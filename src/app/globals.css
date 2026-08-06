@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-serif: var(--font-bodoni), serif;
+  --font-sans: var(--font-jost), sans-serif;
+
+  --color-cream: #f4eee4;
+  --color-ink: #1e1a16;
+  --color-terracotta: #b0654a;
+  --color-gold: #d9a57e;
+  --color-card: #fbf8f2;
+  --color-border: #e8dfd2;
+  --color-border-soft: #e2d9cc;
+  --color-muted: #9c8e78;
+  --color-muted-2: #7c7264;
+  --color-muted-3: #6e6557;
+  --color-muted-4: #4a443c;
+  --color-placeholder: #b6ab99;
+  --color-warm-bg: #f6ecdd;
+  --color-warm-border: #e4cdb0;
+  --color-warm-text: #8a6b4a;
+  --color-warm-text-2: #7c5a43;
+  --color-chip-soft-bg: #efe7da;
+  --color-chip-soft-text: #6e5b43;
+  --color-chip-soft-border: #e4d8c2;
+  --color-rust: #9e4b2e;
+  --color-sage: #8fb27a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+.scrollarea {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollarea::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+input.capin {
+  outline: none;
+}
+input.capin::placeholder {
+  color: var(--color-placeholder);
+}

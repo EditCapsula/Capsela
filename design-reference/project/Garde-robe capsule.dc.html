@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400;1,6..96,500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  .scrollarea { scrollbar-width: none; -ms-overflow-style: none; }
+  body { margin: 0; }
+  input.capin { outline:none; }
+  input.capin::placeholder { color:#B6AB99; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#E2D6C3; display:flex; align-items:center; justify-content:center; padding:40px 0; font-family:'Jost',sans-serif;">
+  <div style="width:392px; background:#15110D; border-radius:46px; padding:8px; box-shadow:0 30px 80px rgba(30,22,14,.35);">
+    <div style="background:#F4EEE4; border-radius:39px; overflow:hidden; height:812px; position:relative; display:flex; flex-direction:column;">
+
+      <!-- STATUS BAR -->
+      <div style="flex:0 0 auto; display:flex; justify-content:space-between; align-items:center; padding:13px 24px 7px; font-size:12px; color:#1E1A16; font-weight:500; letter-spacing:.02em; z-index:5; position:relative;">
+        <span>9:41</span>
+        <span style="display:flex; gap:7px; align-items:center; font-size:11px;"><span>·ıl</span><span>◗</span><span style="border:1px solid #1E1A16; border-radius:3px; padding:0 3px; font-size:8px;">86</span></span>
+      </div>
+
+      <!-- SCREENS -->
+      <div style="flex:1 1 auto; position:relative; overflow:hidden;">
+
+        <!-- ===================== WELCOME ===================== -->
+        <sc-if value="{{ isWelcome }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute; inset:0; display:flex; flex-direction:column; background:#1E1A16;">
+            <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:0 34px;">
+              <div style="font-family:'Bodoni Moda',serif; font-size:15px; letter-spacing:.4em; color:#D9A57E; padding-left:.4em;">✦</div>
+              <div style="font-family:'Bodoni Moda',serif; font-size:40px; letter-spacing:.30em; color:#F4EEE4; margin-top:18px; padding-left:.30em;">CAPSELA</div>
+              <div style="font-family:'Bodoni Moda',serif; font-style:italic; font-size:21px; color:#C7B9A2; margin-top:20px; line-height:1.35;">Ta capsule, à partir de<br>ce que tu possèdes déjà.</div>
+              <div style="font-size:13px; color:#A99C88; margin-top:16px; line-height:1.55; max-width:272px;">Réunis ton dressing, choisis tes 30-40 essentiels, et porte enfin tout ce que tu as. Aucun achat pour commencer.</div>
+            </div>
+            <div style="padding:0 28px 40px; display:flex; flex-direction:column; gap:12px;">
+              <div onClick="{{ startOnb }}" style="background:#B0654A; color:#F4EEE4; text-align:center; border-radius:100px; padding:16px; font-size:13px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer;">Commencer</div>
+              <div onClick="{{ goAuth }}" style="text-align:center; padding:8px; font-size:13px; color:#C7B9A2; cursor:pointer;">J'ai déjà un compte · <span style="color:#D9A57E;">Se connecter</span></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== ONBOARDING ===================== -->
+        <sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; inset:0; display:flex; flex-direction:column; padding:8px 28px 28px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div onClick="{{ onbBack }}" style="{{ onbBackStyle }}">←</div>
+              <div onClick="{{ goAuth }}" style="font-size:12px; color:#9C8E78; cursor:pointer; letter-spacing:.04em;">Passer</div>
+            </div>
+
+            <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+              <div style="aspect-ratio:1/1; max-height:300px; border-radius:20px; background:{{ onbSlide.bg }}; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                <div style="font-family:'Bodoni Moda',serif; font-style:italic; font-size:120px; color:{{ onbSlide.glyphColor }};">{{ onbSlide.glyph }}</div>
+                <div style="position:absolute; bottom:14px; left:16px; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:{{ onbSlide.tagColor }};">{{ onbSlide.tag }}</div>
+              </div>
+              <div style="margin-top:32px;">
+                <div style="font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:#B0654A;">{{ onbSlide.kicker }}</div>
+                <div style="font-family:'Bodoni Moda',serif; font-size:31px; line-height:1.08; letter-spacing:-.01em; color:#1E1A16; margin-top:12px;">{{ onbSlide.title }}</div>
+                <div style="font-size:14px; color:#6E6557; margin-top:12px; line-height:1.55;">{{ onbSlide.body }}</div>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-top:20px;">
+              <div style="display:flex; gap:7px; align-items:center;">
+                <sc-for list="{{ onbDots }}" as="d" hint-placeholder-count="3">
+                  <span style="{{ d.style }}"></span>
+                </sc-for>
+              </div>
+              <div onClick="{{ onbNext }}" style="background:#1E1A16; color:#F4EEE4; border-radius:100px; padding:14px 26px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer;">{{ onbCta }}</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== AUTH (création de compte) ===================== -->
+        <sc-if value="{{ isAuth }}" hint-placeholder-val="{{ false }}">
+          <div class="scrollarea" style="position:absolute; inset:0; overflow-y:auto; display:flex; flex-direction:column; padding:8px 28px 28px;">
+            <div onClick="{{ goWelcome }}" style="width:38px; height:38px; border-radius:100px; background:#FBF8F2; border:1px solid #E8DFD2; display:flex; align-items:center; justify-content:center; font-size:17px; color:#1E1A16; cursor:pointer;">←</div>
+
+            <div style="margin-top:22px;">
+              <div style="font-family:'Bodoni Moda',serif; font-size:32px; line-height:1.05; color:#1E1A16;">Crée ton <span style="font-style:italic;">compte</span></div>
+              <div style="font-size:13px; color:#7C7264; margin-top:10px; line-height:1.5;">Pour sauvegarder ton dressing et ta capsule, et les retrouver sur tous tes écrans.</div>
+            </div>
+
+            <div style="margin-top:22px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:16px; padding:16px 18px; display:flex; flex-direction:column; gap:13px;">
+              <sc-for list="{{ authPerks }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex; align-items:flex-start; gap:11px;">
+                  <span style="width:20px; height:20px; border-radius:100px; background:#B0654A; color:#F4EEE4; display:flex; align-items:center; justify-content:center; font-size:11px; flex-shrink:0; margin-top:1px;">✓</span>
+                  <span style="font-size:13px; color:#4A443C; line-height:1.4;">{{ p }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div onClick="{{ enterApp }}" style="display:flex; align-items:center; justify-content:center; gap:10px; background:#FBF8F2; border:1px solid #E2D9CC; color:#1E1A16; border-radius:100px; padding:15px; font-size:14px; cursor:pointer; margin-top:22px;"><span style="font-family:'Bodoni Moda',serif; font-weight:500;">G</span> &nbsp;Continuer avec Google</div>
+
+            <div style="display:flex; align-items:center; gap:11px; margin:20px 0;">
+              <div style="flex:1; height:1px; background:#E2D9CC;"></div>
+              <span style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#B6AB99;">ou par e-mail</span>
+              <div style="flex:1; height:1px; background:#E2D9CC;"></div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <input class="capin" value="{{ authName }}" onInput="{{ setAuthName }}" placeholder="Prénom" style="background:#FBF8F2; border:1px solid #E8DFD2; border-radius:12px; padding:14px 16px; font-size:14px; color:#1E1A16; font-family:'Jost',sans-serif;">
+              <input class="capin" placeholder="Adresse e-mail" style="background:#FBF8F2; border:1px solid #E8DFD2; border-radius:12px; padding:14px 16px; font-size:14px; color:#1E1A16; font-family:'Jost',sans-serif;">
+              <input class="capin" type="password" placeholder="Mot de passe" style="background:#FBF8F2; border:1px solid #E8DFD2; border-radius:12px; padding:14px 16px; font-size:14px; color:#1E1A16; font-family:'Jost',sans-serif;">
+            </div>
+
+            <div onClick="{{ enterApp }}" style="margin-top:18px; background:#B0654A; color:#F4EEE4; text-align:center; border-radius:100px; padding:16px; font-size:13px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer;">Créer mon compte</div>
+            <div style="font-size:11px; color:#9C8E78; text-align:center; margin-top:14px; line-height:1.5;">En continuant, tu acceptes nos Conditions et notre Politique de confidentialité.</div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== MA GARDE-ROBE ===================== -->
+        <sc-if value="{{ isWardrobe }}" hint-placeholder-val="{{ false }}">
+          <div class="scrollarea" style="position:absolute; inset:0; overflow-y:auto; padding:6px 24px 96px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+              <div>
+                <div style="font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:#9C8E78;">{{ dressCountText }}</div>
+                <div style="font-family:'Bodoni Moda',serif; font-size:29px; color:#1E1A16; margin-top:4px;">Ma garde-robe</div>
+              </div>
+              <div onClick="{{ openAdd }}" style="width:42px; height:42px; border-radius:100px; background:#1E1A16; color:#F4EEE4; display:flex; align-items:center; justify-content:center; font-size:24px; cursor:pointer;">+</div>
+            </div>
+
+            <div class="scrollarea" style="display:flex; gap:8px; margin-top:18px; overflow-x:auto; padding-bottom:2px;">
+              <sc-for list="{{ catChips }}" as="c" hint-placeholder-count="6">
+                <div onClick="{{ c.onSelect }}" style="{{ c.chipStyle }}">{{ c.name }} <span style="opacity:.5;">{{ c.count }}</span></div>
+              </sc-for>
+            </div>
+
+            <div class="scrollarea" style="display:flex; gap:8px; margin-top:11px; overflow-x:auto; padding-bottom:2px;">
+              <sc-for list="{{ seasonChips }}" as="s" hint-placeholder-count="5">
+                <div onClick="{{ s.onSelect }}" style="{{ s.chipStyle }}">{{ s.label }}</div>
+              </sc-for>
+            </div>
+
+            <div style="display:flex; flex-direction:column; margin-top:16px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:16px; overflow:hidden;">
+              <sc-for list="{{ dressList }}" as="it" hint-placeholder-count="7">
+                <div onClick="{{ it.onSelect }}" style="{{ it.rowStyle }}">
+                  <div style="{{ it.swatchStyle }}">
+                    <sc-if value="{{ it.inCap }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute; top:5px; right:5px; width:16px; height:16px; border-radius:100px; background:#B0654A; color:#F4EEE4; display:flex; align-items:center; justify-content:center; font-size:9px;">✦</span>
+                    </sc-if>
+                  </div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:14.5px; color:#1E1A16; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ it.name }}</div>
+                    <div style="display:flex; align-items:center; gap:7px; margin-top:4px;">
+                      <span style="{{ it.dotStyle }}"></span>
+                      <span style="font-size:11.5px; color:#9C8E78;">{{ it.meta }}</span>
+                    </div>
+                    <div style="font-size:11px; color:{{ it.wornColor }}; margin-top:4px; letter-spacing:.02em;">{{ it.wornText }}</div>
+                  </div>
+                  <span style="font-size:18px; color:#C7BBA8; flex-shrink:0;">›</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div onClick="{{ openAdd }}" style="margin-top:16px; display:flex; align-items:center; justify-content:center; gap:9px; border:1.5px dashed #C9B69A; background:#FBF8F2; border-radius:14px; padding:16px; font-size:13px; letter-spacing:.06em; color:#1E1A16; cursor:pointer;"><span style="font-size:17px; color:#B0654A;">+</span> Ajouter une pièce</div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== FICHE VÊTEMENT ===================== -->
+        <sc-if value="{{ isPiece }}" hint-placeholder-val="{{ false }}">
+          <div class="scrollarea" style="position:absolute; inset:0; overflow-y:auto;">
+            <div style="position:relative; height:360px; background:{{ piece.hex }}; display:flex; align-items:flex-start; padding:16px;">
+              <div onClick="{{ goWardrobe }}" style="width:38px; height:38px; border-radius:100px; background:rgba(244,238,228,.92); display:flex; align-items:center; justify-content:center; font-size:17px; color:#1E1A16; cursor:pointer;">←</div>
+              <span style="position:absolute; top:18px; right:16px; background:{{ piece.wornBg }}; color:{{ piece.wornTagColor }}; font-size:10px; letter-spacing:.04em; padding:6px 11px; border-radius:100px;">{{ piece.wornTag }}</span>
+              <span style="position:absolute; bottom:16px; left:18px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.82);">{{ piece.catLabel }}</span>
+            </div>
+            <div style="padding:22px 24px 30px;">
+              <div style="font-family:'Bodoni Moda',serif; font-size:28px; line-height:1.05; color:#1E1A16;">{{ piece.name }}</div>
+              <div style="font-size:13px; color:#9C8E78; margin-top:6px;">{{ piece.color }} · {{ piece.catLabel }}</div>
+
+              <div style="display:flex; gap:10px; margin-top:20px;">
+                <div style="flex:1; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:14px; padding:14px; text-align:center;">
+                  <div style="font-size:11px; color:#9C8E78;">Dernier port</div>
+                  <div style="font-size:14px; color:{{ piece.wornColor }}; margin-top:5px;">{{ piece.wornText }}</div>
+                </div>
+                <div style="flex:1; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:14px; padding:14px; text-align:center;">
+                  <div style="font-size:11px; color:#9C8E78;">Saison</div>
+                  <div style="font-family:'Bodoni Moda',serif; font-size:17px; color:#1E1A16; margin-top:6px;">{{ piece.season }}</div>
+                </div>
+              </div>
+
+              <div style="margin-top:18px; display:flex; align-items:center; gap:13px; background:{{ piece.capCardBg }}; border:1px solid {{ piece.capCardBorder }}; border-radius:16px; padding:15px 16px;">
+                <span style="{{ piece.capIconStyle }}">✦</span>
+                <div style="flex:1;">
+                  <div style="font-size:14px; color:#1E1A16;">{{ piece.capTitle }}</div>
+                  <div style="font-size:11.5px; color:#9C8E78; margin-top:2px; line-height:1.4;">{{ piece.capSub }}</div>
+                </div>
+              </div>
+
+              <sc-if value="{{ piece.notWornToday }}" hint-placeholder-val="{{ true }}">
+                <div onClick="{{ wearActiveToday }}" style="margin-top:18px; background:#1E1A16; color:#F4EEE4; text-align:center; border-radius:100px; padding:15px; font-size:13px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;">Porter aujourd'hui</div>
+              </sc-if>
+              <sc-if value="{{ piece.wornToday }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:18px; display:flex; align-items:center; gap:12px; background:#1E1A16; border-radius:16px; padding:14px 16px;">
+                  <span style="width:32px; height:32px; border-radius:100px; background:#B0654A; color:#F4EEE4; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;">✓</span>
+                  <div style="flex:1;">
+                    <div style="font-size:14px; color:#F4EEE4;">Portée aujourd'hui</div>
+                    <div style="font-size:11px; color:#A99C88; margin-top:2px;">Ajoutée à ton journal</div>
+                  </div>
+                  <span onClick="{{ correctActive }}" style="display:flex; align-items:center; gap:4px; font-size:11px; color:#D9A57E; cursor:pointer;">Corriger <sc-if value="{{ notPremium }}" hint-placeholder-val="{{ true }}"><span style="font-family:'Bodoni Moda',serif;">✦</span></sc-if></span>
+                </div>
+              </sc-if>
+              <div onClick="{{ toggleActiveCapsule }}" style="{{ piece.capBtnStyle }}">{{ piece.capBtnLabel }}</div>
+              <div style="display:flex; gap:10px; margin-top:10px;">
+                <div style="flex:1; text-align:center; border:1px solid #E2D9CC; color:#6E6557; border-radius:100px; padding:13px; font-size:12.5px; cursor:pointer;">Modifier</div>
+                <div onClick="{{ removeActive }}" style="flex:1; text-align:center; border:1px solid #E2D9CC; color:#9E4B2E; border-radius:100px; padding:13px; font-size:12.5px; cursor:pointer;">Retirer</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== AJOUTER UNE PIÈCE ===================== -->
+        <sc-if value="{{ isAdd }}" hint-placeholder-val="{{ false }}">
+          <div class="scrollarea" style="position:absolute; inset:0; overflow-y:auto; padding:6px 24px 30px;">
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div onClick="{{ addBack }}" style="width:38px; height:38px; border-radius:100px; background:#FBF8F2; border:1px solid #E8DFD2; display:flex; align-items:center; justify-content:center; font-size:17px; color:#1E1A16; cursor:pointer;">←</div>
+              <div style="font-family:'Bodoni Moda',serif; font-size:24px; color:#1E1A16;">Ajouter une pièce</div>
+            </div>
+
+            <div style="margin-top:22px; height:190px; border-radius:16px; border:1.5px dashed #C9B69A; background:{{ addPhotoBg }}; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;">
+              <div style="width:54px; height:54px; border-radius:100px; background:#1E1A16; color:#F4EEE4; display:flex; align-items:center; justify-content:center; font-size:24px;">▢</div>
+              <div style="font-size:13px; color:#1E1A16;">Prendre la pièce en photo</div>
+              <div style="font-size:11px; color:#9C8E78;">ou importer depuis ta galerie</div>
+            </div>
+
+            <div style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78; margin:24px 0 11px;">Nom de la pièce</div>
+            <input class="capin" value="{{ addName }}" onInput="{{ setAddName }}" placeholder="ex. Chemise en lin écrue" style="width:100%; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:12px; padding:14px 16px; font-size:14px; color:#1E1A16; font-family:'Jost',sans-serif;">
+
+            <div style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78; margin:24px 0 11px;">Catégorie</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <sc-for list="{{ addCatChips }}" as="c" hint-placeholder-count="5">
+                <div onClick="{{ c.onSelect }}" style="{{ c.chipStyle }}">{{ c.label }}</div>
+              </sc-for>
+            </div>
+
+            <div style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78; margin:24px 0 12px;">Couleur dominante</div>
+            <div style="display:flex; gap:13px; flex-wrap:wrap;">
+              <sc-for list="{{ addColorDots }}" as="col" hint-placeholder-count="8">
+                <div onClick="{{ col.onSelect }}" style="display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;">
+                  <div style="{{ col.dotStyle }}"></div>
+                  <div style="font-size:9.5px; color:{{ col.labelColor }};">{{ col.name }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78; margin:24px 0 11px;">Saison</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <sc-for list="{{ addSeasonChips }}" as="s" hint-placeholder-count="5">
+                <div onClick="{{ s.onSelect }}" style="{{ s.chipStyle }}">{{ s.label }}</div>
+              </sc-for>
+            </div>
+
+            <div onClick="{{ saveItem }}" style="margin-top:28px; background:#1E1A16; color:#F4EEE4; text-align:center; border-radius:100px; padding:16px; font-size:13px; letter-spacing:.14em; text-transform:uppercase; cursor:pointer;">Ajouter à ma garde-robe</div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== MA CAPSULE ===================== -->
+        <sc-if value="{{ isCapsule }}" hint-placeholder-val="{{ false }}">
+          <div class="scrollarea" style="position:absolute; inset:0; overflow-y:auto; padding:6px 24px 96px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+              <div>
+                <div onClick="{{ toggleSeasonPicker }}" style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                  <span style="font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:#9C8E78;">Ta sélection · {{ activeSeasonLabel }}</span>
+                  <span style="font-size:9px; color:#B0654A;">▼</span>
+                </div>
+                <div style="font-family:'Bodoni Moda',serif; font-size:29px; color:#1E1A16; margin-top:4px;">Ma capsule</div>
+                <div style="font-size:12.5px; color:#7C7264; margin-top:6px; line-height:1.45;">Tes 30-40 essentiels qui vont ensemble.</div>
+              </div>
+              <div onClick="{{ toggleCapInfo }}" style="{{ capInfoBtnStyle }}">?</div>
+            </div>
+
+            <sc-if value="{{ seasonPickerOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px; background:#F4EEE4; border:1px solid #E8DFD2; border-radius:16px; padding:16px;">
+                <div style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78; margin-bottom:11px;">Capsule de la saison</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  <sc-for list="{{ seasonRows }}" as="r" hint-placeholder-count="4">
+                    <div onClick="{{ r.onSelect }}" style="{{ r.rowStyle }}">
+                      <span style="{{ r.nameStyle }}">{{ r.name }}</span>
+                      <span style="{{ r.countStyle }}">{{ r.countText }}</span>
+                      <span style="{{ r.checkStyle }}">{{ r.check }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ hasDupSources }}" hint-placeholder-val="{{ false }}">
+                  <div style="height:1px; background:#E8DFD2; margin:15px 0 13px;"></div>
+                  <div style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#9C8E78; margin-bottom:10px;">Repartir d'une autre saison</div>
+                  <div style="display:flex; flex-direction:column; gap:8px;">
+                    <sc-for list="{{ dupSources }}" as="d" hint-placeholder-count="1">
+                      <div onClick="{{ d.onDup }}" style="display:flex; align-items:center; gap:9px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:100px; padding:12px 16px; font-size:12.5px; color:#1E1A16; cursor:pointer;"><span style="color:#B0654A;">⧉</span>{{ d.label }}</div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ capInfoOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px; background:#F6ECDD; border:1px solid #E4CDB0; border-radius:16px; padding:16px 17px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-family:'Bodoni Moda',serif; font-style:italic; font-size:15px; color:#B0654A;">✦</span>
+                  <span style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#B0654A;">Qu'est-ce qu'une capsule ?</span>
+                </div>
+                <p style="margin:11px 0 0; font-size:13px; line-height:1.55; color:#5A5145;">Une capsule, ce sont <b style="font-weight:500; color:#1E1A16;">30 à 40 pièces choisies pour toutes aller ensemble</b>. Tu piges dedans chaque jour : moins de « rien à me mettre », des décisions plus rapides, et tu portes enfin tout ce que tu as.</p>
+                <div style="display:flex; flex-direction:column; gap:9px; margin-top:13px;">
+                  <div style="display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:#5A5145; line-height:1.4;"><span style="color:#B0654A; margin-top:1px;">·</span>Ta <b style="font-weight:500; color:#1E1A16;">garde-robe</b> = tout ce que tu possèdes.</div>
+                  <div style="display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:#5A5145; line-height:1.4;"><span style="color:#B0654A; margin-top:1px;">·</span>Ta <b style="font-weight:500; color:#1E1A16;">capsule</b> = la sélection resserrée du moment.</div>
+                  <div style="display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:#5A5145; line-height:1.4;"><span style="color:#B0654A; margin-top:1px;">·</span>L'app génère tes <b style="font-weight:500; color:#1E1A16;">tenues du jour</b> à partir d'elle.</div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- JAUGE -->
+            <div style="margin-top:18px; background:#1E1A16; border-radius:22px; padding:24px;">
+              <div style="display:flex; align-items:flex-end; justify-content:space-between;">
+                <div style="display:flex; align-items:baseline; gap:8px;">
+                  <span style="font-family:'Bodoni Moda',serif; font-size:64px; line-height:.8; color:#F4EEE4;">{{ capCount }}</span>
+                  <span style="font-size:14px; color:#A99C88;">/ 40 pièces</span>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:#A99C88;">Cible idéale</div>
+                  <div style="font-family:'Bodoni Moda',serif; font-style:italic; font-size:20px; color:#D9A57E; margin-top:2px;">30 – 40</div>
+                </div>
+              </div>
+
+              <div style="height:12px; background:#3A342B; border-radius:100px; margin-top:18px; position:relative; overflow:hidden;">
+                <div style="position:absolute; left:75%; right:0; top:0; bottom:0; background:rgba(217,165,126,.20);"></div>
+                <div style="{{ gaugeFillStyle }}"></div>
+                <div style="position:absolute; left:75%; top:0; bottom:0; width:1.5px; background:rgba(217,165,126,.6);"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:10px; color:#7C7264; letter-spacing:.04em;">
+                <span>0</span><span style="color:#D9A57E;">30 · seuil capsule</span><span>40</span>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:9px; margin-top:16px; background:{{ capStatusBg }}; border-radius:12px; padding:12px 14px;">
+                <span style="{{ capStatusDot }}"></span>
+                <span style="font-size:12.5px; color:#F4EEE4; line-height:1.4;">{{ capStatus }}</span>
+              </div>
+            </div>
+
+            <!-- RÉPARTITION -->
+            <div style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78; margin:24px 0 14px;">Répartition par catégorie</div>
+            <div style="display:flex; flex-direction:column; gap:14px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:16px; padding:18px 16px;">
+              <sc-for list="{{ breakdown }}" as="r" hint-placeholder-count="5">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <span style="width:84px; font-size:12px; color:#4A443C; flex-shrink:0;">{{ r.label }}</span>
+                  <div style="flex:1; height:8px; background:#EADFCF; border-radius:100px; overflow:hidden;">
+                    <div style="{{ r.barStyle }}"></div>
+                  </div>
+                  <span style="font-size:12px; color:#1E1A16; width:38px; text-align:right; flex-shrink:0;">{{ r.count }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <!-- SÉLECTION -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:24px 0 12px;">
+              <span style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78;">Tes pièces</span>
+              <span style="font-size:11px; color:#9C8E78;">Appuie pour ajouter / retirer</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <sc-for list="{{ capsuleList }}" as="it" hint-placeholder-count="6">
+                <div onClick="{{ it.onToggle }}" style="{{ it.rowStyle }}">
+                  <div style="{{ it.swatchStyle }}"></div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:14px; color:#1E1A16; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ it.name }}</div>
+                    <div style="font-size:11px; color:#9C8E78; margin-top:2px;">{{ it.meta }}</div>
+                  </div>
+                  <span style="{{ it.checkStyle }}">{{ it.checkMark }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== TENUE DU JOUR ===================== -->
+        <sc-if value="{{ isTenues }}" hint-placeholder-val="{{ false }}">
+          <div class="scrollarea" style="position:absolute; inset:0; overflow-y:auto; padding:6px 24px 96px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+              <div>
+                <div style="font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:#9C8E78;">{{ dateText }}</div>
+                <div style="font-family:'Bodoni Moda',serif; font-size:29px; color:#1E1A16; margin-top:4px;">Ta tenue du jour</div>
+              </div>
+              <div onClick="{{ goHistory }}" style="display:flex; align-items:center; gap:6px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:100px; padding:9px 13px; cursor:pointer; flex-shrink:0;">
+                <span style="font-size:12px; color:#1E1A16;">Journal</span>
+                <sc-if value="{{ notPremium }}" hint-placeholder-val="{{ true }}"><span style="font-family:'Bodoni Moda',serif; font-size:11px; color:#B0654A;">✦</span></sc-if>
+              </div>
+            </div>
+            <div style="font-size:13px; color:#7C7264; margin-top:8px; line-height:1.5;">Une combinaison composée à partir de ta capsule.</div>
+
+            <div style="display:flex; align-items:center; gap:9px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:100px; padding:10px 15px; margin-top:14px;">
+              <span style="width:9px; height:9px; border-radius:100px; background:#B0654A; box-shadow:0 0 0 4px rgba(176,101,74,.16); flex-shrink:0;"></span>
+              <div style="flex:1; min-width:0; font-size:13px; color:#1E1A16; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ geoText }}</div>
+              <span style="font-size:12px; color:#4A443C; white-space:nowrap; flex-shrink:0;">{{ weatherShort }}</span>
+              <span style="width:1px; height:14px; background:#E2D9CC; flex-shrink:0;"></span>
+              <span onClick="{{ cycleGeo }}" style="font-size:11px; color:#B0654A; letter-spacing:.04em; cursor:pointer; flex-shrink:0;">Modifier</span>
+            </div>
+
+            <div style="display:flex; gap:12px; margin-top:16px;">
+              <div style="flex:1; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:16px; padding:15px;">
+                <div style="font-family:'Bodoni Moda',serif; font-size:26px; color:#1E1A16;">{{ lookCount }}</div>
+                <div style="font-size:12px; color:#7C7264; margin-top:2px;">looks portés</div>
+              </div>
+              <div style="flex:1; background:#F6ECDD; border:1px solid #E4CDB0; border-radius:16px; padding:15px;">
+                <div style="font-family:'Bodoni Moda',serif; font-size:26px; color:#B0654A;">{{ neverWornCount }}</div>
+                <div style="font-size:12px; color:#8A6B4A; margin-top:2px;">jamais portées</div>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; justify-content:space-between; margin:22px 0 10px;">
+              <span style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78;">Occasion</span>
+              <sc-if value="{{ notPremium }}" hint-placeholder-val="{{ true }}">
+                <span onClick="{{ goPremium }}" style="display:flex; align-items:center; gap:5px; font-size:10.5px; letter-spacing:.03em; color:#B0654A; cursor:pointer;"><span style="font-family:'Bodoni Moda',serif;">✦</span> Premium</span>
+              </sc-if>
+            </div>
+            <div class="scrollarea" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:2px;">
+              <sc-for list="{{ occasionChips }}" as="o" hint-placeholder-count="4">
+                <div onClick="{{ o.onSelect }}" style="{{ o.chipStyle }}">{{ o.label }}</div>
+              </sc-for>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin:24px 0 12px;">
+              <span style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78;">La combinaison</span>
+              <span onClick="{{ regenOutfit }}" style="font-size:12px; color:#B0654A; letter-spacing:.03em; cursor:pointer;">↻ Régénérer</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:9px; margin-bottom:12px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:14px; padding:11px 14px;">
+              <span style="width:7px; height:7px; border-radius:100px; background:#B0654A; margin-top:4px; flex-shrink:0;"></span>
+              <div style="font-size:12px; color:#6E6557; line-height:1.45;">{{ weatherReason }}</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <sc-for list="{{ outfitPieces }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; gap:13px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:14px; padding:11px;">
+                  <div style="{{ p.swatchStyle }}"></div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:14.5px; color:#1E1A16;">{{ p.name }}</div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:3px;">
+                      <span style="font-size:11px; color:#9C8E78;">{{ p.meta }}</span>
+                      <span style="font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#C7BBA8;">· {{ p.role }}</span>
+                    </div>
+                  </div>
+                  <div onClick="{{ p.onLock }}" style="{{ p.lockStyle }}">{{ p.lockIcon }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ bagMissing }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:10px; background:#F6ECDD; border:1px solid #E4CDB0; border-radius:16px; padding:15px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:44px; height:52px; border-radius:10px; border:1.5px dashed #C9966F; background:#F0E4D2; display:flex; align-items:center; justify-content:center; font-size:20px; color:#B0654A; flex-shrink:0;">▢</div>
+                  <div style="flex:1;">
+                    <div style="font-size:14px; color:#1E1A16;">Il manque un sac à ta garde-robe</div>
+                    <div style="font-size:11.5px; color:#8A6B4A; margin-top:3px; line-height:1.4;">Une tenue n'est vraiment complète qu'avec le bon sac. Ajoute les tiens pour qu'ils entrent dans tes tenues du jour.</div>
+                  </div>
+                </div>
+                <div onClick="{{ openAddBag }}" style="margin-top:13px; background:#B0654A; color:#F4EEE4; text-align:center; border-radius:100px; padding:13px; font-size:12.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;">Ajouter un sac</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ outfitValidated }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:18px; display:flex; align-items:center; gap:12px; background:#1E1A16; border-radius:16px; padding:15px 17px;">
+                <span style="width:34px; height:34px; border-radius:100px; background:#B0654A; color:#F4EEE4; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">✓</span>
+                <div style="flex:1;">
+                  <div style="font-size:14px; color:#F4EEE4;">Porté aujourd'hui</div>
+                  <div style="font-size:11px; color:#A99C88; margin-top:2px;">Compté dans tes stats · pièces mises à jour</div>
+                </div>
+                <span onClick="{{ regenOutfit }}" style="font-size:11px; color:#D9A57E; cursor:pointer;">Autre</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ outfitNotValidated }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; gap:10px; margin-top:18px;">
+                <div onClick="{{ regenOutfit }}" style="flex:1; border:1px solid #1E1A16; color:#1E1A16; text-align:center; border-radius:100px; padding:15px; font-size:12.5px; letter-spacing:.06em; cursor:pointer;">Proposer autre chose</div>
+                <div onClick="{{ wearOutfitToday }}" style="flex:1.3; background:#B0654A; color:#F4EEE4; text-align:center; border-radius:100px; padding:15px; font-size:12.5px; letter-spacing:.06em; cursor:pointer;">Porté aujourd'hui ✓</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ hasNeverWorn }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin:26px 0 10px;">
+                <span style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78;">Jamais portées · {{ neverWornCount }}</span>
+                <span onClick="{{ goNeverWorn }}" style="display:flex; align-items:center; gap:5px; font-size:12px; color:#B0654A; cursor:pointer;">Tout voir <sc-if value="{{ notPremium }}" hint-placeholder-val="{{ true }}"><span style="font-family:'Bodoni Moda',serif;">✦</span></sc-if></span>
+              </div>
+              <div style="display:flex; align-items:flex-start; gap:10px; background:#F6ECDD; border:1px solid #E4CDB0; border-radius:14px; padding:13px 15px;">
+                <span style="font-size:15px; color:#B0654A; margin-top:1px;">⌛</span>
+                <div style="font-size:12px; color:#7C5A43; line-height:1.45;">Ces pièces n'ont jamais été portées. Mets-en une en avant aujourd'hui.</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:9px; margin-top:12px;">
+                <sc-for list="{{ neverWornList }}" as="n" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:13px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:14px; padding:10px 12px;">
+                    <div style="{{ n.swatchStyle }}"></div>
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-size:14px; color:#1E1A16;">{{ n.name }}</div>
+                      <div style="font-size:11px; color:#9C8E78; margin-top:2px;">{{ n.meta }}</div>
+                    </div>
+                    <div onClick="{{ n.onWear }}" style="font-size:11px; color:#B0654A; border:1px solid #E4CDB0; border-radius:100px; padding:8px 13px; cursor:pointer; flex-shrink:0;">Porter</div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ===================== PREMIUM (paywall) ===================== -->
+        <sc-if value="{{ isPremiumScreen }}" hint-placeholder-val="{{ false }}">
+          <div class="scrollarea" style="position:absolute; inset:0; overflow-y:auto; background:#1E1A16; display:flex; flex-direction:column; padding:8px 28px 32px;">
+            <div onClick="{{ premiumBack }}" style="width:38px; height:38px; border-radius:100px; background:rgba(244,238,228,.12); display:flex; align-items:center; justify-content:center; font-size:17px; color:#F4EEE4; cursor:pointer;">←</div>
+            <div style="margin-top:22px;">
+              <div style="font-family:'Bodoni Moda',serif; font-size:13px; letter-spacing:.3em; color:#D9A57E; padding-left:.3em;">✦ PREMIUM</div>
+              <div style="font-family:'Bodoni Moda',serif; font-size:34px; line-height:1.08; color:#F4EEE4; margin-top:14px;">Va plus loin avec<br><span style="font-style:italic;">ta capsule.</span></div>
+              <div style="font-size:13.5px; color:#A99C88; margin-top:12px; line-height:1.55;">Les outils qui transforment ta capsule en garde-robe vraiment vécue.</div>
+            </div>
+
+            <div style="margin-top:24px; display:flex; flex-direction:column; gap:12px;">
+              <sc-for list="{{ premiumFeatures }}" as="f" hint-placeholder-count="4">
+                <div style="display:flex; align-items:flex-start; gap:13px; background:rgba(244,238,228,.06); border:1px solid rgba(217,165,126,.22); border-radius:16px; padding:15px 16px;">
+                  <span style="width:36px; height:36px; border-radius:100px; background:#B0654A; color:#F4EEE4; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">{{ f.icon }}</span>
+                  <div style="flex:1;">
+                    <div style="font-size:14.5px; color:#F4EEE4;">{{ f.title }}</div>
+                    <div style="font-size:12px; color:#A99C88; margin-top:3px; line-height:1.45;">{{ f.body }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="margin-top:24px; background:rgba(217,165,126,.12); border:1px solid rgba(217,165,126,.3); border-radius:18px; padding:20px; text-align:center;">
+              <div style="display:flex; align-items:baseline; justify-content:center; gap:6px;">
+                <span style="font-family:'Bodoni Moda',serif; font-size:40px; color:#F4EEE4;">4,99 €</span>
+                <span style="font-size:13px; color:#A99C88;">/ mois</span>
+              </div>
+              <div style="font-size:12px; color:#A99C88; margin-top:4px;">7 jours d'essai · résiliable à tout moment</div>
+            </div>
+
+            <div onClick="{{ subscribe }}" style="margin-top:18px; background:#B0654A; color:#F4EEE4; text-align:center; border-radius:100px; padding:17px; font-size:13px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer;">Passer en Premium</div>
+            <div onClick="{{ premiumBack }}" style="text-align:center; padding:14px; font-size:13px; color:#A99C88; cursor:pointer;">Peut-être plus tard</div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== JOURNAL / HISTORIQUE ===================== -->
+        <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+          <div class="scrollarea" style="position:absolute; inset:0; overflow-y:auto; padding:6px 24px 96px;">
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div onClick="{{ goTenues }}" style="width:38px; height:38px; border-radius:100px; background:#FBF8F2; border:1px solid #E8DFD2; display:flex; align-items:center; justify-content:center; font-size:17px; color:#1E1A16; cursor:pointer;">←</div>
+              <div>
+                <div style="font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:#9C8E78;">✦ Premium</div>
+                <div style="font-family:'Bodoni Moda',serif; font-size:25px; color:#1E1A16; margin-top:2px;">Ton journal</div>
+              </div>
+            </div>
+
+            <div style="margin-top:18px; background:#1E1A16; border-radius:18px; padding:20px;">
+              <div style="display:flex; align-items:baseline; gap:8px;">
+                <span style="font-family:'Bodoni Moda',serif; font-size:44px; line-height:.9; color:#F4EEE4;">{{ weekCount }}</span>
+                <span style="font-size:13px; color:#A99C88;">tenues cette semaine</span>
+              </div>
+              <div style="font-size:12px; color:#A99C88; margin-top:8px; line-height:1.4;">Ce que tu as réellement porté, jour après jour.</div>
+            </div>
+
+            <sc-if value="{{ hasMemory }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:14px; background:#1E1A16; border-radius:18px; padding:18px; border:1px solid rgba(217,165,126,.3);">
+                <div style="display:flex; align-items:center; gap:7px;">
+                  <span style="font-family:'Bodoni Moda',serif; font-style:italic; font-size:15px; color:#D9A57E;">✦</span>
+                  <span style="font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#D9A57E;">{{ memory.title }}</span>
+                </div>
+                <div style="font-size:12px; color:#A99C88; margin-top:6px;">{{ memory.dateText }}</div>
+                <div style="display:flex; gap:8px; margin-top:14px;">
+                  <sc-for list="{{ memory.swatches }}" as="sw" hint-placeholder-count="4">
+                    <div style="{{ sw.style }}"></div>
+                  </sc-for>
+                </div>
+                <div style="font-size:12px; color:#C7B9A2; margin-top:12px; line-height:1.4;">{{ memory.summary }}</div>
+                <div onClick="{{ memory.onReWear }}" style="margin-top:15px; background:#B0654A; color:#F4EEE4; text-align:center; border-radius:100px; padding:14px; font-size:12.5px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer;">Reporter cette tenue</div>
+              </div>
+            </sc-if>
+
+            <div style="font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#9C8E78; margin:24px 0 12px;">Historique</div>
+            <div style="display:flex; flex-direction:column; gap:20px;">
+              <sc-for list="{{ historyDays }}" as="d" hint-placeholder-count="4">
+                <div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                    <span style="font-size:13px; color:#1E1A16; font-weight:500;">{{ d.rel }}</span>
+                    <sc-if value="{{ d.isMulti }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px; color:#9C8E78;">{{ d.countText }}</span></sc-if>
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:9px;">
+                    <sc-for list="{{ d.entries }}" as="h" hint-placeholder-count="1">
+                      <div style="background:#FBF8F2; border:1px solid #E8DFD2; border-radius:16px; padding:14px 15px;">
+                        <sc-if value="{{ h.hasOcc }}" hint-placeholder-val="{{ false }}">
+                          <span style="display:inline-block; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:#8A6B4A; background:#F0E5D4; border-radius:100px; padding:4px 11px;">{{ h.occLabel }}</span>
+                        </sc-if>
+                        <div style="display:flex; gap:7px; margin-top:11px;">
+                          <sc-for list="{{ h.swatches }}" as="sw" hint-placeholder-count="4">
+                            <div style="{{ sw.style }}"></div>
+                          </sc-for>
+                        </div>
+                        <div style="font-size:11px; color:#9C8E78; margin-top:10px; line-height:1.4;">{{ h.summary }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== JAMAIS PORTÉES (dédié) ===================== -->
+        <sc-if value="{{ isNeverWornScreen }}" hint-placeholder-val="{{ false }}">
+          <div class="scrollarea" style="position:absolute; inset:0; overflow-y:auto; padding:6px 24px 96px;">
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div onClick="{{ goTenues }}" style="width:38px; height:38px; border-radius:100px; background:#FBF8F2; border:1px solid #E8DFD2; display:flex; align-items:center; justify-content:center; font-size:17px; color:#1E1A16; cursor:pointer;">←</div>
+              <div>
+                <div style="font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:#9C8E78;">✦ Premium</div>
+                <div style="font-family:'Bodoni Moda',serif; font-size:25px; color:#1E1A16; margin-top:2px;">Jamais portées</div>
+              </div>
+            </div>
+
+            <div style="margin-top:18px; display:flex; align-items:flex-start; gap:11px; background:#F6ECDD; border:1px solid #E4CDB0; border-radius:16px; padding:15px 16px;">
+              <span style="font-family:'Bodoni Moda',serif; font-size:30px; line-height:.9; color:#B0654A;">{{ neverWornFullCount }}</span>
+              <div style="font-size:12.5px; color:#7C5A43; line-height:1.45; padding-top:2px;">pièces attendent leur tour. Mets-en une en avant aujourd'hui, ou envisage de la sortir de ta capsule.</div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:9px; margin-top:16px;">
+              <sc-for list="{{ neverWornFull }}" as="n" hint-placeholder-count="4">
+                <div style="display:flex; align-items:center; gap:13px; background:#FBF8F2; border:1px solid #E8DFD2; border-radius:14px; padding:11px 12px;">
+                  <div onClick="{{ n.onSelect }}" style="{{ n.swatchStyle }}"></div>
+                  <div onClick="{{ n.onSelect }}" style="flex:1; min-width:0; cursor:pointer;">
+                    <div style="font-size:14px; color:#1E1A16;">{{ n.name }}</div>
+                    <div style="font-size:11px; color:#9C8E78; margin-top:2px;">{{ n.meta }}</div>
+                  </div>
+                  <div onClick="{{ n.onWear }}" style="font-size:11px; color:#F4EEE4; background:#B0654A; border-radius:100px; padding:9px 15px; cursor:pointer; flex-shrink:0;">Porter</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===================== TAB BAR ===================== -->
+        <sc-if value="{{ showTabbar }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute; left:0; right:0; bottom:0; background:#F4EEE4; border-top:1px solid #E8DFD2; display:flex; align-items:center; justify-content:space-around; padding:13px 12px 22px;">
+            <div onClick="{{ goWardrobe }}" style="display:flex; flex-direction:column; align-items:center; gap:7px; cursor:pointer; flex:1;">
+              <span style="{{ tabDressIcon }}"></span>
+              <span style="font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:{{ tabDressColor }};">Garde-robe</span>
+            </div>
+            <div onClick="{{ goTenues }}" style="display:flex; flex-direction:column; align-items:center; gap:7px; cursor:pointer; flex:1;">
+              <span style="width:18px; height:18px; display:flex; align-items:center; justify-content:center;"><span style="{{ tabTenuesIcon }}"></span></span>
+              <span style="font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:{{ tabTenuesColor }};">Tenues</span>
+            </div>
+            <div onClick="{{ goHistory }}" style="display:flex; flex-direction:column; align-items:center; gap:7px; cursor:pointer; flex:1; position:relative;">
+              <span style="width:18px; height:18px; display:flex; align-items:center; justify-content:center; position:relative;">
+                <span style="{{ tabJournalIcon }}"></span>
+                <sc-if value="{{ notPremium }}" hint-placeholder-val="{{ true }}"><span style="position:absolute; top:-5px; right:-6px; font-family:'Bodoni Moda',serif; font-size:10px; color:#B0654A;">✦</span></sc-if>
+              </span>
+              <span style="font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:{{ tabJournalColor }};">Journal</span>
+            </div>
+            <div onClick="{{ goCapsule }}" style="display:flex; flex-direction:column; align-items:center; gap:7px; cursor:pointer; flex:1;">
+              <span style="{{ tabCapsuleIcon }}"></span>
+              <span style="font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:{{ tabCapsuleColor }};">Ma capsule</span>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;welcome&quot;,&quot;onboarding&quot;,&quot;auth&quot;,&quot;wardrobe&quot;,&quot;tenues&quot;,&quot;capsule&quot;,&quot;premium&quot;,&quot;history&quot;,&quot;neverworn&quot;],&quot;default&quot;:&quot;welcome&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Aperçu&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const CATS = [
+      ['haut','Haut','Hauts'], ['bas','Bas','Bas'], ['robe','Robe','Robes'],
+      ['chaussures','Chaussures','Chaussures'], ['accessoire','Accessoire','Accessoires']
+    ];
+    // name, cat, colorName, hex, season, lastWornDays(null=jamais), inCapsule
+    const RAW = [
+      ['Chemise en lin','haut','Blanc cassé','#EDE4D6','Été',3,true],
+      ['Pull col rond','haut','Camel','#C08A5E','Hiver',12,true],
+      ['T-shirt coton','haut','Crème','#E7DCC8','Toutes saisons',1,true],
+      ['Blouse en soie','haut','Rose poudré','#D3AE9F','Printemps',24,true],
+      ['Débardeur côtelé','haut','Noir','#2A2724','Été',5,true],
+      ['Gilet fin','haut','Taupe','#A8967C','Automne',40,true],
+      ['Chemisier rayé','haut','Bleu grisé','#8A96A0','Toutes saisons',8,true],
+      ['Sweat molleton','haut','Gris','#9B968F','Hiver',60,false],
+      ['Top cache-cœur','haut','Terracotta','#B07A4E','Été',6,true],
+      ['Chemise oversize','haut','Olive','#8A8560','Automne',15,true],
+      ['Pull torsadé','haut','Brique','#9E5A3C','Hiver',90,true],
+      ['Jean droit','bas','Denim','#5E6E7C','Toutes saisons',2,true],
+      ['Pantalon tailleur','bas','Taupe','#A8967C','Automne',9,true],
+      ['Jupe midi','bas','Olive','#8A8560','Printemps',20,true],
+      ['Short en lin','bas','Crème','#E7DCC8','Été',null,false],
+      ['Jean brut','bas','Marine','#3A4152','Toutes saisons',4,true],
+      ['Pantalon large','bas','Noir','#2A2724','Toutes saisons',7,true],
+      ['Chino','bas','Sable','#D9C9B2','Printemps',30,true],
+      ['Robe portefeuille','robe','Terracotta','#B07A4E','Été',11,true],
+      ['Robe chemise','robe','Marine','#3A4152','Automne',18,true],
+      ['Robe pull','robe','Gris','#9B968F','Hiver',null,false],
+      ['Robe longue','robe','Rouille','#A9613F','Été',22,true],
+      ['Bottines cuir','chaussures','Chocolat','#7C5436','Automne',5,true],
+      ['Baskets blanches','chaussures','Blanc cassé','#EDE4D6','Toutes saisons',1,true],
+      ['Sandales tressées','chaussures','Camel','#C08A5E','Été',14,true],
+      ['Escarpins','chaussures','Bordeaux','#6E3B3A','Hiver',null,false],
+      ['Mocassins','chaussures','Camel','#C08A5E','Automne',10,true],
+      ['Ballerines','chaussures','Taupe','#A8967C','Printemps',33,true],
+      ['Bottes hautes','chaussures','Noir','#2A2724','Hiver',25,true],
+      ['Ceinture cuir','accessoire','Rouille','#A9613F','Toutes saisons',3,true],
+      ['Foulard soie','accessoire','Moutarde','#C39A50','Printemps',45,true],
+      ['Sac cabas','accessoire','Camel','#C08A5E','Toutes saisons',2,true],
+      ['Écharpe laine','accessoire','Bordeaux','#6E3B3A','Hiver',70,true],
+      ['Chapeau feutre','accessoire','Chocolat','#7C5436','Automne',50,true]
+    ];
+    this.CATS = CATS;
+    this.CATLABEL = {}; this.CATPLURAL = {};
+    CATS.forEach(c => { this.CATLABEL[c[0]] = c[1]; this.CATPLURAL[c[0]] = c[2]; });
+    this.PALETTE = [
+      ['Blanc cassé','#EDE4D6'], ['Crème','#E7DCC8'], ['Sable','#D9C9B2'], ['Rose poudré','#D3AE9F'],
+      ['Camel','#C08A5E'], ['Caramel','#B57F4E'], ['Terracotta','#B07A4E'], ['Rouille','#A9613F'],
+      ['Brique','#9E5A3C'], ['Chocolat','#7C5436'], ['Moutarde','#C39A50'], ['Olive','#8A8560'],
+      ['Kaki','#6E6A4C'], ['Vert sauge','#9AA389'], ['Taupe','#A8967C'], ['Gris','#9B968F'],
+      ['Bleu grisé','#8A96A0'], ['Denim','#5E6E7C'], ['Marine','#3A4152'], ['Bordeaux','#6E3B3A'], ['Noir','#2A2724']
+    ];
+    this.SEASONS = ['Printemps','Été','Automne','Hiver','Toutes saisons'];
+    this.OCCASIONS = [['all','Toutes'],['travail','Travail'],['weekend','Week-end'],['sport','Sport'],['soiree','Soirée'],['ceremonie','Cérémonie'],['voyage','Voyage']];
+    this.OCC_LABELS = {}; this.OCCASIONS.forEach(o => { this.OCC_LABELS[o[0]] = o[1]; });
+    this.weather = this.computeWeather();
+    this.CITIES = [
+      { city: 'Paris 11e', temp: 27, label: 'Ensoleillé' },
+      { city: 'Lyon', temp: 30, label: 'Ensoleillé' },
+      { city: 'Marseille', temp: 32, label: 'Grand soleil' },
+      { city: 'Bordeaux', temp: 28, label: 'Éclaircies' },
+      { city: 'Lille', temp: 22, label: 'Nuageux' }
+    ];
+
+    const items = RAW.map((r, i) => ({
+      id: i + 1, name: r[0], cat: r[1], color: r[2], hex: r[3], season: r[4], worn: r[5], seed: r[6]
+    }));
+    // Capsules par saison — source de vérité : { saison: [ids] }
+    this.CAP_SEASONS = ['Printemps 2026', 'Été 2026', 'Automne 2026', 'Hiver 2026'];
+    const capsules = { 'Printemps 2026': [], 'Été 2026': items.filter(i => i.seed).map(i => i.id), 'Automne 2026': [], 'Hiver 2026': [] };
+
+    this.state = {
+      capsules,
+      activeSeason: 'Été 2026',
+      seasonPickerOpen: false,
+      screen: props.startScreen || 'welcome',
+      onbStep: 0,
+      authName: '',
+      activeId: 1,
+      catFilter: 'all',
+      seasonFilter: 'all',
+      items,
+      addName: '',
+      addCat: 'haut',
+      addColor: { name: 'Blanc cassé', hex: '#EDE4D6' },
+      addSeason: 'Toutes saisons',
+      capInfoOpen: false,
+      geoIndex: 0,
+      outfit: [],
+      outfitValidated: false,
+      lookCount: 24,
+      isPremium: false,
+      premiumReturn: 'tenues',
+      occasion: 'all',
+      lockedPieces: [],
+      history: this.seedHistory()
+    };
+  }
+
+  seedHistory() {
+    const now = new Date();
+    const day = 864e5;
+    // [offsetJours, [ids], occasion]
+    const seeds = [
+      [0, [1, 13, 27, 32, 31], 'travail'],
+      [0, [3, 15, 24, 32], 'sport'],
+      [1, [3, 12, 24, 32], 'weekend'],
+      [2, [19, 26, 32], 'soiree'],
+      [3, [9, 14, 25, 32], 'weekend'],
+      [6, [7, 13, 26, 32], 'travail']
+    ];
+    const arr = seeds.map((sd, i) => ({
+      id: 'h' + i, ts: now.getTime() - sd[0] * day, pieceIds: sd[1], occasion: sd[2]
+    }));
+    // souvenir : une tenue portée il y a un an, jour pour jour
+    const lastYear = new Date(now); lastYear.setFullYear(now.getFullYear() - 1);
+    arr.push({ id: 'hy', ts: lastYear.getTime(), pieceIds: [1, 14, 25, 32, 31], occasion: 'weekend' });
+    return arr;
+  }
+
+  componentDidMount() {
+    if (!this.state.outfit || !this.state.outfit.length) this.generateOutfit();
+  }
+
+  // ---- premium ----
+  goPremium = () => this.setState(s => ({ premiumReturn: (s.screen === 'premium' ? s.premiumReturn : s.screen), screen: 'premium' }));
+  subscribe = () => this.setState(s => ({ isPremium: true, screen: s.premiumReturn || 'tenues' }));
+  premiumBack = () => this.setState(s => ({ screen: s.premiumReturn || 'tenues' }));
+  requirePremium = (fn) => () => { if (this.state.isPremium) fn(); else this.goPremium(); };
+  goHistory = () => this.go('history');
+  reWear = (ids) => this.setState(st => ({
+    outfit: ids.filter(id => st.items.some(i => i.id === id)),
+    outfitValidated: false, screen: 'tenues'
+  }));
+  goNeverWorn = () => this.go('neverworn');
+  setOccasion = (o) => this.setState({ occasion: o }, () => this.generateOutfit());
+  toggleLock = (id) => this.setState(s => {
+    const cur = s.lockedPieces || [];
+    return { lockedPieces: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
+  });
+  occasionFit(it, occ) {
+    const n = (it.name + ' ' + it.color).toLowerCase();
+    const rx = {
+      travail: /tailleur|chemis|blouse|escarpin|mocassin|ballerine|cabas|gilet|foulard|portefeuille|robe chemise|pull col|pull torsad/,
+      weekend: /jean|basket|sweat|t-shirt|short|sandal|débardeur|chino|chapeau|écharpe|robe longue|robe pull|top cache/,
+      sport: /basket|sweat|t-shirt|short|débardeur|molleton|jogging|legging/,
+      soiree: /soie|blouse|escarpin|robe|bordeaux|noir|foulard|portefeuille|longue/,
+      ceremonie: /tailleur|soie|blouse|escarpin|robe|foulard|portefeuille/,
+      voyage: /jean|basket|t-shirt|chino|pantalon large|cabas|sweat|mocassin|foulard/
+    };
+    if (occ === 'travail') return rx.travail.test(n) || (it.cat === 'robe' && !/longue|pull/.test(n));
+    if (occ === 'weekend') return rx.weekend.test(n) || it.cat === 'haut';
+    if (occ === 'sport') return rx.sport.test(n) || (it.cat === 'chaussures' && /basket/.test(n));
+    if (occ === 'soiree') return rx.soiree.test(n) || it.cat === 'robe';
+    if (occ === 'ceremonie') return rx.ceremonie.test(n) || it.cat === 'robe';
+    if (occ === 'voyage') return rx.voyage.test(n) || it.cat === 'haut';
+    return true;
+  }
+
+  goTenues = () => this.go('tenues');
+  cycleGeo = () => this.setState(s => ({ geoIndex: ((s.geoIndex || 0) + 1) % this.CITIES.length }));
+
+  activeCapIds = () => this.state.capsules[this.state.activeSeason] || [];
+  toggleSeasonPicker = () => this.setState(s => ({ seasonPickerOpen: !s.seasonPickerOpen }));
+  setSeason = (name) => this.setState({ activeSeason: name, seasonPickerOpen: false }, () => this.generateOutfit());
+  duplicateFrom = (src) => this.setState(s => {
+    const from = s.capsules[src] || [];
+    const cur = s.capsules[s.activeSeason] || [];
+    const merged = Array.from(new Set([...cur, ...from]));
+    return { capsules: { ...s.capsules, [s.activeSeason]: merged } };
+  }, () => this.generateOutfit());
+
+  generateOutfit = () => {
+    const s = this.state;
+    const capIds = this.activeCapIds();
+    const cap = s.items.filter(i => capIds.includes(i.id));
+    const occasion = s.isPremium ? (s.occasion || 'all') : 'all';
+    const locked = (s.lockedPieces || []).filter(id => capIds.includes(id) && s.isPremium);
+    const lockedItems = cap.filter(i => locked.includes(i.id));
+    const hasLockedRobe = lockedItems.some(i => i.cat === 'robe');
+    const hasLockedTop = lockedItems.some(i => i.cat === 'haut');
+    const hasLockedBottom = lockedItems.some(i => i.cat === 'bas');
+    const hasLockedShoes = lockedItems.some(i => i.cat === 'chaussures');
+    const hasLockedBag = lockedItems.some(i => this.isBag(i));
+
+    const pool = (pred) => {
+      let base = cap.filter(pred);
+      const w = base.filter(i => this.weather.seasons.includes(i.season)); if (w.length) base = w;
+      if (occasion !== 'all') { const o = base.filter(i => this.occasionFit(i, occasion)); if (o.length) base = o; }
+      return base;
+    };
+    const rand = (arr) => arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+
+    const ids = [...lockedItems.map(i => i.id)];
+    if (!hasLockedRobe && !hasLockedTop && !hasLockedBottom) {
+      const useRobe = Math.random() < 0.4 && pool(i => i.cat === 'robe').length;
+      if (useRobe) { const r = rand(pool(i => i.cat === 'robe')); if (r) ids.push(r.id); }
+      else { const h = rand(pool(i => i.cat === 'haut')); const b = rand(pool(i => i.cat === 'bas')); if (h) ids.push(h.id); if (b) ids.push(b.id); }
+    } else if (!hasLockedRobe) {
+      if (!hasLockedTop) { const h = rand(pool(i => i.cat === 'haut')); if (h) ids.push(h.id); }
+      if (!hasLockedBottom) { const b = rand(pool(i => i.cat === 'bas')); if (b) ids.push(b.id); }
+    }
+    if (!hasLockedShoes) { const sh = rand(pool(i => i.cat === 'chaussures')); if (sh) ids.push(sh.id); }
+    if (!hasLockedBag) {
+      const capBags = pool(i => this.isBag(i));
+      const allBags = s.items.filter(i => this.isBag(i));
+      const bagPool = capBags.length ? capBags : allBags;
+      if (bagPool.length) ids.push(rand(bagPool).id);
+    }
+    const otherAcc = pool(i => i.cat === 'accessoire' && !this.isBag(i));
+    if (otherAcc.length && Math.random() < 0.5 && !lockedItems.some(i => i.cat === 'accessoire' && !this.isBag(i))) ids.push(rand(otherAcc).id);
+    this.setState({ outfit: Array.from(new Set(ids)), outfitValidated: false });
+  };
+  regenOutfit = () => this.generateOutfit();
+  wearOutfitToday = () => this.setState(st => ({
+    items: st.items.map(it => st.outfit.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it),
+    outfitValidated: true, lookCount: st.lookCount + 1,
+    history: [{ id: 'h' + Date.now(), ts: Date.now(), pieceIds: [...st.outfit], occasion: st.occasion || 'all' }, ...st.history]
+  }));
+  wearPieceToday = (id) => this.setState(st => ({
+    items: st.items.map(it => it.id === id ? { ...it, wornPrev: it.worn, worn: 0 } : it),
+    lookCount: st.lookCount + 1,
+    history: [{ id: 'h' + Date.now(), ts: Date.now(), pieceIds: [id], occasion: st.occasion || 'all' }, ...st.history]
+  }));
+  wearActiveToday = () => this.wearPieceToday(this.state.activeId);
+  correctPiece = (id) => this.setState(st => ({
+    items: st.items.map(it => it.id === id ? { ...it, worn: (it.wornPrev === undefined ? null : it.wornPrev) } : it),
+    lookCount: Math.max(0, st.lookCount - 1)
+  }));
+  correctActive = () => this.correctPiece(this.state.activeId);
+
+  componentDidUpdate(prev) {
+    if (prev.startScreen !== this.props.startScreen && this.props.startScreen) {
+      this.setState({ screen: this.props.startScreen });
+    }
+  }
+
+  // ---- navigation ----
+  go = (screen) => this.setState({ screen });
+  startOnb = () => this.setState({ screen: 'onboarding', onbStep: 0 });
+  goWelcome = () => this.go('welcome');
+  goAuth = () => this.go('auth');
+  enterApp = () => this.go('tenues');
+  goWardrobe = () => this.go('wardrobe');
+  goCapsule = () => this.go('capsule');
+  openAdd = () => this.go('add');
+  openAddBag = () => this.setState({ screen: 'add', addCat: 'accessoire', addName: 'Sac ' });
+  addBack = () => this.go('wardrobe');
+  setAuthName = (e) => this.setState({ authName: e.target.value });
+
+  onbBack = () => {
+    if (this.state.onbStep === 0) this.go('welcome');
+    else this.setState({ onbStep: this.state.onbStep - 1 });
+  };
+  onbNext = () => {
+    if (this.state.onbStep >= 2) this.go('auth');
+    else this.setState({ onbStep: this.state.onbStep + 1 });
+  };
+
+  openItem = (id) => this.setState({ activeId: id, screen: 'piece' });
+  removeActive = () => this.setState(s => {
+    const caps = {};
+    Object.keys(s.capsules).forEach(k => { caps[k] = (s.capsules[k] || []).filter(id => id !== s.activeId); });
+    return { items: s.items.filter(it => it.id !== s.activeId), capsules: caps, screen: 'wardrobe' };
+  });
+  toggleCapsule = (id) => this.setState(s => {
+    const cur = s.capsules[s.activeSeason] || [];
+    const next = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+    return { capsules: { ...s.capsules, [s.activeSeason]: next } };
+  });
+  toggleActiveCapsule = () => this.toggleCapsule(this.state.activeId);
+  toggleCapInfo = () => this.setState(s => ({ capInfoOpen: !s.capInfoOpen }));
+
+  setCatFilter = (k) => this.setState({ catFilter: k });
+  setSeasonFilter = (k) => this.setState({ seasonFilter: k });
+
+  setAddName = (e) => this.setState({ addName: e.target.value });
+  setAddCat = (k) => this.setState({ addCat: k });
+  setAddColor = (c) => this.setState({ addColor: c });
+  setAddSeason = (s) => this.setState({ addSeason: s });
+  saveItem = () => {
+    const s = this.state;
+    const item = {
+      id: Math.max(0, ...s.items.map(i => i.id)) + 1,
+      name: (s.addName || '').trim() || 'Nouvelle pièce',
+      cat: s.addCat, color: s.addColor.name, hex: s.addColor.hex,
+      season: s.addSeason, worn: null, inCapsule: false
+    };
+    this.setState({ items: [item, ...s.items], addName: '', screen: 'wardrobe' });
+  };
+
+  // ---- helpers ----
+  isBag(it) { return /\bsac\b/i.test(it.name); }
+
+  computeWeather() {
+    const m = new Date().getMonth();
+    let season, temp, label;
+    if (m === 11 || m <= 1) { season = 'Hiver'; temp = 6; label = 'Frais et couvert'; }
+    else if (m <= 4) { season = 'Printemps'; temp = 16; label = 'Doux'; }
+    else if (m <= 7) { season = 'Été'; temp = 27; label = 'Ensoleillé'; }
+    else { season = 'Automne'; temp = 14; label = 'Nuageux'; }
+    return { season, temp, label, seasons: [season, 'Toutes saisons'] };
+  }
+
+  wornAgo(d) {
+    if (d == null) return 'Jamais portée';
+    if (d < 1) return 'Porté aujourd\u2019hui';
+    if (d === 1) return 'Porté hier';
+    if (d < 7) return 'Porté il y a ' + d + ' j';
+    if (d < 30) return 'Porté il y a ' + Math.round(d / 7) + ' sem';
+    if (d < 365) return 'Porté il y a ' + Math.round(d / 30) + ' mois';
+    return 'Porté il y a +1 an';
+  }
+
+  chip(active, extra) {
+    const base = {
+      flex: '0 0 auto', padding: '9px 15px', borderRadius: '100px', fontSize: '13px',
+      whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'Jost',sans-serif",
+      transition: 'all .15s'
+    };
+    if (active) return { ...base, background: '#1E1A16', color: '#F4EEE4', border: '1px solid #1E1A16', ...extra };
+    return { ...base, background: '#FBF8F2', color: '#6E6557', border: '1px solid #E8DFD2', ...extra };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const capIds = s.capsules[s.activeSeason] || [];
+    const items = s.items.map(it => ({ ...it, inCapsule: capIds.includes(it.id) }));
+    const capCount = capIds.length;
+
+    // ---- onboarding ----
+    const SLIDES = [
+      { kicker: 'Ton dressing', tag: 'ce que tu as déjà', glyph: '1', bg: '#E7DCC8', glyphColor: 'rgba(124,84,54,.28)', tagColor: '#8A6B4A',
+        title: 'On part de ce que tu possèdes déjà.',
+        body: 'Photographie tes vêtements un par un. Aucun achat pour commencer — ta capsule naît de ta propre garde-robe.' },
+      { kicker: 'Ta capsule', tag: '30 à 40 pièces', glyph: '2', bg: '#D9C9B2', glyphColor: 'rgba(124,84,54,.26)', tagColor: '#7C6A4F',
+        title: '30 à 40 pièces, choisies avec soin.',
+        body: 'Sélectionne l\u2019essentiel qui va vraiment ensemble. Un compteur et la répartition par catégorie t\u2019aident à garder l\u2019équilibre.' },
+      { kicker: 'Moins, mais mieux', tag: 'porte tout', glyph: '3', bg: '#C9B29A', glyphColor: 'rgba(124,84,54,.24)', tagColor: '#6E5B43',
+        title: 'Tout porter, enfin.', 
+        body: 'Repère tes pièces jamais portées, compose tes tenues et achète moins. Un dressing plus léger, plus toi.' }
+    ];
+    const onbDots = SLIDES.map((_, i) => ({
+      style: i === s.onbStep
+        ? { width: '22px', height: '7px', borderRadius: '100px', background: '#B0654A', display: 'inline-block' }
+        : { width: '7px', height: '7px', borderRadius: '100px', background: '#D8CBB6', display: 'inline-block' }
+    }));
+
+    // ---- wardrobe filters ----
+    const catChips = [{ key: 'all', name: 'Tout', count: items.length }].concat(
+      this.CATS.map(c => ({ key: c[0], name: c[2], count: items.filter(i => i.cat === c[0]).length }))
+    ).map(c => ({
+      name: c.name, count: c.count,
+      chipStyle: this.chip(s.catFilter === c.key),
+      onSelect: () => this.setCatFilter(c.key)
+    }));
+    const seasonChips = [{ key: 'all', label: 'Toutes saisons' }].concat(
+      ['Printemps', 'Été', 'Automne', 'Hiver'].map(x => ({ key: x, label: x }))
+    ).map(c => {
+      const on = s.seasonFilter === c.key;
+      return {
+        label: c.label,
+        chipStyle: {
+          flex: '0 0 auto', padding: '7px 13px', borderRadius: '100px', fontSize: '12px',
+          whiteSpace: 'nowrap', cursor: 'pointer', fontFamily: "'Jost',sans-serif", transition: 'all .15s',
+          background: on ? '#EFE7DA' : 'transparent',
+          color: on ? '#6E5B43' : '#9C8E78',
+          border: '1px solid ' + (on ? '#E4D8C2' : '#EADFCF')
+        },
+        onSelect: () => this.setSeasonFilter(c.key)
+      };
+    });
+
+    const filtered = items.filter(it =>
+      (s.catFilter === 'all' || it.cat === s.catFilter) &&
+      (s.seasonFilter === 'all' || it.season === s.seasonFilter || it.season === 'Toutes saisons')
+    );
+    const dressList = filtered.map(it => ({
+      id: it.id, name: it.name, inCap: it.inCapsule,
+      meta: this.CATLABEL[it.cat] + ' · ' + it.color + ' · ' + it.season,
+      wornText: this.wornAgo(it.worn),
+      wornColor: it.worn == null ? '#B0654A' : '#9C8E78',
+      rowStyle: { display: 'flex', alignItems: 'center', gap: '14px', padding: '13px 15px', borderBottom: '1px solid #EFE7DA', cursor: 'pointer' },
+      swatchStyle: { position: 'relative', width: '50px', height: '62px', borderRadius: '9px', background: it.hex, flexShrink: 0, boxShadow: 'inset 0 0 0 1px rgba(30,26,22,.06)' },
+      dotStyle: { width: '9px', height: '9px', borderRadius: '100px', background: it.hex, flexShrink: 0, boxShadow: 'inset 0 0 0 1px rgba(30,26,22,.12)' },
+      onSelect: () => this.openItem(it.id)
+    }));
+
+    // ---- piece detail ----
+    const active = items.find(i => i.id === s.activeId) || items[0] || {};
+    const pNever = active.worn == null;
+    const pToday = active.worn === 0;
+    const piece = {
+      wornToday: pToday, notWornToday: !pToday,
+      name: active.name, hex: active.hex, color: active.color,
+      catLabel: this.CATLABEL[active.cat] || '', season: active.season,
+      wornText: this.wornAgo(active.worn),
+      wornColor: pNever ? '#B0654A' : '#4A443C',
+      wornTag: pNever ? 'Jamais portée' : 'Portée récemment',
+      wornBg: pNever ? '#F6ECDD' : 'rgba(244,238,228,.92)',
+      wornTagColor: pNever ? '#B0654A' : '#4A443C',
+      capTitle: active.inCapsule ? 'Dans ta capsule' : 'Hors de ta capsule',
+      capSub: active.inCapsule ? 'Compte parmi tes 30-40 essentiels.' : 'Ajoute-la pour l\u2019inclure dans ta sélection.',
+      capCardBg: active.inCapsule ? '#1E1A16' : '#FBF8F2',
+      capCardBorder: active.inCapsule ? '#1E1A16' : '#E8DFD2',
+      capIconStyle: {
+        width: '34px', height: '34px', borderRadius: '100px', flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px',
+        background: active.inCapsule ? '#B0654A' : '#F0E5D4',
+        color: active.inCapsule ? '#F4EEE4' : '#B0654A'
+      },
+      capBtnLabel: active.inCapsule ? 'Retirer de ma capsule' : 'Ajouter à ma capsule',
+      capBtnStyle: active.inCapsule
+        ? { marginTop: '10px', textAlign: 'center', border: '1px solid #1E1A16', color: '#1E1A16', borderRadius: '100px', padding: '15px', fontSize: '13px', letterSpacing: '.1em', textTransform: 'uppercase', cursor: 'pointer' }
+        : { marginTop: '10px', background: '#B0654A', color: '#F4EEE4', textAlign: 'center', borderRadius: '100px', padding: '15px', fontSize: '13px', letterSpacing: '.1em', textTransform: 'uppercase', cursor: 'pointer' }
+    };
+    // fix capCardBorder color for dark card
+    piece.capCardBg = active.inCapsule ? '#1E1A16' : '#FBF8F2';
+    if (active.inCapsule) { piece.capTitle = 'Dans ta capsule'; }
+
+    // ---- piece detail card text colors on dark ----
+    const pieceCapTextDark = active.inCapsule;
+
+    // ---- add form ----
+    const addCatChips = this.CATS.map(c => ({
+      label: c[1], chipStyle: this.chip(s.addCat === c[0]), onSelect: () => this.setAddCat(c[0])
+    }));
+    const addColorDots = this.PALETTE.map(p => {
+      const on = s.addColor.hex === p[1];
+      return {
+        name: p[0], labelColor: on ? '#1E1A16' : '#9C8E78',
+        dotStyle: {
+          width: '38px', height: '38px', borderRadius: '11px', background: p[1], cursor: 'pointer',
+          border: on ? '2px solid #1E1A16' : '1px solid rgba(30,26,22,.12)',
+          boxShadow: on ? '0 0 0 3px #F4EEE4 inset' : 'none'
+        },
+        onSelect: () => this.setAddColor({ name: p[0], hex: p[1] })
+      };
+    });
+    const addSeasonChips = this.SEASONS.map(x => ({
+      label: x, chipStyle: this.chip(s.addSeason === x), onSelect: () => this.setAddSeason(x)
+    }));
+
+    // ---- capsule ----
+    const frac = Math.min(capCount, 40) / 40;
+    const inZone = capCount >= 30 && capCount <= 40;
+    const gaugeFillStyle = {
+      position: 'absolute', left: 0, top: 0, bottom: 0, width: (frac * 100) + '%',
+      background: capCount > 40 ? '#9E4B2E' : '#B0654A', borderRadius: '100px', transition: 'width .3s'
+    };
+    let capStatus, capBg, dotColor;
+    if (capCount < 30) {
+      const miss = 30 - capCount;
+      capStatus = 'Encore ' + miss + (miss === 1 ? ' pièce' : ' pièces') + ' pour atteindre une capsule complète.';
+      capBg = 'rgba(217,165,126,.14)'; dotColor = '#D9A57E';
+    } else if (capCount <= 40) {
+      capStatus = 'Capsule complète — tu es dans la fourchette idéale.';
+      capBg = 'rgba(124,154,110,.18)'; dotColor = '#8FB27A';
+    } else {
+      capStatus = 'Un peu trop chargée — retire ' + (capCount - 40) + ' pièce(s) pour rester capsule.';
+      capBg = 'rgba(158,75,46,.20)'; dotColor = '#D98A6E';
+    }
+    const capStatusDot = { width: '9px', height: '9px', borderRadius: '100px', background: dotColor, flexShrink: 0 };
+
+    const inCounts = this.CATS.map(c => items.filter(i => i.cat === c[0] && i.inCapsule).length);
+    const maxIn = Math.max(1, ...inCounts);
+    const breakdown = this.CATS.map((c, idx) => {
+      const inC = inCounts[idx];
+      const tot = items.filter(i => i.cat === c[0]).length;
+      return {
+        label: c[2], count: inC + ' / ' + tot,
+        barStyle: { width: (inC / maxIn * 100) + '%', height: '100%', background: '#B0654A', borderRadius: '100px', transition: 'width .3s' }
+      };
+    });
+
+    const capsuleList = items.map(it => ({
+      name: it.name, meta: this.CATLABEL[it.cat] + ' · ' + it.color,
+      rowStyle: {
+        display: 'flex', alignItems: 'center', gap: '13px', padding: '10px 12px', borderRadius: '14px', cursor: 'pointer',
+        background: it.inCapsule ? '#FBF8F2' : '#F1EADD',
+        border: '1px solid ' + (it.inCapsule ? '#E8DFD2' : '#E6DCC9'),
+        opacity: it.inCapsule ? 1 : 0.72
+      },
+      swatchStyle: { width: '44px', height: '54px', borderRadius: '8px', background: it.hex, flexShrink: 0, boxShadow: 'inset 0 0 0 1px rgba(30,26,22,.06)' },
+      checkStyle: {
+        width: '26px', height: '26px', borderRadius: '100px', flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 500,
+        background: it.inCapsule ? '#B0654A' : 'transparent',
+        color: it.inCapsule ? '#F4EEE4' : 'transparent',
+        border: it.inCapsule ? '1px solid #B0654A' : '1.5px solid #C9B69A'
+      },
+      checkMark: it.inCapsule ? '✓' : '',
+      onToggle: () => this.toggleCapsule(it.id)
+    }));
+
+    // ---- tenues / tracking ----
+    const DAYS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const now = new Date();
+    const dateText = DAYS[now.getDay()] + ' ' + now.getDate() + ' ' + MONTHS[now.getMonth()];
+    const geoCity = this.CITIES[(s.geoIndex || 0) % this.CITIES.length];
+    const roleLabel = { haut: 'Haut', bas: 'Bas', robe: 'Robe', chaussures: 'Chaussures', accessoire: 'Accessoire' };
+    const lockedSet = s.lockedPieces || [];
+    const outfitPieces = (s.outfit || []).map(id => items.find(i => i.id === id)).filter(Boolean).map(it => {
+      const isLocked = lockedSet.includes(it.id);
+      return {
+        name: it.name, role: this.isBag(it) ? 'Sac' : roleLabel[it.cat], meta: it.color + ' · ' + it.season,
+        swatchStyle: { width: '58px', height: '70px', borderRadius: '8px', background: it.hex, flexShrink: 0, boxShadow: 'inset 0 0 0 1px rgba(30,26,22,.06)' },
+        onLock: this.requirePremium(() => this.toggleLock(it.id)),
+        lockStyle: {
+          width: '30px', height: '30px', borderRadius: '100px', flexShrink: 0, cursor: 'pointer', fontSize: '13px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: (s.isPremium && isLocked) ? '#1E1A16' : '#F1EADD',
+          color: (s.isPremium && isLocked) ? '#F4EEE4' : '#B6AB99',
+          border: '1px solid ' + ((s.isPremium && isLocked) ? '#1E1A16' : '#E4D8C2')
+        },
+        lockIcon: (s.isPremium && isLocked) ? '🔒' : '🔓'
+      };
+    });
+
+    // occasion filter (premium)
+    const occasionChips = this.OCCASIONS.map(o => {
+      const on = (s.occasion || 'all') === o[0] && s.isPremium;
+      return {
+        label: o[1], onSelect: this.requirePremium(() => this.setOccasion(o[0])),
+        chipStyle: {
+          flex: '0 0 auto', textAlign: 'center', padding: '9px 16px', borderRadius: '100px', fontSize: '12.5px', cursor: 'pointer',
+          whiteSpace: 'nowrap', fontFamily: "'Jost',sans-serif", transition: 'all .15s',
+          background: on ? '#1E1A16' : 'transparent', color: on ? '#F4EEE4' : '#6E6557',
+          border: '1px solid ' + (on ? '#1E1A16' : '#E2D9CC')
+        }
+      };
+    });
+
+    const neverWorn = items.filter(i => i.worn == null);
+    const mkNeverRow = (sw) => (it) => ({
+      name: it.name, meta: this.CATLABEL[it.cat] + ' · ' + it.color,
+      swatchStyle: { width: sw + 'px', height: Math.round(sw * 1.22) + 'px', borderRadius: '8px', background: it.hex, flexShrink: 0, boxShadow: 'inset 0 0 0 1px rgba(30,26,22,.06)' },
+      onWear: () => this.wearPieceToday(it.id),
+      onSelect: () => this.openItem(it.id)
+    });
+    const neverWornList = neverWorn.slice(0, 3).map(mkNeverRow(46));
+    const neverWornFull = neverWorn.map(mkNeverRow(52));
+
+    // history (premium)
+    const DAYS_S = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+    const todayMid = new Date(); todayMid.setHours(0, 0, 0, 0);
+    const annEntry = (s.history || []).find(h => {
+      const d = new Date(h.ts);
+      return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() < now.getFullYear();
+    });
+    let memory = null;
+    if (annEntry) {
+      const yrs = now.getFullYear() - new Date(annEntry.ts).getFullYear();
+      const pcs = annEntry.pieceIds.map(id => items.find(i => i.id === id)).filter(Boolean);
+      const stillHave = annEntry.pieceIds.filter(id => items.some(i => i.id === id));
+      memory = {
+        title: yrs === 1 ? 'Il y a un an, jour pour jour' : 'Il y a ' + yrs + ' ans, jour pour jour',
+        dateText: 'Le ' + new Date(annEntry.ts).getDate() + ' ' + MONTHS[new Date(annEntry.ts).getMonth()] + ' ' + new Date(annEntry.ts).getFullYear(),
+        summary: pcs.map(p => p.name).join(' · '),
+        swatches: pcs.map(p => ({ style: { width: '46px', height: '56px', borderRadius: '7px', background: p.hex, flexShrink: 0, boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.14)' } })),
+        onReWear: () => this.reWear(stillHave)
+      };
+    }
+    const entries = (s.history || []).filter(h => h.id !== (annEntry && annEntry.id));
+    const dayOrder = []; const dayMap = {};
+    entries.forEach(h => {
+      const d = new Date(h.ts);
+      const key = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate();
+      const dMid = new Date(d); dMid.setHours(0, 0, 0, 0);
+      const diff = Math.round((todayMid - dMid) / 864e5);
+      const rel = diff <= 0 ? "Aujourd'hui" : diff === 1 ? 'Hier' : DAYS_S[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+      if (!dayMap[key]) { dayMap[key] = { rel, list: [] }; dayOrder.push(key); }
+      const pcs = h.pieceIds.map(id => items.find(i => i.id === id)).filter(Boolean);
+      const occ = (h.occasion && h.occasion !== 'all') ? this.OCC_LABELS[h.occasion] : '';
+      dayMap[key].list.push({
+        hasOcc: !!occ, occLabel: occ || '',
+        summary: pcs.map(p => p.name).join(' · '),
+        swatches: pcs.map(p => ({ style: { width: '34px', height: '42px', borderRadius: '6px', background: p.hex, flexShrink: 0, boxShadow: 'inset 0 0 0 1px rgba(30,26,22,.06)' } }))
+      });
+    });
+    const historyDays = dayOrder.map(k => {
+      const n = dayMap[k].list.length;
+      return { rel: dayMap[k].rel, entries: dayMap[k].list, isMulti: n > 1, countText: n + ' tenues' };
+    });
+    const weekCount = (s.history || []).filter(h => (todayMid - new Date(new Date(h.ts).setHours(0, 0, 0, 0))) / 864e5 < 7).length;
+
+    // ---- tab bar ----
+    const dressActive = s.screen === 'wardrobe';
+    const tenuesActive = s.screen === 'tenues' || s.screen === 'neverworn';
+    const journalActive = s.screen === 'history';
+    const capActive = s.screen === 'capsule';
+    const tabDressIcon = { width: '18px', height: '18px', borderRadius: '5px', border: '2px solid ' + (dressActive ? '#B0654A' : '#B6AB99'), background: dressActive ? '#B0654A' : 'transparent' };
+    const tabTenuesIcon = { width: '15px', height: '15px', borderRadius: '3px', border: '2px solid ' + (tenuesActive ? '#B0654A' : '#B6AB99'), background: tenuesActive ? '#B0654A' : 'transparent', transform: 'rotate(45deg)' };
+    const tabJournalIcon = { width: '16px', height: '18px', borderRadius: '3px', border: '2px solid ' + (journalActive ? '#B0654A' : '#B6AB99'), background: journalActive ? '#B0654A' : 'transparent' };
+    const tabCapsuleIcon = { width: '18px', height: '18px', borderRadius: '100px', border: '2px solid ' + (capActive ? '#B0654A' : '#B6AB99'), background: capActive ? '#B0654A' : 'transparent' };
+
+    return {
+      // screens
+      isWelcome: s.screen === 'welcome',
+      isOnboarding: s.screen === 'onboarding',
+      isAuth: s.screen === 'auth',
+      isWardrobe: s.screen === 'wardrobe',
+      isPiece: s.screen === 'piece',
+      isAdd: s.screen === 'add',
+      isCapsule: s.screen === 'capsule',
+      isTenues: s.screen === 'tenues',
+      isPremiumScreen: s.screen === 'premium',
+      isHistory: s.screen === 'history',
+      isNeverWornScreen: s.screen === 'neverworn',
+      showTabbar: s.screen === 'wardrobe' || s.screen === 'capsule' || s.screen === 'tenues' || s.screen === 'history' || s.screen === 'neverworn',
+
+      // nav
+      startOnb: this.startOnb, goWelcome: this.goWelcome, goAuth: this.goAuth,
+      enterApp: this.enterApp, goWardrobe: this.goWardrobe, goCapsule: this.goCapsule,
+      openAdd: this.openAdd, addBack: this.addBack, goTenues: this.goTenues,
+
+      // tenues + tracking
+      dateText, outfitPieces, outfitValidated: s.outfitValidated, outfitNotValidated: !s.outfitValidated,
+      regenOutfit: this.regenOutfit, wearOutfitToday: this.wearOutfitToday,
+      lookCount: s.lookCount, neverWornCount: neverWorn.length, neverWornList, hasNeverWorn: neverWorn.length > 0,
+      wearActiveToday: this.wearActiveToday,
+      occasionChips, isPremium: s.isPremium, notPremium: !s.isPremium,
+      goHistory: this.requirePremium(this.goHistory), goNeverWorn: this.requirePremium(this.goNeverWorn),
+      goPremium: this.goPremium, subscribe: this.subscribe, premiumBack: this.premiumBack,
+      historyDays, weekCount, hasHistory: (s.history || []).length > 0, neverWornFull,
+      memory, hasMemory: !!memory,
+      neverWornFullCount: neverWorn.length,
+      premiumFeatures: [
+        { icon: '☷', title: 'Journal des tenues', body: 'Retrouve tout ce que tu as porté, jour par jour, et vois ta semaine d\u2019un coup d\u2019œil.' },
+        { icon: '⌛', title: 'Pièces jamais portées', body: 'Un espace dédié pour repérer et enfin sortir les oubliées de ton dressing.' },
+        { icon: '✎', title: 'Corriger tes ports', body: 'Marque, ajuste ou annule un « porté aujourd\u2019hui » quand tu changes d\u2019avis.' },
+        { icon: '🔒', title: 'Génération sur mesure', body: 'Verrouille une pièce et régénère le reste, ou filtre par occasion (travail / week-end).' }
+      ],
+      bagMissing: !items.some(i => this.isBag(i)), openAddBag: this.openAddBag,
+      geoText: 'Autour de toi · ' + geoCity.city, cycleGeo: this.cycleGeo,
+      weatherShort: geoCity.temp + '° · ' + geoCity.label,
+      weatherReason: 'Météo à ' + geoCity.city + ' : ' + geoCity.temp + '° (' + geoCity.label.toLowerCase() + ') — priorité aux tenues de ' + this.weather.season.toLowerCase() + ' et toutes saisons.',
+
+      // onboarding
+      onbSlide: SLIDES[s.onbStep], onbDots, onbBack: this.onbBack, onbNext: this.onbNext,
+      onbCta: s.onbStep >= 2 ? 'Créer mon compte' : 'Continuer',
+      onbBackStyle: { width: '34px', height: '34px', borderRadius: '100px', background: '#FBF8F2', border: '1px solid #E8DFD2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', color: '#1E1A16', cursor: 'pointer' },
+
+      // auth
+      authPerks: ['Ton dressing sauvegardé et synchronisé', 'Ta capsule et tes stats en un coup d\u2019œil', 'Retrouve tout, même après un nouveau téléphone'],
+      authName: s.authName, setAuthName: this.setAuthName,
+
+      // wardrobe
+      dressCountText: items.length + ' pièces',
+      catChips, seasonChips, dressList,
+
+      // piece
+      piece, toggleActiveCapsule: this.toggleActiveCapsule, removeActive: this.removeActive, goWardrobe: this.goWardrobe,
+      correctActive: this.requirePremium(this.correctActive),
+
+      // add
+      addPhotoBg: '#FBF8F2',
+      addName: s.addName, setAddName: this.setAddName,
+      addCatChips, addColorDots, addSeasonChips, saveItem: this.saveItem,
+
+      // capsule
+      capCount, gaugeFillStyle, capStatus, capStatusBg: capBg, capStatusDot,
+      activeSeasonLabel: s.activeSeason,
+      seasonPickerOpen: !!s.seasonPickerOpen, toggleSeasonPicker: this.toggleSeasonPicker,
+      seasonRows: this.CAP_SEASONS.map(name => {
+        const n = (s.capsules[name] || []).length;
+        const active = name === s.activeSeason;
+        return {
+          name, active,
+          countText: n + (n > 1 ? ' pièces' : ' pièce'),
+          onSelect: () => this.setSeason(name),
+          rowStyle: {
+            display: 'flex', alignItems: 'center', gap: '11px', padding: '13px 14px', borderRadius: '13px', cursor: 'pointer',
+            background: active ? '#1E1A16' : '#FBF8F2',
+            border: '1px solid ' + (active ? '#1E1A16' : '#E8DFD2')
+          },
+          nameStyle: { flex: 1, fontFamily: "'Bodoni Moda',serif", fontSize: '16px', color: active ? '#F4EEE4' : '#1E1A16' },
+          countStyle: { fontSize: '12px', color: active ? '#A99C88' : '#9C8E78' },
+          checkStyle: {
+            width: '20px', height: '20px', borderRadius: '100px', flexShrink: 0, fontSize: '11px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: active ? '#B0654A' : 'transparent', color: active ? '#F4EEE4' : 'transparent',
+            border: active ? '1px solid #B0654A' : '1.5px solid #D8CBB6'
+          },
+          check: active ? '✓' : ''
+        };
+      }),
+      dupSources: this.CAP_SEASONS
+        .filter(name => name !== s.activeSeason && (s.capsules[name] || []).length > 0)
+        .map(name => ({ name, label: 'Dupliquer « ' + name + ' » ici', onDup: () => this.duplicateFrom(name) })),
+      hasDupSources: this.CAP_SEASONS.some(name => name !== s.activeSeason && (s.capsules[name] || []).length > 0),
+      capIsEmpty: capCount === 0,
+
+      capInfoOpen: !!s.capInfoOpen, toggleCapInfo: this.toggleCapInfo,
+      capInfoBtnStyle: {
+        width: '28px', height: '28px', borderRadius: '100px', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', fontFamily: "'Bodoni Moda',serif", fontStyle: 'italic', fontSize: '16px',
+        cursor: 'pointer', flexShrink: 0,
+        background: s.capInfoOpen ? '#1E1A16' : '#FBF8F2',
+        color: s.capInfoOpen ? '#F4EEE4' : '#6E6557',
+        border: '1px solid ' + (s.capInfoOpen ? '#1E1A16' : '#E8DFD2')
+      },
+      breakdown, capsuleList,
+
+      // tabs
+      tabDressIcon, tabTenuesIcon, tabJournalIcon, tabCapsuleIcon,
+      tabDressColor: dressActive ? '#1E1A16' : '#B6AB99',
+      tabJournalColor: journalActive ? '#1E1A16' : '#B6AB99',
+      tabTenuesColor: tenuesActive ? '#1E1A16' : '#B6AB99',
+      tabCapsuleColor: capActive ? '#1E1A16' : '#B6AB99'
+    };
+  }
+}
+</script>
+</body>
+</html>
