@@ -1,8 +1,23 @@
 "use client";
 
 import { CATLABEL, CITIES, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { neverWornItems } from "@/lib/selectors";
+
+function ProfileButton() {
+  const { profile, email } = useAuth();
+  const { actions } = useCapsela();
+  const initial = (profile.displayName || email || "C").charAt(0).toUpperCase();
+  return (
+    <button
+      onClick={actions.goProfile}
+      className="w-[36px] h-[36px] rounded-full bg-ink text-cream font-serif text-[15px] flex items-center justify-center cursor-pointer"
+    >
+      {initial}
+    </button>
+  );
+}
 
 export default function TenuesScreen() {
   const { state, weather, actions, requirePremium } = useCapsela();
@@ -26,13 +41,16 @@ export default function TenuesScreen() {
           <div className="text-[11px] tracking-[.18em] uppercase text-muted">{dateText}</div>
           <div className="font-serif text-[29px] text-ink mt-1">Ta tenue du jour</div>
         </div>
-        <button
-          onClick={requirePremium(actions.goHistory)}
-          className="flex items-center gap-[6px] bg-card border border-border rounded-full py-[9px] px-[13px] cursor-pointer flex-shrink-0"
-        >
-          <span className="text-[12px] text-ink">Journal</span>
-          {!state.isPremium && <span className="font-serif text-[11px] text-terracotta">✦</span>}
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={requirePremium(actions.goHistory)}
+            className="flex items-center gap-[6px] bg-card border border-border rounded-full py-[9px] px-[13px] cursor-pointer"
+          >
+            <span className="text-[12px] text-ink">Journal</span>
+            {!state.isPremium && <span className="font-serif text-[11px] text-terracotta">✦</span>}
+          </button>
+          <ProfileButton />
+        </div>
       </div>
       <div className="text-[13px] text-muted-2 mt-2 leading-[1.5]">Une combinaison composée à partir de ta capsule.</div>
 

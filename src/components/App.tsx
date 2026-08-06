@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { CapselaProvider, useCapsela } from "@/lib/store";
 import WelcomeScreen from "./screens/WelcomeScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
@@ -12,13 +14,35 @@ import TenuesScreen from "./screens/TenuesScreen";
 import PremiumScreen from "./screens/PremiumScreen";
 import HistoryScreen from "./screens/HistoryScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
+import ProfileSetupScreen from "./screens/ProfileSetupScreen";
+import ProfileScreen from "./screens/ProfileScreen";
 import TabBar from "./TabBar";
 
 const TABBAR_SCREENS = new Set(["wardrobe", "capsule", "tenues", "history", "neverworn"]);
+const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth"]);
 
 function Screens() {
-  const { state } = useCapsela();
+  const { state, actions } = useCapsela();
+  const auth = useAuth();
   const showTabbar = TABBAR_SCREENS.has(state.screen);
+
+  // Session déjà ouverte (retour OAuth ou rechargement) : saute les écrans d'accueil.
+  const { ready, signedIn } = auth;
+  const profileCompleted = auth.profile.completed;
+  useEffect(() => {
+    if (ready && signedIn && PRE_AUTH_SCREENS.has(state.screen)) {
+      actions.go(profileCompleted ? "tenues" : "profileSetup");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, signedIn]);
+
+  if (!ready) {
+    return (
+      <div className="relative w-full max-w-[480px] mx-auto h-dvh flex items-center justify-center bg-cream">
+        <span className="font-serif text-[15px] tracking-[.4em] text-terracotta pl-[.4em]">✦</span>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden">
@@ -34,6 +58,8 @@ function Screens() {
         {state.screen === "premium" && <PremiumScreen />}
         {state.screen === "history" && <HistoryScreen />}
         {state.screen === "neverworn" && <NeverWornScreen />}
+        {state.screen === "profileSetup" && <ProfileSetupScreen />}
+        {state.screen === "profile" && <ProfileScreen />}
       </div>
       {showTabbar && <TabBar />}
     </div>
@@ -42,8 +68,10 @@ function Screens() {
 
 export default function App() {
   return (
-    <CapselaProvider>
-      <Screens />
-    </CapselaProvider>
+    <AuthProvider>
+      <CapselaProvider>
+        <Screens />
+      </CapselaProvider>
+    </AuthProvider>
   );
 }

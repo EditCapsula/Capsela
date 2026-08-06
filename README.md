@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Capsela
 
-## Getting Started
+App mobile-first de garde-robe capsule : « ta capsule, à partir de ce que tu possèdes déjà ».
+Stack : Next.js (App Router) + Tailwind + Supabase. Déploiement cible : Vercel.
 
-First, run the development server:
+## Lancer en local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ouvre [http://localhost:3000](http://localhost:3000) (idéalement en vue mobile dans les devtools).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Sans configuration Supabase, l'app tourne en **mode démo** : compte et profil sont stockés
+dans le navigateur (localStorage), les données de dressing sont des données d'exemple.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Brancher Supabase (comptes réels)
 
-## Learn More
+1. Crée un projet sur [supabase.com](https://supabase.com) (gratuit).
+2. Dans le dashboard : **SQL Editor** → colle et exécute le contenu de
+   `supabase/migrations/0001_profiles.sql`.
+3. **Project Settings → API** : copie l'URL du projet et la clé `anon`.
+4. Copie `.env.local.example` en `.env.local` et remplis les deux valeurs.
+5. Relance `npm run dev`. Inscription e-mail + mot de passe opérationnelle.
 
-To learn more about Next.js, take a look at the following resources:
+Pour « Continuer avec Google » : **Authentication → Providers → Google** dans le dashboard
+Supabase (nécessite un client OAuth Google, voir la doc Supabase).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `src/lib/` — état global (`store.tsx`), auth + profil (`auth.tsx`, `profile.ts`,
+  `supabase.ts`), données et logique de reco (`data.ts`, `logic.ts`, `selectors.ts`)
+- `src/components/screens/` — un fichier par écran
+- `supabase/migrations/` — schéma SQL (à exécuter dans Supabase)
+- `design-reference/` — prototype Claude Design validé (référence visuelle et transcripts)
 
-## Deploy on Vercel
+## Feuille de route (P0 → Alpha interne)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. ✅ Compte & profil (genre, taille, style, morphologie, goûts)
+2. Dressing — champ saison obligatoire et bloquant
+3. Capsule par défaut personnalisée (style, morphologie, météo, genre)
+4. Reco du jour · profil puis · dressing (filtre saison avant occasion)
+5. Création de looks depuis le dressing

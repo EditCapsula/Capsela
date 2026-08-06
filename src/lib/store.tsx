@@ -60,6 +60,8 @@ export interface Actions {
   goTenues: () => void;
   goHistory: () => void;
   goNeverWorn: () => void;
+  goProfile: () => void;
+  goProfileSetup: () => void;
   openAdd: () => void;
   openAddBag: () => void;
   addBack: () => void;
@@ -136,6 +138,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goTenues: () => go("tenues"),
     goHistory: () => go("history"),
     goNeverWorn: () => go("neverworn"),
+    goProfile: () => go("profile"),
+    goProfileSetup: () => go("profileSetup"),
     openAdd: () => go("add"),
     openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "accessoire", addName: "Sac " })),
     addBack: () => go("wardrobe"),

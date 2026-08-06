@@ -85,4 +85,6 @@ export type Screen =
   | "tenues"
   | "premium"
   | "history"
-  | "neverworn";
+  | "neverworn"
+  | "profileSetup"
+  | "profile";
