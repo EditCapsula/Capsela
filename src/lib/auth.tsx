@@ -22,7 +22,12 @@ export interface AuthContextValue {
   email: string | null;
   profile: Profile;
   error: string | null;
-  signUpEmail: (name: string, email: string, password: string, birthdate?: string) => Promise<boolean>;
+  signUpEmail: (
+    name: string,
+    email: string,
+    password: string,
+    birthdate?: string
+  ) => Promise<"ok" | "confirm_email" | "error">;
   signInEmail: (email: string, password: string) => Promise<boolean>;
   signInGoogle: () => Promise<boolean>;
   signOut: () => Promise<void>;
@@ -128,24 +133,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     else localStorage.removeItem(DEMO_KEY);
   };
 
-  const signUpEmail = async (name: string, email: string, password: string, birthdate?: string) => {
+  const signUpEmail = async (
+    name: string,
+    email: string,
+    password: string,
+    birthdate?: string
+  ): Promise<"ok" | "confirm_email" | "error"> => {
     setError(null);
     const fresh = { ...EMPTY_PROFILE, displayName: name, birthdate: birthdate || null };
     if (!isSupabaseConfigured) {
       persistDemo({ email, profile: fresh });
       setProfile(fresh);
-      return true;
+      return "ok";
     }
-    const { error: err } = await getSupabase().auth.signUp({
+    const { data, error: err } = await getSupabase().auth.signUp({
       email,
       password,
       options: { data: { display_name: name, birthdate: birthdate || null } },
     });
     if (err) {
       setError(frenchAuthError(err.message));
-      return false;
+      return "error";
     }
-    return true;
+    // Session absente = le projet Supabase exige la confirmation par e-mail.
+    return data.session ? "ok" : "confirm_email";
   };
 
   const signInEmail = async (email: string, password: string) => {

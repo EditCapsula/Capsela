@@ -15,6 +15,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [birthdate, setBirthdate] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmPending, setConfirmPending] = useState(false);
 
   const afterAuth = () => {
     if (auth.profile.completed) actions.goTenues();
@@ -24,9 +25,10 @@ export default function AuthScreen() {
   const submitEmail = async () => {
     if (busy) return;
     setBusy(true);
-    const ok = await auth.signUpEmail(state.authName.trim(), email.trim(), password, birthdate);
+    const res = await auth.signUpEmail(state.authName.trim(), email.trim(), password, birthdate);
     setBusy(false);
-    if (ok) actions.goProfileSetup(0);
+    if (res === "ok") actions.goProfileSetup(0);
+    else if (res === "confirm_email") setConfirmPending(true);
   };
 
   const submitGoogle = async () => {
@@ -100,6 +102,12 @@ export default function AuthScreen() {
       {auth.error && (
         <div className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12.5px] text-rust leading-[1.45]">
           {auth.error}
+        </div>
+      )}
+      {confirmPending && (
+        <div className="mt-4 bg-warm-bg border border-warm-border rounded-xl px-4 py-3 text-[12.5px] text-warm-text-2 leading-[1.5]">
+          <span className="font-semibold">Vérifie ta boîte mail.</span> On t&apos;a envoyé un lien de
+          confirmation à {email.trim()}. Clique dessus, puis reviens te connecter.
         </div>
       )}
 
