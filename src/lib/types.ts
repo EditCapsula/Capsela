@@ -54,6 +54,14 @@ export interface HistoryEntry {
   occasion: OccasionKey;
 }
 
+/** Look composé manuellement par l'utilisateur à partir de son dressing réel. */
+export interface SavedLook {
+  id: string;
+  name: string;
+  pieceIds: number[];
+  createdAt: number;
+}
+
 export interface AppState {
   /** Dressing réel de l'utilisateur. Vide au départ : la capsule par défaut prend le relais. */
   items: Item[];
@@ -102,6 +110,14 @@ export interface AppState {
   opinionContact: string | null;
   opinionStatus: "sent" | null;
   opinionVia: "message" | "whatsapp" | "social" | null;
+
+  /** Looks composés manuellement à partir du dressing réel. */
+  savedLooks: SavedLook[];
+  /** Pièces choisies dans l'écran de création de look, avant sauvegarde. */
+  lookDraftIds: number[];
+  lookDraftName: string;
+  /** Id du look actuellement ouvert dans l'écran de détail. */
+  activeLookId: string | null;
 }
 
 export type Screen =
@@ -121,4 +137,6 @@ export type Screen =
   | "profile"
   | "profileEdit"
   | "login"
-  | "opinionShare";
+  | "opinionShare"
+  | "createLook"
+  | "lookDetail";

@@ -20,6 +20,8 @@ import ProfileScreen from "./screens/ProfileScreen";
 import ProfileEditScreen from "./screens/ProfileEditScreen";
 import LoginScreen from "./screens/LoginScreen";
 import OpinionShareScreen from "./screens/OpinionShareScreen";
+import CreateLookScreen from "./screens/CreateLookScreen";
+import LookDetailScreen from "./screens/LookDetailScreen";
 import TabBar from "./TabBar";
 
 const TABBAR_SCREENS = new Set(["home", "wardrobe", "capsule", "tenues", "history"]);
@@ -68,6 +70,8 @@ function Screens() {
         {state.screen === "profileEdit" && <ProfileEditScreen />}
         {state.screen === "login" && <LoginScreen />}
         {state.screen === "opinionShare" && <OpinionShareScreen />}
+        {state.screen === "createLook" && <CreateLookScreen />}
+        {state.screen === "lookDetail" && <LookDetailScreen />}
       </div>
       {showTabbar && <TabBar />}
     </div>

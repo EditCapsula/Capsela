@@ -6,7 +6,7 @@ import { CATALOG } from "./catalog";
 import { computeDefaultCapsule, weatherSeasonBucket } from "./capsule";
 import { CATS, CITIES, type Weather } from "./data";
 import { generateOutfit, swapOutfitPiece } from "./logic";
-import type { AppState, CategoryKey, Item, OccasionKey, Screen, Season } from "./types";
+import type { AppState, CategoryKey, Item, OccasionKey, SavedLook, Screen, Season } from "./types";
 
 function buildInitialState(): AppState {
   return {
@@ -43,6 +43,10 @@ function buildInitialState(): AppState {
     opinionContact: null,
     opinionStatus: null,
     opinionVia: null,
+    savedLooks: [],
+    lookDraftIds: [],
+    lookDraftName: "",
+    activeLookId: null,
   };
 }
 
@@ -104,6 +108,16 @@ export interface Actions {
   closeOpinionShare: () => void;
   setOpinionContact: (c: string) => void;
   sendOpinionRequest: (via: "message" | "whatsapp" | "social") => void;
+
+  goCreateLook: () => void;
+  cancelCreateLook: () => void;
+  toggleLookDraftPiece: (id: number) => void;
+  setLookDraftName: (v: string) => void;
+  saveLook: () => void;
+  openLook: (id: string) => void;
+  closeLookDetail: () => void;
+  deleteActiveLook: () => void;
+  wearLookToday: (id: string) => void;
 }
 
 interface CapselaContextValue {
@@ -346,6 +360,59 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     closeOpinionShare: () => go("tenues"),
     setOpinionContact: (c) => setState((s) => ({ ...s, opinionContact: s.opinionContact === c ? null : c })),
     sendOpinionRequest: (via) => setState((s) => ({ ...s, opinionStatus: "sent", opinionVia: via })),
+
+    goCreateLook: () => setState((s) => ({ ...s, lookDraftIds: [], lookDraftName: "", screen: "createLook" })),
+    cancelCreateLook: () => go("wardrobe"),
+    toggleLookDraftPiece: (id) =>
+      setState((s) => ({
+        ...s,
+        lookDraftIds: s.lookDraftIds.includes(id) ? s.lookDraftIds.filter((x) => x !== id) : [...s.lookDraftIds, id],
+      })),
+    setLookDraftName: (v) => setState((s) => ({ ...s, lookDraftName: v })),
+    saveLook: () =>
+      setState((s) => {
+        // Un look doit rassembler au moins 2 pièces pour avoir du sens.
+        if (s.lookDraftIds.length < 2) return s;
+        const now = new Date();
+        const defaultName =
+          "Look du " + now.getDate().toString().padStart(2, "0") + "/" + (now.getMonth() + 1).toString().padStart(2, "0");
+        const look: SavedLook = {
+          id: "look" + Date.now(),
+          name: s.lookDraftName.trim() || defaultName,
+          pieceIds: [...s.lookDraftIds],
+          createdAt: Date.now(),
+        };
+        return {
+          ...s,
+          savedLooks: [look, ...s.savedLooks],
+          lookDraftIds: [],
+          lookDraftName: "",
+          screen: "wardrobe",
+        };
+      }),
+    openLook: (id) => setState((s) => ({ ...s, activeLookId: id, screen: "lookDetail" })),
+    closeLookDetail: () => setState((s) => ({ ...s, activeLookId: null, screen: "wardrobe" })),
+    deleteActiveLook: () =>
+      setState((s) => ({
+        ...s,
+        savedLooks: s.savedLooks.filter((l) => l.id !== s.activeLookId),
+        activeLookId: null,
+        screen: "wardrobe",
+      })),
+    wearLookToday: (id) =>
+      setState((s) => {
+        const look = s.savedLooks.find((l) => l.id === id);
+        if (!look) return s;
+        return {
+          ...s,
+          items: s.items.map((it) => (look.pieceIds.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
+          lookCount: s.lookCount + 1,
+          history: [
+            { id: "h" + Date.now(), ts: Date.now(), pieceIds: [...look.pieceIds], occasion: "all" },
+            ...s.history,
+          ],
+        };
+      }),
   };
 
   const requirePremium = (fn: () => void) => () => {

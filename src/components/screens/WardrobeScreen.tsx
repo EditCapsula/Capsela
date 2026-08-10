@@ -81,6 +81,51 @@ export default function WardrobeScreen() {
         </div>
       ))}
 
+      <div className="flex items-center justify-between mt-6 mb-3">
+        <span className="text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
+          Mes looks <span className="text-placeholder font-normal">({state.savedLooks.length})</span>
+        </span>
+        <button onClick={actions.goCreateLook} className="text-[12.5px] text-terracotta cursor-pointer">
+          + Créer un look
+        </button>
+      </div>
+      {state.savedLooks.length === 0 ? (
+        <button
+          onClick={actions.goCreateLook}
+          className="w-full flex items-center justify-center gap-[9px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card rounded-[14px] py-4 text-[13px] tracking-[.06em] text-ink cursor-pointer"
+        >
+          <span className="text-[17px] text-terracotta">+</span> Compose ton premier look
+        </button>
+      ) : (
+        <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
+          {state.savedLooks.map((look) => {
+            const pieces = look.pieceIds
+              .map((id) => items.find((i) => i.id === id))
+              .filter((it): it is NonNullable<typeof it> => Boolean(it));
+            return (
+              <button
+                key={look.id}
+                onClick={() => actions.openLook(look.id)}
+                className="flex-none w-[104px] cursor-pointer text-left"
+                style={{ scrollSnapAlign: "start" }}
+              >
+                <div className="w-full rounded-[11px] border border-border overflow-hidden flex" style={{ aspectRatio: "4/5" }}>
+                  {pieces.slice(0, 3).map((p, i) => (
+                    <div key={p.id} className="flex-1 h-full" style={{ background: p.hex, borderLeft: i > 0 ? "1px solid rgba(243,238,229,.5)" : "none" }} />
+                  ))}
+                </div>
+                <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
+                  {look.name}
+                </div>
+                <div className="text-[9.5px] text-placeholder mt-[1px]">
+                  {pieces.length} {pieces.length === 1 ? "pièce" : "pièces"}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <button
         onClick={actions.openAdd}
         className="mt-4 w-full flex items-center justify-center gap-[9px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card rounded-[14px] py-4 text-[13px] tracking-[.06em] text-ink cursor-pointer"
