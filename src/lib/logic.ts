@@ -1,5 +1,6 @@
 import type { CategoryKey, Item, OccasionKey } from "./types";
 import type { Weather } from "./data";
+import { bestStyleFor } from "./capsule";
 
 const BOTTOMS: CategoryKey[] = ["bas", "jupe"];
 
@@ -36,6 +37,56 @@ export function occasionFit(it: Item, occ: OccasionKey): boolean {
   }
 }
 
+/**
+ * Couleurs neutres : elles se combinent librement entre elles. Une fois
+ * qu'une teinte affirmée (hors de cette liste) figure dans la tenue, les
+ * pièces suivantes retombent sur les neutres pour éviter les accords qui
+ * jurent — au plus une couleur affirmée par tenue.
+ */
+const NEUTRAL_COLORS = new Set([
+  "Blanc", "Blanc cassé", "Crème", "Sable", "Camel", "Caramel", "Chocolat",
+  "Taupe", "Kaki", "Gris clair", "Gris", "Gris anthracite", "Noir", "Marine", "Denim", "Beige rosé",
+]);
+
+function isNeutralColor(colorName: string): boolean {
+  return NEUTRAL_COLORS.has(colorName);
+}
+
+/**
+ * Resserre un pool de candidats pour qu'ils s'accordent avec les pièces déjà
+ * retenues : couleur (au plus une teinte affirmée par tenue) puis style
+ * (préférence pour le style de la pièce d'ancrage) — chaque critère ne
+ * s'applique que s'il laisse au moins une option, jamais de blocage total.
+ */
+function harmonize(candidates: Item[], chosen: Item[], essential = true): Item[] {
+  if (candidates.length <= 1 || !chosen.length) return candidates;
+  let pool = candidates;
+  // Le bijou est un petit accent métallique (or/argent) : il ne doit pas
+  // consommer à lui seul le budget « une couleur affirmée par tenue ».
+  const colorRelevant = chosen.filter((i) => i.cat !== "bijou");
+  const accentPiece = colorRelevant.find((i) => !isNeutralColor(i.color));
+  if (accentPiece) {
+    const neutrals = pool.filter((i) => isNeutralColor(i.color));
+    if (neutrals.length) {
+      pool = neutrals;
+    } else {
+      // Aucune option neutre ici (ex. accessoires souvent tous colorés) :
+      // on reprend la même teinte affirmée plutôt que d'en ajouter une autre.
+      const echo = pool.filter((i) => i.color === accentPiece.color);
+      if (echo.length) pool = echo;
+      // Sinon, pour une pièce facultative on préfère l'omettre plutôt que
+      // jurer avec la couleur déjà choisie ; les pièces essentielles, elles,
+      // ne doivent jamais se retrouver bloquées à zéro option.
+      else if (!essential) pool = [];
+    }
+  }
+  if (!pool.length) return pool;
+  const anchorStyle = bestStyleFor(chosen[0]);
+  const styleMatches = pool.filter((i) => bestStyleFor(i) === anchorStyle);
+  if (styleMatches.length) pool = styleMatches;
+  return pool;
+}
+
 function rand<T>(arr: T[]): T | null {
   return arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 }
@@ -51,7 +102,8 @@ export interface GeneratedOutfit {
  * défaut tant qu'il est vide).
  * Contrainte produit : le pool est filtré par SAISON (météo du jour) AVANT
  * d'être filtré par occasion — chaque filtre ne s'applique que s'il laisse
- * au moins 4 pièces, sinon on retombe sur l'étape précédente.
+ * au moins 4 pièces, sinon on retombe sur l'étape précédente. Les pièces
+ * sont ensuite choisies pour s'accorder entre elles (couleur, style).
  */
 export function generateOutfit(pool: Item[], weather: Weather, occasion: OccasionKey): GeneratedOutfit {
   const seasonFiltered = pool.filter((i) => weather.seasons.includes(i.season));
@@ -59,7 +111,13 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
   const occFiltered = occasion === "all" ? seasonPool : seasonPool.filter((i) => occasionFit(i, occasion));
   const active = occFiltered.length >= 4 ? occFiltered : seasonPool;
 
-  const pick = (cats: CategoryKey[]) => rand(active.filter((i) => cats.includes(i.cat)));
+  const chosen: Item[] = [];
+  const pick = (cats: CategoryKey[], essential = true) => {
+    const candidates = harmonize(active.filter((i) => cats.includes(i.cat)), chosen, essential);
+    const picked = rand(candidates);
+    if (picked) chosen.push(picked);
+    return picked;
+  };
   const hasCat = (cats: CategoryKey[]) => pool.some((i) => cats.includes(i.cat));
 
   const ids: number[] = [];
@@ -74,11 +132,11 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
     if (b) ids.push(b.id);
   }
   if (Math.random() < 0.35) {
-    const p = pick(["pull"]);
+    const p = pick(["pull"], false);
     if (p && !ids.includes(p.id)) ids.push(p.id);
   }
   if (Math.random() < 0.3) {
-    const m = pick(["manteau"]);
+    const m = pick(["manteau"], false);
     if (m) ids.push(m.id);
   }
   const sh = pick(["chaussures"]);
@@ -88,7 +146,7 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
   const bijou = pick(["bijou"]);
   if (bijou) ids.push(bijou.id);
   if (Math.random() < 0.5) {
-    const ac = pick(["accessoire"]);
+    const ac = pick(["accessoire"], false);
     if (ac && !ids.includes(ac.id)) ids.push(ac.id);
   }
 
@@ -104,13 +162,17 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
   return { ids: Array.from(new Set(ids)), missingCats };
 }
 
-/** Remplace une pièce de la tenue par une autre de la même famille de catégorie. */
-export function swapOutfitPiece(outfit: number[], pool: Item[], pieceId: number, cat: CategoryKey): number[] {
+/**
+ * Remplace une pièce de la tenue par une autre de la même famille de
+ * catégorie, en priorité une qui s'accorde avec le reste de la tenue.
+ */
+export function swapOutfitPiece(outfitItems: Item[], pool: Item[], pieceId: number, cat: CategoryKey): number[] {
   const catGroup: CategoryKey[] =
     cat === "bas" ? ["bas", "jupe"] : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
-  const alts = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId);
-  if (!alts.length) return outfit;
-  const next = rand(alts);
-  if (!next) return outfit;
-  return outfit.map((id) => (id === pieceId ? next.id : id));
+  const candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId);
+  if (!candidates.length) return outfitItems.map((i) => i.id);
+  const rest = outfitItems.filter((i) => i.id !== pieceId);
+  const next = rand(harmonize(candidates, rest));
+  if (!next) return outfitItems.map((i) => i.id);
+  return outfitItems.map((i) => (i.id === pieceId ? next.id : i.id));
 }

@@ -299,7 +299,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
     setOccasion: (o) => setState((s) => regen({ ...s, occasion: o })),
     swapPiece: (id, cat) =>
-      setState((s) => ({ ...s, outfit: swapOutfitPiece(s.outfit, poolRef.current, id, cat) })),
+      setState((s) => {
+        const outfitItems = s.outfit
+          .map((oid) => findPiece(poolRef.current, oid))
+          .filter((it): it is Item => Boolean(it));
+        return { ...s, outfit: swapOutfitPiece(outfitItems, poolRef.current, id, cat) };
+      }),
     cycleGeo: () => setState((s) => ({ ...s, geoIndex: ((s.geoIndex || 0) + 1) % CITIES.length })),
 
     regenOutfit: () => setState(regen),
