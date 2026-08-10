@@ -16,10 +16,12 @@ import HistoryScreen from "./screens/HistoryScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import ProfileScreen from "./screens/ProfileScreen";
+import ProfileEditScreen from "./screens/ProfileEditScreen";
+import LoginScreen from "./screens/LoginScreen";
 import TabBar from "./TabBar";
 
 const TABBAR_SCREENS = new Set(["wardrobe", "capsule", "tenues", "history", "neverworn"]);
-const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth"]);
+const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
 
 function Screens() {
   const { state, actions } = useCapsela();
@@ -60,6 +62,8 @@ function Screens() {
         {state.screen === "neverworn" && <NeverWornScreen />}
         {state.screen === "profileSetup" && <ProfileSetupScreen />}
         {state.screen === "profile" && <ProfileScreen />}
+        {state.screen === "profileEdit" && <ProfileEditScreen />}
+        {state.screen === "login" && <LoginScreen />}
       </div>
       {showTabbar && <TabBar />}
     </div>

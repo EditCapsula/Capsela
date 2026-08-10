@@ -48,6 +48,8 @@ export interface AppState {
 
   screen: Screen;
   premiumReturn: Screen;
+  profileSetupStep: number;
+  profileSetupFromEdit: boolean;
   onbStep: number;
   authName: string;
   activeId: number;
@@ -87,4 +89,6 @@ export type Screen =
   | "history"
   | "neverworn"
   | "profileSetup"
-  | "profile";
+  | "profile"
+  | "profileEdit"
+  | "login";

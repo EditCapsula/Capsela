@@ -1,23 +1,23 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-serif: var(--font-bodoni), serif;
-  --font-sans: var(--font-jost), sans-serif;
+  --font-serif: var(--font-fraunces), serif;
+  --font-sans: var(--font-manrope), sans-serif;
 
-  --color-cream: #f4eee4;
-  --color-ink: #1e1a16;
-  --color-terracotta: #b0654a;
-  --color-gold: #d9a57e;
-  --color-card: #fbf8f2;
-  --color-border: #e8dfd2;
-  --color-border-soft: #e2d9cc;
-  --color-muted: #9c8e78;
-  --color-muted-2: #7c7264;
-  --color-muted-3: #6e6557;
-  --color-muted-4: #4a443c;
-  --color-placeholder: #b6ab99;
-  --color-warm-bg: #f6ecdd;
-  --color-warm-border: #e4cdb0;
+  --color-cream: #f3eee5;
+  --color-ink: #1d1a16;
+  --color-terracotta: #a66950;
+  --color-gold: #c9966f;
+  --color-card: #fbf8f3;
+  --color-border: #e6dccb;
+  --color-border-soft: #e6dccb;
+  --color-muted: #7b7366;
+  --color-muted-2: #7b7366;
+  --color-muted-3: #5c5548;
+  --color-muted-4: #5c5548;
+  --color-placeholder: #b3aa9b;
+  --color-warm-bg: #f0e5d6;
+  --color-warm-border: #dfd3be;
   --color-warm-text: #8a6b4a;
   --color-warm-text-2: #7c5a43;
   --color-chip-soft-bg: #efe7da;
@@ -25,6 +25,9 @@
   --color-chip-soft-border: #e4d8c2;
   --color-rust: #9e4b2e;
   --color-sage: #8fb27a;
+  --color-dots: #dfd3be;
+  --color-cream-dark-muted: #b3aa9b;
+  --color-cream-dark-soft: #d9cbb6;
 }
 
 * {

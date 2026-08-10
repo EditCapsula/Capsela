@@ -1,18 +1,20 @@
--- Profils utilisateurs Capsela.
+-- Profils utilisateurs Capsela (aligné sur le prototype v2).
 -- À exécuter dans le SQL Editor du dashboard Supabase (ou via `supabase db push`).
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   display_name text not null default '',
+  birthdate date,
   gender text check (gender in ('femme', 'homme', 'neutre', 'non_precise')),
-  height_cm integer check (height_cm between 100 and 250),
-  clothing_size text check (clothing_size in ('XS', 'S', 'M', 'L', 'XL', 'XXL')),
-  shoe_size numeric check (shoe_size between 30 and 55),
-  styles text[] not null default '{}',
-  morphology text check (morphology in ('A', 'V', 'H', 'X', 'O')),
   favorite_colors text[] not null default '{}',
-  tastes text[] not null default '{}',
+  taille_haut text check (taille_haut in ('XS', 'S', 'M', 'L', 'XL', 'XXL')),
+  taille_bas text,
+  pointure text,
+  styles text[] not null default '{}',
+  morphology text,
+  city text not null default 'Paris',
   completed boolean not null default false,
+  prefs jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -38,8 +40,12 @@ language plpgsql
 security definer set search_path = public
 as $$
 begin
-  insert into public.profiles (id, display_name)
-  values (new.id, coalesce(new.raw_user_meta_data ->> 'display_name', ''))
+  insert into public.profiles (id, display_name, birthdate)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'display_name', ''),
+    nullif(new.raw_user_meta_data ->> 'birthdate', '')::date
+  )
   on conflict (id) do nothing;
   return new;
 end;

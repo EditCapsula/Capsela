@@ -28,6 +28,8 @@ function buildInitialState(): AppState {
     seasonPickerOpen: false,
     screen: "welcome",
     premiumReturn: "tenues",
+    profileSetupStep: 0,
+    profileSetupFromEdit: false,
     onbStep: 0,
     authName: "",
     activeId: 1,
@@ -61,7 +63,10 @@ export interface Actions {
   goHistory: () => void;
   goNeverWorn: () => void;
   goProfile: () => void;
-  goProfileSetup: () => void;
+  goProfileEdit: () => void;
+  goLogin: () => void;
+  /** Ouvre le questionnaire profil à une étape donnée (0 = début). fromEdit : retour vers l'édition à la fin. */
+  goProfileSetup: (step?: number, fromEdit?: boolean) => void;
   openAdd: () => void;
   openAddBag: () => void;
   addBack: () => void;
@@ -139,7 +144,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goHistory: () => go("history"),
     goNeverWorn: () => go("neverworn"),
     goProfile: () => go("profile"),
-    goProfileSetup: () => go("profileSetup"),
+    goProfileEdit: () => go("profileEdit"),
+    goLogin: () => go("login"),
+    goProfileSetup: (step = 0, fromEdit = false) =>
+      setState((s) => ({ ...s, screen: "profileSetup", profileSetupStep: step, profileSetupFromEdit: fromEdit })),
     openAdd: () => go("add"),
     openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "accessoire", addName: "Sac " })),
     addBack: () => go("wardrobe"),

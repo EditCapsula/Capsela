@@ -1,6 +1,7 @@
 "use client";
 
 import { ONBOARDING_SLIDES } from "@/lib/data";
+import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
 
 export default function OnboardingScreen() {
@@ -10,6 +11,7 @@ export default function OnboardingScreen() {
 
   return (
     <div className="absolute inset-0 flex flex-col px-7 pt-2 pb-7">
+      <AppHeader showAvatar={false} />
       <div className="flex justify-between items-center">
         <button
           onClick={actions.onbBack}
@@ -17,7 +19,7 @@ export default function OnboardingScreen() {
         >
           ←
         </button>
-        <button onClick={actions.goAuth} className="text-[12px] text-muted cursor-pointer tracking-[.04em]">
+        <button onClick={actions.goAuth} className="text-[13px] text-muted cursor-pointer">
           Passer
         </button>
       </div>
@@ -40,7 +42,7 @@ export default function OnboardingScreen() {
         <div className="mt-8">
           <div className="text-[11px] tracking-[.2em] uppercase text-terracotta">{slide.kicker}</div>
           <div className="font-serif text-[31px] leading-[1.08] tracking-[-.01em] text-ink mt-3">{slide.title}</div>
-          <div className="text-[14px] text-muted-3 mt-3 leading-[1.55]">{slide.body}</div>
+          <div className="text-[14px] text-muted mt-3 leading-[1.55]">{slide.body}</div>
         </div>
       </div>
 
@@ -52,8 +54,8 @@ export default function OnboardingScreen() {
               className="rounded-full inline-block"
               style={
                 i === state.onbStep
-                  ? { width: 22, height: 7, background: "#B0654A" }
-                  : { width: 7, height: 7, background: "#D8CBB6" }
+                  ? { width: 22, height: 7, background: "#A66950" }
+                  : { width: 7, height: 7, background: "#DFD3BE" }
               }
             />
           ))}

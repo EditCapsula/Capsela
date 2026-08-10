@@ -1,301 +1,275 @@
 "use client";
 
 import { useState } from "react";
+import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { PALETTE } from "@/lib/data";
 import {
-  CLOTHING_SIZES,
   GENDERS,
+  MAX_PROFILE_COLORS,
   MORPHOLOGIES,
+  MORPHO_HINTS,
+  PROFILE_PALETTE,
   STYLE_OPTIONS,
-  TASTE_OPTIONS,
+  TAILLES_HAUT,
+  tailleBasLabelFor,
+  taillesBasFor,
   type Profile,
 } from "@/lib/profile";
 
-const STEPS = ["Genre", "Taille", "Style", "Morphologie", "Goûts"] as const;
+const STEPS = [
+  {
+    kicker: "Étape 1 · Genre",
+    title: "Comment tu te définis ?",
+    subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case.",
+  },
+  {
+    kicker: "Étape 2 · Goûts",
+    title: "Quelles couleurs préfères-tu porter ?",
+    subtitle: "Choisis jusqu’à 3 teintes qui te ressemblent.",
+  },
+  {
+    kicker: "Étape 3 · Taille",
+    title: "Quelles sont tes tailles habituelles ?",
+    subtitle: "Ça nous aide à te proposer des tenues qui tombent bien.",
+  },
+  {
+    kicker: "Étape 4 · Style",
+    title: "Quel est ton style ?",
+    subtitle: "Un seul choix — celui qui te ressemble le plus aujourd’hui.",
+  },
+  {
+    kicker: "Étape 5 · Morphologie",
+    title: "Et ta silhouette ?",
+    subtitle: "Pour affiner nos recommandations de coupes.",
+  },
+];
 
-function Chip({
+function chipCls(on: boolean): string {
+  return (
+    "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border " +
+    (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+  );
+}
+
+function OptionRow({
   label,
-  active,
+  on,
   onClick,
 }: {
   label: string;
-  active: boolean;
+  on: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
       className={
-        "px-[15px] py-[9px] rounded-full text-[13px] whitespace-nowrap cursor-pointer transition-all border " +
-        (active ? "bg-ink text-cream border-ink" : "bg-card text-muted-3 border-border")
+        "flex items-center gap-3 px-4 py-[15px] rounded-[14px] cursor-pointer text-[13.5px] leading-[1.4] text-left border " +
+        (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
       }
     >
-      {label}
+      <span className="flex-1">{label}</span>
+      <span
+        className={
+          "w-5 h-5 rounded-full flex-shrink-0 text-[11px] flex items-center justify-center " +
+          (on ? "bg-terracotta text-cream border border-terracotta" : "border-[1.5px] border-dots text-transparent")
+        }
+      >
+        {on ? "✓" : ""}
+      </span>
     </button>
   );
 }
 
 export default function ProfileSetupScreen() {
-  const { profile, saveProfile, email } = useAuth();
-  const { actions } = useCapsela();
-  const [step, setStep] = useState(0);
+  const { profile, saveProfile } = useAuth();
+  const { state, actions } = useCapsela();
+  const [step, setStep] = useState(state.profileSetupStep || 0);
   const [draft, setDraft] = useState<Profile>(profile);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const patch = (p: Partial<Profile>) => setDraft((d) => ({ ...d, ...p }));
-  const toggleIn = (list: string[], v: string) =>
-    list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
 
-  const stepValid = [
-    draft.gender != null,
-    draft.heightCm != null || draft.clothingSize != null || draft.shoeSize != null,
-    draft.styles.length > 0,
-    draft.morphology != null,
-    true, // les goûts sont optionnels
-  ][step];
+  const toggleColor = (hex: string) => {
+    const cur = draft.favoriteColors;
+    if (cur.includes(hex)) return patch({ favoriteColors: cur.filter((x) => x !== hex) });
+    if (cur.length >= MAX_PROFILE_COLORS) return patch({ favoriteColors: [...cur.slice(1), hex] });
+    patch({ favoriteColors: [...cur, hex] });
+  };
+
+  const isLast = step >= STEPS.length - 1;
 
   const finish = async () => {
     await saveProfile({ ...draft, completed: true });
-    actions.goTenues();
+    if (state.profileSetupFromEdit) actions.goProfileEdit();
+    else actions.goTenues();
   };
 
-  const next = () => (step >= STEPS.length - 1 ? finish() : setStep(step + 1));
-  const back = () => setStep(Math.max(0, step - 1));
+  const next = () => (isLast ? finish() : setStep(step + 1));
+  const back = () => {
+    if (step > 0) setStep(step - 1);
+    else if (state.profileSetupFromEdit || profile.completed) actions.goProfile();
+  };
+  const showBack = step > 0 || state.profileSetupFromEdit || profile.completed;
+
+  const meta = STEPS[step];
+  const taillesBas = taillesBasFor(draft.gender);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-2 pb-7">
+      <AppHeader showAvatar={false} />
+
       <div className="flex items-center justify-between">
-        {step > 0 ? (
+        {showBack ? (
           <button
             onClick={back}
-            className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
+            className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-[16px] text-ink cursor-pointer"
           >
             ←
           </button>
         ) : (
-          <div className="w-[38px]" />
+          <div className="w-9" />
         )}
-        <div className="flex gap-[7px] items-center">
-          {STEPS.map((label, i) => (
+        <div className="flex gap-[6px]">
+          {STEPS.map((s, i) => (
             <span
-              key={label}
-              className={
-                "rounded-full transition-all " +
-                (i === step ? "w-[22px] h-[7px] bg-terracotta" : "w-[7px] h-[7px] bg-[#d8cbb6]")
+              key={s.kicker}
+              className="rounded-full inline-block"
+              style={
+                i === step
+                  ? { width: 20, height: 6, background: "#A66950" }
+                  : { width: 6, height: 6, background: "#DFD3BE" }
               }
             />
           ))}
         </div>
-        <div className="w-[38px]" />
+        <div className="w-9" />
       </div>
 
-      <div className="mt-6">
-        <div className="text-[11px] tracking-[.2em] uppercase text-terracotta">
-          Ton profil · {step + 1} / {STEPS.length}
+      <div className="mt-[26px]">
+        <div className="text-[11px] tracking-[.18em] uppercase text-terracotta">{meta.kicker}</div>
+        <div className="font-serif text-[27px] leading-[1.15] text-ink mt-3">{meta.title}</div>
+        <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">{meta.subtitle}</div>
+      </div>
+
+      {step === 0 && (
+        <div className="flex flex-col gap-[10px] mt-[26px]">
+          {GENDERS.map((g) => (
+            <OptionRow
+              key={g.key}
+              label={g.label}
+              on={draft.gender === g.key}
+              onClick={() => patch({ gender: g.key })}
+            />
+          ))}
         </div>
+      )}
 
-        {step === 0 && (
-          <>
-            <div className="font-serif text-[30px] leading-[1.08] text-ink mt-3">
-              Comment te <span className="italic">présenter</span> ?
-            </div>
-            <div className="text-[13px] text-muted-2 mt-3 leading-[1.55]">
-              Tes recommandations de pièces et de tenues s&apos;adaptent à ton genre — et restent
-              modifiables à tout moment.
-            </div>
-            <div className="flex flex-col gap-[10px] mt-6">
-              {GENDERS.map((g) => (
-                <button
-                  key={g.key}
-                  onClick={() => patch({ gender: g.key })}
-                  className={
-                    "flex items-center justify-between rounded-2xl border px-4 py-[15px] text-[14px] cursor-pointer transition-all " +
-                    (draft.gender === g.key
-                      ? "bg-ink text-cream border-ink"
-                      : "bg-card text-ink border-border")
-                  }
-                >
-                  {g.label}
-                  {draft.gender === g.key && <span className="text-terracotta">✓</span>}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {step === 1 && (
-          <>
-            <div className="font-serif text-[30px] leading-[1.08] text-ink mt-3">
-              Tes <span className="italic">mesures</span>
-            </div>
-            <div className="text-[13px] text-muted-2 mt-3 leading-[1.55]">
-              Pour te proposer des coupes qui tombent bien. Renseigne ce que tu veux.
-            </div>
-
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[11px]">Taille (cm)</div>
-            <input
-              type="number"
-              inputMode="numeric"
-              className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
-              placeholder="ex. 168"
-              value={draft.heightCm ?? ""}
-              onChange={(e) => patch({ heightCm: e.target.value ? Number(e.target.value) : null })}
-            />
-
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[11px]">
-              Taille de confection
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {CLOTHING_SIZES.map((sz) => (
-                <Chip
-                  key={sz}
-                  label={sz}
-                  active={draft.clothingSize === sz}
-                  onClick={() => patch({ clothingSize: draft.clothingSize === sz ? null : sz })}
+      {step === 1 && (
+        <div className="grid grid-cols-4 gap-x-2 gap-y-5 mt-[26px]">
+          {PROFILE_PALETTE.map(([name, hex]) => {
+            const on = draft.favoriteColors.includes(hex);
+            return (
+              <button key={hex} onClick={() => toggleColor(hex)} className="flex flex-col items-center gap-[7px] cursor-pointer">
+                <span
+                  className="w-[38px] h-[38px] rounded-[11px]"
+                  style={{
+                    background: hex,
+                    border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
+                    boxShadow: on ? "0 0 0 3px #F3EEE5 inset" : "none",
+                  }}
                 />
-              ))}
-            </div>
+                <span className={"text-[9.5px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>
+                  {name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[11px]">Pointure (EU)</div>
-            <input
-              type="number"
-              inputMode="numeric"
-              className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
-              placeholder="ex. 38"
-              value={draft.shoeSize ?? ""}
-              onChange={(e) => patch({ shoeSize: e.target.value ? Number(e.target.value) : null })}
-            />
-          </>
-        )}
+      {step === 2 && (
+        <div className="mt-[26px]">
+          <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[11px]">Taille de haut</div>
+          <div className="flex gap-2 flex-wrap">
+            {TAILLES_HAUT.map((t) => (
+              <button key={t} onClick={() => patch({ tailleHaut: t })} className={chipCls(draft.tailleHaut === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[22px] mb-[11px]">
+            {tailleBasLabelFor(draft.gender)}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {taillesBas.map((t) => (
+              <button key={t} onClick={() => patch({ tailleBas: t })} className={chipCls(draft.tailleBas === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+          <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[22px] mb-[11px]">Pointure</div>
+          <input
+            inputMode="numeric"
+            className="capin bg-card border border-border rounded-[14px] px-[17px] py-[13px] text-[14px] text-ink font-sans w-[120px]"
+            placeholder="Ex. 39"
+            value={draft.pointure ?? ""}
+            onChange={(e) => patch({ pointure: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) || null })}
+          />
+        </div>
+      )}
 
-        {step === 2 && (
-          <>
-            <div className="font-serif text-[30px] leading-[1.08] text-ink mt-3">
-              Ton <span className="italic">style</span>
-            </div>
-            <div className="text-[13px] text-muted-2 mt-3 leading-[1.55]">
-              Choisis un ou plusieurs styles — ta capsule par défaut partira de là.
-            </div>
-            <div className="flex gap-2 flex-wrap mt-6">
-              {STYLE_OPTIONS.map((st) => (
-                <Chip
-                  key={st}
-                  label={st}
-                  active={draft.styles.includes(st)}
-                  onClick={() => patch({ styles: toggleIn(draft.styles, st) })}
-                />
-              ))}
-            </div>
-          </>
-        )}
+      {step === 3 && (
+        <div className="flex flex-wrap gap-[9px] mt-[26px]">
+          {STYLE_OPTIONS.map((st) => {
+            const on = draft.styles[0] === st;
+            return (
+              <button
+                key={st}
+                onClick={() => patch({ styles: [st] })}
+                className={
+                  "px-[18px] py-[11px] rounded-full cursor-pointer text-[14px] border " +
+                  (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+                }
+              >
+                {st}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
-        {step === 3 && (
-          <>
-            <div className="font-serif text-[30px] leading-[1.08] text-ink mt-3">
-              Ta <span className="italic">morphologie</span>
-            </div>
-            <div className="text-[13px] text-muted-2 mt-3 leading-[1.55]">
-              Pour privilégier les coupes qui te mettent en valeur.
-            </div>
-            <div className="flex flex-col gap-[10px] mt-6">
+      {step === 4 && (
+        <>
+          <div className="flex flex-col gap-[10px] mt-[26px]">
+            {MORPHOLOGIES.map((m) => (
+              <OptionRow key={m} label={m} on={draft.morphology === m} onClick={() => patch({ morphology: m })} />
+            ))}
+          </div>
+          <button onClick={() => setGuideOpen(!guideOpen)} className="flex items-center gap-[7px] mt-[18px] cursor-pointer">
+            <span className="text-[12.5px] text-terracotta">Comment savoir quelle est ma morphologie ?</span>
+          </button>
+          {guideOpen && (
+            <div className="bg-card border border-border rounded-[14px] px-4 py-[14px] mt-[10px] flex flex-col gap-[11px]">
               {MORPHOLOGIES.map((m) => (
-                <button
-                  key={m.key}
-                  onClick={() => patch({ morphology: m.key })}
-                  className={
-                    "text-left rounded-2xl border px-4 py-[13px] cursor-pointer transition-all " +
-                    (draft.morphology === m.key
-                      ? "bg-ink border-ink"
-                      : "bg-card border-border")
-                  }
-                >
-                  <div
-                    className={
-                      "text-[14px] " + (draft.morphology === m.key ? "text-cream" : "text-ink")
-                    }
-                  >
-                    {m.label}
-                  </div>
-                  <div
-                    className={
-                      "text-[11.5px] mt-[2px] leading-[1.4] " +
-                      (draft.morphology === m.key ? "text-[#a99c88]" : "text-muted")
-                    }
-                  >
-                    {m.hint}
-                  </div>
-                </button>
+                <div key={m}>
+                  <div className="text-[12.5px] text-ink font-semibold">{m}</div>
+                  <div className="text-[12px] text-muted mt-[2px] leading-[1.4]">{MORPHO_HINTS[m]}</div>
+                </div>
               ))}
             </div>
-          </>
-        )}
-
-        {step === 4 && (
-          <>
-            <div className="font-serif text-[30px] leading-[1.08] text-ink mt-3">
-              Tes <span className="italic">goûts</span>
-            </div>
-            <div className="text-[13px] text-muted-2 mt-3 leading-[1.55]">
-              Couleurs et envies — optionnel, mais ça affine les recommandations.
-            </div>
-
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-3">
-              Couleurs préférées
-            </div>
-            <div className="flex gap-[13px] flex-wrap">
-              {PALETTE.map(([name, hex]) => {
-                const on = draft.favoriteColors.includes(name);
-                return (
-                  <button
-                    key={name}
-                    onClick={() => patch({ favoriteColors: toggleIn(draft.favoriteColors, name) })}
-                    className="flex flex-col items-center gap-[6px] cursor-pointer"
-                  >
-                    <span
-                      className="w-[38px] h-[38px] rounded-[11px]"
-                      style={{
-                        background: hex,
-                        border: on ? "2px solid #1e1a16" : "1px solid rgba(30,26,22,.12)",
-                        boxShadow: on ? "0 0 0 3px #f4eee4 inset" : "none",
-                      }}
-                    />
-                    <span className={"text-[9.5px] " + (on ? "text-ink" : "text-muted")}>{name}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[11px]">Tes envies</div>
-            <div className="flex gap-2 flex-wrap">
-              {TASTE_OPTIONS.map((t) => (
-                <Chip
-                  key={t}
-                  label={t}
-                  active={draft.tastes.includes(t)}
-                  onClick={() => patch({ tastes: toggleIn(draft.tastes, t) })}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+          )}
+        </>
+      )}
 
       <div className="flex-1" />
-
       <button
         onClick={next}
-        disabled={!stepValid}
-        className={
-          "mt-7 text-center rounded-full py-4 text-[13px] tracking-[.12em] uppercase transition-all " +
-          (stepValid ? "bg-terracotta text-cream cursor-pointer" : "bg-[#e0d5c2] text-[#a99c88] cursor-default")
-        }
+        className="mt-[22px] text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer bg-terracotta text-cream"
       >
-        {step >= STEPS.length - 1 ? "C'est parti" : "Continuer"}
+        {isLast ? "Terminer le profil" : "Continuer"}
       </button>
-      {email && (
-        <div className="text-[11px] text-muted text-center mt-3">Compte · {email}</div>
-      )}
     </div>
   );
 }

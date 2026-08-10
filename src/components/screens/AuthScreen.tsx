@@ -1,36 +1,32 @@
 "use client";
 
 import { useState } from "react";
+import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 
-const AUTH_PERKS = [
-  "Ton dressing sauvegardé et synchronisé",
-  "Ta capsule et tes stats en un coup d’œil",
-  "Retrouve tout, même après un nouveau téléphone",
-];
+const INPUT_CLS =
+  "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
 
 export default function AuthScreen() {
   const { state, actions } = useCapsela();
   const auth = useAuth();
-  const [mode, setMode] = useState<"signup" | "signin">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [birthdate, setBirthdate] = useState("");
   const [busy, setBusy] = useState(false);
 
   const afterAuth = () => {
-    actions.go(auth.profile.completed ? "tenues" : "profileSetup");
+    if (auth.profile.completed) actions.goTenues();
+    else actions.goProfileSetup(0);
   };
 
   const submitEmail = async () => {
     if (busy) return;
     setBusy(true);
-    const ok =
-      mode === "signup"
-        ? await auth.signUpEmail(state.authName.trim(), email.trim(), password)
-        : await auth.signInEmail(email.trim(), password);
+    const ok = await auth.signUpEmail(state.authName.trim(), email.trim(), password, birthdate);
     setBusy(false);
-    if (ok) afterAuth();
+    if (ok) actions.goProfileSetup(0);
   };
 
   const submitGoogle = async () => {
@@ -42,90 +38,67 @@ export default function AuthScreen() {
     if (ok) afterAuth();
   };
 
-  const switchMode = (m: "signup" | "signin") => {
-    setMode(m);
-    auth.clearError();
-  };
-
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-2 pb-7">
-      <button
-        onClick={actions.goWelcome}
-        className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-      >
-        ←
-      </button>
-
-      <div className="mt-[22px]">
-        <div className="font-serif text-[32px] leading-[1.05] text-ink">
-          {mode === "signup" ? (
-            <>
-              Crée ton <span className="italic">compte</span>
-            </>
-          ) : (
-            <>
-              Re-<span className="italic">bienvenue</span>
-            </>
-          )}
-        </div>
-        <div className="text-[13px] text-muted-2 mt-[10px] leading-[1.5]">
-          Pour sauvegarder ton dressing et ta capsule, et les retrouver sur tous tes écrans.
-        </div>
+    <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
+      <div className="mt-[6px]">
+        <AppHeader showAvatar={false} />
       </div>
 
-      {mode === "signup" && (
-        <div className="mt-[22px] bg-card border border-border rounded-2xl px-[18px] py-4 flex flex-col gap-[13px]">
-          {AUTH_PERKS.map((p) => (
-            <div key={p} className="flex items-start gap-[11px]">
-              <span className="w-5 h-5 rounded-full bg-terracotta text-cream flex items-center justify-center text-[11px] flex-shrink-0 mt-px">
-                ✓
-              </span>
-              <span className="text-[13px] text-muted-4 leading-[1.4]">{p}</span>
-            </div>
-          ))}
+      <div className="mt-[22px]">
+        <div className="font-serif text-[30px] leading-[1.12] text-ink">
+          Crée ton <span className="italic text-terracotta">compte</span>
         </div>
-      )}
+        <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">
+          Pour recevoir ta tenue du jour et sauvegarder ton dressing, où que tu sois.
+        </div>
+      </div>
 
       <button
         onClick={submitGoogle}
-        className="flex items-center justify-center gap-[10px] bg-card border border-border-soft text-ink rounded-full py-[15px] text-[14px] cursor-pointer mt-[22px]"
+        className="flex items-center justify-center gap-[10px] bg-card border border-border text-ink rounded-full py-[15px] text-[14px] cursor-pointer mt-7"
       >
-        <span className="font-serif font-medium">G</span>&nbsp;Continuer avec Google
+        <span className="font-serif font-semibold">G</span>Continuer avec Google
       </button>
 
-      <div className="flex items-center gap-[11px] my-5">
-        <div className="flex-1 h-px bg-border-soft" />
-        <span className="text-[11px] tracking-[.14em] uppercase text-placeholder">ou par e-mail</span>
-        <div className="flex-1 h-px bg-border-soft" />
+      <div className="flex items-center gap-[11px] my-[22px]">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-[10.5px] tracking-[.16em] uppercase text-placeholder">ou par e-mail</span>
+        <div className="flex-1 h-px bg-border" />
       </div>
 
       <div className="flex flex-col gap-[10px]">
-        {mode === "signup" && (
-          <input
-            className="capin bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
-            value={state.authName}
-            onChange={(e) => actions.setAuthName(e.target.value)}
-            placeholder="Prénom"
-          />
-        )}
+        <input
+          className={INPUT_CLS}
+          value={state.authName}
+          onChange={(e) => actions.setAuthName(e.target.value)}
+          placeholder="Prénom"
+        />
         <input
           type="email"
-          className="capin bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
+          className={INPUT_CLS}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Adresse e-mail"
         />
         <input
           type="password"
-          className="capin bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
+          className={INPUT_CLS}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Mot de passe"
         />
+        <input
+          type="date"
+          className={INPUT_CLS}
+          style={{ colorScheme: "light" }}
+          value={birthdate}
+          onChange={(e) => setBirthdate(e.target.value)}
+          aria-label="Date de naissance"
+        />
       </div>
 
       {auth.error && (
-        <div className="mt-4 bg-[#f6e3dd] border border-[#e4b8a8] rounded-xl px-4 py-3 text-[12.5px] text-rust leading-[1.45]">
+        <div className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12.5px] text-rust leading-[1.45]">
           {auth.error}
         </div>
       )}
@@ -133,35 +106,30 @@ export default function AuthScreen() {
       <button
         onClick={submitEmail}
         className={
-          "mt-[18px] text-center rounded-full py-4 text-[13px] tracking-[.12em] uppercase cursor-pointer " +
-          (busy ? "bg-[#c99680] text-cream" : "bg-terracotta text-cream")
+          "mt-5 text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer text-cream " +
+          (busy ? "bg-[#bd8a75]" : "bg-terracotta")
         }
       >
-        {busy ? "Un instant…" : mode === "signup" ? "Créer mon compte" : "Se connecter"}
+        {busy ? "Un instant…" : "Créer mon compte"}
       </button>
 
-      <button
-        onClick={() => switchMode(mode === "signup" ? "signin" : "signup")}
-        className="text-center py-[14px] text-[13px] text-muted-2 cursor-pointer bg-transparent"
-      >
-        {mode === "signup" ? (
-          <>
-            J&apos;ai déjà un compte · <span className="text-terracotta">Se connecter</span>
-          </>
-        ) : (
-          <>
-            Pas encore de compte · <span className="text-terracotta">S&apos;inscrire</span>
-          </>
-        )}
-      </button>
+      <div className="text-[11px] text-placeholder text-center mt-4 leading-[1.5]">
+        En continuant, tu acceptes nos <span className="text-muted">Conditions</span> et notre{" "}
+        <span className="text-muted">Politique de confidentialité</span>.
+      </div>
 
       {auth.demoMode && (
-        <div className="text-[11px] text-muted text-center mt-1 leading-[1.5]">
+        <div className="text-[11px] text-muted text-center mt-3 leading-[1.5]">
           Mode démo : aucun serveur configuré, ton compte reste sur cet appareil.
         </div>
       )}
-      <div className="text-[11px] text-muted text-center mt-2 leading-[1.5]">
-        En continuant, tu acceptes nos Conditions et notre Politique de confidentialité.
+
+      <div className="flex-1" />
+      <div className="text-center pt-4 pb-[6px] text-[13px] text-muted">
+        Déjà un compte ·{" "}
+        <button onClick={actions.goLogin} className="text-terracotta cursor-pointer">
+          Se connecter
+        </button>
       </div>
     </div>
   );

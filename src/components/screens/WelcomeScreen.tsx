@@ -10,14 +10,14 @@ export default function WelcomeScreen() {
       <div className="flex-1 flex flex-col justify-center items-center text-center px-[34px]">
         <div className="font-serif text-[15px] tracking-[.4em] text-gold pl-[.4em]">✦</div>
         <div className="font-serif text-[40px] tracking-[.30em] text-cream mt-[18px] pl-[.30em]">CAPSELA</div>
-        <div className="font-serif italic text-[21px] text-[#C7B9A2] mt-5 leading-[1.35]">
-          Ta capsule, à partir de
+        <div className="font-serif italic text-[21px] text-cream-dark-soft mt-5 leading-[1.35]">
+          Ton styliste personnel,
           <br />
-          ce que tu possèdes déjà.
+          chaque matin.
         </div>
-        <div className="text-[13px] text-[#A99C88] mt-4 leading-[1.55] max-w-[272px]">
-          Réunis ton dressing, choisis tes 30-40 essentiels, et porte enfin tout ce que tu as. Aucun achat pour
-          commencer.
+        <div className="text-[13px] text-cream-dark-muted mt-4 leading-[1.55] max-w-[280px]">
+          Des tenues pensées pour ta silhouette, tes goûts, la météo et tes sorties — à partir de ton
+          propre dressing.
         </div>
       </div>
       <div className="px-7 pb-10 flex flex-col gap-3">
@@ -27,7 +27,7 @@ export default function WelcomeScreen() {
         >
           Commencer
         </button>
-        <button onClick={actions.goAuth} className="text-center py-2 text-[13px] text-[#C7B9A2] cursor-pointer">
+        <button onClick={actions.goLogin} className="text-center py-2 text-[13px] text-cream-dark-muted cursor-pointer">
           J&apos;ai déjà un compte · <span className="text-gold">Se connecter</span>
         </button>
       </div>

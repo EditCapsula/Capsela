@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
-import { EMPTY_PROFILE, type Profile } from "./profile";
+import { DEFAULT_PREFS, EMPTY_PROFILE, type Profile } from "./profile";
 
 const DEMO_KEY = "capsela.demo.auth";
 
@@ -22,7 +22,7 @@ export interface AuthContextValue {
   email: string | null;
   profile: Profile;
   error: string | null;
-  signUpEmail: (name: string, email: string, password: string) => Promise<boolean>;
+  signUpEmail: (name: string, email: string, password: string, birthdate?: string) => Promise<boolean>;
   signInEmail: (email: string, password: string) => Promise<boolean>;
   signInGoogle: () => Promise<boolean>;
   signOut: () => Promise<void>;
@@ -35,30 +35,34 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function rowToProfile(row: Record<string, unknown>): Profile {
   return {
     displayName: (row.display_name as string) ?? "",
+    birthdate: (row.birthdate as string) ?? null,
     gender: (row.gender as Profile["gender"]) ?? null,
-    heightCm: (row.height_cm as number) ?? null,
-    clothingSize: (row.clothing_size as string) ?? null,
-    shoeSize: row.shoe_size == null ? null : Number(row.shoe_size),
+    favoriteColors: (row.favorite_colors as string[]) ?? [],
+    tailleHaut: (row.taille_haut as string) ?? null,
+    tailleBas: (row.taille_bas as string) ?? null,
+    pointure: (row.pointure as string) ?? null,
     styles: (row.styles as string[]) ?? [],
     morphology: (row.morphology as string) ?? null,
-    favoriteColors: (row.favorite_colors as string[]) ?? [],
-    tastes: (row.tastes as string[]) ?? [],
+    city: (row.city as string) || "Paris",
     completed: Boolean(row.completed),
+    prefs: { ...DEFAULT_PREFS, ...((row.prefs as object) ?? {}) },
   };
 }
 
 function profileToRow(p: Profile) {
   return {
     display_name: p.displayName,
+    birthdate: p.birthdate,
     gender: p.gender,
-    height_cm: p.heightCm,
-    clothing_size: p.clothingSize,
-    shoe_size: p.shoeSize,
+    favorite_colors: p.favoriteColors,
+    taille_haut: p.tailleHaut,
+    taille_bas: p.tailleBas,
+    pointure: p.pointure,
     styles: p.styles,
     morphology: p.morphology,
-    favorite_colors: p.favoriteColors,
-    tastes: p.tastes,
+    city: p.city,
     completed: p.completed,
+    prefs: p.prefs,
   };
 }
 
@@ -124,17 +128,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     else localStorage.removeItem(DEMO_KEY);
   };
 
-  const signUpEmail = async (name: string, email: string, password: string) => {
+  const signUpEmail = async (name: string, email: string, password: string, birthdate?: string) => {
     setError(null);
+    const fresh = { ...EMPTY_PROFILE, displayName: name, birthdate: birthdate || null };
     if (!isSupabaseConfigured) {
-      persistDemo({ email, profile: { ...EMPTY_PROFILE, displayName: name } });
-      setProfile({ ...EMPTY_PROFILE, displayName: name });
+      persistDemo({ email, profile: fresh });
+      setProfile(fresh);
       return true;
     }
     const { error: err } = await getSupabase().auth.signUp({
       email,
       password,
-      options: { data: { display_name: name } },
+      options: { data: { display_name: name, birthdate: birthdate || null } },
     });
     if (err) {
       setError(frenchAuthError(err.message));
