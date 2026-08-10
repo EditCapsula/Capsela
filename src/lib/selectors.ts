@@ -53,7 +53,7 @@ export function breakdown(state: AppState): BreakdownRow[] {
     const inC = inCounts[idx];
     const tot = items.filter((i) => i.cat === key).length;
     return { label: plural, inCount: inC, total: tot, pct: (inC / maxIn) * 100 };
-  });
+  }).filter((r) => r.total > 0);
 }
 
 export function neverWornItems(state: AppState): Item[] {

@@ -1,15 +1,27 @@
-export type CategoryKey = "haut" | "bas" | "robe" | "chaussures" | "accessoire";
+export type CategoryKey =
+  | "haut"
+  | "bas"
+  | "robe"
+  | "manteau"
+  | "pull"
+  | "combinaison"
+  | "jupe"
+  | "chaussures"
+  | "sac"
+  | "bijou"
+  | "accessoire";
 
-export type Season = "Printemps" | "Été" | "Automne" | "Hiver" | "Toutes saisons";
+export type Season = "Printemps / Été" | "Automne / Hiver" | "Toutes saisons";
 
 export type OccasionKey =
   | "all"
   | "travail"
-  | "weekend"
+  | "chill"
+  | "dejeuner"
+  | "date"
   | "sport"
   | "soiree"
-  | "ceremonie"
-  | "voyage";
+  | "ceremonie";
 
 export interface Item {
   id: number;
@@ -22,6 +34,10 @@ export interface Item {
   worn: number | null;
   /** Value of `worn` before the most recent "worn today" action, for Corriger/undo. */
   wornPrev?: number | null;
+  brand?: string;
+  size?: string | null;
+  /** Occasion principale déclarée à l'ajout. */
+  occasion?: OccasionKey;
 }
 
 export interface City {
@@ -55,12 +71,15 @@ export interface AppState {
   activeId: number;
 
   catFilter: CategoryKey | "all";
-  seasonFilter: Season | "all";
 
   addName: string;
+  addBrand: string;
   addCat: CategoryKey;
   addColor: { name: string; hex: string };
-  addSeason: Season;
+  addSize: string | null;
+  /** null tant que l'utilisateur n'a pas confirmé — la sauvegarde est bloquée. */
+  addSeason: Season | null;
+  addOccasion: OccasionKey;
 
   capInfoOpen: boolean;
   geoIndex: number;

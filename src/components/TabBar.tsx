@@ -25,7 +25,7 @@ export default function TabBar() {
             background: dressActive ? "#B0654A" : "transparent",
           }}
         />
-        <span className={`text-[10px] tracking-[.09em] uppercase ${labelColor(dressActive)}`}>Garde-robe</span>
+        <span className={`text-[10px] tracking-[.09em] uppercase ${labelColor(dressActive)}`}>Dressing</span>
       </button>
 
       <button

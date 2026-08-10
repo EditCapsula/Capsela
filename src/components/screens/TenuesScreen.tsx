@@ -91,23 +91,25 @@ export default function TenuesScreen() {
         )}
       </div>
       <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px]">
-        {OCCASIONS.map(([key, label]) => {
-          const on = (state.occasion || "all") === key && state.isPremium;
-          return (
-            <button
-              key={key}
-              onClick={requirePremium(() => actions.setOccasion(key))}
-              className="flex-none text-center py-[9px] px-4 rounded-full text-[12.5px] cursor-pointer whitespace-nowrap font-sans transition-all border"
-              style={{
-                background: on ? "#1E1A16" : "transparent",
-                color: on ? "#F4EEE4" : "#6E6557",
-                borderColor: on ? "#1E1A16" : "#E2D9CC",
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
+        {([["all", "Toutes"] as const, ...OCCASIONS.map(([key, label]) => [key, label] as const)]).map(
+          ([key, label]) => {
+            const on = (state.occasion || "all") === key && state.isPremium;
+            return (
+              <button
+                key={key}
+                onClick={requirePremium(() => actions.setOccasion(key))}
+                className="flex-none text-center py-[9px] px-4 rounded-full text-[12.5px] cursor-pointer whitespace-nowrap font-sans transition-all border"
+                style={{
+                  background: on ? "#1D1A16" : "transparent",
+                  color: on ? "#F3EEE5" : "#5C5548",
+                  borderColor: on ? "#1D1A16" : "#E6DCCB",
+                }}
+              >
+                {label}
+              </button>
+            );
+          }
+        )}
       </div>
 
       <div className="flex justify-between items-center mt-6 mb-3">

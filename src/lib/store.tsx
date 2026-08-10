@@ -16,15 +16,13 @@ function buildInitialState(): AppState {
     worn: s.worn,
   }));
   const capsules: AppState["capsules"] = {
-    "Printemps 2026": [],
-    "Été 2026": SEED_ITEMS.filter((i) => i.seed).map((i) => i.id),
-    "Automne 2026": [],
-    "Hiver 2026": [],
+    "Printemps / Été 2026": SEED_ITEMS.filter((i) => i.seed).map((i) => i.id),
+    "Automne / Hiver 2026": [],
   };
   return {
     items,
     capsules,
-    activeSeason: "Été 2026",
+    activeSeason: "Printemps / Été 2026",
     seasonPickerOpen: false,
     screen: "welcome",
     premiumReturn: "tenues",
@@ -34,11 +32,14 @@ function buildInitialState(): AppState {
     authName: "",
     activeId: 1,
     catFilter: "all",
-    seasonFilter: "all",
     addName: "",
+    addBrand: "",
     addCat: "haut",
     addColor: { name: "Blanc cassé", hex: "#EDE4D6" },
-    addSeason: "Toutes saisons",
+    addSize: null,
+    // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
+    addSeason: null,
+    addOccasion: "travail",
     capInfoOpen: false,
     geoIndex: 0,
     outfit: [],
@@ -79,11 +80,13 @@ export interface Actions {
   toggleActiveCapsule: () => void;
   toggleCapInfo: () => void;
   setCatFilter: (k: CategoryKey | "all") => void;
-  setSeasonFilter: (k: Season | "all") => void;
   setAddName: (v: string) => void;
+  setAddBrand: (v: string) => void;
   setAddCat: (k: CategoryKey) => void;
   setAddColor: (c: { name: string; hex: string }) => void;
+  setAddSize: (v: string | null) => void;
   setAddSeason: (s: Season) => void;
+  setAddOccasion: (o: OccasionKey) => void;
   saveItem: () => void;
   goPremium: () => void;
   subscribe: () => void;
@@ -149,7 +152,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goProfileSetup: (step = 0, fromEdit = false) =>
       setState((s) => ({ ...s, screen: "profileSetup", profileSetupStep: step, profileSetupFromEdit: fromEdit })),
     openAdd: () => go("add"),
-    openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "accessoire", addName: "Sac " })),
+    openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
     addBack: () => go("wardrobe"),
     setAuthName: (v) => setState((s) => ({ ...s, authName: v })),
 
@@ -184,24 +187,31 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     toggleCapInfo: () => setState((s) => ({ ...s, capInfoOpen: !s.capInfoOpen })),
 
     setCatFilter: (k) => setState((s) => ({ ...s, catFilter: k })),
-    setSeasonFilter: (k) => setState((s) => ({ ...s, seasonFilter: k })),
 
     setAddName: (v) => setState((s) => ({ ...s, addName: v })),
-    setAddCat: (k) => setState((s) => ({ ...s, addCat: k })),
+    setAddBrand: (v) => setState((s) => ({ ...s, addBrand: v })),
+    setAddCat: (k) => setState((s) => ({ ...s, addCat: k, addSize: null })),
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c })),
+    setAddSize: (v) => setState((s) => ({ ...s, addSize: v })),
     setAddSeason: (season) => setState((s) => ({ ...s, addSeason: season })),
+    setAddOccasion: (o) => setState((s) => ({ ...s, addOccasion: o })),
     saveItem: () =>
       setState((s) => {
+        // Contrainte produit : pas de sauvegarde tant que la saison n'est pas confirmée.
+        if (!s.addSeason) return s;
         const item: Item = {
           id: Math.max(0, ...s.items.map((i) => i.id)) + 1,
           name: (s.addName || "").trim() || "Nouvelle pièce",
+          brand: (s.addBrand || "").trim() || undefined,
           cat: s.addCat,
           color: s.addColor.name,
           hex: s.addColor.hex,
+          size: s.addSize,
           season: s.addSeason,
+          occasion: s.addOccasion,
           worn: null,
         };
-        return { ...s, items: [item, ...s.items], addName: "", screen: "wardrobe" };
+        return { ...s, items: [item, ...s.items], addName: "", addBrand: "", addSeason: null, screen: "wardrobe" };
       }),
 
     goPremium: () => setState(toPremiumScreen),
