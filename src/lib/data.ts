@@ -102,10 +102,6 @@ export function wornAgo(d: number | null | undefined): string {
   return "Porté il y a +1 an";
 }
 
-export const PREMIUM_FEATURES = [
-  { icon: "☷", title: "Journal des tenues", body: "Retrouve tout ce que tu as porté, jour par jour, et vois ta semaine d’un coup d’œil." },
-];
-
 export interface OnboardingSlide {
   kicker: string;
   tag: string;
