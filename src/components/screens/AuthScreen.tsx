@@ -18,7 +18,7 @@ export default function AuthScreen() {
   const [confirmPending, setConfirmPending] = useState(false);
 
   const afterAuth = () => {
-    if (auth.profile.completed) actions.goTenues();
+    if (auth.profile.completed) actions.goHome();
     else actions.goProfileSetup(0);
   };
 

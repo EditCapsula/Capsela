@@ -42,6 +42,7 @@ export interface Item {
 
 export interface City {
   city: string;
+  country: string;
   temp: number;
   label: string;
 }
@@ -62,6 +63,8 @@ export interface AppState {
   replacingId: number | null;
 
   screen: Screen;
+  /** Écran vers lequel revenir en quittant le profil (ouvert depuis l'avatar). */
+  profileReturn: Screen;
   premiumReturn: Screen;
   profileSetupStep: number;
   profileSetupFromEdit: boolean;
@@ -85,20 +88,27 @@ export interface AppState {
   geoIndex: number;
 
   outfit: number[];
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). */
+  outfitMissingCats: CategoryKey[];
   outfitValidated: boolean;
-  lockedPieces: number[];
   occasion: OccasionKey;
 
   lookCount: number;
   isPremium: boolean;
 
   history: HistoryEntry[];
+
+  /** Écran « Demander un avis à un proche ». */
+  opinionContact: string | null;
+  opinionStatus: "sent" | null;
+  opinionVia: "message" | "whatsapp" | "social" | null;
 }
 
 export type Screen =
   | "welcome"
   | "onboarding"
   | "auth"
+  | "home"
   | "wardrobe"
   | "piece"
   | "add"
@@ -110,4 +120,5 @@ export type Screen =
   | "profileSetup"
   | "profile"
   | "profileEdit"
-  | "login";
+  | "login"
+  | "opinionShare";

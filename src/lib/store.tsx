@@ -5,7 +5,7 @@ import { useAuth } from "./auth";
 import { CATALOG } from "./catalog";
 import { computeDefaultCapsule, weatherSeasonBucket } from "./capsule";
 import { CATS, CITIES, type Weather } from "./data";
-import { generateOutfitIds } from "./logic";
+import { generateOutfit, swapOutfitPiece } from "./logic";
 import type { AppState, CategoryKey, Item, OccasionKey, Screen, Season } from "./types";
 
 function buildInitialState(): AppState {
@@ -15,7 +15,8 @@ function buildInitialState(): AppState {
     suggestedExcluded: [],
     replacingId: null,
     screen: "welcome",
-    premiumReturn: "tenues",
+    profileReturn: "home",
+    premiumReturn: "home",
     profileSetupStep: 0,
     profileSetupFromEdit: false,
     onbStep: 0,
@@ -33,12 +34,15 @@ function buildInitialState(): AppState {
     addOccasion: "travail",
     geoIndex: 0,
     outfit: [],
+    outfitMissingCats: [],
     outfitValidated: false,
-    lockedPieces: [],
     occasion: "all",
     lookCount: 0,
     isPremium: false,
     history: [],
+    opinionContact: null,
+    opinionStatus: null,
+    opinionVia: null,
   };
 }
 
@@ -48,6 +52,7 @@ export interface Actions {
   goWelcome: () => void;
   goAuth: () => void;
   enterApp: () => void;
+  goHome: () => void;
   goWardrobe: () => void;
   goCapsule: () => void;
   goTenues: () => void;
@@ -85,7 +90,8 @@ export interface Actions {
   subscribe: () => void;
   premiumBack: () => void;
   setOccasion: (o: OccasionKey) => void;
-  toggleLock: (id: number) => void;
+  /** Remplace une pièce de la tenue par une autre de la même famille. */
+  swapPiece: (id: number, cat: CategoryKey) => void;
   cycleGeo: () => void;
   regenOutfit: () => void;
   wearOutfitToday: () => void;
@@ -94,6 +100,10 @@ export interface Actions {
   correctPiece: (id: number) => void;
   correctActive: () => void;
   reWear: (ids: number[]) => void;
+  openOpinionShare: () => void;
+  closeOpinionShare: () => void;
+  setOpinionContact: (c: string) => void;
+  sendOpinionRequest: (via: "message" | "whatsapp" | "social") => void;
 }
 
 interface CapselaContextValue {
@@ -103,6 +113,8 @@ interface CapselaContextValue {
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
   wardrobePool: Item[];
+  /** La tenue du jour vient de vraies pièces (par opposition aux suggestions de la capsule). */
+  outfitFromDressing: boolean;
   actions: Actions;
   /** Wraps a handler so it only runs for Premium users; otherwise routes to the paywall. */
   requirePremium: (fn: () => void) => () => void;
@@ -152,6 +164,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     [state.items, defaultCapsule]
   );
+  const outfitFromDressing = state.items.length > 0;
 
   const poolRef = useRef(wardrobePool);
   const weatherRef = useRef(weather);
@@ -160,16 +173,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     weatherRef.current = weather;
   }, [wardrobePool, weather]);
 
-  const regen = (s: AppState): AppState => ({
-    ...s,
-    outfit: generateOutfitIds(s, poolRef.current, weatherRef.current),
-    outfitValidated: false,
-  });
+  const regen = (s: AppState): AppState => {
+    const { ids, missingCats } = generateOutfit(poolRef.current, weatherRef.current, s.occasion || "all");
+    return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false };
+  };
 
   // Première tenue : dès que le profil est chargé (la capsule par défaut en dépend).
   useEffect(() => {
     if (ready && !stateRef.current.outfit.length) {
-      setState((s) => ({ ...s, outfit: generateOutfitIds(s, poolRef.current, weatherRef.current) }));
+      setState((s) => regen(s));
     }
   }, [ready, defaultCapsule]);
 
@@ -180,13 +192,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     startOnb: () => setState((s) => ({ ...s, screen: "onboarding", onbStep: 0 })),
     goWelcome: () => go("welcome"),
     goAuth: () => go("auth"),
-    enterApp: () => go("tenues"),
+    enterApp: () => go("home"),
+    goHome: () => go("home"),
     goWardrobe: () => go("wardrobe"),
     goCapsule: () => go("capsule"),
     goTenues: () => go("tenues"),
     goHistory: () => go("history"),
     goNeverWorn: () => go("neverworn"),
-    goProfile: () => go("profile"),
+    goProfile: () => setState((s) => ({ ...s, profileReturn: s.screen === "profile" ? s.profileReturn : s.screen, screen: "profile" })),
     goProfileEdit: () => go("profileEdit"),
     goLogin: () => go("login"),
     goProfileSetup: (step = 0, fromEdit = false) =>
@@ -267,15 +280,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
 
     goPremium: () => setState(toPremiumScreen),
-    subscribe: () => setState((s) => ({ ...s, isPremium: true, screen: s.premiumReturn || "tenues" })),
-    premiumBack: () => setState((s) => ({ ...s, screen: s.premiumReturn || "tenues" })),
+    subscribe: () => setState((s) => ({ ...s, isPremium: true, screen: s.premiumReturn || "home" })),
+    premiumBack: () => setState((s) => ({ ...s, screen: s.premiumReturn || "home" })),
 
     setOccasion: (o) => setState((s) => regen({ ...s, occasion: o })),
-    toggleLock: (id) =>
-      setState((s) => {
-        const cur = s.lockedPieces || [];
-        return { ...s, lockedPieces: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] };
-      }),
+    swapPiece: (id, cat) =>
+      setState((s) => ({ ...s, outfit: swapOutfitPiece(s.outfit, poolRef.current, id, cat) })),
     cycleGeo: () => setState((s) => ({ ...s, geoIndex: ((s.geoIndex || 0) + 1) % CITIES.length })),
 
     regenOutfit: () => setState(regen),
@@ -331,6 +341,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         outfitValidated: false,
         screen: "tenues",
       })),
+
+    openOpinionShare: () => setState((s) => ({ ...s, screen: "opinionShare", opinionContact: null, opinionStatus: null })),
+    closeOpinionShare: () => go("tenues"),
+    setOpinionContact: (c) => setState((s) => ({ ...s, opinionContact: s.opinionContact === c ? null : c })),
+    sendOpinionRequest: (via) => setState((s) => ({ ...s, opinionStatus: "sent", opinionVia: via })),
   };
 
   const requirePremium = (fn: () => void) => () => {
@@ -338,7 +353,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     else setState(toPremiumScreen);
   };
 
-  const value: CapselaContextValue = { state, weather, defaultCapsule, wardrobePool, actions, requirePremium };
+  const value: CapselaContextValue = {
+    state,
+    weather,
+    defaultCapsule,
+    wardrobePool,
+    outfitFromDressing,
+    actions,
+    requirePremium,
+  };
 
   return <CapselaContext.Provider value={value}>{children}</CapselaContext.Provider>;
 }

@@ -6,6 +6,7 @@ import { CapselaProvider, useCapsela } from "@/lib/store";
 import WelcomeScreen from "./screens/WelcomeScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import AuthScreen from "./screens/AuthScreen";
+import HomeScreen from "./screens/HomeScreen";
 import WardrobeScreen from "./screens/WardrobeScreen";
 import PieceScreen from "./screens/PieceScreen";
 import AddScreen from "./screens/AddScreen";
@@ -18,9 +19,10 @@ import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import ProfileEditScreen from "./screens/ProfileEditScreen";
 import LoginScreen from "./screens/LoginScreen";
+import OpinionShareScreen from "./screens/OpinionShareScreen";
 import TabBar from "./TabBar";
 
-const TABBAR_SCREENS = new Set(["wardrobe", "capsule", "tenues", "history", "neverworn"]);
+const TABBAR_SCREENS = new Set(["home", "wardrobe", "capsule", "tenues", "history"]);
 const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
 
 function Screens() {
@@ -33,7 +35,7 @@ function Screens() {
   const profileCompleted = auth.profile.completed;
   useEffect(() => {
     if (ready && signedIn && PRE_AUTH_SCREENS.has(state.screen)) {
-      actions.go(profileCompleted ? "tenues" : "profileSetup");
+      actions.go(profileCompleted ? "home" : "profileSetup");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, signedIn]);
@@ -52,6 +54,7 @@ function Screens() {
         {state.screen === "welcome" && <WelcomeScreen />}
         {state.screen === "onboarding" && <OnboardingScreen />}
         {state.screen === "auth" && <AuthScreen />}
+        {state.screen === "home" && <HomeScreen />}
         {state.screen === "wardrobe" && <WardrobeScreen />}
         {state.screen === "piece" && <PieceScreen />}
         {state.screen === "add" && <AddScreen />}
@@ -64,6 +67,7 @@ function Screens() {
         {state.screen === "profile" && <ProfileScreen />}
         {state.screen === "profileEdit" && <ProfileEditScreen />}
         {state.screen === "login" && <LoginScreen />}
+        {state.screen === "opinionShare" && <OpinionShareScreen />}
       </div>
       {showTabbar && <TabBar />}
     </div>

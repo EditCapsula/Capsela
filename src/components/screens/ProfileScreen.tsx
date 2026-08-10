@@ -6,7 +6,7 @@ import { colorNameFromHex, genderLabel } from "@/lib/profile";
 
 export default function ProfileScreen() {
   const { profile, email, demoMode, signOut } = useAuth();
-  const { actions } = useCapsela();
+  const { state, actions } = useCapsela();
 
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
   const tailleValue =
@@ -37,7 +37,7 @@ export default function ProfileScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-10">
       <div className="flex items-center gap-[14px]">
         <button
-          onClick={actions.goTenues}
+          onClick={() => actions.go(state.profileReturn)}
           className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
         >
           ←

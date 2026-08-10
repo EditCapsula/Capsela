@@ -103,7 +103,7 @@ export default function ProfileSetupScreen() {
   const finish = async () => {
     await saveProfile({ ...draft, completed: true });
     if (state.profileSetupFromEdit) actions.goProfileEdit();
-    else actions.goTenues();
+    else actions.goHome();
   };
 
   const next = () => (isLast ? finish() : setStep(step + 1));

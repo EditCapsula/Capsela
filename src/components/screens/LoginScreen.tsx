@@ -20,7 +20,7 @@ export default function LoginScreen() {
     const ok = await auth.signInEmail(email.trim(), password);
     setBusy(false);
     if (ok) {
-      if (auth.profile.completed) actions.goTenues();
+      if (auth.profile.completed) actions.goHome();
       else actions.goProfileSetup(0);
     }
   };

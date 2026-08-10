@@ -53,12 +53,27 @@ OCCASIONS.forEach(([key, label]) => {
 });
 
 export const CITIES: City[] = [
-  { city: "Paris 11e", temp: 27, label: "Ensoleillé" },
-  { city: "Lyon", temp: 30, label: "Ensoleillé" },
-  { city: "Marseille", temp: 32, label: "Grand soleil" },
-  { city: "Bordeaux", temp: 28, label: "Éclaircies" },
-  { city: "Lille", temp: 22, label: "Nuageux" },
+  { city: "Paris", country: "France", temp: 24, label: "Ensoleillé" },
+  { city: "Lyon", country: "France", temp: 27, label: "Ensoleillé" },
+  { city: "Marseille", country: "France", temp: 29, label: "Grand soleil" },
+  { city: "Nantes", country: "France", temp: 21, label: "Éclaircies" },
+  { city: "Lille", country: "France", temp: 18, label: "Nuageux" },
+  { city: "Bordeaux", country: "France", temp: 26, label: "Ensoleillé" },
+  { city: "Toulouse", country: "France", temp: 28, label: "Grand soleil" },
+  { city: "Strasbourg", country: "France", temp: 20, label: "Éclaircies" },
+  { city: "Rennes", country: "France", temp: 19, label: "Nuageux" },
+  { city: "Nice", country: "France", temp: 30, label: "Grand soleil" },
+  { city: "Bruxelles", country: "Belgique", temp: 19, label: "Nuageux" },
+  { city: "Genève", country: "Suisse", temp: 22, label: "Éclaircies" },
+  { city: "Montréal", country: "Canada", temp: 25, label: "Ensoleillé" },
+  { city: "Casablanca", country: "Maroc", temp: 27, label: "Ensoleillé" },
+  { city: "Londres", country: "Royaume-Uni", temp: 20, label: "Nuageux" },
+  { city: "Barcelone", country: "Espagne", temp: 28, label: "Grand soleil" },
+  { city: "Berlin", country: "Allemagne", temp: 21, label: "Éclaircies" },
+  { city: "Dakar", country: "Sénégal", temp: 31, label: "Grand soleil" },
 ];
+
+export const CONTACTS = ["Léa", "Chloé", "Sacha", "Mon copain"];
 
 export const DAYS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 export const MONTHS_FR = [
@@ -89,9 +104,6 @@ export function wornAgo(d: number | null | undefined): string {
 
 export const PREMIUM_FEATURES = [
   { icon: "☷", title: "Journal des tenues", body: "Retrouve tout ce que tu as porté, jour par jour, et vois ta semaine d’un coup d’œil." },
-  { icon: "⌛", title: "Pièces jamais portées", body: "Un espace dédié pour repérer et enfin sortir les oubliées de ton dressing." },
-  { icon: "✎", title: "Corriger tes ports", body: "Marque, ajuste ou annule un « porté aujourd’hui » quand tu changes d’avis." },
-  { icon: "🔒", title: "Génération sur mesure", body: "Verrouille une pièce et régénère le reste, ou filtre par occasion (travail / week-end)." },
 ];
 
 export interface OnboardingSlide {
