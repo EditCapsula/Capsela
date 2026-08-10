@@ -1,5 +1,6 @@
 "use client";
 
+import AppHeader from "@/components/AppHeader";
 import { PREMIUM_FEATURES } from "@/lib/data";
 import { useCapsela } from "@/lib/store";
 
@@ -8,6 +9,7 @@ export default function PremiumScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto bg-ink flex flex-col px-7 pt-2 pb-8">
+      <AppHeader dark />
       <button
         onClick={actions.premiumBack}
         className="w-[38px] h-[38px] rounded-full bg-[rgba(244,238,228,.12)] flex items-center justify-center text-[17px] text-cream cursor-pointer"

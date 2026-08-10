@@ -6,7 +6,7 @@ import { useCapsela } from "@/lib/store";
 import { neverWornItems } from "@/lib/selectors";
 
 export default function WardrobeScreen() {
-  const { state, wardrobePool, actions, requirePremium } = useCapsela();
+  const { state, wardrobePool, actions } = useCapsela();
   const items = state.items;
   const neverWorn = neverWornItems(items);
 
@@ -38,7 +38,7 @@ export default function WardrobeScreen() {
 
       {neverWorn.length > 0 && (
         <button
-          onClick={requirePremium(actions.goNeverWorn)}
+          onClick={actions.goNeverWorn}
           className="mt-4 w-full flex items-center gap-[11px] bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px] cursor-pointer text-left"
         >
           <span className="w-[30px] h-[30px] rounded-full bg-terracotta text-cream flex items-center justify-center text-[14px] flex-shrink-0">

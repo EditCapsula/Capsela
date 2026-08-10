@@ -1,5 +1,6 @@
 "use client";
 
+import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
 import { historyView } from "@/lib/selectors";
 
@@ -9,6 +10,7 @@ export default function HistoryScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
+      <AppHeader />
       <div className="flex items-center gap-[14px]">
         <button
           onClick={actions.goTenues}

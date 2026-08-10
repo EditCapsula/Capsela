@@ -9,7 +9,7 @@ import { useCapsela } from "@/lib/store";
 import { capsuleBreakdown, neverWornItems } from "@/lib/selectors";
 
 export default function CapsuleScreen() {
-  const { defaultCapsule, wardrobePool, actions, requirePremium } = useCapsela();
+  const { defaultCapsule, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
 
   const total = CATALOG.length;
@@ -61,7 +61,7 @@ export default function CapsuleScreen() {
 
       <div className="flex gap-[10px] mt-3">
         <button
-          onClick={requirePremium(actions.goNeverWorn)}
+          onClick={actions.goNeverWorn}
           className="flex-1 bg-card border border-border rounded-2xl p-[14px] text-left cursor-pointer"
         >
           <div className="font-serif text-[24px] text-ink">{neverWorn.length}</div>

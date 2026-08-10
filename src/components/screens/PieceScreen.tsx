@@ -110,6 +110,14 @@ export default function PieceScreen() {
               Porter aujourd&apos;hui
             </button>
           )}
+          {pNever && (
+            <button
+              onClick={actions.goNeverWorn}
+              className="mt-[10px] w-full flex items-center justify-center gap-2 border border-warm-border bg-warm-bg text-terracotta text-center rounded-full py-[14px] text-[12.5px] cursor-pointer"
+            >
+              <span>↻</span> Envisager de la revendre
+            </button>
+          )}
           <button
             onClick={actions.removeActive}
             className="mt-[10px] w-full text-center border border-border-soft text-rust rounded-full py-[13px] text-[12.5px] cursor-pointer"
