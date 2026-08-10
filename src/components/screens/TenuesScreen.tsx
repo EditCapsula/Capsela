@@ -20,19 +20,19 @@ function ProfileButton() {
 }
 
 export default function TenuesScreen() {
-  const { state, weather, actions, requirePremium } = useCapsela();
+  const { state, weather, wardrobePool, actions, requirePremium } = useCapsela();
 
   const now = new Date();
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
   const geoCity = CITIES[(state.geoIndex || 0) % CITIES.length];
-  const neverWorn = neverWornItems(state);
+  const neverWorn = neverWornItems(state.items);
   const neverWornPreview = neverWorn.slice(0, 3);
 
   const outfitPieces = (state.outfit || [])
-    .map((id) => state.items.find((i) => i.id === id))
+    .map((id) => wardrobePool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
 
-  const bagMissing = !state.items.some(isBag);
+  const bagMissing = !wardrobePool.some(isBag);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">

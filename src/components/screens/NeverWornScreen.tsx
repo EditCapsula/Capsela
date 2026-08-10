@@ -4,9 +4,13 @@ import { CATLABEL } from "@/lib/data";
 import { useCapsela } from "@/lib/store";
 import { neverWornItems } from "@/lib/selectors";
 
+/**
+ * Pièces jamais portées de ton dressing réel — les suggestions de la
+ * capsule par défaut n'y figurent pas (elles ne sont pas encore à toi).
+ */
 export default function NeverWornScreen() {
   const { state, actions } = useCapsela();
-  const neverWorn = neverWornItems(state);
+  const neverWorn = neverWornItems(state.items);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
@@ -29,6 +33,12 @@ export default function NeverWornScreen() {
           pièces attendent leur tour. Mets-en une en avant aujourd&apos;hui, ou envisage de la sortir de ta capsule.
         </div>
       </div>
+
+      {neverWorn.length === 0 && (
+        <div className="text-[12.5px] text-muted mt-4 leading-[1.5]">
+          Aucune pièce de ton dressing n&apos;attend son tour pour l&apos;instant.
+        </div>
+      )}
 
       <div className="flex flex-col gap-[9px] mt-4">
         {neverWorn.map((it) => (

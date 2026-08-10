@@ -1,63 +1,22 @@
 import { CATS, MONTHS_FR, OCC_LABELS } from "./data";
-import type { AppState, HistoryEntry, Item } from "./types";
-
-export function activeCapIds(state: AppState): number[] {
-  return state.capsules[state.activeSeason] || [];
-}
-
-export function itemsWithCapsuleFlag(state: AppState): (Item & { inCapsule: boolean })[] {
-  const capIds = activeCapIds(state);
-  return state.items.map((it) => ({ ...it, inCapsule: capIds.includes(it.id) }));
-}
-
-export interface GaugeInfo {
-  capCount: number;
-  frac: number;
-  overCapacity: boolean;
-  status: "under" | "ok" | "over";
-  statusText: string;
-}
-
-export function gaugeInfo(state: AppState): GaugeInfo {
-  const capCount = activeCapIds(state).length;
-  const frac = Math.min(capCount, 40) / 40;
-  const overCapacity = capCount > 40;
-  let status: GaugeInfo["status"];
-  let statusText: string;
-  if (capCount < 30) {
-    const miss = 30 - capCount;
-    status = "under";
-    statusText = "Encore " + miss + (miss === 1 ? " pièce" : " pièces") + " pour atteindre une capsule complète.";
-  } else if (capCount <= 40) {
-    status = "ok";
-    statusText = "Capsule complète — tu es dans la fourchette idéale.";
-  } else {
-    status = "over";
-    statusText = "Un peu trop chargée — retire " + (capCount - 40) + " pièce(s) pour rester capsule.";
-  }
-  return { capCount, frac, overCapacity, status, statusText };
-}
+import type { HistoryEntry, Item } from "./types";
 
 export interface BreakdownRow {
   label: string;
-  inCount: number;
-  total: number;
+  count: number;
   pct: number;
 }
 
-export function breakdown(state: AppState): BreakdownRow[] {
-  const items = itemsWithCapsuleFlag(state);
-  const inCounts = CATS.map(([key]) => items.filter((i) => i.cat === key && i.inCapsule).length);
-  const maxIn = Math.max(1, ...inCounts);
-  return CATS.map(([key, , plural], idx) => {
-    const inC = inCounts[idx];
-    const tot = items.filter((i) => i.cat === key).length;
-    return { label: plural, inCount: inC, total: tot, pct: (inC / maxIn) * 100 };
-  }).filter((r) => r.total > 0);
+/** Répartition par catégorie du pool actif (dressing réel, ou capsule suggérée). */
+export function capsuleBreakdown(pool: Item[]): BreakdownRow[] {
+  const counts = CATS.map(([key]) => pool.filter((i) => i.cat === key).length);
+  const max = Math.max(1, ...counts);
+  return CATS.map(([, , plural], idx) => ({ label: plural, count: counts[idx], pct: (counts[idx] / max) * 100 }))
+    .filter((r) => r.count > 0);
 }
 
-export function neverWornItems(state: AppState): Item[] {
-  return state.items.filter((i) => i.worn == null);
+export function neverWornItems(pool: Item[]): Item[] {
+  return pool.filter((i) => i.worn == null);
 }
 
 const MONTHS = MONTHS_FR;
@@ -91,11 +50,10 @@ export interface HistoryView {
   weekCount: number;
 }
 
-export function historyView(state: AppState): HistoryView {
+export function historyView(history: HistoryEntry[], pool: Item[]): HistoryView {
   const now = new Date();
   const todayMid = new Date();
   todayMid.setHours(0, 0, 0, 0);
-  const history = state.history || [];
 
   const annEntry = history.find((h) => {
     const d = new Date(h.ts);
@@ -106,8 +64,8 @@ export function historyView(state: AppState): HistoryView {
   if (annEntry) {
     const annDate = new Date(annEntry.ts);
     const yrs = now.getFullYear() - annDate.getFullYear();
-    const pcs = annEntry.pieceIds.map((id) => state.items.find((i) => i.id === id)).filter(Boolean) as Item[];
-    const stillHave = annEntry.pieceIds.filter((id) => state.items.some((i) => i.id === id));
+    const pcs = annEntry.pieceIds.map((id) => pool.find((i) => i.id === id)).filter(Boolean) as Item[];
+    const stillHave = annEntry.pieceIds.filter((id) => pool.some((i) => i.id === id));
     memory = {
       title: yrs === 1 ? "Il y a un an, jour pour jour" : "Il y a " + yrs + " ans, jour pour jour",
       dateText: "Le " + annDate.getDate() + " " + MONTHS[annDate.getMonth()] + " " + annDate.getFullYear(),
@@ -132,7 +90,7 @@ export function historyView(state: AppState): HistoryView {
       dayMap[key] = { rel, list: [] };
       dayOrder.push(key);
     }
-    const pcs = h.pieceIds.map((id) => state.items.find((i) => i.id === id)).filter(Boolean) as Item[];
+    const pcs = h.pieceIds.map((id) => pool.find((i) => i.id === id)).filter(Boolean) as Item[];
     const occ = h.occasion && h.occasion !== "all" ? OCC_LABELS[h.occasion] : "";
     dayMap[key].list.push({
       id: h.id,

@@ -4,8 +4,8 @@ import { useCapsela } from "@/lib/store";
 import { historyView } from "@/lib/selectors";
 
 export default function HistoryScreen() {
-  const { state, actions } = useCapsela();
-  const { memory, days, weekCount } = historyView(state);
+  const { state, wardrobePool, actions } = useCapsela();
+  const { memory, days, weekCount } = historyView(state.history, wardrobePool);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">

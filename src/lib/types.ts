@@ -53,14 +53,13 @@ export interface HistoryEntry {
   occasion: OccasionKey;
 }
 
-/** Capsule membership per season: season label -> item ids. */
-export type CapsulesBySeason = Record<string, number[]>;
-
 export interface AppState {
+  /** Dressing réel de l'utilisateur. Vide au départ : la capsule par défaut prend le relais. */
   items: Item[];
-  capsules: CapsulesBySeason;
-  activeSeason: string;
-  seasonPickerOpen: boolean;
+  /** Ids de suggestions du catalogue écartées ("Retirer" sur une pièce suggérée). */
+  suggestedExcluded: number[];
+  /** Id de la suggestion en cours de remplacement via l'écran Ajouter. */
+  replacingId: number | null;
 
   screen: Screen;
   premiumReturn: Screen;
@@ -69,6 +68,8 @@ export interface AppState {
   onbStep: number;
   authName: string;
   activeId: number;
+  /** La pièce actuellement ouverte est une suggestion du catalogue, pas une pièce réelle. */
+  activeSuggested: boolean;
 
   catFilter: CategoryKey | "all";
 
@@ -81,7 +82,6 @@ export interface AppState {
   addSeason: Season | null;
   addOccasion: OccasionKey;
 
-  capInfoOpen: boolean;
   geoIndex: number;
 
   outfit: number[];

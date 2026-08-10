@@ -43,20 +43,20 @@ function rand<T>(arr: T[]): T | null {
 }
 
 /**
- * Génère une tenue depuis la capsule active.
+ * Génère une tenue depuis le pool actif (dressing réel, ou capsule par
+ * défaut tant qu'il est vide).
  * Contrainte produit : le pool est filtré par SAISON (météo du jour) AVANT
  * d'être filtré par occasion. Le sac est toujours inclus quand il en existe un.
  */
-export function generateOutfitIds(state: AppState, weather: Weather): number[] {
-  const capIds = state.capsules[state.activeSeason] || [];
-  const cap = state.items.filter((i) => capIds.includes(i.id));
+export function generateOutfitIds(state: AppState, wardrobePool: Item[], weather: Weather): number[] {
   const occasion = state.isPremium ? state.occasion || "all" : "all";
-  const locked = (state.lockedPieces || []).filter((id) => capIds.includes(id) && state.isPremium);
-  const lockedItems = cap.filter((i) => locked.includes(i.id));
+  const poolIds = new Set(wardrobePool.map((i) => i.id));
+  const locked = (state.lockedPieces || []).filter((id) => poolIds.has(id) && state.isPremium);
+  const lockedItems = wardrobePool.filter((i) => locked.includes(i.id));
   const hasLocked = (pred: (i: Item) => boolean) => lockedItems.some(pred);
 
   const pool = (pred: (i: Item) => boolean) => {
-    let base = cap.filter(pred);
+    let base = wardrobePool.filter(pred);
     // 1. Saison d'abord — une pièce hors saison ne doit jamais être proposée
     //    tant qu'il existe des pièces de saison.
     const w = base.filter((i) => weather.seasons.includes(i.season));
@@ -116,7 +116,7 @@ export function generateOutfitIds(state: AppState, weather: Weather): number[] {
 
   if (!hasLocked(isBag)) {
     const capBags = pool(isBag);
-    const allBags = state.items.filter(isBag);
+    const allBags = wardrobePool.filter(isBag);
     const bagPool = capBags.length ? capBags : allBags;
     if (bagPool.length) {
       const b = rand(bagPool);

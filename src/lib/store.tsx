@@ -1,36 +1,27 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { CAP_SEASONS, CITIES, SEED_ITEMS, computeWeather, seedHistory, type Weather } from "./data";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "./auth";
+import { CATALOG } from "./catalog";
+import { computeDefaultCapsule, weatherSeasonBucket } from "./capsule";
+import { CATS, CITIES, type Weather } from "./data";
 import { generateOutfitIds } from "./logic";
 import type { AppState, CategoryKey, Item, OccasionKey, Screen, Season } from "./types";
 
 function buildInitialState(): AppState {
-  const items: Item[] = SEED_ITEMS.map((s) => ({
-    id: s.id,
-    name: s.name,
-    cat: s.cat,
-    color: s.color,
-    hex: s.hex,
-    season: s.season,
-    worn: s.worn,
-  }));
-  const capsules: AppState["capsules"] = {
-    "Printemps / Été 2026": SEED_ITEMS.filter((i) => i.seed).map((i) => i.id),
-    "Automne / Hiver 2026": [],
-  };
   return {
-    items,
-    capsules,
-    activeSeason: "Printemps / Été 2026",
-    seasonPickerOpen: false,
+    // Le dressing réel démarre vide : la capsule par défaut prend le relais.
+    items: [],
+    suggestedExcluded: [],
+    replacingId: null,
     screen: "welcome",
     premiumReturn: "tenues",
     profileSetupStep: 0,
     profileSetupFromEdit: false,
     onbStep: 0,
     authName: "",
-    activeId: 1,
+    activeId: 0,
+    activeSuggested: false,
     catFilter: "all",
     addName: "",
     addBrand: "",
@@ -40,15 +31,14 @@ function buildInitialState(): AppState {
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
     addOccasion: "travail",
-    capInfoOpen: false,
     geoIndex: 0,
     outfit: [],
     outfitValidated: false,
     lockedPieces: [],
     occasion: "all",
-    lookCount: 24,
+    lookCount: 0,
     isPremium: false,
-    history: seedHistory(),
+    history: [],
   };
 }
 
@@ -74,11 +64,14 @@ export interface Actions {
   setAuthName: (v: string) => void;
   onbBack: () => void;
   onbNext: () => void;
-  openItem: (id: number) => void;
+  openItem: (id: number, suggested?: boolean) => void;
   removeActive: () => void;
-  toggleCapsule: (id: number) => void;
+  /** Pièce suggérée : l'adopte dans le dressing réel. Pièce réelle : la retire. */
   toggleActiveCapsule: () => void;
-  toggleCapInfo: () => void;
+  /** Écarte une suggestion de la capsule par défaut. */
+  dismissSuggested: (id: number) => void;
+  /** Ouvre l'ajout d'une pièce pour remplacer une suggestion. */
+  startReplace: (id: number, cat: CategoryKey) => void;
   setCatFilter: (k: CategoryKey | "all") => void;
   setAddName: (v: string) => void;
   setAddBrand: (v: string) => void;
@@ -94,9 +87,6 @@ export interface Actions {
   setOccasion: (o: OccasionKey) => void;
   toggleLock: (id: number) => void;
   cycleGeo: () => void;
-  toggleSeasonPicker: () => void;
-  setSeason: (name: string) => void;
-  duplicateFrom: (src: string) => void;
   regenOutfit: () => void;
   wearOutfitToday: () => void;
   wearPieceToday: (id: number) => void;
@@ -109,6 +99,10 @@ export interface Actions {
 interface CapselaContextValue {
   state: AppState;
   weather: Weather;
+  /** Capsule par défaut personnalisée (suggestions du catalogue). */
+  defaultCapsule: Item[];
+  /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
+  wardrobePool: Item[];
   actions: Actions;
   /** Wraps a handler so it only runs for Premium users; otherwise routes to the paywall. */
   requirePremium: (fn: () => void) => () => void;
@@ -122,16 +116,62 @@ const toPremiumScreen = (s: AppState): AppState => ({
   screen: "premium",
 });
 
+/** Retrouve une pièce par id dans un pool, puis dans le catalogue (pour l'historique). */
+export function findPiece(pool: Item[], id: number): Item | undefined {
+  return pool.find((i) => i.id === id) ?? CATALOG.find((i) => i.id === id);
+}
+
 export function CapselaProvider({ children }: { children: React.ReactNode }) {
-  const [weather] = useState<Weather>(() => computeWeather());
-  const [state, setState] = useState<AppState>(() => {
-    const base = buildInitialState();
-    return { ...base, outfit: generateOutfitIds(base, weather) };
-  });
+  const { profile, ready } = useAuth();
+  const [state, setState] = useState<AppState>(buildInitialState);
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  const geoCity = CITIES[(state.geoIndex || 0) % CITIES.length];
+  const weather: Weather = useMemo(() => {
+    const season = weatherSeasonBucket(geoCity.temp);
+    return { season, temp: geoCity.temp, label: geoCity.label, seasons: [season, "Toutes saisons"] };
+  }, [geoCity]);
+
+  const defaultCapsule = useMemo(
+    () => computeDefaultCapsule(profile, geoCity.temp, state.suggestedExcluded),
+    [profile, geoCity.temp, state.suggestedExcluded]
+  );
+  // Pool effectif : par catégorie, tes pièces réelles si tu en as, sinon les
+  // suggestions de la capsule par défaut — jamais un mélange à l'intérieur
+  // d'une même catégorie, mais jamais "tout ou rien" non plus (ajouter une
+  // seule pièce réelle ne doit pas faire disparaître les suggestions des
+  // autres catégories).
+  const wardrobePool = useMemo(
+    () =>
+      CATS.flatMap(([key]) => {
+        const real = state.items.filter((i) => i.cat === key);
+        return real.length ? real : defaultCapsule.filter((i) => i.cat === key);
+      }),
+    [state.items, defaultCapsule]
+  );
+
+  const poolRef = useRef(wardrobePool);
+  const weatherRef = useRef(weather);
+  useEffect(() => {
+    poolRef.current = wardrobePool;
+    weatherRef.current = weather;
+  }, [wardrobePool, weather]);
+
+  const regen = (s: AppState): AppState => ({
+    ...s,
+    outfit: generateOutfitIds(s, poolRef.current, weatherRef.current),
+    outfitValidated: false,
+  });
+
+  // Première tenue : dès que le profil est chargé (la capsule par défaut en dépend).
+  useEffect(() => {
+    if (ready && !stateRef.current.outfit.length) {
+      setState((s) => ({ ...s, outfit: generateOutfitIds(s, poolRef.current, weatherRef.current) }));
+    }
+  }, [ready, defaultCapsule]);
 
   const go = (screen: Screen) => setState((s) => ({ ...s, screen }));
 
@@ -153,7 +193,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, screen: "profileSetup", profileSetupStep: step, profileSetupFromEdit: fromEdit })),
     openAdd: () => go("add"),
     openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
-    addBack: () => go("wardrobe"),
+    addBack: () => setState((s) => ({ ...s, replacingId: null, screen: "wardrobe" })),
     setAuthName: (v) => setState((s) => ({ ...s, authName: v })),
 
     onbBack: () =>
@@ -161,30 +201,33 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     onbNext: () =>
       setState((s) => (s.onbStep >= 2 ? { ...s, screen: "auth" } : { ...s, onbStep: s.onbStep + 1 })),
 
-    openItem: (id) => setState((s) => ({ ...s, activeId: id, screen: "piece" })),
+    openItem: (id, suggested = false) =>
+      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, screen: "piece" })),
     removeActive: () =>
       setState((s) => {
-        const caps: AppState["capsules"] = {};
-        Object.keys(s.capsules).forEach((k) => {
-          caps[k] = (s.capsules[k] || []).filter((id) => id !== s.activeId);
-        });
-        return { ...s, items: s.items.filter((it) => it.id !== s.activeId), capsules: caps, screen: "wardrobe" };
+        if (s.activeSuggested) {
+          return { ...s, suggestedExcluded: [...s.suggestedExcluded, s.activeId], screen: "wardrobe" };
+        }
+        return { ...s, items: s.items.filter((it) => it.id !== s.activeId), screen: "wardrobe" };
       }),
 
-    toggleCapsule: (id) =>
-      setState((s) => {
-        const cur = s.capsules[s.activeSeason] || [];
-        const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
-        return { ...s, capsules: { ...s.capsules, [s.activeSeason]: next } };
-      }),
     toggleActiveCapsule: () =>
       setState((s) => {
-        const cur = s.capsules[s.activeSeason] || [];
-        const id = s.activeId;
-        const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
-        return { ...s, capsules: { ...s.capsules, [s.activeSeason]: next } };
+        if (s.activeSuggested) {
+          const found = CATALOG.find((i) => i.id === s.activeId);
+          if (!found) return s;
+          // Adopter la suggestion : elle devient une pièce réelle du dressing.
+          const { genre: _genre, ...piece } = found;
+          void _genre;
+          return { ...s, items: [{ ...piece }, ...s.items], activeSuggested: false };
+        }
+        return { ...s, items: s.items.filter((it) => it.id !== s.activeId), screen: "wardrobe" };
       }),
-    toggleCapInfo: () => setState((s) => ({ ...s, capInfoOpen: !s.capInfoOpen })),
+
+    dismissSuggested: (id) =>
+      setState((s) => ({ ...s, suggestedExcluded: [...s.suggestedExcluded, id] })),
+    startReplace: (id, cat) =>
+      setState((s) => ({ ...s, replacingId: id, addCat: cat, addSize: null, screen: "add" })),
 
     setCatFilter: (k) => setState((s) => ({ ...s, catFilter: k })),
 
@@ -211,18 +254,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           occasion: s.addOccasion,
           worn: null,
         };
-        return { ...s, items: [item, ...s.items], addName: "", addBrand: "", addSeason: null, screen: "wardrobe" };
+        return {
+          ...s,
+          items: [item, ...s.items],
+          suggestedExcluded: s.replacingId ? [...s.suggestedExcluded, s.replacingId] : s.suggestedExcluded,
+          replacingId: null,
+          addName: "",
+          addBrand: "",
+          addSeason: null,
+          screen: "wardrobe",
+        };
       }),
 
     goPremium: () => setState(toPremiumScreen),
     subscribe: () => setState((s) => ({ ...s, isPremium: true, screen: s.premiumReturn || "tenues" })),
     premiumBack: () => setState((s) => ({ ...s, screen: s.premiumReturn || "tenues" })),
 
-    setOccasion: (o) =>
-      setState((s) => {
-        const s2 = { ...s, occasion: o };
-        return { ...s2, outfit: generateOutfitIds(s2, weather), outfitValidated: false };
-      }),
+    setOccasion: (o) => setState((s) => regen({ ...s, occasion: o })),
     toggleLock: (id) =>
       setState((s) => {
         const cur = s.lockedPieces || [];
@@ -230,22 +278,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     cycleGeo: () => setState((s) => ({ ...s, geoIndex: ((s.geoIndex || 0) + 1) % CITIES.length })),
 
-    toggleSeasonPicker: () => setState((s) => ({ ...s, seasonPickerOpen: !s.seasonPickerOpen })),
-    setSeason: (name) =>
-      setState((s) => {
-        const s2 = { ...s, activeSeason: name, seasonPickerOpen: false };
-        return { ...s2, outfit: generateOutfitIds(s2, weather), outfitValidated: false };
-      }),
-    duplicateFrom: (src) =>
-      setState((s) => {
-        const from = s.capsules[src] || [];
-        const cur = s.capsules[s.activeSeason] || [];
-        const merged = Array.from(new Set([...cur, ...from]));
-        const s2 = { ...s, capsules: { ...s.capsules, [s.activeSeason]: merged } };
-        return { ...s2, outfit: generateOutfitIds(s2, weather), outfitValidated: false };
-      }),
-
-    regenOutfit: () => setState((s) => ({ ...s, outfit: generateOutfitIds(s, weather), outfitValidated: false })),
+    regenOutfit: () => setState(regen),
     wearOutfitToday: () =>
       setState((s) => ({
         ...s,
@@ -294,7 +327,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     reWear: (ids) =>
       setState((s) => ({
         ...s,
-        outfit: ids.filter((id) => s.items.some((i) => i.id === id)),
+        outfit: ids.filter((id) => findPiece(poolRef.current, id)),
         outfitValidated: false,
         screen: "tenues",
       })),
@@ -305,7 +338,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     else setState(toPremiumScreen);
   };
 
-  const value: CapselaContextValue = { state, weather, actions, requirePremium };
+  const value: CapselaContextValue = { state, weather, defaultCapsule, wardrobePool, actions, requirePremium };
 
   return <CapselaContext.Provider value={value}>{children}</CapselaContext.Provider>;
 }
@@ -315,5 +348,3 @@ export function useCapsela(): CapselaContextValue {
   if (!ctx) throw new Error("useCapsela must be used within a CapselaProvider");
   return ctx;
 }
-
-export { CAP_SEASONS };

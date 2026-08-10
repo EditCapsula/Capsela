@@ -3,16 +3,19 @@
 import AppHeader from "@/components/AppHeader";
 import { CATS, wornAgo } from "@/lib/data";
 import { useCapsela } from "@/lib/store";
+import { neverWornItems } from "@/lib/selectors";
 
 export default function WardrobeScreen() {
-  const { state, actions } = useCapsela();
+  const { state, wardrobePool, actions, requirePremium } = useCapsela();
   const items = state.items;
+  const neverWorn = neverWornItems(items);
 
-  const groups = CATS.map(([key, , plural]) => ({
-    key,
-    label: plural.toUpperCase(),
-    items: items.filter((i) => i.cat === key),
-  })).filter((g) => g.items.length > 0);
+  // Chaque catégorie montre tes pièces réelles ; à défaut, des suggestions
+  // de la capsule par défaut (marquées comme telles) pour te donner une idée.
+  const groups = CATS.map(([key, , plural]) => {
+    const suggested = !items.some((i) => i.cat === key);
+    return { key, label: plural.toUpperCase(), items: wardrobePool.filter((i) => i.cat === key), suggested };
+  }).filter((g) => g.items.length > 0);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
@@ -33,6 +36,22 @@ export default function WardrobeScreen() {
         </button>
       </div>
 
+      {neverWorn.length > 0 && (
+        <button
+          onClick={requirePremium(actions.goNeverWorn)}
+          className="mt-4 w-full flex items-center gap-[11px] bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px] cursor-pointer text-left"
+        >
+          <span className="w-[30px] h-[30px] rounded-full bg-terracotta text-cream flex items-center justify-center text-[14px] flex-shrink-0">
+            ↻
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] text-ink">{neverWorn.length} pièce(s) jamais portée(s)</div>
+            <div className="text-[11px] text-warm-text mt-[1px]">Envisage de les revendre sur Vinted</div>
+          </div>
+          <span className="text-terracotta text-[16px]">›</span>
+        </button>
+      )}
+
       {groups.map((g) => (
         <div key={g.key}>
           <div className="mt-6 mb-3 text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
@@ -42,7 +61,7 @@ export default function WardrobeScreen() {
             {g.items.map((it) => (
               <button
                 key={it.id}
-                onClick={() => actions.openItem(it.id)}
+                onClick={() => actions.openItem(it.id, g.suggested)}
                 className="flex-none w-[104px] cursor-pointer text-left"
                 style={{ scrollSnapAlign: "start" }}
               >
@@ -53,8 +72,8 @@ export default function WardrobeScreen() {
                 <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
                   {it.name}
                 </div>
-                <div className={"text-[9.5px] mt-[1px] " + (it.worn == null ? "text-terracotta" : "text-placeholder")}>
-                  {it.worn == null ? "Jamais portée" : wornAgo(it.worn)}
+                <div className={"text-[9.5px] mt-[1px] " + (g.suggested ? "text-terracotta" : "text-placeholder")}>
+                  {g.suggested ? "Suggestion" : it.worn == null ? "Jamais portée" : wornAgo(it.worn)}
                 </div>
               </button>
             ))}

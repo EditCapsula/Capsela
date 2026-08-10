@@ -57,7 +57,9 @@ export default function AddScreen() {
         >
           ←
         </button>
-        <div className="font-serif text-[22px] text-ink">Ajouter une pièce</div>
+        <div className="font-serif text-[22px] text-ink">
+          {state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce"}
+        </div>
       </div>
 
       <div className="mt-[22px] h-[190px] rounded-2xl border-[1.5px] border-dashed border-[#d6c7ae] bg-card flex flex-col items-center justify-center gap-[10px]">
