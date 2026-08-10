@@ -65,10 +65,16 @@ export default function PieceScreen() {
         {active.brand && <InfoRow label="Marque" value={active.brand} />}
         <InfoRow label="Taille" value={active.size || "—"} />
         <InfoRow label="Style" value={bestStyleFor(active)} />
-        <InfoRow label="Occasion" value={active.occasion ? OCC_LABELS[active.occasion] : "—"} />
+        <InfoRow
+          label="Occasion"
+          value={active.occasion && active.occasion.length ? active.occasion.map((o) => OCC_LABELS[o]).join(", ") : "—"}
+        />
         <InfoRow label="Saison" value={active.season} />
         {active.matiere && <InfoRow label="Matière" value={active.matiere} />}
         {active.coupe && <InfoRow label="Coupe" value={active.coupe} />}
+        {active.sacType && <InfoRow label="Type de sac" value={active.sacType} />}
+        {active.bijouType && <InfoRow label="Type de bijou" value={active.bijouType} />}
+        {active.accessoireType && <InfoRow label="Type d'accessoire" value={active.accessoireType} />}
       </div>
 
       {suggested ? (

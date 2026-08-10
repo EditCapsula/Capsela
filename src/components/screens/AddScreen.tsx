@@ -1,14 +1,14 @@
 "use client";
 
-import { CATS, OCCASIONS, PALETTE, SEASONS, SHOE_TYPES, seasonSuggestion } from "@/lib/data";
-import { COUPES, MATIERES } from "@/lib/attributes";
+import { ACCESSOIRE_TYPES, BAS_CATS, BIJOU_TYPES, CATS, OCCASIONS, PALETTE, PALETTE_BIJOU, SAC_TYPES, SEASONS, SHOE_TYPES, seasonSuggestion } from "@/lib/data";
+import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable } from "@/lib/attributes";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
 import type { CategoryKey } from "@/lib/types";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
-const BOTTOM_SIZED: CategoryKey[] = ["bas", "jupe", "combinaison"];
+const BOTTOM_SIZED: CategoryKey[] = [...BAS_CATS, "jupe", "combinaison"];
 
 function chipCls(on: boolean): string {
   return (
@@ -25,30 +25,28 @@ export default function AddScreen() {
   const { state, actions } = useCapsela();
   const { profile } = useAuth();
 
-  const sizes =
-    state.addCat === "chaussures"
-      ? POINTURES
-      : BOTTOM_SIZED.includes(state.addCat)
-        ? taillesBasFor(profile.gender)
-        : TAILLES_HAUT;
+  const isShoe = state.addCat === "chaussures";
+  const isSac = state.addCat === "sac";
+  const isBijou = state.addCat === "bijou";
+  const isAccessoire = state.addCat === "accessoire";
+  const sizeApplicable = isSizeApplicable(state.addCat);
+  const coupeApplicable = isCoupeApplicable(state.addCat);
+
+  const sizes = isShoe ? POINTURES : BOTTOM_SIZED.includes(state.addCat) ? taillesBasFor(profile.gender) : TAILLES_HAUT;
   // Taille pré-remplie depuis le profil, modifiable.
-  const profileDefaultSize =
-    state.addCat === "chaussures"
-      ? profile.pointure
-      : BOTTOM_SIZED.includes(state.addCat)
-        ? profile.tailleBas
-        : profile.tailleHaut;
+  const profileDefaultSize = isShoe ? profile.pointure : BOTTOM_SIZED.includes(state.addCat) ? profile.tailleBas : profile.tailleHaut;
   const selectedSize = state.addSize ?? profileDefaultSize;
+
+  const colorPalette = isBijou ? PALETTE_BIJOU : PALETTE;
 
   const suggestion = seasonSuggestion(state.addCat, state.addName);
   const seasonMissing = !state.addSeason;
-  const isShoe = state.addCat === "chaussures";
   const shoeTypeMissing = isShoe && !state.addShoeType;
   const blocked = seasonMissing || shoeTypeMissing;
 
   const save = () => {
     if (blocked) return;
-    if (state.addSize == null && selectedSize) actions.setAddSize(selectedSize);
+    if (sizeApplicable && state.addSize == null && selectedSize) actions.setAddSize(selectedSize);
     actions.saveItem();
   };
 
@@ -99,20 +97,94 @@ export default function AddScreen() {
         ))}
       </div>
 
-      <Label>
-        Taille <span className="opacity-60 normal-case tracking-normal">(reprise de ton profil, modifiable)</span>
-      </Label>
-      <div className="flex gap-2 flex-wrap">
-        {sizes.map((t) => (
-          <button key={t} onClick={() => actions.setAddSize(t)} className={chipCls(selectedSize === t)}>
-            {t}
-          </button>
-        ))}
-      </div>
+      {sizeApplicable && (
+        <>
+          <Label>
+            {isShoe ? "Pointure" : "Taille"} <span className="opacity-60 normal-case tracking-normal">(reprise de ton profil, modifiable)</span>
+          </Label>
+          {isShoe ? (
+            <input
+              className="capin bg-card border border-border rounded-[14px] px-4 py-[13px] text-[14px] text-ink font-sans w-[120px]"
+              value={state.addSize ?? ""}
+              onChange={(e) => actions.setAddSize(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
+              placeholder="Ex. 39"
+              inputMode="numeric"
+            />
+          ) : (
+            <div className="flex gap-2 flex-wrap">
+              {sizes.map((t) => (
+                <button key={t} onClick={() => actions.setAddSize(t)} className={chipCls(selectedSize === t)}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {isShoe && (
+        <>
+          <Label>
+            Type de chaussure <span className="text-terracotta">*</span>
+          </Label>
+          <div className="flex gap-2 flex-wrap">
+            {SHOE_TYPES.map((t) => (
+              <button key={t} onClick={() => actions.setAddShoeType(t)} className={chipCls(state.addShoeType === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {isSac && (
+        <>
+          <Label>
+            Type de sac <span className="opacity-60 normal-case tracking-normal">(détecté automatiquement, modifiable)</span>
+          </Label>
+          <div className="flex gap-2 flex-wrap">
+            {SAC_TYPES.map((t) => (
+              <button key={t} onClick={() => actions.setAddSacType(t)} className={chipCls(state.addSacType === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {isBijou && (
+        <>
+          <Label>
+            Type de bijou <span className="opacity-60 normal-case tracking-normal">(détecté automatiquement, modifiable)</span>
+          </Label>
+          <div className="flex gap-2 flex-wrap">
+            {BIJOU_TYPES.map((t) => (
+              <button key={t} onClick={() => actions.setAddBijouType(t)} className={chipCls(state.addBijouType === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      {isAccessoire && (
+        <>
+          <Label>
+            Type d&apos;accessoire <span className="opacity-60 normal-case tracking-normal">(détecté automatiquement, modifiable)</span>
+          </Label>
+          <div className="flex gap-2 flex-wrap">
+            {ACCESSOIRE_TYPES.map((t) => (
+              <button key={t} onClick={() => actions.setAddAccessoireType(t)} className={chipCls(state.addAccessoireType === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       <Label>Couleur dominante</Label>
       <div className="grid grid-cols-4 gap-x-2 gap-y-[18px]">
-        {PALETTE.map(([name, hex]) => {
+        {colorPalette.map(([name, hex]) => {
           const on = state.addColor.hex === hex;
           return (
             <button
@@ -137,26 +209,6 @@ export default function AddScreen() {
       </div>
 
       <Label>
-        Matière <span className="opacity-60 normal-case tracking-normal">(détectée automatiquement, modifiable)</span>
-      </Label>
-      <div className="flex gap-2 flex-wrap">
-        {MATIERES.map((m) => (
-          <button key={m} onClick={() => actions.setAddMatiere(m)} className={chipCls(state.addMatiere === m)}>
-            {m}
-          </button>
-        ))}
-      </div>
-
-      <Label>Coupe</Label>
-      <div className="flex gap-2 flex-wrap">
-        {COUPES.map((c) => (
-          <button key={c} onClick={() => actions.setAddCoupe(c)} className={chipCls(state.addCoupe === c)}>
-            {c}
-          </button>
-        ))}
-      </div>
-
-      <Label>
         Saison <span className="text-terracotta">*</span>
       </Label>
       {seasonMissing && suggestion && (
@@ -172,29 +224,40 @@ export default function AddScreen() {
         ))}
       </div>
 
-      {isShoe && (
+      <Label>
+        Occasion <span className="opacity-60 normal-case tracking-normal">(plusieurs choix possibles)</span>
+      </Label>
+      <div className="flex gap-2 flex-wrap">
+        {OCCASIONS.map(([key, label]) => (
+          <button key={key} onClick={() => actions.setAddOccasion(key)} className={chipCls(state.addOccasion.includes(key))}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <Label>
+        Matière <span className="opacity-60 normal-case tracking-normal">(détectée automatiquement, modifiable)</span>
+      </Label>
+      <div className="flex gap-2 flex-wrap">
+        {MATIERES.map((m) => (
+          <button key={m} onClick={() => actions.setAddMatiere(m)} className={chipCls(state.addMatiere === m)}>
+            {m}
+          </button>
+        ))}
+      </div>
+
+      {coupeApplicable && (
         <>
-          <Label>
-            Type de chaussure <span className="text-terracotta">*</span>
-          </Label>
+          <Label>Coupe</Label>
           <div className="flex gap-2 flex-wrap">
-            {SHOE_TYPES.map((t) => (
-              <button key={t} onClick={() => actions.setAddShoeType(t)} className={chipCls(state.addShoeType === t)}>
-                {t}
+            {COUPES.map((c) => (
+              <button key={c} onClick={() => actions.setAddCoupe(c)} className={chipCls(state.addCoupe === c)}>
+                {c}
               </button>
             ))}
           </div>
         </>
       )}
-
-      <Label>Occasion</Label>
-      <div className="flex gap-2 flex-wrap">
-        {OCCASIONS.map(([key, label]) => (
-          <button key={key} onClick={() => actions.setAddOccasion(key)} className={chipCls(state.addOccasion === key)}>
-            {label}
-          </button>
-        ))}
-      </div>
 
       <button
         onClick={save}

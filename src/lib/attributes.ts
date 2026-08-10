@@ -1,4 +1,4 @@
-import type { Coupe, Item, Matiere } from "./types";
+import type { AccessoireType, BijouType, CategoryKey, Coupe, Item, Matiere, SacType } from "./types";
 
 /**
  * Attributs du moteur de règles stylistiques (matière, coupe, formalité,
@@ -30,6 +30,50 @@ export function detectCoupe(name: string): Coupe | null {
   if (/oversize|large|ample/.test(n)) return "Ample";
   if (/slim|moulant|ajusté/.test(n)) return "Ajusté";
   if (/skinny|serré/.test(n)) return "Serré";
+  return null;
+}
+
+/** Coupe non pertinente pour ces catégories — masquée à la saisie. */
+export function isCoupeApplicable(cat: CategoryKey): boolean {
+  return !["chaussures", "sac", "bijou", "accessoire"].includes(cat);
+}
+
+/** Taille non pertinente pour ces catégories — masquée à la saisie. */
+export function isSizeApplicable(cat: CategoryKey): boolean {
+  return !["sac", "bijou", "accessoire"].includes(cat);
+}
+
+/** Pré-suggestion de type de sac à l'ajout — jamais imposée, jamais bloquante. */
+export function detectSacType(name: string): SacType | null {
+  const n = (name || "").toLowerCase();
+  if (/cabas/.test(n)) return "Cabas";
+  if (/bandoulière/.test(n)) return "Bandoulière";
+  if (/dos/.test(n)) return "Sac à dos";
+  if (/pochette/.test(n)) return "Pochette";
+  if (/seau/.test(n)) return "Sac seau";
+  return null;
+}
+
+/** Pré-suggestion de type de bijou à l'ajout — jamais imposée, jamais bloquante. */
+export function detectBijouType(name: string): BijouType | null {
+  const n = (name || "").toLowerCase();
+  if (/collier/.test(n)) return "Collier";
+  if (/boucle/.test(n)) return "Boucles d'oreilles";
+  if (/bracelet/.test(n)) return "Bracelet";
+  if (/bague/.test(n)) return "Bague";
+  if (/broche/.test(n)) return "Broche";
+  return null;
+}
+
+/** Pré-suggestion de type d'accessoire à l'ajout — jamais imposée, jamais bloquante. */
+export function detectAccessoireType(name: string): AccessoireType | null {
+  const n = (name || "").toLowerCase();
+  if (/ceinture/.test(n)) return "Ceinture";
+  if (/foulard/.test(n)) return "Foulard";
+  if (/écharpe/.test(n)) return "Écharpe";
+  if (/chapeau|casquette/.test(n)) return "Chapeau";
+  if (/lunette/.test(n)) return "Lunettes";
+  if (/gant/.test(n)) return "Gants";
   return null;
 }
 

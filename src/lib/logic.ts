@@ -1,6 +1,6 @@
 import type { CategoryKey, Item, OccasionKey } from "./types";
 import type { Weather } from "./data";
-import { OCC_FORMALITY } from "./data";
+import { BAS_CATS, OCC_FORMALITY } from "./data";
 import { bestStyleFor, morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
@@ -13,10 +13,11 @@ import {
   rolePieceOf,
 } from "./attributes";
 
-const BOTTOMS: CategoryKey[] = ["bas", "jupe"];
+const BOTTOMS: CategoryKey[] = [...BAS_CATS, "jupe"];
+const TOP_OR_BOTTOM_CATS: CategoryKey[] = ["haut", ...BAS_CATS, "jupe"];
 
 /** Catégories suivies pour l'anti-répétition (R-B7) et le calcul de formalité d'une tenue. */
-const CLOTHING_CATS: CategoryKey[] = ["haut", "bas", "jupe", "robe", "combinaison", "manteau", "pull"];
+const CLOTHING_CATS: CategoryKey[] = ["haut", ...BAS_CATS, "jupe", "robe", "combinaison", "manteau", "pull"];
 const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire"];
 
 function recentlyWorn(it: Item): boolean {
@@ -29,7 +30,7 @@ function isDressy(occasion: OccasionKey): boolean {
 
 export function occasionFit(it: Item, occ: OccasionKey): boolean {
   // Une occasion déclarée sur la pièce prime sur les heuristiques de nom.
-  if (it.occasion && it.occasion !== "all") return it.occasion === occ;
+  if (it.occasion && it.occasion.length) return it.occasion.includes(occ);
   const n = (it.name + " " + it.color).toLowerCase();
   switch (occ) {
     case "quotidien":
@@ -103,12 +104,12 @@ function harmonize(candidates: Item[], chosen: Item[], essential = true): Item[]
 
   // Coupe — évite un double ajusté ou double oversize sur haut+bas (R-B4).
   if (pool.length > 1) {
-    const anchor = chosen.find((i) => i.cat === "haut" || i.cat === "bas" || i.cat === "jupe");
+    const anchor = chosen.find((i) => TOP_OR_BOTTOM_CATS.includes(i.cat));
     if (anchor) {
       const anchorCoupe = coupeOf(anchor);
       if (anchorCoupe !== "regular") {
         const nonClashing = pool.filter(
-          (i) => !(["haut", "bas", "jupe"].includes(i.cat) && coupeOf(i) === anchorCoupe)
+          (i) => !(TOP_OR_BOTTOM_CATS.includes(i.cat) && coupeOf(i) === anchorCoupe)
         );
         if (nonClashing.length) pool = nonClashing;
       }
@@ -127,8 +128,8 @@ function rand<T>(arr: T[]): T | null {
 
 export interface GeneratedOutfit {
   ids: number[];
-  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). */
-  missingCats: CategoryKey[];
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. */
+  missingCats: (CategoryKey | "bas")[];
 }
 
 /**
@@ -211,7 +212,7 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
     if (ac && !ids.includes(ac.id)) ids.push(ac.id);
   }
 
-  const missingCats: CategoryKey[] = [];
+  const missingCats: (CategoryKey | "bas")[] = [];
   if (!useRobe) {
     if (!hasCat(["haut"])) missingCats.push("haut");
     if (!hasCat(BOTTOMS)) missingCats.push("bas");
@@ -236,7 +237,7 @@ export function swapOutfitPiece(
   occasion: OccasionKey = "all"
 ): number[] {
   const catGroup: CategoryKey[] =
-    cat === "bas" ? ["bas", "jupe"] : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
+    BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId);
   if (cat === "chaussures" && isDressy(occasion)) {
     const nonBasket = candidates.filter((i) => i.shoeType !== "Basket / sneaker");
@@ -285,7 +286,7 @@ export function evaluateBlocking(pieces: Item[], occasion: OccasionKey, weather:
   }
 
   const hasRobeOrCombi = pieces.some((i) => i.cat === "robe" || i.cat === "combinaison");
-  const topBottom = clothing.filter((i) => i.cat === "haut" || i.cat === "bas" || i.cat === "jupe");
+  const topBottom = clothing.filter((i) => TOP_OR_BOTTOM_CATS.includes(i.cat));
   if (!hasRobeOrCombi && topBottom.length === 2) {
     const [a, b] = topBottom;
     const ca = coupeOf(a);
@@ -301,7 +302,7 @@ export function evaluateBlocking(pieces: Item[], occasion: OccasionKey, weather:
     }
   }
 
-  if (hasRobeOrCombi && pieces.some((i) => i.cat === "haut" || i.cat === "bas" || i.cat === "jupe")) {
+  if (hasRobeOrCombi && pieces.some((i) => TOP_OR_BOTTOM_CATS.includes(i.cat))) {
     hits.push({ id: "R-B5", message: "Une robe ou une combinaison se suffit à elle-même, sans haut ni bas en plus." });
   }
 
@@ -377,7 +378,7 @@ export function computeLookScore(
 
   // R-S3 — règle 60/30/10 (approximation sur poids par catégorie, pas de vraie surface)
   const WEIGHT: Partial<Record<CategoryKey, number>> = {
-    haut: 3, bas: 3, robe: 3, combinaison: 3, jupe: 3, manteau: 3, pull: 3,
+    haut: 3, pantalon: 3, jean: 3, short: 3, robe: 3, combinaison: 3, jupe: 3, manteau: 3, pull: 3,
     chaussures: 1, sac: 1, bijou: 1, accessoire: 1,
   };
   const colorWeights = new Map<string, number>();

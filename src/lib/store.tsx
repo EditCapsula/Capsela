@@ -4,10 +4,24 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useAuth } from "./auth";
 import { CATALOG } from "./catalog";
 import { computeDefaultCapsule, weatherSeasonBucket } from "./capsule";
-import { CATS, CITIES, type Weather } from "./data";
+import { CATS, CITIES, PALETTE, PALETTE_BIJOU, type Weather } from "./data";
 import { generateOutfit, swapOutfitPiece } from "./logic";
-import { detectCoupe, detectMatiere } from "./attributes";
-import type { AppState, CategoryKey, Coupe, Item, Matiere, OccasionKey, SavedLook, Screen, Season, ShoeType } from "./types";
+import { detectAccessoireType, detectBijouType, detectCoupe, detectMatiere, detectSacType } from "./attributes";
+import type {
+  AccessoireType,
+  AppState,
+  BijouType,
+  CategoryKey,
+  Coupe,
+  Item,
+  Matiere,
+  OccasionKey,
+  SacType,
+  SavedLook,
+  Screen,
+  Season,
+  ShoeType,
+} from "./types";
 
 function buildInitialState(): AppState {
   return {
@@ -32,12 +46,18 @@ function buildInitialState(): AppState {
     addSize: null,
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
-    addOccasion: "quotidien",
+    addOccasion: ["quotidien"],
     addShoeType: null,
     addMatiere: null,
     addCoupe: null,
     addMatiereTouched: false,
     addCoupeTouched: false,
+    addSacType: null,
+    addBijouType: null,
+    addAccessoireType: null,
+    addSacTypeTouched: false,
+    addBijouTypeTouched: false,
+    addAccessoireTypeTouched: false,
     geoIndex: 0,
     outfit: [],
     outfitMissingCats: [],
@@ -97,10 +117,14 @@ export interface Actions {
   setAddColor: (c: { name: string; hex: string }) => void;
   setAddSize: (v: string | null) => void;
   setAddSeason: (s: Season) => void;
+  /** Bascule l'occasion dans la sélection multiple. */
   setAddOccasion: (o: OccasionKey) => void;
   setAddShoeType: (t: ShoeType) => void;
   setAddMatiere: (m: Matiere) => void;
   setAddCoupe: (c: Coupe) => void;
+  setAddSacType: (t: SacType) => void;
+  setAddBijouType: (t: BijouType) => void;
+  setAddAccessoireType: (t: AccessoireType) => void;
   saveItem: () => void;
   goPremium: () => void;
   subscribe: () => void;
@@ -279,16 +303,43 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addName: v,
         addMatiere: s.addMatiereTouched ? s.addMatiere : detectMatiere(v),
         addCoupe: s.addCoupeTouched ? s.addCoupe : detectCoupe(v),
+        addSacType: s.addSacTypeTouched ? s.addSacType : detectSacType(v),
+        addBijouType: s.addBijouTypeTouched ? s.addBijouType : detectBijouType(v),
+        addAccessoireType: s.addAccessoireTypeTouched ? s.addAccessoireType : detectAccessoireType(v),
       })),
     setAddBrand: (v) => setState((s) => ({ ...s, addBrand: v })),
-    setAddCat: (k) => setState((s) => ({ ...s, addCat: k, addSize: null, addShoeType: null })),
+    setAddCat: (k) =>
+      setState((s) => {
+        const wasBijou = s.addCat === "bijou";
+        const isBijou = k === "bijou";
+        const addColor = wasBijou !== isBijou
+          ? isBijou
+            ? { name: PALETTE_BIJOU[0][0], hex: PALETTE_BIJOU[0][1] }
+            : { name: PALETTE[0][0], hex: PALETTE[0][1] }
+          : s.addColor;
+        return {
+          ...s,
+          addCat: k,
+          addSize: null,
+          addShoeType: null,
+          addCoupe: k === "chaussures" ? null : s.addCoupe,
+          addColor,
+        };
+      }),
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c })),
     setAddSize: (v) => setState((s) => ({ ...s, addSize: v })),
     setAddSeason: (season) => setState((s) => ({ ...s, addSeason: season })),
-    setAddOccasion: (o) => setState((s) => ({ ...s, addOccasion: o })),
+    setAddOccasion: (o) =>
+      setState((s) => ({
+        ...s,
+        addOccasion: s.addOccasion.includes(o) ? s.addOccasion.filter((x) => x !== o) : [...s.addOccasion, o],
+      })),
     setAddShoeType: (t) => setState((s) => ({ ...s, addShoeType: t })),
     setAddMatiere: (m) => setState((s) => ({ ...s, addMatiere: m, addMatiereTouched: true })),
     setAddCoupe: (c) => setState((s) => ({ ...s, addCoupe: c, addCoupeTouched: true })),
+    setAddSacType: (t) => setState((s) => ({ ...s, addSacType: t, addSacTypeTouched: true })),
+    setAddBijouType: (t) => setState((s) => ({ ...s, addBijouType: t, addBijouTypeTouched: true })),
+    setAddAccessoireType: (t) => setState((s) => ({ ...s, addAccessoireType: t, addAccessoireTypeTouched: true })),
     saveItem: () =>
       setState((s) => {
         // Contrainte produit : pas de sauvegarde tant que la saison n'est pas confirmée,
@@ -304,10 +355,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           hex: s.addColor.hex,
           size: s.addSize,
           season: s.addSeason,
-          occasion: s.addOccasion,
+          occasion: s.addOccasion.length ? s.addOccasion : undefined,
           shoeType: s.addCat === "chaussures" ? s.addShoeType || undefined : undefined,
           matiere: s.addMatiere || undefined,
           coupe: s.addCoupe || undefined,
+          sacType: s.addCat === "sac" ? s.addSacType || undefined : undefined,
+          bijouType: s.addCat === "bijou" ? s.addBijouType || undefined : undefined,
+          accessoireType: s.addCat === "accessoire" ? s.addAccessoireType || undefined : undefined,
           worn: null,
         };
         return {
@@ -321,8 +375,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addCoupe: null,
           addMatiereTouched: false,
           addCoupeTouched: false,
+          addSacType: null,
+          addBijouType: null,
+          addAccessoireType: null,
+          addSacTypeTouched: false,
+          addBijouTypeTouched: false,
+          addAccessoireTypeTouched: false,
           addSeason: null,
           addShoeType: null,
+          addOccasion: ["quotidien"],
           screen: "wardrobe",
         };
       }),

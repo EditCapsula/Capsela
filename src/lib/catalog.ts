@@ -1,3 +1,4 @@
+import { detectAccessoireType, detectBijouType, detectSacType } from "./attributes";
 import type { CategoryKey, Item, Season, ShoeType } from "./types";
 
 /**
@@ -20,12 +21,12 @@ const RAW: [string, CategoryKey, string, string][] = [
   ["Chemise oversize", "haut", "Kaki", "#8A8560"],
   ["Top cache-cœur", "haut", "Terracotta", "#B4735A"],
   ["Blazer structuré", "haut", "Marine", "#3A4152"],
-  ["Jean droit", "bas", "Denim", "#5E6E7C"],
-  ["Pantalon tailleur", "bas", "Taupe", "#A8967C"],
-  ["Jean brut", "bas", "Marine", "#3A4152"],
-  ["Pantalon large", "bas", "Noir", "#2A2724"],
-  ["Chino", "bas", "Sable", "#D9C9B2"],
-  ["Short en lin", "bas", "Crème", "#E7DCC8"],
+  ["Jean droit", "jean", "Denim", "#5E6E7C"],
+  ["Pantalon tailleur", "pantalon", "Taupe", "#A8967C"],
+  ["Jean brut", "jean", "Marine", "#3A4152"],
+  ["Pantalon large", "pantalon", "Noir", "#2A2724"],
+  ["Chino", "pantalon", "Sable", "#D9C9B2"],
+  ["Short en lin", "short", "Crème", "#E7DCC8"],
   ["Jupe midi plissée", "jupe", "Kaki", "#8A8560"],
   ["Jupe droite", "jupe", "Noir", "#2A2724"],
   ["Robe portefeuille", "robe", "Terracotta", "#B4735A"],
@@ -80,6 +81,9 @@ export const CATALOG: CatalogItem[] = RAW.map(([name, cat, color, hex], i) => ({
   hex,
   season: catalogSeasonFor(cat, name),
   shoeType: catalogShoeTypeFor(cat, name),
+  sacType: cat === "sac" ? detectSacType(name) || undefined : undefined,
+  bijouType: cat === "bijou" ? detectBijouType(name) || undefined : undefined,
+  accessoireType: cat === "accessoire" ? detectAccessoireType(name) || undefined : undefined,
   // Rythme d'exemple : deux pièces sur trois « déjà portées », le reste jamais.
   worn: i % 3 !== 0 ? (i % 5) * 3 + 1 : null,
   genre: cat === "robe" || cat === "jupe" ? "femme" : "unisexe",

@@ -1,6 +1,8 @@
 export type CategoryKey =
   | "haut"
-  | "bas"
+  | "pantalon"
+  | "jean"
+  | "short"
   | "robe"
   | "manteau"
   | "pull"
@@ -28,6 +30,9 @@ export type OccasionKey =
   | "cocooning";
 
 export type ShoeType = "Basket / sneaker" | "Escarpin" | "Mocassin" | "Botte / bottine" | "Sandale";
+export type SacType = "Cabas" | "Bandoulière" | "Sac à dos" | "Pochette" | "Sac seau";
+export type BijouType = "Collier" | "Boucles d'oreilles" | "Bracelet" | "Bague" | "Broche";
+export type AccessoireType = "Ceinture" | "Foulard" | "Écharpe" | "Chapeau" | "Lunettes" | "Gants";
 
 export type Matiere = "Coton" | "Lin" | "Laine" | "Soie" | "Cuir" | "Denim" | "Synthétique";
 export type Coupe = "Serré" | "Ajusté" | "Ample";
@@ -45,13 +50,17 @@ export interface Item {
   wornPrev?: number | null;
   brand?: string;
   size?: string | null;
-  /** Occasion principale déclarée à l'ajout. */
-  occasion?: OccasionKey;
+  /** Occasions déclarées à l'ajout — plusieurs choix possibles. */
+  occasion?: OccasionKey[];
   /** Type de chaussure — obligatoire si cat === "chaussures" (nécessaire à R-B6). */
   shoeType?: ShoeType;
   /** Matière et coupe — pré-suggérées à la saisie du nom, jamais bloquantes. */
   matiere?: Matiere;
   coupe?: Coupe;
+  /** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
+  sacType?: SacType;
+  bijouType?: BijouType;
+  accessoireType?: AccessoireType;
 }
 
 export interface City {
@@ -106,20 +115,27 @@ export interface AppState {
   addSize: string | null;
   /** null tant que l'utilisateur n'a pas confirmé — la sauvegarde est bloquée. */
   addSeason: Season | null;
-  addOccasion: OccasionKey;
+  /** Plusieurs choix possibles. */
+  addOccasion: OccasionKey[];
   /** Type de chaussure en cours de saisie — obligatoire si addCat === "chaussures" (R-B6). */
   addShoeType: ShoeType | null;
-  /** Matière/coupe en cours de saisie — pré-suggérées au nom tant que non modifiées manuellement. */
+  /** Matière/coupe/sous-types en cours de saisie — pré-suggérés au nom tant que non modifiés manuellement. */
   addMatiere: Matiere | null;
   addCoupe: Coupe | null;
   addMatiereTouched: boolean;
   addCoupeTouched: boolean;
+  addSacType: SacType | null;
+  addBijouType: BijouType | null;
+  addAccessoireType: AccessoireType | null;
+  addSacTypeTouched: boolean;
+  addBijouTypeTouched: boolean;
+  addAccessoireTypeTouched: boolean;
 
   geoIndex: number;
 
   outfit: number[];
-  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). */
-  outfitMissingCats: CategoryKey[];
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. */
+  outfitMissingCats: (CategoryKey | "bas")[];
   outfitValidated: boolean;
   occasion: OccasionKey;
   /** Clés des suggestions proactives (R-S12/R-S13) écartées pour la tenue affichée. */

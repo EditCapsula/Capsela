@@ -1,9 +1,11 @@
-import type { CategoryKey, City, OccasionKey, Season, ShoeType } from "./types";
+import type { AccessoireType, BijouType, CategoryKey, City, OccasionKey, SacType, Season, ShoeType } from "./types";
 import { PROFILE_PALETTE } from "./profile";
 
 export const CATS: [CategoryKey, string, string][] = [
   ["haut", "Haut", "Hauts"],
-  ["bas", "Bas", "Bas"],
+  ["pantalon", "Pantalon", "Pantalons"],
+  ["jean", "Jean", "Jeans"],
+  ["short", "Short", "Shorts"],
   ["robe", "Robe", "Robes"],
   ["manteau", "Manteau", "Manteaux"],
   ["pull", "Pull / Gilet", "Pulls / Gilets"],
@@ -14,6 +16,9 @@ export const CATS: [CategoryKey, string, string][] = [
   ["bijou", "Bijou", "Bijoux"],
   ["accessoire", "Accessoire", "Accessoires"],
 ];
+
+/** Catégories regroupées sous "bas" pour la taille, l'anti-répétition et le picker de tenue. */
+export const BAS_CATS: CategoryKey[] = ["pantalon", "jean", "short"];
 
 export const CATLABEL: Record<CategoryKey, string> = {} as Record<CategoryKey, string>;
 export const CATPLURAL: Record<CategoryKey, string> = {} as Record<CategoryKey, string>;
@@ -65,6 +70,21 @@ OCCASIONS.forEach(([key, label, , formality]) => {
 
 /** Type de chaussure — obligatoire si catégorie = chaussures, nécessaire à R-B6. */
 export const SHOE_TYPES: ShoeType[] = ["Basket / sneaker", "Escarpin", "Mocassin", "Botte / bottine", "Sandale"];
+/** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
+export const SAC_TYPES: SacType[] = ["Cabas", "Bandoulière", "Sac à dos", "Pochette", "Sac seau"];
+export const BIJOU_TYPES: BijouType[] = ["Collier", "Boucles d'oreilles", "Bracelet", "Bague", "Broche"];
+export const ACCESSOIRE_TYPES: AccessoireType[] = ["Ceinture", "Foulard", "Écharpe", "Chapeau", "Lunettes", "Gants"];
+
+/** Palette dédiée au bijou (tons métalliques) — remplace la palette générale pour cette catégorie. */
+export const PALETTE_BIJOU: [string, string][] = [
+  ["Doré", "#C9A24B"],
+  ["Argenté", "#B9BEC4"],
+  ["Cuivré", "#B8734A"],
+  ["Or rose", "#D4A995"],
+  ["Bronze", "#8C6A3F"],
+  ["Perle", "#EDE6DA"],
+  ["Noir mat", "#2A2724"],
+];
 
 export const CITIES: City[] = [
   { city: "Paris", country: "France", temp: 24, label: "Ensoleillé" },
