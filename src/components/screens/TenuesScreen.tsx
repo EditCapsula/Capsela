@@ -4,6 +4,7 @@ import AppHeader from "@/components/AppHeader";
 import { CATLABEL, CITIES, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
+import { computeLookScore } from "@/lib/logic";
 
 const MISSING_LABELS: Record<string, string> = {
   haut: "haut",
@@ -46,6 +47,15 @@ export default function TenuesScreen() {
     : "Depuis ton profil style · " + (profile.styles[0] || "");
 
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
+
+  const dismissed = new Set(state.dismissedSuggestions || []);
+  const lookScore = computeLookScore(
+    outfitPieces,
+    state.occasion || "all",
+    profile.favoriteColors || [],
+    profile.morphology,
+    dismissed
+  );
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
@@ -108,7 +118,14 @@ export default function TenuesScreen() {
       <div className="mt-[14px] text-[11.5px] text-muted">{tenueSourceText}</div>
 
       <div className="flex justify-between items-center mt-[22px] mb-3">
-        <span className="text-[11px] tracking-[.16em] uppercase text-muted">La combinaison</span>
+        <div className="flex items-center gap-[9px]">
+          <span className="text-[11px] tracking-[.16em] uppercase text-muted">La combinaison</span>
+          {lookScore.badge === "recommande" && (
+            <span className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
+              Recommandé
+            </span>
+          )}
+        </div>
         <button onClick={actions.regenOutfit} className="text-[12px] text-terracotta tracking-[.03em] cursor-pointer">
           ↻ Régénérer
         </button>
@@ -142,6 +159,27 @@ export default function TenuesScreen() {
           </div>
         ))}
       </div>
+
+      {lookScore.badge === "ajuster" && lookScore.adjustMessage && (
+        <div className="mt-4 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
+          <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
+        </div>
+      )}
+
+      {lookScore.proactive && (
+        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta">✦</span>
+          <div className="flex-1">
+            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.proactive.text}</div>
+            <button
+              onClick={() => actions.dismissOutfitSuggestion(lookScore.proactive!.key)}
+              className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer"
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      )}
 
       {missingText && (
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">

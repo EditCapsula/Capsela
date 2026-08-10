@@ -1,11 +1,25 @@
 "use client";
 
-import { CATS, CATLABEL } from "@/lib/data";
+import { CATS, CATLABEL, OCCASIONS } from "@/lib/data";
+import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
+import { computeLookScore, evaluateBlocking } from "@/lib/logic";
+import type { Item } from "@/lib/types";
+
+const TOP_BOTTOM_CATS = new Set(["haut", "bas", "jupe"]);
 
 export default function CreateLookScreen() {
-  const { state, actions } = useCapsela();
+  const { state, weather, actions } = useCapsela();
+  const { profile } = useAuth();
   const items = state.items;
+
+  const draftPieces = state.lookDraftIds
+    .map((id) => items.find((i) => i.id === id))
+    .filter((it): it is Item => Boolean(it));
+  const hasRobeOrCombi = draftPieces.some((i) => i.cat === "robe" || i.cat === "combinaison");
+  const hasTopBottom = draftPieces.some((i) => TOP_BOTTOM_CATS.has(i.cat));
+  const occFormality = (OCCASIONS.find(([key]) => key === state.lookDraftOccasion) || [])[3] || 0;
+  const dressy = occFormality >= 3;
 
   const groups = CATS.map(([key, , plural]) => ({
     key,
@@ -15,6 +29,16 @@ export default function CreateLookScreen() {
 
   const count = state.lookDraftIds.length;
   const canSave = count >= 2;
+
+  const dismissed = new Set(state.lookDraftDismissed || []);
+  const lookScore = computeLookScore(
+    draftPieces,
+    state.lookDraftOccasion,
+    profile.favoriteColors || [],
+    profile.morphology,
+    dismissed
+  );
+  const blockingHits = evaluateBlocking(draftPieces, state.lookDraftOccasion, weather);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[30px]">
@@ -37,6 +61,30 @@ export default function CreateLookScreen() {
         </div>
       )}
 
+      <div className="mt-6 text-[11px] tracking-[.16em] uppercase text-muted">
+        Occasion <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
+      </div>
+      <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[9px]">
+        {OCCASIONS.map(([key, label, sub]) => {
+          const on = state.lookDraftOccasion === key;
+          return (
+            <button
+              key={key}
+              onClick={() => actions.setLookDraftOccasion(key)}
+              className="flex-none text-left py-[10px] px-[15px] rounded-full cursor-pointer border"
+              style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB" }}
+            >
+              <div className="text-[12.5px] whitespace-nowrap" style={{ color: on ? "#F3EEE5" : "#1D1A16" }}>
+                {label}
+              </div>
+              <div className="text-[10.5px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
+                {sub}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
       {groups.map((g) => (
         <div key={g.key}>
           <div className="mt-6 mb-3 text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
@@ -45,12 +93,20 @@ export default function CreateLookScreen() {
           <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
             {g.items.map((it) => {
               const on = state.lookDraftIds.includes(it.id);
+              // Filtrage dynamique doux (R-B5 : robe/combinaison exclut haut/bas ;
+              // R-B6 : baskets reléguées en contexte habillé) — jamais désactivé,
+              // juste atténué visuellement ; le bandeau ci-dessous couvre le reste.
+              const dimmed =
+                !on &&
+                ((TOP_BOTTOM_CATS.has(it.cat) && hasRobeOrCombi) ||
+                  ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom) ||
+                  (it.cat === "chaussures" && it.shoeType === "Basket / sneaker" && dressy));
               return (
                 <button
                   key={it.id}
                   onClick={() => actions.toggleLookDraftPiece(it.id)}
                   className="flex-none w-[104px] cursor-pointer text-left"
-                  style={{ scrollSnapAlign: "start" }}
+                  style={{ scrollSnapAlign: "start", opacity: dimmed ? 0.4 : 1 }}
                 >
                   <div
                     className="relative w-full rounded-[11px] overflow-hidden"
@@ -77,6 +133,44 @@ export default function CreateLookScreen() {
           </div>
         </div>
       ))}
+
+      {count >= 2 && (
+        <div className="flex items-center gap-[9px] mt-6">
+          <span className="text-[11px] tracking-[.16em] uppercase text-muted">Ce look</span>
+          {lookScore.badge === "recommande" && (
+            <span className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
+              Recommandé
+            </span>
+          )}
+        </div>
+      )}
+
+      {lookScore.badge === "ajuster" && lookScore.adjustMessage && (
+        <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
+          <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
+        </div>
+      )}
+
+      {lookScore.proactive && (
+        <div className="mt-3 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta">✦</span>
+          <div className="flex-1">
+            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.proactive.text}</div>
+            <button
+              onClick={() => actions.dismissLookDraftSuggestion(lookScore.proactive!.key)}
+              className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer"
+            >
+              Ignorer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {blockingHits.length > 0 && (
+        <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
+          <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{blockingHits[0].message}</div>
+        </div>
+      )}
 
       <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-3">
         Nom du look <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>

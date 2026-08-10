@@ -1,4 +1,4 @@
-import type { CategoryKey, Item, Season } from "./types";
+import type { CategoryKey, Item, Season, ShoeType } from "./types";
 
 /**
  * Pièce du catalogue de suggestions : sert à composer la capsule par défaut
@@ -61,6 +61,17 @@ export function catalogSeasonFor(cat: CategoryKey, name: string): Season {
   return "Toutes saisons";
 }
 
+function catalogShoeTypeFor(cat: CategoryKey, name: string): ShoeType | undefined {
+  if (cat !== "chaussures") return undefined;
+  const n = name.toLowerCase();
+  if (/basket/.test(n)) return "Basket / sneaker";
+  if (/escarpin/.test(n)) return "Escarpin";
+  if (/mocassin/.test(n)) return "Mocassin";
+  if (/bottine|botte/.test(n)) return "Botte / bottine";
+  if (/sandale/.test(n)) return "Sandale";
+  return undefined;
+}
+
 export const CATALOG: CatalogItem[] = RAW.map(([name, cat, color, hex], i) => ({
   id: 1001 + i,
   name,
@@ -68,6 +79,7 @@ export const CATALOG: CatalogItem[] = RAW.map(([name, cat, color, hex], i) => ({
   color,
   hex,
   season: catalogSeasonFor(cat, name),
+  shoeType: catalogShoeTypeFor(cat, name),
   // Rythme d'exemple : deux pièces sur trois « déjà portées », le reste jamais.
   worn: i % 3 !== 0 ? (i % 5) * 3 + 1 : null,
   genre: cat === "robe" || cat === "jupe" ? "femme" : "unisexe",

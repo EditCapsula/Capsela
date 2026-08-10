@@ -1,6 +1,7 @@
 "use client";
 
-import { CATS, OCCASIONS, PALETTE, SEASONS, seasonSuggestion } from "@/lib/data";
+import { CATS, OCCASIONS, PALETTE, SEASONS, SHOE_TYPES, seasonSuggestion } from "@/lib/data";
+import { COUPES, MATIERES } from "@/lib/attributes";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
@@ -41,9 +42,12 @@ export default function AddScreen() {
 
   const suggestion = seasonSuggestion(state.addCat, state.addName);
   const seasonMissing = !state.addSeason;
+  const isShoe = state.addCat === "chaussures";
+  const shoeTypeMissing = isShoe && !state.addShoeType;
+  const blocked = seasonMissing || shoeTypeMissing;
 
   const save = () => {
-    if (seasonMissing) return;
+    if (blocked) return;
     if (state.addSize == null && selectedSize) actions.setAddSize(selectedSize);
     actions.saveItem();
   };
@@ -133,6 +137,26 @@ export default function AddScreen() {
       </div>
 
       <Label>
+        Matière <span className="opacity-60 normal-case tracking-normal">(détectée automatiquement, modifiable)</span>
+      </Label>
+      <div className="flex gap-2 flex-wrap">
+        {MATIERES.map((m) => (
+          <button key={m} onClick={() => actions.setAddMatiere(m)} className={chipCls(state.addMatiere === m)}>
+            {m}
+          </button>
+        ))}
+      </div>
+
+      <Label>Coupe</Label>
+      <div className="flex gap-2 flex-wrap">
+        {COUPES.map((c) => (
+          <button key={c} onClick={() => actions.setAddCoupe(c)} className={chipCls(state.addCoupe === c)}>
+            {c}
+          </button>
+        ))}
+      </div>
+
+      <Label>
         Saison <span className="text-terracotta">*</span>
       </Label>
       {seasonMissing && suggestion && (
@@ -148,6 +172,21 @@ export default function AddScreen() {
         ))}
       </div>
 
+      {isShoe && (
+        <>
+          <Label>
+            Type de chaussure <span className="text-terracotta">*</span>
+          </Label>
+          <div className="flex gap-2 flex-wrap">
+            {SHOE_TYPES.map((t) => (
+              <button key={t} onClick={() => actions.setAddShoeType(t)} className={chipCls(state.addShoeType === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       <Label>Occasion</Label>
       <div className="flex gap-2 flex-wrap">
         {OCCASIONS.map(([key, label]) => (
@@ -161,14 +200,16 @@ export default function AddScreen() {
         onClick={save}
         className={
           "mt-7 w-full text-center rounded-full py-4 text-[13px] tracking-[.14em] uppercase " +
-          (seasonMissing ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta text-cream cursor-pointer")
+          (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta text-cream cursor-pointer")
         }
       >
         Ajouter à mon dressing
       </button>
-      {seasonMissing && (
+      {blocked && (
         <div className="text-center text-[11.5px] text-terracotta mt-[10px]">
-          Confirme la saison pour pouvoir ajouter cette pièce.
+          {seasonMissing
+            ? "Confirme la saison" + (shoeTypeMissing ? " et le type de chaussure" : "") + " pour pouvoir ajouter cette pièce."
+            : "Confirme le type de chaussure pour pouvoir ajouter cette pièce."}
         </div>
       )}
     </div>

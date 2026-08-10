@@ -6,7 +6,8 @@ import { CATALOG } from "./catalog";
 import { computeDefaultCapsule, weatherSeasonBucket } from "./capsule";
 import { CATS, CITIES, type Weather } from "./data";
 import { generateOutfit, swapOutfitPiece } from "./logic";
-import type { AppState, CategoryKey, Item, OccasionKey, SavedLook, Screen, Season } from "./types";
+import { detectCoupe, detectMatiere } from "./attributes";
+import type { AppState, CategoryKey, Coupe, Item, Matiere, OccasionKey, SavedLook, Screen, Season, ShoeType } from "./types";
 
 function buildInitialState(): AppState {
   return {
@@ -31,12 +32,18 @@ function buildInitialState(): AppState {
     addSize: null,
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
-    addOccasion: "travail",
+    addOccasion: "quotidien",
+    addShoeType: null,
+    addMatiere: null,
+    addCoupe: null,
+    addMatiereTouched: false,
+    addCoupeTouched: false,
     geoIndex: 0,
     outfit: [],
     outfitMissingCats: [],
     outfitValidated: false,
     occasion: "all",
+    dismissedSuggestions: [],
     lookCount: 0,
     isPremium: false,
     history: [],
@@ -46,6 +53,8 @@ function buildInitialState(): AppState {
     savedLooks: [],
     lookDraftIds: [],
     lookDraftName: "",
+    lookDraftOccasion: "all",
+    lookDraftDismissed: [],
     activeLookId: null,
   };
 }
@@ -89,6 +98,9 @@ export interface Actions {
   setAddSize: (v: string | null) => void;
   setAddSeason: (s: Season) => void;
   setAddOccasion: (o: OccasionKey) => void;
+  setAddShoeType: (t: ShoeType) => void;
+  setAddMatiere: (m: Matiere) => void;
+  setAddCoupe: (c: Coupe) => void;
   saveItem: () => void;
   goPremium: () => void;
   subscribe: () => void;
@@ -98,6 +110,7 @@ export interface Actions {
   swapPiece: (id: number, cat: CategoryKey) => void;
   cycleGeo: () => void;
   regenOutfit: () => void;
+  dismissOutfitSuggestion: (key: string) => void;
   wearOutfitToday: () => void;
   wearPieceToday: (id: number) => void;
   wearActiveToday: () => void;
@@ -113,6 +126,8 @@ export interface Actions {
   cancelCreateLook: () => void;
   toggleLookDraftPiece: (id: number) => void;
   setLookDraftName: (v: string) => void;
+  setLookDraftOccasion: (o: OccasionKey) => void;
+  dismissLookDraftSuggestion: (key: string) => void;
   saveLook: () => void;
   openLook: (id: string) => void;
   closeLookDetail: () => void;
@@ -189,7 +204,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
   const regen = (s: AppState): AppState => {
     const { ids, missingCats } = generateOutfit(poolRef.current, weatherRef.current, s.occasion || "all");
-    return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false };
+    return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
   };
 
   // Première tenue : dès que le profil est chargé (la capsule par défaut en dépend).
@@ -258,17 +273,28 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
     setCatFilter: (k) => setState((s) => ({ ...s, catFilter: k })),
 
-    setAddName: (v) => setState((s) => ({ ...s, addName: v })),
+    setAddName: (v) =>
+      setState((s) => ({
+        ...s,
+        addName: v,
+        addMatiere: s.addMatiereTouched ? s.addMatiere : detectMatiere(v),
+        addCoupe: s.addCoupeTouched ? s.addCoupe : detectCoupe(v),
+      })),
     setAddBrand: (v) => setState((s) => ({ ...s, addBrand: v })),
-    setAddCat: (k) => setState((s) => ({ ...s, addCat: k, addSize: null })),
+    setAddCat: (k) => setState((s) => ({ ...s, addCat: k, addSize: null, addShoeType: null })),
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c })),
     setAddSize: (v) => setState((s) => ({ ...s, addSize: v })),
     setAddSeason: (season) => setState((s) => ({ ...s, addSeason: season })),
     setAddOccasion: (o) => setState((s) => ({ ...s, addOccasion: o })),
+    setAddShoeType: (t) => setState((s) => ({ ...s, addShoeType: t })),
+    setAddMatiere: (m) => setState((s) => ({ ...s, addMatiere: m, addMatiereTouched: true })),
+    setAddCoupe: (c) => setState((s) => ({ ...s, addCoupe: c, addCoupeTouched: true })),
     saveItem: () =>
       setState((s) => {
-        // Contrainte produit : pas de sauvegarde tant que la saison n'est pas confirmée.
+        // Contrainte produit : pas de sauvegarde tant que la saison n'est pas confirmée,
+        // ni tant que le type de chaussure n'est pas choisi pour cette catégorie (R-B6).
         if (!s.addSeason) return s;
+        if (s.addCat === "chaussures" && !s.addShoeType) return s;
         const item: Item = {
           id: Math.max(0, ...s.items.map((i) => i.id)) + 1,
           name: (s.addName || "").trim() || "Nouvelle pièce",
@@ -279,6 +305,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           size: s.addSize,
           season: s.addSeason,
           occasion: s.addOccasion,
+          shoeType: s.addCat === "chaussures" ? s.addShoeType || undefined : undefined,
+          matiere: s.addMatiere || undefined,
+          coupe: s.addCoupe || undefined,
           worn: null,
         };
         return {
@@ -288,7 +317,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           replacingId: null,
           addName: "",
           addBrand: "",
+          addMatiere: null,
+          addCoupe: null,
+          addMatiereTouched: false,
+          addCoupeTouched: false,
           addSeason: null,
+          addShoeType: null,
           screen: "wardrobe",
         };
       }),
@@ -303,11 +337,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         const outfitItems = s.outfit
           .map((oid) => findPiece(poolRef.current, oid))
           .filter((it): it is Item => Boolean(it));
-        return { ...s, outfit: swapOutfitPiece(outfitItems, poolRef.current, id, cat) };
+        return {
+          ...s,
+          outfit: swapOutfitPiece(outfitItems, poolRef.current, id, cat, s.occasion || "all"),
+          dismissedSuggestions: [],
+        };
       }),
     cycleGeo: () => setState((s) => ({ ...s, geoIndex: ((s.geoIndex || 0) + 1) % CITIES.length })),
 
     regenOutfit: () => setState(regen),
+    dismissOutfitSuggestion: (key) =>
+      setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
     wearOutfitToday: () =>
       setState((s) => ({
         ...s,
@@ -366,14 +406,27 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setOpinionContact: (c) => setState((s) => ({ ...s, opinionContact: s.opinionContact === c ? null : c })),
     sendOpinionRequest: (via) => setState((s) => ({ ...s, opinionStatus: "sent", opinionVia: via })),
 
-    goCreateLook: () => setState((s) => ({ ...s, lookDraftIds: [], lookDraftName: "", screen: "createLook" })),
+    goCreateLook: () =>
+      setState((s) => ({
+        ...s,
+        lookDraftIds: [],
+        lookDraftName: "",
+        lookDraftOccasion: "all",
+        lookDraftDismissed: [],
+        screen: "createLook",
+      })),
     cancelCreateLook: () => go("wardrobe"),
     toggleLookDraftPiece: (id) =>
       setState((s) => ({
         ...s,
         lookDraftIds: s.lookDraftIds.includes(id) ? s.lookDraftIds.filter((x) => x !== id) : [...s.lookDraftIds, id],
+        lookDraftDismissed: [],
       })),
     setLookDraftName: (v) => setState((s) => ({ ...s, lookDraftName: v })),
+    setLookDraftOccasion: (o) =>
+      setState((s) => ({ ...s, lookDraftOccasion: s.lookDraftOccasion === o ? "all" : o, lookDraftDismissed: [] })),
+    dismissLookDraftSuggestion: (key) =>
+      setState((s) => ({ ...s, lookDraftDismissed: [...s.lookDraftDismissed, key] })),
     saveLook: () =>
       setState((s) => {
         // Un look doit rassembler au moins 2 pièces pour avoir du sens.
@@ -386,12 +439,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           name: s.lookDraftName.trim() || defaultName,
           pieceIds: [...s.lookDraftIds],
           createdAt: Date.now(),
+          occasion: s.lookDraftOccasion !== "all" ? s.lookDraftOccasion : undefined,
         };
         return {
           ...s,
           savedLooks: [look, ...s.savedLooks],
           lookDraftIds: [],
           lookDraftName: "",
+          lookDraftOccasion: "all",
+          lookDraftDismissed: [],
           screen: "wardrobe",
         };
       }),

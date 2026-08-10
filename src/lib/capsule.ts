@@ -51,6 +51,21 @@ export function morphoFit(it: Item, morpho: string | null): boolean {
   return rx ? rx.test((it.name + " " + it.color).toLowerCase()) : false;
 }
 
+/** Points de vigilance par morphologie (scoring négatif R-S9) — jamais bloquant. */
+const MORPHO_AVOID: Record<string, RegExp> = {
+  "Taille bien marquée": /oversize|large|ample/,
+  "Épaules plus larges que les hanches": /épaul|structuré haut|blazer|manches bouffantes/,
+  "Hanches plus marquées que les épaules": /moulant|ceinture serrée/,
+  "Silhouette plutôt fine et droite": /^(?!.*(pull|gilet|combinaison|trench|blazer|torsad)).*coupe droite.*$/,
+  "Silhouette plutôt ronde et régulière": /moulant|ceinture serrée|col montant/,
+};
+
+export function morphoVigilance(it: Item, morpho: string | null): boolean {
+  if (!morpho) return false;
+  const rx = MORPHO_AVOID[morpho];
+  return rx ? rx.test((it.name + " " + it.color).toLowerCase()) : false;
+}
+
 /**
  * Capsule par défaut : sélection du catalogue personnalisée par le profil
  * (genre, météo de la ville, style, couleurs préférées) puis ordonnée par

@@ -1,6 +1,6 @@
 "use client";
 
-import { CATLABEL, isBag } from "@/lib/data";
+import { CATLABEL, OCC_LABELS, isBag } from "@/lib/data";
 import { useCapsela } from "@/lib/store";
 
 export default function LookDetailScreen() {
@@ -27,6 +27,7 @@ export default function LookDetailScreen() {
 
       <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-3">
         {pieces.length} {pieces.length === 1 ? "pièce" : "pièces"}
+        {look.occasion ? " · " + OCC_LABELS[look.occasion] : ""}
       </div>
       <div className="flex flex-col gap-[10px]">
         {pieces.map((it) => (

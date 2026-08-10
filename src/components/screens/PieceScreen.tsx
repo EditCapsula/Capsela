@@ -67,6 +67,8 @@ export default function PieceScreen() {
         <InfoRow label="Style" value={bestStyleFor(active)} />
         <InfoRow label="Occasion" value={active.occasion ? OCC_LABELS[active.occasion] : "—"} />
         <InfoRow label="Saison" value={active.season} />
+        {active.matiere && <InfoRow label="Matière" value={active.matiere} />}
+        {active.coupe && <InfoRow label="Coupe" value={active.coupe} />}
       </div>
 
       {suggested ? (

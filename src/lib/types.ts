@@ -15,13 +15,22 @@ export type Season = "Printemps / Été" | "Automne / Hiver" | "Toutes saisons";
 
 export type OccasionKey =
   | "all"
-  | "travail"
-  | "chill"
-  | "dejeuner"
+  | "quotidien"
+  | "travail_formel"
+  | "entretien"
   | "date"
-  | "sport"
   | "soiree"
-  | "ceremonie";
+  | "evenement_pro"
+  | "evenement_perso"
+  | "sport"
+  | "voyage"
+  | "meteo"
+  | "cocooning";
+
+export type ShoeType = "Basket / sneaker" | "Escarpin" | "Mocassin" | "Botte / bottine" | "Sandale";
+
+export type Matiere = "Coton" | "Lin" | "Laine" | "Soie" | "Cuir" | "Denim" | "Synthétique";
+export type Coupe = "Serré" | "Ajusté" | "Ample";
 
 export interface Item {
   id: number;
@@ -38,6 +47,11 @@ export interface Item {
   size?: string | null;
   /** Occasion principale déclarée à l'ajout. */
   occasion?: OccasionKey;
+  /** Type de chaussure — obligatoire si cat === "chaussures" (nécessaire à R-B6). */
+  shoeType?: ShoeType;
+  /** Matière et coupe — pré-suggérées à la saisie du nom, jamais bloquantes. */
+  matiere?: Matiere;
+  coupe?: Coupe;
 }
 
 export interface City {
@@ -60,6 +74,7 @@ export interface SavedLook {
   name: string;
   pieceIds: number[];
   createdAt: number;
+  occasion?: OccasionKey;
 }
 
 export interface AppState {
@@ -92,6 +107,13 @@ export interface AppState {
   /** null tant que l'utilisateur n'a pas confirmé — la sauvegarde est bloquée. */
   addSeason: Season | null;
   addOccasion: OccasionKey;
+  /** Type de chaussure en cours de saisie — obligatoire si addCat === "chaussures" (R-B6). */
+  addShoeType: ShoeType | null;
+  /** Matière/coupe en cours de saisie — pré-suggérées au nom tant que non modifiées manuellement. */
+  addMatiere: Matiere | null;
+  addCoupe: Coupe | null;
+  addMatiereTouched: boolean;
+  addCoupeTouched: boolean;
 
   geoIndex: number;
 
@@ -100,6 +122,8 @@ export interface AppState {
   outfitMissingCats: CategoryKey[];
   outfitValidated: boolean;
   occasion: OccasionKey;
+  /** Clés des suggestions proactives (R-S12/R-S13) écartées pour la tenue affichée. */
+  dismissedSuggestions: string[];
 
   lookCount: number;
   isPremium: boolean;
@@ -116,6 +140,9 @@ export interface AppState {
   /** Pièces choisies dans l'écran de création de look, avant sauvegarde. */
   lookDraftIds: number[];
   lookDraftName: string;
+  lookDraftOccasion: OccasionKey;
+  /** Clés des suggestions proactives écartées pour le brouillon de look en cours. */
+  lookDraftDismissed: string[];
   /** Id du look actuellement ouvert dans l'écran de détail. */
   activeLookId: string | null;
 }

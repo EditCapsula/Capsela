@@ -1,4 +1,4 @@
-import type { CategoryKey, City, OccasionKey, Season } from "./types";
+import type { CategoryKey, City, OccasionKey, Season, ShoeType } from "./types";
 import { PROFILE_PALETTE } from "./profile";
 
 export const CATS: [CategoryKey, string, string][] = [
@@ -37,20 +37,34 @@ export function seasonSuggestion(cat: CategoryKey, name: string): Season | null 
   return null;
 }
 
-export const OCCASIONS: [OccasionKey, string, string][] = [
-  ["travail", "Travail / stage", "Bureau, réunions"],
-  ["chill", "Chill & balade", "Visites, musée, expo"],
-  ["dejeuner", "Déjeuner / brunch", "Amies, famille, collègues"],
-  ["date", "Rendez-vous", "Date, dîner"],
-  ["sport", "Sport", "Actif, décontracté"],
-  ["soiree", "Soirée", "Cocktail, sortie"],
-  ["ceremonie", "Cérémonie", "Mariage, événement"],
+/**
+ * Occasion, libellé, sous-libellé, niveau de formalité minimum requis
+ * (0 = sport, 1 = décontracté, 3 = business casual, 4 = habillé) — alimente
+ * R-B3 (incohérence occasion) et R-B6 (baskets non éligibles).
+ */
+export const OCCASIONS: [OccasionKey, string, string, number][] = [
+  ["quotidien", "Quotidien / bureau décontracté", "Journée type", 1],
+  ["travail_formel", "Travail formel", "Bureau, réunions", 3],
+  ["entretien", "Réunion importante / entretien", "Ça compte", 4],
+  ["date", "Rendez-vous / date", "Date, dîner", 3],
+  ["soiree", "Soirée / sortie entre amis", "Cocktail, sortie", 3],
+  ["evenement_pro", "Événement pro", "Conférence, salon", 4],
+  ["evenement_perso", "Événement perso formel", "Mariage, baptême", 4],
+  ["sport", "Sport", "Actif, décontracté", 0],
+  ["voyage", "Voyage", "Confortable, polyvalent", 1],
+  ["meteo", "Météo changeante", "Superposable", 1],
+  ["cocooning", "Cocooning", "Chez soi, détente", 0],
 ];
 
 export const OCC_LABELS: Record<OccasionKey, string> = { all: "Toutes" } as Record<OccasionKey, string>;
-OCCASIONS.forEach(([key, label]) => {
+export const OCC_FORMALITY: Record<OccasionKey, number> = { all: 0 } as Record<OccasionKey, number>;
+OCCASIONS.forEach(([key, label, , formality]) => {
   OCC_LABELS[key] = label;
+  OCC_FORMALITY[key] = formality;
 });
+
+/** Type de chaussure — obligatoire si catégorie = chaussures, nécessaire à R-B6. */
+export const SHOE_TYPES: ShoeType[] = ["Basket / sneaker", "Escarpin", "Mocassin", "Botte / bottine", "Sandale"];
 
 export const CITIES: City[] = [
   { city: "Paris", country: "France", temp: 24, label: "Ensoleillé" },
