@@ -18,10 +18,7 @@ export default function HistoryScreen() {
         >
           ←
         </button>
-        <div>
-          <div className="text-[11px] tracking-[.18em] uppercase text-muted">✦ Premium</div>
-          <div className="font-serif text-[25px] text-ink mt-[2px]">Ton journal</div>
-        </div>
+        <div className="font-serif text-[25px] text-ink mt-[2px]">Ton journal</div>
       </div>
 
       <div className="mt-[18px] bg-ink rounded-2xl p-5">

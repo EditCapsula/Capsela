@@ -5,46 +5,38 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 
 export default function HomeScreen() {
-  const { actions, requirePremium } = useCapsela();
+  const { actions } = useCapsela();
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
 
   const features = [
     {
       title: "Dressing",
-      tag: "Gratuit",
       body: "Ajoute tes vêtements et accessoires par photo.",
-      locked: false,
       onOpen: actions.goWardrobe,
       bg: "#EFE3D3",
       accent: "#1D1A16",
     },
     {
       title: "Capsule par défaut",
-      tag: "Gratuit",
       body: "Une sélection déjà prête, pensée pour ton style.",
-      locked: false,
       onOpen: actions.goCapsule,
       bg: "#E7DCCB",
       accent: "#1D1A16",
     },
     {
       title: "Second avis",
-      tag: "Gratuit",
       body: "Partage ta tenue à un proche avant de te lancer.",
-      locked: false,
       onOpen: actions.openOpinionShare,
       bg: "#E7DCCB",
       accent: "#1D1A16",
     },
     {
       title: "Journal des tenues",
-      tag: "Premium",
       body: "L’historique de toutes tes tenues portées.",
-      locked: true,
-      onOpen: requirePremium(actions.goHistory),
-      bg: "#1D1A16",
-      accent: "#F3EEE5",
+      onOpen: actions.goHistory,
+      bg: "#E7DCCB",
+      accent: "#1D1A16",
     },
   ];
 
@@ -89,18 +81,10 @@ export default function HomeScreen() {
             style={{ background: f.bg }}
           >
             <div className="flex-1 min-w-0">
-              {f.tag === "Premium" && (
-                <span
-                  className="inline-block text-[11px] rounded-full py-1 px-2 mb-[9px]"
-                  style={{ color: "#F3EEE5", background: "rgba(166,105,80,.35)" }}
-                >
-                  🔒
-                </span>
-              )}
               <div className="font-serif text-[17px]" style={{ color: f.accent }}>
                 {f.title}
               </div>
-              <div className="text-[11.5px] mt-[5px] leading-[1.4]" style={{ color: f.tag === "Premium" ? "#B3AA9B" : "#7B7366" }}>
+              <div className="text-[11.5px] mt-[5px] leading-[1.4]" style={{ color: "#7B7366" }}>
                 {f.body}
               </div>
             </div>
