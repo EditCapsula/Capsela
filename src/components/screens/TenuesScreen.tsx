@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATLABEL, CITIES, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
@@ -16,31 +17,23 @@ const MISSING_LABELS: Record<string, string> = {
 };
 
 function missingSuggestionText(missingCats: string[]): string {
-  const needsLayer = missingCats.includes("couche");
-  const rest = missingCats.filter((k) => k !== "couche");
-  const words = rest.map((k) => MISSING_LABELS[k] || k);
-  let text = "";
+  const words = missingCats.map((k) => MISSING_LABELS[k] || k);
+  if (words.length === 0) return "";
   if (words.length === 1) {
     const w = words[0];
-    text =
-      w === "chaussures" || w === "accessoires"
-        ? "Il te manque des " + w + " pour compléter cette tenue."
-        : "Il te manque un " + w + " pour compléter cette tenue.";
-  } else if (words.length > 1) {
-    const last = words[words.length - 1];
-    const head = words.slice(0, -1).join(", ");
-    text = "Il te manque des " + head + " et " + last + " pour compléter cette tenue.";
+    return w === "chaussures" || w === "accessoires"
+      ? "Il te manque des " + w + " pour compléter cette tenue."
+      : "Il te manque un " + w + " pour compléter cette tenue.";
   }
-  if (needsLayer) {
-    const layerMsg = "Il te manque une veste ou un gilet pour pouvoir superposer.";
-    text = text ? text + " " + layerMsg : layerMsg;
-  }
-  return text;
+  const last = words[words.length - 1];
+  const head = words.slice(0, -1).join(", ");
+  return "Il te manque des " + head + " et " + last + " pour compléter cette tenue.";
 }
 
 export default function TenuesScreen() {
-  const { state, wardrobePool, outfitFromDressing, actions } = useCapsela();
+  const { state, weather, wardrobePool, outfitFromDressing, actions } = useCapsela();
   const { profile } = useAuth();
+  const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
 
   const now = new Date();
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
@@ -64,7 +57,8 @@ export default function TenuesScreen() {
     state.occasion || "all",
     profile.favoriteColors || [],
     profile.morphology,
-    dismissed
+    dismissed,
+    weather
   );
 
   return (
@@ -125,24 +119,6 @@ export default function TenuesScreen() {
         })}
       </div>
 
-      <button
-        onClick={actions.toggleLayerable}
-        className="w-full flex items-center justify-between gap-3 mt-[10px] py-[2px] cursor-pointer"
-      >
-        <span className="text-[12px]" style={{ color: state.layerable ? "#A66950" : "#1D1A16" }}>
-          Je veux pouvoir superposer
-        </span>
-        <span
-          className="w-[34px] h-5 rounded-full relative flex-shrink-0 transition-colors"
-          style={{ background: state.layerable ? "#A66950" : "#DCCFBC" }}
-        >
-          <span
-            className="absolute top-[3px] w-[14px] h-[14px] rounded-full bg-cream transition-all"
-            style={{ left: state.layerable ? 17 : 3 }}
-          />
-        </span>
-      </button>
-
       <div className="mt-[14px] text-[11.5px] text-muted">{tenueSourceText}</div>
 
       <div className="flex justify-between items-center mt-[22px] mb-3">
@@ -198,7 +174,25 @@ export default function TenuesScreen() {
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">✦</span>
           <div className="flex-1">
+            {lookScore.proactive.key === "layer" && (
+              <div className="flex items-center gap-[6px] mb-[6px]">
+                <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Layering</span>
+                <button
+                  onClick={() => setLayeringInfoOpen((v) => !v)}
+                  aria-label="Qu'est-ce que le layering ?"
+                  className="text-[11px] text-placeholder cursor-pointer"
+                >
+                  ⓘ
+                </button>
+              </div>
+            )}
             <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.proactive.text}</div>
+            {lookScore.proactive.key === "layer" && layeringInfoOpen && (
+              <div className="text-[11.5px] text-muted mt-[6px] leading-[1.4]">
+                Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un débardeur
+                sous une chemise oversize ouverte.
+              </div>
+            )}
             <button
               onClick={() => actions.dismissOutfitSuggestion(lookScore.proactive!.key)}
               className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer"

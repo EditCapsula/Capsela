@@ -33,7 +33,8 @@ export default function CreateLookScreen() {
     state.lookDraftOccasion,
     profile.favoriteColors || [],
     profile.morphology,
-    dismissed
+    dismissed,
+    weather
   );
   const blockingHits = evaluateBlocking(draftPieces, state.lookDraftOccasion, weather);
   const hardBlocked = blockingHits.some((h) => h.hard);
@@ -156,6 +157,9 @@ export default function CreateLookScreen() {
         <div className="mt-3 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">✦</span>
           <div className="flex-1">
+            {lookScore.proactive.key === "layer" && (
+              <div className="text-[10px] tracking-[.14em] uppercase text-terracotta mb-[6px]">Layering</div>
+            )}
             <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.proactive.text}</div>
             <button
               onClick={() => actions.dismissLookDraftSuggestion(lookScore.proactive!.key)}

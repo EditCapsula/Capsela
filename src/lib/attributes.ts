@@ -75,6 +75,8 @@ export function detectAccessoireType(name: string): AccessoireType | null {
   if (/casquette/.test(n)) return "Casquette";
   if (/chapeau/.test(n)) return "Chapeau";
   if (/lunette/.test(n)) return "Lunettes";
+  if (/collant/.test(n)) return "Collants";
+  if (/chaussette/.test(n)) return "Chaussettes hautes";
   return null;
 }
 

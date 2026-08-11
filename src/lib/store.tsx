@@ -5,7 +5,7 @@ import { useAuth } from "./auth";
 import { CATALOG } from "./catalog";
 import { computeDefaultCapsule, weatherSeasonBucket } from "./capsule";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
-import { generateOutfit, pickSeasonalVeste, swapOutfitPiece, violatesOuterwearRule } from "./logic";
+import { generateOutfit, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import {
   detectAccessoireType,
   detectBijouType,
@@ -53,7 +53,7 @@ function buildInitialState(): AppState {
     addSize: null,
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
-    addOccasion: ["travail_formel"],
+    addOccasion: ["travail_presentiel"],
     addShoeType: null,
     addMatiere: null,
     addCoupe: null,
@@ -73,7 +73,6 @@ function buildInitialState(): AppState {
     outfitValidated: false,
     occasion: "all",
     dismissedSuggestions: [],
-    layerable: false,
     lookCount: 0,
     isPremium: false,
     history: [],
@@ -145,7 +144,6 @@ export interface Actions {
   swapPiece: (id: number, cat: CategoryKey) => void;
   cycleGeo: () => void;
   regenOutfit: () => void;
-  toggleLayerable: () => void;
   dismissOutfitSuggestion: (key: string) => void;
   wearOutfitToday: () => void;
   wearPieceToday: (id: number) => void;
@@ -239,7 +237,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   }, [wardrobePool, weather]);
 
   const regen = (s: AppState): AppState => {
-    const { ids, missingCats } = generateOutfit(poolRef.current, weatherRef.current, s.occasion || "all", s.layerable);
+    const { ids, missingCats } = generateOutfit(poolRef.current, weatherRef.current, s.occasion || "all");
     return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
   };
 
@@ -404,7 +402,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSubtypeTouched: false,
           addSeason: null,
           addShoeType: null,
-          addOccasion: ["travail_formel"],
+          addOccasion: ["travail_presentiel"],
           screen: "wardrobe",
         };
       }),
@@ -428,31 +426,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     cycleGeo: () => setState((s) => ({ ...s, geoIndex: ((s.geoIndex || 0) + 1) % CITIES.length })),
 
     regenOutfit: () => setState(regen),
-    toggleLayerable: () =>
-      setState((s) => {
-        const layerable = !s.layerable;
-        if (!layerable) {
-          // Retire la veste ajoutée pour la superposition, garde le reste de la tenue recommandée.
-          const outfit = s.outfit.filter((id) => findPiece(poolRef.current, id)?.cat !== "veste");
-          return { ...s, layerable, outfit, outfitMissingCats: s.outfitMissingCats.filter((m) => m !== "couche") };
-        }
-        // Garde la tenue recommandée initiale, ajoute juste une veste adaptée à la saison.
-        const chosen = s.outfit.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
-        if (chosen.some((i) => i.cat === "veste")) return { ...s, layerable };
-        const picked = pickSeasonalVeste(poolRef.current, chosen, weatherRef.current);
-        const outfitMissingCats: AppState["outfitMissingCats"] = picked
-          ? s.outfitMissingCats.filter((m) => m !== "couche")
-          : s.outfitMissingCats.includes("couche")
-            ? s.outfitMissingCats
-            : [...s.outfitMissingCats, "couche"];
-        return {
-          ...s,
-          layerable,
-          outfit: picked ? [...s.outfit, picked.id] : s.outfit,
-          outfitMissingCats,
-          dismissedSuggestions: [],
-        };
-      }),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
     wearOutfitToday: () =>

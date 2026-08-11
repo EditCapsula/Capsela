@@ -27,9 +27,9 @@ export const CATS: [CategoryKey, string, string][] = [
   ["accessoire", "Accessoire", "Accessoires"],
 ];
 
-/** Sous-types génériques par catégorie — pré-suggérés à la saisie du nom. Facultatifs sauf pour SUBTYPE_REQUIRED. */
+/** Sous-types génériques par catégorie — pré-suggérés à la saisie du nom, toujours facultatifs (seul le type de chaussure bloque, cf. SHOE_TYPES/R-B6). */
 export const SUBTYPES: Partial<Record<CategoryKey, string[]>> = {
-  haut: ["T-shirt", "Top", "Débardeur", "Chemise", "Blouse", "Polo", "Sweat"],
+  haut: ["T-shirt", "Top", "Débardeur", "Chemise", "Chemisier", "Blouse", "Polo", "Sweat"],
   pull: ["Pull", "Gilet", "Cardigan", "Col roulé"],
   pantalon: ["Pantalon", "Tailleur", "Cargo", "Legging", "Jogging"],
   jean: ["Droit", "Slim", "Skinny", "Mom", "Boyfriend", "Wide leg", "Flare"],
@@ -41,8 +41,8 @@ export const SUBTYPES: Partial<Record<CategoryKey, string[]>> = {
   manteau: ["Manteau", "Trench", "Caban", "Doudoune", "Parka", "Imperméable"],
 };
 
-/** Catégories pour lesquelles le sous-type est obligatoire (bloque l'ajout). */
-export const SUBTYPE_REQUIRED: CategoryKey[] = ["veste", "manteau"];
+/** Catégories du sous-type générique pour lesquelles il est obligatoire — aucune : seul le type de chaussure bloque (mécanisme séparé, cf. addShoeType/R-B6). */
+export const SUBTYPE_REQUIRED: CategoryKey[] = [];
 
 /** Catégories regroupées sous "bas" pour la taille, l'anti-répétition et le picker de tenue. */
 export const BAS_CATS: CategoryKey[] = ["pantalon", "jean", "short"];
@@ -76,22 +76,28 @@ export function seasonSuggestion(cat: CategoryKey, name: string): Season | null 
  */
 export const OCCASIONS: [OccasionKey, string, string, number][] = [
   ["quotidien", "Journée ordinaire", "Boulot décontracté, courses, école", 1],
-  ["travail_formel", "Travail formel", "Bureau, réunions", 3],
+  ["travail_teletravail", "Travail — Télétravail", "Bureau à la maison", 1],
+  ["travail_presentiel", "Travail — Présentiel", "Bureau, réunions", 3],
   ["entretien", "Réunion importante / entretien", "Ça compte", 4],
   ["date", "Rendez-vous / date", "Date, dîner", 3],
   ["soiree", "Soirée / sortie entre amis", "Cocktail, sortie", 3],
-  ["evenement_pro", "Événement pro", "Conférence, salon", 4],
+  ["evenement_pro", "Événement pro", "Conférence, salon", 3],
   ["evenement_perso", "Événement perso formel", "Mariage, baptême", 4],
   ["sport", "Sport", "Actif, décontracté", 0],
-  ["voyage", "Voyage", "Confortable, polyvalent", 1],
-  ["cocooning", "Cocooning", "Chez soi, détente", 0],
+  ["voyage_court", "Voyage — Court trajet", "Confortable, polyvalent", 1],
+  ["voyage_long", "Voyage — Longue distance", "Confortable, polyvalent", 1],
+  ["cocooning", "Cocooning", "Chez soi, détente", 1],
 ];
 
 /** Libellés courts pour les chips d'occasion à l'ajout d'une pièce (espace restreint). */
 export const OCC_SHORT: Partial<Record<OccasionKey, string>> = {
+  travail_teletravail: "Télétravail",
+  travail_presentiel: "Présentiel",
   entretien: "Réunion / entretien",
   date: "Date",
   evenement_perso: "Événement perso",
+  voyage_court: "Voyage court",
+  voyage_long: "Voyage long",
 };
 
 export const OCC_LABELS: Record<OccasionKey, string> = { all: "Toutes" } as Record<OccasionKey, string>;
@@ -106,7 +112,9 @@ export const SHOE_TYPES: ShoeType[] = ["Baskets", "Bottines", "Bottes", "Escarpi
 /** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
 export const SAC_TYPES: SacType[] = ["Sac à main", "Cabas", "Bandoulière", "Pochette", "Sac à dos"];
 export const BIJOU_TYPES: BijouType[] = ["Collier", "Boucles d'oreilles", "Bracelet", "Bague", "Montre"];
-export const ACCESSOIRE_TYPES: AccessoireType[] = ["Ceinture", "Foulard", "Écharpe", "Chapeau", "Casquette", "Lunettes"];
+export const ACCESSOIRE_TYPES: AccessoireType[] = [
+  "Ceinture", "Foulard", "Écharpe", "Chapeau", "Casquette", "Lunettes", "Collants", "Chaussettes hautes",
+];
 
 /** Palette dédiée au bijou (tons métalliques) — remplace la palette générale pour cette catégorie. */
 export const PALETTE_BIJOU: [string, string][] = [

@@ -50,7 +50,9 @@ export function occasionFit(it: Item, occ: OccasionKey): boolean {
   switch (occ) {
     case "quotidien":
       return /baskets|jean droit|chino|t-shirt|sweat|mocassins|ballerines|cabas|kaki|sable|crème/.test(n);
-    case "travail_formel":
+    case "travail_teletravail":
+      return /t-shirt|sweat|jean droit|chino|pull|gilet|mocassins|ballerines/.test(n);
+    case "travail_presentiel":
       return /tailleur|chemis|blazer|blouse|escarpin|mocassin|gilet|robe chemise|robe droite|marine|noir/.test(n);
     case "entretien":
       return /tailleur|blazer|chemis|escarpin|robe chemise|robe droite|marine|noir/.test(n);
@@ -64,7 +66,8 @@ export function occasionFit(it: Item, occ: OccasionKey): boolean {
       return /soie|robe longue|robe droite|escarpin|dentelle|doré|glamour|paillet|tailleur|chemis/.test(n);
     case "sport":
       return /sweat|jean brut|molleton|baskets|coupe-vent|débardeur|jogging/.test(n);
-    case "voyage":
+    case "voyage_court":
+    case "voyage_long":
       return /baskets|jean|sweat|chino|t-shirt|coupe-vent|molleton/.test(n);
     case "cocooning":
       return /sweat|molleton|jogging|pull col rond/.test(n);
@@ -139,21 +142,10 @@ function rand<T>(arr: T[]): T | null {
   return arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 }
 
-/**
- * Choisit une veste adaptée à la saison en cours pour compléter une tenue
- * déjà composée ("Je veux pouvoir superposer") — priorité aux vestes de
- * saison, repli sur tout le dressing si aucune ne correspond.
- */
-export function pickSeasonalVeste(pool: Item[], chosen: Item[], weather: Weather): Item | null {
-  const seasonVestes = pool.filter((i) => i.cat === "veste" && weather.seasons.includes(i.season));
-  const candidates = seasonVestes.length ? seasonVestes : pool.filter((i) => i.cat === "veste");
-  return rand(harmonize(candidates, chosen, false));
-}
-
 export interface GeneratedOutfit {
   ids: number[];
-  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short, "couche" = veste (superposition). */
-  missingCats: (CategoryKey | "bas" | "couche")[];
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. */
+  missingCats: (CategoryKey | "bas")[];
 }
 
 /**
@@ -167,12 +159,7 @@ export interface GeneratedOutfit {
  * est habillée (R-B6), et les pièces choisies pour s'accorder entre elles
  * (couleur, formalité, coupe, style).
  */
-export function generateOutfit(
-  pool: Item[],
-  weather: Weather,
-  occasion: OccasionKey,
-  layerable = false
-): GeneratedOutfit {
+export function generateOutfit(pool: Item[], weather: Weather, occasion: OccasionKey): GeneratedOutfit {
   const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
 
@@ -181,7 +168,11 @@ export function generateOutfit(
   const antiRepBase = antiRepClothingCount >= 2 ? antiRepPool : seasonBase;
 
   const occFiltered = occasion === "all" ? antiRepBase : antiRepBase.filter((i) => occasionFit(i, occasion));
-  const active = occFiltered.length >= 4 ? occFiltered : antiRepBase;
+  let active = occFiltered.length >= 4 ? occFiltered : antiRepBase;
+  // R-B11 — en contexte Sport, seules les pièces réellement sportives sont
+  // éligibles (correspondance stricte, pas un seuil minimum comme R-B3) ;
+  // ce filtre ne se relâche jamais, même si le pool résultant est restreint.
+  if (occasion === "sport") active = active.filter((i) => formalityOf(i) === 0);
 
   const chosen: Item[] = [];
   const pick = (cats: CategoryKey[], essential = true) => {
@@ -218,20 +209,13 @@ export function generateOutfit(
     const layer = rand(harmonize(layerCandidates, chosen, false));
     if (layer) { chosen.push(layer); ids.push(layer.id); }
   }
-  // "Je veux pouvoir superposer" : ajoute une veste adaptée à la saison en
-  // plus de la tenue déjà composée (garde le reste inchangé).
-  if (layerable) {
-    const v = pickSeasonalVeste(pool, chosen, weather);
+  if (Math.random() < 0.35) {
+    const p = pick(["pull"], false);
+    if (p && !ids.includes(p.id)) ids.push(p.id);
+  }
+  if (Math.random() < 0.3) {
+    const v = pick(["veste"], false);
     if (v && !ids.includes(v.id)) ids.push(v.id);
-  } else {
-    if (Math.random() < 0.35) {
-      const p = pick(["pull"], false);
-      if (p && !ids.includes(p.id)) ids.push(p.id);
-    }
-    if (Math.random() < 0.3) {
-      const v = pick(["veste"], false);
-      if (v && !ids.includes(v.id)) ids.push(v.id);
-    }
   }
   const sh = (() => {
     const shoePool = active.filter((i) => i.cat === "chaussures");
@@ -251,7 +235,7 @@ export function generateOutfit(
     if (ac && !ids.includes(ac.id)) ids.push(ac.id);
   }
 
-  const missingCats: (CategoryKey | "bas" | "couche")[] = [];
+  const missingCats: (CategoryKey | "bas")[] = [];
   if (!useRobe) {
     if (!hasCat(["haut"])) missingCats.push("haut");
     if (!hasCat(BOTTOMS)) missingCats.push("bas");
@@ -259,7 +243,6 @@ export function generateOutfit(
   if (!hasCat(["chaussures"])) missingCats.push("chaussures");
   if (!hasCat(["sac"])) missingCats.push("sac");
   if (!hasCat(["bijou"])) missingCats.push("bijou");
-  if (layerable && !pool.some((i) => i.cat === "veste")) missingCats.push("couche");
 
   return { ids: Array.from(new Set(ids)), missingCats };
 }
@@ -299,7 +282,7 @@ export interface BlockingHit {
 }
 
 /**
- * Évalue les 9 règles bloquantes (R-B1 à R-B9) sur un ensemble de pièces.
+ * Évalue les 10 règles bloquantes (R-B1 à R-B10) sur un ensemble de pièces.
  * Sauf R-B9, aucune n'empêche la sauvegarde : sert uniquement à afficher un
  * bandeau doux, non alarmant, quand une règle est contournée manuellement
  * (Création de looks). La génération automatique, elle, évite ces
@@ -378,10 +361,16 @@ export function evaluateBlocking(pieces: Item[], occasion: OccasionKey, weather:
     });
   }
 
+  // R-B10 — deux chemises/chemisiers en même temps, quel que soit leur rôle.
+  const shirtLike = pieces.filter((i) => i.subtype === "Chemise" || i.subtype === "Chemisier");
+  if (shirtLike.length >= 2) {
+    hits.push({ id: "R-B10", message: "Deux chemises dans la même tenue, essaie d'en retirer une." });
+  }
+
   return hits;
 }
 
-/** Résultat du scoring d'une tenue complète (R-S1 à R-S13). */
+/** Résultat du scoring d'une tenue complète (R-S1 à R-S11, plus suggestions proactives R-S12 à R-S14). */
 export interface LookScore {
   score: number;
   badge: "recommande" | "neutre" | "ajuster";
@@ -392,7 +381,7 @@ export interface LookScore {
 }
 
 /**
- * Calcule le score d'une tenue complète (R-S1 à R-S13). Non bloquant :
+ * Calcule le score d'une tenue complète (R-S1 à R-S11). Non bloquant :
  * une tenue reste toujours proposable quel que soit son score. Seuils :
  * ≥80 recommandé, 50-79 neutre, <50 bandeau d'ajustement ciblé sur la
  * règle la plus pénalisante (jamais cumulé, jamais le nom technique).
@@ -402,7 +391,8 @@ export function computeLookScore(
   occasion: OccasionKey,
   favoriteColors: string[],
   morphology: string | null,
-  dismissed: Set<string>
+  dismissed: Set<string>,
+  weather: Weather
 ): LookScore {
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
   const accessories = pieces.filter((i) => ACCESSORY_CATS.includes(i.cat));
@@ -497,11 +487,12 @@ export function computeLookScore(
 
   // R-S12 — suggestion layering (calque seul, sans base, contexte décontracté)
   // R-S13 — suggestion contraste (total look noir sans accessoire coloré)
+  // R-S14 — suggestion veste, soirée fraîche (remplace l'ancien toggle manuel)
   const proactiveCandidates: { key: string; text: string }[] = [];
   if (tops.length === 1 && roles[0] === "calque" && !dressy && !dismissed.has("layer")) {
     proactiveCandidates.push({
       key: "layer",
-      text: "Essaie avec un débardeur ou un top fin en dessous, pour structurer un peu la silhouette.",
+      text: "Il te manque un haut pour compléter cette tenue.",
     });
   }
   const allBlack = clothing.length > 0 && clothing.every((i) => /noir/i.test(i.color));
@@ -509,7 +500,14 @@ export function computeLookScore(
   if (allBlack && !hasColorAccessory && !dismissed.has("color")) {
     proactiveCandidates.push({
       key: "color",
-      text: "Une touche de couleur sur les accessoires pourrait casser ce total look noir.",
+      text: "Il te manque une touche de couleur pour compléter cette tenue.",
+    });
+  }
+  const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau");
+  if (weather.season === "Automne / Hiver" && !hasOuterwear && !dismissed.has("veste_soir")) {
+    proactiveCandidates.push({
+      key: "veste_soir",
+      text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",
     });
   }
 

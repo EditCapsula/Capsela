@@ -19,20 +19,30 @@ export type Season = "Printemps / Été" | "Automne / Hiver" | "Toutes saisons";
 export type OccasionKey =
   | "all"
   | "quotidien"
-  | "travail_formel"
+  | "travail_teletravail"
+  | "travail_presentiel"
   | "entretien"
   | "date"
   | "soiree"
   | "evenement_pro"
   | "evenement_perso"
   | "sport"
-  | "voyage"
+  | "voyage_court"
+  | "voyage_long"
   | "cocooning";
 
 export type ShoeType = "Baskets" | "Bottines" | "Bottes" | "Escarpins" | "Sandales" | "Mocassins" | "Ballerines";
 export type SacType = "Sac à main" | "Cabas" | "Bandoulière" | "Pochette" | "Sac à dos";
 export type BijouType = "Collier" | "Boucles d'oreilles" | "Bracelet" | "Bague" | "Montre";
-export type AccessoireType = "Ceinture" | "Foulard" | "Écharpe" | "Chapeau" | "Casquette" | "Lunettes";
+export type AccessoireType =
+  | "Ceinture"
+  | "Foulard"
+  | "Écharpe"
+  | "Chapeau"
+  | "Casquette"
+  | "Lunettes"
+  | "Collants"
+  | "Chaussettes hautes";
 
 export type Matiere = "Coton" | "Lin" | "Laine" | "Soie" | "Cuir" | "Denim" | "Synthétique";
 export type Coupe = "Serré" | "Ajusté" | "Ample";
@@ -61,7 +71,7 @@ export interface Item {
   sacType?: SacType;
   bijouType?: BijouType;
   accessoireType?: AccessoireType;
-  /** Sous-type générique (haut, pull, bas, robe, veste, manteau...) — obligatoire pour veste/manteau (cf. SUBTYPE_REQUIRED), facultatif ailleurs. */
+  /** Sous-type générique (haut, pull, bas, robe, veste, manteau...) — toujours facultatif (seul le type de chaussure est bloquant, cf. shoeType). */
   subtype?: string;
 }
 
@@ -132,21 +142,19 @@ export interface AppState {
   addSacTypeTouched: boolean;
   addBijouTypeTouched: boolean;
   addAccessoireTypeTouched: boolean;
-  /** Sous-type générique en cours de saisie — obligatoire si addCat ∈ SUBTYPE_REQUIRED (veste, manteau). */
+  /** Sous-type générique en cours de saisie — toujours facultatif. */
   addSubtype: string | null;
   addSubtypeTouched: boolean;
 
   geoIndex: number;
 
   outfit: number[];
-  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short, "couche" = veste/manteau/pull. */
-  outfitMissingCats: (CategoryKey | "bas" | "couche")[];
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. */
+  outfitMissingCats: (CategoryKey | "bas")[];
   outfitValidated: boolean;
   occasion: OccasionKey;
-  /** Clés des suggestions proactives (R-S12/R-S13) écartées pour la tenue affichée. */
+  /** Clés des suggestions proactives (R-S12/R-S13/R-S14) écartées pour la tenue affichée. */
   dismissedSuggestions: string[];
-  /** "Je veux pouvoir superposer" — pioche une pièce veste/manteau/pull ensemble plutôt que séparément. */
-  layerable: boolean;
 
   lookCount: number;
   isPremium: boolean;
