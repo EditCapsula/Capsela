@@ -21,6 +21,22 @@ function Label({ children }: { children: React.ReactNode }) {
   return <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[11px]">{children}</div>;
 }
 
+/** Sous-menu "↳ Préciser : X" — reprend le rattachement visuel du prototype (trait vertical + libellé en terracotta). */
+function SubMenu({ label, note, children }: { label: string; note?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex gap-[11px] mt-[14px]">
+      <div className="w-[1.5px] flex-shrink-0 bg-border rounded-sm ml-[7px]" />
+      <div className="flex-1 min-w-0">
+        <div className="text-[11px] tracking-[.16em] uppercase text-terracotta mb-[10px]">
+          ↳ Préciser : {label}{" "}
+          {note && <span className="opacity-55 normal-case tracking-normal text-muted">{note}</span>}
+        </div>
+        <div className="flex gap-2 flex-wrap">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function AddScreen() {
   const { state, actions } = useCapsela();
   const { profile } = useAuth();
@@ -100,24 +116,58 @@ export default function AddScreen() {
         ))}
       </div>
 
+      {isShoe && (
+        <SubMenu label="chaussure">
+          {SHOE_TYPES.map((t) => (
+            <button key={t} onClick={() => actions.setAddShoeType(t)} className={chipCls(state.addShoeType === t)}>
+              {t}
+            </button>
+          ))}
+        </SubMenu>
+      )}
+
       {subtypeOptions && subtypeOptions.length > 0 && (
-        <>
-          <Label>
-            Type de {CATLABEL[state.addCat].toLowerCase()}{" "}
-            {subtypeRequired ? (
-              <span className="text-terracotta">*</span>
-            ) : (
-              <span className="opacity-60 normal-case tracking-normal">(facultatif, détecté automatiquement)</span>
-            )}
-          </Label>
-          <div className="flex gap-2 flex-wrap">
-            {subtypeOptions.map((t) => (
-              <button key={t} onClick={() => actions.setAddSubtype(t)} className={chipCls(state.addSubtype === t)}>
-                {t}
-              </button>
-            ))}
-          </div>
-        </>
+        <SubMenu label={CATLABEL[state.addCat].toLowerCase()} note={!subtypeRequired && "(facultatif)"}>
+          {subtypeOptions.map((t) => (
+            <button key={t} onClick={() => actions.setAddSubtype(t)} className={chipCls(state.addSubtype === t)}>
+              {t}
+            </button>
+          ))}
+        </SubMenu>
+      )}
+
+      {isSac && (
+        <SubMenu label="sac" note="(détecté automatiquement, modifiable)">
+          {SAC_TYPES.map((t) => (
+            <button key={t} onClick={() => actions.setAddSacType(t)} className={chipCls(state.addSacType === t)}>
+              {t}
+            </button>
+          ))}
+        </SubMenu>
+      )}
+
+      {isBijou && (
+        <SubMenu label="bijou" note="(détecté automatiquement, modifiable)">
+          {BIJOU_TYPES.map((t) => (
+            <button key={t} onClick={() => actions.setAddBijouType(t)} className={chipCls(state.addBijouType === t)}>
+              {t}
+            </button>
+          ))}
+        </SubMenu>
+      )}
+
+      {isAccessoire && (
+        <SubMenu label="accessoire" note="(détecté automatiquement, modifiable)">
+          {ACCESSOIRE_TYPES.map((t) => (
+            <button
+              key={t}
+              onClick={() => actions.setAddAccessoireType(t)}
+              className={chipCls(state.addAccessoireType === t)}
+            >
+              {t}
+            </button>
+          ))}
+        </SubMenu>
       )}
 
       {sizeApplicable && (
@@ -142,66 +192,6 @@ export default function AddScreen() {
               ))}
             </div>
           )}
-        </>
-      )}
-
-      {isShoe && (
-        <>
-          <Label>
-            Type de chaussure <span className="text-terracotta">*</span>
-          </Label>
-          <div className="flex gap-2 flex-wrap">
-            {SHOE_TYPES.map((t) => (
-              <button key={t} onClick={() => actions.setAddShoeType(t)} className={chipCls(state.addShoeType === t)}>
-                {t}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {isSac && (
-        <>
-          <Label>
-            Type de sac <span className="opacity-60 normal-case tracking-normal">(détecté automatiquement, modifiable)</span>
-          </Label>
-          <div className="flex gap-2 flex-wrap">
-            {SAC_TYPES.map((t) => (
-              <button key={t} onClick={() => actions.setAddSacType(t)} className={chipCls(state.addSacType === t)}>
-                {t}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {isBijou && (
-        <>
-          <Label>
-            Type de bijou <span className="opacity-60 normal-case tracking-normal">(détecté automatiquement, modifiable)</span>
-          </Label>
-          <div className="flex gap-2 flex-wrap">
-            {BIJOU_TYPES.map((t) => (
-              <button key={t} onClick={() => actions.setAddBijouType(t)} className={chipCls(state.addBijouType === t)}>
-                {t}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
-      {isAccessoire && (
-        <>
-          <Label>
-            Type d&apos;accessoire <span className="opacity-60 normal-case tracking-normal">(détecté automatiquement, modifiable)</span>
-          </Label>
-          <div className="flex gap-2 flex-wrap">
-            {ACCESSOIRE_TYPES.map((t) => (
-              <button key={t} onClick={() => actions.setAddAccessoireType(t)} className={chipCls(state.addAccessoireType === t)}>
-                {t}
-              </button>
-            ))}
-          </div>
         </>
       )}
 
