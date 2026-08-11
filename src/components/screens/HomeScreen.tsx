@@ -78,7 +78,7 @@ export default function HomeScreen() {
       </button>
 
       <div className="flex items-center justify-between mx-6 mt-[26px] mb-3">
-        <span className="text-[11px] tracking-[.16em] uppercase text-muted">Explore Capsela</span>
+        <span className="text-[11px] tracking-[.16em] uppercase text-muted">Explore L&apos;édit Capsela</span>
       </div>
       <div className="flex flex-col gap-3 px-6">
         {features.map((f) => (

@@ -1,4 +1,4 @@
-# Capsela
+# L'édit Capsela
 
 App mobile-first de garde-robe capsule : « ta capsule, à partir de ce que tu possèdes déjà ».
 Stack : Next.js (App Router) + Tailwind + Supabase. Déploiement cible : Vercel.

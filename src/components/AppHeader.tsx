@@ -4,8 +4,9 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 
 /**
- * Bandeau de marque du prototype v2 : ✦ CAPSELA centré, avatar profil à droite
+ * Bandeau de marque du prototype v2 : ✦ L'ÉDIT CAPSELA centré, avatar profil à droite
  * (masqué sur les écrans d'avant-connexion et de profil).
+ * Wordmark textuel en attendant l'intégration du logo définitif.
  */
 export default function AppHeader({
   showAvatar = true,
@@ -24,9 +25,9 @@ export default function AppHeader({
       <div className="flex items-center gap-2">
         <span className={"font-serif italic text-[14px] " + (dark ? "text-gold" : "text-terracotta")}>✦</span>
         <span
-          className={"font-serif text-[15px] tracking-[.28em] pl-[.28em] " + (dark ? "text-cream" : "text-ink")}
+          className={"font-serif text-[15px] tracking-[.2em] pl-[.2em] " + (dark ? "text-cream" : "text-ink")}
         >
-          CAPSELA
+          L&apos;ÉDIT CAPSELA
         </span>
       </div>
       <div className="w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center">

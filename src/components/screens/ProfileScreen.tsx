@@ -83,7 +83,7 @@ export default function ProfileScreen() {
       >
         Se déconnecter
       </button>
-      <div className="text-center text-[11px] text-placeholder mt-[18px]">Capsela · v1.4.0</div>
+      <div className="text-center text-[11px] text-placeholder mt-[18px]">L&apos;édit Capsela · v1.4.0</div>
     </div>
   );
 }

@@ -19,7 +19,7 @@ export default function PremiumScreen() {
       <div className="mt-[22px]">
         <div className="text-[12px] tracking-[.2em] uppercase text-terracotta">Fonctionnalité premium</div>
         <div className="font-serif text-[30px] leading-[1.15] text-cream mt-[14px]">
-          Débloque tout <span className="italic text-gold">Capsela.</span>
+          Débloque tout <span className="italic text-gold">L&apos;édit Capsela.</span>
         </div>
         <div className="text-[13px] text-[#B3AA9B] mt-3 leading-[1.55]">Journal des tenues, et plus à venir.</div>
       </div>
