@@ -20,8 +20,6 @@ const TOP_OR_BOTTOM_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe
 /** Pièces qui constituent une base valide sous une veste/un manteau (R-B9) — un pull seul ne compte pas comme base. */
 const BASE_GARMENT_CATS: CategoryKey[] = ["haut", "robe", "combinaison"];
 const OUTERWEAR_CATS: CategoryKey[] = ["veste", "manteau"];
-/** Catégories piochées ensemble comme "couche" quand le toggle superposition est actif. */
-const LAYER_CATS: CategoryKey[] = ["veste", "manteau", "pull"];
 
 /** Catégories suivies pour l'anti-répétition (R-B7) et le calcul de formalité d'une tenue. */
 const CLOTHING_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe", "robe", "combinaison", "veste", "manteau"];
@@ -141,9 +139,20 @@ function rand<T>(arr: T[]): T | null {
   return arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
 }
 
+/**
+ * Choisit une veste adaptée à la saison en cours pour compléter une tenue
+ * déjà composée ("Je veux pouvoir superposer") — priorité aux vestes de
+ * saison, repli sur tout le dressing si aucune ne correspond.
+ */
+export function pickSeasonalVeste(pool: Item[], chosen: Item[], weather: Weather): Item | null {
+  const seasonVestes = pool.filter((i) => i.cat === "veste" && weather.seasons.includes(i.season));
+  const candidates = seasonVestes.length ? seasonVestes : pool.filter((i) => i.cat === "veste");
+  return rand(harmonize(candidates, chosen, false));
+}
+
 export interface GeneratedOutfit {
   ids: number[];
-  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short, "couche" = veste/manteau/pull (superposition). */
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short, "couche" = veste (superposition). */
   missingCats: (CategoryKey | "bas" | "couche")[];
 }
 
@@ -209,12 +218,10 @@ export function generateOutfit(
     const layer = rand(harmonize(layerCandidates, chosen, false));
     if (layer) { chosen.push(layer); ids.push(layer.id); }
   }
-  // "Je veux pouvoir superposer" : une seule pièce veste/manteau/pull piochée
-  // dans tout le dressing (pas seulement le pool filtré) plutôt que veste et
-  // pull séparément — sinon veste et pull restent des ajouts ponctuels.
+  // "Je veux pouvoir superposer" : ajoute une veste adaptée à la saison en
+  // plus de la tenue déjà composée (garde le reste inchangé).
   if (layerable) {
-    const layerPool = pool.filter((i) => LAYER_CATS.includes(i.cat));
-    const v = rand(layerPool);
+    const v = pickSeasonalVeste(pool, chosen, weather);
     if (v && !ids.includes(v.id)) ids.push(v.id);
   } else {
     if (Math.random() < 0.35) {
@@ -252,7 +259,7 @@ export function generateOutfit(
   if (!hasCat(["chaussures"])) missingCats.push("chaussures");
   if (!hasCat(["sac"])) missingCats.push("sac");
   if (!hasCat(["bijou"])) missingCats.push("bijou");
-  if (layerable && !pool.some((i) => LAYER_CATS.includes(i.cat))) missingCats.push("couche");
+  if (layerable && !pool.some((i) => i.cat === "veste")) missingCats.push("couche");
 
   return { ids: Array.from(new Set(ids)), missingCats };
 }

@@ -5,7 +5,7 @@ import { useAuth } from "./auth";
 import { CATALOG } from "./catalog";
 import { computeDefaultCapsule, weatherSeasonBucket } from "./capsule";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
-import { generateOutfit, swapOutfitPiece, violatesOuterwearRule } from "./logic";
+import { generateOutfit, pickSeasonalVeste, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import {
   detectAccessoireType,
   detectBijouType,
@@ -428,7 +428,31 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     cycleGeo: () => setState((s) => ({ ...s, geoIndex: ((s.geoIndex || 0) + 1) % CITIES.length })),
 
     regenOutfit: () => setState(regen),
-    toggleLayerable: () => setState((s) => regen({ ...s, layerable: !s.layerable })),
+    toggleLayerable: () =>
+      setState((s) => {
+        const layerable = !s.layerable;
+        if (!layerable) {
+          // Retire la veste ajoutée pour la superposition, garde le reste de la tenue recommandée.
+          const outfit = s.outfit.filter((id) => findPiece(poolRef.current, id)?.cat !== "veste");
+          return { ...s, layerable, outfit, outfitMissingCats: s.outfitMissingCats.filter((m) => m !== "couche") };
+        }
+        // Garde la tenue recommandée initiale, ajoute juste une veste adaptée à la saison.
+        const chosen = s.outfit.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
+        if (chosen.some((i) => i.cat === "veste")) return { ...s, layerable };
+        const picked = pickSeasonalVeste(poolRef.current, chosen, weatherRef.current);
+        const outfitMissingCats: AppState["outfitMissingCats"] = picked
+          ? s.outfitMissingCats.filter((m) => m !== "couche")
+          : s.outfitMissingCats.includes("couche")
+            ? s.outfitMissingCats
+            : [...s.outfitMissingCats, "couche"];
+        return {
+          ...s,
+          layerable,
+          outfit: picked ? [...s.outfit, picked.id] : s.outfit,
+          outfitMissingCats,
+          dismissedSuggestions: [],
+        };
+      }),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
     wearOutfitToday: () =>
