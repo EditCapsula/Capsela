@@ -4,7 +4,7 @@ import AppHeader from "@/components/AppHeader";
 import { CATLABEL, CITIES, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { computeLookScore } from "@/lib/logic";
+import { computeLookScore, violatesOuterwearRule } from "@/lib/logic";
 
 const MISSING_LABELS: Record<string, string> = {
   haut: "haut",
@@ -16,17 +16,26 @@ const MISSING_LABELS: Record<string, string> = {
 };
 
 function missingSuggestionText(missingCats: string[]): string {
-  const words = missingCats.map((k) => MISSING_LABELS[k] || k);
-  if (words.length === 0) return "";
+  const needsLayer = missingCats.includes("couche");
+  const rest = missingCats.filter((k) => k !== "couche");
+  const words = rest.map((k) => MISSING_LABELS[k] || k);
+  let text = "";
   if (words.length === 1) {
     const w = words[0];
-    return w === "chaussures" || w === "accessoires"
-      ? "Il te manque des " + w + " pour compléter cette tenue."
-      : "Il te manque un " + w + " pour compléter cette tenue.";
+    text =
+      w === "chaussures" || w === "accessoires"
+        ? "Il te manque des " + w + " pour compléter cette tenue."
+        : "Il te manque un " + w + " pour compléter cette tenue.";
+  } else if (words.length > 1) {
+    const last = words[words.length - 1];
+    const head = words.slice(0, -1).join(", ");
+    text = "Il te manque des " + head + " et " + last + " pour compléter cette tenue.";
   }
-  const last = words[words.length - 1];
-  const head = words.slice(0, -1).join(", ");
-  return "Il te manque des " + head + " et " + last + " pour compléter cette tenue.";
+  if (needsLayer) {
+    const layerMsg = "Il te manque une veste ou un gilet pour pouvoir superposer.";
+    text = text ? text + " " + layerMsg : layerMsg;
+  }
+  return text;
 }
 
 export default function TenuesScreen() {
@@ -47,6 +56,7 @@ export default function TenuesScreen() {
     : "Depuis ton profil style · " + (profile.styles[0] || "");
 
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
+  const vesteWithoutBase = violatesOuterwearRule(outfitPieces);
 
   const dismissed = new Set(state.dismissedSuggestions || []);
   const lookScore = computeLookScore(
@@ -114,6 +124,24 @@ export default function TenuesScreen() {
           );
         })}
       </div>
+
+      <button
+        onClick={actions.toggleLayerable}
+        className="w-full flex items-center justify-between gap-3 mt-[10px] py-[2px] cursor-pointer"
+      >
+        <span className="text-[12px]" style={{ color: state.layerable ? "#A66950" : "#1D1A16" }}>
+          Je veux pouvoir superposer
+        </span>
+        <span
+          className="w-[34px] h-5 rounded-full relative flex-shrink-0 transition-colors"
+          style={{ background: state.layerable ? "#A66950" : "#DCCFBC" }}
+        >
+          <span
+            className="absolute top-[3px] w-[14px] h-[14px] rounded-full bg-cream transition-all"
+            style={{ left: state.layerable ? 17 : 3 }}
+          />
+        </span>
+      </button>
 
       <div className="mt-[14px] text-[11.5px] text-muted">{tenueSourceText}</div>
 
@@ -193,6 +221,20 @@ export default function TenuesScreen() {
         </div>
       )}
 
+      {vesteWithoutBase && (
+        <div className="mt-4 flex items-start gap-[11px] bg-warm-bg border-[1.5px] border-terracotta rounded-[14px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta">!</span>
+          <div className="flex-1">
+            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
+              Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.
+            </div>
+            <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
+              Choisir une pièce →
+            </button>
+          </div>
+        </div>
+      )}
+
       {state.outfitValidated ? (
         <div className="mt-[22px] flex items-center gap-3 bg-ink rounded-2xl py-[15px] px-4">
           <span className="w-8 h-8 rounded-full bg-terracotta text-cream flex items-center justify-center text-base flex-shrink-0">
@@ -202,8 +244,11 @@ export default function TenuesScreen() {
         </div>
       ) : (
         <button
-          onClick={actions.wearOutfitToday}
-          className="mt-[22px] w-full bg-terracotta text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+          onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
+          className={
+            "mt-[22px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
+            (vesteWithoutBase ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta text-cream cursor-pointer")
+          }
         >
           Porter cette tenue
         </button>

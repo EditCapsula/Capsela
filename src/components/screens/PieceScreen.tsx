@@ -26,7 +26,7 @@ export default function PieceScreen() {
   const pToday = active.worn === 0;
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[30px]">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <button
         onClick={actions.goWardrobe}
         className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
@@ -75,6 +75,7 @@ export default function PieceScreen() {
         {active.sacType && <InfoRow label="Type de sac" value={active.sacType} />}
         {active.bijouType && <InfoRow label="Type de bijou" value={active.bijouType} />}
         {active.accessoireType && <InfoRow label="Type d'accessoire" value={active.accessoireType} />}
+        {active.subtype && <InfoRow label="Type" value={active.subtype} />}
       </div>
 
       {suggested ? (

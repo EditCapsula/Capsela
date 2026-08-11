@@ -1,4 +1,5 @@
 import type { AccessoireType, BijouType, CategoryKey, Coupe, Item, Matiere, SacType } from "./types";
+import { SUBTYPES } from "./data";
 
 /**
  * Attributs du moteur de règles stylistiques (matière, coupe, formalité,
@@ -17,10 +18,10 @@ export function detectMatiere(name: string): Matiere | null {
   if (/lin/.test(n)) return "Lin";
   if (/laine|pull|gilet|tricot/.test(n)) return "Laine";
   if (/soie/.test(n)) return "Soie";
-  if (/cuir|bottine|escarpin|mocassin/.test(n)) return "Cuir";
+  if (/cuir|bottine|escarpin|mocassin|perfecto/.test(n)) return "Cuir";
   if (/jean|denim/.test(n)) return "Denim";
   if (/coton|t-shirt|chemise/.test(n)) return "Coton";
-  if (/sweat|molleton|jogging/.test(n)) return "Synthétique";
+  if (/sweat|molleton|jogging|synthétique|synthetique|polyester/.test(n)) return "Synthétique";
   return null;
 }
 
@@ -50,7 +51,7 @@ export function detectSacType(name: string): SacType | null {
   if (/bandoulière/.test(n)) return "Bandoulière";
   if (/dos/.test(n)) return "Sac à dos";
   if (/pochette/.test(n)) return "Pochette";
-  if (/seau/.test(n)) return "Sac seau";
+  if (/\bsac\b/.test(n)) return "Sac à main";
   return null;
 }
 
@@ -61,7 +62,7 @@ export function detectBijouType(name: string): BijouType | null {
   if (/boucle/.test(n)) return "Boucles d'oreilles";
   if (/bracelet/.test(n)) return "Bracelet";
   if (/bague/.test(n)) return "Bague";
-  if (/broche/.test(n)) return "Broche";
+  if (/montre/.test(n)) return "Montre";
   return null;
 }
 
@@ -71,9 +72,27 @@ export function detectAccessoireType(name: string): AccessoireType | null {
   if (/ceinture/.test(n)) return "Ceinture";
   if (/foulard/.test(n)) return "Foulard";
   if (/écharpe/.test(n)) return "Écharpe";
-  if (/chapeau|casquette/.test(n)) return "Chapeau";
+  if (/casquette/.test(n)) return "Casquette";
+  if (/chapeau/.test(n)) return "Chapeau";
   if (/lunette/.test(n)) return "Lunettes";
-  if (/gant/.test(n)) return "Gants";
+  return null;
+}
+
+/** Pré-suggestion de sous-type générique (haut, pull, bas, robe, veste, manteau...) — jamais imposée, jamais bloquante (sauf blocage produit pour veste/manteau, géré à la saisie). */
+export function detectSubtype(cat: CategoryKey, name: string): string | null {
+  const options = SUBTYPES[cat];
+  if (!options) return null;
+  const n = (name || "").toLowerCase();
+  const found = options.find((opt) => n.includes(opt.toLowerCase()));
+  if (found) return found;
+  if (cat === "veste") {
+    if (/perfecto/.test(n)) return "Perfecto";
+    if (/jean|denim/.test(n)) return "Veste en jean";
+    if (/légère|leger|coupe-vent/.test(n)) return "Veste légère";
+  }
+  if (cat === "manteau") {
+    if (/imperméable|impermeable|k-way|kway/.test(n)) return "Imperméable";
+  }
   return null;
 }
 
@@ -95,6 +114,7 @@ const MATIERE_DEFAULT_BY_CAT: Record<string, Matiere> = {
   bijou: "Synthétique",
   accessoire: "Synthétique",
   manteau: "Laine",
+  veste: "Laine",
   pull: "Laine",
 };
 
@@ -125,7 +145,7 @@ export function coupeOf(it: Item): "ajusté" | "regular" | "oversize" {
  */
 export function formalityOf(it: Item): number {
   const text = n(it);
-  if (it.shoeType === "Basket / sneaker" || /sweat|jogging|molleton|legging|coupe-vent|survêt/.test(text)) return 0;
+  if (it.shoeType === "Baskets" || /sweat|jogging|molleton|legging|coupe-vent|survêt/.test(text)) return 0;
   if (/soie|tailleur|smoking|paillet|dentelle/.test(text) && /robe|blouse|combinaison/.test(text)) return 4;
   if (/tailleur|blazer|escarpin|chemis|blouse|gilet|robe chemise|robe droite/.test(text)) return 3;
   return 1;
@@ -148,11 +168,11 @@ export function metalOf(it: Item): "or" | "argent" | "aucun" {
 }
 
 /**
- * Rôle de la pièce dans la superposition — catégorie haut uniquement.
+ * Rôle de la pièce dans la superposition — catégories haut et pull uniquement.
  * ajusté/regular → base (portée en dessous), oversize → calque (par-dessus).
  */
 export function rolePieceOf(it: Item): "base" | "calque" | "piece_unique" {
-  if (it.cat !== "haut") return "piece_unique";
+  if (it.cat !== "haut" && it.cat !== "pull") return "piece_unique";
   return coupeOf(it) === "oversize" ? "calque" : "base";
 }
 

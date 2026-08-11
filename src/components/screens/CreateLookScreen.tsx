@@ -27,9 +27,6 @@ export default function CreateLookScreen() {
     items: items.filter((i) => i.cat === key),
   })).filter((g) => g.items.length > 0);
 
-  const count = state.lookDraftIds.length;
-  const canSave = count >= 2;
-
   const dismissed = new Set(state.lookDraftDismissed || []);
   const lookScore = computeLookScore(
     draftPieces,
@@ -39,9 +36,13 @@ export default function CreateLookScreen() {
     dismissed
   );
   const blockingHits = evaluateBlocking(draftPieces, state.lookDraftOccasion, weather);
+  const hardBlocked = blockingHits.some((h) => h.hard);
+
+  const count = state.lookDraftIds.length;
+  const canSave = count >= 2 && !hardBlocked;
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[30px]">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
         <button
           onClick={actions.cancelCreateLook}
@@ -100,7 +101,7 @@ export default function CreateLookScreen() {
                 !on &&
                 ((TOP_BOTTOM_CATS.has(it.cat) && hasRobeOrCombi) ||
                   ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom) ||
-                  (it.cat === "chaussures" && it.shoeType === "Basket / sneaker" && dressy));
+                  (it.cat === "chaussures" && it.shoeType === "Baskets" && dressy));
               return (
                 <button
                   key={it.id}
@@ -193,7 +194,7 @@ export default function CreateLookScreen() {
       </button>
       {!canSave && (
         <div className="text-center text-[11.5px] text-terracotta mt-[10px]">
-          Choisis au moins 2 pièces pour enregistrer ce look.
+          {count < 2 ? "Choisis au moins 2 pièces pour enregistrer ce look." : blockingHits.find((h) => h.hard)?.message}
         </div>
       )}
     </div>

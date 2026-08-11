@@ -4,9 +4,16 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useAuth } from "./auth";
 import { CATALOG } from "./catalog";
 import { computeDefaultCapsule, weatherSeasonBucket } from "./capsule";
-import { CATS, CITIES, PALETTE, PALETTE_BIJOU, type Weather } from "./data";
-import { generateOutfit, swapOutfitPiece } from "./logic";
-import { detectAccessoireType, detectBijouType, detectCoupe, detectMatiere, detectSacType } from "./attributes";
+import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
+import { generateOutfit, swapOutfitPiece, violatesOuterwearRule } from "./logic";
+import {
+  detectAccessoireType,
+  detectBijouType,
+  detectCoupe,
+  detectMatiere,
+  detectSacType,
+  detectSubtype,
+} from "./attributes";
 import type {
   AccessoireType,
   AppState,
@@ -58,12 +65,15 @@ function buildInitialState(): AppState {
     addSacTypeTouched: false,
     addBijouTypeTouched: false,
     addAccessoireTypeTouched: false,
+    addSubtype: null,
+    addSubtypeTouched: false,
     geoIndex: 0,
     outfit: [],
     outfitMissingCats: [],
     outfitValidated: false,
     occasion: "all",
     dismissedSuggestions: [],
+    layerable: false,
     lookCount: 0,
     isPremium: false,
     history: [],
@@ -125,6 +135,7 @@ export interface Actions {
   setAddSacType: (t: SacType) => void;
   setAddBijouType: (t: BijouType) => void;
   setAddAccessoireType: (t: AccessoireType) => void;
+  setAddSubtype: (t: string) => void;
   saveItem: () => void;
   goPremium: () => void;
   subscribe: () => void;
@@ -134,6 +145,7 @@ export interface Actions {
   swapPiece: (id: number, cat: CategoryKey) => void;
   cycleGeo: () => void;
   regenOutfit: () => void;
+  toggleLayerable: () => void;
   dismissOutfitSuggestion: (key: string) => void;
   wearOutfitToday: () => void;
   wearPieceToday: (id: number) => void;
@@ -227,7 +239,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   }, [wardrobePool, weather]);
 
   const regen = (s: AppState): AppState => {
-    const { ids, missingCats } = generateOutfit(poolRef.current, weatherRef.current, s.occasion || "all");
+    const { ids, missingCats } = generateOutfit(poolRef.current, weatherRef.current, s.occasion || "all", s.layerable);
     return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
   };
 
@@ -306,6 +318,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addSacType: s.addSacTypeTouched ? s.addSacType : detectSacType(v),
         addBijouType: s.addBijouTypeTouched ? s.addBijouType : detectBijouType(v),
         addAccessoireType: s.addAccessoireTypeTouched ? s.addAccessoireType : detectAccessoireType(v),
+        addSubtype: s.addSubtypeTouched ? s.addSubtype : detectSubtype(s.addCat, v),
       })),
     setAddBrand: (v) => setState((s) => ({ ...s, addBrand: v })),
     setAddCat: (k) =>
@@ -324,6 +337,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addShoeType: null,
           addCoupe: k === "chaussures" ? null : s.addCoupe,
           addColor,
+          addSubtype: detectSubtype(k, s.addName),
+          addSubtypeTouched: false,
         };
       }),
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c })),
@@ -340,12 +355,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setAddSacType: (t) => setState((s) => ({ ...s, addSacType: t, addSacTypeTouched: true })),
     setAddBijouType: (t) => setState((s) => ({ ...s, addBijouType: t, addBijouTypeTouched: true })),
     setAddAccessoireType: (t) => setState((s) => ({ ...s, addAccessoireType: t, addAccessoireTypeTouched: true })),
+    setAddSubtype: (t) => setState((s) => ({ ...s, addSubtype: t, addSubtypeTouched: true })),
     saveItem: () =>
       setState((s) => {
         // Contrainte produit : pas de sauvegarde tant que la saison n'est pas confirmée,
-        // ni tant que le type de chaussure n'est pas choisi pour cette catégorie (R-B6).
+        // ni tant que le type de chaussure n'est pas choisi pour cette catégorie (R-B6),
+        // ni tant que le sous-type n'est pas choisi pour veste/manteau (SUBTYPE_REQUIRED).
         if (!s.addSeason) return s;
         if (s.addCat === "chaussures" && !s.addShoeType) return s;
+        if (SUBTYPE_REQUIRED.includes(s.addCat) && !s.addSubtype) return s;
         const item: Item = {
           id: Math.max(0, ...s.items.map((i) => i.id)) + 1,
           name: (s.addName || "").trim() || "Nouvelle pièce",
@@ -362,6 +380,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           sacType: s.addCat === "sac" ? s.addSacType || undefined : undefined,
           bijouType: s.addCat === "bijou" ? s.addBijouType || undefined : undefined,
           accessoireType: s.addCat === "accessoire" ? s.addAccessoireType || undefined : undefined,
+          subtype: s.addSubtype || undefined,
           worn: null,
         };
         return {
@@ -381,6 +400,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSacTypeTouched: false,
           addBijouTypeTouched: false,
           addAccessoireTypeTouched: false,
+          addSubtype: null,
+          addSubtypeTouched: false,
           addSeason: null,
           addShoeType: null,
           addOccasion: ["travail_formel"],
@@ -407,19 +428,25 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     cycleGeo: () => setState((s) => ({ ...s, geoIndex: ((s.geoIndex || 0) + 1) % CITIES.length })),
 
     regenOutfit: () => setState(regen),
+    toggleLayerable: () => setState((s) => regen({ ...s, layerable: !s.layerable })),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
     wearOutfitToday: () =>
-      setState((s) => ({
-        ...s,
-        items: s.items.map((it) => (s.outfit.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
-        outfitValidated: true,
-        lookCount: s.lookCount + 1,
-        history: [
-          { id: "h" + Date.now(), ts: Date.now(), pieceIds: [...s.outfit], occasion: s.occasion || "all" },
-          ...s.history,
-        ],
-      })),
+      setState((s) => {
+        // R-B9 — défense en profondeur : une veste/un manteau seul sans base ne peut pas être validé comme porté.
+        const outfitPieces = s.outfit.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
+        if (violatesOuterwearRule(outfitPieces)) return s;
+        return {
+          ...s,
+          items: s.items.map((it) => (s.outfit.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
+          outfitValidated: true,
+          lookCount: s.lookCount + 1,
+          history: [
+            { id: "h" + Date.now(), ts: Date.now(), pieceIds: [...s.outfit], occasion: s.occasion || "all" },
+            ...s.history,
+          ],
+        };
+      }),
     wearPieceToday: (id) =>
       setState((s) => ({
         ...s,
@@ -492,6 +519,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => {
         // Un look doit rassembler au moins 2 pièces pour avoir du sens.
         if (s.lookDraftIds.length < 2) return s;
+        // R-B9 — seule règle bloquante : une veste/un manteau seul sans pièce de base ne peut pas être enregistré.
+        const draftPieces = s.lookDraftIds.map((id) => s.items.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
+        if (violatesOuterwearRule(draftPieces)) return s;
         const now = new Date();
         const defaultName =
           "Look du " + now.getDate().toString().padStart(2, "0") + "/" + (now.getMonth() + 1).toString().padStart(2, "0");

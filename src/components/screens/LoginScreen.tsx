@@ -13,6 +13,9 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pwVisible, setPwVisible] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   const submit = async () => {
     if (busy) return;
@@ -22,6 +25,68 @@ export default function LoginScreen() {
     // Navigation post-connexion centralisée dans App.tsx (réagit à signedIn/profileCompleted) :
     // lire auth.profile ici serait lire une valeur pas encore mise à jour (state React asynchrone).
   };
+
+  if (forgotOpen) {
+    return (
+      <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
+        <button
+          onClick={() => {
+            setForgotOpen(false);
+            setForgotSent(false);
+          }}
+          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
+        >
+          ←
+        </button>
+
+        {forgotSent ? (
+          <div className="mt-[30px] flex flex-col items-center text-center px-[10px] py-5">
+            <span className="w-[52px] h-[52px] rounded-full bg-[#F0E5D6] text-terracotta flex items-center justify-center text-[22px] mb-4">
+              ✉
+            </span>
+            <div className="font-serif text-[19px] text-ink">Lien envoyé</div>
+            <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[260px]">
+              Si un compte existe pour {email.trim() || "cette adresse"}, tu recevras un lien pour réinitialiser ton
+              mot de passe.
+            </div>
+            <button
+              onClick={() => {
+                setForgotOpen(false);
+                setForgotSent(false);
+              }}
+              className="mt-[22px] w-full bg-terracotta text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+            >
+              Retour à la connexion
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="mt-[30px]">
+              <div className="font-serif text-[30px] leading-[1.12] text-ink">Mot de passe oublié</div>
+              <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">
+                Indique ton adresse e-mail, on t&apos;enverra un lien pour le réinitialiser.
+              </div>
+            </div>
+            <div className="mt-[26px]">
+              <input
+                type="email"
+                className={INPUT_CLS}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Adresse e-mail"
+              />
+            </div>
+            <button
+              onClick={() => setForgotSent(true)}
+              className="mt-5 text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer text-cream bg-terracotta"
+            >
+              Envoyer le lien
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
@@ -49,14 +114,31 @@ export default function LoginScreen() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Adresse e-mail"
         />
-        <input
-          type="password"
-          className={INPUT_CLS}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Mot de passe"
-        />
+        <div className="relative">
+          <input
+            type={pwVisible ? "text" : "password"}
+            className={INPUT_CLS + " pr-[46px]"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mot de passe"
+          />
+          <button
+            type="button"
+            onClick={() => setPwVisible((v) => !v)}
+            aria-label={pwVisible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] text-muted cursor-pointer"
+          >
+            {pwVisible ? "⊘" : "◉"}
+          </button>
+        </div>
       </div>
+
+      <button
+        onClick={() => setForgotOpen(true)}
+        className="mt-3 self-end text-[12.5px] text-terracotta cursor-pointer"
+      >
+        Mot de passe oublié ?
+      </button>
 
       {auth.error && (
         <div className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12.5px] text-rust leading-[1.45]">

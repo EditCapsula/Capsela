@@ -14,11 +14,28 @@ import {
 } from "./attributes";
 
 const BOTTOMS: CategoryKey[] = [...BAS_CATS, "jupe"];
-const TOP_OR_BOTTOM_CATS: CategoryKey[] = ["haut", ...BAS_CATS, "jupe"];
+/** Catégories haut du corps concernées par le rôle base/calque (R-B8, R-S11/S12). */
+const TOP_LAYER_CATS: CategoryKey[] = ["haut", "pull"];
+const TOP_OR_BOTTOM_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe"];
+/** Pièces qui constituent une base valide sous une veste/un manteau (R-B9) — un pull seul ne compte pas comme base. */
+const BASE_GARMENT_CATS: CategoryKey[] = ["haut", "robe", "combinaison"];
+const OUTERWEAR_CATS: CategoryKey[] = ["veste", "manteau"];
+/** Catégories piochées ensemble comme "couche" quand le toggle superposition est actif. */
+const LAYER_CATS: CategoryKey[] = ["veste", "manteau", "pull"];
 
 /** Catégories suivies pour l'anti-répétition (R-B7) et le calcul de formalité d'une tenue. */
-const CLOTHING_CATS: CategoryKey[] = ["haut", ...BAS_CATS, "jupe", "robe", "combinaison", "manteau", "pull"];
+const CLOTHING_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe", "robe", "combinaison", "veste", "manteau"];
 const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire"];
+
+/** Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète (R-B9). */
+function hasBaseGarment(items: Item[]): boolean {
+  return items.some((i) => BASE_GARMENT_CATS.includes(i.cat));
+}
+
+/** R-B9 — vrai si la sélection contient une veste/un manteau sans pièce de base (haut, robe, combinaison) en dessous. */
+export function violatesOuterwearRule(pieces: Item[]): boolean {
+  return pieces.some((i) => OUTERWEAR_CATS.includes(i.cat)) && !hasBaseGarment(pieces);
+}
 
 function recentlyWorn(it: Item): boolean {
   return it.worn != null && it.worn <= 2;
@@ -51,8 +68,6 @@ export function occasionFit(it: Item, occ: OccasionKey): boolean {
       return /sweat|jean brut|molleton|baskets|coupe-vent|débardeur|jogging/.test(n);
     case "voyage":
       return /baskets|jean|sweat|chino|t-shirt|coupe-vent|molleton/.test(n);
-    case "meteo":
-      return /manteau|coupe-vent|pull|gilet|trench/.test(n);
     case "cocooning":
       return /sweat|molleton|jogging|pull col rond/.test(n);
     default:
@@ -128,8 +143,8 @@ function rand<T>(arr: T[]): T | null {
 
 export interface GeneratedOutfit {
   ids: number[];
-  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. */
-  missingCats: (CategoryKey | "bas")[];
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short, "couche" = veste/manteau/pull (superposition). */
+  missingCats: (CategoryKey | "bas" | "couche")[];
 }
 
 /**
@@ -143,7 +158,12 @@ export interface GeneratedOutfit {
  * est habillée (R-B6), et les pièces choisies pour s'accorder entre elles
  * (couleur, formalité, coupe, style).
  */
-export function generateOutfit(pool: Item[], weather: Weather, occasion: OccasionKey): GeneratedOutfit {
+export function generateOutfit(
+  pool: Item[],
+  weather: Weather,
+  occasion: OccasionKey,
+  layerable = false
+): GeneratedOutfit {
   const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
 
@@ -173,30 +193,42 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
     const b = pick(BOTTOMS);
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
-    // Superposition (R-S11/R-S12) : une deuxième pièce haut n'est tentée que
-    // si la première a le rôle « base » (ajusté/regular) et le contexte est
-    // décontracté — jamais deux calques, jamais de calque seul en formel.
-    if (h && rolePieceOf(h) === "base" && !isDressy(occasion) && Math.random() < 0.25) {
-      const layerCandidates = harmonize(
-        active.filter((i) => i.cat === "haut" && i.id !== h.id && rolePieceOf(i) === "calque"),
-        chosen,
-        false
-      );
-      const layer = rand(layerCandidates);
-      if (layer) { chosen.push(layer); ids.push(layer.id); }
+  }
+  // Superposition (R-S11/R-S12/R-B8) : une pièce haut supplémentaire (ex. gilet,
+  // cardigan) — jamais deux calques simultanés, jamais de calque seul en
+  // contexte habillé sans validation manuelle. Une robe/combinaison se suffit
+  // à elle-même (R-B5) : pas de haut en plus dans ce cas.
+  if (!useRobe && Math.random() < 0.35) {
+    const dressy = isDressy(occasion);
+    const layerCandidates = active.filter((i) => {
+      if (i.cat !== "haut" || chosen.some((c) => c.id === i.id)) return false;
+      if (rolePieceOf(i) !== "calque") return true;
+      const hasCalqueAlready = chosen.some((c) => c.cat === "haut" && rolePieceOf(c) === "calque");
+      return !hasCalqueAlready && !dressy;
+    });
+    const layer = rand(harmonize(layerCandidates, chosen, false));
+    if (layer) { chosen.push(layer); ids.push(layer.id); }
+  }
+  // "Je veux pouvoir superposer" : une seule pièce veste/manteau/pull piochée
+  // dans tout le dressing (pas seulement le pool filtré) plutôt que veste et
+  // pull séparément — sinon veste et pull restent des ajouts ponctuels.
+  if (layerable) {
+    const layerPool = pool.filter((i) => LAYER_CATS.includes(i.cat));
+    const v = rand(layerPool);
+    if (v && !ids.includes(v.id)) ids.push(v.id);
+  } else {
+    if (Math.random() < 0.35) {
+      const p = pick(["pull"], false);
+      if (p && !ids.includes(p.id)) ids.push(p.id);
     }
-  }
-  if (Math.random() < 0.35) {
-    const p = pick(["pull"], false);
-    if (p && !ids.includes(p.id)) ids.push(p.id);
-  }
-  if (Math.random() < 0.3) {
-    const m = pick(["manteau"], false);
-    if (m) ids.push(m.id);
+    if (Math.random() < 0.3) {
+      const v = pick(["veste"], false);
+      if (v && !ids.includes(v.id)) ids.push(v.id);
+    }
   }
   const sh = (() => {
     const shoePool = active.filter((i) => i.cat === "chaussures");
-    const nonBasket = shoePool.filter((i) => i.shoeType !== "Basket / sneaker");
+    const nonBasket = shoePool.filter((i) => i.shoeType !== "Baskets");
     const finalPool = isDressy(occasion) && nonBasket.length ? nonBasket : shoePool;
     const picked = rand(harmonize(finalPool, chosen, true));
     if (picked) chosen.push(picked);
@@ -212,7 +244,7 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
     if (ac && !ids.includes(ac.id)) ids.push(ac.id);
   }
 
-  const missingCats: (CategoryKey | "bas")[] = [];
+  const missingCats: (CategoryKey | "bas" | "couche")[] = [];
   if (!useRobe) {
     if (!hasCat(["haut"])) missingCats.push("haut");
     if (!hasCat(BOTTOMS)) missingCats.push("bas");
@@ -220,6 +252,7 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
   if (!hasCat(["chaussures"])) missingCats.push("chaussures");
   if (!hasCat(["sac"])) missingCats.push("sac");
   if (!hasCat(["bijou"])) missingCats.push("bijou");
+  if (layerable && !pool.some((i) => LAYER_CATS.includes(i.cat))) missingCats.push("couche");
 
   return { ids: Array.from(new Set(ids)), missingCats };
 }
@@ -240,7 +273,7 @@ export function swapOutfitPiece(
     BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId);
   if (cat === "chaussures" && isDressy(occasion)) {
-    const nonBasket = candidates.filter((i) => i.shoeType !== "Basket / sneaker");
+    const nonBasket = candidates.filter((i) => i.shoeType !== "Baskets");
     if (nonBasket.length) candidates = nonBasket;
   }
   if (!candidates.length) return outfitItems.map((i) => i.id);
@@ -254,12 +287,14 @@ export function swapOutfitPiece(
 export interface BlockingHit {
   id: string;
   message: string;
+  /** R-B9 uniquement : bloque réellement la sauvegarde (contrairement aux autres règles, juste signalées). */
+  hard?: boolean;
 }
 
 /**
- * Évalue les 8 règles bloquantes (R-B1 à R-B8) sur un ensemble de pièces.
- * N'empêche jamais la sauvegarde : sert uniquement à afficher un bandeau
- * doux, non alarmant, quand une règle est contournée manuellement
+ * Évalue les 9 règles bloquantes (R-B1 à R-B9) sur un ensemble de pièces.
+ * Sauf R-B9, aucune n'empêche la sauvegarde : sert uniquement à afficher un
+ * bandeau doux, non alarmant, quand une règle est contournée manuellement
  * (Création de looks). La génération automatique, elle, évite ces
  * combinaisons en amont via generateOutfit/harmonize.
  */
@@ -307,7 +342,7 @@ export function evaluateBlocking(pieces: Item[], occasion: OccasionKey, weather:
   }
 
   const dressy = isDressy(occasion);
-  if (dressy && pieces.some((i) => i.cat === "chaussures" && i.shoeType === "Basket / sneaker")) {
+  if (dressy && pieces.some((i) => i.cat === "chaussures" && i.shoeType === "Baskets")) {
     hits.push({ id: "R-B6", message: "Les baskets sont peut-être trop décontractées pour cette occasion." });
   }
 
@@ -315,7 +350,7 @@ export function evaluateBlocking(pieces: Item[], occasion: OccasionKey, weather:
     hits.push({ id: "R-B7", message: "Une pièce de cette tenue a déjà été portée il y a moins de 2 jours." });
   }
 
-  const tops = pieces.filter((i) => i.cat === "haut");
+  const tops = pieces.filter((i) => TOP_LAYER_CATS.includes(i.cat));
   if (tops.length) {
     const roles = tops.map(rolePieceOf);
     const calqueCount = roles.filter((r) => r === "calque").length;
@@ -324,6 +359,16 @@ export function evaluateBlocking(pieces: Item[], occasion: OccasionKey, weather:
     } else if (calqueCount === 1 && dressy) {
       hits.push({ id: "R-B8", message: "Une pièce ample en superposition dans un contexte habillé, à valider toi-même." });
     }
+  }
+
+  // R-B9 — une veste ou un manteau seul ne fait pas une tenue complète.
+  // Seule règle qui bloque réellement la sauvegarde (cf. section 6 du brief).
+  if (violatesOuterwearRule(pieces)) {
+    hits.push({
+      id: "R-B9",
+      message: "Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.",
+      hard: true,
+    });
   }
 
   return hits;
@@ -378,7 +423,7 @@ export function computeLookScore(
 
   // R-S3 — règle 60/30/10 (approximation sur poids par catégorie, pas de vraie surface)
   const WEIGHT: Partial<Record<CategoryKey, number>> = {
-    haut: 3, pantalon: 3, jean: 3, short: 3, robe: 3, combinaison: 3, jupe: 3, manteau: 3, pull: 3,
+    haut: 3, pantalon: 3, jean: 3, short: 3, robe: 3, combinaison: 3, jupe: 3, pull: 3, veste: 3, manteau: 3,
     chaussures: 1, sac: 1, bijou: 1, accessoire: 1,
   };
   const colorWeights = new Map<string, number>();
@@ -427,7 +472,7 @@ export function computeLookScore(
   if (favoriteColors.length && pieces.some((i) => favoriteColors.includes(i.hex))) bonuses.push(10);
 
   // R-S11 — layering réussi (base + calque en contexte décontracté)
-  const tops = pieces.filter((i) => i.cat === "haut");
+  const tops = pieces.filter((i) => TOP_LAYER_CATS.includes(i.cat));
   const roles = tops.map(rolePieceOf);
   const dressy = isDressy(occasion);
   const hasBase = roles.includes("base");

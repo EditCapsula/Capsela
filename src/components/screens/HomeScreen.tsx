@@ -29,15 +29,6 @@ export default function HomeScreen() {
       accent: "#1D1A16",
     },
     {
-      title: "Journal des tenues",
-      tag: "Premium",
-      body: "L’historique de toutes tes tenues portées.",
-      locked: true,
-      onOpen: requirePremium(actions.goHistory),
-      bg: "#1D1A16",
-      accent: "#F3EEE5",
-    },
-    {
       title: "Second avis",
       tag: "Gratuit",
       body: "Partage ta tenue à un proche avant de te lancer.",
@@ -45,6 +36,15 @@ export default function HomeScreen() {
       onOpen: actions.openOpinionShare,
       bg: "#E7DCCB",
       accent: "#1D1A16",
+    },
+    {
+      title: "Journal des tenues",
+      tag: "Premium",
+      body: "L’historique de toutes tes tenues portées.",
+      locked: true,
+      onOpen: requirePremium(actions.goHistory),
+      bg: "#1D1A16",
+      accent: "#F3EEE5",
     },
   ];
 

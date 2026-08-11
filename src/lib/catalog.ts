@@ -1,4 +1,4 @@
-import { detectAccessoireType, detectBijouType, detectSacType } from "./attributes";
+import { detectAccessoireType, detectBijouType, detectSacType, detectSubtype } from "./attributes";
 import type { CategoryKey, Item, Season, ShoeType } from "./types";
 
 /**
@@ -20,7 +20,7 @@ const RAW: [string, CategoryKey, string, string][] = [
   ["Débardeur côtelé", "haut", "Noir", "#2A2724"],
   ["Chemise oversize", "haut", "Kaki", "#8A8560"],
   ["Top cache-cœur", "haut", "Terracotta", "#B4735A"],
-  ["Blazer structuré", "haut", "Marine", "#3A4152"],
+  ["Blazer structuré", "veste", "Marine", "#3A4152"],
   ["Jean droit", "jean", "Denim", "#5E6E7C"],
   ["Pantalon tailleur", "pantalon", "Taupe", "#A8967C"],
   ["Jean brut", "jean", "Marine", "#3A4152"],
@@ -40,6 +40,7 @@ const RAW: [string, CategoryKey, string, string][] = [
   ["Trench beige", "manteau", "Sable", "#D9C9B2"],
   ["Manteau laine long", "manteau", "Chocolat", "#7C5436"],
   ["Coupe-vent léger", "manteau", "Marine", "#3A4152"],
+  ["Veste en jean", "veste", "Denim", "#5E6E7C"],
   ["Combinaison lin", "combinaison", "Blanc cassé", "#EDE4D6"],
   ["Bottines cuir", "chaussures", "Chocolat", "#7C5436"],
   ["Baskets blanches", "chaussures", "Blanc", "#F7F4EE"],
@@ -57,7 +58,7 @@ const RAW: [string, CategoryKey, string, string][] = [
 ];
 
 export function catalogSeasonFor(cat: CategoryKey, name: string): Season {
-  if (cat === "manteau" || cat === "pull") return "Automne / Hiver";
+  if (cat === "veste" || cat === "manteau" || cat === "pull") return "Automne / Hiver";
   if (/lin|short|débardeur|sandal|combinaison/.test((name || "").toLowerCase())) return "Printemps / Été";
   return "Toutes saisons";
 }
@@ -65,11 +66,13 @@ export function catalogSeasonFor(cat: CategoryKey, name: string): Season {
 function catalogShoeTypeFor(cat: CategoryKey, name: string): ShoeType | undefined {
   if (cat !== "chaussures") return undefined;
   const n = name.toLowerCase();
-  if (/basket/.test(n)) return "Basket / sneaker";
-  if (/escarpin/.test(n)) return "Escarpin";
-  if (/mocassin/.test(n)) return "Mocassin";
-  if (/bottine|botte/.test(n)) return "Botte / bottine";
-  if (/sandale/.test(n)) return "Sandale";
+  if (/basket/.test(n)) return "Baskets";
+  if (/escarpin/.test(n)) return "Escarpins";
+  if (/mocassin/.test(n)) return "Mocassins";
+  if (/bottine/.test(n)) return "Bottines";
+  if (/botte/.test(n)) return "Bottes";
+  if (/sandale/.test(n)) return "Sandales";
+  if (/ballerine/.test(n)) return "Ballerines";
   return undefined;
 }
 
@@ -84,6 +87,7 @@ export const CATALOG: CatalogItem[] = RAW.map(([name, cat, color, hex], i) => ({
   sacType: cat === "sac" ? detectSacType(name) || undefined : undefined,
   bijouType: cat === "bijou" ? detectBijouType(name) || undefined : undefined,
   accessoireType: cat === "accessoire" ? detectAccessoireType(name) || undefined : undefined,
+  subtype: detectSubtype(cat, name) || undefined,
   // Rythme d'exemple : deux pièces sur trois « déjà portées », le reste jamais.
   worn: i % 3 !== 0 ? (i % 5) * 3 + 1 : null,
   genre: cat === "robe" || cat === "jupe" ? "femme" : "unisexe",

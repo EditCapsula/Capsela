@@ -34,7 +34,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-10">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
         <button
           onClick={() => actions.go(state.profileReturn)}

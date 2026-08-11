@@ -1,21 +1,48 @@
-import type { AccessoireType, BijouType, CategoryKey, City, OccasionKey, SacType, Season, ShoeType } from "./types";
+import type {
+  AccessoireType,
+  BijouType,
+  CategoryKey,
+  City,
+  OccasionKey,
+  SacType,
+  Season,
+  ShoeType,
+} from "./types";
 import { PROFILE_PALETTE } from "./profile";
 
 export const CATS: [CategoryKey, string, string][] = [
   ["haut", "Haut", "Hauts"],
+  ["pull", "Pull / Gilet", "Pulls & gilets"],
   ["pantalon", "Pantalon", "Pantalons"],
   ["jean", "Jean", "Jeans"],
+  ["jupe", "Jupe", "Jupes"],
   ["short", "Short", "Shorts"],
   ["robe", "Robe", "Robes"],
-  ["manteau", "Manteau", "Manteaux"],
-  ["pull", "Pull / Gilet", "Pulls / Gilets"],
   ["combinaison", "Combinaison", "Combinaisons"],
-  ["jupe", "Jupe", "Jupes"],
+  ["veste", "Veste / Blazer", "Vestes & blazers"],
+  ["manteau", "Manteau", "Manteaux & extérieurs"],
   ["chaussures", "Chaussures", "Chaussures"],
   ["sac", "Sac", "Sacs"],
   ["bijou", "Bijou", "Bijoux"],
   ["accessoire", "Accessoire", "Accessoires"],
 ];
+
+/** Sous-types génériques par catégorie — pré-suggérés à la saisie du nom. Facultatifs sauf pour SUBTYPE_REQUIRED. */
+export const SUBTYPES: Partial<Record<CategoryKey, string[]>> = {
+  haut: ["T-shirt", "Top", "Débardeur", "Chemise", "Blouse", "Polo", "Sweat"],
+  pull: ["Pull", "Gilet", "Cardigan", "Col roulé"],
+  pantalon: ["Pantalon", "Tailleur", "Cargo", "Legging", "Jogging"],
+  jean: ["Droit", "Slim", "Skinny", "Mom", "Boyfriend", "Wide leg", "Flare"],
+  jupe: ["Mini", "Midi", "Longue", "Crayon", "Plissée"],
+  short: ["Short", "Bermuda"],
+  robe: ["Courte", "Midi", "Longue", "Chemise", "Portefeuille", "Pull"],
+  combinaison: ["Combinaison", "Combishort", "Salopette"],
+  veste: ["Blazer", "Veste légère", "Perfecto", "Veste en jean", "Surchemise"],
+  manteau: ["Manteau", "Trench", "Caban", "Doudoune", "Parka", "Imperméable"],
+};
+
+/** Catégories pour lesquelles le sous-type est obligatoire (bloque l'ajout). */
+export const SUBTYPE_REQUIRED: CategoryKey[] = ["veste", "manteau"];
 
 /** Catégories regroupées sous "bas" pour la taille, l'anti-répétition et le picker de tenue. */
 export const BAS_CATS: CategoryKey[] = ["pantalon", "jean", "short"];
@@ -37,7 +64,7 @@ export const SEASONS: Season[] = ["Printemps / Été", "Automne / Hiver", "Toute
  * l'utilisateur doit toujours confirmer (contrainte produit).
  */
 export function seasonSuggestion(cat: CategoryKey, name: string): Season | null {
-  if (cat === "manteau" || cat === "pull") return "Automne / Hiver";
+  if (cat === "veste" || cat === "manteau" || cat === "pull") return "Automne / Hiver";
   if (/lin|short|débardeur|sandal|combinaison/.test((name || "").toLowerCase())) return "Printemps / Été";
   return null;
 }
@@ -48,7 +75,7 @@ export function seasonSuggestion(cat: CategoryKey, name: string): Season | null 
  * R-B3 (incohérence occasion) et R-B6 (baskets non éligibles).
  */
 export const OCCASIONS: [OccasionKey, string, string, number][] = [
-  ["quotidien", "Quotidien / bureau décontracté", "Journée type", 1],
+  ["quotidien", "Journée ordinaire", "Boulot décontracté, courses, école", 1],
   ["travail_formel", "Travail formel", "Bureau, réunions", 3],
   ["entretien", "Réunion importante / entretien", "Ça compte", 4],
   ["date", "Rendez-vous / date", "Date, dîner", 3],
@@ -57,9 +84,15 @@ export const OCCASIONS: [OccasionKey, string, string, number][] = [
   ["evenement_perso", "Événement perso formel", "Mariage, baptême", 4],
   ["sport", "Sport", "Actif, décontracté", 0],
   ["voyage", "Voyage", "Confortable, polyvalent", 1],
-  ["meteo", "Météo changeante", "Superposable", 1],
   ["cocooning", "Cocooning", "Chez soi, détente", 0],
 ];
+
+/** Libellés courts pour les chips d'occasion à l'ajout d'une pièce (espace restreint). */
+export const OCC_SHORT: Partial<Record<OccasionKey, string>> = {
+  entretien: "Réunion / entretien",
+  date: "Date",
+  evenement_perso: "Événement perso",
+};
 
 export const OCC_LABELS: Record<OccasionKey, string> = { all: "Toutes" } as Record<OccasionKey, string>;
 export const OCC_FORMALITY: Record<OccasionKey, number> = { all: 0 } as Record<OccasionKey, number>;
@@ -69,11 +102,11 @@ OCCASIONS.forEach(([key, label, , formality]) => {
 });
 
 /** Type de chaussure — obligatoire si catégorie = chaussures, nécessaire à R-B6. */
-export const SHOE_TYPES: ShoeType[] = ["Basket / sneaker", "Escarpin", "Mocassin", "Botte / bottine", "Sandale"];
+export const SHOE_TYPES: ShoeType[] = ["Baskets", "Bottines", "Bottes", "Escarpins", "Sandales", "Mocassins", "Ballerines"];
 /** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
-export const SAC_TYPES: SacType[] = ["Cabas", "Bandoulière", "Sac à dos", "Pochette", "Sac seau"];
-export const BIJOU_TYPES: BijouType[] = ["Collier", "Boucles d'oreilles", "Bracelet", "Bague", "Broche"];
-export const ACCESSOIRE_TYPES: AccessoireType[] = ["Ceinture", "Foulard", "Écharpe", "Chapeau", "Lunettes", "Gants"];
+export const SAC_TYPES: SacType[] = ["Sac à main", "Cabas", "Bandoulière", "Pochette", "Sac à dos"];
+export const BIJOU_TYPES: BijouType[] = ["Collier", "Boucles d'oreilles", "Bracelet", "Bague", "Montre"];
+export const ACCESSOIRE_TYPES: AccessoireType[] = ["Ceinture", "Foulard", "Écharpe", "Chapeau", "Casquette", "Lunettes"];
 
 /** Palette dédiée au bijou (tons métalliques) — remplace la palette générale pour cette catégorie. */
 export const PALETTE_BIJOU: [string, string][] = [

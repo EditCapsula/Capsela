@@ -14,7 +14,7 @@ export default function LookDetailScreen() {
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[30px]">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
         <button
           onClick={actions.closeLookDetail}

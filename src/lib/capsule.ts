@@ -102,5 +102,20 @@ export function computeDefaultCapsule(
   const sorted = [...curated].sort(
     (a, b) => Number(morphoFit(b, profile.morphology)) - Number(morphoFit(a, profile.morphology))
   );
-  return sorted.slice(0, 34);
+  let out = sorted.slice(0, 34);
+
+  // Garantit la présence d'au moins une veste et un pull dans la capsule,
+  // même si les filtres précédents les avaient tous écartés — ces catégories
+  // sont nécessaires à la superposition (R-B9, toggle "Je veux pouvoir superposer").
+  const ensure = (cat: "veste" | "pull") => {
+    if (out.some((it) => it.cat === cat)) return;
+    const pool = CATALOG.filter((it) => it.cat === cat && !excluded.has(it.id));
+    const fav = pool.filter((it) => favColors.includes(it.hex));
+    const pickFrom = fav.length ? fav : pool;
+    if (pickFrom.length) out = [...out, pickFrom[0]];
+  };
+  ensure("veste");
+  ensure("pull");
+
+  return out;
 }

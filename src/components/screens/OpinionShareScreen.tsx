@@ -1,17 +1,16 @@
 "use client";
 
-import { CONTACTS } from "@/lib/data";
 import { useCapsela } from "@/lib/store";
 
 export default function OpinionShareScreen() {
   const { state, actions } = useCapsela();
 
   const viaText =
-    state.opinionVia === "whatsapp" ? "par WhatsApp" : state.opinionVia === "social" ? "sur les réseaux" : "par message";
+    state.opinionVia === "whatsapp" ? "par WhatsApp" : state.opinionVia === "social" ? "sur les réseaux" : "par SMS";
 
   if (state.opinionStatus === "sent") {
     return (
-      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[30px]">
+      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
         <div className="flex items-center gap-[14px]">
           <button
             onClick={actions.closeOpinionShare}
@@ -43,7 +42,7 @@ export default function OpinionShareScreen() {
   }
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[30px]">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
         <button
           onClick={actions.closeOpinionShare}
@@ -55,28 +54,8 @@ export default function OpinionShareScreen() {
       </div>
 
       <div className="text-[13px] text-muted mt-4 leading-[1.5]">
-        Envoie ta tenue du jour à quelqu&apos;un de confiance avant de te lancer.
-      </div>
-
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[22px] mb-3">
-        À qui ? <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
-      </div>
-      <div className="flex gap-2 flex-wrap">
-        {CONTACTS.map((c) => {
-          const on = state.opinionContact === c;
-          return (
-            <button
-              key={c}
-              onClick={() => actions.setOpinionContact(c)}
-              className={
-                "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border " +
-                (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
-              }
-            >
-              {c}
-            </button>
-          );
-        })}
+        Envoie ta tenue du jour à quelqu&apos;un de confiance avant de te lancer. Tu choisis la personne dans
+        l&apos;application de partage.
       </div>
 
       <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-3">Partager via</div>
@@ -97,7 +76,7 @@ export default function OpinionShareScreen() {
           onClick={() => actions.sendOpinionRequest("message")}
           className="flex items-center gap-3 bg-card border border-border rounded-[14px] px-4 py-[14px] text-[13.5px] text-ink cursor-pointer"
         >
-          <span className="text-terracotta">✎</span> Message
+          <span className="text-terracotta">✎</span> SMS
         </button>
       </div>
     </div>

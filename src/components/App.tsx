@@ -24,13 +24,14 @@ import CreateLookScreen from "./screens/CreateLookScreen";
 import LookDetailScreen from "./screens/LookDetailScreen";
 import TabBar from "./TabBar";
 
-const TABBAR_SCREENS = new Set(["home", "wardrobe", "capsule", "tenues", "history"]);
+/** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) et l'écran Premium (fond sombre, pas de variante de barre adaptée). */
+const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup", "premium"]);
 const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
 
 function Screens() {
   const { state, actions } = useCapsela();
   const auth = useAuth();
-  const showTabbar = TABBAR_SCREENS.has(state.screen);
+  const showTabbar = !NO_TABBAR_SCREENS.has(state.screen);
 
   // Session déjà ouverte (connexion, retour OAuth ou rechargement) : saute les écrans
   // d'accueil, direction la tenue du jour plutôt que de refaire l'onboarding. Seule source

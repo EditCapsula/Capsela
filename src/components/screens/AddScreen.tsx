@@ -1,6 +1,6 @@
 "use client";
 
-import { ACCESSOIRE_TYPES, BAS_CATS, BIJOU_TYPES, CATS, OCCASIONS, PALETTE, PALETTE_BIJOU, SAC_TYPES, SEASONS, SHOE_TYPES, seasonSuggestion } from "@/lib/data";
+import { ACCESSOIRE_TYPES, BAS_CATS, BIJOU_TYPES, CATLABEL, CATS, OCCASIONS, OCC_SHORT, PALETTE, PALETTE_BIJOU, SAC_TYPES, SEASONS, SHOE_TYPES, SUBTYPES, SUBTYPE_REQUIRED, seasonSuggestion } from "@/lib/data";
 import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable } from "@/lib/attributes";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -42,7 +42,10 @@ export default function AddScreen() {
   const suggestion = seasonSuggestion(state.addCat, state.addName);
   const seasonMissing = !state.addSeason;
   const shoeTypeMissing = isShoe && !state.addShoeType;
-  const blocked = seasonMissing || shoeTypeMissing;
+  const subtypeOptions = SUBTYPES[state.addCat];
+  const subtypeRequired = SUBTYPE_REQUIRED.includes(state.addCat);
+  const subtypeMissing = subtypeRequired && !state.addSubtype;
+  const blocked = seasonMissing || shoeTypeMissing || subtypeMissing;
 
   const save = () => {
     if (blocked) return;
@@ -51,7 +54,7 @@ export default function AddScreen() {
   };
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[30px]">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
         <button
           onClick={actions.addBack}
@@ -96,6 +99,26 @@ export default function AddScreen() {
           </button>
         ))}
       </div>
+
+      {subtypeOptions && subtypeOptions.length > 0 && (
+        <>
+          <Label>
+            Type de {CATLABEL[state.addCat].toLowerCase()}{" "}
+            {subtypeRequired ? (
+              <span className="text-terracotta">*</span>
+            ) : (
+              <span className="opacity-60 normal-case tracking-normal">(facultatif, détecté automatiquement)</span>
+            )}
+          </Label>
+          <div className="flex gap-2 flex-wrap">
+            {subtypeOptions.map((t) => (
+              <button key={t} onClick={() => actions.setAddSubtype(t)} className={chipCls(state.addSubtype === t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {sizeApplicable && (
         <>
@@ -230,7 +253,7 @@ export default function AddScreen() {
       <div className="flex gap-2 flex-wrap">
         {OCCASIONS.map(([key, label]) => (
           <button key={key} onClick={() => actions.setAddOccasion(key)} className={chipCls(state.addOccasion.includes(key))}>
-            {label}
+            {OCC_SHORT[key] || label}
           </button>
         ))}
       </div>
@@ -271,8 +294,10 @@ export default function AddScreen() {
       {blocked && (
         <div className="text-center text-[11.5px] text-terracotta mt-[10px]">
           {seasonMissing
-            ? "Confirme la saison" + (shoeTypeMissing ? " et le type de chaussure" : "") + " pour pouvoir ajouter cette pièce."
-            : "Confirme le type de chaussure pour pouvoir ajouter cette pièce."}
+            ? "Confirme la saison" +
+              (shoeTypeMissing || subtypeMissing ? " et le type de pièce" : "") +
+              " pour pouvoir ajouter cette pièce."
+            : "Confirme le type de pièce pour pouvoir ajouter cette pièce."}
         </div>
       )}
     </div>
