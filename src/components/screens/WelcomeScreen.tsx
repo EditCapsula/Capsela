@@ -8,7 +8,8 @@ export default function WelcomeScreen() {
   return (
     <div className="absolute inset-0 flex flex-col bg-ink">
       <div className="flex-1 flex flex-col justify-center items-center text-center px-[34px]">
-        <div className="font-serif text-[15px] tracking-[.4em] text-gold pl-[.4em]">✦</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-icon.svg" alt="" className="w-[68px] h-auto" />
         <div className="font-serif text-[40px] tracking-[.30em] text-cream mt-[18px] pl-[.30em]">CAPSELA</div>
         <div className="font-serif italic text-[21px] text-cream-dark-soft mt-5 leading-[1.35]">
           Ton styliste personnel,

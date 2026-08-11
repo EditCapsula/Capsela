@@ -4,9 +4,10 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 
 /**
- * Bandeau de marque du prototype v2 : ✦ L'ÉDIT CAPSELA centré, avatar profil à droite
- * (masqué sur les écrans d'avant-connexion et de profil).
- * Wordmark textuel en attendant l'intégration du logo définitif.
+ * Bandeau de marque : logo complet L'édit Capsela centré, avatar profil à
+ * droite (masqué sur les écrans d'avant-connexion et de profil). Sur fond
+ * sombre (Premium), le logo complet (coloré pour fond clair) cède la place
+ * à l'icône seule + "CAPSELA", comme dans la maquette.
  */
 export default function AppHeader({
   showAvatar = true,
@@ -22,14 +23,16 @@ export default function AppHeader({
   return (
     <div className="flex items-center justify-between mb-[10px]">
       <div className="w-[34px] flex-shrink-0" />
-      <div className="flex items-center gap-2">
-        <span className={"font-serif italic text-[14px] " + (dark ? "text-gold" : "text-terracotta")}>✦</span>
-        <span
-          className={"font-serif text-[15px] tracking-[.2em] pl-[.2em] " + (dark ? "text-cream" : "text-ink")}
-        >
-          L&apos;ÉDIT CAPSELA
-        </span>
-      </div>
+      {dark ? (
+        <div className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" alt="" className="h-[22px] w-auto" />
+          <span className="font-serif text-[15px] tracking-[.28em] pl-[.28em] text-cream">CAPSELA</span>
+        </div>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-full.svg" alt="L'édit Capsela" className="h-[40px] w-auto" />
+      )}
       <div className="w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center">
         {showAvatar && (
           <button
