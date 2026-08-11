@@ -46,7 +46,7 @@ function buildInitialState(): AppState {
     addSize: null,
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
-    addOccasion: ["quotidien"],
+    addOccasion: ["travail_formel"],
     addShoeType: null,
     addMatiere: null,
     addCoupe: null,
@@ -383,7 +383,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addAccessoireTypeTouched: false,
           addSeason: null,
           addShoeType: null,
-          addOccasion: ["quotidien"],
+          addOccasion: ["travail_formel"],
           screen: "wardrobe",
         };
       }),
