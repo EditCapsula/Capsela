@@ -133,6 +133,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     else localStorage.removeItem(DEMO_KEY);
   };
 
+  /** Relit le compte démo stocké (survit à une déconnexion) pour le restaurer à la reconnexion. */
+  const readStoredDemo = (): DemoAuth | null => {
+    try {
+      const raw = localStorage.getItem(DEMO_KEY);
+      return raw ? (JSON.parse(raw) as DemoAuth) : null;
+    } catch {
+      return null;
+    }
+  };
+
   const signUpEmail = async (
     name: string,
     email: string,
@@ -162,7 +172,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInEmail = async (email: string, password: string) => {
     setError(null);
     if (!isSupabaseConfigured) {
-      persistDemo({ email, profile: demoUser?.profile ?? EMPTY_PROFILE });
+      const stored = readStoredDemo();
+      const restored: DemoAuth = stored && stored.email === email ? stored : { email, profile: EMPTY_PROFILE };
+      persistDemo(restored);
+      setProfile(restored.profile);
       return true;
     }
     const { error: err } = await getSupabase().auth.signInWithPassword({ email, password });
@@ -176,7 +189,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInGoogle = async () => {
     setError(null);
     if (!isSupabaseConfigured) {
-      persistDemo({ email: "demo@capsela.app", profile: demoUser?.profile ?? EMPTY_PROFILE });
+      const email = "demo@capsela.app";
+      const stored = readStoredDemo();
+      const restored: DemoAuth = stored && stored.email === email ? stored : { email, profile: EMPTY_PROFILE };
+      persistDemo(restored);
+      setProfile(restored.profile);
       return true;
     }
     const { error: err } = await getSupabase().auth.signInWithOAuth({
@@ -193,7 +210,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     if (!isSupabaseConfigured) {
-      persistDemo(null);
+      // Termine la session locale sans effacer le compte/profil stocké : une
+      // reconnexion avec le même e-mail doit retrouver son dressing.
+      setDemoUser(null);
       setProfile(EMPTY_PROFILE);
       return;
     }

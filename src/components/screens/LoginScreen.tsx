@@ -17,12 +17,10 @@ export default function LoginScreen() {
   const submit = async () => {
     if (busy) return;
     setBusy(true);
-    const ok = await auth.signInEmail(email.trim(), password);
+    await auth.signInEmail(email.trim(), password);
     setBusy(false);
-    if (ok) {
-      if (auth.profile.completed) actions.goHome();
-      else actions.goProfileSetup(0);
-    }
+    // Navigation post-connexion centralisée dans App.tsx (réagit à signedIn/profileCompleted) :
+    // lire auth.profile ici serait lire une valeur pas encore mise à jour (state React asynchrone).
   };
 
   return (

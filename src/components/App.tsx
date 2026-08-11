@@ -32,15 +32,20 @@ function Screens() {
   const auth = useAuth();
   const showTabbar = TABBAR_SCREENS.has(state.screen);
 
-  // Session déjà ouverte (retour OAuth ou rechargement) : saute les écrans d'accueil.
+  // Session déjà ouverte (connexion, retour OAuth ou rechargement) : saute les écrans
+  // d'accueil, direction la tenue du jour plutôt que de refaire l'onboarding. Seule source
+  // de vérité pour la navigation post-connexion — le profil arrive de façon asynchrone
+  // (state React, ou requête réseau en mode réel), donc profileCompleted doit rester en
+  // dépendance pour que l'effet se redéclenche dès qu'il est prêt, même si signedIn est
+  // passé à true avant que le profil ne soit chargé.
   const { ready, signedIn } = auth;
   const profileCompleted = auth.profile.completed;
   useEffect(() => {
     if (ready && signedIn && PRE_AUTH_SCREENS.has(state.screen)) {
-      actions.go(profileCompleted ? "home" : "profileSetup");
+      actions.go(profileCompleted ? "tenues" : "profileSetup");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, signedIn]);
+  }, [ready, signedIn, profileCompleted]);
 
   if (!ready) {
     return (

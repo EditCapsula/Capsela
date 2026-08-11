@@ -17,11 +17,6 @@ export default function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [confirmPending, setConfirmPending] = useState(false);
 
-  const afterAuth = () => {
-    if (auth.profile.completed) actions.goHome();
-    else actions.goProfileSetup(0);
-  };
-
   const submitEmail = async () => {
     if (busy) return;
     setBusy(true);
@@ -34,10 +29,11 @@ export default function AuthScreen() {
   const submitGoogle = async () => {
     if (busy) return;
     setBusy(true);
-    const ok = await auth.signInGoogle();
+    await auth.signInGoogle();
     setBusy(false);
-    // En mode réel, signInGoogle redirige vers Google : on ne navigue pas ici.
-    if (ok) afterAuth();
+    // Navigation post-connexion centralisée dans App.tsx (réagit à signedIn/profileCompleted) :
+    // lire auth.profile ici serait lire une valeur pas encore mise à jour (state React asynchrone).
+    // En mode réel, signInGoogle redirige de toute façon vers Google.
   };
 
   return (
