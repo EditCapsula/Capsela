@@ -16,7 +16,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function PieceScreen() {
-  const { state, actions, requirePremium } = useCapsela();
+  const { state, actions } = useCapsela();
   const [suggestionInfoOpen, setSuggestionInfoOpen] = useState(false);
   const active = state.activeSuggested
     ? CATALOG.find((i) => i.id === state.activeId)
@@ -121,10 +121,10 @@ export default function PieceScreen() {
                 <div className="text-[11px] text-cream-dark-muted mt-[2px]">Ajoutée à ton journal</div>
               </div>
               <button
-                onClick={requirePremium(actions.correctActive)}
+                onClick={actions.correctActive}
                 className="flex items-center gap-1 text-[11px] text-gold cursor-pointer"
               >
-                Corriger {!state.isPremium && <span className="font-serif">✦</span>}
+                Corriger
               </button>
             </div>
           ) : (
