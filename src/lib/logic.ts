@@ -1,4 +1,4 @@
-import type { CategoryKey, Item, OccasionKey, WorkMode } from "./types";
+import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
 import { BAS_CATS, effectiveFormality } from "./data";
 import { bestStyleFor, morphoFit, morphoVigilance } from "./capsule";
@@ -39,8 +39,8 @@ function recentlyWorn(it: Item): boolean {
   return it.worn != null && it.worn <= 2;
 }
 
-function isDressy(occasion: OccasionKey, workMode: WorkMode = "Présentiel"): boolean {
-  return effectiveFormality(occasion, workMode) >= 3;
+function isDressy(occasion: OccasionKey, workMode: WorkMode = "Présentiel", dateContext: DateContext = "Verre"): boolean {
+  return effectiveFormality(occasion, workMode, dateContext) >= 3;
 }
 
 export function occasionFit(it: Item, occ: OccasionKey): boolean {
@@ -57,10 +57,10 @@ export function occasionFit(it: Item, occ: OccasionKey): boolean {
     case "date":
       return /soie|robe|blouse|escarpin|jupe|foulard|rose poudré|bordeaux/.test(n);
     case "soiree":
-      return /soie|robe|escarpin|doré|bordeaux|noir/.test(n);
-    case "evenement_pro":
-      return /tailleur|blazer|chemis|escarpin|robe chemise|robe droite|marine/.test(n);
-    case "evenement_perso":
+      return /soie|robe|escarpin|doré|bordeaux|noir|t-shirt|jean|baskets/.test(n);
+    case "sortie_festive":
+      return /soie|robe|escarpin|doré|bordeaux|noir|paillet|clouté/.test(n);
+    case "evenement":
       return /soie|robe longue|robe droite|escarpin|dentelle|doré|glamour|paillet|tailleur|chemis/.test(n);
     case "sport":
       return /sweat|jean brut|molleton|baskets|coupe-vent|débardeur|jogging/.test(n);
@@ -160,7 +160,8 @@ export function generateOutfit(
   pool: Item[],
   weather: Weather,
   occasion: OccasionKey,
-  workMode: WorkMode = "Présentiel"
+  workMode: WorkMode = "Présentiel",
+  dateContext: DateContext = "Verre"
 ): GeneratedOutfit {
   const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
@@ -169,26 +170,48 @@ export function generateOutfit(
   const antiRepClothingCount = antiRepPool.filter((i) => CLOTHING_CATS.includes(i.cat)).length;
   const antiRepBase = antiRepClothingCount >= 2 ? antiRepPool : seasonBase;
 
+  // Compatibilité catégorie × occasion (R-B11 Sport, R-B12/R-B13 Cocooning ↔
+  // chaussures d'intérieur) — jamais relâchée, même si le pool résultant est
+  // restreint ; appliquée à toute source de pool, y compris aux catégories
+  // qui bypassent par ailleurs le simple filtre heuristique d'occasion (chaussures/sac).
+  const hardCategoryFilter = (items: Item[]): Item[] => {
+    let r = items;
+    if (occasion === "sport") {
+      // R-B11 — correspondance stricte, pas un seuil minimum : liste blanche
+      // explicite par catégorie (section 22 du moteur de règles), avec une
+      // exception pour le sac cabas (compatible Sport bien que non technique).
+      r = r.filter((i) => {
+        if (i.cat === "chaussures") return formalityOf(i) === 0;
+        if (i.cat === "sac") return formalityOf(i) === 0 || i.sacType === "Cabas";
+        if (i.cat === "bijou" || i.cat === "accessoire") return true;
+        return formalityOf(i) === 0;
+      });
+    }
+    if (occasion === "cocooning") {
+      // R-B12 — pas de veste/manteau ni de chaussures autres que d'intérieur chez soi.
+      r = r.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
+      r = r.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
+    } else {
+      // R-B13 — symétrique de R-B12 : une chaussure d'intérieur n'apparaît jamais hors Cocooning.
+      r = r.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Chaussures d'intérieur");
+    }
+    return r;
+  };
+
   const occFiltered = occasion === "all" ? antiRepBase : antiRepBase.filter((i) => occasionFit(i, occasion));
   let active = occFiltered.length >= 4 ? occFiltered : antiRepBase;
-  // R-B11 — en contexte Sport, seules les pièces réellement sportives sont
-  // éligibles (correspondance stricte, pas un seuil minimum comme R-B3) ;
-  // ce filtre ne se relâche jamais, même si le pool résultant est restreint.
-  if (occasion === "sport") active = active.filter((i) => formalityOf(i) === 0);
-  // R-B12 — en Cocooning, pas de veste/manteau (on ne porte pas ça chez soi) ni
-  // de chaussures autres que d'intérieur ; filtre en amont, jamais relâché.
-  if (occasion === "cocooning") {
-    active = active.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
-    active = active.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
-  }
+  active = hardCategoryFilter(active);
 
-  // Chaussures/sacs/bijoux/accessoires restent toujours éligibles quelle que
-  // soit l'occasion (la saison reste respectée) — conçus pour être reportés
-  // souvent, contrairement aux vêtements filtrés plus strictement ci-dessus.
+  // Chaussures/sacs/bijoux/accessoires restent toujours éligibles vis-à-vis du
+  // simple filtre heuristique d'occasion (occFiltered, la saison reste
+  // respectée) — conçus pour être reportés souvent, contrairement aux
+  // vêtements filtrés plus strictement ci-dessus. Les règles dures (R-B11/
+  // R-B12/R-B13, jamais relâchées) s'appliquent en revanche toujours, via hardCategoryFilter.
   const poolFor = (cats: CategoryKey[]): Item[] => {
     if (!cats.every((c) => ACCESSORY_CATS.includes(c))) return active;
-    const inSeason = seasonPool.filter((i) => cats.includes(i.cat));
-    return inSeason.length ? seasonPool : pool;
+    const basis = hardCategoryFilter(seasonPool);
+    const inSeason = basis.filter((i) => cats.includes(i.cat));
+    return inSeason.length ? basis : hardCategoryFilter(pool);
   };
 
   const chosen: Item[] = [];
@@ -216,7 +239,7 @@ export function generateOutfit(
   // contexte habillé sans validation manuelle. Une robe/combinaison se suffit
   // à elle-même (R-B5) : pas de haut en plus dans ce cas.
   if (!useRobe && Math.random() < 0.35) {
-    const dressy = isDressy(occasion, workMode);
+    const dressy = isDressy(occasion, workMode, dateContext);
     const layerCandidates = active.filter((i) => {
       if (i.cat !== "haut" || chosen.some((c) => c.id === i.id)) return false;
       if (rolePieceOf(i) !== "calque") return true;
@@ -241,7 +264,7 @@ export function generateOutfit(
   const sh = (() => {
     const shoePool = poolFor(["chaussures"]).filter((i) => i.cat === "chaussures");
     const nonBasket = shoePool.filter((i) => i.shoeType !== "Baskets");
-    const finalPool = isDressy(occasion, workMode) && nonBasket.length ? nonBasket : shoePool;
+    const finalPool = isDressy(occasion, workMode, dateContext) && nonBasket.length ? nonBasket : shoePool;
     const picked = rand(harmonize(finalPool, chosen, true));
     if (picked) chosen.push(picked);
     return picked;
@@ -279,12 +302,28 @@ export function swapOutfitPiece(
   pieceId: number,
   cat: CategoryKey,
   occasion: OccasionKey = "all",
-  workMode: WorkMode = "Présentiel"
+  workMode: WorkMode = "Présentiel",
+  dateContext: DateContext = "Verre"
 ): number[] {
   const catGroup: CategoryKey[] =
     BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId);
-  if (cat === "chaussures" && isDressy(occasion, workMode)) {
+  // R-B11/R-B12/R-B13 — jamais relâchées, y compris sur un échange manuel.
+  if (occasion === "sport") {
+    candidates = candidates.filter((i) => {
+      if (i.cat === "chaussures") return formalityOf(i) === 0;
+      if (i.cat === "sac") return formalityOf(i) === 0 || i.sacType === "Cabas";
+      if (i.cat === "bijou" || i.cat === "accessoire") return true;
+      return formalityOf(i) === 0;
+    });
+  }
+  if (occasion === "cocooning") {
+    candidates = candidates.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
+    candidates = candidates.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
+  } else {
+    candidates = candidates.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Chaussures d'intérieur");
+  }
+  if (cat === "chaussures" && isDressy(occasion, workMode, dateContext)) {
     const nonBasket = candidates.filter((i) => i.shoeType !== "Baskets");
     if (nonBasket.length) candidates = nonBasket;
   }
@@ -314,7 +353,8 @@ export function evaluateBlocking(
   pieces: Item[],
   occasion: OccasionKey,
   weather: Weather,
-  workMode: WorkMode = "Présentiel"
+  workMode: WorkMode = "Présentiel",
+  dateContext: DateContext = "Verre"
 ): BlockingHit[] {
   const hits: BlockingHit[] = [];
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
@@ -332,7 +372,7 @@ export function evaluateBlocking(
 
   if (occasion !== "all" && clothing.length) {
     const minFormality = Math.min(...clothing.map(formalityOf));
-    if (minFormality < effectiveFormality(occasion, workMode)) {
+    if (minFormality < effectiveFormality(occasion, workMode, dateContext)) {
       hits.push({ id: "R-B3", message: "Cette tenue est peut-être un peu trop décontractée pour l'occasion choisie." });
     }
   }
@@ -358,7 +398,7 @@ export function evaluateBlocking(
     hits.push({ id: "R-B5", message: "Une robe ou une combinaison se suffit à elle-même, sans haut ni bas en plus." });
   }
 
-  const dressy = isDressy(occasion, workMode);
+  const dressy = isDressy(occasion, workMode, dateContext);
   if (dressy && pieces.some((i) => i.cat === "chaussures" && i.shoeType === "Baskets")) {
     hits.push({ id: "R-B6", message: "Les baskets sont peut-être trop décontractées pour cette occasion." });
   }
@@ -420,7 +460,8 @@ export function computeLookScore(
   morphology: string | null,
   dismissed: Set<string>,
   weather: Weather,
-  workMode: WorkMode = "Présentiel"
+  workMode: WorkMode = "Présentiel",
+  dateContext: DateContext = "Verre"
 ): LookScore {
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
   const accessories = pieces.filter((i) => ACCESSORY_CATS.includes(i.cat));
@@ -499,7 +540,7 @@ export function computeLookScore(
   // R-S11 — layering réussi (base + calque en contexte décontracté)
   const tops = pieces.filter((i) => TOP_LAYER_CATS.includes(i.cat));
   const roles = tops.map(rolePieceOf);
-  const dressy = isDressy(occasion, workMode);
+  const dressy = isDressy(occasion, workMode, dateContext);
   const hasBase = roles.includes("base");
   const hasCalque = roles.includes("calque");
   if (hasBase && hasCalque && !dressy) bonuses.push(10);

@@ -3,6 +3,7 @@ import type {
   BijouType,
   CategoryKey,
   City,
+  DateContext,
   OccasionKey,
   SacType,
   Season,
@@ -72,46 +73,72 @@ export function seasonSuggestion(cat: CategoryKey, name: string): Season | null 
 
 /**
  * Occasion, libellé, sous-libellé, niveau de formalité minimum requis
- * (0 = sport, 1 = décontracté, 3 = business casual, 4 = habillé) — alimente
- * R-B3 (incohérence occasion) et R-B6 (baskets non éligibles).
+ * (0 = sport, 1 = décontracté, 3 = business casual, 4 = habillé), groupe
+ * d'affichage (principale = mise en avant, secondaire = "Autres occasions")
+ * — alimente R-B3 (incohérence occasion) et R-B6 (baskets non éligibles).
+ * Taxonomie révisée (recette 12/08/2026) : "Événement professionnel" retiré
+ * (couvert par Rendez-vous important / Travail-bureau), "Sortie festive"
+ * ajoutée, "Date" a désormais une formalité variable selon son sous-contexte
+ * (cf. DATE_CONTEXTS) — la valeur ci-dessous n'est qu'un repli par défaut.
  */
-export const OCCASIONS: [OccasionKey, string, string, number][] = [
-  ["quotidien", "Quotidien / décontracté", "Courses, école, journée libre", 1],
-  ["travail_formel", "Travail / bureau", "Journée de travail", 3],
-  ["entretien", "Réunion importante / entretien", "Ça compte", 4],
-  ["date", "Rendez-vous / date", "Date, dîner", 3],
-  ["soiree", "Soirée / sortie", "Cocktail, bar, amis", 3],
-  ["evenement_pro", "Événement professionnel", "Conférence, salon", 3],
-  ["evenement_perso", "Événement habillé / cérémonie", "Mariage, baptême", 4],
-  ["sport", "Sport", "Actif, décontracté", 0],
-  ["voyage", "Voyage", "Confortable, polyvalent", 1],
-  ["cocooning", "Cocooning / maison", "Chez soi, détente", 1],
+export const OCCASIONS: [OccasionKey, string, string, number, "principale" | "secondaire"][] = [
+  ["quotidien", "Quotidien / décontracté", "Courses, école, journée libre", 1, "principale"],
+  ["travail_formel", "Travail / bureau", "Journée de travail", 3, "principale"],
+  ["entretien", "Rendez-vous important", "Entretien, présentation, rendez-vous client", 4, "principale"],
+  ["date", "Date", "Rendez-vous amoureux", 1, "principale"],
+  ["soiree", "Sortie / soirée", "Restaurant, verre, cinéma, amis", 1, "principale"],
+  ["sortie_festive", "Sortie festive", "Concert, bar dansant, club, fête", 1, "principale"],
+  ["sport", "Sport", "Salle, fitness, activité sportive", 0, "principale"],
+  ["cocooning", "Cocooning / maison", "Chez soi, détente", 1, "principale"],
+  ["voyage", "Voyage / déplacement", "Train, avion, trajet, journée de voyage", 1, "secondaire"],
+  ["evenement", "Événement / cérémonie", "Mariage, baptême, cérémonie, occasion habillée", 4, "secondaire"],
 ];
+
+/** Sous-contexte de l'occasion "Date" — seul déterminant de sa formalité (recette 12/08/2026). */
+export const DATE_CONTEXTS: [DateContext, number][] = [
+  ["Restaurant / romantique", 4],
+  ["Verre", 1],
+  ["Cinéma / balade", 1],
+  ["Activité", 1],
+  ["Soirée festive", 3],
+];
+export const DATE_CONTEXT_FORMALITY: Record<DateContext, number> = {} as Record<DateContext, number>;
+DATE_CONTEXTS.forEach(([key, formality]) => {
+  DATE_CONTEXT_FORMALITY[key] = formality;
+});
 
 /** Libellés courts pour les chips d'occasion à l'ajout d'une pièce (espace restreint). */
 export const OCC_SHORT: Partial<Record<OccasionKey, string>> = {
   quotidien: "Quotidien",
   travail_formel: "Travail",
-  entretien: "Réunion / entretien",
+  entretien: "Rendez-vous",
   date: "Date",
-  evenement_pro: "Événement pro",
-  evenement_perso: "Cérémonie",
+  soiree: "Sortie",
+  sortie_festive: "Sortie festive",
+  evenement: "Cérémonie",
 };
 
 export const OCC_LABELS: Record<OccasionKey, string> = { all: "Toutes" } as Record<OccasionKey, string>;
 export const OCC_FORMALITY: Record<OccasionKey, number> = { all: 0 } as Record<OccasionKey, number>;
-OCCASIONS.forEach(([key, label, , formality]) => {
+export const OCC_GROUP: Record<OccasionKey, "principale" | "secondaire"> = { all: "principale" } as Record<
+  OccasionKey,
+  "principale" | "secondaire"
+>;
+OCCASIONS.forEach(([key, label, , formality, group]) => {
   OCC_LABELS[key] = label;
   OCC_FORMALITY[key] = formality;
+  OCC_GROUP[key] = group;
 });
 
 /**
  * Formalité minimum effective d'une occasion — "travail_formel" varie selon
  * le sous-choix Présentiel (business casual) / Télétravail (décontracté),
- * les autres occasions gardent leur valeur fixe de OCC_FORMALITY.
+ * "date" varie selon son sous-contexte (cf. DATE_CONTEXTS), les autres
+ * occasions gardent leur valeur fixe de OCC_FORMALITY.
  */
-export function effectiveFormality(occasion: OccasionKey, workMode: WorkMode): number {
+export function effectiveFormality(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext = "Verre"): number {
   if (occasion === "travail_formel") return workMode === "Télétravail" ? 1 : 3;
+  if (occasion === "date") return DATE_CONTEXT_FORMALITY[dateContext] ?? 1;
   return OCC_FORMALITY[occasion] ?? 0;
 }
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import { CATLABEL, CITIES, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
+import { CATLABEL, CITIES, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, wornAgo, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -68,7 +68,8 @@ export default function TenuesScreen() {
     profile.morphology,
     dismissed,
     weather,
-    state.workMode
+    state.workMode,
+    state.dateContext
   );
 
   return (
@@ -107,9 +108,12 @@ export default function TenuesScreen() {
         </button>
       </div>
 
-      <div className="mt-5 text-[11px] tracking-[.16em] uppercase text-muted">Occasion</div>
+      <div className="mt-5 text-[11px] tracking-[.16em] uppercase text-muted">
+        Qu&apos;est-ce qui est prévu aujourd&apos;hui ?
+      </div>
       <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[9px]">
-        {OCCASIONS.map(([key, label, sub], i) => {
+        {OCCASIONS.filter(([, , , , group]) => group === "principale").map(([key, label, sub]) => {
+          const i = OCCASIONS.findIndex(([k]) => k === key);
           const on = state.occasion === key;
           return (
             <button
@@ -128,6 +132,54 @@ export default function TenuesScreen() {
           );
         })}
       </div>
+
+      <div className="mt-3 text-[10px] tracking-[.14em] uppercase text-placeholder">Autres occasions</div>
+      <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[7px]">
+        {OCCASIONS.filter(([, , , , group]) => group === "secondaire").map(([key, label, sub]) => {
+          const i = OCCASIONS.findIndex(([k]) => k === key);
+          const on = state.occasion === key;
+          return (
+            <button
+              key={key}
+              onClick={() => actions.setOccasion(on ? "all" : key)}
+              className="flex-none text-left py-[10px] px-[15px] rounded-full cursor-pointer border"
+              style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB" }}
+            >
+              <div className="text-[12.5px] whitespace-nowrap" style={{ color: on ? "#F3EEE5" : "#1D1A16" }}>
+                <span style={{ color: on ? "#C9966F" : "#B3AA9B" }}>{String(i + 1).padStart(2, "0")}</span> {label}
+              </div>
+              <div className="text-[10.5px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
+                {sub}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {state.occasion === "date" && (
+        <div className="flex gap-[11px] mt-3">
+          <div className="w-[1.5px] flex-shrink-0 bg-border rounded-sm ml-[7px]" />
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] tracking-[.16em] uppercase text-terracotta mb-[9px]">
+              ↳ Quel type de date ?
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {DATE_CONTEXTS.map(([m]) => (
+                <button
+                  key={m}
+                  onClick={() => actions.setDateContext(m)}
+                  className={
+                    "px-[14px] py-[7px] rounded-full text-[12px] cursor-pointer font-sans border " +
+                    (state.dateContext === m ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+                  }
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {state.occasion === "travail_formel" && (
         <div className="flex gap-[11px] mt-3">
@@ -242,7 +294,7 @@ export default function TenuesScreen() {
                   )}
                   <div className="text-[14.5px] text-ink">{it.name}</div>
                   <div className="text-[11px] text-muted mt-[3px]">
-                    {CATLABEL[isBag(it) ? "sac" : it.cat]} · {it.worn ? "porté récemment" : "neuf"}
+                    {CATLABEL[isBag(it) ? "sac" : it.cat]} · {wornAgo(it.worn)}
                   </div>
                 </div>
                 <button

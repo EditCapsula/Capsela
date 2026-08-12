@@ -20,6 +20,7 @@ import type {
   BijouType,
   CategoryKey,
   Coupe,
+  DateContext,
   Item,
   Matiere,
   OccasionKey,
@@ -78,6 +79,7 @@ function buildInitialState(): AppState {
     workMode: "Présentiel",
     travelMode: "Court trajet",
     travelTipDismissed: false,
+    dateContext: "Verre",
     lookCount: 0,
     isPremium: false,
     history: [],
@@ -150,6 +152,8 @@ export interface Actions {
   /** Sous-choix affiché uniquement pour l'occasion "voyage" ; régénère la tenue. */
   setTravelMode: (m: TravelMode) => void;
   dismissTravelTip: () => void;
+  /** Sous-choix affiché uniquement pour l'occasion "date" ; seul déterminant de sa formalité, régénère la tenue. */
+  setDateContext: (c: DateContext) => void;
   /** Remplace une pièce de la tenue par une autre de la même famille. */
   swapPiece: (id: number, cat: CategoryKey) => void;
   cycleGeo: () => void;
@@ -244,7 +248,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   }, [wardrobePool, weather]);
 
   const regen = (s: AppState): AppState => {
-    const { ids, missingCats } = generateOutfit(poolRef.current, weatherRef.current, s.occasion || "all", s.workMode);
+    const { ids, missingCats } = generateOutfit(
+      poolRef.current,
+      weatherRef.current,
+      s.occasion || "all",
+      s.workMode,
+      s.dateContext
+    );
     return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
   };
 
@@ -422,6 +432,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setWorkMode: (m) => setState((s) => regen({ ...s, workMode: m })),
     setTravelMode: (m) => setState((s) => regen({ ...s, travelMode: m, travelTipDismissed: false })),
     dismissTravelTip: () => setState((s) => ({ ...s, travelTipDismissed: true })),
+    setDateContext: (c) => setState((s) => regen({ ...s, dateContext: c })),
     swapPiece: (id, cat) =>
       setState((s) => {
         const outfitItems = s.outfit
@@ -429,7 +440,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           .filter((it): it is Item => Boolean(it));
         return {
           ...s,
-          outfit: swapOutfitPiece(outfitItems, poolRef.current, id, cat, s.occasion || "all", s.workMode),
+          outfit: swapOutfitPiece(outfitItems, poolRef.current, id, cat, s.occasion || "all", s.workMode, s.dateContext),
           dismissedSuggestions: [],
         };
       }),
