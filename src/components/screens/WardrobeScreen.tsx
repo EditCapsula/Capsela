@@ -6,15 +6,14 @@ import { useCapsela } from "@/lib/store";
 import { neverWornItems } from "@/lib/selectors";
 
 export default function WardrobeScreen() {
-  const { state, wardrobePool, actions } = useCapsela();
+  const { state, actions } = useCapsela();
   const items = state.items;
   const neverWorn = neverWornItems(items);
 
-  // Chaque catégorie montre tes pièces réelles ; à défaut, des suggestions
-  // de la capsule par défaut (marquées comme telles) pour te donner une idée.
+  // Le dressing n'affiche que les pièces réelles ; les suggestions de la
+  // capsule par défaut vivent exclusivement sur l'écran Capsule.
   const groups = CATS.map(([key, , plural]) => {
-    const suggested = !items.some((i) => i.cat === key);
-    return { key, label: plural.toUpperCase(), items: wardrobePool.filter((i) => i.cat === key), suggested };
+    return { key, label: plural.toUpperCase(), items: items.filter((i) => i.cat === key) };
   }).filter((g) => g.items.length > 0);
 
   return (
@@ -52,34 +51,57 @@ export default function WardrobeScreen() {
         </button>
       )}
 
-      {groups.map((g) => (
-        <div key={g.key}>
-          <div className="mt-6 mb-3 text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
-            {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
+      {items.length === 0 ? (
+        <div className="mt-6 flex flex-col items-center text-center gap-[14px] bg-card border border-border rounded-[18px] px-5 py-8">
+          <div className="font-serif text-[18px] text-ink">Ton dressing est encore vide</div>
+          <div className="text-[13px] text-muted leading-[1.5]">
+            Ajoute tes premières pièces, ou pars d&apos;une sélection déjà prête pour t&apos;inspirer.
           </div>
-          <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
-            {g.items.map((it) => (
-              <button
-                key={it.id}
-                onClick={() => actions.openItem(it.id, g.suggested)}
-                className="flex-none w-[104px] cursor-pointer text-left"
-                style={{ scrollSnapAlign: "start" }}
-              >
-                <div
-                  className="w-full rounded-[11px] border border-border overflow-hidden"
-                  style={{ aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
-                />
-                <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
-                  {it.name}
-                </div>
-                <div className={"text-[9.5px] mt-[1px] " + (g.suggested ? "text-terracotta" : "text-placeholder")}>
-                  {g.suggested ? "Suggestion" : it.worn == null ? "Jamais portée" : wornAgo(it.worn)}
-                </div>
-              </button>
-            ))}
+          <div className="flex flex-col gap-[10px] w-full mt-[4px]">
+            <button
+              onClick={actions.openAdd}
+              className="w-full bg-terracotta text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.08em] uppercase cursor-pointer"
+            >
+              Ajouter un vêtement
+            </button>
+            <button
+              onClick={actions.goCapsule}
+              className="w-full text-center border border-border-soft text-ink rounded-full py-[13px] text-[12.5px] cursor-pointer"
+            >
+              Découvre ta capsule
+            </button>
           </div>
         </div>
-      ))}
+      ) : (
+        groups.map((g) => (
+          <div key={g.key}>
+            <div className="mt-6 mb-3 text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
+              {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
+            </div>
+            <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
+              {g.items.map((it) => (
+                <button
+                  key={it.id}
+                  onClick={() => actions.openItem(it.id, false)}
+                  className="flex-none w-[104px] cursor-pointer text-left"
+                  style={{ scrollSnapAlign: "start" }}
+                >
+                  <div
+                    className="w-full rounded-[11px] border border-border overflow-hidden"
+                    style={{ aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
+                  />
+                  <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
+                    {it.name}
+                  </div>
+                  <div className="text-[9.5px] mt-[1px] text-placeholder">
+                    {it.worn == null ? "Jamais porté" : wornAgo(it.worn)}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
 
       <div className="flex items-center justify-between mt-6 mb-3">
         <span className="text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
