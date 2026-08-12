@@ -3,9 +3,17 @@
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATLABEL, CITIES, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
+import { isCatalogId } from "@/lib/catalog";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, violatesOuterwearRule } from "@/lib/logic";
+
+/** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
+const MODE_LABELS = {
+  capsule_depart: "Capsule de départ",
+  hybride: "Tes pièces + suggestions",
+  dressing_complet: "100% ton dressing",
+} as const;
 
 const MISSING_LABELS: Record<string, string> = {
   haut: "haut",
@@ -31,9 +39,10 @@ function missingSuggestionText(missingCats: string[]): string {
 }
 
 export default function TenuesScreen() {
-  const { state, weather, wardrobePool, outfitFromDressing, actions } = useCapsela();
+  const { state, weather, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
+  const [suggestionInfoId, setSuggestionInfoId] = useState<number | null>(null);
 
   const now = new Date();
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
@@ -44,9 +53,13 @@ export default function TenuesScreen() {
     .map((id) => wardrobePool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
 
-  const tenueSourceText = outfitFromDressing
-    ? "Depuis ton dressing"
-    : "Depuis ton profil style · " + (profile.styles[0] || "");
+  const suggestedCount = outfitPieces.filter((it) => isCatalogId(it.id)).length;
+  const recommendationMode: keyof typeof MODE_LABELS =
+    suggestedCount === 0
+      ? "dressing_complet"
+      : suggestedCount === outfitPieces.length
+        ? "capsule_depart"
+        : "hybride";
 
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
   const vesteWithoutBase = violatesOuterwearRule(outfitPieces);
@@ -119,7 +132,9 @@ export default function TenuesScreen() {
         })}
       </div>
 
-      <div className="mt-[14px] text-[11.5px] text-muted">{tenueSourceText}</div>
+      <span className="inline-block mt-[14px] text-[10.5px] tracking-[.06em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[11px]">
+        {MODE_LABELS[recommendationMode]}
+      </span>
 
       <div className="flex justify-between items-center mt-[22px] mb-3">
         <div className="flex items-center gap-[9px]">
@@ -135,33 +150,53 @@ export default function TenuesScreen() {
         </button>
       </div>
       <div className="flex flex-col gap-[10px]">
-        {outfitPieces.map((it) => (
-          <div key={it.id} className="flex items-center gap-[13px] bg-card border border-border rounded-[14px] p-[11px]">
-            <div
-              className="relative w-[58px] h-[70px] rounded-lg flex-shrink-0"
-              style={{ background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
-            >
-              <span
-                className="absolute left-[6px] bottom-[6px] text-[8.5px] tracking-[.05em]"
-                style={{ color: "rgba(243,238,229,.9)", textShadow: "0 1px 2px rgba(0,0,0,.35)" }}
-              >
-                {CATLABEL[it.cat].toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[14.5px] text-ink">{it.name}</div>
-              <div className="text-[11px] text-muted mt-[3px]">
-                {CATLABEL[isBag(it) ? "sac" : it.cat]} · {it.worn ? "porté récemment" : "neuf"}
+        {outfitPieces.map((it) => {
+          const suggested = isCatalogId(it.id);
+          const infoOpen = suggestionInfoId === it.id;
+          return (
+            <div key={it.id} className="bg-card border border-border rounded-[14px] p-[11px]">
+              <div className="flex items-center gap-[13px]">
+                <div
+                  className="relative w-[58px] h-[70px] rounded-lg flex-shrink-0"
+                  style={{ background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
+                >
+                  <span
+                    className="absolute left-[6px] bottom-[6px] text-[8.5px] tracking-[.05em]"
+                    style={{ color: "rgba(243,238,229,.9)", textShadow: "0 1px 2px rgba(0,0,0,.35)" }}
+                  >
+                    {CATLABEL[it.cat].toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  {suggested && (
+                    <button
+                      onClick={() => setSuggestionInfoId(infoOpen ? null : it.id)}
+                      className="inline-block text-[9px] tracking-[.08em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px] mb-[6px] cursor-pointer"
+                    >
+                      Suggestion
+                    </button>
+                  )}
+                  <div className="text-[14.5px] text-ink">{it.name}</div>
+                  <div className="text-[11px] text-muted mt-[3px]">
+                    {CATLABEL[isBag(it) ? "sac" : it.cat]} · {it.worn ? "porté récemment" : "neuf"}
+                  </div>
+                </div>
+                <button
+                  onClick={() => actions.swapPiece(it.id, it.cat)}
+                  className="text-[17px] text-placeholder cursor-pointer flex-shrink-0 p-[6px]"
+                >
+                  ⇄
+                </button>
               </div>
+              {suggested && infoOpen && (
+                <div className="text-[11.5px] text-muted mt-[10px] leading-[1.4]">
+                  Tu n&apos;as pas encore de pièce de cette catégorie dans ton dressing — {it.name} en est un
+                  exemple, tiré de ta capsule de départ.
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => actions.swapPiece(it.id, it.cat)}
-              className="text-[17px] text-placeholder cursor-pointer flex-shrink-0 p-[6px]"
-            >
-              ⇄
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {lookScore.badge === "ajuster" && lookScore.adjustMessage && (

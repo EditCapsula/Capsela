@@ -176,8 +176,6 @@ interface CapselaContextValue {
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
   wardrobePool: Item[];
-  /** La tenue du jour vient de vraies pièces (par opposition aux suggestions de la capsule). */
-  outfitFromDressing: boolean;
   actions: Actions;
   /** Wraps a handler so it only runs for Premium users; otherwise routes to the paywall. */
   requirePremium: (fn: () => void) => () => void;
@@ -227,7 +225,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     [state.items, defaultCapsule]
   );
-  const outfitFromDressing = state.items.length > 0;
 
   const poolRef = useRef(wardrobePool);
   const weatherRef = useRef(weather);
@@ -574,7 +571,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     weather,
     defaultCapsule,
     wardrobePool,
-    outfitFromDressing,
     actions,
     requirePremium,
   };
