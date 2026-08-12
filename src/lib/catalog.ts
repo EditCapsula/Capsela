@@ -60,7 +60,11 @@ const RAW: [string, CategoryKey, string, string][] = [
 
 export function catalogSeasonFor(cat: CategoryKey, name: string): Season {
   if (cat === "veste" || cat === "manteau" || cat === "pull") return "Automne / Hiver";
-  if (/lin|short|débardeur|sandal|combinaison/.test((name || "").toLowerCase())) return "Printemps / Été";
+  const n = (name || "").toLowerCase();
+  if (/laine|bottine|botte|manteau|trench|caban|doudoune|parka|écharpe|gants|col roulé|molleton|torsadé|cuir/.test(n)) {
+    return "Automne / Hiver";
+  }
+  if (/lin|short|débardeur|sandal|combinaison|soie/.test(n)) return "Printemps / Été";
   return "Toutes saisons";
 }
 

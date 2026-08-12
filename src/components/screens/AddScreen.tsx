@@ -137,7 +137,7 @@ export default function AddScreen() {
       )}
 
       {isSac && (
-        <SubMenu label="sac" note="(détecté automatiquement, modifiable)">
+        <SubMenu label="sac" note="(détecté automatiquement, à confirmer)">
           {SAC_TYPES.map((t) => (
             <button key={t} onClick={() => actions.setAddSacType(t)} className={chipCls(state.addSacType === t)}>
               {t}
@@ -147,7 +147,7 @@ export default function AddScreen() {
       )}
 
       {isBijou && (
-        <SubMenu label="bijou" note="(détecté automatiquement, modifiable)">
+        <SubMenu label="bijou" note="(détecté automatiquement, à confirmer)">
           {BIJOU_TYPES.map((t) => (
             <button key={t} onClick={() => actions.setAddBijouType(t)} className={chipCls(state.addBijouType === t)}>
               {t}
@@ -157,7 +157,7 @@ export default function AddScreen() {
       )}
 
       {isAccessoire && (
-        <SubMenu label="accessoire" note="(détecté automatiquement, modifiable)">
+        <SubMenu label="accessoire" note="(détecté automatiquement, à confirmer)">
           {ACCESSOIRE_TYPES.map((t) => (
             <button
               key={t}
@@ -283,11 +283,13 @@ export default function AddScreen() {
       </button>
       {blocked && (
         <div className="text-center text-[11.5px] text-terracotta mt-[10px]">
-          {seasonMissing
-            ? "Confirme la saison" +
-              (shoeTypeMissing || subtypeMissing ? " et le type de pièce" : "") +
-              " pour pouvoir ajouter cette pièce."
-            : "Confirme le type de pièce pour pouvoir ajouter cette pièce."}
+          {(() => {
+            const missing: string[] = [];
+            if (seasonMissing) missing.push("la saison");
+            if (shoeTypeMissing) missing.push("le type de chaussure");
+            else if (subtypeMissing) missing.push("le type de pièce");
+            return "Confirme " + missing.join(" et ") + " pour pouvoir ajouter cette pièce.";
+          })()}
         </div>
       )}
     </div>

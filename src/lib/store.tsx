@@ -28,6 +28,8 @@ import type {
   Screen,
   Season,
   ShoeType,
+  TravelMode,
+  WorkMode,
 } from "./types";
 
 function buildInitialState(): AppState {
@@ -53,7 +55,7 @@ function buildInitialState(): AppState {
     addSize: null,
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
-    addOccasion: ["travail_presentiel"],
+    addOccasion: ["travail_formel"],
     addShoeType: null,
     addMatiere: null,
     addCoupe: null,
@@ -73,6 +75,9 @@ function buildInitialState(): AppState {
     outfitValidated: false,
     occasion: "all",
     dismissedSuggestions: [],
+    workMode: "Présentiel",
+    travelMode: "Court trajet",
+    travelTipDismissed: false,
     lookCount: 0,
     isPremium: false,
     history: [],
@@ -140,6 +145,11 @@ export interface Actions {
   subscribe: () => void;
   premiumBack: () => void;
   setOccasion: (o: OccasionKey) => void;
+  /** Sous-choix affiché uniquement pour l'occasion "travail_formel" ; régénère la tenue. */
+  setWorkMode: (m: WorkMode) => void;
+  /** Sous-choix affiché uniquement pour l'occasion "voyage" ; régénère la tenue. */
+  setTravelMode: (m: TravelMode) => void;
+  dismissTravelTip: () => void;
   /** Remplace une pièce de la tenue par une autre de la même famille. */
   swapPiece: (id: number, cat: CategoryKey) => void;
   cycleGeo: () => void;
@@ -234,7 +244,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   }, [wardrobePool, weather]);
 
   const regen = (s: AppState): AppState => {
-    const { ids, missingCats } = generateOutfit(poolRef.current, weatherRef.current, s.occasion || "all");
+    const { ids, missingCats } = generateOutfit(poolRef.current, weatherRef.current, s.occasion || "all", s.workMode);
     return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
   };
 
@@ -399,7 +409,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSubtypeTouched: false,
           addSeason: null,
           addShoeType: null,
-          addOccasion: ["travail_presentiel"],
+          addOccasion: ["travail_formel"],
           screen: "wardrobe",
         };
       }),
@@ -409,6 +419,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     premiumBack: () => setState((s) => ({ ...s, screen: s.premiumReturn || "home" })),
 
     setOccasion: (o) => setState((s) => regen({ ...s, occasion: o })),
+    setWorkMode: (m) => setState((s) => regen({ ...s, workMode: m })),
+    setTravelMode: (m) => setState((s) => regen({ ...s, travelMode: m, travelTipDismissed: false })),
+    dismissTravelTip: () => setState((s) => ({ ...s, travelTipDismissed: true })),
     swapPiece: (id, cat) =>
       setState((s) => {
         const outfitItems = s.outfit
@@ -416,7 +429,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           .filter((it): it is Item => Boolean(it));
         return {
           ...s,
-          outfit: swapOutfitPiece(outfitItems, poolRef.current, id, cat, s.occasion || "all"),
+          outfit: swapOutfitPiece(outfitItems, poolRef.current, id, cat, s.occasion || "all", s.workMode),
           dismissedSuggestions: [],
         };
       }),

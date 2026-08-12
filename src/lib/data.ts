@@ -7,6 +7,7 @@ import type {
   SacType,
   Season,
   ShoeType,
+  WorkMode,
 } from "./types";
 import { PROFILE_PALETTE } from "./profile";
 
@@ -75,29 +76,26 @@ export function seasonSuggestion(cat: CategoryKey, name: string): Season | null 
  * R-B3 (incohérence occasion) et R-B6 (baskets non éligibles).
  */
 export const OCCASIONS: [OccasionKey, string, string, number][] = [
-  ["quotidien", "Journée ordinaire", "Boulot décontracté, courses, école", 1],
-  ["travail_teletravail", "Travail — Télétravail", "Bureau à la maison", 1],
-  ["travail_presentiel", "Travail — Présentiel", "Bureau, réunions", 3],
+  ["quotidien", "Quotidien / décontracté", "Courses, école, journée libre", 1],
+  ["travail_formel", "Travail / bureau", "Journée de travail", 3],
   ["entretien", "Réunion importante / entretien", "Ça compte", 4],
   ["date", "Rendez-vous / date", "Date, dîner", 3],
-  ["soiree", "Soirée / sortie entre amis", "Cocktail, sortie", 3],
-  ["evenement_pro", "Événement pro", "Conférence, salon", 3],
-  ["evenement_perso", "Événement perso formel", "Mariage, baptême", 4],
+  ["soiree", "Soirée / sortie", "Cocktail, bar, amis", 3],
+  ["evenement_pro", "Événement professionnel", "Conférence, salon", 3],
+  ["evenement_perso", "Événement habillé / cérémonie", "Mariage, baptême", 4],
   ["sport", "Sport", "Actif, décontracté", 0],
-  ["voyage_court", "Voyage — Court trajet", "Confortable, polyvalent", 1],
-  ["voyage_long", "Voyage — Longue distance", "Confortable, polyvalent", 1],
-  ["cocooning", "Cocooning", "Chez soi, détente", 1],
+  ["voyage", "Voyage", "Confortable, polyvalent", 1],
+  ["cocooning", "Cocooning / maison", "Chez soi, détente", 1],
 ];
 
 /** Libellés courts pour les chips d'occasion à l'ajout d'une pièce (espace restreint). */
 export const OCC_SHORT: Partial<Record<OccasionKey, string>> = {
-  travail_teletravail: "Télétravail",
-  travail_presentiel: "Présentiel",
+  quotidien: "Quotidien",
+  travail_formel: "Travail",
   entretien: "Réunion / entretien",
   date: "Date",
-  evenement_perso: "Événement perso",
-  voyage_court: "Voyage court",
-  voyage_long: "Voyage long",
+  evenement_pro: "Événement pro",
+  evenement_perso: "Cérémonie",
 };
 
 export const OCC_LABELS: Record<OccasionKey, string> = { all: "Toutes" } as Record<OccasionKey, string>;
@@ -106,6 +104,16 @@ OCCASIONS.forEach(([key, label, , formality]) => {
   OCC_LABELS[key] = label;
   OCC_FORMALITY[key] = formality;
 });
+
+/**
+ * Formalité minimum effective d'une occasion — "travail_formel" varie selon
+ * le sous-choix Présentiel (business casual) / Télétravail (décontracté),
+ * les autres occasions gardent leur valeur fixe de OCC_FORMALITY.
+ */
+export function effectiveFormality(occasion: OccasionKey, workMode: WorkMode): number {
+  if (occasion === "travail_formel") return workMode === "Télétravail" ? 1 : 3;
+  return OCC_FORMALITY[occasion] ?? 0;
+}
 
 /** Type de chaussure — obligatoire si catégorie = chaussures, nécessaire à R-B6. */
 export const SHOE_TYPES: ShoeType[] = [
@@ -170,7 +178,7 @@ export function isBag(it: { cat?: CategoryKey; name: string }): boolean {
 }
 
 export function wornAgo(d: number | null | undefined): string {
-  if (d == null) return "Jamais portée";
+  if (d == null) return "Jamais porté";
   if (d < 1) return "Porté aujourd’hui";
   if (d === 1) return "Porté hier";
   if (d < 7) return "Porté il y a " + d + " j";

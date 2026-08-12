@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { CATALOG } from "@/lib/catalog";
 import { bestStyleFor } from "@/lib/capsule";
@@ -16,6 +17,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 export default function PieceScreen() {
   const { state, actions, requirePremium } = useCapsela();
+  const [suggestionInfoOpen, setSuggestionInfoOpen] = useState(false);
   const active = state.activeSuggested
     ? CATALOG.find((i) => i.id === state.activeId)
     : state.items.find((i) => i.id === state.activeId);
@@ -40,9 +42,23 @@ export default function PieceScreen() {
       />
 
       {suggested && (
-        <span className="inline-block mt-4 text-[9px] tracking-[.08em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px]">
-          Suggestion
-        </span>
+        <div>
+          <button
+            onClick={() => setSuggestionInfoOpen((v) => !v)}
+            className="inline-flex items-center gap-[6px] mt-4 text-[9px] tracking-[.08em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px] cursor-pointer"
+          >
+            Suggestion
+            <span className="w-[13px] h-[13px] rounded-full border border-[#C9966F] text-[8px] normal-case flex items-center justify-center">
+              i
+            </span>
+          </button>
+          {suggestionInfoOpen && (
+            <div className="mt-[9px] bg-[#F0E5D6] rounded-[11px] px-3 py-[11px] text-[11.5px] text-[#3F3B34] leading-[1.5]">
+              Cette pièce vient de ta capsule de départ : tu n&apos;as pas encore ajouté de pièce de cette catégorie à
+              ton dressing. Ajoute-la si tu l&apos;as déjà, ou remplace-la par une des tiennes.
+            </div>
+          )}
+        </div>
       )}
 
       <div className="text-[11px] tracking-[.14em] uppercase text-muted mt-[14px]">
@@ -57,7 +73,7 @@ export default function PieceScreen() {
           style={{ background: pNever ? "#A66950" : "#7B7366" }}
         />
         <span className="text-[13px]" style={{ color: pNever ? "#A66950" : "#7B7366" }}>
-          {pNever ? "Jamais portée" : wornAgo(active.worn)}
+          {pNever ? "Jamais porté" : wornAgo(active.worn)}
         </span>
       </div>
 

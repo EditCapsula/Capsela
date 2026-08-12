@@ -153,23 +153,23 @@ export default function CreateLookScreen() {
         </div>
       )}
 
-      {lookScore.proactive && (
-        <div className="mt-3 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+      {lookScore.proactives.map((p) => (
+        <div key={p.key} className="mt-3 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">✦</span>
           <div className="flex-1">
-            {lookScore.proactive.key === "layer" && (
+            {p.key === "layer" && (
               <div className="text-[10px] tracking-[.14em] uppercase text-terracotta mb-[6px]">Layering</div>
             )}
-            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.proactive.text}</div>
+            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
             <button
-              onClick={() => actions.dismissLookDraftSuggestion(lookScore.proactive!.key)}
+              onClick={() => actions.dismissLookDraftSuggestion(p.key)}
               className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer"
             >
               Ignorer
             </button>
           </div>
         </div>
-      )}
+      ))}
 
       {blockingHits.length > 0 && (
         <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">

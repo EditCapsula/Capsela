@@ -16,26 +16,21 @@ const MODE_LABELS = {
 } as const;
 
 const MISSING_LABELS: Record<string, string> = {
-  haut: "haut",
-  bas: "bas",
-  chaussures: "chaussures",
-  accessoire: "accessoires",
-  sac: "sac",
-  bijou: "bijou",
+  haut: "un haut",
+  bas: "un bas",
+  chaussures: "des chaussures",
+  accessoire: "un accessoire",
+  sac: "un sac",
+  bijou: "un bijou",
 };
 
 function missingSuggestionText(missingCats: string[]): string {
-  const words = missingCats.map((k) => MISSING_LABELS[k] || k);
+  const words = Array.from(new Set(missingCats.map((k) => MISSING_LABELS[k]).filter(Boolean)));
   if (words.length === 0) return "";
-  if (words.length === 1) {
-    const w = words[0];
-    return w === "chaussures" || w === "accessoires"
-      ? "Il te manque des " + w + " pour compléter cette tenue."
-      : "Il te manque un " + w + " pour compléter cette tenue.";
-  }
+  if (words.length === 1) return "Il te manque " + words[0] + " pour compléter cette tenue.";
   const last = words[words.length - 1];
   const head = words.slice(0, -1).join(", ");
-  return "Il te manque des " + head + " et " + last + " pour compléter cette tenue.";
+  return "Il te manque " + head + " et " + last + " pour compléter cette tenue.";
 }
 
 export default function TenuesScreen() {
@@ -62,7 +57,8 @@ export default function TenuesScreen() {
         : "hybride";
 
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
-  const vesteWithoutBase = violatesOuterwearRule(outfitPieces);
+  // Sans objet en Cocooning (R-B12) : veste/manteau déjà exclus du pool de génération.
+  const vesteWithoutBase = state.occasion !== "cocooning" && violatesOuterwearRule(outfitPieces);
 
   const dismissed = new Set(state.dismissedSuggestions || []);
   const lookScore = computeLookScore(
@@ -71,7 +67,8 @@ export default function TenuesScreen() {
     profile.favoriteColors || [],
     profile.morphology,
     dismissed,
-    weather
+    weather,
+    state.workMode
   );
 
   return (
@@ -132,6 +129,73 @@ export default function TenuesScreen() {
         })}
       </div>
 
+      {state.occasion === "travail_formel" && (
+        <div className="flex gap-[11px] mt-3">
+          <div className="w-[1.5px] flex-shrink-0 bg-border rounded-sm ml-[7px]" />
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] tracking-[.16em] uppercase text-terracotta mb-[9px]">
+              ↳ Où travailles-tu aujourd&apos;hui ?
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {(["Présentiel", "Télétravail"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => actions.setWorkMode(m)}
+                  className={
+                    "px-[14px] py-[7px] rounded-full text-[12px] cursor-pointer font-sans border " +
+                    (state.workMode === m ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+                  }
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {state.occasion === "voyage" && (
+        <div className="flex gap-[11px] mt-3">
+          <div className="w-[1.5px] flex-shrink-0 bg-border rounded-sm ml-[7px]" />
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] tracking-[.16em] uppercase text-terracotta mb-[9px]">
+              ↳ Quel type de trajet ?
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {(["Court trajet", "Longue distance"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => actions.setTravelMode(m)}
+                  className={
+                    "px-[14px] py-[7px] rounded-full text-[12px] cursor-pointer font-sans border " +
+                    (state.travelMode === m ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+                  }
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {state.occasion === "voyage" && state.travelMode === "Longue distance" && !state.travelTipDismissed && (
+        <div className="mt-[14px] flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
+              En voyage longue distance ? Pense aux bas de contention pour limiter les jambes lourdes.
+            </div>
+          </div>
+          <button
+            onClick={actions.dismissTravelTip}
+            className="flex-shrink-0 text-[14px] text-placeholder cursor-pointer px-[2px]"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <span className="inline-block mt-[14px] text-[10.5px] tracking-[.06em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[11px]">
         {MODE_LABELS[recommendationMode]}
       </span>
@@ -190,8 +254,8 @@ export default function TenuesScreen() {
               </div>
               {suggested && infoOpen && (
                 <div className="text-[11.5px] text-muted mt-[10px] leading-[1.4]">
-                  Tu n&apos;as pas encore de pièce de cette catégorie dans ton dressing — {it.name} en est un
-                  exemple, tiré de ta capsule de départ.
+                  Cette pièce vient de ta capsule de départ : tu n&apos;as pas encore ajouté de pièce de cette
+                  catégorie à ton dressing. Ajoute-la si tu l&apos;as déjà, ou remplace-la par une des tiennes.
                 </div>
               )}
             </div>
@@ -205,38 +269,38 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      {lookScore.proactive && (
-        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-          <span className="font-serif italic text-[15px] text-terracotta">✦</span>
-          <div className="flex-1">
-            {lookScore.proactive.key === "layer" && (
+      {lookScore.proactives.map((p) => (
+        <div key={p.key} className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
+          <div className="flex-1 min-w-0">
+            {p.key === "layer" && (
               <div className="flex items-center gap-[6px] mb-[6px]">
                 <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Layering</span>
                 <button
                   onClick={() => setLayeringInfoOpen((v) => !v)}
                   aria-label="Qu'est-ce que le layering ?"
-                  className="text-[11px] text-placeholder cursor-pointer"
+                  className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10.5px] text-terracotta flex items-center justify-center cursor-pointer"
                 >
-                  ⓘ
+                  i
                 </button>
               </div>
             )}
-            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.proactive.text}</div>
-            {lookScore.proactive.key === "layer" && layeringInfoOpen && (
+            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
+            {p.key === "layer" && layeringInfoOpen && (
               <div className="text-[11.5px] text-muted mt-[6px] leading-[1.4]">
                 Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un débardeur
                 sous une chemise oversize ouverte.
               </div>
             )}
             <button
-              onClick={() => actions.dismissOutfitSuggestion(lookScore.proactive!.key)}
+              onClick={() => actions.dismissOutfitSuggestion(p.key)}
               className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer"
             >
               Ignorer
             </button>
           </div>
         </div>
-      )}
+      ))}
 
       {missingText && (
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">

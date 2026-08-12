@@ -19,17 +19,20 @@ export type Season = "Printemps / Été" | "Automne / Hiver" | "Toutes saisons";
 export type OccasionKey =
   | "all"
   | "quotidien"
-  | "travail_teletravail"
-  | "travail_presentiel"
+  | "travail_formel"
   | "entretien"
   | "date"
   | "soiree"
   | "evenement_pro"
   | "evenement_perso"
   | "sport"
-  | "voyage_court"
-  | "voyage_long"
+  | "voyage"
   | "cocooning";
+
+/** Sous-choix de l'occasion "travail_formel" — Présentiel relève le niveau de formalité minimum, Télétravail l'abaisse. */
+export type WorkMode = "Présentiel" | "Télétravail";
+/** Sous-choix de l'occasion "voyage" — n'affecte pas la formalité, seule la Longue distance affiche une carte conseil. */
+export type TravelMode = "Court trajet" | "Longue distance";
 
 export type ShoeType =
   | "Baskets"
@@ -161,8 +164,13 @@ export interface AppState {
   outfitMissingCats: (CategoryKey | "bas")[];
   outfitValidated: boolean;
   occasion: OccasionKey;
-  /** Clés des suggestions proactives (R-S12/R-S13/R-S14) écartées pour la tenue affichée. */
+  /** Clés des suggestions proactives (R-S12/R-S13/R-S14) écartées pour la tenue affichée — indépendantes, plusieurs peuvent être affichées à la fois. */
   dismissedSuggestions: string[];
+  /** Sous-choix affiché uniquement quand occasion === "travail_formel" ; affecte la formalité minimum requise. */
+  workMode: WorkMode;
+  /** Sous-choix affiché uniquement quand occasion === "voyage" ; n'affecte que l'affichage de la carte conseil longue distance. */
+  travelMode: TravelMode;
+  travelTipDismissed: boolean;
 
   lookCount: number;
   isPremium: boolean;

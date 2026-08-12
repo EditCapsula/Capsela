@@ -1,6 +1,6 @@
 import { CATALOG, type CatalogItem } from "./catalog";
 import type { Profile } from "./profile";
-import type { Item, Season } from "./types";
+import type { CategoryKey, Item, Season } from "./types";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
@@ -104,18 +104,18 @@ export function computeDefaultCapsule(
   );
   let out = sorted.slice(0, 34);
 
-  // Garantit la présence d'au moins une veste et un pull dans la capsule,
-  // même si les filtres précédents les avaient tous écartés — ces catégories
-  // sont nécessaires à la superposition (R-B9, R-S14 suggestion veste météo).
-  const ensure = (cat: "veste" | "pull") => {
+  // Garantit la présence d'au moins une pièce de chaque catégorie essentielle
+  // dans la capsule, même si les filtres précédents les avaient toutes
+  // écartées — sinon certaines tenues (superposition R-B9/R-S14, catégories
+  // entières) n'auraient aucune pièce éligible pour un dressing encore vide.
+  const ensure = (cat: CategoryKey) => {
     if (out.some((it) => it.cat === cat)) return;
     const pool = CATALOG.filter((it) => it.cat === cat && !excluded.has(it.id));
     const fav = pool.filter((it) => favColors.includes(it.hex));
     const pickFrom = fav.length ? fav : pool;
     if (pickFrom.length) out = [...out, pickFrom[0]];
   };
-  ensure("veste");
-  ensure("pull");
+  (["haut", "chaussures", "sac", "bijou", "veste", "manteau", "pull", "accessoire"] as CategoryKey[]).forEach(ensure);
 
   // Garantit au moins une paire de chaussures d'intérieur, indépendamment du
   // style — sinon un look Cocooning (R-B12) n'aurait aucune chaussure éligible.

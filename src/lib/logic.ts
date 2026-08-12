@@ -1,6 +1,6 @@
-import type { CategoryKey, Item, OccasionKey } from "./types";
+import type { CategoryKey, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, OCC_FORMALITY } from "./data";
+import { BAS_CATS, effectiveFormality } from "./data";
 import { bestStyleFor, morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
@@ -39,8 +39,8 @@ function recentlyWorn(it: Item): boolean {
   return it.worn != null && it.worn <= 2;
 }
 
-function isDressy(occasion: OccasionKey): boolean {
-  return (OCC_FORMALITY[occasion] || 0) >= 3;
+function isDressy(occasion: OccasionKey, workMode: WorkMode = "Présentiel"): boolean {
+  return effectiveFormality(occasion, workMode) >= 3;
 }
 
 export function occasionFit(it: Item, occ: OccasionKey): boolean {
@@ -50,10 +50,8 @@ export function occasionFit(it: Item, occ: OccasionKey): boolean {
   switch (occ) {
     case "quotidien":
       return /baskets|jean droit|chino|t-shirt|sweat|mocassins|ballerines|cabas|kaki|sable|crème/.test(n);
-    case "travail_teletravail":
-      return /t-shirt|sweat|jean droit|chino|pull|gilet|mocassins|ballerines/.test(n);
-    case "travail_presentiel":
-      return /tailleur|chemis|blazer|blouse|escarpin|mocassin|gilet|robe chemise|robe droite|marine|noir/.test(n);
+    case "travail_formel":
+      return /tailleur|chemis|blazer|blouse|escarpin|mocassin|gilet|robe chemise|robe droite|marine|noir|t-shirt|sweat|jean droit|chino|pull|ballerines/.test(n);
     case "entretien":
       return /tailleur|blazer|chemis|escarpin|robe chemise|robe droite|marine|noir/.test(n);
     case "date":
@@ -66,8 +64,7 @@ export function occasionFit(it: Item, occ: OccasionKey): boolean {
       return /soie|robe longue|robe droite|escarpin|dentelle|doré|glamour|paillet|tailleur|chemis/.test(n);
     case "sport":
       return /sweat|jean brut|molleton|baskets|coupe-vent|débardeur|jogging/.test(n);
-    case "voyage_court":
-    case "voyage_long":
+    case "voyage":
       return /baskets|jean|sweat|chino|t-shirt|coupe-vent|molleton/.test(n);
     case "cocooning":
       return /sweat|molleton|jogging|pull col rond/.test(n);
@@ -159,7 +156,12 @@ export interface GeneratedOutfit {
  * est habillée (R-B6), et les pièces choisies pour s'accorder entre elles
  * (couleur, formalité, coupe, style).
  */
-export function generateOutfit(pool: Item[], weather: Weather, occasion: OccasionKey): GeneratedOutfit {
+export function generateOutfit(
+  pool: Item[],
+  weather: Weather,
+  occasion: OccasionKey,
+  workMode: WorkMode = "Présentiel"
+): GeneratedOutfit {
   const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
 
@@ -180,9 +182,18 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
     active = active.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
   }
 
+  // Chaussures/sacs/bijoux/accessoires restent toujours éligibles quelle que
+  // soit l'occasion (la saison reste respectée) — conçus pour être reportés
+  // souvent, contrairement aux vêtements filtrés plus strictement ci-dessus.
+  const poolFor = (cats: CategoryKey[]): Item[] => {
+    if (!cats.every((c) => ACCESSORY_CATS.includes(c))) return active;
+    const inSeason = seasonPool.filter((i) => cats.includes(i.cat));
+    return inSeason.length ? seasonPool : pool;
+  };
+
   const chosen: Item[] = [];
   const pick = (cats: CategoryKey[], essential = true) => {
-    const candidates = harmonize(active.filter((i) => cats.includes(i.cat)), chosen, essential);
+    const candidates = harmonize(poolFor(cats).filter((i) => cats.includes(i.cat)), chosen, essential);
     const picked = rand(candidates);
     if (picked) chosen.push(picked);
     return picked;
@@ -205,7 +216,7 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
   // contexte habillé sans validation manuelle. Une robe/combinaison se suffit
   // à elle-même (R-B5) : pas de haut en plus dans ce cas.
   if (!useRobe && Math.random() < 0.35) {
-    const dressy = isDressy(occasion);
+    const dressy = isDressy(occasion, workMode);
     const layerCandidates = active.filter((i) => {
       if (i.cat !== "haut" || chosen.some((c) => c.id === i.id)) return false;
       if (rolePieceOf(i) !== "calque") return true;
@@ -215,7 +226,11 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
     const layer = rand(harmonize(layerCandidates, chosen, false));
     if (layer) { chosen.push(layer); ids.push(layer.id); }
   }
-  if (Math.random() < 0.35) {
+  // Le pull ne se superpose que sur une base fine (t-shirt/débardeur/top/col
+  // roulé) — jamais par-dessus un haut déjà volumineux ou habillé.
+  const firstTop = chosen.find((i) => i.cat === "haut" || i.cat === "pull");
+  const canStackTop = !!firstTop && /t-shirt|débardeur|top|body|col roulé/i.test(firstTop.name + " " + (firstTop.subtype || ""));
+  if (canStackTop && Math.random() < 0.35) {
     const p = pick(["pull"], false);
     if (p && !ids.includes(p.id)) ids.push(p.id);
   }
@@ -224,9 +239,9 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
     if (v && !ids.includes(v.id)) ids.push(v.id);
   }
   const sh = (() => {
-    const shoePool = active.filter((i) => i.cat === "chaussures");
+    const shoePool = poolFor(["chaussures"]).filter((i) => i.cat === "chaussures");
     const nonBasket = shoePool.filter((i) => i.shoeType !== "Baskets");
-    const finalPool = isDressy(occasion) && nonBasket.length ? nonBasket : shoePool;
+    const finalPool = isDressy(occasion, workMode) && nonBasket.length ? nonBasket : shoePool;
     const picked = rand(harmonize(finalPool, chosen, true));
     if (picked) chosen.push(picked);
     return picked;
@@ -263,12 +278,13 @@ export function swapOutfitPiece(
   pool: Item[],
   pieceId: number,
   cat: CategoryKey,
-  occasion: OccasionKey = "all"
+  occasion: OccasionKey = "all",
+  workMode: WorkMode = "Présentiel"
 ): number[] {
   const catGroup: CategoryKey[] =
     BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId);
-  if (cat === "chaussures" && isDressy(occasion)) {
+  if (cat === "chaussures" && isDressy(occasion, workMode)) {
     const nonBasket = candidates.filter((i) => i.shoeType !== "Baskets");
     if (nonBasket.length) candidates = nonBasket;
   }
@@ -294,7 +310,12 @@ export interface BlockingHit {
  * (Création de looks). La génération automatique, elle, évite ces
  * combinaisons en amont via generateOutfit/harmonize.
  */
-export function evaluateBlocking(pieces: Item[], occasion: OccasionKey, weather: Weather): BlockingHit[] {
+export function evaluateBlocking(
+  pieces: Item[],
+  occasion: OccasionKey,
+  weather: Weather,
+  workMode: WorkMode = "Présentiel"
+): BlockingHit[] {
   const hits: BlockingHit[] = [];
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
 
@@ -311,7 +332,7 @@ export function evaluateBlocking(pieces: Item[], occasion: OccasionKey, weather:
 
   if (occasion !== "all" && clothing.length) {
     const minFormality = Math.min(...clothing.map(formalityOf));
-    if (minFormality < (OCC_FORMALITY[occasion] || 0)) {
+    if (minFormality < effectiveFormality(occasion, workMode)) {
       hits.push({ id: "R-B3", message: "Cette tenue est peut-être un peu trop décontractée pour l'occasion choisie." });
     }
   }
@@ -337,7 +358,7 @@ export function evaluateBlocking(pieces: Item[], occasion: OccasionKey, weather:
     hits.push({ id: "R-B5", message: "Une robe ou une combinaison se suffit à elle-même, sans haut ni bas en plus." });
   }
 
-  const dressy = isDressy(occasion);
+  const dressy = isDressy(occasion, workMode);
   if (dressy && pieces.some((i) => i.cat === "chaussures" && i.shoeType === "Baskets")) {
     hits.push({ id: "R-B6", message: "Les baskets sont peut-être trop décontractées pour cette occasion." });
   }
@@ -382,8 +403,8 @@ export interface LookScore {
   badge: "recommande" | "neutre" | "ajuster";
   /** Message ciblé sur la règle de scoring la plus pénalisante, seulement si badge === "ajuster". */
   adjustMessage: string;
-  /** Suggestion proactive dismissible (R-S12/R-S13), au plus une à la fois. */
-  proactive: { key: string; text: string } | null;
+  /** Suggestions proactives dismissibles (R-S12/R-S13/R-S14) — indépendantes, plusieurs peuvent s'afficher à la fois. */
+  proactives: { key: string; text: string }[];
 }
 
 /**
@@ -398,7 +419,8 @@ export function computeLookScore(
   favoriteColors: string[],
   morphology: string | null,
   dismissed: Set<string>,
-  weather: Weather
+  weather: Weather,
+  workMode: WorkMode = "Présentiel"
 ): LookScore {
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
   const accessories = pieces.filter((i) => ACCESSORY_CATS.includes(i.cat));
@@ -477,7 +499,7 @@ export function computeLookScore(
   // R-S11 — layering réussi (base + calque en contexte décontracté)
   const tops = pieces.filter((i) => TOP_LAYER_CATS.includes(i.cat));
   const roles = tops.map(rolePieceOf);
-  const dressy = isDressy(occasion);
+  const dressy = isDressy(occasion, workMode);
   const hasBase = roles.includes("base");
   const hasCalque = roles.includes("calque");
   if (hasBase && hasCalque && !dressy) bonuses.push(10);
@@ -491,32 +513,41 @@ export function computeLookScore(
   const badge: LookScore["badge"] = score >= 80 ? "recommande" : score < 50 ? "ajuster" : "neutre";
   const adjustMessage = badge === "ajuster" && penalties.length ? penalties[0][1] : "";
 
-  // R-S12 — suggestion layering (calque seul, sans base, contexte décontracté)
-  // R-S13 — suggestion contraste (total look noir sans accessoire coloré)
-  // R-S14 — suggestion veste, soirée fraîche (remplace l'ancien toggle manuel)
-  const proactiveCandidates: { key: string; text: string }[] = [];
-  if (tops.length === 1 && roles[0] === "calque" && !dressy && !dismissed.has("layer")) {
-    proactiveCandidates.push({
+  // R-S12/R-S13/R-S14 — suggestions proactives, indépendantes les unes des
+  // autres (plusieurs peuvent s'afficher en même temps, chacune dismissible séparément).
+  const proactives: { key: string; text: string }[] = [];
+
+  // R-S12 — layering : un seul haut, oversize/ample ou une chemise, contexte décontracté.
+  if (
+    tops.length === 1 &&
+    dressy === false &&
+    /oversize|ample|chemise/i.test(tops[0].name + " " + (tops[0].subtype || "")) &&
+    !dismissed.has("layer")
+  ) {
+    proactives.push({
       key: "layer",
-      text: "Il te manque un haut pour compléter cette tenue.",
+      text: "Il te manque un débardeur ou un t-shirt pour compléter cette tenue.",
     });
   }
+
+  // R-S13 — contraste : total look noir sans accessoire coloré.
   const allBlack = clothing.length > 0 && clothing.every((i) => /noir/i.test(i.color));
   const hasColorAccessory = accessories.some((i) => !isNeutralColor(i.color));
   if (allBlack && !hasColorAccessory && !dismissed.has("color")) {
-    proactiveCandidates.push({
+    proactives.push({
       key: "color",
       text: "Il te manque une touche de couleur pour compléter cette tenue.",
     });
   }
-  // Exclue en Cocooning (R-B12) : pas de sens à suggérer une veste chez soi.
+
+  // R-S14 — soirée fraîche : exclue en Cocooning (R-B12), pas de sens à suggérer une veste chez soi.
   const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau");
-  if (occasion !== "cocooning" && weather.season === "Automne / Hiver" && !hasOuterwear && !dismissed.has("veste_soir")) {
-    proactiveCandidates.push({
+  if (occasion !== "cocooning" && weather.temp <= 21 && !hasOuterwear && !dismissed.has("veste_soir")) {
+    proactives.push({
       key: "veste_soir",
       text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",
     });
   }
 
-  return { score, badge, adjustMessage, proactive: proactiveCandidates[0] || null };
+  return { score, badge, adjustMessage, proactives };
 }
