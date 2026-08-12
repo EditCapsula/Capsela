@@ -173,6 +173,12 @@ export function generateOutfit(pool: Item[], weather: Weather, occasion: Occasio
   // éligibles (correspondance stricte, pas un seuil minimum comme R-B3) ;
   // ce filtre ne se relâche jamais, même si le pool résultant est restreint.
   if (occasion === "sport") active = active.filter((i) => formalityOf(i) === 0);
+  // R-B12 — en Cocooning, pas de veste/manteau (on ne porte pas ça chez soi) ni
+  // de chaussures autres que d'intérieur ; filtre en amont, jamais relâché.
+  if (occasion === "cocooning") {
+    active = active.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
+    active = active.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
+  }
 
   const chosen: Item[] = [];
   const pick = (cats: CategoryKey[], essential = true) => {
@@ -503,8 +509,9 @@ export function computeLookScore(
       text: "Il te manque une touche de couleur pour compléter cette tenue.",
     });
   }
+  // Exclue en Cocooning (R-B12) : pas de sens à suggérer une veste chez soi.
   const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau");
-  if (weather.season === "Automne / Hiver" && !hasOuterwear && !dismissed.has("veste_soir")) {
+  if (occasion !== "cocooning" && weather.season === "Automne / Hiver" && !hasOuterwear && !dismissed.has("veste_soir")) {
     proactiveCandidates.push({
       key: "veste_soir",
       text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",

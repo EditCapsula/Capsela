@@ -48,6 +48,7 @@ const RAW: [string, CategoryKey, string, string][] = [
   ["Escarpins", "chaussures", "Bordeaux", "#6E3B3A"],
   ["Mocassins", "chaussures", "Camel", "#C08A5E"],
   ["Ballerines", "chaussures", "Taupe", "#A8967C"],
+  ["Chaussons cocooning", "chaussures", "Crème", "#E7DCC8"],
   ["Sac cabas", "sac", "Camel", "#C08A5E"],
   ["Sac bandoulière", "sac", "Noir", "#2A2724"],
   ["Ceinture cuir", "accessoire", "Rouille", "#A9613F"],
@@ -73,6 +74,7 @@ function catalogShoeTypeFor(cat: CategoryKey, name: string): ShoeType | undefine
   if (/botte/.test(n)) return "Bottes";
   if (/sandale/.test(n)) return "Sandales";
   if (/ballerine/.test(n)) return "Ballerines";
+  if (/chausson|charentaise|pantoufle|intérieur/.test(n)) return "Chaussures d'intérieur";
   return undefined;
 }
 

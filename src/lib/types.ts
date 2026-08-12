@@ -31,7 +31,15 @@ export type OccasionKey =
   | "voyage_long"
   | "cocooning";
 
-export type ShoeType = "Baskets" | "Bottines" | "Bottes" | "Escarpins" | "Sandales" | "Mocassins" | "Ballerines";
+export type ShoeType =
+  | "Baskets"
+  | "Bottines"
+  | "Bottes"
+  | "Escarpins"
+  | "Sandales"
+  | "Mocassins"
+  | "Ballerines"
+  | "Chaussures d'intérieur";
 export type SacType = "Sac à main" | "Cabas" | "Bandoulière" | "Pochette" | "Sac à dos";
 export type BijouType = "Collier" | "Boucles d'oreilles" | "Bracelet" | "Bague" | "Montre";
 export type AccessoireType =

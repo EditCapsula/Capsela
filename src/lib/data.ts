@@ -108,7 +108,9 @@ OCCASIONS.forEach(([key, label, , formality]) => {
 });
 
 /** Type de chaussure — obligatoire si catégorie = chaussures, nécessaire à R-B6. */
-export const SHOE_TYPES: ShoeType[] = ["Baskets", "Bottines", "Bottes", "Escarpins", "Sandales", "Mocassins", "Ballerines"];
+export const SHOE_TYPES: ShoeType[] = [
+  "Baskets", "Bottines", "Bottes", "Escarpins", "Sandales", "Mocassins", "Ballerines", "Chaussures d'intérieur",
+];
 /** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
 export const SAC_TYPES: SacType[] = ["Sac à main", "Cabas", "Bandoulière", "Pochette", "Sac à dos"];
 export const BIJOU_TYPES: BijouType[] = ["Collier", "Boucles d'oreilles", "Bracelet", "Bague", "Montre"];

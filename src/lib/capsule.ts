@@ -106,7 +106,7 @@ export function computeDefaultCapsule(
 
   // Garantit la présence d'au moins une veste et un pull dans la capsule,
   // même si les filtres précédents les avaient tous écartés — ces catégories
-  // sont nécessaires à la superposition (R-B9, toggle "Je veux pouvoir superposer").
+  // sont nécessaires à la superposition (R-B9, R-S14 suggestion veste météo).
   const ensure = (cat: "veste" | "pull") => {
     if (out.some((it) => it.cat === cat)) return;
     const pool = CATALOG.filter((it) => it.cat === cat && !excluded.has(it.id));
@@ -116,6 +116,17 @@ export function computeDefaultCapsule(
   };
   ensure("veste");
   ensure("pull");
+
+  // Garantit au moins une paire de chaussures d'intérieur, indépendamment du
+  // style — sinon un look Cocooning (R-B12) n'aurait aucune chaussure éligible.
+  if (!out.some((it) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur")) {
+    const pool = CATALOG.filter(
+      (it) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur" && !excluded.has(it.id)
+    );
+    const fav = pool.filter((it) => favColors.includes(it.hex));
+    const pickFrom = fav.length ? fav : pool;
+    if (pickFrom.length) out = [...out, pickFrom[0]];
+  }
 
   return out;
 }
