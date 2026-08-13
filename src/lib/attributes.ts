@@ -146,6 +146,7 @@ export function coupeOf(it: Item): "ajusté" | "regular" | "oversize" {
  * (R-B3) et à l'écart de formalité entre pièces (R-B2).
  */
 export function formalityOf(it: Item): number {
+  if (it.niveauFormalite != null) return it.niveauFormalite;
   const text = n(it);
   if (it.shoeType === "Baskets" || /sweat|jogging|molleton|legging|coupe-vent|survêt/.test(text)) return 0;
   if (/soie|tailleur|smoking|paillet|dentelle/.test(text) && /robe|blouse|combinaison/.test(text)) return 4;
@@ -175,6 +176,7 @@ export function metalOf(it: Item): "or" | "argent" | "aucun" {
  */
 export function rolePieceOf(it: Item): "base" | "calque" | "piece_unique" {
   if (it.cat !== "haut" && it.cat !== "pull") return "piece_unique";
+  if (it.rolePiece) return it.rolePiece;
   return coupeOf(it) === "oversize" ? "calque" : "base";
 }
 

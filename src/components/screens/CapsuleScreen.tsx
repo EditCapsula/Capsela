@@ -8,11 +8,11 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 
 export default function CapsuleScreen() {
-  const { state, weather, actions } = useCapsela();
+  const { state, weather, actions, vestiairePool } = useCapsela();
   const { profile } = useAuth();
 
   const capsuleSeason: CapsuleSeason = state.capsuleSeason || currentSeasonKey();
-  const capsule = computeDefaultCapsule(profile, weather.temp, state.suggestedExcluded, capsuleSeason);
+  const capsule = computeDefaultCapsule(profile, weather.temp, state.suggestedExcluded, capsuleSeason, vestiairePool);
   const styleLabel = profile.styles[0] || GENDERS.find((g) => g.key === profile.gender)?.label || "";
 
   const count = (cat: string) => capsule.filter((i) => i.cat === cat).length;

@@ -91,6 +91,16 @@ export interface Item {
   subtype?: string;
   /** Lien affilié (pièces suggérées uniquement) — absent tant qu'aucune source de données affiliées n'est branchée ; le bouton "Trouver cette pièce" ne s'affiche que si présent. */
   affLink?: string;
+  /** Formalité stockée (0 sport / 1 décontracté / 3 business casual / 4 habillé) — prime sur la déduction par regex quand présente (source : vestiaire_universel). */
+  niveauFormalite?: number;
+  /** Rôle de superposition stocké — prime sur la déduction par coupe quand présent (source : vestiaire_universel). */
+  rolePiece?: "base" | "calque" | "piece_unique";
+  /** Styles auxquels la pièce est rattachée (source : vestiaire_universel) — prime sur la détection par regex du nom quand présent. */
+  styleTags?: string[];
+  /** Morphologies favorisées par la pièce (source : vestiaire_universel) — prime sur la détection par regex du nom quand présent. */
+  morphologyTags?: string[];
+  /** true pour une pièce indispensable de capsule (source : vestiaire_universel) — priorisée dans la sélection de la capsule par défaut. */
+  estBasiqueCapsule?: boolean;
 }
 
 export interface City {

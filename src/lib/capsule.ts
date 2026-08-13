@@ -28,6 +28,7 @@ const STYLE_FIT: Record<string, RegExp> = {
 };
 
 export function styleFit(it: Item, style: string): boolean {
+  if (it.styleTags) return it.styleTags.includes(style);
   const rx = STYLE_FIT[style];
   return rx ? rx.test((it.name + " " + it.color).toLowerCase()) : false;
 }
@@ -50,6 +51,7 @@ const MORPHO_FIT: Record<string, RegExp> = {
 
 export function morphoFit(it: Item, morpho: string | null): boolean {
   if (!morpho) return false;
+  if (it.morphologyTags) return it.morphologyTags.includes(morpho);
   const rx = MORPHO_FIT[morpho];
   return rx ? rx.test((it.name + " " + it.color).toLowerCase()) : false;
 }
@@ -79,10 +81,11 @@ export function computeDefaultCapsule(
   profile: Profile,
   cityTemp: number,
   excludedIds: number[] = [],
-  seasonKey?: CapsuleSeason
+  seasonKey?: CapsuleSeason,
+  sourcePool: CatalogItem[] = CATALOG
 ): CatalogItem[] {
   const excluded = new Set(excludedIds);
-  let base = CATALOG.filter((it) => !excluded.has(it.id));
+  let base = sourcePool.filter((it) => !excluded.has(it.id));
 
   if (profile.gender === "homme") {
     const noFem = base.filter((it) => it.genre !== "femme");
@@ -105,9 +108,13 @@ export function computeDefaultCapsule(
     if (cFit.length >= 12) curated = cFit;
   }
 
-  const sorted = [...curated].sort(
-    (a, b) => Number(morphoFit(b, profile.morphology)) - Number(morphoFit(a, profile.morphology))
-  );
+  // Priorité aux pièces indispensables (est_basique_capsule), puis tri par
+  // compatibilité morphologique au sein de chaque groupe.
+  const sorted = [...curated].sort((a, b) => {
+    const basique = Number(!!b.estBasiqueCapsule) - Number(!!a.estBasiqueCapsule);
+    if (basique !== 0) return basique;
+    return Number(morphoFit(b, profile.morphology)) - Number(morphoFit(a, profile.morphology));
+  });
   let out = sorted.slice(0, 34);
 
   // Garantit la présence d'au moins une pièce de chaque catégorie essentielle
@@ -116,7 +123,7 @@ export function computeDefaultCapsule(
   // entières) n'auraient aucune pièce éligible pour un dressing encore vide.
   const ensure = (cat: CategoryKey) => {
     if (out.some((it) => it.cat === cat)) return;
-    const pool = CATALOG.filter((it) => it.cat === cat && !excluded.has(it.id));
+    const pool = sourcePool.filter((it) => it.cat === cat && !excluded.has(it.id));
     const fav = pool.filter((it) => favColors.includes(it.hex));
     const pickFrom = fav.length ? fav : pool;
     if (pickFrom.length) out = [...out, pickFrom[0]];
@@ -126,7 +133,7 @@ export function computeDefaultCapsule(
   // Garantit au moins une paire de chaussures d'intérieur, indépendamment du
   // style — sinon un look Cocooning (R-B12) n'aurait aucune chaussure éligible.
   if (!out.some((it) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur")) {
-    const pool = CATALOG.filter(
+    const pool = sourcePool.filter(
       (it) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur" && !excluded.has(it.id)
     );
     const fav = pool.filter((it) => favColors.includes(it.hex));

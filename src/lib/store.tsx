@@ -2,8 +2,9 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
-import { CATALOG } from "./catalog";
+import { CATALOG, type CatalogItem } from "./catalog";
 import { computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
+import { fetchVestiaireUniversel } from "./vestiaire";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { generateOutfit, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { paletteHexes } from "./profile";
@@ -198,6 +199,8 @@ interface CapselaContextValue {
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
   wardrobePool: Item[];
+  /** Source des suggestions — vestiaire universel (Supabase) si disponible, sinon le catalogue statique de secours. Utilisé par l'écran Capsule pour recalculer une capsule sur une saison différente de la saison courante. */
+  vestiairePool: CatalogItem[];
   actions: Actions;
   /** Wraps a handler so it only runs for Premium users; otherwise routes to the paywall. */
   requirePremium: (fn: () => void) => () => void;
@@ -230,11 +233,26 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     return { season, temp: geoCity.temp, label: geoCity.label, seasons: [season, "Toutes saisons"] };
   }, [geoCity]);
 
+  // Vestiaire universel (Supabase) : remplace le catalogue statique dès qu'il
+  // est disponible. En mode démo, si la requête échoue, ou si la table/les
+  // colonnes ne sont pas encore en place, on retombe silencieusement sur le
+  // catalogue statique (CATALOG) — jamais d'écran vide en attendant.
+  const [vestiairePool, setVestiairePool] = useState<CatalogItem[]>(CATALOG);
+  useEffect(() => {
+    let cancelled = false;
+    fetchVestiaireUniversel().then((rows) => {
+      if (!cancelled && rows.length) setVestiairePool(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Toujours la saison calendaire courante — indépendante de la saison parcourue
   // sur l'écran Capsule (state.capsuleSeason), qui n'affecte que son affichage.
   const defaultCapsule = useMemo(
-    () => computeDefaultCapsule(profile, geoCity.temp, state.suggestedExcluded, currentSeasonKey()),
-    [profile, geoCity.temp, state.suggestedExcluded]
+    () => computeDefaultCapsule(profile, geoCity.temp, state.suggestedExcluded, currentSeasonKey(), vestiairePool),
+    [profile, geoCity.temp, state.suggestedExcluded, vestiairePool]
   );
   // Pool effectif : par catégorie, tes pièces réelles si tu en as, sinon les
   // suggestions de la capsule par défaut — jamais un mélange à l'intérieur
@@ -610,6 +628,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     weather,
     defaultCapsule,
     wardrobePool,
+    vestiairePool,
     actions,
     requirePremium,
   };
