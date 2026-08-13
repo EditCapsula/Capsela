@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { WORK_DAYS, colorNameFromHex, genderLabel, type ProfilePrefs } from "@/lib/profile";
@@ -31,6 +32,13 @@ export default function ProfileEditScreen() {
   const prefs = profile.prefs;
   const setPrefs = (p: Partial<ProfilePrefs>) => saveProfile({ ...profile, prefs: { ...prefs, ...p } });
 
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setPhotoUrl(URL.createObjectURL(file));
+  };
+
   const birthdateText = profile.birthdate
     ? new Date(profile.birthdate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : null;
@@ -50,8 +58,19 @@ export default function ProfileEditScreen() {
       </button>
 
       <div className="flex flex-col items-center text-center mt-[6px]">
-        <div className="w-24 h-24 rounded-full bg-[#dccfbc] flex items-center justify-center">
-          <span className="font-serif italic text-[40px] text-muted">{initial}</span>
+        <div
+          className="w-24 h-24 rounded-full bg-terracotta flex items-center justify-center overflow-hidden bg-cover bg-center"
+          style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}
+        >
+          {!photoUrl && <span className="font-serif italic text-[40px] text-cream">{initial}</span>}
+        </div>
+        <input ref={photoInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
+        <button onClick={() => photoInputRef.current?.click()} className="text-[12px] text-terracotta mt-[10px] cursor-pointer">
+          Modifier ma photo
+        </button>
+        <div className="text-[11px] text-muted mt-[6px] leading-[1.5] max-w-[270px]">
+          Optionnelle. Sans photo, ton avatar reste l&apos;initiale de ton prénom. Elle sert uniquement à
+          personnaliser ton profil — jamais partagée, jamais vendue.
         </div>
         <div className="font-serif text-[30px] text-ink mt-4">{profile.displayName || "Ton nom"}</div>
         <div className="text-[13px] text-muted mt-[6px]">{profile.city}</div>
