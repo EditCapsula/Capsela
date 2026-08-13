@@ -42,6 +42,7 @@ function buildInitialState(): AppState {
     screen: "welcome",
     profileReturn: "home",
     premiumReturn: "home",
+    legalReturn: "profile",
     profileSetupStep: 0,
     profileSetupFromEdit: false,
     onbStep: 0,
@@ -109,6 +110,8 @@ export interface Actions {
   goNeverWorn: () => void;
   goProfile: () => void;
   goProfileEdit: () => void;
+  goLegal: () => void;
+  backFromLegal: () => void;
   goLogin: () => void;
   /** Ouvre le questionnaire profil à une étape donnée (0 = début). fromEdit : retour vers l'édition à la fin. */
   goProfileSetup: (step?: number, fromEdit?: boolean) => void;
@@ -281,6 +284,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goNeverWorn: () => go("neverworn"),
     goProfile: () => setState((s) => ({ ...s, profileReturn: s.screen === "profile" ? s.profileReturn : s.screen, screen: "profile" })),
     goProfileEdit: () => go("profileEdit"),
+    goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
+    backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
     goLogin: () => go("login"),
     goProfileSetup: (step = 0, fromEdit = false) =>
       setState((s) => ({ ...s, screen: "profileSetup", profileSetupStep: step, profileSetupFromEdit: fromEdit })),

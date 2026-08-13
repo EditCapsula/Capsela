@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { colorNameFromHex, genderLabel } from "@/lib/profile";
+import { APP_VERSION } from "@/lib/data";
 
 export default function ProfileScreen() {
   const { profile, email, demoMode, signOut } = useAuth();
@@ -83,7 +84,13 @@ export default function ProfileScreen() {
       >
         Se déconnecter
       </button>
-      <div className="text-center text-[11px] text-placeholder mt-[18px]">L&apos;édit Capsela · v1.4.0</div>
+      <button
+        onClick={actions.goLegal}
+        className="mt-[10px] w-full bg-card border border-border rounded-full py-[15px] flex items-center justify-center gap-[7px] text-[13px] text-ink cursor-pointer"
+      >
+        Informations légales <span className="text-terracotta">›</span>
+      </button>
+      <div className="text-center text-[11px] text-placeholder mt-[18px]">L&apos;édit Capsela · v{APP_VERSION}</div>
     </div>
   );
 }

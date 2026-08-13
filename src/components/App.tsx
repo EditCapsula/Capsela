@@ -18,6 +18,7 @@ import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import ProfileEditScreen from "./screens/ProfileEditScreen";
+import LegalScreen from "./screens/LegalScreen";
 import LoginScreen from "./screens/LoginScreen";
 import OpinionShareScreen from "./screens/OpinionShareScreen";
 import CreateLookScreen from "./screens/CreateLookScreen";
@@ -74,6 +75,7 @@ function Screens() {
         {state.screen === "profileSetup" && <ProfileSetupScreen />}
         {state.screen === "profile" && <ProfileScreen />}
         {state.screen === "profileEdit" && <ProfileEditScreen />}
+        {state.screen === "legal" && <LegalScreen />}
         {state.screen === "login" && <LoginScreen />}
         {state.screen === "opinionShare" && <OpinionShareScreen />}
         {state.screen === "createLook" && <CreateLookScreen />}

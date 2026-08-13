@@ -123,6 +123,8 @@ export interface AppState {
   /** Écran vers lequel revenir en quittant le profil (ouvert depuis l'avatar). */
   profileReturn: Screen;
   premiumReturn: Screen;
+  /** Écran vers lequel revenir en quittant Informations légales (toujours "profile" en pratique). */
+  legalReturn: Screen;
   profileSetupStep: number;
   profileSetupFromEdit: boolean;
   onbStep: number;
@@ -214,6 +216,7 @@ export type Screen =
   | "profileSetup"
   | "profile"
   | "profileEdit"
+  | "legal"
   | "login"
   | "opinionShare"
   | "createLook"

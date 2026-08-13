@@ -22,93 +22,51 @@ export function neverWornItems(pool: Item[]): Item[] {
 const MONTHS = MONTHS_FR;
 const DAYS_SHORT = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
 
-export interface Memory {
-  title: string;
-  dateText: string;
-  summary: string;
-  pieces: Item[];
-  reWearIds: number[];
+/** "Porté récemment" est déclaré uniquement via l'action explicite "marquer comme porté" (Journal), jamais déduit d'une simple suggestion ou tenue générée. */
+export function wornFromHistory(history: HistoryEntry[], id: number): boolean {
+  return history.some((h) => h.pieceIds.includes(id));
 }
 
-export interface HistoryDayGroup {
-  key: string;
+export interface JournalStats {
+  total: number;
+  worn: number;
+  never: number;
+  pctWorn: number;
+  hasItems: boolean;
+}
+
+/** Statistiques du Journal : part du dressing réel déjà portée (au moins une fois, via une tenue validée). */
+export function journalStats(items: Item[], history: HistoryEntry[]): JournalStats {
+  const total = items.length;
+  const worn = items.filter((i) => wornFromHistory(history, i.id)).length;
+  const never = total - worn;
+  const pctWorn = total ? Math.round((worn / total) * 100) : 0;
+  return { total, worn, never, pctWorn, hasItems: total > 0 };
+}
+
+export interface JournalEntry {
+  id: string;
   rel: string;
-  isMulti: boolean;
-  countText: string;
-  entries: {
-    id: string;
-    hasOcc: boolean;
-    occLabel: string;
-    summary: string;
-    pieces: Item[];
-  }[];
+  hasOccasion: boolean;
+  occLabel: string;
+  summary: string;
+  swatches: Item[];
 }
 
-export interface HistoryView {
-  memory: Memory | null;
-  days: HistoryDayGroup[];
-  weekCount: number;
-}
-
-export function historyView(history: HistoryEntry[], pool: Item[]): HistoryView {
-  const now = new Date();
+/** Liste plate des tenues portées, la plus récente en premier. */
+export function journalEntries(history: HistoryEntry[], pool: Item[]): JournalEntry[] {
   const todayMid = new Date();
   todayMid.setHours(0, 0, 0, 0);
-
-  const annEntry = history.find((h) => {
-    const d = new Date(h.ts);
-    return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() < now.getFullYear();
-  });
-
-  let memory: Memory | null = null;
-  if (annEntry) {
-    const annDate = new Date(annEntry.ts);
-    const yrs = now.getFullYear() - annDate.getFullYear();
-    const pcs = annEntry.pieceIds.map((id) => pool.find((i) => i.id === id)).filter(Boolean) as Item[];
-    const stillHave = annEntry.pieceIds.filter((id) => pool.some((i) => i.id === id));
-    memory = {
-      title: yrs === 1 ? "Il y a un an, jour pour jour" : "Il y a " + yrs + " ans, jour pour jour",
-      dateText: "Le " + annDate.getDate() + " " + MONTHS[annDate.getMonth()] + " " + annDate.getFullYear(),
-      summary: pcs.map((p) => p.name).join(" · "),
-      pieces: pcs,
-      reWearIds: stillHave,
-    };
-  }
-
-  const entries = history.filter((h) => h.id !== annEntry?.id);
-  const dayOrder: string[] = [];
-  const dayMap: Record<string, { rel: string; list: HistoryDayGroup["entries"] }> = {};
-
-  entries.forEach((h: HistoryEntry) => {
-    const d = new Date(h.ts);
-    const key = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
-    const dMid = new Date(d);
-    dMid.setHours(0, 0, 0, 0);
-    const diff = Math.round((todayMid.getTime() - dMid.getTime()) / 864e5);
-    const rel = diff <= 0 ? "Aujourd'hui" : diff === 1 ? "Hier" : DAYS_SHORT[d.getDay()] + " " + d.getDate() + " " + MONTHS[d.getMonth()];
-    if (!dayMap[key]) {
-      dayMap[key] = { rel, list: [] };
-      dayOrder.push(key);
-    }
-    const pcs = h.pieceIds.map((id) => pool.find((i) => i.id === id)).filter(Boolean) as Item[];
-    const occ = h.occasion && h.occasion !== "all" ? OCC_LABELS[h.occasion] : "";
-    dayMap[key].list.push({
-      id: h.id,
-      hasOcc: !!occ,
-      occLabel: occ || "",
-      summary: pcs.map((p) => p.name).join(" · "),
-      pieces: pcs,
+  return [...history]
+    .sort((a, b) => b.ts - a.ts)
+    .map((h) => {
+      const d = new Date(h.ts);
+      const dMid = new Date(d);
+      dMid.setHours(0, 0, 0, 0);
+      const diff = Math.round((todayMid.getTime() - dMid.getTime()) / 864e5);
+      const rel = diff <= 0 ? "Aujourd'hui" : diff === 1 ? "Hier" : DAYS_SHORT[d.getDay()] + " " + d.getDate() + " " + MONTHS[d.getMonth()];
+      const pcs = h.pieceIds.map((id) => pool.find((i) => i.id === id)).filter(Boolean) as Item[];
+      const occ = h.occasion && h.occasion !== "all" ? OCC_LABELS[h.occasion] : "";
+      return { id: h.id, rel, hasOccasion: !!occ, occLabel: occ, summary: pcs.map((p) => p.name).join(" · "), swatches: pcs };
     });
-  });
-
-  const days: HistoryDayGroup[] = dayOrder.map((k) => {
-    const n = dayMap[k].list.length;
-    return { key: k, rel: dayMap[k].rel, entries: dayMap[k].list, isMulti: n > 1, countText: n + " tenues" };
-  });
-
-  const weekCount = history.filter(
-    (h) => (todayMid.getTime() - new Date(new Date(h.ts).setHours(0, 0, 0, 0)).getTime()) / 864e5 < 7
-  ).length;
-
-  return { memory, days, weekCount };
 }

@@ -12,6 +12,9 @@ import type {
 } from "./types";
 import { PROFILE_PALETTE } from "./profile";
 
+/** Source unique du numéro de version — partagée entre l'écran Profil et l'écran Informations légales, pour éviter toute divergence d'affichage. */
+export const APP_VERSION = "1.4.0";
+
 export const CATS: [CategoryKey, string, string][] = [
   ["haut", "Haut", "Hauts"],
   ["pull", "Pull / Gilet", "Pulls & gilets"],
