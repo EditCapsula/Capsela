@@ -103,25 +103,26 @@ export function seasonSuggestion(cat: CategoryKey, name: string): Season | null 
 
 /**
  * Occasion, libellé, sous-libellé, niveau de formalité minimum requis
- * (0 = sport, 1 = décontracté, 3 = business casual, 4 = habillé), groupe
- * d'affichage (principale = mise en avant, secondaire = "Autres occasions")
- * — alimente R-B3 (incohérence occasion) et R-B6 (baskets non éligibles).
- * Taxonomie révisée (recette 12/08/2026) : "Événement professionnel" retiré
- * (couvert par Rendez-vous important / Travail-bureau), "Sortie festive"
- * ajoutée, "Date" a désormais une formalité variable selon son sous-contexte
- * (cf. DATE_CONTEXTS) — la valeur ci-dessous n'est qu'un repli par défaut.
+ * (0 = sport, 1 = décontracté, 3 = business casual, 4 = habillé) — alimente
+ * R-B3 (incohérence occasion) et R-B6 (baskets non éligibles). Les 10
+ * occasions sont présentées au même niveau côté UI, sans hiérarchie
+ * principale/secondaire (corrigé le 12/08/2026 — la version précédente de
+ * cette table n'avait pas été mise à jour lors du passage à cette taxonomie
+ * et reprenait par erreur des valeurs de formalité obsolètes).
+ * "Date" a une formalité variable selon son sous-contexte (cf. DATE_CONTEXTS)
+ * — la valeur ci-dessous n'est qu'un repli par défaut.
  */
-export const OCCASIONS: [OccasionKey, string, string, number, "principale" | "secondaire"][] = [
-  ["quotidien", "Quotidien / Décontracté", "Courses, école, journée libre", 1, "principale"],
-  ["travail_formel", "Travail / Bureau", "Journée de travail", 3, "principale"],
-  ["entretien", "Rendez-vous important", "Entretien, réunion clé", 4, "principale"],
-  ["date", "Date", "Tête-à-tête", 3, "principale"],
-  ["soiree", "Sortie / Soirée", "Bar, dîner, entre amis", 3, "principale"],
-  ["festive", "Sortie festive", "Club, anniversaire, bal", 3, "principale"],
-  ["sport", "Sport", "Actif, technique", 0, "principale"],
-  ["cocooning", "Cocooning / Maison", "Chez soi, détente", 0, "principale"],
-  ["voyage", "Voyage / Déplacement", "Confortable, polyvalent", 1, "secondaire"],
-  ["evenement_perso", "Événement / Cérémonie", "Mariage, baptême", 4, "secondaire"],
+export const OCCASIONS: [OccasionKey, string, string, number][] = [
+  ["quotidien", "Quotidien / Décontracté", "Courses, école, journée libre", 1],
+  ["travail_formel", "Travail / Bureau", "Journée de travail", 3],
+  ["entretien", "Rendez-vous important", "Entretien, réunion clé", 4],
+  ["date", "Date", "Tête-à-tête", 3],
+  ["soiree", "Sortie / Soirée", "Bar, dîner, entre amis", 1],
+  ["festive", "Sortie festive", "Club, anniversaire, bal", 1],
+  ["sport", "Sport", "Actif, technique", 0],
+  ["cocooning", "Cocooning / Maison", "Chez soi, détente", 1],
+  ["voyage", "Voyage / Déplacement", "Confortable, polyvalent", 1],
+  ["evenement_perso", "Événement / Cérémonie", "Mariage, baptême", 4],
 ];
 
 /** Sous-contexte de l'occasion "Date" — seul déterminant de sa formalité (recette 12/08/2026). */
@@ -150,14 +151,9 @@ export const OCC_SHORT: Partial<Record<OccasionKey, string>> = {
 
 export const OCC_LABELS: Record<OccasionKey, string> = { all: "Toutes" } as Record<OccasionKey, string>;
 export const OCC_FORMALITY: Record<OccasionKey, number> = { all: 0 } as Record<OccasionKey, number>;
-export const OCC_GROUP: Record<OccasionKey, "principale" | "secondaire"> = { all: "principale" } as Record<
-  OccasionKey,
-  "principale" | "secondaire"
->;
-OCCASIONS.forEach(([key, label, , formality, group]) => {
+OCCASIONS.forEach(([key, label, , formality]) => {
   OCC_LABELS[key] = label;
   OCC_FORMALITY[key] = formality;
-  OCC_GROUP[key] = group;
 });
 
 /**

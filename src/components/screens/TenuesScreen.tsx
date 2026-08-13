@@ -38,7 +38,6 @@ export default function TenuesScreen() {
   const { state, weather, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
-  const [otherOccasionsOpen, setOtherOccasionsOpen] = useState(false);
   const [suggestionInfoId, setSuggestionInfoId] = useState<number | null>(null);
 
   const now = new Date();
@@ -114,8 +113,7 @@ export default function TenuesScreen() {
         Qu&apos;est-ce qui est prévu aujourd&apos;hui ?
       </div>
       <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[9px]">
-        {OCCASIONS.filter(([, , , , group]) => group === "principale").map(([key, label, sub]) => {
-          const i = OCCASIONS.findIndex(([k]) => k === key);
+        {OCCASIONS.map(([key, label, sub], i) => {
           const on = state.occasion === key;
           return (
             <button
@@ -134,36 +132,6 @@ export default function TenuesScreen() {
           );
         })}
       </div>
-
-      <button
-        onClick={() => setOtherOccasionsOpen((v) => !v)}
-        className="mt-[11px] flex items-center gap-[7px] cursor-pointer"
-      >
-        <span className="text-[12px] text-terracotta">Autres occasions</span>
-        <span className="text-[14px] text-[#C9966F]">{otherOccasionsOpen ? "‹" : "›"}</span>
-      </button>
-      {otherOccasionsOpen && (
-        <div className="flex gap-2 flex-wrap mt-[10px]">
-          {OCCASIONS.filter(([, , , , group]) => group === "secondaire").map(([key, label, sub]) => {
-            const on = state.occasion === key;
-            return (
-              <button
-                key={key}
-                onClick={() => actions.setOccasion(on ? "all" : key)}
-                className="flex-none text-left py-[10px] px-[15px] rounded-full cursor-pointer border"
-                style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB" }}
-              >
-                <div className="text-[12.5px] whitespace-nowrap" style={{ color: on ? "#F3EEE5" : "#1D1A16" }}>
-                  {label}
-                </div>
-                <div className="text-[10px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
-                  {sub}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {state.occasion === "date" && (
         <div className="flex gap-[11px] mt-3">
