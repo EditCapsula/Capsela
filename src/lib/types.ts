@@ -16,6 +16,9 @@ export type CategoryKey =
 
 export type Season = "Printemps / Été" | "Automne / Hiver" | "Toutes saisons";
 
+/** Saison calendaire des 4 capsules par défaut (recette 12/08/2026) — distincte de Season (saison météo d'une pièce). */
+export type CapsuleSeason = "Printemps" | "Été" | "Automne" | "Hiver";
+
 export type OccasionKey =
   | "all"
   | "quotidien"
@@ -177,6 +180,8 @@ export interface AppState {
   travelTipDismissed: boolean;
   /** Sous-choix affiché uniquement quand occasion === "date" ; seul déterminant de sa formalité. */
   dateContext: DateContext;
+  /** Saison parcourue sur l'écran Capsule — n'affecte que ce qui y est affiché, jamais la génération de la tenue du jour (toujours la saison calendaire courante). null = saison courante. */
+  capsuleSeason: CapsuleSeason | null;
 
   lookCount: number;
   isPremium: boolean;

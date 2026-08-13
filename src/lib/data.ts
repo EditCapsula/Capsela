@@ -10,7 +10,6 @@ import type {
   ShoeType,
   WorkMode,
 } from "./types";
-import { PROFILE_PALETTE } from "./profile";
 
 /** Source unique du numéro de version — partagée entre l'écran Profil et l'écran Informations légales, pour éviter toute divergence d'affichage. */
 export const APP_VERSION = "1.4.0";
@@ -59,8 +58,36 @@ CATS.forEach(([key, label, plural]) => {
   CATPLURAL[key] = plural;
 });
 
-/** Palette de couleurs des pièces — la même que celle du profil (27 teintes). */
-export const PALETTE: [string, string][] = PROFILE_PALETTE;
+/** Palette de couleurs pour les pièces du dressing (27 teintes) — indépendante de la palette personnelle du profil. */
+export const PALETTE: [string, string][] = [
+  ["Blanc", "#F7F4EE"],
+  ["Blanc cassé", "#EDE4D6"],
+  ["Crème", "#E7DCC8"],
+  ["Sable", "#D9C9B2"],
+  ["Camel", "#C08A5E"],
+  ["Caramel", "#B4835A"],
+  ["Terracotta", "#B4735A"],
+  ["Rouille", "#A9613F"],
+  ["Brique", "#9E5A3C"],
+  ["Chocolat", "#7C5436"],
+  ["Moutarde", "#C39A50"],
+  ["Kaki", "#8A8560"],
+  ["Vert sauge", "#9AA389"],
+  ["Vert bouteille", "#3F5342"],
+  ["Taupe", "#A8967C"],
+  ["Beige rosé", "#D8C3B4"],
+  ["Rose poudré", "#D3AE9F"],
+  ["Corail", "#C9846A"],
+  ["Gris clair", "#C7C2B9"],
+  ["Gris", "#9B968F"],
+  ["Gris anthracite", "#4B4A47"],
+  ["Bleu ciel", "#A9BFCB"],
+  ["Denim", "#5E6E7C"],
+  ["Marine", "#3A4152"],
+  ["Prune", "#5B3A4A"],
+  ["Bordeaux", "#6E3B3A"],
+  ["Noir", "#2A2724"],
+];
 
 export const SEASONS: Season[] = ["Printemps / Été", "Automne / Hiver", "Toutes saisons"];
 

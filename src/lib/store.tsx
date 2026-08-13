@@ -3,9 +3,10 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
 import { CATALOG } from "./catalog";
-import { computeDefaultCapsule, weatherSeasonBucket } from "./capsule";
+import { computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { generateOutfit, swapOutfitPiece, violatesOuterwearRule } from "./logic";
+import { paletteHexes } from "./profile";
 import {
   detectAccessoireType,
   detectBijouType,
@@ -18,6 +19,7 @@ import type {
   AccessoireType,
   AppState,
   BijouType,
+  CapsuleSeason,
   CategoryKey,
   Coupe,
   DateContext,
@@ -81,6 +83,7 @@ function buildInitialState(): AppState {
     travelMode: "Court trajet",
     travelTipDismissed: false,
     dateContext: "Verre",
+    capsuleSeason: null,
     lookCount: 0,
     isPremium: false,
     history: [],
@@ -157,6 +160,8 @@ export interface Actions {
   dismissTravelTip: () => void;
   /** Sous-choix affiché uniquement pour l'occasion "date" ; seul déterminant de sa formalité, régénère la tenue. */
   setDateContext: (c: DateContext) => void;
+  /** Saison parcourue sur l'écran Capsule uniquement ; n'affecte jamais la tenue du jour. */
+  setCapsuleSeason: (s: CapsuleSeason) => void;
   /** Remplace une pièce de la tenue par une autre de la même famille. */
   swapPiece: (id: number, cat: CategoryKey) => void;
   cycleGeo: () => void;
@@ -225,8 +230,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     return { season, temp: geoCity.temp, label: geoCity.label, seasons: [season, "Toutes saisons"] };
   }, [geoCity]);
 
+  // Toujours la saison calendaire courante — indépendante de la saison parcourue
+  // sur l'écran Capsule (state.capsuleSeason), qui n'affecte que son affichage.
   const defaultCapsule = useMemo(
-    () => computeDefaultCapsule(profile, geoCity.temp, state.suggestedExcluded),
+    () => computeDefaultCapsule(profile, geoCity.temp, state.suggestedExcluded, currentSeasonKey()),
     [profile, geoCity.temp, state.suggestedExcluded]
   );
   // Pool effectif : par catégorie, tes pièces réelles si tu en as, sinon les
@@ -256,7 +263,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       weatherRef.current,
       s.occasion || "all",
       s.workMode,
-      s.dateContext
+      s.dateContext,
+      paletteHexes(profile)
     );
     return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
   };
@@ -266,6 +274,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     if (ready && !stateRef.current.outfit.length) {
       setState((s) => regen(s));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, defaultCapsule]);
 
   const go = (screen: Screen) => setState((s) => ({ ...s, screen }));
@@ -438,6 +447,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setTravelMode: (m) => setState((s) => regen({ ...s, travelMode: m, travelTipDismissed: false })),
     dismissTravelTip: () => setState((s) => ({ ...s, travelTipDismissed: true })),
     setDateContext: (c) => setState((s) => regen({ ...s, dateContext: c })),
+    setCapsuleSeason: (s) => setState((st) => ({ ...st, capsuleSeason: s })),
     swapPiece: (id, cat) =>
       setState((s) => {
         const outfitItems = s.outfit

@@ -1,19 +1,5 @@
-import { CATS, MONTHS_FR, OCC_LABELS } from "./data";
+import { MONTHS_FR, OCC_LABELS } from "./data";
 import type { HistoryEntry, Item } from "./types";
-
-export interface BreakdownRow {
-  label: string;
-  count: number;
-  pct: number;
-}
-
-/** Répartition par catégorie du pool actif (dressing réel, ou capsule suggérée). */
-export function capsuleBreakdown(pool: Item[]): BreakdownRow[] {
-  const counts = CATS.map(([key]) => pool.filter((i) => i.cat === key).length);
-  const max = Math.max(1, ...counts);
-  return CATS.map(([, , plural], idx) => ({ label: plural, count: counts[idx], pct: (counts[idx] / max) * 100 }))
-    .filter((r) => r.count > 0);
-}
 
 export function neverWornItems(pool: Item[]): Item[] {
   return pool.filter((i) => i.worn == null);

@@ -4,6 +4,7 @@ import { BAS_CATS, CATS, CATLABEL, OCCASIONS } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, evaluateBlocking } from "@/lib/logic";
+import { paletteHexes } from "@/lib/profile";
 import type { Item } from "@/lib/types";
 
 const TOP_BOTTOM_CATS = new Set(["haut", ...BAS_CATS, "jupe"]);
@@ -31,7 +32,7 @@ export default function CreateLookScreen() {
   const lookScore = computeLookScore(
     draftPieces,
     state.lookDraftOccasion,
-    profile.favoriteColors || [],
+    paletteHexes(profile),
     profile.morphology,
     dismissed,
     weather

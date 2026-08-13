@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { WORK_DAYS, colorNameFromHex, genderLabel, type ProfilePrefs } from "@/lib/profile";
+import { WORK_DAYS, genderLabel, paletteSummary, type ProfilePrefs } from "@/lib/profile";
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
@@ -95,7 +95,7 @@ export default function ProfileEditScreen() {
 
       <div className="flex items-center justify-between mt-[26px] mb-[11px]">
         <span className="text-[11px] tracking-[.16em] uppercase text-muted">Ma silhouette</span>
-        <button onClick={() => actions.goProfileSetup(2, true)} className="text-[12.5px] text-terracotta cursor-pointer">
+        <button onClick={() => actions.goProfileSetup(6, true)} className="text-[12.5px] text-terracotta cursor-pointer">
           Modifier
         </button>
       </div>
@@ -123,10 +123,8 @@ export default function ProfileEditScreen() {
         </button>
       </div>
       <div className="bg-card border border-border rounded-2xl p-4">
-        <div className="text-[11.5px] text-muted">Couleurs préférées</div>
-        <div className="text-[13.5px] text-ink mt-[6px]">
-          {profile.favoriteColors.map(colorNameFromHex).filter(Boolean).join(", ") || "Non renseignées"}
-        </div>
+        <div className="text-[11.5px] text-muted">Palette</div>
+        <div className="text-[13.5px] text-ink mt-[6px] leading-[1.4]">{paletteSummary(profile)}</div>
         <div className="h-px bg-border my-[14px]" />
         <div className="text-[11.5px] text-muted">Style</div>
         <div className="text-[13.5px] text-ink mt-[6px]">{profile.styles.join(", ") || "—"}</div>

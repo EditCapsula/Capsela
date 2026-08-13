@@ -7,6 +7,7 @@ import { isCatalogId } from "@/lib/catalog";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, violatesOuterwearRule } from "@/lib/logic";
+import { paletteHexes } from "@/lib/profile";
 
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
 const MODE_LABELS = {
@@ -65,7 +66,7 @@ export default function TenuesScreen() {
   const lookScore = computeLookScore(
     outfitPieces,
     state.occasion || "all",
-    profile.favoriteColors || [],
+    paletteHexes(profile),
     profile.morphology,
     dismissed,
     weather,

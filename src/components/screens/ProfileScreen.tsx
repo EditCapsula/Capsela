@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { colorNameFromHex, genderLabel } from "@/lib/profile";
+import { genderLabel, paletteSummary } from "@/lib/profile";
 import { APP_VERSION } from "@/lib/data";
 
 export default function ProfileScreen() {
@@ -23,10 +23,7 @@ export default function ProfileScreen() {
     { label: "Taille", value: tailleValue },
     { label: "Style", value: profile.styles.join(", ") || "—" },
     { label: "Morphologie", value: profile.morphology || "—" },
-    {
-      label: "Goûts",
-      value: profile.favoriteColors.map(colorNameFromHex).filter(Boolean).join(", ") || "—",
-    },
+    { label: "Palette", value: paletteSummary(profile) },
   ];
 
   const handleSignOut = async () => {

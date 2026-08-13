@@ -1,10 +1,19 @@
 import { CATALOG, type CatalogItem } from "./catalog";
-import type { Profile } from "./profile";
-import type { CategoryKey, Item, Season } from "./types";
+import { paletteHexes, type Profile } from "./profile";
+import type { CapsuleSeason, CategoryKey, Item, Season } from "./types";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
   return temp >= 20 ? "Printemps / Été" : "Automne / Hiver";
+}
+
+export type { CapsuleSeason };
+export const CAPSULE_SEASONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
+
+/** Saison calendaire courante — pilote la capsule "de départ" affichée par défaut (indépendante de la météo du jour). */
+export function currentSeasonKey(): CapsuleSeason {
+  const m = new Date().getMonth();
+  return m <= 1 || m === 11 ? "Hiver" : m <= 4 ? "Printemps" : m <= 7 ? "Été" : "Automne";
 }
 
 const STYLE_FIT: Record<string, RegExp> = {
@@ -75,7 +84,8 @@ export function morphoVigilance(it: Item, morpho: string | null): boolean {
 export function computeDefaultCapsule(
   profile: Profile,
   cityTemp: number,
-  excludedIds: number[] = []
+  excludedIds: number[] = [],
+  seasonKey?: CapsuleSeason
 ): CatalogItem[] {
   const excluded = new Set(excludedIds);
   let base = CATALOG.filter((it) => !excluded.has(it.id));
@@ -85,7 +95,9 @@ export function computeDefaultCapsule(
     if (noFem.length >= 16) base = noFem;
   }
 
-  const bucket = weatherSeasonBucket(cityTemp);
+  const bucket = seasonKey
+    ? (["Printemps", "Été"].includes(seasonKey) ? "Printemps / Été" : "Automne / Hiver")
+    : weatherSeasonBucket(cityTemp);
   const seasonFit = base.filter((it) => it.season === bucket || it.season === "Toutes saisons");
   if (seasonFit.length >= 16) base = seasonFit;
 
@@ -93,7 +105,7 @@ export function computeDefaultCapsule(
   let curated = styles.length ? base.filter((it) => styles.some((st) => styleFit(it, st))) : base;
   if (curated.length < 18) curated = base;
 
-  const favColors = profile.favoriteColors || [];
+  const favColors = paletteHexes(profile);
   if (favColors.length) {
     const cFit = curated.filter((it) => favColors.includes(it.hex));
     if (cFit.length >= 12) curated = cFit;

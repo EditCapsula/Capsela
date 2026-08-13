@@ -5,45 +5,37 @@ import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import {
+  AFFINITE_OPTIONS,
   GENDERS,
-  MAX_PROFILE_COLORS,
+  INTENSITE_OPTIONS,
+  MAX_PALETTE_ACCENTS,
+  MAX_PALETTE_NEUTRES,
   MORPHOLOGIES,
   MORPHO_HINTS,
-  PROFILE_PALETTE,
+  PAL_ACCENTS,
+  PAL_BASE,
+  PAL_NEUTRES,
   STYLE_OPTIONS,
   TAILLES_HAUT,
+  paletteColorName,
   tailleBasLabelFor,
   taillesBasFor,
+  type Affinite,
+  type Intensite,
   type Profile,
 } from "@/lib/profile";
 
 const STEPS = [
-  {
-    kicker: "Étape 1 · Genre",
-    title: "Comment tu te définis ?",
-    subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case.",
-  },
-  {
-    kicker: "Étape 2 · Goûts",
-    title: "Quelles couleurs préfères-tu porter ?",
-    subtitle: "Choisis jusqu’à 3 teintes qui te ressemblent.",
-  },
-  {
-    kicker: "Étape 3 · Taille",
-    title: "Quelles sont tes tailles habituelles ?",
-    subtitle: "Ça nous aide à te proposer des tenues qui tombent bien.",
-  },
-  {
-    kicker: "Étape 4 · Style",
-    title: "Quel est ton style ?",
-    subtitle: "Un seul choix — celui qui te ressemble le plus aujourd’hui.",
-  },
-  {
-    kicker: "Étape 5 · Morphologie",
-    title: "Et ta silhouette ?",
-    subtitle: "Pour affiner nos recommandations de coupes.",
-  },
-];
+  { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
+  { key: "pal_base", kicker: "Ta palette", title: "Quelle est ta couleur de base ?", subtitle: "Celle qui revient le plus souvent dans tes tenues. Un seul choix." },
+  { key: "pal_neutres", kicker: "Ta palette", title: "Quelles teintes aimes-tu y associer ?", subtitle: "Jusqu’à 3 neutres qui s’accordent avec ta base." },
+  { key: "pal_accents", kicker: "Ta palette", title: "Et pour donner du caractère ?", subtitle: "Jusqu’à 3 couleurs d’accent — celles qui réveillent une tenue." },
+  { key: "pal_ressenti", kicker: "Ta palette", title: "Deux précisions rapides", subtitle: "Elles affinent nos suggestions, sans jamais écarter une couleur que tu as choisie." },
+  { key: "pal_recap", kicker: "Ta palette", title: "Voilà ta palette", subtitle: "Tu pourras la retoucher quand tu veux depuis ton profil." },
+  { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
+  { key: "style", kicker: "Style", title: "Quel est ton style ?", subtitle: "Un seul choix — celui qui te ressemble le plus aujourd’hui." },
+  { key: "morpho", kicker: "Morphologie", title: "Et ta silhouette ?", subtitle: "Pour affiner nos recommandations de coupes." },
+] as const;
 
 function chipCls(on: boolean): string {
   return (
@@ -82,6 +74,37 @@ function OptionRow({
   );
 }
 
+/** Grille de pastilles de la palette personnelle — sélection unique ou multiple (jusqu'à 3, éviction FIFO). */
+function PaletteDots({
+  options,
+  selected,
+  onSelect,
+}: {
+  options: [string, string][];
+  selected: string[];
+  onSelect: (hex: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-4 gap-x-3 gap-y-5 mt-[26px]">
+      {options.map(([name, hex]) => {
+        const on = selected.includes(hex);
+        return (
+          <button key={hex} onClick={() => onSelect(hex)} className="flex flex-col items-center gap-[8px] cursor-pointer">
+            <span
+              className="w-11 h-11 rounded-full"
+              style={{
+                background: hex,
+                boxShadow: on ? "0 0 0 2px #F3EEE5, 0 0 0 4px #A66950" : "inset 0 0 0 1px rgba(29,26,22,.10)",
+              }}
+            />
+            <span className={"text-[10px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ProfileSetupScreen() {
   const { profile, saveProfile } = useAuth();
   const { state, actions } = useCapsela();
@@ -91,11 +114,15 @@ export default function ProfileSetupScreen() {
 
   const patch = (p: Partial<Profile>) => setDraft((d) => ({ ...d, ...p }));
 
-  const toggleColor = (hex: string) => {
-    const cur = draft.favoriteColors;
-    if (cur.includes(hex)) return patch({ favoriteColors: cur.filter((x) => x !== hex) });
-    if (cur.length >= MAX_PROFILE_COLORS) return patch({ favoriteColors: [...cur.slice(1), hex] });
-    patch({ favoriteColors: [...cur, hex] });
+  const toggleNeutre = (hex: string) => {
+    const cur = draft.paletteNeutres;
+    if (cur.includes(hex)) return patch({ paletteNeutres: cur.filter((x) => x !== hex) });
+    patch({ paletteNeutres: cur.length >= MAX_PALETTE_NEUTRES ? [...cur.slice(1), hex] : [...cur, hex] });
+  };
+  const toggleAccent = (hex: string) => {
+    const cur = draft.paletteAccents;
+    if (cur.includes(hex)) return patch({ paletteAccents: cur.filter((x) => x !== hex) });
+    patch({ paletteAccents: cur.length >= MAX_PALETTE_ACCENTS ? [...cur.slice(1), hex] : [...cur, hex] });
   };
 
   const isLast = step >= STEPS.length - 1;
@@ -116,6 +143,26 @@ export default function ProfileSetupScreen() {
   const meta = STEPS[step];
   const taillesBas = taillesBasFor(draft.gender);
 
+  const recapRows = [
+    {
+      label: "Base",
+      value: draft.paletteBase ? paletteColorName(draft.paletteBase) || "à choisir" : "à choisir",
+      swatches: draft.paletteBase ? [draft.paletteBase] : [],
+    },
+    {
+      label: "Neutres",
+      value: draft.paletteNeutres.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
+      swatches: draft.paletteNeutres,
+    },
+    {
+      label: "Accents",
+      value: draft.paletteAccents.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
+      swatches: draft.paletteAccents,
+    },
+    { label: "Affinité", value: draft.paletteAffinite || "non précisée", swatches: [] as string[] },
+    { label: "Intensité", value: draft.paletteIntensite || "non précisée", swatches: [] as string[] },
+  ];
+
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-2 pb-7">
       <AppHeader showAvatar={false} />
@@ -134,7 +181,7 @@ export default function ProfileSetupScreen() {
         <div className="flex gap-[6px]">
           {STEPS.map((s, i) => (
             <span
-              key={s.kicker}
+              key={s.key}
               className="rounded-full inline-block"
               style={
                 i === step
@@ -153,7 +200,7 @@ export default function ProfileSetupScreen() {
         <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">{meta.subtitle}</div>
       </div>
 
-      {step === 0 && (
+      {meta.key === "genre" && (
         <div className="flex flex-col gap-[10px] mt-[26px]">
           {GENDERS.map((g) => (
             <OptionRow
@@ -166,30 +213,66 @@ export default function ProfileSetupScreen() {
         </div>
       )}
 
-      {step === 1 && (
-        <div className="grid grid-cols-4 gap-x-2 gap-y-5 mt-[26px]">
-          {PROFILE_PALETTE.map(([name, hex]) => {
-            const on = draft.favoriteColors.includes(hex);
-            return (
-              <button key={hex} onClick={() => toggleColor(hex)} className="flex flex-col items-center gap-[7px] cursor-pointer">
-                <span
-                  className="w-[38px] h-[38px] rounded-[11px]"
-                  style={{
-                    background: hex,
-                    border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
-                    boxShadow: on ? "0 0 0 3px #F3EEE5 inset" : "none",
-                  }}
-                />
-                <span className={"text-[9.5px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>
-                  {name}
-                </span>
+      {meta.key === "pal_base" && (
+        <PaletteDots
+          options={PAL_BASE}
+          selected={draft.paletteBase ? [draft.paletteBase] : []}
+          onSelect={(hex) => patch({ paletteBase: hex })}
+        />
+      )}
+
+      {meta.key === "pal_neutres" && (
+        <PaletteDots options={PAL_NEUTRES} selected={draft.paletteNeutres} onSelect={toggleNeutre} />
+      )}
+
+      {meta.key === "pal_accents" && (
+        <PaletteDots options={PAL_ACCENTS} selected={draft.paletteAccents} onSelect={toggleAccent} />
+      )}
+
+      {meta.key === "pal_ressenti" && (
+        <div className="mt-[26px]">
+          <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[11px]">
+            Tes couleurs penchent plutôt vers…
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {AFFINITE_OPTIONS.map((a: Affinite) => (
+              <button key={a} onClick={() => patch({ paletteAffinite: a })} className={chipCls(draft.paletteAffinite === a)}>
+                {a}
               </button>
-            );
-          })}
+            ))}
+          </div>
+          <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[11px]">Et leur intensité ?</div>
+          <div className="flex gap-2 flex-wrap">
+            {INTENSITE_OPTIONS.map((it: Intensite) => (
+              <button key={it} onClick={() => patch({ paletteIntensite: it })} className={chipCls(draft.paletteIntensite === it)}>
+                {it}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {step === 2 && (
+      {meta.key === "pal_recap" && (
+        <div className="mt-6 bg-card border border-border rounded-[18px] p-[18px]">
+          {recapRows.map((r) => (
+            <div key={r.label} className="flex items-center gap-3 py-[11px] border-b border-border last:border-b-0">
+              <span className="w-[70px] flex-shrink-0 text-[11px] tracking-[.1em] uppercase text-muted">{r.label}</span>
+              <div className="flex items-center gap-[6px] flex-wrap flex-1 min-w-0">
+                {r.swatches.map((hex) => (
+                  <span
+                    key={hex}
+                    className="w-[15px] h-[15px] rounded-full flex-shrink-0"
+                    style={{ background: hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }}
+                  />
+                ))}
+                <span className="text-[12.5px] text-ink">{r.value}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {meta.key === "taille" && (
         <div className="mt-[26px]">
           <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[11px]">Taille de haut</div>
           <div className="flex gap-2 flex-wrap">
@@ -220,7 +303,7 @@ export default function ProfileSetupScreen() {
         </div>
       )}
 
-      {step === 3 && (
+      {meta.key === "style" && (
         <div className="flex flex-wrap gap-[9px] mt-[26px]">
           {STYLE_OPTIONS.map((st) => {
             const on = draft.styles[0] === st;
@@ -240,7 +323,7 @@ export default function ProfileSetupScreen() {
         </div>
       )}
 
-      {step === 4 && (
+      {meta.key === "morpho" && (
         <>
           <div className="flex flex-col gap-[10px] mt-[26px]">
             {MORPHOLOGIES.map((m) => (

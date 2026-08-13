@@ -2,27 +2,34 @@
 
 import AppHeader from "@/components/AppHeader";
 import { CATS } from "@/lib/data";
-import { CATALOG } from "@/lib/catalog";
+import { CAPSULE_SEASONS, computeDefaultCapsule, currentSeasonKey, type CapsuleSeason } from "@/lib/capsule";
 import { GENDERS } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { capsuleBreakdown, neverWornItems } from "@/lib/selectors";
 
 export default function CapsuleScreen() {
-  const { defaultCapsule, wardrobePool, actions } = useCapsela();
+  const { state, weather, actions } = useCapsela();
   const { profile } = useAuth();
 
-  const total = CATALOG.length;
-  const neverWorn = neverWornItems(wardrobePool);
-  const wornCount = wardrobePool.length - neverWorn.length;
-  const neverWornPct = wardrobePool.length ? Math.round((neverWorn.length / wardrobePool.length) * 100) : 0;
-  const rows = capsuleBreakdown(defaultCapsule);
-  const styleLabel = profile.styles[0] || GENDERS.find((g) => g.key === profile.gender)?.label || "ton profil";
+  const capsuleSeason: CapsuleSeason = state.capsuleSeason || currentSeasonKey();
+  const capsule = computeDefaultCapsule(profile, weather.temp, state.suggestedExcluded, capsuleSeason);
+  const styleLabel = profile.styles[0] || GENDERS.find((g) => g.key === profile.gender)?.label || "";
+
+  const count = (cat: string) => capsule.filter((i) => i.cat === cat).length;
+  const tops = count("haut");
+  const bottoms = count("pantalon") + count("jean") + count("jupe") + count("short");
+  const dresses = count("robe") + count("combinaison");
+  const shoes = Math.max(1, count("chaussures"));
+  const looksCount = (tops * bottoms + dresses) * shoes;
+
+  const introText = styleLabel
+    ? "Composée à partir de ton style " + styleLabel + " et de ta palette personnelle — le temps que tu remplisses ton dressing."
+    : "Composée à partir de ton profil et de ta palette personnelle — le temps que tu remplisses ton dressing.";
 
   const groups = CATS.map(([key, , plural]) => ({
     key,
     label: plural.toUpperCase(),
-    items: defaultCapsule.filter((i) => i.cat === key),
+    items: capsule.filter((i) => i.cat === key),
   })).filter((g) => g.items.length > 0);
 
   return (
@@ -42,52 +49,36 @@ export default function CapsuleScreen() {
         </div>
       </div>
 
-      <div className="mt-[18px] flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-        <span className="font-serif italic text-[15px] text-terracotta">✦</span>
+      <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[18px]">
+        {CAPSULE_SEASONS.map((s) => {
+          const on = capsuleSeason === s;
+          return (
+            <button
+              key={s}
+              onClick={() => actions.setCapsuleSeason(s)}
+              className="flex-none py-[9px] px-4 rounded-full text-[12.5px] cursor-pointer border whitespace-nowrap"
+              style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB", color: on ? "#F3EEE5" : "#1D1A16" }}
+            >
+              {s}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4">
+        <div className="font-serif text-[22px] text-ink">
+          Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
+        </div>
+        <div className="text-[12.5px] text-muted mt-[5px]">
+          {capsule.length} pièces · {looksCount} looks possibles
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+        <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
         <div className="text-[12.5px] text-muted-3 leading-[1.5]">
-          Composée à partir de ton style{" "}
-          <span className="text-terracotta">{styleLabel}</span>{" "}
-          et de tes couleurs préférées — le temps que tu remplisses ton dressing. Elle s&apos;ajustera
-          automatiquement dès que tu ajouteras tes propres pièces.
+          {introText + " Elle s'ajustera automatiquement dès que tu ajouteras tes propres pièces."}
         </div>
-      </div>
-
-      <div className="mt-[22px] bg-ink rounded-[20px] p-[22px]">
-        <div className="flex items-baseline gap-2">
-          <span className="font-serif text-[46px] leading-[.85] text-cream">{defaultCapsule.length}</span>
-          <span className="text-[13px] text-cream-dark-muted">pièces sélectionnées sur {total}</span>
-        </div>
-      </div>
-
-      <div className="flex gap-[10px] mt-3">
-        <button
-          onClick={actions.goNeverWorn}
-          className="flex-1 bg-card border border-border rounded-2xl p-[14px] text-left cursor-pointer"
-        >
-          <div className="font-serif text-[24px] text-ink">{neverWorn.length}</div>
-          <div className="text-[11px] text-muted mt-[2px] leading-[1.3]">jamais portées ›</div>
-        </button>
-        <div className="flex-1 bg-card border border-border rounded-2xl p-[14px]">
-          <div className="font-serif text-[24px] text-ink">{wornCount}</div>
-          <div className="text-[11px] text-muted mt-[2px] leading-[1.3]">déjà portées</div>
-        </div>
-        <div className="flex-1 bg-card border border-border rounded-2xl p-[14px]">
-          <div className="font-serif text-[24px] text-terracotta">{neverWornPct}%</div>
-          <div className="text-[11px] text-muted mt-[2px] leading-[1.3]">non portées</div>
-        </div>
-      </div>
-
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[22px] mb-3">Répartition</div>
-      <div className="flex flex-col gap-3 bg-card border border-border rounded-2xl p-4">
-        {rows.map((r) => (
-          <div key={r.label} className="flex items-center gap-[11px]">
-            <span className="w-24 text-[12px] text-[#3F3B34] flex-shrink-0">{r.label}</span>
-            <div className="flex-1 h-2 bg-[#EFE7DA] rounded-full overflow-hidden">
-              <div className="h-full bg-terracotta rounded-full" style={{ width: r.pct + "%" }} />
-            </div>
-            <span className="text-[12px] text-ink w-4 text-right flex-shrink-0">{r.count}</span>
-          </div>
-        ))}
       </div>
 
       {groups.map((g) => (

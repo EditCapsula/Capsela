@@ -161,7 +161,8 @@ export function generateOutfit(
   weather: Weather,
   occasion: OccasionKey,
   workMode: WorkMode = "Présentiel",
-  dateContext: DateContext = "Verre"
+  dateContext: DateContext = "Verre",
+  preferredHexes: string[] = []
 ): GeneratedOutfit {
   const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
@@ -217,7 +218,11 @@ export function generateOutfit(
 
   const chosen: Item[] = [];
   const pick = (cats: CategoryKey[], essential = true) => {
-    const candidates = harmonize(poolFor(cats).filter((i) => cats.includes(i.cat)), chosen, essential);
+    const base = poolFor(cats).filter((i) => cats.includes(i.cat));
+    // Préférence pour la palette personnelle — n'écarte rien, juste une inclination
+    // quand elle laisse assez d'options (R-S10, esprit "préférence molle, jamais exclusive").
+    const preferred = preferredHexes.length ? base.filter((i) => preferredHexes.includes(i.hex)) : [];
+    const candidates = harmonize(preferred.length ? preferred : base, chosen, essential);
     const picked = rand(candidates);
     if (picked) chosen.push(picked);
     return picked;
@@ -458,7 +463,7 @@ export interface LookScore {
 export function computeLookScore(
   pieces: Item[],
   occasion: OccasionKey,
-  favoriteColors: string[],
+  paletteHexList: string[],
   morphology: string | null,
   dismissed: Set<string>,
   weather: Weather,
@@ -536,8 +541,8 @@ export function computeLookScore(
     }
   }
 
-  // R-S10 — couleurs privilégiées du profil
-  if (favoriteColors.length && pieces.some((i) => favoriteColors.includes(i.hex))) bonuses.push(10);
+  // R-S10 — palette personnelle du profil (préférence molle, jamais exclusive)
+  if (paletteHexList.length && pieces.some((i) => paletteHexList.includes(i.hex))) bonuses.push(10);
 
   // R-S11 — layering réussi (base + calque en contexte décontracté)
   const tops = pieces.filter((i) => TOP_LAYER_CATS.includes(i.cat));
