@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import { CATLABEL, CITIES, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, wornAgo, isBag } from "@/lib/data";
+import { CATLABEL, CITIES, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -37,6 +37,7 @@ export default function TenuesScreen() {
   const { state, weather, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
+  const [otherOccasionsOpen, setOtherOccasionsOpen] = useState(false);
   const [suggestionInfoId, setSuggestionInfoId] = useState<number | null>(null);
 
   const now = new Date();
@@ -133,28 +134,35 @@ export default function TenuesScreen() {
         })}
       </div>
 
-      <div className="mt-3 text-[10px] tracking-[.14em] uppercase text-placeholder">Autres occasions</div>
-      <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[7px]">
-        {OCCASIONS.filter(([, , , , group]) => group === "secondaire").map(([key, label, sub]) => {
-          const i = OCCASIONS.findIndex(([k]) => k === key);
-          const on = state.occasion === key;
-          return (
-            <button
-              key={key}
-              onClick={() => actions.setOccasion(on ? "all" : key)}
-              className="flex-none text-left py-[10px] px-[15px] rounded-full cursor-pointer border"
-              style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB" }}
-            >
-              <div className="text-[12.5px] whitespace-nowrap" style={{ color: on ? "#F3EEE5" : "#1D1A16" }}>
-                <span style={{ color: on ? "#C9966F" : "#B3AA9B" }}>{String(i + 1).padStart(2, "0")}</span> {label}
-              </div>
-              <div className="text-[10.5px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
-                {sub}
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      <button
+        onClick={() => setOtherOccasionsOpen((v) => !v)}
+        className="mt-[11px] flex items-center gap-[7px] cursor-pointer"
+      >
+        <span className="text-[12px] text-terracotta">Autres occasions</span>
+        <span className="text-[14px] text-[#C9966F]">{otherOccasionsOpen ? "‹" : "›"}</span>
+      </button>
+      {otherOccasionsOpen && (
+        <div className="flex gap-2 flex-wrap mt-[10px]">
+          {OCCASIONS.filter(([, , , , group]) => group === "secondaire").map(([key, label, sub]) => {
+            const on = state.occasion === key;
+            return (
+              <button
+                key={key}
+                onClick={() => actions.setOccasion(on ? "all" : key)}
+                className="flex-none text-left py-[10px] px-[15px] rounded-full cursor-pointer border"
+                style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB" }}
+              >
+                <div className="text-[12.5px] whitespace-nowrap" style={{ color: on ? "#F3EEE5" : "#1D1A16" }}>
+                  {label}
+                </div>
+                <div className="text-[10px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
+                  {sub}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {state.occasion === "date" && (
         <div className="flex gap-[11px] mt-3">
@@ -293,9 +301,7 @@ export default function TenuesScreen() {
                     </button>
                   )}
                   <div className="text-[14.5px] text-ink">{it.name}</div>
-                  <div className="text-[11px] text-muted mt-[3px]">
-                    {CATLABEL[isBag(it) ? "sac" : it.cat]} · {wornAgo(it.worn)}
-                  </div>
+                  <div className="text-[11px] text-muted mt-[3px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
                 </div>
                 <button
                   onClick={() => actions.swapPiece(it.id, it.cat)}

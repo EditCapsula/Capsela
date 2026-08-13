@@ -52,26 +52,29 @@ export default function WardrobeScreen() {
       )}
 
       {items.length === 0 ? (
-        <div className="mt-6 flex flex-col items-center text-center gap-[14px] bg-card border border-border rounded-[18px] px-5 py-8">
-          <div className="font-serif text-[18px] text-ink">Ton dressing est encore vide</div>
-          <div className="text-[13px] text-muted leading-[1.5]">
-            Ajoute tes premières pièces, ou pars d&apos;une sélection déjà prête pour t&apos;inspirer.
+        <>
+          <div className="mt-[26px] text-center">
+            <div className="font-serif text-[22px] leading-[1.25] text-ink">
+              Ton dressing est encore <span className="italic text-terracotta">vide</span>
+            </div>
+            <div className="text-[12.5px] text-muted leading-[1.55] mt-[9px]">
+              Ajoute tes premières pièces — une photo suffit. Tes tenues se construiront à partir de ce que tu
+              possèdes déjà.
+            </div>
           </div>
-          <div className="flex flex-col gap-[10px] w-full mt-[4px]">
-            <button
-              onClick={actions.openAdd}
-              className="w-full bg-terracotta text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.08em] uppercase cursor-pointer"
-            >
-              Ajouter un vêtement
-            </button>
-            <button
-              onClick={actions.goCapsule}
-              className="w-full text-center border border-border-soft text-ink rounded-full py-[13px] text-[12.5px] cursor-pointer"
-            >
-              Découvre ta capsule
-            </button>
-          </div>
-        </div>
+          <button
+            onClick={actions.openAdd}
+            className="mt-[22px] w-full bg-ink text-cream text-center rounded-full py-4 text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+          >
+            Ajouter une pièce
+          </button>
+          <button
+            onClick={actions.goCapsule}
+            className="mt-[14px] w-full text-center text-[13px] text-terracotta cursor-pointer"
+          >
+            Découvre ta capsule ›
+          </button>
+        </>
       ) : (
         groups.map((g) => (
           <div key={g.key}>

@@ -82,21 +82,21 @@ export function seasonSuggestion(cat: CategoryKey, name: string): Season | null 
  * (cf. DATE_CONTEXTS) — la valeur ci-dessous n'est qu'un repli par défaut.
  */
 export const OCCASIONS: [OccasionKey, string, string, number, "principale" | "secondaire"][] = [
-  ["quotidien", "Quotidien / décontracté", "Courses, école, journée libre", 1, "principale"],
-  ["travail_formel", "Travail / bureau", "Journée de travail", 3, "principale"],
-  ["entretien", "Rendez-vous important", "Entretien, présentation, rendez-vous client", 4, "principale"],
-  ["date", "Date", "Rendez-vous amoureux", 1, "principale"],
-  ["soiree", "Sortie / soirée", "Restaurant, verre, cinéma, amis", 1, "principale"],
-  ["sortie_festive", "Sortie festive", "Concert, bar dansant, club, fête", 1, "principale"],
-  ["sport", "Sport", "Salle, fitness, activité sportive", 0, "principale"],
-  ["cocooning", "Cocooning / maison", "Chez soi, détente", 1, "principale"],
-  ["voyage", "Voyage / déplacement", "Train, avion, trajet, journée de voyage", 1, "secondaire"],
-  ["evenement", "Événement / cérémonie", "Mariage, baptême, cérémonie, occasion habillée", 4, "secondaire"],
+  ["quotidien", "Quotidien / Décontracté", "Courses, école, journée libre", 1, "principale"],
+  ["travail_formel", "Travail / Bureau", "Journée de travail", 3, "principale"],
+  ["entretien", "Rendez-vous important", "Entretien, réunion clé", 4, "principale"],
+  ["date", "Date", "Tête-à-tête", 3, "principale"],
+  ["soiree", "Sortie / Soirée", "Bar, dîner, entre amis", 3, "principale"],
+  ["festive", "Sortie festive", "Club, anniversaire, bal", 3, "principale"],
+  ["sport", "Sport", "Actif, technique", 0, "principale"],
+  ["cocooning", "Cocooning / Maison", "Chez soi, détente", 0, "principale"],
+  ["voyage", "Voyage / Déplacement", "Confortable, polyvalent", 1, "secondaire"],
+  ["evenement_perso", "Événement / Cérémonie", "Mariage, baptême", 4, "secondaire"],
 ];
 
 /** Sous-contexte de l'occasion "Date" — seul déterminant de sa formalité (recette 12/08/2026). */
 export const DATE_CONTEXTS: [DateContext, number][] = [
-  ["Restaurant / romantique", 4],
+  ["Restaurant / date romantique", 4],
   ["Verre", 1],
   ["Cinéma / balade", 1],
   ["Activité", 1],
@@ -114,8 +114,8 @@ export const OCC_SHORT: Partial<Record<OccasionKey, string>> = {
   entretien: "Rendez-vous",
   date: "Date",
   soiree: "Sortie",
-  sortie_festive: "Sortie festive",
-  evenement: "Cérémonie",
+  festive: "Sortie festive",
+  evenement_perso: "Cérémonie",
 };
 
 export const OCC_LABELS: Record<OccasionKey, string> = { all: "Toutes" } as Record<OccasionKey, string>;

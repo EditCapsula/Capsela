@@ -67,15 +67,17 @@ export default function PieceScreen() {
       <div className="font-serif text-[24px] text-ink mt-1">{active.name}</div>
       <div className="text-[13px] text-muted mt-[6px]">{active.color}</div>
 
-      <div className="flex items-center gap-[9px] mt-5 bg-card border border-border rounded-[14px] px-4 py-[14px]">
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ background: pNever ? "#A66950" : "#7B7366" }}
-        />
-        <span className="text-[13px]" style={{ color: pNever ? "#A66950" : "#7B7366" }}>
-          {pNever ? "Jamais porté" : wornAgo(active.worn)}
-        </span>
-      </div>
+      {!suggested && (
+        <div className="flex items-center gap-[9px] mt-5 bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ background: pNever ? "#A66950" : "#7B7366" }}
+          />
+          <span className="text-[13px]" style={{ color: pNever ? "#A66950" : "#7B7366" }}>
+            {pNever ? "Jamais porté" : wornAgo(active.worn)}
+          </span>
+        </div>
+      )}
 
       <div className="flex flex-col gap-[9px] mt-3 bg-card border border-border rounded-[14px] px-4 py-[14px]">
         {active.brand && <InfoRow label="Marque" value={active.brand} />}

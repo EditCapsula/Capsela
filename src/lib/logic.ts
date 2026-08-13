@@ -51,16 +51,16 @@ export function occasionFit(it: Item, occ: OccasionKey): boolean {
     case "quotidien":
       return /baskets|jean droit|chino|t-shirt|sweat|mocassins|ballerines|cabas|kaki|sable|crème/.test(n);
     case "travail_formel":
-      return /tailleur|chemis|blazer|blouse|escarpin|mocassin|gilet|robe chemise|robe droite|marine|noir|t-shirt|sweat|jean droit|chino|pull|ballerines/.test(n);
+      return /tailleur|chemis|blazer|blouse|escarpin|mocassin|gilet|robe chemise|robe droite|marine|noir/.test(n);
     case "entretien":
       return /tailleur|blazer|chemis|escarpin|robe chemise|robe droite|marine|noir/.test(n);
     case "date":
       return /soie|robe|blouse|escarpin|jupe|foulard|rose poudré|bordeaux/.test(n);
     case "soiree":
-      return /soie|robe|escarpin|doré|bordeaux|noir|t-shirt|jean|baskets/.test(n);
-    case "sortie_festive":
-      return /soie|robe|escarpin|doré|bordeaux|noir|paillet|clouté/.test(n);
-    case "evenement":
+      return /soie|robe|escarpin|doré|bordeaux|noir/.test(n);
+    case "festive":
+      return /soie|robe|escarpin|doré|paillet|bordeaux|noir|glamour/.test(n);
+    case "evenement_perso":
       return /soie|robe longue|robe droite|escarpin|dentelle|doré|glamour|paillet|tailleur|chemis/.test(n);
     case "sport":
       return /sweat|jean brut|molleton|baskets|coupe-vent|débardeur|jogging/.test(n);
@@ -183,7 +183,8 @@ export function generateOutfit(
       r = r.filter((i) => {
         if (i.cat === "chaussures") return formalityOf(i) === 0;
         if (i.cat === "sac") return formalityOf(i) === 0 || i.sacType === "Cabas";
-        if (i.cat === "bijou" || i.cat === "accessoire") return true;
+        if (i.cat === "bijou") return false;
+        if (i.cat === "accessoire") return true;
         return formalityOf(i) === 0;
       });
     }
@@ -313,7 +314,8 @@ export function swapOutfitPiece(
     candidates = candidates.filter((i) => {
       if (i.cat === "chaussures") return formalityOf(i) === 0;
       if (i.cat === "sac") return formalityOf(i) === 0 || i.sacType === "Cabas";
-      if (i.cat === "bijou" || i.cat === "accessoire") return true;
+      if (i.cat === "bijou") return false;
+      if (i.cat === "accessoire") return true;
       return formalityOf(i) === 0;
     });
   }

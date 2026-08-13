@@ -44,7 +44,7 @@ export default function HomeScreen() {
       ghost: "01",
     },
     {
-      title: "Capsule par défaut",
+      title: "Tes capsules",
       body: "Une sélection déjà prête, pensée pour ton style.",
       onOpen: actions.goCapsule,
       bg: "#F0E7D9",

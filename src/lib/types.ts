@@ -23,18 +23,18 @@ export type OccasionKey =
   | "entretien"
   | "date"
   | "soiree"
-  | "sortie_festive"
+  | "festive"
   | "sport"
   | "cocooning"
   | "voyage"
-  | "evenement";
+  | "evenement_perso";
 
 /** Sous-choix de l'occasion "travail_formel" — Présentiel relève le niveau de formalité minimum, Télétravail l'abaisse. */
 export type WorkMode = "Présentiel" | "Télétravail";
 /** Sous-choix de l'occasion "voyage" — n'affecte pas la formalité, seule la Longue distance affiche une carte conseil. */
 export type TravelMode = "Court trajet" | "Longue distance";
 /** Sous-choix de l'occasion "date" — seul déterminant de sa formalité, variable contrairement aux autres occasions (recette 12/08/2026). */
-export type DateContext = "Restaurant / romantique" | "Verre" | "Cinéma / balade" | "Activité" | "Soirée festive";
+export type DateContext = "Restaurant / date romantique" | "Verre" | "Cinéma / balade" | "Activité" | "Soirée festive";
 
 export type ShoeType =
   | "Baskets"
