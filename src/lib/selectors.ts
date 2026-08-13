@@ -19,15 +19,20 @@ export interface JournalStats {
   never: number;
   pctWorn: number;
   hasItems: boolean;
+  wornThisWeek: number;
 }
 
-/** Statistiques du Journal : part du dressing réel déjà portée (au moins une fois, via une tenue validée). */
+/** Statistiques du Journal : part du dressing réel déjà portée (au moins une fois, via une tenue validée), et tenues portées cette semaine. */
 export function journalStats(items: Item[], history: HistoryEntry[]): JournalStats {
   const total = items.length;
   const worn = items.filter((i) => wornFromHistory(history, i.id)).length;
   const never = total - worn;
   const pctWorn = total ? Math.round((worn / total) * 100) : 0;
-  return { total, worn, never, pctWorn, hasItems: total > 0 };
+  const wornThisWeek = history.filter((h) => {
+    const diffDays = (Date.now() - h.ts) / 86400000;
+    return diffDays >= 0 && diffDays < 7;
+  }).length;
+  return { total, worn, never, pctWorn, hasItems: total > 0, wornThisWeek };
 }
 
 export interface JournalEntry {

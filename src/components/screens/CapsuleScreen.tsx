@@ -101,8 +101,18 @@ export default function CapsuleScreen() {
                   onClick={() => actions.startReplace(it.id, it.cat)}
                   className="mt-[6px] w-full text-center text-[10.5px] text-muted border border-border rounded-full py-[6px] px-2 cursor-pointer"
                 >
-                  Remplacer
+                  J&apos;ai déjà ça
                 </button>
+                {it.affLink && (
+                  <a
+                    href={it.affLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-[6px] block w-full text-center text-[10.5px] text-terracotta border border-border rounded-full py-[6px] px-2 cursor-pointer"
+                  >
+                    Trouver cette pièce
+                  </a>
+                )}
                 <button
                   onClick={() => actions.dismissSuggested(it.id)}
                   className="mt-[6px] w-full text-center text-[10.5px] text-[#9C6B5A] border border-border rounded-full py-[6px] px-2 cursor-pointer"

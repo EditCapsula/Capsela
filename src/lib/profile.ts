@@ -67,7 +67,6 @@ export const GENDERS: { key: Gender; label: string }[] = [
   { key: "femme", label: "Femme" },
   { key: "homme", label: "Homme" },
   { key: "neutre", label: "Neutre / non-binaire" },
-  { key: "non_precise", label: "Préfère ne pas dire" },
 ];
 
 export function genderLabel(g: Gender | null): string {
@@ -141,19 +140,13 @@ export function paletteSummary(profile: Profile): string {
 
 export const STYLE_OPTIONS = [
   "Minimaliste",
-  "Bohème",
-  "Classique chic",
-  "Working girl",
-  "Romantique",
-  "Streetwear",
   "Casual chic",
-  "Sportswear",
+  "Classique chic",
+  "Romantique",
+  "Bohème",
+  "Streetwear",
   "Preppy",
-  "Rock",
-  "Vintage / rétro",
   "Glamour",
-  "Éclectique",
-  "Nature / éco",
 ];
 
 export const MORPHOLOGIES = [

@@ -89,6 +89,8 @@ export interface Item {
   accessoireType?: AccessoireType;
   /** Sous-type générique (haut, pull, bas, robe, veste, manteau...) — toujours facultatif (seul le type de chaussure est bloquant, cf. shoeType). */
   subtype?: string;
+  /** Lien affilié (pièces suggérées uniquement) — absent tant qu'aucune source de données affiliées n'est branchée ; le bouton "Trouver cette pièce" ne s'affiche que si présent. */
+  affLink?: string;
 }
 
 export interface City {

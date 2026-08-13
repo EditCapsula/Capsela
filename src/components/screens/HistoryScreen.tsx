@@ -19,17 +19,23 @@ export default function HistoryScreen() {
 
       {stats.hasItems && (
         <>
-          <div className="mt-5 bg-ink rounded-2xl p-5">
-            <div className="flex items-baseline gap-2">
-              <span className="font-serif text-[38px] leading-[.85] text-cream">{stats.pctWorn}%</span>
-              <span className="text-[12.5px] text-[#B3AA9B]">de ton dressing déjà porté</span>
+          <div className="flex gap-[10px] mt-5">
+            <div className="flex-1 bg-ink rounded-[20px] p-[18px]">
+              <div className="font-serif text-[32px] leading-[.85] text-cream">{stats.pctWorn}%</div>
+              <div className="text-[11px] text-[#B3AA9B] mt-2 leading-[1.4]">du dressing déjà porté</div>
             </div>
-            <div className="h-[7px] bg-[#3A352D] rounded-full overflow-hidden mt-[14px]">
-              <div className="h-full bg-terracotta rounded-full" style={{ width: stats.pctWorn + "%" }} />
+            <div className="flex-1 bg-card border border-border rounded-[20px] p-[18px]">
+              <div className="font-serif text-[32px] leading-[.85] text-terracotta">{stats.wornThisWeek}</div>
+              <div className="text-[11px] text-muted mt-2 leading-[1.4]">
+                tenue{stats.wornThisWeek <= 1 ? "" : "s"} portée{stats.wornThisWeek <= 1 ? "" : "s"} cette semaine
+              </div>
             </div>
-            <div className="text-[11.5px] text-[#B3AA9B] mt-[10px] leading-[1.5]">
-              {stats.worn} portées · {stats.never} pas encore — sur {stats.total} pièces.
-            </div>
+          </div>
+          <div className="h-[7px] bg-[#EFE7DA] rounded-full overflow-hidden mt-3">
+            <div className="h-full bg-terracotta rounded-full" style={{ width: stats.pctWorn + "%" }} />
+          </div>
+          <div className="text-[11.5px] text-muted mt-[10px] leading-[1.5]">
+            {stats.worn} portées · {stats.never} pas encore — sur {stats.total} pièces.
           </div>
           <button
             onClick={actions.goNeverWorn}

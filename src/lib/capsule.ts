@@ -18,19 +18,13 @@ export function currentSeasonKey(): CapsuleSeason {
 
 const STYLE_FIT: Record<string, RegExp> = {
   Minimaliste: /t-shirt|jean droit|chemise en lin|pull col rond|pantalon large|baskets blanches|mocassins|sac cabas|ceinture/,
-  "Bohème": /lin|foulard|jupe|robe portefeuille|robe longue|sandales|chapeau|écharpe|kaki|moutarde|rouille/,
-  "Classique chic": /chemis|tailleur|escarpin|gilet|pull torsad|robe chemise|ballerines|trench|manteau laine/,
-  "Working girl": /tailleur|chemisier|blazer|escarpin|trench|robe droite|sac cabas/,
-  Romantique: /blouse|soie|rose poudré|jupe|robe|dentelle|foulard|ballerines/,
-  Streetwear: /sweat|baskets|jean brut|jogging|coupe-vent|débardeur|molleton/,
   "Casual chic": /jean|chemise en lin|mocassins|cabas|pull col rond|ballerines/,
-  Sportswear: /baskets|sweat|jogging|molleton|coupe-vent|débardeur/,
+  "Classique chic": /chemis|tailleur|escarpin|gilet|pull torsad|robe chemise|ballerines|trench|manteau laine/,
+  Romantique: /blouse|soie|rose poudré|jupe|robe|dentelle|foulard|ballerines/,
+  "Bohème": /lin|foulard|jupe|robe portefeuille|robe longue|sandales|chapeau|écharpe|kaki|moutarde|rouille/,
+  Streetwear: /sweat|baskets|jean brut|jogging|coupe-vent|débardeur|molleton/,
   Preppy: /chemise|pull col rond|gilet|mocassins|ceinture|rayé|marine|chino/,
-  Rock: /noir|bottines|bottes|jean brut|débardeur|cuir|escarpins|bordeaux|clouté/,
-  "Vintage / rétro": /soie|dentelle|robe longue|foulard|chapeau|moutarde|bordeaux/,
   Glamour: /soie|escarpins|robe|doré|paillet/,
-  "Éclectique": /imprimé|foulard|moutarde|rouille|kaki/,
-  "Nature / éco": /lin|coton|kaki|olive|crème|blanc cassé|taupe/,
 };
 
 export function styleFit(it: Item, style: string): boolean {
