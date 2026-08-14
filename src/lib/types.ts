@@ -109,6 +109,12 @@ export interface Item {
   /** Ton et intensité de couleur stockés (source : vestiaire_universel) — priment sur la déduction depuis le hex quand présents ; alimentent le rapprochement avec la palette personnelle du profil dans la capsule par défaut. */
   tonsCouleur?: Tons;
   intensiteCouleur?: IntensiteCouleur;
+  /** Pièce "statement" stockée (source : vestiaire_universel) — prime sur la déduction par regex/couleur non neutre quand présente. */
+  statement?: boolean;
+  /** Métal dominant stocké (source : vestiaire_universel, bijou/accessoire uniquement) — prime sur la déduction par regex quand présent. */
+  metalDominant?: "or" | "argent";
+  /** Rôle de la couleur dans la palette personnelle (source : vestiaire_universel) — base/neutre/accent, reflète la structure de l'onboarding Palette. Pas encore consommé par le moteur de sélection de capsule. */
+  paletteRole?: "base" | "neutre" | "accent";
 }
 
 export interface City {

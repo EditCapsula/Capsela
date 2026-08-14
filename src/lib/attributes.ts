@@ -16,7 +16,7 @@ export const COUPES: Coupe[] = ["Serré", "Ajusté", "Ample"];
 export function detectMatiere(name: string): Matiere | null {
   const n = (name || "").toLowerCase();
   if (/lin/.test(n)) return "Lin";
-  if (/laine|pull|gilet|tricot/.test(n)) return "Laine";
+  if (/laine|pull|gilet|tricot|maille/.test(n)) return "Laine";
   if (/soie/.test(n)) return "Soie";
   if (/cuir|bottine|escarpin|mocassin|perfecto/.test(n)) return "Cuir";
   if (/jean|denim/.test(n)) return "Denim";
@@ -156,6 +156,7 @@ export function formalityOf(it: Item): number {
 
 /** Pièce "statement" (imprimé fort, couleur vive, coupe originale) — R-S5, R-S7. */
 export function isStatement(it: Item): boolean {
+  if (it.statement != null) return it.statement;
   const text = n(it);
   if (/imprimé|paillet|clouté|brodé|fleuri|graphique|rayé/.test(text)) return true;
   return !isNeutralColor(it.color) && it.color !== "Beige rosé";
@@ -163,8 +164,9 @@ export function isStatement(it: Item): boolean {
 
 /** Métal dominant — pertinent pour bijou/accessoire uniquement. */
 export function metalOf(it: Item): "or" | "argent" | "aucun" {
-  const text = n(it);
   if (it.cat !== "bijou" && it.cat !== "accessoire") return "aucun";
+  if (it.metalDominant) return it.metalDominant;
+  const text = n(it);
   if (/dor[ée]/.test(text)) return "or";
   if (/argent[ée]/.test(text)) return "argent";
   return "aucun";

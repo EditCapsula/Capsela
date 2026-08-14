@@ -1,5 +1,5 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
-import { detectAccessoireType, detectBijouType, detectSacType } from "./attributes";
+import { detectAccessoireType, detectBijouType, detectMatiere, detectSacType } from "./attributes";
 import type { CatalogItem } from "./catalog";
 import type { CategoryKey, Coupe, IntensiteCouleur, Matiere, Season, ShoeType, Tons } from "./types";
 
@@ -17,21 +17,35 @@ import type { CategoryKey, Coupe, IntensiteCouleur, Matiere, Season, ShoeType, T
  *   pull...), sinon la taxonomie du brief (hauts, pulls_gilets...).
  * - `styles` / `morphologies` : liste libre séparée par virgule, point-virgule
  *   ou barre verticale.
- * - `niveau_formalite` / `role_piece` / `genre` / `matiere` / `tons` /
- *   `intensite` : valeurs des contraintes CHECK posées dans les migrations
- *   0003 et 0005.
+ * - `niveau_formalite` / `role_piece` / `genre` / `tons` / `intensite` /
+ *   `coupe` / `metal_dominant` / `role_couleur_palette` : valeurs des
+ *   contraintes CHECK posées dans les migrations 0003, 0005 et 0006.
+ * - `matiere` : lecture souple — les données réelles utilisent des
+ *   descriptions plus riches qu'un enum strict (ex. "Maille fine", "lin,
+ *   jean" pour un tissu qui existe dans les deux) ; valeur exacte connue en
+ *   priorité, sinon même détection par mots-clés que la saisie manuelle
+ *   (detectMatiere), jamais bloquant. Colonne sans contrainte CHECK depuis
+ *   la migration 0006.
+ * - `saison_capsule` : liste libre séparée par virgule (ex. "Automne,
+ *   Hiver, Printemps") — mappée sur le bucket météo (Printemps/Été vs
+ *   Automne/Hiver) s'il n'y a qu'un seul des deux couvert, sinon "Toutes
+ *   saisons" (y compris si les deux buckets sont couverts à la fois).
  * - `tons` (chauds/froids/les_deux) et `intensite` (douce/intense/lumineuse/
  *   melange) alimentent le rapprochement avec la palette personnelle du
  *   profil (affinité/intensité, recette 12/08/2026) dans la capsule par
  *   défaut — cf. paletteFit dans capsule.ts. Une valeur absente est déduite
  *   du hex (cf. tonsOf/intensiteOf dans attributes.ts), jamais bloquant.
- * - `meteo_min_temp`/`meteo_max_temp`, `resiste_pluie` : pas encore exploités
- *   (aucun signal météo temps réel côté app actuellement) — lus mais ignorés
- *   pour l'instant.
+ * - `lien_affiliation` : mappé sur Item.affLink, active le bouton "Acheter"
+ *   sur l'écran Capsule quand présent.
+ * - `role_couleur_palette` (base/neutre/accent) : lu et stocké
+ *   (Item.paletteRole) mais pas encore consommé par le moteur de sélection
+ *   de capsule — en attente de décision sur son usage exact.
+ * - `couleur_secondaire`, `meteo_min_temp`/`meteo_max_temp`, `resiste_pluie` :
+ *   pas encore exploités côté app — lus mais ignorés pour l'instant.
  */
 export const VESTIAIRE_ID_OFFSET = 100000;
 
-interface VestiaireRow {
+export interface VestiaireRow {
   id: number;
   category: string | null;
   url_image: string | null;
@@ -52,6 +66,12 @@ interface VestiaireRow {
   matiere: string | null;
   tons: string | null;
   intensite: string | null;
+  statement: boolean | null;
+  role_couleur_palette: string | null;
+  coupe: string | null;
+  couleur_secondaire: string | null;
+  metal_dominant: string | null;
+  lien_affiliation: string | null;
 }
 
 const CATEGORY_MAP: Record<string, CategoryKey> = {
@@ -118,7 +138,32 @@ function mapGenre(raw: string | null): "femme" | "unisexe" {
 
 const MATIERES: Matiere[] = ["Coton", "Lin", "Laine", "Soie", "Cuir", "Denim", "Synthétique"];
 function mapMatiere(raw: string | null): Matiere | undefined {
-  return MATIERES.find((m) => m.toLowerCase() === (raw || "").trim().toLowerCase());
+  if (!raw) return undefined;
+  const exact = MATIERES.find((m) => m.toLowerCase() === raw.trim().toLowerCase());
+  if (exact) return exact;
+  return detectMatiere(raw) || undefined;
+}
+
+function mapCoupe(raw: string | null): Coupe | undefined {
+  const v = (raw || "").trim();
+  if (v === "Serré" || v === "Ajusté" || v === "Ample") return v;
+  return undefined;
+}
+
+function mapStatement(raw: boolean | null): boolean | undefined {
+  return raw ?? undefined;
+}
+
+function mapMetalDominant(raw: string | null): "or" | "argent" | undefined {
+  const v = (raw || "").trim().toLowerCase();
+  if (v === "or" || v === "argent") return v;
+  return undefined;
+}
+
+function mapPaletteRole(raw: string | null): "base" | "neutre" | "accent" | undefined {
+  const v = (raw || "").trim().toLowerCase();
+  if (v === "base" || v === "neutre" || v === "accent") return v;
+  return undefined;
 }
 
 function mapTons(raw: string | null): Tons | undefined {
@@ -134,9 +179,13 @@ function mapIntensite(raw: string | null): IntensiteCouleur | undefined {
 }
 
 function mapSaisonToSeason(raw: string | null): Season {
-  const v = (raw || "").trim().toLowerCase();
-  if (v === "printemps" || v === "été" || v === "ete") return "Printemps / Été";
-  if (v === "automne" || v === "hiver") return "Automne / Hiver";
+  if (!raw) return "Toutes saisons";
+  const tokens = raw.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const hasPrintempsEte = tokens.some((t) => t === "printemps" || t === "été" || t === "ete");
+  const hasAutomneHiver = tokens.some((t) => t === "automne" || t === "hiver");
+  if (hasPrintempsEte && hasAutomneHiver) return "Toutes saisons";
+  if (hasPrintempsEte) return "Printemps / Été";
+  if (hasAutomneHiver) return "Automne / Hiver";
   return "Toutes saisons";
 }
 
@@ -159,14 +208,13 @@ const SHOE_TYPE_MAP: Record<string, ShoeType> = {
   "chaussures d'intérieur": "Chaussures d'intérieur",
 };
 
-function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
+export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
   const cat = mapCategory(row.category);
   if (!cat) return null;
   const name = (row.name || "").trim();
   if (!name) return null;
   const hex = row.hex || "#DCCFBC";
   const color = row.couleur_dominante || "";
-  const coupe: Coupe | undefined = undefined; // pas de colonne coupe dédiée pour l'instant, dérivée du nom si besoin
 
   return {
     id: VESTIAIRE_ID_OFFSET + row.id,
@@ -178,7 +226,7 @@ function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     worn: null,
     shoeType: cat === "chaussures" ? SHOE_TYPE_MAP[(row.sous_type || "").trim().toLowerCase()] : undefined,
     matiere: mapMatiere(row.matiere),
-    coupe,
+    coupe: mapCoupe(row.coupe),
     sacType: cat === "sac" ? detectSacType(name) || undefined : undefined,
     bijouType: cat === "bijou" ? detectBijouType(name) || undefined : undefined,
     accessoireType: cat === "accessoire" ? detectAccessoireType(name) || undefined : undefined,
@@ -191,6 +239,10 @@ function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     genre: mapGenre(row.genre),
     tonsCouleur: mapTons(row.tons),
     intensiteCouleur: mapIntensite(row.intensite),
+    statement: mapStatement(row.statement),
+    metalDominant: mapMetalDominant(row.metal_dominant),
+    paletteRole: mapPaletteRole(row.role_couleur_palette),
+    affLink: row.lien_affiliation || undefined,
   };
 }
 
