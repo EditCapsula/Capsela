@@ -5,6 +5,7 @@ import { useAuth } from "./auth";
 import { CATALOG, type CatalogItem } from "./catalog";
 import { computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
 import { fetchVestiaireUniversel } from "./vestiaire";
+import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { generateOutfit, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { paletteHexes } from "./profile";
@@ -22,6 +23,7 @@ import type {
   BijouType,
   CapsuleSeason,
   CategoryKey,
+  City,
   Coupe,
   DateContext,
   Item,
@@ -195,6 +197,8 @@ export interface Actions {
 interface CapselaContextValue {
   state: AppState;
   weather: Weather;
+  /** Ville affichée (météo réelle de la position si consentie et disponible, sinon la ville simulée courante — cf. geoIndex). */
+  geoCity: City;
   /** Capsule par défaut personnalisée (suggestions du catalogue). */
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
@@ -227,7 +231,30 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     stateRef.current = state;
   }, [state]);
 
-  const geoCity = CITIES[(state.geoIndex || 0) % CITIES.length];
+  // Météo réelle de la position (OpenWeatherMap) quand géolocalisation +
+  // "météo de ma position" sont activées (profile.prefs, recette écran
+  // "Localisation & météo") — sinon on retombe sur la liste de villes
+  // simulée (CITIES, cycle manuel via "Modifier"), jamais d'écran bloqué en
+  // attendant une réponse réseau ou un refus de permission.
+  const [liveWeather, setLiveWeather] = useState<City | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!profile.prefs.geoConsent || !profile.prefs.weatherFromGeo) {
+        if (!cancelled) setLiveWeather(null);
+        return;
+      }
+      const pos = await getBrowserPosition();
+      if (!pos || cancelled) return;
+      const w = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude);
+      if (!cancelled && w) setLiveWeather(w);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profile.prefs.geoConsent, profile.prefs.weatherFromGeo]);
+
+  const geoCity: City = liveWeather ?? CITIES[(state.geoIndex || 0) % CITIES.length];
   const weather: Weather = useMemo(() => {
     const season = weatherSeasonBucket(geoCity.temp);
     return { season, temp: geoCity.temp, label: geoCity.label, seasons: [season, "Toutes saisons"] };
@@ -626,6 +653,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const value: CapselaContextValue = {
     state,
     weather,
+    geoCity,
     defaultCapsule,
     wardrobePool,
     vestiairePool,

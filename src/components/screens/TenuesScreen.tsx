@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import { CATLABEL, CITIES, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
+import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -35,7 +35,7 @@ function missingSuggestionText(missingCats: string[]): string {
 }
 
 export default function TenuesScreen() {
-  const { state, weather, wardrobePool, actions } = useCapsela();
+  const { state, weather, geoCity, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
   const [suggestionInfoId, setSuggestionInfoId] = useState<number | null>(null);
@@ -43,7 +43,6 @@ export default function TenuesScreen() {
   const now = new Date();
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
   const firstNameOrYou = profile.displayName || "toi";
-  const geoCity = CITIES[(state.geoIndex || 0) % CITIES.length];
 
   const outfitPieces = (state.outfit || [])
     .map((id) => wardrobePool.find((i) => i.id === id))
