@@ -3,7 +3,6 @@
 import AppHeader from "@/components/AppHeader";
 import { CATS } from "@/lib/data";
 import { CAPSULE_SEASONS, computeDefaultCapsule, currentSeasonKey, type CapsuleSeason } from "@/lib/capsule";
-import { GENDERS } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 
@@ -13,18 +12,12 @@ export default function CapsuleScreen() {
 
   const capsuleSeason: CapsuleSeason = state.capsuleSeason || currentSeasonKey();
   const capsule = computeDefaultCapsule(profile, weather.temp, state.suggestedExcluded, capsuleSeason, vestiairePool);
-  const styleLabel = profile.styles[0] || GENDERS.find((g) => g.key === profile.gender)?.label || "";
-
   const count = (cat: string) => capsule.filter((i) => i.cat === cat).length;
   const tops = count("haut");
   const bottoms = count("pantalon") + count("jean") + count("jupe") + count("short");
   const dresses = count("robe") + count("combinaison");
   const shoes = Math.max(1, count("chaussures"));
   const looksCount = (tops * bottoms + dresses) * shoes;
-
-  const introText = styleLabel
-    ? "Composée à partir de ton style " + styleLabel + " et de ta palette personnelle — le temps que tu remplisses ton dressing."
-    : "Composée à partir de ton profil et de ta palette personnelle — le temps que tu remplisses ton dressing.";
 
   const groups = CATS.map(([key, , plural]) => ({
     key,
@@ -46,6 +39,9 @@ export default function CapsuleScreen() {
         <div>
           <div className="text-[11px] tracking-[.18em] uppercase text-muted">Proposée pour toi</div>
           <div className="font-serif text-[24px] text-ink mt-[2px]">Ta capsule</div>
+          <div className="text-[12px] text-muted leading-[1.5] mt-[6px]">
+            Composée à partir de ton profil et de ta palette personnelle. Elle s&apos;ajustera automatiquement au fur et à mesure que tu ajouteras tes propres pièces.
+          </div>
         </div>
       </div>
 
@@ -71,13 +67,6 @@ export default function CapsuleScreen() {
         </div>
         <div className="text-[12.5px] text-muted mt-[5px]">
           {capsule.length} pièces · {looksCount} looks possibles
-        </div>
-      </div>
-
-      <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-        <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
-        <div className="text-[12.5px] text-muted-3 leading-[1.5]">
-          {introText + " Elle s'ajustera automatiquement dès que tu ajouteras tes propres pièces."}
         </div>
       </div>
 
@@ -110,15 +99,9 @@ export default function CapsuleScreen() {
                     rel="noopener noreferrer"
                     className="mt-[6px] block w-full text-center text-[10.5px] text-terracotta border border-border rounded-full py-[6px] px-2 cursor-pointer"
                   >
-                    Trouver cette pièce
+                    Acheter
                   </a>
                 )}
-                <button
-                  onClick={() => actions.dismissSuggested(it.id)}
-                  className="mt-[6px] w-full text-center text-[10.5px] text-[#9C6B5A] border border-border rounded-full py-[6px] px-2 cursor-pointer"
-                >
-                  Retirer
-                </button>
               </div>
             ))}
           </div>
