@@ -63,6 +63,11 @@ export type AccessoireType =
 export type Matiere = "Coton" | "Lin" | "Laine" | "Soie" | "Cuir" | "Denim" | "Synthétique";
 export type Coupe = "Serré" | "Ajusté" | "Ample";
 
+/** Ton dominant de la couleur d'une pièce — alimente le rapprochement avec l'affinité de palette du profil (Tons chauds/froids/Les deux). */
+export type Tons = "chauds" | "froids" | "les_deux";
+/** Intensité de la couleur d'une pièce — alimente le rapprochement avec l'intensité de palette du profil. */
+export type IntensiteCouleur = "douce" | "intense" | "lumineuse" | "melange";
+
 export interface Item {
   id: number;
   name: string;
@@ -101,6 +106,9 @@ export interface Item {
   morphologyTags?: string[];
   /** true pour une pièce indispensable de capsule (source : vestiaire_universel) — priorisée dans la sélection de la capsule par défaut. */
   estBasiqueCapsule?: boolean;
+  /** Ton et intensité de couleur stockés (source : vestiaire_universel) — priment sur la déduction depuis le hex quand présents ; alimentent le rapprochement avec la palette personnelle du profil dans la capsule par défaut. */
+  tonsCouleur?: Tons;
+  intensiteCouleur?: IntensiteCouleur;
 }
 
 export interface City {

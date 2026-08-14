@@ -1,4 +1,4 @@
-import type { AccessoireType, BijouType, CategoryKey, Coupe, Item, Matiere, SacType } from "./types";
+import type { AccessoireType, BijouType, CategoryKey, Coupe, IntensiteCouleur, Item, Matiere, SacType, Tons } from "./types";
 import { SUBTYPES } from "./data";
 
 /**
@@ -205,4 +205,47 @@ export function huesHarmonious(hexA: string, hexB: string): boolean {
   const diff = Math.abs(a - b);
   const wrapped = Math.min(diff, 360 - diff);
   return wrapped <= 40 || (wrapped >= 150 && wrapped <= 210);
+}
+
+/** Saturation et luminosité (0-1) approximées depuis le hex — complète hueOf pour dériver tons/intensité. */
+function satLightOf(hex: string): { s: number; l: number } {
+  const v = hex.replace("#", "");
+  const r = parseInt(v.slice(0, 2), 16) / 255;
+  const g = parseInt(v.slice(2, 4), 16) / 255;
+  const b = parseInt(v.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const s = max === min ? 0 : (l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min));
+  return { s, l };
+}
+
+/**
+ * Ton chaud/froid de la couleur — la valeur stockée prime (source :
+ * vestiaire_universel), sinon déduite du hex (teinte + quasi-neutres gris/
+ * blanc/noir/très clairs ou très foncés rangés dans "les_deux"). Sert au
+ * rapprochement avec l'affinité de palette du profil (Tons chauds/froids).
+ */
+export function tonsOf(it: Item): Tons {
+  if (it.tonsCouleur) return it.tonsCouleur;
+  const { s, l } = satLightOf(it.hex);
+  if (s < 0.12 || l > 0.92 || l < 0.08) return "les_deux";
+  const h = hueOf(it.hex);
+  if (h < 70 || h >= 320) return "chauds";
+  if (h >= 150 && h < 320) return "froids";
+  return "les_deux";
+}
+
+/**
+ * Intensité de la couleur — la valeur stockée prime (source :
+ * vestiaire_universel), sinon déduite du hex (saturation/luminosité). Sert au
+ * rapprochement avec l'intensité de palette du profil.
+ */
+export function intensiteOf(it: Item): IntensiteCouleur {
+  if (it.intensiteCouleur) return it.intensiteCouleur;
+  const { s, l } = satLightOf(it.hex);
+  if (s < 0.18) return "douce";
+  if (l < 0.35 && s > 0.3) return "intense";
+  if (l > 0.6 && s > 0.35) return "lumineuse";
+  return "melange";
 }

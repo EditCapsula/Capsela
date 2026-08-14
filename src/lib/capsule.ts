@@ -1,6 +1,7 @@
 import { CATALOG, type CatalogItem } from "./catalog";
-import { paletteHexes, type Profile } from "./profile";
-import type { CapsuleSeason, CategoryKey, Item, Season } from "./types";
+import { intensiteOf, tonsOf } from "./attributes";
+import { paletteHexes, type Affinite, type Intensite, type Profile } from "./profile";
+import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, Season, Tons } from "./types";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
@@ -71,6 +72,40 @@ export function morphoVigilance(it: Item, morpho: string | null): boolean {
   return rx ? rx.test((it.name + " " + it.color).toLowerCase()) : false;
 }
 
+const INTENSITE_TAG: Record<Intensite, IntensiteCouleur> = {
+  "Douces et discrètes": "douce",
+  "Profondes et intenses": "intense",
+  "Lumineuses": "lumineuse",
+  "Un mélange": "melange",
+};
+
+/** La pièce contredit l'affinité de palette du profil — jamais si l'une des deux vaut "les deux"/pas de préférence. */
+function tonsConflict(itemTons: Tons, affinite: Affinite | null): boolean {
+  if (!affinite || affinite === "Les deux" || affinite === "Je ne sais pas") return false;
+  if (itemTons === "les_deux") return false;
+  const want: Tons = affinite === "Tons chauds" ? "chauds" : "froids";
+  return itemTons !== want;
+}
+
+/** La pièce contredit l'intensité de palette du profil — jamais si l'une des deux vaut "un mélange"/pas de préférence. */
+function intensiteConflict(itemIntensite: IntensiteCouleur, intensite: Intensite | null): boolean {
+  if (!intensite || intensite === "Un mélange") return false;
+  if (itemIntensite === "melange") return false;
+  return itemIntensite !== INTENSITE_TAG[intensite];
+}
+
+/**
+ * Compatibilité avec la palette personnelle du profil (recette 12/08/2026) :
+ * une pièce correspond si sa teinte est l'une des couleurs choisies (base/
+ * neutres/accents) OU si son ton et son intensité ne contredisent pas
+ * l'affinité/intensité déclarées — jamais exclusif, une pièce sans conflit
+ * connu passe toujours (esprit "préférence molle", comme R-S10).
+ */
+export function paletteFit(it: Item, profile: Profile): boolean {
+  if (paletteHexes(profile).includes(it.hex)) return true;
+  return !tonsConflict(tonsOf(it), profile.paletteAffinite) && !intensiteConflict(intensiteOf(it), profile.paletteIntensite);
+}
+
 /**
  * Capsule par défaut : sélection du catalogue personnalisée par le profil
  * (genre, météo de la ville, style, couleurs préférées) puis ordonnée par
@@ -103,9 +138,10 @@ export function computeDefaultCapsule(
   if (curated.length < 18) curated = base;
 
   const favColors = paletteHexes(profile);
-  if (favColors.length) {
-    const cFit = curated.filter((it) => favColors.includes(it.hex));
-    if (cFit.length >= 12) curated = cFit;
+  const hasPaletteProfile = favColors.length > 0 || !!profile.paletteAffinite || !!profile.paletteIntensite;
+  if (hasPaletteProfile) {
+    const pFit = curated.filter((it) => paletteFit(it, profile));
+    if (pFit.length >= 12) curated = pFit;
   }
 
   // Priorité aux pièces indispensables (est_basique_capsule), puis tri par

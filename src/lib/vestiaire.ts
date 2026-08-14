@@ -1,7 +1,7 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { detectAccessoireType, detectBijouType, detectSacType } from "./attributes";
 import type { CatalogItem } from "./catalog";
-import type { CategoryKey, Coupe, Matiere, Season, ShoeType } from "./types";
+import type { CategoryKey, Coupe, IntensiteCouleur, Matiere, Season, ShoeType, Tons } from "./types";
 
 /**
  * Lecture de la table vestiaire_universel (Supabase) — source des 4 capsules
@@ -9,19 +9,25 @@ import type { CategoryKey, Coupe, Matiere, Season, ShoeType } from "./types";
  * pour ne jamais entrer en collision avec le catalogue statique de secours
  * (ids 1001+, cf. catalog.ts) ni avec les pièces réelles (ids Date.now()).
  *
- * ⚠️ Le format exact de plusieurs colonnes (styles, morphologies,
- * colorimetrie, category) n'a pas pu être confirmé sur des données réelles
- * — cette lecture applique une interprétation raisonnable, documentée
- * ci-dessous, à corriger une fois le format réel connu :
+ * ⚠️ Le format exact de plusieurs colonnes (styles, morphologies, category)
+ * n'a pas pu être confirmé sur des données réelles — cette lecture applique
+ * une interprétation raisonnable, documentée ci-dessous, à corriger une fois
+ * le format réel connu :
  * - `category` : essaie d'abord une valeur déjà au format interne (haut,
  *   pull...), sinon la taxonomie du brief (hauts, pulls_gilets...).
  * - `styles` / `morphologies` : liste libre séparée par virgule, point-virgule
  *   ou barre verticale.
- * - `niveau_formalite` / `role_piece` / `genre` / `matiere` : valeurs des
- *   contraintes CHECK posées dans la migration 0003.
- * - `colorimetrie`, `meteo_min_temp`/`meteo_max_temp`, `resiste_pluie` :
- *   pas encore exploités (aucun signal météo temps réel ni consommateur
- *   de ces champs côté app actuellement) — lus mais ignorés pour l'instant.
+ * - `niveau_formalite` / `role_piece` / `genre` / `matiere` / `tons` /
+ *   `intensite` : valeurs des contraintes CHECK posées dans les migrations
+ *   0003 et 0005.
+ * - `tons` (chauds/froids/les_deux) et `intensite` (douce/intense/lumineuse/
+ *   melange) alimentent le rapprochement avec la palette personnelle du
+ *   profil (affinité/intensité, recette 12/08/2026) dans la capsule par
+ *   défaut — cf. paletteFit dans capsule.ts. Une valeur absente est déduite
+ *   du hex (cf. tonsOf/intensiteOf dans attributes.ts), jamais bloquant.
+ * - `meteo_min_temp`/`meteo_max_temp`, `resiste_pluie` : pas encore exploités
+ *   (aucun signal météo temps réel côté app actuellement) — lus mais ignorés
+ *   pour l'instant.
  */
 export const VESTIAIRE_ID_OFFSET = 100000;
 
@@ -31,7 +37,6 @@ interface VestiaireRow {
   url_image: string | null;
   styles: string | null;
   morphologies: string | null;
-  colorimetrie: string | null;
   meteo_min_temp: number | null;
   meteo_max_temp: number | null;
   resiste_pluie: boolean | null;
@@ -45,6 +50,8 @@ interface VestiaireRow {
   hex: string | null;
   genre: string | null;
   matiere: string | null;
+  tons: string | null;
+  intensite: string | null;
 }
 
 const CATEGORY_MAP: Record<string, CategoryKey> = {
@@ -114,6 +121,18 @@ function mapMatiere(raw: string | null): Matiere | undefined {
   return MATIERES.find((m) => m.toLowerCase() === (raw || "").trim().toLowerCase());
 }
 
+function mapTons(raw: string | null): Tons | undefined {
+  const v = (raw || "").trim().toLowerCase();
+  if (v === "chauds" || v === "froids" || v === "les_deux") return v;
+  return undefined;
+}
+
+function mapIntensite(raw: string | null): IntensiteCouleur | undefined {
+  const v = (raw || "").trim().toLowerCase();
+  if (v === "douce" || v === "intense" || v === "lumineuse" || v === "melange") return v;
+  return undefined;
+}
+
 function mapSaisonToSeason(raw: string | null): Season {
   const v = (raw || "").trim().toLowerCase();
   if (v === "printemps" || v === "été" || v === "ete") return "Printemps / Été";
@@ -170,6 +189,8 @@ function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     morphologyTags: splitTags(row.morphologies),
     estBasiqueCapsule: row.est_basique_capsule ?? undefined,
     genre: mapGenre(row.genre),
+    tonsCouleur: mapTons(row.tons),
+    intensiteCouleur: mapIntensite(row.intensite),
   };
 }
 
