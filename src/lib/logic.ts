@@ -197,6 +197,11 @@ export function generateOutfit(
       // R-B13 — symétrique de R-B12 : une chaussure d'intérieur n'apparaît jamais hors Cocooning.
       r = r.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Chaussures d'intérieur");
     }
+    // R-B14 — aucun sac n'a de fonction chez soi : exclu en Cocooning et en
+    // Télétravail (sous-contexte de travail_formel), jamais en Présentiel.
+    if (occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail")) {
+      r = r.filter((i) => i.cat !== "sac");
+    }
     return r;
   };
 
@@ -329,6 +334,10 @@ export function swapOutfitPiece(
     candidates = candidates.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
   } else {
     candidates = candidates.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Chaussures d'intérieur");
+  }
+  // R-B14 — symétrique du filtre appliqué dans generateOutfit.
+  if (occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail")) {
+    candidates = candidates.filter((i) => i.cat !== "sac");
   }
   if (cat === "chaussures" && isDressy(occasion, workMode, dateContext)) {
     const nonBasket = candidates.filter((i) => i.shoeType !== "Baskets");
