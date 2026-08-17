@@ -220,16 +220,28 @@ export function generateOutfit(
     if (occasion === "travail_formel" && workMode === "Télétravail") {
       r = r.filter((i) => i.cat !== "accessoire");
     }
-    // R-B15 — symétrique de R-B11 : un vêtement de sport (formalité 0) est
-    // réservé à l'occasion Sport, jamais réutilisé ailleurs. Ne concerne que
-    // les catégories vêtement (CLOTHING_CATS) — baskets, sac cabas et
-    // accessoires sport restent des basiques réutilisables hors Sport,
-    // couverts par les heuristiques d'occasion existantes (occasionFit).
-    if (occasion !== "all" && occasion !== "sport") {
-      r = r.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) !== 0);
+    // R-B3 — filtrage dur (section 1 du moteur de règles) : un vêtement dont
+    // la formalité est sous le minimum requis par l'occasion est exclu, pas
+    // seulement signalé après coup. Limité aux catégories vêtement
+    // (CLOTHING_CATS) — chaussures/sacs/accessoires ont leurs propres règles
+    // dédiées (R-B6, R-B11...), ne pas les y soumettre casserait par exemple
+    // les baskets pour Quotidien (formalité 0 < minimum 1) alors qu'elles y
+    // sont explicitement adaptées.
+    if (occasion !== "all") {
+      const minFormality = effectiveFormality(occasion, workMode, dateContext);
+      r = r.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) >= minFormality);
     }
-    // R-B16 — une pièce qui ne se justifie que par temps ensoleillé (ex.
-    // lunettes de soleil) n'est jamais suggérée hors météo ensoleillée.
+    // R-B6 — les baskets ne sont jamais éligibles dès que l'occasion demande
+    // au moins business_casual (habillée), quelle que soit la disponibilité
+    // d'alternatives.
+    if (isDressy(occasion, workMode, dateContext)) {
+      r = r.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Baskets");
+    }
+    // R-B15 — une pièce qui ne se justifie que par temps ensoleillé (ex.
+    // lunettes de soleil) n'est jamais suggérée hors météo ensoleillée, dans
+    // le pool des suggestions automatiques (Tenue du jour, capsules) — ne
+    // s'applique pas au picker manuel de l'écran Création de looks (qui ne
+    // passe pas par hardCategoryFilter).
     if (!isSunny(weather)) {
       r = r.filter((i) => !i.necessiteSoleil);
     }
@@ -304,10 +316,9 @@ export function generateOutfit(
     if (v && !ids.includes(v.id)) ids.push(v.id);
   }
   const sh = (() => {
+    // Les baskets sont déjà exclues en amont si l'occasion est habillée (R-B6, hardCategoryFilter).
     const shoePool = poolFor(["chaussures"]).filter((i) => i.cat === "chaussures");
-    const nonBasket = shoePool.filter((i) => i.shoeType !== "Baskets");
-    const finalPool = isDressy(occasion, workMode, dateContext) && nonBasket.length ? nonBasket : shoePool;
-    const picked = rand(harmonize(finalPool, chosen, true));
+    const picked = rand(harmonize(shoePool, chosen, true));
     if (picked) chosen.push(picked);
     return picked;
   })();
@@ -378,17 +389,18 @@ export function swapOutfitPiece(
   if (occasion === "travail_formel" && workMode === "Télétravail") {
     candidates = candidates.filter((i) => i.cat !== "accessoire");
   }
-  // R-B15 — symétrique du filtre appliqué dans generateOutfit.
-  if (occasion !== "all" && occasion !== "sport") {
-    candidates = candidates.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) !== 0);
+  // R-B3 — symétrique du filtre appliqué dans generateOutfit.
+  if (occasion !== "all") {
+    const minFormality = effectiveFormality(occasion, workMode, dateContext);
+    candidates = candidates.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) >= minFormality);
   }
-  // R-B16 — symétrique du filtre appliqué dans generateOutfit.
+  // R-B6 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
+  if (isDressy(occasion, workMode, dateContext)) {
+    candidates = candidates.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Baskets");
+  }
+  // R-B15 — symétrique du filtre appliqué dans generateOutfit.
   if (weather && !isSunny(weather)) {
     candidates = candidates.filter((i) => !i.necessiteSoleil);
-  }
-  if (cat === "chaussures" && isDressy(occasion, workMode, dateContext)) {
-    const nonBasket = candidates.filter((i) => i.shoeType !== "Baskets");
-    if (nonBasket.length) candidates = nonBasket;
   }
   if (!candidates.length) return outfitItems.map((i) => i.id);
   const rest = outfitItems.filter((i) => i.id !== pieceId);
