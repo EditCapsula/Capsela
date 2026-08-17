@@ -8,7 +8,7 @@ import { fetchVestiaireUniversel } from "./vestiaire";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { generateOutfit, swapOutfitPiece, violatesOuterwearRule } from "./logic";
-import { paletteHexes } from "./profile";
+import { paletteHexes, type ProfilePrefs } from "./profile";
 import {
   detectAccessoireType,
   detectBijouType,
@@ -37,6 +37,14 @@ import type {
   TravelMode,
   WorkMode,
 } from "./types";
+
+/** Occasion par défaut suggérée en arrivant sur "Tenue du jour" sans choix explicite (recette 13/08/2026) — toujours modifiable manuellement ensuite. */
+const DAYS_S = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+function defaultOccasionToday(prefs: ProfilePrefs): OccasionKey {
+  if (prefs.onVacation) return "cocooning";
+  const todayKey = DAYS_S[new Date().getDay()];
+  return prefs.workDays.includes(todayKey) ? "travail_formel" : "quotidien";
+}
 
 function buildInitialState(): AppState {
   return {
@@ -81,6 +89,7 @@ function buildInitialState(): AppState {
     outfitMissingCats: [],
     outfitValidated: false,
     occasion: "all",
+    occasionManual: false,
     dismissedSuggestions: [],
     workMode: "Présentiel",
     travelMode: "Court trajet",
@@ -333,7 +342,19 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goHome: () => go("home"),
     goWardrobe: () => go("wardrobe"),
     goCapsule: () => go("capsule"),
-    goTenues: () => go("tenues"),
+    goTenues: () =>
+      setState((s) => {
+        let next: AppState = { ...s, screen: "tenues" };
+        // Occasion par défaut du jour (recette 13/08/2026) : calculée une
+        // seule fois, tant qu'aucune tenue n'a encore été générée et que
+        // l'utilisatrice n'a jamais choisi d'occasion elle-même cette
+        // session — toujours remplaçable ensuite via les chips d'occasion.
+        if (!next.outfit.length) {
+          if (!next.occasionManual) next = { ...next, occasion: defaultOccasionToday(profile.prefs) };
+          next = regen(next);
+        }
+        return next;
+      }),
     goHistory: () => go("history"),
     goNeverWorn: () => go("neverworn"),
     goProfile: () => setState((s) => ({ ...s, profileReturn: s.screen === "profile" ? s.profileReturn : s.screen, screen: "profile" })),
@@ -487,7 +508,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     subscribe: () => setState((s) => ({ ...s, isPremium: true, screen: s.premiumReturn || "home" })),
     premiumBack: () => setState((s) => ({ ...s, screen: s.premiumReturn || "home" })),
 
-    setOccasion: (o) => setState((s) => regen({ ...s, occasion: o })),
+    setOccasion: (o) => setState((s) => regen({ ...s, occasion: o, occasionManual: true })),
     setWorkMode: (m) => setState((s) => regen({ ...s, workMode: m })),
     setTravelMode: (m) => setState((s) => regen({ ...s, travelMode: m, travelTipDismissed: false })),
     dismissTravelTip: () => setState((s) => ({ ...s, travelTipDismissed: true })),

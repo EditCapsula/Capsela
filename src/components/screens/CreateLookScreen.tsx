@@ -96,20 +96,24 @@ export default function CreateLookScreen() {
           <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
             {g.items.map((it) => {
               const on = state.lookDraftIds.includes(it.id);
-              // Filtrage dynamique doux (R-B5 : robe/combinaison exclut haut/bas ;
-              // R-B6 : baskets reléguées en contexte habillé) — jamais désactivé,
-              // juste atténué visuellement ; le bandeau ci-dessous couvre le reste.
-              const dimmed =
+              // R-B5 — une robe/combinaison exclut haut/bas et réciproquement :
+              // structurellement incompatibles, jamais juste une préférence de
+              // style (contrairement à R-B6 ci-dessous) — retiré du picker.
+              const robeConflict =
                 !on &&
                 ((TOP_BOTTOM_CATS.has(it.cat) && hasRobeOrCombi) ||
-                  ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom) ||
-                  (it.cat === "chaussures" && it.shoeType === "Baskets" && dressy));
+                  ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom));
+              // R-B6 — baskets reléguées en contexte habillé : simple nudge
+              // visuel, reste sélectionnable si l'utilisatrice le souhaite
+              // vraiment (le bandeau ci-dessous couvre le reste).
+              const basketDim = !on && it.cat === "chaussures" && it.shoeType === "Baskets" && dressy;
               return (
                 <button
                   key={it.id}
-                  onClick={() => actions.toggleLookDraftPiece(it.id)}
-                  className="flex-none w-[104px] cursor-pointer text-left"
-                  style={{ scrollSnapAlign: "start", opacity: dimmed ? 0.4 : 1 }}
+                  onClick={() => !robeConflict && actions.toggleLookDraftPiece(it.id)}
+                  disabled={robeConflict}
+                  className={"flex-none w-[104px] text-left " + (robeConflict ? "cursor-not-allowed" : "cursor-pointer")}
+                  style={{ scrollSnapAlign: "start", opacity: robeConflict ? 0.3 : basketDim ? 0.4 : 1 }}
                 >
                   <div
                     className="relative w-full rounded-[11px] overflow-hidden"

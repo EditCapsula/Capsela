@@ -202,6 +202,8 @@ export interface AppState {
   outfitMissingCats: (CategoryKey | "bas")[];
   outfitValidated: boolean;
   occasion: OccasionKey;
+  /** true dès que l'utilisatrice a choisi une occasion elle-même (même pour revenir à "all") — désactive alors l'occasion par défaut auto-calculée (recette 13/08/2026) pour le reste de la session. */
+  occasionManual: boolean;
   /** Clés des suggestions proactives (R-S12/R-S13/R-S14) écartées pour la tenue affichée — indépendantes, plusieurs peuvent être affichées à la fois. */
   dismissedSuggestions: string[];
   /** Sous-choix affiché uniquement quand occasion === "travail_formel" ; affecte la formalité minimum requise. */

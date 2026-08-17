@@ -44,7 +44,8 @@ function Screens() {
   const profileCompleted = auth.profile.completed;
   useEffect(() => {
     if (ready && signedIn && PRE_AUTH_SCREENS.has(state.screen)) {
-      actions.go(profileCompleted ? "tenues" : "profileSetup");
+      if (profileCompleted) actions.goTenues();
+      else actions.go("profileSetup");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, signedIn, profileCompleted]);
