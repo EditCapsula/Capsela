@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import { useAuth } from "@/lib/auth";
+import { markSignupIntent, useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 
 const INPUT_CLS =
@@ -29,6 +29,7 @@ export default function AuthScreen() {
   const submitGoogle = async () => {
     if (busy) return;
     setBusy(true);
+    markSignupIntent();
     await auth.signInGoogle();
     setBusy(false);
     // Navigation post-connexion centralisée dans App.tsx (réagit à signedIn/profileCompleted) :

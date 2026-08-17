@@ -6,6 +6,33 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { DEFAULT_PREFS, EMPTY_PROFILE, type Profile } from "./profile";
 
 const DEMO_KEY = "capsela.demo.auth";
+const AUTH_INTENT_KEY = "capsela.authIntent";
+
+/**
+ * Signale une intention de création de compte avant de déclencher signInGoogle
+ * (le seul point d'entrée Google, exposé uniquement sur l'écran "Créer un
+ * compte") — nécessaire pour distinguer nouvel utilisateur / compte existant
+ * après un aller-retour OAuth qui démonte et remonte l'app (sessionStorage,
+ * contrairement à un state React, survit à ce rechargement dans le même onglet).
+ */
+export function markSignupIntent() {
+  try {
+    sessionStorage.setItem(AUTH_INTENT_KEY, "signup");
+  } catch {
+    // sessionStorage indisponible : au pire l'utilisateur atterrit sur la Homepage
+    // au lieu du questionnaire, jamais l'inverse.
+  }
+}
+
+function readAndClearSignupIntent(): boolean {
+  try {
+    const v = sessionStorage.getItem(AUTH_INTENT_KEY);
+    sessionStorage.removeItem(AUTH_INTENT_KEY);
+    return v === "signup";
+  } catch {
+    return false;
+  }
+}
 
 interface DemoAuth {
   email: string;
@@ -17,6 +44,15 @@ export interface AuthContextValue {
   ready: boolean;
   /** Un utilisateur est connecté (réel ou démo). */
   signedIn: boolean;
+  /**
+   * true uniquement pour la connexion Google qui vient de créer le compte
+   * (intention posée par markSignupIntent avant l'appel) — seul signal fiable
+   * de "nouvel utilisateur" pour ce point d'entrée, distinct d'une simple
+   * connexion ou d'une session restaurée au chargement. La création de compte
+   * par e-mail navigue directement vers le questionnaire sans passer par ce
+   * flag (cf. AuthScreen.submitEmail).
+   */
+  justSignedUp: boolean;
   /** Mode démo : pas de credentials Supabase configurés. */
   demoMode: boolean;
   email: string | null;
@@ -95,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [demoUser, setDemoUser] = useState<DemoAuth | null>(null);
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const [error, setError] = useState<string | null>(null);
+  const [justSignedUp, setJustSignedUp] = useState(false);
 
   const loadProfile = useCallback(async (userId: string) => {
     const { data } = await getSupabase().from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -123,14 +160,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = getSupabase();
     supabase.auth.getUser().then(async ({ data }) => {
       setUser(data.user ?? null);
-      if (data.user) await loadProfile(data.user.id);
+      if (data.user) {
+        await loadProfile(data.user.id);
+        setJustSignedUp(readAndClearSignupIntent());
+      }
       setReady(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) await loadProfile(u.id);
-      else setProfile(EMPTY_PROFILE);
+      if (u) {
+        await loadProfile(u.id);
+        setJustSignedUp(readAndClearSignupIntent());
+      } else {
+        setProfile(EMPTY_PROFILE);
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, [loadProfile]);
@@ -202,6 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const restored: DemoAuth = stored && stored.email === email ? stored : { email, profile: EMPTY_PROFILE };
       persistDemo(restored);
       setProfile(restored.profile);
+      setJustSignedUp(readAndClearSignupIntent());
       return true;
     }
     const { error: err } = await getSupabase().auth.signInWithOAuth({
@@ -217,6 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    setJustSignedUp(false);
     if (!isSupabaseConfigured) {
       // Termine la session locale sans effacer le compte/profil stocké : une
       // reconnexion avec le même e-mail doit retrouver son dressing.
@@ -243,6 +289,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextValue = {
     ready,
     signedIn: Boolean(user || demoUser),
+    justSignedUp,
     demoMode: !isSupabaseConfigured,
     email: user?.email ?? demoUser?.email ?? null,
     profile,

@@ -35,20 +35,25 @@ function Screens() {
   const showTabbar = !NO_TABBAR_SCREENS.has(state.screen);
 
   // Session déjà ouverte (connexion, retour OAuth ou rechargement) : saute les écrans
-  // d'accueil, direction la tenue du jour plutôt que de refaire l'onboarding. Seule source
-  // de vérité pour la navigation post-connexion — le profil arrive de façon asynchrone
-  // (state React, ou requête réseau en mode réel), donc profileCompleted doit rester en
-  // dépendance pour que l'effet se redéclenche dès qu'il est prêt, même si signedIn est
-  // passé à true avant que le profil ne soit chargé.
-  const { ready, signedIn } = auth;
+  // d'accueil, direction la Homepage — jamais le questionnaire, même si le profil est
+  // incomplet (règle métier 17/08/2026 : un compte existant n'est jamais renvoyé vers
+  // l'onboarding, quelle que soit la complétude du profil). Seule exception : la
+  // connexion Google qui vient tout juste de créer le compte (justSignedUp, posé via
+  // markSignupIntent avant l'appel — la création de compte par e-mail navigue déjà
+  // directement vers le questionnaire dans AuthScreen, sans passer par cet effet).
+  // Seule source de vérité pour la navigation post-connexion — le profil arrive de façon
+  // asynchrone (state React, ou requête réseau en mode réel), donc profileCompleted et
+  // justSignedUp doivent rester en dépendance pour que l'effet se redéclenche dès qu'ils
+  // sont prêts, même si signedIn est passé à true avant que le profil ne soit chargé.
+  const { ready, signedIn, justSignedUp } = auth;
   const profileCompleted = auth.profile.completed;
   useEffect(() => {
     if (ready && signedIn && PRE_AUTH_SCREENS.has(state.screen)) {
-      if (profileCompleted) actions.goTenues();
-      else actions.go("profileSetup");
+      if (justSignedUp && !profileCompleted) actions.goProfileSetup(0);
+      else actions.goHome();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, signedIn, profileCompleted]);
+  }, [ready, signedIn, justSignedUp, profileCompleted]);
 
   if (!ready) {
     return (
