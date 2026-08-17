@@ -259,20 +259,32 @@ export function generateOutfit(
     return r;
   };
 
-  const occFiltered = occasion === "all" ? antiRepBase : antiRepBase.filter((i) => occasionFit(i, occasion));
-  let active = occFiltered.length >= 4 ? occFiltered : antiRepBase;
-  active = hardCategoryFilter(active);
+  // Règles dures (R-B3/R-B6/R-B11...) — jamais relâchées, appliquées une
+  // bonne fois pour toutes sur la base anti-répétition/saison.
+  const hardBase = hardCategoryFilter(antiRepBase);
 
   // Chaussures/sacs/bijoux/accessoires restent toujours éligibles vis-à-vis du
-  // simple filtre heuristique d'occasion (occFiltered, la saison reste
-  // respectée) — conçus pour être reportés souvent, contrairement aux
-  // vêtements filtrés plus strictement ci-dessus. Les règles dures (R-B11/
-  // R-B12/R-B13, jamais relâchées) s'appliquent en revanche toujours, via hardCategoryFilter.
+  // simple filtre heuristique d'occasion — conçus pour être reportés souvent,
+  // contrairement aux vêtements filtrés plus strictement ci-dessous. Les
+  // règles dures s'appliquent en revanche toujours, via hardCategoryFilter.
+  //
+  // Pour les autres catégories, le filtre heuristique d'occasion (occasionFit)
+  // ne se décide plus globalement (un total ≥4 toutes catégories confondues
+  // pouvait, par exemple pour "Date", valider le pool sur la seule base d'une
+  // jupe correspondant au mot-clé — laissant "haut" à zéro option alors
+  // qu'aucun de ses regex ne matchait) : la décision de relâcher ou non se
+  // prend catégorie par catégorie, comme les autres critères "molles" de
+  // pick() — jamais de blocage total pour une catégorie essentielle.
   const poolFor = (cats: CategoryKey[]): Item[] => {
-    if (!cats.every((c) => ACCESSORY_CATS.includes(c))) return active;
-    const basis = hardCategoryFilter(seasonPool);
-    const inSeason = basis.filter((i) => cats.includes(i.cat));
-    return inSeason.length ? basis : hardCategoryFilter(pool);
+    if (cats.every((c) => ACCESSORY_CATS.includes(c))) {
+      const basis = hardCategoryFilter(seasonPool);
+      const inSeason = basis.filter((i) => cats.includes(i.cat));
+      return inSeason.length ? basis : hardCategoryFilter(pool);
+    }
+    const inCat = hardBase.filter((i) => cats.includes(i.cat));
+    if (occasion === "all") return inCat;
+    const narrowed = inCat.filter((i) => occasionFit(i, occasion));
+    return narrowed.length ? narrowed : inCat;
   };
 
   const chosen: Item[] = [];
@@ -289,7 +301,7 @@ export function generateOutfit(
   const hasCat = (cats: CategoryKey[]) => pool.some((i) => cats.includes(i.cat));
 
   const ids: number[] = [];
-  const useRobe = Math.random() < 0.4 && active.some((i) => i.cat === "robe");
+  const useRobe = Math.random() < 0.4 && poolFor(["robe"]).length > 0;
   if (useRobe) {
     const r = pick(["robe"]);
     if (r) ids.push(r.id);
@@ -305,7 +317,7 @@ export function generateOutfit(
   // à elle-même (R-B5) : pas de haut en plus dans ce cas.
   if (!useRobe && Math.random() < 0.35) {
     const dressy = isDressy(occasion, workMode, dateContext);
-    const layerCandidates = active.filter((i) => {
+    const layerCandidates = poolFor(["haut"]).filter((i) => {
       if (i.cat !== "haut" || chosen.some((c) => c.id === i.id)) return false;
       if (rolePieceOf(i) !== "calque") return true;
       const hasCalqueAlready = chosen.some((c) => c.cat === "haut" && rolePieceOf(c) === "calque");
