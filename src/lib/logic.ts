@@ -202,6 +202,14 @@ export function generateOutfit(
     if (occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail")) {
       r = r.filter((i) => i.cat !== "sac");
     }
+    // R-B15 — symétrique de R-B11 : un vêtement de sport (formalité 0) est
+    // réservé à l'occasion Sport, jamais réutilisé ailleurs. Ne concerne que
+    // les catégories vêtement (CLOTHING_CATS) — baskets, sac cabas et
+    // accessoires sport restent des basiques réutilisables hors Sport,
+    // couverts par les heuristiques d'occasion existantes (occasionFit).
+    if (occasion !== "all" && occasion !== "sport") {
+      r = r.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) !== 0);
+    }
     return r;
   };
 
@@ -338,6 +346,10 @@ export function swapOutfitPiece(
   // R-B14 — symétrique du filtre appliqué dans generateOutfit.
   if (occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail")) {
     candidates = candidates.filter((i) => i.cat !== "sac");
+  }
+  // R-B15 — symétrique du filtre appliqué dans generateOutfit.
+  if (occasion !== "all" && occasion !== "sport") {
+    candidates = candidates.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) !== 0);
   }
   if (cat === "chaussures" && isDressy(occasion, workMode, dateContext)) {
     const nonBasket = candidates.filter((i) => i.shoeType !== "Baskets");
