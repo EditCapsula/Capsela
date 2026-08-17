@@ -311,28 +311,26 @@ export function generateOutfit(
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
   }
-  // Superposition (R-S11/R-S12/R-B8) : une pièce haut supplémentaire (ex. gilet,
-  // cardigan) — jamais deux calques simultanés, jamais de calque seul en
-  // contexte habillé sans validation manuelle. Une robe/combinaison se suffit
-  // à elle-même (R-B5) : pas de haut en plus dans ce cas.
+  // R-B8 — superposition hauts/pulls_gilets (TOP_LAYER_CATS) : une 2e pièce
+  // n'est ajoutée que si la 1ère (déjà choisie) est "base" et que la
+  // candidate est "calque" — jamais 2 calques, jamais de calque en contexte
+  // habillé sans validation manuelle (uniquement possible depuis le picker
+  // manuel, pas ici). Une robe/combinaison se suffit à elle-même (R-B5) :
+  // pas de calque en plus dans ce cas.
   if (!useRobe && Math.random() < 0.35) {
     const dressy = isDressy(occasion, workMode, dateContext);
-    const layerCandidates = poolFor(["haut"]).filter((i) => {
-      if (i.cat !== "haut" || chosen.some((c) => c.id === i.id)) return false;
-      if (rolePieceOf(i) !== "calque") return true;
-      const hasCalqueAlready = chosen.some((c) => c.cat === "haut" && rolePieceOf(c) === "calque");
-      return !hasCalqueAlready && !dressy;
-    });
-    const layer = rand(harmonize(layerCandidates, chosen, false));
-    if (layer) { chosen.push(layer); ids.push(layer.id); }
-  }
-  // Le pull ne se superpose que sur une base fine (t-shirt/débardeur/top/col
-  // roulé) — jamais par-dessus un haut déjà volumineux ou habillé.
-  const firstTop = chosen.find((i) => i.cat === "haut" || i.cat === "pull");
-  const canStackTop = !!firstTop && /t-shirt|débardeur|top|body|col roulé/i.test(firstTop.name + " " + (firstTop.subtype || ""));
-  if (canStackTop && Math.random() < 0.35) {
-    const p = pick(["pull"], false);
-    if (p && !ids.includes(p.id)) ids.push(p.id);
+    const firstLayer = chosen.find((c) => TOP_LAYER_CATS.includes(c.cat));
+    if (firstLayer && rolePieceOf(firstLayer) === "base" && !dressy) {
+      // La base déjà choisie ancre l'occasion : le calque n'a pas à repasser
+      // par le narrowing heuristique d'occasion (son vocabulaire propre —
+      // gilet, cardigan — ne recoupe pas forcément les mots-clés de
+      // l'occasion), seulement par les règles dures (hardBase).
+      const layerCandidates = hardBase.filter(
+        (i) => TOP_LAYER_CATS.includes(i.cat) && !chosen.some((c) => c.id === i.id) && rolePieceOf(i) === "calque"
+      );
+      const layer = rand(harmonize(layerCandidates, chosen, false));
+      if (layer) { chosen.push(layer); ids.push(layer.id); }
+    }
   }
   if (Math.random() < 0.3) {
     const v = pick(["veste"], false);
