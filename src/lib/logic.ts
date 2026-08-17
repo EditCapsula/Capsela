@@ -1,6 +1,6 @@
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, effectiveFormality } from "./data";
+import { BAS_CATS, effectiveFormality, isSunny } from "./data";
 import { bestStyleFor, morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
@@ -24,11 +24,6 @@ const OUTERWEAR_CATS: CategoryKey[] = ["veste", "manteau"];
 /** Catégories suivies pour l'anti-répétition (R-B7) et le calcul de formalité d'une tenue. */
 const CLOTHING_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe", "robe", "combinaison", "veste", "manteau"];
 const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire"];
-
-/** Météo ensoleillée — R-B16 (lunettes de soleil et pièces similaires). */
-function isSunny(weather: Weather): boolean {
-  return /soleil/i.test(weather.label);
-}
 
 /** Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète (R-B9). */
 function hasBaseGarment(items: Item[]): boolean {

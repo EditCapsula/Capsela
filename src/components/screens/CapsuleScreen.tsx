@@ -11,7 +11,7 @@ export default function CapsuleScreen() {
   const { profile } = useAuth();
 
   const capsuleSeason: CapsuleSeason = state.capsuleSeason || currentSeasonKey();
-  const capsule = computeDefaultCapsule(profile, weather.temp, state.suggestedExcluded, capsuleSeason, vestiairePool);
+  const capsule = computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
   const count = (cat: string) => capsule.filter((i) => i.cat === cat).length;
   const tops = count("haut");
   const bottoms = count("pantalon") + count("jean") + count("jupe") + count("short");

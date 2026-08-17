@@ -226,6 +226,11 @@ export interface Weather {
   seasons: Season[];
 }
 
+/** Météo ensoleillée — R-B15 (lunettes de soleil et pièces similaires nécessitant du soleil). */
+export function isSunny(weather: Weather): boolean {
+  return /soleil/i.test(weather.label);
+}
+
 export function isBag(it: { cat?: CategoryKey; name: string }): boolean {
   return it.cat === "sac" || /\bsac\b/i.test(it.name);
 }

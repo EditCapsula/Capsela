@@ -288,8 +288,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // Toujours la saison calendaire courante — indépendante de la saison parcourue
   // sur l'écran Capsule (state.capsuleSeason), qui n'affecte que son affichage.
   const defaultCapsule = useMemo(
-    () => computeDefaultCapsule(profile, geoCity.temp, state.suggestedExcluded, currentSeasonKey(), vestiairePool),
-    [profile, geoCity.temp, state.suggestedExcluded, vestiairePool]
+    () => computeDefaultCapsule(profile, weather, state.suggestedExcluded, currentSeasonKey(), vestiairePool),
+    [profile, weather, state.suggestedExcluded, vestiairePool]
   );
   // Pool effectif : par catégorie, tes pièces réelles si tu en as, sinon les
   // suggestions de la capsule par défaut — jamais un mélange à l'intérieur

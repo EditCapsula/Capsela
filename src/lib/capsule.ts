@@ -1,5 +1,6 @@
 import { CATALOG, type CatalogItem } from "./catalog";
 import { intensiteOf, tonsOf } from "./attributes";
+import { isSunny, type Weather } from "./data";
 import { paletteHexes, type Affinite, type Intensite, type Profile } from "./profile";
 import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, Season, Tons } from "./types";
 
@@ -114,13 +115,21 @@ export function paletteFit(it: Item, profile: Profile): boolean {
  */
 export function computeDefaultCapsule(
   profile: Profile,
-  cityTemp: number,
+  weather: Weather,
   excludedIds: number[] = [],
   seasonKey?: CapsuleSeason,
   sourcePool: CatalogItem[] = CATALOG
 ): CatalogItem[] {
   const excluded = new Set(excludedIds);
   let base = sourcePool.filter((it) => !excluded.has(it.id));
+
+  // R-B15 — symétrique du filtre appliqué à la génération de la tenue du jour
+  // (logic.ts) : une pièce qui ne se justifie que par temps ensoleillé (ex.
+  // lunettes de soleil) n'est jamais suggérée dans la capsule hors météo
+  // ensoleillée.
+  if (!isSunny(weather)) {
+    base = base.filter((it) => !it.necessiteSoleil);
+  }
 
   if (profile.gender === "homme") {
     const noFem = base.filter((it) => it.genre !== "femme");
@@ -129,7 +138,7 @@ export function computeDefaultCapsule(
 
   const bucket = seasonKey
     ? (["Printemps", "Été"].includes(seasonKey) ? "Printemps / Été" : "Automne / Hiver")
-    : weatherSeasonBucket(cityTemp);
+    : weatherSeasonBucket(weather.temp);
   const seasonFit = base.filter((it) => it.season === bucket || it.season === "Toutes saisons");
   if (seasonFit.length >= 16) base = seasonFit;
 
@@ -159,7 +168,9 @@ export function computeDefaultCapsule(
   // entières) n'auraient aucune pièce éligible pour un dressing encore vide.
   const ensure = (cat: CategoryKey) => {
     if (out.some((it) => it.cat === cat)) return;
-    const pool = sourcePool.filter((it) => it.cat === cat && !excluded.has(it.id));
+    const pool = sourcePool.filter(
+      (it) => it.cat === cat && !excluded.has(it.id) && (isSunny(weather) || !it.necessiteSoleil)
+    );
     const fav = pool.filter((it) => favColors.includes(it.hex));
     const pickFrom = fav.length ? fav : pool;
     if (pickFrom.length) out = [...out, pickFrom[0]];
