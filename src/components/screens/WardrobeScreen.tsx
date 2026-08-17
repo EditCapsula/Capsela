@@ -91,7 +91,11 @@ export default function WardrobeScreen() {
                 >
                   <div
                     className="w-full rounded-[11px] border border-border overflow-hidden"
-                    style={{ aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
+                    style={
+                      it.photoUrl
+                        ? { aspectRatio: "4/5", backgroundImage: `url(${it.photoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+                        : { aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
+                    }
                   />
                   <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
                     {it.name}

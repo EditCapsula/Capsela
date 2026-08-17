@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { ACCESSOIRE_TYPES, BAS_CATS, BIJOU_TYPES, CATLABEL, CATS, OCCASIONS, OCC_SHORT, PALETTE, PALETTE_BIJOU, SAC_TYPES, SEASONS, SHOE_TYPES, SUBTYPES, SUBTYPE_REQUIRED, seasonSuggestion } from "@/lib/data";
 import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable } from "@/lib/attributes";
 import { useAuth } from "@/lib/auth";
@@ -40,6 +41,13 @@ function SubMenu({ label, note, children }: { label: string; note?: React.ReactN
 export default function AddScreen() {
   const { state, actions } = useCapsela();
   const { profile } = useAuth();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    // Aperçu local uniquement pour l'instant (URL.createObjectURL) — perdu au
+    // rechargement tant que l'upload vers Supabase Storage n'est pas branché.
+    if (file) actions.setAddPhoto(URL.createObjectURL(file));
+  };
 
   const isShoe = state.addCat === "chaussures";
   const isSac = state.addCat === "sac";
@@ -83,11 +91,35 @@ export default function AddScreen() {
         </div>
       </div>
 
-      <div className="mt-[22px] h-[190px] rounded-2xl border-[1.5px] border-dashed border-[#d6c7ae] bg-card flex flex-col items-center justify-center gap-[10px]">
-        <div className="w-[54px] h-[54px] rounded-full bg-ink text-cream flex items-center justify-center text-2xl">▢</div>
-        <div className="text-[13px] text-ink">Prendre la pièce en photo</div>
-        <div className="text-[11px] text-muted">ou importer depuis ta galerie</div>
-      </div>
+      <input ref={photoInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
+      <button
+        type="button"
+        onClick={() => photoInputRef.current?.click()}
+        className={
+          "mt-[22px] w-full h-[190px] rounded-2xl flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
+          (state.addPhotoUrl ? "" : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
+        }
+        style={
+          state.addPhotoUrl
+            ? { backgroundImage: `url(${state.addPhotoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+            : undefined
+        }
+      >
+        {state.addPhotoUrl ? (
+          <span
+            className="absolute bottom-3 right-3 text-[11px] text-cream rounded-full px-3 py-[6px]"
+            style={{ background: "rgba(29,26,22,.7)" }}
+          >
+            Changer la photo
+          </span>
+        ) : (
+          <>
+            <div className="w-[54px] h-[54px] rounded-full bg-ink text-cream flex items-center justify-center text-2xl">▢</div>
+            <div className="text-[13px] text-ink">Prendre la pièce en photo</div>
+            <div className="text-[11px] text-muted">ou importer depuis ta galerie</div>
+          </>
+        )}
+      </button>
 
       <Label>Nom de la pièce</Label>
       <input

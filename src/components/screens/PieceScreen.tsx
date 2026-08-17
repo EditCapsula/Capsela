@@ -37,7 +37,11 @@ export default function PieceScreen() {
 
       <div
         className="w-full rounded-[18px] border border-border overflow-hidden mt-[18px]"
-        style={{ aspectRatio: "4/5", background: active.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
+        style={
+          active.photoUrl
+            ? { aspectRatio: "4/5", backgroundImage: `url(${active.photoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+            : { aspectRatio: "4/5", background: active.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
+        }
       />
 
       {suggested && (

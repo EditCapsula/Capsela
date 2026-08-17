@@ -81,6 +81,8 @@ export interface Item {
   wornPrev?: number | null;
   brand?: string;
   size?: string | null;
+  /** Photo prise/importée à l'ajout — pour l'instant une URL locale (blob:), perdue au rechargement tant que l'upload vers Supabase Storage n'est pas branché. Sans photo, l'app retombe sur la pastille de couleur (hex). */
+  photoUrl?: string;
   /** Occasions déclarées à l'ajout — plusieurs choix possibles. */
   occasion?: OccasionKey[];
   /** Type de chaussure — obligatoire si cat === "chaussures" (nécessaire à R-B6). */
@@ -176,6 +178,8 @@ export interface AppState {
   addCat: CategoryKey;
   addColor: { name: string; hex: string };
   addSize: string | null;
+  /** Photo prise/importée en cours de saisie — jamais bloquante, toujours facultative. */
+  addPhotoUrl: string | null;
   /** null tant que l'utilisateur n'a pas confirmé — la sauvegarde est bloquée. */
   addSeason: Season | null;
   /** Plusieurs choix possibles. */

@@ -69,6 +69,7 @@ function buildInitialState(): AppState {
     addCat: "haut",
     addColor: { name: "Blanc cassé", hex: "#EDE4D6" },
     addSize: null,
+    addPhotoUrl: null,
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
     addOccasion: ["travail_formel"],
@@ -149,6 +150,7 @@ export interface Actions {
   setAddCat: (k: CategoryKey) => void;
   setAddColor: (c: { name: string; hex: string }) => void;
   setAddSize: (v: string | null) => void;
+  setAddPhoto: (url: string | null) => void;
   setAddSeason: (s: Season) => void;
   /** Bascule l'occasion dans la sélection multiple. */
   setAddOccasion: (o: OccasionKey) => void;
@@ -424,6 +426,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c })),
     setAddSize: (v) => setState((s) => ({ ...s, addSize: v })),
+    setAddPhoto: (v) => setState((s) => ({ ...s, addPhotoUrl: v })),
     setAddSeason: (season) => setState((s) => ({ ...s, addSeason: season })),
     setAddOccasion: (o) =>
       setState((s) => ({
@@ -462,6 +465,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           bijouType: s.addCat === "bijou" ? s.addBijouType || undefined : undefined,
           accessoireType: s.addCat === "accessoire" ? s.addAccessoireType || undefined : undefined,
           subtype: s.addSubtype || undefined,
+          photoUrl: s.addPhotoUrl || undefined,
           worn: null,
         };
         return {
@@ -471,6 +475,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           replacingId: null,
           addName: "",
           addBrand: "",
+          addPhotoUrl: null,
           addMatiere: null,
           addCoupe: null,
           addMatiereTouched: false,
