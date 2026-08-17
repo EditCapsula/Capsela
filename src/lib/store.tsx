@@ -500,7 +500,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           .filter((it): it is Item => Boolean(it));
         return {
           ...s,
-          outfit: swapOutfitPiece(outfitItems, poolRef.current, id, cat, s.occasion || "all", s.workMode, s.dateContext),
+          outfit: swapOutfitPiece(outfitItems, poolRef.current, id, cat, s.occasion || "all", s.workMode, s.dateContext, weatherRef.current),
           dismissedSuggestions: [],
         };
       }),

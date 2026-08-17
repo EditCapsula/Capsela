@@ -40,6 +40,9 @@ import type { CategoryKey, Coupe, IntensiteCouleur, Matiere, Season, ShoeType, T
  * - `role_couleur_palette` (base/neutre/accent) : lu et stocké
  *   (Item.paletteRole) mais pas encore consommé par le moteur de sélection
  *   de capsule — en attente de décision sur son usage exact.
+ * - `necessite_soleil` (boolean) : mappé sur Item.necessiteSoleil — R-B16
+ *   exclut la pièce des tenues générées tant que la météo du jour n'est pas
+ *   ensoleillée (label contenant "soleil").
  * - `couleur_secondaire`, `meteo_min_temp`/`meteo_max_temp`, `resiste_pluie` :
  *   pas encore exploités côté app — lus mais ignorés pour l'instant.
  */
@@ -72,6 +75,7 @@ export interface VestiaireRow {
   couleur_secondaire: string | null;
   metal_dominant: string | null;
   lien_affiliation: string | null;
+  necessite_soleil: boolean | null;
 }
 
 const CATEGORY_MAP: Record<string, CategoryKey> = {
@@ -166,6 +170,10 @@ function mapPaletteRole(raw: string | null): "base" | "neutre" | "accent" | unde
   return undefined;
 }
 
+function mapNecessiteSoleil(raw: boolean | null): boolean | undefined {
+  return raw ?? undefined;
+}
+
 function mapTons(raw: string | null): Tons | undefined {
   const v = (raw || "").trim().toLowerCase();
   if (v === "chauds" || v === "froids" || v === "les_deux") return v;
@@ -243,6 +251,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     metalDominant: mapMetalDominant(row.metal_dominant),
     paletteRole: mapPaletteRole(row.role_couleur_palette),
     affLink: row.lien_affiliation || undefined,
+    necessiteSoleil: mapNecessiteSoleil(row.necessite_soleil),
   };
 }
 

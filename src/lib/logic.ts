@@ -25,6 +25,11 @@ const OUTERWEAR_CATS: CategoryKey[] = ["veste", "manteau"];
 const CLOTHING_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe", "robe", "combinaison", "veste", "manteau"];
 const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire"];
 
+/** Météo ensoleillée — R-B16 (lunettes de soleil et pièces similaires). */
+function isSunny(weather: Weather): boolean {
+  return /soleil/i.test(weather.label);
+}
+
 /** Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète (R-B9). */
 function hasBaseGarment(items: Item[]): boolean {
   return items.some((i) => BASE_GARMENT_CATS.includes(i.cat));
@@ -210,6 +215,11 @@ export function generateOutfit(
     if (occasion !== "all" && occasion !== "sport") {
       r = r.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) !== 0);
     }
+    // R-B16 — une pièce qui ne se justifie que par temps ensoleillé (ex.
+    // lunettes de soleil) n'est jamais suggérée hors météo ensoleillée.
+    if (!isSunny(weather)) {
+      r = r.filter((i) => !i.necessiteSoleil);
+    }
     return r;
   };
 
@@ -322,7 +332,8 @@ export function swapOutfitPiece(
   cat: CategoryKey,
   occasion: OccasionKey = "all",
   workMode: WorkMode = "Présentiel",
-  dateContext: DateContext = "Verre"
+  dateContext: DateContext = "Verre",
+  weather?: Weather
 ): number[] {
   const catGroup: CategoryKey[] =
     BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
@@ -350,6 +361,10 @@ export function swapOutfitPiece(
   // R-B15 — symétrique du filtre appliqué dans generateOutfit.
   if (occasion !== "all" && occasion !== "sport") {
     candidates = candidates.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) !== 0);
+  }
+  // R-B16 — symétrique du filtre appliqué dans generateOutfit.
+  if (weather && !isSunny(weather)) {
+    candidates = candidates.filter((i) => !i.necessiteSoleil);
   }
   if (cat === "chaussures" && isDressy(occasion, workMode, dateContext)) {
     const nonBasket = candidates.filter((i) => i.shoeType !== "Baskets");

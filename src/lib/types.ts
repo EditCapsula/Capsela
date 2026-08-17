@@ -115,6 +115,8 @@ export interface Item {
   metalDominant?: "or" | "argent";
   /** Rôle de la couleur dans la palette personnelle (source : vestiaire_universel) — base/neutre/accent, reflète la structure de l'onboarding Palette. Pas encore consommé par le moteur de sélection de capsule. */
   paletteRole?: "base" | "neutre" | "accent";
+  /** true si la pièce ne doit être suggérée que par temps ensoleillé (ex. lunettes de soleil, source : vestiaire_universel) — R-B16, jamais bloquant pour une catégorie essentielle. */
+  necessiteSoleil?: boolean;
 }
 
 export interface City {
