@@ -62,6 +62,7 @@ function buildInitialState(): AppState {
     authName: "",
     activeId: 0,
     activeSuggested: false,
+    pieceReturn: "wardrobe",
     catFilter: "all",
     addName: "",
     addBrand: "",
@@ -138,8 +139,6 @@ export interface Actions {
   onbNext: () => void;
   openItem: (id: number, suggested?: boolean) => void;
   removeActive: () => void;
-  /** Pièce suggérée : l'adopte dans le dressing réel. Pièce réelle : la retire. */
-  toggleActiveCapsule: () => void;
   /** Écarte une suggestion de la capsule par défaut. */
   dismissSuggested: (id: number) => void;
   /** Ouvre l'ajout d'une pièce pour remplacer une suggestion. */
@@ -375,26 +374,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => (s.onbStep >= 2 ? { ...s, screen: "auth" } : { ...s, onbStep: s.onbStep + 1 })),
 
     openItem: (id, suggested = false) =>
-      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, screen: "piece" })),
+      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" })),
     removeActive: () =>
       setState((s) => {
         if (s.activeSuggested) {
-          return { ...s, suggestedExcluded: [...s.suggestedExcluded, s.activeId], screen: "wardrobe" };
+          return { ...s, suggestedExcluded: [...s.suggestedExcluded, s.activeId], screen: s.pieceReturn };
         }
-        return { ...s, items: s.items.filter((it) => it.id !== s.activeId), screen: "wardrobe" };
-      }),
-
-    toggleActiveCapsule: () =>
-      setState((s) => {
-        if (s.activeSuggested) {
-          const found = CATALOG.find((i) => i.id === s.activeId);
-          if (!found) return s;
-          // Adopter la suggestion : elle devient une pièce réelle du dressing.
-          const { genre: _genre, ...piece } = found;
-          void _genre;
-          return { ...s, items: [{ ...piece }, ...s.items], activeSuggested: false };
-        }
-        return { ...s, items: s.items.filter((it) => it.id !== s.activeId), screen: "wardrobe" };
+        return { ...s, items: s.items.filter((it) => it.id !== s.activeId), screen: s.pieceReturn };
       }),
 
     dismissSuggested: (id) =>

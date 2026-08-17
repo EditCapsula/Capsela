@@ -166,6 +166,8 @@ export interface AppState {
   activeId: number;
   /** La pièce actuellement ouverte est une suggestion du catalogue, pas une pièce réelle. */
   activeSuggested: boolean;
+  /** Écran vers lequel revenir en quittant la vue détail d'une pièce (dressing, capsule, jamais-portées...). */
+  pieceReturn: Screen;
 
   catFilter: CategoryKey | "all";
 

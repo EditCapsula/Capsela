@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
-import { CATALOG } from "@/lib/catalog";
 import { bestStyleFor } from "@/lib/capsule";
 import { useCapsela } from "@/lib/store";
 
@@ -16,10 +15,10 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function PieceScreen() {
-  const { state, actions } = useCapsela();
+  const { state, actions, vestiairePool } = useCapsela();
   const [suggestionInfoOpen, setSuggestionInfoOpen] = useState(false);
   const active = state.activeSuggested
-    ? CATALOG.find((i) => i.id === state.activeId)
+    ? vestiairePool.find((i) => i.id === state.activeId)
     : state.items.find((i) => i.id === state.activeId);
   if (!active) return null;
 
@@ -30,7 +29,7 @@ export default function PieceScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <button
-        onClick={actions.goWardrobe}
+        onClick={() => actions.go(state.pieceReturn)}
         className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
       >
         ←
@@ -99,17 +98,21 @@ export default function PieceScreen() {
       {suggested ? (
         <>
           <button
-            onClick={actions.toggleActiveCapsule}
+            onClick={() => actions.startReplace(active.id, active.cat)}
             className="mt-[18px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
           >
-            Ajouter à mon dressing
+            J&apos;ai déjà ça
           </button>
-          <button
-            onClick={actions.removeActive}
-            className="mt-[10px] w-full text-center border border-border-soft text-muted-3 rounded-full py-[13px] text-[12.5px] cursor-pointer"
-          >
-            Écarter cette suggestion
-          </button>
+          {active.affLink && (
+            <a
+              href={active.affLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-[10px] block w-full text-center border border-border-soft text-terracotta rounded-full py-[13px] text-[12.5px] cursor-pointer"
+            >
+              Acheter
+            </a>
+          )}
         </>
       ) : (
         <>

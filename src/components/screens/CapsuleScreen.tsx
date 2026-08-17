@@ -77,7 +77,12 @@ export default function CapsuleScreen() {
           </div>
           <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
             {g.items.map((it) => (
-              <div key={it.id} className="flex-none w-[104px]" style={{ scrollSnapAlign: "start" }}>
+              <button
+                key={it.id}
+                onClick={() => actions.openItem(it.id, true)}
+                className="flex-none w-[104px] text-left cursor-pointer"
+                style={{ scrollSnapAlign: "start" }}
+              >
                 <div
                   className="w-full rounded-[11px] border border-border"
                   style={{ aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
@@ -86,23 +91,7 @@ export default function CapsuleScreen() {
                   {it.name}
                 </div>
                 <div className="text-[9.5px] text-terracotta mt-[1px]">Suggestion</div>
-                <button
-                  onClick={() => actions.startReplace(it.id, it.cat)}
-                  className="mt-[6px] w-full text-center text-[10.5px] text-muted border border-border rounded-full py-[6px] px-2 cursor-pointer"
-                >
-                  J&apos;ai déjà ça
-                </button>
-                {it.affLink && (
-                  <a
-                    href={it.affLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-[6px] block w-full text-center text-[10.5px] text-terracotta border border-border rounded-full py-[6px] px-2 cursor-pointer"
-                  >
-                    Acheter
-                  </a>
-                )}
-              </div>
+              </button>
             ))}
           </div>
         </div>
