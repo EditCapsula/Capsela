@@ -4,16 +4,27 @@ import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
+import { currentSeasonKey } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, violatesOuterwearRule } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
 
+const WEATHER_ICONS: Record<string, string> = {
+  "Ensoleillé": "☀️",
+  "Grand soleil": "☀️",
+  "Éclaircies": "⛅",
+  "Nuageux": "☁️",
+  "Pluie": "🌧️",
+  "Orageux": "⛈️",
+  "Neige": "❄️",
+};
+
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
-const MODE_LABELS = {
-  capsule_depart: "Capsule de départ",
-  hybride: "Tes pièces + suggestions",
-  dressing_complet: "100% ton dressing",
+const MODE_STYLES = {
+  capsule_depart: { color: "#A66950", bg: "#F0E5D6", border: "#E2CDB8", dot: "#C9966F" },
+  hybride: { color: "#8A6B3F", bg: "#F3EDDD", border: "#E2D6BD", dot: "#B99A63" },
+  dressing_complet: { color: "#3F5A47", bg: "#E9F0E9", border: "#CFE0D2", dot: "#6E9179" },
 } as const;
 
 const MISSING_LABELS: Record<string, string> = {
@@ -49,12 +60,19 @@ export default function TenuesScreen() {
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
 
   const suggestedCount = outfitPieces.filter((it) => isCatalogId(it.id)).length;
-  const recommendationMode: keyof typeof MODE_LABELS =
+  const recommendationMode: keyof typeof MODE_STYLES =
     suggestedCount === 0
       ? "dressing_complet"
       : suggestedCount === outfitPieces.length
         ? "capsule_depart"
         : "hybride";
+  const modeLabel =
+    recommendationMode === "capsule_depart"
+      ? "Capsule " + currentSeasonKey()
+      : recommendationMode === "hybride"
+        ? "Tes pièces + suggestions"
+        : "100% ton dressing";
+  const modeStyle = MODE_STYLES[recommendationMode];
 
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
   // Sans objet en Cocooning (R-B12) : veste/manteau déjà exclus du pool de génération.
@@ -99,13 +117,10 @@ export default function TenuesScreen() {
         <div className="flex-1 min-w-0 text-[13px] text-ink whitespace-nowrap overflow-hidden text-ellipsis">
           {geoCity.city}
         </div>
+        <span className="text-[13px] flex-shrink-0">{WEATHER_ICONS[geoCity.label] || "🌤️"}</span>
         <span className="text-[12px] text-[#3F3B34] whitespace-nowrap flex-shrink-0">
           {geoCity.temp}° · {geoCity.label}
         </span>
-        <span className="w-px h-[14px] bg-[#E2D5C0] flex-shrink-0" />
-        <button onClick={actions.cycleGeo} className="text-[11px] text-terracotta tracking-[.03em] cursor-pointer flex-shrink-0">
-          Modifier
-        </button>
       </div>
 
       <div className="mt-5 text-[11px] tracking-[.16em] uppercase text-muted">
@@ -224,9 +239,15 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      <span className="inline-block mt-[14px] text-[10.5px] tracking-[.06em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[11px]">
-        {MODE_LABELS[recommendationMode]}
-      </span>
+      <div
+        className="inline-flex items-center gap-2 mt-[14px] rounded-full"
+        style={{ padding: "7px 14px 7px 11px", background: modeStyle.bg, border: `1px solid ${modeStyle.border}` }}
+      >
+        <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: modeStyle.dot }} />
+        <span className="text-[11px] tracking-[.13em] uppercase" style={{ color: modeStyle.color }}>
+          {modeLabel}
+        </span>
+      </div>
 
       <div className="flex justify-between items-center mt-[22px] mb-3">
         <div className="flex items-center gap-[9px]">
