@@ -194,18 +194,31 @@ export function generateOutfit(
         return formalityOf(i) === 0;
       });
     }
+    // Contexte "à la maison" — Cocooning, ou Télétravail (sous-contexte de
+    // travail_formel) : partagé par plusieurs règles (R-B13/R-B14/R-B17),
+    // jamais en Présentiel.
+    const isHomeContext = occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail");
     if (occasion === "cocooning") {
-      // R-B12 — pas de veste/manteau ni de chaussures autres que d'intérieur chez soi.
+      // R-B12 — pas de veste/manteau chez soi (Cocooning uniquement — en
+      // Télétravail on peut porter un gilet/une veste, rien ne l'interdit).
       r = r.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
+    }
+    if (isHomeContext) {
+      // R-B13/R-B17 — chaussures d'intérieur uniquement à la maison
+      // (Cocooning et Télétravail).
       r = r.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
     } else {
-      // R-B13 — symétrique de R-B12 : une chaussure d'intérieur n'apparaît jamais hors Cocooning.
+      // R-B13 — symétrique : une chaussure d'intérieur n'apparaît jamais hors de ce contexte.
       r = r.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Chaussures d'intérieur");
     }
-    // R-B14 — aucun sac n'a de fonction chez soi : exclu en Cocooning et en
-    // Télétravail (sous-contexte de travail_formel), jamais en Présentiel.
-    if (occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail")) {
+    // R-B14 — aucun sac n'a de fonction chez soi.
+    if (isHomeContext) {
       r = r.filter((i) => i.cat !== "sac");
+    }
+    // R-B18 — aucun accessoire n'a de fonction en Télétravail (bijou/sac déjà
+    // couverts ailleurs ; concerne ceinture, foulard, lunettes...).
+    if (occasion === "travail_formel" && workMode === "Télétravail") {
+      r = r.filter((i) => i.cat !== "accessoire");
     }
     // R-B15 — symétrique de R-B11 : un vêtement de sport (formalité 0) est
     // réservé à l'occasion Sport, jamais réutilisé ailleurs. Ne concerne que
@@ -348,15 +361,22 @@ export function swapOutfitPiece(
       return formalityOf(i) === 0;
     });
   }
+  const isHomeContext = occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail");
   if (occasion === "cocooning") {
     candidates = candidates.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
+  }
+  if (isHomeContext) {
     candidates = candidates.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
   } else {
     candidates = candidates.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Chaussures d'intérieur");
   }
   // R-B14 — symétrique du filtre appliqué dans generateOutfit.
-  if (occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail")) {
+  if (isHomeContext) {
     candidates = candidates.filter((i) => i.cat !== "sac");
+  }
+  // R-B18 — symétrique du filtre appliqué dans generateOutfit.
+  if (occasion === "travail_formel" && workMode === "Télétravail") {
+    candidates = candidates.filter((i) => i.cat !== "accessoire");
   }
   // R-B15 — symétrique du filtre appliqué dans generateOutfit.
   if (occasion !== "all" && occasion !== "sport") {
