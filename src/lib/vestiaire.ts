@@ -40,11 +40,15 @@ import type { CategoryKey, Coupe, IntensiteCouleur, Matiere, Season, ShoeType, T
  * - `role_couleur_palette` (base/neutre/accent) : lu et stocké
  *   (Item.paletteRole) mais pas encore consommé par le moteur de sélection
  *   de capsule — en attente de décision sur son usage exact.
- * - `necessite_soleil` (boolean) : mappé sur Item.necessiteSoleil — R-B16
+ * - `necessite_soleil` (boolean) : mappé sur Item.necessiteSoleil — R-B15
  *   exclut la pièce des tenues générées tant que la météo du jour n'est pas
  *   ensoleillée (label contenant "soleil").
- * - `couleur_secondaire`, `meteo_min_temp`/`meteo_max_temp`, `resiste_pluie` :
- *   pas encore exploités côté app — lus mais ignorés pour l'instant.
+ * - `meteo_min_temp`/`meteo_max_temp` : mappés sur Item.meteoMinTemp/
+ *   meteoMaxTemp — exclut la pièce des tenues générées si la température du
+ *   jour est hors de cette plage (toutes catégories, contrairement à R-B3
+ *   qui ne concerne que le vêtement). Absent = jamais filtré sur ce critère.
+ * - `couleur_secondaire`, `resiste_pluie` : pas encore exploités côté app —
+ *   lus mais ignorés pour l'instant.
  */
 export const VESTIAIRE_ID_OFFSET = 100000;
 
@@ -252,6 +256,8 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     paletteRole: mapPaletteRole(row.role_couleur_palette),
     affLink: row.lien_affiliation || undefined,
     necessiteSoleil: mapNecessiteSoleil(row.necessite_soleil),
+    meteoMinTemp: row.meteo_min_temp ?? undefined,
+    meteoMaxTemp: row.meteo_max_temp ?? undefined,
   };
 }
 

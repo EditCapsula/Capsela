@@ -245,6 +245,17 @@ export function generateOutfit(
     if (!isSunny(weather)) {
       r = r.filter((i) => !i.necessiteSoleil);
     }
+    // Plage de température (meteo_min_temp/meteo_max_temp, source
+    // vestiaire_universel) — une pièce n'est jamais suggérée si la météo du
+    // jour sort de sa plage déclarée. Toutes catégories (contrairement à
+    // R-B3, limitée au vêtement) : un manteau d'hiver ou une écharpe n'ont
+    // pas plus leur place par forte chaleur qu'un haut trop léger par temps
+    // froid. Sans valeur déclarée, jamais filtré sur ce critère.
+    r = r.filter((i) => {
+      if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp) return false;
+      if (i.meteoMaxTemp != null && weather.temp > i.meteoMaxTemp) return false;
+      return true;
+    });
     return r;
   };
 
@@ -401,6 +412,14 @@ export function swapOutfitPiece(
   // R-B15 — symétrique du filtre appliqué dans generateOutfit.
   if (weather && !isSunny(weather)) {
     candidates = candidates.filter((i) => !i.necessiteSoleil);
+  }
+  // Plage de température — symétrique du filtre appliqué dans generateOutfit.
+  if (weather) {
+    candidates = candidates.filter((i) => {
+      if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp) return false;
+      if (i.meteoMaxTemp != null && weather.temp > i.meteoMaxTemp) return false;
+      return true;
+    });
   }
   if (!candidates.length) return outfitItems.map((i) => i.id);
   const rest = outfitItems.filter((i) => i.id !== pieceId);
