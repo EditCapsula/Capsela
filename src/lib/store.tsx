@@ -583,11 +583,32 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       })),
     cancelCreateLook: () => go("wardrobe"),
     toggleLookDraftPiece: (id) =>
-      setState((s) => ({
-        ...s,
-        lookDraftIds: s.lookDraftIds.includes(id) ? s.lookDraftIds.filter((x) => x !== id) : [...s.lookDraftIds, id],
-        lookDraftDismissed: [],
-      })),
+      setState((s) => {
+        const piece = s.items.find((i) => i.id === id);
+        if (!piece) return s;
+        if (s.lookDraftIds.includes(id)) {
+          return { ...s, lookDraftIds: s.lookDraftIds.filter((x) => x !== id), lookDraftDismissed: [] };
+        }
+        // Picker "Créer un look" (recette 13/08/2026) : Bijoux se sélectionne
+        // à volonté (plusieurs pièces simultanées, sans plafond) ; hauts/pulls
+        // gardent l'exception layering existante (2 pièces max, éviction FIFO
+        // au-delà) ; toute autre catégorie reste à sélection unique — choisir
+        // une nouvelle pièce y remplace celle déjà retenue dans la même catégorie.
+        let next: number[];
+        if (piece.cat === "bijou") {
+          next = [...s.lookDraftIds, id];
+        } else if (piece.cat === "haut" || piece.cat === "pull") {
+          const layerIds = s.lookDraftIds.filter((x) => {
+            const it = s.items.find((i) => i.id === x);
+            return it && (it.cat === "haut" || it.cat === "pull");
+          });
+          const trimmed = layerIds.length >= 2 ? s.lookDraftIds.filter((x) => x !== layerIds[0]) : s.lookDraftIds;
+          next = [...trimmed, id];
+        } else {
+          next = [...s.lookDraftIds.filter((x) => s.items.find((i) => i.id === x)?.cat !== piece.cat), id];
+        }
+        return { ...s, lookDraftIds: next, lookDraftDismissed: [] };
+      }),
     setLookDraftName: (v) => setState((s) => ({ ...s, lookDraftName: v })),
     setLookDraftOccasion: (o) =>
       setState((s) => ({ ...s, lookDraftOccasion: s.lookDraftOccasion === o ? "all" : o, lookDraftDismissed: [] })),
