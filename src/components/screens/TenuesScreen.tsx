@@ -46,7 +46,7 @@ function missingSuggestionText(missingCats: string[]): string {
 }
 
 export default function TenuesScreen() {
-  const { state, weather, geoCity, wardrobePool, actions } = useCapsela();
+  const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
   const [suggestionInfoId, setSuggestionInfoId] = useState<number | null>(null);
@@ -109,19 +109,33 @@ export default function TenuesScreen() {
         </div>
       </div>
 
-      <div className="flex items-center gap-[9px] bg-card border border-border rounded-full py-[10px] px-[15px] mt-5">
-        <span
-          className="w-[9px] h-[9px] rounded-full bg-terracotta flex-shrink-0"
-          style={{ boxShadow: "0 0 0 4px rgba(166,105,80,.16)" }}
-        />
-        <div className="flex-1 min-w-0 text-[13px] text-ink whitespace-nowrap overflow-hidden text-ellipsis">
-          {geoCity.city}
+      {geoLoading ? (
+        <div className="flex items-center gap-[9px] bg-card border border-border rounded-full py-[10px] px-[15px] mt-5">
+          <span className="w-[9px] h-[9px] rounded-full flex-shrink-0 animate-pulse" style={{ background: "#B3AA9B" }} />
+          <div className="flex-1 min-w-0 text-[13px] text-muted">Localisation en cours…</div>
         </div>
-        <span className="text-[13px] flex-shrink-0">{WEATHER_ICONS[geoCity.label] || "🌤️"}</span>
-        <span className="text-[12px] text-[#3F3B34] whitespace-nowrap flex-shrink-0">
-          {geoCity.temp}° · {geoCity.label}
-        </span>
-      </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-[9px] bg-card border border-border rounded-full py-[10px] px-[15px] mt-5">
+            <span
+              className="w-[9px] h-[9px] rounded-full bg-terracotta flex-shrink-0"
+              style={{ boxShadow: "0 0 0 4px rgba(166,105,80,.16)" }}
+            />
+            <div className="flex-1 min-w-0 text-[13px] text-ink whitespace-nowrap overflow-hidden text-ellipsis">
+              {geoCity.city}
+            </div>
+            <span className="text-[13px] flex-shrink-0">{WEATHER_ICONS[geoCity.label] || "🌤️"}</span>
+            <span className="text-[12px] text-[#3F3B34] whitespace-nowrap flex-shrink-0">
+              {geoCity.temp}° · {geoCity.label}
+            </span>
+          </div>
+          {!geoIsLive && (
+            <div className="text-[10.5px] text-placeholder mt-[6px] px-[5px]">
+              Position par défaut — active la géolocalisation pour ta météo du jour exacte.
+            </div>
+          )}
+        </>
+      )}
 
       <div className="mt-5 text-[11px] tracking-[.16em] uppercase text-muted">
         Qu&apos;est-ce qui est prévu aujourd&apos;hui ?
@@ -263,7 +277,17 @@ export default function TenuesScreen() {
         </button>
       </div>
       <div className="flex flex-col gap-[10px]">
-        {outfitPieces.map((it) => {
+        {geoLoading
+          ? [0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-[13px] bg-card border border-border rounded-[14px] p-[11px]">
+                <div className="w-[58px] h-[70px] rounded-lg flex-shrink-0 animate-pulse" style={{ background: "#EFE7D8" }} />
+                <div className="flex-1 min-w-0 flex flex-col gap-[8px]">
+                  <div className="h-[10px] w-3/4 rounded-full animate-pulse" style={{ background: "#EFE7D8" }} />
+                  <div className="h-[10px] w-1/2 rounded-full animate-pulse" style={{ background: "#EFE7D8" }} />
+                </div>
+              </div>
+            ))
+          : outfitPieces.map((it) => {
           const suggested = isCatalogId(it.id);
           const infoOpen = suggestionInfoId === it.id;
           return (

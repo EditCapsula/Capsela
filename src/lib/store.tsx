@@ -46,6 +46,9 @@ function defaultOccasionToday(prefs: ProfilePrefs): OccasionKey {
   return prefs.workDays.includes(todayKey) ? "travail_formel" : "quotidien";
 }
 
+/** Dernière position géolocalisée avec succès (persistée) — fallback prioritaire sur la ville de profil si la géolocalisation échoue ensuite (recette 17/08/2026). */
+const LAST_KNOWN_CITY_KEY = "capsela.lastKnownCity";
+
 function buildInitialState(): AppState {
   return {
     // Le dressing réel démarre vide : la capsule par défaut prend le relais.
@@ -86,7 +89,6 @@ function buildInitialState(): AppState {
     addAccessoireTypeTouched: false,
     addSubtype: null,
     addSubtypeTouched: false,
-    geoIndex: 0,
     outfit: [],
     outfitMissingCats: [],
     outfitValidated: false,
@@ -177,7 +179,6 @@ export interface Actions {
   setCapsuleSeason: (s: CapsuleSeason) => void;
   /** Remplace une pièce de la tenue par une autre de la même famille. */
   swapPiece: (id: number, cat: CategoryKey) => void;
-  cycleGeo: () => void;
   regenOutfit: () => void;
   dismissOutfitSuggestion: (key: string) => void;
   wearOutfitToday: () => void;
@@ -207,8 +208,12 @@ export interface Actions {
 interface CapselaContextValue {
   state: AppState;
   weather: Weather;
-  /** Ville affichée (météo réelle de la position si consentie et disponible, sinon la ville simulée courante — cf. geoIndex). */
+  /** Ville affichée : position géolocalisée en direct si disponible, sinon la dernière position connue, sinon la ville de profil. */
   geoCity: City;
+  /** true tant que la géolocalisation est en cours — aucune ville ne doit être affichée comme "courante" pendant ce délai. */
+  geoLoading: boolean;
+  /** true si geoCity reflète une position géolocalisée en direct (pas un fallback à signaler comme tel). */
+  geoIsLive: boolean;
   /** Capsule par défaut personnalisée (suggestions du catalogue). */
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
@@ -241,30 +246,70 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     stateRef.current = state;
   }, [state]);
 
-  // Météo réelle de la position (OpenWeatherMap) quand géolocalisation +
-  // "météo de ma position" sont activées (profile.prefs, recette écran
-  // "Localisation & météo") — sinon on retombe sur la liste de villes
-  // simulée (CITIES, cycle manuel via "Modifier"), jamais d'écran bloqué en
-  // attendant une réponse réseau ou un refus de permission.
+  // Dernière position géolocalisée avec succès, si une existe (survit aux
+  // rechargements) — lue une seule fois après montage, jamais pendant le
+  // rendu initial (mismatch d'hydratation, cf. auth.tsx).
+  const [lastKnownCity, setLastKnownCity] = useState<City | null>(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LAST_KNOWN_CITY_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (raw) setLastKnownCity(JSON.parse(raw) as City);
+    } catch {
+      // stockage indisponible : pas de dernière position connue, on retombe sur la ville de profil.
+    }
+  }, []);
+
+  // Géolocalisation en direct (OpenWeatherMap) quand "géolocalisation" +
+  // "météo de ma position" sont activées (profile.prefs, écran "Localisation
+  // & météo") — statut explicite (pas seulement liveWeather nullable) pour
+  // distinguer "en cours" de "abandonnée sans résultat" : la ville et la
+  // météo affichées ne doivent jamais rester sur une ancienne valeur pendant
+  // que la vraie position se charge (recette 17/08/2026 "Règle de
+  // géolocalisation sur la page Tenue du jour").
   const [liveWeather, setLiveWeather] = useState<City | null>(null);
+  const [geoStatus, setGeoStatus] = useState<"disabled" | "loading" | "success" | "failed">("disabled");
   useEffect(() => {
     let cancelled = false;
+    if (!profile.prefs.geoConsent || !profile.prefs.weatherFromGeo) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLiveWeather(null);
+      setGeoStatus("disabled");
+      return;
+    }
+    setGeoStatus("loading");
     (async () => {
-      if (!profile.prefs.geoConsent || !profile.prefs.weatherFromGeo) {
-        if (!cancelled) setLiveWeather(null);
-        return;
-      }
       const pos = await getBrowserPosition();
-      if (!pos || cancelled) return;
-      const w = await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude);
-      if (!cancelled && w) setLiveWeather(w);
+      if (cancelled) return;
+      const w = pos ? await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude) : null;
+      if (cancelled) return;
+      if (w) {
+        setLiveWeather(w);
+        setLastKnownCity(w);
+        setGeoStatus("success");
+        try {
+          localStorage.setItem(LAST_KNOWN_CITY_KEY, JSON.stringify(w));
+        } catch {
+          // stockage indisponible : la position ne sera pas retrouvée hors ligne la prochaine fois, sans impact ici.
+        }
+      } else {
+        setGeoStatus("failed");
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, [profile.prefs.geoConsent, profile.prefs.weatherFromGeo]);
 
-  const geoCity: City = liveWeather ?? CITIES[(state.geoIndex || 0) % CITIES.length];
+  // En cours : aucune ville affichée tant que la vraie position n'est pas
+  // connue (jamais une ancienne ville affichée comme si elle était la
+  // position courante). Résolu (succès, échec ou géoloc désactivée) : ville
+  // en direct, sinon dernière position connue, sinon la ville de profil —
+  // geoIsLive distingue ce cas pour l'indiquer clairement à l'écran.
+  const geoLoading = geoStatus === "loading";
+  const geoIsLive = geoStatus === "success";
+  const profileCityFallback = CITIES.find((c) => c.city === profile.city) ?? CITIES[0];
+  const geoCity: City = liveWeather ?? lastKnownCity ?? profileCityFallback;
   const weather: Weather = useMemo(() => {
     const season = weatherSeasonBucket(geoCity.temp);
     return { season, temp: geoCity.temp, label: geoCity.label, seasons: [season, "Toutes saisons"] };
@@ -324,13 +369,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
   };
 
-  // Première tenue : dès que le profil est chargé (la capsule par défaut en dépend).
+  // Première tenue : dès que le profil est chargé (la capsule par défaut en
+  // dépend) ET que la géolocalisation a fini de se résoudre (succès, échec
+  // ou désactivée) — jamais avant, sinon la toute première tenue générée
+  // s'appuierait sur une météo de repli qui ne serait plus jamais
+  // régénérée automatiquement par la suite (recette 17/08/2026).
   useEffect(() => {
-    if (ready && !stateRef.current.outfit.length) {
+    if (ready && !geoLoading && !stateRef.current.outfit.length) {
       setState((s) => regen(s));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, defaultCapsule]);
+  }, [ready, geoLoading, defaultCapsule]);
 
   const go = (screen: Screen) => setState((s) => ({ ...s, screen }));
 
@@ -516,8 +565,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           dismissedSuggestions: [],
         };
       }),
-    cycleGeo: () => setState((s) => ({ ...s, geoIndex: ((s.geoIndex || 0) + 1) % CITIES.length })),
-
     regenOutfit: () => setState(regen),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
@@ -687,6 +734,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     state,
     weather,
     geoCity,
+    geoLoading,
+    geoIsLive,
     defaultCapsule,
     wardrobePool,
     vestiairePool,

@@ -201,8 +201,6 @@ export interface AppState {
   addSubtype: string | null;
   addSubtypeTouched: boolean;
 
-  geoIndex: number;
-
   outfit: number[];
   /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. */
   outfitMissingCats: (CategoryKey | "bas")[];
