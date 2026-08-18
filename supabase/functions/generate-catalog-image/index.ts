@@ -140,7 +140,8 @@ Deno.serve(async (req) => {
     return jsonError(message, 422);
   }
 
-  const genre = (article.genre || "").trim().toLowerCase() === "femme" ? "femme" : "unisexe";
+  const genreRaw = (article.genre || "").trim().toLowerCase();
+  const genre = genreRaw === "femme" ? "femme" : genreRaw === "homme" ? "homme" : "unisexe";
   const sousTypeNorm = normalizeVisualSubtype(article.sous_type);
   const couleurNorm = normalizeVisualColor(article.couleur_dominante);
   const visualKey = computeVisualKey({

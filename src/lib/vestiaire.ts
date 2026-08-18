@@ -157,8 +157,11 @@ function mapRolePiece(raw: string | null): "base" | "calque" | "piece_unique" | 
   return undefined;
 }
 
-function mapGenre(raw: string | null): "femme" | "unisexe" {
-  return (raw || "").trim().toLowerCase() === "femme" ? "femme" : "unisexe";
+function mapGenre(raw: string | null): "femme" | "homme" | "unisexe" {
+  const v = (raw || "").trim().toLowerCase();
+  if (v === "femme") return "femme";
+  if (v === "homme") return "homme";
+  return "unisexe";
 }
 
 const MATIERES: Matiere[] = ["Coton", "Lin", "Laine", "Soie", "Cuir", "Denim", "Synthétique"];

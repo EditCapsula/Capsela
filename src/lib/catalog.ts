@@ -7,8 +7,8 @@ import type { CategoryKey, Item, Season, ShoeType } from "./types";
  * entrer en collision avec les pièces ajoutées par l'utilisateur.
  */
 export interface CatalogItem extends Item {
-  /** 'femme' pour les pièces exclues des capsules homme, sinon 'unisexe'. */
-  genre: "femme" | "unisexe";
+  /** 'femme'/'homme' pour une pièce genrée (exclue de l'autre capsule), 'unisexe' pour une pièce commune aux deux. */
+  genre: "femme" | "homme" | "unisexe";
 }
 
 // name, cat, colorName, hex

@@ -242,7 +242,7 @@ export interface BuiltPrompt {
  */
 export function buildImagePrompt(item: CatalogItem): BuiltPrompt {
   const canonCategory = item.cat;
-  const genreEn = item.genre === "femme" ? "women's" : "unisex";
+  const genreEn = item.genre === "femme" ? "women's" : item.genre === "homme" ? "men's" : "unisex";
   const colorEn = translate(COLOR_EN, item.color) || (item.color ? item.color.toLowerCase() : "");
   const matiereEn = item.matiere ? MATIERE_EN[item.matiere] : undefined;
 

@@ -315,7 +315,8 @@ export interface BuiltPrompt {
  */
 export function buildImagePrompt(row: VestiaireRow): BuiltPrompt {
   const canonCategory = CATEGORY_CANON[(row.category || "").trim().toLowerCase()] || "accessoire";
-  const genreEn = (row.genre || "").trim().toLowerCase() === "femme" ? "women's" : "unisex";
+  const genreRaw = (row.genre || "").trim().toLowerCase();
+  const genreEn = genreRaw === "femme" ? "women's" : genreRaw === "homme" ? "men's" : "unisex";
   const colorRaw = row.couleur_dominante || "";
   const colorEn = translate(COLOR_EN, colorRaw) || (colorRaw ? colorRaw.toLowerCase() : "");
   const matiereEn = translate(MATIERE_EN, row.matiere);

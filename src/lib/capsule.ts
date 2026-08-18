@@ -131,9 +131,17 @@ export function computeDefaultCapsule(
     base = base.filter((it) => !it.necessiteSoleil);
   }
 
+  // Filtrage genre symétrique (recette 18/08/2026, distinction homme/femme
+  // dans le catalogue) : un profil homme ne voit jamais les pièces taguées
+  // femme, et réciproquement — les pièces unisexe restent visibles des deux
+  // côtés. Le garde-fou "≥16" évite de trop restreindre le pool si le
+  // catalogue manque encore de pièces genrées dans un sens.
   if (profile.gender === "homme") {
     const noFem = base.filter((it) => it.genre !== "femme");
     if (noFem.length >= 16) base = noFem;
+  } else if (profile.gender === "femme") {
+    const noHomme = base.filter((it) => it.genre !== "homme");
+    if (noHomme.length >= 16) base = noHomme;
   }
 
   const bucket = seasonKey
