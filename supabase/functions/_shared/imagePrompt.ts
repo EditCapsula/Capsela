@@ -19,6 +19,7 @@ export interface VestiaireRow {
   couleur_dominante: string | null;
   matiere: string | null;
   genre: string | null;
+  coupe: string | null;
 }
 
 export const CATEGORY_CANON: Record<string, string> = {
@@ -230,6 +231,13 @@ const COLOR_EN: Record<string, string> = {
   perle: "pearl white",
 };
 
+/** Coupe structurée (champ dédié `coupe`, distinct du texte libre de sous_type) — recette 18/08/2026. */
+const COUPE_EN: Record<string, string> = {
+  "Serré": "fitted",
+  "Ajusté": "tailored",
+  "Ample": "loose-fitting",
+};
+
 /** Toutes les matières (contrairement à la clé visuelle, qui n'en retient qu'une partie pour la déduplication) — décrire fidèlement le tissu aide la génération, même sans dédupliquer dessus. */
 const MATIERE_EN: Record<string, string> = {
   coton: "cotton",
@@ -328,13 +336,14 @@ export function buildImagePrompt(row: VestiaireRow): BuiltPrompt {
   const sousTypeRaw = (row.sous_type || "").trim().toLowerCase();
   const noun = translate(SUBTYPE_EN, sousTypeRaw) || CATEGORY_EN[canonCategory] || "item";
 
-  // Modificateurs de coupe/style repérés dans sous_type uniquement.
+  // Modificateurs de coupe/style : mots-clés repérés dans sous_type, plus le
+  // champ structuré `coupe` (Serré/Ajusté/Ample) quand renseigné.
   const modifiers = Array.from(
     new Set(
-      sousTypeRaw
-        .split(/[\s/]+/)
-        .map((w) => MODIFIER_EN[w])
-        .filter((w): w is string => Boolean(w))
+      [
+        ...sousTypeRaw.split(/[\s/]+/).map((w) => MODIFIER_EN[w]),
+        row.coupe ? COUPE_EN[row.coupe] : undefined,
+      ].filter((w): w is string => Boolean(w))
     )
   );
 

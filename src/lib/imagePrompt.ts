@@ -153,6 +153,13 @@ const COLOR_EN: Record<string, string> = {
   perle: "pearl white",
 };
 
+/** Coupe structurée (champ dédié `coupe`, distinct du texte libre de sous_type) — recette 18/08/2026. */
+const COUPE_EN: Record<string, string> = {
+  "Serré": "fitted",
+  "Ajusté": "tailored",
+  "Ample": "loose-fitting",
+};
+
 /** Toutes les matières (contrairement à la clé visuelle, qui n'en retient qu'une partie pour la déduplication) — décrire fidèlement le tissu aide la génération, même sans dédupliquer dessus. */
 const MATIERE_EN: Record<string, string> = {
   Coton: "cotton",
@@ -253,10 +260,10 @@ export function buildImagePrompt(item: CatalogItem): BuiltPrompt {
 
   const modifiers = Array.from(
     new Set(
-      subtypeSource
-        .split(/[\s/]+/)
-        .map((w) => MODIFIER_EN[w])
-        .filter((w): w is string => Boolean(w))
+      [
+        ...subtypeSource.split(/[\s/]+/).map((w) => MODIFIER_EN[w]),
+        item.coupe ? COUPE_EN[item.coupe] : undefined,
+      ].filter((w): w is string => Boolean(w))
     )
   );
 

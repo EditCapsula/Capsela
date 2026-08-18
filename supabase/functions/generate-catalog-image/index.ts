@@ -52,6 +52,7 @@ interface ArticleRow {
   couleur_dominante: string | null;
   matiere: string | null;
   genre: string | null;
+  coupe: string | null;
   visual_asset_id: number | null;
 }
 
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
 
   const { data: article, error: fetchError } = await supabase
     .from("vestiaire_universel")
-    .select("id, name, category, sous_type, couleur_dominante, matiere, genre, visual_asset_id")
+    .select("id, name, category, sous_type, couleur_dominante, matiere, genre, coupe, visual_asset_id")
     .eq("id", itemId)
     .maybeSingle<ArticleRow>();
 
@@ -270,6 +271,7 @@ Deno.serve(async (req) => {
       couleur_dominante: article.couleur_dominante,
       matiere: article.matiere,
       genre: article.genre,
+      coupe: article.coupe,
     } satisfies VestiaireRow);
 
     // Logs de debug (correctif 18/08/2026) — visibles dans Supabase Dashboard
