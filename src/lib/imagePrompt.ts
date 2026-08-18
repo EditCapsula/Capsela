@@ -106,6 +106,10 @@ const MODIFIER_EN: Record<string, string> = {
   tailleur: "tailored",
   bretelles: "with thin straps",
   bustier: "strapless bustier",
+  sport: "athletic",
+  capuche: "hooded",
+  "zippé": "zip-up",
+  "zippée": "zip-up",
 };
 
 /** Cols/encolures reconnus en bigramme (2 mots consécutifs) n'importe où dans sous_type — ex. "pull col v" ou "col roulé" seul fonctionnent tous les deux. */
@@ -119,6 +123,7 @@ const NECKLINE_EN: Record<string, string> = {
   "col cheminée": "funnel neck",
   "sans manches": "sleeveless",
   "dos nu": "backless",
+  "robe chemise": "shirt-style",
 };
 
 const COLOR_EN: Record<string, string> = {
