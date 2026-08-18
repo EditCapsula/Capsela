@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { bestStyleFor } from "@/lib/capsule";
 import { useCapsela } from "@/lib/store";
+import { resolveItemImage } from "@/lib/catalogImages";
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -20,11 +21,32 @@ export default function PieceScreen() {
   const active = state.activeSuggested
     ? vestiairePool.find((i) => i.id === state.activeId)
     : state.items.find((i) => i.id === state.activeId);
+
+  // Génération à la demande pour cette seule pièce (recette 18/08/2026) :
+  // ouvrir la fiche détail est une action ciblée sur UN article, donc un
+  // point de déclenchement sûr — contrairement à l'écran Capsule qui liste
+  // tout le catalogue proposé et ne doit jamais déclencher pour tout à la fois.
+  useEffect(() => {
+    // Seules les pièces suggérées (catalogue) ont des visuels générés — une
+    // pièce réelle du dressing n'a jamais de ligne côté vestiaire_universel.
+    if (!active || !state.activeSuggested) return;
+    if (
+      resolveItemImage(active).kind === "placeholder" &&
+      active.imageStatus !== "generating" &&
+      active.imageStatus !== "error" &&
+      active.imageStatus !== "invalid"
+    ) {
+      actions.requestCatalogImage(active.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id, state.activeSuggested]);
+
   if (!active) return null;
 
   const suggested = state.activeSuggested;
   const pNever = active.worn == null;
   const pToday = active.worn === 0;
+  const resolvedImage = resolveItemImage(active);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
@@ -36,13 +58,27 @@ export default function PieceScreen() {
       </button>
 
       <div
-        className="w-full rounded-[18px] border border-border overflow-hidden mt-[18px]"
+        className="w-full rounded-[18px] border border-border overflow-hidden mt-[18px] relative"
         style={
-          active.photoUrl
-            ? { aspectRatio: "4/5", backgroundImage: `url(${active.photoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-            : { aspectRatio: "4/5", background: active.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
+          resolvedImage.kind === "generated"
+            ? { aspectRatio: "4/5", background: "#F3EDE1" }
+            : resolvedImage.url
+              ? { aspectRatio: "4/5", backgroundImage: `url(${resolvedImage.url})`, backgroundSize: "cover", backgroundPosition: "center" }
+              : { aspectRatio: "4/5", background: active.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
         }
-      />
+      >
+        {resolvedImage.kind === "generated" && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolvedImage.url}
+            alt={active.name}
+            style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", padding: 18, boxSizing: "border-box" }}
+          />
+        )}
+        {resolvedImage.kind === "placeholder" && active.imageStatus === "generating" && (
+          <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
+        )}
+      </div>
 
       {suggested && (
         <div>

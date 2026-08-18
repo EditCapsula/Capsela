@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATS } from "@/lib/data";
 import { CAPSULE_SEASONS, computeDefaultCapsule, currentSeasonKey, type CapsuleSeason } from "@/lib/capsule";
@@ -18,23 +18,12 @@ export default function CapsuleScreen() {
     [profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool]
   );
 
-  // Génération automatique des visuels manquants (même logique que la page
-  // Tenue, recette 18/08/2026) : la capsule est un des écrans où les pièces
-  // du catalogue sont le plus consultées, donc où le déclenchement à la
-  // demande doit aussi avoir lieu.
-  useEffect(() => {
-    capsule.forEach((it) => {
-      if (
-        resolveItemImage(it).kind === "placeholder" &&
-        it.imageStatus !== "generating" &&
-        it.imageStatus !== "error" &&
-        it.imageStatus !== "invalid"
-      ) {
-        actions.requestCatalogImage(it.id);
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [capsule]);
+  // Affichage seul ici (pas de déclenchement) : la capsule liste 15-30
+  // pièces d'un coup, donc y déclencher la génération pour toutes en même
+  // temps équivaudrait à une génération en masse, explicitement exclue tant
+  // que le système n'est pas validé. Le déclenchement à la demande, pièce
+  // par pièce, se fait uniquement à l'ouverture de la fiche détail
+  // (PieceScreen) — cohérent avec "chaque article est cliquable".
 
   const count = (cat: string) => capsule.filter((i) => i.cat === cat).length;
   const tops = count("haut");

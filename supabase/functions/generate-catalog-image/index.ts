@@ -123,7 +123,23 @@ Deno.serve(async (req) => {
     // 'error' ou 'missing' : retente ci-dessous (cascade + génération), même asset réutilisé.
   }
 
-  const canonCategory = CATEGORY_CANON[(article.category || "").trim().toLowerCase()] || "accessoire";
+  // Catégorie strictement mappée — jamais de repli silencieux sur
+  // "accessoire" (correctif 18/08/2026 v2) : un article dont la catégorie
+  // brute ne correspond à aucune entrée connue de CATEGORY_CANON tombait
+  // auparavant dans le seau générique "accessoire", où il pouvait entrer en
+  // collision de visual_key (et donc de visuel réutilisé) avec des articles
+  // d'une tout autre nature (pantalon de jogging, short, lunettes se
+  // partageant la même image). Un repli implicite est toujours plus
+  // dangereux ici qu'un échec explicite et loggé.
+  const rawCategory = (article.category || "").trim().toLowerCase();
+  const canonCategory = CATEGORY_CANON[rawCategory];
+  if (!canonCategory) {
+    const message = `Catégorie inconnue : "${article.category ?? ""}" (article ${article.id}) ne correspond à aucune entrée de CATEGORY_CANON. Génération annulée avant tout appel API.`;
+    console.error(JSON.stringify({ item_id: article.id, name: article.name, raw_category: article.category, error: message }));
+    await supabase.from("vestiaire_universel").update({ image_status: "error" }).eq("id", article.id);
+    return jsonError(message, 422);
+  }
+
   const genre = (article.genre || "").trim().toLowerCase() === "femme" ? "femme" : "unisexe";
   const sousTypeNorm = normalizeVisualSubtype(article.sous_type);
   const couleurNorm = normalizeVisualColor(article.couleur_dominante);
@@ -136,8 +152,12 @@ Deno.serve(async (req) => {
   });
 
   try {
-    // 2. Exact visual_key, prêt.
-    let reusable = await findReadyAsset(supabase, { visual_key: visualKey });
+    // 2. Exact visual_key, prêt. category contrainte aussi ici en défense en
+    // profondeur (correctif 18/08/2026 v2) : la clé exacte inclut déjà la
+    // catégorie par construction, mais si deux clés dégénèrent malgré tout
+    // vers la même valeur (données sources incomplètes), ce filtre
+    // supplémentaire empêche toute réutilisation cross-catégorie.
+    let reusable = await findReadyAsset(supabase, { visual_key: visualKey, category: canonCategory });
     // 3. genre + sous_type + couleur (matière ignorée), prêt. category
     // TOUJOURS contrainte (correctif 18/08/2026) : jamais de réutilisation
     // cross-catégorie (ex. veste réutilisée pour un pantalon) même quand
