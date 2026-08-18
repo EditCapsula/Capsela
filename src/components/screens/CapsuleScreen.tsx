@@ -1,17 +1,41 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATS } from "@/lib/data";
 import { CAPSULE_SEASONS, computeDefaultCapsule, currentSeasonKey, type CapsuleSeason } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
+import { resolveItemImage } from "@/lib/catalogImages";
 
 export default function CapsuleScreen() {
   const { state, weather, actions, vestiairePool } = useCapsela();
   const { profile } = useAuth();
 
   const capsuleSeason: CapsuleSeason = state.capsuleSeason || currentSeasonKey();
-  const capsule = computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
+  const capsule = useMemo(
+    () => computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool),
+    [profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool]
+  );
+
+  // Génération automatique des visuels manquants (même logique que la page
+  // Tenue, recette 18/08/2026) : la capsule est un des écrans où les pièces
+  // du catalogue sont le plus consultées, donc où le déclenchement à la
+  // demande doit aussi avoir lieu.
+  useEffect(() => {
+    capsule.forEach((it) => {
+      if (
+        resolveItemImage(it).kind === "placeholder" &&
+        it.imageStatus !== "generating" &&
+        it.imageStatus !== "error" &&
+        it.imageStatus !== "invalid"
+      ) {
+        actions.requestCatalogImage(it.id);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capsule]);
+
   const count = (cat: string) => capsule.filter((i) => i.cat === cat).length;
   const tops = count("haut");
   const bottoms = count("pantalon") + count("jean") + count("jupe") + count("short");
@@ -76,23 +100,44 @@ export default function CapsuleScreen() {
             {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
           </div>
           <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
-            {g.items.map((it) => (
-              <button
-                key={it.id}
-                onClick={() => actions.openItem(it.id, true)}
-                className="flex-none w-[104px] text-left cursor-pointer"
-                style={{ scrollSnapAlign: "start" }}
-              >
-                <div
-                  className="w-full rounded-[11px] border border-border"
-                  style={{ aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
-                />
-                <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
-                  {it.name}
-                </div>
-                <div className="text-[9.5px] text-terracotta mt-[1px]">Suggestion</div>
-              </button>
-            ))}
+            {g.items.map((it) => {
+              const resolvedImage = resolveItemImage(it);
+              return (
+                <button
+                  key={it.id}
+                  onClick={() => actions.openItem(it.id, true)}
+                  className="flex-none w-[104px] text-left cursor-pointer"
+                  style={{ scrollSnapAlign: "start" }}
+                >
+                  <div
+                    className="w-full rounded-[11px] border border-border relative overflow-hidden"
+                    style={{
+                      aspectRatio: "4/5",
+                      background: resolvedImage.url ? "#F3EDE1" : it.hex,
+                      boxShadow: resolvedImage.url ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
+                    }}
+                  >
+                    {resolvedImage.url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={resolvedImage.url}
+                        alt={it.name}
+                        loading="lazy"
+                        style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", padding: 8, boxSizing: "border-box" }}
+                      />
+                    ) : (
+                      it.imageStatus === "generating" && (
+                        <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
+                      )
+                    )}
+                  </div>
+                  <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
+                    {it.name}
+                  </div>
+                  <div className="text-[9.5px] text-terracotta mt-[1px]">Suggestion</div>
+                </button>
+              );
+            })}
           </div>
         </div>
       ))}
