@@ -1,0 +1,26 @@
+name: Déployer la fonction Supabase (images catalogue)
+
+# Permet de déployer generate-catalog-image sans terminal local : ce
+# workflow tourne sur les serveurs de GitHub. Se déclenche automatiquement
+# quand le code de la fonction change, ou manuellement depuis l'onglet
+# Actions ("Run workflow"). Nécessite un secret de dépôt GitHub
+# SUPABASE_ACCESS_TOKEN (Settings → Secrets and variables → Actions).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase functions deploy generate-catalog-image --project-ref tkrbzrazejrxavtfspll
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
