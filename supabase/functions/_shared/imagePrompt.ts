@@ -129,7 +129,6 @@ const SUBTYPE_EN: Record<string, string> = {
   top: "top",
   polo: "polo shirt",
   sweat: "sweatshirt",
-  "col roulé": "turtleneck",
   gilet: "cardigan",
   cardigan: "cardigan",
   // Vestes / manteaux
@@ -183,6 +182,17 @@ const MODIFIER_EN: Record<string, string> = {
   portefeuille: "wrap",
   "croisée": "wrap",
   tailleur: "tailored",
+};
+
+/** Cols/encolures reconnus en bigramme (2 mots consécutifs) n'importe où dans sous_type. */
+const NECKLINE_EN: Record<string, string> = {
+  "col v": "v-neck",
+  "col rond": "crew neck",
+  "col roulé": "turtleneck",
+  "col bateau": "boat neck",
+  "col claudine": "peter pan collar",
+  "col chemise": "collared",
+  "col cheminée": "funnel neck",
 };
 
 const COLOR_EN: Record<string, string> = {
@@ -336,12 +346,16 @@ export function buildImagePrompt(row: VestiaireRow): BuiltPrompt {
   const sousTypeRaw = (row.sous_type || "").trim().toLowerCase();
   const noun = translate(SUBTYPE_EN, sousTypeRaw) || CATEGORY_EN[canonCategory] || "item";
 
-  // Modificateurs de coupe/style : mots-clés repérés dans sous_type, plus le
-  // champ structuré `coupe` (Serré/Ajusté/Ample) quand renseigné.
+  // Modificateurs de coupe/style : mots-clés repérés dans sous_type (en mot
+  // seul ou en bigramme pour les cols/encolures, ex. "col v"), plus le champ
+  // structuré `coupe` (Serré/Ajusté/Ample) quand renseigné.
+  const sousTypeTokens = sousTypeRaw.split(/[\s/]+/).filter(Boolean);
+  const sousTypeBigrams = sousTypeTokens.slice(0, -1).map((w, i) => `${w} ${sousTypeTokens[i + 1]}`);
   const modifiers = Array.from(
     new Set(
       [
-        ...sousTypeRaw.split(/[\s/]+/).map((w) => MODIFIER_EN[w]),
+        ...sousTypeTokens.map((w) => MODIFIER_EN[w]),
+        ...sousTypeBigrams.map((b) => NECKLINE_EN[b]),
         row.coupe ? COUPE_EN[row.coupe] : undefined,
       ].filter((w): w is string => Boolean(w))
     )

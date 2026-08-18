@@ -54,7 +54,6 @@ const SUBTYPE_EN: Record<string, string> = {
   top: "top",
   polo: "polo shirt",
   sweat: "sweatshirt",
-  "col roulé": "turtleneck",
   gilet: "cardigan",
   cardigan: "cardigan",
   blazer: "blazer",
@@ -105,6 +104,17 @@ const MODIFIER_EN: Record<string, string> = {
   portefeuille: "wrap",
   "croisée": "wrap",
   tailleur: "tailored",
+};
+
+/** Cols/encolures reconnus en bigramme (2 mots consécutifs) n'importe où dans sous_type — ex. "pull col v" ou "col roulé" seul fonctionnent tous les deux. */
+const NECKLINE_EN: Record<string, string> = {
+  "col v": "v-neck",
+  "col rond": "crew neck",
+  "col roulé": "turtleneck",
+  "col bateau": "boat neck",
+  "col claudine": "peter pan collar",
+  "col chemise": "collared",
+  "col cheminée": "funnel neck",
 };
 
 const COLOR_EN: Record<string, string> = {
@@ -258,10 +268,13 @@ export function buildImagePrompt(item: CatalogItem): BuiltPrompt {
     .toLowerCase();
   const noun = translate(SUBTYPE_EN, subtypeSource) || CATEGORY_EN[canonCategory] || "item";
 
+  const subtypeTokens = subtypeSource.split(/[\s/]+/).filter(Boolean);
+  const subtypeBigrams = subtypeTokens.slice(0, -1).map((w, i) => `${w} ${subtypeTokens[i + 1]}`);
   const modifiers = Array.from(
     new Set(
       [
-        ...subtypeSource.split(/[\s/]+/).map((w) => MODIFIER_EN[w]),
+        ...subtypeTokens.map((w) => MODIFIER_EN[w]),
+        ...subtypeBigrams.map((b) => NECKLINE_EN[b]),
         item.coupe ? COUPE_EN[item.coupe] : undefined,
       ].filter((w): w is string => Boolean(w))
     )
