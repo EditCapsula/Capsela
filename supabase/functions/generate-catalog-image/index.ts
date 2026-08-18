@@ -1,35 +1,68 @@
-// Edge Function generate-catalog-image (recette 18/08/2026, gestion
-// automatique des images produit du catalogue).
+// Edge Function generate-catalog-image (recette 18/08/2026 v2 — architecture
+// à déduplication visual_assets).
 //
-// Entrée : { item_id: number } — id BRUT de la ligne vestiaire_universel
-// (pas l'id décalé de VESTIAIRE_ID_OFFSET côté app, cf. src/lib/vestiaire.ts).
+// Entrée : { item_id: number, force_regenerate?: boolean } — item_id est
+// l'id BRUT de la ligne vestiaire_universel (pas l'id décalé de
+// VESTIAIRE_ID_OFFSET côté app, cf. src/lib/vestiaire.ts). force_regenerate
+// réservé à un usage admin futur, jamais envoyé par le client actuel.
 //
-// Étapes : récupère l'article -> revérifie url_image -> cherche un visuel
-// réutilisable par clé visuelle -> sinon passe generating, construit le
-// prompt, appelle OpenAI (gpt-image-1), upload dans Storage, met à jour la
-// ligne, retourne image_url. Erreur à n'importe quelle étape -> image_status
-// = error, jamais d'exception non gérée (le frontend garde le placeholder).
+// Ordre impératif avant tout appel API (objectif économique central : un
+// visuel générique généré une seule fois, réutilisé indéfiniment) :
+//   1. L'article a-t-il déjà un visual_asset_id prêt ?
+//   2. Un asset existe-t-il pour la visual_key exacte ?
+//   3. Un asset compatible existe-t-il (genre + sous_type + couleur) ?
+//   4. Un asset compatible existe-t-il (sous_type + couleur seuls) ?
+//   5. Sinon seulement : génération (verrouillée, 1 retry max, plafond
+//      quotidien, jamais deux fois le même visual_key en parallèle).
 //
 // Sécurité : OPENAI_API_KEY n'est lue que côté serveur (secret Supabase),
 // jamais transmise au frontend. Déployer avec :
 //   supabase functions deploy generate-catalog-image
 //   supabase secrets set OPENAI_API_KEY=sk-...
+//   supabase secrets set IMAGE_GENERATION_MODEL=gpt-image-1   (optionnel, défaut ci-dessous)
+//   supabase secrets set IMAGE_GENERATION_QUALITY=low          (optionnel, défaut ci-dessous)
+//   supabase secrets set MAX_IMAGE_GENERATIONS_PER_DAY=50      (optionnel, défaut ci-dessous)
 //
-// Limite connue : gpt-image-1 ne peut renvoyer que du PNG (pas de WebP
-// natif) — stocké tel quel (`{id}-v{version}.png`) plutôt que de dépendre
-// d'une conversion WebP en Deno non testable depuis cet environnement.
-// Reste compatible à l'identique côté affichage (object-fit: contain).
+// ⚠️ Compression WebP (toWebp ci-dessous) : tentée via @jsquash/webp (WASM),
+// mais jamais vérifiée en conditions réelles depuis ce sandbox (pas de Deno
+// installé, pas d'accès réseau à esm.sh) — repli automatique et silencieux
+// sur PNG brut (1024×1024) si la conversion échoue pour une raison
+// quelconque, la génération n'est jamais bloquée par cette étape. À
+// vérifier en premier après le tout premier appel réel : si le fichier
+// dans Storage se termine en .png plutôt qu'en .webp, la conversion n'a
+// pas fonctionné (l'affichage reste correct dans les deux cas).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-import { buildImagePrompt, storageFolderFor, type VestiaireRow } from "../_shared/imagePrompt.ts";
+import { buildImagePrompt, CATEGORY_CANON, CATEGORY_FOLDER, type VestiaireRow } from "../_shared/imagePrompt.ts";
+import { computeVisualKey, normalizeVisualColor, normalizeVisualSubtype } from "../_shared/visualKey.ts";
 
 const BUCKET = "catalog-images";
+const DEFAULT_MODEL = "gpt-image-1";
+const DEFAULT_QUALITY = "low";
+const DEFAULT_DAILY_CAP = 50;
+// Coût approximatif par image (gpt-image-1, qualité basse, 1024x1024) — pour le monitoring uniquement, jamais utilisé pour bloquer/facturer.
+const ESTIMATED_COST_USD = 0.02;
 
-interface VestiaireImageRow extends VestiaireRow {
-  url_image: string | null;
-  image_status: string | null;
-  image_version: number | null;
+interface ArticleRow {
+  id: number;
+  name: string | null;
+  category: string | null;
+  sous_type: string | null;
+  couleur_dominante: string | null;
+  matiere: string | null;
+  genre: string | null;
+  visual_asset_id: number | null;
+}
+
+interface AssetRow {
+  id: number;
+  visual_key: string;
+  image_url: string | null;
+  image_status: string;
+  image_source: string | null;
+  prompt: string | null;
+  usage_count: number;
 }
 
 Deno.serve(async (req) => {
@@ -40,136 +73,334 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  const model = Deno.env.get("IMAGE_GENERATION_MODEL") || DEFAULT_MODEL;
+  const quality = Deno.env.get("IMAGE_GENERATION_QUALITY") || DEFAULT_QUALITY;
+  const dailyCap = Number(Deno.env.get("MAX_IMAGE_GENERATIONS_PER_DAY")) || DEFAULT_DAILY_CAP;
+
   if (!supabaseUrl || !serviceRoleKey) {
     return jsonError("Configuration serveur incomplète (SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY).", 500);
   }
-
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   let itemId: number;
+  let forceRegenerate = false;
   try {
     const body = await req.json();
     itemId = Number(body.item_id);
+    forceRegenerate = body.force_regenerate === true;
     if (!Number.isFinite(itemId)) throw new Error("item_id invalide");
   } catch {
     return jsonError("item_id manquant ou invalide.", 400);
   }
 
-  // 1-2. Récupère l'article, revérifie image_url (course possible entre deux
-  // requêtes concurrentes sur la même pièce).
-  const { data: row, error: fetchError } = await supabase
+  const { data: article, error: fetchError } = await supabase
     .from("vestiaire_universel")
-    .select(
-      "id, name, category, sous_type, couleur_dominante, matiere, genre, styles, url_image, image_status, image_version"
-    )
+    .select("id, name, category, sous_type, couleur_dominante, matiere, genre, visual_asset_id")
     .eq("id", itemId)
-    .maybeSingle<VestiaireImageRow>();
+    .maybeSingle<ArticleRow>();
 
-  if (fetchError || !row) {
+  if (fetchError || !article) {
     return jsonError("Article introuvable.", 404);
   }
-  if (row.url_image) {
-    // 3. Déjà présente : retour immédiat, aucun appel API image.
-    return jsonOk({ image_url: row.url_image });
+
+  // 1. L'article a-t-il déjà un asset prêt ? (jamais de régénération auto si ready, sauf force_regenerate admin)
+  if (article.visual_asset_id && !forceRegenerate) {
+    const { data: existingAsset } = await supabase
+      .from("visual_assets")
+      .select("id, visual_key, image_url, image_status, image_source, prompt, usage_count")
+      .eq("id", article.visual_asset_id)
+      .maybeSingle<AssetRow>();
+
+    if (existingAsset?.image_status === "ready" && existingAsset.image_url) {
+      await touchAsset(supabase, existingAsset);
+      await mirrorToArticle(supabase, article.id, existingAsset);
+      return jsonOk({ image_url: existingAsset.image_url });
+    }
+    if (existingAsset?.image_status === "generating") {
+      // Quelqu'un d'autre génère déjà ce même asset — on attend, placeholder côté client.
+      return jsonOk({ image_url: null, status: "generating" });
+    }
+    // 'error' ou 'missing' : retente ci-dessous (cascade + génération), même asset réutilisé.
   }
 
+  const canonCategory = CATEGORY_CANON[(article.category || "").trim().toLowerCase()] || "accessoire";
+  const genre = (article.genre || "").trim().toLowerCase() === "femme" ? "femme" : "unisexe";
+  const sousTypeNorm = normalizeVisualSubtype(article.sous_type);
+  const couleurNorm = normalizeVisualColor(article.couleur_dominante);
+  const visualKey = computeVisualKey({
+    genre,
+    category: canonCategory,
+    sousType: article.sous_type,
+    couleur: article.couleur_dominante,
+    matiere: article.matiere,
+  });
+
   try {
-    // Clé visuelle (genre_category_sousType_couleur_matiere) : réutilise un
-    // visuel déjà généré pour un article strictement équivalent plutôt que
-    // d'en régénérer un — évite les doublons et les appels API inutiles.
-    const { data: twin } = await supabase
-      .from("vestiaire_universel")
-      .select("url_image")
-      .eq("image_status", "ready")
-      .not("url_image", "is", null)
-      .eq("category", row.category ?? "")
-      .eq("sous_type", row.sous_type ?? "")
-      .eq("couleur_dominante", row.couleur_dominante ?? "")
-      .eq("matiere", row.matiere ?? "")
-      .eq("genre", row.genre ?? "")
-      .neq("id", row.id)
-      .limit(1)
-      .maybeSingle<{ url_image: string }>();
+    // 2. Exact visual_key, prêt.
+    let reusable = await findReadyAsset(supabase, { visual_key: visualKey });
+    // 3. genre + sous_type + couleur (matière ignorée), prêt.
+    if (!reusable) {
+      reusable = await findReadyAsset(supabase, { genre, sous_type: sousTypeNorm, couleur: couleurNorm });
+    }
+    // 4. sous_type + couleur seuls, prêt.
+    if (!reusable) {
+      reusable = await findReadyAsset(supabase, { sous_type: sousTypeNorm, couleur: couleurNorm });
+    }
+    if (reusable) {
+      await touchAsset(supabase, reusable);
+      await mirrorToArticle(supabase, article.id, reusable);
+      return jsonOk({ image_url: reusable.image_url });
+    }
 
-    if (twin?.url_image) {
-      await supabase
-        .from("vestiaire_universel")
+    // 5. Aucune source réutilisable — génération, en dernier recours seulement.
+    if (!openaiKey) throw new Error("OPENAI_API_KEY absente des secrets Supabase.");
+
+    // Verrou logique atomique : réutilise une ligne existante pour cette
+    // visual_key exacte (statut missing/error) si elle existe déjà, sinon en
+    // crée une. `.neq('image_status','generating')` empêche deux requêtes
+    // concurrentes de lancer deux générations pour le même visual_key.
+    const { data: priorRow } = await supabase
+      .from("visual_assets")
+      .select("id, image_status")
+      .eq("visual_key", visualKey)
+      .maybeSingle<{ id: number; image_status: string }>();
+
+    let assetId: number;
+    if (priorRow) {
+      if (priorRow.image_status === "generating") {
+        return jsonOk({ image_url: null, status: "generating" });
+      }
+      const { data: claimed } = await supabase
+        .from("visual_assets")
         .update({
-          url_image: twin.url_image,
-          image_status: "ready",
-          image_source: "generated",
-          image_generated_at: new Date().toISOString(),
+          image_status: "generating",
+          genre,
+          category: canonCategory,
+          sous_type: sousTypeNorm,
+          couleur: couleurNorm,
+          matiere: article.matiere,
+          generation_model: model,
+          generation_quality: quality,
         })
-        .eq("id", row.id);
-      return jsonOk({ image_url: twin.url_image });
+        .eq("id", priorRow.id)
+        .neq("image_status", "generating")
+        .select("id")
+        .maybeSingle<{ id: number }>();
+      if (!claimed) return jsonOk({ image_url: null, status: "generating" });
+      assetId = claimed.id;
+    } else {
+      const { data: inserted, error: insertError } = await supabase
+        .from("visual_assets")
+        .insert({
+          visual_key: visualKey,
+          genre,
+          category: canonCategory,
+          sous_type: sousTypeNorm,
+          couleur: couleurNorm,
+          matiere: article.matiere,
+          image_status: "generating",
+          generation_model: model,
+          generation_quality: quality,
+        })
+        .select("id")
+        .maybeSingle<{ id: number }>();
+      if (insertError || !inserted) {
+        // Course avec une autre requête concurrente sur le même visual_key (contrainte unique) — laisse cette autre requête générer.
+        return jsonOk({ image_url: null, status: "generating" });
+      }
+      assetId = inserted.id;
     }
 
-    if (!openaiKey) {
-      throw new Error("OPENAI_API_KEY absente des secrets Supabase.");
+    // Plafond quotidien — jamais d'appel API au-delà, jamais de recommandation cassée.
+    const sinceMidnight = new Date();
+    sinceMidnight.setUTCHours(0, 0, 0, 0);
+    const { count: generatedToday } = await supabase
+      .from("image_generation_logs")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", sinceMidnight.toISOString());
+
+    if ((generatedToday ?? 0) >= dailyCap) {
+      await supabase.from("image_generation_logs").insert({
+        visual_key: visualKey,
+        model,
+        quality,
+        success: false,
+        estimated_cost: 0,
+        error: "daily_limit_reached",
+      });
+      // Repli à 'missing' (pas 'error') : un prochain jour retentera normalement, sans forcer une intervention manuelle.
+      await supabase.from("visual_assets").update({ image_status: "missing" }).eq("id", assetId);
+      return jsonOk({ image_url: null, status: "missing", error: "daily_limit_reached" });
     }
 
-    // 4. generating.
-    await supabase.from("vestiaire_universel").update({ image_status: "generating" }).eq("id", row.id);
+    const prompt = buildImagePrompt({
+      id: article.id,
+      name: article.name,
+      category: article.category,
+      sous_type: article.sous_type,
+      couleur_dominante: article.couleur_dominante,
+      matiere: article.matiere,
+      genre: article.genre,
+    } satisfies VestiaireRow);
 
-    // 5. Prompt.
-    const prompt = buildImagePrompt(row);
-
-    // 6-7. Génération (OpenAI gpt-image-1) — toujours du PNG en base64.
-    const genRes = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt,
-        size: "1024x1024",
-        n: 1,
-      }),
-    });
-    if (!genRes.ok) {
-      const detail = await genRes.text().catch(() => "");
-      throw new Error(`Échec génération image (${genRes.status}) : ${detail.slice(0, 300)}`);
+    // 6-7. Génération avec 1 retry automatique maximum.
+    let pngBytes: Uint8Array | null = null;
+    let lastError = "";
+    for (let attempt = 0; attempt < 2 && !pngBytes; attempt++) {
+      try {
+        pngBytes = await callImageApi(openaiKey, model, quality, prompt);
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err);
+      }
     }
-    const genData = await genRes.json();
-    const b64 = genData?.data?.[0]?.b64_json;
-    if (!b64) throw new Error("Réponse OpenAI sans image (b64_json manquant).");
-    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    if (!pngBytes) throw new Error(lastError || "Échec de génération après 1 tentative supplémentaire.");
 
-    // 8. Upload Storage.
-    const version = (row.image_version ?? 0) + 1;
-    const path = `${storageFolderFor(row)}/${row.id}-v${version}.png`;
+    // Compression WebP best-effort — repli silencieux sur PNG brut si indisponible.
+    const { bytes, contentType, ext } = await toWebp(pngBytes);
+
+    // 8. Upload Storage — un seul fichier par asset (pas par article).
+    const path = `${genre}/${CATEGORY_FOLDER[canonCategory] || canonCategory}/${assetId}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(path, bytes, { contentType: "image/png", upsert: true });
+      .upload(path, bytes, { contentType, upsert: true });
     if (uploadError) throw new Error(`Échec upload Storage : ${uploadError.message}`);
 
     const { data: publicUrlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
     const imageUrl = publicUrlData.publicUrl;
 
-    // 9-12. Mise à jour de la ligne.
-    const { error: updateError } = await supabase
-      .from("vestiaire_universel")
+    // 9. Ligne asset -> ready.
+    await supabase
+      .from("visual_assets")
       .update({
-        url_image: imageUrl,
-        image_prompt: prompt,
-        image_status: "ready",
+        image_url: imageUrl,
         image_source: "generated",
-        image_generated_at: new Date().toISOString(),
-        image_version: version,
+        image_status: "ready",
+        prompt,
+        generation_model: model,
+        generation_quality: quality,
+        usage_count: 1,
       })
-      .eq("id", row.id);
-    if (updateError) throw new Error(`Échec mise à jour de la ligne : ${updateError.message}`);
+      .eq("id", assetId);
 
-    // 13. Retour.
+    await supabase.from("image_generation_logs").insert({
+      visual_key: visualKey,
+      model,
+      quality,
+      success: true,
+      estimated_cost: ESTIMATED_COST_USD,
+    });
+
+    await mirrorToArticle(supabase, article.id, {
+      id: assetId,
+      image_url: imageUrl,
+      image_status: "ready",
+      image_source: "generated",
+      prompt,
+    });
+
     return jsonOk({ image_url: imageUrl });
   } catch (err) {
-    await supabase.from("vestiaire_universel").update({ image_status: "error" }).eq("id", row.id);
     const message = err instanceof Error ? err.message : "Erreur inconnue.";
+    await supabase.from("visual_assets").update({ image_status: "error" }).eq("visual_key", visualKey);
+    await supabase
+      .from("vestiaire_universel")
+      .update({ image_status: "error" })
+      .eq("id", article.id);
+    await supabase.from("image_generation_logs").insert({
+      visual_key: visualKey,
+      model,
+      quality,
+      success: false,
+      estimated_cost: 0,
+      error: message,
+    });
     return jsonError(message, 500);
   }
 });
+
+/** Cherche un asset prêt correspondant aux critères donnés (filtre partiel — seuls les champs fournis sont contraints). */
+async function findReadyAsset(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  criteria: Partial<Pick<AssetRow, "visual_key">> & { genre?: string; sous_type?: string; couleur?: string }
+): Promise<AssetRow | null> {
+  let query = supabase
+    .from("visual_assets")
+    .select("id, visual_key, image_url, image_status, image_source, prompt, usage_count")
+    .eq("image_status", "ready")
+    .not("image_url", "is", null);
+  if (criteria.visual_key) query = query.eq("visual_key", criteria.visual_key);
+  if (criteria.genre) query = query.eq("genre", criteria.genre);
+  if (criteria.sous_type) query = query.eq("sous_type", criteria.sous_type);
+  if (criteria.couleur) query = query.eq("couleur", criteria.couleur);
+  const { data } = await query.limit(1).maybeSingle();
+  return (data as AssetRow | null) ?? null;
+}
+
+/** Incrémente usage_count — chaque réutilisation compte, chaque génération initiale aussi (déjà mise à 1 à la création). */
+// deno-lint-ignore no-explicit-any
+async function touchAsset(supabase: any, asset: AssetRow): Promise<void> {
+  await supabase
+    .from("visual_assets")
+    .update({ usage_count: (asset.usage_count ?? 0) + 1 })
+    .eq("id", asset.id);
+}
+
+/** Reflète l'asset résolu sur la ligne article — cache dénormalisé lu directement par le frontend (aucun changement requis côté app). */
+async function mirrorToArticle(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  articleId: number,
+  asset: Pick<AssetRow, "id" | "image_url" | "image_status" | "image_source" | "prompt">
+): Promise<void> {
+  await supabase
+    .from("vestiaire_universel")
+    .update({
+      visual_asset_id: asset.id,
+      url_image: asset.image_url,
+      image_status: asset.image_status,
+      image_source: asset.image_source,
+      image_prompt: asset.prompt,
+      image_generated_at: new Date().toISOString(),
+      image_version: 1,
+    })
+    .eq("id", articleId);
+}
+
+async function callImageApi(apiKey: string, model: string, quality: string, prompt: string): Promise<Uint8Array> {
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, prompt, size: "1024x1024", quality, n: 1 }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Échec génération image (${res.status}) : ${detail.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const b64 = data?.data?.[0]?.b64_json;
+  if (!b64) throw new Error("Réponse OpenAI sans image (b64_json manquant).");
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+/**
+ * Conversion WebP best-effort via @jsquash/webp (WASM) — jamais vérifiée
+ * depuis ce sandbox (pas de Deno/réseau ici). Repli automatique et
+ * silencieux sur le PNG brut si la conversion échoue pour une raison
+ * quelconque : ne bloque jamais la génération.
+ */
+async function toWebp(pngBytes: Uint8Array): Promise<{ bytes: Uint8Array; contentType: string; ext: string }> {
+  try {
+    const { default: decode } = await import("https://esm.sh/@jsquash/png@2.1.0/decode.js");
+    const { default: encode } = await import("https://esm.sh/@jsquash/webp@1.4.0/encode.js");
+    const imageData = await decode(pngBytes.buffer as ArrayBuffer);
+    const webpBuffer = await encode(imageData, { quality: 75 });
+    return { bytes: new Uint8Array(webpBuffer), contentType: "image/webp", ext: "webp" };
+  } catch (err) {
+    console.error("Conversion WebP indisponible, repli sur PNG brut :", err);
+    return { bytes: pngBytes, contentType: "image/png", ext: "png" };
+  }
+}
 
 function jsonOk(body: Record<string, unknown>): Response {
   return new Response(JSON.stringify(body), {

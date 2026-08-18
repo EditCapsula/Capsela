@@ -1,4 +1,3 @@
-import { bestStyleFor } from "./capsule";
 import type { CatalogItem } from "./catalog";
 
 const CATEGORY_EN: Record<string, string> = {
@@ -111,27 +110,6 @@ const COLOR_EN: Record<string, string> = {
   perle: "pearl white",
 };
 
-const MATIERE_EN: Record<string, string> = {
-  coton: "cotton",
-  lin: "linen",
-  laine: "wool",
-  soie: "silk",
-  cuir: "leather",
-  denim: "denim",
-  synthétique: "synthetic fabric",
-};
-
-const STYLE_EN: Record<string, string> = {
-  minimaliste: "minimalist",
-  "casual chic": "casual chic",
-  "classique chic": "classic chic",
-  romantique: "romantic",
-  "bohème": "bohemian",
-  streetwear: "streetwear",
-  preppy: "preppy",
-  glamour: "glamorous",
-};
-
 function translate(dict: Record<string, string>, raw: string | undefined | null): string | undefined {
   if (!raw) return undefined;
   return dict[raw.trim().toLowerCase()];
@@ -139,41 +117,29 @@ function translate(dict: Record<string, string>, raw: string | undefined | null)
 
 /**
  * Construit automatiquement le prompt anglais de génération d'image à
- * partir des attributs de la pièce (recette 18/08/2026, gestion automatique
- * des images produit) — esthétique homogène Capsela (photo produit seule,
- * fond ivoire beige, style e-commerce premium), jamais de mannequin/
- * personne/texte/logo/marque.
+ * partir des attributs de la pièce (recette 18/08/2026 v2, gabarit commun
+ * et minimal) — seuls genre/produit/couleur/matière (si pertinente,
+ * uniquement le cuir) varient. Le style n'entre plus dans le prompt,
+ * cohérent avec son exclusion de la clé visuelle (n'affecte pas l'apparence
+ * du produit). Miroir exact de la logique Deno utilisée par l'Edge Function
+ * (supabase/functions/_shared/imagePrompt.ts, à garder synchronisée) —
+ * conservée côté app pour un futur aperçu/regénération manuelle en
+ * administration (structure seulement, pas de back-office pour l'instant).
  */
 export function buildImagePrompt(item: CatalogItem): string {
   const genreEn = item.genre === "femme" ? "women's" : "unisex";
   const colorEn = translate(COLOR_EN, item.color) || item.color.toLowerCase() || "neutral";
-  const matiereEn = translate(MATIERE_EN, item.matiere);
+  const matiereEn = item.matiere === "Cuir" ? "leather" : undefined;
   const subtypeSource = item.subtype || item.shoeType || item.sacType || item.bijouType || item.accessoireType;
   const productEn =
     translate(SUBTYPE_EN, subtypeSource) || translate(CATEGORY_EN, item.cat) || CATEGORY_EN[item.cat] || "item";
-  const styleSources = item.styleTags && item.styleTags.length ? item.styleTags : [bestStyleFor(item)];
-  const stylesEn = Array.from(new Set(styleSources.map((s) => translate(STYLE_EN, s) || s.toLowerCase()))).join(" ");
-
   const productDescription = [genreEn, colorEn, matiereEn, productEn].filter(Boolean).join(" ");
 
   return [
-    `Professional premium ecommerce product photography of ${productDescription}, ${stylesEn} style.`,
+    `Premium ecommerce product photo of ${productDescription}.`,
     "",
-    "Single product only.",
-    "No person.",
-    "No feet.",
-    "No mannequin.",
-    "No model.",
-    "No text.",
-    "No logo.",
-    "No brand.",
-    "",
-    "Product centered and fully visible.",
-    "Soft natural studio lighting.",
-    "Warm ivory beige background.",
-    "Subtle realistic shadow.",
-    "Minimal premium French fashion aesthetic.",
-    "Square composition.",
-    "Photorealistic.",
+    "Single product only. No person. No model. No text. No logo.",
+    "Centered product. Warm ivory background. Soft studio light.",
+    "Realistic. Minimal French fashion aesthetic. Square composition.",
   ].join("\n");
 }

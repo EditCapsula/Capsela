@@ -2,6 +2,11 @@
 // Edge Functions Supabase tournent dans un runtime Deno séparé du bundle
 // Next.js et ne peuvent pas importer directement depuis src/lib. Les deux
 // fichiers doivent être tenus synchronisés si les dictionnaires évoluent.
+//
+// Gabarit commun et minimal (recette 18/08/2026 v2) : seules genre/produit/
+// couleur/matière (si pertinente) varient — le style n'entre plus dans le
+// prompt (cohérent avec son exclusion de la clé visuelle : il n'affecte pas
+// l'apparence du produit lui-même).
 
 export interface VestiaireRow {
   id: number;
@@ -11,10 +16,9 @@ export interface VestiaireRow {
   couleur_dominante: string | null;
   matiere: string | null;
   genre: string | null;
-  styles: string | null;
 }
 
-const CATEGORY_CANON: Record<string, string> = {
+export const CATEGORY_CANON: Record<string, string> = {
   hauts: "haut",
   pulls_gilets: "pull",
   pantalons: "pantalon",
@@ -42,6 +46,24 @@ const CATEGORY_CANON: Record<string, string> = {
   sac: "sac",
   bijou: "bijou",
   accessoire: "accessoire",
+};
+
+/** Les 14 catégories officielles du catalogue, utilisées comme noms de dossier Storage (genre/{dossier}/...). */
+export const CATEGORY_FOLDER: Record<string, string> = {
+  haut: "hauts",
+  pull: "pulls-gilets",
+  pantalon: "pantalons",
+  jean: "jeans",
+  jupe: "jupes",
+  short: "shorts",
+  robe: "robes",
+  combinaison: "combinaisons",
+  veste: "vestes-blazers",
+  manteau: "manteaux-exterieurs",
+  chaussures: "chaussures",
+  sac: "sacs",
+  bijou: "bijoux",
+  accessoire: "accessoires",
 };
 
 const CATEGORY_EN: Record<string, string> = {
@@ -150,24 +172,7 @@ const COLOR_EN: Record<string, string> = {
 };
 
 const MATIERE_EN: Record<string, string> = {
-  coton: "cotton",
-  lin: "linen",
-  laine: "wool",
-  soie: "silk",
   cuir: "leather",
-  denim: "denim",
-  synthétique: "synthetic fabric",
-};
-
-const STYLE_EN: Record<string, string> = {
-  minimaliste: "minimalist",
-  "casual chic": "casual chic",
-  "classique chic": "classic chic",
-  romantique: "romantic",
-  "bohème": "bohemian",
-  streetwear: "streetwear",
-  preppy: "preppy",
-  glamour: "glamorous",
 };
 
 function translate(dict: Record<string, string>, raw: string | null | undefined): string | undefined {
@@ -175,50 +180,29 @@ function translate(dict: Record<string, string>, raw: string | null | undefined)
   return dict[raw.trim().toLowerCase()];
 }
 
-/** Construit le prompt anglais de génération à partir d'une ligne vestiaire_universel brute — cf. src/lib/imagePrompt.ts pour la version app (source de vérité, à garder synchronisée). */
+/** Construit le prompt anglais minimal — cf. src/lib/imagePrompt.ts pour la version app (source de vérité, à garder synchronisée). */
 export function buildImagePrompt(row: VestiaireRow): string {
   const genreEn = (row.genre || "").trim().toLowerCase() === "femme" ? "women's" : "unisex";
   const canonCat = CATEGORY_CANON[(row.category || "").trim().toLowerCase()] || "accessoire";
   const colorRaw = row.couleur_dominante || "";
   const colorEn = translate(COLOR_EN, colorRaw) || colorRaw.toLowerCase() || "neutral";
-  const matiereEn = translate(MATIERE_EN, row.matiere);
+  // Matière seulement si elle change réellement l'apparence (cuir) — même règle que la clé visuelle.
+  const matiereEn = (row.matiere || "").trim().toLowerCase() === "cuir" ? MATIERE_EN.cuir : undefined;
   const productEn = translate(SUBTYPE_EN, row.sous_type) || CATEGORY_EN[canonCat] || "item";
-  const styleList = (row.styles || "")
-    .split(/[,;|]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const stylesEn =
-    Array.from(new Set((styleList.length ? styleList : ["Casual chic"]).map((s) => translate(STYLE_EN, s) || s.toLowerCase()))).join(
-      " "
-    );
-
   const productDescription = [genreEn, colorEn, matiereEn, productEn].filter(Boolean).join(" ");
 
   return [
-    `Professional premium ecommerce product photography of ${productDescription}, ${stylesEn} style.`,
+    `Premium ecommerce product photo of ${productDescription}.`,
     "",
-    "Single product only.",
-    "No person.",
-    "No feet.",
-    "No mannequin.",
-    "No model.",
-    "No text.",
-    "No logo.",
-    "No brand.",
-    "",
-    "Product centered and fully visible.",
-    "Soft natural studio lighting.",
-    "Warm ivory beige background.",
-    "Subtle realistic shadow.",
-    "Minimal premium French fashion aesthetic.",
-    "Square composition.",
-    "Photorealistic.",
+    "Single product only. No person. No model. No text. No logo.",
+    "Centered product. Warm ivory background. Soft studio light.",
+    "Realistic. Minimal French fashion aesthetic. Square composition.",
   ].join("\n");
 }
 
-/** Dossier de rangement Storage — {genre}/{category} (les deux seules valeurs de genre existantes côté app : femme, unisexe). */
-export function storageFolderFor(row: VestiaireRow): string {
+/** Dossier de rangement Storage — {genre}/{catégorie officielle} (les 14 catégories du catalogue). Genre ∈ (femme, unisexe), seules valeurs existantes côté app. */
+export function storageFolderFor(row: Pick<VestiaireRow, "genre" | "category">): string {
   const genre = (row.genre || "").trim().toLowerCase() === "femme" ? "femme" : "unisexe";
   const canonCat = CATEGORY_CANON[(row.category || "").trim().toLowerCase()] || "accessoire";
-  return `${genre}/${canonCat}`;
+  return `${genre}/${CATEGORY_FOLDER[canonCat] || canonCat}`;
 }

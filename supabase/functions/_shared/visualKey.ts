@@ -1,6 +1,7 @@
-import type { CatalogItem } from "./catalog";
+// Miroir Deno de src/lib/visualKey.ts — dupliqué volontairement (runtime
+// Deno séparé du bundle Next.js, cf. _shared/imagePrompt.ts). À garder
+// synchronisé si les dictionnaires évoluent côté app.
 
-/** Slug ASCII simple (minuscules, sans accents, mots séparés par _) — pour composer une clé stable et lisible. */
 function slug(s: string): string {
   return s
     .normalize("NFD")
@@ -11,13 +12,6 @@ function slug(s: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
-/**
- * Regroupe les variantes de couleur visuellement équivalentes sous un seul
- * mot générique (recette 18/08/2026 v2) — sinon "écru"/"ivoire"/"crème"
- * généreraient chacun leur propre asset pour un rendu quasi identique.
- * Retombe sur le mot d'origine (slugifié) si aucun regroupement ne
- * correspond : mieux vaut une clé un peu plus fine qu'une couleur perdue.
- */
 const COLOR_BUCKETS: Record<string, string> = {
   écru: "ecru",
   ivoire: "ecru",
@@ -73,19 +67,11 @@ const COLOR_BUCKETS: Record<string, string> = {
   perle: "ecru",
 };
 
-/** Normalise une couleur libre vers son bucket visuel générique (ex. "Blanc cassé" -> "ecru"). */
-export function normalizeVisualColor(raw: string): string {
+export function normalizeVisualColor(raw: string | null | undefined): string {
   const key = (raw || "").trim().toLowerCase();
-  return COLOR_BUCKETS[key] || slug(raw);
+  return COLOR_BUCKETS[key] || slug(raw || "");
 }
 
-/**
- * Regroupe les variantes de sous-type sous une seule valeur canonique — ex.
- * "ballerine"/"ballerines classiques"/"ballerines plates" partagent toutes
- * "ballerines". À garder distinct de display_name (le libellé affiché à
- * l'utilisatrice, ex. "Ballerines / Mocassins") : jamais de sous-type
- * composite type "ballerines_mocassins" dans la clé visuelle.
- */
 const SUBTYPE_BUCKETS: Record<string, string> = {
   ballerine: "ballerines",
   ballerines: "ballerines",
@@ -141,32 +127,29 @@ const SUBTYPE_BUCKETS: Record<string, string> = {
   "chaussettes hautes": "chaussettes",
 };
 
-/** Normalise un sous-type libre vers sa valeur canonique unique (ex. "Ballerines plates" -> "ballerines"). */
-export function normalizeVisualSubtype(raw: string): string {
+export function normalizeVisualSubtype(raw: string | null | undefined): string {
   const key = (raw || "").trim().toLowerCase();
-  return SUBTYPE_BUCKETS[key] || slug(raw);
+  return SUBTYPE_BUCKETS[key] || slug(raw || "");
 }
 
-/** Seules ces matières changent réellement l'apparence du produit (cuir vs tissu) — les autres (coton/lin/laine/soie/denim/synthétique) n'entrent jamais dans la clé. */
 const VISUALLY_SIGNIFICANT_MATIERES = new Set(["cuir"]);
 
-/**
- * Clé visuelle resserrée d'une pièce du catalogue (recette 18/08/2026 v2) :
- * genre_category_sousType_couleur, matiere ajoutée seulement si elle change
- * réellement l'apparence (cuir). Deux articles avec la même clé peuvent
- * réutiliser exactement le même visuel — styles/occasion/morphologies/
- * saison/niveau de formalité/rôle de superposition n'entrent jamais dans la
- * clé, ils n'influencent jamais l'apparence du produit lui-même.
- * Ex. "femme_chaussures_ballerines_beige".
- */
-export function computeVisualKey(item: CatalogItem): string {
-  const subtypeRaw = item.subtype || item.shoeType || item.sacType || item.bijouType || item.accessoireType || "";
-  const matiereSlug = slug(item.matiere || "");
+export interface VisualKeyInput {
+  genre: string | null;
+  category: string | null; // canonique interne (haut, chaussures...), pas la catégorie brute DB
+  sousType: string | null;
+  couleur: string | null;
+  matiere: string | null;
+}
+
+/** Clé visuelle resserrée — cf. src/lib/visualKey.ts (source de vérité) pour la logique complète. */
+export function computeVisualKey(input: VisualKeyInput): string {
+  const matiereSlug = slug(input.matiere || "");
   const parts = [
-    item.genre,
-    item.cat,
-    normalizeVisualSubtype(subtypeRaw),
-    normalizeVisualColor(item.color),
+    input.genre || "unisexe",
+    input.category || "",
+    normalizeVisualSubtype(input.sousType),
+    normalizeVisualColor(input.couleur),
     VISUALLY_SIGNIFICANT_MATIERES.has(matiereSlug) ? matiereSlug : "",
   ];
   return parts.map(slug).filter(Boolean).join("_");
