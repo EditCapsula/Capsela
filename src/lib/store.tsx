@@ -369,14 +369,30 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
   };
 
+  // Occasion par défaut du jour (recette 13/08/2026) — calculée une seule
+  // fois, tant qu'aucune tenue n'a encore été générée et que l'utilisatrice
+  // n'a jamais choisi d'occasion elle-même cette session, et appliquée
+  // avant génération pour que la card correspondante apparaisse déjà cochée
+  // dans le sélecteur (précision 13/08/2026 : jamais juste une valeur
+  // interne sans retour visuel) — toujours remplaçable ensuite via les
+  // chips d'occasion. Factorisé pour rester identique quel que soit le
+  // déclencheur de la toute première génération (goTenues ci-dessous, ou
+  // l'effet "première tenue" indépendant de l'écran affiché).
+  const withDefaultOccasion = (s: AppState): AppState =>
+    s.occasionManual ? s : { ...s, occasion: defaultOccasionToday(profile.prefs) };
+
   // Première tenue : dès que le profil est chargé (la capsule par défaut en
   // dépend) ET que la géolocalisation a fini de se résoudre (succès, échec
   // ou désactivée) — jamais avant, sinon la toute première tenue générée
   // s'appuierait sur une météo de repli qui ne serait plus jamais
-  // régénérée automatiquement par la suite (recette 17/08/2026).
+  // régénérée automatiquement par la suite (recette 17/08/2026). Ce
+  // déclenchement ne dépend pas de l'écran affiché (la redirection post-
+  // connexion mène désormais à Accueil, pas à Tenue) : sans
+  // withDefaultOccasion ici, l'occasion resterait sur "all" et aucune card
+  // n'apparaîtrait cochée à l'ouverture de Tenue.
   useEffect(() => {
     if (ready && !geoLoading && !stateRef.current.outfit.length) {
-      setState((s) => regen(s));
+      setState((s) => regen(withDefaultOccasion(s)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, geoLoading, defaultCapsule]);
@@ -394,16 +410,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goCapsule: () => go("capsule"),
     goTenues: () =>
       setState((s) => {
-        let next: AppState = { ...s, screen: "tenues" };
-        // Occasion par défaut du jour (recette 13/08/2026) : calculée une
-        // seule fois, tant qu'aucune tenue n'a encore été générée et que
-        // l'utilisatrice n'a jamais choisi d'occasion elle-même cette
-        // session — toujours remplaçable ensuite via les chips d'occasion.
-        if (!next.outfit.length) {
-          if (!next.occasionManual) next = { ...next, occasion: defaultOccasionToday(profile.prefs) };
-          next = regen(next);
-        }
-        return next;
+        const next: AppState = { ...s, screen: "tenues" };
+        return next.outfit.length ? next : regen(withDefaultOccasion(next));
       }),
     goHistory: () => go("history"),
     goNeverWorn: () => go("neverworn"),
