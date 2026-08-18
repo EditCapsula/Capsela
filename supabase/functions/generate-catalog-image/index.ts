@@ -138,13 +138,21 @@ Deno.serve(async (req) => {
   try {
     // 2. Exact visual_key, prêt.
     let reusable = await findReadyAsset(supabase, { visual_key: visualKey });
-    // 3. genre + sous_type + couleur (matière ignorée), prêt.
+    // 3. genre + sous_type + couleur (matière ignorée), prêt. category
+    // TOUJOURS contrainte (correctif 18/08/2026) : jamais de réutilisation
+    // cross-catégorie (ex. veste réutilisée pour un pantalon) même quand
+    // sous_type/couleur coïncident.
     if (!reusable) {
-      reusable = await findReadyAsset(supabase, { genre, sous_type: sousTypeNorm, couleur: couleurNorm });
+      reusable = await findReadyAsset(supabase, {
+        category: canonCategory,
+        genre,
+        sous_type: sousTypeNorm,
+        couleur: couleurNorm,
+      });
     }
-    // 4. sous_type + couleur seuls, prêt.
+    // 4. sous_type + couleur seuls (genre ignoré), category toujours contrainte.
     if (!reusable) {
-      reusable = await findReadyAsset(supabase, { sous_type: sousTypeNorm, couleur: couleurNorm });
+      reusable = await findReadyAsset(supabase, { category: canonCategory, sous_type: sousTypeNorm, couleur: couleurNorm });
     }
     if (reusable) {
       await touchAsset(supabase, reusable);
@@ -233,7 +241,7 @@ Deno.serve(async (req) => {
       return jsonOk({ image_url: null, status: "missing", error: "daily_limit_reached" });
     }
 
-    const prompt = buildImagePrompt({
+    const built = buildImagePrompt({
       id: article.id,
       name: article.name,
       category: article.category,
@@ -242,6 +250,35 @@ Deno.serve(async (req) => {
       matiere: article.matiere,
       genre: article.genre,
     } satisfies VestiaireRow);
+
+    // Logs de debug (correctif 18/08/2026) — visibles dans Supabase Dashboard
+    // → Edge Functions → generate-catalog-image → Logs, sans terminal.
+    console.log(
+      JSON.stringify({
+        item_id: article.id,
+        name: article.name,
+        category: article.category,
+        sous_type: article.sous_type,
+        genre: article.genre,
+        couleur_dominante: article.couleur_dominante,
+        matiere: article.matiere,
+        visual_key: visualKey,
+        prompt_noun: built.noun,
+        prompt_ok: built.ok,
+        storage_path: `${genre}/${CATEGORY_FOLDER[canonCategory] || canonCategory}/${assetId}.webp`,
+      })
+    );
+
+    // Validation de cohérence catégorie/sujet (correctif 18/08/2026) : si le
+    // sujet déterminé pour le prompt n'est pas compatible avec la
+    // catégorie de l'article, on n'appelle JAMAIS l'API — mieux vaut
+    // aucune image qu'une image du mauvais type de vêtement.
+    if (!built.ok) {
+      throw new Error(
+        `Incohérence catégorie/sujet : category="${canonCategory}" mais sujet déterminé="${built.noun}". Génération annulée avant tout appel API.`
+      );
+    }
+    const prompt = built.prompt;
 
     // 6-7. Génération avec 1 retry automatique maximum.
     let pngBytes: Uint8Array | null = null;
@@ -322,7 +359,12 @@ Deno.serve(async (req) => {
 async function findReadyAsset(
   // deno-lint-ignore no-explicit-any
   supabase: any,
-  criteria: Partial<Pick<AssetRow, "visual_key">> & { genre?: string; sous_type?: string; couleur?: string }
+  criteria: Partial<Pick<AssetRow, "visual_key">> & {
+    category?: string;
+    genre?: string;
+    sous_type?: string;
+    couleur?: string;
+  }
 ): Promise<AssetRow | null> {
   let query = supabase
     .from("visual_assets")
@@ -330,6 +372,10 @@ async function findReadyAsset(
     .eq("image_status", "ready")
     .not("image_url", "is", null);
   if (criteria.visual_key) query = query.eq("visual_key", criteria.visual_key);
+  // category n'est jamais optionnelle en dehors de la clé exacte (correctif
+  // 18/08/2026) : jamais de réutilisation cross-catégorie (veste -> pantalon,
+  // haut -> robe, chaussures -> sac), cohérence du produit avant économie.
+  if (criteria.category) query = query.eq("category", criteria.category);
   if (criteria.genre) query = query.eq("genre", criteria.genre);
   if (criteria.sous_type) query = query.eq("sous_type", criteria.sous_type);
   if (criteria.couleur) query = query.eq("couleur", criteria.couleur);
@@ -371,7 +417,12 @@ async function callImageApi(apiKey: string, model: string, quality: string, prom
   const res = await fetch("https://api.openai.com/v1/images/generations", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, prompt, size: "1024x1024", quality, n: 1 }),
+    // background/output_format : fond transparent si le modèle le permet
+    // (gpt-image-1) — préservé en PNG pour que la conversion WebP en aval
+    // garde le canal alpha. Repli sur fond ivoire côté frontend si jamais
+    // le modèle utilisé ne supporte pas ces deux paramètres (ignorés sans
+    // erreur par l'API dans ce cas).
+    body: JSON.stringify({ model, prompt, size: "1024x1024", quality, n: 1, background: "transparent", output_format: "png" }),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");

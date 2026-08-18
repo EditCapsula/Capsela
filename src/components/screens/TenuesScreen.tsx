@@ -67,7 +67,12 @@ export default function TenuesScreen() {
   // le catalogue statique de secours (cf. ensureCatalogImage).
   useEffect(() => {
     outfitPieces.forEach((it) => {
-      if (resolveItemImage(it).kind === "placeholder" && it.imageStatus !== "generating" && it.imageStatus !== "error") {
+      if (
+        resolveItemImage(it).kind === "placeholder" &&
+        it.imageStatus !== "generating" &&
+        it.imageStatus !== "error" &&
+        it.imageStatus !== "invalid"
+      ) {
         actions.requestCatalogImage(it.id);
       }
     });
@@ -311,16 +316,19 @@ export default function TenuesScreen() {
               <div className="flex items-center gap-[13px]">
                 {resolvedImage.url ? (
                   <div
-                    className="relative w-[58px] h-[70px] rounded-lg flex-shrink-0 overflow-hidden"
-                    style={{ background: "#EEE6D8", boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
+                    className="relative flex-shrink-0 rounded-lg overflow-hidden"
+                    // Zone image fixe (recette 18/08/2026, intégration naturelle) : un
+                    // très léger fond ivoire Capsela (jamais de bordure/ombre marquée
+                    // qui donnerait un effet "photo insérée dans un carré"), avec une
+                    // marge interne pour que le vêtement ne touche jamais les bords.
+                    style={{ width: 110, height: 132, background: "#F3EDE1", padding: 10 }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={resolvedImage.url}
                       alt={it.name}
                       loading="lazy"
-                      className="w-full h-full"
-                      style={{ objectFit: "contain", objectPosition: "center" }}
+                      style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
                     />
                   </div>
                 ) : (

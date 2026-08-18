@@ -69,7 +69,7 @@ export type Tons = "chauds" | "froids" | "les_deux";
 export type IntensiteCouleur = "douce" | "intense" | "lumineuse" | "melange";
 
 /** Cycle de vie du visuel produit généré pour une pièce du catalogue (recette 18/08/2026). */
-export type ImageStatus = "missing" | "generating" | "ready" | "error";
+export type ImageStatus = "missing" | "generating" | "ready" | "error" | "invalid";
 /** Provenance du visuel produit — priorité d'affichage : photo dressing réel > affiliate > generated/manual. */
 export type ImageSource = "generated" | "manual" | "affiliate" | "user";
 

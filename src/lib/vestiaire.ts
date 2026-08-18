@@ -203,7 +203,7 @@ function mapImageSource(raw: string | null): ImageSource | undefined {
 
 function mapImageStatus(raw: string | null): ImageStatus {
   const v = (raw || "").trim().toLowerCase();
-  if (v === "generating" || v === "ready" || v === "error") return v;
+  if (v === "generating" || v === "ready" || v === "error" || v === "invalid") return v;
   return "missing";
 }
 
@@ -288,11 +288,12 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     meteoMinTemp: row.meteo_min_temp ?? undefined,
     meteoMaxTemp: row.meteo_max_temp ?? undefined,
     imageUrl: row.url_image || undefined,
-    // Une image déjà présente est toujours "ready", quelle que soit la valeur
-    // stockée — jamais de déclenchement de génération pour une pièce qui a
-    // déjà son visuel (posé manuellement avant ce système, ou colonne pas
-    // encore migrée côté base).
-    imageStatus: row.url_image ? "ready" : mapImageStatus(row.image_status),
+    // Le status stocké fait foi (recette 18/08/2026 — correctif) : une image
+    // invalidée (image_status='invalid'/'error') ne doit jamais rester
+    // affichée simplement parce que url_image n'a pas été vidé côté base.
+    // Seul repli : une ligne avec url_image mais sans image_status renseigné
+    // (posée manuellement avant ce système) compte comme "ready".
+    imageStatus: row.image_status ? mapImageStatus(row.image_status) : row.url_image ? "ready" : "missing",
     imageSource: mapImageSource(row.image_source),
     imagePrompt: row.image_prompt || undefined,
     imageGeneratedAt: row.image_generated_at || undefined,

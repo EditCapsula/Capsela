@@ -14,11 +14,15 @@ export interface ResolvedItemImage {
  * photo réelle d'une pièce ajoutée par l'utilisatrice, et on ne génère
  * jamais un visuel artificiel pour représenter un produit affilié précis
  * qui a déjà sa vraie photo.
+ *
+ * Correctif 18/08/2026 : une image générée n'est utilisée que si son statut
+ * est explicitement "ready" — jamais affichée juste parce qu'imageUrl
+ * existe (une image invalidée après coup ne doit jamais réapparaître).
  */
 export function resolveItemImage(item: Item): ResolvedItemImage {
   if (item.photoUrl) return { kind: "photo", url: item.photoUrl };
   if (item.affiliateImageUrl) return { kind: "affiliate", url: item.affiliateImageUrl };
-  if (item.imageUrl) return { kind: "generated", url: item.imageUrl };
+  if (item.imageUrl && item.imageStatus === "ready") return { kind: "generated", url: item.imageUrl };
   return { kind: "placeholder" };
 }
 

@@ -3,10 +3,13 @@
 // Next.js et ne peuvent pas importer directement depuis src/lib. Les deux
 // fichiers doivent être tenus synchronisés si les dictionnaires évoluent.
 //
-// Gabarit commun et minimal (recette 18/08/2026 v2) : seules genre/produit/
-// couleur/matière (si pertinente) varient — le style n'entre plus dans le
-// prompt (cohérent avec son exclusion de la clé visuelle : il n'affecte pas
-// l'apparence du produit lui-même).
+// Correctif 18/08/2026 (mapping incorrect constaté : un pantalon affichait
+// une veste/chemise) : le sujet de l'image ne doit JAMAIS être interprété
+// depuis `name` en texte libre. Priorité stricte sous_type > category >
+// name (name n'apparaît plus du tout dans le prompt). Composition et
+// exclusions spécifiques par catégorie pour empêcher structurellement
+// OpenAI de produire un autre type de vêtement, + validation de cohérence
+// avant tout appel API (buildImagePrompt.ok).
 
 export interface VestiaireRow {
   id: number;
@@ -66,6 +69,7 @@ export const CATEGORY_FOLDER: Record<string, string> = {
   accessoire: "accessoires",
 };
 
+/** Nom du produit en anglais — utilisé UNIQUEMENT comme repli quand sous_type ne correspond à rien de connu (jamais depuis `name`). */
 const CATEGORY_EN: Record<string, string> = {
   haut: "top",
   pull: "sweater",
@@ -83,7 +87,9 @@ const CATEGORY_EN: Record<string, string> = {
   accessoire: "accessory",
 };
 
+/** Sous-types reconnus comme nom complet du produit (correspondance exacte du sous_type entier). */
 const SUBTYPE_EN: Record<string, string> = {
+  // Chaussures
   baskets: "sneakers",
   bottines: "ankle boots",
   bottes: "boots",
@@ -92,16 +98,19 @@ const SUBTYPE_EN: Record<string, string> = {
   mocassins: "loafers",
   ballerines: "ballet flats",
   "chaussures d'intérieur": "house slippers",
+  // Sacs
   "sac à main": "handbag",
   cabas: "tote bag",
   bandoulière: "crossbody bag",
   pochette: "clutch bag",
   "sac à dos": "backpack",
+  // Bijoux
   collier: "necklace",
   "boucles d'oreilles": "earrings",
   bracelet: "bracelet",
   bague: "ring",
   montre: "watch",
+  // Accessoires
   ceinture: "belt",
   foulard: "scarf",
   écharpe: "scarf",
@@ -110,19 +119,69 @@ const SUBTYPE_EN: Record<string, string> = {
   lunettes: "sunglasses",
   collants: "tights",
   "chaussettes hautes": "knee-high socks",
+  // Hauts / pulls
   "t-shirt": "t-shirt",
   chemise: "shirt",
   chemisier: "blouse",
   blouse: "blouse",
   débardeur: "tank top",
   top: "top",
+  polo: "polo shirt",
+  sweat: "sweatshirt",
   "col roulé": "turtleneck",
   gilet: "cardigan",
   cardigan: "cardigan",
+  // Vestes / manteaux
   blazer: "blazer",
   trench: "trench coat",
   parka: "parka",
   doudoune: "puffer jacket",
+  caban: "pea coat",
+  imperméable: "raincoat",
+  perfecto: "leather jacket",
+  // Bas
+  legging: "leggings",
+  jogging: "jogging pants",
+  bermuda: "bermuda shorts",
+  // Robes / combinaisons
+  combishort: "playsuit",
+  salopette: "dungarees",
+};
+
+/** Mots-clés de coupe/style repérés DANS sous_type (jamais dans name) — ajoutés comme modificateurs, ne changent jamais le type de produit. */
+const MODIFIER_EN: Record<string, string> = {
+  fluide: "flowy",
+  fluides: "flowy",
+  ample: "wide-leg",
+  amples: "wide-leg",
+  large: "loose",
+  larges: "loose",
+  droit: "straight-leg",
+  droite: "straight",
+  slim: "slim-fit",
+  skinny: "skinny",
+  moulant: "fitted",
+  moulante: "fitted",
+  oversize: "oversized",
+  "plissé": "pleated",
+  "plissée": "pleated",
+  crayon: "pencil",
+  midi: "midi-length",
+  mini: "mini",
+  long: "long",
+  longue: "long",
+  court: "short",
+  courte: "short",
+  "évasé": "flared",
+  "évasée": "flared",
+  cargo: "cargo-style",
+  bootcut: "bootcut",
+  flare: "flared",
+  mom: "mom-fit",
+  boyfriend: "boyfriend-fit",
+  portefeuille: "wrap",
+  "croisée": "wrap",
+  tailleur: "tailored",
 };
 
 const COLOR_EN: Record<string, string> = {
@@ -171,8 +230,69 @@ const COLOR_EN: Record<string, string> = {
   perle: "pearl white",
 };
 
+/** Toutes les matières (contrairement à la clé visuelle, qui n'en retient qu'une partie pour la déduplication) — décrire fidèlement le tissu aide la génération, même sans dédupliquer dessus. */
 const MATIERE_EN: Record<string, string> = {
+  coton: "cotton",
+  lin: "linen",
+  laine: "wool",
+  soie: "silk",
   cuir: "leather",
+  denim: "denim",
+  "synthétique": "synthetic fabric",
+};
+
+/** Composition spécifique par catégorie — empêche structurellement une confusion de type de vêtement (ex. veste générée pour un pantalon). */
+const CATEGORY_COMPOSITION: Record<string, string> = {
+  pantalon: "Complete pair of trousers, visible from waistband to hem. Both legs clearly visible.",
+  jean: "Complete pair of jeans, visible from waistband to hem. Both legs clearly visible.",
+  short: "Complete shorts, waistband to hem visible.",
+  haut: "Complete top, front view.",
+  pull: "Complete sweater, front view.",
+  robe: "Complete dress, full length visible, from shoulders to hem.",
+  jupe: "Complete skirt, waistband to hem visible.",
+  combinaison: "Complete jumpsuit, full length visible.",
+  chaussures: "Pair of shoes, both shoes visible.",
+  sac: "Single handbag, fully visible.",
+  bijou: "Single jewelry item, centered.",
+  veste: "Complete blazer or jacket, front view.",
+  manteau: "Complete coat, front view.",
+  accessoire: "Single accessory item, centered.",
+};
+
+/** Exclusions spécifiques par catégorie (garde-fou supplémentaire contre la confusion de type). */
+const CATEGORY_EXCLUDE: Record<string, string[]> = {
+  pantalon: ["shirt", "jacket", "blazer", "shoes", "dress"],
+  jean: ["shirt", "jacket", "blazer", "shoes", "dress"],
+  short: ["shirt", "jacket", "shoes"],
+  haut: ["jacket", "trousers", "dress", "skirt"],
+  pull: ["jacket", "trousers", "dress"],
+  robe: ["trousers", "jacket", "shirt"],
+  jupe: ["trousers", "shirt", "jacket"],
+  combinaison: ["jacket", "shirt", "dress"],
+  veste: ["shirt", "trousers", "dress"],
+  manteau: ["shirt", "trousers", "dress"],
+  chaussures: ["bag", "clothing item"],
+  sac: ["shoes", "clothing item"],
+  bijou: ["clothing item", "shoes", "bag"],
+  accessoire: ["clothing item", "shoes"],
+};
+
+/** Mots attendus dans le nom du produit pour chaque catégorie — sert à la validation de cohérence avant l'appel API. */
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  haut: ["top", "shirt", "blouse", "tank top", "turtleneck", "polo", "sweatshirt"],
+  pull: ["sweater", "cardigan"],
+  pantalon: ["trousers", "pants"],
+  jean: ["jeans"],
+  jupe: ["skirt"],
+  short: ["shorts"],
+  robe: ["dress"],
+  combinaison: ["jumpsuit", "playsuit", "dungarees"],
+  veste: ["jacket", "blazer"],
+  manteau: ["coat", "parka", "puffer jacket", "raincoat"],
+  chaussures: ["shoes", "sneakers", "boots", "flats", "sandals", "loafers", "pumps", "slippers"],
+  sac: ["bag", "handbag", "tote", "backpack", "clutch"],
+  bijou: ["necklace", "earrings", "bracelet", "ring", "watch", "jewelry"],
+  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory"],
 };
 
 function translate(dict: Record<string, string>, raw: string | null | undefined): string | undefined {
@@ -180,29 +300,77 @@ function translate(dict: Record<string, string>, raw: string | null | undefined)
   return dict[raw.trim().toLowerCase()];
 }
 
-/** Construit le prompt anglais minimal — cf. src/lib/imagePrompt.ts pour la version app (source de vérité, à garder synchronisée). */
-export function buildImagePrompt(row: VestiaireRow): string {
-  const genreEn = (row.genre || "").trim().toLowerCase() === "femme" ? "women's" : "unisex";
-  const canonCat = CATEGORY_CANON[(row.category || "").trim().toLowerCase()] || "accessoire";
-  const colorRaw = row.couleur_dominante || "";
-  const colorEn = translate(COLOR_EN, colorRaw) || colorRaw.toLowerCase() || "neutral";
-  // Matière seulement si elle change réellement l'apparence (cuir) — même règle que la clé visuelle.
-  const matiereEn = (row.matiere || "").trim().toLowerCase() === "cuir" ? MATIERE_EN.cuir : undefined;
-  const productEn = translate(SUBTYPE_EN, row.sous_type) || CATEGORY_EN[canonCat] || "item";
-  const productDescription = [genreEn, colorEn, matiereEn, productEn].filter(Boolean).join(" ");
-
-  return [
-    `Premium ecommerce product photo of ${productDescription}.`,
-    "",
-    "Single product only. No person. No model. No text. No logo.",
-    "Centered product. Warm ivory background. Soft studio light.",
-    "Realistic. Minimal French fashion aesthetic. Square composition.",
-  ].join("\n");
+export interface BuiltPrompt {
+  prompt: string;
+  ok: boolean;
+  noun: string;
+  canonCategory: string;
 }
 
-/** Dossier de rangement Storage — {genre}/{catégorie officielle} (les 14 catégories du catalogue). Genre ∈ (femme, unisexe), seules valeurs existantes côté app. */
-export function storageFolderFor(row: Pick<VestiaireRow, "genre" | "category">): string {
-  const genre = (row.genre || "").trim().toLowerCase() === "femme" ? "femme" : "unisexe";
-  const canonCat = CATEGORY_CANON[(row.category || "").trim().toLowerCase()] || "accessoire";
-  return `${genre}/${CATEGORY_FOLDER[canonCat] || canonCat}`;
+/**
+ * Construit le prompt anglais et valide sa cohérence avec la catégorie —
+ * cf. src/lib/imagePrompt.ts pour la version app (source de vérité, à
+ * garder synchronisée). `ok: false` signale un sujet incompatible avec la
+ * catégorie : l'appelant ne doit JAMAIS appeler l'API de génération dans ce cas.
+ */
+export function buildImagePrompt(row: VestiaireRow): BuiltPrompt {
+  const canonCategory = CATEGORY_CANON[(row.category || "").trim().toLowerCase()] || "accessoire";
+  const genreEn = (row.genre || "").trim().toLowerCase() === "femme" ? "women's" : "unisex";
+  const colorRaw = row.couleur_dominante || "";
+  const colorEn = translate(COLOR_EN, colorRaw) || (colorRaw ? colorRaw.toLowerCase() : "");
+  const matiereEn = translate(MATIERE_EN, row.matiere);
+
+  // Sujet du produit : sous_type > category > (jamais name). sous_type
+  // complet reconnu tel quel s'il correspond à un nom déjà complet (ex.
+  // "ballerines"), sinon repli sur la catégorie — jamais interprété
+  // librement depuis le nom de la pièce.
+  const sousTypeRaw = (row.sous_type || "").trim().toLowerCase();
+  const noun = translate(SUBTYPE_EN, sousTypeRaw) || CATEGORY_EN[canonCategory] || "item";
+
+  // Modificateurs de coupe/style repérés dans sous_type uniquement.
+  const modifiers = Array.from(
+    new Set(
+      sousTypeRaw
+        .split(/[\s/]+/)
+        .map((w) => MODIFIER_EN[w])
+        .filter((w): w is string => Boolean(w))
+    )
+  );
+
+  const productDescription = [genreEn, colorEn, ...modifiers, matiereEn, noun].filter(Boolean).join(" ");
+
+  const ok = (CATEGORY_KEYWORDS[canonCategory] || []).some((kw) => noun.includes(kw));
+
+  const composition = CATEGORY_COMPOSITION[canonCategory] || "Single fashion item, fully visible.";
+  const excludeLines = (CATEGORY_EXCLUDE[canonCategory] || []).map((w) => `No ${w}.`);
+
+  const prompt = [
+    `Premium ecommerce cutout product image of ${productDescription}.`,
+    "",
+    composition,
+    "",
+    "Single fashion item only.",
+    "Entire product fully visible.",
+    "Centered.",
+    "Front or slight three-quarter view.",
+    "No person.",
+    "No model.",
+    "No mannequin.",
+    "No body parts.",
+    ...excludeLines,
+    "No hanger.",
+    "No furniture.",
+    "No props.",
+    "No text.",
+    "No logo.",
+    "No brand.",
+    "No additional clothing.",
+    "Clean isolated product presentation.",
+    "Very soft subtle shadow.",
+    "Transparent background if supported.",
+    "Photorealistic.",
+    "Designed to remain clearly recognizable as a small mobile ecommerce thumbnail.",
+  ].join("\n");
+
+  return { prompt, ok, noun, canonCategory };
 }

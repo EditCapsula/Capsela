@@ -342,7 +342,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     let alreadyHandled = false;
     setVestiairePool((pool) => {
       const idx = pool.findIndex((it) => it.id === itemId);
-      if (idx === -1 || pool[idx].imageUrl || pool[idx].imageStatus === "generating") {
+      const current = pool[idx];
+      const hasReadyImage = current?.imageUrl && current.imageStatus === "ready";
+      if (idx === -1 || hasReadyImage || current.imageStatus === "generating") {
         alreadyHandled = true;
         return pool;
       }
