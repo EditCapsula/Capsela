@@ -5,6 +5,7 @@ import { useAuth } from "./auth";
 import { CATALOG, type CatalogItem } from "./catalog";
 import { computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
 import { fetchVestiaireUniversel } from "./vestiaire";
+import { ensureCatalogImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { generateOutfit, swapOutfitPiece, violatesOuterwearRule } from "./logic";
@@ -179,6 +180,8 @@ export interface Actions {
   setCapsuleSeason: (s: CapsuleSeason) => void;
   /** Remplace une pièce de la tenue par une autre de la même famille. */
   swapPiece: (id: number, cat: CategoryKey) => void;
+  /** Déclenche la génération du visuel d'une pièce du catalogue si elle n'en a pas encore (sans effet sinon). */
+  requestCatalogImage: (itemId: number) => void;
   regenOutfit: () => void;
   dismissOutfitSuggestion: (key: string) => void;
   wearOutfitToday: () => void;
@@ -329,6 +332,37 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, []);
+
+  // Déclenche la génération du visuel d'une pièce du catalogue quand elle
+  // n'en a pas encore (recette 18/08/2026, gestion automatique des images
+  // produit) — optimiste (image_status passe à "generating" immédiatement
+  // pour l'affichage) puis met à jour vestiairePool à la réponse de l'Edge
+  // Function ; jamais deux appels pour le même id (cf. ensureCatalogImage).
+  const requestCatalogImage = (itemId: number) => {
+    let alreadyHandled = false;
+    setVestiairePool((pool) => {
+      const idx = pool.findIndex((it) => it.id === itemId);
+      if (idx === -1 || pool[idx].imageUrl || pool[idx].imageStatus === "generating") {
+        alreadyHandled = true;
+        return pool;
+      }
+      const next = [...pool];
+      next[idx] = { ...next[idx], imageStatus: "generating" };
+      return next;
+    });
+    if (alreadyHandled) return;
+    ensureCatalogImage(itemId).then((url) => {
+      setVestiairePool((pool) => {
+        const idx = pool.findIndex((it) => it.id === itemId);
+        if (idx === -1) return pool;
+        const next = [...pool];
+        next[idx] = url
+          ? { ...next[idx], imageUrl: url, imageStatus: "ready", imageSource: "generated" }
+          : { ...next[idx], imageStatus: "error" };
+        return next;
+      });
+    });
+  };
 
   // Toujours la saison calendaire courante — indépendante de la saison parcourue
   // sur l'écran Capsule (state.capsuleSeason), qui n'affecte que son affichage.
@@ -573,6 +607,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           dismissedSuggestions: [],
         };
       }),
+    requestCatalogImage,
     regenOutfit: () => setState(regen),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),

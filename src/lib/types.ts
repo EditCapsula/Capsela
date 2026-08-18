@@ -68,6 +68,11 @@ export type Tons = "chauds" | "froids" | "les_deux";
 /** Intensité de la couleur d'une pièce — alimente le rapprochement avec l'intensité de palette du profil. */
 export type IntensiteCouleur = "douce" | "intense" | "lumineuse" | "melange";
 
+/** Cycle de vie du visuel produit généré pour une pièce du catalogue (recette 18/08/2026). */
+export type ImageStatus = "missing" | "generating" | "ready" | "error";
+/** Provenance du visuel produit — priorité d'affichage : photo dressing réel > affiliate > generated/manual. */
+export type ImageSource = "generated" | "manual" | "affiliate" | "user";
+
 export interface Item {
   id: number;
   name: string;
@@ -122,6 +127,17 @@ export interface Item {
   /** Plage de température (°C) dans laquelle la pièce est adaptée (source : vestiaire_universel) — exclue si la météo du jour est hors plage, quelle que soit la catégorie. */
   meteoMinTemp?: number;
   meteoMaxTemp?: number;
+  /** Photo produit générique du catalogue (source : vestiaire_universel, colonne url_image) — jamais utilisée pour une pièce du dressing réel (cf. photoUrl), qui garde toujours sa propre photo. Priorité d'affichage : photoUrl > affiliateImageUrl > imageUrl > placeholder. */
+  imageUrl?: string;
+  imageSource?: ImageSource;
+  /** Prompt anglais construit automatiquement pour la génération — conservé pour audit/regénération, jamais affiché à l'utilisatrice. */
+  imagePrompt?: string;
+  /** "missing" tant qu'aucune image n'a été générée/posée — déclenche l'appel à l'Edge Function generate-catalog-image ; jamais régénéré si déjà "ready". */
+  imageStatus?: ImageStatus;
+  imageGeneratedAt?: string;
+  imageVersion?: number;
+  /** Vraie photo du produit affilié (distincte du simple lien de clic affLink) — prime sur imageUrl : jamais remplacée par un visuel généré artificiellement. */
+  affiliateImageUrl?: string;
 }
 
 export interface City {

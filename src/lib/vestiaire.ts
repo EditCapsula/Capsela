@@ -1,7 +1,7 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { detectAccessoireType, detectBijouType, detectMatiere, detectSacType } from "./attributes";
 import type { CatalogItem } from "./catalog";
-import type { CategoryKey, Coupe, IntensiteCouleur, Matiere, Season, ShoeType, Tons } from "./types";
+import type { CategoryKey, Coupe, ImageSource, ImageStatus, IntensiteCouleur, Matiere, Season, ShoeType, Tons } from "./types";
 
 /**
  * Lecture de la table vestiaire_universel (Supabase) — source des 4 capsules
@@ -49,8 +49,19 @@ import type { CategoryKey, Coupe, IntensiteCouleur, Matiere, Season, ShoeType, T
  *   qui ne concerne que le vêtement). Absent = jamais filtré sur ce critère.
  * - `couleur_secondaire`, `resiste_pluie` : pas encore exploités côté app —
  *   lus mais ignorés pour l'instant.
+ * - `url_image` : mappé sur Item.imageUrl — photo produit du catalogue
+ *   (posée manuellement ou générée automatiquement, cf. image_source),
+ *   jamais pour une pièce du dressing réel. `image_status`/`image_source`/
+ *   `image_prompt`/`image_generated_at`/`image_version` pilotent son cycle
+ *   de vie (recette 18/08/2026, gestion automatique des images produit) ;
+ *   `affiliate_image_url` (vraie photo produit affilié) prime dessus.
  */
 export const VESTIAIRE_ID_OFFSET = 100000;
+
+/** true si l'id correspond à une ligne réelle de vestiaire_universel (pas au catalogue statique de secours, ids 1001+ sans ligne en base). */
+export function isVestiaireId(id: number): boolean {
+  return id >= VESTIAIRE_ID_OFFSET;
+}
 
 export interface VestiaireRow {
   id: number;
@@ -80,6 +91,12 @@ export interface VestiaireRow {
   metal_dominant: string | null;
   lien_affiliation: string | null;
   necessite_soleil: boolean | null;
+  image_source: string | null;
+  image_prompt: string | null;
+  image_status: string | null;
+  image_generated_at: string | null;
+  image_version: number | null;
+  affiliate_image_url: string | null;
 }
 
 const CATEGORY_MAP: Record<string, CategoryKey> = {
@@ -178,6 +195,18 @@ function mapNecessiteSoleil(raw: boolean | null): boolean | undefined {
   return raw ?? undefined;
 }
 
+function mapImageSource(raw: string | null): ImageSource | undefined {
+  const v = (raw || "").trim().toLowerCase();
+  if (v === "generated" || v === "manual" || v === "affiliate" || v === "user") return v;
+  return undefined;
+}
+
+function mapImageStatus(raw: string | null): ImageStatus {
+  const v = (raw || "").trim().toLowerCase();
+  if (v === "generating" || v === "ready" || v === "error") return v;
+  return "missing";
+}
+
 function mapTons(raw: string | null): Tons | undefined {
   const v = (raw || "").trim().toLowerCase();
   if (v === "chauds" || v === "froids" || v === "les_deux") return v;
@@ -258,6 +287,17 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     necessiteSoleil: mapNecessiteSoleil(row.necessite_soleil),
     meteoMinTemp: row.meteo_min_temp ?? undefined,
     meteoMaxTemp: row.meteo_max_temp ?? undefined,
+    imageUrl: row.url_image || undefined,
+    // Une image déjà présente est toujours "ready", quelle que soit la valeur
+    // stockée — jamais de déclenchement de génération pour une pièce qui a
+    // déjà son visuel (posé manuellement avant ce système, ou colonne pas
+    // encore migrée côté base).
+    imageStatus: row.url_image ? "ready" : mapImageStatus(row.image_status),
+    imageSource: mapImageSource(row.image_source),
+    imagePrompt: row.image_prompt || undefined,
+    imageGeneratedAt: row.image_generated_at || undefined,
+    imageVersion: row.image_version ?? undefined,
+    affiliateImageUrl: row.affiliate_image_url || undefined,
   };
 }
 

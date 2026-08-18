@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
+import { resolveItemImage } from "@/lib/catalogImages";
 import { currentSeasonKey } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -58,6 +59,20 @@ export default function TenuesScreen() {
   const outfitPieces = (state.outfit || [])
     .map((id) => wardrobePool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
+
+  // Génération automatique des visuels manquants (recette 18/08/2026) : dès
+  // qu'une pièce du catalogue est affichée dans "La combinaison" sans photo
+  // réelle/affiliée/générée, on déclenche sa génération — jamais pour une
+  // pièce déjà pourvue (cf. requestCatalogImage, garde côté store) ni pour
+  // le catalogue statique de secours (cf. ensureCatalogImage).
+  useEffect(() => {
+    outfitPieces.forEach((it) => {
+      if (resolveItemImage(it).kind === "placeholder" && it.imageStatus !== "generating" && it.imageStatus !== "error") {
+        actions.requestCatalogImage(it.id);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.outfit]);
 
   const suggestedCount = outfitPieces.filter((it) => isCatalogId(it.id)).length;
   const recommendationMode: keyof typeof MODE_STYLES =
@@ -290,20 +305,43 @@ export default function TenuesScreen() {
           : outfitPieces.map((it) => {
           const suggested = isCatalogId(it.id);
           const infoOpen = suggestionInfoId === it.id;
+          const resolvedImage = resolveItemImage(it);
           return (
             <div key={it.id} className="bg-card border border-border rounded-[14px] p-[11px]">
               <div className="flex items-center gap-[13px]">
-                <div
-                  className="relative w-[58px] h-[70px] rounded-lg flex-shrink-0"
-                  style={{ background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
-                >
-                  <span
-                    className="absolute left-[6px] bottom-[6px] text-[8.5px] tracking-[.05em]"
-                    style={{ color: "rgba(243,238,229,.9)", textShadow: "0 1px 2px rgba(0,0,0,.35)" }}
+                {resolvedImage.url ? (
+                  <div
+                    className="relative w-[58px] h-[70px] rounded-lg flex-shrink-0 overflow-hidden"
+                    style={{ background: "#EEE6D8", boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
                   >
-                    {CATLABEL[it.cat].toUpperCase()}
-                  </span>
-                </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={resolvedImage.url}
+                      alt={it.name}
+                      loading="lazy"
+                      className="w-full h-full"
+                      style={{ objectFit: "contain", objectPosition: "center" }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className="relative w-[58px] h-[70px] rounded-lg flex-shrink-0 overflow-hidden"
+                    style={{ background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
+                  >
+                    {it.imageStatus === "generating" && (
+                      <span
+                        className="absolute inset-0 animate-pulse"
+                        style={{ background: "rgba(243,238,229,.35)" }}
+                      />
+                    )}
+                    <span
+                      className="absolute left-[6px] bottom-[6px] text-[8.5px] tracking-[.05em]"
+                      style={{ color: "rgba(243,238,229,.9)", textShadow: "0 1px 2px rgba(0,0,0,.35)" }}
+                    >
+                      {CATLABEL[it.cat].toUpperCase()}
+                    </span>
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   {suggested && (
                     <button
