@@ -104,6 +104,8 @@ const MODIFIER_EN: Record<string, string> = {
   portefeuille: "wrap",
   "croisée": "wrap",
   tailleur: "tailored",
+  bretelles: "with thin straps",
+  bustier: "strapless bustier",
 };
 
 /** Cols/encolures reconnus en bigramme (2 mots consécutifs) n'importe où dans sous_type — ex. "pull col v" ou "col roulé" seul fonctionnent tous les deux. */
@@ -115,6 +117,8 @@ const NECKLINE_EN: Record<string, string> = {
   "col claudine": "peter pan collar",
   "col chemise": "collared",
   "col cheminée": "funnel neck",
+  "sans manches": "sleeveless",
+  "dos nu": "backless",
 };
 
 const COLOR_EN: Record<string, string> = {
