@@ -170,9 +170,10 @@ export const MORPHO_HINTS: Record<string, string> = {
     "Le buste, la taille et les hanches suivent une même largeur généreuse, sans creux marqué.",
 };
 
-export const TAILLES_HAUT = ["XS", "S", "M", "L", "XL", "XXL"];
-export const TAILLES_BAS = ["34", "36", "38", "40", "42", "44", "46"];
-export const TAILLES_BAS_HOMME = ["38", "40", "42", "44", "46", "48", "50"];
+/** Plage élargie au-delà du standard S–XL jusqu'aux grandes tailles (recette 13/08/2026). */
+export const TAILLES_HAUT = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"];
+export const TAILLES_BAS = ["34", "36", "38", "40", "42", "44", "46", "48", "50", "52", "54", "56"];
+export const TAILLES_BAS_HOMME = ["38", "40", "42", "44", "46", "48", "50", "52", "54", "56", "58", "60"];
 
 export function taillesBasFor(gender: Gender | null): string[] {
   return gender === "homme" ? TAILLES_BAS_HOMME : TAILLES_BAS;
