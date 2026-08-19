@@ -311,8 +311,8 @@ export default function TenuesScreen() {
                 className="flex-none rounded-[10px] overflow-hidden"
                 style={
                   preview.url
-                    ? { width: 48, height: 58, background: "#F3EDE1", padding: 6 }
-                    : { width: 48, height: 58, background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
+                    ? { width: 61, height: 74, background: "#F3EDE1", padding: 8 }
+                    : { width: 61, height: 74, background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
                 }
               >
                 {preview.url && (
@@ -329,11 +329,11 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      <div className="flex flex-col gap-[10px]">
+      <div className="flex flex-col gap-[9px]">
         {geoLoading
           ? [0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-[13px] bg-card border border-border rounded-[14px] p-[11px]">
-                <div className="w-[58px] h-[70px] rounded-lg flex-shrink-0 animate-pulse" style={{ background: "#EFE7D8" }} />
+              <div key={i} className="flex items-center gap-[11px] bg-card border border-border rounded-[14px] p-[9px]">
+                <div className="w-[52px] h-[63px] rounded-lg flex-shrink-0 animate-pulse" style={{ background: "#EFE7D8" }} />
                 <div className="flex-1 min-w-0 flex flex-col gap-[8px]">
                   <div className="h-[10px] w-3/4 rounded-full animate-pulse" style={{ background: "#EFE7D8" }} />
                   <div className="h-[10px] w-1/2 rounded-full animate-pulse" style={{ background: "#EFE7D8" }} />
@@ -345,16 +345,17 @@ export default function TenuesScreen() {
           const infoOpen = suggestionInfoId === it.id;
           const resolvedImage = resolveItemImage(it);
           return (
-            <div key={it.id} className="bg-card border border-border rounded-[14px] p-[11px]">
-              <div className="flex items-center gap-[13px]">
+            <div key={it.id} className="bg-card border border-border rounded-[14px] p-[9px]">
+              <div className="flex items-center gap-[11px]">
                 {resolvedImage.url ? (
                   <div
                     className="relative flex-shrink-0 rounded-lg overflow-hidden"
-                    // Zone image fixe (recette 18/08/2026, intégration naturelle) : un
+                    // Zone image fixe (recette 18/08/2026, intégration naturelle ;
+                    // hauteur réduite ~10% le 19/08/2026 pour alléger la page) : un
                     // très léger fond ivoire Capsela (jamais de bordure/ombre marquée
                     // qui donnerait un effet "photo insérée dans un carré"), avec une
                     // marge interne pour que le vêtement ne touche jamais les bords.
-                    style={{ width: 110, height: 132, background: "#F3EDE1", padding: 10 }}
+                    style={{ width: 99, height: 119, background: "#F3EDE1", padding: 9 }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -366,7 +367,7 @@ export default function TenuesScreen() {
                   </div>
                 ) : (
                   <div
-                    className="relative w-[58px] h-[70px] rounded-lg flex-shrink-0 overflow-hidden"
+                    className="relative w-[52px] h-[63px] rounded-lg flex-shrink-0 overflow-hidden"
                     style={{ background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
                   >
                     {it.imageStatus === "generating" && (

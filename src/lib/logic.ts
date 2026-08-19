@@ -43,6 +43,19 @@ function isDressy(occasion: OccasionKey, workMode: WorkMode = "Présentiel", dat
   return effectiveFormality(occasion, workMode, dateContext) >= 3;
 }
 
+/**
+ * Probabilités d'inclusion des accessoires facultatifs (recette 19/08/2026)
+ * — jamais une obligation systématique, mais le contexte influence leur
+ * pertinence : un sac fonctionnel est plus probable au bureau en
+ * présentiel, bijoux/accessoires habillés plus probables pour une
+ * cérémonie.
+ */
+function accessoryProbabilities(occasion: OccasionKey, workMode: WorkMode): { sac: number; bijou: number; accessoire: number } {
+  if (occasion === "evenement_perso") return { sac: 0.65, bijou: 0.6, accessoire: 0.55 };
+  if (occasion === "travail_formel" && workMode === "Présentiel") return { sac: 0.75, bijou: 0.35, accessoire: 0.3 };
+  return { sac: 0.55, bijou: 0.35, accessoire: 0.3 };
+}
+
 /** Tournure au génitif désignant le contexte du jour, pour la phrase d'explication de la recommandation. */
 function occasionPhrase(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext): string {
   switch (occasion) {
@@ -416,18 +429,22 @@ export function generateOutfit(
   if (sh) ids.push(sh.id);
   // Accessoires facultatifs (recette 19/08/2026) : haut+bas/pièce
   // unique+chaussures sont les seuls éléments structurants systématiques.
-  // Veste/manteau (déjà ci-dessus, 30%) et sac restent occasionnels ; bijou
-  // et accessoire encore plus rares — Capsela ne doit jamais chercher à
-  // remplir mécaniquement toutes les catégories.
-  if (Math.random() < 0.55) {
+  // Veste/manteau (déjà ci-dessus, 30%), sac, bijou et accessoire restent
+  // occasionnels — Capsela ne doit jamais chercher à remplir mécaniquement
+  // toutes les catégories. Le contexte influence leur probabilité sans
+  // jamais devenir une obligation (accessoryProbabilities ci-dessus) : un
+  // sac fonctionnel est plus pertinent au bureau en présentiel, bijoux/
+  // accessoires habillés plus pertinents pour une cérémonie.
+  const accProb = accessoryProbabilities(occasion, workMode);
+  if (Math.random() < accProb.sac) {
     const sac = pick(["sac"], false);
     if (sac && !ids.includes(sac.id)) ids.push(sac.id);
   }
-  if (Math.random() < 0.35) {
+  if (Math.random() < accProb.bijou) {
     const bijou = pick(["bijou"], false);
     if (bijou && !ids.includes(bijou.id)) ids.push(bijou.id);
   }
-  if (Math.random() < 0.3) {
+  if (Math.random() < accProb.accessoire) {
     // R-B19 — les collants ne se portent qu'avec une robe, une jupe ou un
     // short (jamais avec un pantalon/jean) : exclus du tirage sinon, sans
     // affecter les autres accessoires. La température reste prise en compte
