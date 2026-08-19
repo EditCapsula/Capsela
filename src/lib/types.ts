@@ -138,6 +138,13 @@ export interface Item {
   imageVersion?: number;
   /** Vraie photo du produit affilié (distincte du simple lien de clic affLink) — prime sur imageUrl : jamais remplacée par un visuel généré artificiellement. */
   affiliateImageUrl?: string;
+  /** Niveau de tendance visuelle pour la génération d'image (source : vestiaire_universel, recette 19/08/2026) — "contemporain" si absent. */
+  niveauTendance?: "intemporel" | "contemporain" | "tendance";
+  /** Silhouette/détails éditoriaux explicites pour la génération d'image — priment sur toute règle tendances_mode déduite. */
+  silhouetteMode?: string;
+  detailsMode?: string;
+  /** Échappatoire total : remplace la partie "design" du prompt de génération d'image quand renseigné. */
+  promptImageOverride?: string;
 }
 
 export interface City {

@@ -97,6 +97,10 @@ export interface VestiaireRow {
   image_generated_at: string | null;
   image_version: number | null;
   affiliate_image_url: string | null;
+  niveau_tendance: string | null;
+  silhouette_mode: string | null;
+  details_mode: string | null;
+  prompt_image_override: string | null;
 }
 
 const CATEGORY_MAP: Record<string, CategoryKey> = {
@@ -210,6 +214,12 @@ function mapImageStatus(raw: string | null): ImageStatus {
   return "missing";
 }
 
+function mapNiveauTendance(raw: string | null): "intemporel" | "contemporain" | "tendance" | undefined {
+  const v = (raw || "").trim().toLowerCase();
+  if (v === "intemporel" || v === "contemporain" || v === "tendance") return v;
+  return undefined;
+}
+
 function mapTons(raw: string | null): Tons | undefined {
   const v = (raw || "").trim().toLowerCase();
   if (v === "chauds" || v === "froids" || v === "les_deux") return v;
@@ -302,6 +312,10 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     imageGeneratedAt: row.image_generated_at || undefined,
     imageVersion: row.image_version ?? undefined,
     affiliateImageUrl: row.affiliate_image_url || undefined,
+    niveauTendance: mapNiveauTendance(row.niveau_tendance),
+    silhouetteMode: row.silhouette_mode || undefined,
+    detailsMode: row.details_mode || undefined,
+    promptImageOverride: row.prompt_image_override || undefined,
   };
 }
 

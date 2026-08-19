@@ -34,7 +34,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-import { buildImagePrompt, CATEGORY_CANON, CATEGORY_FOLDER, type VestiaireRow } from "../_shared/imagePrompt.ts";
+import { buildImagePrompt, CATEGORY_CANON, CATEGORY_FOLDER, type TrendRule, type VestiaireRow } from "../_shared/imagePrompt.ts";
 import { computeVisualKey, normalizeVisualColor, normalizeVisualSubtype } from "../_shared/visualKey.ts";
 
 const BUCKET = "catalog-images";
@@ -54,6 +54,21 @@ interface ArticleRow {
   genre: string | null;
   coupe: string | null;
   visual_asset_id: number | null;
+  niveau_tendance: string | null;
+  silhouette_mode: string | null;
+  details_mode: string | null;
+  prompt_image_override: string | null;
+}
+
+interface TrendRuleRow {
+  sous_type: string | null;
+  genre: string | null;
+  annee: number | null;
+  silhouette: string | null;
+  coupes: string | null;
+  matieres: string | null;
+  details: string | null;
+  elements_a_eviter: string | null;
 }
 
 interface AssetRow {
@@ -96,7 +111,9 @@ Deno.serve(async (req) => {
 
   const { data: article, error: fetchError } = await supabase
     .from("vestiaire_universel")
-    .select("id, name, category, sous_type, couleur_dominante, matiere, genre, coupe, visual_asset_id")
+    .select(
+      "id, name, category, sous_type, couleur_dominante, matiere, genre, coupe, visual_asset_id, niveau_tendance, silhouette_mode, details_mode, prompt_image_override"
+    )
     .eq("id", itemId)
     .maybeSingle<ArticleRow>();
 
@@ -153,28 +170,54 @@ Deno.serve(async (req) => {
     matiere: article.matiere,
   });
 
+  // Design "bespoke" (override ou silhouette/details explicites, recette
+  // 19/08/2026) : un asset issu de ces champs est propre à CET article et ne
+  // doit jamais être proposé à un autre article via la cascade générique
+  // (steps 3/4 ci-dessous, indexés sur genre/sous_type/couleur seuls, pas sur
+  // visual_key) — ni l'inverse (cet article ne doit jamais hériter d'un
+  // asset générique existant). Un marqueur dans le visual_key (jamais
+  // produit par computeVisualKey en temps normal) sert à exclure ces assets
+  // de la recherche générique, sans toucher à la clé visuelle standard.
+  const bespokeMarker = article.prompt_image_override?.trim()
+    ? `~ov~${shortHash(article.prompt_image_override.trim())}`
+    : article.silhouette_mode?.trim() || article.details_mode?.trim()
+    ? `~bp~${shortHash(`${article.silhouette_mode || ""}|${article.details_mode || ""}`)}`
+    : "";
+  const isBespoke = Boolean(bespokeMarker);
+  const effectiveVisualKey = isBespoke ? `${visualKey}${bespokeMarker}` : visualKey;
+
   try {
     // 2. Exact visual_key, prêt. category contrainte aussi ici en défense en
     // profondeur (correctif 18/08/2026 v2) : la clé exacte inclut déjà la
     // catégorie par construction, mais si deux clés dégénèrent malgré tout
     // vers la même valeur (données sources incomplètes), ce filtre
-    // supplémentaire empêche toute réutilisation cross-catégorie.
-    let reusable = await findReadyAsset(supabase, { visual_key: visualKey, category: canonCategory });
-    // 3. genre + sous_type + couleur (matière ignorée), prêt. category
-    // TOUJOURS contrainte (correctif 18/08/2026) : jamais de réutilisation
-    // cross-catégorie (ex. veste réutilisée pour un pantalon) même quand
-    // sous_type/couleur coïncident.
-    if (!reusable) {
+    // supplémentaire empêche toute réutilisation cross-catégorie. Clé
+    // "bespoke" incluse ici : ne matche que si CET article a déjà généré
+    // exactement ce même design par le passé (cache légitime, pas de fuite).
+    let reusable = await findReadyAsset(supabase, { visual_key: effectiveVisualKey, category: canonCategory });
+    // 3-4. Cascade générique (genre+sous_type+couleur, puis sous_type+couleur
+    // seuls) — jamais pour un article bespoke (recette 19/08/2026) : un
+    // design personnalisé (override/silhouette_mode/details_mode) ne doit
+    // jamais hériter d'un asset générique existant, ni être proposé à
+    // d'autres articles (excludeBespoke exclut symétriquement tout asset
+    // bespoke des résultats, y compris pour les recherches génériques
+    // futures d'autres articles).
+    if (!reusable && !isBespoke) {
       reusable = await findReadyAsset(supabase, {
         category: canonCategory,
         genre,
         sous_type: sousTypeNorm,
         couleur: couleurNorm,
+        excludeBespoke: true,
       });
     }
-    // 4. sous_type + couleur seuls (genre ignoré), category toujours contrainte.
-    if (!reusable) {
-      reusable = await findReadyAsset(supabase, { category: canonCategory, sous_type: sousTypeNorm, couleur: couleurNorm });
+    if (!reusable && !isBespoke) {
+      reusable = await findReadyAsset(supabase, {
+        category: canonCategory,
+        sous_type: sousTypeNorm,
+        couleur: couleurNorm,
+        excludeBespoke: true,
+      });
     }
     if (reusable) {
       await touchAsset(supabase, reusable);
@@ -192,7 +235,7 @@ Deno.serve(async (req) => {
     const { data: priorRow } = await supabase
       .from("visual_assets")
       .select("id, image_status")
-      .eq("visual_key", visualKey)
+      .eq("visual_key", effectiveVisualKey)
       .maybeSingle<{ id: number; image_status: string }>();
 
     let assetId: number;
@@ -222,7 +265,7 @@ Deno.serve(async (req) => {
       const { data: inserted, error: insertError } = await supabase
         .from("visual_assets")
         .insert({
-          visual_key: visualKey,
+          visual_key: effectiveVisualKey,
           genre,
           category: canonCategory,
           sous_type: sousTypeNorm,
@@ -251,7 +294,7 @@ Deno.serve(async (req) => {
 
     if ((generatedToday ?? 0) >= dailyCap) {
       await supabase.from("image_generation_logs").insert({
-        visual_key: visualKey,
+        visual_key: effectiveVisualKey,
         model,
         quality,
         success: false,
@@ -263,16 +306,36 @@ Deno.serve(async (req) => {
       return jsonOk({ image_url: null, status: "missing", error: "daily_limit_reached" });
     }
 
-    const built = buildImagePrompt({
-      id: article.id,
-      name: article.name,
-      category: article.category,
-      sous_type: article.sous_type,
-      couleur_dominante: article.couleur_dominante,
-      matiere: article.matiere,
-      genre: article.genre,
-      coupe: article.coupe,
-    } satisfies VestiaireRow);
+    // Règle de tendances_mode la plus pertinente (recette 19/08/2026) —
+    // seulement si un override total n'est pas déjà présent (celui-ci
+    // remplace le bloc design en entier, la tendance ne serait pas utilisée).
+    let trend: TrendRule | null = null;
+    if (!article.prompt_image_override?.trim()) {
+      trend = await findTrendRule(supabase, {
+        categorie: canonCategory,
+        sousType: article.sous_type,
+        genre,
+        annee: new Date().getFullYear(),
+      });
+    }
+
+    const built = buildImagePrompt(
+      {
+        id: article.id,
+        name: article.name,
+        category: article.category,
+        sous_type: article.sous_type,
+        couleur_dominante: article.couleur_dominante,
+        matiere: article.matiere,
+        genre: article.genre,
+        coupe: article.coupe,
+        niveau_tendance: article.niveau_tendance,
+        silhouette_mode: article.silhouette_mode,
+        details_mode: article.details_mode,
+        prompt_image_override: article.prompt_image_override,
+      } satisfies VestiaireRow,
+      trend
+    );
 
     // Logs de debug (correctif 18/08/2026) — visibles dans Supabase Dashboard
     // → Edge Functions → generate-catalog-image → Logs, sans terminal.
@@ -285,7 +348,10 @@ Deno.serve(async (req) => {
         genre: article.genre,
         couleur_dominante: article.couleur_dominante,
         matiere: article.matiere,
-        visual_key: visualKey,
+        visual_key: effectiveVisualKey,
+        niveau_tendance: article.niveau_tendance || "contemporain",
+        trend_matched: Boolean(trend),
+        is_bespoke: isBespoke,
         prompt_noun: built.noun,
         prompt_ok: built.ok,
         storage_path: `${genre}/${CATEGORY_FOLDER[canonCategory] || canonCategory}/${assetId}.webp`,
@@ -343,7 +409,7 @@ Deno.serve(async (req) => {
       .eq("id", assetId);
 
     await supabase.from("image_generation_logs").insert({
-      visual_key: visualKey,
+      visual_key: effectiveVisualKey,
       model,
       quality,
       success: true,
@@ -361,13 +427,13 @@ Deno.serve(async (req) => {
     return jsonOk({ image_url: imageUrl });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur inconnue.";
-    await supabase.from("visual_assets").update({ image_status: "error" }).eq("visual_key", visualKey);
+    await supabase.from("visual_assets").update({ image_status: "error" }).eq("visual_key", effectiveVisualKey);
     await supabase
       .from("vestiaire_universel")
       .update({ image_status: "error" })
       .eq("id", article.id);
     await supabase.from("image_generation_logs").insert({
-      visual_key: visualKey,
+      visual_key: effectiveVisualKey,
       model,
       quality,
       success: false,
@@ -387,6 +453,11 @@ async function findReadyAsset(
     genre?: string;
     sous_type?: string;
     couleur?: string;
+    // Exclut les assets "bespoke" (override/silhouette_mode/details_mode,
+    // recette 19/08/2026) — leur visual_key porte un marqueur ~ov~/~bp~
+    // (cf. bespokeMarker) — de la cascade générique : un design personnalisé
+    // pour UN article ne doit jamais être hérité par un autre.
+    excludeBespoke?: boolean;
   }
 ): Promise<AssetRow | null> {
   let query = supabase
@@ -402,8 +473,63 @@ async function findReadyAsset(
   if (criteria.genre) query = query.eq("genre", criteria.genre);
   if (criteria.sous_type) query = query.eq("sous_type", criteria.sous_type);
   if (criteria.couleur) query = query.eq("couleur", criteria.couleur);
+  if (criteria.excludeBespoke) query = query.not("visual_key", "like", "%~ov~%").not("visual_key", "like", "%~bp~%");
   const { data } = await query.limit(1).maybeSingle();
   return (data as AssetRow | null) ?? null;
+}
+
+/** Hash court et déterministe (FNV-1a) — distingue deux designs bespoke différents dans une clé visuelle, jamais un usage cryptographique. */
+function shortHash(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(36);
+}
+
+/**
+ * Règle de tendances_mode la plus pertinente pour une famille de vêtement
+ * (categorie/sous_type/genre/année, recette 19/08/2026) — matching en code
+ * plutôt qu'en SQL complexe (peu de lignes attendues, table volontairement
+ * légère). Privilégie une correspondance exacte de sous_type ; à défaut,
+ * retombe sur une règle générique de la categorie (sous_type NULL en base).
+ * Ne fait jamais échouer la génération : retourne simplement null si rien
+ * de pertinent n'est trouvé.
+ */
+async function findTrendRule(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  params: { categorie: string; sousType: string | null; genre: string; annee: number }
+): Promise<TrendRule | null> {
+  const { data } = await supabase
+    .from("tendances_mode")
+    .select("sous_type, genre, annee, silhouette, coupes, matieres, details, elements_a_eviter")
+    .eq("actif", true)
+    .eq("categorie", params.categorie);
+  const rows = (data as TrendRuleRow[] | null) || [];
+  if (!rows.length) return null;
+
+  const genreOk = (g: string | null) => !g || g === params.genre || g === "unisexe";
+  const anneeOk = (a: number | null) => a === null || a === undefined || a <= params.annee;
+  const candidates = rows.filter((r) => genreOk(r.genre) && anneeOk(r.annee));
+  if (!candidates.length) return null;
+
+  // Priorité sous_type exact ; à défaut, règle générique de la catégorie (sous_type NULL en base).
+  const sousTypeNorm = (params.sousType || "").trim().toLowerCase();
+  const exact = sousTypeNorm ? candidates.filter((r) => (r.sous_type || "").trim().toLowerCase() === sousTypeNorm) : [];
+  const pool = exact.length ? exact : candidates.filter((r) => !r.sous_type);
+  if (!pool.length) return null;
+
+  // La plus récente d'abord, puis le genre le plus spécifique (femme/homme avant unisexe/générique).
+  pool.sort((a, b) => {
+    const yearDiff = (b.annee ?? 0) - (a.annee ?? 0);
+    if (yearDiff !== 0) return yearDiff;
+    const specA = a.genre === params.genre ? 0 : 1;
+    const specB = b.genre === params.genre ? 0 : 1;
+    return specA - specB;
+  });
+  return pool[0];
 }
 
 /** Incrémente usage_count — chaque réutilisation compte, chaque génération initiale aussi (déjà mise à 1 à la création). */

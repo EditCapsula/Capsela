@@ -56,6 +56,7 @@ const SUBTYPE_EN: Record<string, string> = {
   polo: "polo shirt",
   sweat: "sweatshirt",
   gilet: "cardigan",
+  "gilet sans manches": "sleeveless vest",
   cardigan: "cardigan",
   blazer: "blazer",
   trench: "trench coat",
@@ -267,6 +268,32 @@ function translate(dict: Record<string, string>, raw: string | undefined | null)
   return dict[raw.trim().toLowerCase()];
 }
 
+/** Majuscule initiale + point final (sauf ponctuation finale déjà présente) — pour les phrases de style libre (silhouetteMode, tendances_mode, override...). */
+function capSentence(s: string): string {
+  const t = s.trim();
+  if (!t) return t;
+  const capped = t[0].toUpperCase() + t.slice(1);
+  return /[.!?]$/.test(capped) ? capped : `${capped}.`;
+}
+
+/** Éclate un texte libre (souvent saisi en liste séparée par virgules) en une ligne par élément, chacune capitalisée. */
+function toLines(text: string): string[] {
+  return text
+    .split(/[,;\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map(capSentence);
+}
+
+/** Une règle de tendances_mode déjà résolue par l'appelant — cette fonction reste pure/synchrone et ne touche jamais la base. */
+export interface TrendRule {
+  silhouette?: string | null;
+  coupes?: string | null;
+  matieres?: string | null;
+  details?: string | null;
+  elements_a_eviter?: string | null;
+}
+
 export interface BuiltPrompt {
   prompt: string;
   ok: boolean;
@@ -283,8 +310,18 @@ export interface BuiltPrompt {
  * (supabase/functions/_shared/imagePrompt.ts, à garder synchronisée) —
  * conservée côté app pour un futur aperçu/regénération manuelle en
  * administration (structure seulement, pas de back-office pour l'instant).
+ *
+ * `trend` est déjà résolu par l'appelant (matching en base sur
+ * categorie/sous_type/genre/année, cf. findTrendRule côté Edge Function).
+ * Ordre de priorité pour la partie "design" du prompt (recette 19/08/2026) :
+ * 1. item.promptImageOverride, si renseigné (remplace tout le bloc design)
+ * 2. item.silhouetteMode / item.detailsMode
+ * 3. trend.silhouette / trend.details (ignoré si niveauTendance = intemporel)
+ * 4. caractéristiques standards (dictionnaires ci-dessus, comme avant)
+ * Le sujet structurel (noun/canonCategory/ok) ne dépend JAMAIS de cet ordre —
+ * une tendance ne peut jamais changer la nature du produit.
  */
-export function buildImagePrompt(item: CatalogItem): BuiltPrompt {
+export function buildImagePrompt(item: CatalogItem, trend?: TrendRule | null): BuiltPrompt {
   const canonCategory = item.cat;
   const genreEn = item.genre === "femme" ? "women's" : item.genre === "homme" ? "men's" : "unisex";
   const colorEn = translate(COLOR_EN, item.color) || (item.color ? item.color.toLowerCase() : "");
@@ -317,45 +354,119 @@ export function buildImagePrompt(item: CatalogItem): BuiltPrompt {
   );
 
   const productDescription = [genreEn, colorEn, ...modifiers, matiereEn, noun].filter(Boolean).join(" ");
+
+  // Sujet structurel — jamais affecté par override/tendance (garde-fou
+  // "un blazer doit rester un blazer" du brief 19/08/2026).
   const ok = (CATEGORY_KEYWORDS[canonCategory] || []).some((kw) => noun.includes(kw));
   const composition = CATEGORY_COMPOSITION[canonCategory] || "Single fashion item, fully visible.";
   const excludeLines = (CATEGORY_EXCLUDE[canonCategory] || []).map((w) => `No ${w}.`);
 
-  const prompt = [
-    `Premium ecommerce cutout product image of ${productDescription}.`,
-    "",
-    composition,
-    "",
-    "Contemporary, on-trend 2025-2026 fashion design, as currently sold by a modern minimalist fashion retailer. Avoid retro, vintage, or outdated silhouettes, cuts, and fabrics.",
-    "",
+  const niveauTendance = item.niveauTendance || "contemporain";
+  // intemporel = jamais de micro-tendance : la table tendances_mode n'est
+  // jamais consultée pour ce niveau (mais un silhouetteMode/detailsMode saisi
+  // explicitement sur l'article, lui, reste respecté — ce n'est pas une
+  // "micro-tendance" mais une description éditoriale).
+  const effectiveTrend = niveauTendance === "intemporel" ? null : trend || null;
+
+  const overrideText = item.promptImageOverride?.trim() || "";
+  let designBlock: string;
+
+  if (overrideText) {
+    designBlock = overrideText;
+  } else {
+    const productLine = capSentence([...modifiers, noun].filter(Boolean).join(" ") || noun);
+    const silhouetteText = item.silhouetteMode?.trim() || effectiveTrend?.silhouette?.trim() || "";
+    const detailsText = item.detailsMode?.trim() || effectiveTrend?.details?.trim() || "";
+
+    const blocks: string[] = [`Product:\n${productLine}`];
+    if (colorEn) blocks.push(`Color:\n${capSentence(colorEn)}`);
+    if (silhouetteText) blocks.push(`Silhouette:\n${capSentence(silhouetteText)}`);
+    if (detailsText) blocks.push(`Details:\n${toLines(detailsText).join("\n")}`);
+
+    if (niveauTendance === "intemporel") {
+      blocks.push(
+        [
+          "Timeless design direction:",
+          "Sober, refined, and understated design.",
+          "Visually durable — not tied to a passing micro-trend.",
+          "Versatile and easy to wear across seasons.",
+          "Premium quality feel.",
+          "Current without being marked by a specific fashion moment.",
+        ].join("\n")
+      );
+    } else {
+      const directionLines = [
+        "Current fashion direction:",
+        "Contemporary fashion aesthetic appropriate to the current year.",
+        "The garment must look current and commercially relevant for the contemporary European fashion market.",
+        "Use current proportions and construction appropriate to this exact garment category.",
+        "Avoid dated cuts, outdated proportions, obsolete detailing and generic old-fashioned styling.",
+        "The result should feel like a real ready-to-wear item currently sold by a contemporary premium fashion retailer.",
+        "Prioritize a timeless foundation combined with current fashion proportions and refined contemporary detailing.",
+      ];
+      // "tendance" seulement : va davantage chercher dans tendances_mode (brief 19/08/2026 point 4) —
+      // "contemporain" reste aux codes actuels génériques ci-dessus, sans micro-tendance spécifique.
+      if (niveauTendance === "tendance" && effectiveTrend?.coupes?.trim()) {
+        directionLines.push(`Cut direction: ${capSentence(effectiveTrend.coupes)}`);
+      }
+      if (niveauTendance === "tendance" && effectiveTrend?.matieres?.trim()) {
+        directionLines.push(`Fabric direction: ${capSentence(effectiveTrend.matieres)}`);
+      }
+      blocks.push(directionLines.join("\n"));
+    }
+
+    if (effectiveTrend?.elements_a_eviter?.trim()) {
+      blocks.push(`Avoid:\n${toLines(effectiveTrend.elements_a_eviter).join("\n")}`);
+    }
+
+    designBlock = blocks.join("\n\n");
+  }
+
+  // Template visuel Capsela commun à toutes les générations (brief
+  // 19/08/2026 point 6) — composition/excludeLines spécifiques à la
+  // catégorie et marge anti-crop des catégories hautes (recette 19/08/2026,
+  // correctif images coupées) conservées comme garde-fous structurels
+  // existants, insérées au fil du template commun plutôt qu'en doublon.
+  const commonTemplate = [
     "Single fashion item only.",
-    "Entire product fully visible, with no part cropped or extending beyond the frame.",
-    "Generous empty margin on all four sides between the product and the edge of the image.",
+    "Complete garment or product fully visible.",
+    composition,
+    "Entire product must remain inside the frame with no cropped part.",
+    "Generous empty margin on all four sides.",
     ...(TALL_CATEGORIES.has(canonCategory)
       ? [
           "This is a visually tall/long garment: scale it down further than usual so the very top and the very bottom both sit well within the frame, with clear empty space above and below — never let the top or bottom edge touch or extend past the image border.",
         ]
       : []),
-    "Centered.",
-    "Front or slight three-quarter view.",
+    "Perfectly centered.",
+    "Front view or very slight three-quarter view.",
     "No person.",
     "No model.",
     "No mannequin.",
+    "No visible body.",
     "No body parts.",
-    ...excludeLines,
     "No hanger.",
     "No furniture.",
     "No props.",
     "No text.",
     "No logo.",
     "No brand.",
-    "No additional clothing.",
+    "No additional clothing unless structurally part of the product.",
+    ...excludeLines,
     "Clean isolated product presentation.",
+    "Realistic premium material texture.",
+    "Natural construction and folds.",
+    "Soft diffused studio lighting.",
     "Very soft subtle shadow.",
     "Transparent background if supported.",
+    "Otherwise use a clean uniform neutral or white background.",
     "Photorealistic.",
-    "Designed to remain clearly recognizable as a small mobile ecommerce thumbnail.",
+    "High detail.",
+    "Sharp clean product edges.",
+    "Designed to remain immediately recognizable when displayed as a small mobile ecommerce thumbnail in the Capsela application.",
   ].join("\n");
+
+  const prompt = [`Premium ecommerce cutout product image of ${productDescription}.`, "", designBlock, "", commonTemplate].join("\n");
 
   return { prompt, ok, noun };
 }
