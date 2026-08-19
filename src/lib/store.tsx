@@ -610,11 +610,33 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         };
       }),
     requestCatalogImage,
-    regenOutfit: () => setState(regen),
+    // "Régénérer" = proposer une autre combinaison, jamais générer de
+    // nouveaux visuels (recette 19/08/2026) : conserve météo/occasion/
+    // présentiel-télétravail/capsule/profil (déjà les seules entrées de
+    // regen()), et essaie plusieurs tirages pour éviter de retomber tout de
+    // suite sur exactement la même combinaison (comparaison par ensemble
+    // d'ids, ordre indifférent) — sans garantie absolue si peu d'options
+    // existent, jamais bloquant.
+    regenOutfit: () =>
+      setState((s) => {
+        const prevIds = new Set(s.outfit);
+        let next = regen(s);
+        let attempts = 0;
+        const sameAsBefore = (ids: number[]) => ids.length === prevIds.size && ids.every((id) => prevIds.has(id));
+        while (attempts < 5 && sameAsBefore(next.outfit)) {
+          next = regen(s);
+          attempts++;
+        }
+        return next;
+      }),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
     wearOutfitToday: () =>
       setState((s) => {
+        // Garde anti double-clic (recette 19/08/2026) : une fois déjà
+        // validée, un second appel (rapide double-clic avant le re-rendu
+        // qui masque le bouton) n'enregistre jamais une deuxième entrée.
+        if (s.outfitValidated) return s;
         // R-B9 — défense en profondeur : une veste/un manteau seul sans base ne peut pas être validé comme porté.
         const outfitPieces = s.outfit.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
         if (violatesOuterwearRule(outfitPieces)) return s;
@@ -624,7 +646,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           outfitValidated: true,
           lookCount: s.lookCount + 1,
           history: [
-            { id: "h" + Date.now(), ts: Date.now(), pieceIds: [...s.outfit], occasion: s.occasion || "all" },
+            {
+              id: "h" + Date.now(),
+              ts: Date.now(),
+              pieceIds: [...s.outfit],
+              occasion: s.occasion || "all",
+              temp: weatherRef.current.temp,
+              weatherLabel: weatherRef.current.label,
+            },
             ...s.history,
           ],
         };

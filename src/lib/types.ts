@@ -152,6 +152,9 @@ export interface HistoryEntry {
   ts: number;
   pieceIds: number[];
   occasion: OccasionKey;
+  /** Météo au moment de la validation (recette 19/08/2026) — absente sur les entrées antérieures. */
+  temp?: number;
+  weatherLabel?: string;
 }
 
 /** Look composé manuellement par l'utilisateur à partir de son dressing réel. */

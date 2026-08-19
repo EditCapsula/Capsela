@@ -43,6 +43,59 @@ function isDressy(occasion: OccasionKey, workMode: WorkMode = "Présentiel", dat
   return effectiveFormality(occasion, workMode, dateContext) >= 3;
 }
 
+/** Tournure au génitif désignant le contexte du jour, pour la phrase d'explication de la recommandation. */
+function occasionPhrase(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext): string {
+  switch (occasion) {
+    case "quotidien":
+      return "ta journée";
+    case "travail_formel":
+      return workMode === "Télétravail" ? "ta journée en télétravail" : "ta journée au bureau";
+    case "entretien":
+      return "ton rendez-vous important";
+    case "date":
+      return dateContext === "Restaurant / date romantique"
+        ? "ton dîner"
+        : dateContext === "Soirée festive"
+          ? "ta soirée"
+          : "ton rendez-vous";
+    case "soiree":
+      return "ta sortie";
+    case "festive":
+      return "ta soirée festive";
+    case "sport":
+      return "ta séance de sport";
+    case "cocooning":
+      return "ta journée cocooning";
+    case "voyage":
+      return "ton déplacement";
+    case "evenement_perso":
+      return "ta cérémonie";
+    default:
+      return "aujourd'hui";
+  }
+}
+
+/**
+ * Phrase courte expliquant pourquoi cette combinaison est recommandée,
+ * générée par template (recette 19/08/2026) — jamais d'IA, jamais de
+ * texte codé en dur indépendant du contexte réel (occasion, présentiel/
+ * télétravail, météo du jour).
+ */
+export function explainRecommendation(
+  occasion: OccasionKey,
+  workMode: WorkMode,
+  dateContext: DateContext,
+  temp: number | null | undefined
+): string {
+  const occ = occasionPhrase(occasion, workMode, dateContext);
+  if (temp == null || !Number.isFinite(temp)) return `Pensée pour ${occ}.`;
+  const t = Math.round(temp);
+  if (t >= 27) return `Pensée pour ${occ} et la chaleur annoncée (${t}°).`;
+  if (t >= 20) return `Pensée pour ${occ} et les ${t}° prévus.`;
+  if (t >= 12) return `Pensée pour ${occ}, avec ${t}° au programme.`;
+  return `Pensée pour ${occ} et le froid annoncé (${t}°).`;
+}
+
 export function occasionFit(it: Item, occ: OccasionKey): boolean {
   // Une occasion déclarée sur la pièce prime sur les heuristiques de nom.
   if (it.occasion && it.occasion.length) return it.occasion.includes(occ);
@@ -81,9 +134,30 @@ export function occasionFit(it: Item, occ: OccasionKey): boolean {
  * chaque critère ne s'applique que s'il laisse au moins une option, jamais
  * de blocage total pour une pièce essentielle.
  */
+/** R-S15 — poids d'anti-répétition (jamais un filtre dur, cf. harmonize ci-dessous). */
+function repetitionWeight(it: Item): number {
+  if (!CLOTHING_CATS.includes(it.cat) || it.worn == null) return 0;
+  if (it.worn <= 1) return 3;
+  if (it.worn <= 3) return 2;
+  if (it.worn <= 14) return 1;
+  return 0;
+}
+
 function harmonize(candidates: Item[], chosen: Item[], essential = true): Item[] {
-  if (candidates.length <= 1 || !chosen.length) return candidates;
+  if (candidates.length <= 1) return candidates;
   let pool = candidates;
+
+  // R-S15 — préfère les pièces les moins récemment portées : ne retient que
+  // le palier le plus frais présent dans le pool, jamais un rejet complet
+  // d'une catégorie (le palier le plus frais existe toujours dans un pool
+  // non vide) — une pièce portée hier reste sélectionnable s'il n'existe
+  // vraiment aucune alternative plus fraîche.
+  if (pool.length > 1) {
+    const minWeight = Math.min(...pool.map(repetitionWeight));
+    const freshest = pool.filter((i) => repetitionWeight(i) === minWeight);
+    if (freshest.length) pool = freshest;
+  }
+  if (!chosen.length) return pool;
 
   // Couleur — au plus une teinte affirmée par tenue. Le bijou est un petit
   // accent métallique (or/argent) : il ne doit pas consommer à lui seul le
@@ -167,9 +241,10 @@ export function generateOutfit(
   const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
 
-  const antiRepPool = seasonBase.filter((i) => !(CLOTHING_CATS.includes(i.cat) && recentlyWorn(i)));
-  const antiRepClothingCount = antiRepPool.filter((i) => CLOTHING_CATS.includes(i.cat)).length;
-  const antiRepBase = antiRepClothingCount >= 2 ? antiRepPool : seasonBase;
+  // R-S15 — l'anti-répétition n'exclut plus jamais une pièce du pool en
+  // amont (ancien comportement R-B7, reclassé le 13/08/2026) : c'est
+  // désormais harmonize() qui la préfère sans jamais bloquer une catégorie,
+  // cf. plus bas.
 
   // Compatibilité catégorie × occasion (R-B11 Sport, R-B12/R-B13 Cocooning ↔
   // chaussures d'intérieur) — jamais relâchée, même si le pool résultant est
@@ -256,7 +331,7 @@ export function generateOutfit(
 
   // Règles dures (R-B3/R-B6/R-B11...) — jamais relâchées, appliquées une
   // bonne fois pour toutes sur la base anti-répétition/saison.
-  const hardBase = hardCategoryFilter(antiRepBase);
+  const hardBase = hardCategoryFilter(seasonBase);
 
   // Chaussures/sacs/bijoux/accessoires restent toujours éligibles vis-à-vis du
   // simple filtre heuristique d'occasion — conçus pour être reportés souvent,
@@ -339,11 +414,20 @@ export function generateOutfit(
     return picked;
   })();
   if (sh) ids.push(sh.id);
-  const sac = pick(["sac"]);
-  if (sac) ids.push(sac.id);
-  const bijou = pick(["bijou"]);
-  if (bijou) ids.push(bijou.id);
-  if (Math.random() < 0.5) {
+  // Accessoires facultatifs (recette 19/08/2026) : haut+bas/pièce
+  // unique+chaussures sont les seuls éléments structurants systématiques.
+  // Veste/manteau (déjà ci-dessus, 30%) et sac restent occasionnels ; bijou
+  // et accessoire encore plus rares — Capsela ne doit jamais chercher à
+  // remplir mécaniquement toutes les catégories.
+  if (Math.random() < 0.55) {
+    const sac = pick(["sac"], false);
+    if (sac && !ids.includes(sac.id)) ids.push(sac.id);
+  }
+  if (Math.random() < 0.35) {
+    const bijou = pick(["bijou"], false);
+    if (bijou && !ids.includes(bijou.id)) ids.push(bijou.id);
+  }
+  if (Math.random() < 0.3) {
     // R-B19 — les collants ne se portent qu'avec une robe, une jupe ou un
     // short (jamais avec un pantalon/jean) : exclus du tirage sinon, sans
     // affecter les autres accessoires. La température reste prise en compte
@@ -360,14 +444,15 @@ export function generateOutfit(
     if (ac && !ids.includes(ac.id)) ids.push(ac.id);
   }
 
+  // Sac/bijou désormais facultatifs (recette 19/08/2026) : leur absence
+  // n'est plus jamais signalée comme un manque, seuls les éléments
+  // structurants (haut+bas/robe, chaussures) le sont.
   const missingCats: (CategoryKey | "bas")[] = [];
   if (!useRobe) {
     if (!hasCat(["haut"])) missingCats.push("haut");
     if (!hasCat(BOTTOMS)) missingCats.push("bas");
   }
   if (!hasCat(["chaussures"])) missingCats.push("chaussures");
-  if (!hasCat(["sac"])) missingCats.push("sac");
-  if (!hasCat(["bijou"])) missingCats.push("bijou");
 
   return { ids: Array.from(new Set(ids)), missingCats };
 }
@@ -667,6 +752,23 @@ export function computeLookScore(
   const hasBase = roles.includes("base");
   const hasCalque = roles.includes("calque");
   if (hasBase && hasCalque && !dressy) bonuses.push(10);
+
+  // R-S15 — anti-répétition graduée (reclassifiée depuis l'ex-R-B7 bloquant,
+  // cf. moteur de règles section 20) : jamais un filtre dur qui exclurait
+  // une pièce du pool, seulement une pénalité de score sur la tenue
+  // complète — une combinaison récemment portée reste toujours proposable,
+  // simplement moins favorisée. Uniquement les catégories vêtement
+  // (CLOTHING_CATS) — jamais chaussures/sacs/bijoux/accessoires, qui se
+  // réutilisent librement d'un look à l'autre.
+  const mostRecentWorn = clothing.reduce<number | null>(
+    (min, i) => (i.worn == null ? min : min == null ? i.worn : Math.min(min, i.worn)),
+    null
+  );
+  if (mostRecentWorn != null) {
+    if (mostRecentWorn <= 1) penalties.push([30, "Cette tenue ressemble beaucoup à celle d'hier, essaie de varier une pièce."]);
+    else if (mostRecentWorn <= 3) penalties.push([15, "Cette tenue a été portée il y a peu, une petite variation la rafraîchirait."]);
+    else if (mostRecentWorn <= 14) penalties.push([5, "Cette tenue a déjà été portée récemment."]);
+  }
 
   let score = 100;
   penalties.forEach(([w]) => { score -= w; });

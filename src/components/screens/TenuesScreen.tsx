@@ -8,7 +8,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { currentSeasonKey } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { computeLookScore, violatesOuterwearRule } from "@/lib/logic";
+import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
 
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
@@ -87,6 +87,16 @@ export default function TenuesScreen() {
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
   // Sans objet en Cocooning (R-B12) : veste/manteau déjà exclus du pool de génération.
   const vesteWithoutBase = state.occasion !== "cocooning" && violatesOuterwearRule(outfitPieces);
+
+  // Phrase d'explication de la recommandation (recette 19/08/2026) — par
+  // template, jamais d'IA ; pas de température affichée tant que la
+  // géolocalisation n'a pas résolu la météo réelle du jour.
+  const recommendationText = explainRecommendation(
+    state.occasion || "all",
+    state.workMode,
+    state.dateContext,
+    geoLoading ? null : geoCity.temp
+  );
 
   const dismissed = new Set(state.dismissedSuggestions || []);
   const lookScore = computeLookScore(
@@ -286,6 +296,39 @@ export default function TenuesScreen() {
           ↻ Régénérer
         </button>
       </div>
+
+      {!geoLoading && (
+        <div className="text-[12.5px] text-muted leading-[1.4] mb-3 -mt-1">{recommendationText}</div>
+      )}
+
+      {!geoLoading && outfitPieces.length > 0 && (
+        <div className="scrollarea flex gap-[8px] overflow-x-auto pb-[2px] mb-4">
+          {outfitPieces.map((it) => {
+            const preview = resolveItemImage(it);
+            return (
+              <div
+                key={"preview-" + it.id}
+                className="flex-none rounded-[10px] overflow-hidden"
+                style={
+                  preview.url
+                    ? { width: 48, height: 58, background: "#F3EDE1", padding: 6 }
+                    : { width: 48, height: 58, background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
+                }
+              >
+                {preview.url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={preview.url}
+                    alt=""
+                    style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex flex-col gap-[10px]">
         {geoLoading
           ? [0, 1, 2].map((i) => (
@@ -341,20 +384,28 @@ export default function TenuesScreen() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  {suggested && (
+                  {/* Badge à sens réel (recette 19/08/2026) : DRESSING pour une pièce
+                      possédée, CAPSULE pour une pièce de la capsule de départ — jamais
+                      "Suggestion" générique appliqué à tout indistinctement. */}
+                  {suggested ? (
                     <button
                       onClick={() => setSuggestionInfoId(infoOpen ? null : it.id)}
                       className="inline-block text-[9px] tracking-[.08em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px] mb-[6px] cursor-pointer"
                     >
-                      Suggestion
+                      Capsule
                     </button>
+                  ) : (
+                    <span className="inline-block text-[9px] tracking-[.08em] uppercase text-[#6B6357] bg-[#EFEAE0] rounded-full py-1 px-[10px] mb-[6px]">
+                      Dressing
+                    </span>
                   )}
                   <div className="text-[14.5px] text-ink">{it.name}</div>
                   <div className="text-[11px] text-muted mt-[3px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
                 </div>
                 <button
                   onClick={() => actions.swapPiece(it.id, it.cat)}
-                  className="text-[17px] text-placeholder cursor-pointer flex-shrink-0 p-[6px]"
+                  aria-label="Remplacer cette pièce"
+                  className="text-[17px] text-placeholder cursor-pointer flex-shrink-0 p-[9px] flex items-center justify-center"
                 >
                   ⇄
                 </button>
