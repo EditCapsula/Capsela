@@ -1,0 +1,27 @@
+name: Générer toutes les images du catalogue (admin)
+
+# Déclenchement manuel uniquement ("Run workflow" depuis l'onglet Actions) —
+# jamais automatique, pour ne jamais lancer de génération sans action
+# explicite. Balaie tout le catalogue (image_status 'missing'/'error'),
+# appelle l'Edge Function generate-catalog-image pour chacun (qui applique
+# elle-même déduplication, verrou et plafond quotidien). Nécessite le
+# secret de dépôt SUPABASE_SERVICE_ROLE_KEY (Settings → Secrets and
+# variables → Actions) — jamais exposé côté client, lu uniquement ici côté
+# serveur GitHub.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: node scripts/generate-all-catalog-images.mjs
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
