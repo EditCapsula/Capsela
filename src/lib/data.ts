@@ -139,6 +139,17 @@ DATE_CONTEXTS.forEach(([key, formality]) => {
 });
 
 /** Libellés courts pour les chips d'occasion à l'ajout d'une pièce (espace restreint). */
+/** Icône météo par libellé de condition (partagée Tenue du jour / Accueil). */
+export const WEATHER_ICONS: Record<string, string> = {
+  "Ensoleillé": "☀️",
+  "Grand soleil": "☀️",
+  "Éclaircies": "⛅",
+  "Nuageux": "☁️",
+  "Pluie": "🌧️",
+  "Orageux": "⛈️",
+  "Neige": "❄️",
+};
+
 export const OCC_SHORT: Partial<Record<OccasionKey, string>> = {
   quotidien: "Quotidien",
   travail_formel: "Travail",

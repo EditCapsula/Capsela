@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, isBag } from "@/lib/data";
+import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { currentSeasonKey } from "@/lib/capsule";
@@ -10,16 +10,6 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, violatesOuterwearRule } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
-
-const WEATHER_ICONS: Record<string, string> = {
-  "Ensoleillé": "☀️",
-  "Grand soleil": "☀️",
-  "Éclaircies": "⛅",
-  "Nuageux": "☁️",
-  "Pluie": "🌧️",
-  "Orageux": "⛈️",
-  "Neige": "❄️",
-};
 
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
 const MODE_STYLES = {

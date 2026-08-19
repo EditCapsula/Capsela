@@ -1,10 +1,11 @@
 "use client";
 
 import AppHeader from "@/components/AppHeader";
+import { OCC_LABELS, OCC_SHORT, WEATHER_ICONS } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
-import { useCapsela } from "@/lib/store";
+import { useCapsela, defaultOccasionToday } from "@/lib/store";
 
-const GRADIENT_TO = ["#EFE3D3", "#E8DCC9", "#E1D3BC", "#D9C9AF"];
+const GRADIENT_TO = ["#EFE3D3", "#E8DCC9", "#E1D3BC"];
 
 function HangerIcon() {
   return (
@@ -29,9 +30,27 @@ function JournalIcon() {
 }
 
 export default function HomeScreen() {
-  const { actions } = useCapsela();
+  const { state, geoCity, geoLoading, actions } = useCapsela();
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
+
+  // Bloc principal (brief design Homepage, 19/08/2026) : lecture seule des
+  // données déjà disponibles ailleurs dans l'app (météo/localisation,
+  // occasion auto-sélectionnée) — jamais de génération de tenue ni d'appel
+  // image depuis cet écran. hasOutfit distingue "tenue déjà déterminée"
+  // (visitée au moins une fois cette session) de "pas encore choisie".
+  const hasOutfit = state.outfit.length > 0;
+  const occasionKey = state.occasion && state.occasion !== "all" ? state.occasion : defaultOccasionToday(profile.prefs);
+  const occasionLabel = OCC_SHORT[occasionKey] || OCC_LABELS[occasionKey];
+
+  const contextParts: string[] = [];
+  if (!geoLoading) {
+    if (geoCity.city) contextParts.push(geoCity.city);
+    if (geoCity.temp != null) contextParts.push(geoCity.temp + "°");
+    if (occasionLabel) contextParts.push(occasionLabel);
+  }
+  const weatherIcon = !geoLoading && geoCity.label ? WEATHER_ICONS[geoCity.label] : "";
+  const contextLine = contextParts.join(" · ");
 
   const features = [
     {
@@ -53,22 +72,13 @@ export default function HomeScreen() {
       ghost: "02",
     },
     {
-      title: "Second avis",
-      body: "Partage ta tenue à un proche avant de te lancer.",
-      onOpen: actions.openOpinionShare,
-      bg: "#E9DECC",
-      accent: "#1D1A16",
-      glyph: "❞" as const,
-      ghost: "03",
-    },
-    {
       title: "Journal des tenues",
       body: "L’historique de toutes tes tenues portées.",
       onOpen: actions.goHistory,
-      bg: "#E2D5C0",
+      bg: "#E9DECC",
       accent: "#1D1A16",
       glyph: "journal" as const,
-      ghost: "04",
+      ghost: "03",
     },
   ];
 
@@ -92,12 +102,24 @@ export default function HomeScreen() {
       >
         <div className="text-[10px] tracking-[.14em] uppercase text-[rgba(243,238,229,.75)]">Aujourd&apos;hui</div>
         <div className="font-serif text-[22px] text-cream mt-2 leading-[1.25]">
-          Découvrir ta
-          <br />
-          tenue du jour
+          {hasOutfit ? (
+            "Ta tenue est prête"
+          ) : (
+            <>
+              Découvre ta
+              <br />
+              tenue du jour
+            </>
+          )}
         </div>
+        {contextLine && (
+          <div className="text-[12.5px] mt-[7px]" style={{ color: "rgba(243,238,229,.7)" }}>
+            {weatherIcon ? weatherIcon + " " : ""}
+            {contextLine}
+          </div>
+        )}
         <div className="inline-flex items-center gap-[7px] mt-4 bg-cream text-ink rounded-full py-[10px] px-4 text-[12px] tracking-[.04em]">
-          Voir la tenue →
+          {hasOutfit ? "Découvrir ma tenue →" : "Choisir ma tenue →"}
         </div>
       </button>
 

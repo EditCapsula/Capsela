@@ -23,7 +23,7 @@ export default function TabBar() {
           <button key={tab.screen} onClick={onClick} className="flex flex-col items-center gap-[6px] flex-1 min-w-0 cursor-pointer">
             <span
               className="text-[9.5px] tracking-[.05em] uppercase whitespace-nowrap"
-              style={{ color: active ? "#1D1A16" : "#B3AA9B" }}
+              style={{ color: active ? "#1D1A16" : "#948A79" }}
             >
               {tab.label}
             </span>

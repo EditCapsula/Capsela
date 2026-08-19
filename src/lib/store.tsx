@@ -41,7 +41,7 @@ import type {
 
 /** Occasion par défaut suggérée en arrivant sur "Tenue du jour" sans choix explicite (recette 13/08/2026) — toujours modifiable manuellement ensuite. */
 const DAYS_S = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-function defaultOccasionToday(prefs: ProfilePrefs): OccasionKey {
+export function defaultOccasionToday(prefs: ProfilePrefs): OccasionKey {
   if (prefs.onVacation) return "cocooning";
   const todayKey = DAYS_S[new Date().getDay()];
   return prefs.workDays.includes(todayKey) ? "travail_formel" : "quotidien";
