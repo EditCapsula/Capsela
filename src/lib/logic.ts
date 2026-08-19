@@ -1,7 +1,7 @@
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
 import { BAS_CATS, effectiveFormality, isSunny } from "./data";
-import { bestStyleFor, morphoFit, morphoVigilance } from "./capsule";
+import { morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
   formalityOf,
@@ -200,9 +200,20 @@ function harmonize(candidates: Item[], chosen: Item[], essential = true): Item[]
     }
   }
 
-  const anchorStyle = bestStyleFor(chosen[0]);
-  const styleMatches = pool.filter((i) => bestStyleFor(i) === anchorStyle);
-  if (styleMatches.length) pool = styleMatches;
+  // Correctif 19/08/2026 (audit moteur) : bestStyleFor() réduit une pièce à
+  // un seul style deviné par mots-clés du nom (premier match dans un ordre
+  // fixe) — une jupe est toujours "Romantique" (mot-clé "jupe"), jamais
+  // compatible avec un t-shirt toujours "Minimaliste" (mot-clé "t-shirt"),
+  // même à formalité et couleur identiques. Ce narrowing n'est fiable que
+  // lorsque les pièces ont un style_tags explicitement déclaré (donnée
+  // structurée, jamais une supposition) ; sans cette déclaration sur
+  // l'ancre, on ne filtre plus par style plutôt que de risquer une
+  // exclusion arbitraire.
+  const anchor = chosen[0];
+  if (anchor.styleTags && anchor.styleTags.length) {
+    const styleMatches = pool.filter((i) => i.styleTags && i.styleTags.some((s) => anchor.styleTags!.includes(s)));
+    if (styleMatches.length) pool = styleMatches;
+  }
   return pool;
 }
 
