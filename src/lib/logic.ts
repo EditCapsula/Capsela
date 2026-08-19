@@ -109,34 +109,18 @@ export function explainRecommendation(
   return `Pensée pour ${occ} et le froid annoncé (${t}°).`;
 }
 
-export function occasionFit(it: Item, occ: OccasionKey): boolean {
-  // Une occasion déclarée sur la pièce prime sur les heuristiques de nom.
-  if (it.occasion && it.occasion.length) return it.occasion.includes(occ);
-  const n = (it.name + " " + it.color).toLowerCase();
-  switch (occ) {
-    case "quotidien":
-      return /baskets|jean droit|chino|t-shirt|sweat|mocassins|ballerines|cabas|kaki|sable|crème/.test(n);
-    case "travail_formel":
-      return /tailleur|chemis|blazer|blouse|escarpin|mocassin|gilet|robe chemise|robe droite|marine|noir/.test(n);
-    case "entretien":
-      return /tailleur|blazer|chemis|escarpin|robe chemise|robe droite|marine|noir/.test(n);
-    case "date":
-      return /soie|robe|blouse|escarpin|jupe|foulard|rose poudré|bordeaux/.test(n);
-    case "soiree":
-      return /soie|robe|escarpin|doré|bordeaux|noir/.test(n);
-    case "festive":
-      return /soie|robe|escarpin|doré|paillet|bordeaux|noir|glamour/.test(n);
-    case "evenement_perso":
-      return /soie|robe longue|robe droite|escarpin|dentelle|doré|glamour|paillet|tailleur|chemis/.test(n);
-    case "sport":
-      return /sweat|jean brut|molleton|baskets|coupe-vent|débardeur|jogging/.test(n);
-    case "voyage":
-      return /baskets|jean|sweat|chino|t-shirt|coupe-vent|molleton/.test(n);
-    case "cocooning":
-      return /sweat|molleton|jogging|pull col rond/.test(n);
-    default:
-      return true;
-  }
+/**
+ * Une occasion explicitement déclarée sur une pièce (dressing réel,
+ * AddScreen) exclut réellement — c'est un signal fiable, contrairement à
+ * l'ancien filtre par mots-clés du nom/couleur retiré le 19/08/2026 (audit
+ * moteur : produisait des associations accidentelles, ex. un pantalon noir
+ * retenu pour "Sortie" uniquement parce que "noir" matchait la regex,
+ * excluant à tort une jupe ou un jean de formalité identique). Sans
+ * déclaration explicite, aucune restriction — laisse la formalité (R-B3)
+ * décider seule.
+ */
+export function declaredOccasionOk(it: Item, occ: OccasionKey): boolean {
+  return !it.occasion || !it.occasion.length || it.occasion.includes(occ);
 }
 
 /**
@@ -310,9 +294,16 @@ export function generateOutfit(
     // dédiées (R-B6, R-B11...), ne pas les y soumettre casserait par exemple
     // les baskets pour Quotidien (formalité 0 < minimum 1) alors qu'elles y
     // sont explicitement adaptées.
+    // Correctif 19/08/2026 : le haut (TOP_LAYER_CATS) échappe à ce plancher
+    // strict — sa formalité peut être compensée par une veste structurée
+    // (ex. "t-shirt + blazer" = tenue bureau valide), décidé plus bas dans
+    // generateOutfit. Le bas, lui, reste soumis au plancher plein : aucune
+    // veste ne rend un jogging adapté au bureau.
     if (occasion !== "all") {
       const minFormality = effectiveFormality(occasion, workMode, dateContext);
-      r = r.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) >= minFormality);
+      r = r.filter(
+        (i) => !CLOTHING_CATS.includes(i.cat) || TOP_LAYER_CATS.includes(i.cat) || formalityOf(i) >= minFormality
+      );
     }
     // R-B6 — les baskets ne sont jamais éligibles dès que l'occasion demande
     // au moins business_casual (habillée), quelle que soit la disponibilité
@@ -339,6 +330,11 @@ export function generateOutfit(
       if (i.meteoMaxTemp != null && weather.temp > i.meteoMaxTemp) return false;
       return true;
     });
+    // Occasion explicitement déclarée sur la pièce (correctif 19/08/2026,
+    // remplace l'ancien filtre par mots-clés — cf. déclarations plus haut).
+    if (occasion !== "all") {
+      r = r.filter((i) => declaredOccasionOk(i, occasion));
+    }
     return r;
   };
 
@@ -347,27 +343,26 @@ export function generateOutfit(
   const hardBase = hardCategoryFilter(seasonBase);
 
   // Chaussures/sacs/bijoux/accessoires restent toujours éligibles vis-à-vis du
-  // simple filtre heuristique d'occasion — conçus pour être reportés souvent,
-  // contrairement aux vêtements filtrés plus strictement ci-dessous. Les
-  // règles dures s'appliquent en revanche toujours, via hardCategoryFilter.
+  // filtrage d'occasion — conçus pour être reportés souvent, contrairement
+  // aux vêtements filtrés plus strictement ci-dessous. Les règles dures
+  // s'appliquent en revanche toujours, via hardCategoryFilter.
   //
-  // Pour les autres catégories, le filtre heuristique d'occasion (occasionFit)
-  // ne se décide plus globalement (un total ≥4 toutes catégories confondues
-  // pouvait, par exemple pour "Date", valider le pool sur la seule base d'une
-  // jupe correspondant au mot-clé — laissant "haut" à zéro option alors
-  // qu'aucun de ses regex ne matchait) : la décision de relâcher ou non se
-  // prend catégorie par catégorie, comme les autres critères "molles" de
-  // pick() — jamais de blocage total pour une catégorie essentielle.
+  // Correctif 19/08/2026 (audit moteur) : l'ancien filtre heuristique par
+  // mots-clés nom/couleur (occasionFit) produisait des associations
+  // accidentelles plutôt que réellement pertinentes — ex. un pantalon
+  // tailleur retenu pour "Sortie" uniquement parce qu'il était noir
+  // (mot-clé de la regex "soiree"), tandis qu'une jupe ou un jean de
+  // formalité identique étaient exclus faute de coïncidence lexicale.
+  // La formalité par pièce (R-B3, déjà appliquée dans hardBase) est le
+  // signal fiable — retiré, ne plus réintroduire de narrowing par
+  // mots-clés ici.
   const poolFor = (cats: CategoryKey[]): Item[] => {
     if (cats.every((c) => ACCESSORY_CATS.includes(c))) {
       const basis = hardCategoryFilter(seasonPool);
       const inSeason = basis.filter((i) => cats.includes(i.cat));
       return inSeason.length ? basis : hardCategoryFilter(pool);
     }
-    const inCat = hardBase.filter((i) => cats.includes(i.cat));
-    if (occasion === "all") return inCat;
-    const narrowed = inCat.filter((i) => occasionFit(i, occasion));
-    return narrowed.length ? narrowed : inCat;
+    return hardBase.filter((i) => cats.includes(i.cat));
   };
 
   const chosen: Item[] = [];
@@ -383,23 +378,44 @@ export function generateOutfit(
   };
   const hasCat = (cats: CategoryKey[]) => pool.some((i) => cats.includes(i.cat));
 
+  const dressy = isDressy(occasion, workMode, dateContext);
+  const minFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
+
   const ids: number[] = [];
+  let compensatingVeste: Item | null = null;
   const useRobe = Math.random() < 0.4 && poolFor(["robe"]).length > 0;
   if (useRobe) {
     const r = pick(["robe"]);
     if (r) ids.push(r.id);
   } else {
-    const h = pick(["haut"]);
+    // Formalité du haut compensée par une veste structurée (recette
+    // 19/08/2026, audit moteur) : "t-shirt + blazer" doit pouvoir
+    // constituer une tenue bureau valide. On ne cherche cette compensation
+    // que si aucun haut n'atteint seul la formalité requise — jamais pour
+    // le bas, qui doit rester autonome (poolFor(BOTTOMS) reste soumis au
+    // plancher plein, cf. hardCategoryFilter).
+    const hautCandidates = poolFor(["haut"]);
+    const hautMeetingFloor = dressy ? hautCandidates.filter((i) => formalityOf(i) >= minFormality) : hautCandidates;
+    let hautPool = hautMeetingFloor;
+    if (dressy && !hautMeetingFloor.length && hautCandidates.length) {
+      const vesteCandidates = hardBase.filter((i) => i.cat === "veste" && formalityOf(i) >= minFormality);
+      compensatingVeste = rand(harmonize(vesteCandidates, chosen, false));
+      if (compensatingVeste) hautPool = hautCandidates;
+    }
+    const hautPreferred = preferredHexes.length ? hautPool.filter((i) => preferredHexes.includes(i.hex)) : [];
+    const h = rand(harmonize(hautPreferred.length ? hautPreferred : hautPool, chosen, true));
+    if (h) chosen.push(h);
     const b = pick(BOTTOMS);
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
+    if (compensatingVeste) { chosen.push(compensatingVeste); ids.push(compensatingVeste.id); }
   }
   // R-B5 assoupli (nuance demandée le 19/08/2026) : une robe/combinaison
   // reste self-sufficient face à un haut/bas "base" (redondant), mais une
   // pièce role_piece = "calque" par-dessus (chemise ouverte, gilet léger)
   // est un vrai geste stylistique, jamais en contexte habillé — seulement
   // décontracté, jamais systématique.
-  if (useRobe && !isDressy(occasion, workMode, dateContext) && Math.random() < 0.3) {
+  if (useRobe && !dressy && Math.random() < 0.3) {
     const robeLayerCandidates = hardBase.filter((i) => TOP_LAYER_CATS.includes(i.cat) && rolePieceOf(i) === "calque");
     const robeLayer = rand(harmonize(robeLayerCandidates, chosen, false));
     if (robeLayer) { chosen.push(robeLayer); ids.push(robeLayer.id); }
@@ -410,7 +426,6 @@ export function generateOutfit(
   // habillé sans validation manuelle (uniquement possible depuis le picker
   // manuel, pas ici).
   if (!useRobe && Math.random() < 0.35) {
-    const dressy = isDressy(occasion, workMode, dateContext);
     const firstLayer = chosen.find((c) => TOP_LAYER_CATS.includes(c.cat));
     if (firstLayer && rolePieceOf(firstLayer) === "base" && !dressy) {
       // La base déjà choisie ancre l'occasion : le calque n'a pas à repasser
@@ -424,7 +439,7 @@ export function generateOutfit(
       if (layer) { chosen.push(layer); ids.push(layer.id); }
     }
   }
-  if (Math.random() < 0.3) {
+  if (!compensatingVeste && Math.random() < 0.3) {
     const v = pick(["veste"], false);
     if (v && !ids.includes(v.id)) ids.push(v.id);
   }
@@ -528,10 +543,23 @@ export function swapOutfitPiece(
   if (occasion === "travail_formel" && workMode === "Télétravail") {
     candidates = candidates.filter((i) => i.cat !== "accessoire");
   }
-  // R-B3 — symétrique du filtre appliqué dans generateOutfit.
+  // R-B3 — symétrique du filtre appliqué dans generateOutfit, avec la même
+  // compensation "haut sous veste structurée" (correctif 19/08/2026) : si
+  // le reste de la tenue comporte déjà une veste assez formelle, le haut de
+  // remplacement n'est pas soumis au plancher de formalité — jamais le bas.
   if (occasion !== "all") {
     const minFormality = effectiveFormality(occasion, workMode, dateContext);
-    candidates = candidates.filter((i) => !CLOTHING_CATS.includes(i.cat) || formalityOf(i) >= minFormality);
+    const hasCompensatingVeste = outfitItems.some(
+      (i) => i.id !== pieceId && i.cat === "veste" && formalityOf(i) >= minFormality
+    );
+    candidates = candidates.filter(
+      (i) =>
+        !CLOTHING_CATS.includes(i.cat) ||
+        (TOP_LAYER_CATS.includes(i.cat) && hasCompensatingVeste) ||
+        formalityOf(i) >= minFormality
+    );
+    // Occasion explicitement déclarée sur la pièce (correctif 19/08/2026).
+    candidates = candidates.filter((i) => declaredOccasionOk(i, occasion));
   }
   // R-B6 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (isDressy(occasion, workMode, dateContext)) {
@@ -605,8 +633,15 @@ export function evaluateBlocking(
   }
 
   if (occasion !== "all" && clothing.length) {
-    const minFormality = Math.min(...clothing.map(formalityOf));
-    if (minFormality < effectiveFormality(occasion, workMode, dateContext)) {
+    const minFormalityRequired = effectiveFormality(occasion, workMode, dateContext);
+    // Correctif 19/08/2026 : une veste structurée compense la formalité du
+    // haut (ex. "t-shirt + blazer" pour le bureau), cf. generateOutfit —
+    // exclut le haut du calcul quand une telle veste est présente, jamais
+    // le bas.
+    const hasCompensatingVeste = pieces.some((i) => i.cat === "veste" && formalityOf(i) >= minFormalityRequired);
+    const relevant = hasCompensatingVeste ? clothing.filter((i) => !TOP_LAYER_CATS.includes(i.cat)) : clothing;
+    const minFormality = relevant.length ? Math.min(...relevant.map(formalityOf)) : minFormalityRequired;
+    if (minFormality < minFormalityRequired) {
       hits.push({ id: "R-B3", message: "Cette tenue est peut-être un peu trop décontractée pour l'occasion choisie." });
     }
   }
