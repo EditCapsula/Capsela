@@ -344,7 +344,15 @@ export function generateOutfit(
   const bijou = pick(["bijou"]);
   if (bijou) ids.push(bijou.id);
   if (Math.random() < 0.5) {
-    const ac = pick(["accessoire"], false);
+    // R-B19 — les collants ne se portent qu'avec une robe ou une jupe (jamais
+    // avec un pantalon/jean/short) : exclus du tirage sinon, sans affecter
+    // les autres accessoires.
+    const hasRobeOrJupe = useRobe || chosen.some((c) => c.cat === "jupe");
+    const accessoireBase = poolFor(["accessoire"]).filter(
+      (i) => i.cat === "accessoire" && (hasRobeOrJupe || i.accessoireType !== "Collants")
+    );
+    const ac = rand(harmonize(accessoireBase, chosen, false));
+    if (ac) chosen.push(ac);
     if (ac && !ids.includes(ac.id)) ids.push(ac.id);
   }
 
@@ -425,6 +433,15 @@ export function swapOutfitPiece(
       if (i.meteoMaxTemp != null && weather.temp > i.meteoMaxTemp) return false;
       return true;
     });
+  }
+  // R-B19 — symétrique du filtre appliqué dans generateOutfit : les collants
+  // ne remplacent jamais un accessoire si le reste de la tenue ne comporte
+  // ni robe ni jupe.
+  if (cat === "accessoire") {
+    const hasRobeOrJupe = outfitItems.some((i) => i.id !== pieceId && (i.cat === "robe" || i.cat === "jupe"));
+    if (!hasRobeOrJupe) {
+      candidates = candidates.filter((i) => i.cat !== "accessoire" || i.accessoireType !== "Collants");
+    }
   }
   if (!candidates.length) return outfitItems.map((i) => i.id);
   const rest = outfitItems.filter((i) => i.id !== pieceId);
