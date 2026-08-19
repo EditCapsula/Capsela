@@ -326,6 +326,8 @@ export function buildImagePrompt(item: CatalogItem): BuiltPrompt {
     "",
     composition,
     "",
+    "Contemporary, on-trend 2025-2026 fashion design, as currently sold by a modern minimalist fashion retailer. Avoid retro, vintage, or outdated silhouettes, cuts, and fabrics.",
+    "",
     "Single fashion item only.",
     "Entire product fully visible, with no part cropped or extending beyond the frame.",
     "Generous empty margin on all four sides between the product and the edge of the image.",
