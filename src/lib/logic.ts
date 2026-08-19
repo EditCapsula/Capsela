@@ -1,6 +1,6 @@
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, OCCASIONS, effectiveFormality, isSunny } from "./data";
+import { BAS_CATS, CATLABEL, OCCASIONS, effectiveFormality, isSunny } from "./data";
 import { morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
@@ -902,6 +902,26 @@ export function computeLookScore(
   return { score, badge, adjustMessage, proactives };
 }
 
+/**
+ * Tenue complète obligatoire (module "Comment porter cette pièce ?",
+ * précision 13/08/2026 du brief 19/08/2026) : jamais un "look" incomplet
+ * (ex. chaussures+sac+bijou seuls, haut+accessoire seul). Structure
+ * minimale requise : haut/pull + bas, OU robe/combinaison + chaussures —
+ * veste/sac/bijou/accessoire viennent toujours en complément éventuel,
+ * jamais en substitut. Ce filtre détermine directement le comptage
+ * "occasion couverte" (une occasion n'est couverte que si au moins une
+ * tenue complète existe pour elle, jamais une compatibilité seulement
+ * théorique).
+ */
+function isCompleteOutfit(items: Item[]): boolean {
+  const cats = new Set(items.map((i) => i.cat));
+  if (!cats.has("chaussures")) return false;
+  if (cats.has("robe") || cats.has("combinaison")) return true;
+  const hasTop = cats.has("haut") || cats.has("pull");
+  const hasBottom = BOTTOMS.some((c) => cats.has(c));
+  return hasTop && hasBottom;
+}
+
 /** Une combinaison valide autour d'une pièce pivot, pour une occasion donnée. */
 export interface ItemOutfitVariation {
   occasion: OccasionKey;
@@ -956,8 +976,9 @@ export function getOutfitsForItem(
       if (!ids.includes(pivotId)) continue;
       const key = structuralKeyOf(ids);
       if (seenKeys.has(key) || localSeen.has(key)) continue;
-      localSeen.add(key);
       const outfitItems = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
+      if (!isCompleteOutfit(outfitItems)) continue;
+      localSeen.add(key);
       const { score } = computeLookScore(outfitItems, occasion, preferredHexes, null, new Set(), weather, "Présentiel", "Verre");
       candidates.push({ occasion, ids, score });
     }
@@ -970,7 +991,7 @@ export function getOutfitsForItem(
   return results;
 }
 
-/** Phrase de base par occasion pour le look le mieux noté du groupe (module "Comment porter cette pièce ?"). */
+/** Repli minimal par occasion — utilisé seulement si aucune pièce distinctive n'a pu être identifiée (cas rare : pivot + chaussures seuls). */
 const OCCASION_VARIATION_BASE: Partial<Record<OccasionKey, string>> = {
   quotidien: "Simple et facile à porter au quotidien.",
   travail_formel: "Structurée pour le bureau.",
@@ -984,12 +1005,61 @@ const OCCASION_VARIATION_BASE: Partial<Record<OccasionKey, string>> = {
   evenement_perso: "À la hauteur d'une cérémonie.",
 };
 
+/** Clôture de phrase par occasion, plusieurs variantes pour éviter la répétition entre les looks d'une même section (précision 13/08/2026 du brief 19/08/2026). */
+const OCCASION_CLOSERS: Partial<Record<OccasionKey, string[]>> = {
+  quotidien: ["pour un look simple et facile à porter.", "pour une allure décontractée au quotidien."],
+  travail_formel: ["pour une allure structurée au bureau.", "pour un rendu soigné et professionnel."],
+  entretien: ["pour une présentation sérieuse et posée."],
+  date: ["pour une touche plus soignée pour ce rendez-vous.", "pour une allure élégante sans être trop habillée."],
+  soiree: ["pour une sortie entre amis.", "pour une allure plus détendue en soirée."],
+  festive: ["pour une soirée qui sort de l'ordinaire."],
+  sport: ["confortable et technique."],
+  cocooning: ["pour une allure relâchée à la maison."],
+  voyage: ["pratique et confortable pour se déplacer."],
+  evenement_perso: ["à la hauteur de l'occasion."],
+};
+
+/** Catégories dont le sous-type est déjà un nom complet (ex. "Chemise", "Blazer", "Sandales plates") — jamais préfixé par le libellé générique de la catégorie, contrairement aux catégories à sous-type "modificateur" (ex. jupe: "Midi"). */
+const NOUN_SUBTYPE_CATS = new Set<CategoryKey>(["haut", "pull", "veste", "manteau", "chaussures", "sac", "bijou", "accessoire", "combinaison"]);
+
+/** Libellé compact d'une pièce, toujours dérivé de ses données réelles — construction "en {couleur}" volontairement invariable en genre (jamais d'article accordé, ex. "chemise en blanc" reste correct quel que soit le genre du nom). */
+function pieceLabel(it: Item): string {
+  const catLabel = (CATLABEL[it.cat] || it.name).toLowerCase();
+  const subtypeLower = it.subtype?.trim().toLowerCase();
+  let base: string;
+  if (subtypeLower && NOUN_SUBTYPE_CATS.has(it.cat)) {
+    base = subtypeLower;
+  } else if (subtypeLower && subtypeLower !== catLabel) {
+    // Évite le doublon "pantalon pantalon" quand le sous-type choisi est le nom générique de la catégorie lui-même (ex. subtype="Pantalon").
+    base = `${catLabel} ${subtypeLower}`;
+  } else {
+    base = catLabel;
+  }
+  return it.color ? `${base} en ${it.color.toLowerCase()}` : base;
+}
+
+/** Ordre de priorité pour choisir les 1-2 pièces les plus distinctives d'un look (hors pivot) — la veste/le manteau et le bas/la robe sont ce qui différencie le plus deux propositions autour d'une même pièce pivot. */
+const DESCRIPTION_PRIORITY: CategoryKey[] = ["veste", "manteau", "robe", "combinaison", "jupe", "pantalon", "jean", "short", "haut", "pull", "chaussures"];
+
 /**
- * Phrase courte par look, générée par template déterministe (jamais
- * OpenAI) — la première combinaison d'une occasion reçoit la phrase de
- * base, les suivantes une variante générique.
+ * Phrase courte par look (1-2 lignes), générée par template déterministe
+ * (jamais OpenAI) à partir des caractéristiques réelles des pièces —
+ * jamais de texte générique type "Une alternative tout aussi adaptée."
+ * (précision 13/08/2026 du brief 19/08/2026). `indexInOccasion` fait
+ * varier la clôture de phrase entre les looks d'une même section.
  */
-export function describeOutfitVariation(variation: ItemOutfitVariation, isFirstOfOccasion: boolean): string {
-  if (isFirstOfOccasion) return OCCASION_VARIATION_BASE[variation.occasion] || "Une combinaison bien assortie.";
-  return "Une alternative tout aussi adaptée.";
+export function describeOutfitVariation(variation: ItemOutfitVariation, items: Item[], pivotId: number, indexInOccasion: number): string {
+  const others = items.filter((it) => it.id !== pivotId);
+  const picked: Item[] = [];
+  for (const cat of DESCRIPTION_PRIORITY) {
+    if (picked.length >= 2) break;
+    const found = others.find((it) => it.cat === cat);
+    if (found) picked.push(found);
+  }
+
+  const closers = OCCASION_CLOSERS[variation.occasion] || ["une combinaison bien assortie."];
+  const closer = closers[indexInOccasion % closers.length];
+
+  if (!picked.length) return OCCASION_VARIATION_BASE[variation.occasion] || "Une combinaison bien assortie.";
+  return `Avec ${picked.map(pieceLabel).join(" et ")}, ${closer}`;
 }

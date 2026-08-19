@@ -178,7 +178,7 @@ export default function ItemOutfitsScreen() {
                       })}
                     </div>
                     <div className="text-[12.5px] text-[#3F3B34] mt-[10px] leading-[1.4]">
-                      {describeOutfitVariation(variation, idx === 0)}
+                      {describeOutfitVariation(variation, pieces, pivot.id, idx)}
                     </div>
                     <button
                       onClick={() => actions.viewItemOutfit(variation.ids, variation.occasion)}
