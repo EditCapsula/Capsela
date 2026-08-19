@@ -26,12 +26,12 @@ export default function AppHeader({
       {dark ? (
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.svg" alt="" className="h-[22px] w-auto" />
+          <img src="/logo-icon.svg" alt="" className="h-6 w-auto" />
           <span className="font-serif text-[15px] tracking-[.28em] pl-[.28em] text-cream">CAPSELA</span>
         </div>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src="/logo-full.svg" alt="L'édit Capsela" className="h-[40px] w-auto" />
+        <img src="/logo-full.svg" alt="L'édit Capsela" className="h-11 w-auto" />
       )}
       <div className="w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center">
         {showAvatar && (
