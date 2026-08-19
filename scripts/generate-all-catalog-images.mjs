@@ -6,13 +6,15 @@
 // article — jusque-là la consigne était de ne jamais balayer tout le
 // catalogue d'un coup.
 //
-// Cible uniquement image_status IN ('missing', 'error') : ne touche jamais
-// un visuel déjà 'ready', ni un visuel marqué 'invalid' (qui doit rester
-// une décision consciente de remédiation, pas une régénération automatique
-// silencieuse). La déduplication (visual_key, cascade de réutilisation)
-// s'applique normalement côté Edge Function — beaucoup de ces appels ne
-// coûteront rien de plus, juste une réutilisation d'un visuel déjà généré
-// pour un article équivalent.
+// Cible url_image IS NULL (demande du 19/08/2026) : ne touche jamais un
+// article qui a déjà un visuel, ni un visuel marqué 'invalid' (qui doit
+// rester une décision consciente de remédiation, pas une régénération
+// automatique silencieuse — un article invalide a url_image = null lui
+// aussi, mais image_status = 'invalid' ; exclu explicitement ci-dessous).
+// La déduplication (visual_key, cascade de réutilisation) s'applique
+// normalement côté Edge Function — beaucoup de ces appels ne coûteront
+// rien de plus, juste une réutilisation d'un visuel déjà généré pour un
+// article équivalent.
 //
 // Usage (Node 20+, réutilise .env.local) :
 //   node --env-file=.env.local scripts/generate-all-catalog-images.mjs
@@ -38,7 +40,8 @@ async function main() {
   const { data: rows, error } = await supabase
     .from("vestiaire_universel")
     .select("id, name")
-    .in("image_status", ["missing", "error"])
+    .is("url_image", null)
+    .neq("image_status", "invalid")
     .order("id", { ascending: true });
 
   if (error) {

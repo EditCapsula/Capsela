@@ -286,6 +286,13 @@ const CATEGORY_COMPOSITION: Record<string, string> = {
   accessoire: "Single accessory item, centered.",
 };
 
+/**
+ * Catégories verticalement hautes (recette 19/08/2026, correctif images
+ * coupées) : dans un cadre carré, un vêtement long a besoin d'être réduit
+ * davantage pour ne jamais toucher le haut ou le bas du cadre.
+ */
+const TALL_CATEGORIES = new Set(["robe", "manteau", "combinaison", "pantalon", "jean"]);
+
 /** Exclusions spécifiques par catégorie (garde-fou supplémentaire contre la confusion de type). */
 const CATEGORY_EXCLUDE: Record<string, string[]> = {
   pantalon: ["shirt", "jacket", "blazer", "shoes", "dress"],
@@ -385,6 +392,11 @@ export function buildImagePrompt(row: VestiaireRow): BuiltPrompt {
     "Single fashion item only.",
     "Entire product fully visible, with no part cropped or extending beyond the frame.",
     "Generous empty margin on all four sides between the product and the edge of the image.",
+    ...(TALL_CATEGORIES.has(canonCategory)
+      ? [
+          "This is a visually tall/long garment: scale it down further than usual so the very top and the very bottom both sit well within the frame, with clear empty space above and below — never let the top or bottom edge touch or extend past the image border.",
+        ]
+      : []),
     "Centered.",
     "Front or slight three-quarter view.",
     "No person.",
