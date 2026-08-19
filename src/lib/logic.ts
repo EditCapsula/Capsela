@@ -394,12 +394,21 @@ export function generateOutfit(
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
   }
+  // R-B5 assoupli (nuance demandée le 19/08/2026) : une robe/combinaison
+  // reste self-sufficient face à un haut/bas "base" (redondant), mais une
+  // pièce role_piece = "calque" par-dessus (chemise ouverte, gilet léger)
+  // est un vrai geste stylistique, jamais en contexte habillé — seulement
+  // décontracté, jamais systématique.
+  if (useRobe && !isDressy(occasion, workMode, dateContext) && Math.random() < 0.3) {
+    const robeLayerCandidates = hardBase.filter((i) => TOP_LAYER_CATS.includes(i.cat) && rolePieceOf(i) === "calque");
+    const robeLayer = rand(harmonize(robeLayerCandidates, chosen, false));
+    if (robeLayer) { chosen.push(robeLayer); ids.push(robeLayer.id); }
+  }
   // R-B8 — superposition hauts/pulls_gilets (TOP_LAYER_CATS) : une 2e pièce
   // n'est ajoutée que si la 1ère (déjà choisie) est "base" et que la
   // candidate est "calque" — jamais 2 calques, jamais de calque en contexte
   // habillé sans validation manuelle (uniquement possible depuis le picker
-  // manuel, pas ici). Une robe/combinaison se suffit à elle-même (R-B5) :
-  // pas de calque en plus dans ce cas.
+  // manuel, pas ici).
   if (!useRobe && Math.random() < 0.35) {
     const dressy = isDressy(occasion, workMode, dateContext);
     const firstLayer = chosen.find((c) => TOP_LAYER_CATS.includes(c.cat));
@@ -619,8 +628,20 @@ export function evaluateBlocking(
     }
   }
 
-  if (hasRobeOrCombi && pieces.some((i) => TOP_OR_BOTTOM_CATS.includes(i.cat))) {
-    hits.push({ id: "R-B5", message: "Une robe ou une combinaison se suffit à elle-même, sans haut ni bas en plus." });
+  // R-B5 assoupli (nuance demandée le 19/08/2026, cf. generateOutfit) : un
+  // bas, ou un haut "base", n'a pas de sens à côté d'une robe/combinaison —
+  // mais un haut "calque" (chemise ouverte, gilet léger) en contexte
+  // décontracté est un vrai geste stylistique, jamais signalé.
+  if (hasRobeOrCombi) {
+    const dressy = isDressy(occasion, workMode, dateContext);
+    const offending = pieces.some((i) => {
+      if (!TOP_OR_BOTTOM_CATS.includes(i.cat)) return false;
+      if (!TOP_LAYER_CATS.includes(i.cat)) return true; // un bas n'a jamais de sens ici
+      return dressy || rolePieceOf(i) !== "calque";
+    });
+    if (offending) {
+      hits.push({ id: "R-B5", message: "Une robe ou une combinaison se suffit à elle-même, sans haut ni bas en plus." });
+    }
   }
 
   const dressy = isDressy(occasion, workMode, dateContext);
