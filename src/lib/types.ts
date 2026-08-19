@@ -189,6 +189,8 @@ export interface AppState {
   activeSuggested: boolean;
   /** Écran vers lequel revenir en quittant la vue détail d'une pièce (dressing, capsule, jamais-portées...). */
   pieceReturn: Screen;
+  /** Écran vers lequel revenir en quittant le module "Comment porter cette pièce ?". */
+  itemOutfitsReturn: Screen;
 
   catFilter: CategoryKey | "all";
 
@@ -281,4 +283,5 @@ export type Screen =
   | "login"
   | "opinionShare"
   | "createLook"
-  | "lookDetail";
+  | "lookDetail"
+  | "itemOutfits";

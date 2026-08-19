@@ -25,6 +25,7 @@ const SUBTYPE_EN: Record<string, string> = {
   bottes: "boots",
   escarpins: "pumps",
   sandales: "sandals",
+  "tropéziennes": "strappy flat sandals",
   mocassins: "loafers",
   ballerines: "ballet flats",
   "chaussures d'intérieur": "house slippers",

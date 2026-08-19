@@ -18,6 +18,31 @@ export function currentSeasonKey(): CapsuleSeason {
   return m <= 1 || m === 11 ? "Hiver" : m <= 4 ? "Printemps" : m <= 7 ? "Été" : "Automne";
 }
 
+/** Température représentative par saison — repli neutre quand une valeur concrète est nécessaire sans dépendre de la météo du jour. */
+const REPRESENTATIVE_TEMP: Record<CapsuleSeason, number> = {
+  Printemps: 16,
+  Été: 24,
+  Automne: 14,
+  Hiver: 6,
+};
+
+/**
+ * Météo synthétique représentative d'une saison de capsule (recette
+ * 19/08/2026, module "Comment porter cette pièce ?") — pour un contexte
+ * "toutes les façons de la porter" qui doit rester valable sur toute la
+ * saison, pas seulement la météo du jour (cf. weather réel, réservé à la
+ * Tenue du jour).
+ */
+export function representativeWeatherFor(season: CapsuleSeason): Weather {
+  const temp = REPRESENTATIVE_TEMP[season];
+  return {
+    season: weatherSeasonBucket(temp),
+    temp,
+    label: season === "Été" ? "Ensoleillé" : "Nuageux",
+    seasons: [weatherSeasonBucket(temp), "Toutes saisons"],
+  };
+}
+
 const STYLE_FIT: Record<string, RegExp> = {
   Minimaliste: /t-shirt|jean droit|chemise en lin|pull col rond|pantalon large|baskets blanches|mocassins|sac cabas|ceinture/,
   "Casual chic": /jean|chemise en lin|mocassins|cabas|pull col rond|ballerines/,

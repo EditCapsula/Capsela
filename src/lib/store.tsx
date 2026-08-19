@@ -67,6 +67,7 @@ function buildInitialState(): AppState {
     activeId: 0,
     activeSuggested: false,
     pieceReturn: "wardrobe",
+    itemOutfitsReturn: "capsule",
     catFilter: "all",
     addName: "",
     addBrand: "",
@@ -142,6 +143,10 @@ export interface Actions {
   onbBack: () => void;
   onbNext: () => void;
   openItem: (id: number, suggested?: boolean) => void;
+  /** Ouvre le module "Comment porter cette pièce ?" pour une pièce de la capsule. */
+  openItemOutfits: (id: number) => void;
+  /** Affiche une combinaison choisie depuis ce module sur l'écran Tenue — jamais un enregistrement automatique comme portée. */
+  viewItemOutfit: (ids: number[], occasion: OccasionKey) => void;
   removeActive: () => void;
   /** Écarte une suggestion de la capsule par défaut. */
   dismissSuggested: (id: number) => void;
@@ -470,6 +475,22 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
     openItem: (id, suggested = false) =>
       setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" })),
+    openItemOutfits: (id) =>
+      setState((s) => ({ ...s, activeId: id, activeSuggested: true, itemOutfitsReturn: s.screen, screen: "itemOutfits" })),
+    // Affiche la combinaison choisie sur l'écran Tenue (recette 19/08/2026) :
+    // conserve l'occasion correspondante, jamais d'enregistrement comme
+    // portée ni de remplacement automatique en dehors de ce clic explicite.
+    viewItemOutfit: (ids, occasion) =>
+      setState((s) => ({
+        ...s,
+        outfit: ids,
+        outfitMissingCats: [],
+        outfitValidated: false,
+        occasion,
+        occasionManual: true,
+        dismissedSuggestions: [],
+        screen: "tenues",
+      })),
     removeActive: () =>
       setState((s) => {
         if (s.activeSuggested) {

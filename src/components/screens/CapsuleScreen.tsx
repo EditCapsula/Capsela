@@ -94,7 +94,7 @@ export default function CapsuleScreen() {
               return (
                 <button
                   key={it.id}
-                  onClick={() => actions.openItem(it.id, true)}
+                  onClick={() => actions.openItemOutfits(it.id)}
                   className="flex-none w-[104px] text-left cursor-pointer"
                   style={{ scrollSnapAlign: "start" }}
                 >

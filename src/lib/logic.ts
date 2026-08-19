@@ -1,6 +1,6 @@
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, effectiveFormality, isSunny } from "./data";
+import { BAS_CATS, OCCASIONS, effectiveFormality, isSunny } from "./data";
 import { morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
@@ -900,4 +900,96 @@ export function computeLookScore(
   }
 
   return { score, badge, adjustMessage, proactives };
+}
+
+/** Une combinaison valide autour d'une pièce pivot, pour une occasion donnée. */
+export interface ItemOutfitVariation {
+  occasion: OccasionKey;
+  ids: number[];
+  score: number;
+}
+
+/**
+ * Génère plusieurs combinaisons valides autour d'une pièce pivot,
+ * regroupées par occasion (module "Comment porter cette pièce ?", recette
+ * 19/08/2026). Réutilise generateOutfit tel quel — jamais un second moteur
+ * — en tirant plusieurs fois par occasion et en ne retenant que les
+ * résultats contenant la pièce pivot. Dédoublonne par ensemble de pièces
+ * STRUCTURANTES (haut/bas/robe/veste/manteau/chaussures) : deux looks ne
+ * différant que par un sac/bijou/accessoire comptent comme le même look.
+ * Jamais de permutations exhaustives : plafonds configurables, par défaut
+ * 3 looks max par occasion, 18 au total.
+ */
+export function getOutfitsForItem(
+  pivotId: number,
+  pool: Item[],
+  weather: Weather,
+  preferredHexes: string[] = [],
+  opts: { maxPerOccasion?: number; maxTotal?: number; attemptsPerOccasion?: number } = {}
+): ItemOutfitVariation[] {
+  const pivot = pool.find((i) => i.id === pivotId);
+  if (!pivot) return [];
+
+  const maxPerOccasion = opts.maxPerOccasion ?? 3;
+  const maxTotal = opts.maxTotal ?? 18;
+  const attemptsPerOccasion = opts.attemptsPerOccasion ?? 30;
+  const structuralCats: CategoryKey[] = [...CLOTHING_CATS, "chaussures"];
+
+  const structuralKeyOf = (ids: number[]): string =>
+    ids
+      .filter((id) => {
+        const it = pool.find((p) => p.id === id);
+        return it && structuralCats.includes(it.cat);
+      })
+      .sort((a, b) => a - b)
+      .join(",");
+
+  const results: ItemOutfitVariation[] = [];
+  const seenKeys = new Set<string>();
+
+  for (const [occasion] of OCCASIONS) {
+    if (results.length >= maxTotal) break;
+    const candidates: ItemOutfitVariation[] = [];
+    const localSeen = new Set<string>();
+    for (let attempt = 0; attempt < attemptsPerOccasion; attempt++) {
+      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", preferredHexes);
+      if (!ids.includes(pivotId)) continue;
+      const key = structuralKeyOf(ids);
+      if (seenKeys.has(key) || localSeen.has(key)) continue;
+      localSeen.add(key);
+      const outfitItems = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
+      const { score } = computeLookScore(outfitItems, occasion, preferredHexes, null, new Set(), weather, "Présentiel", "Verre");
+      candidates.push({ occasion, ids, score });
+    }
+    candidates.sort((a, b) => b.score - a.score);
+    const top = candidates.slice(0, Math.min(maxPerOccasion, maxTotal - results.length));
+    top.forEach((c) => seenKeys.add(structuralKeyOf(c.ids)));
+    results.push(...top);
+  }
+
+  return results;
+}
+
+/** Phrase de base par occasion pour le look le mieux noté du groupe (module "Comment porter cette pièce ?"). */
+const OCCASION_VARIATION_BASE: Partial<Record<OccasionKey, string>> = {
+  quotidien: "Simple et facile à porter au quotidien.",
+  travail_formel: "Structurée pour le bureau.",
+  entretien: "Sérieuse et posée pour un rendez-vous important.",
+  date: "Une touche soignée pour un rendez-vous.",
+  soiree: "Parfaite pour une sortie entre amis.",
+  festive: "Prête pour une soirée qui sort de l'ordinaire.",
+  sport: "Confortable et technique.",
+  cocooning: "Décontractée, pensée pour la maison.",
+  voyage: "Pratique et confortable pour se déplacer.",
+  evenement_perso: "À la hauteur d'une cérémonie.",
+};
+
+/**
+ * Phrase courte par look, générée par template déterministe (jamais
+ * OpenAI) — la première combinaison d'une occasion reçoit la phrase de
+ * base, les suivantes une variante générique.
+ */
+export function describeOutfitVariation(variation: ItemOutfitVariation, isFirstOfOccasion: boolean): string {
+  if (isFirstOfOccasion) return OCCASION_VARIATION_BASE[variation.occasion] || "Une combinaison bien assortie.";
+  return "Une alternative tout aussi adaptée.";
 }

@@ -23,6 +23,7 @@ import LoginScreen from "./screens/LoginScreen";
 import OpinionShareScreen from "./screens/OpinionShareScreen";
 import CreateLookScreen from "./screens/CreateLookScreen";
 import LookDetailScreen from "./screens/LookDetailScreen";
+import ItemOutfitsScreen from "./screens/ItemOutfitsScreen";
 import TabBar from "./TabBar";
 
 /** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) et l'écran Premium (fond sombre, pas de variante de barre adaptée). */
@@ -86,6 +87,7 @@ function Screens() {
         {state.screen === "opinionShare" && <OpinionShareScreen />}
         {state.screen === "createLook" && <CreateLookScreen />}
         {state.screen === "lookDetail" && <LookDetailScreen />}
+        {state.screen === "itemOutfits" && <ItemOutfitsScreen />}
       </div>
       {showTabbar && <TabBar />}
     </div>
