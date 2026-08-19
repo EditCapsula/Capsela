@@ -356,17 +356,23 @@ export function buildImagePrompt(row: VestiaireRow): BuiltPrompt {
   const colorEn = translate(COLOR_EN, colorRaw) || (colorRaw ? colorRaw.toLowerCase() : "");
   const matiereEn = translate(MATIERE_EN, row.matiere);
 
-  // Sujet du produit : sous_type > category > (jamais name). sous_type
-  // complet reconnu tel quel s'il correspond à un nom déjà complet (ex.
-  // "ballerines"), sinon repli sur la catégorie — jamais interprété
-  // librement depuis le nom de la pièce.
+  // Sujet du produit : sous_type > category > (jamais name). Phrase entière
+  // reconnue d'abord (garde les entrées composées comme "sac à main"), puis
+  // mot par mot si la phrase entière ne matche rien (correctif 19/08/2026 :
+  // "sandales plates" ne matchait pas "sandales" en recherche de phrase
+  // exacte et retombait à tort sur le terme générique de la catégorie) —
+  // jamais interprété librement depuis le nom de la pièce.
   const sousTypeRaw = (row.sous_type || "").trim().toLowerCase();
-  const noun = translate(SUBTYPE_EN, sousTypeRaw) || CATEGORY_EN[canonCategory] || "item";
+  const sousTypeTokens = sousTypeRaw.split(/[\s/]+/).filter(Boolean);
+  const noun =
+    translate(SUBTYPE_EN, sousTypeRaw) ||
+    sousTypeTokens.map((w) => SUBTYPE_EN[w]).find((w): w is string => Boolean(w)) ||
+    CATEGORY_EN[canonCategory] ||
+    "item";
 
   // Modificateurs de coupe/style : mots-clés repérés dans sous_type (en mot
   // seul ou en bigramme pour les cols/encolures, ex. "col v"), plus le champ
   // structuré `coupe` (Serré/Ajusté/Ample) quand renseigné.
-  const sousTypeTokens = sousTypeRaw.split(/[\s/]+/).filter(Boolean);
   const sousTypeBigrams = sousTypeTokens.slice(0, -1).map((w, i) => `${w} ${sousTypeTokens[i + 1]}`);
   const modifiers = Array.from(
     new Set(

@@ -111,6 +111,15 @@ const MODIFIER_EN: Record<string, string> = {
   capuche: "hooded",
   "zippé": "zip-up",
   "zippée": "zip-up",
+  plates: "flat",
+  plate: "flat",
+  plat: "flat",
+  talons: "high-heeled",
+  talon: "high-heeled",
+  "compensées": "wedge",
+  "compensée": "wedge",
+  "compensés": "wedge",
+  "compensé": "wedge",
 };
 
 /** Cols/encolures reconnus en bigramme (2 mots consécutifs) n'importe où dans sous_type — ex. "pull col v" ou "col roulé" seul fonctionnent tous les deux. */
@@ -284,9 +293,18 @@ export function buildImagePrompt(item: CatalogItem): BuiltPrompt {
   const subtypeSource = (item.subtype || item.shoeType || item.sacType || item.bijouType || item.accessoireType || "")
     .trim()
     .toLowerCase();
-  const noun = translate(SUBTYPE_EN, subtypeSource) || CATEGORY_EN[canonCategory] || "item";
-
   const subtypeTokens = subtypeSource.split(/[\s/]+/).filter(Boolean);
+  // Correspondance exacte de la phrase entière d'abord (garde les entrées
+  // composées comme "sac à main"), puis mot par mot si la phrase entière ne
+  // matche rien (correctif 19/08/2026 : "sandales plates" ne matchait pas
+  // "sandales" en recherche de phrase exacte et retombait à tort sur le
+  // terme générique de la catégorie).
+  const noun =
+    translate(SUBTYPE_EN, subtypeSource) ||
+    subtypeTokens.map((w) => SUBTYPE_EN[w]).find((w): w is string => Boolean(w)) ||
+    CATEGORY_EN[canonCategory] ||
+    "item";
+
   const subtypeBigrams = subtypeTokens.slice(0, -1).map((w, i) => `${w} ${subtypeTokens[i + 1]}`);
   const modifiers = Array.from(
     new Set(
