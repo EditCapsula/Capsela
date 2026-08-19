@@ -344,12 +344,16 @@ export function generateOutfit(
   const bijou = pick(["bijou"]);
   if (bijou) ids.push(bijou.id);
   if (Math.random() < 0.5) {
-    // R-B19 — les collants ne se portent qu'avec une robe ou une jupe (jamais
-    // avec un pantalon/jean/short) : exclus du tirage sinon, sans affecter
-    // les autres accessoires.
-    const hasRobeOrJupe = useRobe || chosen.some((c) => c.cat === "jupe");
+    // R-B19 — les collants ne se portent qu'avec une robe, une jupe ou un
+    // short (jamais avec un pantalon/jean) : exclus du tirage sinon, sans
+    // affecter les autres accessoires. La température reste prise en compte
+    // séparément par le filtre générique meteo_min_temp/meteo_max_temp
+    // (déjà appliqué à toutes les catégories, cf. hardCategoryFilter) — à
+    // renseigner sur l'article Collants côté catalogue pour l'exclure par
+    // temps chaud, quelle que soit la pièce du bas choisie.
+    const hasRobeJupeOuShort = useRobe || chosen.some((c) => c.cat === "jupe" || c.cat === "short");
     const accessoireBase = poolFor(["accessoire"]).filter(
-      (i) => i.cat === "accessoire" && (hasRobeOrJupe || i.accessoireType !== "Collants")
+      (i) => i.cat === "accessoire" && (hasRobeJupeOuShort || i.accessoireType !== "Collants")
     );
     const ac = rand(harmonize(accessoireBase, chosen, false));
     if (ac) chosen.push(ac);
@@ -436,10 +440,13 @@ export function swapOutfitPiece(
   }
   // R-B19 — symétrique du filtre appliqué dans generateOutfit : les collants
   // ne remplacent jamais un accessoire si le reste de la tenue ne comporte
-  // ni robe ni jupe.
+  // ni robe, ni jupe, ni short. La température reste gérée séparément par
+  // le filtre générique meteo_min_temp/meteo_max_temp ci-dessus.
   if (cat === "accessoire") {
-    const hasRobeOrJupe = outfitItems.some((i) => i.id !== pieceId && (i.cat === "robe" || i.cat === "jupe"));
-    if (!hasRobeOrJupe) {
+    const hasRobeJupeOuShort = outfitItems.some(
+      (i) => i.id !== pieceId && (i.cat === "robe" || i.cat === "jupe" || i.cat === "short")
+    );
+    if (!hasRobeJupeOuShort) {
       candidates = candidates.filter((i) => i.cat !== "accessoire" || i.accessoireType !== "Collants");
     }
   }
