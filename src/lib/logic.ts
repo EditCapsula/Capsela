@@ -144,16 +144,15 @@ function harmonize(candidates: Item[], chosen: Item[], essential = true): Item[]
   if (candidates.length <= 1) return candidates;
   let pool = candidates;
 
-  // R-S15 — préfère les pièces les moins récemment portées : ne retient que
-  // le palier le plus frais présent dans le pool, jamais un rejet complet
-  // d'une catégorie (le palier le plus frais existe toujours dans un pool
-  // non vide) — une pièce portée hier reste sélectionnable s'il n'existe
-  // vraiment aucune alternative plus fraîche.
-  if (pool.length > 1) {
-    const minWeight = Math.min(...pool.map(repetitionWeight));
-    const freshest = pool.filter((i) => repetitionWeight(i) === minWeight);
-    if (freshest.length) pool = freshest;
-  }
+  // R-S15 (correctif 20/08/2026) : l'anti-répétition n'écarte plus aucune
+  // pièce ici — toutes les pièces éligibles restent candidates, la
+  // préférence pour les moins récemment portées s'exprime uniquement comme
+  // une pondération dans le tirage aléatoire final (cf. rand()). L'ancienne
+  // version filtrait déjà le pool au palier le plus frais présent : dans un
+  // catalogue où `worn` ne change jamais en dehors d'un vrai "portée
+  // aujourd'hui", ça revenait à une exclusion permanente de toute pièce
+  // moins fraîche qu'au moins une autre de la même catégorie, jamais une
+  // vraie préférence "molle".
   if (!chosen.length) return pool;
 
   // Couleur — au plus une teinte affirmée par tenue. Le bijou est un petit
@@ -217,8 +216,25 @@ function harmonize(candidates: Item[], chosen: Item[], essential = true): Item[]
   return pool;
 }
 
-function rand<T>(arr: T[]): T | null {
-  return arr.length ? arr[Math.floor(Math.random() * arr.length)] : null;
+/**
+ * Tirage aléatoire pondéré (R-S15, correctif 20/08/2026) — préfère les
+ * pièces les moins récemment portées SANS jamais réduire à zéro la chance
+ * d'une pièce plus récente : poids 4 pour le palier le plus frais, jusqu'à
+ * 1 pour le palier le plus récent (jamais 0). Remplace l'ancien filtrage en
+ * dur de harmonize(), qui excluait purement et simplement toute pièce non
+ * maximale en fraîcheur dès qu'une alternative plus fraîche co-existait.
+ */
+function rand(items: Item[]): Item | null {
+  if (!items.length) return null;
+  if (items.length === 1) return items[0];
+  const weights = items.map((i) => 4 - repetitionWeight(i));
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return items[i];
+  }
+  return items[items.length - 1];
 }
 
 export interface GeneratedOutfit {
