@@ -36,7 +36,7 @@ const ALL_STEPS = [
   { key: "pal_ressenti", kicker: "Ta palette", title: "Deux précisions rapides", subtitle: "Elles affinent nos suggestions, sans jamais écarter une couleur que tu as choisie." },
   { key: "pal_recap", kicker: "Ta palette", title: "Voilà ta palette", subtitle: "Tu pourras la retoucher quand tu veux depuis ton profil." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
-  { key: "style", kicker: "Style", title: "Quels styles te ressemblent ?", subtitle: "Choisis les styles qui te correspondent. Tu peux en sélectionner plusieurs." },
+  { key: "style", kicker: "Style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis celui qui correspond le mieux à ta façon de t'habiller." },
   { key: "morpho", kicker: "Morphologie", title: "Et ta silhouette ?", subtitle: "Pour affiner nos recommandations de coupes." },
 ] as const;
 
