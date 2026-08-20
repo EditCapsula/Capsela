@@ -1,11 +1,66 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import AppHeader from "@/components/AppHeader";
-import { OCC_LABELS, OCC_SHORT, WEATHER_ICONS } from "@/lib/data";
+import { OCC_LABELS } from "@/lib/data";
+import { resolveItemImage } from "@/lib/catalogImages";
+import { explainRecommendation } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
 import { useCapsela, defaultOccasionToday } from "@/lib/store";
+import type { CategoryKey, Item } from "@/lib/types";
 
 const GRADIENT_TO = ["#EFE3D3", "#E8DCC9", "#E1D3BC"];
+
+/**
+ * Mini flat-lay de la card héros Accueil (recette 20/08/2026, alignement
+ * proto) — miroir exact de la logique du prototype (homeCompositionPieces) :
+ * les 3 pièces les plus représentatives (robe/combinaison d'abord, puis
+ * haut/pull, puis bas, chaussures, sac), en cascade diagonale simple —
+ * distinct du cadre héros complet (rôle par pièce) de la page Tenue, pensé
+ * pour le petit espace de cette card.
+ */
+const HOME_COMPOSITION_PRIORITY: CategoryKey[] = [
+  "robe",
+  "combinaison",
+  "haut",
+  "pull",
+  "pantalon",
+  "jean",
+  "jupe",
+  "short",
+  "chaussures",
+  "sac",
+];
+
+function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSProperties }[] {
+  const main = [...items]
+    .sort((a, b) => HOME_COMPOSITION_PRIORITY.indexOf(a.cat) - HOME_COMPOSITION_PRIORITY.indexOf(b.cat))
+    .slice(0, 3);
+  return main.map((it, i) => {
+    const w = 26 - i * 2;
+    const left = 6 + i * 30;
+    const top = 8 + (i % 2) * 14;
+    const height = 76 - i * 6;
+    const img = resolveItemImage(it);
+    const hasImg = Boolean(img.url);
+    return {
+      id: it.id,
+      style: {
+        position: "absolute",
+        left: left + "%",
+        top: top + "%",
+        width: w + "%",
+        height: height + "%",
+        backgroundImage: hasImg ? `url(${img.url})` : undefined,
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        background: hasImg ? undefined : it.hex,
+        borderRadius: hasImg ? 0 : 8,
+      },
+    };
+  });
+}
 
 function HangerIcon() {
   return (
@@ -30,27 +85,28 @@ function JournalIcon() {
 }
 
 export default function HomeScreen() {
-  const { state, geoCity, geoLoading, actions } = useCapsela();
+  const { state, geoCity, geoLoading, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
 
-  // Bloc principal (brief design Homepage, 19/08/2026) : lecture seule des
-  // données déjà disponibles ailleurs dans l'app (météo/localisation,
-  // occasion auto-sélectionnée) — jamais de génération de tenue ni d'appel
-  // image depuis cet écran. hasOutfit distingue "tenue déjà déterminée"
-  // (visitée au moins une fois cette session) de "pas encore choisie".
+  // Bloc principal (brief design Homepage, 19/08/2026 ; alignement proto
+  // 20/08/2026) : lecture seule des données déjà disponibles ailleurs dans
+  // l'app (météo/localisation, occasion auto-sélectionnée, tenue déjà
+  // déterminée) — jamais de génération de tenue ni d'appel image depuis cet
+  // écran. hasOutfit distingue "tenue déjà déterminée" (visitée au moins
+  // une fois cette session) de "pas encore choisie".
   const hasOutfit = state.outfit.length > 0;
   const occasionKey = state.occasion && state.occasion !== "all" ? state.occasion : defaultOccasionToday(profile.prefs);
-  const occasionLabel = OCC_SHORT[occasionKey] || OCC_LABELS[occasionKey];
+  const occasionLabel = OCC_LABELS[occasionKey];
 
-  const contextParts: string[] = [];
-  if (!geoLoading) {
-    if (geoCity.city) contextParts.push(geoCity.city);
-    if (geoCity.temp != null) contextParts.push(geoCity.temp + "°");
-    if (occasionLabel) contextParts.push(occasionLabel);
-  }
-  const weatherIcon = !geoLoading && geoCity.label ? WEATHER_ICONS[geoCity.label] : "";
-  const contextLine = contextParts.join(" · ");
+  const outfitPieces = hasOutfit
+    ? state.outfit.map((id) => wardrobePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it))
+    : [];
+
+  // Même phrase d'explication que la page Tenue (explainRecommendation,
+  // jamais un second template) — pas de température affichée tant que la
+  // géolocalisation n'a pas résolu la météo réelle du jour.
+  const outfitQuote = explainRecommendation(occasionKey, state.workMode, state.dateContext, geoLoading ? null : geoCity.temp);
 
   const features = [
     {
@@ -100,8 +156,7 @@ export default function HomeScreen() {
         className="mx-6 mt-5 bg-terracotta rounded-[22px] p-[22px] cursor-pointer relative overflow-hidden text-left block"
         style={{ width: "calc(100% - 48px)" }}
       >
-        <div className="text-[10px] tracking-[.14em] uppercase text-[rgba(243,238,229,.75)]">Aujourd&apos;hui</div>
-        <div className="font-serif text-[22px] text-cream mt-2 leading-[1.25]">
+        <div className="font-serif text-[22px] text-cream leading-[1.25]">
           {hasOutfit ? (
             "Ta tenue est prête"
           ) : (
@@ -112,14 +167,38 @@ export default function HomeScreen() {
             </>
           )}
         </div>
-        {contextLine && (
-          <div className="text-[12.5px] mt-[7px]" style={{ color: "rgba(243,238,229,.7)" }}>
-            {weatherIcon ? weatherIcon + " " : ""}
-            {contextLine}
+        <div className="text-[12.5px] mt-[7px]" style={{ color: hasOutfit ? "rgba(243,238,229,.82)" : "rgba(243,238,229,.8)", maxWidth: 230 }}>
+          {hasOutfit ? outfitQuote : "Une sélection pensée pour toi, ta journée et la météo."}
+        </div>
+        {hasOutfit && outfitPieces.length > 0 && (
+          <div
+            style={{
+              marginTop: 14,
+              position: "relative",
+              borderRadius: 14,
+              overflow: "hidden",
+              background: "rgba(243,238,229,.14)",
+              height: 92,
+            }}
+          >
+            {homeCompositionPiecesOf(outfitPieces).map((p) => (
+              <div key={"home-comp-" + p.id} style={p.style} />
+            ))}
           </div>
         )}
-        <div className="inline-flex items-center gap-[7px] mt-4 bg-cream text-ink rounded-full py-[10px] px-4 text-[12px] tracking-[.04em]">
-          {hasOutfit ? "Découvrir ma tenue →" : "Choisir ma tenue →"}
+        {hasOutfit && occasionLabel && (
+          <div
+            className="inline-flex items-center gap-[7px] mt-[14px] text-[10px] tracking-[.08em] uppercase"
+            style={{ background: "rgba(243,238,229,.16)", color: "#F3EEE5", borderRadius: 100, padding: "7px 14px" }}
+          >
+            {occasionLabel}
+          </div>
+        )}
+        <div
+          className="inline-flex items-center gap-[7px] bg-cream text-ink rounded-full py-[10px] px-4 text-[12px] tracking-[.04em]"
+          style={{ marginTop: hasOutfit ? 14 : 16 }}
+        >
+          {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
         </div>
       </button>
 
