@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATS } from "@/lib/data";
 import { CAPSULE_SEASONS, computeDefaultCapsule, currentSeasonKey, type CapsuleSeason } from "@/lib/capsule";
@@ -37,6 +37,9 @@ export default function CapsuleScreen() {
     label: plural.toUpperCase(),
     items: capsule.filter((i) => i.cat === key),
   })).filter((g) => g.items.length > 0);
+
+  const [catFilter, setCatFilter] = useState<string>("all");
+  const visibleGroups = catFilter === "all" ? groups : groups.filter((g) => g.key === catFilter);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
@@ -83,29 +86,41 @@ export default function CapsuleScreen() {
         </div>
       </div>
 
-      {/* Navigation rapide par catégorie (recette 20/08/2026) — défilement vers la section correspondante, jamais de filtrage qui masquerait le reste de la capsule. */}
+      {/* Navigation par catégorie (recette 20/08/2026, passe design) — liens
+          texte discrets, jamais des boutons pill : filtre réellement la
+          liste affichée (Tout + une entrée par catégorie présente dans la
+          capsule), plus une simple ancre de défilement. */}
       {groups.length > 1 && (
-        <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-4">
+        <div className="scrollarea flex gap-4 overflow-x-auto pb-[2px] mt-4">
           <button
-            onClick={() => document.getElementById("capsule-top")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-            className="flex-none py-[8px] px-[13px] rounded-full text-[12px] cursor-pointer border whitespace-nowrap bg-terracotta text-cream border-terracotta"
+            onClick={() => setCatFilter("all")}
+            className={
+              "flex-none text-[11px] tracking-[.1em] uppercase cursor-pointer whitespace-nowrap pb-[2px] border-b-2 " +
+              (catFilter === "all"
+                ? "text-ink font-bold border-terracotta"
+                : "text-[#9C9081] font-normal border-transparent hover:text-ink")
+            }
           >
             Tout
           </button>
           {groups.map((g) => (
             <button
               key={g.key}
-              onClick={() => document.getElementById("capsule-cat-" + g.key)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              className="flex-none py-[8px] px-[13px] rounded-full text-[12px] cursor-pointer border whitespace-nowrap bg-card text-ink border-border"
+              onClick={() => setCatFilter(g.key)}
+              className={
+                "flex-none text-[11px] tracking-[.1em] uppercase cursor-pointer whitespace-nowrap pb-[2px] border-b-2 " +
+                (catFilter === g.key
+                  ? "text-ink font-bold border-terracotta"
+                  : "text-[#9C9081] font-normal border-transparent hover:text-ink")
+              }
             >
               {g.label}
             </button>
           ))}
         </div>
       )}
-      <div id="capsule-top" />
 
-      {groups.map((g) => (
+      {visibleGroups.map((g) => (
         <div key={g.key} id={"capsule-cat-" + g.key}>
           <div className="mt-6 mb-3 text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
             {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>

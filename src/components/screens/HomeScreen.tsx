@@ -255,19 +255,18 @@ export default function HomeScreen() {
             </div>
           </div>
         )}
-        {hasOutfit && occasionLabel && (
-          <div
-            className="inline-flex items-center gap-[7px] mt-[14px] text-[10px] tracking-[.08em] uppercase"
-            style={{ background: "rgba(243,238,229,.16)", color: "#F3EEE5", borderRadius: 100, padding: "7px 14px" }}
-          >
-            {occasionLabel}
+        <div className="flex items-center gap-[10px] flex-wrap" style={{ marginTop: hasOutfit ? 14 : 16 }}>
+          {hasOutfit && occasionLabel && (
+            <div
+              className="inline-flex items-center gap-[7px] text-[10px] tracking-[.08em] uppercase"
+              style={{ background: "rgba(243,238,229,.16)", color: "#F3EEE5", borderRadius: 100, padding: "7px 14px" }}
+            >
+              {occasionLabel}
+            </div>
+          )}
+          <div className="inline-flex items-center gap-[7px] bg-cream text-ink rounded-full py-[10px] px-4 text-[12px] tracking-[.04em]">
+            {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
           </div>
-        )}
-        <div
-          className="inline-flex items-center gap-[7px] bg-cream text-ink rounded-full py-[10px] px-4 text-[12px] tracking-[.04em]"
-          style={{ marginTop: hasOutfit ? 14 : 16 }}
-        >
-          {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
         </div>
       </button>
 

@@ -437,6 +437,12 @@ export default function TenuesScreen() {
         </div>
       )}
 
+      {!geoLoading && outfitPieces.length > 0 && (
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[10px]">
+          Les {outfitPieces.length} pièces
+        </div>
+      )}
+
       <div className="flex flex-col gap-[9px]">
         {geoLoading
           ? [0, 1, 2].map((i) => (
