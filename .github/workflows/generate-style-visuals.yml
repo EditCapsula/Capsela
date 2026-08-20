@@ -50,7 +50,11 @@ on:
         required: false
         type: string
       candidate:
-        description: "Mode promote uniquement : numéro du candidat retenu"
+        description: 'Mode promote uniquement, un seul style : numéro du candidat retenu (ignoré si "items" est rempli)'
+        required: false
+        type: string
+      items:
+        description: "Mode promote uniquement, plusieurs styles d'un coup — style:candidat,style:candidat,... ex. minimaliste:1,classique_chic:1,romantique:2"
         required: false
         type: string
       candidates:
@@ -82,8 +86,14 @@ jobs:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      - name: Promotion
-        if: ${{ inputs.mode == 'promote' }}
+      - name: Promotion (plusieurs styles)
+        if: ${{ inputs.mode == 'promote' && inputs.items != '' }}
+        run: node scripts/generate-style-visuals.mjs --mode=promote --gender=${{ inputs.gender }} --items=${{ inputs.items }}
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Promotion (un style)
+        if: ${{ inputs.mode == 'promote' && inputs.items == '' }}
         run: node scripts/generate-style-visuals.mjs --mode=promote --gender=${{ inputs.gender }} --style=${{ inputs.style }} --candidate=${{ inputs.candidate }}
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co

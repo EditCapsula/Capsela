@@ -340,8 +340,37 @@ async function main() {
   }
 
   if (mode === "promote") {
+    // Promotion groupée (--items="style:candidat,style:candidat,...") pour
+    // valider plusieurs styles d'un même genre en un seul run, plutôt qu'un
+    // run par style. --style/--candidate simples restent supportés pour un
+    // seul style à la fois.
+    if (args.items) {
+      if (!args.gender) {
+        console.error('--gender requis avec --items (ex. --gender=femme --items="minimaliste:1,classique_chic:1")');
+        process.exit(1);
+      }
+      const entries = String(args.items)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((entry) => {
+          const [style, candidate] = entry.split(":").map((s) => s.trim());
+          return { style, candidate: Number(candidate) };
+        });
+      for (const { style, candidate } of entries) {
+        if (!style || !candidate) {
+          console.error(`Entrée invalide dans --items : "${style}:${candidate}" — attendu "style:candidat".`);
+          process.exit(1);
+        }
+        await promoteOne(args.gender, style, candidate);
+      }
+      console.log(`\n${entries.length} visuel(s) promu(s).`);
+      return;
+    }
     if (!args.gender || !args.style || !args.candidate) {
-      console.error("Requis pour --mode=promote : --gender=femme --style=romantique --candidate=1|2|3");
+      console.error(
+        'Requis pour --mode=promote : --gender=femme --style=romantique --candidate=1|2|3, ou --gender=femme --items="minimaliste:1,classique_chic:1,romantique:2" pour plusieurs styles d\'un coup.'
+      );
       process.exit(1);
     }
     await promoteOne(args.gender, args.style, Number(args.candidate));
