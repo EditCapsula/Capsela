@@ -196,7 +196,7 @@ export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardCo
     boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: styleVisualUrl("femme", "boheme") },
     streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("femme", "streetwear") },
     preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: styleVisualUrl("femme", "preppy") },
-    glamour: { label: "Glamour", desc: "Féminin, audacieux et résolument élégant.", asset: styleVisualUrl("femme", "glamour") },
+    glamour: { label: "Glamour", desc: "Sophistiqué, audacieux et résolument élégant.", asset: styleVisualUrl("femme", "glamour") },
   },
   homme: {
     minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: styleVisualUrl("homme", "minimaliste") },

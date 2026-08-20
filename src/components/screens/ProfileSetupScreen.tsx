@@ -303,7 +303,11 @@ export default function ProfileSetupScreen() {
                 key={id}
                 onClick={() => selectStyle(id)}
                 className={
-                  "relative text-left rounded-[16px] overflow-hidden border cursor-pointer flex flex-col " +
+                  // Épaisseur de bordure fixe (jamais 1px ↔ 2px) : seule la
+                  // couleur change à la sélection, jamais la largeur, pour
+                  // qu'aucune card ne bouge d'un pixel au clic (indépendant
+                  // de box-sizing, garanti par construction).
+                  "relative text-left rounded-[16px] overflow-hidden border-[1.5px] cursor-pointer flex flex-col " +
                   (on ? "border-terracotta" : "border-border")
                 }
                 style={{ background: on ? "#F6EBE2" : "#FBF8F3" }}
@@ -311,7 +315,10 @@ export default function ProfileSetupScreen() {
                 <div
                   className="w-full flex-shrink-0"
                   style={{
-                    aspectRatio: "4/3",
+                    // ~60/40 image/texte (recette 20/08/2026) : 5/4 est plus
+                    // dominant que le 4/3 précédent sans agrandir la card de
+                    // façon perceptible.
+                    aspectRatio: "5/4",
                     // Aplat beige toujours en fond : si l'URL Storage est vide, indisponible
                     // ou en échec de chargement, background-image ne dessine simplement rien
                     // par-dessus — jamais une icône d'image cassée (repli déjà natif, pas de JS).
@@ -323,12 +330,16 @@ export default function ProfileSetupScreen() {
                   }}
                 />
                 <span
-                  className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-2"
-                  style={{ background: "#FBF8F3", borderColor: on ? "#A66950" : "#DFD3BE" }}
+                  className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-[1.5px]"
+                  style={{ background: on ? "#A66950" : "#FFFFFF", borderColor: on ? "#A66950" : "#B08968" }}
                 >
-                  {on && <span className="w-[10px] h-[10px] rounded-full" style={{ background: "#A66950" }} />}
+                  {on && (
+                    <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                      <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
                 </span>
-                <div className="px-[13px] py-[12px]">
+                <div className="px-[13px] py-[11px]">
                   <div className="font-serif text-[15px] text-ink leading-[1.2]">{cfg.label}</div>
                   <div className="text-[11px] text-muted mt-[4px] leading-[1.35]">{cfg.desc}</div>
                 </div>
