@@ -11,6 +11,7 @@ import {
   MAX_PALETTE_COULEURS,
   MIN_PALETTE_COULEURS,
   MORPHOLOGIES,
+  MORPHOLOGY_LABELS,
   MORPHO_HINTS,
   PAL_COULEURS,
   STYLE_OPTIONS,
@@ -359,7 +360,12 @@ export default function ProfileSetupScreen() {
         <>
           <div className="flex flex-col gap-[10px] mt-[26px]">
             {MORPHOLOGIES.map((m) => (
-              <OptionRow key={m} label={m} on={draft.morphology === m} onClick={() => patch({ morphology: m })} />
+              <OptionRow
+                key={m}
+                label={MORPHOLOGY_LABELS[m]}
+                on={draft.morphology === m}
+                onClick={() => patch({ morphology: m })}
+              />
             ))}
           </div>
           <button onClick={() => setGuideOpen(!guideOpen)} className="flex items-center gap-[7px] mt-[18px] cursor-pointer">
@@ -369,7 +375,7 @@ export default function ProfileSetupScreen() {
             <div className="bg-card border border-border rounded-[14px] px-4 py-[14px] mt-[10px] flex flex-col gap-[11px]">
               {MORPHOLOGIES.map((m) => (
                 <div key={m}>
-                  <div className="text-[12.5px] text-ink font-semibold">{m}</div>
+                  <div className="text-[12.5px] text-ink font-semibold">{MORPHOLOGY_LABELS[m]}</div>
                   <div className="text-[12px] text-muted mt-[2px] leading-[1.4]">{MORPHO_HINTS[m]}</div>
                 </div>
               ))}

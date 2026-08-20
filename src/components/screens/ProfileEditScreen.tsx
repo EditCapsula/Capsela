@@ -3,7 +3,15 @@
 import { useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { GENDERS, WORK_DAYS, genderLabel, paletteSummary, type Gender, type ProfilePrefs } from "@/lib/profile";
+import {
+  GENDERS,
+  WORK_DAYS,
+  genderLabel,
+  morphologyLabel,
+  paletteSummary,
+  type Gender,
+  type ProfilePrefs,
+} from "@/lib/profile";
 
 function GenderModal({
   current,
@@ -188,7 +196,7 @@ export default function ProfileEditScreen() {
       </div>
       <div className="bg-card border border-border rounded-2xl p-4 mt-[10px]">
         <div className="text-[11.5px] text-muted">Morphologie</div>
-        <div className="text-[13.5px] text-ink mt-[6px]">{profile.morphology || "—"}</div>
+        <div className="text-[13.5px] text-ink mt-[6px]">{morphologyLabel(profile.morphology) || "—"}</div>
       </div>
 
       <div className="flex items-center justify-between mt-[26px] mb-[11px]">

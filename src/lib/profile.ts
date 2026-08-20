@@ -132,25 +132,35 @@ export const STYLE_OPTIONS = [
   "Glamour",
 ];
 
-export const MORPHOLOGIES = [
-  "Silhouette plutôt fine et droite",
-  "Taille bien marquée",
-  "Épaules plus larges que les hanches",
-  "Hanches plus marquées que les épaules",
-  "Silhouette plutôt ronde et régulière",
-];
+/**
+ * Morphologie — taxonomie féminine uniquement en P0 (Tâche 5, arbitrages du
+ * 20/08/2026). Valeurs préfixées `f_` : "Rectangle" et "Triangle inversé"
+ * seront un jour partagés avec une taxonomie homme non activée, mais avec
+ * des règles de scoring différentes (R-S9) — le préfixe évite qu'un
+ * changement de genre fasse silencieusement scorer une valeur sous la
+ * mauvaise taxonomie. Le texte affiché vit dans MORPHOLOGY_LABELS, jamais
+ * dans la valeur stockée.
+ */
+export const MORPHOLOGIES = ["f_sablier", "f_poire", "f_pomme", "f_rectangle", "f_triangle_inverse"];
+
+export const MORPHOLOGY_LABELS: Record<string, string> = {
+  f_sablier: "Taille bien marquée",
+  f_poire: "Hanches plus marquées que les épaules",
+  f_pomme: "Silhouette plutôt ronde et régulière",
+  f_rectangle: "Silhouette plutôt fine et droite",
+  f_triangle_inverse: "Épaules plus larges que les hanches",
+};
+
+export function morphologyLabel(m: string | null): string {
+  return MORPHOLOGY_LABELS[m ?? ""] ?? "";
+}
 
 export const MORPHO_HINTS: Record<string, string> = {
-  "Silhouette plutôt fine et droite":
-    "Épaules, taille et hanches sont assez alignées, sans marquage particulier.",
-  "Taille bien marquée":
-    "Tes épaules et tes hanches ont une largeur proche, avec une taille nettement plus fine.",
-  "Épaules plus larges que les hanches":
-    "Tes épaules paraissent plus larges que tes hanches, forme en V.",
-  "Hanches plus marquées que les épaules":
-    "Tes hanches sont plus larges que tes épaules, forme en A.",
-  "Silhouette plutôt ronde et régulière":
-    "Le buste, la taille et les hanches suivent une même largeur généreuse, sans creux marqué.",
+  f_rectangle: "Épaules, taille et hanches sont assez alignées, sans marquage particulier.",
+  f_sablier: "Tes épaules et tes hanches ont une largeur proche, avec une taille nettement plus fine.",
+  f_triangle_inverse: "Tes épaules paraissent plus larges que tes hanches, forme en V.",
+  f_poire: "Tes hanches sont plus larges que tes épaules, forme en A.",
+  f_pomme: "Le buste, la taille et les hanches suivent une même largeur généreuse, sans creux marqué.",
 };
 
 /** Plage élargie au-delà du standard S–XL jusqu'aux grandes tailles (recette 13/08/2026). */

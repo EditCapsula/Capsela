@@ -69,11 +69,11 @@ export function bestStyleFor(it: Item): string {
  * (les pièces les plus flatteuses d'abord), jamais à exclure.
  */
 const MORPHO_FIT: Record<string, RegExp> = {
-  "Taille bien marquée": /portefeuille|cache-cœur|robe|jupe|ceinture|blazer/,
-  "Épaules plus larges que les hanches": /jupe|pantalon large|jean|chino|robe longue|évasé/,
-  "Hanches plus marquées que les épaules": /blouse|chemis|blazer|top|collier|boucles|foulard|épaul/,
-  "Silhouette plutôt fine et droite": /pull|gilet|combinaison|trench|blazer|torsad/,
-  "Silhouette plutôt ronde et régulière": /fluide|longue|portefeuille|lin|large|oversize/,
+  f_sablier: /portefeuille|cache-cœur|robe|jupe|ceinture|blazer/,
+  f_triangle_inverse: /jupe|pantalon large|jean|chino|robe longue|évasé/,
+  f_poire: /blouse|chemis|blazer|top|collier|boucles|foulard|épaul/,
+  f_rectangle: /pull|gilet|combinaison|trench|blazer|torsad/,
+  f_pomme: /fluide|longue|portefeuille|lin|large|oversize/,
 };
 
 export function morphoFit(it: Item, morpho: string | null): boolean {
@@ -85,11 +85,11 @@ export function morphoFit(it: Item, morpho: string | null): boolean {
 
 /** Points de vigilance par morphologie (scoring négatif R-S9) — jamais bloquant. */
 const MORPHO_AVOID: Record<string, RegExp> = {
-  "Taille bien marquée": /oversize|large|ample/,
-  "Épaules plus larges que les hanches": /épaul|structuré haut|blazer|manches bouffantes/,
-  "Hanches plus marquées que les épaules": /moulant|ceinture serrée/,
-  "Silhouette plutôt fine et droite": /^(?!.*(pull|gilet|combinaison|trench|blazer|torsad)).*coupe droite.*$/,
-  "Silhouette plutôt ronde et régulière": /moulant|ceinture serrée|col montant/,
+  f_sablier: /oversize|large|ample/,
+  f_triangle_inverse: /épaul|structuré haut|blazer|manches bouffantes/,
+  f_poire: /moulant|ceinture serrée/,
+  f_rectangle: /^(?!.*(pull|gilet|combinaison|trench|blazer|torsad)).*coupe droite.*$/,
+  f_pomme: /moulant|ceinture serrée|col montant/,
 };
 
 export function morphoVigilance(it: Item, morpho: string | null): boolean {
