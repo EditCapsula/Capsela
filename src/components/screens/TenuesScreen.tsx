@@ -30,36 +30,38 @@ function compositionRoleOf(cat: CategoryKey): CompositionRole {
   return "petit"; // pull et tout le reste : replie sur le petit slot, comme le proto (SLOTS[rk] || SLOTS.petit)
 }
 
-// Composition éditoriale resserrée (recette 20/08/2026, passe affinage) :
-// tailles augmentées d'environ 15-20% par rapport à la version précédente,
-// chevauchements de coin volontaires (haut/pièce unique au-dessus du bas à
-// leur zone commune) plutôt qu'un alignement vertical strict chemise/bas/
-// chaussures, accessoire rapproché du haut plutôt qu'isolé à l'écart.
+// Composition compacte (recette 20/08/2026, passe "flat lay compact") :
+// hauteur de cadre désormais bornée (compositionFrameHeight) plutôt que
+// dérivée d'un simple ratio dépendant du nombre de pièces — resserre les
+// zones les unes vers les autres (chevauchements volontaires plus marqués)
+// pour réduire les espaces vides entre articles, haut/bas recentrés sur
+// l'axe vertical du cadre, chaussures/sac/petits accessoires rapprochés de
+// cet axe plutôt que dispersés vers les coins.
 const SLOTS_ONEPIECE: Record<string, [number, number, number, number]> = {
-  onepiece: [24, 2, 52, 70],
-  sac: [2, 40, 26, 26],
-  chaussures: [44, 68, 30, 24],
-  petit: [66, 8, 16, 16],
+  onepiece: [22, 0, 56, 74],
+  sac: [2, 42, 28, 28],
+  chaussures: [42, 68, 32, 26],
+  petit: [64, 6, 18, 18],
 };
 const SLOTS_STANDARD: Record<string, [number, number, number, number]> = {
-  outerwear: [22, 0, 46, 35],
-  haut: [18, 0, 40, 34],
+  outerwear: [20, 0, 48, 36],
+  haut: [16, 0, 44, 36],
   // Quand une veste/un manteau est aussi présent, veste et haut se placent
   // franchement côte à côte, sans se recouvrir (correctif 20/08/2026) —
   // l'ancien décalage de 6%/2% laissait les deux zones quasiment
   // superposées, la veste ne montrant qu'un fin liséré derrière le haut.
-  outerwearAvecHaut: [2, 0, 44, 37],
-  hautAvecVeste: [50, 4, 37, 32],
-  pantalon: [34, 26, 42, 40],
-  chaussures: [14, 62, 30, 22],
-  sac: [4, 30, 24, 24],
-  petit: [58, 2, 17, 17],
+  outerwearAvecHaut: [0, 0, 46, 38],
+  hautAvecVeste: [48, 4, 40, 34],
+  pantalon: [28, 28, 46, 42],
+  chaussures: [18, 60, 34, 26],
+  sac: [6, 34, 26, 26],
+  petit: [56, 4, 19, 19],
 };
 const PETIT_OFFSETS: [number, number][] = [
   [0, 0],
   [10, 12],
-  [-56, 10],
-  [-56, 32],
+  [-52, 10],
+  [-52, 30],
 ];
 
 function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties }[] {
@@ -113,8 +115,20 @@ function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties 
   });
 }
 
-function compositionFrameAspectRatio(n: number): string {
-  return n <= 3 ? "3/2" : n <= 4 ? "6/5" : "11/8";
+/**
+ * Hauteur de cadre bornée (recette 20/08/2026, "flat lay compact") — jamais
+ * plus de ~310px sur mobile quel que soit le nombre de pièces ou la largeur
+ * de l'écran (remplace l'ancien aspect-ratio dérivé du nombre de pièces,
+ * qui pouvait dépasser cette cible sur les écrans larges). clamp() garde
+ * une hauteur proportionnelle à la largeur (72vw) entre un plancher et un
+ * plafond qui montent légèrement avec le nombre de pièces à loger, pour
+ * qu'une tenue à 2-3 pièces reste compacte plutôt qu'étirée dans un cadre
+ * pensé pour 6-7.
+ */
+function compositionFrameHeight(n: number): string {
+  if (n <= 3) return "clamp(220px, 62vw, 260px)";
+  if (n <= 5) return "clamp(250px, 68vw, 290px)";
+  return "clamp(270px, 74vw, 310px)";
 }
 
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
@@ -424,7 +438,7 @@ export default function TenuesScreen() {
             borderRadius: 20,
             overflow: "hidden",
             background: "#F3EDE1",
-            aspectRatio: compositionFrameAspectRatio(outfitPieces.length),
+            height: compositionFrameHeight(outfitPieces.length),
           }}
         >
           {compositionPiecesOf(outfitPieces).map((p) => (
