@@ -38,6 +38,11 @@ import { buildImagePrompt, CATEGORY_CANON, CATEGORY_FOLDER, type TrendRule, type
 import { computeVisualKey, normalizeVisualColor, normalizeVisualSubtype } from "../_shared/visualKey.ts";
 
 const BUCKET = "catalog-images";
+// Catégories où le rendu visuel ne dépend pas vraiment du genre affiché —
+// seules celles-ci peuvent bénéficier du repli de cascade sans genre
+// (correctif 20/08/2026, cf. step 4 ci-dessous). Tout le reste (vêtements,
+// chaussures) a une coupe/silhouette qui diffère réellement selon le genre.
+const GENRE_AGNOSTIC_CATEGORIES = new Set(["sac", "bijou", "accessoire"]);
 const DEFAULT_MODEL = "gpt-image-1";
 const DEFAULT_QUALITY = "low";
 const DEFAULT_DAILY_CAP = 50;
@@ -168,6 +173,7 @@ Deno.serve(async (req) => {
     sousType: article.sous_type,
     couleur: article.couleur_dominante,
     matiere: article.matiere,
+    coupe: article.coupe,
   });
 
   // Design "bespoke" (override ou silhouette/details explicites, recette
@@ -226,7 +232,14 @@ Deno.serve(async (req) => {
         niveauTendance,
       });
     }
-    if (!reusable && !isBespoke) {
+    // Le repli sans genre (step 4) ne vaut que pour les catégories dont le
+    // rendu visuel ne dépend pas vraiment du genre affiché (sac/bijou/
+    // accessoire) — correctif 20/08/2026 : sans cette restriction, un
+    // article "homme" pouvait silencieusement hériter de la photo d'un
+    // article "femme" du même sous-type/couleur (constaté sur une chemise
+    // homme récupérant le visuel de la version femme), alors que la coupe
+    // d'un vêtement diffère réellement selon le genre.
+    if (!reusable && !isBespoke && GENRE_AGNOSTIC_CATEGORIES.has(canonCategory)) {
       reusable = await findReadyAsset(supabase, {
         category: canonCategory,
         sous_type: sousTypeNorm,

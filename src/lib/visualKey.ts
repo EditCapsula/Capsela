@@ -151,13 +151,17 @@ export function normalizeVisualSubtype(raw: string): string {
 const VISUALLY_SIGNIFICANT_MATIERES = new Set(["cuir"]);
 
 /**
- * Clé visuelle resserrée d'une pièce du catalogue (recette 18/08/2026 v2) :
- * genre_category_sousType_couleur, matiere ajoutée seulement si elle change
- * réellement l'apparence (cuir). Deux articles avec la même clé peuvent
- * réutiliser exactement le même visuel — styles/occasion/morphologies/
- * saison/niveau de formalité/rôle de superposition n'entrent jamais dans la
- * clé, ils n'influencent jamais l'apparence du produit lui-même.
- * Ex. "femme_chaussures_ballerines_beige".
+ * Clé visuelle resserrée d'une pièce du catalogue (recette 18/08/2026 v2,
+ * complétée 20/08/2026 — coupe oversize) : genre_category_sousType_couleur,
+ * matiere ajoutée seulement si elle change réellement l'apparence (cuir),
+ * "oversize" ajouté seulement pour coupe = "Ample" (silhouette visiblement
+ * différente d'une coupe ajustée/regular — ex. permet à une même chemise en
+ * version base/ajustée et calque/oversize d'avoir chacune leur propre
+ * visuel). Deux articles avec la même clé peuvent réutiliser exactement le
+ * même visuel — styles/occasion/morphologies/saison/niveau de formalité/
+ * rôle de superposition n'entrent jamais dans la clé, ils n'influencent
+ * jamais l'apparence du produit lui-même (contrairement à la coupe).
+ * Ex. "femme_chaussures_ballerines_beige", "homme_hauts_chemise_blanc_oversize".
  */
 export function computeVisualKey(item: CatalogItem): string {
   const subtypeRaw = item.subtype || item.shoeType || item.sacType || item.bijouType || item.accessoireType || "";
@@ -168,6 +172,7 @@ export function computeVisualKey(item: CatalogItem): string {
     normalizeVisualSubtype(subtypeRaw),
     normalizeVisualColor(item.color),
     VISUALLY_SIGNIFICANT_MATIERES.has(matiereSlug) ? matiereSlug : "",
+    item.coupe === "Ample" ? "oversize" : "",
   ];
   return parts.map(slug).filter(Boolean).join("_");
 }

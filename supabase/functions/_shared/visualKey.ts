@@ -140,9 +140,14 @@ export interface VisualKeyInput {
   sousType: string | null;
   couleur: string | null;
   matiere: string | null;
+  coupe?: string | null;
 }
 
-/** Clé visuelle resserrée — cf. src/lib/visualKey.ts (source de vérité) pour la logique complète. */
+/**
+ * Clé visuelle resserrée — cf. src/lib/visualKey.ts (source de vérité) pour
+ * la logique complète. "oversize" ajouté seulement pour coupe = "Ample"
+ * (recette 20/08/2026) — seule coupe qui change visiblement la silhouette.
+ */
 export function computeVisualKey(input: VisualKeyInput): string {
   const matiereSlug = slug(input.matiere || "");
   const parts = [
@@ -151,6 +156,7 @@ export function computeVisualKey(input: VisualKeyInput): string {
     normalizeVisualSubtype(input.sousType),
     normalizeVisualColor(input.couleur),
     VISUALLY_SIGNIFICANT_MATIERES.has(matiereSlug) ? matiereSlug : "",
+    input.coupe === "Ample" ? "oversize" : "",
   ];
   return parts.map(slug).filter(Boolean).join("_");
 }
