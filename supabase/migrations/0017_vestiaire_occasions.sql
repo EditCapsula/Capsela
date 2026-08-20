@@ -1,0 +1,17 @@
+-- Occasions déclarées explicitement sur un article catalogue (recette
+-- 20/08/2026, demande explicite) — mécanisme déjà existant côté moteur pour
+-- le dressing réel (Item.occasion / declaredOccasionOk dans logic.ts, saisi
+-- via AddScreen) mais jamais alimenté depuis le catalogue jusqu'ici. Liste
+-- libre séparée par virgule/point-virgule/barre verticale, même format que
+-- `styles`/`morphologies` — volontairement sans contrainte CHECK (comme ces
+-- deux colonnes) : un token qui ne correspond à aucune occasion connue est
+-- simplement ignoré côté app plutôt que de bloquer l'insertion.
+--
+-- Filtre DUR et exclusif dès qu'il est renseigné (contrairement à
+-- niveau_formalite qui fixe un plancher assoupli selon le contexte) : un
+-- article avec des occasions déclarées ne peut plus jamais apparaître en
+-- dehors de cette liste, quelle que soit sa formalité/saison par ailleurs.
+-- Laisser vide (comportement par défaut, rétrocompatible) pour tout article
+-- dont l'éligibilité doit continuer à se déduire de niveau_formalite/
+-- saison_capsule/genre uniquement.
+alter table public.vestiaire_universel add column if not exists occasions text null;

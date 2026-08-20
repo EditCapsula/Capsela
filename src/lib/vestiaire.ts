@@ -1,7 +1,7 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { detectAccessoireType, detectBijouType, detectMatiere, detectSacType } from "./attributes";
 import type { CatalogItem } from "./catalog";
-import type { CategoryKey, Coupe, ImageSource, ImageStatus, IntensiteCouleur, Matiere, Season, ShoeType, Tons } from "./types";
+import type { CategoryKey, Coupe, ImageSource, ImageStatus, IntensiteCouleur, Matiere, OccasionKey, Season, ShoeType, Tons } from "./types";
 
 /**
  * Lecture de la table vestiaire_universel (Supabase) — source des 4 capsules
@@ -51,6 +51,15 @@ import type { CategoryKey, Coupe, ImageSource, ImageStatus, IntensiteCouleur, Ma
  *   20/08/2026), préférence molle jamais exclusive pour une veste/un manteau
  *   qui y résiste quand la météo du jour est pluvieuse (label contenant
  *   "pluie" ou "orage").
+ * - `occasions` (recette 20/08/2026) : liste libre séparée par virgule,
+ *   point-virgule ou barre verticale, valeurs attendues parmi les slugs
+ *   internes d'OccasionKey (quotidien, travail_formel, entretien, date,
+ *   soiree, festive, sport, cocooning, voyage, evenement_perso — jamais
+ *   "all"). Mappée sur Item.occasion, lu par declaredOccasionOk (logic.ts) :
+ *   filtre DUR dès qu'au moins une valeur est reconnue — l'article ne peut
+ *   plus apparaître pour une occasion absente de cette liste, quelle que
+ *   soit sa formalité/saison par ailleurs. Vide/non reconnu = aucune
+ *   restriction (comportement historique, inchangé).
  * - `couleur_secondaire` : pas encore exploité côté app — lu mais ignoré.
  * - `url_image` : mappé sur Item.imageUrl — photo produit du catalogue
  *   (posée manuellement ou générée automatiquement, cf. image_source),
@@ -104,6 +113,7 @@ export interface VestiaireRow {
   silhouette_mode: string | null;
   details_mode: string | null;
   prompt_image_override: string | null;
+  occasions: string | null;
 }
 
 const CATEGORY_MAP: Record<string, CategoryKey> = {
@@ -246,6 +256,27 @@ function mapSaisonToSeason(raw: string | null): Season {
   return "Toutes saisons";
 }
 
+const VALID_OCCASIONS = new Set<OccasionKey>([
+  "quotidien",
+  "travail_formel",
+  "entretien",
+  "date",
+  "soiree",
+  "festive",
+  "sport",
+  "cocooning",
+  "voyage",
+  "evenement_perso",
+]);
+
+/** Filtre discret, jamais bloquant : un token qui ne correspond à aucune occasion connue est simplement ignoré (recette 20/08/2026). */
+function mapOccasions(raw: string | null): OccasionKey[] | undefined {
+  const tokens = splitTags(raw);
+  if (!tokens) return undefined;
+  const valid = tokens.map((t) => t.trim().toLowerCase()).filter((t): t is OccasionKey => VALID_OCCASIONS.has(t as OccasionKey));
+  return valid.length ? valid : undefined;
+}
+
 function splitTags(raw: string | null): string[] | undefined {
   if (!raw || !raw.trim()) return undefined;
   return raw
@@ -302,6 +333,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     affLink: row.lien_affiliation || undefined,
     necessiteSoleil: mapNecessiteSoleil(row.necessite_soleil),
     resistePluie: row.resiste_pluie ?? undefined,
+    occasion: mapOccasions(row.occasions),
     meteoMinTemp: row.meteo_min_temp ?? undefined,
     meteoMaxTemp: row.meteo_max_temp ?? undefined,
     imageUrl: row.url_image || undefined,
