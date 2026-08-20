@@ -1,7 +1,14 @@
 import { CATALOG, type CatalogItem } from "./catalog";
 import { formalityOf, intensiteOf, tonsOf } from "./attributes";
 import { isSunny, type Weather } from "./data";
-import { paletteHexes, type Affinite, type Intensite, type Profile } from "./profile";
+import {
+  STYLE_ID_TO_CATALOG_LABEL,
+  paletteHexes,
+  type Affinite,
+  type Intensite,
+  type Profile,
+  type StyleId,
+} from "./profile";
 import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, Season, Tons } from "./types";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
@@ -191,7 +198,12 @@ export function computeDefaultCapsule(
   );
   if (tempFit.length >= 16) base = tempFit;
 
-  const styles = profile.styles || [];
+  // profile.styles porte des ids (StyleId) depuis la Tâche 7 — traduits en
+  // libellé catalogue avant de matcher styleFit()/it.styleTags, qui restent
+  // eux au format libellé français (colonne `styles` de vestiaire_universel).
+  const styles = (profile.styles || [])
+    .map((id) => STYLE_ID_TO_CATALOG_LABEL[id as StyleId])
+    .filter((label): label is string => Boolean(label));
   let curated = styles.length ? base.filter((it) => styles.some((st) => styleFit(it, st))) : base;
   if (curated.length < 18) curated = base;
 

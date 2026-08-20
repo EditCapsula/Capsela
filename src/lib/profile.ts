@@ -25,7 +25,7 @@ export interface Profile {
   tailleHaut: string | null;
   tailleBas: string | null;
   pointure: string | null;
-  /** Style : choix unique (tableau pour évolution future). */
+  /** Style : choix unique — un id de StyleId (tableau pour évolution future). */
   styles: string[];
   morphology: string | null;
   city: string;
@@ -121,16 +121,87 @@ export function paletteSummary(profile: Profile): string {
   return "Couleurs : " + profile.paletteCouleurs.map(paletteColorName).filter(Boolean).join(", ");
 }
 
-export const STYLE_OPTIONS = [
-  "Minimaliste",
-  "Casual chic",
-  "Classique chic",
-  "Romantique",
-  "Bohème",
-  "Streetwear",
-  "Preppy",
-  "Glamour",
-];
+/**
+ * Style utilisateur — sélection unique, 8 ids stables et jamais renommés
+ * (Tâche 7, arbitrages du 20/08/2026). Seuls le libellé, la description et
+ * le visuel varient selon le genre (STYLE_CONFIG) ; l'id seul est
+ * persisté sur `profiles.styles` — un libellé stocké deviendrait faux au
+ * premier changement de genre.
+ */
+export const STYLE_IDS = [
+  "minimaliste",
+  "casual_chic",
+  "classique_chic",
+  "romantique",
+  "boheme",
+  "streetwear",
+  "preppy",
+  "glamour",
+] as const;
+export type StyleId = (typeof STYLE_IDS)[number];
+
+/**
+ * Pont vers le libellé français encore utilisé par la colonne `styles` du
+ * catalogue (vestiaire_universel) et par STYLE_FIT (capsule.ts) — jamais
+ * renommé côté catalogue : un id de profil utilisateur n'est pas un
+ * libellé d'article, les deux évoluent indépendamment.
+ */
+export const STYLE_ID_TO_CATALOG_LABEL: Record<StyleId, string> = {
+  minimaliste: "Minimaliste",
+  casual_chic: "Casual chic",
+  classique_chic: "Classique chic",
+  romantique: "Romantique",
+  boheme: "Bohème",
+  streetwear: "Streetwear",
+  preppy: "Preppy",
+  glamour: "Glamour",
+};
+
+export interface StyleCardConfig {
+  label: string;
+  desc: string;
+  /** Chemin déclaré explicitement, jamais dérivé de l'id — homme/creatif-artistique correspond à l'id romantique. */
+  asset: string;
+}
+
+/**
+ * Placeholders (aplat beige + nom du style) en attendant les 16 assets
+ * réels — l'écran ne se livre qu'une fois ces visuels produits. Deux
+ * libellés changent côté homme (romantique → Créatif / Artistique,
+ * glamour → Élégant / Sophistiqué) ; les ids et les 6 autres libellés
+ * sont identiques dans les deux genres.
+ */
+export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardConfig>> = {
+  femme: {
+    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: "/styles/femme/minimaliste.svg" },
+    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: "/styles/femme/casual-chic.svg" },
+    classique_chic: { label: "Classique chic", desc: "Élégant, féminin et toujours approprié.", asset: "/styles/femme/classique-chic.svg" },
+    romantique: { label: "Romantique", desc: "Douceur, fluidité et détails féminins.", asset: "/styles/femme/romantique.svg" },
+    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: "/styles/femme/boheme.svg" },
+    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: "/styles/femme/streetwear.svg" },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: "/styles/femme/preppy.svg" },
+    glamour: { label: "Glamour", desc: "Féminin, audacieux et résolument élégant.", asset: "/styles/femme/glamour.svg" },
+  },
+  homme: {
+    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: "/styles/homme/minimaliste.svg" },
+    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: "/styles/homme/casual-chic.svg" },
+    classique_chic: { label: "Classique chic", desc: "Élégant et toujours approprié.", asset: "/styles/homme/classique-chic.svg" },
+    romantique: { label: "Créatif / Artistique", desc: "Original, expressif, hors des codes classiques.", asset: "/styles/homme/creatif-artistique.svg" },
+    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: "/styles/homme/boheme.svg" },
+    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: "/styles/homme/streetwear.svg" },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: "/styles/homme/preppy.svg" },
+    glamour: { label: "Élégant / Sophistiqué", desc: "Raffiné, maîtrisé et résolument chic.", asset: "/styles/homme/elegant-sophistique.svg" },
+  },
+};
+
+export function styleConfigFor(gender: Gender | null): Record<StyleId, StyleCardConfig> {
+  return STYLE_CONFIG[gender === "homme" ? "homme" : "femme"];
+}
+
+export function styleLabel(id: string | undefined | null, gender: Gender | null): string {
+  if (!id) return "";
+  return styleConfigFor(gender)[id as StyleId]?.label ?? "";
+}
 
 /**
  * Morphologie — taxonomie féminine uniquement en P0 (Tâche 5, arbitrages du

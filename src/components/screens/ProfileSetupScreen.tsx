@@ -14,9 +14,10 @@ import {
   MORPHOLOGY_LABELS,
   MORPHO_HINTS,
   PAL_COULEURS,
-  STYLE_OPTIONS,
+  STYLE_IDS,
   TAILLES_HAUT,
   paletteColorName,
+  styleConfigFor,
   tailleBasLabelFor,
   taillesBasFor,
   type Affinite,
@@ -39,24 +40,6 @@ const ALL_STEPS = [
   { key: "style", kicker: "Style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis celui qui correspond le mieux à ta façon de t'habiller." },
   { key: "morpho", kicker: "Morphologie", title: "Et ta silhouette ?", subtitle: "Pour affiner nos recommandations de coupes." },
 ] as const;
-
-/**
- * Visuel + description par style (recette 20/08/2026, moodboard multi-
- * sélection) — assets statiques dans /public/styles, jamais générés à la
- * volée (aucun appel OpenAI depuis cet écran). Placeholders SVG abstraits
- * en attendant de vraies photos ; remplacer le fichier au même chemin
- * suffira, aucun changement de code nécessaire.
- */
-const STYLE_INFO: Record<string, { desc: string; asset: string }> = {
-  "Minimaliste": { desc: "Épuré, essentiel et intemporel.", asset: "/styles/minimaliste.svg" },
-  "Casual chic": { desc: "Décontracté mais soigné, facile au quotidien.", asset: "/styles/casual-chic.svg" },
-  "Classique chic": { desc: "Élégant, féminin et toujours approprié.", asset: "/styles/classique-chic.svg" },
-  "Romantique": { desc: "Douceur, fluidité et détails féminins.", asset: "/styles/romantique.svg" },
-  "Bohème": { desc: "Naturel, libre et inspiré des voyages.", asset: "/styles/boheme.svg" },
-  "Streetwear": { desc: "Urbain, confort et attitude décontractée.", asset: "/styles/streetwear.svg" },
-  "Preppy": { desc: "Soigné, frais et esprit collegiate.", asset: "/styles/preppy.svg" },
-  "Glamour": { desc: "Féminin, audacieux et résolument élégant.", asset: "/styles/glamour.svg" },
-};
 
 function chipCls(on: boolean): string {
   return (
@@ -143,14 +126,10 @@ export default function ProfileSetupScreen() {
     if (cur.includes(hex)) return patch({ paletteCouleurs: cur.filter((x) => x !== hex) });
     patch({ paletteCouleurs: cur.length >= MAX_PALETTE_COULEURS ? [...cur.slice(1), hex] : [...cur, hex] });
   };
-  // Multi-sélection (recette 20/08/2026) — draft.styles était déjà un
-  // tableau côté state/Supabase (profiles.styles text[]), seule l'ancienne
-  // UI le forçait à un seul élément ([st] à chaque clic). Aucune migration
-  // de données nécessaire, juste ce toggle add/remove.
-  const toggleStyle = (st: string) => {
-    const cur = draft.styles;
-    patch({ styles: cur.includes(st) ? cur.filter((x) => x !== st) : [...cur, st] });
-  };
+  // Sélection unique (Tâche 7, arbitrages du 20/08/2026 — reconduit après
+  // un essai de multi-sélection le même jour) : un seul id stocké, la carte
+  // précédente se désélectionne automatiquement.
+  const selectStyle = (id: string) => patch({ styles: [id] });
 
   const isLast = step >= STEPS.length - 1;
 
@@ -315,54 +294,45 @@ export default function ProfileSetupScreen() {
       )}
 
       {meta.key === "style" && (
-        <>
-          <div className="grid grid-cols-2 gap-[11px] mt-[26px]">
-            {STYLE_OPTIONS.map((st) => {
-              const info = STYLE_INFO[st];
-              const on = draft.styles.includes(st);
-              return (
-                <button
-                  key={st}
-                  onClick={() => toggleStyle(st)}
-                  className={
-                    "relative text-left rounded-[16px] overflow-hidden border cursor-pointer flex flex-col " +
-                    (on ? "border-terracotta" : "border-border")
-                  }
-                  style={{ background: on ? "#F6EBE2" : "#FBF8F3" }}
+        <div className="grid grid-cols-2 gap-[11px] mt-[26px]">
+          {STYLE_IDS.map((id) => {
+            const cfg = styleConfigFor(draft.gender)[id];
+            const on = draft.styles[0] === id;
+            return (
+              <button
+                key={id}
+                onClick={() => selectStyle(id)}
+                className={
+                  "relative text-left rounded-[16px] overflow-hidden border cursor-pointer flex flex-col " +
+                  (on ? "border-terracotta" : "border-border")
+                }
+                style={{ background: on ? "#F6EBE2" : "#FBF8F3" }}
+              >
+                <div
+                  className="w-full flex-shrink-0"
+                  style={{
+                    aspectRatio: "4/3",
+                    backgroundColor: "#E6DCCB",
+                    backgroundImage: `url(${cfg.asset})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                  }}
+                />
+                <span
+                  className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-2"
+                  style={{ background: "#FBF8F3", borderColor: on ? "#A66950" : "#DFD3BE" }}
                 >
-                  <div
-                    className="w-full flex-shrink-0"
-                    style={{
-                      aspectRatio: "4/3",
-                      backgroundColor: "#F3EDE1",
-                      backgroundImage: `url(${info.asset})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      backgroundRepeat: "no-repeat",
-                    }}
-                  />
-                  <span
-                    className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-2"
-                    style={{ background: on ? "#A66950" : "#FBF8F3", borderColor: on ? "#A66950" : "#DFD3BE" }}
-                  >
-                    {on && (
-                      <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
-                        <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </span>
-                  <div className="px-[13px] py-[12px]">
-                    <div className="font-serif text-[15px] text-ink leading-[1.2]">{st}</div>
-                    <div className="text-[11px] text-muted mt-[4px] leading-[1.35]">{info.desc}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-          <div className="text-[11.5px] text-muted mt-[16px] leading-[1.4]">
-            ✦ Tu pourras affiner tes choix plus tard dans ton profil.
-          </div>
-        </>
+                  {on && <span className="w-[10px] h-[10px] rounded-full" style={{ background: "#A66950" }} />}
+                </span>
+                <div className="px-[13px] py-[12px]">
+                  <div className="font-serif text-[15px] text-ink leading-[1.2]">{cfg.label}</div>
+                  <div className="text-[11px] text-muted mt-[4px] leading-[1.35]">{cfg.desc}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {meta.key === "morpho" && (

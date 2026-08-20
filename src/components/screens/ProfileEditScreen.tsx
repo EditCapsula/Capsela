@@ -9,6 +9,7 @@ import {
   genderLabel,
   morphologyLabel,
   paletteSummary,
+  styleLabel,
   type Gender,
   type ProfilePrefs,
 } from "@/lib/profile";
@@ -212,7 +213,7 @@ export default function ProfileEditScreen() {
         <div className="text-[13.5px] text-ink mt-[6px] leading-[1.4]">{paletteSummary(profile)}</div>
         <div className="h-px bg-border my-[14px]" />
         <div className="text-[11.5px] text-muted">Style</div>
-        <div className="text-[13.5px] text-ink mt-[6px]">{profile.styles.join(", ") || "—"}</div>
+        <div className="text-[13.5px] text-ink mt-[6px]">{styleLabel(profile.styles[0], profile.gender) || "—"}</div>
       </div>
 
       <SectionLabel>Compte</SectionLabel>

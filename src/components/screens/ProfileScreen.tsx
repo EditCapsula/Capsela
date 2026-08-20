@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { genderLabel, morphologyLabel, paletteSummary } from "@/lib/profile";
+import { genderLabel, morphologyLabel, paletteSummary, styleLabel } from "@/lib/profile";
 import { APP_VERSION } from "@/lib/data";
 
 export default function ProfileScreen() {
@@ -21,7 +21,7 @@ export default function ProfileScreen() {
   const rows = [
     { label: "Genre", value: genderLabel(profile.gender) || "—" },
     { label: "Taille", value: tailleValue },
-    { label: "Style", value: profile.styles.join(", ") || "—" },
+    { label: "Style", value: styleLabel(profile.styles[0], profile.gender) || "—" },
     { label: "Morphologie", value: morphologyLabel(profile.morphology) || "—" },
     { label: "Palette", value: paletteSummary(profile) },
   ];
