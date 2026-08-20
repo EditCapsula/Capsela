@@ -52,7 +52,11 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const BUCKET = "catalog-images";
 const MODEL = "gpt-image-1";
 const QUALITY = "medium"; // décidé en chat le 20/08/2026 — assets permanents, visibles dès le premier écran.
-const CANDIDATES_PER_VISUAL = 3;
+// 3 par défaut (permet de choisir le meilleur — un même prompt peut donner
+// des fonds/échelles/lumières différents d'un appel à l'autre, limite du
+// modèle). Réglable via --candidates=N : 1 suffit en phase d'itération sur
+// le wording des prompts, avant le passage en revue final à 3.
+let CANDIDATES_PER_VISUAL = 3;
 const DELAY_MS = 1500;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
@@ -302,6 +306,14 @@ async function toWebp(pngBytes) {
 async function main() {
   const args = parseArgs();
   const mode = args.mode || (args.promote ? "promote" : "generate");
+  if (args.candidates) {
+    const n = Number(args.candidates);
+    if (!Number.isInteger(n) || n < 1 || n > 5) {
+      console.error("--candidates doit être un entier entre 1 et 5.");
+      process.exit(1);
+    }
+    CANDIDATES_PER_VISUAL = n;
+  }
 
   if (mode === "generate") {
     // --style accepte aussi une liste séparée par des virgules (ex.

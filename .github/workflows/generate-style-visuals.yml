@@ -7,7 +7,9 @@ name: Générer les visuels de l'écran Style (admin)
 # scripts/generate-style-visuals.mjs.
 #
 # Flux en 2 temps :
-#   1. mode "generate" : génère 3 candidats par visuel, uploadés dans
+#   1. mode "generate" : génère N candidats par visuel (3 par défaut,
+#      réglable via l'input "candidates" — 1 suffit en phase d'itération sur
+#      le wording des prompts), uploadés dans
 #      catalog-images/style-visuals/_staging/ (public, ouvrable directement
 #      au navigateur — pas de zip à télécharger).
 #   2. mode "promote" : une fois un candidat choisi visuellement, le
@@ -48,9 +50,14 @@ on:
         required: false
         type: string
       candidate:
-        description: "Mode promote uniquement : numéro du candidat retenu (1, 2 ou 3)"
+        description: "Mode promote uniquement : numéro du candidat retenu"
         required: false
         type: string
+      candidates:
+        description: "Mode generate uniquement : nombre de candidats par visuel (1 à 5, défaut 3 — 1 suffit en phase d'itération sur le wording)"
+        required: false
+        type: string
+        default: "3"
 
 jobs:
   run:
@@ -63,14 +70,14 @@ jobs:
       - run: npm ci
       - name: Génération
         if: ${{ inputs.mode == 'generate' && inputs.all }}
-        run: node scripts/generate-style-visuals.mjs --mode=generate --all
+        run: node scripts/generate-style-visuals.mjs --mode=generate --all --candidates=${{ inputs.candidates }}
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       - name: Génération (un ou plusieurs visuels)
         if: ${{ inputs.mode == 'generate' && !inputs.all }}
-        run: node scripts/generate-style-visuals.mjs --mode=generate --gender=${{ inputs.gender }} --style=${{ inputs.style }}
+        run: node scripts/generate-style-visuals.mjs --mode=generate --gender=${{ inputs.gender }} --style=${{ inputs.style }} --candidates=${{ inputs.candidates }}
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
