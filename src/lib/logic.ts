@@ -1052,25 +1052,28 @@ const OCCASION_CLOSERS: Partial<Record<OccasionKey, string[]>> = {
 /** Catégories dont le sous-type est déjà un nom complet (ex. "Chemise", "Blazer", "Sandales plates") — jamais préfixé par le libellé générique de la catégorie, contrairement aux catégories à sous-type "modificateur" (ex. jupe: "Midi"). */
 const NOUN_SUBTYPE_CATS = new Set<CategoryKey>(["haut", "pull", "veste", "manteau", "chaussures", "sac", "bijou", "accessoire", "combinaison"]);
 
-/** Libellé compact d'une pièce, toujours dérivé de ses données réelles — construction "en {couleur}" volontairement invariable en genre (jamais d'article accordé, ex. "chemise en blanc" reste correct quel que soit le genre du nom). */
-function pieceLabel(it: Item): string {
+/** Nom compact d'une pièce, sans couleur (ex. "t-shirt", "pantalon fluide"). */
+function pieceBase(it: Item): string {
   const catLabel = (CATLABEL[it.cat] || it.name).toLowerCase();
   const subtypeLower = it.subtype?.trim().toLowerCase();
-  let base: string;
   if (subtypeLower && NOUN_SUBTYPE_CATS.has(it.cat)) {
-    base = subtypeLower;
-  } else if (subtypeLower && (subtypeLower === catLabel || subtypeLower.startsWith(catLabel + " "))) {
+    return subtypeLower;
+  }
+  if (subtypeLower && (subtypeLower === catLabel || subtypeLower.startsWith(catLabel + " "))) {
     // Évite le doublon "pantalon pantalon(...)" — non seulement quand le
     // sous-type EST le nom générique de la catégorie (ex. "Pantalon"), mais
     // aussi quand il commence par ce nom (ex. "Pantalon fluide" pour la
     // catégorie pantalon, correctif 20/08/2026 : la vérification d'égalité
     // stricte seule laissait passer "pantalon pantalon fluide").
-    base = subtypeLower;
-  } else if (subtypeLower) {
-    base = `${catLabel} ${subtypeLower}`;
-  } else {
-    base = catLabel;
+    return subtypeLower;
   }
+  if (subtypeLower) return `${catLabel} ${subtypeLower}`;
+  return catLabel;
+}
+
+/** Libellé compact d'une pièce, toujours dérivé de ses données réelles — construction "en {couleur}" volontairement invariable en genre (jamais d'article accordé, ex. "chemise en blanc" reste correct quel que soit le genre du nom). */
+function pieceLabel(it: Item): string {
+  const base = pieceBase(it);
   return it.color ? `${base} en ${it.color.toLowerCase()}` : base;
 }
 
@@ -1097,5 +1100,14 @@ export function describeOutfitVariation(variation: ItemOutfitVariation, items: I
   const closer = closers[indexInOccasion % closers.length];
 
   if (!picked.length) return OCCASION_VARIATION_BASE[variation.occasion] || "Une combinaison bien assortie.";
-  return `Avec ${picked.map(pieceLabel).join(" et ")}, ${closer}`;
+
+  // Couleur partagée entre les 2 pièces (correctif 20/08/2026) : évite la
+  // répétition "t-shirt en blanc et baskets en blanc" — mentionnée une
+  // seule fois à la fin plutôt qu'après chaque pièce.
+  const sameColor =
+    picked.length === 2 && picked[0].color && picked[1].color && picked[0].color.toLowerCase() === picked[1].color.toLowerCase();
+  const piecesText = sameColor
+    ? `${picked.map(pieceBase).join(" et ")} en ${picked[0].color!.toLowerCase()}`
+    : picked.map(pieceLabel).join(" et ");
+  return `Avec ${piecesText}, ${closer}`;
 }
