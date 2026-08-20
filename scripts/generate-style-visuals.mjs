@@ -304,11 +304,20 @@ async function main() {
   const mode = args.mode || (args.promote ? "promote" : "generate");
 
   if (mode === "generate") {
+    // --style accepte aussi une liste séparée par des virgules (ex.
+    // "minimaliste,classique_chic,romantique") pour relancer plusieurs
+    // styles d'un même genre en un seul run, sans tout régénérer via --all.
+    const styleList = String(args.style || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const targets = args.all
       ? VISUALS
-      : VISUALS.filter((v) => v.gender === args.gender && v.style === args.style);
+      : VISUALS.filter((v) => v.gender === args.gender && styleList.includes(v.style));
     if (!targets.length) {
-      console.error('Aucune cible. Utilise --all, ou --gender=femme --style=romantique (id exact, ex. "casual_chic").');
+      console.error(
+        'Aucune cible. Utilise --all, ou --gender=femme --style=romantique (un id, ex. "casual_chic"), ou --gender=femme --style=minimaliste,classique_chic,... (plusieurs ids séparés par des virgules).'
+      );
       process.exit(1);
     }
     for (const visual of targets) {
