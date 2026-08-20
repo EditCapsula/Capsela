@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { genderLabel, morphologyLabel, paletteSummary, styleLabel } from "@/lib/profile";
+import { GENDER_DEPENDENT_FIELDS, fieldNeedsRevalidation, genderLabel, morphologyLabel, paletteSummary, styleLabel } from "@/lib/profile";
 import { APP_VERSION } from "@/lib/data";
 
 export default function ProfileScreen() {
@@ -31,6 +31,12 @@ export default function ProfileScreen() {
     actions.goWelcome();
   };
 
+  // Bloc "à compléter" (recette 20/08/2026, mécanique générique de
+  // revalidation) : état calculé à chaque rendu, jamais une alerte au
+  // lancement de l'app — persiste tant qu'aucune valeur valide n'a été
+  // ré-enregistrée pour ce champ.
+  const toRevalidate = GENDER_DEPENDENT_FIELDS.find((f) => fieldNeedsRevalidation(f, profile));
+
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
@@ -55,6 +61,16 @@ export default function ProfileScreen() {
           )}
         </div>
       </div>
+
+      {toRevalidate && (
+        <button
+          onClick={actions.goProfileEdit}
+          className="w-full text-left bg-[#F6EBE2] border border-terracotta rounded-2xl p-4 mt-5 cursor-pointer"
+        >
+          <div className="text-[11px] tracking-[.16em] uppercase text-terracotta">À compléter</div>
+          <div className="text-[13.5px] text-ink mt-[6px]">{toRevalidate.fieldLabel} est à mettre à jour.</div>
+        </button>
+      )}
 
       <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[10px]">Tes infos</div>
       <div className="bg-card border border-border rounded-2xl overflow-hidden">

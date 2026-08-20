@@ -6,11 +6,13 @@ import { useCapsela } from "@/lib/store";
 import {
   GENDERS,
   WORK_DAYS,
+  applyGenderChange,
   genderLabel,
   morphologyLabel,
   paletteSummary,
   styleLabel,
   type Gender,
+  type GenderDependentField,
   type ProfilePrefs,
 } from "@/lib/profile";
 
@@ -53,6 +55,39 @@ function GenderModal({
   );
 }
 
+/**
+ * Invitation immédiate après un changement de genre qui rend une donnée
+ * "à revalider" (recette 20/08/2026, mécanique générique). Bottom sheet
+ * dans le flux du profil — jamais un message technique, jamais le mot
+ * "incompatible", jamais de redirection forcée vers le questionnaire
+ * d'onboarding (seul un clic explicite sur le CTA ouvre l'étape dédiée).
+ */
+function RevalidationSheet({ field, onDismiss, onEdit }: { field: GenderDependentField; onDismiss: () => void; onEdit: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: "rgba(29,26,22,.45)" }}
+      onClick={onDismiss}
+    >
+      <div className="w-full max-w-[440px] bg-cream rounded-t-[22px] px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
+        <div className="font-serif text-[19px] text-ink mb-[8px]">{field.fieldLabel} est à mettre à jour</div>
+        <div className="text-[13px] text-muted leading-[1.5] mb-[20px]">
+          Les propositions évoluent selon ton profil. Choisis celle qui te correspond le mieux aujourd&apos;hui.
+        </div>
+        <button
+          onClick={onEdit}
+          className="w-full bg-terracotta text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+        >
+          {field.ctaLabel}
+        </button>
+        <button onClick={onDismiss} className="mt-[14px] w-full text-center text-[12.5px] text-muted cursor-pointer">
+          Plus tard
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
     <button
@@ -81,17 +116,19 @@ export default function ProfileEditScreen() {
   const setPrefs = (p: Partial<ProfilePrefs>) => saveProfile({ ...profile, prefs: { ...prefs, ...p } });
 
   const [genderModalOpen, setGenderModalOpen] = useState(false);
-  // Tâche 5 (arbitrages 20/08/2026) : la taxonomie morphologique homme n'est
-  // pas activée en P0 — un profil Homme n'a donc jamais de morphologie
-  // pertinente. Au changement vers Homme, on vide une morphologie déclarée
-  // sous l'ancien genre plutôt que de la laisser scorer R-S9 sous une
-  // taxonomie qui ne lui correspond plus. Jamais de conversion
-  // automatique entre taxonomies (cf. règle Tâche 5).
+  const [revalidateField, setRevalidateField] = useState<GenderDependentField | null>(null);
+  // Mécanique générique de revalidation (recette 20/08/2026, branchée sur
+  // la morphologie) : applyGenderChange efface silencieusement les champs
+  // non applicables au nouveau genre (ex. morphologie côté Homme, taxonomie
+  // non activée — jamais de modale pour un champ sans aucun écran de
+  // resaisie, cf. Tâche 4) et ne renvoie un champ à revalider que s'il
+  // reste une vraie valeur incompatible parmi de vraies valeurs possibles.
   const changeGender = (g: Gender) => {
     setGenderModalOpen(false);
     if (g === profile.gender) return;
-    const clearMorphology = g === "homme" && !!profile.morphology;
-    saveProfile({ ...profile, gender: g, morphology: clearMorphology ? null : profile.morphology });
+    const { patch, revalidate } = applyGenderChange(profile, g);
+    saveProfile({ ...profile, ...patch });
+    if (revalidate) setRevalidateField(revalidate);
   };
 
   const [nameDraft, setNameDraft] = useState(profile.displayName);
@@ -327,6 +364,16 @@ export default function ProfileEditScreen() {
 
       {genderModalOpen && (
         <GenderModal current={profile.gender} onSelect={changeGender} onClose={() => setGenderModalOpen(false)} />
+      )}
+      {revalidateField && (
+        <RevalidationSheet
+          field={revalidateField}
+          onDismiss={() => setRevalidateField(null)}
+          onEdit={() => {
+            setRevalidateField(null);
+            actions.goProfileSetup(revalidateField.key === "morphology" ? "morpho" : "style", true);
+          }}
+        />
       )}
     </div>
   );

@@ -234,6 +234,84 @@ export const MORPHO_HINTS: Record<string, string> = {
   f_pomme: "Le buste, la taille et les hanches suivent une même largeur généreuse, sans creux marqué.",
 };
 
+/**
+ * Champs dont les valeurs valides dépendent du genre — mécanique
+ * générique de revalidation (recette 20/08/2026). Branché sur la
+ * morphologie pour l'instant ; le style s'y branchera si le scénario
+ * "7 cartes" (moins de styles proposés côté Homme) est retenu — pour
+ * l'instant les deux genres partagent les 8 mêmes StyleId, donc
+ * `valuesFor` ne rendrait jamais aucune valeur invalide.
+ *
+ * État "à revalider" CALCULÉ, jamais stocké : dérivé de
+ * valeur_stockée ∉ valeurs_autorisées(genre_courant) à chaque lecture,
+ * jamais une colonne booléenne (source de désynchronisation à chaque
+ * écriture qui oublierait de la mettre à jour).
+ *
+ * Cas particulier — `valuesFor(genre)` vide : le champ n'a AUCUNE valeur
+ * possible pour ce genre (morphologie côté Homme, taxonomie non activée
+ * en P0, Tâche 4), ce n'est pas juste "à revalider avec un mauvais choix
+ * actuel". Traité comme NON APPLICABLE : effacé silencieusement au
+ * changement de genre, jamais de modale ni de bloc "à compléter" — il
+ * n'existe aucun écran de resaisie pour ce genre, en proposer un
+ * violerait la Tâche 4 ("aucun écran, rien n'indique qu'une étape a été
+ * retirée pour Homme").
+ */
+export interface GenderDependentField {
+  key: string;
+  /** Utilisé dans la modale d'invitation et le bloc "à compléter". */
+  fieldLabel: string;
+  ctaLabel: string;
+  get: (p: Profile) => string | null;
+  clear: () => Partial<Profile>;
+  valuesFor: (gender: Gender | null) => readonly string[];
+}
+
+export const GENDER_DEPENDENT_FIELDS: GenderDependentField[] = [
+  {
+    key: "morphology",
+    fieldLabel: "Ta silhouette",
+    ctaLabel: "ENREGISTRER MA MORPHOLOGIE",
+    get: (p) => p.morphology,
+    clear: () => ({ morphology: null }),
+    valuesFor: (g) => (g === "femme" ? MORPHOLOGIES : []),
+  },
+];
+
+/** Le champ a de vraies valeurs possibles pour ce genre, et la valeur stockée n'en fait pas partie. */
+export function fieldNeedsRevalidation(field: GenderDependentField, profile: Profile): boolean {
+  const value = field.get(profile);
+  if (!value) return false;
+  const allowed = field.valuesFor(profile.gender);
+  return allowed.length > 0 && !allowed.includes(value);
+}
+
+/** Le champ n'a aucune valeur possible pour ce genre (feature non activée) — à effacer silencieusement, jamais à revalider. */
+export function fieldNotApplicable(field: GenderDependentField, profile: Profile): boolean {
+  return !!field.get(profile) && field.valuesFor(profile.gender).length === 0;
+}
+
+export function profileNeedsRevalidation(profile: Profile): boolean {
+  return GENDER_DEPENDENT_FIELDS.some((f) => fieldNeedsRevalidation(f, profile));
+}
+
+/**
+ * À appliquer au changement de genre : (a) efface silencieusement les
+ * champs non applicables au nouveau genre, (b) retourne le premier champ
+ * qui reste "à revalider" après cet effacement (valeurs possibles non
+ * vides, valeur stockée hors de cet ensemble) pour déclencher l'invitation
+ * immédiate — ou `null` si rien à revalider.
+ */
+export function applyGenderChange(profile: Profile, gender: Gender): { patch: Partial<Profile>; revalidate: GenderDependentField | null } {
+  let patch: Partial<Profile> = { gender };
+  const next = { ...profile, gender };
+  GENDER_DEPENDENT_FIELDS.forEach((f) => {
+    if (fieldNotApplicable(f, next)) patch = { ...patch, ...f.clear() };
+  });
+  const after = { ...next, ...patch };
+  const revalidate = GENDER_DEPENDENT_FIELDS.find((f) => fieldNeedsRevalidation(f, after)) ?? null;
+  return { patch, revalidate };
+}
+
 /** Plage élargie au-delà du standard S–XL jusqu'aux grandes tailles (recette 13/08/2026). */
 export const TAILLES_HAUT = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"];
 export const TAILLES_BAS = ["34", "36", "38", "40", "42", "44", "46", "48", "50", "52", "54", "56"];
