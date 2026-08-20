@@ -86,12 +86,14 @@ function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties 
         top: top + "%",
         width: w + "%",
         height: h + "%",
-        // Couleur toujours posée en repli (recette 20/08/2026, correctif) —
-        // même quand une image est disponible : si son chargement échoue
-        // pour une raison quelconque, la pièce reste visible au lieu de
-        // devenir invisible (backgroundImage se pose simplement par-dessus
-        // backgroundColor quand il charge, jamais de conflit entre les deux).
-        backgroundColor: it.hex,
+        // Repli neutre quand une image est disponible (correctif 20/08/2026) —
+        // pas la couleur de la pièce elle-même : un pantalon noir sur repli
+        // noir devenait illisible dès que la photo (fond transparent) se
+        // superposait à son propre aplat. Même beige neutre que les
+        // miniatures "Comment porter cette pièce" (#F3EDE1). La couleur de
+        // la pièce ne sert de repli que quand il n'y a vraiment aucune image
+        // (mêmes teintes que la card, réservé à ce cas).
+        backgroundColor: hasImg ? "#F3EDE1" : it.hex,
         backgroundImage: hasImg ? `url(${img.url})` : undefined,
         backgroundSize: "contain",
         backgroundRepeat: "no-repeat",

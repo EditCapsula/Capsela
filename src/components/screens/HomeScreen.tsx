@@ -101,10 +101,12 @@ function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSPropert
         top: top + "%",
         width: w + "%",
         height: h + "%",
-        // Couleur toujours posée en repli (recette 20/08/2026, correctif) —
-        // même quand une image est disponible, pour ne jamais rendre une
-        // pièce invisible si son chargement échoue.
-        backgroundColor: it.hex,
+        // Repli neutre quand une image est disponible (correctif 20/08/2026) —
+        // pas la couleur de la pièce elle-même : un pantalon noir sur repli
+        // noir devenait illisible dès que la photo (fond transparent) se
+        // superposait à son propre aplat. La couleur de la pièce ne sert de
+        // repli que quand il n'y a vraiment aucune image.
+        backgroundColor: hasImg ? "#F3EDE1" : it.hex,
         backgroundImage: hasImg ? `url(${img.url})` : undefined,
         backgroundSize: "contain",
         backgroundRepeat: "no-repeat",
