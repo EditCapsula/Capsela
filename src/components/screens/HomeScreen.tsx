@@ -66,21 +66,24 @@ function homeRoleOf(cat: CategoryKey): HomeRole {
   return "petit";
 }
 
-// Slots en % relatifs au cluster central (lui-même à 76% de la largeur de
-// la card, cf. JSX) — pièce dominante large, bas juste dessous en léger
-// décalage, chaussures en bas, sac/accessoire petits de part et d'autre.
+// Slots en % relatifs au cluster central (lui-même à 82% de la largeur de
+// la card, cf. JSX) — composition éditoriale (recette 20/08/2026, passe
+// affinage) : chemise/pantalon grands et proches sans être empilés (léger
+// chevauchement en coin seulement, jamais la chemise masquée), chaussures
+// décalées en bas à gauche plutôt que nichées sous le pantalon, accessoire
+// nettement plus petit sur le côté — asymétrique, pas une grille.
 const HOME_SLOTS_ONEPIECE: Record<string, [number, number, number, number]> = {
-  onepiece: [22, 0, 46, 84],
-  chaussures: [38, 80, 28, 20],
-  sac: [0, 38, 26, 32],
-  petit: [80, 42, 20, 20],
+  onepiece: [8, 0, 52, 82],
+  chaussures: [4, 80, 32, 20],
+  sac: [64, 6, 30, 34],
+  petit: [72, 60, 20, 16],
 };
 const HOME_SLOTS_STANDARD: Record<string, [number, number, number, number]> = {
-  haut: [24, 0, 42, 48],
-  bas: [32, 42, 42, 50],
-  chaussures: [40, 78, 30, 22],
-  sac: [0, 44, 28, 34],
-  petit: [80, 46, 20, 20],
+  haut: [4, 0, 50, 44],
+  bas: [32, 38, 56, 56],
+  chaussures: [2, 80, 34, 20],
+  sac: [0, 44, 26, 30],
+  petit: [76, 60, 20, 16],
 };
 
 function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSProperties }[] {
@@ -101,17 +104,16 @@ function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSPropert
         top: top + "%",
         width: w + "%",
         height: h + "%",
-        // Repli neutre quand une image est disponible (correctif 20/08/2026) —
-        // pas la couleur de la pièce elle-même : un pantalon noir sur repli
-        // noir devenait illisible dès que la photo (fond transparent) se
-        // superposait à son propre aplat. Semi-transparent (pas le même
-        // beige plein que "Comment porter cette pièce ?", correctif suivant
-        // le même jour) : sur le fond terracotta de la card héros, un aplat
-        // beige opaque ressortait comme un rectangle disjoint — la version
-        // semi-transparente se fond dans la card tout en gardant assez de
-        // clarté pour qu'un vêtement noir reste lisible. La couleur de la
-        // pièce ne sert de repli que quand il n'y a vraiment aucune image.
-        backgroundColor: hasImg ? "rgba(243,238,229,.55)" : it.hex,
+        // Aucun fond propre par pièce quand une image existe (recette
+        // 20/08/2026, passe éditoriale) — un aplat CSS derrière chaque photo
+        // (même semi-transparent) créait un effet "collage de vignettes
+        // e-commerce" : chaque fichier produit porte déjà son propre fond
+        // (blanc/beige) s'il en a un, jamais besoin d'en superposer un
+        // second. Le seul vrai contenant visuel est le cadre global (cf.
+        // JSX, rgba(243,238,229,.14)). La couleur de la pièce ne sert de
+        // repli que quand il n'y a vraiment aucune image, pour ne jamais
+        // rendre une pièce invisible.
+        backgroundColor: hasImg ? undefined : it.hex,
         backgroundImage: hasImg ? `url(${img.url})` : undefined,
         backgroundSize: "contain",
         backgroundRepeat: "no-repeat",
@@ -242,10 +244,11 @@ export default function HomeScreen() {
               height: 148,
             }}
           >
-            {/* Cluster central à 76% de largeur (brief composition 20/08/2026)
-                — laisse de l'air de part et d'autre plutôt que de remplir
-                toute la largeur de la card. */}
-            <div style={{ position: "relative", width: "76%", height: "100%", margin: "0 auto" }}>
+            {/* Cluster central à 82% de largeur (brief composition 20/08/2026,
+                passe éditoriale) — utilise davantage la largeur disponible
+                que la première passe (76%), tout en gardant un peu d'air de
+                part et d'autre plutôt que de remplir toute la card. */}
+            <div style={{ position: "relative", width: "82%", height: "100%", margin: "0 auto" }}>
               {homeCompositionPiecesOf(outfitPieces).map((p) => (
                 <div key={"home-comp-" + p.id} style={p.style} />
               ))}
