@@ -8,13 +8,11 @@ import {
   AFFINITE_OPTIONS,
   GENDERS,
   INTENSITE_OPTIONS,
-  MAX_PALETTE_ACCENTS,
-  MAX_PALETTE_NEUTRES,
+  MAX_PALETTE_COULEURS,
+  MIN_PALETTE_COULEURS,
   MORPHOLOGIES,
   MORPHO_HINTS,
-  PAL_ACCENTS,
-  PAL_BASE,
-  PAL_NEUTRES,
+  PAL_COULEURS,
   STYLE_OPTIONS,
   TAILLES_HAUT,
   paletteColorName,
@@ -27,9 +25,7 @@ import {
 
 const STEPS = [
   { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
-  { key: "pal_base", kicker: "Ta palette", title: "Quelle est ta couleur de base ?", subtitle: "Celle qui revient le plus souvent dans tes tenues. Un seul choix." },
-  { key: "pal_neutres", kicker: "Ta palette", title: "Quelles teintes aimes-tu y associer ?", subtitle: "Jusqu’à 3 neutres qui s’accordent avec ta base." },
-  { key: "pal_accents", kicker: "Ta palette", title: "Et pour donner du caractère ?", subtitle: "Jusqu’à 3 couleurs d’accent — celles qui réveillent une tenue." },
+  { key: "pal_couleurs", kicker: "Ta palette", title: "Quelles couleurs aimes-tu porter ?", subtitle: "De 1 à 6 couleurs — celles qui reviennent le plus souvent dans tes tenues." },
   { key: "pal_ressenti", kicker: "Ta palette", title: "Deux précisions rapides", subtitle: "Elles affinent nos suggestions, sans jamais écarter une couleur que tu as choisie." },
   { key: "pal_recap", kicker: "Ta palette", title: "Voilà ta palette", subtitle: "Tu pourras la retoucher quand tu veux depuis ton profil." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
@@ -132,15 +128,10 @@ export default function ProfileSetupScreen() {
 
   const patch = (p: Partial<Profile>) => setDraft((d) => ({ ...d, ...p }));
 
-  const toggleNeutre = (hex: string) => {
-    const cur = draft.paletteNeutres;
-    if (cur.includes(hex)) return patch({ paletteNeutres: cur.filter((x) => x !== hex) });
-    patch({ paletteNeutres: cur.length >= MAX_PALETTE_NEUTRES ? [...cur.slice(1), hex] : [...cur, hex] });
-  };
-  const toggleAccent = (hex: string) => {
-    const cur = draft.paletteAccents;
-    if (cur.includes(hex)) return patch({ paletteAccents: cur.filter((x) => x !== hex) });
-    patch({ paletteAccents: cur.length >= MAX_PALETTE_ACCENTS ? [...cur.slice(1), hex] : [...cur, hex] });
+  const toggleCouleur = (hex: string) => {
+    const cur = draft.paletteCouleurs;
+    if (cur.includes(hex)) return patch({ paletteCouleurs: cur.filter((x) => x !== hex) });
+    patch({ paletteCouleurs: cur.length >= MAX_PALETTE_COULEURS ? [...cur.slice(1), hex] : [...cur, hex] });
   };
   // Multi-sélection (recette 20/08/2026) — draft.styles était déjà un
   // tableau côté state/Supabase (profiles.styles text[]), seule l'ancienne
@@ -168,25 +159,18 @@ export default function ProfileSetupScreen() {
 
   const meta = STEPS[step];
   const taillesBas = taillesBasFor(draft.gender);
-  // Seule l'étape style exige une sélection non vide (recette 20/08/2026) —
-  // les autres étapes gardent leur comportement existant, jamais bloquant.
-  const canContinue = meta.key !== "style" || draft.styles.length > 0;
+  // Seules les étapes style et palette exigent une sélection non vide
+  // (styles : recette 20/08/2026 ; palette : Tâche 8, min 1 couleur) — les
+  // autres étapes gardent leur comportement existant, jamais bloquant.
+  const canContinue =
+    (meta.key !== "style" || draft.styles.length > 0) &&
+    (meta.key !== "pal_couleurs" || draft.paletteCouleurs.length >= MIN_PALETTE_COULEURS);
 
   const recapRows = [
     {
-      label: "Base",
-      value: draft.paletteBase ? paletteColorName(draft.paletteBase) || "à choisir" : "à choisir",
-      swatches: draft.paletteBase ? [draft.paletteBase] : [],
-    },
-    {
-      label: "Neutres",
-      value: draft.paletteNeutres.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
-      swatches: draft.paletteNeutres,
-    },
-    {
-      label: "Accents",
-      value: draft.paletteAccents.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
-      swatches: draft.paletteAccents,
+      label: "Couleurs",
+      value: draft.paletteCouleurs.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
+      swatches: draft.paletteCouleurs,
     },
     { label: "Affinité", value: draft.paletteAffinite || "non précisée", swatches: [] as string[] },
     { label: "Intensité", value: draft.paletteIntensite || "non précisée", swatches: [] as string[] },
@@ -242,20 +226,8 @@ export default function ProfileSetupScreen() {
         </div>
       )}
 
-      {meta.key === "pal_base" && (
-        <PaletteDots
-          options={PAL_BASE}
-          selected={draft.paletteBase ? [draft.paletteBase] : []}
-          onSelect={(hex) => patch({ paletteBase: hex })}
-        />
-      )}
-
-      {meta.key === "pal_neutres" && (
-        <PaletteDots options={PAL_NEUTRES} selected={draft.paletteNeutres} onSelect={toggleNeutre} />
-      )}
-
-      {meta.key === "pal_accents" && (
-        <PaletteDots options={PAL_ACCENTS} selected={draft.paletteAccents} onSelect={toggleAccent} />
+      {meta.key === "pal_couleurs" && (
+        <PaletteDots options={PAL_COULEURS} selected={draft.paletteCouleurs} onSelect={toggleCouleur} />
       )}
 
       {meta.key === "pal_ressenti" && (

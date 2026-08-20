@@ -17,10 +17,8 @@ export interface Profile {
   displayName: string;
   birthdate: string | null;
   gender: Gender | null;
-  /** Palette personnelle (remplace l'ancien choix simple de 3 couleurs, recette 12/08/2026). */
-  paletteBase: string | null;
-  paletteNeutres: string[];
-  paletteAccents: string[];
+  /** Palette personnelle (recette 12/08/2026, champ unique depuis le 20/08/2026 — fusion base/neutres/accents, Tâche 8). */
+  paletteCouleurs: string[];
   paletteAffinite: Affinite | null;
   paletteIntensite: Intensite | null;
   tailleHaut: string | null;
@@ -48,9 +46,7 @@ export const EMPTY_PROFILE: Profile = {
   displayName: "",
   birthdate: null,
   gender: null,
-  paletteBase: null,
-  paletteNeutres: [],
-  paletteAccents: [],
+  paletteCouleurs: [],
   paletteAffinite: null,
   paletteIntensite: null,
   tailleHaut: null,
@@ -73,25 +69,26 @@ export function genderLabel(g: Gender | null): string {
   return GENDERS.find((x) => x.key === g)?.label ?? "";
 }
 
-/** Palette personnelle — construction guidée en 3 étapes (recette 12/08/2026, section 27). */
-export const PAL_BASE: [string, string][] = [
+/**
+ * Palette personnelle — un seul champ multi-sélection (Tâche 8, arbitrages
+ * du 20/08/2026 : fusion de PAL_BASE/PAL_NEUTRES/PAL_ACCENTS, qui n'étaient
+ * déjà distingués par aucune logique en aval). Ordre conservé (neutres
+ * sombres → neutres clairs → couleurs vives) pour une progression lisible
+ * dans la grille ; dédupliqué (« Gris » #8E8B85 existait dans deux listes).
+ */
+export const PAL_COULEURS: [string, string][] = [
   ["Noir", "#2A2724"],
   ["Marine", "#3A4152"],
   ["Gris", "#8E8B85"],
   ["Chocolat", "#5A4436"],
   ["Blanc / écru", "#EDE4D6"],
-];
-export const PAL_NEUTRES: [string, string][] = [
   ["Blanc", "#F7F4EE"],
   ["Crème", "#E7DCC8"],
   ["Sable", "#DCCFBC"],
   ["Beige", "#CDBBA2"],
   ["Taupe", "#A8967C"],
   ["Camel", "#C08A5E"],
-  ["Gris", "#8E8B85"],
   ["Kaki", "#6E7358"],
-];
-export const PAL_ACCENTS: [string, string][] = [
   ["Terracotta", "#A66950"],
   ["Bordeaux", "#6E3B3A"],
   ["Prune", "#5B3A4A"],
@@ -102,40 +99,26 @@ export const PAL_ACCENTS: [string, string][] = [
   ["Vert bouteille", "#3C5347"],
   ["Bleu", "#4A6280"],
 ];
-export const MAX_PALETTE_NEUTRES = 3;
-export const MAX_PALETTE_ACCENTS = 3;
+export const MIN_PALETTE_COULEURS = 1;
+export const MAX_PALETTE_COULEURS = 6;
 
 export const AFFINITE_OPTIONS: Affinite[] = ["Tons chauds", "Tons froids", "Les deux", "Je ne sais pas"];
 export const INTENSITE_OPTIONS: Intensite[] = ["Douces et discrètes", "Profondes et intenses", "Lumineuses", "Un mélange"];
 
-/** Cherche le nom d'une teinte hex dans les 3 listes de la palette personnelle. */
+/** Cherche le nom d'une teinte hex dans la palette personnelle. */
 export function paletteColorName(hex: string): string | null {
-  return (
-    PAL_BASE.find(([, h]) => h === hex)?.[0] ??
-    PAL_NEUTRES.find(([, h]) => h === hex)?.[0] ??
-    PAL_ACCENTS.find(([, h]) => h === hex)?.[0] ??
-    null
-  );
+  return PAL_COULEURS.find(([, h]) => h === hex)?.[0] ?? null;
 }
 
-/** Toutes les teintes de la palette personnelle, à plat — alimente R-S10 et la préférence de sélection à la génération. */
+/** Toutes les teintes de la palette personnelle — alimente R-S10 et la préférence de sélection à la génération. */
 export function paletteHexes(profile: Profile): string[] {
-  return [profile.paletteBase, ...profile.paletteNeutres, ...profile.paletteAccents].filter(
-    (x): x is string => Boolean(x)
-  );
+  return profile.paletteCouleurs.filter((x): x is string => Boolean(x));
 }
 
-/** Résumé affichable de la palette personnelle : "Base : X · Neutres : Y, Z · Accents : ...". */
+/** Résumé affichable de la palette personnelle : "Couleurs : X, Y, Z". */
 export function paletteSummary(profile: Profile): string {
-  const parts: string[] = [];
-  if (profile.paletteBase) parts.push("Base : " + paletteColorName(profile.paletteBase));
-  if (profile.paletteNeutres.length) {
-    parts.push("Neutres : " + profile.paletteNeutres.map(paletteColorName).filter(Boolean).join(", "));
-  }
-  if (profile.paletteAccents.length) {
-    parts.push("Accents : " + profile.paletteAccents.map(paletteColorName).filter(Boolean).join(", "));
-  }
-  return parts.join(" · ") || "Non renseignée";
+  if (!profile.paletteCouleurs.length) return "Non renseignée";
+  return "Couleurs : " + profile.paletteCouleurs.map(paletteColorName).filter(Boolean).join(", ");
 }
 
 export const STYLE_OPTIONS = [
