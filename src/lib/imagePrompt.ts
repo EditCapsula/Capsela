@@ -252,8 +252,8 @@ const CATEGORY_EXCLUDE: Record<string, string[]> = {
 /** Mots attendus dans le nom du produit pour chaque catégorie — sert à la validation de cohérence avant l'appel API. */
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
   haut: ["top", "shirt", "blouse", "tank top", "turtleneck", "polo", "sweatshirt"],
-  pull: ["sweater", "cardigan"],
-  pantalon: ["trousers", "pants"],
+  pull: ["sweater", "cardigan", "sweatshirt"],
+  pantalon: ["trousers", "pants", "leggings"],
   jean: ["jeans"],
   jupe: ["skirt"],
   short: ["shorts"],

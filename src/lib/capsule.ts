@@ -1,5 +1,5 @@
 import { CATALOG, type CatalogItem } from "./catalog";
-import { intensiteOf, tonsOf } from "./attributes";
+import { formalityOf, intensiteOf, tonsOf } from "./attributes";
 import { isSunny, type Weather } from "./data";
 import { paletteHexes, type Affinite, type Intensite, type Profile } from "./profile";
 import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, Season, Tons } from "./types";
@@ -220,6 +220,26 @@ export function computeDefaultCapsule(
     const pickFrom = fav.length ? fav : pool;
     if (pickFrom.length) out = [...out, pickFrom[0]];
   }
+
+  // Garantit une base Sport complète — haut, bas et chaussures de
+  // formalité 0 (recette 20/08/2026) : le plafond de 34 pièces + le tri par
+  // "basique"/morphologie pouvait exclure les pièces sport (rarement taguées
+  // est_basique_capsule) alors que ensure() ci-dessus se contente d'"au
+  // moins un haut/une chaussure", sans exiger qu'ils soient sport-compatibles
+  // — un haut habillé suffisait à satisfaire cette garde, laissant l'occasion
+  // Sport sans aucune tenue complète possible (R-B11, formalité stricte).
+  const ensureSport = (cats: CategoryKey[]) => {
+    if (out.some((it) => cats.includes(it.cat) && formalityOf(it) === 0)) return;
+    const pool = sourcePool.filter(
+      (it) => cats.includes(it.cat) && formalityOf(it) === 0 && !excluded.has(it.id) && (isSunny(weather) || !it.necessiteSoleil)
+    );
+    const fav = pool.filter((it) => favColors.includes(it.hex));
+    const pickFrom = fav.length ? fav : pool;
+    if (pickFrom.length) out = [...out, pickFrom[0]];
+  };
+  ensureSport(["haut", "pull"]);
+  ensureSport(["pantalon", "jean", "short"]);
+  ensureSport(["chaussures"]);
 
   return out;
 }
