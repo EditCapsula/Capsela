@@ -242,6 +242,11 @@ export function isSunny(weather: Weather): boolean {
   return /soleil/i.test(weather.label);
 }
 
+/** Météo pluvieuse — R-B16 (préférence pour une veste/un manteau resiste_pluie quand il pleut). */
+export function isRainy(weather: Weather): boolean {
+  return /pluie|orage/i.test(weather.label);
+}
+
 export function isBag(it: { cat?: CategoryKey; name: string }): boolean {
   return it.cat === "sac" || /\bsac\b/i.test(it.name);
 }

@@ -47,8 +47,11 @@ import type { CategoryKey, Coupe, ImageSource, ImageStatus, IntensiteCouleur, Ma
  *   meteoMaxTemp — exclut la pièce des tenues générées si la température du
  *   jour est hors de cette plage (toutes catégories, contrairement à R-B3
  *   qui ne concerne que le vêtement). Absent = jamais filtré sur ce critère.
- * - `couleur_secondaire`, `resiste_pluie` : pas encore exploités côté app —
- *   lus mais ignorés pour l'instant.
+ * - `resiste_pluie` (boolean) : mappé sur Item.resistePluie — R-B16 (recette
+ *   20/08/2026), préférence molle jamais exclusive pour une veste/un manteau
+ *   qui y résiste quand la météo du jour est pluvieuse (label contenant
+ *   "pluie" ou "orage").
+ * - `couleur_secondaire` : pas encore exploité côté app — lu mais ignoré.
  * - `url_image` : mappé sur Item.imageUrl — photo produit du catalogue
  *   (posée manuellement ou générée automatiquement, cf. image_source),
  *   jamais pour une pièce du dressing réel. `image_status`/`image_source`/
@@ -298,6 +301,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     paletteRole: mapPaletteRole(row.role_couleur_palette),
     affLink: row.lien_affiliation || undefined,
     necessiteSoleil: mapNecessiteSoleil(row.necessite_soleil),
+    resistePluie: row.resiste_pluie ?? undefined,
     meteoMinTemp: row.meteo_min_temp ?? undefined,
     meteoMaxTemp: row.meteo_max_temp ?? undefined,
     imageUrl: row.url_image || undefined,

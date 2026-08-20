@@ -124,6 +124,8 @@ export interface Item {
   paletteRole?: "base" | "neutre" | "accent";
   /** true si la pièce ne doit être suggérée que par temps ensoleillé (ex. lunettes de soleil, source : vestiaire_universel) — R-B15, jamais bloquant pour une catégorie essentielle. */
   necessiteSoleil?: boolean;
+  /** true si la veste/le manteau résiste à la pluie (source : vestiaire_universel, colonne resiste_pluie) — R-B16, préférence molle jamais exclusive : ne fait que privilégier ce choix quand il pleut. */
+  resistePluie?: boolean;
   /** Plage de température (°C) dans laquelle la pièce est adaptée (source : vestiaire_universel) — exclue si la météo du jour est hors plage, quelle que soit la catégorie. */
   meteoMinTemp?: number;
   meteoMaxTemp?: number;

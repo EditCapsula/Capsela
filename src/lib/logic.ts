@@ -1,6 +1,6 @@
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, CATLABEL, OCCASIONS, effectiveFormality, isSunny } from "./data";
+import { BAS_CATS, CATLABEL, OCCASIONS, effectiveFormality, isRainy, isSunny } from "./data";
 import { morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
@@ -394,7 +394,15 @@ export function generateOutfit(
 
   const chosen: Item[] = [];
   const pick = (cats: CategoryKey[], essential = true) => {
-    const base = poolFor(cats).filter((i) => cats.includes(i.cat));
+    let base = poolFor(cats).filter((i) => cats.includes(i.cat));
+    // Préférence pluie (R-B16, recette 20/08/2026) — n'écarte rien, juste une
+    // inclination pour une veste/un manteau qui résiste à la pluie quand il
+    // pleut, seulement si ça laisse au moins une option (même esprit que
+    // R-S10 ci-dessous, jamais de catégorie essentielle bloquée).
+    if (isRainy(weather) && cats.some((c) => OUTERWEAR_CATS.includes(c))) {
+      const rainResistant = base.filter((i) => i.resistePluie);
+      if (rainResistant.length) base = rainResistant;
+    }
     // Préférence pour la palette personnelle — n'écarte rien, juste une inclination
     // quand elle laisse assez d'options (R-S10, esprit "préférence molle, jamais exclusive").
     const preferred = preferredHexes.length ? base.filter((i) => preferredHexes.includes(i.hex)) : [];
@@ -595,6 +603,12 @@ export function swapOutfitPiece(
   // R-B15 — symétrique du filtre appliqué dans generateOutfit.
   if (weather && !isSunny(weather)) {
     candidates = candidates.filter((i) => !i.necessiteSoleil);
+  }
+  // R-B16 — symétrique de la préférence pluie appliquée dans generateOutfit,
+  // molle jamais exclusive : ne filtre que s'il reste au moins une option.
+  if (weather && isRainy(weather) && OUTERWEAR_CATS.includes(cat)) {
+    const rainResistant = candidates.filter((i) => i.resistePluie);
+    if (rainResistant.length) candidates = rainResistant;
   }
   // Plage de température — symétrique du filtre appliqué dans generateOutfit.
   if (weather) {
