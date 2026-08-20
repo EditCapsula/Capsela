@@ -114,17 +114,25 @@ export default function WardrobeScreen() {
         <span className="text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
           Mes looks <span className="text-placeholder font-normal">({state.savedLooks.length})</span>
         </span>
-        <button onClick={actions.goCreateLook} className="text-[12.5px] text-terracotta cursor-pointer">
-          + Créer un look
-        </button>
+        {state.savedLooks.length > 0 && (
+          <button onClick={actions.goCreateLook} className="text-[12.5px] text-terracotta cursor-pointer">
+            + Créer un look
+          </button>
+        )}
       </div>
       {state.savedLooks.length === 0 ? (
-        <button
-          onClick={actions.goCreateLook}
-          className="w-full flex items-center justify-center gap-[9px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card rounded-[14px] py-4 text-[13px] tracking-[.06em] text-ink cursor-pointer"
-        >
-          <span className="text-[17px] text-terracotta">+</span> Compose ton premier look
-        </button>
+        <div>
+          {/* Simplification CTA d'ajout (recette 20/08/2026) : un seul message explicatif, un seul bouton — plus de bloc "+ Ajouter une pièce" redondant en bas de page. */}
+          <div className="text-[12.5px] text-muted leading-[1.5] mb-[12px]">
+            Tes looks apparaîtront ici lorsque tu commenceras à composer tes tenues.
+          </div>
+          <button
+            onClick={actions.goCreateLook}
+            className="w-full flex items-center justify-center gap-[9px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card rounded-[14px] py-4 text-[13px] tracking-[.06em] text-ink cursor-pointer"
+          >
+            <span className="text-[17px] text-terracotta">+</span> Composer mon premier look
+          </button>
+        </div>
       ) : (
         <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
           {state.savedLooks.map((look) => {
@@ -155,12 +163,6 @@ export default function WardrobeScreen() {
         </div>
       )}
 
-      <button
-        onClick={actions.openAdd}
-        className="mt-4 w-full flex items-center justify-center gap-[9px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card rounded-[14px] py-4 text-[13px] tracking-[.06em] text-ink cursor-pointer"
-      >
-        <span className="text-[17px] text-terracotta">+</span> Ajouter une pièce
-      </button>
       <button
         onClick={actions.goTenues}
         className="mt-[22px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"

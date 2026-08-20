@@ -83,8 +83,30 @@ export default function CapsuleScreen() {
         </div>
       </div>
 
+      {/* Navigation rapide par catégorie (recette 20/08/2026) — défilement vers la section correspondante, jamais de filtrage qui masquerait le reste de la capsule. */}
+      {groups.length > 1 && (
+        <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-4">
+          <button
+            onClick={() => document.getElementById("capsule-top")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="flex-none py-[8px] px-[13px] rounded-full text-[12px] cursor-pointer border whitespace-nowrap bg-terracotta text-cream border-terracotta"
+          >
+            Tout
+          </button>
+          {groups.map((g) => (
+            <button
+              key={g.key}
+              onClick={() => document.getElementById("capsule-cat-" + g.key)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              className="flex-none py-[8px] px-[13px] rounded-full text-[12px] cursor-pointer border whitespace-nowrap bg-card text-ink border-border"
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div id="capsule-top" />
+
       {groups.map((g) => (
-        <div key={g.key}>
+        <div key={g.key} id={"capsule-cat-" + g.key}>
           <div className="mt-6 mb-3 text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
             {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
           </div>

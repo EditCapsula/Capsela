@@ -33,14 +33,19 @@ const HOME_COMPOSITION_PRIORITY: CategoryKey[] = [
 ];
 
 function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSProperties }[] {
+  // Jusqu'à 5 pièces selon la tenue disponible (recette 20/08/2026, brief
+  // UX/UI) — réparties à largeur égale plutôt qu'à décalage fixe (qui ne
+  // fonctionnait que pour exactement 3 pièces et débordait au-delà).
   const main = [...items]
     .sort((a, b) => HOME_COMPOSITION_PRIORITY.indexOf(a.cat) - HOME_COMPOSITION_PRIORITY.indexOf(b.cat))
-    .slice(0, 3);
+    .slice(0, 5);
+  const n = main.length;
+  const slot = 100 / n;
   return main.map((it, i) => {
-    const w = 26 - i * 2;
-    const left = 6 + i * 30;
+    const w = slot - 4;
+    const left = i * slot + 2;
     const top = 8 + (i % 2) * 14;
-    const height = 76 - i * 6;
+    const height = 76 - (i % 2) * 14;
     const img = resolveItemImage(it);
     const hasImg = Boolean(img.url);
     return {
