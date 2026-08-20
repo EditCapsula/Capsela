@@ -152,8 +152,8 @@ const VISUALS = [
     gender: "femme",
     style: "boheme",
     label: "Bohème",
-    items: "a heavily textured woven blouse, flowing trousers or a long skirt in a raw natural fabric, a hand-knit light layer, leather sandals, a soft woven bag, organic-shaped jewelry",
-    extra: "Color palette: ecru, camel, olive, brown, terracotta, sand — warm earthy tones only. Strongly emphasize raw, visible natural textures: nubby linen weave, rough suede or leather grain, hand-knit texture, woven straw — a tactile, handcrafted, earthy feel. Distinctly warmer and more textured than Romantique — no pastel tones, no lace, no delicate sheer fabrics. No festival styling, no caricatural hippie look, no accumulated fringe.",
+    items: "a flowing linen blouse with a subtle crochet trim detail, wide-leg linen or cotton trousers or a flowing skirt, a light natural-fiber knit layer, natural leather sandals, a woven straw or natural leather bag, one organic-shaped jewelry piece as a focal point",
+    extra: "Color palette: ecru as the dominant base tone, with terracotta and olive as clear accent colors — avoid an all-beige, all-camel, all-brown monochrome look, the palette must read as ecru + terracotta + olive, not a single earth tone. Emphasize linen texture, a touch of crochet detail, natural leather grain, and one organic-shaped jewelry piece as a clear focal point. A tactile, contemporary bohemian feel — modern and fresh, not overly rustic. Distinctly warmer and more textured than Romantique — no pastel tones, no lace, no delicate sheer fabrics. No festival styling, no caricatural hippie look, no accumulated fringe.",
   },
   {
     gender: "femme",
@@ -166,8 +166,8 @@ const VISUALS = [
     gender: "femme",
     style: "preppy",
     label: "Preppy",
-    items: "a crisp Oxford shirt, an argyle or cable-knit cardigan, a pleated tartan or plain skirt, penny loafers, a structured bag",
-    extra: "Color palette: navy, cream, camel, burgundy, sky blue. Strong Ivy League / collegiate cues: argyle or cable-knit pattern, tennis-inspired styling, a tartan or plaid accent, crisp Oxford collar. Distinctly more collegiate and pattern-driven than Classique chic. Avoid a literal school-uniform effect.",
+    items: "a crisp Oxford shirt, a cable-knit or twisted-stitch cardigan in a plain color, a straight or subtly pleated skirt or tailored chino trousers, loafers, a structured bag",
+    extra: "Color palette: navy, cream, camel, burgundy, sky blue. Contemporary, adult preppy for 2026 — refined collegiate heritage cues used subtly and sparingly (a hint of texture or trim), polished and wearable, not costume-like. Explicitly avoid an argyle pattern, explicitly avoid tartan or plaid print, explicitly avoid any literal school-uniform or dark-academia costume effect — this must read as modern adult fashion with a preppy sensibility, not a uniform. Distinctly more collegiate-inspired than Classique chic, but through cut and texture, not through pattern.",
   },
   {
     gender: "femme",
