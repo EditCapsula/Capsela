@@ -133,9 +133,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [justSignedUp, setJustSignedUp] = useState(false);
 
-  const loadProfile = useCallback(async (userId: string) => {
-    const { data } = await getSupabase().from("profiles").select("*").eq("id", userId).maybeSingle();
-    setProfile(data ? rowToProfile(data) : EMPTY_PROFILE);
+  const loadProfile = useCallback(async (authUser: User) => {
+    const { data } = await getSupabase().from("profiles").select("*").eq("id", authUser.id).maybeSingle();
+    const loaded = data ? rowToProfile(data) : EMPTY_PROFILE;
+    // Repli sur les métadonnées Supabase Auth (correctif 20/08/2026) — nom et
+    // date de naissance saisis à l'inscription (signUpEmail) ne sont écrits
+    // que dans user_metadata, jamais dans la table profiles (aucune ligne n'y
+    // est créée avant le premier saveProfile, typiquement à la fin du
+    // questionnaire) : sans ce repli, ces deux infos étaient silencieusement
+    // perdues — jamais reportées sur le profil que l'app affiche/enregistre.
+    const meta = authUser.user_metadata as { display_name?: string; birthdate?: string } | undefined;
+    setProfile({
+      ...loaded,
+      displayName: loaded.displayName || meta?.display_name || "",
+      birthdate: loaded.birthdate || meta?.birthdate || null,
+    });
   }, []);
 
   useEffect(() => {
@@ -161,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getUser().then(async ({ data }) => {
       setUser(data.user ?? null);
       if (data.user) {
-        await loadProfile(data.user.id);
+        await loadProfile(data.user);
         setJustSignedUp(readAndClearSignupIntent());
       }
       setReady(true);
@@ -170,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
-        await loadProfile(u.id);
+        await loadProfile(u);
         setJustSignedUp(readAndClearSignupIntent());
       } else {
         setProfile(EMPTY_PROFILE);

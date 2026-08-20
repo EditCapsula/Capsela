@@ -32,6 +32,21 @@ export default function ProfileEditScreen() {
   const prefs = profile.prefs;
   const setPrefs = (p: Partial<ProfilePrefs>) => saveProfile({ ...profile, prefs: { ...prefs, ...p } });
 
+  const [nameDraft, setNameDraft] = useState(profile.displayName);
+  // Le profil se charge de façon asynchrone (Supabase) après le montage —
+  // resynchronise le brouillon si la vraie valeur arrive/change entre-temps
+  // (ajustement pendant le rendu, jamais dans un effet, pour ne jamais
+  // écraser une saisie en cours après le premier chargement).
+  const [lastSeenName, setLastSeenName] = useState(profile.displayName);
+  if (profile.displayName !== lastSeenName) {
+    setLastSeenName(profile.displayName);
+    setNameDraft(profile.displayName);
+  }
+  const commitName = () => {
+    const trimmed = nameDraft.trim();
+    if (trimmed !== profile.displayName) saveProfile({ ...profile, displayName: trimmed });
+  };
+
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,7 +87,13 @@ export default function ProfileEditScreen() {
           Optionnelle. Sans photo, ton avatar reste l&apos;initiale de ton prénom. Elle sert uniquement à
           personnaliser ton profil — jamais partagée, jamais vendue.
         </div>
-        <div className="font-serif text-[30px] text-ink mt-4">{profile.displayName || "Ton nom"}</div>
+        <input
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          onBlur={commitName}
+          placeholder="Ton nom"
+          className="font-serif text-[30px] text-ink mt-4 text-center bg-transparent border-none outline-none w-full placeholder:text-placeholder"
+        />
         <div className="text-[13px] text-muted mt-[6px]">{profile.city}</div>
         {profile.gender && (
           <div className="text-[12px] text-terracotta bg-[#f0e5d6] rounded-full px-[13px] py-[5px] mt-2">
