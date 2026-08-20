@@ -200,6 +200,15 @@ Deno.serve(async (req) => {
   const niveauTendanceRaw = (article.niveau_tendance || "").trim().toLowerCase();
   const niveauTendance = niveauTendanceRaw === "tendance" || niveauTendanceRaw === "intemporel" ? niveauTendanceRaw : "contemporain";
 
+  // Coupe oversize (correctif 20/08/2026) — seule coupe qui change vraiment
+  // la silhouette (cf. computeVisualKey). Portée par une colonne dédiée sur
+  // visual_assets (pas seulement par le suffixe "oversize" de visual_key)
+  // car la cascade générique (step 3 ci-dessous) ne lit jamais visual_key —
+  // sans ce filtre explicite, une base ajustée et un calque oversize du
+  // même genre/sous_type/couleur se refaisaient réattribuer le même asset
+  // dès que l'un des deux existait.
+  const isOversize = article.coupe === "Ample";
+
   try {
     // 2. Exact visual_key, prêt. category contrainte aussi ici en défense en
     // profondeur (correctif 18/08/2026 v2) : la clé exacte inclut déjà la
@@ -230,6 +239,7 @@ Deno.serve(async (req) => {
         couleur: couleurNorm,
         excludeBespoke: true,
         niveauTendance,
+        oversize: isOversize,
       });
     }
     // Le repli sans genre (step 4) ne vaut que pour les catégories dont le
@@ -246,6 +256,7 @@ Deno.serve(async (req) => {
         couleur: couleurNorm,
         excludeBespoke: true,
         niveauTendance,
+        oversize: isOversize,
       });
     }
     if (reusable) {
@@ -282,6 +293,7 @@ Deno.serve(async (req) => {
           couleur: couleurNorm,
           matiere: article.matiere,
           niveau_tendance: niveauTendance,
+          oversize: isOversize,
           generation_model: model,
           generation_quality: quality,
         })
@@ -302,6 +314,7 @@ Deno.serve(async (req) => {
           couleur: couleurNorm,
           matiere: article.matiere,
           niveau_tendance: niveauTendance,
+          oversize: isOversize,
           image_status: "generating",
           generation_model: model,
           generation_quality: quality,
@@ -497,6 +510,12 @@ async function findReadyAsset(
     // les assets explicitement au même niveau — jamais un ancien asset
     // générique, pour qu'un article nouvellement marqué régénère vraiment.
     niveauTendance?: string;
+    // Coupe oversize de L'ARTICLE courant (correctif 20/08/2026) — filtré
+    // explicitement (jamais optionnel dans la cascade générique step 3/4,
+    // toujours fourni en boolean) car visual_key seul ne suffit pas à
+    // distinguer une base ajustée d'un calque oversize une fois qu'on
+    // retombe sur les critères génériques (genre+sous_type+couleur).
+    oversize?: boolean;
   }
 ): Promise<AssetRow | null> {
   let query = supabase
@@ -516,6 +535,7 @@ async function findReadyAsset(
   if (criteria.niveauTendance === "tendance" || criteria.niveauTendance === "intemporel") {
     query = query.eq("niveau_tendance", criteria.niveauTendance);
   }
+  if (typeof criteria.oversize === "boolean") query = query.eq("oversize", criteria.oversize);
   const { data } = await query.limit(1).maybeSingle();
   return (data as AssetRow | null) ?? null;
 }
