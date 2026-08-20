@@ -24,7 +24,13 @@ import {
   type Profile,
 } from "@/lib/profile";
 
-const STEPS = [
+/**
+ * Étape Morphologie exclue pour les profils Homme (Tâche 4, arbitrages du
+ * 20/08/2026 : taxonomie homme non activée en P0) — filtrée à l'usage dans
+ * le composant, jamais ce tableau brut, pour que STEPS reflète toujours le
+ * parcours réellement servi.
+ */
+const ALL_STEPS = [
   { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
   { key: "pal_couleurs", kicker: "Ta palette", title: "Quelles couleurs aimes-tu porter ?", subtitle: "De 1 à 6 couleurs — celles qui reviennent le plus souvent dans tes tenues." },
   { key: "pal_ressenti", kicker: "Ta palette", title: "Deux précisions rapides", subtitle: "Elles affinent nos suggestions, sans jamais écarter une couleur que tu as choisie." },
@@ -123,8 +129,11 @@ function PaletteDots({
 export default function ProfileSetupScreen() {
   const { profile, saveProfile } = useAuth();
   const { state, actions } = useCapsela();
-  const [step, setStep] = useState(state.profileSetupStep || 0);
   const [draft, setDraft] = useState<Profile>(profile);
+  const STEPS = ALL_STEPS.filter((s) => s.key !== "morpho" || draft.gender === "femme");
+  const [step, setStep] = useState(() =>
+    Math.max(0, STEPS.findIndex((s) => s.key === (state.profileSetupStep || "genre")))
+  );
   const [guideOpen, setGuideOpen] = useState(false);
 
   const patch = (p: Partial<Profile>) => setDraft((d) => ({ ...d, ...p }));

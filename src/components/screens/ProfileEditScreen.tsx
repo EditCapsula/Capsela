@@ -178,7 +178,7 @@ export default function ProfileEditScreen() {
 
       <div className="flex items-center justify-between mt-[26px] mb-[11px]">
         <span className="text-[11px] tracking-[.16em] uppercase text-muted">Ma silhouette</span>
-        <button onClick={() => actions.goProfileSetup(4, true)} className="text-[12.5px] text-terracotta cursor-pointer">
+        <button onClick={() => actions.goProfileSetup("taille", true)} className="text-[12.5px] text-terracotta cursor-pointer">
           Modifier
         </button>
       </div>
@@ -194,14 +194,16 @@ export default function ProfileEditScreen() {
           </div>
         ))}
       </div>
-      <div className="bg-card border border-border rounded-2xl p-4 mt-[10px]">
-        <div className="text-[11.5px] text-muted">Morphologie</div>
-        <div className="text-[13.5px] text-ink mt-[6px]">{morphologyLabel(profile.morphology) || "—"}</div>
-      </div>
+      {profile.gender !== "homme" && (
+        <div className="bg-card border border-border rounded-2xl p-4 mt-[10px]">
+          <div className="text-[11.5px] text-muted">Morphologie</div>
+          <div className="text-[13.5px] text-ink mt-[6px]">{morphologyLabel(profile.morphology) || "—"}</div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between mt-[26px] mb-[11px]">
         <span className="text-[11px] tracking-[.16em] uppercase text-muted">Mes goûts</span>
-        <button onClick={() => actions.goProfileSetup(1, true)} className="text-[12.5px] text-terracotta cursor-pointer">
+        <button onClick={() => actions.goProfileSetup("pal_couleurs", true)} className="text-[12.5px] text-terracotta cursor-pointer">
           Modifier
         </button>
       </div>

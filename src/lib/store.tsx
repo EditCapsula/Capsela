@@ -60,7 +60,7 @@ function buildInitialState(): AppState {
     profileReturn: "home",
     premiumReturn: "home",
     legalReturn: "profile",
-    profileSetupStep: 0,
+    profileSetupStep: "genre",
     profileSetupFromEdit: false,
     onbStep: 0,
     authName: "",
@@ -134,8 +134,14 @@ export interface Actions {
   goLegal: () => void;
   backFromLegal: () => void;
   goLogin: () => void;
-  /** Ouvre le questionnaire profil à une étape donnée (0 = début). fromEdit : retour vers l'édition à la fin. */
-  goProfileSetup: (step?: number, fromEdit?: boolean) => void;
+  /**
+   * Ouvre le questionnaire profil à une étape donnée, identifiée par sa clé
+   * (ex. "taille") plutôt qu'un index numérique — le nombre et l'ordre des
+   * étapes ne sont plus fixes depuis la Tâche 4 (étape Morphologie
+   * conditionnée au genre), un index absolu deviendrait rapidement faux.
+   * fromEdit : retour vers l'édition à la fin.
+   */
+  goProfileSetup: (stepKey?: string, fromEdit?: boolean) => void;
   openAdd: () => void;
   openAddBag: () => void;
   addBack: () => void;
@@ -461,8 +467,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
     backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
     goLogin: () => go("login"),
-    goProfileSetup: (step = 0, fromEdit = false) =>
-      setState((s) => ({ ...s, screen: "profileSetup", profileSetupStep: step, profileSetupFromEdit: fromEdit })),
+    goProfileSetup: (stepKey = "genre", fromEdit = false) =>
+      setState((s) => ({ ...s, screen: "profileSetup", profileSetupStep: stepKey, profileSetupFromEdit: fromEdit })),
     openAdd: () => go("add"),
     openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
     addBack: () => setState((s) => ({ ...s, replacingId: null, screen: "wardrobe" })),

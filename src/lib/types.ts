@@ -189,7 +189,8 @@ export interface AppState {
   premiumReturn: Screen;
   /** Écran vers lequel revenir en quittant Informations légales (toujours "profile" en pratique). */
   legalReturn: Screen;
-  profileSetupStep: number;
+  /** Clé de l'étape (ex. "taille"), pas un index — le nombre d'étapes n'est plus fixe (Tâche 4, arbitrages 20/08/2026). */
+  profileSetupStep: string;
   profileSetupFromEdit: boolean;
   onbStep: number;
   authName: string;

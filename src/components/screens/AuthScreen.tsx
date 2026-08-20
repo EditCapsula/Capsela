@@ -22,7 +22,7 @@ export default function AuthScreen() {
     setBusy(true);
     const res = await auth.signUpEmail(state.authName.trim(), email.trim(), password, birthdate);
     setBusy(false);
-    if (res === "ok") actions.goProfileSetup(0);
+    if (res === "ok") actions.goProfileSetup("genre");
     else if (res === "confirm_email") setConfirmPending(true);
   };
 
