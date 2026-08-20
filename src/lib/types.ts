@@ -45,6 +45,8 @@ export type ShoeType =
   | "Bottes"
   | "Escarpins"
   | "Sandales"
+  | "Sandales à talons"
+  | "Espadrilles"
   | "Mocassins"
   | "Ballerines"
   | "Chaussures d'intérieur";

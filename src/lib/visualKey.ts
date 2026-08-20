@@ -123,6 +123,8 @@ const SUBTYPE_BUCKETS: Record<string, string> = {
   bottines: "bottines",
   bottes: "bottes",
   sandales: "sandales",
+  "sandales à talons": "sandales_talons",
+  espadrilles: "espadrilles",
   mocassins: "mocassins",
   baskets: "baskets",
   "chaussures d'intérieur": "chaussons",

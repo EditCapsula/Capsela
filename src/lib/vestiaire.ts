@@ -292,6 +292,8 @@ const SHOE_TYPE_MAP: Record<string, ShoeType> = {
   bottes: "Bottes",
   escarpins: "Escarpins",
   sandales: "Sandales",
+  "sandales à talons": "Sandales à talons",
+  espadrilles: "Espadrilles",
   mocassins: "Mocassins",
   ballerines: "Ballerines",
   "chaussures d'intérieur": "Chaussures d'intérieur",

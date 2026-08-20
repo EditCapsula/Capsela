@@ -190,7 +190,8 @@ export function effectiveFormality(occasion: OccasionKey, workMode: WorkMode, da
 
 /** Type de chaussure — obligatoire si catégorie = chaussures, nécessaire à R-B6. */
 export const SHOE_TYPES: ShoeType[] = [
-  "Baskets", "Bottines", "Bottes", "Escarpins", "Sandales", "Mocassins", "Ballerines", "Chaussures d'intérieur",
+  "Baskets", "Bottines", "Bottes", "Escarpins", "Sandales", "Sandales à talons", "Espadrilles", "Mocassins",
+  "Ballerines", "Chaussures d'intérieur",
 ];
 
 /**

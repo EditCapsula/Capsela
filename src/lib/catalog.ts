@@ -76,6 +76,10 @@ function catalogShoeTypeFor(cat: CategoryKey, name: string): ShoeType | undefine
   if (/mocassin/.test(n)) return "Mocassins";
   if (/bottine/.test(n)) return "Bottines";
   if (/botte/.test(n)) return "Bottes";
+  if (/espadrille/.test(n)) return "Espadrilles";
+  // Talon avant le générique (sinon "sandale" matcherait en premier et
+  // masquerait la distinction talon/plat).
+  if (/sandale.*talon/.test(n)) return "Sandales à talons";
   if (/sandale/.test(n)) return "Sandales";
   if (/ballerine/.test(n)) return "Ballerines";
   if (/chausson|charentaise|pantoufle|intérieur/.test(n)) return "Chaussures d'intérieur";
