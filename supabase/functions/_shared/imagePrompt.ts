@@ -130,11 +130,15 @@ const SUBTYPE_EN: Record<string, string> = {
   bandoulière: "crossbody bag",
   pochette: "clutch bag",
   "sac à dos": "backpack",
+  panier: "woven basket bag",
+  // Robes
+  "slip dress": "silk slip dress",
   // Bijoux
   collier: "necklace",
   "boucles d'oreilles": "earrings",
   bracelet: "bracelet",
   bague: "ring",
+  bagues: "rings",
   montre: "watch",
   // Accessoires
   ceinture: "belt",
@@ -208,6 +212,7 @@ const MODIFIER_EN: Record<string, string> = {
   portefeuille: "wrap",
   "croisée": "wrap",
   tailleur: "tailored",
+  pinces: "pleated-front",
   bretelles: "with thin straps",
   bustier: "strapless bustier",
   sport: "athletic",
