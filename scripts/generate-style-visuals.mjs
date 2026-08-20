@@ -166,8 +166,14 @@ const VISUALS = [
     gender: "femme",
     style: "preppy",
     label: "Preppy",
-    items: "a crisp Oxford shirt, a cable-knit or twisted-stitch cardigan in a plain color, a straight or subtly pleated skirt or tailored chino trousers, loafers, a structured bag",
-    extra: "Color palette: navy, cream, camel, burgundy, sky blue. Contemporary, adult preppy for 2026 — refined collegiate heritage cues used subtly and sparingly (a hint of texture or trim), polished and wearable, not costume-like. Explicitly avoid an argyle pattern, explicitly avoid tartan or plaid print, explicitly avoid any literal school-uniform or dark-academia costume effect — this must read as modern adult fashion with a preppy sensibility, not a uniform. Distinctly more collegiate-inspired than Classique chic, but through cut and texture, not through pattern.",
+    // Deuxième révision (retour candidats 1/2) — la première révision
+    // nommait encore "argyle"/"tartan" dans une consigne négative ("avoid
+    // an argyle pattern"), et le modèle les a rendus quand même : nommer un
+    // motif, même pour le proscrire, tend à le faire apparaître. Cette
+    // version ne mentionne plus jamais ces deux mots, positif ou négatif —
+    // uniquement une description positive de tenue solide et unie.
+    items: "a light blue Oxford shirt, a plain cream cardigan or a twisted-stitch knit sweater in a single solid color, beige chino trousers or raw straight-leg jeans, chocolate brown loafers, a structured bag",
+    extra: "Color palette: sky blue, cream, beige, chocolate brown, navy. Adult, sophisticated, everyday-wearable preppy for 2026 — polished and chic, built around exactly one clear preppy signature (the Oxford shirt collar), everything else kept clean, solid-colored and unpatterned. Contemporary modern adult fashion — avoid any schoolwear or uniform styling, avoid a teenage aesthetic.",
   },
   {
     gender: "femme",
