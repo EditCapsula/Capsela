@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
@@ -10,6 +10,94 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
+import type { CategoryKey, Item } from "@/lib/types";
+
+/**
+ * Cadre héros "flat-lay" de l'aperçu global (recette 20/08/2026, alignement
+ * proto) — positions fixes en % selon le rôle de la pièce (silhouette
+ * verticale : veste/haut en haut, bas au milieu, chaussures en bas, sac et
+ * petits accessoires près de cet axe), jamais une simple liste alignée.
+ * Miroir exact de la logique du prototype (buildTenueVals côté proto).
+ */
+type CompositionRole = "onepiece" | "outerwear" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
+
+function compositionRoleOf(cat: CategoryKey): CompositionRole {
+  if (cat === "pantalon" || cat === "jean" || cat === "jupe" || cat === "short") return "pantalon";
+  if (cat === "veste" || cat === "manteau") return "outerwear";
+  if (cat === "robe" || cat === "combinaison") return "onepiece";
+  if (cat === "bijou" || cat === "accessoire") return "petit";
+  if (cat === "haut" || cat === "chaussures" || cat === "sac") return cat;
+  return "petit"; // pull et tout le reste : replie sur le petit slot, comme le proto (SLOTS[rk] || SLOTS.petit)
+}
+
+const SLOTS_ONEPIECE: Record<string, [number, number, number, number]> = {
+  onepiece: [27, 4, 46, 62],
+  sac: [4, 46, 21, 22],
+  chaussures: [37, 68, 26, 20],
+  petit: [72, 50, 13, 13],
+};
+const SLOTS_STANDARD: Record<string, [number, number, number, number]> = {
+  outerwear: [26, 2, 40, 30],
+  haut: [30, 4, 34, 28],
+  pantalon: [31, 26, 33, 34],
+  chaussures: [36, 56, 26, 18],
+  sac: [5, 40, 20, 20],
+  petit: [74, 46, 13, 13],
+};
+const PETIT_OFFSETS: [number, number][] = [
+  [0, 0],
+  [0, 30],
+  [-58, 12],
+  [-58, 40],
+];
+
+function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties }[] {
+  const sliced = items.slice(0, 7);
+  const roles = sliced.map((it) => compositionRoleOf(it.cat));
+  const hasOnePiece = roles.includes("onepiece");
+  const slots = hasOnePiece ? SLOTS_ONEPIECE : SLOTS_STANDARD;
+  let petitIndex = 0;
+  return sliced.map((it, i) => {
+    const rk = roles[i];
+    const [baseLeft, baseTop, w, h] = slots[rk] || slots.petit;
+    let left = baseLeft;
+    let top = baseTop;
+    if (rk === "petit") {
+      const off = PETIT_OFFSETS[petitIndex % PETIT_OFFSETS.length];
+      petitIndex++;
+      left += off[0];
+      top += off[1];
+    }
+    if (rk === "outerwear" && roles.includes("haut")) {
+      left -= 6;
+      top -= 2;
+    }
+    const img = resolveItemImage(it);
+    const hasImg = Boolean(img.url);
+    return {
+      id: it.id,
+      style: {
+        position: "absolute",
+        left: left + "%",
+        top: top + "%",
+        width: w + "%",
+        height: h + "%",
+        backgroundImage: hasImg ? `url(${img.url})` : undefined,
+        backgroundSize: "contain",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        background: hasImg ? undefined : it.hex,
+        borderRadius: hasImg ? 0 : 10,
+        boxShadow: hasImg ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
+        zIndex: rk === "outerwear" ? 1 : 2,
+      },
+    };
+  });
+}
+
+function compositionFrameAspectRatio(n: number): string {
+  return n <= 3 ? "3/2" : n <= 4 ? "6/5" : "11/8";
+}
 
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
 const MODE_STYLES = {
@@ -97,6 +185,8 @@ export default function TenuesScreen() {
     state.dateContext,
     geoLoading ? null : geoCity.temp
   );
+
+  const heroOccasionLabel = OCCASIONS.find(([key]) => key === state.occasion)?.[1] || "Ta tenue";
 
   const dismissed = new Set(state.dismissedSuggestions || []);
   const lookScore = computeLookScore(
@@ -302,30 +392,37 @@ export default function TenuesScreen() {
       )}
 
       {!geoLoading && outfitPieces.length > 0 && (
-        <div className="scrollarea flex gap-[8px] overflow-x-auto pb-[2px] mb-4">
-          {outfitPieces.map((it) => {
-            const preview = resolveItemImage(it);
-            return (
-              <div
-                key={"preview-" + it.id}
-                className="flex-none rounded-[10px] overflow-hidden"
-                style={
-                  preview.url
-                    ? { width: 61, height: 74, background: "#F3EDE1", padding: 8 }
-                    : { width: 61, height: 74, background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
-                }
-              >
-                {preview.url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={preview.url}
-                    alt=""
-                    style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
-                  />
-                )}
-              </div>
-            );
-          })}
+        <div
+          className="mb-4"
+          style={{
+            marginTop: 14,
+            position: "relative",
+            borderRadius: 20,
+            overflow: "hidden",
+            background: "#F3EDE1",
+            aspectRatio: compositionFrameAspectRatio(outfitPieces.length),
+          }}
+        >
+          {compositionPiecesOf(outfitPieces).map((p) => (
+            <div key={"comp-" + p.id} style={p.style} />
+          ))}
+          <div
+            style={{
+              position: "absolute",
+              left: 14,
+              bottom: 14,
+              background: "#FBF8F3",
+              borderRadius: 100,
+              padding: "9px 16px",
+              fontSize: 10,
+              letterSpacing: ".08em",
+              textTransform: "uppercase",
+              color: "#1D1A16",
+              zIndex: 5,
+            }}
+          >
+            {heroOccasionLabel}
+          </div>
         </div>
       )}
 
