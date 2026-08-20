@@ -151,8 +151,9 @@ export default function ItemOutfitsScreen() {
                 const pieces = variation.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
                 return (
                   <div key={variation.ids.join("-")} className="bg-card border border-border rounded-[14px] p-[13px]">
-                    {/* pt/pb (correctif 20/08/2026) : overflow-x-auto rend overflow-y "auto" aussi (règle CSS implicite dès qu'un seul axe n'est pas visible) — sans marge verticale, l'anneau terracotta de la pièce pivot (box-shadow, hors boîte) se faisait rogner en haut par ce conteneur défilant. */}
-                    <div className="flex gap-[7px] overflow-x-auto pt-[3px] pb-[3px]">
+                    {/* pt/pb (correctif 20/08/2026) : overflow-x-auto rend overflow-y "auto" aussi (règle CSS implicite dès qu'un seul axe n'est pas visible) — sans marge verticale, l'anneau terracotta de la pièce pivot (box-shadow, hors boîte) se faisait rogner en haut par ce conteneur défilant.
+                        pl/pr (correctif 20/08/2026, suite) : même souci sur l'axe horizontal — le padding du card parent (p-[13px]) ne protège pas l'anneau de la clipping d'overflow-x-auto, qui se fait au bord de CE conteneur, pas du parent. Rogné à gauche quand la pièce pivot est la première de la rangée. */}
+                    <div className="flex gap-[7px] overflow-x-auto pt-[3px] pb-[3px] pl-[3px] pr-[3px]">
                       {pieces.map((p) => {
                         const img = resolveItemImage(p);
                         const isPivot = p.id === pivot.id;
