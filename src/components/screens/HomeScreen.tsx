@@ -104,9 +104,14 @@ function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSPropert
         // Repli neutre quand une image est disponible (correctif 20/08/2026) —
         // pas la couleur de la pièce elle-même : un pantalon noir sur repli
         // noir devenait illisible dès que la photo (fond transparent) se
-        // superposait à son propre aplat. La couleur de la pièce ne sert de
-        // repli que quand il n'y a vraiment aucune image.
-        backgroundColor: hasImg ? "#F3EDE1" : it.hex,
+        // superposait à son propre aplat. Semi-transparent (pas le même
+        // beige plein que "Comment porter cette pièce ?", correctif suivant
+        // le même jour) : sur le fond terracotta de la card héros, un aplat
+        // beige opaque ressortait comme un rectangle disjoint — la version
+        // semi-transparente se fond dans la card tout en gardant assez de
+        // clarté pour qu'un vêtement noir reste lisible. La couleur de la
+        // pièce ne sert de repli que quand il n'y a vraiment aucune image.
+        backgroundColor: hasImg ? "rgba(243,238,229,.55)" : it.hex,
         backgroundImage: hasImg ? `url(${img.url})` : undefined,
         backgroundSize: "contain",
         backgroundRepeat: "no-repeat",
