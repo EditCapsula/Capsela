@@ -51,11 +51,14 @@ function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSPropert
         top: top + "%",
         width: w + "%",
         height: height + "%",
+        // Couleur toujours posée en repli (recette 20/08/2026, correctif) —
+        // même quand une image est disponible, pour ne jamais rendre une
+        // pièce invisible si son chargement échoue.
+        backgroundColor: it.hex,
         backgroundImage: hasImg ? `url(${img.url})` : undefined,
         backgroundSize: "contain",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
-        background: hasImg ? undefined : it.hex,
         borderRadius: hasImg ? 0 : 8,
       },
     };

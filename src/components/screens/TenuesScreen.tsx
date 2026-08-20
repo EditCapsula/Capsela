@@ -82,11 +82,16 @@ function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties 
         top: top + "%",
         width: w + "%",
         height: h + "%",
+        // Couleur toujours posée en repli (recette 20/08/2026, correctif) —
+        // même quand une image est disponible : si son chargement échoue
+        // pour une raison quelconque, la pièce reste visible au lieu de
+        // devenir invisible (backgroundImage se pose simplement par-dessus
+        // backgroundColor quand il charge, jamais de conflit entre les deux).
+        backgroundColor: it.hex,
         backgroundImage: hasImg ? `url(${img.url})` : undefined,
         backgroundSize: "contain",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
-        background: hasImg ? undefined : it.hex,
         borderRadius: hasImg ? 0 : 10,
         boxShadow: hasImg ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
         zIndex: rk === "outerwear" ? 1 : 2,
