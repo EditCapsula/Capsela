@@ -186,6 +186,14 @@ Deno.serve(async (req) => {
   const isBespoke = Boolean(bespokeMarker);
   const effectiveVisualKey = isBespoke ? `${visualKey}${bespokeMarker}` : visualKey;
 
+  // Niveau de tendance normalisé (recette 20/08/2026, correctif) — sert à
+  // exclure de la cascade générique les assets qui ne correspondent pas au
+  // niveau demandé, pour qu'un article nouvellement marqué "tendance" (ou
+  // "intemporel") ne retombe jamais silencieusement sur un ancien visuel
+  // "contemporain" déjà en cache sans jamais rappeler OpenAI.
+  const niveauTendanceRaw = (article.niveau_tendance || "").trim().toLowerCase();
+  const niveauTendance = niveauTendanceRaw === "tendance" || niveauTendanceRaw === "intemporel" ? niveauTendanceRaw : "contemporain";
+
   try {
     // 2. Exact visual_key, prêt. category contrainte aussi ici en défense en
     // profondeur (correctif 18/08/2026 v2) : la clé exacte inclut déjà la
@@ -194,14 +202,20 @@ Deno.serve(async (req) => {
     // supplémentaire empêche toute réutilisation cross-catégorie. Clé
     // "bespoke" incluse ici : ne matche que si CET article a déjà généré
     // exactement ce même design par le passé (cache légitime, pas de fuite).
-    let reusable = await findReadyAsset(supabase, { visual_key: effectiveVisualKey, category: canonCategory });
+    let reusable = await findReadyAsset(supabase, {
+      visual_key: effectiveVisualKey,
+      category: canonCategory,
+      niveauTendance,
+    });
     // 3-4. Cascade générique (genre+sous_type+couleur, puis sous_type+couleur
     // seuls) — jamais pour un article bespoke (recette 19/08/2026) : un
     // design personnalisé (override/silhouette_mode/details_mode) ne doit
     // jamais hériter d'un asset générique existant, ni être proposé à
     // d'autres articles (excludeBespoke exclut symétriquement tout asset
     // bespoke des résultats, y compris pour les recherches génériques
-    // futures d'autres articles).
+    // futures d'autres articles). niveauTendance (correctif 20/08/2026) :
+    // idem pour la tendance — jamais hériter d'un asset "contemporain" déjà
+    // en cache quand l'article vient d'être marqué "tendance"/"intemporel".
     if (!reusable && !isBespoke) {
       reusable = await findReadyAsset(supabase, {
         category: canonCategory,
@@ -209,6 +223,7 @@ Deno.serve(async (req) => {
         sous_type: sousTypeNorm,
         couleur: couleurNorm,
         excludeBespoke: true,
+        niveauTendance,
       });
     }
     if (!reusable && !isBespoke) {
@@ -217,6 +232,7 @@ Deno.serve(async (req) => {
         sous_type: sousTypeNorm,
         couleur: couleurNorm,
         excludeBespoke: true,
+        niveauTendance,
       });
     }
     if (reusable) {
@@ -252,6 +268,7 @@ Deno.serve(async (req) => {
           sous_type: sousTypeNorm,
           couleur: couleurNorm,
           matiere: article.matiere,
+          niveau_tendance: niveauTendance,
           generation_model: model,
           generation_quality: quality,
         })
@@ -271,6 +288,7 @@ Deno.serve(async (req) => {
           sous_type: sousTypeNorm,
           couleur: couleurNorm,
           matiere: article.matiere,
+          niveau_tendance: niveauTendance,
           image_status: "generating",
           generation_model: model,
           generation_quality: quality,
@@ -458,6 +476,14 @@ async function findReadyAsset(
     // (cf. bespokeMarker) — de la cascade générique : un design personnalisé
     // pour UN article ne doit jamais être hérité par un autre.
     excludeBespoke?: boolean;
+    // Niveau de tendance de L'ARTICLE courant (recette 20/08/2026, correctif) —
+    // "contemporain" (par défaut) matche aussi bien les anciens assets jamais
+    // renseignés (niveau_tendance NULL) que les nouveaux explicitement
+    // "contemporain" : comportement identique à avant l'introduction du
+    // système de tendance. "tendance"/"intemporel" ne matche en revanche QUE
+    // les assets explicitement au même niveau — jamais un ancien asset
+    // générique, pour qu'un article nouvellement marqué régénère vraiment.
+    niveauTendance?: string;
   }
 ): Promise<AssetRow | null> {
   let query = supabase
@@ -474,6 +500,9 @@ async function findReadyAsset(
   if (criteria.sous_type) query = query.eq("sous_type", criteria.sous_type);
   if (criteria.couleur) query = query.eq("couleur", criteria.couleur);
   if (criteria.excludeBespoke) query = query.not("visual_key", "like", "%~ov~%").not("visual_key", "like", "%~bp~%");
+  if (criteria.niveauTendance === "tendance" || criteria.niveauTendance === "intemporel") {
+    query = query.eq("niveau_tendance", criteria.niveauTendance);
+  }
   const { data } = await query.limit(1).maybeSingle();
   return (data as AssetRow | null) ?? null;
 }

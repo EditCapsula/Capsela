@@ -39,6 +39,12 @@ const SLOTS_ONEPIECE: Record<string, [number, number, number, number]> = {
 const SLOTS_STANDARD: Record<string, [number, number, number, number]> = {
   outerwear: [26, 2, 40, 30],
   haut: [30, 4, 34, 28],
+  // Quand une veste/un manteau est aussi présent, veste et haut se placent
+  // franchement côte à côte, sans se recouvrir (correctif 20/08/2026) —
+  // l'ancien décalage de 6%/2% laissait les deux zones quasiment
+  // superposées, la veste ne montrant qu'un fin liséré derrière le haut.
+  outerwearAvecHaut: [4, 0, 38, 32],
+  hautAvecVeste: [46, 6, 32, 28],
   pantalon: [31, 26, 33, 34],
   chaussures: [36, 56, 26, 18],
   sac: [5, 40, 20, 20],
@@ -56,10 +62,12 @@ function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties 
   const roles = sliced.map((it) => compositionRoleOf(it.cat));
   const hasOnePiece = roles.includes("onepiece");
   const slots = hasOnePiece ? SLOTS_ONEPIECE : SLOTS_STANDARD;
+  const hasOuterwearAndHaut = !hasOnePiece && roles.includes("outerwear") && roles.includes("haut");
   let petitIndex = 0;
   return sliced.map((it, i) => {
     const rk = roles[i];
-    const [baseLeft, baseTop, w, h] = slots[rk] || slots.petit;
+    const slotKey = !hasOuterwearAndHaut ? rk : rk === "haut" ? "hautAvecVeste" : rk === "outerwear" ? "outerwearAvecHaut" : rk;
+    const [baseLeft, baseTop, w, h] = slots[slotKey] || slots[rk] || slots.petit;
     let left = baseLeft;
     let top = baseTop;
     if (rk === "petit") {
@@ -67,10 +75,6 @@ function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties 
       petitIndex++;
       left += off[0];
       top += off[1];
-    }
-    if (rk === "outerwear" && roles.includes("haut")) {
-      left -= 6;
-      top -= 2;
     }
     const img = resolveItemImage(it);
     const hasImg = Boolean(img.url);
