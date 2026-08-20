@@ -12,40 +12,85 @@ import type { CategoryKey, Item } from "@/lib/types";
 const GRADIENT_TO = ["#EFE3D3", "#E8DCC9", "#E1D3BC"];
 
 /**
- * Mini flat-lay de la card héros Accueil (recette 20/08/2026, alignement
- * proto) — miroir exact de la logique du prototype (homeCompositionPieces) :
- * les 3 pièces les plus représentatives (robe/combinaison d'abord, puis
- * haut/pull, puis bas, chaussures, sac), en cascade diagonale simple —
- * distinct du cadre héros complet (rôle par pièce) de la page Tenue, pensé
- * pour le petit espace de cette card.
+ * Mini flat-lay éditorial de la card héros Accueil (recette 20/08/2026,
+ * optimisation composition) — même source que la page Tenue (state.outfit),
+ * jamais un recalcul indépendant. Contrairement à l'ancienne version (rangée
+ * de colonnes égales, illisible comme "5 produits alignés"), la sélection
+ * suit une priorité stricte (robe/combinaison seule sinon haut+bas, puis
+ * chaussures, sac, au plus un accessoire) et le placement suit un rôle par
+ * pièce (grande pièce dominante en haut, bas juste en dessous, chaussures
+ * en bas, sac et accessoire en petit de part et d'autre) — pensé comme un
+ * teaser de la tenue complète, pas une liste.
  */
-const HOME_COMPOSITION_PRIORITY: CategoryKey[] = [
-  "robe",
-  "combinaison",
-  "haut",
-  "pull",
-  "pantalon",
-  "jean",
-  "jupe",
-  "short",
-  "chaussures",
-  "sac",
-];
+function isOnePieceCat(cat: CategoryKey) {
+  return cat === "robe" || cat === "combinaison";
+}
+function isTopCat(cat: CategoryKey) {
+  return cat === "haut" || cat === "pull";
+}
+function isBottomCat(cat: CategoryKey) {
+  return cat === "pantalon" || cat === "jean" || cat === "jupe" || cat === "short";
+}
+function isAccessoryCat(cat: CategoryKey) {
+  return cat === "bijou" || cat === "accessoire";
+}
+
+/** Sélectionne 3 à 5 pièces représentatives, jamais plus d'un accessoire. */
+function selectHomePieces(items: Item[]): Item[] {
+  const onePiece = items.find((it) => isOnePieceCat(it.cat));
+  const core: Item[] = [];
+  if (onePiece) {
+    core.push(onePiece);
+  } else {
+    const top = items.find((it) => isTopCat(it.cat));
+    const bottom = items.find((it) => isBottomCat(it.cat));
+    if (top) core.push(top);
+    if (bottom) core.push(bottom);
+  }
+  const shoes = items.find((it) => it.cat === "chaussures");
+  if (shoes) core.push(shoes);
+  const bag = items.find((it) => it.cat === "sac");
+  if (bag) core.push(bag);
+  const accessory = items.find((it) => isAccessoryCat(it.cat));
+  if (accessory && core.length < 5) core.push(accessory);
+  return core.slice(0, 5);
+}
+
+type HomeRole = "onepiece" | "haut" | "bas" | "chaussures" | "sac" | "petit";
+function homeRoleOf(cat: CategoryKey): HomeRole {
+  if (isOnePieceCat(cat)) return "onepiece";
+  if (isTopCat(cat)) return "haut";
+  if (isBottomCat(cat)) return "bas";
+  if (cat === "chaussures") return "chaussures";
+  if (cat === "sac") return "sac";
+  return "petit";
+}
+
+// Slots en % relatifs au cluster central (lui-même à 76% de la largeur de
+// la card, cf. JSX) — pièce dominante large, bas juste dessous en léger
+// décalage, chaussures en bas, sac/accessoire petits de part et d'autre.
+const HOME_SLOTS_ONEPIECE: Record<string, [number, number, number, number]> = {
+  onepiece: [22, 0, 46, 84],
+  chaussures: [38, 80, 28, 20],
+  sac: [0, 38, 26, 32],
+  petit: [80, 42, 20, 20],
+};
+const HOME_SLOTS_STANDARD: Record<string, [number, number, number, number]> = {
+  haut: [24, 0, 42, 48],
+  bas: [32, 42, 42, 50],
+  chaussures: [40, 78, 30, 22],
+  sac: [0, 44, 28, 34],
+  petit: [80, 46, 20, 20],
+};
 
 function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSProperties }[] {
-  // Jusqu'à 5 pièces selon la tenue disponible (recette 20/08/2026, brief
-  // UX/UI) — réparties à largeur égale plutôt qu'à décalage fixe (qui ne
-  // fonctionnait que pour exactement 3 pièces et débordait au-delà).
-  const main = [...items]
-    .sort((a, b) => HOME_COMPOSITION_PRIORITY.indexOf(a.cat) - HOME_COMPOSITION_PRIORITY.indexOf(b.cat))
-    .slice(0, 5);
-  const n = main.length;
-  const slot = 100 / n;
+  const main = selectHomePieces(items);
+  const roles = main.map((it) => homeRoleOf(it.cat));
+  const hasOnePiece = roles.includes("onepiece");
+  const slots = hasOnePiece ? HOME_SLOTS_ONEPIECE : HOME_SLOTS_STANDARD;
   return main.map((it, i) => {
-    const w = slot - 4;
-    const left = i * slot + 2;
-    const top = 8 + (i % 2) * 14;
-    const height = 76 - (i % 2) * 14;
+    const rk = roles[i];
+    const [left, top, w, h] = slots[rk] || slots.petit;
     const img = resolveItemImage(it);
     const hasImg = Boolean(img.url);
     return {
@@ -55,7 +100,7 @@ function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSPropert
         left: left + "%",
         top: top + "%",
         width: w + "%",
-        height: height + "%",
+        height: h + "%",
         // Couleur toujours posée en repli (recette 20/08/2026, correctif) —
         // même quand une image est disponible, pour ne jamais rendre une
         // pièce invisible si son chargement échoue.
@@ -65,6 +110,7 @@ function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSPropert
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
         borderRadius: hasImg ? 0 : 8,
+        zIndex: rk === "sac" || rk === "petit" ? 1 : 2,
       },
     };
   });
@@ -186,12 +232,17 @@ export default function HomeScreen() {
               borderRadius: 14,
               overflow: "hidden",
               background: "rgba(243,238,229,.14)",
-              height: 92,
+              height: 148,
             }}
           >
-            {homeCompositionPiecesOf(outfitPieces).map((p) => (
-              <div key={"home-comp-" + p.id} style={p.style} />
-            ))}
+            {/* Cluster central à 76% de largeur (brief composition 20/08/2026)
+                — laisse de l'air de part et d'autre plutôt que de remplir
+                toute la largeur de la card. */}
+            <div style={{ position: "relative", width: "76%", height: "100%", margin: "0 auto" }}>
+              {homeCompositionPiecesOf(outfitPieces).map((p) => (
+                <div key={"home-comp-" + p.id} style={p.style} />
+              ))}
+            </div>
           </div>
         )}
         {hasOutfit && occasionLabel && (
