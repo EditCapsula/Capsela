@@ -116,7 +116,7 @@ export default function ProfileEditScreen() {
 
       <div className="flex items-center justify-between mt-[26px] mb-[11px]">
         <span className="text-[11px] tracking-[.16em] uppercase text-muted">Ma silhouette</span>
-        <button onClick={() => actions.goProfileSetup(6, true)} className="text-[12.5px] text-terracotta cursor-pointer">
+        <button onClick={() => actions.goProfileSetup(4, true)} className="text-[12.5px] text-terracotta cursor-pointer">
           Modifier
         </button>
       </div>
