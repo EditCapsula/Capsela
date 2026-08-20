@@ -67,23 +67,24 @@ function homeRoleOf(cat: CategoryKey): HomeRole {
 }
 
 // Slots en % relatifs au cluster central (lui-même à 82% de la largeur de
-// la card, cf. JSX) — composition éditoriale (recette 20/08/2026, passe
-// affinage) : chemise/pantalon grands et proches sans être empilés (léger
-// chevauchement en coin seulement, jamais la chemise masquée), chaussures
-// décalées en bas à gauche plutôt que nichées sous le pantalon, accessoire
-// nettement plus petit sur le côté — asymétrique, pas une grille.
+// la card, cf. JSX) — composition éditoriale resserrée (recette 20/08/2026,
+// passe "un seul groupe visuel") : les pièces se chevauchent volontairement
+// un peu à leurs coins (chemise sur le haut du pantalon, chaussures/sac/
+// accessoire contre le pantalon) au lieu de flotter séparément — jamais au
+// point de masquer une pièce principale. Vêtements dominants (haut/bas),
+// accessoires nettement plus petits, toujours en périphérie du groupe.
 const HOME_SLOTS_ONEPIECE: Record<string, [number, number, number, number]> = {
-  onepiece: [8, 0, 52, 82],
-  chaussures: [4, 80, 32, 20],
-  sac: [64, 6, 30, 34],
-  petit: [72, 60, 20, 16],
+  onepiece: [22, 0, 50, 86],
+  chaussures: [10, 76, 30, 24],
+  sac: [64, 4, 30, 34],
+  petit: [66, 56, 24, 20],
 };
 const HOME_SLOTS_STANDARD: Record<string, [number, number, number, number]> = {
-  haut: [4, 0, 50, 44],
-  bas: [32, 38, 56, 56],
-  chaussures: [2, 80, 34, 20],
-  sac: [0, 44, 26, 30],
-  petit: [76, 60, 20, 16],
+  haut: [16, 0, 48, 46],
+  bas: [30, 32, 54, 56],
+  chaussures: [8, 70, 32, 26],
+  sac: [60, 6, 30, 32],
+  petit: [68, 58, 24, 20],
 };
 
 function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSProperties }[] {
@@ -119,7 +120,10 @@ function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSPropert
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
         borderRadius: hasImg ? 0 : 8,
-        zIndex: rk === "sac" || rk === "petit" ? 1 : 2,
+        // Le haut/la pièce unique reste au-dessus du bas à leur zone de
+        // chevauchement (recette 20/08/2026) — jamais l'inverse, une chemise
+        // dissimulée sous un pantalon ne se lirait plus comme un chevauchement volontaire.
+        zIndex: rk === "haut" || rk === "onepiece" ? 3 : rk === "bas" || rk === "chaussures" ? 2 : 1,
       },
     };
   });
