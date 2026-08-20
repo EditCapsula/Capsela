@@ -3,7 +3,46 @@
 import { useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { WORK_DAYS, genderLabel, paletteSummary, type ProfilePrefs } from "@/lib/profile";
+import { GENDERS, WORK_DAYS, genderLabel, paletteSummary, type Gender, type ProfilePrefs } from "@/lib/profile";
+
+function GenderModal({
+  current,
+  onSelect,
+  onClose,
+}: {
+  current: Gender | null;
+  onSelect: (g: Gender) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: "rgba(29,26,22,.45)" }}
+      onClick={onClose}
+    >
+      <div className="w-full max-w-[440px] bg-cream rounded-t-[22px] px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
+        <div className="font-serif text-[19px] text-ink mb-[16px]">Modifier mon genre</div>
+        <div className="flex flex-col gap-[10px]">
+          {GENDERS.map((g) => (
+            <button
+              key={g.key}
+              onClick={() => onSelect(g.key)}
+              className={
+                "text-left px-4 py-[15px] rounded-[14px] cursor-pointer text-[13.5px] border " +
+                (current === g.key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+              }
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={onClose} className="mt-[18px] w-full text-center text-[12.5px] text-muted cursor-pointer">
+          Annuler
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
@@ -31,6 +70,20 @@ export default function ProfileEditScreen() {
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
   const prefs = profile.prefs;
   const setPrefs = (p: Partial<ProfilePrefs>) => saveProfile({ ...profile, prefs: { ...prefs, ...p } });
+
+  const [genderModalOpen, setGenderModalOpen] = useState(false);
+  // Tâche 5 (arbitrages 20/08/2026) : la taxonomie morphologique homme n'est
+  // pas activée en P0 — un profil Homme n'a donc jamais de morphologie
+  // pertinente. Au changement vers Homme, on vide une morphologie déclarée
+  // sous l'ancien genre plutôt que de la laisser scorer R-S9 sous une
+  // taxonomie qui ne lui correspond plus. Jamais de conversion
+  // automatique entre taxonomies (cf. règle Tâche 5).
+  const changeGender = (g: Gender) => {
+    setGenderModalOpen(false);
+    if (g === profile.gender) return;
+    const clearMorphology = g === "homme" && !!profile.morphology;
+    saveProfile({ ...profile, gender: g, morphology: clearMorphology ? null : profile.morphology });
+  };
 
   const [nameDraft, setNameDraft] = useState(profile.displayName);
   // Le profil se charge de façon asynchrone (Supabase) après le montage —
@@ -95,11 +148,12 @@ export default function ProfileEditScreen() {
           className="font-serif text-[30px] text-ink mt-4 text-center bg-transparent border-none outline-none w-full placeholder:text-placeholder"
         />
         <div className="text-[13px] text-muted mt-[6px]">{profile.city}</div>
-        {profile.gender && (
-          <div className="text-[12px] text-terracotta bg-[#f0e5d6] rounded-full px-[13px] py-[5px] mt-2">
-            {genderLabel(profile.gender)}
-          </div>
-        )}
+        <button
+          onClick={() => setGenderModalOpen(true)}
+          className="text-[12px] text-terracotta bg-[#f0e5d6] rounded-full px-[13px] py-[5px] mt-2 cursor-pointer"
+        >
+          {profile.gender ? genderLabel(profile.gender) : "Renseigner mon genre"}
+        </button>
         {birthdateText && <div className="text-[13px] text-muted mt-1">🎂 {birthdateText}</div>}
       </div>
 
@@ -259,6 +313,10 @@ export default function ProfileEditScreen() {
       >
         Enregistrer
       </button>
+
+      {genderModalOpen && (
+        <GenderModal current={profile.gender} onSelect={changeGender} onClose={() => setGenderModalOpen(false)} />
+      )}
     </div>
   );
 }

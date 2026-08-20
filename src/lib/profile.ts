@@ -1,4 +1,5 @@
-export type Gender = "femme" | "homme" | "neutre" | "non_precise";
+/** Genre — 2 valeurs (Tâche 3, arbitrages du 20/08/2026 : "Neutre / non-binaire" et "Préfère ne pas dire" retirés). */
+export type Gender = "femme" | "homme";
 
 export interface ProfilePrefs {
   notifEnabled: boolean;
@@ -62,7 +63,6 @@ export const EMPTY_PROFILE: Profile = {
 export const GENDERS: { key: Gender; label: string }[] = [
   { key: "femme", label: "Femme" },
   { key: "homme", label: "Homme" },
-  { key: "neutre", label: "Neutre / non-binaire" },
 ];
 
 export function genderLabel(g: Gender | null): string {
