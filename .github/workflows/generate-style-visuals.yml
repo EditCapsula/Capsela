@@ -1,0 +1,83 @@
+name: Générer les visuels de l'écran Style (admin)
+
+# Déclenchement manuel uniquement ("Run workflow" depuis l'onglet Actions) —
+# jamais automatique, pour ne jamais consommer de crédit OpenAI sans action
+# explicite. Indépendant du pipeline catalogue (generate-catalog-image) —
+# appelle l'API OpenAI Images directement, cf. en-tête de
+# scripts/generate-style-visuals.mjs.
+#
+# Flux en 2 temps :
+#   1. mode "generate" : génère 3 candidats par visuel, uploadés dans
+#      catalog-images/style-visuals/_staging/ (public, ouvrable directement
+#      au navigateur — pas de zip à télécharger).
+#   2. mode "promote" : une fois un candidat choisi visuellement, le
+#      convertit en .webp et le copie vers le chemin définitif
+#      catalog-images/style-visuals/{genre}/{style}.webp.
+#
+# Nécessite deux secrets de dépôt (Settings → Secrets and variables →
+# Actions) : SUPABASE_SERVICE_ROLE_KEY (déjà utilisé par les autres
+# workflows d'images) et OPENAI_API_KEY (NOUVEAU — n'existe nulle part
+# ailleurs dans ce dépôt, la clé n'était jusqu'ici qu'un secret Edge
+# Function Supabase, jamais un secret GitHub).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "generate (candidats) ou promote (chemin définitif)"
+        required: true
+        type: choice
+        options:
+          - generate
+          - promote
+        default: generate
+      all:
+        description: "Mode generate uniquement : générer les 14 visuels d'un coup"
+        required: false
+        type: boolean
+        default: false
+      gender:
+        description: "femme ou homme (ignoré si 'all' est coché)"
+        required: false
+        type: choice
+        options:
+          - femme
+          - homme
+      style:
+        description: 'Id du style, ex. "casual_chic" (ignoré si "all" est coché)'
+        required: false
+        type: string
+      candidate:
+        description: "Mode promote uniquement : numéro du candidat retenu (1, 2 ou 3)"
+        required: false
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Génération
+        if: ${{ inputs.mode == 'generate' && inputs.all }}
+        run: node scripts/generate-style-visuals.mjs --mode=generate --all
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Génération (un visuel)
+        if: ${{ inputs.mode == 'generate' && !inputs.all }}
+        run: node scripts/generate-style-visuals.mjs --mode=generate --gender=${{ inputs.gender }} --style=${{ inputs.style }}
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Promotion
+        if: ${{ inputs.mode == 'promote' }}
+        run: node scripts/generate-style-visuals.mjs --mode=promote --gender=${{ inputs.gender }} --style=${{ inputs.style }} --candidate=${{ inputs.candidate }}
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

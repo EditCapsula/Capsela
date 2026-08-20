@@ -165,34 +165,67 @@ export interface StyleCardConfig {
 }
 
 /**
- * Placeholders (aplat beige + nom du style) en attendant les 16 assets
- * réels — l'écran ne se livre qu'une fois ces visuels produits. Deux
- * libellés changent côté homme (romantique → Créatif / Artistique,
- * glamour → Élégant / Sophistiqué) ; les ids et les 6 autres libellés
- * sont identiques dans les deux genres.
+ * URL publique Storage des visuels de style (recette 20/08/2026 — génération
+ * OpenAI, script `generate-style-visuals.mjs`, bucket `catalog-images`
+ * existant, préfixe dédié `style-visuals/`, jamais le pipeline catalogue —
+ * cf. en-tête du script). `NEXT_PUBLIC_SUPABASE_URL` est déjà un env public
+ * (lu ainsi dans `supabase.ts`), sûr à exposer côté client.
+ */
+const STYLE_VISUALS_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/catalog-images/style-visuals`
+  : "";
+function styleVisualUrl(gender: "femme" | "homme", slug: string): string {
+  return STYLE_VISUALS_BASE ? `${STYLE_VISUALS_BASE}/${gender}/${slug}.webp` : "";
+}
+
+/**
+ * Deux libellés changent côté homme (romantique → Créatif / Artistique,
+ * glamour → Élégant / Sophistiqué) ; les ids et les 6 autres libellés sont
+ * identiques dans les deux genres. `romantique`/`glamour` gardent une entrée
+ * homme (pour que `styleLabel()` ne casse jamais sur une valeur historique)
+ * mais n'ont volontairement PAS de visuel ni de carte dans la grille
+ * d'onboarding homme — cf. `EXPOSED_STYLE_IDS` plus bas, décision arrêtée le
+ * 20/08/2026, aucun équivalent masculin à ces deux styles.
  */
 export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardConfig>> = {
   femme: {
-    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: "/styles/femme/minimaliste.svg" },
-    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: "/styles/femme/casual-chic.svg" },
-    classique_chic: { label: "Classique chic", desc: "Élégant, féminin et toujours approprié.", asset: "/styles/femme/classique-chic.svg" },
-    romantique: { label: "Romantique", desc: "Douceur, fluidité et détails féminins.", asset: "/styles/femme/romantique.svg" },
-    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: "/styles/femme/boheme.svg" },
-    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: "/styles/femme/streetwear.svg" },
-    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: "/styles/femme/preppy.svg" },
-    glamour: { label: "Glamour", desc: "Féminin, audacieux et résolument élégant.", asset: "/styles/femme/glamour.svg" },
+    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: styleVisualUrl("femme", "minimaliste") },
+    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: styleVisualUrl("femme", "casual-chic") },
+    classique_chic: { label: "Classique chic", desc: "Élégant, féminin et toujours approprié.", asset: styleVisualUrl("femme", "classique-chic") },
+    romantique: { label: "Romantique", desc: "Douceur, fluidité et détails féminins.", asset: styleVisualUrl("femme", "romantique") },
+    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: styleVisualUrl("femme", "boheme") },
+    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("femme", "streetwear") },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: styleVisualUrl("femme", "preppy") },
+    glamour: { label: "Glamour", desc: "Féminin, audacieux et résolument élégant.", asset: styleVisualUrl("femme", "glamour") },
   },
   homme: {
-    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: "/styles/homme/minimaliste.svg" },
-    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: "/styles/homme/casual-chic.svg" },
-    classique_chic: { label: "Classique chic", desc: "Élégant et toujours approprié.", asset: "/styles/homme/classique-chic.svg" },
-    romantique: { label: "Créatif / Artistique", desc: "Original, expressif, hors des codes classiques.", asset: "/styles/homme/creatif-artistique.svg" },
-    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: "/styles/homme/boheme.svg" },
-    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: "/styles/homme/streetwear.svg" },
-    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: "/styles/homme/preppy.svg" },
-    glamour: { label: "Élégant / Sophistiqué", desc: "Raffiné, maîtrisé et résolument chic.", asset: "/styles/homme/elegant-sophistique.svg" },
+    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: styleVisualUrl("homme", "minimaliste") },
+    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: styleVisualUrl("homme", "casual-chic") },
+    classique_chic: { label: "Classique chic", desc: "Élégant et toujours approprié.", asset: styleVisualUrl("homme", "classique-chic") },
+    // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS), entrée conservée uniquement pour styleLabel().
+    romantique: { label: "Créatif / Artistique", desc: "Original, expressif, hors des codes classiques.", asset: "" },
+    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: styleVisualUrl("homme", "boheme") },
+    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("homme", "streetwear") },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: styleVisualUrl("homme", "preppy") },
+    // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS), entrée conservée uniquement pour styleLabel().
+    glamour: { label: "Élégant / Sophistiqué", desc: "Raffiné, maîtrisé et résolument chic.", asset: "" },
   },
 };
+
+/**
+ * Styles réellement proposés dans la grille d'onboarding par genre (visuels
+ * de style, recette 20/08/2026) — Homme n'a pas d'équivalent à Romantique/
+ * Glamour, décision arrêtée le 20/08/2026 : jamais un 9e id, jamais une
+ * conversion, ces deux familles ne sont simplement pas proposées côté Homme.
+ */
+export const EXPOSED_STYLE_IDS: Record<"femme" | "homme", StyleId[]> = {
+  femme: [...STYLE_IDS],
+  homme: STYLE_IDS.filter((id) => id !== "romantique" && id !== "glamour"),
+};
+
+export function exposedStyleIds(gender: Gender | null): StyleId[] {
+  return EXPOSED_STYLE_IDS[gender === "homme" ? "homme" : "femme"];
+}
 
 export function styleConfigFor(gender: Gender | null): Record<StyleId, StyleCardConfig> {
   return STYLE_CONFIG[gender === "homme" ? "homme" : "femme"];
@@ -237,10 +270,15 @@ export const MORPHO_HINTS: Record<string, string> = {
 /**
  * Champs dont les valeurs valides dépendent du genre — mécanique
  * générique de revalidation (recette 20/08/2026). Branché sur la
- * morphologie pour l'instant ; le style s'y branchera si le scénario
- * "7 cartes" (moins de styles proposés côté Homme) est retenu — pour
- * l'instant les deux genres partagent les 8 mêmes StyleId, donc
- * `valuesFor` ne rendrait jamais aucune valeur invalide.
+ * morphologie pour l'instant.
+ *
+ * ⚠️ Depuis la tâche "visuels de l'écran Style" (20/08/2026), Homme n'expose
+ * plus que 6 styles sur 8 (EXPOSED_STYLE_IDS) — le style est donc redevenu
+ * un candidat légitime pour ce mécanisme (un profil Femme avec `romantique`/
+ * `glamour` qui passe à Homme a désormais une valeur réellement hors des
+ * options proposées). Explicitement PAS branché ici : cette tâche visuels
+ * excluait toute modification des règles de revalidation de son périmètre.
+ * À traiter dans une tâche dédiée, pas silencieusement au fil d'une autre.
  *
  * État "à revalider" CALCULÉ, jamais stocké : dérivé de
  * valeur_stockée ∉ valeurs_autorisées(genre_courant) à chaque lecture,

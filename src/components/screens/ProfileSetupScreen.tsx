@@ -14,8 +14,8 @@ import {
   MORPHOLOGY_LABELS,
   MORPHO_HINTS,
   PAL_COULEURS,
-  STYLE_IDS,
   TAILLES_HAUT,
+  exposedStyleIds,
   paletteColorName,
   styleConfigFor,
   tailleBasLabelFor,
@@ -295,7 +295,7 @@ export default function ProfileSetupScreen() {
 
       {meta.key === "style" && (
         <div className="grid grid-cols-2 gap-[11px] mt-[26px]">
-          {STYLE_IDS.map((id) => {
+          {exposedStyleIds(draft.gender).map((id) => {
             const cfg = styleConfigFor(draft.gender)[id];
             const on = draft.styles[0] === id;
             return (
@@ -312,8 +312,11 @@ export default function ProfileSetupScreen() {
                   className="w-full flex-shrink-0"
                   style={{
                     aspectRatio: "4/3",
+                    // Aplat beige toujours en fond : si l'URL Storage est vide, indisponible
+                    // ou en échec de chargement, background-image ne dessine simplement rien
+                    // par-dessus — jamais une icône d'image cassée (repli déjà natif, pas de JS).
                     backgroundColor: "#E6DCCB",
-                    backgroundImage: `url(${cfg.asset})`,
+                    ...(cfg.asset ? { backgroundImage: `url(${cfg.asset})` } : {}),
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     backgroundRepeat: "no-repeat",
