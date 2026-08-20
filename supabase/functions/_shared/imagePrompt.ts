@@ -220,6 +220,23 @@ const MODIFIER_EN: Record<string, string> = {
   capuche: "hooded",
   "zippé": "zip-up",
   "zippée": "zip-up",
+  plates: "flat",
+  plate: "flat",
+  plat: "flat",
+  talons: "high-heeled",
+  talon: "high-heeled",
+  "compensées": "wedge",
+  "compensée": "wedge",
+  "compensés": "wedge",
+  "compensé": "wedge",
+  transparent: "sheer",
+  transparente: "sheer",
+  transparents: "sheer",
+  transparentes: "sheer",
+  "semi-opaque": "semi-opaque",
+  "semi-opaques": "semi-opaque",
+  opaque: "opaque",
+  opaques: "opaque",
 };
 
 /** Cols/encolures reconnus en bigramme (2 mots consécutifs) n'importe où dans sous_type. */

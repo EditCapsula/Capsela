@@ -37,11 +37,16 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function main() {
+  // .neq("image_status", "invalid") seul exclut à tort les lignes où
+  // image_status est NULL (jamais renseigné) : en SQL, `NULL <> 'invalid'`
+  // vaut NULL/inconnu, pas TRUE, donc la ligne ne passe pas le filtre —
+  // correctif 20/08/2026, trouvé sur un article ajouté/renommé manuellement
+  // dont image_status n'avait jamais été explicitement mis à 'missing'.
   const { data: rows, error } = await supabase
     .from("vestiaire_universel")
     .select("id, name")
     .is("url_image", null)
-    .neq("image_status", "invalid")
+    .or("image_status.is.null,image_status.neq.invalid")
     .order("id", { ascending: true });
 
   if (error) {

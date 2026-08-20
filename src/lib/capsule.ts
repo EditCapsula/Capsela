@@ -175,6 +175,22 @@ export function computeDefaultCapsule(
   const seasonFit = base.filter((it) => it.season === bucket || it.season === "Toutes saisons");
   if (seasonFit.length >= 16) base = seasonFit;
 
+  // Plage de température (correctif 20/08/2026) — jamais appliquée ici
+  // jusque-là, contrairement à generateOutfit/swapOutfitPiece (logic.ts) :
+  // un article dont le season_capsule touche à la fois Printemps et Automne
+  // (mais ni Été ni Hiver, ex. des collants mi-saison) retombe sur le bucket
+  // "Toutes saisons" faute d'un modèle de saison plus fin (cf. Season,
+  // 3 valeurs seulement) — il n'était donc jamais exclu de la capsule Été
+  // malgré des bornes meteo_min_temp/meteo_max_temp explicites qui
+  // l'excluent clairement. Utilise la température représentative de la
+  // saison demandée plutôt que la météo du jour, cohérent avec l'esprit
+  // "valable sur toute la saison" de la capsule (cf. representativeWeatherFor).
+  const capsuleTemp = seasonKey ? REPRESENTATIVE_TEMP[seasonKey] : weather.temp;
+  const tempFit = base.filter(
+    (it) => (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) && (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp)
+  );
+  if (tempFit.length >= 16) base = tempFit;
+
   const styles = profile.styles || [];
   let curated = styles.length ? base.filter((it) => styles.some((st) => styleFit(it, st))) : base;
   if (curated.length < 18) curated = base;
@@ -208,8 +224,18 @@ export function computeDefaultCapsule(
   // entières) n'auraient aucune pièce éligible pour un dressing encore vide.
   const ensure = (cat: CategoryKey) => {
     if (out.some((it) => it.cat === cat)) return;
+    // meteo_min_temp/meteo_max_temp respectés ici aussi (correctif 20/08/2026)
+    // — sinon ce filet de sécurité pouvait réintroduire une pièce que le
+    // filtre de température venait tout juste d'exclure (constaté : des
+    // collants mi-saison réapparaissant dans une capsule Été/Hiver dès que
+    // plus aucun autre accessoire ne passait le filtre).
     const pool = sourcePool.filter(
-      (it) => it.cat === cat && !excluded.has(it.id) && (isSunny(weather) || !it.necessiteSoleil)
+      (it) =>
+        it.cat === cat &&
+        !excluded.has(it.id) &&
+        (isSunny(weather) || !it.necessiteSoleil) &&
+        (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) &&
+        (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp)
     );
     const fav = pool.filter((it) => favColors.includes(it.hex));
     const pickFrom = fav.length ? fav : pool;

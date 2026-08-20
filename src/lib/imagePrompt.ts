@@ -126,6 +126,14 @@ const MODIFIER_EN: Record<string, string> = {
   "compensée": "wedge",
   "compensés": "wedge",
   "compensé": "wedge",
+  transparent: "sheer",
+  transparente: "sheer",
+  transparents: "sheer",
+  transparentes: "sheer",
+  "semi-opaque": "semi-opaque",
+  "semi-opaques": "semi-opaque",
+  opaque: "opaque",
+  opaques: "opaque",
 };
 
 /** Cols/encolures reconnus en bigramme (2 mots consécutifs) n'importe où dans sous_type — ex. "pull col v" ou "col roulé" seul fonctionnent tous les deux. */
