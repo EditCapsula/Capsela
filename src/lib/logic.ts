@@ -1,6 +1,6 @@
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
+import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
@@ -405,7 +405,11 @@ export function generateOutfit(
     }
     // Préférence pour la palette personnelle — n'écarte rien, juste une inclination
     // quand elle laisse assez d'options (R-S10, esprit "préférence molle, jamais exclusive").
-    const preferred = preferredHexes.length ? base.filter((i) => preferredHexes.includes(i.hex)) : [];
+    // Un article à FALLBACK_HEX (couleur jamais renseignée) échappe à ce
+    // filtre (correctif 20/08/2026) : sinon il ne matche jamais la palette
+    // et se fait donc écarter à CHAQUE tirage dès qu'une alternative dans
+    // la palette existe — en pratique jamais choisi, pas juste "moins".
+    const preferred = preferredHexes.length ? base.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX) : [];
     const candidates = harmonize(preferred.length ? preferred : base, chosen, essential);
     const picked = rand(candidates);
     if (picked) chosen.push(picked);
@@ -437,7 +441,8 @@ export function generateOutfit(
       compensatingVeste = rand(harmonize(vesteCandidates, chosen, false));
       if (compensatingVeste) hautPool = hautCandidates;
     }
-    const hautPreferred = preferredHexes.length ? hautPool.filter((i) => preferredHexes.includes(i.hex)) : [];
+    // Même exemption FALLBACK_HEX que dans pick() ci-dessus.
+    const hautPreferred = preferredHexes.length ? hautPool.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX) : [];
     const h = rand(harmonize(hautPreferred.length ? hautPreferred : hautPool, chosen, true));
     if (h) chosen.push(h);
     const b = pick(BOTTOMS);

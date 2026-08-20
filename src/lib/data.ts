@@ -58,6 +58,15 @@ CATS.forEach(([key, label, plural]) => {
   CATPLURAL[key] = plural;
 });
 
+/**
+ * Repli hex quand un article catalogue n'a pas de couleur renseignée
+ * (vestiaire.ts) — jamais une vraie couleur de palette, correctif 20/08/2026 :
+ * la préférence de palette personnelle (R-S10, logic.ts) exempte
+ * explicitement les articles à cette valeur, pour ne jamais les exclure "à
+ * vie" d'une tenue simplement parce que leur couleur n'a pas été saisie.
+ */
+export const FALLBACK_HEX = "#DCCFBC";
+
 /** Palette de couleurs pour les pièces du dressing (27 teintes) — indépendante de la palette personnelle du profil. */
 export const PALETTE: [string, string][] = [
   ["Blanc", "#F7F4EE"],

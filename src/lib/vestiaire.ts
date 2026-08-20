@@ -1,6 +1,7 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { detectAccessoireType, detectBijouType, detectMatiere, detectSacType } from "./attributes";
 import type { CatalogItem } from "./catalog";
+import { FALLBACK_HEX } from "./data";
 import type { CategoryKey, Coupe, ImageSource, ImageStatus, IntensiteCouleur, Matiere, OccasionKey, Season, ShoeType, Tons } from "./types";
 
 /**
@@ -301,7 +302,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
   if (!cat) return null;
   const name = (row.name || "").trim();
   if (!name) return null;
-  const hex = row.hex || "#DCCFBC";
+  const hex = row.hex || FALLBACK_HEX;
   const color = row.couleur_dominante || "";
 
   return {
