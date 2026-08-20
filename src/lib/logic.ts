@@ -1059,8 +1059,14 @@ function pieceLabel(it: Item): string {
   let base: string;
   if (subtypeLower && NOUN_SUBTYPE_CATS.has(it.cat)) {
     base = subtypeLower;
-  } else if (subtypeLower && subtypeLower !== catLabel) {
-    // Évite le doublon "pantalon pantalon" quand le sous-type choisi est le nom générique de la catégorie lui-même (ex. subtype="Pantalon").
+  } else if (subtypeLower && (subtypeLower === catLabel || subtypeLower.startsWith(catLabel + " "))) {
+    // Évite le doublon "pantalon pantalon(...)" — non seulement quand le
+    // sous-type EST le nom générique de la catégorie (ex. "Pantalon"), mais
+    // aussi quand il commence par ce nom (ex. "Pantalon fluide" pour la
+    // catégorie pantalon, correctif 20/08/2026 : la vérification d'égalité
+    // stricte seule laissait passer "pantalon pantalon fluide").
+    base = subtypeLower;
+  } else if (subtypeLower) {
     base = `${catLabel} ${subtypeLower}`;
   } else {
     base = catLabel;

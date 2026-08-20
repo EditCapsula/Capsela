@@ -151,7 +151,8 @@ export default function ItemOutfitsScreen() {
                 const pieces = variation.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
                 return (
                   <div key={variation.ids.join("-")} className="bg-card border border-border rounded-[14px] p-[13px]">
-                    <div className="flex gap-[7px] overflow-x-auto pb-[2px]">
+                    {/* pt/pb (correctif 20/08/2026) : overflow-x-auto rend overflow-y "auto" aussi (règle CSS implicite dès qu'un seul axe n'est pas visible) — sans marge verticale, l'anneau terracotta de la pièce pivot (box-shadow, hors boîte) se faisait rogner en haut par ce conteneur défilant. */}
+                    <div className="flex gap-[7px] overflow-x-auto pt-[3px] pb-[3px]">
                       {pieces.map((p) => {
                         const img = resolveItemImage(p);
                         const isPivot = p.id === pivot.id;
