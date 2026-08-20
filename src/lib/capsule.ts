@@ -193,7 +193,14 @@ export function computeDefaultCapsule(
     if (basique !== 0) return basique;
     return Number(morphoFit(b, profile.morphology)) - Number(morphoFit(a, profile.morphology));
   });
-  let out = sorted.slice(0, 34);
+  // Plafond relevé de 34 à 50 (recette 20/08/2026, suite à "Mules à talons"
+  // jamais visible) : le tri basique-d'abord poussait systématiquement hors
+  // du plafond toute pièce non basique d'une catégorie déjà pourvue en
+  // basiques (une seule pièce basique de la catégorie suffisait à satisfaire
+  // le filet de sécurité ensure() ci-dessous, sans jamais garantir qu'une
+  // pièce précise y figure) — jamais un vrai bug de règle, mais une capsule
+  // qui ne laissait aucune place aux pièces plus habillées/statement.
+  let out = sorted.slice(0, 50);
 
   // Garantit la présence d'au moins une pièce de chaque catégorie essentielle
   // dans la capsule, même si les filtres précédents les avaient toutes
