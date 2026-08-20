@@ -183,6 +183,25 @@ export function effectiveFormality(occasion: OccasionKey, workMode: WorkMode, da
 export const SHOE_TYPES: ShoeType[] = [
   "Baskets", "Bottines", "Bottes", "Escarpins", "Sandales", "Mocassins", "Ballerines", "Chaussures d'intérieur",
 ];
+
+/**
+ * Préférences de style par occasion (R-S16, recette 20/08/2026) — mécanisme
+ * général et extensible : chaque occasion peut définir des attributs
+ * favorisés (aujourd'hui le type de chaussure, d'autres pourront s'ajouter
+ * ici plus tard, ex. matière/statement) SANS jamais devenir un critère
+ * d'exclusion. Appliqué comme une inclination molle dans logic.ts (même
+ * esprit que R-S10/R-B15/R-B16) : ne retient le sous-ensemble préféré que
+ * s'il laisse au moins une option, jamais de tenue bloquée faute de la
+ * bonne pièce dans le dressing. Occasions absentes de cette table : aucune
+ * préférence de style, comportement inchangé.
+ */
+export interface OccasionStylePrefs {
+  /** Types de chaussures favorisés (ex. talons pour une sortie festive). */
+  shoeTypes?: ShoeType[];
+}
+export const OCCASION_STYLE_PREFS: Partial<Record<OccasionKey, OccasionStylePrefs>> = {
+  festive: { shoeTypes: ["Escarpins"] },
+};
 /** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
 export const SAC_TYPES: SacType[] = ["Sac à main", "Cabas", "Bandoulière", "Pochette", "Sac à dos"];
 export const BIJOU_TYPES: BijouType[] = ["Collier", "Boucles d'oreilles", "Bracelet", "Bague", "Montre"];

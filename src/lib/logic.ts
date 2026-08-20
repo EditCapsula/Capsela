@@ -1,6 +1,6 @@
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, CATLABEL, OCCASIONS, effectiveFormality, isRainy, isSunny } from "./data";
+import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
@@ -480,7 +480,16 @@ export function generateOutfit(
   }
   const sh = (() => {
     // Les baskets sont déjà exclues en amont si l'occasion est habillée (R-B6, hardCategoryFilter).
-    const shoePool = poolFor(["chaussures"]).filter((i) => i.cat === "chaussures");
+    let shoePool = poolFor(["chaussures"]).filter((i) => i.cat === "chaussures");
+    // Préférence de style par occasion (R-S16, recette 20/08/2026) — ex.
+    // talons favorisés pour une sortie festive (cf. OCCASION_STYLE_PREFS) —
+    // n'écarte rien, juste une inclination si ça laisse au moins une option
+    // (même esprit que R-S10/R-B15/R-B16).
+    const shoeTypePrefs = OCCASION_STYLE_PREFS[occasion]?.shoeTypes;
+    if (shoeTypePrefs?.length) {
+      const styled = shoePool.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
+      if (styled.length) shoePool = styled;
+    }
     const picked = rand(harmonize(shoePool, chosen, true));
     if (picked) chosen.push(picked);
     return picked;
@@ -609,6 +618,15 @@ export function swapOutfitPiece(
   if (weather && isRainy(weather) && OUTERWEAR_CATS.includes(cat)) {
     const rainResistant = candidates.filter((i) => i.resistePluie);
     if (rainResistant.length) candidates = rainResistant;
+  }
+  // R-S16 — symétrique de la préférence de style par occasion appliquée
+  // dans generateOutfit (cf. OCCASION_STYLE_PREFS), molle jamais exclusive.
+  if (cat === "chaussures") {
+    const shoeTypePrefs = OCCASION_STYLE_PREFS[occasion]?.shoeTypes;
+    if (shoeTypePrefs?.length) {
+      const styled = candidates.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
+      if (styled.length) candidates = styled;
+    }
   }
   // Plage de température — symétrique du filtre appliqué dans generateOutfit.
   if (weather) {
