@@ -56,7 +56,16 @@ export default function TabBar() {
   const { state, actions } = useCapsela();
 
   return (
-    <div className="absolute left-0 right-0 bottom-0 bg-cream border-t border-border flex items-center justify-around px-2 pt-[11px] pb-[22px]">
+    <div
+      className="absolute left-0 right-0 bottom-0 bg-cream border-t border-border flex items-center justify-around px-2 pt-[11px]"
+      // pb (correctif 20/08/2026, contenu masqué par la navigation basse) :
+      // étend la nav elle-même dans la safe-area (encoche/barre de gestes)
+      // au lieu de laisser son padding de confort (22px) s'arrêter avant —
+      // sinon la nav pourrait se retrouver partiellement sous la barre
+      // système sur certains téléphones. --bottom-nav-height (globals.css)
+      // reste la hauteur HORS safe-area, cohérente avec .pb-safe-nav.
+      style={{ paddingBottom: "calc(22px + env(safe-area-inset-bottom))" }}
+    >
       {TABS.map((tab) => {
         const active = state.screen === tab.screen;
         const color = active ? "#A66950" : "#948A79";

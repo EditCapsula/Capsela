@@ -52,6 +52,28 @@ body {
   height: 0;
 }
 
+/**
+ * Hauteur réelle de TabBar.tsx hors safe-area (pt-[11px] + icône 19px +
+ * gap-[5px] + libellé ~11.4px + pb-[22px] ≈ 68.4px, arrondi) — recette
+ * 20/08/2026, correctif contenu masqué par la navigation basse. Source
+ * unique de vérité : si TabBar change de taille, ne mettre à jour QUE
+ * cette variable, jamais une valeur en dur dans chaque écran.
+ */
+:root {
+  --bottom-nav-height: 70px;
+}
+
+/**
+ * Marge de bas de page réservée à la navigation fixe — hauteur réelle de
+ * la nav + zone système (encoche/barre de gestes) + une marge de confort,
+ * jamais une valeur arbitraire propre à un téléphone. À utiliser sur le
+ * conteneur scrollable de tout écran dont le dernier élément doit rester
+ * pleinement visible au-dessus de TabBar.
+ */
+.pb-safe-nav {
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px);
+}
+
 input.capin {
   outline: none;
 }

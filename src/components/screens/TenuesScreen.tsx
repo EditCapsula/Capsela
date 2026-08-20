@@ -30,31 +30,36 @@ function compositionRoleOf(cat: CategoryKey): CompositionRole {
   return "petit"; // pull et tout le reste : replie sur le petit slot, comme le proto (SLOTS[rk] || SLOTS.petit)
 }
 
+// Composition éditoriale resserrée (recette 20/08/2026, passe affinage) :
+// tailles augmentées d'environ 15-20% par rapport à la version précédente,
+// chevauchements de coin volontaires (haut/pièce unique au-dessus du bas à
+// leur zone commune) plutôt qu'un alignement vertical strict chemise/bas/
+// chaussures, accessoire rapproché du haut plutôt qu'isolé à l'écart.
 const SLOTS_ONEPIECE: Record<string, [number, number, number, number]> = {
-  onepiece: [27, 4, 46, 62],
-  sac: [4, 46, 21, 22],
-  chaussures: [37, 68, 26, 20],
-  petit: [72, 50, 13, 13],
+  onepiece: [24, 2, 52, 70],
+  sac: [2, 40, 26, 26],
+  chaussures: [44, 68, 30, 24],
+  petit: [66, 8, 16, 16],
 };
 const SLOTS_STANDARD: Record<string, [number, number, number, number]> = {
-  outerwear: [26, 2, 40, 30],
-  haut: [30, 4, 34, 28],
+  outerwear: [22, 0, 46, 35],
+  haut: [18, 0, 40, 34],
   // Quand une veste/un manteau est aussi présent, veste et haut se placent
   // franchement côte à côte, sans se recouvrir (correctif 20/08/2026) —
   // l'ancien décalage de 6%/2% laissait les deux zones quasiment
   // superposées, la veste ne montrant qu'un fin liséré derrière le haut.
-  outerwearAvecHaut: [4, 0, 38, 32],
-  hautAvecVeste: [46, 6, 32, 28],
-  pantalon: [31, 26, 33, 34],
-  chaussures: [36, 56, 26, 18],
-  sac: [5, 40, 20, 20],
-  petit: [74, 46, 13, 13],
+  outerwearAvecHaut: [2, 0, 44, 37],
+  hautAvecVeste: [50, 4, 37, 32],
+  pantalon: [34, 26, 42, 40],
+  chaussures: [14, 62, 30, 22],
+  sac: [4, 30, 24, 24],
+  petit: [58, 2, 17, 17],
 };
 const PETIT_OFFSETS: [number, number][] = [
   [0, 0],
-  [0, 30],
-  [-58, 12],
-  [-58, 40],
+  [10, 12],
+  [-56, 10],
+  [-56, 32],
 ];
 
 function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties }[] {
@@ -100,7 +105,9 @@ function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties 
         backgroundPosition: "center",
         borderRadius: hasImg ? 0 : 10,
         boxShadow: hasImg ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
-        zIndex: rk === "outerwear" ? 1 : 2,
+        // Le haut/la pièce unique reste au-dessus du bas à leur zone de
+        // chevauchement volontaire (recette 20/08/2026) — jamais l'inverse.
+        zIndex: rk === "haut" || rk === "onepiece" ? 3 : rk === "pantalon" || rk === "chaussures" ? 2 : 1,
       },
     };
   });
@@ -211,8 +218,14 @@ export default function TenuesScreen() {
     state.dateContext
   );
 
+  // pb-safe-nav (correctif 20/08/2026) remplace pb-24 : réserve la hauteur
+  // réelle de la navigation basse + safe-area-inset-bottom + marge de
+  // confort (globals.css), jamais une valeur arbitraire — pour que "Porter
+  // cette tenue"/"Demander un avis à un proche" restent toujours
+  // entièrement visibles au-dessus de TabBar, quel que soit l'écran/
+  // l'encoche/la barre de gestes.
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <AppHeader />
 
       <div className="flex items-center gap-[14px]">
