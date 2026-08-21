@@ -281,9 +281,28 @@ export interface Weather {
   seasons: Season[];
 }
 
-/** Météo ensoleillée — R-B15 (lunettes de soleil et pièces similaires nécessitant du soleil). */
+/**
+ * Indice UV estimé — aucune vraie donnée UV n'est disponible côté API météo
+ * actuelle (correctif 21/08/2026 : approximation à partir de la température
+ * et du libellé météo, faute de brancher un endpoint UV dédié). Sert de
+ * signal pour R-B15 (lunettes de soleil et pièces similaires nécessitant du
+ * soleil) : seuil demandé "dès que l'indice UV est de 3 minimum".
+ */
+function estimateUvIndex(weather: Weather): number {
+  let base: number;
+  if (weather.temp >= 25) base = 7;
+  else if (weather.temp >= 20) base = 5;
+  else if (weather.temp >= 15) base = 4;
+  else if (weather.temp >= 10) base = 2;
+  else base = 1;
+  if (/soleil/i.test(weather.label)) return base;
+  if (/pluie|orage/i.test(weather.label)) return Math.max(0, base - 3);
+  return Math.max(0, base - 2);
+}
+
+/** Météo jugée assez ensoleillée pour les pièces necessite_soleil (R-B15) — seuil indice UV estimé ≥ 3 (correctif 21/08/2026, remplace l'ancien test uniquement textuel sur "ensoleillé"). */
 export function isSunny(weather: Weather): boolean {
-  return /soleil/i.test(weather.label);
+  return estimateUvIndex(weather) >= 3;
 }
 
 /** Météo pluvieuse — R-B16 (préférence pour une veste/un manteau resiste_pluie quand il pleut). */
