@@ -468,10 +468,17 @@ export function generateOutfit(
 
   const ids: number[] = [];
   let compensatingVeste: Item | null = null;
+  // Robe/jupe/short trop frais pour la météo (repli météo de poolFor,
+  // cf. applyTempFilter) : compensé par un collant de saison plutôt que
+  // simplement toléré tel quel — signalé le 21/08/2026 ("il faudrait
+  // inciter à mettre un collant de la saison"). Jamais pour un pantalon/
+  // jean (R-B19 — les collants ne se portent qu'avec robe/jupe/short).
+  let needsCollant = false;
   const useRobe = Math.random() < 0.4 && poolFor(["robe"]).length > 0;
   if (useRobe) {
     const r = pick(["robe"]);
     if (r) ids.push(r.id);
+    if (r && r.meteoMinTemp != null && weather.temp < r.meteoMinTemp) needsCollant = true;
   } else {
     // Formalité du haut compensée par une veste structurée (recette
     // 19/08/2026, audit moteur) : "t-shirt + blazer" doit pouvoir
@@ -495,6 +502,12 @@ export function generateOutfit(
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
     if (compensatingVeste) { chosen.push(compensatingVeste); ids.push(compensatingVeste.id); }
+    if (b && (b.cat === "jupe" || b.cat === "short") && b.meteoMinTemp != null && weather.temp < b.meteoMinTemp) needsCollant = true;
+  }
+  if (needsCollant) {
+    const collantPool = poolFor(["accessoire"]).filter((i) => i.cat === "accessoire" && i.accessoireType === "Collants");
+    const collant = rand(harmonize(collantPool, chosen, false));
+    if (collant && !ids.includes(collant.id)) { chosen.push(collant); ids.push(collant.id); }
   }
   // Veste décidée AVANT le calque haut/pull (correctif 21/08/2026, signalé :
   // veste + layering proposés ensemble) — une veste et un calque (chemise
