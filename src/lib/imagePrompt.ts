@@ -47,6 +47,9 @@ const SUBTYPE_EN: Record<string, string> = {
   bagues: "rings",
   panier: "woven basket bag",
   "slip dress": "silk slip dress",
+  "robe chemise": "shirt dress",
+  "robe polo": "polo dress",
+  "robe t-shirt": "t-shirt dress",
   montre: "watch",
   ceinture: "belt",
   foulard: "scarf",
@@ -275,7 +278,7 @@ const CATEGORY_EXCLUDE: Record<string, string[]> = {
 
 /** Mots attendus dans le nom du produit pour chaque catégorie — sert à la validation de cohérence avant l'appel API. */
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  haut: ["top", "shirt", "blouse", "tank top", "turtleneck", "polo", "sweatshirt"],
+  haut: ["top", "shirt", "blouse", "tank top", "turtleneck", "polo", "sweatshirt", "cardigan", "sweater"],
   pull: ["sweater", "cardigan", "sweatshirt"],
   pantalon: ["trousers", "pants", "leggings"],
   jean: ["jeans"],
@@ -288,7 +291,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   chaussures: ["shoes", "sneakers", "boots", "flats", "sandals", "loafers", "pumps", "slippers"],
   sac: ["bag", "handbag", "tote", "backpack", "clutch"],
   bijou: ["necklace", "earrings", "bracelet", "ring", "watch", "jewelry"],
-  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory"],
+  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch"],
 };
 
 function translate(dict: Record<string, string>, raw: string | undefined | null): string | undefined {

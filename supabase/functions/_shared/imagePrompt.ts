@@ -137,8 +137,15 @@ const SUBTYPE_EN: Record<string, string> = {
   pochette: "clutch bag",
   "sac à dos": "backpack",
   panier: "woven basket bag",
-  // Robes
+  // Robes — correspondances exactes prioritaires (correctif 21/08/2026,
+  // signalé : erreur de génération) : sans elles, le repli mot-par-mot
+  // matchait "chemise"/"polo"/"t-shirt" comme un haut autonome ("shirt",
+  // "polo shirt", "t-shirt"), échouant la validation de cohérence de la
+  // catégorie "robe" (qui exige "dress" dans le nom du produit).
   "slip dress": "silk slip dress",
+  "robe chemise": "shirt dress",
+  "robe polo": "polo dress",
+  "robe t-shirt": "t-shirt dress",
   // Bijoux
   collier: "necklace",
   "boucles d'oreilles": "earrings",
@@ -377,7 +384,11 @@ const CATEGORY_EXCLUDE: Record<string, string[]> = {
 
 /** Mots attendus dans le nom du produit pour chaque catégorie — sert à la validation de cohérence avant l'appel API. */
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  haut: ["top", "shirt", "blouse", "tank top", "turtleneck", "polo", "sweatshirt"],
+  // "cardigan"/"sweater" ajoutés (correctif 21/08/2026, signalé : erreur de
+  // génération) : la catégorie "pulls_gilets"/pull n'est jamais utilisée
+  // dans les données réelles, les cardigans sont systématiquement stockés
+  // en category="hauts" -> canonCategory="haut".
+  haut: ["top", "shirt", "blouse", "tank top", "turtleneck", "polo", "sweatshirt", "cardigan", "sweater"],
   pull: ["sweater", "cardigan", "sweatshirt"],
   pantalon: ["trousers", "pants", "leggings"],
   jean: ["jeans"],
@@ -390,7 +401,11 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   chaussures: ["shoes", "sneakers", "boots", "flats", "sandals", "loafers", "pumps", "slippers"],
   sac: ["bag", "handbag", "tote", "backpack", "clutch"],
   bijou: ["necklace", "earrings", "bracelet", "ring", "watch", "jewelry"],
-  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory"],
+  // Mots-clés sac ajoutés (correctif 21/08/2026, signalé : erreur de
+  // génération) : la catégorie "sacs" n'est jamais utilisée dans les
+  // données réelles, tous les sacs sont stockés en category="accessoires"
+  // -> canonCategory="accessoire".
+  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch"],
 };
 
 function translate(dict: Record<string, string>, raw: string | null | undefined): string | undefined {
