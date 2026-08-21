@@ -35,6 +35,11 @@ export function violatesOuterwearRule(pieces: Item[]): boolean {
   return pieces.some((i) => OUTERWEAR_CATS.includes(i.cat)) && !hasBaseGarment(pieces);
 }
 
+/** R-B10 — deux chemises/chemisiers ensemble, quel que soit leur rôle de superposition. */
+function isShirtLike(it: Item): boolean {
+  return it.subtype === "Chemise" || it.subtype === "Chemisier";
+}
+
 function recentlyWorn(it: Item): boolean {
   return it.worn != null && it.worn <= 2;
 }
@@ -506,8 +511,17 @@ export function generateOutfit(
       // par le narrowing heuristique d'occasion (son vocabulaire propre —
       // gilet, cardigan — ne recoupe pas forcément les mots-clés de
       // l'occasion), seulement par les règles dures (hardBase).
+      // R-B10 (correctif 21/08/2026, signalé : "Chemise blanche" + "Chemise
+      // oversize en lin" superposées) — evaluateBlocking() signale déjà deux
+      // chemises/chemisiers ensemble, mais rien ne l'empêchait ici en amont :
+      // la génération automatique est censée éviter ces combinaisons, pas
+      // seulement les signaler après coup.
       const layerCandidates = hardBase.filter(
-        (i) => TOP_LAYER_CATS.includes(i.cat) && !chosen.some((c) => c.id === i.id) && rolePieceOf(i) === "calque"
+        (i) =>
+          TOP_LAYER_CATS.includes(i.cat) &&
+          !chosen.some((c) => c.id === i.id) &&
+          rolePieceOf(i) === "calque" &&
+          !(isShirtLike(firstLayer) && isShirtLike(i))
       );
       const layer = rand(harmonize(layerCandidates, chosen, false));
       if (layer) { chosen.push(layer); ids.push(layer.id); }
