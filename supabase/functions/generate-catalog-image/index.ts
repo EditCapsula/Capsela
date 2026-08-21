@@ -23,14 +23,21 @@
 //   supabase secrets set IMAGE_GENERATION_QUALITY=low          (optionnel, défaut ci-dessous)
 //   supabase secrets set MAX_IMAGE_GENERATIONS_PER_DAY=50      (optionnel, défaut ci-dessous)
 //
-// ⚠️ Compression WebP (toWebp ci-dessous) : tentée via @jsquash/webp (WASM),
-// mais jamais vérifiée en conditions réelles depuis ce sandbox (pas de Deno
-// installé, pas d'accès réseau à esm.sh) — repli automatique et silencieux
-// sur PNG brut (1024×1024) si la conversion échoue pour une raison
-// quelconque, la génération n'est jamais bloquée par cette étape. À
-// vérifier en premier après le tout premier appel réel : si le fichier
-// dans Storage se termine en .png plutôt qu'en .webp, la conversion n'a
-// pas fonctionné (l'affichage reste correct dans les deux cas).
+// ⚠️ Redimensionnement (@jsquash/resize) + compression WebP (@jsquash/webp),
+// tous deux en WASM via toWebp ci-dessous — mais jamais vérifiés en
+// conditions réelles depuis ce sandbox (pas de Deno installé, pas d'accès
+// réseau à esm.sh) — repli automatique et silencieux sur PNG brut
+// (1024×1024, taille originale) si une étape échoue pour une raison
+// quelconque, la génération n'est jamais bloquée. À vérifier en premier
+// après le tout premier appel réel : si le fichier dans Storage se termine
+// en .png plutôt qu'en .webp, ou fait 1024×1024 plutôt que ≤800×800, une des
+// deux étapes n'a pas fonctionné (l'affichage reste correct dans tous les
+// cas, juste plus lourd en egress).
+// 800×800 (max, correctif 21/08/2026 — egress cache Free Plan Supabase
+// dépassé) : couvre confortablement le plus grand affichage réel de l'app
+// (fiche détail plein écran PieceScreen, ratio 4/5, très en dessous de 800px
+// de large même en 2x retina sur mobile) ; toutes les autres cartes sont
+// nettement plus petites (jusqu'à 119px, cf. TenuesScreen/CapsuleScreen).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
@@ -655,20 +662,27 @@ async function callImageApi(apiKey: string, model: string, quality: string, prom
 }
 
 /**
- * Conversion WebP best-effort via @jsquash/webp (WASM) — jamais vérifiée
- * depuis ce sandbox (pas de Deno/réseau ici). Repli automatique et
- * silencieux sur le PNG brut si la conversion échoue pour une raison
- * quelconque : ne bloque jamais la génération.
+ * Redimensionnement (@jsquash/resize) + conversion WebP (@jsquash/webp),
+ * best-effort — jamais vérifiés depuis ce sandbox (pas de Deno/réseau ici).
+ * Repli automatique et silencieux sur le PNG brut 1024×1024 (taille
+ * d'origine) si une étape échoue pour une raison quelconque : ne bloque
+ * jamais la génération.
  */
+const MAX_IMAGE_DIMENSION = 800;
+
 async function toWebp(pngBytes: Uint8Array): Promise<{ bytes: Uint8Array; contentType: string; ext: string }> {
   try {
     const { default: decode } = await import("https://esm.sh/@jsquash/png@2.1.0/decode.js");
+    const { default: resize } = await import("https://esm.sh/@jsquash/resize@1.1.1");
     const { default: encode } = await import("https://esm.sh/@jsquash/webp@1.4.0/encode.js");
-    const imageData = await decode(pngBytes.buffer as ArrayBuffer);
+    let imageData = await decode(pngBytes.buffer as ArrayBuffer);
+    if (imageData.width > MAX_IMAGE_DIMENSION || imageData.height > MAX_IMAGE_DIMENSION) {
+      imageData = await resize(imageData, { width: MAX_IMAGE_DIMENSION, height: MAX_IMAGE_DIMENSION });
+    }
     const webpBuffer = await encode(imageData, { quality: 75 });
     return { bytes: new Uint8Array(webpBuffer), contentType: "image/webp", ext: "webp" };
   } catch (err) {
-    console.error("Conversion WebP indisponible, repli sur PNG brut :", err);
+    console.error("Redimensionnement/conversion WebP indisponible, repli sur PNG brut :", err);
     return { bytes: pngBytes, contentType: "image/png", ext: "png" };
   }
 }
