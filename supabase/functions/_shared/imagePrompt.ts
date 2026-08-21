@@ -94,6 +94,17 @@ export const CATEGORY_FOLDER: Record<string, string> = {
   accessoire: "accessoires",
 };
 
+/**
+ * Détecte une teinte claire/blanche (correctif 21/08/2026, signalé : "Pochette
+ * de costume" blanche invisible sur fond blanc) — le fond "blanc" par défaut
+ * du prompt (repli si la transparence n'est pas honorée par le modèle) rend
+ * un produit clair illisible. Basé sur le nom de couleur : VestiaireRow ne
+ * porte pas le hex, doit rester identique au miroir app (src/lib/imagePrompt.ts).
+ */
+function isPaleColor(color: string | null | undefined): boolean {
+  return !!color && /blanc|ivoire|écru|crème|nacré/i.test(color);
+}
+
 /** Nom du produit en anglais — utilisé UNIQUEMENT comme repli quand sous_type ne correspond à rien de connu (jamais depuis `name`). */
 const CATEGORY_EN: Record<string, string> = {
   haut: "top",
@@ -606,8 +617,11 @@ export function buildImagePrompt(row: VestiaireRow, trend?: TrendRule | null): B
     "Natural construction and folds.",
     "Soft diffused studio lighting.",
     "Very soft subtle shadow.",
-    "Transparent background if supported.",
-    "Otherwise use a clean uniform neutral or white background.",
+    ...(isPaleColor(row.couleur_dominante)
+      ? [
+          "This product is white or very pale colored: never use a white or transparent background — use a soft contrasting light grey studio background instead, so the product edges stay clearly visible.",
+        ]
+      : ["Transparent background if supported.", "Otherwise use a clean uniform neutral or white background."]),
     "Photorealistic.",
     "High detail.",
     "Sharp clean product edges.",
