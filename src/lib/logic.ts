@@ -450,12 +450,25 @@ export function generateOutfit(
     if (b) ids.push(b.id);
     if (compensatingVeste) { chosen.push(compensatingVeste); ids.push(compensatingVeste.id); }
   }
+  // Veste décidée AVANT le calque haut/pull (correctif 21/08/2026, signalé :
+  // veste + layering proposés ensemble) — une veste et un calque (chemise
+  // ouverte, cardigan, gilet, sweat) jouent le même rôle de superposition ;
+  // cumuler les deux est redondant et encombre visuellement la silhouette.
+  let hasVeste = !!compensatingVeste;
+  if (!hasVeste && Math.random() < 0.3) {
+    const v = pick(["veste"], false);
+    if (v) {
+      hasVeste = true;
+      if (!ids.includes(v.id)) ids.push(v.id);
+    }
+  }
   // R-B5 assoupli (nuance demandée le 19/08/2026) : une robe/combinaison
   // reste self-sufficient face à un haut/bas "base" (redondant), mais une
   // pièce role_piece = "calque" par-dessus (chemise ouverte, gilet léger)
   // est un vrai geste stylistique, jamais en contexte habillé — seulement
-  // décontracté, jamais systématique.
-  if (useRobe && !dressy && Math.random() < 0.3) {
+  // décontracté, jamais systématique, jamais non plus si une veste est déjà
+  // dans la tenue (même rôle de superposition, cf. plus haut).
+  if (useRobe && !dressy && !hasVeste && Math.random() < 0.3) {
     const robeLayerCandidates = hardBase.filter((i) => TOP_LAYER_CATS.includes(i.cat) && rolePieceOf(i) === "calque");
     const robeLayer = rand(harmonize(robeLayerCandidates, chosen, false));
     if (robeLayer) { chosen.push(robeLayer); ids.push(robeLayer.id); }
@@ -464,8 +477,8 @@ export function generateOutfit(
   // n'est ajoutée que si la 1ère (déjà choisie) est "base" et que la
   // candidate est "calque" — jamais 2 calques, jamais de calque en contexte
   // habillé sans validation manuelle (uniquement possible depuis le picker
-  // manuel, pas ici).
-  if (!useRobe && Math.random() < 0.35) {
+  // manuel, pas ici), jamais non plus si une veste est déjà dans la tenue.
+  if (!useRobe && !hasVeste && Math.random() < 0.35) {
     const firstLayer = chosen.find((c) => TOP_LAYER_CATS.includes(c.cat));
     if (firstLayer && rolePieceOf(firstLayer) === "base" && !dressy) {
       // La base déjà choisie ancre l'occasion : le calque n'a pas à repasser
@@ -478,10 +491,6 @@ export function generateOutfit(
       const layer = rand(harmonize(layerCandidates, chosen, false));
       if (layer) { chosen.push(layer); ids.push(layer.id); }
     }
-  }
-  if (!compensatingVeste && Math.random() < 0.3) {
-    const v = pick(["veste"], false);
-    if (v && !ids.includes(v.id)) ids.push(v.id);
   }
   const sh = (() => {
     // Les baskets sont déjà exclues en amont si l'occasion est habillée (R-B6, hardCategoryFilter).

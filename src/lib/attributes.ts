@@ -172,13 +172,18 @@ export function metalOf(it: Item): "or" | "argent" | "aucun" {
   return "aucun";
 }
 
+/** Types de haut jamais portés ouverts par-dessus un autre haut/une robe, même en coupe oversize — un t-shirt ample reste un t-shirt, pas une chemise ouverte (correctif 21/08/2026, signalé : t-shirt oversize proposé en layering sur une robe). */
+const NEVER_LAYER_RE = /t-shirt|d[ée]bardeur|\bpolo\b|crop top|maillot|jersey|bandeau|brassière/;
+
 /**
  * Rôle de la pièce dans la superposition — catégories haut et pull uniquement.
- * ajusté/regular → base (portée en dessous), oversize → calque (par-dessus).
+ * ajusté/regular → base (portée en dessous), oversize → calque (par-dessus),
+ * sauf les types NEVER_LAYER_RE qui restent "base" quelle que soit la coupe.
  */
 export function rolePieceOf(it: Item): "base" | "calque" | "piece_unique" {
   if (it.cat !== "haut" && it.cat !== "pull") return "piece_unique";
   if (it.rolePiece) return it.rolePiece;
+  if (NEVER_LAYER_RE.test(((it.subtype || "") + " " + it.name).toLowerCase())) return "base";
   return coupeOf(it) === "oversize" ? "calque" : "base";
 }
 
