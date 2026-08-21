@@ -411,7 +411,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       s.occasion || "all",
       s.workMode,
       s.dateContext,
-      paletteHexes(profile)
+      paletteHexes(profile),
+      profile.gender
     );
     return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
   };

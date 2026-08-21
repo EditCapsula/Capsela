@@ -277,7 +277,9 @@ export function generateOutfit(
   occasion: OccasionKey,
   workMode: WorkMode = "Présentiel",
   dateContext: DateContext = "Verre",
-  preferredHexes: string[] = []
+  preferredHexes: string[] = [],
+  /** Genre du profil — la compensation robe/jupe/short trop fraîche par un collant (cf. plus bas) est un usage féminin, jamais proposée pour un profil homme. */
+  gender: "femme" | "homme" | null = null
 ): GeneratedOutfit {
   const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
@@ -471,8 +473,11 @@ export function generateOutfit(
   // Robe/jupe/short trop frais pour la météo (repli météo de poolFor,
   // cf. applyTempFilter) : compensé par un collant de saison plutôt que
   // simplement toléré tel quel — signalé le 21/08/2026 ("il faudrait
-  // inciter à mettre un collant de la saison"). Jamais pour un pantalon/
-  // jean (R-B19 — les collants ne se portent qu'avec robe/jupe/short).
+  // inciter à mettre un collant de la saison"), précisé ensuite : usage
+  // féminin uniquement ("et que pour les femmes"), jamais pour un profil
+  // homme (un short homme trop frais n'appelle pas de collant). Jamais non
+  // plus pour un pantalon/jean (R-B19 — les collants ne se portent qu'avec
+  // robe/jupe/short).
   let needsCollant = false;
   const useRobe = Math.random() < 0.4 && poolFor(["robe"]).length > 0;
   if (useRobe) {
@@ -504,7 +509,7 @@ export function generateOutfit(
     if (compensatingVeste) { chosen.push(compensatingVeste); ids.push(compensatingVeste.id); }
     if (b && (b.cat === "jupe" || b.cat === "short") && b.meteoMinTemp != null && weather.temp < b.meteoMinTemp) needsCollant = true;
   }
-  if (needsCollant) {
+  if (needsCollant && gender === "femme") {
     const collantPool = poolFor(["accessoire"]).filter((i) => i.cat === "accessoire" && i.accessoireType === "Collants");
     const collant = rand(harmonize(collantPool, chosen, false));
     if (collant && !ids.includes(collant.id)) { chosen.push(collant); ids.push(collant.id); }
@@ -1081,7 +1086,8 @@ export function getOutfitsForItem(
   pool: Item[],
   weather: Weather,
   preferredHexes: string[] = [],
-  opts: { maxPerOccasion?: number; maxTotal?: number; attemptsPerOccasion?: number } = {}
+  opts: { maxPerOccasion?: number; maxTotal?: number; attemptsPerOccasion?: number } = {},
+  gender: "femme" | "homme" | null = null
 ): ItemOutfitVariation[] {
   const pivot = pool.find((i) => i.id === pivotId);
   if (!pivot) return [];
@@ -1120,7 +1126,7 @@ export function getOutfitsForItem(
     const candidates: ItemOutfitVariation[] = [];
     const localSeen = new Set<string>();
     for (let attempt = 0; attempt < attemptsPerOccasion; attempt++) {
-      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes);
+      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender);
       if (!ids.includes(pivotId)) continue;
       const key = structuralKeyOf(ids);
       if (seenKeys.has(key) || localSeen.has(key)) continue;

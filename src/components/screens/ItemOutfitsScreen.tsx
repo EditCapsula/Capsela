@@ -39,8 +39,8 @@ export default function ItemOutfitsScreen() {
   const preferredHexes = useMemo(() => paletteHexes(profile), [profile]);
 
   const variations = useMemo(
-    () => (!pivot ? [] : getOutfitsForItem(pivot.id, pool, weather, preferredHexes)),
-    [pivot, pool, weather, preferredHexes]
+    () => (!pivot ? [] : getOutfitsForItem(pivot.id, pool, weather, preferredHexes, {}, profile.gender)),
+    [pivot, pool, weather, preferredHexes, profile.gender]
   );
 
   if (!pivot) return null;
