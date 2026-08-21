@@ -21,6 +21,9 @@ const CATEGORY_EN: Record<string, string> = {
 /** Sous-types reconnus comme nom complet du produit (correspondance exacte du sous-type entier). */
 const SUBTYPE_EN: Record<string, string> = {
   baskets: "sneakers",
+  "sneakers rétro": "low-top retro-style sneakers",
+  "sneakers chunky": "chunky platform sneakers",
+  "sneakers montantes": "high-top sneakers",
   bottines: "ankle boots",
   bottes: "boots",
   escarpins: "pumps",

@@ -116,6 +116,9 @@ const CATEGORY_EN: Record<string, string> = {
 const SUBTYPE_EN: Record<string, string> = {
   // Chaussures
   baskets: "sneakers",
+  "sneakers rétro": "low-top retro-style sneakers",
+  "sneakers chunky": "chunky platform sneakers",
+  "sneakers montantes": "high-top sneakers",
   bottines: "ankle boots",
   bottes: "boots",
   escarpins: "pumps",
