@@ -289,6 +289,7 @@ function splitTags(raw: string | null): string[] | undefined {
 const SHOE_TYPE_MAP: Record<string, ShoeType> = {
   baskets: "Baskets",
   bottines: "Bottines",
+  "desert boots": "Bottines",
   bottes: "Bottes",
   "boots lacées": "Bottes",
   escarpins: "Escarpins",
