@@ -82,6 +82,8 @@ function catalogShoeTypeFor(cat: CategoryKey, name: string): ShoeType | undefine
   if (/sandale.*talon/.test(n)) return "Sandales à talons";
   if (/sandale/.test(n)) return "Sandales";
   if (/ballerine/.test(n)) return "Ballerines";
+  if (/mule/.test(n)) return "Mules";
+  if (/slingback/.test(n)) return "Slingbacks";
   if (/chausson|charentaise|pantoufle|intérieur/.test(n)) return "Chaussures d'intérieur";
   return undefined;
 }

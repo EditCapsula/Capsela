@@ -210,7 +210,13 @@ export interface OccasionStylePrefs {
   shoeTypes?: ShoeType[];
 }
 export const OCCASION_STYLE_PREFS: Partial<Record<OccasionKey, OccasionStylePrefs>> = {
-  festive: { shoeTypes: ["Escarpins"] },
+  // Élargi (correctif 21/08/2026, signalé) au-delà des seuls escarpins :
+  // toute chaussure à talon reste une préférence légitime pour une sortie
+  // festive.
+  festive: { shoeTypes: ["Escarpins", "Sandales à talons", "Mules", "Slingbacks"] },
+  // Ajouté (correctif 21/08/2026, signalé) — inverse : le voyage privilégie
+  // le confort, jamais un talon.
+  voyage: { shoeTypes: ["Baskets", "Ballerines", "Sandales", "Mocassins", "Espadrilles"] },
 };
 /** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
 export const SAC_TYPES: SacType[] = ["Sac à main", "Cabas", "Bandoulière", "Pochette", "Sac à dos"];
