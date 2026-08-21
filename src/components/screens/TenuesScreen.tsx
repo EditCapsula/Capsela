@@ -145,6 +145,9 @@ const MISSING_LABELS: Record<string, string> = {
   accessoire: "un accessoire",
   sac: "un sac",
   bijou: "un bijou",
+  // R-B18 : une pièce de la tenue est sous son seuil de température et
+  // aucun gilet/cardigan/veste compatible n'a été trouvé pour compenser.
+  chaud: "une pièce plus chaude",
 };
 
 function missingSuggestionText(missingCats: string[]): string {

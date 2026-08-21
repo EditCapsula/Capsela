@@ -239,7 +239,7 @@ export interface AppState {
 
   outfit: number[];
   /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. */
-  outfitMissingCats: (CategoryKey | "bas")[];
+  outfitMissingCats: (CategoryKey | "bas" | "chaud")[];
   outfitValidated: boolean;
   occasion: OccasionKey;
   /** true dès que l'utilisatrice a choisi une occasion elle-même (même pour revenir à "all") — désactive alors l'occasion par défaut auto-calculée (recette 13/08/2026) pour le reste de la session. */

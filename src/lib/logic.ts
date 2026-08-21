@@ -256,8 +256,8 @@ function rand(items: Item[]): Item | null {
 
 export interface GeneratedOutfit {
   ids: number[];
-  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. */
-  missingCats: (CategoryKey | "bas")[];
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. "chaud" (R-B18) : une pièce présente est sous son meteo_min_temp et aucun calque compatible n'a été trouvé pour compenser. */
+  missingCats: (CategoryKey | "bas" | "chaud")[];
 }
 
 /**
@@ -470,6 +470,10 @@ export function generateOutfit(
 
   const ids: number[] = [];
   let compensatingVeste: Item | null = null;
+  // Haut/robe retenu(e) trop frais(che) pour la météo (repli météo de
+  // poolFor) — traqué pour la compensation R-B18 plus bas, une fois toutes
+  // les couches probabilistes (veste, robeLayer, R-B8) déjà décidées.
+  let primaryTop: Item | null = null;
   // Robe/jupe/short trop frais pour la météo (repli météo de poolFor,
   // cf. applyTempFilter) : compensé par un collant de saison plutôt que
   // simplement toléré tel quel — signalé le 21/08/2026 ("il faudrait
@@ -483,6 +487,7 @@ export function generateOutfit(
   if (useRobe) {
     const r = pick(["robe"]);
     if (r) ids.push(r.id);
+    primaryTop = r;
     if (r && r.meteoMinTemp != null && weather.temp < r.meteoMinTemp) needsCollant = true;
   } else {
     // Formalité du haut compensée par une veste structurée (recette
@@ -503,6 +508,7 @@ export function generateOutfit(
     const hautPreferred = preferredHexes.length ? hautPool.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX) : [];
     const h = rand(harmonize(hautPreferred.length ? hautPreferred : hautPool, chosen, true));
     if (h) chosen.push(h);
+    primaryTop = h;
     const b = pick(BOTTOMS);
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
@@ -565,6 +571,35 @@ export function generateOutfit(
       if (layer) { chosen.push(layer); ids.push(layer.id); }
     }
   }
+  // R-B18 (nouveau 21/08/2026, "en été si la température est en dessous du
+  // min pour un débardeur, il faut porter un gilet dessus") : le haut/la
+  // robe retenu(e) plus haut peut être sous son propre meteo_min_temp — cas
+  // rare, seulement quand poolFor() a dû recourir à son repli météo faute
+  // d'alternative. Compensation en dernier ressort, après les superpositions
+  // probabilistes ci-dessus (veste, robeLayer, R-B8) : si l'une d'elles a
+  // déjà ajouté une pièce calque/veste/manteau, la pièce est déjà couverte.
+  // Sinon, on cherche explicitement un gilet/cardigan/pull calque ou une
+  // veste/manteau dont le propre meteo_min_temp couvre la météo du jour, et
+  // on l'ajoute d'office — jamais laissé tel quel silencieusement. Si
+  // aucune pièce compatible n'existe dans le pool, signalé via missingCats
+  // ("chaud"), même mécanisme que pour un bas manquant.
+  let missingWarmth = false;
+  if (primaryTop && primaryTop.meteoMinTemp != null && weather.temp < primaryTop.meteoMinTemp) {
+    const alreadyCompensated = chosen.some(
+      (c) => c.id !== primaryTop!.id && (c.cat === "pull" || OUTERWEAR_CATS.includes(c.cat))
+    );
+    if (!alreadyCompensated) {
+      const compensationCandidates = hardBaseNoTemp.filter((i) => {
+        if (chosen.some((c) => c.id === i.id)) return false;
+        const isCalquePull = i.cat === "pull" && rolePieceOf(i) === "calque";
+        if (!isCalquePull && !OUTERWEAR_CATS.includes(i.cat)) return false;
+        return i.meteoMinTemp == null || weather.temp >= i.meteoMinTemp;
+      });
+      const compensation = rand(harmonize(compensationCandidates, chosen, false));
+      if (compensation) { chosen.push(compensation); ids.push(compensation.id); }
+      else missingWarmth = true;
+    }
+  }
   const sh = (() => {
     // Les baskets sont déjà exclues en amont si l'occasion est habillée (R-B6, hardCategoryFilter).
     let shoePool = poolFor(["chaussures"]).filter((i) => i.cat === "chaussures");
@@ -619,12 +654,13 @@ export function generateOutfit(
   // Sac/bijou désormais facultatifs (recette 19/08/2026) : leur absence
   // n'est plus jamais signalée comme un manque, seuls les éléments
   // structurants (haut+bas/robe, chaussures) le sont.
-  const missingCats: (CategoryKey | "bas")[] = [];
+  const missingCats: (CategoryKey | "bas" | "chaud")[] = [];
   if (!useRobe) {
     if (!hasCat(["haut"])) missingCats.push("haut");
     if (!hasCat(BOTTOMS)) missingCats.push("bas");
   }
   if (!hasCat(["chaussures"])) missingCats.push("chaussures");
+  if (missingWarmth) missingCats.push("chaud");
 
   return { ids: Array.from(new Set(ids)), missingCats };
 }
