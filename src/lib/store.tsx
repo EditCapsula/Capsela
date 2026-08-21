@@ -8,7 +8,7 @@ import { fetchVestiaireUniversel } from "./vestiaire";
 import { ensureCatalogImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
-import { generateOutfit, swapOutfitPiece, violatesOuterwearRule } from "./logic";
+import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { paletteHexes, type ProfilePrefs } from "./profile";
 import {
   detectAccessoireType,
@@ -93,6 +93,8 @@ function buildInitialState(): AppState {
     addSubtypeTouched: false,
     outfit: [],
     outfitMissingCats: [],
+    outfitFormalityDowngraded: false,
+    outfitNoCompleteOutfit: false,
     outfitValidated: false,
     occasion: "all",
     occasionManual: false,
@@ -405,7 +407,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   }, [wardrobePool, weather]);
 
   const regen = (s: AppState): AppState => {
-    const { ids, missingCats } = generateOutfit(
+    const result = generateOutfitWithFallback(
       poolRef.current,
       weatherRef.current,
       s.occasion || "all",
@@ -414,7 +416,34 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       paletteHexes(profile),
       profile.gender
     );
-    return { ...s, outfit: ids, outfitMissingCats: missingCats, outfitValidated: false, dismissedSuggestions: [] };
+    // Tracking (repli progressif de formalité, section 8 du brief 21/08/2026)
+    // — pas de pipeline analytics dans ce prototype : log console en
+    // attendant, pour repérer les couples occasion×style×genre×saison qui
+    // déclenchent fréquemment un repli et signalent un trou de couverture
+    // catalogue (le repli est une sécurité produit, pas un remplacement de
+    // l'enrichissement du catalogue).
+    if (result.formalityDowngraded || result.noCompleteOutfit) {
+      console.info("[formality-fallback]", {
+        occasion: s.occasion,
+        subOccasion: s.occasion === "date" ? s.dateContext : s.occasion === "travail_formel" ? s.workMode : null,
+        styles: profile.styles,
+        genre: profile.gender,
+        saison: currentSeasonKey(),
+        requestedFormality: result.requestedFormality,
+        resolvedFormality: result.resolvedFormality,
+        levelsDropped: result.requestedFormality - result.resolvedFormality,
+        noCompleteOutfit: result.noCompleteOutfit,
+      });
+    }
+    return {
+      ...s,
+      outfit: result.ids,
+      outfitMissingCats: result.missingCats,
+      outfitFormalityDowngraded: result.formalityDowngraded,
+      outfitNoCompleteOutfit: result.noCompleteOutfit,
+      outfitValidated: false,
+      dismissedSuggestions: [],
+    };
   };
 
   // Occasion par défaut du jour (recette 13/08/2026) — calculée une seule
@@ -492,6 +521,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         ...s,
         outfit: ids,
         outfitMissingCats: [],
+        outfitFormalityDowngraded: false,
+        outfitNoCompleteOutfit: false,
         outfitValidated: false,
         occasion,
         occasionManual: true,

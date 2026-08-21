@@ -256,8 +256,8 @@ function rand(items: Item[]): Item | null {
 
 export interface GeneratedOutfit {
   ids: number[];
-  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. "chaud" (R-B18) : une pièce présente est sous son meteo_min_temp et aucun calque compatible n'a été trouvé pour compenser. "moins_habille" : le palier "habillé" n'était atteignable par aucune pièce, repli d'un palier vers business_casual. */
-  missingCats: (CategoryKey | "bas" | "chaud" | "moins_habille")[];
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. "chaud" (R-B18) : une pièce présente est sous son meteo_min_temp et aucun calque compatible n'a été trouvé pour compenser. */
+  missingCats: (CategoryKey | "bas" | "chaud")[];
 }
 
 /**
@@ -279,7 +279,9 @@ export function generateOutfit(
   dateContext: DateContext = "Verre",
   preferredHexes: string[] = [],
   /** Genre du profil — la compensation robe/jupe/short trop fraîche par un collant (cf. plus bas) est un usage féminin, jamais proposée pour un profil homme. */
-  gender: "femme" | "homme" | null = null
+  gender: "femme" | "homme" | null = null,
+  /** Palier de formalité explicite — remplace la déduction occasion/sous-contexte quand fourni (cf. generateOutfitWithFallback, repli progressif de formalité). */
+  formalityOverride?: number
 ): GeneratedOutfit {
   const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
@@ -465,22 +467,12 @@ export function generateOutfit(
   };
   const hasCat = (cats: CategoryKey[]) => pool.some((i) => cats.includes(i.cat));
 
-  const dressy = isDressy(occasion, workMode, dateContext);
-  const minFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
-
-  // Repli de formalité borné à un seul palier (nouveau 21/08/2026, décidé :
-  // "idéalement habillé, mais si rien, redescendre à business casual",
-  // avec message de transparence) — échelle 0 sport / 1 décontracté /
-  // 3 business_casual / 4 habillé (cf. data.ts). Jusqu'ici, quand aucune
-  // pièce (haut+veste compensatoire, ou bas) n'atteignait "habillé", la
-  // tenue restait silencieusement incomplète (constaté : Restaurant/date
-  // romantique sans aucun haut ni bas). Ne s'applique qu'au palier le plus
-  // exigeant, jamais en cascade vers décontracté.
-  const HABILLE_FORMALITY = 4;
-  const BUSINESS_CASUAL_FORMALITY = 3;
-  const relaxedFormalityBase =
-    minFormality === HABILLE_FORMALITY ? applyTempFilter(hardCategoryFilter(seasonBase, BUSINESS_CASUAL_FORMALITY)) : null;
-  let downgradedFormality = false;
+  // minFormality suit formalityOverride quand fourni (cf. generateOutfitWithFallback)
+  // — dressy (R-B6 baskets, layering habillé...) en découle directement,
+  // plutôt que de rappeler isDressy() sur l'occasion brute, pour rester
+  // cohérent avec le palier effectivement utilisé par ce tirage.
+  const minFormality = formalityOverride ?? (occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0);
+  const dressy = minFormality >= 3;
 
   const ids: number[] = [];
   let compensatingVeste: Item | null = null;
@@ -517,42 +509,13 @@ export function generateOutfit(
       const vesteCandidates = hardBase.filter((i) => i.cat === "veste" && formalityOf(i) >= minFormality);
       compensatingVeste = rand(harmonize(vesteCandidates, chosen, false));
       if (compensatingVeste) hautPool = hautCandidates;
-      // Repli d'un palier (cf. commentaire relaxedFormalityBase) : ni le
-      // haut seul ni une veste compensatoire n'atteignent "habillé" —
-      // retente au palier business_casual plutôt que de laisser le haut
-      // (et la veste) totalement absents de la tenue.
-      if (!compensatingVeste && relaxedFormalityBase) {
-        const hautRelaxed = hautCandidates.filter((i) => formalityOf(i) >= BUSINESS_CASUAL_FORMALITY);
-        if (hautRelaxed.length) {
-          hautPool = hautRelaxed;
-          downgradedFormality = true;
-        } else {
-          const vesteRelaxed = relaxedFormalityBase.filter((i) => i.cat === "veste" && formalityOf(i) >= BUSINESS_CASUAL_FORMALITY);
-          const relaxedVeste = rand(harmonize(vesteRelaxed, chosen, false));
-          if (relaxedVeste) {
-            compensatingVeste = relaxedVeste;
-            hautPool = hautCandidates;
-            downgradedFormality = true;
-          }
-        }
-      }
     }
     // Même exemption FALLBACK_HEX que dans pick() ci-dessus.
     const hautPreferred = preferredHexes.length ? hautPool.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX) : [];
     const h = rand(harmonize(hautPreferred.length ? hautPreferred : hautPool, chosen, true));
     if (h) chosen.push(h);
     primaryTop = h;
-    let b = pick(BOTTOMS);
-    // Même repli d'un palier pour le bas — jusqu'ici jamais assoupli du
-    // tout, contrairement au haut (cf. commentaire relaxedFormalityBase).
-    if (!b && relaxedFormalityBase) {
-      const bottomsRelaxed = relaxedFormalityBase.filter((i) => BOTTOMS.includes(i.cat));
-      const bottomsPreferred = preferredHexes.length
-        ? bottomsRelaxed.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX)
-        : [];
-      b = rand(harmonize(bottomsPreferred.length ? bottomsPreferred : bottomsRelaxed, chosen, true));
-      if (b) { chosen.push(b); downgradedFormality = true; }
-    }
+    const b = pick(BOTTOMS);
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
     if (compensatingVeste) { chosen.push(compensatingVeste); ids.push(compensatingVeste.id); }
@@ -697,16 +660,85 @@ export function generateOutfit(
   // Sac/bijou désormais facultatifs (recette 19/08/2026) : leur absence
   // n'est plus jamais signalée comme un manque, seuls les éléments
   // structurants (haut+bas/robe, chaussures) le sont.
-  const missingCats: (CategoryKey | "bas" | "chaud" | "moins_habille")[] = [];
+  const missingCats: (CategoryKey | "bas" | "chaud")[] = [];
   if (!useRobe) {
     if (!hasCat(["haut"])) missingCats.push("haut");
     if (!hasCat(BOTTOMS)) missingCats.push("bas");
   }
   if (!hasCat(["chaussures"])) missingCats.push("chaussures");
   if (missingWarmth) missingCats.push("chaud");
-  if (downgradedFormality) missingCats.push("moins_habille");
 
   return { ids: Array.from(new Set(ids)), missingCats };
+}
+
+/**
+ * Repli progressif de formalité (nouveau 21/08/2026, décidé) : le
+ * niveau_formalite ciblé par l'occasion est une CIBLE, pas une condition
+ * bloquante — quand aucune tenue complète (haut+bas, ou robe/combinaison)
+ * n'existe au palier idéal, on redescend d'un palier et on relance TOUTE
+ * la génération (pas seulement la pièce en défaut), jusqu'à trouver une
+ * tenue complète ou épuiser les paliers autorisés par FORMALITY_FALLBACK_CHAIN
+ * (décontracté et sport n'ont aucun repli). Les autres critères (genre,
+ * saison, météo, occasion, style, règles de composition...) restent
+ * intacts à chaque palier — seul niveau_formalite change, via
+ * formalityOverride passé à generateOutfit. Remplace le patch posé plus
+ * tôt le même jour (haut/veste/bas assouplis séparément, un seul palier) :
+ * ici la formalité redescend pour LA TENUE ENTIÈRE en une fois, jamais
+ * pièce par pièce, pour éviter de dupliquer la même règle à deux endroits.
+ */
+const FORMALITY_FALLBACK_CHAIN: Record<number, number[]> = {
+  4: [4, 3, 1], // habillé -> business_casual -> décontracté
+  3: [3, 1], // business_casual -> décontracté
+  1: [1], // décontracté : aucun repli
+  0: [0], // sport : aucun repli
+};
+
+/** Une tenue a un socle vestimentaire valide : haut+bas, ou une pièce robe/combinaison — jamais seulement chaussures/accessoires (section 5, "lunettes + mocassins ≠ tenue valide"). */
+function hasCoreOutfit(ids: number[], pool: Item[]): boolean {
+  const items = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
+  if (items.some((i) => i.cat === "robe" || i.cat === "combinaison")) return true;
+  return items.some((i) => i.cat === "haut") && items.some((i) => BOTTOMS.includes(i.cat));
+}
+
+export interface GeneratedOutfitWithFallback extends GeneratedOutfit {
+  /** Palier de formalité initialement visé par l'occasion (0 sport / 1 décontracté / 3 business_casual / 4 habillé). */
+  requestedFormality: number;
+  /** Palier effectivement utilisé pour produire cette tenue. */
+  resolvedFormality: number;
+  /** true si resolvedFormality < requestedFormality — badge "Meilleure alternative" côté UI plutôt que "Recommandé". */
+  formalityDowngraded: boolean;
+  /** true si aucun palier autorisé n'a permis de constituer une tenue complète — ids vide volontairement, état vide à afficher côté UI plutôt qu'une tenue chaussures/accessoires seuls. */
+  noCompleteOutfit: boolean;
+}
+
+export function generateOutfitWithFallback(
+  pool: Item[],
+  weather: Weather,
+  occasion: OccasionKey,
+  workMode: WorkMode = "Présentiel",
+  dateContext: DateContext = "Verre",
+  preferredHexes: string[] = [],
+  gender: "femme" | "homme" | null = null
+): GeneratedOutfitWithFallback {
+  const requestedFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
+  const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
+  for (const tier of chain) {
+    const result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier);
+    if (hasCoreOutfit(result.ids, pool)) {
+      return { ...result, requestedFormality, resolvedFormality: tier, formalityDowngraded: tier !== requestedFormality, noCompleteOutfit: false };
+    }
+  }
+  // Section 7 — aucun palier autorisé n'a produit de tenue complète :
+  // jamais afficher une fausse combinaison chaussures/accessoires seuls,
+  // ids vide pour que l'UI affiche un état vide explicite.
+  return {
+    ids: [],
+    missingCats: ["haut", "bas"],
+    requestedFormality,
+    resolvedFormality: requestedFormality,
+    formalityDowngraded: false,
+    noCompleteOutfit: true,
+  };
 }
 
 /**

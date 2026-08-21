@@ -239,7 +239,11 @@ export interface AppState {
 
   outfit: number[];
   /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. */
-  outfitMissingCats: (CategoryKey | "bas" | "chaud" | "moins_habille")[];
+  outfitMissingCats: (CategoryKey | "bas" | "chaud")[];
+  /** true si la tenue affichée est un repli de formalité (ex. business_casual faute d'habillé) — badge "Meilleure alternative" plutôt que "Recommandé". */
+  outfitFormalityDowngraded: boolean;
+  /** true si aucun palier de formalité autorisé n'a permis de constituer une tenue complète — état vide à afficher, jamais une tenue chaussures/accessoires seuls. */
+  outfitNoCompleteOutfit: boolean;
   outfitValidated: boolean;
   occasion: OccasionKey;
   /** true dès que l'utilisatrice a choisi une occasion elle-même (même pour revenir à "all") — désactive alors l'occasion par défaut auto-calculée (recette 13/08/2026) pour le reste de la session. */

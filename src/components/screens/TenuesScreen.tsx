@@ -212,11 +212,12 @@ export default function TenuesScreen() {
   const modeStyle = MODE_STYLES[recommendationMode];
 
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
-  // Repli de formalité d'un palier (nouveau 21/08/2026, décidé : "idéalement
-  // habillé, mais si rien, redescendre à business casual") — bannière
-  // distincte de missingText, jamais fusionnée avec elle (cf. commentaire
-  // missingSuggestionText).
-  const formalityDowngraded = (state.outfitMissingCats || []).includes("moins_habille");
+  // Repli progressif de formalité (nouveau 21/08/2026, décidé) — calculé
+  // par generateOutfitWithFallback (store.tsx), jamais recalculé ici :
+  // bannière + badge distincts de missingText (rien ne manque, la
+  // formalité est réduite).
+  const formalityDowngraded = state.outfitFormalityDowngraded;
+  const noCompleteOutfit = state.outfitNoCompleteOutfit;
   // Sans objet en Cocooning (R-B12) : veste/manteau déjà exclus du pool de génération.
   const vesteWithoutBase = state.occasion !== "cocooning" && violatesOuterwearRule(outfitPieces);
 
@@ -426,10 +427,16 @@ export default function TenuesScreen() {
       <div className="flex justify-between items-center mt-[22px] mb-3">
         <div className="flex items-center gap-[9px]">
           <span className="text-[11px] tracking-[.16em] uppercase text-muted">La combinaison</span>
-          {lookScore.badge === "recommande" && (
-            <span className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
-              Recommandé
+          {formalityDowngraded ? (
+            <span className="text-[9.5px] tracking-[.06em] uppercase text-[#8A6B3F] bg-[#F3EDDD] rounded-full px-[9px] py-[3px]">
+              Meilleure alternative
             </span>
+          ) : (
+            lookScore.badge === "recommande" && (
+              <span className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
+                Recommandé
+              </span>
+            )
           )}
         </div>
         <button onClick={actions.regenOutfit} className="text-[12px] text-terracotta tracking-[.03em] cursor-pointer">
@@ -439,6 +446,17 @@ export default function TenuesScreen() {
 
       {!geoLoading && (
         <div className="text-[12.5px] text-muted leading-[1.4] mb-3 -mt-1">{recommendationText}</div>
+      )}
+
+      {!geoLoading && noCompleteOutfit && (
+        <div className="mt-2 mb-4 bg-card border border-border rounded-[14px] px-4 py-[22px] text-center">
+          <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
+            Ta capsule ne contient pas encore assez de pièces adaptées à cette occasion.
+          </div>
+          <button onClick={actions.openAdd} className="mt-[12px] inline-block text-[12.5px] text-terracotta cursor-pointer">
+            Compléter mon dressing →
+          </button>
+        </div>
       )}
 
       {!geoLoading && outfitPieces.length > 0 && (
@@ -636,12 +654,13 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      {formalityDowngraded && (
+      {formalityDowngraded && !noCompleteOutfit && (
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">✦</span>
           <div className="flex-1">
             <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
-              Cette tenue est un peu moins habillée que ce que tu recherchais, faute de mieux dans ta capsule.
+              Ta capsule n&apos;a pas de tenue suffisamment habillée pour cette occasion. On te propose l&apos;alternative la
+              plus adaptée avec tes pièces.
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
               Ajouter une pièce plus habillée →
