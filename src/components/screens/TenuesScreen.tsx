@@ -486,7 +486,11 @@ export default function TenuesScreen() {
           const infoOpen = suggestionInfoId === it.id;
           const resolvedImage = resolveItemImage(it);
           return (
-            <div key={it.id} className="bg-card border border-border rounded-[14px] p-[9px]">
+            <div
+              key={it.id}
+              onClick={() => (suggested ? actions.openItemOutfits(it.id) : actions.openItem(it.id, false))}
+              className="bg-card border border-border rounded-[14px] p-[9px] cursor-pointer"
+            >
               <div className="flex items-center gap-[11px]">
                 {resolvedImage.url ? (
                   <div
@@ -531,7 +535,10 @@ export default function TenuesScreen() {
                       "Suggestion" générique appliqué à tout indistinctement. */}
                   {suggested ? (
                     <button
-                      onClick={() => setSuggestionInfoId(infoOpen ? null : it.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSuggestionInfoId(infoOpen ? null : it.id);
+                      }}
                       className="inline-block text-[9px] tracking-[.08em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px] mb-[6px] cursor-pointer"
                     >
                       Capsule
@@ -545,7 +552,10 @@ export default function TenuesScreen() {
                   <div className="text-[11px] text-muted mt-[3px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
                 </div>
                 <button
-                  onClick={() => actions.swapPiece(it.id, it.cat)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    actions.swapPiece(it.id, it.cat);
+                  }}
                   aria-label="Remplacer cette pièce"
                   className="text-[17px] text-placeholder cursor-pointer flex-shrink-0 p-[9px] flex items-center justify-center"
                 >
