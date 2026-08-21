@@ -252,6 +252,8 @@ const NECKLINE_EN: Record<string, string> = {
   "col cheminée": "funnel neck",
   "robe chemise": "shirt-style",
   "sans manches": "sleeveless",
+  "manches courtes": "short-sleeved",
+  "manches longues": "long-sleeved",
   "dos nu": "backless",
 };
 
