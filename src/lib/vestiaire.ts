@@ -298,6 +298,7 @@ const SHOE_TYPE_MAP: Record<string, ShoeType> = {
   ballerines: "Ballerines",
   mules: "Mules",
   slingbacks: "Slingbacks",
+  derbies: "Derbies",
   "chaussures d'intérieur": "Chaussures d'intérieur",
 };
 

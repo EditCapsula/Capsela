@@ -56,6 +56,18 @@ function accessoryProbabilities(occasion: OccasionKey, workMode: WorkMode): { sa
   return { sac: 0.55, bijou: 0.35, accessoire: 0.3 };
 }
 
+/**
+ * Probabilité d'inclure une veste/un blazer (correctif 21/08/2026, décidé —
+ * option B, cf. OCCASION_STYLE_PREFS.entretien) : le seuil de formalité d'un
+ * entretien reste business_casual, mais la tenue doit lire plus structurée
+ * qu'une simple journée de bureau — la veste devient nettement plus probable
+ * plutôt qu'un tirage à plat 30 %, jamais systématique pour autant.
+ */
+function vesteProbability(occasion: OccasionKey): number {
+  if (occasion === "entretien") return 0.65;
+  return 0.3;
+}
+
 /** Tournure au génitif désignant le contexte du jour, pour la phrase d'explication de la recommandation. */
 function occasionPhrase(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext): string {
   switch (occasion) {
@@ -464,7 +476,7 @@ export function generateOutfit(
   // ouverte, cardigan, gilet, sweat) jouent le même rôle de superposition ;
   // cumuler les deux est redondant et encombre visuellement la silhouette.
   let hasVeste = !!compensatingVeste;
-  if (!hasVeste && Math.random() < 0.3) {
+  if (!hasVeste && Math.random() < vesteProbability(occasion)) {
     const v = pick(["veste"], false);
     if (v) {
       hasVeste = true;

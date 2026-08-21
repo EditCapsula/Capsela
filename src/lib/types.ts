@@ -51,6 +51,7 @@ export type ShoeType =
   | "Ballerines"
   | "Mules"
   | "Slingbacks"
+  | "Derbies"
   | "Chaussures d'intérieur";
 export type SacType = "Sac à main" | "Cabas" | "Bandoulière" | "Pochette" | "Sac à dos";
 export type BijouType = "Collier" | "Boucles d'oreilles" | "Bracelet" | "Bague" | "Montre";

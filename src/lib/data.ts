@@ -221,6 +221,11 @@ export const OCCASION_STYLE_PREFS: Partial<Record<OccasionKey, OccasionStylePref
   // Ajouté (correctif 21/08/2026, signalé) — inverse : le voyage privilégie
   // le confort, jamais un talon.
   voyage: { shoeTypes: ["Baskets", "Ballerines", "Sandales", "Mocassins", "Espadrilles"] },
+  // Ajouté (correctif 21/08/2026, décidé — option B) : le seuil de formalité
+  // d'un entretien reste business_casual (cf. OCCASIONS ci-dessus), mais la
+  // tenue doit lire plus sérieuse qu'une simple journée de bureau — favorise
+  // les chaussures les plus structurées/habillées de ce niveau.
+  entretien: { shoeTypes: ["Mocassins", "Escarpins", "Derbies", "Bottines"] },
 };
 /** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
 export const SAC_TYPES: SacType[] = ["Sac à main", "Cabas", "Bandoulière", "Pochette", "Sac à dos"];
