@@ -397,9 +397,21 @@ export function generateOutfit(
   // supportant 15°) sans jamais aucun repli, contrairement à l'esprit
   // "jamais de blocage total pour une pièce essentielle" appliqué partout
   // ailleurs dans ce fichier (harmonize, R-S10, R-B16...).
+  // R-B18 (nouveau 21/08/2026, précisé : seuil chemise 20°C — "en-dessous
+  // de cette température, on ajoute une pièce calque dessus") : haut/pull/
+  // robe ne sont plus jamais exclus pour être sous leur propre
+  // meteo_min_temp — ils restent éligibles à toute température, la
+  // compensation par un calque (plus bas dans generateOutfit) prend le
+  // relais plutôt qu'une exclusion silencieuse. Sans cette exemption, une
+  // chemise avec un seuil (20°) disparaîtrait purement et simplement du
+  // pool sous ce seuil au lieu de rester proposée avec un calque —
+  // contraire à l'objectif même de R-B18. Le plafond haute température
+  // (meteo_max_temp) reste appliqué normalement à ces catégories : un pull
+  // épais n'a pas sa place en pleine canicule.
+  const TEMP_COMPENSATED_CATS: CategoryKey[] = [...TOP_LAYER_CATS, "robe"];
   const applyTempFilter = (items: Item[]): Item[] =>
     items.filter((i) => {
-      if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp) return false;
+      if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp && !TEMP_COMPENSATED_CATS.includes(i.cat)) return false;
       if (i.meteoMaxTemp != null && weather.temp > i.meteoMaxTemp) return false;
       return true;
     });
@@ -526,17 +538,33 @@ export function generateOutfit(
     const collant = rand(harmonize(collantPool, chosen, false));
     if (collant && !ids.includes(collant.id)) { chosen.push(collant); ids.push(collant.id); }
   }
+  // Entretien + chemise : toujours un blazer/veste légère par-dessus,
+  // peu importe météo/saison (nouveau 21/08/2026, décidé) — jamais
+  // probabiliste comme vesteProbability pour le reste des occasions/hauts.
+  const isChemise = (i: Item | null): boolean => !!i && !!i.subtype && i.subtype.toLowerCase().includes("chemise");
+  const forceEntretienVeste = occasion === "entretien" && isChemise(primaryTop);
+
   // Veste décidée AVANT le calque haut/pull (correctif 21/08/2026, signalé :
   // veste + layering proposés ensemble) — une veste et un calque (chemise
   // ouverte, cardigan, gilet, sweat) jouent le même rôle de superposition ;
   // cumuler les deux est redondant et encombre visuellement la silhouette.
   let hasVeste = !!compensatingVeste;
-  if (!hasVeste && Math.random() < vesteProbability(occasion)) {
-    const v = pick(["veste"], false);
+  if (!hasVeste && (forceEntretienVeste || Math.random() < vesteProbability(occasion))) {
+    const v = pick(["veste"], forceEntretienVeste);
     if (v) {
       hasVeste = true;
       if (!ids.includes(v.id)) ids.push(v.id);
     }
+  }
+  // Entretien + chemise, par temps froid : un manteau par-dessus (nouveau
+  // 21/08/2026, décidé, "en hiver on met un manteau dessus"). Pas de
+  // signal saison explicite disponible ici — la plage meteo_min_temp/
+  // meteo_max_temp propre à chaque manteau fait déjà ce tri : si aucun
+  // manteau de la capsule ne couvre la météo du jour, rien n'est ajouté,
+  // jamais forcé hors de sa plage déclarée.
+  if (forceEntretienVeste) {
+    const manteau = pick(["manteau"], false);
+    if (manteau && !ids.includes(manteau.id)) ids.push(manteau.id);
   }
   // R-B5 assoupli (nuance demandée le 19/08/2026) : une robe/combinaison
   // reste self-sufficient face à un haut/bas "base" (redondant), mais une
