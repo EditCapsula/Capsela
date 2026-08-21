@@ -45,6 +45,11 @@ export default function ItemOutfitsScreen() {
 
   if (!pivot) return null;
 
+  // Pièce suggérée (catalogue) = absente du dressing réel — même logique que
+  // le calcul de `pivot`/`pool` ci-dessus, faute d'un flag "suggested" explicite
+  // ici (contrairement à PieceScreen, ouvert avec state.activeSuggested connu).
+  const isSuggested = !wardrobePool.some((i) => i.id === pivot.id);
+
   const occasionsCovered = Array.from(new Set(variations.map((v) => v.occasion)));
   const filteredVariations = occasionFilter === "all" ? variations : variations.filter((v) => v.occasion === occasionFilter);
 
@@ -97,6 +102,15 @@ export default function ItemOutfitsScreen() {
           </div>
         </div>
       </div>
+
+      {isSuggested && (
+        <button
+          onClick={() => actions.startReplace(pivot.id, pivot.cat)}
+          className="mt-[14px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
+        >
+          J&apos;ai déjà ça
+        </button>
+      )}
 
       <div className="mt-[16px] text-[12.5px] text-terracotta">
         {occasionsCovered.length === 0
