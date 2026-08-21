@@ -168,6 +168,14 @@ export function computeDefaultCapsule(
   // femme, et réciproquement — les pièces unisexe restent visibles des deux
   // côtés. Le garde-fou "≥16" évite de trop restreindre le pool si le
   // catalogue manque encore de pièces genrées dans un sens.
+  // oppositeGenre réutilisé plus bas par les filets de sécurité ensure()
+  // (correctif 21/08/2026, signalé — cabas femme visible sur un profil
+  // homme) : ces filets retombent volontairement sur sourcePool (non
+  // filtré par genre à ce stade) pour ne jamais laisser une catégorie
+  // essentielle totalement vide, mais oubliaient le genre, réintroduisant
+  // ainsi une pièce de l'autre genre dès qu'aucune pièce genrée ne passait
+  // les filtres précédents (température/style/palette).
+  const oppositeGenre = profile.gender === "homme" ? "femme" : profile.gender === "femme" ? "homme" : null;
   if (profile.gender === "homme") {
     const noFem = base.filter((it) => it.genre !== "femme");
     if (noFem.length >= 16) base = noFem;
@@ -245,6 +253,7 @@ export function computeDefaultCapsule(
       (it) =>
         it.cat === cat &&
         !excluded.has(it.id) &&
+        it.genre !== oppositeGenre &&
         (isSunny(weather) || !it.necessiteSoleil) &&
         (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) &&
         (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp)
@@ -259,7 +268,11 @@ export function computeDefaultCapsule(
   // style — sinon un look Cocooning (R-B12) n'aurait aucune chaussure éligible.
   if (!out.some((it) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur")) {
     const pool = sourcePool.filter(
-      (it) => it.cat === "chaussures" && it.shoeType === "Chaussures d'intérieur" && !excluded.has(it.id)
+      (it) =>
+        it.cat === "chaussures" &&
+        it.shoeType === "Chaussures d'intérieur" &&
+        !excluded.has(it.id) &&
+        it.genre !== oppositeGenre
     );
     const fav = pool.filter((it) => favColors.includes(it.hex));
     const pickFrom = fav.length ? fav : pool;
