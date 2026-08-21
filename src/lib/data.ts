@@ -124,7 +124,11 @@ export function seasonSuggestion(cat: CategoryKey, name: string): Season | null 
 export const OCCASIONS: [OccasionKey, string, string, number][] = [
   ["quotidien", "Quotidien / Décontracté", "Courses, école, journée libre", 1],
   ["travail_formel", "Travail / Bureau", "Journée de travail", 3],
-  ["entretien", "Rendez-vous important", "Entretien, réunion clé", 4],
+  // Formalité alignée sur travail_formel (correctif 21/08/2026, décidé) :
+  // un entretien se traite comme une journée de travail en présentiel,
+  // business_casual — pas le niveau habillé, jamais couvert par les bas du
+  // catalogue (aucun pantalon/jupe n'atteint ce niveau dans les capsules).
+  ["entretien", "Rendez-vous important", "Entretien, réunion clé", 3],
   ["date", "Date", "Tête-à-tête", 3],
   ["soiree", "Sortie / Soirée", "Bar, dîner, entre amis", 1],
   ["festive", "Sortie festive", "Club, anniversaire, bal", 1],
