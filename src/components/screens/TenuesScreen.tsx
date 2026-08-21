@@ -151,7 +151,11 @@ const MISSING_LABELS: Record<string, string> = {
 };
 
 function missingSuggestionText(missingCats: string[]): string {
-  const words = Array.from(new Set(missingCats.map((k) => MISSING_LABELS[k]).filter(Boolean)));
+  // "moins_habille" n'est pas une catégorie manquante mais un repli de
+  // formalité sur des pièces déjà présentes (cf. bannière dédiée
+  // formalityDowngraded ci-dessous) — jamais mélangé à cette phrase
+  // "il te manque un/une X", qui suppose une catégorie vide.
+  const words = Array.from(new Set(missingCats.filter((k) => k !== "moins_habille").map((k) => MISSING_LABELS[k]).filter(Boolean)));
   if (words.length === 0) return "";
   if (words.length === 1) return "Il te manque " + words[0] + " pour compléter cette tenue.";
   const last = words[words.length - 1];
@@ -208,6 +212,11 @@ export default function TenuesScreen() {
   const modeStyle = MODE_STYLES[recommendationMode];
 
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
+  // Repli de formalité d'un palier (nouveau 21/08/2026, décidé : "idéalement
+  // habillé, mais si rien, redescendre à business casual") — bannière
+  // distincte de missingText, jamais fusionnée avec elle (cf. commentaire
+  // missingSuggestionText).
+  const formalityDowngraded = (state.outfitMissingCats || []).includes("moins_habille");
   // Sans objet en Cocooning (R-B12) : veste/manteau déjà exclus du pool de génération.
   const vesteWithoutBase = state.occasion !== "cocooning" && violatesOuterwearRule(outfitPieces);
 
@@ -622,6 +631,20 @@ export default function TenuesScreen() {
             <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{missingText}</div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
               Ajouter une pièce →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {formalityDowngraded && (
+        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta">✦</span>
+          <div className="flex-1">
+            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
+              Cette tenue est un peu moins habillée que ce que tu recherchais, faute de mieux dans ta capsule.
+            </div>
+            <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
+              Ajouter une pièce plus habillée →
             </button>
           </div>
         </div>

@@ -256,8 +256,8 @@ function rand(items: Item[]): Item | null {
 
 export interface GeneratedOutfit {
   ids: number[];
-  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. "chaud" (R-B18) : une pièce présente est sous son meteo_min_temp et aucun calque compatible n'a été trouvé pour compenser. */
-  missingCats: (CategoryKey | "bas" | "chaud")[];
+  /** Catégories essentielles totalement absentes du pool (pas seulement de ce tirage). "bas" regroupe pantalon/jean/short. "chaud" (R-B18) : une pièce présente est sous son meteo_min_temp et aucun calque compatible n'a été trouvé pour compenser. "moins_habille" : le palier "habillé" n'était atteignable par aucune pièce, repli d'un palier vers business_casual. */
+  missingCats: (CategoryKey | "bas" | "chaud" | "moins_habille")[];
 }
 
 /**
@@ -293,7 +293,7 @@ export function generateOutfit(
   // chaussures d'intérieur) — jamais relâchée, même si le pool résultant est
   // restreint ; appliquée à toute source de pool, y compris aux catégories
   // qui bypassent par ailleurs le simple filtre heuristique d'occasion (chaussures/sac).
-  const hardCategoryFilter = (items: Item[]): Item[] => {
+  const hardCategoryFilter = (items: Item[], minFormalityOverride?: number): Item[] => {
     let r = items;
     if (occasion === "sport") {
       // R-B11 — correspondance stricte, pas un seuil minimum : liste blanche
@@ -352,7 +352,7 @@ export function generateOutfit(
     // exempté comme avant. Hors occasion Sport, un haut formalité 0 repasse
     // donc par le plancher plein comme n'importe quel autre vêtement.
     if (occasion !== "all") {
-      const minFormality = effectiveFormality(occasion, workMode, dateContext);
+      const minFormality = minFormalityOverride ?? effectiveFormality(occasion, workMode, dateContext);
       r = r.filter(
         (i) =>
           !CLOTHING_CATS.includes(i.cat) ||
@@ -468,6 +468,20 @@ export function generateOutfit(
   const dressy = isDressy(occasion, workMode, dateContext);
   const minFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
 
+  // Repli de formalité borné à un seul palier (nouveau 21/08/2026, décidé :
+  // "idéalement habillé, mais si rien, redescendre à business casual",
+  // avec message de transparence) — échelle 0 sport / 1 décontracté /
+  // 3 business_casual / 4 habillé (cf. data.ts). Jusqu'ici, quand aucune
+  // pièce (haut+veste compensatoire, ou bas) n'atteignait "habillé", la
+  // tenue restait silencieusement incomplète (constaté : Restaurant/date
+  // romantique sans aucun haut ni bas). Ne s'applique qu'au palier le plus
+  // exigeant, jamais en cascade vers décontracté.
+  const HABILLE_FORMALITY = 4;
+  const BUSINESS_CASUAL_FORMALITY = 3;
+  const relaxedFormalityBase =
+    minFormality === HABILLE_FORMALITY ? applyTempFilter(hardCategoryFilter(seasonBase, BUSINESS_CASUAL_FORMALITY)) : null;
+  let downgradedFormality = false;
+
   const ids: number[] = [];
   let compensatingVeste: Item | null = null;
   // Haut/robe retenu(e) trop frais(che) pour la météo (repli météo de
@@ -503,13 +517,42 @@ export function generateOutfit(
       const vesteCandidates = hardBase.filter((i) => i.cat === "veste" && formalityOf(i) >= minFormality);
       compensatingVeste = rand(harmonize(vesteCandidates, chosen, false));
       if (compensatingVeste) hautPool = hautCandidates;
+      // Repli d'un palier (cf. commentaire relaxedFormalityBase) : ni le
+      // haut seul ni une veste compensatoire n'atteignent "habillé" —
+      // retente au palier business_casual plutôt que de laisser le haut
+      // (et la veste) totalement absents de la tenue.
+      if (!compensatingVeste && relaxedFormalityBase) {
+        const hautRelaxed = hautCandidates.filter((i) => formalityOf(i) >= BUSINESS_CASUAL_FORMALITY);
+        if (hautRelaxed.length) {
+          hautPool = hautRelaxed;
+          downgradedFormality = true;
+        } else {
+          const vesteRelaxed = relaxedFormalityBase.filter((i) => i.cat === "veste" && formalityOf(i) >= BUSINESS_CASUAL_FORMALITY);
+          const relaxedVeste = rand(harmonize(vesteRelaxed, chosen, false));
+          if (relaxedVeste) {
+            compensatingVeste = relaxedVeste;
+            hautPool = hautCandidates;
+            downgradedFormality = true;
+          }
+        }
+      }
     }
     // Même exemption FALLBACK_HEX que dans pick() ci-dessus.
     const hautPreferred = preferredHexes.length ? hautPool.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX) : [];
     const h = rand(harmonize(hautPreferred.length ? hautPreferred : hautPool, chosen, true));
     if (h) chosen.push(h);
     primaryTop = h;
-    const b = pick(BOTTOMS);
+    let b = pick(BOTTOMS);
+    // Même repli d'un palier pour le bas — jusqu'ici jamais assoupli du
+    // tout, contrairement au haut (cf. commentaire relaxedFormalityBase).
+    if (!b && relaxedFormalityBase) {
+      const bottomsRelaxed = relaxedFormalityBase.filter((i) => BOTTOMS.includes(i.cat));
+      const bottomsPreferred = preferredHexes.length
+        ? bottomsRelaxed.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX)
+        : [];
+      b = rand(harmonize(bottomsPreferred.length ? bottomsPreferred : bottomsRelaxed, chosen, true));
+      if (b) { chosen.push(b); downgradedFormality = true; }
+    }
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
     if (compensatingVeste) { chosen.push(compensatingVeste); ids.push(compensatingVeste.id); }
@@ -654,13 +697,14 @@ export function generateOutfit(
   // Sac/bijou désormais facultatifs (recette 19/08/2026) : leur absence
   // n'est plus jamais signalée comme un manque, seuls les éléments
   // structurants (haut+bas/robe, chaussures) le sont.
-  const missingCats: (CategoryKey | "bas" | "chaud")[] = [];
+  const missingCats: (CategoryKey | "bas" | "chaud" | "moins_habille")[] = [];
   if (!useRobe) {
     if (!hasCat(["haut"])) missingCats.push("haut");
     if (!hasCat(BOTTOMS)) missingCats.push("bas");
   }
   if (!hasCat(["chaussures"])) missingCats.push("chaussures");
   if (missingWarmth) missingCats.push("chaud");
+  if (downgradedFormality) missingCats.push("moins_habille");
 
   return { ids: Array.from(new Set(ids)), missingCats };
 }
