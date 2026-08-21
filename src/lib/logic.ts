@@ -326,10 +326,19 @@ export function generateOutfit(
     // (ex. "t-shirt + blazer" = tenue bureau valide), décidé plus bas dans
     // generateOutfit. Le bas, lui, reste soumis au plancher plein : aucune
     // veste ne rend un jogging adapté au bureau.
+    // Correctif 21/08/2026 (signalé : "T-shirt technique / Débardeur sport"
+    // proposé hors sport) : l'exemption ne couvre plus la formalité 0
+    // ("sport") — un haut purement technique n'est jamais "compensé" par une
+    // veste, contrairement à un t-shirt basique (formalité >= 1) qui reste
+    // exempté comme avant. Hors occasion Sport, un haut formalité 0 repasse
+    // donc par le plancher plein comme n'importe quel autre vêtement.
     if (occasion !== "all") {
       const minFormality = effectiveFormality(occasion, workMode, dateContext);
       r = r.filter(
-        (i) => !CLOTHING_CATS.includes(i.cat) || TOP_LAYER_CATS.includes(i.cat) || formalityOf(i) >= minFormality
+        (i) =>
+          !CLOTHING_CATS.includes(i.cat) ||
+          (TOP_LAYER_CATS.includes(i.cat) && formalityOf(i) > 0) ||
+          formalityOf(i) >= minFormality
       );
     }
     // R-B6 — les baskets ne sont jamais éligibles dès que l'occasion demande
