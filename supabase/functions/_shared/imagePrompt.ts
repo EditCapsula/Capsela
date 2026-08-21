@@ -135,7 +135,7 @@ const SUBTYPE_EN: Record<string, string> = {
   escarpins: "pumps",
   sandales: "sandals",
   "sandales à talons": "heeled sandals",
-  espadrilles: "espadrille wedge sandals",
+  espadrilles: "espadrille sandals",
   mules: "backless mule shoes",
   "tropéziennes": "strappy flat sandals",
   mocassins: "loafers",
