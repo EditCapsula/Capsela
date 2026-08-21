@@ -372,17 +372,6 @@ export function generateOutfit(
     if (!isSunny(weather)) {
       r = r.filter((i) => !i.necessiteSoleil);
     }
-    // Plage de température (meteo_min_temp/meteo_max_temp, source
-    // vestiaire_universel) — une pièce n'est jamais suggérée si la météo du
-    // jour sort de sa plage déclarée. Toutes catégories (contrairement à
-    // R-B3, limitée au vêtement) : un manteau d'hiver ou une écharpe n'ont
-    // pas plus leur place par forte chaleur qu'un haut trop léger par temps
-    // froid. Sans valeur déclarée, jamais filtré sur ce critère.
-    r = r.filter((i) => {
-      if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp) return false;
-      if (i.meteoMaxTemp != null && weather.temp > i.meteoMaxTemp) return false;
-      return true;
-    });
     // Occasion explicitement déclarée sur la pièce (correctif 19/08/2026,
     // remplace l'ancien filtre par mots-clés — cf. déclarations plus haut).
     if (occasion !== "all") {
@@ -391,9 +380,30 @@ export function generateOutfit(
     return r;
   };
 
+  // Plage de température (meteo_min_temp/meteo_max_temp, source
+  // vestiaire_universel) — une pièce n'est jamais suggérée si la météo du
+  // jour sort de sa plage déclarée. Toutes catégories (contrairement à
+  // R-B3, limitée au vêtement) : un manteau d'hiver ou une écharpe n'ont
+  // pas plus leur place par forte chaleur qu'un haut trop léger par temps
+  // froid. Sans valeur déclarée, jamais filtré sur ce critère. Sortie de
+  // hardCategoryFilter (correctif 21/08/2026, signalé : tenues générées sans
+  // aucun bas) pour pouvoir être retirée en dernier recours par poolFor —
+  // contrairement aux autres filtres de cette fonction, celui-ci pouvait
+  // vider une catégorie entière (ex. aucun bas de la capsule Été ne
+  // supportant 15°) sans jamais aucun repli, contrairement à l'esprit
+  // "jamais de blocage total pour une pièce essentielle" appliqué partout
+  // ailleurs dans ce fichier (harmonize, R-S10, R-B16...).
+  const applyTempFilter = (items: Item[]): Item[] =>
+    items.filter((i) => {
+      if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp) return false;
+      if (i.meteoMaxTemp != null && weather.temp > i.meteoMaxTemp) return false;
+      return true;
+    });
+
   // Règles dures (R-B3/R-B6/R-B11...) — jamais relâchées, appliquées une
   // bonne fois pour toutes sur la base anti-répétition/saison.
-  const hardBase = hardCategoryFilter(seasonBase);
+  const hardBaseNoTemp = hardCategoryFilter(seasonBase);
+  const hardBase = applyTempFilter(hardBaseNoTemp);
 
   // Chaussures/sacs/bijoux/accessoires restent toujours éligibles vis-à-vis du
   // filtrage d'occasion — conçus pour être reportés souvent, contrairement
@@ -411,11 +421,21 @@ export function generateOutfit(
   // mots-clés ici.
   const poolFor = (cats: CategoryKey[]): Item[] => {
     if (cats.every((c) => ACCESSORY_CATS.includes(c))) {
-      const basis = hardCategoryFilter(seasonPool);
-      const inSeason = basis.filter((i) => cats.includes(i.cat));
-      return inSeason.length ? basis : hardCategoryFilter(pool);
+      const basisNoTemp = hardCategoryFilter(seasonPool);
+      const basis = applyTempFilter(basisNoTemp);
+      if (basis.filter((i) => cats.includes(i.cat)).length) return basis;
+      // Repli météo (cf. commentaire applyTempFilter) avant de sortir de la saison.
+      if (basisNoTemp.filter((i) => cats.includes(i.cat)).length) return basisNoTemp;
+      const fullNoTemp = hardCategoryFilter(pool);
+      const full = applyTempFilter(fullNoTemp);
+      return full.filter((i) => cats.includes(i.cat)).length ? full : fullNoTemp;
     }
-    return hardBase.filter((i) => cats.includes(i.cat));
+    const withTemp = hardBase.filter((i) => cats.includes(i.cat));
+    if (withTemp.length) return withTemp;
+    // Repli météo : jamais une catégorie essentielle (ex. le bas) totalement
+    // vidée uniquement parce qu'aucune pièce de la capsule ne couvre la
+    // météo du jour — cf. commentaire applyTempFilter.
+    return hardBaseNoTemp.filter((i) => cats.includes(i.cat));
   };
 
   const chosen: Item[] = [];
