@@ -49,7 +49,13 @@ const BUCKET = "catalog-images";
 // seules celles-ci peuvent bénéficier du repli de cascade sans genre
 // (correctif 20/08/2026, cf. step 4 ci-dessous). Tout le reste (vêtements,
 // chaussures) a une coupe/silhouette qui diffère réellement selon le genre.
-const GENRE_AGNOSTIC_CATEGORIES = new Set(["sac", "bijou", "accessoire"]);
+// "sac" retiré le 21/08/2026 : un cabas homme réutilisait tel quel l'asset
+// déjà généré pour la version femme via ce repli, alors que le prompt (qui,
+// lui, distingue bien "women's"/"men's...") n'était donc jamais appelé —
+// résultat trop féminin pour l'homme. Un sac a, en pratique, un rendu
+// perceptiblement genré (comme un vêtement), contrairement à un bijou ou un
+// accessoire générique.
+const GENRE_AGNOSTIC_CATEGORIES = new Set(["bijou", "accessoire"]);
 const DEFAULT_MODEL = "gpt-image-1";
 const DEFAULT_QUALITY = "low";
 // Relevé 21/08/2026 (50 → 200) : backlog catalogue ~196 articles sans visuel,
