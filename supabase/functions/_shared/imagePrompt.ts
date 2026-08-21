@@ -180,6 +180,7 @@ const SUBTYPE_EN: Record<string, string> = {
   "t-shirt": "t-shirt",
   chemise: "shirt",
   chemisier: "blouse",
+  surchemise: "overshirt",
   blouse: "blouse",
   débardeur: "tank top",
   top: "top",
