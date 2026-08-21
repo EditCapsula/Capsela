@@ -1058,6 +1058,18 @@ export function getOutfitsForItem(
   const attemptsPerOccasion = opts.attemptsPerOccasion ?? 30;
   const structuralCats: CategoryKey[] = [...CLOTHING_CATS, "chaussures"];
 
+  // La préférence de palette (R-S10) n'est censée être qu'une inclination
+  // molle dans generateOutfit — mais ici, où l'on ne retient que les tirages
+  // contenant précisément pivotId, elle devient de fait un blocage dur dès
+  // que la couleur du pivot n'est pas dans la palette et qu'une alternative
+  // de la palette existe dans sa catégorie : hautPreferred (et équivalents)
+  // exclut alors systématiquement le pivot à CHAQUE tentative, sur toutes
+  // les occasions — d'où "pas encore assez de combinaisons" même avec un
+  // dressing par ailleurs bien fourni. On traite donc la teinte du pivot
+  // comme faisant partie de la palette pour cet appel uniquement, sans
+  // changer le comportement de generateOutfit lui-même.
+  const effectiveHexes = pivot.hex && !preferredHexes.includes(pivot.hex) ? [...preferredHexes, pivot.hex] : preferredHexes;
+
   const structuralKeyOf = (ids: number[]): string =>
     ids
       .filter((id) => {
@@ -1075,7 +1087,7 @@ export function getOutfitsForItem(
     const candidates: ItemOutfitVariation[] = [];
     const localSeen = new Set<string>();
     for (let attempt = 0; attempt < attemptsPerOccasion; attempt++) {
-      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", preferredHexes);
+      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes);
       if (!ids.includes(pivotId)) continue;
       const key = structuralKeyOf(ids);
       if (seenKeys.has(key) || localSeen.has(key)) continue;
