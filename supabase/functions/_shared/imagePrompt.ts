@@ -427,6 +427,21 @@ function translate(dict: Record<string, string>, raw: string | null | undefined)
   return dict[raw.trim().toLowerCase()];
 }
 
+/**
+ * Cherche la clé composée (plusieurs mots) la plus longue dont `raw`
+ * commence par elle (correctif 21/08/2026) — une entrée exacte comme
+ * "robe chemise" ne matchait que si le sous-type était EXACTEMENT ces deux
+ * mots, jamais pour un sous-type plus descriptif comme "Robe chemise midi
+ * ceinturée", qui retombait alors sur le mot-par-mot et piochait "chemise"
+ * isolément ("shirt"), en incohérence avec la catégorie "robe".
+ */
+function findPrefixMatch(dict: Record<string, string>, raw: string): string | undefined {
+  const match = Object.keys(dict)
+    .filter((k) => k.includes(" ") && raw.startsWith(k))
+    .sort((a, b) => b.length - a.length)[0];
+  return match ? dict[match] : undefined;
+}
+
 /** Majuscule initiale + point final (sauf ponctuation finale déjà présente) — pour les phrases de style libre (silhouette_mode, tendances_mode, override...). */
 function capSentence(s: string): string {
   const t = s.trim();
@@ -494,6 +509,7 @@ export function buildImagePrompt(row: VestiaireRow, trend?: TrendRule | null): B
   const sousTypeTokens = sousTypeRaw.split(/[\s/]+/).filter(Boolean);
   const noun =
     translate(SUBTYPE_EN, sousTypeRaw) ||
+    findPrefixMatch(SUBTYPE_EN, sousTypeRaw) ||
     sousTypeTokens.map((w) => SUBTYPE_EN[w]).find((w): w is string => Boolean(w)) ||
     CATEGORY_EN[canonCategory] ||
     "item";
