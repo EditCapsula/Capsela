@@ -136,6 +136,14 @@ const MODIFIER_EN: Record<string, string> = {
   "semi-opaques": "semi-opaque",
   opaque: "opaque",
   opaques: "opaque",
+  // Motifs/imprimés (correctif 21/08/2026, signalé : blouse "imprimée
+  // paisley" générée sans le motif, faute de vocabulaire reconnu).
+  paisley: "paisley print",
+  fleuri: "floral print",
+  fleurie: "floral print",
+  floral: "floral print",
+  "rayé": "striped",
+  "rayée": "striped",
 };
 
 /** Cols/encolures reconnus en bigramme (2 mots consécutifs) n'importe où dans sous_type — ex. "pull col v" ou "col roulé" seul fonctionnent tous les deux. */
