@@ -378,7 +378,11 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
 export async function fetchVestiaireUniversel(): Promise<CatalogItem[]> {
   if (!isSupabaseConfigured) return [];
   try {
-    const { data, error } = await getSupabase().from("vestiaire_universel").select("*");
+    // .eq("frozen", false) — recette 21/08/2026 : exclut les articles gelés
+    // (jamais supprimés, juste retirés du pool de sélection) sans toucher au
+    // reste de la logique de filtrage (styles/saison_capsule restent
+    // volontairement permissifs par défaut, cf. migration 0020).
+    const { data, error } = await getSupabase().from("vestiaire_universel").select("*").eq("frozen", false);
     if (error || !data) return [];
     return (data as VestiaireRow[])
       .map(rowToCatalogItem)
