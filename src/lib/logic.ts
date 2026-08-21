@@ -583,6 +583,12 @@ export function swapOutfitPiece(
   const catGroup: CategoryKey[] =
     BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId);
+  // Correctif 21/08/2026 (signalé : deux sacs dans la même tenue) — "sac" est
+  // regroupé avec accessoire/bijou pour élargir les options d'échange, mais
+  // jamais si un sac est déjà présent ailleurs dans la tenue.
+  if (catGroup.includes("sac") && outfitItems.some((i) => i.cat === "sac" && i.id !== pieceId)) {
+    candidates = candidates.filter((i) => i.cat !== "sac");
+  }
   // R-B11/R-B12/R-B13 — jamais relâchées, y compris sur un échange manuel.
   if (occasion === "sport") {
     candidates = candidates.filter((i) => {
