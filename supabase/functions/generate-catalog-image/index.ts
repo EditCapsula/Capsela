@@ -432,10 +432,16 @@ Deno.serve(async (req) => {
     const { bytes, contentType, ext } = await toWebp(pngBytes);
 
     // 8. Upload Storage — un seul fichier par asset (pas par article).
+    // cacheControl 1 an + immutable (correctif 21/08/2026, egress cache Free
+    // Plan dépassé) : un visual_key donné ne change jamais de contenu une
+    // fois généré (seul un reset manuel de image_status redéclenche une
+    // génération), donc rien n'empêche un cache long côté navigateur/CDN —
+    // sans ça, Supabase retombe sur une durée de cache courte par défaut et
+    // chaque rechargement de l'app retélécharge les mêmes images.
     const path = `${genre}/${CATEGORY_FOLDER[canonCategory] || canonCategory}/${assetId}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(path, bytes, { contentType, upsert: true });
+      .upload(path, bytes, { contentType, upsert: true, cacheControl: "31536000" });
     if (uploadError) throw new Error(`Échec upload Storage : ${uploadError.message}`);
 
     const { data: publicUrlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
