@@ -45,7 +45,10 @@ const BUCKET = "catalog-images";
 const GENRE_AGNOSTIC_CATEGORIES = new Set(["sac", "bijou", "accessoire"]);
 const DEFAULT_MODEL = "gpt-image-1";
 const DEFAULT_QUALITY = "low";
-const DEFAULT_DAILY_CAP = 50;
+// Relevé 21/08/2026 (50 → 200) : backlog catalogue ~196 articles sans visuel,
+// coût estimé ~0.02$/image donc ~4$ pour tout traiter — plafond quotidien
+// remonté pour vider le backlog en une seule exécution du workflow.
+const DEFAULT_DAILY_CAP = 200;
 // Coût approximatif par image (gpt-image-1, qualité basse, 1024x1024) — pour le monitoring uniquement, jamais utilisé pour bloquer/facturer.
 const ESTIMATED_COST_USD = 0.02;
 
