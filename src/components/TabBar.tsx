@@ -57,7 +57,15 @@ export default function TabBar() {
 
   return (
     <div
-      className="absolute left-0 right-0 bottom-0 bg-cream border-t border-border flex items-center justify-around px-2 pt-[11px]"
+      // z-20 (correctif 20/08/2026, bug scroll Tenue) : sans z-index explicite,
+      // TabBar (z-index:auto) perdait face à tout élément à z-index positif du
+      // contenu défilant (ex. pièces du flat-lay "La combinaison", jusqu'à
+      // zIndex:5) — aucun conteneur intermédiaire ne crée de contexte
+      // d'empilement propre, donc ces valeurs se comparent directement entre
+      // elles, indépendamment de l'ordre dans le DOM. z-20 reste sous les
+      // modales plein écran (z-50, ex. ProfileEditScreen) qui doivent
+      // continuer de recouvrir la nav.
+      className="absolute left-0 right-0 bottom-0 z-20 bg-cream border-t border-border flex items-center justify-around px-2 pt-[11px]"
       // pb (correctif 20/08/2026, contenu masqué par la navigation basse) :
       // étend la nav elle-même dans la safe-area (encoche/barre de gestes)
       // au lieu de laisser son padding de confort (22px) s'arrêter avant —
