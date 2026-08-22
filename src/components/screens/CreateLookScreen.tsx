@@ -3,7 +3,7 @@
 import { BAS_CATS, CATS, CATLABEL, OCCASIONS } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { computeLookScore, evaluateBlocking } from "@/lib/logic";
+import { CLOTHING_CATS, computeLookScore, evaluateBlocking, recentlyWorn } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
 import type { Item } from "@/lib/types";
 
@@ -22,11 +22,22 @@ export default function CreateLookScreen() {
   const occFormality = (OCCASIONS.find(([key]) => key === state.lookDraftOccasion) || [])[3] || 0;
   const dressy = occFormality >= 3;
 
-  const groups = CATS.map(([key, , plural]) => ({
-    key,
-    label: plural.toUpperCase(),
-    items: items.filter((i) => i.cat === key),
-  })).filter((g) => g.items.length > 0);
+  // Brief design section 4 (correctif 22/08/2026) : anti-répétition ≤2 jours
+  // et baskets en occasion habillée redeviennent de vrais filtres du picker
+  // (jamais juste un nudge visuel) — sauf si l'exclusion viderait
+  // entièrement une catégorie, auquel cas on la réaffiche exceptionnellement
+  // (même principe de repli que le moteur de génération auto pour la météo,
+  // cf. poolFor dans logic.ts) plutôt que de laisser le picker sans option.
+  const groups = CATS.map(([key, , plural]) => {
+    const allItems = items.filter((i) => i.cat === key);
+    let visible = CLOTHING_CATS.includes(key) ? allItems.filter((i) => !recentlyWorn(i)) : allItems;
+    if (!visible.length) visible = allItems;
+    if (key === "chaussures" && dressy) {
+      const withoutBaskets = visible.filter((i) => i.shoeType !== "Baskets");
+      if (withoutBaskets.length) visible = withoutBaskets;
+    }
+    return { key, label: plural.toUpperCase(), items: visible };
+  }).filter((g) => g.items.length > 0);
 
   const dismissed = new Set(state.lookDraftDismissed || []);
   const lookScore = computeLookScore(
@@ -103,17 +114,13 @@ export default function CreateLookScreen() {
                 !on &&
                 ((TOP_BOTTOM_CATS.has(it.cat) && hasRobeOrCombi) ||
                   ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom));
-              // R-B6 — baskets reléguées en contexte habillé : simple nudge
-              // visuel, reste sélectionnable si l'utilisatrice le souhaite
-              // vraiment (le bandeau ci-dessous couvre le reste).
-              const basketDim = !on && it.cat === "chaussures" && it.shoeType === "Baskets" && dressy;
               return (
                 <button
                   key={it.id}
                   onClick={() => !robeConflict && actions.toggleLookDraftPiece(it.id)}
                   disabled={robeConflict}
                   className={"flex-none w-[104px] text-left " + (robeConflict ? "cursor-not-allowed" : "cursor-pointer")}
-                  style={{ scrollSnapAlign: "start", opacity: robeConflict ? 0.3 : basketDim ? 0.4 : 1 }}
+                  style={{ scrollSnapAlign: "start", opacity: robeConflict ? 0.3 : 1 }}
                 >
                   <div
                     className="relative w-full rounded-[11px] overflow-hidden"

@@ -21,8 +21,8 @@ const TOP_OR_BOTTOM_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe
 const BASE_GARMENT_CATS: CategoryKey[] = ["haut", "robe", "combinaison"];
 const OUTERWEAR_CATS: CategoryKey[] = ["veste", "manteau"];
 
-/** Catégories suivies pour l'anti-répétition (R-B7) et le calcul de formalité d'une tenue. */
-const CLOTHING_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe", "robe", "combinaison", "veste", "manteau"];
+/** Catégories suivies pour l'anti-répétition (R-B7) et le calcul de formalité d'une tenue. Exporté pour CreateLookScreen (filtre dur du picker manuel, brief design section 4). */
+export const CLOTHING_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe", "robe", "combinaison", "veste", "manteau"];
 const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire"];
 
 /** Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète (R-B9). */
@@ -40,7 +40,8 @@ function isShirtLike(it: Item): boolean {
   return it.subtype === "Chemise" || it.subtype === "Chemisier";
 }
 
-function recentlyWorn(it: Item): boolean {
+/** Exporté pour CreateLookScreen (filtre dur du picker manuel, brief design section 4). */
+export function recentlyWorn(it: Item): boolean {
   return it.worn != null && it.worn <= 2;
 }
 
