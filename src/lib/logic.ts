@@ -1217,8 +1217,16 @@ export function computeLookScore(
   const proactives: { key: string; text: string }[] = [];
 
   // R-S12 — layering : un seul haut, oversize/ample ou une chemise, contexte décontracté.
+  // Correctif 22/08/2026 (signalé : cartouche affiché avec une combinaison +
+  // une chemise oversize) — "il te manque un débardeur ou un t-shirt" n'a de
+  // sens que si ce haut EST la base de la tenue (structure haut+bas) : avec
+  // une robe/combinaison déjà présente, ce même haut oversize est un calque
+  // porté par-dessus une pièce qui couvre déjà tout le corps, jamais un haut
+  // ouvert cherchant une base dessous.
+  const hasOnepiece = pieces.some((i) => i.cat === "robe" || i.cat === "combinaison");
   if (
     tops.length === 1 &&
+    !hasOnepiece &&
     dressy === false &&
     /oversize|ample|chemise/i.test(tops[0].name + " " + (tops[0].subtype || "")) &&
     !dismissed.has("layer")
