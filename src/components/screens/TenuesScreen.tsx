@@ -408,6 +408,19 @@ export default function TenuesScreen() {
             {orderedCompositionPieces(outfitPieces).map(({ item: it, role }) => {
               const img = resolveItemImage(it);
               const hasImg = Boolean(img.url);
+              // Une photo réelle du dressing (kind "photo") n'est jamais
+              // détourée comme une image produit catalogue/affiliée : la
+              // traiter en "contain" la laisse flotter, minuscule, au milieu
+              // d'un grand vide beige, alors que les pièces catalogue
+              // occupent naturellement toute la cellule sur leur fond
+              // transparent — d'où l'écart visuel signalé le 22/08/2026
+              // ("les images importées du dressing doivent avoir le même
+              // traitement d'images"). Recadrée en "cover" plein cadre à la
+              // place (même traitement que la grille Dressing, WardrobeScreen)
+              // : elle occupe alors exactement le même espace que ses
+              // voisines, comme une vraie tuile de look plutôt qu'une photo
+              // de vacances incrustée dans une case.
+              const isRealPhoto = img.kind === "photo";
               const span = TIER_SPAN[TIER_OF_ROLE[role]];
               return (
                 <div
@@ -416,15 +429,15 @@ export default function TenuesScreen() {
                     gridColumn: `span ${span.col}`,
                     gridRow: `span ${span.row}`,
                     borderRadius: 14,
-                    padding: 8,
+                    padding: isRealPhoto ? 0 : 8,
                     boxSizing: "border-box",
                     background: "#F3EDE1",
                     backgroundImage: hasImg ? `url(${img.url})` : undefined,
                     backgroundColor: hasImg ? undefined : it.hex,
-                    backgroundSize: "contain",
+                    backgroundSize: isRealPhoto ? "cover" : "contain",
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "center",
-                    backgroundOrigin: "content-box",
+                    backgroundOrigin: isRealPhoto ? "border-box" : "content-box",
                     boxShadow: hasImg ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
                   }}
                 />
@@ -485,14 +498,28 @@ export default function TenuesScreen() {
                     // très léger fond ivoire Capsela (jamais de bordure/ombre marquée
                     // qui donnerait un effet "photo insérée dans un carré"), avec une
                     // marge interne pour que le vêtement ne touche jamais les bords.
-                    style={{ width: 99, height: 119, background: "#F3EDE1", padding: 9 }}
+                    // Correctif 22/08/2026 : sans objet pour une photo réelle du
+                    // dressing (kind "photo") — recadrée plein cadre en "cover"
+                    // comme dans la grille Dressing, même traitement que les
+                    // pièces catalogue/affiliées plutôt qu'un écart visuel.
+                    style={{
+                      width: 99,
+                      height: 119,
+                      background: "#F3EDE1",
+                      padding: resolvedImage.kind === "photo" ? 0 : 9,
+                    }}
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={resolvedImage.url}
                       alt={it.name}
                       loading="lazy"
-                      style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: resolvedImage.kind === "photo" ? "cover" : "contain",
+                        objectPosition: "center",
+                      }}
                     />
                   </div>
                 ) : (
