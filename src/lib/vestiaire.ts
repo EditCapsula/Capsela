@@ -311,12 +311,23 @@ const SHOE_TYPE_MAP: Record<string, ShoeType> = {
 };
 
 export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
-  const cat = mapCategory(row.category);
+  let cat = mapCategory(row.category);
   if (!cat) return null;
   const name = (row.name || "").trim();
   if (!name) return null;
   const hex = row.hex || FALLBACK_HEX;
   const color = row.couleur_dominante || "";
+  // Correctif 22/08/2026 (signalé : deux "sacs" dans la même tenue) — en
+  // pratique, aucune ligne de vestiaire_universel n'utilise category =
+  // "sacs" : tous les sacs sont catalogués sous "accessoires", au même
+  // titre que ceintures/foulards/lunettes. Sans reclassement, ils restent
+  // cat="accessoire" et sont piochés par le tirage accessoire (accProb.accessoire
+  // dans generateOutfit) indépendamment du tirage sac (accProb.sac), qui lui
+  // ne trouve jamais rien à proposer — d'où deux pièces "Sac" (l'étiquette
+  // d'affichage isBag() masquant qu'elles viennent de deux tirages distincts)
+  // au lieu d'une vraie alternance sac/accessoire. Même détection par nom
+  // que isBag()/detectSacType(), pour rester cohérent avec l'étiquetage.
+  if (cat === "accessoire" && detectSacType(name)) cat = "sac";
 
   return {
     id: VESTIAIRE_ID_OFFSET + row.id,
