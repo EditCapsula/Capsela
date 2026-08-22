@@ -1,6 +1,7 @@
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
+import { isCatalogId } from "./catalog";
 import { morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
@@ -476,6 +477,19 @@ export function generateOutfit(
   const chosen: Item[] = [];
   const pick = (cats: CategoryKey[], essential = true) => {
     let base = poolFor(cats).filter((i) => cats.includes(i.cat));
+    // Priorité au réel sur un groupe de catégories fusionnées pour un même
+    // tirage (correctif 22/08/2026, signalé : un jean réel ajouté au
+    // dressing n'apparaissait presque jamais, noyé parmi les 20+ pantalons/
+    // shorts/jupes suggérés de la capsule pour le même tirage "bas").
+    // wardrobePool applique déjà "pièces réelles sinon capsule" catégorie
+    // par catégorie exacte — mais BOTTOMS (pantalon+jean+short+jupe),
+    // TOP_LAYER_CATS (haut+pull) et le groupe accessoire/bijou/sac d'un
+    // remplacement manuel combinent plusieurs catégories dans un seul
+    // tirage, où le réel d'une catégorie se retrouvait mélangé à parts
+    // égales avec la capsule des autres. Dès qu'au moins une pièce réelle
+    // existe dans ce groupe, la capsule est écartée pour CE tirage.
+    const real = base.filter((i) => !isCatalogId(i.id));
+    if (real.length) base = real;
     // Préférence pluie (R-B16, recette 20/08/2026) — n'écarte rien, juste une
     // inclination pour une veste/un manteau qui résiste à la pluie quand il
     // pleut, seulement si ça laisse au moins une option (même esprit que
@@ -806,6 +820,11 @@ export function swapOutfitPiece(
   const catGroup: CategoryKey[] =
     BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId);
+  // Priorité au réel sur le groupe accessoire/bijou/sac — même correctif
+  // 22/08/2026 que dans generateOutfit (cf. son commentaire) : pas
+  // seulement à la génération automatique, aussi lors d'un remplacement manuel.
+  const realCandidates = candidates.filter((i) => !isCatalogId(i.id));
+  if (realCandidates.length) candidates = realCandidates;
   // Correctif 21/08/2026 (signalé : deux sacs dans la même tenue) — "sac" est
   // regroupé avec accessoire/bijou pour élargir les options d'échange, mais
   // jamais si un sac est déjà présent ailleurs dans la tenue.
