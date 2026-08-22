@@ -168,11 +168,26 @@ function occasionPhrase(occasion: OccasionKey, workMode: WorkMode, dateContext: 
   }
 }
 
+/** Qualificatif court associé à la température — deuxième "raison" de explainRecommendation ci-dessous. */
+function weatherQualifier(t: number): string {
+  if (t >= 27) return "légère et fraîche";
+  if (t >= 20) return "légère et confortable";
+  if (t >= 12) return "confortable, une couche en plus si besoin";
+  return "chaude et enveloppante";
+}
+
 /**
- * Phrase courte expliquant pourquoi cette combinaison est recommandée,
- * générée par template (recette 19/08/2026) — jamais d'IA, jamais de
- * texte codé en dur indépendant du contexte réel (occasion, présentiel/
- * télétravail, météo du jour).
+ * Justification courte de la recommandation (brief design 22/08/2026,
+ * remplace "Pensée pour ta journée et les X° prévus" par un format plus
+ * direct et scannable : "X° aujourd'hui · qualificatif météo"), générée par
+ * template — jamais d'IA, jamais de texte codé en dur indépendant du
+ * contexte réel.
+ *
+ * Construite comme une liste de "raisons" jointes par " · " plutôt qu'une
+ * phrase figée : architecture pensée pour accueillir plus tard d'autres
+ * critères du moteur de recommandation (occasion, pièce mise en avant...)
+ * en ajoutant simplement une entrée à `reasons`, sans revoir le format ni
+ * les appelants (TenuesScreen, HomeScreen).
  */
 export function explainRecommendation(
   occasion: OccasionKey,
@@ -180,13 +195,12 @@ export function explainRecommendation(
   dateContext: DateContext,
   temp: number | null | undefined
 ): string {
-  const occ = occasionPhrase(occasion, workMode, dateContext);
-  if (temp == null || !Number.isFinite(temp)) return `Pensée pour ${occ}.`;
+  if (temp == null || !Number.isFinite(temp)) {
+    return `Pensée pour ${occasionPhrase(occasion, workMode, dateContext)}.`;
+  }
   const t = Math.round(temp);
-  if (t >= 27) return `Pensée pour ${occ} et la chaleur annoncée (${t}°).`;
-  if (t >= 20) return `Pensée pour ${occ} et les ${t}° prévus.`;
-  if (t >= 12) return `Pensée pour ${occ}, avec ${t}° au programme.`;
-  return `Pensée pour ${occ} et le froid annoncé (${t}°).`;
+  const reasons = [`${t}° aujourd'hui`, weatherQualifier(t)];
+  return reasons.join(" · ");
 }
 
 /**

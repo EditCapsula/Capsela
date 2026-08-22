@@ -13,18 +13,37 @@ import { paletteHexes } from "@/lib/profile";
 import type { CategoryKey, Item } from "@/lib/types";
 
 /**
- * Grille non chevauchante de l'aperçu global (correctif 22/08/2026, signalé :
- * "il y a un problème d'affichage des tenues avec le libellé. il cache les
- * paires de chaussures ou des fois les pièces se chevauchent entre elles" —
- * remplace l'ancien flat-lay à chevauchements volontaires, dont les zones se
- * recouvraient et dont le badge d'occasion masquait parfois les chaussures).
- * Chaque pièce occupe désormais sa propre cellule de grille, jamais
- * recouverte par une autre ; l'ordre est fixe (même rôle → même position
- * relative à chaque rendu, jamais aléatoire) plutôt que l'ordre de tirage.
+ * Grille non chevauchante et hiérarchisée de l'aperçu "La combinaison"
+ * (brief design 22/08/2026, "faire ressentir une tenue complète, pas cinq
+ * produits indépendants") — chaque pièce occupe sa propre cellule (jamais
+ * recouverte par une autre), avec une taille dérivée de son rôle plutôt que
+ * de sa position dans le tableau : pièces principales (haut/bas/robe/veste)
+ * grandes, chaussures intermédiaires, sac/bijou/accessoire petits. Grille
+ * CSS à spans (jamais de position absolue dépendante du nombre de pièces) —
+ * s'adapte donc à toute combinaison générée par Capsela. L'ordre est fixe
+ * (même rôle → même position relative à chaque rendu, jamais aléatoire).
  */
 type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
+type CompositionTier = "principal" | "chaussures" | "petit";
 
 const ROLE_ORDER: CompositionRole[] = ["outerwear", "onepiece", "haut", "pantalon", "chaussures", "sac", "petit"];
+
+const TIER_OF_ROLE: Record<CompositionRole, CompositionTier> = {
+  outerwear: "principal",
+  onepiece: "principal",
+  haut: "principal",
+  pantalon: "principal",
+  chaussures: "chaussures",
+  sac: "petit",
+  petit: "petit",
+};
+
+/** Empan de grille par palier de taille — 4 colonnes, "dense" comble les trous laissés par les petites pièces. */
+const TIER_SPAN: Record<CompositionTier, { col: number; row: number }> = {
+  principal: { col: 2, row: 2 },
+  chaussures: { col: 2, row: 1 },
+  petit: { col: 1, row: 1 },
+};
 
 function compositionRoleOf(cat: CategoryKey): CompositionRole {
   if (cat === "pantalon" || cat === "jean" || cat === "jupe" || cat === "short") return "pantalon";
@@ -35,12 +54,12 @@ function compositionRoleOf(cat: CategoryKey): CompositionRole {
   return "petit"; // pull et tout le reste
 }
 
-/** Ordre fixe par rôle (jamais l'ordre de tirage, qui varie à chaque régénération). */
-function orderedCompositionPieces(items: Item[]): Item[] {
+/** Ordre fixe par rôle (jamais l'ordre de tirage, qui varie à chaque régénération) + rôle pour la taille de cellule. */
+function orderedCompositionPieces(items: Item[]): { item: Item; role: CompositionRole }[] {
   return items
-    .map((it, i) => ({ it, i, rank: ROLE_ORDER.indexOf(compositionRoleOf(it.cat)) }))
-    .sort((a, b) => a.rank - b.rank || a.i - b.i)
-    .map((r) => r.it);
+    .map((it, i) => ({ item: it, role: compositionRoleOf(it.cat), i }))
+    .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || a.i - b.i)
+    .map(({ item, role }) => ({ item, role }));
 }
 
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
@@ -79,6 +98,9 @@ export default function TenuesScreen() {
   const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
+  // "Enregistrer cette tenue" — voir le commentaire au point d'usage
+  // (composant prêt, persistance volontairement non branchée).
+  const [savedOutfitKey, setSavedOutfitKey] = useState<string | null>(null);
 
   const now = new Date();
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
@@ -87,6 +109,8 @@ export default function TenuesScreen() {
   const outfitPieces = (state.outfit || [])
     .map((id) => wardrobePool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
+  const outfitKey = outfitPieces.map((it) => it.id).sort((a, b) => a - b).join(",");
+  const isOutfitSaved = outfitKey.length > 0 && savedOutfitKey === outfitKey;
 
   // Génération automatique des visuels manquants (recette 18/08/2026) : dès
   // qu'une pièce du catalogue est affichée dans "La combinaison" sans photo
@@ -142,7 +166,6 @@ export default function TenuesScreen() {
     geoLoading ? null : geoCity.temp
   );
 
-  const heroOccasionLabel = OCCASIONS.find(([key]) => key === state.occasion)?.[1] || "Ta tenue";
 
   const dismissed = new Set(state.dismissedSuggestions || []);
   const lookScore = computeLookScore(
@@ -352,7 +375,7 @@ export default function TenuesScreen() {
             ))}
         </div>
         <button onClick={actions.regenOutfit} className="text-[12px] text-terracotta tracking-[.03em] cursor-pointer">
-          ↻ Régénérer
+          ↻ Autre tenue
         </button>
       </div>
 
@@ -372,18 +395,28 @@ export default function TenuesScreen() {
       )}
 
       {!geoLoading && outfitPieces.length > 0 && (
-        <div className="mb-4" style={{ marginTop: 14 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-            {orderedCompositionPieces(outfitPieces).map((it) => {
+        <div className="mb-3" style={{ marginTop: 10 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gridAutoRows: "clamp(58px, 17vw, 74px)",
+              gridAutoFlow: "dense",
+              gap: 6,
+            }}
+          >
+            {orderedCompositionPieces(outfitPieces).map(({ item: it, role }) => {
               const img = resolveItemImage(it);
               const hasImg = Boolean(img.url);
+              const span = TIER_SPAN[TIER_OF_ROLE[role]];
               return (
                 <div
                   key={"comp-" + it.id}
                   style={{
-                    aspectRatio: "4 / 5",
+                    gridColumn: `span ${span.col}`,
+                    gridRow: `span ${span.row}`,
                     borderRadius: 14,
-                    padding: 9,
+                    padding: 8,
                     boxSizing: "border-box",
                     background: "#F3EDE1",
                     backgroundImage: hasImg ? `url(${img.url})` : undefined,
@@ -398,20 +431,22 @@ export default function TenuesScreen() {
               );
             })}
           </div>
-          <div
-            className="inline-block mt-3"
-            style={{
-              background: "#FBF8F3",
-              borderRadius: 100,
-              padding: "9px 16px",
-              fontSize: 10,
-              letterSpacing: ".08em",
-              textTransform: "uppercase",
-              color: "#1D1A16",
-            }}
+          {/* "Enregistrer cette tenue" (brief design 22/08/2026, section 8) —
+              état local volontairement non persisté : savedLooks (store.tsx)
+              sert à un autre usage (looks nommés composés à la main) et
+              aucun système de sauvegarde n'existe encore pour "aimer" la
+              recommandation du jour telle quelle. Composant prêt ; brancher
+              une vraie persistance (ex. colonne dédiée sur outfit_history ou
+              nouvelle table Supabase) reviendrait à remplacer ce useState
+              par un state/action du store, sans toucher à ce JSX. */}
+          <button
+            onClick={() => setSavedOutfitKey(isOutfitSaved ? null : outfitKey)}
+            className="mt-3 flex items-center gap-[6px] text-[12.5px] cursor-pointer"
+            style={{ color: isOutfitSaved ? "#A66950" : "#7B7366" }}
           >
-            {heroOccasionLabel}
-          </div>
+            <span>{isOutfitSaved ? "♥" : "♡"}</span>
+            {isOutfitSaved ? "Tenue enregistrée" : "Enregistrer cette tenue"}
+          </button>
         </div>
       )}
 
