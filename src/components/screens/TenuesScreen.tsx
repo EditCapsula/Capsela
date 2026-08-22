@@ -167,7 +167,6 @@ export default function TenuesScreen() {
   const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
-  const [suggestionInfoId, setSuggestionInfoId] = useState<number | null>(null);
 
   const now = new Date();
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
@@ -514,7 +513,6 @@ export default function TenuesScreen() {
             ))
           : outfitPieces.map((it) => {
           const suggested = isCatalogId(it.id);
-          const infoOpen = suggestionInfoId === it.id;
           const resolvedImage = resolveItemImage(it);
           return (
             <div
@@ -561,24 +559,11 @@ export default function TenuesScreen() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  {/* Badge à sens réel (recette 19/08/2026) : DRESSING pour une pièce
-                      possédée, CAPSULE pour une pièce de la capsule de départ — jamais
-                      "Suggestion" générique appliqué à tout indistinctement. */}
-                  {suggested ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSuggestionInfoId(infoOpen ? null : it.id);
-                      }}
-                      className="inline-block text-[9px] tracking-[.08em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px] mb-[6px] cursor-pointer"
-                    >
-                      Capsule
-                    </button>
-                  ) : (
-                    <span className="inline-block text-[9px] tracking-[.08em] uppercase text-[#6B6357] bg-[#EFEAE0] rounded-full py-1 px-[10px] mb-[6px]">
-                      Dressing
-                    </span>
-                  )}
+                  {/* Badge "pièce suggérée" retiré de cet écran (brief design
+                      section 0, correctif 22/08/2026) : exclusif à l'écran
+                      Capsule — ici, le mode de recommandation global
+                      (recommendationMode/modeLabel ci-dessus) suffit déjà à
+                      signaler la présence de pièces de capsule dans la tenue. */}
                   <div className="text-[14.5px] text-ink">{it.name}</div>
                   <div className="text-[11px] text-muted mt-[3px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
                 </div>
@@ -593,12 +578,6 @@ export default function TenuesScreen() {
                   ⇄
                 </button>
               </div>
-              {suggested && infoOpen && (
-                <div className="text-[11.5px] text-muted mt-[10px] leading-[1.4]">
-                  Cette pièce vient de ta capsule de départ : tu n&apos;as pas encore ajouté de pièce de cette
-                  catégorie à ton dressing. Ajoute-la si tu l&apos;as déjà, ou remplace-la par une des tiennes.
-                </div>
-              )}
             </div>
           );
         })}

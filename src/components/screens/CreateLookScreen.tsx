@@ -3,7 +3,14 @@
 import { BAS_CATS, CATS, CATLABEL, OCCASIONS } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { CLOTHING_CATS, TOP_LAYER_CATS, computeLookScore, evaluateBlocking, recentlyWorn } from "@/lib/logic";
+import {
+  CLOTHING_CATS,
+  TOP_LAYER_CATS,
+  applySportCocooningFilter,
+  computeLookScore,
+  evaluateBlocking,
+  recentlyWorn,
+} from "@/lib/logic";
 import { rolePieceOf } from "@/lib/attributes";
 import { paletteHexes } from "@/lib/profile";
 import type { Item } from "@/lib/types";
@@ -31,16 +38,19 @@ export default function CreateLookScreen() {
   const topDraftBaseSelected = draftPieces.some((i) => TOP_LAYER_CATS.includes(i.cat) && rolePieceOf(i) === "base");
   const hasCalqueOption = items.some((i) => TOP_LAYER_CATS.includes(i.cat) && rolePieceOf(i) === "calque");
 
-  // Brief design section 4 (correctif 22/08/2026) : anti-répétition ≤2 jours
-  // et baskets en occasion habillée redeviennent de vrais filtres du picker
-  // (jamais juste un nudge visuel) — sauf si l'exclusion viderait
-  // entièrement une catégorie, auquel cas on la réaffiche exceptionnellement
-  // (même principe de repli que le moteur de génération auto pour la météo,
-  // cf. poolFor dans logic.ts) plutôt que de laisser le picker sans option.
+  // Brief design section 4 (correctif 22/08/2026) : liste blanche Sport
+  // (R-B11) et exclusions Cocooning (R-B12/B13/B14) étendues au picker
+  // manuel — jusqu'ici réservées au moteur de génération automatique.
+  // Jamais relâchées, y compris si ça vide entièrement une catégorie (même
+  // philosophie que côté génération auto : "jamais relâchée, même si le
+  // pool résultant est restreint") — contrairement à l'anti-répétition et
+  // aux baskets ci-dessous, qui ont un repli parce que ce sont des
+  // préférences, pas des incompatibilités structurelles.
   const groups = CATS.map(([key, , plural]) => {
-    const allItems = items.filter((i) => i.cat === key);
-    let visible = CLOTHING_CATS.includes(key) ? allItems.filter((i) => !recentlyWorn(i)) : allItems;
-    if (!visible.length) visible = allItems;
+    const catItems = items.filter((i) => i.cat === key);
+    const occasionOk = applySportCocooningFilter(catItems, state.lookDraftOccasion);
+    let visible = CLOTHING_CATS.includes(key) ? occasionOk.filter((i) => !recentlyWorn(i)) : occasionOk;
+    if (!visible.length) visible = occasionOk;
     if (key === "chaussures" && dressy) {
       const withoutBaskets = visible.filter((i) => i.shoeType !== "Baskets");
       if (withoutBaskets.length) visible = withoutBaskets;

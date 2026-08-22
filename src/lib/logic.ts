@@ -35,6 +35,57 @@ export function violatesOuterwearRule(pieces: Item[]): boolean {
   return pieces.some((i) => OUTERWEAR_CATS.includes(i.cat)) && !hasBaseGarment(pieces);
 }
 
+/**
+ * R-B11 (Sport, liste blanche stricte) + R-B12/R-B13/R-B14 (Cocooning,
+ * exclusions symétriques) — jamais relâchées, quelle que soit la source du
+ * pool. Extrait de generateOutfit pour être réutilisé tel quel par le
+ * picker manuel de Création de looks (brief design section 4, correctif
+ * 22/08/2026 : ces règles n'existaient jusqu'ici que côté génération
+ * automatique). workMode par défaut "Présentiel" : CreateLookScreen n'a pas
+ * de sous-contexte Présentiel/Télétravail sélectionnable, donc isHomeContext
+ * s'y limite naturellement à Cocooning.
+ */
+export function applySportCocooningFilter(items: Item[], occasion: OccasionKey, workMode: WorkMode = "Présentiel"): Item[] {
+  let r = items;
+  if (occasion === "sport") {
+    // R-B11 — correspondance stricte, pas un seuil minimum : liste blanche
+    // explicite par catégorie (section 22 du moteur de règles), avec une
+    // exception pour le sac cabas (compatible Sport bien que non technique).
+    // Correctif 22/08/2026 (signalé : ceinture proposée en Sport) — ceinture
+    // et foulard n'ont aucune fonction sportive, contrairement à casquette/
+    // lunettes/chaussettes hautes qui restent autorisées.
+    r = r.filter((i) => {
+      if (i.cat === "chaussures") return formalityOf(i) === 0;
+      if (i.cat === "sac") return formalityOf(i) === 0 || i.sacType === "Cabas";
+      if (i.cat === "bijou") return false;
+      if (i.cat === "accessoire") return i.accessoireType !== "Ceinture" && i.accessoireType !== "Foulard";
+      return formalityOf(i) === 0;
+    });
+  }
+  // Contexte "à la maison" — Cocooning, ou Télétravail (sous-contexte de
+  // travail_formel) : partagé par plusieurs règles (R-B13/R-B14/R-B17),
+  // jamais en Présentiel.
+  const isHomeContext = occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail");
+  if (occasion === "cocooning") {
+    // R-B12 — pas de veste/manteau chez soi (Cocooning uniquement — en
+    // Télétravail on peut porter un gilet/une veste, rien ne l'interdit).
+    r = r.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
+  }
+  if (isHomeContext) {
+    // R-B13/R-B17 — chaussures d'intérieur uniquement à la maison
+    // (Cocooning et Télétravail).
+    r = r.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
+  } else {
+    // R-B13 — symétrique : une chaussure d'intérieur n'apparaît jamais hors de ce contexte.
+    r = r.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Chaussures d'intérieur");
+  }
+  // R-B14 — aucun sac n'a de fonction chez soi.
+  if (isHomeContext) {
+    r = r.filter((i) => i.cat !== "sac");
+  }
+  return r;
+}
+
 /** R-B10 — deux chemises/chemisiers ensemble, quel que soit leur rôle de superposition. */
 function isShirtLike(it: Item): boolean {
   return it.subtype === "Chemise" || it.subtype === "Chemisier";
@@ -297,40 +348,7 @@ export function generateOutfit(
   // restreint ; appliquée à toute source de pool, y compris aux catégories
   // qui bypassent par ailleurs le simple filtre heuristique d'occasion (chaussures/sac).
   const hardCategoryFilter = (items: Item[], minFormalityOverride?: number): Item[] => {
-    let r = items;
-    if (occasion === "sport") {
-      // R-B11 — correspondance stricte, pas un seuil minimum : liste blanche
-      // explicite par catégorie (section 22 du moteur de règles), avec une
-      // exception pour le sac cabas (compatible Sport bien que non technique).
-      r = r.filter((i) => {
-        if (i.cat === "chaussures") return formalityOf(i) === 0;
-        if (i.cat === "sac") return formalityOf(i) === 0 || i.sacType === "Cabas";
-        if (i.cat === "bijou") return false;
-        if (i.cat === "accessoire") return true;
-        return formalityOf(i) === 0;
-      });
-    }
-    // Contexte "à la maison" — Cocooning, ou Télétravail (sous-contexte de
-    // travail_formel) : partagé par plusieurs règles (R-B13/R-B14/R-B17),
-    // jamais en Présentiel.
-    const isHomeContext = occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail");
-    if (occasion === "cocooning") {
-      // R-B12 — pas de veste/manteau chez soi (Cocooning uniquement — en
-      // Télétravail on peut porter un gilet/une veste, rien ne l'interdit).
-      r = r.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
-    }
-    if (isHomeContext) {
-      // R-B13/R-B17 — chaussures d'intérieur uniquement à la maison
-      // (Cocooning et Télétravail).
-      r = r.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
-    } else {
-      // R-B13 — symétrique : une chaussure d'intérieur n'apparaît jamais hors de ce contexte.
-      r = r.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Chaussures d'intérieur");
-    }
-    // R-B14 — aucun sac n'a de fonction chez soi.
-    if (isHomeContext) {
-      r = r.filter((i) => i.cat !== "sac");
-    }
+    let r = applySportCocooningFilter(items, occasion, workMode);
     // R-B18 — aucun accessoire n'a de fonction en Télétravail (bijou/sac déjà
     // couverts ailleurs ; concerne ceinture, foulard, lunettes...).
     if (occasion === "travail_formel" && workMode === "Télétravail") {
@@ -794,29 +812,9 @@ export function swapOutfitPiece(
   if (catGroup.includes("sac") && outfitItems.some((i) => i.cat === "sac" && i.id !== pieceId)) {
     candidates = candidates.filter((i) => i.cat !== "sac");
   }
-  // R-B11/R-B12/R-B13 — jamais relâchées, y compris sur un échange manuel.
-  if (occasion === "sport") {
-    candidates = candidates.filter((i) => {
-      if (i.cat === "chaussures") return formalityOf(i) === 0;
-      if (i.cat === "sac") return formalityOf(i) === 0 || i.sacType === "Cabas";
-      if (i.cat === "bijou") return false;
-      if (i.cat === "accessoire") return true;
-      return formalityOf(i) === 0;
-    });
-  }
-  const isHomeContext = occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail");
-  if (occasion === "cocooning") {
-    candidates = candidates.filter((i) => !OUTERWEAR_CATS.includes(i.cat));
-  }
-  if (isHomeContext) {
-    candidates = candidates.filter((i) => i.cat !== "chaussures" || i.shoeType === "Chaussures d'intérieur");
-  } else {
-    candidates = candidates.filter((i) => i.cat !== "chaussures" || i.shoeType !== "Chaussures d'intérieur");
-  }
-  // R-B14 — symétrique du filtre appliqué dans generateOutfit.
-  if (isHomeContext) {
-    candidates = candidates.filter((i) => i.cat !== "sac");
-  }
+  // R-B11/R-B12/R-B13/R-B14 — jamais relâchées, y compris sur un échange
+  // manuel (fonction partagée avec generateOutfit, un seul endroit à tenir à jour).
+  candidates = applySportCocooningFilter(candidates, occasion, workMode);
   // R-B18 — symétrique du filtre appliqué dans generateOutfit.
   if (occasion === "travail_formel" && workMode === "Télétravail") {
     candidates = candidates.filter((i) => i.cat !== "accessoire");
