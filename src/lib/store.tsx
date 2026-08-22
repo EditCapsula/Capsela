@@ -2,9 +2,18 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
+import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
 import { computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
 import { fetchVestiaireUniversel } from "./vestiaire";
+import {
+  deleteDressingItem,
+  fetchDressingItems,
+  fetchOutfitHistory,
+  insertDressingItem,
+  insertOutfitHistoryEntry,
+  updateDressingItemWorn,
+} from "./dressing";
 import { ensureCatalogImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
@@ -27,6 +36,7 @@ import type {
   City,
   Coupe,
   DateContext,
+  HistoryEntry,
   Item,
   Matiere,
   OccasionKey,
@@ -255,12 +265,37 @@ export function findPiece(pool: Item[], id: number): Item | undefined {
 }
 
 export function CapselaProvider({ children }: { children: React.ReactNode }) {
-  const { profile, ready } = useAuth();
+  const { profile, ready, userId } = useAuth();
   const [state, setState] = useState<AppState>(buildInitialState);
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Dressing réel + historique (Supabase) — remplace le state []/[] initial
+  // dès que la session est prête. En mode démo (ou déconnecté), rien à
+  // charger : le state en mémoire reste la seule source, comme aujourd'hui.
+  // dressingLoaded gate l'effet "première tenue" ci-dessous : sans ça, la
+  // toute première génération se ferait sur un wardrobePool vide alors que
+  // des pièces existent en base, le temps que la requête réponde.
+  const [dressingLoaded, setDressingLoaded] = useState(false);
+  useEffect(() => {
+    if (!ready) return;
+    if (!isSupabaseConfigured || !userId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDressingLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([fetchDressingItems(userId), fetchOutfitHistory(userId)]).then(([items, history]) => {
+      if (cancelled) return;
+      setState((s) => ({ ...s, items, history }));
+      setDressingLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, userId]);
 
   // Dernière position géolocalisée avec succès, si une existe (survit aux
   // rechargements) — lue une seule fois après montage, jamais pendant le
@@ -468,11 +503,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // withDefaultOccasion ici, l'occasion resterait sur "all" et aucune card
   // n'apparaîtrait cochée à l'ouverture de Tenue.
   useEffect(() => {
-    if (ready && !geoLoading && !stateRef.current.outfit.length) {
+    if (ready && dressingLoaded && !geoLoading && !stateRef.current.outfit.length) {
       setState((s) => regen(withDefaultOccasion(s)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, geoLoading, defaultCapsule]);
+  }, [ready, dressingLoaded, geoLoading, defaultCapsule]);
 
   const go = (screen: Screen) => setState((s) => ({ ...s, screen }));
 
@@ -529,13 +564,20 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         dismissedSuggestions: [],
         screen: "tenues",
       })),
-    removeActive: () =>
+    removeActive: () => {
+      let deletedId: number | null = null;
       setState((s) => {
         if (s.activeSuggested) {
           return { ...s, suggestedExcluded: [...s.suggestedExcluded, s.activeId], screen: s.pieceReturn };
         }
+        deletedId = s.activeId;
         return { ...s, items: s.items.filter((it) => it.id !== s.activeId), screen: s.pieceReturn };
-      }),
+      });
+      if (deletedId !== null && isSupabaseConfigured && userId) {
+        // Suppression best-effort : la pièce reste retirée localement même en cas d'échec réseau.
+        deleteDressingItem(deletedId).catch(() => {});
+      }
+    },
 
     dismissSuggested: (id) =>
       setState((s) => ({ ...s, suggestedExcluded: [...s.suggestedExcluded, id] })),
@@ -592,7 +634,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setAddBijouType: (t) => setState((s) => ({ ...s, addBijouType: t, addBijouTypeTouched: true })),
     setAddAccessoireType: (t) => setState((s) => ({ ...s, addAccessoireType: t, addAccessoireTypeTouched: true })),
     setAddSubtype: (t) => setState((s) => ({ ...s, addSubtype: t, addSubtypeTouched: true })),
-    saveItem: () =>
+    saveItem: () => {
+      // Renseigné par l'updater ci-dessous quand Supabase est configuré : la
+      // pièce n'a pas encore d'id réel, l'insertion se fait après le
+      // setState (jamais d'appel réseau dans un updater React).
+      let pending: Omit<Item, "id"> | null = null;
       setState((s) => {
         // Contrainte produit : pas de sauvegarde tant que la saison n'est pas confirmée,
         // ni tant que le type de chaussure n'est pas choisi pour cette catégorie (R-B6),
@@ -600,8 +646,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         if (!s.addSeason) return s;
         if (s.addCat === "chaussures" && !s.addShoeType) return s;
         if (SUBTYPE_REQUIRED.includes(s.addCat) && !s.addSubtype) return s;
-        const item: Item = {
-          id: Math.max(0, ...s.items.map((i) => i.id)) + 1,
+        const base: Omit<Item, "id"> = {
           name: (s.addName || "").trim() || "Nouvelle pièce",
           brand: (s.addBrand || "").trim() || undefined,
           cat: s.addCat,
@@ -620,9 +665,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           photoUrl: s.addPhotoUrl || undefined,
           worn: null,
         };
-        return {
+        const reset: AppState = {
           ...s,
-          items: [item, ...s.items],
           suggestedExcluded: s.replacingId ? [...s.suggestedExcluded, s.replacingId] : s.suggestedExcluded,
           replacingId: null,
           addName: "",
@@ -645,7 +689,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addOccasion: ["travail_formel"],
           screen: "wardrobe",
         };
-      }),
+        if (isSupabaseConfigured && userId) {
+          // Id local Math.max+1 abandonné dans ce cas : l'id réel vient de Postgres (identity).
+          pending = base;
+          return reset;
+        }
+        const item: Item = { id: Math.max(0, ...s.items.map((i) => i.id)) + 1, ...base };
+        return { ...reset, items: [item, ...s.items] };
+      });
+      if (pending && userId) {
+        insertDressingItem(userId, pending)
+          .then((item) => setState((s) => ({ ...s, items: [item, ...s.items] })))
+          .catch(() => {
+            // Échec réseau : la pièce n'apparaît pas dans le dressing plutôt que d'y
+            // exister avec un id local qui ne correspondrait à aucune ligne en base.
+          });
+      }
+    },
 
     goPremium: () => setState(toPremiumScreen),
     subscribe: () => setState((s) => ({ ...s, isPremium: true, screen: s.premiumReturn || "home" })),
@@ -690,7 +750,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
-    wearOutfitToday: () =>
+    wearOutfitToday: () => {
+      const wornUpdates: { id: number; worn: number | null; wornPrev?: number | null }[] = [];
+      let entry: HistoryEntry | null = null;
       setState((s) => {
         // Garde anti double-clic (recette 19/08/2026) : une fois déjà
         // validée, un second appel (rapide double-clic avant le re-rendu
@@ -699,58 +761,96 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         // R-B9 — défense en profondeur : une veste/un manteau seul sans base ne peut pas être validé comme porté.
         const outfitPieces = s.outfit.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
         if (violatesOuterwearRule(outfitPieces)) return s;
+        const items = s.items.map((it) => {
+          if (!s.outfit.includes(it.id)) return it;
+          wornUpdates.push({ id: it.id, worn: 0, wornPrev: it.worn });
+          return { ...it, wornPrev: it.worn, worn: 0 };
+        });
+        entry = {
+          id: "h" + Date.now(),
+          ts: Date.now(),
+          pieceIds: [...s.outfit],
+          occasion: s.occasion || "all",
+          temp: weatherRef.current.temp,
+          weatherLabel: weatherRef.current.label,
+        };
         return {
           ...s,
-          items: s.items.map((it) => (s.outfit.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
+          items,
           outfitValidated: true,
           lookCount: s.lookCount + 1,
-          history: [
-            {
-              id: "h" + Date.now(),
-              ts: Date.now(),
-              pieceIds: [...s.outfit],
-              occasion: s.occasion || "all",
-              temp: weatherRef.current.temp,
-              weatherLabel: weatherRef.current.label,
-            },
-            ...s.history,
-          ],
+          history: [entry, ...s.history],
         };
-      }),
-    wearPieceToday: (id) =>
+      });
+      if (isSupabaseConfigured && userId) {
+        // Persistance best-effort, en parallèle du state déjà mis à jour ci-dessus :
+        // un échec réseau ne doit jamais bloquer la validation de la tenue à l'écran.
+        if (wornUpdates.length) updateDressingItemWorn(wornUpdates).catch(() => {});
+        if (entry) insertOutfitHistoryEntry(userId, entry).catch(() => {});
+      }
+    },
+    wearPieceToday: (id) => {
+      let wornUpdate: { id: number; worn: number | null; wornPrev?: number | null } | null = null;
+      let entry: HistoryEntry | null = null;
+      setState((s) => {
+        const items = s.items.map((it) => {
+          if (it.id !== id) return it;
+          wornUpdate = { id: it.id, worn: 0, wornPrev: it.worn };
+          return { ...it, wornPrev: it.worn, worn: 0 };
+        });
+        entry = { id: "h" + Date.now(), ts: Date.now(), pieceIds: [id], occasion: s.occasion || "all" };
+        return { ...s, items, lookCount: s.lookCount + 1, history: [entry, ...s.history] };
+      });
+      if (isSupabaseConfigured && userId) {
+        if (wornUpdate) updateDressingItemWorn([wornUpdate]).catch(() => {});
+        if (entry) insertOutfitHistoryEntry(userId, entry).catch(() => {});
+      }
+    },
+    wearActiveToday: () => {
+      let wornUpdate: { id: number; worn: number | null; wornPrev?: number | null } | null = null;
+      let entry: HistoryEntry | null = null;
+      setState((s) => {
+        const items = s.items.map((it) => {
+          if (it.id !== s.activeId) return it;
+          wornUpdate = { id: it.id, worn: 0, wornPrev: it.worn };
+          return { ...it, wornPrev: it.worn, worn: 0 };
+        });
+        entry = { id: "h" + Date.now(), ts: Date.now(), pieceIds: [s.activeId], occasion: s.occasion || "all" };
+        return { ...s, items, lookCount: s.lookCount + 1, history: [entry, ...s.history] };
+      });
+      if (isSupabaseConfigured && userId) {
+        if (wornUpdate) updateDressingItemWorn([wornUpdate]).catch(() => {});
+        if (entry) insertOutfitHistoryEntry(userId, entry).catch(() => {});
+      }
+    },
+    correctPiece: (id) => {
+      let wornUpdate: { id: number; worn: number | null } | null = null;
       setState((s) => ({
         ...s,
-        items: s.items.map((it) => (it.id === id ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
-        lookCount: s.lookCount + 1,
-        history: [
-          { id: "h" + Date.now(), ts: Date.now(), pieceIds: [id], occasion: s.occasion || "all" },
-          ...s.history,
-        ],
-      })),
-    wearActiveToday: () =>
-      setState((s) => ({
-        ...s,
-        items: s.items.map((it) => (it.id === s.activeId ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
-        lookCount: s.lookCount + 1,
-        history: [
-          { id: "h" + Date.now(), ts: Date.now(), pieceIds: [s.activeId], occasion: s.occasion || "all" },
-          ...s.history,
-        ],
-      })),
-    correctPiece: (id) =>
-      setState((s) => ({
-        ...s,
-        items: s.items.map((it) => (it.id === id ? { ...it, worn: it.wornPrev === undefined ? null : it.wornPrev } : it)),
+        items: s.items.map((it) => {
+          if (it.id !== id) return it;
+          const worn = it.wornPrev === undefined ? null : it.wornPrev;
+          wornUpdate = { id: it.id, worn };
+          return { ...it, worn };
+        }),
         lookCount: Math.max(0, s.lookCount - 1),
-      })),
-    correctActive: () =>
+      }));
+      if (wornUpdate && isSupabaseConfigured && userId) updateDressingItemWorn([wornUpdate]).catch(() => {});
+    },
+    correctActive: () => {
+      let wornUpdate: { id: number; worn: number | null } | null = null;
       setState((s) => ({
         ...s,
-        items: s.items.map((it) =>
-          it.id === s.activeId ? { ...it, worn: it.wornPrev === undefined ? null : it.wornPrev } : it
-        ),
+        items: s.items.map((it) => {
+          if (it.id !== s.activeId) return it;
+          const worn = it.wornPrev === undefined ? null : it.wornPrev;
+          wornUpdate = { id: it.id, worn };
+          return { ...it, worn };
+        }),
         lookCount: Math.max(0, s.lookCount - 1),
-      })),
+      }));
+      if (wornUpdate && isSupabaseConfigured && userId) updateDressingItemWorn([wornUpdate]).catch(() => {});
+    },
     reWear: (ids) =>
       setState((s) => ({
         ...s,
@@ -842,20 +942,30 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         activeLookId: null,
         screen: "wardrobe",
       })),
-    wearLookToday: (id) =>
+    wearLookToday: (id) => {
+      // Hors périmètre dressing_items/outfit_history (système "Mes Looks") —
+      // seule la cohérence de worn est maintenue côté base.
+      const wornUpdates: { id: number; worn: number | null; wornPrev?: number | null }[] = [];
       setState((s) => {
         const look = s.savedLooks.find((l) => l.id === id);
         if (!look) return s;
+        const items = s.items.map((it) => {
+          if (!look.pieceIds.includes(it.id)) return it;
+          wornUpdates.push({ id: it.id, worn: 0, wornPrev: it.worn });
+          return { ...it, wornPrev: it.worn, worn: 0 };
+        });
         return {
           ...s,
-          items: s.items.map((it) => (look.pieceIds.includes(it.id) ? { ...it, wornPrev: it.worn, worn: 0 } : it)),
+          items,
           lookCount: s.lookCount + 1,
           history: [
             { id: "h" + Date.now(), ts: Date.now(), pieceIds: [...look.pieceIds], occasion: "all" },
             ...s.history,
           ],
         };
-      }),
+      });
+      if (wornUpdates.length && isSupabaseConfigured && userId) updateDressingItemWorn(wornUpdates).catch(() => {});
+    },
   };
 
   const requirePremium = (fn: () => void) => () => {

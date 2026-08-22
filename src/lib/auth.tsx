@@ -56,6 +56,8 @@ export interface AuthContextValue {
   /** Mode démo : pas de credentials Supabase configurés. */
   demoMode: boolean;
   email: string | null;
+  /** Id Supabase Auth réel — null en mode démo (pas d'utilisateur Supabase) ou tant qu'aucune session n'est chargée. */
+  userId: string | null;
   profile: Profile;
   error: string | null;
   signUpEmail: (
@@ -300,6 +302,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     justSignedUp,
     demoMode: !isSupabaseConfigured,
     email: user?.email ?? demoUser?.email ?? null,
+    userId: user?.id ?? null,
     profile,
     error,
     signUpEmail,
