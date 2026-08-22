@@ -131,11 +131,23 @@ export default function ProfileSetupScreen() {
   // précédente se désélectionne automatiquement.
   const selectStyle = (id: string) => patch({ styles: [id] });
 
-  const isLast = step >= STEPS.length - 1;
+  // Édition ciblée d'une seule étape (recette 22/08/2026, signalé : "si je
+  // change mon style je ne devrai pas avoir à chaque fois l'écran
+  // morphologie") — en mode édition (fromEdit), "Continuer" termine et
+  // revient dès la fin de l'étape d'entrée, sans enchaîner sur les étapes
+  // suivantes qui n'ont rien à voir (ex. style → morpho, pur hasard de
+  // l'ordre de ALL_STEPS). Seul le groupe palette (pal_couleurs → pal_ressenti
+  // → pal_recap) reste multi-étapes même en édition : ces trois étapes
+  // forment un seul geste ("Mes goûts"), jamais séparables.
+  const PALETTE_GROUP = ["pal_couleurs", "pal_ressenti", "pal_recap"];
+  const entryStepKey = state.profileSetupStep || "genre";
+  const editGroupEndKey = PALETTE_GROUP.includes(entryStepKey) ? "pal_recap" : entryStepKey;
+  const editGroupEndIndex = STEPS.findIndex((s) => s.key === editGroupEndKey);
+  const isLast = step >= STEPS.length - 1 || (state.profileSetupFromEdit && step >= editGroupEndIndex);
 
   const finish = async () => {
     await saveProfile({ ...draft, completed: true });
-    if (state.profileSetupFromEdit) actions.goProfileEdit();
+    if (state.profileSetupFromEdit) actions.go(state.profileSetupReturn);
     else actions.goHome();
   };
 

@@ -212,7 +212,15 @@ export function computeDefaultCapsule(
   const styles = (profile.styles || [])
     .map((id) => STYLE_ID_TO_CATALOG_LABEL[id as StyleId])
     .filter((label): label is string => Boolean(label));
-  let curated = styles.length ? base.filter((it) => styles.some((st) => styleFit(it, st))) : base;
+  // La gourde et le sac de sport sont purement fonctionnels (recette
+  // 22/08/2026, signalé : "la gourde doit s'afficher pour tous les styles
+  // dans la catégorie sport") — aucun style esthétique n'a de sens à leur
+  // appliquer, donc ils échappent au filtre de curation par style plutôt que
+  // de risquer d'être exclus faute de correspondre à la garde-robe stylée du
+  // profil (ex. Bohème, Classique chic...).
+  const isSportEssential = (it: Item) =>
+    (it.cat === "accessoire" && it.accessoireType === "Gourde") || (it.cat === "sac" && it.sacType === "Sac de sport");
+  let curated = styles.length ? base.filter((it) => isSportEssential(it) || styles.some((st) => styleFit(it, st))) : base;
   if (curated.length < 18) curated = base;
 
   const favColors = paletteHexes(profile);

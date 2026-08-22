@@ -73,6 +73,7 @@ function buildInitialState(): AppState {
     legalReturn: "profile",
     profileSetupStep: "genre",
     profileSetupFromEdit: false,
+    profileSetupReturn: "profileEdit",
     onbStep: 0,
     authName: "",
     activeId: 0,
@@ -551,7 +552,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
     goLogin: () => go("login"),
     goProfileSetup: (stepKey = "genre", fromEdit = false) =>
-      setState((s) => ({ ...s, screen: "profileSetup", profileSetupStep: stepKey, profileSetupFromEdit: fromEdit })),
+      setState((s) => ({
+        ...s,
+        screen: "profileSetup",
+        profileSetupStep: stepKey,
+        profileSetupFromEdit: fromEdit,
+        profileSetupReturn: s.screen,
+      })),
     openAdd: () => go("add"),
     openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
     addBack: () => setState((s) => ({ ...s, replacingId: null, screen: "wardrobe" })),

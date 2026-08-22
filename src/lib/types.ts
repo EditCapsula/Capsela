@@ -198,6 +198,8 @@ export interface AppState {
   /** Clé de l'étape (ex. "taille"), pas un index — le nombre d'étapes n'est plus fixe (Tâche 4, arbitrages 20/08/2026). */
   profileSetupStep: string;
   profileSetupFromEdit: boolean;
+  /** Écran vers lequel revenir en terminant une édition ciblée (ex. "profile" depuis Ton profil, "profileEdit" depuis Modifier mon profil). */
+  profileSetupReturn: Screen;
   onbStep: number;
   authName: string;
   activeId: number;
