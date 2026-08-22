@@ -48,16 +48,25 @@ export function violatesOuterwearRule(pieces: Item[]): boolean {
  */
 export function applySportCocooningFilter(items: Item[], occasion: OccasionKey, workMode: WorkMode = "Présentiel"): Item[] {
   let r = items;
+  // La gourde n'a de fonction qu'en Sport (recette 22/08/2026, "valable que
+  // pour le sport") — exclue de toute autre occasion, y compris du picker
+  // manuel de Création de looks (même portée que les autres règles ici).
+  if (occasion !== "sport") {
+    r = r.filter((i) => i.accessoireType !== "Gourde");
+  }
   if (occasion === "sport") {
     // R-B11 — correspondance stricte, pas un seuil minimum : liste blanche
-    // explicite par catégorie (section 22 du moteur de règles), avec une
-    // exception pour le sac cabas (compatible Sport bien que non technique).
+    // explicite par catégorie (section 22 du moteur de règles).
     // Correctif 22/08/2026 (signalé : ceinture proposée en Sport) — ceinture
     // et foulard n'ont aucune fonction sportive, contrairement à casquette/
     // lunettes/chaussettes hautes qui restent autorisées.
+    // Correctif 22/08/2026 (signalé : "pour le sport ça doit toujours être
+    // un sac de sport") — plus d'exception cabas/formalité 0 : seul le type
+    // dédié "Sac de sport" est éligible, jamais relâché même si ça vide la
+    // catégorie (même esprit que le reste de cette liste blanche).
     r = r.filter((i) => {
       if (i.cat === "chaussures") return formalityOf(i) === 0;
-      if (i.cat === "sac") return formalityOf(i) === 0 || i.sacType === "Cabas";
+      if (i.cat === "sac") return i.sacType === "Sac de sport";
       if (i.cat === "bijou") return false;
       if (i.cat === "accessoire") return i.accessoireType !== "Ceinture" && i.accessoireType !== "Foulard";
       return formalityOf(i) === 0;
@@ -102,16 +111,17 @@ function isDressy(occasion: OccasionKey, workMode: WorkMode = "Présentiel", dat
 }
 
 /**
- * Probabilités d'inclusion des accessoires facultatifs (recette 19/08/2026)
- * — jamais une obligation systématique, mais le contexte influence leur
- * pertinence : un sac fonctionnel est plus probable au bureau en
- * présentiel, bijoux/accessoires habillés plus probables pour une
- * cérémonie.
+ * Probabilités d'inclusion des bijoux/accessoires facultatifs (recette
+ * 19/08/2026) — jamais une obligation systématique, le contexte influence
+ * leur pertinence (bijoux/accessoires habillés plus probables pour une
+ * cérémonie). Le sac, lui, est devenu essentiel (recette 22/08/2026,
+ * cf. l'appel à pick(["sac"], true) plus bas) et n'a donc plus de
+ * probabilité ici.
  */
-function accessoryProbabilities(occasion: OccasionKey, workMode: WorkMode): { sac: number; bijou: number; accessoire: number } {
-  if (occasion === "evenement_perso") return { sac: 0.65, bijou: 0.6, accessoire: 0.55 };
-  if (occasion === "travail_formel" && workMode === "Présentiel") return { sac: 0.75, bijou: 0.35, accessoire: 0.3 };
-  return { sac: 0.55, bijou: 0.35, accessoire: 0.3 };
+function accessoryProbabilities(occasion: OccasionKey, workMode: WorkMode): { bijou: number; accessoire: number } {
+  if (occasion === "evenement_perso") return { bijou: 0.6, accessoire: 0.55 };
+  if (occasion === "travail_formel" && workMode === "Présentiel") return { bijou: 0.35, accessoire: 0.3 };
+  return { bijou: 0.35, accessoire: 0.3 };
 }
 
 /**
@@ -693,19 +703,21 @@ export function generateOutfit(
     return picked;
   })();
   if (sh) ids.push(sh.id);
-  // Accessoires facultatifs (recette 19/08/2026) : haut+bas/pièce
-  // unique+chaussures sont les seuls éléments structurants systématiques.
-  // Veste/manteau (déjà ci-dessus, 30%), sac, bijou et accessoire restent
-  // occasionnels — Capsela ne doit jamais chercher à remplir mécaniquement
-  // toutes les catégories. Le contexte influence leur probabilité sans
-  // jamais devenir une obligation (accessoryProbabilities ci-dessus) : un
-  // sac fonctionnel est plus pertinent au bureau en présentiel, bijoux/
-  // accessoires habillés plus pertinents pour une cérémonie.
+  // Bijou/accessoire restent facultatifs (recette 19/08/2026, sac passé
+  // essentiel le 22/08/2026 — cf. plus bas) : le contexte influence leur
+  // probabilité sans jamais devenir une obligation (accessoryProbabilities
+  // ci-dessus) — bijoux/accessoires habillés plus pertinents pour une
+  // cérémonie.
   const accProb = accessoryProbabilities(occasion, workMode);
-  if (Math.random() < accProb.sac) {
-    const sac = pick(["sac"], false);
-    if (sac && !ids.includes(sac.id)) ids.push(sac.id);
-  }
+  // Sac désormais essentiel (recette 22/08/2026, "pour chaque tenue
+  // recommandée sauf télétravail et cocooning je devrais avoir un sac") —
+  // essential=true, comme haut/bas/chaussures. Pas de garde explicite sur
+  // le contexte "à la maison" : applySportCocooningFilter (R-B14) a déjà
+  // vidé la catégorie sac du pool pour Cocooning/Télétravail, donc pick()
+  // n'y renvoie naturellement rien. En Sport, applySportCocooningFilter
+  // restreint déjà les candidats aux seuls Sac de sport (R-B11).
+  const sac = pick(["sac"], true);
+  if (sac && !ids.includes(sac.id)) ids.push(sac.id);
   if (Math.random() < accProb.bijou) {
     const bijou = pick(["bijou"], false);
     if (bijou && !ids.includes(bijou.id)) ids.push(bijou.id);

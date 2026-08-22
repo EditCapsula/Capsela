@@ -47,6 +47,7 @@ export function isSizeApplicable(cat: CategoryKey): boolean {
 /** Pré-suggestion de type de sac à l'ajout — jamais imposée, jamais bloquante. */
 export function detectSacType(name: string): SacType | null {
   const n = (name || "").toLowerCase();
+  if (/sport|sac de sport|gym|fitness/.test(n)) return "Sac de sport";
   if (/cabas/.test(n)) return "Cabas";
   if (/bandoulière/.test(n)) return "Bandoulière";
   if (/dos/.test(n)) return "Sac à dos";
@@ -77,6 +78,7 @@ export function detectAccessoireType(name: string): AccessoireType | null {
   if (/lunette/.test(n)) return "Lunettes";
   if (/collant/.test(n)) return "Collants";
   if (/chaussette/.test(n)) return "Chaussettes hautes";
+  if (/gourde/.test(n)) return "Gourde";
   return null;
 }
 

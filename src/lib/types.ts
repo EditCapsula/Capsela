@@ -53,7 +53,7 @@ export type ShoeType =
   | "Slingbacks"
   | "Derbies"
   | "Chaussures d'intérieur";
-export type SacType = "Sac à main" | "Cabas" | "Bandoulière" | "Pochette" | "Sac à dos";
+export type SacType = "Sac à main" | "Cabas" | "Bandoulière" | "Pochette" | "Sac à dos" | "Sac de sport";
 export type BijouType = "Collier" | "Boucles d'oreilles" | "Bracelet" | "Bague" | "Montre";
 export type AccessoireType =
   | "Ceinture"
@@ -63,7 +63,8 @@ export type AccessoireType =
   | "Casquette"
   | "Lunettes"
   | "Collants"
-  | "Chaussettes hautes";
+  | "Chaussettes hautes"
+  | "Gourde";
 
 export type Matiere = "Coton" | "Lin" | "Laine" | "Soie" | "Cuir" | "Denim" | "Synthétique";
 export type Coupe = "Serré" | "Ajusté" | "Ample";

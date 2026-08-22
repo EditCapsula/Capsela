@@ -228,10 +228,10 @@ export const OCCASION_STYLE_PREFS: Partial<Record<OccasionKey, OccasionStylePref
   entretien: { shoeTypes: ["Mocassins", "Escarpins", "Derbies", "Bottines"] },
 };
 /** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
-export const SAC_TYPES: SacType[] = ["Sac à main", "Cabas", "Bandoulière", "Pochette", "Sac à dos"];
+export const SAC_TYPES: SacType[] = ["Sac à main", "Cabas", "Bandoulière", "Pochette", "Sac à dos", "Sac de sport"];
 export const BIJOU_TYPES: BijouType[] = ["Collier", "Boucles d'oreilles", "Bracelet", "Bague", "Montre"];
 export const ACCESSOIRE_TYPES: AccessoireType[] = [
-  "Ceinture", "Foulard", "Écharpe", "Chapeau", "Casquette", "Lunettes", "Collants", "Chaussettes hautes",
+  "Ceinture", "Foulard", "Écharpe", "Chapeau", "Casquette", "Lunettes", "Collants", "Chaussettes hautes", "Gourde",
 ];
 
 /** Palette dédiée au bijou (tons métalliques) — remplace la palette générale pour cette catégorie. */
