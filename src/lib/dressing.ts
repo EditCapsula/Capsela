@@ -103,9 +103,13 @@ export async function fetchDressingItems(userId: string): Promise<Item[]> {
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
-    if (error || !data) return [];
+    if (error) {
+      console.error("[dressing] échec fetchDressingItems", error);
+      return [];
+    }
     return (data as DressingItemRow[]).map(rowToItem);
-  } catch {
+  } catch (err) {
+    console.error("[dressing] échec fetchDressingItems", err);
     return [];
   }
 }
@@ -178,9 +182,13 @@ export async function fetchOutfitHistory(userId: string): Promise<HistoryEntry[]
       .select("*")
       .eq("user_id", userId)
       .order("occurred_at", { ascending: false });
-    if (error || !data) return [];
+    if (error) {
+      console.error("[dressing] échec fetchOutfitHistory", error);
+      return [];
+    }
     return (data as OutfitHistoryRow[]).map(rowToHistoryEntry);
-  } catch {
+  } catch (err) {
+    console.error("[dressing] échec fetchOutfitHistory", err);
     return [];
   }
 }
