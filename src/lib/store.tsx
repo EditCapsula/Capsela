@@ -13,6 +13,7 @@ import {
   insertDressingItem,
   insertOutfitHistoryEntry,
   updateDressingItemWorn,
+  uploadDressingPhoto,
 } from "./dressing";
 import { ensureCatalogImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
@@ -85,6 +86,7 @@ function buildInitialState(): AppState {
     addColor: { name: "Blanc cassé", hex: "#EDE4D6" },
     addSize: null,
     addPhotoUrl: null,
+    addPhotoUploading: false,
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
     addOccasion: ["travail_formel"],
@@ -178,6 +180,8 @@ export interface Actions {
   setAddColor: (c: { name: string; hex: string }) => void;
   setAddSize: (v: string | null) => void;
   setAddPhoto: (url: string | null) => void;
+  /** Aperçu local immédiat puis upload réel vers Supabase Storage (bucket dressing-photos) — remplace addPhotoUrl par l'URL définitive une fois terminé. */
+  uploadAddPhoto: (file: File) => void;
   setAddSeason: (s: Season) => void;
   /** Bascule l'occasion dans la sélection multiple. */
   setAddOccasion: (o: OccasionKey) => void;
@@ -637,6 +641,26 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c })),
     setAddSize: (v) => setState((s) => ({ ...s, addSize: v })),
     setAddPhoto: (v) => setState((s) => ({ ...s, addPhotoUrl: v })),
+    uploadAddPhoto: (file) => {
+      // Aperçu local instantané (URL.createObjectURL) pendant l'upload —
+      // jamais ce qui sera persisté au final (cf. photoUrl côté
+      // insertDressingItem, uniquement rempli une fois l'URL définitive
+      // obtenue ci-dessous).
+      setState((s) => ({ ...s, addPhotoUrl: URL.createObjectURL(file), addPhotoUploading: true }));
+      if (!isSupabaseConfigured || !userId) {
+        // Mode démo : pas de Storage à interroger, l'aperçu local reste tel quel.
+        setState((s) => ({ ...s, addPhotoUploading: false }));
+        return;
+      }
+      uploadDressingPhoto(userId, file)
+        .then((url) => setState((s) => ({ ...s, addPhotoUrl: url, addPhotoUploading: false })))
+        .catch((err) => {
+          // Échec : jamais persister l'aperçu blob (invalide au rechargement,
+          // cf. bug signalé) — repasse à "pas de photo" plutôt qu'une photo cassée.
+          setState((s) => ({ ...s, addPhotoUrl: null, addPhotoUploading: false }));
+          reportDressingError("uploadDressingPhoto", err);
+        });
+    },
     setAddSeason: (season) => setState((s) => ({ ...s, addSeason: season })),
     setAddOccasion: (o) =>
       setState((s) => ({
@@ -670,6 +694,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       if (!s.addSeason) return;
       if (s.addCat === "chaussures" && !s.addShoeType) return;
       if (SUBTYPE_REQUIRED.includes(s.addCat) && !s.addSubtype) return;
+      // Jamais persister l'aperçu local (blob:) : attendre la fin de l'upload
+      // Storage plutôt que de sauvegarder une URL qui redeviendrait invalide.
+      if (s.addPhotoUploading) return;
       const base: Omit<Item, "id"> = {
         name: (s.addName || "").trim() || "Nouvelle pièce",
         brand: (s.addBrand || "").trim() || undefined,
@@ -696,6 +723,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addName: "",
         addBrand: "",
         addPhotoUrl: null,
+        addPhotoUploading: false,
         addMatiere: null,
         addCoupe: null,
         addMatiereTouched: false,

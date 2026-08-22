@@ -44,9 +44,10 @@ export default function AddScreen() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    // Aperçu local uniquement pour l'instant (URL.createObjectURL) — perdu au
-    // rechargement tant que l'upload vers Supabase Storage n'est pas branché.
-    if (file) actions.setAddPhoto(URL.createObjectURL(file));
+    // Aperçu local instantané puis upload réel vers Supabase Storage
+    // (correctif 22/08/2026, signalé : photo jamais affichée après
+    // rechargement — l'ancien aperçu blob: n'était jamais persisté).
+    if (file) actions.uploadAddPhoto(file);
   };
 
   const isShoe = state.addCat === "chaussures";
@@ -69,7 +70,7 @@ export default function AddScreen() {
   const subtypeOptions = SUBTYPES[state.addCat];
   const subtypeRequired = SUBTYPE_REQUIRED.includes(state.addCat);
   const subtypeMissing = subtypeRequired && !state.addSubtype;
-  const blocked = seasonMissing || shoeTypeMissing || subtypeMissing;
+  const blocked = seasonMissing || shoeTypeMissing || subtypeMissing || state.addPhotoUploading;
 
   const save = () => {
     if (blocked) return;
@@ -105,6 +106,14 @@ export default function AddScreen() {
             : undefined
         }
       >
+        {state.addPhotoUploading && (
+          <span
+            className="absolute inset-0 flex items-center justify-center text-[12px] text-cream"
+            style={{ background: "rgba(29,26,22,.45)" }}
+          >
+            Envoi de la photo…
+          </span>
+        )}
         {state.addPhotoUrl ? (
           <span
             className="absolute bottom-3 right-3 text-[11px] text-cream rounded-full px-3 py-[6px]"
@@ -315,13 +324,15 @@ export default function AddScreen() {
       </button>
       {blocked && (
         <div className="text-center text-[11.5px] text-terracotta mt-[10px]">
-          {(() => {
-            const missing: string[] = [];
-            if (seasonMissing) missing.push("la saison");
-            if (shoeTypeMissing) missing.push("le type de chaussure");
-            else if (subtypeMissing) missing.push("le type de pièce");
-            return "Confirme " + missing.join(" et ") + " pour pouvoir ajouter cette pièce.";
-          })()}
+          {state.addPhotoUploading
+            ? "Envoi de la photo en cours…"
+            : (() => {
+                const missing: string[] = [];
+                if (seasonMissing) missing.push("la saison");
+                if (shoeTypeMissing) missing.push("le type de chaussure");
+                else if (subtypeMissing) missing.push("le type de pièce");
+                return "Confirme " + missing.join(" et ") + " pour pouvoir ajouter cette pièce.";
+              })()}
         </div>
       )}
     </div>

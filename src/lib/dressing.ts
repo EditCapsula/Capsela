@@ -114,6 +114,24 @@ export async function fetchDressingItems(userId: string): Promise<Item[]> {
   }
 }
 
+/**
+ * Upload la photo réelle d'une pièce vers le bucket dressing-photos (cf.
+ * migration 0023) et renvoie son URL publique définitive — remplace
+ * l'ancienne URL locale (blob:) qui redevenait invalide au rechargement.
+ * Chemin {user_id}/{uuid}.{ext} : l'UUID évite toute collision entre deux
+ * photos, l'extension est déduite du type MIME du fichier.
+ */
+export async function uploadDressingPhoto(userId: string, file: File): Promise<string> {
+  const ext = file.type.split("/")[1] || "jpg";
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await getSupabase()
+    .storage.from("dressing-photos")
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw error;
+  const { data } = getSupabase().storage.from("dressing-photos").getPublicUrl(path);
+  return data.publicUrl;
+}
+
 /** Insère la pièce et renvoie la ligne créée (id généré par Postgres) — l'appelant l'ajoute à son state une fois la promesse résolue. */
 export async function insertDressingItem(userId: string, item: Omit<Item, "id">): Promise<Item> {
   const { data, error } = await getSupabase()

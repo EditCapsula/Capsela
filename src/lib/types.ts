@@ -214,8 +214,10 @@ export interface AppState {
   addCat: CategoryKey;
   addColor: { name: string; hex: string };
   addSize: string | null;
-  /** Photo prise/importée en cours de saisie — jamais bloquante, toujours facultative. */
+  /** Photo prise/importée en cours de saisie — jamais bloquante, toujours facultative. Aperçu local (blob:) le temps de l'upload, puis URL définitive du bucket dressing-photos. */
   addPhotoUrl: string | null;
+  /** true pendant l'upload vers Supabase Storage (correctif 22/08/2026, remplace l'ancien aperçu blob: jamais persisté) — bloque la sauvegarde le temps d'obtenir l'URL définitive. */
+  addPhotoUploading: boolean;
   /** null tant que l'utilisateur n'a pas confirmé — la sauvegarde est bloquée. */
   addSeason: Season | null;
   /** Plusieurs choix possibles. */
