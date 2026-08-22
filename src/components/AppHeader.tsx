@@ -7,7 +7,8 @@ import { useCapsela } from "@/lib/store";
  * Bandeau de marque : logo complet L'édit Capsela centré, avatar profil à
  * droite (masqué sur les écrans d'avant-connexion et de profil). Sur fond
  * sombre (Premium), le logo complet (coloré pour fond clair) cède la place
- * à l'icône seule + "CAPSELA", comme dans la maquette.
+ * à l'icône seule + "L'ÉDIT CAPSELA" (correctif 22/08/2026 : le résidu
+ * "CAPSELA" seul contrevenait au renommage produit complet).
  */
 export default function AppHeader({
   showAvatar = true,
@@ -27,7 +28,7 @@ export default function AppHeader({
         <div className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-icon.svg" alt="" className="h-6 w-auto" />
-          <span className="font-serif text-[15px] tracking-[.28em] pl-[.28em] text-cream">CAPSELA</span>
+          <span className="font-serif text-[15px] tracking-[.28em] pl-[.28em] text-cream">L&apos;ÉDIT CAPSELA</span>
         </div>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
