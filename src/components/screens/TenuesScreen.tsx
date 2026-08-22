@@ -427,17 +427,18 @@ export default function TenuesScreen() {
       <div className="flex justify-between items-center mt-[22px] mb-3">
         <div className="flex items-center gap-[9px]">
           <span className="text-[11px] tracking-[.16em] uppercase text-muted">La combinaison</span>
-          {formalityDowngraded ? (
-            <span className="text-[9.5px] tracking-[.06em] uppercase text-[#8A6B3F] bg-[#F3EDDD] rounded-full px-[9px] py-[3px]">
-              Meilleure alternative
-            </span>
-          ) : (
-            lookScore.badge === "recommande" && (
-              <span className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
-                Recommandé
+          {!noCompleteOutfit &&
+            (formalityDowngraded ? (
+              <span className="text-[9.5px] tracking-[.06em] uppercase text-[#8A6B3F] bg-[#F3EDDD] rounded-full px-[9px] py-[3px]">
+                Meilleure alternative
               </span>
-            )
-          )}
+            ) : (
+              lookScore.badge === "recommande" && (
+                <span className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
+                  Recommandé
+                </span>
+              )
+            ))}
         </div>
         <button onClick={actions.regenOutfit} className="text-[12px] text-terracotta tracking-[.03em] cursor-pointer">
           ↻ Régénérer
@@ -603,13 +604,13 @@ export default function TenuesScreen() {
         })}
       </div>
 
-      {lookScore.badge === "ajuster" && lookScore.adjustMessage && (
+      {!noCompleteOutfit && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
         <div className="mt-4 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
           <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
         </div>
       )}
 
-      {lookScore.proactives.map((p) => (
+      {!noCompleteOutfit && lookScore.proactives.map((p) => (
         <div key={p.key} className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1 min-w-0">
@@ -642,7 +643,7 @@ export default function TenuesScreen() {
         </div>
       ))}
 
-      {missingText && (
+      {!noCompleteOutfit && missingText && (
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">✦</span>
           <div className="flex-1">
@@ -669,7 +670,7 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      {vesteWithoutBase && (
+      {!noCompleteOutfit && vesteWithoutBase && (
         <div className="mt-4 flex items-start gap-[11px] bg-warm-bg border-[1.5px] border-terracotta rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">!</span>
           <div className="flex-1">
@@ -683,31 +684,34 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      {state.outfitValidated ? (
-        <div className="mt-[22px] flex items-center gap-3 bg-ink rounded-2xl py-[15px] px-4">
-          <span className="w-8 h-8 rounded-full bg-terracotta text-cream flex items-center justify-center text-base flex-shrink-0">
-            ✓
-          </span>
-          <div className="text-[13.5px] text-cream">Bonne journée avec cette tenue !</div>
-        </div>
-      ) : (
+      {!noCompleteOutfit &&
+        (state.outfitValidated ? (
+          <div className="mt-[22px] flex items-center gap-3 bg-ink rounded-2xl py-[15px] px-4">
+            <span className="w-8 h-8 rounded-full bg-terracotta text-cream flex items-center justify-center text-base flex-shrink-0">
+              ✓
+            </span>
+            <div className="text-[13.5px] text-cream">Bonne journée avec cette tenue !</div>
+          </div>
+        ) : (
+          <button
+            onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
+            className={
+              "mt-[22px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
+              (vesteWithoutBase ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta text-cream cursor-pointer")
+            }
+          >
+            Porter cette tenue
+          </button>
+        ))}
+
+      {!noCompleteOutfit && (
         <button
-          onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
-          className={
-            "mt-[22px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
-            (vesteWithoutBase ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta text-cream cursor-pointer")
-          }
+          onClick={actions.openOpinionShare}
+          className="mt-3 w-full flex items-center justify-center gap-2 border border-border bg-card rounded-full py-[14px] text-[12.5px] text-ink cursor-pointer"
         >
-          Porter cette tenue
+          <span className="text-terracotta">✦</span> Demander un avis à un proche
         </button>
       )}
-
-      <button
-        onClick={actions.openOpinionShare}
-        className="mt-3 w-full flex items-center justify-center gap-2 border border-border bg-card rounded-full py-[14px] text-[12.5px] text-ink cursor-pointer"
-      >
-        <span className="text-terracotta">✦</span> Demander un avis à un proche
-      </button>
     </div>
   );
 }
