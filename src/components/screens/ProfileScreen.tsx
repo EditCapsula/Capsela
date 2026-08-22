@@ -21,7 +21,7 @@ export default function ProfileScreen() {
   const rows = [
     { label: "Genre", value: genderLabel(profile.gender) || "—" },
     { label: "Taille", value: tailleValue },
-    { label: "Style", value: styleLabel(profile.styles[0], profile.gender) || "—" },
+    { label: "Style", value: styleLabel(profile.styles[0], profile.gender) || "—", onClick: () => actions.goProfileSetup("style", true) },
     { label: "Morphologie", value: morphologyLabel(profile.morphology) || "—" },
     { label: "Palette", value: paletteSummary(profile) },
   ];
@@ -74,15 +74,25 @@ export default function ProfileScreen() {
 
       <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[10px]">Tes infos</div>
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
-        {rows.map((r) => (
-          <div
-            key={r.label}
-            className="flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4"
-          >
-            <span className="text-[13px] text-muted flex-shrink-0">{r.label}</span>
-            <span className="text-[13.5px] text-ink text-right leading-[1.4]">{r.value}</span>
-          </div>
-        ))}
+        {rows.map((r) => {
+          const Tag = r.onClick ? "button" : "div";
+          return (
+            <Tag
+              key={r.label}
+              onClick={r.onClick}
+              className={
+                "flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4 w-full text-left " +
+                (r.onClick ? "cursor-pointer" : "")
+              }
+            >
+              <span className="text-[13px] text-muted flex-shrink-0">{r.label}</span>
+              <span className="flex items-center gap-[6px]">
+                <span className="text-[13.5px] text-ink text-right leading-[1.4]">{r.value}</span>
+                {r.onClick && <span className="text-placeholder">›</span>}
+              </span>
+            </Tag>
+          );
+        })}
       </div>
 
       <button
