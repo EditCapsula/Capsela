@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
@@ -13,13 +13,18 @@ import { paletteHexes } from "@/lib/profile";
 import type { CategoryKey, Item } from "@/lib/types";
 
 /**
- * Cadre héros "flat-lay" de l'aperçu global (recette 20/08/2026, alignement
- * proto) — positions fixes en % selon le rôle de la pièce (silhouette
- * verticale : veste/haut en haut, bas au milieu, chaussures en bas, sac et
- * petits accessoires près de cet axe), jamais une simple liste alignée.
- * Miroir exact de la logique du prototype (buildTenueVals côté proto).
+ * Grille non chevauchante de l'aperçu global (correctif 22/08/2026, signalé :
+ * "il y a un problème d'affichage des tenues avec le libellé. il cache les
+ * paires de chaussures ou des fois les pièces se chevauchent entre elles" —
+ * remplace l'ancien flat-lay à chevauchements volontaires, dont les zones se
+ * recouvraient et dont le badge d'occasion masquait parfois les chaussures).
+ * Chaque pièce occupe désormais sa propre cellule de grille, jamais
+ * recouverte par une autre ; l'ordre est fixe (même rôle → même position
+ * relative à chaque rendu, jamais aléatoire) plutôt que l'ordre de tirage.
  */
-type CompositionRole = "onepiece" | "outerwear" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
+type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
+
+const ROLE_ORDER: CompositionRole[] = ["outerwear", "onepiece", "haut", "pantalon", "chaussures", "sac", "petit"];
 
 function compositionRoleOf(cat: CategoryKey): CompositionRole {
   if (cat === "pantalon" || cat === "jean" || cat === "jupe" || cat === "short") return "pantalon";
@@ -27,106 +32,15 @@ function compositionRoleOf(cat: CategoryKey): CompositionRole {
   if (cat === "robe" || cat === "combinaison") return "onepiece";
   if (cat === "bijou" || cat === "accessoire") return "petit";
   if (cat === "haut" || cat === "chaussures" || cat === "sac") return cat;
-  return "petit"; // pull et tout le reste : replie sur le petit slot, comme le proto (SLOTS[rk] || SLOTS.petit)
+  return "petit"; // pull et tout le reste
 }
 
-// Composition compacte (recette 20/08/2026, passe "flat lay compact") :
-// hauteur de cadre désormais bornée (compositionFrameHeight) plutôt que
-// dérivée d'un simple ratio dépendant du nombre de pièces — resserre les
-// zones les unes vers les autres (chevauchements volontaires plus marqués)
-// pour réduire les espaces vides entre articles, haut/bas recentrés sur
-// l'axe vertical du cadre, chaussures/sac/petits accessoires rapprochés de
-// cet axe plutôt que dispersés vers les coins.
-const SLOTS_ONEPIECE: Record<string, [number, number, number, number]> = {
-  onepiece: [22, 0, 56, 74],
-  sac: [2, 42, 28, 28],
-  chaussures: [42, 68, 32, 26],
-  petit: [64, 6, 18, 18],
-};
-const SLOTS_STANDARD: Record<string, [number, number, number, number]> = {
-  outerwear: [20, 0, 48, 36],
-  haut: [16, 0, 44, 36],
-  // Quand une veste/un manteau est aussi présent, veste et haut se placent
-  // franchement côte à côte, sans se recouvrir (correctif 20/08/2026) —
-  // l'ancien décalage de 6%/2% laissait les deux zones quasiment
-  // superposées, la veste ne montrant qu'un fin liséré derrière le haut.
-  outerwearAvecHaut: [0, 0, 46, 38],
-  hautAvecVeste: [48, 4, 40, 34],
-  pantalon: [28, 28, 46, 42],
-  chaussures: [18, 60, 34, 26],
-  sac: [6, 34, 26, 26],
-  petit: [56, 4, 19, 19],
-};
-const PETIT_OFFSETS: [number, number][] = [
-  [0, 0],
-  [10, 12],
-  [-52, 10],
-  [-52, 30],
-];
-
-function compositionPiecesOf(items: Item[]): { id: number; style: CSSProperties }[] {
-  const sliced = items.slice(0, 7);
-  const roles = sliced.map((it) => compositionRoleOf(it.cat));
-  const hasOnePiece = roles.includes("onepiece");
-  const slots = hasOnePiece ? SLOTS_ONEPIECE : SLOTS_STANDARD;
-  const hasOuterwearAndHaut = !hasOnePiece && roles.includes("outerwear") && roles.includes("haut");
-  let petitIndex = 0;
-  return sliced.map((it, i) => {
-    const rk = roles[i];
-    const slotKey = !hasOuterwearAndHaut ? rk : rk === "haut" ? "hautAvecVeste" : rk === "outerwear" ? "outerwearAvecHaut" : rk;
-    const [baseLeft, baseTop, w, h] = slots[slotKey] || slots[rk] || slots.petit;
-    let left = baseLeft;
-    let top = baseTop;
-    if (rk === "petit") {
-      const off = PETIT_OFFSETS[petitIndex % PETIT_OFFSETS.length];
-      petitIndex++;
-      left += off[0];
-      top += off[1];
-    }
-    const img = resolveItemImage(it);
-    const hasImg = Boolean(img.url);
-    return {
-      id: it.id,
-      style: {
-        position: "absolute",
-        left: left + "%",
-        top: top + "%",
-        width: w + "%",
-        height: h + "%",
-        // Pas de repli beige derrière une photo (correctif 22/08/2026, signalé :
-        // les rectangles de fond de chaque pièce se découpaient les uns les
-        // autres aux zones de chevauchement volontaire). Seule la silhouette
-        // détourée (fond transparent) doit être visible ; la couleur de la
-        // pièce ne sert de repli que quand il n'y a vraiment aucune image.
-        backgroundColor: hasImg ? "transparent" : it.hex,
-        backgroundImage: hasImg ? `url(${img.url})` : undefined,
-        backgroundSize: "contain",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
-        borderRadius: hasImg ? 0 : 10,
-        boxShadow: hasImg ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
-        // Le haut/la pièce unique reste au-dessus du bas à leur zone de
-        // chevauchement volontaire (recette 20/08/2026) — jamais l'inverse.
-        zIndex: rk === "haut" || rk === "onepiece" ? 3 : rk === "pantalon" || rk === "chaussures" ? 2 : 1,
-      },
-    };
-  });
-}
-
-/**
- * Hauteur de cadre bornée (recette 20/08/2026, "flat lay compact") — jamais
- * plus de ~310px sur mobile quel que soit le nombre de pièces ou la largeur
- * de l'écran (remplace l'ancien aspect-ratio dérivé du nombre de pièces,
- * qui pouvait dépasser cette cible sur les écrans larges). clamp() garde
- * une hauteur proportionnelle à la largeur (72vw) entre un plancher et un
- * plafond qui montent légèrement avec le nombre de pièces à loger, pour
- * qu'une tenue à 2-3 pièces reste compacte plutôt qu'étirée dans un cadre
- * pensé pour 6-7.
- */
-function compositionFrameHeight(n: number): string {
-  if (n <= 3) return "clamp(220px, 62vw, 260px)";
-  if (n <= 5) return "clamp(250px, 68vw, 290px)";
-  return "clamp(270px, 74vw, 310px)";
+/** Ordre fixe par rôle (jamais l'ordre de tirage, qui varie à chaque régénération). */
+function orderedCompositionPieces(items: Item[]): Item[] {
+  return items
+    .map((it, i) => ({ it, i, rank: ROLE_ORDER.indexOf(compositionRoleOf(it.cat)) }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .map((r) => r.it);
 }
 
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
@@ -458,25 +372,35 @@ export default function TenuesScreen() {
       )}
 
       {!geoLoading && outfitPieces.length > 0 && (
-        <div
-          className="mb-4"
-          style={{
-            marginTop: 14,
-            position: "relative",
-            borderRadius: 20,
-            overflow: "hidden",
-            background: "#F3EDE1",
-            height: compositionFrameHeight(outfitPieces.length),
-          }}
-        >
-          {compositionPiecesOf(outfitPieces).map((p) => (
-            <div key={"comp-" + p.id} style={p.style} />
-          ))}
+        <div className="mb-4" style={{ marginTop: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            {orderedCompositionPieces(outfitPieces).map((it) => {
+              const img = resolveItemImage(it);
+              const hasImg = Boolean(img.url);
+              return (
+                <div
+                  key={"comp-" + it.id}
+                  style={{
+                    aspectRatio: "4 / 5",
+                    borderRadius: 14,
+                    padding: 9,
+                    boxSizing: "border-box",
+                    background: "#F3EDE1",
+                    backgroundImage: hasImg ? `url(${img.url})` : undefined,
+                    backgroundColor: hasImg ? undefined : it.hex,
+                    backgroundSize: "contain",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "center",
+                    backgroundOrigin: "content-box",
+                    boxShadow: hasImg ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
+                  }}
+                />
+              );
+            })}
+          </div>
           <div
+            className="inline-block mt-3"
             style={{
-              position: "absolute",
-              left: 14,
-              bottom: 14,
               background: "#FBF8F3",
               borderRadius: 100,
               padding: "9px 16px",
@@ -484,7 +408,6 @@ export default function TenuesScreen() {
               letterSpacing: ".08em",
               textTransform: "uppercase",
               color: "#1D1A16",
-              zIndex: 5,
             }}
           >
             {heroOccasionLabel}
