@@ -21,6 +21,8 @@ const TOP_OR_BOTTOM_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe
 /** Pièces qui constituent une base valide sous une veste/un manteau (R-B9) — un pull seul ne compte pas comme base. */
 const BASE_GARMENT_CATS: CategoryKey[] = ["haut", "robe", "combinaison"];
 const OUTERWEAR_CATS: CategoryKey[] = ["veste", "manteau"];
+/** Pièce unique remplaçant haut+bas (R-B5) — robe et combinaison, toujours équivalentes ici. */
+const ONEPIECE_CATS: CategoryKey[] = ["robe", "combinaison"];
 
 /** Catégories suivies pour l'anti-répétition (R-B7) et le calcul de formalité d'une tenue. Exporté pour CreateLookScreen (filtre dur du picker manuel, brief design section 4). */
 export const CLOTHING_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe", "robe", "combinaison", "veste", "manteau"];
@@ -461,7 +463,7 @@ export function generateOutfit(
   // contraire à l'objectif même de R-B18. Le plafond haute température
   // (meteo_max_temp) reste appliqué normalement à ces catégories : un pull
   // épais n'a pas sa place en pleine canicule.
-  const TEMP_COMPENSATED_CATS: CategoryKey[] = [...TOP_LAYER_CATS, "robe"];
+  const TEMP_COMPENSATED_CATS: CategoryKey[] = [...TOP_LAYER_CATS, "robe", "combinaison"];
   const applyTempFilter = (items: Item[]): Item[] =>
     items.filter((i) => {
       if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp && !TEMP_COMPENSATED_CATS.includes(i.cat)) return false;
@@ -567,12 +569,22 @@ export function generateOutfit(
   // plus pour un pantalon/jean (R-B19 — les collants ne se portent qu'avec
   // robe/jupe/short).
   let needsCollant = false;
-  const useRobe = Math.random() < 0.4 && poolFor(["robe"]).length > 0;
+  // Correctif 22/08/2026 (signalé : "aucune de mes combinaisons ne me soit
+  // proposées dans les tenues recommandées") — ce tirage "pièce unique" ne
+  // portait que sur la catégorie "robe", jamais "combinaison", alors que les
+  // deux sont traitées comme équivalentes partout ailleurs dans ce fichier
+  // (R-B5, compositionRoleOf côté écran...). Une combinaison réelle du
+  // dressing n'avait donc littéralement aucune chance d'être choisie ici,
+  // quel que soit le correctif harmonize() du 22/08/2026 sur le style — le
+  // bug était en amont, dans la liste de catégories elle-même.
+  const useRobe = Math.random() < 0.4 && poolFor(ONEPIECE_CATS).length > 0;
   if (useRobe) {
-    const r = pick(["robe"]);
+    const r = pick(ONEPIECE_CATS);
     if (r) ids.push(r.id);
     primaryTop = r;
-    if (r && r.meteoMinTemp != null && weather.temp < r.meteoMinTemp) needsCollant = true;
+    // Collant seulement pour une robe (jambes nues) — une combinaison
+    // couvre déjà les jambes comme un pantalon, R-B19 ne s'y applique pas.
+    if (r && r.cat === "robe" && r.meteoMinTemp != null && weather.temp < r.meteoMinTemp) needsCollant = true;
   } else {
     // Formalité du haut compensée par une veste structurée (recette
     // 19/08/2026, audit moteur) : "t-shirt + blazer" doit pouvoir
@@ -744,7 +756,10 @@ export function generateOutfit(
     // (déjà appliqué à toutes les catégories, cf. hardCategoryFilter) — à
     // renseigner sur l'article Collants côté catalogue pour l'exclure par
     // temps chaud, quelle que soit la pièce du bas choisie.
-    const hasRobeJupeOuShort = useRobe || chosen.some((c) => c.cat === "jupe" || c.cat === "short");
+    // R-B19 : useRobe seul ne suffit plus à autoriser les collants — il
+    // couvre désormais aussi la combinaison (jambes déjà couvertes, cf.
+    // plus haut), qui ne doit pas en déclencher.
+    const hasRobeJupeOuShort = primaryTop?.cat === "robe" || chosen.some((c) => c.cat === "jupe" || c.cat === "short");
     const accessoireBase = poolFor(["accessoire"]).filter(
       (i) => i.cat === "accessoire" && (hasRobeJupeOuShort || i.accessoireType !== "Collants")
     );
