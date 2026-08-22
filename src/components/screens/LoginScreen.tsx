@@ -90,12 +90,17 @@ export default function LoginScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
-      <button
-        onClick={actions.goAuth}
-        className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-      >
-        ←
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={actions.goAuth}
+          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
+        >
+          ←
+        </button>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-full.svg" alt="L'édit Capsela" className="h-9 w-auto" />
+        <div className="w-[38px] flex-shrink-0" />
+      </div>
 
       <div className="mt-[30px]">
         <div className="font-serif text-[30px] leading-[1.12] text-ink">
