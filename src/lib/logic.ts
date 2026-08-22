@@ -278,9 +278,18 @@ function harmonize(candidates: Item[], chosen: Item[], essential = true): Item[]
   // structurée, jamais une supposition) ; sans cette déclaration sur
   // l'ancre, on ne filtre plus par style plutôt que de risquer une
   // exclusion arbitraire.
+  // Correctif 22/08/2026 : symétrique côté candidat — une pièce réelle du
+  // dressing n'a jamais de style_tags déclaré (seul le catalogue en a),
+  // donc l'ancien `i.styleTags && ...` l'excluait purement et simplement dès
+  // qu'une ancre stylée était déjà choisie, alors qu'on ignore justement son
+  // style. On ne filtre plus que les candidats dont le style_tags déclaré
+  // s'oppose explicitement à celui de l'ancre ; une pièce sans déclaration
+  // reste toujours candidate.
   const anchor = chosen[0];
   if (anchor.styleTags && anchor.styleTags.length) {
-    const styleMatches = pool.filter((i) => i.styleTags && i.styleTags.some((s) => anchor.styleTags!.includes(s)));
+    const styleMatches = pool.filter(
+      (i) => !i.styleTags || !i.styleTags.length || i.styleTags.some((s) => anchor.styleTags!.includes(s))
+    );
     if (styleMatches.length) pool = styleMatches;
   }
   return pool;

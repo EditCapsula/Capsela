@@ -8,9 +8,9 @@ import { resolveItemImage } from "@/lib/catalogImages";
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between">
-      <span className="text-[11px] tracking-[.08em] uppercase text-placeholder">{label}</span>
-      <span className="text-[13px] text-ink">{value}</span>
+    <div className="flex justify-between gap-3">
+      <span className="text-[11px] tracking-[.08em] uppercase text-placeholder flex-shrink-0">{label}</span>
+      <span className="text-[13px] text-ink text-right">{value}</span>
     </div>
   );
 }
@@ -121,7 +121,10 @@ export default function PieceScreen() {
       <div className="flex flex-col gap-[9px] mt-3 bg-card border border-border rounded-[14px] px-4 py-[14px]">
         {active.brand && <InfoRow label="Marque" value={active.brand} />}
         <InfoRow label="Taille" value={active.size || "—"} />
-        <InfoRow label="Style" value={bestStyleFor(active)} />
+        {/* Le style n'est qu'un style_tags déclaré côté catalogue (donnée
+            réelle) — pour une pièce réelle du dressing ce serait une
+            supposition par mots-clés du nom, sans intérêt à afficher ici. */}
+        {suggested && <InfoRow label="Style" value={bestStyleFor(active)} />}
         <InfoRow
           label="Occasion"
           value={active.occasion && active.occasion.length ? active.occasion.map((o) => OCC_LABELS[o]).join(", ") : "—"}
