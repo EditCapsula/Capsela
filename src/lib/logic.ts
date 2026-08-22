@@ -14,8 +14,8 @@ import {
 } from "./attributes";
 
 const BOTTOMS: CategoryKey[] = [...BAS_CATS, "jupe"];
-/** Catégories haut du corps concernées par le rôle base/calque (R-B8, R-S11/S12). */
-const TOP_LAYER_CATS: CategoryKey[] = ["haut", "pull"];
+/** Catégories haut du corps concernées par le rôle base/calque (R-B8, R-S11/S12). Exporté pour CreateLookScreen (règle "jamais 2 pièces base", brief design section 4). */
+export const TOP_LAYER_CATS: CategoryKey[] = ["haut", "pull"];
 const TOP_OR_BOTTOM_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe"];
 /** Pièces qui constituent une base valide sous une veste/un manteau (R-B9) — un pull seul ne compte pas comme base. */
 const BASE_GARMENT_CATS: CategoryKey[] = ["haut", "robe", "combinaison"];

@@ -3,7 +3,8 @@
 import { BAS_CATS, CATS, CATLABEL, OCCASIONS } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { CLOTHING_CATS, computeLookScore, evaluateBlocking, recentlyWorn } from "@/lib/logic";
+import { CLOTHING_CATS, TOP_LAYER_CATS, computeLookScore, evaluateBlocking, recentlyWorn } from "@/lib/logic";
+import { rolePieceOf } from "@/lib/attributes";
 import { paletteHexes } from "@/lib/profile";
 import type { Item } from "@/lib/types";
 
@@ -21,6 +22,14 @@ export default function CreateLookScreen() {
   const hasTopBottom = draftPieces.some((i) => TOP_BOTTOM_CATS.has(i.cat));
   const occFormality = (OCCASIONS.find(([key]) => key === state.lookDraftOccasion) || [])[3] || 0;
   const dressy = occFormality >= 3;
+
+  // Brief design section 4 — "jamais 2 pièces base ensemble" : une 2e pièce
+  // haut/pull n'est permise que si base+calque (ex. t-shirt + cardigan
+  // oversize), jamais 2 pièces base (ex. 2 t-shirts). Repli si le dressing
+  // ne contient aucune pièce calque dans ce groupe : bloquer indéfiniment
+  // rendrait le layering totalement impossible pour cette utilisatrice.
+  const topDraftBaseSelected = draftPieces.some((i) => TOP_LAYER_CATS.includes(i.cat) && rolePieceOf(i) === "base");
+  const hasCalqueOption = items.some((i) => TOP_LAYER_CATS.includes(i.cat) && rolePieceOf(i) === "calque");
 
   // Brief design section 4 (correctif 22/08/2026) : anti-répétition ≤2 jours
   // et baskets en occasion habillée redeviennent de vrais filtres du picker
@@ -114,13 +123,24 @@ export default function CreateLookScreen() {
                 !on &&
                 ((TOP_BOTTOM_CATS.has(it.cat) && hasRobeOrCombi) ||
                   ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom));
+              // Brief design section 4 — "jamais 2 pièces base ensemble" : une
+              // fois une pièce base du haut/pull sélectionnée, toute autre
+              // pièce base du même groupe devient indisponible (repli si
+              // aucune pièce calque n'existe dans le dressing, cf. ci-dessus).
+              const baseLayerConflict =
+                !on &&
+                TOP_LAYER_CATS.includes(it.cat) &&
+                rolePieceOf(it) === "base" &&
+                topDraftBaseSelected &&
+                hasCalqueOption;
+              const blocked = robeConflict || baseLayerConflict;
               return (
                 <button
                   key={it.id}
-                  onClick={() => !robeConflict && actions.toggleLookDraftPiece(it.id)}
-                  disabled={robeConflict}
-                  className={"flex-none w-[104px] text-left " + (robeConflict ? "cursor-not-allowed" : "cursor-pointer")}
-                  style={{ scrollSnapAlign: "start", opacity: robeConflict ? 0.3 : 1 }}
+                  onClick={() => !blocked && actions.toggleLookDraftPiece(it.id)}
+                  disabled={blocked}
+                  className={"flex-none w-[104px] text-left " + (blocked ? "cursor-not-allowed" : "cursor-pointer")}
+                  style={{ scrollSnapAlign: "start", opacity: blocked ? 0.3 : 1 }}
                 >
                   <div
                     className="relative w-full rounded-[11px] overflow-hidden"
