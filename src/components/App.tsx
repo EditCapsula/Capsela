@@ -66,6 +66,23 @@ function Screens() {
 
   return (
     <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden">
+      {/* Bandeau de diagnostic temporaire (correctif 22/08/2026, signalé :
+          pièces ajoutées au dressing non conservées) — affiche l'erreur
+          Supabase réelle sur mobile, où la console développeur n'est pas
+          accessible. À retirer une fois la cause identifiée et corrigée. */}
+      {state.dressingError && (
+        <div
+          className="absolute top-0 left-0 right-0 z-50 px-4 py-3 text-[12px] leading-[1.4]"
+          style={{ background: "#B3261E", color: "#FFF" }}
+        >
+          <div className="flex items-start gap-2">
+            <span className="flex-1 break-words">{state.dressingError}</span>
+            <button onClick={actions.dismissDressingError} className="flex-shrink-0 font-semibold cursor-pointer">
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <div className="relative flex-1 overflow-hidden">
         {state.screen === "welcome" && <WelcomeScreen />}
         {state.screen === "onboarding" && <OnboardingScreen />}

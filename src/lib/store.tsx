@@ -106,6 +106,7 @@ function buildInitialState(): AppState {
     outfitFormalityDowngraded: false,
     outfitNoCompleteOutfit: false,
     outfitValidated: false,
+    dressingError: null,
     occasion: "all",
     occasionManual: false,
     dismissedSuggestions: [],
@@ -188,6 +189,8 @@ export interface Actions {
   setAddAccessoireType: (t: AccessoireType) => void;
   setAddSubtype: (t: string) => void;
   saveItem: () => void;
+  /** Ferme le bandeau de diagnostic temporaire dressingError (correctif 22/08/2026). */
+  dismissDressingError: () => void;
   goPremium: () => void;
   subscribe: () => void;
   premiumBack: () => void;
@@ -271,6 +274,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Bandeau de diagnostic temporaire (correctif 22/08/2026, signalé : pièces
+  // ajoutées au dressing non conservées, silencieusement jusqu'ici) — logue
+  // en console ET affiche le message dans l'UI, utile sur mobile où la
+  // console développeur n'est pas accessible. À retirer une fois la cause
+  // du problème de persistance identifiée et corrigée.
+  const reportDressingError = (context: string, err: unknown) => {
+    console.error("[dressing] échec " + context, err);
+    const message = err instanceof Error ? err.message : typeof err === "string" ? err : JSON.stringify(err);
+    setState((s) => ({ ...s, dressingError: context + " : " + message }));
+  };
 
   // Dressing réel + historique (Supabase) — remplace le state []/[] initial
   // dès que la session est prête. En mode démo (ou déconnecté), rien à
@@ -575,7 +589,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       });
       if (deletedId !== null && isSupabaseConfigured && userId) {
         // Suppression best-effort : la pièce reste retirée localement même en cas d'échec réseau.
-        deleteDressingItem(deletedId).catch((err) => console.error("[dressing] échec deleteDressingItem", err));
+        deleteDressingItem(deletedId).catch((err) => reportDressingError("deleteDressingItem", err));
       }
     },
 
@@ -705,10 +719,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             // plutôt que d'y exister avec un id local qui ne correspondrait à aucune
             // ligne en base — mais loguée (correctif 22/08/2026, signalé : pièces
             // ajoutées non conservées, jusqu'ici invisible faute de log).
-            console.error("[dressing] échec insertDressingItem", err);
+            reportDressingError("insertDressingItem", err);
           });
       }
     },
+    dismissDressingError: () => setState((s) => ({ ...s, dressingError: null })),
 
     goPremium: () => setState(toPremiumScreen),
     subscribe: () => setState((s) => ({ ...s, isPremium: true, screen: s.premiumReturn || "home" })),
@@ -788,8 +803,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       if (isSupabaseConfigured && userId) {
         // Persistance best-effort, en parallèle du state déjà mis à jour ci-dessus :
         // un échec réseau ne doit jamais bloquer la validation de la tenue à l'écran.
-        if (wornUpdates.length) updateDressingItemWorn(wornUpdates).catch((err) => console.error("[dressing] échec updateDressingItemWorn", err));
-        if (entry) insertOutfitHistoryEntry(userId, entry).catch((err) => console.error("[dressing] échec insertOutfitHistoryEntry", err));
+        if (wornUpdates.length) updateDressingItemWorn(wornUpdates).catch((err) => reportDressingError("updateDressingItemWorn", err));
+        if (entry) insertOutfitHistoryEntry(userId, entry).catch((err) => reportDressingError("insertOutfitHistoryEntry", err));
       }
     },
     wearPieceToday: (id) => {
@@ -805,8 +820,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         return { ...s, items, lookCount: s.lookCount + 1, history: [entry, ...s.history] };
       });
       if (isSupabaseConfigured && userId) {
-        if (wornUpdate) updateDressingItemWorn([wornUpdate]).catch((err) => console.error("[dressing] échec updateDressingItemWorn", err));
-        if (entry) insertOutfitHistoryEntry(userId, entry).catch((err) => console.error("[dressing] échec insertOutfitHistoryEntry", err));
+        if (wornUpdate) updateDressingItemWorn([wornUpdate]).catch((err) => reportDressingError("updateDressingItemWorn", err));
+        if (entry) insertOutfitHistoryEntry(userId, entry).catch((err) => reportDressingError("insertOutfitHistoryEntry", err));
       }
     },
     wearActiveToday: () => {
@@ -822,8 +837,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         return { ...s, items, lookCount: s.lookCount + 1, history: [entry, ...s.history] };
       });
       if (isSupabaseConfigured && userId) {
-        if (wornUpdate) updateDressingItemWorn([wornUpdate]).catch((err) => console.error("[dressing] échec updateDressingItemWorn", err));
-        if (entry) insertOutfitHistoryEntry(userId, entry).catch((err) => console.error("[dressing] échec insertOutfitHistoryEntry", err));
+        if (wornUpdate) updateDressingItemWorn([wornUpdate]).catch((err) => reportDressingError("updateDressingItemWorn", err));
+        if (entry) insertOutfitHistoryEntry(userId, entry).catch((err) => reportDressingError("insertOutfitHistoryEntry", err));
       }
     },
     correctPiece: (id) => {
@@ -838,7 +853,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         }),
         lookCount: Math.max(0, s.lookCount - 1),
       }));
-      if (wornUpdate && isSupabaseConfigured && userId) updateDressingItemWorn([wornUpdate]).catch((err) => console.error("[dressing] échec updateDressingItemWorn", err));
+      if (wornUpdate && isSupabaseConfigured && userId) updateDressingItemWorn([wornUpdate]).catch((err) => reportDressingError("updateDressingItemWorn", err));
     },
     correctActive: () => {
       let wornUpdate: { id: number; worn: number | null } | null = null;
@@ -852,7 +867,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         }),
         lookCount: Math.max(0, s.lookCount - 1),
       }));
-      if (wornUpdate && isSupabaseConfigured && userId) updateDressingItemWorn([wornUpdate]).catch((err) => console.error("[dressing] échec updateDressingItemWorn", err));
+      if (wornUpdate && isSupabaseConfigured && userId) updateDressingItemWorn([wornUpdate]).catch((err) => reportDressingError("updateDressingItemWorn", err));
     },
     reWear: (ids) =>
       setState((s) => ({
@@ -967,7 +982,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           ],
         };
       });
-      if (wornUpdates.length && isSupabaseConfigured && userId) updateDressingItemWorn(wornUpdates).catch((err) => console.error("[dressing] échec updateDressingItemWorn", err));
+      if (wornUpdates.length && isSupabaseConfigured && userId) updateDressingItemWorn(wornUpdates).catch((err) => reportDressingError("updateDressingItemWorn", err));
     },
   };
 
