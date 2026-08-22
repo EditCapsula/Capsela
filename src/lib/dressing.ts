@@ -8,6 +8,7 @@ import type {
   Item,
   Matiere,
   OccasionKey,
+  PhotoAnalysis,
   SacType,
   Season,
   ShoeType,
@@ -130,6 +131,30 @@ export async function uploadDressingPhoto(userId: string, file: File): Promise<s
   if (error) throw error;
   const { data } = getSupabase().storage.from("dressing-photos").getPublicUrl(path);
   return data.publicUrl;
+}
+
+/**
+ * Suggère catégorie/couleur/sous-type/matière... à partir de la photo d'une
+ * pièce réelle (recette 22/08/2026) — réutilise le même compte OpenAI que
+ * la génération d'images catalogue (Edge Function analyze-dressing-photo).
+ * Ne renvoie jamais d'erreur à l'appelant : un échec (réseau, quota, réponse
+ * imprévue) redonne simplement {} — l'appelant (uploadAddPhoto, store.tsx)
+ * traite ça comme "rien à suggérer", jamais comme un blocage de l'ajout.
+ */
+export async function analyzeDressingPhoto(photoUrl: string): Promise<PhotoAnalysis> {
+  try {
+    const { data, error } = await getSupabase().functions.invoke("analyze-dressing-photo", {
+      body: { photo_url: photoUrl },
+    });
+    if (error) {
+      console.error("[dressing] échec analyzeDressingPhoto", error);
+      return {};
+    }
+    return (data as PhotoAnalysis) ?? {};
+  } catch (err) {
+    console.error("[dressing] échec analyzeDressingPhoto", err);
+    return {};
+  }
 }
 
 /** Insère la pièce et renvoie la ligne créée (id généré par Postgres) — l'appelant l'ajoute à son state une fois la promesse résolue. */

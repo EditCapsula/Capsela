@@ -7,6 +7,7 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import { computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
+  analyzeDressingPhoto,
   deleteDressingItem,
   fetchDressingItems,
   fetchOutfitHistory,
@@ -84,14 +85,18 @@ function buildInitialState(): AppState {
     addName: "",
     addBrand: "",
     addCat: "haut",
+    addCatTouched: false,
     addColor: { name: "Blanc cassé", hex: "#EDE4D6" },
+    addColorTouched: false,
     addSize: null,
     addPhotoUrl: null,
     addPhotoUploading: false,
+    addPhotoAnalyzing: false,
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
     addOccasion: ["travail_formel"],
     addShoeType: null,
+    addShoeTypeTouched: false,
     addMatiere: null,
     addCoupe: null,
     addMatiereTouched: false,
@@ -637,6 +642,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         return {
           ...s,
           addCat: k,
+          addCatTouched: true,
           addSize: null,
           addShoeType: null,
           addCoupe: k === "chaussures" ? null : s.addCoupe,
@@ -645,7 +651,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSubtypeTouched: false,
         };
       }),
-    setAddColor: (c) => setState((s) => ({ ...s, addColor: c })),
+    setAddColor: (c) => setState((s) => ({ ...s, addColor: c, addColorTouched: true })),
     setAddSize: (v) => setState((s) => ({ ...s, addSize: v })),
     setAddPhoto: (v) => setState((s) => ({ ...s, addPhotoUrl: v })),
     uploadAddPhoto: (file) => {
@@ -660,7 +666,43 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       uploadDressingPhoto(userId, file)
-        .then((url) => setState((s) => ({ ...s, addPhotoUrl: url, addPhotoUploading: false })))
+        .then((url) => {
+          setState((s) => ({ ...s, addPhotoUrl: url, addPhotoUploading: false, addPhotoAnalyzing: true }));
+          // Pré-remplissage par photo (recette 22/08/2026, "comment faire pour
+          // que l'article ajouté soit pré rempli selon les informations de la
+          // photo") — jamais bloquant, jamais imposé : chaque champ n'est
+          // appliqué que si l'utilisatrice ne l'a pas déjà modifié elle-même
+          // (mêmes drapeaux *Touched que la détection par nom, cf.
+          // setAddName ci-dessus). Sous-type/type de chaussure/sac/bijou/
+          // accessoire ne sont appliqués que si la catégorie finalement
+          // retenue est bien celle que l'IA a analysée (catMatches) — sinon
+          // une catégorie choisie manuellement entre-temps hériterait d'un
+          // sous-type d'une autre catégorie (ex. "Bermuda" sur une "veste").
+          analyzeDressingPhoto(url)
+            .then((a) => {
+              setState((s) => {
+                // La photo a déjà changé pendant l'analyse (nouvelle prise/
+                // import) : suggestion périmée, jamais appliquée à la nouvelle.
+                if (s.addPhotoUrl !== url) return { ...s, addPhotoAnalyzing: false };
+                const finalCat = s.addCatTouched ? s.addCat : a.cat ?? s.addCat;
+                const catMatches = Boolean(a.cat) && a.cat === finalCat;
+                return {
+                  ...s,
+                  addPhotoAnalyzing: false,
+                  addCat: finalCat,
+                  addColor: s.addColorTouched || !a.colorName || !a.colorHex ? s.addColor : { name: a.colorName, hex: a.colorHex },
+                  addMatiere: s.addMatiereTouched ? s.addMatiere : a.matiere ?? s.addMatiere,
+                  addSubtype: s.addSubtypeTouched || !catMatches ? s.addSubtype : a.subtype ?? s.addSubtype,
+                  addShoeType: s.addShoeTypeTouched || !catMatches ? s.addShoeType : a.shoeType ?? s.addShoeType,
+                  addSacType: s.addSacTypeTouched || !catMatches ? s.addSacType : a.sacType ?? s.addSacType,
+                  addBijouType: s.addBijouTypeTouched || !catMatches ? s.addBijouType : a.bijouType ?? s.addBijouType,
+                  addAccessoireType:
+                    s.addAccessoireTypeTouched || !catMatches ? s.addAccessoireType : a.accessoireType ?? s.addAccessoireType,
+                };
+              });
+            })
+            .catch(() => setState((s) => ({ ...s, addPhotoAnalyzing: false })));
+        })
         .catch((err) => {
           // Échec : jamais persister l'aperçu blob (invalide au rechargement,
           // cf. bug signalé) — repasse à "pas de photo" plutôt qu'une photo cassée.
@@ -674,7 +716,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         ...s,
         addOccasion: s.addOccasion.includes(o) ? s.addOccasion.filter((x) => x !== o) : [...s.addOccasion, o],
       })),
-    setAddShoeType: (t) => setState((s) => ({ ...s, addShoeType: t })),
+    setAddShoeType: (t) => setState((s) => ({ ...s, addShoeType: t, addShoeTypeTouched: true })),
     setAddMatiere: (m) => setState((s) => ({ ...s, addMatiere: m, addMatiereTouched: true })),
     setAddCoupe: (c) => setState((s) => ({ ...s, addCoupe: c, addCoupeTouched: true })),
     setAddSacType: (t) => setState((s) => ({ ...s, addSacType: t, addSacTypeTouched: true })),
@@ -731,6 +773,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addBrand: "",
         addPhotoUrl: null,
         addPhotoUploading: false,
+        addPhotoAnalyzing: false,
+        addCatTouched: false,
+        addColorTouched: false,
         addMatiere: null,
         addCoupe: null,
         addMatiereTouched: false,
@@ -745,6 +790,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addSubtypeTouched: false,
         addSeason: null,
         addShoeType: null,
+        addShoeTypeTouched: false,
         addOccasion: ["travail_formel"],
         screen: "wardrobe",
       });

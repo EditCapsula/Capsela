@@ -129,6 +129,11 @@ export default function AddScreen() {
           </>
         )}
       </button>
+      {state.addPhotoAnalyzing && (
+        <div className="text-[12px] text-terracotta mt-[9px] leading-[1.4]">
+          Analyse de la photo… catégorie, couleur et matière vont se pré-remplir.
+        </div>
+      )}
 
       <Label>Nom de la pièce</Label>
       <input
@@ -148,7 +153,9 @@ export default function AddScreen() {
         placeholder="ex. Sézane"
       />
 
-      <Label>Catégorie</Label>
+      <Label>
+        Catégorie <span className="opacity-60 normal-case tracking-normal">(détectée automatiquement, à confirmer)</span>
+      </Label>
       <div className="flex gap-2 flex-wrap">
         {CATS.map(([key, label]) => (
           <button key={key} onClick={() => actions.setAddCat(key)} className={chipCls(state.addCat === key)}>
@@ -158,7 +165,7 @@ export default function AddScreen() {
       </div>
 
       {isShoe && (
-        <SubMenu label="chaussure">
+        <SubMenu label="chaussure" note="(détecté automatiquement, à confirmer)">
           {SHOE_TYPES.map((t) => (
             <button key={t} onClick={() => actions.setAddShoeType(t)} className={chipCls(state.addShoeType === t)}>
               {t}
@@ -236,7 +243,9 @@ export default function AddScreen() {
         </>
       )}
 
-      <Label>Couleur dominante</Label>
+      <Label>
+        Couleur dominante <span className="opacity-60 normal-case tracking-normal">(détectée automatiquement, modifiable)</span>
+      </Label>
       <div className="grid grid-cols-4 gap-x-2 gap-y-[18px]">
         {colorPalette.map(([name, hex]) => {
           const on = state.addColor.hex === hex;

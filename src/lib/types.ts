@@ -181,6 +181,24 @@ export interface SavedLook {
   occasion?: OccasionKey;
 }
 
+/**
+ * Suggestion extraite d'une photo de pièce réelle (recette 22/08/2026,
+ * Edge Function analyze-dressing-photo) — tous les champs sont facultatifs,
+ * un champ absent/imprécis n'est simplement pas suggéré (jamais une valeur
+ * hasardée). Déjà validée contre les enums exacts côté Edge Function.
+ */
+export interface PhotoAnalysis {
+  cat?: CategoryKey | null;
+  colorName?: string;
+  colorHex?: string;
+  matiere?: Matiere;
+  subtype?: string;
+  shoeType?: ShoeType;
+  sacType?: SacType;
+  bijouType?: BijouType;
+  accessoireType?: AccessoireType;
+}
+
 export interface AppState {
   /** Dressing réel de l'utilisateur. Vide au départ : la capsule par défaut prend le relais. */
   items: Item[];
@@ -215,18 +233,26 @@ export interface AppState {
   addName: string;
   addBrand: string;
   addCat: CategoryKey;
+  /** true dès que l'utilisatrice choisit la catégorie elle-même — au-delà, la suggestion par photo (analyzeDressingPhoto) ne la modifie plus. */
+  addCatTouched: boolean;
   addColor: { name: string; hex: string };
+  /** true dès que l'utilisatrice choisit la couleur elle-même — même logique que addCatTouched. */
+  addColorTouched: boolean;
   addSize: string | null;
   /** Photo prise/importée en cours de saisie — jamais bloquante, toujours facultative. Aperçu local (blob:) le temps de l'upload, puis URL définitive du bucket dressing-photos. */
   addPhotoUrl: string | null;
   /** true pendant l'upload vers Supabase Storage (correctif 22/08/2026, remplace l'ancien aperçu blob: jamais persisté) — bloque la sauvegarde le temps d'obtenir l'URL définitive. */
   addPhotoUploading: boolean;
+  /** true pendant l'analyse de la photo par l'IA (recette 22/08/2026, pré-remplissage catégorie/couleur/matière...) — jamais bloquant pour la sauvegarde, juste un indicateur. */
+  addPhotoAnalyzing: boolean;
   /** null tant que l'utilisateur n'a pas confirmé — la sauvegarde est bloquée. */
   addSeason: Season | null;
   /** Plusieurs choix possibles. */
   addOccasion: OccasionKey[];
   /** Type de chaussure en cours de saisie — obligatoire si addCat === "chaussures" (R-B6). */
   addShoeType: ShoeType | null;
+  /** true dès que l'utilisatrice choisit le type de chaussure elle-même — même logique que addCatTouched. */
+  addShoeTypeTouched: boolean;
   /** Matière/coupe/sous-types en cours de saisie — pré-suggérés au nom tant que non modifiés manuellement. */
   addMatiere: Matiere | null;
   addCoupe: Coupe | null;
