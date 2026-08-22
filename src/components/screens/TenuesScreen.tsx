@@ -439,6 +439,12 @@ export default function TenuesScreen() {
                     backgroundPosition: "center",
                     backgroundOrigin: isRealPhoto ? "border-box" : "content-box",
                     boxShadow: hasImg ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
+                    // Rapproche l'éclairage d'une vraie photo (extérieur,
+                    // lumière naturelle) du rendu plat des photos produit
+                    // catalogue (signalé 22/08/2026, "la luminosité de
+                    // l'image") — réglage approximatif, jamais une vraie
+                    // correction d'exposition analysée au cas par cas.
+                    filter: isRealPhoto ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
                   }}
                 />
               );
@@ -519,6 +525,8 @@ export default function TenuesScreen() {
                         height: "100%",
                         objectFit: resolvedImage.kind === "photo" ? "cover" : "contain",
                         objectPosition: "center",
+                        // Même réglage d'éclairage que la composition ci-dessus.
+                        filter: resolvedImage.kind === "photo" ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
                       }}
                     />
                   </div>
