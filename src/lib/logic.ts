@@ -1356,8 +1356,25 @@ export function computeLookScore(
   // "Ajouter à la tenue") — seul le bouton "Acheter cette pièce" reste
   // conditionné à sa présence, côté rendu (TenuesScreen).
   const pieceIds = new Set(pieces.map((i) => i.id));
+  // Jamais une pièce dont le "rôle" (accessoireType/bijouType/sacType) est
+  // déjà tenu par une pièce de la tenue affichée (correctif 23/08/2026,
+  // signalé : une deuxième paire de lunettes de soleil suggérée alors que la
+  // tenue en porte déjà une) — sans intérêt réel, même si l'id diffère.
+  // Limité aux pièces au sous-type connu des deux côtés : sans sous-type
+  // déclaré, on ne sait pas si les rôles se recoupent, donc on ne bloque pas
+  // par excès de prudence plutôt que de risquer d'exclure une suggestion
+  // valable (ex. une ceinture déjà présente ne doit pas empêcher de
+  // suggérer des lunettes, même toutes deux catégorie "accessoire").
+  const hasSameSlot = (candidate: Item): boolean =>
+    pieces.some((p) => {
+      if (p.cat !== candidate.cat) return false;
+      if (candidate.accessoireType) return p.accessoireType === candidate.accessoireType;
+      if (candidate.bijouType) return p.bijouType === candidate.bijouType;
+      if (candidate.sacType) return p.sacType === candidate.sacType;
+      return false;
+    });
   const findSuggestedPiece = (cats: CategoryKey[], extra: (i: Item) => boolean): number | undefined =>
-    pool.find((i) => cats.includes(i.cat) && isCatalogId(i.id) && !pieceIds.has(i.id) && extra(i))?.id;
+    pool.find((i) => cats.includes(i.cat) && isCatalogId(i.id) && !pieceIds.has(i.id) && !hasSameSlot(i) && extra(i))?.id;
 
   // Un bijou doré/argenté/cuivré (palette PALETTE_BIJOU, data.ts) n'est pas
   // une "touche de couleur" — c'est une finition métallique, pas plus
@@ -1365,9 +1382,13 @@ export function computeLookScore(
   // argentée suggérée pour R-S13). isNeutralColor (attributes.ts) ne
   // couvre que les neutres vêtement (blanc/noir/gris/camel...), jamais ces
   // teintes bijou — exclues séparément ici, dans le déclencheur ET la
-  // sélection, pour rester cohérent des deux côtés.
+  // sélection, pour rester cohérent des deux côtés. Une couleur absente
+  // (jamais renseignée) n'est pas non plus une touche de couleur réelle —
+  // sans ce garde-fou, isNeutralColor("") passe à tort (absente de la liste
+  // des neutres nommés), laissant filtrer une pièce dont la couleur réelle
+  // est simplement inconnue.
   const isColorAccent = (color: string): boolean =>
-    !isNeutralColor(color) && !["Doré", "Argenté", "Cuivré", "Or rose", "Bronze", "Perle"].includes(color);
+    Boolean(color) && !isNeutralColor(color) && !["Doré", "Argenté", "Cuivré", "Or rose", "Bronze", "Perle"].includes(color);
 
   // R-S13 — contraste : total look noir sans accessoire coloré.
   const allBlack = clothing.length > 0 && clothing.every((i) => /noir/i.test(i.color));
