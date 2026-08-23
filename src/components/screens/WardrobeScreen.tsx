@@ -74,11 +74,15 @@ export default function WardrobeScreen() {
             {groups.length} {groups.length <= 1 ? "catégorie" : "catégories"} · {items.length} {items.length <= 1 ? "pièce" : "pièces"}
           </div>
         </div>
-        <button onClick={actions.openAdd} className="flex items-center gap-[9px] flex-shrink-0 cursor-pointer text-left">
+        {/* Décalé sous le titre plutôt qu'aligné avec "TON DRESSING"
+            (recette 24/08/2026, signalé : concurrençait le titre comme point
+            d'entrée visuel) — le centre du cercle vient plutôt tomber vers le
+            compteur "X catégories · Y pièces". */}
+        <button onClick={actions.openAdd} className="flex items-center gap-[9px] flex-shrink-0 cursor-pointer text-left mt-[26px]">
           <span className="w-[42px] h-[42px] rounded-full bg-terracotta text-cream flex items-center justify-center text-2xl flex-shrink-0">
             +
           </span>
-          <span className="text-[11.5px] text-ink leading-[1.25]">
+          <span className="text-[11.5px] text-ink leading-[1.25] mt-[2px]">
             Ajouter
             <br />
             une pièce
