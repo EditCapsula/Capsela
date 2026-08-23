@@ -283,13 +283,23 @@ export default function WardrobeScreen() {
                         )}
                       </span>
                     </div>
-                    <div className="flex px-[11px] pt-[8px] gap-[3px]">
+                    {/* grid-cols-4 fixe (correctif 25/08/2026, signalé : cartes
+                        désalignées) — avec flex-1, une seule vignette
+                        occupait toute la largeur de la carte et devenait bien
+                        plus haute (aspect-ratio 3/4 appliqué à une largeur
+                        4x plus grande) qu'une carte à 4 pièces, faussant la
+                        hauteur des cartes et donc l'alignement de la grille
+                        2 colonnes. Avec 4 colonnes fixes, chaque vignette
+                        garde la même taille quel que soit le nombre de
+                        pièces (1 à 4) ; les cases vides au-delà de N restent
+                        simplement inoccupées. */}
+                    <div className="grid grid-cols-4 px-[11px] pt-[8px] gap-[3px]">
                       {pieces.slice(0, 4).map((p) => {
                         const img = resolveItemImage(p);
                         return (
                           <div
                             key={p.id}
-                            className="flex-1 rounded-[7px] overflow-hidden"
+                            className="rounded-[7px] overflow-hidden"
                             style={{ aspectRatio: "3/4", background: img.url ? "#F3EDE1" : p.hex }}
                           >
                             {img.url && (
