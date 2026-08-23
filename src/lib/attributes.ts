@@ -195,6 +195,14 @@ export function suggestOccasions(cat: CategoryKey, shoeType?: ShoeType | null): 
  * uniquement tant que l'utilisatrice n'a pas touché le champ elle-même
  * (addNameTouched, store.tsx). Purement client, aucun appel OpenAI
  * supplémentaire : recompose simplement les champs déjà détectés.
+ *
+ * Correctif 25/08/2026 (signalé : "Midi bordeaux" sans catégorie) — la
+ * catégorie ouvrait systématiquement le nom, sous_type ne servait que de
+ * repli ; en réalité sous_type REMPLAÇAIT la catégorie dès qu'il était
+ * renseigné (le cas le plus courant après une analyse photo), d'où sa
+ * disparition. La catégorie est désormais toujours en tête ; le sous-type
+ * ne s'ajoute que s'il apporte une précision réelle (pas déjà contenu dans
+ * le libellé de catégorie, ex. "Blazer" dans "Veste / Blazer").
  */
 export function suggestName(
   cat: CategoryKey,
@@ -202,7 +210,12 @@ export function suggestName(
   matiere: Matiere | null | undefined,
   colorName: string | null | undefined
 ): string {
-  const parts = [subtype || CATLABEL[cat]];
+  const catLabel = CATLABEL[cat];
+  const parts = [catLabel];
+  const subtypeTrim = subtype?.trim();
+  if (subtypeTrim && !catLabel.toLowerCase().includes(subtypeTrim.toLowerCase())) {
+    parts.push(subtypeTrim.toLowerCase());
+  }
   if (matiere) parts.push(`en ${matiere.toLowerCase()}`);
   if (colorName) parts.push(colorName.toLowerCase());
   return parts.join(" ");

@@ -233,11 +233,6 @@ export default function AddScreen() {
           <div className="font-serif text-[21px] text-ink leading-[1.2]">
             {state.editingId != null ? "Modifier la pièce" : state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce"}
           </div>
-          {photoAnalyzed && (
-            <div className="text-[12px] text-muted mt-[3px] flex items-center justify-center gap-[5px]">
-              Capsela a analysé ta photo <SparkleIcon className="text-terracotta" />
-            </div>
-          )}
         </div>
       </div>
 
@@ -281,6 +276,11 @@ export default function AddScreen() {
       {state.addPhotoAnalyzing && (
         <div className="text-[12px] text-terracotta mt-[9px] leading-[1.4]">
           Analyse de la photo… catégorie, couleur et matière vont se pré-remplir.
+        </div>
+      )}
+      {photoAnalyzed && (
+        <div className="text-[12px] text-muted mt-[9px] flex items-center gap-[5px]">
+          L&apos;édit Capsela a analysé ta photo <SparkleIcon className="text-terracotta" />
         </div>
       )}
 
