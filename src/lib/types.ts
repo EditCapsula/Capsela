@@ -172,6 +172,8 @@ export interface Item {
   detailsMode?: string;
   /** Échappatoire total : remplace la partie "design" du prompt de génération d'image quand renseigné. */
   promptImageOverride?: string;
+  /** Valeurs brutes de saison_capsule (source : vestiaire_universel uniquement, jamais déduit du type de vêtement) — alimente le badge saison de "Les idées de tenues". Absent pour une pièce du dressing réel ou du catalogue statique de secours (catalog.ts), qui n'ont pas cette colonne. */
+  capsuleSeasons?: CapsuleSeason[];
 }
 
 export interface City {

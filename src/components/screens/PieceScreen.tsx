@@ -141,7 +141,7 @@ export default function PieceScreen() {
       {suggested ? (
         <>
           <button
-            onClick={() => actions.startReplace(active.id, active.cat)}
+            onClick={() => actions.startReplace(active)}
             className="mt-[18px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
           >
             J&apos;ai déjà ça

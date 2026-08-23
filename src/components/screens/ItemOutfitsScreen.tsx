@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { OutfitComposition } from "@/components/OutfitComposition";
+import { isCatalogId } from "@/lib/catalog";
 import { CATLABEL, OCC_LABELS } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { currentSeasonKey, representativeWeatherFor } from "@/lib/capsule";
@@ -12,15 +13,20 @@ import { useCapsela } from "@/lib/store";
 import type { OccasionKey } from "@/lib/types";
 
 /**
- * Module "Comment porter cette pièce ?" (recette 19/08/2026, refonte UX/UI
- * 22/08/2026) — P0 : clic sur un article de Capsule, pièce pivot ("anchor
- * piece", identifiée par son contour terracotta — jamais utilisé pour un
- * autre état UI), combinaisons regroupées par occasion, filtre, images
- * existantes, CTA "Voir cette tenue". Réutilise getOutfitsForItem (lui-même
- * une réutilisation de generateOutfit) — jamais un second moteur, jamais
- * d'appel OpenAI à l'ouverture — et OutfitComposition (variante "compact"),
- * le même composant de composition visuelle que la page Tenue ("hero") :
- * un seul moteur de layout, jamais deux qui divergent.
+ * Module "Les idées de tenues" (recette 19/08/2026, refonte UX/UI 22/08/2026,
+ * renommage + saison/statut de possession 23/08/2026) — P0 : clic sur un
+ * article de Capsule, pièce pivot ("anchor piece", identifiée par son
+ * contour terracotta — jamais utilisé pour un autre état UI), combinaisons
+ * regroupées par occasion, filtre, images existantes, CTA "Voir cette
+ * tenue". Réutilise getOutfitsForItem (lui-même une réutilisation de
+ * generateOutfit) — jamais un second moteur, jamais d'appel OpenAI à
+ * l'ouverture — et OutfitComposition (variante "compact"), le même
+ * composant de composition visuelle que la page Tenue ("hero") : un seul
+ * moteur de layout, jamais deux qui divergent. Statut de possession dérivé
+ * d'isCatalogId + suggestedExcluded (jamais du wardrobePool, qui masque une
+ * pièce suggérée non possédée comblant une catégorie vide de la capsule par
+ * défaut) ; badge saison strictement lu depuis capsuleSeasons (colonne
+ * saison_capsule de vestiaire_universel), jamais déduit du type de pièce.
  */
 export default function ItemOutfitsScreen() {
   const { state, wardrobePool, vestiairePool, actions } = useCapsela();
@@ -50,10 +56,23 @@ export default function ItemOutfitsScreen() {
 
   if (!pivot) return null;
 
-  // Pièce suggérée (catalogue) = absente du dressing réel — même logique que
-  // le calcul de `pivot`/`pool` ci-dessus, faute d'un flag "suggested" explicite
-  // ici (contrairement à PieceScreen, ouvert avec state.activeSuggested connu).
-  const isSuggested = !wardrobePool.some((i) => i.id === pivot.id);
+  // Déjà au dressing = pas un id de catalogue (statique 1001+ ou
+  // vestiaire_universel 100000+, cf. isCatalogId), ou déjà remplacée via
+  // "J'ai déjà" (suggestedExcluded, alimenté par startReplace + saveItem).
+  // Plus fiable que l'ancien !wardrobePool.some(...) : wardrobePool contient
+  // aussi les pièces de la capsule par défaut qui comblent une catégorie
+  // vide, où une pièce suggérée non possédée lirait alors à tort comme
+  // "déjà au dressing".
+  const alreadyOwned = !isCatalogId(pivot.id) || state.suggestedExcluded.includes(pivot.id);
+
+  // Saison capsule (recette 23/08/2026) — strictement la colonne saison_capsule
+  // (vestiaire.ts), jamais déduite du type de vêtement ; absente pour une
+  // pièce du dressing réel ou du catalogue statique de secours.
+  const seasonLabel = !pivot.capsuleSeasons?.length
+    ? null
+    : pivot.capsuleSeasons.length === 1
+      ? `Capsule ${pivot.capsuleSeasons[0]}`
+      : pivot.capsuleSeasons.join(" · ");
 
   const occasionsCovered = Array.from(new Set(variations.map((v) => v.occasion)));
   const filteredVariations = occasionFilter === "all" ? variations : variations.filter((v) => v.occasion === occasionFilter);
@@ -79,7 +98,7 @@ export default function ItemOutfitsScreen() {
         ←
       </button>
 
-      <div className="mt-[18px] text-[11px] tracking-[.16em] uppercase text-muted">Comment porter cette pièce ?</div>
+      <div className="mt-[18px] text-[11px] tracking-[.16em] uppercase text-muted">Les idées de tenues</div>
 
       {/* "Autour de cette pièce" (brief design 22/08/2026, section 2) — rend
           explicite le rôle de la pièce mise en avant ci-dessous : celle
@@ -115,20 +134,64 @@ export default function ItemOutfitsScreen() {
         </div>
       </div>
 
-      {isSuggested && (
+      {/* Badge saison capsule (brief 23/08/2026, section 2) — même style pastille
+          + libellé tracké que le badge de mode de la page Tenue (MODE_STYLES),
+          jamais répété par carte plus bas : une seule vérité pour toute la page. */}
+      {seasonLabel && (
+        <div
+          className="inline-flex items-center gap-2 mt-[12px] rounded-full"
+          style={{ padding: "7px 14px 7px 11px", background: "#F0E5D6", border: "1px solid #E2CDB8" }}
+        >
+          <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: "#C9966F" }} />
+          <span className="text-[11px] tracking-[.13em] uppercase" style={{ color: "#A66950" }}>
+            {seasonLabel}
+          </span>
+        </div>
+      )}
+
+      {/* Statut de possession / CTA (brief 23/08/2026, section 3) — trois états
+          exclusifs : déjà au dressing (aucun CTA), pas encore possédée avec un
+          vrai lien affilié (Acheter + Je l'ai déjà), pas encore possédée sans
+          lien (Je l'ai déjà seule). Jamais "Acheter" sans affLink réel, jamais
+          "Je l'ai déjà" si déjà possédée. */}
+      {alreadyOwned ? (
+        <div className="mt-[14px] flex items-center gap-3 bg-ink rounded-2xl px-4 py-[14px]">
+          <span className="w-8 h-8 rounded-full bg-terracotta text-cream flex items-center justify-center text-[15px] flex-shrink-0">
+            ✓
+          </span>
+          <div className="text-[13px] text-cream">Dans mon dressing</div>
+        </div>
+      ) : pivot.affLink ? (
+        <>
+          <a
+            href={pivot.affLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-[14px] block w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
+          >
+            Acheter cette pièce ↗
+          </a>
+          <button
+            onClick={() => actions.startReplace(pivot)}
+            className="mt-[10px] w-full text-center border border-border-soft text-terracotta rounded-full py-[13px] text-[12.5px] cursor-pointer"
+          >
+            J&apos;ai déjà
+          </button>
+        </>
+      ) : (
         <button
-          onClick={() => actions.startReplace(pivot.id, pivot.cat)}
+          onClick={() => actions.startReplace(pivot)}
           className="mt-[14px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
         >
-          J&apos;ai déjà ça
+          J&apos;ai déjà
         </button>
       )}
 
-      <div className="mt-[16px] text-[12.5px] text-terracotta">
-        {occasionsCovered.length === 0
-          ? "Pas encore assez de combinaisons"
-          : `${occasionsCovered.length} occasion${occasionsCovered.length > 1 ? "s" : ""} couverte${occasionsCovered.length > 1 ? "s" : ""} · ${variations.length} look${variations.length > 1 ? "s" : ""} possible${variations.length > 1 ? "s" : ""}`}
-      </div>
+      {occasionsCovered.length > 0 && (
+        <div className="mt-[18px] text-[10px] tracking-[.16em] uppercase text-terracotta">
+          {variations.length} idée{variations.length > 1 ? "s" : ""} de tenue{variations.length > 1 ? "s" : ""}
+        </div>
+      )}
 
       {occasionsCovered.length > 0 && (
         <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[14px]">

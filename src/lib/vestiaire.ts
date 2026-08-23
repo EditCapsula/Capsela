@@ -2,7 +2,7 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { detectAccessoireType, detectBijouType, detectMatiere, detectSacType } from "./attributes";
 import type { CatalogItem } from "./catalog";
 import { FALLBACK_HEX } from "./data";
-import type { CategoryKey, Coupe, ImageSource, ImageStatus, IntensiteCouleur, Matiere, OccasionKey, Season, ShoeType, Tons } from "./types";
+import type { CapsuleSeason, CategoryKey, Coupe, ImageSource, ImageStatus, IntensiteCouleur, Matiere, OccasionKey, Season, ShoeType, Tons } from "./types";
 
 /**
  * Lecture de la table vestiaire_universel (Supabase) — source des 4 capsules
@@ -257,6 +257,34 @@ function mapSaisonToSeason(raw: string | null): Season {
   return "Toutes saisons";
 }
 
+const CAPSULE_SEASON_MAP: Record<string, CapsuleSeason> = {
+  printemps: "Printemps",
+  "été": "Été",
+  ete: "Été",
+  automne: "Automne",
+  hiver: "Hiver",
+};
+
+/**
+ * Valeurs brutes de saison_capsule (recette 23/08/2026, badge saison de "Les
+ * idées de tenues") — distinct de mapSaisonToSeason, qui ne conserve que le
+ * bucket météo grossier (Printemps/Été vs Automne/Hiver). Ordre canonique
+ * (Printemps, Été, Automne, Hiver) plutôt que l'ordre de la colonne, pour un
+ * affichage stable ("PRINTEMPS · ÉTÉ", jamais "ÉTÉ · PRINTEMPS").
+ */
+function parseCapsuleSeasons(raw: string | null): CapsuleSeason[] | undefined {
+  if (!raw) return undefined;
+  const tokens = new Set(
+    raw
+      .split(",")
+      .map((s) => CAPSULE_SEASON_MAP[s.trim().toLowerCase()])
+      .filter((s): s is CapsuleSeason => Boolean(s))
+  );
+  if (!tokens.size) return undefined;
+  const order: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
+  return order.filter((s) => tokens.has(s));
+}
+
 const VALID_OCCASIONS = new Set<OccasionKey>([
   "quotidien",
   "travail_formel",
@@ -336,6 +364,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     color,
     hex,
     season: mapSaisonToSeason(row.saison_capsule),
+    capsuleSeasons: parseCapsuleSeasons(row.saison_capsule),
     worn: null,
     shoeType: cat === "chaussures" ? SHOE_TYPE_MAP[(row.sous_type || "").trim().toLowerCase()] : undefined,
     matiere: mapMatiere(row.matiere),

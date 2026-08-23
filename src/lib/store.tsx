@@ -16,7 +16,7 @@ import {
   updateDressingItemWorn,
   uploadDressingPhoto,
 } from "./dressing";
-import { ensureCatalogImage } from "./catalogImages";
+import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
@@ -178,8 +178,15 @@ export interface Actions {
   removeActive: () => void;
   /** Écarte une suggestion de la capsule par défaut. */
   dismissSuggested: (id: number) => void;
-  /** Ouvre l'ajout d'une pièce pour remplacer une suggestion. */
-  startReplace: (id: number, cat: CategoryKey) => void;
+  /**
+   * Ouvre l'ajout d'une pièce pour remplacer une suggestion ("J'ai déjà
+   * ça") — préremplit le formulaire avec tout ce que Capsela connaît déjà
+   * sur cette pièce catalogue (brief design 22/08/2026, "Comment porter
+   * cette pièce" section 4 : ne jamais redemander une information déjà
+   * disponible). Chaque champ reste modifiable normalement ensuite (mêmes
+   * drapeaux *Touched que la détection par nom/photo).
+   */
+  startReplace: (item: Item) => void;
   setCatFilter: (k: CategoryKey | "all") => void;
   setAddName: (v: string) => void;
   setAddBrand: (v: string) => void;
@@ -616,8 +623,39 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
     dismissSuggested: (id) =>
       setState((s) => ({ ...s, suggestedExcluded: [...s.suggestedExcluded, id] })),
-    startReplace: (id, cat) =>
-      setState((s) => ({ ...s, replacingId: id, addCat: cat, addSize: null, screen: "add" })),
+    startReplace: (item) =>
+      setState((s) => {
+        const img = resolveItemImage(item);
+        return {
+          ...s,
+          replacingId: item.id,
+          addName: item.name,
+          addBrand: item.brand ?? "",
+          addCat: item.cat,
+          addCatTouched: true,
+          addColor: { name: item.color, hex: item.hex },
+          addColorTouched: true,
+          addSize: null,
+          addPhotoUrl: img.url ?? null,
+          addSeason: item.season,
+          addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
+          addShoeType: item.cat === "chaussures" ? item.shoeType ?? null : null,
+          addShoeTypeTouched: Boolean(item.shoeType),
+          addMatiere: item.matiere ?? null,
+          addMatiereTouched: Boolean(item.matiere),
+          addCoupe: item.coupe ?? null,
+          addCoupeTouched: Boolean(item.coupe),
+          addSacType: item.cat === "sac" ? item.sacType ?? null : null,
+          addSacTypeTouched: Boolean(item.sacType),
+          addBijouType: item.cat === "bijou" ? item.bijouType ?? null : null,
+          addBijouTypeTouched: Boolean(item.bijouType),
+          addAccessoireType: item.cat === "accessoire" ? item.accessoireType ?? null : null,
+          addAccessoireTypeTouched: Boolean(item.accessoireType),
+          addSubtype: item.subtype ?? null,
+          addSubtypeTouched: Boolean(item.subtype),
+          screen: "add",
+        };
+      }),
 
     setCatFilter: (k) => setState((s) => ({ ...s, catFilter: k })),
 
