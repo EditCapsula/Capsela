@@ -13,6 +13,24 @@ import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "
 import { paletteHexes } from "@/lib/profile";
 import type { Item } from "@/lib/types";
 
+/** Icônes des CTA de pièce suggérée (recette 23/08/2026) — trait fin, même style que TabBar, jamais d'emoji. */
+function PlusIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+      <line x1="12" y1="4" x2="12" y2="20" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+    </svg>
+  );
+}
+function BagIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 8h12l-1 12H7L6 8z" />
+      <path d="M9 8V6a3 3 0 016 0v2" />
+    </svg>
+  );
+}
+
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
 const MODE_STYLES = {
   capsule_depart: { color: "#A66950", bg: "#F0E5D6", border: "#E2CDB8", dot: "#C9966F" },
@@ -553,6 +571,13 @@ export default function TenuesScreen() {
         </div>
       )}
 
+      {!noCompleteOutfit && lookScore.proactives.length > 0 && (
+        <div className="mt-4 flex items-center gap-[7px]">
+          <span className="font-serif italic text-[13px] text-terracotta">✦</span>
+          <span className="text-[10.5px] tracking-[.14em] uppercase text-terracotta">Nos conseils pour sublimer cette tenue</span>
+        </div>
+      )}
+
       {!noCompleteOutfit && lookScore.proactives.map((p) => {
         // Pièce concrète suggérée (R-S13/R-S14 uniquement, recette 23/08/2026,
         // extension du mécanisme d'achat déjà utilisé sur l'écran Capsule) —
@@ -584,14 +609,16 @@ export default function TenuesScreen() {
                 </div>
               )}
               {suggested && (
-                <>
-                  {/* Visuel "fantôme" (recette 23/08/2026) — pièce de la capsule,
-                      pas encore ajoutée à la tenue : légèrement désaturée et
-                      atténuée pour se lire comme un aperçu, jamais confondue
-                      avec une pièce réelle de la composition ci-dessus. */}
-                  <div className="flex items-center gap-[9px] mt-[11px]">
+                // Visuel "fantôme" agrandi (recette 23/08/2026) — pièce de la
+                // capsule pas encore ajoutée à la tenue : désaturée + atténuée
+                // pour se lire comme un aperçu, jamais confondue avec une
+                // pièce réelle de la composition ci-dessus. Badge "Suggérée"
+                // superposé plutôt qu'une simple mention textuelle, pour
+                // rester lisible même si le nom de la pièce est long.
+                <div className="flex items-start gap-[13px] mt-[13px]">
+                  <div className="relative flex-shrink-0">
                     <div
-                      className="w-[38px] h-[46px] rounded-[8px] flex-shrink-0"
+                      className="w-[92px] h-[110px] rounded-[11px]"
                       style={{
                         background: resolveItemImage(suggested).url ? "#F3EDE1" : suggested.hex,
                         backgroundImage: resolveItemImage(suggested).url ? `url(${resolveItemImage(suggested).url})` : undefined,
@@ -601,30 +628,38 @@ export default function TenuesScreen() {
                         filter: "grayscale(55%) opacity(.8)",
                       }}
                     />
-                    <span className="text-[12.5px] text-ink">{suggested.name}</span>
+                    <span className="absolute top-[7px] left-[7px] bg-terracotta text-cream text-[8.5px] tracking-[.08em] uppercase rounded-full py-[3px] px-[8px]">
+                      Suggérée
+                    </span>
                   </div>
-                  <div className="flex gap-[8px] mt-[10px]">
-                    <button
-                      onClick={() => {
-                        actions.addPieceToOutfit(suggested.id);
-                        setAddedSuggestions((m) => ({ ...m, [p.key]: suggested }));
-                      }}
-                      className="flex-1 bg-terracotta text-cream text-center rounded-full py-[10px] text-[12px] cursor-pointer"
-                    >
-                      Ajouter à la tenue
-                    </button>
-                    {suggested.affLink && (
-                      <a
-                        href={suggested.affLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 text-center border border-border-soft text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
+                  <div className="flex-1 min-w-0 pt-[2px]">
+                    <div className="text-[13px] text-ink leading-[1.25]">{suggested.name}</div>
+                    <div className="text-[11px] text-muted mt-[2px]">{CATLABEL[suggested.cat]}</div>
+                    <div className="flex flex-col gap-[8px] mt-[11px]">
+                      <button
+                        onClick={() => {
+                          actions.addPieceToOutfit(suggested.id);
+                          setAddedSuggestions((m) => ({ ...m, [p.key]: suggested }));
+                        }}
+                        className="inline-flex items-center justify-center gap-[6px] bg-terracotta text-cream text-center rounded-full py-[10px] text-[12px] cursor-pointer"
                       >
-                        Acheter cette pièce
-                      </a>
-                    )}
+                        <PlusIcon />
+                        Ajouter à la tenue
+                      </button>
+                      {suggested.affLink && (
+                        <a
+                          href={suggested.affLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-[6px] border border-border-soft text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
+                        >
+                          <BagIcon />
+                          <span className="underline underline-offset-2">Acheter cette pièce</span>
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </>
+                </div>
               )}
               <button
                 onClick={() => actions.dismissOutfitSuggestion(p.key)}
