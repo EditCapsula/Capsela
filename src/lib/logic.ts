@@ -408,11 +408,26 @@ export function generateOutfit(
     // veste, contrairement à un t-shirt basique (formalité >= 1) qui reste
     // exempté comme avant. Hors occasion Sport, un haut formalité 0 repasse
     // donc par le plancher plein comme n'importe quel autre vêtement.
+    // Correctif 23/08/2026 (signalé : combinaison en coton explicitement
+    // déclarée "Travail / Bureau" par l'utilisatrice, toujours exclue de
+    // cette occasion) — une pièce réelle du dressing n'a pas de
+    // niveauFormalite déclaré (seul le catalogue en a) : formalityOf() le
+    // devine alors par mots-clés du nom (attributes.ts), une heuristique
+    // forcément grossière qui ne reconnaît par exemple aucune "combinaison"
+    // comme habillée. Dès qu'elle sous-estime la formalité réelle, ce
+    // plancher contredisait silencieusement une occasion pourtant choisie
+    // explicitement par l'utilisatrice sur cette pièce (AddScreen) — alors
+    // que declaredOccasionOk (plus haut) traite déjà cette même déclaration
+    // comme un signal fiable qui prime sur toute déduction. Par symétrie,
+    // une occasion explicitement déclarée sur la pièce l'exempte aussi du
+    // plancher de formalité pour cette occasion précise : la déduction ne
+    // reprend la main que pour les pièces qui n'ont rien déclaré.
     if (occasion !== "all") {
       const minFormality = minFormalityOverride ?? effectiveFormality(occasion, workMode, dateContext);
       r = r.filter(
         (i) =>
           !CLOTHING_CATS.includes(i.cat) ||
+          Boolean(i.occasion && i.occasion.includes(occasion)) ||
           (TOP_LAYER_CATS.includes(i.cat) && formalityOf(i) > 0) ||
           formalityOf(i) >= minFormality
       );
@@ -923,6 +938,10 @@ export function swapOutfitPiece(
   // compensation "haut sous veste structurée" (correctif 19/08/2026) : si
   // le reste de la tenue comporte déjà une veste assez formelle, le haut de
   // remplacement n'est pas soumis au plancher de formalité — jamais le bas.
+  // Correctif 23/08/2026 : même exemption qu'à la génération automatique
+  // (cf. son commentaire) pour une pièce dont l'occasion a été déclarée
+  // explicitement — sinon un remplacement manuel pouvait exclure une pièce
+  // que l'utilisatrice avait pourtant explicitement associée à cette occasion.
   if (occasion !== "all") {
     const minFormality = effectiveFormality(occasion, workMode, dateContext);
     const hasCompensatingVeste = outfitItems.some(
@@ -931,6 +950,7 @@ export function swapOutfitPiece(
     candidates = candidates.filter(
       (i) =>
         !CLOTHING_CATS.includes(i.cat) ||
+        Boolean(i.occasion && i.occasion.includes(occasion)) ||
         (TOP_LAYER_CATS.includes(i.cat) && hasCompensatingVeste) ||
         formalityOf(i) >= minFormality
     );
