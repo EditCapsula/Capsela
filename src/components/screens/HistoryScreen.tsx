@@ -167,33 +167,25 @@ export default function HistoryScreen() {
       {stats.hasItems && (
         <>
           <div className="grid grid-cols-4 gap-[7px] mt-5">
-            <div className="bg-ink rounded-[16px] p-[11px] flex flex-col justify-between min-h-[92px]">
+            <div className="bg-ink rounded-[16px] p-[11px] flex flex-col min-h-[92px]">
               <SparkleIcon className="text-[#D9CBB6]" />
-              <div>
-                <div className="font-serif text-[21px] leading-[.9] text-cream">{stats.pctWorn}%</div>
-                <div className="text-[9px] text-[#B3AA9B] mt-[4px] leading-[1.25]">déjà porté</div>
-              </div>
+              <div className="font-serif text-[21px] leading-[.9] text-cream mt-[13px]">{stats.pctWorn}%</div>
+              <div className="text-[9px] text-[#B3AA9B] mt-[4px] leading-[1.25]">déjà porté</div>
             </div>
-            <div className="bg-card border border-border rounded-[16px] p-[11px] flex flex-col justify-between min-h-[92px]">
+            <div className="bg-card border border-border rounded-[16px] p-[11px] flex flex-col min-h-[92px]">
               <CalendarIcon className="text-terracotta" />
-              <div>
-                <div className="font-serif text-[21px] leading-[.9] text-ink">{stats.wornThisWeek}</div>
-                <div className="text-[9px] text-muted mt-[4px] leading-[1.25]">cette semaine</div>
-              </div>
+              <div className="font-serif text-[21px] leading-[.9] text-ink mt-[13px]">{stats.wornThisWeek}</div>
+              <div className="text-[9px] text-muted mt-[4px] leading-[1.25]">cette semaine</div>
             </div>
-            <div className="bg-card border border-border rounded-[16px] p-[11px] flex flex-col justify-between min-h-[92px]">
+            <div className="bg-card border border-border rounded-[16px] p-[11px] flex flex-col min-h-[92px]">
               <CalendarIcon className="text-terracotta" />
-              <div>
-                <div className="font-serif text-[21px] leading-[.9] text-ink">{insights.wornThisMonth}</div>
-                <div className="text-[9px] text-muted mt-[4px] leading-[1.25]">ce mois-ci</div>
-              </div>
+              <div className="font-serif text-[21px] leading-[.9] text-ink mt-[13px]">{insights.wornThisMonth}</div>
+              <div className="text-[9px] text-muted mt-[4px] leading-[1.25]">ce mois-ci</div>
             </div>
-            <div className="bg-card border border-border rounded-[16px] p-[11px] flex flex-col justify-between min-h-[92px]">
+            <div className="bg-card border border-border rounded-[16px] p-[11px] flex flex-col min-h-[92px]">
               <HangerIcon className="text-terracotta" />
-              <div>
-                <div className="font-serif text-[21px] leading-[.9] text-ink">{insights.distinctPiecesWornThisMonth}</div>
-                <div className="text-[9px] text-muted mt-[4px] leading-[1.25]">pièces ce mois-ci</div>
-              </div>
+              <div className="font-serif text-[21px] leading-[.9] text-ink mt-[13px]">{insights.distinctPiecesWornThisMonth}</div>
+              <div className="text-[9px] text-muted mt-[4px] leading-[1.25]">pièces ce mois-ci</div>
             </div>
           </div>
 
@@ -233,39 +225,33 @@ export default function HistoryScreen() {
               </div>
             )}
             {stats.never > 0 && (
-              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col justify-between gap-[9px]">
+              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col">
                 <HangerIcon className="text-terracotta" />
-                <div>
-                  <div className="font-serif text-[22px] leading-[.9] text-ink">{stats.never}</div>
-                  <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">
-                    pièce{stats.never <= 1 ? "" : "s"} pas encore portée{stats.never <= 1 ? "" : "s"}
-                  </div>
+                <div className="font-serif text-[22px] leading-[.9] text-ink mt-[10px]">{stats.never}</div>
+                <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">
+                  pièce{stats.never <= 1 ? "" : "s"} pas encore portée{stats.never <= 1 ? "" : "s"}
                 </div>
-                <button onClick={actions.goNeverWorn} className="text-[10.5px] text-terracotta text-left cursor-pointer">
+                <button onClick={actions.goNeverWorn} className="text-[10.5px] text-terracotta text-left cursor-pointer mt-[9px]">
                   Les redécouvrir →
                 </button>
               </div>
             )}
             {newLooks > 0 && (
-              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col justify-between gap-[9px]">
+              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col">
                 <StarIcon className="text-terracotta" />
-                <div>
-                  <div className="font-serif text-[22px] leading-[.9] text-ink">{newLooks}</div>
-                  <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">
-                    nouveau{newLooks <= 1 ? "" : "x"} look{newLooks <= 1 ? "" : "s"} créé{newLooks <= 1 ? "" : "s"}
-                  </div>
+                <div className="font-serif text-[22px] leading-[.9] text-ink mt-[10px]">{newLooks}</div>
+                <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">
+                  nouveau{newLooks <= 1 ? "" : "x"} look{newLooks <= 1 ? "" : "s"} créé{newLooks <= 1 ? "" : "s"}
                 </div>
-                <div className="text-[10.5px] text-terracotta">Bravo !</div>
+                <div className="text-[10.5px] text-terracotta mt-[9px]">Bravo !</div>
               </div>
             )}
             {topWorn.length > 0 && (
-              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col justify-between gap-[9px]">
+              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col">
                 <TShirtIcon className="text-terracotta" />
-                <div>
-                  <div className="font-serif text-[22px] leading-[.9] text-ink">{topWorn[0].count}</div>
-                  <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">fois portée</div>
-                </div>
-                <div className="text-[10.5px] text-terracotta leading-[1.25]">Ta pièce la plus polyvalente</div>
+                <div className="font-serif text-[22px] leading-[.9] text-ink mt-[10px]">{topWorn[0].count}</div>
+                <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">fois portée</div>
+                <div className="text-[10.5px] text-terracotta leading-[1.25] mt-[9px]">Ta pièce la plus polyvalente</div>
               </div>
             )}
           </div>
