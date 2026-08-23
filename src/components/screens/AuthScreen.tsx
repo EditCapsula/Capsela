@@ -89,7 +89,13 @@ export default function AuthScreen() {
         <input
           type="date"
           className={INPUT_CLS}
-          style={{ colorScheme: "light" }}
+          // Un <input type="date"> vide n'a pas de vrai placeholder : le
+          // navigateur rend "jj/mm/aaaa" avec la couleur de texte normale du
+          // champ, pas via ::placeholder (correctif 24/08/2026, signalé —
+          // couleur différente des 3 champs au-dessus). On applique donc
+          // nous-mêmes la couleur placeholder tant qu'aucune date n'est
+          // choisie, puis la couleur normale une fois remplie.
+          style={{ colorScheme: "light", color: birthdate ? undefined : "var(--color-placeholder)" }}
           value={birthdate}
           onChange={(e) => setBirthdate(e.target.value)}
           aria-label="Date de naissance"
