@@ -262,7 +262,7 @@ export default function HistoryScreen() {
       {topWorn.length > 0 && (
         <div className="mt-[26px]">
           <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-3">Tes 3 pièces les plus portées</div>
-          <div className="scrollarea flex gap-[12px] overflow-x-auto pb-[2px]">
+          <div className="scrollarea flex gap-[12px] overflow-x-auto pt-[6px] pb-[2px]">
             {topWorn.map(({ item, count }, idx) => {
               const img = resolveItemImage(item);
               return (
@@ -273,7 +273,7 @@ export default function HistoryScreen() {
                 >
                   <div className="relative">
                     <span
-                      className={`absolute -top-[6px] -left-[6px] z-10 w-[19px] h-[19px] rounded-full flex items-center justify-center text-[10px] text-cream ${RANK_BADGE[idx]}`}
+                      className={`absolute top-[4px] left-[4px] z-10 w-[19px] h-[19px] rounded-full flex items-center justify-center text-[10px] text-cream shadow-[0_1px_3px_rgba(29,26,22,.25)] ${RANK_BADGE[idx]}`}
                     >
                       {idx + 1}
                     </span>
