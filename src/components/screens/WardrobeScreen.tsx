@@ -6,7 +6,7 @@ import { useCapsela } from "@/lib/store";
 import { neverWornItems } from "@/lib/selectors";
 
 export default function WardrobeScreen() {
-  const { state, actions } = useCapsela();
+  const { state, actions, wardrobePool } = useCapsela();
   const items = state.items;
   const neverWorn = neverWornItems(items);
 
@@ -136,8 +136,11 @@ export default function WardrobeScreen() {
       ) : (
         <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
           {state.savedLooks.map((look) => {
+            // "Enregistrer cette tenue" (recette 23/08/2026) peut mélanger
+            // pièces possédées et suggestions capsule dans un même look —
+            // résolution sur wardrobePool, jamais sur le seul dressing réel.
             const pieces = look.pieceIds
-              .map((id) => items.find((i) => i.id === id))
+              .map((id) => wardrobePool.find((i) => i.id === id))
               .filter((it): it is NonNullable<typeof it> => Boolean(it));
             return (
               <button

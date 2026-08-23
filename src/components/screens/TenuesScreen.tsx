@@ -118,11 +118,12 @@ export default function TenuesScreen() {
     .map((id) => wardrobePool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
   // "Enregistrer cette tenue" (recette 23/08/2026) — atterrit dans Dressing →
-  // Mes looks, comme "Créer un look" : un look ne référence que de vraies
-  // pièces du dressing, jamais une suggestion catalogue non possédée.
-  const realOutfitIds = outfitPieces.filter((it) => !isCatalogId(it.id)).map((it) => it.id);
-  const canSaveOutfit = realOutfitIds.length >= 2;
-  const outfitKey = [...realOutfitIds].sort((a, b) => a - b).join(",");
+  // Mes looks, mais à la différence de "Créer un look" (dressing réel
+  // uniquement), garde la tenue du jour telle quelle : pièces possédées et
+  // suggestions capsule peuvent s'y mélanger.
+  const outfitIds = outfitPieces.map((it) => it.id);
+  const canSaveOutfit = outfitIds.length >= 2;
+  const outfitKey = [...outfitIds].sort((a, b) => a - b).join(",");
   const isOutfitSaved =
     canSaveOutfit &&
     state.savedLooks.some((l) => [...l.pieceIds].sort((a, b) => a - b).join(",") === outfitKey);
@@ -491,16 +492,17 @@ export default function TenuesScreen() {
         <div className="mb-3" style={{ marginTop: 10 }}>
           <OutfitComposition items={outfitPieces} variant="hero" />
           {/* "Enregistrer cette tenue" (recette 23/08/2026) — persiste dans
-              savedLooks, visible dans Dressing → Mes looks au même titre
-              qu'un look créé manuellement. Toujours affiché (correctif
-              23/08/2026 : le masquer selon la composition de la tenue le
-              faisait disparaître de façon déroutante après une régénération) ;
-              simplement inerte, en grisé, si la tenue ne compte pas encore
-              2 pièces réellement possédées (suggestions catalogue seules). */}
+              savedLooks, visible dans Dressing → Mes looks. À la différence
+              de "Créer un look" (dressing réel uniquement), garde la tenue
+              telle quelle : pièces possédées et suggestions capsule peuvent
+              s'y mélanger. Toujours affiché (correctif 23/08/2026 : le
+              masquer selon la composition de la tenue le faisait disparaître
+              de façon déroutante après une régénération) ; simplement
+              inerte, en grisé, tant que la tenue ne compte pas 2 pièces. */}
           <button
             onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook()}
             disabled={!canSaveOutfit}
-            title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces déjà dans ton dressing à cette tenue pour l'enregistrer."}
+            title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces à cette tenue pour l'enregistrer."}
             className={"mt-3 flex items-center gap-[6px] text-[12.5px] " + (canSaveOutfit ? "cursor-pointer" : "cursor-default opacity-40")}
             style={{ color: isOutfitSaved ? "#A66950" : "#7B7366" }}
           >

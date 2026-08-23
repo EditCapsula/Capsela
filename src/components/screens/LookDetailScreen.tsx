@@ -4,13 +4,16 @@ import { CATLABEL, OCC_LABELS, isBag } from "@/lib/data";
 import { useCapsela } from "@/lib/store";
 
 export default function LookDetailScreen() {
-  const { state, actions } = useCapsela();
+  const { state, actions, wardrobePool } = useCapsela();
   const look = state.savedLooks.find((l) => l.id === state.activeLookId);
   if (!look) return null;
 
-  // Un look ne référence que de vraies pièces du dressing, jamais des suggestions.
+  // Un look "Créer un look" ne référence que de vraies pièces du dressing ;
+  // un look "Enregistrer cette tenue" peut aussi contenir des suggestions
+  // capsule pas encore possédées (recette 23/08/2026) — résolution sur
+  // wardrobePool dans les deux cas.
   const pieces = look.pieceIds
-    .map((id) => state.items.find((i) => i.id === id))
+    .map((id) => wardrobePool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
 
   return (

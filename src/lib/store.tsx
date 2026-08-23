@@ -1097,20 +1097,22 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         };
       }),
     // "Enregistrer cette tenue" (Tenue du jour, recette 23/08/2026) — atterrit
-    // dans Dressing → Mes looks, exactement comme "Créer un look" : mêmes
-    // règles (2 pièces réelles minimum, R-B9, jamais de suggestion catalogue
-    // non possédée). Toggle : un second clic sur une tenue déjà enregistrée
+    // dans Dressing → Mes looks, mais à la différence de "Créer un look"
+    // (dressing réel uniquement), peut mélanger pièces possédées et
+    // suggestions capsule non encore achetées : c'est la tenue du jour
+    // telle quelle qu'on enregistre, pas une sélection filtrée (décision
+    // 23/08/2026). Toggle : un second clic sur une tenue déjà enregistrée
     // retire le look correspondant plutôt que d'en créer un doublon.
     toggleSaveOutfitLook: () =>
       setState((s) => {
-        const realIds = s.outfit.filter((id) => s.items.some((it) => it.id === id));
-        if (realIds.length < 2) return s;
-        const key = [...realIds].sort((a, b) => a - b).join(",");
+        const ids = [...s.outfit];
+        if (ids.length < 2) return s;
+        const key = [...ids].sort((a, b) => a - b).join(",");
         const existing = s.savedLooks.find((l) => [...l.pieceIds].sort((a, b) => a - b).join(",") === key);
         if (existing) {
           return { ...s, savedLooks: s.savedLooks.filter((l) => l.id !== existing.id) };
         }
-        const draftPieces = realIds.map((id) => s.items.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
+        const draftPieces = ids.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
         if (violatesOuterwearRule(draftPieces)) return s;
         const now = new Date();
         const defaultName =
@@ -1118,7 +1120,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         const look: SavedLook = {
           id: "look" + Date.now(),
           name: defaultName,
-          pieceIds: realIds,
+          pieceIds: ids,
           createdAt: Date.now(),
           occasion: s.occasion && s.occasion !== "all" ? s.occasion : undefined,
         };
