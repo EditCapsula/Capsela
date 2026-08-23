@@ -87,6 +87,9 @@ const SUBTYPE_EN: Record<string, string> = {
   "gilet sans manches": "sleeveless vest",
   cardigan: "cardigan",
   blazer: "blazer",
+  bomber: "bomber jacket",
+  "coupe-vent": "windbreaker jacket",
+  "veste en jean": "denim jacket",
   trench: "trench coat",
   parka: "parka",
   doudoune: "puffer jacket",
@@ -261,7 +264,13 @@ const CATEGORY_COMPOSITION: Record<string, string> = {
   chaussures: "Pair of shoes, both shoes visible.",
   sac: "Single handbag, fully visible.",
   bijou: "Single jewelry item, centered.",
-  veste: "Complete blazer or jacket, front view.",
+  // "blazer or jacket" retiré (correctif 23/08/2026, signalé : bomber et
+  // coupe-vent générés comme des blazers) — cette suggestion biaisait tout
+  // sujet non reconnu (faute d'entrée SUBTYPE_EN) vers une silhouette de
+  // blazer structuré, y compris pour une veste technique/décontractée sans
+  // aucun rapport. La silhouette réelle doit venir du sujet (noun) déterminé
+  // plus haut, jamais de ce gabarit générique par catégorie.
+  veste: "Complete jacket, front view.",
   manteau: "Complete coat, front view.",
   accessoire: "Single accessory item, centered.",
 };

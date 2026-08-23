@@ -192,6 +192,9 @@ const SUBTYPE_EN: Record<string, string> = {
   cardigan: "cardigan",
   // Vestes / manteaux
   blazer: "blazer",
+  bomber: "bomber jacket",
+  "coupe-vent": "windbreaker jacket",
+  "veste en jean": "denim jacket",
   trench: "trench coat",
   parka: "parka",
   doudoune: "puffer jacket",
@@ -368,7 +371,7 @@ const CATEGORY_COMPOSITION: Record<string, string> = {
   chaussures: "Pair of shoes, both shoes visible.",
   sac: "Single handbag, fully visible.",
   bijou: "Single jewelry item, centered.",
-  veste: "Complete blazer or jacket, front view.",
+  veste: "Complete jacket, front view.",
   manteau: "Complete coat, front view.",
   accessoire: "Single accessory item, centered.",
 };
