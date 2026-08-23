@@ -278,7 +278,7 @@ export default function AddScreen() {
           Analyse de la photo… catégorie, couleur et matière vont se pré-remplir.
         </div>
       )}
-      {photoAnalyzed && (
+      {photoAnalyzed && state.editingId == null && (
         <div className="text-[12px] text-muted mt-[9px] flex items-center gap-[5px]">
           L&apos;édit Capsela a analysé ta photo <SparkleIcon className="text-terracotta" />
         </div>

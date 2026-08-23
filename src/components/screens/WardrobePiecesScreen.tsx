@@ -2,15 +2,20 @@
 
 import { useCapsela } from "@/lib/store";
 import { wearCounts } from "@/lib/selectors";
+import { wornAgo } from "@/lib/data";
 
 /**
  * "Mes pièces" (recette 24/08/2026, mockup fourni) — grille plate 2 colonnes
  * remplaçant le regroupement par catégorie en scroll horizontal : plus
- * lisible pour parcourir tout le dressing d'un coup. Statut "Portée X fois"
- * dérivé de l'historique réel (wearCounts, jamais un compteur séparé
- * désynchronisable) plutôt que de active.worn (jours depuis le dernier
- * port, impropre à un total) ; "Aujourd'hui" affiché en plus quand
- * worn === 0, jamais à la place du total.
+ * lisible pour parcourir tout le dressing d'un coup. "Jamais porté" reste
+ * décidé par it.worn (source de vérité déjà utilisée partout ailleurs,
+ * ex. PieceScreen) ; le total "Porté X fois" vient de l'historique réel
+ * (wearCounts, jamais un compteur séparé désynchronisable) — correctif
+ * 25/08/2026 : ne plus laisser wearCounts décider seul de "jamais porté",
+ * sous peine de contredire it.worn si l'historique est incomplet (ex.
+ * fetchOutfitHistory revenu vide sur un aléa réseau) alors que la pièce a
+ * bien été portée. "Aujourd'hui" affiché en plus quand worn === 0, jamais
+ * à la place du total.
  */
 export default function WardrobePiecesScreen() {
   const { state, actions } = useCapsela();
@@ -50,6 +55,14 @@ export default function WardrobePiecesScreen() {
           {items.map((it) => {
             const count = counts.get(it.id) || 0;
             const isToday = it.worn === 0;
+            // it.worn (jamais null si déjà porté) reste la source de vérité
+            // de "jamais porté" (correctif 25/08/2026, signalé en revue :
+            // wearCounts seul pouvait afficher "Jamais porté" pour une pièce
+            // dont worn est renseigné mais dont l'historique n'a pas (ou
+            // plus) d'entrée correspondante — ex. fetchOutfitHistory revenu
+            // vide sur un aléa réseau). count ne sert plus qu'à composer le
+            // texte "Porté X fois" quand une pièce a bien été portée.
+            const neverWorn = it.worn == null;
             return (
               <button key={it.id} onClick={() => actions.openItem(it.id, false)} className="text-left cursor-pointer">
                 <div
@@ -64,7 +77,7 @@ export default function WardrobePiecesScreen() {
                   {it.name}
                 </div>
                 <div className="text-[11px] text-placeholder mt-[2px]">
-                  {count === 0 ? "Jamais porté" : `Porté ${count} fois`}
+                  {neverWorn ? "Jamais porté" : count > 0 ? `Porté ${count} fois` : wornAgo(it.worn)}
                 </div>
                 {isToday && <div className="text-[11px] text-terracotta mt-[1px]">Aujourd&apos;hui</div>}
               </button>
