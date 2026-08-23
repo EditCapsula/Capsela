@@ -2,6 +2,7 @@
 
 import AppHeader from "@/components/AppHeader";
 import { CATS, wornAgo } from "@/lib/data";
+import { resolveItemImage } from "@/lib/catalogImages";
 import { useCapsela } from "@/lib/store";
 import { neverWornItems } from "@/lib/selectors";
 
@@ -149,10 +150,31 @@ export default function WardrobeScreen() {
                 className="flex-none w-[104px] cursor-pointer text-left"
                 style={{ scrollSnapAlign: "start" }}
               >
+                {/* Photos réelles plutôt que des pastilles de couleur plates
+                    (app mode, recette 23/08/2026) — la même règle de
+                    priorité d'affichage que partout ailleurs (photo >
+                    affiliate > généré > couleur) s'applique ici aussi. */}
                 <div className="w-full rounded-[11px] border border-border overflow-hidden flex" style={{ aspectRatio: "4/5" }}>
-                  {pieces.slice(0, 3).map((p, i) => (
-                    <div key={p.id} className="flex-1 h-full" style={{ background: p.hex, borderLeft: i > 0 ? "1px solid rgba(243,238,229,.5)" : "none" }} />
-                  ))}
+                  {pieces.slice(0, 3).map((p, i) => {
+                    const img = resolveItemImage(p);
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex-1 h-full"
+                        style={
+                          img.url
+                            ? {
+                                background: "#F3EDE1",
+                                backgroundImage: `url(${img.url})`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
+                                borderLeft: i > 0 ? "1px solid rgba(243,238,229,.5)" : "none",
+                              }
+                            : { background: p.hex, borderLeft: i > 0 ? "1px solid rgba(243,238,229,.5)" : "none" }
+                        }
+                      />
+                    );
+                  })}
                 </div>
                 <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
                   {look.name}

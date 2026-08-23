@@ -1,6 +1,8 @@
 "use client";
 
 import { CATLABEL, OCC_LABELS, isBag } from "@/lib/data";
+import { isCatalogId } from "@/lib/catalog";
+import { resolveItemImage } from "@/lib/catalogImages";
 import { useCapsela } from "@/lib/store";
 
 export default function LookDetailScreen() {
@@ -33,20 +35,49 @@ export default function LookDetailScreen() {
         {look.occasion ? " · " + OCC_LABELS[look.occasion] : ""}
       </div>
       <div className="flex flex-col gap-[10px]">
-        {pieces.map((it) => (
-          <div key={it.id} className="flex items-center gap-[13px] bg-card border border-border rounded-[14px] p-[11px]">
-            <div
-              className="w-[58px] h-[70px] rounded-lg flex-shrink-0"
-              style={{ background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }}
-            />
-            <div className="flex-1 min-w-0">
-              <div className="text-[14.5px] text-ink">{it.name}</div>
-              <div className="text-[11px] text-muted mt-[3px]">
-                {CATLABEL[isBag(it) ? "sac" : it.cat]} · {it.color}
+        {pieces.map((it) => {
+          const img = resolveItemImage(it);
+          // Une pièce suggérée capsule (recette 23/08/2026, "Enregistrer
+          // cette tenue") reste visuellement distincte d'une pièce possédée :
+          // même traitement photo + badge que partout ailleurs dans l'app
+          // (désaturée/atténuée, pastille "Suggérée"), jamais une simple
+          // pastille de couleur plate — app mode, le visuel prime.
+          const suggested = isCatalogId(it.id);
+          return (
+            <div key={it.id} className="flex items-center gap-[13px] bg-card border border-border rounded-[14px] p-[11px]">
+              <div className="relative flex-shrink-0">
+                <div
+                  className="w-[58px] h-[70px] rounded-lg overflow-hidden"
+                  style={
+                    img.url
+                      ? { background: "#F3EDE1", filter: suggested ? "grayscale(55%) opacity(.8)" : undefined }
+                      : { background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)", filter: suggested ? "grayscale(55%) opacity(.8)" : undefined }
+                  }
+                >
+                  {img.url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={img.url}
+                      alt={it.name}
+                      style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
+                    />
+                  )}
+                </div>
+                {suggested && (
+                  <span className="absolute top-[4px] left-[4px] bg-terracotta text-cream text-[7.5px] tracking-[.06em] uppercase rounded-full py-[2px] px-[6px]">
+                    Suggérée
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14.5px] text-ink">{it.name}</div>
+                <div className="text-[11px] text-muted mt-[3px]">
+                  {CATLABEL[isBag(it) ? "sac" : it.cat]} · {it.color}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <button
