@@ -31,6 +31,8 @@ import {
   detectMatiere,
   detectSacType,
   detectSubtype,
+  suggestName,
+  suggestOccasions,
 } from "./attributes";
 import type {
   AccessoireType,
@@ -86,6 +88,7 @@ function buildInitialState(): AppState {
     itemOutfitsReturn: "capsule",
     catFilter: "all",
     addName: "",
+    addNameTouched: false,
     addBrand: "",
     addCat: "haut",
     addCatTouched: false,
@@ -98,6 +101,7 @@ function buildInitialState(): AppState {
     // Pas de valeur par défaut : la saison doit être confirmée par l'utilisateur.
     addSeason: null,
     addOccasion: ["travail_formel"],
+    addOccasionTouched: false,
     addShoeType: null,
     addShoeTypeTouched: false,
     addMatiere: null,
@@ -658,6 +662,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           ...s,
           replacingId: item.id,
           addName: item.name,
+          addNameTouched: true,
           addBrand: item.brand ?? "",
           addCat: item.cat,
           addCatTouched: true,
@@ -667,6 +672,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addPhotoUrl: img.url ?? null,
           addSeason: item.season,
           addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
+          addOccasionTouched: true,
           addShoeType: item.cat === "chaussures" ? item.shoeType ?? null : null,
           addShoeTypeTouched: Boolean(item.shoeType),
           addMatiere: item.matiere ?? null,
@@ -691,6 +697,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({
         ...s,
         addName: v,
+        addNameTouched: true,
         addMatiere: s.addMatiereTouched ? s.addMatiere : detectMatiere(v),
         addCoupe: s.addCoupeTouched ? s.addCoupe : detectCoupe(v),
         addSacType: s.addSacTypeTouched ? s.addSacType : detectSacType(v),
@@ -718,6 +725,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addColor,
           addSubtype: detectSubtype(k, s.addName),
           addSubtypeTouched: false,
+          addOccasion: s.addOccasionTouched ? s.addOccasion : suggestOccasions(k),
         };
       }),
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c, addColorTouched: true })),
@@ -755,18 +763,27 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                 if (s.addPhotoUrl !== url) return { ...s, addPhotoAnalyzing: false };
                 const finalCat = s.addCatTouched ? s.addCat : a.cat ?? s.addCat;
                 const catMatches = Boolean(a.cat) && a.cat === finalCat;
+                const finalColor = s.addColorTouched || !a.colorName || !a.colorHex ? s.addColor : { name: a.colorName, hex: a.colorHex };
+                const finalMatiere = s.addMatiereTouched ? s.addMatiere : a.matiere ?? s.addMatiere;
+                const finalSubtype = s.addSubtypeTouched || !catMatches ? s.addSubtype : a.subtype ?? s.addSubtype;
+                const finalShoeType = s.addShoeTypeTouched || !catMatches ? s.addShoeType : a.shoeType ?? s.addShoeType;
                 return {
                   ...s,
                   addPhotoAnalyzing: false,
                   addCat: finalCat,
-                  addColor: s.addColorTouched || !a.colorName || !a.colorHex ? s.addColor : { name: a.colorName, hex: a.colorHex },
-                  addMatiere: s.addMatiereTouched ? s.addMatiere : a.matiere ?? s.addMatiere,
-                  addSubtype: s.addSubtypeTouched || !catMatches ? s.addSubtype : a.subtype ?? s.addSubtype,
-                  addShoeType: s.addShoeTypeTouched || !catMatches ? s.addShoeType : a.shoeType ?? s.addShoeType,
+                  addColor: finalColor,
+                  addMatiere: finalMatiere,
+                  addSubtype: finalSubtype,
+                  addShoeType: finalShoeType,
                   addSacType: s.addSacTypeTouched || !catMatches ? s.addSacType : a.sacType ?? s.addSacType,
                   addBijouType: s.addBijouTypeTouched || !catMatches ? s.addBijouType : a.bijouType ?? s.addBijouType,
                   addAccessoireType:
                     s.addAccessoireTypeTouched || !catMatches ? s.addAccessoireType : a.accessoireType ?? s.addAccessoireType,
+                  // Nom composé et occasions recommandées (recette 24/08/2026,
+                  // écran "Ajouter une pièce" repensé) — jamais imposés, cf.
+                  // addNameTouched/addOccasionTouched.
+                  addName: !s.addNameTouched && !s.addName ? suggestName(finalCat, finalSubtype, finalMatiere, finalColor.name) : s.addName,
+                  addOccasion: s.addOccasionTouched ? s.addOccasion : suggestOccasions(finalCat, finalShoeType),
                 };
               });
             })
@@ -784,6 +801,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({
         ...s,
         addOccasion: s.addOccasion.includes(o) ? s.addOccasion.filter((x) => x !== o) : [...s.addOccasion, o],
+        addOccasionTouched: true,
       })),
     setAddShoeType: (t) => setState((s) => ({ ...s, addShoeType: t, addShoeTypeTouched: true })),
     setAddMatiere: (m) => setState((s) => ({ ...s, addMatiere: m, addMatiereTouched: true })),
@@ -839,6 +857,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         suggestedExcluded: st.replacingId ? [...st.suggestedExcluded, st.replacingId] : st.suggestedExcluded,
         replacingId: null,
         addName: "",
+        addNameTouched: false,
         addBrand: "",
         addPhotoUrl: null,
         addPhotoUploading: false,
@@ -861,6 +880,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addShoeType: null,
         addShoeTypeTouched: false,
         addOccasion: ["travail_formel"],
+        addOccasionTouched: false,
         screen: "wardrobe",
       });
       if (isSupabaseConfigured && userId) {

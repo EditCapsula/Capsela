@@ -1,12 +1,27 @@
 "use client";
 
-import { useRef } from "react";
-import { ACCESSOIRE_TYPES, BAS_CATS, BIJOU_TYPES, CATLABEL, CATS, OCCASIONS, OCC_SHORT, PALETTE, PALETTE_BIJOU, SAC_TYPES, SEASONS, SHOE_TYPES, SUBTYPES, SUBTYPE_REQUIRED, seasonSuggestion } from "@/lib/data";
+import { useRef, useState } from "react";
+import BottomSheet from "@/components/BottomSheet";
+import {
+  ACCESSOIRE_TYPES,
+  BAS_CATS,
+  BIJOU_TYPES,
+  CATS,
+  OCCASIONS,
+  OCC_SHORT,
+  PALETTE,
+  PALETTE_BIJOU,
+  SAC_TYPES,
+  SEASONS,
+  SHOE_TYPES,
+  SUBTYPES,
+  seasonSuggestion,
+} from "@/lib/data";
 import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable } from "@/lib/attributes";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
-import type { CategoryKey } from "@/lib/types";
+import type { AccessoireType, BijouType, CategoryKey, SacType, ShoeType } from "@/lib/types";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
 const BOTTOM_SIZED: CategoryKey[] = [...BAS_CATS, "jupe", "combinaison"];
@@ -18,30 +33,135 @@ function chipCls(on: boolean): string {
   );
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[11px]">{children}</div>;
+function SparkleIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="9" height="9" viewBox="0 0 24 24" className={className} fill="currentColor">
+      <path d="M12 2l2.1 7.9L22 12l-7.9 2.1L12 22l-2.1-7.9L2 12l7.9-2.1L12 2z" />
+    </svg>
+  );
+}
+function HangerIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.2a1.5 1.5 0 1 1 1.3 2.3L12 7" />
+      <path d="M12 7l9.3 6.6a1.4 1.4 0 0 1-.9 2.5H3.6a1.4 1.4 0 0 1-.9-2.5L12 7z" />
+    </svg>
+  );
+}
+function TshirtIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 4L4 7.2l2.4 2.6L8 8.4V20h8V8.4l1.6 1.4 2.4-2.6L16 4l-4 1.8L8 4z" />
+    </svg>
+  );
+}
+function LeafIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 15c0-7 5.5-11 16-11 0 11-4.5 16.5-11.5 16.5C5 20.5 4 18 4 15z" />
+      <path d="M5 20L15 10" />
+    </svg>
+  );
+}
+function FabricIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M4 8l16 8M4 12l16 8M4 4l16 8M8 4L4 8m16 8l-4 4" />
+    </svg>
+  );
+}
+function FitIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 12h4M16 12h4M9 8l-3 4 3 4M15 8l3 4-3 4" />
+    </svg>
+  );
+}
+function CropIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M6 2v4M6 6H2M18 22v-4M18 18h4M6 6h12v12M18 18H6V6" />
+    </svg>
+  );
+}
+function InfoIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11.2v5.3M12 7.8v.01" />
+    </svg>
+  );
 }
 
-/** Sous-menu "↳ Préciser : X" — reprend le rattachement visuel du prototype (trait vertical + libellé en terracotta). */
-function SubMenu({ label, note, children }: { label: string; note?: React.ReactNode; children: React.ReactNode }) {
+/** Pastille "détecté par Capsela" (recette 24/08/2026) — un seul marqueur commun partout, jamais de pourcentage de confiance. */
+function AiTag() {
   return (
-    <div className="flex gap-[11px] mt-[14px]">
-      <div className="w-[1.5px] flex-shrink-0 bg-border rounded-sm ml-[7px]" />
-      <div className="flex-1 min-w-0">
-        <div className="text-[11px] tracking-[.16em] uppercase text-terracotta mb-[10px]">
-          ↳ Préciser : {label}{" "}
-          {note && <span className="opacity-55 normal-case tracking-normal text-muted">{note}</span>}
-        </div>
-        <div className="flex gap-2 flex-wrap">{children}</div>
-      </div>
+    <span className="inline-flex items-center gap-[3px] text-[9.5px] tracking-[.03em] text-terracotta bg-[#F0E5D6] rounded-full py-[2px] px-[7px] flex-shrink-0">
+      <SparkleIcon /> IA
+    </span>
+  );
+}
+
+function FieldLabel({ children, ai }: { children: React.ReactNode; ai?: boolean }) {
+  return (
+    <div className="flex items-center gap-[8px] mt-6 mb-[11px]">
+      <span className="text-[11px] tracking-[.16em] uppercase text-muted">{children}</span>
+      {ai && <AiTag />}
     </div>
   );
+}
+
+/** Select natif stylé en bouton compact (icône + valeur + chevron) — remplace les grilles de chips pour catégorie/type/taille/saison (recette 24/08/2026, signalé : trop de scroll). */
+function SelectField({
+  icon,
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  icon?: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+}) {
+  return (
+    <div className="relative flex-1 min-w-0">
+      {icon && <span className="absolute left-[13px] top-1/2 -translate-y-1/2 text-terracotta pointer-events-none">{icon}</span>}
+      <select
+        className={
+          "capin w-full bg-card border border-border rounded-xl py-[13px] pr-[30px] text-[13.5px] text-ink font-sans cursor-pointer " +
+          (icon ? "pl-[34px]" : "pl-[13px]")
+        }
+        style={{ appearance: "none", WebkitAppearance: "none" }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-muted pointer-events-none text-[10px]">▾</span>
+    </div>
+  );
+}
+
+function typeOptionsFor(cat: CategoryKey): string[] | undefined {
+  if (cat === "chaussures") return SHOE_TYPES;
+  if (cat === "sac") return SAC_TYPES;
+  if (cat === "bijou") return BIJOU_TYPES;
+  if (cat === "accessoire") return ACCESSOIRE_TYPES;
+  return SUBTYPES[cat];
 }
 
 export default function AddScreen() {
   const { state, actions } = useCapsela();
   const { profile } = useAuth();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [sheet, setSheet] = useState<"characteristics" | "occasions" | null>(null);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     // Aperçu local instantané puis upload réel vers Supabase Storage
@@ -64,31 +184,60 @@ export default function AddScreen() {
 
   const colorPalette = isBijou ? PALETTE_BIJOU : PALETTE;
 
-  const suggestion = seasonSuggestion(state.addCat, state.addName);
+  const suggestedSeason = seasonSuggestion(state.addCat, state.addName);
+  const effectiveSeason = state.addSeason ?? suggestedSeason;
   const seasonMissing = !state.addSeason;
   const shoeTypeMissing = isShoe && !state.addShoeType;
-  const subtypeOptions = SUBTYPES[state.addCat];
-  const subtypeRequired = SUBTYPE_REQUIRED.includes(state.addCat);
-  const subtypeMissing = subtypeRequired && !state.addSubtype;
+  const subtypeMissing = false; // aucune catégorie n'exige de sous-type générique (seul le type de chaussure bloque, R-B6).
   const blocked = seasonMissing || shoeTypeMissing || subtypeMissing || state.addPhotoUploading;
+
+  const typeOptions = typeOptionsFor(state.addCat);
+  const typeValue = isShoe ? state.addShoeType : isSac ? state.addSacType : isBijou ? state.addBijouType : isAccessoire ? state.addAccessoireType : state.addSubtype;
+  const typeTouched = isShoe ? state.addShoeTypeTouched : isSac ? state.addSacTypeTouched : isBijou ? state.addBijouTypeTouched : isAccessoire ? state.addAccessoireTypeTouched : state.addSubtypeTouched;
+  const setTypeValue = (v: string) => {
+    if (isShoe) actions.setAddShoeType(v as ShoeType);
+    else if (isSac) actions.setAddSacType(v as SacType);
+    else if (isBijou) actions.setAddBijouType(v as BijouType);
+    else if (isAccessoire) actions.setAddAccessoireType(v as AccessoireType);
+    else actions.setAddSubtype(v);
+  };
+
+  const photoAnalyzed = Boolean(state.addPhotoUrl) && !state.addPhotoAnalyzing;
+  const nameIsAi = !state.addNameTouched && state.addName.trim().length > 0;
+  const catIsAi = !state.addCatTouched && photoAnalyzed;
+  const typeIsAi = !typeTouched && Boolean(typeValue);
+  const colorIsAi = !state.addColorTouched && photoAnalyzed;
+  const matiereIsAi = !state.addMatiereTouched && Boolean(state.addMatiere);
+  const coupeIsAi = !state.addCoupeTouched && Boolean(state.addCoupe);
+  const characteristicsAi = colorIsAi || matiereIsAi || coupeIsAi;
+  const seasonIsAi = Boolean(effectiveSeason) && effectiveSeason === suggestedSeason;
+  const occasionsIsAi = !state.addOccasionTouched;
 
   const save = () => {
     if (blocked) return;
     if (sizeApplicable && state.addSize == null && selectedSize) actions.setAddSize(selectedSize);
+    if (state.addSeason == null && effectiveSeason) actions.setAddSeason(effectiveSeason);
     actions.saveItem();
   };
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
-      <div className="flex items-center gap-[14px]">
+      <div className="relative pt-2">
         <button
           onClick={actions.addBack}
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
+          className="absolute left-0 top-0 w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
         >
           ←
         </button>
-        <div className="font-serif text-[22px] text-ink">
-          {state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce"}
+        <div className="text-center px-[46px]">
+          <div className="font-serif text-[21px] text-ink leading-[1.2]">
+            {state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce"}
+          </div>
+          {photoAnalyzed && (
+            <div className="text-[12px] text-muted mt-[3px] flex items-center justify-center gap-[5px]">
+              Capsela a analysé ta photo <SparkleIcon className="text-terracotta" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -97,7 +246,7 @@ export default function AddScreen() {
         type="button"
         onClick={() => photoInputRef.current?.click()}
         className={
-          "mt-[22px] w-full h-[190px] rounded-2xl flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
+          "mt-[18px] w-full h-[190px] rounded-2xl flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
           (state.addPhotoUrl ? "" : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
         }
         style={
@@ -116,10 +265,10 @@ export default function AddScreen() {
         )}
         {state.addPhotoUrl ? (
           <span
-            className="absolute bottom-3 right-3 text-[11px] text-cream rounded-full px-3 py-[6px]"
+            className="absolute bottom-3 right-3 flex items-center gap-[6px] text-[11px] text-cream rounded-full px-3 py-[6px]"
             style={{ background: "rgba(29,26,22,.7)" }}
           >
-            Changer la photo
+            <CropIcon /> Changer la photo
           </span>
         ) : (
           <>
@@ -135,7 +284,7 @@ export default function AddScreen() {
         </div>
       )}
 
-      <Label>Nom de la pièce</Label>
+      <FieldLabel ai={nameIsAi}>Nom de la pièce</FieldLabel>
       <input
         className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
         value={state.addName}
@@ -143,9 +292,9 @@ export default function AddScreen() {
         placeholder="ex. Chemise en lin écrue"
       />
 
-      <Label>
+      <FieldLabel>
         Marque <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
-      </Label>
+      </FieldLabel>
       <input
         className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
         value={state.addBrand}
@@ -153,206 +302,235 @@ export default function AddScreen() {
         placeholder="ex. Sézane"
       />
 
-      <Label>
-        Catégorie <span className="opacity-60 normal-case tracking-normal">(détectée automatiquement, à confirmer)</span>
-      </Label>
-      <div className="flex gap-2 flex-wrap">
-        {CATS.map(([key, label]) => (
-          <button key={key} onClick={() => actions.setAddCat(key)} className={chipCls(state.addCat === key)}>
-            {label}
-          </button>
-        ))}
+      <div className="flex items-center gap-[16px] mt-6 mb-[11px]">
+        <div className="flex items-center gap-[6px] flex-1">
+          <span className="text-[11px] tracking-[.16em] uppercase text-muted">Catégorie</span>
+          {catIsAi && <AiTag />}
+        </div>
+        {typeOptions && typeOptions.length > 0 && (
+          <div className="flex items-center gap-[6px] flex-1">
+            <span className="text-[11px] tracking-[.16em] uppercase text-muted">Type</span>
+            {typeIsAi && <AiTag />}
+          </div>
+        )}
+        {sizeApplicable && (
+          <div className="w-[76px] flex-shrink-0 text-[11px] tracking-[.16em] uppercase text-muted">
+            {isShoe ? "Pointure" : "Taille"}
+          </div>
+        )}
       </div>
-
-      {isShoe && (
-        <SubMenu label="chaussure" note="(détecté automatiquement, à confirmer)">
-          {SHOE_TYPES.map((t) => (
-            <button key={t} onClick={() => actions.setAddShoeType(t)} className={chipCls(state.addShoeType === t)}>
-              {t}
-            </button>
-          ))}
-        </SubMenu>
-      )}
-
-      {subtypeOptions && subtypeOptions.length > 0 && (
-        <SubMenu label={CATLABEL[state.addCat].toLowerCase()} note={!subtypeRequired && "(facultatif)"}>
-          {subtypeOptions.map((t) => (
-            <button key={t} onClick={() => actions.setAddSubtype(t)} className={chipCls(state.addSubtype === t)}>
-              {t}
-            </button>
-          ))}
-        </SubMenu>
-      )}
-
-      {isSac && (
-        <SubMenu label="sac" note="(détecté automatiquement, à confirmer)">
-          {SAC_TYPES.map((t) => (
-            <button key={t} onClick={() => actions.setAddSacType(t)} className={chipCls(state.addSacType === t)}>
-              {t}
-            </button>
-          ))}
-        </SubMenu>
-      )}
-
-      {isBijou && (
-        <SubMenu label="bijou" note="(détecté automatiquement, à confirmer)">
-          {BIJOU_TYPES.map((t) => (
-            <button key={t} onClick={() => actions.setAddBijouType(t)} className={chipCls(state.addBijouType === t)}>
-              {t}
-            </button>
-          ))}
-        </SubMenu>
-      )}
-
-      {isAccessoire && (
-        <SubMenu label="accessoire" note="(détecté automatiquement, à confirmer)">
-          {ACCESSOIRE_TYPES.map((t) => (
-            <button
-              key={t}
-              onClick={() => actions.setAddAccessoireType(t)}
-              className={chipCls(state.addAccessoireType === t)}
-            >
-              {t}
-            </button>
-          ))}
-        </SubMenu>
-      )}
-
-      {sizeApplicable && (
-        <>
-          <Label>
-            {isShoe ? "Pointure" : "Taille"} <span className="opacity-60 normal-case tracking-normal">(reprise de ton profil, modifiable)</span>
-          </Label>
-          {isShoe ? (
-            <input
-              className="capin bg-card border border-border rounded-[14px] px-4 py-[13px] text-[14px] text-ink font-sans w-[120px]"
-              value={state.addSize ?? ""}
-              onChange={(e) => actions.setAddSize(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
-              placeholder="Ex. 39"
-              inputMode="numeric"
+      <div className="flex items-start gap-[8px]">
+        <SelectField
+          icon={<HangerIcon />}
+          value={state.addCat}
+          onChange={(v) => actions.setAddCat(v as CategoryKey)}
+          options={CATS.map(([key, label]) => ({ value: key, label }))}
+        />
+        {typeOptions && typeOptions.length > 0 && (
+          <SelectField
+            icon={<TshirtIcon />}
+            value={typeValue || ""}
+            onChange={setTypeValue}
+            options={typeOptions.map((t) => ({ value: t, label: t }))}
+            placeholder={isShoe ? "Choisir" : "Non précisé"}
+          />
+        )}
+        {sizeApplicable && (
+          <div className="w-[76px] flex-shrink-0">
+            <SelectField
+              value={selectedSize ?? ""}
+              onChange={(v) => actions.setAddSize(v)}
+              options={sizes.map((t) => ({ value: t, label: t }))}
+              placeholder="—"
             />
-          ) : (
-            <div className="flex gap-2 flex-wrap">
-              {sizes.map((t) => (
-                <button key={t} onClick={() => actions.setAddSize(t)} className={chipCls(selectedSize === t)}>
-                  {t}
-                </button>
-              ))}
+          </div>
+        )}
+      </div>
+      {shoeTypeMissing && (
+        <div className="text-[11.5px] text-terracotta mt-[8px]">Choisis un type de chaussure pour pouvoir ajouter cette pièce.</div>
+      )}
+
+      {/* "Analysé par Capsela" (recette 24/08/2026) — couleur/matière estimée/
+          coupe repliées en résumé compact, jamais le nuancier complet ni la
+          liste des matières affichés d'office ; tout reste modifiable via
+          "Modifier ces caractéristiques" (bottom sheet), rien n'est perdu. */}
+      <div className="mt-6 bg-card border border-border rounded-[16px] px-4 py-[16px]">
+        <div className="flex items-center gap-[7px] mb-[14px]">
+          <span className="text-[11px] tracking-[.16em] uppercase text-ink font-semibold">Analysé par L&apos;édit Capsela</span>
+          {characteristicsAi && <AiTag />}
+        </div>
+        <div className="grid grid-cols-3 gap-[8px] text-center">
+          <div className="flex flex-col items-center gap-[7px]">
+            <span
+              className="w-[34px] h-[34px] rounded-full flex-shrink-0"
+              style={{ background: state.addColor.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }}
+            />
+            <div>
+              <div className="text-[10px] tracking-[.08em] uppercase text-muted">Couleur</div>
+              <div className="text-[12.5px] text-ink mt-[2px] leading-[1.2]">{state.addColor.name}</div>
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-[7px]">
+            <span className="w-[34px] h-[34px] rounded-full bg-warm-bg flex items-center justify-center text-warm-text flex-shrink-0">
+              <FabricIcon />
+            </span>
+            <div>
+              <div className="text-[10px] tracking-[.08em] uppercase text-muted">Matière estimée</div>
+              <div className="text-[12.5px] text-ink mt-[2px] leading-[1.2]">{state.addMatiere || "Non précisée"}</div>
+            </div>
+          </div>
+          {coupeApplicable && (
+            <div className="flex flex-col items-center gap-[7px]">
+              <span className="w-[34px] h-[34px] rounded-full bg-warm-bg flex items-center justify-center text-warm-text flex-shrink-0">
+                <FitIcon />
+              </span>
+              <div>
+                <div className="text-[10px] tracking-[.08em] uppercase text-muted">Coupe</div>
+                <div className="text-[12.5px] text-ink mt-[2px] leading-[1.2]">{state.addCoupe || "Non précisée"}</div>
+              </div>
             </div>
           )}
-        </>
-      )}
-
-      <Label>
-        Couleur dominante <span className="opacity-60 normal-case tracking-normal">(détectée automatiquement, modifiable)</span>
-      </Label>
-      <div className="grid grid-cols-4 gap-x-2 gap-y-[18px]">
-        {colorPalette.map(([name, hex]) => {
-          const on = state.addColor.hex === hex;
-          return (
-            <button
-              key={hex}
-              onClick={() => actions.setAddColor({ name, hex })}
-              className="flex flex-col items-center gap-[7px] cursor-pointer"
-            >
-              <span
-                className="w-[38px] h-[38px] rounded-[11px]"
-                style={{
-                  background: hex,
-                  border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
-                  boxShadow: on ? "0 0 0 3px #F3EEE5 inset" : "none",
-                }}
-              />
-              <span className={"text-[9.5px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>
-                {name}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <Label>
-        Saison <span className="text-terracotta">*</span>
-      </Label>
-      {seasonMissing && suggestion && (
-        <div className="text-[12px] text-terracotta mb-[9px] leading-[1.4]">
-          Suggestion : {suggestion} — confirme ou modifie ci-dessous.
         </div>
-      )}
-      <div className="flex gap-2 flex-wrap">
-        {SEASONS.map((s) => (
-          <button key={s} onClick={() => actions.setAddSeason(s)} className={chipCls(state.addSeason === s)}>
-            {s}
-          </button>
-        ))}
+        <button
+          onClick={() => setSheet("characteristics")}
+          className="mt-[14px] text-[12.5px] text-terracotta cursor-pointer flex items-center gap-[4px]"
+        >
+          Modifier ces caractéristiques ›
+        </button>
       </div>
 
-      <Label>
-        Occasion <span className="opacity-60 normal-case tracking-normal">(plusieurs choix possibles)</span>
-      </Label>
-      <div className="flex gap-2 flex-wrap">
-        {OCCASIONS.map(([key, label]) => (
-          <button key={key} onClick={() => actions.setAddOccasion(key)} className={chipCls(state.addOccasion.includes(key))}>
-            {OCC_SHORT[key] || label}
-          </button>
-        ))}
-      </div>
+      <FieldLabel ai={seasonIsAi}>Saison</FieldLabel>
+      <SelectField
+        icon={<LeafIcon />}
+        value={effectiveSeason ?? ""}
+        onChange={(v) => actions.setAddSeason(v as (typeof SEASONS)[number])}
+        options={SEASONS.map((s) => ({ value: s, label: s }))}
+        placeholder="À confirmer"
+      />
 
-      <Label>
-        Matière <span className="opacity-60 normal-case tracking-normal">(détectée automatiquement, modifiable)</span>
-      </Label>
-      {/* Liste déroulante plutôt que des chips (recette 24/08/2026, signalé :
-          liste de matières trop courte pour couvrir les photos réelles) —
-          plus adaptée à une liste allongée qu'une rangée de chips qui
-          aurait fini sur 3-4 lignes. */}
-      <select
-        className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
-        value={state.addMatiere ?? ""}
-        onChange={(e) => actions.setAddMatiere((e.target.value || null) as typeof state.addMatiere)}
+      <div className="flex items-center gap-[8px] mt-6 mb-[11px]">
+        <span className="text-[11px] tracking-[.16em] uppercase text-muted">Occasions recommandées</span>
+        {occasionsIsAi && <AiTag />}
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        {state.addOccasion.length > 0 ? (
+          state.addOccasion.map((o) => (
+            <span key={o} className={chipCls(true)}>
+              {OCC_SHORT[o] || o}
+            </span>
+          ))
+        ) : (
+          <span className="text-[12.5px] text-muted">Aucune occasion sélectionnée.</span>
+        )}
+      </div>
+      <button
+        onClick={() => setSheet("occasions")}
+        className="mt-[10px] text-[12.5px] text-terracotta cursor-pointer flex items-center gap-[4px]"
       >
-        <option value="">Non précisée</option>
-        {MATIERES.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
-        ))}
-      </select>
+        Modifier les occasions ›
+      </button>
 
-      {coupeApplicable && (
-        <>
-          <Label>Coupe</Label>
-          <div className="flex gap-2 flex-wrap">
-            {COUPES.map((c) => (
-              <button key={c} onClick={() => actions.setAddCoupe(c)} className={chipCls(state.addCoupe === c)}>
-                {c}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+      <div className="flex items-start gap-[8px] mt-6 text-muted">
+        <InfoIcon className="mt-[2px] flex-shrink-0" />
+        <span className="text-[11.5px] leading-[1.45]">Tu pourras modifier toutes ces informations à tout moment.</span>
+      </div>
 
       <button
         onClick={save}
         className={
-          "mt-7 w-full text-center rounded-full py-4 text-[13px] tracking-[.14em] uppercase " +
+          "mt-6 w-full text-center rounded-full py-4 text-[13px] tracking-[.14em] uppercase " +
           (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta text-cream cursor-pointer")
         }
       >
         Ajouter à mon dressing
       </button>
-      {blocked && (
+      {blocked && !state.addPhotoUploading && (
         <div className="text-center text-[11.5px] text-terracotta mt-[10px]">
-          {state.addPhotoUploading
-            ? "Envoi de la photo en cours…"
-            : (() => {
-                const missing: string[] = [];
-                if (seasonMissing) missing.push("la saison");
-                if (shoeTypeMissing) missing.push("le type de chaussure");
-                else if (subtypeMissing) missing.push("le type de pièce");
-                return "Confirme " + missing.join(" et ") + " pour pouvoir ajouter cette pièce.";
-              })()}
+          {shoeTypeMissing ? "Confirme le type de chaussure pour pouvoir ajouter cette pièce." : "Confirme la saison pour pouvoir ajouter cette pièce."}
         </div>
       )}
+      {state.addPhotoUploading && (
+        <div className="text-center text-[11.5px] text-terracotta mt-[10px]">Envoi de la photo en cours…</div>
+      )}
+
+      <BottomSheet title="Caractéristiques" open={sheet === "characteristics"} onClose={() => setSheet(null)}>
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[11px]">Couleur dominante</div>
+        <div className="grid grid-cols-4 gap-x-2 gap-y-[18px]">
+          {colorPalette.map(([name, hex]) => {
+            const on = state.addColor.hex === hex;
+            return (
+              <button
+                key={hex}
+                onClick={() => actions.setAddColor({ name, hex })}
+                className="flex flex-col items-center gap-[7px] cursor-pointer"
+              >
+                <span
+                  className="w-[38px] h-[38px] rounded-[11px]"
+                  style={{
+                    background: hex,
+                    border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
+                    boxShadow: on ? "0 0 0 3px #F3EEE5 inset" : "none",
+                  }}
+                />
+                <span className={"text-[9.5px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[26px] mb-[11px]">
+          Matière <span className="opacity-60 normal-case tracking-normal">(estimation, jamais garantie sur photo)</span>
+        </div>
+        <select
+          className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
+          value={state.addMatiere ?? ""}
+          onChange={(e) => actions.setAddMatiere((e.target.value || null) as typeof state.addMatiere)}
+        >
+          <option value="">Non précisée</option>
+          {MATIERES.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+
+        {coupeApplicable && (
+          <>
+            <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[26px] mb-[11px]">Coupe</div>
+            <div className="flex gap-2 flex-wrap">
+              {COUPES.map((c) => (
+                <button key={c} onClick={() => actions.setAddCoupe(c)} className={chipCls(state.addCoupe === c)}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        <button
+          onClick={() => setSheet(null)}
+          className="mt-[26px] w-full bg-terracotta text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+        >
+          Terminé
+        </button>
+      </BottomSheet>
+
+      <BottomSheet title="Occasions" open={sheet === "occasions"} onClose={() => setSheet(null)}>
+        <div className="text-[12.5px] text-muted mb-[16px] leading-[1.45]">Plusieurs choix possibles.</div>
+        <div className="flex gap-2 flex-wrap">
+          {OCCASIONS.map(([key, label]) => (
+            <button key={key} onClick={() => actions.setAddOccasion(key)} className={chipCls(state.addOccasion.includes(key))}>
+              {OCC_SHORT[key] || label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setSheet(null)}
+          className="mt-[26px] w-full bg-terracotta text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+        >
+          Terminé
+        </button>
+      </BottomSheet>
     </div>
   );
 }

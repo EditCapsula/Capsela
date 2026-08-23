@@ -274,6 +274,8 @@ export interface AppState {
   catFilter: CategoryKey | "all";
 
   addName: string;
+  /** true dès que l'utilisatrice modifie le nom elle-même — au-delà, le nom auto-composé par l'analyse photo (recette 24/08/2026, "Manteau en laine chocolat") ne s'applique plus. */
+  addNameTouched: boolean;
   addBrand: string;
   addCat: CategoryKey;
   /** true dès que l'utilisatrice choisit la catégorie elle-même — au-delà, la suggestion par photo (analyzeDressingPhoto) ne la modifie plus. */
@@ -292,6 +294,8 @@ export interface AppState {
   addSeason: Season | null;
   /** Plusieurs choix possibles. */
   addOccasion: OccasionKey[];
+  /** true dès que l'utilisatrice modifie la sélection elle-même (recette 24/08/2026) — au-delà, ni suggestOccasions(cat) ni une nouvelle catégorie ne remplacent plus la sélection. */
+  addOccasionTouched: boolean;
   /** Type de chaussure en cours de saisie — obligatoire si addCat === "chaussures" (R-B6). */
   addShoeType: ShoeType | null;
   /** true dès que l'utilisatrice choisit le type de chaussure elle-même — même logique que addCatTouched. */

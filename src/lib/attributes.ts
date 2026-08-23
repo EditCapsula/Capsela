@@ -1,5 +1,5 @@
-import type { AccessoireType, BijouType, CategoryKey, Coupe, IntensiteCouleur, Item, Matiere, SacType, Tons } from "./types";
-import { SUBTYPES } from "./data";
+import type { AccessoireType, BijouType, CategoryKey, Coupe, IntensiteCouleur, Item, Matiere, OccasionKey, SacType, ShoeType, Tons } from "./types";
+import { CATLABEL, SUBTYPES } from "./data";
 
 /**
  * Attributs du moteur de règles stylistiques (matière, coupe, formalité,
@@ -156,6 +156,56 @@ const MATIERE_DEFAULT_BY_CAT: Record<string, Matiere> = {
 export function matiereOf(it: Item): Matiere {
   if (it.matiere) return it.matiere;
   return detectMatiere(it.name) || MATIERE_DEFAULT_BY_CAT[it.cat] || "Coton";
+}
+
+/**
+ * Pré-suggestion d'occasions à l'ajout d'une pièce (recette 24/08/2026,
+ * "Ajouter une pièce" repensé — Capsela recommande plutôt que de demander à
+ * l'utilisatrice de déterminer seule les 10 occasions compatibles).
+ * Heuristique de premier jet, uniquement par catégorie (+ type de chaussure
+ * pour distinguer le sport) — jamais imposée, modifiable via "Modifier les
+ * occasions". À affiner plus tard avec un vrai signal de formalité si
+ * besoin (matière, coupe...).
+ */
+const OCCASIONS_DEFAULT_BY_CAT: Partial<Record<CategoryKey, OccasionKey[]>> = {
+  haut: ["quotidien", "travail_formel"],
+  pull: ["quotidien", "cocooning"],
+  pantalon: ["quotidien", "travail_formel"],
+  jean: ["quotidien"],
+  jupe: ["quotidien", "soiree"],
+  short: ["quotidien", "sport"],
+  robe: ["soiree", "date", "evenement_perso"],
+  combinaison: ["soiree", "date"],
+  veste: ["quotidien", "travail_formel", "date", "soiree"],
+  manteau: ["quotidien", "travail_formel", "date", "soiree"],
+  chaussures: ["quotidien", "travail_formel"],
+  sac: ["quotidien", "travail_formel"],
+  bijou: ["quotidien", "soiree"],
+  accessoire: ["quotidien"],
+};
+
+export function suggestOccasions(cat: CategoryKey, shoeType?: ShoeType | null): OccasionKey[] {
+  if (cat === "chaussures" && shoeType === "Baskets") return ["quotidien", "sport"];
+  return OCCASIONS_DEFAULT_BY_CAT[cat] || ["quotidien"];
+}
+
+/**
+ * Nom composé automatiquement à la fin de l'analyse photo (recette
+ * 24/08/2026, "Manteau en laine chocolat") — jamais imposé, appliqué
+ * uniquement tant que l'utilisatrice n'a pas touché le champ elle-même
+ * (addNameTouched, store.tsx). Purement client, aucun appel OpenAI
+ * supplémentaire : recompose simplement les champs déjà détectés.
+ */
+export function suggestName(
+  cat: CategoryKey,
+  subtype: string | null | undefined,
+  matiere: Matiere | null | undefined,
+  colorName: string | null | undefined
+): string {
+  const parts = [subtype || CATLABEL[cat]];
+  if (matiere) parts.push(`en ${matiere.toLowerCase()}`);
+  if (colorName) parts.push(colorName.toLowerCase());
+  return parts.join(" ");
 }
 
 /**
