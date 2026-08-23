@@ -34,11 +34,14 @@ function TabIcon({ name, color }: { name: IconName; color: string }) {
         </svg>
       );
     case "journal":
+      // Livre ouvert (recette 24/08/2026, signalé : l'icône lignes suggérait
+      // une liste, pas un journal) — deux pages symétriques de part et
+      // d'autre d'une reliure centrale.
       return (
-        <svg {...common} strokeWidth={1.6} strokeLinecap="round">
-          <line x1="4.5" y1="7.5" x2="19.5" y2="7.5" />
-          <line x1="4.5" y1="12" x2="19.5" y2="12" />
-          <line x1="4.5" y1="16.5" x2="19.5" y2="16.5" />
+        <svg {...common} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 6.8c-1.9-1.4-4.3-2.1-7-2.1a.9.9 0 00-.9.9v10.6c0 .5.4.9.9.9 2.7 0 5.1.7 7 2.1" />
+          <path d="M12 6.8c1.9-1.4 4.3-2.1 7-2.1a.9.9 0 01.9.9v10.6a.9.9 0 01-.9.9c-2.7 0-5.1.7-7 2.1" />
+          <line x1="12" y1="6.8" x2="12" y2="19.2" />
         </svg>
       );
   }
