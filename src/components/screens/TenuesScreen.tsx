@@ -589,25 +589,38 @@ export default function TenuesScreen() {
           <div key={p.key} className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
             <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
             <div className="flex-1 min-w-0">
-              {p.key === "layer" && (
-                <div className="flex items-center gap-[6px] mb-[6px]">
-                  <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Layering</span>
-                  <button
-                    onClick={() => setLayeringInfoOpen((v) => !v)}
-                    aria-label="Qu'est-ce que le layering ?"
-                    className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10.5px] text-terracotta flex items-center justify-center cursor-pointer"
-                  >
-                    i
-                  </button>
+              {/* "Ignorer" au même niveau que le conseil (correctif 23/08/2026,
+                  signalé : détaché et créant du vide en bas de card) — retiré
+                  de son ancienne position en pied de card. */}
+              <div className="flex items-start justify-between gap-[10px]">
+                <div className="flex-1 min-w-0">
+                  {p.key === "layer" && (
+                    <div className="flex items-center gap-[6px] mb-[6px]">
+                      <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Layering</span>
+                      <button
+                        onClick={() => setLayeringInfoOpen((v) => !v)}
+                        aria-label="Qu'est-ce que le layering ?"
+                        className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10.5px] text-terracotta flex items-center justify-center cursor-pointer"
+                      >
+                        i
+                      </button>
+                    </div>
+                  )}
+                  <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
+                  {p.key === "layer" && layeringInfoOpen && (
+                    <div className="text-[11.5px] text-muted mt-[6px] leading-[1.4]">
+                      Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un
+                      débardeur sous une chemise oversize ouverte.
+                    </div>
+                  )}
                 </div>
-              )}
-              <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
-              {p.key === "layer" && layeringInfoOpen && (
-                <div className="text-[11.5px] text-muted mt-[6px] leading-[1.4]">
-                  Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un débardeur
-                  sous une chemise oversize ouverte.
-                </div>
-              )}
+                <button
+                  onClick={() => actions.dismissOutfitSuggestion(p.key)}
+                  className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer"
+                >
+                  Ignorer
+                </button>
+              </div>
               {suggested && (
                 // Visuel "fantôme" agrandi (recette 23/08/2026) — pièce de la
                 // capsule pas encore ajoutée à la tenue : désaturée + atténuée
@@ -661,12 +674,6 @@ export default function TenuesScreen() {
                   </div>
                 </div>
               )}
-              <button
-                onClick={() => actions.dismissOutfitSuggestion(p.key)}
-                className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer"
-              >
-                Ignorer
-              </button>
             </div>
           </div>
         );

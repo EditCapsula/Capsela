@@ -1349,14 +1349,24 @@ export function computeLookScore(
   const findSuggestedPiece = (cats: CategoryKey[], extra: (i: Item) => boolean): number | undefined =>
     pool.find((i) => cats.includes(i.cat) && isCatalogId(i.id) && !pieceIds.has(i.id) && extra(i))?.id;
 
+  // Un bijou doré/argenté/cuivré (palette PALETTE_BIJOU, data.ts) n'est pas
+  // une "touche de couleur" — c'est une finition métallique, pas plus
+  // chromatique qu'un neutre (correctif 23/08/2026, signalé : une bague
+  // argentée suggérée pour R-S13). isNeutralColor (attributes.ts) ne
+  // couvre que les neutres vêtement (blanc/noir/gris/camel...), jamais ces
+  // teintes bijou — exclues séparément ici, dans le déclencheur ET la
+  // sélection, pour rester cohérent des deux côtés.
+  const isColorAccent = (color: string): boolean =>
+    !isNeutralColor(color) && !["Doré", "Argenté", "Cuivré", "Or rose", "Bronze", "Perle"].includes(color);
+
   // R-S13 — contraste : total look noir sans accessoire coloré.
   const allBlack = clothing.length > 0 && clothing.every((i) => /noir/i.test(i.color));
-  const hasColorAccessory = accessories.some((i) => !isNeutralColor(i.color));
+  const hasColorAccessory = accessories.some((i) => isColorAccent(i.color));
   if (allBlack && !hasColorAccessory && !dismissed.has("color")) {
     proactives.push({
       key: "color",
       text: "Il te manque une touche de couleur pour compléter cette tenue.",
-      suggestedId: findSuggestedPiece(["bijou", "accessoire"], (i) => !isNeutralColor(i.color)),
+      suggestedId: findSuggestedPiece(["bijou", "accessoire"], (i) => isColorAccent(i.color)),
     });
   }
 
