@@ -1169,7 +1169,12 @@ export interface LookScore {
   /** Message ciblé sur la règle de scoring la plus pénalisante, seulement si badge === "ajuster". */
   adjustMessage: string;
   /** Suggestions proactives dismissibles (R-S12/R-S13/R-S14) — indépendantes, plusieurs peuvent s'afficher à la fois. */
-  proactives: { key: string; text: string }[];
+  proactives: {
+    key: string;
+    text: string;
+    /** Pièce concrète du catalogue à suggérer (R-S13/R-S14 uniquement, recette 23/08/2026) — présent seulement si une pièce avec lien_affiliation a été trouvée dans le pool ; jamais pour R-S12 (layering). */
+    suggestedId?: number;
+  }[];
 }
 
 /**
@@ -1186,7 +1191,16 @@ export function computeLookScore(
   dismissed: Set<string>,
   weather: Weather,
   workMode: WorkMode = "Présentiel",
-  dateContext: DateContext = "Verre"
+  dateContext: DateContext = "Verre",
+  /**
+   * Pool actif (recette 23/08/2026, extension du mécanisme d'achat aux
+   * suggestions R-S13/R-S14) — sert uniquement à identifier une pièce
+   * concrète du catalogue à suggérer (avec lien_affiliation) pour ces deux
+   * cartes ; jamais consulté ailleurs dans cette fonction. Facultatif : les
+   * autres appelants (CreateLookScreen, getOutfitsForItem) n'ont pas besoin
+   * de cette suggestion et continuent de fonctionner sans y toucher.
+   */
+  pool: Item[] = []
 ): LookScore {
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
   const accessories = pieces.filter((i) => ACCESSORY_CATS.includes(i.cat));
@@ -1298,7 +1312,7 @@ export function computeLookScore(
 
   // R-S12/R-S13/R-S14 — suggestions proactives, indépendantes les unes des
   // autres (plusieurs peuvent s'afficher en même temps, chacune dismissible séparément).
-  const proactives: { key: string; text: string }[] = [];
+  const proactives: LookScore["proactives"] = [];
 
   // R-S12 — layering : un seul haut, oversize/ample ou une chemise, contexte décontracté.
   // Correctif 22/08/2026 (signalé : cartouche affiché avec une combinaison +
@@ -1321,6 +1335,16 @@ export function computeLookScore(
     });
   }
 
+  // Pièce concrète à suggérer pour R-S13/R-S14 (recette 23/08/2026) —
+  // uniquement une pièce du catalogue avec lien_affiliation renseigné : sans
+  // ce lien, la carte reste le texte seul d'aujourd'hui, comportement
+  // inchangé (extension du mécanisme d'achat déjà utilisé sur l'écran
+  // Capsule, jamais une nouvelle logique parallèle). Jamais une pièce déjà
+  // présente dans la tenue affichée.
+  const pieceIds = new Set(pieces.map((i) => i.id));
+  const findPurchasable = (cats: CategoryKey[], extra: (i: Item) => boolean): number | undefined =>
+    pool.find((i) => cats.includes(i.cat) && isCatalogId(i.id) && i.affLink && !pieceIds.has(i.id) && extra(i))?.id;
+
   // R-S13 — contraste : total look noir sans accessoire coloré.
   const allBlack = clothing.length > 0 && clothing.every((i) => /noir/i.test(i.color));
   const hasColorAccessory = accessories.some((i) => !isNeutralColor(i.color));
@@ -1328,6 +1352,7 @@ export function computeLookScore(
     proactives.push({
       key: "color",
       text: "Il te manque une touche de couleur pour compléter cette tenue.",
+      suggestedId: findPurchasable(["bijou", "accessoire"], (i) => !isNeutralColor(i.color)),
     });
   }
 
@@ -1337,6 +1362,7 @@ export function computeLookScore(
     proactives.push({
       key: "veste_soir",
       text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",
+      suggestedId: findPurchasable(["veste", "manteau"], (i) => weather.seasons.includes(i.season)),
     });
   }
 
