@@ -1,5 +1,22 @@
 import { MONTHS_FR, OCC_LABELS, OCC_SHORT } from "./data";
+import { isCatalogId } from "./catalog";
 import type { HistoryEntry, Item, OccasionKey, SavedLook } from "./types";
+
+/**
+ * "Wishlist" (Mes looks, recette 23/08/2026) n'est pas une 3ᵉ façon
+ * d'enregistrer un look : c'est un filtre calculé sur les looks existants
+ * (Enregistrés ou Créés par moi) qui contiennent encore au moins une pièce
+ * suggérée pas encore possédée.
+ */
+export function isWishlistLook(look: SavedLook): boolean {
+  return look.pieceIds.some((id) => isCatalogId(id));
+}
+
+/** Nombre de fois où la combinaison exacte d'un look a été portée (même jeu de pièces dans l'historique), jamais un compteur séparé et désynchronisable. */
+export function lookWornCount(look: SavedLook, history: HistoryEntry[]): number {
+  const key = [...look.pieceIds].sort((a, b) => a - b).join(",");
+  return history.filter((h) => [...h.pieceIds].sort((a, b) => a - b).join(",") === key).length;
+}
 
 export function neverWornItems(pool: Item[]): Item[] {
   return pool.filter((i) => i.worn == null);

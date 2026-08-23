@@ -126,7 +126,7 @@ export default function TenuesScreen() {
   const outfitKey = [...outfitIds].sort((a, b) => a - b).join(",");
   const isOutfitSaved =
     canSaveOutfit &&
-    state.savedLooks.some((l) => [...l.pieceIds].sort((a, b) => a - b).join(",") === outfitKey);
+    state.savedLooks.some((l) => l.source === "saved" && [...l.pieceIds].sort((a, b) => a - b).join(",") === outfitKey);
 
   // Génération automatique des visuels manquants (recette 18/08/2026) : dès
   // qu'une pièce du catalogue est affichée dans "La combinaison" sans photo

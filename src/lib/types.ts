@@ -193,13 +193,22 @@ export interface HistoryEntry {
   weatherLabel?: string;
 }
 
-/** Look composé manuellement par l'utilisateur à partir de son dressing réel. */
+/**
+ * Look enregistré dans Mes looks — deux origines distinctes (recette
+ * 23/08/2026) : "created" = composé pièce par pièce via Créer un look
+ * (dressing réel uniquement) ; "saved" = tenue du jour telle quelle via
+ * Enregistrer cette tenue (peut mélanger pièces possédées et suggestions
+ * capsule). "Wishlist" n'est pas une 3ᵉ origine mais un filtre calculé :
+ * tout look, quelle que soit sa source, contenant au moins une pièce
+ * suggérée pas encore possédée (cf. isWishlistLook, selectors.ts).
+ */
 export interface SavedLook {
   id: string;
   name: string;
   pieceIds: number[];
   createdAt: number;
   occasion?: OccasionKey;
+  source: "saved" | "created";
 }
 
 /**

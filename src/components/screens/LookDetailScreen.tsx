@@ -3,12 +3,14 @@
 import { CATLABEL, OCC_LABELS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
+import { isWishlistLook } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 
 export default function LookDetailScreen() {
   const { state, actions, wardrobePool } = useCapsela();
   const look = state.savedLooks.find((l) => l.id === state.activeLookId);
   if (!look) return null;
+  const wishlist = isWishlistLook(look);
 
   // Un look "Créer un look" ne référence que de vraies pièces du dressing ;
   // un look "Enregistrer cette tenue" peut aussi contenir des suggestions
@@ -30,7 +32,10 @@ export default function LookDetailScreen() {
         <div className="font-serif text-[22px] text-ink">{look.name}</div>
       </div>
 
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-3">
+      <div className={"text-[10px] tracking-[.06em] uppercase mt-5 " + (wishlist ? "text-terracotta" : look.source === "saved" ? "text-terracotta" : "text-muted")}>
+        {wishlist ? "✦ Suggéré (Wishlist)" : look.source === "saved" ? "♡ Enregistré" : "✦ Créé par moi"}
+      </div>
+      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[6px] mb-3">
         {pieces.length} {pieces.length === 1 ? "pièce" : "pièces"}
         {look.occasion ? " · " + OCC_LABELS[look.occasion] : ""}
       </div>

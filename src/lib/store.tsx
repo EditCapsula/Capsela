@@ -1085,6 +1085,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           pieceIds: [...s.lookDraftIds],
           createdAt: Date.now(),
           occasion: s.lookDraftOccasion !== "all" ? s.lookDraftOccasion : undefined,
+          source: "created",
         };
         return {
           ...s,
@@ -1108,7 +1109,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         const ids = [...s.outfit];
         if (ids.length < 2) return s;
         const key = [...ids].sort((a, b) => a - b).join(",");
-        const existing = s.savedLooks.find((l) => [...l.pieceIds].sort((a, b) => a - b).join(",") === key);
+        const existing = s.savedLooks.find(
+          (l) => l.source === "saved" && [...l.pieceIds].sort((a, b) => a - b).join(",") === key
+        );
         if (existing) {
           return { ...s, savedLooks: s.savedLooks.filter((l) => l.id !== existing.id) };
         }
@@ -1123,6 +1126,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           pieceIds: ids,
           createdAt: Date.now(),
           occasion: s.occasion && s.occasion !== "all" ? s.occasion : undefined,
+          source: "saved",
         };
         return { ...s, savedLooks: [look, ...s.savedLooks] };
       }),
