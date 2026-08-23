@@ -839,6 +839,39 @@ export interface GeneratedOutfitWithFallback extends GeneratedOutfit {
   reason?: OutfitFailureReason;
 }
 
+/**
+ * Nombre de tirages retentés par palier avant d'abandonner ce palier
+ * (correctif 23/08/2026, signalé : "Travail / Bureau" resté vide malgré une
+ * combinaison réelle explicitement éligible et une capsule bien fournie,
+ * après plusieurs correctifs qui réglaient chacun un vrai problème sans
+ * jamais être la cause de CE symptôme précis) — useRobe (plus bas dans
+ * generateOutfit) ne tente le chemin robe/combinaison qu'un tirage sur 2,5
+ * en moyenne (Math.random() < 0.4). Un seul appel par palier, comme avant ce
+ * correctif, faisait donc échouer ~60% du temps un pool où SEUL ce chemin
+ * est valide (aucun haut+bas complet) — un pur coup de malchance, jamais un
+ * problème de règles. Même esprit que getOutfitsForItem (30 tentatives) :
+ * aucune règle relâchée, seulement assez d'essais pour que le hasard
+ * n'invente pas un échec qui n'existe pas dans les données.
+ */
+const MAX_ATTEMPTS_PER_TIER = 20;
+
+function attemptCoreOutfit(
+  pool: Item[],
+  weather: Weather,
+  occasion: OccasionKey,
+  workMode: WorkMode,
+  dateContext: DateContext,
+  preferredHexes: string[],
+  gender: "femme" | "homme" | null,
+  formalityOverride: number
+): GeneratedOutfit {
+  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride);
+  for (let attempt = 1; attempt < MAX_ATTEMPTS_PER_TIER && !hasCoreOutfit(result.ids, pool); attempt++) {
+    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride);
+  }
+  return result;
+}
+
 export function generateOutfitWithFallback(
   pool: Item[],
   weather: Weather,
@@ -851,7 +884,7 @@ export function generateOutfitWithFallback(
   const requestedFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
   const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
   for (const tier of chain) {
-    const result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier);
+    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier);
     if (hasCoreOutfit(result.ids, pool)) {
       return { ...result, requestedFormality, resolvedFormality: tier, formalityDowngraded: tier !== requestedFormality, noCompleteOutfit: false };
     }
@@ -884,7 +917,7 @@ export function generateOutfitWithFallback(
   if (!hasStructuralOption) {
     reason = "missing_required_category";
   } else {
-    const probe = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0);
+    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0);
     reason = hasCoreOutfit(probe.ids, pool) ? "formality_gap" : "no_match";
   }
   return {
