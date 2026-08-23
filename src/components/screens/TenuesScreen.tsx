@@ -556,8 +556,9 @@ export default function TenuesScreen() {
       {!noCompleteOutfit && lookScore.proactives.map((p) => {
         // Pièce concrète suggérée (R-S13/R-S14 uniquement, recette 23/08/2026,
         // extension du mécanisme d'achat déjà utilisé sur l'écran Capsule) —
-        // seulement si un lien_affiliation existe réellement ; sinon la carte
-        // reste le texte seul d'aujourd'hui (comportement inchangé).
+        // affichée dès qu'une pièce compatible existe dans la capsule/le
+        // dressing ; "Acheter cette pièce" ne s'ajoute que si lien_affiliation
+        // est réellement renseigné (cf. plus bas), jamais l'inverse.
         const suggested = p.suggestedId != null ? wardrobePool.find((i) => i.id === p.suggestedId) : undefined;
         return (
           <div key={p.key} className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
@@ -582,8 +583,12 @@ export default function TenuesScreen() {
                   sous une chemise oversize ouverte.
                 </div>
               )}
-              {suggested && suggested.affLink && (
+              {suggested && (
                 <>
+                  {/* Visuel "fantôme" (recette 23/08/2026) — pièce de la capsule,
+                      pas encore ajoutée à la tenue : légèrement désaturée et
+                      atténuée pour se lire comme un aperçu, jamais confondue
+                      avec une pièce réelle de la composition ci-dessus. */}
                   <div className="flex items-center gap-[9px] mt-[11px]">
                     <div
                       className="w-[38px] h-[46px] rounded-[8px] flex-shrink-0"
@@ -593,6 +598,7 @@ export default function TenuesScreen() {
                         backgroundSize: "contain",
                         backgroundRepeat: "no-repeat",
                         backgroundPosition: "center",
+                        filter: "grayscale(55%) opacity(.8)",
                       }}
                     />
                     <span className="text-[12.5px] text-ink">{suggested.name}</span>
@@ -607,14 +613,16 @@ export default function TenuesScreen() {
                     >
                       Ajouter à la tenue
                     </button>
-                    <a
-                      href={suggested.affLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 text-center border border-border-soft text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
-                    >
-                      Acheter cette pièce
-                    </a>
+                    {suggested.affLink && (
+                      <a
+                        href={suggested.affLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 text-center border border-border-soft text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
+                      >
+                        Acheter cette pièce
+                      </a>
+                    )}
                   </div>
                 </>
               )}

@@ -1340,10 +1340,14 @@ export function computeLookScore(
   // ce lien, la carte reste le texte seul d'aujourd'hui, comportement
   // inchangé (extension du mécanisme d'achat déjà utilisé sur l'écran
   // Capsule, jamais une nouvelle logique parallèle). Jamais une pièce déjà
-  // présente dans la tenue affichée.
+  // présente dans la tenue affichée. Le lien_affiliation n'est plus une
+  // condition d'affichage de la pièce elle-même (correctif 23/08/2026,
+  // signalé : la card doit toujours montrer un visuel de la capsule avec
+  // "Ajouter à la tenue") — seul le bouton "Acheter cette pièce" reste
+  // conditionné à sa présence, côté rendu (TenuesScreen).
   const pieceIds = new Set(pieces.map((i) => i.id));
-  const findPurchasable = (cats: CategoryKey[], extra: (i: Item) => boolean): number | undefined =>
-    pool.find((i) => cats.includes(i.cat) && isCatalogId(i.id) && i.affLink && !pieceIds.has(i.id) && extra(i))?.id;
+  const findSuggestedPiece = (cats: CategoryKey[], extra: (i: Item) => boolean): number | undefined =>
+    pool.find((i) => cats.includes(i.cat) && isCatalogId(i.id) && !pieceIds.has(i.id) && extra(i))?.id;
 
   // R-S13 — contraste : total look noir sans accessoire coloré.
   const allBlack = clothing.length > 0 && clothing.every((i) => /noir/i.test(i.color));
@@ -1352,7 +1356,7 @@ export function computeLookScore(
     proactives.push({
       key: "color",
       text: "Il te manque une touche de couleur pour compléter cette tenue.",
-      suggestedId: findPurchasable(["bijou", "accessoire"], (i) => !isNeutralColor(i.color)),
+      suggestedId: findSuggestedPiece(["bijou", "accessoire"], (i) => !isNeutralColor(i.color)),
     });
   }
 
@@ -1362,7 +1366,7 @@ export function computeLookScore(
     proactives.push({
       key: "veste_soir",
       text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",
-      suggestedId: findPurchasable(["veste", "manteau"], (i) => weather.seasons.includes(i.season)),
+      suggestedId: findSuggestedPiece(["veste", "manteau"], (i) => weather.seasons.includes(i.season)),
     });
   }
 
