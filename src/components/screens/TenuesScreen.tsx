@@ -67,14 +67,49 @@ export default function TenuesScreen() {
   const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
-  // Confirmation "Ajouter à la tenue" (recette 23/08/2026, extension du
-  // mécanisme d'achat aux suggestions R-S13/R-S14) — la pièce ajoutée fait
-  // sortir la suggestion de lookScore.proactives dès le prochain rendu (sa
-  // condition de déclenchement n'est plus vraie), donc ce petit état local
-  // garde la carte de confirmation visible ; filtré en direct par présence
-  // dans state.outfit (cf. plus bas) pour ne jamais rester affiché après une
-  // régénération qui a fait disparaître la pièce.
-  const [addedSuggestions, setAddedSuggestions] = useState<Record<string, Item>>({});
+  // "Ajouter à la tenue" (recette 23/08/2026, extension du mécanisme d'achat
+  // aux suggestions R-S13/R-S14, révisé le même jour : plus de grande card
+  // de confirmation permanente, remplacée par une petite transition de
+  // sortie + un toast temporaire) — l'ajout fait sortir la suggestion de
+  // lookScore.proactives dès le prochain rendu (sa condition de
+  // déclenchement n'est plus vraie), donc son dernier contenu connu reste
+  // conservé dans cet état le temps de sa transition de sortie, même une
+  // fois disparue de lookScore.proactives. Aucune ref nulle part ici (règle
+  // react-hooks/refs — interdit d'en lire une pendant le rendu, y compris
+  // indirectement via une fonction appelée depuis un gestionnaire défini au
+  // fil du JSX) : les setTimeout ci-dessous s'auto-annulent par comparaison
+  // de valeur dans un updater fonctionnel plutôt que via clearTimeout+ref.
+  type ProactiveEntry = (typeof lookScore.proactives)[number];
+  const [dismissingEntries, setDismissingEntries] = useState<Record<string, { p: ProactiveEntry; suggested?: Item }>>({});
+  /** Pièce dont la carte de composition ci-dessous garde un contour terracotta ~1,5s après un ajout, pour la faire remarquer sans rester un état permanent. */
+  const [recentlyAddedId, setRecentlyAddedId] = useState<number | null>(null);
+  const [toast, setToast] = useState<{ text: string; onUndo: () => void } | null>(null);
+
+  function showToast(text: string, onUndo: () => void) {
+    const entry = { text, onUndo };
+    setToast(entry);
+    setTimeout(() => setToast((current) => (current === entry ? null : current)), 2600);
+  }
+
+  function handleAddSuggestedPiece(p: ProactiveEntry, piece: Item) {
+    actions.addPieceToOutfit(piece.id);
+    setDismissingEntries((m) => ({ ...m, [p.key]: { p, suggested: piece } }));
+    setTimeout(() => {
+      setDismissingEntries((m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== p.key)));
+    }, 320);
+    setRecentlyAddedId(piece.id);
+    setTimeout(() => setRecentlyAddedId((current) => (current === piece.id ? null : current)), 1500);
+    // "Ajouté à la tenue : {nom}" plutôt que "{nom} ajouté(e)" — le nom d'une
+    // pièce catalogue est un texte libre dont le genre/nombre n'est jamais
+    // fiable à deviner (contrairement à agreeColor/nounInfoOf, qui n'accordent
+    // que la couleur d'après la catégorie/le sous-type structurés, jamais un
+    // nom entier) ; cette forme reste grammaticalement correcte quel que soit
+    // le nom de la pièce, sans jamais inventer un accord.
+    showToast(`✓ Ajouté à la tenue : ${piece.name}`, () => {
+      actions.removePieceFromOutfit(piece.id);
+      setToast(null);
+    });
+  }
   // "Enregistrer cette tenue" — voir le commentaire au point d'usage
   // (composant prêt, persistance volontairement non branchée).
   const [savedOutfitKey, setSavedOutfitKey] = useState<string | null>(null);
@@ -211,6 +246,17 @@ export default function TenuesScreen() {
     state.dateContext,
     wardrobePool
   );
+
+  // Union clés vivantes (lookScore.proactives) + clés en cours de
+  // transition de sortie (dismissingEntries) — une suggestion qui vient
+  // d'être résolue par un ajout sort de lookScore.proactives dès ce rendu ;
+  // son dernier contenu connu (figé dans l'état au moment du clic, cf.
+  // handleAddSuggestedPiece) reste affiché le temps de la transition
+  // plutôt que de disparaître net. La donnée vivante prime toujours quand
+  // elle existe encore. Calculé ici (pas dans une IIFE au fil du JSX) pour
+  // rester une donnée de rendu ordinaire.
+  const liveProactiveByKey = new Map(lookScore.proactives.map((p) => [p.key, p]));
+  const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)]));
 
   // pb-safe-nav (correctif 20/08/2026) remplace pb-24 : réserve la hauteur
   // réelle de la navigation basse + safe-area-inset-bottom + marge de
@@ -484,7 +530,12 @@ export default function TenuesScreen() {
             <div
               key={it.id}
               onClick={() => (suggested ? actions.openItemOutfits(it.id) : actions.openItem(it.id, false))}
-              className="bg-card border border-border rounded-[14px] p-[9px] cursor-pointer"
+              className="bg-card border border-border rounded-[14px] p-[9px] cursor-pointer transition-shadow duration-[1200ms] ease-out"
+              // Contour terracotta temporaire (recette 23/08/2026) — pièce
+              // qui vient d'être ajoutée via "Ajouter à la tenue" (R-S13/
+              // R-S14) : se remarque ~1,5s puis revient exactement à l'état
+              // des autres pièces (recentlyAddedId repasse à null).
+              style={{ boxShadow: recentlyAddedId === it.id ? "0 0 0 1.5px #A66950" : "0 0 0 1.5px rgba(166,105,80,0)" }}
             >
               <div className="flex items-center gap-[11px]">
                 {resolvedImage.url ? (
@@ -578,124 +629,111 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      {!noCompleteOutfit && lookScore.proactives.map((p) => {
-        // Pièce concrète suggérée (R-S13/R-S14 uniquement, recette 23/08/2026,
-        // extension du mécanisme d'achat déjà utilisé sur l'écran Capsule) —
-        // affichée dès qu'une pièce compatible existe dans la capsule/le
-        // dressing ; "Acheter cette pièce" ne s'ajoute que si lien_affiliation
-        // est réellement renseigné (cf. plus bas), jamais l'inverse.
-        const suggested = p.suggestedId != null ? wardrobePool.find((i) => i.id === p.suggestedId) : undefined;
-        return (
-          <div key={p.key} className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-            <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
-            <div className="flex-1 min-w-0">
-              {/* "Ignorer" au même niveau que le conseil (correctif 23/08/2026,
-                  signalé : détaché et créant du vide en bas de card) — retiré
-                  de son ancienne position en pied de card. */}
-              <div className="flex items-start justify-between gap-[10px]">
-                <div className="flex-1 min-w-0">
-                  {p.key === "layer" && (
-                    <div className="flex items-center gap-[6px] mb-[6px]">
-                      <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Layering</span>
-                      <button
-                        onClick={() => setLayeringInfoOpen((v) => !v)}
-                        aria-label="Qu'est-ce que le layering ?"
-                        className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10.5px] text-terracotta flex items-center justify-center cursor-pointer"
-                      >
-                        i
-                      </button>
-                    </div>
-                  )}
-                  <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
-                  {p.key === "layer" && layeringInfoOpen && (
-                    <div className="text-[11.5px] text-muted mt-[6px] leading-[1.4]">
-                      Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un
-                      débardeur sous une chemise oversize ouverte.
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => actions.dismissOutfitSuggestion(p.key)}
-                  className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer"
-                >
-                  Ignorer
-                </button>
-              </div>
-              {suggested && (
-                // Visuel "fantôme" agrandi (recette 23/08/2026) — pièce de la
-                // capsule pas encore ajoutée à la tenue : désaturée + atténuée
-                // pour se lire comme un aperçu, jamais confondue avec une
-                // pièce réelle de la composition ci-dessus. Badge "Suggérée"
-                // superposé plutôt qu'une simple mention textuelle, pour
-                // rester lisible même si le nom de la pièce est long.
-                <div className="flex items-start gap-[13px] mt-[13px]">
-                  <div className="relative flex-shrink-0">
-                    <div
-                      className="w-[92px] h-[110px] rounded-[11px]"
-                      style={{
-                        background: resolveItemImage(suggested).url ? "#F3EDE1" : suggested.hex,
-                        backgroundImage: resolveItemImage(suggested).url ? `url(${resolveItemImage(suggested).url})` : undefined,
-                        backgroundSize: "contain",
-                        backgroundRepeat: "no-repeat",
-                        backgroundPosition: "center",
-                        filter: "grayscale(55%) opacity(.8)",
-                      }}
-                    />
-                    <span className="absolute top-[7px] left-[7px] bg-terracotta text-cream text-[8.5px] tracking-[.08em] uppercase rounded-full py-[3px] px-[8px]">
-                      Suggérée
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0 pt-[2px]">
-                    <div className="text-[13px] text-ink leading-[1.25]">{suggested.name}</div>
-                    <div className="text-[11px] text-muted mt-[2px]">{CATLABEL[suggested.cat]}</div>
-                    <div className="flex flex-col gap-[8px] mt-[11px]">
-                      <button
-                        onClick={() => {
-                          actions.addPieceToOutfit(suggested.id);
-                          setAddedSuggestions((m) => ({ ...m, [p.key]: suggested }));
-                        }}
-                        className="inline-flex items-center justify-center gap-[6px] bg-terracotta text-cream text-center rounded-full py-[10px] text-[12px] cursor-pointer"
-                      >
-                        <PlusIcon />
-                        Ajouter à la tenue
-                      </button>
-                      {suggested.affLink && (
-                        <a
-                          href={suggested.affLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-[6px] border border-border-soft text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
-                        >
-                          <BagIcon />
-                          <span className="underline underline-offset-2">Acheter cette pièce</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Confirmation "Ajouter à la tenue" — la suggestion elle-même
-          disparaît dès l'ajout (sa condition de déclenchement n'est plus
-          vraie, cf. R-S13/R-S14 dans logic.ts), donc cette carte autonome
-          porte la confirmation demandée. Filtrée par présence réelle dans
-          state.outfit : ne survit jamais à une régénération qui a remplacé
-          la tenue. */}
       {!noCompleteOutfit &&
-        Object.entries(addedSuggestions)
-          .filter(([, item]) => state.outfit.includes(item.id))
-          .map(([key]) => (
-            <div key={"added-" + key} className="mt-4 flex items-center gap-[9px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-              <span className="w-[18px] h-[18px] rounded-full bg-[#3F5A47] text-cream flex items-center justify-center text-[10px] flex-shrink-0">
-                ✓
-              </span>
-              <span className="text-[12.5px] text-[#3F3B34]">Ajoute cette pièce à ta tenue pour la porter.</span>
-            </div>
-          ))}
+        proactiveKeys.map((key) => {
+            const frozen = dismissingEntries[key];
+            const p = liveProactiveByKey.get(key) ?? frozen?.p;
+            if (!p) return null;
+            const suggested = frozen?.suggested ?? (p.suggestedId != null ? wardrobePool.find((i) => i.id === p.suggestedId) : undefined);
+            const closing = Boolean(frozen);
+            return (
+              <div
+                key={key}
+                className="overflow-hidden transition-all duration-300 ease-out"
+                style={closing ? { opacity: 0, maxHeight: 0, marginTop: 0 } : { opacity: 1, maxHeight: 600, marginTop: 16 }}
+              >
+                <div className="flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+                  <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
+                  <div className="flex-1 min-w-0">
+                    {/* "Ignorer" au même niveau que le conseil (correctif
+                        23/08/2026, signalé : détaché et créant du vide en bas
+                        de card) — retiré de son ancienne position en pied de
+                        card. */}
+                    <div className="flex items-start justify-between gap-[10px]">
+                      <div className="flex-1 min-w-0">
+                        {key === "layer" && (
+                          <div className="flex items-center gap-[6px] mb-[6px]">
+                            <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Layering</span>
+                            <button
+                              onClick={() => setLayeringInfoOpen((v) => !v)}
+                              aria-label="Qu'est-ce que le layering ?"
+                              className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10.5px] text-terracotta flex items-center justify-center cursor-pointer"
+                            >
+                              i
+                            </button>
+                          </div>
+                        )}
+                        <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
+                        {key === "layer" && layeringInfoOpen && (
+                          <div className="text-[11.5px] text-muted mt-[6px] leading-[1.4]">
+                            Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un
+                            débardeur sous une chemise oversize ouverte.
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => actions.dismissOutfitSuggestion(key)}
+                        className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer"
+                      >
+                        Ignorer
+                      </button>
+                    </div>
+                    {suggested && (
+                      // Visuel "fantôme" agrandi (recette 23/08/2026) — pièce
+                      // de la capsule pas encore ajoutée à la tenue :
+                      // désaturée + atténuée pour se lire comme un aperçu,
+                      // jamais confondue avec une pièce réelle de la
+                      // composition ci-dessus. Badge "Suggérée" superposé
+                      // plutôt qu'une simple mention textuelle, pour rester
+                      // lisible même si le nom de la pièce est long.
+                      <div className="flex items-start gap-[13px] mt-[13px]">
+                        <div className="relative flex-shrink-0">
+                          <div
+                            className="w-[92px] h-[110px] rounded-[11px]"
+                            style={{
+                              background: resolveItemImage(suggested).url ? "#F3EDE1" : suggested.hex,
+                              backgroundImage: resolveItemImage(suggested).url ? `url(${resolveItemImage(suggested).url})` : undefined,
+                              backgroundSize: "contain",
+                              backgroundRepeat: "no-repeat",
+                              backgroundPosition: "center",
+                              filter: "grayscale(55%) opacity(.8)",
+                            }}
+                          />
+                          <span className="absolute top-[7px] left-[7px] bg-terracotta text-cream text-[8.5px] tracking-[.08em] uppercase rounded-full py-[3px] px-[8px]">
+                            Suggérée
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0 pt-[2px]">
+                          <div className="text-[13px] text-ink leading-[1.25]">{suggested.name}</div>
+                          <div className="text-[11px] text-muted mt-[2px]">{CATLABEL[suggested.cat]}</div>
+                          <div className="flex flex-col gap-[8px] mt-[11px]">
+                            <button
+                              onClick={() => handleAddSuggestedPiece(p, suggested)}
+                              className="inline-flex items-center justify-center gap-[6px] bg-terracotta text-cream text-center rounded-full py-[10px] text-[12px] cursor-pointer"
+                            >
+                              <PlusIcon />
+                              Ajouter à la tenue
+                            </button>
+                            {suggested.affLink && (
+                              <a
+                                href={suggested.affLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-[6px] border border-border-soft text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
+                              >
+                                <BagIcon />
+                                <span className="underline underline-offset-2">Acheter cette pièce</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
 
       {!noCompleteOutfit && missingText && (
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
@@ -765,6 +803,29 @@ export default function TenuesScreen() {
         >
           <span className="text-terracotta">✦</span> Demander un avis à un proche
         </button>
+      )}
+
+      {/* Toast "Ajouter à la tenue" (recette 23/08/2026) — remplace l'ancienne
+          carte de confirmation permanente : disparaît seule après ~2,6s,
+          "Annuler" retire immédiatement la pièce (removePieceFromOutfit) et
+          referme le toast. fixed plutôt qu'absolute pour rester visible quel
+          que soit le défilement de cet écran, contraint à la largeur du
+          cadre mobile (max-w-[480px] mx-auto) comme TabBar juste en dessous. */}
+      {toast && (
+        <div
+          className="fixed inset-x-0 mx-auto max-w-[480px] px-6 z-30"
+          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 14px)" }}
+        >
+          <div className="flex items-center gap-3 bg-ink rounded-full py-[12px] pl-4 pr-[6px] shadow-lg">
+            <span className="flex-1 min-w-0 text-[12.5px] text-cream truncate">{toast.text}</span>
+            <button
+              onClick={toast.onUndo}
+              className="flex-shrink-0 text-[12px] text-terracotta tracking-[.02em] cursor-pointer py-[7px] px-[11px]"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

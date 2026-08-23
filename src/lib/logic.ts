@@ -1314,19 +1314,29 @@ export function computeLookScore(
   // autres (plusieurs peuvent s'afficher en même temps, chacune dismissible séparément).
   const proactives: LookScore["proactives"] = [];
 
-  // R-S12 — layering : un seul haut, oversize/ample ou une chemise, contexte décontracté.
+  // R-S12 — layering : un seul haut, effectivement un calque ouvert (chemise
+  // oversize, gilet léger...), contexte décontracté.
   // Correctif 22/08/2026 (signalé : cartouche affiché avec une combinaison +
   // une chemise oversize) — "il te manque un débardeur ou un t-shirt" n'a de
   // sens que si ce haut EST la base de la tenue (structure haut+bas) : avec
   // une robe/combinaison déjà présente, ce même haut oversize est un calque
   // porté par-dessus une pièce qui couvre déjà tout le corps, jamais un haut
   // ouvert cherchant une base dessous.
+  // Correctif 23/08/2026 (signalé : "T-shirt ample" — un haut fermé, jamais
+  // porté ouvert par-dessus quoi que ce soit — déclenchait la suggestion
+  // aussi souvent qu'une vraie chemise oversize ouverte) — l'ancien
+  // /oversize|ample|chemise/i confondait la coupe du vêtement avec son rôle
+  // réel. rolePieceOf (attributes.ts, déjà la source de vérité de R-S11 pour
+  // la même distinction) exclut justement les t-shirts/débardeurs/polos de
+  // "calque" quelle que soit leur coupe (NEVER_LAYER_RE) — seul un vrai
+  // calque ouvert (chemise oversize, gilet léger...) a un intérêt réel à
+  // porter quelque chose dessous.
   const hasOnepiece = pieces.some((i) => i.cat === "robe" || i.cat === "combinaison");
   if (
     tops.length === 1 &&
     !hasOnepiece &&
     dressy === false &&
-    /oversize|ample|chemise/i.test(tops[0].name + " " + (tops[0].subtype || "")) &&
+    rolePieceOf(tops[0]) === "calque" &&
     !dismissed.has("layer")
   ) {
     proactives.push({

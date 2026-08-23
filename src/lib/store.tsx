@@ -226,6 +226,8 @@ export interface Actions {
   swapPiece: (id: number, cat: CategoryKey) => void;
   /** Ajoute une pièce à l'affichage de la tenue du jour (recette 23/08/2026, "Ajouter à la tenue" des suggestions R-S13/R-S14) — aperçu de composition, jamais une acquisition ; sans effet si déjà présente. */
   addPieceToOutfit: (id: number) => void;
+  /** Annule un addPieceToOutfit (toast "Annuler", recette 23/08/2026) — retire une pièce de l'affichage de la tenue du jour ; sans effet si absente. */
+  removePieceFromOutfit: (id: number) => void;
   /** Déclenche la génération du visuel d'une pièce du catalogue si elle n'en a pas encore (sans effet sinon). */
   requestCatalogImage: (itemId: number) => void;
   regenOutfit: () => void;
@@ -895,6 +897,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     addPieceToOutfit: (id) =>
       setState((s) => (s.outfit.includes(id) ? s : { ...s, outfit: [...s.outfit, id] })),
+    removePieceFromOutfit: (id) =>
+      setState((s) => ({ ...s, outfit: s.outfit.filter((oid) => oid !== id) })),
     requestCatalogImage,
     // "Régénérer" = proposer une autre combinaison, jamais générer de
     // nouveaux visuels (recette 19/08/2026) : conserve météo/occasion/
