@@ -81,20 +81,30 @@ export default function TenuesScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.outfit]);
 
+  // Correctif 23/08/2026 (signalé : "100% ton dressing" affiché alors que
+  // l'empty state parle de capsule juste en dessous) — suggestedCount === 0
+  // est trivialement vrai sur une tenue VIDE (0 pièce suggérée sur 0 pièce
+  // au total), donc l'ancien calcul retombait sur "dressing_complet" par
+  // défaut plutôt que de refléter l'absence réelle de tenue. Le badge n'a
+  // plus aucun sens à afficher quand il n'y a rien à décrire : recomputed
+  // à null explicitement, et le bloc entier est masqué au rendu (cf. plus
+  // bas, section "état vide" du brief design).
   const suggestedCount = outfitPieces.filter((it) => isCatalogId(it.id)).length;
-  const recommendationMode: keyof typeof MODE_STYLES =
-    suggestedCount === 0
-      ? "dressing_complet"
-      : suggestedCount === outfitPieces.length
-        ? "capsule_depart"
-        : "hybride";
+  const recommendationMode: keyof typeof MODE_STYLES | null =
+    outfitPieces.length === 0
+      ? null
+      : suggestedCount === 0
+        ? "dressing_complet"
+        : suggestedCount === outfitPieces.length
+          ? "capsule_depart"
+          : "hybride";
   const modeLabel =
     recommendationMode === "capsule_depart"
       ? "Capsule " + currentSeasonKey()
       : recommendationMode === "hybride"
         ? "Tes pièces + suggestions"
         : "100% ton dressing";
-  const modeStyle = MODE_STYLES[recommendationMode];
+  const modeStyle = recommendationMode ? MODE_STYLES[recommendationMode] : null;
 
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
   // Repli progressif de formalité (nouveau 21/08/2026, décidé) — calculé
@@ -105,6 +115,51 @@ export default function TenuesScreen() {
   const noCompleteOutfit = state.outfitNoCompleteOutfit;
   // Sans objet en Cocooning (R-B12) : veste/manteau déjà exclus du pool de génération.
   const vesteWithoutBase = state.occasion !== "cocooning" && violatesOuterwearRule(outfitPieces);
+
+  // État vide (brief design 22/08/2026, "corriger l'état aucune tenue
+  // trouvée") — wardrobePool ne connaît pas de "source" globale unique
+  // (chaque catégorie utilise déjà tes pièces réelles si tu en as, sinon la
+  // capsule, cf. store.tsx), donc "dressing" vs "capsule" ne peut pas être
+  // un simple drapeau existant à relire tel quel. Heuristique honnête et
+  // bon marché : si state.items contient au moins une pièce vêtement
+  // réelle, le message parle de "ton dressing" (elle a de vraies pièces qui
+  // ne suffisent pas encore pour cette occasion) ; sinon de "cette capsule"
+  // (aucune pièce réelle, les suggestions par défaut ne couvrent pas cette
+  // occasion). Jamais utilisée pour le badge de mode ci-dessus, qui décrit
+  // la tenue affichée — sans objet ici puisqu'il n'y en a pas.
+  const CLOTHING_LIKE_CATS = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau"];
+  const usesRealClothing = state.items.some((i) => CLOTHING_LIKE_CATS.includes(i.cat));
+  const sourceLabel = usesRealClothing ? "ton dressing" : "cette capsule";
+
+  // Raison structurée déjà calculée par le moteur (generateOutfitWithFallback,
+  // logic.ts) — jamais un diagnostic recalculé/inventé ici, seulement mis en
+  // mots. Cf. types.ts (OutfitFailureReason) pour ce que chaque valeur
+  // garantit réellement.
+  const emptyState = !noCompleteOutfit
+    ? null
+    : state.outfitFailureReason === "formality_gap"
+      ? {
+          title: "Il manque une pièce plus habillée",
+          body: "Tes pièces actuelles ne permettent pas encore de composer une tenue suffisamment habillée pour cette occasion.",
+          ctaLabel: "Ajouter une pièce plus habillée →",
+          onCta: actions.openAdd,
+        }
+      : state.outfitFailureReason === "missing_required_category"
+        ? {
+            title: usesRealClothing ? "Dressing insuffisant" : "Capsule insuffisante",
+            body: `Il manque au moins un haut et un bas (ou une robe/combinaison) dans ${sourceLabel} pour composer une tenue, quelle que soit l'occasion.`,
+            ctaLabel: "Ajouter des pièces →",
+            onCta: actions.openAdd,
+          }
+        : {
+            title: "Pas encore de combinaison idéale",
+            body:
+              usesRealClothing
+                ? "Je ne trouve pas encore de tenue adaptée à cette occasion avec les pièces de ton dressing."
+                : "Je ne trouve pas encore de tenue adaptée à cette occasion dans cette capsule.",
+            ctaLabel: null,
+            onCta: null,
+          };
 
   // Phrase d'explication de la recommandation (recette 19/08/2026) — par
   // template, jamais d'IA ; pas de température affichée tant que la
@@ -298,15 +353,22 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      <div
-        className="inline-flex items-center gap-2 mt-[14px] rounded-full"
-        style={{ padding: "7px 14px 7px 11px", background: modeStyle.bg, border: `1px solid ${modeStyle.border}` }}
-      >
-        <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: modeStyle.dot }} />
-        <span className="text-[11px] tracking-[.13em] uppercase" style={{ color: modeStyle.color }}>
-          {modeLabel}
-        </span>
-      </div>
+      {/* Badge de mode (section 1/10 du brief 22/08/2026) : décrit la
+          provenance des pièces de LA tenue affichée — sans objet, donc
+          masqué, quand il n'y en a pas (recommendationMode/modeStyle null
+          sur une tenue vide, cf. plus haut). Ne doit jamais dire "100% ton
+          dressing" à côté d'un empty state qui parle d'autre chose. */}
+      {recommendationMode && modeStyle && (
+        <div
+          className="inline-flex items-center gap-2 mt-[14px] rounded-full"
+          style={{ padding: "7px 14px 7px 11px", background: modeStyle.bg, border: `1px solid ${modeStyle.border}` }}
+        >
+          <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: modeStyle.dot }} />
+          <span className="text-[11px] tracking-[.13em] uppercase" style={{ color: modeStyle.color }}>
+            {modeLabel}
+          </span>
+        </div>
+      )}
 
       <div className="flex justify-between items-center mt-[22px] mb-3">
         <div className="flex items-center gap-[9px]">
@@ -324,23 +386,35 @@ export default function TenuesScreen() {
               )
             ))}
         </div>
-        <button onClick={actions.regenOutfit} className="text-[12px] text-terracotta tracking-[.03em] cursor-pointer">
-          ↻ Autre tenue
-        </button>
+        {/* "↻ Autre tenue" (section 2) : n'a de sens que s'il y a déjà une
+            tenue à régénérer — jamais affiché à côté d'un état vide. */}
+        {!noCompleteOutfit && (
+          <button onClick={actions.regenOutfit} className="text-[12px] text-terracotta tracking-[.03em] cursor-pointer">
+            ↻ Autre tenue
+          </button>
+        )}
       </div>
 
-      {!geoLoading && (
+      {/* Justification météo (section 3) : c'est la justification de LA
+          tenue recommandée — jamais affichée quand il n'y en a pas. */}
+      {!geoLoading && !noCompleteOutfit && (
         <div className="text-[12.5px] text-muted leading-[1.4] mb-3 -mt-1">{recommendationText}</div>
       )}
 
-      {!geoLoading && noCompleteOutfit && (
-        <div className="mt-2 mb-4 bg-card border border-border rounded-[14px] px-4 py-[22px] text-center">
-          <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
-            Ta capsule ne contient pas encore assez de pièces adaptées à cette occasion.
-          </div>
-          <button onClick={actions.openAdd} className="mt-[12px] inline-block text-[12.5px] text-terracotta cursor-pointer">
-            Compléter mon dressing →
-          </button>
+      {/* État vide (section 5/6/7/9) : microcopy neutre et orientée
+          solution, correspondant à la source réellement interrogée
+          (dressing/capsule) et à la raison structurée déjà connue du
+          moteur (state.outfitFailureReason) — jamais un diagnostic
+          recalculé/inventé ici. Sobre, typographique, sans illustration. */}
+      {!geoLoading && emptyState && (
+        <div className="mt-2 mb-4 bg-card border border-border rounded-[14px] px-4 py-[26px] text-center">
+          <div className="font-serif text-[16px] text-ink leading-[1.3]">{emptyState.title}</div>
+          <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[8px]">{emptyState.body}</div>
+          {emptyState.ctaLabel && emptyState.onCta && (
+            <button onClick={emptyState.onCta} className="mt-[14px] inline-block text-[12.5px] text-terracotta cursor-pointer">
+              {emptyState.ctaLabel}
+            </button>
+          )}
         </div>
       )}
 

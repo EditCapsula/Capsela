@@ -113,6 +113,7 @@ function buildInitialState(): AppState {
     outfitMissingCats: [],
     outfitFormalityDowngraded: false,
     outfitNoCompleteOutfit: false,
+    outfitFailureReason: null,
     outfitValidated: false,
     dressingError: null,
     occasion: "all",
@@ -500,6 +501,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       outfitMissingCats: result.missingCats,
       outfitFormalityDowngraded: result.formalityDowngraded,
       outfitNoCompleteOutfit: result.noCompleteOutfit,
+      outfitFailureReason: result.reason ?? null,
       outfitValidated: false,
       dismissedSuggestions: [],
     };
@@ -588,6 +590,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         outfitMissingCats: [],
         outfitFormalityDowngraded: false,
         outfitNoCompleteOutfit: false,
+        outfitFailureReason: null,
         outfitValidated: false,
         occasion,
         occasionManual: true,

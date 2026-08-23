@@ -32,6 +32,25 @@ export type OccasionKey =
   | "voyage"
   | "evenement_perso";
 
+/**
+ * Raison structurée d'un échec de génération de tenue (recette 22/08/2026,
+ * brief design "empty state" — remplace l'empty state générique unique par
+ * un message pertinent à la cause réelle) :
+ * - "missing_required_category" : le pool n'a structurellement aucun
+ *   haut+bas ni robe/combinaison, quels que soient occasion/météo/formalité
+ *   — il manque une catégorie indispensable, pas seulement une pièce
+ *   adaptée à cette occasion précise.
+ * - "formality_gap" : une tenue complète existe au palier de formalité le
+ *   plus bas (0, jamais tenté par la chaîne de repli habituelle pour une
+ *   occasion non-sport) mais pas au palier le plus permissif réellement
+ *   autorisé pour cette occasion — le pool manque spécifiquement de pièces
+ *   assez habillées.
+ * - "no_match" : repli générique — le pool a des catégories structurantes
+ *   mais aucune combinaison compatible n'existe même à formalité 0 (le plus
+ *   souvent occasion déclarée sur les pièces, ou conflit météo).
+ */
+export type OutfitFailureReason = "missing_required_category" | "formality_gap" | "no_match";
+
 /** Sous-choix de l'occasion "travail_formel" — Présentiel relève le niveau de formalité minimum, Télétravail l'abaisse. */
 export type WorkMode = "Présentiel" | "Télétravail";
 /** Sous-choix de l'occasion "voyage" — n'affecte pas la formalité, seule la Longue distance affiche une carte conseil. */
@@ -275,6 +294,8 @@ export interface AppState {
   outfitFormalityDowngraded: boolean;
   /** true si aucun palier de formalité autorisé n'a permis de constituer une tenue complète — état vide à afficher, jamais une tenue chaussures/accessoires seuls. */
   outfitNoCompleteOutfit: boolean;
+  /** Raison structurée de l'échec (recette 22/08/2026, brief design "empty state") — null quand outfitNoCompleteOutfit est false. Dérivée de signaux déjà calculés par le moteur (présence de catégories dans le pool, probe à formalité 0), jamais un diagnostic inventé côté UI. */
+  outfitFailureReason: OutfitFailureReason | null;
   outfitValidated: boolean;
   /** Bandeau de diagnostic temporaire (correctif 22/08/2026, signalé : pièces ajoutées au dressing non conservées) — dernier échec Supabase dressing_items/outfit_history, affiché tel quel pour permettre le diagnostic sans console développeur (utile sur mobile). À retirer une fois la cause identifiée et corrigée. */
   dressingError: string | null;

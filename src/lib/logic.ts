@@ -1,4 +1,4 @@
-import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
+import type { CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, WorkMode } from "./types";
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
@@ -820,6 +820,8 @@ export interface GeneratedOutfitWithFallback extends GeneratedOutfit {
   formalityDowngraded: boolean;
   /** true si aucun palier autorisé n'a permis de constituer une tenue complète — ids vide volontairement, état vide à afficher côté UI plutôt qu'une tenue chaussures/accessoires seuls. */
   noCompleteOutfit: boolean;
+  /** Raison structurée de l'échec (cf. OutfitFailureReason) — toujours défini quand noCompleteOutfit est true, jamais sinon. */
+  reason?: OutfitFailureReason;
 }
 
 export function generateOutfitWithFallback(
@@ -842,6 +844,34 @@ export function generateOutfitWithFallback(
   // Section 7 — aucun palier autorisé n'a produit de tenue complète :
   // jamais afficher une fausse combinaison chaussures/accessoires seuls,
   // ids vide pour que l'UI affiche un état vide explicite.
+  //
+  // Raison structurée (recette 22/08/2026, brief design "empty state" —
+  // remplace le message générique unique par un message pertinent à la
+  // cause réelle, sans jamais inventer un diagnostic côté frontend) :
+  // dérivée de deux vérifications bon marché, jamais une réécriture du
+  // moteur.
+  // 1. missing_required_category : le pool n'a structurellement AUCUN
+  //    haut+bas ni robe/combinaison, indépendamment de tout filtre —
+  //    il manque une catégorie indispensable, pas juste une pièce adaptée
+  //    à cette occasion précise.
+  // 2. formality_gap : sinon, une sonde à formalité 0 (jamais tentée par
+  //    FORMALITY_FALLBACK_CHAIN pour une occasion non-sport, par choix
+  //    produit délibéré) — si elle réussit, le seul obstacle réel était le
+  //    plancher de formalité, pas une absence de pièces.
+  // 3. no_match : repli générique (le plus souvent occasion déclarée sur
+  //    les pièces, ou conflit météo — non distingués plus finement ici
+  //    pour ne pas inventer une cause non vérifiée).
+  const hasAnyTop = pool.some((i) => i.cat === "haut");
+  const hasAnyBottom = pool.some((i) => BOTTOMS.includes(i.cat));
+  const hasAnyOnepiece = pool.some((i) => i.cat === "robe" || i.cat === "combinaison");
+  const hasStructuralOption = (hasAnyTop && hasAnyBottom) || hasAnyOnepiece;
+  let reason: OutfitFailureReason;
+  if (!hasStructuralOption) {
+    reason = "missing_required_category";
+  } else {
+    const probe = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0);
+    reason = hasCoreOutfit(probe.ids, pool) ? "formality_gap" : "no_match";
+  }
   return {
     ids: [],
     missingCats: ["haut", "bas"],
@@ -849,6 +879,7 @@ export function generateOutfitWithFallback(
     resolvedFormality: requestedFormality,
     formalityDowngraded: false,
     noCompleteOutfit: true,
+    reason,
   };
 }
 
