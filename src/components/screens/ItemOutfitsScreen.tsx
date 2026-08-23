@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { OutfitComposition } from "@/components/OutfitComposition";
 import { CATLABEL, OCC_LABELS } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { currentSeasonKey, representativeWeatherFor } from "@/lib/capsule";
@@ -11,11 +12,15 @@ import { useCapsela } from "@/lib/store";
 import type { OccasionKey } from "@/lib/types";
 
 /**
- * Module "Comment porter cette pièce ?" (recette 19/08/2026) — P0 : clic
- * sur un article de Capsule, pièce pivot, combinaisons regroupées par
- * occasion, filtre, images existantes, CTA "Voir cette tenue". Réutilise
- * getOutfitsForItem (lui-même une réutilisation de generateOutfit) —
- * jamais un second moteur, jamais d'appel OpenAI à l'ouverture.
+ * Module "Comment porter cette pièce ?" (recette 19/08/2026, refonte UX/UI
+ * 22/08/2026) — P0 : clic sur un article de Capsule, pièce pivot ("anchor
+ * piece", identifiée par son contour terracotta — jamais utilisé pour un
+ * autre état UI), combinaisons regroupées par occasion, filtre, images
+ * existantes, CTA "Voir cette tenue". Réutilise getOutfitsForItem (lui-même
+ * une réutilisation de generateOutfit) — jamais un second moteur, jamais
+ * d'appel OpenAI à l'ouverture — et OutfitComposition (variante "compact"),
+ * le même composant de composition visuelle que la page Tenue ("hero") :
+ * un seul moteur de layout, jamais deux qui divergent.
  */
 export default function ItemOutfitsScreen() {
   const { state, wardrobePool, vestiairePool, actions } = useCapsela();
@@ -66,7 +71,7 @@ export default function ItemOutfitsScreen() {
   const metaParts = [pivot.color, pivot.matiere].filter(Boolean);
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <button
         onClick={() => actions.go(state.itemOutfitsReturn)}
         className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
@@ -75,6 +80,13 @@ export default function ItemOutfitsScreen() {
       </button>
 
       <div className="mt-[18px] text-[11px] tracking-[.16em] uppercase text-muted">Comment porter cette pièce ?</div>
+
+      {/* "Autour de cette pièce" (brief design 22/08/2026, section 2) — rend
+          explicite le rôle de la pièce mise en avant ci-dessous : celle
+          autour de laquelle toutes les combinaisons de cette page sont
+          construites. Son contour terracotta dans chaque composition plus
+          bas n'a pas d'autre signification dans toute l'app. */}
+      <div className="mt-[18px] text-[10px] tracking-[.16em] uppercase text-terracotta">Autour de cette pièce</div>
 
       <div className="flex items-center gap-[13px] mt-[10px]">
         <div
@@ -160,47 +172,38 @@ export default function ItemOutfitsScreen() {
         grouped.map((group) => (
           <div key={group.occasion} className="mt-[22px]">
             <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[10px]">{OCC_LABELS[group.occasion]}</div>
-            <div className="flex flex-col gap-[12px]">
+            <div className="flex flex-col gap-[14px]">
               {group.items.map((variation, idx) => {
                 const pieces = variation.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
+                const insight = describeOutfitVariation(variation, pieces, pivot.id, idx);
                 return (
-                  <div key={variation.ids.join("-")} className="bg-card border border-border rounded-[14px] p-[13px]">
-                    {/* pt/pb (correctif 20/08/2026) : overflow-x-auto rend overflow-y "auto" aussi (règle CSS implicite dès qu'un seul axe n'est pas visible) — sans marge verticale, l'anneau terracotta de la pièce pivot (box-shadow, hors boîte) se faisait rogner en haut par ce conteneur défilant.
-                        pl/pr (correctif 20/08/2026, suite) : même souci sur l'axe horizontal — le padding du card parent (p-[13px]) ne protège pas l'anneau de la clipping d'overflow-x-auto, qui se fait au bord de CE conteneur, pas du parent. Rogné à gauche quand la pièce pivot est la première de la rangée. */}
-                    <div className="flex gap-[7px] overflow-x-auto pt-[3px] pb-[3px] pl-[3px] pr-[3px]">
-                      {pieces.map((p) => {
-                        const img = resolveItemImage(p);
-                        const isPivot = p.id === pivot.id;
-                        return (
-                          <div
-                            key={p.id}
-                            className="flex-none rounded-[9px] overflow-hidden"
-                            style={
-                              img.url
-                                ? { width: 46, height: 56, background: "#F3EDE1", padding: 6, boxShadow: isPivot ? "0 0 0 1.5px #A66950" : undefined }
-                                : { width: 46, height: 56, background: p.hex, boxShadow: isPivot ? "0 0 0 1.5px #A66950" : "inset 0 0 0 1px rgba(29,26,22,.06)" }
-                            }
-                          >
-                            {img.url && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={img.url}
-                                alt=""
-                                style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
-                              />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="text-[12.5px] text-[#3F3B34] mt-[10px] leading-[1.4]">
-                      {describeOutfitVariation(variation, pieces, pivot.id, idx)}
-                    </div>
+                  <div key={variation.ids.join("-")}>
+                    {/* "Option N" (brief design 22/08/2026, section 9) — seulement
+                        quand plusieurs propositions existent pour cette même
+                        occasion, pour qu'elles se lisent comme de vraies
+                        alternatives plutôt que des blocs empilés au hasard. */}
+                    {group.items.length > 1 && (
+                      <div className="text-[10px] tracking-[.14em] uppercase text-placeholder mb-[7px]">
+                        Option {idx + 1}
+                      </div>
+                    )}
+                    {/* Card entièrement cliquable (section 8) : un seul vrai
+                        élément interactif (button), jamais de bouton imbriqué —
+                        "Voir cette tenue →" reste visible mais n'est qu'un span
+                        stylé, l'action est portée par la card entière. Focus
+                        visible au clavier via focus-visible:outline. */}
                     <button
+                      type="button"
                       onClick={() => actions.viewItemOutfit(variation.ids, variation.occasion)}
-                      className="mt-[9px] inline-block text-[12.5px] text-terracotta cursor-pointer"
+                      aria-label={`Voir la tenue : ${insight.title}`}
+                      className="w-full text-left bg-card border border-border rounded-[16px] p-[13px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
                     >
-                      Voir cette tenue →
+                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} />
+                      <div className="mt-[11px]">
+                        <div className="font-serif text-[14.5px] text-ink leading-[1.25]">{insight.title}</div>
+                        <div className="text-[12.5px] text-[#3F3B34] mt-[3px] leading-[1.4]">{insight.sentence}</div>
+                      </div>
+                      <span className="mt-[10px] inline-block text-[12.5px] text-terracotta">Voir cette tenue →</span>
                     </button>
                   </div>
                 );

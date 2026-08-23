@@ -1361,7 +1361,21 @@ export function getOutfitsForItem(
   return results;
 }
 
-/** Repli minimal par occasion — utilisé seulement si aucune pièce distinctive n'a pu être identifiée (cas rare : pivot + chaussures seuls). */
+/** Repli minimal par occasion (titre court) — utilisé quand aucune pièce distinctive, ou aucun contraste de formalité, n'a pu être identifié. */
+const OCCASION_BASE_TITLE: Partial<Record<OccasionKey, string>> = {
+  quotidien: "Simple et facile à porter",
+  travail_formel: "Structurée pour le bureau",
+  entretien: "Sérieuse et posée",
+  date: "Une touche soignée",
+  soiree: "Parfaite pour une sortie",
+  festive: "Prête à sortir de l'ordinaire",
+  sport: "Confortable et technique",
+  cocooning: "Décontractée à la maison",
+  voyage: "Pratique pour se déplacer",
+  evenement_perso: "À la hauteur de l'occasion",
+};
+
+/** Repli minimal par occasion (phrase) — cas rare où même une description par énumération n'a rien à dire (pivot + chaussures seuls). */
 const OCCASION_VARIATION_BASE: Partial<Record<OccasionKey, string>> = {
   quotidien: "Simple et facile à porter au quotidien.",
   travail_formel: "Structurée pour le bureau.",
@@ -1389,6 +1403,18 @@ const OCCASION_CLOSERS: Partial<Record<OccasionKey, string[]>> = {
   evenement_perso: ["à la hauteur de l'occasion."],
 };
 
+/** Titre court quand un vrai contraste habillé/décontracté est détecté entre deux pièces du look (cf. styleInsightTitle) — occasions absentes : jamais de contraste pertinent (sport, cocooning), repli sur OCCASION_BASE_TITLE. */
+const OCCASION_CONTRAST_TITLE: Partial<Record<OccasionKey, string>> = {
+  quotidien: "Décontracté mais soigné",
+  travail_formel: "Structurée sans rigidité",
+  entretien: "Posée sans être guindée",
+  date: "Décontracté mais soigné",
+  soiree: "Chic sans en faire trop",
+  festive: "Chic sans en faire trop",
+  voyage: "Pratique mais soigné",
+  evenement_perso: "Habillée sans excès",
+};
+
 /** Catégories dont le sous-type est déjà un nom complet (ex. "Chemise", "Blazer", "Sandales plates") — jamais préfixé par le libellé générique de la catégorie, contrairement aux catégories à sous-type "modificateur" (ex. jupe: "Midi"). */
 const NOUN_SUBTYPE_CATS = new Set<CategoryKey>(["haut", "pull", "veste", "manteau", "chaussures", "sac", "bijou", "accessoire", "combinaison"]);
 
@@ -1411,24 +1437,161 @@ function pieceBase(it: Item): string {
   return catLabel;
 }
 
-/** Libellé compact d'une pièce, toujours dérivé de ses données réelles — construction "en {couleur}" volontairement invariable en genre (jamais d'article accordé, ex. "chemise en blanc" reste correct quel que soit le genre du nom). */
+/**
+ * Genre/nombre grammatical d'une pièce (recette 22/08/2026, brief design
+ * "Comment porter cette pièce" section 6 — accord naturel plutôt que "en
+ * {couleur}" invariable). Dérivé des données structurées (cat/subtype),
+ * jamais d'une analyse du texte généré — fiable même sur un nom de pièce
+ * imprévisible. Pour les catégories où le sous-type MODIFIE le nom
+ * générique (ex. "jean droit"), le genre reste celui de la catégorie
+ * (tête du groupe nominal). Pour celles où le sous-type REMPLACE le nom
+ * générique (NOUN_SUBTYPE_CATS), chaque sous-type a son propre genre.
+ */
+type Gender = "m" | "f";
+interface NounInfo { gender: Gender; plural?: boolean }
+
+const CAT_GENDER: Record<CategoryKey, NounInfo> = {
+  haut: { gender: "m" }, pull: { gender: "m" }, pantalon: { gender: "m" }, jean: { gender: "m" },
+  jupe: { gender: "f" }, short: { gender: "m" }, robe: { gender: "f" }, combinaison: { gender: "f" },
+  veste: { gender: "f" }, manteau: { gender: "m" }, chaussures: { gender: "f", plural: true },
+  sac: { gender: "m" }, bijou: { gender: "m" }, accessoire: { gender: "m" },
+};
+
+const SUBTYPE_GENDER: Partial<Record<CategoryKey, Record<string, NounInfo>>> = {
+  haut: {
+    "t-shirt": { gender: "m" }, top: { gender: "m" }, "débardeur": { gender: "m" }, chemise: { gender: "f" },
+    chemisier: { gender: "m" }, blouse: { gender: "f" }, polo: { gender: "m" }, sweat: { gender: "m" },
+  },
+  pull: { pull: { gender: "m" }, gilet: { gender: "m" }, cardigan: { gender: "m" }, "col roulé": { gender: "m" } },
+  veste: {
+    blazer: { gender: "m" }, "veste légère": { gender: "f" }, perfecto: { gender: "m" },
+    "veste en jean": { gender: "f" }, surchemise: { gender: "f" },
+  },
+  manteau: {
+    manteau: { gender: "m" }, trench: { gender: "m" }, caban: { gender: "m" },
+    doudoune: { gender: "f" }, parka: { gender: "f" }, "imperméable": { gender: "m" },
+  },
+  chaussures: {
+    baskets: { gender: "f", plural: true }, bottines: { gender: "f", plural: true }, bottes: { gender: "f", plural: true },
+    escarpins: { gender: "m", plural: true }, sandales: { gender: "f", plural: true }, "sandales à talons": { gender: "f", plural: true },
+    espadrilles: { gender: "f", plural: true }, mocassins: { gender: "m", plural: true }, ballerines: { gender: "f", plural: true },
+    "chaussures d'intérieur": { gender: "f", plural: true },
+  },
+  sac: {
+    "sac à main": { gender: "m" }, cabas: { gender: "m" }, "bandoulière": { gender: "f" },
+    pochette: { gender: "f" }, "sac à dos": { gender: "m" }, "sac de sport": { gender: "m" },
+  },
+  bijou: {
+    collier: { gender: "m" }, "boucles d'oreilles": { gender: "f", plural: true }, bracelet: { gender: "m" },
+    bague: { gender: "f" }, montre: { gender: "f" },
+  },
+  accessoire: {
+    ceinture: { gender: "f" }, foulard: { gender: "m" }, "écharpe": { gender: "f" }, chapeau: { gender: "m" },
+    casquette: { gender: "f" }, lunettes: { gender: "f", plural: true }, collants: { gender: "m", plural: true },
+    "chaussettes hautes": { gender: "f", plural: true }, gourde: { gender: "f" },
+  },
+  combinaison: { combinaison: { gender: "f" }, combishort: { gender: "m" }, salopette: { gender: "f" } },
+};
+
+function nounInfoOf(it: Item): NounInfo {
+  const catInfo = CAT_GENDER[it.cat] || { gender: "m" as const };
+  if (!NOUN_SUBTYPE_CATS.has(it.cat)) return catInfo;
+  const sub = it.subtype?.trim().toLowerCase();
+  const info = sub && SUBTYPE_GENDER[it.cat]?.[sub];
+  return info || catInfo;
+}
+
+/**
+ * Accord des rares couleurs qui sont de vrais adjectifs variables en
+ * français (blanc/noir/gris, doré/argenté/cuivré). Toutes les autres
+ * couleurs de la palette Capsela sont des noms employés comme couleur
+ * (kaki, marine, corail, terracotta, chocolat, moutarde, camel, taupe,
+ * denim, prune, bordeaux, crème, sable, brique, perle, bronze...) ou des
+ * couleurs composées (ex. "blanc cassé", "vert sauge", "gris clair") —
+ * grammaticalement invariables dans les deux cas, jamais accordées.
+ */
+const COLOR_AGREEMENT: Record<string, { m: string; f: string; mp: string; fp: string }> = {
+  blanc: { m: "blanc", f: "blanche", mp: "blancs", fp: "blanches" },
+  noir: { m: "noir", f: "noire", mp: "noirs", fp: "noires" },
+  gris: { m: "gris", f: "grise", mp: "gris", fp: "grises" },
+  "doré": { m: "doré", f: "dorée", mp: "dorés", fp: "dorées" },
+  "argenté": { m: "argenté", f: "argentée", mp: "argentés", fp: "argentées" },
+  "cuivré": { m: "cuivré", f: "cuivrée", mp: "cuivrés", fp: "cuivrées" },
+};
+
+function agreeColor(colorName: string, info: NounInfo): string {
+  const forms = COLOR_AGREEMENT[colorName.trim().toLowerCase()];
+  if (!forms) return colorName.toLowerCase();
+  if (info.plural) return info.gender === "f" ? forms.fp : forms.mp;
+  return info.gender === "f" ? forms.f : forms.m;
+}
+
+/** Accord d'une couleur partagée par plusieurs pièces jointes par "et" — toujours pluriel ; masculin dès qu'au moins une pièce est masculine ("le masculin l'emporte", règle standard du français). */
+function agreeColorForGroup(colorName: string, items: Item[]): string {
+  const gender: Gender = items.every((it) => nounInfoOf(it).gender === "f") ? "f" : "m";
+  return agreeColor(colorName, { gender, plural: true });
+}
+
+/** Libellé compact d'une pièce, toujours dérivé de ses données réelles — accord naturel de couleur ("pantalon noir", "baskets blanches"), jamais la construction invariable "en {couleur}". */
 function pieceLabel(it: Item): string {
   const base = pieceBase(it);
-  return it.color ? `${base} en ${it.color.toLowerCase()}` : base;
+  return it.color ? `${base} ${agreeColor(it.color, nounInfoOf(it))}` : base;
 }
 
 /** Ordre de priorité pour choisir les 1-2 pièces les plus distinctives d'un look (hors pivot) — la veste/le manteau et le bas/la robe sont ce qui différencie le plus deux propositions autour d'une même pièce pivot. */
 const DESCRIPTION_PRIORITY: CategoryKey[] = ["veste", "manteau", "robe", "combinaison", "jupe", "pantalon", "jean", "short", "haut", "pull", "chaussures"];
 
+/** Conseil de style d'un look (titre court + phrase), affiché en Zone 2 de la card (brief design 22/08/2026, section 5/7). */
+export interface OutfitStyleInsight {
+  title: string;
+  sentence: string;
+}
+
 /**
- * Phrase courte par look (1-2 lignes), générée par template déterministe
- * (jamais OpenAI) à partir des caractéristiques réelles des pièces —
- * jamais de texte générique type "Une alternative tout aussi adaptée."
- * (précision 13/08/2026 du brief 19/08/2026). `indexInOccasion` fait
+ * Conseil de style court par look (titre + 1 phrase), généré par template
+ * déterministe (jamais OpenAI) à partir des caractéristiques réelles des
+ * pièces — jamais de texte générique type "Une alternative tout aussi
+ * adaptée.", jamais une caractéristique non présente dans les données
+ * (brief design 22/08/2026, section 7 : "ne pas inventer").
+ *
+ * Quand un vrai contraste de formalité existe entre deux pièces du look
+ * (ex. un blazer structuré + des baskets), le conseil explique POURQUOI la
+ * combinaison fonctionne plutôt que de simplement énumérer les pièces —
+ * c'est la seule "raison" que les données permettent d'établir de façon
+ * fiable (formalityOf, déjà la source de vérité du moteur pour R-B2/R-B3).
+ * Sans ce contraste, repli sur une description par énumération (comme
+ * avant), avec un titre court tiré de l'occasion. `indexInOccasion` fait
  * varier la clôture de phrase entre les looks d'une même section.
  */
-export function describeOutfitVariation(variation: ItemOutfitVariation, items: Item[], pivotId: number, indexInOccasion: number): string {
+export function describeOutfitVariation(
+  variation: ItemOutfitVariation,
+  items: Item[],
+  pivotId: number,
+  indexInOccasion: number
+): OutfitStyleInsight {
+  const pivot = items.find((it) => it.id === pivotId);
   const others = items.filter((it) => it.id !== pivotId);
+
+  // Contraste de formalité (structurant vs décontracté) parmi les pièces
+  // vêtement/chaussures, hors pivot — les accessoires/bijoux ne
+  // "structurent" ni ne "décontractent" un look au sens courant du terme.
+  const clothingLike = others.filter((it) => CLOTHING_CATS.includes(it.cat) || it.cat === "chaussures");
+  if (pivot && clothingLike.length >= 2) {
+    const withFormality = clothingLike.map((it) => ({ it, f: formalityOf(it) }));
+    const maxF = Math.max(...withFormality.map((x) => x.f));
+    const minF = Math.min(...withFormality.map((x) => x.f));
+    if (maxF - minF >= 2) {
+      const structurer = withFormality.find((x) => x.f === maxF)!.it;
+      const casual = withFormality.find((x) => x.f === minF)!.it;
+      if (structurer.id !== casual.id) {
+        const title = OCCASION_CONTRAST_TITLE[variation.occasion] || OCCASION_BASE_TITLE[variation.occasion] || "Une tenue équilibrée";
+        const sentence = `Le ${pieceLabel(structurer)} structure le ${pieceBase(pivot)}, tandis que le ${pieceLabel(casual)} garde le look décontracté.`;
+        return { title, sentence };
+      }
+    }
+  }
+
+  // Repli : description par énumération des 1-2 pièces les plus distinctives.
   const picked: Item[] = [];
   for (const cat of DESCRIPTION_PRIORITY) {
     if (picked.length >= 2) break;
@@ -1436,18 +1599,21 @@ export function describeOutfitVariation(variation: ItemOutfitVariation, items: I
     if (found) picked.push(found);
   }
 
+  const title = OCCASION_BASE_TITLE[variation.occasion] || "Une tenue équilibrée";
   const closers = OCCASION_CLOSERS[variation.occasion] || ["une combinaison bien assortie."];
   const closer = closers[indexInOccasion % closers.length];
 
-  if (!picked.length) return OCCASION_VARIATION_BASE[variation.occasion] || "Une combinaison bien assortie.";
+  if (!picked.length) {
+    return { title, sentence: OCCASION_VARIATION_BASE[variation.occasion] || "Une combinaison bien assortie." };
+  }
 
   // Couleur partagée entre les 2 pièces (correctif 20/08/2026) : évite la
-  // répétition "t-shirt en blanc et baskets en blanc" — mentionnée une
-  // seule fois à la fin plutôt qu'après chaque pièce.
+  // répétition "t-shirt blanc et baskets blanches" — mentionnée une seule
+  // fois à la fin plutôt qu'après chaque pièce.
   const sameColor =
     picked.length === 2 && picked[0].color && picked[1].color && picked[0].color.toLowerCase() === picked[1].color.toLowerCase();
   const piecesText = sameColor
-    ? `${picked.map(pieceBase).join(" et ")} en ${picked[0].color!.toLowerCase()}`
+    ? `${picked.map(pieceBase).join(" et ")} ${agreeColorForGroup(picked[0].color!, picked)}`
     : picked.map(pieceLabel).join(" et ");
-  return `Avec ${piecesText}, ${closer}`;
+  return { title, sentence: `Avec ${piecesText}, ${closer}` };
 }

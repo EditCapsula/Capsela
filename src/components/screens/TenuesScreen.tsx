@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import { OutfitComposition } from "@/components/OutfitComposition";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -10,57 +11,6 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
-import type { CategoryKey, Item } from "@/lib/types";
-
-/**
- * Grille non chevauchante et hiérarchisée de l'aperçu "La combinaison"
- * (brief design 22/08/2026, "faire ressentir une tenue complète, pas cinq
- * produits indépendants") — chaque pièce occupe sa propre cellule (jamais
- * recouverte par une autre), avec une taille dérivée de son rôle plutôt que
- * de sa position dans le tableau : pièces principales (haut/bas/robe/veste)
- * grandes, chaussures intermédiaires, sac/bijou/accessoire petits. Grille
- * CSS à spans (jamais de position absolue dépendante du nombre de pièces) —
- * s'adapte donc à toute combinaison générée par Capsela. L'ordre est fixe
- * (même rôle → même position relative à chaque rendu, jamais aléatoire).
- */
-type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
-type CompositionTier = "principal" | "chaussures" | "petit";
-
-const ROLE_ORDER: CompositionRole[] = ["outerwear", "onepiece", "haut", "pantalon", "chaussures", "sac", "petit"];
-
-const TIER_OF_ROLE: Record<CompositionRole, CompositionTier> = {
-  outerwear: "principal",
-  onepiece: "principal",
-  haut: "principal",
-  pantalon: "principal",
-  chaussures: "chaussures",
-  sac: "petit",
-  petit: "petit",
-};
-
-/** Empan de grille par palier de taille — 4 colonnes, "dense" comble les trous laissés par les petites pièces. */
-const TIER_SPAN: Record<CompositionTier, { col: number; row: number }> = {
-  principal: { col: 2, row: 2 },
-  chaussures: { col: 2, row: 1 },
-  petit: { col: 1, row: 1 },
-};
-
-function compositionRoleOf(cat: CategoryKey): CompositionRole {
-  if (cat === "pantalon" || cat === "jean" || cat === "jupe" || cat === "short") return "pantalon";
-  if (cat === "veste" || cat === "manteau") return "outerwear";
-  if (cat === "robe" || cat === "combinaison") return "onepiece";
-  if (cat === "bijou" || cat === "accessoire") return "petit";
-  if (cat === "haut" || cat === "chaussures" || cat === "sac") return cat;
-  return "petit"; // pull et tout le reste
-}
-
-/** Ordre fixe par rôle (jamais l'ordre de tirage, qui varie à chaque régénération) + rôle pour la taille de cellule. */
-function orderedCompositionPieces(items: Item[]): { item: Item; role: CompositionRole }[] {
-  return items
-    .map((it, i) => ({ item: it, role: compositionRoleOf(it.cat), i }))
-    .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || a.i - b.i)
-    .map(({ item, role }) => ({ item, role }));
-}
 
 /** US-05 — transparence du mode de recommandation : source réelle des pièces de la tenue affichée. */
 const MODE_STYLES = {
@@ -396,60 +346,7 @@ export default function TenuesScreen() {
 
       {!geoLoading && outfitPieces.length > 0 && (
         <div className="mb-3" style={{ marginTop: 10 }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gridAutoRows: "clamp(58px, 17vw, 74px)",
-              gridAutoFlow: "dense",
-              gap: 6,
-            }}
-          >
-            {orderedCompositionPieces(outfitPieces).map(({ item: it, role }) => {
-              const img = resolveItemImage(it);
-              const hasImg = Boolean(img.url);
-              // Une photo réelle du dressing (kind "photo") n'est jamais
-              // détourée comme une image produit catalogue/affiliée : la
-              // traiter en "contain" la laisse flotter, minuscule, au milieu
-              // d'un grand vide beige, alors que les pièces catalogue
-              // occupent naturellement toute la cellule sur leur fond
-              // transparent — d'où l'écart visuel signalé le 22/08/2026
-              // ("les images importées du dressing doivent avoir le même
-              // traitement d'images"). Recadrée en "cover" plein cadre à la
-              // place (même traitement que la grille Dressing, WardrobeScreen)
-              // : elle occupe alors exactement le même espace que ses
-              // voisines, comme une vraie tuile de look plutôt qu'une photo
-              // de vacances incrustée dans une case.
-              const isRealPhoto = img.kind === "photo";
-              const span = TIER_SPAN[TIER_OF_ROLE[role]];
-              return (
-                <div
-                  key={"comp-" + it.id}
-                  style={{
-                    gridColumn: `span ${span.col}`,
-                    gridRow: `span ${span.row}`,
-                    borderRadius: 14,
-                    padding: isRealPhoto ? 0 : 8,
-                    boxSizing: "border-box",
-                    background: "#F3EDE1",
-                    backgroundImage: hasImg ? `url(${img.url})` : undefined,
-                    backgroundColor: hasImg ? undefined : it.hex,
-                    backgroundSize: isRealPhoto ? "cover" : "contain",
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center",
-                    backgroundOrigin: isRealPhoto ? "border-box" : "content-box",
-                    boxShadow: hasImg ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
-                    // Rapproche l'éclairage d'une vraie photo (extérieur,
-                    // lumière naturelle) du rendu plat des photos produit
-                    // catalogue (signalé 22/08/2026, "la luminosité de
-                    // l'image") — réglage approximatif, jamais une vraie
-                    // correction d'exposition analysée au cas par cas.
-                    filter: isRealPhoto ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
-                  }}
-                />
-              );
-            })}
-          </div>
+          <OutfitComposition items={outfitPieces} variant="hero" />
           {/* "Enregistrer cette tenue" (brief design 22/08/2026, section 8) —
               état local volontairement non persisté : savedLooks (store.tsx)
               sert à un autre usage (looks nommés composés à la main) et
