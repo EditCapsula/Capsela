@@ -32,6 +32,7 @@ import {
  * parcours réellement servi.
  */
 const ALL_STEPS = [
+  { key: "prenom", kicker: "Toi", title: "Comment tu t'appelles ?", subtitle: "Pour personnaliser ton expérience Capsela." },
   { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
   { key: "pal_couleurs", kicker: "Ta palette", title: "Quelles couleurs aimes-tu porter ?", subtitle: "De 1 à 6 couleurs — celles qui reviennent le plus souvent dans tes tenues." },
   { key: "pal_ressenti", kicker: "Ta palette", title: "Deux précisions rapides", subtitle: "Elles affinent nos suggestions, sans jamais écarter une couleur que tu as choisie." },
@@ -113,7 +114,12 @@ export default function ProfileSetupScreen() {
   const { profile, saveProfile } = useAuth();
   const { state, actions } = useCapsela();
   const [draft, setDraft] = useState<Profile>(profile);
-  const STEPS = ALL_STEPS.filter((s) => s.key !== "morpho" || draft.gender === "femme");
+  // Étape "prenom" masquée dès qu'un prénom est déjà connu (saisi à
+  // l'inscription par e-mail, ou repris des métadonnées Google) — jamais
+  // redemandé pour rien (correctif 24/08/2026).
+  const STEPS = ALL_STEPS.filter(
+    (s) => (s.key !== "morpho" || draft.gender === "femme") && (s.key !== "prenom" || !profile.displayName.trim())
+  );
   const [step, setStep] = useState(() =>
     Math.max(0, STEPS.findIndex((s) => s.key === (state.profileSetupStep || "genre")))
   );
@@ -164,6 +170,7 @@ export default function ProfileSetupScreen() {
   // (styles : recette 20/08/2026 ; palette : Tâche 8, min 1 couleur) — les
   // autres étapes gardent leur comportement existant, jamais bloquant.
   const canContinue =
+    (meta.key !== "prenom" || draft.displayName.trim().length > 0) &&
     (meta.key !== "style" || draft.styles.length > 0) &&
     (meta.key !== "pal_couleurs" || draft.paletteCouleurs.length >= MIN_PALETTE_COULEURS);
 
@@ -213,6 +220,18 @@ export default function ProfileSetupScreen() {
         <div className="font-serif text-[27px] leading-[1.15] text-ink mt-3">{meta.title}</div>
         <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">{meta.subtitle}</div>
       </div>
+
+      {meta.key === "prenom" && (
+        <div className="mt-[26px]">
+          <input
+            className="capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full"
+            placeholder="Prénom"
+            value={draft.displayName}
+            onChange={(e) => patch({ displayName: e.target.value })}
+            autoFocus
+          />
+        </div>
+      )}
 
       {meta.key === "genre" && (
         <div className="flex flex-col gap-[10px] mt-[26px]">

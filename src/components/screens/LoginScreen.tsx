@@ -26,6 +26,18 @@ export default function LoginScreen() {
     // lire auth.profile ici serait lire une valeur pas encore mise à jour (state React asynchrone).
   };
 
+  // Écran Se connecter (correctif 24/08/2026, signalé : un compte créé via
+  // Google ne pouvait pas se reconnecter par ce biais, seul e-mail/mot de
+  // passe était proposé ici). Jamais markSignupIntent ici, à la différence
+  // d'AuthScreen (Créer un compte) : cet écran suppose un compte déjà
+  // existant, il ne doit jamais être traité comme une nouvelle inscription.
+  const submitGoogle = async () => {
+    if (busy) return;
+    setBusy(true);
+    await auth.signInGoogle();
+    setBusy(false);
+  };
+
   if (forgotOpen) {
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
@@ -111,7 +123,20 @@ export default function LoginScreen() {
         </div>
       </div>
 
-      <div className="mt-[26px] flex flex-col gap-3">
+      <button
+        onClick={submitGoogle}
+        className="flex items-center justify-center gap-[10px] bg-card border border-border text-ink rounded-full py-[15px] text-[14px] cursor-pointer mt-7"
+      >
+        <span className="font-serif font-semibold">G</span>Continuer avec Google
+      </button>
+
+      <div className="flex items-center gap-[11px] my-[22px]">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-[10.5px] tracking-[.16em] uppercase text-placeholder">ou par e-mail</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
+      <div className="flex flex-col gap-3">
         <input
           type="email"
           className={INPUT_CLS}

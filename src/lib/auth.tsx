@@ -140,10 +140,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // est créée avant le premier saveProfile, typiquement à la fin du
     // questionnaire) : sans ce repli, ces deux infos étaient silencieusement
     // perdues — jamais reportées sur le profil que l'app affiche/enregistre.
-    const meta = authUser.user_metadata as { display_name?: string; birthdate?: string } | undefined;
+    // Connexion Google (correctif 24/08/2026, signalé : prénom jamais
+    // demandé) — Supabase n'écrit rien dans display_name pour ce provider,
+    // le prénom arrive dans given_name/full_name/name (selon ce que le
+    // compte Google partage) ; à défaut, l'étape "prenom" de l'onboarding
+    // (ProfileSetupScreen) prend le relais plutôt que de laisser le champ vide.
+    const meta = authUser.user_metadata as
+      | { display_name?: string; birthdate?: string; given_name?: string; full_name?: string; name?: string }
+      | undefined;
+    const metaFirstName = meta?.given_name || meta?.full_name?.split(" ")[0] || meta?.name?.split(" ")[0];
     setProfile({
       ...loaded,
-      displayName: loaded.displayName || meta?.display_name || "",
+      displayName: loaded.displayName || meta?.display_name || metaFirstName || "",
       birthdate: loaded.birthdate || meta?.birthdate || null,
     });
   }, []);
