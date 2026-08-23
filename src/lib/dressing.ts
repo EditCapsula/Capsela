@@ -46,6 +46,7 @@ interface DressingItemRow {
   photo_url: string | null;
   worn: number | null;
   worn_prev: number | null;
+  created_at: string;
 }
 
 function rowToItem(row: DressingItemRow): Item {
@@ -69,6 +70,7 @@ function rowToItem(row: DressingItemRow): Item {
     photoUrl: row.photo_url ?? undefined,
     worn: row.worn,
     wornPrev: row.worn_prev ?? undefined,
+    createdAt: new Date(row.created_at).getTime(),
   };
 }
 
@@ -171,6 +173,15 @@ export async function insertDressingItem(userId: string, item: Omit<Item, "id">)
 
 export async function deleteDressingItem(id: number): Promise<void> {
   const { error } = await getSupabase().from("dressing_items").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Met à jour une pièce existante ("Modifier les informations"/"Changer la photo", recette 24/08/2026) — mêmes colonnes qu'à l'insertion, jamais de nouvelle ligne. */
+export async function updateDressingItem(id: number, item: Omit<Item, "id">): Promise<void> {
+  const row = itemToRow(item, "");
+  const { user_id: _userId, ...patch } = row;
+  void _userId;
+  const { error } = await getSupabase().from("dressing_items").update(patch).eq("id", id);
   if (error) throw error;
 }
 
@@ -315,5 +326,11 @@ export async function insertSavedLook(userId: string, look: Omit<SavedLook, "id"
 
 export async function deleteSavedLook(id: string): Promise<void> {
   const { error } = await getSupabase().from("saved_looks").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Ajoute une pièce à un look existant ("♡ Ajouter à un look", recette 24/08/2026, PieceScreen) — patch minimal (piece_ids uniquement). */
+export async function updateSavedLook(id: string, pieceIds: number[]): Promise<void> {
+  const { error } = await getSupabase().from("saved_looks").update({ piece_ids: pieceIds }).eq("id", id);
   if (error) throw error;
 }

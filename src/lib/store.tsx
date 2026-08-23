@@ -16,7 +16,9 @@ import {
   insertDressingItem,
   insertOutfitHistoryEntry,
   insertSavedLook,
+  updateDressingItem,
   updateDressingItemWorn,
+  updateSavedLook,
   uploadDressingPhoto,
 } from "./dressing";
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
@@ -73,6 +75,7 @@ function buildInitialState(): AppState {
     items: [],
     suggestedExcluded: [],
     replacingId: null,
+    editingId: null,
     screen: "welcome",
     profileReturn: "home",
     premiumReturn: "home",
@@ -179,8 +182,15 @@ export interface Actions {
   onbBack: () => void;
   onbNext: () => void;
   openItem: (id: number, suggested?: boolean) => void;
-  /** Ouvre le module "Comment porter cette pièce ?" pour une pièce de la capsule. */
-  openItemOutfits: (id: number) => void;
+  /**
+   * Ouvre le module "Comment porter cette pièce ?" — pour une pièce de la
+   * capsule (suggested = true, valeur par défaut, comportement historique)
+   * ou, depuis la refonte PieceScreen (recette 24/08/2026, CTA "Voir des
+   * tenues avec cette pièce"), pour une pièce réelle du dressing
+   * (suggested = false) — sans quoi activeSuggested resterait figé à true
+   * au retour sur PieceScreen et l'afficherait à tort comme une suggestion.
+   */
+  openItemOutfits: (id: number, suggested?: boolean) => void;
   /** Affiche une combinaison choisie depuis ce module sur l'écran Tenue — jamais un enregistrement automatique comme portée. */
   viewItemOutfit: (ids: number[], occasion: OccasionKey) => void;
   removeActive: () => void;
@@ -195,6 +205,8 @@ export interface Actions {
    * drapeaux *Touched que la détection par nom/photo).
    */
   startReplace: (item: Item) => void;
+  /** Ouvre l'écran Ajouter en mode édition pour une pièce réelle du dressing ("Modifier les informations"/"Changer la photo", recette 24/08/2026) — préremplit tous les champs, saveItem met alors à jour cette ligne plutôt que d'en créer une nouvelle. */
+  startEditItem: (item: Item) => void;
   setCatFilter: (k: CategoryKey | "all") => void;
   setAddName: (v: string) => void;
   setAddBrand: (v: string) => void;
@@ -251,7 +263,8 @@ export interface Actions {
   setOpinionContact: (c: string) => void;
   sendOpinionRequest: (via: "message" | "whatsapp" | "social") => void;
 
-  goCreateLook: () => void;
+  /** seedId : préremplit lookDraftIds avec cette pièce (recette 24/08/2026, PieceScreen "Ajouter à un look → Créer un nouveau look") — jamais renseigné hors de ce parcours. */
+  goCreateLook: (seedId?: number) => void;
   cancelCreateLook: () => void;
   toggleLookDraftPiece: (id: number) => void;
   setLookDraftName: (v: string) => void;
@@ -263,6 +276,8 @@ export interface Actions {
   closeLookDetail: () => void;
   deleteActiveLook: () => void;
   wearLookToday: (id: string) => void;
+  /** Ajoute une pièce du dressing réel à un look existant (recette 24/08/2026, PieceScreen "Ajouter à un look") — persistance best-effort, jamais bloquant. */
+  addPieceToLook: (lookId: string, pieceId: number) => void;
 }
 
 interface CapselaContextValue {
@@ -607,7 +622,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       })),
     openAdd: () => go("add"),
     openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
-    addBack: () => setState((s) => ({ ...s, replacingId: null, screen: "wardrobe" })),
+    addBack: () =>
+      setState((s) => ({
+        ...s,
+        replacingId: null,
+        editingId: null,
+        screen: s.editingId != null ? "piece" : "wardrobe",
+      })),
     setAuthName: (v) => setState((s) => ({ ...s, authName: v })),
 
     onbBack: () =>
@@ -617,8 +638,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
     openItem: (id, suggested = false) =>
       setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" })),
-    openItemOutfits: (id) =>
-      setState((s) => ({ ...s, activeId: id, activeSuggested: true, itemOutfitsReturn: s.screen, screen: "itemOutfits" })),
+    openItemOutfits: (id, suggested = true) =>
+      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, itemOutfitsReturn: s.screen, screen: "itemOutfits" })),
     // Affiche la combinaison choisie sur l'écran Tenue (recette 19/08/2026) :
     // conserve l'occasion correspondante, jamais d'enregistrement comme
     // portée ni de remplacement automatique en dehors de ce clic explicite.
@@ -670,6 +691,41 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addColorTouched: true,
           addSize: null,
           addPhotoUrl: img.url ?? null,
+          addSeason: item.season,
+          addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
+          addOccasionTouched: true,
+          addShoeType: item.cat === "chaussures" ? item.shoeType ?? null : null,
+          addShoeTypeTouched: Boolean(item.shoeType),
+          addMatiere: item.matiere ?? null,
+          addMatiereTouched: Boolean(item.matiere),
+          addCoupe: item.coupe ?? null,
+          addCoupeTouched: Boolean(item.coupe),
+          addSacType: item.cat === "sac" ? item.sacType ?? null : null,
+          addSacTypeTouched: Boolean(item.sacType),
+          addBijouType: item.cat === "bijou" ? item.bijouType ?? null : null,
+          addBijouTypeTouched: Boolean(item.bijouType),
+          addAccessoireType: item.cat === "accessoire" ? item.accessoireType ?? null : null,
+          addAccessoireTypeTouched: Boolean(item.accessoireType),
+          addSubtype: item.subtype ?? null,
+          addSubtypeTouched: Boolean(item.subtype),
+          screen: "add",
+        };
+      }),
+    startEditItem: (item) =>
+      setState((s) => {
+        const img = resolveItemImage(item);
+        return {
+          ...s,
+          editingId: item.id,
+          addName: item.name,
+          addNameTouched: true,
+          addBrand: item.brand ?? "",
+          addCat: item.cat,
+          addCatTouched: true,
+          addColor: { name: item.color, hex: item.hex },
+          addColorTouched: true,
+          addSize: item.size ?? null,
+          addPhotoUrl: item.photoUrl ?? img.url ?? null,
           addSeason: item.season,
           addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
           addOccasionTouched: true,
@@ -833,6 +889,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // Jamais persister l'aperçu local (blob:) : attendre la fin de l'upload
       // Storage plutôt que de sauvegarder une URL qui redeviendrait invalide.
       if (s.addPhotoUploading) return;
+      // Modification d'une pièce existante (recette 24/08/2026, PieceScreen
+      // "Modifier les informations"/"Changer la photo") : worn/wornPrev/
+      // createdAt viennent toujours de la pièce d'origine, jamais du
+      // formulaire (qui n'en a pas connaissance) — sinon "Modifier"
+      // effacerait silencieusement le statut de port.
+      const editingId = s.editingId;
+      const original = editingId != null ? s.items.find((i) => i.id === editingId) : undefined;
       const base: Omit<Item, "id"> = {
         name: (s.addName || "").trim() || "Nouvelle pièce",
         brand: (s.addBrand || "").trim() || undefined,
@@ -850,12 +913,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         accessoireType: s.addCat === "accessoire" ? s.addAccessoireType || undefined : undefined,
         subtype: s.addSubtype || undefined,
         photoUrl: s.addPhotoUrl || undefined,
-        worn: null,
+        worn: original ? original.worn : null,
+        wornPrev: original?.wornPrev,
       };
       const resetFields = (st: AppState): AppState => ({
         ...st,
         suggestedExcluded: st.replacingId ? [...st.suggestedExcluded, st.replacingId] : st.suggestedExcluded,
         replacingId: null,
+        editingId: null,
         addName: "",
         addNameTouched: false,
         addBrand: "",
@@ -881,8 +946,18 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addShoeTypeTouched: false,
         addOccasion: ["travail_formel"],
         addOccasionTouched: false,
-        screen: "wardrobe",
+        screen: editingId != null ? "piece" : "wardrobe",
       });
+      if (editingId != null) {
+        setState((st) => ({
+          ...resetFields(st),
+          items: st.items.map((it) => (it.id === editingId ? { ...it, ...base, id: editingId, createdAt: it.createdAt } : it)),
+        }));
+        if (isSupabaseConfigured && userId) {
+          updateDressingItem(editingId, base).catch((err) => reportDressingError("updateDressingItem", err));
+        }
+        return;
+      }
       if (isSupabaseConfigured && userId) {
         setState(resetFields);
         insertDressingItem(userId, base)
@@ -1054,10 +1129,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setOpinionContact: (c) => setState((s) => ({ ...s, opinionContact: s.opinionContact === c ? null : c })),
     sendOpinionRequest: (via) => setState((s) => ({ ...s, opinionStatus: "sent", opinionVia: via })),
 
-    goCreateLook: () =>
+    goCreateLook: (seedId) =>
       setState((s) => ({
         ...s,
-        lookDraftIds: [],
+        lookDraftIds: seedId != null ? [seedId] : [],
         lookDraftName: "",
         lookDraftOccasion: "all",
         lookDraftDismissed: [],
@@ -1214,6 +1289,19 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         ],
       }));
       if (wornUpdates.length && isSupabaseConfigured && userId) updateDressingItemWorn(wornUpdates).catch((err) => reportDressingError("updateDressingItemWorn", err));
+    },
+    addPieceToLook: (lookId, pieceId) => {
+      const s = stateRef.current;
+      const look = s.savedLooks.find((l) => l.id === lookId);
+      if (!look || look.pieceIds.includes(pieceId)) return;
+      const nextPieceIds = [...look.pieceIds, pieceId];
+      setState((st) => ({
+        ...st,
+        savedLooks: st.savedLooks.map((l) => (l.id === lookId ? { ...l, pieceIds: nextPieceIds } : l)),
+      }));
+      if (isSupabaseConfigured && userId) {
+        updateSavedLook(lookId, nextPieceIds).catch((err) => reportDressingError("updateSavedLook", err));
+      }
     },
   };
 

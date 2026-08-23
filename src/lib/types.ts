@@ -187,6 +187,8 @@ export interface Item {
   promptImageOverride?: string;
   /** Valeurs brutes de saison_capsule (source : vestiaire_universel uniquement, jamais déduit du type de vêtement) — alimente le badge saison de "Les idées de tenues". Absent pour une pièce du dressing réel ou du catalogue statique de secours (catalog.ts), qui n'ont pas cette colonne. */
   capsuleSeasons?: CapsuleSeason[];
+  /** Date d'ajout au dressing réel (recette 24/08/2026, module revente contextuel de PieceScreen) — timestamp ms, mappé depuis created_at (dressing_items). Absent pour une pièce du catalogue vestiaire_universel/catalog.ts, qui n'a pas cette notion. */
+  createdAt?: number;
 }
 
 export interface City {
@@ -249,6 +251,8 @@ export interface AppState {
   suggestedExcluded: number[];
   /** Id de la suggestion en cours de remplacement via l'écran Ajouter. */
   replacingId: number | null;
+  /** Id de la pièce réelle en cours de modification via l'écran Ajouter (recette 24/08/2026, PieceScreen "Modifier les informations") — distinct de replacingId : saveItem met à jour cette ligne existante plutôt que d'en insérer une nouvelle. */
+  editingId: number | null;
 
   screen: Screen;
   /** Écran vers lequel revenir en quittant le profil (ouvert depuis l'avatar). */

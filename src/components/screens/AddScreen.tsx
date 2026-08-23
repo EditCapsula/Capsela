@@ -231,7 +231,7 @@ export default function AddScreen() {
         </button>
         <div className="text-center px-[46px]">
           <div className="font-serif text-[21px] text-ink leading-[1.2]">
-            {state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce"}
+            {state.editingId != null ? "Modifier la pièce" : state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce"}
           </div>
           {photoAnalyzed && (
             <div className="text-[12px] text-muted mt-[3px] flex items-center justify-center gap-[5px]">
@@ -442,7 +442,7 @@ export default function AddScreen() {
           (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta text-cream cursor-pointer")
         }
       >
-        Ajouter à mon dressing
+        {state.editingId != null ? "Enregistrer les modifications" : "Ajouter à mon dressing"}
       </button>
       {blocked && !state.addPhotoUploading && (
         <div className="text-center text-[11.5px] text-terracotta mt-[10px]">

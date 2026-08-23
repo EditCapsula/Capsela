@@ -206,7 +206,7 @@ export default function WardrobeScreen() {
         <div className="flex items-center justify-between mt-[2px] mb-3">
           <div className="text-[11.5px] text-muted">Tes looks enregistrés et créés par toi.</div>
           {state.savedLooks.length > 0 && (
-            <button onClick={actions.goCreateLook} className="text-[12.5px] text-terracotta cursor-pointer flex-shrink-0">
+            <button onClick={() => actions.goCreateLook()} className="text-[12.5px] text-terracotta cursor-pointer flex-shrink-0">
               + Créer un look
             </button>
           )}
@@ -219,7 +219,7 @@ export default function WardrobeScreen() {
             Tes looks apparaîtront ici lorsque tu commenceras à composer tes tenues.
           </div>
           <button
-            onClick={actions.goCreateLook}
+            onClick={() => actions.goCreateLook()}
             className="w-full flex items-center justify-center gap-[9px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card rounded-[14px] py-4 text-[13px] tracking-[.06em] text-ink cursor-pointer"
           >
             <span className="text-[17px] text-terracotta">+</span> Composer mon premier look
