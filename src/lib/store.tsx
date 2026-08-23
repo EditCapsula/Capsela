@@ -250,6 +250,7 @@ export interface Actions {
   setLookDraftOccasion: (o: OccasionKey) => void;
   dismissLookDraftSuggestion: (key: string) => void;
   saveLook: () => void;
+  toggleSaveOutfitLook: () => void;
   openLook: (id: string) => void;
   closeLookDetail: () => void;
   deleteActiveLook: () => void;
@@ -1094,6 +1095,34 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           lookDraftDismissed: [],
           screen: "wardrobe",
         };
+      }),
+    // "Enregistrer cette tenue" (Tenue du jour, recette 23/08/2026) — atterrit
+    // dans Dressing → Mes looks, exactement comme "Créer un look" : mêmes
+    // règles (2 pièces réelles minimum, R-B9, jamais de suggestion catalogue
+    // non possédée). Toggle : un second clic sur une tenue déjà enregistrée
+    // retire le look correspondant plutôt que d'en créer un doublon.
+    toggleSaveOutfitLook: () =>
+      setState((s) => {
+        const realIds = s.outfit.filter((id) => s.items.some((it) => it.id === id));
+        if (realIds.length < 2) return s;
+        const key = [...realIds].sort((a, b) => a - b).join(",");
+        const existing = s.savedLooks.find((l) => [...l.pieceIds].sort((a, b) => a - b).join(",") === key);
+        if (existing) {
+          return { ...s, savedLooks: s.savedLooks.filter((l) => l.id !== existing.id) };
+        }
+        const draftPieces = realIds.map((id) => s.items.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
+        if (violatesOuterwearRule(draftPieces)) return s;
+        const now = new Date();
+        const defaultName =
+          "Tenue du " + now.getDate().toString().padStart(2, "0") + "/" + (now.getMonth() + 1).toString().padStart(2, "0");
+        const look: SavedLook = {
+          id: "look" + Date.now(),
+          name: defaultName,
+          pieceIds: realIds,
+          createdAt: Date.now(),
+          occasion: s.occasion && s.occasion !== "all" ? s.occasion : undefined,
+        };
+        return { ...s, savedLooks: [look, ...s.savedLooks] };
       }),
     openLook: (id) => setState((s) => ({ ...s, activeLookId: id, screen: "lookDetail" })),
     closeLookDetail: () => setState((s) => ({ ...s, activeLookId: null, screen: "wardrobe" })),

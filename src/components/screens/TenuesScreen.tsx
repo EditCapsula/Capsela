@@ -110,10 +110,6 @@ export default function TenuesScreen() {
       setToast(null);
     });
   }
-  // "Enregistrer cette tenue" — voir le commentaire au point d'usage
-  // (composant prêt, persistance volontairement non branchée).
-  const [savedOutfitKey, setSavedOutfitKey] = useState<string | null>(null);
-
   const now = new Date();
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
   const firstNameOrYou = profile.displayName || "toi";
@@ -121,8 +117,15 @@ export default function TenuesScreen() {
   const outfitPieces = (state.outfit || [])
     .map((id) => wardrobePool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
-  const outfitKey = outfitPieces.map((it) => it.id).sort((a, b) => a - b).join(",");
-  const isOutfitSaved = outfitKey.length > 0 && savedOutfitKey === outfitKey;
+  // "Enregistrer cette tenue" (recette 23/08/2026) — atterrit dans Dressing →
+  // Mes looks, comme "Créer un look" : un look ne référence que de vraies
+  // pièces du dressing, jamais une suggestion catalogue non possédée.
+  const realOutfitIds = outfitPieces.filter((it) => !isCatalogId(it.id)).map((it) => it.id);
+  const canSaveOutfit = realOutfitIds.length >= 2;
+  const outfitKey = [...realOutfitIds].sort((a, b) => a - b).join(",");
+  const isOutfitSaved =
+    canSaveOutfit &&
+    state.savedLooks.some((l) => [...l.pieceIds].sort((a, b) => a - b).join(",") === outfitKey);
 
   // Génération automatique des visuels manquants (recette 18/08/2026) : dès
   // qu'une pièce du catalogue est affichée dans "La combinaison" sans photo
@@ -487,22 +490,21 @@ export default function TenuesScreen() {
       {!geoLoading && outfitPieces.length > 0 && (
         <div className="mb-3" style={{ marginTop: 10 }}>
           <OutfitComposition items={outfitPieces} variant="hero" />
-          {/* "Enregistrer cette tenue" (brief design 22/08/2026, section 8) —
-              état local volontairement non persisté : savedLooks (store.tsx)
-              sert à un autre usage (looks nommés composés à la main) et
-              aucun système de sauvegarde n'existe encore pour "aimer" la
-              recommandation du jour telle quelle. Composant prêt ; brancher
-              une vraie persistance (ex. colonne dédiée sur outfit_history ou
-              nouvelle table Supabase) reviendrait à remplacer ce useState
-              par un state/action du store, sans toucher à ce JSX. */}
-          <button
-            onClick={() => setSavedOutfitKey(isOutfitSaved ? null : outfitKey)}
-            className="mt-3 flex items-center gap-[6px] text-[12.5px] cursor-pointer"
-            style={{ color: isOutfitSaved ? "#A66950" : "#7B7366" }}
-          >
-            <span>{isOutfitSaved ? "♥" : "♡"}</span>
-            {isOutfitSaved ? "Tenue enregistrée" : "Enregistrer cette tenue"}
-          </button>
+          {/* "Enregistrer cette tenue" (recette 23/08/2026) — persiste dans
+              savedLooks, visible dans Dressing → Mes looks au même titre
+              qu'un look créé manuellement. Masqué si la tenue du jour ne
+              compte pas au moins 2 pièces réellement possédées (une tenue
+              faite uniquement de suggestions catalogue n'a rien à enregistrer). */}
+          {canSaveOutfit && (
+            <button
+              onClick={actions.toggleSaveOutfitLook}
+              className="mt-3 flex items-center gap-[6px] text-[12.5px] cursor-pointer"
+              style={{ color: isOutfitSaved ? "#A66950" : "#7B7366" }}
+            >
+              <span>{isOutfitSaved ? "♥" : "♡"}</span>
+              {isOutfitSaved ? "Tenue enregistrée" : "Enregistrer cette tenue"}
+            </button>
+          )}
         </div>
       )}
 
