@@ -151,6 +151,7 @@ export interface Actions {
   goTenues: () => void;
   goHistory: () => void;
   goNeverWorn: () => void;
+  goWardrobePieces: () => void;
   goProfile: () => void;
   goProfileEdit: () => void;
   goLegal: () => void;
@@ -581,6 +582,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     goHistory: () => go("history"),
     goNeverWorn: () => go("neverworn"),
+    goWardrobePieces: () => go("wardrobePieces"),
     goProfile: () => setState((s) => ({ ...s, profileReturn: s.screen === "profile" ? s.profileReturn : s.screen, screen: "profile" })),
     goProfileEdit: () => go("profileEdit"),
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),

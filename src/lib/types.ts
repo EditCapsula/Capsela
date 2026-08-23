@@ -368,4 +368,5 @@ export type Screen =
   | "opinionShare"
   | "createLook"
   | "lookDetail"
-  | "itemOutfits";
+  | "itemOutfits"
+  | "wardrobePieces";

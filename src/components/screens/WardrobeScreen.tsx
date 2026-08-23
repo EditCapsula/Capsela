@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import { CATS, wornAgo } from "@/lib/data";
+import { CATS } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { useCapsela } from "@/lib/store";
 import { isWishlistLook, lookWornCount, neverWornItems } from "@/lib/selectors";
@@ -146,78 +146,52 @@ export default function WardrobeScreen() {
           </button>
         </>
       ) : (
-        <>
-          {/* "Mes pièces" (recette 23/08/2026) — vue d'ensemble par catégorie
-              (photo représentative + effectif), en plus du détail complet
-              conservé ci-dessous : rien ne disparaît, juste un repère visuel
-              en plus, cohérent avec le reste de l'app mode (photos, jamais
-              d'aplat de couleur en résumé). */}
-          <div className="mt-6">
+        // "Mes pièces" (recette 23/08/2026) — vue d'ensemble compacte par
+        // catégorie (photo représentative + effectif) ; le détail complet
+        // par pièce vit désormais sur son propre écran ("Voir tout"), pour
+        // que Mes looks garde sa mise en avant sur cette page plutôt que
+        // d'être repoussé sous une longue liste de pièces.
+        <div className="mt-6">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-[7px] text-ink">
               <TshirtIcon />
               <span className="text-[12px] tracking-[.1em] uppercase font-semibold">Mes pièces</span>
             </div>
-            <div className="text-[11.5px] text-muted mt-[2px] mb-3">Toutes les pièces de ton dressing.</div>
-            <div className="grid grid-cols-2 gap-[9px]">
-              {groups.map((g) => {
-                const img = resolveItemImage(g.items[0]);
-                return (
-                  <div key={g.key} className="bg-card border border-border rounded-[14px] overflow-hidden">
-                    <div className="w-full" style={{ aspectRatio: "16/10", background: "#F3EDE1" }}>
-                      {img.url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={img.url}
-                          alt=""
-                          style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
-                        />
-                      )}
-                    </div>
-                    <div className="px-[12px] py-[10px]">
-                      <div className="text-[12.5px] text-ink">{g.label}</div>
-                      <div className="text-[10.5px] text-placeholder mt-[1px]">
-                        {g.items.length} {g.items.length <= 1 ? "pièce" : "pièces"}
-                      </div>
+            <button onClick={actions.goWardrobePieces} className="text-[12.5px] text-terracotta cursor-pointer">
+              Voir tout ›
+            </button>
+          </div>
+          <div className="text-[11.5px] text-muted mt-[2px] mb-3">Toutes les pièces de ton dressing.</div>
+          <div className="grid grid-cols-2 gap-[9px]">
+            {groups.map((g) => {
+              const img = resolveItemImage(g.items[0]);
+              return (
+                <button
+                  key={g.key}
+                  onClick={actions.goWardrobePieces}
+                  className="bg-card border border-border rounded-[14px] overflow-hidden text-left cursor-pointer"
+                >
+                  <div className="w-full" style={{ aspectRatio: "16/10", background: "#F3EDE1" }}>
+                    {img.url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={img.url}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
+                      />
+                    )}
+                  </div>
+                  <div className="px-[12px] py-[10px]">
+                    <div className="text-[12.5px] text-ink">{g.label}</div>
+                    <div className="text-[10.5px] text-placeholder mt-[1px]">
+                      {g.items.length} {g.items.length <= 1 ? "pièce" : "pièces"}
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                </button>
+              );
+            })}
           </div>
-
-          {groups.map((g) => (
-            <div key={g.key}>
-              <div className="mt-6 mb-3 text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
-                {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
-              </div>
-              <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
-                {g.items.map((it) => (
-                  <button
-                    key={it.id}
-                    onClick={() => actions.openItem(it.id, false)}
-                    className="flex-none w-[104px] cursor-pointer text-left"
-                    style={{ scrollSnapAlign: "start" }}
-                  >
-                    <div
-                      className="w-full rounded-[11px] border border-border overflow-hidden"
-                      style={
-                        it.photoUrl
-                          ? { aspectRatio: "4/5", backgroundImage: `url(${it.photoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-                          : { aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
-                      }
-                    />
-                    <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
-                      {it.name}
-                    </div>
-                    <div className="text-[9.5px] mt-[1px] text-placeholder">
-                      {it.worn == null ? "Jamais porté" : wornAgo(it.worn)}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </>
+        </div>
       )}
 
       <div className="mt-6">
