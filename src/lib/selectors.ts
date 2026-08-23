@@ -41,7 +41,7 @@ export function wornFromHistory(history: HistoryEntry[], id: number): boolean {
 }
 
 /** Nombre de ports par pièce, dérivé exclusivement de l'historique réel. */
-function wearCounts(history: HistoryEntry[]): Map<number, number> {
+export function wearCounts(history: HistoryEntry[]): Map<number, number> {
   const counts = new Map<number, number>();
   history.forEach((h) => h.pieceIds.forEach((id) => counts.set(id, (counts.get(id) || 0) + 1)));
   return counts;
