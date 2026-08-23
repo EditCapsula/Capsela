@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { isCatalogId } from "@/lib/catalog";
 import { CATLABEL, OCC_LABELS } from "@/lib/data";
@@ -53,6 +53,24 @@ export default function ItemOutfitsScreen() {
     () => (!pivot ? [] : getOutfitsForItem(pivot.id, pool, weather, preferredHexes, {}, profile.gender)),
     [pivot, pool, weather, preferredHexes, profile.gender]
   );
+
+  // Génération à la demande du visuel de la pièce pivot (correctif 23/08/2026,
+  // signalé : "Bomber oversize" resté sans photo sur cette page) — cet écran
+  // n'avait jamais ce déclenchement, contrairement à PieceScreen/TenuesScreen,
+  // qui l'ont déjà pour la même raison (aucune ligne vestiaire_universel pour
+  // une pièce réelle du dressing, donc jamais de génération pour elle).
+  useEffect(() => {
+    if (!pivot || !isCatalogId(pivot.id)) return;
+    if (
+      resolveItemImage(pivot).kind === "placeholder" &&
+      pivot.imageStatus !== "generating" &&
+      pivot.imageStatus !== "error" &&
+      pivot.imageStatus !== "invalid"
+    ) {
+      actions.requestCatalogImage(pivot.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pivot?.id]);
 
   if (!pivot) return null;
 
