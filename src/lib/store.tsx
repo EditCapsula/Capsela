@@ -76,6 +76,7 @@ function buildInitialState(): AppState {
     suggestedExcluded: [],
     replacingId: null,
     editingId: null,
+    addReturn: null,
     screen: "welcome",
     profileReturn: "home",
     premiumReturn: "home",
@@ -177,6 +178,8 @@ export interface Actions {
   goProfileSetup: (stepKey?: string, fromEdit?: boolean) => void;
   openAdd: () => void;
   openAddBag: () => void;
+  /** Ouvre l'ajout pré-rempli sur une catégorie donnée, en mémorisant l'écran d'origine pour y revenir (recette 24/08/2026, tuile "Ajouter un/une..." de Créer un look) — jamais utilisé pour openAdd/startReplace/startEditItem, qui gardent leur repli habituel. */
+  openAddForCategory: (cat: CategoryKey) => void;
   addBack: () => void;
   setAuthName: (v: string) => void;
   onbBack: () => void;
@@ -622,12 +625,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       })),
     openAdd: () => go("add"),
     openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
+    openAddForCategory: (cat) =>
+      setState((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),
     addBack: () =>
       setState((s) => ({
         ...s,
         replacingId: null,
         editingId: null,
-        screen: s.editingId != null ? "piece" : "wardrobe",
+        addReturn: null,
+        screen: s.addReturn || (s.editingId != null ? "piece" : "wardrobe"),
       })),
     setAuthName: (v) => setState((s) => ({ ...s, authName: v })),
 
@@ -895,6 +901,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // formulaire (qui n'en a pas connaissance) — sinon "Modifier"
       // effacerait silencieusement le statut de port.
       const editingId = s.editingId;
+      const addReturn = s.addReturn;
       const original = editingId != null ? s.items.find((i) => i.id === editingId) : undefined;
       const base: Omit<Item, "id"> = {
         name: (s.addName || "").trim() || "Nouvelle pièce",
@@ -921,6 +928,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         suggestedExcluded: st.replacingId ? [...st.suggestedExcluded, st.replacingId] : st.suggestedExcluded,
         replacingId: null,
         editingId: null,
+        addReturn: null,
         addName: "",
         addNameTouched: false,
         addBrand: "",
@@ -946,7 +954,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addShoeTypeTouched: false,
         addOccasion: ["travail_formel"],
         addOccasionTouched: false,
-        screen: editingId != null ? "piece" : "wardrobe",
+        screen: addReturn || (editingId != null ? "piece" : "wardrobe"),
       });
       if (editingId != null) {
         setState((st) => ({

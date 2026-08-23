@@ -253,6 +253,8 @@ export interface AppState {
   replacingId: number | null;
   /** Id de la pièce réelle en cours de modification via l'écran Ajouter (recette 24/08/2026, PieceScreen "Modifier les informations") — distinct de replacingId : saveItem met à jour cette ligne existante plutôt que d'en insérer une nouvelle. */
   editingId: number | null;
+  /** Écran vers lequel revenir en quittant l'ajout (recette 24/08/2026, tuile "Ajouter un/une..." de Créer un look) — prime sur le repli habituel (wardrobe/piece) quand renseigné ; null partout ailleurs (openAdd/startReplace/startEditItem/openAddBag), comportement inchangé. */
+  addReturn: Screen | null;
 
   screen: Screen;
   /** Écran vers lequel revenir en quittant le profil (ouvert depuis l'avatar). */
