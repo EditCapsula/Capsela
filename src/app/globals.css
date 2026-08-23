@@ -80,3 +80,25 @@ input.capin {
 input.capin::placeholder {
   color: var(--color-placeholder);
 }
+
+/**
+ * Icône de chargement (spinner cintre + cœur) — spec 23/08/2026 : le cintre
+ * reste fixe, seul l'arc tourne dans le sens horaire, 1,2 s en boucle.
+ */
+@keyframes loading-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.loading-spinner-arc {
+  animation: loading-spin 1.2s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner-arc {
+    animation: none;
+  }
+}

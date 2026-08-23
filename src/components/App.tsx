@@ -25,6 +25,7 @@ import CreateLookScreen from "./screens/CreateLookScreen";
 import LookDetailScreen from "./screens/LookDetailScreen";
 import ItemOutfitsScreen from "./screens/ItemOutfitsScreen";
 import TabBar from "./TabBar";
+import LoadingSpinner from "./LoadingSpinner";
 
 /** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) et l'écran Premium (fond sombre, pas de variante de barre adaptée). */
 const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup", "premium"]);
@@ -59,7 +60,7 @@ function Screens() {
   if (!ready) {
     return (
       <div className="relative w-full max-w-[480px] mx-auto h-dvh flex items-center justify-center bg-cream">
-        <span className="font-serif text-[15px] tracking-[.4em] text-terracotta pl-[.4em]">✦</span>
+        <LoadingSpinner size={96} />
       </div>
     );
   }
