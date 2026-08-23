@@ -45,19 +45,11 @@ export default function CapsuleScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <AppHeader />
 
-      <div className="flex items-start gap-[14px] mt-[18px]">
-        <button
-          onClick={actions.goWardrobe}
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer flex-shrink-0"
-        >
-          ←
-        </button>
-        <div>
-          <div className="text-[11px] tracking-[.18em] uppercase text-muted">Proposée pour toi</div>
-          <div className="font-serif text-[24px] text-ink mt-[6px]">Ta capsule</div>
-          <div className="text-[12px] text-muted leading-[1.5] mt-[6px]">
-            Composée à partir de ton profil et de ta palette personnelle. Elle s&apos;ajustera automatiquement au fur et à mesure que tu ajouteras tes propres pièces.
-          </div>
+      <div className="mt-[18px]">
+        <div className="text-[11px] tracking-[.18em] uppercase text-muted">Proposée pour toi</div>
+        <div className="font-serif text-[24px] text-ink mt-[6px]">Ta capsule</div>
+        <div className="text-[12px] text-muted leading-[1.5] mt-[6px]">
+          Composée à partir de ton profil et de ta palette personnelle. Elle s&apos;ajustera automatiquement au fur et à mesure que tu ajouteras tes propres pièces.
         </div>
       </div>
 
