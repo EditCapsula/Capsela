@@ -9,19 +9,41 @@ import { SUBTYPES } from "./data";
  * déductions, jamais saisies par l'utilisatrice.
  */
 
-export const MATIERES: Matiere[] = ["Coton", "Lin", "Laine", "Soie", "Cuir", "Denim", "Synthétique"];
+// Liste élargie (recette 24/08/2026, signalé : liste trop courte pour que
+// l'analyse photo puisse retenir la bonne matière sur des pièces réelles).
+export const MATIERES: Matiere[] = [
+  "Coton",
+  "Lin",
+  "Laine",
+  "Cachemire",
+  "Soie",
+  "Viscose",
+  "Cuir",
+  "Daim",
+  "Denim",
+  "Velours",
+  "Polyester",
+  "Nylon",
+  "Synthétique",
+];
 export const COUPES: Coupe[] = ["Serré", "Ajusté", "Ample"];
 
 /** Pré-suggestion de matière à l'ajout — jamais imposée, l'utilisateur peut toujours la changer. */
 export function detectMatiere(name: string): Matiere | null {
   const n = (name || "").toLowerCase();
+  if (/cachemire|cashmere/.test(n)) return "Cachemire";
   if (/lin/.test(n)) return "Lin";
   if (/laine|pull|gilet|tricot|maille/.test(n)) return "Laine";
   if (/soie/.test(n)) return "Soie";
+  if (/viscose/.test(n)) return "Viscose";
+  if (/daim|suède|suede/.test(n)) return "Daim";
   if (/cuir|bottine|escarpin|mocassin|perfecto/.test(n)) return "Cuir";
   if (/jean|denim/.test(n)) return "Denim";
+  if (/velours/.test(n)) return "Velours";
+  if (/polyester/.test(n)) return "Polyester";
+  if (/nylon/.test(n)) return "Nylon";
   if (/coton|t-shirt|chemise/.test(n)) return "Coton";
-  if (/sweat|molleton|jogging|synthétique|synthetique|polyester/.test(n)) return "Synthétique";
+  if (/sweat|molleton|jogging|synthétique|synthetique/.test(n)) return "Synthétique";
   return null;
 }
 

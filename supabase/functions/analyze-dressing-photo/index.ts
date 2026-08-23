@@ -62,7 +62,13 @@ const SUBTYPES: Partial<Record<CategoryKey, string[]>> = {
   manteau: ["Manteau", "Trench", "Caban", "Doudoune", "Parka", "Imperméable"],
 };
 
-const MATIERES = ["Coton", "Lin", "Laine", "Soie", "Cuir", "Denim", "Synthétique"] as const;
+// Liste élargie (recette 24/08/2026, signalé : liste trop courte pour que
+// l'analyse retienne la bonne matière sur des pièces réelles) — doit rester
+// synchronisée avec MATIERES (src/lib/attributes.ts, app-side).
+const MATIERES = [
+  "Coton", "Lin", "Laine", "Cachemire", "Soie", "Viscose",
+  "Cuir", "Daim", "Denim", "Velours", "Polyester", "Nylon", "Synthétique",
+] as const;
 const SHOE_TYPES = [
   "Baskets", "Bottines", "Bottes", "Escarpins", "Sandales", "Sandales à talons",
   "Espadrilles", "Mocassins", "Ballerines", "Chaussures d'intérieur",

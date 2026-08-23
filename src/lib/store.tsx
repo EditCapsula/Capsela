@@ -204,7 +204,7 @@ export interface Actions {
   /** Bascule l'occasion dans la sélection multiple. */
   setAddOccasion: (o: OccasionKey) => void;
   setAddShoeType: (t: ShoeType) => void;
-  setAddMatiere: (m: Matiere) => void;
+  setAddMatiere: (m: Matiere | null) => void;
   setAddCoupe: (c: Coupe) => void;
   setAddSacType: (t: SacType) => void;
   setAddBijouType: (t: BijouType) => void;

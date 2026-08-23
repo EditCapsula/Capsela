@@ -301,13 +301,22 @@ export default function AddScreen() {
       <Label>
         Matière <span className="opacity-60 normal-case tracking-normal">(détectée automatiquement, modifiable)</span>
       </Label>
-      <div className="flex gap-2 flex-wrap">
+      {/* Liste déroulante plutôt que des chips (recette 24/08/2026, signalé :
+          liste de matières trop courte pour couvrir les photos réelles) —
+          plus adaptée à une liste allongée qu'une rangée de chips qui
+          aurait fini sur 3-4 lignes. */}
+      <select
+        className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
+        value={state.addMatiere ?? ""}
+        onChange={(e) => actions.setAddMatiere((e.target.value || null) as typeof state.addMatiere)}
+      >
+        <option value="">Non précisée</option>
         {MATIERES.map((m) => (
-          <button key={m} onClick={() => actions.setAddMatiere(m)} className={chipCls(state.addMatiere === m)}>
+          <option key={m} value={m}>
             {m}
-          </button>
+          </option>
         ))}
-      </div>
+      </select>
 
       {coupeApplicable && (
         <>

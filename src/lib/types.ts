@@ -85,7 +85,20 @@ export type AccessoireType =
   | "Chaussettes hautes"
   | "Gourde";
 
-export type Matiere = "Coton" | "Lin" | "Laine" | "Soie" | "Cuir" | "Denim" | "Synthétique";
+export type Matiere =
+  | "Coton"
+  | "Lin"
+  | "Laine"
+  | "Cachemire"
+  | "Soie"
+  | "Viscose"
+  | "Cuir"
+  | "Daim"
+  | "Denim"
+  | "Velours"
+  | "Polyester"
+  | "Nylon"
+  | "Synthétique";
 export type Coupe = "Serré" | "Ajusté" | "Ample";
 
 /** Ton dominant de la couleur d'une pièce — alimente le rapprochement avec l'affinité de palette du profil (Tons chauds/froids/Les deux). */
