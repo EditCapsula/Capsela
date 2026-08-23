@@ -1,10 +1,12 @@
-name: Déployer la fonction Supabase (images catalogue)
+name: Déployer les fonctions Supabase
 
-# Permet de déployer generate-catalog-image sans terminal local : ce
-# workflow tourne sur les serveurs de GitHub. Se déclenche automatiquement
-# quand le code de la fonction change, ou manuellement depuis l'onglet
-# Actions ("Run workflow"). Nécessite un secret de dépôt GitHub
-# SUPABASE_ACCESS_TOKEN (Settings → Secrets and variables → Actions).
+# Permet de déployer les Edge Functions sans terminal local : ce workflow
+# tourne sur les serveurs de GitHub. Se déclenche automatiquement quand le
+# code d'une fonction change, ou manuellement depuis l'onglet Actions
+# ("Run workflow" — nécessaire ici pour déployer analyze-dressing-photo une
+# première fois, jamais poussée jusqu'ici, recette 24/08/2026). Nécessite un
+# secret de dépôt GitHub SUPABASE_ACCESS_TOKEN (Settings → Secrets and
+# variables → Actions), déjà configuré.
 
 on:
   push:
@@ -22,5 +24,8 @@ jobs:
         with:
           version: latest
       - run: supabase functions deploy generate-catalog-image --project-ref tkrbzrazejrxavtfspll
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - run: supabase functions deploy analyze-dressing-photo --project-ref tkrbzrazejrxavtfspll
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
