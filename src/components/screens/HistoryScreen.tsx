@@ -309,7 +309,7 @@ export default function HistoryScreen() {
                       )}
                     </div>
                   </div>
-                  <div className="text-[11px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
+                  <div className="text-[11px] text-ink mt-[6px] leading-[1.25] line-clamp-2">
                     {item.name}
                   </div>
                   <div className="text-[10px] text-terracotta mt-[1px]">
@@ -361,7 +361,7 @@ export default function HistoryScreen() {
                       />
                     )}
                   </div>
-                  <div className="text-[11px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
+                  <div className="text-[11px] text-ink mt-[6px] leading-[1.25] line-clamp-2">
                     {item.name}
                   </div>
                   <div className="text-[10px] text-terracotta mt-[1px] leading-[1.25]">Voir des idées de tenues ›</div>
