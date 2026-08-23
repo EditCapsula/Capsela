@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
-import { computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
+import { capsuleSeasonBucket, computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
@@ -393,9 +393,25 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const geoIsLive = geoStatus === "success";
   const profileCityFallback = CITIES.find((c) => c.city === profile.city) ?? CITIES[0];
   const geoCity: City = liveWeather ?? lastKnownCity ?? profileCityFallback;
+  // La capsule par défaut (defaultCapsule ci-dessous) est composée pour la
+  // saison CALENDAIRE courante (currentSeasonKey(), ex. "Été" en août),
+  // volontairement indépendante de la météo réelle du jour — décidé, cf. son
+  // commentaire plus bas. Filtrer ensuite ses pièces avec seulement le bucket
+  // météo réel (weather.seasons) revenait donc à écarter une bonne partie de
+  // cette même capsule dès que la météo du jour sort de sa saison calendaire
+  // (ex. 15° et nuageux en plein août) — jusqu'à vider entièrement le pool
+  // vêtement pour certaines occasions, malgré une capsule par ailleurs bien
+  // fournie (signalé 23/08/2026). weather.seasons inclut donc aussi le bucket
+  // de la saison calendaire : la température précise (meteoMinTemp/
+  // meteoMaxTemp, cf. applyTempFilter dans logic.ts) reste le filtre fin qui
+  // protège contre une pièce réellement inadaptée (ex. un short par 5°) —
+  // ce bucket grossier n'est qu'un premier tri, pas la protection météo réelle.
   const weather: Weather = useMemo(() => {
     const season = weatherSeasonBucket(geoCity.temp);
-    return { season, temp: geoCity.temp, label: geoCity.label, seasons: [season, "Toutes saisons"] };
+    const calendarBucket = capsuleSeasonBucket(currentSeasonKey());
+    const seasons: Season[] =
+      calendarBucket === season ? [season, "Toutes saisons"] : [season, calendarBucket, "Toutes saisons"];
+    return { season, temp: geoCity.temp, label: geoCity.label, seasons };
   }, [geoCity]);
 
   // Vestiaire universel (Supabase) : remplace le catalogue statique dès qu'il

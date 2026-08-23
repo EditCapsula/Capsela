@@ -16,6 +16,11 @@ export function weatherSeasonBucket(temp: number): Season {
   return temp >= 20 ? "Printemps / Été" : "Automne / Hiver";
 }
 
+/** Bucket météo (2 valeurs) correspondant à une saison calendaire de capsule (4 valeurs). */
+export function capsuleSeasonBucket(s: CapsuleSeason): Season {
+  return s === "Printemps" || s === "Été" ? "Printemps / Été" : "Automne / Hiver";
+}
+
 export type { CapsuleSeason };
 export const CAPSULE_SEASONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
 
@@ -184,9 +189,7 @@ export function computeDefaultCapsule(
     if (noHomme.length >= 16) base = noHomme;
   }
 
-  const bucket = seasonKey
-    ? (["Printemps", "Été"].includes(seasonKey) ? "Printemps / Été" : "Automne / Hiver")
-    : weatherSeasonBucket(weather.temp);
+  const bucket = seasonKey ? capsuleSeasonBucket(seasonKey) : weatherSeasonBucket(weather.temp);
   const seasonFit = base.filter((it) => it.season === bucket || it.season === "Toutes saisons");
   if (seasonFit.length >= 16) base = seasonFit;
 
