@@ -194,16 +194,16 @@ export default function TenuesScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <AppHeader />
 
-      <div className="flex items-center gap-[14px]">
+      <div className="flex items-start gap-[14px] mt-[18px]">
         <button
           onClick={actions.goWardrobe}
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
+          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer flex-shrink-0"
         >
           ←
         </button>
         <div>
           <div className="text-[11px] tracking-[.18em] uppercase text-muted">{dateText}</div>
-          <div className="font-serif text-[30px] leading-[1.12] text-ink mt-[2px]">
+          <div className="font-serif text-[30px] leading-[1.12] text-ink mt-[6px]">
             Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
           </div>
         </div>

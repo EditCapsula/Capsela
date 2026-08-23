@@ -211,7 +211,7 @@ export default function HomeScreen() {
         <AppHeader />
       </div>
 
-      <div className="px-6 pt-4">
+      <div className="px-6 mt-[18px]">
         <div className="text-[11px] tracking-[.18em] uppercase text-muted">Aujourd&apos;hui</div>
         <div className="font-serif text-[30px] leading-[1.12] text-ink mt-[6px]">
           Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>

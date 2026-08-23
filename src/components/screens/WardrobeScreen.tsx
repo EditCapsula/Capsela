@@ -25,7 +25,7 @@ export default function WardrobeScreen() {
           <div className="text-[11px] tracking-[.18em] uppercase text-muted">
             {items.length} {items.length === 1 ? "pièce" : "pièces"}
           </div>
-          <div className="font-serif text-[28px] text-ink mt-1">Ton dressing</div>
+          <div className="font-serif text-[28px] text-ink mt-[6px]">Ton dressing</div>
         </div>
         <button
           onClick={actions.openAdd}

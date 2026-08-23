@@ -26,8 +26,8 @@ export default function HistoryScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <AppHeader />
 
-      <div className="text-[11px] tracking-[.18em] uppercase text-muted">{countText}</div>
-      <div className="font-serif text-[28px] text-ink mt-1">Ton journal</div>
+      <div className="mt-[18px] text-[11px] tracking-[.18em] uppercase text-muted">{countText}</div>
+      <div className="font-serif text-[28px] text-ink mt-[6px]">Ton journal</div>
 
       {stats.hasItems && (
         <>
