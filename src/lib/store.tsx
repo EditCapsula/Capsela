@@ -9,10 +9,13 @@ import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
   deleteDressingItem,
+  deleteSavedLook,
   fetchDressingItems,
   fetchOutfitHistory,
+  fetchSavedLooks,
   insertDressingItem,
   insertOutfitHistoryEntry,
+  insertSavedLook,
   updateDressingItemWorn,
   uploadDressingPhoto,
 } from "./dressing";
@@ -325,11 +328,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     let cancelled = false;
-    Promise.all([fetchDressingItems(userId), fetchOutfitHistory(userId)]).then(([items, history]) => {
-      if (cancelled) return;
-      setState((s) => ({ ...s, items, history }));
-      setDressingLoaded(true);
-    });
+    Promise.all([fetchDressingItems(userId), fetchOutfitHistory(userId), fetchSavedLooks(userId)]).then(
+      ([items, history, savedLooks]) => {
+        if (cancelled) return;
+        setState((s) => ({ ...s, items, history, savedLooks }));
+        setDressingLoaded(true);
+      }
+    );
     return () => {
       cancelled = true;
     };
@@ -1071,34 +1076,47 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, lookDraftOccasion: s.lookDraftOccasion === o ? "all" : o, lookDraftDismissed: [] })),
     dismissLookDraftSuggestion: (key) =>
       setState((s) => ({ ...s, lookDraftDismissed: [...s.lookDraftDismissed, key] })),
-    saveLook: () =>
-      setState((s) => {
-        // Un look doit rassembler au moins 2 pièces pour avoir du sens.
-        if (s.lookDraftIds.length < 2) return s;
-        // R-B9 — seule règle bloquante : une veste/un manteau seul sans pièce de base ne peut pas être enregistré.
-        const draftPieces = s.lookDraftIds.map((id) => s.items.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
-        if (violatesOuterwearRule(draftPieces)) return s;
-        const now = new Date();
-        const defaultName =
-          "Look du " + now.getDate().toString().padStart(2, "0") + "/" + (now.getMonth() + 1).toString().padStart(2, "0");
-        const look: SavedLook = {
-          id: "look" + Date.now(),
-          name: s.lookDraftName.trim() || defaultName,
-          pieceIds: [...s.lookDraftIds],
-          createdAt: Date.now(),
-          occasion: s.lookDraftOccasion !== "all" ? s.lookDraftOccasion : undefined,
-          source: "created",
-        };
-        return {
-          ...s,
-          savedLooks: [look, ...s.savedLooks],
-          lookDraftIds: [],
-          lookDraftName: "",
-          lookDraftOccasion: "all",
-          lookDraftDismissed: [],
-          screen: "wardrobe",
-        };
-      }),
+    // Persistance saved_looks (recette 23/08/2026, signalé : les looks
+    // enregistrés disparaissaient au rechargement — jamais persistés jusque
+    // là, contrairement à dressing_items/outfit_history). Même prudence que
+    // saveItem : on attend l'id réel renvoyé par Supabase avant d'ajouter le
+    // look au state, pour qu'une suppression dans la même session (id encore
+    // local) ne cible jamais une ligne qui n'existe pas encore en base.
+    saveLook: () => {
+      const s = stateRef.current;
+      // Un look doit rassembler au moins 2 pièces pour avoir du sens.
+      if (s.lookDraftIds.length < 2) return;
+      // R-B9 — seule règle bloquante : une veste/un manteau seul sans pièce de base ne peut pas être enregistré.
+      const draftPieces = s.lookDraftIds.map((id) => s.items.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
+      if (violatesOuterwearRule(draftPieces)) return;
+      const now = new Date();
+      const defaultName =
+        "Look du " + now.getDate().toString().padStart(2, "0") + "/" + (now.getMonth() + 1).toString().padStart(2, "0");
+      const base: Omit<SavedLook, "id"> = {
+        name: s.lookDraftName.trim() || defaultName,
+        pieceIds: [...s.lookDraftIds],
+        createdAt: Date.now(),
+        occasion: s.lookDraftOccasion !== "all" ? s.lookDraftOccasion : undefined,
+        source: "created",
+      };
+      const resetDraft = (st: AppState): AppState => ({
+        ...st,
+        lookDraftIds: [],
+        lookDraftName: "",
+        lookDraftOccasion: "all",
+        lookDraftDismissed: [],
+        screen: "wardrobe",
+      });
+      if (isSupabaseConfigured && userId) {
+        setState(resetDraft);
+        insertSavedLook(userId, base)
+          .then((look) => setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] })))
+          .catch((err) => reportDressingError("insertSavedLook", err));
+        return;
+      }
+      const look: SavedLook = { id: "look" + Date.now(), ...base };
+      setState((st) => ({ ...resetDraft(st), savedLooks: [look, ...st.savedLooks] }));
+    },
     // "Enregistrer cette tenue" (Tenue du jour, recette 23/08/2026) — atterrit
     // dans Dressing → Mes looks, mais à la différence de "Créer un look"
     // (dressing réel uniquement), peut mélanger pièces possédées et
@@ -1106,41 +1124,57 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // telle quelle qu'on enregistre, pas une sélection filtrée (décision
     // 23/08/2026). Toggle : un second clic sur une tenue déjà enregistrée
     // retire le look correspondant plutôt que d'en créer un doublon.
-    toggleSaveOutfitLook: () =>
-      setState((s) => {
-        const ids = [...s.outfit];
-        if (ids.length < 2) return s;
-        const key = [...ids].sort((a, b) => a - b).join(",");
-        const existing = s.savedLooks.find(
-          (l) => l.source === "saved" && [...l.pieceIds].sort((a, b) => a - b).join(",") === key
-        );
-        if (existing) {
-          return { ...s, savedLooks: s.savedLooks.filter((l) => l.id !== existing.id) };
+    toggleSaveOutfitLook: () => {
+      const s = stateRef.current;
+      const ids = [...s.outfit];
+      if (ids.length < 2) return;
+      const key = [...ids].sort((a, b) => a - b).join(",");
+      const existing = s.savedLooks.find(
+        (l) => l.source === "saved" && [...l.pieceIds].sort((a, b) => a - b).join(",") === key
+      );
+      if (existing) {
+        setState((st) => ({ ...st, savedLooks: st.savedLooks.filter((l) => l.id !== existing.id) }));
+        if (isSupabaseConfigured && userId) {
+          deleteSavedLook(existing.id).catch((err) => reportDressingError("deleteSavedLook", err));
         }
-        const draftPieces = ids.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
-        if (violatesOuterwearRule(draftPieces)) return s;
-        const now = new Date();
-        const defaultName =
-          "Tenue du " + now.getDate().toString().padStart(2, "0") + "/" + (now.getMonth() + 1).toString().padStart(2, "0");
-        const look: SavedLook = {
-          id: "look" + Date.now(),
-          name: defaultName,
-          pieceIds: ids,
-          createdAt: Date.now(),
-          occasion: s.occasion && s.occasion !== "all" ? s.occasion : undefined,
-          source: "saved",
-        };
-        return { ...s, savedLooks: [look, ...s.savedLooks] };
-      }),
+        return;
+      }
+      const draftPieces = ids.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
+      if (violatesOuterwearRule(draftPieces)) return;
+      const now = new Date();
+      const defaultName =
+        "Tenue du " + now.getDate().toString().padStart(2, "0") + "/" + (now.getMonth() + 1).toString().padStart(2, "0");
+      const base: Omit<SavedLook, "id"> = {
+        name: defaultName,
+        pieceIds: ids,
+        createdAt: Date.now(),
+        occasion: s.occasion && s.occasion !== "all" ? s.occasion : undefined,
+        source: "saved",
+      };
+      if (isSupabaseConfigured && userId) {
+        insertSavedLook(userId, base)
+          .then((look) => setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] })))
+          .catch((err) => reportDressingError("insertSavedLook", err));
+        return;
+      }
+      const look: SavedLook = { id: "look" + Date.now(), ...base };
+      setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
+    },
     openLook: (id) => setState((s) => ({ ...s, activeLookId: id, screen: "lookDetail" })),
     closeLookDetail: () => setState((s) => ({ ...s, activeLookId: null, screen: "wardrobe" })),
-    deleteActiveLook: () =>
-      setState((s) => ({
-        ...s,
-        savedLooks: s.savedLooks.filter((l) => l.id !== s.activeLookId),
+    deleteActiveLook: () => {
+      const s = stateRef.current;
+      const deletedId = s.activeLookId;
+      setState((st) => ({
+        ...st,
+        savedLooks: st.savedLooks.filter((l) => l.id !== deletedId),
         activeLookId: null,
         screen: "wardrobe",
-      })),
+      }));
+      if (deletedId && isSupabaseConfigured && userId) {
+        deleteSavedLook(deletedId).catch((err) => reportDressingError("deleteSavedLook", err));
+      }
+    },
     wearLookToday: (id) => {
       // Hors périmètre dressing_items/outfit_history (système "Mes Looks") —
       // seule la cohérence de worn est maintenue côté base.

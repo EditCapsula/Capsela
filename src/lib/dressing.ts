@@ -10,6 +10,7 @@ import type {
   OccasionKey,
   PhotoAnalysis,
   SacType,
+  SavedLook,
   Season,
   ShoeType,
 } from "./types";
@@ -252,4 +253,67 @@ export async function insertOutfitHistoryEntry(userId: string, entry: Omit<Histo
     .single();
   if (error || !data) throw error ?? new Error("Échec de l'insertion dans outfit_history");
   return rowToHistoryEntry(data as OutfitHistoryRow);
+}
+
+interface SavedLookRow {
+  id: number;
+  user_id: string;
+  name: string;
+  piece_ids: number[];
+  occasion: string | null;
+  source: string;
+  created_at: string;
+}
+
+function rowToSavedLook(row: SavedLookRow): SavedLook {
+  return {
+    id: String(row.id),
+    name: row.name,
+    pieceIds: row.piece_ids ?? [],
+    occasion: (row.occasion as OccasionKey | null) ?? undefined,
+    source: row.source as SavedLook["source"],
+    createdAt: new Date(row.created_at).getTime(),
+  };
+}
+
+/** Retourne [] en mode démo ou en cas d'échec réseau — l'appelant garde alors les looks tels quels plutôt que de les écraser. */
+export async function fetchSavedLooks(userId: string): Promise<SavedLook[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await getSupabase()
+      .from("saved_looks")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.error("[dressing] échec fetchSavedLooks", error);
+      return [];
+    }
+    return (data as SavedLookRow[]).map(rowToSavedLook);
+  } catch (err) {
+    console.error("[dressing] échec fetchSavedLooks", err);
+    return [];
+  }
+}
+
+/** Insère le look et renvoie la ligne créée (id réel côté base) — l'appelant l'ajoute à son state une fois la promesse résolue, jamais avant (cf. saveItem, même précaution). */
+export async function insertSavedLook(userId: string, look: Omit<SavedLook, "id">): Promise<SavedLook> {
+  const { data, error } = await getSupabase()
+    .from("saved_looks")
+    .insert({
+      user_id: userId,
+      name: look.name,
+      piece_ids: look.pieceIds,
+      occasion: look.occasion ?? null,
+      source: look.source,
+    })
+    .select()
+    .single();
+  if (error || !data) throw error ?? new Error("Échec de l'insertion dans saved_looks");
+  return rowToSavedLook(data as SavedLookRow);
+}
+
+export async function deleteSavedLook(id: string): Promise<void> {
+  const { error } = await getSupabase().from("saved_looks").delete().eq("id", id);
+  if (error) throw error;
 }
