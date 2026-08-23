@@ -492,19 +492,21 @@ export default function TenuesScreen() {
           <OutfitComposition items={outfitPieces} variant="hero" />
           {/* "Enregistrer cette tenue" (recette 23/08/2026) — persiste dans
               savedLooks, visible dans Dressing → Mes looks au même titre
-              qu'un look créé manuellement. Masqué si la tenue du jour ne
-              compte pas au moins 2 pièces réellement possédées (une tenue
-              faite uniquement de suggestions catalogue n'a rien à enregistrer). */}
-          {canSaveOutfit && (
-            <button
-              onClick={actions.toggleSaveOutfitLook}
-              className="mt-3 flex items-center gap-[6px] text-[12.5px] cursor-pointer"
-              style={{ color: isOutfitSaved ? "#A66950" : "#7B7366" }}
-            >
-              <span>{isOutfitSaved ? "♥" : "♡"}</span>
-              {isOutfitSaved ? "Tenue enregistrée" : "Enregistrer cette tenue"}
-            </button>
-          )}
+              qu'un look créé manuellement. Toujours affiché (correctif
+              23/08/2026 : le masquer selon la composition de la tenue le
+              faisait disparaître de façon déroutante après une régénération) ;
+              simplement inerte, en grisé, si la tenue ne compte pas encore
+              2 pièces réellement possédées (suggestions catalogue seules). */}
+          <button
+            onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook()}
+            disabled={!canSaveOutfit}
+            title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces déjà dans ton dressing à cette tenue pour l'enregistrer."}
+            className={"mt-3 flex items-center gap-[6px] text-[12.5px] " + (canSaveOutfit ? "cursor-pointer" : "cursor-default opacity-40")}
+            style={{ color: isOutfitSaved ? "#A66950" : "#7B7366" }}
+          >
+            <span>{isOutfitSaved ? "♥" : "♡"}</span>
+            {isOutfitSaved ? "Tenue enregistrée" : "Enregistrer cette tenue"}
+          </button>
         </div>
       )}
 
