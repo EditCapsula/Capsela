@@ -73,6 +73,7 @@ const SUBTYPE_EN: Record<string, string> = {
   lunettes: "sunglasses",
   collants: "tights",
   "chaussettes hautes": "knee-high socks",
+  gourde: "reusable water bottle",
   "t-shirt": "t-shirt",
   chemise: "shirt",
   chemisier: "blouse",
@@ -306,7 +307,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   chaussures: ["shoes", "sneakers", "boots", "flats", "sandals", "loafers", "pumps", "slippers"],
   sac: ["bag", "handbag", "tote", "backpack", "clutch"],
   bijou: ["necklace", "earrings", "bracelet", "ring", "watch", "jewelry"],
-  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch"],
+  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch", "bottle"],
 };
 
 function translate(dict: Record<string, string>, raw: string | undefined | null): string | undefined {

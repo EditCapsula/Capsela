@@ -44,10 +44,18 @@ export function isSizeApplicable(cat: CategoryKey): boolean {
   return !["sac", "bijou", "accessoire"].includes(cat);
 }
 
-/** Pré-suggestion de type de sac à l'ajout — jamais imposée, jamais bloquante. */
+/**
+ * Pré-suggestion de type de sac à l'ajout — jamais imposée, jamais bloquante.
+ * Correctif 23/08/2026 (signalé : "Gourde de sport", un accessoire, catégorisée
+ * à tort en sac) — l'ancien /sport|gym|fitness/ matchait ces mots seuls
+ * n'importe où dans le nom, donc n'importe quel article "de sport" (gourde,
+ * casquette, chaussettes...) était pris pour un sac de sport. Exige
+ * désormais la mention explicite d'un sac (même esprit que les autres
+ * branches ci-dessous, toutes ancrées sur le mot du produit lui-même).
+ */
 export function detectSacType(name: string): SacType | null {
   const n = (name || "").toLowerCase();
-  if (/sport|sac de sport|gym|fitness/.test(n)) return "Sac de sport";
+  if (/sac de sport|sac de gym|sac de fitness|gym bag/.test(n)) return "Sac de sport";
   if (/cabas/.test(n)) return "Cabas";
   if (/bandoulière/.test(n)) return "Bandoulière";
   if (/dos/.test(n)) return "Sac à dos";

@@ -176,6 +176,7 @@ const SUBTYPE_EN: Record<string, string> = {
   lunettes: "sunglasses",
   collants: "tights",
   "chaussettes hautes": "knee-high socks",
+  gourde: "reusable water bottle",
   // Hauts / pulls
   "t-shirt": "t-shirt",
   chemise: "shirt",
@@ -420,7 +421,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   // génération) : la catégorie "sacs" n'est jamais utilisée dans les
   // données réelles, tous les sacs sont stockés en category="accessoires"
   // -> canonCategory="accessoire".
-  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch"],
+  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch", "bottle"],
 };
 
 function translate(dict: Record<string, string>, raw: string | null | undefined): string | undefined {
