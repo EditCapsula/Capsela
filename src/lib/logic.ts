@@ -1432,10 +1432,26 @@ export function computeLookScore(
   // R-S14 — soirée fraîche : exclue en Cocooning (R-B12), pas de sens à suggérer une veste chez soi.
   const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau");
   if (occasion !== "cocooning" && weather.temp <= 21 && !hasOuterwear && !dismissed.has("veste_soir")) {
+    // Occasion sport (recette 25/08/2026, signalé : blazer structuré
+    // suggéré sur une tenue baskets + short cycliste) — préférence molle
+    // pour une veste décontractée (formalityOf <= 1, ex. coupe-vent/
+    // bomber) plutôt qu'un blazer structuré, jamais exclusive : repli sur
+    // n'importe quelle veste si le pool n'a aucune option décontractée
+    // (même esprit que R-B16/R-S16, findSuggestedPiece ne permettant pas
+    // ce classement par préférence).
+    const vesteManteauCandidates = pool.filter(
+      (i) =>
+        (i.cat === "veste" || i.cat === "manteau") &&
+        isCatalogId(i.id) &&
+        !pieceIds.has(i.id) &&
+        !hasSameSlot(i) &&
+        weather.seasons.includes(i.season)
+    );
+    const decontracte = occasion === "sport" ? vesteManteauCandidates.filter((i) => formalityOf(i) <= 1) : [];
     proactives.push({
       key: "veste_soir",
       text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",
-      suggestedId: findSuggestedPiece(["veste", "manteau"], (i) => weather.seasons.includes(i.season)),
+      suggestedId: (decontracte.length ? decontracte : vesteManteauCandidates)[0]?.id,
     });
   }
 
