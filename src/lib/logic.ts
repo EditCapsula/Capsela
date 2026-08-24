@@ -371,7 +371,16 @@ export function generateOutfit(
   /** Genre du profil — la compensation robe/jupe/short trop fraîche par un collant (cf. plus bas) est un usage féminin, jamais proposée pour un profil homme. */
   gender: "femme" | "homme" | null = null,
   /** Palier de formalité explicite — remplace la déduction occasion/sous-contexte quand fourni (cf. generateOutfitWithFallback, repli progressif de formalité). */
-  formalityOverride?: number
+  formalityOverride?: number,
+  /**
+   * Pièce imposée par l'appelant, exemptée de la seule priorité au réel de
+   * pick() (correctif 26/08/2026, cf. son commentaire). Uniquement renseigné
+   * par getOutfitsForItem : la tenue du jour n'a pas de pièce imposée et son
+   * comportement est strictement inchangé. N'accorde aucun autre privilège —
+   * la pièce reste soumise à toutes les règles dures (R-B3, R-B6, R-B11...)
+   * et n'est jamais forcée dans la tenue, seulement rendue tirable.
+   */
+  pinnedId?: number
 ): GeneratedOutfit {
   const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
@@ -608,8 +617,23 @@ export function generateOutfit(
     // tirage, où le réel d'une catégorie se retrouvait mélangé à parts
     // égales avec la capsule des autres. Dès qu'au moins une pièce réelle
     // existe dans ce groupe, la capsule est écartée pour CE tirage.
+    //
+    // Exception pour la pièce imposée (correctif 26/08/2026, signalé : un
+    // article de la capsule n'affichait aucune idée de tenue dès qu'une pièce
+    // réelle existait dans le même tirage). Sur "Les idées de tenues", la
+    // question posée est "comment porter CETTE pièce" : l'écran l'ajoute au
+    // pool, mais cette règle l'en réévinçait aussitôt, si bien qu'aucun des
+    // 30 tirages × 10 occasions ne la contenait — écran vide, alors même que
+    // la capsule regorgeait de pièces compatibles. Réintégrée ici comme
+    // simple candidate à côté du réel (jamais à la place, jamais forcée) :
+    // la priorité au réel reste entière pour toutes les autres pièces.
+    // Affectait robes/combinaisons, bas, vestes, manteaux, sacs et bijoux —
+    // les hauts et chaussures se tirent hors de pick() et y échappaient.
     const real = base.filter((i) => !isCatalogId(i.id));
-    if (real.length) base = real;
+    if (real.length) {
+      const pinned = pinnedId != null && !real.some((i) => i.id === pinnedId) ? base.find((i) => i.id === pinnedId) : undefined;
+      base = pinned ? [...real, pinned] : real;
+    }
     // Préférence molle optionnelle passée par l'appelant (ex. R-S17
     // ci-dessous, "pas de robe chemise en sortie festive") — même esprit
     // que les autres filtres de cette fonction : jamais exclusive.
@@ -1646,7 +1670,7 @@ export function getOutfitsForItem(
     const candidates: ItemOutfitVariation[] = [];
     const localSeen = new Set<string>();
     for (let attempt = 0; attempt < attemptsPerOccasion; attempt++) {
-      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender);
+      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender, undefined, pivotId);
       if (!ids.includes(pivotId)) continue;
       const key = structuralKeyOf(ids);
       if (seenKeys.has(key) || localSeen.has(key)) continue;
