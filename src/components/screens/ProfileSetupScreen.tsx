@@ -264,9 +264,8 @@ export default function ProfileSetupScreen() {
         <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">{meta.subtitle}</div>
         {meta.key === "pal_couleurs" && draft.paletteCouleurs.length > 0 && (
           <div className="text-[12.5px] text-muted mt-[6px]">
-            {draft.paletteCouleurs.length} couleur{draft.paletteCouleurs.length > 1 ? "s" : ""} sélectionnée
-            {draft.paletteCouleurs.length > 1 ? "s" : ""} ·{" "}
-            {draft.paletteCouleurs.length >= MAX_PALETTE_COULEURS ? "Maximum atteint" : `Jusqu'à ${MAX_PALETTE_COULEURS}`}
+            {draft.paletteCouleurs.length} sur {MAX_PALETTE_COULEURS} couleur{draft.paletteCouleurs.length > 1 ? "s" : ""} sélectionnée
+            {draft.paletteCouleurs.length > 1 ? "s" : ""}
           </div>
         )}
       </div>
@@ -297,10 +296,11 @@ export default function ProfileSetupScreen() {
       )}
 
       {meta.key === "pal_couleurs" && (
-        // pb-[110px] : dégage la dernière ligne du nuancier du CTA sticky
-        // ci-dessous (brief UX "Ta palette" du 24/08/2026, point 7 — ne
-        // jamais masquer la dernière rangée pendant le scroll).
-        <div className="pb-[110px]">
+        // pb-safe-palette-cta (globals.css, même principe que pb-safe-nav
+        // pour TabBar) : dégage la dernière ligne du nuancier — pastilles ET
+        // libellés — du CTA sticky ci-dessous, safe-area incluse (correctif
+        // 24/08/2026, signalé : pastilles coupées/masquées par le sticky).
+        <div className="pb-safe-palette-cta">
           <PaletteDots options={PAL_COULEURS} selected={draft.paletteCouleurs} onSelect={toggleCouleur} />
         </div>
       )}
@@ -489,8 +489,11 @@ export default function ProfileSetupScreen() {
           // flex-col de l'écran (étiré pleine largeur par défaut) — ce
           // wrapper reproduit le même contexte flex pour qu'il garde
           // exactement la même largeur qu'avant, sans toucher au bouton.
+          // border-t border-border : même traitement de séparation que
+          // TabBar.tsx, seul autre élément sticky/fixed du Design System —
+          // jamais un nouvel effet propre à cet écran (recette 24/08/2026).
           <div
-            className="sticky bottom-0 -mx-7 px-7 bg-cream flex flex-col"
+            className="sticky bottom-0 -mx-7 px-7 bg-cream border-t border-border flex flex-col"
             style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}
           >
             {continueButton}

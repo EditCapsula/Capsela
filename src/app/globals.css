@@ -75,6 +75,22 @@ body {
   padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px);
 }
 
+/**
+ * Même principe que --bottom-nav-height/.pb-safe-nav ci-dessus, pour le
+ * CTA sticky de l'écran "Ta palette" (ProfileSetupScreen) — recette
+ * 24/08/2026, correctif nuancier masqué par le bouton en sticky. Hauteur
+ * hors safe-area : mt-[22px] du bouton + bouton (py-4 + texte ≈ 48px) +
+ * padding bas propre au wrapper sticky (16px) ≈ 86px, arrondi. Source
+ * unique de vérité : si ce CTA change de taille, ne mettre à jour QUE
+ * cette variable.
+ */
+:root {
+  --palette-cta-height: 86px;
+}
+.pb-safe-palette-cta {
+  padding-bottom: calc(var(--palette-cta-height) + env(safe-area-inset-bottom) + 16px);
+}
+
 input.capin {
   outline: none;
 }
