@@ -446,6 +446,15 @@ export function generateOutfit(
     if (!isSunny(weather)) {
       r = r.filter((i) => !i.necessiteSoleil);
     }
+    // R-B20 (25/08/2026, signalé) — un short (capsule ou dressing réel,
+    // jamais de distinction de source) n'est jamais proposé dans la tenue
+    // recommandée à 22°C ou moins, quelle que soit sa propre plage
+    // meteo_min_temp/meteo_max_temp déclarée (souvent absente pour une
+    // pièce du dressing réel, cf. dressing.ts) — règle de catégorie dure,
+    // jamais relâchée, symétrique de R-B15/R-B6 ci-dessus.
+    if (weather.temp <= 22) {
+      r = r.filter((i) => i.cat !== "short");
+    }
     // Occasion explicitement déclarée sur la pièce (correctif 19/08/2026,
     // remplace l'ancien filtre par mots-clés — cf. déclarations plus haut).
     if (occasion !== "all") {
@@ -997,6 +1006,10 @@ export function swapOutfitPiece(
   // R-B15 — symétrique du filtre appliqué dans generateOutfit.
   if (weather && !isSunny(weather)) {
     candidates = candidates.filter((i) => !i.necessiteSoleil);
+  }
+  // R-B20 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
+  if (weather && weather.temp <= 22) {
+    candidates = candidates.filter((i) => i.cat !== "short");
   }
   // R-B16 — symétrique de la préférence pluie appliquée dans generateOutfit,
   // molle jamais exclusive : ne filtre que s'il reste au moins une option.
