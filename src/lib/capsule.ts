@@ -339,9 +339,15 @@ export function computeDefaultCapsule(
   // jamais soumis au même tri qualitatif que le reste (cf. bloc Sport
   // ci-dessous), pour ne jamais faire concurrence aux pièces non-Sport sur
   // la couverture d'occasion (les deux restent des populations distinctes
-  // même si le total est partagé).
+  // même si le total est partagé). Pris sur `base` (saison/météo/genre
+  // déjà appliqués), jamais sur `curated` (style + palette) — correctif
+  // 24/08/2026, signalé : plus aucune tenue Sport disponible dès que le
+  // catalogue Sport ne matchait pas le style du profil (ex. Minimaliste),
+  // le bloc Sport disparaissait entièrement avant même d'être isolé. Même
+  // logique que isSportEssential ci-dessus (gourde/sac de sport) : le
+  // Sport est fonctionnel, jamais un choix esthétique à filtrer par style.
   const isSportPiece = (it: Item) => formalityOf(it) === 0;
-  const sportPool = curated.filter(isSportPiece);
+  const sportPool = base.filter(isSportPiece);
   const nonSportPool = curated.filter((it) => !isSportPiece(it));
 
   // Sélection qualitative par macro-catégorie (étapes 1-2) : remplace
