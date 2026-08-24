@@ -1584,19 +1584,53 @@ export function getOutfitsForItem(
   return results;
 }
 
-/** Repli minimal par occasion (titre court) — utilisé quand aucune pièce distinctive, ou aucun contraste de formalité, n'a pu être identifié. */
-const OCCASION_BASE_TITLE: Partial<Record<OccasionKey, string>> = {
-  quotidien: "Simple et facile à porter",
-  travail_formel: "Structurée pour le bureau",
-  entretien: "Sérieuse et posée",
-  date: "Une touche soignée",
-  soiree: "Parfaite pour une sortie",
-  festive: "Prête à sortir de l'ordinaire",
-  sport: "Confortable et technique",
-  cocooning: "Décontractée à la maison",
-  voyage: "Pratique pour se déplacer",
-  evenement_perso: "À la hauteur de l'occasion",
+/**
+ * Titres différenciants par occasion, du plus décontracté au plus habillé
+ * (recette 26/08/2026, "Idées de tenues" section 4 — signalé : plusieurs
+ * variantes d'une même occasion affichaient exactement le même titre,
+ * ex. "Une touche soignée" répété 3 fois sous "Date"). Choisis par
+ * styleTitleFor() selon le rang de formalité réel de chaque variante parmi
+ * ses semblables (outfitFormality), jamais par index arbitraire : le titre
+ * reflète une vraie différence entre les tenues plutôt qu'une rotation
+ * cosmétique.
+ */
+const OCCASION_STYLE_TITLES: Partial<Record<OccasionKey, string[]>> = {
+  quotidien: ["Simple et facile à porter", "Décontractée soignée", "Un cran plus habillée"],
+  travail_formel: ["Structurée sans rigidité", "Professionnelle et posée", "Formelle et affirmée"],
+  entretien: ["Posée et accessible", "Sérieuse et soignée", "Rigoureuse et formelle"],
+  date: ["Décontractée chic", "Élégante sans effort", "Plus habillée"],
+  soiree: ["Facile pour la soirée", "Chic sans en faire trop", "Sophistiquée"],
+  festive: ["Décontractée mais festive", "Chic et affirmée", "Prête à sortir de l'ordinaire"],
+  sport: ["Confortable avant tout", "Technique et soignée", "Prête à performer"],
+  cocooning: ["Relâchée à la maison", "Confortable et posée", "Cocooning soigné"],
+  voyage: ["Pratique avant tout", "Confortable et soignée", "Prête pour toutes les étapes"],
+  evenement_perso: ["Soignée sans excès", "Élégante pour l'occasion", "À la hauteur de l'occasion"],
 };
+
+const DEFAULT_STYLE_TITLES = ["Une tenue simple", "Une tenue équilibrée", "Une tenue plus habillée"];
+
+/**
+ * Formalité moyenne des pièces vêtement/chaussures d'un look, hors pivot
+ * (recette 26/08/2026) — sert uniquement à classer entre elles les
+ * variantes d'une même occasion, de la plus décontractée à la plus
+ * habillée, pour leur attribuer des titres réellement différenciants.
+ */
+export function outfitFormality(items: Item[], pivotId: number): number {
+  const clothingLike = items.filter((it) => it.id !== pivotId && (CLOTHING_CATS.includes(it.cat) || it.cat === "chaussures"));
+  if (!clothingLike.length) {
+    const pivot = items.find((it) => it.id === pivotId);
+    return pivot ? formalityOf(pivot) : 0;
+  }
+  return clothingLike.reduce((sum, it) => sum + formalityOf(it), 0) / clothingLike.length;
+}
+
+/** Sélectionne le titre correspondant au rang de formalité d'une variante parmi les `groupSize` variantes de sa section occasion (rang 0 = la plus décontractée). */
+function styleTitleFor(occasion: OccasionKey, rank: number, groupSize: number): string {
+  const tiers = OCCASION_STYLE_TITLES[occasion] || DEFAULT_STYLE_TITLES;
+  if (groupSize <= 1) return tiers[1] ?? tiers[0];
+  const tierIdx = Math.round((rank / (groupSize - 1)) * (tiers.length - 1));
+  return tiers[Math.min(tiers.length - 1, Math.max(0, tierIdx))];
+}
 
 /** Repli minimal par occasion (phrase) — cas rare où même une description par énumération n'a rien à dire (pivot + chaussures seuls). */
 const OCCASION_VARIATION_BASE: Partial<Record<OccasionKey, string>> = {
@@ -1624,18 +1658,6 @@ const OCCASION_CLOSERS: Partial<Record<OccasionKey, string[]>> = {
   cocooning: ["pour une allure relâchée à la maison."],
   voyage: ["pratique et confortable pour se déplacer."],
   evenement_perso: ["à la hauteur de l'occasion."],
-};
-
-/** Titre court quand un vrai contraste habillé/décontracté est détecté entre deux pièces du look (cf. styleInsightTitle) — occasions absentes : jamais de contraste pertinent (sport, cocooning), repli sur OCCASION_BASE_TITLE. */
-const OCCASION_CONTRAST_TITLE: Partial<Record<OccasionKey, string>> = {
-  quotidien: "Décontracté mais soigné",
-  travail_formel: "Structurée sans rigidité",
-  entretien: "Posée sans être guindée",
-  date: "Décontracté mais soigné",
-  soiree: "Chic sans en faire trop",
-  festive: "Chic sans en faire trop",
-  voyage: "Pratique mais soigné",
-  evenement_perso: "Habillée sans excès",
 };
 
 /** Catégories dont le sous-type est déjà un nom complet (ex. "Chemise", "Blazer", "Sandales plates") — jamais préfixé par le libellé générique de la catégorie, contrairement aux catégories à sous-type "modificateur" (ex. jupe: "Midi"). */
@@ -1783,17 +1805,23 @@ export interface OutfitStyleInsight {
  * c'est la seule "raison" que les données permettent d'établir de façon
  * fiable (formalityOf, déjà la source de vérité du moteur pour R-B2/R-B3).
  * Sans ce contraste, repli sur une description par énumération (comme
- * avant), avec un titre court tiré de l'occasion. `indexInOccasion` fait
- * varier la clôture de phrase entre les looks d'une même section.
+ * avant). Le titre, lui, est toujours choisi séparément par styleTitleFor
+ * à partir du rang de formalité réel de la variante parmi les `groupSize`
+ * variantes de sa section occasion (`styleRank`, 0 = la plus décontractée)
+ * — jamais le même titre générique répété pour plusieurs variantes d'une
+ * même occasion (recette 26/08/2026, section 4). `styleRank` sert aussi à
+ * faire varier la clôture de phrase entre les looks d'une même section.
  */
 export function describeOutfitVariation(
   variation: ItemOutfitVariation,
   items: Item[],
   pivotId: number,
-  indexInOccasion: number
+  styleRank: number,
+  groupSize: number
 ): OutfitStyleInsight {
   const pivot = items.find((it) => it.id === pivotId);
   const others = items.filter((it) => it.id !== pivotId);
+  const title = styleTitleFor(variation.occasion, styleRank, groupSize);
 
   // Contraste de formalité (structurant vs décontracté) parmi les pièces
   // vêtement/chaussures, hors pivot — les accessoires/bijoux ne
@@ -1807,7 +1835,6 @@ export function describeOutfitVariation(
       const structurer = withFormality.find((x) => x.f === maxF)!.it;
       const casual = withFormality.find((x) => x.f === minF)!.it;
       if (structurer.id !== casual.id) {
-        const title = OCCASION_CONTRAST_TITLE[variation.occasion] || OCCASION_BASE_TITLE[variation.occasion] || "Une tenue équilibrée";
         const sentence = `Le ${pieceLabel(structurer)} structure le ${pieceBase(pivot)}, tandis que le ${pieceLabel(casual)} garde le look décontracté.`;
         return { title, sentence };
       }
@@ -1822,9 +1849,8 @@ export function describeOutfitVariation(
     if (found) picked.push(found);
   }
 
-  const title = OCCASION_BASE_TITLE[variation.occasion] || "Une tenue équilibrée";
   const closers = OCCASION_CLOSERS[variation.occasion] || ["une combinaison bien assortie."];
-  const closer = closers[indexInOccasion % closers.length];
+  const closer = closers[styleRank % closers.length];
 
   if (!picked.length) {
     return { title, sentence: OCCASION_VARIATION_BASE[variation.occasion] || "Une combinaison bien assortie." };

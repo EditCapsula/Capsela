@@ -18,6 +18,14 @@ import type { CategoryKey, Item } from "@/lib/types";
  * "compact" (page "Comment porter cette pièce ?", plusieurs cards par page).
  * `anchorId`, propre à "compact" : entoure la pièce pivot d'un contour
  * terracotta — jamais utilisé par "hero", qui n'a pas de notion de pivot.
+ *
+ * En "compact", la pièce pivot est déjà connue de l'utilisatrice (recette
+ * 26/08/2026, "Idées de tenues" section 5) : elle occupe une cellule plus
+ * petite (palier "chaussures" plutôt que "principal") pour laisser le poids
+ * visuel aux pièces complémentaires, qui sont ce qui distingue réellement
+ * les variantes entre elles. `suggestedIds`, propre à "compact" également :
+ * petit marqueur ✦ sur les pièces suggérées par Capsela (jamais un badge
+ * plein, la provenance reste secondaire à la lecture de la tenue).
  */
 export type CompositionVariant = "hero" | "compact";
 type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
@@ -44,7 +52,9 @@ const TIER_SPAN: Record<CompositionTier, { col: number; row: number }> = {
 
 const VARIANT_CONFIG: Record<CompositionVariant, { rowHeight: string; gap: number; radius: number; pad: number }> = {
   hero: { rowHeight: "clamp(58px, 17vw, 74px)", gap: 6, radius: 14, pad: 8 },
-  compact: { rowHeight: "clamp(46px, 13vw, 58px)", gap: 5, radius: 11, pad: 6 },
+  // Réduit (recette 26/08/2026, section 8 : "l'écran devient très long") —
+  // cards plus compactes, plusieurs variantes visibles simultanément.
+  compact: { rowHeight: "clamp(36px, 10vw, 46px)", gap: 4, radius: 10, pad: 5 },
 };
 
 function compositionRoleOf(cat: CategoryKey): CompositionRole {
@@ -68,11 +78,14 @@ export function OutfitComposition({
   items,
   variant = "hero",
   anchorId,
+  suggestedIds,
 }: {
   items: Item[];
   variant?: CompositionVariant;
   /** Id de la pièce pivot à distinguer par un contour terracotta — jamais utilisé pour un autre état UI (brief design 22/08/2026, section 2). */
   anchorId?: number;
+  /** Ids des pièces suggérées par Capsela (non possédées) à marquer d'un ✦ discret — propre à "compact" (recette 26/08/2026, section 6). */
+  suggestedIds?: number[];
 }) {
   const cfg = VARIANT_CONFIG[variant];
   return (
@@ -95,7 +108,14 @@ export function OutfitComposition({
         // rapprocher du rendu plat des photos produit.
         const isRealPhoto = img.kind === "photo";
         const isAnchor = anchorId != null && it.id === anchorId;
-        const span = TIER_SPAN[TIER_OF_ROLE[role]];
+        const isSuggested = variant === "compact" && suggestedIds?.includes(it.id);
+        // Pivot déjà connu : palier réduit en "compact" pour ne pas
+        // occuper la majorité de la card (section 5) — seulement pour les
+        // rôles "principal" (haut/bas/robe/veste), jamais un agrandissement
+        // pour un pivot déjà petit (sac/bijou/accessoire). Inchangé en "hero".
+        const naturalTier = TIER_OF_ROLE[role];
+        const tier = variant === "compact" && isAnchor && naturalTier === "principal" ? "chaussures" : naturalTier;
+        const span = TIER_SPAN[tier];
         const shadows = [
           isAnchor && "0 0 0 1.5px #A66950",
           !hasImg && "inset 0 0 0 1px rgba(29,26,22,.06)",
@@ -104,6 +124,7 @@ export function OutfitComposition({
           <div
             key={"comp-" + it.id}
             style={{
+              position: "relative",
               gridColumn: `span ${span.col}`,
               gridRow: `span ${span.row}`,
               borderRadius: cfg.radius,
@@ -119,7 +140,16 @@ export function OutfitComposition({
               boxShadow: shadows.length ? shadows.join(", ") : undefined,
               filter: isRealPhoto ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
             }}
-          />
+          >
+            {isSuggested && (
+              <span
+                className="absolute top-[3px] right-[3px] flex items-center justify-center rounded-full text-terracotta"
+                style={{ width: 14, height: 14, fontSize: 8, background: "rgba(251,248,243,.92)", boxShadow: "0 1px 2px rgba(29,26,22,.18)" }}
+              >
+                ✦
+              </span>
+            )}
+          </div>
         );
       })}
     </div>

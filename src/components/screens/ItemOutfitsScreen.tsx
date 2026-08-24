@@ -6,7 +6,7 @@ import { isCatalogId } from "@/lib/catalog";
 import { CATLABEL, OCC_LABELS } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { currentSeasonKey, representativeWeatherFor } from "@/lib/capsule";
-import { describeOutfitVariation, getOutfitsForItem, type ItemOutfitVariation } from "@/lib/logic";
+import { describeOutfitVariation, getOutfitsForItem, outfitFormality, type ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -152,6 +152,19 @@ export default function ItemOutfitsScreen() {
         </div>
       </div>
 
+      {/* Statut "déjà possédée" (brief 26/08/2026, section 1) — remplace le
+          gros bloc plein écran par un statut compact, discret, directement
+          sous les informations de la pièce. */}
+      {alreadyOwned && (
+        <div
+          className="inline-flex items-center gap-[6px] mt-[10px] rounded-full"
+          style={{ padding: "5px 12px", background: "#F0E5D6", border: "1px solid #E2CDB8" }}
+        >
+          <span className="text-[10px] text-terracotta">✓</span>
+          <span className="text-[11px] text-ink">Dans mon dressing</span>
+        </div>
+      )}
+
       {/* Badge saison capsule (brief 23/08/2026, section 2) — même style pastille
           + libellé tracké que le badge de mode de la page Tenue (MODE_STYLES),
           jamais répété par carte plus bas : une seule vérité pour toute la page. */}
@@ -167,43 +180,36 @@ export default function ItemOutfitsScreen() {
         </div>
       )}
 
-      {/* Statut de possession / CTA (brief 23/08/2026, section 3) — trois états
-          exclusifs : déjà au dressing (aucun CTA), pas encore possédée avec un
-          vrai lien affilié (Acheter + Je l'ai déjà), pas encore possédée sans
-          lien (Je l'ai déjà seule). Jamais "Acheter" sans affLink réel, jamais
-          "Je l'ai déjà" si déjà possédée. */}
-      {alreadyOwned ? (
-        <div className="mt-[14px] flex items-center gap-3 bg-ink rounded-2xl px-4 py-[14px]">
-          <span className="w-8 h-8 rounded-full bg-terracotta text-cream flex items-center justify-center text-[15px] flex-shrink-0">
-            ✓
-          </span>
-          <div className="text-[13px] text-cream">Dans mon dressing</div>
-        </div>
-      ) : pivot.affLink ? (
-        <>
-          <a
-            href={pivot.affLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-[14px] block w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
-          >
-            Acheter cette pièce ↗
-          </a>
+      {/* CTA / lien affilié (brief 23/08/2026, section 3) — deux états
+          exclusifs restants : pas encore possédée avec un vrai lien affilié
+          (Acheter + Je l'ai déjà), pas encore possédée sans lien (Je l'ai
+          déjà seule). Jamais "Acheter" sans affLink réel. */}
+      {!alreadyOwned &&
+        (pivot.affLink ? (
+          <>
+            <a
+              href={pivot.affLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-[14px] block w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
+            >
+              Acheter cette pièce ↗
+            </a>
+            <button
+              onClick={() => actions.startReplace(pivot)}
+              className="mt-[10px] w-full text-center border border-border-soft text-terracotta rounded-full py-[13px] text-[12.5px] cursor-pointer"
+            >
+              J&apos;ai déjà
+            </button>
+          </>
+        ) : (
           <button
             onClick={() => actions.startReplace(pivot)}
-            className="mt-[10px] w-full text-center border border-border-soft text-terracotta rounded-full py-[13px] text-[12.5px] cursor-pointer"
+            className="mt-[14px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
           >
             J&apos;ai déjà
           </button>
-        </>
-      ) : (
-        <button
-          onClick={() => actions.startReplace(pivot)}
-          className="mt-[14px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
-        >
-          J&apos;ai déjà
-        </button>
-      )}
+        ))}
 
       {occasionsCovered.length > 0 && (
         <div className="mt-[18px] text-[10px] tracking-[.16em] uppercase text-terracotta">
@@ -250,48 +256,60 @@ export default function ItemOutfitsScreen() {
           </button>
         </div>
       ) : (
-        grouped.map((group) => (
-          <div key={group.occasion} className="mt-[22px]">
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[10px]">{OCC_LABELS[group.occasion]}</div>
-            <div className="flex flex-col gap-[14px]">
-              {group.items.map((variation, idx) => {
-                const pieces = variation.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
-                const insight = describeOutfitVariation(variation, pieces, pivot.id, idx);
-                return (
-                  <div key={variation.ids.join("-")}>
-                    {/* "Option N" (brief design 22/08/2026, section 9) — seulement
-                        quand plusieurs propositions existent pour cette même
-                        occasion, pour qu'elles se lisent comme de vraies
-                        alternatives plutôt que des blocs empilés au hasard. */}
-                    {group.items.length > 1 && (
-                      <div className="text-[10px] tracking-[.14em] uppercase text-placeholder mb-[7px]">
-                        Option {idx + 1}
-                      </div>
-                    )}
-                    {/* Card entièrement cliquable (section 8) : un seul vrai
-                        élément interactif (button), jamais de bouton imbriqué —
-                        "Voir cette tenue →" reste visible mais n'est qu'un span
-                        stylé, l'action est portée par la card entière. Focus
-                        visible au clavier via focus-visible:outline. */}
+        grouped.map((group) => {
+          // Rang de formalité au sein de la section occasion (brief
+          // 26/08/2026, section 4) — 0 = variante la plus décontractée,
+          // groupSize - 1 = la plus habillée. Calculé une fois par section
+          // pour que describeOutfitVariation choisisse un titre réellement
+          // différenciant plutôt qu'un même titre générique répété.
+          const withPieces = group.items.map((variation) => ({
+            variation,
+            pieces: variation.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => Boolean(p)),
+          }));
+          const rankOf = new Map(
+            [...withPieces]
+              .sort((a, b) => outfitFormality(a.pieces, pivot.id) - outfitFormality(b.pieces, pivot.id))
+              .map((x, rank) => [x.variation, rank])
+          );
+
+          return (
+            <div key={group.occasion} className="mt-[20px]">
+              <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[9px]">{OCC_LABELS[group.occasion]}</div>
+              <div className="flex flex-col gap-[10px]">
+                {withPieces.map(({ variation, pieces }) => {
+                  const styleRank = rankOf.get(variation)!;
+                  const insight = describeOutfitVariation(variation, pieces, pivot.id, styleRank, withPieces.length);
+                  // Pièces suggérées par Capsela dans cette combinaison (brief
+                  // section 6) — même règle que alreadyOwned pour le pivot :
+                  // un id de catalogue non exclu par "J'ai déjà" est suggéré,
+                  // jamais possédée réellement.
+                  const suggestedIds = pieces.filter((p) => isCatalogId(p.id) && !state.suggestedExcluded.includes(p.id)).map((p) => p.id);
+                  return (
+                    // Card entièrement cliquable (section 8) : un seul vrai
+                    // élément interactif (button), jamais de bouton imbriqué —
+                    // "Voir cette tenue →" reste visible mais n'est qu'un span
+                    // stylé, l'action est portée par la card entière. Focus
+                    // visible au clavier via focus-visible:outline.
                     <button
+                      key={variation.ids.join("-")}
                       type="button"
                       onClick={() => actions.viewItemOutfit(variation.ids, variation.occasion)}
                       aria-label={`Voir la tenue : ${insight.title}`}
-                      className="w-full text-left bg-card border border-border rounded-[16px] p-[13px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
+                      className="w-full text-left bg-card border border-border rounded-[14px] p-[11px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
                     >
-                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} />
-                      <div className="mt-[11px]">
-                        <div className="font-serif text-[14.5px] text-ink leading-[1.25]">{insight.title}</div>
-                        <div className="text-[12.5px] text-[#3F3B34] mt-[3px] leading-[1.4]">{insight.sentence}</div>
+                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} suggestedIds={suggestedIds} />
+                      <div className="mt-[9px]">
+                        <div className="font-serif text-[14px] text-ink leading-[1.25]">{insight.title}</div>
+                        <div className="text-[12px] text-[#3F3B34] mt-[3px] leading-[1.4]">{insight.sentence}</div>
                       </div>
-                      <span className="mt-[10px] inline-block text-[12.5px] text-terracotta">Voir cette tenue →</span>
+                      <span className="mt-[8px] inline-block text-[12px] text-terracotta">Voir cette tenue →</span>
                     </button>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );
