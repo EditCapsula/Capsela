@@ -1,6 +1,6 @@
 import { MONTHS_FR, OCC_LABELS, OCC_SHORT } from "./data";
 import { isCatalogId } from "./catalog";
-import type { HistoryEntry, Item, OccasionKey, SavedLook } from "./types";
+import type { HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
 
 /**
  * "Wishlist" (Mes looks, recette 23/08/2026) n'est pas une 3ᵉ façon
@@ -66,6 +66,82 @@ export function daysSinceWorn(history: HistoryEntry[], itemId: number): number |
   }
   if (latestTs == null) return null;
   return Math.max(0, Math.floor((Date.now() - latestTs) / 86400000));
+}
+
+/**
+ * Durée minimale de présence dans le dressing au cours d'une saison (ou en
+ * continu pour "Toutes saisons") pour qu'elle "compte" comme une vraie
+ * occasion manquée (recette 25/08/2026, "Jamais portées") — une pièce
+ * ajoutée en toute fin de saison n'a pas eu de chance réelle d'être
+ * portée pendant celle-ci (ex. ajoutée le 25 août : l'été qui se termine
+ * ne doit pas jouer contre elle). Même durée que l'ancien seuil continu
+ * ad hoc de PieceScreen, désormais remplacé par inactivityInfo — un seul
+ * repère dans toute l'app.
+ */
+const MIN_SEASON_PRESENCE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Fenêtre calendaire la plus récente déjà entièrement écoulée pour le
+ * bucket saisonnier d'une pièce. Item.season ne distingue que 2 buckets
+ * (Printemps / Été combinés, Automne / Hiver combinés) — jamais les 4
+ * saisons individuelles : une pièce du dressing réel n'a pas de
+ * granularité plus fine (capsuleSeasons, source vestiaire_universel
+ * uniquement, n'existe jamais pour elle, cf. son commentaire dans
+ * types.ts). "Toutes saisons" n'a pas de fenêtre calendaire : gérée à
+ * part par un seuil continu (cf. inactivityInfo).
+ */
+function lastCompletedSeasonWindow(season: Season, now: number): { start: number; end: number } | null {
+  if (season === "Toutes saisons") return null;
+  const isWarm = season === "Printemps / Été";
+  const windowFor = (y: number) =>
+    isWarm
+      ? { start: new Date(y, 2, 1).getTime(), end: new Date(y, 8, 1).getTime() } // 1 mars → 1 sept
+      : { start: new Date(y, 8, 1).getTime(), end: new Date(y + 1, 2, 1).getTime() }; // 1 sept → 1 mars
+  let year = new Date(now).getFullYear();
+  let w = windowFor(year);
+  while (w.end > now) {
+    year -= 1;
+    w = windowFor(year);
+  }
+  return w;
+}
+
+export interface InactivityInfo {
+  /** true seulement si une fenêtre saisonnière pertinente (ou le seuil continu pour "Toutes saisons") est déjà entièrement écoulée sans port, ET que la pièce était présente assez longtemps pendant celle-ci. */
+  inactive: boolean;
+  /** Libellé de la période concernée pour un message contextualisé (ex. "le printemps/été dernier") — null si "Toutes saisons" (seuil continu, aucune saison à nommer) ou si inactive est false. */
+  periodLabel: string | null;
+}
+
+const INACTIVE_NONE: InactivityInfo = { inactive: false, periodLabel: null };
+
+/**
+ * Détecte une pièce "candidate à la réactivation" (recette 25/08/2026,
+ * brief "Jamais portées") — distinct de "jamais portée" (aucun port
+ * enregistré, un simple fait) : ici, une saison pertinente entière (ou le
+ * seuil continu pour "Toutes saisons") s'est écoulée sans port ALORS que
+ * la pièce était déjà présente assez longtemps pour avoir eu sa chance.
+ * Jamais calculé sur la seule ancienneté en mois, sans tenir compte de la
+ * saison de la pièce (une pièce Été qui n'a pas été portée cet hiver
+ * n'est jamais inactive pour cette raison — ce n'est pas sa saison).
+ * Ne fait jamais rien pour une pièce déjà portée au moins une fois (worn
+ * != null) : ce module ne concerne que le cas "jamais portée".
+ */
+export function inactivityInfo(item: Item): InactivityInfo {
+  if (item.worn != null) return INACTIVE_NONE;
+  if (item.createdAt == null) return INACTIVE_NONE;
+  const now = Date.now();
+
+  if (item.season === "Toutes saisons") {
+    return now - item.createdAt >= MIN_SEASON_PRESENCE_MS ? { inactive: true, periodLabel: null } : INACTIVE_NONE;
+  }
+
+  const w = lastCompletedSeasonWindow(item.season, now);
+  if (!w) return INACTIVE_NONE;
+  const presenceStart = Math.max(item.createdAt, w.start);
+  if (w.end - presenceStart < MIN_SEASON_PRESENCE_MS) return INACTIVE_NONE;
+  const periodLabel = item.season === "Printemps / Été" ? "le printemps/été dernier" : "l'automne/hiver dernier";
+  return { inactive: true, periodLabel };
 }
 
 export interface JournalStats {

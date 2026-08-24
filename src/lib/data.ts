@@ -330,6 +330,23 @@ export function wornAgo(d: number | null | undefined): string {
   return "Porté il y a +1 an";
 }
 
+/**
+ * "Ajoutée il y a X" à partir de Item.createdAt (recette 25/08/2026, écran
+ * "Jamais portées") — null si createdAt est absent, jamais une durée
+ * devinée. Même granularité que wornAgo, jamais un second calcul de dates
+ * qui pourrait diverger.
+ */
+export function addedAgo(createdAt: number | null | undefined): string | null {
+  if (createdAt == null) return null;
+  const d = Math.max(0, Math.floor((Date.now() - createdAt) / 86400000));
+  if (d < 1) return "Ajoutée aujourd’hui";
+  if (d === 1) return "Ajoutée hier";
+  if (d < 7) return "Ajoutée il y a " + d + " j";
+  if (d < 30) return "Ajoutée il y a " + Math.round(d / 7) + " sem";
+  if (d < 365) return "Ajoutée il y a " + Math.round(d / 30) + " mois";
+  return "Ajoutée il y a +1 an";
+}
+
 export interface OnboardingSlide {
   kicker: string;
   tag: string;

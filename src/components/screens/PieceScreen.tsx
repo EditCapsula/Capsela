@@ -4,13 +4,10 @@ import { useEffect, useState } from "react";
 import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { bestStyleFor } from "@/lib/capsule";
 import { isCoupeApplicable, isSizeApplicable, suggestName } from "@/lib/attributes";
-import { daysSinceWorn } from "@/lib/selectors";
+import { daysSinceWorn, inactivityInfo } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import BottomSheet from "@/components/BottomSheet";
-
-/** Pièce jamais portée depuis au moins ce délai avant que le module revente contextuel s'affiche (recette 24/08/2026, point 7 du brief PieceScreen) — première approche heuristique, comme suggestOccasions ; ajustable plus tard sans changer la logique. */
-const DORMANT_THRESHOLD_MS = 30 * 24 * 60 * 60 * 1000;
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -133,18 +130,15 @@ export default function PieceScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.id, state.activeSuggested]);
 
-  // Module revente contextuel (recette 24/08/2026, point 7 du brief PieceScreen)
-  // — Date.now() est impur, jamais lu directement pendant le rendu : calculé
-  // dans un effet, pas de compte à rebours en direct nécessaire, une seule
+  // Module revente contextuel (recette 24/08/2026, point 7 du brief
+  // PieceScreen ; règle d'inactivité tenant compte de la saison depuis le
+  // 25/08/2026, cf. inactivityInfo/selectors.ts — même détection que
+  // l'écran "Jamais portées", un seul repère dans toute l'app) — Date.now()
+  // est impur, jamais lu directement pendant le rendu : calculé dans un
+  // effet, pas de compte à rebours en direct nécessaire, une seule
   // évaluation après montage/changement de pièce suffit.
   useEffect(() => {
-    const next = Boolean(
-      active &&
-        !state.activeSuggested &&
-        active.worn == null &&
-        active.createdAt != null &&
-        Date.now() - active.createdAt > DORMANT_THRESHOLD_MS
-    );
+    const next = Boolean(active && !state.activeSuggested && inactivityInfo(active).inactive);
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDormant(next);
   }, [active, state.activeSuggested]);
