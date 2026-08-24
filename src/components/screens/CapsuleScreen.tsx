@@ -7,6 +7,25 @@ import { CAPSULE_SEASONS, computeDefaultCapsule, currentSeasonKey, type CapsuleS
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
+import type { CategoryKey } from "@/lib/types";
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .15s ease" }}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
 
 export default function CapsuleScreen() {
   const { state, weather, actions, vestiairePool } = useCapsela();
@@ -38,19 +57,34 @@ export default function CapsuleScreen() {
     items: capsule.filter((i) => i.cat === key),
   })).filter((g) => g.items.length > 0);
 
-  const [catFilter, setCatFilter] = useState<string>("all");
-  const visibleGroups = catFilter === "all" ? groups : groups.filter((g) => g.key === catFilter);
+  // Accordéon (recette 25/08/2026, prototype fourni) — remplace l'ancienne
+  // navigation par liens texte "Tout / Hauts / Pantalons..." (qui masquait
+  // toutes les autres catégories tant que "Tout" n'était pas resélectionné)
+  // par une liste où chaque catégorie reste visible, repliée, avec son
+  // effectif ; une seule s'ouvre à la fois — cliquer sur celle déjà ouverte
+  // la referme sans en rouvrir une autre. La première catégorie non vide
+  // reste ouverte par défaut, comme dans le prototype.
+  const [openCat, setOpenCat] = useState<CategoryKey | null>(groups[0]?.key ?? null);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <AppHeader />
 
       <div className="mt-[18px]">
-        <div className="text-[11px] tracking-[.18em] uppercase text-muted">Proposée pour toi</div>
-        <div className="font-serif text-[24px] text-ink mt-[6px]">Ta capsule</div>
-        <div className="text-[12px] text-muted leading-[1.5] mt-[6px]">
-          Composée à partir de ton profil et de ta palette personnelle. Elle s&apos;ajustera automatiquement au fur et à mesure que tu ajouteras tes propres pièces.
+        <div className="text-[11px] tracking-[.18em] uppercase text-muted">Ta capsule</div>
+        <div className="font-serif text-[28px] leading-[1.15] text-ink mt-[6px]">
+          Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
         </div>
+        <div className="text-[12px] text-muted leading-[1.5] mt-[8px]">
+          Une sélection de pièces pensée pour ton style. Tes idées de tenues s&apos;appuient sur cette capsule. Plus
+          tu ajoutes tes propres vêtements, plus L&apos;édit Capsela les intègre à ses recommandations.
+        </div>
+        <div className="font-serif text-[15px] text-ink mt-[10px]">
+          {capsule.length} pièces · {looksCount} looks possibles
+        </div>
+        <button onClick={actions.openAdd} className="mt-[6px] text-[12px] text-terracotta cursor-pointer">
+          + Ajouter mes pièces
+        </button>
       </div>
 
       <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[18px]">
@@ -69,102 +103,77 @@ export default function CapsuleScreen() {
         })}
       </div>
 
-      <div className="mt-4">
-        <div className="font-serif text-[22px] text-ink">
-          Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
-        </div>
-        <div className="text-[12.5px] text-muted mt-[5px]">
-          {capsule.length} pièces · {looksCount} looks possibles
-        </div>
-      </div>
-
-      {/* Navigation par catégorie (recette 20/08/2026, passe design) — liens
-          texte discrets, jamais des boutons pill : filtre réellement la
-          liste affichée (Tout + une entrée par catégorie présente dans la
-          capsule), plus une simple ancre de défilement. */}
-      {groups.length > 1 && (
-        <div className="scrollarea flex gap-4 overflow-x-auto pb-[2px] mt-4">
-          <button
-            onClick={() => setCatFilter("all")}
-            className={
-              "flex-none text-[11px] tracking-[.1em] uppercase cursor-pointer whitespace-nowrap pb-[2px] border-b-2 " +
-              (catFilter === "all"
-                ? "text-ink font-bold border-terracotta"
-                : "text-[#9C9081] font-normal border-transparent hover:text-ink")
-            }
-          >
-            Tout
-          </button>
-          {groups.map((g) => (
-            <button
-              key={g.key}
-              onClick={() => setCatFilter(g.key)}
-              className={
-                "flex-none text-[11px] tracking-[.1em] uppercase cursor-pointer whitespace-nowrap pb-[2px] border-b-2 " +
-                (catFilter === g.key
-                  ? "text-ink font-bold border-terracotta"
-                  : "text-[#9C9081] font-normal border-transparent hover:text-ink")
-              }
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {visibleGroups.map((g) => (
-        <div key={g.key} id={"capsule-cat-" + g.key}>
-          <div className="mt-6 mb-3 text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
-            {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
-          </div>
-          <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]" style={{ scrollSnapType: "x mandatory" }}>
-            {g.items.map((it) => {
-              const resolvedImage = resolveItemImage(it);
-              return (
-                <button
-                  key={it.id}
-                  onClick={() => actions.openItemOutfits(it.id)}
-                  className="flex-none w-[104px] text-left cursor-pointer"
-                  style={{ scrollSnapAlign: "start" }}
+      <div className="mt-6">
+        {groups.map((g) => {
+          const open = openCat === g.key;
+          return (
+            <div key={g.key} className="border-b border-border">
+              <button
+                onClick={() => setOpenCat(open ? null : g.key)}
+                className="w-full flex items-center justify-between py-[14px] cursor-pointer text-left"
+              >
+                <span className="text-[12px] tracking-[.1em] uppercase font-semibold text-ink">
+                  {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
+                </span>
+                <span className="text-muted flex-shrink-0">
+                  <ChevronIcon open={open} />
+                </span>
+              </button>
+              {open && (
+                <div
+                  className="scrollarea flex gap-[9px] overflow-x-auto pb-[16px]"
+                  style={{ scrollSnapType: "x mandatory" }}
                 >
-                  <div
-                    className="w-full rounded-[11px] border border-border relative overflow-hidden"
-                    style={{
-                      aspectRatio: "4/5",
-                      background: resolvedImage.url ? "#F3EDE1" : it.hex,
-                      boxShadow: resolvedImage.url ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
-                    }}
-                  >
-                    {resolvedImage.url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={resolvedImage.url}
-                        alt={it.name}
-                        loading="lazy"
-                        style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", padding: 8, boxSizing: "border-box" }}
-                      />
-                    ) : (
-                      it.imageStatus === "generating" && (
-                        <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
-                      )
-                    )}
-                  </div>
-                  <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
-                    {it.name}
-                  </div>
-                  <div className="text-[9.5px] text-terracotta mt-[1px]">Suggestion</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+                  {g.items.map((it) => {
+                    const resolvedImage = resolveItemImage(it);
+                    return (
+                      <button
+                        key={it.id}
+                        onClick={() => actions.openItemOutfits(it.id)}
+                        className="flex-none w-[104px] text-left cursor-pointer"
+                        style={{ scrollSnapAlign: "start" }}
+                      >
+                        <div
+                          className="w-full rounded-[11px] border border-border relative overflow-hidden"
+                          style={{
+                            aspectRatio: "4/5",
+                            background: resolvedImage.url ? "#F3EDE1" : it.hex,
+                            boxShadow: resolvedImage.url ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
+                          }}
+                        >
+                          {resolvedImage.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={resolvedImage.url}
+                              alt={it.name}
+                              loading="lazy"
+                              style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", padding: 8, boxSizing: "border-box" }}
+                            />
+                          ) : (
+                            it.imageStatus === "generating" && (
+                              <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
+                            )
+                          )}
+                        </div>
+                        <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
+                          {it.name}
+                        </div>
+                        <div className="text-[9.5px] text-terracotta mt-[1px]">Suggestion</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
       <button
         onClick={actions.goTenues}
         className="mt-[22px] w-full bg-terracotta text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
       >
-        Voir ma tenue du jour
+        ✦ Voir mes idées de tenues
       </button>
     </div>
   );
