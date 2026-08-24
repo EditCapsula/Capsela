@@ -229,16 +229,16 @@ function StyleBoard({ items, height }: { items: Item[]; height: number }) {
 
 /**
  * Visuels éditoriaux génériques Capsela pour la card Journal (brief
- * 26/08/2026) — JAMAIS les photos personnelles de l'utilisatrice (Dressing/
- * Journal réels) : le rôle de ces images est purement d'illustrer le concept
- * "tenues portées au quotidien", adapté uniquement au genre du profil. Ces
- * fichiers n'existent pas encore dans /public — l'appel gracieux ci-dessous
- * (PolaroidPhoto, onError) masque la vignette sans casser l'écran tant qu'ils
- * n'ont pas été fournis.
+ * 26/08/2026, fichiers fournis le 26/08/2026) — JAMAIS les photos
+ * personnelles de l'utilisatrice (Dressing/Journal réels) : le rôle de ces
+ * images est purement d'illustrer le concept "tenues portées au quotidien",
+ * adapté uniquement au genre du profil. L'appel gracieux plus bas
+ * (PolaroidPhoto, onError) reste en place si l'un de ces fichiers venait à
+ * manquer, mais les 6 existent déjà dans /public/editorial.
  */
 const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
-  femme: ["/editorial/journal-femme-1.jpg", "/editorial/journal-femme-2.jpg", "/editorial/journal-femme-3.jpg"],
-  homme: ["/editorial/journal-homme-1.jpg", "/editorial/journal-homme-2.jpg", "/editorial/journal-homme-3.jpg"],
+  femme: ["/editorial/editcapsela-femme1-hp.jpg", "/editorial/editcapsela-femme2-hp.jpg", "/editorial/editcapsela-femme3-hp.jpg"],
+  homme: ["/editorial/editcapsela-homme1-hp.jpg", "/editorial/editcapsela-homme2-hp.jpg", "/editorial/editcapsela-homme3-hp.jpg"],
 };
 
 const POLAROID_SLOTS: { left: number; top: number; rotate: number; z: number }[] = [
