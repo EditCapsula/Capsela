@@ -1,5 +1,5 @@
 import { CATALOG, type CatalogItem } from "./catalog";
-import { formalityOf, intensiteOf, tonsOf } from "./attributes";
+import { formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "./attributes";
 import { isSunny, type Weather } from "./data";
 import {
   STYLE_ID_TO_CATALOG_LABEL,
@@ -9,7 +9,7 @@ import {
   type Profile,
   type StyleId,
 } from "./profile";
-import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, Season, Tons } from "./types";
+import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, OccasionKey, Season, Tons } from "./types";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
@@ -145,6 +145,107 @@ export function paletteFit(it: Item, profile: Profile): boolean {
 }
 
 /**
+ * Macro-catégories de la sélection qualitative de capsule (recette
+ * 24/08/2026, plafonds + tri qualitatif — remplace le tri basique/morpho +
+ * slice(50) qui laissait passer 49 pièces sur une capsule Minimaliste,
+ * certaines catégories à 12 pièces quand Vestes plafonnait à 1 seule).
+ * Regroupe les 14 CategoryKey en 7 blocs pour répartir le plafond de 35
+ * pièces hors Sport (le Sport est isolé avant ce calcul, cf. isSportPiece).
+ */
+const CAPSULE_GROUPS: { name: string; cats: CategoryKey[]; quota: number }[] = [
+  { name: "hauts", cats: ["haut", "pull"], quota: 8 },
+  { name: "bas", cats: ["pantalon", "jean", "jupe", "short"], quota: 7 },
+  { name: "robes-combinaisons", cats: ["robe", "combinaison"], quota: 4 },
+  { name: "vestes-manteaux", cats: ["veste", "manteau"], quota: 5 },
+  { name: "chaussures", cats: ["chaussures"], quota: 4 },
+  { name: "accessoires", cats: ["sac", "accessoire"], quota: 4 },
+  { name: "bijoux", cats: ["bijou"], quota: 3 },
+];
+
+/** Catégories structurantes (étape 3, garde-fou formalité) — celles dont dépend le palier de formalité d'une tenue complète. */
+const STRUCTURING_GROUPS = new Set(["hauts", "bas", "robes-combinaisons"]);
+
+/** Occasions couvertes par une pièce — déclarées si présentes, sinon repli sur la déduction existante (jamais une pièce sans donnée qui compte pour zéro par accident). */
+function occasionsOf(it: Item): OccasionKey[] {
+  return it.occasion && it.occasion.length ? it.occasion : suggestOccasions(it.cat, it.shoeType);
+}
+
+/**
+ * Pièce qui débloque le plus d'occasions pas encore couvertes par la
+ * capsule en cours de construction — marginale, pas brute (une pièce qui
+ * ne fait que redécouvrir une occasion déjà acquise n'apporte rien).
+ * Égalité tranchée par est_basique_capsule, puis compatibilité
+ * morphologique (cf. morphoFit, préservé de l'ancien tri), puis id
+ * (déterministe).
+ */
+function pickBestMarginal(candidates: CatalogItem[], covered: Set<OccasionKey>, morphology: string | null): CatalogItem | null {
+  const scoreKey = (it: CatalogItem): number[] => [
+    occasionsOf(it).filter((o) => !covered.has(o)).length,
+    it.estBasiqueCapsule ? 1 : 0,
+    morphoFit(it, morphology) ? 1 : 0,
+    -it.id,
+  ];
+  // Comparaison lexicographique : le premier critère qui diffère tranche
+  // (couverture marginale > basique > morphologie > id, dans cet ordre).
+  const isBetter = (a: number[], b: number[]) => {
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return a[i] > b[i];
+    }
+    return false;
+  };
+  let best: CatalogItem | null = null;
+  let bestKey: number[] | null = null;
+  for (const it of candidates) {
+    const key = scoreKey(it);
+    if (!best || !bestKey || isBetter(key, bestKey)) {
+      best = it;
+      bestKey = key;
+    }
+  }
+  return best;
+}
+
+/**
+ * Sélection qualitative d'un bloc macro-catégorie (étapes 2.1/2.2) : 1
+ * place réservée à la meilleure pièce statement=true du pool si au moins
+ * une existe (sautée sinon — styles sobres type Minimaliste), puis le
+ * reste du quota rempli par couverture d'occasion marginale décroissante
+ * contre l'ensemble de la capsule en construction (pas juste cette
+ * catégorie, cf. paramètre `covered` partagé entre tous les appels).
+ */
+function selectGroup(
+  pool: CatalogItem[],
+  quota: number,
+  covered: Set<OccasionKey>,
+  morphology: string | null
+): CatalogItem[] {
+  const picked: CatalogItem[] = [];
+  let remaining = quota;
+
+  const statementCandidates = pool.filter((it) => isStatement(it));
+  if (statementCandidates.length && remaining > 0) {
+    const best = pickBestMarginal(statementCandidates, covered, morphology);
+    if (best) {
+      picked.push(best);
+      occasionsOf(best).forEach((o) => covered.add(o));
+      remaining -= 1;
+    }
+  }
+
+  let candidates = pool.filter((it) => !picked.some((p) => p.id === it.id));
+  while (remaining > 0 && candidates.length) {
+    const best = pickBestMarginal(candidates, covered, morphology);
+    if (!best) break;
+    picked.push(best);
+    occasionsOf(best).forEach((o) => covered.add(o));
+    candidates = candidates.filter((it) => it.id !== best.id);
+    remaining -= 1;
+  }
+
+  return picked;
+}
+
+/**
  * Capsule par défaut : sélection du catalogue personnalisée par le profil
  * (genre, météo de la ville, style, couleurs préférées) puis ordonnée par
  * compatibilité morphologique. Chaque filtre ne s'applique que s'il laisse
@@ -233,21 +334,50 @@ export function computeDefaultCapsule(
     if (pFit.length >= 12) curated = pFit;
   }
 
-  // Priorité aux pièces indispensables (est_basique_capsule), puis tri par
-  // compatibilité morphologique au sein de chaque groupe.
-  const sorted = [...curated].sort((a, b) => {
-    const basique = Number(!!b.estBasiqueCapsule) - Number(!!a.estBasiqueCapsule);
-    if (basique !== 0) return basique;
-    return Number(morphoFit(b, profile.morphology)) - Number(morphoFit(a, profile.morphology));
-  });
-  // Plafond relevé de 34 à 50 (recette 20/08/2026, suite à "Mules à talons"
-  // jamais visible) : le tri basique-d'abord poussait systématiquement hors
-  // du plafond toute pièce non basique d'une catégorie déjà pourvue en
-  // basiques (une seule pièce basique de la catégorie suffisait à satisfaire
-  // le filet de sécurité ensure() ci-dessous, sans jamais garantir qu'une
-  // pièce précise y figure) — jamais un vrai bug de règle, mais une capsule
-  // qui ne laissait aucune place aux pièces plus habillées/statement.
-  let out = sorted.slice(0, 50);
+  // Bloc Sport isolé avant le calcul du plafond (étape 0, recette
+  // 24/08/2026, plafonds + tri qualitatif) : formalité 0 traité à part —
+  // jamais soumis au même tri qualitatif que le reste (cf. bloc Sport
+  // ci-dessous), pour ne jamais faire concurrence aux pièces non-Sport sur
+  // la couverture d'occasion (les deux restent des populations distinctes
+  // même si le total est partagé).
+  const isSportPiece = (it: Item) => formalityOf(it) === 0;
+  const sportPool = curated.filter(isSportPiece);
+  const nonSportPool = curated.filter((it) => !isSportPiece(it));
+
+  // Sélection qualitative par macro-catégorie (étapes 1-2) : remplace
+  // l'ancien tri basique/morpho + slice(50) qui laissait passer des
+  // capsules à 49 pièces (12 hauts, 6 chaussures) quand Vestes plafonnait à
+  // 1 seule — la requête catalogue (style × saison × genre) n'avait aucun
+  // plafond par catégorie. Plafond de 35 pièces hors Sport, réparti par
+  // quota indicatif (cf. CAPSULE_GROUPS), rempli par couverture d'occasion
+  // marginale décroissante plutôt qu'un plafond arbitraire.
+  const covered = new Set<OccasionKey>();
+  const poolByGroup = new Map<string, CatalogItem[]>();
+  let out: CatalogItem[] = [];
+  for (const group of CAPSULE_GROUPS) {
+    const groupPool = nonSportPool.filter((it) => group.cats.includes(it.cat));
+    poolByGroup.set(group.name, groupPool);
+    out = [...out, ...selectGroup(groupPool, group.quota, covered, profile.morphology)];
+  }
+
+  // Garde-fou formalité (étape 3) : dans les catégories structurantes, si
+  // un palier de formalité existe dans le pool mais n'est représenté par
+  // aucune pièce sélectionnée (le tri par couverture l'a évincé), on le
+  // réintègre de force — même à faible score de couverture. Distinct de la
+  // réservation "statement" ci-dessus (selectGroup) : une pièce habillée
+  // peut être parfaitement sobre et non-statement (ex. pantalon de costume
+  // marine uni), donc pas garantie de survivre par ce seul mécanisme.
+  for (const group of CAPSULE_GROUPS) {
+    if (!STRUCTURING_GROUPS.has(group.name)) continue;
+    const groupPool = poolByGroup.get(group.name) || [];
+    const tiersPresent = new Set(groupPool.map((it) => formalityOf(it)));
+    tiersPresent.forEach((tier) => {
+      const alreadyCovered = out.some((it) => group.cats.includes(it.cat) && formalityOf(it) === tier);
+      if (alreadyCovered) return;
+      const forced = groupPool.filter((it) => formalityOf(it) === tier).sort((a, b) => a.id - b.id)[0];
+      if (forced) out = [...out, forced];
+    });
+  }
 
   // Garantit la présence d'au moins une pièce de chaque catégorie essentielle
   // dans la capsule, même si les filtres précédents les avaient toutes
@@ -290,25 +420,13 @@ export function computeDefaultCapsule(
     if (pickFrom.length) out = [...out, pickFrom[0]];
   }
 
-  // Garantit une base Sport complète — haut, bas et chaussures de
-  // formalité 0 (recette 20/08/2026) : le plafond de 34 pièces + le tri par
-  // "basique"/morphologie pouvait exclure les pièces sport (rarement taguées
-  // est_basique_capsule) alors que ensure() ci-dessus se contente d'"au
-  // moins un haut/une chaussure", sans exiger qu'ils soient sport-compatibles
-  // — un haut habillé suffisait à satisfaire cette garde, laissant l'occasion
-  // Sport sans aucune tenue complète possible (R-B11, formalité stricte).
-  const ensureSport = (cats: CategoryKey[]) => {
-    if (out.some((it) => cats.includes(it.cat) && formalityOf(it) === 0)) return;
-    const pool = sourcePool.filter(
-      (it) => cats.includes(it.cat) && formalityOf(it) === 0 && !excluded.has(it.id) && (isSunny(weather) || !it.necessiteSoleil)
-    );
-    const fav = pool.filter((it) => favColors.includes(it.hex));
-    const pickFrom = fav.length ? fav : pool;
-    if (pickFrom.length) out = [...out, pickFrom[0]];
-  };
-  ensureSport(["haut", "pull"]);
-  ensureSport(["pantalon", "jean", "short"]);
-  ensureSport(["chaussures"]);
+  // Bloc Sport (étape 4) : toutes les pièces Sport du pool (déjà filtrées
+  // par saison/température/genre/style comme le reste, cf. curated)
+  // s'ajoutent telles quelles par-dessus le bloc non-Sport — comptées dans
+  // le total global de la capsule, mais toujours présentes, jamais
+  // soumises au tri qualitatif ci-dessus (même logique que la garantie
+  // chaussures d'intérieur juste au-dessus pour le Cocooning).
+  out = [...out, ...sportPool];
 
   return out;
 }
