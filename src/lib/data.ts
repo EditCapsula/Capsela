@@ -218,6 +218,12 @@ export const OCCASION_STYLE_PREFS: Partial<Record<OccasionKey, OccasionStylePref
   // toute chaussure à talon reste une préférence légitime pour une sortie
   // festive.
   festive: { shoeTypes: ["Escarpins", "Sandales à talons", "Mules", "Slingbacks"] },
+  // Ajouté (recette 25/08/2026, signalé) — un mariage/baptême appelle une
+  // chaussure à talon au même titre qu'une sortie festive, jamais une
+  // simple sandale plate ; même liste que festive (occasion la plus
+  // proche déjà couverte), préférence molle jamais exclusive comme
+  // partout ailleurs dans cette table.
+  evenement_perso: { shoeTypes: ["Escarpins", "Sandales à talons", "Mules", "Slingbacks"] },
   // Ajouté (correctif 21/08/2026, signalé) — inverse : le voyage privilégie
   // le confort, jamais un talon.
   voyage: { shoeTypes: ["Baskets", "Ballerines", "Sandales", "Mocassins", "Espadrilles"] },
