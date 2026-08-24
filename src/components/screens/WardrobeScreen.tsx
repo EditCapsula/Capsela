@@ -186,7 +186,7 @@ export default function WardrobeScreen() {
                     )}
                   </div>
                   <div className="px-[12px] py-[10px]">
-                    <div className="text-[12.5px] text-ink">{g.label}</div>
+                    <div className="text-[12px] tracking-[.1em] uppercase font-semibold text-ink">{g.label}</div>
                     <div className="text-[10.5px] text-placeholder mt-[1px]">
                       {g.items.length} {g.items.length <= 1 ? "pièce" : "pièces"}
                     </div>
