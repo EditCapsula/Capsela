@@ -5,7 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import { CATS } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { useCapsela } from "@/lib/store";
-import { isWishlistLook, lookWornCount, neverWornItems } from "@/lib/selectors";
+import { inactivityInfo, isWishlistLook, lookWornCount, neverWornItems } from "@/lib/selectors";
 import type { SavedLook } from "@/lib/types";
 
 function TshirtIcon() {
@@ -94,6 +94,18 @@ export default function WardrobeScreen() {
         (() => {
           const rep = neverWorn[0];
           const img = resolveItemImage(rep);
+          // Bloc "jamais portées" à deux niveaux (recette 26/08/2026) : par
+          // défaut, simple invitation à découvrir ces pièces, jamais de
+          // référence à une inactivité ou à la revente ("Voir des idées →",
+          // même destination goNeverWorn qui présente déjà des tenues
+          // autour de ces pièces). Seulement lorsque TOUTES les pièces
+          // jamais portées sont en plus détectées inactives (inactivityInfo,
+          // saisonnièrement significatif) le message devient plus pressant
+          // ("à redécouvrir" / "Que faire avec ?") — c'est ce second niveau,
+          // et lui seul, qui amène progressivement vers la réactivation puis
+          // la revente (déjà géré par l'écran "Jamais portées" lui-même).
+          const allInactive = neverWorn.every((it) => inactivityInfo(it).inactive);
+          const plural = neverWorn.length > 1;
           return (
             <button
               onClick={actions.goNeverWorn}
@@ -104,12 +116,18 @@ export default function WardrobeScreen() {
               </span>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] text-ink">
-                  {neverWorn.length} {neverWorn.length === 1 ? "pièce jamais portée" : "pièces jamais portées"}
+                  {neverWorn.length} {plural ? (allInactive ? "pièces à redécouvrir" : "pièces jamais portées") : allInactive ? "pièce à redécouvrir" : "pièce jamais portée"}
                 </div>
                 <div className="text-[11px] text-warm-text mt-[1px]">
-                  {neverWorn.length === 1 ? "Cette pièce dort dans ton dressing." : "Ces pièces dorment dans ton dressing."}
+                  {allInactive
+                    ? plural
+                      ? "Tu ne les as pas portées pendant leur dernière saison."
+                      : "Tu ne l'as pas portée pendant sa dernière saison."
+                    : plural
+                      ? "Et si c'était l'occasion de les essayer ?"
+                      : "Et si c'était l'occasion de l'essayer ?"}
                 </div>
-                <div className="text-[11.5px] text-terracotta mt-[3px]">Que faire avec ? →</div>
+                <div className="text-[11.5px] text-terracotta mt-[3px]">{allInactive ? "Que faire avec ? →" : "Voir des idées →"}</div>
               </div>
               <div
                 className="w-[50px] h-[60px] rounded-[10px] flex-shrink-0 overflow-hidden"
@@ -272,7 +290,7 @@ export default function WardrobeScreen() {
                       <span className={"inline-flex items-center gap-[4px] text-[9px] tracking-[.05em] uppercase " + (wishlist ? "text-terracotta" : look.source === "saved" ? "text-terracotta" : "text-muted")}>
                         {wishlist ? (
                           <>
-                            <SparkleIcon /> Suggéré (Wishlist)
+                            <SparkleIcon /> Pièces suggérées
                           </>
                         ) : look.source === "saved" ? (
                           "♡ Enregistré"
@@ -337,8 +355,7 @@ export default function WardrobeScreen() {
                 <LightbulbIcon />
               </span>
               <div className="flex-1 min-w-0 text-[11.5px] text-warm-text-2 leading-[1.4]">
-                {wishlistCount} {wishlistCount === 1 ? "look contient" : "looks contiennent"} des pièces que tu ne possèdes pas
-                encore.
+                {wishlistCount} {wishlistCount === 1 ? "look contient" : "looks contiennent"} des pièces suggérées.
                 <span className="block text-[11px] mt-[1px]">Découvre des alternatives ou ajoute-les à ton dressing.</span>
               </div>
               <span className="text-terracotta text-[16px] flex-shrink-0">›</span>
