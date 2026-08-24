@@ -69,7 +69,7 @@ export default function WardrobeScreen() {
       <div className="flex items-start justify-between gap-3 mt-[18px]">
         <div>
           <div className="text-[11px] tracking-[.18em] uppercase text-muted">Ton dressing</div>
-          <div className="font-serif text-[26px] leading-[1.2] text-ink mt-[6px]">Ton vestiaire, tes looks.</div>
+          <div className="font-serif text-[26px] leading-[1.2] text-ink mt-[6px]">Ton vestiaire, tes looks</div>
           <div className="text-[12px] text-muted mt-[6px]">
             {groups.length} {groups.length <= 1 ? "catégorie" : "catégories"} · {items.length} {items.length <= 1 ? "pièce" : "pièces"}
           </div>
