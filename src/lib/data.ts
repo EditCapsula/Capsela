@@ -389,14 +389,18 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     title: "30 à 40 pièces, choisies avec soin.",
     body: "Capsela construit une capsule cohérente à partir de ton style. Garde ce qui te plaît, remplace certaines pièces et fais-la évoluer avec ton dressing.",
   },
+  // Visuel remplacé par un mini-aperçu d'écran (recette 26/08/2026, même
+  // direction que les slides 1 et 2) — cf. OnboardingScreen.tsx. tag/glyph/
+  // glyphColor/tagColor conservés pour la cohérence de type, non rendus
+  // pour ce slide.
   {
-    kicker: "Moins, mais mieux",
+    kicker: "Tes tenues",
     tag: "porte tout",
     glyph: "3",
     bg: "#C9B29A",
     glyphColor: "rgba(166,105,80,.24)",
     tagColor: "#6E5B43",
-    title: "Tout porter, enfin.",
-    body: "Repère tes pièces jamais portées, compose tes tenues et achète moins. Un dressing plus léger, plus toi.",
+    title: "S’habiller devient simple.",
+    body: "Chaque jour, Capsela compose des tenues adaptées à ton style, à la météo et à tes occasions, avec tes pièces et celles qui peuvent compléter ton dressing.",
   },
 ];

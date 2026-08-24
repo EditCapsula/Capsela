@@ -28,6 +28,20 @@ const CAPSULE_FEATURES: { glyph: string; label: string; desc: string }[] = [
   { glyph: "↻", label: "Adaptable", desc: "Garde, remplace, personnalise" },
 ];
 
+/**
+ * Repères "Tenue du jour" (slide 3, "Tes tenues") — ☀️ reprend l'usage
+ * déjà établi des emoji météo (WEATHER_ICONS, data.ts) ; le cintre réutilise
+ * le même asset que le compteur du slide 2 plutôt qu'un 3e langage d'icône.
+ */
+const DAILY_OUTFIT_FEATURES: { glyph: string; label: string; desc: string }[] = [
+  { glyph: "☀️", label: "Météo", desc: "En temps réel dans ta ville" },
+  { glyph: "🗓️", label: "Occasion", desc: "Adaptée à ton programme" },
+  { glyph: "", label: "Ton style", desc: "Et les pièces de ta capsule" },
+];
+
+/** Pastilles couleur du mini-aperçu "Tenue du jour" — palette neutre déjà présente dans PAL_COULEURS (profile.ts), jamais de nouvelles teintes. */
+const OUTFIT_PREVIEW_HEXES = ["#C08A5E", "#F7F4EE", "#2A2724", "#5A4436", "#8E8B85", "#A66950"];
+
 function MoodboardCard({ id, className }: { id: StyleId; className?: string }) {
   const cfg = STYLE_CONFIG.femme[id];
   // Repli gracieux si le visuel Storage ne charge pas (même principe que
@@ -58,6 +72,7 @@ export default function OnboardingScreen() {
   const cta = state.onbStep >= 2 ? "Créer mon compte" : "Continuer";
   const isStyleMoodboard = state.onbStep === 0;
   const isCapsulePreview = state.onbStep === 1;
+  const isOutfitPreview = state.onbStep === 2;
 
   return (
     <div className="absolute inset-0 flex flex-col px-7 pt-2 pb-7">
@@ -109,6 +124,52 @@ export default function OnboardingScreen() {
                   <div className="text-[9px] text-muted mt-[2px] leading-[1.25]">{f.desc}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        ) : isOutfitPreview ? (
+          <div className="rounded-[20px] p-[10px]" style={{ background: slide.bg }}>
+            <div className="flex gap-[10px] items-stretch">
+              <div className="flex-[1.3] bg-ink rounded-[18px] p-[6px]">
+                <div className="bg-cream rounded-[13px] overflow-hidden px-[10px] pt-[10px] pb-[9px] h-full flex flex-col">
+                  <div className="text-[9px] text-ink font-serif text-center mb-[8px]">Tenue du jour</div>
+                  <div className="flex gap-[5px] mb-[8px]">
+                    <div className="flex-1 bg-card rounded-[8px] px-[6px] py-[5px] text-[7px] text-ink leading-[1.3]">
+                      ☀️ 22° · Paris
+                    </div>
+                    <div className="flex-1 bg-card rounded-[8px] px-[6px] py-[5px] text-[7px] text-ink leading-[1.3]">
+                      Travail / Bureau
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-[4px] mb-[8px]">
+                    {OUTFIT_PREVIEW_HEXES.map((hex, i) => (
+                      <div key={i} className="aspect-square rounded-[6px]" style={{ background: hex }} />
+                    ))}
+                  </div>
+                  <div className="flex-1" />
+                  <div className="bg-ink text-cream text-center rounded-full py-[6px] text-[7.5px] mb-[5px]">
+                    Voir le détail
+                  </div>
+                  <div className="border border-border text-ink text-center rounded-full py-[6px] text-[7.5px]">
+                    Plus d’idées
+                  </div>
+                </div>
+              </div>
+              <div className="flex-1 flex flex-col justify-center gap-[14px]">
+                {DAILY_OUTFIT_FEATURES.map((f) => (
+                  <div key={f.label} className="flex items-start gap-[7px]">
+                    <div className="w-6 h-6 rounded-full bg-card border border-border flex items-center justify-center text-[11px] flex-shrink-0">
+                      {f.glyph || (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src="/logo-hanger-only.png" alt="" style={{ width: 11, height: "auto" }} />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-ink font-medium leading-[1.2]">{f.label}</div>
+                      <div className="text-[9px] text-muted mt-[1px] leading-[1.25]">{f.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
