@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import { CATS } from "@/lib/data";
 import { CAPSULE_SEASONS, computeDefaultCapsule, currentSeasonKey, type CapsuleSeason } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
+import { styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import type { CategoryKey } from "@/lib/types";
@@ -51,6 +52,11 @@ export default function CapsuleScreen() {
   const shoes = Math.max(1, count("chaussures"));
   const looksCount = (tops * bottoms + dresses) * shoes;
 
+  // Style renseigné en profil (recette 25/08/2026) — premier style choisi,
+  // même convention que ProfileScreen/ProfileEditScreen (styleLabel(profile.styles[0], ...)) ;
+  // "" si aucun style n'a été renseigné, jamais un style inventé.
+  const userStyleLabel = styleLabel(profile.styles[0], profile.gender);
+
   const groups = CATS.map(([key, , plural]) => ({
     key,
     label: plural.toUpperCase(),
@@ -76,14 +82,20 @@ export default function CapsuleScreen() {
           Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
         </div>
         <div className="text-[12px] text-muted leading-[1.5] mt-[8px]">
-          Une sélection de pièces pensée pour ton style. Tes idées de tenues s&apos;appuient sur cette capsule. Plus
-          tu ajoutes tes propres vêtements, plus L&apos;édit Capsela les intègre à ses recommandations.
+          {userStyleLabel ? (
+            <>
+              Une sélection pensée pour ton style <span className="text-ink">{userStyleLabel}</span> et ta palette,
+              pour inspirer tes tenues.
+            </>
+          ) : (
+            "Une sélection pensée pour ton style et ta palette, pour inspirer tes tenues."
+          )}
         </div>
         <div className="font-serif text-[15px] text-ink mt-[10px]">
           {capsule.length} pièces · {looksCount} looks possibles
         </div>
         <button onClick={actions.openAdd} className="mt-[6px] text-[12px] text-terracotta cursor-pointer">
-          + Ajouter mes pièces
+          + Ajouter une pièce à mon dressing
         </button>
       </div>
 
