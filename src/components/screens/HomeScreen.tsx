@@ -241,10 +241,15 @@ const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
   homme: ["/editorial/editcapsela-homme1-hp.jpg", "/editorial/editcapsela-homme2-hp.jpg", "/editorial/editcapsela-homme3-hp.jpg"],
 };
 
-const POLAROID_SLOTS: { left: number; top: number; rotate: number; z: number }[] = [
-  { left: 0, top: 14, rotate: -7, z: 1 },
-  { left: 30, top: 0, rotate: 4, z: 2 },
-  { left: 26, top: 32, rotate: -2, z: 3 },
+// Hiérarchie carnet de looks plutôt qu'une pile de miniatures égales
+// (recette 26/08/2026) : une photo principale nettement plus grande devant,
+// deux plus petites derrière — jamais 3 tirages de même taille. Léger débord
+// à gauche accepté (vers le centre de la card), absorbé par overflow-hidden
+// de la card elle-même.
+const POLAROID_SLOTS: { left: number; top: number; w: number; h: number; rotate: number; z: number }[] = [
+  { left: 24, top: 8, w: 78, h: 96, rotate: -2, z: 3 },
+  { left: -8, top: 4, w: 54, h: 68, rotate: -11, z: 1 },
+  { left: 40, top: 44, w: 52, h: 66, rotate: 9, z: 2 },
 ];
 
 function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (typeof POLAROID_SLOTS)[number] }) {
@@ -255,8 +260,8 @@ function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (ty
         position: "absolute",
         left: slot.left + "%",
         top: slot.top + "%",
-        width: 62,
-        height: 76,
+        width: slot.w,
+        height: slot.h,
         transform: `rotate(${slot.rotate}deg)`,
         zIndex: slot.z,
         background: "#FBF8F3",
@@ -450,12 +455,12 @@ export default function HomeScreen() {
           className="w-full text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex items-center justify-between gap-[14px] box-border"
           style={{ background: "linear-gradient(120deg, #F6F0E6 0%, #EEE1CE 100%)", padding: "16px 10px 16px 18px" }}
         >
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0" style={{ maxWidth: 128 }}>
             <div className="font-serif text-[17px] text-ink">Journal des tenues</div>
-            <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">Retrouve les tenues que tu as portées.</div>
+            <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">Garde une trace de tes tenues au fil des jours.</div>
             <div className="text-[12px] text-terracotta mt-[9px]">Voir le journal →</div>
           </div>
-          <div className="relative flex-shrink-0" style={{ width: 96, height: 96 }}>
+          <div className="relative flex-shrink-0" style={{ width: 118, height: 118 }}>
             {journalVisuals.map((src, i) => (
               <PolaroidPhoto key={src} src={src} alt="" slot={POLAROID_SLOTS[i]} />
             ))}
