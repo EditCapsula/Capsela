@@ -485,7 +485,14 @@ export default function ProfileSetupScreen() {
         // garde exactement son style existant.
         if (meta.key !== "pal_couleurs") return continueButton;
         return (
-          <div className="sticky bottom-0 -mx-7 px-7 bg-cream" style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
+          // flex flex-col : le bouton était un enfant direct du conteneur
+          // flex-col de l'écran (étiré pleine largeur par défaut) — ce
+          // wrapper reproduit le même contexte flex pour qu'il garde
+          // exactement la même largeur qu'avant, sans toucher au bouton.
+          <div
+            className="sticky bottom-0 -mx-7 px-7 bg-cream flex flex-col"
+            style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}
+          >
             {continueButton}
           </div>
         );
