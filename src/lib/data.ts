@@ -359,16 +359,26 @@ export interface OnboardingSlide {
 }
 
 export const ONBOARDING_SLIDES: OnboardingSlide[] = [
+  // Visuel remplacé par un moodboard de styles (recette 26/08/2026, direction
+  // adaptée d'une proposition externe) — cf. OnboardingScreen.tsx, qui
+  // affiche une grille de cards de style à la place du glyphe/tag ci-dessous
+  // pour ce slide précis. bg/glyph/glyphColor/tagColor/tag restent déclarés
+  // pour la cohérence de type avec les 2 autres slides, mais ne sont plus
+  // rendus pour celui-ci.
   {
-    kicker: "Ton dressing",
+    kicker: "Ton style",
     tag: "ce que tu as déjà",
     glyph: "1",
     bg: "#E7DCCB",
     glyphColor: "rgba(166,105,80,.28)",
     tagColor: "#8A6B4A",
-    title: "On part de ce que tu possèdes déjà.",
-    body: "Photographie tes vêtements un par un. Aucun achat pour commencer — ta capsule naît de ta propre garde-robe.",
+    title: "Un dressing pensé pour toi.",
+    body: "Indique ton style et L’Édit Capsela te propose une sélection de pièces qui te ressemble. Tu peux ensuite la personnaliser avec les vêtements que tu possèdes déjà.",
   },
+  // Visuel remplacé par un aperçu de capsule (recette 26/08/2026, même
+  // direction que le slide 1) — cf. OnboardingScreen.tsx. tag/glyph/
+  // glyphColor/tagColor conservés pour la cohérence de type, non rendus
+  // pour ce slide.
   {
     kicker: "Ta capsule",
     tag: "30 à 40 pièces",
@@ -377,7 +387,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     glyphColor: "rgba(166,105,80,.26)",
     tagColor: "#7C6A4F",
     title: "30 à 40 pièces, choisies avec soin.",
-    body: "Sélectionne l’essentiel qui va vraiment ensemble. Un compteur et la répartition par catégorie t’aident à garder l’équilibre.",
+    body: "Capsela construit une capsule cohérente à partir de ton style. Garde ce qui te plaît, remplace certaines pièces et fais-la évoluer avec ton dressing.",
   },
   {
     kicker: "Moins, mais mieux",
