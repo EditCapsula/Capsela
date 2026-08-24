@@ -318,9 +318,18 @@ const toPremiumScreen = (s: AppState): AppState => ({
   screen: "premium",
 });
 
-/** Retrouve une pièce par id dans un pool, puis dans le catalogue (pour l'historique). */
-export function findPiece(pool: Item[], id: number): Item | undefined {
-  return pool.find((i) => i.id === id) ?? CATALOG.find((i) => i.id === id);
+/**
+ * Retrouve une pièce par id dans un pool, puis dans le catalogue (pour
+ * l'historique). `fallback` doit être le vestiaire vivant (vestiairePool),
+ * pas la constante CATALOG : celle-ci n'est que le catalogue statique de
+ * secours, remplacé par les lignes vestiaire_universel dès qu'elles sont
+ * chargées. S'en tenir à CATALOG faisait échouer la résolution de toute
+ * pièce catalogue chargée dynamiquement (ids 100000+) — notamment celles
+ * d'une capsule de style exploré. CATALOG reste le défaut pour les appels
+ * hors provider, où le vestiaire vivant n'est pas accessible.
+ */
+export function findPiece(pool: Item[], id: number, fallback: Item[] = CATALOG): Item | undefined {
+  return pool.find((i) => i.id === id) ?? fallback.find((i) => i.id === id);
 }
 
 export function CapselaProvider({ children }: { children: React.ReactNode }) {
@@ -541,10 +550,18 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
   const poolRef = useRef(wardrobePool);
   const weatherRef = useRef(weather);
+  // Repli de résolution des actions (findPiece) : poolRef ne sert qu'à la
+  // génération et ne contient, par catégorie, que les pièces réelles ou les
+  // suggestions de la capsule du profil courant. vestiaireRef couvre en plus
+  // toute pièce catalogue référencée par l'historique ou un look enregistré,
+  // y compris celles d'une capsule de style exploré. Les pièces réelles sont
+  // déjà toutes dans poolRef (cf. wardrobePool), inutile de les redoubler.
+  const vestiaireRef = useRef<Item[]>(vestiairePool);
   useEffect(() => {
     poolRef.current = wardrobePool;
     weatherRef.current = weather;
-  }, [wardrobePool, weather]);
+    vestiaireRef.current = vestiairePool;
+  }, [wardrobePool, weather, vestiairePool]);
 
   const regen = (s: AppState): AppState => {
     const result = generateOutfitWithFallback(
@@ -1057,7 +1074,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     swapPiece: (id, cat) =>
       setState((s) => {
         const outfitItems = s.outfit
-          .map((oid) => findPiece(poolRef.current, oid))
+          .map((oid) => findPiece(poolRef.current, oid, vestiaireRef.current))
           .filter((it): it is Item => Boolean(it));
         return {
           ...s,
@@ -1100,7 +1117,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // validée, un second appel n'enregistre jamais une deuxième entrée.
       if (s.outfitValidated) return;
       // R-B9 — défense en profondeur : une veste/un manteau seul sans base ne peut pas être validé comme porté.
-      const outfitPieces = s.outfit.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
+      const outfitPieces = s.outfit.map((id) => findPiece(poolRef.current, id, vestiaireRef.current)).filter((it): it is Item => Boolean(it));
       if (violatesOuterwearRule(outfitPieces)) return;
       const wornUpdates = s.items
         .filter((it) => s.outfit.includes(it.id))
@@ -1186,7 +1203,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     reWear: (ids) =>
       setState((s) => ({
         ...s,
-        outfit: ids.filter((id) => findPiece(poolRef.current, id)),
+        outfit: ids.filter((id) => findPiece(poolRef.current, id, vestiaireRef.current)),
         outfitValidated: false,
         screen: "tenues",
       })),
@@ -1301,7 +1318,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         }
         return;
       }
-      const draftPieces = ids.map((id) => findPiece(poolRef.current, id)).filter((it): it is Item => Boolean(it));
+      const draftPieces = ids.map((id) => findPiece(poolRef.current, id, vestiaireRef.current)).filter((it): it is Item => Boolean(it));
       if (violatesOuterwearRule(draftPieces)) return;
       const now = new Date();
       const defaultName =

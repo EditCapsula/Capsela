@@ -216,9 +216,18 @@ export default function TenuesScreen() {
     return computeDefaultCapsule(exploredProfile, weather, state.suggestedExcluded, season, vestiairePool);
   }, [state.exploredStyleId, profile, weather, state.suggestedExcluded, state.capsuleSeason, vestiairePool]);
   const displayPool = exploredCapsulePool ?? wardrobePool;
+  // Repli de résolution stable (même correctif que HistoryScreen, 20/08/2026)
+  // — state.outfit peut porter des ids qu'aucun des deux pools ne connaît :
+  // "Voir cette tenue" depuis le Journal (viewItemOutfit) rejoue une entrée
+  // d'historique enregistrée pendant l'exploration d'un autre style, dont les
+  // pièces viennent de la capsule de ce style-là ; une fois exploredStyleId
+  // retombé à null, displayPool vaut wardrobePool et n'en trouve aucune, d'où
+  // une tenue affichée vide. Repli seulement : displayPool reste prioritaire,
+  // et le pool de suggestions (computeLookScore) n'est pas élargi pour autant.
+  const resolveFallback = [...state.items, ...vestiairePool];
 
   const outfitPieces = (state.outfit || [])
-    .map((id) => displayPool.find((i) => i.id === id))
+    .map((id) => displayPool.find((i) => i.id === id) ?? resolveFallback.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
   // "Enregistrer cette tenue" (recette 23/08/2026) — atterrit dans Dressing →
   // Mes looks, mais à la différence de "Créer un look" (dressing réel

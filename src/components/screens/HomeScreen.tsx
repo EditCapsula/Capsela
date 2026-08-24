@@ -301,7 +301,7 @@ function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (ty
 }
 
 export default function HomeScreen() {
-  const { state, geoCity, geoLoading, wardrobePool, vestiairePool, weather, actions } = useCapsela();
+  const { state, geoCity, geoLoading, vestiairePool, weather, actions } = useCapsela();
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
 
@@ -315,8 +315,15 @@ export default function HomeScreen() {
   const occasionKey = state.occasion && state.occasion !== "all" ? state.occasion : defaultOccasionToday(profile.prefs);
   const occasionLabel = OCC_LABELS[occasionKey];
 
+  // Pool de résolution stable (même correctif que HistoryScreen, 20/08/2026) :
+  // wardrobePool ne contient, par catégorie, que les pièces réelles ou les
+  // suggestions de la capsule du profil courant, alors que state.outfit peut
+  // venir de la capsule d'un style exploré (viewExploredOutfit) ou d'une
+  // entrée d'historique rejouée — la card "tenue du jour" se vidait alors ici
+  // alors que la page Tenue, elle, l'affichait.
+  const resolvePool = [...state.items, ...vestiairePool];
   const outfitPieces = hasOutfit
-    ? state.outfit.map((id) => wardrobePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it))
+    ? state.outfit.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it))
     : [];
 
   // Même phrase d'explication que la page Tenue (explainRecommendation,
