@@ -93,7 +93,7 @@ export default function NeverWornScreen() {
                         e.stopPropagation();
                         actions.openItemOutfits(it.id, false);
                       }}
-                      className="text-[11.5px] text-cream bg-terracotta rounded-full py-[8px] px-[14px] cursor-pointer"
+                      className="text-[11.5px] text-cream bg-terracotta active:bg-terracotta-hover rounded-full py-[8px] px-[14px] cursor-pointer"
                     >
                       Voir des tenues
                     </button>

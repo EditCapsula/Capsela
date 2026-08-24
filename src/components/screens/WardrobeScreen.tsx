@@ -259,7 +259,7 @@ export default function WardrobeScreen() {
                 onClick={() => setLookFilter(f.key)}
                 className={
                   "flex-none rounded-full px-4 py-[9px] text-[12px] whitespace-nowrap cursor-pointer " +
-                  (lookFilter === f.key ? "bg-terracotta text-cream" : "bg-card border border-border text-ink")
+                  (lookFilter === f.key ? "bg-terracotta active:bg-terracotta-hover text-cream" : "bg-card border border-border text-ink")
                 }
               >
                 {f.label}
@@ -366,7 +366,7 @@ export default function WardrobeScreen() {
 
       <button
         onClick={actions.goTenues}
-        className="mt-[22px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+        className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
       >
         Voir ma tenue du jour
       </button>

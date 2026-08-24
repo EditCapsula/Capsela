@@ -36,7 +36,7 @@ export default function PremiumScreen() {
 
       <button
         onClick={actions.subscribe}
-        className="mt-4 bg-terracotta text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+        className="mt-4 bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
       >
         S&apos;abonner
       </button>

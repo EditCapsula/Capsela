@@ -352,7 +352,7 @@ export default function HomeScreen() {
 
       <button
         onClick={actions.goTenues}
-        className="mx-6 mt-5 bg-terracotta rounded-[22px] p-[22px] cursor-pointer relative overflow-hidden text-left block"
+        className="mx-6 mt-5 bg-terracotta active:bg-terracotta-hover rounded-[22px] p-[22px] cursor-pointer relative overflow-hidden text-left block"
         style={{ width: "calc(100% - 48px)" }}
       >
         <div className="font-serif text-[22px] text-cream leading-[1.25]">

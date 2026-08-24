@@ -715,7 +715,7 @@ export default function TenuesScreen() {
                           <div className="flex flex-col gap-[8px] mt-[11px]">
                             <button
                               onClick={() => handleAddSuggestedPiece(p, suggested)}
-                              className="inline-flex items-center justify-center gap-[6px] bg-terracotta text-cream text-center rounded-full py-[10px] text-[12px] cursor-pointer"
+                              className="inline-flex items-center justify-center gap-[6px] bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[10px] text-[12px] cursor-pointer"
                             >
                               <PlusIcon />
                               Ajouter à la tenue
@@ -795,7 +795,7 @@ export default function TenuesScreen() {
             onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
             className={
               "mt-[22px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
-              (vesteWithoutBase ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta text-cream cursor-pointer")
+              (vesteWithoutBase ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer")
             }
           >
             Porter cette tenue

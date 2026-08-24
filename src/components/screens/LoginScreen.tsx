@@ -66,7 +66,7 @@ export default function LoginScreen() {
                 setForgotOpen(false);
                 setForgotSent(false);
               }}
-              className="mt-[22px] w-full bg-terracotta text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+              className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
             >
               Retour à la connexion
             </button>
@@ -90,7 +90,7 @@ export default function LoginScreen() {
             </div>
             <button
               onClick={() => setForgotSent(true)}
-              className="mt-5 text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer text-cream bg-terracotta"
+              className="mt-5 text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer text-cream bg-terracotta active:bg-terracotta-hover"
             >
               Envoyer le lien
             </button>
@@ -180,7 +180,7 @@ export default function LoginScreen() {
         onClick={submit}
         className={
           "mt-5 text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer text-cream " +
-          (busy ? "bg-[#bd8a75]" : "bg-terracotta")
+          (busy ? "bg-[#bd8a75]" : "bg-terracotta active:bg-terracotta-hover")
         }
       >
         {busy ? "Un instant…" : "Se connecter"}

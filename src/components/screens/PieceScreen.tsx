@@ -317,7 +317,7 @@ export default function PieceScreen() {
         <>
           <button
             onClick={() => actions.startReplace(active)}
-            className="mt-[18px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
+            className="mt-[18px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
           >
             J&apos;ai déjà ça
           </button>
@@ -429,7 +429,7 @@ export default function PieceScreen() {
               setLookSheetOpen(false);
               actions.goCreateLook(active.id);
             }}
-            className="mt-[14px] w-full bg-terracotta text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-[14px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
           >
             + Créer un nouveau look
           </button>

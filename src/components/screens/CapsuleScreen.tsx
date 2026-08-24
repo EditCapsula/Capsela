@@ -183,7 +183,7 @@ export default function CapsuleScreen() {
 
       <button
         onClick={actions.goTenues}
-        className="mt-[22px] w-full bg-terracotta text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+        className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
       >
         ✦ Voir mes idées de tenues
       </button>

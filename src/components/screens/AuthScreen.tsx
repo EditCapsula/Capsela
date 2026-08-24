@@ -118,7 +118,7 @@ export default function AuthScreen() {
         onClick={submitEmail}
         className={
           "mt-5 text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer text-cream " +
-          (busy ? "bg-[#bd8a75]" : "bg-terracotta")
+          (busy ? "bg-[#bd8a75]" : "bg-terracotta active:bg-terracotta-hover")
         }
       >
         {busy ? "Un instant…" : "Créer mon compte"}

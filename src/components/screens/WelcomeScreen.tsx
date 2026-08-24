@@ -29,7 +29,7 @@ export default function WelcomeScreen() {
       <div className="px-7 pb-10 flex flex-col gap-3">
         <button
           onClick={actions.startOnb}
-          className="bg-terracotta text-cream text-center rounded-full py-4 text-[13px] tracking-[.12em] uppercase cursor-pointer"
+          className="bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.12em] uppercase cursor-pointer"
         >
           Commencer
         </button>

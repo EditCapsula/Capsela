@@ -375,7 +375,7 @@ export default function CreateLookScreen() {
         onClick={actions.saveLook}
         className={
           "mt-7 w-full text-center rounded-full py-4 text-[13px] tracking-[.14em] uppercase " +
-          (canSave ? "bg-terracotta text-cream cursor-pointer" : "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed")
+          (canSave ? "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer" : "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed")
         }
       >
         Enregistrer ce look {count > 0 ? `(${count})` : ""}

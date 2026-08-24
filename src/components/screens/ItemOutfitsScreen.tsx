@@ -208,7 +208,7 @@ export default function ItemOutfitsScreen() {
               href={pivot.affLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-[14px] block w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
+              className="mt-[14px] block w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
             >
               Acheter cette pièce ↗
             </a>
@@ -222,7 +222,7 @@ export default function ItemOutfitsScreen() {
         ) : (
           <button
             onClick={() => actions.startReplace(pivot)}
-            className="mt-[14px] w-full bg-terracotta text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
+            className="mt-[14px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
           >
             J&apos;ai déjà
           </button>

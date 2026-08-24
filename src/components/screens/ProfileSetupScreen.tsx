@@ -414,7 +414,7 @@ export default function ProfileSetupScreen() {
         disabled={!canContinue}
         className={
           "mt-[22px] text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
-          (canContinue ? "cursor-pointer bg-terracotta text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
+          (canContinue ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
         }
       >
         {isLast ? "Terminer le profil" : "Continuer"}

@@ -439,7 +439,7 @@ export default function AddScreen() {
         onClick={save}
         className={
           "mt-6 w-full text-center rounded-full py-4 text-[13px] tracking-[.14em] uppercase " +
-          (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta text-cream cursor-pointer")
+          (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer")
         }
       >
         {state.editingId != null ? "Enregistrer les modifications" : "Ajouter à mon dressing"}
@@ -509,7 +509,7 @@ export default function AddScreen() {
 
         <button
           onClick={() => setSheet(null)}
-          className="mt-[26px] w-full bg-terracotta text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
         >
           Terminé
         </button>
@@ -526,7 +526,7 @@ export default function AddScreen() {
         </div>
         <button
           onClick={() => setSheet(null)}
-          className="mt-[26px] w-full bg-terracotta text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
         >
           Terminé
         </button>
