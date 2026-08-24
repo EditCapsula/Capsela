@@ -100,9 +100,11 @@ function isLightColor(hex: string): boolean {
  * d'éviction). Contour unique terracotta + coche à la sélection (remplace
  * le double anneau décoratif crème/terracotta) ; bordure neutre du Design
  * System (--color-border) hors sélection, y compris pour les teintes très
- * claires qui s'y fondaient auparavant. Au maximum, les pastilles non
- * sélectionnées passent en opacity-40 (même convention "inactif" que
- * TenuesScreen) et deviennent non cliquables.
+ * claires qui s'y fondaient auparavant. Correctif 24/08/2026 (2e retour) :
+ * les pastilles non sélectionnées restent toujours au rendu normal, y
+ * compris à 6/6 — plus d'atténuation opacity-40, le compteur "6 sur 6"
+ * suffit à communiquer la limite ; toggleCouleur reste seul responsable
+ * du blocage de la 7e sélection.
  */
 function PaletteDots({
   options,
@@ -113,20 +115,13 @@ function PaletteDots({
   selected: string[];
   onSelect: (hex: string) => void;
 }) {
-  const atMax = selected.length >= MAX_PALETTE_COULEURS;
   return (
     <div className="grid grid-cols-4 gap-x-3 gap-y-5 mt-[26px]">
       {options.map(([name, hex]) => {
         const on = selected.includes(hex);
-        const disabled = atMax && !on;
         const checkColor = isLightColor(hex) ? "#A66950" : "#FFFFFF";
         return (
-          <button
-            key={hex}
-            onClick={() => !disabled && onSelect(hex)}
-            disabled={disabled}
-            className={"flex flex-col items-center gap-[8px] " + (disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer")}
-          >
+          <button key={hex} onClick={() => onSelect(hex)} className="flex flex-col items-center gap-[8px] cursor-pointer">
             <span
               className="w-11 h-11 rounded-full flex items-center justify-center"
               style={{
@@ -227,8 +222,14 @@ export default function ProfileSetupScreen() {
     { label: "Intensité", value: draft.paletteIntensite || "non précisée", swatches: [] as string[] },
   ];
 
-  return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-2 pb-7">
+  // Contenu de l'écran, identique quelle que soit l'étape — extrait dans
+  // une variable (correctif 24/08/2026, 2e retour) pour pouvoir l'insérer
+  // soit dans le conteneur scrollable unique historique (toutes les étapes
+  // sauf pal_couleurs, structure inchangée), soit dans la zone scrollable
+  // d'un layout à deux zones distinctes pour pal_couleurs (cf. plus bas) —
+  // jamais un second rendu divergent du même contenu.
+  const pageBody = (
+    <>
       <AppHeader showAvatar={false} />
 
       <div className="flex items-center justify-between">
@@ -296,13 +297,7 @@ export default function ProfileSetupScreen() {
       )}
 
       {meta.key === "pal_couleurs" && (
-        // pb-safe-palette-cta (globals.css, même principe que pb-safe-nav
-        // pour TabBar) : dégage la dernière ligne du nuancier — pastilles ET
-        // libellés — du CTA sticky ci-dessous, safe-area incluse (correctif
-        // 24/08/2026, signalé : pastilles coupées/masquées par le sticky).
-        <div className="pb-safe-palette-cta">
-          <PaletteDots options={PAL_COULEURS} selected={draft.paletteCouleurs} onSelect={toggleCouleur} />
-        </div>
+        <PaletteDots options={PAL_COULEURS} selected={draft.paletteCouleurs} onSelect={toggleCouleur} />
       )}
 
       {meta.key === "pal_ressenti" && (
@@ -463,43 +458,52 @@ export default function ProfileSetupScreen() {
         </>
       )}
 
-      <div className="flex-1" />
-      {(() => {
-        const continueButton = (
-          <button
-            onClick={canContinue ? next : undefined}
-            disabled={!canContinue}
-            className={
-              "mt-[22px] text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
-              (canContinue ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
-            }
-          >
-            {isLast ? "Terminer le profil" : "Continuer"}
-          </button>
-        );
-        // Sticky uniquement sur l'étape palette (brief UX "Ta palette" du
-        // 24/08/2026, point 7) — le CTA reste accessible pendant le scroll
-        // du nuancier, jamais un changement de structure pour les autres
-        // étapes. -mx-7 px-7 réétend le fond crème edge-to-edge malgré le
-        // padding horizontal du conteneur scrollable ; le bouton lui-même
-        // garde exactement son style existant.
-        if (meta.key !== "pal_couleurs") return continueButton;
-        return (
-          // flex flex-col : le bouton était un enfant direct du conteneur
-          // flex-col de l'écran (étiré pleine largeur par défaut) — ce
-          // wrapper reproduit le même contexte flex pour qu'il garde
-          // exactement la même largeur qu'avant, sans toucher au bouton.
-          // border-t border-border : même traitement de séparation que
-          // TabBar.tsx, seul autre élément sticky/fixed du Design System —
-          // jamais un nouvel effet propre à cet écran (recette 24/08/2026).
-          <div
-            className="sticky bottom-0 -mx-7 px-7 bg-cream border-t border-border flex flex-col"
-            style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}
-          >
-            {continueButton}
-          </div>
-        );
-      })()}
+      {meta.key !== "pal_couleurs" && <div className="flex-1" />}
+    </>
+  );
+
+  const continueButton = (
+    <button
+      onClick={canContinue ? next : undefined}
+      disabled={!canContinue}
+      className={
+        "mt-[22px] text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
+        (canContinue ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
+      }
+    >
+      {isLast ? "Terminer le profil" : "Continuer"}
+    </button>
+  );
+
+  // pal_couleurs : layout à deux zones distinctes (correctif 24/08/2026,
+  // 2e retour — le sticky+padding ne garantissait pas l'absence de
+  // recouvrement, seule une vraie séparation structurelle le fait). La
+  // zone scrollable (flex-1 overflow-y-auto) et la zone d'action (le
+  // footer, hauteur naturelle) sont deux frères dans un conteneur non
+  // scrollable : le footer ne peut plus jamais recouvrir le contenu,
+  // quelle que soit sa hauteur réelle ou la valeur du safe-area — aucun
+  // padding à deviner. border-t border-border : même traitement de
+  // séparation que TabBar.tsx, seul autre élément fixe du Design System.
+  // Toutes les autres étapes gardent la structure historique à zone
+  // scrollable unique, strictement inchangée.
+  if (meta.key === "pal_couleurs") {
+    return (
+      <div className="absolute inset-0 flex flex-col">
+        <div className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">{pageBody}</div>
+        <div
+          className="flex-shrink-0 px-7 bg-cream border-t border-border flex flex-col"
+          style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}
+        >
+          {continueButton}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-2 pb-7">
+      {pageBody}
+      {continueButton}
     </div>
   );
 }
