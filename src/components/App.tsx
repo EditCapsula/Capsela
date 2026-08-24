@@ -61,7 +61,7 @@ function Screens() {
   if (!ready) {
     return (
       <div className="relative w-full max-w-[480px] mx-auto h-dvh flex items-center justify-center bg-cream">
-        <LoadingSpinner size={96} />
+        <LoadingSpinner size={76} />
       </div>
     );
   }

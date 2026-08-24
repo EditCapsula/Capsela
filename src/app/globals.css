@@ -82,8 +82,11 @@ input.capin::placeholder {
 }
 
 /**
- * Icône de chargement (spinner cintre + cœur) — spec 23/08/2026 : le cintre
- * reste fixe, seul l'arc tourne dans le sens horaire, 1,2 s en boucle.
+ * Icône de chargement (spinner cintre + cœur) — spec 23/08/2026, affinée
+ * 26/08/2026 : le cintre reste fixe, seul l'arc tourne dans le sens
+ * horaire. Vitesse constante (linear, pas ease-in-out) pour un mouvement
+ * fluide plutôt qu'une rotation qui accélère/ralentit à chaque boucle ;
+ * 1,4 s par tour, lent et posé, jamais agressif.
  */
 @keyframes loading-spin {
   from {
@@ -94,7 +97,7 @@ input.capin::placeholder {
   }
 }
 .loading-spinner-arc {
-  animation: loading-spin 1.2s ease-in-out infinite;
+  animation: loading-spin 1.4s linear infinite;
   transform-origin: 50% 50%;
 }
 @media (prefers-reduced-motion: reduce) {
