@@ -156,12 +156,27 @@ export interface JournalStats {
   wornRarely: number;
 }
 
-/** Statistiques du Journal : part du dressing réel déjà portée (au moins une fois, via une tenue validée), rotation (souvent/peu portées), et tenues portées cette semaine. */
+/**
+ * Statistiques du Journal : part du dressing réel déjà portée (au moins une
+ * fois), rotation (souvent/peu portées), et tenues portées cette semaine.
+ *
+ * Correctif 26/08/2026 (signalé : "1 pièce pas encore portée" dans le
+ * Journal alors que "Mes pièces"/"Jamais portées" en comptaient 2) —
+ * `never`/`worn`/`pctWorn` dérivaient d'une présence dans l'historique
+ * (wearCounts), un second repère qui pouvait diverger du champ Item.worn
+ * (ex. une pièce "Corrigée" après un port par erreur : worn revient à null,
+ * mais l'entrée d'historique correspondante, elle, n'est jamais retirée).
+ * Utilise désormais neverWornItems (même source que Mes pièces/Jamais
+ * portées, item.worn === null) : un seul repère "jamais portée" dans toute
+ * l'app, jamais deux calculs qui peuvent se contredire. wornOften/wornRarely
+ * restent basés sur les comptes réels de l'historique (fréquence de port,
+ * pas simple présence/absence).
+ */
 export function journalStats(items: Item[], history: HistoryEntry[]): JournalStats {
   const total = items.length;
   const counts = wearCounts(history);
-  const worn = items.filter((i) => counts.has(i.id)).length;
-  const never = total - worn;
+  const never = neverWornItems(items).length;
+  const worn = total - never;
   const pctWorn = total ? Math.round((worn / total) * 100) : 0;
   const wornOften = items.filter((i) => (counts.get(i.id) || 0) >= 3).length;
   const wornRarely = items.filter((i) => {
