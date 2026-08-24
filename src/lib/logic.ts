@@ -1,4 +1,4 @@
-import type { CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, WorkMode } from "./types";
+import type { CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
@@ -27,6 +27,8 @@ const ONEPIECE_CATS: CategoryKey[] = ["robe", "combinaison"];
 /** Catégories suivies pour l'anti-répétition (R-B7) et le calcul de formalité d'une tenue. Exporté pour CreateLookScreen (filtre dur du picker manuel, brief design section 4). */
 export const CLOTHING_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe", "robe", "combinaison", "veste", "manteau"];
 const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire"];
+/** Types de chaussures ouvertes exclus s'il est prévu de la pluie (R-B21) — uniquement les valeurs explicitement des sandales, jamais une extrapolation vers d'autres types semi-ouverts (mules, espadrilles...) non nommés par la demande. */
+const SANDAL_SHOE_TYPES: ShoeType[] = ["Sandales", "Sandales à talons"];
 
 /** Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète (R-B9). */
 function hasBaseGarment(items: Item[]): boolean {
@@ -454,6 +456,15 @@ export function generateOutfit(
     // jamais relâchée, symétrique de R-B15/R-B6 ci-dessus.
     if (weather.temp <= 22) {
       r = r.filter((i) => i.cat !== "short");
+    }
+    // R-B21 (25/08/2026, signalé) — sandales jamais proposées s'il est
+    // prévu de la pluie, capsule ou dressing réel (jamais de distinction
+    // de source) : on privilégie les chaussures fermées. Règle de
+    // catégorie dure, jamais relâchée — contrairement à R-B16 ci-dessus
+    // (préférence molle sur les vestes/manteaux résistants à la pluie),
+    // qui ne s'applique elle-même qu'à défaut d'alternative.
+    if (isRainy(weather)) {
+      r = r.filter((i) => i.cat !== "chaussures" || !i.shoeType || !SANDAL_SHOE_TYPES.includes(i.shoeType));
     }
     // Occasion explicitement déclarée sur la pièce (correctif 19/08/2026,
     // remplace l'ancien filtre par mots-clés — cf. déclarations plus haut).
@@ -1010,6 +1021,10 @@ export function swapOutfitPiece(
   // R-B20 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (weather && weather.temp <= 22) {
     candidates = candidates.filter((i) => i.cat !== "short");
+  }
+  // R-B21 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
+  if (weather && isRainy(weather)) {
+    candidates = candidates.filter((i) => i.cat !== "chaussures" || !i.shoeType || !SANDAL_SHOE_TYPES.includes(i.shoeType));
   }
   // R-B16 — symétrique de la préférence pluie appliquée dans generateOutfit,
   // molle jamais exclusive : ne filtre que s'il reste au moins une option.
