@@ -138,8 +138,19 @@ export const NEUTRAL_COLORS = new Set([
   "Taupe", "Kaki", "Gris clair", "Gris", "Gris anthracite", "Noir", "Marine", "Denim", "Beige rosé",
 ]);
 
+/**
+ * Correspondance insensible à la casse et par sous-chaîne (correctif
+ * 24/08/2026, signalé : lunettes de soleil noires suggérées comme "touche
+ * de couleur" pour compléter une tenue) — une égalité stricte contre
+ * NEUTRAL_COLORS ratait toute variante du nom stocké en base qui ne
+ * correspond pas caractère pour caractère (ex. "Noir mat", casse
+ * différente), laissant router à tort la pièce vers la branche "couleur
+ * inconnue = accent" plutôt que "neutre".
+ */
 export function isNeutralColor(colorName: string): boolean {
-  return NEUTRAL_COLORS.has(colorName);
+  if (!colorName) return false;
+  const c = colorName.toLowerCase();
+  return Array.from(NEUTRAL_COLORS).some((n) => c.includes(n.toLowerCase()));
 }
 
 const MATIERE_DEFAULT_BY_CAT: Record<string, Matiere> = {
