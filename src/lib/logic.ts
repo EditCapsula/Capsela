@@ -854,6 +854,19 @@ export function generateOutfit(
   // restreint déjà les candidats aux seuls Sac de sport (R-B11).
   const sac = pick(["sac"], true);
   if (sac && !ids.includes(sac.id)) ids.push(sac.id);
+  // Gourde systématique en Sport (décidé 26/08/2026) — jamais probabiliste,
+  // même esprit que la veste forcée d'un entretien avec chemise (cf.
+  // forceEntretienVeste) : la gourde est fonctionnelle, pas un accessoire
+  // esthétique tiré au sort. Hors harmonize() délibérément — en mode
+  // facultatif, l'harmonisation couleur peut omettre la pièce sur un simple
+  // conflit de teinte, ce qui casserait la garantie ; une gourde n'a pas à
+  // s'accorder à la tenue. Déjà exclue de toutes les autres occasions par
+  // applySportCocooningFilter, et retirée du tirage facultatif ci-dessous
+  // pour ne jamais en proposer deux.
+  if (occasion === "sport") {
+    const gourde = rand(poolFor(["accessoire"]).filter((i) => i.cat === "accessoire" && i.accessoireType === "Gourde"));
+    if (gourde && !ids.includes(gourde.id)) { chosen.push(gourde); ids.push(gourde.id); }
+  }
   if (Math.random() < accProb.bijou) {
     const bijou = pick(["bijou"], false);
     if (bijou && !ids.includes(bijou.id)) ids.push(bijou.id);
@@ -871,7 +884,11 @@ export function generateOutfit(
     // plus haut), qui ne doit pas en déclencher.
     const hasRobeJupeOuShort = primaryTop?.cat === "robe" || chosen.some((c) => c.cat === "jupe" || c.cat === "short");
     const accessoireBase = poolFor(["accessoire"]).filter(
-      (i) => i.cat === "accessoire" && (hasRobeJupeOuShort || i.accessoireType !== "Collants")
+      (i) =>
+        i.cat === "accessoire" &&
+        (hasRobeJupeOuShort || i.accessoireType !== "Collants") &&
+        // En Sport, la gourde est déjà ajoutée systématiquement ci-dessus.
+        (occasion !== "sport" || i.accessoireType !== "Gourde")
     );
     const ac = rand(harmonize(accessoireBase, chosen, false));
     if (ac) chosen.push(ac);
