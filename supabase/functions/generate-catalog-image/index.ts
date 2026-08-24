@@ -446,12 +446,25 @@ Deno.serve(async (req) => {
 
     // 8. Upload Storage — un seul fichier par asset (pas par article).
     // cacheControl 1 an + immutable (correctif 21/08/2026, egress cache Free
-    // Plan dépassé) : un visual_key donné ne change jamais de contenu une
-    // fois généré (seul un reset manuel de image_status redéclenche une
-    // génération), donc rien n'empêche un cache long côté navigateur/CDN —
-    // sans ça, Supabase retombe sur une durée de cache courte par défaut et
-    // chaque rechargement de l'app retélécharge les mêmes images.
-    const path = `${genre}/${CATEGORY_FOLDER[canonCategory] || canonCategory}/${assetId}.${ext}`;
+    // Plan dépassé) : un visual_key donné ne change jamais de contenu tant
+    // que son asset garde le même chemin, donc rien n'empêche un cache long
+    // côté navigateur/CDN — sans ça, Supabase retombe sur une durée de cache
+    // courte par défaut et chaque rechargement de l'app retélécharge les
+    // mêmes images.
+    //
+    // Horodatage dans le nom de fichier (correctif 26/08/2026, signalé :
+    // "Gourde de sport" affichant tantôt la bonne photo tantôt une autre
+    // pièce, "un jour sur deux") — un reset manuel de image_status (missing/
+    // error) régénère sur le MÊME assetId (branche priorRow ci-dessus), donc
+    // sans horodatage l'upload réécrivait le même chemin (upsert) sous un
+    // cache d'1 an : les client·e·s ayant déjà mis l'ancien contenu en cache
+    // continuaient de le voir indéfiniment, tandis qu'un cache froid
+    // récupérait la version corrigée — d'où l'incohérence "un jour sur
+    // deux", pas un bug de sélection de ligne. Chaque (ré)génération produit
+    // désormais une URL distincte, qui invalide naturellement tous les
+    // caches précédents ; l'ancien fichier reste orphelin dans le bucket
+    // (nettoyage hors scope de ce correctif).
+    const path = `${genre}/${CATEGORY_FOLDER[canonCategory] || canonCategory}/${assetId}-${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
       .upload(path, bytes, { contentType, upsert: true, cacheControl: "31536000" });
