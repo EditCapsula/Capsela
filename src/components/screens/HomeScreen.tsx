@@ -409,10 +409,10 @@ export default function HomeScreen() {
             style={{ background: "linear-gradient(165deg, #F6F0E6 0%, #EEE1CE 100%)" }}
           >
             <div className="px-[14px] pt-[14px]">
-              <StyleBoard items={dressingPieces} height={116} />
+              <StyleBoard items={dressingPieces} height={122} />
             </div>
             <div className="px-[14px] pt-[10px] pb-[14px]">
-              <div className="font-serif text-[17px] text-ink">Dressing</div>
+              <div className="font-serif text-[17px] text-ink leading-[1.2]">Dressing</div>
               <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">Tes pièces, tes looks, ton vestiaire.</div>
               <div className="text-[12px] text-terracotta mt-[9px]">
                 {dressingCount} {dressingCount <= 1 ? "pièce" : "pièces"} →
@@ -429,7 +429,7 @@ export default function HomeScreen() {
             style={{ background: "linear-gradient(165deg, #F0E7D9 0%, #E5D6BF 100%)" }}
           >
             <div className="px-[14px] pt-[14px]">
-              <StyleBoard items={capsulePieces} height={128} />
+              <StyleBoard items={capsulePieces} height={122} />
             </div>
             <div className="px-[14px] pt-[10px] pb-[14px]">
               <div className="font-serif text-[17px] text-ink leading-[1.2]">
