@@ -25,18 +25,23 @@ import type { CategoryKey, Item } from "@/lib/types";
  * visuel aux pièces complémentaires, qui sont ce qui distingue réellement
  * les variantes entre elles.
  *
- * Provenance en "compact" (arbitrage 26/08/2026, remplace les glyphes ✓/✦
- * dont la signification n'était pas lisible et changeait de sens d'une card
- * à l'autre) : deux micro-libellés en toutes lettres, dans le langage de
- * pastille déjà utilisé par TenuesScreen et LookDetailScreen.
- * - "Ta pièce" sur le pivot (anchorId), en complément de son contour
- *   terracotta — traitement discret mais nommé, jamais un encadrement lourd.
- * - "Suggestion" sur les seules pièces listées dans `suggestedIds`, fourni
- *   PAR L'APPELANT uniquement pour les tenues mixtes (Dressing + Capsule) où
- *   la distinction aide réellement à lire le look. Une pièce du dressing ne
- *   porte jamais de pastille : son absence est signifiante parce que la
- *   règle est constante. Une tenue homogène tout-suggéré n'en porte aucune
- *   non plus — la phrase de provenance en haut d'écran la couvre déjà.
+ * AUCUN texte dans la composition (recette 26/08/2026, 3e passe — signalé :
+ * "SUGGESTION" répété sur presque chaque vêtement, l'écran ressemblant à une
+ * interface qui annote chaque élément plutôt qu'à une sélection de looks).
+ * Les pastilles de provenance "Ta pièce"/"Suggestion" sont supprimées : la
+ * première fait doublon avec le titre "Autour de cette pièce" et le contour
+ * terracotta, la seconde avec la phrase de provenance en haut d'écran.
+ *
+ * La règle "badge uniquement sur tenue mixte", pourtant respectée à la
+ * lettre, produisait en pratique l'inverse de son intention : il suffit
+ * d'UNE pièce réelle dans un look pour le rendre mixte, et alors TOUTES ses
+ * pièces capsule sont badgées. Mesuré sur un dressing d'une seule pièce
+ * complémentaire réelle : 100% des tenues mixtes, 56% des vignettes badgées.
+ * Le bruit était donc maximal quand le dressing est le plus vide — soit
+ * exactement quand la distinction possédé/suggéré apporte le moins.
+ *
+ * Seul repère conservé : le contour terracotta du pivot (anchorId), qui n'a
+ * aucune autre signification dans toute l'app.
  */
 export type CompositionVariant = "hero" | "compact";
 type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
@@ -63,14 +68,17 @@ const TIER_SPAN: Record<CompositionTier, { col: number; row: number }> = {
 
 const VARIANT_CONFIG: Record<CompositionVariant, { rowHeight: string; gap: number; radius: number; pad: number }> = {
   hero: { rowHeight: "clamp(58px, 17vw, 74px)", gap: 6, radius: 14, pad: 8 },
-  // Cards compactes, plusieurs variantes visibles simultanément (recette
-  // 26/08/2026, section 8 : "l'écran devient très long"). Taille des vignettes
-  // volontairement INCHANGÉE par la refonte densité (section 5) : mesuré, la
-  // moindre augmentation ici annule l'économie faite sur le bloc texte (une
-  // composition fait 3 rangées, donc +2px de rangée = +6px de card). La part
-  // relative de la composition monte quand même, puisque c'est le texte qui
-  // se resserre — et les vêtements restent exactement aussi reconnaissables.
-  compact: { rowHeight: "clamp(36px, 10vw, 46px)", gap: 4, radius: 10, pad: 5 },
+  // Le vêtement est le contenu principal de la card (recette 26/08/2026,
+  // 3e passe — signalé : vignettes trop petites pour reconnaître une pièce).
+  // Rangée portée de ~39px à ~51px à 390px, soit +30% en linéaire et +70% en
+  // surface : une pièce principale (2 rangées) passe de 82px à 107px de haut.
+  // Mesuré sur les compositions réellement générées (4 à 6 pièces), la
+  // composition occupe alors 51% (tenue à 4 pièces) à 69% (6 pièces) de la
+  // card, ~62% sur le cas courant à 5 pièces — la cible de 55-60% ne peut pas
+  // être tenue à la pièce près, la hauteur variant par palier d'une rangée
+  // entière selon le nombre de pièces. Gouttière 4 -> 6px : l'espace gagné
+  // sur les pastilles supprimées sert aussi à aérer entre les pièces.
+  compact: { rowHeight: "clamp(46px, 13vw, 58px)", gap: 6, radius: 10, pad: 5 },
 };
 
 function compositionRoleOf(cat: CategoryKey): CompositionRole {
@@ -94,14 +102,11 @@ export function OutfitComposition({
   items,
   variant = "hero",
   anchorId,
-  suggestedIds,
 }: {
   items: Item[];
   variant?: CompositionVariant;
-  /** Id de la pièce pivot à distinguer par un contour terracotta + "Ta pièce" — jamais utilisé pour un autre état UI (brief design 22/08/2026, section 2). */
+  /** Id de la pièce pivot à distinguer par un contour terracotta — jamais utilisé pour un autre état UI (brief design 22/08/2026, section 2). */
   anchorId?: number;
-  /** Ids des pièces à marquer "Suggestion" (issues de la capsule) — vide/absent = aucune pastille. */
-  suggestedIds?: number[];
 }) {
   const cfg = VARIANT_CONFIG[variant];
   return (
@@ -124,14 +129,15 @@ export function OutfitComposition({
         // rapprocher du rendu plat des photos produit.
         const isRealPhoto = img.kind === "photo";
         const isAnchor = anchorId != null && it.id === anchorId;
-        const badge =
-          variant !== "compact" ? null : isAnchor ? "Ta pièce" : suggestedIds?.includes(it.id) ? "Suggestion" : null;
-        // Pivot déjà connu : palier réduit en "compact" pour ne pas
-        // occuper la majorité de la card (section 5) — seulement pour les
-        // rôles "principal" (haut/bas/robe/veste), jamais un agrandissement
-        // pour un pivot déjà petit (sac/bijou/accessoire). Inchangé en "hero".
-        const naturalTier = TIER_OF_ROLE[role];
-        const tier = variant === "compact" && isAnchor && naturalTier === "principal" ? "chaussures" : naturalTier;
+        // Le pivot garde son palier naturel (recette 26/08/2026, 3e passe).
+        // Il était auparavant rétrogradé en "compact" pour laisser le poids
+        // visuel aux compléments — mais mesuré, cette rétrogradation ne
+        // gagnait AUCUNE hauteur (le remplissage dense de la grille comble
+        // la place libérée : mêmes 3 rangées dans les deux cas). Elle ne
+        // faisait donc que rendre la pièce de départ moins reconnaissable,
+        // en l'écrasant sur une seule rangée — une robe en particulier. Son
+        // contour terracotta suffit à la désigner.
+        const tier = TIER_OF_ROLE[role];
         const span = TIER_SPAN[tier];
         const shadows = [
           isAnchor && "0 0 0 1.5px #A66950",
@@ -145,7 +151,12 @@ export function OutfitComposition({
               gridColumn: `span ${span.col}`,
               gridRow: `span ${span.row}`,
               borderRadius: cfg.radius,
-              padding: isRealPhoto ? 0 : cfg.pad,
+              // Photo du dressing en retrait comme les visuels produit
+              // (recette 26/08/2026, section 4) : à fond perdu, elle captait
+              // le regard et devenait le point focal du look au lieu d'en
+              // être une pièce parmi d'autres. Toujours recadrée en "cover"
+              // (une photo n'est pas détourée), mais dans la zone de contenu.
+              padding: cfg.pad,
               boxSizing: "border-box",
               background: "#F3EDE1",
               backgroundImage: hasImg ? `url(${img.url})` : undefined,
@@ -153,27 +164,11 @@ export function OutfitComposition({
               backgroundSize: isRealPhoto ? "cover" : "contain",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center",
-              backgroundOrigin: isRealPhoto ? "border-box" : "content-box",
+              backgroundOrigin: "content-box",
               boxShadow: shadows.length ? shadows.join(", ") : undefined,
               filter: isRealPhoto ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
             }}
           >
-            {badge && (
-              // Même pastille que "Suggérée" ailleurs dans l'app
-              // (LookDetailScreen/TenuesScreen), à l'échelle de la vignette.
-              // "Ta pièce" en version claire pour rester discrète et faire
-              // corps avec le contour terracotta ; "Suggestion" en terracotta
-              // plein, comme partout ailleurs pour une pièce non possédée.
-              <span
-                className={
-                  "absolute top-[4px] left-[4px] rounded-full tracking-[.06em] uppercase whitespace-nowrap " +
-                  (isAnchor ? "bg-card text-terracotta" : "bg-terracotta text-cream")
-                }
-                style={{ fontSize: 7.5, lineHeight: "10px", padding: "2px 6px", boxShadow: "0 1px 2px rgba(29,26,22,.14)" }}
-              >
-                {badge}
-              </span>
-            )}
           </div>
         );
       })}

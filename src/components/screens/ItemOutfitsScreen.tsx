@@ -306,18 +306,6 @@ export default function ItemOutfitsScreen() {
                 {withPieces.map(({ variation, pieces }) => {
                   const styleRank = rankOf.get(variation)!;
                   const insight = describeOutfitVariation(variation, pieces, pivot.id, styleRank, withPieces.length);
-                  // Provenance (arbitrage 26/08/2026) — pastille "Suggestion"
-                  // seulement sur les compléments issus de la capsule, et
-                  // seulement dans une tenue MIXTE (compléments possédés ET
-                  // suggérés à la fois) : c'est le seul cas où la distinction
-                  // aide à lire le look. Tenue homogène tout-suggéré : aucune
-                  // pastille, la phrase de provenance en haut d'écran suffit.
-                  // Pièce du dressing : jamais de pastille — son absence est
-                  // signifiante puisque la règle est constante. Le pivot, lui,
-                  // porte "Ta pièce" dans tous les cas (cf. OutfitComposition).
-                  const complementary = pieces.filter((p) => p.id !== pivot.id);
-                  const mixed = complementary.some((p) => pieceOwned(p.id)) && complementary.some((p) => !pieceOwned(p.id));
-                  const suggestedIds = mixed ? complementary.filter((p) => !pieceOwned(p.id)).map((p) => p.id) : undefined;
                   return (
                     // Card entièrement cliquable (section 8) : un seul vrai
                     // élément interactif (button), jamais de bouton imbriqué —
@@ -331,9 +319,12 @@ export default function ItemOutfitsScreen() {
                       aria-label={`Voir la tenue : ${insight.title}`}
                       className="w-full text-left bg-card border border-border rounded-[14px] p-[10px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
                     >
-                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} suggestedIds={suggestedIds} />
-                      {/* Bloc texte resserré au profit de la composition
-                          (brief 26/08/2026, section 5). La description est
+                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} />
+                      {/* Card en trois niveaux (recette 26/08/2026, 3e passe,
+                          section 6) : composition, titre, puis description et
+                          action. Aucun autre badge ni métadonnée — la
+                          provenance est portée une seule fois, par la phrase
+                          en haut d'écran. La description est
                           bornée à 3 lignes : describeOutfitVariation produit
                           parfois une phrase de 4-5 lignes qui à elle seule
                           rendait les cards nettement plus hautes que la tenue
