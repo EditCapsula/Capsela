@@ -236,20 +236,26 @@ function StyleBoard({ items, height }: { items: Item[]; height: number }) {
  * (PolaroidPhoto, onError) reste en place si l'un de ces fichiers venait à
  * manquer, mais les 6 existent déjà dans /public/editorial.
  */
+// Ordre = priorité visuelle (recette 26/08/2026) : la photo la plus
+// lumineuse, à la silhouette entière la plus lisible, vient en premier —
+// POLAROID_SLOTS[0] (le plus grand emplacement, devant) lui est toujours
+// assignée. femme2/homme3 (lumière du jour / studio clair) passent devant
+// femme1/homme1 (plus chaudes/contrastées) et femme3/homme2 (les plus
+// sombres, les plus éditoriales), reléguées en second plan.
 const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
-  femme: ["/editorial/editcapsela-femme1-hp.jpg", "/editorial/editcapsela-femme2-hp.jpg", "/editorial/editcapsela-femme3-hp.jpg"],
-  homme: ["/editorial/editcapsela-homme1-hp.jpg", "/editorial/editcapsela-homme2-hp.jpg", "/editorial/editcapsela-homme3-hp.jpg"],
+  femme: ["/editorial/editcapsela-femme2-hp.jpg", "/editorial/editcapsela-femme1-hp.jpg", "/editorial/editcapsela-femme3-hp.jpg"],
+  homme: ["/editorial/editcapsela-homme3-hp.jpg", "/editorial/editcapsela-homme1-hp.jpg", "/editorial/editcapsela-homme2-hp.jpg"],
 };
 
-// Hiérarchie carnet de looks plutôt qu'une pile de miniatures égales
-// (recette 26/08/2026) : une photo principale nettement plus grande devant,
-// deux plus petites derrière — jamais 3 tirages de même taille. Léger débord
-// à gauche accepté (vers le centre de la card), absorbé par overflow-hidden
-// de la card elle-même.
+// Composition "album" plutôt qu'une pile de miniatures (recette 26/08/2026) :
+// une photo principale nettement plus grande devant, deux plus petites et
+// plus sombres derrière — jamais 3 tirages de même taille. Slots en % du
+// conteneur photo (42% de la card, cf. JSX), pour rester proportionnels
+// quelle que soit la largeur réelle de l'écran.
 const POLAROID_SLOTS: { left: number; top: number; w: number; h: number; rotate: number; z: number }[] = [
-  { left: 24, top: 8, w: 78, h: 96, rotate: -2, z: 3 },
-  { left: -8, top: 4, w: 54, h: 68, rotate: -11, z: 1 },
-  { left: 40, top: 44, w: 52, h: 66, rotate: 9, z: 2 },
+  { left: 16, top: 4, w: 74, h: 88, rotate: -2, z: 3 },
+  { left: -14, top: 2, w: 48, h: 56, rotate: -12, z: 1 },
+  { left: 42, top: 48, w: 46, h: 54, rotate: 10, z: 2 },
 ];
 
 function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (typeof POLAROID_SLOTS)[number] }) {
@@ -260,16 +266,16 @@ function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (ty
         position: "absolute",
         left: slot.left + "%",
         top: slot.top + "%",
-        width: slot.w,
-        height: slot.h,
+        width: slot.w + "%",
+        height: slot.h + "%",
         transform: `rotate(${slot.rotate}deg)`,
         zIndex: slot.z,
         background: "#FBF8F3",
         padding: 4,
-        paddingBottom: 9,
+        paddingBottom: 8,
         borderRadius: 4,
         boxSizing: "border-box",
-        boxShadow: "0 6px 14px rgba(29,26,22,.18)",
+        boxShadow: "0 3px 9px rgba(29,26,22,.12)",
       }}
     >
       {!failed ? (
@@ -447,23 +453,29 @@ export default function HomeScreen() {
           </button>
         </div>
 
-        {/* Journal des tenues — les tenues portées au fil du temps. Visuels
+        {/* Journal des tenues — les tenues portées au fil du temps. Deux
+            vraies zones (42% photos / 58% contenu, recette 26/08/2026) plutôt
+            qu'un texte à gauche et une pile isolée dans un coin : les
+            polaroids occupent l'essentiel de la hauteur de la card, pour
+            évoquer un album plutôt que 3 vignettes décoratives. Visuels
             éditoriaux génériques (PolaroidPhoto), jamais les photos
             personnelles du dressing/journal réels de l'utilisatrice. */}
         <button
           onClick={actions.goHistory}
-          className="w-full text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex items-center justify-between gap-[14px] box-border"
-          style={{ background: "linear-gradient(120deg, #F6F0E6 0%, #EEE1CE 100%)", padding: "16px 10px 16px 18px" }}
+          className="w-full text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex box-border"
+          style={{ background: "linear-gradient(120deg, #F6F0E6 0%, #EEE1CE 100%)" }}
         >
-          <div className="flex-1 min-w-0" style={{ maxWidth: 128 }}>
-            <div className="font-serif text-[17px] text-ink">Journal des tenues</div>
-            <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">Garde une trace de tes tenues au fil des jours.</div>
-            <div className="text-[12px] text-terracotta mt-[9px]">Voir le journal →</div>
+          <div className="relative flex-shrink-0 box-border" style={{ width: "42%", height: 176, padding: "18px 6px 18px 16px" }}>
+            <div className="relative w-full h-full">
+              {journalVisuals.map((src, i) => (
+                <PolaroidPhoto key={src} src={src} alt="" slot={POLAROID_SLOTS[i]} />
+              ))}
+            </div>
           </div>
-          <div className="relative flex-shrink-0" style={{ width: 118, height: 118 }}>
-            {journalVisuals.map((src, i) => (
-              <PolaroidPhoto key={src} src={src} alt="" slot={POLAROID_SLOTS[i]} />
-            ))}
+          <div className="flex-1 min-w-0 flex flex-col justify-center" style={{ padding: "18px 18px 18px 8px" }}>
+            <div className="font-serif text-[17px] text-ink leading-[1.2]">Journal des tenues</div>
+            <div className="text-[11.5px] text-muted leading-[1.4] mt-[7px]">Garde une trace de tes tenues au fil des jours.</div>
+            <div className="text-[12px] text-terracotta mt-[9px]">Voir le journal →</div>
           </div>
         </button>
       </div>
