@@ -23,9 +23,14 @@ import type { CategoryKey, Item } from "@/lib/types";
  * 26/08/2026, "Idées de tenues" section 5) : elle occupe une cellule plus
  * petite (palier "chaussures" plutôt que "principal") pour laisser le poids
  * visuel aux pièces complémentaires, qui sont ce qui distingue réellement
- * les variantes entre elles. `suggestedIds`, propre à "compact" également :
- * petit marqueur ✦ sur les pièces suggérées par Capsela (jamais un badge
- * plein, la provenance reste secondaire à la lecture de la tenue).
+ * les variantes entre elles.
+ *
+ * `pieceMarkers`, propre à "compact" (recette 26/08/2026, section 3 —
+ * remplace un ✦ sur chaque pièce suggérée, trop de bruit visuel) : marqueur
+ * ✓/✦ discret par vignette, fourni PAR L'APPELANT uniquement pour les
+ * tenues mixtes (Dressing + Capsule) où la distinction aide réellement à
+ * comprendre le look — jamais pour une tenue homogène, où une légende
+ * unique en haut d'écran suffit déjà.
  */
 export type CompositionVariant = "hero" | "compact";
 type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
@@ -78,14 +83,14 @@ export function OutfitComposition({
   items,
   variant = "hero",
   anchorId,
-  suggestedIds,
+  pieceMarkers,
 }: {
   items: Item[];
   variant?: CompositionVariant;
   /** Id de la pièce pivot à distinguer par un contour terracotta — jamais utilisé pour un autre état UI (brief design 22/08/2026, section 2). */
   anchorId?: number;
-  /** Ids des pièces suggérées par Capsela (non possédées) à marquer d'un ✦ discret — propre à "compact" (recette 26/08/2026, section 6). */
-  suggestedIds?: number[];
+  /** Statut ("owned" = ✓ Dressing, "suggested" = ✦ Capsule) des pièces à marquer — absente d'une entrée = pas de marqueur pour cette pièce. */
+  pieceMarkers?: Record<number, "owned" | "suggested">;
 }) {
   const cfg = VARIANT_CONFIG[variant];
   return (
@@ -108,7 +113,7 @@ export function OutfitComposition({
         // rapprocher du rendu plat des photos produit.
         const isRealPhoto = img.kind === "photo";
         const isAnchor = anchorId != null && it.id === anchorId;
-        const isSuggested = variant === "compact" && suggestedIds?.includes(it.id);
+        const marker = variant === "compact" ? pieceMarkers?.[it.id] : undefined;
         // Pivot déjà connu : palier réduit en "compact" pour ne pas
         // occuper la majorité de la card (section 5) — seulement pour les
         // rôles "principal" (haut/bas/robe/veste), jamais un agrandissement
@@ -141,12 +146,12 @@ export function OutfitComposition({
               filter: isRealPhoto ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
             }}
           >
-            {isSuggested && (
+            {marker && (
               <span
-                className="absolute top-[3px] right-[3px] flex items-center justify-center rounded-full text-terracotta"
+                className={"absolute top-[3px] right-[3px] flex items-center justify-center rounded-full " + (marker === "owned" ? "text-[#7B7366]" : "text-terracotta")}
                 style={{ width: 14, height: 14, fontSize: 8, background: "rgba(251,248,243,.92)", boxShadow: "0 1px 2px rgba(29,26,22,.18)" }}
               >
-                ✦
+                {marker === "owned" ? "✓" : "✦"}
               </span>
             )}
           </div>

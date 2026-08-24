@@ -1595,16 +1595,16 @@ export function getOutfitsForItem(
  * cosmétique.
  */
 const OCCASION_STYLE_TITLES: Partial<Record<OccasionKey, string[]>> = {
-  quotidien: ["Simple et facile à porter", "Décontractée soignée", "Un cran plus habillée"],
+  quotidien: ["Simple et facile à porter", "Décontractée mais affirmée", "Un cran plus habillée"],
   travail_formel: ["Structurée sans rigidité", "Professionnelle et posée", "Formelle et affirmée"],
-  entretien: ["Posée et accessible", "Sérieuse et soignée", "Rigoureuse et formelle"],
-  date: ["Décontractée chic", "Élégante sans effort", "Plus habillée"],
-  soiree: ["Facile pour la soirée", "Chic sans en faire trop", "Sophistiquée"],
+  entretien: ["Posée et accessible", "Sérieuse et maîtrisée", "Rigoureuse et formelle"],
+  date: ["Décontractée chic", "Féminine et minimaliste", "Plus habillée"],
+  soiree: ["Décontractée du soir", "Chic sans en faire trop", "Sophistiquée"],
   festive: ["Décontractée mais festive", "Chic et affirmée", "Prête à sortir de l'ordinaire"],
   sport: ["Confortable avant tout", "Technique et soignée", "Prête à performer"],
-  cocooning: ["Relâchée à la maison", "Confortable et posée", "Cocooning soigné"],
+  cocooning: ["Relâchée à la maison", "Confortable et structurée", "Cocooning chic"],
   voyage: ["Pratique avant tout", "Confortable et soignée", "Prête pour toutes les étapes"],
-  evenement_perso: ["Soignée sans excès", "Élégante pour l'occasion", "À la hauteur de l'occasion"],
+  evenement_perso: ["Soignée sans excès", "Féminine et posée", "À la hauteur de l'occasion"],
 };
 
 const DEFAULT_STYLE_TITLES = ["Une tenue simple", "Une tenue équilibrée", "Une tenue plus habillée"];
@@ -1784,8 +1784,19 @@ function pieceLabel(it: Item): string {
   return it.color ? `${base} ${agreeColor(it.color, nounInfoOf(it))}` : base;
 }
 
-/** Ordre de priorité pour choisir les 1-2 pièces les plus distinctives d'un look (hors pivot) — la veste/le manteau et le bas/la robe sont ce qui différencie le plus deux propositions autour d'une même pièce pivot. */
-const DESCRIPTION_PRIORITY: CategoryKey[] = ["veste", "manteau", "robe", "combinaison", "jupe", "pantalon", "jean", "short", "haut", "pull", "chaussures"];
+/**
+ * Ordre de priorité pour choisir les 1-2 pièces les plus distinctives d'un
+ * look (hors pivot) — la veste/le manteau et le bas/la robe sont ce qui
+ * différencie le plus deux propositions autour d'une même pièce pivot.
+ * Sac/bijou/accessoire en repli (recette 26/08/2026, "Idées de tenues"
+ * section 6 : la description doit pouvoir citer concrètement "un sac noir"
+ * ou "des bijoux dorés", pas seulement du vêtement) — seulement utilisés
+ * quand aucune pièce vêtement/chaussures plus distinctive n'est disponible.
+ */
+const DESCRIPTION_PRIORITY: CategoryKey[] = [
+  "veste", "manteau", "robe", "combinaison", "jupe", "pantalon", "jean", "short", "haut", "pull", "chaussures",
+  "sac", "bijou", "accessoire",
+];
 
 /** Conseil de style d'un look (titre court + phrase), affiché en Zone 2 de la card (brief design 22/08/2026, section 5/7). */
 export interface OutfitStyleInsight {

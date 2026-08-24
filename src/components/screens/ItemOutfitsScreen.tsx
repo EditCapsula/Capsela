@@ -107,6 +107,12 @@ export default function ItemOutfitsScreen() {
   const pivotImage = resolveItemImage(pivot);
   const metaParts = [pivot.color, pivot.matiere].filter(Boolean);
 
+  // Statut Dressing/Capsule d'une pièce (brief 26/08/2026, sections 2-3) —
+  // même règle que alreadyOwned pour le pivot : un id de catalogue non
+  // exclu par "J'ai déjà" est une suggestion, jamais une pièce possédée.
+  const pieceOwned = (id: number) => !isCatalogId(id) || state.suggestedExcluded.includes(id);
+  const hasSuggestedPieces = variations.some((v) => v.ids.some((id) => id !== pivot.id && !pieceOwned(id)));
+
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <button
@@ -151,6 +157,17 @@ export default function ItemOutfitsScreen() {
           </div>
         </div>
       </div>
+
+      {/* Légende unique de provenance (brief 26/08/2026, section 2 —
+          remplace un ✦ répété sur chaque pièce complémentaire suggérée,
+          trop de bruit visuel). N'apparaît que s'il existe au moins une
+          pièce suggérée par la capsule parmi toutes les propositions ;
+          jamais affichée si le dressing couvre déjà tout. */}
+      {hasSuggestedPieces && (
+        <div className="text-[10.5px] text-placeholder mt-[8px] leading-[1.4]">
+          ✦ Les autres pièces sont suggérées par ta capsule
+        </div>
+      )}
 
       {/* Statut "déjà possédée" (brief 26/08/2026, section 1) — remplace le
           gros bloc plein écran par un statut compact, discret, directement
@@ -212,13 +229,7 @@ export default function ItemOutfitsScreen() {
         ))}
 
       {occasionsCovered.length > 0 && (
-        <div className="mt-[18px] text-[10px] tracking-[.16em] uppercase text-terracotta">
-          {variations.length} idée{variations.length > 1 ? "s" : ""} de tenue{variations.length > 1 ? "s" : ""}
-        </div>
-      )}
-
-      {occasionsCovered.length > 0 && (
-        <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[14px]">
+        <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[22px]">
           <button
             onClick={() => setOccasionFilter("all")}
             className="flex-none py-[9px] px-4 rounded-full text-[12.5px] cursor-pointer border whitespace-nowrap"
@@ -274,16 +285,31 @@ export default function ItemOutfitsScreen() {
 
           return (
             <div key={group.occasion} className="mt-[20px]">
-              <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[9px]">{OCC_LABELS[group.occasion]}</div>
+              {/* Compteur local plutôt qu'un total global (brief 26/08/2026,
+                  section 4 — "7 IDÉES DE TENUES" supprimé, redondant avec les
+                  sections par occasion) : le nombre reste secondaire visuellement
+                  par rapport au nom de l'occasion. */}
+              <div className="flex items-baseline gap-[6px] mb-[9px]">
+                <span className="text-[11px] tracking-[.16em] uppercase text-muted">{OCC_LABELS[group.occasion]}</span>
+                <span className="text-[10px] text-placeholder">
+                  · {withPieces.length} idée{withPieces.length > 1 ? "s" : ""}
+                </span>
+              </div>
               <div className="flex flex-col gap-[10px]">
                 {withPieces.map(({ variation, pieces }) => {
                   const styleRank = rankOf.get(variation)!;
                   const insight = describeOutfitVariation(variation, pieces, pivot.id, styleRank, withPieces.length);
-                  // Pièces suggérées par Capsela dans cette combinaison (brief
-                  // section 6) — même règle que alreadyOwned pour le pivot :
-                  // un id de catalogue non exclu par "J'ai déjà" est suggéré,
-                  // jamais possédée réellement.
-                  const suggestedIds = pieces.filter((p) => isCatalogId(p.id) && !state.suggestedExcluded.includes(p.id)).map((p) => p.id);
+                  // Marqueurs ✓/✦ (brief section 3) — seulement pour une
+                  // tenue MIXTE (pièces complémentaires possédées ET
+                  // suggérées à la fois) : c'est le seul cas où distinguer
+                  // vraiment la provenance aide à comprendre le look. Une
+                  // tenue homogène (tout possédé ou tout suggéré) n'a besoin
+                  // d'aucun marqueur — la légende générale plus haut suffit.
+                  const complementary = pieces.filter((p) => p.id !== pivot.id);
+                  const mixed = complementary.some((p) => pieceOwned(p.id)) && complementary.some((p) => !pieceOwned(p.id));
+                  const pieceMarkers = mixed
+                    ? Object.fromEntries(complementary.map((p) => [p.id, pieceOwned(p.id) ? "owned" : "suggested"] as const))
+                    : undefined;
                   return (
                     // Card entièrement cliquable (section 8) : un seul vrai
                     // élément interactif (button), jamais de bouton imbriqué —
@@ -297,7 +323,7 @@ export default function ItemOutfitsScreen() {
                       aria-label={`Voir la tenue : ${insight.title}`}
                       className="w-full text-left bg-card border border-border rounded-[14px] p-[11px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
                     >
-                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} suggestedIds={suggestedIds} />
+                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} pieceMarkers={pieceMarkers} />
                       <div className="mt-[9px]">
                         <div className="font-serif text-[14px] text-ink leading-[1.25]">{insight.title}</div>
                         <div className="text-[12px] text-[#3F3B34] mt-[3px] leading-[1.4]">{insight.sentence}</div>
