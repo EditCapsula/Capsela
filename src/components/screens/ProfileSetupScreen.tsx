@@ -34,7 +34,7 @@ import {
 const ALL_STEPS = [
   { key: "prenom", kicker: "Toi", title: "Comment tu t'appelles ?", subtitle: "Pour personnaliser ton expérience Capsela." },
   { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
-  { key: "pal_couleurs", kicker: "Ta palette", title: "Quelles couleurs aimes-tu porter ?", subtitle: "De 1 à 6 couleurs — celles qui reviennent le plus souvent dans tes tenues." },
+  { key: "pal_couleurs", kicker: "Ta palette", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis de 1 à 6 couleurs — celles qui reviennent le plus souvent dans tes tenues." },
   { key: "pal_ressenti", kicker: "Ta palette", title: "Deux précisions rapides", subtitle: "Elles affinent nos suggestions, sans jamais écarter une couleur que tu as choisie." },
   { key: "pal_recap", kicker: "Ta palette", title: "Voilà ta palette", subtitle: "Tu pourras la retoucher quand tu veux depuis ton profil." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
@@ -79,7 +79,31 @@ function OptionRow({
   );
 }
 
-/** Grille de pastilles de la palette personnelle — sélection unique ou multiple (jusqu'à 3, éviction FIFO). */
+/**
+ * Luminance perçue d'une teinte hex — décide si la coche de sélection doit
+ * être blanche (pastille foncée) ou terracotta (pastille très claire, brief
+ * UX "Ta palette" du 24/08/2026, point 3 : jamais de coche blanche
+ * illisible sur Blanc/Crème/Sable...). Seuil 0,6, cohérent avec les 5
+ * teintes explicitement citées comme "très claires" dans le brief.
+ */
+function isLightColor(hex: string): boolean {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6;
+}
+
+/**
+ * Grille de pastilles de la palette personnelle — sélection multiple
+ * jusqu'à MAX_PALETTE_COULEURS (cf. toggleCouleur, bloquant au-delà, pas
+ * d'éviction). Contour unique terracotta + coche à la sélection (remplace
+ * le double anneau décoratif crème/terracotta) ; bordure neutre du Design
+ * System (--color-border) hors sélection, y compris pour les teintes très
+ * claires qui s'y fondaient auparavant. Au maximum, les pastilles non
+ * sélectionnées passent en opacity-40 (même convention "inactif" que
+ * TenuesScreen) et deviennent non cliquables.
+ */
 function PaletteDots({
   options,
   selected,
@@ -89,19 +113,33 @@ function PaletteDots({
   selected: string[];
   onSelect: (hex: string) => void;
 }) {
+  const atMax = selected.length >= MAX_PALETTE_COULEURS;
   return (
     <div className="grid grid-cols-4 gap-x-3 gap-y-5 mt-[26px]">
       {options.map(([name, hex]) => {
         const on = selected.includes(hex);
+        const disabled = atMax && !on;
+        const checkColor = isLightColor(hex) ? "#A66950" : "#FFFFFF";
         return (
-          <button key={hex} onClick={() => onSelect(hex)} className="flex flex-col items-center gap-[8px] cursor-pointer">
+          <button
+            key={hex}
+            onClick={() => !disabled && onSelect(hex)}
+            disabled={disabled}
+            className={"flex flex-col items-center gap-[8px] " + (disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer")}
+          >
             <span
-              className="w-11 h-11 rounded-full"
+              className="w-11 h-11 rounded-full flex items-center justify-center"
               style={{
                 background: hex,
-                boxShadow: on ? "0 0 0 2px #F3EEE5, 0 0 0 4px #A66950" : "inset 0 0 0 1px rgba(29,26,22,.10)",
+                boxShadow: on ? "0 0 0 2px #A66950" : "inset 0 0 0 1px #E6DCCB",
               }}
-            />
+            >
+              {on && (
+                <svg width="14" height="11" viewBox="0 0 11 9" fill="none">
+                  <path d="M1 4.5L4 7.5L10 1" stroke={checkColor} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </span>
             <span className={"text-[10px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>
           </button>
         );
@@ -127,10 +165,15 @@ export default function ProfileSetupScreen() {
 
   const patch = (p: Partial<Profile>) => setDraft((d) => ({ ...d, ...p }));
 
+  // Bloque la 7e sélection plutôt que d'évincer la plus ancienne (brief UX
+  // "Ta palette" du 24/08/2026) — au maximum, les couleurs non sélectionnées
+  // sont désactivées (cf. PaletteDots), donc ce cas ne devrait plus être
+  // déclenché depuis l'UI ; gardé en défense en profondeur.
   const toggleCouleur = (hex: string) => {
     const cur = draft.paletteCouleurs;
     if (cur.includes(hex)) return patch({ paletteCouleurs: cur.filter((x) => x !== hex) });
-    patch({ paletteCouleurs: cur.length >= MAX_PALETTE_COULEURS ? [...cur.slice(1), hex] : [...cur, hex] });
+    if (cur.length >= MAX_PALETTE_COULEURS) return;
+    patch({ paletteCouleurs: [...cur, hex] });
   };
   // Sélection unique (Tâche 7, arbitrages du 20/08/2026 — reconduit après
   // un essai de multi-sélection le même jour) : un seul id stocké, la carte
@@ -219,6 +262,13 @@ export default function ProfileSetupScreen() {
         <div className="text-[11px] tracking-[.18em] uppercase text-terracotta">{meta.kicker}</div>
         <div className="font-serif text-[27px] leading-[1.15] text-ink mt-3">{meta.title}</div>
         <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">{meta.subtitle}</div>
+        {meta.key === "pal_couleurs" && draft.paletteCouleurs.length > 0 && (
+          <div className="text-[12.5px] text-muted mt-[6px]">
+            {draft.paletteCouleurs.length} couleur{draft.paletteCouleurs.length > 1 ? "s" : ""} sélectionnée
+            {draft.paletteCouleurs.length > 1 ? "s" : ""} ·{" "}
+            {draft.paletteCouleurs.length >= MAX_PALETTE_COULEURS ? "Maximum atteint" : `Jusqu'à ${MAX_PALETTE_COULEURS}`}
+          </div>
+        )}
       </div>
 
       {meta.key === "prenom" && (
@@ -247,7 +297,12 @@ export default function ProfileSetupScreen() {
       )}
 
       {meta.key === "pal_couleurs" && (
-        <PaletteDots options={PAL_COULEURS} selected={draft.paletteCouleurs} onSelect={toggleCouleur} />
+        // pb-[110px] : dégage la dernière ligne du nuancier du CTA sticky
+        // ci-dessous (brief UX "Ta palette" du 24/08/2026, point 7 — ne
+        // jamais masquer la dernière rangée pendant le scroll).
+        <div className="pb-[110px]">
+          <PaletteDots options={PAL_COULEURS} selected={draft.paletteCouleurs} onSelect={toggleCouleur} />
+        </div>
       )}
 
       {meta.key === "pal_ressenti" && (
@@ -409,16 +464,32 @@ export default function ProfileSetupScreen() {
       )}
 
       <div className="flex-1" />
-      <button
-        onClick={canContinue ? next : undefined}
-        disabled={!canContinue}
-        className={
-          "mt-[22px] text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
-          (canContinue ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
-        }
-      >
-        {isLast ? "Terminer le profil" : "Continuer"}
-      </button>
+      {(() => {
+        const continueButton = (
+          <button
+            onClick={canContinue ? next : undefined}
+            disabled={!canContinue}
+            className={
+              "mt-[22px] text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
+              (canContinue ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
+            }
+          >
+            {isLast ? "Terminer le profil" : "Continuer"}
+          </button>
+        );
+        // Sticky uniquement sur l'étape palette (brief UX "Ta palette" du
+        // 24/08/2026, point 7) — le CTA reste accessible pendant le scroll
+        // du nuancier, jamais un changement de structure pour les autres
+        // étapes. -mx-7 px-7 réétend le fond crème edge-to-edge malgré le
+        // padding horizontal du conteneur scrollable ; le bouton lui-même
+        // garde exactement son style existant.
+        if (meta.key !== "pal_couleurs") return continueButton;
+        return (
+          <div className="sticky bottom-0 -mx-7 px-7 bg-cream" style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
+            {continueButton}
+          </div>
+        );
+      })()}
     </div>
   );
 }

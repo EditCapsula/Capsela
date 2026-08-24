@@ -72,31 +72,33 @@ export function genderLabel(g: Gender | null): string {
 /**
  * Palette personnelle — un seul champ multi-sélection (Tâche 8, arbitrages
  * du 20/08/2026 : fusion de PAL_BASE/PAL_NEUTRES/PAL_ACCENTS, qui n'étaient
- * déjà distingués par aucune logique en aval). Ordre conservé (neutres
- * sombres → neutres clairs → couleurs vives) pour une progression lisible
- * dans la grille ; dédupliqué (« Gris » #8E8B85 existait dans deux listes).
+ * déjà distingués par aucune logique en aval), dédupliqué (« Gris » #8E8B85
+ * existait dans deux listes). Ordre du nuancier figé par le brief UX
+ * "Ta palette" du 24/08/2026 (neutres sombres → neutres clairs → bruns →
+ * couleurs vives) — ne pas réordonner sans revalidation, la grille 4
+ * colonnes de ProfileSetupScreen s'appuie sur cet ordre exact.
  */
 export const PAL_COULEURS: [string, string][] = [
   ["Noir", "#2A2724"],
   ["Marine", "#3A4152"],
   ["Gris", "#8E8B85"],
-  ["Chocolat", "#5A4436"],
   ["Blanc / écru", "#EDE4D6"],
   ["Blanc", "#F7F4EE"],
   ["Crème", "#E7DCC8"],
   ["Sable", "#DCCFBC"],
   ["Beige", "#CDBBA2"],
   ["Taupe", "#A8967C"],
+  ["Chocolat", "#5A4436"],
   ["Camel", "#C08A5E"],
   ["Kaki", "#6E7358"],
-  ["Terracotta", "#A66950"],
+  ["Vert bouteille", "#3C5347"],
   ["Bordeaux", "#6E3B3A"],
   ["Prune", "#5B3A4A"],
   ["Rouge", "#933B33"],
+  ["Terracotta", "#A66950"],
   ["Rose poudré", "#D6A9A0"],
   ["Corail", "#CF7358"],
   ["Moutarde", "#C29A3D"],
-  ["Vert bouteille", "#3C5347"],
   ["Bleu", "#4A6280"],
 ];
 export const MIN_PALETTE_COULEURS = 1;
