@@ -558,7 +558,14 @@ async function findReadyAsset(
     query = query.eq("niveau_tendance", criteria.niveauTendance);
   }
   if (typeof criteria.oversize === "boolean") query = query.eq("oversize", criteria.oversize);
-  const { data } = await query.limit(1).maybeSingle();
+  // Correctif 26/08/2026 (signalé : "Gourde de sport" affichant tantôt la
+  // bonne photo, tantôt une autre pièce) — sans ORDER BY explicite, Postgres
+  // ne garantit aucun ordre stable quand plusieurs assets correspondent aux
+  // mêmes critères (ex. la cascade générique "accessoire" sans sous_type/
+  // couleur, cf. commentaires ci-dessus) : LIMIT 1 pouvait renvoyer une ligne
+  // différente d'un appel à l'autre. Tri déterministe sur id (le plus ancien
+  // asset correspondant gagne toujours), jamais un ordre laissé au hasard.
+  const { data } = await query.order("id", { ascending: true }).limit(1).maybeSingle();
   return (data as AssetRow | null) ?? null;
 }
 
