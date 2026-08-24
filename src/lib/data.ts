@@ -130,8 +130,12 @@ export const OCCASIONS: [OccasionKey, string, string, number][] = [
   // catalogue (aucun pantalon/jupe n'atteint ce niveau dans les capsules).
   ["entretien", "Rendez-vous important", "Entretien, réunion clé", 3],
   ["date", "Date", "Tête-à-tête", 3],
-  ["soiree", "Sortie / Soirée", "Bar, dîner, entre amis", 1],
-  ["festive", "Sortie festive", "Club, anniversaire, bal", 1],
+  // Formalité relevée (recette 24/08/2026, signalé : tenues trop basiques
+  // pour ces deux occasions) — repli automatique déjà en place
+  // (FORMALITY_FALLBACK_CHAIN, logic.ts) si le dressing/la capsule ne suit
+  // pas : 3 -> [3,1], 4 -> [4,3,1], jamais de tenue bloquée pour autant.
+  ["soiree", "Sortie / Soirée", "Bar, dîner, entre amis", 3],
+  ["festive", "Sortie festive", "Club, anniversaire, bal", 4],
   ["sport", "Sport", "Actif, technique", 0],
   ["cocooning", "Cocooning / Maison", "Chez soi, détente", 1],
   ["voyage", "Voyage / Déplacement", "Confortable, polyvalent", 1],
