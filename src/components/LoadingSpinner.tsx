@@ -36,7 +36,7 @@ export default function LoadingSpinner({ size = 76, className = "" }: Props) {
           cy={size / 2}
           r={r}
           fill="none"
-          stroke="#E07A3C"
+          stroke="#A66950"
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={`${activeLength} ${c - activeLength}`}
