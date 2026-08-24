@@ -284,10 +284,15 @@ export default function CreateLookScreen() {
                 </button>
               );
             })}
+            {/* h-full plutôt qu'un aspect-ratio estimé (correctif 25/08/2026,
+                signalé : tuile "Ajouter..." plus haute que les tuiles de
+                pièces) — grid-cols-2 étire par défaut chaque cellule à la
+                hauteur de sa ligne de grille (déterminée par la tuile
+                pièce, photo + légende), h-full suffit donc à égaler
+                exactement cette hauteur sans avoir à la recalculer. */}
             <button
               onClick={() => actions.openAddForCategory(g.key)}
-              className="flex flex-col items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card cursor-pointer text-center px-2"
-              style={{ aspectRatio: "0.72" }}
+              className="h-full flex flex-col items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card cursor-pointer text-center px-2"
             >
               <span className="w-9 h-9 rounded-full bg-cream border border-border text-terracotta flex items-center justify-center flex-shrink-0">
                 <PlusIcon />
