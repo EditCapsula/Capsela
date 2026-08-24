@@ -33,10 +33,16 @@ export default function CapsuleScreen() {
   const { profile } = useAuth();
 
   const capsuleSeason: CapsuleSeason = state.capsuleSeason || currentSeasonKey();
-  const capsule = useMemo(
-    () => computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool),
-    [profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool]
-  );
+
+  // Exploration ponctuelle d'un autre style ("Explorer d'autres styles" depuis
+  // l'état vide Tenues, recette 24/08/2026) — state.exploredStyleId ne
+  // remplace jamais profile.styles : seule cette variable locale, dérivée à
+  // la volée, voit le style temporaire ; aucune écriture profil ici.
+  const exploredStyleId = state.exploredStyleId;
+  const capsule = useMemo(() => {
+    const capsuleProfile = exploredStyleId ? { ...profile, styles: [exploredStyleId] } : profile;
+    return computeDefaultCapsule(capsuleProfile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
+  }, [profile, exploredStyleId, weather, state.suggestedExcluded, capsuleSeason, vestiairePool]);
 
   // Affichage seul ici (pas de déclenchement) : la capsule liste 15-30
   // pièces d'un coup, donc y déclencher la génération pour toutes en même
@@ -56,6 +62,10 @@ export default function CapsuleScreen() {
   // même convention que ProfileScreen/ProfileEditScreen (styleLabel(profile.styles[0], ...)) ;
   // "" si aucun style n'a été renseigné, jamais un style inventé.
   const userStyleLabel = styleLabel(profile.styles[0], profile.gender);
+  // Style exploré (recette 24/08/2026) — n'affecte que ce libellé d'affichage,
+  // jamais profile.styles ; la capsule ci-dessus est déjà calculée sur ce
+  // même style temporaire.
+  const exploredStyleLabel = exploredStyleId ? styleLabel(exploredStyleId, profile.gender) : null;
 
   const groups = CATS.map(([key, , plural]) => ({
     key,
@@ -82,7 +92,11 @@ export default function CapsuleScreen() {
           Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
         </div>
         <div className="text-[12px] text-muted leading-[1.5] mt-[8px]">
-          {userStyleLabel ? (
+          {exploredStyleLabel ? (
+            <>
+              Aperçu du style <span className="text-ink">{exploredStyleLabel}</span> — pas ton style habituel.
+            </>
+          ) : userStyleLabel ? (
             <>
               Une sélection pensée pour ton style <span className="text-ink">{userStyleLabel}</span> et ta palette,
               pour inspirer tes tenues.
@@ -98,6 +112,21 @@ export default function CapsuleScreen() {
           + Ajouter une pièce à mon dressing
         </button>
       </div>
+
+      {exploredStyleLabel && (
+        <div className="mt-[14px] flex items-center gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
+          <div className="flex-1 min-w-0 text-[12.5px] text-[#3F3B34] leading-[1.45]">
+            Tu explores le style {exploredStyleLabel}, sans changer ton profil.
+          </div>
+          <button
+            onClick={actions.clearExploredStyle}
+            className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer whitespace-nowrap"
+          >
+            Revenir à mon style
+          </button>
+        </div>
+      )}
 
       <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[18px]">
         {CAPSULE_SEASONS.map((s) => {

@@ -25,7 +25,7 @@ import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
-import { paletteHexes, type ProfilePrefs } from "./profile";
+import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import {
   detectAccessoireType,
   detectBijouType,
@@ -135,6 +135,7 @@ function buildInitialState(): AppState {
     travelTipDismissed: false,
     dateContext: "Verre",
     capsuleSeason: null,
+    exploredStyleId: null,
     lookCount: 0,
     isPremium: false,
     history: [],
@@ -245,6 +246,10 @@ export interface Actions {
   setDateContext: (c: DateContext) => void;
   /** Saison parcourue sur l'écran Capsule uniquement ; n'affecte jamais la tenue du jour. */
   setCapsuleSeason: (s: CapsuleSeason) => void;
+  /** Explore un style autre que celui du profil sur l'écran Capsule ("Explorer d'autres styles", recette 24/08/2026) — jamais persisté dans profile.styles, ne modifie jamais le style principal. */
+  setExploredStyle: (id: StyleId) => void;
+  /** Quitte le mode exploration ("Revenir à mon style"). */
+  clearExploredStyle: () => void;
   /** Remplace une pièce de la tenue par une autre de la même famille. */
   swapPiece: (id: number, cat: CategoryKey) => void;
   /** Ajoute une pièce à l'affichage de la tenue du jour (recette 23/08/2026, "Ajouter à la tenue" des suggestions R-S13/R-S14) — aperçu de composition, jamais une acquisition ; sans effet si déjà présente. */
@@ -323,6 +328,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Garde-fou exploration de style (recette 24/08/2026) : un style exploré
+  // devient invalide si le profil change de genre (styles exposés différents)
+  // ou si le style principal devient lui-même ce style exploré — jamais
+  // laissé actif par erreur après un changement de profil fait ailleurs
+  // (ProfileSetupScreen/ProfileEditScreen, hors de ce store). Ajustement
+  // pendant le rendu (pattern React officiel, pas un effet) : évite un aller-
+  // retour de rendu inutile pour une simple invalidation dérivée du profil.
+  const profileStyleKey = `${profile.gender ?? ""}|${profile.styles.join(",")}`;
+  const [lastProfileStyleKey, setLastProfileStyleKey] = useState(profileStyleKey);
+  if (profileStyleKey !== lastProfileStyleKey) {
+    setLastProfileStyleKey(profileStyleKey);
+    if (state.exploredStyleId) {
+      const stillValid = state.exploredStyleId !== profile.styles[0] && exposedStyleIds(profile.gender).includes(state.exploredStyleId);
+      if (!stillValid) setState((s) => ({ ...s, exploredStyleId: null }));
+    }
+  }
 
   // Bandeau de diagnostic temporaire (correctif 22/08/2026, signalé : pièces
   // ajoutées au dressing non conservées, silencieusement jusqu'ici) — logue
@@ -995,6 +1017,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     dismissTravelTip: () => setState((s) => ({ ...s, travelTipDismissed: true })),
     setDateContext: (c) => setState((s) => regen({ ...s, dateContext: c })),
     setCapsuleSeason: (s) => setState((st) => ({ ...st, capsuleSeason: s })),
+    setExploredStyle: (id) => setState((st) => ({ ...st, exploredStyleId: id })),
+    clearExploredStyle: () => setState((st) => ({ ...st, exploredStyleId: null })),
     swapPiece: (id, cat) =>
       setState((s) => {
         const outfitItems = s.outfit

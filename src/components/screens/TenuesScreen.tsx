@@ -10,7 +10,8 @@ import { currentSeasonKey } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
-import { paletteHexes } from "@/lib/profile";
+import { paletteHexes, styleLabel, type StyleId } from "@/lib/profile";
+import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
 
 /** Icônes des CTA de pièce suggérée (recette 23/08/2026) — trait fin, même style que TabBar, jamais d'emoji. */
@@ -64,9 +65,43 @@ function missingSuggestionText(missingCats: string[]): string {
 }
 
 export default function TenuesScreen() {
-  const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, actions } = useCapsela();
+  const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
+  // "Explorer d'autres styles" (recette 24/08/2026, état vide Tenues) —
+  // calcul déclenché uniquement au clic, jamais automatiquement (coûteux :
+  // rejoue le moteur pour chaque style candidat). Réinitialisé dès que
+  // l'occasion/le sous-choix change (ajustement pendant le rendu, pattern
+  // React officiel — pas un effet), pour ne jamais afficher un résultat
+  // devenu obsolète à côté d'un état vide différent.
+  const [exploring, setExploring] = useState(false);
+  const [compatibleStyles, setCompatibleStyles] = useState<StyleId[]>([]);
+  const exploreQueryKey = `${state.occasion}|${state.workMode}|${state.dateContext}`;
+  const [lastExploreQueryKey, setLastExploreQueryKey] = useState(exploreQueryKey);
+  if (exploreQueryKey !== lastExploreQueryKey) {
+    setLastExploreQueryKey(exploreQueryKey);
+    setExploring(false);
+    setCompatibleStyles([]);
+  }
+  function handleExploreStyles() {
+    setCompatibleStyles(
+      findCompatibleStyles(
+        profile,
+        weather,
+        state.occasion || "all",
+        state.workMode,
+        state.dateContext,
+        vestiairePool,
+        state.suggestedExcluded,
+        state.capsuleSeason
+      )
+    );
+    setExploring(true);
+  }
+  function handleSelectExploredStyle(id: StyleId) {
+    actions.setExploredStyle(id);
+    actions.goCapsule();
+  }
   // "Ajouter à la tenue" (recette 23/08/2026, extension du mécanisme d'achat
   // aux suggestions R-S13/R-S14, révisé le même jour : plus de grande card
   // de confirmation permanente, remplacée par une petite transition de
@@ -484,6 +519,33 @@ export default function TenuesScreen() {
             <button onClick={emptyState.onCta} className="mt-[14px] inline-block text-[12.5px] text-terracotta cursor-pointer">
               {emptyState.ctaLabel}
             </button>
+          )}
+
+          {!exploring ? (
+            <button onClick={handleExploreStyles} className="mt-[10px] block mx-auto text-[12.5px] text-terracotta cursor-pointer">
+              Explorer d&apos;autres styles →
+            </button>
+          ) : compatibleStyles.length > 0 ? (
+            <div className="mt-[16px] text-left">
+              <div className="text-[11px] tracking-[.14em] uppercase text-muted mb-[9px]">
+                Ces styles couvrent cette occasion
+              </div>
+              <div className="flex flex-col gap-[8px]">
+                {compatibleStyles.map((id) => (
+                  <button
+                    key={id}
+                    onClick={() => handleSelectExploredStyle(id)}
+                    className="w-full text-left px-4 py-[11px] rounded-[12px] border border-border bg-cream text-[13px] text-ink cursor-pointer"
+                  >
+                    {styleLabel(id, profile.gender)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-[14px] text-[12.5px] text-muted leading-[1.5]">
+              Aucun autre style ne permet encore de couvrir cette occasion avec ta capsule actuelle.
+            </div>
           )}
         </div>
       )}

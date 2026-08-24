@@ -1,3 +1,5 @@
+import type { StyleId } from "./profile";
+
 export type CategoryKey =
   | "haut"
   | "pull"
@@ -347,6 +349,8 @@ export interface AppState {
   dateContext: DateContext;
   /** Saison parcourue sur l'écran Capsule — n'affecte que ce qui y est affiché, jamais la génération de la tenue du jour (toujours la saison calendaire courante). null = saison courante. */
   capsuleSeason: CapsuleSeason | null;
+  /** Style exploré ponctuellement depuis "Explorer d'autres styles" (état vide Tenues) — ne remplace jamais profile.styles, n'affecte que la Capsule tant que ce mode est actif. null = pas d'exploration en cours, toujours le style du profil. */
+  exploredStyleId: StyleId | null;
 
   lookCount: number;
   isPremium: boolean;
