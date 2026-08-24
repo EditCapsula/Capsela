@@ -545,7 +545,7 @@ export function generateOutfit(
   };
 
   const chosen: Item[] = [];
-  const pick = (cats: CategoryKey[], essential = true) => {
+  const pick = (cats: CategoryKey[], essential = true, extra?: (i: Item) => boolean) => {
     let base = poolFor(cats).filter((i) => cats.includes(i.cat));
     // Priorité au réel sur un groupe de catégories fusionnées pour un même
     // tirage (correctif 22/08/2026, signalé : un jean réel ajouté au
@@ -560,6 +560,13 @@ export function generateOutfit(
     // existe dans ce groupe, la capsule est écartée pour CE tirage.
     const real = base.filter((i) => !isCatalogId(i.id));
     if (real.length) base = real;
+    // Préférence molle optionnelle passée par l'appelant (ex. R-S17
+    // ci-dessous, "pas de robe chemise en sortie festive") — même esprit
+    // que les autres filtres de cette fonction : jamais exclusive.
+    if (extra) {
+      const filtered = base.filter(extra);
+      if (filtered.length) base = filtered;
+    }
     // Préférence pluie (R-B16, recette 20/08/2026) — n'écarte rien, juste une
     // inclination pour une veste/un manteau qui résiste à la pluie quand il
     // pleut, seulement si ça laisse au moins une option (même esprit que
@@ -614,7 +621,9 @@ export function generateOutfit(
   // bug était en amont, dans la liste de catégories elle-même.
   const useRobe = Math.random() < 0.4 && poolFor(ONEPIECE_CATS).length > 0;
   if (useRobe) {
-    const r = pick(ONEPIECE_CATS);
+    // R-S17 (25/08/2026, signalé) — même principe que pour le haut ci-dessous :
+    // pas de robe chemise en sortie festive, préférence molle.
+    const r = pick(ONEPIECE_CATS, true, occasion === "festive" ? (i) => i.subtype !== "Chemise" : undefined);
     if (r) ids.push(r.id);
     primaryTop = r;
     // Collant seulement pour une robe (jambes nues) — une combinaison
@@ -634,6 +643,14 @@ export function generateOutfit(
       const vesteCandidates = hardBase.filter((i) => i.cat === "veste" && formalityOf(i) >= minFormality);
       compensatingVeste = rand(harmonize(vesteCandidates, chosen, false));
       if (compensatingVeste) hautPool = hautCandidates;
+    }
+    // R-S17 (25/08/2026, signalé) — sortie festive : on privilégie un
+    // haut, mais pas une chemise/chemisier (trop bureau/quotidien pour ce
+    // contexte) — préférence molle, jamais exclusive : repli sur le pool
+    // complet si aucune alternative n'existe.
+    if (occasion === "festive") {
+      const nonChemise = hautPool.filter((i) => !["Chemise", "Chemisier"].includes(i.subtype ?? ""));
+      if (nonChemise.length) hautPool = nonChemise;
     }
     // Même exemption FALLBACK_HEX que dans pick() ci-dessus.
     const hautPreferred = preferredHexes.length ? hautPool.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX) : [];
@@ -1040,6 +1057,13 @@ export function swapOutfitPiece(
       const styled = candidates.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) candidates = styled;
     }
+  }
+  // R-S17 — symétrique du filtre appliqué dans generateOutfit : pas de
+  // chemise/chemisier (haut) ni de robe chemise en sortie festive, molle
+  // jamais exclusive.
+  if (occasion === "festive" && (cat === "haut" || cat === "robe" || cat === "combinaison")) {
+    const nonChemise = candidates.filter((i) => !["Chemise", "Chemisier"].includes(i.subtype ?? ""));
+    if (nonChemise.length) candidates = nonChemise;
   }
   // Plage de température — symétrique du filtre appliqué dans generateOutfit.
   if (weather) {
