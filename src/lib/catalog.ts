@@ -89,22 +89,67 @@ function catalogShoeTypeFor(cat: CategoryKey, name: string): ShoeType | undefine
   return undefined;
 }
 
-export const CATALOG: CatalogItem[] = RAW.map(([name, cat, color, hex], i) => ({
-  id: 1001 + i,
-  name,
-  cat,
-  color,
-  hex,
-  season: catalogSeasonFor(cat, name),
-  shoeType: catalogShoeTypeFor(cat, name),
-  sacType: cat === "sac" ? detectSacType(name) || undefined : undefined,
-  bijouType: cat === "bijou" ? detectBijouType(name) || undefined : undefined,
-  accessoireType: cat === "accessoire" ? detectAccessoireType(name) || undefined : undefined,
-  subtype: detectSubtype(cat, name) || undefined,
-  // Rythme d'exemple : deux pièces sur trois « déjà portées », le reste jamais.
-  worn: i % 3 !== 0 ? (i % 5) * 3 + 1 : null,
-  genre: cat === "robe" || cat === "jupe" ? "femme" : "unisexe",
-}));
+// Bloc Sport du catalogue de secours (correctif 26/08/2026, balayage capsule ×
+// occasion : Sport structurellement impossible pour TOUS les styles/saisons/
+// genres tant que le dressing est vide) — R-B11 exige formalité 0 sur tout
+// vêtement, et RAW n'en contenait aucune : le bloc Sport de
+// computeDefaultCapsule (capsule.ts, étape 4) restait donc vide. Liste à part
+// plutôt que des entrées RAW : ces pièces portent des champs que le tuple
+// [name, cat, color, hex] ne sait pas exprimer — niveauFormalite: 0 explicite
+// (les noms ne matchent pas tous l'heuristique de formalityOf) et
+// occasion: ["sport"] (declaredOccasionOk) pour qu'elles ne fuient jamais vers
+// les autres occasions, comme leurs équivalentes vestiaire_universel.
+// Saison "Toutes saisons" : le sport se pratique toute l'année, la plage
+// courte (short) reste bornée par R-B20 (jamais à 22°C ou moins).
+const SPORT_RAW: [string, CategoryKey, string, string, "femme" | "homme" | "unisexe"][] = [
+  ["T-shirt technique", "haut", "Blanc", "#F7F4EE", "unisexe"],
+  ["Débardeur de sport", "haut", "Noir", "#2A2724", "unisexe"],
+  ["Legging de sport", "pantalon", "Noir", "#2A2724", "femme"],
+  ["Jogging en molleton", "pantalon", "Gris", "#9B968F", "unisexe"],
+  ["Short de sport", "short", "Marine", "#3A4152", "unisexe"],
+  ["Baskets running", "chaussures", "Blanc", "#F7F4EE", "unisexe"],
+  ["Sac de sport", "sac", "Noir", "#2A2724", "unisexe"],
+  ["Gourde isotherme", "accessoire", "Kaki", "#8A8560", "unisexe"],
+];
+
+export const CATALOG: CatalogItem[] = [
+  ...RAW.map(([name, cat, color, hex], i): CatalogItem => ({
+    id: 1001 + i,
+    name,
+    cat,
+    color,
+    hex,
+    season: catalogSeasonFor(cat, name),
+    shoeType: catalogShoeTypeFor(cat, name),
+    sacType: cat === "sac" ? detectSacType(name) || undefined : undefined,
+    bijouType: cat === "bijou" ? detectBijouType(name) || undefined : undefined,
+    accessoireType: cat === "accessoire" ? detectAccessoireType(name) || undefined : undefined,
+    subtype: detectSubtype(cat, name) || undefined,
+    // Rythme d'exemple : deux pièces sur trois « déjà portées », le reste jamais.
+    worn: i % 3 !== 0 ? (i % 5) * 3 + 1 : null,
+    genre: cat === "robe" || cat === "jupe" ? "femme" : "unisexe",
+  })),
+  // Ids strictement APRÈS ceux de RAW : les ids sont positionnels, toute
+  // insertion au milieu de RAW décalerait des ids déjà référencés par
+  // l'historique et les looks enregistrés — le bloc Sport s'ajoute donc en
+  // queue, et RAW ne doit lui-même s'étendre qu'en fin de liste.
+  ...SPORT_RAW.map(([name, cat, color, hex, genre], j): CatalogItem => ({
+    id: 1001 + RAW.length + j,
+    name,
+    cat,
+    color,
+    hex,
+    season: "Toutes saisons",
+    shoeType: catalogShoeTypeFor(cat, name),
+    sacType: cat === "sac" ? detectSacType(name) || undefined : undefined,
+    accessoireType: cat === "accessoire" ? detectAccessoireType(name) || undefined : undefined,
+    subtype: detectSubtype(cat, name) || undefined,
+    niveauFormalite: 0,
+    occasion: ["sport"],
+    worn: null,
+    genre,
+  })),
+];
 
 export function isCatalogId(id: number): boolean {
   return id >= 1001;
