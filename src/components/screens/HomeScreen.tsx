@@ -247,20 +247,22 @@ const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
   homme: ["/editorial/editcapsela-homme3-hp.jpg", "/editorial/editcapsela-homme1-hp.jpg", "/editorial/editcapsela-homme2-hp.jpg"],
 };
 
-// Composition "éventail" (recette 26/08/2026, 3e correctif — signalé :
-// chevauchement encore trop fort, les deux polaroids secondaires restaient
-// trop cachés derrière la principale) : les 3 boîtes sont TOUJOURS comprises
-// dans [0,100] (jamais de left/top négatif ni de right/bottom > 100 — aucun
-// débordement hors de la card), décalées verticalement (top 2/14/50) plutôt
-// qu'empilées, et dimensionnées pour que chaque secondaire reste visible sur
-// ~65-70% de sa surface (calcul exact : aire de recouvrement avec la
-// principale / aire du secondaire — contre ~50% avant ce correctif). Marge
-// intérieure gérée par le padding du conteneur (JSX, 16px sur les 4 côtés),
-// pas par des coordonnées négatives.
+// Composition "carnet de souvenirs" (recette 26/08/2026, 4e correctif —
+// signalé : polaroids trop petits/tassés à gauche, zone photo perçue comme
+// secondaire). Une principale nettement dominante au premier plan, une
+// secondaire décalée haut/gauche et une troisième décalée bas/droite,
+// toutes deux visiblement DERRIÈRE (z inférieur) mais jamais presque
+// entièrement masquées : recouvrement main/secondaire ≈35-40% de la surface
+// du secondaire (≈60-65% visible), contre le calcul précédent, plus serré,
+// qui laissait les secondaires trop discrets. Les 3 boîtes restent TOUJOURS
+// comprises dans [0,100] (jamais de left/top négatif ni de right/bottom >
+// 100 — aucun débordement hors de la card, aucune ne touche le bord gauche).
+// Marge intérieure gérée par le padding du conteneur (JSX), pas par des
+// coordonnées négatives.
 const POLAROID_SLOTS: { left: number; top: number; w: number; h: number; rotate: number; z: number }[] = [
-  { left: 24, top: 14, w: 54, h: 64, rotate: -1, z: 3 },
-  { left: 2, top: 2, w: 38, h: 44, rotate: -8, z: 1 },
-  { left: 58, top: 50, w: 38, h: 44, rotate: 8, z: 2 },
+  { left: 22, top: 10, w: 60, h: 70, rotate: -2, z: 3 },
+  { left: 1, top: 0, w: 38, h: 42, rotate: -8, z: 1 },
+  { left: 60, top: 54, w: 36, h: 40, rotate: 7, z: 2 },
 ];
 
 function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (typeof POLAROID_SLOTS)[number] }) {
@@ -459,18 +461,21 @@ export default function HomeScreen() {
         </div>
 
         {/* Journal des tenues — les tenues portées au fil du temps. Deux
-            vraies zones (42% photos / 58% contenu, recette 26/08/2026) plutôt
-            qu'un texte à gauche et une pile isolée dans un coin : les
-            polaroids occupent l'essentiel de la hauteur de la card, pour
-            évoquer un album plutôt que 3 vignettes décoratives. Visuels
-            éditoriaux génériques (PolaroidPhoto), jamais les photos
-            personnelles du dressing/journal réels de l'utilisatrice. */}
+            zones au poids visuel comparable (46% photos / 54% contenu,
+            recette 26/08/2026, 4e passe) : les polaroids, agrandis et
+            recentrés (composition "carnet de souvenirs", cf. POLAROID_SLOTS),
+            dominent la hauteur de la card au même titre que le bloc texte —
+            jamais un texte principal accompagné d'une pile décorative
+            secondaire. Padding vertical symétrique (14px) = le mécanisme de
+            centrage de la composition photo, cohérent avec justify-center
+            côté texte. Visuels éditoriaux génériques (PolaroidPhoto), jamais
+            les photos personnelles du dressing/journal réels. */}
         <button
           onClick={actions.goHistory}
           className="w-full text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex box-border"
           style={{ background: "linear-gradient(120deg, #F6F0E6 0%, #EEE1CE 100%)" }}
         >
-          <div className="relative flex-shrink-0 box-border" style={{ width: "42%", height: 176, padding: "18px 16px" }}>
+          <div className="relative flex-shrink-0 box-border" style={{ width: "46%", height: 176, padding: "14px 12px" }}>
             <div className="relative w-full h-full">
               {journalVisuals.map((src, i) => (
                 <PolaroidPhoto key={src} src={src} alt="" slot={POLAROID_SLOTS[i]} />
@@ -479,8 +484,8 @@ export default function HomeScreen() {
           </div>
           <div className="flex-1 min-w-0 flex flex-col justify-center" style={{ padding: "18px 18px 18px 8px" }}>
             <div className="font-serif text-[17px] text-ink leading-[1.2]">Journal des tenues</div>
-            <div className="text-[11.5px] text-muted leading-[1.4] mt-[7px]">Garde une trace de tes tenues au fil des jours.</div>
-            <div className="text-[12px] text-terracotta mt-[9px]">Voir le journal →</div>
+            <div className="text-[11.5px] text-muted leading-[1.4] mt-[4px]">Garde une trace de tes tenues au fil des jours.</div>
+            <div className="text-[12px] text-terracotta mt-[7px]">Voir le journal →</div>
           </div>
         </button>
       </div>
