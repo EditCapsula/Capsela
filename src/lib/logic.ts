@@ -466,13 +466,28 @@ export function generateOutfit(
     if (isRainy(weather)) {
       r = r.filter((i) => i.cat !== "chaussures" || !i.shoeType || !SANDAL_SHOE_TYPES.includes(i.shoeType));
     }
-    // Occasion explicitement déclarée sur la pièce (correctif 19/08/2026,
-    // remplace l'ancien filtre par mots-clés — cf. déclarations plus haut).
-    if (occasion !== "all") {
-      r = r.filter((i) => declaredOccasionOk(i, occasion));
-    }
     return r;
   };
+
+  // Occasion explicitement déclarée sur la pièce (correctif 19/08/2026,
+  // remplace l'ancien filtre par mots-clés — cf. déclarations plus haut).
+  //
+  // Sortie de hardCategoryFilter (correctif 26/08/2026, signalé : "Voyage /
+  // Déplacement" systématiquement vide alors que sa formalité est la plus
+  // basse), exactement comme applyTempFilter plus bas et pour la même raison :
+  // ce filtre pouvait vider une catégorie essentielle sans aucun repli.
+  // OCCASIONS_DEFAULT_BY_CAT (attributes.ts) ne propose jamais voyage,
+  // entretien ni festive, et saveItem persiste cette suggestion automatique
+  // telle quelle — toute pièce réelle se retrouve donc déclarée sur d'autres
+  // occasions et exclue de ces trois-là, sans que l'utilisatrice n'ait rien
+  // choisi. Compléter la table des défauts ne suffirait pas et se paierait
+  // ailleurs : une occasion déclarée exempte aussi la pièce du plancher de
+  // formalité (cf. R-B3 ci-dessus), donc y ajouter "entretien" rendrait au
+  // passage n'importe quel t-shirt éligible à un entretien. Le repli ci-
+  // dessous corrige la cause commune sans toucher à cette sémantique, et
+  // couvre du même coup une liste restrictive réellement choisie à la main.
+  const applyDeclaredOccasionFilter = (items: Item[]): Item[] =>
+    occasion === "all" ? items : items.filter((i) => declaredOccasionOk(i, occasion));
 
   // Plage de température (meteo_min_temp/meteo_max_temp, source
   // vestiaire_universel) — une pièce n'est jamais suggérée si la météo du
@@ -508,8 +523,24 @@ export function generateOutfit(
 
   // Règles dures (R-B3/R-B6/R-B11...) — jamais relâchées, appliquées une
   // bonne fois pour toutes sur la base anti-répétition/saison.
-  const hardBaseNoTemp = hardCategoryFilter(seasonBase);
+  // formalityOverride propagé jusqu'au filtre dur (correctif 26/08/2026,
+  // signalé : occasions restant vides sans que baisser la formalité n'y
+  // change rien) — hardCategoryFilter acceptait ce paramètre depuis
+  // toujours, mais aucun appelant ne le passait : R-B3 retombait donc
+  // systématiquement sur effectiveFormality(occasion), y compris pendant le
+  // repli progressif de FORMALITY_FALLBACK_CHAIN et pendant la sonde à
+  // formalité 0 de generateOutfitWithFallback. Le repli était donc inerte
+  // pour tout ce que R-B3 filtre (le bas au premier chef, le haut étant
+  // exempté par ailleurs), et la sonde diagnostiquait "no_match" là où la
+  // cause réelle était bien "formality_gap". Les paliers restent tentés dans
+  // l'ordre, du plus formel au moins formel : une tenue qui passait déjà au
+  // palier demandé est inchangée, seul le repli devient réellement effectif.
+  const hardBaseNoOcc = hardCategoryFilter(seasonBase, formalityOverride);
+  const hardBaseNoTemp = applyDeclaredOccasionFilter(hardBaseNoOcc);
   const hardBase = applyTempFilter(hardBaseNoTemp);
+  // Dernier barreau du repli de poolFor — règles dures et météo appliquées,
+  // seule l'occasion déclarée est relâchée.
+  const hardBaseNoOccWithTemp = applyTempFilter(hardBaseNoOcc);
 
   // Chaussures/sacs/bijoux/accessoires restent toujours éligibles vis-à-vis du
   // filtrage d'occasion — conçus pour être reportés souvent, contrairement
@@ -525,28 +556,47 @@ export function generateOutfit(
   // La formalité par pièce (R-B3, déjà appliquée dans hardBase) est le
   // signal fiable — retiré, ne plus réintroduire de narrowing par
   // mots-clés ici.
-  const poolFor = (cats: CategoryKey[]): Item[] => {
+  //
+  // `essential` (correctif 26/08/2026) ouvre un dernier barreau de repli :
+  // relâcher l'occasion déclarée plutôt que de laisser une catégorie
+  // indispensable totalement vide. Réservé aux catégories dont l'absence
+  // annule la tenue entière (haut, bas, robe/combinaison, chaussures) :
+  // pour une veste ou un bijou, une catégorie vide est un résultat
+  // acceptable, et réintroduire une pièce écartée y serait une régression.
+  const poolFor = (cats: CategoryKey[], essential = false): Item[] => {
     if (cats.every((c) => ACCESSORY_CATS.includes(c))) {
-      const basisNoTemp = hardCategoryFilter(seasonPool);
-      const basis = applyTempFilter(basisNoTemp);
-      if (basis.filter((i) => cats.includes(i.cat)).length) return basis;
-      // Repli météo (cf. commentaire applyTempFilter) avant de sortir de la saison.
-      if (basisNoTemp.filter((i) => cats.includes(i.cat)).length) return basisNoTemp;
-      const fullNoTemp = hardCategoryFilter(pool);
-      const full = applyTempFilter(fullNoTemp);
-      return full.filter((i) => cats.includes(i.cat)).length ? full : fullNoTemp;
+      const seasonNoOcc = hardCategoryFilter(seasonPool, formalityOverride);
+      const fullNoOcc = hardCategoryFilter(pool, formalityOverride);
+      const seasonNoTemp = applyDeclaredOccasionFilter(seasonNoOcc);
+      const fullNoTemp = applyDeclaredOccasionFilter(fullNoOcc);
+      // Barreaux inchangés : saison+météo, saison seule (repli météo, cf.
+      // commentaire applyTempFilter), puis hors saison. Les deux derniers
+      // n'existent que pour une catégorie essentielle — chaussures : une
+      // tenue sans chaussures après avoir relâché l'occasion sur le haut et
+      // le bas serait incohérente.
+      const ladder = [applyTempFilter(seasonNoTemp), seasonNoTemp, applyTempFilter(fullNoTemp), fullNoTemp];
+      if (essential) ladder.push(applyTempFilter(fullNoOcc), fullNoOcc);
+      for (const rung of ladder) {
+        if (rung.filter((i) => cats.includes(i.cat)).length) return rung;
+      }
+      return ladder[ladder.length - 1];
     }
     const withTemp = hardBase.filter((i) => cats.includes(i.cat));
     if (withTemp.length) return withTemp;
     // Repli météo : jamais une catégorie essentielle (ex. le bas) totalement
     // vidée uniquement parce qu'aucune pièce de la capsule ne couvre la
     // météo du jour — cf. commentaire applyTempFilter.
-    return hardBaseNoTemp.filter((i) => cats.includes(i.cat));
+    const noTemp = hardBaseNoTemp.filter((i) => cats.includes(i.cat));
+    if (noTemp.length || !essential) return noTemp;
+    // Repli occasion déclarée, en dernier — la météo reprend la priorité sur
+    // ce barreau-ci, exactement comme au-dessus.
+    const noOccWithTemp = hardBaseNoOccWithTemp.filter((i) => cats.includes(i.cat));
+    return noOccWithTemp.length ? noOccWithTemp : hardBaseNoOcc.filter((i) => cats.includes(i.cat));
   };
 
   const chosen: Item[] = [];
   const pick = (cats: CategoryKey[], essential = true, extra?: (i: Item) => boolean) => {
-    let base = poolFor(cats).filter((i) => cats.includes(i.cat));
+    let base = poolFor(cats, essential).filter((i) => cats.includes(i.cat));
     // Priorité au réel sur un groupe de catégories fusionnées pour un même
     // tirage (correctif 22/08/2026, signalé : un jean réel ajouté au
     // dressing n'apparaissait presque jamais, noyé parmi les 20+ pantalons/
@@ -626,7 +676,7 @@ export function generateOutfit(
   // dressing n'avait donc littéralement aucune chance d'être choisie ici,
   // quel que soit le correctif harmonize() du 22/08/2026 sur le style — le
   // bug était en amont, dans la liste de catégories elle-même.
-  const useRobe = Math.random() < 0.4 && poolFor(ONEPIECE_CATS).length > 0;
+  const useRobe = Math.random() < 0.4 && poolFor(ONEPIECE_CATS, true).length > 0;
   if (useRobe) {
     // R-S17 (25/08/2026, signalé) — même principe que pour le haut ci-dessous :
     // pas de robe chemise en sortie festive, préférence molle.
@@ -643,7 +693,7 @@ export function generateOutfit(
     // que si aucun haut n'atteint seul la formalité requise — jamais pour
     // le bas, qui doit rester autonome (poolFor(BOTTOMS) reste soumis au
     // plancher plein, cf. hardCategoryFilter).
-    const hautCandidates = poolFor(["haut"]);
+    const hautCandidates = poolFor(["haut"], true);
     const hautMeetingFloor = dressy ? hautCandidates.filter((i) => formalityOf(i) >= minFormality) : hautCandidates;
     let hautPool = hautMeetingFloor;
     if (dressy && !hautMeetingFloor.length && hautCandidates.length) {
@@ -774,7 +824,7 @@ export function generateOutfit(
   }
   const sh = (() => {
     // Les baskets sont déjà exclues en amont si l'occasion est habillée (R-B6, hardCategoryFilter).
-    let shoePool = poolFor(["chaussures"]).filter((i) => i.cat === "chaussures");
+    let shoePool = poolFor(["chaussures"], true).filter((i) => i.cat === "chaussures");
     // Préférence de style par occasion (R-S16, recette 20/08/2026) — ex.
     // talons favorisés pour une sortie festive (cf. OCCASION_STYLE_PREFS) —
     // n'écarte rien, juste une inclination si ça laisse au moins une option
@@ -1033,7 +1083,13 @@ export function swapOutfitPiece(
         formalityOf(i) >= minFormality
     );
     // Occasion explicitement déclarée sur la pièce (correctif 19/08/2026).
-    candidates = candidates.filter((i) => declaredOccasionOk(i, occasion));
+    // Relâchée plutôt que de ne proposer aucune alternative (correctif
+    // 26/08/2026, symétrique du repli de poolFor à la génération) : la tenue
+    // affichée peut désormais contenir une pièce retenue justement parce que
+    // ce filtre avait vidé sa catégorie, "changer cette pièce" ne doit pas
+    // se retrouver sans candidat pour cette même raison.
+    const declaredOk = candidates.filter((i) => declaredOccasionOk(i, occasion));
+    if (declaredOk.length) candidates = declaredOk;
   }
   // R-B6 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (isDressy(occasion, workMode, dateContext)) {
