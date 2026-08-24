@@ -8,7 +8,44 @@ import { useAuth } from "@/lib/auth";
 import { styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
-import type { CategoryKey } from "@/lib/types";
+import type { CategoryKey, DateContext, OccasionKey, WorkMode } from "@/lib/types";
+
+/**
+ * Reprend le libellé naturel de l'occasion (bandeau d'exploration ci-dessous)
+ * — même wording que occasionPhrase (logic.ts, non exportée), dupliqué ici
+ * volontairement plutôt que d'exporter/toucher logic.ts, hors périmètre de
+ * cette correction (recette 24/08/2026, parcours d'exploration).
+ */
+function occasionPhraseFor(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext): string {
+  switch (occasion) {
+    case "quotidien":
+      return "ta journée";
+    case "travail_formel":
+      return workMode === "Télétravail" ? "ta journée en télétravail" : "ta journée au bureau";
+    case "entretien":
+      return "ton rendez-vous important";
+    case "date":
+      return dateContext === "Restaurant / date romantique"
+        ? "ton dîner"
+        : dateContext === "Soirée festive"
+          ? "ta soirée"
+          : "ton rendez-vous";
+    case "soiree":
+      return "ta sortie";
+    case "festive":
+      return "ta sortie festive";
+    case "sport":
+      return "ta séance de sport";
+    case "cocooning":
+      return "ta journée cocooning";
+    case "voyage":
+      return "ton déplacement";
+    case "evenement_perso":
+      return "ta cérémonie";
+    default:
+      return "aujourd'hui";
+  }
+}
 
 function ChevronIcon({ open }: { open: boolean }) {
   return (
@@ -114,16 +151,28 @@ export default function CapsuleScreen() {
       </div>
 
       {exploredStyleLabel && (
-        <div className="mt-[14px] flex items-center gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
-          <div className="flex-1 min-w-0 text-[12.5px] text-[#3F3B34] leading-[1.45]">
-            Tu explores le style {exploredStyleLabel}, sans changer ton profil.
+        <div className="mt-[14px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <div className="flex items-start gap-[11px]">
+            <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] text-ink leading-[1.4]">Tu explores le style {exploredStyleLabel}</div>
+              <div className="text-[12.5px] text-[#3F3B34] leading-[1.45] mt-[3px]">
+                Cette capsule permet de composer une tenue pour{" "}
+                {occasionPhraseFor(state.occasion || "all", state.workMode, state.dateContext)}.
+              </div>
+            </div>
+            <button
+              onClick={actions.clearExploredStyle}
+              className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer whitespace-nowrap"
+            >
+              Revenir à mon style
+            </button>
           </div>
           <button
-            onClick={actions.clearExploredStyle}
-            className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer whitespace-nowrap"
+            onClick={actions.viewExploredOutfit}
+            className="mt-[14px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
           >
-            Revenir à mon style
+            Voir ma tenue →
           </button>
         </div>
       )}

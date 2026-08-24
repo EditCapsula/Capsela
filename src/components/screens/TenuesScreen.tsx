@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { currentSeasonKey } from "@/lib/capsule";
+import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
@@ -203,8 +203,22 @@ export default function TenuesScreen() {
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
   const firstNameOrYou = profile.displayName || "toi";
 
+  // Pool de résolution de la tenue affichée (recette 24/08/2026, retour
+  // d'exploration) — en mode exploration, state.outfit contient des ids
+  // tirés de la capsule du style exploré, jamais de wardrobePool (profil).
+  // Même construction que CapsuleScreen (computeDefaultCapsule sur un profil
+  // temporaire), jamais wardrobePool/profile.styles touchés ; displayPool
+  // retombe sur wardrobePool à l'identique dès que exploredStyleId est null.
+  const exploredCapsulePool = useMemo(() => {
+    if (!state.exploredStyleId) return null;
+    const exploredProfile = { ...profile, styles: [state.exploredStyleId] };
+    const season = state.capsuleSeason || currentSeasonKey();
+    return computeDefaultCapsule(exploredProfile, weather, state.suggestedExcluded, season, vestiairePool);
+  }, [state.exploredStyleId, profile, weather, state.suggestedExcluded, state.capsuleSeason, vestiairePool]);
+  const displayPool = exploredCapsulePool ?? wardrobePool;
+
   const outfitPieces = (state.outfit || [])
-    .map((id) => wardrobePool.find((i) => i.id === id))
+    .map((id) => displayPool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
   // "Enregistrer cette tenue" (recette 23/08/2026) — atterrit dans Dressing →
   // Mes looks, mais à la différence de "Créer un look" (dressing réel
@@ -337,7 +351,7 @@ export default function TenuesScreen() {
     weather,
     state.workMode,
     state.dateContext,
-    wardrobePool
+    displayPool
   );
 
   // Union clés vivantes (lookScore.proactives) + clés en cours de
@@ -529,6 +543,26 @@ export default function TenuesScreen() {
         </div>
       )}
 
+      {/* Retour d'exploration (recette 24/08/2026) : la tenue affichée vient
+          de la capsule du style exploré, pas de wardrobePool/profil — info
+          secondaire discrète, jamais confondue avec le badge de mode
+          ci-dessus (qui décrit dressing vs capsule DU style du profil). */}
+      {state.exploredStyleId && (
+        <div className="flex items-center justify-between gap-3 mt-[14px]">
+          <div className="text-[12px] text-muted leading-[1.4]">
+            Tenue issue du style {styleConfigFor(profile.gender)[state.exploredStyleId].label}.
+            <br />
+            Ton style personnel reste inchangé.
+          </div>
+          <button
+            onClick={actions.clearExploredStyle}
+            className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer whitespace-nowrap"
+          >
+            Revenir à mon style
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mt-[22px] mb-3">
         <div className="flex items-center gap-[9px]">
           <span className="text-[11px] tracking-[.16em] uppercase text-muted">La combinaison</span>
@@ -546,9 +580,14 @@ export default function TenuesScreen() {
             ))}
         </div>
         {/* "↻ Autre tenue" (section 2) : n'a de sens que s'il y a déjà une
-            tenue à régénérer — jamais affiché à côté d'un état vide. */}
+            tenue à régénérer — jamais affiché à côté d'un état vide. En mode
+            exploration, rejoue un tirage sur la capsule explorée (jamais
+            regen()/wardrobePool — recette 24/08/2026). */}
         {!noCompleteOutfit && (
-          <button onClick={actions.regenOutfit} className="text-[12px] text-terracotta tracking-[.03em] cursor-pointer">
+          <button
+            onClick={state.exploredStyleId ? actions.viewExploredOutfit : actions.regenOutfit}
+            className="text-[12px] text-terracotta tracking-[.03em] cursor-pointer"
+          >
             ↻ Autre tenue
           </button>
         )}
@@ -767,7 +806,7 @@ export default function TenuesScreen() {
             const frozen = dismissingEntries[key];
             const p = liveProactiveByKey.get(key) ?? frozen?.p;
             if (!p) return null;
-            const suggested = frozen?.suggested ?? (p.suggestedId != null ? wardrobePool.find((i) => i.id === p.suggestedId) : undefined);
+            const suggested = frozen?.suggested ?? (p.suggestedId != null ? displayPool.find((i) => i.id === p.suggestedId) : undefined);
             const closing = Boolean(frozen);
             return (
               <div

@@ -250,6 +250,8 @@ export interface Actions {
   setExploredStyle: (id: StyleId) => void;
   /** Quitte le mode exploration ("Revenir à mon style"). */
   clearExploredStyle: () => void;
+  /** Génère (ou régénère) la tenue du jour à partir de la capsule du style exploré, pour l'occasion/le sous-choix courants — jamais via wardrobePool/regen() standard (recette 24/08/2026, "Voir ma tenue" depuis Capsule, et "Autre tenue" pendant l'exploration). Sans effet si exploredStyleId est null. */
+  viewExploredOutfit: () => void;
   /** Remplace une pièce de la tenue par une autre de la même famille. */
   swapPiece: (id: number, cat: CategoryKey) => void;
   /** Ajoute une pièce à l'affichage de la tenue du jour (recette 23/08/2026, "Ajouter à la tenue" des suggestions R-S13/R-S14) — aperçu de composition, jamais une acquisition ; sans effet si déjà présente. */
@@ -1019,6 +1021,39 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setCapsuleSeason: (s) => setState((st) => ({ ...st, capsuleSeason: s })),
     setExploredStyle: (id) => setState((st) => ({ ...st, exploredStyleId: id })),
     clearExploredStyle: () => setState((st) => ({ ...st, exploredStyleId: null })),
+    // "Voir ma tenue" (Capsule → Tenue) et "Autre tenue" pendant l'exploration
+    // (recette 24/08/2026) : même pipeline pur que regen() (computeDefaultCapsule
+    // → generateOutfitWithFallback), mais sur la capsule du style exploré —
+    // jamais wardrobePool/profile.styles, jamais regen() lui-même. Un seul
+    // tirage aléatoire par appel (comme generateOutfit) : rappelé tel quel,
+    // "Autre tenue" produit donc naturellement un nouveau tirage.
+    viewExploredOutfit: () =>
+      setState((s) => {
+        if (!s.exploredStyleId) return s;
+        const exploredProfile = { ...profile, styles: [s.exploredStyleId] };
+        const season = s.capsuleSeason || currentSeasonKey();
+        const capsulePool = computeDefaultCapsule(exploredProfile, weatherRef.current, s.suggestedExcluded, season, vestiairePool);
+        const result = generateOutfitWithFallback(
+          capsulePool,
+          weatherRef.current,
+          s.occasion || "all",
+          s.workMode,
+          s.dateContext,
+          paletteHexes(profile),
+          profile.gender
+        );
+        return {
+          ...s,
+          outfit: result.ids,
+          outfitMissingCats: result.missingCats,
+          outfitFormalityDowngraded: result.formalityDowngraded,
+          outfitNoCompleteOutfit: result.noCompleteOutfit,
+          outfitFailureReason: result.reason ?? null,
+          outfitValidated: false,
+          dismissedSuggestions: [],
+          screen: "tenues",
+        };
+      }),
     swapPiece: (id, cat) =>
       setState((s) => {
         const outfitItems = s.outfit
