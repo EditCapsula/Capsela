@@ -10,7 +10,7 @@ import { currentSeasonKey } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
-import { paletteHexes, styleLabel, type StyleId } from "@/lib/profile";
+import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
 
@@ -29,6 +29,55 @@ function BagIcon() {
       <path d="M6 8h12l-1 12H7L6 8z" />
       <path d="M9 8V6a3 3 0 016 0v2" />
     </svg>
+  );
+}
+
+/**
+ * Card style "Explorer d'autres styles" (recette 24/08/2026, direction adaptée
+ * d'une proposition externe) — même construction que la card de sélection de
+ * style de ProfileSetupScreen (visuel STYLE_CONFIG, badge coché terracotta,
+ * label + desc en dessous, bordure terracotta + fond teinté à la sélection) :
+ * aucun nouveau pattern visuel, seulement redimensionnée pour un défilement
+ * horizontal compact. Repli gracieux si le visuel Storage ne charge pas, même
+ * principe que MoodboardCard (OnboardingScreen.tsx).
+ */
+function ExploreStyleCard({
+  id,
+  gender,
+  selected,
+  onClick,
+}: {
+  id: StyleId;
+  gender: Gender | null;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const cfg = styleConfigFor(gender)[id];
+  const [failed, setFailed] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      className={"relative flex-none w-[124px] text-left rounded-[14px] overflow-hidden border-[1.5px] cursor-pointer " + (selected ? "border-terracotta" : "border-border")}
+      style={{ background: selected ? "#F6EBE2" : "#FBF8F3" }}
+    >
+      <div className="w-full aspect-[4/5] relative" style={{ background: "#E6DCCB" }}>
+        {cfg.asset && !failed && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cfg.asset} alt="" onError={() => setFailed(true)} className="absolute inset-0 w-full h-full object-cover" />
+        )}
+        {selected && (
+          <span className="absolute top-[7px] right-[7px] w-[19px] h-[19px] rounded-full bg-terracotta flex items-center justify-center">
+            <svg width="10" height="8" viewBox="0 0 11 9" fill="none">
+              <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        )}
+      </div>
+      <div className="px-[10px] py-[9px]">
+        <div className="font-serif text-[13px] text-ink leading-[1.2]">{cfg.label}</div>
+        <div className="text-[10px] text-muted mt-[3px] leading-[1.3]">{cfg.desc}</div>
+      </div>
+    </button>
   );
 }
 
@@ -532,33 +581,29 @@ export default function TenuesScreen() {
             </button>
           ) : compatibleStyles.length > 0 ? (
             <div className="mt-[18px] text-left">
-              <div className="font-serif text-[14.5px] text-ink leading-[1.3]">D&apos;autres styles peuvent t&apos;inspirer</div>
+              <div className="text-[10.5px] tracking-[.14em] uppercase text-terracotta">✦ Une autre piste</div>
+              <div className="font-serif text-[16px] text-ink leading-[1.25] mt-[4px]">Explore un autre univers</div>
               <div className="text-[12.5px] text-muted leading-[1.5] mt-[6px]">
-                Explore une capsule qui contient les pièces adaptées. Ton style actuel restera inchangé.
+                Découvre les capsules qui peuvent compléter ton dressing pour cette occasion. Ton style personnel reste
+                inchangé.
               </div>
-              <div className="flex flex-wrap gap-[8px] mt-[14px]">
-                {compatibleStyles.map((id) => {
-                  const on = selectedExploreStyle === id;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => setSelectedExploreStyle(on ? null : id)}
-                      className={
-                        "px-[14px] py-[7px] rounded-full text-[12px] cursor-pointer font-sans border " +
-                        (on ? "bg-[#F6EBE2] border-terracotta text-terracotta" : "bg-card text-ink border-border")
-                      }
-                    >
-                      {styleLabel(id, profile.gender)}
-                    </button>
-                  );
-                })}
+              <div className="scrollarea flex gap-[10px] overflow-x-auto mt-[14px] pb-[2px]">
+                {compatibleStyles.map((id) => (
+                  <ExploreStyleCard
+                    key={id}
+                    id={id}
+                    gender={profile.gender}
+                    selected={selectedExploreStyle === id}
+                    onClick={() => setSelectedExploreStyle(selectedExploreStyle === id ? null : id)}
+                  />
+                ))}
               </div>
               {selectedExploreStyle && (
                 <button
                   onClick={handleConfirmExploredStyle}
                   className="mt-[16px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
                 >
-                  Explorer la capsule {styleLabel(selectedExploreStyle, profile.gender)} →
+                  Explorer la capsule {styleConfigFor(profile.gender)[selectedExploreStyle].label} →
                 </button>
               )}
             </div>
