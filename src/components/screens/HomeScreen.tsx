@@ -129,28 +129,6 @@ function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSPropert
   });
 }
 
-function HangerIcon({ size = 19 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="#F8F3EA" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 6.2a2.1 2.1 0 1 1 2.1-2.1" />
-      <path d="M12 6.2v2.1" />
-      <path d="M12 8.3 3.6 14.6a1.2 1.2 0 0 0 .72 2.17h15.36a1.2 1.2 0 0 0 .72-2.17Z" />
-    </svg>
-  );
-}
-
-function JournalIcon({ size = 19 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="#F8F3EA" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M5.5 3.5h11.2a1.8 1.8 0 0 1 1.8 1.8v13.4a1.8 1.8 0 0 1-1.8 1.8H5.5Z" />
-      <path d="M5.5 3.5a1.6 1.6 0 0 0 0 3.2" />
-      <path d="M9 8.6h6" />
-      <path d="M9 12h6" />
-      <path d="M9 15.4h3.6" />
-    </svg>
-  );
-}
-
 /**
  * Section "Explore L'édit Capsela" (refonte éditoriale 26/08/2026) — remplace
  * les 3 cards horizontales identiques (icône + texte + flèche, lisibles comme
@@ -189,20 +167,26 @@ function selectBoardPieces(items: Item[], max: number): Item[] {
 type BoardSlot = { left: number; top: number; w: number; h: number; rotate: number; z: number };
 const BOARD_SLOTS: Record<number, BoardSlot[]> = {
   1: [{ left: 24, top: 6, w: 54, h: 88, rotate: -2, z: 1 }],
+  // Dressing (2-3 pièces) — chevauchement réduit (recette 26/08/2026) pour
+  // que chaque pièce du dressing réel reste bien distincte à l'œil.
   2: [
-    { left: 2, top: 8, w: 56, h: 80, rotate: -4, z: 2 },
-    { left: 46, top: 30, w: 50, h: 66, rotate: 5, z: 1 },
+    { left: 0, top: 6, w: 50, h: 82, rotate: -3, z: 2 },
+    { left: 52, top: 26, w: 46, h: 64, rotate: 4, z: 1 },
   ],
   3: [
-    { left: 0, top: 10, w: 48, h: 78, rotate: -4, z: 2 },
-    { left: 44, top: 0, w: 42, h: 46, rotate: 5, z: 1 },
-    { left: 50, top: 48, w: 40, h: 48, rotate: -3, z: 3 },
+    { left: 0, top: 8, w: 44, h: 80, rotate: -3, z: 2 },
+    { left: 46, top: 0, w: 40, h: 44, rotate: 4, z: 1 },
+    { left: 50, top: 50, w: 38, h: 46, rotate: -2, z: 3 },
   ],
+  // Capsule (4 pièces) — pièces ~10% plus grandes (recette 26/08/2026) pour
+  // renforcer l'aspect sélection de styliste ; léger débord accepté sur les
+  // bords, absorbé par le rayon de la card (overflow-hidden), jamais hors
+  // de son container.
   4: [
-    { left: 0, top: 12, w: 44, h: 74, rotate: -4, z: 2 },
-    { left: 40, top: 0, w: 34, h: 40, rotate: 6, z: 1 },
-    { left: 62, top: 32, w: 36, h: 42, rotate: -5, z: 3 },
-    { left: 38, top: 50, w: 32, h: 40, rotate: 4, z: 1 },
+    { left: 0, top: 12, w: 48, h: 81, rotate: -4, z: 2 },
+    { left: 40, top: 0, w: 37, h: 44, rotate: 6, z: 1 },
+    { left: 62, top: 32, w: 40, h: 46, rotate: -5, z: 3 },
+    { left: 38, top: 50, w: 35, h: 44, rotate: 4, z: 1 },
   ],
 };
 
@@ -423,15 +407,7 @@ export default function HomeScreen() {
               <StyleBoard items={dressingPieces} height={116} />
             </div>
             <div className="px-[14px] pt-[10px] pb-[14px]">
-              <div className="flex items-center gap-[8px]">
-                <span
-                  className="w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: "#A66950" }}
-                >
-                  <HangerIcon size={13} />
-                </span>
-                <span className="font-serif text-[17px] text-ink">Dressing</span>
-              </div>
+              <div className="font-serif text-[17px] text-ink">Dressing</div>
               <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">Tes pièces, tes looks, ton vestiaire.</div>
               <div className="text-[12px] text-terracotta mt-[9px]">
                 {dressingCount} {dressingCount <= 1 ? "pièce" : "pièces"} →
@@ -475,15 +451,7 @@ export default function HomeScreen() {
           style={{ background: "linear-gradient(120deg, #F6F0E6 0%, #EEE1CE 100%)", padding: "16px 10px 16px 18px" }}
         >
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-[8px]">
-              <span
-                className="w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ background: "#A66950" }}
-              >
-                <JournalIcon size={13} />
-              </span>
-              <span className="font-serif text-[17px] text-ink">Journal des tenues</span>
-            </div>
+            <div className="font-serif text-[17px] text-ink">Journal des tenues</div>
             <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">Retrouve les tenues que tu as portées.</div>
             <div className="text-[12px] text-terracotta mt-[9px]">Voir le journal →</div>
           </div>
