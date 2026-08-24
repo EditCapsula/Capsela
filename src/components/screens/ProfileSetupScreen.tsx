@@ -471,7 +471,7 @@ export default function ProfileSetupScreen() {
         (canContinue ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
       }
     >
-      {isLast ? "Terminer le profil" : "Continuer"}
+      {isLast ? (state.profileSetupFromEdit ? "Enregistrer les modifications" : "Terminer mon profil") : "Continuer"}
     </button>
   );
 
