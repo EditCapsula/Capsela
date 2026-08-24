@@ -1607,11 +1607,152 @@ function isCompleteOutfit(items: Item[]): boolean {
   return hasTop && hasBottom;
 }
 
+/**
+ * Dimension par laquelle une idée se distingue des idées déjà retenues de sa
+ * section (cf. selectDiverseVariations). Sert deux fois : à départager les
+ * candidats à score équivalent, et à titrer la card sur une différence
+ * réellement observable plutôt que sur un rang de formalité (recette
+ * 26/08/2026, signalé : trois idées perçues comme la même tenue).
+ */
+export type DiversityAxis = "layer" | "bottom" | "color" | "shoes" | null;
+
 /** Une combinaison valide autour d'une pièce pivot, pour une occasion donnée. */
 export interface ItemOutfitVariation {
   occasion: OccasionKey;
   ids: number[];
   score: number;
+  /** Renseigné par la sélection finale — null pour la première idée d'une section (retenue sur son seul score). */
+  axis?: DiversityAxis;
+}
+
+/**
+ * Écart de score toléré pour préférer un look plus diversifié (recette
+ * 26/08/2026). Mesuré sur la section "Quotidien" d'un t-shirt, capsule Été :
+ * au meilleur score strict, 6 candidats mais UNE SEULE famille de bas — la
+ * diversité y est mathématiquement impossible ; à 5 points près, 18
+ * candidats couvrant les 4 familles. 10 points n'apporteraient qu'un type de
+ * chaussures de plus pour le double de concession. La dégradation maximale
+ * est donc bornée à 5 points sur 115, soit 4,3%, et n'est jamais consentie
+ * sans contrepartie : à diversité égale, c'est toujours le score qui tranche.
+ */
+const DIVERSITY_SCORE_TOLERANCE = 5;
+
+/** Famille de pièce structurante — dérivée de la seule catégorie, aucune donnée catalogue ajoutée. */
+function bottomFamilyOf(items: Item[]): string | null {
+  const onepiece = items.find((it) => it.cat === "robe" || it.cat === "combinaison");
+  if (onepiece) return "onepiece";
+  return items.find((it) => BOTTOMS.includes(it.cat))?.cat ?? null;
+}
+
+/** Famille de chaussures — le shoeType déjà porté par la pièce (catalogue statique comme vestiaire_universel). */
+function shoeFamilyOf(items: Item[]): string | null {
+  return items.find((it) => it.cat === "chaussures")?.shoeType ?? null;
+}
+
+/** Luminance relative d'un hex — sert uniquement à séparer les neutres entre eux (cf. colorFamilyOf). */
+function luminanceOf(hex: string): number {
+  const n = Number.parseInt((hex || "").replace("#", ""), 16);
+  if (!Number.isFinite(n)) return 0.5;
+  return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+}
+
+/**
+ * Famille de couleur du bas, dérivée du seul hex — aucune donnée ajoutée.
+ * isNeutralColor() ne suffit pas ici : Sable, Crème et Taupe sont TOUS
+ * neutres, donc indistinguables par ce test, alors que c'est précisément
+ * entre eux que se joue le problème signalé ("trois looks beiges"). Une
+ * pièce non neutre est identifiée par son nom de couleur ; une pièce neutre
+ * l'est par sa bande de clarté, ce qui sépare Crème (L=0,87) de Taupe
+ * (L=0,60) et de Marine (L=0,25), mais regroupe bien Sable (0,80) et Crème
+ * — deux beiges que rien ne distingue à l'œil sur une vignette.
+ */
+function colorFamilyOf(items: Item[]): string | null {
+  const bas = items.find((it) => it.cat === "robe" || it.cat === "combinaison") ?? items.find((it) => BOTTOMS.includes(it.cat));
+  if (!bas) return null;
+  if (!isNeutralColor(bas.color)) return "teinte:" + bas.color.toLowerCase();
+  const l = luminanceOf(bas.hex);
+  return "neutre:" + (l >= 0.7 ? "clair" : l >= 0.45 ? "moyen" : "foncé");
+}
+
+/** Présence d'une couche supplémentaire (veste/manteau). */
+function hasLayer(items: Item[]): boolean {
+  return items.some((it) => OUTERWEAR_CATS.includes(it.cat));
+}
+
+/**
+ * Sélection finale des idées affichées (recette 26/08/2026) — remplace un
+ * simple "3 meilleurs scores", qui produisait trois quasi-jumelles : la
+ * déduplication par structuralKeyOf garantit au moins une pièce différente,
+ * jamais une différence PERCEPTIBLE, et les scores sont très souvent ex
+ * æquo (6 candidats à 115 sur une même section), si bien que l'ordre retenu
+ * n'était en pratique que l'ordre de tirage.
+ *
+ * Ordre de priorité strict — validité, puis qualité, puis diversité :
+ * 1. les candidats sont ceux déjà produits, validés et scorés par le moteur ;
+ *    rien n'est composé, modifié ou complété ici ;
+ * 2. seuls les candidats à DIVERSITY_SCORE_TOLERANCE près du meilleur sont
+ *    éligibles, la première idée restant la mieux scorée comme avant ;
+ * 3. entre éligibles, on maximise la distance de diversité ; à distance
+ *    égale c'est le score qui tranche, puis l'ordre de tirage.
+ *
+ * Les quatre dimensions sont pondérées 8/4/2/1 pour être strictement
+ * lexicographiques (8 > 4+2+1) dans l'ordre demandé : famille de bas,
+ * famille de chaussures, famille de couleur, présence d'une couche.
+ *
+ * Une distance nulle signifie "ce look ne se distingue par aucune dimension
+ * perceptible" : il est écarté, quitte à ne retourner qu'une ou deux idées.
+ * Jamais de troisième quasi-doublon pour atteindre un compte rond.
+ */
+function selectDiverseVariations(
+  candidates: ItemOutfitVariation[],
+  pool: Item[],
+  limit: number
+): ItemOutfitVariation[] {
+  if (candidates.length <= 1) return candidates.slice(0, limit);
+  const itemsOf = (v: ItemOutfitVariation) => v.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
+  const traits = new Map(
+    candidates.map((v) => {
+      const items = itemsOf(v);
+      return [v, { bottom: bottomFamilyOf(items), shoes: shoeFamilyOf(items), color: colorFamilyOf(items), layer: hasLayer(items) }];
+    })
+  );
+
+  const byScore = [...candidates].sort((a, b) => b.score - a.score);
+  const floor = byScore[0].score - DIVERSITY_SCORE_TOLERANCE;
+  const eligible = byScore.filter((v) => v.score >= floor);
+
+  const used = new Set<ItemOutfitVariation>([byScore[0]]);
+  const selected: ItemOutfitVariation[] = [{ ...byScore[0], axis: null }];
+  const taken = [traits.get(byScore[0])!];
+
+  while (selected.length < limit) {
+    // `eligible` est trié par score décroissant : le premier candidat de
+    // distance maximale rencontré est donc déjà le mieux scoré à cette
+    // distance — le tri fait office de départage, sans second critère.
+    let best: { v: ItemOutfitVariation; axis: DiversityAxis; d: number } | null = null;
+    for (const v of eligible) {
+      if (used.has(v)) continue;
+      const t = traits.get(v)!;
+      // Une dimension compte comme nouvelle si AUCUNE idée déjà retenue ne la partage.
+      const newBottom = t.bottom != null && taken.every((x) => x.bottom !== t.bottom);
+      const newShoes = t.shoes != null && taken.every((x) => x.shoes !== t.shoes);
+      const newColor = t.color != null && taken.every((x) => x.color !== t.color);
+      const newLayer = taken.every((x) => x.layer !== t.layer);
+      const d = (newBottom ? 8 : 0) + (newShoes ? 4 : 0) + (newColor ? 2 : 0) + (newLayer ? 1 : 0);
+      if (d === 0) continue;
+      // Les poids classent les candidats dans l'ordre de priorité demandé
+      // (bas > chaussures > couleur > couche) ; l'axe retenu pour le TITRE
+      // suit un autre ordre, celui de ce qui se raconte le mieux : une veste
+      // en plus se voit avant un changement de type de chaussures.
+      const axis: DiversityAxis = newLayer ? "layer" : newBottom ? "bottom" : newColor ? "color" : "shoes";
+      if (!best || d > best.d) best = { v, axis, d };
+    }
+    if (!best) break;
+    used.add(best.v);
+    selected.push({ ...best.v, axis: best.axis });
+    taken.push(traits.get(best.v)!);
+  }
+  return selected;
 }
 
 /**
@@ -1638,7 +1779,14 @@ export function getOutfitsForItem(
 
   const maxPerOccasion = opts.maxPerOccasion ?? 3;
   const maxTotal = opts.maxTotal ?? 18;
-  const attemptsPerOccasion = opts.attemptsPerOccasion ?? 30;
+  // 30 -> 60 (recette 26/08/2026) : sert UNIQUEMENT à enrichir le vivier de
+  // candidats offert au reclassement par diversité, jamais à modifier la
+  // génération, la validation ou le scoring — chaque tirage passe exactement
+  // les mêmes filtres qu'avant. Sans cela, les occasions peu couvertes
+  // n'offrent pas de quoi diversifier : "Voyage" passe de 2 à 6 candidats.
+  // Coût mesuré à l'ouverture de l'écran (10 occasions, une passe mémoïsée) :
+  // 23 ms -> 37 ms.
+  const attemptsPerOccasion = opts.attemptsPerOccasion ?? 60;
   const structuralCats: CategoryKey[] = [...CLOTHING_CATS, "chaussures"];
 
   // La préférence de palette (R-S10) n'est censée être qu'une inclination
@@ -1680,8 +1828,7 @@ export function getOutfitsForItem(
       const { score } = computeLookScore(outfitItems, occasion, preferredHexes, null, new Set(), weather, "Présentiel", "Verre");
       candidates.push({ occasion, ids, score });
     }
-    candidates.sort((a, b) => b.score - a.score);
-    const top = candidates.slice(0, Math.min(maxPerOccasion, maxTotal - results.length));
+    const top = selectDiverseVariations(candidates, pool, Math.min(maxPerOccasion, maxTotal - results.length));
     top.forEach((c) => seenKeys.add(structuralKeyOf(c.ids)));
     results.push(...top);
   }
@@ -1729,12 +1876,50 @@ export function outfitFormality(items: Item[], pivotId: number): number {
   return clothingLike.reduce((sum, it) => sum + formalityOf(it), 0) / clothingLike.length;
 }
 
-/** Sélectionne le titre correspondant au rang de formalité d'une variante parmi les `groupSize` variantes de sa section occasion (rang 0 = la plus décontractée). */
-function styleTitleFor(occasion: OccasionKey, rank: number, groupSize: number): string {
+/**
+ * Titre d'une idée (recette 26/08/2026 — signalé : "Simple et facile à
+ * porter" / "Décontractée mais affirmée" attribués à deux tenues de
+ * formalité STRICTEMENT identique). L'ancienne version dérivait le titre du
+ * seul rang de formalité ; sur valeurs égales, le tri est arbitraire, et
+ * l'écran annonçait donc un dégradé que les données ne portaient pas.
+ *
+ * Le titre décrit désormais la différence par laquelle l'idée a été retenue
+ * (`axis`, cf. selectDiverseVariations) — donc toujours quelque chose
+ * d'observable dans la composition affichée. Le repli sur la formalité n'est
+ * conservé que pour un écart RÉEL (≥ 1 point), jamais entre ex æquo. La
+ * première idée d'une section (axis null) garde le libellé neutre de son
+ * occasion, sans promesse de progression.
+ */
+function styleTitleFor(occasion: OccasionKey, axis: DiversityAxis, items: Item[], pivotId: number, formalityGap: number): string {
   const tiers = OCCASION_STYLE_TITLES[occasion] || DEFAULT_STYLE_TITLES;
-  if (groupSize <= 1) return tiers[1] ?? tiers[0];
-  const tierIdx = Math.round((rank / (groupSize - 1)) * (tiers.length - 1));
-  return tiers[Math.min(tiers.length - 1, Math.max(0, tierIdx))];
+  const neutral = tiers[1] ?? tiers[0];
+  const others = items.filter((it) => it.id !== pivotId);
+
+  if (axis === "layer") {
+    const layer = others.find((it) => OUTERWEAR_CATS.includes(it.cat));
+    if (layer) return `Avec ${indefiniteArticle(layer)} ${pieceBase(layer)}`;
+  }
+  if (axis === "bottom") {
+    const bas = others.find((it) => it.cat === "robe" || it.cat === "combinaison") ?? others.find((it) => BOTTOMS.includes(it.cat));
+    if (bas) return `Avec ${indefiniteArticle(bas)} ${pieceBase(bas)}`;
+  }
+  if (axis === "color") {
+    const bas = others.find((it) => it.cat === "robe" || it.cat === "combinaison") ?? others.find((it) => BOTTOMS.includes(it.cat));
+    if (bas) {
+      if (!isNeutralColor(bas.color)) return "Version plus contrastée";
+      const l = luminanceOf(bas.hex);
+      return l >= 0.7 ? "Version claire" : l >= 0.45 ? "Version tout en nuances" : "Version plus foncée";
+    }
+  }
+  if (axis === "shoes") {
+    const sh = others.find((it) => it.cat === "chaussures");
+    if (sh?.shoeType) return `Version ${sh.shoeType.toLowerCase()}`;
+  }
+  // Écart de formalité réel uniquement — jamais un titre de progression
+  // inventé entre deux tenues de formalité identique.
+  if (formalityGap >= 1) return "Version plus habillée";
+  if (formalityGap <= -1) return "Version plus décontractée";
+  return neutral;
 }
 
 /** Repli minimal par occasion (phrase) — cas rare où même une description par énumération n'a rien à dire (pivot + chaussures seuls). */
@@ -1883,6 +2068,30 @@ function agreeColorForGroup(colorName: string, items: Item[]): string {
   return agreeColor(colorName, { gender, plural: true });
 }
 
+/**
+ * Articles accordés (correctif 26/08/2026, signalé : "le chaussures taupe").
+ * L'accord de couleur était déjà géré par agreeColor, mais l'article restait
+ * codé en dur dans les gabarits de phrase, ce qui produisait un masculin
+ * systématique sur les pièces féminines ou plurielles. Élision devant
+ * voyelle ou h muet pour l'article défini ("l'écharpe").
+ */
+function definiteArticle(it: Item, noun: string): string {
+  const info = nounInfoOf(it);
+  if (info.plural) return "les ";
+  // Élision devant voyelle uniquement, jamais devant h : le français ne
+  // permet pas de deviner l'aspiration depuis la graphie, et les noms de
+  // pièces concernés sont aspirés ("le haut", pas "l'haut"). Un éventuel h
+  // muet donnerait "le ..." — correct à l'usage, contrairement à l'inverse.
+  if (/^[aeiouyàâäéèêëîïôöùûü]/i.test(noun)) return "l'";
+  return info.gender === "f" ? "la " : "le ";
+}
+
+function indefiniteArticle(it: Item): string {
+  const info = nounInfoOf(it);
+  if (info.plural) return "des";
+  return info.gender === "f" ? "une" : "un";
+}
+
 /** Libellé compact d'une pièce, toujours dérivé de ses données réelles — accord naturel de couleur ("pantalon noir", "baskets blanches"), jamais la construction invariable "en {couleur}". */
 function pieceLabel(it: Item): string {
   const base = pieceBase(it);
@@ -1934,11 +2143,13 @@ export function describeOutfitVariation(
   items: Item[],
   pivotId: number,
   styleRank: number,
-  groupSize: number
+  groupSize: number,
+  /** Écart de formalité de cette variante à la moyenne de sa section — repli de titrage, seulement s'il est réel (cf. styleTitleFor). */
+  formalityGap = 0
 ): OutfitStyleInsight {
   const pivot = items.find((it) => it.id === pivotId);
   const others = items.filter((it) => it.id !== pivotId);
-  const title = styleTitleFor(variation.occasion, styleRank, groupSize);
+  const title = styleTitleFor(variation.occasion, variation.axis ?? null, items, pivotId, formalityGap);
 
   // Contraste de formalité (structurant vs décontracté) parmi les pièces
   // vêtement/chaussures, hors pivot — les accessoires/bijoux ne
@@ -1952,7 +2163,17 @@ export function describeOutfitVariation(
       const structurer = withFormality.find((x) => x.f === maxF)!.it;
       const casual = withFormality.find((x) => x.f === minF)!.it;
       if (structurer.id !== casual.id) {
-        const sentence = `Le ${pieceLabel(structurer)} structure le ${pieceBase(pivot)}, tandis que le ${pieceLabel(casual)} garde le look décontracté.`;
+        // Articles ET verbes accordés (correctif 26/08/2026) : le gabarit
+        // portait un article masculin singulier et un verbe au singulier en
+        // dur, d'où "le chaussures taupe" puis "les chaussures blanches
+        // garde". L'accord suit nounInfoOf, déjà utilisé par agreeColor.
+        const artS = definiteArticle(structurer, pieceBase(structurer));
+        const verbS = nounInfoOf(structurer).plural ? "structurent" : "structure";
+        const verbC = nounInfoOf(casual).plural ? "gardent" : "garde";
+        const sentence =
+          `${artS.charAt(0).toUpperCase()}${artS.slice(1)}${pieceLabel(structurer)} ${verbS} ` +
+          `${definiteArticle(pivot, pieceBase(pivot))}${pieceBase(pivot)}, tandis que ` +
+          `${definiteArticle(casual, pieceBase(casual))}${pieceLabel(casual)} ${verbC} le look décontracté.`;
         return { title, sentence };
       }
     }

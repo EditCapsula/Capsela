@@ -289,6 +289,13 @@ export default function ItemOutfitsScreen() {
               .sort((a, b) => outfitFormality(a.pieces, pivot.id) - outfitFormality(b.pieces, pivot.id))
               .map((x, rank) => [x.variation, rank])
           );
+          // Écart de formalité à la moyenne de la section — repli de titrage
+          // quand aucune dimension de diversité ne distingue l'idée (recette
+          // 26/08/2026). Un ÉCART, jamais un rang : deux tenues de formalité
+          // identique donnaient auparavant deux titres suggérant une
+          // progression inexistante, le tri sur ex æquo étant arbitraire.
+          const formalities = withPieces.map((x) => outfitFormality(x.pieces, pivot.id));
+          const avgFormality = formalities.reduce((sum, f) => sum + f, 0) / (formalities.length || 1);
 
           return (
             <div key={group.occasion} className="mt-[20px]">
@@ -305,7 +312,8 @@ export default function ItemOutfitsScreen() {
               <div className="flex flex-col gap-[10px]">
                 {withPieces.map(({ variation, pieces }) => {
                   const styleRank = rankOf.get(variation)!;
-                  const insight = describeOutfitVariation(variation, pieces, pivot.id, styleRank, withPieces.length);
+                  const formalityGap = outfitFormality(pieces, pivot.id) - avgFormality;
+                  const insight = describeOutfitVariation(variation, pieces, pivot.id, styleRank, withPieces.length, formalityGap);
                   return (
                     // Card entièrement cliquable (section 8) : un seul vrai
                     // élément interactif (button), jamais de bouton imbriqué —
