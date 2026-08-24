@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { ONBOARDING_SLIDES } from "@/lib/data";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
@@ -29,11 +30,20 @@ const CAPSULE_FEATURES: { glyph: string; label: string; desc: string }[] = [
 
 function MoodboardCard({ id, className }: { id: StyleId; className?: string }) {
   const cfg = STYLE_CONFIG.femme[id];
+  // Repli gracieux si le visuel Storage ne charge pas (même principe que
+  // PolaroidPhoto, HomeScreen.tsx) : le libellé reste lisible sur l'aplat
+  // de fond, jamais une icône d'image cassée.
+  const [failed, setFailed] = useState(false);
   return (
     <div className={"rounded-[14px] overflow-hidden bg-[#E6DCCB] relative " + (className || "")}>
-      {cfg.asset && (
+      {cfg.asset && !failed && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={cfg.asset} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <img
+          src={cfg.asset}
+          alt=""
+          onError={() => setFailed(true)}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
       )}
       <div className="absolute bottom-0 left-0 right-0 px-[9px] py-[7px] bg-gradient-to-t from-black/45 to-transparent">
         <div className="text-[10.5px] text-white font-medium leading-[1.2]">{cfg.label}</div>
