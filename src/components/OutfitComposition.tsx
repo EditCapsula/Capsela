@@ -25,12 +25,18 @@ import type { CategoryKey, Item } from "@/lib/types";
  * visuel aux pièces complémentaires, qui sont ce qui distingue réellement
  * les variantes entre elles.
  *
- * `pieceMarkers`, propre à "compact" (recette 26/08/2026, section 3 —
- * remplace un ✦ sur chaque pièce suggérée, trop de bruit visuel) : marqueur
- * ✓/✦ discret par vignette, fourni PAR L'APPELANT uniquement pour les
- * tenues mixtes (Dressing + Capsule) où la distinction aide réellement à
- * comprendre le look — jamais pour une tenue homogène, où une légende
- * unique en haut d'écran suffit déjà.
+ * Provenance en "compact" (arbitrage 26/08/2026, remplace les glyphes ✓/✦
+ * dont la signification n'était pas lisible et changeait de sens d'une card
+ * à l'autre) : deux micro-libellés en toutes lettres, dans le langage de
+ * pastille déjà utilisé par TenuesScreen et LookDetailScreen.
+ * - "Ta pièce" sur le pivot (anchorId), en complément de son contour
+ *   terracotta — traitement discret mais nommé, jamais un encadrement lourd.
+ * - "Suggestion" sur les seules pièces listées dans `suggestedIds`, fourni
+ *   PAR L'APPELANT uniquement pour les tenues mixtes (Dressing + Capsule) où
+ *   la distinction aide réellement à lire le look. Une pièce du dressing ne
+ *   porte jamais de pastille : son absence est signifiante parce que la
+ *   règle est constante. Une tenue homogène tout-suggéré n'en porte aucune
+ *   non plus — la phrase de provenance en haut d'écran la couvre déjà.
  */
 export type CompositionVariant = "hero" | "compact";
 type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
@@ -57,8 +63,13 @@ const TIER_SPAN: Record<CompositionTier, { col: number; row: number }> = {
 
 const VARIANT_CONFIG: Record<CompositionVariant, { rowHeight: string; gap: number; radius: number; pad: number }> = {
   hero: { rowHeight: "clamp(58px, 17vw, 74px)", gap: 6, radius: 14, pad: 8 },
-  // Réduit (recette 26/08/2026, section 8 : "l'écran devient très long") —
-  // cards plus compactes, plusieurs variantes visibles simultanément.
+  // Cards compactes, plusieurs variantes visibles simultanément (recette
+  // 26/08/2026, section 8 : "l'écran devient très long"). Taille des vignettes
+  // volontairement INCHANGÉE par la refonte densité (section 5) : mesuré, la
+  // moindre augmentation ici annule l'économie faite sur le bloc texte (une
+  // composition fait 3 rangées, donc +2px de rangée = +6px de card). La part
+  // relative de la composition monte quand même, puisque c'est le texte qui
+  // se resserre — et les vêtements restent exactement aussi reconnaissables.
   compact: { rowHeight: "clamp(36px, 10vw, 46px)", gap: 4, radius: 10, pad: 5 },
 };
 
@@ -83,14 +94,14 @@ export function OutfitComposition({
   items,
   variant = "hero",
   anchorId,
-  pieceMarkers,
+  suggestedIds,
 }: {
   items: Item[];
   variant?: CompositionVariant;
-  /** Id de la pièce pivot à distinguer par un contour terracotta — jamais utilisé pour un autre état UI (brief design 22/08/2026, section 2). */
+  /** Id de la pièce pivot à distinguer par un contour terracotta + "Ta pièce" — jamais utilisé pour un autre état UI (brief design 22/08/2026, section 2). */
   anchorId?: number;
-  /** Statut ("owned" = ✓ Dressing, "suggested" = ✦ Capsule) des pièces à marquer — absente d'une entrée = pas de marqueur pour cette pièce. */
-  pieceMarkers?: Record<number, "owned" | "suggested">;
+  /** Ids des pièces à marquer "Suggestion" (issues de la capsule) — vide/absent = aucune pastille. */
+  suggestedIds?: number[];
 }) {
   const cfg = VARIANT_CONFIG[variant];
   return (
@@ -113,7 +124,8 @@ export function OutfitComposition({
         // rapprocher du rendu plat des photos produit.
         const isRealPhoto = img.kind === "photo";
         const isAnchor = anchorId != null && it.id === anchorId;
-        const marker = variant === "compact" ? pieceMarkers?.[it.id] : undefined;
+        const badge =
+          variant !== "compact" ? null : isAnchor ? "Ta pièce" : suggestedIds?.includes(it.id) ? "Suggestion" : null;
         // Pivot déjà connu : palier réduit en "compact" pour ne pas
         // occuper la majorité de la card (section 5) — seulement pour les
         // rôles "principal" (haut/bas/robe/veste), jamais un agrandissement
@@ -146,12 +158,20 @@ export function OutfitComposition({
               filter: isRealPhoto ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
             }}
           >
-            {marker && (
+            {badge && (
+              // Même pastille que "Suggérée" ailleurs dans l'app
+              // (LookDetailScreen/TenuesScreen), à l'échelle de la vignette.
+              // "Ta pièce" en version claire pour rester discrète et faire
+              // corps avec le contour terracotta ; "Suggestion" en terracotta
+              // plein, comme partout ailleurs pour une pièce non possédée.
               <span
-                className={"absolute top-[3px] right-[3px] flex items-center justify-center rounded-full " + (marker === "owned" ? "text-[#7B7366]" : "text-terracotta")}
-                style={{ width: 14, height: 14, fontSize: 8, background: "rgba(251,248,243,.92)", boxShadow: "0 1px 2px rgba(29,26,22,.18)" }}
+                className={
+                  "absolute top-[4px] left-[4px] rounded-full tracking-[.06em] uppercase whitespace-nowrap " +
+                  (isAnchor ? "bg-card text-terracotta" : "bg-terracotta text-cream")
+                }
+                style={{ fontSize: 7.5, lineHeight: "10px", padding: "2px 6px", boxShadow: "0 1px 2px rgba(29,26,22,.14)" }}
               >
-                {marker === "owned" ? "✓" : "✦"}
+                {badge}
               </span>
             )}
           </div>
