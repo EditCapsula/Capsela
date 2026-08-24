@@ -47,6 +47,27 @@ export function wearCounts(history: HistoryEntry[]): Map<number, number> {
   return counts;
 }
 
+/**
+ * Jours écoulés depuis le dernier port réel d'une pièce, dérivé de la date
+ * de la plus récente entrée d'historique qui la contient — jamais du champ
+ * Item.worn stocké (correctif 25/08/2026, signalé : "Aujourd'hui" restait
+ * affiché indéfiniment). worn n'est mis à jour QUE par une action "porter"
+ * explicite (wearPieceToday/wearOutfitToday/wearLookToday, store.tsx), qui
+ * le fige à 0 — rien ne le fait ensuite "vieillir" jour après jour tant
+ * qu'aucune nouvelle action n'est déclenchée : une pièce portée il y a 3
+ * semaines restait donc affichée "Porté aujourd'hui" jusqu'à son prochain
+ * port réel. null si la pièce n'apparaît dans aucune entrée d'historique
+ * (jamais porté).
+ */
+export function daysSinceWorn(history: HistoryEntry[], itemId: number): number | null {
+  let latestTs: number | null = null;
+  for (const h of history) {
+    if (h.pieceIds.includes(itemId) && (latestTs == null || h.ts > latestTs)) latestTs = h.ts;
+  }
+  if (latestTs == null) return null;
+  return Math.max(0, Math.floor((Date.now() - latestTs) / 86400000));
+}
+
 export interface JournalStats {
   total: number;
   worn: number;

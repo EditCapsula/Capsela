@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { bestStyleFor } from "@/lib/capsule";
 import { isCoupeApplicable, isSizeApplicable, suggestName } from "@/lib/attributes";
+import { daysSinceWorn } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import BottomSheet from "@/components/BottomSheet";
@@ -152,6 +153,13 @@ export default function PieceScreen() {
 
   const suggested = state.activeSuggested;
   const pNever = active.worn == null;
+  // Jours réels depuis le dernier port, dérivés de l'historique plutôt que
+  // du champ worn stocké (correctif 25/08/2026, même cause que "Mes
+  // pièces" : worn est figé par la dernière action "porter" et ne vieillit
+  // jamais tout seul — "Porté aujourd'hui" restait sinon affiché
+  // indéfiniment). Non calculé pour une pièce suggérée, qui n'affiche pas
+  // ce statut.
+  const daysWorn = !suggested && !pNever ? daysSinceWorn(state.history, active.id) : null;
   const resolvedImage = resolveItemImage(active);
 
   // Type unifié (chaussure/sac/bijou/accessoire/sous-type générique) — même
@@ -244,7 +252,7 @@ export default function PieceScreen() {
             style={{ background: pNever ? "#A66950" : "#7B7366" }}
           />
           <span className="text-[13px]" style={{ color: pNever ? "#A66950" : "#7B7366" }}>
-            {pNever ? "Jamais porté" : wornAgo(active.worn)}
+            {pNever ? "Jamais porté" : wornAgo(daysWorn ?? active.worn)}
           </span>
         </div>
       )}

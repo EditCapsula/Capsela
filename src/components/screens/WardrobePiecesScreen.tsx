@@ -1,7 +1,7 @@
 "use client";
 
 import { useCapsela } from "@/lib/store";
-import { wearCounts } from "@/lib/selectors";
+import { daysSinceWorn, wearCounts } from "@/lib/selectors";
 import { wornAgo } from "@/lib/data";
 
 /**
@@ -10,12 +10,21 @@ import { wornAgo } from "@/lib/data";
  * lisible pour parcourir tout le dressing d'un coup. "Jamais porté" reste
  * décidé par it.worn (source de vérité déjà utilisée partout ailleurs,
  * ex. PieceScreen) ; le total "Porté X fois" vient de l'historique réel
- * (wearCounts, jamais un compteur séparé désynchronisable) — correctif
- * 25/08/2026 : ne plus laisser wearCounts décider seul de "jamais porté",
- * sous peine de contredire it.worn si l'historique est incomplet (ex.
- * fetchOutfitHistory revenu vide sur un aléa réseau) alors que la pièce a
- * bien été portée. "Aujourd'hui" affiché en plus quand worn === 0, jamais
- * à la place du total.
+ * (wearCounts, jamais un compteur séparé désynchronisable).
+ *
+ * Correctif 25/08/2026 (signalé : "Aujourd'hui" affiché sur plusieurs
+ * pièces manifestement pas portées le jour même) — it.worn est figé par la
+ * dernière action "porter" et ne "vieillit" jamais tout seul ; le nombre de
+ * jours réel vient maintenant de daysSinceWorn (dérivé de la date de la
+ * plus récente entrée d'historique). Même correctif que l'ancien "Porté
+ * aujourd'hui" qui restait affiché indéfiniment.
+ *
+ * "Aujourd'hui" affiché en pastille sur la photo plutôt qu'en 3e ligne de
+ * légende (correctif 25/08/2026, signalé : cartes désalignées) — une
+ * légende à hauteur variable (2 ou 3 lignes selon la pièce) agrandissait la
+ * ligne de grille concernée, avec un risque de décalage visuel entre les
+ * deux colonnes ; la légende reste maintenant toujours sur 2 lignes,
+ * quelle que soit la pièce.
  */
 export default function WardrobePiecesScreen() {
   const { state, actions } = useCapsela();
@@ -54,32 +63,40 @@ export default function WardrobePiecesScreen() {
         <div className="grid grid-cols-2 gap-x-[12px] gap-y-[22px] mt-4">
           {items.map((it) => {
             const count = counts.get(it.id) || 0;
-            const isToday = it.worn === 0;
             // it.worn (jamais null si déjà porté) reste la source de vérité
             // de "jamais porté" (correctif 25/08/2026, signalé en revue :
             // wearCounts seul pouvait afficher "Jamais porté" pour une pièce
             // dont worn est renseigné mais dont l'historique n'a pas (ou
             // plus) d'entrée correspondante — ex. fetchOutfitHistory revenu
-            // vide sur un aléa réseau). count ne sert plus qu'à composer le
-            // texte "Porté X fois" quand une pièce a bien été portée.
+            // vide sur un aléa réseau).
             const neverWorn = it.worn == null;
+            const days = neverWorn ? null : daysSinceWorn(state.history, it.id);
+            const isToday = days === 0;
             return (
               <button key={it.id} onClick={() => actions.openItem(it.id, false)} className="text-left cursor-pointer">
                 <div
-                  className="w-full rounded-[14px] border border-border overflow-hidden"
+                  className="relative w-full rounded-[14px] border border-border overflow-hidden"
                   style={
                     it.photoUrl
                       ? { aspectRatio: "4/5", backgroundImage: `url(${it.photoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
                       : { aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
                   }
-                />
+                >
+                  {isToday && (
+                    <span
+                      className="absolute top-[8px] right-[8px] text-[9.5px] tracking-[.04em] text-cream rounded-full px-[8px] py-[3px]"
+                      style={{ background: "rgba(166,105,80,.92)" }}
+                    >
+                      Aujourd&apos;hui
+                    </span>
+                  )}
+                </div>
                 <div className="text-[13px] text-ink mt-[8px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
                   {it.name}
                 </div>
                 <div className="text-[11px] text-placeholder mt-[2px]">
-                  {neverWorn ? "Jamais porté" : count > 0 ? `Porté ${count} fois` : wornAgo(it.worn)}
+                  {neverWorn ? "Jamais porté" : count > 0 ? `Porté ${count} fois` : wornAgo(days)}
                 </div>
-                {isToday && <div className="text-[11px] text-terracotta mt-[1px]">Aujourd&apos;hui</div>}
               </button>
             );
           })}
