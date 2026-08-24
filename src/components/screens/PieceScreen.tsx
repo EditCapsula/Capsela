@@ -5,9 +5,12 @@ import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { bestStyleFor } from "@/lib/capsule";
 import { isCoupeApplicable, isSizeApplicable, suggestName } from "@/lib/attributes";
 import { daysSinceWorn, inactivityInfo } from "@/lib/selectors";
+import { nounInfoOf } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import BottomSheet from "@/components/BottomSheet";
+
+const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -156,10 +159,34 @@ export default function PieceScreen() {
   const daysWorn = !suggested && !pNever ? daysSinceWorn(state.history, active.id) : null;
   const resolvedImage = resolveItemImage(active);
 
+  // Statut de port accordé au genre du vêtement (recette 26/08/2026,
+  // signalé : "Jamais porté" pour une robe) — même détection de genre que
+  // le reste des descriptions de tenues (nounInfoOf, logic.ts), jamais un
+  // second moteur d'accord. wornAgo() est toujours au masculin par défaut
+  // ("Porté hier") ; seul son participe de tête est ré-accordé, le reste de
+  // la phrase ne varie jamais avec le genre.
+  const feminine = nounInfoOf(active).gender === "f";
+  const wornStatusLabel = pNever
+    ? feminine
+      ? "Jamais portée"
+      : "Jamais porté"
+    : feminine
+      ? wornAgo(daysWorn ?? active.worn).replace(/^Porté/, "Portée")
+      : wornAgo(daysWorn ?? active.worn);
+
   // Type unifié (chaussure/sac/bijou/accessoire/sous-type générique) — même
   // hiérarchie que typeOptionsFor/typeValue côté AddScreen, en lecture seule ici.
   const typeValue = active.shoeType || active.sacType || active.bijouType || active.accessoireType || active.subtype || null;
   const eyebrow = (typeValue || CATLABEL[active.cat]).toUpperCase();
+  // Longueur vs Type (recette 26/08/2026, signalé : "TYPE → Midi", une
+  // longueur affichée comme un type) — seuls jupe et robe ont des
+  // sous-types qui sont des longueurs (Mini/Midi/Longue/Courte, cf.
+  // SUBTYPES dans data.ts) ; ailleurs (chaussures, sac, bijou, accessoire,
+  // veste, manteau...) le sous-type est un vrai type, jamais une longueur.
+  // Ligne masquée quand vide plutôt que de retomber sur CATLABEL : la
+  // catégorie ("Robe") est déjà donnée par la ligne de synthèse au-dessus,
+  // inutile de la répéter.
+  const isLength = Boolean(active.subtype && LENGTH_SUBTYPES.has(active.subtype));
   const displayName =
     active.name && active.name !== "Nouvelle pièce"
       ? active.name
@@ -246,7 +273,7 @@ export default function PieceScreen() {
             style={{ background: pNever ? "#A66950" : "#7B7366" }}
           />
           <span className="text-[13px]" style={{ color: pNever ? "#A66950" : "#7B7366" }}>
-            {pNever ? "Jamais porté" : wornAgo(daysWorn ?? active.worn)}
+            {wornStatusLabel}
           </span>
         </div>
       )}
@@ -266,7 +293,7 @@ export default function PieceScreen() {
           {active.sacType && <InfoRow label="Type de sac" value={active.sacType} />}
           {active.bijouType && <InfoRow label="Type de bijou" value={active.bijouType} />}
           {active.accessoireType && <InfoRow label="Type d'accessoire" value={active.accessoireType} />}
-          {active.subtype && <InfoRow label="Type" value={active.subtype} />}
+          {active.subtype && <InfoRow label={isLength ? "Longueur" : "Type"} value={active.subtype} />}
         </div>
       ) : (
         <div className="flex flex-col gap-[11px] mt-3 bg-card border border-border rounded-[14px] px-4 py-[14px]">
@@ -282,7 +309,7 @@ export default function PieceScreen() {
           <CharRow icon={<LeafIcon />} label="Saison" value={active.season} />
           <CharRow icon={<FabricIcon />} label="Matière" value={active.matiere || "Non renseignée"} />
           {coupeApplicable && <CharRow icon={<TshirtIcon />} label="Coupe" value={active.coupe || "Non renseignée"} />}
-          <CharRow icon={<HangerIcon />} label="Type" value={typeValue || CATLABEL[active.cat]} />
+          {typeValue && <CharRow icon={<HangerIcon />} label={isLength ? "Longueur" : "Type"} value={typeValue} />}
         </div>
       )}
 
@@ -311,7 +338,7 @@ export default function PieceScreen() {
             onClick={() => actions.openItemOutfits(active.id, false)}
             className="mt-[18px] w-full bg-ink text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
           >
-            ✦ Voir des tenues avec cette pièce
+            Voir des tenues avec cette pièce
           </button>
           <button
             onClick={() => setLookSheetOpen(true)}

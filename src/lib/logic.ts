@@ -1738,7 +1738,8 @@ const SUBTYPE_GENDER: Partial<Record<CategoryKey, Record<string, NounInfo>>> = {
   combinaison: { combinaison: { gender: "f" }, combishort: { gender: "m" }, salopette: { gender: "f" } },
 };
 
-function nounInfoOf(it: Item): NounInfo {
+/** Genre grammatical d'une pièce, exposé (recette 26/08/2026, "Jamais porté" → accord au vêtement, PieceScreen) — même détection que le reste des descriptions de tenues, jamais un second moteur d'accord. */
+export function nounInfoOf(it: Item): NounInfo {
   const catInfo = CAT_GENDER[it.cat] || { gender: "m" as const };
   if (!NOUN_SUBTYPE_CATS.has(it.cat)) return catInfo;
   const sub = it.subtype?.trim().toLowerCase();
