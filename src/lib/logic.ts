@@ -2,7 +2,7 @@ import type { CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, 
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
-import { morphoFit, morphoVigilance } from "./capsule";
+import { currentSeasonKey, morphoFit, morphoVigilance } from "./capsule";
 import {
   coupeOf,
   formalityOf,
@@ -610,6 +610,13 @@ export function generateOutfit(
   // homme (un short homme trop frais n'appelle pas de collant). Jamais non
   // plus pour un pantalon/jean (R-B19 — les collants ne se portent qu'avec
   // robe/jupe/short).
+  //
+  // Déclencheur élargi pour le short (26/08/2026, révision R-B19 — pas une
+  // nouvelle règle) : en dehors de la période été (Automne/Hiver/Printemps),
+  // un short reste possible (R-B20 ne l'exclut qu'en dessous de 22°C, pas
+  // par saison) mais doit systématiquement être associé à un collant — plus
+  // seulement dans le cas de repli météo. Jupe/robe gardent exactement
+  // l'ancien déclencheur (repli météo uniquement), inchangé.
   let needsCollant = false;
   // Correctif 22/08/2026 (signalé : "aucune de mes combinaisons ne me soit
   // proposées dans les tenues recommandées") — ce tirage "pièce unique" ne
@@ -661,7 +668,8 @@ export function generateOutfit(
     if (h) ids.push(h.id);
     if (b) ids.push(b.id);
     if (compensatingVeste) { chosen.push(compensatingVeste); ids.push(compensatingVeste.id); }
-    if (b && (b.cat === "jupe" || b.cat === "short") && b.meteoMinTemp != null && weather.temp < b.meteoMinTemp) needsCollant = true;
+    if (b && b.cat === "jupe" && b.meteoMinTemp != null && weather.temp < b.meteoMinTemp) needsCollant = true;
+    if (b && b.cat === "short" && currentSeasonKey() !== "Été") needsCollant = true;
   }
   if (needsCollant && gender === "femme") {
     const collantPool = poolFor(["accessoire"]).filter((i) => i.cat === "accessoire" && i.accessoireType === "Collants");
