@@ -17,13 +17,13 @@ export default function WelcomeScreen() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo-full.svg" alt="L'édit Capsela" className="w-[220px] h-auto" style={{ filter: "brightness(0) invert(1)" }} />
         <div className="font-serif italic text-[21px] text-cream-dark-soft mt-5 leading-[1.35]">
-          Ton styliste personnel,
+          La bonne tenue,
           <br />
-          chaque matin.
+          au bon moment.
         </div>
         <div className="text-[13px] text-cream-dark-muted mt-4 leading-[1.55] max-w-[280px]">
-          Des tenues pensées pour ta silhouette, tes goûts, la météo et tes sorties — à partir de ton
-          propre dressing.
+          Des idées de tenues adaptées à ton style, à la météo et à tes occasions — pensées à partir de
+          ta capsule et de ton dressing.
         </div>
       </div>
       <div className="px-7 pb-10 flex flex-col gap-3">
