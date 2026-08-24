@@ -247,20 +247,20 @@ const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
   homme: ["/editorial/editcapsela-homme3-hp.jpg", "/editorial/editcapsela-homme1-hp.jpg", "/editorial/editcapsela-homme2-hp.jpg"],
 };
 
-// Composition "éventail" (recette 26/08/2026, 2e correctif — signalé :
-// pile trop superposée, principale masquant trop les deux autres, et le
-// polaroid gauche tronqué par le bord de la card) : les 3 boîtes sont
-// TOUJOURS comprises dans [0,100] (jamais de left/top négatif ni de
-// right/bottom > 100 — aucun débordement hors de la card), décalées
-// verticalement (top 4/10/44) plutôt qu'empilées, et dimensionnées pour que
-// chaque secondaire reste visible sur ~50% de sa surface (calcul exact :
-// aire de recouvrement avec la principale / aire du secondaire). Marge
+// Composition "éventail" (recette 26/08/2026, 3e correctif — signalé :
+// chevauchement encore trop fort, les deux polaroids secondaires restaient
+// trop cachés derrière la principale) : les 3 boîtes sont TOUJOURS comprises
+// dans [0,100] (jamais de left/top négatif ni de right/bottom > 100 — aucun
+// débordement hors de la card), décalées verticalement (top 2/14/50) plutôt
+// qu'empilées, et dimensionnées pour que chaque secondaire reste visible sur
+// ~65-70% de sa surface (calcul exact : aire de recouvrement avec la
+// principale / aire du secondaire — contre ~50% avant ce correctif). Marge
 // intérieure gérée par le padding du conteneur (JSX, 16px sur les 4 côtés),
 // pas par des coordonnées négatives.
 const POLAROID_SLOTS: { left: number; top: number; w: number; h: number; rotate: number; z: number }[] = [
-  { left: 20, top: 10, w: 60, h: 70, rotate: -1, z: 3 },
-  { left: 4, top: 4, w: 42, h: 48, rotate: -10, z: 1 },
-  { left: 52, top: 44, w: 42, h: 48, rotate: 9, z: 2 },
+  { left: 24, top: 14, w: 54, h: 64, rotate: -1, z: 3 },
+  { left: 2, top: 2, w: 38, h: 44, rotate: -8, z: 1 },
+  { left: 58, top: 50, w: 38, h: 44, rotate: 8, z: 2 },
 ];
 
 function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (typeof POLAROID_SLOTS)[number] }) {
