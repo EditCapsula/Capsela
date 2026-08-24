@@ -252,10 +252,14 @@ const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
 // plus sombres derrière — jamais 3 tirages de même taille. Slots en % du
 // conteneur photo (42% de la card, cf. JSX), pour rester proportionnels
 // quelle que soit la largeur réelle de l'écran.
+// Correctif 26/08/2026 (signalé : la 3e photo, en bas, quasi invisible —
+// entièrement recouverte par la principale) : la principale est resserrée
+// (right/bottom ≤ 82%) pour dégager un vrai bord visible de chaque côté aux
+// deux photos secondaires, jamais un simple liseré d'1-2%.
 const POLAROID_SLOTS: { left: number; top: number; w: number; h: number; rotate: number; z: number }[] = [
-  { left: 16, top: 4, w: 74, h: 88, rotate: -2, z: 3 },
-  { left: -14, top: 2, w: 48, h: 56, rotate: -12, z: 1 },
-  { left: 42, top: 48, w: 46, h: 54, rotate: 10, z: 2 },
+  { left: 14, top: 2, w: 68, h: 80, rotate: -2, z: 3 },
+  { left: -16, top: 0, w: 44, h: 50, rotate: -13, z: 1 },
+  { left: 44, top: 50, w: 46, h: 50, rotate: 11, z: 2 },
 ];
 
 function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (typeof POLAROID_SLOTS)[number] }) {
