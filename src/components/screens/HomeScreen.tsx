@@ -247,19 +247,20 @@ const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
   homme: ["/editorial/editcapsela-homme3-hp.jpg", "/editorial/editcapsela-homme1-hp.jpg", "/editorial/editcapsela-homme2-hp.jpg"],
 };
 
-// Composition "album" plutôt qu'une pile de miniatures (recette 26/08/2026) :
-// une photo principale nettement plus grande devant, deux plus petites et
-// plus sombres derrière — jamais 3 tirages de même taille. Slots en % du
-// conteneur photo (42% de la card, cf. JSX), pour rester proportionnels
-// quelle que soit la largeur réelle de l'écran.
-// Correctif 26/08/2026 (signalé : la 3e photo, en bas, quasi invisible —
-// entièrement recouverte par la principale) : la principale est resserrée
-// (right/bottom ≤ 82%) pour dégager un vrai bord visible de chaque côté aux
-// deux photos secondaires, jamais un simple liseré d'1-2%.
+// Composition "éventail" (recette 26/08/2026, 2e correctif — signalé :
+// pile trop superposée, principale masquant trop les deux autres, et le
+// polaroid gauche tronqué par le bord de la card) : les 3 boîtes sont
+// TOUJOURS comprises dans [0,100] (jamais de left/top négatif ni de
+// right/bottom > 100 — aucun débordement hors de la card), décalées
+// verticalement (top 4/10/44) plutôt qu'empilées, et dimensionnées pour que
+// chaque secondaire reste visible sur ~50% de sa surface (calcul exact :
+// aire de recouvrement avec la principale / aire du secondaire). Marge
+// intérieure gérée par le padding du conteneur (JSX, 16px sur les 4 côtés),
+// pas par des coordonnées négatives.
 const POLAROID_SLOTS: { left: number; top: number; w: number; h: number; rotate: number; z: number }[] = [
-  { left: 14, top: 2, w: 68, h: 80, rotate: -2, z: 3 },
-  { left: -16, top: 0, w: 44, h: 50, rotate: -13, z: 1 },
-  { left: 44, top: 50, w: 46, h: 50, rotate: 11, z: 2 },
+  { left: 20, top: 10, w: 60, h: 70, rotate: -1, z: 3 },
+  { left: 4, top: 4, w: 42, h: 48, rotate: -10, z: 1 },
+  { left: 52, top: 44, w: 42, h: 48, rotate: 9, z: 2 },
 ];
 
 function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (typeof POLAROID_SLOTS)[number] }) {
@@ -469,7 +470,7 @@ export default function HomeScreen() {
           className="w-full text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex box-border"
           style={{ background: "linear-gradient(120deg, #F6F0E6 0%, #EEE1CE 100%)" }}
         >
-          <div className="relative flex-shrink-0 box-border" style={{ width: "42%", height: 176, padding: "18px 6px 18px 16px" }}>
+          <div className="relative flex-shrink-0 box-border" style={{ width: "42%", height: 176, padding: "18px 16px" }}>
             <div className="relative w-full h-full">
               {journalVisuals.map((src, i) => (
                 <PolaroidPhoto key={src} src={src} alt="" slot={POLAROID_SLOTS[i]} />
