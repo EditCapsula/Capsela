@@ -69,6 +69,8 @@ export interface AuthContextValue {
   signInEmail: (email: string, password: string) => Promise<boolean>;
   signInGoogle: () => Promise<boolean>;
   signOut: () => Promise<void>;
+  /** Supprime définitivement le compte (Edge Function delete-account, cf. son en-tête) et déconnecte. Renvoie false + error rempli en cas d'échec — jamais de déconnexion locale silencieuse si la suppression serveur a échoué. */
+  deleteAccount: () => Promise<boolean>;
   saveProfile: (p: Profile) => Promise<void>;
   clearError: () => void;
 }
@@ -291,6 +293,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await getSupabase().auth.signOut();
   };
 
+  const deleteAccount = async (): Promise<boolean> => {
+    setError(null);
+    if (!isSupabaseConfigured) {
+      // Mode démo : pas de compte serveur réel — efface le profil démo
+      // stocké localement (persistDemo(null), contrairement à signOut qui le
+      // conserve pour permettre une reconnexion avec le même e-mail).
+      persistDemo(null);
+      setJustSignedUp(false);
+      setProfile(EMPTY_PROFILE);
+      return true;
+    }
+    if (!user) return false;
+    try {
+      const { error: err } = await getSupabase().functions.invoke("delete-account");
+      if (err) {
+        setError("Impossible de supprimer le compte : " + err.message);
+        return false;
+      }
+      // Nettoyage local best-effort — le compte est déjà supprimé côté
+      // serveur à ce stade, cet appel échouerait silencieusement sans
+      // conséquence si le token est déjà invalidé.
+      await getSupabase().auth.signOut();
+      return true;
+    } catch (e) {
+      setError("Impossible de supprimer le compte : " + (e instanceof Error ? e.message : "erreur inconnue"));
+      return false;
+    }
+  };
+
   const saveProfile = async (p: Profile) => {
     setProfile(p);
     if (!isSupabaseConfigured) {
@@ -317,6 +348,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInEmail,
     signInGoogle,
     signOut,
+    deleteAccount,
     saveProfile,
     clearError: () => setError(null),
   };

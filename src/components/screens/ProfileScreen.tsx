@@ -1,13 +1,17 @@
 "use client";
 
+import { useState } from "react";
+import BottomSheet from "@/components/BottomSheet";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { GENDER_DEPENDENT_FIELDS, fieldNeedsRevalidation, genderLabel, morphologyLabel, styleLabel } from "@/lib/profile";
 import { APP_VERSION } from "@/lib/data";
 
 export default function ProfileScreen() {
-  const { profile, email, demoMode, signOut } = useAuth();
+  const { profile, email, demoMode, signOut, deleteAccount, error, clearError } = useAuth();
   const { state, actions } = useCapsela();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
   const tailleValue =
@@ -36,6 +40,28 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     await signOut();
     actions.goWelcome();
+  };
+
+  const openDeleteConfirm = () => {
+    clearError();
+    setConfirmDelete(true);
+  };
+  const closeDeleteConfirm = () => {
+    if (deleting) return;
+    clearError();
+    setConfirmDelete(false);
+  };
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    const ok = await deleteAccount();
+    setDeleting(false);
+    if (ok) {
+      setConfirmDelete(false);
+      actions.goWelcome();
+    }
+    // En cas d'échec : la sheet reste ouverte, error (useAuth) affiche le
+    // message — jamais de déconnexion locale silencieuse si la suppression
+    // serveur a échoué (cf. deleteAccount, auth.tsx).
   };
 
   // Bloc "à compléter" (recette 20/08/2026, mécanique générique de
@@ -162,16 +188,45 @@ export default function ProfileScreen() {
           <span className="text-[13.5px] text-ink">Confidentialité et données</span>
           <span className="text-placeholder">›</span>
         </button>
-        <div className="flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4 cursor-pointer">
+        <button
+          onClick={openDeleteConfirm}
+          className="flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4 w-full text-left cursor-pointer"
+        >
           <span className="text-[13.5px] text-rust">Supprimer mon compte</span>
           <span className="text-rust">›</span>
-        </div>
+        </button>
       </div>
 
       <div className="text-center text-[11px] text-placeholder mt-[22px]">L&apos;édit Capsela · v{APP_VERSION}</div>
       <button onClick={handleSignOut} className="mt-[10px] w-full text-center text-[12.5px] text-terracotta cursor-pointer">
         Se déconnecter
       </button>
+
+      <BottomSheet title="Supprimer mon compte" open={confirmDelete} onClose={closeDeleteConfirm}>
+        <div className="text-[13px] text-ink leading-[1.55]">
+          Cette action est <span className="text-rust">définitive et irréversible</span>. Ton dressing, tes tenues
+          enregistrées, tes looks et les informations de ton profil seront supprimés — il ne sera plus possible de
+          les récupérer.
+        </div>
+        {error && <div className="mt-[14px] text-[12.5px] text-rust leading-[1.5]">{error}</div>}
+        <button
+          onClick={handleDeleteAccount}
+          disabled={deleting}
+          className={
+            "mt-[22px] w-full text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase " +
+            (deleting ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-rust text-cream cursor-pointer")
+          }
+        >
+          {deleting ? "Suppression en cours…" : "Supprimer définitivement"}
+        </button>
+        <button
+          onClick={closeDeleteConfirm}
+          disabled={deleting}
+          className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer"
+        >
+          Annuler
+        </button>
+      </BottomSheet>
     </div>
   );
 }
