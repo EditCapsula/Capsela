@@ -1,15 +1,15 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import AppHeader from "@/components/AppHeader";
 import { OCC_LABELS } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
+import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { explainRecommendation } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
+import { styleLabel } from "@/lib/profile";
 import { useCapsela, defaultOccasionToday } from "@/lib/store";
 import type { CategoryKey, Item } from "@/lib/types";
-
-const GRADIENT_TO = ["#EFE3D3", "#E8DCC9", "#E1D3BC"];
 
 /**
  * Mini flat-lay éditorial de la card héros Accueil (recette 20/08/2026,
@@ -129,9 +129,9 @@ function homeCompositionPiecesOf(items: Item[]): { id: number; style: CSSPropert
   });
 }
 
-function HangerIcon() {
+function HangerIcon({ size = 19 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={19} height={19} fill="none" stroke="#F8F3EA" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="#F8F3EA" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 6.2a2.1 2.1 0 1 1 2.1-2.1" />
       <path d="M12 6.2v2.1" />
       <path d="M12 8.3 3.6 14.6a1.2 1.2 0 0 0 .72 2.17h15.36a1.2 1.2 0 0 0 .72-2.17Z" />
@@ -139,9 +139,9 @@ function HangerIcon() {
   );
 }
 
-function JournalIcon() {
+function JournalIcon({ size = 19 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 24 24" width={19} height={19} fill="none" stroke="#F8F3EA" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="#F8F3EA" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
       <path d="M5.5 3.5h11.2a1.8 1.8 0 0 1 1.8 1.8v13.4a1.8 1.8 0 0 1-1.8 1.8H5.5Z" />
       <path d="M5.5 3.5a1.6 1.6 0 0 0 0 3.2" />
       <path d="M9 8.6h6" />
@@ -151,8 +151,155 @@ function JournalIcon() {
   );
 }
 
+/**
+ * Section "Explore L'édit Capsela" (refonte éditoriale 26/08/2026) — remplace
+ * les 3 cards horizontales identiques (icône + texte + flèche, lisibles comme
+ * un menu générique) par une composition mode : Dressing/Capsule en vis-à-vis
+ * (chacune illustrée par une petite planche de stylisme faite de vraies pièces),
+ * Journal en pleine largeur avec des visuels éditoriaux. Priorité de catégories
+ * pour choisir des pièces visuellement variées sur une planche, jamais 3 fois
+ * la même famille de vêtement côte à côte.
+ */
+const BOARD_PRIORITY: CategoryKey[] = [
+  "robe", "combinaison", "manteau", "veste", "haut", "pull", "jupe", "pantalon", "jean", "short",
+  "chaussures", "sac", "bijou", "accessoire",
+];
+
+function selectBoardPieces(items: Item[], max: number): Item[] {
+  const picked: Item[] = [];
+  const usedCats = new Set<CategoryKey>();
+  for (const cat of BOARD_PRIORITY) {
+    if (picked.length >= max) break;
+    const found = items.find((it) => it.cat === cat && !usedCats.has(it.cat));
+    if (found) {
+      picked.push(found);
+      usedCats.add(cat);
+    }
+  }
+  // Repli si le dressing/la capsule n'a pas assez de catégories distinctes —
+  // complète avec les pièces restantes plutôt que de laisser la planche vide.
+  for (const it of items) {
+    if (picked.length >= max) break;
+    if (!picked.includes(it)) picked.push(it);
+  }
+  return picked;
+}
+
+/** Emplacements en % (asymétriques, légèrement pivotés) selon le nombre de pièces — jamais une grille régulière. */
+type BoardSlot = { left: number; top: number; w: number; h: number; rotate: number; z: number };
+const BOARD_SLOTS: Record<number, BoardSlot[]> = {
+  1: [{ left: 24, top: 6, w: 54, h: 88, rotate: -2, z: 1 }],
+  2: [
+    { left: 2, top: 8, w: 56, h: 80, rotate: -4, z: 2 },
+    { left: 46, top: 30, w: 50, h: 66, rotate: 5, z: 1 },
+  ],
+  3: [
+    { left: 0, top: 10, w: 48, h: 78, rotate: -4, z: 2 },
+    { left: 44, top: 0, w: 42, h: 46, rotate: 5, z: 1 },
+    { left: 50, top: 48, w: 40, h: 48, rotate: -3, z: 3 },
+  ],
+  4: [
+    { left: 0, top: 12, w: 44, h: 74, rotate: -4, z: 2 },
+    { left: 40, top: 0, w: 34, h: 40, rotate: 6, z: 1 },
+    { left: 62, top: 32, w: 36, h: 42, rotate: -5, z: 3 },
+    { left: 38, top: 50, w: 32, h: 40, rotate: 4, z: 1 },
+  ],
+};
+
+/** Petite planche de stylisme (Dressing/Capsule) — pièces réelles, tailles et rotations variées, léger chevauchement. */
+function StyleBoard({ items, height }: { items: Item[]; height: number }) {
+  const slots = BOARD_SLOTS[items.length] || [];
+  if (!items.length) return null;
+  return (
+    <div style={{ position: "relative", height }}>
+      {items.map((it, i) => {
+        const slot = slots[i];
+        if (!slot) return null;
+        const img = resolveItemImage(it);
+        const hasImg = Boolean(img.url);
+        return (
+          <div
+            key={"board-" + it.id}
+            style={{
+              position: "absolute",
+              left: slot.left + "%",
+              top: slot.top + "%",
+              width: slot.w + "%",
+              height: slot.h + "%",
+              transform: `rotate(${slot.rotate}deg)`,
+              zIndex: slot.z,
+              backgroundColor: hasImg ? undefined : it.hex,
+              backgroundImage: hasImg ? `url(${img.url})` : undefined,
+              backgroundSize: "contain",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              borderRadius: hasImg ? 0 : 8,
+              boxShadow: hasImg ? "0 4px 10px rgba(29,26,22,.14)" : "inset 0 0 0 1px rgba(29,26,22,.06)",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Visuels éditoriaux génériques Capsela pour la card Journal (brief
+ * 26/08/2026) — JAMAIS les photos personnelles de l'utilisatrice (Dressing/
+ * Journal réels) : le rôle de ces images est purement d'illustrer le concept
+ * "tenues portées au quotidien", adapté uniquement au genre du profil. Ces
+ * fichiers n'existent pas encore dans /public — l'appel gracieux ci-dessous
+ * (PolaroidPhoto, onError) masque la vignette sans casser l'écran tant qu'ils
+ * n'ont pas été fournis.
+ */
+const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
+  femme: ["/editorial/journal-femme-1.jpg", "/editorial/journal-femme-2.jpg", "/editorial/journal-femme-3.jpg"],
+  homme: ["/editorial/journal-homme-1.jpg", "/editorial/journal-homme-2.jpg", "/editorial/journal-homme-3.jpg"],
+};
+
+const POLAROID_SLOTS: { left: number; top: number; rotate: number; z: number }[] = [
+  { left: 0, top: 14, rotate: -7, z: 1 },
+  { left: 30, top: 0, rotate: 4, z: 2 },
+  { left: 26, top: 32, rotate: -2, z: 3 },
+];
+
+function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (typeof POLAROID_SLOTS)[number] }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: slot.left + "%",
+        top: slot.top + "%",
+        width: 62,
+        height: 76,
+        transform: `rotate(${slot.rotate}deg)`,
+        zIndex: slot.z,
+        background: "#FBF8F3",
+        padding: 4,
+        paddingBottom: 9,
+        borderRadius: 4,
+        boxSizing: "border-box",
+        boxShadow: "0 6px 14px rgba(29,26,22,.18)",
+      }}
+    >
+      {!failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={alt}
+          onError={() => setFailed(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 2, display: "block" }}
+        />
+      ) : (
+        <div style={{ width: "100%", height: "100%", borderRadius: 2, background: "#EFE7DA" }} />
+      )}
+    </div>
+  );
+}
+
 export default function HomeScreen() {
-  const { state, geoCity, geoLoading, wardrobePool, actions } = useCapsela();
+  const { state, geoCity, geoLoading, wardrobePool, vestiairePool, weather, actions } = useCapsela();
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
 
@@ -175,35 +322,20 @@ export default function HomeScreen() {
   // géolocalisation n'a pas résolu la météo réelle du jour.
   const outfitQuote = explainRecommendation(occasionKey, state.workMode, state.dateContext, geoLoading ? null : geoCity.temp);
 
-  const features = [
-    {
-      title: "Dressing",
-      body: "Ajoute tes vêtements et accessoires par photo.",
-      onOpen: actions.goWardrobe,
-      bg: "#F6F0E6",
-      accent: "#1D1A16",
-      glyph: "❑" as const,
-      ghost: "01",
-    },
-    {
-      title: "Tes capsules",
-      body: "Une sélection déjà prête, pensée pour ton style.",
-      onOpen: actions.goCapsule,
-      bg: "#F0E7D9",
-      accent: "#1D1A16",
-      glyph: "hanger" as const,
-      ghost: "02",
-    },
-    {
-      title: "Journal des tenues",
-      body: "L’historique de toutes tes tenues portées.",
-      onOpen: actions.goHistory,
-      bg: "#E9DECC",
-      accent: "#1D1A16",
-      glyph: "journal" as const,
-      ghost: "03",
-    },
-  ];
+  // Section "Explore L'édit Capsela" (refonte éditoriale 26/08/2026) —
+  // capsule calculée avec le même moteur que CapsuleScreen
+  // (computeDefaultCapsule), jamais un second calcul : saison/style/effectif
+  // affichés ici doivent toujours correspondre exactement à l'écran Capsule.
+  const capsuleSeason = state.capsuleSeason || currentSeasonKey();
+  const capsule = computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
+  const capsuleStyleLabel = styleLabel(profile.styles[0], profile.gender);
+
+  const dressingCount = state.items.length;
+  const dressingPieces = selectBoardPieces(state.items, 3);
+  const capsulePieces = selectBoardPieces(capsule, 4);
+
+  const journalGender: "femme" | "homme" = profile.gender === "homme" ? "homme" : "femme";
+  const journalVisuals = JOURNAL_VISUALS[journalGender];
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-[100px]">
@@ -277,42 +409,90 @@ export default function HomeScreen() {
       <div className="flex items-center justify-between mx-6 mt-[26px] mb-3">
         <span className="text-[11px] tracking-[.16em] uppercase text-muted">Explore L&apos;édit Capsela</span>
       </div>
+
       <div className="flex flex-col gap-3 px-6">
-        {features.map((f, i) => (
+        <div className="flex gap-3">
+          {/* Dressing — ce que je possède : planche de stylisme faite de
+              vraies pièces du dressing, effectif réel dynamique. */}
           <button
-            key={f.title}
-            onClick={f.onOpen}
-            className="relative overflow-hidden w-full rounded-[18px] cursor-pointer flex items-center justify-between gap-[13px] text-left box-border"
-            style={{
-              background: "linear-gradient(135deg, " + f.bg + " 0%, " + GRADIENT_TO[i] + " 100%)",
-              padding: "16px 18px",
-            }}
+            onClick={actions.goWardrobe}
+            className="flex-1 min-w-0 text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex flex-col box-border"
+            style={{ background: "linear-gradient(165deg, #F6F0E6 0%, #EEE1CE 100%)" }}
           >
-            <span
-              className="absolute pointer-events-none font-serif italic"
-              style={{ right: "-16px", bottom: "-34px", fontSize: "76px", lineHeight: 1, color: "rgba(166,105,80,.12)" }}
-            >
-              {f.ghost}
-            </span>
-            <div
-              className="relative flex-shrink-0 w-[38px] h-[38px] rounded-full flex items-center justify-center text-[16px]"
-              style={{ background: "#A66950", color: "#F8F3EA" }}
-            >
-              {f.glyph === "hanger" ? <HangerIcon /> : f.glyph === "journal" ? <JournalIcon /> : <span>{f.glyph}</span>}
+            <div className="px-[14px] pt-[14px]">
+              <StyleBoard items={dressingPieces} height={116} />
             </div>
-            <div className="relative flex-1 min-w-0">
-              <div className="font-serif text-[17px]" style={{ color: f.accent }}>
-                {f.title}
+            <div className="px-[14px] pt-[10px] pb-[14px]">
+              <div className="flex items-center gap-[8px]">
+                <span
+                  className="w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: "#A66950" }}
+                >
+                  <HangerIcon size={13} />
+                </span>
+                <span className="font-serif text-[17px] text-ink">Dressing</span>
               </div>
-              <div className="text-[11.5px] mt-1 leading-[1.4]" style={{ color: "#7B7366" }}>
-                {f.body}
+              <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">Tes pièces, tes looks, ton vestiaire.</div>
+              <div className="text-[12px] text-terracotta mt-[9px]">
+                {dressingCount} {dressingCount <= 1 ? "pièce" : "pièces"} →
               </div>
             </div>
-            <span className="relative flex-shrink-0 text-[15px]" style={{ color: f.accent }}>
-              →
-            </span>
           </button>
-        ))}
+
+          {/* Capsule — la sélection mode proposée par L'édit Capsela : mini
+              sélection de styliste (tailles/rotation variées, léger
+              chevauchement), jamais une grille e-commerce. */}
+          <button
+            onClick={actions.goCapsule}
+            className="flex-1 min-w-0 text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex flex-col box-border"
+            style={{ background: "linear-gradient(165deg, #F0E7D9 0%, #E5D6BF 100%)" }}
+          >
+            <div className="px-[14px] pt-[14px]">
+              <StyleBoard items={capsulePieces} height={128} />
+            </div>
+            <div className="px-[14px] pt-[10px] pb-[14px]">
+              <div className="font-serif text-[17px] text-ink leading-[1.2]">
+                Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
+              </div>
+              <div className="text-[10.5px] text-muted mt-[3px]">
+                {capsuleStyleLabel ? capsuleStyleLabel + " · " : ""}
+                {capsule.length} {capsule.length <= 1 ? "pièce" : "pièces"}
+              </div>
+              <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">
+                Une sélection pensée pour ton style et ta palette.
+              </div>
+              <div className="text-[12px] text-terracotta mt-[9px]">Découvrir →</div>
+            </div>
+          </button>
+        </div>
+
+        {/* Journal des tenues — les tenues portées au fil du temps. Visuels
+            éditoriaux génériques (PolaroidPhoto), jamais les photos
+            personnelles du dressing/journal réels de l'utilisatrice. */}
+        <button
+          onClick={actions.goHistory}
+          className="w-full text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex items-center justify-between gap-[14px] box-border"
+          style={{ background: "linear-gradient(120deg, #F6F0E6 0%, #EEE1CE 100%)", padding: "16px 10px 16px 18px" }}
+        >
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-[8px]">
+              <span
+                className="w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "#A66950" }}
+              >
+                <JournalIcon size={13} />
+              </span>
+              <span className="font-serif text-[17px] text-ink">Journal des tenues</span>
+            </div>
+            <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">Retrouve les tenues que tu as portées.</div>
+            <div className="text-[12px] text-terracotta mt-[9px]">Voir le journal →</div>
+          </div>
+          <div className="relative flex-shrink-0" style={{ width: 96, height: 96 }}>
+            {journalVisuals.map((src, i) => (
+              <PolaroidPhoto key={src} src={src} alt="" slot={POLAROID_SLOTS[i]} />
+            ))}
+          </div>
+        </button>
       </div>
     </div>
   );
