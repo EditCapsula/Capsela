@@ -136,6 +136,18 @@ const n = (it: Item) => (it.name + " " + it.color).toLowerCase();
 export const NEUTRAL_COLORS = new Set([
   "Blanc", "Blanc cassé", "Crème", "Sable", "Camel", "Caramel", "Chocolat",
   "Taupe", "Kaki", "Gris clair", "Gris", "Gris anthracite", "Noir", "Marine", "Denim", "Beige rosé",
+  // Correctif 26/08/2026 (signalé, 3e occurrence : "lunettes de soleil
+  // noires suggérées comme touche de couleur") — la liste ne couvrait que
+  // les neutres les plus évidents, alors que isNeutralColor est le seul
+  // garde-fou d'isColorAccent (R-S13) et d'isStatement (R-S5/R-S7) : les
+  // deux échouent en mode ouvert, donc TOUT libellé absent d'ici passe pour
+  // une couleur affirmée. Mesuré avant correctif : 22 accessoires sur 54
+  // étaient éligibles à "touche de couleur", dont 4 beiges, 2 écrus et une
+  // paire de lunettes écaille. Les teintes ci-dessous sont les neutres et
+  // finitions réellement présents dans vestiaire_universel — ni des accents
+  // (bordeaux, terracotta, rose poudré... restent volontairement dehors),
+  // ni un élargissement de confort.
+  "Écru", "Ivoire", "Beige", "Champagne", "Nude", "Écaille", "Cognac", "Brun", "Naturel",
 ]);
 
 /**

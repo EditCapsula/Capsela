@@ -1544,8 +1544,19 @@ export function computeLookScore(
   // sans ce garde-fou, isNeutralColor("") passe à tort (absente de la liste
   // des neutres nommés), laissant filtrer une pièce dont la couleur réelle
   // est simplement inconnue.
-  const isColorAccent = (color: string): boolean =>
-    Boolean(color) && !isNeutralColor(color) && !["Doré", "Argenté", "Cuivré", "Or rose", "Bronze", "Perle"].includes(color);
+  // Correspondance par sous-chaîne plutôt qu'égalité stricte (correctif
+  // 26/08/2026) : "Doré vieilli" et "Argent vieilli" existent en base et
+  // échappaient à la liste exacte, donc une manchette dorée patinée était
+  // encore proposée comme touche de couleur — exactement le cas que le
+  // correctif du 23/08 visait. Même logique que isNeutralColor depuis le
+  // 24/08, pour que les deux garde-fous se comportent pareil.
+  const METAL_FINISHES = ["doré", "or ", "argent", "cuivré", "bronze", "perle"];
+  const isColorAccent = (color: string): boolean => {
+    if (!color) return false;
+    const c = color.toLowerCase();
+    if (isNeutralColor(color)) return false;
+    return !METAL_FINISHES.some((m) => c.startsWith(m) || c.includes(` ${m}`) || c === m.trim());
+  };
 
   // R-S13 — contraste : total look noir sans accessoire coloré.
   const allBlack = clothing.length > 0 && clothing.every((i) => /noir/i.test(i.color));
