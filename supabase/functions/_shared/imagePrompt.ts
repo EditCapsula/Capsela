@@ -158,6 +158,7 @@ const SUBTYPE_EN: Record<string, string> = {
   // catégorie "robe" (qui exige "dress" dans le nom du produit).
   "slip dress": "silk slip dress",
   "robe chemise": "shirt dress",
+  "robe blazer": "blazer dress",
   "robe polo": "polo dress",
   "robe t-shirt": "t-shirt dress",
   // Bijoux
@@ -184,6 +185,8 @@ const SUBTYPE_EN: Record<string, string> = {
   surchemise: "overshirt",
   blouse: "blouse",
   débardeur: "tank top",
+  body: "bodysuit",
+  bodysuit: "bodysuit",
   top: "top",
   polo: "polo shirt",
   sweat: "sweatshirt",
@@ -195,6 +198,7 @@ const SUBTYPE_EN: Record<string, string> = {
   bomber: "bomber jacket",
   "coupe-vent": "windbreaker jacket",
   "veste en jean": "denim jacket",
+  "veste saharienne": "safari jacket",
   trench: "trench coat",
   parka: "parka",
   doudoune: "puffer jacket",
@@ -235,6 +239,12 @@ const MODIFIER_EN: Record<string, string> = {
   court: "short",
   courte: "short",
   "évasé": "flared",
+  fendue: "side-slit",
+  "drapé": "draped",
+  "drapée": "draped",
+  "asymétrique": "asymmetric",
+  "structuré": "structured",
+  "structurée": "structured",
   "évasée": "flared",
   cargo: "cargo-style",
   bootcut: "bootcut",
@@ -292,6 +302,9 @@ const NECKLINE_EN: Record<string, string> = {
   "manches courtes": "short-sleeved",
   "manches longues": "long-sleeved",
   "dos nu": "backless",
+  "épaules dénudées": "off-the-shoulder",
+  "épaules dégagées": "off-the-shoulder",
+  "manches ballon": "balloon-sleeve",
 };
 
 const COLOR_EN: Record<string, string> = {
@@ -328,6 +341,9 @@ const COLOR_EN: Record<string, string> = {
   prune: "plum purple",
   violet: "purple",
   bordeaux: "burgundy",
+  "rouge cerise": "cherry red",
+  "bleu nuit": "midnight blue",
+  "beige clair": "light beige",
   rouge: "red",
   jaune: "yellow",
   orange: "orange",
@@ -407,7 +423,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   // génération) : la catégorie "pulls_gilets"/pull n'est jamais utilisée
   // dans les données réelles, les cardigans sont systématiquement stockés
   // en category="hauts" -> canonCategory="haut".
-  haut: ["top", "shirt", "blouse", "tank top", "turtleneck", "polo", "sweatshirt", "cardigan", "sweater"],
+  haut: ["top", "shirt", "blouse", "tank top", "bodysuit", "turtleneck", "polo", "sweatshirt", "cardigan", "sweater"],
   pull: ["sweater", "cardigan", "sweatshirt"],
   pantalon: ["trousers", "pants", "leggings"],
   jean: ["jeans"],
