@@ -7,6 +7,7 @@ import {
   coupeOf,
   formalityOf,
   huesHarmonious,
+  isMetallicFinish,
   isNeutralColor,
   isStatement,
   matiereOf,
@@ -1550,13 +1551,7 @@ export function computeLookScore(
   // encore proposée comme touche de couleur — exactement le cas que le
   // correctif du 23/08 visait. Même logique que isNeutralColor depuis le
   // 24/08, pour que les deux garde-fous se comportent pareil.
-  const METAL_FINISHES = ["doré", "or ", "argent", "cuivré", "bronze", "perle"];
-  const isColorAccent = (color: string): boolean => {
-    if (!color) return false;
-    const c = color.toLowerCase();
-    if (isNeutralColor(color)) return false;
-    return !METAL_FINISHES.some((m) => c.startsWith(m) || c.includes(` ${m}`) || c === m.trim());
-  };
+  const isColorAccent = (color: string): boolean => Boolean(color) && !isNeutralColor(color) && !isMetallicFinish(color);
 
   // R-S13 — contraste : total look noir sans accessoire coloré.
   const allBlack = clothing.length > 0 && clothing.every((i) => /noir/i.test(i.color));
