@@ -113,31 +113,50 @@ export default function ItemOutfitsScreen() {
   const pieceOwned = (id: number) => !isCatalogId(id) || state.suggestedExcluded.includes(id);
   const hasSuggestedPieces = variations.some((v) => v.ids.some((id) => id !== pivot.id && !pieceOwned(id)));
 
+  // Saison citée dans la phrase de provenance — currentSeasonKey() et NON la
+  // variable capsuleSeason ci-dessus. Les deux diffèrent : capsuleSeason suit
+  // la saison parcourue sur l'écran Capsule (state.capsuleSeason) et ne sert
+  // ici qu'à calculer la météo de génération, alors que les pièces
+  // complémentaires viennent de wardrobePool, dont la part capsule est
+  // construite dans le store avec currentSeasonKey(). Citer capsuleSeason
+  // rendrait la phrase fausse dès qu'une autre saison a été parcourue.
+  const suggestionSeason = currentSeasonKey();
+  // Badge saison masqué quand il ferait doublon avec cette phrase (arbitrage
+  // 26/08/2026) : il ne décrit pas la même chose (les saisons déclarées de la
+  // PIÈCE, pas la provenance des compléments), mais se lit à l'identique quand
+  // il annonce la même saison. Conservé seulement s'il ajoute une information.
+  const pivotSeasons = pivot.capsuleSeasons ?? [];
+  const seasonAddsInfo = pivotSeasons.length > 1 || (pivotSeasons.length === 1 && pivotSeasons[0] !== suggestionSeason);
+  const showSeasonBadge = Boolean(seasonLabel) && (!hasSuggestedPieces || seasonAddsInfo);
+
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <button
-        onClick={() => actions.go(state.itemOutfitsReturn)}
-        className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-      >
-        ←
-      </button>
+      {/* En-tête compacté (recette 26/08/2026, refonte densité) : retour et
+          surtitre sur une même ligne — même motif que LookDetailScreen — au
+          lieu de deux blocs empilés, pour faire remonter les idées de tenues
+          dans le viewport. */}
+      <div className="flex items-center gap-[14px]">
+        <button
+          onClick={() => actions.go(state.itemOutfitsReturn)}
+          className="w-[38px] h-[38px] flex-shrink-0 rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
+        >
+          ←
+        </button>
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted">Les idées de tenues</div>
+      </div>
 
-      <div className="mt-[18px] text-[11px] tracking-[.16em] uppercase text-muted">Les idées de tenues</div>
-
-      {/* "Autour de cette pièce" (brief design 22/08/2026, section 2) — rend
-          explicite le rôle de la pièce mise en avant ci-dessous : celle
-          autour de laquelle toutes les combinaisons de cette page sont
-          construites. Son contour terracotta dans chaque composition plus
-          bas n'a pas d'autre signification dans toute l'app. */}
-      <div className="mt-[18px] text-[10px] tracking-[.16em] uppercase text-terracotta">Autour de cette pièce</div>
-
-      <div className="flex items-center gap-[13px] mt-[10px]">
+      {/* Fiche compacte de la pièce. "Autour de cette pièce" (brief design
+          22/08/2026, section 2) est devenu le surtitre DANS la colonne texte
+          plutôt qu'une ligne autonome : même information, une trentaine de
+          pixels de moins. Le contour terracotta de cette pièce dans chaque
+          composition plus bas n'a pas d'autre signification dans toute l'app. */}
+      <div className="flex items-center gap-[13px] mt-[14px]">
         <div
           className="relative flex-shrink-0 rounded-[14px] overflow-hidden"
           style={
             pivotImage.url
-              ? { width: 84, height: 100, background: "#F3EDE1", padding: 8 }
-              : { width: 84, height: 100, background: pivot.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
+              ? { width: 72, height: 86, background: "#F3EDE1", padding: 7 }
+              : { width: 72, height: 86, background: pivot.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
           }
         >
           {pivotImage.url && (
@@ -150,110 +169,98 @@ export default function ItemOutfitsScreen() {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-serif text-[20px] text-ink leading-[1.2]">{pivot.name}</div>
-          <div className="text-[12px] text-muted mt-[4px]">
+          <div className="text-[10px] tracking-[.16em] uppercase text-terracotta">Autour de cette pièce</div>
+          <div className="font-serif text-[19px] text-ink leading-[1.2] mt-[3px]">{pivot.name}</div>
+          <div className="text-[12px] text-muted mt-[3px]">
             {CATLABEL[pivot.cat]}
             {metaParts.length ? " · " + metaParts.join(" · ") : ""}
           </div>
+          {/* Badge saison capsule — masqué quand il ferait doublon avec la
+              phrase de provenance ci-dessous (arbitrage 26/08/2026) : il ne
+              s'affiche que s'il ajoute une information, c'est-à-dire quand la
+              pièce couvre plusieurs saisons ou une saison autre que la capsule
+              courante, ou quand la phrase elle-même est absente. Logé dans la
+              colonne texte : la vignette étant plus haute, il ne rallonge pas
+              la fiche. */}
+          {showSeasonBadge && (
+            <div className="inline-flex items-center gap-2 mt-[7px] rounded-full bg-warm-bg border border-warm-border" style={{ padding: "5px 11px 5px 9px" }}>
+              <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-gold" />
+              <span className="text-[10px] tracking-[.13em] uppercase text-terracotta">{seasonLabel}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Légende unique de provenance (brief 26/08/2026, section 2 —
-          remplace un ✦ répété sur chaque pièce complémentaire suggérée,
-          trop de bruit visuel). N'apparaît que s'il existe au moins une
-          pièce suggérée par la capsule parmi toutes les propositions ;
-          jamais affichée si le dressing couvre déjà tout. */}
-      {hasSuggestedPieces && (
-        <div className="text-[10.5px] text-placeholder mt-[8px] leading-[1.4]">
-          ✦ Les autres pièces sont suggérées par ta capsule
+      {/* Provenance des compléments + action secondaire sur une seule ligne
+          (brief 26/08/2026, hiérarchie cible). La saison citée est celle de la
+          capsule qui alimente RÉELLEMENT ces suggestions, cf. suggestionSeason.
+          "J'ai déjà" est passé en secondaire (outline) et en largeur
+          automatique : l'objectif de cet écran est de parcourir des idées de
+          tenues, pas de déclarer une possession — comportement et conditions
+          d'affichage strictement inchangés. */}
+      <div className="flex items-center flex-wrap gap-x-3 gap-y-[10px] mt-[12px]">
+          {hasSuggestedPieces && (
+            <div className="flex-1 min-w-[150px] text-[11.5px] text-muted leading-[1.4]">
+              Les pièces complémentaires viennent de ta capsule {suggestionSeason}.
+            </div>
+          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {alreadyOwned ? (
+              <span className="inline-flex items-center gap-[6px] rounded-full bg-warm-bg border border-warm-border" style={{ padding: "6px 12px" }}>
+                <span className="text-[10px] text-terracotta">✓</span>
+                <span className="text-[11px] text-ink">Dans mon dressing</span>
+              </span>
+            ) : (
+              <>
+                {pivot.affLink && (
+                  <a
+                    href={pivot.affLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block bg-terracotta active:bg-terracotta-hover text-cream rounded-full py-[10px] px-[16px] text-[12px] tracking-[.06em] uppercase cursor-pointer whitespace-nowrap"
+                  >
+                    Acheter ↗
+                  </a>
+                )}
+                <button
+                  onClick={() => actions.startReplace(pivot)}
+                  className="inline-block border border-border-soft text-terracotta rounded-full py-[10px] px-[16px] text-[12.5px] cursor-pointer whitespace-nowrap"
+                >
+                  J&apos;ai déjà
+                </button>
+              </>
+          )}
         </div>
-      )}
-
-      {/* Statut "déjà possédée" (brief 26/08/2026, section 1) — remplace le
-          gros bloc plein écran par un statut compact, discret, directement
-          sous les informations de la pièce. */}
-      {alreadyOwned && (
-        <div
-          className="inline-flex items-center gap-[6px] mt-[10px] rounded-full"
-          style={{ padding: "5px 12px", background: "#F0E5D6", border: "1px solid #E2CDB8" }}
-        >
-          <span className="text-[10px] text-terracotta">✓</span>
-          <span className="text-[11px] text-ink">Dans mon dressing</span>
-        </div>
-      )}
-
-      {/* Badge saison capsule (brief 23/08/2026, section 2) — même style pastille
-          + libellé tracké que le badge de mode de la page Tenue (MODE_STYLES),
-          jamais répété par carte plus bas : une seule vérité pour toute la page. */}
-      {seasonLabel && (
-        <div
-          className="inline-flex items-center gap-2 mt-[12px] rounded-full"
-          style={{ padding: "7px 14px 7px 11px", background: "#F0E5D6", border: "1px solid #E2CDB8" }}
-        >
-          <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: "#C9966F" }} />
-          <span className="text-[11px] tracking-[.13em] uppercase" style={{ color: "#A66950" }}>
-            {seasonLabel}
-          </span>
-        </div>
-      )}
-
-      {/* CTA / lien affilié (brief 23/08/2026, section 3) — deux états
-          exclusifs restants : pas encore possédée avec un vrai lien affilié
-          (Acheter + Je l'ai déjà), pas encore possédée sans lien (Je l'ai
-          déjà seule). Jamais "Acheter" sans affLink réel. */}
-      {!alreadyOwned &&
-        (pivot.affLink ? (
-          <>
-            <a
-              href={pivot.affLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-[14px] block w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
-            >
-              Acheter cette pièce ↗
-            </a>
-            <button
-              onClick={() => actions.startReplace(pivot)}
-              className="mt-[10px] w-full text-center border border-border-soft text-terracotta rounded-full py-[13px] text-[12.5px] cursor-pointer"
-            >
-              J&apos;ai déjà
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={() => actions.startReplace(pivot)}
-            className="mt-[14px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
-          >
-            J&apos;ai déjà
-          </button>
-        ))}
+      </div>
 
       {occasionsCovered.length > 0 && (
-        <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[22px]">
+        // Chip canonique du Design System (identique à WardrobeScreen) plutôt
+        // que des hex inline : l'état sélectionné était en `ink`, divergence
+        // introduite ici seulement. Débord `-mx-6 px-6` pour que la liste se
+        // coupe au bord de l'ÉCRAN et non au bord du contenu — la chip
+        // tronquée devient l'affordance naturelle du scroll horizontal.
+        <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[18px] -mx-6 px-6">
           <button
             onClick={() => setOccasionFilter("all")}
-            className="flex-none py-[9px] px-4 rounded-full text-[12.5px] cursor-pointer border whitespace-nowrap"
-            style={{
-              background: occasionFilter === "all" ? "#1D1A16" : "#FBF8F3",
-              borderColor: occasionFilter === "all" ? "#1D1A16" : "#E6DCCB",
-              color: occasionFilter === "all" ? "#F3EEE5" : "#1D1A16",
-            }}
+            className={
+              "flex-none rounded-full px-4 py-[9px] text-[12px] whitespace-nowrap cursor-pointer " +
+              (occasionFilter === "all" ? "bg-terracotta active:bg-terracotta-hover text-cream" : "bg-card border border-border text-ink")
+            }
           >
             Tout
           </button>
-          {occasionsCovered.map((occ) => {
-            const on = occasionFilter === occ;
-            return (
-              <button
-                key={occ}
-                onClick={() => setOccasionFilter(occ)}
-                className="flex-none py-[9px] px-4 rounded-full text-[12.5px] cursor-pointer border whitespace-nowrap"
-                style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB", color: on ? "#F3EEE5" : "#1D1A16" }}
-              >
-                {OCC_LABELS[occ]}
-              </button>
-            );
-          })}
+          {occasionsCovered.map((occ) => (
+            <button
+              key={occ}
+              onClick={() => setOccasionFilter(occ)}
+              className={
+                "flex-none rounded-full px-4 py-[9px] text-[12px] whitespace-nowrap cursor-pointer " +
+                (occasionFilter === occ ? "bg-terracotta active:bg-terracotta-hover text-cream" : "bg-card border border-border text-ink")
+              }
+            >
+              {OCC_LABELS[occ]}
+            </button>
+          ))}
         </div>
       )}
 
@@ -282,6 +289,13 @@ export default function ItemOutfitsScreen() {
               .sort((a, b) => outfitFormality(a.pieces, pivot.id) - outfitFormality(b.pieces, pivot.id))
               .map((x, rank) => [x.variation, rank])
           );
+          // Écart de formalité à la moyenne de la section — repli de titrage
+          // quand aucune dimension de diversité ne distingue l'idée (recette
+          // 26/08/2026). Un ÉCART, jamais un rang : deux tenues de formalité
+          // identique donnaient auparavant deux titres suggérant une
+          // progression inexistante, le tri sur ex æquo étant arbitraire.
+          const formalities = withPieces.map((x) => outfitFormality(x.pieces, pivot.id));
+          const avgFormality = formalities.reduce((sum, f) => sum + f, 0) / (formalities.length || 1);
 
           return (
             <div key={group.occasion} className="mt-[20px]">
@@ -298,18 +312,8 @@ export default function ItemOutfitsScreen() {
               <div className="flex flex-col gap-[10px]">
                 {withPieces.map(({ variation, pieces }) => {
                   const styleRank = rankOf.get(variation)!;
-                  const insight = describeOutfitVariation(variation, pieces, pivot.id, styleRank, withPieces.length);
-                  // Marqueurs ✓/✦ (brief section 3) — seulement pour une
-                  // tenue MIXTE (pièces complémentaires possédées ET
-                  // suggérées à la fois) : c'est le seul cas où distinguer
-                  // vraiment la provenance aide à comprendre le look. Une
-                  // tenue homogène (tout possédé ou tout suggéré) n'a besoin
-                  // d'aucun marqueur — la légende générale plus haut suffit.
-                  const complementary = pieces.filter((p) => p.id !== pivot.id);
-                  const mixed = complementary.some((p) => pieceOwned(p.id)) && complementary.some((p) => !pieceOwned(p.id));
-                  const pieceMarkers = mixed
-                    ? Object.fromEntries(complementary.map((p) => [p.id, pieceOwned(p.id) ? "owned" : "suggested"] as const))
-                    : undefined;
+                  const formalityGap = outfitFormality(pieces, pivot.id) - avgFormality;
+                  const insight = describeOutfitVariation(variation, pieces, pivot.id, styleRank, withPieces.length, formalityGap);
                   return (
                     // Card entièrement cliquable (section 8) : un seul vrai
                     // élément interactif (button), jamais de bouton imbriqué —
@@ -321,14 +325,31 @@ export default function ItemOutfitsScreen() {
                       type="button"
                       onClick={() => actions.viewItemOutfit(variation.ids, variation.occasion)}
                       aria-label={`Voir la tenue : ${insight.title}`}
-                      className="w-full text-left bg-card border border-border rounded-[14px] p-[11px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
+                      className="w-full text-left bg-card border border-border rounded-[14px] p-[10px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
                     >
-                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} pieceMarkers={pieceMarkers} />
-                      <div className="mt-[9px]">
+                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} />
+                      {/* Card en trois niveaux (recette 26/08/2026, 3e passe,
+                          section 6) : composition, titre, puis description et
+                          action. Aucun autre badge ni métadonnée — la
+                          provenance est portée une seule fois, par la phrase
+                          en haut d'écran. La description est
+                          bornée à 3 lignes : describeOutfitVariation produit
+                          parfois une phrase de 4-5 lignes qui à elle seule
+                          rendait les cards nettement plus hautes que la tenue
+                          affichée. Borne à 3 et non à 2 : une description
+                          courante ("Le blazer structuré structure la robe,
+                          tandis que...") tient en 2 lignes à 390px mais passe
+                          à 3 dès 360px — la borner à 2 la tronquerait sur les
+                          petits écrans, ce que le brief exclut.
+                          "Voir cette tenue →" reste sur sa propre ligne : le
+                          remonter sur celle du titre ferait passer les titres
+                          les plus longs ("Prête à sortir de l'ordinaire") sur
+                          deux lignes dès 390px, sans rien gagner. */}
+                      <div className="mt-[8px]">
                         <div className="font-serif text-[14px] text-ink leading-[1.25]">{insight.title}</div>
-                        <div className="text-[12px] text-[#3F3B34] mt-[3px] leading-[1.4]">{insight.sentence}</div>
+                        <div className="text-[12px] text-[#3F3B34] mt-[2px] leading-[1.4] line-clamp-3">{insight.sentence}</div>
                       </div>
-                      <span className="mt-[8px] inline-block text-[12px] text-terracotta">Voir cette tenue →</span>
+                      <span className="mt-[6px] inline-block text-[12px] text-terracotta">Voir cette tenue →</span>
                     </button>
                   );
                 })}

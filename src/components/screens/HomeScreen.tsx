@@ -247,22 +247,36 @@ const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
   homme: ["/editorial/editcapsela-homme3-hp.jpg", "/editorial/editcapsela-homme1-hp.jpg", "/editorial/editcapsela-homme2-hp.jpg"],
 };
 
-// Composition "carnet de souvenirs" (recette 26/08/2026, 4e correctif —
-// signalé : polaroids trop petits/tassés à gauche, zone photo perçue comme
-// secondaire). Une principale nettement dominante au premier plan, une
-// secondaire décalée haut/gauche et une troisième décalée bas/droite,
-// toutes deux visiblement DERRIÈRE (z inférieur) mais jamais presque
-// entièrement masquées : recouvrement main/secondaire ≈35-40% de la surface
-// du secondaire (≈60-65% visible), contre le calcul précédent, plus serré,
-// qui laissait les secondaires trop discrets. Les 3 boîtes restent TOUJOURS
-// comprises dans [0,100] (jamais de left/top négatif ni de right/bottom >
-// 100 — aucun débordement hors de la card, aucune ne touche le bord gauche).
-// Marge intérieure gérée par le padding du conteneur (JSX), pas par des
-// coordonnées négatives.
+// Composition en trois photos SÉPARÉES (recette 26/08/2026, 5e correctif —
+// signalé une nouvelle fois : "les polaroids se chevauchent toujours"). Les
+// quatre passes précédentes ont réduit le recouvrement sans jamais le
+// supprimer, la dernière l'assumant même à ≈35-40% de la surface des
+// secondaires au nom d'un effet "carnet de souvenirs" : mesuré sur la
+// composition déployée, cela représentait ~1350 à 1660 px² de recouvrement
+// par paire. L'objectif n'est donc plus de doser le chevauchement mais de
+// l'éliminer : une principale dominante à gauche (≈2x la surface d'une
+// secondaire), deux secondaires empilées à droite, aucune ne mordant sur
+// une autre.
+//
+// Géométrie vérifiée par calcul sur 360/390/412/430px de large, ROTATION
+// COMPRISE (une boîte tournée déborde de sa boîte CSS : une rotation de 3°
+// sur ~55px ajoute ~1,5px de chaque côté, ce qui suffit à faire se toucher
+// deux photos calées au pixel près) : 0 px² de recouvrement, écarts min.
+// ~9px à l'horizontale et ~11px à la verticale, et aucun débordement de la
+// zone photo. Les rotations restent volontairement faibles (2-3°) : au-delà,
+// les coins mangent ces écarts. Toute retouche de left/top/w/h/rotate doit
+// donc être revérifiée sur ces quatre largeurs, pas seulement à l'œil sur
+// une seule.
+//
+// Les 3 boîtes restent comprises dans [0,100] (jamais de left/top négatif ni
+// de right/bottom > 100) ; la marge intérieure est gérée par le padding du
+// conteneur (JSX), pas par des coordonnées négatives. Les z-index, désormais
+// sans effet puisqu'il n'y a plus de superposition, sont conservés comme
+// garde-fou si une future retouche réintroduisait un contact.
 const POLAROID_SLOTS: { left: number; top: number; w: number; h: number; rotate: number; z: number }[] = [
-  { left: 22, top: 10, w: 60, h: 70, rotate: -2, z: 3 },
-  { left: 1, top: 0, w: 38, h: 42, rotate: -8, z: 1 },
-  { left: 60, top: 54, w: 36, h: 40, rotate: 7, z: 2 },
+  { left: 2, top: 15, w: 48, h: 64, rotate: -2, z: 3 },
+  { left: 60, top: 8, w: 35, h: 38, rotate: 3, z: 2 },
+  { left: 60, top: 55, w: 35, h: 38, rotate: -2, z: 1 },
 ];
 
 function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (typeof POLAROID_SLOTS)[number] }) {
@@ -301,7 +315,7 @@ function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (ty
 }
 
 export default function HomeScreen() {
-  const { state, geoCity, geoLoading, wardrobePool, vestiairePool, weather, actions } = useCapsela();
+  const { state, geoCity, geoLoading, vestiairePool, weather, actions } = useCapsela();
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
 
@@ -315,8 +329,15 @@ export default function HomeScreen() {
   const occasionKey = state.occasion && state.occasion !== "all" ? state.occasion : defaultOccasionToday(profile.prefs);
   const occasionLabel = OCC_LABELS[occasionKey];
 
+  // Pool de résolution stable (même correctif que HistoryScreen, 20/08/2026) :
+  // wardrobePool ne contient, par catégorie, que les pièces réelles ou les
+  // suggestions de la capsule du profil courant, alors que state.outfit peut
+  // venir de la capsule d'un style exploré (viewExploredOutfit) ou d'une
+  // entrée d'historique rejouée — la card "tenue du jour" se vidait alors ici
+  // alors que la page Tenue, elle, l'affichait.
+  const resolvePool = [...state.items, ...vestiairePool];
   const outfitPieces = hasOutfit
-    ? state.outfit.map((id) => wardrobePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it))
+    ? state.outfit.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it))
     : [];
 
   // Même phrase d'explication que la page Tenue (explainRecommendation,
@@ -462,8 +483,8 @@ export default function HomeScreen() {
 
         {/* Journal des tenues — les tenues portées au fil du temps. Deux
             zones au poids visuel comparable (46% photos / 54% contenu,
-            recette 26/08/2026, 4e passe) : les polaroids, agrandis et
-            recentrés (composition "carnet de souvenirs", cf. POLAROID_SLOTS),
+            recette 26/08/2026, 5e passe) : les polaroids, agrandis et
+            désormais entièrement séparés (cf. POLAROID_SLOTS),
             dominent la hauteur de la card au même titre que le bloc texte —
             jamais un texte principal accompagné d'une pile décorative
             secondaire. Padding vertical symétrique (14px) = le mécanisme de

@@ -7,17 +7,26 @@ import { isWishlistLook } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 
 export default function LookDetailScreen() {
-  const { state, actions, wardrobePool } = useCapsela();
+  const { state, actions, vestiairePool } = useCapsela();
   const look = state.savedLooks.find((l) => l.id === state.activeLookId);
   if (!look) return null;
   const wishlist = isWishlistLook(look);
 
   // Un look "Créer un look" ne référence que de vraies pièces du dressing ;
   // un look "Enregistrer cette tenue" peut aussi contenir des suggestions
-  // capsule pas encore possédées (recette 23/08/2026) — résolution sur
-  // wardrobePool dans les deux cas.
+  // capsule pas encore possédées (recette 23/08/2026) — résolution sur un
+  // pool stable dans les deux cas.
+  // Pool de résolution stable (même correctif que HistoryScreen, 20/08/2026) :
+  // wardrobePool ne contient, par catégorie, que les pièces réelles ou les
+  // suggestions de la capsule du profil courant. Une tenue enregistrée pendant
+  // l'exploration d'un autre style (state.exploredStyleId) référence des
+  // suggestions de la capsule de ce style-là, absentes de wardrobePool une fois
+  // revenue au style normal — d'où le "0 pièces" constaté. state.items +
+  // vestiairePool couvre toujours l'intégralité des pièces possibles, réelles
+  // ou suggérées, quel que soit le style courant.
+  const resolvePool = [...state.items, ...vestiairePool];
   const pieces = look.pieceIds
-    .map((id) => wardrobePool.find((i) => i.id === id))
+    .map((id) => resolvePool.find((i) => i.id === id))
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
 
   return (
