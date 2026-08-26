@@ -366,6 +366,56 @@ export function computeDefaultCapsule(
     out = [...out, ...selectGroup(groupPool, group.quota, covered, profile.morphology)];
   }
 
+  // Redistribution du reliquat (correctif 26/08/2026, signalé sur l'audit
+  // des 56 capsules) : un groupe dont le pool est vide ou plus petit que son
+  // quota laissait ses places perdues, jamais réattribuées. Une capsule
+  // homme plafonnait ainsi à 31 pièces au lieu de 35 — les 4 places
+  // "robes-combinaisons" n'ayant aucun candidat — et il en allait de même
+  // pour tout style qui n'utilise pas naturellement une famille (les robes
+  // en Streetwear, par exemple). Le reliquat est reversé aux groupes qui ont
+  // encore du stock, dans l'ordre structurel ci-dessous, avec un plafond par
+  // groupe pour ne jamais retomber sur le déséquilibre que CAPSULE_GROUPS
+  // corrigeait au départ (12 hauts quand Vestes plafonnait à 1).
+  // Contrairement à selectGroup, ce complément ne réserve pas de place
+  // "statement" : elle l'a déjà été au premier passage.
+  const REDISTRIBUTION_ORDER = ["hauts", "bas", "vestes-manteaux", "chaussures", "accessoires", "bijoux", "robes-combinaisons"];
+  const totalQuota = CAPSULE_GROUPS.reduce((sum, g) => sum + g.quota, 0);
+  let leftover = totalQuota - out.length;
+  if (leftover > 0) {
+    const chosenIds = new Set(out.map((it) => it.id));
+    const restByGroup = new Map<string, CatalogItem[]>();
+    const roomByGroup = new Map<string, number>();
+    for (const name of REDISTRIBUTION_ORDER) {
+      const group = CAPSULE_GROUPS.find((g) => g.name === name);
+      if (!group) continue;
+      restByGroup.set(name, (poolByGroup.get(name) || []).filter((it) => !chosenIds.has(it.id)));
+      roomByGroup.set(name, Math.ceil(group.quota / 2));
+    }
+    // Tour de table : une pièce par groupe et par passe, jamais un groupe
+    // servi jusqu'à saturation avant le suivant — sinon la totalité du
+    // reliquat retombait sur les hauts (12 hauts pour 7 bas mesuré), le
+    // déséquilibre même que les quotas corrigeaient.
+    let progress = true;
+    while (leftover > 0 && progress) {
+      progress = false;
+      for (const name of REDISTRIBUTION_ORDER) {
+        if (leftover <= 0) break;
+        if ((roomByGroup.get(name) ?? 0) <= 0) continue;
+        const candidates = restByGroup.get(name) || [];
+        if (!candidates.length) continue;
+        const best = pickBestMarginal(candidates, covered, profile.morphology);
+        if (!best) continue;
+        out = [...out, best];
+        chosenIds.add(best.id);
+        occasionsOf(best).forEach((o) => covered.add(o));
+        restByGroup.set(name, candidates.filter((it) => it.id !== best.id));
+        roomByGroup.set(name, (roomByGroup.get(name) ?? 0) - 1);
+        leftover -= 1;
+        progress = true;
+      }
+    }
+  }
+
   // Garde-fou formalité (étape 3) : dans les catégories structurantes, si
   // un palier de formalité existe dans le pool mais n'est représenté par
   // aucune pièce sélectionnée (le tri par couverture l'a évincé), on le
