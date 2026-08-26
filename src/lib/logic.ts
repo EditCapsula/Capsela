@@ -730,7 +730,21 @@ export function generateOutfit(
     // le bas, qui doit rester autonome (poolFor(BOTTOMS) reste soumis au
     // plancher plein, cf. hardCategoryFilter).
     const hautCandidates = poolFor(["haut"], true);
-    const hautMeetingFloor = dressy ? hautCandidates.filter((i) => formalityOf(i) >= minFormality) : hautCandidates;
+    // Correctif 26/08/2026 (signalé : un haut explicitement ouvert à
+    // "festive" n'apparaissait jamais dans une tenue festive) — ce second
+    // plancher rejouait formalityOf() brut sur le haut, sans reprendre
+    // l'exemption que hardCategoryFilter accorde déjà à une occasion
+    // déclarée sur la pièce (correctif 23/08/2026, R-B3). Une pièce que
+    // R-B3 avait volontairement laissée passer était donc réexclue ici,
+    // sauf à trouver une veste compensatrice — l'exemption n'avait plus
+    // aucun effet là où elle comptait le plus. Le plancher reste entier
+    // pour les pièces qui ne déclarent rien : la compensation par veste
+    // garde tout son rôle, seule la déclaration explicite y échappe.
+    const declaredForOccasion = (i: Item): boolean =>
+      occasion !== "all" && Boolean(i.occasion && i.occasion.includes(occasion));
+    const hautMeetingFloor = dressy
+      ? hautCandidates.filter((i) => formalityOf(i) >= minFormality || declaredForOccasion(i))
+      : hautCandidates;
     let hautPool = hautMeetingFloor;
     if (dressy && !hautMeetingFloor.length && hautCandidates.length) {
       const vesteCandidates = hardBase.filter((i) => i.cat === "veste" && formalityOf(i) >= minFormality);
