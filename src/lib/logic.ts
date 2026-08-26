@@ -19,7 +19,7 @@ const BOTTOMS: CategoryKey[] = [...BAS_CATS, "jupe"];
 /** Catégories haut du corps concernées par le rôle base/calque (R-B8, R-S11/S12). Exporté pour CreateLookScreen (règle "jamais 2 pièces base", brief design section 4). */
 export const TOP_LAYER_CATS: CategoryKey[] = ["haut", "pull"];
 const TOP_OR_BOTTOM_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe"];
-/** Pièces qui constituent une base valide sous une veste/un manteau (R-B9) — un pull seul ne compte pas comme base. */
+/** Pièces qui constituent une base valide sous une veste/un manteau (R-B9). */
 const BASE_GARMENT_CATS: CategoryKey[] = ["haut", "robe", "combinaison"];
 const OUTERWEAR_CATS: CategoryKey[] = ["veste", "manteau"];
 /** Pièce unique remplaçant haut+bas (R-B5) — robe et combinaison, toujours équivalentes ici. */
@@ -31,9 +31,25 @@ const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire
 /** Types de chaussures ouvertes exclus s'il est prévu de la pluie (R-B21) — uniquement les valeurs explicitement des sandales, jamais une extrapolation vers d'autres types semi-ouverts (mules, espadrilles...) non nommés par la demande. */
 const SANDAL_SHOE_TYPES: ShoeType[] = ["Sandales", "Sandales à talons"];
 
-/** Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète (R-B9). */
+/**
+ * Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète
+ * (R-B9).
+ *
+ * Correctif 26/08/2026 (signalé : "un pull ne doit pas nécessairement être
+ * porté avec un haut en dessous") — un pull comptait pour rien dans cette
+ * règle, si bien que "col roulé + pantalon + manteau" était refusé à la
+ * sauvegarde alors que c'est une tenue d'hiver parfaitement constituée. Un
+ * pull dont le rôle est "base" (col roulé, col rond, col V...) vaut
+ * désormais base à lui seul ; un pull "calque" (cardigan, gilet, maille
+ * oversize) continue d'en exiger une sous lui, ce qui est bien le cas où le
+ * layering est réellement obligatoire. La distinction vient de rolePieceOf(),
+ * qui lit le rôle déclaré sur la pièce et retombe sinon sur la coupe — pas
+ * d'heuristique de libellé ajoutée ici.
+ */
 function hasBaseGarment(items: Item[]): boolean {
-  return items.some((i) => BASE_GARMENT_CATS.includes(i.cat));
+  return items.some(
+    (i) => BASE_GARMENT_CATS.includes(i.cat) || (i.cat === "pull" && rolePieceOf(i) === "base")
+  );
 }
 
 /** R-B9 — vrai si la sélection contient une veste/un manteau sans pièce de base (haut, robe, combinaison) en dessous. */
