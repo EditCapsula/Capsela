@@ -1,0 +1,42 @@
+name: CI
+
+# Vérifie à chaque poussée et sur chaque pull request que le projet compile,
+# passe le linter et que les règles du moteur tiennent toujours. Les trois
+# autres workflows du dépôt ne font que du déploiement Supabase ou de la
+# génération d'images : jusqu'ici, rien ne contrôlait le code lui-même.
+#
+# Les tests couvrent src/lib — les règles R-B3, R-B9, R-B19, les quotas de
+# capsule, les clés visuelles et le vocabulaire des prompts image. Ce sont
+# des fonctions pures, la suite tourne en quelques secondes.
+
+on:
+  push:
+    branches-ignore: []
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Types
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      - name: Build de production
+        run: npm run build
