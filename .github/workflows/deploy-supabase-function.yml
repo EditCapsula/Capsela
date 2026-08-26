@@ -23,15 +23,28 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase functions deploy generate-catalog-image --project-ref tkrbzrazejrxavtfspll
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      - run: supabase functions deploy analyze-dressing-photo --project-ref tkrbzrazejrxavtfspll
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      - run: supabase functions deploy delete-account --project-ref tkrbzrazejrxavtfspll
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      - run: supabase functions deploy weather --project-ref tkrbzrazejrxavtfspll
+
+      # Déploie toutes les fonctions présentes dans supabase/functions,
+      # plutôt qu'une liste à tenir à jour à la main (simplifié le
+      # 26/08/2026). Cette liste avait déjà laissé analyze-dressing-photo
+      # non déployée pendant des semaines, et weather a bien failli suivre
+      # le même chemin.
+      #
+      # Les dossiers commençant par _ sont ignorés : _shared contient les
+      # modules importés par les fonctions, ce n'en est pas une.
+      #
+      # bash s'arrête au premier échec (comportement par défaut des étapes
+      # `run`), donc un déploiement raté fait échouer le workflow au lieu de
+      # passer inaperçu.
+      - name: Déployer toutes les fonctions
+        run: |
+          for dir in supabase/functions/*/; do
+            name=$(basename "$dir")
+            case "$name" in
+              _*) echo "· $name ignoré (dossier partagé, pas une fonction)"; continue ;;
+            esac
+            echo "→ déploiement de $name"
+            supabase functions deploy "$name" --project-ref tkrbzrazejrxavtfspll
+          done
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
