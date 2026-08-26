@@ -233,6 +233,19 @@ const COLOR_EN: Record<string, string> = {
   "gris anthracite": "charcoal grey",
   "bleu ciel": "sky blue",
   denim: "denim blue",
+  // Correctif 26/08/2026 : les libellés denim composés de la base
+  // ("Denim bleu", "Denim clair", "Denim brut", "Denim gris") ne
+  // matchaient que sur `denim` seul en recherche exacte, donc jamais —
+  // le repli `item.color.toLowerCase()` injectait du français brut dans
+  // le prompt anglais ("women's denim bleu denim shorts"). Traduits par
+  // la nuance seule ("blue", pas "blue denim") : MATIERE_EN injecte déjà
+  // "denim" juste après, et CATEGORY_EN le répète pour les jeans.
+  "denim bleu": "blue",
+  "denim clair": "light blue",
+  "denim brut": "raw indigo",
+  "denim gris": "grey",
+  "bleu moyen": "medium blue",
+  "bleu brut": "raw indigo blue",
   bleu: "blue",
   marine: "navy blue",
   prune: "plum purple",
