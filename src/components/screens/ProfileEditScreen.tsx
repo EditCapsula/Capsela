@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
+import { readConsent, setConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
 import {
   GENDERS,
   WORK_DAYS,
@@ -300,6 +301,8 @@ export default function ProfileEditScreen() {
         </div>
         <Toggle on={prefs.weatherFromGeo} onClick={() => setPrefs({ weatherFromGeo: !prefs.weatherFromGeo })} />
       </div>
+
+      <AnalyticsPreference />
       <div className="flex gap-2 mt-[9px]">
         {(
           [
@@ -376,5 +379,34 @@ export default function ProfileEditScreen() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * Retrait du consentement aux mesures d'audience — obligatoire et aussi
+ * simple à actionner que l'acceptation initiale (CNIL). Affiché seulement
+ * si une mesure est réellement configurée : sans NEXT_PUBLIC_GA_ID, ce
+ * réglage n'aurait aucun objet.
+ *
+ * Lit le même store que le bandeau (lib/consent.ts), donc les deux restent
+ * synchronisés sans passer par le profil serveur — le consentement aux
+ * cookies s'attache à l'appareil, pas au compte.
+ */
+function AnalyticsPreference() {
+  const consent = useSyncExternalStore(subscribeConsent, readConsent, () => "unknown" as ConsentState);
+  if (!process.env.NEXT_PUBLIC_GA_ID) return null;
+  return (
+    <>
+      <SectionLabel>Mesure d&apos;audience</SectionLabel>
+      <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px]">
+        <div className="flex-1 pr-3">
+          <span className="text-[13px] text-ink">Autoriser les statistiques d&apos;usage</span>
+          <div className="text-[11.5px] text-muted mt-[2px] leading-[1.35]">
+            Établies par Google Analytics, pour améliorer l&apos;application. Aucune incidence sur son fonctionnement.
+          </div>
+        </div>
+        <Toggle on={consent === "granted"} onClick={() => setConsent(consent === "granted" ? "denied" : "granted")} />
+      </div>
+    </>
   );
 }
