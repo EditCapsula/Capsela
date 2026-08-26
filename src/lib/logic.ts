@@ -788,7 +788,28 @@ export function generateOutfit(
     if (b && b.cat === "short" && currentSeasonKey() !== "Été") needsCollant = true;
   }
   if (needsCollant && gender === "femme") {
-    const collantPool = poolFor(["accessoire"]).filter((i) => i.cat === "accessoire" && i.accessoireType === "Collants");
+    // Recherche dédiée, jamais dérivée de poolFor (correctif 26/08/2026,
+    // signalé) : l'échelle de replis des accessoires retient le premier
+    // barreau contenant AU MOINS UN accessoire, pas nécessairement celui que
+    // l'appelant cherche. Une ceinture — sans aucune contrainte de
+    // température — validait donc le barreau filtré météo pour tout le
+    // monde, et les collants, eux écartés par ce filtre sous leur
+    // meteo_min_temp, disparaissaient avec lui. Mesuré : sur la capsule
+    // Glamour Hiver, 100 % des pièces courtes sortaient avec collants à 2 °C
+    // tant qu'ils étaient le seul accessoire, 0 % dès qu'on ajoutait une
+    // ceinture. Une pièce sans rapport décidait du sort d'une autre.
+    //
+    // R-B19 étant une compensation thermique, la météo ne peut pas non plus
+    // être un motif d'exclusion ici : on préfère la paire dont la plage
+    // couvre la température du jour, mais on n'en laisse jamais aucune —
+    // des jambes nues à 2 °C sont un défaut plus grave qu'un denier
+    // imparfait.
+    const allCollants = pool.filter((i) => i.cat === "accessoire" && i.accessoireType === "Collants");
+    const inTemp = allCollants.filter(
+      (i) =>
+        (i.meteoMinTemp == null || weather.temp >= i.meteoMinTemp) && (i.meteoMaxTemp == null || weather.temp <= i.meteoMaxTemp)
+    );
+    const collantPool = inTemp.length ? inTemp : allCollants;
     const collant = rand(harmonize(collantPool, chosen, false));
     if (collant && !ids.includes(collant.id)) { chosen.push(collant); ids.push(collant.id); }
   }
