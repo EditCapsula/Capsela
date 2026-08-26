@@ -523,7 +523,18 @@ export function generateOutfit(
   // contraire à l'objectif même de R-B18. Le plafond haute température
   // (meteo_max_temp) reste appliqué normalement à ces catégories : un pull
   // épais n'a pas sa place en pleine canicule.
-  const TEMP_COMPENSATED_CATS: CategoryKey[] = [...TOP_LAYER_CATS, "robe", "combinaison"];
+  // Correctif 26/08/2026 (signalé sur la capsule Glamour Automne) : jupe et
+  // short rejoignent la liste. La compensation par un collant existait déjà
+  // plus bas (R-B19 : `b.cat === "jupe"` sous son meteo_min_temp, puis
+  // `b.cat === "short"` hors Été), mais elle ne pouvait jamais se
+  // déclencher — applyTempFilter retirait la jupe du pool avant même que le
+  // bas soit tiré, rendant ces deux lignes inertes. Une mini-jupe à seuil
+  // 16° disparaissait donc purement et simplement à 14° au lieu d'être
+  // proposée avec des collants, exactement ce que R-B19 est censée éviter.
+  // Même raisonnement que pour haut/pull/robe : jamais d'exclusion
+  // silencieuse quand une autre pièce peut compenser. Le plafond
+  // meteo_max_temp reste appliqué normalement.
+  const TEMP_COMPENSATED_CATS: CategoryKey[] = [...TOP_LAYER_CATS, "robe", "combinaison", "jupe", "short"];
   const applyTempFilter = (items: Item[]): Item[] =>
     items.filter((i) => {
       if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp && !TEMP_COMPENSATED_CATS.includes(i.cat)) return false;
