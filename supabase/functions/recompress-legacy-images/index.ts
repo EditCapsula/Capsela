@@ -21,16 +21,23 @@
 // - aucun autre champ que image_url n'est écrit (updated_at bouge seul, via
 //   le trigger de la table).
 //
+// PRÉREQUIS
+// Un secret RECOMPRESS_ADMIN_KEY dans Settings > Edge Functions > Secrets,
+// avec pour valeur une chaîne aléatoire quelconque. Ce n'est PAS une clé
+// d'API Supabase : elle ne sert qu'à cette fonction et ne donne accès à rien
+// d'autre. Sans ce secret, la fonction répond 503.
+//
 // APPEL
+// Depuis le panneau de test du tableau de bord (Edge Functions > cette
+// fonction > Test), méthode POST, corps :
+//   {"admin_key": "<valeur du secret>", "dry_run": true}
+//
+// En ligne de commande, la clé peut aussi passer par l'en-tête :
 //   curl -X POST \
 //     'https://<ref>.supabase.co/functions/v1/recompress-legacy-images' \
-//     -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+//     -H "Authorization: Bearer $RECOMPRESS_ADMIN_KEY" \
 //     -H 'Content-Type: application/json' \
 //     -d '{"limit": 25}'
-//
-// Depuis le panneau de test du tableau de bord, qui impose son propre
-// en-tête Authorization, passer la clé dans le corps :
-//   {"admin_key": "<clé service_role>", "dry_run": true}
 //
 // Corps accepté : { admin_key?: string, limit?: number, dry_run?: boolean }.
 // Idempotente : une ligne convertie ne finit plus en .png, donc un second
@@ -74,19 +81,33 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({} as Record<string, unknown>));
 
   // Garde d'accès : cette fonction réécrit image_url sur des centaines de
-  // lignes, elle ne doit pas être appelable depuis l'app. La clé anon suffit
-  // à passer la vérification de jeton de Supabase — on exige donc en plus la
-  // clé de service, que seule l'administration détient.
+  // lignes, elle ne doit pas être appelable depuis l'app — la clé anon suffit
+  // à passer la vérification de jeton de Supabase, elle ne protège rien ici.
   //
-  // Elle est acceptée dans l'en-tête Authorization OU dans le corps, sous
-  // admin_key : le panneau de test du tableau de bord Supabase impose son
-  // propre en-tête Authorization sans toujours permettre de le remplacer,
-  // alors que le corps JSON reste librement éditable. Les deux voies offrent
-  // la même protection — la requête est chiffrée dans les deux cas.
+  // Le mot de passe est un secret DÉDIÉ, RECOMPRESS_ADMIN_KEY, et surtout pas
+  // la clé service_role (correctif 27/08/2026, après que cette dernière a dû
+  // être collée dans le panneau de test du tableau de bord puis révoquée) :
+  //  - un secret dédié ne donne accès qu'à cette fonction, alors qu'une clé
+  //    service_role divulguée ouvre la totalité de la base ;
+  //  - il se change en une ligne, sans rien casser ailleurs ;
+  //  - il survit à toute rotation des clés d'API du projet.
+  //
+  // Il se pose une fois : Settings > Edge Functions > Secrets, avec pour
+  // valeur une chaîne aléatoire quelconque. Passé dans le corps sous
+  // admin_key, parce que le panneau de test impose son propre en-tête
+  // Authorization sans toujours permettre de le remplacer ; l'en-tête reste
+  // accepté pour un appel en ligne de commande.
+  const adminKey = Deno.env.get("RECOMPRESS_ADMIN_KEY");
+  if (!adminKey) {
+    return json(
+      { error: "Secret RECOMPRESS_ADMIN_KEY absent : à définir dans Settings > Edge Functions > Secrets." },
+      503
+    );
+  }
   const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
   const fournie = typeof body.admin_key === "string" ? body.admin_key.trim() : bearer;
-  if (fournie !== serviceRoleKey) {
-    return json({ error: "Réservé à la clé de service (en-tête Authorization ou champ admin_key)." }, 403);
+  if (fournie !== adminKey) {
+    return json({ error: "Clé d'administration invalide (champ admin_key du corps, ou en-tête Authorization)." }, 403);
   }
 
   let limit = DEFAULT_LIMIT;
