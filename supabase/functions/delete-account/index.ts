@@ -33,7 +33,7 @@
 //   4. Aucun secret à ajouter tant que les clés JWT historiques sont
 //      actives : SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont injectés
 //      automatiquement par le runtime Edge Functions. Une fois ces clés
-//      désactivées, il faut un secret SUPABASE_SECRET_KEY contenant la clé
+//      désactivées, il faut un secret SB_SECRET_KEY contenant la clé
 //      `sb_secret_...` (cf. ../_shared/adminKey.ts).
 //
 // Déploiement avec la CLI (équivalent) :
