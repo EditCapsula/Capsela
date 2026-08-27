@@ -46,7 +46,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { toWebp } from "../_shared/webp.ts";
-import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
+import { ADMIN_KEY_MISSING, getAdminKey, getAdminKeySource } from "../_shared/adminKey.ts";
 
 const BUCKET = "catalog-images";
 // Chaque image coûte un décodage PNG + un redimensionnement + un encodage
@@ -150,6 +150,7 @@ Deno.serve(async (req) => {
   if (dryRun) {
     return json({
       dry_run: true,
+      cle_utilisee: getAdminKeySource(),
       restants: restantsAvant ?? 0,
       lot: assets.map((a) => ({ id: a.id, visual_key: a.visual_key, chemin: cheminDepuisUrl(a.image_url) })),
     });

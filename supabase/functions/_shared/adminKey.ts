@@ -21,6 +21,18 @@ export function getAdminKey(): string | undefined {
   return Deno.env.get("SB_SECRET_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 }
 
+/**
+ * Laquelle des deux sources a réellement servi. Le repli étant silencieux,
+ * rien ne distingue de l'extérieur une fonction déjà migrée d'une fonction
+ * qui tient encore par la clé JWT — et la désactivation de ces clés est
+ * irréversible. Ce témoin lève le doute avant de franchir ce pas.
+ */
+export function getAdminKeySource(): "SB_SECRET_KEY" | "SUPABASE_SERVICE_ROLE_KEY" | null {
+  if (Deno.env.get("SB_SECRET_KEY")) return "SB_SECRET_KEY";
+  if (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return "SUPABASE_SERVICE_ROLE_KEY";
+  return null;
+}
+
 /** Message d'erreur commun, pour ne pas laisser croire qu'une seule des deux variables est attendue. */
 export const ADMIN_KEY_MISSING =
   "Configuration serveur incomplète : SUPABASE_URL et l'une de SB_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY sont requises.";
