@@ -35,6 +35,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { buildImagePrompt, CATEGORY_CANON, CATEGORY_FOLDER, type TrendRule, type VestiaireRow } from "../_shared/imagePrompt.ts";
 import { computeVisualKey, normalizeVisualColor, normalizeVisualSubtype } from "../_shared/visualKey.ts";
 import { toWebp } from "../_shared/webp.ts";
+import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
 
 const BUCKET = "catalog-images";
 // Catégories où le rendu visuel ne dépend pas vraiment du genre affiché —
@@ -100,14 +101,14 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = getAdminKey();
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   const model = Deno.env.get("IMAGE_GENERATION_MODEL") || DEFAULT_MODEL;
   const quality = Deno.env.get("IMAGE_GENERATION_QUALITY") || DEFAULT_QUALITY;
   const dailyCap = Number(Deno.env.get("MAX_IMAGE_GENERATIONS_PER_DAY")) || DEFAULT_DAILY_CAP;
 
   if (!supabaseUrl || !serviceRoleKey) {
-    return jsonError("Configuration serveur incomplète (SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY).", 500);
+    return jsonError(ADMIN_KEY_MISSING, 500);
   }
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 

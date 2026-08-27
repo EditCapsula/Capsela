@@ -30,13 +30,17 @@
 //   1. Dashboard Supabase → Edge Functions → "Deploy a new function".
 //   2. Nom de la fonction : delete-account (exactement ce nom).
 //   3. Coller l'intégralité de ce fichier, puis Deploy.
-//   4. Aucun secret à ajouter : SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY
-//      sont déjà injectés automatiquement par le runtime Edge Functions.
+//   4. Aucun secret à ajouter tant que les clés JWT historiques sont
+//      actives : SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont injectés
+//      automatiquement par le runtime Edge Functions. Une fois ces clés
+//      désactivées, il faut un secret SUPABASE_SECRET_KEY contenant la clé
+//      `sb_secret_...` (cf. ../_shared/adminKey.ts).
 //
 // Déploiement avec la CLI (équivalent) :
 //   supabase functions deploy delete-account
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,9 +53,9 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = getAdminKey();
   if (!supabaseUrl || !serviceRoleKey) {
-    return jsonError("Configuration serveur incomplète (SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY).", 500);
+    return jsonError(ADMIN_KEY_MISSING, 500);
   }
 
   const authHeader = req.headers.get("Authorization");

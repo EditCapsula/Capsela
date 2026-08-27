@@ -46,6 +46,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { toWebp } from "../_shared/webp.ts";
+import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
 
 const BUCKET = "catalog-images";
 // Chaque image coûte un décodage PNG + un redimensionnement + un encodage
@@ -73,9 +74,9 @@ Deno.serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = getAdminKey();
   if (!supabaseUrl || !serviceRoleKey) {
-    return json({ error: "Configuration serveur incomplète (SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY)." }, 500);
+    return json({ error: ADMIN_KEY_MISSING }, 500);
   }
 
   const body = await req.json().catch(() => ({} as Record<string, unknown>));
