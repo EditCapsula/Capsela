@@ -161,7 +161,7 @@ export default function ItemOutfitsScreen() {
         >
           {pivotImage.url && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <img loading="lazy"
               src={pivotImage.url}
               alt={pivot.name}
               style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}

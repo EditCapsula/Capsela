@@ -67,7 +67,7 @@ export default function NeverWornScreen() {
                 >
                   {img.url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <img loading="lazy"
                       src={img.url}
                       alt={it.name}
                       style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}

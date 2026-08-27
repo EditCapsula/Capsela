@@ -144,7 +144,7 @@ export default function WardrobeScreen() {
               >
                 {img.url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }} />
+                  <img loading="lazy" src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }} />
                 )}
               </div>
               <span className="text-terracotta text-[16px] flex-shrink-0">›</span>
@@ -205,7 +205,7 @@ export default function WardrobeScreen() {
                   <div className="w-full" style={{ aspectRatio: "16/10", background: "#F3EDE1" }}>
                     {img.url && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <img loading="lazy"
                         src={img.url}
                         alt=""
                         style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
@@ -331,7 +331,7 @@ export default function WardrobeScreen() {
                           >
                             {img.url && (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img
+                              <img loading="lazy"
                                 src={img.url}
                                 alt=""
                                 style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}

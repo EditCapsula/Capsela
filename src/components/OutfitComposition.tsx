@@ -237,7 +237,7 @@ export function OutfitComposition({
           >
             {hasImg && !isRealPhoto && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <img loading="lazy"
                 src={img.url}
                 alt=""
                 style={{
