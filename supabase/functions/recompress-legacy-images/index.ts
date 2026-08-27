@@ -28,7 +28,11 @@
 //     -H 'Content-Type: application/json' \
 //     -d '{"limit": 25}'
 //
-// Corps accepté : { limit?: number, dry_run?: boolean }.
+// Depuis le panneau de test du tableau de bord, qui impose son propre
+// en-tête Authorization, passer la clé dans le corps :
+//   {"admin_key": "<clé service_role>", "dry_run": true}
+//
+// Corps accepté : { admin_key?: string, limit?: number, dry_run?: boolean }.
 // Idempotente : une ligne convertie ne finit plus en .png, donc un second
 // appel ne la reprend pas. Relancer jusqu'à ce que `restants` vaille 0.
 
@@ -67,28 +71,33 @@ Deno.serve(async (req) => {
     return json({ error: "Configuration serveur incomplète (SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY)." }, 500);
   }
 
+  const body = await req.json().catch(() => ({} as Record<string, unknown>));
+
   // Garde d'accès : cette fonction réécrit image_url sur des centaines de
   // lignes, elle ne doit pas être appelable depuis l'app. La clé anon suffit
-  // à passer la vérification de jeton de Supabase — on exige donc en plus
-  // que le porteur soit la clé de service, que seule l'administration détient.
+  // à passer la vérification de jeton de Supabase — on exige donc en plus la
+  // clé de service, que seule l'administration détient.
+  //
+  // Elle est acceptée dans l'en-tête Authorization OU dans le corps, sous
+  // admin_key : le panneau de test du tableau de bord Supabase impose son
+  // propre en-tête Authorization sans toujours permettre de le remplacer,
+  // alors que le corps JSON reste librement éditable. Les deux voies offrent
+  // la même protection — la requête est chiffrée dans les deux cas.
   const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
-  if (bearer !== serviceRoleKey) {
-    return json({ error: "Réservé à la clé de service." }, 403);
+  const fournie = typeof body.admin_key === "string" ? body.admin_key.trim() : bearer;
+  if (fournie !== serviceRoleKey) {
+    return json({ error: "Réservé à la clé de service (en-tête Authorization ou champ admin_key)." }, 403);
   }
 
   let limit = DEFAULT_LIMIT;
-  let dryRun = false;
-  try {
-    const body = await req.json().catch(() => ({}));
-    if (body.limit !== undefined) {
-      const n = Number(body.limit);
-      if (!Number.isFinite(n) || n < 1) throw new Error("limit invalide");
-      limit = Math.min(Math.floor(n), MAX_LIMIT);
+  if (body.limit !== undefined) {
+    const n = Number(body.limit);
+    if (!Number.isFinite(n) || n < 1) {
+      return json({ error: "limit invalide : entier positif attendu." }, 400);
     }
-    dryRun = body.dry_run === true;
-  } catch (err) {
-    return json({ error: err instanceof Error ? err.message : "Corps de requête invalide." }, 400);
+    limit = Math.min(Math.floor(n), MAX_LIMIT);
   }
+  const dryRun = body.dry_run === true;
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
