@@ -219,10 +219,25 @@ describe("Convention de nommage du catalogue", () => {
     }
 
     if (impactes.length) {
-      console.log(`\n── Renommages qui MODIFIENT le moteur (contrainte 6) ──`);
+      // Regroupés par nature d'impact : 136 entrées à plat sont illisibles, et
+      // ce qui compte pour arbitrer n'est pas la ligne mais le motif — combien
+      // de pièces perdent leur coupe, combien gagnent une affinité, etc.
+      const familles = new Map<string, typeof impactes>();
       for (const i of impactes) {
-        console.log(`  [#${i.id}] "${i.ancien}" → "${i.nouveau}"`);
-        for (const e of i.ecarts) console.log(`      ⚠ ${e}`);
+        const cle = i.ecarts.map((e) => e.split(":")[0]).sort().join(" + ");
+        familles.set(cle, [...(familles.get(cle) || []), i]);
+      }
+      console.log(`\n── Renommages qui MODIFIENT le moteur, par nature (contrainte 6) ──`);
+      for (const [cle, lignes] of [...familles.entries()].sort((a, b) => b[1].length - a[1].length)) {
+        console.log(`\n  ▸ ${cle} — ${lignes.length} pièce(s)`);
+        // Transitions distinctes observées dans cette famille, avec leur poids.
+        const transitions = new Map<string, number>();
+        for (const l of lignes) for (const e of l.ecarts) transitions.set(e, (transitions.get(e) || 0) + 1);
+        for (const [t, n] of [...transitions.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)) {
+          console.log(`      ${n}×  ${t}`);
+        }
+        console.log(`      exemples : ${lignes.slice(0, 3).map((l) => `[#${l.id}] "${l.ancien}" → "${l.nouveau}"`).join("  ·  ")}`);
+        console.log(`      ids : ${lignes.map((l) => l.id).join(", ")}`);
       }
     }
 
