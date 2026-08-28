@@ -59,13 +59,18 @@ jobs:
           # que la fonction ne peut pas traiter, pas un aléa : on s'arrête
           # plutôt que de boucler indéfiniment dessus.
           saturations=0
+          # Une réponse vide ou illisible est un aléa de transport, pas un
+          # verdict : le run du 28/08/2026 a converti 92 images puis s'est
+          # arrêté sur un unique appel revenu vide, laissant 265 images en
+          # plan. On réessaie donc avant d'abandonner.
+          illisibles=0
 
           for appel in $(seq 1 "$MAX_APPELS"); do
-            reponse=$(curl -sS -X POST "$URL" \
+            reponse=$(curl -sS --max-time 120 -X POST "$URL" \
               -H "apikey: $PUBLISHABLE_KEY" \
               -H "Authorization: Bearer $PUBLISHABLE_KEY" \
               -H "Content-Type: application/json" \
-              -d "{\"admin_key\": \"$ADMIN_KEY\", \"limit\": $LOT}")
+              -d "{\"admin_key\": \"$ADMIN_KEY\", \"limit\": $LOT}") || reponse=""
 
             if echo "$reponse" | jq -e '.code == "WORKER_RESOURCE_LIMIT"' >/dev/null 2>&1; then
               saturations=$((saturations + 1))
@@ -81,10 +86,17 @@ jobs:
             saturations=0
 
             if ! echo "$reponse" | jq -e 'has("restants")' >/dev/null 2>&1; then
-              echo "::error::réponse inattendue de la fonction"
-              echo "$reponse"
-              exit 1
+              illisibles=$((illisibles + 1))
+              echo "appel $appel · réponse illisible ($illisibles/4) — nouvelle tentative"
+              echo "  reçu : ${reponse:-<vide>}"
+              if [ "$illisibles" -ge 4 ]; then
+                echo "::error::quatre réponses illisibles d'affilée — la fonction ne répond plus correctement"
+                exit 1
+              fi
+              sleep $((illisibles * 5))
+              continue
             fi
+            illisibles=0
 
             convertis=$(echo "$reponse" | jq -r '.convertis // 0')
             restants=$(echo "$reponse" | jq -r '.restants')
