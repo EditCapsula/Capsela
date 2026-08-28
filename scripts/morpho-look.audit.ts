@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { writeFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
-import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
+import { rowToCatalogItem, VESTIAIRE_ID_OFFSET, type VestiaireRow } from "../src/lib/vestiaire";
 import { computeDefaultCapsule, morphoFit, morphoVigilance } from "../src/lib/capsule";
 import { computeLookScore, generateOutfit } from "../src/lib/logic";
 import { effetMorphologique, scoreMorphoV2, signatureLook, type ClasseLook } from "../src/lib/garmentEffect";
@@ -44,6 +44,15 @@ const CAS: { style: string; saison: CapsuleSeason }[] = [
 ];
 
 const TENTATIVES = 40;
+
+// Copie locale de la table de zones : la simulation d'annotation a besoin de
+// la zone sans repasser par signatureLook, qui ne l'expose pas.
+const ZONE_PAR_FAMILLE_LOCAL: Record<string, "haut" | "bas" | "transverse" | "aucune"> = {
+  haut: "haut", pull: "haut", veste: "haut", manteau: "haut",
+  pantalon: "bas", jean: "bas", short: "bas", jupe: "bas",
+  robe: "transverse", combinaison: "transverse",
+  chaussures: "aucune", sac: "aucune", bijou: "aucune", accessoire: "aucune",
+};
 
 function meteo(temp: number, season: Season): Weather {
   return { season, temp, label: temp < 10 ? "Froid" : temp < 20 ? "Doux" : "Chaud", seasons: [season, "Toutes saisons"] };
@@ -193,7 +202,8 @@ describe("Couverture morphologique au niveau du look", () => {
     console.log(`  Positions de classement modifiées : ${rangsChanges}`);
 
     // ── 4. Priorisation d'annotation par fréquence réelle ─────────────────
-    const ligneDe = new Map(data.map((r) => [r.id, r]));
+    // Les ids du pool portent VESTIAIRE_ID_OFFSET ; les lignes SQL non.
+    const ligneDe = new Map(data.map((r) => [r.id + VESTIAIRE_ID_OFFSET, r]));
     const inconnues = pool
       .filter((p) => {
         const e = effetMorphologique(p);
@@ -220,6 +230,34 @@ describe("Couverture morphologique au niveau du look", () => {
     const couvertParTop = top.reduce((a, p) => a + p.freq, 0);
     const totalFreqInconnues = inconnues.reduce((a, p) => a + p.freq, 0);
     console.log(`\n  Ces 40 pièces représentent ${pct(couvertParTop, totalFreqInconnues)} des apparitions de pièces non évaluées.`);
+
+    // ── 5. Rendement marginal d'une annotation ────────────────────────────
+    // Combien de looks basculeraient en READY si l'on annotait les N pièces
+    // non évaluées les plus présentes dans les looks réels ? C'est la seule
+    // façon honnête d'estimer le retour d'un effort d'annotation : compter des
+    // pièces ne dit rien, compter des looks débloqués le dit.
+    const classeAvecAnnotes = (l: Look, annotes: Set<number>): ClasseLook => {
+      let haut = false, bas = false;
+      for (const it of l.pieces) {
+        const e = effetMorphologique(it);
+        if (!e.pertinent) continue;
+        const zone = ZONE_PAR_FAMILLE_LOCAL[it.cat];
+        const connue = annotes.has(it.id) || e.confiance === "haute" || e.confiance === "moyenne" || e.epaules > 0 || e.hanches > 0;
+        if (!connue) continue;
+        if (zone === "haut" || zone === "transverse") haut = true;
+        if (zone === "bas" || zone === "transverse") bas = true;
+      }
+      return haut && bas ? "MORPHOLOGY_READY" : haut || bas ? "MORPHOLOGY_PARTIAL" : "MORPHOLOGY_UNKNOWN";
+    };
+
+    console.log(`\n── RENDEMENT MARGINAL DE L'ANNOTATION ──`);
+    const candidats = inconnues.filter((i) => i.freq > 0);
+    console.log(`  base : ${pct(parClasse("MORPHOLOGY_READY").length, looks.length)} de looks READY`);
+    for (const n of [5, 10, 15, 21, candidats.length].filter((v, i, a) => v <= candidats.length && a.indexOf(v) === i)) {
+      const annotes = new Set(candidats.slice(0, n).map((c) => c.id));
+      const ready = looks.filter((l) => classeAvecAnnotes(l, annotes) === "MORPHOLOGY_READY").length;
+      console.log(`  ${String(n).padStart(3)} pièces annotées → ${String(ready).padStart(4)} looks READY  ${pct(ready, looks.length)}`);
+    }
 
     writeFileSync(
       "morpho-annotation-priorite.csv",
