@@ -41,3 +41,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Tableau de contrôle du renommage catalogue (artefact CI, jamais versionné)
+tableau-de-controle-noms.csv
+termes-sous-type.csv
