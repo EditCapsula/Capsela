@@ -26,5 +26,7 @@ jobs:
         if: always()
         with:
           name: tableau-de-controle-noms
-          path: tableau-de-controle-noms.csv
+          path: |
+            tableau-de-controle-noms.csv
+            termes-sous-type.csv
           if-no-files-found: error
