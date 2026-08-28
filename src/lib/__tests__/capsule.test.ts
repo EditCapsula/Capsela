@@ -87,3 +87,38 @@ describe("Collants — pièce fonctionnelle garantie", () => {
     expect(tights(homme)).toHaveLength(0);
   });
 });
+
+describe("Doublons visuels", () => {
+  /**
+   * Catalogue où toutes les pièces d'une catégorie partagent la même image —
+   * situation réelle du catalogue Capsela, qui mutualise volontairement les
+   * visuels par clé visuelle (quatre robes écrues, une seule photo).
+   */
+  function catalogueAImagePartagee(): CatalogItem[] {
+    const out: CatalogItem[] = [];
+    let id = 1;
+    for (const category of CATS) {
+      for (let k = 0; k < 12; k += 1) {
+        out.push(item({
+          id: id++, category, name: `${category} ${k}`, couleur_dominante: "Noir",
+          niveau_formalite: "business_casual", role_piece: "base", occasions: OCCS[k % OCCS.length],
+          url_image: `https://exemple.test/${category}.webp`, image_status: "ready",
+        }));
+      }
+    }
+    return out;
+  }
+
+  it("ne retient jamais deux pièces affichant la même image", () => {
+    const capsule = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogueAImagePartagee());
+    const images = capsule.map((it) => it.imageUrl).filter(Boolean);
+    expect(new Set(images).size).toBe(images.length);
+  });
+
+  it("ne déduplique pas les pièces sans visuel prêt", () => {
+    // Sinon une capsule entière se réduirait à une pièce par groupe tant que
+    // le catalogue n'a pas ses images générées.
+    const capsule = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogueSansRobes());
+    expect(capsule.length).toBeGreaterThanOrEqual(35);
+  });
+});
