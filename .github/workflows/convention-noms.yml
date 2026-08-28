@@ -9,7 +9,13 @@ name: Audits catalogue — lecture seule (admin)
 # imposerait une fusion avant chaque nouvelle campagne d'audit.
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      audit:
+        description: "Audit à exécuter (vide = tous)"
+        type: choice
+        options: ["", "convention-noms", "taille-capsules"]
+        default: ""
 
 jobs:
   controle:
@@ -22,7 +28,9 @@ jobs:
       - run: npm ci
       # Config dédiée : l'audit interroge Supabase, il est donc tenu hors de
       # `npm test`, qui doit rester hors-ligne (cf. vitest.audit.config.mts).
-      - run: npx vitest run --config vitest.audit.config.mts
+      # Un audit à la fois quand on le demande : les sorties sont volumineuses
+      # et se noient l'une l'autre dans le log du job.
+      - run: npx vitest run --config vitest.audit.config.mts ${{ inputs.audit }}
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
           SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
@@ -34,4 +42,4 @@ jobs:
             tableau-de-controle-noms.csv
             termes-sous-type.csv
             renommages-surs.sql
-          if-no-files-found: error
+          if-no-files-found: ignore
