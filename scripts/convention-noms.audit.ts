@@ -157,23 +157,11 @@ describe("Convention de nommage du catalogue", () => {
 
     writeFileSync("tableau-de-controle-noms.csv", lignes.join("\n"), "utf8");
 
-    console.log(`\nCatalogue : ${data.length} ligne(s).`);
-    console.log(`  ${inchanges} déjà conforme(s).`);
-    console.log(`  ${inertes.length} renommage(s) INERTE(S) — aucun attribut dérivé ne bouge.`);
-    console.log(`  ${impactes.length} renommage(s) qui CHANGENT le comportement du moteur.`);
 
     if (sansSousType.length) {
       console.log(`\n── ${sansSousType.length} ligne(s) sans sous_type — aucun nom proposé ──`);
       for (const r of sansSousType.slice(0, 25)) console.log(`  [#${r.id}] ${r.name} (${r.category})`);
       if (sansSousType.length > 25) console.log(`  … et ${sansSousType.length - 25} autre(s).`);
-    }
-
-    if (impactes.length) {
-      console.log(`\n── Renommages à arbitrer : ils modifient le moteur ──`);
-      for (const i of impactes) {
-        console.log(`  [#${i.id}] "${i.ancien}" → "${i.nouveau}"`);
-        for (const e of i.ecarts) console.log(`      ⚠ ${e}`);
-      }
     }
 
     if (collisionsIrresolues.length) {
@@ -229,6 +217,23 @@ describe("Convention de nommage du catalogue", () => {
       console.log(`\n── Valeurs de coupe hors mapping (conservées telles quelles) ──`);
       for (const [v, n] of coupesInconnues) console.log(`  "${v}" (${n})`);
     }
+
+    if (impactes.length) {
+      console.log(`\n── Renommages qui MODIFIENT le moteur (contrainte 6) ──`);
+      for (const i of impactes) {
+        console.log(`  [#${i.id}] "${i.ancien}" → "${i.nouveau}"`);
+        for (const e of i.ecarts) console.log(`      ⚠ ${e}`);
+      }
+    }
+
+    // Bilan en dernier : c'est la première chose qu'on lit dans un log tronqué.
+    console.log(`\n════════ BILAN ════════`);
+    console.log(`Catalogue : ${data.length} ligne(s), ${sansSousType.length} sans sous_type.`);
+    console.log(`  ${inchanges} déjà conforme(s).`);
+    console.log(`  ${inertes.length} renommage(s) INERTE(S).`);
+    console.log(`  ${impactes.length} renommage(s) qui CHANGENT le moteur.`);
+    console.log(`  ${collisionsIrresolues.length} collision(s) de nom NON RÉSOLUE(S) par la matière.`);
+    console.log(`  ${aArbitrer.length} cas ambigu(s) signalé(s).`);
 
     console.log(`\nArtefacts : tableau-de-controle-noms.csv, termes-sous-type.csv.`);
     console.log("Aucune modification effectuée — audit en lecture seule.");
