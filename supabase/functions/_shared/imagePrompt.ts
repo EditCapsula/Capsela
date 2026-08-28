@@ -488,7 +488,13 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   short: ["shorts"],
   robe: ["dress"],
   combinaison: ["jumpsuit", "playsuit", "dungarees"],
-  veste: ["jacket", "blazer"],
+  // "overshirt" ajouté (correctif 28/08/2026, trouvé pendant l'audit des
+  // visuels au sujet faux) : les surchemises sont stockées tantôt en
+  // category="hauts", tantôt en "vestes_blazers". Côté haut elles passaient
+  // par la sous-chaîne "shirt" ; côté veste, rien ne matchait et la
+  // validation refusait de générer l'article (422) — trois pièces du
+  // catalogue étaient devenues définitivement non régénérables.
+  veste: ["jacket", "blazer", "overshirt"],
   manteau: ["coat", "parka", "puffer jacket", "raincoat"],
   chaussures: ["shoes", "sneakers", "boots", "flats", "sandals", "loafers", "pumps", "slippers"],
   sac: ["bag", "handbag", "tote", "backpack", "clutch"],
@@ -497,7 +503,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   // génération) : la catégorie "sacs" n'est jamais utilisée dans les
   // données réelles, tous les sacs sont stockés en category="accessoires"
   // -> canonCategory="accessoire".
-  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch", "bottle"],
+  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch", "bottle", "briefcase"],
 };
 
 function translate(dict: Record<string, string>, raw: string | null | undefined): string | undefined {
@@ -612,7 +618,16 @@ export function buildImagePrompt(row: VestiaireRow, trend?: TrendRule | null): B
   // "un blazer doit rester un blazer" du brief 19/08/2026).
   const ok = (CATEGORY_KEYWORDS[canonCategory] || []).some((kw) => noun.includes(kw));
   const composition = CATEGORY_COMPOSITION[canonCategory] || "Single fashion item, fully visible.";
-  const excludeLines = (CATEGORY_EXCLUDE[canonCategory] || []).map((w) => `No ${w}.`);
+  // Une exclusion ne doit jamais viser le produit demandé : la catégorie
+  // "veste" interdit "shirt" pour empêcher qu'une veste soit dessinée en
+  // chemise, mais une surchemise ("overshirt") contient ce mot — le prompt
+  // aurait demandé l'objet et l'aurait interdit dans la même page. On
+  // retire donc toute exclusion contenue dans le nom du produit, plutôt que
+  // de traiter le cas surchemise à part : la règle vaut pour tout terme
+  // futur qui se trouverait englober un mot exclu.
+  const excludeLines = (CATEGORY_EXCLUDE[canonCategory] || [])
+    .filter((w) => !noun.includes(w))
+    .map((w) => `No ${w}.`);
 
   const niveauTendance = normalizeNiveauTendance(row.niveau_tendance);
   // intemporel = jamais de micro-tendance : la table tendances_mode n'est
