@@ -19,6 +19,9 @@ on:
       max:
         description: "Plafond de visuels régénérés en une exécution"
         default: "40"
+      ids:
+        description: "Reprise ciblée : ids d'articles séparés par des virgules (ignore la détection)"
+        default: ""
 
 jobs:
   visuels:
@@ -40,3 +43,4 @@ jobs:
           SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
           MODE: ${{ inputs.mode }}
           MAX: ${{ inputs.max }}
+          IDS: ${{ inputs.ids }}

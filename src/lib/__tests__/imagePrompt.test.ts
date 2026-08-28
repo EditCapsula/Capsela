@@ -59,4 +59,35 @@ describe("buildImagePrompt — garde-fous structurels", () => {
     const built = buildImagePrompt(item({ id: 6, category: "chaussures", name: "Erreur de saisie", sous_type: "Blazer" }));
     expect(built.ok).toBe(false);
   });
+
+  it("accepte une surchemise rangée en veste comme en haut", () => {
+    // Correctif 28/08/2026 : les surchemises sont stockées dans les deux
+    // catégories. Côté veste, aucun mot-clé ne matchait "overshirt" et la
+    // validation refusait de générer — trois articles du catalogue étaient
+    // devenus non régénérables alors que le sujet était parfaitement connu.
+    for (const category of ["vestes_blazers", "hauts"]) {
+      const built = buildImagePrompt(item({ id: 7, category, name: "Surchemise", sous_type: "Surchemise" }));
+      expect(built.noun, category).toBe("overshirt");
+      expect(built.ok, category).toBe(true);
+    }
+  });
+
+  it("n'interdit jamais le produit qu'il demande", () => {
+    // La catégorie veste exclut "shirt" pour qu'une veste ne soit pas
+    // dessinée en chemise — mais "overshirt" contient ce mot : le prompt
+    // demandait l'objet et l'interdisait dans la même page.
+    const surchemise = buildImagePrompt(item({ id: 8, category: "vestes_blazers", name: "Surchemise", sous_type: "Surchemise" })).prompt;
+    expect(surchemise).not.toContain("No shirt.");
+    expect(surchemise).toContain("No trousers.");
+
+    // L'exclusion reste en place quand elle ne vise pas le produit demandé.
+    const blazer = buildImagePrompt(item({ id: 9, category: "vestes_blazers", name: "Blazer", sous_type: "Blazer" })).prompt;
+    expect(blazer).toContain("No shirt.");
+  });
+
+  it("sait dessiner un sac porte-documents", () => {
+    const built = buildImagePrompt(item({ id: 10, category: "accessoires", name: "Porte-documents", sous_type: "Sac porte-documents" }));
+    expect(built.noun).toBe("briefcase");
+    expect(built.ok).toBe(true);
+  });
 });

@@ -6,10 +6,16 @@
 // correctifs. Les visuels générés AVANT l'ajout d'un terme ont été dessinés
 // à partir d'un sujet de repli générique ("top", "item") au lieu du terme
 // exact ("bodysuit"). Le catalogue garde la trace de ce qui a été demandé à
-// OpenAI dans vestiaire_universel.image_prompt : on compare donc le sujet
-// réellement employé au sujet que le code produirait AUJOURD'HUI, et on ne
-// retient que les écarts — quelques dizaines de pièces, pas les centaines
-// qu'un balayage complet régénérerait.
+// OpenAI dans vestiaire_universel.image_prompt : on relit donc le bloc
+// "Product:" du prompt stocké et on le compare à ce que le code produirait
+// AUJOURD'HUI.
+//
+// Un simple écart de formulation ne suffit pas à retenir une pièce — sinon
+// l'outil proposerait de remplacer « handbag » par « bag », c'est-à-dire de
+// PERDRE en précision contre de l'argent. Trois conditions cumulatives
+// (détaillées au point de détection) ne gardent que le motif réel : le
+// vocabulaire connaît aujourd'hui un terme précis, et la génération était
+// retombée sur le terme générique de la catégorie.
 //
 // Le reste des imperfections connues (nuances de couleur fusionnées par
 // COLOR_BUCKETS, sous-types trop grossiers) n'est PAS traité ici : ce sont
@@ -34,6 +40,14 @@ const MODE = (process.env.MODE || "audit").trim().toLowerCase();
 // l'image, donc 40 assets ≈ 0,80 $. Jamais dépassé même si la détection
 // remonte davantage de pièces — le reste attend une exécution suivante.
 const MAX = Number(process.env.MAX || 40);
+// Reprise ciblée : liste d'identifiants d'articles à retraiter, court-circuitant
+// la détection. Sert aux échecs isolés — un article dont la génération a échoué
+// voit son image_status passer à "error", et la détection, qui ne regarde que
+// les visuels "ready", ne le reverrait jamais.
+const IDS = (process.env.IDS || "")
+  .split(",")
+  .map((v) => Number(v.trim()))
+  .filter((v) => Number.isFinite(v) && v > 0);
 const DELAY_MS = 1200;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
@@ -60,15 +74,24 @@ interface Ligne extends VestiaireRow {
 }
 
 /**
- * Le sujet attendu apparaît-il tel quel dans le prompt réellement envoyé ?
- * Test volontairement conservateur : on cherche le terme exact, bordé de
- * non-lettres. Un prompt qui contient "bodysuit" est considéré bon même si
- * le reste de la formulation a changé depuis — on ne veut signaler que les
- * cas où OpenAI a dessiné une AUTRE pièce, pas les évolutions de style.
+ * Le terme apparaît-il tel quel, bordé de non-lettres ? Une comparaison de
+ * sous-chaîne suffirait à croire "bag" présent dans "handbag" — exactement
+ * la confusion qu'on cherche à détecter.
  */
-function sujetPresent(prompt: string, sujet: string): boolean {
-  const echappe = sujet.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(^|[^a-z])${echappe}([^a-z]|$)`, "i").test(prompt);
+function terme(texte: string, mot: string): boolean {
+  const echappe = mot.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z])${echappe}([^a-z]|$)`, "i").test(texte);
+}
+
+/**
+ * Le sujet réellement dessiné, extrait du bloc "Product:" du prompt stocké.
+ * C'est la seule ligne du prompt qui décrit l'objet ; tout le reste est du
+ * cadrage et du style. Null si l'article utilise un prompt_image_override
+ * (design sur mesure, sans bloc Product : hors périmètre).
+ */
+function sujetDessine(prompt: string): string | null {
+  const m = prompt.match(/Product:\n(.+)/);
+  return m ? m[1].trim() : null;
 }
 
 async function main() {
@@ -83,11 +106,26 @@ async function main() {
     process.exit(1);
   }
 
+  if (IDS.length) {
+    const cibles = data.filter((r) => IDS.includes(r.id));
+    const introuvables = IDS.filter((id) => !cibles.some((r) => r.id === id));
+    if (introuvables.length) console.log(`⚠ Identifiant(s) introuvable(s) : ${introuvables.join(", ")}`);
+    console.log(`Reprise ciblée de ${cibles.length} article(s) : ${cibles.map((r) => r.id).join(", ")}\n`);
+    if (MODE === "audit") {
+      for (const r of cibles) console.log(`  [#${r.id}] ${r.name} — image_status "${r.image_status}"`);
+      console.log("\nMODE=audit : aucune modification effectuée.");
+      return;
+    }
+    await regenerer(cibles.map((ligne) => ({ assetId: ligne.visual_asset_id, grp: [{ ligne }] })));
+    return;
+  }
+
   const avecVisuel = data.filter((r) => r.image_status === "ready" && r.url_image && r.image_prompt);
-  const faux: { ligne: Ligne; attendu: string; }[] = [];
+  const faux: { ligne: Ligne; attendu: string; dessine: string }[] = [];
   const vocabulaireManquant: Ligne[] = [];
 
   for (const ligne of avecVisuel) {
+    if (ligne.prompt_image_override?.trim()) continue; // design sur mesure, jamais repris automatiquement
     const built = buildImagePrompt(ligne);
     if (!built.ok) {
       // Le code ACTUEL ne sait toujours pas quel objet dessiner : régénérer
@@ -96,7 +134,31 @@ async function main() {
       vocabulaireManquant.push(ligne);
       continue;
     }
-    if (!sujetPresent(ligne.image_prompt!, built.noun)) faux.push({ ligne, attendu: built.noun });
+    const dessine = sujetDessine(ligne.image_prompt!);
+    if (!dessine) continue;
+
+    // Terme de repli de la catégorie : ce que le prompt emploie quand le
+    // sous-type ne dit rien au vocabulaire. Obtenu en rejouant le
+    // constructeur sans sous_type, plutôt qu'en recopiant le dictionnaire.
+    const generique = buildImagePrompt({ ...ligne, sous_type: null }).noun;
+
+    // Trois conditions, et il faut les trois. Sans elles, l'audit signale
+    // des reformulations inoffensives et, pire, propose de remplacer un
+    // terme PLUS précis que celui d'aujourd'hui :
+    //   · "Sac structuré" attend « bag », le visuel a été dessiné en
+    //     « handbag » — régénérer appauvrirait l'image.
+    //   · "Pull col V" attend « sweater », qui EST le repli de la catégorie :
+    //     il n'existe pas de terme plus fin à demander.
+    // Ne restent que les cas où le vocabulaire connaît aujourd'hui un terme
+    // précis et où la génération, elle, était retombée sur le générique —
+    // le body dessiné en « top » qui a motivé tout ceci.
+    const termePrecisDisponible = built.noun !== generique;
+    const sujetAbsent = !terme(dessine, built.noun);
+    const dessineEnGenerique = terme(dessine, generique) || terme(dessine, "item");
+
+    if (termePrecisDisponible && sujetAbsent && dessineEnGenerique) {
+      faux.push({ ligne, attendu: built.noun, dessine });
+    }
   }
 
   console.log(`Catalogue : ${data.length} article(s), dont ${avecVisuel.length} avec un visuel prêt.\n`);
@@ -119,8 +181,8 @@ async function main() {
   // Regroupement par asset : plusieurs articles peuvent partager une même
   // image. Une seule génération suffit pour tout le groupe, les articles
   // suivants ne font que recopier l'URL produite (aucun appel OpenAI).
-  const parAsset = new Map<number, { ligne: Ligne; attendu: string }[]>();
-  const sansAsset: { ligne: Ligne; attendu: string }[] = [];
+  const parAsset = new Map<number, { ligne: Ligne; attendu: string; dessine: string }[]>();
+  const sansAsset: { ligne: Ligne; attendu: string; dessine: string }[] = [];
   for (const f of faux) {
     if (f.ligne.visual_asset_id === null) sansAsset.push(f);
     else {
@@ -136,13 +198,13 @@ async function main() {
   console.log(`Coût estimé d'une régénération complète : ~${(aGenerer * 0.02).toFixed(2)} $.\n`);
 
   for (const [assetId, grp] of groupes) {
-    console.log(`  asset ${assetId} — dessiné comme autre chose que « ${grp[0].attendu} »`);
+    console.log(`  asset ${assetId} — dessiné « ${grp[0].dessine} » au lieu de « ${grp[0].attendu} »`);
     for (const { ligne, attendu } of grp) {
       console.log(`    [#${ligne.id}] ${ligne.name} — sous_type "${ligne.sous_type}" → attendu « ${attendu} »`);
     }
   }
-  for (const { ligne, attendu } of sansAsset) {
-    console.log(`  (sans asset) [#${ligne.id}] ${ligne.name} → attendu « ${attendu} »`);
+  for (const { ligne, attendu, dessine } of sansAsset) {
+    console.log(`  (sans asset) [#${ligne.id}] ${ligne.name} — dessiné « ${dessine} » au lieu de « ${attendu} »`);
   }
   console.log("");
 
@@ -152,11 +214,21 @@ async function main() {
   }
 
   const lots = [
-    ...groupes.map(([assetId, grp]) => ({ assetId, grp })),
+    ...groupes.map(([assetId, grp]) => ({ assetId: assetId as number | null, grp })),
     ...sansAsset.map((f) => ({ assetId: null as number | null, grp: [f] })),
   ].slice(0, MAX);
   console.log(`MODE=regen : traitement de ${lots.length} visuel(s) (plafond MAX=${MAX}).\n`);
+  await regenerer(lots);
+  const restants = aGenerer - lots.length;
+  if (restants > 0) console.log(`${restants} visuel(s) au-delà du plafond MAX — relancer pour les traiter.`);
+}
 
+/**
+ * Régénère un lot de visuels. Chaque entrée porte l'asset à invalider et les
+ * articles qui l'utilisent : le premier déclenche la génération, les suivants
+ * ne font que recopier l'URL produite.
+ */
+async function regenerer(lots: { assetId: number | null; grp: { ligne: Ligne }[] }[]): Promise<void> {
   let generes = 0;
   let echecs = 0;
 
@@ -202,9 +274,8 @@ async function main() {
     }
   }
 
-  const restants = aGenerer - lots.length;
   console.log(`\nTerminé : ${generes} article(s) remis à jour, ${echecs} échec(s).`);
-  if (restants > 0) console.log(`${restants} visuel(s) au-delà du plafond MAX — relancer pour les traiter.`);
+  if (echecs) console.log(`Reprendre les échecs avec IDS=<ids séparés par des virgules> et MODE=regen.`);
 }
 
 main();
