@@ -1,0 +1,137 @@
+name: Recompresser les visuels PNG hérités
+
+# Enchaîne les appels à la fonction Edge recompress-legacy-images jusqu'à
+# épuisement du stock de PNG. Un appel ne peut traiter que 2 à 3 images — le
+# décodage/redimensionnement/encodage WASM sature le budget CPU d'une
+# invocation Edge au-delà — donc vider 357 images demande ~180 appels. Ce
+# workflow les fait à ta place.
+#
+# PRÉREQUIS — deux secrets de dépôt (Settings > Secrets and variables > Actions) :
+#   RECOMPRESS_ADMIN_KEY      la chaîne choisie pour le secret du même nom
+#                             côté Supabase (Edge Functions > Secrets)
+#   SUPABASE_PUBLISHABLE_KEY  la clé sb_publishable_... du projet. Elle n'est
+#                             pas confidentielle (le navigateur l'expose déjà),
+#                             mais Supabase exige un jeton valide en en-tête
+#                             avant même d'exécuter la fonction : c'est ce
+#                             laissez-passer, pas l'autorisation d'agir, que
+#                             RECOMPRESS_ADMIN_KEY porte dans le corps.
+#
+# Reprise : la fonction est idempotente et n'écrit qu'après conversion réussie.
+# Une exécution interrompue peut être relancée telle quelle, elle repartira
+# des images encore en .png.
+
+on:
+  workflow_dispatch:
+    inputs:
+      lot:
+        description: "Images par appel (3 sature la limite CPU, 2 laisse une marge)"
+        default: "2"
+      max_appels:
+        description: "Nombre maximum d'appels avant de rendre la main"
+        default: "250"
+
+jobs:
+  recompresser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enchaîner les appels jusqu'à épuisement
+        env:
+          ADMIN_KEY: ${{ secrets.RECOMPRESS_ADMIN_KEY }}
+          PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          LOT: ${{ inputs.lot }}
+          MAX_APPELS: ${{ inputs.max_appels }}
+        run: |
+          set -uo pipefail
+          URL="https://tkrbzrazejrxavtfspll.supabase.co/functions/v1/recompress-legacy-images"
+
+          if [ -z "$ADMIN_KEY" ]; then
+            echo "::error::secret RECOMPRESS_ADMIN_KEY absent"; exit 1
+          fi
+          if [ -z "$PUBLISHABLE_KEY" ]; then
+            echo "::error::secret SUPABASE_PUBLISHABLE_KEY absent"; exit 1
+          fi
+
+          convertis_total=0
+          avant_total=0
+          apres_total=0
+          echecs_total=0
+          # Deux saturations CPU d'affilée sur le même lot signalent une image
+          # que la fonction ne peut pas traiter, pas un aléa : on s'arrête
+          # plutôt que de boucler indéfiniment dessus.
+          saturations=0
+
+          for appel in $(seq 1 "$MAX_APPELS"); do
+            reponse=$(curl -sS -X POST "$URL" \
+              -H "apikey: $PUBLISHABLE_KEY" \
+              -H "Authorization: Bearer $PUBLISHABLE_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{\"admin_key\": \"$ADMIN_KEY\", \"limit\": $LOT}")
+
+            if echo "$reponse" | jq -e '.code == "WORKER_RESOURCE_LIMIT"' >/dev/null 2>&1; then
+              saturations=$((saturations + 1))
+              echo "appel $appel · limite CPU atteinte ($saturations/2) — nouvelle tentative"
+              if [ "$saturations" -ge 2 ]; then
+                echo "::error::deux saturations consécutives, une image bloque le traitement"
+                echo "$reponse"
+                exit 1
+              fi
+              sleep 5
+              continue
+            fi
+            saturations=0
+
+            if ! echo "$reponse" | jq -e 'has("restants")' >/dev/null 2>&1; then
+              echo "::error::réponse inattendue de la fonction"
+              echo "$reponse"
+              exit 1
+            fi
+
+            convertis=$(echo "$reponse" | jq -r '.convertis // 0')
+            restants=$(echo "$reponse" | jq -r '.restants')
+            avant=$(echo "$reponse" | jq -r '.octets_avant // 0')
+            apres=$(echo "$reponse" | jq -r '.octets_apres // 0')
+            nb_echecs=$(echo "$reponse" | jq -r '.echecs | length')
+
+            convertis_total=$((convertis_total + convertis))
+            avant_total=$((avant_total + avant))
+            apres_total=$((apres_total + apres))
+            echecs_total=$((echecs_total + nb_echecs))
+
+            echo "appel $appel · +$convertis converties · $restants restantes"
+
+            if [ "$nb_echecs" -gt 0 ]; then
+              echo "$reponse" | jq -c '.echecs[]' | while read -r e; do
+                echo "::warning::échec — $e"
+              done
+            fi
+
+            if [ "$restants" -eq 0 ]; then
+              echo "Stock épuisé."
+              break
+            fi
+
+            # Un appel converti mais restants inchangé signifierait que la
+            # sélection ne progresse pas : on préfère s'arrêter net.
+            if [ "$convertis" -eq 0 ] && [ "$nb_echecs" -eq 0 ]; then
+              echo "::error::appel sans conversion ni échec — arrêt pour éviter une boucle"
+              echo "$reponse"
+              exit 1
+            fi
+
+            sleep 1
+          done
+
+          {
+            echo "### Recompression des visuels hérités"
+            echo ""
+            echo "| Mesure | Valeur |"
+            echo "|---|---|"
+            echo "| Images converties | $convertis_total |"
+            echo "| Images en échec | $echecs_total |"
+            echo "| Restant en .png | ${restants:-inconnu} |"
+            echo "| Poids avant | $((avant_total / 1024)) Ko |"
+            echo "| Poids après | $((apres_total / 1024)) Ko |"
+            if [ "$avant_total" -gt 0 ]; then
+              echo "| Gain | $(( 100 - (apres_total * 100 / avant_total) )) % |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
