@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeDefaultCapsule } from "../capsule";
+import { CAPSULE_MAX_PIECES, computeDefaultCapsule } from "../capsule";
 import type { CatalogItem } from "../catalog";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 import { at, item } from "./fixtures";
@@ -33,17 +33,17 @@ describe("Quotas de capsule", () => {
   it("ne perd pas les places d'un groupe sans candidat (correctif 26/08/2026)", () => {
     // Les 4 places "robes-combinaisons" n'étaient jamais réattribuées : une
     // capsule homme, ou tout style qui n'utilise pas cette famille,
-    // plafonnait 4 pièces en dessous du plafond de 35.
+    // plafonnait 4 pièces en dessous du bloc à quota.
     const capsule = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogueSansRobes());
     expect(capsule.some((it) => it.cat === "robe")).toBe(false);
-    expect(capsule.length).toBeGreaterThanOrEqual(35);
+    expect(capsule.length).toBeGreaterThanOrEqual(30);
   });
 
   it("répartit le reliquat plutôt que de le verser à un seul groupe", () => {
     const capsule = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogueSansRobes());
     const hauts = capsule.filter((it) => it.cat === "haut").length;
-    // Quota de base 8 pour le groupe hauts, plafond de complément quota/2.
-    expect(hauts).toBeLessThanOrEqual(12);
+    // Quota de base 7 pour le groupe hauts, plafond de complément quota/2.
+    expect(hauts).toBeLessThanOrEqual(11);
   });
 });
 
@@ -119,6 +119,53 @@ describe("Doublons visuels", () => {
     // Sinon une capsule entière se réduirait à une pièce par groupe tant que
     // le catalogue n'a pas ses images générées.
     const capsule = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogueSansRobes());
-    expect(capsule.length).toBeGreaterThanOrEqual(35);
+    expect(capsule.length).toBeGreaterThanOrEqual(30);
+  });
+});
+
+describe("Plafond de 40 pièces, Sport compris", () => {
+  /** Le catalogue ci-dessus, augmenté d'un bloc Sport fourni — celui qui débordait. */
+  function catalogueAvecSport(): CatalogItem[] {
+    const out = catalogueSansRobes();
+    let id = 9000;
+    for (const category of ["hauts", "pantalons", "chaussures", "accessoires", "sacs"] as const) {
+      for (let k = 0; k < 4; k += 1) {
+        out.push(item({
+          id: id++, category, name: `sport ${category} ${k}`, couleur_dominante: "Noir",
+          niveau_formalite: "sport", role_piece: "base", occasions: "sport",
+        }));
+      }
+    }
+    return out;
+  }
+
+  it("ne dépasse jamais 40 pièces, y compris avec un bloc Sport fourni", () => {
+    // Règle produit du 28/08/2026. Avant la mise en budget, aucune borne
+    // n'existait sur la taille totale : les quotas sommaient à 35 hors Sport
+    // et cinq mécanismes ajoutaient par-dessus (formalité, ensure×8,
+    // chaussures d'intérieur, collants, Sport entier).
+    for (const saison of ["Printemps", "Été", "Automne", "Hiver"] as const) {
+      const temp = saison === "Été" ? 26 : saison === "Hiver" ? 5 : 16;
+      const bucket = saison === "Automne" || saison === "Hiver" ? "Automne / Hiver" : "Printemps / Été";
+      const capsule = computeDefaultCapsule(profile(), at(temp, bucket), [], saison, catalogueAvecSport());
+      expect(capsule.length).toBeLessThanOrEqual(CAPSULE_MAX_PIECES);
+    }
+  });
+
+  it("compte les pièces Sport dans le budget plutôt que par-dessus", () => {
+    const capsule = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogueAvecSport());
+    const sport = capsule.filter((it) => it.niveauFormalite === 0);
+    expect(sport.length).toBeGreaterThan(0);
+    expect(capsule.length).toBeLessThanOrEqual(CAPSULE_MAX_PIECES);
+  });
+
+  it("paie le budget sur le bloc à quota, jamais sur les garanties", () => {
+    // Une pièce retirée ne doit coûter ni une catégorie entière, ni un palier
+    // de formalité de cette catégorie : couper « les cinq dernières » aurait
+    // fait sauter aussi bien un manteau qu'une occasion unique.
+    const capsule = computeDefaultCapsule(profile(), at(5, "Automne / Hiver"), [], "Hiver", catalogueAvecSport());
+    for (const cat of ["haut", "pantalon", "chaussures", "veste", "manteau", "sac", "accessoire", "bijou"]) {
+      expect(capsule.some((it) => it.cat === cat)).toBe(true);
+    }
   });
 });

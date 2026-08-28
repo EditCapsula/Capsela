@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
-import { capsuleSeasonBucket, computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
+import { computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
 import { formalityOf, suggestOccasions } from "../src/lib/attributes";
 import { generateOutfit } from "../src/lib/logic";
 import { effetMorphologique } from "../src/lib/garmentEffect";

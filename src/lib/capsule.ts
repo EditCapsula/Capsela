@@ -145,21 +145,38 @@ export function paletteFit(it: Item, profile: Profile): boolean {
 }
 
 /**
+ * Plafond produit : une capsule ne dépasse jamais 40 pièces, Sport COMPRIS
+ * (règle énoncée le 28/08/2026 — « le maximum à ne pas dépasser pour chaque
+ * capsule par style et par saison »). Avant ce budget, la cible de 40
+ * n'existait nulle part dans le code : les quotas sommaient à 35 hors Sport
+ * et cinq mécanismes ajoutaient par-dessus sans borne. Mesuré alors :
+ * 24 capsules sur 24 au-dessus du plafond, 44,5 pièces en moyenne.
+ */
+export const CAPSULE_MAX_PIECES = 40;
+
+/**
  * Macro-catégories de la sélection qualitative de capsule (recette
  * 24/08/2026, plafonds + tri qualitatif — remplace le tri basique/morpho +
  * slice(50) qui laissait passer 49 pièces sur une capsule Minimaliste,
  * certaines catégories à 12 pièces quand Vestes plafonnait à 1 seule).
- * Regroupe les 14 CategoryKey en 7 blocs pour répartir le plafond de 35
- * pièces hors Sport (le Sport est isolé avant ce calcul, cf. isSportPiece).
+ * Regroupe les 14 CategoryKey en 7 blocs.
+ *
+ * Les quotas somment à 30, et non plus à 35 : le budget de la capsule est
+ * de 40 pièces, dont il faut défalquer le bloc Sport (5 à 6 pièces mesurées)
+ * et les garanties hors quota (formalité, ensure, chaussures d'intérieur,
+ * collants — 4 à 5 pièces mesurées). Les 5 places retirées sont prises sur
+ * les familles les mieux dotées ou les moins structurantes ; vestes-manteaux
+ * (paliers de formalité) et accessoires (déjà tendus, les collants s'y
+ * perdaient) restent inchangés.
  */
 const CAPSULE_GROUPS: { name: string; cats: CategoryKey[]; quota: number }[] = [
-  { name: "hauts", cats: ["haut", "pull"], quota: 8 },
-  { name: "bas", cats: ["pantalon", "jean", "jupe", "short"], quota: 7 },
-  { name: "robes-combinaisons", cats: ["robe", "combinaison"], quota: 4 },
+  { name: "hauts", cats: ["haut", "pull"], quota: 7 },
+  { name: "bas", cats: ["pantalon", "jean", "jupe", "short"], quota: 6 },
+  { name: "robes-combinaisons", cats: ["robe", "combinaison"], quota: 3 },
   { name: "vestes-manteaux", cats: ["veste", "manteau"], quota: 5 },
-  { name: "chaussures", cats: ["chaussures"], quota: 4 },
+  { name: "chaussures", cats: ["chaussures"], quota: 3 },
   { name: "accessoires", cats: ["sac", "accessoire"], quota: 4 },
-  { name: "bijoux", cats: ["bijou"], quota: 3 },
+  { name: "bijoux", cats: ["bijou"], quota: 2 },
 ];
 
 /** Catégories structurantes (étape 3, garde-fou formalité) — celles dont dépend le palier de formalité d'une tenue complète. */
@@ -389,7 +406,7 @@ export function computeDefaultCapsule(
   // l'ancien tri basique/morpho + slice(50) qui laissait passer des
   // capsules à 49 pièces (12 hauts, 6 chaussures) quand Vestes plafonnait à
   // 1 seule — la requête catalogue (style × saison × genre) n'avait aucun
-  // plafond par catégorie. Plafond de 35 pièces hors Sport, réparti par
+  // plafond par catégorie. Bloc à quota de 30 pièces hors Sport, réparti par
   // quota indicatif (cf. CAPSULE_GROUPS), rempli par couverture d'occasion
   // marginale décroissante plutôt qu'un plafond arbitraire.
   const covered = new Set<OccasionKey>();
@@ -460,6 +477,13 @@ export function computeDefaultCapsule(
       }
     }
   }
+
+  // Fin du bloc à quota. Ces pièces — et elles seules — sont celles qui
+  // peuvent rendre leur place quand le budget de 40 est atteint : les
+  // garanties qui suivent existent chacune à la suite d'un incident constaté
+  // (paliers de formalité évincés, look Cocooning sans chaussure éligible,
+  // 14 capsules femme sur 16 sans collants) et ne sont jamais amputées.
+  const placesQuota = new Set(out.map((it) => it.id));
 
   // Garde-fou formalité (étape 3) : dans les catégories structurantes, si
   // un palier de formalité existe dans le pool mais n'est représenté par
@@ -581,5 +605,52 @@ export function computeDefaultCapsule(
   // chaussures d'intérieur juste au-dessus pour le Cocooning).
   out = [...out, ...sportPool];
 
+  // Application du budget (étape 5). Le plafond n'est PAS une troncature des
+  // dernières pièces sélectionnées : celles-ci ne sont pas les moins
+  // importantes, et couper à l'aveugle ferait sauter aussi bien un palier de
+  // formalité qu'une occasion unique. Le budget se paie sur le bloc à quota,
+  // et uniquement sur les pièces dont le retrait ne coûte rien :
+  //   — aucune occasion perdue pour la capsule ;
+  //   — pas la dernière pièce de sa catégorie ;
+  //   — pas la dernière de son palier de formalité dans sa catégorie.
+  // C'est la mécanique du « la garantie consomme une place du quota » : si
+  // aucune garantie ne se déclenche, la redistribution a déjà rendu la place
+  // et rien n'est retiré ici.
+  out = respecterBudget(out, placesQuota);
+
   return out;
+}
+
+/**
+ * Ramène une capsule sous CAPSULE_MAX_PIECES en ne retirant que des pièces
+ * sans valeur marginale, prises dans le bloc à quota (`liberables`) et de la
+ * plus récemment sélectionnée à la plus ancienne — les premières retenues
+ * sont celles qui ont ouvert le plus d'occasions.
+ *
+ * Si aucune pièce ne remplit ces conditions, la capsule reste au-dessus du
+ * plafond : mieux vaut une capsule à 41 pièces qu'une capsule à 40 privée
+ * d'une occasion ou d'un palier de formalité. Mesuré sur les 24 capsules
+ * femme × saison, ce cas ne se présente pas.
+ */
+function respecterBudget(pieces: CatalogItem[], liberables: Set<number>): CatalogItem[] {
+  let courant = pieces;
+  while (courant.length > CAPSULE_MAX_PIECES) {
+    let cible = -1;
+    for (let i = courant.length - 1; i >= 0; i--) {
+      const it = courant[i];
+      if (!liberables.has(it.id)) continue;
+      const reste = courant.filter((_, j) => j !== i);
+      const occReste = new Set<OccasionKey>();
+      reste.forEach((r) => occasionsOf(r).forEach((o) => occReste.add(o)));
+      if (occasionsOf(it).some((o) => !occReste.has(o))) continue;
+      if (!reste.some((r) => r.cat === it.cat)) continue;
+      const palier = formalityOf(it);
+      if (!reste.some((r) => r.cat === it.cat && formalityOf(r) === palier)) continue;
+      cible = i;
+      break;
+    }
+    if (cible < 0) break;
+    courant = courant.filter((_, j) => j !== cible);
+  }
+  return courant;
 }
