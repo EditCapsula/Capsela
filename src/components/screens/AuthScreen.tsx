@@ -86,20 +86,36 @@ export default function AuthScreen() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Mot de passe"
         />
-        <input
-          type="date"
-          className={INPUT_CLS}
-          // Un <input type="date"> vide n'a pas de vrai placeholder : le
-          // navigateur rend "jj/mm/aaaa" avec la couleur de texte normale du
-          // champ, pas via ::placeholder (correctif 24/08/2026, signalé —
-          // couleur différente des 3 champs au-dessus). On applique donc
-          // nous-mêmes la couleur placeholder tant qu'aucune date n'est
-          // choisie, puis la couleur normale une fois remplie.
-          style={{ colorScheme: "light", color: birthdate ? undefined : "var(--color-placeholder)" }}
-          value={birthdate}
-          onChange={(e) => setBirthdate(e.target.value)}
-          aria-label="Date de naissance"
-        />
+        {/* Un <input type="date"> vide n'a pas de placeholder, et les
+            navigateurs ne s'accordent pas sur ce qu'ils affichent à la place :
+            Chrome bureau écrit « jj/mm/aaaa », Chrome Android ne montre
+            RIEN — juste une case vide (signalé le 28/08/2026 sur Samsung).
+            Le correctif du 24/08/2026 se contentait de recolorer le texte du
+            navigateur, ce qui ne pouvait donc rien donner là où il n'y a pas
+            de texte.
+            On pose notre propre libellé par-dessus, avec le style exact des
+            placeholders des trois champs au-dessus, et on rend transparent le
+            texte natif tant qu'aucune date n'est choisie — sinon les deux se
+            superposeraient sur bureau. `pointer-events-none` laisse le
+            toucher atteindre le champ, qui reste un vrai sélecteur de date. */}
+        <div className="relative">
+          <input
+            type="date"
+            className={INPUT_CLS}
+            style={{ colorScheme: "light", color: birthdate ? undefined : "transparent" }}
+            value={birthdate}
+            onChange={(e) => setBirthdate(e.target.value)}
+            aria-label="Date de naissance"
+          />
+          {!birthdate && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute left-[17px] top-1/2 -translate-y-1/2 text-[14px] text-placeholder font-sans"
+            >
+              Date de naissance
+            </span>
+          )}
+        </div>
       </div>
 
       {auth.error && (
