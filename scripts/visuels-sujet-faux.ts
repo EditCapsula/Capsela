@@ -40,6 +40,14 @@ const MODE = (process.env.MODE || "audit").trim().toLowerCase();
 // l'image, donc 40 assets ≈ 0,80 $. Jamais dépassé même si la détection
 // remonte davantage de pièces — le reste attend une exécution suivante.
 const MAX = Number(process.env.MAX || 40);
+// Reprise ciblée : liste d'identifiants d'articles à retraiter, court-circuitant
+// la détection. Sert aux échecs isolés — un article dont la génération a échoué
+// voit son image_status passer à "error", et la détection, qui ne regarde que
+// les visuels "ready", ne le reverrait jamais.
+const IDS = (process.env.IDS || "")
+  .split(",")
+  .map((v) => Number(v.trim()))
+  .filter((v) => Number.isFinite(v) && v > 0);
 const DELAY_MS = 1200;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
@@ -96,6 +104,20 @@ async function main() {
   if (error) {
     console.error(`Erreur de lecture du catalogue : ${error.message}`);
     process.exit(1);
+  }
+
+  if (IDS.length) {
+    const cibles = data.filter((r) => IDS.includes(r.id));
+    const introuvables = IDS.filter((id) => !cibles.some((r) => r.id === id));
+    if (introuvables.length) console.log(`⚠ Identifiant(s) introuvable(s) : ${introuvables.join(", ")}`);
+    console.log(`Reprise ciblée de ${cibles.length} article(s) : ${cibles.map((r) => r.id).join(", ")}\n`);
+    if (MODE === "audit") {
+      for (const r of cibles) console.log(`  [#${r.id}] ${r.name} — image_status "${r.image_status}"`);
+      console.log("\nMODE=audit : aucune modification effectuée.");
+      return;
+    }
+    await regenerer(cibles.map((ligne) => ({ assetId: ligne.visual_asset_id, grp: [{ ligne }] })));
+    return;
   }
 
   const avecVisuel = data.filter((r) => r.image_status === "ready" && r.url_image && r.image_prompt);
@@ -192,11 +214,21 @@ async function main() {
   }
 
   const lots = [
-    ...groupes.map(([assetId, grp]) => ({ assetId, grp })),
+    ...groupes.map(([assetId, grp]) => ({ assetId: assetId as number | null, grp })),
     ...sansAsset.map((f) => ({ assetId: null as number | null, grp: [f] })),
   ].slice(0, MAX);
   console.log(`MODE=regen : traitement de ${lots.length} visuel(s) (plafond MAX=${MAX}).\n`);
+  await regenerer(lots);
+  const restants = aGenerer - lots.length;
+  if (restants > 0) console.log(`${restants} visuel(s) au-delà du plafond MAX — relancer pour les traiter.`);
+}
 
+/**
+ * Régénère un lot de visuels. Chaque entrée porte l'asset à invalider et les
+ * articles qui l'utilisent : le premier déclenche la génération, les suivants
+ * ne font que recopier l'URL produite.
+ */
+async function regenerer(lots: { assetId: number | null; grp: { ligne: Ligne }[] }[]): Promise<void> {
   let generes = 0;
   let echecs = 0;
 
@@ -242,9 +274,8 @@ async function main() {
     }
   }
 
-  const restants = aGenerer - lots.length;
   console.log(`\nTerminé : ${generes} article(s) remis à jour, ${echecs} échec(s).`);
-  if (restants > 0) console.log(`${restants} visuel(s) au-delà du plafond MAX — relancer pour les traiter.`);
+  if (echecs) console.log(`Reprendre les échecs avec IDS=<ids séparés par des virgules> et MODE=regen.`);
 }
 
 main();
