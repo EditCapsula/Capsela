@@ -14,7 +14,7 @@ on:
       audit:
         description: "Audit à exécuter (vide = tous)"
         type: choice
-        options: ["", "convention-noms", "taille-capsules", "images-perimees", "idees-par-piece", "coupe-backfill", "couverture-morpho", "morpho-look", "morpho-contre-audit", "morpho-arbitrage"]
+        options: ["", "convention-noms", "taille-capsules", "images-perimees", "idees-par-piece", "coupe-backfill", "couverture-morpho", "morpho-look", "morpho-contre-audit", "morpho-arbitrage", "morpho-phase7"]
         default: ""
 
 jobs:
