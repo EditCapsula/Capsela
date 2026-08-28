@@ -55,10 +55,18 @@ jobs:
           avant_total=0
           apres_total=0
           echecs_total=0
-          # Deux saturations CPU d'affilée sur le même lot signalent une image
-          # que la fonction ne peut pas traiter, pas un aléa : on s'arrête
-          # plutôt que de boucler indéfiniment dessus.
-          saturations=0
+          enjambees=0
+          # Curseur : la fonction ne considère que les assets d'id supérieur.
+          # Il n'avance que sur les lots effectivement tentés, donc une
+          # exécution interrompue peut toujours repartir de zéro sans rien
+          # retraiter — les images déjà converties ne sont plus en .png.
+          curseur=0
+          # Une saturation CPU ne veut pas dire la même chose selon la taille
+          # du lot (relevé du 28/08/2026) : à 2, c'est le plus souvent la
+          # somme de deux images ; à 1, c'est cette image-là qui est
+          # intraitable. D'où la dégressivité — réessayer à l'identique, comme
+          # le faisait la version précédente, ne pouvait qu'échouer à nouveau.
+          lot_courant="$LOT"
           # Une réponse vide ou illisible est un aléa de transport, pas un
           # verdict : le run du 28/08/2026 a converti 92 images puis s'est
           # arrêté sur un unique appel revenu vide, laissant 265 images en
@@ -70,20 +78,38 @@ jobs:
               -H "apikey: $PUBLISHABLE_KEY" \
               -H "Authorization: Bearer $PUBLISHABLE_KEY" \
               -H "Content-Type: application/json" \
-              -d "{\"admin_key\": \"$ADMIN_KEY\", \"limit\": $LOT}") || reponse=""
+              -d "{\"admin_key\": \"$ADMIN_KEY\", \"limit\": $lot_courant, \"apres_id\": $curseur}") || reponse=""
 
             if echo "$reponse" | jq -e '.code == "WORKER_RESOURCE_LIMIT"' >/dev/null 2>&1; then
-              saturations=$((saturations + 1))
-              echo "appel $appel · limite CPU atteinte ($saturations/2) — nouvelle tentative"
-              if [ "$saturations" -ge 2 ]; then
-                echo "::error::deux saturations consécutives, une image bloque le traitement"
-                echo "$reponse"
+              if [ "$lot_courant" -gt 1 ]; then
+                lot_courant=$((lot_courant / 2))
+                echo "appel $appel · limite CPU atteinte — nouvelle tentative avec un lot de $lot_courant"
+                sleep 5
+                continue
+              fi
+              # Lot de 1 saturé : cette image est intraitable telle quelle. On
+              # demande son id sans la traiter (dry_run ne calcule rien), on
+              # l'enjambe, et on la signale pour un traitement séparé.
+              bloquante=$(curl -sS --max-time 60 -X POST "$URL" \
+                -H "apikey: $PUBLISHABLE_KEY" \
+                -H "Authorization: Bearer $PUBLISHABLE_KEY" \
+                -H "Content-Type: application/json" \
+                -d "{\"admin_key\": \"$ADMIN_KEY\", \"limit\": 1, \"apres_id\": $curseur, \"dry_run\": true}") || bloquante=""
+              id_bloquant=$(echo "$bloquante" | jq -r '.lot[0].id // empty')
+              cle_bloquante=$(echo "$bloquante" | jq -r '.lot[0].visual_key // "?"')
+              if [ -z "$id_bloquant" ]; then
+                echo "::error::image intraitable, et son identification a échoué — arrêt"
+                echo "$bloquante"
                 exit 1
               fi
-              sleep 5
+              echo "::warning::image $id_bloquant ($cle_bloquante) intraitable — enjambée, à recompresser séparément"
+              enjambees=$((enjambees + 1))
+              curseur="$id_bloquant"
+              lot_courant="$LOT"
+              sleep 2
               continue
             fi
-            saturations=0
+            lot_courant="$LOT"
 
             if ! echo "$reponse" | jq -e 'has("restants")' >/dev/null 2>&1; then
               illisibles=$((illisibles + 1))
@@ -100,6 +126,8 @@ jobs:
 
             convertis=$(echo "$reponse" | jq -r '.convertis // 0')
             restants=$(echo "$reponse" | jq -r '.restants')
+            a_traiter=$(echo "$reponse" | jq -r '.restants_a_traiter // 0')
+            curseur=$(echo "$reponse" | jq -r '.dernier_id // 0')
             avant=$(echo "$reponse" | jq -r '.octets_avant // 0')
             apres=$(echo "$reponse" | jq -r '.octets_apres // 0')
             nb_echecs=$(echo "$reponse" | jq -r '.echecs | length')
@@ -117,17 +145,18 @@ jobs:
               done
             fi
 
-            if [ "$restants" -eq 0 ]; then
-              echo "Stock épuisé."
+            # C'est le reste APRÈS curseur qui commande l'arrêt : `restants`
+            # inclut les images enjambées, qu'aucun appel ne reprendra.
+            if [ "$a_traiter" -eq 0 ]; then
+              echo "Plus rien à traiter après le curseur."
               break
             fi
 
-            # Un appel converti mais restants inchangé signifierait que la
-            # sélection ne progresse pas : on préfère s'arrêter net.
+            # Le curseur avançant sur chaque lot tenté, un appel sans
+            # conversion ni échec ne peut plus faire boucler ; il reste
+            # anormal et mérite d'être signalé.
             if [ "$convertis" -eq 0 ] && [ "$nb_echecs" -eq 0 ]; then
-              echo "::error::appel sans conversion ni échec — arrêt pour éviter une boucle"
-              echo "$reponse"
-              exit 1
+              echo "::warning::appel sans conversion ni échec — $reponse"
             fi
 
             sleep 1
@@ -140,6 +169,7 @@ jobs:
             echo "|---|---|"
             echo "| Images converties | $convertis_total |"
             echo "| Images en échec | $echecs_total |"
+            echo "| Images enjambées (intraitables) | $enjambees |"
             echo "| Restant en .png | ${restants:-inconnu} |"
             echo "| Poids avant | $((avant_total / 1024)) Ko |"
             echo "| Poids après | $((apres_total / 1024)) Ko |"
