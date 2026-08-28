@@ -2,6 +2,7 @@ import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { computeDefaultCapsule } from "../src/lib/capsule";
+import { formalityOf } from "../src/lib/attributes";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason } from "../src/lib/types";
 import { EMPTY_PROFILE, type Profile } from "../src/lib/profile";
@@ -70,12 +71,24 @@ describe("Taille des capsules", () => {
 
     const tailles: number[] = [];
     let pire = { taille: 0, libelle: "", detail: "" };
+    // Attribution du dépassement. Le bloc Sport est exactement l'ensemble des
+    // pièces de formalité 0 (cf. isSportPiece dans capsule.ts), les collants et
+    // les chaussures d'intérieur sont leurs garanties nommées. Le reliquat est
+    // imputable au plafond de 35 plus le garde-fou de formalité.
+    const cumul = { sport: 0, collants: 0, interieur: 0, total: 0 };
 
     for (const gender of ["femme", "homme"] as const) {
       for (const style of STYLES) {
         for (const saison of SAISONS) {
           const capsule = computeDefaultCapsule(profil(gender, [style]), meteo(TEMP[saison], BUCKET[saison]), [], saison, pool);
           tailles.push(capsule.length);
+          const sport = capsule.filter((it) => formalityOf(it) === 0).length;
+          const collants = capsule.filter((it) => it.accessoireType === "Collants").length;
+          const interieur = capsule.filter((it) => it.shoeType === "Chaussures d'intérieur").length;
+          cumul.sport += sport;
+          cumul.collants += collants;
+          cumul.interieur += interieur;
+          cumul.total += capsule.length;
           const parCat = new Map<string, number>();
           for (const it of capsule) parCat.set(it.cat, (parCat.get(it.cat) || 0) + 1);
           const detail = [...parCat.entries()].sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join(", ");
@@ -96,6 +109,12 @@ describe("Taille des capsules", () => {
     console.log(`  ${tailles.filter((n) => n > 35).length} capsule(s) au-dessus du plafond annoncé de 35.`);
     console.log(`\nPire cas : ${pire.taille} pièces — ${pire.libelle}`);
     console.log(`  répartition : ${pire.detail}`);
+    const n = tailles.length;
+    console.log(`\nD'où viennent les pièces, en moyenne par capsule :`);
+    console.log(`  plafond quota + garde-fou formalité : ${((cumul.total - cumul.sport - cumul.collants - cumul.interieur) / n).toFixed(1)}`);
+    console.log(`  bloc Sport (formalité 0, hors quota) : ${(cumul.sport / n).toFixed(1)}`);
+    console.log(`  garantie collants                    : ${(cumul.collants / n).toFixed(1)}`);
+    console.log(`  garantie chaussures d'intérieur      : ${(cumul.interieur / n).toFixed(1)}`);
     console.log("\nAucune modification effectuée — audit en lecture seule.");
   });
 });
