@@ -135,6 +135,46 @@ Deno.serve(async (req) => {
     return jsonError("Article introuvable.", 404);
   }
 
+  // Clé visuelle attendue pour l'article DANS SON ÉTAT ACTUEL — calculée
+  // avant l'étape 1 (correctif 28/08/2026) pour pouvoir vérifier que l'asset
+  // déjà rattaché lui correspond encore.
+  //
+  // Signalé : deux sweats à capuche, l'un gris chiné l'autre noir, affichant
+  // la même image. Leur asset porte la clé `femme_pull_sweat_a_capuche_zippe`,
+  // SANS segment de couleur — elle a été calculée quand la couleur n'était pas
+  // encore renseignée. L'étape 1 renvoyait ensuite l'asset existant sans
+  // jamais revérifier la clé, si bien que renseigner la couleur plus tard ne
+  // corrigeait jamais le visuel. Même mécanisme pour un sous-type, une
+  // matière ou une coupe modifiés après coup.
+  //
+  // Catégorie inconnue : on laisse `null` et on ne compare rien, pour que le
+  // comportement de l'étape 1 reste strictement inchangé dans ce cas — le
+  // refus explicite (422) intervient plus bas, comme avant.
+  const rawCategory = (article.category || "").trim().toLowerCase();
+  const canonCategory = CATEGORY_CANON[rawCategory];
+  const genreRaw = (article.genre || "").trim().toLowerCase();
+  const genre = genreRaw === "femme" ? "femme" : genreRaw === "homme" ? "homme" : "unisexe";
+  const sousTypeNorm = normalizeVisualSubtype(article.sous_type);
+  const couleurNorm = normalizeVisualColor(article.couleur_dominante);
+  const visualKey = canonCategory
+    ? computeVisualKey({
+        genre,
+        category: canonCategory,
+        sousType: article.sous_type,
+        couleur: article.couleur_dominante,
+        matiere: article.matiere,
+        coupe: article.coupe,
+      })
+    : null;
+
+  const bespokeMarker = article.prompt_image_override?.trim()
+    ? `~ov~${shortHash(article.prompt_image_override.trim())}`
+    : article.silhouette_mode?.trim() || article.details_mode?.trim()
+    ? `~bp~${shortHash(`${article.silhouette_mode || ""}|${article.details_mode || ""}`)}`
+    : "";
+  const isBespoke = Boolean(bespokeMarker);
+  const effectiveVisualKey = visualKey === null ? null : isBespoke ? `${visualKey}${bespokeMarker}` : visualKey;
+
   // 1. L'article a-t-il déjà un asset prêt ? (jamais de régénération auto si ready, sauf force_regenerate admin)
   if (article.visual_asset_id && !forceRegenerate) {
     const { data: existingAsset } = await supabase
@@ -143,13 +183,35 @@ Deno.serve(async (req) => {
       .eq("id", article.visual_asset_id)
       .maybeSingle<AssetRow>();
 
-    if (existingAsset?.image_status === "ready" && existingAsset.image_url) {
+    // Asset devenu obsolète : l'article a changé d'apparence depuis le
+    // rattachement. On ne renvoie pas ce visuel et on laisse la cascade
+    // ci-dessous re-résoudre — elle réutilisera un asset existant qui
+    // correspond à la nouvelle clé, et ne générera que si aucun ne convient.
+    // mirrorToArticle réécrit alors visual_asset_id, donc le mauvais lien
+    // disparaît de lui-même.
+    const cleObsolete =
+      Boolean(existingAsset) && effectiveVisualKey !== null && existingAsset!.visual_key !== effectiveVisualKey;
+    if (cleObsolete) {
+      console.info(
+        JSON.stringify({
+          item_id: article.id,
+          name: article.name,
+          step: "cle_visuelle_obsolete",
+          cle_asset: existingAsset!.visual_key,
+          cle_attendue: effectiveVisualKey,
+        })
+      );
+    }
+
+    if (!cleObsolete && existingAsset?.image_status === "ready" && existingAsset.image_url) {
       await touchAsset(supabase, existingAsset);
       await mirrorToArticle(supabase, article.id, existingAsset);
       return jsonOk({ image_url: existingAsset.image_url });
     }
-    if (existingAsset?.image_status === "generating") {
-      // Quelqu'un d'autre génère déjà ce même asset — on attend, placeholder côté client.
+    if (!cleObsolete && existingAsset?.image_status === "generating") {
+      // Quelqu'un d'autre génère déjà ce même asset — on attend, placeholder
+      // côté client. Jamais quand la clé est périmée : la génération en cours
+      // porte sur l'ancienne apparence, cet article l'attendrait en vain.
       return jsonOk({ image_url: null, status: "generating" });
     }
     // 'error' ou 'missing' : retente ci-dessous (cascade + génération), même asset réutilisé.
@@ -163,8 +225,6 @@ Deno.serve(async (req) => {
   // d'une tout autre nature (pantalon de jogging, short, lunettes se
   // partageant la même image). Un repli implicite est toujours plus
   // dangereux ici qu'un échec explicite et loggé.
-  const rawCategory = (article.category || "").trim().toLowerCase();
-  const canonCategory = CATEGORY_CANON[rawCategory];
   if (!canonCategory) {
     const message = `Catégorie inconnue : "${article.category ?? ""}" (article ${article.id}) ne correspond à aucune entrée de CATEGORY_CANON. Génération annulée avant tout appel API.`;
     console.error(JSON.stringify({ item_id: article.id, name: article.name, raw_category: article.category, error: message }));
@@ -172,34 +232,9 @@ Deno.serve(async (req) => {
     return jsonError(message, 422);
   }
 
-  const genreRaw = (article.genre || "").trim().toLowerCase();
-  const genre = genreRaw === "femme" ? "femme" : genreRaw === "homme" ? "homme" : "unisexe";
-  const sousTypeNorm = normalizeVisualSubtype(article.sous_type);
-  const couleurNorm = normalizeVisualColor(article.couleur_dominante);
-  const visualKey = computeVisualKey({
-    genre,
-    category: canonCategory,
-    sousType: article.sous_type,
-    couleur: article.couleur_dominante,
-    matiere: article.matiere,
-    coupe: article.coupe,
-  });
-
-  // Design "bespoke" (override ou silhouette/details explicites, recette
-  // 19/08/2026) : un asset issu de ces champs est propre à CET article et ne
-  // doit jamais être proposé à un autre article via la cascade générique
-  // (steps 3/4 ci-dessous, indexés sur genre/sous_type/couleur seuls, pas sur
-  // visual_key) — ni l'inverse (cet article ne doit jamais hériter d'un
-  // asset générique existant). Un marqueur dans le visual_key (jamais
-  // produit par computeVisualKey en temps normal) sert à exclure ces assets
-  // de la recherche générique, sans toucher à la clé visuelle standard.
-  const bespokeMarker = article.prompt_image_override?.trim()
-    ? `~ov~${shortHash(article.prompt_image_override.trim())}`
-    : article.silhouette_mode?.trim() || article.details_mode?.trim()
-    ? `~bp~${shortHash(`${article.silhouette_mode || ""}|${article.details_mode || ""}`)}`
-    : "";
-  const isBespoke = Boolean(bespokeMarker);
-  const effectiveVisualKey = isBespoke ? `${visualKey}${bespokeMarker}` : visualKey;
+  // Après cette garde, la catégorie est connue : la clé calculée plus haut
+  // ne peut plus être nulle.
+  const cleVisuelle = effectiveVisualKey as string;
 
   // Niveau de tendance normalisé (recette 20/08/2026, correctif) — sert à
   // exclure de la cascade générique les assets qui ne correspondent pas au
@@ -227,7 +262,7 @@ Deno.serve(async (req) => {
     // "bespoke" incluse ici : ne matche que si CET article a déjà généré
     // exactement ce même design par le passé (cache légitime, pas de fuite).
     let reusable = await findReadyAsset(supabase, {
-      visual_key: effectiveVisualKey,
+      visual_key: cleVisuelle,
       category: canonCategory,
       niveauTendance,
     });
@@ -284,7 +319,7 @@ Deno.serve(async (req) => {
     const { data: priorRow } = await supabase
       .from("visual_assets")
       .select("id, image_status")
-      .eq("visual_key", effectiveVisualKey)
+      .eq("visual_key", cleVisuelle)
       .maybeSingle<{ id: number; image_status: string }>();
 
     let assetId: number;
@@ -316,7 +351,7 @@ Deno.serve(async (req) => {
       const { data: inserted, error: insertError } = await supabase
         .from("visual_assets")
         .insert({
-          visual_key: effectiveVisualKey,
+          visual_key: cleVisuelle,
           genre,
           category: canonCategory,
           sous_type: sousTypeNorm,
@@ -347,7 +382,7 @@ Deno.serve(async (req) => {
 
     if ((generatedToday ?? 0) >= dailyCap) {
       await supabase.from("image_generation_logs").insert({
-        visual_key: effectiveVisualKey,
+        visual_key: cleVisuelle,
         model,
         quality,
         success: false,
@@ -401,7 +436,7 @@ Deno.serve(async (req) => {
         genre: article.genre,
         couleur_dominante: article.couleur_dominante,
         matiere: article.matiere,
-        visual_key: effectiveVisualKey,
+        visual_key: cleVisuelle,
         niveau_tendance: article.niveau_tendance || "contemporain",
         trend_matched: Boolean(trend),
         is_bespoke: isBespoke,
@@ -481,7 +516,7 @@ Deno.serve(async (req) => {
       .eq("id", assetId);
 
     await supabase.from("image_generation_logs").insert({
-      visual_key: effectiveVisualKey,
+      visual_key: cleVisuelle,
       model,
       quality,
       success: true,
@@ -499,13 +534,13 @@ Deno.serve(async (req) => {
     return jsonOk({ image_url: imageUrl });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur inconnue.";
-    await supabase.from("visual_assets").update({ image_status: "error" }).eq("visual_key", effectiveVisualKey);
+    await supabase.from("visual_assets").update({ image_status: "error" }).eq("visual_key", cleVisuelle);
     await supabase
       .from("vestiaire_universel")
       .update({ image_status: "error" })
       .eq("id", article.id);
     await supabase.from("image_generation_logs").insert({
-      visual_key: effectiveVisualKey,
+      visual_key: cleVisuelle,
       model,
       quality,
       success: false,
