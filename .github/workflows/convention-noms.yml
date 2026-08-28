@@ -29,4 +29,5 @@ jobs:
           path: |
             tableau-de-controle-noms.csv
             termes-sous-type.csv
+            renommages-surs.sql
           if-no-files-found: error
