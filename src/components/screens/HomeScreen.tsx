@@ -273,11 +273,58 @@ const JOURNAL_VISUALS: Record<"femme" | "homme", string[]> = {
 // conteneur (JSX), pas par des coordonnées négatives. Les z-index, désormais
 // sans effet puisqu'il n'y a plus de superposition, sont conservés comme
 // garde-fou si une future retouche réintroduisait un contact.
+//
+// Agrandissement du 28/08/2026 (signalé : « sur mon Samsung c'est trop
+// petit »). Le gain vient des marges, jamais de la hauteur de la card, qui
+// reste à 176 px : colonne photo 46 → 50 %, padding de la zone 14/12 → 8/10.
+//
+// Mesures recalculées sur les quatre largeurs, rotation comprise :
+//   surface des polaroids  +18 %   (secondaires +22 %, les moins lisibles)
+//   garde minimale         0,8 px → 6,6 px
+//   amplitude de recadrage 0,61-0,94 → 0,63-0,88
+//
+// Le 0,8 px de garde de la version précédente expliquait l'impression de
+// polaroid coupé : le principal était calé à left:2%, soit ~2,4 px, dont la
+// rotation reprenait 1,6. Il part maintenant à 6 %.
 const POLAROID_SLOTS: { left: number; top: number; w: number; h: number; rotate: number; z: number }[] = [
-  { left: 2, top: 15, w: 48, h: 64, rotate: -2, z: 3 },
-  { left: 60, top: 8, w: 35, h: 38, rotate: 3, z: 2 },
-  { left: 60, top: 55, w: 35, h: 38, rotate: -2, z: 1 },
+  { left: 6, top: 10, w: 46, h: 62, rotate: -2, z: 3 },
+  { left: 60, top: 6, w: 33, h: 40, rotate: 3, z: 2 },
+  { left: 60, top: 54, w: 33, h: 40, rotate: -2, z: 1 },
 ];
+
+/**
+ * Collage d'attente de la card Dressing, quand aucune pièce n'a encore été
+ * saisie (brief 28/08/2026). Réutilise les photos éditoriales du Journal —
+ * décision produit assumée — dans la géométrie des planches Dressing/Capsule,
+ * pas celle du Journal : même hauteur de 122 px que StyleBoard, donc aucun
+ * décalage de mise en page au passage vide → rempli.
+ *
+ * Ces images sont purement décoratives. Elles ne sont jamais comptées, ne
+ * rejoignent jamais le dressing, n'entrent ni dans wardrobePool ni dans le
+ * moteur : cette planche ne reçoit aucun Item, seulement des chemins de
+ * fichiers.
+ */
+// Géométrie calculée sur 360/390/412/430 px, rotation comprise : 3,7 px de
+// garde minimale, aucun contact ni débordement. La card Dressing étant deux
+// fois plus étroite que celle du Journal, les marges y sont proportionnellement
+// plus serrées — d'où des valeurs propres plutôt qu'une reprise de
+// BOARD_SLOTS[3], calibré pour des découpes de vêtements sans cadre.
+const EMPTY_BOARD_SLOTS: { left: number; top: number; w: number; h: number; rotate: number; z: number }[] = [
+  { left: 5, top: 5, w: 43, h: 80, rotate: -3, z: 3 },
+  { left: 55, top: 5, w: 40, h: 40, rotate: 4, z: 2 },
+  { left: 55, top: 52, w: 40, h: 40, rotate: -2, z: 1 },
+];
+
+/** Planche éditoriale d'attente — mêmes cadres polaroid que le Journal, dimensions de StyleBoard. */
+function EmptyDressingBoard({ visuals, height }: { visuals: string[]; height: number }) {
+  return (
+    <div style={{ position: "relative", height }} aria-hidden="true">
+      {visuals.map((src, i) => (
+        <PolaroidPhoto key={src} src={src} alt="" slot={EMPTY_BOARD_SLOTS[i]} />
+      ))}
+    </div>
+  );
+}
 
 function PolaroidPhoto({ src, alt, slot }: { src: string; alt: string; slot: (typeof POLAROID_SLOTS)[number] }) {
   const [failed, setFailed] = useState(false);
@@ -354,11 +401,17 @@ export default function HomeScreen() {
   const capsuleStyleLabel = styleLabel(profile.styles[0], profile.gender);
 
   const dressingCount = state.items.length;
+  const dressingVide = dressingCount === 0;
   const dressingPieces = selectBoardPieces(state.items, 3);
   const capsulePieces = selectBoardPieces(capsule, 4);
 
   const journalGender: "femme" | "homme" = profile.gender === "homme" ? "homme" : "femme";
   const journalVisuals = JOURNAL_VISUALS[journalGender];
+  // Ordre inversé pour la planche d'attente du Dressing : le stock ne compte
+  // que trois photos par genre, donc les deux cards montrent les mêmes
+  // fichiers. Changer la dominante évite au moins l'effet de copie exacte
+  // entre deux cards visibles ensemble.
+  const emptyBoardVisuals = [...journalVisuals].reverse();
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-[100px]">
@@ -438,18 +491,32 @@ export default function HomeScreen() {
           {/* Dressing — ce que je possède : planche de stylisme faite de
               vraies pièces du dressing, effectif réel dynamique. */}
           <button
-            onClick={actions.goWardrobe}
+            onClick={dressingVide ? actions.openAdd : actions.goWardrobe}
             className="flex-1 min-w-0 text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex flex-col box-border"
             style={{ background: "linear-gradient(165deg, #F6F0E6 0%, #EEE1CE 100%)" }}
           >
             <div className="px-[14px] pt-[14px]">
-              <StyleBoard items={dressingPieces} height={122} />
+              {/* Même hauteur dans les deux états : le passage de la planche
+                  d'attente aux vraies pièces ne déplace rien. */}
+              {dressingVide ? (
+                <EmptyDressingBoard visuals={emptyBoardVisuals} height={122} />
+              ) : (
+                <StyleBoard items={dressingPieces} height={122} />
+              )}
             </div>
             <div className="px-[14px] pt-[10px] pb-[14px]">
               <div className="font-serif text-[17px] text-ink leading-[1.2]">Dressing</div>
-              <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">Tes pièces, tes looks, ton vestiaire.</div>
+              <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">
+                {dressingVide ? "Ajoute tes pièces pour créer tes premiers looks." : "Tes pièces, tes looks, ton vestiaire."}
+              </div>
+              {/* Libellé actionnable (brief 28/08/2026) : « 6 pièces → » se
+                  lisait comme une étiquette, pas comme un lien. */}
               <div className="text-[12px] text-terracotta mt-[9px]">
-                {dressingCount} {dressingCount <= 1 ? "pièce" : "pièces"} →
+                {dressingVide
+                  ? "Ajouter mes pièces →"
+                  : dressingCount === 1
+                    ? "Voir ma pièce →"
+                    : `Voir mes ${dressingCount} pièces →`}
               </div>
             </div>
           </button>
@@ -474,7 +541,7 @@ export default function HomeScreen() {
                 {capsule.length} {capsule.length <= 1 ? "pièce" : "pièces"}
               </div>
               <div className="text-[11px] text-muted leading-[1.4] mt-[6px]">
-                Une sélection pensée pour ton style et ta palette.
+                Une sélection pensée pour ton style et tes couleurs.
               </div>
               <div className="text-[12px] text-terracotta mt-[9px]">Découvrir →</div>
             </div>
@@ -496,7 +563,7 @@ export default function HomeScreen() {
           className="w-full text-left cursor-pointer rounded-[20px] border border-border overflow-hidden flex box-border"
           style={{ background: "linear-gradient(120deg, #F6F0E6 0%, #EEE1CE 100%)" }}
         >
-          <div className="relative flex-shrink-0 box-border" style={{ width: "46%", height: 176, padding: "14px 12px" }}>
+          <div className="relative flex-shrink-0 box-border" style={{ width: "50%", height: 176, padding: "8px 10px" }}>
             <div className="relative w-full h-full">
               {journalVisuals.map((src, i) => (
                 <PolaroidPhoto key={src} src={src} alt="" slot={POLAROID_SLOTS[i]} />
