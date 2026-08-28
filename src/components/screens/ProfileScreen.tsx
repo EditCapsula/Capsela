@@ -3,15 +3,18 @@
 import { useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { useAuth } from "@/lib/auth";
+import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport";
 import { useCapsela } from "@/lib/store";
 import { GENDER_DEPENDENT_FIELDS, fieldNeedsRevalidation, genderLabel, morphologyLabel, styleLabel } from "@/lib/profile";
 import { APP_VERSION } from "@/lib/data";
 
 export default function ProfileScreen() {
-  const { profile, email, demoMode, signOut, deleteAccount, error, clearError } = useAuth();
+  const { profile, email, userId, demoMode, signOut, deleteAccount, error, clearError } = useAuth();
   const { state, actions } = useCapsela();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
   const tailleValue =
@@ -40,6 +43,22 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     await signOut();
     actions.goWelcome();
+  };
+
+  const handleExport = async () => {
+    if (!userId) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const donnees = await buildDataExport(userId, email);
+      downloadJson(donnees, exportFileName());
+    } catch (err) {
+      // Message affiché tel quel : un export partiel serait trompeur au
+      // regard de l'article 20, mieux vaut dire que rien n'a été produit.
+      setExportError(err instanceof Error ? err.message : "Export impossible pour le moment.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const openDeleteConfirm = () => {
@@ -163,15 +182,14 @@ export default function ProfileScreen() {
       </button>
 
       {/* Section Compte (recette 25/08/2026) — regroupe ce qui vivait avant
-          en boutons séparés (Informations légales) plus deux nouvelles
-          entrées : Confidentialité et données pointe vers le même écran
-          (sa section "Politique de confidentialité" couvre déjà ce sujet,
-          jamais un second écran dupliqué) ; Supprimer mon compte reste pour
-          l'instant un simple repère visuel sans action réelle, aucun
-          parcours de suppression de compte n'existe encore dans l'app —
-          même traitement (chevron, cursor-pointer, sans onClick) que les
-          lignes de LegalScreen, qui n'ont elles non plus pas encore de
-          destination branchée. */}
+          en boutons séparés (Informations légales) plus Confidentialité et
+          données, qui pointe vers le même écran : sa section "Politique de
+          confidentialité" couvre déjà ce sujet, jamais un second écran
+          dupliqué.
+          Suppression et téléchargement sont désormais tous deux branchés
+          (le commentaire d'origine décrivait la suppression comme un simple
+          repère visuel — ce n'est plus vrai depuis delete-account, et
+          l'export article 20 l'a rejointe le 28/08/2026). */}
       <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[10px]">Compte</div>
       <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <button
@@ -188,6 +206,22 @@ export default function ProfileScreen() {
           <span className="text-[13.5px] text-ink">Confidentialité et données</span>
           <span className="text-placeholder">›</span>
         </button>
+        {/* Portabilité (article 20 du RGPD) — placée juste avant la
+            suppression : ce sont les deux gestes d'un départ, et récupérer
+            ses données avant d'effacer son compte est l'ordre naturel.
+            Masquée en mode démo, où rien n'a quitté l'appareil. */}
+        {!demoMode && (
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4 w-full text-left cursor-pointer disabled:opacity-60"
+          >
+            <span className="text-[13.5px] text-ink">
+              {exporting ? "Préparation du fichier…" : "Télécharger mes données"}
+            </span>
+            <span className="text-placeholder">›</span>
+          </button>
+        )}
         <button
           onClick={openDeleteConfirm}
           className="flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4 w-full text-left cursor-pointer"
@@ -196,6 +230,8 @@ export default function ProfileScreen() {
           <span className="text-rust">›</span>
         </button>
       </div>
+
+      {exportError && <div className="mt-[10px] text-[12.5px] text-rust leading-[1.5]">{exportError}</div>}
 
       <div className="text-center text-[11px] text-placeholder mt-[22px]">L&apos;édit Capsela · v{APP_VERSION}</div>
       <button onClick={handleSignOut} className="mt-[10px] w-full text-center text-[12.5px] text-terracotta cursor-pointer">
