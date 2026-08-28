@@ -14,7 +14,7 @@ on:
       audit:
         description: "Audit à exécuter (vide = tous)"
         type: choice
-        options: ["", "convention-noms", "taille-capsules"]
+        options: ["", "convention-noms", "taille-capsules", "images-perimees"]
         default: ""
 
 jobs:
