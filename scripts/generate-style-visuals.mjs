@@ -40,14 +40,18 @@
 //   node scripts/generate-style-visuals.mjs --mode=generate --all
 //   node scripts/generate-style-visuals.mjs --mode=promote --gender=femme --style=romantique --candidate=2
 //
-// Env requis : SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY
+// Env requis : SUPABASE_URL, SB_SECRET_KEY, OPENAI_API_KEY
 // (secret GitHub Actions dédié — n'existe nulle part ailleurs dans ce
 // projet, à ajouter dans Settings → Secrets and variables → Actions).
 
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Clé privilégiée : SB_SECRET_KEY (clé sb_secret_... du nouveau système
+// Supabase) d'abord, SUPABASE_SERVICE_ROLE_KEY ensuite. Les clés JWT
+// historiques ont été désactivées le 28/08/2026 — le repli ne sert donc plus
+// qu'à un environnement local qui n'aurait pas encore été mis à jour.
+const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const BUCKET = "catalog-images";
 const MODEL = "gpt-image-1";
@@ -60,7 +64,7 @@ let CANDIDATES_PER_VISUAL = 3;
 const DELAY_MS = 1500;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error("SUPABASE_URL (ou NEXT_PUBLIC_SUPABASE_URL) et SUPABASE_SERVICE_ROLE_KEY sont requis.");
+  console.error("SUPABASE_URL (ou NEXT_PUBLIC_SUPABASE_URL) et SB_SECRET_KEY sont requis.");
   process.exit(1);
 }
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
