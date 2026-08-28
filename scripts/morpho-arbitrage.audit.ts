@@ -60,6 +60,7 @@ const CIBLES_POINT: Record<string, { epaules: number; taille: number; hanches: n
   f_pomme: null,
 };
 
+const ecartBorneLocal = (v: number, b: Borne) => ecartIntervalle(v, b);
 const ecartIntervalle = (v: number, b: Borne) =>
   Math.max(0, (b.min ?? -Infinity) - v === -Infinity ? 0 : (b.min ?? 0) - v) + Math.max(0, v - (b.max ?? Infinity));
 
@@ -178,6 +179,64 @@ describe("Arbitrage phase 5B", () => {
     console.log(`\n  Sablier et rectangle, sur ${evalues} looks évaluables :`);
     console.log(`     cibles-point  : avis identique sur ${pct(memeAvisPoint, evalues)} (par construction, cibles égales)`);
     console.log(`     intervalles   : avis identique sur ${pct(memeAvisInt, evalues)}`);
+
+    // ── D · D'OÙ VIENT LE SIGNAL DE TAILLE ? ──────────────────────────────
+    // Le rectangle donne +10 sur 84,7 % des looks actifs. Avant de relever le
+    // plancher, il faut savoir ce que ce plancher mesure réellement : une taille
+    // marquée par un VÊTEMENT, ou la simple présence d'une ceinture qui apporte
+    // +2 à elle seule. Les deux n'ont pas la même valeur de conseil.
+    console.log(`\n════════ D · SOURCE DU SIGNAL DE TAILLE ════════`);
+    let tailleConnue = 0, viaCeintureSeule = 0, viaVetement = 0, viaLesDeux = 0;
+    for (const l of looks) {
+      const sig = signatureLook(l);
+      if (!sig.tailleConnue) continue;
+      tailleConnue += 1;
+      const ceinture = l.some((x) => x.cat === "accessoire" && x.accessoireType === "Ceinture");
+      const vetement = l.some((x) => effetMorphologique(x).taille > 0);
+      if (ceinture && vetement) viaLesDeux += 1;
+      else if (ceinture) viaCeintureSeule += 1;
+      else viaVetement += 1;
+    }
+    console.log(`  Looks avec une taille renseignée : ${tailleConnue}  ${pct(tailleConnue, looks.length)}`);
+    console.log(`     par une ceinture seule  : ${viaCeintureSeule}  ${pct(viaCeintureSeule, tailleConnue)}`);
+    console.log(`     par un vêtement seul    : ${viaVetement}  ${pct(viaVetement, tailleConnue)}`);
+    console.log(`     par les deux            : ${viaLesDeux}  ${pct(viaLesDeux, tailleConnue)}`);
+
+    // Le rectangle exige taille ≥ 2. Une ceinture apporte exactement +2.
+    const rectSurCeintureSeule = looks.filter((l) => {
+      const sig = signatureLook(l);
+      if (sig.classe !== "MORPHOLOGY_READY" || !sig.tailleConnue) return false;
+      if (ecartBorneLocal(sig.taille, { min: 2 }) !== 0) return false;
+      return !l.some((x) => effetMorphologique(x).taille > 0);
+    }).length;
+    console.log(`\n  Bonus rectangle obtenus SANS aucun vêtement marquant la taille : ${rectSurCeintureSeule}`);
+
+    // ── E · UNE PIÈCE TRANSVERSE SUFFIT-ELLE À DÉCLARER READY ? ───────────
+    console.log(`\n════════ E · READY OBTENU SUR UNE SEULE PIÈCE ════════`);
+    const readyUnePiece = looks.filter((l) => {
+      const sig = signatureLook(l);
+      if (sig.classe !== "MORPHOLOGY_READY") return false;
+      const evaluees = l.filter((x) => {
+        const e = effetMorphologique(x);
+        return e.pertinent && (e.confiance === "haute" || e.confiance === "moyenne" || e.epaules > 0 || e.hanches > 0);
+      });
+      return evaluees.length === 1;
+    }).length;
+    const ready = looks.filter((l) => signatureLook(l).classe === "MORPHOLOGY_READY").length;
+    console.log(`  Looks READY : ${ready}  ${pct(ready, looks.length)}`);
+    console.log(`  ...dont READY sur UNE SEULE pièce évaluée : ${readyUnePiece}  ${pct(readyUnePiece, ready)} des READY`);
+
+    // Une jupe suffit-elle à produire un bonus sablier ?
+    const jupeSeule = looks.filter((l) => {
+      const sig = signatureLook(l);
+      if (sig.classe !== "MORPHOLOGY_READY" || !sig.tailleConnue) return false;
+      const evaluees = l.filter((x) => {
+        const e = effetMorphologique(x);
+        return e.pertinent && (e.confiance === "haute" || e.confiance === "moyenne" || e.epaules > 0 || e.hanches > 0);
+      });
+      return evaluees.length === 1 && evaluees[0].cat === "jupe";
+    }).length;
+    console.log(`  Looks où une jupe seule porte tout l'avis : ${jupeSeule}`);
 
     console.log(`\nAucune modification effectuée — audit en lecture seule.`);
   }, 900_000);
