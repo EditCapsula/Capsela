@@ -409,13 +409,44 @@ function directionParEcart(ecart: number): Direction {
 export const ZONES_REQUISES: Record<string, ("epaules" | "taille" | "hanches")[]> = {
   f_poire: ["epaules", "hanches"],
   f_triangle_inverse: ["epaules", "hanches"],
-  f_sablier: ["epaules", "taille", "hanches"],
+  // Garde-fou de volume : la taille n'entre pas dans l'alerte.
+  f_sablier: ["epaules", "hanches"],
   f_rectangle: ["epaules", "taille", "hanches"],
   f_pomme: [],
 };
 
 export const zonesRequises = (morphology: string): ("epaules" | "taille" | "hanches")[] =>
   ZONES_REQUISES[morphology] ?? [];
+
+/**
+ * Robustesse de l'évidence d'un look. Distincte de la direction : un look peut
+ * pointer nettement dans un sens sur la foi d'une seule pièce.
+ *
+ * HIGH exige au moins DEUX pièces évaluées — une robe seule marque « haut » et
+ * « bas » à elle seule, mais l'avis ne repose alors que sur un article.
+ */
+export type NiveauConfiance = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
+
+export function niveauConfiance(pieces: Item[], signature?: SignatureLook): NiveauConfiance {
+  const sig = signature ?? signatureLook(pieces);
+  const part = sig.piecesPertinentes ? sig.piecesEvaluees / sig.piecesPertinentes : 0;
+  if (sig.classe === "MORPHOLOGY_READY" && sig.piecesEvaluees >= 2 && part >= 0.75) return "HIGH";
+  if (sig.classe === "MORPHOLOGY_READY") return "MEDIUM";
+  if (sig.classe === "MORPHOLOGY_PARTIAL") return "LOW";
+  return "UNKNOWN";
+}
+
+/**
+ * Un conseil n'est affichable que si l'évidence est robuste ET la direction
+ * positive. Une direction défavorable reste utile au classement mais n'est
+ * JAMAIS montrée : elle dirait à une femme qu'un vêtement lui va mal.
+ */
+export function conseilAffichable(pieces: Item[], morphology: string | null): boolean {
+  const sig = signatureLook(pieces);
+  const niveau = niveauConfiance(pieces, sig);
+  if (niveau !== "HIGH" && niveau !== "MEDIUM") return false;
+  return scoreMorphoV2(pieces, morphology, sig).delta > 0;
+}
 
 export interface ScoreMorpho {
   /** false = aucune affirmation morphologique. Le score reste strictement neutre. */
@@ -474,18 +505,23 @@ export function scoreMorphoV2(pieces: Item[], morphology: string | null, signatu
     return rendre("neutre", sig.taille - volume, `taille ${sig.taille}, volume ${volume} : pas de définition marquée`);
   }
 
-  // Sablier : GARDE-FOU, pas classement. La pénalité ne vise qu'un cas précis —
-  // un volume maximal des deux côtés, qui encadre et efface la taille. Son taux
-  // faible (1,6 % mesuré) est attendu : la plupart des tenues ne masquent pas la
-  // taille. Sa valeur se juge à sa PRÉCISION sur ces cas, jamais à son volume.
+  // Sablier : GARDE-FOU PUR (arbitrage du 28/08/2026). Neutre par défaut, jamais
+  // de bonus. Il ne dit pas « cette tenue est particulièrement adaptée » — il dit
+  // seulement « cette combinaison accumule un volume extrême des deux côtés ».
+  //
+  // Le bonus précédent tombait sur 65,2 % des looks : un signal distribué deux
+  // fois sur trois n'informe pas, et laissait croire à un classement là où il n'y
+  // a qu'une alerte. Sa valeur se juge à la PRÉCISION de ses alertes, jamais à
+  // leur fréquence.
+  //
+  // Il ne consulte pas la taille : l'alerte porte sur le volume qui l'encadre,
+  // pas sur sa définition. Exiger une taille connue l'aurait rendu muet sur les
+  // looks où elle ne l'est pas, sans rien apporter — cf. ZONES_REQUISES.
   if (morphology === "f_sablier") {
     if (sig.epaules >= 3 && sig.hanches >= 3) {
       return rendre("defavorable", null, `volume maximal des deux côtés (${sig.epaules}/${sig.hanches}) : la taille disparaît`);
     }
-    if (sig.taille >= 1 && sig.epaules <= 2 && sig.hanches <= 2) {
-      return rendre("compensation", null, `taille ${sig.taille} préservée, volume contenu`);
-    }
-    return rendre("neutre", null, `taille ${sig.taille}, volume ${sig.epaules}/${sig.hanches}`);
+    return rendre("neutre", null, `volume ${sig.epaules}/${sig.hanches} : rien à signaler`);
   }
 
   return INACTIF(`${morphology} : aucune règle`);

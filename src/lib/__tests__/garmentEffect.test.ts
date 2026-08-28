@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effetMorphologique, scoreMorphoV2, signatureLook, zonesRequises } from "../garmentEffect";
+import { conseilAffichable, effetMorphologique, niveauConfiance, scoreMorphoV2, signatureLook, zonesRequises } from "../garmentEffect";
 import { row } from "./fixtures";
 import { rowToCatalogItem } from "../vestiaire";
 import type { CatalogItem } from "../catalog";
@@ -156,7 +156,10 @@ describe("score morphologique v2", () => {
   });
 
   it("se tait sur une morphologie qui dépend de la taille quand la taille est inconnue", () => {
-    const r = scoreMorphoV2([cargo, blazer], "f_sablier");
+    // Le rectangle en dépend — créer de la définition suppose de savoir si la
+    // taille est marquée. Le sablier n'en dépend plus depuis qu'il est un pur
+    // garde-fou de volume.
+    const r = scoreMorphoV2([cargo, blazer], "f_rectangle");
     expect(r.actif).toBe(false);
     expect(r.motif).toContain("taille");
   });
@@ -211,10 +214,11 @@ describe("direction de compensation — trois états, jamais deux", () => {
     expect(zonesRequises("f_pomme")).toHaveLength(0);
   });
 
-  it("le sablier ne pénalise que le volume maximal des deux côtés", () => {
+  it("le sablier ne donne jamais de bonus — garde-fou pur", () => {
     const contenu = scoreMorphoV2(
       [piece({ id: 74, category: "robes", name: "Robe cintrée", sous_type: "Robe" })], "f_sablier");
-    expect(contenu.delta).toBeGreaterThanOrEqual(0);
+    expect(contenu.delta).toBe(0);
+    expect(contenu.direction).toBe("neutre");
   });
 });
 
@@ -262,11 +266,14 @@ describe("l'ignorance ne produit jamais de pénalité", () => {
   });
 
   it("reste neutre quand la taille est inconnue, pour les morphologies qui en dépendent", () => {
-    for (const m of ["f_sablier", "f_rectangle"]) {
-      const r = scoreMorphoV2([connuHaut, connuBas], m);
-      expect(r.actif, m).toBe(false);
-      expect(r.delta, m).toBe(0);
-    }
+    const r = scoreMorphoV2([connuHaut, connuBas], "f_rectangle");
+    expect(r.actif).toBe(false);
+    expect(r.delta).toBe(0);
+  });
+
+  it("laisse le garde-fou sablier opérer sans connaître la taille, sans jamais récompenser", () => {
+    const r = scoreMorphoV2([connuHaut, connuBas], "f_sablier");
+    expect(r.delta).toBeLessThanOrEqual(0);
   });
 
   it("ne pénalise jamais une longueur inconnue", () => {
@@ -279,5 +286,95 @@ describe("l'ignorance ne produit jamais de pénalité", () => {
     for (const m of ["f_poire", "f_sablier", "f_rectangle", "f_triangle_inverse", "f_pomme"]) {
       expect(scoreMorphoV2([inconnuHaut, inconnuBas], m).delta, m).toBe(0);
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Non-régression phase 8 — garde-fou sablier, confiance, et affichage du conseil.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("sablier — garde-fou pur", () => {
+  const hautVolumineux = piece({ id: 100, category: "vestes_blazers", name: "Bomber oversize", sous_type: "Bomber" });
+  const basVolumineux = piece({ id: 101, category: "jeans", name: "Jean baggy", sous_type: "Jean" });
+  const tshirt = piece({ id: 102, category: "hauts", name: "T-shirt basique", sous_type: "T-shirt" });
+  const jupeCrayon = piece({ id: 103, category: "jupes", name: "Jupe crayon", sous_type: "Jupe" });
+
+  it("reste neutre sur une tenue ordinaire, sans jamais récompenser", () => {
+    const r = scoreMorphoV2([jupeCrayon, hautVolumineux], "f_sablier");
+    expect(r.delta).toBe(0);
+  });
+
+  it("alerte sur le motif historique : volume maximal en haut ET en bas", () => {
+    // Reproduit les 13 cas relevés sur 4 515 looks : bomber oversize + jean
+    // baggy. C'est le seul motif que le garde-fou doit détecter.
+    const r = scoreMorphoV2([hautVolumineux, basVolumineux, tshirt], "f_sablier");
+    expect(r.actif).toBe(true);
+    expect(r.direction).toBe("defavorable");
+    expect(r.delta).toBeLessThan(0);
+  });
+
+  it("n'alerte pas quand un seul côté est volumineux", () => {
+    expect(scoreMorphoV2([hautVolumineux, jupeCrayon], "f_sablier").delta).toBe(0);
+    expect(scoreMorphoV2([basVolumineux, tshirt], "f_sablier").delta).toBe(0);
+  });
+
+  it("n'exige pas que la taille soit connue — l'alerte porte sur le volume", () => {
+    expect(zonesRequises("f_sablier")).not.toContain("taille");
+  });
+});
+
+describe("niveau de confiance", () => {
+  const pantalonLarge = piece({ id: 110, category: "pantalons", name: "Pantalon wide leg", sous_type: "Pantalon" });
+  const blazer = piece({ id: 111, category: "vestes_blazers", name: "Blazer structuré", sous_type: "Blazer" });
+  const robe = piece({ id: 112, category: "robes", name: "Robe fourreau", sous_type: "Robe" });
+  const hautInconnu = piece({ id: 113, category: "hauts", name: "Haut", sous_type: "Haut" });
+
+  it("dégrade en MEDIUM un avis porté par une seule pièce", () => {
+    // Une robe couvre physiquement le haut et le bas, mais l'évidence tient à
+    // un seul article : l'avis ne peut pas être affirmé.
+    expect(niveauConfiance([robe])).toBe("MEDIUM");
+  });
+
+  it("accorde HIGH quand deux pièces au moins sont évaluées", () => {
+    expect(niveauConfiance([pantalonLarge, blazer])).toBe("HIGH");
+  });
+
+  it("descend à LOW ou UNKNOWN quand une moitié manque", () => {
+    expect(["LOW", "UNKNOWN"]).toContain(niveauConfiance([hautInconnu, pantalonLarge]));
+    expect(niveauConfiance([hautInconnu])).toBe("UNKNOWN");
+  });
+});
+
+describe("affichage du conseil", () => {
+  const pantalonLarge = piece({ id: 120, category: "pantalons", name: "Pantalon wide leg", sous_type: "Pantalon" });
+  const caraco = piece({ id: 121, category: "hauts", name: "Caraco", sous_type: "Caraco" });
+  const bomber = piece({ id: 122, category: "vestes_blazers", name: "Bomber oversize", sous_type: "Bomber" });
+  const jeanBaggy = piece({ id: 123, category: "jeans", name: "Jean baggy", sous_type: "Jean" });
+  const hautInconnu = piece({ id: 124, category: "hauts", name: "Haut", sous_type: "Haut" });
+
+  it("affiche un conseil sur une direction positive et une évidence robuste", () => {
+    expect(conseilAffichable([pantalonLarge, caraco], "f_triangle_inverse")).toBe(true);
+  });
+
+  it("ne montre JAMAIS une direction défavorable", () => {
+    expect(scoreMorphoV2([pantalonLarge, caraco], "f_poire").delta).toBeLessThan(0);
+    expect(conseilAffichable([pantalonLarge, caraco], "f_poire")).toBe(false);
+    expect(conseilAffichable([bomber, jeanBaggy], "f_sablier")).toBe(false);
+  });
+
+  it("se tait sur une direction neutre", () => {
+    const neutre = scoreMorphoV2([pantalonLarge, bomber], "f_poire");
+    expect(neutre.delta).toBe(0);
+    expect(conseilAffichable([pantalonLarge, bomber], "f_poire")).toBe(false);
+  });
+
+  it("se tait quand l'évidence manque, quelle que soit la morphologie", () => {
+    for (const m of ["f_poire", "f_triangle_inverse", "f_sablier", "f_rectangle", "f_pomme"]) {
+      expect(conseilAffichable([hautInconnu], m), m).toBe(false);
+    }
+  });
+
+  it("ne parle jamais pour la pomme", () => {
+    expect(conseilAffichable([pantalonLarge, caraco], "f_pomme")).toBe(false);
   });
 });
