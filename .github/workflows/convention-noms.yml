@@ -1,0 +1,30 @@
+name: Convention de nommage — tableau de contrôle (admin)
+
+# Lecture seule, sans exception : produit le tableau de contrôle du renommage
+# du catalogue et ne génère AUCUN update. Le CSV est déposé en artefact du job,
+# à relire avant toute écriture en base.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  controle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      # Config dédiée : l'audit interroge Supabase, il est donc tenu hors de
+      # `npm test`, qui doit rester hors-ligne (cf. vitest.audit.config.mts).
+      - run: npx vitest run --config vitest.audit.config.mts scripts/convention-noms.audit.ts
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tableau-de-controle-noms
+          path: tableau-de-controle-noms.csv
+          if-no-files-found: error
