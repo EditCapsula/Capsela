@@ -50,7 +50,12 @@ describe("Instrumentation phase 8", () => {
       .map(rowToCatalogItem).filter((it): it is CatalogItem => Boolean(it));
     const ligneDe = new Map(rows.map((r) => [r.id + VESTIAIRE_ID_OFFSET, r]));
 
-    interface Look { saison: CapsuleSeason; style: string; pieces: CatalogItem[] }
+    interface Look { saison: CapsuleSeason; style: string; occasion: string; pieces: CatalogItem[] }
+    // Périmètre morphologique : un look composé uniquement de pièces sport est
+    // HORS périmètre, pas « sans capacité ». R-B11 rend l'occasion sport
+    // étanche (liste blanche formalité 0), donc ces looks n'ont pas à peser sur
+    // le dénominateur d'une couverture de conseil morphologique.
+    const horsPerimetre = (l: Look) => l.occasion === "sport" || l.pieces.every(isSport);
     const looks: Look[] = [];
     const capsules: { nom: string; saison: CapsuleSeason; pieces: CatalogItem[] }[] = [];
 
@@ -67,25 +72,29 @@ describe("Instrumentation phase 8", () => {
             if (ids.length < 2 || vus.has(cle)) continue;
             vus.add(cle);
             const p = ids.map((i) => c.find((x) => x.id === i)).filter((x): x is CatalogItem => Boolean(x));
-            if (p.length >= 2) looks.push({ saison, style, pieces: p });
+            if (p.length >= 2) looks.push({ saison, style, occasion: occ, pieces: p });
           }
         }
       }
     }
 
     // ── F · KPI DE COUVERTURE DU CONSEIL ──────────────────────────────────
-    console.log(`\n════════ F · COUVERTURE DU CONSEIL MORPHOLOGIQUE (${looks.length} looks) ════════`);
+    const dansPerimetre = looks.filter((l) => !horsPerimetre(l));
+    const exclus = looks.length - dansPerimetre.length;
+    console.log(`\n════════ F · COUVERTURE DU CONSEIL MORPHOLOGIQUE ════════`);
+    console.log(`  ${looks.length} looks générés · ${exclus} hors périmètre morphologique (sport) · ${dansPerimetre.length} évalués`);
+    console.log(`  Le sport n'est pas « sans capacité morphologique » : il est hors périmètre.`);
     console.log(`  Un conseil est AFFICHABLE si l'évidence est HIGH ou MEDIUM et la direction positive.`);
     console.log(`  Une direction défavorable n'est jamais montrée : elle ne sert qu'au classement.\n`);
     console.log(`  ${"morphologie".padEnd(20)} ${"HIGH".padStart(8)} ${"MEDIUM".padStart(8)} ${"LOW".padStart(8)} ${"UNKNOWN".padStart(9)} ${"CONSEIL".padStart(9)} ${"silence".padStart(9)}`);
     for (const m of MORPHOS) {
-      const niveaux = looks.map((l) => niveauConfiance(l.pieces));
+      const niveaux = dansPerimetre.map((l) => niveauConfiance(l.pieces));
       const n = (v: string) => niveaux.filter((x) => x === v).length;
-      const avecConseil = looks.filter((l) => conseilAffichable(l.pieces, m)).length;
+      const avecConseil = dansPerimetre.filter((l) => conseilAffichable(l.pieces, m)).length;
       console.log(
-        `  ${m.padEnd(20)} ${pct(n("HIGH"), looks.length).padStart(8)} ${pct(n("MEDIUM"), looks.length).padStart(8)}` +
-        ` ${pct(n("LOW"), looks.length).padStart(8)} ${pct(n("UNKNOWN"), looks.length).padStart(9)}` +
-        ` ${pct(avecConseil, looks.length).padStart(9)} ${pct(looks.length - avecConseil, looks.length).padStart(9)}`
+        `  ${m.padEnd(20)} ${pct(n("HIGH"), dansPerimetre.length).padStart(8)} ${pct(n("MEDIUM"), dansPerimetre.length).padStart(8)}` +
+        ` ${pct(n("LOW"), dansPerimetre.length).padStart(8)} ${pct(n("UNKNOWN"), dansPerimetre.length).padStart(9)}` +
+        ` ${pct(avecConseil, dansPerimetre.length).padStart(9)} ${pct(dansPerimetre.length - avecConseil, dansPerimetre.length).padStart(9)}`
       );
     }
 
@@ -93,7 +102,7 @@ describe("Instrumentation phase 8", () => {
     console.log(`  ${"morphologie".padEnd(20)} ${SAISONS.map((s) => s.padStart(11)).join("")}`);
     for (const m of MORPHOS) {
       const cols = SAISONS.map((s) => {
-        const sub = looks.filter((l) => l.saison === s);
+        const sub = dansPerimetre.filter((l) => l.saison === s);
         return pct(sub.filter((l) => conseilAffichable(l.pieces, m)).length, sub.length).padStart(11);
       }).join("");
       console.log(`  ${m.padEnd(20)}${cols}`);
