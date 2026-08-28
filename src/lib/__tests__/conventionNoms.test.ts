@@ -20,8 +20,23 @@ describe("découpage de sous_type", () => {
     expect(decouper("Robe longue fluide").longueurDeplacee).toBe(false);
   });
 
+  it("ne prend jamais une longueur de manche pour une longueur de vêtement", () => {
+    // Audit du 28/08/2026 : "Chemise manches courtes" décrivait des manches
+    // courtes, pas une chemise courte — la convention produisait "Chemise
+    // courtes manches", et pire, "Body longues ajusté drapé manches".
+    expect(decouper("Chemise manches courtes")).toMatchObject({
+      type: "Chemise", longueur: null, detail: "manches courtes", longueurDeplacee: false,
+    });
+    expect(decouper("Body drapé manches longues")).toMatchObject({ longueur: null, detail: "drapé manches longues" });
+    expect(composerNom("Body drapé manches longues", "Ajusté").nom).toBe("Body ajusté drapé manches longues");
+    // Une vraie longueur de vêtement reste reconnue dans la même phrase.
+    expect(decouper("Robe longue manches courtes")).toMatchObject({ longueur: "longue", detail: "manches courtes" });
+  });
+
   it("signale plusieurs longueurs au lieu d'en choisir une", () => {
     expect(decouper("Robe courte longue").longueursMultiples).toEqual(["courte", "longue"]);
+    // "manches longues" ne compte pas comme seconde longueur.
+    expect(decouper("Robe longue manches longues").longueursMultiples).toEqual([]);
   });
 
   it("reconnaît les longueurs quel que soit le genre ou le nombre", () => {

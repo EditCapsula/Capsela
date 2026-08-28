@@ -157,23 +157,62 @@ describe("Convention de nommage du catalogue", () => {
 
     writeFileSync("tableau-de-controle-noms.csv", lignes.join("\n"), "utf8");
 
-    console.log(`\nCatalogue : ${data.length} ligne(s).`);
-    console.log(`  ${inchanges} déjà conforme(s).`);
-    console.log(`  ${inertes.length} renommage(s) INERTE(S) — aucun attribut dérivé ne bouge.`);
-    console.log(`  ${impactes.length} renommage(s) qui CHANGENT le comportement du moteur.`);
+    // ── Jeu sûr ────────────────────────────────────────────────────────────
+    // Un renommage n'est retenu que s'il est inerte pour le moteur ET si le
+    // nom final reste unique dans TOUT le catalogue. L'unicité est vérifiée
+    // contre l'ensemble complet des noms d'arrivée — les noms proposés pour
+    // les lignes renommées comme les noms actuels des lignes qu'on ne touche
+    // pas. Sans cette seconde condition, renommer une ligne "propre" peut la
+    // faire entrer en collision avec une voisine laissée en place.
+    const inertesSet = new Set(inertes);
+    const nomsFinaux = new Map<string, number>();
+    for (const [id, e] of base) {
+      const ancien = (e.row.name || "").trim();
+      const cible = final.get(id)!;
+      const retenu = inertesSet.has(id) ? cible.nom : ancien;
+      nomsFinaux.set(retenu, (nomsFinaux.get(retenu) || 0) + 1);
+    }
+    // Les lignes sans sous_type gardent leur nom : elles comptent aussi.
+    for (const r of sansSousType) {
+      const n = (r.name || "").trim();
+      nomsFinaux.set(n, (nomsFinaux.get(n) || 0) + 1);
+    }
+
+    const sur: { id: number; ancien: string; nouveau: string }[] = [];
+    const ecartesPourCollision: { id: number; nouveau: string }[] = [];
+    for (const id of inertes) {
+      const e = base.get(id)!;
+      const cible = final.get(id)!;
+      if ((nomsFinaux.get(cible.nom) || 0) > 1) {
+        ecartesPourCollision.push({ id, nouveau: cible.nom });
+        continue;
+      }
+      sur.push({ id, ancien: (e.row.name || "").trim(), nouveau: cible.nom });
+    }
+
+    // SQL en une seule instruction : la garde `v.name = c.ancien` fait qu'une
+    // ligne modifiée entre-temps n'est pas touchée, plutôt que d'être écrasée.
+    const sql = sur.length
+      ? [
+          "-- Jeu sûr : renommages inertes pour le moteur et sans collision de nom.",
+          `-- ${sur.length} ligne(s). Généré le ${new Date().toISOString().slice(0, 10)} — à relire avant exécution.`,
+          "update vestiaire_universel v",
+          "set name = c.nouveau",
+          "from (values",
+          sur
+            .map((r, i) => `  (${r.id}, '${r.ancien.replace(/'/g, "''")}', '${r.nouveau.replace(/'/g, "''")}')${i === sur.length - 1 ? "" : ","}`)
+            .join("\n"),
+          ") as c(id, ancien, nouveau)",
+          "where v.id = c.id and v.name = c.ancien;",
+        ].join("\n")
+      : "-- Aucun renommage sûr.";
+    writeFileSync("renommages-surs.sql", sql + "\n", "utf8");
+
 
     if (sansSousType.length) {
       console.log(`\n── ${sansSousType.length} ligne(s) sans sous_type — aucun nom proposé ──`);
       for (const r of sansSousType.slice(0, 25)) console.log(`  [#${r.id}] ${r.name} (${r.category})`);
       if (sansSousType.length > 25) console.log(`  … et ${sansSousType.length - 25} autre(s).`);
-    }
-
-    if (impactes.length) {
-      console.log(`\n── Renommages à arbitrer : ils modifient le moteur ──`);
-      for (const i of impactes) {
-        console.log(`  [#${i.id}] "${i.ancien}" → "${i.nouveau}"`);
-        for (const e of i.ecarts) console.log(`      ⚠ ${e}`);
-      }
     }
 
     if (collisionsIrresolues.length) {
@@ -230,7 +269,41 @@ describe("Convention de nommage du catalogue", () => {
       for (const [v, n] of coupesInconnues) console.log(`  "${v}" (${n})`);
     }
 
-    console.log(`\nArtefacts : tableau-de-controle-noms.csv, termes-sous-type.csv.`);
+    if (impactes.length) {
+      // Regroupés par nature d'impact : 136 entrées à plat sont illisibles, et
+      // ce qui compte pour arbitrer n'est pas la ligne mais le motif — combien
+      // de pièces perdent leur coupe, combien gagnent une affinité, etc.
+      const familles = new Map<string, typeof impactes>();
+      for (const i of impactes) {
+        const cle = i.ecarts.map((e) => e.split(":")[0]).sort().join(" + ");
+        familles.set(cle, [...(familles.get(cle) || []), i]);
+      }
+      console.log(`\n── Renommages qui MODIFIENT le moteur, par nature (contrainte 6) ──`);
+      for (const [cle, lignes] of [...familles.entries()].sort((a, b) => b[1].length - a[1].length)) {
+        console.log(`\n  ▸ ${cle} — ${lignes.length} pièce(s)`);
+        // Transitions distinctes observées dans cette famille, avec leur poids.
+        const transitions = new Map<string, number>();
+        for (const l of lignes) for (const e of l.ecarts) transitions.set(e, (transitions.get(e) || 0) + 1);
+        for (const [t, n] of [...transitions.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6)) {
+          console.log(`      ${n}×  ${t}`);
+        }
+        console.log(`      exemples : ${lignes.slice(0, 3).map((l) => `[#${l.id}] "${l.ancien}" → "${l.nouveau}"`).join("  ·  ")}`);
+        console.log(`      ids : ${lignes.map((l) => l.id).join(", ")}`);
+      }
+    }
+
+    // Bilan en dernier : c'est la première chose qu'on lit dans un log tronqué.
+    console.log(`\n════════ BILAN ════════`);
+    console.log(`Catalogue : ${data.length} ligne(s), ${sansSousType.length} sans sous_type.`);
+    console.log(`  ${inchanges} déjà conforme(s).`);
+    console.log(`  ${inertes.length} renommage(s) INERTE(S).`);
+    console.log(`  ${impactes.length} renommage(s) qui CHANGENT le moteur.`);
+    console.log(`  ${collisionsIrresolues.length} collision(s) de nom NON RÉSOLUE(S) par la matière.`);
+    console.log(`  → JEU SÛR : ${sur.length} renommage(s) applicables (inertes ET nom final unique).`);
+    console.log(`     ${ecartesPourCollision.length} inerte(s) écarté(s) parce que leur nom final serait partagé.`);
+    console.log(`  ${aArbitrer.length} cas ambigu(s) signalé(s).`);
+
+    console.log(`\nArtefacts : tableau-de-controle-noms.csv, termes-sous-type.csv, renommages-surs.sql.`);
     console.log("Aucune modification effectuée — audit en lecture seule.");
   });
 });

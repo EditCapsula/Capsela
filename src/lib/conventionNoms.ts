@@ -47,6 +47,9 @@ export function stem(mot: string): string {
 const LONGUEURS = new Set(LONGUEUR_SOURCE.map(stem));
 const COUPE_LIBELLE = new Map(Object.entries(COUPE_SOURCE).map(([cle, valeur]) => [stem(cle), valeur]));
 
+/** Termes après lesquels une longueur qualifie les manches, jamais le vêtement. */
+const PORTEURS_DE_MANCHE = new Set(["manche"].map(stem));
+
 export function estLongueur(mot: string): boolean {
   return LONGUEURS.has(stem(mot));
 }
@@ -86,13 +89,22 @@ export function decouper(sousType: string): Decoupage {
   const mots = sousType.trim().replace(/\s+/g, " ").split(" ").filter(Boolean);
   const type = mots[0] ? mots[0][0].toUpperCase() + mots[0].slice(1) : "";
   const reste = mots.slice(1);
-  const trouvees = reste.filter(estLongueur);
+  // Une longueur ne qualifie le vêtement que si elle ne qualifie pas les
+  // manches. "Chemise manches courtes" décrit des manches courtes, pas une
+  // chemise courte : sans ce garde-fou, la convention produisait "Chemise
+  // courtes manches" et "Body longues ajusté drapé manches" (audit du
+  // 28/08/2026). On ne retient donc jamais un terme précédé de "manche(s)".
+  const indices = reste
+    .map((mot, i) => (estLongueur(mot) && !PORTEURS_DE_MANCHE.has(stem(reste[i - 1] ?? "")) ? i : -1))
+    .filter((i) => i >= 0);
+  const trouvees = indices.map((i) => reste[i]);
   const longueur = trouvees[0] ?? null;
+  const indexLongueur = indices[0] ?? -1;
   return {
     type,
     longueur,
-    detail: reste.filter((m) => m !== longueur).join(" "),
-    longueurDeplacee: Boolean(longueur) && reste[0] !== longueur,
+    detail: reste.filter((_, i) => i !== indexLongueur).join(" "),
+    longueurDeplacee: indexLongueur > 0,
     longueursMultiples: trouvees.length > 1 ? trouvees : [],
   };
 }

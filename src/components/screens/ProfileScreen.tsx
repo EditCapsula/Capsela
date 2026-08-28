@@ -46,10 +46,14 @@ export default function ProfileScreen() {
       label: "Morphologie",
       value: morphoSet ? morphologyLabel(profile.morphology) : "Non renseignée",
       renseigne: morphoSet,
-      // Cliquable uniquement tant que non renseignée (recette 25/08/2026) —
-      // invite à la compléter ; une fois renseignée, comportement inchangé
-      // (simple valeur, comme avant).
-      onClick: morphoSet ? undefined : () => actions.goProfileSetup("morpho", true),
+      // Toujours cliquable (signalé le 28/08/2026 : "je dois pouvoir modifier
+      // ma morphologie directement depuis cet écran"). La version du
+      // 25/08/2026 ne l'ouvrait que tant qu'elle était vide : une fois
+      // renseignée, la ligne devenait inerte et la seule façon de la corriger
+      // était de reprendre l'onboarding. Style se comporte déjà ainsi, et le
+      // second argument de goProfileSetup ramène ici après validation, sans
+      // enchaîner les autres étapes.
+      onClick: () => actions.goProfileSetup("morpho", true),
     },
   ];
 
