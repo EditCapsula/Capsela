@@ -50,11 +50,21 @@ import { ADMIN_KEY_MISSING, getAdminKey, getAdminKeySource } from "../_shared/ad
 
 const BUCKET = "catalog-images";
 // Chaque image coûte un décodage PNG + un redimensionnement + un encodage
-// WebP, tous en WASM. Un lot volontairement petit pour rester loin de la
-// limite de temps d'exécution d'une fonction Edge : mieux vaut dix appels
-// qui aboutissent qu'un seul qui expire à mi-parcours.
-const DEFAULT_LIMIT = 25;
-const MAX_LIMIT = 100;
+// WebP, tous en WASM, donc du calcul pur — c'est exactement ce que le budget
+// CPU d'une invocation Edge limite.
+//
+// Mesuré le 28/08/2026 : un lot de 5 s'interrompt sur WORKER_RESOURCE_LIMIT
+// après avoir converti 3 images ; un lot de 1 passe confortablement. Le
+// plafond réel est donc de 3. On s'arrête à 2 par défaut pour garder une
+// marge — un PNG plus lourd que la moyenne coûte davantage, et un lot
+// interrompu gaspille le travail déjà calculé pour l'image en cours.
+//
+// Le plafond dur reste bas pour la même raison : au-delà, l'appel échoue
+// systématiquement. Passer à l'échelle se fait en enchaînant les appels
+// (cf. .github/workflows/recompress-legacy-images.yml), pas en grossissant
+// les lots.
+const DEFAULT_LIMIT = 2;
+const MAX_LIMIT = 5;
 
 interface AssetRow {
   id: number;
