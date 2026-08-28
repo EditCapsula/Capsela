@@ -563,10 +563,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     vestiaireRef.current = vestiairePool;
   }, [wardrobePool, weather, vestiairePool]);
 
-  const regen = (s: AppState): AppState => {
+  // pool/meteo surchargeables : les références ne sont mises à jour que par
+  // un effet, donc encore périmées pendant le rendu où le profil vient de
+  // changer. L'ajustement de style plus bas passe les valeurs fraîches.
+  const regen = (s: AppState, pool: Item[] = poolRef.current, w: Weather = weatherRef.current): AppState => {
     const result = generateOutfitWithFallback(
-      poolRef.current,
-      weatherRef.current,
+      pool,
+      w,
       s.occasion || "all",
       s.workMode,
       s.dateContext,
@@ -631,6 +634,35 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, dressingLoaded, geoLoading, defaultCapsule]);
+
+  // Changer de style (ou de genre) redéfinit la capsule par défaut, donc le
+  // vivier de suggestions : la tenue affichée doit suivre immédiatement.
+  // Sans ça, elle restait celle de l'ancien style jusqu'à la prochaine
+  // action — l'effet d'amorçage ci-dessus ne régénère que lorsque
+  // state.outfit est vide, ce qui n'est plus le cas après le premier
+  // chargement (signalé le 28/08/2026).
+  //
+  // Ajustement pendant le rendu, comme l'invalidation de l'exploration plus
+  // haut, et non un effet : la régénération reçoit wardrobePool et weather
+  // directement, déjà recalculés pour le nouveau style. Les références
+  // poolRef/weatherRef, elles, ne sont mises à jour que par un effet — s'en
+  // servir ici régénérerait la tenue sur l'ancien vivier.
+  const [dernierStyleRegenKey, setDernierStyleRegenKey] = useState(profileStyleKey);
+  if (profileStyleKey !== dernierStyleRegenKey) {
+    setDernierStyleRegenKey(profileStyleKey);
+    if (ready && dressingLoaded && !geoLoading) {
+      setState((s) => {
+        // Aucune tenue encore générée : l'effet d'amorçage s'en charge.
+        if (!s.outfit.length) return s;
+        // Exploration en cours : la tenue affichée vient délibérément d'un
+        // autre style que celui du profil, la remplacer serait un contresens.
+        // Si l'exploration est devenue caduque, le bloc ligne ~350 l'a déjà
+        // annulée et ce garde-fou ne s'applique donc plus.
+        if (s.exploredStyleId) return s;
+        return regen(s, wardrobePool, weather);
+      });
+    }
+  }
 
   const go = (screen: Screen) => setState((s) => ({ ...s, screen }));
 
