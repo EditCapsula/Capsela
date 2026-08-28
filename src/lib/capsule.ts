@@ -213,33 +213,68 @@ function pickBestMarginal(candidates: CatalogItem[], covered: Set<OccasionKey>, 
  * contre l'ensemble de la capsule en construction (pas juste cette
  * catégorie, cf. paramètre `covered` partagé entre tous les appels).
  */
+/**
+ * Signature d'apparence d'une pièce du catalogue — l'URL du visuel affiché.
+ * Deux pièces rattachées au même asset la partagent à l'identique : c'est
+ * exactement ce que l'œil voit comme « la même pièce ».
+ *
+ * `null` quand aucun visuel n'est prêt : ces pièces s'affichent avec un
+ * placeholder et ne doivent jamais être dédupliquées entre elles, sans quoi
+ * une capsule entière se réduirait à une pièce par groupe tant que le
+ * catalogue n'a pas ses images.
+ */
+function signatureVisuelle(it: CatalogItem): string | null {
+  return it.imageStatus === "ready" && it.imageUrl ? it.imageUrl : null;
+}
+
+/**
+ * Une capsule ne montre jamais deux fois la même image (signalé le
+ * 28/08/2026 : « beaucoup de doublons de pièces dans les capsules »).
+ *
+ * La déduplication ne portait que sur `id`, alors que le catalogue mutualise
+ * volontairement les visuels par clé visuelle — quatre robes écrues
+ * différentes partagent une seule photo. Deux d'entre elles sélectionnées
+ * ensemble donnaient donc bien deux pièces distinctes en base, mais deux
+ * fois la même vignette à l'écran.
+ *
+ * Correctif d'affichage assumé : il masque la répétition sans corriger la
+ * granularité des clés, qui demanderait de régénérer des centaines de
+ * visuels. La pièce évincée n'est pas perdue, une autre prend sa place.
+ */
 function selectGroup(
   pool: CatalogItem[],
   quota: number,
   covered: Set<OccasionKey>,
-  morphology: string | null
+  morphology: string | null,
+  visuelsUtilises: Set<string>
 ): CatalogItem[] {
   const picked: CatalogItem[] = [];
   let remaining = quota;
 
-  const statementCandidates = pool.filter((it) => isStatement(it));
+  const retenir = (it: CatalogItem) => {
+    picked.push(it);
+    occasionsOf(it).forEach((o) => covered.add(o));
+    const sig = signatureVisuelle(it);
+    if (sig) visuelsUtilises.add(sig);
+    remaining -= 1;
+  };
+  const disponible = (it: CatalogItem) => {
+    const sig = signatureVisuelle(it);
+    return !sig || !visuelsUtilises.has(sig);
+  };
+
+  const statementCandidates = pool.filter((it) => isStatement(it) && disponible(it));
   if (statementCandidates.length && remaining > 0) {
     const best = pickBestMarginal(statementCandidates, covered, morphology);
-    if (best) {
-      picked.push(best);
-      occasionsOf(best).forEach((o) => covered.add(o));
-      remaining -= 1;
-    }
+    if (best) retenir(best);
   }
 
-  let candidates = pool.filter((it) => !picked.some((p) => p.id === it.id));
+  let candidates = pool.filter((it) => !picked.some((p) => p.id === it.id) && disponible(it));
   while (remaining > 0 && candidates.length) {
     const best = pickBestMarginal(candidates, covered, morphology);
     if (!best) break;
-    picked.push(best);
-    occasionsOf(best).forEach((o) => covered.add(o));
-    candidates = candidates.filter((it) => it.id !== best.id);
-    remaining -= 1;
+    retenir(best);
+    candidates = candidates.filter((it) => it.id !== best.id && disponible(it));
   }
 
   return picked;
@@ -358,12 +393,15 @@ export function computeDefaultCapsule(
   // quota indicatif (cf. CAPSULE_GROUPS), rempli par couverture d'occasion
   // marginale décroissante plutôt qu'un plafond arbitraire.
   const covered = new Set<OccasionKey>();
+  // Partagé par tous les groupes : une même image ne peut apparaître qu'une
+  // fois dans la capsule, quelle que soit la famille de vêtement.
+  const visuelsUtilises = new Set<string>();
   const poolByGroup = new Map<string, CatalogItem[]>();
   let out: CatalogItem[] = [];
   for (const group of CAPSULE_GROUPS) {
     const groupPool = nonSportPool.filter((it) => group.cats.includes(it.cat));
     poolByGroup.set(group.name, groupPool);
-    out = [...out, ...selectGroup(groupPool, group.quota, covered, profile.morphology)];
+    out = [...out, ...selectGroup(groupPool, group.quota, covered, profile.morphology, visuelsUtilises)];
   }
 
   // Redistribution du reliquat (correctif 26/08/2026, signalé sur l'audit
@@ -401,13 +439,20 @@ export function computeDefaultCapsule(
       for (const name of REDISTRIBUTION_ORDER) {
         if (leftover <= 0) break;
         if ((roomByGroup.get(name) ?? 0) <= 0) continue;
-        const candidates = restByGroup.get(name) || [];
+        // Même règle que selectGroup : le reliquat ne doit pas réintroduire
+        // une image déjà présente dans la capsule.
+        const candidates = (restByGroup.get(name) || []).filter((it) => {
+          const sig = signatureVisuelle(it);
+          return !sig || !visuelsUtilises.has(sig);
+        });
         if (!candidates.length) continue;
         const best = pickBestMarginal(candidates, covered, profile.morphology);
         if (!best) continue;
         out = [...out, best];
         chosenIds.add(best.id);
         occasionsOf(best).forEach((o) => covered.add(o));
+        const sigBest = signatureVisuelle(best);
+        if (sigBest) visuelsUtilises.add(sigBest);
         restByGroup.set(name, candidates.filter((it) => it.id !== best.id));
         roomByGroup.set(name, (roomByGroup.get(name) ?? 0) - 1);
         leftover -= 1;
