@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effetMorphologique, scoreMorphoV2, signatureLook } from "../garmentEffect";
+import { CONTRAINTES, ecartBorne, effetMorphologique, scoreMorphoV2, signatureLook, zonesRequises } from "../garmentEffect";
 import { row } from "./fixtures";
 import { rowToCatalogItem } from "../vestiaire";
 import type { CatalogItem } from "../catalog";
@@ -148,10 +148,10 @@ describe("score morphologique v2", () => {
     expect(scoreMorphoV2([cargo, blazer], null)).toMatchObject({ actif: false, delta: 0 });
   });
 
-  it("n'invente pas de cible pour la pomme", () => {
+  it("n'invente pas de contrainte pour la pomme", () => {
     const r = scoreMorphoV2([cargo, blazer], "f_pomme");
     expect(r.actif).toBe(false);
-    expect(r.motif).toContain("cible");
+    expect(r.motif).toContain("contrainte");
   });
 
   it("se tait sur une morphologie qui dépend de la taille quand la taille est inconnue", () => {
@@ -164,5 +164,132 @@ describe("score morphologique v2", () => {
     const r = scoreMorphoV2([cargo, blazer], "f_triangle_inverse");
     expect(r.actif).toBe(true);
     expect(r.delta).toBeGreaterThan(0);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Batterie d'arbitrage (phase 5, 28/08/2026) — valide les hypothèses de modèle
+// plutôt que le comportement d'une fonction isolée.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("contraintes par intervalle — asymétrie plancher / plafond", () => {
+  it("ne pénalise pas le dépassement d'un plancher", () => {
+    // f_poire demande épaules ≥ 1. Deux épaules ou trois valent autant qu'une :
+    // c'est exactement ce qu'une distance à une cible-point ne savait pas dire.
+    expect(ecartBorne(1, { min: 1 })).toBe(0);
+    expect(ecartBorne(3, { min: 1 })).toBe(0);
+    expect(ecartBorne(0, { min: 1 })).toBe(1);
+  });
+
+  it("ne pénalise pas d'être sous un plafond", () => {
+    expect(ecartBorne(0, { max: 1 })).toBe(0);
+    expect(ecartBorne(1, { max: 1 })).toBe(0);
+    expect(ecartBorne(3, { max: 1 })).toBe(2);
+  });
+
+  it("distingue enfin sablier et rectangle", () => {
+    // Les cibles-point valaient 1/2/1 pour les deux : le score ne pouvait
+    // mathématiquement pas les différencier. Une taille peu marquée dans une
+    // tenue sans volume satisfait le sablier et pas le rectangle.
+    expect(zonesRequises("f_sablier")).not.toEqual(zonesRequises("f_rectangle"));
+    const sablier = ecartBorne(1, CONTRAINTES.f_sablier.taille!);
+    const rectangle = ecartBorne(1, CONTRAINTES.f_rectangle.taille!);
+    expect(sablier).toBe(0);
+    expect(rectangle).toBeGreaterThan(0);
+  });
+
+  it("ne contraint la pomme sur aucun axe", () => {
+    expect(zonesRequises("f_pomme")).toHaveLength(0);
+  });
+});
+
+describe("cibles — sous, dans, au-dessus de la zone attendue", () => {
+  const bas = (nom: string) => piece({ id: 70, category: "pantalons", name: nom, sous_type: "Pantalon" });
+  const haut = (nom: string) => piece({ id: 71, category: "vestes_blazers", name: nom, sous_type: "Veste" });
+
+  it("récompense un triangle inversé dont le volume est en bas, pas en haut", () => {
+    // Le haut doit être ÉVALUÉ, sinon le look n'est pas READY et le score reste
+    // neutre — ce qui est le comportement voulu, pas un échec.
+    const hautDiscret = piece({ id: 72, category: "hauts", name: "Caraco", sous_type: "Caraco" });
+    const bon = scoreMorphoV2([bas("Pantalon wide leg"), hautDiscret], "f_triangle_inverse");
+    expect(bon.actif).toBe(true);
+    expect(bon.delta).toBeGreaterThan(0);
+  });
+
+  it("ne récompense pas une poire dont le volume est en bas", () => {
+    const mauvais = scoreMorphoV2([bas("Pantalon wide leg"), haut("Veste structurée")], "f_poire");
+    expect(mauvais.actif).toBe(true);
+    expect(mauvais.delta).toBeLessThan(10);
+  });
+
+  it("laisse passer un excès au-dessus d'un plancher sans le pénaliser", () => {
+    const modere = scoreMorphoV2([bas("Pantalon slim"), haut("Veste structurée")], "f_poire");
+    const fort = scoreMorphoV2([bas("Pantalon slim"), haut("Veste oversize structurée")], "f_poire");
+    expect(modere.delta).toBe(10);
+    expect(fort.delta).toBe(10);
+  });
+});
+
+describe("superposition", () => {
+  const tshirt = piece({ id: 80, category: "hauts", name: "T-shirt oversize", sous_type: "T-shirt" });
+  const blazer = piece({ id: 81, category: "vestes_blazers", name: "Blazer structuré", sous_type: "Blazer" });
+  const manteau = piece({ id: 82, category: "manteaux_exterieurs", name: "Manteau oversize", sous_type: "Manteau" });
+  const pantalon = piece({ id: 83, category: "pantalons", name: "Pantalon slim", sous_type: "Pantalon" });
+
+  it("documente la limite : les effets s'additionnent sans savoir ce qui est visible", () => {
+    // Comportement ACTUEL, volontairement figé par ce test. Le modèle ne dispose
+    // d'aucune donnée ouvert/fermé ; empiler des couches accroît donc l'effet
+    // épaules même si le dessous n'est pas visible. Si une pondération est un
+    // jour introduite, ce test doit échouer et être révisé sciemment.
+    const seul = signatureLook([tshirt, pantalon]);
+    const avecVeste = signatureLook([tshirt, blazer, pantalon]);
+    const troisCouches = signatureLook([tshirt, blazer, manteau, pantalon]);
+    expect(avecVeste.epaules).toBeGreaterThanOrEqual(seul.epaules);
+    expect(troisCouches.epaules).toBeGreaterThanOrEqual(avecVeste.epaules);
+  });
+
+  it("borne l'empilement, ce qui limite mécaniquement la dérive", () => {
+    // La signature est bornée à 3 : trois couches volumineuses ne produisent pas
+    // un 9. C'est ce plafond qui rend l'absence de pondération supportable.
+    expect(signatureLook([tshirt, blazer, manteau, pantalon]).epaules).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("l'ignorance ne produit jamais de pénalité", () => {
+  const inconnuHaut = piece({ id: 90, category: "hauts", name: "Haut", sous_type: "Haut" });
+  const inconnuBas = piece({ id: 91, category: "pantalons", name: "Pantalon", sous_type: "Pantalon" });
+  const connuBas = piece({ id: 92, category: "pantalons", name: "Pantalon wide leg", sous_type: "Pantalon" });
+  const connuHaut = piece({ id: 93, category: "vestes_blazers", name: "Veste structurée", sous_type: "Veste" });
+
+  it("reste neutre quand le haut est inconnu", () => {
+    for (const m of ["f_poire", "f_sablier", "f_rectangle", "f_triangle_inverse", "f_pomme"]) {
+      expect(scoreMorphoV2([inconnuHaut, connuBas], m).delta, m).toBe(0);
+    }
+  });
+
+  it("reste neutre quand le bas est inconnu", () => {
+    for (const m of ["f_poire", "f_sablier", "f_rectangle", "f_triangle_inverse", "f_pomme"]) {
+      expect(scoreMorphoV2([connuHaut, inconnuBas], m).delta, m).toBe(0);
+    }
+  });
+
+  it("reste neutre quand la taille est inconnue, pour les morphologies qui en dépendent", () => {
+    for (const m of ["f_sablier", "f_rectangle"]) {
+      const r = scoreMorphoV2([connuHaut, connuBas], m);
+      expect(r.actif, m).toBe(false);
+      expect(r.delta, m).toBe(0);
+    }
+  });
+
+  it("ne pénalise jamais une longueur inconnue", () => {
+    const sansLongueur = piece({ id: 94, category: "pantalons", name: "Pantalon wide leg", sous_type: "Pantalon" });
+    expect(effetMorphologique(sansLongueur).longueur).toBeNull();
+    expect(scoreMorphoV2([connuHaut, sansLongueur], "f_triangle_inverse").delta).toBeGreaterThanOrEqual(0);
+  });
+
+  it("ne pénalise jamais un look entièrement inconnu", () => {
+    for (const m of ["f_poire", "f_sablier", "f_rectangle", "f_triangle_inverse", "f_pomme"]) {
+      expect(scoreMorphoV2([inconnuHaut, inconnuBas], m).delta, m).toBe(0);
+    }
   });
 });

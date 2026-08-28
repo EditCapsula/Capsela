@@ -361,34 +361,59 @@ export function signatureLook(pieces: Item[]): SignatureLook {
 // Score morphologique v2 — SHADOW MODE. Jamais branché sur le ranking.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface Cible { epaules: number; taille: number; hanches: number }
+/** Borne ouverte d'un côté : un plancher, un plafond, ou les deux. */
+export interface Borne { min?: number; max?: number }
+export type Contraintes = Partial<Record<"epaules" | "taille" | "hanches", Borne>>;
 
 /**
- * Cibles provisoires (arbitrage du 28/08/2026). Elles décrivent l'effet
- * RECHERCHÉ par la tenue, pas l'anatomie de la personne.
+ * Contraintes par intervalle (arbitrage du 28/08/2026, remplace les cibles-point).
  *
- * `f_pomme` est délibérément absente : les trois axes ne suffisent pas à la
- * décrire. Ce qu'on veut pour une pomme — réduire le volume central, allonger,
- * définir la taille modérément — repose sur une fluidité et une verticalité que
- * ce modèle ne mesure pas. Lui donner une cible chiffrée serait inventer une
- * donnée, exactement ce que le principe directeur interdit.
+ * Une cible-point impose une distance symétrique : manquer de volume aux épaules
+ * y coûte exactement autant qu'en avoir trop. Stylistiquement c'est faux — un
+ * objectif morphologique est presque toujours un PLANCHER (« assez de présence
+ * ici ») ou un PLAFOND (« pas trop de volume là »), rarement une valeur exacte.
+ * Une borne ouverte du côté où rien n'est demandé exprime cette asymétrie.
+ *
+ * Effet secondaire décisif : avec des cibles-point, sablier et rectangle
+ * partageaient la même cible 1/2/1 et recevaient donc toujours le même avis, ce
+ * qui rendait les deux morphologies indistinguables. Leurs objectifs sont
+ * pourtant opposés — le rectangle veut CRÉER une définition de taille absente,
+ * le sablier veut RESPECTER une définition présente sans l'engloutir. L'un est
+ * un plancher, l'autre un plancher plus deux plafonds.
+ *
+ * `f_pomme` reste sans contrainte : rien de défendable ne s'exprime sur les
+ * trois axes horizontaux. Elle n'est pas scorée, plutôt que scorée à faux.
+ *
+ * Ces valeurs sont un modèle stylistique, pas une mesure. Elles décrivent l'effet
+ * recherché par la TENUE, jamais l'anatomie de la personne.
  */
-export const CIBLES: Record<string, Cible | null> = {
-  f_sablier: { epaules: 1, taille: 2, hanches: 1 },
-  f_poire: { epaules: 2, taille: 1, hanches: 0 },
-  f_triangle_inverse: { epaules: 0, taille: 1, hanches: 2 },
-  f_rectangle: { epaules: 1, taille: 2, hanches: 1 },
-  f_pomme: null,
+export const CONTRAINTES: Record<string, Contraintes> = {
+  // Hanches plus larges que les épaules : donner de la présence en haut, ne pas
+  // en ajouter en bas. Aucun plafond en haut — une veste très structurée reste
+  // un bon choix.
+  f_poire: { epaules: { min: 1 }, hanches: { max: 1 } },
+  // Miroir exact.
+  f_triangle_inverse: { epaules: { max: 1 }, hanches: { min: 1 } },
+  // Taille marquée à préserver : un plancher sur la taille, et des plafonds de
+  // part et d'autre pour que le volume ne l'efface pas.
+  f_sablier: { taille: { min: 1 }, epaules: { max: 2 }, hanches: { max: 2 } },
+  // Peu de démarcation naturelle : tout l'enjeu est d'en créer. Un plancher
+  // exigeant sur la taille, et aucune contrainte ailleurs — le volume en haut ou
+  // en bas crée du contraste plutôt qu'il ne nuit.
+  f_rectangle: { taille: { min: 2 } },
+  f_pomme: {},
 };
 
-/** Zones dont la connaissance conditionne un avis honnête, par morphologie. */
-export const ZONES_REQUISES: Record<string, ("epaules" | "taille" | "hanches")[]> = {
-  f_sablier: ["taille"],
-  f_poire: ["epaules", "hanches"],
-  f_triangle_inverse: ["epaules", "hanches"],
-  f_rectangle: ["taille"],
-  f_pomme: ["taille"],
-};
+/** Écart à l'intervalle : nul à l'intérieur, distance à la borne franchie sinon. */
+export function ecartBorne(valeur: number, b: Borne): number {
+  if (b.min !== undefined && valeur < b.min) return b.min - valeur;
+  if (b.max !== undefined && valeur > b.max) return valeur - b.max;
+  return 0;
+}
+
+/** Zones dont la connaissance conditionne un avis honnête : exactement celles qui sont contraintes. */
+export const zonesRequises = (morphology: string): ("epaules" | "taille" | "hanches")[] =>
+  Object.keys(CONTRAINTES[morphology] ?? {}) as ("epaules" | "taille" | "hanches")[];
 
 export interface ScoreMorpho {
   /** false = aucune affirmation morphologique. Le score reste strictement neutre. */
@@ -411,24 +436,23 @@ const INACTIF = (motif: string): ScoreMorpho => ({ actif: false, delta: 0, dista
  */
 export function scoreMorphoV2(pieces: Item[], morphology: string | null, signature?: SignatureLook): ScoreMorpho {
   if (!morphology) return INACTIF("aucune morphologie déclarée");
-  const cible = CIBLES[morphology];
-  if (cible === undefined) return INACTIF(`morphologie « ${morphology} » inconnue du modèle`);
-  if (cible === null) return INACTIF(`${morphology} : aucune cible honnête sur trois axes`);
+  const contraintes = CONTRAINTES[morphology];
+  if (!contraintes) return INACTIF(`morphologie « ${morphology} » inconnue du modèle`);
+  const zones = zonesRequises(morphology);
+  if (!zones.length) return INACTIF(`${morphology} : aucune contrainte défendable sur trois axes`);
 
   const sig = signature ?? signatureLook(pieces);
   if (sig.classe !== "MORPHOLOGY_READY") return INACTIF(`look ${sig.classe} : moitié de silhouette inconnue`);
-
-  const requises = ZONES_REQUISES[morphology] ?? ["epaules", "taille", "hanches"];
-  if (requises.includes("taille") && !sig.tailleConnue) {
+  if (zones.includes("taille") && !sig.tailleConnue) {
     return INACTIF(`${morphology} dépend de la taille, non renseignée par ce look`);
   }
 
-  const distance = requises.reduce((acc, z) => acc + Math.abs(sig[z] - cible[z]), 0);
-  const delta = distance <= 1 ? 10 : distance >= 3 ? -5 : 0;
-  return {
-    actif: true,
-    delta,
-    distance,
-    motif: `distance ${distance} sur ${requises.join("+")} (look ${sig.epaules}/${sig.taille}/${sig.hanches} vs cible ${cible.epaules}/${cible.taille}/${cible.hanches})`,
-  };
+  const distance = zones.reduce((acc, z) => acc + ecartBorne(sig[z], contraintes[z]!), 0);
+  const delta = distance === 0 ? 10 : distance >= 2 ? -5 : 0;
+  const lu = zones.map((z) => {
+    const b = contraintes[z]!;
+    const borne = b.min !== undefined && b.max !== undefined ? `${b.min}-${b.max}` : b.min !== undefined ? `≥${b.min}` : `≤${b.max}`;
+    return `${z} ${sig[z]} (attendu ${borne})`;
+  }).join(" · ");
+  return { actif: true, delta, distance, motif: `écart ${distance} — ${lu}` };
 }
