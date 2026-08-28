@@ -14,7 +14,7 @@ on:
       audit:
         description: "Audit à exécuter (vide = tous)"
         type: choice
-        options: ["", "convention-noms", "taille-capsules", "images-perimees", "idees-par-piece", "coupe-backfill", "couverture-morpho", "morpho-look"]
+        options: ["", "convention-noms", "taille-capsules", "images-perimees", "idees-par-piece", "coupe-backfill", "couverture-morpho", "morpho-look", "morpho-contre-audit"]
         default: ""
 
 jobs:
@@ -46,4 +46,5 @@ jobs:
             couverture-morpho.csv
             morpho-looks.csv
             morpho-annotation-priorite.csv
+            morpho-candidats.csv
           if-no-files-found: ignore
