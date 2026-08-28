@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { effetMorphologique, signatureLook } from "../garmentEffect";
+import { effetMorphologique, scoreMorphoV2, signatureLook } from "../garmentEffect";
 import { row } from "./fixtures";
 import { rowToCatalogItem } from "../vestiaire";
 import type { CatalogItem } from "../catalog";
@@ -15,11 +15,10 @@ const effet = (over: Parameters<typeof row>[0], sousType?: string | null) =>
 
 describe("zone d'impact selon la famille", () => {
   it("place le volume en bas pour un pantalon, en haut pour un pull", () => {
-    const pantalon = effet({ id: 1, category: "pantalons", name: "Pantalon", sous_type: "Pantalon large" });
-    expect(pantalon).toMatchObject({ hanches: 3, epaules: 0 });
-
-    const pull = effet({ id: 2, category: "pulls_gilets", name: "Pull", sous_type: "Pull oversize" });
-    expect(pull).toMatchObject({ epaules: 3, hanches: 0 });
+    expect(effet({ id: 1, category: "pantalons", name: "Pantalon", sous_type: "Pantalon large" }))
+      .toMatchObject({ hanches: 3, epaules: 0 });
+    expect(effet({ id: 2, category: "pulls_gilets", name: "Pull", sous_type: "Pull oversize" }))
+      .toMatchObject({ epaules: 3, hanches: 0 });
   });
 
   it("répartit le volume d'une robe sur les trois zones plutôt que de le concentrer", () => {
@@ -28,81 +27,142 @@ describe("zone d'impact selon la famille", () => {
     expect(robe.hanches).toBeLessThan(3);
   });
 
-  it("écarte les pièces qui ne modifient pas la silhouette", () => {
+  it("écarte les pièces qui ne structurent pas la silhouette", () => {
     for (const [category, sous_type] of [
       ["accessoires", "Bonnet"], ["sacs", "Cabas"], ["bijoux", "Collier"], ["chaussures", "Bottines"],
     ] as const) {
-      const e = effet({ id: 4, category, name: "x", sous_type });
-      expect(e.pertinent, `${category}`).toBe(false);
+      expect(effet({ id: 4, category, name: "x", sous_type }).pertinent, `${category}`).toBe(false);
     }
   });
 });
 
-describe("intensité", () => {
-  it("préfère la colonne coupe au vocabulaire du sous-type", () => {
-    const e = effet({ id: 5, category: "pantalons", name: "Pantalon", sous_type: "Pantalon cigarette", coupe: "Ample" });
+describe("types univoques", () => {
+  it("donne un effet, pas une coupe, et le justifie", () => {
+    const e = effet({ id: 10, category: "pantalons", name: "Pantalon wide leg", sous_type: "Pantalon" });
     expect(e).toMatchObject({ hanches: 3, confiance: "haute" });
+    expect(e.motif).toContain("type");
   });
 
-  it("gradue le volume du plus ample au plus près du corps", () => {
-    const large = effet({ id: 6, category: "pantalons", name: "P", sous_type: "Pantalon palazzo" }).hanches;
-    const cargo = effet({ id: 7, category: "pantalons", name: "P", sous_type: "Pantalon cargo" }).hanches;
-    const droit = effet({ id: 8, category: "pantalons", name: "P", sous_type: "Pantalon droit" }).hanches;
-    const cigarette = effet({ id: 9, category: "pantalons", name: "P", sous_type: "Pantalon cigarette" }).hanches;
-    expect(large).toBeGreaterThan(cargo);
-    expect(cargo).toBeGreaterThan(droit);
-    expect(droit).toBeGreaterThan(cigarette);
+  it("distingue un évasement parti de la taille d'un évasement parti du genou", () => {
+    // Même racine stylistique, effets opposés sur la hanche : seule la famille
+    // permet de trancher. C'est la raison d'être du modèle.
+    const jupe = effet({ id: 11, category: "jupes", name: "Jupe trapèze", sous_type: "Jupe" });
+    const pantalon = effet({ id: 12, category: "pantalons", name: "Pantalon flare", sous_type: "Pantalon" });
+    expect(jupe.hanches).toBeGreaterThan(pantalon.hanches);
   });
 
-  it("renforce les épaules sur une pièce structurée", () => {
-    const simple = effet({ id: 10, category: "vestes_blazers", name: "Blazer", sous_type: "Blazer droit" });
-    const structure = effet({ id: 11, category: "vestes_blazers", name: "Blazer", sous_type: "Blazer structuré droit" });
-    expect(structure.epaules).toBeGreaterThan(simple.epaules);
+  it("ignore un terme de type hors des familles où il a un sens", () => {
+    expect(effet({ id: 13, category: "sacs", name: "Sac cargo", sous_type: "Sac" }).pertinent).toBe(false);
+    const haut = effet({ id: 14, category: "hauts", name: "Haut cargo", sous_type: "Haut" });
+    expect(haut.confiance).toBe("inconnue");
+  });
+
+  it("ne déduit rien des types seulement indicatifs", () => {
+    for (const [category, name] of [
+      ["hauts", "Polo"], ["hauts", "Chemise"], ["hauts", "Blouse"],
+      ["pulls_gilets", "Pull"], ["pulls_gilets", "Cardigan"],
+      ["pantalons", "Chino"], ["shorts", "Bermuda"],
+    ] as const) {
+      expect(effet({ id: 15, category, name, sous_type: name }).confiance, name).toBe("inconnue");
+    }
+  });
+
+  it("laisse la colonne coupe primer sur le type", () => {
+    const e = effet({ id: 16, category: "pantalons", name: "Pantalon wide leg", sous_type: "Pantalon", coupe: "Serré" });
+    expect(e.hanches).toBe(0);
+    expect(e.motif).toContain("coupe");
   });
 });
 
-describe("donnée inconnue", () => {
-  it("reste strictement neutre, jamais négative", () => {
-    const e = effet({ id: 12, category: "hauts", name: "Top", sous_type: "Top" });
-    expect(e).toMatchObject({ pertinent: true, epaules: 0, taille: 0, hanches: 0, confiance: "inconnue" });
+describe("longueur", () => {
+  it("lit la longueur du vêtement", () => {
+    expect(effet({ id: 20, category: "jupes", name: "Jupe midi", sous_type: "Jupe" }).longueur).toBe("longue");
+    expect(effet({ id: 21, category: "hauts", name: "Top crop", sous_type: "Top" }).longueur).toBe("courte");
   });
 
-  it("ne compte pas une pièce inconnue comme évaluée dans la signature", () => {
-    const sig = signatureLook([
-      { item: piece({ id: 13, category: "hauts", name: "Top", sous_type: "Top" }), sousType: "Top" },
-    ]);
-    expect(sig.piecesEvaluees).toBe(0);
-    expect(sig).toMatchObject({ epaules: 0, taille: 0, hanches: 0 });
+  it("ne confond pas longueur de manche et longueur de vêtement", () => {
+    expect(effet({ id: 22, category: "hauts", name: "Chemise manches longues", sous_type: "Chemise" }).longueur).toBeNull();
+    expect(effet({ id: 23, category: "hauts", name: "T-shirt manches courtes", sous_type: "T-shirt" }).longueur).toBeNull();
+  });
+
+  it("ne rend pas une pièce évaluable en volume sur la seule longueur", () => {
+    const e = effet({ id: 24, category: "jupes", name: "Jupe midi", sous_type: "Jupe" });
+    expect(e.confiance).toBe("faible");
+    expect(e.hanches).toBe(0);
   });
 });
 
-describe("taille", () => {
-  it("détecte la définition portée par le vêtement lui-même", () => {
-    const e = effet({ id: 14, category: "robes", name: "Robe", sous_type: "Robe portefeuille" });
-    expect(e.taille).toBe(3);
+describe("neutralité de l'inconnu", () => {
+  it("renvoie une pièce non reconnue strictement neutre", () => {
+    const e = effet({ id: 30, category: "hauts", name: "Haut", sous_type: "Haut" });
+    expect(e).toMatchObject({ epaules: 0, taille: 0, hanches: 0, longueur: null, confiance: "inconnue", pertinent: true });
+  });
+});
+
+describe("signature de look", () => {
+  const pantalonLarge = piece({ id: 40, category: "pantalons", name: "Pantalon large", sous_type: "Pantalon" });
+  const pullOversize = piece({ id: 41, category: "pulls_gilets", name: "Pull oversize", sous_type: "Pull" });
+  const hautInconnu = piece({ id: 42, category: "hauts", name: "Haut", sous_type: "Haut" });
+  const ceinture = piece({ id: 43, category: "accessoires", name: "Ceinture", sous_type: "Ceinture" });
+
+  it("classe READY seulement quand les deux moitiés sont connues", () => {
+    expect(signatureLook([pantalonLarge, pullOversize]).classe).toBe("MORPHOLOGY_READY");
+    expect(signatureLook([pantalonLarge, hautInconnu]).classe).toBe("MORPHOLOGY_PARTIAL");
+    expect(signatureLook([hautInconnu]).classe).toBe("MORPHOLOGY_UNKNOWN");
   });
 
-  it("ajoute la ceinture au niveau du look, jamais à l'article", () => {
-    const jean = { item: piece({ id: 15, category: "jeans", name: "Jean", sous_type: "Jean droit" }), sousType: "Jean droit" };
-    const ceinture = { item: piece({ id: 16, category: "accessoires", name: "Ceinture", sous_type: "Ceinture" }), sousType: "Ceinture" };
-    expect(signatureLook([jean]).taille).toBe(0);
-    expect(signatureLook([jean, ceinture]).taille).toBe(2);
-    // La ceinture reste sans effet morphologique propre.
-    expect(effetMorphologique(ceinture.item, "Ceinture").pertinent).toBe(false);
+  it("ne compte la ceinture qu'au niveau du look", () => {
+    expect(effetMorphologique(ceinture).pertinent).toBe(false);
+    expect(signatureLook([pantalonLarge, pullOversize]).taille).toBe(0);
+    expect(signatureLook([pantalonLarge, pullOversize, ceinture]).taille).toBeGreaterThan(0);
+  });
+
+  it("ne déduit pas d'une absence de ceinture une taille indéfinie", () => {
+    const robeCintree = piece({ id: 44, category: "robes", name: "Robe cintrée", sous_type: "Robe" });
+    expect(signatureLook([robeCintree]).tailleConnue).toBe(true);
   });
 });
 
 describe("compensation entre pièces", () => {
-  it("rééquilibre un bas volumineux par un haut structurant", () => {
-    const cargo = { item: piece({ id: 17, category: "pantalons", name: "Cargo", sous_type: "Pantalon cargo" }), sousType: "Pantalon cargo" };
-    const blazer = { item: piece({ id: 18, category: "vestes_blazers", name: "Blazer", sous_type: "Blazer structuré" }), sousType: "Blazer structuré" };
+  it("émerge de la signature, sans règle par paire", () => {
+    const cargo = piece({ id: 50, category: "pantalons", name: "Pantalon cargo", sous_type: "Pantalon" });
+    const blazer = piece({ id: 51, category: "vestes_blazers", name: "Blazer structuré", sous_type: "Blazer" });
+    const hautSimple = piece({ id: 52, category: "hauts", name: "Débardeur ajusté", sous_type: "Débardeur" });
 
-    const seul = signatureLook([cargo]);
-    const avecBlazer = signatureLook([cargo, blazer]);
+    const seul = signatureLook([cargo, hautSimple]);
+    const compense = signatureLook([cargo, blazer, hautSimple]);
+    expect(compense.hanches - compense.epaules).toBeLessThan(seul.hanches - seul.epaules);
+  });
+});
 
-    // Le cargo seul creuse l'écart bas/haut ; le blazer le referme, sans
-    // qu'aucune règle "cargo + blazer" n'existe.
-    expect(seul.hanches - seul.epaules).toBeGreaterThan(0);
-    expect(avecBlazer.hanches - avecBlazer.epaules).toBeLessThan(seul.hanches - seul.epaules);
+describe("score morphologique v2", () => {
+  const cargo = piece({ id: 60, category: "pantalons", name: "Pantalon cargo", sous_type: "Pantalon" });
+  const blazer = piece({ id: 61, category: "vestes_blazers", name: "Blazer structuré", sous_type: "Blazer" });
+  const hautInconnu = piece({ id: 62, category: "hauts", name: "Haut", sous_type: "Haut" });
+
+  it("reste strictement neutre quand le look n'est pas READY", () => {
+    expect(scoreMorphoV2([cargo, hautInconnu], "f_poire")).toMatchObject({ actif: false, delta: 0 });
+  });
+
+  it("reste neutre sans morphologie déclarée", () => {
+    expect(scoreMorphoV2([cargo, blazer], null)).toMatchObject({ actif: false, delta: 0 });
+  });
+
+  it("n'invente pas de cible pour la pomme", () => {
+    const r = scoreMorphoV2([cargo, blazer], "f_pomme");
+    expect(r.actif).toBe(false);
+    expect(r.motif).toContain("cible");
+  });
+
+  it("se tait sur une morphologie qui dépend de la taille quand la taille est inconnue", () => {
+    const r = scoreMorphoV2([cargo, blazer], "f_sablier");
+    expect(r.actif).toBe(false);
+    expect(r.motif).toContain("taille");
+  });
+
+  it("récompense un triangle inversé dont le volume est en bas", () => {
+    const r = scoreMorphoV2([cargo, blazer], "f_triangle_inverse");
+    expect(r.actif).toBe(true);
+    expect(r.delta).toBeGreaterThan(0);
   });
 });

@@ -48,3 +48,5 @@ termes-sous-type.csv
 renommages-surs.sql
 coupe-backfill.csv
 couverture-morpho.csv
+morpho-looks.csv
+morpho-annotation-priorite.csv
