@@ -131,9 +131,28 @@ Deno.serve(async (req) => {
   }
   const dryRun = body.dry_run === true;
 
+  // Curseur : ne considérer que les assets d'id strictement supérieur.
+  // Indispensable pour enjamber une image que la fonction n'arrive pas à
+  // traiter (relevé du 28/08/2026 : une image sature le budget CPU même
+  // seule, et la sélection étant ordonnée par id, chaque appel suivant
+  // retombait dessus — le traitement s'arrêtait définitivement à cet endroit).
+  let apresId = 0;
+  if (body.apres_id !== undefined) {
+    const n = Number(body.apres_id);
+    if (!Number.isFinite(n) || n < 0) {
+      return json({ error: "apres_id invalide : entier positif ou nul attendu." }, 400);
+    }
+    apresId = Math.floor(n);
+  }
+
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-  // Reste à traiter, avant ce lot — sert à savoir quand s'arrêter d'appeler.
+  // Deux comptes, volontairement distincts :
+  //  - restants        : tous les PNG du catalogue, la mesure qui a du sens
+  //                      pour un humain, curseur ou pas ;
+  //  - restants_a_traiter : ceux situés après le curseur, ce qui pilote la
+  //                      boucle appelante. L'écart entre les deux, en fin de
+  //                      parcours, ce sont exactement les images enjambées.
   const { count: restantsAvant, error: countErr } = await supabase
     .from("visual_assets")
     .select("id", { count: "exact", head: true })
@@ -142,10 +161,20 @@ Deno.serve(async (req) => {
     return json({ error: `Comptage impossible : ${countErr.message}` }, 500);
   }
 
+  const { count: restantsApresCurseur, error: countCurseurErr } = await supabase
+    .from("visual_assets")
+    .select("id", { count: "exact", head: true })
+    .like("image_url", "%.png")
+    .gt("id", apresId);
+  if (countCurseurErr) {
+    return json({ error: `Comptage impossible : ${countCurseurErr.message}` }, 500);
+  }
+
   const { data: assets, error: selectErr } = await supabase
     .from("visual_assets")
     .select("id, visual_key, image_url")
     .like("image_url", "%.png")
+    .gt("id", apresId)
     .order("id", { ascending: true })
     .limit(limit)
     .returns<AssetRow[]>();
@@ -154,14 +183,29 @@ Deno.serve(async (req) => {
   }
 
   if (!assets || assets.length === 0) {
-    return json({ traites: 0, convertis: 0, echecs: [], restants: 0, message: "Plus aucun PNG à recompresser." });
+    return json({
+      traites: 0,
+      convertis: 0,
+      echecs: [],
+      restants: restantsAvant ?? 0,
+      restants_a_traiter: 0,
+      dernier_id: apresId,
+      message: "Plus aucun PNG à recompresser après ce curseur.",
+    });
   }
+
+  // Plus grand id du lot tenté — le curseur que l'appelant reprendra, qu'une
+  // image ait été convertie ou non. C'est ce qui garantit l'avancée même
+  // quand une image échoue.
+  const dernierId = assets[assets.length - 1].id;
 
   if (dryRun) {
     return json({
       dry_run: true,
       cle_utilisee: getAdminKeySource(),
       restants: restantsAvant ?? 0,
+      restants_a_traiter: restantsApresCurseur ?? 0,
+      dernier_id: dernierId,
       lot: assets.map((a) => ({ id: a.id, visual_key: a.visual_key, chemin: cheminDepuisUrl(a.image_url) })),
     });
   }
@@ -227,6 +271,8 @@ Deno.serve(async (req) => {
     convertis,
     echecs,
     restants: Math.max((restantsAvant ?? 0) - convertis, 0),
+    restants_a_traiter: Math.max((restantsApresCurseur ?? 0) - assets.length, 0),
+    dernier_id: dernierId,
     octets_avant: octetsAvant,
     octets_apres: octetsApres,
     gain: octetsAvant > 0 ? `${Math.round((1 - octetsApres / octetsAvant) * 100)} %` : null,
