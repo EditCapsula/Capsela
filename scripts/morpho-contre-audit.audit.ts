@@ -52,10 +52,15 @@ const pct = (n: number, t: number) => (t ? ((n / t) * 100).toFixed(1) : "0.0") +
 const csv = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
 /** Une pièce est « évaluée » si on sait lui attribuer un chiffre sur sa zone. */
+const cacheEval = new Map<number, boolean>();
 const evaluee = (it: Item, annotes?: Set<number>): boolean => {
   if (annotes?.has(it.id)) return true;
+  const vu = cacheEval.get(it.id);
+  if (vu !== undefined) return vu;
   const e = effetMorphologique(it);
-  return e.pertinent && (e.confiance === "haute" || e.confiance === "moyenne" || e.epaules > 0 || e.hanches > 0);
+  const r = e.pertinent && (e.confiance === "haute" || e.confiance === "moyenne" || e.epaules > 0 || e.hanches > 0);
+  cacheEval.set(it.id, r);
+  return r;
 };
 
 const classeDe = (pieces: Item[], annotes?: Set<number>): ClasseLook => {
@@ -217,10 +222,38 @@ describe("Contre-audit morphologie", () => {
       usage: usageFreq.get(p.id) || 0,
     }));
 
+    // Pré-calcul : pour chaque look, ce qu'on sait déjà et quelles pièces
+    // inconnues pourraient débloquer quelle moitié. Sans cela, le glouton
+    // recalculerait la signature de 1 200 looks à chaque candidat testé.
+    const profils = looks.map((l) => {
+      let haut = false, bas = false;
+      const bloquantesHaut: number[] = [], bloquantesBas: number[] = [];
+      for (const it of l.pieces) {
+        if (!effetMorphologique(it).pertinent) continue;
+        const z = ZONE[it.cat];
+        const ok = evaluee(it);
+        if (ok) {
+          if (z === "haut" || z === "transverse") haut = true;
+          if (z === "bas" || z === "transverse") bas = true;
+        } else {
+          if (z === "haut" || z === "transverse") bloquantesHaut.push(it.id);
+          if (z === "bas" || z === "transverse") bloquantesBas.push(it.id);
+        }
+      }
+      return { haut, bas, bloquantesHaut, bloquantesBas };
+    });
+
     const readyAvec = (ids: number[]) => {
       const s = new Set(ids);
-      return looks.filter((l) => classeDe(l.pieces, s) === "MORPHOLOGY_READY").length;
+      let n = 0;
+      for (const p of profils) {
+        const h = p.haut || p.bloquantesHaut.some((id) => s.has(id));
+        const b = p.bas || p.bloquantesBas.some((id) => s.has(id));
+        if (h && b) n += 1;
+      }
+      return n;
     };
+
     const glouton = (n: number): number[] => {
       const choisis: number[] = [];
       const restants = candidats.filter((c) => c.freq > 0 || c.verrou > 0).map((c) => c.id);
@@ -236,12 +269,13 @@ describe("Contre-audit morphologie", () => {
       }
       return choisis;
     };
+    const ordreGlouton = glouton(20);
 
     const STRATS: { nom: string; ids: (n: number) => number[] }[] = [
       { nom: "A · fréquence",            ids: (n) => [...candidats].sort((a, b) => b.freq - a.freq).slice(0, n).map((c) => c.id) },
       { nom: "B · impact (verrou)",      ids: (n) => [...candidats].sort((a, b) => b.verrou - a.verrou).slice(0, n).map((c) => c.id) },
       { nom: "C · fréquence × verrou",   ids: (n) => [...candidats].sort((a, b) => b.freq * b.verrou - a.freq * a.verrou).slice(0, n).map((c) => c.id) },
-      { nom: "D · glouton (marginal)",   ids: (n) => glouton(n) },
+      { nom: "D · glouton (marginal)",   ids: (n) => ordreGlouton.slice(0, n) },
     ];
     console.log(`\n════════ 4 · STRATÉGIES D'ANNOTATION ════════`);
     console.log(`  base : ${pct(readyAvec([]), looks.length)} de looks READY`);
@@ -256,7 +290,7 @@ describe("Contre-audit morphologie", () => {
       console.log(`     [#${c.id - VESTIAIRE_ID_OFFSET}] ${c.name.padEnd(38).slice(0, 38)} ${c.categorie.padEnd(20)} freq ${String(c.freq).padStart(4)} · verrou ${String(c.verrou).padStart(4)} · usage ${c.usage}`);
     }
 
-    const ordreD = glouton(20);
+    const ordreD = ordreGlouton;
     console.log(`\n  Ordre glouton (le vrai top 20) :`);
     ordreD.forEach((id, i) => {
       const c = candidats.find((x) => x.id === id)!;
