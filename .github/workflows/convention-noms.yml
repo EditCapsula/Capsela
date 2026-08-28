@@ -1,8 +1,12 @@
-name: Convention de nommage — tableau de contrôle (admin)
+name: Audits catalogue — lecture seule (admin)
 
-# Lecture seule, sans exception : produit le tableau de contrôle du renommage
-# du catalogue et ne génère AUCUN update. Le CSV est déposé en artefact du job,
-# à relire avant toute écriture en base.
+# Lecture seule, sans exception : exécute tous les audits catalogue
+# (scripts/*.audit.ts) et ne génère AUCUN update. Les sorties sont déposées en
+# artefacts du job, à relire avant toute écriture en base.
+#
+# Le fichier garde son nom d'origine : workflow_dispatch exige qu'un workflow
+# existe sur la branche par défaut pour être déclenchable, et le renommer
+# imposerait une fusion avant chaque nouvelle campagne d'audit.
 
 on:
   workflow_dispatch: {}
@@ -18,7 +22,7 @@ jobs:
       - run: npm ci
       # Config dédiée : l'audit interroge Supabase, il est donc tenu hors de
       # `npm test`, qui doit rester hors-ligne (cf. vitest.audit.config.mts).
-      - run: npx vitest run --config vitest.audit.config.mts scripts/convention-noms.audit.ts
+      - run: npx vitest run --config vitest.audit.config.mts
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
           SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
