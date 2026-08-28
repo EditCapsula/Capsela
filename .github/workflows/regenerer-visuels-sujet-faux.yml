@@ -1,0 +1,42 @@
+name: Régénérer les visuels au sujet faux (admin)
+
+# Déclenchement manuel uniquement, et en lecture seule par défaut : le mode
+# "audit" liste les pièces dont l'image ne représente pas le bon vêtement
+# sans rien modifier ni rien facturer. Passer mode="regen" ensuite, une fois
+# la liste relue, pour ne régénérer QUE ces visuels-là (~0,02 $ pièce).
+#
+# À ne pas confondre avec generate-all-catalog-images.yml, qui balaie tout
+# le catalogue : ici la cible est fermée et bornée par `max`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "audit (liste seulement) ou regen (régénère)"
+        type: choice
+        options: [audit, regen]
+        default: audit
+      max:
+        description: "Plafond de visuels régénérés en une exécution"
+        default: "40"
+
+jobs:
+  visuels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      # --experimental-strip-types : le script importe directement le
+      # constructeur de prompt des Edge Functions (TypeScript, runtime Deno)
+      # plutôt que d'en recopier les dictionnaires — c'est ce qui garantit
+      # que le "sujet attendu" calculé ici est exactement celui qu'emploiera
+      # la génération.
+      - run: node --experimental-strip-types --no-warnings scripts/visuels-sujet-faux.ts
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+          MODE: ${{ inputs.mode }}
+          MAX: ${{ inputs.max }}
