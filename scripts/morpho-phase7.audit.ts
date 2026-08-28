@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { computeDefaultCapsule } from "../src/lib/capsule";
 import { generateOutfit } from "../src/lib/logic";
-import { effetMorphologique, signatureLook } from "../src/lib/garmentEffect";
+import { effetMorphologique, scoreMorphoV2, signatureLook } from "../src/lib/garmentEffect";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, Item, Season } from "../src/lib/types";
 import { EMPTY_PROFILE, type Profile } from "../src/lib/profile";
@@ -48,34 +48,7 @@ const evaluee = (it: Item) => {
 };
 const isSport = (it: Item) => (it.niveauFormalite ?? 1) === 0;
 
-interface Sig { epaules: number; taille: number; hanches: number; ready: boolean; tailleConnue: boolean }
-
-/** Variantes de règles, calculées hors du prototype. delta: +10 / 0 / −5. */
-const REGLES: Record<string, (s: Sig) => number | null> = {
-  "poire · actuelle (≥1 / ≤1)": (s) =>
-    !s.ready ? null : s.epaules >= 1 && s.hanches <= 1 ? 10 : (s.epaules < 1 ? 1 : 0) + (s.hanches > 1 ? s.hanches - 1 : 0) >= 2 ? -5 : 0,
-  "poire · relation": (s) =>
-    !s.ready ? null : s.epaules >= s.hanches && s.epaules + s.hanches >= 1 ? 10 : s.hanches - s.epaules >= 2 ? -5 : 0,
-  "poire · relation + écart ≥1": (s) =>
-    !s.ready ? null : s.epaules - s.hanches >= 1 ? 10 : s.hanches - s.epaules >= 2 ? -5 : 0,
-  "triangle · actuelle (≤1 / ≥1)": (s) =>
-    !s.ready ? null : s.hanches >= 1 && s.epaules <= 1 ? 10 : (s.hanches < 1 ? 1 : 0) + (s.epaules > 1 ? s.epaules - 1 : 0) >= 2 ? -5 : 0,
-  "triangle · relation": (s) =>
-    !s.ready ? null : s.hanches >= s.epaules && s.epaules + s.hanches >= 1 ? 10 : s.epaules - s.hanches >= 2 ? -5 : 0,
-  "triangle · relation + écart ≥1": (s) =>
-    !s.ready ? null : s.hanches - s.epaules >= 1 ? 10 : s.epaules - s.hanches >= 2 ? -5 : 0,
-  "rectangle R0 · taille ≥2": (s) =>
-    !s.ready || !s.tailleConnue ? null : s.taille >= 2 ? 10 : s.taille === 0 ? -5 : 0,
-  "rectangle R1 · taille ≥3": (s) =>
-    !s.ready || !s.tailleConnue ? null : s.taille >= 3 ? 10 : s.taille <= 1 ? -5 : 0,
-  "rectangle R2 · taille ≥2 + volume ≥1": (s) =>
-    !s.ready || !s.tailleConnue ? null : s.taille >= 2 && s.epaules + s.hanches >= 1 ? 10 : s.taille === 0 ? -5 : 0,
-  "rectangle R3 · taille > max(ép,ha)": (s) =>
-    !s.ready || !s.tailleConnue ? null : s.taille > Math.max(s.epaules, s.hanches) ? 10 : s.taille === 0 ? -5 : 0,
-  "sablier · actuelle": (s) =>
-    !s.ready || !s.tailleConnue ? null : s.taille >= 1 && s.epaules <= 2 && s.hanches <= 2 ? 10
-      : (s.taille < 1 ? 1 : 0) + Math.max(0, s.epaules - 2) + Math.max(0, s.hanches - 2) >= 2 ? -5 : 0,
-};
+const MORPHOS = ["f_poire", "f_triangle_inverse", "f_sablier", "f_rectangle", "f_pomme"];
 
 describe("Simulation phase 7", () => {
   it("mesure les variantes de règles et les capacités de capsule", async () => {
@@ -128,7 +101,7 @@ describe("Simulation phase 7", () => {
     console.log(`  Capacité taille   : min ${Math.min(...stats.map((s) => s.capTa))} · moy ${moy(stats.map((s) => s.capTa)).toFixed(1)} · max ${Math.max(...stats.map((s) => s.capTa))}`);
 
     // ── LOOKS ─────────────────────────────────────────────────────────────
-    const sigs: Sig[] = [];
+    const tousLooks: { pieces: CatalogItem[] }[] = [];
     const parCapsule: { nom: string; capEp: number; capBas: number; poireOk: number; total: number }[] = [];
     capsules.forEach((c, idx) => {
       const vus = new Set<string>();
@@ -141,34 +114,58 @@ describe("Simulation phase 7", () => {
           vus.add(cle);
           const p = ids.map((i) => c.pieces.find((x) => x.id === i)).filter((x): x is CatalogItem => Boolean(x));
           if (p.length < 2) continue;
+          tousLooks.push({ pieces: p });
           const s = signatureLook(p);
-          const sig: Sig = { epaules: s.epaules, taille: s.taille, hanches: s.hanches, ready: s.classe === "MORPHOLOGY_READY", tailleConnue: s.tailleConnue };
-          sigs.push(sig);
-          if (sig.ready) { total += 1; if (sig.epaules >= sig.hanches && sig.epaules + sig.hanches >= 1) poireOk += 1; }
+          if (s.classe === "MORPHOLOGY_READY") {
+            total += 1;
+            if (scoreMorphoV2(p, "f_poire").delta > 0) poireOk += 1;
+          }
         }
       }
       parCapsule.push({ nom: c.nom, capEp: stats[idx].capEp, capBas: stats[idx].capBas, poireOk, total });
     });
 
-    console.log(`\n════════ 2 · VARIANTES DE RÈGLES (${sigs.length} looks) ════════`);
-    console.log(`  ${"règle".padEnd(38)} ${"actifs".padStart(8)} ${"+10".padStart(8)} ${"0".padStart(8)} ${"−5".padStart(8)}`);
-    for (const [nom, f] of Object.entries(REGLES)) {
-      const res = sigs.map(f).filter((v): v is number => v !== null);
-      const p = res.filter((v) => v === 10).length, z = res.filter((v) => v === 0).length, m = res.filter((v) => v === -5).length;
-      console.log(`  ${nom.padEnd(38)} ${pct(res.length, sigs.length).padStart(8)} ${pct(p, res.length).padStart(8)} ${pct(z, res.length).padStart(8)} ${pct(m, res.length).padStart(8)}`);
+    console.log(`\n════════ 2 · DIRECTIONS PAR MORPHOLOGIE (${tousLooks.length} looks) ════════`);
+    console.log(`  ${"morphologie".padEnd(20)} ${"actifs".padStart(8)} ${"comp.forte".padStart(11)} ${"comp.".padStart(8)} ${"neutre".padStart(8)} ${"défav.".padStart(8)} ${"défav.fort".padStart(11)}`);
+    for (const m of MORPHOS) {
+      const res = tousLooks.map((l) => scoreMorphoV2(l.pieces, m)).filter((r) => r.actif);
+      if (!res.length) { console.log(`  ${m.padEnd(20)}   non scorée`); continue; }
+      const n = (d: string) => res.filter((r) => r.direction === d).length;
+      console.log(
+        `  ${m.padEnd(20)} ${pct(res.length, tousLooks.length).padStart(8)}` +
+        ` ${pct(n("compensation_forte"), res.length).padStart(11)} ${pct(n("compensation"), res.length).padStart(8)}` +
+        ` ${pct(n("neutre"), res.length).padStart(8)} ${pct(n("defavorable"), res.length).padStart(8)}` +
+        ` ${pct(n("defavorable_fort"), res.length).padStart(11)}`
+      );
     }
 
-    // Distribution des couples (épaules, hanches) — répond à « 3/0 et 1/0
-    // valident la même relation sans produire le même effet ».
-    console.log(`\n  Distribution des écarts épaules − hanches sur les looks READY :`);
-    const readySigs = sigs.filter((s) => s.ready);
+    // Le sablier est un GARDE-FOU : sa valeur se juge à la précision de ses
+    // pénalités, pas à leur fréquence. On sort donc les cas pénalisés pour
+    // qu'un œil humain tranche s'ils sont réellement problématiques.
+    console.log(`\n── PRÉCISION DU GARDE-FOU SABLIER : les looks pénalisés ──`);
+    const penalises = tousLooks
+      .map((l) => ({ l, r: scoreMorphoV2(l.pieces, "f_sablier") }))
+      .filter(({ r }) => r.delta < 0);
+    console.log(`  ${penalises.length} look(s) pénalisé(s) sur ${tousLooks.length}  ${pct(penalises.length, tousLooks.length)}`);
+    const vus = new Set<string>();
+    for (const { l, r } of penalises) {
+      const desc = l.pieces.filter((p) => ["haut", "pull", "veste", "manteau", "pantalon", "jean", "jupe", "short", "robe", "combinaison"].includes(p.cat))
+        .map((p) => p.name).sort().join(" + ");
+      if (vus.has(desc)) continue;
+      vus.add(desc);
+      if (vus.size > 15) break;
+      console.log(`     ${desc}`);
+      console.log(`        → ${r.motif}`);
+    }
+
+    // Distribution des écarts — sert à juger si un seuil à +1 est le bon.
+    console.log(`\n  Distribution des écarts épaules − hanches (looks READY) :`);
+    const readySigs = tousLooks.map((l) => signatureLook(l.pieces)).filter((s2) => s2.classe === "MORPHOLOGY_READY");
     const ecarts = new Map<number, number>();
-    for (const s of readySigs) ecarts.set(s.epaules - s.hanches, (ecarts.get(s.epaules - s.hanches) || 0) + 1);
+    for (const s2 of readySigs) ecarts.set(s2.epaules - s2.hanches, (ecarts.get(s2.epaules - s2.hanches) || 0) + 1);
     for (const [e, n] of [...ecarts.entries()].sort((a, b) => a[0] - b[0])) {
       console.log(`     écart ${String(e).padStart(3)} : ${String(n).padStart(4)}  ${pct(n, readySigs.length)}`);
     }
-    const plats = readySigs.filter((s) => s.epaules === 0 && s.hanches === 0).length;
-    console.log(`  Looks READY totalement plats (0/0) : ${plats}  ${pct(plats, readySigs.length)}`);
 
     // ── CORRÉLATION CAPACITÉ ↔ SILHOUETTES ÉQUILIBRÉES ────────────────────
     console.log(`\n════════ 3 · CAPACITÉ ÉPAULES ↔ LOOKS ÉQUILIBRÉS (poire) ════════`);

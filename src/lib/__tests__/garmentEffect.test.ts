@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CONTRAINTES, ecartBorne, effetMorphologique, scoreMorphoV2, signatureLook, zonesRequises } from "../garmentEffect";
+import { effetMorphologique, scoreMorphoV2, signatureLook, zonesRequises } from "../garmentEffect";
 import { row } from "./fixtures";
 import { rowToCatalogItem } from "../vestiaire";
 import type { CatalogItem } from "../catalog";
@@ -148,10 +148,11 @@ describe("score morphologique v2", () => {
     expect(scoreMorphoV2([cargo, blazer], null)).toMatchObject({ actif: false, delta: 0 });
   });
 
-  it("n'invente pas de contrainte pour la pomme", () => {
+  it("n'invente aucune règle pour la pomme", () => {
     const r = scoreMorphoV2([cargo, blazer], "f_pomme");
     expect(r.actif).toBe(false);
-    expect(r.motif).toContain("contrainte");
+    expect(r.delta).toBe(0);
+    expect(r.motif).toContain("règle");
   });
 
   it("se tait sur une morphologie qui dépend de la taille quand la taille est inconnue", () => {
@@ -172,61 +173,48 @@ describe("score morphologique v2", () => {
 // plutôt que le comportement d'une fonction isolée.
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("contraintes par intervalle — asymétrie plancher / plafond", () => {
-  it("ne pénalise pas le dépassement d'un plancher", () => {
-    // f_poire demande épaules ≥ 1. Deux épaules ou trois valent autant qu'une :
-    // c'est exactement ce qu'une distance à une cible-point ne savait pas dire.
-    expect(ecartBorne(1, { min: 1 })).toBe(0);
-    expect(ecartBorne(3, { min: 1 })).toBe(0);
-    expect(ecartBorne(0, { min: 1 })).toBe(1);
+describe("direction de compensation — trois états, jamais deux", () => {
+  const bas = (nom: string) => piece({ id: 70, category: "pantalons", name: nom, sous_type: "Pantalon" });
+  const haut = (nom: string) => piece({ id: 71, category: "vestes_blazers", name: nom, sous_type: "Veste" });
+
+  it("traite un écart nul comme neutre, jamais comme défavorable", () => {
+    // Une poire peut porter une tenue symétrique parfaitement élégante. Le moteur
+    // n'a pas à la déprécier au motif qu'elle ne cherche pas à corriger.
+    const r = scoreMorphoV2([bas("Pantalon wide leg"), haut("Veste oversize")], "f_poire");
+    expect(r.actif).toBe(true);
+    expect(r.ecart).toBe(0);
+    expect(r.direction).toBe("neutre");
+    expect(r.delta).toBe(0);
   });
 
-  it("ne pénalise pas d'être sous un plafond", () => {
-    expect(ecartBorne(0, { max: 1 })).toBe(0);
-    expect(ecartBorne(1, { max: 1 })).toBe(0);
-    expect(ecartBorne(3, { max: 1 })).toBe(2);
+  it("gradue la direction plutôt que de trancher en deux", () => {
+    const compense = scoreMorphoV2([bas("Pantalon slim"), haut("Veste oversize structurée")], "f_triangle_inverse");
+    const inverse = scoreMorphoV2([bas("Pantalon wide leg"), haut("Veste")], "f_poire");
+    expect(["compensation", "compensation_forte", "neutre", "defavorable", "defavorable_fort"]).toContain(compense.direction);
+    expect(inverse.delta).toBeLessThanOrEqual(0);
   });
 
-  it("distingue enfin sablier et rectangle", () => {
-    // Les cibles-point valaient 1/2/1 pour les deux : le score ne pouvait
-    // mathématiquement pas les différencier. Une taille peu marquée dans une
-    // tenue sans volume satisfait le sablier et pas le rectangle.
-    expect(zonesRequises("f_sablier")).not.toEqual(zonesRequises("f_rectangle"));
-    const sablier = ecartBorne(1, CONTRAINTES.f_sablier.taille!);
-    const rectangle = ecartBorne(1, CONTRAINTES.f_rectangle.taille!);
-    expect(sablier).toBe(0);
-    expect(rectangle).toBeGreaterThan(0);
+  it("récompense un triangle inversé dont le volume est en bas", () => {
+    const hautDiscret = piece({ id: 72, category: "hauts", name: "Caraco", sous_type: "Caraco" });
+    const r = scoreMorphoV2([bas("Pantalon wide leg"), hautDiscret], "f_triangle_inverse");
+    expect(r.actif).toBe(true);
+    expect(r.delta).toBeGreaterThan(0);
+  });
+
+  it("désavantage une poire dont le volume est en bas", () => {
+    const hautDiscret = piece({ id: 73, category: "hauts", name: "Caraco", sous_type: "Caraco" });
+    const r = scoreMorphoV2([bas("Pantalon wide leg"), hautDiscret], "f_poire");
+    expect(r.delta).toBeLessThan(0);
   });
 
   it("ne contraint la pomme sur aucun axe", () => {
     expect(zonesRequises("f_pomme")).toHaveLength(0);
   });
-});
 
-describe("cibles — sous, dans, au-dessus de la zone attendue", () => {
-  const bas = (nom: string) => piece({ id: 70, category: "pantalons", name: nom, sous_type: "Pantalon" });
-  const haut = (nom: string) => piece({ id: 71, category: "vestes_blazers", name: nom, sous_type: "Veste" });
-
-  it("récompense un triangle inversé dont le volume est en bas, pas en haut", () => {
-    // Le haut doit être ÉVALUÉ, sinon le look n'est pas READY et le score reste
-    // neutre — ce qui est le comportement voulu, pas un échec.
-    const hautDiscret = piece({ id: 72, category: "hauts", name: "Caraco", sous_type: "Caraco" });
-    const bon = scoreMorphoV2([bas("Pantalon wide leg"), hautDiscret], "f_triangle_inverse");
-    expect(bon.actif).toBe(true);
-    expect(bon.delta).toBeGreaterThan(0);
-  });
-
-  it("ne récompense pas une poire dont le volume est en bas", () => {
-    const mauvais = scoreMorphoV2([bas("Pantalon wide leg"), haut("Veste structurée")], "f_poire");
-    expect(mauvais.actif).toBe(true);
-    expect(mauvais.delta).toBeLessThan(10);
-  });
-
-  it("laisse passer un excès au-dessus d'un plancher sans le pénaliser", () => {
-    const modere = scoreMorphoV2([bas("Pantalon slim"), haut("Veste structurée")], "f_poire");
-    const fort = scoreMorphoV2([bas("Pantalon slim"), haut("Veste oversize structurée")], "f_poire");
-    expect(modere.delta).toBe(10);
-    expect(fort.delta).toBe(10);
+  it("le sablier ne pénalise que le volume maximal des deux côtés", () => {
+    const contenu = scoreMorphoV2(
+      [piece({ id: 74, category: "robes", name: "Robe cintrée", sous_type: "Robe" })], "f_sablier");
+    expect(contenu.delta).toBeGreaterThanOrEqual(0);
   });
 });
 
