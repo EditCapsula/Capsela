@@ -153,6 +153,13 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
+        // Journalisation explicitement refusée (28/08/2026). Le réglage
+        // « API call logging » de l'organisation OpenAI est sur « Enabled per
+        // call » : c'est donc l'appel qui tranche, et sans ce paramètre on
+        // s'en remettrait à un comportement par défaut non garanti. Cet appel
+        // transporte la photo de dressing d'une utilisatrice — elle n'a rien
+        // à faire dans un journal consultable, fût-il le nôtre.
+        store: false,
         response_format: { type: "json_object" },
         max_tokens: 300,
         messages: [
