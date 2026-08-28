@@ -117,6 +117,30 @@ describe("Couverture morphologique", () => {
       console.log(`     [#${m.id}] ${m.name} — sous_type "${m.sousType}"`);
     }
 
+    // Ce que coûterait l'option C : élargir le vocabulaire plutôt qu'annoter.
+    // On ne peut pas arbitrer C sans savoir ce que les UNKNOWN contiennent
+    // réellement. On compte donc les termes de leur sous_type et de leur nom,
+    // hors mots de famille qui ne disent rien de la silhouette.
+    const MOTS_FAMILLE = new Set([
+      "pantalon", "jupe", "robe", "veste", "manteau", "pull", "gilet", "haut", "chemise",
+      "short", "jean", "combinaison", "blazer", "top", "t", "shirt", "tee", "cardigan",
+      "de", "du", "des", "la", "le", "les", "en", "a", "au", "aux", "et", "d", "l", "un", "une", "sport",
+    ]);
+    const freq = new Map<string, number>();
+    for (const m of inconnues) {
+      const mots = new Set(
+        `${m.sousType} ${m.name}`
+          .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !MOTS_FAMILLE.has(w))
+      );
+      for (const w of mots) freq.set(w, (freq.get(w) || 0) + 1);
+    }
+    console.log(`\n── TERMES NON RECONNUS DANS LES ${inconnues.length} UNKNOWN (option C) ──`);
+    const classes = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40);
+    for (const [mot, n] of classes) {
+      console.log(`  ${mot.padEnd(20)} ${String(n).padStart(3)} pièce(s)  ${pct(n, inconnues.length)} des UNKNOWN`);
+    }
+
     console.log(`\n════════ BILAN ════════`);
     const taux = (exploitables.length / (pertinentes.length || 1)) * 100;
     console.log(`  Couverture des pièces pertinentes : ${taux.toFixed(1)} %`);
