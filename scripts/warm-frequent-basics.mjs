@@ -11,7 +11,7 @@
 // balayage de tout le catalogue.
 //
 // Usage :
-//   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/generate-missing-catalog-images.mjs
+//   SUPABASE_URL=... SB_SECRET_KEY=... node scripts/generate-missing-catalog-images.mjs
 // ou, en réutilisant .env.local (Node 20+) :
 //   node --env-file=.env.local scripts/generate-missing-catalog-images.mjs
 //
@@ -23,7 +23,11 @@
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Clé privilégiée : SB_SECRET_KEY (clé sb_secret_... du nouveau système
+// Supabase) d'abord, SUPABASE_SERVICE_ROLE_KEY ensuite. Les clés JWT
+// historiques ont été désactivées le 28/08/2026 — le repli ne sert donc plus
+// qu'à un environnement local qui n'aurait pas encore été mis à jour.
+const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 const DELAY_MS = 1200; // Espace les appels — évite de saturer l'API de génération.
 
 // Basiques fréquents uniquement (brief 18/08/2026 v2) — jamais tout le catalogue.
@@ -46,7 +50,7 @@ const FREQUENT_BASICS = [
 ];
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error("SUPABASE_URL (ou NEXT_PUBLIC_SUPABASE_URL) et SUPABASE_SERVICE_ROLE_KEY sont requis.");
+  console.error("SUPABASE_URL (ou NEXT_PUBLIC_SUPABASE_URL) et SB_SECRET_KEY sont requis.");
   process.exit(1);
 }
 

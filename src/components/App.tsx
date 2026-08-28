@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CapselaProvider, useCapsela } from "@/lib/store";
 import WelcomeScreen from "./screens/WelcomeScreen";
@@ -26,6 +27,8 @@ import CreateLookScreen from "./screens/CreateLookScreen";
 import LookDetailScreen from "./screens/LookDetailScreen";
 import ItemOutfitsScreen from "./screens/ItemOutfitsScreen";
 import TabBar from "./TabBar";
+import CookieBanner from "./CookieBanner";
+import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
 import LoadingSpinner from "./LoadingSpinner";
 
 /** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) et l'écran Premium (fond sombre, pas de variante de barre adaptée). */
@@ -110,7 +113,36 @@ function Screens() {
         {state.screen === "itemOutfits" && <ItemOutfitsScreen />}
       </div>
       {showTabbar && <TabBar />}
+      <Analytics />
     </div>
+  );
+}
+
+/**
+ * Mesure d'audience — chargée seulement après un consentement explicite
+ * (cf. lib/consent.ts). Le composant GoogleAnalytics de @next/third-parties
+ * n'est monté qu'à ce moment : tant que la réponse n'est pas "granted",
+ * aucun script Google n'est injecté dans la page, ce que la CNIL exige.
+ *
+ * NEXT_PUBLIC_GA_ID absent (développement local, préproduction) : rien n'est
+ * chargé et le bandeau ne s'affiche pas — inutile de demander un
+ * consentement pour une mesure qui n'existe pas.
+ */
+function Analytics() {
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  // useSyncExternalStore plutôt qu'un useState + useEffect : le
+  // consentement vit dans localStorage, c'est un store externe au sens de
+  // React. Le snapshot serveur vaut "unknown" — l'app est de toute façon
+  // montée en ssr:false (AppLoader), mais l'écrire évite tout écart
+  // d'hydratation si ça changeait un jour.
+  const consent = useSyncExternalStore(subscribeConsent, readConsent, () => "unknown" as ConsentState);
+
+  if (!gaId) return null;
+  return (
+    <>
+      {consent === "unknown" && <CookieBanner />}
+      {consent === "granted" && <GoogleAnalytics gaId={gaId} />}
+    </>
   );
 }
 

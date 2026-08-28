@@ -5,7 +5,7 @@ name: Générer toutes les images du catalogue (admin)
 # explicite. Balaie tout le catalogue (image_status 'missing'/'error'),
 # appelle l'Edge Function generate-catalog-image pour chacun (qui applique
 # elle-même déduplication, verrou et plafond quotidien). Nécessite le
-# secret de dépôt SUPABASE_SERVICE_ROLE_KEY (Settings → Secrets and
+# secret de dépôt SB_SECRET_KEY (clé sb_secret_...) (Settings → Secrets and
 # variables → Actions) — jamais exposé côté client, lu uniquement ici côté
 # serveur GitHub.
 
@@ -24,4 +24,4 @@ jobs:
       - run: node scripts/generate-all-catalog-images.mjs
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}

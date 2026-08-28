@@ -366,6 +366,56 @@ export function computeDefaultCapsule(
     out = [...out, ...selectGroup(groupPool, group.quota, covered, profile.morphology)];
   }
 
+  // Redistribution du reliquat (correctif 26/08/2026, signalé sur l'audit
+  // des 56 capsules) : un groupe dont le pool est vide ou plus petit que son
+  // quota laissait ses places perdues, jamais réattribuées. Une capsule
+  // homme plafonnait ainsi à 31 pièces au lieu de 35 — les 4 places
+  // "robes-combinaisons" n'ayant aucun candidat — et il en allait de même
+  // pour tout style qui n'utilise pas naturellement une famille (les robes
+  // en Streetwear, par exemple). Le reliquat est reversé aux groupes qui ont
+  // encore du stock, dans l'ordre structurel ci-dessous, avec un plafond par
+  // groupe pour ne jamais retomber sur le déséquilibre que CAPSULE_GROUPS
+  // corrigeait au départ (12 hauts quand Vestes plafonnait à 1).
+  // Contrairement à selectGroup, ce complément ne réserve pas de place
+  // "statement" : elle l'a déjà été au premier passage.
+  const REDISTRIBUTION_ORDER = ["hauts", "bas", "vestes-manteaux", "chaussures", "accessoires", "bijoux", "robes-combinaisons"];
+  const totalQuota = CAPSULE_GROUPS.reduce((sum, g) => sum + g.quota, 0);
+  let leftover = totalQuota - out.length;
+  if (leftover > 0) {
+    const chosenIds = new Set(out.map((it) => it.id));
+    const restByGroup = new Map<string, CatalogItem[]>();
+    const roomByGroup = new Map<string, number>();
+    for (const name of REDISTRIBUTION_ORDER) {
+      const group = CAPSULE_GROUPS.find((g) => g.name === name);
+      if (!group) continue;
+      restByGroup.set(name, (poolByGroup.get(name) || []).filter((it) => !chosenIds.has(it.id)));
+      roomByGroup.set(name, Math.ceil(group.quota / 2));
+    }
+    // Tour de table : une pièce par groupe et par passe, jamais un groupe
+    // servi jusqu'à saturation avant le suivant — sinon la totalité du
+    // reliquat retombait sur les hauts (12 hauts pour 7 bas mesuré), le
+    // déséquilibre même que les quotas corrigeaient.
+    let progress = true;
+    while (leftover > 0 && progress) {
+      progress = false;
+      for (const name of REDISTRIBUTION_ORDER) {
+        if (leftover <= 0) break;
+        if ((roomByGroup.get(name) ?? 0) <= 0) continue;
+        const candidates = restByGroup.get(name) || [];
+        if (!candidates.length) continue;
+        const best = pickBestMarginal(candidates, covered, profile.morphology);
+        if (!best) continue;
+        out = [...out, best];
+        chosenIds.add(best.id);
+        occasionsOf(best).forEach((o) => covered.add(o));
+        restByGroup.set(name, candidates.filter((it) => it.id !== best.id));
+        roomByGroup.set(name, (roomByGroup.get(name) ?? 0) - 1);
+        leftover -= 1;
+        progress = true;
+      }
+    }
+  }
+
   // Garde-fou formalité (étape 3) : dans les catégories structurantes, si
   // un palier de formalité existe dans le pool mais n'est représenté par
   // aucune pièce sélectionnée (le tri par couverture l'a évincé), on le
@@ -424,6 +474,58 @@ export function computeDefaultCapsule(
     const fav = pool.filter((it) => favColors.includes(it.hex));
     const pickFrom = fav.length ? fav : pool;
     if (pickFrom.length) out = [...out, pickFrom[0]];
+  }
+
+  // Garantit une paire de collants en Automne/Hiver pour un profil femme
+  // (correctif 26/08/2026, signalé : "les collants correspondent à tous les
+  // styles et s'accordent avec une mini-jupe, robe, short si la température
+  // est inférieure au seuil, en Automne et en Hiver"). Mesuré avant
+  // correctif : 14 des 16 capsules femme × saison n'en contenaient aucune —
+  // non par inéligibilité, mais parce que le groupe "accessoires" ne compte
+  // que 4 places partagées avec les sacs et que des collants à occasions
+  // NULL retombent sur la seule couverture "quotidien", la plus faible du
+  // classement marginal. Ils perdaient systématiquement contre un foulard,
+  // un cabas ou une ceinture. Hors quota, donc, exactement comme la garantie
+  // chaussures d'intérieur ci-dessus : R-B19 ne peut compenser une pièce
+  // courte que si la capsule contient de quoi le faire.
+  //
+  // Le style reste préféré mais n'est jamais bloquant (paliers ci-dessous) :
+  // les collants les plus opaques ne relèvent pas de tous les vestiaires
+  // — un 100 DEN thermique n'est pas une pièce Glamour — mais aucune
+  // utilisatrice ne doit se retrouver jambes nues faute de correspondance.
+  const capsuleBucket = seasonKey ? capsuleSeasonBucket(seasonKey) : weatherSeasonBucket(weather.temp);
+  const needsCollants = profile.gender === "femme" && capsuleBucket === "Automne / Hiver";
+  if (needsCollants && !out.some((it) => it.cat === "accessoire" && it.accessoireType === "Collants")) {
+    const allCollants = sourcePool.filter(
+      (it) =>
+        it.cat === "accessoire" &&
+        it.accessoireType === "Collants" &&
+        !excluded.has(it.id) &&
+        it.genre !== oppositeGenre
+    );
+    const tempOk = (it: CatalogItem) =>
+      (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) && (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp);
+    const styleOk = (it: CatalogItem) => !styles.length || styles.some((st) => styleFit(it, st));
+    const tiers = [
+      allCollants.filter((it) => styleOk(it) && tempOk(it)),
+      allCollants.filter((it) => styleOk(it)),
+      allCollants.filter((it) => tempOk(it)),
+      allCollants,
+    ];
+    // Dans un palier où la météo a été relâchée, la paire la plus proche de
+    // la température de la capsule prime sur le classement marginal : sans
+    // ça, un Glamour en Hiver héritait du 15-20 DEN (plage 12→22 °C) plutôt
+    // que du 30-40 (8→18 °C), tous deux Glamour mais l'un nettement plus
+    // adapté à 6 °C. Distance nulle dès que la plage couvre la température,
+    // donc sans effet sur les paliers 1 et 3.
+    const tempDistance = (it: CatalogItem) =>
+      Math.max(0, (it.meteoMinTemp ?? capsuleTemp) - capsuleTemp) + Math.max(0, capsuleTemp - (it.meteoMaxTemp ?? capsuleTemp));
+    const tier = tiers.find((t) => t.length);
+    if (tier) {
+      const closest = Math.min(...tier.map(tempDistance));
+      const pick = tier.filter((it) => tempDistance(it) === closest);
+      out = [...out, pickBestMarginal(pick, covered, profile.morphology) || pick[0]];
+    }
   }
 
   // Bloc Sport (étape 4) : toutes les pièces Sport du pool (déjà filtrées

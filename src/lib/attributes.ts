@@ -136,6 +136,18 @@ const n = (it: Item) => (it.name + " " + it.color).toLowerCase();
 export const NEUTRAL_COLORS = new Set([
   "Blanc", "Blanc cassé", "Crème", "Sable", "Camel", "Caramel", "Chocolat",
   "Taupe", "Kaki", "Gris clair", "Gris", "Gris anthracite", "Noir", "Marine", "Denim", "Beige rosé",
+  // Correctif 26/08/2026 (signalé, 3e occurrence : "lunettes de soleil
+  // noires suggérées comme touche de couleur") — la liste ne couvrait que
+  // les neutres les plus évidents, alors que isNeutralColor est le seul
+  // garde-fou d'isColorAccent (R-S13) et d'isStatement (R-S5/R-S7) : les
+  // deux échouent en mode ouvert, donc TOUT libellé absent d'ici passe pour
+  // une couleur affirmée. Mesuré avant correctif : 22 accessoires sur 54
+  // étaient éligibles à "touche de couleur", dont 4 beiges, 2 écrus et une
+  // paire de lunettes écaille. Les teintes ci-dessous sont les neutres et
+  // finitions réellement présents dans vestiaire_universel — ni des accents
+  // (bordeaux, terracotta, rose poudré... restent volontairement dehors),
+  // ni un élargissement de confort.
+  "Écru", "Ivoire", "Beige", "Champagne", "Nude", "Écaille", "Cognac", "Brun", "Naturel",
 ]);
 
 /**
@@ -260,11 +272,48 @@ export function formalityOf(it: Item): number {
   return 1;
 }
 
-/** Pièce "statement" (imprimé fort, couleur vive, coupe originale) — R-S5, R-S7. */
+/**
+ * Finitions métalliques — dorées, argentées, cuivrées et leurs variantes
+ * patinées. Neutres par nature : une chaîne dorée n'attire pas l'œil comme
+ * une pièce colorée, c'est une finition. Extrait ici (correctif 26/08/2026)
+ * parce que la même liste vivait en local dans computeLookScore pour R-S13 :
+ * deux copies qui divergent, c'est exactement ce qui a laissé "Doré vieilli"
+ * passer entre les mailles du correctif du 23/08. Une seule définition,
+ * lue par R-S5 et R-S13.
+ *
+ * Comparaison par sous-chaîne, jamais par égalité : la base contient
+ * "Doré vieilli", "Argent vieilli", "Doré / pierre", "Or rose".
+ */
+const METAL_FINISHES = ["doré", "or ", "argent", "cuivré", "bronze", "perle"];
+export function isMetallicFinish(colorName: string | null | undefined): boolean {
+  if (!colorName) return false;
+  const c = colorName.toLowerCase();
+  return METAL_FINISHES.some((m) => c.startsWith(m) || c.includes(` ${m}`) || c === m.trim());
+}
+
+/**
+ * Bijoux et accessoires dont le VOLUME ou le DESIGN fait l'accent, quelle
+ * que soit la finition (recette 26/08/2026) — une manchette imposante ou un
+ * collier plastron reste une pièce forte même en doré. Restreint à bijou/
+ * accessoire à dessein : "oversize" et "épais" qualifient aussi des
+ * vêtements (hoodie oversize, pull épais) où ils décrivent un confort, pas
+ * une intention d'accent. Élargir aux vêtements est un arbitrage distinct,
+ * pas un effet de bord de celui-ci.
+ */
+const STATEMENT_DESIGN_RE = /sculptur|plastron|manchette|chunky|imposant|statement|massif|multirang|xxl|oversize|épais/;
+
+/** Pièce "statement" (imprimé fort, couleur vive, volume affirmé) — R-S5, R-S7. */
 export function isStatement(it: Item): boolean {
   if (it.statement != null) return it.statement;
   const text = n(it);
   if (/imprimé|paillet|clouté|brodé|fleuri|graphique|rayé/.test(text)) return true;
+  // Volume/design d'un bijou ou d'un accessoire — prime sur la finition :
+  // des créoles épaisses dorées comptent, une chaîne fine dorée non.
+  if ((it.cat === "bijou" || it.cat === "accessoire") && STATEMENT_DESIGN_RE.test(text)) return true;
+  // Finition métallique seule : jamais un accent (correctif 26/08/2026,
+  // signalé — alignement de R-S5 sur R-S13, qui excluait déjà les métaux
+  // depuis le 23/08 alors que R-S5 les comptait encore).
+  if (isMetallicFinish(it.color)) return false;
   return !isNeutralColor(it.color) && it.color !== "Beige rosé";
 }
 

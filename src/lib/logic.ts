@@ -7,6 +7,7 @@ import {
   coupeOf,
   formalityOf,
   huesHarmonious,
+  isMetallicFinish,
   isNeutralColor,
   isStatement,
   matiereOf,
@@ -18,7 +19,7 @@ const BOTTOMS: CategoryKey[] = [...BAS_CATS, "jupe"];
 /** Catégories haut du corps concernées par le rôle base/calque (R-B8, R-S11/S12). Exporté pour CreateLookScreen (règle "jamais 2 pièces base", brief design section 4). */
 export const TOP_LAYER_CATS: CategoryKey[] = ["haut", "pull"];
 const TOP_OR_BOTTOM_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe"];
-/** Pièces qui constituent une base valide sous une veste/un manteau (R-B9) — un pull seul ne compte pas comme base. */
+/** Pièces qui constituent une base valide sous une veste/un manteau (R-B9). */
 const BASE_GARMENT_CATS: CategoryKey[] = ["haut", "robe", "combinaison"];
 const OUTERWEAR_CATS: CategoryKey[] = ["veste", "manteau"];
 /** Pièce unique remplaçant haut+bas (R-B5) — robe et combinaison, toujours équivalentes ici. */
@@ -30,9 +31,25 @@ const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire
 /** Types de chaussures ouvertes exclus s'il est prévu de la pluie (R-B21) — uniquement les valeurs explicitement des sandales, jamais une extrapolation vers d'autres types semi-ouverts (mules, espadrilles...) non nommés par la demande. */
 const SANDAL_SHOE_TYPES: ShoeType[] = ["Sandales", "Sandales à talons"];
 
-/** Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète (R-B9). */
+/**
+ * Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète
+ * (R-B9).
+ *
+ * Correctif 26/08/2026 (signalé : "un pull ne doit pas nécessairement être
+ * porté avec un haut en dessous") — un pull comptait pour rien dans cette
+ * règle, si bien que "col roulé + pantalon + manteau" était refusé à la
+ * sauvegarde alors que c'est une tenue d'hiver parfaitement constituée. Un
+ * pull dont le rôle est "base" (col roulé, col rond, col V...) vaut
+ * désormais base à lui seul ; un pull "calque" (cardigan, gilet, maille
+ * oversize) continue d'en exiger une sous lui, ce qui est bien le cas où le
+ * layering est réellement obligatoire. La distinction vient de rolePieceOf(),
+ * qui lit le rôle déclaré sur la pièce et retombe sinon sur la coupe — pas
+ * d'heuristique de libellé ajoutée ici.
+ */
 function hasBaseGarment(items: Item[]): boolean {
-  return items.some((i) => BASE_GARMENT_CATS.includes(i.cat));
+  return items.some(
+    (i) => BASE_GARMENT_CATS.includes(i.cat) || (i.cat === "pull" && rolePieceOf(i) === "base")
+  );
 }
 
 /** R-B9 — vrai si la sélection contient une veste/un manteau sans pièce de base (haut, robe, combinaison) en dessous. */
@@ -522,7 +539,18 @@ export function generateOutfit(
   // contraire à l'objectif même de R-B18. Le plafond haute température
   // (meteo_max_temp) reste appliqué normalement à ces catégories : un pull
   // épais n'a pas sa place en pleine canicule.
-  const TEMP_COMPENSATED_CATS: CategoryKey[] = [...TOP_LAYER_CATS, "robe", "combinaison"];
+  // Correctif 26/08/2026 (signalé sur la capsule Glamour Automne) : jupe et
+  // short rejoignent la liste. La compensation par un collant existait déjà
+  // plus bas (R-B19 : `b.cat === "jupe"` sous son meteo_min_temp, puis
+  // `b.cat === "short"` hors Été), mais elle ne pouvait jamais se
+  // déclencher — applyTempFilter retirait la jupe du pool avant même que le
+  // bas soit tiré, rendant ces deux lignes inertes. Une mini-jupe à seuil
+  // 16° disparaissait donc purement et simplement à 14° au lieu d'être
+  // proposée avec des collants, exactement ce que R-B19 est censée éviter.
+  // Même raisonnement que pour haut/pull/robe : jamais d'exclusion
+  // silencieuse quand une autre pièce peut compenser. Le plafond
+  // meteo_max_temp reste appliqué normalement.
+  const TEMP_COMPENSATED_CATS: CategoryKey[] = [...TOP_LAYER_CATS, "robe", "combinaison", "jupe", "short"];
   const applyTempFilter = (items: Item[]): Item[] =>
     items.filter((i) => {
       if (i.meteoMinTemp != null && weather.temp < i.meteoMinTemp && !TEMP_COMPENSATED_CATS.includes(i.cat)) return false;
@@ -718,7 +746,21 @@ export function generateOutfit(
     // le bas, qui doit rester autonome (poolFor(BOTTOMS) reste soumis au
     // plancher plein, cf. hardCategoryFilter).
     const hautCandidates = poolFor(["haut"], true);
-    const hautMeetingFloor = dressy ? hautCandidates.filter((i) => formalityOf(i) >= minFormality) : hautCandidates;
+    // Correctif 26/08/2026 (signalé : un haut explicitement ouvert à
+    // "festive" n'apparaissait jamais dans une tenue festive) — ce second
+    // plancher rejouait formalityOf() brut sur le haut, sans reprendre
+    // l'exemption que hardCategoryFilter accorde déjà à une occasion
+    // déclarée sur la pièce (correctif 23/08/2026, R-B3). Une pièce que
+    // R-B3 avait volontairement laissée passer était donc réexclue ici,
+    // sauf à trouver une veste compensatrice — l'exemption n'avait plus
+    // aucun effet là où elle comptait le plus. Le plancher reste entier
+    // pour les pièces qui ne déclarent rien : la compensation par veste
+    // garde tout son rôle, seule la déclaration explicite y échappe.
+    const declaredForOccasion = (i: Item): boolean =>
+      occasion !== "all" && Boolean(i.occasion && i.occasion.includes(occasion));
+    const hautMeetingFloor = dressy
+      ? hautCandidates.filter((i) => formalityOf(i) >= minFormality || declaredForOccasion(i))
+      : hautCandidates;
     let hautPool = hautMeetingFloor;
     if (dressy && !hautMeetingFloor.length && hautCandidates.length) {
       const vesteCandidates = hardBase.filter((i) => i.cat === "veste" && formalityOf(i) >= minFormality);
@@ -746,7 +788,28 @@ export function generateOutfit(
     if (b && b.cat === "short" && currentSeasonKey() !== "Été") needsCollant = true;
   }
   if (needsCollant && gender === "femme") {
-    const collantPool = poolFor(["accessoire"]).filter((i) => i.cat === "accessoire" && i.accessoireType === "Collants");
+    // Recherche dédiée, jamais dérivée de poolFor (correctif 26/08/2026,
+    // signalé) : l'échelle de replis des accessoires retient le premier
+    // barreau contenant AU MOINS UN accessoire, pas nécessairement celui que
+    // l'appelant cherche. Une ceinture — sans aucune contrainte de
+    // température — validait donc le barreau filtré météo pour tout le
+    // monde, et les collants, eux écartés par ce filtre sous leur
+    // meteo_min_temp, disparaissaient avec lui. Mesuré : sur la capsule
+    // Glamour Hiver, 100 % des pièces courtes sortaient avec collants à 2 °C
+    // tant qu'ils étaient le seul accessoire, 0 % dès qu'on ajoutait une
+    // ceinture. Une pièce sans rapport décidait du sort d'une autre.
+    //
+    // R-B19 étant une compensation thermique, la météo ne peut pas non plus
+    // être un motif d'exclusion ici : on préfère la paire dont la plage
+    // couvre la température du jour, mais on n'en laisse jamais aucune —
+    // des jambes nues à 2 °C sont un défaut plus grave qu'un denier
+    // imparfait.
+    const allCollants = pool.filter((i) => i.cat === "accessoire" && i.accessoireType === "Collants");
+    const inTemp = allCollants.filter(
+      (i) =>
+        (i.meteoMinTemp == null || weather.temp >= i.meteoMinTemp) && (i.meteoMaxTemp == null || weather.temp <= i.meteoMaxTemp)
+    );
+    const collantPool = inTemp.length ? inTemp : allCollants;
     const collant = rand(harmonize(collantPool, chosen, false));
     if (collant && !ids.includes(collant.id)) { chosen.push(collant); ids.push(collant.id); }
   }
@@ -1544,8 +1607,13 @@ export function computeLookScore(
   // sans ce garde-fou, isNeutralColor("") passe à tort (absente de la liste
   // des neutres nommés), laissant filtrer une pièce dont la couleur réelle
   // est simplement inconnue.
-  const isColorAccent = (color: string): boolean =>
-    Boolean(color) && !isNeutralColor(color) && !["Doré", "Argenté", "Cuivré", "Or rose", "Bronze", "Perle"].includes(color);
+  // Correspondance par sous-chaîne plutôt qu'égalité stricte (correctif
+  // 26/08/2026) : "Doré vieilli" et "Argent vieilli" existent en base et
+  // échappaient à la liste exacte, donc une manchette dorée patinée était
+  // encore proposée comme touche de couleur — exactement le cas que le
+  // correctif du 23/08 visait. Même logique que isNeutralColor depuis le
+  // 24/08, pour que les deux garde-fous se comportent pareil.
+  const isColorAccent = (color: string): boolean => Boolean(color) && !isNeutralColor(color) && !isMetallicFinish(color);
 
   // R-S13 — contraste : total look noir sans accessoire coloré.
   const allBlack = clothing.length > 0 && clothing.every((i) => /noir/i.test(i.color));

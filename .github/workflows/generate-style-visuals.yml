@@ -17,10 +17,9 @@ name: Générer les visuels de l'écran Style (admin)
 #      catalog-images/style-visuals/{genre}/{style}.webp.
 #
 # Nécessite deux secrets de dépôt (Settings → Secrets and variables →
-# Actions) : SUPABASE_SERVICE_ROLE_KEY (déjà utilisé par les autres
-# workflows d'images) et OPENAI_API_KEY (NOUVEAU — n'existe nulle part
-# ailleurs dans ce dépôt, la clé n'était jusqu'ici qu'un secret Edge
-# Function Supabase, jamais un secret GitHub).
+# Actions) : SB_SECRET_KEY (la clé sb_secret_... du projet, également
+# utilisée par les autres workflows d'images depuis la désactivation des
+# clés JWT le 28/08/2026) et OPENAI_API_KEY.
 
 on:
   workflow_dispatch:
@@ -77,24 +76,24 @@ jobs:
         run: node scripts/generate-style-visuals.mjs --mode=generate --all --candidates=${{ inputs.candidates }}
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       - name: Génération (un ou plusieurs visuels)
         if: ${{ inputs.mode == 'generate' && !inputs.all }}
         run: node scripts/generate-style-visuals.mjs --mode=generate --gender=${{ inputs.gender }} --style=${{ inputs.style }} --candidates=${{ inputs.candidates }}
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       - name: Promotion (plusieurs styles)
         if: ${{ inputs.mode == 'promote' && inputs.items != '' }}
         run: node scripts/generate-style-visuals.mjs --mode=promote --gender=${{ inputs.gender }} --items=${{ inputs.items }}
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
       - name: Promotion (un style)
         if: ${{ inputs.mode == 'promote' && inputs.items == '' }}
         run: node scripts/generate-style-visuals.mjs --mode=promote --gender=${{ inputs.gender }} --style=${{ inputs.style }} --candidate=${{ inputs.candidate }}
         env:
           SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
