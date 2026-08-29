@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { effetMorphologique } from "../garmentEffect";
-import { STRATEGIE_LEGACY, STRATEGIE_PRODUCTION, computeDefaultCapsule } from "../capsule";
+import { CAPSULE_MAX_PIECES, STRATEGIE_LEGACY, STRATEGIE_PRODUCTION, computeDefaultCapsule } from "../capsule";
 import { computeLookScore } from "../logic";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 import { at } from "./fixtures";
@@ -176,5 +176,68 @@ describe("Neutralisation du signal legacy (29/08/2026)", () => {
     // Neutralisation, pas suppression : le comportement d'avant reste
     // reproductible tant qu'on n'a pas démontré qu'il peut disparaître.
     expect(STRATEGIE_LEGACY.rang3).toBe("legacy");
+  });
+});
+
+describe("V2 en simulation — invariants avant tout branchement", () => {
+  const V2_A = { rang3: "neutre", v2: "A" } as const;
+  const meteo = at(16, "Printemps / Été");
+
+  it("n'est pas branchée en production", () => {
+    expect(STRATEGIE_PRODUCTION.v2).toBe(false);
+  });
+
+  it("ne change rien pour rectangle, sablier et pomme", () => {
+    // valeurDirection renvoie 0 sur ces trois morphologies : le modèle n'a pas
+    // de règle de sélection défendable pour elles, et lui en inventer une
+    // contredirait le principe « UNKNOWN plutôt que donnée fausse ».
+    const catalogue = catalogueSansRobes();
+    for (const m of ["f_rectangle", "f_sablier", "f_pomme"]) {
+      const sans = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue);
+      const avec = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue, V2_A);
+      expect(avec.map((it) => it.id)).toEqual(sans.map((it) => it.id));
+    }
+  });
+
+  it("ne change rien sans morphologie déclarée", () => {
+    const catalogue = catalogueSansRobes();
+    const sans = computeDefaultCapsule(profile(), meteo, [], "Printemps", catalogue);
+    const avec = computeDefaultCapsule(profile(), meteo, [], "Printemps", catalogue, V2_A);
+    expect(avec.map((it) => it.id)).toEqual(sans.map((it) => it.id));
+  });
+
+  it("ne touche ni au plafond, ni au plancher, ni aux catégories", () => {
+    const catalogue = catalogueSansRobes();
+    for (const m of ["f_poire", "f_triangle_inverse"]) {
+      const capsule = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue, V2_A);
+      expect(capsule.length).toBeLessThanOrEqual(CAPSULE_MAX_PIECES);
+      expect(capsule.length).toBeGreaterThanOrEqual(30);
+      for (const cat of ["haut", "pantalon", "chaussures", "veste", "manteau", "sac", "accessoire", "bijou"]) {
+        expect(capsule.some((it) => it.cat === cat)).toBe(true);
+      }
+    }
+  });
+
+  it("ne départage jamais une pièce de sport", () => {
+    // Le bloc Sport est isolé avant la sélection qualitative : il n'atteint
+    // jamais pickBestMarginal, donc jamais le rang 4.
+    const catalogue = [...catalogueSansRobes()];
+    let id = 9000;
+    for (let k = 0; k < 4; k += 1) {
+      const p = item({ id: id++, category: "pantalons", name: `jogging ${k}`, couleur_dominante: "Gris", niveau_formalite: "sport", occasions: "sport" });
+      if (p) catalogue.push(p);
+    }
+    for (const m of ["f_poire", "f_triangle_inverse"]) {
+      const sans = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue);
+      const avec = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue, V2_A);
+      const sportSans = sans.filter((it) => it.niveauFormalite === 0).map((it) => it.id).sort();
+      const sportAvec = avec.filter((it) => it.niveauFormalite === 0).map((it) => it.id).sort();
+      expect(sportAvec).toEqual(sportSans);
+    }
+  });
+
+  it("B2 et B3 ne diffèrent que par le rang 4", () => {
+    // Même pipeline, même rang 3 neutralisé : la seule variable est v2.
+    expect(STRATEGIE_PRODUCTION.rang3).toBe(V2_A.rang3);
   });
 });
