@@ -14,7 +14,7 @@ on:
       audit:
         description: "Audit à exécuter (vide = tous)"
         type: choice
-        options: ["", "convention-noms", "taille-capsules", "images-perimees", "idees-par-piece", "coupe-backfill", "couverture-morpho", "morpho-look", "morpho-contre-audit", "morpho-arbitrage", "morpho-phase7", "morpho-phase8", "morpho-poire-entonnoir", "plafond-40", "contrefactuel-capsule", "morpho-substitution-optimisee", "morpho-regle-reelle", "morpho-phase10", "morpho-phase11", "morpho-phase12", "style-saison", "couverture-occasions", "formalite-palier4", "candidats-palier4"]
+        options: ["", "convention-noms", "taille-capsules", "images-perimees", "idees-par-piece", "coupe-backfill", "couverture-morpho", "morpho-look", "morpho-contre-audit", "morpho-arbitrage", "morpho-phase7", "morpho-phase8", "morpho-poire-entonnoir", "plafond-40", "contrefactuel-capsule", "morpho-substitution-optimisee", "morpho-regle-reelle", "morpho-phase10", "morpho-phase11", "morpho-phase12", "style-saison", "couverture-occasions", "formalite-palier4", "candidats-palier4", "simulation-retag"]
         default: ""
 
 jobs:
