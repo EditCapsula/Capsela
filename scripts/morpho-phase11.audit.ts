@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
-import { capsuleSeasonBucket, computeDefaultCapsule, morphoFit, morphoVigilance, representativeWeatherFor, type SelectionStrategy } from "../src/lib/capsule";
+import { computeDefaultCapsule, morphoFit, morphoVigilance, representativeWeatherFor, type SelectionStrategy } from "../src/lib/capsule";
 import { formalityOf } from "../src/lib/attributes";
 import { computeLookScore, generateOutfit } from "../src/lib/logic";
 import { conseilAffichable, effetMorphologique, niveauConfiance, scoreMorphoV2 } from "../src/lib/garmentEffect";
