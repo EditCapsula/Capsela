@@ -217,7 +217,7 @@ export type SelectionStrategy = {
  * La stratégie reste paramétrable pour que la comparaison reste possible en
  * audit, mais aucun code applicatif ne renseigne ce paramètre.
  */
-export const STRATEGIE_PRODUCTION: SelectionStrategy = { rang3: "neutre", v2: false };
+export const STRATEGIE_PRODUCTION: SelectionStrategy = { rang3: "neutre", v2: "A" };
 
 /** Comportement d'avant le 29/08/2026 — conservé pour les audits comparatifs. */
 export const STRATEGIE_LEGACY: SelectionStrategy = { rang3: "legacy", v2: false };
@@ -236,6 +236,20 @@ const SATURATION: Record<"A" | "B", (n: number) => number> = {
 };
 
 /**
+ * CE QUE CE SIGNAL PRÉTEND, ET CE QU'IL NE PRÉTEND PAS.
+ *
+ * Capsela ne prétend pas déterminer si un vêtement est « flatteur » pour une
+ * morphologie. Le moteur utilise la morphologie uniquement comme signal
+ * SECONDAIRE de répartition des volumes, après les critères fonctionnels de
+ * couverture d'occasion et de caractère basique — un rang 1 qui diffère ne
+ * peut jamais être renversé par lui, ce qu'un test verrouille.
+ *
+ * Le signal est asymétrique et contextuel : il privilégie certains volumes
+ * complémentaires selon la morphologie déclarée, sans jamais imposer une
+ * préférence absolue pour les épaules ou pour les hanches. Le volume d'épaules
+ * qui va dans le sens d'une poire va contre celui d'un triangle inversé, et
+ * réciproquement.
+ *
  * Direction de compensation apportée par une pièce, RAPPORTÉE à la
  * morphologie déclarée. Ce n'est pas une qualité intrinsèque de la pièce : le
  * volume d'épaules qui va dans le sens d'une poire va contre celui d'un

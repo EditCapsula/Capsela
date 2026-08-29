@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { effetMorphologique } from "../garmentEffect";
 import { CAPSULE_MAX_PIECES, STRATEGIE_LEGACY, STRATEGIE_PRODUCTION, computeDefaultCapsule } from "../capsule";
 import { computeLookScore } from "../logic";
+import { suggestOccasions } from "../attributes";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 import { at } from "./fixtures";
 import type { CatalogItem } from "../catalog";
@@ -22,6 +23,28 @@ function catalogueSansRobes(): CatalogItem[] {
 }
 function profile(over: Partial<Profile> = {}): Profile {
   return { ...EMPTY_PROFILE, gender: "femme", ...over };
+}
+
+/**
+ * Catalogue portant de VRAIS leviers morphologiques. Le catalogue synthétique
+ * ci-dessus nomme ses pièces « hauts 0 », « pantalons 3 » : aucun vocabulaire
+ * que effetMorphologique sache lire, donc confiance « inconnue » partout et
+ * V2 sans prise. Un test de V2 écrit dessus passerait à vide.
+ */
+function catalogueAvecLeviers(): CatalogItem[] {
+  const out = catalogueSansRobes();
+  let id = 5000;
+  const leviers: [string, typeof CATS_TEST[number]][] = [
+    ["Pull oversize", "hauts"], ["Chemise oversize", "hauts"], ["Blazer épaules structurées", "vestes_blazers"],
+    ["Top ajusté", "hauts"], ["Caraco fines bretelles", "hauts"],
+    ["Pantalon wide leg", "pantalons"], ["Pantalon cargo ample", "pantalons"], ["Jean baggy", "jeans"],
+    ["Pantalon droit", "pantalons"], ["Jean slim", "jeans"],
+  ];
+  leviers.forEach(([name, category], k) => {
+    const piece = item({ id: id++, category, name, couleur_dominante: "Noir", niveau_formalite: "business_casual", role_piece: "base", occasions: OCCS_TEST[k % OCCS_TEST.length] });
+    if (piece) out.push(piece);
+  });
+  return out;
 }
 import type { CategoryKey, Item } from "../types";
 
@@ -139,16 +162,15 @@ describe("Neutralisation du signal legacy (29/08/2026)", () => {
     // une poire, en ajoutait 29,1 de direction défavorable, et coûtait 7,4 %
     // de diversité à une pomme pour laquelle le modèle refuse toute règle.
     expect(STRATEGIE_PRODUCTION.rang3).toBe("neutre");
-    expect(STRATEGIE_PRODUCTION.v2).toBe(false);
   });
 
-  it("produit la même capsule avec et sans morphologie déclarée", () => {
-    // Conséquence directe : la morphologie n'entrant plus dans le tri, une
-    // morphologie déclarée ne peut plus déplacer une seule pièce. C'était le
-    // cas sur 120 capsules sur 120 avant le retrait.
-    const catalogue = catalogueSansRobes();
+  it("laisse les trois morphologies silencieuses strictement inchangées", () => {
+    // Le legacy déplaçait leurs capsules sur 120 sur 120. V2 ne les touche pas :
+    // axeDirection ne reconnaît que poire et triangle inversé, tout le reste
+    // retourne null — par construction, pas par liste d'exclusion.
+    const catalogue = catalogueAvecLeviers();
     const sans = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogue);
-    for (const m of ["f_poire", "f_triangle_inverse", "f_rectangle", "f_sablier", "f_pomme"]) {
+    for (const m of ["f_rectangle", "f_sablier", "f_pomme"]) {
       const avec = computeDefaultCapsule(profile({ morphology: m }), at(16, "Printemps / Été"), [], "Printemps", catalogue);
       expect(avec.map((it) => it.id)).toEqual(sans.map((it) => it.id));
     }
@@ -179,19 +201,52 @@ describe("Neutralisation du signal legacy (29/08/2026)", () => {
   });
 });
 
-describe("V2 en simulation — invariants avant tout branchement", () => {
+describe("V2 branchée en production (29/08/2026) — invariants", () => {
   const V2_A = { rang3: "neutre", v2: "A" } as const;
   const meteo = at(16, "Printemps / Été");
 
-  it("n'est pas branchée en production", () => {
-    expect(STRATEGIE_PRODUCTION.v2).toBe(false);
+  it("est active avec la saturation A, et sans le rang legacy", () => {
+    expect(STRATEGIE_PRODUCTION.v2).toBe("A");
+    expect(STRATEGIE_PRODUCTION.rang3).toBe("neutre");
+  });
+
+  it("départage réellement la poire et le triangle inversé", () => {
+    // Le pendant du test précédent : sur un catalogue porteur de leviers, ces
+    // deux morphologies DOIVENT produire une capsule différente, sans quoi le
+    // branchement serait inerte et les tests de silence passeraient à vide.
+    const catalogue = catalogueAvecLeviers();
+    const sans = computeDefaultCapsule(profile(), meteo, [], "Printemps", catalogue);
+    for (const m of ["f_poire", "f_triangle_inverse"]) {
+      const avec = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue);
+      expect(avec.map((it) => it.id)).not.toEqual(sans.map((it) => it.id));
+    }
+  });
+
+  it("ne réduit ni la couverture d'occasion ni les catégories", () => {
+    // L'invariant est « jamais moins », pas « exactement autant » : mesuré ici,
+    // V2 fait passer les catégories de 9 à 10 sur ce catalogue. Un départage
+    // secondaire peut élargir la couverture, il ne doit jamais la rétrécir.
+    const catalogue = catalogueAvecLeviers();
+    const sans = computeDefaultCapsule(profile(), meteo, [], "Printemps", catalogue);
+    const cats = (c: CatalogItem[]) => new Set(c.map((it) => it.cat)).size;
+    const occ = (c: CatalogItem[]) => {
+      const o = new Set<string>();
+      c.forEach((it) => (it.occasion && it.occasion.length ? it.occasion : suggestOccasions(it.cat, it.shoeType)).forEach((x) => o.add(x)));
+      return o.size;
+    };
+    for (const m of ["f_poire", "f_triangle_inverse"]) {
+      const avec = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue);
+      expect(avec.length).toBe(sans.length);
+      expect(cats(avec)).toBeGreaterThanOrEqual(cats(sans));
+      expect(occ(avec)).toBeGreaterThanOrEqual(occ(sans));
+    }
   });
 
   it("ne change rien pour rectangle, sablier et pomme", () => {
     // valeurDirection renvoie 0 sur ces trois morphologies : le modèle n'a pas
     // de règle de sélection défendable pour elles, et lui en inventer une
     // contredirait le principe « UNKNOWN plutôt que donnée fausse ».
-    const catalogue = catalogueSansRobes();
+    const catalogue = catalogueAvecLeviers();
     for (const m of ["f_rectangle", "f_sablier", "f_pomme"]) {
       const sans = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue);
       const avec = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue, V2_A);
@@ -200,14 +255,14 @@ describe("V2 en simulation — invariants avant tout branchement", () => {
   });
 
   it("ne change rien sans morphologie déclarée", () => {
-    const catalogue = catalogueSansRobes();
+    const catalogue = catalogueAvecLeviers();
     const sans = computeDefaultCapsule(profile(), meteo, [], "Printemps", catalogue);
     const avec = computeDefaultCapsule(profile(), meteo, [], "Printemps", catalogue, V2_A);
     expect(avec.map((it) => it.id)).toEqual(sans.map((it) => it.id));
   });
 
   it("ne touche ni au plafond, ni au plancher, ni aux catégories", () => {
-    const catalogue = catalogueSansRobes();
+    const catalogue = catalogueAvecLeviers();
     for (const m of ["f_poire", "f_triangle_inverse"]) {
       const capsule = computeDefaultCapsule(profile({ morphology: m }), meteo, [], "Printemps", catalogue, V2_A);
       expect(capsule.length).toBeLessThanOrEqual(CAPSULE_MAX_PIECES);
@@ -221,7 +276,7 @@ describe("V2 en simulation — invariants avant tout branchement", () => {
   it("ne départage jamais une pièce de sport", () => {
     // Le bloc Sport est isolé avant la sélection qualitative : il n'atteint
     // jamais pickBestMarginal, donc jamais le rang 4.
-    const catalogue = [...catalogueSansRobes()];
+    const catalogue = [...catalogueAvecLeviers()];
     let id = 9000;
     for (let k = 0; k < 4; k += 1) {
       const p = item({ id: id++, category: "pantalons", name: `jogging ${k}`, couleur_dominante: "Gris", niveau_formalite: "sport", occasions: "sport" });
@@ -236,8 +291,10 @@ describe("V2 en simulation — invariants avant tout branchement", () => {
     }
   });
 
-  it("B2 et B3 ne diffèrent que par le rang 4", () => {
-    // Même pipeline, même rang 3 neutralisé : la seule variable est v2.
+  it("conserve un rang 3 neutralisé", () => {
+    // Le legacy ne revient pas par la bande : V2 s'ajoute au rang 4, il ne
+    // réhabilite pas le rang 3.
     expect(STRATEGIE_PRODUCTION.rang3).toBe(V2_A.rang3);
+    expect(STRATEGIE_LEGACY.rang3).toBe("legacy");
   });
 });

@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
-import { STRATEGIE_PRODUCTION, computeDefaultCapsule, representativeWeatherFor, type SelectionStrategy } from "../src/lib/capsule";
+import { computeDefaultCapsule, representativeWeatherFor, type SelectionStrategy } from "../src/lib/capsule";
 import { formalityOf, huesHarmonious, isNeutralColor, isStatement, matiereOf, suggestOccasions } from "../src/lib/attributes";
 import { computeLookScore, generateOutfit } from "../src/lib/logic";
 import { conseilAffichable, scoreMorphoV2 } from "../src/lib/garmentEffect";
@@ -42,7 +42,10 @@ const isSport = (it: Item) => formalityOf(it) === 0;
 const occasionsDe = (it: Item): OccasionKey[] => (it.occasion && it.occasion.length ? it.occasion : suggestOccasions(it.cat, it.shoeType));
 const CLOTHING: CategoryKey[] = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau"];
 
-const B2: SelectionStrategy = STRATEGIE_PRODUCTION;
+// B2 est figé en littéral : depuis le branchement de V2 le 29/08/2026,
+// STRATEGIE_PRODUCTION vaut { neutre, "A" }, et s'y référer ferait comparer
+// deux fois la même variante.
+const B2: SelectionStrategy = { rang3: "neutre", v2: false };
 const B3: SelectionStrategy = { rang3: "neutre", v2: "A" };
 
 type Rep = {
