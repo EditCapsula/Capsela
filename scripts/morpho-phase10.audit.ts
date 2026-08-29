@@ -152,6 +152,34 @@ describe("Phase 10 — legacy contre V2 dans la vraie boucle", () => {
     expect(divergentes).toBe(0);
     console.log(`  ✓ La stratégie par défaut reproduit la production à l'identique.`);
 
+    // ═══ A bis. PLANCHER DE BRUIT ═══
+    //
+    // B2 (rang 3 neutralisé, morphologie déclarée) et B4 (rang 3 legacy,
+    // morphologie nulle) ont exactement la même clé de tri : morphoFit(it,
+    // null) renvoie false, donc le rang 3 vaut 0 pour tout candidat dans les
+    // deux cas, et `morphology` n'entre dans la sélection que par ce rang.
+    // Les deux variantes produisent donc LES MÊMES capsules.
+    //
+    // Tout écart entre leurs KPI de looks est par conséquent du bruit
+    // d'échantillonnage — generateOutfit tire au hasard. C'est un étalon
+    // gratuit : aucun écart inférieur à celui-là ne peut être interprété.
+    let identiques = 0, comparees2 = 0;
+    for (const morphology of MORPHOS) {
+      for (const saison of SAISONS) {
+        const w = representativeWeatherFor(saison);
+        for (const style of STYLES) {
+          const b2 = computeDefaultCapsule(profil([style], morphology), w, [], saison, pool, { rang3: "neutre", v2: false });
+          const b4 = computeDefaultCapsule(profil([style], null), w, [], saison, pool, { rang3: "legacy", v2: false });
+          comparees2 += 1;
+          if (empreinte(b2) === empreinte(b4)) identiques += 1;
+        }
+      }
+    }
+    console.log(`\n════════ A bis · PLANCHER DE BRUIT ════════`);
+    console.log(`  Capsules B2 et B4 identiques : ${identiques} / ${comparees2}`);
+    expect(identiques).toBe(comparees2);
+    console.log(`  ✓ Tout écart B2/B4 dans les tableaux qui suivent est du bruit d'échantillonnage.`);
+
     // ═══ B. LE LEGACY : COMBIEN DE PIÈCES DÉPLACE-T-IL, ET OÙ ═══
     console.log(`\n════════ B · CE QUE DÉPLACE LE LEGACY (B1 contre B4) ════════`);
     console.log(`  ${"morphologie".padEnd(20)}${"saison".padEnd(11)}${"pièces ≠".padStart(9)}${"familles touchées".padStart(19)}`);
