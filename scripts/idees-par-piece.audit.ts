@@ -5,7 +5,8 @@ import { computeDefaultCapsule } from "../src/lib/capsule";
 import { getOutfitsForItem } from "../src/lib/logic";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, Season } from "../src/lib/types";
-import { EMPTY_PROFILE, type Profile } from "../src/lib/profile";
+import { type Profile, type StyleId } from "../src/lib/profile";
+import { profilAudit } from "./harnaisAudit";
 import type { Weather } from "../src/lib/data";
 
 // Mesure de référence, en lecture seule : combien d'idées de tenue ("comment
@@ -35,13 +36,16 @@ const BUCKET: Record<CapsuleSeason, Season> = {
 // Six combinaisons représentatives plutôt que les 56 : chaque pièce demande
 // une passe complète de getOutfitsForItem (~37 ms), le tour complet coûterait
 // des minutes pour un signal que ces six donnent déjà.
-const CAS: { genre: "femme" | "homme"; style: string; saison: CapsuleSeason }[] = [
-  { genre: "femme", style: "Casual chic", saison: "Été" },
-  { genre: "femme", style: "Casual chic", saison: "Automne" },
-  { genre: "femme", style: "Glamour", saison: "Hiver" },
-  { genre: "homme", style: "Casual chic", saison: "Été" },
-  { genre: "homme", style: "Casual chic", saison: "Automne" },
-  { genre: "homme", style: "Streetwear", saison: "Printemps" },
+// Styles par IDENTIFIANT (harnais d'audit du 29/08/2026) : les libellés
+// français renvoyaient `undefined` via STYLE_ID_TO_CATALOG_LABEL, le filtre
+// de style était sauté et la mesure portait sur un pool universel.
+const CAS: { genre: "femme" | "homme"; style: StyleId; saison: CapsuleSeason }[] = [
+  { genre: "femme", style: "casual_chic", saison: "Été" },
+  { genre: "femme", style: "casual_chic", saison: "Automne" },
+  { genre: "femme", style: "glamour", saison: "Hiver" },
+  { genre: "homme", style: "casual_chic", saison: "Été" },
+  { genre: "homme", style: "casual_chic", saison: "Automne" },
+  { genre: "homme", style: "streetwear", saison: "Printemps" },
 ];
 
 function meteo(temp: number, season: Season): Weather {
@@ -49,7 +53,7 @@ function meteo(temp: number, season: Season): Weather {
 }
 
 function profil(gender: "femme" | "homme", styles: string[]): Profile {
-  return { ...EMPTY_PROFILE, gender, styles };
+  return profilAudit({ gender, styles });
 }
 
 describe("Idées de tenue par pièce de capsule", () => {

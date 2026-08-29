@@ -5,7 +5,8 @@ import { computeDefaultCapsule } from "../src/lib/capsule";
 import { formalityOf } from "../src/lib/attributes";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason } from "../src/lib/types";
-import { EMPTY_PROFILE, type Profile } from "../src/lib/profile";
+import { type Profile } from "../src/lib/profile";
+import { profilAudit, stylesAudit } from "./harnaisAudit";
 import type { Weather } from "../src/lib/data";
 import type { Season } from "../src/lib/types";
 
@@ -26,7 +27,11 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABAS
 const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
-const STYLES = ["Casual chic", "Classique chic", "Romantique", "Bohème", "Streetwear", "Preppy", "Glamour"];
+// Styles par IDENTIFIANT (harnais d'audit du 29/08/2026) : les libellés
+// français renvoyaient `undefined` via STYLE_ID_TO_CATALOG_LABEL, le filtre
+// de style était sauté et la mesure portait sur un pool universel.
+// Chaque genre est mesuré sur les styles réellement exposés pour lui :
+// romantique et glamour n'ont pas d'équivalent homme (EXPOSED_STYLE_IDS).
 /** Température représentative de chaque saison, pour que les filtres météo jouent normalement. */
 const TEMP: Record<CapsuleSeason, number> = { Printemps: 16, "Été": 26, Automne: 13, Hiver: 5 };
 /** Bucket météo correspondant, tel que l'app le calcule pour la saison affichée. */
@@ -47,7 +52,7 @@ function meteo(temp: number, season: Season): Weather {
 }
 
 function profil(gender: "femme" | "homme", styles: string[]): Profile {
-  return { ...EMPTY_PROFILE, gender, styles };
+  return profilAudit({ gender, styles });
 }
 
 describe("Taille des capsules", () => {
@@ -78,7 +83,7 @@ describe("Taille des capsules", () => {
     const cumul = { sport: 0, collants: 0, interieur: 0, total: 0 };
 
     for (const gender of ["femme", "homme"] as const) {
-      for (const style of STYLES) {
+      for (const style of stylesAudit(gender)) {
         for (const saison of SAISONS) {
           const capsule = computeDefaultCapsule(profil(gender, [style]), meteo(TEMP[saison], BUCKET[saison]), [], saison, pool);
           tailles.push(capsule.length);

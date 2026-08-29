@@ -7,7 +7,8 @@ import { computeLookScore, generateOutfit } from "../src/lib/logic";
 import { conseilAffichable, effetMorphologique, niveauConfiance, scoreMorphoV2 } from "../src/lib/garmentEffect";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, CategoryKey, Item, OccasionKey } from "../src/lib/types";
-import { EMPTY_PROFILE, type Profile } from "../src/lib/profile";
+import { type Profile } from "../src/lib/profile";
+import { STYLES_FEMME, profilAudit } from "./harnaisAudit";
 import { OCCASIONS } from "../src/lib/data";
 import type { Weather } from "../src/lib/data";
 
@@ -32,14 +33,20 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABAS
 const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
-const STYLES = ["Casual chic", "Classique", "Glamour", "Bohème", "Streetwear", "Minimaliste"];
+/**
+ * Les styles exposés, par IDENTIFIANT (harnais d'audit du 29/08/2026).
+ * Les libellés français qu'utilisait la version précédente renvoyaient
+ * `undefined` via STYLE_ID_TO_CATALOG_LABEL : le filtre de style était
+ * silencieusement sauté et la mesure portait sur un pool universel.
+ */
+const STYLES = STYLES_FEMME;
 const K_MAX = 4;
 const TIRAGES = 20;
 /** Nombre de couples (sortante, entrante) réellement régénérés à chaque pas. */
 const CANDIDATS_EVALUES = 4;
 const PLAFOND = 40;
 
-const profil = (styles: string[], morphology: string): Profile => ({ ...EMPTY_PROFILE, gender: "femme", styles, morphology });
+const profil = (styles: readonly string[], morphology: string): Profile => profilAudit({ gender: "femme", styles, morphology });
 const pct = (n: number, t: number) => (t ? ((n / t) * 100).toFixed(1) : "0.0") + " %";
 const isSport = (it: Item) => formalityOf(it) === 0;
 const occasionsDe = (it: Item): OccasionKey[] => (it.occasion && it.occasion.length ? it.occasion : suggestOccasions(it.cat, it.shoeType));

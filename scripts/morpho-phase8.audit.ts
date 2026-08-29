@@ -6,7 +6,8 @@ import { generateOutfit } from "../src/lib/logic";
 import { conseilAffichable, effetMorphologique, niveauConfiance, scoreMorphoV2, signatureLook } from "../src/lib/garmentEffect";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, Item, Season } from "../src/lib/types";
-import { EMPTY_PROFILE, type Profile } from "../src/lib/profile";
+import { type Profile } from "../src/lib/profile";
+import { STYLES_FEMME, profilAudit } from "./harnaisAudit";
 import { OCCASIONS } from "../src/lib/data";
 import type { Weather } from "../src/lib/data";
 
@@ -27,14 +28,20 @@ const BUCKET: Record<CapsuleSeason, Season> = {
   Printemps: "Printemps / Été", "Été": "Printemps / Été",
   Automne: "Automne / Hiver", Hiver: "Automne / Hiver",
 };
-const STYLES = ["Casual chic", "Classique", "Glamour", "Bohème", "Streetwear", "Minimaliste"];
+/**
+ * Les styles exposés, par IDENTIFIANT (harnais d'audit du 29/08/2026).
+ * Les libellés français qu'utilisait la version précédente renvoyaient
+ * `undefined` via STYLE_ID_TO_CATALOG_LABEL : le filtre de style était
+ * silencieusement sauté et la mesure portait sur un pool universel.
+ */
+const STYLES = STYLES_FEMME;
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
 const MORPHOS = ["f_poire", "f_triangle_inverse", "f_sablier", "f_rectangle", "f_pomme"];
 const TENTATIVES = 35;
 
 const meteo = (t: number, s: Season): Weather =>
   ({ season: s, temp: t, label: t < 10 ? "Froid" : t < 20 ? "Doux" : "Chaud", seasons: [s, "Toutes saisons"] });
-const profil = (styles: string[]): Profile => ({ ...EMPTY_PROFILE, gender: "femme", styles });
+const profil = (styles: readonly string[]): Profile => profilAudit({ gender: "femme", styles });
 const pct = (n: number, t: number) => (t ? ((n / t) * 100).toFixed(1) : "0.0") + " %";
 const moy = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 const isSport = (it: Item) => (it.niveauFormalite ?? 1) === 0;

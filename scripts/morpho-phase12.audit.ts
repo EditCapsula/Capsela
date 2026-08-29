@@ -7,7 +7,8 @@ import { computeLookScore, generateOutfit } from "../src/lib/logic";
 import { conseilAffichable, scoreMorphoV2 } from "../src/lib/garmentEffect";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, CategoryKey, Item, OccasionKey } from "../src/lib/types";
-import { EMPTY_PROFILE, exposedStyleIds, type Profile } from "../src/lib/profile";
+import { type Profile } from "../src/lib/profile";
+import { STYLES_FEMME, profilAudit } from "./harnaisAudit";
 import { OCCASIONS, type Weather } from "../src/lib/data";
 
 // PHASE 12 — LECTURE SEULE, AUCUN BRANCHEMENT.
@@ -44,11 +45,11 @@ const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
  * sur un pool de 184 à 271 pièces au lieu des 40 à 67 d'un pool de style réel.
  * L'un des six libellés, « Classique », n'existait même pas.
  */
-const STYLES = exposedStyleIds("femme");
+const STYLES = STYLES_FEMME;
 const REPETITIONS = 5;
 const TIRAGES = 40;
 
-const profil = (styles: readonly string[], morphology: string | null): Profile => ({ ...EMPTY_PROFILE, gender: "femme", styles: [...styles], morphology });
+const profil = (styles: readonly string[], morphology: string | null): Profile => profilAudit({ gender: "femme", styles, morphology });
 const isSport = (it: Item) => formalityOf(it) === 0;
 const occasionsDe = (it: Item): OccasionKey[] => (it.occasion && it.occasion.length ? it.occasion : suggestOccasions(it.cat, it.shoeType));
 const CLOTHING: CategoryKey[] = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau"];

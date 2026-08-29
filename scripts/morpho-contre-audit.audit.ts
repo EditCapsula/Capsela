@@ -7,7 +7,8 @@ import { computeLookScore, generateOutfit } from "../src/lib/logic";
 import { effetMorphologique, signatureLook, type ClasseLook } from "../src/lib/garmentEffect";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, Item, OccasionKey, Season } from "../src/lib/types";
-import { EMPTY_PROFILE, type Profile } from "../src/lib/profile";
+import { type Profile, type StyleId } from "../src/lib/profile";
+import { profilAudit } from "./harnaisAudit";
 import { OCCASIONS } from "../src/lib/data";
 import type { Weather } from "../src/lib/data";
 
@@ -31,10 +32,13 @@ const BUCKET: Record<CapsuleSeason, Season> = {
   Printemps: "Printemps / Été", "Été": "Printemps / Été",
   Automne: "Automne / Hiver", Hiver: "Automne / Hiver",
 };
-const CAS: { style: string; saison: CapsuleSeason }[] = [
-  { style: "Casual chic", saison: "Été" }, { style: "Casual chic", saison: "Automne" },
-  { style: "Classique", saison: "Hiver" }, { style: "Glamour", saison: "Hiver" },
-  { style: "Bohème", saison: "Printemps" }, { style: "Streetwear", saison: "Automne" },
+// Styles par IDENTIFIANT (harnais d'audit du 29/08/2026) : les libellés
+// français renvoyaient `undefined` via STYLE_ID_TO_CATALOG_LABEL, le filtre
+// de style était sauté et la mesure portait sur un pool universel.
+const CAS: { style: StyleId; saison: CapsuleSeason }[] = [
+  { style: "casual_chic", saison: "Été" }, { style: "casual_chic", saison: "Automne" },
+  { style: "classique_chic", saison: "Hiver" }, { style: "glamour", saison: "Hiver" },
+  { style: "boheme", saison: "Printemps" }, { style: "streetwear", saison: "Automne" },
 ];
 const TENTATIVES = 40;
 
@@ -47,7 +51,7 @@ const ZONE: Record<string, "haut" | "bas" | "transverse" | "aucune"> = {
 
 const meteo = (temp: number, season: Season): Weather =>
   ({ season, temp, label: temp < 10 ? "Froid" : temp < 20 ? "Doux" : "Chaud", seasons: [season, "Toutes saisons"] });
-const profil = (styles: string[]): Profile => ({ ...EMPTY_PROFILE, gender: "femme", styles });
+const profil = (styles: readonly string[]): Profile => profilAudit({ gender: "femme", styles });
 const pct = (n: number, t: number) => (t ? ((n / t) * 100).toFixed(1) : "0.0") + " %";
 const csv = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 

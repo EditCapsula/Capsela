@@ -6,7 +6,8 @@ import { generateOutfit } from "../src/lib/logic";
 import { effetMorphologique } from "../src/lib/garmentEffect";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, Item } from "../src/lib/types";
-import { EMPTY_PROFILE, type Profile } from "../src/lib/profile";
+import { type Profile } from "../src/lib/profile";
+import { STYLES_FEMME, profilAudit } from "./harnaisAudit";
 import { OCCASIONS } from "../src/lib/data";
 
 // Où se perd la capacité morphologique d'une poire ? — LECTURE SEULE.
@@ -24,8 +25,14 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABAS
 const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
-const STYLES = ["Casual chic", "Classique", "Glamour", "Bohème", "Streetwear", "Minimaliste"];
-const profil = (styles: string[]): Profile => ({ ...EMPTY_PROFILE, gender: "femme", styles });
+/**
+ * Les styles exposés, par IDENTIFIANT (harnais d'audit du 29/08/2026).
+ * Les libellés français qu'utilisait la version précédente renvoyaient
+ * `undefined` via STYLE_ID_TO_CATALOG_LABEL : le filtre de style était
+ * silencieusement sauté et la mesure portait sur un pool universel.
+ */
+const STYLES = STYLES_FEMME;
+const profil = (styles: readonly string[]): Profile => profilAudit({ gender: "femme", styles });
 const pct = (n: number, t: number) => (t ? ((n / t) * 100).toFixed(1) : "0.0") + " %";
 const isSport = (it: Item) => (it.niveauFormalite ?? 1) === 0;
 
