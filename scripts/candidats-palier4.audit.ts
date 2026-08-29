@@ -44,8 +44,16 @@ describe("Phase 15 — candidats au palier 4", () => {
       .from("vestiaire_universel").select("*").order("id", { ascending: true }).returns<VestiaireRow[]>();
     if (error) throw new Error(`Lecture impossible : ${error.message}`);
     const brutes = rows.filter((r) => (r as VestiaireRow & { frozen?: boolean }).frozen !== true);
-    const parId = new Map(brutes.map((r) => [r.id, r]));
-    const pool = brutes.map(rowToCatalogItem).filter((it): it is CatalogItem => Boolean(it));
+    // Indexé sur l'id du CatalogItem, pas sur celui de la ligne :
+    // rowToCatalogItem applique VESTIAIRE_ID_OFFSET, les deux diffèrent de 100000.
+    const parId = new Map<number, VestiaireRow>();
+    const pool: CatalogItem[] = [];
+    for (const r of brutes) {
+      const it = rowToCatalogItem(r);
+      if (!it) continue;
+      pool.push(it);
+      parId.set(it.id, r);
+    }
     assertCatalogueStyles(pool, STYLES_FEMME);
 
     // ═══ 1 · CROISEMENT JOINT FORMALITÉ × SAISON ═══
