@@ -140,6 +140,23 @@ describe("Phase 15 — mécanique du palier 4", () => {
       }
     }
 
+    // ═══ 4bis · Y A-T-IL DE QUOI RE-TAGUER, OU FAUT-IL CRÉER ? ═══
+    // Décide entre « créer des pièces » et « déclarer l'occasion sur
+    // l'existant » : sans ce compte, l'arbitrage n'est pas décidable.
+    console.log(`\n════════ 4bis · UNE-PIÈCES EXISTANTES PAR STYLE, PAR FORMALITÉ ════════`);
+    console.log(`  ${"style".padEnd(16)}${"1p total".padStart(10)}${"f=1".padStart(6)}${"f=3".padStart(6)}${"f=4".padStart(6)}${"P/É".padStart(6)}${"A/H".padStart(6)}${"tt sais.".padStart(10)}`);
+    for (const style of STYLES_FEMME) {
+      const label = STYLE_ID_TO_CATALOG_LABEL[style];
+      const l = pool.filter((it) => UNEPIECE.includes(it.cat) && styleFit(it, label));
+      const nf = (f: number) => l.filter((it) => formalityOf(it) === f).length;
+      const ns = (b: string) => l.filter((it) => it.season === b).length;
+      console.log(`  ${style.padEnd(16)}${String(l.length).padStart(10)}${String(nf(1)).padStart(6)}${String(nf(3)).padStart(6)}${String(nf(4)).padStart(6)}` +
+        `${String(ns("Printemps / Été")).padStart(6)}${String(ns("Automne / Hiver")).padStart(6)}${String(ns("Toutes saisons")).padStart(10)}`);
+    }
+    console.log(`\n  Lecture : une une-pièce de formalité 3 déjà présente dans un style manquant peut`);
+    console.log(`  être ouverte au palier 4 par une DÉCLARATION d'occasion (clause 2 de R-B3), sans`);
+    console.log(`  créer de pièce. Un style à 0 une-pièce n'a aucune autre issue que la création.`);
+
     // ═══ 5 · LA PROPRIÉTÉ LOCALE EST-ELLE SUFFISANTE ? ═══
     console.log(`\n════════ 5 · PRÉSENCE DANS LE POOL ⟹ PRÉSENCE DANS LA CAPSULE ? ════════`);
     console.log(`  Test empirique sur les couples où le catalogue contient déjà un candidat.`);
