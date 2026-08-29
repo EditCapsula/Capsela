@@ -1,7 +1,6 @@
-import { CATALOG, type CatalogItem } from "./catalog";
-import { formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "./attributes";
-import { isSunny, type Weather } from "./data";
-import { effetMorphologique } from "./garmentEffect";
+import { CATALOG, type CatalogItem } from "../../src/lib/catalog";
+import { formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "../../src/lib/attributes";
+import { isSunny, type Weather } from "../../src/lib/data";
 import {
   STYLE_ID_TO_CATALOG_LABEL,
   paletteHexes,
@@ -9,8 +8,8 @@ import {
   type Intensite,
   type Profile,
   type StyleId,
-} from "./profile";
-import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, OccasionKey, Season, Tons } from "./types";
+} from "../../src/lib/profile";
+import type { CapsuleSeason, CategoryKey, Item, IntensiteCouleur, OccasionKey, Season, Tons } from "../../src/lib/types";
 
 /** Bascule saisonnière pilotée par la température de la ville. */
 export function weatherSeasonBucket(temp: number): Season {
@@ -189,81 +188,6 @@ function occasionsOf(it: Item): OccasionKey[] {
 }
 
 /**
- * Couture d'audit (phase 10, 29/08/2026). Permet d'exécuter la sélection
- * RÉELLE — mêmes filtres, même boucle gloutonne, même `covered` partagé —
- * avec un rang morphologique différent, sans dupliquer le pipeline dans un
- * script d'audit où il divergerait aussitôt.
- *
- * `STRATEGIE_PRODUCTION` est la valeur par défaut de tous les appels : le
- * comportement de production est strictement inchangé tant qu'aucun appelant
- * ne passe autre chose. Aucun code applicatif ne renseigne ce paramètre.
- */
-export type SelectionStrategy = {
-  /** Rang 3 : `morphoFit` legacy, ou neutre (le rang disparaît du tri). */
-  rang3: "legacy" | "neutre";
-  /** Rang 4 : direction de compensation V2, absente par défaut. "A" et "B" sont deux fonctions de saturation. */
-  v2: false | "A" | "B";
-};
-export const STRATEGIE_PRODUCTION: SelectionStrategy = { rang3: "legacy", v2: false };
-
-/** Familles pertinentes pour chaque extrémité de la silhouette. */
-const CATS_HAUT: CategoryKey[] = ["haut", "pull", "veste", "manteau"];
-const CATS_BAS: CategoryKey[] = ["pantalon", "jean", "jupe", "short"];
-
-/**
- * Saturation molle : la valeur du n-ième levier déjà représenté décroît, sans
- * jamais s'annuler. Un seuil qui couperait à n serait un quota déguisé.
- */
-const SATURATION: Record<"A" | "B", (n: number) => number> = {
-  A: (n) => [1, 0.6, 0.3, 0.05][n] ?? 0.02,
-  B: (n) => 1 / (1 + n),
-};
-
-/**
- * Direction de compensation apportée par une pièce, RAPPORTÉE à la
- * morphologie déclarée. Ce n'est pas une qualité intrinsèque de la pièce : le
- * volume d'épaules qui va dans le sens d'une poire va contre celui d'un
- * triangle inversé. Un critère de diversité morphologique agnostique
- * dégraderait donc la moitié des profils, ce que la phase 8 a mesuré.
- *
- * Rectangle, sablier et pomme renvoient 0 : le modèle V2 n'a pas de règle de
- * sélection défendable pour eux, et lui en inventer une contredirait le
- * principe « UNKNOWN plutôt que donnée fausse ».
- */
-function valeurDirection(it: Item, morphology: string | null, retenues: CatalogItem[], saturation: "A" | "B"): number {
-  if (!morphology) return 0;
-  const e = effetMorphologique(it);
-  if (e.confiance === "inconnue") return 0;
-  const poids = SATURATION[saturation];
-  const dejaLa = (axe: "haut" | "bas") =>
-    retenues.filter((r) => axeDirection(r, morphology) === axe).length;
-  const axe = axeDirection(it, morphology);
-  if (!axe) return 0;
-  const intensite = morphology === "f_poire"
-    ? (CATS_HAUT.includes(it.cat) ? e.epaules : 3 - e.hanches)
-    : (CATS_BAS.includes(it.cat) ? e.hanches : 3 - e.epaules);
-  return poids(dejaLa(axe)) * intensite;
-}
-
-/** Extrémité sur laquelle la pièce apporte une direction utile à cette morphologie, ou null. */
-function axeDirection(it: Item, morphology: string | null): "haut" | "bas" | null {
-  if (!morphology) return null;
-  const e = effetMorphologique(it);
-  if (e.confiance === "inconnue") return null;
-  if (morphology === "f_poire") {
-    if (CATS_HAUT.includes(it.cat) && e.epaules >= 2) return "haut";
-    if (CATS_BAS.includes(it.cat) && e.hanches <= 1) return "bas";
-    return null;
-  }
-  if (morphology === "f_triangle_inverse") {
-    if (CATS_BAS.includes(it.cat) && e.hanches >= 2) return "bas";
-    if (CATS_HAUT.includes(it.cat) && e.epaules <= 1) return "haut";
-    return null;
-  }
-  return null;
-}
-
-/**
  * Pièce qui débloque le plus d'occasions pas encore couvertes par la
  * capsule en cours de construction — marginale, pas brute (une pièce qui
  * ne fait que redécouvrir une occasion déjà acquise n'apporte rien).
@@ -271,22 +195,11 @@ function axeDirection(it: Item, morphology: string | null): "haut" | "bas" | nul
  * morphologique (cf. morphoFit, préservé de l'ancien tri), puis id
  * (déterministe).
  */
-function pickBestMarginal(
-  candidates: CatalogItem[],
-  covered: Set<OccasionKey>,
-  morphology: string | null,
-  strategy: SelectionStrategy = STRATEGIE_PRODUCTION,
-  retenues: CatalogItem[] = []
-): CatalogItem | null {
-  // Les deux rangs morphologiques sont TOUJOURS présents dans la clé. Sous la
-  // stratégie de production, le rang 4 vaut 0 pour tout candidat : une valeur
-  // constante ne peut jamais départager, donc la clé se comporte exactement
-  // comme l'ancienne [occasions, basique, morphoFit, -id].
+function pickBestMarginal(candidates: CatalogItem[], covered: Set<OccasionKey>, morphology: string | null): CatalogItem | null {
   const scoreKey = (it: CatalogItem): number[] => [
     occasionsOf(it).filter((o) => !covered.has(o)).length,
     it.estBasiqueCapsule ? 1 : 0,
-    strategy.rang3 === "legacy" && morphoFit(it, morphology) ? 1 : 0,
-    strategy.v2 ? valeurDirection(it, morphology, retenues, strategy.v2) : 0,
+    morphoFit(it, morphology) ? 1 : 0,
     -it.id,
   ];
   // Comparaison lexicographique : le premier critère qui diffère tranche
@@ -350,10 +263,7 @@ function selectGroup(
   quota: number,
   covered: Set<OccasionKey>,
   morphology: string | null,
-  visuelsUtilises: Set<string>,
-  strategy: SelectionStrategy = STRATEGIE_PRODUCTION,
-  /** Pièces déjà retenues dans les groupes précédents — le rang 4 lit la redondance sur la capsule entière, pas sur le seul groupe. */
-  dejaRetenues: CatalogItem[] = []
+  visuelsUtilises: Set<string>
 ): CatalogItem[] {
   const picked: CatalogItem[] = [];
   let remaining = quota;
@@ -372,13 +282,13 @@ function selectGroup(
 
   const statementCandidates = pool.filter((it) => isStatement(it) && disponible(it));
   if (statementCandidates.length && remaining > 0) {
-    const best = pickBestMarginal(statementCandidates, covered, morphology, strategy, [...dejaRetenues, ...picked]);
+    const best = pickBestMarginal(statementCandidates, covered, morphology);
     if (best) retenir(best);
   }
 
   let candidates = pool.filter((it) => !picked.some((p) => p.id === it.id) && disponible(it));
   while (remaining > 0 && candidates.length) {
-    const best = pickBestMarginal(candidates, covered, morphology, strategy, [...dejaRetenues, ...picked]);
+    const best = pickBestMarginal(candidates, covered, morphology);
     if (!best) break;
     retenir(best);
     candidates = candidates.filter((it) => it.id !== best.id && disponible(it));
@@ -398,9 +308,7 @@ export function computeDefaultCapsule(
   weather: Weather,
   excludedIds: number[] = [],
   seasonKey?: CapsuleSeason,
-  sourcePool: CatalogItem[] = CATALOG,
-  /** Couture d'audit — cf. SelectionStrategy. La production ne renseigne jamais ce paramètre. */
-  strategy: SelectionStrategy = STRATEGIE_PRODUCTION
+  sourcePool: CatalogItem[] = CATALOG
 ): CatalogItem[] {
   const excluded = new Set(excludedIds);
   let base = sourcePool.filter((it) => !excluded.has(it.id));
@@ -510,7 +418,7 @@ export function computeDefaultCapsule(
   for (const group of CAPSULE_GROUPS) {
     const groupPool = nonSportPool.filter((it) => group.cats.includes(it.cat));
     poolByGroup.set(group.name, groupPool);
-    out = [...out, ...selectGroup(groupPool, group.quota, covered, profile.morphology, visuelsUtilises, strategy, out)];
+    out = [...out, ...selectGroup(groupPool, group.quota, covered, profile.morphology, visuelsUtilises)];
   }
 
   // Redistribution du reliquat (correctif 26/08/2026, signalé sur l'audit
@@ -555,7 +463,7 @@ export function computeDefaultCapsule(
           return !sig || !visuelsUtilises.has(sig);
         });
         if (!candidates.length) continue;
-        const best = pickBestMarginal(candidates, covered, profile.morphology, strategy, out);
+        const best = pickBestMarginal(candidates, covered, profile.morphology);
         if (!best) continue;
         out = [...out, best];
         chosenIds.add(best.id);
@@ -685,7 +593,7 @@ export function computeDefaultCapsule(
     if (tier) {
       const closest = Math.min(...tier.map(tempDistance));
       const pick = tier.filter((it) => tempDistance(it) === closest);
-      out = [...out, pickBestMarginal(pick, covered, profile.morphology, strategy, out) || pick[0]];
+      out = [...out, pickBestMarginal(pick, covered, profile.morphology) || pick[0]];
     }
   }
 
