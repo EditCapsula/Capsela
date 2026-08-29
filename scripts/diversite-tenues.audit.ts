@@ -158,6 +158,66 @@ describe("P0 — diversité des tenues", () => {
       console.log(`  ${saison.padEnd(11)}${(taille / n).toFixed(1).padStart(9)}${((mortesB / n).toFixed(1) + ` (${pct(mortesB, taille)})`).padStart(18)}` +
         `${((mortesC / n).toFixed(1) + ` (${pct(mortesC, taille)})`).padStart(18)}${((mortesB - mortesC) / n).toFixed(1).padStart(14)}`);
     }
+    // ═══ 5 · TAILLES DE POOL PAR CELLULE — DÉTERMINISTE, SANS BRUIT ═══
+    console.log(`\n════════ 5 · POOL AVANT ET APRÈS seasonPool, PAR STYLE × SAISON ════════`);
+    console.log(`  Mesure déterministe : aucun tirage, donc aucun bruit.`);
+    console.log(`  ${"saison".padEnd(11)}${STYLES_FEMME.map((x) => x.slice(0, 8).padStart(11)).join("")}`);
+    for (const saison of CAPSULE_SEASONS) {
+      const wB = representativeWeatherFor(saison);
+      const bucket: Season[] = [capsuleSeasonBucket(saison), "Toutes saisons"];
+      const cellules = STYLES_FEMME.map((style) => {
+        const c = capsules.get(`${saison}|${style}`)!;
+        const b = c.filter((it) => wB.seasons.includes(it.season)).length;
+        const cc = c.filter((it) => bucket.includes(it.season)).length;
+        return `${c.length}→${b}/${cc}`;
+      });
+      console.log(`  ${saison.padEnd(11)}${cellules.map((x) => x.padStart(11)).join("")}`);
+    }
+    console.log(`  Lecture : « capsule → pool avant (B) / pool après (C) ».`);
+
+    // ═══ 6 · DÉTAIL PAR OCCASION ═══
+    console.log(`\n════════ 6 · TENUES DISTINCTES PAR OCCASION (B → C) ════════`);
+    const TIR = 60;
+    const distinctesPour = (capsule: CatalogItem[], w: Weather, s: CapsuleSeason | null, occ: OccasionKey) => {
+      const sig = new Set<string>();
+      for (let k = 0; k < TIR; k++) {
+        const r = generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme", s);
+        if (r.ids.length) sig.add([...r.ids].sort((a, b) => a - b).join("-"));
+      }
+      return sig.size;
+    };
+    for (const saison of CAPSULE_SEASONS) {
+      const wB = representativeWeatherFor(saison);
+      const lignes = OCCS.map((occ) => {
+        let b = 0, c = 0;
+        for (const style of STYLES_FEMME) {
+          const caps = capsules.get(`${saison}|${style}`)!;
+          b += distinctesPour(caps, wB, null, occ);
+          c += distinctesPour(caps, wB, saison, occ);
+        }
+        const n = STYLES_FEMME.length;
+        return { occ, b: b / n, c: c / n, delta: (c - b) / n };
+      }).sort((x, y) => y.delta - x.delta);
+      console.log(`\n  ── ${saison} ──`);
+      for (const l of lignes) {
+        console.log(`     ${l.occ.padEnd(18)}${l.b.toFixed(1).padStart(8)}${l.c.toFixed(1).padStart(8)}${(l.delta >= 0 ? "+" : "") + l.delta.toFixed(1)}`.padEnd(60) +
+          (l.b > 0 ? pct(l.delta, l.b) : "—"));
+      }
+    }
+
+    // ═══ 7 · DÉTAIL PAR STYLE, SAISON LA PLUS TOUCHÉE ═══
+    console.log(`\n════════ 7 · TENUES DISTINCTES PAR STYLE (B → C) ════════`);
+    console.log(`  ${"saison".padEnd(11)}${"style".padEnd(16)}${"avant (B)".padStart(11)}${"après (C)".padStart(11)}${"écart".padStart(9)}${"%".padStart(9)}`);
+    for (const saison of CAPSULE_SEASONS) {
+      const wB = representativeWeatherFor(saison);
+      for (const style of STYLES_FEMME) {
+        const caps = capsules.get(`${saison}|${style}`)!;
+        let b = 0, c = 0;
+        for (const occ of OCCS) { b += distinctesPour(caps, wB, null, occ); c += distinctesPour(caps, wB, saison, occ); }
+        console.log(`  ${saison.padEnd(11)}${style.padEnd(16)}${String(b).padStart(11)}${String(c).padStart(11)}${((c - b >= 0 ? "+" : "") + (c - b)).padStart(9)}${(b ? pct(c - b, b) : "—").padStart(9)}`);
+      }
+    }
+
     console.log(`\n  LECTURE SEULE. Aucune écriture, aucun retag, aucune modification.`);
   }, 900_000);
 });
