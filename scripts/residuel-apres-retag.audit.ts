@@ -34,8 +34,17 @@ const OCC4: OccasionKey[] = ["festive", "evenement_perso"];
 const OCC3: OccasionKey[] = ["travail_formel", "entretien", "soiree"];
 const UNEPIECE: CategoryKey[] = ["robe", "combinaison"];
 const TIRAGES = 20;
-/** Les quatre retags démontrés, et l'ensemble d'occasions arrêté à l'arbitrage. */
-const RETAG_IDS = new Set([101038, 100801, 100855, 100993]);
+/**
+ * Deux jeux comparés. #100891 avait été écartée au motif qu'elle n'entre dans
+ * aucune capsule — mais cette mesure avait été faite SANS retag, alors que le
+ * retag change les occasions déclarées, donc le rang 1 de pickBestMarginal,
+ * donc la sélection elle-même. Écarter une pièce sur son comportement isolé
+ * quand un autre levier la conditionne est exactement l'erreur que la règle
+ * méthodologique interdit. Les deux jeux sont donc mesurés.
+ */
+const RETAG_4 = new Set([101038, 100801, 100855, 100993]);
+const RETAG_5 = new Set([101038, 100801, 100855, 100993, 100891]);
+const RETAG_IDS = RETAG_4;
 const RETAG_OCC: OccasionKey[] = ["quotidien", "travail_formel", "entretien", "soiree", "date", "evenement_perso"];
 
 function passeRB3(it: Item, occ: OccasionKey, min: number): boolean {
@@ -156,6 +165,32 @@ describe("P0 — cellules résiduelles après retag", () => {
       }
       console.log(`  ${occ.padEnd(18)}${(sans + "/32").padStart(12)}${(avec + "/32").padStart(12)}${String(sans - avec).padStart(9)}`);
     }
+    // ═══ 5 · #100891 CHANGE-T-ELLE QUELQUE CHOSE ? ═══
+    console.log(`\n════════ 5 · QUATRE RETAGS CONTRE CINQ — LE CAS #100891 ════════`);
+    console.log(`  #100891 (Robe chemise longue ceinturée, Bohème, Toutes saisons) n'entrait`);
+    console.log(`  dans aucune capsule SANS retag. Le retag modifie ses occasions déclarées,`);
+    console.log(`  donc son rang dans pickBestMarginal, donc potentiellement la sélection.`);
+    const simule5: CatalogItem[] = pool.map((it) => (RETAG_5.has(it.id) ? { ...it, occasion: [...RETAG_OCC] } : it));
+    console.log(`\n  ${"occasion".padEnd(18)}${"4 retags".padStart(11)}${"5 retags".padStart(11)}${"écart".padStart(9)}`);
+    for (const occ of OCC4) {
+      let q = 0, c = 0;
+      for (const saison of CAPSULE_SEASONS) {
+        const w = representativeWeatherFor(saison);
+        for (const style of STYLES_FEMME) {
+          if (replie(capsule(saison, style, simule), w, occ, saison)) q += 1;
+          if (replie(capsule(saison, style, simule5), w, occ, saison)) c += 1;
+        }
+      }
+      console.log(`  ${occ.padEnd(18)}${(q + "/32").padStart(11)}${(c + "/32").padStart(11)}${String(q - c).padStart(9)}`);
+    }
+    console.log(`\n  #100891 est-elle retenue dans la capsule, avec et sans retag ?`);
+    console.log(`  ${"saison".padEnd(11)}${"sans retag".padStart(12)}${"avec 5 retags".padStart(15)}`);
+    for (const saison of CAPSULE_SEASONS) {
+      const sans = capsule(saison, "boheme", pool).some((it) => it.id === 100891);
+      const avec = capsule(saison, "boheme", simule5).some((it) => it.id === 100891);
+      console.log(`  ${saison.padEnd(11)}${(sans ? "oui" : "non").padStart(12)}${(avec ? "oui" : "non").padStart(15)}`);
+    }
+
     console.log(`\n  LECTURE SEULE. Retag simulé en mémoire, aucun UPDATE, aucune création.`);
   }, 900_000);
 });
