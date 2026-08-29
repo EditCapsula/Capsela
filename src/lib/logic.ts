@@ -1,8 +1,8 @@
-import type { CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
+import type { CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
-import { currentSeasonKey } from "./capsule";
+import { capsuleSeasonBucket, currentSeasonKey } from "./capsule";
 import {
   coupeOf,
   formalityOf,
@@ -397,9 +397,29 @@ export function generateOutfit(
    * la pièce reste soumise à toutes les règles dures (R-B3, R-B6, R-B11...)
    * et n'est jamais forcée dans la tenue, seulement rendue tirable.
    */
-  pinnedId?: number
+  pinnedId?: number,
+  /**
+   * Saison de la capsule dont `pool` est issu, quand il en existe une
+   * (correctif 29/08/2026, défaut démontré). Le référentiel SAISONNIER vient
+   * alors de la capsule, jamais de la température : `representativeWeatherFor`
+   * dérive son bucket de la température (16 °C au printemps -> "Automne /
+   * Hiver" via weatherSeasonBucket, seuil 20), tandis que la capsule Printemps
+   * est bâtie sur "Printemps / Été" (capsuleSeasonBucket). Le filtre ci-dessous
+   * écartait donc 20,4 % de la capsule de printemps, pour les dix occasions.
+   *
+   * La météo continue de gouverner tout le reste — température, bornes
+   * meteo_min_temp/meteo_max_temp, pluie, soleil : une pièce de la bonne
+   * saison mais hors de ses bornes thermiques reste exclue. Non renseigné,
+   * le comportement météo d'origine est strictement conservé (tenue du jour).
+   */
+  capsuleSeason?: CapsuleSeason | null
 ): GeneratedOutfit {
-  const seasonPool = pool.filter((i) => weather.seasons.includes(i.season));
+  // Référentiel saisonnier : celui de la capsule quand il est connu, sinon
+  // celui que la météo porte (tenue du jour sous météo réelle, inchangée).
+  const seasonBucket = capsuleSeason ? capsuleSeasonBucket(capsuleSeason) : null;
+  const seasonPool = seasonBucket
+    ? pool.filter((i) => i.season === seasonBucket || i.season === "Toutes saisons")
+    : pool.filter((i) => weather.seasons.includes(i.season));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
 
   // R-S15 — l'anti-répétition n'exclut plus jamais une pièce du pool en
@@ -1062,11 +1082,12 @@ function attemptCoreOutfit(
   dateContext: DateContext,
   preferredHexes: string[],
   gender: "femme" | "homme" | null,
-  formalityOverride: number
+  formalityOverride: number,
+  capsuleSeason?: CapsuleSeason | null
 ): GeneratedOutfit {
-  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride);
+  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason);
   for (let attempt = 1; attempt < MAX_ATTEMPTS_PER_TIER && !hasCoreOutfit(result.ids, pool); attempt++) {
-    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride);
+    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason);
   }
   return result;
 }
@@ -1078,12 +1099,27 @@ export function generateOutfitWithFallback(
   workMode: WorkMode = "Présentiel",
   dateContext: DateContext = "Verre",
   preferredHexes: string[] = [],
-  gender: "femme" | "homme" | null = null
+  gender: "femme" | "homme" | null = null,
+  /**
+   * Saison de la capsule dont `pool` est issu, quand il en existe une
+   * (correctif 29/08/2026, défaut démontré). Le référentiel SAISONNIER vient
+   * alors de la capsule, jamais de la température : `representativeWeatherFor`
+   * dérive son bucket de la température (16 °C au printemps -> "Automne /
+   * Hiver" via weatherSeasonBucket, seuil 20), tandis que la capsule Printemps
+   * est bâtie sur "Printemps / Été" (capsuleSeasonBucket). Le filtre ci-dessous
+   * écartait donc 20,4 % de la capsule de printemps, pour les dix occasions.
+   *
+   * La météo continue de gouverner tout le reste — température, bornes
+   * meteo_min_temp/meteo_max_temp, pluie, soleil : une pièce de la bonne
+   * saison mais hors de ses bornes thermiques reste exclue. Non renseigné,
+   * le comportement météo d'origine est strictement conservé (tenue du jour).
+   */
+  capsuleSeason?: CapsuleSeason | null
 ): GeneratedOutfitWithFallback {
   const requestedFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
   const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
   for (const tier of chain) {
-    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier);
+    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason);
     if (hasCoreOutfit(result.ids, pool)) {
       return { ...result, requestedFormality, resolvedFormality: tier, formalityDowngraded: tier !== requestedFormality, noCompleteOutfit: false };
     }
@@ -1116,7 +1152,7 @@ export function generateOutfitWithFallback(
   if (!hasStructuralOption) {
     reason = "missing_required_category";
   } else {
-    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0);
+    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason);
     reason = hasCoreOutfit(probe.ids, pool) ? "formality_gap" : "no_match";
   }
   return {
@@ -1847,7 +1883,9 @@ export function getOutfitsForItem(
   weather: Weather,
   preferredHexes: string[] = [],
   opts: { maxPerOccasion?: number; maxTotal?: number; attemptsPerOccasion?: number } = {},
-  gender: "femme" | "homme" | null = null
+  gender: "femme" | "homme" | null = null,
+  /** Saison de la capsule dont `pool` est issu — cf. generateOutfit. L'écran « Comment porter cette pièce ? » raisonne toujours sur une saison de capsule explicite. */
+  capsuleSeason?: CapsuleSeason | null
 ): ItemOutfitVariation[] {
   const pivot = pool.find((i) => i.id === pivotId);
   if (!pivot) return [];
@@ -1893,7 +1931,7 @@ export function getOutfitsForItem(
     const candidates: ItemOutfitVariation[] = [];
     const localSeen = new Set<string>();
     for (let attempt = 0; attempt < attemptsPerOccasion; attempt++) {
-      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender, undefined, pivotId);
+      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender, undefined, pivotId, capsuleSeason);
       if (!ids.includes(pivotId)) continue;
       const key = structuralKeyOf(ids);
       if (seenKeys.has(key) || localSeen.has(key)) continue;

@@ -143,6 +143,41 @@ describe("Phase 15 — anomalie printemps", () => {
       const n = STYLES_FEMME.length;
       console.log(`  ${saison.padEnd(11)}${(tot / n).toFixed(1).padStart(14)}${(surv / n).toFixed(1).padStart(17)}${(((tot - surv) / tot) * 100).toFixed(1).padStart(8)}%`);
     }
-    console.log(`\n  AUCUNE CORRECTION N'EST PROPOSÉE NI APPLIQUÉE. Constat seul.`);
+    // ═══ 5 · APRÈS CORRECTIF — CE QUE LA GÉNÉRATION CONSOMME RÉELLEMENT ═══
+    console.log(`\n════════ 5 · APRÈS CORRECTIF — RÉFÉRENTIEL DE CAPSULE ════════`);
+    console.log(`  Même mesure, mais avec le référentiel que generateOutfit utilise désormais`);
+    console.log(`  quand la saison de capsule lui est transmise (capsuleSeasonBucket).`);
+    console.log(`  ${"saison".padEnd(11)}${"capsule moy.".padStart(14)}${"utilisable moy.".padStart(17)}${"perte".padStart(9)}`);
+    for (const saison of CAPSULE_SEASONS) {
+      const w = representativeWeatherFor(saison);
+      const bucket = capsuleSeasonBucket(saison);
+      let tot = 0, surv = 0;
+      for (const style of STYLES_FEMME) {
+        const c = computeDefaultCapsule(profilAudit({ gender: "femme", styles: [style] }), w, [], saison, pool);
+        tot += c.length;
+        surv += c.filter((it) => it.season === bucket || it.season === "Toutes saisons").length;
+      }
+      const n = STYLES_FEMME.length;
+      console.log(`  ${saison.padEnd(11)}${(tot / n).toFixed(1).padStart(14)}${(surv / n).toFixed(1).padStart(17)}${(((tot - surv) / tot) * 100).toFixed(1).padStart(8)}%`);
+    }
+
+    // ═══ 6 · LES CINQ CAS, APRÈS CORRECTIF ═══
+    console.log(`\n════════ 6 · LES CINQ CAS, AVEC LA SAISON DE CAPSULE TRANSMISE ════════`);
+    console.log(`  (retag toujours SIMULÉ en mémoire — aucun UPDATE)`);
+    console.log(`  ${"pièce".padEnd(9)}${"style".padEnd(16)}${"saison".padEnd(11)}${"avant".padStart(9)}${"après".padStart(9)}`);
+    for (const cas of CAS) {
+      const w = representativeWeatherFor(cas.saison);
+      const capsule = computeDefaultCapsule(profilAudit({ gender: "femme", styles: [cas.style] }), w, [], cas.saison, simule);
+      let avant = 0, apres = 0;
+      for (let k = 0; k < TIRAGES; k++) {
+        const a = generateOutfitWithFallback(capsule, w, "evenement_perso", "Présentiel", "Verre", [], "femme");
+        if (a.ids.length && !a.formalityDowngraded) avant += 1;
+        const b = generateOutfitWithFallback(capsule, w, "evenement_perso", "Présentiel", "Verre", [], "femme", cas.saison);
+        if (b.ids.length && !b.formalityDowngraded) apres += 1;
+      }
+      console.log(`  #${cas.id}  ${cas.style.padEnd(16)}${cas.saison.padEnd(11)}${(avant + "/" + TIRAGES).padStart(9)}${(apres + "/" + TIRAGES).padStart(9)}`);
+    }
+
+    console.log(`\n  AUCUN UPDATE, AUCUN RETAG. Le retag reste simulé en mémoire.`);
   }, 900_000);
 });
