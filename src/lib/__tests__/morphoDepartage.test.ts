@@ -1,6 +1,28 @@
 import { describe, expect, it } from "vitest";
 import { effetMorphologique } from "../garmentEffect";
+import { STRATEGIE_LEGACY, STRATEGIE_PRODUCTION, computeDefaultCapsule } from "../capsule";
+import { computeLookScore } from "../logic";
+import { EMPTY_PROFILE, type Profile } from "../profile";
+import { at } from "./fixtures";
+import type { CatalogItem } from "../catalog";
 import { item } from "./fixtures";
+
+const CATS_TEST = ["hauts", "pulls_gilets", "pantalons", "jeans", "jupes", "vestes_blazers", "manteaux_exterieurs", "chaussures", "sacs", "accessoires", "bijoux"] as const;
+const OCCS_TEST = ["quotidien", "travail_formel", "date", "soiree", "entretien", "voyage", "festive"];
+function catalogueSansRobes(): CatalogItem[] {
+  const out: CatalogItem[] = [];
+  let id = 1;
+  for (const category of CATS_TEST) {
+    for (let k = 0; k < 12; k += 1) {
+      const piece = item({ id: id++, category, name: `${category} ${k}`, couleur_dominante: "Noir", niveau_formalite: "business_casual", role_piece: "base", occasions: OCCS_TEST[k % OCCS_TEST.length] });
+      if (piece) out.push(piece);
+    }
+  }
+  return out;
+}
+function profile(over: Partial<Profile> = {}): Profile {
+  return { ...EMPTY_PROFILE, gender: "femme", ...over };
+}
 import type { CategoryKey, Item } from "../types";
 
 // Invariants du DÉPARTAGE morphologique, verrouillés AVANT toute
@@ -108,5 +130,51 @@ describe("La morphologie départage, elle ne sélectionne pas", () => {
     for (const m of ["f_pomme", "f_sablier", "f_rectangle"]) {
       expect(valeurDirection(haut, m, 0, poidsA)).toBe(0);
     }
+  });
+});
+
+describe("Neutralisation du signal legacy (29/08/2026)", () => {
+  it("ne consulte plus morphoFit dans la sélection de capsule", () => {
+    // Mesuré avant retrait : ce rang retirait 16,5 points de compensation à
+    // une poire, en ajoutait 29,1 de direction défavorable, et coûtait 7,4 %
+    // de diversité à une pomme pour laquelle le modèle refuse toute règle.
+    expect(STRATEGIE_PRODUCTION.rang3).toBe("neutre");
+    expect(STRATEGIE_PRODUCTION.v2).toBe(false);
+  });
+
+  it("produit la même capsule avec et sans morphologie déclarée", () => {
+    // Conséquence directe : la morphologie n'entrant plus dans le tri, une
+    // morphologie déclarée ne peut plus déplacer une seule pièce. C'était le
+    // cas sur 120 capsules sur 120 avant le retrait.
+    const catalogue = catalogueSansRobes();
+    const sans = computeDefaultCapsule(profile(), at(16, "Printemps / Été"), [], "Printemps", catalogue);
+    for (const m of ["f_poire", "f_triangle_inverse", "f_rectangle", "f_sablier", "f_pomme"]) {
+      const avec = computeDefaultCapsule(profile({ morphology: m }), at(16, "Printemps / Été"), [], "Printemps", catalogue);
+      expect(avec.map((it) => it.id)).toEqual(sans.map((it) => it.id));
+    }
+  });
+
+  it("n'ajoute plus aucun terme morphologique au score", () => {
+    // R-S9 est retirée : le score 0–120 ne comporte plus de terme
+    // morphologique, ni bonus ni pénalité, et n'affiche plus de phrase sur la
+    // silhouette. Le score d'un même look ne dépend donc plus du profil.
+    const pieces = [
+      item({ id: 1, category: "hauts", name: "Blazer cintré", couleur_dominante: "Noir" }),
+      item({ id: 2, category: "jupes", name: "Jupe portefeuille", couleur_dominante: "Noir" }),
+      item({ id: 3, category: "chaussures", name: "Escarpins", couleur_dominante: "Noir" }),
+    ].filter((x): x is NonNullable<typeof x> => Boolean(x));
+    const meteo = at(16, "Printemps / Été");
+    const reference = computeLookScore(pieces, "quotidien", [], null, new Set<string>(), meteo);
+    for (const m of ["f_poire", "f_triangle_inverse", "f_rectangle", "f_sablier", "f_pomme"]) {
+      const avec = computeLookScore(pieces, "quotidien", [], m, new Set<string>(), meteo);
+      expect(avec.score).toBe(reference.score);
+      expect(avec.adjustMessage).toBe(reference.adjustMessage);
+    }
+  });
+
+  it("conserve la stratégie legacy pour les audits comparatifs", () => {
+    // Neutralisation, pas suppression : le comportement d'avant reste
+    // reproductible tant qu'on n'a pas démontré qu'il peut disparaître.
+    expect(STRATEGIE_LEGACY.rang3).toBe("legacy");
   });
 });

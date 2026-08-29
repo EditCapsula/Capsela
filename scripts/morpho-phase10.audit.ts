@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
-import { capsuleSeasonBucket, computeDefaultCapsule, representativeWeatherFor, type SelectionStrategy } from "../src/lib/capsule";
+import { STRATEGIE_LEGACY, capsuleSeasonBucket, computeDefaultCapsule, representativeWeatherFor, type SelectionStrategy } from "../src/lib/capsule";
 import { computeDefaultCapsule as capsuleAvantCouture } from "./baseline/capsule.preseam";
 import { formalityOf, suggestOccasions } from "../src/lib/attributes";
 import { computeLookScore, generateOutfit } from "../src/lib/logic";
@@ -140,7 +140,10 @@ describe("Phase 10 — legacy contre V2 dans la vraie boucle", () => {
         for (const style of STYLES) {
           const p = profil([style], morphology);
           const avant = capsuleAvantCouture(p, w, [], saison, pool);
-          const apres = computeDefaultCapsule(p, w, [], saison, pool);
+          // Depuis la neutralisation du 29/08/2026, c'est la stratégie LEGACY
+          // explicite qui doit reproduire le code d'avant la couture — la
+          // stratégie par défaut, elle, a délibérément changé.
+          const apres = computeDefaultCapsule(p, w, [], saison, pool, STRATEGIE_LEGACY);
           comparees += 1;
           if (empreinte(avant) !== empreinte(apres)) divergentes += 1;
         }

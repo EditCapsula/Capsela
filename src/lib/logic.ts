@@ -2,7 +2,7 @@ import type { CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, 
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
-import { currentSeasonKey, morphoFit, morphoVigilance } from "./capsule";
+import { currentSeasonKey } from "./capsule";
 import {
   coupeOf,
   formalityOf,
@@ -1485,13 +1485,20 @@ export function computeLookScore(
   const matieres = new Set(pieces.filter((i) => i.cat !== "bijou").map(matiereOf));
   if (matieres.size > 1) bonuses.push(5);
 
-  // R-S9 — cohérence morphologique (jamais bloquant, neutre si non renseignée)
-  if (morphology) {
-    if (clothing.some((i) => morphoFit(i, morphology))) bonuses.push(10);
-    else if (clothing.some((i) => morphoVigilance(i, morphology))) {
-      penalties.push([5, "Une pièce n'est peut-être pas la plus flatteuse pour ta silhouette déclarée."]);
-    }
-  }
+  // R-S9 — RETIRÉE le 29/08/2026. Elle reposait sur morphoFit / morphoVigilance,
+  // c'est-à-dire sur les mêmes expressions régulières que la sélection de
+  // capsule vient d'abandonner : aucune des 623 pièces du catalogue n'a la
+  // colonne `morphologies` renseignée, donc le signal n'a jamais reposé sur
+  // une donnée déclarée. Le garder ici aurait laissé le score récompenser un
+  // signal que la sélection ne croit plus, et sa branche négative affichait la
+  // seule phrase morphologique de l'application — une phrase qui porte un
+  // jugement sur la silhouette de l'utilisatrice à partir d'une regex sur un
+  // nom de produit.
+  //
+  // Le score ne comporte donc plus aucun terme morphologique. Le modèle V2
+  // (garmentEffect) reste hors production et hors du score : il décrit l'effet
+  // des vêtements, jamais le corps, et son branchement éventuel se fera dans
+  // la sélection, pas ici.
 
   // R-S10 — palette personnelle du profil (préférence molle, jamais exclusive)
   if (paletteHexList.length && pieces.some((i) => paletteHexList.includes(i.hex))) bonuses.push(10);

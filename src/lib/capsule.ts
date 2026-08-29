@@ -204,7 +204,23 @@ export type SelectionStrategy = {
   /** Rang 4 : direction de compensation V2, absente par défaut. "A" et "B" sont deux fonctions de saturation. */
   v2: false | "A" | "B";
 };
-export const STRATEGIE_PRODUCTION: SelectionStrategy = { rang3: "legacy", v2: false };
+/**
+ * Depuis le 29/08/2026, la production ne consulte plus `morphoFit` au rang 3.
+ * Mesuré sur 120 capsules et 5 répétitions indépendantes : ce signal retirait
+ * 16,5 points de compensation à une poire et lui ajoutait 29,1 points de
+ * direction défavorable, coûtait 7,4 % de diversité à une pomme pour laquelle
+ * le modèle refuse explicitement toute règle, et contredisait le statut de
+ * garde-fou pur du sablier. Les 623 pièces du catalogue passent par
+ * l'expression régulière de repli : aucune n'a la colonne `morphologies`
+ * renseignée, donc ce signal n'a jamais reposé sur une donnée déclarée.
+ *
+ * La stratégie reste paramétrable pour que la comparaison reste possible en
+ * audit, mais aucun code applicatif ne renseigne ce paramètre.
+ */
+export const STRATEGIE_PRODUCTION: SelectionStrategy = { rang3: "neutre", v2: false };
+
+/** Comportement d'avant le 29/08/2026 — conservé pour les audits comparatifs. */
+export const STRATEGIE_LEGACY: SelectionStrategy = { rang3: "legacy", v2: false };
 
 /** Familles pertinentes pour chaque extrémité de la silhouette. */
 const CATS_HAUT: CategoryKey[] = ["haut", "pull", "veste", "manteau"];
