@@ -2,7 +2,7 @@ import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { STRATEGIE_PRODUCTION, computeDefaultCapsule, representativeWeatherFor, type SelectionStrategy } from "../src/lib/capsule";
-import { formalityOf, huesHarmonious, isNeutralColor, matiereOf, suggestOccasions } from "../src/lib/attributes";
+import { formalityOf, huesHarmonious, isNeutralColor, isStatement, matiereOf, suggestOccasions } from "../src/lib/attributes";
 import { computeLookScore, generateOutfit } from "../src/lib/logic";
 import { conseilAffichable, scoreMorphoV2 } from "../src/lib/garmentEffect";
 import type { CatalogItem } from "../src/lib/catalog";
@@ -48,7 +48,7 @@ const B3: SelectionStrategy = { rang3: "neutre", v2: "A" };
 type Rep = {
   looks: number; score: number; median: number; p10: number; p90: number;
   compForte: number; comp: number; neutre: number; defav: number; defavFort: number; conseil: number;
-  rs1: number; rs2: number; rs8: number; ecartFormalite: number;
+  rs1: number; rs2: number; rs5: number; rs6: number; rs7: number; rs8: number; ecartFormalite: number;
 };
 
 /**
@@ -69,9 +69,17 @@ function termesScore(pieces: Item[]) {
   }
   const matieres = new Set(pieces.filter((i) => i.cat !== "bijou").map(matiereOf));
   const form = clothing.map(formalityOf);
+  // R-S5 / R-S6 / R-S7 : les seules autres règles d'amplitude 10 ou 15 que
+  // l'échange de pièces peut faire basculer. R-S6 est un BONUS : le perdre
+  // coûte 10 points, ce qui est la signature d'un P10 qui chute de 10 pile.
+  const chaussure = pieces.find((i) => i.cat === "chaussures");
+  const sac = pieces.find((i) => i.cat === "sac");
   return {
     rs1: nonNeutralClothing.size > 3 ? 1 : 0,          // pénalité −10
     rs2: harmonieux ? 1 : 0,                            // bonus +15
+    rs5: pieces.filter(isStatement).length >= 2 ? 1 : 0, // pénalité −15
+    rs6: chaussure && (isNeutralColor(chaussure.color) || clothing.some((i) => i.hex === chaussure.hex)) ? 1 : 0, // bonus +10
+    rs7: sac && chaussure && isStatement(sac) && isStatement(chaussure) ? 1 : 0, // pénalité −10
     rs8: matieres.size > 1 ? 1 : 0,                     // bonus +5
     ecart: form.length >= 2 ? Math.max(...form) - Math.min(...form) : 0,
   };
@@ -81,7 +89,7 @@ function mesurerUneFois(capsule: CatalogItem[], w: Weather, morphology: string):
   const sig = new Set<string>();
   const scores: number[] = [];
   let actifs = 0, cf = 0, c = 0, n = 0, d = 0, df = 0, conseil = 0, evalues = 0;
-  let rs1 = 0, rs2 = 0, rs8 = 0, ecart = 0, nLooks = 0;
+  let rs1 = 0, rs2 = 0, rs5 = 0, rs6 = 0, rs7 = 0, rs8 = 0, ecart = 0, nLooks = 0;
   for (const [o] of OCCASIONS) {
     for (let k = 0; k < TIRAGES; k++) {
       const { ids } = generateOutfit(capsule, w, o, "Présentiel", "Verre", [], "femme");
@@ -90,7 +98,7 @@ function mesurerUneFois(capsule: CatalogItem[], w: Weather, morphology: string):
       sig.add([...ids].sort((a, b) => a - b).join("-"));
       scores.push(computeLookScore(pieces, o, [], morphology, new Set<string>(), w).score);
       const t = termesScore(pieces);
-      rs1 += t.rs1; rs2 += t.rs2; rs8 += t.rs8; ecart += t.ecart; nLooks += 1;
+      rs1 += t.rs1; rs2 += t.rs2; rs5 += t.rs5; rs6 += t.rs6; rs7 += t.rs7; rs8 += t.rs8; ecart += t.ecart; nLooks += 1;
       if (pieces.every(isSport)) continue;
       evalues += 1;
       const s = scoreMorphoV2(pieces, morphology);
@@ -114,7 +122,8 @@ function mesurerUneFois(capsule: CatalogItem[], w: Weather, morphology: string):
     compForte: actifs ? cf / actifs : 0, comp: actifs ? c / actifs : 0, neutre: actifs ? n / actifs : 0,
     defav: actifs ? d / actifs : 0, defavFort: actifs ? df / actifs : 0,
     conseil: evalues ? conseil / evalues : 0,
-    rs1: nLooks ? rs1 / nLooks : 0, rs2: nLooks ? rs2 / nLooks : 0, rs8: nLooks ? rs8 / nLooks : 0,
+    rs1: nLooks ? rs1 / nLooks : 0, rs2: nLooks ? rs2 / nLooks : 0, rs5: nLooks ? rs5 / nLooks : 0,
+    rs6: nLooks ? rs6 / nLooks : 0, rs7: nLooks ? rs7 / nLooks : 0, rs8: nLooks ? rs8 / nLooks : 0,
     ecartFormalite: nLooks ? ecart / nLooks : 0,
   };
 }
@@ -188,7 +197,8 @@ describe("Phase 12 — V2 après retrait du legacy et de R-S9", () => {
               score: moy((x) => x.score), median: moy((x) => x.median), p10: moy((x) => x.p10), p90: moy((x) => x.p90),
               compForte: moy((x) => x.compForte), comp: moy((x) => x.comp), neutre: moy((x) => x.neutre),
               defav: moy((x) => x.defav), defavFort: moy((x) => x.defavFort), conseil: moy((x) => x.conseil),
-              rs1: moy((x) => x.rs1), rs2: moy((x) => x.rs2), rs8: moy((x) => x.rs8), ecartFormalite: moy((x) => x.ecartFormalite),
+              rs1: moy((x) => x.rs1), rs2: moy((x) => x.rs2), rs5: moy((x) => x.rs5), rs6: moy((x) => x.rs6),
+              rs7: moy((x) => x.rs7), rs8: moy((x) => x.rs8), ecartFormalite: moy((x) => x.ecartFormalite),
             });
           }
         }
@@ -202,10 +212,10 @@ describe("Phase 12 — V2 après retrait du legacy et de R-S9", () => {
             `${f(v.map((x) => x.defav)).padStart(10)}${f(v.map((x) => x.defavFort)).padStart(10)}${f(v.map((x) => x.conseil)).padStart(11)}`);
         }
         // Termes du score susceptibles de basculer — diagnostic obligatoire.
-        console.log(`  ${"".padEnd(5)}${"R-S1 (-10)".padStart(14)}${"R-S2 (+15)".padStart(14)}${"R-S8 (+5)".padStart(13)}${"écart formalité".padStart(18)}`);
+        console.log(`  ${"".padEnd(5)}${"R-S1 (-10)".padStart(13)}${"R-S2 (+15)".padStart(13)}${"R-S5 (-15)".padStart(13)}${"R-S6 (+10)".padStart(13)}${"R-S7 (-10)".padStart(13)}${"R-S8 (+5)".padStart(12)}${"écart form.".padStart(14)}`);
         for (const nom of ["B2", "B3"]) {
           const v = res.get(nom)!;
-          console.log(`  ${nom.padEnd(5)}${f(v.map((x) => x.rs1)).padStart(14)}${f(v.map((x) => x.rs2)).padStart(14)}${f(v.map((x) => x.rs8)).padStart(13)}${f(v.map((x) => x.ecartFormalite), 1, 2).padStart(18)}`);
+          console.log(`  ${nom.padEnd(5)}${f(v.map((x) => x.rs1)).padStart(13)}${f(v.map((x) => x.rs2)).padStart(13)}${f(v.map((x) => x.rs5)).padStart(13)}${f(v.map((x) => x.rs6)).padStart(13)}${f(v.map((x) => x.rs7)).padStart(13)}${f(v.map((x) => x.rs8)).padStart(12)}${f(v.map((x) => x.ecartFormalite), 1, 2).padStart(14)}`);
         }
       }
     }
