@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
+import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
@@ -314,31 +315,17 @@ export default function TenuesScreen() {
   // logic.ts) — jamais un diagnostic recalculé/inventé ici, seulement mis en
   // mots. Cf. types.ts (OutfitFailureReason) pour ce que chaque valeur
   // garantit réellement.
-  const emptyState = !noCompleteOutfit
+  // Les textes sont sortis dans emptyStateCopy (src/lib/emptyStateCopy.ts) :
+  // wording seul, testable hors rendu React. Les CONDITIONS de déclenchement
+  // sont strictement inchangées — même raison du moteur, mêmes trois branches,
+  // même repli sur "no_match" quand outfitFailureReason est null.
+  const emptyStateBase = !noCompleteOutfit
     ? null
-    : state.outfitFailureReason === "formality_gap"
-      ? {
-          title: "Il manque une pièce plus habillée",
-          body: "Tes pièces actuelles ne permettent pas encore de composer une tenue suffisamment habillée pour cette occasion.",
-          ctaLabel: "Ajouter une pièce plus habillée →",
-          onCta: actions.openAdd,
-        }
-      : state.outfitFailureReason === "missing_required_category"
-        ? {
-            title: usesRealClothing ? "Dressing insuffisant" : "Capsule insuffisante",
-            body: `Il manque au moins un haut et un bas (ou une robe/combinaison) dans ${sourceLabel} pour composer une tenue, quelle que soit l'occasion.`,
-            ctaLabel: "Ajouter des pièces →",
-            onCta: actions.openAdd,
-          }
-        : {
-            title: usesRealClothing ? "Ton dressing ne couvre pas encore cette occasion" : "Cette capsule ne couvre pas encore cette occasion",
-            body:
-              usesRealClothing
-                ? "Les pièces de ton dressing ne permettent pas encore de composer une tenue adaptée à cette occasion."
-                : "Les pièces de cette capsule ne permettent pas encore de composer une tenue adaptée à cette occasion.",
-            ctaLabel: null,
-            onCta: null,
-          };
+    : emptyStateCopy(state.outfitFailureReason ?? "no_match", sourceLabel);
+  const emptyState = emptyStateBase && {
+    ...emptyStateBase,
+    onCta: emptyStateBase.ctaLabel ? actions.openAdd : null,
+  };
 
   // Phrase d'explication de la recommandation (recette 19/08/2026) — par
   // template, jamais d'IA ; pas de température affichée tant que la
