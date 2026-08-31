@@ -350,6 +350,81 @@ describe("suggestions mortes — cause", () => {
     console.log(`\n  Une colonne nulle partout sauf sur une occasion signale un chemin de tirage unique :`);
     console.log(`  la catégorie n'a alors aucune voie d'accès aux neuf autres occasions.`);
 
+    // ═══ 10 · POURQUOI LE PULL S'EFFONDRE SUR LES OCCASIONS HABILLÉES ═══
+    //
+    // Le §9 montre une anti-corrélation nette entre veste et pull : entretien
+    // veste 74,5 % / pull 0,6 %, quotidien veste 30,7 % / pull 16,7 %. C'est
+    // une CORRÉLATION. Ce bloc la met à l'épreuve.
+    //
+    // `vesteProbability` est une règle interne du moteur : la neutraliser
+    // sortirait du périmètre de lecture seule. Le test se fait donc côté
+    // DONNÉES — retirer le concurrent de la capsule, jamais la règle. Et
+    // comme un pull peut aussi être tiré comme haut principal (TOP_LAYER_CATS
+    // fusionne haut et pull), un seul levier ne trancherait rien : les deux
+    // sont croisés.
+    //
+    //   A  capsule telle quelle                      (baseline)
+    //   B  sans veste ni manteau                     (levier 1 seul)
+    //   C  sans haut                                 (levier 2 seul)
+    //   D  sans veste, ni manteau, ni haut           (les deux)
+    //
+    // Baseline, chaque levier seul et la combinaison, dans la même exécution,
+    // sur les mêmes capsules. Retirer des pièces change la capsule : ce n'est
+    // pas « la règle désactivée », c'est « le concurrent absent ». La nuance
+    // est réelle et la conclusion doit s'y tenir.
+    //
+    // Le nombre de tenues NON VIDES est reporté pour chaque bras : retirer les
+    // hauts peut empêcher toute tenue, auquel cas un pourcentage calculé sur
+    // presque rien serait trompeur.
+    console.log(`\n════════ 10 · PULL CONTRE VESTE — TEST CROISÉ ════════`);
+    const BRAS = [
+      { nom: "A · capsule telle quelle", retire: [] as CategoryKey[] },
+      { nom: "B · sans veste/manteau", retire: ["veste", "manteau"] as CategoryKey[] },
+      { nom: "C · sans haut", retire: ["haut"] as CategoryKey[] },
+      { nom: "D · sans veste/manteau/haut", retire: ["veste", "manteau", "haut"] as CategoryKey[] },
+    ];
+    const occPull = new Map<string, number>();
+    const tenuesBras = new Map<string, Map<OccasionKey, number>>();
+    const pullsRessuscites = new Map<string, number>();
+    for (const bras of BRAS) {
+      tenuesBras.set(bras.nom, new Map());
+      pullsRessuscites.set(bras.nom, 0);
+    }
+    const pullsMorts = mortes.filter((m) => m.it.cat === "pull");
+    for (const c of cellules) {
+      for (const bras of BRAS) {
+        const capsule = bras.retire.length ? c.capsule.filter((it) => !bras.retire.includes(it.cat)) : c.capsule;
+        const m = mesure(capsule, c.w, c.saison, N_BASE);
+        const t = tenuesBras.get(bras.nom)!;
+        for (const occ of OCCS) {
+          occPull.set(`${bras.nom}|${occ}`, (occPull.get(`${bras.nom}|${occ}`) ?? 0) + (m.parCatOcc.get(`pull|${occ}`) ?? 0));
+          t.set(occ, (t.get(occ) ?? 0) + (m.tenuesParOcc.get(occ) ?? 0));
+        }
+        for (const pm of pullsMorts) {
+          if (pm.saison === c.saison && pm.style === c.style && m.parPiece.has(pm.it.id)) {
+            pullsRessuscites.set(bras.nom, (pullsRessuscites.get(bras.nom) ?? 0) + 1);
+          }
+        }
+      }
+    }
+    console.log(`  Part des tenues contenant un pull, par occasion et par bras.`);
+    console.log(`\n  ${"occasion".padEnd(18)}${BRAS.map((b) => b.nom.slice(0, 4).padStart(12)).join("")}`);
+    for (const occ of OCCS) {
+      const cols = BRAS.map((b) => pct(occPull.get(`${b.nom}|${occ}`) ?? 0, tenuesBras.get(b.nom)!.get(occ) ?? 0).padStart(12));
+      console.log(`  ${occ.padEnd(18)}${cols.join("")}`);
+    }
+    console.log(`\n  ${"bras".padEnd(32)}${"tenues non vides".padStart(18)}${"pulls ressuscités".padStart(20)}`);
+    for (const b of BRAS) {
+      const total = [...tenuesBras.get(b.nom)!.values()].reduce((x, y) => x + y, 0);
+      console.log(`  ${b.nom.padEnd(32)}${String(total).padStart(18)}${`${pullsRessuscites.get(b.nom)} / ${pullsMorts.length}`.padStart(20)}`);
+    }
+    console.log(`\n  Lecture :`);
+    console.log(`    B >> A   le pull perdait bien sa place à la veste : concurrence démontrée.`);
+    console.log(`    B ≈ A    la veste n'y est pour rien, la corrélation du §9 était trompeuse.`);
+    console.log(`    C >> A   le pull était écarté du tirage du haut principal par les hauts.`);
+    console.log(`    D ≈ A    aucun des deux : le pull est bloqué par autre chose, à chercher ailleurs.`);
+    console.log(`  Un bras dont les tenues non vides s'effondrent rend ses pourcentages ininterprétables.`);
+
     console.log(`\n  LECTURE SEULE. Aucun UPDATE, aucune modification de production.`);
     console.log(`  Aucune correction n'est proposée ici : cet audit établit une cause, rien de plus.`);
   }, 900_000);
