@@ -72,6 +72,10 @@ interface Mesure {
   parPiece: Map<number, number>;
   /** Nombre de tenues contenant AU MOINS une pièce de la catégorie. */
   parCat: Map<CategoryKey, number>;
+  /** Idem, ventilé par occasion — clé `cat|occasion`. */
+  parCatOcc: Map<string, number>;
+  /** Tenues non vides produites, par occasion. */
+  tenuesParOcc: Map<OccasionKey, number>;
   /** Tenues non vides produites. */
   tenues: number;
 }
@@ -80,6 +84,8 @@ interface Mesure {
 function mesure(capsule: CatalogItem[], w: ReturnType<typeof representativeWeatherFor>, s: CapsuleSeason, n: number): Mesure {
   const parPiece = new Map<number, number>();
   const parCat = new Map<CategoryKey, number>();
+  const parCatOcc = new Map<string, number>();
+  const tenuesParOcc = new Map<OccasionKey, number>();
   const index = new Map(capsule.map((it) => [it.id, it]));
   let tenues = 0;
   for (const occ of OCCS) {
@@ -87,16 +93,20 @@ function mesure(capsule: CatalogItem[], w: ReturnType<typeof representativeWeath
       const ids = generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme", s).ids;
       if (!ids.length) continue;
       tenues += 1;
+      tenuesParOcc.set(occ, (tenuesParOcc.get(occ) ?? 0) + 1);
       const cats = new Set<CategoryKey>();
       for (const id of ids) {
         parPiece.set(id, (parPiece.get(id) ?? 0) + 1);
         const it = index.get(id);
         if (it) cats.add(it.cat);
       }
-      for (const c of cats) parCat.set(c, (parCat.get(c) ?? 0) + 1);
+      for (const c of cats) {
+        parCat.set(c, (parCat.get(c) ?? 0) + 1);
+        parCatOcc.set(`${c}|${occ}`, (parCatOcc.get(`${c}|${occ}`) ?? 0) + 1);
+      }
     }
   }
-  return { parPiece, parCat, tenues };
+  return { parPiece, parCat, parCatOcc, tenuesParOcc, tenues };
 }
 
 const idsVus = (capsule: CatalogItem[], w: ReturnType<typeof representativeWeatherFor>, s: CapsuleSeason, n: number): Set<number> =>
@@ -289,6 +299,56 @@ describe("suggestions mortes — cause", () => {
     for (const e of exemples) {
       console.log(`  ${e.cause.padEnd(30)}${e.saison.padEnd(11)}${e.style.padEnd(16)}${String(e.cat).padEnd(13)}${e.nom}`);
     }
+
+    // ═══ 8 · OCCUPATION VENTILÉE PAR SAISON ═══
+    // Le §5 agrège les quatre saisons : « manteau 1,3 % » pouvait masquer
+    // 5 % en Hiver et 0 % ailleurs. Cette ventilation lève cette limite.
+    console.log(`\n════════ 8 · OCCUPATION PAR CATÉGORIE × SAISON ════════`);
+    const CIBLES: CategoryKey[] = ["pull", "manteau", "veste", "short", "haut", "pantalon"];
+    const occSaison = new Map<string, { occup: number; tenues: number; pieces: number; cellules: number }>();
+    const parOccasion = new Map<string, number>();
+    const tenuesOccasion = new Map<OccasionKey, number>();
+    for (const c of cellules) {
+      const m = mesure(c.capsule, c.w, c.saison, N_BASE);
+      for (const cat of CIBLES) {
+        const cle = `${cat}|${c.saison}`;
+        const a = occSaison.get(cle) ?? { occup: 0, tenues: 0, pieces: 0, cellules: 0 };
+        a.occup += m.parCat.get(cat) ?? 0;
+        a.tenues += m.tenues;
+        a.pieces += c.capsule.filter((it) => it.cat === cat).length;
+        a.cellules += 1;
+        occSaison.set(cle, a);
+        for (const occ of OCCS) {
+          parOccasion.set(`${cat}|${occ}`, (parOccasion.get(`${cat}|${occ}`) ?? 0) + (m.parCatOcc.get(`${cat}|${occ}`) ?? 0));
+        }
+      }
+      for (const occ of OCCS) tenuesOccasion.set(occ, (tenuesOccasion.get(occ) ?? 0) + (m.tenuesParOcc.get(occ) ?? 0));
+    }
+    console.log(`  Part des tenues contenant au moins une pièce de la catégorie, et pièces par capsule.`);
+    console.log(`\n  ${"catégorie".padEnd(12)}${CAPSULE_SEASONS.map((x) => x.padStart(16)).join("")}`);
+    for (const cat of CIBLES) {
+      const cols = CAPSULE_SEASONS.map((sa) => {
+        const a = occSaison.get(`${cat}|${sa}`)!;
+        return `${pct(a.occup, a.tenues)} (${(a.pieces / a.cellules).toFixed(1)})`;
+      });
+      console.log(`  ${String(cat).padEnd(12)}${cols.map((x) => x.padStart(16)).join("")}`);
+    }
+    console.log(`  Lecture : « part des tenues (pièces par capsule) ».`);
+
+    // ═══ 9 · OCCUPATION VENTILÉE PAR OCCASION ═══
+    // Lecture de code à confirmer ou infirmer par le moteur : le manteau n'est
+    // tiré qu'à une seule condition (logic.ts, pick(["manteau"]) sous
+    // forceEntretienVeste) — occasion « entretien » ET haut principal chemise.
+    // Aucun autre chemin n'ajoute un manteau à une tenue. Si c'est exact, son
+    // occupation doit être nulle sur les neuf autres occasions.
+    console.log(`\n════════ 9 · OCCUPATION PAR CATÉGORIE × OCCASION ════════`);
+    console.log(`  ${"occasion".padEnd(18)}${CIBLES.map((c) => String(c).padStart(12)).join("")}`);
+    for (const occ of OCCS) {
+      const t = tenuesOccasion.get(occ) ?? 0;
+      console.log(`  ${occ.padEnd(18)}${CIBLES.map((c) => pct(parOccasion.get(`${c}|${occ}`) ?? 0, t).padStart(12)).join("")}`);
+    }
+    console.log(`\n  Une colonne nulle partout sauf sur une occasion signale un chemin de tirage unique :`);
+    console.log(`  la catégorie n'a alors aucune voie d'accès aux neuf autres occasions.`);
 
     console.log(`\n  LECTURE SEULE. Aucun UPDATE, aucune modification de production.`);
     console.log(`  Aucune correction n'est proposée ici : cet audit établit une cause, rien de plus.`);
