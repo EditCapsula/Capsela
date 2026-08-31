@@ -59,9 +59,9 @@ describe("leviers de mesure — inertes par défaut", () => {
     expect(idsDesPulls(pool).filter((id) => vus.has(id))).toEqual([]);
   });
 
-  it("un levier explicitement à false est aussi inerte", () => {
+  it("un objet de leviers sans P1 est aussi inerte", () => {
     const pool = poolSansHaut();
-    const vus = tire(pool, { pullCommeHautPrincipal: false });
+    const vus = tire(pool, { superpositionMaillesFermees: true });
     expect(idsDesPulls(pool).filter((id) => vus.has(id))).toEqual([]);
   });
 
@@ -69,8 +69,27 @@ describe("leviers de mesure — inertes par défaut", () => {
   // qu'il sert à produire ne vaudrait rien.
   it("avec pullCommeHautPrincipal, un pull devient haut principal", () => {
     const pool = poolSansHaut();
-    const vus = tire(pool, { pullCommeHautPrincipal: true });
+    const vus = tire(pool, { pullCommeHautPrincipal: "tous" });
     expect(idsDesPulls(pool).some((id) => vus.has(id))).toBe(true);
+  });
+
+  // Le mode "base" est la traduction technique de l'arbitrage éditorial du
+  // 31/08/2026 (« un pull peut être le dessus principal, ou être porté sous
+  // une veste ») : c'est exactement le rôle que `hasBaseGarment` exige sous
+  // une veste au titre de R-B9. Un cardigan ne doit donc pas y entrer.
+  it("en mode base, un pull calque ne devient jamais haut principal", () => {
+    const pool: CatalogItem[] = [
+      item({ id: 1, category: "pull", name: "Cardigan long", sous_type: "Cardigan", role_piece: "calque" }),
+      item({ id: 2, category: "pantalon", name: "Pantalon droit" }),
+      item({ id: 3, category: "chaussures", name: "Mocassins", sous_type: "Mocassins" }),
+    ];
+    const [cardigan] = idsDesPulls(pool);
+    for (let k = 0; k < 120; k++) {
+      const ids = generateOutfit(pool, MILD, "quotidien", "Présentiel", "Verre", [], "femme", undefined, undefined, null, {
+        pullCommeHautPrincipal: "base",
+      }).ids;
+      expect(ids.includes(cardigan)).toBe(false);
+    }
   });
 });
 
@@ -91,7 +110,7 @@ describe("mailles fermées — deux d'entre elles ne se superposent jamais", () 
     const [fin, ample] = idsDesPulls(pool);
     for (let k = 0; k < 120; k++) {
       const ids = generateOutfit(pool, MILD, "quotidien", "Présentiel", "Verre", [], "femme", undefined, undefined, null, {
-        pullCommeHautPrincipal: true,
+        pullCommeHautPrincipal: "tous",
       }).ids;
       expect(ids.includes(fin) && ids.includes(ample)).toBe(false);
     }

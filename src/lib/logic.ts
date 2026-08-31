@@ -145,8 +145,20 @@ function isClosedKnit(it: Item): boolean {
  * que leur absence reproduit le comportement livré.
  */
 export interface LeviersMesure {
-  /** P1 — le tirage du haut principal s'ouvre à TOP_LAYER_CATS au lieu de la seule catégorie "haut". */
-  pullCommeHautPrincipal?: boolean;
+  /**
+   * P1 — le tirage du haut principal s'ouvre aux pulls au lieu de la seule
+   * catégorie "haut".
+   *
+   * `"base"` restreint l'ouverture aux pulls dont le rôle est déjà `base`,
+   * `"tous"` l'étend à tous les pulls y compris les `calque`. La distinction
+   * n'est pas cosmétique : R-B9 exige un vêtement de base sous une veste, et
+   * `hasBaseGarment` n'accepte un pull que s'il est `base`. Ouvrir à `"tous"`
+   * laisse donc un cardigan devenir dessus principal puis recevoir une veste,
+   * ce qui viole R-B9 — la seule règle qui empêche réellement une tenue
+   * d'être sauvegardée. Mesuré : 395 violations sur 12 800 tenues, contre
+   * zéro en production.
+   */
+  pullCommeHautPrincipal?: "tous" | "base";
   /**
    * Reproduit le comportement d'AVANT l'ouverture de la seconde couche aux
    * pulls (31/08/2026) : seul le rôle "calque" y donnait accès, donc jamais un
@@ -804,7 +816,10 @@ export function generateOutfit(
     // plancher plein, cf. hardCategoryFilter).
     // P1 (levier de mesure, inerte par défaut) — sans lui la catégorie demandée
     // reste "haut" seule : aucun pull ne peut être haut principal.
-    const hautCandidates = poolFor(leviers?.pullCommeHautPrincipal ? TOP_LAYER_CATS : ["haut"], true);
+    const ouverturePull = leviers?.pullCommeHautPrincipal;
+    const hautCandidates = poolFor(ouverturePull ? TOP_LAYER_CATS : ["haut"], true).filter(
+      (i) => i.cat !== "pull" || ouverturePull === "tous" || (ouverturePull === "base" && rolePieceOf(i) === "base")
+    );
     // Correctif 26/08/2026 (signalé : un haut explicitement ouvert à
     // "festive" n'apparaissait jamais dans une tenue festive) — ce second
     // plancher rejouait formalityOf() brut sur le haut, sans reprendre
@@ -1099,8 +1114,11 @@ function hasCoreOutfit(ids: number[], pool: Item[], leviers?: LeviersMesure): bo
   // attemptCoreOutfit le rejette et retente jusqu'à retomber sur un haut ou
   // une robe. Mesurer P1 sans ouvrir aussi ce point ne mesure pas P1 : cela
   // mesure son échec, et déplace massivement la composition vers la robe.
-  const socle: CategoryKey[] = leviers?.pullCommeHautPrincipal ? TOP_LAYER_CATS : ["haut"];
-  return items.some((i) => socle.includes(i.cat)) && items.some((i) => BOTTOMS.includes(i.cat));
+  const ouverturePull = leviers?.pullCommeHautPrincipal;
+  const estSocle = (i: Item) =>
+    i.cat === "haut" ||
+    (i.cat === "pull" && (ouverturePull === "tous" || (ouverturePull === "base" && rolePieceOf(i) === "base")));
+  return items.some(estSocle) && items.some((i) => BOTTOMS.includes(i.cat));
 }
 
 export interface GeneratedOutfitWithFallback extends GeneratedOutfit {

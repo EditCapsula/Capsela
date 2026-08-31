@@ -47,17 +47,49 @@ const pct = (n: number, t: number) => (t ? ((n / t) * 100).toFixed(1) : "—").p
 
 const BRAS: { nom: string; court: string; leviers?: LeviersMesure }[] = [
   { nom: "A · production actuelle", court: "A" },
-  { nom: "P1 · pull haut principal", court: "P1", leviers: { pullCommeHautPrincipal: true } },
-  { nom: "avant-P2 · pull non superposable", court: "avP2", leviers: { pullNonSuperposable: true } },
-  { nom: "P1 seul, sans P2", court: "P1-av", leviers: { pullCommeHautPrincipal: true, pullNonSuperposable: true } },
-  // Cinquième bras — ne teste aucun arbitrage. Il élucide un écart de ligne de
-  // base que je n'ai pas su expliquer : l'audit `suggestions-mortes` comptait
-  // 90 mortes, celui-ci 69 sur le même pool. La règle des mailles fermées est
-  // la seule modification de code entre les deux runs. Ce bras la neutralise :
-  // s'il retrouve 90, l'écart est expliqué ; sinon, il ne l'est pas et les
-  // valeurs absolues du bras A restent ininterprétables.
-  { nom: "R · sans règle mailles fermées", court: "R", leviers: { superpositionMaillesFermees: true } },
+  // P1' — la traduction technique de l'arbitrage éditorial du 31/08/2026 :
+  // « un pull peut être le dessus principal, ou être porté sous une veste ou
+  // un manteau ». C'est exactement le rôle `base`, celui que `hasBaseGarment`
+  // exige déjà sous une veste au titre de R-B9. Aucune donnée modifiée.
+  { nom: "P1' · pull base comme dessus", court: "P1'", leviers: { pullCommeHautPrincipal: "base" } },
+  // P1 « tous » — conservé UNIQUEMENT pour attribuer les 395 violations R-B9
+  // mesurées au tour précédent. Il n'est pas candidat : il laisse un cardigan
+  // devenir dessus principal, ce que l'arbitrage exclut explicitement.
+  { nom: "P1 · tous pulls (contre-épreuve)", court: "P1t", leviers: { pullCommeHautPrincipal: "tous" } },
+  // Ligne de base d'avant l'ouverture de la seconde couche, pour situer P2.
+  { nom: "avP2 · avant ouverture R-B8", court: "avP2", leviers: { pullNonSuperposable: true } },
+  // Ne teste aucun arbitrage : neutralise la règle des mailles fermées pour
+  // mesurer son coût réel, et pour voir si elle mord sur les données réelles.
+  { nom: "R · sans mailles fermées", court: "R", leviers: { superpositionMaillesFermees: true } },
 ];
+
+/**
+ * GRAINE — le correctif d'audit le plus important de ce fichier.
+ *
+ * `generateOutfit` est massivement stochastique (vesteProbability, les 0,3 et
+ * 0,35 des superpositions, `rand()` partout). Jusqu'ici chaque bras déroulait
+ * sa propre boucle et consommait donc son PROPRE flux aléatoire : « même
+ * exécution, même pool » était vrai, « mêmes tirages » ne l'était pas. Deux
+ * audits successifs ont ainsi rendu 90 et 69 pièces mortes sur le même pool —
+ * deux tirages d'une variable aléatoire, pas deux mesures d'une constante.
+ *
+ * En semant sur (saison, style, occasion, k) — sans le bras — tous les bras
+ * voient la MÊME suite de nombres et ne diffèrent QUE par le levier. C'est le
+ * point 3 de la règle d'audit mené à son terme : seul le levier étudié varie.
+ */
+function mulberry32(a: number): () => number {
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function grainePour(cle: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < cle.length; i++) { h ^= cle.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
 
 const estMailleFermee = (it: Item) => it.cat === "pull" && (it.subtype === "Pull" || it.subtype === "Col roulé");
 
@@ -75,13 +107,20 @@ interface Resultat {
   pullPrincipal: number;
   pullSecondaire: number;
   deuxMaillesFermees: number;
+  /** Les trois usages validés par l'arbitrage éditorial et aujourd'hui impossibles. */
+  pullSousVeste: number;
+  pullSousManteau: number;
+  /** Répartition demandée par l'arbitrage : saison, occasion, météo. */
+  pullSeulParSaison: Map<string, number>;
+  tenuesParSaison: Map<string, number>;
+  pullSeulParOcc: Map<OccasionKey, number>;
   parCatOcc: Map<string, number>;
   /** Signatures de tenues, pour repérer celles qu'un bras crée et que A ne produit pas. */
   echantillon: Map<string, string>;
 }
 
 describe("contrat pull / génération", () => {
-  it("mesure les quatre bras dans la même exécution", async () => {
+  it("mesure les cinq bras dans la même exécution, sur les mêmes tirages", async () => {
     if (!SUPABASE_URL || !SERVICE_ROLE_KEY) throw new Error("SUPABASE_URL et SB_SECRET_KEY sont requis.");
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const { data: rows, error } = await supabase
@@ -105,6 +144,7 @@ describe("contrat pull / génération", () => {
     const vide = (): Resultat => ({
       vus: new Set(), tenues: 0, tenuesParOcc: new Map(), occCouvertes: 0, violations: 0, tenuesAvecViolation: 0, rb1: 0, parRegle: new Map(),
       distinctes: new Set(), pullPrincipal: 0, pullSecondaire: 0, deuxMaillesFermees: 0, parCatOcc: new Map(), echantillon: new Map(),
+      pullSousVeste: 0, pullSousManteau: 0, pullSeulParSaison: new Map(), tenuesParSaison: new Map(), pullSeulParOcc: new Map(),
     });
     const res = new Map<string, Resultat>(BRAS.map((b) => [b.court, vide()]));
     /** Mortes par bras, pour la vitalité dans les deux sens. */
@@ -116,7 +156,15 @@ describe("contrat pull / génération", () => {
         for (const occ of OCCS) {
           let couverte = false;
           for (let k = 0; k < N; k++) {
-            const ids = generateOutfitWithFallback(c.capsule, c.w, occ, "Présentiel", "Verre", [], "femme", c.saison, b.leviers).ids;
+            // La graine ne dépend PAS du bras : tous voient la même suite.
+            const vraiRandom = Math.random;
+            Math.random = mulberry32(grainePour(`${c.saison}|${c.style}|${occ}|${k}`));
+            let ids: number[];
+            try {
+              ids = generateOutfitWithFallback(c.capsule, c.w, occ, "Présentiel", "Verre", [], "femme", c.saison, b.leviers).ids;
+            } finally {
+              Math.random = vraiRandom;
+            }
             if (!ids.length) continue;
             couverte = true;
             r.tenues += 1;
@@ -137,6 +185,17 @@ describe("contrat pull / génération", () => {
             if (pullSeul) r.pullPrincipal += 1;
             if (pulls.length && dessus.some((p) => p.cat === "haut")) r.pullSecondaire += 1;
             if (dessus.filter(estMailleFermee).length >= 2) r.deuxMaillesFermees += 1;
+            // Usages 2 et 3 de l'arbitrage. Mesurés en A avant toute ouverture :
+            // R-B8 est gardé par `!hasVeste` et le manteau n'arrive que par
+            // `forceEntretienVeste`, qui pose aussi une veste — donc attendus
+            // à zéro en production. C'est P1 qui les débloque, pas P2.
+            if (pulls.length && pieces.some((p) => p.cat === "veste")) r.pullSousVeste += 1;
+            if (pulls.length && pieces.some((p) => p.cat === "manteau")) r.pullSousManteau += 1;
+            r.tenuesParSaison.set(c.saison, (r.tenuesParSaison.get(c.saison) ?? 0) + 1);
+            if (pullSeul) {
+              r.pullSeulParSaison.set(c.saison, (r.pullSeulParSaison.get(c.saison) ?? 0) + 1);
+              r.pullSeulParOcc.set(occ, (r.pullSeulParOcc.get(occ) ?? 0) + 1);
+            }
             for (const cat of new Set(pieces.map((p) => p.cat))) {
               r.parCatOcc.set(`${cat}|${occ}`, (r.parCatOcc.get(`${cat}|${occ}`) ?? 0) + 1);
             }
@@ -262,6 +321,39 @@ describe("contrat pull / génération", () => {
     }
     console.log(`  « 2 mailles fermées » doit rester à 0,0 % partout : la règle du 31/08/2026 est active par défaut.`);
 
+    console.log(`\n════════ 5c · LES CINQ USAGES DE L'ARBITRAGE ÉDITORIAL ════════`);
+    console.log(`  L'arbitrage du 31/08/2026 valide cinq usages du pull. Ce tableau dit lesquels`);
+    console.log(`  le moteur SAIT produire. Un usage validé mais mesuré à 0,0 % n'est pas rare :`);
+    console.log(`  il est structurellement impossible.`);
+    console.log(`  ${"bras".padEnd(28)}${"1 pull+bas".padStart(12)}${"2 pull+veste".padStart(14)}${"3 pull+manteau".padStart(16)}${"4 chemise+pull".padStart(16)}${"5 pull+pull".padStart(13)}`);
+    for (const b of BRAS) {
+      const r = res.get(b.court)!;
+      console.log(`  ${b.nom.padEnd(28)}${pct(r.pullPrincipal, r.tenues).padStart(12)}${pct(r.pullSousVeste, r.tenues).padStart(14)}` +
+        `${pct(r.pullSousManteau, r.tenues).padStart(16)}${pct(r.pullSecondaire, r.tenues).padStart(16)}${pct(r.deuxMaillesFermees, r.tenues).padStart(13)}`);
+    }
+    console.log(`  L'usage 5 est le seul INTERDIT par l'arbitrage : il doit rester à 0,0 %.`);
+
+    console.log(`\n════════ 5d · RÉPARTITION DU PULL COMME DESSUS PRINCIPAL ════════`);
+    console.log(`  Demandé par l'arbitrage : « la mesure doit déterminer comment cette possibilité`);
+    console.log(`  se répartit selon saison, occasion, contexte météo ». Ce n'est PAS un objectif`);
+    console.log(`  à maximiser — c'est une répartition à juger éditorialement.`);
+    console.log(`\n  Par saison (météo représentative entre parenthèses) :`);
+    console.log(`  ${"bras".padEnd(28)}${CAPSULE_SEASONS.map((sa) => `${sa} ${representativeWeatherFor(sa).temp}°`.padStart(18)).join("")}`);
+    for (const b of BRAS) {
+      const r = res.get(b.court)!;
+      console.log(`  ${b.nom.padEnd(28)}` +
+        CAPSULE_SEASONS.map((sa) => pct(r.pullSeulParSaison.get(sa) ?? 0, r.tenuesParSaison.get(sa) ?? 0).padStart(18)).join(""));
+    }
+    console.log(`\n  Par occasion :`);
+    console.log(`  ${"occasion".padEnd(20)}${BRAS.map((b) => b.court.padStart(12)).join("")}`);
+    for (const occ of OCCS) {
+      console.log(`  ${occ.padEnd(20)}` +
+        BRAS.map((b) => {
+          const r = res.get(b.court)!;
+          return pct(r.pullSeulParOcc.get(occ) ?? 0, r.tenuesParOcc.get(occ) ?? 0).padStart(12);
+        }).join(""));
+    }
+
     console.log(`\n════════ 5b · OCCUPATION PAR CATÉGORIE — RÉGRESSIONS ÉVENTUELLES ════════`);
     console.log(`  Une catégorie qui recule est une pièce que le pull a évincée.`);
     const suivies: CategoryKey[] = ["haut", "pull", "veste", "manteau", "robe", "pantalon"];
@@ -305,7 +397,7 @@ describe("contrat pull / génération", () => {
     console.log(`  sont produites par P1+P2, ont un PULL POUR SEUL DESSUS, et n'existent pas dans`);
     console.log(`  le bras A. C'est très exactement ce que l'arbitrage a autorisé. À juger à l'œil.`);
     const dejaVues = res.get("A")!.distinctes;
-    const nouvelles = [...res.get("P1")!.echantillon.entries()].filter(([sig]) => !dejaVues.has(sig)).slice(0, 30);
+    const nouvelles = [...res.get("P1'")!.echantillon.entries()].filter(([sig]) => !dejaVues.has(sig)).slice(0, 30);
     if (!nouvelles.length) console.log(`  (aucune tenue nouvelle)`);
     for (const [, texte] of nouvelles) console.log(`  ${texte}`);
 
