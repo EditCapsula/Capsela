@@ -953,11 +953,20 @@ export function generateOutfit(
           // un `haut` — un t-shirt ne se porte pas par-dessus une chemise, et
           // NEVER_LAYER_RE continue de l'en empêcher.
           //
-          // Mesuré avant ouverture (audit pull-contrat, 4 bras, même exécution,
-          // 12 800 tenues par bras) : mortalité des pulls 53 -> 0, zéro nouvelle
-          // pièce morte, couverture d'occasion 320/320 inchangée, violations de
-          // règles dures 18,6 % contre 18,6 %, R-B9 à zéro, R-B8 et R-B5 en
-          // BAISSE, composition des tenues inchangée. Aucun coût mesuré.
+          // Mesuré avant ouverture (audit pull-contrat, même exécution, 12 800
+          // tenues par bras) : mortalité des pulls 53 -> 0, zéro nouvelle pièce
+          // morte, couverture d'occasion 320/320 inchangée, violations de règles
+          // dures 18,6 % contre 18,6 %, R-B9 à zéro, composition des tenues
+          // inchangée. Aucun coût mesuré.
+          //
+          // Ce commentaire a d'abord affirmé « R-B8 et R-B5 en BAISSE ». RETIRÉ :
+          // les bras de cette mesure ne partageaient pas leur flux aléatoire, et
+          // ces deux écarts (696 -> 637, 15 -> 10) sont trop petits pour être
+          // distingués du bruit. L'audit sème désormais ses tirages ; les cinq
+          // constats ci-dessus, eux, tiennent — le premier parce qu'avant cette
+          // ligne aucun chemin de code n'existait, donc la probabilité était
+          // exactement nulle, et les autres parce qu'ils saturent ou portent sur
+          // des écarts d'un ordre de grandeur.
           (rolePieceOf(i) === "calque" || (i.cat === "pull" && leviers?.pullNonSuperposable !== true)) &&
           !(isShirtLike(firstLayer) && isShirtLike(i)) &&
           // Mailles fermées — règle active par défaut (arbitrage 31/08/2026).
