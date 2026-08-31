@@ -61,7 +61,7 @@ describe("leviers de mesure — inertes par défaut", () => {
 
   it("un levier explicitement à false est aussi inerte", () => {
     const pool = poolSansHaut();
-    const vus = tire(pool, { pullCommeHautPrincipal: false, pullSuperposable: false });
+    const vus = tire(pool, { pullCommeHautPrincipal: false });
     expect(idsDesPulls(pool).filter((id) => vus.has(id))).toEqual([]);
   });
 
@@ -119,7 +119,7 @@ describe("garde-fou — aucun appelant de production ne passe de levier", () => 
   it("LeviersMesure n'est nommé nulle part hors de logic.ts", () => {
     const coupables = fichiersProduction(SRC)
       .filter((f) => !f.endsWith(join("lib", "logic.ts")))
-      .filter((f) => /LeviersMesure|pullCommeHautPrincipal|pullSuperposable|superpositionMaillesFermees/.test(readFileSync(f, "utf8")));
+      .filter((f) => /LeviersMesure|pullCommeHautPrincipal|pullNonSuperposable|superpositionMaillesFermees/.test(readFileSync(f, "utf8")));
     expect(coupables.map((f) => f.slice(SRC.length + 1))).toEqual([]);
   });
 });

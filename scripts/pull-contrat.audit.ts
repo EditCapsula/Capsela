@@ -48,8 +48,8 @@ const pct = (n: number, t: number) => (t ? ((n / t) * 100).toFixed(1) : "—").p
 const BRAS: { nom: string; court: string; leviers?: LeviersMesure }[] = [
   { nom: "A · production actuelle", court: "A" },
   { nom: "P1 · pull haut principal", court: "P1", leviers: { pullCommeHautPrincipal: true } },
-  { nom: "P2 · pull superposable", court: "P2", leviers: { pullSuperposable: true } },
-  { nom: "P1+P2 · les deux", court: "P1+P2", leviers: { pullCommeHautPrincipal: true, pullSuperposable: true } },
+  { nom: "avant-P2 · pull non superposable", court: "avP2", leviers: { pullNonSuperposable: true } },
+  { nom: "P1 seul, sans P2", court: "P1-av", leviers: { pullCommeHautPrincipal: true, pullNonSuperposable: true } },
   // Cinquième bras — ne teste aucun arbitrage. Il élucide un écart de ligne de
   // base que je n'ai pas su expliquer : l'audit `suggestions-mortes` comptait
   // 90 mortes, celui-ci 69 sur le même pool. La règle des mailles fermées est
@@ -305,7 +305,7 @@ describe("contrat pull / génération", () => {
     console.log(`  sont produites par P1+P2, ont un PULL POUR SEUL DESSUS, et n'existent pas dans`);
     console.log(`  le bras A. C'est très exactement ce que l'arbitrage a autorisé. À juger à l'œil.`);
     const dejaVues = res.get("A")!.distinctes;
-    const nouvelles = [...res.get("P1+P2")!.echantillon.entries()].filter(([sig]) => !dejaVues.has(sig)).slice(0, 30);
+    const nouvelles = [...res.get("P1")!.echantillon.entries()].filter(([sig]) => !dejaVues.has(sig)).slice(0, 30);
     if (!nouvelles.length) console.log(`  (aucune tenue nouvelle)`);
     for (const [, texte] of nouvelles) console.log(`  ${texte}`);
 

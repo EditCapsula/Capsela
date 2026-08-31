@@ -147,8 +147,12 @@ function isClosedKnit(it: Item): boolean {
 export interface LeviersMesure {
   /** P1 — le tirage du haut principal s'ouvre à TOP_LAYER_CATS au lieu de la seule catégorie "haut". */
   pullCommeHautPrincipal?: boolean;
-  /** P2 — un pull devient candidat de seconde couche quelle que soit sa coupe, au lieu d'exiger le rôle "calque". */
-  pullSuperposable?: boolean;
+  /**
+   * Reproduit le comportement d'AVANT l'ouverture de la seconde couche aux
+   * pulls (31/08/2026) : seul le rôle "calque" y donnait accès, donc jamais un
+   * pull de coupe fine. Conservé pour qu'un audit retrouve la ligne de base.
+   */
+  pullNonSuperposable?: boolean;
   /** Reproduit le comportement d'AVANT la règle des mailles fermées, pour en mesurer le coût réel. */
   superpositionMaillesFermees?: boolean;
 }
@@ -928,9 +932,18 @@ export function generateOutfit(
         (i) =>
           TOP_LAYER_CATS.includes(i.cat) &&
           !chosen.some((c) => c.id === i.id) &&
-          // P2 (levier de mesure, inerte par défaut) — sans lui, seul le rôle
-          // "calque" ouvre la seconde couche, donc jamais un pull de coupe fine.
-          (rolePieceOf(i) === "calque" || (leviers?.pullSuperposable === true && i.cat === "pull")) &&
+          // Un pull est superposable quelle que soit sa coupe (arbitrage
+          // éditorial du 31/08/2026 : « un pull de coupe fine peut être proposé
+          // par-dessus une chemise »). Le rôle "calque" reste la condition pour
+          // un `haut` — un t-shirt ne se porte pas par-dessus une chemise, et
+          // NEVER_LAYER_RE continue de l'en empêcher.
+          //
+          // Mesuré avant ouverture (audit pull-contrat, 4 bras, même exécution,
+          // 12 800 tenues par bras) : mortalité des pulls 53 -> 0, zéro nouvelle
+          // pièce morte, couverture d'occasion 320/320 inchangée, violations de
+          // règles dures 18,6 % contre 18,6 %, R-B9 à zéro, R-B8 et R-B5 en
+          // BAISSE, composition des tenues inchangée. Aucun coût mesuré.
+          (rolePieceOf(i) === "calque" || (i.cat === "pull" && leviers?.pullNonSuperposable !== true)) &&
           !(isShirtLike(firstLayer) && isShirtLike(i)) &&
           // Mailles fermées — règle active par défaut (arbitrage 31/08/2026).
           (leviers?.superpositionMaillesFermees === true || !(isClosedKnit(firstLayer) && isClosedKnit(i)))
