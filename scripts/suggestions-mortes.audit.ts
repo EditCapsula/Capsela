@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { CAPSULE_SEASONS, computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
 import { generateOutfitWithFallback } from "../src/lib/logic";
+import { coupeOf, formalityOf, isNeutralColor, rolePieceOf } from "../src/lib/attributes";
 import { OCCASIONS } from "../src/lib/data";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, CategoryKey, OccasionKey } from "../src/lib/types";
@@ -424,6 +425,84 @@ describe("suggestions mortes — cause", () => {
     console.log(`    C >> A   le pull était écarté du tirage du haut principal par les hauts.`);
     console.log(`    D ≈ A    aucun des deux : le pull est bloqué par autre chose, à chercher ailleurs.`);
     console.log(`  Un bras dont les tenues non vides s'effondrent rend ses pourcentages ininterprétables.`);
+
+    // ═══ 11 · CE QUI SÉPARE UN PULL MORT DE SON VOISIN VIVANT ═══
+    //
+    // Le §10 a réfuté la piste veste : les 53 pulls morts le restent même
+    // quand on leur laisse tout l'emplacement du dessus. Ils ne perdent pas
+    // un tirage équitable — quelque chose préfère systématiquement leurs
+    // voisines. La lecture du code désigne `harmonize`, qui applique trois
+    // filtres DURS (et non un classement) capables de vider un candidat :
+    //
+    //   couleur  si une pièce colorée est déjà choisie, le pool est réduit
+    //            aux NEUTRES dès qu'il en existe un ;
+    //   R-B2     écart de formalité <= 2 avec la moyenne déjà choisie ;
+    //   R-B4     coupe identique à celle de l'ancre haut/bas, si non regular.
+    //
+    // Descriptif d'abord, contrefactuel ensuite : si les morts et les vivants
+    // se séparent nettement sur un de ces trois axes, la cause est presque
+    // lue avant toute manipulation.
+    console.log(`\n════════ 11 · PULLS MORTS CONTRE PULLS VIVANTS ════════`);
+    interface Profil { n: number; nonNeutre: number; form: number[]; oversize: number; ajuste: number; calque: number }
+    const vide2 = (): Profil => ({ n: 0, nonNeutre: 0, form: [], oversize: 0, ajuste: 0, calque: 0 });
+    const profMorts = vide2();
+    const profVivants = vide2();
+    const ajouteProfil = (pr: Profil, it: CatalogItem) => {
+      pr.n += 1;
+      if (!isNeutralColor(it.color)) pr.nonNeutre += 1;
+      pr.form.push(formalityOf(it));
+      const c = coupeOf(it);
+      if (c === "oversize") pr.oversize += 1;
+      if (c === "ajusté") pr.ajuste += 1;
+      if (rolePieceOf(it) === "calque") pr.calque += 1;
+    };
+    const idsMorts = new Set(pullsMorts.map((m) => `${m.saison}|${m.style}|${m.it.id}`));
+    for (const c of cellules) {
+      const vus = idsVus(c.capsule, c.w, c.saison, N_LARGE);
+      for (const it of c.capsule.filter((x) => x.cat === "pull")) {
+        if (idsMorts.has(`${c.saison}|${c.style}|${it.id}`)) ajouteProfil(profMorts, it);
+        else if (vus.has(it.id)) ajouteProfil(profVivants, it);
+      }
+    }
+    const moyForm = (pr: Profil) => (pr.form.length ? (pr.form.reduce((a, b) => a + b, 0) / pr.form.length).toFixed(2) : "—");
+    console.log(`  ${"population".padEnd(16)}${"n".padStart(6)}${"non neutre".padStart(13)}${"formalité moy.".padStart(16)}${"oversize".padStart(11)}${"ajusté".padStart(9)}${"calque".padStart(9)}`);
+    for (const [nom, pr] of [["morts", profMorts], ["vivants", profVivants]] as [string, Profil][]) {
+      console.log(`  ${nom.padEnd(16)}${String(pr.n).padStart(6)}${pct(pr.nonNeutre, pr.n).padStart(13)}${moyForm(pr).padStart(16)}` +
+        `${pct(pr.oversize, pr.n).padStart(11)}${pct(pr.ajuste, pr.n).padStart(9)}${pct(pr.calque, pr.n).padStart(9)}`);
+    }
+    console.log(`  Un écart net sur une colonne désigne le filtre ; des colonnes semblables l'excluent.`);
+
+    // ═══ 12 · CONTREFACTUEL SUR LES TROIS FILTRES DE harmonize ═══
+    //
+    // CORRECTION D'UNE ERREUR DE CONCEPTION DU §3, à signaler avant les
+    // chiffres. Le levier « formalité » du §3 poussait niveauFormalite à 4.
+    // Or R-B2 borne l'ÉCART à la moyenne de la tenue : monter à 4 peut
+    // AGGRAVER l'exclusion quand cette moyenne est basse. Le « 0 pièce
+    // attribuée à la formalité » du §3 n'exonère donc pas la formalité — il
+    // ne teste qu'une valeur, et la plus défavorable. Les valeurs 1 et 3 sont
+    // ajoutées ici.
+    console.log(`\n════════ 12 · CONTREFACTUEL SUR LES FILTRES DE harmonize ════════`);
+    const VARIANTES: { nom: string; f: (it: CatalogItem) => CatalogItem }[] = [
+      { nom: "couleur -> neutre (Noir)", f: (it) => ({ ...it, color: "Noir" }) },
+      { nom: "formalité -> 1", f: (it) => ({ ...it, niveauFormalite: 1 }) },
+      { nom: "formalité -> 3", f: (it) => ({ ...it, niveauFormalite: 3 }) },
+      { nom: "formalité -> 4 (contrôle §3)", f: (it) => ({ ...it, niveauFormalite: 4 }) },
+      { nom: "coupe -> non renseignée", f: (it) => ({ ...it, coupe: undefined }) },
+      { nom: "rôle -> calque", f: (it) => ({ ...it, rolePiece: "calque" }) },
+      { nom: "les six ensemble", f: (it) => ({ ...it, color: "Noir", niveauFormalite: 1, coupe: undefined, rolePiece: "calque" }) },
+    ];
+    console.log(`  Sur les ${pullsMorts.length} pulls morts. Un levier à la fois, même capsule, même exécution.`);
+    console.log(`\n  ${"levier neutralisé".padEnd(32)}${"ressuscités".padStart(14)}${"part".padStart(9)}`);
+    for (const v of VARIANTES) {
+      let n = 0;
+      for (const m of pullsMorts) {
+        const capsule = m.capsule.map((x) => (x.id === m.it.id ? v.f(m.it) : x));
+        if (idsVus(capsule, m.w, m.saison, N_CONTRE).has(m.it.id)) n += 1;
+      }
+      console.log(`  ${v.nom.padEnd(32)}${String(n).padStart(14)}${pct(n, pullsMorts.length).padStart(9)}`);
+    }
+    console.log(`\n  Un levier qui ressuscite massivement désigne le filtre responsable.`);
+    console.log(`  Tous à zéro : la cause n'est dans aucun des trois filtres de harmonize.`);
 
     console.log(`\n  LECTURE SEULE. Aucun UPDATE, aucune modification de production.`);
     console.log(`  Aucune correction n'est proposée ici : cet audit établit une cause, rien de plus.`);
