@@ -122,6 +122,37 @@ function isShirtLike(it: Item): boolean {
   return it.subtype === "Chemise" || it.subtype === "Chemisier";
 }
 
+/**
+ * Maille FERMÉE (arbitrage éditorial du 31/08/2026) — deux d'entre elles ne se
+ * superposent pas, exactement au même titre que deux chemises (R-B10). Comme
+ * R-B10, la règle vise les SOUS-TYPES et non la catégorie : `pull` recouvre
+ * aussi "Gilet" et "Cardigan" (cf. data.ts), qui restent des calques
+ * parfaitement légitimes par-dessus une maille fermée — c'est même le cas
+ * d'usage que R-B8 cite en exemple ("gilet léger"). Une interdiction par
+ * catégorie aurait donc annulé une partie de la règle qu'elle complète.
+ */
+function isClosedKnit(it: Item): boolean {
+  return it.cat === "pull" && (it.subtype === "Pull" || it.subtype === "Col roulé");
+}
+
+/**
+ * Leviers de MESURE (31/08/2026) — tous facultatifs, tous inertes par défaut :
+ * non renseignés, la génération se comporte exactement comme avant leur
+ * introduction. Ils existent pour qu'un audit compare un avant et un après
+ * DANS LA MÊME EXÉCUTION sans dupliquer le pipeline (cf. AGENTS.md,
+ * « Conséquence pratique pour les scripts d'audit »), comme `capsuleSeason`
+ * avant eux. Aucun appelant de production ne les passe, et un test verrouille
+ * que leur absence reproduit le comportement livré.
+ */
+export interface LeviersMesure {
+  /** P1 — le tirage du haut principal s'ouvre à TOP_LAYER_CATS au lieu de la seule catégorie "haut". */
+  pullCommeHautPrincipal?: boolean;
+  /** P2 — un pull devient candidat de seconde couche quelle que soit sa coupe, au lieu d'exiger le rôle "calque". */
+  pullSuperposable?: boolean;
+  /** Reproduit le comportement d'AVANT la règle des mailles fermées, pour en mesurer le coût réel. */
+  superpositionMaillesFermees?: boolean;
+}
+
 /** Exporté pour CreateLookScreen (filtre dur du picker manuel, brief design section 4). */
 export function recentlyWorn(it: Item): boolean {
   return it.worn != null && it.worn <= 2;
@@ -412,7 +443,9 @@ export function generateOutfit(
    * saison mais hors de ses bornes thermiques reste exclue. Non renseigné,
    * le comportement météo d'origine est strictement conservé (tenue du jour).
    */
-  capsuleSeason?: CapsuleSeason | null
+  capsuleSeason?: CapsuleSeason | null,
+  /** Leviers de mesure — inertes par défaut, cf. LeviersMesure. */
+  leviers?: LeviersMesure
 ): GeneratedOutfit {
   // Référentiel saisonnier : celui de la capsule quand il est connu, sinon
   // celui que la météo porte (tenue du jour sous météo réelle, inchangée).
@@ -765,7 +798,9 @@ export function generateOutfit(
     // que si aucun haut n'atteint seul la formalité requise — jamais pour
     // le bas, qui doit rester autonome (poolFor(BOTTOMS) reste soumis au
     // plancher plein, cf. hardCategoryFilter).
-    const hautCandidates = poolFor(["haut"], true);
+    // P1 (levier de mesure, inerte par défaut) — sans lui la catégorie demandée
+    // reste "haut" seule : aucun pull ne peut être haut principal.
+    const hautCandidates = poolFor(leviers?.pullCommeHautPrincipal ? TOP_LAYER_CATS : ["haut"], true);
     // Correctif 26/08/2026 (signalé : un haut explicitement ouvert à
     // "festive" n'apparaissait jamais dans une tenue festive) — ce second
     // plancher rejouait formalityOf() brut sur le haut, sans reprendre
@@ -893,8 +928,12 @@ export function generateOutfit(
         (i) =>
           TOP_LAYER_CATS.includes(i.cat) &&
           !chosen.some((c) => c.id === i.id) &&
-          rolePieceOf(i) === "calque" &&
-          !(isShirtLike(firstLayer) && isShirtLike(i))
+          // P2 (levier de mesure, inerte par défaut) — sans lui, seul le rôle
+          // "calque" ouvre la seconde couche, donc jamais un pull de coupe fine.
+          (rolePieceOf(i) === "calque" || (leviers?.pullSuperposable === true && i.cat === "pull")) &&
+          !(isShirtLike(firstLayer) && isShirtLike(i)) &&
+          // Mailles fermées — règle active par défaut (arbitrage 31/08/2026).
+          (leviers?.superpositionMaillesFermees === true || !(isClosedKnit(firstLayer) && isClosedKnit(i)))
       );
       const layer = rand(harmonize(layerCandidates, chosen, false));
       if (layer) { chosen.push(layer); ids.push(layer.id); }
@@ -1083,11 +1122,12 @@ function attemptCoreOutfit(
   preferredHexes: string[],
   gender: "femme" | "homme" | null,
   formalityOverride: number,
-  capsuleSeason?: CapsuleSeason | null
+  capsuleSeason?: CapsuleSeason | null,
+  leviers?: LeviersMesure
 ): GeneratedOutfit {
-  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason);
+  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers);
   for (let attempt = 1; attempt < MAX_ATTEMPTS_PER_TIER && !hasCoreOutfit(result.ids, pool); attempt++) {
-    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason);
+    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers);
   }
   return result;
 }
@@ -1114,12 +1154,14 @@ export function generateOutfitWithFallback(
    * saison mais hors de ses bornes thermiques reste exclue. Non renseigné,
    * le comportement météo d'origine est strictement conservé (tenue du jour).
    */
-  capsuleSeason?: CapsuleSeason | null
+  capsuleSeason?: CapsuleSeason | null,
+  /** Leviers de mesure — inertes par défaut, cf. LeviersMesure. */
+  leviers?: LeviersMesure
 ): GeneratedOutfitWithFallback {
   const requestedFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
   const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
   for (const tier of chain) {
-    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason);
+    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason, leviers);
     if (hasCoreOutfit(result.ids, pool)) {
       return { ...result, requestedFormality, resolvedFormality: tier, formalityDowngraded: tier !== requestedFormality, noCompleteOutfit: false };
     }
@@ -1152,7 +1194,7 @@ export function generateOutfitWithFallback(
   if (!hasStructuralOption) {
     reason = "missing_required_category";
   } else {
-    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason);
+    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason, leviers);
     reason = hasCoreOutfit(probe.ids, pool) ? "formality_gap" : "no_match";
   }
   return {
