@@ -50,6 +50,13 @@ const BRAS: { nom: string; court: string; leviers?: LeviersMesure }[] = [
   { nom: "P1 · pull haut principal", court: "P1", leviers: { pullCommeHautPrincipal: true } },
   { nom: "P2 · pull superposable", court: "P2", leviers: { pullSuperposable: true } },
   { nom: "P1+P2 · les deux", court: "P1+P2", leviers: { pullCommeHautPrincipal: true, pullSuperposable: true } },
+  // Cinquième bras — ne teste aucun arbitrage. Il élucide un écart de ligne de
+  // base que je n'ai pas su expliquer : l'audit `suggestions-mortes` comptait
+  // 90 mortes, celui-ci 69 sur le même pool. La règle des mailles fermées est
+  // la seule modification de code entre les deux runs. Ce bras la neutralise :
+  // s'il retrouve 90, l'écart est expliqué ; sinon, il ne l'est pas et les
+  // valeurs absolues du bras A restent ininterprétables.
+  { nom: "R · sans règle mailles fermées", court: "R", leviers: { superpositionMaillesFermees: true } },
 ];
 
 const estMailleFermee = (it: Item) => it.cat === "pull" && (it.subtype === "Pull" || it.subtype === "Col roulé");
@@ -119,9 +126,15 @@ describe("contrat pull / génération", () => {
             for (const p of pieces) r.vus.add(p.id);
 
             // Composition — un pull est « principal » s'il est le seul dessus.
+            // « Pull seul dessus » exclut les tenues à robe/combinaison : un pull
+            // posé en calque sur une robe n'est pas un pull porté seul, et le
+            // compter ainsi gonflait la métrique de 2,2 % dans un bras où aucun
+            // pull ne PEUT être haut principal — un chiffre impossible, donc faux.
+            const unePiece = pieces.some((p) => p.cat === "robe" || p.cat === "combinaison");
             const dessus = pieces.filter((p) => p.cat === "haut" || p.cat === "pull");
             const pulls = dessus.filter((p) => p.cat === "pull");
-            if (pulls.length && !dessus.some((p) => p.cat === "haut")) r.pullPrincipal += 1;
+            const pullSeul = pulls.length > 0 && !unePiece && !dessus.some((p) => p.cat === "haut");
+            if (pullSeul) r.pullPrincipal += 1;
             if (pulls.length && dessus.some((p) => p.cat === "haut")) r.pullSecondaire += 1;
             if (dessus.filter(estMailleFermee).length >= 2) r.deuxMaillesFermees += 1;
             for (const cat of new Set(pieces.map((p) => p.cat))) {
@@ -148,7 +161,13 @@ describe("contrat pull / génération", () => {
               for (const h of dures) r.parRegle.set(h.id, (r.parRegle.get(h.id) ?? 0) + 1);
             }
 
-            if (b.court !== "A" && r.echantillon.size < 400) {
+            // Échantillon pour lecture humaine — RESTREINT aux tenues où un pull
+            // est le seul dessus. Sans ce filtre, il listait des tenues « absentes
+            // du bras A » qui l'étaient par pur hasard du tirage, sans le moindre
+            // pull : 8 642 tenues distinctes tirées aléatoirement rendent la
+            // quasi-totalité des signatures inédites. L'échantillon ne montrait
+            // donc rien de ce qu'il prétendait montrer.
+            if (b.court !== "A" && pullSeul && r.echantillon.size < 400) {
               r.echantillon.set(
                 `${c.saison}|${c.style}|${occ}|${[...ids].sort((x, y) => x - y).join(",")}`,
                 `${c.saison} · ${c.style} · ${occ} — ${pieces.filter((p) => CLOTHING_CATS.includes(p.cat)).map((p) => p.name).join(" + ")}`
@@ -283,7 +302,8 @@ describe("contrat pull / génération", () => {
     // ═══ 7 · LECTURE HUMAINE ═══
     console.log(`\n════════ 7 · TENUES NOUVELLES — POUR LECTURE HUMAINE ════════`);
     console.log(`  Le réalisme éditorial n'est mesurable par AUCUNE métrique existante. Ces tenues`);
-    console.log(`  sont produites par P1+P2 et n'existent pas dans le bras A. À juger à l'œil.`);
+    console.log(`  sont produites par P1+P2, ont un PULL POUR SEUL DESSUS, et n'existent pas dans`);
+    console.log(`  le bras A. C'est très exactement ce que l'arbitrage a autorisé. À juger à l'œil.`);
     const dejaVues = res.get("A")!.distinctes;
     const nouvelles = [...res.get("P1+P2")!.echantillon.entries()].filter(([sig]) => !dejaVues.has(sig)).slice(0, 30);
     if (!nouvelles.length) console.log(`  (aucune tenue nouvelle)`);

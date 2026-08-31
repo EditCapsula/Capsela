@@ -1078,10 +1078,16 @@ const FORMALITY_FALLBACK_CHAIN: Record<number, number[]> = {
 };
 
 /** Une tenue a un socle vestimentaire valide : haut+bas, ou une pièce robe/combinaison — jamais seulement chaussures/accessoires (section 5, "lunettes + mocassins ≠ tenue valide"). */
-function hasCoreOutfit(ids: number[], pool: Item[]): boolean {
+function hasCoreOutfit(ids: number[], pool: Item[], leviers?: LeviersMesure): boolean {
   const items = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
   if (items.some((i) => i.cat === "robe" || i.cat === "combinaison")) return true;
-  return items.some((i) => i.cat === "haut") && items.some((i) => BOTTOMS.includes(i.cat));
+  // Second verrou de P1, distinct du tirage lui-même : sans le levier, un
+  // socle "pull + bas" n'est PAS reconnu comme une tenue valide, donc
+  // attemptCoreOutfit le rejette et retente jusqu'à retomber sur un haut ou
+  // une robe. Mesurer P1 sans ouvrir aussi ce point ne mesure pas P1 : cela
+  // mesure son échec, et déplace massivement la composition vers la robe.
+  const socle: CategoryKey[] = leviers?.pullCommeHautPrincipal ? TOP_LAYER_CATS : ["haut"];
+  return items.some((i) => socle.includes(i.cat)) && items.some((i) => BOTTOMS.includes(i.cat));
 }
 
 export interface GeneratedOutfitWithFallback extends GeneratedOutfit {
@@ -1126,7 +1132,7 @@ function attemptCoreOutfit(
   leviers?: LeviersMesure
 ): GeneratedOutfit {
   let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers);
-  for (let attempt = 1; attempt < MAX_ATTEMPTS_PER_TIER && !hasCoreOutfit(result.ids, pool); attempt++) {
+  for (let attempt = 1; attempt < MAX_ATTEMPTS_PER_TIER && !hasCoreOutfit(result.ids, pool, leviers); attempt++) {
     result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers);
   }
   return result;
@@ -1162,7 +1168,7 @@ export function generateOutfitWithFallback(
   const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
   for (const tier of chain) {
     const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason, leviers);
-    if (hasCoreOutfit(result.ids, pool)) {
+    if (hasCoreOutfit(result.ids, pool, leviers)) {
       return { ...result, requestedFormality, resolvedFormality: tier, formalityDowngraded: tier !== requestedFormality, noCompleteOutfit: false };
     }
   }
@@ -1195,7 +1201,7 @@ export function generateOutfitWithFallback(
     reason = "missing_required_category";
   } else {
     const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason, leviers);
-    reason = hasCoreOutfit(probe.ids, pool) ? "formality_gap" : "no_match";
+    reason = hasCoreOutfit(probe.ids, pool, leviers) ? "formality_gap" : "no_match";
   }
   return {
     ids: [],
