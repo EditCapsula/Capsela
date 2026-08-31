@@ -2,6 +2,7 @@ import { describe, it } from "vitest";
 import { writeFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
+import { STYLE_ID_TO_CATALOG_LABEL } from "../src/lib/profile";
 import {
   coupeOf, formalityOf, intensiteOf, isStatement, matiereOf, metalOf, rolePieceOf, tonsOf,
 } from "../src/lib/attributes";
@@ -34,7 +35,11 @@ import { composerNom, estLongueur, matierePrincipale, type Decoupage } from "../
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const STYLES = ["Casual chic", "Classique chic", "Romantique", "Bohème", "Streetwear", "Preppy", "Glamour"];
+// LIBELLÉS catalogue, et non StyleId : ce sont les valeurs que porte la
+// colonne `styles` et qu'attend styleFit(item, label). Ils ne touchent jamais
+// `profile.styles`. Dérivés de la table de correspondance plutôt qu'écrits en
+// dur — la liste précédente en omettait un, « Minimaliste ».
+const LIBELLES_STYLE = Object.values(STYLE_ID_TO_CATALOG_LABEL);
 const MORPHOS = ["f_sablier", "f_triangle_inverse", "f_poire", "f_rectangle", "f_pomme"];
 
 function derives(row: VestiaireRow) {
@@ -44,7 +49,7 @@ function derives(row: VestiaireRow) {
     coupe: coupeOf(it), formalite: formalityOf(it), statement: isStatement(it),
     matiere: matiereOf(it), metal: metalOf(it), role: rolePieceOf(it),
     tons: tonsOf(it), intensite: intensiteOf(it),
-    styles: STYLES.filter((s) => styleFit(it, s)),
+    styles: LIBELLES_STYLE.filter((s) => styleFit(it, s)),
     morphoFit: MORPHOS.filter((m) => morphoFit(it, m)),
     morphoAvoid: MORPHOS.filter((m) => morphoVigilance(it, m)),
   };

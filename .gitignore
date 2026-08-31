@@ -46,3 +46,8 @@ next-env.d.ts
 tableau-de-controle-noms.csv
 termes-sous-type.csv
 renommages-surs.sql
+coupe-backfill.csv
+couverture-morpho.csv
+morpho-looks.csv
+morpho-annotation-priorite.csv
+morpho-candidats.csv

@@ -1089,7 +1089,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           s.workMode,
           s.dateContext,
           paletteHexes(profile),
-          profile.gender
+          profile.gender,
+          // Même saison que la capsule construite juste au-dessus : sans elle,
+          // la génération redérivait son bucket de la température réelle et
+          // pouvait écarter les pièces de la capsule qu'elle vient de recevoir
+          // (correctif 29/08/2026).
+          season
         );
         return {
           ...s,

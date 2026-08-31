@@ -10,6 +10,9 @@ import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
+import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
+import { emptyStateCopy } from "@/lib/emptyStateCopy";
+import { missingSuggestionText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
@@ -87,31 +90,6 @@ const MODE_STYLES = {
   hybride: { color: "#8A6B3F", bg: "#F3EDDD", border: "#E2D6BD", dot: "#B99A63" },
   dressing_complet: { color: "#3F5A47", bg: "#E9F0E9", border: "#CFE0D2", dot: "#6E9179" },
 } as const;
-
-const MISSING_LABELS: Record<string, string> = {
-  haut: "un haut",
-  bas: "un bas",
-  chaussures: "des chaussures",
-  accessoire: "un accessoire",
-  sac: "un sac",
-  bijou: "un bijou",
-  // R-B18 : une pièce de la tenue est sous son seuil de température et
-  // aucun gilet/cardigan/veste compatible n'a été trouvé pour compenser.
-  chaud: "une pièce plus chaude",
-};
-
-function missingSuggestionText(missingCats: string[]): string {
-  // "moins_habille" n'est pas une catégorie manquante mais un repli de
-  // formalité sur des pièces déjà présentes (cf. bannière dédiée
-  // formalityDowngraded ci-dessous) — jamais mélangé à cette phrase
-  // "il te manque un/une X", qui suppose une catégorie vide.
-  const words = Array.from(new Set(missingCats.filter((k) => k !== "moins_habille").map((k) => MISSING_LABELS[k]).filter(Boolean)));
-  if (words.length === 0) return "";
-  if (words.length === 1) return "Il te manque " + words[0] + " pour compléter cette tenue.";
-  const last = words[words.length - 1];
-  const head = words.slice(0, -1).join(", ");
-  return "Il te manque " + head + " et " + last + " pour compléter cette tenue.";
-}
 
 export default function TenuesScreen() {
   const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, vestiairePool, actions } = useCapsela();
@@ -313,31 +291,17 @@ export default function TenuesScreen() {
   // logic.ts) — jamais un diagnostic recalculé/inventé ici, seulement mis en
   // mots. Cf. types.ts (OutfitFailureReason) pour ce que chaque valeur
   // garantit réellement.
-  const emptyState = !noCompleteOutfit
+  // Les textes sont sortis dans emptyStateCopy (src/lib/emptyStateCopy.ts) :
+  // wording seul, testable hors rendu React. Les CONDITIONS de déclenchement
+  // sont strictement inchangées — même raison du moteur, mêmes trois branches,
+  // même repli sur "no_match" quand outfitFailureReason est null.
+  const emptyStateBase = !noCompleteOutfit
     ? null
-    : state.outfitFailureReason === "formality_gap"
-      ? {
-          title: "Il manque une pièce plus habillée",
-          body: "Tes pièces actuelles ne permettent pas encore de composer une tenue suffisamment habillée pour cette occasion.",
-          ctaLabel: "Ajouter une pièce plus habillée →",
-          onCta: actions.openAdd,
-        }
-      : state.outfitFailureReason === "missing_required_category"
-        ? {
-            title: usesRealClothing ? "Dressing insuffisant" : "Capsule insuffisante",
-            body: `Il manque au moins un haut et un bas (ou une robe/combinaison) dans ${sourceLabel} pour composer une tenue, quelle que soit l'occasion.`,
-            ctaLabel: "Ajouter des pièces →",
-            onCta: actions.openAdd,
-          }
-        : {
-            title: usesRealClothing ? "Ton dressing ne couvre pas encore cette occasion" : "Cette capsule ne couvre pas encore cette occasion",
-            body:
-              usesRealClothing
-                ? "Les pièces de ton dressing ne permettent pas encore de composer une tenue adaptée à cette occasion."
-                : "Les pièces de cette capsule ne permettent pas encore de composer une tenue adaptée à cette occasion.",
-            ctaLabel: null,
-            onCta: null,
-          };
+    : emptyStateCopy(state.outfitFailureReason ?? "no_match", sourceLabel);
+  const emptyState = emptyStateBase && {
+    ...emptyStateBase,
+    onCta: emptyStateBase.ctaLabel ? actions.openAdd : null,
+  };
 
   // Phrase d'explication de la recommandation (recette 19/08/2026) — par
   // template, jamais d'IA ; pas de température affichée tant que la
@@ -371,6 +335,12 @@ export default function TenuesScreen() {
   // plutôt que de disparaître net. La donnée vivante prime toujours quand
   // elle existe encore. Calculé ici (pas dans une IIFE au fil du JSX) pour
   // rester une donnée de rendu ordinaire.
+  const badges = outfitBadges({
+    scoreBadge: lookScore.badge,
+    formalityDowngraded,
+    noCompleteOutfit,
+  });
+
   const liveProactiveByKey = new Map(lookScore.proactives.map((p) => [p.key, p]));
   const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)]));
 
@@ -572,21 +542,35 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      <div className="flex justify-between items-center mt-[22px] mb-3">
-        <div className="flex items-center gap-[9px]">
+      <div className="flex justify-between items-center gap-3 mt-[22px] mb-3">
+        {/* flex-wrap : deux pastilles peuvent désormais coexister à côté du
+            libellé, la ligne ne doit pas déborder sur un écran étroit. */}
+        <div className="flex items-center flex-wrap gap-[9px]">
           <span className="text-[11px] tracking-[.16em] uppercase text-muted">La combinaison</span>
-          {!noCompleteOutfit &&
-            (formalityDowngraded ? (
-              <span className="text-[9.5px] tracking-[.06em] uppercase text-[#8A6B3F] bg-[#F3EDDD] rounded-full px-[9px] py-[3px]">
-                Meilleure alternative
+          {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la qualité
+              vient du score, le registre vient du repli de formalité. Une
+              tenue peut porter les deux — aucune exclusivité ici. Pastille
+              PLEINE pour le badge principal, pastille DÉTOURÉE et muette pour
+              le registre : la hiérarchie passe par le remplissage, jamais par
+              une couleur d'alerte (le terracotta et bg-warm-bg de cet écran
+              signalent un avertissement, ils sont réservés à ça). */}
+          {badges.map((key) =>
+            key === "recommande" ? (
+              <span
+                key={key}
+                className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]"
+              >
+                {BADGE_RECOMMANDE}
               </span>
             ) : (
-              lookScore.badge === "recommande" && (
-                <span className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
-                  Recommandé
-                </span>
-              )
-            ))}
+              <span
+                key={key}
+                className="text-[9.5px] tracking-[.06em] uppercase text-muted border border-border rounded-full px-[9px] py-[3px]"
+              >
+                {BADGE_REGISTRE}
+              </span>
+            )
+          )}
         </div>
         {/* "↻ Autre tenue" (section 2) : n'a de sens que s'il y a déjà une
             tenue à régénérer — jamais affiché à côté d'un état vide. En mode
@@ -932,9 +916,16 @@ export default function TenuesScreen() {
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">✦</span>
           <div className="flex-1">
+            {/* Ancien texte : « Ta capsule n\'a pas de tenue suffisamment
+                habillée pour cette occasion. On te propose l\'alternative la
+                plus adaptée avec tes pièces. » Retiré : « n\'a pas » et
+                « suffisamment » faisaient porter un manque sur le vestiaire de
+                l\'utilisatrice, et « la plus adaptée » est un superlatif jamais
+                démontré. Le bandeau porte maintenant ce que la pastille ne peut
+                pas dire — la DIMENSION du repli — au lieu de répéter le mot du
+                badge. */}
             <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
-              Ta capsule n&apos;a pas de tenue suffisamment habillée pour cette occasion. On te propose l&apos;alternative la
-              plus adaptée avec tes pièces.
+              Pour cette occasion, on te propose un registre plus sobre, composé avec les pièces de {sourceLabel}.
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
               Ajouter une pièce plus habillée →

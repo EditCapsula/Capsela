@@ -47,7 +47,10 @@ export function findCompatibleStyles(
   const compatible: StyleId[] = [];
   for (const styleId of candidates) {
     const candidateCapsule = computeDefaultCapsule({ ...profile, styles: [styleId] }, weather, excludedIds, season, vestiairePool);
-    const result = generateOutfitWithFallback(candidateCapsule, weather, occasion, workMode, dateContext, preferredHexes, profile.gender);
+    // `season` sert au référentiel saisonnier de la tenue comme il sert déjà à
+    // celui de la capsule ci-dessus — sans quoi la capsule et sa génération ne
+    // parlent pas de la même saison (correctif 29/08/2026).
+    const result = generateOutfitWithFallback(candidateCapsule, weather, occasion, workMode, dateContext, preferredHexes, profile.gender, season);
     if (!result.noCompleteOutfit) compatible.push(styleId);
   }
   return compatible;

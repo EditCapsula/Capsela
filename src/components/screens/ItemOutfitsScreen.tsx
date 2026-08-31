@@ -50,8 +50,13 @@ export default function ItemOutfitsScreen() {
   const preferredHexes = useMemo(() => paletteHexes(profile), [profile]);
 
   const variations = useMemo(
-    () => (!pivot ? [] : getOutfitsForItem(pivot.id, pool, weather, preferredHexes, {}, profile.gender)),
-    [pivot, pool, weather, preferredHexes, profile.gender]
+    // capsuleSeason transmis explicitement (correctif 29/08/2026) : le
+    // référentiel saisonnier vient de la capsule affichée, jamais de la
+    // température représentative — 16 °C au printemps basculait le bucket
+    // météo en "Automne / Hiver" et écartait les pièces Printemps/Été de
+    // leur propre capsule. La météo continue de gouverner la température.
+    () => (!pivot ? [] : getOutfitsForItem(pivot.id, pool, weather, preferredHexes, {}, profile.gender, capsuleSeason)),
+    [pivot, pool, weather, preferredHexes, profile.gender, capsuleSeason]
   );
 
   // Génération à la demande du visuel de la pièce pivot (correctif 23/08/2026,
