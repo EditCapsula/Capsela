@@ -67,16 +67,40 @@ function neutralise(it: CatalogItem, leviers: Levier[]): CatalogItem {
   return r;
 }
 
-/** Ids vus dans au moins une tenue, sur les dix occasions × n tirages. */
-function idsVus(capsule: CatalogItem[], w: ReturnType<typeof representativeWeatherFor>, s: CapsuleSeason, n: number): Set<number> {
-  const vus = new Set<number>();
+interface Mesure {
+  /** Nombre de tenues contenant la pièce, par id. */
+  parPiece: Map<number, number>;
+  /** Nombre de tenues contenant AU MOINS une pièce de la catégorie. */
+  parCat: Map<CategoryKey, number>;
+  /** Tenues non vides produites. */
+  tenues: number;
+}
+
+/** Dix occasions × n tirages, sur la capsule telle quelle. */
+function mesure(capsule: CatalogItem[], w: ReturnType<typeof representativeWeatherFor>, s: CapsuleSeason, n: number): Mesure {
+  const parPiece = new Map<number, number>();
+  const parCat = new Map<CategoryKey, number>();
+  const index = new Map(capsule.map((it) => [it.id, it]));
+  let tenues = 0;
   for (const occ of OCCS) {
     for (let k = 0; k < n; k++) {
-      for (const id of generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme", s).ids) vus.add(id);
+      const ids = generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme", s).ids;
+      if (!ids.length) continue;
+      tenues += 1;
+      const cats = new Set<CategoryKey>();
+      for (const id of ids) {
+        parPiece.set(id, (parPiece.get(id) ?? 0) + 1);
+        const it = index.get(id);
+        if (it) cats.add(it.cat);
+      }
+      for (const c of cats) parCat.set(c, (parCat.get(c) ?? 0) + 1);
     }
   }
-  return vus;
+  return { parPiece, parCat, tenues };
 }
+
+const idsVus = (capsule: CatalogItem[], w: ReturnType<typeof representativeWeatherFor>, s: CapsuleSeason, n: number): Set<number> =>
+  new Set(mesure(capsule, w, s, n).parPiece.keys());
 
 describe("suggestions mortes — cause", () => {
   it("mesure la mortalité, puis attribue chaque mort à un levier par contrefactuel", async () => {
@@ -151,6 +175,8 @@ describe("suggestions mortes — cause", () => {
     const inc = (k: string) => compte.set(k, (compte.get(k) ?? 0) + 1);
     /** Détail nominatif, plafonné pour rester lisible. */
     const exemples: { cause: string; saison: CapsuleSeason; style: string; nom: string; cat: CategoryKey }[] = [];
+    /** Cause retenue pour CHAQUE morte — le §4 doit porter sur les 90, jamais sur l'échantillon. */
+    const causeParMorte = new Map<(typeof mortes)[number], string>();
 
     for (const m of mortes) {
       const rejoue = (leviers: Levier[]): boolean => {
@@ -164,6 +190,7 @@ describe("suggestions mortes — cause", () => {
       else if (seuls.length > 1) cause = `PLUSIEURS (${seuls.join("+")})`;
       else cause = rejoue(LEVIERS) ? "INTERACTION" : "CONCURRENCE";
       inc(cause);
+      causeParMorte.set(m, cause);
       if (exemples.length < 40) exemples.push({ cause, saison: m.saison, style: m.style, nom: m.it.name, cat: m.it.cat });
     }
 
@@ -186,13 +213,78 @@ describe("suggestions mortes — cause", () => {
     console.log(`  Bijou et accessoire ne sont tirés qu'avec une probabilité (accessoryProbabilities),`);
     console.log(`  veste et manteau seulement quand la météo ou la formalité les appelle. Une morte dans`);
     console.log(`  ces catégories n'a pas le même sens qu'une morte sur un haut ou un bas.`);
+    const concurrentes = mortes.filter((m) => causeParMorte.get(m) === "CONCURRENCE");
     const conc = new Map<CategoryKey, number>();
-    for (const e of exemples.filter((x) => x.cause === "CONCURRENCE")) conc.set(e.cat, (conc.get(e.cat) ?? 0) + 1);
-    if (!conc.size) console.log(`  (aucune pièce CONCURRENCE dans l'échantillon nominatif ci-dessous)`);
-    for (const [cat, n] of [...conc.entries()].sort((a, b) => b[1] - a[1])) console.log(`    ${String(cat).padEnd(14)}${String(n).padStart(5)}`);
+    for (const m of concurrentes) conc.set(m.it.cat, (conc.get(m.it.cat) ?? 0) + 1);
+    console.log(`  Sur les ${concurrentes.length} pièces CONCURRENCE — toutes, pas un échantillon :`);
+    for (const [cat, n] of [...conc.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`    ${String(cat).padEnd(14)}${String(n).padStart(5)}  ${pct(n, concurrentes.length)}`);
+    }
+
+    // ═══ 5 · LA CATÉGORIE EST-ELLE RAREMENT TIRÉE, OU SATURÉE ? ═══
+    console.log(`\n════════ 5 · OCCUPATION DES CATÉGORIES ════════`);
+    console.log(`  Deux explications concurrentes à une morte, que ce tableau sépare :`);
+    console.log(`    (a) SATURATION  la catégorie est tirée souvent, mais un seul exemplaire par tenue —`);
+    console.log(`                    au-delà d'un certain nombre de pièces, le surplus est inatteignable.`);
+    console.log(`    (b) RARETÉ      la catégorie n'est presque jamais tirée — même deux pièces suffisent`);
+    console.log(`                    à en laisser une morte.`);
+    console.log(`  « tenues » = part des tenues contenant au moins une pièce de la catégorie.`);
+    console.log(`  « places/pièce » = tenues occupées ÷ pièces de la catégorie dans la capsule.`);
+    console.log(`\n  ${"catégorie".padEnd(14)}${"pièces/caps.".padStart(13)}${"tenues".padStart(10)}${"places/pièce".padStart(14)}${"mortes".padStart(9)}`);
+    const agCat = new Map<CategoryKey, { pieces: number; occup: number; tenues: number; cellules: number }>();
+    for (const c of cellules) {
+      const m = mesure(c.capsule, c.w, c.saison, N_BASE);
+      for (const it of c.capsule) {
+        const a = agCat.get(it.cat) ?? { pieces: 0, occup: 0, tenues: 0, cellules: 0 };
+        a.pieces += 1;
+        agCat.set(it.cat, a);
+      }
+      for (const cat of new Set(c.capsule.map((it) => it.cat))) {
+        const a = agCat.get(cat)!;
+        a.occup += m.parCat.get(cat) ?? 0;
+        a.tenues += m.tenues;
+        a.cellules += 1;
+      }
+    }
+    const mortesParCat = new Map<CategoryKey, number>();
+    for (const m of mortes) mortesParCat.set(m.it.cat, (mortesParCat.get(m.it.cat) ?? 0) + 1);
+    for (const [cat, a] of [...agCat.entries()].sort((x, y) => (y[1].occup / y[1].tenues) - (x[1].occup / x[1].tenues))) {
+      const piecesParCaps = a.pieces / a.cellules;
+      const partTenues = a.occup / a.tenues;
+      console.log(`  ${String(cat).padEnd(14)}${piecesParCaps.toFixed(1).padStart(13)}${(pct(a.occup, a.tenues)).padStart(10)}` +
+        `${(partTenues > 0 ? (partTenues / piecesParCaps).toFixed(2) : "—").padStart(14)}${String(mortesParCat.get(cat) ?? 0).padStart(9)}`);
+    }
+
+    // ═══ 6 · LA MORTE COEXISTE-T-ELLE AVEC DES VIVANTES DE SA CATÉGORIE ? ═══
+    console.log(`\n════════ 6 · VOISINAGE IMMÉDIAT DE CHAQUE MORTE ════════`);
+    console.log(`  Test direct de la concurrence intra-catégorie : dans SA capsule, combien de pièces`);
+    console.log(`  partagent sa catégorie, et combien d'entre elles sont vivantes ?`);
+    console.log(`    seule de sa catégorie      -> la concurrence intra-catégorie est exclue.`);
+    console.log(`    entourée de vivantes       -> concurrence intra-catégorie démontrée.`);
+    console.log(`    catégorie entièrement morte -> la catégorie n'est jamais tirée, autre cause.`);
+    let seule = 0, entouree = 0, catMorte = 0;
+    const detailVoisinage: { saison: CapsuleSeason; style: string; nom: string; cat: CategoryKey; total: number; vivantes: number }[] = [];
+    for (const m of concurrentes) {
+      const vus = idsVus(m.capsule, m.w, m.saison, N_LARGE);
+      const memeCat = m.capsule.filter((x) => x.cat === m.it.cat);
+      const vivantes = memeCat.filter((x) => vus.has(x.id)).length;
+      if (memeCat.length === 1) seule += 1;
+      else if (vivantes > 0) entouree += 1;
+      else catMorte += 1;
+      if (detailVoisinage.length < 25) {
+        detailVoisinage.push({ saison: m.saison, style: m.style, nom: m.it.name, cat: m.it.cat, total: memeCat.length, vivantes });
+      }
+    }
+    console.log(`\n  seule de sa catégorie        : ${String(seule).padStart(4)}  ${pct(seule, concurrentes.length)}`);
+    console.log(`  entourée de vivantes         : ${String(entouree).padStart(4)}  ${pct(entouree, concurrentes.length)}`);
+    console.log(`  catégorie entièrement morte  : ${String(catMorte).padStart(4)}  ${pct(catMorte, concurrentes.length)}`);
+    console.log(`\n  ${"saison".padEnd(11)}${"style".padEnd(16)}${"cat".padEnd(13)}${"cat.".padStart(6)}${"viv.".padStart(6)}  pièce`);
+    for (const d of detailVoisinage) {
+      console.log(`  ${d.saison.padEnd(11)}${d.style.padEnd(16)}${String(d.cat).padEnd(13)}${String(d.total).padStart(6)}${String(d.vivantes).padStart(6)}  ${d.nom}`);
+    }
 
     // ═══ 5 · ÉCHANTILLON NOMINATIF ═══
-    console.log(`\n════════ 5 · ÉCHANTILLON NOMINATIF (40 premières) ════════`);
+    console.log(`\n════════ 7 · ÉCHANTILLON NOMINATIF (40 premières) ════════`);
     console.log(`  ${"cause".padEnd(30)}${"saison".padEnd(11)}${"style".padEnd(16)}${"cat".padEnd(13)}pièce`);
     for (const e of exemples) {
       console.log(`  ${e.cause.padEnd(30)}${e.saison.padEnd(11)}${e.style.padEnd(16)}${String(e.cat).padEnd(13)}${e.nom}`);
