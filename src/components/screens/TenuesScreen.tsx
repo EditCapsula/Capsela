@@ -10,6 +10,7 @@ import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
+import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
@@ -371,6 +372,12 @@ export default function TenuesScreen() {
   // plutôt que de disparaître net. La donnée vivante prime toujours quand
   // elle existe encore. Calculé ici (pas dans une IIFE au fil du JSX) pour
   // rester une donnée de rendu ordinaire.
+  const badges = outfitBadges({
+    scoreBadge: lookScore.badge,
+    formalityDowngraded,
+    noCompleteOutfit,
+  });
+
   const liveProactiveByKey = new Map(lookScore.proactives.map((p) => [p.key, p]));
   const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)]));
 
@@ -572,21 +579,35 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      <div className="flex justify-between items-center mt-[22px] mb-3">
-        <div className="flex items-center gap-[9px]">
+      <div className="flex justify-between items-center gap-3 mt-[22px] mb-3">
+        {/* flex-wrap : deux pastilles peuvent désormais coexister à côté du
+            libellé, la ligne ne doit pas déborder sur un écran étroit. */}
+        <div className="flex items-center flex-wrap gap-[9px]">
           <span className="text-[11px] tracking-[.16em] uppercase text-muted">La combinaison</span>
-          {!noCompleteOutfit &&
-            (formalityDowngraded ? (
-              <span className="text-[9.5px] tracking-[.06em] uppercase text-[#8A6B3F] bg-[#F3EDDD] rounded-full px-[9px] py-[3px]">
-                Meilleure alternative
+          {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la qualité
+              vient du score, le registre vient du repli de formalité. Une
+              tenue peut porter les deux — aucune exclusivité ici. Pastille
+              PLEINE pour le badge principal, pastille DÉTOURÉE et muette pour
+              le registre : la hiérarchie passe par le remplissage, jamais par
+              une couleur d'alerte (le terracotta et bg-warm-bg de cet écran
+              signalent un avertissement, ils sont réservés à ça). */}
+          {badges.map((key) =>
+            key === "recommande" ? (
+              <span
+                key={key}
+                className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]"
+              >
+                {BADGE_RECOMMANDE}
               </span>
             ) : (
-              lookScore.badge === "recommande" && (
-                <span className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
-                  Recommandé
-                </span>
-              )
-            ))}
+              <span
+                key={key}
+                className="text-[9.5px] tracking-[.06em] uppercase text-muted border border-border rounded-full px-[9px] py-[3px]"
+              >
+                {BADGE_REGISTRE}
+              </span>
+            )
+          )}
         </div>
         {/* "↻ Autre tenue" (section 2) : n'a de sens que s'il y a déjà une
             tenue à régénérer — jamais affiché à côté d'un état vide. En mode
@@ -932,9 +953,16 @@ export default function TenuesScreen() {
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">✦</span>
           <div className="flex-1">
+            {/* Ancien texte : « Ta capsule n\'a pas de tenue suffisamment
+                habillée pour cette occasion. On te propose l\'alternative la
+                plus adaptée avec tes pièces. » Retiré : « n\'a pas » et
+                « suffisamment » faisaient porter un manque sur le vestiaire de
+                l\'utilisatrice, et « la plus adaptée » est un superlatif jamais
+                démontré. Le bandeau porte maintenant ce que la pastille ne peut
+                pas dire — la DIMENSION du repli — au lieu de répéter le mot du
+                badge. */}
             <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
-              Ta capsule n&apos;a pas de tenue suffisamment habillée pour cette occasion. On te propose l&apos;alternative la
-              plus adaptée avec tes pièces.
+              Pour cette occasion, on te propose un registre plus sobre, composé avec les pièces de ta capsule.
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
               Ajouter une pièce plus habillée →
