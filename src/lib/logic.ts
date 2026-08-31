@@ -1604,7 +1604,7 @@ export function computeLookScore(
   ) {
     proactives.push({
       key: "layer",
-      text: "Il te manque un débardeur ou un t-shirt pour compléter cette tenue.",
+      text: "Un débardeur ou un t-shirt dessous compléterait cette tenue.",
     });
   }
 
@@ -1664,7 +1664,7 @@ export function computeLookScore(
   if (allBlack && !hasColorAccessory && !dismissed.has("color")) {
     proactives.push({
       key: "color",
-      text: "Il te manque une touche de couleur pour compléter cette tenue.",
+      text: "Une touche de couleur réveillerait ce total look noir.",
       suggestedId: findSuggestedPiece(["bijou", "accessoire"], (i) => isColorAccent(i.color)),
     });
   }

@@ -12,6 +12,7 @@ import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
+import { missingSuggestionText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
@@ -89,31 +90,6 @@ const MODE_STYLES = {
   hybride: { color: "#8A6B3F", bg: "#F3EDDD", border: "#E2D6BD", dot: "#B99A63" },
   dressing_complet: { color: "#3F5A47", bg: "#E9F0E9", border: "#CFE0D2", dot: "#6E9179" },
 } as const;
-
-const MISSING_LABELS: Record<string, string> = {
-  haut: "un haut",
-  bas: "un bas",
-  chaussures: "des chaussures",
-  accessoire: "un accessoire",
-  sac: "un sac",
-  bijou: "un bijou",
-  // R-B18 : une pièce de la tenue est sous son seuil de température et
-  // aucun gilet/cardigan/veste compatible n'a été trouvé pour compenser.
-  chaud: "une pièce plus chaude",
-};
-
-function missingSuggestionText(missingCats: string[]): string {
-  // "moins_habille" n'est pas une catégorie manquante mais un repli de
-  // formalité sur des pièces déjà présentes (cf. bannière dédiée
-  // formalityDowngraded ci-dessous) — jamais mélangé à cette phrase
-  // "il te manque un/une X", qui suppose une catégorie vide.
-  const words = Array.from(new Set(missingCats.filter((k) => k !== "moins_habille").map((k) => MISSING_LABELS[k]).filter(Boolean)));
-  if (words.length === 0) return "";
-  if (words.length === 1) return "Il te manque " + words[0] + " pour compléter cette tenue.";
-  const last = words[words.length - 1];
-  const head = words.slice(0, -1).join(", ");
-  return "Il te manque " + head + " et " + last + " pour compléter cette tenue.";
-}
 
 export default function TenuesScreen() {
   const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, vestiairePool, actions } = useCapsela();
@@ -949,7 +925,7 @@ export default function TenuesScreen() {
                 pas dire — la DIMENSION du repli — au lieu de répéter le mot du
                 badge. */}
             <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
-              Pour cette occasion, on te propose un registre plus sobre, composé avec les pièces de ta capsule.
+              Pour cette occasion, on te propose un registre plus sobre, composé avec les pièces de {sourceLabel}.
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
               Ajouter une pièce plus habillée →
