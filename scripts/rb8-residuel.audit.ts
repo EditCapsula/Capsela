@@ -207,18 +207,38 @@ describe("origine des +13 R-B8", () => {
     console.log(`\n  divergences dues au garde-fou : ${divGardeFou}`);
     console.log(`  divergences autres            : ${divAutres}`);
 
+    // Le verdict porte sur la CONTRIBUTION à l'écart, jamais sur le NOMBRE de
+    // divergences. Correctif du 01/09/2026 : la première version exigeait
+    // `divAutres === 0` pour conclure « expliquée », ce qui confondait « il
+    // existe d'autres divergences » avec « d'autres divergences contribuent ».
+    // Elle a rendu « PARTIELLEMENT EXPLIQUÉE » sur un résiduel de 0 et 0, en
+    // imprimant la phrase auto-contradictoire « Un résiduel subsiste : 0 ».
+    // Des divergences sans effet sur les règles mesurées ne sont pas un
+    // résiduel : c'est un fait distinct, rapporté au § 4 et nulle part ailleurs.
     const totalRetrouve = ecartRB8 === 13 && ecartRB2 === -2;
+    const residuel = ecartRB8Autres !== 0 || ecartRB2Autres !== 0;
+    const gardeFouExplique = ecartRB8GardeFou !== 0 || ecartRB2GardeFou !== 0;
+    const ecartNul = ecartRB8 === 0 && ecartRB2 === 0;
     const verdict =
       !apparieOk ? "AUDIT INVALIDE"
       : !totalRetrouve ? "ÉCART NON REPRODUIT — voir § 1"
-      : divAutres === 0 && ecartRB8Autres === 0 && ecartRB2Autres === 0 ? "CAUSE EXPLIQUÉE"
-      : ecartRB8GardeFou !== 0 || ecartRB2GardeFou !== 0 ? "CAUSE PARTIELLEMENT EXPLIQUÉE"
+      : !residuel ? "CAUSE EXPLIQUÉE"
+      : gardeFouExplique ? "CAUSE PARTIELLEMENT EXPLIQUÉE"
       : "CAUSE NON EXPLIQUÉE";
     console.log(`\n  >>> VERDICT : ${verdict}`);
+    if (verdict === "CAUSE EXPLIQUÉE") {
+      console.log(`      L'intégralité de l'écart est attribuée aux divergences que le garde-fou`);
+      console.log(`      a provoquées. Les divergences AUTRES y contribuent 0 et 0 : elles ne`);
+      console.log(`      sont pas un résiduel, mais un fait séparé — cf. § 4.`);
+      if (ecartNul) {
+        console.log(`      ATTENTION : l'écart total est nul. « Expliqué » ne veut alors rien dire`);
+        console.log(`      d'autre que « il n'y avait rien à expliquer ».`);
+      }
+    }
     if (verdict === "CAUSE PARTIELLEMENT EXPLIQUÉE") {
-      console.log(`      Un résiduel subsiste : ${ecartRB8Autres} R-B8 et ${ecartRB2Autres} R-B2 proviennent de`);
-      console.log(`      divergences où B ne contenait PAS deux mailles fermées. Le garde-fou a donc`);
-      console.log(`      un effet au-delà du cas qu'il vise. Échantillon au § 4.`);
+      console.log(`      RÉSIDUEL RÉEL : ${ecartRB8Autres} R-B8 et ${ecartRB2Autres} R-B2 proviennent de divergences`);
+      console.log(`      où B ne contenait PAS deux mailles fermées. Le garde-fou a donc un effet`);
+      console.log(`      MESURABLE au-delà du cas qu'il vise. Échantillon au § 4.`);
     }
     if (verdict === "CAUSE NON EXPLIQUÉE") {
       console.log(`      Les divergences dues au garde-fou n'expliquent RIEN de l'écart. Le mécanisme`);
@@ -246,8 +266,16 @@ describe("origine des +13 R-B8", () => {
     // ═══ 4 · LE RÉSIDUEL ═══
     console.log(`\n════════ 4 · DIVERGENCES NON ATTRIBUABLES AU GARDE-FOU ════════`);
     console.log(`  Paires où les deux bras diffèrent alors que B ne contenait PAS deux mailles`);
-    console.log(`  fermées. Leur seule existence est un fait à expliquer : le levier ne devrait`);
-    console.log(`  rien changer là où la règle n'a rien à refuser.`);
+    console.log(`  fermées — là où le garde-fou n'avait rien à refuser.`);
+    console.log(`  Nombre : ${divAutres}. CONTRIBUTION à l'écart : ${ecartRB8Autres} R-B8, ${ecartRB2Autres} R-B2.`);
+    console.log(`  Ces deux chiffres ne disent PAS la même chose et ne doivent pas être`);
+    console.log(`  confondus : des divergences peuvent exister sans peser sur aucune règle.`);
+    console.log(`  Mécanisme attendu : le garde-fou raccourcit la LISTE de candidats de R-B8,`);
+    console.log(`  donc le même nombre aléatoire y sélectionne un autre élément, et le décalage`);
+    console.log(`  se propage aux tirages suivants. La garantie « mêmes tirages » vaut à`);
+    console.log(`  l'ENTRÉE, pas à chaque tirage intermédiaire — limite de méthode, à connaître`);
+    console.log(`  pour tout audit comparatif ultérieur. L'attribution du § 2 n'en dépend pas :`);
+    console.log(`  elle compare les tenues pièce à pièce, sans supposer l'identité du flux.`);
     if (!divAutres) console.log(`  Aucune. Le garde-fou ne modifie que les tenues qu'il vise.`);
     for (const [, texte] of exemplesAutres) console.log(`     ${texte}`);
 
