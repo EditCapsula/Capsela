@@ -342,6 +342,55 @@ export function rolePieceOf(it: Item): "base" | "calque" | "piece_unique" {
   return coupeOf(it) === "oversize" ? "calque" : "base";
 }
 
+/**
+ * OUVERTE / FERMÉE — la seule distinction que le catalogue sait exprimer.
+ *
+ * Arbitrage éditorial du 31/08/2026 : « une maille fermée peut être le dessus
+ * principal ou être portée sous une pièce extérieure ; elle ne doit pas être
+ * superposée à une autre maille fermée » et « pas de pull en été, juste des
+ * gilets ou vestes ». Critère retenu : L'OUVRABILITÉ RÉELLE — un sweat zippé
+ * s'ouvre comme un cardigan, un hoodie non.
+ *
+ * POURQUOI UN PRÉFIXE ET NON UNE ÉGALITÉ. `subtype` vient de la colonne
+ * `sous_type`, TEXTE LIBRE jamais normalisé : la base écrit « Pull col roulé »,
+ * « Cardigan structuré », « Gilet sans manches épais ». Le vocabulaire canonique
+ * SUBTYPES ("Pull", "Gilet", "Cardigan", "Col roulé") n'y apparaît quasiment
+ * jamais. La version précédente de cette règle comparait par ÉGALITÉ STRICTE et
+ * ne voyait donc 0 maille fermée sur 34 — mesuré, et confirmé par un bras
+ * d'audit qui la neutralisait sans changer une seule métrique.
+ *
+ * CE QUE CETTE FONCTION NE DIT PAS : l'épaisseur. Aucune donnée du catalogue ne
+ * la porte — `matiere` vaut "Laine" pour 40 pulls sur 56, du cardigan fin au
+ * pull épais, et `coupe` n'est renseigné que sur 8 pièces avec une seule valeur
+ * distincte. La déduire d'un libellé referait exactement l'erreur ci-dessus,
+ * en silence. Décision produit du 31/08/2026 : aucune notion d'épaisseur n'est
+ * créée tant que le catalogue ne sait pas l'exprimer.
+ */
+export type FermetureMaille = "fermée" | "ouverte";
+
+/** Préfixes de sous-type qui désignent une maille s'enfilant par la tête. */
+const MAILLE_FERMEE_PREFIXES = ["pull", "col roule", "hoodie", "sweat"];
+/** Préfixes qui désignent une maille s'ouvrant sur le devant. */
+const MAILLE_OUVERTE_PREFIXES = ["cardigan", "gilet", "veste en maille"];
+/** L'ouvrabilité réelle prime sur le préfixe : « Sweat à capuche zippé » s'ouvre. */
+const MAILLE_ZIPPEE_RE = /\bzipp/;
+
+const sansAccents = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+
+/**
+ * Fermeture d'une maille, ou `null` hors de la catégorie `pull` — les autres
+ * catégories ne relèvent pas de cet arbitrage, et une robe-pull (cat "robe")
+ * n'est délibérément pas couverte ici : ce serait un autre périmètre.
+ */
+export function fermetureMaille(it: Item): FermetureMaille | null {
+  if (it.cat !== "pull") return null;
+  const st = sansAccents(it.subtype ?? "");
+  if (MAILLE_ZIPPEE_RE.test(sansAccents(`${it.subtype ?? ""} ${it.name || ""}`))) return "ouverte";
+  if (MAILLE_FERMEE_PREFIXES.some((p) => st.startsWith(p))) return "fermée";
+  if (MAILLE_OUVERTE_PREFIXES.some((p) => st.startsWith(p))) return "ouverte";
+  return null;
+}
+
 /** Teinte (0-360°) approximée depuis le hex, pour l'harmonie du cercle chromatique (R-S2). */
 export function hueOf(hex: string): number {
   const v = hex.replace("#", "");

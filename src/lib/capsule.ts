@@ -1,5 +1,5 @@
 import { CATALOG, type CatalogItem } from "./catalog";
-import { formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "./attributes";
+import { fermetureMaille, formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "./attributes";
 import { isSunny, type Weather } from "./data";
 import { effetMorphologique } from "./garmentEffect";
 import {
@@ -203,6 +203,19 @@ export type SelectionStrategy = {
   rang3: "legacy" | "neutre";
   /** Rang 4 : direction de compensation V2, absente par défaut. "A" et "B" sont deux fonctions de saturation. */
   v2: false | "A" | "B";
+  /**
+   * Mailles fermées en capsule Été. "exclues" est la production depuis le
+   * 31/08/2026 ; "admises" reproduit le comportement d'avant, pour qu'un audit
+   * mesure l'avant et l'après DANS LA MÊME EXÉCUTION sans dupliquer le
+   * pipeline (AGENTS.md, « Conséquence pratique pour les scripts d'audit »).
+   *
+   * Facultatif, et le défaut est le comportement de PRODUCTION : seul
+   * "admises" désactive la règle. Les audits antérieurs construisent leurs
+   * propres littéraux de stratégie pour mesurer la morphologie ; les rendre
+   * tous responsables d'une règle qui ne les concerne pas serait le meilleur
+   * moyen de la désactiver par inadvertance dans l'un d'eux.
+   */
+  maillesFermeesEte?: "exclues" | "admises";
 };
 /**
  * Depuis le 29/08/2026, la production ne consulte plus `morphoFit` au rang 3.
@@ -217,10 +230,10 @@ export type SelectionStrategy = {
  * La stratégie reste paramétrable pour que la comparaison reste possible en
  * audit, mais aucun code applicatif ne renseigne ce paramètre.
  */
-export const STRATEGIE_PRODUCTION: SelectionStrategy = { rang3: "neutre", v2: "A" };
+export const STRATEGIE_PRODUCTION: SelectionStrategy = { rang3: "neutre", v2: "A", maillesFermeesEte: "exclues" };
 
 /** Comportement d'avant le 29/08/2026 — conservé pour les audits comparatifs. */
-export const STRATEGIE_LEGACY: SelectionStrategy = { rang3: "legacy", v2: false };
+export const STRATEGIE_LEGACY: SelectionStrategy = { rang3: "legacy", v2: false, maillesFermeesEte: "admises" };
 
 /** Familles pertinentes pour chaque extrémité de la silhouette. */
 const CATS_HAUT: CategoryKey[] = ["haut", "pull", "veste", "manteau"];
@@ -465,6 +478,27 @@ export function computeDefaultCapsule(
   }
 
   const bucket = seasonKey ? capsuleSeasonBucket(seasonKey) : weatherSeasonBucket(weather.temp);
+
+  // Arbitrage éditorial du 31/08/2026 : « pas de pull en été, juste des gilets
+  // ou vestes ». Une maille fermée (cf. fermetureMaille) n'entre pas dans une
+  // capsule Été ; les mailles ouvertes — cardigans, gilets — y restent
+  // éligibles, et les vestes ne sont pas concernées.
+  //
+  // Exclusion DURE, posée AVANT les filtres relâchables ci-dessous et jamais
+  // soumise à leur seuil de 16 pièces : une règle éditoriale qui s'annulerait
+  // dès que le pool est pauvre ne serait pas une règle. Mesuré sur le
+  // vestiaire réel : 3 pièces retirées sur les 10 pulls éligibles à l'Été, 7
+  // conservées — aucun risque de vider la catégorie.
+  //
+  // Conditionnée à `seasonKey === "Été"` et non au bucket "Printemps / Été" :
+  // l'arbitrage porte sur l'été, pas sur le printemps, et le bucket confond
+  // les deux. Sans `seasonKey`, rien n'atteste qu'on est en été — la règle ne
+  // s'applique donc pas plutôt que de s'appliquer au jugé. Tous les appelants
+  // de production passent une saison.
+  if (seasonKey === "Été" && strategy.maillesFermeesEte !== "admises") {
+    base = base.filter((it) => fermetureMaille(it) !== "fermée");
+  }
+
   const seasonFit = base.filter((it) => it.season === bucket || it.season === "Toutes saisons");
   if (seasonFit.length >= 16) base = seasonFit;
 
@@ -644,7 +678,12 @@ export function computeDefaultCapsule(
         it.genre !== oppositeGenre &&
         (isSunny(weather) || !it.necessiteSoleil) &&
         (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) &&
-        (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp)
+        (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp) &&
+        // Même éligibilité que la sélection principale, sinon ce filet
+        // réintroduirait depuis `sourcePool` exactement ce qu'elle vient
+        // d'écarter. Invariant posé le 31/08/2026 : une maille fermée ne doit
+        // pas pouvoir réapparaître indirectement dans une capsule Été.
+        !(seasonKey === "Été" && strategy.maillesFermeesEte !== "admises" && fermetureMaille(it) === "fermée")
     );
     const fav = pool.filter((it) => favColors.includes(it.hex));
     const pickFrom = fav.length ? fav : pool;

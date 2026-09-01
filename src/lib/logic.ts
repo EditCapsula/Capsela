@@ -7,6 +7,7 @@ import {
   coupeOf,
   formalityOf,
   huesHarmonious,
+  fermetureMaille,
   isMetallicFinish,
   isNeutralColor,
   isStatement,
@@ -132,7 +133,14 @@ function isShirtLike(it: Item): boolean {
  * catégorie aurait donc annulé une partie de la règle qu'elle complète.
  */
 function isClosedKnit(it: Item): boolean {
-  return it.cat === "pull" && (it.subtype === "Pull" || it.subtype === "Col roulé");
+  // Correctif du 31/08/2026 : cette fonction comparait `subtype` par ÉGALITÉ
+  // STRICTE à "Pull" / "Col roulé". Mesuré sur le vestiaire réel, elle voyait
+  // 0 maille fermée sur 34 — la base écrit « Pull col roulé », « Pull col
+  // rond », jamais le mot seul. La règle était donc INERTE depuis son
+  // écriture, ce qu'un bras d'audit la neutralisant a confirmé en rendant des
+  // métriques strictement identiques à la production. La classification vit
+  // désormais dans `fermetureMaille`, qui compare par préfixe.
+  return fermetureMaille(it) === "fermée";
 }
 
 /**
