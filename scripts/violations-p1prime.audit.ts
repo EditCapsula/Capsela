@@ -2,7 +2,7 @@ import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { CAPSULE_SEASONS, computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
-import { evaluateBlocking, generateOutfitWithFallback, type LeviersMesure } from "../src/lib/logic";
+import { CLOTHING_CATS, evaluateBlocking, generateOutfitWithFallback, type LeviersMesure } from "../src/lib/logic";
 import { OCCASIONS } from "../src/lib/data";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, Item, OccasionKey } from "../src/lib/types";
@@ -52,6 +52,8 @@ const OCCS: OccasionKey[] = OCCASIONS.map(([k]) => k);
 /** Identique à l'audit P1' : toute autre valeur mesurerait un autre tirage. */
 const N = 40;
 const P1: LeviersMesure = { pullCommeHautPrincipal: "base" };
+/** Règle affichée mais hors total, comme dans l'audit P1' d'origine. */
+const HORS_TOTAL = "R-B1";
 
 const BRAS: { court: string; nom: string; leviers: (occ: OccasionKey) => LeviersMesure | undefined }[] = [
   { court: "A", nom: "A · production actuelle", leviers: () => undefined },
@@ -117,10 +119,10 @@ describe("les −106 violations de P1'", () => {
     //
     // Avant d'expliquer un écart, vérifier qu'on mesure bien le même écart.
     console.log(`\n════════ 1 · LES TOTAUX SONT-ILS CEUX DE L'AUDIT P1' ? ════════`);
-    const totaux = new Map<string, { tenues: number; violations: number; parRegle: Map<string, number> }>();
+    const totaux = new Map<string, { tenues: number; violations: number; parRegle: Map<string, number>; piecesVetement: number; avecExterieur: number }>();
     const tenuesPar = new Map<string, Map<string, number[]>>(); // bras -> clé -> ids
     for (const b of BRAS) {
-      totaux.set(b.court, { tenues: 0, violations: 0, parRegle: new Map() });
+      totaux.set(b.court, { tenues: 0, violations: 0, parRegle: new Map(), piecesVetement: 0, avecExterieur: 0 });
       tenuesPar.set(b.court, new Map());
     }
     for (const c of cellules) {
@@ -135,9 +137,18 @@ describe("les −106 violations de P1'", () => {
             t.tenues += 1;
             const pieces = ids.map((id) => index.get(id)).filter((p): p is CatalogItem => Boolean(p)) as Item[];
             for (const h of evaluateBlocking(pieces, occ, c.w, "Présentiel", "Verre")) {
-              t.violations += 1;
+              // R-B1 est HORS TOTAL, exactement comme dans l'audit P1' qu'on
+              // cherche à expliquer : elle compare la saison de la pièce à la
+              // météo alors que la génération suit le référentiel de la
+              // capsule. La compter ici ferait diverger les totaux de la
+              // mesure d'origine et rendrait la décomposition inutilisable.
+              // Elle reste affichée, séparément, parce qu'elle bouge aussi.
+              if (h.id !== HORS_TOTAL) t.violations += 1;
               t.parRegle.set(h.id, (t.parRegle.get(h.id) ?? 0) + 1);
             }
+            const vet = pieces.filter((p) => CLOTHING_CATS.includes(p.cat));
+            t.piecesVetement += vet.length;
+            if (pieces.some((p) => p.cat === "veste" || p.cat === "manteau")) t.avecExterieur += 1;
           }
         }
       }
@@ -166,7 +177,8 @@ describe("les −106 violations de P1'", () => {
       const a = totaux.get("A")!.parRegle.get(rg) ?? 0;
       const b = totaux.get("B")!.parRegle.get(rg) ?? 0;
       const c = totaux.get("C")!.parRegle.get(rg) ?? 0;
-      console.log(`  ${rg.padEnd(10)}${String(a).padStart(8)}${String(b).padStart(8)}${String(c).padStart(8)}${((b - a >= 0 ? "+" : "") + (b - a)).padStart(8)}`);
+      console.log(`  ${rg.padEnd(10)}${String(a).padStart(8)}${String(b).padStart(8)}${String(c).padStart(8)}${((b - a >= 0 ? "+" : "") + (b - a)).padStart(8)}`
+        + (rg === HORS_TOTAL ? "   (hors total — exclue par l'audit P1')" : ""));
     }
 
     // ═══ 3 · ATTRIBUTION APPARIÉE ═════════════════════════════════════════
@@ -175,6 +187,7 @@ describe("les −106 violations de P1'", () => {
     console.log(`  retirer p de la tenue de A éteint cette règle-là.`);
     const familles = new Map<string, Map<Famille, number>>();
     const inverse = new Map<string, number>();
+    const inverseFam = new Map<string, Map<Famille, number>>();
     let identiques = 0, divergentes = 0, popA = 0, popB = 0, sansDeclencheur = 0;
     const exemples: string[] = [];
 
@@ -194,10 +207,35 @@ describe("les −106 violations de P1'", () => {
           const hitsB = new Set(idsB.length ? evaluateBlocking(piecesB, occ, c.w, "Présentiel", "Verre").map((h) => h.id) : []);
           const nouveauPull = pullPrincipal(piecesB) && !pullPrincipal(piecesA);
 
-          for (const rg of hitsB) if (!hitsA.has(rg)) inverse.set(rg, (inverse.get(rg) ?? 0) + 1);
+          // Les APPARITIONS sont attribuées avec exactement la même méthode que
+          // les disparitions — retrait unitaire sur la tenue de B. Ne traiter
+          // qu'un sens donnerait un compte-rendu à moitié fait : le net de
+          // −106 est une différence entre deux mouvements, pas un seul.
+          for (const rg of hitsB) {
+            if (hitsA.has(rg)) continue;
+            if (rg === HORS_TOTAL) continue;
+            const parFam = inverseFam.get(rg) ?? new Map<Famille, number>();
+            let fam: Famille;
+            if (!idsA.length) fam = "population";
+            else {
+              const declB = piecesB.filter((p) => {
+                const reste = piecesB.filter((q) => q.id !== p.id);
+                return !reste.length || !evaluateBlocking(reste, occ, c.w, "Présentiel", "Verre").some((h) => h.id === rg);
+              });
+              const idsAset = new Set(idsA);
+              fam = !declB.length ? "contexte"
+                : declB.every((p) => !idsAset.has(p.id))
+                  ? (declB.some((p) => p.cat === "pull") ? "pull" : "autre")
+                  : "contexte";
+            }
+            parFam.set(fam, (parFam.get(fam) ?? 0) + 1);
+            inverseFam.set(rg, parFam);
+            inverse.set(rg, (inverse.get(rg) ?? 0) + 1);
+          }
 
           for (const rg of hitsA) {
             if (hitsB.has(rg)) continue;
+            if (rg === HORS_TOTAL) continue;
             const parFam = familles.get(rg) ?? new Map<Famille, number>();
             let fam: Famille;
             if (!idsB.length) { fam = "population"; popB += 1; }
@@ -246,8 +284,15 @@ describe("les −106 violations de P1'", () => {
       `${String(tot.get("autre") ?? 0).padStart(8)}${String(tot.get("contexte") ?? 0).padStart(10)}${String(tot.get("population") ?? 0).padStart(9)}`);
 
     console.log(`\n  APPARITIONS (règle dans B, absente dans A) :`);
+    console.log(`  ${"règle".padEnd(10)}${"total".padStart(8)}${"pull".padStart(8)}${"autre".padStart(8)}${"contexte".padStart(10)}${"popul.".padStart(9)}`);
     let sommeInv = 0;
-    for (const rg of [...inverse.keys()].sort()) { console.log(`  ${rg.padEnd(10)}${String(inverse.get(rg)).padStart(8)}`); sommeInv += inverse.get(rg)!; }
+    for (const rg of [...inverse.keys()].sort()) {
+      const f = inverseFam.get(rg) ?? new Map<Famille, number>();
+      const g = (x: Famille) => f.get(x) ?? 0;
+      console.log(`  ${rg.padEnd(10)}${String(inverse.get(rg)).padStart(8)}${String(g("pull")).padStart(8)}` +
+        `${String(g("autre")).padStart(8)}${String(g("contexte")).padStart(10)}${String(g("population")).padStart(9)}`);
+      sommeInv += inverse.get(rg)!;
+    }
     console.log(`  ${"TOTAL".padEnd(10)}${String(sommeInv).padStart(8)}`);
     console.log(`\n  Mouvement brut : −${somme} / +${sommeInv}. Net : ${sommeInv - somme}.`);
     console.log(`  Le net doit égaler B−A = ${(totaux.get("B")!.violations - totaux.get("A")!.violations)}.`);
@@ -261,6 +306,23 @@ describe("les −106 violations de P1'", () => {
 
     console.log(`\n  Exemples de disparitions imputables au pull (bruts, non retouchés) :`);
     for (const e of exemples) console.log(`     ${e}`);
+
+    // ═══ 4 · LA BAISSE VIENT-ELLE D'UNE TENUE PLUS COURTE ? ═══════════════
+    //
+    // Les exemples montrent tous le même mouvement : le pull remplace la
+    // surchemise ET la tenue perd son blazer ou son trench. Une tenue avec
+    // moins de pièces a mécaniquement moins d'occasions de violer une règle.
+    // Ce n'est pas une amélioration, c'est une simplification — et la
+    // distinction décide de la lecture du −106. Mesuré, pas déduit.
+    console.log(`\n════════ 4 · LA TENUE DE B EST-ELLE PLUS COURTE QUE CELLE DE A ? ════════`);
+    console.log(`  ${"bras".padEnd(26)}${"tenues".padStart(9)}${"pièces vêtement".padStart(18)}${"par tenue".padStart(11)}${"avec veste/manteau".padStart(20)}`);
+    for (const b of BRAS) {
+      const t = totaux.get(b.court)!;
+      console.log(`  ${b.nom.padEnd(26)}${String(t.tenues).padStart(9)}${String(t.piecesVetement).padStart(18)}` +
+        `${(t.piecesVetement / t.tenues).toFixed(2).padStart(11)}${`${t.avecExterieur} (${((t.avecExterieur / t.tenues) * 100).toFixed(1)} %)`.padStart(20)}`);
+    }
+    console.log(`  Si B porte moins de pièces et moins de couches extérieures que A, alors une`);
+    console.log(`  part du −106 tient au NOMBRE de pièces évaluées, pas à leur cohérence.`);
 
     console.log(`\n  LECTURE SEULE. Ce script n'interprète pas : une baisse expliquée reste une`);
     console.log(`  baisse, pas une amélioration. Le jugement est éditorial et n'appartient pas`);
