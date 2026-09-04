@@ -189,6 +189,7 @@ describe("les −106 violations de P1'", () => {
     const inverse = new Map<string, number>();
     const inverseFam = new Map<string, Map<Famille, number>>();
     let identiques = 0, divergentes = 0, popA = 0, popB = 0, sansDeclencheur = 0;
+    const sousPull = new Map<string, number>();
     const exemples: string[] = [];
 
     for (const c of cellules) {
@@ -249,6 +250,17 @@ describe("les −106 violations de P1'", () => {
                 const idsBset = new Set(idsB);
                 const toutesParties = declencheurs.every((p) => !idsBset.has(p.id));
                 fam = !toutesParties ? "contexte" : nouveauPull ? "pull" : "autre";
+                // Sous-partition de la famille « pull », exigée par le mandat :
+                // une règle peut cesser de tirer parce que la COMPOSITION a
+                // changé, ou simplement parce que la tenue de B a perdu sa
+                // couche extérieure et offre moins de prises. Les deux se
+                // ressemblent dans le total et n'ont pas la même valeur.
+                if (fam === "pull") {
+                  const extA = piecesA.some((p) => p.cat === "veste" || p.cat === "manteau");
+                  const extB = piecesB.some((p) => p.cat === "veste" || p.cat === "manteau");
+                  const cle = extA && !extB ? "couchePerdue" : extA === extB ? "memeCouche" : "coucheGagnee";
+                  sousPull.set(cle, (sousPull.get(cle) ?? 0) + 1);
+                }
                 if (fam === "pull" && exemples.length < 10) {
                   exemples.push(
                     `${rg} · ${c.saison}/${c.style}/${occ}\n         A : ${piecesA.map((p) => p.name).join(" + ")}` +
@@ -323,6 +335,18 @@ describe("les −106 violations de P1'", () => {
     }
     console.log(`  Si B porte moins de pièces et moins de couches extérieures que A, alors une`);
     console.log(`  part du −106 tient au NOMBRE de pièces évaluées, pas à leur cohérence.`);
+    console.log(`\n  Les ${tot.get("pull") ?? 0} disparitions imputées au pull, selon que la tenue de B a GARDÉ`);
+    console.log(`  ou PERDU sa couche extérieure par rapport à celle de A :`);
+    const lib: Record<string, string> = {
+      memeCouche: "même situation de couche  -> la règle cesse par COMPOSITION",
+      couchePerdue: "B a perdu veste/manteau   -> la règle cesse peut-être par ABSENCE",
+      coucheGagnee: "B a gagné veste/manteau   -> la règle cesse malgré une couche EN PLUS",
+    };
+    for (const k of ["memeCouche", "couchePerdue", "coucheGagnee"]) {
+      console.log(`     ${String(sousPull.get(k) ?? 0).padStart(5)}  ${lib[k]}`);
+    }
+    console.log(`  C'est cette répartition, et elle seule, qui dit si le −106 tient à une tenue`);
+    console.log(`  autrement composée ou à une tenue simplement plus courte.`);
 
     console.log(`\n  LECTURE SEULE. Ce script n'interprète pas : une baisse expliquée reste une`);
     console.log(`  baisse, pas une amélioration. Le jugement est éditorial et n'appartient pas`);
