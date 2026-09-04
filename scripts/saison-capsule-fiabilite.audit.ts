@@ -266,6 +266,34 @@ describe("fiabilité de saison_capsule", () => {
     console.log(`  ${String(reelMax).padStart(4)}  RÉEL — écartée par le max (aucune exemption n'existe de ce côté)`);
     console.log(`  ${String(mixte).padStart(4)}  MIXTE — les deux bornes contredisent, à regarder pièce par pièce`);
     console.log(`  ${String(totalRetirs).padStart(4)}  total des pièces dont une saison déclarée est contredite`);
+    // Le détail des seuls cas RÉELS — ceux qui relèvent vraiment du chantier
+    // de fiabilisation. Les artefacts ne sont pas listés : les lister
+    // inviterait à les corriger, ce qui serait l'erreur.
+    console.log(`\n  ──────── LE DÉTAIL DES CAS RÉELS, PIÈCE PAR PIÈCE ────────`);
+    console.log(`  Les artefacts ne sont volontairement PAS listés : les afficher inviterait`);
+    console.log(`  à les corriger, ce qui serait précisément l'erreur à éviter.`);
+    console.log(`\n  ${"id".padStart(6)}  ${"cat".padEnd(11)}${"côté".padEnd(6)}${"plage".padEnd(12)}${"contredit".padEnd(26)}${"plage couvre".padEnd(22)}${"matière · sous-type"}`);
+    const reels: { c: typeof cas[number]; cote: "min" | "max" }[] = [];
+    for (const c of cas) {
+      let duMin = false, duMax = false;
+      for (const sa of c.aRetirer) {
+        const t = temp.get(sa)!;
+        if (c.min != null && t < c.min) duMin = true;
+        if (c.max != null && t > c.max) duMax = true;
+      }
+      if (duMin && duMax) continue;
+      if (duMax) reels.push({ c, cote: "max" });
+      else if (duMin && !EXEMPTEES.includes(c.cat)) reels.push({ c, cote: "min" });
+    }
+    for (const { c, cote } of reels.sort((a, b) => a.c.cat.localeCompare(b.c.cat) || a.cote.localeCompare(b.cote) || a.c.id - b.c.id)) {
+      console.log(
+        `  ${String(c.id).padStart(6)}  ${c.cat.padEnd(11)}${cote.padEnd(6)}` +
+        `${`[${c.min ?? "—"}, ${c.max ?? "—"}]`.padEnd(12)}${c.aRetirer.join(", ").padEnd(26)}` +
+        `${(c.implicites.join(", ") || "aucune").padEnd(22)}${(c.matiere || "—").slice(0, 20)} · ${(c.sousType || "—").slice(0, 26)}`,
+      );
+    }
+    console.log(`\n  ${reels.length} pièces — c'est tout le chantier de fiabilisation des données.`);
+
     console.log(`\n  Lecture : la part ARTEFACT ne se corrige PAS en base. La corriger`);
     console.log(`  retirerait des saisons légitimes — une chemise déclarée en hiver s'y porte`);
     console.log(`  réellement, sous un pull, et le moteur le sait déjà.`);
