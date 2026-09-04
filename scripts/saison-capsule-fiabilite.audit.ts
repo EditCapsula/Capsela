@@ -218,6 +218,59 @@ describe("fiabilité de saison_capsule", () => {
     writeFileSync(CSV, [entetes.map(csvCell).join(","), ...lignes].join("\n"), "utf8");
     console.log(`\n  ${cas.length} lignes écrites dans ${CSV} (artefact du job) — triable, arbitrable.`);
 
+    // ═══ 7 · COMBIEN DE CES DÉSACCORDS SONT DE VRAIES ERREURS ? ═════════
+    //
+    // RÉOUVERTURE (règle d'audit, point 8). En sortant les 14 écarts les plus
+    // francs, une vérification de code a invalidé la lecture qui les
+    // désignait : elles sont toutes de catégorie `haut` ou `robe`, et leur
+    // contradiction vient du `meteo_min_temp`. Or logic.ts:633 EXEMPTE ces
+    // catégories du filtre bas —
+    //
+    //   TEMP_COMPENSATED_CATS = [...TOP_LAYER_CATS, robe, combinaison, jupe, short]
+    //
+    // — parce qu'une chemise se porte à 8 ° sous un pull. Le moteur le sait
+    // déjà. Le seul endroit où ce `min` mord est capsule.ts:517, qui l'applique
+    // SANS l'exemption. Ces désaccords ne sont donc pas des erreurs de saisie
+    // mais des artefacts du filtre de capsule — la même erreur structurelle
+    // que sur la borne haute, en symétrique.
+    //
+    // Ce classement sépare donc, parmi les 140, ce qui relève de la DONNÉE de
+    // ce qui relève du MÉCANISME. Il ne corrige rien : il empêche de corriger
+    // à tort.
+    const EXEMPTEES: string[] = ["haut", "pull", "robe", "combinaison", "jupe", "short"];
+    console.log(`\n════════ 7 · RÉOUVERTURE — DONNÉE FAUSSE OU ARTEFACT DU FILTRE ? ════════`);
+    console.log(`  Catégories exemptées du filtre BAS à la génération : ${EXEMPTEES.join(", ")}.`);
+    console.log(`  Aucune catégorie n'est exemptée du filtre HAUT : un désaccord dû au max`);
+    console.log(`  est donc toujours réel, quelle que soit la pièce.`);
+    let artefactMin = 0, reelMin = 0, reelMax = 0, mixte = 0;
+    const parCatArtefact = new Map<string, number>();
+    for (const c of cas) {
+      // De quel côté vient la contradiction ? Une saison est écartée par le
+      // min si sa température est sous le min, par le max si elle est dessus.
+      let duMin = false, duMax = false;
+      for (const s of c.aRetirer) {
+        const t = temp.get(s)!;
+        if (c.min != null && t < c.min) duMin = true;
+        if (c.max != null && t > c.max) duMax = true;
+      }
+      if (!duMin && !duMax) continue;
+      if (duMin && duMax) { mixte += 1; continue; }
+      if (duMax) { reelMax += 1; continue; }
+      if (EXEMPTEES.includes(c.cat)) { artefactMin += 1; parCatArtefact.set(c.cat, (parCatArtefact.get(c.cat) ?? 0) + 1); }
+      else reelMin += 1;
+    }
+    const totalRetirs = artefactMin + reelMin + reelMax + mixte;
+    console.log(`\n  ${String(artefactMin).padStart(4)}  ARTEFACT — écartée par le min, sur une catégorie que la génération exempte`);
+    console.log(`        ${[...parCatArtefact.entries()].sort((a, b) => b[1] - a[1]).map(([c, n]) => `${c} ${n}`).join("  ")}`);
+    console.log(`  ${String(reelMin).padStart(4)}  RÉEL — écartée par le min, sur une catégorie NON exemptée`);
+    console.log(`  ${String(reelMax).padStart(4)}  RÉEL — écartée par le max (aucune exemption n'existe de ce côté)`);
+    console.log(`  ${String(mixte).padStart(4)}  MIXTE — les deux bornes contredisent, à regarder pièce par pièce`);
+    console.log(`  ${String(totalRetirs).padStart(4)}  total des pièces dont une saison déclarée est contredite`);
+    console.log(`\n  Lecture : la part ARTEFACT ne se corrige PAS en base. La corriger`);
+    console.log(`  retirerait des saisons légitimes — une chemise déclarée en hiver s'y porte`);
+    console.log(`  réellement, sous un pull, et le moteur le sait déjà.`);
+    console.log(`  Seules les parts RÉEL et MIXTE relèvent du chantier de fiabilisation.`);
+
     console.log(`\n  LECTURE SEULE. Aucune correction proposée, aucune donnée touchée.`);
     console.log(`  Ce script ne dit pas qui a raison de la déclaration ou de la borne : il`);
     console.log(`  met les deux face à face et regroupe les cas pour que ce soit décidable.`);
