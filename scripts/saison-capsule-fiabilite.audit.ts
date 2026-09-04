@@ -181,6 +181,32 @@ describe("fiabilité de saison_capsule", () => {
     console.log(`     Un élargissement d'un degré est probablement une borne mal arrondie.`);
     console.log(`     Au-delà de cinq, c'est la déclaration qui est douteuse, pas la borne.`);
 
+    // ═══ 6 · LE GROUPE LE PLUS FLAGRANT, EN ENTIER ══════════════════════
+    //
+    // Arbitrage du 04/09 : commencer par les pièces dont les deux sources sont
+    // séparées de PLUS DE DIX DEGRÉS. C'est là que l'incompatibilité est
+    // franche — une chemise en lin `min 20 °` n'est pas une pièce d'hiver,
+    // quoi qu'en dise la colonne —, et la correction porte sur la DÉCLARATION,
+    // donc sans risque d'inventer une borne.
+    //
+    // La « déclaration résultante » est ce que le scénario A donnerait
+    // mécaniquement. Elle n'est PAS une recommandation : une pièce qui s'y
+    // retrouverait sans aucune saison est signalée pour être traitée à part.
+    const flagrants = elargissements.filter((e) => e.degres > 10).sort((a, b) => b.degres - a.degres);
+    console.log(`\n════════ 6 · LES ${flagrants.length} PIÈCES À PLUS DE 10 ° D'ÉCART ════════`);
+    console.log(`  Chaque ligne : ce que dit la plage, ce que dit la déclaration, et l'écart.`);
+    for (const { c, degres } of flagrants) {
+      const resultante = c.implicites.length ? c.implicites.join(", ") : "AUCUNE — à traiter à part";
+      console.log(`\n  ── ${c.nom}   (id ${c.id})`);
+      console.log(`     catégorie / sous-type ... ${c.cat} · ${c.sousType || "—"}`);
+      console.log(`     matière ................. ${c.matiere || "—"}`);
+      console.log(`     plage de température .... [${c.min ?? "—"}, ${c.max ?? "—"}]`);
+      console.log(`     saisons DÉCLARÉES ....... ${c.declarees.join(", ")}`);
+      console.log(`     saisons que la PLAGE couvre ... ${c.implicites.join(", ") || "aucune"}`);
+      console.log(`     en contradiction ........ ${c.aRetirer.join(", ")}   (écart ${degres} °)`);
+      console.log(`     déclaration résultante du scénario A : ${resultante}`);
+    }
+
     // ═══ 5 · LE DÉTAIL, EN CSV ══════════════════════════════════════════
     const entetes = ["id", "nom", "categorie", "sous_type", "matiere", "min", "max", "saisons_declarees", "saisons_impliquees_par_la_plage", "a_retirer", "a_ajouter", "motif", "degres_elargissement_scenario_B"];
     const degresPar = new Map(elargissements.map((e) => [e.c.id, e.degres]));
