@@ -57,10 +57,12 @@ const tirage = (pool: CatalogItem[], leviers?: LeviersMesure, k = 0): number[] =
   } finally { Math.random = vrai; }
 };
 
+/** Les traces du DERNIER tirage seulement — cf. TraceRepli, type "début". */
 const traces = (pool: CatalogItem[], k = 0): TraceRepli[] => {
   const vues: TraceRepli[] = [];
   tirage(pool, { traceRepli: (e) => vues.push(e) }, k);
-  return vues;
+  const dernierDebut = vues.map((e) => e.type).lastIndexOf("début");
+  return vues.slice(dernierDebut + 1);
 };
 
 describe("trace de repli — elle observe et ne participe pas", () => {
@@ -122,10 +124,22 @@ describe("trace de repli — elle dit vrai", () => {
     }
   });
 
+  it("un marqueur de début ouvre chaque tirage, pour séparer les tentatives", () => {
+    // Sans lui, les traces des tentatives abandonnées de la chaîne de
+    // formalité se mélangeraient à celles de la tenue rendue.
+    const toutes: TraceRepli[] = [];
+    tirage(poolBasHorsMeteo(), { traceRepli: (e) => toutes.push(e) });
+    expect(toutes.filter((e) => e.type === "début").length).toBeGreaterThan(0);
+    expect(toutes[0].type).toBe("début");
+    // Aucun repli n'est rapporté avant le premier marqueur.
+    expect(toutes.findIndex((e) => e.type === "repli")).toBeGreaterThan(0);
+  });
+
   it("chaque trace nomme son barreau et compte tous les barreaux de son échelle", () => {
     // Garde-fou de forme : une trace dont les effectifs ne couvriraient pas
     // toute l'échelle laisserait croire à une attribution complète.
     for (const e of traces(poolBasHorsMeteo())) {
+      expect(e.type).toBe("repli");
       expect(e.nom.length).toBeGreaterThan(0);
       expect(e.effectifs.length).toBeGreaterThanOrEqual(4);
       expect(e.cats.length).toBeGreaterThan(0);

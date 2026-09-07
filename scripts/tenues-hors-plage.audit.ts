@@ -2,7 +2,7 @@ import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { CAPSULE_SEASONS, computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
-import { generateOutfitWithFallback } from "../src/lib/logic";
+import { generateOutfitWithFallback, type TraceRepli } from "../src/lib/logic";
 import { OCCASIONS } from "../src/lib/data";
 import type { Weather } from "../src/lib/data";
 import type { CatalogItem } from "../src/lib/catalog";
@@ -29,23 +29,39 @@ import { STYLES_FEMME, assertCatalogueStyles, profilAudit } from "./harnaisAudit
 // s'applique : l'hypothèse « c'est le repli de poolFor » est testée, pas
 // supposée.
 //
-// L'ATTRIBUTION, calculable et sans instrumenter la production. Pour chaque
-// pièce portée hors de sa plage, on reconstruit le pool qui ÉTAIT éligible
-// dans sa capsule à cette température, avec les règles réelles de
-// `applyTempFilter` — max toujours appliqué, min exempté pour
-// TEMP_COMPENSATED_CATS :
+// PREMIÈRE VERSION RETIRÉE, ET POURQUOI. Ce script attribuait d'abord en
+// RECONSTITUANT à côté le pool qui « aurait dû » être éligible. Il ne
+// reconstituait que le filtre de température, alors que l'échelle de
+// `poolFor` filtre d'abord par occasion, formalité et style. Sa famille
+// « choix malgré alternatives » comptait donc comme alternatives des pièces
+// qui n'auraient passé aucun des autres filtres : 266 cas attribués à tort.
+// C'est le défaut qui a produit trois conclusions fausses en phase 15.
 //
-//   · REPLI FORCÉ — aucune pièce de cette catégorie ne passait le filtre.
-//     Le moteur n'avait pas le choix : soit il relâchait, soit la catégorie
-//     restait vide. Correctif éventuel : la capsule, pas le repli.
-//   · CHOIX MALGRÉ ALTERNATIVES — d'autres pièces de la même catégorie
-//     passaient. Le moteur avait de quoi faire et a pris celle-ci.
-//     Correctif éventuel : le chemin de sélection, pas la capsule.
-//   · EXEMPTION SANS COUCHE — la pièce est sous son min dans une catégorie
-//     que la génération exempte volontairement. L'exemption suppose une
-//     couche par-dessus ; ici il n'y en a pas. On mesure alors si une couche
-//     ÉTAIT disponible dans la capsule : si oui, le défaut est corrigeable
-//     sans toucher aux données ni à la capsule.
+// L'ATTRIBUTION VIENT MAINTENANT DE LA PRODUCTION ELLE-MÊME, via la trace
+// `traceRepli` (07/09/2026), fidèle par construction. Elle rapporte, pour
+// chaque appel de `poolFor`, le barreau retenu et l'effectif de CHAQUE
+// barreau. Deux familles suffisent alors, et elles sont exactes :
+//
+//   · REPLI — le barreau retenu n'est pas le premier. Par construction de
+//     `poolFor`, cela signifie que le premier était VIDE : le moteur n'avait
+//     aucune alternative. La question devient « qu'est-ce qui l'a vidé ? »,
+//     et l'écart entre les effectifs des barreaux y répond.
+//   · EXEMPTION SANS COUCHE — barreau 0, donc la pièce a passé le filtre de
+//     température, et elle est pourtant sous son min : ce ne peut être que
+//     l'exemption TEMP_COMPENSATED_CATS. Elle suppose une couche par-dessus
+//     et il n'y en a pas.
+//
+// Un troisième cas serait une INCOHÉRENCE DE CODE et est compté à part :
+// une pièce au-dessus de son max au barreau 0. Le max n'est exempté nulle
+// part ; si ce compteur n'est pas nul, c'est qu'une pièce entre dans la tenue
+// sans passer par `poolFor`.
+//
+// SEGMENTATION. `generateOutfitWithFallback` appelle `generateOutfit`
+// plusieurs fois — une par palier de formalité, et jusqu'à
+// MAX_ATTEMPTS_PER_TIER par palier. Seules les traces du DERNIER tirage
+// correspondent à la tenue rendue ; les autres viennent de tentatives
+// abandonnées. Le script segmente donc sur le marqueur « début » et ne garde
+// que le dernier segment.
 //
 // Aucune écriture, aucun ALTER, aucun fichier de production modifié.
 
@@ -90,7 +106,7 @@ const passeLeFiltre = (it: CatalogItem, temp: number): boolean => {
   return true;
 };
 
-type Famille = "repli forcé" | "choix malgré alternatives" | "exemption sans couche";
+type Famille = "repli" | "exemption sans couche" | "INCOHÉRENCE — hors max sans repli";
 
 describe("les tenues hors de la plage de leur saison", () => {
   it("attribue chaque pièce hors plage à un mécanisme, sans en supposer aucun", async () => {
@@ -109,6 +125,8 @@ describe("les tenues hors de la plage de leur saison", () => {
     const parCategorie = new Map<CategoryKey, Map<Famille, number>>();
     const parPiece = new Map<number, number>();
     const coucheDispo = { oui: 0, non: 0 };
+    const barreaux = new Map<string, number>();
+    const videurs = new Map<string, number>();
     let tenuesTotal = 0, tenuesFautives = 0;
     const exemples: string[] = [];
     const rngEx = mulberry32(grainePour("echantillon-hors-plage"));
@@ -125,18 +143,27 @@ describe("les tenues hors de la plage de leur saison", () => {
         const w = meteo(temp, saison);
         let tenues = 0, fautives = 0, surMax = 0, sousMinNu = 0;
         for (const { style, capsule } of capsules) {
-          // Ce qui ÉTAIT éligible dans cette capsule à cette température.
-          const eligiblesParCat = new Map<CategoryKey, number>();
-          for (const it of capsule) if (passeLeFiltre(it, temp)) eligiblesParCat.set(it.cat, (eligiblesParCat.get(it.cat) ?? 0) + 1);
-          const coucheEligible = COUCHES.some((c) => (eligiblesParCat.get(c) ?? 0) > 0);
+          // Une couche était-elle seulement disponible dans la capsule à cette
+          // température ? Sert au seul cas « exemption sans couche ».
+          const coucheEligible = capsule.some((it) => COUCHES.includes(it.cat) && passeLeFiltre(it, temp));
 
           for (const occ of OCCS) {
             for (let k = 0; k < N; k++) {
               const vrai = Math.random;
               Math.random = mulberry32(grainePour(`${saison}|${style}|${occ}|${k}|${temp}`));
               let ids: number[];
-              try { ids = generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme", saison).ids; }
-              finally { Math.random = vrai; }
+              const brutes: TraceRepli[] = [];
+              try {
+                ids = generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme", saison, {
+                  traceRepli: (e) => brutes.push(e),
+                }).ids;
+              } finally { Math.random = vrai; }
+              // Seul le dernier tirage a produit la tenue rendue.
+              const dernier = brutes.map((e) => e.type).lastIndexOf("début");
+              const tracesDuTirage = brutes.slice(dernier + 1);
+              /** Le barreau retenu pour une catégorie, et l'échelle qui l'a produit. */
+              const replisPar = new Map<CategoryKey, TraceRepli>();
+              for (const e of tracesDuTirage) for (const c of e.cats) replisPar.set(c, e);
               if (!ids.length) continue;
               tenues += 1; tenuesTotal += 1;
               const pieces = ids.map((id) => index.get(id)).filter((p): p is CatalogItem => Boolean(p));
@@ -147,15 +174,26 @@ describe("les tenues hors de la plage de leur saison", () => {
                 const tropFroid = p.meteoMinTemp != null && temp < p.meteoMinTemp;
                 if (!tropChaud && !(tropFroid && !aUneCouche)) continue;
                 fautive = true;
+                const trace = replisPar.get(p.cat);
+                const aReplie = trace != null && trace.barreau !== 0;
                 let fam: Famille;
                 if (tropChaud) {
-                  fam = (eligiblesParCat.get(p.cat) ?? 0) === 0 ? "repli forcé" : "choix malgré alternatives";
+                  // Le max n'est exempté nulle part. Sans repli, la pièce
+                  // n'aurait pas dû franchir applyTempFilter.
+                  fam = aReplie ? "repli" : "INCOHÉRENCE — hors max sans repli";
                   surMax += 1;
                 } else {
-                  fam = COMPENSEES.includes(p.cat) ? "exemption sans couche"
-                    : (eligiblesParCat.get(p.cat) ?? 0) === 0 ? "repli forcé" : "choix malgré alternatives";
+                  fam = aReplie ? "repli" : "exemption sans couche";
                   sousMinNu += 1;
                   if (fam === "exemption sans couche") { if (coucheEligible) coucheDispo.oui += 1; else coucheDispo.non += 1; }
+                }
+                if (aReplie && trace) {
+                  barreaux.set(trace.nom, (barreaux.get(trace.nom) ?? 0) + 1);
+                  // Ce qui a vidé le premier barreau : si le suivant est
+                  // fourni, c'est la météo ; s'il est vide aussi, c'est plus
+                  // en amont — occasion, formalité ou style.
+                  const videPar = (trace.effectifs[1] ?? 0) > 0 ? "la météo" : "occasion / formalité / style";
+                  videurs.set(videPar, (videurs.get(videPar) ?? 0) + 1);
                 }
                 parFamille.set(fam, (parFamille.get(fam) ?? 0) + 1);
                 const m = parCategorie.get(p.cat) ?? new Map<Famille, number>();
@@ -182,7 +220,7 @@ describe("les tenues hors de la plage de leur saison", () => {
     console.log(`\n════════ 2 · ATTRIBUTION — PAR QUEL CHEMIN CES PIÈCES ARRIVENT ════════`);
     const total = [...parFamille.values()].reduce((a, b) => a + b, 0);
     console.log(`  ${tenuesFautives} tenues fautives sur ${tenuesTotal} (${((tenuesFautives / tenuesTotal) * 100).toFixed(1)} %), ${total} occurrences.`);
-    for (const fam of ["repli forcé", "choix malgré alternatives", "exemption sans couche"] as Famille[]) {
+    for (const fam of ["repli", "exemption sans couche", "INCOHÉRENCE — hors max sans repli"] as Famille[]) {
       const n = parFamille.get(fam) ?? 0;
       console.log(`  ${String(n).padStart(6)}  ${((n / total) * 100).toFixed(1).padStart(5)} %  ${fam}`);
     }
@@ -191,13 +229,17 @@ describe("les tenues hors de la plage de leur saison", () => {
     console.log(`     aucune couche éligible ........................ : ${coucheDispo.non}`);
     console.log(`  Le premier chiffre est corrigeable sans toucher aux données ni à la capsule.`);
 
+    console.log(`\n  Quel barreau a été retenu, et qu'est-ce qui avait vidé le premier :`);
+    for (const [nom, n] of [...barreaux.entries()].sort((a, b) => b[1] - a[1])) console.log(`     ${String(n).padStart(5)}  barreau « ${nom} »`);
+    for (const [nom, n] of [...videurs.entries()].sort((a, b) => b[1] - a[1])) console.log(`     ${String(n).padStart(5)}  premier barreau vidé par ${nom}`);
+
     console.log(`\n  Par catégorie :`);
-    console.log(`  ${"cat".padEnd(13)}${"repli forcé".padStart(13)}${"malgré alt.".padStart(13)}${"exempt. nue".padStart(13)}`);
+    console.log(`  ${"cat".padEnd(13)}${"repli".padStart(13)}${"exempt. nue".padStart(13)}${"INCOHÉRENCE".padStart(14)}`);
     for (const [cat, m] of [...parCategorie.entries()].sort((a, b) => {
       const s = (x: Map<Famille, number>) => [...x.values()].reduce((p, q) => p + q, 0);
       return s(b[1]) - s(a[1]);
     })) {
-      console.log(`  ${cat.padEnd(13)}${String(m.get("repli forcé") ?? 0).padStart(13)}${String(m.get("choix malgré alternatives") ?? 0).padStart(13)}${String(m.get("exemption sans couche") ?? 0).padStart(13)}`);
+      console.log(`  ${cat.padEnd(13)}${String(m.get("repli") ?? 0).padStart(13)}${String(m.get("exemption sans couche") ?? 0).padStart(13)}${String(m.get("INCOHÉRENCE — hors max sans repli") ?? 0).padStart(14)}`);
     }
 
     console.log(`\n  Les 15 pièces les plus souvent hors plage :`);

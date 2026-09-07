@@ -197,8 +197,20 @@ export interface LeviersMesure {
   traceRepli?: (evenement: TraceRepli) => void;
 }
 
-/** Un passage dans l'échelle de repli de `poolFor`. Cf. LeviersMesure.traceRepli. */
+/**
+ * Un événement de trace. Cf. LeviersMesure.traceRepli.
+ *
+ * `type: "début"` marque le commencement d'un tirage. Il est indispensable :
+ * `generateOutfitWithFallback` appelle `generateOutfit` PLUSIEURS fois — une
+ * par palier de la chaîne de formalité, et jusqu'à MAX_ATTEMPTS_PER_TIER fois
+ * par palier. Sans ce marqueur, les traces des tentatives abandonnées se
+ * mélangeraient à celles de la tenue réellement rendue, et toute attribution
+ * bâtie dessus serait fausse. La tenue rendue est toujours celle du DERNIER
+ * tirage : un consommateur segmente sur les marqueurs et ne garde que le
+ * dernier segment.
+ */
 export interface TraceRepli {
+  type: "début" | "repli";
   cats: CategoryKey[];
   /** L'appelant acceptait-il les deux derniers barreaux (relâchement de l'occasion) ? */
   essential: boolean;
@@ -726,9 +738,13 @@ export function generateOutfit(
    * comme avant, la trace ne fait que rapporter le barreau retenu.
    */
   const tracer = leviers?.traceRepli;
+  // Marqueur de début — cf. TraceRepli. Émis avant tout appel à `poolFor`,
+  // et seulement si quelqu'un écoute.
+  if (tracer) tracer({ type: "début", cats: [], essential: false, barreau: -1, nom: "début de tirage", effectifs: [] });
   const noteRepli = (cats: CategoryKey[], essential: boolean, barreau: number, noms: readonly string[], echelle: Item[][]) => {
     if (!tracer) return;
     tracer({
+      type: "repli",
       cats: [...cats],
       essential,
       barreau,
