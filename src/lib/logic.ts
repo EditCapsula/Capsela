@@ -175,7 +175,49 @@ export interface LeviersMesure {
   pullNonSuperposable?: boolean;
   /** Reproduit le comportement d'AVANT la règle des mailles fermées, pour en mesurer le coût réel. */
   superpositionMaillesFermees?: boolean;
+  /**
+   * TRACE DE REPLI (07/09/2026) — observe l'échelle de `poolFor` sans la
+   * modifier. Rien d'autre ne l'observe aujourd'hui, alors qu'elle décide du
+   * contenu de chaque tenue : quand un barreau se vide, le suivant relâche la
+   * météo, puis l'occasion déclarée.
+   *
+   * Pourquoi une trace plutôt qu'une reconstitution dans l'audit : un audit
+   * du 07/09 a voulu attribuer les pièces portées hors de leur plage en
+   * recalculant à côté ce qui « aurait dû » être éligible. Il ne reconstituait
+   * que le filtre de température, alors que l'échelle filtre d'abord par
+   * occasion, formalité et style — l'attribution était donc fausse sans que
+   * rien ne le signale. Recopier l'échelle dans un script aurait reproduit ce
+   * défaut en plus gros : c'est exactement la façon dont trois conclusions de
+   * la phase 15 se sont révélées fausses (cf. AGENTS.md).
+   *
+   * Appelée une fois par appel de `poolFor`, uniquement si elle est fournie.
+   * Elle ne peut rien changer : `poolFor` ignore sa valeur de retour et le
+   * pool est calculé avant qu'elle soit appelée.
+   */
+  traceRepli?: (evenement: TraceRepli) => void;
 }
+
+/** Un passage dans l'échelle de repli de `poolFor`. Cf. LeviersMesure.traceRepli. */
+export interface TraceRepli {
+  cats: CategoryKey[];
+  /** L'appelant acceptait-il les deux derniers barreaux (relâchement de l'occasion) ? */
+  essential: boolean;
+  /** Index du barreau retenu. 0 = aucun repli. -1 = tous vides, dernier barreau rendu par défaut. */
+  barreau: number;
+  /** Nom du barreau retenu, pour lire une trace sans compter les index. */
+  nom: string;
+  /** Effectif de CHAQUE barreau, restreint à `cats` — de quoi voir ce que le moteur avait sous la main. */
+  effectifs: number[];
+}
+
+/** Les barreaux, dans l'ordre, pour chacune des deux échelles de `poolFor`. */
+const BARREAUX_ACCESSOIRES = [
+  "saison + météo", "saison, météo relâchée", "hors saison + météo",
+  "hors saison, météo relâchée", "occasion relâchée + météo", "occasion et météo relâchées",
+] as const;
+const BARREAUX_VETEMENTS = [
+  "saison + occasion + météo", "météo relâchée", "occasion relâchée + météo", "occasion et météo relâchées",
+] as const;
 
 /** Exporté pour CreateLookScreen (filtre dur du picker manuel, brief design section 4). */
 export function recentlyWorn(it: Item): boolean {
@@ -677,6 +719,24 @@ export function generateOutfit(
   // annule la tenue entière (haut, bas, robe/combinaison, chaussures) :
   // pour une veste ou un bijou, une catégorie vide est un résultat
   // acceptable, et réintroduire une pièce écartée y serait une régression.
+  /**
+   * Trace de repli — n'est calculée que si un appelant en fournit une. Sans
+   * elle, le coût est une lecture de propriété par appel de `poolFor`, et le
+   * comportement est identique au caractère près : l'échelle est parcourue
+   * comme avant, la trace ne fait que rapporter le barreau retenu.
+   */
+  const tracer = leviers?.traceRepli;
+  const noteRepli = (cats: CategoryKey[], essential: boolean, barreau: number, noms: readonly string[], echelle: Item[][]) => {
+    if (!tracer) return;
+    tracer({
+      cats: [...cats],
+      essential,
+      barreau,
+      nom: noms[barreau] ?? "aucun barreau non vide",
+      effectifs: echelle.map((rung) => rung.filter((i) => cats.includes(i.cat)).length),
+    });
+  };
+
   const poolFor = (cats: CategoryKey[], essential = false): Item[] => {
     if (cats.every((c) => ACCESSORY_CATS.includes(c))) {
       const seasonNoOcc = hardCategoryFilter(seasonPool, formalityOverride);
@@ -690,22 +750,34 @@ export function generateOutfit(
       // le bas serait incohérente.
       const ladder = [applyTempFilter(seasonNoTemp), seasonNoTemp, applyTempFilter(fullNoTemp), fullNoTemp];
       if (essential) ladder.push(applyTempFilter(fullNoOcc), fullNoOcc);
-      for (const rung of ladder) {
-        if (rung.filter((i) => cats.includes(i.cat)).length) return rung;
+      for (let i = 0; i < ladder.length; i++) {
+        if (ladder[i].filter((x) => cats.includes(x.cat)).length) {
+          noteRepli(cats, essential, i, BARREAUX_ACCESSOIRES, ladder);
+          return ladder[i];
+        }
       }
+      noteRepli(cats, essential, -1, BARREAUX_ACCESSOIRES, ladder);
       return ladder[ladder.length - 1];
     }
+    const echelle = [hardBase, hardBaseNoTemp, hardBaseNoOccWithTemp, hardBaseNoOcc];
     const withTemp = hardBase.filter((i) => cats.includes(i.cat));
-    if (withTemp.length) return withTemp;
+    if (withTemp.length) { noteRepli(cats, essential, 0, BARREAUX_VETEMENTS, echelle); return withTemp; }
     // Repli météo : jamais une catégorie essentielle (ex. le bas) totalement
     // vidée uniquement parce qu'aucune pièce de la capsule ne couvre la
     // météo du jour — cf. commentaire applyTempFilter.
     const noTemp = hardBaseNoTemp.filter((i) => cats.includes(i.cat));
-    if (noTemp.length || !essential) return noTemp;
+    // Un pool vide rendu à un appelant non essentiel n'est PAS un repli : la
+    // catégorie est simplement absente, et la tracer comme barreau 1 ferait
+    // compter des replis qui n'ont pas eu lieu.
+    if (noTemp.length) { noteRepli(cats, essential, 1, BARREAUX_VETEMENTS, echelle); return noTemp; }
+    if (!essential) { noteRepli(cats, essential, -1, BARREAUX_VETEMENTS, echelle); return noTemp; }
     // Repli occasion déclarée, en dernier — la météo reprend la priorité sur
     // ce barreau-ci, exactement comme au-dessus.
     const noOccWithTemp = hardBaseNoOccWithTemp.filter((i) => cats.includes(i.cat));
-    return noOccWithTemp.length ? noOccWithTemp : hardBaseNoOcc.filter((i) => cats.includes(i.cat));
+    if (noOccWithTemp.length) { noteRepli(cats, essential, 2, BARREAUX_VETEMENTS, echelle); return noOccWithTemp; }
+    const dernier = hardBaseNoOcc.filter((i) => cats.includes(i.cat));
+    noteRepli(cats, essential, dernier.length ? 3 : -1, BARREAUX_VETEMENTS, echelle);
+    return dernier;
   };
 
   const chosen: Item[] = [];

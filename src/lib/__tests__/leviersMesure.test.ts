@@ -136,9 +136,14 @@ describe("garde-fou — aucun appelant de production ne passe de levier", () => 
   }
 
   it("LeviersMesure n'est nommé nulle part hors de logic.ts", () => {
+    // `traceRepli` ajouté le 07/09/2026 avec la trace de repli : elle est
+    // inerte et sans effet, mais un appelant de production qui la passerait
+    // ferait tourner en production du code qui n'existe que pour mesurer.
+    // Un garde-fou qui ne connaîtrait pas le nom du dernier levier ne
+    // garderait plus rien.
     const coupables = fichiersProduction(SRC)
       .filter((f) => !f.endsWith(join("lib", "logic.ts")))
-      .filter((f) => /LeviersMesure|pullCommeHautPrincipal|pullNonSuperposable|superpositionMaillesFermees/.test(readFileSync(f, "utf8")));
+      .filter((f) => /LeviersMesure|pullCommeHautPrincipal|pullNonSuperposable|superpositionMaillesFermees|traceRepli|TraceRepli/.test(readFileSync(f, "utf8")));
     expect(coupables.map((f) => f.slice(SRC.length + 1))).toEqual([]);
   });
 });
