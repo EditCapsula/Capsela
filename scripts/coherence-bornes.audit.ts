@@ -85,7 +85,6 @@ describe("cohérence des bornes et coût de l'extension aux robes", () => {
     const ligne = new Map<number, VestiaireRow>(brutes.map((r) => [VESTIAIRE_ID_OFFSET + r.id, r]));
     const pool = brutes.map(rowToCatalogItem).filter((it): it is CatalogItem => Boolean(it));
     assertCatalogueStyles(pool, STYLES_FEMME);
-    const index = new Map(pool.map((it) => [it.id, it]));
     console.log(`Catalogue : ${pool.length} pièces.`);
 
     // ═══ 1 · BORNE CONTRE SAISON DÉCLARÉE ════════════════════════════════

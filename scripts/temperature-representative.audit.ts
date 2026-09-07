@@ -150,7 +150,7 @@ describe("la température représentative des saisons", () => {
         const detail: string[] = [];
         for (const temp of PLAGE_REELLE[saison]) {
           const w = meteo(temp, saison);
-          let surMax = 0, sousMinNu = 0, cellules = 0, tenues = 0;
+          let surMax = 0, sousMinNu = 0, cellules = 0;
           for (const { style, capsule } of capsules) {
             for (const occ of OCCS) {
               let couverte = false;
@@ -161,7 +161,7 @@ describe("la température représentative des saisons", () => {
                 try { ids = generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme", saison).ids; }
                 finally { Math.random = vrai; }
                 if (!ids.length) continue;
-                couverte = true; tenues += 1;
+                couverte = true;
                 const p = ids.map((id) => index.get(id)).filter((x): x is CatalogItem => Boolean(x));
                 const aUneCouche = p.some((x) => COUCHES.includes(x.cat));
                 for (const x of p) {
