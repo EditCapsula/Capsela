@@ -125,6 +125,16 @@ describe("les tenues hors de la plage de leur saison", () => {
     const parCategorie = new Map<CategoryKey, Map<Famille, number>>();
     const parPiece = new Map<number, number>();
     const coucheDispo = { oui: 0, non: 0 };
+    /**
+     * La même question, mais DÉMONTRÉE par la trace au lieu d'être
+     * reconstituée. Limite assumée et mesurée : la trace ne voit que les
+     * couches qui passent par `poolFor`, c'est-à-dire veste et manteau. Le
+     * pull posé en calque est filtré directement sur `hardBase` et n'émet
+     * aucune trace — les tirages où le moteur n'a pas demandé de couche
+     * extérieure sont donc comptés « non observable » plutôt que rangés
+     * d'office d'un côté ou de l'autre.
+     */
+    const coucheTracee = { disponible: 0, indisponible: 0, nonObservable: 0 };
     const barreaux = new Map<string, number>();
     const videurs = new Map<string, number>();
     let tenuesTotal = 0, tenuesFautives = 0;
@@ -164,6 +174,12 @@ describe("les tenues hors de la plage de leur saison", () => {
               /** Le barreau retenu pour une catégorie, et l'échelle qui l'a produit. */
               const replisPar = new Map<CategoryKey, TraceRepli>();
               for (const e of tracesDuTirage) for (const c of e.cats) replisPar.set(c, e);
+              // Ce que la trace sait d'une couche EXTÉRIEURE sur ce tirage.
+              const tracesCouche = tracesDuTirage.filter((e) => e.cats.some((c) => c === "veste" || c === "manteau"));
+              const coucheVerdict: "disponible" | "indisponible" | "nonObservable" =
+                !tracesCouche.length ? "nonObservable"
+                : tracesCouche.some((e) => e.barreau === 0 && (e.effectifs[0] ?? 0) > 0) ? "disponible"
+                : "indisponible";
               if (!ids.length) continue;
               tenues += 1; tenuesTotal += 1;
               const pieces = ids.map((id) => index.get(id)).filter((p): p is CatalogItem => Boolean(p));
@@ -185,7 +201,10 @@ describe("les tenues hors de la plage de leur saison", () => {
                 } else {
                   fam = aReplie ? "repli" : "exemption sans couche";
                   sousMinNu += 1;
-                  if (fam === "exemption sans couche") { if (coucheEligible) coucheDispo.oui += 1; else coucheDispo.non += 1; }
+                  if (fam === "exemption sans couche") {
+                    if (coucheEligible) coucheDispo.oui += 1; else coucheDispo.non += 1;
+                    coucheTracee[coucheVerdict] += 1;
+                  }
                 }
                 if (aReplie && trace) {
                   barreaux.set(trace.nom, (barreaux.get(trace.nom) ?? 0) + 1);
@@ -225,9 +244,19 @@ describe("les tenues hors de la plage de leur saison", () => {
       console.log(`  ${String(n).padStart(6)}  ${((n / total) * 100).toFixed(1).padStart(5)} %  ${fam}`);
     }
     console.log(`\n  Pour les « exemption sans couche » : une couche était-elle disponible ?`);
-    console.log(`     couche DISPONIBLE dans la capsule, non utilisée : ${coucheDispo.oui}`);
-    console.log(`     aucune couche éligible ........................ : ${coucheDispo.non}`);
-    console.log(`  Le premier chiffre est corrigeable sans toucher aux données ni à la capsule.`);
+    console.log(`\n  a) RECONSTITUÉ par ce script, sur le seul filtre de température —`);
+    console.log(`     à ne pas confondre avec une démonstration, c'est le type d'approximation`);
+    console.log(`     qui a rendu fausse la première version de cet audit :`);
+    console.log(`        couche température-éligible : ${coucheDispo.oui}   aucune : ${coucheDispo.non}`);
+    console.log(`\n  b) DÉMONTRÉ par la trace, tous filtres compris (saison, occasion, formalité,`);
+    console.log(`     style, météo). La trace ne voit que veste et manteau : le pull posé en`);
+    console.log(`     calque est filtré hors de poolFor et n'émet rien.`);
+    console.log(`        couche extérieure DISPONIBLE et non utilisée : ${coucheTracee.disponible}`);
+    console.log(`        couche extérieure INDISPONIBLE ............. : ${coucheTracee.indisponible}`);
+    console.log(`        non observable (aucune couche demandée) .... : ${coucheTracee.nonObservable}`);
+    console.log(`\n     Seul le premier de ces trois est corrigeable dans la génération sans`);
+    console.log(`     toucher aux données ni à la capsule. L'écart avec (a) mesure exactement`);
+    console.log(`     ce que ma reconstitution surestimait.`);
 
     console.log(`\n  Quel barreau a été retenu, et qu'est-ce qui avait vidé le premier :`);
     for (const [nom, n] of [...barreaux.entries()].sort((a, b) => b[1] - a[1])) console.log(`     ${String(n).padStart(5)}  barreau « ${nom} »`);
