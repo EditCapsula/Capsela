@@ -135,6 +135,16 @@ describe("les tenues hors de la plage de leur saison", () => {
      * d'office d'un côté ou de l'autre.
      */
     const coucheTracee = { disponible: 0, indisponible: 0, nonObservable: 0 };
+    /**
+     * R-B19 (logic.ts) : une jupe ou une robe retenue sous son propre
+     * meteo_min_temp déclenche une recherche DÉDIÉE de collants, en dehors de
+     * `poolFor`. Des collants sont donc, pour ces deux catégories seulement,
+     * la couche que le moteur prévoit — les compter comme « nu sous son min »
+     * revenait à déclarer fautives des tenues que le moteur avait compensées.
+     * Corrigé ici ; ce compteur mesure exactement ce que la version
+     * précédente de cet audit surestimait.
+     */
+    let collantsR19 = 0;
     const barreaux = new Map<string, number>();
     const videurs = new Map<string, number>();
     let tenuesTotal = 0, tenuesFautives = 0;
@@ -184,11 +194,17 @@ describe("les tenues hors de la plage de leur saison", () => {
               tenues += 1; tenuesTotal += 1;
               const pieces = ids.map((id) => index.get(id)).filter((p): p is CatalogItem => Boolean(p));
               const aUneCouche = pieces.some((p) => COUCHES.includes(p.cat));
+              const aDesCollants = pieces.some((p) => p.cat === "accessoire" && p.accessoireType === "Collants");
+              // Une jupe/robe sous son min que le moteur a couverte de
+              // collants (R-B19) n'est pas nue : elle est compensée.
+              const compensee = (p: CatalogItem) =>
+                aUneCouche || ((p.cat === "jupe" || p.cat === "robe") && aDesCollants);
               let fautive = false;
               for (const p of pieces) {
                 const tropChaud = p.meteoMaxTemp != null && temp > p.meteoMaxTemp;
                 const tropFroid = p.meteoMinTemp != null && temp < p.meteoMinTemp;
-                if (!tropChaud && !(tropFroid && !aUneCouche)) continue;
+                if (tropFroid && !aUneCouche && compensee(p)) collantsR19 += 1;
+                if (!tropChaud && !(tropFroid && !compensee(p))) continue;
                 fautive = true;
                 const trace = replisPar.get(p.cat);
                 const aReplie = trace != null && trace.barreau !== 0;
@@ -253,10 +269,15 @@ describe("les tenues hors de la plage de leur saison", () => {
     console.log(`     calque est filtré hors de poolFor et n'émet rien.`);
     console.log(`        couche extérieure DISPONIBLE et non utilisée : ${coucheTracee.disponible}`);
     console.log(`        couche extérieure INDISPONIBLE ............. : ${coucheTracee.indisponible}`);
-    console.log(`        non observable (aucune couche demandée) .... : ${coucheTracee.nonObservable}`);
-    console.log(`\n     Seul le premier de ces trois est corrigeable dans la génération sans`);
-    console.log(`     toucher aux données ni à la capsule. L'écart avec (a) mesure exactement`);
-    console.log(`     ce que ma reconstitution surestimait.`);
+    console.log(`        aucun appel poolFor(veste|manteau) sur ce tirage : ${coucheTracee.nonObservable}`);
+    console.log(`\n     La troisième ligne ne dit PAS que le moteur a renoncé à une couche : les`);
+    console.log(`     deux compensations thermiques (R-B18 haut sous son min, R-B19 collants)`);
+    console.log(`     tirent hors de poolFor et n'émettent aucune trace. Elle dit seulement`);
+    console.log(`     que la question ne s'est pas posée par ce chemin-là.`);
+    console.log(`\n     Seule la première ligne est corrigeable dans la génération sans toucher`);
+    console.log(`     aux données ni à la capsule.`);
+    console.log(`\n  c) Jupes/robes sous leur min que R-B19 avait déjà couvertes de collants,`);
+    console.log(`     comptées à tort « nu sous son min » par la version précédente : ${collantsR19}`);
 
     console.log(`\n  Quel barreau a été retenu, et qu'est-ce qui avait vidé le premier :`);
     for (const [nom, n] of [...barreaux.entries()].sort((a, b) => b[1] - a[1])) console.log(`     ${String(n).padStart(5)}  barreau « ${nom} »`);
