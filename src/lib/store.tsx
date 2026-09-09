@@ -79,7 +79,6 @@ function buildInitialState(): AppState {
     addReturn: null,
     screen: "welcome",
     profileReturn: "home",
-    premiumReturn: "home",
     legalReturn: "profile",
     profileSetupStep: "genre",
     profileSetupFromEdit: false,
@@ -137,7 +136,6 @@ function buildInitialState(): AppState {
     capsuleSeason: null,
     exploredStyleId: null,
     lookCount: 0,
-    isPremium: false,
     history: [],
     opinionContact: null,
     opinionStatus: null,
@@ -233,9 +231,6 @@ export interface Actions {
   saveItem: () => void;
   /** Ferme le bandeau de diagnostic temporaire dressingError (correctif 22/08/2026). */
   dismissDressingError: () => void;
-  goPremium: () => void;
-  subscribe: () => void;
-  premiumBack: () => void;
   setOccasion: (o: OccasionKey) => void;
   /** Sous-choix affiché uniquement pour l'occasion "travail_formel" ; régénère la tenue. */
   setWorkMode: (m: WorkMode) => void;
@@ -306,17 +301,9 @@ interface CapselaContextValue {
   /** Source des suggestions — vestiaire universel (Supabase) si disponible, sinon le catalogue statique de secours. Utilisé par l'écran Capsule pour recalculer une capsule sur une saison différente de la saison courante. */
   vestiairePool: CatalogItem[];
   actions: Actions;
-  /** Wraps a handler so it only runs for Premium users; otherwise routes to the paywall. */
-  requirePremium: (fn: () => void) => () => void;
 }
 
 const CapselaContext = createContext<CapselaContextValue | null>(null);
-
-const toPremiumScreen = (s: AppState): AppState => ({
-  ...s,
-  premiumReturn: s.screen === "premium" ? s.premiumReturn : s.screen,
-  screen: "premium",
-});
 
 /**
  * Retrouve une pièce par id dans un pool, puis dans le catalogue (pour
@@ -1058,10 +1045,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     },
     dismissDressingError: () => setState((s) => ({ ...s, dressingError: null })),
 
-    goPremium: () => setState(toPremiumScreen),
-    subscribe: () => setState((s) => ({ ...s, isPremium: true, screen: s.premiumReturn || "home" })),
-    premiumBack: () => setState((s) => ({ ...s, screen: s.premiumReturn || "home" })),
-
     setOccasion: (o) => setState((s) => regen({ ...s, occasion: o, occasionManual: true })),
     setWorkMode: (m) => setState((s) => regen({ ...s, workMode: m })),
     setTravelMode: (m) => setState((s) => regen({ ...s, travelMode: m, travelTipDismissed: false })),
@@ -1426,11 +1409,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     },
   };
 
-  const requirePremium = (fn: () => void) => () => {
-    if (stateRef.current.isPremium) fn();
-    else setState(toPremiumScreen);
-  };
-
   const value: CapselaContextValue = {
     state,
     weather,
@@ -1441,7 +1419,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     wardrobePool,
     vestiairePool,
     actions,
-    requirePremium,
   };
 
   return <CapselaContext.Provider value={value}>{children}</CapselaContext.Provider>;
