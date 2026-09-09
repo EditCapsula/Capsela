@@ -114,6 +114,7 @@ export default function PieceScreen() {
   const { state, actions, vestiairePool } = useCapsela();
   const [suggestionInfoOpen, setSuggestionInfoOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [lookSheetOpen, setLookSheetOpen] = useState(false);
   const [dormant, setDormant] = useState(false);
   const active = state.activeSuggested
@@ -389,13 +390,40 @@ export default function PieceScreen() {
             <button
               onClick={() => {
                 setMenuOpen(false);
-                actions.removeActive();
+                setConfirmRemove(true);
               }}
               className="flex items-center gap-[13px] py-[15px] text-[14px] text-rust cursor-pointer text-left"
             >
               <TrashIcon /> Retirer de mon dressing
             </button>
           </div>
+        </BottomSheet>
+      )}
+
+      {/* Confirmation ajoutée le 09/09/2026 : le retrait est définitif et
+          partait jusqu'ici sur une seule touche, sans retour possible — dans
+          un menu dont les deux autres entrées sont anodines. */}
+      {!suggested && (
+        <BottomSheet title="Retirer cette pièce" open={confirmRemove} onClose={() => setConfirmRemove(false)}>
+          <div className="text-[13px] text-ink leading-[1.55]">
+            Cette pièce quittera ton dressing et ne sera plus proposée dans tes tenues. Ton historique reste intact.{" "}
+            <span className="text-rust">Cette action est définitive.</span>
+          </div>
+          <button
+            onClick={() => {
+              setConfirmRemove(false);
+              actions.removeActive();
+            }}
+            className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
+          >
+            Retirer définitivement
+          </button>
+          <button
+            onClick={() => setConfirmRemove(false)}
+            className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer"
+          >
+            Annuler
+          </button>
         </BottomSheet>
       )}
 

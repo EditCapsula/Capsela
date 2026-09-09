@@ -196,6 +196,8 @@ export interface Actions {
   /** Affiche une combinaison choisie depuis ce module sur l'écran Tenue — jamais un enregistrement automatique comme portée. */
   viewItemOutfit: (ids: number[], occasion: OccasionKey) => void;
   removeActive: () => void;
+  /** Retire plusieurs pièces du dressing d'un coup (sélection multiple depuis "Mes pièces"). Les pièces suggérées ne passent jamais par ici. */
+  removeItems: (ids: number[]) => void;
   /** Écarte une suggestion de la capsule par défaut. */
   dismissSuggested: (id: number) => void;
   /**
@@ -737,6 +739,21 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       if (isSupabaseConfigured && userId) {
         // Suppression best-effort : la pièce reste retirée localement même en cas d'échec réseau.
         deleteDressingItem(deletedId).catch((err) => reportDressingError("deleteDressingItem", err));
+      }
+    },
+
+    removeItems: (ids) => {
+      // Même contrat que removeActive, appliqué à une sélection : retrait
+      // local immédiat, puis suppression best-effort en base pièce par pièce.
+      // Un échec réseau sur l'une n'empêche pas les autres — et la pièce
+      // reste retirée localement, comme pour une suppression unitaire.
+      const aRetirer = new Set(ids);
+      if (!aRetirer.size) return;
+      setState((st) => ({ ...st, items: st.items.filter((it) => !aRetirer.has(it.id)) }));
+      if (isSupabaseConfigured && userId) {
+        for (const id of aRetirer) {
+          deleteDressingItem(id).catch((err) => reportDressingError("deleteDressingItem", err));
+        }
       }
     },
 
