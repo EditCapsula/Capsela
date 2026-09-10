@@ -118,19 +118,78 @@ export async function fetchDressingItems(userId: string): Promise<Item[]> {
   }
 }
 
+/** Côté le plus long d'une photo enregistrée. Au-delà, l'écran n'en montre rien de plus. */
+export const PHOTO_COTE_MAX = 1200;
+/** Qualité JPEG. 0,8 est le seuil au-delà duquel le poids monte sans gain visible sur une photo de vêtement. */
+export const PHOTO_QUALITE = 0.8;
+
+/**
+ * Réduit une photo AVANT l'envoi (correctif 10/09/2026, après un dépassement
+ * de quota « Cached Egress Exceeded » chez Supabase).
+ *
+ * Jusqu'ici le fichier de l'appareil photo partait tel quel : les photos
+ * mesurées dans le bucket pesaient de 2 à 8,4 Mo pièce, pour être affichées
+ * dans une vignette de 200 px. Le coût n'est pas le stockage — c'est l'egress,
+ * facturé à chaque affichage : six vignettes à 3 Mo, ce sont 18 Mo servis
+ * chaque fois qu'on ouvre « Mes pièces ».
+ *
+ * NE JAMAIS BLOQUER L'AJOUT. Tout ce qui peut manquer — un navigateur sans
+ * `createImageBitmap`, un rendu serveur sans `document`, un canvas refusé, un
+ * fichier qui n'est pas une image — rend le fichier d'origine plutôt que de
+ * lever. Une photo lourde vaut mieux qu'une pièce qu'on ne peut pas ajouter.
+ *
+ * Et jamais de résultat pire que l'entrée : si le ré-encodage produit un
+ * fichier plus gros (petite image déjà optimisée), on garde l'original.
+ */
+export async function compressDressingPhoto(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+  if (typeof createImageBitmap !== "function" || typeof document === "undefined") return file;
+  let bitmap: ImageBitmap | null = null;
+  try {
+    // `imageOrientation` applique l'orientation EXIF : sans elle, les photos
+    // prises en portrait sur téléphone ressortent couchées.
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const echelle = Math.min(1, PHOTO_COTE_MAX / Math.max(bitmap.width, bitmap.height));
+    const largeur = Math.max(1, Math.round(bitmap.width * echelle));
+    const hauteur = Math.max(1, Math.round(bitmap.height * echelle));
+    const canvas = document.createElement("canvas");
+    canvas.width = largeur;
+    canvas.height = hauteur;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    // Fond blanc avant le dessin : le JPEG ignore la transparence et rendrait
+    // noir le fond d'un PNG détouré.
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, largeur, hauteur);
+    ctx.drawImage(bitmap, 0, 0, largeur, hauteur);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", PHOTO_QUALITE)
+    );
+    if (!blob || blob.size >= file.size) return file;
+    const nom = file.name.replace(/\.[^.]+$/, "") || "photo";
+    return new File([blob], `${nom}.jpg`, { type: "image/jpeg", lastModified: file.lastModified });
+  } catch {
+    return file;
+  } finally {
+    bitmap?.close();
+  }
+}
+
 /**
  * Upload la photo réelle d'une pièce vers le bucket dressing-photos (cf.
  * migration 0023) et renvoie son URL publique définitive — remplace
  * l'ancienne URL locale (blob:) qui redevenait invalide au rechargement.
  * Chemin {user_id}/{uuid}.{ext} : l'UUID évite toute collision entre deux
- * photos, l'extension est déduite du type MIME du fichier.
+ * photos, l'extension est déduite du type MIME du fichier — celui du fichier
+ * COMPRESSÉ, qui n'est pas forcément celui d'origine.
  */
 export async function uploadDressingPhoto(userId: string, file: File): Promise<string> {
-  const ext = file.type.split("/")[1] || "jpg";
+  const photo = await compressDressingPhoto(file);
+  const ext = photo.type.split("/")[1] || "jpg";
   const path = `${userId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await getSupabase()
     .storage.from("dressing-photos")
-    .upload(path, file, { contentType: file.type, upsert: false });
+    .upload(path, photo, { contentType: photo.type, upsert: false });
   if (error) throw error;
   const { data } = getSupabase().storage.from("dressing-photos").getPublicUrl(path);
   return data.publicUrl;
