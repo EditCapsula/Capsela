@@ -76,36 +76,43 @@ export default function WardrobePiecesScreen() {
           </button>
           <div className="font-serif text-[20px] text-ink truncate">Mes pièces</div>
         </div>
+        <button onClick={actions.openAdd} className="flex items-center gap-[7px] flex-shrink-0 cursor-pointer">
+          <span className="w-[30px] h-[30px] rounded-full bg-terracotta text-cream flex items-center justify-center text-[16px] flex-shrink-0">
+            +
+          </span>
+          <span className="text-[11.5px] text-ink">Ajouter</span>
+        </button>
+      </div>
+
+      {/* « Sélectionner » vit sur la ligne du compte, pas dans l'en-tête
+          (correctif 10/09/2026, signalé : « je ne vois pas comment
+          sélectionner en masse »). Placé en gris entre le titre et le
+          « + Ajouter » terracotta, il se lisait comme du décor sur une
+          largeur de téléphone. Ici il est seul de son côté, en terracotta —
+          la couleur que l'app réserve aux actions — et juste au-dessus de la
+          grille sur laquelle il agit. */}
+      <div className="flex items-baseline justify-between gap-3 mt-4">
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted">
+          {selectionMode
+            ? selection.size === 0
+              ? "Touche les pièces à retirer"
+              : `${selection.size} ${selection.size === 1 ? "sélectionnée" : "sélectionnées"}`
+            : `${items.length} ${items.length === 1 ? "pièce" : "pièces"}`}
+        </div>
         {selectionMode ? (
-          <button onClick={quitterSelection} className="text-[12.5px] text-muted flex-shrink-0 cursor-pointer py-[6px]">
+          <button onClick={quitterSelection} className="text-[12.5px] text-muted flex-shrink-0 cursor-pointer py-[4px]">
             Annuler
           </button>
         ) : (
-          <div className="flex items-center gap-[14px] flex-shrink-0">
-            {items.length > 0 && (
-              <button
-                onClick={() => setSelectionMode(true)}
-                className="text-[12.5px] text-muted cursor-pointer py-[6px]"
-              >
-                Sélectionner
-              </button>
-            )}
-            <button onClick={actions.openAdd} className="flex items-center gap-[7px] cursor-pointer">
-              <span className="w-[30px] h-[30px] rounded-full bg-terracotta text-cream flex items-center justify-center text-[16px] flex-shrink-0">
-                +
-              </span>
-              <span className="text-[11.5px] text-ink">Ajouter</span>
+          items.length > 0 && (
+            <button
+              onClick={() => setSelectionMode(true)}
+              className="text-[12.5px] text-terracotta flex-shrink-0 cursor-pointer py-[4px]"
+            >
+              Sélectionner
             </button>
-          </div>
+          )
         )}
-      </div>
-
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-4">
-        {selectionMode
-          ? selection.size === 0
-            ? "Touche les pièces à retirer"
-            : `${selection.size} ${selection.size === 1 ? "sélectionnée" : "sélectionnées"}`
-          : `${items.length} ${items.length === 1 ? "pièce" : "pièces"}`}
       </div>
 
       {items.length === 0 ? (
