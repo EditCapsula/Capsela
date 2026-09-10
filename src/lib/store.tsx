@@ -9,7 +9,9 @@ import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
   deleteDressingItem,
+  deleteDressingPhotos,
   deleteSavedLook,
+  dressingPhotoPath,
   fetchDressingItems,
   fetchOutfitHistory,
   fetchSavedLooks,
@@ -303,6 +305,31 @@ interface CapselaContextValue {
   /** Source des suggestions — vestiaire universel (Supabase) si disponible, sinon le catalogue statique de secours. Utilisé par l'écran Capsule pour recalculer une capsule sur une saison différente de la saison courante. */
   vestiairePool: CatalogItem[];
   actions: Actions;
+}
+
+/**
+ * Photos personnelles devenues orphelines par le retrait de pièces
+ * (09/09/2026, signalé) : jusqu'ici le fichier restait dans le bucket pour
+ * toujours, sans plus rien pour le désigner — invisible, mais comptant dans
+ * le quota de stockage.
+ *
+ * Deux garde-fous, et ils comptent autant que la suppression elle-même.
+ * `dressingPhotoPath` écarte tout ce qui n'est pas une photo personnelle :
+ * `startEditItem` retombe sur l'image de catalogue quand la pièce n'a pas de
+ * photo propre, et ce visuel est PARTAGÉ par toutes les utilisatrices — le
+ * supprimer le casserait pour tout le monde. Et une URL encore référencée
+ * par une pièce conservée n'est jamais supprimée : deux pièces peuvent
+ * pointer le même fichier.
+ */
+function photosDevenuesOrphelines(retirees: Item[], conservees: Item[]): string[] {
+  const encoreUtilisees = new Set(conservees.map((it) => it.photoUrl).filter(Boolean));
+  const chemins = new Set<string>();
+  for (const it of retirees) {
+    if (encoreUtilisees.has(it.photoUrl)) continue;
+    const chemin = dressingPhotoPath(it.photoUrl);
+    if (chemin) chemins.add(chemin);
+  }
+  return [...chemins];
 }
 
 const CapselaContext = createContext<CapselaContextValue | null>(null);
@@ -735,10 +762,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const deletedId = s.activeId;
+      const retiree = s.items.filter((it) => it.id === deletedId);
+      const photos = photosDevenuesOrphelines(retiree, s.items.filter((it) => it.id !== deletedId));
       setState((st) => ({ ...st, items: st.items.filter((it) => it.id !== deletedId), screen: st.pieceReturn }));
       if (isSupabaseConfigured && userId) {
         // Suppression best-effort : la pièce reste retirée localement même en cas d'échec réseau.
         deleteDressingItem(deletedId).catch((err) => reportDressingError("deleteDressingItem", err));
+        deleteDressingPhotos(photos).catch((err) => reportDressingError("deleteDressingPhotos", err));
       }
     },
 
@@ -749,11 +779,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // reste retirée localement, comme pour une suppression unitaire.
       const aRetirer = new Set(ids);
       if (!aRetirer.size) return;
+      const avant = stateRef.current.items;
+      const photos = photosDevenuesOrphelines(
+        avant.filter((it) => aRetirer.has(it.id)),
+        avant.filter((it) => !aRetirer.has(it.id))
+      );
       setState((st) => ({ ...st, items: st.items.filter((it) => !aRetirer.has(it.id)) }));
       if (isSupabaseConfigured && userId) {
         for (const id of aRetirer) {
           deleteDressingItem(id).catch((err) => reportDressingError("deleteDressingItem", err));
         }
+        deleteDressingPhotos(photos).catch((err) => reportDressingError("deleteDressingPhotos", err));
       }
     },
 
@@ -1034,12 +1070,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: addReturn || (editingId != null ? "piece" : "wardrobe"),
       });
       if (editingId != null) {
+        // "Changer la photo" laissait l'ancienne dans le bucket, elle aussi
+        // sans plus rien pour la désigner. Même règle que pour un retrait :
+        // seule une photo personnelle que plus aucune pièce ne référence
+        // s'en va.
+        const avant = stateRef.current.items;
+        const ancienne = avant.find((it) => it.id === editingId);
+        const photos =
+          ancienne && ancienne.photoUrl !== base.photoUrl
+            ? photosDevenuesOrphelines([ancienne], avant.filter((it) => it.id !== editingId))
+            : [];
         setState((st) => ({
           ...resetFields(st),
           items: st.items.map((it) => (it.id === editingId ? { ...it, ...base, id: editingId, createdAt: it.createdAt } : it)),
         }));
         if (isSupabaseConfigured && userId) {
           updateDressingItem(editingId, base).catch((err) => reportDressingError("updateDressingItem", err));
+          deleteDressingPhotos(photos).catch((err) => reportDressingError("deleteDressingPhotos", err));
         }
         return;
       }
