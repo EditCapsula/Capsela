@@ -93,6 +93,26 @@ function InfoIcon({ className = "" }: { className?: string }) {
   );
 }
 
+/** Mêmes tracés que dans PieceScreen : le geste « photo » se reconnaît d'un écran à l'autre. */
+function CameraIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+      <circle cx="12" cy="13" r="3.4" />
+    </svg>
+  );
+}
+
+function GalerieIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="8.5" cy="10" r="1.6" />
+      <path d="M21 16l-5-5-5.5 5.5L8 14l-5 5" />
+    </svg>
+  );
+}
+
 /** Pastille "détecté par Capsela" (recette 24/08/2026) — un seul marqueur commun partout, jamais de pourcentage de confiance. */
 function AiTag() {
   return (
@@ -160,7 +180,17 @@ function typeOptionsFor(cat: CategoryKey): string[] | undefined {
 export default function AddScreen() {
   const { state, actions } = useCapsela();
   const { profile } = useAuth();
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  // Deux champs distincts (correctif 10/09/2026, signalé : « je ne peux que
+  // choisir dans la galerie, je ne peux pas prendre une photo »). Un seul
+  // `accept="image/*"` laisse le système décider s'il propose l'appareil
+  // photo — beaucoup de navigateurs mobiles, et la plupart des vues intégrées
+  // aux applications, ouvrent directement la galerie sans jamais l'offrir.
+  // `capture="environment"` demande explicitement l'appareil photo arrière ;
+  // le champ sans `capture` garde l'accès à la galerie. Le choix revient donc
+  // à l'utilisatrice, plus au navigateur.
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galerieInputRef = useRef<HTMLInputElement>(null);
+  const [sourcePhoto, setSourcePhoto] = useState(false);
   const [sheet, setSheet] = useState<"characteristics" | "occasions" | null>(null);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -168,6 +198,10 @@ export default function AddScreen() {
     // (correctif 22/08/2026, signalé : photo jamais affichée après
     // rechargement — l'ancien aperçu blob: n'était jamais persisté).
     if (file) actions.uploadAddPhoto(file);
+    // Réinitialise le champ : sans ça, reprendre DEUX FOIS la même photo
+    // (même nom de fichier) n'émettrait pas de second `change`.
+    e.target.value = "";
+    setSourcePhoto(false);
   };
 
   const isShoe = state.addCat === "chaussures";
@@ -242,10 +276,11 @@ export default function AddScreen() {
         </div>
       </div>
 
-      <input ref={photoInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={onPhotoChange} className="hidden" />
+      <input ref={galerieInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
       <button
         type="button"
-        onClick={() => photoInputRef.current?.click()}
+        onClick={() => setSourcePhoto(true)}
         className={
           "mt-[18px] w-full h-[190px] rounded-2xl flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
           (state.addPhotoUrl ? "" : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
@@ -468,6 +503,33 @@ export default function AddScreen() {
       {state.addPhotoUploading && (
         <div className="text-center text-[11.5px] text-terracotta mt-[10px]">Envoi de la photo en cours…</div>
       )}
+
+      <BottomSheet
+        title={state.addPhotoUrl ? "Changer la photo" : "Ajouter une photo"}
+        open={sourcePhoto}
+        onClose={() => setSourcePhoto(false)}
+      >
+        <div className="flex flex-col">
+          <button
+            onClick={() => {
+              setSourcePhoto(false);
+              cameraInputRef.current?.click();
+            }}
+            className="flex items-center gap-[13px] py-[15px] text-[14px] text-ink border-b border-border cursor-pointer text-left"
+          >
+            <CameraIcon /> Prendre une photo
+          </button>
+          <button
+            onClick={() => {
+              setSourcePhoto(false);
+              galerieInputRef.current?.click();
+            }}
+            className="flex items-center gap-[13px] py-[15px] text-[14px] text-ink cursor-pointer text-left"
+          >
+            <GalerieIcon /> Choisir dans la galerie
+          </button>
+        </div>
+      </BottomSheet>
 
       <BottomSheet title="Caractéristiques" open={sheet === "characteristics"} onClose={() => setSheet(null)}>
         <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[11px]">Couleur dominante</div>
