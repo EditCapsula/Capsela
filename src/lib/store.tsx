@@ -26,6 +26,7 @@ import {
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
+import { composeWardrobePool } from "./selectors";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import {
@@ -555,13 +556,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // d'une même catégorie, mais jamais "tout ou rien" non plus (ajouter une
   // seule pièce réelle ne doit pas faire disparaître les suggestions des
   // autres catégories).
+  /** Les clés de catégorie, dans l'ordre de `CATS` — l'ordre du pool reste celui d'avant l'extraction. */
+  const CAT_KEYS = useMemo(() => CATS.map(([key]) => key), []);
+
+  // Composition déléguée à `composeWardrobePool` (selectors.ts) plutôt que
+  // recopiée ici : c'est la même fonction que les audits mesurent, si bien
+  // qu'aucune dérive n'est possible entre ce que le moteur fait et ce qu'on
+  // croit mesurer. Sans occasion, le comportement est celui d'avant — les
+  // vraies pièces priment, catégorie par catégorie.
   const wardrobePool = useMemo(
-    () =>
-      CATS.flatMap(([key]) => {
-        const real = state.items.filter((i) => i.cat === key);
-        return real.length ? real : defaultCapsule.filter((i) => i.cat === key);
-      }),
-    [state.items, defaultCapsule]
+    () => composeWardrobePool(state.items, defaultCapsule, CAT_KEYS),
+    [state.items, defaultCapsule, CAT_KEYS]
   );
 
   const poolRef = useRef(wardrobePool);
@@ -573,18 +578,38 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // y compris celles d'une capsule de style exploré. Les pièces réelles sont
   // déjà toutes dans poolRef (cf. wardrobePool), inutile de les redoubler.
   const vestiaireRef = useRef<Item[]>(vestiairePool);
+  // La capsule sert à COMPLÉTER le pool au moment de générer (cf. regen) :
+  // il faut donc la garder sous la main, comme le pool et la météo.
+  const capsuleRef = useRef<Item[]>(defaultCapsule);
   useEffect(() => {
     poolRef.current = wardrobePool;
     weatherRef.current = weather;
     vestiaireRef.current = vestiairePool;
-  }, [wardrobePool, weather, vestiairePool]);
+    capsuleRef.current = defaultCapsule;
+  }, [wardrobePool, weather, vestiairePool, defaultCapsule]);
 
   // pool/meteo surchargeables : les références ne sont mises à jour que par
   // un effet, donc encore périmées pendant le rendu où le profil vient de
   // changer. L'ajustement de style plus bas passe les valeurs fraîches.
-  const regen = (s: AppState, pool: Item[] = poolRef.current, w: Weather = weatherRef.current): AppState => {
+  const regen = (
+    s: AppState,
+    pool: Item[] = poolRef.current,
+    w: Weather = weatherRef.current,
+    capsule: Item[] = capsuleRef.current
+  ): AppState => {
+    // Complétion par occasion (correctif 10/09/2026, signalé : « pourquoi je
+    // n'ai pas de tenues de sport »). Une catégorie dont aucune pièce réelle
+    // ne sert l'occasion du jour se voit rendre les pièces de la capsule qui,
+    // elles, la déclarent — sans jamais retirer une pièce réelle. Mesuré : le
+    // sport passait de 100 % à 0 % de tenue dès qu'un dressing contenait des
+    // pièces, parce qu'il est la seule occasion sans repli de formalité.
+    // `composeWardrobePool` est idempotente sur un pool déjà composé : sur un
+    // dressing vide, elle ne change rien.
+    const poolGeneration = s.occasion
+      ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion })
+      : pool;
     const result = generateOutfitWithFallback(
-      pool,
+      poolGeneration,
       w,
       s.occasion || "all",
       s.workMode,
@@ -675,7 +700,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         // Si l'exploration est devenue caduque, le bloc ligne ~350 l'a déjà
         // annulée et ce garde-fou ne s'applique donc plus.
         if (s.exploredStyleId) return s;
-        return regen(s, wardrobePool, weather);
+        return regen(s, wardrobePool, weather, defaultCapsule);
       });
     }
   }

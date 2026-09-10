@@ -3,7 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, type VestiaireRow } from "../src/lib/vestiaire";
 import { CAPSULE_SEASONS, computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
 import { generateOutfitWithFallback } from "../src/lib/logic";
-import { suggestOccasions } from "../src/lib/attributes";
+import { occasionsOf } from "../src/lib/capsule";
+import { composeWardrobePool } from "../src/lib/selectors";
 import { CATS, OCCASIONS } from "../src/lib/data";
 import type { Weather } from "../src/lib/data";
 import type { CatalogItem } from "../src/lib/catalog";
@@ -68,17 +69,18 @@ function grainePour(cle: string): number {
   return h >>> 0;
 }
 
-/** Recopie d'`occasionsOf` (capsule.ts:187), qui n'est pas exportée. */
-const occasionsDe = (it: CatalogItem): OccasionKey[] =>
-  it.occasion && it.occasion.length ? it.occasion : suggestOccasions(it.cat, it.shoeType);
+const CAT_KEYS: CategoryKey[] = CATS.map(([key]) => key);
 
-/** Recopie fidèle de la composition du pool (store.tsx:558) — tout ou rien par catégorie. */
-function poolDeGeneration(possedees: CatalogItem[], capsule: CatalogItem[]): CatalogItem[] {
-  return CATS.flatMap(([key]) => {
-    const reelles = possedees.filter((i) => i.cat === key);
-    return reelles.length ? reelles : capsule.filter((i) => i.cat === key);
-  });
-}
+/**
+ * La VRAIE fonction de production, plus une recopie. La première version de
+ * ce script réimplémentait la composition du pool à côté du store : elle
+ * mesurait donc ma lecture du code, pas le code. `composeWardrobePool` a été
+ * extraite pour ça — une dérive entre les deux ne peut plus exister.
+ */
+const poolDeGeneration = (
+  possedees: CatalogItem[], capsule: CatalogItem[], completerPourOccasion?: OccasionKey
+): CatalogItem[] =>
+  composeWardrobePool(possedees, capsule, CAT_KEYS, { completerPourOccasion }) as CatalogItem[];
 
 describe("un dressing partiel", () => {
   it("mesure si posséder des pièces peut retirer une occasion, au lieu de l'en déduire", async () => {
@@ -95,7 +97,12 @@ describe("un dressing partiel", () => {
     type Compte = { tenues: number; total: number };
     const vide = new Map<OccasionKey, Compte>();
     const partiel = new Map<OccasionKey, Compte>();
-    for (const o of OCCS) { vide.set(o, { tenues: 0, total: 0 }); partiel.set(o, { tenues: 0, total: 0 }); }
+    const complete = new Map<OccasionKey, Compte>();
+    for (const o of OCCS) {
+      vide.set(o, { tenues: 0, total: 0 });
+      partiel.set(o, { tenues: 0, total: 0 });
+      complete.set(o, { tenues: 0, total: 0 });
+    }
     let piecesPossedeesTotal = 0, capsulesVues = 0;
 
     for (const saison of CAPSULE_SEASONS) {
@@ -109,17 +116,21 @@ describe("un dressing partiel", () => {
         // qui a rentré ses vraies affaires sans tenue de sport — pas une
         // utilisatrice dont le dressing serait choisi contre le moteur.
         const possedees = capsule.filter(
-          (it) => CATS_POSSEDEES.includes(it.cat) && !occasionsDe(it).includes("sport")
+          (it) => CATS_POSSEDEES.includes(it.cat) && !occasionsOf(it).includes("sport")
         );
         piecesPossedeesTotal += possedees.length; capsulesVues += 1;
         const poolVide = poolDeGeneration([], capsule);
         const poolPartiel = poolDeGeneration(possedees, capsule);
 
         for (const occ of OCCS) {
+          // Le troisième bras est le correctif : même dressing partiel, mais
+          // le pool est complété pour l'occasion demandée.
+          const poolComplete = poolDeGeneration(possedees, capsule, occ);
           for (let k = 0; k < N; k++) {
             for (const [bras, p, compteur] of [
               ["vide", poolVide, vide] as const,
               ["partiel", poolPartiel, partiel] as const,
+              ["complete", poolComplete, complete] as const,
             ]) {
               void bras;
               const vrai = Math.random;
@@ -140,15 +151,18 @@ describe("un dressing partiel", () => {
     console.log(`\n  Dressing simulé : ${(piecesPossedeesTotal / capsulesVues).toFixed(1)} pièces en moyenne par capsule,`);
     console.log(`  dans les catégories ${CATS_POSSEDEES.join(", ")}, aucune déclarant le sport.`);
     console.log(`\n════════ TAUX DE TENUE PAR OCCASION ════════`);
-    console.log(`  ${"occasion".padEnd(18)}${"dressing vide".padStart(15)}${"dressing partiel".padStart(18)}${"écart".padStart(10)}`);
+    console.log(`  ${"occasion".padEnd(18)}${"vide".padStart(9)}${"partiel".padStart(10)}${"+ complétion".padStart(14)}${"écart".padStart(10)}`);
     const pc = (c: Compte) => (c.total ? (c.tenues / c.total) * 100 : 0);
     let pires: { occ: OccasionKey; ecart: number }[] = [];
+    let regressions = 0, repares = 0;
     for (const occ of OCCS) {
-      const a = pc(vide.get(occ)!), b = pc(partiel.get(occ)!);
+      const a = pc(vide.get(occ)!), b = pc(partiel.get(occ)!), c = pc(complete.get(occ)!);
       const ecart = b - a;
       pires.push({ occ, ecart });
-      const marque = ecart <= -50 ? "   <<< OCCASION PERDUE" : ecart < 0 ? "   <-- dégradée" : "";
-      console.log(`  ${occ.padEnd(18)}${a.toFixed(1).padStart(14)}%${b.toFixed(1).padStart(17)}%${ecart.toFixed(1).padStart(9)}${marque}`);
+      if (c < b - 0.001) regressions += 1;
+      if (ecart <= -50 && c >= a - 0.001) repares += 1;
+      const marque = ecart <= -50 ? (c >= a - 0.001 ? "   RÉPARÉ" : "   <<< TOUJOURS PERDUE") : c < b - 0.001 ? "   <<< RÉGRESSION" : "";
+      console.log(`  ${occ.padEnd(18)}${a.toFixed(1).padStart(8)}%${b.toFixed(1).padStart(9)}%${c.toFixed(1).padStart(13)}%${ecart.toFixed(1).padStart(9)}${marque}`);
     }
     pires = pires.sort((x, y) => x.ecart - y.ecart);
 
@@ -165,8 +179,17 @@ describe("un dressing partiel", () => {
       console.log(`  catégorie écarte toutes les suggestions du catalogue pour cette catégorie.`);
       console.log(`  Une occasion sans repli de formalité n'a alors nulle part où redescendre.`);
     }
-    console.log(`\n  LECTURE SEULE. Aucun correctif appliqué, aucune donnée modifiée.`);
-    console.log(`  Ce script établit l'existence du mécanisme, pas le remède : le remède`);
-    console.log(`  est un arbitrage produit.`);
+    console.log(`\n════════ LE CORRECTIF TIENT-IL ? ════════`);
+    console.log(`  Occasions perdues puis réparées par la complétion : ${repares}`);
+    console.log(`  Occasions que la complétion FAIT RECULER ........ : ${regressions}`);
+    if (regressions > 0) {
+      console.log(`\n  Une seule régression suffit à refuser le correctif : compléter le pool ne`);
+      console.log(`  doit jamais coûter une tenue là où il y en avait une.`);
+    } else {
+      console.log(`\n  Aucune régression. La complétion n'ajoute des pièces que dans les catégories`);
+      console.log(`  qui ne savaient pas servir l'occasion, et seulement des pièces qui la`);
+      console.log(`  déclarent — les neuf autres occasions ne voient donc rien changer.`);
+    }
+    console.log(`\n  LECTURE SEULE. Aucune donnée modifiée.`);
   }, 900_000);
 });

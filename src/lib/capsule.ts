@@ -183,8 +183,8 @@ const CAPSULE_GROUPS: { name: string; cats: CategoryKey[]; quota: number }[] = [
 /** Catégories structurantes (étape 3, garde-fou formalité) — celles dont dépend le palier de formalité d'une tenue complète. */
 const STRUCTURING_GROUPS = new Set(["hauts", "bas", "robes-combinaisons"]);
 
-/** Occasions couvertes par une pièce — déclarées si présentes, sinon repli sur la déduction existante (jamais une pièce sans donnée qui compte pour zéro par accident). */
-function occasionsOf(it: Item): OccasionKey[] {
+/** Occasions couvertes par une pièce — déclarées si présentes, sinon repli sur la déduction existante (jamais une pièce sans donnée qui compte pour zéro par accident). Exporté pour `composeWardrobePool`, qui doit trancher la même question avec la même règle. */
+export function occasionsOf(it: Item): OccasionKey[] {
   return it.occasion && it.occasion.length ? it.occasion : suggestOccasions(it.cat, it.shoeType);
 }
 
