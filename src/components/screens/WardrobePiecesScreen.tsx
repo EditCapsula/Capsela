@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import BottomSheet from "@/components/BottomSheet";
 import { useCapsela } from "@/lib/store";
 import { daysSinceWorn, wearCounts } from "@/lib/selectors";
 import { wornAgo } from "@/lib/data";
@@ -19,6 +21,15 @@ import { wornAgo } from "@/lib/data";
  * plus récente entrée d'historique). Même correctif que l'ancien "Porté
  * aujourd'hui" qui restait affiché indéfiniment.
  *
+ * SUPPRESSION MULTIPLE (09/09/2026, signalé : "je dois pouvoir supprimer des
+ * pièces du dressing"). Retirer une pièce était déjà possible, mais seulement
+ * une par une et au fond du menu d'une pièce ouverte — invisible depuis cette
+ * grille, qui est pourtant l'écran où l'on fait le tri. Le mode sélection
+ * s'active depuis l'en-tête ; tant qu'il est actif, toucher une carte la
+ * coche au lieu de l'ouvrir, et rien n'est supprimé avant la confirmation.
+ * Une suppression est définitive : c'est la seule raison pour laquelle elle
+ * passe par une feuille de confirmation, comme la suppression de compte.
+ *
  * "Aujourd'hui" affiché en pastille sur la photo plutôt qu'en 3e ligne de
  * légende (correctif 25/08/2026, signalé : cartes désalignées) — une
  * légende à hauteur variable (2 ou 3 lignes selon la pièce) agrandissait la
@@ -30,6 +41,28 @@ export default function WardrobePiecesScreen() {
   const { state, actions } = useCapsela();
   const items = state.items;
   const counts = wearCounts(state.history);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selection, setSelection] = useState<Set<number>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const quitterSelection = () => {
+    setSelectionMode(false);
+    setSelection(new Set());
+    setConfirmOpen(false);
+  };
+
+  const basculer = (id: number) =>
+    setSelection((prec) => {
+      const suivant = new Set(prec);
+      if (suivant.has(id)) suivant.delete(id);
+      else suivant.add(id);
+      return suivant;
+    });
+
+  const supprimer = () => {
+    actions.removeItems([...selection]);
+    quitterSelection();
+  };
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
@@ -51,8 +84,35 @@ export default function WardrobePiecesScreen() {
         </button>
       </div>
 
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-4">
-        {items.length} {items.length === 1 ? "pièce" : "pièces"}
+      {/* « Sélectionner » vit sur la ligne du compte, pas dans l'en-tête
+          (correctif 10/09/2026, signalé : « je ne vois pas comment
+          sélectionner en masse »). Placé en gris entre le titre et le
+          « + Ajouter » terracotta, il se lisait comme du décor sur une
+          largeur de téléphone. Ici il est seul de son côté, en terracotta —
+          la couleur que l'app réserve aux actions — et juste au-dessus de la
+          grille sur laquelle il agit. */}
+      <div className="flex items-baseline justify-between gap-3 mt-4">
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted">
+          {selectionMode
+            ? selection.size === 0
+              ? "Touche les pièces à retirer"
+              : `${selection.size} ${selection.size === 1 ? "sélectionnée" : "sélectionnées"}`
+            : `${items.length} ${items.length === 1 ? "pièce" : "pièces"}`}
+        </div>
+        {selectionMode ? (
+          <button onClick={quitterSelection} className="text-[12.5px] text-muted flex-shrink-0 cursor-pointer py-[4px]">
+            Annuler
+          </button>
+        ) : (
+          items.length > 0 && (
+            <button
+              onClick={() => setSelectionMode(true)}
+              className="text-[12.5px] text-terracotta flex-shrink-0 cursor-pointer py-[4px]"
+            >
+              Sélectionner
+            </button>
+          )
+        )}
       </div>
 
       {items.length === 0 ? (
@@ -72,8 +132,14 @@ export default function WardrobePiecesScreen() {
             const neverWorn = it.worn == null;
             const days = neverWorn ? null : daysSinceWorn(state.history, it.id);
             const isToday = days === 0;
+            const selected = selection.has(it.id);
             return (
-              <button key={it.id} onClick={() => actions.openItem(it.id, false)} className="text-left cursor-pointer">
+              <button
+                key={it.id}
+                onClick={() => (selectionMode ? basculer(it.id) : actions.openItem(it.id, false))}
+                aria-pressed={selectionMode ? selected : undefined}
+                className="text-left cursor-pointer"
+              >
                 <div
                   className="relative w-full rounded-[14px] border border-border overflow-hidden"
                   style={
@@ -82,7 +148,19 @@ export default function WardrobePiecesScreen() {
                       : { aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
                   }
                 >
-                  {isToday && (
+                  {selectionMode && (
+                    <span
+                      className="absolute top-[8px] left-[8px] w-[22px] h-[22px] rounded-full border flex items-center justify-center text-[12px]"
+                      style={
+                        selected
+                          ? { background: "rgba(166,105,80,.95)", borderColor: "rgba(166,105,80,.95)", color: "#F3EEE5" }
+                          : { background: "rgba(243,238,229,.85)", borderColor: "rgba(29,26,22,.18)", color: "transparent" }
+                      }
+                    >
+                      ✓
+                    </span>
+                  )}
+                  {isToday && !selectionMode && (
                     <span
                       className="absolute top-[8px] right-[8px] text-[9.5px] tracking-[.04em] text-cream rounded-full px-[8px] py-[3px]"
                       style={{ background: "rgba(166,105,80,.92)" }}
@@ -91,7 +169,10 @@ export default function WardrobePiecesScreen() {
                     </span>
                   )}
                 </div>
-                <div className="text-[13px] text-ink mt-[8px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
+                <div
+                  className="text-[13px] text-ink mt-[8px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap"
+                  style={selectionMode && !selected ? { opacity: 0.45 } : undefined}
+                >
                   {it.name}
                 </div>
                 <div className="text-[11px] text-placeholder mt-[2px]">
@@ -102,6 +183,41 @@ export default function WardrobePiecesScreen() {
           })}
         </div>
       )}
+
+      {selectionMode && selection.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[480px] px-6 pb-[18px] pt-[14px] bg-gradient-to-t from-cream via-cream to-transparent">
+          <button
+            onClick={() => setConfirmOpen(true)}
+            className="w-full text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
+          >
+            Retirer {selection.size} {selection.size === 1 ? "pièce" : "pièces"}
+          </button>
+        </div>
+      )}
+
+      <BottomSheet
+        title={selection.size === 1 ? "Retirer cette pièce" : `Retirer ${selection.size} pièces`}
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+      >
+        <div className="text-[13px] text-ink leading-[1.55]">
+          {selection.size === 1 ? "Cette pièce quittera" : "Ces pièces quitteront"} ton dressing et{" "}
+          {selection.size === 1 ? "ne sera plus proposée" : "ne seront plus proposées"} dans tes tenues. Ton historique
+          reste intact. <span className="text-rust">Cette action est définitive.</span>
+        </div>
+        <button
+          onClick={supprimer}
+          className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
+        >
+          Retirer définitivement
+        </button>
+        <button
+          onClick={() => setConfirmOpen(false)}
+          className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer"
+        >
+          Annuler
+        </button>
+      </BottomSheet>
     </div>
   );
 }

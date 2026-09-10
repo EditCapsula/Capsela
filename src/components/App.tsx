@@ -14,7 +14,6 @@ import PieceScreen from "./screens/PieceScreen";
 import AddScreen from "./screens/AddScreen";
 import CapsuleScreen from "./screens/CapsuleScreen";
 import TenuesScreen from "./screens/TenuesScreen";
-import PremiumScreen from "./screens/PremiumScreen";
 import HistoryScreen from "./screens/HistoryScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
@@ -31,8 +30,8 @@ import CookieBanner from "./CookieBanner";
 import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
 import LoadingSpinner from "./LoadingSpinner";
 
-/** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) et l'écran Premium (fond sombre, pas de variante de barre adaptée). */
-const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup", "premium"]);
+/** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) — la barre d'onglets n'y a pas de sens. */
+const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup"]);
 const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
 
 function Screens() {
@@ -99,7 +98,6 @@ function Screens() {
         {state.screen === "add" && <AddScreen />}
         {state.screen === "capsule" && <CapsuleScreen />}
         {state.screen === "tenues" && <TenuesScreen />}
-        {state.screen === "premium" && <PremiumScreen />}
         {state.screen === "history" && <HistoryScreen />}
         {state.screen === "neverworn" && <NeverWornScreen />}
         {state.screen === "profileSetup" && <ProfileSetupScreen />}

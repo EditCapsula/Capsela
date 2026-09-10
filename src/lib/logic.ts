@@ -7,6 +7,7 @@ import {
   coupeOf,
   formalityOf,
   huesHarmonious,
+  fermetureMaille,
   isMetallicFinish,
   isNeutralColor,
   isStatement,
@@ -121,6 +122,114 @@ export function applySportCocooningFilter(items: Item[], occasion: OccasionKey, 
 function isShirtLike(it: Item): boolean {
   return it.subtype === "Chemise" || it.subtype === "Chemisier";
 }
+
+/**
+ * Maille FERMÉE (arbitrage éditorial du 31/08/2026) — deux d'entre elles ne se
+ * superposent pas, exactement au même titre que deux chemises (R-B10). Comme
+ * R-B10, la règle vise les SOUS-TYPES et non la catégorie : `pull` recouvre
+ * aussi "Gilet" et "Cardigan" (cf. data.ts), qui restent des calques
+ * parfaitement légitimes par-dessus une maille fermée — c'est même le cas
+ * d'usage que R-B8 cite en exemple ("gilet léger"). Une interdiction par
+ * catégorie aurait donc annulé une partie de la règle qu'elle complète.
+ */
+function isClosedKnit(it: Item): boolean {
+  // Correctif du 31/08/2026 : cette fonction comparait `subtype` par ÉGALITÉ
+  // STRICTE à "Pull" / "Col roulé". Mesuré sur le vestiaire réel, elle voyait
+  // 0 maille fermée sur 34 — la base écrit « Pull col roulé », « Pull col
+  // rond », jamais le mot seul. La règle était donc INERTE depuis son
+  // écriture, ce qu'un bras d'audit la neutralisant a confirmé en rendant des
+  // métriques strictement identiques à la production. La classification vit
+  // désormais dans `fermetureMaille`, qui compare par préfixe.
+  return fermetureMaille(it) === "fermée";
+}
+
+/**
+ * Leviers de MESURE (31/08/2026) — tous facultatifs, tous inertes par défaut :
+ * non renseignés, la génération se comporte exactement comme avant leur
+ * introduction. Ils existent pour qu'un audit compare un avant et un après
+ * DANS LA MÊME EXÉCUTION sans dupliquer le pipeline (cf. AGENTS.md,
+ * « Conséquence pratique pour les scripts d'audit »), comme `capsuleSeason`
+ * avant eux. Aucun appelant de production ne les passe, et un test verrouille
+ * que leur absence reproduit le comportement livré.
+ */
+export interface LeviersMesure {
+  /**
+   * P1 — le tirage du haut principal s'ouvre aux pulls au lieu de la seule
+   * catégorie "haut".
+   *
+   * `"base"` restreint l'ouverture aux pulls dont le rôle est déjà `base`,
+   * `"tous"` l'étend à tous les pulls y compris les `calque`. La distinction
+   * n'est pas cosmétique : R-B9 exige un vêtement de base sous une veste, et
+   * `hasBaseGarment` n'accepte un pull que s'il est `base`. Ouvrir à `"tous"`
+   * laisse donc un cardigan devenir dessus principal puis recevoir une veste,
+   * ce qui viole R-B9 — la seule règle qui empêche réellement une tenue
+   * d'être sauvegardée. Mesuré : 395 violations sur 12 800 tenues, contre
+   * zéro en production.
+   */
+  pullCommeHautPrincipal?: "tous" | "base";
+  /**
+   * Reproduit le comportement d'AVANT l'ouverture de la seconde couche aux
+   * pulls (31/08/2026) : seul le rôle "calque" y donnait accès, donc jamais un
+   * pull de coupe fine. Conservé pour qu'un audit retrouve la ligne de base.
+   */
+  pullNonSuperposable?: boolean;
+  /** Reproduit le comportement d'AVANT la règle des mailles fermées, pour en mesurer le coût réel. */
+  superpositionMaillesFermees?: boolean;
+  /**
+   * TRACE DE REPLI (07/09/2026) — observe l'échelle de `poolFor` sans la
+   * modifier. Rien d'autre ne l'observe aujourd'hui, alors qu'elle décide du
+   * contenu de chaque tenue : quand un barreau se vide, le suivant relâche la
+   * météo, puis l'occasion déclarée.
+   *
+   * Pourquoi une trace plutôt qu'une reconstitution dans l'audit : un audit
+   * du 07/09 a voulu attribuer les pièces portées hors de leur plage en
+   * recalculant à côté ce qui « aurait dû » être éligible. Il ne reconstituait
+   * que le filtre de température, alors que l'échelle filtre d'abord par
+   * occasion, formalité et style — l'attribution était donc fausse sans que
+   * rien ne le signale. Recopier l'échelle dans un script aurait reproduit ce
+   * défaut en plus gros : c'est exactement la façon dont trois conclusions de
+   * la phase 15 se sont révélées fausses (cf. AGENTS.md).
+   *
+   * Appelée une fois par appel de `poolFor`, uniquement si elle est fournie.
+   * Elle ne peut rien changer : `poolFor` ignore sa valeur de retour et le
+   * pool est calculé avant qu'elle soit appelée.
+   */
+  traceRepli?: (evenement: TraceRepli) => void;
+}
+
+/**
+ * Un événement de trace. Cf. LeviersMesure.traceRepli.
+ *
+ * `type: "début"` marque le commencement d'un tirage. Il est indispensable :
+ * `generateOutfitWithFallback` appelle `generateOutfit` PLUSIEURS fois — une
+ * par palier de la chaîne de formalité, et jusqu'à MAX_ATTEMPTS_PER_TIER fois
+ * par palier. Sans ce marqueur, les traces des tentatives abandonnées se
+ * mélangeraient à celles de la tenue réellement rendue, et toute attribution
+ * bâtie dessus serait fausse. La tenue rendue est toujours celle du DERNIER
+ * tirage : un consommateur segmente sur les marqueurs et ne garde que le
+ * dernier segment.
+ */
+export interface TraceRepli {
+  type: "début" | "repli";
+  cats: CategoryKey[];
+  /** L'appelant acceptait-il les deux derniers barreaux (relâchement de l'occasion) ? */
+  essential: boolean;
+  /** Index du barreau retenu. 0 = aucun repli. -1 = tous vides, dernier barreau rendu par défaut. */
+  barreau: number;
+  /** Nom du barreau retenu, pour lire une trace sans compter les index. */
+  nom: string;
+  /** Effectif de CHAQUE barreau, restreint à `cats` — de quoi voir ce que le moteur avait sous la main. */
+  effectifs: number[];
+}
+
+/** Les barreaux, dans l'ordre, pour chacune des deux échelles de `poolFor`. */
+const BARREAUX_ACCESSOIRES = [
+  "saison + météo", "saison, météo relâchée", "hors saison + météo",
+  "hors saison, météo relâchée", "occasion relâchée + météo", "occasion et météo relâchées",
+] as const;
+const BARREAUX_VETEMENTS = [
+  "saison + occasion + météo", "météo relâchée", "occasion relâchée + météo", "occasion et météo relâchées",
+] as const;
 
 /** Exporté pour CreateLookScreen (filtre dur du picker manuel, brief design section 4). */
 export function recentlyWorn(it: Item): boolean {
@@ -412,7 +521,9 @@ export function generateOutfit(
    * saison mais hors de ses bornes thermiques reste exclue. Non renseigné,
    * le comportement météo d'origine est strictement conservé (tenue du jour).
    */
-  capsuleSeason?: CapsuleSeason | null
+  capsuleSeason?: CapsuleSeason | null,
+  /** Leviers de mesure — inertes par défaut, cf. LeviersMesure. */
+  leviers?: LeviersMesure
 ): GeneratedOutfit {
   // Référentiel saisonnier : celui de la capsule quand il est connu, sinon
   // celui que la météo porte (tenue du jour sous météo réelle, inchangée).
@@ -620,6 +731,28 @@ export function generateOutfit(
   // annule la tenue entière (haut, bas, robe/combinaison, chaussures) :
   // pour une veste ou un bijou, une catégorie vide est un résultat
   // acceptable, et réintroduire une pièce écartée y serait une régression.
+  /**
+   * Trace de repli — n'est calculée que si un appelant en fournit une. Sans
+   * elle, le coût est une lecture de propriété par appel de `poolFor`, et le
+   * comportement est identique au caractère près : l'échelle est parcourue
+   * comme avant, la trace ne fait que rapporter le barreau retenu.
+   */
+  const tracer = leviers?.traceRepli;
+  // Marqueur de début — cf. TraceRepli. Émis avant tout appel à `poolFor`,
+  // et seulement si quelqu'un écoute.
+  if (tracer) tracer({ type: "début", cats: [], essential: false, barreau: -1, nom: "début de tirage", effectifs: [] });
+  const noteRepli = (cats: CategoryKey[], essential: boolean, barreau: number, noms: readonly string[], echelle: Item[][]) => {
+    if (!tracer) return;
+    tracer({
+      type: "repli",
+      cats: [...cats],
+      essential,
+      barreau,
+      nom: noms[barreau] ?? "aucun barreau non vide",
+      effectifs: echelle.map((rung) => rung.filter((i) => cats.includes(i.cat)).length),
+    });
+  };
+
   const poolFor = (cats: CategoryKey[], essential = false): Item[] => {
     if (cats.every((c) => ACCESSORY_CATS.includes(c))) {
       const seasonNoOcc = hardCategoryFilter(seasonPool, formalityOverride);
@@ -633,22 +766,34 @@ export function generateOutfit(
       // le bas serait incohérente.
       const ladder = [applyTempFilter(seasonNoTemp), seasonNoTemp, applyTempFilter(fullNoTemp), fullNoTemp];
       if (essential) ladder.push(applyTempFilter(fullNoOcc), fullNoOcc);
-      for (const rung of ladder) {
-        if (rung.filter((i) => cats.includes(i.cat)).length) return rung;
+      for (let i = 0; i < ladder.length; i++) {
+        if (ladder[i].filter((x) => cats.includes(x.cat)).length) {
+          noteRepli(cats, essential, i, BARREAUX_ACCESSOIRES, ladder);
+          return ladder[i];
+        }
       }
+      noteRepli(cats, essential, -1, BARREAUX_ACCESSOIRES, ladder);
       return ladder[ladder.length - 1];
     }
+    const echelle = [hardBase, hardBaseNoTemp, hardBaseNoOccWithTemp, hardBaseNoOcc];
     const withTemp = hardBase.filter((i) => cats.includes(i.cat));
-    if (withTemp.length) return withTemp;
+    if (withTemp.length) { noteRepli(cats, essential, 0, BARREAUX_VETEMENTS, echelle); return withTemp; }
     // Repli météo : jamais une catégorie essentielle (ex. le bas) totalement
     // vidée uniquement parce qu'aucune pièce de la capsule ne couvre la
     // météo du jour — cf. commentaire applyTempFilter.
     const noTemp = hardBaseNoTemp.filter((i) => cats.includes(i.cat));
-    if (noTemp.length || !essential) return noTemp;
+    // Un pool vide rendu à un appelant non essentiel n'est PAS un repli : la
+    // catégorie est simplement absente, et la tracer comme barreau 1 ferait
+    // compter des replis qui n'ont pas eu lieu.
+    if (noTemp.length) { noteRepli(cats, essential, 1, BARREAUX_VETEMENTS, echelle); return noTemp; }
+    if (!essential) { noteRepli(cats, essential, -1, BARREAUX_VETEMENTS, echelle); return noTemp; }
     // Repli occasion déclarée, en dernier — la météo reprend la priorité sur
     // ce barreau-ci, exactement comme au-dessus.
     const noOccWithTemp = hardBaseNoOccWithTemp.filter((i) => cats.includes(i.cat));
-    return noOccWithTemp.length ? noOccWithTemp : hardBaseNoOcc.filter((i) => cats.includes(i.cat));
+    if (noOccWithTemp.length) { noteRepli(cats, essential, 2, BARREAUX_VETEMENTS, echelle); return noOccWithTemp; }
+    const dernier = hardBaseNoOcc.filter((i) => cats.includes(i.cat));
+    noteRepli(cats, essential, dernier.length ? 3 : -1, BARREAUX_VETEMENTS, echelle);
+    return dernier;
   };
 
   const chosen: Item[] = [];
@@ -765,7 +910,12 @@ export function generateOutfit(
     // que si aucun haut n'atteint seul la formalité requise — jamais pour
     // le bas, qui doit rester autonome (poolFor(BOTTOMS) reste soumis au
     // plancher plein, cf. hardCategoryFilter).
-    const hautCandidates = poolFor(["haut"], true);
+    // P1 (levier de mesure, inerte par défaut) — sans lui la catégorie demandée
+    // reste "haut" seule : aucun pull ne peut être haut principal.
+    const ouverturePull = leviers?.pullCommeHautPrincipal;
+    const hautCandidates = poolFor(ouverturePull ? TOP_LAYER_CATS : ["haut"], true).filter(
+      (i) => i.cat !== "pull" || ouverturePull === "tous" || (ouverturePull === "base" && rolePieceOf(i) === "base")
+    );
     // Correctif 26/08/2026 (signalé : un haut explicitement ouvert à
     // "festive" n'apparaissait jamais dans une tenue festive) — ce second
     // plancher rejouait formalityOf() brut sur le haut, sans reprendre
@@ -893,8 +1043,30 @@ export function generateOutfit(
         (i) =>
           TOP_LAYER_CATS.includes(i.cat) &&
           !chosen.some((c) => c.id === i.id) &&
-          rolePieceOf(i) === "calque" &&
-          !(isShirtLike(firstLayer) && isShirtLike(i))
+          // Un pull est superposable quelle que soit sa coupe (arbitrage
+          // éditorial du 31/08/2026 : « un pull de coupe fine peut être proposé
+          // par-dessus une chemise »). Le rôle "calque" reste la condition pour
+          // un `haut` — un t-shirt ne se porte pas par-dessus une chemise, et
+          // NEVER_LAYER_RE continue de l'en empêcher.
+          //
+          // Mesuré avant ouverture (audit pull-contrat, même exécution, 12 800
+          // tenues par bras) : mortalité des pulls 53 -> 0, zéro nouvelle pièce
+          // morte, couverture d'occasion 320/320 inchangée, violations de règles
+          // dures 18,6 % contre 18,6 %, R-B9 à zéro, composition des tenues
+          // inchangée. Aucun coût mesuré.
+          //
+          // Ce commentaire a d'abord affirmé « R-B8 et R-B5 en BAISSE ». RETIRÉ :
+          // les bras de cette mesure ne partageaient pas leur flux aléatoire, et
+          // ces deux écarts (696 -> 637, 15 -> 10) sont trop petits pour être
+          // distingués du bruit. L'audit sème désormais ses tirages ; les cinq
+          // constats ci-dessus, eux, tiennent — le premier parce qu'avant cette
+          // ligne aucun chemin de code n'existait, donc la probabilité était
+          // exactement nulle, et les autres parce qu'ils saturent ou portent sur
+          // des écarts d'un ordre de grandeur.
+          (rolePieceOf(i) === "calque" || (i.cat === "pull" && leviers?.pullNonSuperposable !== true)) &&
+          !(isShirtLike(firstLayer) && isShirtLike(i)) &&
+          // Mailles fermées — règle active par défaut (arbitrage 31/08/2026).
+          (leviers?.superpositionMaillesFermees === true || !(isClosedKnit(firstLayer) && isClosedKnit(i)))
       );
       const layer = rand(harmonize(layerCandidates, chosen, false));
       if (layer) { chosen.push(layer); ids.push(layer.id); }
@@ -1039,10 +1211,19 @@ const FORMALITY_FALLBACK_CHAIN: Record<number, number[]> = {
 };
 
 /** Une tenue a un socle vestimentaire valide : haut+bas, ou une pièce robe/combinaison — jamais seulement chaussures/accessoires (section 5, "lunettes + mocassins ≠ tenue valide"). */
-function hasCoreOutfit(ids: number[], pool: Item[]): boolean {
+function hasCoreOutfit(ids: number[], pool: Item[], leviers?: LeviersMesure): boolean {
   const items = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
   if (items.some((i) => i.cat === "robe" || i.cat === "combinaison")) return true;
-  return items.some((i) => i.cat === "haut") && items.some((i) => BOTTOMS.includes(i.cat));
+  // Second verrou de P1, distinct du tirage lui-même : sans le levier, un
+  // socle "pull + bas" n'est PAS reconnu comme une tenue valide, donc
+  // attemptCoreOutfit le rejette et retente jusqu'à retomber sur un haut ou
+  // une robe. Mesurer P1 sans ouvrir aussi ce point ne mesure pas P1 : cela
+  // mesure son échec, et déplace massivement la composition vers la robe.
+  const ouverturePull = leviers?.pullCommeHautPrincipal;
+  const estSocle = (i: Item) =>
+    i.cat === "haut" ||
+    (i.cat === "pull" && (ouverturePull === "tous" || (ouverturePull === "base" && rolePieceOf(i) === "base")));
+  return items.some(estSocle) && items.some((i) => BOTTOMS.includes(i.cat));
 }
 
 export interface GeneratedOutfitWithFallback extends GeneratedOutfit {
@@ -1083,11 +1264,12 @@ function attemptCoreOutfit(
   preferredHexes: string[],
   gender: "femme" | "homme" | null,
   formalityOverride: number,
-  capsuleSeason?: CapsuleSeason | null
+  capsuleSeason?: CapsuleSeason | null,
+  leviers?: LeviersMesure
 ): GeneratedOutfit {
-  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason);
-  for (let attempt = 1; attempt < MAX_ATTEMPTS_PER_TIER && !hasCoreOutfit(result.ids, pool); attempt++) {
-    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason);
+  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers);
+  for (let attempt = 1; attempt < MAX_ATTEMPTS_PER_TIER && !hasCoreOutfit(result.ids, pool, leviers); attempt++) {
+    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers);
   }
   return result;
 }
@@ -1114,13 +1296,15 @@ export function generateOutfitWithFallback(
    * saison mais hors de ses bornes thermiques reste exclue. Non renseigné,
    * le comportement météo d'origine est strictement conservé (tenue du jour).
    */
-  capsuleSeason?: CapsuleSeason | null
+  capsuleSeason?: CapsuleSeason | null,
+  /** Leviers de mesure — inertes par défaut, cf. LeviersMesure. */
+  leviers?: LeviersMesure
 ): GeneratedOutfitWithFallback {
   const requestedFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
   const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
   for (const tier of chain) {
-    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason);
-    if (hasCoreOutfit(result.ids, pool)) {
+    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason, leviers);
+    if (hasCoreOutfit(result.ids, pool, leviers)) {
       return { ...result, requestedFormality, resolvedFormality: tier, formalityDowngraded: tier !== requestedFormality, noCompleteOutfit: false };
     }
   }
@@ -1152,8 +1336,8 @@ export function generateOutfitWithFallback(
   if (!hasStructuralOption) {
     reason = "missing_required_category";
   } else {
-    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason);
-    reason = hasCoreOutfit(probe.ids, pool) ? "formality_gap" : "no_match";
+    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason, leviers);
+    reason = hasCoreOutfit(probe.ids, pool, leviers) ? "formality_gap" : "no_match";
   }
   return {
     ids: [],

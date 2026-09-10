@@ -171,6 +171,42 @@ export async function insertDressingItem(userId: string, item: Omit<Item, "id">)
   return rowToItem(data as DressingItemRow);
 }
 
+/**
+ * Segment d'URL publique commun à tout objet du bucket dressing-photos.
+ * Sert à distinguer une photo personnelle — la seule qu'on ait le droit de
+ * supprimer — d'une image de catalogue : `startEditItem` retombe sur
+ * `img.url` (bucket catalog-images, visuel produit PARTAGÉ par toutes les
+ * utilisatrices) quand la pièce n'a pas de photo propre, et cette URL peut
+ * finir persistée dans photo_url. La supprimer casserait le visuel pour
+ * tout le monde.
+ */
+const PREFIXE_PHOTOS_DRESSING = "/storage/v1/object/public/dressing-photos/";
+
+/**
+ * Chemin de l'objet à l'intérieur du bucket dressing-photos, ou null si
+ * l'URL n'en vient pas (image de catalogue, blob: local, champ vide).
+ * Null est le résultat sûr : il ne déclenche aucune suppression.
+ */
+export function dressingPhotoPath(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const i = url.indexOf(PREFIXE_PHOTOS_DRESSING);
+  if (i === -1) return null;
+  const chemin = url.slice(i + PREFIXE_PHOTOS_DRESSING.length).split("?")[0];
+  return chemin ? decodeURIComponent(chemin) : null;
+}
+
+/**
+ * Supprime des photos personnelles devenues orphelines. La politique du
+ * bucket (migration 0023) restreint déjà la suppression au propriétaire du
+ * préfixe {user_id}/ : une URL forgée pointant vers le dossier d'une autre
+ * utilisatrice serait refusée par Supabase, pas seulement par ce code.
+ */
+export async function deleteDressingPhotos(paths: string[]): Promise<void> {
+  if (!paths.length) return;
+  const { error } = await getSupabase().storage.from("dressing-photos").remove(paths);
+  if (error) throw error;
+}
+
 export async function deleteDressingItem(id: number): Promise<void> {
   const { error } = await getSupabase().from("dressing_items").delete().eq("id", id);
   if (error) throw error;

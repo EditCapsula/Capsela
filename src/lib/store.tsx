@@ -9,7 +9,9 @@ import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
   deleteDressingItem,
+  deleteDressingPhotos,
   deleteSavedLook,
+  dressingPhotoPath,
   fetchDressingItems,
   fetchOutfitHistory,
   fetchSavedLooks,
@@ -24,6 +26,7 @@ import {
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
+import { composeWardrobePool } from "./selectors";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import {
@@ -79,7 +82,6 @@ function buildInitialState(): AppState {
     addReturn: null,
     screen: "welcome",
     profileReturn: "home",
-    premiumReturn: "home",
     legalReturn: "profile",
     profileSetupStep: "genre",
     profileSetupFromEdit: false,
@@ -137,7 +139,6 @@ function buildInitialState(): AppState {
     capsuleSeason: null,
     exploredStyleId: null,
     lookCount: 0,
-    isPremium: false,
     history: [],
     opinionContact: null,
     opinionStatus: null,
@@ -198,6 +199,8 @@ export interface Actions {
   /** Affiche une combinaison choisie depuis ce module sur l'écran Tenue — jamais un enregistrement automatique comme portée. */
   viewItemOutfit: (ids: number[], occasion: OccasionKey) => void;
   removeActive: () => void;
+  /** Retire plusieurs pièces du dressing d'un coup (sélection multiple depuis "Mes pièces"). Les pièces suggérées ne passent jamais par ici. */
+  removeItems: (ids: number[]) => void;
   /** Écarte une suggestion de la capsule par défaut. */
   dismissSuggested: (id: number) => void;
   /**
@@ -233,9 +236,6 @@ export interface Actions {
   saveItem: () => void;
   /** Ferme le bandeau de diagnostic temporaire dressingError (correctif 22/08/2026). */
   dismissDressingError: () => void;
-  goPremium: () => void;
-  subscribe: () => void;
-  premiumBack: () => void;
   setOccasion: (o: OccasionKey) => void;
   /** Sous-choix affiché uniquement pour l'occasion "travail_formel" ; régénère la tenue. */
   setWorkMode: (m: WorkMode) => void;
@@ -306,17 +306,34 @@ interface CapselaContextValue {
   /** Source des suggestions — vestiaire universel (Supabase) si disponible, sinon le catalogue statique de secours. Utilisé par l'écran Capsule pour recalculer une capsule sur une saison différente de la saison courante. */
   vestiairePool: CatalogItem[];
   actions: Actions;
-  /** Wraps a handler so it only runs for Premium users; otherwise routes to the paywall. */
-  requirePremium: (fn: () => void) => () => void;
+}
+
+/**
+ * Photos personnelles devenues orphelines par le retrait de pièces
+ * (09/09/2026, signalé) : jusqu'ici le fichier restait dans le bucket pour
+ * toujours, sans plus rien pour le désigner — invisible, mais comptant dans
+ * le quota de stockage.
+ *
+ * Deux garde-fous, et ils comptent autant que la suppression elle-même.
+ * `dressingPhotoPath` écarte tout ce qui n'est pas une photo personnelle :
+ * `startEditItem` retombe sur l'image de catalogue quand la pièce n'a pas de
+ * photo propre, et ce visuel est PARTAGÉ par toutes les utilisatrices — le
+ * supprimer le casserait pour tout le monde. Et une URL encore référencée
+ * par une pièce conservée n'est jamais supprimée : deux pièces peuvent
+ * pointer le même fichier.
+ */
+function photosDevenuesOrphelines(retirees: Item[], conservees: Item[]): string[] {
+  const encoreUtilisees = new Set(conservees.map((it) => it.photoUrl).filter(Boolean));
+  const chemins = new Set<string>();
+  for (const it of retirees) {
+    if (encoreUtilisees.has(it.photoUrl)) continue;
+    const chemin = dressingPhotoPath(it.photoUrl);
+    if (chemin) chemins.add(chemin);
+  }
+  return [...chemins];
 }
 
 const CapselaContext = createContext<CapselaContextValue | null>(null);
-
-const toPremiumScreen = (s: AppState): AppState => ({
-  ...s,
-  premiumReturn: s.screen === "premium" ? s.premiumReturn : s.screen,
-  screen: "premium",
-});
 
 /**
  * Retrouve une pièce par id dans un pool, puis dans le catalogue (pour
@@ -539,13 +556,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // d'une même catégorie, mais jamais "tout ou rien" non plus (ajouter une
   // seule pièce réelle ne doit pas faire disparaître les suggestions des
   // autres catégories).
+  /** Les clés de catégorie, dans l'ordre de `CATS` — l'ordre du pool reste celui d'avant l'extraction. */
+  const CAT_KEYS = useMemo(() => CATS.map(([key]) => key), []);
+
+  // Composition déléguée à `composeWardrobePool` (selectors.ts) plutôt que
+  // recopiée ici : c'est la même fonction que les audits mesurent, si bien
+  // qu'aucune dérive n'est possible entre ce que le moteur fait et ce qu'on
+  // croit mesurer. Sans occasion, le comportement est celui d'avant — les
+  // vraies pièces priment, catégorie par catégorie.
   const wardrobePool = useMemo(
-    () =>
-      CATS.flatMap(([key]) => {
-        const real = state.items.filter((i) => i.cat === key);
-        return real.length ? real : defaultCapsule.filter((i) => i.cat === key);
-      }),
-    [state.items, defaultCapsule]
+    () => composeWardrobePool(state.items, defaultCapsule, CAT_KEYS),
+    [state.items, defaultCapsule, CAT_KEYS]
   );
 
   const poolRef = useRef(wardrobePool);
@@ -557,18 +578,38 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // y compris celles d'une capsule de style exploré. Les pièces réelles sont
   // déjà toutes dans poolRef (cf. wardrobePool), inutile de les redoubler.
   const vestiaireRef = useRef<Item[]>(vestiairePool);
+  // La capsule sert à COMPLÉTER le pool au moment de générer (cf. regen) :
+  // il faut donc la garder sous la main, comme le pool et la météo.
+  const capsuleRef = useRef<Item[]>(defaultCapsule);
   useEffect(() => {
     poolRef.current = wardrobePool;
     weatherRef.current = weather;
     vestiaireRef.current = vestiairePool;
-  }, [wardrobePool, weather, vestiairePool]);
+    capsuleRef.current = defaultCapsule;
+  }, [wardrobePool, weather, vestiairePool, defaultCapsule]);
 
   // pool/meteo surchargeables : les références ne sont mises à jour que par
   // un effet, donc encore périmées pendant le rendu où le profil vient de
   // changer. L'ajustement de style plus bas passe les valeurs fraîches.
-  const regen = (s: AppState, pool: Item[] = poolRef.current, w: Weather = weatherRef.current): AppState => {
+  const regen = (
+    s: AppState,
+    pool: Item[] = poolRef.current,
+    w: Weather = weatherRef.current,
+    capsule: Item[] = capsuleRef.current
+  ): AppState => {
+    // Complétion par occasion (correctif 10/09/2026, signalé : « pourquoi je
+    // n'ai pas de tenues de sport »). Une catégorie dont aucune pièce réelle
+    // ne sert l'occasion du jour se voit rendre les pièces de la capsule qui,
+    // elles, la déclarent — sans jamais retirer une pièce réelle. Mesuré : le
+    // sport passait de 100 % à 0 % de tenue dès qu'un dressing contenait des
+    // pièces, parce qu'il est la seule occasion sans repli de formalité.
+    // `composeWardrobePool` est idempotente sur un pool déjà composé : sur un
+    // dressing vide, elle ne change rien.
+    const poolGeneration = s.occasion
+      ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion })
+      : pool;
     const result = generateOutfitWithFallback(
-      pool,
+      poolGeneration,
       w,
       s.occasion || "all",
       s.workMode,
@@ -659,7 +700,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         // Si l'exploration est devenue caduque, le bloc ligne ~350 l'a déjà
         // annulée et ce garde-fou ne s'applique donc plus.
         if (s.exploredStyleId) return s;
-        return regen(s, wardrobePool, weather);
+        return regen(s, wardrobePool, weather, defaultCapsule);
       });
     }
   }
@@ -746,10 +787,34 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const deletedId = s.activeId;
+      const retiree = s.items.filter((it) => it.id === deletedId);
+      const photos = photosDevenuesOrphelines(retiree, s.items.filter((it) => it.id !== deletedId));
       setState((st) => ({ ...st, items: st.items.filter((it) => it.id !== deletedId), screen: st.pieceReturn }));
       if (isSupabaseConfigured && userId) {
         // Suppression best-effort : la pièce reste retirée localement même en cas d'échec réseau.
         deleteDressingItem(deletedId).catch((err) => reportDressingError("deleteDressingItem", err));
+        deleteDressingPhotos(photos).catch((err) => reportDressingError("deleteDressingPhotos", err));
+      }
+    },
+
+    removeItems: (ids) => {
+      // Même contrat que removeActive, appliqué à une sélection : retrait
+      // local immédiat, puis suppression best-effort en base pièce par pièce.
+      // Un échec réseau sur l'une n'empêche pas les autres — et la pièce
+      // reste retirée localement, comme pour une suppression unitaire.
+      const aRetirer = new Set(ids);
+      if (!aRetirer.size) return;
+      const avant = stateRef.current.items;
+      const photos = photosDevenuesOrphelines(
+        avant.filter((it) => aRetirer.has(it.id)),
+        avant.filter((it) => !aRetirer.has(it.id))
+      );
+      setState((st) => ({ ...st, items: st.items.filter((it) => !aRetirer.has(it.id)) }));
+      if (isSupabaseConfigured && userId) {
+        for (const id of aRetirer) {
+          deleteDressingItem(id).catch((err) => reportDressingError("deleteDressingItem", err));
+        }
+        deleteDressingPhotos(photos).catch((err) => reportDressingError("deleteDressingPhotos", err));
       }
     },
 
@@ -1030,12 +1095,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: addReturn || (editingId != null ? "piece" : "wardrobe"),
       });
       if (editingId != null) {
+        // "Changer la photo" laissait l'ancienne dans le bucket, elle aussi
+        // sans plus rien pour la désigner. Même règle que pour un retrait :
+        // seule une photo personnelle que plus aucune pièce ne référence
+        // s'en va.
+        const avant = stateRef.current.items;
+        const ancienne = avant.find((it) => it.id === editingId);
+        const photos =
+          ancienne && ancienne.photoUrl !== base.photoUrl
+            ? photosDevenuesOrphelines([ancienne], avant.filter((it) => it.id !== editingId))
+            : [];
         setState((st) => ({
           ...resetFields(st),
           items: st.items.map((it) => (it.id === editingId ? { ...it, ...base, id: editingId, createdAt: it.createdAt } : it)),
         }));
         if (isSupabaseConfigured && userId) {
           updateDressingItem(editingId, base).catch((err) => reportDressingError("updateDressingItem", err));
+          deleteDressingPhotos(photos).catch((err) => reportDressingError("deleteDressingPhotos", err));
         }
         return;
       }
@@ -1057,10 +1133,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       });
     },
     dismissDressingError: () => setState((s) => ({ ...s, dressingError: null })),
-
-    goPremium: () => setState(toPremiumScreen),
-    subscribe: () => setState((s) => ({ ...s, isPremium: true, screen: s.premiumReturn || "home" })),
-    premiumBack: () => setState((s) => ({ ...s, screen: s.premiumReturn || "home" })),
 
     setOccasion: (o) => setState((s) => regen({ ...s, occasion: o, occasionManual: true })),
     setWorkMode: (m) => setState((s) => regen({ ...s, workMode: m })),
@@ -1426,11 +1498,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     },
   };
 
-  const requirePremium = (fn: () => void) => () => {
-    if (stateRef.current.isPremium) fn();
-    else setState(toPremiumScreen);
-  };
-
   const value: CapselaContextValue = {
     state,
     weather,
@@ -1441,7 +1508,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     wardrobePool,
     vestiairePool,
     actions,
-    requirePremium,
   };
 
   return <CapselaContext.Provider value={value}>{children}</CapselaContext.Provider>;

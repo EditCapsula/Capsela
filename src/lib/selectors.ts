@@ -1,6 +1,7 @@
 import { MONTHS_FR, OCC_LABELS, OCC_SHORT } from "./data";
 import { isCatalogId } from "./catalog";
-import type { HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
+import { occasionsOf } from "./capsule";
+import type { CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
 
 /**
  * "Wishlist" (Mes looks, recette 23/08/2026) n'est pas une 3ᵉ façon
@@ -320,4 +321,57 @@ export function journalEntries(history: HistoryEntry[], pool: Item[]): JournalEn
       };
     })
     .filter((e) => e.swatches.length > 0);
+}
+
+/**
+ * Le pool de génération : ce que le moteur a le droit de proposer aujourd'hui.
+ *
+ * RÈGLE DE BASE, inchangée — les vraies affaires priment. Catégorie par
+ * catégorie : dès que l'utilisatrice possède au moins une pièce, ce sont les
+ * siennes qui servent, et les suggestions du catalogue s'effacent. Une femme
+ * qui a rentré cinq hauts ne veut pas qu'on lui propose un sixième haut
+ * qu'elle n'a pas.
+ *
+ * LE DÉFAUT QUE CETTE FONCTION CORRIGE (mesuré le 10/09/2026, signalé :
+ * « pourquoi je n'ai pas de tenues de sport »). Cette règle est TOUT OU RIEN.
+ * Posséder un seul haut écarte tous les hauts du catalogue, y compris le seul
+ * qui servait une occasion que l'utilisatrice ne couvre pas encore. Croisé
+ * avec `FORMALITY_FALLBACK_CHAIN`, où le sport est la seule occasion sans
+ * repli, l'effet mesuré est net : sur les dix occasions, neuf restent à 100 %
+ * de tenue et le sport tombe de 100 % à 0 %. Pas dégradé — perdu, et perdu
+ * au moment précis où l'app devient la sienne.
+ *
+ * LA COMPLÉTION. Quand `completerPourOccasion` est fourni, une catégorie dont
+ * AUCUNE pièce réelle ne déclare cette occasion se voit rendre les pièces du
+ * catalogue qui, elles, la déclarent. Trois limites tiennent le correctif
+ * étroit :
+ *
+ *   · par catégorie — celles que les vraies pièces savent servir ne changent
+ *     pas d'un iota ;
+ *   · pour cette occasion seulement — on n'ajoute jamais une pièce qui ne la
+ *     déclare pas ;
+ *   · en complément, jamais en remplacement — les pièces réelles restent
+ *     toutes dans le pool et gardent leurs chances au tirage.
+ *
+ * Sans le paramètre, le comportement est exactement celui d'avant : c'est ce
+ * qui permet de mesurer les deux bras dans une même exécution, sur le même
+ * pool, sans dupliquer le pipeline (règle d'audit, AGENTS.md).
+ */
+export function composeWardrobePool(
+  items: Item[],
+  capsule: Item[],
+  cats: readonly CategoryKey[],
+  options?: { completerPourOccasion?: OccasionKey | null }
+): Item[] {
+  const occasion = options?.completerPourOccasion ?? null;
+  return cats.flatMap((cat) => {
+    const reelles = items.filter((i) => i.cat === cat);
+    if (!reelles.length) return capsule.filter((i) => i.cat === cat);
+    if (!occasion) return reelles;
+    if (reelles.some((i) => occasionsOf(i).includes(occasion))) return reelles;
+    const secours = capsule.filter(
+      (i) => i.cat === cat && !reelles.some((r) => r.id === i.id) && occasionsOf(i).includes(occasion)
+    );
+    return [...reelles, ...secours];
+  });
 }

@@ -185,7 +185,6 @@ export default function AddScreen() {
   const colorPalette = isBijou ? PALETTE_BIJOU : PALETTE;
 
   const suggestedSeason = seasonSuggestion(state.addCat, state.addName);
-  const effectiveSeason = state.addSeason ?? suggestedSeason;
   const seasonMissing = !state.addSeason;
   const shoeTypeMissing = isShoe && !state.addShoeType;
   const subtypeMissing = false; // aucune catégorie n'exige de sous-type générique (seul le type de chaussure bloque, R-B6).
@@ -210,13 +209,20 @@ export default function AddScreen() {
   const matiereIsAi = !state.addMatiereTouched && Boolean(state.addMatiere);
   const coupeIsAi = !state.addCoupeTouched && Boolean(state.addCoupe);
   const characteristicsAi = colorIsAi || matiereIsAi || coupeIsAi;
-  const seasonIsAi = Boolean(effectiveSeason) && effectiveSeason === suggestedSeason;
+  // La pastille « suggéré par l'IA » suit la valeur RETENUE, pas la
+  // suggestion : sur un champ encore vide elle annoncerait une valeur qui
+  // n'existe pas. La suggestion, elle, se lit dans le libellé du choix vide.
+  const seasonIsAi = Boolean(state.addSeason) && state.addSeason === suggestedSeason;
   const occasionsIsAi = !state.addOccasionTouched;
 
   const save = () => {
     if (blocked) return;
     if (sizeApplicable && state.addSize == null && selectedSize) actions.setAddSize(selectedSize);
-    if (state.addSeason == null && effectiveSeason) actions.setAddSeason(effectiveSeason);
+    // Plus de repli sur la suggestion ici : il était inatteignable (`blocked`
+    // rendait la main avant) et il aurait de toute façon échoué — `saveItem`
+    // relit `stateRef.current`, que ce `setAddSeason` n'a pas encore mis à
+    // jour, et abandonne alors en silence sur son propre garde. Deux verrous
+    // pour la même cause ; la saison se confirme désormais dans le champ.
     actions.saveItem();
   };
 
@@ -399,13 +405,23 @@ export default function AddScreen() {
         </button>
       </div>
 
+      {/* Le champ affiche le CHOIX, jamais la suggestion (correctif 10/09/2026,
+          signalé : « je ne peux pas ajouter la pièce »). Il affichait la
+          suggestion tant que rien n'était choisi — or un <select> natif
+          n'émet aucun `change` si on re-choisit la valeur déjà affichée. Confirmer la saison suggérée était donc
+          impossible : le champ paraissait rempli, le bouton restait grisé, et
+          le message demandait de confirmer ce qui semblait déjà l'être. Seule
+          issue : choisir une AUTRE saison, ce qui revenait à enregistrer une
+          donnée fausse pour contourner l'écran.
+          La suggestion reste visible, mais dans le libellé du choix vide :
+          n'importe quelle sélection change alors la valeur et émet `change`. */}
       <FieldLabel ai={seasonIsAi}>Saison</FieldLabel>
       <SelectField
         icon={<LeafIcon />}
-        value={effectiveSeason ?? ""}
+        value={state.addSeason ?? ""}
         onChange={(v) => actions.setAddSeason(v as (typeof SEASONS)[number])}
         options={SEASONS.map((s) => ({ value: s, label: s }))}
-        placeholder="À confirmer"
+        placeholder={suggestedSeason ? `À confirmer — ${suggestedSeason} ?` : "À confirmer"}
       />
 
       <div className="flex items-center gap-[8px] mt-6 mb-[11px]">
