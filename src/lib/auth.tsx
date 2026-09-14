@@ -4,35 +4,11 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type { User } from "@supabase/supabase-js";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { DEFAULT_PREFS, EMPTY_PROFILE, type Profile } from "./profile";
+import { consumeSignupIntent, forgetSignupIntent } from "./signupIntent";
 
 const DEMO_KEY = "capsela.demo.auth";
-const AUTH_INTENT_KEY = "capsela.authIntent";
 
-/**
- * Signale une intention de création de compte avant de déclencher signInGoogle
- * (le seul point d'entrée Google, exposé uniquement sur l'écran "Créer un
- * compte") — nécessaire pour distinguer nouvel utilisateur / compte existant
- * après un aller-retour OAuth qui démonte et remonte l'app (sessionStorage,
- * contrairement à un state React, survit à ce rechargement dans le même onglet).
- */
-export function markSignupIntent() {
-  try {
-    sessionStorage.setItem(AUTH_INTENT_KEY, "signup");
-  } catch {
-    // sessionStorage indisponible : au pire l'utilisateur atterrit sur la Homepage
-    // au lieu du questionnaire, jamais l'inverse.
-  }
-}
-
-function readAndClearSignupIntent(): boolean {
-  try {
-    const v = sessionStorage.getItem(AUTH_INTENT_KEY);
-    sessionStorage.removeItem(AUTH_INTENT_KEY);
-    return v === "signup";
-  } catch {
-    return false;
-  }
-}
+export { markSignupIntent } from "./signupIntent";
 
 interface DemoAuth {
   email: string;
@@ -182,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user ?? null);
       if (data.user) {
         await loadProfile(data.user);
-        setJustSignedUp(readAndClearSignupIntent());
+        setJustSignedUp(consumeSignupIntent());
       }
       setReady(true);
     });
@@ -191,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(u);
       if (u) {
         await loadProfile(u);
-        setJustSignedUp(readAndClearSignupIntent());
+        setJustSignedUp(consumeSignupIntent());
       } else {
         setProfile(EMPTY_PROFILE);
       }
@@ -266,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const restored: DemoAuth = stored && stored.email === email ? stored : { email, profile: EMPTY_PROFILE };
       persistDemo(restored);
       setProfile(restored.profile);
-      setJustSignedUp(readAndClearSignupIntent());
+      setJustSignedUp(consumeSignupIntent());
       return true;
     }
     const { error: err } = await getSupabase().auth.signInWithOAuth({
@@ -282,6 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    forgetSignupIntent();
     setJustSignedUp(false);
     if (!isSupabaseConfigured) {
       // Termine la session locale sans effacer le compte/profil stocké : une
