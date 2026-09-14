@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
-import { capsuleSeasonBucket, computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
+import { computeDefaultCapsule, currentSeasonKey, weatherForDay } from "./capsule";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
@@ -489,13 +489,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // meteoMaxTemp, cf. applyTempFilter dans logic.ts) reste le filtre fin qui
   // protège contre une pièce réellement inadaptée (ex. un short par 5°) —
   // ce bucket grossier n'est qu'un premier tri, pas la protection météo réelle.
-  const weather: Weather = useMemo(() => {
-    const season = weatherSeasonBucket(geoCity.temp);
-    const calendarBucket = capsuleSeasonBucket(currentSeasonKey());
-    const seasons: Season[] =
-      calendarBucket === season ? [season, "Toutes saisons"] : [season, calendarBucket, "Toutes saisons"];
-    return { season, temp: geoCity.temp, label: geoCity.label, seasons };
-  }, [geoCity]);
+  const weather: Weather = useMemo(
+    () => weatherForDay(geoCity.temp, geoCity.label, currentSeasonKey()),
+    [geoCity]
+  );
 
   // Vestiaire universel (Supabase) : remplace le catalogue statique dès qu'il
   // est disponible. En mode démo, si la requête échoue, ou si la table/les

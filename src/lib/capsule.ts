@@ -60,6 +60,26 @@ export function representativeWeatherFor(season: CapsuleSeason, tempOverride?: n
   };
 }
 
+/**
+ * La météo du jour telle que l'application la compose (extrait de store.tsx le
+ * 14/09/2026 — implémentation UNIQUE, celle que le moteur exécute et celle que
+ * les audits mesurent).
+ *
+ * `seasons` inclut le bucket de la saison CALENDAIRE en plus de celui déduit de
+ * la température : sans lui, une journée dont la température contredit la
+ * saison (ex. 15° et nuageux en plein août) vidait le pool vêtement de
+ * certaines occasions malgré une capsule bien fournie (signalé 23/08/2026). Ce
+ * bucket grossier n'est qu'un premier tri — la protection météo réelle reste
+ * meteoMinTemp/meteoMaxTemp, appliquée par applyTempFilter (logic.ts).
+ */
+export function weatherForDay(temp: number, label: string, saisonCalendaire: CapsuleSeason): Weather {
+  const season = weatherSeasonBucket(temp);
+  const calendarBucket = capsuleSeasonBucket(saisonCalendaire);
+  const seasons: Season[] =
+    calendarBucket === season ? [season, "Toutes saisons"] : [season, calendarBucket, "Toutes saisons"];
+  return { season, temp, label, seasons };
+}
+
 const STYLE_FIT: Record<string, RegExp> = {
   Minimaliste: /t-shirt|jean droit|chemise en lin|pull col rond|pantalon large|baskets blanches|mocassins|sac cabas|ceinture/,
   "Casual chic": /jean|chemise en lin|mocassins|cabas|pull col rond|ballerines/,

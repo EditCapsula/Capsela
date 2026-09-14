@@ -195,6 +195,28 @@ export interface LeviersMesure {
    * pool est calculé avant qu'elle soit appelée.
    */
   traceRepli?: (evenement: TraceRepli) => void;
+  /**
+   * Le barreau « météo relâchée » de `poolFor` cesse de relâcher la BORNE
+   * HAUTE — il ne relâche plus que le `min`.
+   *
+   * Signalé le 14/09/2026, capture à l'appui : 28° à Montreuil, et la tenue
+   * proposée était un blazer de laine SOUS un trench. Mécanisme : la capsule
+   * suit la saison CALENDAIRE (`currentSeasonKey`, store.tsx:551), donc en
+   * septembre elle est bâtie pour l'Automne à 14° ; à 28° `applyTempFilter`
+   * vide alors presque chaque catégorie, et l'échelle descend au barreau 1,
+   * qui abandonne la température des DEUX côtés.
+   *
+   * Or les deux bornes n'ont pas la même nature. Sous son `min`, une pièce
+   * reste portable — une autre couche compense, et c'est précisément ce que
+   * `TEMP_COMPENSATED_CATS` et R-B18/R-B19 organisent. Au-dessus de son
+   * `max`, rien ne compense : on ne retire pas la laine d'un manteau. Relâcher
+   * le `max` ne produit donc pas une tenue imparfaite mais une tenue fausse.
+   *
+   * Ce levier existe pour mesurer ce que coûte de ne plus le relâcher — le
+   * risque étant symétrique : une catégorie qui n'avait que des pièces hors
+   * `max` devient vide, donc une occasion peut se perdre. Inerte par défaut.
+   */
+  replMeteoConserveMax?: boolean;
 }
 
 /**
@@ -709,6 +731,17 @@ export function generateOutfit(
   // Dernier barreau du repli de poolFor — règles dures et météo appliquées,
   // seule l'occasion déclarée est relâchée.
   const hardBaseNoOccWithTemp = applyTempFilter(hardBaseNoOcc);
+  /**
+   * Ce que « relâcher la météo » signifie sur les barreaux qui l'abandonnent.
+   * Sans le levier `replMeteoConserveMax`, l'identité — donc le comportement
+   * livré, au caractère près. Avec, la borne haute survit au relâchement.
+   */
+  const relacheMeteo = (items: Item[]): Item[] =>
+    leviers?.replMeteoConserveMax
+      ? items.filter((i) => i.meteoMaxTemp == null || weather.temp <= i.meteoMaxTemp)
+      : items;
+  const hardBaseMeteoRelachee = relacheMeteo(hardBaseNoTemp);
+  const hardBaseNoOccMeteoRelachee = relacheMeteo(hardBaseNoOcc);
 
   // Chaussures/sacs/bijoux/accessoires restent toujours éligibles vis-à-vis du
   // filtrage d'occasion — conçus pour être reportés souvent, contrairement
@@ -764,8 +797,11 @@ export function generateOutfit(
       // n'existent que pour une catégorie essentielle — chaussures : une
       // tenue sans chaussures après avoir relâché l'occasion sur le haut et
       // le bas serait incohérente.
-      const ladder = [applyTempFilter(seasonNoTemp), seasonNoTemp, applyTempFilter(fullNoTemp), fullNoTemp];
-      if (essential) ladder.push(applyTempFilter(fullNoOcc), fullNoOcc);
+      const ladder = [
+        applyTempFilter(seasonNoTemp), relacheMeteo(seasonNoTemp),
+        applyTempFilter(fullNoTemp), relacheMeteo(fullNoTemp),
+      ];
+      if (essential) ladder.push(applyTempFilter(fullNoOcc), relacheMeteo(fullNoOcc));
       for (let i = 0; i < ladder.length; i++) {
         if (ladder[i].filter((x) => cats.includes(x.cat)).length) {
           noteRepli(cats, essential, i, BARREAUX_ACCESSOIRES, ladder);
@@ -775,13 +811,13 @@ export function generateOutfit(
       noteRepli(cats, essential, -1, BARREAUX_ACCESSOIRES, ladder);
       return ladder[ladder.length - 1];
     }
-    const echelle = [hardBase, hardBaseNoTemp, hardBaseNoOccWithTemp, hardBaseNoOcc];
+    const echelle = [hardBase, hardBaseMeteoRelachee, hardBaseNoOccWithTemp, hardBaseNoOccMeteoRelachee];
     const withTemp = hardBase.filter((i) => cats.includes(i.cat));
     if (withTemp.length) { noteRepli(cats, essential, 0, BARREAUX_VETEMENTS, echelle); return withTemp; }
     // Repli météo : jamais une catégorie essentielle (ex. le bas) totalement
     // vidée uniquement parce qu'aucune pièce de la capsule ne couvre la
     // météo du jour — cf. commentaire applyTempFilter.
-    const noTemp = hardBaseNoTemp.filter((i) => cats.includes(i.cat));
+    const noTemp = hardBaseMeteoRelachee.filter((i) => cats.includes(i.cat));
     // Un pool vide rendu à un appelant non essentiel n'est PAS un repli : la
     // catégorie est simplement absente, et la tracer comme barreau 1 ferait
     // compter des replis qui n'ont pas eu lieu.
@@ -791,7 +827,7 @@ export function generateOutfit(
     // ce barreau-ci, exactement comme au-dessus.
     const noOccWithTemp = hardBaseNoOccWithTemp.filter((i) => cats.includes(i.cat));
     if (noOccWithTemp.length) { noteRepli(cats, essential, 2, BARREAUX_VETEMENTS, echelle); return noOccWithTemp; }
-    const dernier = hardBaseNoOcc.filter((i) => cats.includes(i.cat));
+    const dernier = hardBaseNoOccMeteoRelachee.filter((i) => cats.includes(i.cat));
     noteRepli(cats, essential, dernier.length ? 3 : -1, BARREAUX_VETEMENTS, echelle);
     return dernier;
   };
