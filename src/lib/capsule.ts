@@ -45,9 +45,13 @@ const REPRESENTATIVE_TEMP: Record<CapsuleSeason, number> = {
  * "toutes les façons de la porter" qui doit rester valable sur toute la
  * saison, pas seulement la météo du jour (cf. weather réel, réservé à la
  * Tenue du jour).
+ *
+ * `tempOverride` est la couture d'audit jumelle de
+ * `SelectionStrategy.tempRepresentative` : elle sert à construire la météo
+ * assortie à une température candidate. La production ne la renseigne jamais.
  */
-export function representativeWeatherFor(season: CapsuleSeason): Weather {
-  const temp = REPRESENTATIVE_TEMP[season];
+export function representativeWeatherFor(season: CapsuleSeason, tempOverride?: number): Weather {
+  const temp = tempOverride ?? REPRESENTATIVE_TEMP[season];
   return {
     season: weatherSeasonBucket(temp),
     temp,
@@ -216,6 +220,21 @@ export type SelectionStrategy = {
    * moyen de la désactiver par inadvertance dans l'un d'eux.
    */
   maillesFermeesEte?: "exclues" | "admises";
+  /**
+   * Température représentative de chaque saison de capsule, pour les seules
+   * saisons qu'on veut déplacer. Absent — le cas de la production, qui ne
+   * renseigne jamais ce paramètre — `REPRESENTATIVE_TEMP` s'applique
+   * inchangé.
+   *
+   * Cette couture existe parce que ces quatre nombres décident de
+   * l'APPARTENANCE (capsule.ts:517) : une pièce dont la plage ne couvre pas
+   * la température de la saison est absente d'une capsule qu'elle déclare,
+   * sans erreur ni log. Les mesurer suppose de comparer plusieurs valeurs
+   * DANS LA MÊME EXÉCUTION et sur le même pool (AGENTS.md, point 3) ; les
+   * coder en dur obligerait à dupliquer le pipeline, donc à mesurer une
+   * copie plutôt que le moteur.
+   */
+  tempRepresentative?: Partial<Record<CapsuleSeason, number>>;
 };
 /**
  * Depuis le 29/08/2026, la production ne consulte plus `morphoFit` au rang 3.
@@ -512,7 +531,7 @@ export function computeDefaultCapsule(
   // l'excluent clairement. Utilise la température représentative de la
   // saison demandée plutôt que la météo du jour, cohérent avec l'esprit
   // "valable sur toute la saison" de la capsule (cf. representativeWeatherFor).
-  const capsuleTemp = seasonKey ? REPRESENTATIVE_TEMP[seasonKey] : weather.temp;
+  const capsuleTemp = seasonKey ? (strategy.tempRepresentative?.[seasonKey] ?? REPRESENTATIVE_TEMP[seasonKey]) : weather.temp;
   const tempFit = base.filter(
     (it) => (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) && (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp)
   );
