@@ -121,7 +121,7 @@ async function main() {
   }
 
   const avecVisuel = data.filter((r) => r.image_status === "ready" && r.url_image && r.image_prompt);
-  const faux: { ligne: Ligne; attendu: string; dessine: string }[] = [];
+  const faux: { ligne: Ligne; attendu: string; dessine: string; motif: string }[] = [];
   const vocabulaireManquant: Ligne[] = [];
 
   for (const ligne of avecVisuel) {
@@ -157,7 +157,47 @@ async function main() {
     const dessineEnGenerique = terme(dessine, generique) || terme(dessine, "item");
 
     if (termePrecisDisponible && sujetAbsent && dessineEnGenerique) {
-      faux.push({ ligne, attendu: built.noun, dessine });
+      faux.push({ ligne, attendu: built.noun, dessine, motif: "sujet" });
+      continue;
+    }
+
+    // ── GENRE ET COULEUR (15/09/2026) ─────────────────────────────────────
+    //
+    // Demandé explicitement : « des visuels qui correspondent bien au produit
+    // (couleur, forme...) et au sexe du produit ». La détection ci-dessus ne
+    // regarde que le SUJET, et son commentaire le dit lui-même — « Pull col V »
+    // attend « sweater », qui est le repli de la catégorie, donc elle ne peut
+    // pas voir ce cas. C'est précisément le pull signalé le 15/09, dessiné en
+    // T-shirt : le sujet était générique des deux côtés, seul le reste du
+    // descriptif avait changé.
+    //
+    // On compare donc la ligne "Product:" entière — celle d'aujourd'hui contre
+    // celle qui a réellement été envoyée. Rien n'est recopié du constructeur :
+    // les deux lignes sortent de `buildImagePrompt`, et les mots de couleur
+    // sont obtenus en rejouant le constructeur SANS couleur, comme le terme
+    // générique plus haut.
+    const aujourdhui = sujetDessine(built.prompt);
+    if (!aujourdhui) continue;
+
+    // Le genre est le premier mot du descriptif (women's / men's / unisex).
+    // Les deux doivent être reconnus, sinon on ne compare rien : un prompt
+    // d'une génération plus ancienne pouvait ne pas porter le genre du tout,
+    // et l'absence n'est pas une contradiction.
+    const GENRES = ["women's", "men's", "unisex"];
+    const genreAuj = aujourdhui.split(/\s+/)[0] ?? "";
+    const genreDes = dessine.split(/\s+/)[0] ?? "";
+    if (GENRES.includes(genreAuj) && GENRES.includes(genreDes) && genreAuj !== genreDes) {
+      faux.push({ ligne, attendu: aujourdhui, dessine, motif: `genre : ${genreDes} → ${genreAuj}` });
+      continue;
+    }
+
+    // Les mots de couleur d'aujourd'hui : ce que le descriptif complet a en
+    // plus du même descriptif construit sans `couleur_dominante`.
+    const sansCouleur = sujetDessine(buildImagePrompt({ ...ligne, couleur_dominante: null }).prompt) ?? "";
+    const motsSansCouleur = new Set(sansCouleur.split(/\s+/));
+    const motsCouleur = aujourdhui.split(/\s+/).filter((m) => m && !motsSansCouleur.has(m));
+    if (motsCouleur.length && !motsCouleur.some((m) => terme(dessine, m))) {
+      faux.push({ ligne, attendu: aujourdhui, dessine, motif: `couleur : « ${motsCouleur.join(" ")} » absente` });
     }
   }
 
@@ -174,15 +214,15 @@ async function main() {
   }
 
   if (!faux.length) {
-    console.log("Aucun visuel au sujet manifestement faux. Rien à régénérer.");
+    console.log("Aucun visuel en contradiction avec sa fiche — sujet, genre et couleur concordent. Rien à régénérer.");
     return;
   }
 
   // Regroupement par asset : plusieurs articles peuvent partager une même
   // image. Une seule génération suffit pour tout le groupe, les articles
   // suivants ne font que recopier l'URL produite (aucun appel OpenAI).
-  const parAsset = new Map<number, { ligne: Ligne; attendu: string; dessine: string }[]>();
-  const sansAsset: { ligne: Ligne; attendu: string; dessine: string }[] = [];
+  const parAsset = new Map<number, { ligne: Ligne; attendu: string; dessine: string; motif: string }[]>();
+  const sansAsset: { ligne: Ligne; attendu: string; dessine: string; motif: string }[] = [];
   for (const f of faux) {
     if (f.ligne.visual_asset_id === null) sansAsset.push(f);
     else {
@@ -194,17 +234,20 @@ async function main() {
 
   const groupes = [...parAsset.entries()];
   const aGenerer = groupes.length + sansAsset.length;
-  console.log(`${faux.length} article(s) au sujet faux, répartis sur ${aGenerer} visuel(s) distinct(s).`);
+  const parMotif = new Map<string, number>();
+  for (const f of faux) parMotif.set(f.motif.split(" :")[0], (parMotif.get(f.motif.split(" :")[0]) ?? 0) + 1);
+  console.log(`${faux.length} article(s) dont le visuel ne correspond plus à la fiche, répartis sur ${aGenerer} visuel(s) distinct(s).`);
+  console.log(`  par motif : ${[...parMotif.entries()].map(([m, n]) => `${m} ${n}`).join("  ·  ")}`);
   console.log(`Coût estimé d'une régénération complète : ~${(aGenerer * 0.02).toFixed(2)} $.\n`);
 
   for (const [assetId, grp] of groupes) {
-    console.log(`  asset ${assetId} — dessiné « ${grp[0].dessine} » au lieu de « ${grp[0].attendu} »`);
-    for (const { ligne, attendu } of grp) {
-      console.log(`    [#${ligne.id}] ${ligne.name} — sous_type "${ligne.sous_type}" → attendu « ${attendu} »`);
+    console.log(`  asset ${assetId} — [${grp[0].motif}] dessiné « ${grp[0].dessine} » au lieu de « ${grp[0].attendu} »`);
+    for (const { ligne, attendu, motif } of grp) {
+      console.log(`    [#${ligne.id}] ${ligne.name} — sous_type "${ligne.sous_type}" / ${motif} → attendu « ${attendu} »`);
     }
   }
-  for (const { ligne, attendu, dessine } of sansAsset) {
-    console.log(`  (sans asset) [#${ligne.id}] ${ligne.name} — dessiné « ${dessine} » au lieu de « ${attendu} »`);
+  for (const { ligne, attendu, dessine, motif } of sansAsset) {
+    console.log(`  (sans asset) [#${ligne.id}] ${ligne.name} — [${motif}] dessiné « ${dessine} » au lieu de « ${attendu} »`);
   }
   console.log("");
 
