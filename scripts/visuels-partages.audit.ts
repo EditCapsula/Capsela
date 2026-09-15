@@ -40,6 +40,8 @@ interface Ligne {
   image_source: string | null;
   image_status: string | null;
   visual_asset_id: number | null;
+  couleur_dominante: string | null;
+  genre: string | null;
 }
 
 const court = (s: string | null, n: number) => (s ?? "—").slice(0, n).padEnd(n);
@@ -50,7 +52,7 @@ describe("visuels partagés entre pièces différentes", () => {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const { data, error } = await supabase
       .from("vestiaire_universel")
-      .select("id, name, category, sous_type, url_image, affiliate_image_url, image_source, image_status, visual_asset_id")
+      .select("id, name, category, sous_type, url_image, affiliate_image_url, image_source, image_status, visual_asset_id, couleur_dominante, genre")
       .order("id", { ascending: true })
       .returns<Ligne[]>();
     if (error) throw new Error(`Lecture impossible : ${error.message}`);
@@ -111,6 +113,68 @@ describe("visuels partagés entre pièces différentes", () => {
     for (const [id, ls] of assetsSuspects.slice(0, 20)) {
       console.log(`     asset ${id}`);
       for (const l of ls) console.log(`        id ${String(l.id).padStart(5)}  ${court(l.category, 20)}${court(l.sous_type, 22)}${l.name ?? ""}`);
+    }
+
+    // ═══ 3 · LE VISUEL EST-IL RANGÉ DANS LE DOSSIER DE SA CATÉGORIE ? ════
+    //
+    // Le chemin encode genre/catégorie au moment de la génération. Une ligne
+    // `pulls_gilets` dont l'asset vit sous `hauts/` a donc été produite comme
+    // un haut — et c'est exactement ce que l'utilisatrice a vu : un T-shirt
+    // affiché sur un pull. Elle a confirmé de son côté que deux assets rangés
+    // sous `pulls-gilets/` montrent bien des pulls, ce qui corrobore la lecture.
+    console.log(`\n════════ 3 · VISUEL RANGÉ DANS LE MAUVAIS DOSSIER ════════`);
+    const dossierDe = (url: string): string | null => {
+      const m = /catalog-images\/([^/]+)\/([^/]+)\//.exec(url);
+      return m ? m[2] : null;
+    };
+    const attendu = (categorie: string | null) => (categorie ?? "").replace(/_/g, "-");
+    const malRangees = data.filter((l) => {
+      const url = l.url_image;
+      if (!url) return false;
+      const d = dossierDe(url);
+      return d != null && d !== attendu(l.category);
+    });
+    console.log(`  ${malRangees.length} ligne(s) sur ${data.length} pointent vers un dossier qui n'est pas celui de leur catégorie.`);
+    const parCouple = new Map<string, Ligne[]>();
+    for (const l of malRangees) {
+      const cle = `${l.category} → ${dossierDe(l.url_image!)}`;
+      parCouple.set(cle, [...(parCouple.get(cle) ?? []), l]);
+    }
+    for (const [cle, ls] of [...parCouple.entries()].sort((a, b) => b[1].length - a[1].length)) {
+      console.log(`\n  ── ${cle} — ${ls.length} pièce(s) ──`);
+      for (const l of ls.slice(0, 25)) {
+        console.log(`     id ${String(l.id).padStart(5)}  ${court(l.genre, 9)}${court(l.sous_type, 24)}${court(l.couleur_dominante, 14)}${l.name ?? ""}`);
+      }
+      if (ls.length > 25) console.log(`     … et ${ls.length - 25} de plus.`);
+    }
+
+    // ═══ 4 · UN VISUEL CORRECT EXISTE-T-IL DÉJÀ POUR CHACUNE ? ═══════════
+    //
+    // S'il existe, dans la même catégorie et le même sous-type, une ligne
+    // BIEN rangée et de la même couleur, alors repointer se fait en base et
+    // ne coûte rien. Sinon, aucune correction de données ne rattrape le cas —
+    // et il faut le dire plutôt que de laisser croire à une solution.
+    console.log(`\n════════ 4 · REMPLAÇANT DÉJÀ DISPONIBLE, SANS RIEN RÉGÉNÉRER ? ════════`);
+    const bienRangees = data.filter((l) => l.url_image && dossierDe(l.url_image) === attendu(l.category));
+    const norm = (v: string | null) => (v ?? "").trim().toLowerCase();
+    for (const l of malRangees) {
+      const memeType = bienRangees.filter(
+        (c) => c.category === l.category && norm(c.sous_type) === norm(l.sous_type)
+      );
+      const memeCouleur = memeType.filter((c) => norm(c.couleur_dominante) === norm(l.couleur_dominante));
+      const memeGenre = memeCouleur.filter((c) => norm(c.genre) === norm(l.genre));
+      const retenus = memeGenre.length ? memeGenre : memeCouleur;
+      console.log(`\n  id ${String(l.id).padStart(5)}  ${court(l.sous_type, 24)}${court(l.couleur_dominante, 14)}${court(l.genre, 9)}${l.name ?? ""}`);
+      console.log(`     sert  ${l.url_image}`);
+      if (!retenus.length) {
+        console.log(`     AUCUN remplaçant : ${memeType.length} pièce(s) de même sous-type bien rangées, aucune de la même couleur.`);
+        for (const c of memeType.slice(0, 4)) console.log(`        (couleur ${court(c.couleur_dominante, 14)}id ${c.id})`);
+        continue;
+      }
+      for (const c of retenus.slice(0, 3)) {
+        console.log(`     candidat id ${String(c.id).padStart(5)}  ${court(c.couleur_dominante, 14)}${court(c.genre, 9)}${c.name ?? ""}`);
+        console.log(`        ${c.url_image}`);
+      }
     }
 
     console.log(`\n  LECTURE SEULE. Aucune écriture, aucune génération de visuel déclenchée.`);
