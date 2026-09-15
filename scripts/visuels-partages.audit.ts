@@ -123,10 +123,15 @@ describe("visuels partagés entre pièces différentes", () => {
     // affiché sur un pull. Elle a confirmé de son côté que deux assets rangés
     // sous `pulls-gilets/` montrent bien des pulls, ce qui corrobore la lecture.
     console.log(`\n════════ 3 · VISUEL RANGÉ DANS LE MAUVAIS DOSSIER ════════`);
-    const dossierDe = (url: string): string | null => {
+    const segments = (url: string): { genre: string; dossier: string } | null => {
       const m = /catalog-images\/([^/]+)\/([^/]+)\//.exec(url);
-      return m ? m[2] : null;
+      return m ? { genre: m[1], dossier: m[2] } : null;
     };
+    const dossierDe = (url: string): string | null => segments(url)?.dossier ?? null;
+    const genreDe = (url: string): string | null => segments(url)?.genre ?? null;
+    // Le genre attendu dans le chemin. `unisexe` est une valeur légitime du
+    // catalogue, donc comparée telle quelle — ce n'est pas un joker.
+    const genreAttendu = (g: string | null) => (g ?? "").trim().toLowerCase();
     const attendu = (categorie: string | null) => (categorie ?? "").replace(/_/g, "-");
     const malRangees = data.filter((l) => {
       const url = l.url_image;
@@ -135,6 +140,34 @@ describe("visuels partagés entre pièces différentes", () => {
       return d != null && d !== attendu(l.category);
     });
     console.log(`  ${malRangees.length} ligne(s) sur ${data.length} pointent vers un dossier qui n'est pas celui de leur catégorie.`);
+
+    // Le chemin porte AUSSI le genre, et c'est le second axe demandé le 15/09.
+    // Une pièce femme servie depuis `homme/` ou `unisexe/` montre un produit
+    // qui n'est pas du bon sexe — 454 et 504 sont dans ce cas.
+    const mauvaisGenre = data.filter((l) => {
+      const url = l.url_image;
+      if (!url) return false;
+      const g = genreDe(url);
+      return g != null && g !== genreAttendu(l.genre);
+    });
+    console.log(`  ${mauvaisGenre.length} ligne(s) pointent vers un chemin dont le GENRE n'est pas le leur.`);
+    const parGenre = new Map<string, Ligne[]>();
+    for (const l of mauvaisGenre) parGenre.set(`${l.genre} → ${genreDe(l.url_image!)}`, [...(parGenre.get(`${l.genre} → ${genreDe(l.url_image!)}`) ?? []), l]);
+    for (const [cle, ls] of [...parGenre.entries()].sort((a, b) => b[1].length - a[1].length)) {
+      console.log(`\n  ── genre ${cle} — ${ls.length} pièce(s) ──`);
+      for (const l of ls.slice(0, 30)) {
+        console.log(`     id ${String(l.id).padStart(5)}  ${court(l.category, 16)}${court(l.sous_type, 24)}${court(l.couleur_dominante, 14)}${l.name ?? ""}`);
+      }
+      if (ls.length > 30) console.log(`     … et ${ls.length - 30} de plus.`);
+    }
+
+    // L'ensemble à reprendre : l'un OU l'autre axe suffit, puisque le chemin
+    // est désormais le seul témoin de ce qui a été dessiné — `image_prompt` a
+    // été rafraîchi depuis, et la comparaison prompt contre prompt ne voit
+    // donc plus rien (audit du 15/09 : 0 sur 617).
+    const aReprendre = [...new Set([...malRangees, ...mauvaisGenre].map((l) => l.id))].sort((a, b) => a - b);
+    console.log(`\n  ENSEMBLE À REPRENDRE : ${aReprendre.length} pièce(s)`);
+    console.log(`  IDS=${aReprendre.join(",")}`);
     const parCouple = new Map<string, Ligne[]>();
     for (const l of malRangees) {
       const cle = `${l.category} → ${dossierDe(l.url_image!)}`;
