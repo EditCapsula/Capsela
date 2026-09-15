@@ -6,7 +6,7 @@ import { OutfitComposition } from "@/components/OutfitComposition";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
+import { computeDefaultCapsule, currentSeasonKey, saisonCapsulePourMeteo } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
@@ -190,7 +190,10 @@ export default function TenuesScreen() {
   const exploredCapsulePool = useMemo(() => {
     if (!state.exploredStyleId) return null;
     const exploredProfile = { ...profile, styles: [state.exploredStyleId] };
-    const season = state.capsuleSeason || currentSeasonKey();
+    // Doit rester identique au repli de `viewExploredOutfit` (store.tsx) : ce
+    // pool ne sert qu'à RÉSOUDRE les ids que le store a tirés, les deux
+    // doivent donc désigner la même capsule. Météo à défaut de choix explicite.
+    const season = state.capsuleSeason || saisonCapsulePourMeteo(weather.temp);
     return computeDefaultCapsule(exploredProfile, weather, state.suggestedExcluded, season, vestiairePool);
   }, [state.exploredStyleId, profile, weather, state.suggestedExcluded, state.capsuleSeason, vestiairePool]);
   const displayPool = exploredCapsulePool ?? wardrobePool;

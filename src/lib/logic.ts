@@ -196,27 +196,27 @@ export interface LeviersMesure {
    */
   traceRepli?: (evenement: TraceRepli) => void;
   /**
-   * Le barreau « météo relâchée » de `poolFor` cesse de relâcher la BORNE
-   * HAUTE — il ne relâche plus que le `min`.
+   * Reproduit le comportement d'AVANT le 15/09/2026 : le barreau « météo
+   * relâchée » de `poolFor` relâchait la température des DEUX côtés, borne
+   * haute comprise. Conservé pour qu'un audit retrouve la ligne de base.
    *
-   * Signalé le 14/09/2026, capture à l'appui : 28° à Montreuil, et la tenue
-   * proposée était un blazer de laine SOUS un trench. Mécanisme : la capsule
-   * suit la saison CALENDAIRE (`currentSeasonKey`, store.tsx:551), donc en
-   * septembre elle est bâtie pour l'Automne à 14° ; à 28° `applyTempFilter`
-   * vide alors presque chaque catégorie, et l'échelle descend au barreau 1,
-   * qui abandonne la température des DEUX côtés.
+   * Ce qui a changé et pourquoi. Signalé le 14/09, capture à l'appui : 28° à
+   * Montreuil, et la tenue proposée était un blazer de laine SOUS un trench.
+   * La capsule suivait la saison calendaire, donc à 28° `applyTempFilter`
+   * vidait presque chaque catégorie et l'échelle descendait à ce barreau.
    *
    * Or les deux bornes n'ont pas la même nature. Sous son `min`, une pièce
    * reste portable — une autre couche compense, et c'est précisément ce que
-   * `TEMP_COMPENSATED_CATS` et R-B18/R-B19 organisent. Au-dessus de son
-   * `max`, rien ne compense : on ne retire pas la laine d'un manteau. Relâcher
-   * le `max` ne produit donc pas une tenue imparfaite mais une tenue fausse.
+   * `TEMP_COMPENSATED_CATS` et R-B18/R-B19 organisent. Au-dessus de son `max`,
+   * rien ne compense : on ne retire pas la laine d'un manteau. Relâcher le
+   * `min` produit une tenue imparfaite ; relâcher le `max` produit une tenue
+   * fausse. Le barreau ne relâche donc plus que le `min`.
    *
-   * Ce levier existe pour mesurer ce que coûte de ne plus le relâcher — le
-   * risque étant symétrique : une catégorie qui n'avait que des pièces hors
-   * `max` devient vide, donc une occasion peut se perdre. Inerte par défaut.
+   * Le risque était symétrique et il a été mesuré : une catégorie qui n'avait
+   * que des pièces hors `max` pouvait devenir vide, donc une occasion se
+   * perdre. Sur dix journées et 1600 tenues par bras, aucune occasion perdue.
    */
-  replMeteoConserveMax?: boolean;
+  replMeteoRelacheMax?: boolean;
 }
 
 /**
@@ -732,14 +732,14 @@ export function generateOutfit(
   // seule l'occasion déclarée est relâchée.
   const hardBaseNoOccWithTemp = applyTempFilter(hardBaseNoOcc);
   /**
-   * Ce que « relâcher la météo » signifie sur les barreaux qui l'abandonnent.
-   * Sans le levier `replMeteoConserveMax`, l'identité — donc le comportement
-   * livré, au caractère près. Avec, la borne haute survit au relâchement.
+   * Ce que « relâcher la météo » signifie sur les barreaux qui l'abandonnent :
+   * le `min` cède, jamais le `max` (arbitré le 15/09/2026, cf.
+   * `replMeteoRelacheMax`, qui rétablit l'ancien comportement pour les audits).
    */
   const relacheMeteo = (items: Item[]): Item[] =>
-    leviers?.replMeteoConserveMax
-      ? items.filter((i) => i.meteoMaxTemp == null || weather.temp <= i.meteoMaxTemp)
-      : items;
+    leviers?.replMeteoRelacheMax
+      ? items
+      : items.filter((i) => i.meteoMaxTemp == null || weather.temp <= i.meteoMaxTemp);
   const hardBaseMeteoRelachee = relacheMeteo(hardBaseNoTemp);
   const hardBaseNoOccMeteoRelachee = relacheMeteo(hardBaseNoOcc);
 

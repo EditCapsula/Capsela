@@ -61,6 +61,32 @@ export function representativeWeatherFor(season: CapsuleSeason, tempOverride?: n
 }
 
 /**
+ * La saison de capsule dont la température représentative est la plus proche
+ * de la météo du jour.
+ *
+ * ARBITRÉ LE 15/09/2026, après la capture « 28° et l'application me propose un
+ * blazer de laine sous un trench ». La capsule suivait la saison CALENDAIRE :
+ * en septembre elle était bâtie pour l'Automne, à 14°, et à 28° plus rien n'y
+ * passait le filtre de température — l'échelle de `poolFor` descendait alors
+ * au barreau qui abandonne la météo, et ressortait le trench.
+ *
+ * Cette fonction n'invente aucune constante : elle se sert des quatre
+ * températures représentatives, déjà mesurées. Mesuré le 14/09 sur dix
+ * journées où le calendrier et le thermomètre se contredisent : 167 pièces
+ * portées au-dessus de leur borne haute passent à 0, sans perdre une seule
+ * occasion.
+ *
+ * Elle décide du vivier de la TENUE DU JOUR seulement. L'écran Capsule reste
+ * calendaire — c'est un vestiaire de saison, et c'est ce que le mot veut dire
+ * (arbitrage de l'utilisatrice, même jour).
+ */
+export function saisonCapsulePourMeteo(temp: number): CapsuleSeason {
+  return CAPSULE_SEASONS.reduce((meilleure, s) =>
+    Math.abs(REPRESENTATIVE_TEMP[s] - temp) < Math.abs(REPRESENTATIVE_TEMP[meilleure] - temp) ? s : meilleure
+  );
+}
+
+/**
  * La météo du jour telle que l'application la compose (extrait de store.tsx le
  * 14/09/2026 — implémentation UNIQUE, celle que le moteur exécute et celle que
  * les audits mesurent).

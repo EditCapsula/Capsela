@@ -35,11 +35,24 @@ const poolConfortable = (): CatalogItem[] => [
 ];
 
 /**
- * Le même vestiaire, mais le SEUL bas est hors météo à 16 ° : `poolFor` doit
- * relâcher la météo plutôt que de rendre une tenue sans bas. C'est
- * exactement le repli que la trace existe pour rendre visible.
+ * Le même vestiaire, mais le SEUL bas est SOUS SON MIN à 16 ° : `poolFor` doit
+ * relâcher la météo plutôt que de rendre une tenue sans bas. C'est exactement
+ * le repli que la trace existe pour rendre visible.
+ *
+ * Sous son min, et pas au-dessus de son max : depuis le 15/09/2026 le barreau
+ * de relâchement ne lâche plus la borne haute (cf. `poolBasAuDessusDeSonMax`).
+ * Un pantalon d'hiver à 16 ° ne déclencherait donc plus aucun repli — le test
+ * passerait pour une mauvaise raison, en constatant une absence.
  */
 const poolBasHorsMeteo = (): CatalogItem[] => [
+  item({ id: 1, category: "hauts", name: "T-shirt", sous_type: "T-shirt", meteo_min_temp: 10, meteo_max_temp: 26 }),
+  item({ id: 2, category: "pantalons", name: "Pantalon d'été", sous_type: "Pantalon", meteo_min_temp: 22, meteo_max_temp: 40 }),
+  item({ id: 3, category: "chaussures", name: "Mocassins", sous_type: "Mocassins", meteo_min_temp: 5, meteo_max_temp: 28 }),
+  item({ id: 4, category: "sacs", name: "Cabas", sous_type: "Cabas" }),
+];
+
+/** Le même, mais le seul bas est AU-DESSUS de son max à 16 ° — un pantalon d'hiver. */
+const poolBasAuDessusDeSonMax = (): CatalogItem[] => [
   item({ id: 1, category: "hauts", name: "T-shirt", sous_type: "T-shirt", meteo_min_temp: 10, meteo_max_temp: 26 }),
   item({ id: 2, category: "pantalons", name: "Pantalon d'hiver", sous_type: "Pantalon", meteo_min_temp: -5, meteo_max_temp: 8 }),
   item({ id: 3, category: "chaussures", name: "Mocassins", sous_type: "Mocassins", meteo_min_temp: 5, meteo_max_temp: 28 }),
@@ -144,6 +157,56 @@ describe("trace de repli — elle dit vrai", () => {
       expect(e.effectifs.length).toBeGreaterThanOrEqual(4);
       expect(e.cats.length).toBeGreaterThan(0);
       if (e.barreau >= 0) expect(e.effectifs[e.barreau]).toBeGreaterThan(0);
+    }
+  });
+});
+
+/**
+ * LA BORNE HAUTE NE SE RELÂCHE JAMAIS — arbitré le 15/09/2026.
+ *
+ * Signalé la veille, capture à l'appui : 28° et l'application proposait un
+ * blazer de laine sous un trench. Le barreau « météo relâchée » abandonnait la
+ * température des DEUX côtés, et ressortait des pièces au-dessus de leur max.
+ *
+ * Les deux bornes n'ont pas la même nature. Sous son min, une pièce reste
+ * portable — une couche compense. Au-dessus de son max, rien ne compense. Le
+ * prix accepté est visible ici : quand le SEUL bas est hors de son max, la
+ * tenue sort sans bas plutôt qu'avec un pantalon d'hiver en pleine chaleur.
+ * Mesuré sur le vrai catalogue (dix journées, 1600 tenues par bras) : aucune
+ * occasion perdue.
+ */
+describe("la borne haute ne se relâche jamais", () => {
+  // Les ids sont décalés de VESTIAIRE_ID_OFFSET par `item()` : on lit celui du
+  // pantalon dans le pool plutôt que d'écrire un littéral qui serait faux.
+  const idDuBas = (pool: CatalogItem[]) => pool.find((it) => it.cat === "pantalon")!.id;
+
+  it("un bas au-dessus de son max n'est pas réintroduit par le repli météo", () => {
+    const pool = poolBasAuDessusDeSonMax();
+    expect(tirage(pool), "le pantalon d'hiver ne doit pas être porté à 16 °").not.toContain(idDuBas(pool));
+  });
+
+  it("un bas SOUS son min l'est toujours — le min reste relâchable", () => {
+    const pool = poolBasHorsMeteo();
+    expect(tirage(pool), "le pantalon d'été reste portable à 16 °, une couche compense").toContain(idDuBas(pool));
+  });
+
+  it("le levier d'audit rétablit l'ancien comportement, et lui seul", () => {
+    const pool = poolBasAuDessusDeSonMax();
+    expect(tirage(pool, { replMeteoRelacheMax: true }), "l'ancien barreau relâchait bien la borne haute")
+      .toContain(idDuBas(pool));
+    // Contre-épreuve : sur un pool sans pièce hors max, le levier ne change rien.
+    for (let k = 0; k < 20; k++) {
+      expect(tirage(poolConfortable(), { replMeteoRelacheMax: true }, k), `tirage ${k}`)
+        .toEqual(tirage(poolConfortable(), undefined, k));
+    }
+  });
+
+  it("la trace le dit : plus aucun barreau non vide pour ce bas", () => {
+    const bas = traces(poolBasAuDessusDeSonMax()).filter((e) => e.cats.includes("pantalon"));
+    expect(bas.length, "le bas doit être tiré").toBeGreaterThan(0);
+    for (const e of bas) {
+      expect(e.barreau, "aucun barreau ne doit rendre ce pantalon").toBe(-1);
+      expect(e.effectifs.every((n) => n === 0), `effectifs ${e.effectifs.join("/")}`).toBe(true);
     }
   });
 });

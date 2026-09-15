@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, VESTIAIRE_ID_OFFSET, type VestiaireRow } from "../src/lib/vestiaire";
-import { CAPSULE_SEASONS, computeDefaultCapsule, representativeWeatherFor, weatherForDay } from "../src/lib/capsule";
+import { computeDefaultCapsule, saisonCapsulePourMeteo, weatherForDay } from "../src/lib/capsule";
 import { generateOutfitWithFallback, type LeviersMesure, type TraceRepli } from "../src/lib/logic";
 import { OCCASIONS } from "../src/lib/data";
 import type { CatalogItem } from "../src/lib/catalog";
@@ -35,12 +35,21 @@ import { STYLES_FEMME, assertCatalogueStyles, profilAudit } from "./harnaisAudit
 // produit une tenue imparfaite ; relâcher le `max` produit une tenue fausse.
 //
 // LES DEUX LEVIERS MESURÉS, et leur combinaison, dans la MÊME exécution :
-//   B  `replMeteoConserveMax` — le barreau « météo relâchée » ne relâche plus
-//      que le `min`. Correctif chirurgical : il ne touche à rien d'autre.
-//   C  la capsule est celle dont la température représentative est la plus
-//      proche de la météo du jour, au lieu de la saison calendaire. Cette
-//      règle n'invente aucune constante : elle se sert des quatre nombres
-//      déjà mesurés le 14/09. Elle reste un CANDIDAT, pas une décision.
+//   B  le barreau « météo relâchée » ne relâche plus que le `min`. Correctif
+//      chirurgical : il ne touche à rien d'autre.
+//   C  la capsule de la TENUE DU JOUR est celle dont la température
+//      représentative est la plus proche de la météo, au lieu de la saison
+//      calendaire (`saisonCapsulePourMeteo`). N'invente aucune constante :
+//      se sert des quatre nombres déjà mesurés le 14/09.
+//
+// ARBITRÉ LE 15/09 : B ET C, l'écran Capsule restant calendaire. Les deux sont
+// donc en production, et les bras s'inversent — `replMeteoRelacheMax` et la
+// capsule calendaire reconstituent désormais l'AVANT. Le bras D est le livré.
+//
+// CORRECTION DU SCRIPT AU PASSAGE. La première version transmettait
+// `capsuleSeason` à `generateOutfitWithFallback` ; `regen` (store.tsx) ne le
+// fait pas. Le bras de référence n'était donc pas la production, mais une
+// variante plus stricte sur le filtre de saison. Il est omis partout ici.
 //
 // LA CONTRE-MESURE, sans laquelle B serait un moyen de vider l'application :
 // une catégorie qui n'avait que des pièces hors `max` devient VIDE. On compte
@@ -60,20 +69,12 @@ const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVI
 const OCCS: OccasionKey[] = OCCASIONS.map(([k]) => k);
 const N = 20;
 
-/** Le levier C : la saison dont la représentative est la plus proche de la météo. */
-function saisonLaPlusProche(temp: number): CapsuleSeason {
-  return CAPSULE_SEASONS.reduce((meilleure, s) =>
-    Math.abs(representativeWeatherFor(s).temp - temp) < Math.abs(representativeWeatherFor(meilleure).temp - temp)
-      ? s : meilleure
-  );
-}
-
 type Bras = { nom: string; leviers?: LeviersMesure; capsuleMeteo: boolean };
 const BRAS: Bras[] = [
-  { nom: "A · production", capsuleMeteo: false },
-  { nom: "B · max jamais relâché", leviers: { replMeteoConserveMax: true }, capsuleMeteo: false },
-  { nom: "C · capsule selon météo", capsuleMeteo: true },
-  { nom: "D · B + C", leviers: { replMeteoConserveMax: true }, capsuleMeteo: true },
+  { nom: "A · avant le 15/09", leviers: { replMeteoRelacheMax: true }, capsuleMeteo: false },
+  { nom: "B · max jamais relâché", capsuleMeteo: false },
+  { nom: "C · capsule selon météo", leviers: { replMeteoRelacheMax: true }, capsuleMeteo: true },
+  { nom: "D · B + C (livré)", capsuleMeteo: true },
 ];
 
 /** Journées mesurées : la saison du calendrier, et la température qu'il fait vraiment. */
@@ -137,7 +138,7 @@ describe("quand la météo contredit la saison", () => {
       let ids: number[];
       try {
         ids = generateOutfitWithFallback(capsule, wSignale, "entretien", "Présentiel", "Verre", [], "femme",
-          "Automne", { traceRepli: (e) => traces.push(e) }).ids;
+          undefined, { traceRepli: (e) => traces.push(e), replMeteoRelacheMax: true }).ids;
       } finally { Math.random = vrai; }
       const pieces = ids.map((id) => index.get(id)).filter((p): p is CatalogItem => Boolean(p));
       const horsMax = pieces.filter((p) => p.meteoMaxTemp != null && 28 > p.meteoMaxTemp);
@@ -174,7 +175,7 @@ describe("quand la météo contredit la saison", () => {
       console.log(`\n  ── calendrier ${j.calendaire}, ${j.temp}° ${j.label} ──`);
       console.log(`  ${"bras".padEnd(26)}${"capsule".padEnd(11)}${"tenues".padStart(8)}${"cellules".padStart(10)}${"hors max".padStart(10)}${"nue < min".padStart(11)}`);
       for (const bras of BRAS) {
-        const saisonCapsule = bras.capsuleMeteo ? saisonLaPlusProche(j.temp) : j.calendaire;
+        const saisonCapsule = bras.capsuleMeteo ? saisonCapsulePourMeteo(j.temp) : j.calendaire;
         let tenues = 0, cellules = 0, horsMax = 0, nue = 0;
         for (const style of STYLES_FEMME) {
           const capsule = capsulePour(style, saisonCapsule, j.temp, j.label);
@@ -185,8 +186,10 @@ describe("quand la météo contredit la saison", () => {
               Math.random = mulberry32(grainePour(`${style}|${occ}|${k}`));
               let ids: number[];
               try {
-                ids = generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme",
-                  saisonCapsule, bras.leviers).ids;
+                // `regen` (store.tsx) ne transmet PAS de capsuleSeason : l'omettre
+              // ici est ce qui rend ce bras fidèle à la production.
+              ids = generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme",
+                  undefined, bras.leviers).ids;
               } finally { Math.random = vrai; }
               if (!ids.length) continue;
               couverte = true; tenues += 1;
