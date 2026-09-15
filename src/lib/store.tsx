@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
-import { capsuleSeasonBucket, computeDefaultCapsule, currentSeasonKey, weatherSeasonBucket } from "./capsule";
+import { computeDefaultCapsule, currentSeasonKey, saisonCapsulePourMeteo, weatherForDay } from "./capsule";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
@@ -489,13 +489,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // meteoMaxTemp, cf. applyTempFilter dans logic.ts) reste le filtre fin qui
   // protège contre une pièce réellement inadaptée (ex. un short par 5°) —
   // ce bucket grossier n'est qu'un premier tri, pas la protection météo réelle.
-  const weather: Weather = useMemo(() => {
-    const season = weatherSeasonBucket(geoCity.temp);
-    const calendarBucket = capsuleSeasonBucket(currentSeasonKey());
-    const seasons: Season[] =
-      calendarBucket === season ? [season, "Toutes saisons"] : [season, calendarBucket, "Toutes saisons"];
-    return { season, temp: geoCity.temp, label: geoCity.label, seasons };
-  }, [geoCity]);
+  const weather: Weather = useMemo(
+    () => weatherForDay(geoCity.temp, geoCity.label, currentSeasonKey()),
+    [geoCity]
+  );
 
   // Vestiaire universel (Supabase) : remplace le catalogue statique dès qu'il
   // est disponible. En mode démo, si la requête échoue, ou si la table/les
@@ -545,11 +542,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  // Toujours la saison calendaire courante — indépendante de la saison parcourue
-  // sur l'écran Capsule (state.capsuleSeason), qui n'affecte que son affichage.
+  // Le vivier de la TENUE DU JOUR suit la MÉTÉO, pas le calendrier (arbitré le
+  // 15/09/2026, cf. saisonCapsulePourMeteo). Une capsule bâtie pour l'automne à
+  // 14° ne contient rien de portable à 28° : le filtre de température vidait
+  // alors chaque catégorie, et l'échelle de repli ressortait un trench.
+  //
+  // L'écran Capsule, lui, reste calendaire — il calcule sa propre capsule
+  // depuis `state.capsuleSeason || currentSeasonKey()` et n'utilise pas celle-ci.
+  const saisonTenue = saisonCapsulePourMeteo(weather.temp);
   const defaultCapsule = useMemo(
-    () => computeDefaultCapsule(profile, weather, state.suggestedExcluded, currentSeasonKey(), vestiairePool),
-    [profile, weather, state.suggestedExcluded, vestiairePool]
+    () => computeDefaultCapsule(profile, weather, state.suggestedExcluded, saisonTenue, vestiairePool),
+    [profile, weather, state.suggestedExcluded, saisonTenue, vestiairePool]
   );
   // Pool effectif : par catégorie, tes pièces réelles si tu en as, sinon les
   // suggestions de la capsule par défaut — jamais un mélange à l'intérieur
@@ -1152,7 +1155,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => {
         if (!s.exploredStyleId) return s;
         const exploredProfile = { ...profile, styles: [s.exploredStyleId] };
-        const season = s.capsuleSeason || currentSeasonKey();
+        // Même règle que la tenue du jour : à défaut de saison explicitement
+        // choisie sur l'écran Capsule, c'est la météo qui décide, pas le
+        // calendrier — une tenue explorée est une tenue, elle ne doit pas
+        // échapper au correctif du 15/09.
+        const season = s.capsuleSeason || saisonCapsulePourMeteo(weatherRef.current.temp);
         const capsulePool = computeDefaultCapsule(exploredProfile, weatherRef.current, s.suggestedExcluded, season, vestiairePool);
         const result = generateOutfitWithFallback(
           capsulePool,

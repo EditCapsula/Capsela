@@ -45,15 +45,65 @@ const REPRESENTATIVE_TEMP: Record<CapsuleSeason, number> = {
  * "toutes les façons de la porter" qui doit rester valable sur toute la
  * saison, pas seulement la météo du jour (cf. weather réel, réservé à la
  * Tenue du jour).
+ *
+ * `tempOverride` est la couture d'audit jumelle de
+ * `SelectionStrategy.tempRepresentative` : elle sert à construire la météo
+ * assortie à une température candidate. La production ne la renseigne jamais.
  */
-export function representativeWeatherFor(season: CapsuleSeason): Weather {
-  const temp = REPRESENTATIVE_TEMP[season];
+export function representativeWeatherFor(season: CapsuleSeason, tempOverride?: number): Weather {
+  const temp = tempOverride ?? REPRESENTATIVE_TEMP[season];
   return {
     season: weatherSeasonBucket(temp),
     temp,
     label: season === "Été" ? "Ensoleillé" : "Nuageux",
     seasons: [weatherSeasonBucket(temp), "Toutes saisons"],
   };
+}
+
+/**
+ * La saison de capsule dont la température représentative est la plus proche
+ * de la météo du jour.
+ *
+ * ARBITRÉ LE 15/09/2026, après la capture « 28° et l'application me propose un
+ * blazer de laine sous un trench ». La capsule suivait la saison CALENDAIRE :
+ * en septembre elle était bâtie pour l'Automne, à 14°, et à 28° plus rien n'y
+ * passait le filtre de température — l'échelle de `poolFor` descendait alors
+ * au barreau qui abandonne la météo, et ressortait le trench.
+ *
+ * Cette fonction n'invente aucune constante : elle se sert des quatre
+ * températures représentatives, déjà mesurées. Mesuré le 14/09 sur dix
+ * journées où le calendrier et le thermomètre se contredisent : 167 pièces
+ * portées au-dessus de leur borne haute passent à 0, sans perdre une seule
+ * occasion.
+ *
+ * Elle décide du vivier de la TENUE DU JOUR seulement. L'écran Capsule reste
+ * calendaire — c'est un vestiaire de saison, et c'est ce que le mot veut dire
+ * (arbitrage de l'utilisatrice, même jour).
+ */
+export function saisonCapsulePourMeteo(temp: number): CapsuleSeason {
+  return CAPSULE_SEASONS.reduce((meilleure, s) =>
+    Math.abs(REPRESENTATIVE_TEMP[s] - temp) < Math.abs(REPRESENTATIVE_TEMP[meilleure] - temp) ? s : meilleure
+  );
+}
+
+/**
+ * La météo du jour telle que l'application la compose (extrait de store.tsx le
+ * 14/09/2026 — implémentation UNIQUE, celle que le moteur exécute et celle que
+ * les audits mesurent).
+ *
+ * `seasons` inclut le bucket de la saison CALENDAIRE en plus de celui déduit de
+ * la température : sans lui, une journée dont la température contredit la
+ * saison (ex. 15° et nuageux en plein août) vidait le pool vêtement de
+ * certaines occasions malgré une capsule bien fournie (signalé 23/08/2026). Ce
+ * bucket grossier n'est qu'un premier tri — la protection météo réelle reste
+ * meteoMinTemp/meteoMaxTemp, appliquée par applyTempFilter (logic.ts).
+ */
+export function weatherForDay(temp: number, label: string, saisonCalendaire: CapsuleSeason): Weather {
+  const season = weatherSeasonBucket(temp);
+  const calendarBucket = capsuleSeasonBucket(saisonCalendaire);
+  const seasons: Season[] =
+    calendarBucket === season ? [season, "Toutes saisons"] : [season, calendarBucket, "Toutes saisons"];
+  return { season, temp, label, seasons };
 }
 
 const STYLE_FIT: Record<string, RegExp> = {
@@ -216,6 +266,21 @@ export type SelectionStrategy = {
    * moyen de la désactiver par inadvertance dans l'un d'eux.
    */
   maillesFermeesEte?: "exclues" | "admises";
+  /**
+   * Température représentative de chaque saison de capsule, pour les seules
+   * saisons qu'on veut déplacer. Absent — le cas de la production, qui ne
+   * renseigne jamais ce paramètre — `REPRESENTATIVE_TEMP` s'applique
+   * inchangé.
+   *
+   * Cette couture existe parce que ces quatre nombres décident de
+   * l'APPARTENANCE (capsule.ts:517) : une pièce dont la plage ne couvre pas
+   * la température de la saison est absente d'une capsule qu'elle déclare,
+   * sans erreur ni log. Les mesurer suppose de comparer plusieurs valeurs
+   * DANS LA MÊME EXÉCUTION et sur le même pool (AGENTS.md, point 3) ; les
+   * coder en dur obligerait à dupliquer le pipeline, donc à mesurer une
+   * copie plutôt que le moteur.
+   */
+  tempRepresentative?: Partial<Record<CapsuleSeason, number>>;
 };
 /**
  * Depuis le 29/08/2026, la production ne consulte plus `morphoFit` au rang 3.
@@ -512,7 +577,7 @@ export function computeDefaultCapsule(
   // l'excluent clairement. Utilise la température représentative de la
   // saison demandée plutôt que la météo du jour, cohérent avec l'esprit
   // "valable sur toute la saison" de la capsule (cf. representativeWeatherFor).
-  const capsuleTemp = seasonKey ? REPRESENTATIVE_TEMP[seasonKey] : weather.temp;
+  const capsuleTemp = seasonKey ? (strategy.tempRepresentative?.[seasonKey] ?? REPRESENTATIVE_TEMP[seasonKey]) : weather.temp;
   const tempFit = base.filter(
     (it) => (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) && (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp)
   );
