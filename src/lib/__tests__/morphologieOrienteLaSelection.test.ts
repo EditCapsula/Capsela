@@ -4,7 +4,7 @@ import {
   MORPHOLOGIES_AVEC_DIRECTION,
   morphologieOrienteLaSelection,
 } from "../capsule";
-import { EMPTY_PROFILE, MORPHOLOGIES } from "../profile";
+import { EMPTY_PROFILE, MORPHOLOGIES, MORPHO_HINTS, silhouetteForme } from "../profile";
 import { MILD, item } from "./fixtures";
 import type { CatalogItem } from "../catalog";
 
@@ -83,5 +83,26 @@ describe("morphologieOrienteLaSelection", () => {
       expect(change, `${m} : la capsule ${change ? "change" : "ne change pas"}`)
         .toBe(morphologieOrienteLaSelection(m));
     }
+  });
+});
+
+describe("la forme courte affichée par l'écran Capsule", () => {
+  it("couvre toutes les morphologies que l'écran est susceptible de nommer", () => {
+    for (const m of MORPHOLOGIES_AVEC_DIRECTION) {
+      expect(silhouetteForme(m), `${m} s'afficherait avec un libellé vide`).not.toBe("");
+    }
+  });
+
+  it("ne nomme pas celles que la sélection ignore", () => {
+    for (const m of MORPHOLOGIES.filter((x) => !morphologieOrienteLaSelection(x))) {
+      expect(silhouetteForme(m), `${m} n'a pas à être nommée`).toBe("");
+    }
+  });
+
+  it("garde le vocabulaire des indices de profil, sans nom de fruit", () => {
+    expect(silhouetteForme("f_poire")).toBe("en A");
+    expect(silhouetteForme("f_triangle_inverse")).toBe("en V");
+    expect(MORPHO_HINTS.f_poire).toContain("forme en A");
+    expect(MORPHO_HINTS.f_triangle_inverse).toContain("forme en V");
   });
 });

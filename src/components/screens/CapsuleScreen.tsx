@@ -11,7 +11,7 @@ import {
   type CapsuleSeason,
 } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
-import { morphologyLabel, styleLabel } from "@/lib/profile";
+import { silhouetteForme, styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { looksCombinatoires } from "@/lib/looks";
@@ -123,13 +123,16 @@ export default function CapsuleScreen() {
   const criteres = useMemo(() => {
     const aUnePalette =
       profile.paletteCouleurs.length > 0 || !!profile.paletteAffinite || !!profile.paletteIntensite;
-    const morphoLabel = morphologieOrienteLaSelection(profile.morphology)
-      ? morphologyLabel(profile.morphology)
+    // « en A » / « en V » plutôt que la proposition entière de
+    // MORPHOLOGY_LABELS : « ta morphologie Hanches plus marquées que les
+    // épaules » se lit mal au fil d'une phrase.
+    const forme = morphologieOrienteLaSelection(profile.morphology)
+      ? silhouetteForme(profile.morphology)
       : "";
     return [
       userStyleLabel && { cle: "style", avant: "ton style ", valeur: userStyleLabel, etape: "style" },
       aUnePalette && { cle: "palette", avant: "ta ", valeur: "palette", etape: "pal_couleurs" },
-      morphoLabel && { cle: "morpho", avant: "ta morphologie ", valeur: morphoLabel, etape: "morpho" },
+      forme && { cle: "morpho", avant: "ta silhouette ", valeur: forme, etape: "morpho" },
     ].filter((c): c is { cle: string; avant: string; valeur: string; etape: string } => Boolean(c));
   }, [userStyleLabel, profile.paletteCouleurs, profile.paletteAffinite, profile.paletteIntensite, profile.morphology]);
 

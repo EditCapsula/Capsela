@@ -1,7 +1,8 @@
-import { OCCASIONS } from "./data";
+import { CATS, OCCASIONS } from "./data";
 import type { Weather } from "./data";
 import { generateOutfitWithFallback } from "./logic";
-import type { CapsuleSeason, Item, OccasionKey } from "./types";
+import { composeWardrobePool } from "./selectors";
+import type { CapsuleSeason, CategoryKey, Item, OccasionKey } from "./types";
 
 /**
  * COMBIEN DE LOOKS UNE CAPSULE PERMET-ELLE ?
@@ -16,6 +17,21 @@ import type { CapsuleSeason, Item, OccasionKey } from "./types";
  */
 
 const OCCS: OccasionKey[] = OCCASIONS.map(([k]) => k);
+const CAT_KEYS = CATS.map(([k]) => k) as CategoryKey[];
+
+/**
+ * Le pool que le moteur reçoit pour UNE occasion, composé exactement comme
+ * `regen` (store.tsx) le compose : une catégorie dont aucune pièce réelle ne
+ * déclare l'occasion du jour se voit rendre celles de la capsule qui la
+ * déclarent. Sans ce passage, un décompte reproduirait l'état d'AVANT le
+ * correctif du 10/09 et compterait des occasions perdues qui ne le sont plus.
+ *
+ * Idempotent sur un dressing vide : `pool` vaut alors la capsule, et il n'y a
+ * rien à compléter.
+ */
+function poolPourOccasion(pool: Item[], capsule: Item[], occasion: OccasionKey): Item[] {
+  return composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: occasion });
+}
 
 /**
  * CE QUE L'ÉCRAN AFFICHE DEPUIS TOUJOURS — extrait tel quel de CapsuleScreen
@@ -76,6 +92,7 @@ function avecTirageDeterministe<T>(seed: number, fn: () => T): T {
  * aucune des siennes.
  */
 export function tenuesDistinctes(
+  pool: Item[],
   capsule: Item[],
   weather: Weather,
   gender: "femme" | "homme" | null,
@@ -83,10 +100,11 @@ export function tenuesDistinctes(
   budget = 40
 ): number {
   const vues = new Set<string>();
-  avecTirageDeterministe(graine(capsule), () => {
+  avecTirageDeterministe(graine(pool), () => {
     for (const occ of OCCS) {
+      const p = poolPourOccasion(pool, capsule, occ);
       for (let k = 0; k < budget; k++) {
-        const { ids } = generateOutfitWithFallback(capsule, weather, occ, "Présentiel", "Verre", [], gender, saison);
+        const { ids } = generateOutfitWithFallback(p, weather, occ, "Présentiel", "Verre", [], gender, saison);
         if (ids.length) vues.add([...ids].sort((a, b) => a - b).join(","));
       }
     }
@@ -102,14 +120,16 @@ export function tenuesDistinctes(
  * que « combien de looks », mais y répond sans approximation.
  */
 export function occasionsCouvertes(
+  pool: Item[],
   capsule: Item[],
   weather: Weather,
   gender: "femme" | "homme" | null,
   saison: CapsuleSeason | null
 ): number {
-  return avecTirageDeterministe(graine(capsule), () =>
+  return avecTirageDeterministe(graine(pool), () =>
     OCCS.filter((occ) =>
-      generateOutfitWithFallback(capsule, weather, occ, "Présentiel", "Verre", [], gender, saison).ids.length > 0
+      generateOutfitWithFallback(poolPourOccasion(pool, capsule, occ), weather, occ, "Présentiel", "Verre", [], gender, saison)
+        .ids.length > 0
     ).length
   );
 }

@@ -97,8 +97,11 @@ describe("le compteur d'occasions couvertes", () => {
           for (const forme of FORMES) {
             const possedees = forme.possedees(capsule);
             // Le pool exactement comme le store le compose, complétion comprise.
+            // Les deux entrées de `regen` : le pool composé, et la capsule qui
+            // sert à le compléter occasion par occasion. Omettre la seconde
+            // reproduirait l'état d'avant le correctif du 10/09.
             const poolEffectif: Item[] = composeWardrobePool(possedees, capsule, CAT_KEYS);
-            const n = occasionsCouvertes(poolEffectif, w, genre, saisonTenue);
+            const n = occasionsCouvertes(poolEffectif, capsule, w, genre, saisonTenue);
             resultats.get(forme.nom)!.push(n);
             if (n < NB_OCCASIONS) creux.push(`${genre} · ${saison} · ${style} · ${forme.nom} → ${n}/${NB_OCCASIONS}`);
           }

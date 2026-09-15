@@ -73,8 +73,8 @@ describe("le compteur de looks de l'écran Capsule", () => {
         const capsule = computeDefaultCapsule(profil, w, [], saisonTenue, pool);
         capsules.set(`${saison}|${style}`, { capsule, temp, saison: saisonTenue });
         const formule = looksCombinatoires(capsule);
-        const a = tenuesDistinctes(capsule, w, "femme", saisonTenue, 40);
-        const b = occasionsCouvertes(capsule, w, "femme", saisonTenue);
+        const a = tenuesDistinctes(capsule, capsule, w, "femme", saisonTenue, 40);
+        const b = occasionsCouvertes(capsule, capsule, w, "femme", saisonTenue);
         totFormule += formule; totA += a;
         const ratio = a ? `× ${(formule / a).toFixed(1)}` : "—";
         console.log(`  ${(style === STYLES_FEMME[0] ? saison : "").padEnd(11)}${style.padEnd(17)}${String(capsule.length).padStart(8)}${String(formule).padStart(10)}${String(a).padStart(9)}${`${b}/${NB_OCCASIONS}`.padStart(6)}${ratio.padStart(13)}`);
@@ -96,7 +96,7 @@ describe("le compteur de looks de l'écran Capsule", () => {
         let ms160 = 0;
         for (const budget of BUDGETS) {
           const t0 = Date.now();
-          valeurs.push(tenuesDistinctes(capsule, w, "femme", sk, budget));
+          valeurs.push(tenuesDistinctes(capsule, capsule, w, "femme", sk, budget));
           if (budget === 160) ms160 = Date.now() - t0;
         }
         console.log(`  ${(style === STYLES_FEMME[0] ? saison : "").padEnd(11)}${style.padEnd(17)}${valeurs.map((v) => String(v).padStart(8)).join("")}${String(ms160).padStart(10)}`);
@@ -109,9 +109,9 @@ describe("le compteur de looks de l'écran Capsule", () => {
     const chrono = (fn: () => void) => { const t = Date.now(); fn(); return Date.now() - t; };
     for (const [nom, fn] of [
       ["formule actuelle", (c: CatalogItem[], w: ReturnType<typeof weatherForDay>, s: CapsuleSeason) => { void looksCombinatoires(c); void w; void s; }],
-      ["B · occasions couvertes", (c: CatalogItem[], w: ReturnType<typeof weatherForDay>, s: CapsuleSeason) => { void occasionsCouvertes(c, w, "femme", s); }],
-      ["A · 40 tirages", (c: CatalogItem[], w: ReturnType<typeof weatherForDay>, s: CapsuleSeason) => { void tenuesDistinctes(c, w, "femme", s, 40); }],
-      ["A · 160 tirages", (c: CatalogItem[], w: ReturnType<typeof weatherForDay>, s: CapsuleSeason) => { void tenuesDistinctes(c, w, "femme", s, 160); }],
+      ["B · occasions couvertes", (c: CatalogItem[], w: ReturnType<typeof weatherForDay>, s: CapsuleSeason) => { void occasionsCouvertes(c, c, w, "femme", s); }],
+      ["A · 40 tirages", (c: CatalogItem[], w: ReturnType<typeof weatherForDay>, s: CapsuleSeason) => { void tenuesDistinctes(c, c, w, "femme", s, 40); }],
+      ["A · 160 tirages", (c: CatalogItem[], w: ReturnType<typeof weatherForDay>, s: CapsuleSeason) => { void tenuesDistinctes(c, c, w, "femme", s, 160); }],
     ] as const) {
       const ms = chrono(() => {
         for (const { capsule, temp, saison } of echantillon) {
@@ -127,8 +127,8 @@ describe("le compteur de looks de l'écran Capsule", () => {
     let instables = 0;
     for (const { capsule, temp, saison } of echantillon) {
       const w = weatherForDay(temp, "Nuageux", saison);
-      const a = tenuesDistinctes(capsule, w, "femme", saison, 40);
-      const b = tenuesDistinctes(capsule, w, "femme", saison, 40);
+      const a = tenuesDistinctes(capsule, capsule, w, "femme", saison, 40);
+      const b = tenuesDistinctes(capsule, capsule, w, "femme", saison, 40);
       if (a !== b) instables += 1;
     }
     console.log(`  ${instables}/${echantillon.length} capsules rendent deux valeurs différentes à deux appels identiques.`);
