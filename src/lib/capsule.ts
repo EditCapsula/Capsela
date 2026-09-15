@@ -353,9 +353,30 @@ function valeurDirection(it: Item, morphology: string | null, retenues: CatalogI
   return poids(dejaLa(axe)) * intensite;
 }
 
+/**
+ * Les morphologies pour lesquelles la sélection change RÉELLEMENT.
+ *
+ * `valeurDirection` est le seul endroit où la morphologie pèse encore sur la
+ * capsule en production (`rang3: "neutre"` depuis le 29/08/2026 n'y consulte
+ * plus `morphoFit`). Or elle ne rend un axe que pour ces deux-là : rectangle,
+ * sablier et pomme retournent 0, faute de règle de sélection défendable — et
+ * leur en inventer une contredirait « UNKNOWN plutôt que donnée fausse ».
+ *
+ * Exportée le 15/09/2026 pour que l'écran Capsule puisse dire à qui sa
+ * sélection doit quelque chose à sa morphologie, sans l'annoncer à celles dont
+ * elle ne change rien. `axeDirection` passe par cette même liste : l'affichage
+ * et le moteur ne peuvent donc pas diverger.
+ */
+export const MORPHOLOGIES_AVEC_DIRECTION: readonly string[] = ["f_poire", "f_triangle_inverse"];
+
+/** True si la morphologie oriente effectivement la sélection. Cf. MORPHOLOGIES_AVEC_DIRECTION. */
+export function morphologieOrienteLaSelection(morphology: string | null | undefined): boolean {
+  return morphology != null && MORPHOLOGIES_AVEC_DIRECTION.includes(morphology);
+}
+
 /** Extrémité sur laquelle la pièce apporte une direction utile à cette morphologie, ou null. */
 function axeDirection(it: Item, morphology: string | null): "haut" | "bas" | null {
-  if (!morphology) return null;
+  if (!morphologieOrienteLaSelection(morphology)) return null;
   const e = effetMorphologique(it);
   if (e.confiance === "inconnue") return null;
   if (morphology === "f_poire") {
