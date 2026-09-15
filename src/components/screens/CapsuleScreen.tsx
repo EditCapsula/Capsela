@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { morphologyLabel, styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
+import { looksCombinatoires } from "@/lib/looks";
 import type { CategoryKey, DateContext, OccasionKey, WorkMode } from "@/lib/types";
 
 /**
@@ -94,12 +95,9 @@ export default function CapsuleScreen() {
   // par pièce, se fait uniquement à l'ouverture de la fiche détail
   // (PieceScreen) — cohérent avec "chaque article est cliquable".
 
-  const count = (cat: string) => capsule.filter((i) => i.cat === cat).length;
-  const tops = count("haut");
-  const bottoms = count("pantalon") + count("jean") + count("jupe") + count("short");
-  const dresses = count("robe") + count("combinaison");
-  const shoes = Math.max(1, count("chaussures"));
-  const looksCount = (tops * bottoms + dresses) * shoes;
+  // Formule inchangée, simplement déplacée dans looks.ts (15/09/2026) pour
+  // qu'un audit puisse la mesurer plutôt que d'en recopier une version.
+  const looksCount = looksCombinatoires(capsule);
 
   // Style renseigné en profil (recette 25/08/2026) — premier style choisi,
   // même convention que ProfileScreen/ProfileEditScreen (styleLabel(profile.styles[0], ...)) ;
