@@ -99,7 +99,90 @@ function segments(url: string): { genre: string; dossier: string } | null {
   return m ? { genre: m[1], dossier: m[2] } : null;
 }
 
+/**
+ * Le détecteur, isolé du transport : il ne lit rien, il juge une liste de
+ * lignes. C'est ce qui permet de le mettre à l'épreuve sur des cas fabriqués
+ * (voir la contre-épreuve ci-dessous) au lieu de le croire sur parole.
+ */
+function analyser(lignes: Ligne[]): { violations: Violation[]; examinees: number } {
+  const violations: Violation[] = [];
+  let examinees = 0;
+
+  for (const l of lignes) {
+    // Seules les lignes servies par le bucket sont concernées : une image
+    // affiliée ou une photo utilisateur ne porte pas ce chemin et ne dit
+    // donc rien de la catégorie.
+    const seg = l.url_image ? segments(l.url_image) : null;
+    if (!seg) continue;
+    examinees++;
+
+    const canon = CATEGORY_CANON[(l.category || "").trim().toLowerCase()];
+    if (!canon) {
+      // Même refus que la fonction (index.ts:333) : jamais de repli silencieux
+      // sur "accessoire", qui ferait collisionner des pièces sans rapport.
+      violations.push({ ligne: l, axe: "catégorie inconnue", attendu: "une entrée de CATEGORY_CANON", trouve: l.category ?? "—" });
+      continue;
+    }
+
+    const dossierAttendu = CATEGORY_FOLDER[canon] || canon;
+    if (seg.dossier !== dossierAttendu) {
+      violations.push({ ligne: l, axe: "catégorie", attendu: dossierAttendu, trouve: seg.dossier });
+    }
+
+    // `unisexe` est une valeur légitime du catalogue, comparée telle quelle :
+    // ce n'est pas un joker. L'exemption ne porte que sur les catégories
+    // dont le rendu n'est pas genré.
+    if (!GENRE_AGNOSTIC_CATEGORIES.has(canon)) {
+      const genreAttendu = (l.genre || "").trim().toLowerCase();
+      if (seg.genre !== genreAttendu) {
+        violations.push({ ligne: l, axe: "genre", attendu: genreAttendu || "—", trouve: seg.genre });
+      }
+    }
+  }
+
+  return { violations, examinees };
+}
+
+const URL_BASE = "https://tkrbzrazejrxavtfspll.supabase.co/storage/v1/object/public/catalog-images";
+const cas = (id: number, name: string, category: string, genre: string, chemin: string): Ligne => ({
+  id,
+  name,
+  category,
+  genre,
+  couleur_dominante: null,
+  url_image: `${URL_BASE}/${chemin}/${id}.webp`,
+});
+
 describe("garde-fou : chemin du visuel contre fiche", () => {
+  // CONTRE-ÉPREUVE, et elle n'est pas décorative.
+  //
+  // Le catalogue est propre depuis la campagne du 15/09. Un garde-fou qui rend
+  // vert sur un catalogue propre n'a RIEN démontré : il rendrait exactement le
+  // même vert s'il ne détectait rien du tout. La règle d'audit interdit de
+  // présenter cette absence comme une preuve.
+  //
+  // On lui soumet donc, hors réseau, les quatre cas qui comptent — dont celui
+  // qui ne doit PAS le déclencher, sans quoi l'exemption ne serait pas testée
+  // non plus.
+  it("détecte bien les deux axes, et se tait sur l'exemption", () => {
+    const { violations, examinees } = analyser([
+      cas(1, "Pull col V femme, bien rangé", "pulls_gilets", "femme", "femme/pulls-gilets"),
+      cas(2, "Pull servi depuis hauts", "pulls_gilets", "femme", "femme/hauts"),
+      cas(3, "Pull homme servi depuis femme", "pulls_gilets", "homme", "femme/pulls-gilets"),
+      cas(4, "Bonnet femme servi depuis homme", "accessoires", "femme", "homme/accessoires"),
+      cas(5, "Sac homme servi depuis femme", "sacs", "homme", "femme/sacs"),
+      { id: 6, name: "Photo affiliée, hors bucket", category: "hauts", genre: "femme", couleur_dominante: null, url_image: "https://exemple.test/photo.jpg" },
+    ]);
+
+    expect(examinees, "la ligne hors bucket ne doit pas être examinée").toBe(5);
+    expect(violations.map((v) => `${v.ligne.id}:${v.axe}`)).toEqual([
+      "2:catégorie", // le cas signalé le 15/09 — un pull illustré par un haut
+      "3:genre", // une pièce homme illustrée par un visuel femme
+      "5:genre", // les sacs restent tenus au genre (retirés de l'exemption le 21/08)
+    ]);
+    // La ligne 4 est absente de la liste : c'est l'exemption, et c'est voulu.
+  });
+
   it("aucune pièce n'est servie depuis le dossier d'une autre catégorie ni d'un autre genre", async () => {
     if (!SUPABASE_URL || !SERVICE_ROLE_KEY) throw new Error("SUPABASE_URL et SB_SECRET_KEY sont requis.");
     verifieNonDerive();
@@ -112,40 +195,7 @@ describe("garde-fou : chemin du visuel contre fiche", () => {
       .returns<Ligne[]>();
     if (error) throw new Error(`Lecture impossible : ${error.message}`);
 
-    const violations: Violation[] = [];
-    let examinees = 0;
-
-    for (const l of data) {
-      // Seules les lignes servies par le bucket sont concernées : une image
-      // affiliée ou une photo utilisateur ne porte pas ce chemin et ne dit
-      // donc rien de la catégorie.
-      const seg = l.url_image ? segments(l.url_image) : null;
-      if (!seg) continue;
-      examinees++;
-
-      const canon = CATEGORY_CANON[(l.category || "").trim().toLowerCase()];
-      if (!canon) {
-        // Même refus que la fonction (index.ts:333) : jamais de repli silencieux
-        // sur "accessoire", qui ferait collisionner des pièces sans rapport.
-        violations.push({ ligne: l, axe: "catégorie inconnue", attendu: "une entrée de CATEGORY_CANON", trouve: l.category ?? "—" });
-        continue;
-      }
-
-      const dossierAttendu = CATEGORY_FOLDER[canon] || canon;
-      if (seg.dossier !== dossierAttendu) {
-        violations.push({ ligne: l, axe: "catégorie", attendu: dossierAttendu, trouve: seg.dossier });
-      }
-
-      // `unisexe` est une valeur légitime du catalogue, comparée telle quelle :
-      // ce n'est pas un joker. L'exemption ne porte que sur les catégories
-      // dont le rendu n'est pas genré.
-      if (!GENRE_AGNOSTIC_CATEGORIES.has(canon)) {
-        const genreAttendu = (l.genre || "").trim().toLowerCase();
-        if (seg.genre !== genreAttendu) {
-          violations.push({ ligne: l, axe: "genre", attendu: genreAttendu || "—", trouve: seg.genre });
-        }
-      }
-    }
+    const { violations, examinees } = analyser(data);
 
     const exemptees = data.filter((l) => {
       const canon = CATEGORY_CANON[(l.category || "").trim().toLowerCase()];
