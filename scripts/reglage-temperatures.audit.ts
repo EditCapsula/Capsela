@@ -90,10 +90,27 @@ interface Bras {
   reglage: Reglage;
 }
 
-/** Les deux bras. Le premier EST la production — il n'est pas une reconstitution. */
+/**
+ * Les bras. Le premier EST la production — il n'est pas une reconstitution.
+ *
+ * Les deux derniers sont apparus APRÈS la première exécution, et il faut dire
+ * pourquoi plutôt que de les présenter comme prévus. Le balayage au degré a
+ * montré que « mesuré 14/09 » se dégrade à 9° et nulle part ailleurs : la
+ * frontière Automne/Hiver, à mi-chemin des deux représentatives, descend de
+ * 10° (entre 14 et 6) à 8,5° (entre 12 et 5). Une journée à 9° reçoit donc un
+ * vivier d'automne là où elle recevait un vivier d'hiver, et l'automne est
+ * trop léger pour 9°.
+ *
+ * Deux réparations minimales existent, et une seule frontière les sépare :
+ * remonter l'Hiver, ou remonter l'Automne. Elles sont mesurées plutôt que
+ * choisies — c'est la seule façon de savoir laquelle coûte le gain obtenu sur
+ * l'usage A.
+ */
 const BRAS: Bras[] = [
   { nom: "production", reglage: { Printemps: 16, Été: 24, Automne: 14, Hiver: 6 } },
   { nom: "mesuré 14/09", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 } },
+  { nom: "Hiver 7", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 } },
+  { nom: "Automne 13", reglage: { Printemps: 14, Été: 24, Automne: 13, Hiver: 6 } },
 ];
 
 const sansAccents = (s: string | null | undefined) =>
@@ -330,34 +347,41 @@ describe("réglage des températures représentatives — ses deux usages", () =
 
     // ═══ 3 · LES DEUX USAGES CÔTE À CÔTE ═════════════════════════════════
     console.log(`\n════════ 3 · VERDICT — LES DEUX USAGES, MÊME EXÉCUTION ════════`);
-    const [prod, cand] = BRAS;
-    const a0 = totalA.get(prod.nom)!, a1 = totalA.get(cand.nom)!;
-    const b0 = totalB.get(prod.nom)!, b1 = totalB.get(cand.nom)!;
-    const delta = (x: number, y: number) => `${y - x > 0 ? "+" : ""}${y - x}`;
+    const prod = BRAS[0];
+    const col = (s: string) => s.padStart(15);
     console.log(`\n  USAGE A — écran Capsule (calendaire)`);
-    console.log(`  ${"".padEnd(24)}${prod.nom.padStart(14)}${cand.nom.padStart(14)}${"écart".padStart(9)}`);
-    console.log(`  ${"exclusions démontrées".padEnd(24)}${String(a0.demo).padStart(14)}${String(a1.demo).padStart(14)}${delta(a0.demo, a1.demo).padStart(9)}`);
-    console.log(`  ${"pièces mortes".padEnd(24)}${String(morts(prod.nom).length).padStart(14)}${String(morts(cand.nom).length).padStart(14)}${delta(morts(prod.nom).length, morts(cand.nom).length).padStart(9)}`);
-    console.log(`  ${"cellules couvertes".padEnd(24)}${String(a0.cellules).padStart(14)}${String(a1.cellules).padStart(14)}${delta(a0.cellules, a1.cellules).padStart(9)}`);
-    console.log(`  ${"pièces hors max".padEnd(24)}${String(a0.max).padStart(14)}${String(a1.max).padStart(14)}${delta(a0.max, a1.max).padStart(9)}`);
-    console.log(`  ${"pièces nues < min".padEnd(24)}${String(a0.nue).padStart(14)}${String(a1.nue).padStart(14)}${delta(a0.nue, a1.nue).padStart(9)}`);
-    console.log(`\n  USAGE B — tenue du jour (${TEMPERATURES.length} températures)`);
-    console.log(`  ${"".padEnd(24)}${prod.nom.padStart(14)}${cand.nom.padStart(14)}${"écart".padStart(9)}`);
-    console.log(`  ${"cellules couvertes".padEnd(24)}${String(b0.cellules).padStart(14)}${String(b1.cellules).padStart(14)}${delta(b0.cellules, b1.cellules).padStart(9)}`);
-    console.log(`  ${"tenues produites".padEnd(24)}${String(b0.tenues).padStart(14)}${String(b1.tenues).padStart(14)}${delta(b0.tenues, b1.tenues).padStart(9)}`);
-    console.log(`  ${"pièces hors max".padEnd(24)}${String(b0.max).padStart(14)}${String(b1.max).padStart(14)}${delta(b0.max, b1.max).padStart(9)}`);
-    console.log(`  ${"pièces nues < min".padEnd(24)}${String(b0.nue).padStart(14)}${String(b1.nue).padStart(14)}${delta(b0.nue, b1.nue).padStart(9)}`);
+    console.log(`  ${"".padEnd(24)}${BRAS.map((b) => col(b.nom)).join("")}`);
+    const ligneA = (titre: string, valeur: (nom: string) => number) =>
+      console.log(`  ${titre.padEnd(24)}${BRAS.map((b) => col(String(valeur(b.nom)))).join("")}`);
+    ligneA("exclusions démontrées", (n) => totalA.get(n)!.demo);
+    ligneA("pièces mortes", (n) => morts(n).length);
+    ligneA("cellules couvertes", (n) => totalA.get(n)!.cellules);
+    ligneA("pièces hors max", (n) => totalA.get(n)!.max);
+    ligneA("pièces nues < min", (n) => totalA.get(n)!.nue);
 
-    console.log(`\n  Températures où l'usage B se dégrade en basculant sur « ${cand.nom} » :`);
-    let degrade = 0;
-    for (const t of TEMPERATURES) {
-      const v0 = parTemp.get(t)!.get(prod.nom)!, v1 = parTemp.get(t)!.get(cand.nom)!;
-      const pire = v1.cellules < v0.cellules || v1.max > v0.max || v1.nue > v0.nue;
-      if (!pire) continue;
-      degrade += 1;
-      console.log(`     ${String(t).padStart(3)}°  cellules ${v0.cellules}→${v1.cellules}  hors max ${v0.max}→${v1.max}  nue ${v0.nue}→${v1.nue}`);
+    console.log(`\n  USAGE B — tenue du jour (${TEMPERATURES.length} températures)`);
+    console.log(`  ${"".padEnd(24)}${BRAS.map((b) => col(b.nom)).join("")}`);
+    const ligneB = (titre: string, valeur: (nom: string) => number) =>
+      console.log(`  ${titre.padEnd(24)}${BRAS.map((b) => col(String(valeur(b.nom)))).join("")}`);
+    ligneB("cellules couvertes", (n) => totalB.get(n)!.cellules);
+    ligneB("tenues produites", (n) => totalB.get(n)!.tenues);
+    ligneB("pièces hors max", (n) => totalB.get(n)!.max);
+    ligneB("pièces nues < min", (n) => totalB.get(n)!.nue);
+
+    // Le critère qui a fait tomber « mesuré 14/09 » : un total global meilleur
+    // ne rachète pas une température où l'utilisatrice reçoit une tenue trop
+    // légère. Chaque bras est donc confronté à la production, degré par degré.
+    console.log(`\n  Températures où l'usage B SE DÉGRADE par rapport à la production :`);
+    for (const bras of BRAS.slice(1)) {
+      const pires: string[] = [];
+      for (const t of TEMPERATURES) {
+        const v0 = parTemp.get(t)!.get(prod.nom)!, v1 = parTemp.get(t)!.get(bras.nom)!;
+        if (v1.cellules < v0.cellules || v1.max > v0.max || v1.nue > v0.nue) {
+          pires.push(`${t}° (cell. ${v0.cellules}→${v1.cellules}, max ${v0.max}→${v1.max}, nue ${v0.nue}→${v1.nue})`);
+        }
+      }
+      console.log(`     ${bras.nom.padEnd(14)} ${pires.length ? pires.join("  ·  ") : "aucune."}`);
     }
-    if (!degrade) console.log(`     aucune.`);
 
     console.log(`\n  LECTURE SEULE. Aucune température changée, aucune donnée touchée.`);
     console.log(`  Ce script MESURE, il ne tranche pas : un réglage qui gagne sur un usage et`);
