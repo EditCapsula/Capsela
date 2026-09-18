@@ -79,10 +79,21 @@ export function representativeWeatherFor(season: CapsuleSeason, tempOverride?: n
  * Elle décide du vivier de la TENUE DU JOUR seulement. L'écran Capsule reste
  * calendaire — c'est un vestiaire de saison, et c'est ce que le mot veut dire
  * (arbitrage de l'utilisatrice, même jour).
+ *
+ * `tempRepresentative` est la couture d'audit jumelle de celle de
+ * `representativeWeatherFor` et de `SelectionStrategy` : les quatre valeurs
+ * découpent implicitement l'axe des températures à mi-chemin entre elles,
+ * donc changer le réglage déplace ces frontières. Sans ce paramètre, un audit
+ * du réglage devrait recopier ce `reduce` et mesurerait sa propre lecture du
+ * code plutôt que le code. La production ne le renseigne jamais.
  */
-export function saisonCapsulePourMeteo(temp: number): CapsuleSeason {
+export function saisonCapsulePourMeteo(
+  temp: number,
+  tempRepresentative?: Partial<Record<CapsuleSeason, number>>
+): CapsuleSeason {
+  const reference = (s: CapsuleSeason) => tempRepresentative?.[s] ?? REPRESENTATIVE_TEMP[s];
   return CAPSULE_SEASONS.reduce((meilleure, s) =>
-    Math.abs(REPRESENTATIVE_TEMP[s] - temp) < Math.abs(REPRESENTATIVE_TEMP[meilleure] - temp) ? s : meilleure
+    Math.abs(reference(s) - temp) < Math.abs(reference(meilleure) - temp) ? s : meilleure
   );
 }
 

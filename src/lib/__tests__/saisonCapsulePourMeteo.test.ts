@@ -51,4 +51,35 @@ describe("saisonCapsulePourMeteo", () => {
       expect(["Printemps", "Été", "Automne", "Hiver"], `${t} °`).toContain(saisonCapsulePourMeteo(t));
     }
   });
+
+  // La couture d'audit du 18/09. Elle n'existe que pour pouvoir soumettre un
+  // autre réglage à CETTE fonction plutôt qu'à une copie — donc ce qu'il faut
+  // verrouiller, c'est qu'omise elle ne change rien, et que renseignée elle
+  // déplace bien les frontières.
+  describe("couture tempRepresentative", () => {
+    it("omise ou vide, reproduit exactement la production", () => {
+      for (let t = -30; t <= 55; t += 1) {
+        expect(saisonCapsulePourMeteo(t, undefined), `${t} °`).toBe(saisonCapsulePourMeteo(t));
+        expect(saisonCapsulePourMeteo(t, {}), `${t} °`).toBe(saisonCapsulePourMeteo(t));
+      }
+    });
+
+    it("déplace la frontière quand le réglage change", () => {
+      // Production : 13 ° est à 1 ° de l'Automne (14) et à 3 ° du Printemps (16).
+      expect(saisonCapsulePourMeteo(13)).toBe("Automne");
+      // Réglage mesuré (Printemps 14, Automne 12) : 13 ° est à égale distance
+      // des deux, et l'égalité se tranche vers la saison la plus chaude.
+      const mesure = { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 };
+      expect(saisonCapsulePourMeteo(13, mesure)).toBe("Printemps");
+    });
+
+    it("accepte un réglage partiel, les saisons absentes gardant leur valeur", () => {
+      // Seul l'Hiver bouge : 10 ° reste à 4 ° de l'Automne (14) mais n'est plus
+      // qu'à 7 ° de l'Hiver descendu à 3 — l'Automne l'emporte toujours.
+      expect(saisonCapsulePourMeteo(10, { Hiver: 3 })).toBe("Automne");
+      // Descendre l'Automne seul suffit en revanche à donner 10 ° à l'Hiver :
+      // 4 ° de l'Hiver (6) contre 5 ° de l'Automne ramené à 15.
+      expect(saisonCapsulePourMeteo(10, { Automne: 15 })).toBe("Hiver");
+    });
+  });
 });
