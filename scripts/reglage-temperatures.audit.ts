@@ -68,8 +68,16 @@ const OCCS: OccasionKey[] = OCCASIONS.map(([k]) => k);
 const CAT_KEYS = CATS.map(([k]) => k) as CategoryKey[];
 /** Tirages par cellule. Plus bas que les 40 de l'audit du 14/09 : l'usage B balaie 16 températures. */
 const N = 15;
-/** Le balayage de l'usage B — des journées d'hiver aux canicules, pas au-delà du catalogue. */
-const TEMPERATURES = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32];
+/**
+ * Le balayage de l'usage B — des journées d'hiver aux canicules, AU DEGRÉ.
+ *
+ * Le pas de 2° du premier jet suffisait à voir les frontières bouger, mais pas
+ * à soutenir la conclusion qui compte : « aucune température ne se dégrade ».
+ * Une grille à trous ne peut pas démontrer une absence — elle démontre au
+ * mieux l'absence sur ses propres points. Le pas de 1° coûte neuf secondes de
+ * plus et rend l'affirmation défendable.
+ */
+const TEMPERATURES = Array.from({ length: 35 }, (_, i) => i);
 
 /** Copie de logic.ts:684 — les catégories dont la génération ignore le `min`. */
 const EXEMPTEES: CategoryKey[] = ["haut", "pull", "robe", "combinaison", "jupe", "short"];
@@ -161,15 +169,28 @@ describe("réglage des températures représentatives — ses deux usages", () =
     console.log(`\n════════ 0 · LA CARTE DES SAISONS — CE QUE CHANGE LE RÉGLAGE ════════`);
     console.log(`  Saison du vivier de la tenue du jour, par température réelle.`);
     console.log(`  C'est l'usage qui n'existait pas quand le réglage a été mesuré.`);
-    console.log(`\n  ${"t".padStart(5)}${BRAS.map((b) => b.nom.padStart(15)).join("")}   écart`);
+    // Rendu par PLAGES et non ligne à ligne : au pas de 1° sur 35 points, la
+    // liste exhaustive noie ce qu'on cherche, qui est l'emplacement des
+    // frontières.
+    const plages = (r: Reglage): string => {
+      const out: string[] = [];
+      let debut = TEMPERATURES[0], courante = saisonCapsulePourMeteo(debut, r);
+      for (const t of TEMPERATURES.slice(1)) {
+        const s = saisonCapsulePourMeteo(t, r);
+        if (s === courante) continue;
+        out.push(`${courante} ${debut}–${t - 1}°`);
+        debut = t; courante = s;
+      }
+      out.push(`${courante} ${debut}–${TEMPERATURES[TEMPERATURES.length - 1]}°`);
+      return out.join("  |  ");
+    };
+    for (const b of BRAS) console.log(`  ${b.nom.padEnd(14)} ${plages(b.reglage)}`);
     const bascules: { t: number; de: CapsuleSeason; vers: CapsuleSeason }[] = [];
     for (const t of TEMPERATURES) {
       const choix = BRAS.map((b) => saisonCapsulePourMeteo(t, b.reglage));
-      const differe = new Set(choix).size > 1;
-      if (differe) bascules.push({ t, de: choix[0], vers: choix[1] });
-      console.log(`  ${String(t).padStart(4)}°${choix.map((c) => c.padStart(15)).join("")}   ${differe ? "← bascule" : ""}`);
+      if (new Set(choix).size > 1) bascules.push({ t, de: choix[0], vers: choix[1] });
     }
-    console.log(`\n  ${bascules.length} température(s) du balayage changent de vivier : ${bascules.map((b) => `${b.t}° ${b.de}→${b.vers}`).join(", ") || "aucune"}.`);
+    console.log(`\n  ${bascules.length} température(s) sur ${TEMPERATURES.length} changent de vivier : ${bascules.map((b) => `${b.t}° ${b.de}→${b.vers}`).join(", ") || "aucune"}.`);
 
     // ═══ 1 · USAGE A — COMPOSITION DES CAPSULES (ÉCRAN CAPSULE) ══════════
     console.log(`\n════════ 1 · USAGE A — COMPOSITION DES CAPSULES, CALENDAIRE ════════`);
@@ -258,6 +279,8 @@ describe("réglage des températures représentatives — ses deux usages", () =
     console.log(`  capsule composée pour CETTE saison, pool complété par occasion, et le`);
     console.log(`  moteur appelé SANS capsuleSeason — comme la production, pas plus strict.`);
     console.log(`  La météo du jour est celle de weatherForDay, saison calendaire = la saison choisie.`);
+    console.log(`  Seules les températures où quelque chose n'est pas nul ou diffère entre les`);
+    console.log(`  bras sont détaillées ; les totaux ci-dessous portent sur les ${TEMPERATURES.length} températures.`);
     console.log(`\n  ${"t".padStart(5)}${BRAS.map((b) => `${b.nom} cell.`.padStart(20) + "max".padStart(7) + "nue".padStart(6)).join("")}`);
 
     const totalB = new Map<string, { cellules: number; max: number; nue: number; tenues: number }>();
@@ -294,10 +317,15 @@ describe("réglage des températures représentatives — ses deux usages", () =
         tot.cellules += cellules; tot.max += horsMaxN; tot.nue += nueN;
       }
       parTemp.set(t, ligneT);
-      console.log(`  ${String(t).padStart(4)}°` + BRAS.map((b) => {
-        const v = ligneT.get(b.nom)!;
-        return `${v.cellules}/${STYLES_FEMME.length * OCCS.length}`.padStart(20) + String(v.max).padStart(7) + String(v.nue).padStart(6);
-      }).join(""));
+      const valeurs = BRAS.map((b) => ligneT.get(b.nom)!);
+      const plein = STYLES_FEMME.length * OCCS.length;
+      const digneDInteret =
+        valeurs.some((v) => v.max > 0 || v.nue > 0 || v.cellules < plein) ||
+        new Set(valeurs.map((v) => `${v.cellules}|${v.max}|${v.nue}`)).size > 1;
+      if (digneDInteret) {
+        console.log(`  ${String(t).padStart(4)}°` + valeurs.map((v) =>
+          `${v.cellules}/${plein}`.padStart(20) + String(v.max).padStart(7) + String(v.nue).padStart(6)).join(""));
+      }
     }
 
     // ═══ 3 · LES DEUX USAGES CÔTE À CÔTE ═════════════════════════════════
