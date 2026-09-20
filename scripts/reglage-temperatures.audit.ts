@@ -158,8 +158,27 @@ const HIVER_7 = { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 };
  * falaise de 50 pièces à la seule température de 9°, Hiver 7 reste au niveau de
  * la production sur les gelées.
  *
- * Ce bras tente les deux à la fois : garder Hiver 5, qui gagne les gelées, et
- * remonter l'Automne à 14 pour que la frontière Automne/Hiver revienne à 9,5° —
+ * MESURÉ, ET REFUSÉ — mais pour une raison qui vaut plus que le bras lui-même.
+ * Il tue bien la falaise de 9° (bande froide à 0) ET garde le gain des gelées
+ * (26), donc l'hypothèse était juste. Mais il perd la bande douce : 63 pièces
+ * nues contre 6, et il dégrade 10° et 11° par rapport à la production
+ * (24 → 29). Total 89, derrière les deux autres candidats.
+ *
+ * LA CAUSE EST STRUCTURELLE, et c'est le vrai acquis. `saisonCapsulePourMeteo`
+ * garde la première saison STRICTEMENT plus proche, dans l'ordre Printemps,
+ * Été, Automne, Hiver. Donner à Printemps et Automne la MÊME valeur (14 ici)
+ * rend l'Automne inaccessible : il ne peut jamais être strictement plus proche
+ * que le Printemps, donc il n'est JAMAIS choisi pour la tenue du jour. Les 63
+ * pièces nues sont un vivier de printemps servi à 10-13°.
+ *
+ * Deux règles s'en déduisent, démontrées et non supposées :
+ *   · Printemps et Automne ne doivent jamais partager une valeur.
+ *   · Hiver 5 et Automne 12 ne peuvent pas coexister sans la falaise de 9° :
+ *     l'éviter demande |Automne − 9| > |Hiver − 9|, ce qu'Automne 12 n'atteint
+ *     qu'avec Hiver ≥ 7 — et Hiver 7 renonce au gain des gelées.
+ *
+ * Le bras tente donc de garder Hiver 5, qui gagne les gelées, et de remonter
+ * l'Automne à 14 pour que la frontière Automne/Hiver revienne à 9,5° —
  * donc 9° reparte à l'hiver et la falaise disparaisse. C'est une hypothèse, pas
  * une conclusion : rien ne dit que la composition de l'Automne à 14° ne coûte
  * pas ailleurs ce qu'elle rend ici.
