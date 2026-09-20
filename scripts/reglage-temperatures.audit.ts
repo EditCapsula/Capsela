@@ -53,8 +53,8 @@ import { STYLES_FEMME, assertCatalogueStyles, profilAudit } from "./harnaisAudit
 //
 // CE QUE CE SCRIPT NE MESURE PAS. Il ne rouvre pas la grille complète des
 // combinaisons — `temperatures-representatives` (14/09) l'a déjà balayée pour
-// l'usage A. Il oppose deux réglages COMPLETS, parce que la question posée est
-// binaire : garde-t-on la production, ou bascule-t-on sur le réglage mesuré.
+// l'usage A. Il oppose des réglages COMPLETS, un par bras, parce que la
+// question posée est un choix entre réglages entiers et non entre leviers.
 //
 // Aucune écriture, aucun ALTER, aucun fichier de production modifié. Les deux
 // coutures employées (`SelectionStrategy.tempRepresentative`,
@@ -66,7 +66,7 @@ const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVI
 
 const OCCS: OccasionKey[] = OCCASIONS.map(([k]) => k);
 const CAT_KEYS = CATS.map(([k]) => k) as CategoryKey[];
-/** Tirages par cellule. Plus bas que les 40 de l'audit du 14/09 : l'usage B balaie 16 températures. */
+/** Tirages par cellule. Plus bas que les 40 de l'audit du 14/09 : l'usage B balaie 35 températures par bras. */
 const N = 15;
 /**
  * Le balayage de l'usage B — des journées d'hiver aux canicules, AU DEGRÉ.
@@ -88,7 +88,17 @@ type Reglage = Record<CapsuleSeason, number>;
 interface Bras {
   nom: string;
   reglage: Reglage;
+  /**
+   * Références catalogue dont la borne HAUTE est neutralisée dans ce bras
+   * seulement. Contrefactuel de données, jamais une écriture : il sert à
+   * répondre à « cette pièce est-elle morte à cause du réglage, ou à cause de
+   * sa borne ? » sans inventer une valeur de remplacement.
+   */
+  bornesHautesNeutralisees?: number[];
 }
+
+/** Les deux doudounes bornées `max 5`, mortes en production comme sous Hiver 7. */
+const DOUDOUNES = [843, 1040];
 
 /**
  * Les bras. Le premier EST la production — il n'est pas une reconstitution.
@@ -105,12 +115,22 @@ interface Bras {
  * remonter l'Hiver, ou remonter l'Automne. Elles sont mesurées plutôt que
  * choisies — c'est la seule façon de savoir laquelle coûte le gain obtenu sur
  * l'usage A.
+ *
+ * LE DERNIER BRAS répond à une objection précise, et son existence corrige une
+ * présentation trompeuse de la mienne. « Hiver 7 laisse 2 pièces mortes » est
+ * exact mais suggère qu'il les tue : ce sont les deux doudounes bornées
+ * `max 5`, et elles sont DÉJÀ mortes en production, où l'Hiver est à 6. Seul
+ * « mesuré 14/09 » les sauve, parce que Hiver 5 tombe pile sur leur borne —
+ * une coïncidence de frontière, pas une correction. Ce bras mesure donc Hiver 7
+ * avec cette borne neutralisée, pour séparer ce qui relève du réglage de ce qui
+ * relève de la donnée.
  */
 const BRAS: Bras[] = [
   { nom: "production", reglage: { Printemps: 16, Été: 24, Automne: 14, Hiver: 6 } },
   { nom: "mesuré 14/09", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 } },
   { nom: "Hiver 7", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 } },
   { nom: "Automne 13", reglage: { Printemps: 14, Été: 24, Automne: 13, Hiver: 6 } },
+  { nom: "Hiver 7 + bornes", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 }, bornesHautesNeutralisees: DOUDOUNES },
 ];
 
 const sansAccents = (s: string | null | undefined) =>
@@ -159,12 +179,30 @@ describe("réglage des températures représentatives — ses deux usages", () =
     const strategiePour = (r: Reglage): SelectionStrategy => ({ ...STRATEGIE_PRODUCTION, tempRepresentative: r });
 
     /**
+     * Le pool vu par un bras. Identique au catalogue, sauf pour les bras qui
+     * neutralisent une borne haute — et alors la MÊME liste sert à composer les
+     * capsules, à générer et à compter les pièces hors plage. Sans cette
+     * unicité, un bras corrigé mesurerait la capsule d'un catalogue et les
+     * fautes d'un autre.
+     */
+    const neutralisees = (bras: Bras) => new Set((bras.bornesHautesNeutralisees ?? []).map((ref) => VESTIAIRE_ID_OFFSET + ref));
+    const poolsParBras = new Map<string, { pool: CatalogItem[]; index: Map<number, CatalogItem> }>();
+    for (const bras of BRAS) {
+      const cibles = neutralisees(bras);
+      const p = cibles.size ? pool.map((it) => (cibles.has(it.id) ? { ...it, meteoMaxTemp: undefined } : it)) : pool;
+      poolsParBras.set(bras.nom, { pool: p, index: new Map(p.map((it) => [it.id, it])) });
+    }
+    /** La borne haute telle que le bras la voit — `null` quand il la neutralise. */
+    const maxVuPar = (bras: Bras, id: number): number | null =>
+      neutralisees(bras).has(id) ? null : (ligne.get(id)?.meteo_max_temp ?? null);
+
+    /**
      * Compte les pièces hors plage d'une tenue. Une pièce au-dessus de son max
      * est une faute sèche ; sous son min, elle ne l'est que si rien ne la
      * compense (couche, ou collants sur jupe/robe — R-B19).
      */
-    const horsPlage = (ids: number[], t: number): { max: number; nue: number } => {
-      const pieces = ids.map((id) => index.get(id)).filter((p): p is CatalogItem => Boolean(p));
+    const horsPlage = (ids: number[], t: number, idx: Map<number, CatalogItem>): { max: number; nue: number } => {
+      const pieces = ids.map((id) => idx.get(id)).filter((p): p is CatalogItem => Boolean(p));
       const aUneCouche = pieces.some((p) => COUCHES.includes(p.cat));
       const aDesCollants = pieces.some((p) => p.cat === "accessoire" && p.accessoireType === "Collants");
       let max = 0, nue = 0;
@@ -222,21 +260,23 @@ describe("réglage des températures représentatives — ses deux usages", () =
     const totalA = new Map<string, { demo: number; cellules: number; max: number; nue: number }>();
     for (const bras of BRAS) {
       let demoTot = 0, cellTot = 0, maxTot = 0, nueTot = 0;
+      const { pool: poolBras, index: indexBras } = poolsParBras.get(bras.nom)!;
       for (const saison of CAPSULE_SEASONS) {
         const t = bras.reglage[saison];
         const w = representativeWeatherFor(saison, t);
         const strategie = strategiePour(bras.reglage);
         const capsules = new Map(STYLES_FEMME.map((st) =>
-          [st, computeDefaultCapsule(profilAudit({ gender: "femme", styles: [st] }), w, [], saison, pool, strategie)]));
+          [st, computeDefaultCapsule(profilAudit({ gender: "femme", styles: [st] }), w, [], saison, poolBras, strategie)]));
         const ids = new Map([...capsules].map(([st, c]) => [st, new Set(c.map((x) => x.id))]));
         const taille = [...ids.values()].reduce((a, s) => a + s.size, 0);
 
         // Exclusions démontrées par contrefactuel — bornes neutralisées sur la seule pièce testée.
-        const candidates = pool.filter((it) => {
+        const candidates = poolBras.filter((it) => {
           if (!(declarees.get(it.id) ?? []).includes(saison)) return false;
           const r = ligne.get(it.id);
           if (!r) return false;
-          const horsMax = r.meteo_max_temp != null && t > r.meteo_max_temp;
+          const plafond = maxVuPar(bras, it.id);
+          const horsMax = plafond != null && t > plafond;
           const horsMin = !horsMax && r.meteo_min_temp != null && t < r.meteo_min_temp;
           if (!horsMax && !horsMin) return false;
           return horsMax || !EXEMPTEES.includes(it.cat);
@@ -244,7 +284,7 @@ describe("réglage des températures représentatives — ses deux usages", () =
         const demo = new Set<number>();
         for (const it of candidates) {
           if (STYLES_FEMME.some((st) => ids.get(st)!.has(it.id))) continue;
-          const contrefactuel = pool.map((x) => x.id === it.id ? { ...x, meteoMinTemp: undefined, meteoMaxTemp: undefined } : x);
+          const contrefactuel = poolBras.map((x) => x.id === it.id ? { ...x, meteoMinTemp: undefined, meteoMaxTemp: undefined } : x);
           const entre = STYLES_FEMME.some((st) =>
             computeDefaultCapsule(profilAudit({ gender: "femme", styles: [st] }), w, [], saison, contrefactuel, strategie)
               .some((x) => x.id === it.id));
@@ -263,7 +303,7 @@ describe("réglage des températures représentatives — ses deux usages", () =
               const out = tirage(() => generateOutfitWithFallback(capsule, w, occ, "Présentiel", "Verre", [], "femme", saison).ids, `${st}|${occ}|${k}`);
               if (!out.length) continue;
               couverte = true;
-              const hp = horsPlage(out, t);
+              const hp = horsPlage(out, t, indexBras);
               horsMaxN += hp.max; nueN += hp.nue;
             }
             if (couverte) cellules += 1;
@@ -283,10 +323,15 @@ describe("réglage des températures représentatives — ses deux usages", () =
       }).map((it) => it.id);
     for (const bras of BRAS) {
       const m = morts(bras.nom);
-      console.log(`     ${bras.nom.padEnd(14)} ${String(m.length).padStart(3)} morte(s)`);
+      const cibles = neutralisees(bras);
+      const mention = cibles.size ? `  (borne haute neutralisée sur réf ${(bras.bornesHautesNeutralisees ?? []).join(", ")})` : "";
+      console.log(`     ${bras.nom.padEnd(18)} ${String(m.length).padStart(3)} morte(s)${mention}`);
       for (const id of m) {
         const r = ligne.get(id)!;
-        console.log(`        réf ${String(r.id).padStart(5)}  ${(declarees.get(id) ?? []).join("+").padEnd(28)}min ${String(r.meteo_min_temp ?? "—").padStart(4)}  max ${String(r.meteo_max_temp ?? "—").padStart(4)}  ${index.get(id)!.name}`);
+        // Le max affiché est celui que le bras VOIT, pour qu'une ligne du
+        // tableau ne puisse pas contredire le chiffre qu'elle explique.
+        const plafond = maxVuPar(bras, id);
+        console.log(`        réf ${String(r.id).padStart(5)}  ${(declarees.get(id) ?? []).join("+").padEnd(28)}min ${String(r.meteo_min_temp ?? "—").padStart(4)}  max ${String(plafond ?? "—").padStart(4)}  ${index.get(id)!.name}`);
       }
     }
 
@@ -298,7 +343,7 @@ describe("réglage des températures représentatives — ses deux usages", () =
     console.log(`  La météo du jour est celle de weatherForDay, saison calendaire = la saison choisie.`);
     console.log(`  Seules les températures où quelque chose n'est pas nul ou diffère entre les`);
     console.log(`  bras sont détaillées ; les totaux ci-dessous portent sur les ${TEMPERATURES.length} températures.`);
-    console.log(`\n  ${"t".padStart(5)}${BRAS.map((b) => `${b.nom} cell.`.padStart(20) + "max".padStart(7) + "nue".padStart(6)).join("")}`);
+    console.log(`\n  ${"t".padStart(5)}${BRAS.map((b) => `${b.nom} cell.`.padStart(23) + "max".padStart(7) + "nue".padStart(6)).join("")}`);
 
     const totalB = new Map<string, { cellules: number; max: number; nue: number; tenues: number }>();
     for (const b of BRAS) totalB.set(b.nom, { cellules: 0, max: 0, nue: 0, tenues: 0 });
@@ -310,11 +355,12 @@ describe("réglage des températures représentatives — ses deux usages", () =
         const saison = saisonCapsulePourMeteo(t, bras.reglage);
         const w = weatherForDay(t, t >= 22 ? "Ensoleillé" : "Nuageux", saison);
         const strategie = strategiePour(bras.reglage);
+        const { pool: poolBras, index: indexBras } = poolsParBras.get(bras.nom)!;
         let cellules = 0, horsMaxN = 0, nueN = 0;
         for (const st of STYLES_FEMME) {
           // Dressing vide : le pool de départ EST la capsule, comme pour une
           // utilisatrice qui n'a rien saisi — le cas de la capture du 15/09.
-          const capsule = computeDefaultCapsule(profilAudit({ gender: "femme", styles: [st] }), w, [], saison, pool, strategie) as Item[];
+          const capsule = computeDefaultCapsule(profilAudit({ gender: "femme", styles: [st] }), w, [], saison, poolBras, strategie) as Item[];
           for (const occ of OCCS) {
             const poolOcc = composeWardrobePool(capsule, capsule, CAT_KEYS, { completerPourOccasion: occ });
             let couverte = false;
@@ -322,7 +368,7 @@ describe("réglage des températures représentatives — ses deux usages", () =
               const out = tirage(() => generateOutfitWithFallback(poolOcc, w, occ, "Présentiel", "Verre", [], "femme").ids, `${st}|${occ}|${k}`);
               if (!out.length) continue;
               couverte = true;
-              const hp = horsPlage(out, t);
+              const hp = horsPlage(out, t, indexBras);
               horsMaxN += hp.max; nueN += hp.nue;
               totalB.get(bras.nom)!.tenues += 1;
             }
@@ -341,14 +387,14 @@ describe("réglage des températures représentatives — ses deux usages", () =
         new Set(valeurs.map((v) => `${v.cellules}|${v.max}|${v.nue}`)).size > 1;
       if (digneDInteret) {
         console.log(`  ${String(t).padStart(4)}°` + valeurs.map((v) =>
-          `${v.cellules}/${plein}`.padStart(20) + String(v.max).padStart(7) + String(v.nue).padStart(6)).join(""));
+          `${v.cellules}/${plein}`.padStart(23) + String(v.max).padStart(7) + String(v.nue).padStart(6)).join(""));
       }
     }
 
     // ═══ 3 · LES DEUX USAGES CÔTE À CÔTE ═════════════════════════════════
     console.log(`\n════════ 3 · VERDICT — LES DEUX USAGES, MÊME EXÉCUTION ════════`);
     const prod = BRAS[0];
-    const col = (s: string) => s.padStart(15);
+    const col = (s: string) => s.padStart(18);
     console.log(`\n  USAGE A — écran Capsule (calendaire)`);
     console.log(`  ${"".padEnd(24)}${BRAS.map((b) => col(b.nom)).join("")}`);
     const ligneA = (titre: string, valeur: (nom: string) => number) =>
