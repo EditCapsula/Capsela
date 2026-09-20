@@ -66,18 +66,35 @@ const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVI
 
 const OCCS: OccasionKey[] = OCCASIONS.map(([k]) => k);
 const CAT_KEYS = CATS.map(([k]) => k) as CategoryKey[];
-/** Tirages par cellule. Plus bas que les 40 de l'audit du 14/09 : l'usage B balaie 35 températures par bras. */
+/** Tirages par cellule. Plus bas que les 40 de l'audit du 14/09 : l'usage B balaie 45 températures par bras. */
 const N = 15;
 /**
- * Le balayage de l'usage B — des journées d'hiver aux canicules, AU DEGRÉ.
+ * Trois bandes pour l'usage B. Un total sur 45 températures peut cacher qu'un
+ * réglage gagne l'été ce qu'il perd en gelée — c'est précisément ce que le
+ * critère « dégradation vs production » a laissé passer sur 0 à 2°.
+ */
+const BANDES: { nom: string; min: number; max: number }[] = [
+  { nom: "gelées (−10..2°)", min: -10, max: 2 },
+  { nom: "froid (3..9°)", min: 3, max: 9 },
+  { nom: "doux et chaud (10..34°)", min: 10, max: 34 },
+];
+/**
+ * Le balayage de l'usage B — des gelées aux canicules, AU DEGRÉ.
  *
  * Le pas de 2° du premier jet suffisait à voir les frontières bouger, mais pas
  * à soutenir la conclusion qui compte : « aucune température ne se dégrade ».
  * Une grille à trous ne peut pas démontrer une absence — elle démontre au
- * mieux l'absence sur ses propres points. Le pas de 1° coûte neuf secondes de
- * plus et rend l'affirmation défendable.
+ * mieux l'absence sur ses propres points.
+ *
+ * La borne basse est passée de 0° à −10° pour la même raison. Sur les journées
+ * les plus froides mesurées (0 à 2°), « Hiver 7 » rendait 6 pièces nues contre
+ * 2 pour « mesuré 14/09 » — à égalité avec la production, donc invisible au
+ * critère « dégradation vs production », mais bien réel entre les deux
+ * candidats. Rien ne disait que l'écart ne se creusait pas sous zéro, et un
+ * balayage qui s'arrête là où l'hiver commence vraiment ne peut pas trancher un
+ * réglage d'hiver.
  */
-const TEMPERATURES = Array.from({ length: 35 }, (_, i) => i);
+const TEMPERATURES = Array.from({ length: 45 }, (_, i) => i - 10);
 
 /** Copie de logic.ts:684 — les catégories dont la génération ignore le `min`. */
 const EXEMPTEES: CategoryKey[] = ["haut", "pull", "robe", "combinaison", "jupe", "short"];
@@ -89,16 +106,23 @@ interface Bras {
   nom: string;
   reglage: Reglage;
   /**
-   * Références catalogue dont la borne HAUTE est neutralisée dans ce bras
-   * seulement. Contrefactuel de données, jamais une écriture : il sert à
-   * répondre à « cette pièce est-elle morte à cause du réglage, ou à cause de
-   * sa borne ? » sans inventer une valeur de remplacement.
+   * Borne HAUTE réécrite pour ce bras seulement, par référence catalogue.
+   * `null` = plus aucune limite haute. Contrefactuel de données, jamais une
+   * écriture.
+   *
+   * `null` répond à « cette pièce est-elle morte à cause du réglage ou de sa
+   * borne ? » sans inventer de valeur. Une valeur finie est un AUTRE scénario,
+   * qui doit être mesuré pour lui-même : elle peut faire apparaître des
+   * « hors max » là où `null` n'en produit aucun. Les deux sont donc des bras
+   * distincts, et non une conclusion transportée de l'un à l'autre.
    */
-  bornesHautesNeutralisees?: number[];
+  bornesHautes?: Record<number, number | null>;
 }
 
 /** Les deux doudounes bornées `max 5`, mortes en production comme sous Hiver 7. */
 const DOUDOUNES = [843, 1040];
+const bornePour = (max: number | null): Record<number, number | null> =>
+  Object.fromEntries(DOUDOUNES.map((ref) => [ref, max]));
 
 /**
  * Les bras. Le premier EST la production — il n'est pas une reconstitution.
@@ -116,21 +140,27 @@ const DOUDOUNES = [843, 1040];
  * choisies — c'est la seule façon de savoir laquelle coûte le gain obtenu sur
  * l'usage A.
  *
- * LE DERNIER BRAS répond à une objection précise, et son existence corrige une
- * présentation trompeuse de la mienne. « Hiver 7 laisse 2 pièces mortes » est
- * exact mais suggère qu'il les tue : ce sont les deux doudounes bornées
- * `max 5`, et elles sont DÉJÀ mortes en production, où l'Hiver est à 6. Seul
- * « mesuré 14/09 » les sauve, parce que Hiver 5 tombe pile sur leur borne —
- * une coïncidence de frontière, pas une correction. Ce bras mesure donc Hiver 7
- * avec cette borne neutralisée, pour séparer ce qui relève du réglage de ce qui
- * relève de la donnée.
+ * LES DEUX DERNIERS BRAS répondent à une objection précise, et leur existence
+ * corrige une présentation trompeuse de la mienne. « Hiver 7 laisse 2 pièces
+ * mortes » est exact mais suggère qu'il les tue : ce sont les deux doudounes
+ * bornées `max 5`, et elles sont DÉJÀ mortes en production, où l'Hiver est à 6.
+ * Seul « mesuré 14/09 » les sauve, parce que Hiver 5 tombe pile sur leur borne
+ * — une coïncidence de frontière, pas une correction.
+ *
+ * `max ∅` mesure le bénéfice maximal d'une borne corrigée ; `max 10` mesure une
+ * valeur finie plausible pour une doudoune, parce que « sans limite haute » est
+ * éditorialement discutable et qu'une valeur finie peut produire des « hors
+ * max » que `∅` ne produit jamais. Les deux sont mesurés plutôt que l'un déduit
+ * de l'autre.
  */
+const HIVER_7 = { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 };
 const BRAS: Bras[] = [
   { nom: "production", reglage: { Printemps: 16, Été: 24, Automne: 14, Hiver: 6 } },
   { nom: "mesuré 14/09", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 } },
-  { nom: "Hiver 7", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 } },
+  { nom: "Hiver 7", reglage: HIVER_7 },
   { nom: "Automne 13", reglage: { Printemps: 14, Été: 24, Automne: 13, Hiver: 6 } },
-  { nom: "Hiver 7 + bornes", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 }, bornesHautesNeutralisees: DOUDOUNES },
+  { nom: "Hiver 7 + max ∅", reglage: HIVER_7, bornesHautes: bornePour(null) },
+  { nom: "Hiver 7 + max 10", reglage: HIVER_7, bornesHautes: bornePour(10) },
 ];
 
 const sansAccents = (s: string | null | undefined) =>
@@ -185,16 +215,24 @@ describe("réglage des températures représentatives — ses deux usages", () =
      * unicité, un bras corrigé mesurerait la capsule d'un catalogue et les
      * fautes d'un autre.
      */
-    const neutralisees = (bras: Bras) => new Set((bras.bornesHautesNeutralisees ?? []).map((ref) => VESTIAIRE_ID_OFFSET + ref));
+    /** Les bornes hautes réécrites par un bras, indexées par id de pool. */
+    const reecrites = (bras: Bras) =>
+      new Map<number, number | null>(
+        Object.entries(bras.bornesHautes ?? {}).map(([ref, max]) => [VESTIAIRE_ID_OFFSET + Number(ref), max])
+      );
     const poolsParBras = new Map<string, { pool: CatalogItem[]; index: Map<number, CatalogItem> }>();
     for (const bras of BRAS) {
-      const cibles = neutralisees(bras);
-      const p = cibles.size ? pool.map((it) => (cibles.has(it.id) ? { ...it, meteoMaxTemp: undefined } : it)) : pool;
+      const cibles = reecrites(bras);
+      const p = cibles.size
+        ? pool.map((it) => (cibles.has(it.id) ? { ...it, meteoMaxTemp: cibles.get(it.id) ?? undefined } : it))
+        : pool;
       poolsParBras.set(bras.nom, { pool: p, index: new Map(p.map((it) => [it.id, it])) });
     }
-    /** La borne haute telle que le bras la voit — `null` quand il la neutralise. */
-    const maxVuPar = (bras: Bras, id: number): number | null =>
-      neutralisees(bras).has(id) ? null : (ligne.get(id)?.meteo_max_temp ?? null);
+    /** La borne haute telle que le bras la voit — celle qu'il réécrit, sinon celle de la base. */
+    const maxVuPar = (bras: Bras, id: number): number | null => {
+      const cibles = reecrites(bras);
+      return cibles.has(id) ? cibles.get(id)! : (ligne.get(id)?.meteo_max_temp ?? null);
+    };
 
     /**
      * Compte les pièces hors plage d'une tenue. Une pièce au-dessus de son max
@@ -323,8 +361,10 @@ describe("réglage des températures représentatives — ses deux usages", () =
       }).map((it) => it.id);
     for (const bras of BRAS) {
       const m = morts(bras.nom);
-      const cibles = neutralisees(bras);
-      const mention = cibles.size ? `  (borne haute neutralisée sur réf ${(bras.bornesHautesNeutralisees ?? []).join(", ")})` : "";
+      const cibles = reecrites(bras);
+      const mention = cibles.size
+        ? `  (borne haute réécrite sur réf ${Object.entries(bras.bornesHautes ?? {}).map(([ref, max]) => `${ref} → ${max ?? "∅"}`).join(", ")})`
+        : "";
       console.log(`     ${bras.nom.padEnd(18)} ${String(m.length).padStart(3)} morte(s)${mention}`);
       for (const id of m) {
         const r = ligne.get(id)!;
@@ -413,6 +453,18 @@ describe("réglage des températures représentatives — ses deux usages", () =
     ligneB("tenues produites", (n) => totalB.get(n)!.tenues);
     ligneB("pièces hors max", (n) => totalB.get(n)!.max);
     ligneB("pièces nues < min", (n) => totalB.get(n)!.nue);
+
+    // Le total seul ne suffit pas : il peut rendre en doux ce qu'un réglage
+    // perd en gelée, et c'est exactement ce qui a échappé au critère
+    // « dégradation vs production » sur 0 à 2°.
+    console.log(`\n  Pièces nues < min, PAR BANDE`);
+    console.log(`  ${"".padEnd(24)}${BRAS.map((b) => col(b.nom)).join("")}`);
+    for (const bande of BANDES) {
+      const somme = (nom: string) =>
+        TEMPERATURES.filter((t) => t >= bande.min && t <= bande.max)
+          .reduce((a, t) => a + parTemp.get(t)!.get(nom)!.nue, 0);
+      console.log(`  ${bande.nom.padEnd(24)}${BRAS.map((b) => col(String(somme(b.nom)))).join("")}`);
+    }
 
     // Le critère qui a fait tomber « mesuré 14/09 » : un total global meilleur
     // ne rachète pas une température où l'utilisatrice reçoit une tenue trop
