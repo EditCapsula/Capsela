@@ -127,40 +127,57 @@ const bornePour = (max: number | null): Record<number, number | null> =>
 /**
  * Les bras. Le premier EST la production — il n'est pas une reconstitution.
  *
- * Les deux derniers sont apparus APRÈS la première exécution, et il faut dire
- * pourquoi plutôt que de les présenter comme prévus. Le balayage au degré a
- * montré que « mesuré 14/09 » se dégrade à 9° et nulle part ailleurs : la
- * frontière Automne/Hiver, à mi-chemin des deux représentatives, descend de
- * 10° (entre 14 et 6) à 8,5° (entre 12 et 5). Une journée à 9° reçoit donc un
- * vivier d'automne là où elle recevait un vivier d'hiver, et l'automne est
- * trop léger pour 9°.
+ * AUCUN DES AUTRES N'ÉTAIT PRÉVU. Chacun est né d'un résultat qui a invalidé
+ * une conclusion précédente, et le dire importe autant que les chiffres : la
+ * liste se lit comme l'historique de mes erreurs, pas comme un plan.
  *
- * Deux réparations minimales existent, et une seule frontière les sépare :
- * remonter l'Hiver, ou remonter l'Automne. Elles sont mesurées plutôt que
- * choisies — c'est la seule façon de savoir laquelle coûte le gain obtenu sur
- * l'usage A.
+ * · « Hiver 7 » est né du balayage au degré, qui a montré que « mesuré 14/09 »
+ *   se dégrade à 9° : la frontière Automne/Hiver, à mi-chemin des deux
+ *   représentatives, descend de 10° (entre 14 et 6) à 8,5° (entre 12 et 5).
+ *   Une journée à 9° reçoit alors un vivier d'automne là où elle recevait un
+ *   vivier d'hiver, et l'automne est trop léger pour 9°.
  *
- * LES DEUX DERNIERS BRAS répondent à une objection précise, et leur existence
- * corrige une présentation trompeuse de la mienne. « Hiver 7 laisse 2 pièces
- * mortes » est exact mais suggère qu'il les tue : ce sont les deux doudounes
- * bornées `max 5`, et elles sont DÉJÀ mortes en production, où l'Hiver est à 6.
- * Seul « mesuré 14/09 » les sauve, parce que Hiver 5 tombe pile sur leur borne
- * — une coïncidence de frontière, pas une correction.
+ * · « + max 10 » est né d'une présentation trompeuse de la mienne. « Hiver 7
+ *   laisse 2 pièces mortes » est exact mais suggère qu'il les tue : ce sont les
+ *   deux doudounes bornées `max 5`, DÉJÀ mortes en production où l'Hiver est à
+ *   6. Seul « mesuré 14/09 » les sauve, parce que Hiver 5 tombe pile sur leur
+ *   borne — une coïncidence de frontière, pas une correction. Mesuré d'abord à
+ *   `max ∅` (bénéfice maximal, mais « aucune limite haute » est discutable pour
+ *   une doudoune), puis à `max 10` : les deux rendent exactement la même chose,
+ *   avec zéro « hors max ». La valeur finie ne coûte donc rien.
  *
- * `max ∅` mesure le bénéfice maximal d'une borne corrigée ; `max 10` mesure une
- * valeur finie plausible pour une doudoune, parce que « sans limite haute » est
- * éditorialement discutable et qu'une valeur finie peut produire des « hors
- * max » que `∅` ne produit jamais. Les deux sont mesurés plutôt que l'un déduit
- * de l'autre.
+ * · « Aut14·Hiv5 » est né de l'extension à −10°, qui a retourné le classement.
+ *   Voir son commentaire ci-dessous.
  */
 const HIVER_7 = { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 };
+/**
+ * Le candidat né du balayage étendu à −10°. Celui-ci a retourné le classement :
+ * « mesuré 14/09 » gagne la bande des gelées de 52 pièces (26 contre 78), ce
+ * qu'un balayage arrêté à 0° ne pouvait pas voir, et repasse devant Hiver 7 au
+ * total (82 contre 84). Aucun des deux ne domine : « mesuré » creuse une
+ * falaise de 50 pièces à la seule température de 9°, Hiver 7 reste au niveau de
+ * la production sur les gelées.
+ *
+ * Ce bras tente les deux à la fois : garder Hiver 5, qui gagne les gelées, et
+ * remonter l'Automne à 14 pour que la frontière Automne/Hiver revienne à 9,5° —
+ * donc 9° reparte à l'hiver et la falaise disparaisse. C'est une hypothèse, pas
+ * une conclusion : rien ne dit que la composition de l'Automne à 14° ne coûte
+ * pas ailleurs ce qu'elle rend ici.
+ */
+const AUT14_HIV5 = { Printemps: 14, Été: 24, Automne: 14, Hiver: 5 };
+/**
+ * « Automne 13 » et « Hiver 7 + max ∅ » sont retirés de la table après avoir été
+ * mesurés et rapportés : le premier est dominé (131 nues contre 82 et 84), le
+ * second rend exactement les mêmes chiffres que `max 10` sur les deux usages.
+ * Les garder n'ajouterait que deux colonnes à un tableau déjà large.
+ */
 const BRAS: Bras[] = [
   { nom: "production", reglage: { Printemps: 16, Été: 24, Automne: 14, Hiver: 6 } },
   { nom: "mesuré 14/09", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 } },
   { nom: "Hiver 7", reglage: HIVER_7 },
-  { nom: "Automne 13", reglage: { Printemps: 14, Été: 24, Automne: 13, Hiver: 6 } },
-  { nom: "Hiver 7 + max ∅", reglage: HIVER_7, bornesHautes: bornePour(null) },
   { nom: "Hiver 7 + max 10", reglage: HIVER_7, bornesHautes: bornePour(10) },
+  { nom: "Aut14·Hiv5", reglage: AUT14_HIV5 },
+  { nom: "Aut14·Hiv5 + max 10", reglage: AUT14_HIV5, bornesHautes: bornePour(10) },
 ];
 
 const sansAccents = (s: string | null | undefined) =>
@@ -434,7 +451,7 @@ describe("réglage des températures représentatives — ses deux usages", () =
     // ═══ 3 · LES DEUX USAGES CÔTE À CÔTE ═════════════════════════════════
     console.log(`\n════════ 3 · VERDICT — LES DEUX USAGES, MÊME EXÉCUTION ════════`);
     const prod = BRAS[0];
-    const col = (s: string) => s.padStart(18);
+    const col = (s: string) => s.padStart(21);
     console.log(`\n  USAGE A — écran Capsule (calendaire)`);
     console.log(`  ${"".padEnd(24)}${BRAS.map((b) => col(b.nom)).join("")}`);
     const ligneA = (titre: string, valeur: (nom: string) => number) =>
