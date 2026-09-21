@@ -261,6 +261,29 @@ export function morphologyLabel(m: string | null): string {
   return MORPHOLOGY_LABELS[m ?? ""] ?? "";
 }
 
+/**
+ * La forme courte d'une silhouette, pour la nommer au fil d'une phrase.
+ *
+ * `MORPHOLOGY_LABELS` décrit la silhouette en une proposition entière
+ * (« Hanches plus marquées que les épaules ») : juste dans une fiche de
+ * profil, bancal inséré dans une phrase de l'écran Capsule. Ces deux formes
+ * reprennent le vocabulaire que `MORPHO_HINTS` emploie déjà — « forme en A »,
+ * « forme en V » — plutôt que d'inventer un nom, et surtout plutôt que de
+ * réintroduire les noms de fruits que le projet a écartés.
+ *
+ * Seules les morphologies qui orientent réellement la sélection ont besoin
+ * d'être nommées ainsi (cf. MORPHOLOGIES_AVEC_DIRECTION, capsule.ts) — un test
+ * verrouille que la table les couvre toutes, pour qu'aucune ne s'affiche vide.
+ */
+export const SILHOUETTE_FORME: Record<string, string> = {
+  f_poire: "en A",
+  f_triangle_inverse: "en V",
+};
+
+export function silhouetteForme(m: string | null): string {
+  return SILHOUETTE_FORME[m ?? ""] ?? "";
+}
+
 export const MORPHO_HINTS: Record<string, string> = {
   f_rectangle: "Épaules, taille et hanches sont assez alignées, sans marquage particulier.",
   f_sablier: "Tes épaules et tes hanches ont une largeur proche, avec une taille nettement plus fine.",

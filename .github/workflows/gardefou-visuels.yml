@@ -1,0 +1,38 @@
+name: Garde-fou visuels — chemin contre fiche (lecture seule)
+
+# Échoue dès qu'une pièce du catalogue est servie depuis le dossier d'une
+# autre catégorie ou d'un autre genre que le sien.
+#
+# Pourquoi un workflow à part plutôt qu'une ligne de plus dans les audits :
+# celui-ci n'est pas un rapport, c'est une assertion. Il doit pouvoir passer
+# au rouge tout seul, sans qu'on aille le déclencher — la dérive du 15/09/2026
+# (53 visuels faux) s'est installée en silence parce que `url_image` n'est
+# jamais rafraîchi quand `category` ou `genre` change.
+#
+# Lecture seule, sans exception : aucune écriture, aucune régénération, aucun
+# coût. Quand il échoue, le log donne la liste `IDS=` à passer telle quelle au
+# workflow « Régénérer les visuels au sujet faux » (mode=regen).
+#
+# Le déclenchement programmé ne part QUE de la branche par défaut : tant que
+# ce fichier n'est pas fusionné, seul le déclenchement manuel fonctionne.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Lundi 06:00 UTC — assez tôt pour que le rouge soit vu en début de
+    # semaine, assez espacé pour ne pas noyer la boîte mail.
+    - cron: "0 6 * * 1"
+
+jobs:
+  gardefou:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx vitest run --config vitest.audit.config.mts gardefou-visuels
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}

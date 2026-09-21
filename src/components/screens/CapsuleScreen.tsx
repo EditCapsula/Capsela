@@ -3,11 +3,18 @@
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CATS } from "@/lib/data";
-import { CAPSULE_SEASONS, computeDefaultCapsule, currentSeasonKey, type CapsuleSeason } from "@/lib/capsule";
+import {
+  CAPSULE_SEASONS,
+  computeDefaultCapsule,
+  currentSeasonKey,
+  morphologieOrienteLaSelection,
+  type CapsuleSeason,
+} from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
-import { styleLabel } from "@/lib/profile";
+import { silhouetteForme, styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
+import { looksCombinatoires } from "@/lib/looks";
 import type { CategoryKey, DateContext, OccasionKey, WorkMode } from "@/lib/types";
 
 /**
@@ -88,12 +95,9 @@ export default function CapsuleScreen() {
   // par pièce, se fait uniquement à l'ouverture de la fiche détail
   // (PieceScreen) — cohérent avec "chaque article est cliquable".
 
-  const count = (cat: string) => capsule.filter((i) => i.cat === cat).length;
-  const tops = count("haut");
-  const bottoms = count("pantalon") + count("jean") + count("jupe") + count("short");
-  const dresses = count("robe") + count("combinaison");
-  const shoes = Math.max(1, count("chaussures"));
-  const looksCount = (tops * bottoms + dresses) * shoes;
+  // Formule inchangée, simplement déplacée dans looks.ts (15/09/2026) pour
+  // qu'un audit puisse la mesurer plutôt que d'en recopier une version.
+  const looksCount = looksCombinatoires(capsule);
 
   // Style renseigné en profil (recette 25/08/2026) — premier style choisi,
   // même convention que ProfileScreen/ProfileEditScreen (styleLabel(profile.styles[0], ...)) ;
@@ -103,6 +107,34 @@ export default function CapsuleScreen() {
   // jamais profile.styles ; la capsule ci-dessus est déjà calculée sur ce
   // même style temporaire.
   const exploredStyleLabel = exploredStyleId ? styleLabel(exploredStyleId, profile.gender) : null;
+
+  /**
+   * Ce à quoi cette sélection doit vraiment quelque chose, et rien d'autre.
+   *
+   * La morphologie n'apparaît que si elle ORIENTE la sélection
+   * (`morphologieOrienteLaSelection` : poire et triangle inversé). Pour
+   * rectangle, sablier et pomme, `valeurDirection` rend 0 et la capsule est
+   * identique avec ou sans morphologie déclarée — l'annoncer serait promettre
+   * une personnalisation qui n'a pas lieu.
+   *
+   * Chaque valeur est un bouton vers l'étape de profil correspondante, qui
+   * revient ici (`goProfileSetup(..., true)` mémorise l'écran d'appel).
+   */
+  const criteres = useMemo(() => {
+    const aUnePalette =
+      profile.paletteCouleurs.length > 0 || !!profile.paletteAffinite || !!profile.paletteIntensite;
+    // « en A » / « en V » plutôt que la proposition entière de
+    // MORPHOLOGY_LABELS : « ta morphologie Hanches plus marquées que les
+    // épaules » se lit mal au fil d'une phrase.
+    const forme = morphologieOrienteLaSelection(profile.morphology)
+      ? silhouetteForme(profile.morphology)
+      : "";
+    return [
+      userStyleLabel && { cle: "style", avant: "ton style ", valeur: userStyleLabel, etape: "style" },
+      aUnePalette && { cle: "palette", avant: "ta ", valeur: "palette", etape: "pal_couleurs" },
+      forme && { cle: "morpho", avant: "ta silhouette ", valeur: forme, etape: "morpho" },
+    ].filter((c): c is { cle: string; avant: string; valeur: string; etape: string } => Boolean(c));
+  }, [userStyleLabel, profile.paletteCouleurs, profile.paletteAffinite, profile.paletteIntensite, profile.morphology]);
 
   const groups = CATS.map(([key, , plural]) => ({
     key,
@@ -133,10 +165,22 @@ export default function CapsuleScreen() {
             <>
               Aperçu du style <span className="text-ink">{exploredStyleLabel}</span> — pas ton style habituel.
             </>
-          ) : userStyleLabel ? (
+          ) : criteres.length ? (
             <>
-              Une sélection pensée pour ton style <span className="text-ink">{userStyleLabel}</span> et ta palette,
-              pour inspirer tes tenues.
+              Une sélection pensée pour {criteres.map((c, i) => (
+                <span key={c.cle}>
+                  {i > 0 && (i === criteres.length - 1 ? " et " : ", ")}
+                  {c.avant}
+                  <button
+                    type="button"
+                    onClick={() => actions.goProfileSetup(c.etape, true)}
+                    className="text-terracotta font-semibold cursor-pointer"
+                  >
+                    {c.valeur}
+                  </button>
+                </span>
+              ))}
+              , pour inspirer tes tenues.
             </>
           ) : (
             "Une sélection pensée pour ton style et ta palette, pour inspirer tes tenues."
