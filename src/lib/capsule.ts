@@ -31,12 +31,43 @@ export function currentSeasonKey(): CapsuleSeason {
   return m <= 1 || m === 11 ? "Hiver" : m <= 4 ? "Printemps" : m <= 7 ? "Été" : "Automne";
 }
 
-/** Température représentative par saison — repli neutre quand une valeur concrète est nécessaire sans dépendre de la météo du jour. */
+/**
+ * Température représentative par saison — repli neutre quand une valeur
+ * concrète est nécessaire sans dépendre de la météo du jour.
+ *
+ * ARBITRÉ LE 21/09/2026, après `reglage-temperatures`. Ces quatre nombres
+ * servent à DEUX choses, et c'est ce qui a rendu l'arbitrage long :
+ *   · le filtre de composition des capsules (ci-dessous, `capsuleTemp`) ;
+ *   · le découpage de l'axe des températures par `saisonCapsulePourMeteo`, qui
+ *     choisit le vivier de la tenue du jour — usage né du correctif du 15/09,
+ *     postérieur à la première mesure du réglage.
+ *
+ * Mesuré sur les deux usages dans la même exécution, 8 styles × 10 occasions ×
+ * 15 tirages, et 45 températures de −10 à 34° pour le second. Contre le réglage
+ * précédent (16/24/14/6) : exclusions démontrées 15 → 4, pièces mortes 4 → 0,
+ * pièces portées sous leur minimum 154 → 6 sur 54 000 tenues, et AUCUNE
+ * dégradation à aucune des 45 températures.
+ *
+ * DEUX CONTRAINTES STRUCTURELLES, démontrées, à respecter si ces valeurs
+ * rebougent un jour :
+ *   · Printemps et Automne ne doivent jamais partager une valeur.
+ *     `saisonCapsulePourMeteo` garde la première saison STRICTEMENT plus proche
+ *     dans l'ordre Printemps, Été, Automne, Hiver : à égalité, l'Automne
+ *     devient inatteignable et n'est plus jamais servi comme vivier du jour.
+ *   · Hiver ne peut pas descendre à 5 tant qu'Automne vaut 12. La frontière
+ *     tomberait à 8,5°, une journée à 9° recevrait un vivier d'automne, et la
+ *     mesure rend alors 50 pièces portées sous leur minimum à cette seule
+ *     température. Éviter cela demande |Automne − 9| > |Hiver − 9|.
+ *
+ * Le gain des gelées qu'on croyait devoir à Hiver 5 n'en venait pas : il tenait
+ * à la borne `min 3` de la réf 498 (collants opaques 60–80 DEN), corrigée en
+ * base le 21/09. Une fois cette borne juste, Hiver 7 ne coûte plus rien.
+ */
 const REPRESENTATIVE_TEMP: Record<CapsuleSeason, number> = {
-  Printemps: 16,
+  Printemps: 14,
   Été: 24,
-  Automne: 14,
-  Hiver: 6,
+  Automne: 12,
+  Hiver: 7,
 };
 
 /**

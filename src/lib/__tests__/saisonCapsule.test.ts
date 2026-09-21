@@ -63,11 +63,14 @@ describe("Divergence des deux buckets — le défaut lui-même", () => {
     expect(divergentes).toEqual(["Printemps"]);
   });
 
-  it("representativeWeatherFor n'est pas modifié : sa température et son bucket restent ceux d'avant", () => {
-    // Verrou explicite : la correction ne fabrique aucune température et ne
-    // retouche pas cette fonction (elle reste cohérente avec son propre seuil).
+  it("representativeWeatherFor ne fabrique rien : elle rend la représentative et le bucket qui en découle", () => {
+    // Verrou explicite : la correction du 29/08 ne fabrique aucune température
+    // et ne retouche pas cette fonction (elle reste cohérente avec son propre
+    // seuil). La valeur attendue a suivi le réglage arbitré le 21/09
+    // (Printemps 16 → 14) ; la propriété verrouillée, elle, est inchangée —
+    // c'est le bucket sous le seuil de 20° qui fait diverger le printemps.
     const w = representativeWeatherFor("Printemps");
-    expect(w.temp).toBe(16);
+    expect(w.temp).toBe(14);
     expect(w.season).toBe("Automne / Hiver");
     expect(w.seasons).toContain("Automne / Hiver");
   });

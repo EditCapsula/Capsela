@@ -119,52 +119,45 @@ interface Bras {
   bornes?: Record<number, { min?: number | null; max?: number | null }>;
 }
 
-/** Les deux doudounes bornées `max 5`, mortes en production comme sous Hiver 7. */
-const DOUDOUNES = [843, 1040];
-const doudounesA = (max: number | null): Record<number, { max: number | null }> =>
-  Object.fromEntries(DOUDOUNES.map((ref) => [ref, { max }]));
-
 /**
- * « Collants opaques 60–80 DEN », `min 3`, déclarés Automne ET Hiver.
+ * LES TROIS BORNES CORRIGÉES EN BASE LE 21/09, consignées ici parce que les
+ * bras qui les réécrivaient ont disparu et qu'une mesure future doit savoir
+ * qu'elles ont bougé — et pourquoi.
  *
- * La section 4 a rendu un résultat que je n'attendais pas : les 78 occurrences
- * « nues sous leur minimum » de la bande des gelées sont TOUTES cette seule
- * référence. Tout l'avantage de « mesuré 14/09 » en gelée — 26 contre 78, soit
- * l'argument qui avait retourné mon classement — tient donc à la fréquence de
- * tirage d'une pièce dont la borne est vraisemblablement fausse : des collants
- * opaques 60–80 DEN sont précisément ce qu'on porte quand il gèle.
+ *   · réf 498 « Collants opaques 60–80 DEN », `min 3` → −10. Les 78 occurrences
+ *     « nue sous son minimum » de la bande des gelées étaient TOUTES cette
+ *     seule référence. Une pièce qui déclare l'Hiver et qu'on ne pourrait pas
+ *     porter sous 3° : des collants opaques 60–80 DEN sont précisément ce qu'on
+ *     met quand il gèle.
+ *   · réfs 843 et 1040, les deux doudounes, `max 5` → 10. Elles étaient mortes
+ *     dans TOUTES les saisons déclarées, sous l'ancien réglage comme sous le
+ *     nouveau — la borne, pas le réglage.
  *
- * `min −10` plutôt que `null` : la valeur est arbitraire mais bornée par le
- * balayage, et elle évite de prétendre qu'une pièce n'a aucune limite basse.
- * Ce bras ne corrige rien en base — il mesure ce que vaudrait le réglage une
- * fois cette borne hors de cause.
+ * La bande des gelées est tombée de 78 à 0 pour tous les bras après écriture,
+ * ce qui vérifie l'`update` autant que le diagnostic.
  */
-const COLLANTS = 498;
+const BORNES_CORRIGEES_21_09 = [498, 843, 1040] as const;
 
 /**
- * Les bras. Le premier EST la production — il n'est pas une reconstitution.
+ * Les bras, après l'arbitrage du 21/09. Le premier EST la production — ses
+ * valeurs doivent rester celles de `REPRESENTATIVE_TEMP`, ce que la garde
+ * `assertBrasProduction` vérifie plutôt que de l'espérer.
  *
- * AUCUN DES AUTRES N'ÉTAIT PRÉVU. Chacun est né d'un résultat qui a invalidé
- * une conclusion précédente, et le dire importe autant que les chiffres : la
- * liste se lit comme l'historique de mes erreurs, pas comme un plan.
+ * LES BRAS CONTREFACTUELS ONT ÉTÉ RETIRÉS, et c'est le signe que le chantier
+ * a abouti : les bornes qu'ils réécrivaient (réf 498 `min 3` → −10, réfs 843 et
+ * 1040 `max 5` → 10) sont corrigées EN BASE depuis le 21/09. Les rejouer ne
+ * mesurerait plus rien — la production les porte déjà.
  *
- * · « Hiver 7 » est né du balayage au degré, qui a montré que « mesuré 14/09 »
- *   se dégrade à 9° : la frontière Automne/Hiver, à mi-chemin des deux
- *   représentatives, descend de 10° (entre 14 et 6) à 8,5° (entre 12 et 5).
- *   Une journée à 9° reçoit alors un vivier d'automne là où elle recevait un
- *   vivier d'hiver, et l'automne est trop léger pour 9°.
+ * Restent deux témoins, qui ne sont pas des candidats mais des garde-fous :
+ *   · « avant 21/09 » — le réglage précédent. Si la mesure cessait un jour de
+ *     lui être défavorable, c'est que quelque chose d'autre aurait bougé.
+ *   · « Hiver 5 » — le candidat refusé, qui garde visible la falaise de 9° et
+ *     la raison pour laquelle l'Hiver ne peut pas y descendre tant que
+ *     l'Automne vaut 12.
  *
- * · « + max 10 » est né d'une présentation trompeuse de la mienne. « Hiver 7
- *   laisse 2 pièces mortes » est exact mais suggère qu'il les tue : ce sont les
- *   deux doudounes bornées `max 5`, DÉJÀ mortes en production où l'Hiver est à
- *   6. Seul « mesuré 14/09 » les sauve, parce que Hiver 5 tombe pile sur leur
- *   borne — une coïncidence de frontière, pas une correction. Mesuré d'abord à
- *   `max ∅` (bénéfice maximal, mais « aucune limite haute » est discutable pour
- *   une doudoune), puis à `max 10` : les deux rendent exactement la même chose,
- *   avec zéro « hors max ». La valeur finie ne coûte donc rien.
- *
- * · « Aut14·Hiv5 » est né de l'extension à −10°, qui a retourné le classement.
- *   Voir son commentaire ci-dessous.
+ * La mécanique `bornes` est conservée sans usage actif : c'est l'instrument qui
+ * a permis de séparer ce qui relevait du réglage de ce qui relevait de la
+ * donnée, et la prochaine question de ce genre en aura besoin.
  */
 const HIVER_7 = { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 };
 /**
@@ -199,13 +192,9 @@ const HIVER_7 = { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 };
  * rien à arbitrer.
  */
 const BRAS: Bras[] = [
-  { nom: "production", reglage: { Printemps: 16, Été: 24, Automne: 14, Hiver: 6 } },
-  { nom: "mesuré 14/09", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 } },
-  { nom: "Hiver 7", reglage: HIVER_7 },
-  { nom: "Hiver 7 + max 10", reglage: HIVER_7, bornes: doudounesA(10) },
-  { nom: "H7 + max10 + collants", reglage: HIVER_7, bornes: { ...doudounesA(10), [COLLANTS]: { min: -10 } } },
-  { nom: "mesuré + collants", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 }, bornes: { [COLLANTS]: { min: -10 } } },
-  { nom: "production + collants", reglage: { Printemps: 16, Été: 24, Automne: 14, Hiver: 6 }, bornes: { [COLLANTS]: { min: -10 } } },
+  { nom: "production", reglage: HIVER_7 },
+  { nom: "avant 21/09", reglage: { Printemps: 16, Été: 24, Automne: 14, Hiver: 6 } },
+  { nom: "Hiver 5", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 } },
 ];
 
 /** Colonne de largeur fixe, comme dans les autres audits du dossier. */
@@ -252,6 +241,30 @@ describe("réglage des températures représentatives — ses deux usages", () =
     console.log(`Levier unique : le réglage des quatre températures. Rien d'autre ne varie entre les bras.`);
     for (const b of BRAS) {
       console.log(`  ${b.nom.padEnd(14)} ${CAPSULE_SEASONS.map((s) => `${s} ${b.reglage[s]}°`).join("  ·  ")}`);
+    }
+
+    // Le premier bras prétend ÊTRE la production. S'il dérive de
+    // REPRESENTATIVE_TEMP — parce que le réglage bouge un jour et qu'on oublie
+    // ce fichier — toutes les comparaisons se feraient contre une production
+    // imaginaire, en silence. `representativeWeatherFor` sans override lit la
+    // constante réelle, donc l'écart se voit ici et nulle part ailleurs.
+    const derive = CAPSULE_SEASONS.filter((s) => representativeWeatherFor(s).temp !== BRAS[0].reglage[s]);
+    if (derive.length) {
+      throw new Error(
+        `Le bras « ${BRAS[0].nom} » ne reproduit plus REPRESENTATIVE_TEMP : ` +
+          derive.map((s) => `${s} attendu ${representativeWeatherFor(s).temp}°, bras ${BRAS[0].reglage[s]}°`).join(" · ") +
+          `. Aligner le bras sur la production avant de conclure quoi que ce soit.`
+      );
+    }
+
+    // Les trois bornes corrigées le 21/09, relues telles qu'elles sont
+    // AUJOURD'HUI en base : si l'une repassait à son ancienne valeur, les
+    // chiffres ci-dessous changeraient sans que rien ne le dise.
+    console.log(`\nBornes corrigées le 21/09, état actuel en base :`);
+    for (const ref of BORNES_CORRIGEES_21_09) {
+      const r = ligne.get(VESTIAIRE_ID_OFFSET + ref);
+      const it = index.get(VESTIAIRE_ID_OFFSET + ref);
+      console.log(`  réf ${String(ref).padStart(5)}  min ${String(r?.meteo_min_temp ?? "—").padStart(4)}  max ${String(r?.meteo_max_temp ?? "—").padStart(4)}  ${it?.name ?? "— introuvable —"}`);
     }
 
     const strategiePour = (r: Reglage): SelectionStrategy => ({ ...STRATEGIE_PRODUCTION, tempRepresentative: r });
