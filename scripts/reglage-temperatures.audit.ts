@@ -199,6 +199,9 @@ const BRAS: Bras[] = [
   { nom: "Aut14·Hiv5 + max 10", reglage: AUT14_HIV5, bornesHautes: bornePour(10) },
 ];
 
+/** Colonne de largeur fixe, comme dans les autres audits du dossier. */
+const court = (s: string | null, n: number) => (s ?? "—").slice(0, n).padEnd(n);
+
 const sansAccents = (s: string | null | undefined) =>
   (s ?? "").normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
 
@@ -275,16 +278,21 @@ describe("réglage des températures représentatives — ses deux usages", () =
      * est une faute sèche ; sous son min, elle ne l'est que si rien ne la
      * compense (couche, ou collants sur jupe/robe — R-B19).
      */
-    const horsPlage = (ids: number[], t: number, idx: Map<number, CatalogItem>): { max: number; nue: number } => {
+    const horsPlage = (
+      ids: number[],
+      t: number,
+      idx: Map<number, CatalogItem>
+    ): { max: number; nue: number; nues: number[] } => {
       const pieces = ids.map((id) => idx.get(id)).filter((p): p is CatalogItem => Boolean(p));
       const aUneCouche = pieces.some((p) => COUCHES.includes(p.cat));
       const aDesCollants = pieces.some((p) => p.cat === "accessoire" && p.accessoireType === "Collants");
-      let max = 0, nue = 0;
+      let max = 0;
+      const nues: number[] = [];
       for (const p of pieces) {
         if (p.meteoMaxTemp != null && t > p.meteoMaxTemp) max += 1;
-        else if (p.meteoMinTemp != null && t < p.meteoMinTemp && !(aUneCouche || ((p.cat === "jupe" || p.cat === "robe") && aDesCollants))) nue += 1;
+        else if (p.meteoMinTemp != null && t < p.meteoMinTemp && !(aUneCouche || ((p.cat === "jupe" || p.cat === "robe") && aDesCollants))) nues.push(p.id);
       }
-      return { max, nue };
+      return { max, nue: nues.length, nues };
     };
 
     /** Exécute une génération sous graine, sans laisser `Math.random` détourné. */
@@ -424,6 +432,16 @@ describe("réglage des températures représentatives — ses deux usages", () =
     const totalB = new Map<string, { cellules: number; max: number; nue: number; tenues: number }>();
     for (const b of BRAS) totalB.set(b.nom, { cellules: 0, max: 0, nue: 0, tenues: 0 });
     const parTemp = new Map<number, Map<string, { cellules: number; max: number; nue: number }>>();
+    /**
+     * Qui, nommément, est porté sous son minimum — par bras, par pièce.
+     *
+     * Le décompte agrégé compte des OCCURRENCES dans des tenues, pas des pièces
+     * distinctes : une même pièce tirée trente fois pèse trente. Sans ce relevé,
+     * « 78 pièces nues » se lirait comme « 78 pièces du catalogue », et une
+     * poignée de bornes mal saisies passerait pour un problème de réglage.
+     */
+    const nuesParPiece = new Map<string, Map<number, { occ: number; temps: Set<number> }>>();
+    for (const b of BRAS) nuesParPiece.set(b.nom, new Map());
 
     for (const t of TEMPERATURES) {
       const ligneT = new Map<string, { cellules: number; max: number; nue: number }>();
@@ -446,6 +464,12 @@ describe("réglage des températures représentatives — ses deux usages", () =
               couverte = true;
               const hp = horsPlage(out, t, indexBras);
               horsMaxN += hp.max; nueN += hp.nue;
+              const releve = nuesParPiece.get(bras.nom)!;
+              for (const id of hp.nues) {
+                const e = releve.get(id) ?? { occ: 0, temps: new Set<number>() };
+                e.occ += 1; e.temps.add(t);
+                releve.set(id, e);
+              }
               totalB.get(bras.nom)!.tenues += 1;
             }
             if (couverte) cellules += 1;
@@ -516,6 +540,57 @@ describe("réglage des températures représentatives — ses deux usages", () =
       }
       console.log(`     ${bras.nom.padEnd(14)} ${pires.length ? pires.join("  ·  ") : "aucune."}`);
     }
+
+    // ═══ 4 · QUI EST PORTÉ SOUS SON MINIMUM, NOMMÉMENT ═══════════════════
+    //
+    // Les bandes de la section 3 comptent des OCCURRENCES dans des tenues, pas
+    // des pièces distinctes. Tant qu'on n'a pas les noms, on ne peut pas savoir
+    // si « 78 nues en gelée » désigne un catalogue trop léger pour l'hiver — que
+    // seul un réachat corrigerait — ou trois bornes mal saisies, que du SQL
+    // règle en une minute. Les deux appellent des décisions opposées.
+    console.log(`\n════════ 4 · LES PIÈCES PORTÉES SOUS LEUR MINIMUM, NOMMÉMENT ════════`);
+    console.log(`  « occ » = nombre de tenues concernées, pas de pièces : une même pièce tirée`);
+    console.log(`  trente fois pèse trente. La colonne « pièces » de la section 3 est un total`);
+    console.log(`  d'occurrences — c'est ici qu'on voit combien de références sont en cause.`);
+    for (const bande of BANDES) {
+      console.log(`\n  ── ${bande.nom} ──`);
+      console.log(`  ${"bras".padEnd(21)}${"occ".padStart(6)}${"réfs".padStart(7)}`);
+      for (const bras of BRAS) {
+        const dans = [...nuesParPiece.get(bras.nom)!.entries()]
+          .map(([id, e]) => ({ id, temps: [...e.temps].filter((t) => t >= bande.min && t <= bande.max) }))
+          .filter((x) => x.temps.length);
+        const occ = TEMPERATURES.filter((t) => t >= bande.min && t <= bande.max)
+          .reduce((a, t) => a + parTemp.get(t)!.get(bras.nom)!.nue, 0);
+        console.log(`  ${bras.nom.padEnd(21)}${String(occ).padStart(6)}${String(dans.length).padStart(7)}`);
+      }
+    }
+
+    // Le détail nominatif, sur la production seule : c'est l'état ACTUEL, celui
+    // qu'aucun des réglages candidats ne traite, et donc le seul sur lequel une
+    // correction de données se décide.
+    console.log(`\n  ── détail, PRODUCTION, bande des gelées (${BANDES[0].min}..${BANDES[0].max}°) ──`);
+    console.log(`  C'est l'état actuel de l'application, pas celui d'un candidat.`);
+    const detail = [...nuesParPiece.get(prod.nom)!.entries()]
+      .map(([id, e]) => ({ id, occ: e.occ, temps: [...e.temps].filter((t) => t >= BANDES[0].min && t <= BANDES[0].max).sort((a, b) => a - b) }))
+      .filter((x) => x.temps.length)
+      .sort((a, b) => b.occ - a.occ);
+    console.log(`\n  ${"réf".padStart(6)}  ${court("catégorie", 14)}${court("sous-type", 22)}${"min".padStart(5)}${"max".padStart(5)}${"occ".padStart(6)}  ${court("saisons déclarées", 24)}t°`);
+    for (const d of detail) {
+      const r = ligne.get(d.id)!;
+      const it = index.get(d.id)!;
+      const plage = d.temps.length > 1 ? `${d.temps[0]}..${d.temps[d.temps.length - 1]}°` : `${d.temps[0]}°`;
+      console.log(
+        `  ${String(r.id).padStart(6)}  ${court(it.cat as string, 14)}${court(r.sous_type, 22)}` +
+          `${String(r.meteo_min_temp ?? "—").padStart(5)}${String(r.meteo_max_temp ?? "—").padStart(5)}${String(d.occ).padStart(6)}  ` +
+          `${court((declarees.get(d.id) ?? []).join("+") || "aucune", 24)}${plage}`
+      );
+      console.log(`          ${it.name}`);
+    }
+    console.log(`\n  ${detail.length} référence(s) distincte(s) derrière les occurrences de cette bande.`);
+    console.log(`  Une pièce dont le min est ÉLEVÉ alors qu'elle déclare l'Hiver est le profil`);
+    console.log(`  d'une borne mal saisie ; une pièce légère qui ne déclare pas l'Hiver et que le`);
+    console.log(`  moteur retient faute de mieux est un trou de catalogue. Ce script ne tranche`);
+    console.log(`  pas entre les deux : il donne les noms, la décision est éditoriale.`);
 
     console.log(`\n  LECTURE SEULE. Aucune température changée, aucune donnée touchée.`);
     console.log(`  Ce script MESURE, il ne tranche pas : un réglage qui gagne sur un usage et`);
