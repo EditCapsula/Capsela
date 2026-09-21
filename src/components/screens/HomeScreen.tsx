@@ -79,49 +79,45 @@ type HeroSlot = { left: number; top: number; w: number; h: number; z: number };
  * le bas, le sac sur le coin haut du bas — jamais au point de masquer une
  * pièce principale, d'où les z-index.
  *
- * DEUX BORNES CONTRAIGNENT CES VALEURS, et elles ont été vérifiées par calcul
- * sur 320 / 360 / 375 / 390 / 412 / 430 / 480 px de large, pour les DEUX
- * compositions, pas à l'œil sur une seule largeur. Mes premières valeurs
- * violaient les deux.
+ * LES % SONT RELATIFS À LA ZONE DE COMPOSITION, pas à la card : cette zone
+ * s'arrête 66 px avant le bas (22 de padding + 44 de rangée badge/bouton).
+ * Aucune pièce ne peut donc atteindre les boutons, quelle que soit la hauteur
+ * de la card — c'est une borne structurelle, elle ne se recalcule pas.
  *
- * À GAUCHE — le texte. Le titre est borné à 42 % de la card et la météo à
- * 38 %, donc aucune pièce ne peut commencer avant 44 % (le haut, dans la bande
- * du titre) ni 40 % (les chaussures, dans celle de la météo). C'est cette
- * contrainte qui fixe le décalage du cluster, pas l'esthétique.
+ * Elle remplace deux tentatives arithmétiques qui ont échoué l'une après
+ * l'autre : d'abord des chaussures descendant à 88 % de la card, franchement
+ * sous le bouton ; puis une jupe mordant encore 1,5 px sur la rangée entre 360
+ * et 390 px. La leçon est que la hauteur disponible dépend de la hauteur de la
+ * card, laquelle dépend du contenu : la calculer revenait à poursuivre une
+ * cible mobile.
+ *
+ * LA SEULE CONTRAINTE QUI RESTE ARITHMÉTIQUE est horizontale, et elle a été
+ * vérifiée sur 320 / 360 / 375 / 390 / 412 / 430 / 480 px, pour les deux
+ * compositions. Le titre est borné à 42 % de la card et la météo à 38 %, donc
+ * aucune pièce ne commence avant 44 % (le haut, dans la bande du titre) ni
+ * 40 % (les chaussures, dans celle de la météo). C'est cette contrainte qui
+ * fixe le décalage du cluster vers la droite, pas l'esthétique.
  *
  * Le titre descend à 20 px sous 380 px de large : à 26 px, la colonne tombe à
  * 92 px et « Ta tenue est prête » se brisait en QUATRE lignes pour trois mots.
  *
- * EN BAS — la rangée badge + bouton, haute de 44 px et calée à 18 px du bord,
- * occupe donc les 62 derniers pixels. Aucune pièce ne descend sous 77 %. Deux
- * corrections successives ont été nécessaires : mes premières valeurs
- * faisaient descendre les chaussures à 88 %, franchement sous le bouton ; les
- * secondes laissaient encore la jupe mordre de 1,5 px sur la rangée entre 360
- * et 390 px, ce qui aurait transparu sous le badge, lui semi-opaque.
- *
- * La phrase météo la plus longue que puisse produire `explainRecommendation`
- * — « 12° aujourd'hui · confortable, une couche en plus si besoin », 59
- * caractères — va jusqu'à 6 lignes au plus étroit. Le bloc titre + météo y
- * mesure alors 177 px sur une card de 318, dont la rangée basse commence à
- * 256 : 79 px d'air. C'est le pire cas mesuré, pas une estimation.
- *
  * Largeurs conformes au brief : haut 40 %, bas 46 %, sac 24 %, chaussures 28 %.
  */
 const HERO_SLOTS_ONEPIECE: Record<HomeRole, HeroSlot> = {
-  onepiece: { left: 44, top: 8, w: 44, h: 68, z: 3 },
-  haut: { left: 44, top: 8, w: 44, h: 68, z: 3 },
-  bas: { left: 44, top: 8, w: 44, h: 68, z: 3 },
-  chaussures: { left: 40, top: 50, w: 28, h: 27, z: 4 },
-  sac: { left: 74, top: 9, w: 24, h: 25, z: 2 },
-  petit: { left: 80, top: 52, w: 17, h: 18, z: 2 },
+  onepiece: { left: 44, top: 4, w: 44, h: 86, z: 3 },
+  haut: { left: 44, top: 4, w: 44, h: 86, z: 3 },
+  bas: { left: 44, top: 4, w: 44, h: 86, z: 3 },
+  chaussures: { left: 40, top: 62, w: 28, h: 34, z: 4 },
+  sac: { left: 74, top: 4, w: 24, h: 32, z: 2 },
+  petit: { left: 80, top: 66, w: 17, h: 24, z: 2 },
 };
 const HERO_SLOTS_STANDARD: Record<HomeRole, HeroSlot> = {
-  onepiece: { left: 44, top: 12, w: 40, h: 40, z: 3 },
-  haut: { left: 44, top: 12, w: 40, h: 40, z: 3 },
-  bas: { left: 52, top: 30, w: 46, h: 47, z: 2 },
-  chaussures: { left: 40, top: 50, w: 28, h: 27, z: 4 },
-  sac: { left: 74, top: 9, w: 24, h: 25, z: 1 },
-  petit: { left: 80, top: 52, w: 17, h: 18, z: 1 },
+  onepiece: { left: 44, top: 8, w: 40, h: 52, z: 3 },
+  haut: { left: 44, top: 8, w: 40, h: 52, z: 3 },
+  bas: { left: 52, top: 26, w: 46, h: 62, z: 2 },
+  chaussures: { left: 40, top: 50, w: 28, h: 35, z: 4 },
+  sac: { left: 74, top: 4, w: 24, h: 32, z: 1 },
+  petit: { left: 80, top: 54, w: 17, h: 24, z: 1 },
 };
 
 /**
@@ -462,38 +458,52 @@ export default function HomeScreen() {
       </div>
 
       {/* ══ Card héros — le moment visuel de la page ══════════════════════
-          Deux géométries, et c'est délibéré :
-          · avec tenue, la card prend le ratio 1.28/1 de la maquette et la
-            composition occupe toute sa surface ;
-          · sans tenue, elle reste en hauteur automatique. Imposer le même
-            ratio à un état sans image produirait 330 px de terracotta vide,
-            ce qui n'est pas « éditorial » mais creux.
-          Le min-height passe à 318 px sous 360 px de large pour que le titre,
-          la météo, le badge et le bouton ne se rejoignent jamais : à cette
-          largeur le ratio seul ne donnerait que ~212 px. */}
+          LA HAUTEUR EST LE MAXIMUM ENTRE LE RATIO ET LE CONTENU, et c'est une
+          correction, pas un raffinement. La première version calait le ratio
+          1.28/1 en hauteur ferme et posait la rangée badge + bouton en absolu
+          à 18 px du bas. À 320 px de large, cette rangée ne tenait plus sur
+          une ligne : elle passait à deux, grandissait vers le HAUT et
+          recouvrait la phrase météo. Aucun calcul de slots n'aurait rattrapé
+          cela — il fallait supprimer la contrainte, pas l'ajuster.
+          Deux cellules de grille superposées : un cale-ratio qui ne contient
+          rien, et le contenu. La ligne prend la plus haute des deux, donc le
+          texte et les boutons ne peuvent PLUS se rencontrer, par construction
+          et non par arithmétique.
+          Sans tenue, la card reste en hauteur automatique : imposer le ratio à
+          un état sans image produirait 330 px de terracotta vide, ce qui n'est
+          pas éditorial mais creux. */}
       <button
         onClick={actions.goTenues}
-        className={
-          "mx-6 mt-6 bg-terracotta active:bg-terracotta-hover rounded-[24px] cursor-pointer relative overflow-hidden text-left block " +
-          (avecComposition ? "min-h-[275px] max-[359px]:min-h-[318px]" : "")
-        }
-        style={{
-          width: "calc(100% - 48px)",
-          ...(avecComposition ? { aspectRatio: "1.28 / 1", maxHeight: 330 } : { padding: 22 }),
-        }}
+        className="mx-6 mt-6 bg-terracotta active:bg-terracotta-hover rounded-[24px] cursor-pointer relative overflow-hidden text-left grid"
+        style={{ width: "calc(100% - 48px)", gridTemplateAreas: '"pile"', gridTemplateColumns: "1fr" }}
       >
         {avecComposition && (
-          <div className="absolute inset-0" aria-hidden="true">
-            {heroPieces.map((it) => (
-              <HeroPiece key={"hero-" + it.id} item={it} slot={heroSlots[homeRoleOf(it.cat)]} eager />
-            ))}
-          </div>
+          <>
+            {/* Cale-ratio : 1 / 1.28 = 78,125 % de la largeur, plafonné à
+                330 px et jamais sous 275. Vide et invisible. */}
+            <div
+              aria-hidden="true"
+              className="min-h-[275px]"
+              style={{ gridArea: "pile", paddingTop: "78.125%", maxHeight: 330 }}
+            />
+            {/* La couche des pièces s'arrête AU-DESSUS de la rangée badge +
+                bouton (22 px de padding + 44 px de hauteur), et porte un
+                z-index 0 explicite pour que ses enfants, qui s'empilent entre
+                1 et 4, restent confinés sous le texte en z-10. Sans ces deux
+                bornes, les chaussures passaient par-dessus le badge — lisible
+                à 390 px, illisible à 320 où la card se resserre. */}
+            <div className="absolute left-0 right-0 top-0" style={{ bottom: 66, zIndex: 0 }} aria-hidden="true">
+              {heroPieces.map((it) => (
+                <HeroPiece key={"hero-" + it.id} item={it} slot={heroSlots[homeRoleOf(it.cat)]} eager />
+              ))}
+            </div>
+          </>
         )}
 
         {/* Aucun <br /> forcé dans le titre : il se replie seul dans sa
             colonne, ce qui reste juste quel que soit l'appareil. Un saut en
             dur donnait trois lignes au lieu de deux sous 360 px. */}
-        <div className="relative z-10" style={avecComposition ? { padding: "22px 22px 0 22px" } : undefined}>
+        <div className="relative z-10 flex flex-col" style={{ gridArea: "pile", padding: 22 }}>
           <div
             className="font-serif text-[20px] min-[380px]:text-[26px] text-cream leading-[1.14]"
             style={avecComposition ? { maxWidth: "42%" } : undefined}
@@ -506,32 +516,26 @@ export default function HomeScreen() {
           >
             {hasOutfit ? outfitQuote : "Une sélection pensée pour toi, ta journée et la météo."}
           </div>
-        </div>
 
-        {/* Badge et bouton alignés en bas. Absolus quand la card porte une
-            composition (ils doivent tenir le bas de la card, pas suivre le
-            texte), en flux sinon. */}
-        <div
-          className={
-            "flex items-center gap-[10px] flex-wrap z-10 " +
-            (avecComposition ? "absolute left-[22px] right-[22px] bottom-[18px]" : "mt-4")
-          }
-        >
-          {hasOutfit && occasionLabel && (
+          {/* `mt-auto` colle la rangée au bas de la card quand il reste de la
+              place, et la laisse repousser la card quand il n'y en a plus. */}
+          <div className="flex items-center gap-[10px] flex-wrap mt-auto pt-4">
+            {hasOutfit && occasionLabel && (
+              <div
+                className="inline-flex items-center text-[10px] tracking-[.08em] uppercase"
+                style={{ background: "rgba(243,238,229,.24)", color: "#F3EEE5", borderRadius: 100, padding: "0 16px", minHeight: 44 }}
+              >
+                {occasionLabel}
+              </div>
+            )}
+            {/* 44 px de haut minimum — cible tactile, et le bouton principal
+                de la page ne peut pas être le plus petit élément cliquable. */}
             <div
-              className="inline-flex items-center text-[10px] tracking-[.08em] uppercase"
-              style={{ background: "rgba(243,238,229,.24)", color: "#F3EEE5", borderRadius: 100, padding: "0 16px", minHeight: 44 }}
+              className="inline-flex items-center justify-center bg-cream text-ink rounded-full px-5 text-[13px] tracking-[.04em]"
+              style={{ minHeight: 44 }}
             >
-              {occasionLabel}
+              {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
             </div>
-          )}
-          {/* 44 px de haut minimum — cible tactile, et le bouton principal de
-              la page ne peut pas être le plus petit élément cliquable. */}
-          <div
-            className="inline-flex items-center justify-center bg-cream text-ink rounded-full px-5 text-[13px] tracking-[.04em]"
-            style={{ minHeight: 44 }}
-          >
-            {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
           </div>
         </div>
       </button>
