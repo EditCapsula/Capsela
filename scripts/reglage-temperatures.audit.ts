@@ -106,23 +106,40 @@ interface Bras {
   nom: string;
   reglage: Reglage;
   /**
-   * Borne HAUTE réécrite pour ce bras seulement, par référence catalogue.
-   * `null` = plus aucune limite haute. Contrefactuel de données, jamais une
-   * écriture.
+   * Bornes réécrites pour ce bras seulement, par référence catalogue.
+   * `null` = plus aucune limite de ce côté. Contrefactuel de données, jamais
+   * une écriture.
    *
-   * `null` répond à « cette pièce est-elle morte à cause du réglage ou de sa
+   * `null` répond à « cette pièce est-elle écartée à cause du réglage ou de sa
    * borne ? » sans inventer de valeur. Une valeur finie est un AUTRE scénario,
    * qui doit être mesuré pour lui-même : elle peut faire apparaître des
    * « hors max » là où `null` n'en produit aucun. Les deux sont donc des bras
    * distincts, et non une conclusion transportée de l'un à l'autre.
    */
-  bornesHautes?: Record<number, number | null>;
+  bornes?: Record<number, { min?: number | null; max?: number | null }>;
 }
 
 /** Les deux doudounes bornées `max 5`, mortes en production comme sous Hiver 7. */
 const DOUDOUNES = [843, 1040];
-const bornePour = (max: number | null): Record<number, number | null> =>
-  Object.fromEntries(DOUDOUNES.map((ref) => [ref, max]));
+const doudounesA = (max: number | null): Record<number, { max: number | null }> =>
+  Object.fromEntries(DOUDOUNES.map((ref) => [ref, { max }]));
+
+/**
+ * « Collants opaques 60–80 DEN », `min 3`, déclarés Automne ET Hiver.
+ *
+ * La section 4 a rendu un résultat que je n'attendais pas : les 78 occurrences
+ * « nues sous leur minimum » de la bande des gelées sont TOUTES cette seule
+ * référence. Tout l'avantage de « mesuré 14/09 » en gelée — 26 contre 78, soit
+ * l'argument qui avait retourné mon classement — tient donc à la fréquence de
+ * tirage d'une pièce dont la borne est vraisemblablement fausse : des collants
+ * opaques 60–80 DEN sont précisément ce qu'on porte quand il gèle.
+ *
+ * `min −10` plutôt que `null` : la valeur est arbitraire mais bornée par le
+ * balayage, et elle évite de prétendre qu'une pièce n'a aucune limite basse.
+ * Ce bras ne corrige rien en base — il mesure ce que vaudrait le réglage une
+ * fois cette borne hors de cause.
+ */
+const COLLANTS = 498;
 
 /**
  * Les bras. Le premier EST la production — il n'est pas une reconstitution.
@@ -151,52 +168,44 @@ const bornePour = (max: number | null): Record<number, number | null> =>
  */
 const HIVER_7 = { Printemps: 14, Été: 24, Automne: 12, Hiver: 7 };
 /**
- * Le candidat né du balayage étendu à −10°. Celui-ci a retourné le classement :
- * « mesuré 14/09 » gagne la bande des gelées de 52 pièces (26 contre 78), ce
- * qu'un balayage arrêté à 0° ne pouvait pas voir, et repasse devant Hiver 7 au
- * total (82 contre 84). Aucun des deux ne domine : « mesuré » creuse une
- * falaise de 50 pièces à la seule température de 9°, Hiver 7 reste au niveau de
- * la production sur les gelées.
+ * TROIS BRAS ONT ÉTÉ MESURÉS PUIS RETIRÉS de la table. Ils ne sont plus des
+ * colonnes, mais ce qu'ils ont établi conditionne la lecture de celles qui
+ * restent, donc il est consigné ici plutôt que perdu avec eux.
  *
- * MESURÉ, ET REFUSÉ — mais pour une raison qui vaut plus que le bras lui-même.
- * Il tue bien la falaise de 9° (bande froide à 0) ET garde le gain des gelées
- * (26), donc l'hypothèse était juste. Mais il perd la bande douce : 63 pièces
- * nues contre 6, et il dégrade 10° et 11° par rapport à la production
- * (24 → 29). Total 89, derrière les deux autres candidats.
+ * · « Automne 13 » (14/24/13/6) — dominé : 131 pièces nues contre 82 et 84.
+ * · « Hiver 7 + max ∅ » — rend exactement les mêmes chiffres que `max 10` sur
+ *   les deux usages, avec zéro « hors max ». Une borne haute finie ne coûte
+ *   donc rien par rapport à l'absence de borne.
+ * · « Aut14·Hiv5 » (14/24/14/5) — refusé, mais pour une raison qui vaut plus
+ *   que le bras. Il faisait bien ce qu'on attendait de lui : falaise de 9°
+ *   supprimée ET gain des gelées conservé (26). Mais il effondrait la bande
+ *   douce, 63 pièces nues contre 6, et dégradait 10° et 11°.
  *
- * LA CAUSE EST STRUCTURELLE, et c'est le vrai acquis. `saisonCapsulePourMeteo`
- * garde la première saison STRICTEMENT plus proche, dans l'ordre Printemps,
- * Été, Automne, Hiver. Donner à Printemps et Automne la MÊME valeur (14 ici)
- * rend l'Automne inaccessible : il ne peut jamais être strictement plus proche
- * que le Printemps, donc il n'est JAMAIS choisi pour la tenue du jour. Les 63
- * pièces nues sont un vivier de printemps servi à 10-13°.
+ *   LA CAUSE EST STRUCTURELLE. `saisonCapsulePourMeteo` garde la première
+ *   saison STRICTEMENT plus proche, dans l'ordre Printemps, Été, Automne,
+ *   Hiver. Donner à Printemps et Automne la MÊME valeur rend l'Automne
+ *   inaccessible : il ne peut jamais être strictement plus proche que le
+ *   Printemps, donc il n'est JAMAIS choisi pour la tenue du jour. Les 63 pièces
+ *   nues étaient un vivier de printemps servi à 10-13°.
  *
- * Deux règles s'en déduisent, démontrées et non supposées :
+ * Deux règles en découlent, démontrées et non supposées :
  *   · Printemps et Automne ne doivent jamais partager une valeur.
  *   · Hiver 5 et Automne 12 ne peuvent pas coexister sans la falaise de 9° :
  *     l'éviter demande |Automne − 9| > |Hiver − 9|, ce qu'Automne 12 n'atteint
  *     qu'avec Hiver ≥ 7 — et Hiver 7 renonce au gain des gelées.
  *
- * Le bras tente donc de garder Hiver 5, qui gagne les gelées, et de remonter
- * l'Automne à 14 pour que la frontière Automne/Hiver revienne à 9,5° —
- * donc 9° reparte à l'hiver et la falaise disparaisse. C'est une hypothèse, pas
- * une conclusion : rien ne dit que la composition de l'Automne à 14° ne coûte
- * pas ailleurs ce qu'elle rend ici.
- */
-const AUT14_HIV5 = { Printemps: 14, Été: 24, Automne: 14, Hiver: 5 };
-/**
- * « Automne 13 » et « Hiver 7 + max ∅ » sont retirés de la table après avoir été
- * mesurés et rapportés : le premier est dominé (131 nues contre 82 et 84), le
- * second rend exactement les mêmes chiffres que `max 10` sur les deux usages.
- * Les garder n'ajouterait que deux colonnes à un tableau déjà large.
+ * Les trois bras « + collants » ci-dessous rouvrent justement ce dernier
+ * arbitrage : si le gain des gelées n'est qu'une borne fausse, il n'y a plus
+ * rien à arbitrer.
  */
 const BRAS: Bras[] = [
   { nom: "production", reglage: { Printemps: 16, Été: 24, Automne: 14, Hiver: 6 } },
   { nom: "mesuré 14/09", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 } },
   { nom: "Hiver 7", reglage: HIVER_7 },
-  { nom: "Hiver 7 + max 10", reglage: HIVER_7, bornesHautes: bornePour(10) },
-  { nom: "Aut14·Hiv5", reglage: AUT14_HIV5 },
-  { nom: "Aut14·Hiv5 + max 10", reglage: AUT14_HIV5, bornesHautes: bornePour(10) },
+  { nom: "Hiver 7 + max 10", reglage: HIVER_7, bornes: doudounesA(10) },
+  { nom: "H7 + max10 + collants", reglage: HIVER_7, bornes: { ...doudounesA(10), [COLLANTS]: { min: -10 } } },
+  { nom: "mesuré + collants", reglage: { Printemps: 14, Été: 24, Automne: 12, Hiver: 5 }, bornes: { [COLLANTS]: { min: -10 } } },
+  { nom: "production + collants", reglage: { Printemps: 16, Été: 24, Automne: 14, Hiver: 6 }, bornes: { [COLLANTS]: { min: -10 } } },
 ];
 
 /** Colonne de largeur fixe, comme dans les autres audits du dossier. */
@@ -254,23 +263,35 @@ describe("réglage des températures représentatives — ses deux usages", () =
      * unicité, un bras corrigé mesurerait la capsule d'un catalogue et les
      * fautes d'un autre.
      */
-    /** Les bornes hautes réécrites par un bras, indexées par id de pool. */
+    /** Les bornes réécrites par un bras, indexées par id de pool. */
     const reecrites = (bras: Bras) =>
-      new Map<number, number | null>(
-        Object.entries(bras.bornesHautes ?? {}).map(([ref, max]) => [VESTIAIRE_ID_OFFSET + Number(ref), max])
+      new Map<number, { min?: number | null; max?: number | null }>(
+        Object.entries(bras.bornes ?? {}).map(([ref, b]) => [VESTIAIRE_ID_OFFSET + Number(ref), b])
       );
     const poolsParBras = new Map<string, { pool: CatalogItem[]; index: Map<number, CatalogItem> }>();
     for (const bras of BRAS) {
       const cibles = reecrites(bras);
       const p = cibles.size
-        ? pool.map((it) => (cibles.has(it.id) ? { ...it, meteoMaxTemp: cibles.get(it.id) ?? undefined } : it))
+        ? pool.map((it) => {
+            const b = cibles.get(it.id);
+            if (!b) return it;
+            return {
+              ...it,
+              ...("min" in b ? { meteoMinTemp: b.min ?? undefined } : {}),
+              ...("max" in b ? { meteoMaxTemp: b.max ?? undefined } : {}),
+            };
+          })
         : pool;
       poolsParBras.set(bras.nom, { pool: p, index: new Map(p.map((it) => [it.id, it])) });
     }
-    /** La borne haute telle que le bras la voit — celle qu'il réécrit, sinon celle de la base. */
-    const maxVuPar = (bras: Bras, id: number): number | null => {
-      const cibles = reecrites(bras);
-      return cibles.has(id) ? cibles.get(id)! : (ligne.get(id)?.meteo_max_temp ?? null);
+    /** Les bornes telles que le bras les voit — celles qu'il réécrit, sinon celles de la base. */
+    const bornesVuesPar = (bras: Bras, id: number): { min: number | null; max: number | null } => {
+      const b = reecrites(bras).get(id);
+      const r = ligne.get(id);
+      return {
+        min: b && "min" in b ? (b.min ?? null) : (r?.meteo_min_temp ?? null),
+        max: b && "max" in b ? (b.max ?? null) : (r?.meteo_max_temp ?? null),
+      };
     };
 
     /**
@@ -357,9 +378,9 @@ describe("réglage des températures représentatives — ses deux usages", () =
           if (!(declarees.get(it.id) ?? []).includes(saison)) return false;
           const r = ligne.get(it.id);
           if (!r) return false;
-          const plafond = maxVuPar(bras, it.id);
-          const horsMax = plafond != null && t > plafond;
-          const horsMin = !horsMax && r.meteo_min_temp != null && t < r.meteo_min_temp;
+          const vues = bornesVuesPar(bras, it.id);
+          const horsMax = vues.max != null && t > vues.max;
+          const horsMin = !horsMax && vues.min != null && t < vues.min;
           if (!horsMax && !horsMin) return false;
           return horsMax || !EXEMPTEES.includes(it.cat);
         });
@@ -407,15 +428,15 @@ describe("réglage des températures représentatives — ses deux usages", () =
       const m = morts(bras.nom);
       const cibles = reecrites(bras);
       const mention = cibles.size
-        ? `  (borne haute réécrite sur réf ${Object.entries(bras.bornesHautes ?? {}).map(([ref, max]) => `${ref} → ${max ?? "∅"}`).join(", ")})`
+        ? `  (bornes réécrites : ${Object.entries(bras.bornes ?? {}).map(([ref, b]) => `${ref} ${"min" in b ? `min→${b.min ?? "∅"}` : ""}${"max" in b ? `max→${b.max ?? "∅"}` : ""}`).join(", ")})`
         : "";
-      console.log(`     ${bras.nom.padEnd(18)} ${String(m.length).padStart(3)} morte(s)${mention}`);
+      console.log(`     ${bras.nom.padEnd(22)} ${String(m.length).padStart(3)} morte(s)${mention}`);
       for (const id of m) {
         const r = ligne.get(id)!;
-        // Le max affiché est celui que le bras VOIT, pour qu'une ligne du
-        // tableau ne puisse pas contredire le chiffre qu'elle explique.
-        const plafond = maxVuPar(bras, id);
-        console.log(`        réf ${String(r.id).padStart(5)}  ${(declarees.get(id) ?? []).join("+").padEnd(28)}min ${String(r.meteo_min_temp ?? "—").padStart(4)}  max ${String(plafond ?? "—").padStart(4)}  ${index.get(id)!.name}`);
+        // Les bornes affichées sont celles que le bras VOIT, pour qu'une ligne
+        // du tableau ne puisse pas contredire le chiffre qu'elle explique.
+        const v = bornesVuesPar(bras, id);
+        console.log(`        réf ${String(r.id).padStart(5)}  ${(declarees.get(id) ?? []).join("+").padEnd(28)}min ${String(v.min ?? "—").padStart(4)}  max ${String(v.max ?? "—").padStart(4)}  ${index.get(id)!.name}`);
       }
     }
 
@@ -440,8 +461,14 @@ describe("réglage des températures représentatives — ses deux usages", () =
      * « 78 pièces nues » se lirait comme « 78 pièces du catalogue », et une
      * poignée de bornes mal saisies passerait pour un problème de réglage.
      */
-    const nuesParPiece = new Map<string, Map<number, { occ: number; temps: Set<number> }>>();
+    const nuesParPiece = new Map<string, Map<number, Map<number, number>>>();
     for (const b of BRAS) nuesParPiece.set(b.nom, new Map());
+    /** Occurrences d'une pièce dans une bande, et les températures concernées. */
+    const dansLaBande = (nom: string, id: number, bande: { min: number; max: number }) => {
+      const parT = nuesParPiece.get(nom)!.get(id) ?? new Map<number, number>();
+      const temps = [...parT.keys()].filter((t) => t >= bande.min && t <= bande.max).sort((a, b) => a - b);
+      return { temps, occ: temps.reduce((a, t) => a + parT.get(t)!, 0) };
+    };
 
     for (const t of TEMPERATURES) {
       const ligneT = new Map<string, { cellules: number; max: number; nue: number }>();
@@ -466,9 +493,9 @@ describe("réglage des températures représentatives — ses deux usages", () =
               horsMaxN += hp.max; nueN += hp.nue;
               const releve = nuesParPiece.get(bras.nom)!;
               for (const id of hp.nues) {
-                const e = releve.get(id) ?? { occ: 0, temps: new Set<number>() };
-                e.occ += 1; e.temps.add(t);
-                releve.set(id, e);
+                const parT = releve.get(id) ?? new Map<number, number>();
+                parT.set(t, (parT.get(t) ?? 0) + 1);
+                releve.set(id, parT);
               }
               totalB.get(bras.nom)!.tenues += 1;
             }
@@ -556,37 +583,46 @@ describe("réglage des températures représentatives — ses deux usages", () =
       console.log(`\n  ── ${bande.nom} ──`);
       console.log(`  ${"bras".padEnd(21)}${"occ".padStart(6)}${"réfs".padStart(7)}`);
       for (const bras of BRAS) {
-        const dans = [...nuesParPiece.get(bras.nom)!.entries()]
-          .map(([id, e]) => ({ id, temps: [...e.temps].filter((t) => t >= bande.min && t <= bande.max) }))
-          .filter((x) => x.temps.length);
+        const refs = [...nuesParPiece.get(bras.nom)!.keys()].filter((id) => dansLaBande(bras.nom, id, bande).temps.length);
         const occ = TEMPERATURES.filter((t) => t >= bande.min && t <= bande.max)
           .reduce((a, t) => a + parTemp.get(t)!.get(bras.nom)!.nue, 0);
-        console.log(`  ${bras.nom.padEnd(21)}${String(occ).padStart(6)}${String(dans.length).padStart(7)}`);
+        console.log(`  ${bras.nom.padEnd(23)}${String(occ).padStart(6)}${String(refs.length).padStart(7)}`);
       }
     }
 
-    // Le détail nominatif, sur la production seule : c'est l'état ACTUEL, celui
-    // qu'aucun des réglages candidats ne traite, et donc le seul sur lequel une
-    // correction de données se décide.
-    console.log(`\n  ── détail, PRODUCTION, bande des gelées (${BANDES[0].min}..${BANDES[0].max}°) ──`);
-    console.log(`  C'est l'état actuel de l'application, pas celui d'un candidat.`);
-    const detail = [...nuesParPiece.get(prod.nom)!.entries()]
-      .map(([id, e]) => ({ id, occ: e.occ, temps: [...e.temps].filter((t) => t >= BANDES[0].min && t <= BANDES[0].max).sort((a, b) => a - b) }))
-      .filter((x) => x.temps.length)
-      .sort((a, b) => b.occ - a.occ);
-    console.log(`\n  ${"réf".padStart(6)}  ${court("catégorie", 14)}${court("sous-type", 22)}${"min".padStart(5)}${"max".padStart(5)}${"occ".padStart(6)}  ${court("saisons déclarées", 24)}t°`);
-    for (const d of detail) {
-      const r = ligne.get(d.id)!;
-      const it = index.get(d.id)!;
-      const plage = d.temps.length > 1 ? `${d.temps[0]}..${d.temps[d.temps.length - 1]}°` : `${d.temps[0]}°`;
-      console.log(
-        `  ${String(r.id).padStart(6)}  ${court(it.cat as string, 14)}${court(r.sous_type, 22)}` +
-          `${String(r.meteo_min_temp ?? "—").padStart(5)}${String(r.meteo_max_temp ?? "—").padStart(5)}${String(d.occ).padStart(6)}  ` +
-          `${court((declarees.get(d.id) ?? []).join("+") || "aucune", 24)}${plage}`
-      );
-      console.log(`          ${it.name}`);
+    // Le détail nominatif, pour CHAQUE couple (bras, bande) qui produit quelque
+    // chose. Le restreindre à la production laisserait sans nom les trois
+    // références de la falaise de 9°, qui n'existe que sous « mesuré 14/09 » —
+    // or ce sont elles qui décident si cette falaise se corrige en base ou pas.
+    console.log(`\n  ── détail nominatif, par bras et par bande ──`);
+    console.log(`  ${"réf".padStart(6)}  ${court("catégorie", 12)}${court("sous-type", 20)}${"min".padStart(5)}${"max".padStart(5)}${"occ".padStart(6)}  ${court("saisons", 16)}${court("t°", 10)}nom`);
+    let totalRefs = 0;
+    for (const bras of BRAS) {
+      for (const bande of BANDES) {
+        const detail = [...nuesParPiece.get(bras.nom)!.keys()]
+          .map((id) => ({ id, ...dansLaBande(bras.nom, id, bande) }))
+          .filter((x) => x.temps.length)
+          .sort((a, b) => b.occ - a.occ);
+        if (!detail.length) continue;
+        console.log(`\n  ${bras.nom} — ${bande.nom}`);
+        for (const d of detail) {
+          const r = ligne.get(d.id)!;
+          const it = index.get(d.id)!;
+          // Bornes vues par CE bras : sous « + collants », la réf 498 doit
+          // afficher son min réécrit, sinon la ligne contredirait le chiffre.
+          const v = bornesVuesPar(bras, d.id);
+          const plage = d.temps.length > 1 ? `${d.temps[0]}..${d.temps[d.temps.length - 1]}°` : `${d.temps[0]}°`;
+          console.log(
+            `  ${String(r.id).padStart(6)}  ${court(it.cat as string, 12)}${court(r.sous_type, 20)}` +
+              `${String(v.min ?? "—").padStart(5)}${String(v.max ?? "—").padStart(5)}` +
+              `${String(d.occ).padStart(6)}  ` +
+              `${court((declarees.get(d.id) ?? []).join("+") || "aucune", 16)}${court(plage, 10)}${it.name}`
+          );
+          totalRefs += 1;
+        }
+      }
     }
-    console.log(`\n  ${detail.length} référence(s) distincte(s) derrière les occurrences de cette bande.`);
+    console.log(`\n  ${totalRefs} ligne(s) (bras × bande × référence).`);
     console.log(`  Une pièce dont le min est ÉLEVÉ alors qu'elle déclare l'Hiver est le profil`);
     console.log(`  d'une borne mal saisie ; une pièce légère qui ne déclare pas l'Hiver et que le`);
     console.log(`  moteur retient faute de mieux est un trou de catalogue. Ce script ne tranche`);
