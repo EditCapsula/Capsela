@@ -57,3 +57,21 @@ export function missingSuggestionText(missingCats: string[]): string {
   const head = words.slice(0, -1).join(", ");
   return `${majuscule(head)} et ${last} ${verbe} cette tenue.`;
 }
+
+/**
+ * OCCASION ÉLARGIE — signalé le 22/09/2026 : une robe déclarée pour une
+ * occasion habillée était proposée en Cocooning, sans que l'écran dise
+ * pourquoi.
+ *
+ * L'échelle de `poolFor` abandonne l'occasion déclarée quand le barreau qui la
+ * respecte laisserait une catégorie essentielle vide. C'est délibéré — la
+ * garantie « toujours une tenue » — mais c'était silencieux, et une règle que
+ * l'utilisatrice a posée elle-même ne doit pas tomber sans un mot.
+ *
+ * Voix : la phrase décrit ce que la composition a FAIT, jamais ce que le
+ * vestiaire n'aurait pas. Même correction que `missingSuggestionText` le
+ * 31/08 — « il te manque » attribuait le manque à l'utilisatrice.
+ */
+export function occasionElargieText(occasionLabel: string): string {
+  return `Pour ${occasionLabel}, cette tenue élargit au-delà des occasions déclarées sur tes pièces.`;
+}

@@ -12,7 +12,7 @@ import { useCapsela } from "@/lib/store";
 import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
-import { missingSuggestionText } from "@/lib/outfitCopy";
+import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
@@ -271,6 +271,13 @@ export default function TenuesScreen() {
   // bannière + badge distincts de missingText (rien ne manque, la
   // formalité est réduite).
   const formalityDowngraded = state.outfitFormalityDowngraded;
+  // Repli d'occasion déclarée (22/09/2026, signalé : une robe déclarée pour
+  // une occasion habillée proposée en Cocooning) — distinct du repli de
+  // formalité : là, le registre baisse ; ici, c'est une règle posée par
+  // l'utilisatrice elle-même qui a été élargie. Jamais les deux dans la même
+  // phrase. Le libellé vient d'OCCASIONS, jamais réécrit ici.
+  const occasionElargie = state.outfitOccasionRelachee;
+  const occasionLabelCourant = (OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? "").toLowerCase();
   const noCompleteOutfit = state.outfitNoCompleteOutfit;
   // Sans objet en Cocooning (R-B12) : veste/manteau déjà exclus du pool de génération.
   const vesteWithoutBase = state.occasion !== "cocooning" && violatesOuterwearRule(outfitPieces);
@@ -932,6 +939,20 @@ export default function TenuesScreen() {
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
               Ajouter une pièce plus habillée →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {occasionElargie && !noCompleteOutfit && occasionLabelCourant && (
+        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <span className="font-serif italic text-[15px] text-terracotta">✦</span>
+          <div className="flex-1">
+            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
+              {occasionElargieText(occasionLabelCourant)}
+            </div>
+            <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
+              Ajouter une pièce pour cette occasion →
             </button>
           </div>
         </div>
