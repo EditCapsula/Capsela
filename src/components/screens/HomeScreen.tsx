@@ -517,8 +517,52 @@ export default function HomeScreen() {
             {hasOutfit ? outfitQuote : "Une sélection pensée pour toi, ta journée et la météo."}
           </div>
 
+          {/* Carte « Le look du jour » — bloc PUREMENT DÉCORATIF, assumé comme
+              tel (arbitrage du 22/09). La maquette y place un carton papier
+              manuscrit ; il n'existe ni comme donnée ni comme visuel, et rien
+              ne le rend dynamique. Il est donc dessiné en CSS et marqué
+              aria-hidden : il n'ajoute rien au nom accessible du bouton, qui
+              annonce déjà « Voir ma tenue ».
+
+              Italique serif plutôt qu'une police manuscrite : la charte
+              réserve l'italique terracotta aux accents, et importer une fonte
+              pour quatre mots alourdirait un export statique pour un ornement.
+
+              Masqué sous 380 px : à cette largeur la colonne de texte tombe à
+              ~92 px et la card a déjà grandi pour loger une rangée de boutons
+              sur deux lignes. Un ornement de plus y serait à l'étroit, et un
+              ornement à l'étroit n'orne plus rien.
+
+              `mt-auto` le pousse au bas de l'espace libre, juste au-dessus des
+              boutons — là où la maquette le place. */}
+          {avecComposition && (
+            <div
+              aria-hidden="true"
+              className="hidden min-[380px]:block mt-auto"
+              style={{ maxWidth: "42%", transform: "rotate(-3deg)", transformOrigin: "left bottom" }}
+            >
+              <div
+                style={{
+                  display: "inline-block",
+                  background: "#FBF8F3",
+                  borderRadius: 12,
+                  padding: "11px 16px 13px",
+                  boxShadow: "0 5px 14px rgba(29,26,22,.16)",
+                }}
+              >
+                <div className="font-serif italic text-terracotta text-[16px] leading-[1.15] whitespace-nowrap">
+                  Le look du jour
+                </div>
+                <div style={{ width: 30, height: 1.5, background: "#A66950", opacity: 0.55, marginTop: 6, borderRadius: 1 }} />
+              </div>
+            </div>
+          )}
+
           {/* `mt-auto` colle la rangée au bas de la card quand il reste de la
-              place, et la laisse repousser la card quand il n'y en a plus. */}
+              place, et la laisse repousser la card quand il n'y en a plus.
+              Conservé même lorsque la carte décorative porte déjà un mt-auto :
+              sur les largeurs où elle est masquée, c'est lui qui pousse les
+              boutons en bas. */}
           <div className="flex items-center gap-[10px] flex-wrap mt-auto pt-4">
             {hasOutfit && occasionLabel && (
               <div
