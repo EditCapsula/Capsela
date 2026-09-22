@@ -314,7 +314,16 @@ export default function TenuesScreen() {
     const lignes: { cle: string; glyphe: string; texte: string }[] = [];
     if (dressing > 0) lignes.push({ cle: "dressing", glyphe: "◔", texte: `${pieces(dressing)} de ton dressing` });
     if (capsule > 0) lignes.push({ cle: "capsule", glyphe: "⬚", texte: `${pieces(capsule)} de ta capsule` });
-    return lignes.length ? lignes : null;
+    if (!lignes.length) return null;
+    /*
+     * UNE SEULE SOURCE : la phrase s'ouvre (22/09/2026). « Une sélection de
+     * 5 pièces de ta capsule » vaut mieux qu'un décompte sec quand le
+     * dressing est vide — la capsule est une porte d'entrée dans la valeur du
+     * produit, pas un pis-aller. Deux sources : on garde les deux lignes
+     * nues, « une sélection de » répété deux fois se lirait comme un bégaiement.
+     */
+    if (lignes.length === 1) lignes[0] = { ...lignes[0], texte: `Une sélection de ${lignes[0].texte}` };
+    return lignes;
   })();
 
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
@@ -758,8 +767,12 @@ export default function TenuesScreen() {
         </div>
       )}
 
+      {/* Signalé le 22/09 : l'intitulé collait au bas de la card terracotta.
+          Il n'avait aucune marge haute — invisible tant que la card se
+          terminait par un bouton crème détaché de son bord, criant depuis
+          qu'elle descend jusqu'au sien. */}
       {!geoLoading && outfitPieces.length > 0 && (
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[10px]">
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[26px] mb-[10px]">
           Les {outfitPieces.length} pièces
         </div>
       )}
@@ -1000,10 +1013,18 @@ export default function TenuesScreen() {
                 pas dire — la DIMENSION du repli — au lieu de répéter le mot du
                 badge. */}
             <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
-              Pour cette occasion, on te propose un registre plus sobre, composé avec les pièces de {sourceLabel}.
+              Pour cette occasion, Capsela privilégie un registre plus sobre, composé avec les pièces de {sourceLabel}.
             </div>
+            {/* Le lien ouvre le formulaire d'ajout — il dit donc ce qu'il
+                fait. « Voir une version plus habillée » décrirait une action
+                que l'app ne sait pas faire : rejouer un tirage à un palier
+                imposé est possible (formalityOverride existe) mais n'existe
+                pas comme fonctionnalité, et le repli a précisément eu lieu
+                parce qu'aucune tenue de ce palier n'était disponible.
+                « Ajouter une pièce plus habillée » suggérait par ailleurs un
+                achat ; « compléter » décrit le geste réel sans le sous-entendre. */}
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
-              Ajouter une pièce plus habillée →
+              Compléter mon dressing →
             </button>
           </div>
         </div>

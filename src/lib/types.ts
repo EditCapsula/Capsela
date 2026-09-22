@@ -395,4 +395,8 @@ export type Screen =
   | "createLook"
   | "lookDetail"
   | "itemOutfits"
-  | "wardrobePieces";
+  | "wardrobePieces"
+  // Destinations Premium (brief Accueil 22/09/2026) — écrans d'attente
+  // assumés, branchés pour que la carte ne mène pas dans le vide.
+  | "planifier"
+  | "valise";

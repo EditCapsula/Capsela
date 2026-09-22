@@ -393,6 +393,13 @@ function PolaroidPhoto({ photo, slot }: { photo: EditorialPhoto; slot: BoardSlot
 }
 
 export default function HomeScreen() {
+  /**
+   * Avis du jour — local, et volontairement non persisté pour l'instant :
+   * la table `outfit_feedback` est proposée et attend validation. Dès qu'elle
+   * existera, cet état sera alimenté par elle au montage plutôt que remis à
+   * zéro à chaque visite.
+   */
+  const [avisDuJour, setAvisDuJour] = useState<null | "adore" | "pas_pour_moi">(null);
   const { state, geoCity, geoLoading, vestiairePool, weather, actions } = useCapsela();
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
@@ -451,19 +458,35 @@ export default function HomeScreen() {
     const capsule = outfitPieces.filter((it) => isCatalogId(it.id)).length;
     const dressing = total - capsule;
     const pieces = (n: number) => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
-    if (!capsule) return `${pieces(dressing)} de ton dressing`;
-    if (!dressing) return `${pieces(capsule)} de ta capsule`;
+    // Même règle que l'écran Tenue : une source unique s'énonce, deux
+    // sources se comptent. Les deux écrans disent la même chose du même
+    // calcul, il serait absurde qu'ils ne la disent pas pareil.
+    if (!capsule) return `Une sélection de ${pieces(dressing)} de ton dressing`;
+    if (!dressing) return `Une sélection de ${pieces(capsule)} de ta capsule`;
     return `${pieces(dressing)} de ton dressing + ${pieces(capsule)} de ta capsule`;
   })();
 
-  /** Même clé que toggleSaveOutfitLook (store.tsx) — jamais une autre définition de « déjà enregistrée ». */
-  const tenueEnregistree = (() => {
-    if (!hasOutfit) return false;
-    const cle = [...state.outfit].sort((a, b) => a - b).join(",");
-    return state.savedLooks.some(
-      (l) => l.source === "saved" && [...l.pieceIds].sort((a, b) => a - b).join(",") === cle
-    );
-  })();
+  /*
+   * `tenueEnregistree` est retiré le 22/09 au soir : « J'adore » n'appelle
+   * plus toggleSaveOutfitLook. Enregistrer une tenue et l'aimer sont deux
+   * gestes différents — le premier la range dans Mes looks, le second donne
+   * un avis. Les confondre aurait rempli Mes looks de tenues qu'on a
+   * seulement trouvées jolies. L'avis ira dans `outfit_feedback` une fois la
+   * migration passée.
+   */
+  /**
+   * AUCUNE TENUE POSSIBLE — et non « pas encore de tenue ».
+   *
+   * `state.outfit` est vide dans DEUX situations très différentes : pendant
+   * le chargement, avant que l'effet d'amorçage ait tourné, et après une
+   * génération qui n'a rien produit. Afficher « ajoute des pièces » dans le
+   * premier cas accuserait un dressing que personne n'a encore lu.
+   *
+   * `outfitNoCompleteOutfit` n'est posé que par generateOutfitWithFallback,
+   * donc après une tentative réelle : c'est le seul signal qui distingue les
+   * deux. Le vide seul n'en est pas un.
+   */
+  const aucuneTenuePossible = !hasOutfit && state.outfitNoCompleteOutfit;
 
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
@@ -479,6 +502,30 @@ export default function HomeScreen() {
 
   const heroSlots = outfitPieces.some((it) => isOnePieceCat(it.cat)) ? HERO_SLOTS_ONEPIECE : HERO_SLOTS_STANDARD;
   const heroPieces = selectHomePieces(outfitPieces);
+  /**
+   * LA ZONE DE COMPOSITION S'ARRÊTE OÙ LES PIÈCES S'ARRÊTENT.
+   *
+   * Les emplacements sont des pourcentages, et le plus bas d'entre eux ne
+   * descend pas jusqu'en bas : sur la table standard, le bas s'achève à 88 %.
+   * Les 12 % restants étaient invisibles tant que la rangée d'actions les
+   * recouvrait. Depuis qu'elle a sa propre rangée (22/09), ils forment une
+   * bande de terracotta vide sous la composition — signalé le soir même.
+   *
+   * L'étendue est LUE dans la table active, jamais écrite en dur : la zone
+   * est raccourcie d'autant, et les emplacements renormalisés du même
+   * facteur. Les pièces gardent donc exactement leur taille et leurs
+   * positions relatives ; seule la zone cesse de dépasser sous elles. Si une
+   * table d'emplacements change un jour, le calcul suit.
+   */
+  const etenduePct = Math.max(...Object.values(heroSlots).map((s) => s.top + s.h));
+  const facteurZone = 100 / etenduePct;
+  const heroSlotsAjustes = Object.fromEntries(
+    Object.entries(heroSlots).map(([role, s]) => [role, { ...s, top: s.top * facteurZone, h: s.h * facteurZone }])
+  ) as typeof heroSlots;
+  /** Le ratio 1/1.28 de la maquette, ramené à l'étendue réelle des pièces. */
+  const zoneRatioPct = 78.125 * (etenduePct / 100);
+
+
   /** La card ne prend la géométrie de la maquette que si elle a vraiment une composition à montrer. */
   const avecComposition = hasOutfit && heroPieces.length > 0;
 
@@ -543,23 +590,44 @@ export default function HomeScreen() {
       >
         {avecComposition && (
           <>
-            {/* Cale-ratio : 1 / 1.28 = 78,125 % de la largeur, plafonné à
-                330 px et jamais sous 275. Vide et invisible. */}
+            {/* LA ZONE DE COMPOSITION GARDE SON RATIO, quoi qu'il arrive au
+                texte. Cale-ratio et couche des pièces sont le MÊME élément :
+                1 / 1.28 = 78,125 % de la largeur, plafonné à 330 px, jamais
+                sous 275.
+
+                Signalé le 22/09 au soir, et c'est moi qui l'avais cassé le
+                jour même. En passant la card à deux rangées, la couche des
+                pièces est devenue `inset-0` de la rangée haute — laquelle
+                grandit avec le texte. Les emplacements étant définis en
+                POURCENTAGES de cette zone, une phrase météo de quatre lignes
+                étirait toute la composition : chaussures descendues sur la
+                jupe, sac remonté, terracotta vide en bas à gauche. Le ratio
+                de la maquette n'était plus respecté dès que le texte
+                dépassait.
+
+                Les lier rend la chose impossible : la zone des pièces ne
+                dépend plus que de la largeur de la card. Si le texte a besoin
+                de plus de place, la rangée grandit SOUS la composition, qui
+                ne bouge pas.
+
+                `zIndex: 0` explicite : les enfants s'empilent entre 1 et 4 et
+                doivent rester sous le texte, en z-10. */}
             <div
               aria-hidden="true"
-              className="min-h-[275px]"
-              style={{ gridArea: "pile", paddingTop: "78.125%", maxHeight: 330 }}
-            />
-            {/* La couche des pièces s'arrête AU-DESSUS de la rangée badge +
-                bouton (22 px de padding + 44 px de hauteur), et porte un
-                z-index 0 explicite pour que ses enfants, qui s'empilent entre
-                1 et 4, restent confinés sous le texte en z-10. Sans ces deux
-                bornes, les chaussures passaient par-dessus le badge — lisible
-                à 390 px, illisible à 320 où la card se resserre. */}
-            <div className="absolute inset-0" style={{ zIndex: 0 }} aria-hidden="true">
-              {heroPieces.map((it) => (
-                <HeroPiece key={"hero-" + it.id} item={it} slot={heroSlots[homeRoleOf(it.cat)]} eager />
-              ))}
+              className="relative self-start w-full"
+              style={{
+                gridArea: "pile",
+                paddingTop: `${zoneRatioPct}%`,
+                minHeight: 275 * (etenduePct / 100),
+                maxHeight: 330 * (etenduePct / 100),
+                zIndex: 0,
+              }}
+            >
+              <div className="absolute inset-0">
+                {heroPieces.map((it) => (
+                  <HeroPiece key={"hero-" + it.id} item={it} slot={heroSlotsAjustes[homeRoleOf(it.cat)]} eager />
+                ))}
+              </div>
             </div>
           </>
         )}
@@ -572,7 +640,11 @@ export default function HomeScreen() {
             className="font-serif text-[20px] min-[380px]:text-[26px] text-cream leading-[1.14]"
             style={avecComposition ? { maxWidth: "42%" } : undefined}
           >
-            {hasOutfit ? "Ta tenue est prête" : "Découvre ta tenue du jour"}
+            {hasOutfit
+              ? "Ta tenue est prête"
+              : aucuneTenuePossible
+                ? "On prépare ta première tenue"
+                : "Découvre ta tenue du jour"}
           </div>
           <div
             className="text-[12.5px] mt-[8px] leading-[1.35]"
@@ -588,7 +660,13 @@ export default function HomeScreen() {
                 {iconeMeteo}
               </span>
             )}
-            {hasOutfit ? outfitQuote : "Une sélection pensée pour toi, ta journée et la météo."}
+            {hasOutfit
+              ? outfitQuote
+              : aucuneTenuePossible
+                ? dressingVide
+                  ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
+                  : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."
+                : "Une sélection pensée pour toi, ta journée et la météo."}
           </div>
 
           {/* PROVENANCE — la fonction pédagogique du brief : faire comprendre
@@ -621,56 +699,96 @@ export default function HomeScreen() {
             puisque la première rangée vaut 1fr. Plus aucune distance au bas de
             la card n'est écrite quelque part. */}
         <div className="relative z-10 flex flex-col" style={{ gridArea: "actions", padding: "0 22px 22px" }}>
-          <div className="flex items-center gap-[10px] flex-wrap pt-4">
-            {hasOutfit && occasionLabel && (
-              <div
-                className="inline-flex items-center text-[10px] tracking-[.08em] uppercase"
-                style={{ background: "rgba(243,238,229,.24)", color: "#F3EEE5", borderRadius: 100, padding: "0 16px", minHeight: 44 }}
+          {/* L'OCCASION SUR SA PROPRE LIGNE, à gauche (demandé le 22/09 au
+              soir). Elle partageait sa ligne avec le CTA, qui se retrouvait
+              donc poussé à droite sur une demi-largeur : le bouton principal
+              de la page était le plus étroit de ses éléments. Elle redevient
+              ce qu'elle est — une étiquette de contexte — et cesse de
+              disputer la place à l'action. */}
+          {hasOutfit && occasionLabel && (
+            <div className="pt-[14px]">
+              <span
+                className="inline-flex items-center uppercase whitespace-nowrap"
+                style={{
+                  fontSize: 9.5,
+                  letterSpacing: ".08em",
+                  background: "rgba(243,238,229,.22)",
+                  color: "#FBF3EA",
+                  borderRadius: 100,
+                  padding: "8px 14px",
+                }}
               >
                 {occasionLabel}
-              </div>
-            )}
-            {/* 44 px de haut minimum — cible tactile, et le bouton principal
-                de la page ne peut pas être le plus petit élément cliquable. */}
-            <button
-              onClick={actions.goTenues}
-              className="inline-flex items-center justify-center bg-cream text-ink rounded-full px-5 text-[13px] tracking-[.04em] cursor-pointer"
-              style={{ minHeight: 44 }}
-            >
-              {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
-            </button>
-          </div>
-
-          {/* FEEDBACK — deux signaux, aucune table nouvelle.
-              « J'adore » appelle toggleSaveOutfitLook (saved_looks, migration
-              0025) et « Pas aujourd'hui » la régénération : les deux
-              existaient déjà dans l'écran Tenue sous les noms « Enregistrer »
-              et « Autre tenue ». Rien n'est créé en base, et le signal capté
-              est exactement celui que l'app savait déjà capter.
-
-              Sous le CTA et en petit : le brief demande qu'il ne pousse pas à
-              agir avant « Voir ma tenue ». */}
-          {hasOutfit && (
-            <div className="flex items-center gap-[14px] flex-wrap mt-[12px]">
-              <span className="text-[11px]" style={{ color: "rgba(243,238,229,.6)" }}>
-                Cette tenue te plaît ?
               </span>
-              <button
-                onClick={actions.toggleSaveOutfitLook}
-                aria-pressed={tenueEnregistree}
-                className="inline-flex items-center gap-[5px] text-[11.5px] cursor-pointer"
-                style={{ color: "rgba(243,238,229,.86)", minHeight: 32 }}
-              >
-                <span aria-hidden="true">{tenueEnregistree ? "♥" : "♡"}</span>
-                {tenueEnregistree ? "Enregistrée" : "J'adore"}
-              </button>
-              <button
-                onClick={actions.regenOutfit}
-                className="inline-flex items-center gap-[5px] text-[11.5px] cursor-pointer"
-                style={{ color: "rgba(243,238,229,.86)", minHeight: 32 }}
-              >
-                <span aria-hidden="true">×</span> Pas aujourd&apos;hui
-              </button>
+            </div>
+          )}
+
+          {/* LE CTA PREND TOUTE LA LARGEUR, 50 px. C'est la seule action
+              pleine de la card ; tout le reste y est translucide ou discret,
+              et la hiérarchie passe par là plutôt que par une couleur. */}
+          {/* PAS DE CTA MORT (§9.3). Quand le moteur n'a rien produit,
+              « Voir ma tenue » mènerait à un écran vide : le bouton conduit
+              alors au dressing, qui est l'endroit où la situation se
+              débloque. Vers l'ajout direct si le dressing est vide, vers sa
+              liste sinon — un même libellé pour deux situations en rendrait
+              une des deux fausse. */}
+          <button
+            onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
+            className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full text-[13.5px] tracking-[.04em] cursor-pointer"
+            style={{ minHeight: 50 }}
+          >
+            {hasOutfit
+              ? "Voir ma tenue →"
+              : aucuneTenuePossible
+                ? dressingVide
+                  ? "Ajouter mes pièces →"
+                  : "Voir mon dressing →"
+                : "Découvrir ma tenue →"}
+          </button>
+
+          {/* FEEDBACK — deux boutons DISCRETS, jamais concurrents du CTA :
+              translucides, sous lui, mais à 44 px comme toute cible
+              tactile (§7). Ils étaient à 38 : la discrétion doit venir de la
+              couleur et du poids, jamais d'une cible trop petite pour le
+              pouce.
+
+              Ils n'écrivent rien pour l'instant. Le brief interdit de créer
+              une table sans validation ; la table `outfit_feedback` est
+              proposée et attend son exécution. Tant qu'elle n'existe pas,
+              brancher une écriture ferait échouer l'appel en production —
+              donc la réponse est locale, et la persistance viendra quand la
+              migration sera passée. C'est dit ici pour que personne ne prenne
+              ce silence pour un oubli.
+
+              « Pas pour moi » ne régénère PAS la tenue : le brief l'exige, et
+              c'est l'inverse de ce que j'avais branché quelques heures plus
+              tôt. Régénérer ferait de ce bouton une action, pas un avis. */}
+          {hasOutfit && (
+            <div className="mt-[13px]" aria-live="polite">
+              {avisDuJour ? (
+                <div className="font-serif italic text-[13px]" style={{ color: "#F0DDCF" }}>
+                  {avisDuJour === "adore"
+                    ? "Noté — on garde cette direction."
+                    : "Pas de souci, on t'en propose une autre demain."}
+                </div>
+              ) : (
+                <div className="flex items-center gap-[8px] flex-wrap">
+                  <button
+                    onClick={() => setAvisDuJour("adore")}
+                    className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
+                    style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
+                  >
+                    <span aria-hidden="true">♡</span> J&apos;adore cette tenue
+                  </button>
+                  <button
+                    onClick={() => setAvisDuJour("pas_pour_moi")}
+                    className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
+                    style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
+                  >
+                    <span aria-hidden="true">✕</span> Pas pour moi
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -706,7 +824,7 @@ export default function HomeScreen() {
             <div className="px-[14px] pt-[12px] pb-[14px]">
               <div className="font-serif text-[19px] text-ink leading-[1.18]">Dressing</div>
               <div className="text-[11.5px] text-muted leading-[1.4] mt-[6px]">
-                {dressingVide ? "Ajoute tes pièces pour créer tes premiers looks." : "Tes pièces, tes looks, ton vestiaire."}
+                {dressingVide ? "Ajoute tes pièces pour créer tes premiers looks." : "Tes pièces, ton vestiaire."}
               </div>
               <div className="text-[12px] text-terracotta mt-[9px]">
                 {dressingVide
@@ -735,16 +853,20 @@ export default function HomeScreen() {
               </div>
               {/* Effectif toujours lu depuis la capsule calculée, jamais écrit
                   en dur — c'est la même valeur qu'affiche l'écran Capsule. */}
-              <div className="text-[11.5px] text-muted mt-[5px]">
-                Actuellement {capsule.length} {capsule.length <= 1 ? "pièce" : "pièces"}
-              </div>
-              <div className="text-[11.5px] text-muted leading-[1.4] mt-[5px]">
-                {/* Le rôle de la capsule, dit sans jamais laisser entendre
-                    qu'elle est la source des tenues : le dressing est
-                    prioritaire, elle complète. */}
+              {/* Le rôle de la capsule, dit sans jamais laisser entendre
+                  qu'elle est la source des tenues : le dressing est
+                  prioritaire, elle complète. */}
+              <div className="text-[11.5px] text-muted leading-[1.4] mt-[6px]">
                 {capsuleStyleLabel
-                  ? `Une sélection virtuelle pensée pour ton style ${capsuleStyleLabel}, pour compléter ton dressing quand il en a besoin.`
-                  : "Une sélection virtuelle pensée pour ton style, pour compléter ton dressing quand il en a besoin."}
+                  ? `Une sélection virtuelle pensée pour ton style ${capsuleStyleLabel}.`
+                  : "Une sélection virtuelle pensée pour ton style."}
+              </div>
+              {/* Le total, et rien d'autre : ni « N / 40 » ni jauge. Le
+                  plafond est une contrainte interne du moteur, et la capsule
+                  est en lecture seule — une jauge laisserait croire qu'il
+                  faut la compléter. Arbitré le 22/09. */}
+              <div className="text-[11.5px] text-muted mt-[6px]">
+                {capsule.length} {capsule.length <= 1 ? "pièce" : "pièces"}
               </div>
               <div className="text-[12px] text-terracotta mt-[9px]">Découvrir →</div>
             </div>
@@ -769,10 +891,54 @@ export default function HomeScreen() {
           </div>
           <div className="min-w-0 flex flex-col justify-center" style={{ padding: "18px 18px 18px 10px" }}>
             <div className="font-serif text-[19px] text-ink leading-[1.18]">Journal des tenues</div>
-            <div className="text-[11.5px] text-muted leading-[1.4] mt-[6px]">Garde une trace de tes tenues au fil des jours.</div>
+            <div className="text-[11.5px] text-muted leading-[1.4] mt-[6px]">Garde une trace de tes looks, et regarde ton style évoluer.</div>
             <div className="text-[12px] text-terracotta mt-[8px]">Voir le journal →</div>
           </div>
         </button>
+
+        {/* PRÉPARE LA SUITE — entrée Premium, en fin de rail (décision
+            produit du brief : discrète, jamais un bandeau sous le héros).
+
+            Les deux destinations existent vraiment (PlanifierScreen,
+            ValiseScreen) et affichent un état d'attente honnête. Le brief
+            proposait une « route placeholder » ; arbitré le 22/09 : un lien
+            mort coûte plus en confiance qu'il ne rapporte en promesse.
+
+            Aucun flag d'abonnement n'existe dans l'app — l'audit l'a
+            signalé. La carte est donc visible pour tout le monde et il n'y a
+            pas de paywall à ouvrir : quand l'abonnement existera, c'est ici
+            que le test se posera. */}
+        <div className="bg-warm-bg border border-sand-border rounded-[20px] px-4 py-[16px]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-serif text-[17px] text-ink leading-[1.2]">Prépare la suite</div>
+              <div className="text-[11.5px] text-muted leading-[1.4] mt-[5px]">
+                Une tenue pour un jour précis, ou une valise pour ton prochain séjour.
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-[4px] rounded-full bg-card px-[9px] py-[4px] text-[9.5px] tracking-[.1em] uppercase text-terracotta flex-shrink-0 whitespace-nowrap">
+              <span aria-hidden="true">✦</span> Premium
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-[10px] mt-[13px]" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+            <button
+              onClick={actions.goPlanifier}
+              className="min-w-0 text-left bg-card border border-border rounded-[14px] px-[12px] py-[11px] cursor-pointer flex flex-col justify-between"
+              style={{ minHeight: 64 }}
+            >
+              <span aria-hidden="true" className="text-[15px] text-terracotta leading-none">▤</span>
+              <span className="text-[12px] text-ink leading-[1.3] mt-[9px]">Planifier une tenue</span>
+            </button>
+            <button
+              onClick={actions.goValise}
+              className="min-w-0 text-left bg-card border border-border rounded-[14px] px-[12px] py-[11px] cursor-pointer flex flex-col justify-between"
+              style={{ minHeight: 64 }}
+            >
+              <span aria-hidden="true" className="text-[15px] text-terracotta leading-none">▭</span>
+              <span className="text-[12px] text-ink leading-[1.3] mt-[9px]">Préparer une valise</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

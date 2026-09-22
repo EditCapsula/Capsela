@@ -113,7 +113,14 @@ describe("libellés — l'écran rend la décision partagée, sans la contourner
     const rendu = source().replace(/\{\/\*[\s\S]*?\*\/\}/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
     expect(rendu).not.toContain("Ta capsule n&apos;a pas de tenue suffisamment habillée");
     expect(rendu).not.toContain("l&apos;alternative la");
-    expect(rendu).toContain("Pour cette occasion, on te propose un registre plus sobre");
+    // Reformulé le 22/09/2026 : « on te propose » → « Capsela privilégie »,
+    // plus éditorial. La chaîne reste épinglée — c'est une garde de wording,
+    // pas un test de rendu, et la laisser floue lui ferait perdre son objet.
+    expect(rendu).toContain("Pour cette occasion, Capsela privilégie un registre plus sobre");
+    // Le lien ouvre le formulaire d'ajout. « Ajouter une pièce plus habillée »
+    // suggérait un achat ; « Compléter mon dressing » décrit le geste réel.
+    expect(rendu).not.toContain("Ajouter une pièce plus habillée");
+    expect(rendu).toContain("Compléter mon dressing");
     // Volontairement NON couvert ici : l'état vide (`noCompleteOutfit`) porte
     // les mêmes tournures — « Tes pièces actuelles ne permettent pas encore de
     // composer une tenue suffisamment habillée », « Dressing insuffisant ».
