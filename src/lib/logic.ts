@@ -1,4 +1,4 @@
-import type { CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
+import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
@@ -59,6 +59,27 @@ export function violatesOuterwearRule(pieces: Item[]): boolean {
 }
 
 /**
+ * R-B11 — LES ACCESSOIRES QUI ONT UNE FONCTION SPORTIVE, nommés un par un.
+ *
+ * Une liste blanche et non une liste d'exclusions : un type ajouté plus tard
+ * à `AccessoireType` doit être refusé en Sport tant que personne ne l'a
+ * instruit, et non autorisé par défaut. C'est précisément l'inverse qui s'est
+ * produit avec « Chapeau », entré en Sport sans décision.
+ *
+ * « Écharpe » et « Collants » ne figuraient dans aucune décision : ils
+ * passaient par l'effet de bord de la liste d'exclusions. Ils sont conservés
+ * ici pour ne changer que ce qui a été signalé — leur sort reste à arbitrer.
+ */
+const ACCESSOIRES_SPORT: ReadonlySet<AccessoireType> = new Set<AccessoireType>([
+  "Casquette",
+  "Lunettes",
+  "Chaussettes hautes",
+  "Gourde",
+  "Écharpe",
+  "Collants",
+]);
+
+/**
  * R-B11 (Sport, liste blanche stricte) + R-B12/R-B13/R-B14 (Cocooning,
  * exclusions symétriques) — jamais relâchées, quelle que soit la source du
  * pool. Extrait de generateOutfit pour être réutilisé tel quel par le
@@ -82,6 +103,12 @@ export function applySportCocooningFilter(items: Item[], occasion: OccasionKey, 
     // Correctif 22/08/2026 (signalé : ceinture proposée en Sport) — ceinture
     // et foulard n'ont aucune fonction sportive, contrairement à casquette/
     // lunettes/chaussettes hautes qui restent autorisées.
+    // Correctif 22/09/2026 (signalé : chapeau fedora proposé en Sport) — ce
+    // commentaire annonçait une liste blanche, le code écrivait une liste
+    // noire de deux types. Tout accessoire hors ceinture et foulard passait
+    // donc, y compris un fedora, et chaque type ajouté à AccessoireType
+    // serait entré en Sport sans que personne ne l'ait décidé. La liste est
+    // désormais explicite : ce qui n'y figure pas est refusé.
     // Correctif 22/08/2026 (signalé : "pour le sport ça doit toujours être
     // un sac de sport") — plus d'exception cabas/formalité 0 : seul le type
     // dédié "Sac de sport" est éligible, jamais relâché même si ça vide la
@@ -90,7 +117,10 @@ export function applySportCocooningFilter(items: Item[], occasion: OccasionKey, 
       if (i.cat === "chaussures") return formalityOf(i) === 0;
       if (i.cat === "sac") return i.sacType === "Sac de sport";
       if (i.cat === "bijou") return false;
-      if (i.cat === "accessoire") return i.accessoireType !== "Ceinture" && i.accessoireType !== "Foulard";
+      // Type non reconnu = refusé, comme tout ce qui n'est pas nommé dans la
+      // liste. C'est le sens d'une liste blanche, et le contraire du défaut
+      // qui laissait passer le fedora.
+      if (i.cat === "accessoire") return i.accessoireType != null && ACCESSOIRES_SPORT.has(i.accessoireType);
       return formalityOf(i) === 0;
     });
   }
@@ -1403,7 +1433,16 @@ export function swapOutfitPiece(
 ): number[] {
   const catGroup: CategoryKey[] =
     BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
-  let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId);
+  // Signalé le 22/09/2026 : échanger un accessoire empilait « Gourde de sport »
+  // trois fois dans la même tenue. `catGroup` regroupe accessoire/bijou/sac,
+  // donc une tenue en porte plusieurs à la fois — et seule la pièce échangée
+  // était écartée des candidates, jamais ses voisines. Le remplaçant pouvait
+  // donc être une pièce DÉJÀ portée, et `outfit` est une liste d'identifiants
+  // que l'écran rend telle quelle : deux fois le même identifiant, deux
+  // lignes. Écarter tout ce que la tenue porte déjà est la seule garantie qui
+  // tienne quelle que soit la catégorie.
+  const dejaPortees = new Set(outfitItems.filter((i) => i.id !== pieceId).map((i) => i.id));
+  let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId && !dejaPortees.has(i.id));
   // Priorité au réel sur le groupe accessoire/bijou/sac — même correctif
   // 22/08/2026 que dans generateOutfit (cf. son commentaire) : pas
   // seulement à la génération automatique, aussi lors d'un remplacement manuel.
