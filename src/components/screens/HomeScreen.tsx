@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import { OCC_LABELS } from "@/lib/data";
+import { OCC_LABELS, WEATHER_ICONS } from "@/lib/data";
+import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { explainRecommendation } from "@/lib/logic";
@@ -424,6 +425,46 @@ export default function HomeScreen() {
   const capsule = computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
   const capsuleStyleLabel = styleLabel(profile.styles[0], profile.gender);
 
+  /**
+   * Icône météo — lue en UN point, depuis la seule table de l'app
+   * (WEATHER_ICONS). Arbitré le 22/09 : on garde les emoji pour l'instant, et
+   * ce point unique est ce qui rendra un passage aux glyphes dessinés
+   * réversible en une table plutôt qu'en une chasse à travers l'écran.
+   * La source est `geoCity.label`, la condition COURANTE rendue par
+   * l'endpoint /weather d'OpenWeather — pas une prévision, pas une moyenne.
+   */
+  const iconeMeteo = WEATHER_ICONS[geoCity.label];
+
+  /**
+   * PROVENANCE DES PIÈCES — d'où vient la tenue du jour.
+   *
+   * `isCatalogId` sépare une pièce réellement possédée d'une suggestion de
+   * la capsule : la même séparation que l'écran Tenue, jamais un second
+   * calcul. Le dressing passe toujours en premier, même quand il n'apporte
+   * qu'une pièce — c'est la hiérarchie du produit, pas un tri par quantité.
+   *
+   * Rien n'est dit quand il n'y a pas de tenue, et jamais « 0 pièce ».
+   */
+  const provenanceTexte = (() => {
+    const total = outfitPieces.length;
+    if (!total) return null;
+    const capsule = outfitPieces.filter((it) => isCatalogId(it.id)).length;
+    const dressing = total - capsule;
+    const pieces = (n: number) => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
+    if (!capsule) return `${pieces(dressing)} de ton dressing`;
+    if (!dressing) return `${pieces(capsule)} de ta capsule`;
+    return `${pieces(dressing)} de ton dressing + ${pieces(capsule)} de ta capsule`;
+  })();
+
+  /** Même clé que toggleSaveOutfitLook (store.tsx) — jamais une autre définition de « déjà enregistrée ». */
+  const tenueEnregistree = (() => {
+    if (!hasOutfit) return false;
+    const cle = [...state.outfit].sort((a, b) => a - b).join(",");
+    return state.savedLooks.some(
+      (l) => l.source === "saved" && [...l.pieceIds].sort((a, b) => a - b).join(",") === cle
+    );
+  })();
+
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
   const dressingPieces = selectBoardPieces(state.items, 3);
@@ -472,10 +513,33 @@ export default function HomeScreen() {
           Sans tenue, la card reste en hauteur automatique : imposer le ratio à
           un état sans image produirait 330 px de terracotta vide, ce qui n'est
           pas éditorial mais creux. */}
-      <button
-        onClick={actions.goTenues}
-        className="mx-6 mt-6 bg-terracotta active:bg-terracotta-hover rounded-[24px] cursor-pointer relative overflow-hidden text-left grid"
-        style={{ width: "calc(100% - 48px)", gridTemplateAreas: '"pile"', gridTemplateColumns: "1fr" }}
+      {/* LA CARD N'EST PLUS UN BOUTON (22/09/2026). Elle en était un, donc
+          tout y était cliquable — pratique tant qu'elle ne portait qu'une
+          action. Y loger le feedback imposait d'imbriquer des boutons dans un
+          bouton, ce que le HTML interdit. La card devient un conteneur, et
+          « Voir ma tenue » un vrai bouton.
+
+          Gain accessoire : le nom accessible de l'ancien bouton concaténait
+          tout le texte de la card — titre, météo, occasion, libellé — et se
+          lisait d'un bloc. Chaque action porte maintenant le sien. */}
+      <div
+        className="mx-6 mt-6 bg-terracotta rounded-[24px] relative overflow-hidden text-left grid"
+        style={{
+          width: "calc(100% - 48px)",
+          // DEUX RANGÉES, et c'est un correctif (22/09/2026). La card n'en
+          // avait qu'une : la couche des pièces s'y arrêtait à une distance
+          // ÉCRITE EN DUR du bas (66 px = 22 de padding + 44 de bouton).
+          // Ajouter la ligne de feedback a fait grandir la zone basse, la
+          // borne est devenue fausse, et à 320 px les chaussons repassaient
+          // par-dessus le badge « Travail / Bureau » — exactement le défaut
+          // corrigé le 21/09, revenu par une autre porte.
+          // Les pièces vivent maintenant dans la rangée « pile », les actions
+          // dans « actions » : aucune distance à tenir à jour, et les deux ne
+          // peuvent plus se rencontrer.
+          gridTemplateAreas: '"pile" "actions"',
+          gridTemplateColumns: "1fr",
+          gridTemplateRows: "1fr auto",
+        }}
       >
         {avecComposition && (
           <>
@@ -492,7 +556,7 @@ export default function HomeScreen() {
                 1 et 4, restent confinés sous le texte en z-10. Sans ces deux
                 bornes, les chaussures passaient par-dessus le badge — lisible
                 à 390 px, illisible à 320 où la card se resserre. */}
-            <div className="absolute left-0 right-0 top-0" style={{ bottom: 66, zIndex: 0 }} aria-hidden="true">
+            <div className="absolute inset-0" style={{ zIndex: 0 }} aria-hidden="true">
               {heroPieces.map((it) => (
                 <HeroPiece key={"hero-" + it.id} item={it} slot={heroSlots[homeRoleOf(it.cat)]} eager />
               ))}
@@ -514,56 +578,50 @@ export default function HomeScreen() {
             className="text-[12.5px] mt-[8px] leading-[1.35]"
             style={{ color: "rgba(243,238,229,.84)", maxWidth: avecComposition ? "38%" : 230 }}
           >
+            {/* L'icône vient de WEATHER_ICONS, la seule table de l'app, lue
+                en UN point pour qu'un passage aux glyphes dessinés reste un
+                changement de table et non une chasse à travers l'écran.
+                Jamais affichée tant que la météo n'est pas résolue : une
+                icône par défaut serait une condition inventée. */}
+            {hasOutfit && !geoLoading && iconeMeteo && (
+              <span aria-hidden="true" className="mr-[5px]">
+                {iconeMeteo}
+              </span>
+            )}
             {hasOutfit ? outfitQuote : "Une sélection pensée pour toi, ta journée et la météo."}
           </div>
 
-          {/* Carte « Le look du jour » — bloc PUREMENT DÉCORATIF, assumé comme
-              tel (arbitrage du 22/09). La maquette y place un carton papier
-              manuscrit ; il n'existe ni comme donnée ni comme visuel, et rien
-              ne le rend dynamique. Il est donc dessiné en CSS et marqué
-              aria-hidden : il n'ajoute rien au nom accessible du bouton, qui
-              annonce déjà « Voir ma tenue ».
-
-              Italique serif plutôt qu'une police manuscrite : la charte
-              réserve l'italique terracotta aux accents, et importer une fonte
-              pour quatre mots alourdirait un export statique pour un ornement.
-
-              Masqué sous 380 px : à cette largeur la colonne de texte tombe à
-              ~92 px et la card a déjà grandi pour loger une rangée de boutons
-              sur deux lignes. Un ornement de plus y serait à l'étroit, et un
-              ornement à l'étroit n'orne plus rien.
-
-              `mt-auto` le pousse au bas de l'espace libre, juste au-dessus des
-              boutons — là où la maquette le place. */}
-          {avecComposition && (
+          {/* PROVENANCE — la fonction pédagogique du brief : faire comprendre
+              que Capsela part de ce qu'on possède et complète si nécessaire.
+              Comptée depuis la tenue réelle (isCatalogId), jamais écrite en
+              dur, et absente quand il n'y a pas de tenue. Volontairement plus
+              discrète que la phrase météo : elle explique, elle n'annonce
+              pas. */}
+          {provenanceTexte && (
             <div
-              aria-hidden="true"
-              className="hidden min-[380px]:block mt-auto"
-              style={{ maxWidth: "42%", transform: "rotate(-3deg)", transformOrigin: "left bottom" }}
+              className="text-[11px] mt-[6px] leading-[1.35]"
+              style={{ color: "rgba(243,238,229,.62)", maxWidth: avecComposition ? "42%" : 240 }}
             >
-              <div
-                style={{
-                  display: "inline-block",
-                  background: "#FBF8F3",
-                  borderRadius: 12,
-                  padding: "11px 16px 13px",
-                  boxShadow: "0 5px 14px rgba(29,26,22,.16)",
-                }}
-              >
-                <div className="font-serif italic text-terracotta text-[16px] leading-[1.15] whitespace-nowrap">
-                  Le look du jour
-                </div>
-                <div style={{ width: 30, height: 1.5, background: "#A66950", opacity: 0.55, marginTop: 6, borderRadius: 1 }} />
-              </div>
+              {provenanceTexte}
             </div>
           )}
 
-          {/* `mt-auto` colle la rangée au bas de la card quand il reste de la
-              place, et la laisse repousser la card quand il n'y en a plus.
-              Conservé même lorsque la carte décorative porte déjà un mt-auto :
-              sur les largeurs où elle est masquée, c'est lui qui pousse les
-              boutons en bas. */}
-          <div className="flex items-center gap-[10px] flex-wrap mt-auto pt-4">
+          {/* Le carton décoratif « Le look du jour » est retiré le
+              22/09/2026, sur arbitrage. Il occupait la place où vient la
+              ligne de feedback, et il aurait formé un troisième élément
+              d'allure cliquable dans une card censée n'en porter qu'une. Il
+              n'existait ni comme donnée ni comme visuel : rien ne se perd
+              qu'un ornement. */}
+
+        </div>
+
+        {/* LA BANDE D'ACTIONS — sa propre rangée de grille. Elle prend la
+            hauteur qu'il lui faut, badge et bouton sur une ou deux lignes
+            selon la largeur, et la composition au-dessus s'ajuste d'elle-même
+            puisque la première rangée vaut 1fr. Plus aucune distance au bas de
+            la card n'est écrite quelque part. */}
+        <div className="relative z-10 flex flex-col" style={{ gridArea: "actions", padding: "0 22px 22px" }}>
+          <div className="flex items-center gap-[10px] flex-wrap pt-4">
             {hasOutfit && occasionLabel && (
               <div
                 className="inline-flex items-center text-[10px] tracking-[.08em] uppercase"
@@ -574,15 +632,49 @@ export default function HomeScreen() {
             )}
             {/* 44 px de haut minimum — cible tactile, et le bouton principal
                 de la page ne peut pas être le plus petit élément cliquable. */}
-            <div
-              className="inline-flex items-center justify-center bg-cream text-ink rounded-full px-5 text-[13px] tracking-[.04em]"
+            <button
+              onClick={actions.goTenues}
+              className="inline-flex items-center justify-center bg-cream text-ink rounded-full px-5 text-[13px] tracking-[.04em] cursor-pointer"
               style={{ minHeight: 44 }}
             >
               {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
-            </div>
+            </button>
           </div>
+
+          {/* FEEDBACK — deux signaux, aucune table nouvelle.
+              « J'adore » appelle toggleSaveOutfitLook (saved_looks, migration
+              0025) et « Pas aujourd'hui » la régénération : les deux
+              existaient déjà dans l'écran Tenue sous les noms « Enregistrer »
+              et « Autre tenue ». Rien n'est créé en base, et le signal capté
+              est exactement celui que l'app savait déjà capter.
+
+              Sous le CTA et en petit : le brief demande qu'il ne pousse pas à
+              agir avant « Voir ma tenue ». */}
+          {hasOutfit && (
+            <div className="flex items-center gap-[14px] flex-wrap mt-[12px]">
+              <span className="text-[11px]" style={{ color: "rgba(243,238,229,.6)" }}>
+                Cette tenue te plaît ?
+              </span>
+              <button
+                onClick={actions.toggleSaveOutfitLook}
+                aria-pressed={tenueEnregistree}
+                className="inline-flex items-center gap-[5px] text-[11.5px] cursor-pointer"
+                style={{ color: "rgba(243,238,229,.86)", minHeight: 32 }}
+              >
+                <span aria-hidden="true">{tenueEnregistree ? "♥" : "♡"}</span>
+                {tenueEnregistree ? "Enregistrée" : "J'adore"}
+              </button>
+              <button
+                onClick={actions.regenOutfit}
+                className="inline-flex items-center gap-[5px] text-[11.5px] cursor-pointer"
+                style={{ color: "rgba(243,238,229,.86)", minHeight: 32 }}
+              >
+                <span aria-hidden="true">×</span> Pas aujourd&apos;hui
+              </button>
+            </div>
+          )}
         </div>
-      </button>
+      </div>
 
       <div className="flex items-center justify-between mx-6 mt-6 mb-3">
         <span className="text-[11px] tracking-[.16em] uppercase text-muted">Explore L&apos;édit Capsela</span>
@@ -599,7 +691,7 @@ export default function HomeScreen() {
           <button
             onClick={dressingVide ? actions.openAdd : actions.goWardrobe}
             className="min-w-0 text-left cursor-pointer rounded-[22px] border border-border overflow-hidden flex flex-col box-border min-h-[300px]"
-            style={{ background: "linear-gradient(165deg, #F6F0E6 0%, #EEE1CE 100%)" }}
+            style={{ background: "#F2E9DA" }}
           >
             {/* Zone visuelle ≈ 55 % de la hauteur de la card (165 px sur 300).
                 Même hauteur dans les deux états : le passage de la planche
@@ -632,7 +724,7 @@ export default function HomeScreen() {
           <button
             onClick={actions.goCapsule}
             className="min-w-0 text-left cursor-pointer rounded-[22px] border border-border overflow-hidden flex flex-col box-border min-h-[300px]"
-            style={{ background: "linear-gradient(165deg, #F0E7D9 0%, #E5D6BF 100%)" }}
+            style={{ background: "#EBDFCC" }}
           >
             <div className="px-[14px] pt-[14px]">
               <StyleBoard items={capsulePieces} height={165} />
@@ -647,9 +739,12 @@ export default function HomeScreen() {
                 Actuellement {capsule.length} {capsule.length <= 1 ? "pièce" : "pièces"}
               </div>
               <div className="text-[11.5px] text-muted leading-[1.4] mt-[5px]">
+                {/* Le rôle de la capsule, dit sans jamais laisser entendre
+                    qu'elle est la source des tenues : le dressing est
+                    prioritaire, elle complète. */}
                 {capsuleStyleLabel
-                  ? `Une sélection pensée pour ton style ${capsuleStyleLabel} et tes couleurs.`
-                  : "Une sélection pensée pour ton style et tes couleurs."}
+                  ? `Une sélection virtuelle pensée pour ton style ${capsuleStyleLabel}, pour compléter ton dressing quand il en a besoin.`
+                  : "Une sélection virtuelle pensée pour ton style, pour compléter ton dressing quand il en a besoin."}
               </div>
               <div className="text-[12px] text-terracotta mt-[9px]">Découvrir →</div>
             </div>
@@ -663,7 +758,7 @@ export default function HomeScreen() {
         <button
           onClick={actions.goHistory}
           className="w-full text-left cursor-pointer rounded-[22px] border border-border overflow-hidden grid box-border min-h-[190px] grid-cols-[54%_46%] max-[359px]:grid-cols-[50%_50%]"
-          style={{ background: "linear-gradient(120deg, #F6F0E6 0%, #EEE1CE 100%)" }}
+          style={{ background: "#F2E9DA" }}
         >
           <div className="relative box-border min-w-0" style={{ padding: "10px 10px" }}>
             <div className="relative w-full h-full">
