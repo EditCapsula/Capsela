@@ -8,6 +8,17 @@
   --color-ink: #1d1a16;
   --color-terracotta: #a66950;
   --color-terracotta-hover: #8b5e4d;
+  /*
+   * Trois valeurs de la maquette « Tenue du jour V3 », ajoutées le
+   * 22/09/2026 sur arbitrage. Elles ne remplacent pas les jetons existants :
+   * --color-terracotta reste l'accent (liens, ✦, icônes actives), et
+   * --color-terracotta-deep est un fond PLEIN, plus sombre, réservé aux
+   * grandes surfaces — la card du look du jour et le chip d'occasion actif —
+   * où l'accent manquait de contraste avec le crème posé dessus.
+   */
+  --color-terracotta-deep: #9e5b43;
+  --color-sand-text: #8c5540;
+  --color-sand-border: #e2c9a8;
   --color-gold: #c9966f;
   --color-card: #fbf8f3;
   --color-border: #e6dccb;
