@@ -458,8 +458,11 @@ export default function HomeScreen() {
     const capsule = outfitPieces.filter((it) => isCatalogId(it.id)).length;
     const dressing = total - capsule;
     const pieces = (n: number) => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
-    if (!capsule) return `${pieces(dressing)} de ton dressing`;
-    if (!dressing) return `${pieces(capsule)} de ta capsule`;
+    // Même règle que l'écran Tenue : une source unique s'énonce, deux
+    // sources se comptent. Les deux écrans disent la même chose du même
+    // calcul, il serait absurde qu'ils ne la disent pas pareil.
+    if (!capsule) return `Une sélection de ${pieces(dressing)} de ton dressing`;
+    if (!dressing) return `Une sélection de ${pieces(capsule)} de ta capsule`;
     return `${pieces(dressing)} de ton dressing + ${pieces(capsule)} de ta capsule`;
   })();
 
