@@ -327,6 +327,8 @@ export interface AppState {
   outfitMissingCats: (CategoryKey | "bas" | "chaud")[];
   /** true si la tenue affichée est un repli de formalité (ex. business_casual faute d'habillé) — badge "Meilleure alternative" plutôt que "Recommandé". */
   outfitFormalityDowngraded: boolean;
+  /** Au moins une catégorie a été servie par un barreau qui abandonne l'occasion déclarée (cf. GeneratedOutfit.occasionRelachee) — bannière dédiée, distincte du repli de formalité. */
+  outfitOccasionRelachee: boolean;
   /** true si aucun palier de formalité autorisé n'a permis de constituer une tenue complète — état vide à afficher, jamais une tenue chaussures/accessoires seuls. */
   outfitNoCompleteOutfit: boolean;
   /** Raison structurée de l'échec (recette 22/08/2026, brief design "empty state") — null quand outfitNoCompleteOutfit est false. Dérivée de signaux déjà calculés par le moteur (présence de catégories dans le pool, probe à formalité 0), jamais un diagnostic inventé côté UI. */

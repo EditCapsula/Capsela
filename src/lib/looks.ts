@@ -34,8 +34,12 @@ function poolPourOccasion(pool: Item[], capsule: Item[], occasion: OccasionKey):
 }
 
 /**
- * CE QUE L'ÉCRAN AFFICHE DEPUIS TOUJOURS — extrait tel quel de CapsuleScreen
- * le 15/09/2026, sans changer un caractère, pour pouvoir le mesurer.
+ * CE QUE L'ÉCRAN A AFFICHÉ JUSQU'AU 22/09/2026 — extrait tel quel de
+ * CapsuleScreen le 15/09/2026, sans changer un caractère, pour pouvoir le
+ * mesurer ; retiré de l'écran une fois mesuré, parce que l'écart avec le
+ * nombre de tenues réellement produites va de ×0,5 à ×1,7. Conservé ici et
+ * non supprimé : `compteur-looks.audit.ts` en a besoin comme point de
+ * comparaison, et le supprimer priverait la prochaine mesure de sa baseline.
  *
  * `(hauts × bas + robes) × chaussures`. C'est un produit combinatoire brut :
  * il ignore la formalité par occasion (R-B3), les occasions déclarées, la

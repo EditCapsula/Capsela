@@ -112,6 +112,33 @@ export function detectAccessoireType(name: string): AccessoireType | null {
   return null;
 }
 
+/**
+ * LE TYPE D'ACCESSOIRE D'UNE PIÈCE DU DRESSING, saisi ou déduit du nom.
+ *
+ * Mesuré le 22/09/2026 sur un dressing de sport : une « Casquette de course »
+ * saisie sans dérouler le menu du type n'était plus proposée en Sport, la
+ * liste blanche R-B11 refusant tout type inconnu. Or ce menu est facultatif —
+ * seul le type de chaussure bloque la saisie (R-B6) — alors qu'au catalogue
+ * `detectAccessoireType` lit toujours le nom. Deux chemins, deux résultats
+ * pour la même casquette.
+ *
+ * La valeur saisie l'emporte toujours : la déduction ne comble qu'un vide,
+ * elle ne corrige jamais un choix. Et un nom qu'aucune expression ne
+ * reconnaît reste sans type — « Brassard réfléchissant » n'est pas deviné,
+ * il est laissé inconnu, ce qui est la réponse honnête.
+ *
+ * Dérivée à la lecture, jamais écrite en base : la colonne `accessoire_type`
+ * continue de ne contenir que ce que l'utilisatrice a choisi.
+ */
+export function accessoireTypeFor(
+  cat: CategoryKey,
+  saisi: AccessoireType | null | undefined,
+  name: string
+): AccessoireType | undefined {
+  if (cat !== "accessoire") return undefined;
+  return saisi ?? detectAccessoireType(name) ?? undefined;
+}
+
 /** Pré-suggestion de sous-type générique (haut, pull, bas, robe, veste, manteau...) — jamais imposée, jamais bloquante (sauf blocage produit pour veste/manteau, géré à la saisie). */
 export function detectSubtype(cat: CategoryKey, name: string): string | null {
   const options = SUBTYPES[cat];
@@ -263,10 +290,38 @@ export function coupeOf(it: Item): "ajusté" | "regular" | "oversize" {
  * nom. Sert à comparer une tenue au niveau_formalite_min de l'occasion
  * (R-B3) et à l'écart de formalité entre pièces (R-B2).
  */
+/**
+ * LES NOMS QUI DÉSIGNENT UN VÊTEMENT DE SPORT, et donc une formalité 0.
+ *
+ * Élargie le 22/09/2026. La liste d'origine — sweat, jogging, molleton,
+ * legging, coupe-vent, survêt — ne reconnaissait ni « T-shirt de running »,
+ * ni « Débardeur de sport », ni « Short de running ». Ces pièces valaient
+ * donc 1, et R-B11 exige 0 : une utilisatrice qui saisissait sa vraie tenue
+ * de course la voyait refusée du Sport.
+ *
+ * Le trou était déjà connu : SPORT_RAW (catalog.ts) porte un
+ * `niveauFormalite: 0` explicite justifié par « les noms ne matchent pas tous
+ * l'heuristique de formalityOf ». Il avait été contourné là, jamais rebouché
+ * ici.
+ *
+ * PORTÉE RÉELLE, et c'est ce qui rend l'élargissement peu risqué :
+ * `formalityOf` rend `niveauFormalite` dès qu'il est renseigné, et toute
+ * ligne de vestiaire_universel le renseigne. Cette lecture de nom ne sert
+ * donc qu'aux pièces qui n'en ont pas — le dressing personnel, dont la table
+ * n'a pas la colonne.
+ *
+ * LE FAUX POSITIF ASSUMÉ : « veste sport » désigne en français un blazer
+ * décontracté, qui tomberait ici à 0 au lieu de 3. Aucune couleur de la
+ * palette ni aucun sous-type proposé à la saisie ne déclenche la règle — cela
+ * a été vérifié, et un test le revérifie à chaque exécution.
+ */
+const MOTS_SPORT =
+  /sweat|jogging|molleton|legging|coupe-vent|survêt|running|sport|training|fitness|yoga|trail|brassière|technique/;
+
 export function formalityOf(it: Item): number {
   if (it.niveauFormalite != null) return it.niveauFormalite;
   const text = n(it);
-  if (it.shoeType === "Baskets" || /sweat|jogging|molleton|legging|coupe-vent|survêt/.test(text)) return 0;
+  if (it.shoeType === "Baskets" || MOTS_SPORT.test(text)) return 0;
   if (/soie|tailleur|smoking|paillet|dentelle/.test(text) && /robe|blouse|combinaison/.test(text)) return 4;
   if (/tailleur|blazer|escarpin|chemis|blouse|gilet|robe chemise|robe droite/.test(text)) return 3;
   return 1;

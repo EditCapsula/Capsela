@@ -1,3 +1,4 @@
+import { accessoireTypeFor } from "./attributes";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type {
   AccessoireType,
@@ -65,7 +66,7 @@ function rowToItem(row: DressingItemRow): Item {
     coupe: (row.coupe as Coupe | null) ?? undefined,
     sacType: (row.sac_type as SacType | null) ?? undefined,
     bijouType: (row.bijou_type as BijouType | null) ?? undefined,
-    accessoireType: (row.accessoire_type as AccessoireType | null) ?? undefined,
+    accessoireType: accessoireTypeFor(row.cat as CategoryKey, row.accessoire_type as AccessoireType | null, row.name),
     subtype: row.subtype ?? undefined,
     photoUrl: row.photo_url ?? undefined,
     worn: row.worn,
