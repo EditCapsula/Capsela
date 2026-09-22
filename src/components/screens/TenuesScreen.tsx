@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import BottomSheet from "@/components/BottomSheet";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
@@ -15,7 +16,7 @@ import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
-import type { Item } from "@/lib/types";
+import type { DateContext, Item, TravelMode, WorkMode } from "@/lib/types";
 
 /** Icônes des CTA de pièce suggérée (recette 23/08/2026) — trait fin, même style que TabBar, jamais d'emoji. */
 function PlusIcon() {
@@ -95,6 +96,8 @@ export default function TenuesScreen() {
   const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
+  /** Feuille ouverte, ou aucune. Une seule à la fois : les deux se répondent. */
+  const [feuille, setFeuille] = useState<null | "occasion" | "sous">(null);
   // "Explorer d'autres styles" (recette 24/08/2026, état vide Tenues) —
   // calcul déclenché uniquement au clic, jamais automatiquement (coûteux :
   // rejoue le moteur pour chaque style candidat). Réinitialisé dès que
@@ -265,6 +268,44 @@ export default function TenuesScreen() {
         : "100% ton dressing";
   const modeStyle = recommendationMode ? MODE_STYLES[recommendationMode] : null;
 
+  /**
+   * Ce que les deux chips affichent, et ce que la feuille des sous-choix
+   * contient. `occasion` vaut "all" tant que rien n'est choisi (store.tsx) —
+   * c'est un état légitime, pas une absence de donnée, et le chip le dit
+   * plutôt que de rester vide.
+   *
+   * `choisir` est typé sur `string` et recasté à l'appel : les trois setters
+   * attendent trois types distincts (WorkMode, DateContext, TravelMode) et
+   * les réunir ici évite trois branches de rendu identiques. Les valeurs
+   * proposées viennent toujours de la source — DATE_CONTEXTS pour la date,
+   * les littéraux du type pour les deux autres, comme avant.
+   */
+  const libelleOccasion =
+    OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? "Choisir une occasion";
+  const sousChoix: { titre: string; valeurs: readonly string[]; courant: string; choisir: (v: string) => void } | null =
+    state.occasion === "travail_formel"
+      ? {
+          titre: "Où travailles-tu aujourd'hui ?",
+          valeurs: ["Présentiel", "Télétravail"] as const,
+          courant: state.workMode,
+          choisir: (v) => actions.setWorkMode(v as WorkMode),
+        }
+      : state.occasion === "date"
+        ? {
+            titre: "Quel type de date ?",
+            valeurs: DATE_CONTEXTS.map(([m]) => m),
+            courant: state.dateContext,
+            choisir: (v) => actions.setDateContext(v as DateContext),
+          }
+        : state.occasion === "voyage"
+          ? {
+              titre: "Quel type de trajet ?",
+              valeurs: ["Court trajet", "Longue distance"] as const,
+              courant: state.travelMode,
+              choisir: (v) => actions.setTravelMode(v as TravelMode),
+            }
+          : null;
+
   const missingText = missingSuggestionText(state.outfitMissingCats || []);
   // Repli progressif de formalité (nouveau 21/08/2026, décidé) — calculé
   // par generateOutfitWithFallback (store.tsx), jamais recalculé ici :
@@ -399,104 +440,47 @@ export default function TenuesScreen() {
         </>
       )}
 
-      <div className="mt-5 text-[11px] tracking-[.16em] uppercase text-muted">
-        Qu&apos;est-ce qui est prévu aujourd&apos;hui ?
+      {/* SÉLECTEUR COMPACT (brief 22/09/2026).
+          Les dix occasions défilaient ici en cartes de deux lignes, plus
+          jusqu'à cinq boutons de sous-choix en dessous : le look n'apparaissait
+          qu'après un tiers d'écran. Elles vivent désormais dans une feuille
+          ouverte à la demande — une seule occasion visible, toutes
+          accessibles en un tap.
+
+          Aucune taxonomie locale : OCCASIONS et DATE_CONTEXTS restent les
+          sources. Et TROIS sous-choix, pas deux — le voyage garde le sien
+          (arbitré 22/09), sans quoi « Longue distance » deviendrait
+          inatteignable et le conseil qui en dépend ne s'afficherait plus
+          jamais. */}
+      <div className="flex items-center gap-2 mt-5 flex-wrap">
+        <button
+          onClick={() => setFeuille("occasion")}
+          aria-haspopup="dialog"
+          aria-label={`Occasion : ${libelleOccasion}. Changer d'occasion`}
+          className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-terracotta text-cream"
+          style={{ minHeight: 46 }}
+        >
+          <span aria-hidden="true" className="opacity-70">❑</span>
+          <span className="whitespace-nowrap">{libelleOccasion}</span>
+          <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
+        </button>
+
+        {/* Le second chip n'existe que pour les occasions qui ont réellement
+            un sous-choix — jamais un chip vide pour l'alignement. */}
+        {sousChoix && (
+          <button
+            onClick={() => setFeuille("sous")}
+            aria-haspopup="dialog"
+            aria-label={`${sousChoix.titre} ${sousChoix.courant}. Changer`}
+            className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-warm-bg text-warm-text-2 border border-warm-border"
+            style={{ minHeight: 46 }}
+          >
+            <span aria-hidden="true" className="opacity-70">❑</span>
+            <span className="whitespace-nowrap">{sousChoix.courant}</span>
+            <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
+          </button>
+        )}
       </div>
-      <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[9px]">
-        {OCCASIONS.map(([key, label, sub], i) => {
-          const on = state.occasion === key;
-          return (
-            <button
-              key={key}
-              onClick={() => actions.setOccasion(on ? "all" : key)}
-              className="flex-none text-left py-[10px] px-[15px] rounded-full cursor-pointer border"
-              style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB" }}
-            >
-              <div className="text-[12.5px] whitespace-nowrap" style={{ color: on ? "#F3EEE5" : "#1D1A16" }}>
-                <span style={{ color: on ? "#C9966F" : "#B3AA9B" }}>{String(i + 1).padStart(2, "0")}</span> {label}
-              </div>
-              <div className="text-[10.5px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
-                {sub}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {state.occasion === "date" && (
-        <div className="flex gap-[11px] mt-3">
-          <div className="w-[1.5px] flex-shrink-0 bg-border rounded-sm ml-[7px]" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[11px] tracking-[.16em] uppercase text-terracotta mb-[9px]">
-              ↳ Quel type de date ?
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {DATE_CONTEXTS.map(([m]) => (
-                <button
-                  key={m}
-                  onClick={() => actions.setDateContext(m)}
-                  className={
-                    "px-[14px] py-[7px] rounded-full text-[12px] cursor-pointer font-sans border " +
-                    (state.dateContext === m ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
-                  }
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {state.occasion === "travail_formel" && (
-        <div className="flex gap-[11px] mt-3">
-          <div className="w-[1.5px] flex-shrink-0 bg-border rounded-sm ml-[7px]" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[11px] tracking-[.16em] uppercase text-terracotta mb-[9px]">
-              ↳ Où travailles-tu aujourd&apos;hui ?
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {(["Présentiel", "Télétravail"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => actions.setWorkMode(m)}
-                  className={
-                    "px-[14px] py-[7px] rounded-full text-[12px] cursor-pointer font-sans border " +
-                    (state.workMode === m ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
-                  }
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {state.occasion === "voyage" && (
-        <div className="flex gap-[11px] mt-3">
-          <div className="w-[1.5px] flex-shrink-0 bg-border rounded-sm ml-[7px]" />
-          <div className="flex-1 min-w-0">
-            <div className="text-[11px] tracking-[.16em] uppercase text-terracotta mb-[9px]">
-              ↳ Quel type de trajet ?
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {(["Court trajet", "Longue distance"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => actions.setTravelMode(m)}
-                  className={
-                    "px-[14px] py-[7px] rounded-full text-[12px] cursor-pointer font-sans border " +
-                    (state.travelMode === m ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
-                  }
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {state.occasion === "voyage" && state.travelMode === "Longue distance" && !state.travelTipDismissed && (
         <div className="mt-[14px] flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
@@ -1000,6 +984,89 @@ export default function TenuesScreen() {
           <span className="text-terracotta">✦</span> Demander un avis à un proche
         </button>
       )}
+
+      {/* LES DEUX FEUILLES. BottomSheet existe depuis le 24/08 (écran Ajouter)
+          — overlay cliquable, hauteur plafonnée à 85 %, largeur alignée sur
+          la coquille : rien à réinventer ici, et le comportement au clavier
+          comme au tactile reste celui déjà éprouvé ailleurs.
+
+          `aria-pressed` porte la sélection active plutôt qu'un simple ✓
+          visuel : une lectrice d'écran doit savoir laquelle est choisie, pas
+          seulement voir une coche. */}
+      <BottomSheet title="Qu'est-ce qui est prévu aujourd'hui ?" open={feuille === "occasion"} onClose={() => setFeuille(null)}>
+        <div className="flex flex-col">
+          {OCCASIONS.map(([key, label, sub]) => {
+            const actif = state.occasion === key;
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  actions.setOccasion(key);
+                  setFeuille(null);
+                }}
+                aria-pressed={actif}
+                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                style={{ minHeight: 52 }}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className={"text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
+                  <div className="text-[11.5px] text-muted mt-[2px]">{sub}</div>
+                </div>
+                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
+                  ✓
+                </span>
+              </button>
+            );
+          })}
+          {/* « Peu importe » n'est pas un ajout de taxonomie : "all" est la
+              valeur initiale du store, et l'ancien sélecteur permettait d'y
+              revenir en recliquant l'occasion active. La feuille n'ayant pas
+              ce geste, l'entrée rend ce retour possible plutôt que de le
+              supprimer en silence. */}
+          <button
+            onClick={() => {
+              actions.setOccasion("all");
+              setFeuille(null);
+            }}
+            aria-pressed={state.occasion === "all"}
+            className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-t border-[#EFE7DA]"
+            style={{ minHeight: 52 }}
+          >
+            <div className="flex-1 min-w-0">
+              <div className={"text-[13.5px] " + (state.occasion === "all" ? "text-terracotta" : "text-ink")}>Peu importe</div>
+              <div className="text-[11.5px] text-muted mt-[2px]">Sans occasion particulière</div>
+            </div>
+            <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (state.occasion === "all" ? "text-terracotta" : "text-transparent")}>
+              ✓
+            </span>
+          </button>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet title={sousChoix?.titre ?? ""} open={feuille === "sous" && Boolean(sousChoix)} onClose={() => setFeuille(null)}>
+        <div className="flex flex-col">
+          {sousChoix?.valeurs.map((v) => {
+            const actif = sousChoix.courant === v;
+            return (
+              <button
+                key={v}
+                onClick={() => {
+                  sousChoix.choisir(v);
+                  setFeuille(null);
+                }}
+                aria-pressed={actif}
+                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                style={{ minHeight: 52 }}
+              >
+                <div className={"flex-1 min-w-0 text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{v}</div>
+                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
+                  ✓
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
 
       {/* Toast "Ajouter à la tenue" (recette 23/08/2026) — remplace l'ancienne
           carte de confirmation permanente : disparaît seule après ~2,6s,
