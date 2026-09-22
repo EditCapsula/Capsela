@@ -67,16 +67,18 @@ export function violatesOuterwearRule(pieces: Item[]): boolean {
  * produit avec « Chapeau », entré en Sport sans décision.
  *
  * « Écharpe » et « Collants » ne figuraient dans aucune décision : ils
- * passaient par l'effet de bord de la liste d'exclusions. Ils sont conservés
- * ici pour ne changer que ce qui a été signalé — leur sort reste à arbitrer.
+ * passaient par le seul effet de bord de la liste d'exclusions. Arbitré le
+ * 22/09/2026 — retirés. La liste vaut donc exactement ce que la recette du
+ * 22/08/2026 avait nommé, ni plus ni moins.
+ *
+ * Portée de cet arbitrage : l'occasion Sport, et elle seule. Une écharpe
+ * reste évidemment disponible partout ailleurs.
  */
 const ACCESSOIRES_SPORT: ReadonlySet<AccessoireType> = new Set<AccessoireType>([
   "Casquette",
   "Lunettes",
   "Chaussettes hautes",
   "Gourde",
-  "Écharpe",
-  "Collants",
 ]);
 
 /**
