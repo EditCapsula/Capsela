@@ -14,7 +14,6 @@ import { useAuth } from "@/lib/auth";
 import { silhouetteForme, styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { looksCombinatoires } from "@/lib/looks";
 import type { CategoryKey, DateContext, OccasionKey, WorkMode } from "@/lib/types";
 
 /**
@@ -94,10 +93,6 @@ export default function CapsuleScreen() {
   // que le système n'est pas validé. Le déclenchement à la demande, pièce
   // par pièce, se fait uniquement à l'ouverture de la fiche détail
   // (PieceScreen) — cohérent avec "chaque article est cliquable".
-
-  // Formule inchangée, simplement déplacée dans looks.ts (15/09/2026) pour
-  // qu'un audit puisse la mesurer plutôt que d'en recopier une version.
-  const looksCount = looksCombinatoires(capsule);
 
   // Style renseigné en profil (recette 25/08/2026) — premier style choisi,
   // même convention que ProfileScreen/ProfileEditScreen (styleLabel(profile.styles[0], ...)) ;
@@ -186,8 +181,19 @@ export default function CapsuleScreen() {
             "Une sélection pensée pour ton style et ta palette, pour inspirer tes tenues."
           )}
         </div>
+        {/*
+          « N looks possibles » retiré le 22/09/2026. La formule combinatoire
+          `(hauts × bas + robes) × chaussures` ignore la formalité par
+          occasion, les occasions déclarées, la palette et les bornes météo :
+          l'audit `compteur-looks.audit.ts` l'a mesurée contre le nombre de
+          tenues que le moteur produit réellement, et l'écart va de ×0,5 à
+          ×1,7 selon les profils. Un nombre faux n'est pas rattrapable par une
+          formulation, donc c'est le nombre qui part, pas son étiquette. Reste
+          `capsule.length`, qui est compté, pas estimé. La formule survit dans
+          looks.ts parce que l'audit la mesure encore.
+        */}
         <div className="font-serif text-[15px] text-ink mt-[10px]">
-          {capsule.length} pièces · {looksCount} looks possibles
+          {capsule.length} pièces
         </div>
         <button onClick={actions.openAdd} className="mt-[6px] text-[12px] text-terracotta cursor-pointer">
           + Ajouter une pièce à mon dressing
