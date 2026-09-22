@@ -165,6 +165,8 @@ export interface Actions {
   goCapsule: () => void;
   goTenues: () => void;
   goHistory: () => void;
+  goPlanifier: () => void;
+  goValise: () => void;
   goNeverWorn: () => void;
   goWardrobePieces: () => void;
   goProfile: () => void;
@@ -728,6 +730,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         return next.outfit.length ? next : regen(withDefaultOccasion(next));
       }),
     goHistory: () => go("history"),
+    goPlanifier: () => go("planifier"),
+    goValise: () => go("valise"),
     goNeverWorn: () => go("neverworn"),
     goWardrobePieces: () => go("wardrobePieces"),
     goProfile: () => setState((s) => ({ ...s, profileReturn: s.screen === "profile" ? s.profileReturn : s.screen, screen: "profile" })),

@@ -708,7 +708,10 @@ export default function HomeScreen() {
           </button>
 
           {/* FEEDBACK — deux boutons DISCRETS, jamais concurrents du CTA :
-              translucides, 38 px, sous lui.
+              translucides, sous lui, mais à 44 px comme toute cible
+              tactile (§7). Ils étaient à 38 : la discrétion doit venir de la
+              couleur et du poids, jamais d'une cible trop petite pour le
+              pouce.
 
               Ils n'écrivent rien pour l'instant. Le brief interdit de créer
               une table sans validation ; la table `outfit_feedback` est
@@ -734,14 +737,14 @@ export default function HomeScreen() {
                   <button
                     onClick={() => setAvisDuJour("adore")}
                     className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
-                    style={{ minHeight: 38, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
+                    style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
                   >
                     <span aria-hidden="true">♡</span> J&apos;adore cette tenue
                   </button>
                   <button
                     onClick={() => setAvisDuJour("pas_pour_moi")}
                     className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
-                    style={{ minHeight: 38, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
+                    style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
                   >
                     <span aria-hidden="true">✕</span> Pas pour moi
                   </button>
@@ -782,7 +785,7 @@ export default function HomeScreen() {
             <div className="px-[14px] pt-[12px] pb-[14px]">
               <div className="font-serif text-[19px] text-ink leading-[1.18]">Dressing</div>
               <div className="text-[11.5px] text-muted leading-[1.4] mt-[6px]">
-                {dressingVide ? "Ajoute tes pièces pour créer tes premiers looks." : "Tes pièces, tes looks, ton vestiaire."}
+                {dressingVide ? "Ajoute tes pièces pour créer tes premiers looks." : "Tes pièces, ton vestiaire."}
               </div>
               <div className="text-[12px] text-terracotta mt-[9px]">
                 {dressingVide
@@ -811,16 +814,20 @@ export default function HomeScreen() {
               </div>
               {/* Effectif toujours lu depuis la capsule calculée, jamais écrit
                   en dur — c'est la même valeur qu'affiche l'écran Capsule. */}
-              <div className="text-[11.5px] text-muted mt-[5px]">
-                Actuellement {capsule.length} {capsule.length <= 1 ? "pièce" : "pièces"}
-              </div>
-              <div className="text-[11.5px] text-muted leading-[1.4] mt-[5px]">
-                {/* Le rôle de la capsule, dit sans jamais laisser entendre
-                    qu'elle est la source des tenues : le dressing est
-                    prioritaire, elle complète. */}
+              {/* Le rôle de la capsule, dit sans jamais laisser entendre
+                  qu'elle est la source des tenues : le dressing est
+                  prioritaire, elle complète. */}
+              <div className="text-[11.5px] text-muted leading-[1.4] mt-[6px]">
                 {capsuleStyleLabel
-                  ? `Une sélection virtuelle pensée pour ton style ${capsuleStyleLabel}, pour compléter ton dressing quand il en a besoin.`
-                  : "Une sélection virtuelle pensée pour ton style, pour compléter ton dressing quand il en a besoin."}
+                  ? `Une sélection virtuelle pensée pour ton style ${capsuleStyleLabel}.`
+                  : "Une sélection virtuelle pensée pour ton style."}
+              </div>
+              {/* Le total, et rien d'autre : ni « N / 40 » ni jauge. Le
+                  plafond est une contrainte interne du moteur, et la capsule
+                  est en lecture seule — une jauge laisserait croire qu'il
+                  faut la compléter. Arbitré le 22/09. */}
+              <div className="text-[11.5px] text-muted mt-[6px]">
+                {capsule.length} {capsule.length <= 1 ? "pièce" : "pièces"}
               </div>
               <div className="text-[12px] text-terracotta mt-[9px]">Découvrir →</div>
             </div>
@@ -845,10 +852,54 @@ export default function HomeScreen() {
           </div>
           <div className="min-w-0 flex flex-col justify-center" style={{ padding: "18px 18px 18px 10px" }}>
             <div className="font-serif text-[19px] text-ink leading-[1.18]">Journal des tenues</div>
-            <div className="text-[11.5px] text-muted leading-[1.4] mt-[6px]">Garde une trace de tes tenues au fil des jours.</div>
+            <div className="text-[11.5px] text-muted leading-[1.4] mt-[6px]">Garde une trace de tes looks, et regarde ton style évoluer.</div>
             <div className="text-[12px] text-terracotta mt-[8px]">Voir le journal →</div>
           </div>
         </button>
+
+        {/* PRÉPARE LA SUITE — entrée Premium, en fin de rail (décision
+            produit du brief : discrète, jamais un bandeau sous le héros).
+
+            Les deux destinations existent vraiment (PlanifierScreen,
+            ValiseScreen) et affichent un état d'attente honnête. Le brief
+            proposait une « route placeholder » ; arbitré le 22/09 : un lien
+            mort coûte plus en confiance qu'il ne rapporte en promesse.
+
+            Aucun flag d'abonnement n'existe dans l'app — l'audit l'a
+            signalé. La carte est donc visible pour tout le monde et il n'y a
+            pas de paywall à ouvrir : quand l'abonnement existera, c'est ici
+            que le test se posera. */}
+        <div className="bg-warm-bg border border-sand-border rounded-[20px] px-4 py-[16px]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="font-serif text-[17px] text-ink leading-[1.2]">Prépare la suite</div>
+              <div className="text-[11.5px] text-muted leading-[1.4] mt-[5px]">
+                Une tenue pour un jour précis, ou une valise pour ton prochain séjour.
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-[4px] rounded-full bg-card px-[9px] py-[4px] text-[9.5px] tracking-[.1em] uppercase text-terracotta flex-shrink-0 whitespace-nowrap">
+              <span aria-hidden="true">✦</span> Premium
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-[10px] mt-[13px]" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+            <button
+              onClick={actions.goPlanifier}
+              className="min-w-0 text-left bg-card border border-border rounded-[14px] px-[12px] py-[11px] cursor-pointer flex flex-col justify-between"
+              style={{ minHeight: 64 }}
+            >
+              <span aria-hidden="true" className="text-[15px] text-terracotta leading-none">▤</span>
+              <span className="text-[12px] text-ink leading-[1.3] mt-[9px]">Planifier une tenue</span>
+            </button>
+            <button
+              onClick={actions.goValise}
+              className="min-w-0 text-left bg-card border border-border rounded-[14px] px-[12px] py-[11px] cursor-pointer flex flex-col justify-between"
+              style={{ minHeight: 64 }}
+            >
+              <span aria-hidden="true" className="text-[15px] text-terracotta leading-none">▭</span>
+              <span className="text-[12px] text-ink leading-[1.3] mt-[9px]">Préparer une valise</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
