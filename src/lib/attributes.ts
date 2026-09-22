@@ -112,6 +112,33 @@ export function detectAccessoireType(name: string): AccessoireType | null {
   return null;
 }
 
+/**
+ * LE TYPE D'ACCESSOIRE D'UNE PIÈCE DU DRESSING, saisi ou déduit du nom.
+ *
+ * Mesuré le 22/09/2026 sur un dressing de sport : une « Casquette de course »
+ * saisie sans dérouler le menu du type n'était plus proposée en Sport, la
+ * liste blanche R-B11 refusant tout type inconnu. Or ce menu est facultatif —
+ * seul le type de chaussure bloque la saisie (R-B6) — alors qu'au catalogue
+ * `detectAccessoireType` lit toujours le nom. Deux chemins, deux résultats
+ * pour la même casquette.
+ *
+ * La valeur saisie l'emporte toujours : la déduction ne comble qu'un vide,
+ * elle ne corrige jamais un choix. Et un nom qu'aucune expression ne
+ * reconnaît reste sans type — « Brassard réfléchissant » n'est pas deviné,
+ * il est laissé inconnu, ce qui est la réponse honnête.
+ *
+ * Dérivée à la lecture, jamais écrite en base : la colonne `accessoire_type`
+ * continue de ne contenir que ce que l'utilisatrice a choisi.
+ */
+export function accessoireTypeFor(
+  cat: CategoryKey,
+  saisi: AccessoireType | null | undefined,
+  name: string
+): AccessoireType | undefined {
+  if (cat !== "accessoire") return undefined;
+  return saisi ?? detectAccessoireType(name) ?? undefined;
+}
+
 /** Pré-suggestion de sous-type générique (haut, pull, bas, robe, veste, manteau...) — jamais imposée, jamais bloquante (sauf blocage produit pour veste/manteau, géré à la saisie). */
 export function detectSubtype(cat: CategoryKey, name: string): string | null {
   const options = SUBTYPES[cat];

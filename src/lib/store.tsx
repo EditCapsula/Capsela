@@ -30,6 +30,7 @@ import { composeWardrobePool } from "./selectors";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import {
+  accessoireTypeFor,
   detectAccessoireType,
   detectBijouType,
   detectCoupe,
@@ -1058,7 +1059,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         coupe: s.addCoupe || undefined,
         sacType: s.addCat === "sac" ? s.addSacType || undefined : undefined,
         bijouType: s.addCat === "bijou" ? s.addBijouType || undefined : undefined,
-        accessoireType: s.addCat === "accessoire" ? s.addAccessoireType || undefined : undefined,
+        // Même déduction qu'à la relecture depuis Supabase (accessoireTypeFor) :
+        // sans elle, la même casquette n'aurait pas le même type avant et après
+        // un rechargement.
+        accessoireType: accessoireTypeFor(s.addCat, s.addAccessoireType, (s.addName || "").trim() || "Nouvelle pièce"),
         subtype: s.addSubtype || undefined,
         photoUrl: s.addPhotoUrl || undefined,
         worn: original ? original.worn : null,
