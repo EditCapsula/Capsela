@@ -479,6 +479,30 @@ export default function HomeScreen() {
 
   const heroSlots = outfitPieces.some((it) => isOnePieceCat(it.cat)) ? HERO_SLOTS_ONEPIECE : HERO_SLOTS_STANDARD;
   const heroPieces = selectHomePieces(outfitPieces);
+  /**
+   * LA ZONE DE COMPOSITION S'ARRÊTE OÙ LES PIÈCES S'ARRÊTENT.
+   *
+   * Les emplacements sont des pourcentages, et le plus bas d'entre eux ne
+   * descend pas jusqu'en bas : sur la table standard, le bas s'achève à 88 %.
+   * Les 12 % restants étaient invisibles tant que la rangée d'actions les
+   * recouvrait. Depuis qu'elle a sa propre rangée (22/09), ils forment une
+   * bande de terracotta vide sous la composition — signalé le soir même.
+   *
+   * L'étendue est LUE dans la table active, jamais écrite en dur : la zone
+   * est raccourcie d'autant, et les emplacements renormalisés du même
+   * facteur. Les pièces gardent donc exactement leur taille et leurs
+   * positions relatives ; seule la zone cesse de dépasser sous elles. Si une
+   * table d'emplacements change un jour, le calcul suit.
+   */
+  const etenduePct = Math.max(...Object.values(heroSlots).map((s) => s.top + s.h));
+  const facteurZone = 100 / etenduePct;
+  const heroSlotsAjustes = Object.fromEntries(
+    Object.entries(heroSlots).map(([role, s]) => [role, { ...s, top: s.top * facteurZone, h: s.h * facteurZone }])
+  ) as typeof heroSlots;
+  /** Le ratio 1/1.28 de la maquette, ramené à l'étendue réelle des pièces. */
+  const zoneRatioPct = 78.125 * (etenduePct / 100);
+
+
   /** La card ne prend la géométrie de la maquette que si elle a vraiment une composition à montrer. */
   const avecComposition = hasOutfit && heroPieces.length > 0;
 
@@ -543,23 +567,44 @@ export default function HomeScreen() {
       >
         {avecComposition && (
           <>
-            {/* Cale-ratio : 1 / 1.28 = 78,125 % de la largeur, plafonné à
-                330 px et jamais sous 275. Vide et invisible. */}
+            {/* LA ZONE DE COMPOSITION GARDE SON RATIO, quoi qu'il arrive au
+                texte. Cale-ratio et couche des pièces sont le MÊME élément :
+                1 / 1.28 = 78,125 % de la largeur, plafonné à 330 px, jamais
+                sous 275.
+
+                Signalé le 22/09 au soir, et c'est moi qui l'avais cassé le
+                jour même. En passant la card à deux rangées, la couche des
+                pièces est devenue `inset-0` de la rangée haute — laquelle
+                grandit avec le texte. Les emplacements étant définis en
+                POURCENTAGES de cette zone, une phrase météo de quatre lignes
+                étirait toute la composition : chaussures descendues sur la
+                jupe, sac remonté, terracotta vide en bas à gauche. Le ratio
+                de la maquette n'était plus respecté dès que le texte
+                dépassait.
+
+                Les lier rend la chose impossible : la zone des pièces ne
+                dépend plus que de la largeur de la card. Si le texte a besoin
+                de plus de place, la rangée grandit SOUS la composition, qui
+                ne bouge pas.
+
+                `zIndex: 0` explicite : les enfants s'empilent entre 1 et 4 et
+                doivent rester sous le texte, en z-10. */}
             <div
               aria-hidden="true"
-              className="min-h-[275px]"
-              style={{ gridArea: "pile", paddingTop: "78.125%", maxHeight: 330 }}
-            />
-            {/* La couche des pièces s'arrête AU-DESSUS de la rangée badge +
-                bouton (22 px de padding + 44 px de hauteur), et porte un
-                z-index 0 explicite pour que ses enfants, qui s'empilent entre
-                1 et 4, restent confinés sous le texte en z-10. Sans ces deux
-                bornes, les chaussures passaient par-dessus le badge — lisible
-                à 390 px, illisible à 320 où la card se resserre. */}
-            <div className="absolute inset-0" style={{ zIndex: 0 }} aria-hidden="true">
-              {heroPieces.map((it) => (
-                <HeroPiece key={"hero-" + it.id} item={it} slot={heroSlots[homeRoleOf(it.cat)]} eager />
-              ))}
+              className="relative self-start w-full"
+              style={{
+                gridArea: "pile",
+                paddingTop: `${zoneRatioPct}%`,
+                minHeight: 275 * (etenduePct / 100),
+                maxHeight: 330 * (etenduePct / 100),
+                zIndex: 0,
+              }}
+            >
+              <div className="absolute inset-0">
+                {heroPieces.map((it) => (
+                  <HeroPiece key={"hero-" + it.id} item={it} slot={heroSlotsAjustes[homeRoleOf(it.cat)]} eager />
+                ))}
+              </div>
             </div>
           </>
         )}
