@@ -393,6 +393,13 @@ function PolaroidPhoto({ photo, slot }: { photo: EditorialPhoto; slot: BoardSlot
 }
 
 export default function HomeScreen() {
+  /**
+   * Avis du jour — local, et volontairement non persisté pour l'instant :
+   * la table `outfit_feedback` est proposée et attend validation. Dès qu'elle
+   * existera, cet état sera alimenté par elle au montage plutôt que remis à
+   * zéro à chaque visite.
+   */
+  const [avisDuJour, setAvisDuJour] = useState<null | "adore" | "pas_pour_moi">(null);
   const { state, geoCity, geoLoading, vestiairePool, weather, actions } = useCapsela();
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
@@ -456,15 +463,14 @@ export default function HomeScreen() {
     return `${pieces(dressing)} de ton dressing + ${pieces(capsule)} de ta capsule`;
   })();
 
-  /** Même clé que toggleSaveOutfitLook (store.tsx) — jamais une autre définition de « déjà enregistrée ». */
-  const tenueEnregistree = (() => {
-    if (!hasOutfit) return false;
-    const cle = [...state.outfit].sort((a, b) => a - b).join(",");
-    return state.savedLooks.some(
-      (l) => l.source === "saved" && [...l.pieceIds].sort((a, b) => a - b).join(",") === cle
-    );
-  })();
-
+  /*
+   * `tenueEnregistree` est retiré le 22/09 au soir : « J'adore » n'appelle
+   * plus toggleSaveOutfitLook. Enregistrer une tenue et l'aimer sont deux
+   * gestes différents — le premier la range dans Mes looks, le second donne
+   * un avis. Les confondre aurait rempli Mes looks de tenues qu'on a
+   * seulement trouvées jolies. L'avis ira dans `outfit_feedback` une fois la
+   * migration passée.
+   */
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
   const dressingPieces = selectBoardPieces(state.items, 3);
@@ -666,56 +672,81 @@ export default function HomeScreen() {
             puisque la première rangée vaut 1fr. Plus aucune distance au bas de
             la card n'est écrite quelque part. */}
         <div className="relative z-10 flex flex-col" style={{ gridArea: "actions", padding: "0 22px 22px" }}>
-          <div className="flex items-center gap-[10px] flex-wrap pt-4">
-            {hasOutfit && occasionLabel && (
-              <div
-                className="inline-flex items-center text-[10px] tracking-[.08em] uppercase"
-                style={{ background: "rgba(243,238,229,.24)", color: "#F3EEE5", borderRadius: 100, padding: "0 16px", minHeight: 44 }}
+          {/* L'OCCASION SUR SA PROPRE LIGNE, à gauche (demandé le 22/09 au
+              soir). Elle partageait sa ligne avec le CTA, qui se retrouvait
+              donc poussé à droite sur une demi-largeur : le bouton principal
+              de la page était le plus étroit de ses éléments. Elle redevient
+              ce qu'elle est — une étiquette de contexte — et cesse de
+              disputer la place à l'action. */}
+          {hasOutfit && occasionLabel && (
+            <div className="pt-[14px]">
+              <span
+                className="inline-flex items-center uppercase whitespace-nowrap"
+                style={{
+                  fontSize: 9.5,
+                  letterSpacing: ".08em",
+                  background: "rgba(243,238,229,.22)",
+                  color: "#FBF3EA",
+                  borderRadius: 100,
+                  padding: "8px 14px",
+                }}
               >
                 {occasionLabel}
-              </div>
-            )}
-            {/* 44 px de haut minimum — cible tactile, et le bouton principal
-                de la page ne peut pas être le plus petit élément cliquable. */}
-            <button
-              onClick={actions.goTenues}
-              className="inline-flex items-center justify-center bg-cream text-ink rounded-full px-5 text-[13px] tracking-[.04em] cursor-pointer"
-              style={{ minHeight: 44 }}
-            >
-              {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
-            </button>
-          </div>
-
-          {/* FEEDBACK — deux signaux, aucune table nouvelle.
-              « J'adore » appelle toggleSaveOutfitLook (saved_looks, migration
-              0025) et « Pas aujourd'hui » la régénération : les deux
-              existaient déjà dans l'écran Tenue sous les noms « Enregistrer »
-              et « Autre tenue ». Rien n'est créé en base, et le signal capté
-              est exactement celui que l'app savait déjà capter.
-
-              Sous le CTA et en petit : le brief demande qu'il ne pousse pas à
-              agir avant « Voir ma tenue ». */}
-          {hasOutfit && (
-            <div className="flex items-center gap-[14px] flex-wrap mt-[12px]">
-              <span className="text-[11px]" style={{ color: "rgba(243,238,229,.6)" }}>
-                Cette tenue te plaît ?
               </span>
-              <button
-                onClick={actions.toggleSaveOutfitLook}
-                aria-pressed={tenueEnregistree}
-                className="inline-flex items-center gap-[5px] text-[11.5px] cursor-pointer"
-                style={{ color: "rgba(243,238,229,.86)", minHeight: 32 }}
-              >
-                <span aria-hidden="true">{tenueEnregistree ? "♥" : "♡"}</span>
-                {tenueEnregistree ? "Enregistrée" : "J'adore"}
-              </button>
-              <button
-                onClick={actions.regenOutfit}
-                className="inline-flex items-center gap-[5px] text-[11.5px] cursor-pointer"
-                style={{ color: "rgba(243,238,229,.86)", minHeight: 32 }}
-              >
-                <span aria-hidden="true">×</span> Pas aujourd&apos;hui
-              </button>
+            </div>
+          )}
+
+          {/* LE CTA PREND TOUTE LA LARGEUR, 50 px. C'est la seule action
+              pleine de la card ; tout le reste y est translucide ou discret,
+              et la hiérarchie passe par là plutôt que par une couleur. */}
+          <button
+            onClick={actions.goTenues}
+            className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full text-[13.5px] tracking-[.04em] cursor-pointer"
+            style={{ minHeight: 50 }}
+          >
+            {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
+          </button>
+
+          {/* FEEDBACK — deux boutons DISCRETS, jamais concurrents du CTA :
+              translucides, 38 px, sous lui.
+
+              Ils n'écrivent rien pour l'instant. Le brief interdit de créer
+              une table sans validation ; la table `outfit_feedback` est
+              proposée et attend son exécution. Tant qu'elle n'existe pas,
+              brancher une écriture ferait échouer l'appel en production —
+              donc la réponse est locale, et la persistance viendra quand la
+              migration sera passée. C'est dit ici pour que personne ne prenne
+              ce silence pour un oubli.
+
+              « Pas pour moi » ne régénère PAS la tenue : le brief l'exige, et
+              c'est l'inverse de ce que j'avais branché quelques heures plus
+              tôt. Régénérer ferait de ce bouton une action, pas un avis. */}
+          {hasOutfit && (
+            <div className="mt-[13px]" aria-live="polite">
+              {avisDuJour ? (
+                <div className="font-serif italic text-[13px]" style={{ color: "#F0DDCF" }}>
+                  {avisDuJour === "adore"
+                    ? "Noté — on garde cette direction."
+                    : "Pas de souci, on t'en propose une autre demain."}
+                </div>
+              ) : (
+                <div className="flex items-center gap-[8px] flex-wrap">
+                  <button
+                    onClick={() => setAvisDuJour("adore")}
+                    className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
+                    style={{ minHeight: 38, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
+                  >
+                    <span aria-hidden="true">♡</span> J&apos;adore cette tenue
+                  </button>
+                  <button
+                    onClick={() => setAvisDuJour("pas_pour_moi")}
+                    className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
+                    style={{ minHeight: 38, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
+                  >
+                    <span aria-hidden="true">✕</span> Pas pour moi
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
