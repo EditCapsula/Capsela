@@ -758,8 +758,12 @@ export default function TenuesScreen() {
         </div>
       )}
 
+      {/* Signalé le 22/09 : l'intitulé collait au bas de la card terracotta.
+          Il n'avait aucune marge haute — invisible tant que la card se
+          terminait par un bouton crème détaché de son bord, criant depuis
+          qu'elle descend jusqu'au sien. */}
       {!geoLoading && outfitPieces.length > 0 && (
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[10px]">
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[26px] mb-[10px]">
           Les {outfitPieces.length} pièces
         </div>
       )}

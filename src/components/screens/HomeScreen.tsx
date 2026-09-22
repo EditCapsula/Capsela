@@ -471,6 +471,20 @@ export default function HomeScreen() {
    * seulement trouvées jolies. L'avis ira dans `outfit_feedback` une fois la
    * migration passée.
    */
+  /**
+   * AUCUNE TENUE POSSIBLE — et non « pas encore de tenue ».
+   *
+   * `state.outfit` est vide dans DEUX situations très différentes : pendant
+   * le chargement, avant que l'effet d'amorçage ait tourné, et après une
+   * génération qui n'a rien produit. Afficher « ajoute des pièces » dans le
+   * premier cas accuserait un dressing que personne n'a encore lu.
+   *
+   * `outfitNoCompleteOutfit` n'est posé que par generateOutfitWithFallback,
+   * donc après une tentative réelle : c'est le seul signal qui distingue les
+   * deux. Le vide seul n'en est pas un.
+   */
+  const aucuneTenuePossible = !hasOutfit && state.outfitNoCompleteOutfit;
+
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
   const dressingPieces = selectBoardPieces(state.items, 3);
@@ -623,7 +637,11 @@ export default function HomeScreen() {
             className="font-serif text-[20px] min-[380px]:text-[26px] text-cream leading-[1.14]"
             style={avecComposition ? { maxWidth: "42%" } : undefined}
           >
-            {hasOutfit ? "Ta tenue est prête" : "Découvre ta tenue du jour"}
+            {hasOutfit
+              ? "Ta tenue est prête"
+              : aucuneTenuePossible
+                ? "On prépare ta première tenue"
+                : "Découvre ta tenue du jour"}
           </div>
           <div
             className="text-[12.5px] mt-[8px] leading-[1.35]"
@@ -639,7 +657,13 @@ export default function HomeScreen() {
                 {iconeMeteo}
               </span>
             )}
-            {hasOutfit ? outfitQuote : "Une sélection pensée pour toi, ta journée et la météo."}
+            {hasOutfit
+              ? outfitQuote
+              : aucuneTenuePossible
+                ? dressingVide
+                  ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
+                  : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."
+                : "Une sélection pensée pour toi, ta journée et la météo."}
           </div>
 
           {/* PROVENANCE — la fonction pédagogique du brief : faire comprendre
@@ -699,12 +723,24 @@ export default function HomeScreen() {
           {/* LE CTA PREND TOUTE LA LARGEUR, 50 px. C'est la seule action
               pleine de la card ; tout le reste y est translucide ou discret,
               et la hiérarchie passe par là plutôt que par une couleur. */}
+          {/* PAS DE CTA MORT (§9.3). Quand le moteur n'a rien produit,
+              « Voir ma tenue » mènerait à un écran vide : le bouton conduit
+              alors au dressing, qui est l'endroit où la situation se
+              débloque. Vers l'ajout direct si le dressing est vide, vers sa
+              liste sinon — un même libellé pour deux situations en rendrait
+              une des deux fausse. */}
           <button
-            onClick={actions.goTenues}
+            onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
             className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full text-[13.5px] tracking-[.04em] cursor-pointer"
             style={{ minHeight: 50 }}
           >
-            {hasOutfit ? "Voir ma tenue →" : "Découvrir ma tenue →"}
+            {hasOutfit
+              ? "Voir ma tenue →"
+              : aucuneTenuePossible
+                ? dressingVide
+                  ? "Ajouter mes pièces →"
+                  : "Voir mon dressing →"
+                : "Découvrir ma tenue →"}
           </button>
 
           {/* FEEDBACK — deux boutons DISCRETS, jamais concurrents du CTA :
