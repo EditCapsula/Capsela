@@ -318,7 +318,25 @@ export default function WardrobeScreen() {
         {/* UNE SEULE action dominante : demandé, et c'est ce qui manquait —
             l'écran proposait « Ajouter une pièce », « Découvre ta capsule »
             et le bouton d'en-tête au même niveau de poids. */}
-        <div className="mt-[18px] bg-card border border-border rounded-[24px] p-[18px]">
+        <div className="mt-[18px] bg-card border border-border rounded-[24px] overflow-hidden">
+          {/* Visuel d'accueil, livré le 23/09 — la maquette le prévoyait, il
+              manquait. Ratio 1,548 tenu par aspect-ratio plutôt que par une
+              hauteur fixe : la card étant pleine largeur, l'image n'est JAMAIS
+              rognée, elle se met à l'échelle. Dimensions déclarées pour que la
+              card ne saute pas à l'arrivée de l'image. */}
+          <div style={{ aspectRatio: "1.548", background: "var(--color-warm-bg)" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/editorial/capsela_dressing_empty.webp"
+              alt="Un chapeau de paille, une maille écrue, un collier fin et un sac posés à plat sur du lin"
+              width={864}
+              height={558}
+              loading="lazy"
+              decoding="async"
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            />
+          </div>
+          <div className="p-[18px]">
           <div className="font-serif text-[24px] leading-[1.15] text-ink">
             Ton dressing <span className="italic text-terracotta">commence ici</span>
           </div>
@@ -338,6 +356,7 @@ export default function WardrobeScreen() {
             <div className="text-[12px] leading-[1.5]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
               Pas besoin d&apos;ajouter toute ta garde-robe. Commence avec 5 à 10 pièces que tu portes souvent.
             </div>
+          </div>
           </div>
         </div>
 
