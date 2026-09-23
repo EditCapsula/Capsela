@@ -231,7 +231,15 @@ function Svg({ taille, children }: { taille: number; children: React.ReactNode }
   );
 }
 
-export function GlypheOccasion({ occasion, taille = 17 }: { occasion: Exclude<OccasionKey, "all">; taille?: number }) {
+/**
+ * Accepte OccasionKey entier, "all" compris, et ne rend RIEN pour elle. Le
+ * type strict obligeait chaque appelant à restreindre lui-même ou à caster :
+ * six surfaces affichent une occasion, c'était six occasions de se tromper.
+ * "all" est la sentinelle « aucune occasion choisie » — elle n'a pas de
+ * glyphe, et l'absence de rendu est la bonne réponse, pas une erreur.
+ */
+export function GlypheOccasion({ occasion, taille = 17 }: { occasion: OccasionKey; taille?: number }) {
+  if (occasion === "all") return null;
   return <Svg taille={taille}>{GLYPHES_OCCASION[occasion]}</Svg>;
 }
 

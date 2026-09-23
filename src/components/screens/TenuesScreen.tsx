@@ -268,12 +268,11 @@ export default function TenuesScreen() {
    */
   const libelleOccasion =
     OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? "Choisir une occasion";
-  // Pas de glyphe tant qu'aucune occasion n'est choisie : "all" est un état
-  // légitime, et lui en donner un inventerait un contexte inexistant.
-  const occasionGlyphee = state.occasion !== "all" ? state.occasion : null;
   const sousChoix: {
     titre: string;
-    valeurs: readonly string[];
+    // Typé sur l'union plutôt que sur string : la feuille rend un glyphe par
+    // valeur, et un string nu y aurait demandé un cast à chaque ligne.
+    valeurs: readonly (WorkMode | DateContext | TravelMode)[];
     courant: string;
     glyphe: React.ReactNode;
     choisir: (v: string) => void;
@@ -514,7 +513,7 @@ export default function TenuesScreen() {
               qu'un emoji ne peut pas faire, ses couleurs étant imposées par
               le système. Ils remplacent le carré ❑ du 22/09, qui ne
               distinguait aucune occasion d'une autre. */}
-          {occasionGlyphee && <GlypheOccasion occasion={occasionGlyphee} />}
+          <GlypheOccasion occasion={state.occasion} />
           <span className="whitespace-nowrap">{libelleOccasion}</span>
           <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
         </button>
@@ -1168,6 +1167,12 @@ export default function TenuesScreen() {
                 className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
                 style={{ minHeight: 52 }}
               >
+                {/* Le même glyphe que sur le chip : la feuille est l'endroit
+                    d'où le chip tire sa valeur, les montrer d'un seul côté
+                    rendait le lien entre les deux moins évident. */}
+                <span className={actif ? "text-terracotta" : "text-muted"}>
+                  <GlypheOccasion occasion={key} taille={19} />
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className={"text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
                   <div className="text-[11.5px] text-muted mt-[2px]">{sub}</div>
@@ -1192,6 +1197,11 @@ export default function TenuesScreen() {
             className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-t border-[#EFE7DA]"
             style={{ minHeight: 52 }}
           >
+            {/* Place du glyphe RÉSERVÉE, pas remplie : "all" est l'absence
+                d'occasion, lui dessiner une icône inventerait un contexte.
+                Mais sans cette cale, cette seule ligne se décalait de 19 px
+                vers la gauche et cassait la colonne des dix autres. */}
+            <span aria-hidden="true" className="flex-shrink-0" style={{ width: 19 }} />
             <div className="flex-1 min-w-0">
               <div className={"text-[13.5px] " + (state.occasion === "all" ? "text-terracotta" : "text-ink")}>Peu importe</div>
               <div className="text-[11.5px] text-muted mt-[2px]">Sans occasion particulière</div>
@@ -1218,6 +1228,9 @@ export default function TenuesScreen() {
                 className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
                 style={{ minHeight: 52 }}
               >
+                <span className={actif ? "text-terracotta" : "text-muted"}>
+                  <GlypheSousChoix valeur={v} taille={19} />
+                </span>
                 <div className={"flex-1 min-w-0 text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{v}</div>
                 <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
                   ✓
