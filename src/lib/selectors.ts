@@ -377,8 +377,10 @@ export function composeWardrobePool(
 }
 
 /**
- * Message envoyé à un proche pour lui demander son avis sur la tenue du jour
- * (23/09/2026). Écrit ici, pas dans l'écran, pour une raison précise : c'est
+ * MESSAGE ENVOYÉ À UN PROCHE pour lui demander son avis sur la tenue du jour
+ * (23/09/2026) — les quatre déclarations qui suivent en forment le tout.
+ *
+ * Écrit ici, pas dans l'écran, pour une raison précise : c'est
  * la seule chose de cette fonctionnalité qui soit testable hors rendu, et
  * c'est aussi la seule qui puisse être FAUSSE sans que rien ne plante — un
  * message qui décrirait une autre tenue que celle affichée.
@@ -392,14 +394,37 @@ export function composeWardrobePool(
  * ce que l'utilisatrice possède déjà, et la question posée est vestimentaire,
  * pas patrimoniale.
  */
-export function buildOpinionMessage(args: {
+export interface OpinionMessageParts {
+  /** Première ligne : « Ma tenue du jour », suivie du contexte s'il existe. */
+  titre: string;
+  /** Un nom de pièce par entrée, SANS la puce — elle appartient au rendu. */
+  pieces: string[];
+  /** La question ferme le message, toujours. */
+  question: string;
+}
+
+/**
+ * Les PARTIES du message, avant mise en forme.
+ *
+ * Ajoutées le 23/09/2026 avec la maquette « Demander un avis » : l'écran y
+ * affiche le message en lecture sous forme composée — titre en gras, pièces
+ * à puces terracotta, question en serif italique — et non plus dans une
+ * zone de texte brute.
+ *
+ * POURQUOI LES PARTIES ET PAS UN DÉCOUPAGE DU TEXTE. Le risque de cet écran
+ * n'est pas qu'il soit laid, c'est qu'il affiche autre chose que ce qu'il
+ * envoie. Un composant qui re-fendrait la chaîne sur "\n" et retirerait les
+ * puces à la main serait une SECONDE implémentation du format, libre de
+ * dériver. Ici la chaîne est construite À PARTIR des parties : les deux ne
+ * peuvent pas diverger, puisqu'il n'y a qu'une source.
+ */
+export function buildOpinionMessageParts(args: {
   pieces: Item[];
   occasion: OccasionKey;
   temp: number | null | undefined;
   conditionMeteo: string | null | undefined;
-}): string {
+}): OpinionMessageParts {
   const { pieces, occasion, temp, conditionMeteo } = args;
-  const lignes: string[] = [];
 
   const contexte: string[] = [];
   if (occasion !== "all" && OCC_LABELS[occasion]) contexte.push(OCC_LABELS[occasion]);
@@ -407,11 +432,24 @@ export function buildOpinionMessage(args: {
     contexte.push(conditionMeteo ? `${Math.round(temp)}° · ${conditionMeteo}` : `${Math.round(temp)}°`);
   }
 
-  lignes.push(contexte.length ? `Ma tenue du jour — ${contexte.join(" · ")}` : "Ma tenue du jour");
-  lignes.push("");
-  for (const p of pieces) lignes.push(`• ${p.name}`);
-  lignes.push("");
-  lignes.push("Qu'est-ce que tu en penses ?");
+  return {
+    titre: contexte.length ? `Ma tenue du jour — ${contexte.join(" · ")}` : "Ma tenue du jour",
+    pieces: pieces.map((p) => p.name),
+    question: "Qu'est-ce que tu en penses ?",
+  };
+}
 
-  return lignes.join("\n");
+/** Le message tel qu'il PART — assemblé depuis les parties, jamais à côté d'elles. */
+export function formatOpinionMessage(parts: OpinionMessageParts): string {
+  return [parts.titre, "", ...parts.pieces.map((n) => `• ${n}`), "", parts.question].join("\n");
+}
+
+/** Le message complet, en une fois — forme d'appel historique, conservée. */
+export function buildOpinionMessage(args: {
+  pieces: Item[];
+  occasion: OccasionKey;
+  temp: number | null | undefined;
+  conditionMeteo: string | null | undefined;
+}): string {
+  return formatOpinionMessage(buildOpinionMessageParts(args));
 }
