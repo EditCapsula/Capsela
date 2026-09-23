@@ -311,6 +311,17 @@ interface CapselaContextValue {
   wardrobePool: Item[];
   /** Source des suggestions — vestiaire universel (Supabase) si disponible, sinon le catalogue statique de secours. Utilisé par l'écran Capsule pour recalculer une capsule sur une saison différente de la saison courante. */
   vestiairePool: CatalogItem[];
+  /**
+   * true une fois les pièces, l'historique et les looks chargés.
+   *
+   * Exposé le 23/09/2026 pour l'état de chargement du Dressing : le drapeau
+   * existait déjà en interne, mais l'écran ne pouvait pas distinguer « pas
+   * encore chargé » de « dressing vide » — une utilisatrice qui a des pièces
+   * voyait donc l'empty state le temps du fetch, avec son « Ajoute ta
+   * première pièce ». Aucun comportement de chargement n'est modifié : la
+   * valeur est seulement rendue lisible.
+   */
+  dressingLoaded: boolean;
   actions: Actions;
 }
 
@@ -1578,6 +1589,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     defaultCapsule,
     wardrobePool,
     vestiairePool,
+    dressingLoaded,
     actions,
   };
 
