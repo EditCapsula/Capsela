@@ -705,10 +705,10 @@ export default function WardrobeScreen() {
       {/* ── CE QUE JE PEUX FAIRE MAINTENANT ─────────────────────────────── */}
       <button
         onClick={actions.goTenues}
-        className="mt-[22px] w-full flex items-center justify-center gap-2 rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
+        className="mt-[22px] w-full flex items-center justify-center rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
         style={{ minHeight: 50 }}
       >
-        Voir ma tenue du jour <span aria-hidden="true">→</span>
+        Voir ma tenue du jour
       </button>
     </div>
   );

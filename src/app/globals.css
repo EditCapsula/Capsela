@@ -69,14 +69,19 @@ body {
 }
 
 /**
- * Hauteur réelle de TabBar.tsx hors safe-area (pt-[11px] + icône 19px +
- * gap-[5px] + libellé ~11.4px + pb-[22px] ≈ 68.4px, arrondi) — recette
- * 20/08/2026, correctif contenu masqué par la navigation basse. Source
- * unique de vérité : si TabBar change de taille, ne mettre à jour QUE
- * cette variable, jamais une valeur en dur dans chaque écran.
+ * Hauteur réelle de TabBar.tsx hors safe-area — recette 20/08/2026,
+ * correctif contenu masqué par la navigation basse. Source unique de
+ * vérité : si TabBar change de taille, ne mettre à jour QUE cette
+ * variable, jamais une valeur en dur dans chaque écran.
+ *
+ * Valeur MESURÉE en rendu, pas calculée (23/09/2026) : pt-[8px] +
+ * pastille 29px + gap-[5px] + libellé + pb-[22px] = 79,3px, arrondi à
+ * 80. La version précédente annonçait 68,4px par le calcul et valait 70
+ * alors que la barre en mesurait 72,3 — le libellé Manrope 9,5px occupe
+ * une ligne de 14,3px, pas les ~11,4px estimés. D'où la règle : mesurer.
  */
 :root {
-  --bottom-nav-height: 70px;
+  --bottom-nav-height: 80px;
 }
 
 /**

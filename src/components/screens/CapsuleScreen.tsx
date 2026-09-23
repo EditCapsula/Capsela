@@ -222,7 +222,7 @@ export default function CapsuleScreen() {
             onClick={actions.viewExploredOutfit}
             className="mt-[14px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
           >
-            Voir ma tenue →
+            Voir ma tenue
           </button>
         </div>
       )}
