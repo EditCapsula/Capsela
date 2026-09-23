@@ -8,7 +8,6 @@ import type {
   SacType,
   Season,
   ShoeType,
-  TravelMode,
   WorkMode,
 } from "./types";
 
@@ -157,57 +156,6 @@ DATE_CONTEXTS.forEach(([key, formality]) => {
 });
 
 /** Libellés courts pour les chips d'occasion à l'ajout d'une pièce (espace restreint). */
-/**
- * Icône par occasion, en remplacement du carré ❑ qui tenait lieu de repère
- * depuis le 22/09/2026 (demandé le 23/09). Un carré n'est pas une icône : il
- * ne distingue pas les occasions entre elles, et il en restait deux côte à
- * côte sur l'écran Tenue, l'un pour l'occasion, l'autre pour son sous-choix.
- *
- * Emojis, comme WEATHER_ICONS et pour la même raison : c'est l'arbitrage du
- * 22/09 ("pour l'instant, gardons les emojis, mais il est probable que je
- * revienne sur cette décision"). Réunies ici, en UN point, pour qu'un passage
- * aux glyphes dessinés reste un changement de table.
- *
- * Record complet plutôt que Partial : ajouter une occasion sans lui donner
- * d'icône devient une erreur de compilation, jamais un carré silencieux.
- * "all" en est exclue — c'est la sentinelle « aucune occasion choisie », elle
- * ne figure pas dans OCCASIONS et n'atteint jamais un chip. Lui inventer une
- * icône aurait satisfait le compilateur en ajoutant une valeur morte.
- */
-export const OCCASION_ICONS: Record<Exclude<OccasionKey, "all">, string> = {
-  quotidien: "🌤️",
-  travail_formel: "💼",
-  entretien: "🤝",
-  date: "🕯️",
-  soiree: "🍸",
-  festive: "🎉",
-  sport: "👟",
-  cocooning: "🛋️",
-  voyage: "✈️",
-  evenement_perso: "💐",
-};
-
-/**
- * Icône des sous-choix (mode de travail, contexte de date, mode de voyage).
- * Le second chip portait le même carré que le premier : le corriger d'un
- * côté seulement aurait laissé un placeholder à côté d'une vraie icône.
- * Table unique, les trois familles de valeurs n'ayant aucun libellé commun.
- */
-export const SOUS_CHOIX_ICONS: Record<WorkMode | DateContext | TravelMode, string> = {
-  // WorkMode
-  "Présentiel": "🏢",
-  "Télétravail": "🏠",
-  // DateContext
-  "Restaurant / date romantique": "🍽️",
-  "Verre": "🍷",
-  "Cinéma / balade": "🎬",
-  "Activité": "🎯",
-  "Soirée festive": "🎉",
-  // TravelMode
-  "Court trajet": "🚆",
-  "Longue distance": "🧳",
-};
-
 /** Icône météo par libellé de condition (partagée Tenue du jour / Accueil). */
 export const WEATHER_ICONS: Record<string, string> = {
   "Ensoleillé": "☀️",

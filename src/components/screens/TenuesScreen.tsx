@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { OutfitComposition } from "@/components/OutfitComposition";
-import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, OCCASION_ICONS, SOUS_CHOIX_ICONS, WEATHER_ICONS, isBag } from "@/lib/data";
+import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
+import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCapsulePourMeteo } from "@/lib/capsule";
@@ -267,16 +268,22 @@ export default function TenuesScreen() {
    */
   const libelleOccasion =
     OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? "Choisir une occasion";
-  // Pas d'icône tant qu'aucune occasion n'est choisie : "all" est un état
-  // légitime, et lui en donner une inventerait un contexte inexistant.
-  const iconeOccasion = state.occasion !== "all" ? OCCASION_ICONS[state.occasion] : null;
-  const sousChoix: { titre: string; valeurs: readonly string[]; courant: string; icone: string; choisir: (v: string) => void } | null =
+  // Pas de glyphe tant qu'aucune occasion n'est choisie : "all" est un état
+  // légitime, et lui en donner un inventerait un contexte inexistant.
+  const occasionGlyphee = state.occasion !== "all" ? state.occasion : null;
+  const sousChoix: {
+    titre: string;
+    valeurs: readonly string[];
+    courant: string;
+    glyphe: React.ReactNode;
+    choisir: (v: string) => void;
+  } | null =
     state.occasion === "travail_formel"
       ? {
           titre: "Où travailles-tu aujourd'hui ?",
           valeurs: ["Présentiel", "Télétravail"] as const,
           courant: state.workMode,
-          icone: SOUS_CHOIX_ICONS[state.workMode],
+          glyphe: <GlypheSousChoix valeur={state.workMode} />,
           choisir: (v) => actions.setWorkMode(v as WorkMode),
         }
       : state.occasion === "date"
@@ -284,7 +291,7 @@ export default function TenuesScreen() {
             titre: "Quel type de date ?",
             valeurs: DATE_CONTEXTS.map(([m]) => m),
             courant: state.dateContext,
-          icone: SOUS_CHOIX_ICONS[state.dateContext],
+          glyphe: <GlypheSousChoix valeur={state.dateContext} />,
             choisir: (v) => actions.setDateContext(v as DateContext),
           }
         : state.occasion === "voyage"
@@ -292,7 +299,7 @@ export default function TenuesScreen() {
               titre: "Quel type de trajet ?",
               valeurs: ["Court trajet", "Longue distance"] as const,
               courant: state.travelMode,
-          icone: SOUS_CHOIX_ICONS[state.travelMode],
+          glyphe: <GlypheSousChoix valeur={state.travelMode} />,
               choisir: (v) => actions.setTravelMode(v as TravelMode),
             }
           : null;
@@ -501,12 +508,13 @@ export default function TenuesScreen() {
           className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-terracotta-deep text-cream"
           style={{ minHeight: 46 }}
         >
-          {/* Le carré ❑ tenait lieu de repère depuis le 22/09 : il ne
-              distinguait rien, et il y en avait deux côte à côte. Table
-              OCCASION_ICONS (data.ts), lue en UN point. */}
-          {iconeOccasion && (
-            <span aria-hidden="true" className="text-[14px] leading-none">{iconeOccasion}</span>
-          )}
+          {/* Glyphes dessinés depuis le 23/09, après la planche de
+              comparaison. Ils prennent currentColor, donc le crème du chip
+              actif ici et la terre de sienne du chip sable plus bas — ce
+              qu'un emoji ne peut pas faire, ses couleurs étant imposées par
+              le système. Ils remplacent le carré ❑ du 22/09, qui ne
+              distinguait aucune occasion d'une autre. */}
+          {occasionGlyphee && <GlypheOccasion occasion={occasionGlyphee} />}
           <span className="whitespace-nowrap">{libelleOccasion}</span>
           <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
         </button>
@@ -521,7 +529,7 @@ export default function TenuesScreen() {
             className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-warm-bg text-sand-text border border-sand-border"
             style={{ minHeight: 46 }}
           >
-            <span aria-hidden="true" className="text-[14px] leading-none">{sousChoix.icone}</span>
+            {sousChoix.glyphe}
             <span className="whitespace-nowrap">{sousChoix.courant}</span>
             <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
           </button>

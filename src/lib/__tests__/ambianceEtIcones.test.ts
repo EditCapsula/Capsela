@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { OCCASIONS, OCCASION_ICONS, SOUS_CHOIX_ICONS } from "../data";
+import { GLYPHES_OCCASION, GLYPHES_SOUS_CHOIX } from "../../components/GlyphesOccasion";
+import { OCCASIONS } from "../data";
 import { explainRecommendation, outfitMoodPhrase } from "../logic";
 import { DATE_CONTEXTS } from "../data";
 import type { OccasionKey } from "../types";
 
 /**
  * Deux règles issues du 23/09/2026, qu'aucun type ne protège.
+ *
+ * La seconde garde les tables de glyphes : le Record typé empêche d'oublier
+ * une clé, mais pas d'en laisser une qui n'est plus proposée.
  *
  * La première est la plus importante : outfitMoodPhrase et
  * explainRecommendation se ressemblent assez pour qu'on soit tenté de les
@@ -39,19 +43,18 @@ describe("phrase d'ambiance", () => {
   });
 });
 
-describe("icônes d'occasion", () => {
+describe("glyphes d'occasion", () => {
   it("couvre chaque occasion réellement proposée", () => {
     for (const [cle, libelle] of OCCASIONS) {
-      const icone = OCCASION_ICONS[cle as Exclude<OccasionKey, "all">];
-      expect(icone, libelle).toBeTruthy();
-      // Le carré que ces icônes remplacent : jamais réintroduit par recopie.
-      expect(icone, libelle).not.toBe("❑");
+      expect(GLYPHES_OCCASION[cle as Exclude<OccasionKey, "all">], libelle).toBeTruthy();
     }
   });
 
-  it("n'attribue pas deux fois la même icône à deux occasions", () => {
-    const vues = OCCASIONS.map(([k]) => OCCASION_ICONS[k as Exclude<OccasionKey, "all">]);
-    expect(new Set(vues).size, vues.join(" ")).toBe(vues.length);
+  it("ne contient pas d'occasion inconnue de la table OCCASIONS", () => {
+    const proposees = new Set(OCCASIONS.map(([k]) => k));
+    for (const cle of Object.keys(GLYPHES_OCCASION)) {
+      expect(proposees.has(cle as OccasionKey), `${cle} dessinée mais jamais proposée`).toBe(true);
+    }
   });
 
   it("couvre chaque sous-choix des trois familles", () => {
@@ -61,8 +64,9 @@ describe("icônes d'occasion", () => {
       "Court trajet", "Longue distance",
     ] as const;
     for (const v of valeurs) {
-      expect(SOUS_CHOIX_ICONS[v], v).toBeTruthy();
-      expect(SOUS_CHOIX_ICONS[v], v).not.toBe("❑");
+      expect(GLYPHES_SOUS_CHOIX[v], v).toBeTruthy();
     }
+    // Aucun sous-choix dessiné qui n'existerait plus dans les types.
+    expect(Object.keys(GLYPHES_SOUS_CHOIX).sort()).toEqual([...valeurs].sort());
   });
 });
