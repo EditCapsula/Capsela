@@ -1,4 +1,5 @@
 import { accessoireTypeFor } from "./attributes";
+import { type Verdict, clePieces, jourLocal } from "./outfitFeedback";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type {
   AccessoireType,
@@ -428,5 +429,72 @@ export async function deleteSavedLook(id: string): Promise<void> {
 /** Ajoute une pièce à un look existant ("♡ Ajouter à un look", recette 24/08/2026, PieceScreen) — patch minimal (piece_ids uniquement). */
 export async function updateSavedLook(id: string, pieceIds: number[]): Promise<void> {
   const { error } = await getSupabase().from("saved_looks").update({ piece_ids: pieceIds }).eq("id", id);
+  if (error) throw error;
+}
+
+/* ── Avis rapide sur la tenue du jour (outfit_feedback, 0029) ──────────── */
+
+export interface OutfitFeedbackRow {
+  jour: string;
+  piece_ids: number[];
+  verdict: Verdict;
+}
+
+/**
+ * Enregistre — ou corrige — l'avis du jour sur une tenue.
+ *
+ * `upsert` sur (user_id, jour, piece_ids) : un second tap remplace le verdict
+ * au lieu d'empiler une ligne, ce que la contrainte d'unicité permet et que
+ * `clePieces` rend fiable en triant les ids (cf. outfitFeedback.ts).
+ *
+ * `jour` est envoyé explicitement, en date locale : le défaut `current_date`
+ * de la colonne est en UTC et classerait mal un avis donné après minuit.
+ */
+export async function upsertOutfitFeedback(
+  userId: string,
+  args: { pieceIds: readonly number[]; occasion: string | null; verdict: Verdict; jour?: string }
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from("outfit_feedback")
+    .upsert(
+      {
+        user_id: userId,
+        jour: args.jour ?? jourLocal(),
+        piece_ids: clePieces(args.pieceIds),
+        occasion: args.occasion,
+        verdict: args.verdict,
+      },
+      { onConflict: "user_id,jour,piece_ids" }
+    );
+  if (error) throw error;
+}
+
+/**
+ * Les avis déjà donnés AUJOURD'HUI, toutes tenues confondues.
+ *
+ * Chargé en bloc plutôt que ciblé sur la tenue courante : au démarrage, la
+ * tenue n'est pas encore générée. L'écran retrouve ensuite la ligne qui
+ * correspond à ses pièces. Une régénération dans la journée donne donc une
+ * tenue sans verdict — c'est le comportement voulu, l'avis portait sur
+ * l'autre.
+ */
+export async function fetchOutfitFeedbackDuJour(userId: string, jour = jourLocal()): Promise<OutfitFeedbackRow[]> {
+  const { data, error } = await getSupabase()
+    .from("outfit_feedback")
+    .select("jour, piece_ids, verdict")
+    .eq("user_id", userId)
+    .eq("jour", jour);
+  if (error) throw error;
+  return (data ?? []) as OutfitFeedbackRow[];
+}
+
+/** Retire l'avis du jour sur cette tenue — repasser le même verdict l'annule. */
+export async function deleteOutfitFeedback(userId: string, jour: string, pieceIds: readonly number[]): Promise<void> {
+  const { error } = await getSupabase()
+    .from("outfit_feedback")
+    .delete()
+    .eq("user_id", userId)
+    .eq("jour", jour)
+    .eq("piece_ids", clePieces(pieceIds));
   if (error) throw error;
 }

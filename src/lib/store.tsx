@@ -10,14 +10,17 @@ import {
   analyzeDressingPhoto,
   deleteDressingItem,
   deleteDressingPhotos,
+  deleteOutfitFeedback,
   deleteSavedLook,
   dressingPhotoPath,
   fetchDressingItems,
   fetchOutfitHistory,
+  fetchOutfitFeedbackDuJour,
   fetchSavedLooks,
   insertDressingItem,
   insertOutfitHistoryEntry,
   insertSavedLook,
+  upsertOutfitFeedback,
   updateDressingItem,
   updateDressingItemWorn,
   updateSavedLook,
@@ -27,6 +30,7 @@ import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { composeWardrobePool } from "./selectors";
+import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import {
@@ -142,6 +146,7 @@ function buildInitialState(): AppState {
     exploredStyleId: null,
     lookCount: 0,
     history: [],
+    outfitFeedbackDuJour: [],
     savedLooks: [],
     lookDraftIds: [],
     lookDraftName: "",
@@ -279,6 +284,8 @@ export interface Actions {
   setLookDraftName: (v: string) => void;
   setLookDraftOccasion: (o: OccasionKey) => void;
   dismissLookDraftSuggestion: (key: string) => void;
+  /** Avis rapide sur la tenue du jour — repasser le même verdict le retire. */
+  setOutfitFeedback: (verdict: Verdict) => void;
   saveLook: () => void;
   toggleSaveOutfitLook: () => void;
   openLook: (id: string) => void;
@@ -399,13 +406,29 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     let cancelled = false;
-    Promise.all([fetchDressingItems(userId), fetchOutfitHistory(userId), fetchSavedLooks(userId)]).then(
-      ([items, history, savedLooks]) => {
-        if (cancelled) return;
-        setState((s) => ({ ...s, items, history, savedLooks }));
-        setDressingLoaded(true);
-      }
-    );
+    Promise.all([
+      fetchDressingItems(userId),
+      fetchOutfitHistory(userId),
+      fetchSavedLooks(userId),
+      // Les avis du jour sont chargés en bloc : la tenue n'est pas encore
+      // générée ici, donc on ne peut pas cibler la sienne. Un échec ne doit
+      // PAS priver l'utilisatrice de son dressing — l'avis est accessoire,
+      // le dressing ne l'est pas.
+      fetchOutfitFeedbackDuJour(userId).catch((err) => {
+        reportDressingError("fetchOutfitFeedbackDuJour", err);
+        return [];
+      }),
+    ]).then(([items, history, savedLooks, avis]) => {
+      if (cancelled) return;
+      setState((s) => ({
+        ...s,
+        items,
+        history,
+        savedLooks,
+        outfitFeedbackDuJour: avis.map((a) => ({ jour: a.jour, pieceIds: a.piece_ids, verdict: a.verdict })),
+      }));
+      setDressingLoaded(true);
+    });
     return () => {
       cancelled = true;
     };
@@ -1382,6 +1405,42 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // saveItem : on attend l'id réel renvoyé par Supabase avant d'ajouter le
     // look au state, pour qu'une suppression dans la même session (id encore
     // local) ne cible jamais une ligne qui n'existe pas encore en base.
+    /**
+     * Avis rapide sur la tenue du jour.
+     *
+     * OPTIMISTE, ET C'EST DÉLIBÉRÉ : le state passe avant l'appel réseau,
+     * parce qu'un avis est un geste d'une seconde et qu'attendre la base
+     * ferait clignoter le bouton. En cas d'échec, l'état local est REVENU en
+     * arrière plutôt que laissé à mentir — c'est exactement le défaut que
+     * cette fonctionnalité corrige.
+     *
+     * Repasser le même verdict le RETIRE : un avis se révise, et sans ce
+     * geste il n'existerait aucun moyen de revenir sur un tap involontaire.
+     *
+     * Hors Supabase (mode démo), l'avis vit en mémoire : la tenue s'affiche,
+     * le bouton répond, rien n'est écrit. Pas de faux message d'erreur pour
+     * une session qui n'a pas de compte.
+     */
+    setOutfitFeedback: (verdict) => {
+      const s = stateRef.current;
+      if (!s.outfit.length) return;
+      const pieceIds = clePieces(s.outfit);
+      const jour = jourLocal();
+      const avant = s.outfitFeedbackDuJour;
+      const { liste: apres, retire } = appliquerAvis(avant, { jour, pieceIds, verdict });
+      setState((st) => ({ ...st, outfitFeedbackDuJour: apres }));
+      if (!isSupabaseConfigured || !userId) return;
+      const occasion = s.occasion && s.occasion !== "all" ? s.occasion : null;
+      const ecriture = retire
+        ? deleteOutfitFeedback(userId, jour, pieceIds)
+        : upsertOutfitFeedback(userId, { pieceIds, occasion, verdict });
+      ecriture.catch((err) => {
+        reportDressingError(retire ? "deleteOutfitFeedback" : "upsertOutfitFeedback", err);
+        // Retour en arrière : mieux vaut un bouton qui n'a pas pris que la
+        // trace d'un avis jamais enregistré.
+        setState((st) => ({ ...st, outfitFeedbackDuJour: avant }));
+      });
+    },
     saveLook: () => {
       const s = stateRef.current;
       // Un look doit rassembler au moins 2 pièces pour avoir du sens.
