@@ -178,109 +178,13 @@ function HeroPiece({ item, slot, eager }: { item: Item; slot: HeroSlot; eager: b
 }
 
 /**
- * Section « Explore L'édit Capsela » — Dressing et Capsule en vis-à-vis,
- * Journal en pleine largeur. Priorité de catégories pour que la planche montre
- * des familles de vêtements variées, jamais trois fois la même.
+ * Emplacement en %, légèrement pivoté — la géométrie des collages éditoriaux.
+ *
+ * Servait aussi aux planches de pièces réelles (StyleBoard) jusqu'au
+ * 23/09/2026 : les deux cards de l'Accueil portent depuis des visuels
+ * éditoriaux composés pour leur bande, et le reste du fichier a suivi.
  */
-const BOARD_PRIORITY: CategoryKey[] = [
-  "robe", "combinaison", "manteau", "veste", "haut", "pull", "jupe", "pantalon", "jean", "short",
-  "chaussures", "sac", "bijou", "accessoire",
-];
-
-function selectBoardPieces(items: Item[], max: number): Item[] {
-  const picked: Item[] = [];
-  const usedCats = new Set<CategoryKey>();
-  for (const cat of BOARD_PRIORITY) {
-    if (picked.length >= max) break;
-    const found = items.find((it) => it.cat === cat && !usedCats.has(it.cat));
-    if (found) {
-      picked.push(found);
-      usedCats.add(cat);
-    }
-  }
-  // Repli si le dressing/la capsule n'a pas assez de catégories distinctes.
-  for (const it of items) {
-    if (picked.length >= max) break;
-    if (!picked.includes(it)) picked.push(it);
-  }
-  return picked;
-}
-
-/** Emplacements en % (asymétriques, légèrement pivotés) selon le nombre de pièces — jamais une grille régulière. */
 type BoardSlot = { left: number; top: number; w: number; h: number; rotate: number; z: number };
-const BOARD_SLOTS: Record<number, BoardSlot[]> = {
-  1: [{ left: 24, top: 6, w: 54, h: 88, rotate: -2, z: 1 }],
-  2: [
-    { left: 0, top: 6, w: 50, h: 82, rotate: -3, z: 2 },
-    { left: 52, top: 26, w: 46, h: 64, rotate: 4, z: 1 },
-  ],
-  3: [
-    { left: 0, top: 8, w: 44, h: 80, rotate: -3, z: 2 },
-    { left: 46, top: 0, w: 40, h: 44, rotate: 4, z: 1 },
-    { left: 50, top: 50, w: 38, h: 46, rotate: -2, z: 3 },
-  ],
-  4: [
-    { left: 0, top: 12, w: 48, h: 81, rotate: -4, z: 2 },
-    { left: 40, top: 0, w: 37, h: 44, rotate: 6, z: 1 },
-    { left: 62, top: 32, w: 40, h: 46, rotate: -5, z: 3 },
-    { left: 38, top: 50, w: 35, h: 44, rotate: 4, z: 1 },
-  ],
-};
-
-/** Petite planche de stylisme (Dressing/Capsule) — pièces réelles, tailles et rotations variées, léger chevauchement. */
-function StyleBoard({ items, height }: { items: Item[]; height: number }) {
-  const slots = BOARD_SLOTS[items.length] || [];
-  if (!items.length) return null;
-  return (
-    <div style={{ position: "relative", height }} aria-hidden="true">
-      {items.map((it, i) => {
-        const slot = slots[i];
-        if (!slot) return null;
-        return <BoardPiece key={"board-" + it.id} item={it} slot={slot} />;
-      })}
-    </div>
-  );
-}
-
-function BoardPiece({ item, slot }: { item: Item; slot: BoardSlot }) {
-  const [failed, setFailed] = useState(false);
-  const img = resolveItemImage(item);
-  const showImg = Boolean(img.url) && !failed;
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: slot.left + "%",
-        top: slot.top + "%",
-        width: slot.w + "%",
-        height: slot.h + "%",
-        transform: `rotate(${slot.rotate}deg)`,
-        zIndex: slot.z,
-      }}
-    >
-      {showImg ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={img.url}
-          alt=""
-          decoding="async"
-          loading="lazy"
-          onError={() => setFailed(true)}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            display: "block",
-            filter: "drop-shadow(0 4px 9px rgba(29,26,22,.15))",
-          }}
-        />
-      ) : (
-        <div style={{ width: "100%", height: "100%", borderRadius: 8, background: item.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }} />
-      )}
-    </div>
-  );
-}
-
 /**
  * Visuels éditoriaux génériques Capsela pour la card Journal (brief
  * 26/08/2026) — JAMAIS les photos personnelles de l'utilisatrice : le rôle de
@@ -450,6 +354,42 @@ function CardModule({
       </div>
       <div className="px-[14px] pt-[10px] pb-[14px]">{children}</div>
     </button>
+  );
+}
+
+/**
+ * Bande éditoriale d'une card de l'Accueil — livrée le 23/09/2026, composée
+ * POUR ce format plutôt que recadrée depuis une photo classique.
+ *
+ * LA ZONE DE SÉCURITÉ EST LES 60 % CENTRAUX, et ce n'est pas une marge de
+ * confort : la bande garde 150 px de haut à toutes les largeurs, donc son
+ * ratio varie de 1,61:1 à 320 px à 2,68:1 dès 480 px. Mesuré sur la vraie
+ * card — part de la source réellement visible :
+ *
+ *     320 px -> 59,9 %    390 px -> 77,2 %    480 px et + -> 99,5 %
+ *
+ * Le rognage est UNIQUEMENT latéral : la hauteur se remplit toujours
+ * exactement (150 = 300 / 2), donc rien n'est jamais perdu en haut ni en bas.
+ * Toute image de remplacement doit porter son sujet entre x=162 et x=646 sur
+ * une source de 808 px, les côtés servant de prolongement.
+ *
+ * `width`/`height` sont déclarés : sans eux le navigateur ne réserve pas la
+ * place et la card saute quand l'image arrive.
+ */
+function BandeEditoriale({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div style={{ height: 150, borderRadius: 14, overflow: "hidden", background: "var(--color-warm-bg)" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        width={808}
+        height={300}
+        loading="lazy"
+        decoding="async"
+        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }}
+      />
+    </div>
   );
 }
 
@@ -682,8 +622,6 @@ export default function HomeScreen() {
 
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
-  const dressingPieces = selectBoardPieces(state.items, 3);
-  const capsulePieces = selectBoardPieces(capsule, 4);
 
   const journalGender: "femme" | "homme" = profile.gender === "homme" ? "homme" : "femme";
   const journalVisuals = JOURNAL_VISUALS[journalGender];
@@ -740,10 +678,6 @@ export default function HomeScreen() {
     () => [...state.savedLooks].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4),
     [state.savedLooks]
   );
-  // Ordre inversé pour la planche d'attente du Dressing : le stock ne compte
-  // que trois photos par genre, donc les deux cards montrent les mêmes
-  // fichiers. Changer la dominante évite l'effet de copie exacte.
-  const emptyBoardVisuals = [...journalVisuals].slice().reverse();
 
   const heroSlots = outfitPieces.some((it) => isOnePieceCat(it.cat)) ? HERO_SLOTS_ONEPIECE : HERO_SLOTS_STANDARD;
   const heroPieces = selectHomePieces(outfitPieces);
@@ -1091,11 +1025,15 @@ export default function HomeScreen() {
           cta={dressingVide ? "Ajouter mes pièces" : "Explorer ton dressing"}
           fond="#F2E9DA"
         >
-          {dressingVide ? (
-            <EmptyDressingBoard visuals={emptyBoardVisuals} height={150} />
-          ) : (
-            <StyleBoard items={dressingPieces} height={150} />
-          )}
+          {/* Visuel éditorial et non plus la planche des vraies pièces :
+              l'Accueil est un TEASER, le vestiaire réel s'ouvre d'un tap. La
+              planche y était forcément petite ; une composition pensée pour
+              cette bande porte mieux l'univers. Les pièces réelles restent
+              partout où elles informent — écran Dressing, Tenue, looks. */}
+          <BandeEditoriale
+            src="/editorial/capsela_dressing_banner.webp"
+            alt="Un portant de vêtements aux tons crème et terracotta, un panier, des chaussures et un sac"
+          />
         </CardModule>
 
         {/* 2. LA CAPSULE DU MOMENT — saison, style et effectif lus depuis la
@@ -1112,14 +1050,10 @@ export default function HomeScreen() {
           cta="Découvrir ta capsule"
           fond="#EBDFCC"
         >
-          {/* Capsule vide (vestiaire indisponible) : la planche cède la place
-              au collage éditorial plutôt que de laisser une bande creuse.
-              Capturé : sans ce repli, la card montrait 150 px de vide. */}
-          {capsulePieces.length > 0 ? (
-            <StyleBoard items={capsulePieces} height={150} />
-          ) : (
-            <EmptyDressingBoard visuals={journalVisuals} height={150} />
-          )}
+          <BandeEditoriale
+            src="/editorial/capsela_capsule_banner.webp"
+            alt="Une planche de styliste à plat : pull écru, jean, mocassins, bijoux dorés et lunettes"
+          />
         </CardModule>
 
         {/* 3. TON STYLE ÉVOLUE — tes looks réels, pas des mannequins.
