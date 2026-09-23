@@ -49,3 +49,48 @@ paramètres optionnels du moteur (`capsuleSeason`, `SelectionStrategy`) existent
 pour cela : les omettre reproduit le comportement d'origine sans dupliquer le
 pipeline.
 <!-- END:regle-audit -->
+
+<!-- BEGIN:regle-verification -->
+# Règle de vérification — avant tout commit
+
+Contraignante, pas indicative. Arrêtée le 23/09/2026 après deux CI rouges
+provoquées non par une erreur d'analyse, mais par une chaîne de vérification
+locale incomplète — annoncée comme complète les deux fois.
+
+1. La seule vérification qui compte est **`npm run verify`** : elle enchaîne
+   exactement les quatre étapes de `ci.yml`, dans son ordre — `typecheck`,
+   `lint`, `test`, `build`. Les lancer à la main expose à en oublier une.
+2. **Ne jamais tuber la sortie** dans `tail`, `head` ou `grep` : le code de
+   sortie renvoyé est alors celui du filtre, pas celui de l'étape. Rediriger
+   vers un fichier et lire le code de sortie séparément.
+3. Annoncer « tests verts » ne vaut que pour les tests. Tant que `verify`
+   n'est pas passé en entier, la formule exacte est « tests verts, reste non
+   vérifié ».
+4. `verify` n'est pas identique à la CI : celle-ci part d'un `npm ci` sur un
+   lockfile propre. Un `node_modules` local dérivé peut donc masquer un
+   échec d'installation. En cas de doute, `npm ci` d'abord.
+5. **`verify` échoue sur les erreurs ESLint, pas sur les avertissements** —
+   la CI non plus. Un avertissement reste une trace à nettoyer, mais il ne
+   sera signalé par rien : le lire dans la sortie fait partie de l'étape,
+   pas seulement son code de sortie. Vérifié : une variable inutilisée
+   (avertissement) laisse `verify` à 0 et va jusqu'au bout des quatre
+   étapes ; une apostrophe non échappée en JSX (erreur) le met à 1 et
+   l'arrête à la deuxième.
+
+## Les deux erreurs que cette règle existe pour empêcher
+
+- PR #11. `npx vitest run 2>&1 | tail -3 && npx next build` : le tube renvoie
+  le code de sortie de `tail`, et `tail -3` a coupé la ligne d'échec. « 458
+  tests » a été annoncé sans que le résultat ait été lu. Violation du point 2.
+- PR #13. `typecheck`, `test` et `build` lancés, `lint` jamais — alors que la
+  CI le lance en deuxième position. Deux problèmes ESLint sont passés, dont
+  une erreur bloquante. « 474 tests et build verts » était exact et ne
+  prouvait rien. Violation des points 1 et 3.
+
+## Ce que la règle ne couvre pas
+
+`verify` ne rend pas une capture d'écran. Tout changement visuel se vérifie en
+rendu réel, aux largeurs utiles, et les cas limites ont leur propre mesure —
+cf. la règle d'audit ci-dessus, point 4 : un scénario ne s'extrapole pas à un
+autre.
+<!-- END:regle-verification -->

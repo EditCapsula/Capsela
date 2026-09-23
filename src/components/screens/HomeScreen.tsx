@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
+import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS, WEATHER_ICONS } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -400,8 +401,26 @@ export default function HomeScreen() {
    * existera, cet état sera alimenté par elle au montage plutôt que remis à
    * zéro à chaque visite.
    */
-  const [avisDuJour, setAvisDuJour] = useState<null | "adore" | "pas_pour_moi">(null);
   const { state, geoCity, geoLoading, vestiairePool, weather, actions } = useCapsela();
+
+  /**
+   * L'avis du jour vient désormais du store, donc de la base (0029), et non
+   * plus d'un useState local qui disparaissait au rechargement.
+   *
+   * Le verdict n'est affiché que si une ligne correspond aux pièces AFFICHÉES
+   * — pas seulement à la date. Une tenue régénérée dans la journée repart donc
+   * sans avis, ce qui est juste : l'avis portait sur l'autre tenue.
+   *
+   * « pas_pour_moi » de l'ancienne version locale n'existe pas côté base : la
+   * contrainte CHECK dit « pas_aujourdhui ». C'est ce vocabulaire qui est
+   * repris ici, pour qu'il n'y ait pas deux noms pour un même verdict.
+   */
+  const avisDuJour = useMemo(() => {
+    const jour = jourLocal();
+    return (
+      state.outfitFeedbackDuJour.find((a) => a.jour === jour && memeTenue(a.pieceIds, state.outfit))?.verdict ?? null
+    );
+  }, [state.outfitFeedbackDuJour, state.outfit]);
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
 
@@ -774,22 +793,29 @@ export default function HomeScreen() {
           {hasOutfit && (
             <div className="mt-[13px]" aria-live="polite">
               {avisDuJour ? (
-                <div className="font-serif italic text-[13px]" style={{ color: "#F0DDCF" }}>
+                // Cliquable : repasser le même verdict le retire. Sans ce
+                // geste, un tap involontaire serait définitif pour la journée.
+                <button
+                  onClick={() => actions.setOutfitFeedback(avisDuJour)}
+                  aria-label="Revenir sur mon avis"
+                  className="font-serif italic text-[13px] text-left cursor-pointer"
+                  style={{ color: "#F0DDCF", minHeight: 44 }}
+                >
                   {avisDuJour === "adore"
                     ? "Noté — on garde cette direction."
                     : "Pas de souci, on t'en propose une autre demain."}
-                </div>
+                </button>
               ) : (
                 <div className="flex items-center gap-[8px] flex-wrap">
                   <button
-                    onClick={() => setAvisDuJour("adore")}
+                    onClick={() => actions.setOutfitFeedback("adore")}
                     className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
                     style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
                   >
                     <span aria-hidden="true">♡</span> J&apos;adore cette tenue
                   </button>
                   <button
-                    onClick={() => setAvisDuJour("pas_pour_moi")}
+                    onClick={() => actions.setOutfitFeedback("pas_aujourdhui")}
                     className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
                     style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
                   >

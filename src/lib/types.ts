@@ -360,6 +360,12 @@ export interface AppState {
   /** Écran « Demander un avis à un proche ». */
 
   /** Looks composés manuellement à partir du dressing réel. */
+  /**
+   * Les avis déjà donnés AUJOURD'HUI, toutes tenues confondues (0029).
+   * Chargés en bloc au démarrage : la tenue n'est pas encore générée à ce
+   * moment-là. L'écran retrouve la ligne qui correspond à ses pièces.
+   */
+  outfitFeedbackDuJour: { jour: string; pieceIds: number[]; verdict: "adore" | "pas_aujourdhui" }[];
   savedLooks: SavedLook[];
   /** Pièces choisies dans l'écran de création de look, avant sauvegarde. */
   lookDraftIds: number[];
