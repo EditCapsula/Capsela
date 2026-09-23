@@ -9,7 +9,7 @@ import {
   BIJOU_TYPES,
   CATS,
   OCCASIONS,
-  OCC_SHORT,
+  occasionShortLabel,
   PALETTE,
   PALETTE_BIJOU,
   SAC_TYPES,
@@ -474,7 +474,7 @@ export default function AddScreen() {
           state.addOccasion.map((o) => (
             <span key={o} className={chipGlypheCls(true)}>
               <GlypheOccasion occasion={o} taille={15} />
-              {OCC_SHORT[o] || o}
+              {occasionShortLabel(o)}
             </span>
           ))
         ) : (
@@ -610,7 +610,7 @@ export default function AddScreen() {
               className={chipGlypheCls(state.addOccasion.includes(key))}
             >
               <GlypheOccasion occasion={key} taille={15} />
-              {OCC_SHORT[key] || label}
+              {occasionShortLabel(key)}
             </button>
           ))}
         </div>

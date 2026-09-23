@@ -1,4 +1,4 @@
-import { MONTHS_FR, OCC_LABELS, OCC_SHORT } from "./data";
+import { MONTHS_FR, OCC_LABELS, occasionShortLabel } from "./data";
 import { isCatalogId } from "./catalog";
 import { occasionsOf } from "./capsule";
 import type { CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
@@ -226,7 +226,7 @@ export function journalInsights(history: HistoryEntry[]): JournalInsights {
   let topOccasionShare: number | null = null;
   if (occCounts.size > 0 && monthHistory.length >= 3) {
     const [topKey, topCount] = [...occCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-    topOccasionShort = OCC_SHORT[topKey] || OCC_LABELS[topKey].split(" / ")[0];
+    topOccasionShort = occasionShortLabel(topKey);
     topOccasionShare = Math.round((topCount / monthHistory.length) * 100);
   }
 
