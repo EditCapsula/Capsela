@@ -603,7 +603,7 @@ export default function AddScreen() {
       <BottomSheet title="Occasions" open={sheet === "occasions"} onClose={() => setSheet(null)}>
         <div className="text-[12.5px] text-muted mb-[16px] leading-[1.45]">Plusieurs choix possibles.</div>
         <div className="flex gap-2 flex-wrap">
-          {OCCASIONS.map(([key, label]) => (
+          {OCCASIONS.map(([key]) => (
             <button
               key={key}
               onClick={() => actions.setAddOccasion(key)}
