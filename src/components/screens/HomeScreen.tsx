@@ -924,12 +924,12 @@ export default function HomeScreen() {
             style={{ minHeight: 50 }}
           >
             {hasOutfit
-              ? "Voir ma tenue →"
+              ? "Voir ma tenue"
               : aucuneTenuePossible
                 ? dressingVide
-                  ? "Ajouter mes pièces →"
-                  : "Voir mon dressing →"
-                : "Découvrir ma tenue →"}
+                  ? "Ajouter mes pièces"
+                  : "Voir mon dressing"
+                : "Découvrir ma tenue"}
           </button>
 
           {/* FEEDBACK — deux boutons DISCRETS, jamais concurrents du CTA :
