@@ -591,10 +591,18 @@ export default function TenuesScreen() {
           en damier sur le terracotta. */}
       {!geoLoading && outfitPieces.length > 0 && (
         <div className="mt-[22px] rounded-[24px] bg-terracotta-deep text-cream" style={{ padding: 16 }}>
-          {/* Ligne conditionnelle depuis que le titre est parti : sans elle,
-              une tenue sans badge ouvrirait la card sur une rangée vide. */}
-          {badges.length > 0 && (
-          <div className="flex items-center flex-wrap gap-[9px]">
+          {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
+              le 23/09). Conditionnelle depuis que le titre est parti : sans
+              elle, une tenue sans badge NI phrase ouvrirait la card sur une
+              rangée vide.
+
+              flex-wrap, et c'est ce qui rend la ligne sûre : à 320 px, deux
+              badges suivis d'une phrase manuscrite ne tiennent pas côte à
+              côte, et la phrase passe alors proprement dessous au lieu d'être
+              tronquée ou de pousser la card. La gouttière verticale (gap-y)
+              existe pour ce cas-là seulement. */}
+          {(badges.length > 0 || recommendationText) && (
+          <div className="flex items-center flex-wrap gap-x-[10px] gap-y-[5px]">
             {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la
                 qualité vient du score, le registre du repli de formalité. Sur
                 fond terracotta, la hiérarchie passe par le remplissage —
@@ -618,24 +626,21 @@ export default function TenuesScreen() {
                 </span>
               )
             )}
-          </div>
-          )}
 
-          {/* Phrase d'ambiance — celle de CETTE tenue, jamais un bulletin, et
-              désormais SANS la température : la barre météo la donne déjà à
-              deux cents pixels au-dessus (demandé le 23/09). Manuscrite, d'où
-              une taille plus grande que le corps de texte — une cursive à
-              12,5 px ne se lit pas. Elle passe par outfitMoodPhrase et non
-              explainRecommendation : sur l'accueil, cette même phrase est le
-              SEUL endroit qui affiche la température, et l'argument « elle est
-              déjà au-dessus » y est faux. */}
-          {recommendationText && (
-            <div
-              className={"font-hand text-[17px] leading-[1.25] " + (badges.length > 0 ? "mt-[8px]" : "")}
-              style={{ color: "#F7E7DA" }}
-            >
-              {recommendationText}
-            </div>
+            {/* Phrase d'ambiance — celle de CETTE tenue, jamais un bulletin,
+                et SANS la température : la barre météo la donne déjà à deux
+                cents pixels au-dessus (23/09). Manuscrite, d'où une taille
+                plus grande que le corps de texte — une cursive à 12,5 px ne
+                se lit pas. Elle passe par outfitMoodPhrase et non
+                explainRecommendation : sur l'accueil, cette même phrase est
+                le SEUL endroit qui affiche la température, et l'argument
+                « elle est déjà au-dessus » y est faux. */}
+            {recommendationText && (
+              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "#F7E7DA" }}>
+                {recommendationText}
+              </span>
+            )}
+          </div>
           )}
 
           <div className="mt-[13px]">
