@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { buildOpinionMessage } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
@@ -41,18 +41,31 @@ import type { Item } from "@/lib/types";
  */
 type Issue = "idle" | "partagee" | "copiee" | "manuel";
 
+/**
+ * Capacités du navigateur lues par useSyncExternalStore et non par un effet.
+ *
+ * Le besoin est réel : l'export statique produit le HTML sans navigateur, donc
+ * lire `navigator` pendant le rendu donnerait une réponse fausse au moment de
+ * l'hydratation. La première version posait donc un setState dans un effet —
+ * que la CI a refusé (react-hooks/set-state-in-effect), à raison : c'est un
+ * rendu en cascade pour une valeur qui ne change jamais.
+ *
+ * useSyncExternalStore est fait exactement pour ça : un instantané serveur
+ * distinct de l'instantané client, sans effet ni rendu supplémentaire.
+ * L'abonnement est inerte — une capacité de navigateur ne change pas en cours
+ * de session — et les trois fonctions sont définies au niveau du module pour
+ * garder une référence stable d'un rendu à l'autre.
+ */
+const abonnementInerte = () => () => {};
+const faux = () => false;
+const litPartage = () => typeof navigator !== "undefined" && typeof navigator.share === "function";
+const litCopie = () => typeof navigator !== "undefined" && Boolean(navigator.clipboard?.writeText);
+
 export default function OpinionShareScreen() {
   const { state, geoCity, geoLoading, vestiairePool, actions } = useCapsela();
   const [issue, setIssue] = useState<Issue>("idle");
-  // Détecté après montage : l'export statique rend le HTML sans navigateur,
-  // et lire navigator au rendu donnerait une réponse fausse à l'hydratation.
-  const [peutPartager, setPeutPartager] = useState(false);
-  const [peutCopier, setPeutCopier] = useState(false);
-
-  useEffect(() => {
-    setPeutPartager(typeof navigator !== "undefined" && typeof navigator.share === "function");
-    setPeutCopier(typeof navigator !== "undefined" && Boolean(navigator.clipboard?.writeText));
-  }, []);
+  const peutPartager = useSyncExternalStore(abonnementInerte, litPartage, faux);
+  const peutCopier = useSyncExternalStore(abonnementInerte, litCopie, faux);
 
   // Mêmes pièces que celles affichées sur l'écran Tenue, résolues depuis la
   // même source : le message ne peut pas décrire une autre tenue que celle
