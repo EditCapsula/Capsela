@@ -374,7 +374,7 @@ export default function CreateLookScreen() {
       <button
         onClick={actions.saveLook}
         className={
-          "mt-7 w-full text-center rounded-full py-4 text-[13px] tracking-[.14em] uppercase " +
+          "mt-7 w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
           (canSave ? "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer" : "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed")
         }
       >

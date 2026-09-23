@@ -3,6 +3,10 @@
 @theme inline {
   --font-serif: var(--font-fraunces), serif;
   --font-sans: var(--font-manrope), sans-serif;
+  /* Manuscrite — un seul usage aujourd'hui : la phrase d'ambiance de la card
+     Tenue (23/09/2026). Repli cursive pour que la phrase reste lisible si le
+     fichier ne charge pas, jamais un rendu sans-serif indistinct du reste. */
+  --font-hand: var(--font-caveat), cursive;
 
   --color-cream: #f3eee5;
   --color-ink: #1d1a16;
@@ -116,4 +120,10 @@ input.capin::placeholder {
   .loading-spinner-arc {
     animation: none;
   }
+}
+
+/* Utilitaire de la police manuscrite. Déclaré à la main : le jeton --font-hand
+   n'appartient pas aux familles que Tailwind génère automatiquement. */
+.font-hand {
+  font-family: var(--font-hand);
 }

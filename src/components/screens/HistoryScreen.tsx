@@ -438,7 +438,7 @@ export default function HistoryScreen() {
           </div>
           <button
             onClick={actions.goTenues}
-            className="mt-5 bg-ink text-cream rounded-full py-[15px] px-[26px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-5 bg-ink text-cream rounded-full py-[15px] px-[26px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
           >
             Choisir ma tenue du jour
           </button>

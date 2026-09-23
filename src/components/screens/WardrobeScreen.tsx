@@ -165,7 +165,7 @@ export default function WardrobeScreen() {
           </div>
           <button
             onClick={actions.openAdd}
-            className="mt-[22px] w-full bg-ink text-cream text-center rounded-full py-4 text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-[22px] w-full bg-ink text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
           >
             Ajouter une pièce
           </button>
@@ -375,7 +375,7 @@ export default function WardrobeScreen() {
 
       <button
         onClick={actions.goTenues}
-        className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+        className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
       >
         Voir ma tenue du jour
       </button>

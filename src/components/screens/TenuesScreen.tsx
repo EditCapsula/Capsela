@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { OutfitComposition } from "@/components/OutfitComposition";
-import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
+import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, OCCASION_ICONS, SOUS_CHOIX_ICONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCapsulePourMeteo } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
+import { computeLookScore, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
@@ -267,12 +267,16 @@ export default function TenuesScreen() {
    */
   const libelleOccasion =
     OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? "Choisir une occasion";
-  const sousChoix: { titre: string; valeurs: readonly string[]; courant: string; choisir: (v: string) => void } | null =
+  // Pas d'icône tant qu'aucune occasion n'est choisie : "all" est un état
+  // légitime, et lui en donner une inventerait un contexte inexistant.
+  const iconeOccasion = state.occasion !== "all" ? OCCASION_ICONS[state.occasion] : null;
+  const sousChoix: { titre: string; valeurs: readonly string[]; courant: string; icone: string; choisir: (v: string) => void } | null =
     state.occasion === "travail_formel"
       ? {
           titre: "Où travailles-tu aujourd'hui ?",
           valeurs: ["Présentiel", "Télétravail"] as const,
           courant: state.workMode,
+          icone: SOUS_CHOIX_ICONS[state.workMode],
           choisir: (v) => actions.setWorkMode(v as WorkMode),
         }
       : state.occasion === "date"
@@ -280,6 +284,7 @@ export default function TenuesScreen() {
             titre: "Quel type de date ?",
             valeurs: DATE_CONTEXTS.map(([m]) => m),
             courant: state.dateContext,
+          icone: SOUS_CHOIX_ICONS[state.dateContext],
             choisir: (v) => actions.setDateContext(v as DateContext),
           }
         : state.occasion === "voyage"
@@ -287,6 +292,7 @@ export default function TenuesScreen() {
               titre: "Quel type de trajet ?",
               valeurs: ["Court trajet", "Longue distance"] as const,
               courant: state.travelMode,
+          icone: SOUS_CHOIX_ICONS[state.travelMode],
               choisir: (v) => actions.setTravelMode(v as TravelMode),
             }
           : null;
@@ -376,7 +382,7 @@ export default function TenuesScreen() {
   // Phrase d'explication de la recommandation (recette 19/08/2026) — par
   // template, jamais d'IA ; pas de température affichée tant que la
   // géolocalisation n'a pas résolu la météo réelle du jour.
-  const recommendationText = explainRecommendation(
+  const recommendationText = outfitMoodPhrase(
     state.occasion || "all",
     state.workMode,
     state.dateContext,
@@ -429,11 +435,14 @@ export default function TenuesScreen() {
         {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
             (23/09/2026) : répété ici, il salue une deuxième fois dans la même
             session et ne dit rien de l'écran. Le titre annonce désormais ce
-            qu'on vient y chercher. La mention « Le look du jour » qui vivait
+            qu'on vient y chercher. « Ma », et non « Ton » : c'est déjà le
+            registre des CTA qui y mènent — « Voir ma tenue » sur l'accueil et
+            la capsule, « Voir ma tenue du jour » dans le dressing. La mention
+            « Le look du jour » qui vivait
             DANS la card terracotta est supprimée du même coup — elle ferait
             doublon à deux cents pixels d'écart. */}
         <div className="font-serif text-[30px] leading-[1.12] text-ink mt-[6px]">
-          Ton <span className="italic text-terracotta">look du jour</span>
+          Ma <span className="italic text-terracotta">tenue du jour</span>
         </div>
       </div>
 
@@ -492,7 +501,12 @@ export default function TenuesScreen() {
           className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-terracotta-deep text-cream"
           style={{ minHeight: 46 }}
         >
-          <span aria-hidden="true" className="opacity-70">❑</span>
+          {/* Le carré ❑ tenait lieu de repère depuis le 22/09 : il ne
+              distinguait rien, et il y en avait deux côte à côte. Table
+              OCCASION_ICONS (data.ts), lue en UN point. */}
+          {iconeOccasion && (
+            <span aria-hidden="true" className="text-[14px] leading-none">{iconeOccasion}</span>
+          )}
           <span className="whitespace-nowrap">{libelleOccasion}</span>
           <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
         </button>
@@ -507,7 +521,7 @@ export default function TenuesScreen() {
             className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-warm-bg text-sand-text border border-sand-border"
             style={{ minHeight: 46 }}
           >
-            <span aria-hidden="true" className="opacity-70">❑</span>
+            <span aria-hidden="true" className="text-[14px] leading-none">{sousChoix.icone}</span>
             <span className="whitespace-nowrap">{sousChoix.courant}</span>
             <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
           </button>
@@ -607,11 +621,18 @@ export default function TenuesScreen() {
           </div>
           )}
 
-          {/* Justification météo — celle de CETTE tenue, jamais un bulletin. */}
+          {/* Phrase d'ambiance — celle de CETTE tenue, jamais un bulletin, et
+              désormais SANS la température : la barre météo la donne déjà à
+              deux cents pixels au-dessus (demandé le 23/09). Manuscrite, d'où
+              une taille plus grande que le corps de texte — une cursive à
+              12,5 px ne se lit pas. Elle passe par outfitMoodPhrase et non
+              explainRecommendation : sur l'accueil, cette même phrase est le
+              SEUL endroit qui affiche la température, et l'argument « elle est
+              déjà au-dessus » y est faux. */}
           {recommendationText && (
             <div
-              className={"text-[12.5px] leading-[1.4] " + (badges.length > 0 ? "mt-[6px]" : "")}
-              style={{ color: "#F0DDCF" }}
+              className={"font-hand text-[17px] leading-[1.25] " + (badges.length > 0 ? "mt-[8px]" : "")}
+              style={{ color: "#F7E7DA" }}
             >
               {recommendationText}
             </div>
@@ -677,15 +698,16 @@ export default function TenuesScreen() {
               onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
               disabled={vesteWithoutBase}
               title={vesteWithoutBase ? "Ajoute un haut, une robe ou une combinaison sous ta veste." : undefined}
-              // MÊME BOUTON QUE « Voir ma tenue » SUR L'ACCUEIL (23/09/2026,
-              // signalé). L'un menait à l'autre en changeant de forme au
-              // passage : capitales et interlettrage à .1em ici, casse de
-              // phrase et .04em là-bas, 52 px contre 50. Trois écarts pour
-              // deux boutons qui sont la même action à une étape près. C'est
-              // l'accueil qui fait référence : son libellé se lit en casse de
-              // phrase, ce qui est aussi le registre du reste de l'app.
+              // MÊME BOUTON QUE « Voir ma tenue » SUR L'ACCUEIL, et tous deux
+              // alignés sur la convention de l'app (23/09/2026). Relevé sur
+              // les 26 boutons pleine largeur : 20 CTA principaux, dont la
+              // forme dominante est 13 px / .1em / capitales (17 sur 20 en
+              // .1em, 23 sur 26 en capitales). Ces deux héros étaient les
+              // seuls en casse de phrase — je les y avais mis quelques heures
+              // plus tôt en prenant l'accueil pour référence, alors que
+              // l'accueil était lui-même l'exception.
               className={
-                "mt-[14px] w-full flex items-center justify-center rounded-full text-[13.5px] tracking-[.04em] " +
+                "mt-[14px] w-full flex items-center justify-center rounded-full text-[13px] tracking-[.1em] uppercase " +
                 (vesteWithoutBase ? "cursor-not-allowed" : "bg-cream text-ink cursor-pointer")
               }
               style={{

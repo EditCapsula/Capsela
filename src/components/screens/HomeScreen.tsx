@@ -734,7 +734,9 @@ export default function HomeScreen() {
               une des deux fausse. */}
           <button
             onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
-            className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full text-[13.5px] tracking-[.04em] cursor-pointer"
+            // 13 px / .1em / capitales : la convention des 20 CTA principaux
+            // de l'app (23/09/2026). Ce bouton en était l'exception.
+            className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full text-[13px] tracking-[.1em] uppercase cursor-pointer"
             style={{ minHeight: 50 }}
           >
             {hasOutfit
