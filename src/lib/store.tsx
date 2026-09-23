@@ -142,9 +142,6 @@ function buildInitialState(): AppState {
     exploredStyleId: null,
     lookCount: 0,
     history: [],
-    opinionContact: null,
-    opinionStatus: null,
-    opinionVia: null,
     savedLooks: [],
     lookDraftIds: [],
     lookDraftName: "",
@@ -274,8 +271,6 @@ export interface Actions {
   reWear: (ids: number[]) => void;
   openOpinionShare: () => void;
   closeOpinionShare: () => void;
-  setOpinionContact: (c: string) => void;
-  sendOpinionRequest: (via: "message" | "whatsapp" | "social") => void;
 
   /** seedId : préremplit lookDraftIds avec cette pièce (recette 24/08/2026, PieceScreen "Ajouter à un look → Créer un nouveau look") — jamais renseigné hors de ce parcours. */
   goCreateLook: (seedId?: number) => void;
@@ -1336,10 +1331,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: "tenues",
       })),
 
-    openOpinionShare: () => setState((s) => ({ ...s, screen: "opinionShare", opinionContact: null, opinionStatus: null })),
+    openOpinionShare: () => go("opinionShare"),
     closeOpinionShare: () => go("tenues"),
-    setOpinionContact: (c) => setState((s) => ({ ...s, opinionContact: s.opinionContact === c ? null : c })),
-    sendOpinionRequest: (via) => setState((s) => ({ ...s, opinionStatus: "sent", opinionVia: via })),
 
     goCreateLook: (seedId) =>
       setState((s) => ({

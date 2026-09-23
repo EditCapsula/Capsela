@@ -375,3 +375,43 @@ export function composeWardrobePool(
     return [...reelles, ...secours];
   });
 }
+
+/**
+ * Message envoyé à un proche pour lui demander son avis sur la tenue du jour
+ * (23/09/2026). Écrit ici, pas dans l'écran, pour une raison précise : c'est
+ * la seule chose de cette fonctionnalité qui soit testable hors rendu, et
+ * c'est aussi la seule qui puisse être FAUSSE sans que rien ne plante — un
+ * message qui décrirait une autre tenue que celle affichée.
+ *
+ * Construit depuis les pièces réellement composées, jamais depuis un
+ * libellé recopié. Chaque partie est omise si sa donnée manque plutôt que
+ * remplacée par un défaut : une météo inventée dans un message envoyé à
+ * quelqu'un est pire qu'une météo absente.
+ *
+ * Aucune mention de provenance dressing/capsule : le proche n'a pas à savoir
+ * ce que l'utilisatrice possède déjà, et la question posée est vestimentaire,
+ * pas patrimoniale.
+ */
+export function buildOpinionMessage(args: {
+  pieces: Item[];
+  occasion: OccasionKey;
+  temp: number | null | undefined;
+  conditionMeteo: string | null | undefined;
+}): string {
+  const { pieces, occasion, temp, conditionMeteo } = args;
+  const lignes: string[] = [];
+
+  const contexte: string[] = [];
+  if (occasion !== "all" && OCC_LABELS[occasion]) contexte.push(OCC_LABELS[occasion]);
+  if (temp != null && Number.isFinite(temp)) {
+    contexte.push(conditionMeteo ? `${Math.round(temp)}° · ${conditionMeteo}` : `${Math.round(temp)}°`);
+  }
+
+  lignes.push(contexte.length ? `Ma tenue du jour — ${contexte.join(" · ")}` : "Ma tenue du jour");
+  lignes.push("");
+  for (const p of pieces) lignes.push(`• ${p.name}`);
+  lignes.push("");
+  lignes.push("Qu'est-ce que tu en penses ?");
+
+  return lignes.join("\n");
+}

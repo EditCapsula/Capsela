@@ -358,9 +358,6 @@ export interface AppState {
   history: HistoryEntry[];
 
   /** Écran « Demander un avis à un proche ». */
-  opinionContact: string | null;
-  opinionStatus: "sent" | null;
-  opinionVia: "message" | "whatsapp" | "social" | null;
 
   /** Looks composés manuellement à partir du dressing réel. */
   savedLooks: SavedLook[];
