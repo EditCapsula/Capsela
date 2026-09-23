@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OCC_LABELS, WEATHER_ICONS } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -707,8 +708,12 @@ export default function HomeScreen() {
               disputer la place à l'action. */}
           {hasOutfit && occasionLabel && (
             <div className="pt-[14px]">
+              {/* Le glyphe de l'occasion, comme sur l'écran Tenue. Ce n'est
+                  pas un sélecteur mais une étiquette de contexte : il est
+                  posé à 13 px, plus petit qu'ailleurs, pour rester en
+                  dessous du poids du libellé. */}
               <span
-                className="inline-flex items-center uppercase whitespace-nowrap"
+                className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
                 style={{
                   fontSize: 9.5,
                   letterSpacing: ".08em",
@@ -718,6 +723,7 @@ export default function HomeScreen() {
                   padding: "8px 14px",
                 }}
               >
+                <GlypheOccasion occasion={occasionKey} taille={13} />
                 {occasionLabel}
               </span>
             </div>
@@ -734,7 +740,9 @@ export default function HomeScreen() {
               une des deux fausse. */}
           <button
             onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
-            className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full text-[13.5px] tracking-[.04em] cursor-pointer"
+            // 13 px / .1em / capitales : la convention des 20 CTA principaux
+            // de l'app (23/09/2026). Ce bouton en était l'exception.
+            className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full text-[13px] tracking-[.1em] uppercase cursor-pointer"
             style={{ minHeight: 50 }}
           >
             {hasOutfit

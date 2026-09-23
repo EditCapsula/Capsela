@@ -238,7 +238,7 @@ export default function OnboardingScreen() {
           </div>
           <button
             onClick={actions.onbNext}
-            className="bg-ink text-cream rounded-full py-[14px] px-[26px] text-[13px] tracking-[.08em] uppercase cursor-pointer"
+            className="bg-ink text-cream rounded-full py-[14px] px-[26px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
           >
             {cta}
           </button>

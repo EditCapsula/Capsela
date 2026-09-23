@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { OutfitComposition } from "@/components/OutfitComposition";
+import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCapsulePourMeteo } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { computeLookScore, explainRecommendation, violatesOuterwearRule } from "@/lib/logic";
+import { computeLookScore, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
@@ -175,7 +176,6 @@ export default function TenuesScreen() {
   }
   const now = new Date();
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
-  const firstNameOrYou = profile.displayName || "toi";
 
   // Pool de résolution de la tenue affichée (recette 24/08/2026, retour
   // d'exploration) — en mode exploration, state.outfit contient des ids
@@ -268,12 +268,21 @@ export default function TenuesScreen() {
    */
   const libelleOccasion =
     OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? "Choisir une occasion";
-  const sousChoix: { titre: string; valeurs: readonly string[]; courant: string; choisir: (v: string) => void } | null =
+  const sousChoix: {
+    titre: string;
+    // Typé sur l'union plutôt que sur string : la feuille rend un glyphe par
+    // valeur, et un string nu y aurait demandé un cast à chaque ligne.
+    valeurs: readonly (WorkMode | DateContext | TravelMode)[];
+    courant: string;
+    glyphe: React.ReactNode;
+    choisir: (v: string) => void;
+  } | null =
     state.occasion === "travail_formel"
       ? {
           titre: "Où travailles-tu aujourd'hui ?",
           valeurs: ["Présentiel", "Télétravail"] as const,
           courant: state.workMode,
+          glyphe: <GlypheSousChoix valeur={state.workMode} />,
           choisir: (v) => actions.setWorkMode(v as WorkMode),
         }
       : state.occasion === "date"
@@ -281,6 +290,7 @@ export default function TenuesScreen() {
             titre: "Quel type de date ?",
             valeurs: DATE_CONTEXTS.map(([m]) => m),
             courant: state.dateContext,
+          glyphe: <GlypheSousChoix valeur={state.dateContext} />,
             choisir: (v) => actions.setDateContext(v as DateContext),
           }
         : state.occasion === "voyage"
@@ -288,6 +298,7 @@ export default function TenuesScreen() {
               titre: "Quel type de trajet ?",
               valeurs: ["Court trajet", "Longue distance"] as const,
               courant: state.travelMode,
+          glyphe: <GlypheSousChoix valeur={state.travelMode} />,
               choisir: (v) => actions.setTravelMode(v as TravelMode),
             }
           : null;
@@ -377,7 +388,7 @@ export default function TenuesScreen() {
   // Phrase d'explication de la recommandation (recette 19/08/2026) — par
   // template, jamais d'IA ; pas de température affichée tant que la
   // géolocalisation n'a pas résolu la météo réelle du jour.
-  const recommendationText = explainRecommendation(
+  const recommendationText = outfitMoodPhrase(
     state.occasion || "all",
     state.workMode,
     state.dateContext,
@@ -427,8 +438,17 @@ export default function TenuesScreen() {
 
       <div className="mt-[18px]">
         <div className="text-[11px] tracking-[.18em] uppercase text-muted">{dateText}</div>
+        {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
+            (23/09/2026) : répété ici, il salue une deuxième fois dans la même
+            session et ne dit rien de l'écran. Le titre annonce désormais ce
+            qu'on vient y chercher. « Ma », et non « Ton » : c'est déjà le
+            registre des CTA qui y mènent — « Voir ma tenue » sur l'accueil et
+            la capsule, « Voir ma tenue du jour » dans le dressing. La mention
+            « Le look du jour » qui vivait
+            DANS la card terracotta est supprimée du même coup — elle ferait
+            doublon à deux cents pixels d'écart. */}
         <div className="font-serif text-[30px] leading-[1.12] text-ink mt-[6px]">
-          Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
+          Ma <span className="italic text-terracotta">tenue du jour</span>
         </div>
       </div>
 
@@ -487,7 +507,13 @@ export default function TenuesScreen() {
           className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-terracotta-deep text-cream"
           style={{ minHeight: 46 }}
         >
-          <span aria-hidden="true" className="opacity-70">❑</span>
+          {/* Glyphes dessinés depuis le 23/09, après la planche de
+              comparaison. Ils prennent currentColor, donc le crème du chip
+              actif ici et la terre de sienne du chip sable plus bas — ce
+              qu'un emoji ne peut pas faire, ses couleurs étant imposées par
+              le système. Ils remplacent le carré ❑ du 22/09, qui ne
+              distinguait aucune occasion d'une autre. */}
+          <GlypheOccasion occasion={state.occasion} />
           <span className="whitespace-nowrap">{libelleOccasion}</span>
           <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
         </button>
@@ -502,7 +528,7 @@ export default function TenuesScreen() {
             className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-warm-bg text-sand-text border border-sand-border"
             style={{ minHeight: 46 }}
           >
-            <span aria-hidden="true" className="opacity-70">❑</span>
+            {sousChoix.glyphe}
             <span className="whitespace-nowrap">{sousChoix.courant}</span>
             <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
           </button>
@@ -560,16 +586,30 @@ export default function TenuesScreen() {
           jour, ce qui est exactement ce qu'un bouton principal ne doit pas
           faire.
 
-          LE FOND DU FLAT-LAY NE CHANGE PAS. La composition reposait sur le
-          fond de page (--color-cream, #F3EEE5) ; elle repose maintenant sur
-          un panneau de cette même couleur, à l'intérieur de la card. Poser
-          ses tuiles à nu sur le terracotta aurait modifié le rendu de chaque
-          pièce — leurs propres fonds, leurs ombres portées — sans que rien ne
-          l'ait demandé. Seul l'encadrement est nouveau, pas la surface. */}
+          LE PANNEAU CRÈME EST RETIRÉ (23/09/2026, demandé : « le flat lay de
+          tenue doit ressembler à celui de la home, enlève l'aplat de beige
+          sous les articles »). Il datait de la veille, où la consigne était
+          l'inverse — ne pas toucher au fond de la composition. Ce qui a été
+          vu depuis : sur l'accueil les pièces flottent sur le terracotta, ici
+          elles étaient posées sur un panneau crème rempli de tuiles beiges,
+          soit deux traitements pour le même objet à un onglet d'écart. Les
+          deux couches partent ensemble — le panneau ici, les tuiles dans
+          OutfitComposition — sinon le fond beige des tuiles resterait visible
+          en damier sur le terracotta. */}
       {!geoLoading && outfitPieces.length > 0 && (
         <div className="mt-[22px] rounded-[24px] bg-terracotta-deep text-cream" style={{ padding: 16 }}>
-          <div className="flex items-center flex-wrap gap-[9px]">
-            <span className="font-serif text-[19px] leading-[1.15] text-cream">Le look du jour</span>
+          {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
+              le 23/09). Conditionnelle depuis que le titre est parti : sans
+              elle, une tenue sans badge NI phrase ouvrirait la card sur une
+              rangée vide.
+
+              flex-wrap, et c'est ce qui rend la ligne sûre : à 320 px, deux
+              badges suivis d'une phrase manuscrite ne tiennent pas côte à
+              côte, et la phrase passe alors proprement dessous au lieu d'être
+              tronquée ou de pousser la card. La gouttière verticale (gap-y)
+              existe pour ce cas-là seulement. */}
+          {(badges.length > 0 || recommendationText) && (
+          <div className="flex items-center flex-wrap gap-x-[10px] gap-y-[5px]">
             {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la
                 qualité vient du score, le registre du repli de formalité. Sur
                 fond terracotta, la hiérarchie passe par le remplissage —
@@ -593,27 +633,37 @@ export default function TenuesScreen() {
                 </span>
               )
             )}
-          </div>
 
-          {/* Justification météo — celle de CETTE tenue, jamais un bulletin. */}
-          {recommendationText && (
-            <div className="text-[12.5px] leading-[1.4] mt-[6px]" style={{ color: "#F0DDCF" }}>
-              {recommendationText}
-            </div>
+            {/* Phrase d'ambiance — celle de CETTE tenue, jamais un bulletin,
+                et SANS la température : la barre météo la donne déjà à deux
+                cents pixels au-dessus (23/09). Manuscrite, d'où une taille
+                plus grande que le corps de texte — une cursive à 12,5 px ne
+                se lit pas. Elle passe par outfitMoodPhrase et non
+                explainRecommendation : sur l'accueil, cette même phrase est
+                le SEUL endroit qui affiche la température, et l'argument
+                « elle est déjà au-dessus » y est faux. */}
+            {recommendationText && (
+              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "#F7E7DA" }}>
+                {recommendationText}
+              </span>
+            )}
+          </div>
           )}
 
-          <div className="mt-[13px] rounded-[16px] overflow-hidden bg-cream" style={{ padding: 8 }}>
+          <div className="mt-[13px]">
             <OutfitComposition items={outfitPieces} variant="hero" />
-            {/* PROVENANCE — dans le même panneau que le look, jamais PAR-DESSUS.
+            {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.
                 La maquette les pose en surimpression en bas à gauche du
                 flat-lay. Essayé, capturé : à 390 px, les ballerines
                 disparaissent derrière « 3 pièces de ton dressing » et le sac
                 est à moitié couvert. Une composition n'a pas de zone vide
                 garantie — ses pièces se placent selon leur nombre et leur
                 catégorie, donc aucun coin n'est sûr. Les badges prennent leur
-                propre ligne sous la composition, dans le panneau : ils se
-                lisent toujours en même temps que le look, sans jamais en
-                cacher une pièce. Corrigé en supprimant la contrainte, pas en
+                propre ligne sous la composition : ils se lisent toujours en
+                même temps que le look, sans jamais en cacher une pièce. (Le
+                panneau crème qui les entourait est parti le 23/09 ; la
+                contrainte, elle, tient toujours — elle porte sur la
+                superposition, pas sur la surface.) Corrigé en supprimant la contrainte, pas en
                 déplaçant les badges vers un autre coin — le coin suivant
                 aurait été couvert par une autre tenue.
 
@@ -660,12 +710,20 @@ export default function TenuesScreen() {
               onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
               disabled={vesteWithoutBase}
               title={vesteWithoutBase ? "Ajoute un haut, une robe ou une combinaison sous ta veste." : undefined}
+              // MÊME BOUTON QUE « Voir ma tenue » SUR L'ACCUEIL, et tous deux
+              // alignés sur la convention de l'app (23/09/2026). Relevé sur
+              // les 26 boutons pleine largeur : 20 CTA principaux, dont la
+              // forme dominante est 13 px / .1em / capitales (17 sur 20 en
+              // .1em, 23 sur 26 en capitales). Ces deux héros étaient les
+              // seuls en casse de phrase — je les y avais mis quelques heures
+              // plus tôt en prenant l'accueil pour référence, alors que
+              // l'accueil était lui-même l'exception.
               className={
-                "mt-[14px] w-full text-center rounded-full text-[13px] tracking-[.1em] uppercase " +
+                "mt-[14px] w-full flex items-center justify-center rounded-full text-[13px] tracking-[.1em] uppercase " +
                 (vesteWithoutBase ? "cursor-not-allowed" : "bg-cream text-ink cursor-pointer")
               }
               style={{
-                minHeight: 52,
+                minHeight: 50,
                 background: vesteWithoutBase ? "rgba(243,238,229,.38)" : undefined,
                 color: vesteWithoutBase ? "rgba(29,26,22,.5)" : undefined,
               }}
@@ -1109,6 +1167,12 @@ export default function TenuesScreen() {
                 className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
                 style={{ minHeight: 52 }}
               >
+                {/* Le même glyphe que sur le chip : la feuille est l'endroit
+                    d'où le chip tire sa valeur, les montrer d'un seul côté
+                    rendait le lien entre les deux moins évident. */}
+                <span className={actif ? "text-terracotta" : "text-muted"}>
+                  <GlypheOccasion occasion={key} taille={19} />
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className={"text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
                   <div className="text-[11.5px] text-muted mt-[2px]">{sub}</div>
@@ -1133,6 +1197,11 @@ export default function TenuesScreen() {
             className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-t border-[#EFE7DA]"
             style={{ minHeight: 52 }}
           >
+            {/* Place du glyphe RÉSERVÉE, pas remplie : "all" est l'absence
+                d'occasion, lui dessiner une icône inventerait un contexte.
+                Mais sans cette cale, cette seule ligne se décalait de 19 px
+                vers la gauche et cassait la colonne des dix autres. */}
+            <span aria-hidden="true" className="flex-shrink-0" style={{ width: 19 }} />
             <div className="flex-1 min-w-0">
               <div className={"text-[13.5px] " + (state.occasion === "all" ? "text-terracotta" : "text-ink")}>Peu importe</div>
               <div className="text-[11.5px] text-muted mt-[2px]">Sans occasion particulière</div>
@@ -1159,6 +1228,9 @@ export default function TenuesScreen() {
                 className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
                 style={{ minHeight: 52 }}
               >
+                <span className={actif ? "text-terracotta" : "text-muted"}>
+                  <GlypheSousChoix valeur={v} taille={19} />
+                </span>
                 <div className={"flex-1 min-w-0 text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{v}</div>
                 <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
                   ✓

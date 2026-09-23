@@ -360,7 +360,7 @@ export default function ProfileEditScreen() {
 
       <button
         onClick={actions.goProfile}
-        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.14em] uppercase cursor-pointer"
+        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
       >
         Enregistrer
       </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { BAS_CATS, CATS, CATLABEL, OCCASIONS } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -168,7 +169,11 @@ export default function CreateLookScreen() {
               className="flex-none text-left py-[10px] px-[15px] rounded-full cursor-pointer border"
               style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB" }}
             >
-              <div className="text-[12.5px] whitespace-nowrap" style={{ color: on ? "#F3EEE5" : "#1D1A16" }}>
+              <div
+                className="flex items-center gap-[7px] text-[12.5px] whitespace-nowrap"
+                style={{ color: on ? "#F3EEE5" : "#1D1A16" }}
+              >
+                <GlypheOccasion occasion={key} taille={15} />
                 {label}
               </div>
               <div className="text-[10.5px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
@@ -374,7 +379,7 @@ export default function CreateLookScreen() {
       <button
         onClick={actions.saveLook}
         className={
-          "mt-7 w-full text-center rounded-full py-4 text-[13px] tracking-[.14em] uppercase " +
+          "mt-7 w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
           (canSave ? "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer" : "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed")
         }
       >

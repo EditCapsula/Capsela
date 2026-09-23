@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Manrope } from "next/font/google";
+import { Caveat, Fraunces, Manrope } from "next/font/google";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -13,6 +13,19 @@ const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+/**
+ * Écriture manuscrite — demandée le 23/09/2026 pour la phrase d'ambiance de
+ * la card Tenue. Caveat plutôt qu'une anglaise calligraphique : à 16 px sur
+ * fond terracotta, une plume fine perd ses jambages, et cette phrase doit
+ * rester une information lisible, pas un ornement. Un seul poids (500) —
+ * elle n'a qu'un usage, et chaque graisse est un fichier de plus à charger.
+ */
+const caveat = Caveat({
+  variable: "--font-caveat",
+  subsets: ["latin"],
+  weight: ["500"],
 });
 
 export const metadata: Metadata = {
@@ -39,7 +52,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${fraunces.variable} ${manrope.variable}`}>
+    <html lang="fr" className={`${fraunces.variable} ${manrope.variable} ${caveat.variable}`}>
       <body>{children}</body>
     </html>
   );

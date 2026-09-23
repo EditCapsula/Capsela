@@ -16,6 +16,17 @@ import type { CategoryKey, Item } from "@/lib/types";
  *
  * Deux variantes : "hero" (page Tenue, grande, une seule tenue à la fois) et
  * "compact" (page "Comment porter cette pièce ?", plusieurs cards par page).
+ *
+ * "hero" N'A PLUS DE TUILE (23/09/2026, demandé : « le flat lay de tenue doit
+ * ressembler à celui de la home, enlève l'aplat de beige sous les articles »).
+ * Les pièces reposent directement sur le fond de la card, comme HeroPiece sur
+ * l'accueil : un <img> détouré, une ombre portée par la silhouette et non par
+ * une boîte, et pour une pièce sans visuel l'aplat de sa couleur dominante —
+ * exactement le repli de l'accueil, pour qu'elle ne laisse pas un trou.
+ * L'ombre de boîte (drop-shadow sur l'image) remplace le cadre beige : c'est
+ * elle qui détache désormais la pièce de son fond. "compact" est inchangé :
+ * ses cards reposent sur le fond de page, pas sur un aplat coloré, et rien
+ * n'a été signalé dessus.
  * `anchorId`, propre à "compact" : entoure la pièce pivot d'un contour
  * terracotta — jamais utilisé par "hero", qui n'a pas de notion de pivot.
  *
@@ -89,10 +100,14 @@ const TIER_OF_ROLE: Record<CompositionRole, CompositionTier> = {
  * plus grands, mais le contraste est moins marqué qu'avant.
  */
 const TIER_SPAN: Record<CompositionVariant, Record<CompositionTier, { col: number; row: number }>> = {
+  // "hero" compte en TIERS DE RANGÉE depuis le 23/09/2026 (6/4/3 au lieu de
+  // 2/1/1) : cf. le commentaire d'échelle sous VARIANT_CONFIG. Le vêtement
+  // occupe exactement la même cellule qu'avant — 6 tiers valent les 2
+  // rangées d'origine — seuls les accessoires changent de palier.
   hero: {
-    principal: { col: 2, row: 2 },
-    chaussures: { col: 2, row: 1 },
-    petit: { col: 1, row: 1 },
+    principal: { col: 2, row: 6 },
+    chaussures: { col: 2, row: 4 },
+    petit: { col: 1, row: 4 },
   },
   compact: {
     principal: { col: 1, row: 2 },
@@ -101,8 +116,51 @@ const TIER_SPAN: Record<CompositionVariant, Record<CompositionTier, { col: numbe
   },
 };
 
+/**
+ * ÉCHELLE DES ACCESSOIRES — corrigée le 23/09/2026, signalée après le retrait
+ * des tuiles beiges qui la masquaient. Le rapport n'avait pas bougé ; c'est le
+ * cadre de chaque pièce qui le rendait lisible.
+ *
+ * Mesuré en rendu réel, l'accueil et l'écran Tenue dans la MÊME exécution, sur
+ * les MÊMES quatre pièces, à 320/360/390/430 px, en relevant le pixel
+ * réellement affiché et non la boîte : avec object-fit "contain" la boîte
+ * surestime les petites cellules, soit exactement le défaut à quantifier.
+ *
+ *   écart vêtement -> pièce   accueil (réf.)   avant           après
+ *   chaussures                ×1,64 à ×1,69    ×2,39 à ×2,49   ×1,51 à ×1,57
+ *   sac / bijou               ×1,91 à ×1,92    ×2,39 à ×2,52   ×1,87 à ×2,00
+ *                                                              (×2,17 à 320 px)
+ *
+ * Le levier est l'UNITÉ DE RANGÉE, divisée par trois, avec des empans de 6/4/4
+ * au lieu de 2/1/1. Elle est calée (u = R/3 - 4px) pour que six tiers valent
+ * exactement les deux rangées d'origine : la cellule du vêtement est
+ * INCHANGÉE (139 px à 390 px, comme avant), et la card ne grandit que de la
+ * bande des accessoires — +24 px, et seulement à six pièces ; à quatre et cinq
+ * pièces, sa hauteur ne bouge pas.
+ *
+ * À 320 px le sac reste à ×2,17 : là, et là seulement, il n'est plus limité
+ * par sa hauteur mais par la LARGEUR de sa colonne (56 px). Aucun empan de
+ * rangée ne peut le corriger ; il faudrait une colonne plus large, donc une
+ * autre grille. Non instruit, donc non fait — et écrit ici pour que ce chiffre
+ * ne passe pas pour un oubli.
+ *
+ * Quatre pistes mesurées et écartées, dans la même exécution : chaussures sur
+ * deux rangées pleines les met à ×1,00, aussi grandes qu'une robe, et coûte
+ * 72 px ; une petite pièce sur deux colonnes atteint ×1,41 mais fait passer la
+ * card de 279 à 424 px à six pièces ; forcer l'image à remplir sa cellule
+ * (width 100%) ne change RIEN, les visuels du catalogue étant carrés, la
+ * hauteur reste le facteur limitant ; une unité non calée corrige les rapports
+ * mais grossit tout le flat-lay de 37 px au lieu de 24.
+ *
+ * "compact" est intouché : ses cellules n'ont jamais été signalées, et rien
+ * n'autorise à transporter une mesure prise sur l'écran Tenue vers un écran
+ * qui empile plusieurs compositions par page.
+ */
 const VARIANT_CONFIG: Record<CompositionVariant, { cols: number; rowHeight: string; gap: number; radius: number; pad: number }> = {
-  hero: { cols: 4, rowHeight: "clamp(58px, 17vw, 74px)", gap: 6, radius: 14, pad: 8 },
+  // Unité en tiers de rangée, calée sur l'ancienne (cf. ci-dessus). Retrait
+  // intérieur ramené de 8 à 2 px : il servait à détacher la pièce de sa tuile
+  // beige, qui n'existe plus — la gouttière de 6 px sépare désormais seule.
+  hero: { cols: 4, rowHeight: "clamp(15.33px, calc(5.667vw - 4px), 20.67px)", gap: 6, radius: 14, pad: 2 },
   // Le vêtement est le contenu principal de la card (recette 26/08/2026,
   // 3e passe — signalé : vignettes trop petites pour reconnaître une pièce).
   // Rangée portée de ~39px à ~51px à 390px, soit +30% en linéaire et +70% en
@@ -146,6 +204,9 @@ export function OutfitComposition({
   anchorId?: number;
 }) {
   const cfg = VARIANT_CONFIG[variant];
+  // "hero" repose sur le terracotta de la card Tenue, pas sur le fond de
+  // page : aucune tuile sous les pièces (cf. en-tête).
+  const sansTuile = variant === "hero";
   return (
     <div
       style={{
@@ -199,9 +260,13 @@ export function OutfitComposition({
         // remplit déjà la cellule : le contour y reste sur la cellule.
         const ringOnCell = isAnchor && (isRealPhoto || !hasImg);
         const ringOnImage = isAnchor && hasImg && !isRealPhoto;
+        // "hero" : plus de tuile du tout. Le filet intérieur des pièces sans
+        // visuel disparaît avec elle — un trait sombre à 6 % d'opacité était
+        // calculé pour se poser sur le beige ; sur le terracotta il ne
+        // délimite plus rien.
         const shadows = [
           ringOnCell && "0 0 0 1.5px #A66950",
-          !hasImg && "inset 0 0 0 1px rgba(29,26,22,.06)",
+          !sansTuile && !hasImg && "inset 0 0 0 1px rgba(29,26,22,.06)",
         ].filter(Boolean) as string[];
         return (
           <div
@@ -218,38 +283,81 @@ export function OutfitComposition({
               // (une photo n'est pas détourée), mais dans la zone de contenu.
               padding: cfg.pad,
               boxSizing: "border-box",
-              background: "#F3EDE1",
+              background: sansTuile ? undefined : "#F3EDE1",
               // Photo réelle : toujours en fond "cover" (jamais détourée).
               // Visuel produit : rendu par un <img> ci-dessous, pour que le
               // contour du pivot puisse épouser l'image elle-même.
-              backgroundImage: isRealPhoto && hasImg ? `url(${img.url})` : undefined,
-              backgroundColor: hasImg ? undefined : it.hex,
+              // Sans tuile, TOUT passe par un <img> ou par l'aplat de repli :
+              // un fond de cellule se peint jusqu'au bord de la boîte, donc
+              // il ne peut porter ni coins arrondis propres ni ombre douce.
+              backgroundImage: !sansTuile && isRealPhoto && hasImg ? `url(${img.url})` : undefined,
+              backgroundColor: sansTuile || hasImg ? undefined : it.hex,
               backgroundSize: "cover",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center",
               backgroundOrigin: "content-box",
               boxShadow: shadows.length ? shadows.join(", ") : undefined,
-              filter: isRealPhoto ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
+              filter: !sansTuile && isRealPhoto ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            {hasImg && !isRealPhoto && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img loading="lazy"
-                src={img.url}
-                alt=""
-                style={{
-                  height: "100%",
-                  width: "auto",
-                  maxWidth: "100%",
-                  objectFit: "contain",
-                  display: "block",
-                  borderRadius: Math.max(2, cfg.radius - 4),
-                  boxShadow: ringOnImage ? "0 0 0 1.5px #A66950" : undefined,
-                }}
-              />
+            {sansTuile ? (
+              hasImg ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img loading="lazy"
+                  src={img.url}
+                  alt=""
+                  style={{
+                    height: "100%",
+                    // Une photo du dressing n'est jamais détourée : elle
+                    // remplit sa cellule en "cover", comme avant. Un visuel
+                    // produit garde width:auto, donc sa boîte vaut exactement
+                    // l'image affichée et l'ombre en épouse la silhouette.
+                    width: isRealPhoto ? "100%" : "auto",
+                    maxWidth: "100%",
+                    objectFit: isRealPhoto ? "cover" : "contain",
+                    display: "block",
+                    borderRadius: Math.max(2, cfg.radius - 4),
+                    // Même ombre que HeroPiece sur l'accueil — c'est elle qui
+                    // remplace le cadre beige.
+                    filter: isRealPhoto
+                      ? "brightness(.94) contrast(1.04) saturate(.9) drop-shadow(0 6px 14px rgba(29,26,22,.18))"
+                      : "drop-shadow(0 6px 14px rgba(29,26,22,.18))",
+                    boxShadow: ringOnImage ? "0 0 0 1.5px #A66950" : undefined,
+                  }}
+                />
+              ) : (
+                // Repli identique à celui de l'accueil : un aplat de la
+                // couleur dominante, pour que la pièce reste présente.
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    borderRadius: Math.max(2, cfg.radius - 4),
+                    background: it.hex,
+                    opacity: 0.9,
+                  }}
+                />
+              )
+            ) : (
+              hasImg && !isRealPhoto && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img loading="lazy"
+                  src={img.url}
+                  alt=""
+                  style={{
+                    height: "100%",
+                    width: "auto",
+                    maxWidth: "100%",
+                    objectFit: "contain",
+                    display: "block",
+                    borderRadius: Math.max(2, cfg.radius - 4),
+                    boxShadow: ringOnImage ? "0 0 0 1.5px #A66950" : undefined,
+                  }}
+                />
+              )
             )}
           </div>
         );

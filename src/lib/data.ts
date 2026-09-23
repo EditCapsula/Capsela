@@ -167,13 +167,29 @@ export const WEATHER_ICONS: Record<string, string> = {
   "Neige": "❄️",
 };
 
-export const OCC_SHORT: Partial<Record<OccasionKey, string>> = {
+/**
+ * Libellés courts pour les chips d'occasion (espace restreint).
+ *
+ * Record COMPLET depuis le 23/09/2026, plus Partial. Trois occasions —
+ * sport, cocooning, voyage — n'y figuraient pas, et l'écran d'ajout affichait
+ * alors la clé brute de l'énumération : « voyage » en minuscules, à côté de
+ * chips correctement capitalisés. Le type empêche désormais d'ajouter une
+ * occasion sans son libellé court ; c'est une erreur de compilation, plus une
+ * chaîne technique qui remonte jusqu'à l'écran.
+ *
+ * "all" en est exclue : ce n'est pas une occasion mais la sentinelle
+ * « aucune », et OCC_LABELS lui donne déjà « Toutes ».
+ */
+export const OCC_SHORT: Record<Exclude<OccasionKey, "all">, string> = {
   quotidien: "Quotidien",
   travail_formel: "Travail",
   entretien: "Rendez-vous",
   date: "Date",
   soiree: "Sortie",
   festive: "Sortie festive",
+  sport: "Sport",
+  cocooning: "Cocooning",
+  voyage: "Voyage",
   evenement_perso: "Cérémonie",
 };
 
@@ -183,6 +199,17 @@ OCCASIONS.forEach(([key, label, , formality]) => {
   OCC_LABELS[key] = label;
   OCC_FORMALITY[key] = formality;
 });
+
+/**
+ * Libellé court d'une occasion, quelle que soit la clé — point unique de
+ * lecture. Les trois appelants faisaient chacun leur repli : l'un tombait sur
+ * le libellé complet, l'autre sur sa première moitié, le troisième sur la
+ * CLÉ BRUTE. Trois replis pour une même question, dont un faux.
+ */
+export function occasionShortLabel(key: OccasionKey): string {
+  if (key === "all") return OCC_LABELS.all;
+  return OCC_SHORT[key];
+}
 
 /**
  * Formalité minimum effective d'une occasion — "travail_formel" varie selon

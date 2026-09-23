@@ -2,13 +2,14 @@
 
 import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
+import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import {
   ACCESSOIRE_TYPES,
   BAS_CATS,
   BIJOU_TYPES,
   CATS,
   OCCASIONS,
-  OCC_SHORT,
+  occasionShortLabel,
   PALETTE,
   PALETTE_BIJOU,
   SAC_TYPES,
@@ -31,6 +32,11 @@ function chipCls(on: boolean): string {
     "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border " +
     (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
   );
+}
+
+/** Variante du chip qui porte un glyphe : même fond, contenu mis en ligne. */
+function chipGlypheCls(on: boolean): string {
+  return chipCls(on) + " inline-flex items-center gap-[7px]";
 }
 
 function SparkleIcon({ className = "" }: { className?: string }) {
@@ -466,8 +472,9 @@ export default function AddScreen() {
       <div className="flex gap-2 flex-wrap">
         {state.addOccasion.length > 0 ? (
           state.addOccasion.map((o) => (
-            <span key={o} className={chipCls(true)}>
-              {OCC_SHORT[o] || o}
+            <span key={o} className={chipGlypheCls(true)}>
+              <GlypheOccasion occasion={o} taille={15} />
+              {occasionShortLabel(o)}
             </span>
           ))
         ) : (
@@ -489,7 +496,7 @@ export default function AddScreen() {
       <button
         onClick={save}
         className={
-          "mt-6 w-full text-center rounded-full py-4 text-[13px] tracking-[.14em] uppercase " +
+          "mt-6 w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
           (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer")
         }
       >
@@ -587,7 +594,7 @@ export default function AddScreen() {
 
         <button
           onClick={() => setSheet(null)}
-          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
         >
           Terminé
         </button>
@@ -597,14 +604,19 @@ export default function AddScreen() {
         <div className="text-[12.5px] text-muted mb-[16px] leading-[1.45]">Plusieurs choix possibles.</div>
         <div className="flex gap-2 flex-wrap">
           {OCCASIONS.map(([key, label]) => (
-            <button key={key} onClick={() => actions.setAddOccasion(key)} className={chipCls(state.addOccasion.includes(key))}>
-              {OCC_SHORT[key] || label}
+            <button
+              key={key}
+              onClick={() => actions.setAddOccasion(key)}
+              className={chipGlypheCls(state.addOccasion.includes(key))}
+            >
+              <GlypheOccasion occasion={key} taille={15} />
+              {occasionShortLabel(key)}
             </button>
           ))}
         </div>
         <button
           onClick={() => setSheet(null)}
-          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase cursor-pointer"
+          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
         >
           Terminé
         </button>

@@ -380,6 +380,30 @@ function weatherQualifier(t: number): string {
  * en ajoutant simplement une entrée à `reasons`, sans revoir le format ni
  * les appelants (TenuesScreen, HomeScreen).
  */
+/**
+ * Le seul qualificatif météo, SANS la température (demandé le 23/09/2026 pour
+ * l'écran Tenue : « pas la peine de répéter la température dans le flat lay
+ * puisqu'elle est au-dessus »).
+ *
+ * Fonction séparée plutôt que modification de explainRecommendation, et c'est
+ * le point important : la raison invoquée — la température est déjà affichée
+ * juste au-dessus — est VRAIE sur l'écran Tenue, où la barre météo précède la
+ * card, et FAUSSE sur l'accueil, où cette phrase est le seul endroit de la
+ * page qui donne la température. Toucher à la fonction partagée l'aurait
+ * effacée de l'accueil sans que personne ne le demande.
+ */
+export function outfitMoodPhrase(
+  occasion: OccasionKey,
+  workMode: WorkMode,
+  dateContext: DateContext,
+  temp: number | null | undefined
+): string {
+  if (temp == null || !Number.isFinite(temp)) {
+    return `Pensée pour ${occasionPhrase(occasion, workMode, dateContext)}.`;
+  }
+  return weatherQualifier(Math.round(temp));
+}
+
 export function explainRecommendation(
   occasion: OccasionKey,
   workMode: WorkMode,

@@ -213,7 +213,7 @@ export default function ProfileScreen() {
 
       <button
         onClick={actions.goProfileEdit}
-        className="mt-[22px] w-full bg-ink text-cream text-center rounded-full py-4 text-[12.5px] tracking-[.12em] uppercase cursor-pointer"
+        className="mt-[22px] w-full bg-ink text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
       >
         Modifier mon profil
       </button>
