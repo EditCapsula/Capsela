@@ -175,7 +175,6 @@ export default function TenuesScreen() {
   }
   const now = new Date();
   const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
-  const firstNameOrYou = profile.displayName || "toi";
 
   // Pool de résolution de la tenue affichée (recette 24/08/2026, retour
   // d'exploration) — en mode exploration, state.outfit contient des ids
@@ -427,8 +426,14 @@ export default function TenuesScreen() {
 
       <div className="mt-[18px]">
         <div className="text-[11px] tracking-[.18em] uppercase text-muted">{dateText}</div>
+        {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
+            (23/09/2026) : répété ici, il salue une deuxième fois dans la même
+            session et ne dit rien de l'écran. Le titre annonce désormais ce
+            qu'on vient y chercher. La mention « Le look du jour » qui vivait
+            DANS la card terracotta est supprimée du même coup — elle ferait
+            doublon à deux cents pixels d'écart. */}
         <div className="font-serif text-[30px] leading-[1.12] text-ink mt-[6px]">
-          Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
+          Ton <span className="italic text-terracotta">look du jour</span>
         </div>
       </div>
 
@@ -560,16 +565,22 @@ export default function TenuesScreen() {
           jour, ce qui est exactement ce qu'un bouton principal ne doit pas
           faire.
 
-          LE FOND DU FLAT-LAY NE CHANGE PAS. La composition reposait sur le
-          fond de page (--color-cream, #F3EEE5) ; elle repose maintenant sur
-          un panneau de cette même couleur, à l'intérieur de la card. Poser
-          ses tuiles à nu sur le terracotta aurait modifié le rendu de chaque
-          pièce — leurs propres fonds, leurs ombres portées — sans que rien ne
-          l'ait demandé. Seul l'encadrement est nouveau, pas la surface. */}
+          LE PANNEAU CRÈME EST RETIRÉ (23/09/2026, demandé : « le flat lay de
+          tenue doit ressembler à celui de la home, enlève l'aplat de beige
+          sous les articles »). Il datait de la veille, où la consigne était
+          l'inverse — ne pas toucher au fond de la composition. Ce qui a été
+          vu depuis : sur l'accueil les pièces flottent sur le terracotta, ici
+          elles étaient posées sur un panneau crème rempli de tuiles beiges,
+          soit deux traitements pour le même objet à un onglet d'écart. Les
+          deux couches partent ensemble — le panneau ici, les tuiles dans
+          OutfitComposition — sinon le fond beige des tuiles resterait visible
+          en damier sur le terracotta. */}
       {!geoLoading && outfitPieces.length > 0 && (
         <div className="mt-[22px] rounded-[24px] bg-terracotta-deep text-cream" style={{ padding: 16 }}>
+          {/* Ligne conditionnelle depuis que le titre est parti : sans elle,
+              une tenue sans badge ouvrirait la card sur une rangée vide. */}
+          {badges.length > 0 && (
           <div className="flex items-center flex-wrap gap-[9px]">
-            <span className="font-serif text-[19px] leading-[1.15] text-cream">Le look du jour</span>
             {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la
                 qualité vient du score, le registre du repli de formalité. Sur
                 fond terracotta, la hiérarchie passe par le remplissage —
@@ -594,26 +605,32 @@ export default function TenuesScreen() {
               )
             )}
           </div>
+          )}
 
           {/* Justification météo — celle de CETTE tenue, jamais un bulletin. */}
           {recommendationText && (
-            <div className="text-[12.5px] leading-[1.4] mt-[6px]" style={{ color: "#F0DDCF" }}>
+            <div
+              className={"text-[12.5px] leading-[1.4] " + (badges.length > 0 ? "mt-[6px]" : "")}
+              style={{ color: "#F0DDCF" }}
+            >
               {recommendationText}
             </div>
           )}
 
-          <div className="mt-[13px] rounded-[16px] overflow-hidden bg-cream" style={{ padding: 8 }}>
+          <div className="mt-[13px]">
             <OutfitComposition items={outfitPieces} variant="hero" />
-            {/* PROVENANCE — dans le même panneau que le look, jamais PAR-DESSUS.
+            {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.
                 La maquette les pose en surimpression en bas à gauche du
                 flat-lay. Essayé, capturé : à 390 px, les ballerines
                 disparaissent derrière « 3 pièces de ton dressing » et le sac
                 est à moitié couvert. Une composition n'a pas de zone vide
                 garantie — ses pièces se placent selon leur nombre et leur
                 catégorie, donc aucun coin n'est sûr. Les badges prennent leur
-                propre ligne sous la composition, dans le panneau : ils se
-                lisent toujours en même temps que le look, sans jamais en
-                cacher une pièce. Corrigé en supprimant la contrainte, pas en
+                propre ligne sous la composition : ils se lisent toujours en
+                même temps que le look, sans jamais en cacher une pièce. (Le
+                panneau crème qui les entourait est parti le 23/09 ; la
+                contrainte, elle, tient toujours — elle porte sur la
+                superposition, pas sur la surface.) Corrigé en supprimant la contrainte, pas en
                 déplaçant les badges vers un autre coin — le coin suivant
                 aurait été couvert par une autre tenue.
 
@@ -660,12 +677,19 @@ export default function TenuesScreen() {
               onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
               disabled={vesteWithoutBase}
               title={vesteWithoutBase ? "Ajoute un haut, une robe ou une combinaison sous ta veste." : undefined}
+              // MÊME BOUTON QUE « Voir ma tenue » SUR L'ACCUEIL (23/09/2026,
+              // signalé). L'un menait à l'autre en changeant de forme au
+              // passage : capitales et interlettrage à .1em ici, casse de
+              // phrase et .04em là-bas, 52 px contre 50. Trois écarts pour
+              // deux boutons qui sont la même action à une étape près. C'est
+              // l'accueil qui fait référence : son libellé se lit en casse de
+              // phrase, ce qui est aussi le registre du reste de l'app.
               className={
-                "mt-[14px] w-full text-center rounded-full text-[13px] tracking-[.1em] uppercase " +
+                "mt-[14px] w-full flex items-center justify-center rounded-full text-[13.5px] tracking-[.04em] " +
                 (vesteWithoutBase ? "cursor-not-allowed" : "bg-cream text-ink cursor-pointer")
               }
               style={{
-                minHeight: 52,
+                minHeight: 50,
                 background: vesteWithoutBase ? "rgba(243,238,229,.38)" : undefined,
                 color: vesteWithoutBase ? "rgba(29,26,22,.5)" : undefined,
               }}
