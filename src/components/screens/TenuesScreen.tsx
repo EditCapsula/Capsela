@@ -728,7 +728,7 @@ export default function TenuesScreen() {
                 color: vesteWithoutBase ? "rgba(29,26,22,.5)" : undefined,
               }}
             >
-              Porter cette tenue →
+              Porter cette tenue
             </button>
           )}
 
@@ -813,7 +813,7 @@ export default function TenuesScreen() {
                   onClick={handleConfirmExploredStyle}
                   className="mt-[16px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
                 >
-                  Explorer la capsule {styleConfigFor(profile.gender)[selectedExploreStyle].label} →
+                  Explorer la capsule {styleConfigFor(profile.gender)[selectedExploreStyle].label}
                 </button>
               )}
             </div>
