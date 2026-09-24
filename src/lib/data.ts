@@ -342,9 +342,47 @@ export function isSunny(weather: Weather): boolean {
   return estimateUvIndex(weather) >= 3;
 }
 
-/** Météo pluvieuse — R-B16 (préférence pour une veste/un manteau resiste_pluie quand il pleut). */
-export function isRainy(weather: Weather): boolean {
+/**
+ * Météo pluvieuse — R-B16 (préférence pour une veste/un manteau
+ * resiste_pluie quand il pleut).
+ *
+ * Signature élargie à `{ label }` le 23/09/2026 : la prévision agrège
+ * plusieurs créneaux horaires et doit savoir lequel prime AVANT d'avoir
+ * construit un `Weather`. Recopier la regex là-bas aurait fait deux
+ * définitions d'une même question, dont une qui finit par diverger.
+ * `Weather` satisfait cette forme, aucun appelant ne change.
+ */
+export function isRainy(weather: { label: string }): boolean {
   return /pluie|orage/i.test(weather.label);
+}
+
+/**
+ * Libellé décrivant des précipitations — question de VOCABULAIRE, distincte
+ * de la règle de composition `isRainy` juste au-dessus.
+ *
+ * DÉFAUT MESURÉ LE 23/09/2026, NON CORRIGÉ ICI, À ARBITRER. La fonction Edge
+ * `weather` traduit la condition OpenWeather `Rain` — la pluie ordinaire, de
+ * loin la plus fréquente — par « Pluvieux ». Or `isRainy` teste
+ * `/pluie|orage/i`, et « Pluvieux » ne contient pas « pluie » :
+ *
+ *   Pluvieux      -> isRainy faux    (Rain)
+ *   Pluie légère  -> isRainy VRAI    (Drizzle)
+ *   Orageux       -> isRainy VRAI    (Thunderstorm)
+ *   Neigeux       -> isRainy faux    (Snow)
+ *
+ * R-B16 (préférer une veste resiste_pluie quand il pleut) se déclenche donc
+ * pour la bruine et l'orage, mais PAS pour la pluie. Élargir `isRainy`
+ * changerait le comportement du moteur, ce qui n'est pas une correction à
+ * prendre en passant : la règle reste inchangée tant qu'elle n'est pas
+ * arbitrée.
+ *
+ * Cette fonction-ci ne sert qu'à choisir quel libellé afficher et transmettre
+ * quand plusieurs créneaux sont agrégés (cf. prevision.ts) : elle ne décide
+ * d'aucune pièce. Elle couvre le vocabulaire réellement produit — celui de la
+ * fonction Edge comme celui de la liste `CITIES` simulée.
+ */
+export function labelPrecipitation(label: string): boolean {
+  return /pluie|pluvieux|averse|bruine|orage|neige|neigeux/i.test(label);
 }
 
 export function isBag(it: { cat?: CategoryKey; name: string }): boolean {

@@ -8,6 +8,10 @@ import { useAuth } from "@/lib/auth";
 import { CATS, DATE_CONTEXTS, OCCASIONS, occasionShortLabel } from "@/lib/data";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { generateOutfitWithFallback } from "@/lib/logic";
+import { jourLocal } from "@/lib/outfitFeedback";
+import { joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
+import { saisonCalendairePour, weatherForDay } from "@/lib/capsule";
+import { fetchPrevisionByCity } from "@/lib/weather";
 import { paletteHexes } from "@/lib/profile";
 import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
@@ -104,7 +108,7 @@ const G_NUAGE = (
 );
 const G_COCHE = <path d="M5 12.5l4.5 4.5L19 7.5" {...T} strokeWidth={1.8} />;
 
-const MOMENTS: [string, string][] = [
+const MOMENTS: [MomentJournee, string][] = [
   ["Matin", "Avant midi"],
   ["Après-midi", "De 12 h à 18 h"],
   ["Soirée", "À partir de 18 h"],
@@ -225,16 +229,55 @@ export default function PlanifierScreen() {
   const [workMode, setWorkMode] = useState<WorkMode>("Présentiel");
   const [dateContext, setDateContext] = useState<DateContext | null>(null);
   const [jour, setJour] = useState<number | null>(null);
-  const [moment, setMoment] = useState<string | null>(null);
+  const [moment, setMoment] = useState<MomentJournee | null>(null);
   const [lieu, setLieu] = useState("");
   const [typeLieu, setTypeLieu] = useState<string | null>(null);
   const [dressingSeul, setDressingSeul] = useState(false);
   // Incrémenté par « Autre proposition » — seule entrée du useMemo qui change
   // alors, donc seul moyen de redemander un tirage sans toucher aux réponses.
   const [tirage, setTirage] = useState(0);
+  /**
+   * Prévision du LIEU. Demandée en quittant l'étape 3, c'est-à-dire au moment
+   * où le lieu est arrêté — pas à chaque frappe dans le champ. Le temps que
+   * l'étape 4 soit remplie, la réponse est presque toujours revenue ; « Voir
+   * ma tenue » attend explicitement si ce n'est pas le cas, plutôt que
+   * d'afficher une tenue composée sur la météo du jour puis de la changer
+   * sous les yeux.
+   *
+   * `null` avec l'état "faite" est une réponse, pas une absence : lieu
+   * introuvable, quota, ou fonction Edge pas encore redéployée (elle renvoie
+   * alors la météo actuelle, sans `slots`). Les trois se disent de la même
+   * façon à l'écran.
+   */
+  const [prevision, setPrevision] = useState<Prevision | null>(null);
+  const [previsionEtat, setPrevisionEtat] = useState<"vide" | "encours" | "faite">("vide");
 
   const occLabel = occ && occ !== "all" ? occasionShortLabel(occ) : "";
   const occLong = occ ? (OCCASIONS.find(([k]) => k === occ)?.[1] ?? "") : "";
+
+  const dateChoisie = jour != null ? dansNJours(jour) : null;
+  const dateLongue = dateChoisie
+    ? `${DOW_LONG[dateChoisie.getDay()]} ${dateChoisie.getDate()} ${MOIS[dateChoisie.getMonth()]}`
+    : "";
+
+  /**
+   * Météo du créneau demandé, ou null si la prévision ne va pas jusque-là.
+   * `previsionPour` ne comble jamais un trou avec un autre moment : au-delà
+   * de l'horizon, c'est null, et l'écran le dit.
+   */
+  const meteoMoment =
+    prevision && dateChoisie && moment ? previsionPour(prevision, jourLocal(dateChoisie), moment) : null;
+  /** Dernier jour réellement couvert — sert à dire jusqu'à quand on sait. */
+  const dernierJourConnu = prevision ? joursCouverts(prevision).at(-1) : undefined;
+  /**
+   * Ce que le moteur reçoit. La saison vient de la DATE PLANIFIÉE et non du
+   * jour courant : une tenue préparée pour le 1er septembre depuis le 29 août
+   * relève de l'automne.
+   */
+  const meteoUtilisee =
+    meteoMoment && dateChoisie
+      ? weatherForDay(meteoMoment.temp, meteoMoment.label, saisonCalendairePour(dateChoisie))
+      : weather;
 
   const tenue = useMemo(() => {
     if (!occ) return null;
@@ -245,7 +288,7 @@ export default function PlanifierScreen() {
     const pool = dressingSeul ? state.items : composeWardrobePool(state.items, defaultCapsule, CAT_KEYS, { completerPourOccasion: occ });
     return generateOutfitWithFallback(
       pool,
-      weather,
+      meteoUtilisee,
       occ,
       workMode,
       dateContext ?? "Verre",
@@ -255,7 +298,7 @@ export default function PlanifierScreen() {
     // `tirage` est une dépendance délibérée : c'est le bouton « Autre
     // proposition ». Sans elle, redemander une tenue rendrait la même.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [occ, dressingSeul, state.items, defaultCapsule, weather, workMode, dateContext, profile, tirage]);
+  }, [occ, dressingSeul, state.items, defaultCapsule, meteoUtilisee, workMode, dateContext, profile, tirage]);
 
   const pieces: Item[] = useMemo(() => {
     if (!tenue) return [];
@@ -283,13 +326,46 @@ export default function PlanifierScreen() {
         ? `${pluriel(nbDressing)} de ton dressing`
         : `${pluriel(nbDressing)} de ton dressing + ${nbCapsule} de ta capsule`;
 
-  const dateChoisie = jour != null ? dansNJours(jour) : null;
-  const dateLongue = dateChoisie
-    ? `${DOW_LONG[dateChoisie.getDay()]} ${dateChoisie.getDate()} ${MOIS[dateChoisie.getMonth()]}`
-    : "";
+
+
+  /**
+   * LA PHRASE MÉTÉO, EN UN SEUL ENDROIT. Quatre états, tous vrais :
+   *   1. lieu pas encore connu — une promesse qu'on peut tenir ;
+   *   2. prévision obtenue pour ce créneau — l'amplitude, qui est
+   *      l'information à lire, et non la seule moyenne que le moteur reçoit ;
+   *   3. jour au-delà de l'horizon — on dit jusqu'où on sait ;
+   *   4. pas de prévision du tout — lieu introuvable, quota, ou fonction Edge
+   *      pas encore redéployée : indistinguables pour l'utilisatrice, et elle
+   *      n'a aucune raison d'avoir à les distinguer.
+   */
+  const phraseMeteo = (() => {
+    const aujourdhui = `${weather.temp}°, ${weather.label.toLowerCase()}`;
+    if (previsionEtat !== "faite") {
+      return `On regardera la météo prévue sur place le jour J, pas celle d'aujourd'hui.`;
+    }
+    if (meteoMoment) {
+      const amplitude =
+        meteoMoment.tempMin === meteoMoment.tempMax
+          ? `${meteoMoment.temp}°`
+          : `de ${meteoMoment.tempMin}° à ${meteoMoment.tempMax}°`;
+      return `Prévision à ${prevision?.city || lieu.trim()} pour ce moment : ${amplitude}, ${meteoMoment.label.toLowerCase()}. La tenue en tient compte.`;
+    }
+    if (prevision && dernierJourConnu && dateChoisie && jourLocal(dateChoisie) > dernierJourConnu) {
+      const d = new Date(`${dernierJourConnu}T12:00:00`);
+      return `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue est composée sur la météo d'aujourd'hui — ${aujourdhui}.`;
+    }
+    return `Pas de prévision disponible pour ce lieu. La tenue est composée sur la météo d'aujourd'hui — ${aujourdhui}.`;
+  })();
 
   const sousChoixRequis = occ === "travail_formel" || occ === "date";
   const sousChoixFait = occ === "travail_formel" ? true : occ === "date" ? !!dateContext : true;
+  /**
+   * L'étape 4 attend la prévision plutôt que de composer sur la météo du jour
+   * puis de changer la tenue sous les yeux : la requête est partie en
+   * quittant l'étape 3, elle est presque toujours revenue quand on arrive
+   * ici. Les étapes 1 à 3 ne sont jamais bloquées par elle.
+   */
+  const attend = etape === 4 && previsionEtat === "encours";
   const etapeValide =
     etape === 1 ? !!occ && sousChoixFait : etape === 2 ? jour != null && !!moment : etape === 3 ? !!lieu.trim() : true;
 
@@ -364,9 +440,9 @@ export default function PlanifierScreen() {
               ))}
             </div>
             <div className="mt-5 rounded-[14px] bg-card border border-border px-[14px] py-3 text-[12px] text-muted-3 leading-[1.45]" style={{ textWrap: "pretty" }}>
-              La météo prévue le jour J n&apos;est pas encore branchée : la tenue est composée sur la météo
-              d&apos;aujourd&apos;hui. Et rien n&apos;est conservé pour l&apos;instant — la liste de tes tenues
-              planifiées viendra avec.
+              La météo du jour J est celle prévue sur place, dans la limite de ce que la prévision couvre —
+              au-delà, l&apos;écran le dit plutôt que de l&apos;inventer. Rien n&apos;est conservé pour
+              l&apos;instant : la liste de tes tenues planifiées viendra avec.
             </div>
           </>
         )}
@@ -535,8 +611,7 @@ export default function PlanifierScreen() {
                 <Glyphe taille={17}>{G_NUAGE}</Glyphe>
               </span>
               <div className="text-[12px] text-muted-3 leading-[1.45]" style={{ textWrap: "pretty" }}>
-                La météo prévue le jour J n&apos;est pas encore disponible. La tenue sera composée sur celle
-                d&apos;aujourd&apos;hui — {weather.temp}°, {weather.label.toLowerCase()}.
+                {previsionEtat === "encours" ? "Prévision en cours de récupération…" : phraseMeteo}
               </div>
             </div>
           </>
@@ -585,7 +660,7 @@ export default function PlanifierScreen() {
                   <div className="flex flex-col gap-2 mt-[10px]">
                     {[
                       `Pensée pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`,
-                      `Composée sur la météo d'aujourd'hui — ${weather.temp}°, ${weather.label.toLowerCase()}. Celle du jour J n'est pas encore disponible.`,
+                      phraseMeteo,
                       provenance,
                     ].map((r) => (
                       <div key={r} className="flex gap-[9px] items-start">
@@ -623,18 +698,34 @@ export default function PlanifierScreen() {
         {vue === "etape" && (
           <button
             onClick={() => {
-              if (!etapeValide) return;
+              if (!etapeValide || attend) return;
+              if (etape === 3) {
+                /* Le lieu est arrêté : c'est ici qu'on demande la prévision,
+                   et pas à chaque frappe dans le champ. Aucun effet — un
+                   clic, une requête. */
+                setPrevisionEtat("encours");
+                const demande = lieu.trim();
+                fetchPrevisionByCity(demande)
+                  .then((p) => {
+                    setPrevision(p);
+                    setPrevisionEtat("faite");
+                  })
+                  .catch(() => {
+                    setPrevision(null);
+                    setPrevisionEtat("faite");
+                  });
+              }
               if (etape === 4) setVue("resultat");
               else setEtape(etape + 1);
             }}
-            disabled={!etapeValide}
+            disabled={!etapeValide || attend}
             className="w-full rounded-full text-cream text-[14px] font-semibold cursor-pointer disabled:cursor-not-allowed"
             style={{
               minHeight: 52,
-              background: etapeValide ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
+              background: etapeValide && !attend ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
             }}
           >
-            {etape === 4 ? "Voir ma tenue" : "Suivant"}
+            {attend ? "Un instant…" : etape === 4 ? "Voir ma tenue" : "Suivant"}
           </button>
         )}
         {vue === "resultat" && (

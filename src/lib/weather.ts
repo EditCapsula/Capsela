@@ -1,4 +1,5 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
+import type { CreneauPrevision, Prevision } from "./prevision";
 import type { City } from "./types";
 
 /** Position navigateur — résout à null (jamais de rejet) si l'API est absente, refusée ou expire, pour ne jamais bloquer l'app. */
@@ -36,6 +37,50 @@ export async function fetchWeatherByCoords(lat: number, lon: number): Promise<Ci
     const { data, error } = await getSupabase().functions.invoke("weather", { body: { lat, lon } });
     if (error || !data || data.error) return null;
     return data as City;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prévision pour un lieu nommé — null si indisponible, l'appelant affiche
+ * alors « pas encore de prévision » plutôt qu'une valeur inventée.
+ *
+ * DEUX RAISONS DE RENDRE NULL, VOLONTAIREMENT INDISTINCTES POUR L'APPELANT :
+ * la fonction Edge peut échouer (réseau, quota, ville introuvable), ou bien
+ * la version déployée peut être ANTÉRIEURE à `mode=forecast`. Dans ce second
+ * cas l'ancienne fonction ignore `mode` et renvoie la météo actuelle, c'est-
+ * à-dire une réponse sans `slots` — d'où le test de forme ci-dessous plutôt
+ * qu'une confiance dans le code de retour. L'app tourne donc correctement
+ * avant comme après le redéploiement, sans fenêtre de casse.
+ *
+ * Mode démo (Supabase non configuré) : aucun appel, comme pour la météo
+ * actuelle.
+ */
+export async function fetchPrevisionByCity(city: string): Promise<Prevision | null> {
+  if (!isSupabaseConfigured) return null;
+  const nom = city.trim();
+  if (!nom) return null;
+  try {
+    const { data, error } = await getSupabase().functions.invoke("weather", {
+      body: { city: nom, mode: "forecast" },
+    });
+    if (error || !data || data.error) return null;
+    // Test de FORME, pas de statut : c'est lui qui distingue la nouvelle
+    // fonction de l'ancienne.
+    if (!Array.isArray(data.slots) || !data.slots.length) return null;
+    return {
+      city: typeof data.city === "string" ? data.city : nom,
+      country: typeof data.country === "string" ? data.country : "",
+      timezone: typeof data.timezone === "number" ? data.timezone : 0,
+      slots: data.slots.filter(
+        (s: unknown): s is CreneauPrevision =>
+          !!s &&
+          typeof (s as CreneauPrevision).ts === "number" &&
+          typeof (s as CreneauPrevision).temp === "number" &&
+          typeof (s as CreneauPrevision).label === "string"
+      ),
+    };
   } catch {
     return null;
   }

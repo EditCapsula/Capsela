@@ -26,9 +26,19 @@ export type { CapsuleSeason };
 export const CAPSULE_SEASONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
 
 /** Saison calendaire courante — pilote la capsule "de départ" affichée par défaut (indépendante de la météo du jour). */
-export function currentSeasonKey(): CapsuleSeason {
-  const m = new Date().getMonth();
+/**
+ * Saison calendaire d'une date donnée. Extraite de `currentSeasonKey` le
+ * 23/09/2026 pour « Planifier une tenue » : une tenue préparée pour le 1er
+ * septembre depuis le 29 août relève de l'automne, pas de l'été. Le découpage
+ * est inchangé, au mois près.
+ */
+export function saisonCalendairePour(d: Date): CapsuleSeason {
+  const m = d.getMonth();
   return m <= 1 || m === 11 ? "Hiver" : m <= 4 ? "Printemps" : m <= 7 ? "Été" : "Automne";
+}
+
+export function currentSeasonKey(): CapsuleSeason {
+  return saisonCalendairePour(new Date());
 }
 
 /**
