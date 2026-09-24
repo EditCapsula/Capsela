@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generationAutorisee, generationsRestantes, lireQuota, type QuotaGeneration } from "../generations";
 
 const q = (p: Partial<QuotaGeneration>): QuotaGeneration =>
-  ({ consomme: true, utilisees: 1, limite: 2, premium: false, ...p });
+  ({ consomme: true, utilisees: 1, limite: 2, premium: false, bonus: 0, ...p });
 
 describe("generationAutorisee", () => {
   it("n'applique AUCUNE limite quand on ne sait pas", () => {
@@ -43,7 +43,7 @@ describe("generationsRestantes", () => {
 });
 
 describe("lireQuota", () => {
-  const ligne = { consomme: true, utilisees: 1, limite: 2, premium: false };
+  const ligne = { consomme: true, utilisees: 1, limite: 2, premium: false, bonus: 0 };
 
   it("accepte le tableau de PostgREST comme l'objet nu", () => {
     expect(lireQuota([ligne])).toEqual(ligne);
@@ -68,5 +68,12 @@ describe("lireQuota", () => {
 
   it("traite un `premium` absent comme faux plutôt que comme vrai", () => {
     expect(lireQuota([{ consomme: true, utilisees: 1, limite: 2 }])?.premium).toBe(false);
+  });
+
+  it("tolère un `bonus` absent — base à 0032, migration 0033 pas encore passée", () => {
+    // Entre les deux migrations, la fonction ne renvoie pas encore ce champ.
+    // L'app ne doit pas cesser de fonctionner pour autant.
+    expect(lireQuota([{ consomme: true, utilisees: 1, limite: 2, premium: false }])?.bonus).toBe(0);
+    expect(lireQuota([{ ...ligne, bonus: 1 }])?.bonus).toBe(1);
   });
 });
