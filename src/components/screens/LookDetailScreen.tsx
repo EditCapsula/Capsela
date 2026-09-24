@@ -5,6 +5,7 @@ import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { isWishlistLook } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
+import BoutonRetour from "@/components/BoutonRetour";
 
 export default function LookDetailScreen() {
   const { state, actions, vestiairePool } = useCapsela();
@@ -32,12 +33,7 @@ export default function LookDetailScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
-        <button
-          onClick={actions.closeLookDetail}
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+        <BoutonRetour onClick={actions.closeLookDetail} label="Revenir à l'écran précédent" />
         <div className="font-serif text-[22px] text-ink">{look.name}</div>
       </div>
 

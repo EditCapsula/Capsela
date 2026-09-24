@@ -4,6 +4,8 @@ import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
+import BoutonRetour from "@/components/BoutonRetour";
+import FilEtapes from "@/components/FilEtapes";
 import {
   AFFINITE_OPTIONS,
   GENDERS,
@@ -232,31 +234,19 @@ export default function ProfileSetupScreen() {
     <>
       <AppHeader showAvatar={false} />
 
+      {/* Les deux gouttières valent 38 px et non plus 36 : le bouton de
+          retour est passé au composant commun, dont le cercle fait 38 (cf.
+          BoutonRetour). Des cales restées à 36 décentreraient le fil d'un
+          pixel — invisible isolément, mais c'est la raison d'être de ces
+          deux div. */}
       <div className="flex items-center justify-between">
         {showBack ? (
-          <button
-            onClick={back}
-            className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-[16px] text-ink cursor-pointer"
-          >
-            ←
-          </button>
+          <BoutonRetour onClick={back} label="Revenir à l'étape précédente" />
         ) : (
-          <div className="w-9" />
+          <div className="w-[38px]" />
         )}
-        <div className="flex gap-[6px]">
-          {STEPS.map((s, i) => (
-            <span
-              key={s.key}
-              className="rounded-full inline-block"
-              style={
-                i === step
-                  ? { width: 20, height: 6, background: "#A66950" }
-                  : { width: 6, height: 6, background: "#DFD3BE" }
-              }
-            />
-          ))}
-        </div>
-        <div className="w-9" />
+        <FilEtapes total={STEPS.length} courante={step} />
+        <div className="w-[38px]" />
       </div>
 
       <div className="mt-[26px]">

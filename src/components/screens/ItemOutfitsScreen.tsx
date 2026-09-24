@@ -11,6 +11,7 @@ import { paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import type { OccasionKey } from "@/lib/types";
+import BoutonRetour from "@/components/BoutonRetour";
 
 /**
  * Module "Les idées de tenues" (recette 19/08/2026, refonte UX/UI 22/08/2026,
@@ -141,12 +142,7 @@ export default function ItemOutfitsScreen() {
           lieu de deux blocs empilés, pour faire remonter les idées de tenues
           dans le viewport. */}
       <div className="flex items-center gap-[14px]">
-        <button
-          onClick={() => actions.go(state.itemOutfitsReturn)}
-          className="w-[38px] h-[38px] flex-shrink-0 rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+        <BoutonRetour onClick={() => actions.go(state.itemOutfitsReturn)} label="Revenir à l'écran précédent" className="flex-shrink-0" />
         <div className="text-[11px] tracking-[.16em] uppercase text-muted">Les idées de tenues</div>
       </div>
 

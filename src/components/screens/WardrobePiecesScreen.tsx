@@ -5,6 +5,7 @@ import BottomSheet from "@/components/BottomSheet";
 import { useCapsela } from "@/lib/store";
 import { daysSinceWorn, wearCounts } from "@/lib/selectors";
 import { wornAgo } from "@/lib/data";
+import BoutonRetour from "@/components/BoutonRetour";
 
 /**
  * "Mes pièces" (recette 24/08/2026, mockup fourni) — grille plate 2 colonnes
@@ -68,12 +69,7 @@ export default function WardrobePiecesScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <div className="flex items-center justify-between gap-3 mt-[10px]">
         <div className="flex items-center gap-[14px] min-w-0">
-          <button
-            onClick={actions.goWardrobe}
-            className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer flex-shrink-0"
-          >
-            ←
-          </button>
+          <BoutonRetour onClick={actions.goWardrobe} label="Revenir au dressing" className="flex-shrink-0" />
           <div className="font-serif text-[20px] text-ink truncate">Mes pièces</div>
         </div>
         <button onClick={actions.openAdd} className="flex items-center gap-[7px] flex-shrink-0 cursor-pointer">

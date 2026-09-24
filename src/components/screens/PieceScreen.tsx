@@ -9,6 +9,7 @@ import { nounInfoOf } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import BottomSheet from "@/components/BottomSheet";
+import BoutonRetour from "@/components/BoutonRetour";
 
 const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
 
@@ -203,12 +204,7 @@ export default function PieceScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center justify-between">
-        <button
-          onClick={() => actions.go(state.pieceReturn)}
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+        <BoutonRetour onClick={() => actions.go(state.pieceReturn)} label="Revenir à l'écran précédent" />
         {!suggested && (
           <button
             onClick={() => setMenuOpen(true)}

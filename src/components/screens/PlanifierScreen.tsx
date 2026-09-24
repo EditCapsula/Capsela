@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { useAuth } from "@/lib/auth";
@@ -137,9 +138,14 @@ function dansNJours(n: number): Date {
 
 const WORK_MODES: WorkMode[] = ["Présentiel", "Télétravail"];
 
-/** Étiquette de section, reprise telle quelle des autres écrans. */
+/**
+ * Étiquette de section. 11 px / .16em : la forme MAJORITAIRE de l'app,
+ * relevée à 39 occurrences contre 3 pour le 10,5 px qui traînait ici — ces
+ * trois-là étaient les miennes, écrites d'après la maquette sans compter ce
+ * que l'app utilisait déjà.
+ */
 function Surtitre({ children }: { children: React.ReactNode }) {
-  return <div className="text-[10.5px] tracking-[.16em] uppercase text-muted">{children}</div>;
+  return <div className="text-[11px] tracking-[.16em] uppercase text-muted">{children}</div>;
 }
 
 /** Titre éditorial en deux temps — la seconde moitié en italique terracotta. */
@@ -202,23 +208,6 @@ function LigneChoix({
   );
 }
 
-/** Pastille de sous-choix — même grammaire que les chips de l'écran Tenue. */
-function Pastille({ actif, onClick, children }: { actif: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={actif}
-      className={
-        "inline-flex items-center gap-[6px] rounded-full px-[14px] text-[12.5px] font-medium cursor-pointer border transition-colors " +
-        (actif ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-muted-3")
-      }
-      style={{ minHeight: 40 }}
-    >
-      {children}
-    </button>
-  );
-}
-
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, actions } = useCapsela();
   const { profile } = useAuth();
@@ -227,7 +216,7 @@ export default function PlanifierScreen() {
   const [etape, setEtape] = useState(1);
   const [occ, setOcc] = useState<OccasionKey | null>(null);
   const [workMode, setWorkMode] = useState<WorkMode>("Présentiel");
-  const [dateContext, setDateContext] = useState<DateContext | null>(null);
+  const [dateContext, setDateContext] = useState<DateContext>("Verre");
   const [jour, setJour] = useState<number | null>(null);
   const [moment, setMoment] = useState<MomentJournee | null>(null);
   const [lieu, setLieu] = useState("");
@@ -291,7 +280,7 @@ export default function PlanifierScreen() {
       meteoUtilisee,
       occ,
       workMode,
-      dateContext ?? "Verre",
+      dateContext,
       paletteHexes(profile),
       profile.gender
     );
@@ -357,8 +346,40 @@ export default function PlanifierScreen() {
     return `Pas de prévision disponible pour ce lieu. La tenue est composée sur la météo d'aujourd'hui — ${aujourdhui}.`;
   })();
 
-  const sousChoixRequis = occ === "travail_formel" || occ === "date";
-  const sousChoixFait = occ === "travail_formel" ? true : occ === "date" ? !!dateContext : true;
+  /**
+   * Sous-choix, même construction que l'écran Tenue : un second chip qui
+   * n'existe que pour les occasions qui en ont un. Seuls `travail_formel` et
+   * `date` figurent ici — ce sont les deux que le moteur lit
+   * (`effectiveFormality`). `voyage` a bien un TravelMode sur Tenue, mais il
+   * n'y sert qu'à afficher une carte de conseil : le poser ici donnerait une
+   * commande sans effet sur la tenue.
+   *
+   * Il a TOUJOURS une valeur, comme dans le store de Tenue, donc il ne bloque
+   * plus l'étape. Cela retire du même coup le correctif du 23/09 qui remontait
+   * le bloc dans le champ de vision : il n'y a plus de question obligatoire
+   * née sous le pli, puisqu'il n'y a plus dix lignes à faire défiler.
+   */
+  const sousChoix: {
+    titre: string;
+    valeurs: readonly (WorkMode | DateContext)[];
+    courant: WorkMode | DateContext;
+    choisir: (v: WorkMode | DateContext) => void;
+  } | null =
+    occ === "travail_formel"
+      ? {
+          titre: "Où travailleras-tu ce jour-là ?",
+          valeurs: WORK_MODES,
+          courant: workMode,
+          choisir: (v) => setWorkMode(v as WorkMode),
+        }
+      : occ === "date"
+        ? {
+            titre: "Quel type de date ?",
+            valeurs: DATE_CONTEXTS.map(([m]) => m),
+            courant: dateContext,
+            choisir: (v) => setDateContext(v as DateContext),
+          }
+        : null;
   /**
    * L'étape 4 attend la prévision plutôt que de composer sur la météo du jour
    * puis de changer la tenue sous les yeux : la requête est partie en
@@ -367,7 +388,7 @@ export default function PlanifierScreen() {
    */
   const attend = etape === 4 && previsionEtat === "encours";
   const etapeValide =
-    etape === 1 ? !!occ && sousChoixFait : etape === 2 ? jour != null && !!moment : etape === 3 ? !!lieu.trim() : true;
+    etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : etape === 3 ? !!lieu.trim() : true;
 
   const revenir = () => {
     if (vue === "resultat") setVue("etape");
@@ -389,15 +410,14 @@ export default function PlanifierScreen() {
         <AppHeader showAvatar={false} onBack={revenir} backLabel={vue === "intro" ? "Revenir à l'accueil" : "Revenir à l'étape précédente"} />
       </div>
 
+      {/* Le fil de l'onboarding, repris tel quel (24/09/2026, demandé). Il
+          portait ici quatre barres pleine largeur, écrites sans regarder
+          l'existant. Centré et non aligné à gauche : dans l'onboarding il
+          l'est entre le retour et sa gouttière miroir, et le bandeau de cet
+          écran centre déjà le logo juste au-dessus. */}
       {vue === "etape" && (
-        <div className="flex-shrink-0 flex gap-[5px] px-6 pb-[2px]" aria-hidden="true">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="flex-1 h-[3px] rounded-full"
-              style={{ background: i <= etape ? "var(--color-terracotta-deep)" : "var(--color-border)" }}
-            />
-          ))}
+        <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
+          <FilEtapes total={4} courante={etape - 1} />
         </div>
       )}
 
@@ -406,17 +426,22 @@ export default function PlanifierScreen() {
           <>
             <Surtitre>Planifier</Surtitre>
             <TitreEtape a="Le bon look," b="au bon moment" />
-            <div className="mt-4 rounded-[24px] overflow-hidden bg-warm-bg" style={{ aspectRatio: "1.5" }}>
+            {/* Visuel dédié (24/09/2026, fourni) — il remplace l'emprunt à
+                l'état vide du Dressing. Le ratio du conteneur suit celui de
+                l'image (1,433) plutôt que l'inverse : en gardant 1,5 avec un
+                objectFit cover, on rognait 5 % de la hauteur, donc le carnet
+                « Mes tenues » qui est le sujet. */}
+            <div className="mt-4 rounded-[24px] overflow-hidden bg-warm-bg" style={{ aspectRatio: "1.433" }}>
               {/* <img> et non next/image : l'export statique (output: "export",
                   nécessaire à l'empaquetage Capacitor) n'embarque pas
                   l'optimiseur d'images. Même convention que l'accueil et le
                   dressing. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/editorial/capsela_dressing_empty.webp"
-                alt="Pièces posées à plat, prêtes pour un rendez-vous à venir"
-                width={864}
-                height={558}
+                src="/editorial/capsela_planifier_intro.webp"
+                alt="Un carnet « Mes tenues » posé sur une coiffeuse, devant un miroir et un portant"
+                width={874}
+                height={610}
                 loading="lazy"
                 decoding="async"
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
@@ -456,60 +481,96 @@ export default function PlanifierScreen() {
             </div>
 
             {etape === 1 && (
-              <>
-                <div className="flex flex-col gap-[7px] mt-4">
-                  {OCCASIONS.map(([key, label, desc]) => (
-                    <LigneChoix
+              /* LA MAQUETTE DU 24/09. Elle reprend les LIGNES de la feuille
+                 d'occasion de l'écran Tenue — glyphe, libellé, description,
+                 marque de sélection, filets de séparation — mais posées à
+                 plat sur la page au lieu d'être dans une feuille.
+                 C'est le sens de « plus en lien avec la page Tenues » : ce
+                 sont ses lignes, ses glyphes, son vocabulaire.
+
+                 Ce que ce motif règle, et que ni la liste d'hier ni les chips
+                 de ce matin ne réglaient : LE SOUS-CHOIX EST DANS LA LIGNE
+                 SÉLECTIONNÉE. Il naît donc là où l'on vient de toucher,
+                 forcément à l'écran — le défaut mesuré le 23/09 (question
+                 obligatoire née 218 px sous le pli) ne peut plus se produire,
+                 sans mise en vue ni artifice. */
+              <div className="mt-5">
+                {OCCASIONS.map(([key, label, desc]) => {
+                  const actif = occ === key;
+                  const avecSousChoix = actif && !!sousChoix;
+                  return (
+                    <div
                       key={key}
-                      actif={occ === key}
-                      titre={label}
-                      sousTitre={desc}
-                      glyphe={<GlypheOccasion occasion={key} taille={19} />}
-                      onClick={() => {
-                        setOcc(key);
-                        setDateContext(null);
-                      }}
-                    />
-                  ))}
-                </div>
-                {sousChoixRequis && (
-                  /* `key={occ}` force le remontage en passant de Travail à
-                     Date, sans quoi le bloc reste en place et la mise en vue
-                     ci-dessous ne rejouerait pas. */
-                  <div
-                    key={occ}
-                    ref={(el) => {
-                      /* Les dix occasions dépassent la hauteur d'écran :
-                         sélectionner « Date » faisait apparaître une question
-                         obligatoire SOUS le pli, pendant que « Suivant »
-                         restait grisé sans raison visible. Mesuré, identique
-                         à 320 et 390 px : le bloc naissait 218 px sous le pli,
-                         et la mise en vue le ramène entièrement dans le
-                         cadre (bas du bloc = bas de la zone défilante). */
-                      el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-                    }}
-                  >
-                    <div className="mt-[18px]">
-                      <Surtitre>{occ === "travail_formel" ? "Où travailleras-tu ?" : "Quel type de date ?"}</Surtitre>
+                      /* La ligne active devient un panneau teinté qui ENGLOBE
+                         son sous-choix : c'est ce qui dit que les deux vont
+                         ensemble. Les autres restent des lignes nues séparées
+                         par un filet, comme dans la feuille de Tenue. */
+                      className={actif ? "rounded-[14px] bg-warm-bg px-3 my-1" : "border-b border-[#EFE7DA] last:border-b-0"}
+                    >
+                      <button
+                        onClick={() => setOcc(key)}
+                        aria-pressed={actif}
+                        className="flex items-center gap-3 w-full text-left px-1 py-[10px] cursor-pointer"
+                        style={{ minHeight: 52 }}
+                      >
+                        <span className={"flex-shrink-0 " + (actif ? "text-terracotta" : "text-muted")}>
+                          <GlypheOccasion occasion={key} taille={19} />
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className={"block text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</span>
+                          <span className="block text-[11.5px] text-muted mt-[2px]">{desc}</span>
+                        </span>
+                        {/* Pastille pleine à la sélection plutôt que la coche
+                            nue de la feuille : hors feuille, une coche seule
+                            se lit mal au milieu d'une liste longue. */}
+                        <span
+                          aria-hidden="true"
+                          className="w-[22px] h-[22px] flex-shrink-0 rounded-full flex items-center justify-center"
+                          style={{
+                            border: actif ? "none" : "1.5px solid var(--color-cream-dark-soft)",
+                            background: actif ? "var(--color-terracotta)" : "transparent",
+                            color: "var(--color-cream)",
+                          }}
+                        >
+                          {actif && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" style={{ display: "block" }}>
+                              <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
+                      </button>
+
+                      {avecSousChoix && (
+                        <div className="pb-3 pt-1" style={{ borderTop: "1px solid var(--color-warm-border)" }}>
+                          <div className="text-[12.5px] text-ink mt-2 px-1">{sousChoix.titre}</div>
+                          <div className="flex flex-wrap gap-2 mt-2 px-1">
+                            {sousChoix.valeurs.map((v) => {
+                              const on = sousChoix.courant === v;
+                              return (
+                                <button
+                                  key={v}
+                                  onClick={() => sousChoix.choisir(v)}
+                                  aria-pressed={on}
+                                  className={
+                                    "inline-flex items-center gap-[7px] rounded-full px-[14px] text-[12.5px] cursor-pointer border transition-colors " +
+                                    (on
+                                      ? "bg-terracotta border-terracotta text-cream"
+                                      : "bg-card border-sand-border text-muted-3")
+                                  }
+                                  style={{ minHeight: 44 }}
+                                >
+                                  <GlypheSousChoix valeur={v} taille={16} />
+                                  <span className="whitespace-nowrap">{v}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex flex-wrap gap-[7px] mt-[9px]">
-                      {occ === "travail_formel"
-                        ? WORK_MODES.map((m) => (
-                            <Pastille key={m} actif={workMode === m} onClick={() => setWorkMode(m)}>
-                              <GlypheSousChoix valeur={m} taille={14} />
-                              {m}
-                            </Pastille>
-                          ))
-                        : DATE_CONTEXTS.map(([c]) => (
-                            <Pastille key={c} actif={dateContext === c} onClick={() => setDateContext(c)}>
-                              <GlypheSousChoix valeur={c} taille={14} />
-                              {c}
-                            </Pastille>
-                          ))}
-                    </div>
-                  </div>
-                )}
-              </>
+                  );
+                })}
+              </div>
             )}
 
             {etape === 2 && (
@@ -619,7 +680,10 @@ export default function PlanifierScreen() {
 
         {vue === "resultat" && tenue && (
           <>
-            <span className="inline-block text-[10px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[10px] py-[5px]">
+            {/* 9,5 px / .1em : la forme des deux autres pastilles terracotta de
+                l'app (accueil, Valise). Le 10 px d'ici était un troisième
+                réglage pour le même objet. */}
+            <span className="inline-block text-[9.5px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
               {occLong}
             </span>
             <TitreEtape a={occLabel} b={lieu.trim() ? `· ${lieu.trim()}` : ""} />
@@ -642,7 +706,7 @@ export default function PlanifierScreen() {
               <>
                 <div className="mt-[14px] rounded-[24px] p-4" style={{ background: "var(--color-terracotta-deep)" }}>
                   <div className="flex items-center justify-between gap-[10px]">
-                    <span className="text-[10.5px] tracking-[.12em] uppercase text-cream">Tenue préparée</span>
+                    <span className="text-[10.5px] tracking-[.14em] uppercase text-cream">Tenue préparée</span>
                     <span
                       className="text-[10.5px] text-cream rounded-full px-[11px] py-[5px] whitespace-nowrap"
                       style={{ background: "rgba(251,243,234,.2)" }}
@@ -689,7 +753,7 @@ export default function PlanifierScreen() {
               setVue("etape");
               setEtape(1);
             }}
-            className="w-full rounded-full bg-terracotta-deep text-cream text-[14px] font-semibold cursor-pointer"
+            className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
             style={{ minHeight: 52 }}
           >
             Commencer
@@ -719,7 +783,7 @@ export default function PlanifierScreen() {
               else setEtape(etape + 1);
             }}
             disabled={!etapeValide || attend}
-            className="w-full rounded-full text-cream text-[14px] font-semibold cursor-pointer disabled:cursor-not-allowed"
+            className="w-full rounded-full text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer disabled:cursor-not-allowed"
             style={{
               minHeight: 52,
               background: etapeValide && !attend ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
@@ -732,7 +796,7 @@ export default function PlanifierScreen() {
           <>
             <button
               onClick={actions.goHome}
-              className="w-full rounded-full bg-terracotta-deep text-cream text-[14px] font-semibold cursor-pointer"
+              className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
               style={{ minHeight: 52 }}
             >
               Terminer
@@ -740,7 +804,7 @@ export default function PlanifierScreen() {
             <div className="flex gap-2">
               <button
                 onClick={() => setTirage(tirage + 1)}
-                className="flex-1 rounded-full bg-card border border-border text-[12.5px] font-medium text-muted-3 cursor-pointer"
+                className="flex-1 rounded-full bg-card border border-border text-[12.5px] text-muted-3 cursor-pointer"
                 style={{ minHeight: 44 }}
               >
                 Autre proposition
@@ -750,7 +814,7 @@ export default function PlanifierScreen() {
                   setVue("etape");
                   setEtape(1);
                 }}
-                className="flex-1 rounded-full bg-card border border-border text-[12.5px] font-medium text-muted-3 cursor-pointer"
+                className="flex-1 rounded-full bg-card border border-border text-[12.5px] text-muted-3 cursor-pointer"
                 style={{ minHeight: 44 }}
               >
                 Modifier
@@ -759,6 +823,7 @@ export default function PlanifierScreen() {
           </>
         )}
       </div>
+
     </div>
   );
 }

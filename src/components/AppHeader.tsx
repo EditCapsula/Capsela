@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
+import BoutonRetour from "@/components/BoutonRetour";
 
 /**
  * Bandeau de marque : logo complet L'édit Capsela centré, avatar profil à
@@ -21,11 +22,12 @@ export default function AppHeader({
   showAvatar = true,
   dark = false,
   onBack,
-  backLabel = "Retour",
+  backLabel = "Revenir à l'écran précédent",
 }: {
   showAvatar?: boolean;
   dark?: boolean;
   onBack?: () => void;
+  /** Destination réelle plutôt que « Retour » : c'est ce qu'une lectrice d'écran entend. */
   backLabel?: string;
 }) {
   const { profile, email } = useAuth();
@@ -36,39 +38,16 @@ export default function AppHeader({
     <div className="flex items-center justify-between mb-[10px]">
       <div className="w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center">
         {onBack && (
-          <button
-            onClick={onBack}
-            aria-label={backLabel}
-            /* 34 px dessinés, 44 px touchables (23/09/2026, parcours
-               « Planifier ») : le padding déborde la gouttière et la marge
-               négative le reprend, donc la mise en page ne bouge pas d'un
-               pixel — même technique que « Voir tout » sur l'accueil. Le
-               plancher de 44 px compte particulièrement ici : dans un
-               parcours à CTA propre, la barre d'onglets est masquée et ce
-               chevron est la SEULE sortie.
+          /* Même bouton que partout ailleurs depuis le 24/09 (cf.
+             BoutonRetour) : ce bandeau portait jusque-là un chevron NU, sans
+             cercle, quand les douze autres écrans en avaient un cerclé —
+             deux formes pour un même geste, signalé en capture.
 
-               La taille est portée à 44 et reprise par -5 px de marge, plutôt
-               que 34 + padding + `box-content` : `* { box-sizing: border-box }`
-               est déclaré HORS couche dans globals.css, et une règle sans
-               couche l'emporte sur une utilitaire de Tailwind quelle que soit
-               sa spécificité — `box-content` restait donc sans effet (vérifié
-               en rendu : boxSizing calculé à border-box). */
-            className={
-              "w-11 h-11 -m-[5px] flex items-center justify-center cursor-pointer " +
-              (dark ? "text-cream" : "text-ink")
-            }
-          >
-            <svg width="19" height="19" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-              <path
-                d="M15 5 8 12l7 7"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+             34 px et non 38 : le bandeau réserve deux gouttières de 34, et
+             l'avatar occupe celle de droite. Le bouton en devient le miroir
+             exact, alors que 38 déborderait et décalerait le logo centré. La
+             zone touchable reste à 44 px, le composant s'en charge. */
+          <BoutonRetour onClick={onBack} label={backLabel} taille={34} sombre={dark} />
         )}
       </div>
       {dark ? (

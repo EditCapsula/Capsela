@@ -23,6 +23,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
 import type { AccessoireType, BijouType, CategoryKey, SacType, ShoeType } from "@/lib/types";
+import BoutonRetour from "@/components/BoutonRetour";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
 const BOTTOM_SIZED: CategoryKey[] = [...BAS_CATS, "jupe", "combinaison"];
@@ -269,12 +270,9 @@ export default function AddScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="relative pt-2">
-        <button
-          onClick={actions.addBack}
-          className="absolute left-0 top-0 w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+        <div className="absolute left-0 top-0">
+          <BoutonRetour onClick={actions.addBack} label="Revenir à l'écran précédent" />
+        </div>
         <div className="text-center px-[46px]">
           <div className="font-serif text-[21px] text-ink leading-[1.2]">
             {state.editingId != null ? "Modifier la pièce" : state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce"}
