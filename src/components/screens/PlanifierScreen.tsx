@@ -139,9 +139,14 @@ function dansNJours(n: number): Date {
 
 const WORK_MODES: WorkMode[] = ["Présentiel", "Télétravail"];
 
-/** Étiquette de section, reprise telle quelle des autres écrans. */
+/**
+ * Étiquette de section. 11 px / .16em : la forme MAJORITAIRE de l'app,
+ * relevée à 39 occurrences contre 3 pour le 10,5 px qui traînait ici — ces
+ * trois-là étaient les miennes, écrites d'après la maquette sans compter ce
+ * que l'app utilisait déjà.
+ */
 function Surtitre({ children }: { children: React.ReactNode }) {
-  return <div className="text-[10.5px] tracking-[.16em] uppercase text-muted">{children}</div>;
+  return <div className="text-[11px] tracking-[.16em] uppercase text-muted">{children}</div>;
 }
 
 /** Titre éditorial en deux temps — la seconde moitié en italique terracotta. */
@@ -637,7 +642,10 @@ export default function PlanifierScreen() {
 
         {vue === "resultat" && tenue && (
           <>
-            <span className="inline-block text-[10px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[10px] py-[5px]">
+            {/* 9,5 px / .1em : la forme des deux autres pastilles terracotta de
+                l'app (accueil, Valise). Le 10 px d'ici était un troisième
+                réglage pour le même objet. */}
+            <span className="inline-block text-[9.5px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
               {occLong}
             </span>
             <TitreEtape a={occLabel} b={lieu.trim() ? `· ${lieu.trim()}` : ""} />
@@ -660,7 +668,7 @@ export default function PlanifierScreen() {
               <>
                 <div className="mt-[14px] rounded-[24px] p-4" style={{ background: "var(--color-terracotta-deep)" }}>
                   <div className="flex items-center justify-between gap-[10px]">
-                    <span className="text-[10.5px] tracking-[.12em] uppercase text-cream">Tenue préparée</span>
+                    <span className="text-[10.5px] tracking-[.14em] uppercase text-cream">Tenue préparée</span>
                     <span
                       className="text-[10.5px] text-cream rounded-full px-[11px] py-[5px] whitespace-nowrap"
                       style={{ background: "rgba(251,243,234,.2)" }}
@@ -707,7 +715,7 @@ export default function PlanifierScreen() {
               setVue("etape");
               setEtape(1);
             }}
-            className="w-full rounded-full bg-terracotta-deep text-cream text-[14px] font-semibold cursor-pointer"
+            className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
             style={{ minHeight: 52 }}
           >
             Commencer
@@ -737,7 +745,7 @@ export default function PlanifierScreen() {
               else setEtape(etape + 1);
             }}
             disabled={!etapeValide || attend}
-            className="w-full rounded-full text-cream text-[14px] font-semibold cursor-pointer disabled:cursor-not-allowed"
+            className="w-full rounded-full text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer disabled:cursor-not-allowed"
             style={{
               minHeight: 52,
               background: etapeValide && !attend ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
@@ -750,7 +758,7 @@ export default function PlanifierScreen() {
           <>
             <button
               onClick={actions.goHome}
-              className="w-full rounded-full bg-terracotta-deep text-cream text-[14px] font-semibold cursor-pointer"
+              className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
               style={{ minHeight: 52 }}
             >
               Terminer
@@ -758,7 +766,7 @@ export default function PlanifierScreen() {
             <div className="flex gap-2">
               <button
                 onClick={() => setTirage(tirage + 1)}
-                className="flex-1 rounded-full bg-card border border-border text-[12.5px] font-medium text-muted-3 cursor-pointer"
+                className="flex-1 rounded-full bg-card border border-border text-[12.5px] text-muted-3 cursor-pointer"
                 style={{ minHeight: 44 }}
               >
                 Autre proposition
@@ -768,7 +776,7 @@ export default function PlanifierScreen() {
                   setVue("etape");
                   setEtape(1);
                 }}
-                className="flex-1 rounded-full bg-card border border-border text-[12.5px] font-medium text-muted-3 cursor-pointer"
+                className="flex-1 rounded-full bg-card border border-border text-[12.5px] text-muted-3 cursor-pointer"
                 style={{ minHeight: 44 }}
               >
                 Modifier
