@@ -14,6 +14,8 @@ import { useCapsela } from "@/lib/store";
 import { computeLookScore, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
+import { consommerGeneration, generationAutorisee } from "@/lib/generations";
+import { GENERATIONS_GRATUITES_PAR_JOUR } from "@/lib/premium";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
@@ -88,6 +90,40 @@ function ExploreStyleCard({
 
 export default function TenuesScreen() {
   const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, vestiairePool, actions } = useCapsela();
+
+  /**
+   * LIMITE DE GÉNÉRATIONS — « Autre tenue », 2 par jour sans abonnement.
+   *
+   * Le décompte est fait par la base (`consommer_generation`, migration 0032),
+   * jamais ici : un compteur côté navigateur se remet à zéro en vidant le
+   * stockage, ce qui n'est pas une limite mais une gêne pour les seules
+   * personnes honnêtes.
+   *
+   * SEUL CE BOUTON DÉCOMPTE. La tenue du jour, générée à l'ouverture, ne passe
+   * pas par là et n'est donc jamais bloquée — quelqu'un qui ouvre l'app et
+   * porte ce qu'on lui propose ne rencontre jamais cette limite.
+   *
+   * `generationAutorisee(null)` vaut true : tant que la migration 0032 n'est
+   * pas exécutée, l'appel échoue et personne n'est limité. C'est ce qui rend
+   * l'écran livrable avant la table.
+   */
+  const [quotaAtteint, setQuotaAtteint] = useState(false);
+  const [tirageEnCours, setTirageEnCours] = useState(false);
+  const autreTenue = async () => {
+    if (tirageEnCours) return;
+    setTirageEnCours(true);
+    try {
+      const quota = await consommerGeneration();
+      if (!generationAutorisee(quota)) {
+        setQuotaAtteint(true);
+        return;
+      }
+      if (state.exploredStyleId) actions.viewExploredOutfit();
+      else actions.regenOutfit();
+    } finally {
+      setTirageEnCours(false);
+    }
+  };
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
   /** Feuille ouverte, ou aucune. Une seule à la fois : les deux se répondent. */
@@ -796,9 +832,11 @@ export default function TenuesScreen() {
               seuil AA du petit texte. */}
           {!noCompleteOutfit && (
             <button
-              onClick={state.exploredStyleId ? actions.viewExploredOutfit : actions.regenOutfit}
-              className="mt-[2px] w-full flex items-center justify-center gap-[7px] text-[12.5px] text-cream cursor-pointer"
-              style={{ minHeight: 44 }}
+              onClick={autreTenue}
+              disabled={tirageEnCours}
+              aria-busy={tirageEnCours}
+              className="mt-[2px] w-full flex items-center justify-center gap-[7px] text-[12.5px] text-cream cursor-pointer disabled:cursor-not-allowed"
+              style={{ minHeight: 44, opacity: tirageEnCours ? 0.6 : 1 }}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
                 <path
@@ -1203,6 +1241,55 @@ export default function TenuesScreen() {
           `aria-pressed` porte la sélection active plutôt qu'un simple ✓
           visuel : une lectrice d'écran doit savoir laquelle est choisie, pas
           seulement voir une coche. */}
+      {/* LA LIMITE ATTEINTE — feuille du même composant que les occasions,
+          comme la maquette Premium Gates le demande : « un seul composant, la
+          bottom sheet déjà utilisée ».
+
+          CE QUI MANQUE VOLONTAIREMENT PAR RAPPORT À LA MAQUETTE : la carte
+          « Regarder une vidéo » pour débloquer un tirage. Aucun SDK
+          publicitaire n'existe dans l'app, aucun fournisseur n'est choisi, et
+          un bouton qui n'ouvre aucune vidéo est exactement le genre de
+          promesse qu'on ne peut pas afficher. La maquette prévoit d'ailleurs
+          elle-même ce cas — « si la vidéo du jour a déjà été utilisée, la carte
+          disparaît : seul Premium reste proposé » : c'est cet état-là qui est
+          rendu, en attendant qu'un fournisseur soit arbitré.
+
+          Le compteur 2/2 est écrit à partir de la constante partagée avec
+          l'écran Premium, pas recopié. */}
+      <BottomSheet title="Tu as fait le tour pour aujourd'hui" open={quotaAtteint} onClose={() => setQuotaAtteint(false)}>
+        <div className="flex flex-col">
+          <div className="text-[13px] text-muted-3 leading-[1.5]" style={{ textWrap: "pretty" }}>
+            Tu as utilisé tes {GENERATIONS_GRATUITES_PAR_JOUR} alternatives gratuites du jour. Ta tenue reste là,
+            et de nouvelles propositions arrivent demain matin.
+          </div>
+          <div className="flex items-center gap-[10px] mt-4 bg-warm-bg rounded-[14px] px-[14px] py-3">
+            <span className="text-[11px] tracking-[.16em] uppercase text-terracotta">
+              {GENERATIONS_GRATUITES_PAR_JOUR} / {GENERATIONS_GRATUITES_PAR_JOUR}
+            </span>
+            <span className="flex-1 min-w-0 text-[12px] text-muted-3 leading-[1.45]">
+              Avec Premium, autant de tenues que tu veux.
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setQuotaAtteint(false);
+              actions.goPremium();
+            }}
+            className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer mt-4"
+            style={{ minHeight: 52 }}
+          >
+            Découvrir Premium
+          </button>
+          <button
+            onClick={() => setQuotaAtteint(false)}
+            className="w-full rounded-full text-[12.5px] text-muted-3 cursor-pointer mt-1"
+            style={{ minHeight: 44 }}
+          >
+            Plus tard
+          </button>
+        </div>
+      </BottomSheet>
+
       <BottomSheet title="Qu'est-ce qui est prévu aujourd'hui ?" open={feuille === "occasion"} onClose={() => setFeuille(null)}>
         <div className="flex flex-col">
           {OCCASIONS.map(([key, label, sub]) => {
