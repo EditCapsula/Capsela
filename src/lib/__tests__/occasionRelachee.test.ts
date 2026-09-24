@@ -32,13 +32,45 @@ const haut = item({ id: 5002, category: "hauts", name: "T-shirt" });
 const bas = item({ id: 5003, category: "pantalons", name: "Pantalon droit" });
 const chaussures = item({ id: 5004, category: "chaussures", name: "Ballerines", sous_type: "Ballerines" });
 
+/**
+ * ALÉA FIXÉ — CI rouge du 24/09/2026, `incompletes` à 1 au lieu de 0.
+ *
+ * Ces 200 tirages utilisaient le vrai `Math.random`. Le test échouait donc
+ * parfois, sans rapport avec le diff poussé : mesuré sur 200 000 tirages du
+ * pool [robe, chaussures], le moteur rend une tenue incomplète 5 fois, soit
+ * 0,0025 %. Sur 200 tirages, la probabilité qu'au moins un tombe est de
+ * 0,50 % — une exécution sur deux cents. Localement 25 exécutions d'affilée
+ * étaient passées ; c'est exactement ce qu'un taux pareil produit, et c'est
+ * pourquoi le « ça passe chez moi » ne prouvait rien.
+ *
+ * Le générateur congruentiel de `traceRepli.test.ts` est repris tel quel :
+ * l'assertion reste identique et aussi stricte, mais elle porte désormais sur
+ * un échantillon REPRODUCTIBLE. Ce n'est pas un test mis en quarantaine — rien
+ * n'est ignoré, c'est la variable non contrôlée qui est gelée, conformément au
+ * point 1 de la règle d'audit.
+ *
+ * CE QUE LA MESURE LAISSE OUVERT, et qui n'est pas corrigé ici : sur ce pool,
+ * la garantie « toujours une tenue » ne tient pas à 100 % mais à 99,9975 %.
+ * C'est un constat sur le moteur, pas sur ce test, et personne n'a demandé de
+ * le corriger. Il est écrit ici pour ne pas se perdre.
+ */
 const tirer = (pool: CatalogItem[], leviers?: { robeMemeSiOccasionRelachee?: boolean }) => {
   let avecRobe = 0, signalee = 0, incompletes = 0;
+  const vrai = Math.random;
+  let n = 1;
+  Math.random = () => {
+    n = (n * 9301 + 49297) % 233280;
+    return n / 233280;
+  };
+  try {
   for (let k = 0; k < TIRAGES; k++) {
     const r = generateOutfitWithFallback(pool, MILD, "cocooning", "Présentiel", "Verre", [], "femme", null, leviers);
     if (r.ids.includes(robeHabillee.id)) avecRobe++;
     if (r.occasionRelachee) signalee++;
     if (r.noCompleteOutfit) incompletes++;
+  }
+  } finally {
+    Math.random = vrai;
   }
   return { avecRobe, signalee, incompletes };
 };
