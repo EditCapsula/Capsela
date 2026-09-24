@@ -31,6 +31,26 @@
 // Déploiement avec la CLI (équivalent) :
 //   supabase secrets set OPENWEATHER_API_KEY=...
 //   supabase functions deploy weather
+//
+// ------------------------------------------------------------------
+// 23/09/2026 — `mode=forecast`, ajouté pour « Planifier une tenue ».
+//
+// Sans ce paramètre, la réponse est IDENTIQUE à celle d'avant : la tenue du
+// jour et l'accueil ne voient aucune différence. Cette fonction peut donc
+// être redéployée sans coordination avec le client.
+//
+// Et l'inverse est vrai aussi, ce qui est le point important : tant que la
+// version ci-dessous n'est PAS déployée, l'ancienne ignore `mode` et renvoie
+// la météo actuelle — une réponse sans champ `slots`. Le client teste
+// exactement ça (lib/weather.ts) et retombe alors sur « prévision
+// indisponible », sans erreur visible. Aucune fenêtre de casse entre les
+// deux déploiements, dans un sens comme dans l'autre.
+//
+// L'horizon n'est écrit nulle part : il vaut ce que l'abonnement OpenWeather
+// renvoie. /data/2.5/forecast donne 5 jours par pas de 3 h sur le palier
+// gratuit ; un palier supérieur en donnerait davantage, et le client s'y
+// adapterait sans changer une ligne, puisqu'il déduit l'horizon de la
+// longueur de `slots`.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,6 +105,7 @@ Deno.serve(async (req) => {
   let lat: string | null = null;
   let lon: string | null = null;
   let city: string | null = null;
+  let bodyMode: string | null = null;
 
   const url = new URL(req.url);
   lat = url.searchParams.get("lat");
@@ -92,20 +113,73 @@ Deno.serve(async (req) => {
   city = url.searchParams.get("city");
 
   if (!lat && !city && req.method === "POST") {
+    // (lat/lon ou city viennent toujours avec `mode` : une seule lecture.)
     try {
       const body = await req.json();
       lat = body?.lat != null ? String(body.lat) : null;
       lon = body?.lon != null ? String(body.lon) : null;
       city = body?.city != null ? String(body.city) : null;
+      bodyMode = body?.mode != null ? String(body.mode) : null;
     } catch {
       // Corps absent ou illisible : traité comme des paramètres manquants.
     }
   }
 
+  // mode=forecast : prévision, et non plus météo actuelle (23/09/2026,
+  // « Planifier une tenue »). Tout le reste de l'app continue d'appeler la
+  // fonction SANS ce paramètre et reçoit exactement la même réponse qu'avant.
+  let mode = url.searchParams.get("mode");
+  if (!mode && bodyMode) mode = bodyMode;
+
   let query: string;
   if (lat && lon) query = `lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
   else if (city) query = `q=${encodeURIComponent(city)}`;
   else return json({ error: "lat/lon ou city requis" }, 400);
+
+  if (mode === "forecast") {
+    try {
+      const res = await fetch(
+        `https://api.openweathermap.org/data/2.5/forecast?${query}&units=metric&lang=fr&appid=${apiKey}`
+      );
+      if (!res.ok) return json({ error: `OpenWeather a répondu ${res.status}` }, 502);
+
+      const data = await res.json();
+      const list: unknown[] = Array.isArray(data.list) ? data.list : [];
+
+      // Proxy mince, comme la branche « météo actuelle » juste en dessous :
+      // aucune agrégation ici. Le découpage en jours et en moments de la
+      // journée est du vocabulaire applicatif — il vit dans le client
+      // (lib/prevision.ts), avec ses tests, et pas dans une fonction qu'il
+      // faut redéployer à la main pour corriger une règle de regroupement.
+      //
+      // `timezone` est renvoyé parce qu'il est indispensable et qu'il n'est
+      // pas devinable : les `dt` sont en UTC, or « mardi matin » se lit dans
+      // le fuseau du LIEU, pas dans celui du téléphone. Planifier une tenue
+      // pour une autre ville sans lui donnerait le bon jour au mauvais
+      // endroit.
+      const slots = list
+        .map((raw) => {
+          const e = raw as Record<string, unknown>;
+          const w = (e.weather as Record<string, unknown>[] | undefined)?.[0];
+          const main = w?.main as string | undefined;
+          const label = (main && WEATHER_LABELS[main]) || capitalize((w?.description as string) || "") || "—";
+          const temp = (e.main as Record<string, unknown> | undefined)?.temp;
+          if (typeof e.dt !== "number" || typeof temp !== "number") return null;
+          return { ts: e.dt, temp: Math.round(temp), label };
+        })
+        .filter((s) => s !== null);
+
+      return json({
+        city: data.city?.name || city || "",
+        country: data.city?.country || "",
+        // Décalage du lieu en secondes (OpenWeather le donne tel quel).
+        timezone: typeof data.city?.timezone === "number" ? data.city.timezone : 0,
+        slots,
+      });
+    } catch {
+      return json({ error: "Impossible de contacter OpenWeather" }, 502);
+    }
+  }
 
   try {
     const res = await fetch(

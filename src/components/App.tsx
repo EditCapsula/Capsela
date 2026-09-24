@@ -35,11 +35,25 @@ import LoadingSpinner from "./LoadingSpinner";
 /** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) — la barre d'onglets n'y a pas de sens. */
 const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup"]);
 const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
+/**
+ * Parcours guidés qui portent leur PROPRE action principale en pied d'écran
+ * (23/09/2026, maquette « Planifier une tenue »). Ensemble distinct de
+ * NO_TABBAR_SCREENS, qui dit autre chose : là il n'y a pas encore de compte,
+ * ici il y en a un et la navigation existe — elle est seulement mise de côté
+ * le temps du parcours.
+ *
+ * La raison est mesurable, pas esthétique : TabBar est en `absolute bottom-0
+ * z-20` par-dessus le contenu, et ces écrans posent un bouton plein largeur
+ * exactement à cet endroit. Les deux se superposeraient. Le retour se fait
+ * par le chevron du bandeau, qui remonte les étapes une à une puis rend la
+ * main à l'accueil.
+ */
+const FLOW_SCREENS = new Set(["planifier"]);
 
 function Screens() {
   const { state, actions } = useCapsela();
   const auth = useAuth();
-  const showTabbar = !NO_TABBAR_SCREENS.has(state.screen);
+  const showTabbar = !NO_TABBAR_SCREENS.has(state.screen) && !FLOW_SCREENS.has(state.screen);
 
   // Session déjà ouverte (connexion, retour OAuth ou rechargement) : saute les écrans
   // d'accueil, direction la Homepage — jamais le questionnaire, même si le profil est
