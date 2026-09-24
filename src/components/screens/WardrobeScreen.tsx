@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SegmentedControl, { type Segment } from "@/components/SegmentedControl";
@@ -167,14 +167,25 @@ function VisuelPiece({ piece, alt, radius }: { piece: Item; alt: string; radius:
  * pilule `card` posée sur un module `card` était littéralement invisible —
  * seul son texte et sa flèche se voyaient, comme un lien flottant.
  */
+/**
+ * `fleche` n'est pas un réglage d'apparence : c'est une promesse.
+ *
+ * Deux des trois pilules de cet écran mènent réellement ailleurs
+ * (« Découvrir ma capsule », « Jamais portées ») — la flèche y dit la vérité.
+ * La troisième, « Voir les alternatives », ne quitte pas l'écran : elle pose
+ * un filtre sur une liste. Lui laisser la même flèche, c'est annoncer une
+ * destination qui n'existe pas.
+ */
 function PiluleAction({
   onClick,
   children,
   sur,
+  fleche = true,
 }: {
   onClick: () => void;
   children: React.ReactNode;
   sur: "warm" | "card";
+  fleche?: boolean;
 }) {
   return (
     <button
@@ -183,7 +194,7 @@ function PiluleAction({
       style={{ minHeight: 44, background: sur === "warm" ? "var(--color-card)" : "var(--color-cream)" }}
     >
       {children}
-      <span aria-hidden="true">→</span>
+      {fleche && <span aria-hidden="true">→</span>}
     </button>
   );
 }
@@ -193,6 +204,8 @@ export default function WardrobeScreen() {
   const { profile } = useAuth();
   const items = state.items;
   const [lookFilter, setLookFilter] = useState<LookFilter>("all");
+  /** Cible du défilement de « Voir les alternatives » — la liste qu'il filtre. */
+  const ancreLooks = useRef<HTMLDivElement | null>(null);
 
   // Pool de résolution stable des looks — cf. l'en-tête, correctif 20/08/2026.
   const resolvePool = useMemo(() => [...items, ...vestiairePool], [items, vestiairePool]);
@@ -565,6 +578,7 @@ export default function WardrobeScreen() {
       </div>
 
       {/* ── MES LOOKS ───────────────────────────────────────────────────── */}
+      <div ref={ancreLooks} style={{ scrollMarginTop: 12 }} />
       <TitreSection
         action={
           state.savedLooks.length > 0 ? (
@@ -718,7 +732,28 @@ export default function WardrobeScreen() {
             Découvre des alternatives ou ajoute-les à ton dressing.
           </div>
           <div className="mt-3">
-            <PiluleAction onClick={() => setLookFilter("wishlist")} sur="card">Voir les alternatives</PiluleAction>
+            {/* SIGNALÉ LE 24/09/2026 : « où mène ce bouton ? »
+                Nulle part, et c'était le défaut. Il posait le filtre
+                « wishlist » sur la liste « Mes looks » — qui se trouve
+                AU-DESSUS de ce module. On touchait donc une pilule fléchée,
+                et rien ne bougeait à l'écran : la liste filtrée était hors du
+                champ de vision, parfois plusieurs centaines de pixels plus
+                haut.
+
+                Deux corrections, et les deux comptent. La flèche disparaît,
+                parce qu'elle annonçait une destination. Et la vue remonte
+                jusqu'à la liste, pour que le filtre posé se voie —
+                c'est ce qui transforme un bouton mort en action. */}
+            <PiluleAction
+              onClick={() => {
+                setLookFilter("wishlist");
+                ancreLooks.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              sur="card"
+              fleche={false}
+            >
+              Voir les alternatives
+            </PiluleAction>
           </div>
         </div>
       )}
