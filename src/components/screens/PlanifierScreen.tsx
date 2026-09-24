@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import BottomSheet from "@/components/BottomSheet";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
@@ -203,23 +204,6 @@ function LigneChoix({
   );
 }
 
-/** Pastille de sous-choix — même grammaire que les chips de l'écran Tenue. */
-function Pastille({ actif, onClick, children }: { actif: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={actif}
-      className={
-        "inline-flex items-center gap-[6px] rounded-full px-[14px] text-[12.5px] font-medium cursor-pointer border transition-colors " +
-        (actif ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-muted-3")
-      }
-      style={{ minHeight: 40 }}
-    >
-      {children}
-    </button>
-  );
-}
-
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, actions } = useCapsela();
   const { profile } = useAuth();
@@ -228,7 +212,9 @@ export default function PlanifierScreen() {
   const [etape, setEtape] = useState(1);
   const [occ, setOcc] = useState<OccasionKey | null>(null);
   const [workMode, setWorkMode] = useState<WorkMode>("Présentiel");
-  const [dateContext, setDateContext] = useState<DateContext | null>(null);
+  const [dateContext, setDateContext] = useState<DateContext>("Verre");
+  /** Feuille ouverte, ou aucune. Une seule à la fois, comme sur Tenue. */
+  const [feuille, setFeuille] = useState<"occasion" | "sous" | null>(null);
   const [jour, setJour] = useState<number | null>(null);
   const [moment, setMoment] = useState<MomentJournee | null>(null);
   const [lieu, setLieu] = useState("");
@@ -292,7 +278,7 @@ export default function PlanifierScreen() {
       meteoUtilisee,
       occ,
       workMode,
-      dateContext ?? "Verre",
+      dateContext,
       paletteHexes(profile),
       profile.gender
     );
@@ -358,8 +344,40 @@ export default function PlanifierScreen() {
     return `Pas de prévision disponible pour ce lieu. La tenue est composée sur la météo d'aujourd'hui — ${aujourdhui}.`;
   })();
 
-  const sousChoixRequis = occ === "travail_formel" || occ === "date";
-  const sousChoixFait = occ === "travail_formel" ? true : occ === "date" ? !!dateContext : true;
+  /**
+   * Sous-choix, même construction que l'écran Tenue : un second chip qui
+   * n'existe que pour les occasions qui en ont un. Seuls `travail_formel` et
+   * `date` figurent ici — ce sont les deux que le moteur lit
+   * (`effectiveFormality`). `voyage` a bien un TravelMode sur Tenue, mais il
+   * n'y sert qu'à afficher une carte de conseil : le poser ici donnerait une
+   * commande sans effet sur la tenue.
+   *
+   * Il a TOUJOURS une valeur, comme dans le store de Tenue, donc il ne bloque
+   * plus l'étape. Cela retire du même coup le correctif du 23/09 qui remontait
+   * le bloc dans le champ de vision : il n'y a plus de question obligatoire
+   * née sous le pli, puisqu'il n'y a plus dix lignes à faire défiler.
+   */
+  const sousChoix: {
+    titre: string;
+    valeurs: readonly (WorkMode | DateContext)[];
+    courant: WorkMode | DateContext;
+    choisir: (v: WorkMode | DateContext) => void;
+  } | null =
+    occ === "travail_formel"
+      ? {
+          titre: "Où travailleras-tu ce jour-là ?",
+          valeurs: WORK_MODES,
+          courant: workMode,
+          choisir: (v) => setWorkMode(v as WorkMode),
+        }
+      : occ === "date"
+        ? {
+            titre: "Quel type de date ?",
+            valeurs: DATE_CONTEXTS.map(([m]) => m),
+            courant: dateContext,
+            choisir: (v) => setDateContext(v as DateContext),
+          }
+        : null;
   /**
    * L'étape 4 attend la prévision plutôt que de composer sur la météo du jour
    * puis de changer la tenue sous les yeux : la requête est partie en
@@ -368,7 +386,7 @@ export default function PlanifierScreen() {
    */
   const attend = etape === 4 && previsionEtat === "encours";
   const etapeValide =
-    etape === 1 ? !!occ && sousChoixFait : etape === 2 ? jour != null && !!moment : etape === 3 ? !!lieu.trim() : true;
+    etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : etape === 3 ? !!lieu.trim() : true;
 
   const revenir = () => {
     if (vue === "resultat") setVue("etape");
@@ -456,59 +474,59 @@ export default function PlanifierScreen() {
             </div>
 
             {etape === 1 && (
+              /* LE MOTIF DE L'ÉCRAN TENUE, repris ici (24/09/2026, demandé).
+                 La maquette posait les dix occasions en lignes pleine
+                 largeur ; Tenue pose depuis le 22/09 un chip qui ouvre une
+                 feuille, plus un second chip pour le sous-choix. Deux
+                 sélecteurs pour une même taxonomie dans la même app : c'est
+                 ce qui est corrigé.
+
+                 Le gain n'est pas que d'uniformité. La liste faisait défiler
+                 l'écran sur dix lignes et poussait la question de sous-choix
+                 218 px sous le pli — défaut mesuré le 23/09, corrigé alors
+                 par une mise en vue. La feuille porte la liste, l'étape tient
+                 sur un écran, et le correctif n'a plus lieu d'être. */
+              /* Pas de surtitre ici, contrairement à Tenue : là-bas les
+                 chips arrivent sous la météo sans rien qui dise ce qu'ils
+                 gouvernent, et le surtitre a été demandé le 22/09 pour ça.
+                 Ici le titre de l'étape pose déjà la question et le
+                 sous-titre la reformule — un troisième énoncé la posait une
+                 fois de trop, vérifié en rendu. */
               <>
-                <div className="flex flex-col gap-[7px] mt-4">
-                  {OCCASIONS.map(([key, label, desc]) => (
-                    <LigneChoix
-                      key={key}
-                      actif={occ === key}
-                      titre={label}
-                      sousTitre={desc}
-                      glyphe={<GlypheOccasion occasion={key} taille={19} />}
-                      onClick={() => {
-                        setOcc(key);
-                        setDateContext(null);
-                      }}
-                    />
-                  ))}
-                </div>
-                {sousChoixRequis && (
-                  /* `key={occ}` force le remontage en passant de Travail à
-                     Date, sans quoi le bloc reste en place et la mise en vue
-                     ci-dessous ne rejouerait pas. */
-                  <div
-                    key={occ}
-                    ref={(el) => {
-                      /* Les dix occasions dépassent la hauteur d'écran :
-                         sélectionner « Date » faisait apparaître une question
-                         obligatoire SOUS le pli, pendant que « Suivant »
-                         restait grisé sans raison visible. Mesuré, identique
-                         à 320 et 390 px : le bloc naissait 218 px sous le pli,
-                         et la mise en vue le ramène entièrement dans le
-                         cadre (bas du bloc = bas de la zone défilante). */
-                      el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-                    }}
+                <div className="flex items-center gap-2 mt-5 flex-wrap">
+                  <button
+                    onClick={() => setFeuille("occasion")}
+                    aria-haspopup="dialog"
+                    aria-label={occ ? `Occasion : ${occLong}. Changer d'occasion` : "Choisir une occasion"}
+                    className={
+                      "inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer " +
+                      (occ ? "bg-terracotta-deep text-cream" : "bg-card border border-border text-muted-3")
+                    }
+                    style={{ minHeight: 46 }}
                   >
-                    <div className="mt-[18px]">
-                      <Surtitre>{occ === "travail_formel" ? "Où travailleras-tu ?" : "Quel type de date ?"}</Surtitre>
-                    </div>
-                    <div className="flex flex-wrap gap-[7px] mt-[9px]">
-                      {occ === "travail_formel"
-                        ? WORK_MODES.map((m) => (
-                            <Pastille key={m} actif={workMode === m} onClick={() => setWorkMode(m)}>
-                              <GlypheSousChoix valeur={m} taille={14} />
-                              {m}
-                            </Pastille>
-                          ))
-                        : DATE_CONTEXTS.map(([c]) => (
-                            <Pastille key={c} actif={dateContext === c} onClick={() => setDateContext(c)}>
-                              <GlypheSousChoix valeur={c} taille={14} />
-                              {c}
-                            </Pastille>
-                          ))}
-                    </div>
-                  </div>
-                )}
+                    {/* Pas de glyphe tant que rien n'est choisi : « Peu
+                        importe » n'existe pas dans ce parcours — une tenue se
+                        prépare POUR quelque chose — et dessiner une icône sur
+                        un chip vide inventerait une occasion. */}
+                    {occ && <GlypheOccasion occasion={occ} />}
+                    <span className="whitespace-nowrap">{occ ? occLong : "Choisir une occasion"}</span>
+                    <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
+                  </button>
+
+                  {sousChoix && (
+                    <button
+                      onClick={() => setFeuille("sous")}
+                      aria-haspopup="dialog"
+                      aria-label={`${sousChoix.titre} ${sousChoix.courant}. Changer`}
+                      className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-warm-bg text-sand-text border border-sand-border"
+                      style={{ minHeight: 46 }}
+                    >
+                      <GlypheSousChoix valeur={sousChoix.courant} />
+                      <span className="whitespace-nowrap">{sousChoix.courant}</span>
+                      <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
+                    </button>
+                  )}
+                </div>
               </>
             )}
 
@@ -759,6 +777,76 @@ export default function PlanifierScreen() {
           </>
         )}
       </div>
+
+      {/* LES DEUX FEUILLES, calquées sur celles de l'écran Tenue : même
+          BottomSheet, même ligne de 52 px, même glyphe qu'en chip, même
+          `aria-pressed` pour porter la sélection autrement que par une coche
+          visuelle.
+
+          UNE SEULE DIFFÉRENCE, et elle est voulue : pas d'entrée « Peu
+          importe ». Sur Tenue, "all" est la valeur initiale du store et la
+          feuille doit permettre d'y revenir. Ici l'occasion est ce que le
+          parcours demande en premier — préparer une tenue sans savoir pour
+          quoi n'a pas de sens, et « Suivant » reste grisé tant qu'aucune
+          n'est choisie. */}
+      <BottomSheet title="Qu'est-ce qui est prévu ce jour-là ?" open={feuille === "occasion"} onClose={() => setFeuille(null)}>
+        <div className="flex flex-col">
+          {OCCASIONS.map(([key, label, desc]) => {
+            const actif = occ === key;
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  setOcc(key);
+                  setFeuille(null);
+                }}
+                aria-pressed={actif}
+                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                style={{ minHeight: 52 }}
+              >
+                <span className={actif ? "text-terracotta" : "text-muted"}>
+                  <GlypheOccasion occasion={key} taille={19} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className={"text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
+                  <div className="text-[11.5px] text-muted mt-[2px]">{desc}</div>
+                </div>
+                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
+                  ✓
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet title={sousChoix?.titre ?? ""} open={feuille === "sous" && Boolean(sousChoix)} onClose={() => setFeuille(null)}>
+        <div className="flex flex-col">
+          {sousChoix?.valeurs.map((v) => {
+            const actif = sousChoix.courant === v;
+            return (
+              <button
+                key={v}
+                onClick={() => {
+                  sousChoix.choisir(v);
+                  setFeuille(null);
+                }}
+                aria-pressed={actif}
+                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                style={{ minHeight: 52 }}
+              >
+                <span className={actif ? "text-terracotta" : "text-muted"}>
+                  <GlypheSousChoix valeur={v} taille={19} />
+                </span>
+                <div className={"flex-1 min-w-0 text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{v}</div>
+                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
+                  ✓
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
     </div>
   );
 }
