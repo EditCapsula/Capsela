@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import BottomSheet from "@/components/BottomSheet";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
@@ -218,8 +217,6 @@ export default function PlanifierScreen() {
   const [occ, setOcc] = useState<OccasionKey | null>(null);
   const [workMode, setWorkMode] = useState<WorkMode>("Présentiel");
   const [dateContext, setDateContext] = useState<DateContext>("Verre");
-  /** Feuille ouverte, ou aucune. Une seule à la fois, comme sur Tenue. */
-  const [feuille, setFeuille] = useState<"occasion" | "sous" | null>(null);
   const [jour, setJour] = useState<number | null>(null);
   const [moment, setMoment] = useState<MomentJournee | null>(null);
   const [lieu, setLieu] = useState("");
@@ -429,17 +426,22 @@ export default function PlanifierScreen() {
           <>
             <Surtitre>Planifier</Surtitre>
             <TitreEtape a="Le bon look," b="au bon moment" />
-            <div className="mt-4 rounded-[24px] overflow-hidden bg-warm-bg" style={{ aspectRatio: "1.5" }}>
+            {/* Visuel dédié (24/09/2026, fourni) — il remplace l'emprunt à
+                l'état vide du Dressing. Le ratio du conteneur suit celui de
+                l'image (1,433) plutôt que l'inverse : en gardant 1,5 avec un
+                objectFit cover, on rognait 5 % de la hauteur, donc le carnet
+                « Mes tenues » qui est le sujet. */}
+            <div className="mt-4 rounded-[24px] overflow-hidden bg-warm-bg" style={{ aspectRatio: "1.433" }}>
               {/* <img> et non next/image : l'export statique (output: "export",
                   nécessaire à l'empaquetage Capacitor) n'embarque pas
                   l'optimiseur d'images. Même convention que l'accueil et le
                   dressing. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/editorial/capsela_dressing_empty.webp"
-                alt="Pièces posées à plat, prêtes pour un rendez-vous à venir"
-                width={864}
-                height={558}
+                src="/editorial/capsela_planifier_intro.webp"
+                alt="Un carnet « Mes tenues » posé sur une coiffeuse, devant un miroir et un portant"
+                width={874}
+                height={610}
                 loading="lazy"
                 decoding="async"
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
@@ -479,60 +481,96 @@ export default function PlanifierScreen() {
             </div>
 
             {etape === 1 && (
-              /* LE MOTIF DE L'ÉCRAN TENUE, repris ici (24/09/2026, demandé).
-                 La maquette posait les dix occasions en lignes pleine
-                 largeur ; Tenue pose depuis le 22/09 un chip qui ouvre une
-                 feuille, plus un second chip pour le sous-choix. Deux
-                 sélecteurs pour une même taxonomie dans la même app : c'est
-                 ce qui est corrigé.
+              /* LA MAQUETTE DU 24/09. Elle reprend les LIGNES de la feuille
+                 d'occasion de l'écran Tenue — glyphe, libellé, description,
+                 marque de sélection, filets de séparation — mais posées à
+                 plat sur la page au lieu d'être dans une feuille.
+                 C'est le sens de « plus en lien avec la page Tenues » : ce
+                 sont ses lignes, ses glyphes, son vocabulaire.
 
-                 Le gain n'est pas que d'uniformité. La liste faisait défiler
-                 l'écran sur dix lignes et poussait la question de sous-choix
-                 218 px sous le pli — défaut mesuré le 23/09, corrigé alors
-                 par une mise en vue. La feuille porte la liste, l'étape tient
-                 sur un écran, et le correctif n'a plus lieu d'être. */
-              /* Pas de surtitre ici, contrairement à Tenue : là-bas les
-                 chips arrivent sous la météo sans rien qui dise ce qu'ils
-                 gouvernent, et le surtitre a été demandé le 22/09 pour ça.
-                 Ici le titre de l'étape pose déjà la question et le
-                 sous-titre la reformule — un troisième énoncé la posait une
-                 fois de trop, vérifié en rendu. */
-              <>
-                <div className="flex items-center gap-2 mt-5 flex-wrap">
-                  <button
-                    onClick={() => setFeuille("occasion")}
-                    aria-haspopup="dialog"
-                    aria-label={occ ? `Occasion : ${occLong}. Changer d'occasion` : "Choisir une occasion"}
-                    className={
-                      "inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer " +
-                      (occ ? "bg-terracotta-deep text-cream" : "bg-card border border-border text-muted-3")
-                    }
-                    style={{ minHeight: 46 }}
-                  >
-                    {/* Pas de glyphe tant que rien n'est choisi : « Peu
-                        importe » n'existe pas dans ce parcours — une tenue se
-                        prépare POUR quelque chose — et dessiner une icône sur
-                        un chip vide inventerait une occasion. */}
-                    {occ && <GlypheOccasion occasion={occ} />}
-                    <span className="whitespace-nowrap">{occ ? occLong : "Choisir une occasion"}</span>
-                    <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
-                  </button>
-
-                  {sousChoix && (
-                    <button
-                      onClick={() => setFeuille("sous")}
-                      aria-haspopup="dialog"
-                      aria-label={`${sousChoix.titre} ${sousChoix.courant}. Changer`}
-                      className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-warm-bg text-sand-text border border-sand-border"
-                      style={{ minHeight: 46 }}
+                 Ce que ce motif règle, et que ni la liste d'hier ni les chips
+                 de ce matin ne réglaient : LE SOUS-CHOIX EST DANS LA LIGNE
+                 SÉLECTIONNÉE. Il naît donc là où l'on vient de toucher,
+                 forcément à l'écran — le défaut mesuré le 23/09 (question
+                 obligatoire née 218 px sous le pli) ne peut plus se produire,
+                 sans mise en vue ni artifice. */
+              <div className="mt-5">
+                {OCCASIONS.map(([key, label, desc]) => {
+                  const actif = occ === key;
+                  const avecSousChoix = actif && !!sousChoix;
+                  return (
+                    <div
+                      key={key}
+                      /* La ligne active devient un panneau teinté qui ENGLOBE
+                         son sous-choix : c'est ce qui dit que les deux vont
+                         ensemble. Les autres restent des lignes nues séparées
+                         par un filet, comme dans la feuille de Tenue. */
+                      className={actif ? "rounded-[14px] bg-warm-bg px-3 my-1" : "border-b border-[#EFE7DA] last:border-b-0"}
                     >
-                      <GlypheSousChoix valeur={sousChoix.courant} />
-                      <span className="whitespace-nowrap">{sousChoix.courant}</span>
-                      <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
-                    </button>
-                  )}
-                </div>
-              </>
+                      <button
+                        onClick={() => setOcc(key)}
+                        aria-pressed={actif}
+                        className="flex items-center gap-3 w-full text-left px-1 py-[10px] cursor-pointer"
+                        style={{ minHeight: 52 }}
+                      >
+                        <span className={"flex-shrink-0 " + (actif ? "text-terracotta" : "text-muted")}>
+                          <GlypheOccasion occasion={key} taille={19} />
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <span className={"block text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</span>
+                          <span className="block text-[11.5px] text-muted mt-[2px]">{desc}</span>
+                        </span>
+                        {/* Pastille pleine à la sélection plutôt que la coche
+                            nue de la feuille : hors feuille, une coche seule
+                            se lit mal au milieu d'une liste longue. */}
+                        <span
+                          aria-hidden="true"
+                          className="w-[22px] h-[22px] flex-shrink-0 rounded-full flex items-center justify-center"
+                          style={{
+                            border: actif ? "none" : "1.5px solid var(--color-cream-dark-soft)",
+                            background: actif ? "var(--color-terracotta)" : "transparent",
+                            color: "var(--color-cream)",
+                          }}
+                        >
+                          {actif && (
+                            <svg width="12" height="12" viewBox="0 0 24 24" style={{ display: "block" }}>
+                              <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
+                      </button>
+
+                      {avecSousChoix && (
+                        <div className="pb-3 pt-1" style={{ borderTop: "1px solid var(--color-warm-border)" }}>
+                          <div className="text-[12.5px] text-ink mt-2 px-1">{sousChoix.titre}</div>
+                          <div className="flex flex-wrap gap-2 mt-2 px-1">
+                            {sousChoix.valeurs.map((v) => {
+                              const on = sousChoix.courant === v;
+                              return (
+                                <button
+                                  key={v}
+                                  onClick={() => sousChoix.choisir(v)}
+                                  aria-pressed={on}
+                                  className={
+                                    "inline-flex items-center gap-[7px] rounded-full px-[14px] text-[12.5px] cursor-pointer border transition-colors " +
+                                    (on
+                                      ? "bg-terracotta border-terracotta text-cream"
+                                      : "bg-card border-sand-border text-muted-3")
+                                  }
+                                  style={{ minHeight: 44 }}
+                                >
+                                  <GlypheSousChoix valeur={v} taille={16} />
+                                  <span className="whitespace-nowrap">{v}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
             {etape === 2 && (
@@ -786,75 +824,6 @@ export default function PlanifierScreen() {
         )}
       </div>
 
-      {/* LES DEUX FEUILLES, calquées sur celles de l'écran Tenue : même
-          BottomSheet, même ligne de 52 px, même glyphe qu'en chip, même
-          `aria-pressed` pour porter la sélection autrement que par une coche
-          visuelle.
-
-          UNE SEULE DIFFÉRENCE, et elle est voulue : pas d'entrée « Peu
-          importe ». Sur Tenue, "all" est la valeur initiale du store et la
-          feuille doit permettre d'y revenir. Ici l'occasion est ce que le
-          parcours demande en premier — préparer une tenue sans savoir pour
-          quoi n'a pas de sens, et « Suivant » reste grisé tant qu'aucune
-          n'est choisie. */}
-      <BottomSheet title="Qu'est-ce qui est prévu ce jour-là ?" open={feuille === "occasion"} onClose={() => setFeuille(null)}>
-        <div className="flex flex-col">
-          {OCCASIONS.map(([key, label, desc]) => {
-            const actif = occ === key;
-            return (
-              <button
-                key={key}
-                onClick={() => {
-                  setOcc(key);
-                  setFeuille(null);
-                }}
-                aria-pressed={actif}
-                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
-                style={{ minHeight: 52 }}
-              >
-                <span className={actif ? "text-terracotta" : "text-muted"}>
-                  <GlypheOccasion occasion={key} taille={19} />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className={"text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
-                  <div className="text-[11.5px] text-muted mt-[2px]">{desc}</div>
-                </div>
-                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
-                  ✓
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </BottomSheet>
-
-      <BottomSheet title={sousChoix?.titre ?? ""} open={feuille === "sous" && Boolean(sousChoix)} onClose={() => setFeuille(null)}>
-        <div className="flex flex-col">
-          {sousChoix?.valeurs.map((v) => {
-            const actif = sousChoix.courant === v;
-            return (
-              <button
-                key={v}
-                onClick={() => {
-                  sousChoix.choisir(v);
-                  setFeuille(null);
-                }}
-                aria-pressed={actif}
-                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
-                style={{ minHeight: 52 }}
-              >
-                <span className={actif ? "text-terracotta" : "text-muted"}>
-                  <GlypheSousChoix valeur={v} taille={19} />
-                </span>
-                <div className={"flex-1 min-w-0 text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{v}</div>
-                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
-                  ✓
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </BottomSheet>
     </div>
   );
 }

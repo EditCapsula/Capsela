@@ -7,16 +7,16 @@ import { useCapsela } from "@/lib/store";
 import { STYLE_CONFIG, type StyleId } from "@/lib/profile";
 
 /**
- * Cards du moodboard "Ton style" (slide 1 de l'onboarding, recette
- * 26/08/2026, direction adaptée d'une proposition externe) — réutilise les
- * visuels de style déjà générés (STYLE_CONFIG, consommés par ailleurs par
- * l'étape Style de ProfileSetupScreen), jamais une nouvelle génération
- * d'assets. Genre non encore connu à ce stade de l'onboarding (demandé
- * plus tard dans ProfileSetupScreen) — femme choisi par défaut pour ce
- * moment purement illustratif, avant toute personnalisation réelle.
+ * Cards de visuels de style (recette 26/08/2026) — réutilise les visuels
+ * déjà générés (STYLE_CONFIG, consommés par ailleurs par l'étape Style de
+ * ProfileSetupScreen), jamais une nouvelle génération d'assets. Genre non
+ * encore connu à ce stade de l'onboarding (demandé plus tard dans
+ * ProfileSetupScreen) — femme choisi par défaut pour ce moment purement
+ * illustratif, avant toute personnalisation réelle.
+ *
+ * NE SERT PLUS QU'À LA DIAPOSITIVE 2 depuis le 24/09 : la diapositive « Ton
+ * style » porte désormais un visuel unique fourni, cf. plus bas.
  */
-const MOODBOARD_STYLE_IDS: StyleId[] = ["minimaliste", "casual_chic", "boheme", "classique_chic", "streetwear"];
-
 /**
  * Repères de la capsule (slide 2, "Ta capsule") — glyphes texte simples
  * (✓/✦), même convention que la coche ✓ déjà utilisée telle quelle ailleurs
@@ -107,17 +107,33 @@ export default function OnboardingScreen() {
 
           <div className="flex-1 flex flex-col justify-center">
             {isStyleMoodboard ? (
-              <div className="rounded-[20px] p-[10px]" style={{ background: slide.bg }}>
-                <div className="grid grid-cols-3 gap-[8px]">
-                  {MOODBOARD_STYLE_IDS.slice(0, 3).map((id) => (
-                    <MoodboardCard key={id} id={id} className="aspect-[3/4]" />
-                  ))}
-                </div>
-                <div className="flex gap-[8px] mt-[8px]">
-                  {MOODBOARD_STYLE_IDS.slice(3, 5).map((id) => (
-                    <MoodboardCard key={id} id={id} className="flex-1 aspect-[4/3]" />
-                  ))}
-                </div>
+              /* VISUEL UNIQUE (24/09/2026, fourni) — il remplace la grille de
+                 cinq cards composée à partir de STYLE_CONFIG. Les cinq styles
+                 et leurs libellés sont désormais DANS l'image.
+
+                 Acceptable ICI et nulle part ailleurs : cette diapositive est
+                 purement illustrative, rien n'y est sélectionnable, et c'est
+                 la seule condition sous laquelle du texte peut être gravé
+                 dans un visuel. L'étape Style de ProfileSetupScreen, où l'on
+                 CHOISIT son style, garde ses visuels séparés — ils y sont
+                 chacun une option cliquable.
+
+                 Le libellé gravé ne se traduit pas et ne suit pas les
+                 réglages de taille de texte du téléphone : l'alternative
+                 textuelle porte donc les cinq noms, pour que la diapositive
+                 dise la même chose à qui ne voit pas l'image.
+
+                 `MoodboardCard` reste utilisée par la diapositive 2. */
+              <div className="rounded-[20px] overflow-hidden" style={{ background: slide.bg }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/editorial/capsela_onboarding_styles.webp"
+                  alt="Cinq univers de style en flat-lay : Minimaliste, Casual chic, Bohème, Classique chic et Streetwear"
+                  width={1080}
+                  height={720}
+                  decoding="async"
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
               </div>
             ) : isCapsulePreview ? (
               <div className="rounded-[20px] p-[8px]" style={{ background: slide.bg }}>

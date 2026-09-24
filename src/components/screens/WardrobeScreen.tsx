@@ -264,10 +264,12 @@ export default function WardrobeScreen() {
     <>
       <AppHeader />
       <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[14px]">Ton dressing</div>
-      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
-        Ton vestiaire,
-        <br />
-        <span className="italic text-terracotta">tes looks</span>
+      {/* Une seule ligne (24/09/2026, demandé), taille inchangée : le <br />
+          forcé est retiré, le titre coule. S'il ne tient pas sur un écran
+          très étroit, il se coupe de lui-même là où la ligne le demande —
+          c'est un repli, pas une mise en page imposée. */}
+      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+        Ton vestiaire, <span className="italic text-terracotta">tes looks</span>
       </div>
       <div className="flex items-center justify-between gap-[10px] mt-3">
         <div className="text-[12px] text-muted">{dressingLoaded ? compteur : " "}</div>
