@@ -57,13 +57,17 @@ export async function fetchWeatherByCoords(lat: number, lon: number): Promise<Ci
  * Mode démo (Supabase non configuré) : aucun appel, comme pour la météo
  * actuelle.
  */
-export async function fetchPrevisionByCity(city: string): Promise<Prevision | null> {
+export async function fetchPrevisionByCity(city: string, coords?: { lat: number; lon: number } | null): Promise<Prevision | null> {
   if (!isSupabaseConfigured) return null;
   const nom = city.trim();
   if (!nom) return null;
   try {
+    // LES COORDONNÉES PRIMENT SUR LE NOM quand une suggestion a été choisie :
+    // « Parme » et « Paros » ne sont plus départagés par une chaîne que
+    // l'API réinterprète, mais par le point exact que l'utilisatrice a
+    // désigné. Le nom reste envoyé pour l'affichage de repli.
     const { data, error } = await getSupabase().functions.invoke("weather", {
-      body: { city: nom, mode: "forecast" },
+      body: coords ? { lat: coords.lat, lon: coords.lon, mode: "forecast" } : { city: nom, mode: "forecast" },
     });
     if (error || !data || data.error) return null;
     // Test de FORME, pas de statut : c'est lui qui distingue la nouvelle
@@ -81,6 +85,97 @@ export async function fetchPrevisionByCity(city: string): Promise<Prevision | nu
           typeof (s as CreneauPrevision).label === "string"
       ),
     };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Une ville proposée par l'autocomplétion. `lat`/`lon` sont la raison d'être
+ * de la suggestion : ce sont eux, et non le nom, qui partent ensuite chercher
+ * la prévision.
+ */
+export interface VilleSuggeree {
+  name: string;
+  country: string;
+  state: string;
+  lat: number;
+  lon: number;
+}
+
+/**
+ * Suggestions lues d'une réponse `mode=geo` — fonction PURE, donc testée.
+ *
+ * Trois choses s'y jouent, et aucune n'est du ressort de la fonction Edge :
+ *
+ * 1. LE TEST DE FORME. Une fonction `weather` antérieure au 24/09/2026 ignore
+ *    `mode` et renvoie la météo actuelle : un objet sans `places`. On rend
+ *    alors `null` — pas un tableau vide — pour que l'appelant distingue
+ *    « aucune ville ne correspond » de « l'autocomplétion n'existe pas ici »
+ *    et retombe sur la saisie libre sans rien afficher.
+ * 2. LE DÉDOUBLONNAGE. /geo/1.0/direct rend volontiers plusieurs entrées pour
+ *    une même ville (arrondissements, doublons de base). La clé retenue est
+ *    nom + région + pays : deux « Paris » du Texas et de France restent deux
+ *    lignes, deux « Paris, FR » n'en font qu'une.
+ * 3. RIEN D'AUTRE. Pas de tri par popularité : OpenWeather rend déjà ses
+ *    résultats par pertinence, et les réordonner sur un critère inventé
+ *    ferait remonter la mauvaise ville avec l'air d'être sûr de soi.
+ */
+export function lireVillesSuggerees(data: unknown): VilleSuggeree[] | null {
+  const o = data as { places?: unknown } | null;
+  if (!o || !Array.isArray(o.places)) return null;
+  const vues = new Set<string>();
+  const out: VilleSuggeree[] = [];
+  for (const raw of o.places) {
+    const v = raw as Partial<VilleSuggeree> | null;
+    if (!v || typeof v.name !== "string" || !v.name) continue;
+    if (typeof v.lat !== "number" || typeof v.lon !== "number") continue;
+    const country = typeof v.country === "string" ? v.country : "";
+    const state = typeof v.state === "string" ? v.state : "";
+    const cle = `${v.name}|${state}|${country}`.toLowerCase();
+    if (vues.has(cle)) continue;
+    vues.add(cle);
+    out.push({ name: v.name, country, state, lat: v.lat, lon: v.lon });
+  }
+  return out;
+}
+
+/**
+ * Libellé affiché d'une suggestion — « Paris, France », « Paris, Texas,
+ * États-Unis ».
+ *
+ * Le code pays d'OpenWeather est un ISO 3166-1 alpha-2 (« FR »). `Intl.
+ * DisplayNames` le traduit sans embarquer une table de 250 entrées qu'il
+ * faudrait maintenir ; là où il n'existe pas, le code brut reste affiché,
+ * ce qui est laid mais jamais faux.
+ */
+export function libelleVille(v: VilleSuggeree): string {
+  let pays = v.country;
+  try {
+    pays = new Intl.DisplayNames(["fr"], { type: "region" }).of(v.country) || v.country;
+  } catch {
+    // Environnement sans données de localisation : on garde le code.
+  }
+  return [v.name, v.state, pays].filter(Boolean).join(", ");
+}
+
+/**
+ * Villes correspondant à un début de saisie — `null` quand l'autocomplétion
+ * n'est pas disponible (mode démo, réseau, fonction Edge pas encore
+ * redéployée), `[]` quand elle a répondu et ne connaît rien de tel. La
+ * distinction compte : le premier cas ne doit rien afficher, le second peut
+ * le dire.
+ */
+export async function fetchVilles(q: string): Promise<VilleSuggeree[] | null> {
+  if (!isSupabaseConfigured) return null;
+  const nom = q.trim();
+  if (nom.length < 2) return [];
+  try {
+    const { data, error } = await getSupabase().functions.invoke("weather", {
+      body: { city: nom, mode: "geo" },
+    });
+    if (error || !data || (data as { error?: unknown }).error) return null;
+    return lireVillesSuggerees(data);
   } catch {
     return null;
   }

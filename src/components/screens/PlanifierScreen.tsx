@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
@@ -10,9 +10,9 @@ import { CATS, DATE_CONTEXTS, OCCASIONS, occasionShortLabel } from "@/lib/data";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { generateOutfitWithFallback } from "@/lib/logic";
 import { jourLocal } from "@/lib/outfitFeedback";
-import { joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
+import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { saisonCalendairePour, weatherForDay } from "@/lib/capsule";
-import { fetchPrevisionByCity } from "@/lib/weather";
+import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import { deleteTenuePlanifiee, fetchTenuesPlanifiees, repartirParEcheance, upsertTenuePlanifiee, type TenuePlanifiee } from "@/lib/planifier";
 import { paletteHexes } from "@/lib/profile";
 import { composeWardrobePool } from "@/lib/selectors";
@@ -108,6 +108,18 @@ const G_MAIN = (
 const G_NUAGE = (
   <path d="M7.6 18.2h9.2a3.7 3.7 0 0 0 .4-7.4 5.6 5.6 0 0 0-10.8 1 3.2 3.2 0 0 0 1.2 6.4z" {...T} />
 );
+const G_EPINGLE = (
+  <>
+    <path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 1 0-13 0C5.5 14.9 12 21 12 21z" {...T} />
+    <circle cx="12" cy="10.4" r="2.3" {...T} />
+  </>
+);
+const G_LOUPE = (
+  <>
+    <circle cx="11" cy="11" r="6.2" {...T} />
+    <line x1="15.6" y1="15.6" x2="20" y2="20" {...T} />
+  </>
+);
 const G_COCHE = <path d="M5 12.5l4.5 4.5L19 7.5" {...T} strokeWidth={1.8} />;
 
 const MOMENTS: [MomentJournee, string][] = [
@@ -124,6 +136,54 @@ const TYPES_LIEU: [string, string][] = [
   ["Extérieur", "Parc, balade, plein air"],
   ["Chez quelqu'un", "Dîner, famille"],
 ];
+
+/**
+ * QUELLES OCCASIONS MÉRITENT UN TYPE DE LIEU — arbitré le 24/09/2026,
+ * occasion par occasion, jamais par extension d'un cas à l'autre.
+ *
+ * Deux contraintes cadrent la question avant tout goût :
+ *
+ * 1. LE TYPE DE LIEU N'ENTRE PAS DANS LE MOTEUR. Vérifié : la tenue vient de
+ *    `generateOutfitWithFallback(pool, météo, occasion, workMode, dateContext,
+ *    couleurs, genre)` — `typeLieu` n'y figure pas, et aucune règle de
+ *    `logic.ts` ne le lit. Il décrit le rendez-vous (il s'affiche sur la
+ *    fiche, il se range dans `planned_outfits.type_lieu`), il n'affine pas la
+ *    sélection. Une question sans conséquence ne se pose donc que là où la
+ *    réponse sert à SE RELIRE plus tard.
+ * 2. LES VALEURS SONT FIGÉES PAR LA BASE. `planned_outfits.type_lieu` porte
+ *    un CHECK sur exactement ces cinq chaînes (migration 0030). On peut donc
+ *    en montrer un sous-ensemble, jamais en inventer une sixième : pas de
+ *    « Bureau / coworking », qui exigerait un ALTER TABLE.
+ *
+ * D'où, pour chacune des dix occasions du référentiel :
+ *
+ *   quotidien        — masqué. « Courses, école, journée libre » ne se range
+ *                      dans aucun des cinq sans le déformer.
+ *   travail_formel   — masqué. Aucune des cinq valeurs ne nomme un lieu de
+ *                      travail, et le sous-choix Présentiel / Télétravail dit
+ *                      déjà ce qu'il y a à dire — lui, le moteur le lit.
+ *   entretien        — masqué, même raison.
+ *   date             — les cinq. C'est l'occasion où le lieu fait le plus
+ *                      varier ce qu'on porte, et celle où on se relit.
+ *   soiree           — les cinq.
+ *   festive          — trois. « Club, anniversaire, bal » : un musée et un
+ *                      parc n'y répondent pas.
+ *   sport            — masqué. Seul « Extérieur » aurait du sens, et une
+ *                      liste à une entrée n'est pas un choix.
+ *   cocooning        — masqué. C'est chez soi, par définition.
+ *   voyage           — masqué. Le programme du voyage est le contexte, pas
+ *                      un lieu unique à désigner à l'avance.
+ *   evenement_perso  — quatre. Un bar ne tient pas lieu de cérémonie.
+ *
+ * ARBITRAGE ÉDITORIAL, instruit au niveau de chaque occasion prise une à une.
+ * Il ne s'étend pas à une occasion ajoutée plus tard sans le même examen.
+ */
+const TYPES_LIEU_PAR_OCCASION: Partial<Record<OccasionKey, readonly string[]>> = {
+  date: ["Restaurant", "Bar / Rooftop", "Lieu culturel", "Extérieur", "Chez quelqu'un"],
+  soiree: ["Restaurant", "Bar / Rooftop", "Lieu culturel", "Extérieur", "Chez quelqu'un"],
+  festive: ["Restaurant", "Bar / Rooftop", "Chez quelqu'un"],
+  evenement_perso: ["Restaurant", "Lieu culturel", "Extérieur", "Chez quelqu'un"],
+};
 
 const JOURS_PROPOSES = 21;
 const DOW = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -217,10 +277,32 @@ export default function PlanifierScreen() {
   const [etape, setEtape] = useState(1);
   const [occ, setOcc] = useState<OccasionKey | null>(null);
   const [workMode, setWorkMode] = useState<WorkMode>("Présentiel");
-  const [dateContext, setDateContext] = useState<DateContext>("Verre");
+  /**
+   * PREMIER SOUS-CHOIX DE LA LISTE, ET NON UNE VALEUR ÉCRITE À LA MAIN.
+   *
+   * « Verre » était codé ici en dur. Ce n'était pas un affichage à recaler :
+   * `effectiveFormality("date", …, "Verre")` rend 1 quand
+   * « Restaurant / date romantique » rend 4 (DATE_CONTEXTS, data.ts). La
+   * tenue proposée par défaut pour une Date était donc réellement composée
+   * au palier le plus bas du référentiel, pas seulement étiquetée ainsi.
+   *
+   * `DATE_CONTEXTS[0][0]` plutôt que la chaîne : le jour où l'ordre de la
+   * liste change, le défaut suit, au lieu de désigner silencieusement une
+   * ligne qui n'est plus la première.
+   */
+  const [dateContext, setDateContext] = useState<DateContext>(DATE_CONTEXTS[0][0]);
   const [jour, setJour] = useState<number | null>(null);
   const [moment, setMoment] = useState<MomentJournee | null>(null);
   const [lieu, setLieu] = useState("");
+  /**
+   * VILLE CHOISIE DANS LES SUGGESTIONS, avec ses coordonnées — `null` tant
+   * qu'on tape librement. C'est elle qui part chercher la prévision quand
+   * elle existe : un point, pas une chaîne à réinterpréter. La saisie libre
+   * reste acceptée (l'autocomplétion peut être indisponible), elle est
+   * simplement moins sûre.
+   */
+  const [ville, setVille] = useState<VilleSuggeree | null>(null);
+  const [suggestions, setSuggestions] = useState<VilleSuggeree[] | null>(null);
   const [typeLieu, setTypeLieu] = useState<string | null>(null);
   const [dressingSeul, setDressingSeul] = useState(false);
   // Incrémenté par « Autre proposition » — seule entrée du useMemo qui change
@@ -257,6 +339,61 @@ export default function PlanifierScreen() {
 
   const occLabel = occ && occ !== "all" ? occasionShortLabel(occ) : "";
   const occLong = occ ? (OCCASIONS.find(([k]) => k === occ)?.[1] ?? "") : "";
+
+  /**
+   * Types de lieu proposés pour l'occasion en cours — vide quand la question
+   * ne se pose pas. Le choix déjà fait est effacé si l'occasion change et ne
+   * le propose plus : sinon `planned_outfits.type_lieu` recevrait un « Bar /
+   * Rooftop » sur un Voyage, choisi puis devenu invisible.
+   */
+  const typesLieuProposes = useMemo(() => {
+    const permis = occ ? TYPES_LIEU_PAR_OCCASION[occ] : undefined;
+    if (!permis) return [] as [string, string][];
+    return TYPES_LIEU.filter(([t]) => permis.includes(t));
+  }, [occ]);
+  /**
+   * AUTOCOMPLÉTION DE VILLE — /geo/1.0/direct, via la fonction Edge `weather`
+   * en `mode=geo`. Même clé, même fournisseur que la météo : aucun service
+   * supplémentaire, ce que l'audit demandait de vérifier avant d'en ajouter un.
+   *
+   * 280 ms d'attente après la dernière frappe, et la réponse d'une recherche
+   * périmée est jetée (`annule`) : sans ça, « Par » revenant après « Paris »
+   * remplacerait la bonne liste par l'ancienne.
+   *
+   * `suggestions === null` veut dire « pas d'autocomplétion ici » — mode démo,
+   * réseau, ou fonction Edge pas encore redéployée. Rien ne s'affiche alors,
+   * et la saisie libre continue de fonctionner exactement comme avant.
+   */
+  const villeChoisieAffichee = ville != null && libelleVille(ville) === lieu;
+  /**
+   * Ce qui s'affiche réellement sous le champ. DÉRIVÉ, jamais posé dans un
+   * état : une saisie trop courte ou une ville déjà choisie n'a pas à
+   * déclencher un rendu supplémentaire pour vider une liste — elle n'en a
+   * simplement aucune à montrer. `suggestions` ne change donc que quand une
+   * réponse arrive, ce qui est le seul évènement extérieur ici.
+   */
+  const suggestionsVisibles =
+    lieu.trim().length < 2 || villeChoisieAffichee ? [] : (suggestions ?? []);
+
+  useEffect(() => {
+    if (etape !== 3) return;
+    const q = lieu.trim();
+    if (q.length < 2 || villeChoisieAffichee) return;
+    let annule = false;
+    const t = setTimeout(() => {
+      fetchVilles(q)
+        .then((v) => {
+          if (!annule) setSuggestions(v);
+        })
+        .catch(() => {
+          if (!annule) setSuggestions(null);
+        });
+    }, 280);
+    return () => {
+      annule = true;
+      clearTimeout(t);
+    };
+  }, [lieu, etape, villeChoisieAffichee]);
 
   const dateChoisie = jour != null ? dansNJours(jour) : null;
   const dateLongue = dateChoisie
@@ -344,7 +481,9 @@ export default function PlanifierScreen() {
   const phraseMeteo = (() => {
     const aujourdhui = `${weather.temp}°, ${weather.label.toLowerCase()}`;
     if (previsionEtat !== "faite") {
-      return `On regardera la météo prévue sur place le jour J, pas celle d'aujourd'hui.`;
+      // Avant l'appel il n'y a rien à annoncer sur la météo — seulement à dire
+      // ce qu'il manque pour l'obtenir. Une phrase produit, pas un disclaimer.
+      return `Indique la ville : la tenue tiendra compte de la météo prévue sur place.`;
     }
     if (meteoMoment) {
       const amplitude =
@@ -475,15 +614,37 @@ export default function PlanifierScreen() {
     setJour(null);
     setMoment(null);
     setLieu("");
+    setVille(null);
+    setSuggestions(null);
     setTypeLieu(null);
     setDressingSeul(false);
     setPrevision(null);
     setPrevisionEtat("vide");
   };
 
-  const attend = etape === 4 && previsionEtat === "encours";
-  const etapeValide =
-    etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : etape === 3 ? !!lieu.trim() : true;
+  const attend = previsionEtat === "encours";
+  const etapeValide = etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : !!lieu.trim();
+
+  /**
+   * REMONTER EN HAUT À CHAQUE CHANGEMENT D'ÉTAPE (recette 24/09/2026).
+   *
+   * `window.scrollTo` ne ferait rien ici : la page ne défile pas. C'est le
+   * conteneur `.scrollarea` qui porte le défilement — l'écran est en
+   * `absolute inset-0` avec un en-tête et une barre d'action fixes. On remet
+   * donc à zéro CE conteneur, pas la fenêtre.
+   *
+   * La vue est dans les dépendances autant que l'étape : passer au résultat
+   * puis revenir aux étapes doit aussi repartir du haut, sinon on retrouve le
+   * parcours à la position où on l'avait laissé, fil d'étapes hors champ.
+   *
+   * `auto` et non `smooth` : un défilement animé sur un contenu qui vient
+   * d'être remplacé montre le nouvel écran en train de glisser, ce qui se lit
+   * comme un bug plutôt que comme une transition.
+   */
+  const zoneScroll = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    zoneScroll.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [etape, vue]);
 
   const revenir = () => {
     if (vue === "liste") setVue("intro");
@@ -493,11 +654,33 @@ export default function PlanifierScreen() {
     else actions.goHome();
   };
 
+  /**
+   * TROIS ÉTAPES, PLUS QUATRE — mesuré, pas ressenti.
+   *
+   * L'étape 4 posait une seule question, « Uniquement mon dressing ». Ce
+   * n'était pas un écran maigre à étoffer : c'est tout ce que le moteur
+   * accepte ici. `generateOutfitWithFallback(pool, météo, occasion, workMode,
+   * dateContext, couleurs, genre)` — les couleurs viennent du profil, le
+   * genre du profil, la météo du lieu et de la date, l'occasion et son
+   * sous-choix de l'étape 1. Le palier de formalité, lui, n'est manipulable
+   * que par `formalityOverride`, interne à `attemptCoreOutfit` qui n'est pas
+   * exporté. Il ne restait donc qu'un levier : le POOL.
+   *
+   * Et un levier qui agit instantanément sur une tenue déjà affichée n'est
+   * pas une question à poser avant : c'est un réglage à offrir après. Il est
+   * descendu sur l'écran résultat, où il change la proposition sous les yeux
+   * au lieu de se choisir à l'aveugle.
+   *
+   * Les descriptions des étapes 2 et 3 disaient « elle n'entre pas encore
+   * dans la composition » et « le lieu n'affine pas encore la tenue ». C'était
+   * vrai au lot 1. Depuis le lot 2, la date fixe la saison de composition
+   * (`saisonCalendairePour`) et le lieu fixe la prévision : les deux phrases
+   * étaient devenues fausses, ce qui est pire qu'inutile.
+   */
   const ETAPES: Record<number, [string, string, string, string]> = {
-    1: ["Étape 1 sur 4", "Quelle est", "l'occasion ?", "Choisis ce qui est prévu ce jour-là."],
-    2: ["Étape 2 sur 4", "Pour", "quand ?", "La date décrit le rendez-vous. Elle n'entre pas encore dans la composition."],
-    3: ["Étape 3 sur 4", "Où", "seras-tu ?", "Noté pour le rendez-vous. Le lieu n'affine pas encore la tenue."],
-    4: ["Étape 4 sur 4", "Une envie", "particulière ?", "Un seul réglage agit sur la tenue aujourd'hui."],
+    1: ["Étape 1 sur 3", "Quelle est", "l'occasion ?", "Choisis ce qui est prévu ce jour-là."],
+    2: ["Étape 2 sur 3", "Pour", "quand ?", "La date fixe la saison de la tenue."],
+    3: ["Étape 3 sur 3", "Où", "seras-tu ?", "La ville donne la météo prévue sur place."],
   };
 
   return (
@@ -513,11 +696,11 @@ export default function PlanifierScreen() {
           écran centre déjà le logo juste au-dessus. */}
       {vue === "etape" && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
-          <FilEtapes total={4} courante={etape - 1} />
+          <FilEtapes total={3} courante={etape - 1} />
         </div>
       )}
 
-      <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 pb-5">
+      <div ref={zoneScroll} className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 pb-5">
         {vue === "intro" && (
           <>
             <Surtitre>Planifier</Surtitre>
@@ -573,11 +756,15 @@ export default function PlanifierScreen() {
               </button>
             )}
 
-            <div className="mt-5 rounded-[14px] bg-card border border-border px-[14px] py-3 text-[12px] text-muted-3 leading-[1.45]" style={{ textWrap: "pretty" }}>
-              La météo du jour J est celle prévue sur place, dans la limite de ce que la prévision couvre —
-              au-delà, l&apos;écran le dit plutôt que de l&apos;inventer. Rien n&apos;est conservé pour
-              l&apos;instant : la liste de tes tenues planifiées viendra avec.
-            </div>
+            {/* LE PAVÉ EXPLICATIF EST RETIRÉ (recette 24/09/2026). Il annonçait
+                deux choses. La première — « la météo du jour J est celle prévue
+                sur place » — est une mécanique interne : elle se constate à
+                l'étape 3, où la phrase météo nomme la ville, l'amplitude et la
+                limite de la prévision. La seconde — « rien n'est conservé pour
+                l'instant » — était devenue FAUSSE au lot 3 : `planned_outfits`
+                existe, « Garder cette tenue » écrit dedans, et la liste « Mes
+                tenues planifiées » la relit. Un avertissement périmé sur un
+                écran d'accueil coûte plus cher que pas d'avertissement. */}
           </>
         )}
 
@@ -617,7 +804,18 @@ export default function PlanifierScreen() {
                       className={actif ? "rounded-[14px] bg-warm-bg px-3 my-1" : "border-b border-[#EFE7DA] last:border-b-0"}
                     >
                       <button
-                        onClick={() => setOcc(key)}
+                        onClick={() => {
+                          setOcc(key);
+                          /* Le type de lieu déjà choisi ne survit pas à un
+                             changement d'occasion qui ne le propose plus —
+                             sinon `planned_outfits.type_lieu` recevrait un
+                             « Bar / Rooftop » sur un Voyage, choisi puis
+                             devenu invisible. Remis à zéro ici, à l'endroit
+                             où la décision se prend, plutôt que rattrapé
+                             après coup dans un effet. */
+                          const permis = TYPES_LIEU_PAR_OCCASION[key];
+                          if (!permis || !permis.includes(typeLieu ?? "")) setTypeLieu(null);
+                        }}
                         aria-pressed={actif}
                         className="flex items-center gap-3 w-full text-left px-1 py-[10px] cursor-pointer"
                         style={{ minHeight: 52 }}
@@ -684,15 +882,27 @@ export default function PlanifierScreen() {
 
             {etape === 2 && (
               <>
+                {/* LES 21 JOURS RESTENT PROPOSÉS, MAIS LA BANDE DIT OÙ S'ARRÊTE
+                    LA PRÉVISION. Les retirer serait une autre erreur : on peut
+                    parfaitement préparer une tenue pour dans trois semaines, la
+                    saison et l'occasion suffisent. Ce qu'il ne faut pas, c'est
+                    laisser croire que la météo du jour J est connue. D'où le
+                    filet après le dernier jour couvert, la teinte plus discrète
+                    au-delà, le nom accessible qui le dit, et la légende. */}
                 <div className="scrollarea flex gap-[7px] overflow-x-auto mt-4 -mx-6 px-6">
                   {Array.from({ length: JOURS_PROPOSES }, (_, i) => i + 1).map((n) => {
                     const d = dansNJours(n);
                     const on = jour === n;
-                    return (
+                    const couvert = n <= HORIZON_PREVISION_JOURS;
+                    const bouton = (
                       <button
                         key={n}
                         onClick={() => setJour(n)}
                         aria-pressed={on}
+                        aria-label={
+                          `${DOW_LONG[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}` +
+                          (couvert ? "" : " — au-delà de la prévision météo")
+                        }
                         className={
                           "flex-shrink-0 w-[54px] rounded-[16px] py-[7px] cursor-pointer border transition-colors " +
                           (on ? "bg-terracotta-deep border-terracotta-deep" : "bg-card border-border")
@@ -702,7 +912,12 @@ export default function PlanifierScreen() {
                         <span className={"block text-[9px] tracking-[.08em] uppercase " + (on ? "text-cream" : "text-muted")}>
                           {DOW[d.getDay()]}
                         </span>
-                        <span className={"block font-serif text-[19px] mt-[2px] " + (on ? "text-cream" : "text-ink")}>
+                        <span
+                          className={
+                            "block font-serif text-[19px] mt-[2px] " +
+                            (on ? "text-cream" : couvert ? "text-ink" : "text-muted-3")
+                          }
+                        >
                           {d.getDate()}
                         </span>
                         <span className={"block text-[8.5px] " + (on ? "text-cream" : "text-muted")}>
@@ -710,7 +925,23 @@ export default function PlanifierScreen() {
                         </span>
                       </button>
                     );
+                    if (n !== HORIZON_PREVISION_JOURS) return bouton;
+                    return (
+                      <div key={n} className="flex-shrink-0 flex gap-[7px]">
+                        {bouton}
+                        <span
+                          aria-hidden="true"
+                          className="flex-shrink-0 self-stretch"
+                          style={{ width: 1, background: "var(--color-sand-border)" }}
+                        />
+                      </div>
+                    );
                   })}
+                </div>
+                <div className="text-[11.5px] text-muted leading-[1.45] mt-[9px]" style={{ textWrap: "pretty" }}>
+                  {jour != null && jour > HORIZON_PREVISION_JOURS
+                    ? `La prévision météo ne va pas jusque-là : elle couvre ${HORIZON_PREVISION_JOURS} jours. La tenue sera composée sur la saison, sans météo du jour J.`
+                    : `La prévision météo couvre les ${HORIZON_PREVISION_JOURS} prochains jours. Au-delà du filet, la tenue se compose sur la saison seule.`}
                 </div>
                 <div className="mt-5">
                   <Surtitre>À quel moment ?</Surtitre>
@@ -726,54 +957,79 @@ export default function PlanifierScreen() {
             {etape === 3 && (
               <>
                 <div className="flex items-center gap-[10px] mt-4 bg-card border border-border rounded-[14px] px-[14px]" style={{ minHeight: 48 }}>
+                  <span aria-hidden="true" className="flex-shrink-0 text-placeholder">
+                    <Glyphe taille={17}>{G_LOUPE}</Glyphe>
+                  </span>
                   <input
                     className="capin flex-1 min-w-0 bg-transparent border-none text-[13px] font-medium text-ink"
                     value={lieu}
-                    onChange={(e) => setLieu(e.target.value)}
-                    placeholder="Ville ou lieu — ex. Paris, Clichy…"
-                    aria-label="Lieu du rendez-vous"
+                    onChange={(e) => {
+                      setLieu(e.target.value);
+                      // Retaper invalide le point choisi : sans ça, corriger
+                      // « Paris » en « Parme » enverrait toujours Paris.
+                      setVille(null);
+                    }}
+                    placeholder="Rechercher une ville"
+                    aria-label="Ville du rendez-vous"
+                    autoComplete="off"
+                    autoCapitalize="words"
                   />
                 </div>
-                <div className="mt-5">
-                  <Surtitre>Type de lieu · facultatif</Surtitre>
-                </div>
-                <div className="flex flex-col gap-[7px] mt-3">
-                  {TYPES_LIEU.map(([t, d]) => (
-                    <LigneChoix
-                      key={t}
-                      actif={typeLieu === t}
-                      titre={t}
-                      sousTitre={d || undefined}
-                      onClick={() => setTypeLieu(typeLieu === t ? null : t)}
-                    />
-                  ))}
-                </div>
+                {/* Les suggestions ne s'affichent QUE si l'autocomplétion a
+                    répondu quelque chose. `null` (mode démo, réseau, fonction
+                    Edge pas encore redéployée) ne montre rien du tout : la
+                    saisie libre reste entièrement valable, elle est seulement
+                    moins précise. Rien n'est jamais bloqué par l'absence de
+                    suggestion. */}
+                {suggestionsVisibles.length > 0 && (
+                  <div className="flex flex-col mt-2 bg-card border border-border rounded-[14px] overflow-hidden">
+                    {suggestionsVisibles.map((v) => (
+                      <button
+                        key={`${v.lat},${v.lon}`}
+                        onClick={() => {
+                          setVille(v);
+                          setLieu(libelleVille(v));
+                          setSuggestions([]);
+                        }}
+                        className="flex items-center gap-[10px] text-left px-[14px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                        style={{ minHeight: 46 }}
+                      >
+                        <span aria-hidden="true" className="flex-shrink-0 text-muted">
+                          <Glyphe taille={15}>{G_EPINGLE}</Glyphe>
+                        </span>
+                        <span className="flex-1 min-w-0 text-[13px] text-ink truncate">{libelleVille(v)}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {ville && (
+                  <div className="text-[11.5px] text-muted mt-2">
+                    Météo demandée pour {ville.name}, à ses coordonnées exactes.
+                  </div>
+                )}
+                {/* Le type de lieu ne s'affiche que pour les occasions où il
+                    veut dire quelque chose (cf. TYPES_LIEU_PAR_OCCASION).
+                    Pour les autres, l'étape se réduit à la ville — ce qui est
+                    exactement ce qu'elle a à demander. */}
+                {typesLieuProposes.length > 0 && (
+                  <>
+                    <div className="mt-5">
+                      <Surtitre>Type de lieu · facultatif</Surtitre>
+                    </div>
+                    <div className="flex flex-col gap-[7px] mt-3">
+                      {typesLieuProposes.map(([t, d]) => (
+                        <LigneChoix
+                          key={t}
+                          actif={typeLieu === t}
+                          titre={t}
+                          sousTitre={d || undefined}
+                          onClick={() => setTypeLieu(typeLieu === t ? null : t)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </>
-            )}
-
-            {etape === 4 && (
-              <button
-                onClick={() => setDressingSeul(!dressingSeul)}
-                aria-pressed={dressingSeul}
-                className="w-full flex gap-3 items-center mt-4 bg-card border border-border rounded-[20px] p-[14px] cursor-pointer text-left"
-              >
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[13.5px] font-medium text-ink">Uniquement mon dressing</span>
-                  <span className="block text-[11.5px] text-muted leading-[1.45] mt-[3px]">
-                    Sans compléter avec des pièces de ta capsule.
-                  </span>
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="w-11 h-[26px] flex-shrink-0 rounded-full p-[3px] flex transition-colors"
-                  style={{
-                    background: dressingSeul ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
-                    justifyContent: dressingSeul ? "flex-end" : "flex-start",
-                  }}
-                >
-                  <span className="w-5 h-5 rounded-full bg-card" />
-                </span>
-              </button>
             )}
 
             <div className="flex gap-[10px] items-start mt-[18px] bg-warm-bg rounded-[14px] px-[14px] py-3">
@@ -845,6 +1101,34 @@ export default function PlanifierScreen() {
                     ))}
                   </div>
                 </div>
+
+                {/* L'ANCIENNE ÉTAPE 4, DEVENUE UN RÉGLAGE. Ici il a un effet
+                    immédiat et visible : le pool change, `tenue` se recalcule,
+                    la composition au-dessus se refait. Posé avant la
+                    génération, il demandait de deviner ce qu'on préférerait
+                    sans avoir rien vu. */}
+                <button
+                  onClick={() => setDressingSeul(!dressingSeul)}
+                  aria-pressed={dressingSeul}
+                  className="w-full flex gap-3 items-center mt-[14px] bg-card border border-border rounded-[20px] p-[14px] cursor-pointer text-left"
+                >
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[13.5px] font-medium text-ink">Uniquement mon dressing</span>
+                    <span className="block text-[11.5px] text-muted leading-[1.45] mt-[3px]">
+                      Sans compléter avec des pièces de ta capsule.
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="w-11 h-[26px] flex-shrink-0 rounded-full p-[3px] flex transition-colors"
+                    style={{
+                      background: dressingSeul ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
+                      justifyContent: dressingSeul ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    <span className="w-5 h-5 rounded-full bg-card" />
+                  </span>
+                </button>
 
                 <div className="text-[12px] text-muted leading-[1.5] mt-[14px] text-center" style={{ textWrap: "pretty" }}>
                   Gardée, tu la retrouveras dans tes tenues planifiées jusqu&apos;au jour J.
@@ -947,24 +1231,29 @@ export default function PlanifierScreen() {
           <button
             onClick={() => {
               if (!etapeValide || attend) return;
-              if (etape === 3) {
-                /* Le lieu est arrêté : c'est ici qu'on demande la prévision,
-                   et pas à chaque frappe dans le champ. Aucun effet — un
-                   clic, une requête. */
-                setPrevisionEtat("encours");
-                const demande = lieu.trim();
-                fetchPrevisionByCity(demande)
-                  .then((p) => {
-                    setPrevision(p);
-                    setPrevisionEtat("faite");
-                  })
-                  .catch(() => {
-                    setPrevision(null);
-                    setPrevisionEtat("faite");
-                  });
+              if (etape < 3) {
+                setEtape(etape + 1);
+                return;
               }
-              if (etape === 4) setVue("resultat");
-              else setEtape(etape + 1);
+              /* DERNIÈRE ÉTAPE. Le lieu est arrêté : c'est ici qu'on demande
+                 la prévision, et pas à chaque frappe dans le champ — un clic,
+                 une requête. L'étape 4 servait jusqu'ici de salle d'attente
+                 pendant l'appel ; sans elle, c'est le bouton qui attend, et
+                 il le dit (« Un instant… »). La tenue n'est affichée qu'une
+                 fois la réponse revenue, jamais composée sur la météo du jour
+                 puis changée sous les yeux.
+
+                 Les deux branches mènent au résultat : une prévision
+                 indisponible est une réponse, pas un échec — l'écran compose
+                 alors sur la météo actuelle et l'annonce. */
+              setPrevisionEtat("encours");
+              fetchPrevisionByCity(ville ? ville.name : lieu.trim(), ville)
+                .then((p) => setPrevision(p))
+                .catch(() => setPrevision(null))
+                .finally(() => {
+                  setPrevisionEtat("faite");
+                  setVue("resultat");
+                });
             }}
             disabled={!etapeValide || attend}
             className="w-full rounded-full text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer disabled:cursor-not-allowed"
@@ -973,7 +1262,7 @@ export default function PlanifierScreen() {
               background: etapeValide && !attend ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
             }}
           >
-            {attend ? "Un instant…" : etape === 4 ? "Voir ma tenue" : "Suivant"}
+            {attend ? "Un instant…" : etape === 3 ? "Voir ma tenue" : "Suivant"}
           </button>
         )}
         {vue === "liste" && (
@@ -982,7 +1271,7 @@ export default function PlanifierScreen() {
             className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
             style={{ minHeight: 52 }}
           >
-            + Planifier une tenue
+            + Planifier un nouvel évènement
           </button>
         )}
         {vue === "resultat" && (
@@ -1002,14 +1291,16 @@ export default function PlanifierScreen() {
             >
               {enregistrement ? "Un instant…" : "Garder cette tenue"}
             </button>
+            {/* MODIFIER À GAUCHE, PRINCIPAL À DROITE (recette 24/09/2026).
+                « Modifier » seul laissait croire qu'on retouchait la tenue ;
+                on retouche les réponses qui l'ont produite, d'où « cet
+                évènement ». Les deux gardent le contexte : l'une rouvre les
+                étapes déjà remplies, l'autre retire au même endroit. Aucune
+                des deux ne repart de zéro — ça, c'est le bouton de la liste.
+
+                Le principal de l'écran reste « Garder cette tenue » au-dessus :
+                c'est la seule des trois actions qui laisse une trace. */}
             <div className="flex gap-2">
-              <button
-                onClick={() => setTirage(tirage + 1)}
-                className="flex-1 rounded-full bg-card border border-border text-[12.5px] text-muted-3 cursor-pointer"
-                style={{ minHeight: 44 }}
-              >
-                Autre proposition
-              </button>
               <button
                 onClick={() => {
                   setVue("etape");
@@ -1018,7 +1309,14 @@ export default function PlanifierScreen() {
                 className="flex-1 rounded-full bg-card border border-border text-[12.5px] text-muted-3 cursor-pointer"
                 style={{ minHeight: 44 }}
               >
-                Modifier
+                Modifier cet évènement
+              </button>
+              <button
+                onClick={() => setTirage(tirage + 1)}
+                className="flex-1 rounded-full bg-card border border-terracotta text-[12.5px] font-medium text-terracotta cursor-pointer"
+                style={{ minHeight: 44 }}
+              >
+                Une autre tenue
               </button>
             </div>
           </>

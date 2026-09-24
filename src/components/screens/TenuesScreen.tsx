@@ -1162,6 +1162,39 @@ export default function TenuesScreen() {
         </div>
       )}
 
+      {/* ENTRÉE VERS PLANIFIER (recette 24/09/2026, demandé).
+          Mêmes classes que la card « Et si on préparait la suite ? » de
+          l'accueil — bg-warm-bg, border-sand-border, rayon 22, serif 18 px,
+          sous-titre 11,5 px — plutôt qu'un sixième style de card sur un écran
+          qui en porte déjà cinq. Elle n'est pas extraite en composant partagé :
+          celle de l'accueil porte deux actions et une pastille Premium, celle
+          -ci une seule action ; un composant qui absorberait les deux prendrait
+          plus de paramètres qu'il n'économise de lignes.
+
+          Le titre ne nomme pas de jour. « Un évènement samedi ? » se lit très
+          bien sur une maquette et devient faux cinq jours sur sept ; calculer
+          le prochain samedi le rendrait vrai sans le rendre pertinent — rien
+          ne dit que l'évènement tombe un samedi.
+
+          Placée après les conseils et avant les feuilles : c'est la fin de la
+          lecture de la tenue du jour, donc le moment où regarder plus loin. */}
+      <button
+        onClick={actions.goPlanifier}
+        className="w-full text-left bg-warm-bg border border-sand-border rounded-[22px] px-4 py-[16px] mt-4 cursor-pointer flex items-center gap-3 transition-opacity active:opacity-80"
+      >
+        <span className="flex-1 min-w-0">
+          <span className="block font-serif text-[18px] text-ink leading-[1.2]" style={{ textWrap: "balance" }}>
+            Un évènement à venir ?
+          </span>
+          <span className="block text-[11.5px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
+            Une occasion, une date, un lieu — et la tenue est prête d&apos;avance.
+          </span>
+        </span>
+        <span aria-hidden="true" className="flex-shrink-0 text-terracotta text-[15px]">
+          →
+        </span>
+      </button>
+
       {/* LES DEUX FEUILLES. BottomSheet existe depuis le 24/08 (écran Ajouter)
           — overlay cliquable, hauteur plafonnée à 85 %, largeur alignée sur
           la coquille : rien à réinventer ici, et le comportement au clavier

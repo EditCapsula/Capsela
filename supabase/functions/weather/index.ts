@@ -33,6 +33,14 @@
 //   supabase functions deploy weather
 //
 // ------------------------------------------------------------------
+// 24/09/2026 — `mode=geo`, autocomplétion de ville pour « Planifier une
+// tenue ». Même remarque de compatibilité que `mode=forecast` ci-dessous :
+// sans le paramètre, la réponse ne change pas d'un octet, et AVANT le
+// redéploiement l'ancienne fonction ignore `mode` et rend la météo actuelle —
+// une réponse sans `places`, que le client détecte par la FORME et traite
+// comme « pas de suggestion », en retombant sur la saisie libre. Aucune
+// fenêtre de casse dans un sens comme dans l'autre.
+//
 // 23/09/2026 — `mode=forecast`, ajouté pour « Planifier une tenue ».
 //
 // Sans ce paramètre, la réponse est IDENTIQUE à celle d'avant : la tenue du
@@ -130,6 +138,53 @@ Deno.serve(async (req) => {
   // fonction SANS ce paramètre et reçoit exactement la même réponse qu'avant.
   let mode = url.searchParams.get("mode");
   if (!mode && bodyMode) mode = bodyMode;
+
+  // mode=geo : autocomplétion de ville (recette 24/09/2026). MÊME CLÉ, MÊME
+  // FOURNISSEUR — /geo/1.0/direct fait partie du palier gratuit OpenWeather
+  // déjà utilisé ici. Aucun nouveau service, aucun nouveau secret.
+  //
+  // Placé avant la construction de `query` : celle-ci exige lat/lon ou city,
+  // alors que la recherche part d'un fragment de nom (« Par… ») qui n'est ni
+  // l'un ni l'autre.
+  //
+  // Renvoie les COORDONNÉES en plus du nom. C'est tout l'intérêt : la
+  // prévision se demande ensuite sur lat/lon, donc sur le lieu choisi, et non
+  // sur une chaîne que /data/2.5/forecast réinterprète à sa façon — c'est ce
+  // qui règle « Parme » rendu pour « Parm » et les homonymes.
+  if (mode === "geo") {
+    const q = (city || "").trim();
+    if (q.length < 2) return json({ places: [] });
+    try {
+      const res = await fetch(
+        `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=5&appid=${apiKey}`
+      );
+      if (!res.ok) return json({ error: `OpenWeather a répondu ${res.status}` }, 502);
+      const data = await res.json();
+      const brut: unknown[] = Array.isArray(data) ? data : [];
+      // Proxy mince, comme les deux autres branches : le nom affiché, le
+      // dédoublonnage et la mise en forme sont du vocabulaire applicatif et
+      // vivent côté client, avec leurs tests.
+      const places = brut
+        .map((raw) => {
+          const e = raw as Record<string, unknown>;
+          // local_names.fr quand il existe : « Londres » plutôt que « London ».
+          const locales = e.local_names as Record<string, string> | undefined;
+          const name = (locales?.fr as string | undefined) || (e.name as string | undefined) || "";
+          if (!name || typeof e.lat !== "number" || typeof e.lon !== "number") return null;
+          return {
+            name,
+            country: typeof e.country === "string" ? e.country : "",
+            state: typeof e.state === "string" ? e.state : "",
+            lat: e.lat,
+            lon: e.lon,
+          };
+        })
+        .filter((v) => v !== null);
+      return json({ places });
+    } catch {
+      return json({ error: "Impossible de contacter OpenWeather" }, 502);
+    }
+  }
 
   let query: string;
   if (lat && lon) query = `lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
