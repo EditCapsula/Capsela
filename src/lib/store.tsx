@@ -30,6 +30,7 @@ import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { composeWardrobePool } from "./selectors";
+import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
@@ -88,6 +89,7 @@ function buildInitialState(): AppState {
     screen: "welcome",
     profileReturn: "home",
     legalReturn: "profile",
+    premiumReturn: "home",
     profileSetupStep: "genre",
     profileSetupFromEdit: false,
     profileSetupReturn: "profileEdit",
@@ -174,6 +176,8 @@ export interface Actions {
   goProfile: () => void;
   goProfileEdit: () => void;
   goLegal: () => void;
+  /** Ouvre la page Premium en mémorisant d'où l'on vient. */
+  goPremium: () => void;
   backFromLegal: () => void;
   goLogin: () => void;
   /**
@@ -322,6 +326,16 @@ interface CapselaContextValue {
    * valeur est seulement rendue lisible.
    */
   dressingLoaded: boolean;
+  /**
+   * Droit Premium. Dans le store et non dans un écran : le Dressing en a
+   * besoin pour son compteur et son bouton d'ajout, le store lui-même pour
+   * refuser une pièce de trop, et la page Premium pour se situer. Trois
+   * lecteurs, donc une seule source.
+   *
+   * "inconnu" tant que la vérification n'a pas eu lieu OU n'a pas pu aboutir
+   * — et dans cet état AUCUNE limite ne s'applique (cf. premium.ts).
+   */
+  etatPremium: EtatPremium;
   actions: Actions;
 }
 
@@ -409,6 +423,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // toute première génération se ferait sur un wardrobePool vide alors que
   // des pièces existent en base, le temps que la requête réponde.
   const [dressingLoaded, setDressingLoaded] = useState(false);
+  const [etatPremium, setEtatPremium] = useState<EtatPremium>("inconnu");
+  /* Comme poolRef/weatherRef : saveItem lit stateRef.current et non le rendu
+     courant, il lui faut donc une référence et pas la valeur capturée. */
+  const etatPremiumRef = useRef<EtatPremium>("inconnu");
+  useEffect(() => {
+    etatPremiumRef.current = etatPremium;
+  }, [etatPremium]);
   useEffect(() => {
     if (!ready) return;
     if (!isSupabaseConfigured || !userId) {
@@ -429,8 +450,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         reportDressingError("fetchOutfitFeedbackDuJour", err);
         return [];
       }),
-    ]).then(([items, history, savedLooks, avis]) => {
+      // Le droit Premium ne jette jamais : il rend "inconnu" quand il ne sait
+      // pas, et cet état n'applique aucune limite. Un échec ici ne doit pas
+      // enfermer quelqu'un hors de son propre dressing.
+      fetchEtatPremium(userId),
+    ]).then(([items, history, savedLooks, avis, premium]) => {
       if (cancelled) return;
+      setEtatPremium(premium);
       setState((s) => ({
         ...s,
         items,
@@ -766,6 +792,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goProfile: () => setState((s) => ({ ...s, profileReturn: s.screen === "profile" ? s.profileReturn : s.screen, screen: "profile" })),
     goProfileEdit: () => go("profileEdit"),
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
+    goPremium: () =>
+      setState((s) => ({ ...s, premiumReturn: s.screen === "premium" ? s.premiumReturn : s.screen, screen: "premium" })),
     backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
     goLogin: () => go("login"),
     goProfileSetup: (stepKey = "genre", fromEdit = false) =>
@@ -1064,6 +1092,16 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // directement (même pattern que poolRef/weatherRef) : aucune
       // dépendance au timing de setState.
       const s = stateRef.current;
+      // LIMITE DU DRESSING GRATUIT (24/09/2026). Dernière ligne de défense :
+      // l'écran Dressing renvoie déjà vers Premium avant d'ouvrir le
+      // formulaire, mais on peut arriver ici par d'autres chemins.
+      //
+      // Ne s'applique QU'À LA CRÉATION : `editingId` non nul veut dire
+      // qu'on modifie une pièce existante, et corriger une pièce déjà saisie
+      // n'ajoute rien au dressing. Fermer la modification d'un dressing
+      // au-dessus du plafond serait punir quelqu'un pour des pièces qu'il
+      // possédait avant la limite.
+      if (!s.editingId && !peutAjouter(etatPremiumRef.current, s.items.length)) return;
       // Contrainte produit : pas de sauvegarde tant que la saison n'est pas confirmée,
       // ni tant que le type de chaussure n'est pas choisi pour cette catégorie (R-B6),
       // ni tant que le sous-type n'est pas choisi pour veste/manteau (SUBTYPE_REQUIRED).
@@ -1590,6 +1628,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     wardrobePool,
     vestiairePool,
     dressingLoaded,
+    etatPremium,
     actions,
   };
 

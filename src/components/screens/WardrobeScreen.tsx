@@ -13,6 +13,7 @@ import { paletteHexes } from "@/lib/profile";
 import { inactivityInfo, isWishlistLook, lookWornCount, neverWornItems } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import type { Item, OccasionKey, SavedLook } from "@/lib/types";
+import { placesRestantes } from "@/lib/premium";
 
 /**
  * DRESSING — refonte de présentation, maquette du 23/09/2026.
@@ -188,7 +189,7 @@ function PiluleAction({
 }
 
 export default function WardrobeScreen() {
-  const { state, actions, vestiairePool, defaultCapsule, weather, dressingLoaded } = useCapsela();
+  const { state, actions, vestiairePool, defaultCapsule, weather, dressingLoaded, etatPremium } = useCapsela();
   const { profile } = useAuth();
   const items = state.items;
   const [lookFilter, setLookFilter] = useState<LookFilter>("all");
@@ -258,7 +259,21 @@ export default function WardrobeScreen() {
   }, [items.length, defaultCapsule, weather, state.workMode, state.dateContext, profile]);
 
   const nbCat = groups.length;
-  const compteur = `${nbCat} ${nbCat <= 1 ? "catégorie" : "catégories"} · ${items.length} ${items.length <= 1 ? "pièce" : "pièces"}`;
+  /**
+   * Le compteur annonce les places restantes UNIQUEMENT quand une limite
+   * s'applique réellement — jamais en Premium, jamais tant que le droit n'a
+   * pas pu être vérifié. `placesRestantes` rend null dans ces deux cas, et
+   * c'est ce null qui décide, pas un test refait ici.
+   *
+   * À zéro place, le compteur ne dit pas « 0 restante » : un zéro annoncé
+   * comme un résultat est le défaut déjà corrigé deux fois cette semaine. Il
+   * dit ce qui est vrai — le dressing est complet.
+   */
+  const restantes = placesRestantes(etatPremium, items.length);
+  const dressingPlein = restantes === 0;
+  const compteur =
+    `${nbCat} ${nbCat <= 1 ? "catégorie" : "catégories"} · ${items.length} ${items.length <= 1 ? "pièce" : "pièces"}` +
+    (restantes == null ? "" : dressingPlein ? " · dressing complet" : ` · ${restantes} de libre`);
 
   const enTete = (
     <>
@@ -278,9 +293,13 @@ export default function WardrobeScreen() {
             contient aussi des looks. Plein quand le dressing existe,
             détouré quand l'écran a déjà un CTA d'ajout dominant plus bas —
             deux boutons pleins de même intention se concurrenceraient. */}
+        {/* Plein : le bouton mène à Premium au lieu d'ouvrir un formulaire
+            qui refuserait d'enregistrer à la fin. Un refus à la sauvegarde,
+            après avoir photographié et renseigné une pièce, coûte bien plus
+            qu'un détour annoncé d'avance. */}
         <button
-          onClick={actions.openAdd}
-          aria-label="Ajouter une pièce à mon dressing"
+          onClick={dressingPlein ? actions.goPremium : actions.openAdd}
+          aria-label={dressingPlein ? "Dressing complet — découvrir Premium" : "Ajouter une pièce à mon dressing"}
           className={
             "flex items-center gap-[6px] rounded-full px-[14px] text-[12.5px] whitespace-nowrap flex-shrink-0 cursor-pointer " +
             (items.length > 0
@@ -289,8 +308,8 @@ export default function WardrobeScreen() {
           }
           style={{ minHeight: 40 }}
         >
-          {PLUS}
-          Ajouter une pièce
+          {!dressingPlein && PLUS}
+          {dressingPlein ? "Dressing complet" : "Ajouter une pièce"}
         </button>
       </div>
     </>

@@ -17,6 +17,7 @@ import TenuesScreen from "./screens/TenuesScreen";
 import HistoryScreen from "./screens/HistoryScreen";
 import PlanifierScreen from "./screens/PlanifierScreen";
 import ValiseScreen from "./screens/ValiseScreen";
+import PremiumScreen from "./screens/PremiumScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import ProfileScreen from "./screens/ProfileScreen";
@@ -48,7 +49,7 @@ const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
  * par le chevron du bandeau, qui remonte les étapes une à une puis rend la
  * main à l'accueil.
  */
-const FLOW_SCREENS = new Set(["planifier"]);
+const FLOW_SCREENS = new Set(["planifier", "premium"]);
 
 function Screens() {
   const { state, actions } = useCapsela();
@@ -117,6 +118,7 @@ function Screens() {
         {state.screen === "history" && <HistoryScreen />}
         {state.screen === "planifier" && <PlanifierScreen />}
         {state.screen === "valise" && <ValiseScreen />}
+        {state.screen === "premium" && <PremiumScreen />}
         {state.screen === "neverworn" && <NeverWornScreen />}
         {state.screen === "profileSetup" && <ProfileSetupScreen />}
         {state.screen === "profile" && <ProfileScreen />}
