@@ -7,6 +7,7 @@ import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport"
 import { useCapsela } from "@/lib/store";
 import { GENDER_DEPENDENT_FIELDS, fieldNeedsRevalidation, genderLabel, morphologyLabel, styleLabel } from "@/lib/profile";
 import { APP_VERSION } from "@/lib/data";
+import BoutonRetour from "@/components/BoutonRetour";
 
 export default function ProfileScreen() {
   const { profile, email, userId, demoMode, signOut, deleteAccount, error, clearError } = useAuth();
@@ -113,13 +114,7 @@ export default function ProfileScreen() {
     // encoche, les 100px laissaient le dernier élément trop près du bord.
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <div className="flex items-center gap-[14px]">
-        <button
-          onClick={() => actions.go(state.profileReturn)}
-          aria-label="Retour"
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+        <BoutonRetour onClick={() => actions.go(state.profileReturn)} label="Revenir à l'écran précédent" />
         <div className="font-serif text-[24px] text-ink">Ton profil</div>
       </div>
 

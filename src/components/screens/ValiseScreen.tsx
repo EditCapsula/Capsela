@@ -1,6 +1,7 @@
 "use client";
 
 import { useCapsela } from "@/lib/store";
+import BoutonRetour from "@/components/BoutonRetour";
 
 /**
  * Préparer une valise — destination Premium, brief Accueil du 22/09/2026.
@@ -13,13 +14,7 @@ export default function ValiseScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <div className="flex items-center gap-[14px]">
-        <button
-          onClick={actions.goHome}
-          aria-label="Revenir à l'accueil"
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+        <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" />
         <div className="font-serif text-[25px] text-ink">Préparer une valise</div>
       </div>
 

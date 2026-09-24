@@ -2,6 +2,7 @@
 
 import { APP_VERSION } from "@/lib/data";
 import { useCapsela } from "@/lib/store";
+import BoutonRetour from "@/components/BoutonRetour";
 
 const LEGAL_ROWS = [
   { label: "Mentions légales", sub: "Éditeur, hébergeur, contact" },
@@ -17,12 +18,7 @@ export default function LegalScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px] mt-[10px]">
-        <button
-          onClick={actions.backFromLegal}
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+        <BoutonRetour onClick={actions.backFromLegal} label="Revenir à l'écran précédent" />
         <div className="font-serif text-[24px] text-ink">Informations légales</div>
       </div>
 

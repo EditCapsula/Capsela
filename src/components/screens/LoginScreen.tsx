@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
+import BoutonRetour from "@/components/BoutonRetour";
 
 const INPUT_CLS =
   "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
@@ -41,15 +42,10 @@ export default function LoginScreen() {
   if (forgotOpen) {
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
-        <button
-          onClick={() => {
+        <BoutonRetour onClick={() => {
             setForgotOpen(false);
             setForgotSent(false);
-          }}
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+          }} label="Revenir à la connexion" />
 
         {forgotSent ? (
           <div className="mt-[30px] flex flex-col items-center text-center px-[10px] py-5">
@@ -103,12 +99,7 @@ export default function LoginScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
       <div className="flex items-center justify-between">
-        <button
-          onClick={actions.goAuth}
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+        <BoutonRetour onClick={actions.goAuth} label="Revenir à la création de compte" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo-full.svg" alt="L'édit Capsela" className="h-9 w-auto" />
         <div className="w-[38px] flex-shrink-0" />

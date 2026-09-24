@@ -17,6 +17,7 @@ import {
 import { rolePieceOf } from "@/lib/attributes";
 import { paletteHexes } from "@/lib/profile";
 import type { CategoryKey, Item } from "@/lib/types";
+import BoutonRetour from "@/components/BoutonRetour";
 
 const TOP_BOTTOM_CATS = new Set(["haut", ...BAS_CATS, "jupe"]);
 
@@ -136,12 +137,7 @@ export default function CreateLookScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
-        <button
-          onClick={actions.cancelCreateLook}
-          className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-        >
-          ←
-        </button>
+        <BoutonRetour onClick={actions.cancelCreateLook} label="Annuler et revenir" />
         <div className="font-serif text-[22px] text-ink">Créer un look</div>
       </div>
       <div className="text-[13px] text-muted mt-4 leading-[1.5]">

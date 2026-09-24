@@ -6,6 +6,7 @@ import { suggestName } from "@/lib/attributes";
 import { useCapsela } from "@/lib/store";
 import { neverWornItems, inactivityInfo } from "@/lib/selectors";
 import type { Item } from "@/lib/types";
+import BoutonRetour from "@/components/BoutonRetour";
 
 /**
  * Nom affiché sur la card (recette 25/08/2026) — un nom trop générique
@@ -26,7 +27,7 @@ export default function NeverWornScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <div className="flex items-center gap-[14px]">
-        <button onClick={actions.goTenues} className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer">←</button>
+        <BoutonRetour onClick={actions.goTenues} label="Revenir à la tenue du jour" />
         <div className="font-serif text-[25px] text-ink">Jamais portées</div>
       </div>
 

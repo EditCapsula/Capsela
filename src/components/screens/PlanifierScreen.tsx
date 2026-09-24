@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { useAuth } from "@/lib/auth";
@@ -389,15 +390,14 @@ export default function PlanifierScreen() {
         <AppHeader showAvatar={false} onBack={revenir} backLabel={vue === "intro" ? "Revenir à l'accueil" : "Revenir à l'étape précédente"} />
       </div>
 
+      {/* Le fil de l'onboarding, repris tel quel (24/09/2026, demandé). Il
+          portait ici quatre barres pleine largeur, écrites sans regarder
+          l'existant. Centré et non aligné à gauche : dans l'onboarding il
+          l'est entre le retour et sa gouttière miroir, et le bandeau de cet
+          écran centre déjà le logo juste au-dessus. */}
       {vue === "etape" && (
-        <div className="flex-shrink-0 flex gap-[5px] px-6 pb-[2px]" aria-hidden="true">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="flex-1 h-[3px] rounded-full"
-              style={{ background: i <= etape ? "var(--color-terracotta-deep)" : "var(--color-border)" }}
-            />
-          ))}
+        <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
+          <FilEtapes total={4} courante={etape - 1} />
         </div>
       )}
 

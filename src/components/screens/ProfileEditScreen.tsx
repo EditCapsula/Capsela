@@ -4,6 +4,7 @@ import { useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { readConsent, setConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
+import BoutonRetour from "@/components/BoutonRetour";
 import {
   GENDERS,
   WORK_DAYS,
@@ -165,12 +166,7 @@ export default function ProfileEditScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
-      <button
-        onClick={actions.goProfile}
-        className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-      >
-        ←
-      </button>
+      <BoutonRetour onClick={actions.goProfile} label="Revenir au profil" />
 
       <div className="flex flex-col items-center text-center mt-[6px]">
         <div
