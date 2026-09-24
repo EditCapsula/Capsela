@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
@@ -13,6 +13,7 @@ import { jourLocal } from "@/lib/outfitFeedback";
 import { joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { saisonCalendairePour, weatherForDay } from "@/lib/capsule";
 import { fetchPrevisionByCity } from "@/lib/weather";
+import { deleteTenuePlanifiee, fetchTenuesPlanifiees, repartirParEcheance, upsertTenuePlanifiee, type TenuePlanifiee } from "@/lib/planifier";
 import { paletteHexes } from "@/lib/profile";
 import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
@@ -210,9 +211,9 @@ function LigneChoix({
 
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, actions } = useCapsela();
-  const { profile } = useAuth();
+  const { profile, userId } = useAuth();
 
-  const [vue, setVue] = useState<"intro" | "etape" | "resultat">("intro");
+  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste">("intro");
   const [etape, setEtape] = useState(1);
   const [occ, setOcc] = useState<OccasionKey | null>(null);
   const [workMode, setWorkMode] = useState<WorkMode>("Présentiel");
@@ -238,6 +239,19 @@ export default function PlanifierScreen() {
    * alors la météo actuelle, sans `slots`). Les trois se disent de la même
    * façon à l'écran.
    */
+  /**
+   * TENUES PLANIFIÉES (table planned_outfits, migration 0030).
+   *
+   * Gardées ICI et non dans le store : elles n'ont qu'un seul consommateur.
+   * Le jour où l'écran Tenue en aura besoin — « le jour J, ce look devient ta
+   * tenue du jour » — elles monteront dans le store comme savedLooks. Les y
+   * mettre avant leur second lecteur alourdirait le store sans rien régler.
+   */
+  const [plans, setPlans] = useState<TenuePlanifiee[]>([]);
+  const [enregistrement, setEnregistrement] = useState(false);
+  const [onglet, setOnglet] = useState<"up" | "past">("up");
+  const [toast, setToast] = useState<string | null>(null);
+
   const [prevision, setPrevision] = useState<Prevision | null>(null);
   const [previsionEtat, setPrevisionEtat] = useState<"vide" | "encours" | "faite">("vide");
 
@@ -386,12 +400,94 @@ export default function PlanifierScreen() {
    * quittant l'étape 3, elle est presque toujours revenue quand on arrive
    * ici. Les étapes 1 à 3 ne sont jamais bloquées par elle.
    */
+  /* Chargement unique à l'ouverture de l'écran. `fetchTenuesPlanifiees` rend
+     [] en mode démo comme en cas d'échec : il n'y a donc pas d'état d'erreur
+     à afficher, seulement une liste vide. */
+  useEffect(() => {
+    if (!userId) return;
+    let annule = false;
+    fetchTenuesPlanifiees(userId).then((r) => {
+      if (!annule) setPlans(r);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [userId]);
+
+  const flash = (m: string) => {
+    setToast(m);
+    setTimeout(() => setToast(null), 2600);
+  };
+
+  const { aVenir, passees } = repartirParEcheance(plans);
+  const listeAffichee = onglet === "up" ? aVenir : passees;
+
+  /**
+   * « Garder cette tenue ». L'écriture précède l'affichage : la liste n'est
+   * mise à jour qu'une fois la ligne confirmée par la base, jamais avant
+   * (même précaution que saveItem). En cas d'échec on le dit — une tenue qu'on
+   * croit gardée et qui a disparu au rechargement coûte plus qu'un message.
+   */
+  const garder = async () => {
+    if (!userId || !occ || jour == null || !moment || !tenue || tenue.noCompleteOutfit) return;
+    setEnregistrement(true);
+    try {
+      const ligne = await upsertTenuePlanifiee(userId, {
+        jour: jourLocal(dansNJours(jour)),
+        moment,
+        occasion: occ,
+        sousChoix: sousChoix ? String(sousChoix.courant) : null,
+        lieu: lieu.trim(),
+        typeLieu,
+        dressingSeul,
+        pieceIds: tenue.ids,
+        temp: meteoMoment ? meteoMoment.temp : null,
+        weatherLabel: meteoMoment ? meteoMoment.label : null,
+      });
+      setPlans((l) => [...l.filter((x) => x.id !== ligne.id), ligne]);
+      setVue("liste");
+      setOnglet("up");
+      flash("Ajoutée à tes tenues planifiées");
+    } catch {
+      flash("L'enregistrement a échoué. Réessaie.");
+    } finally {
+      setEnregistrement(false);
+    }
+  };
+
+  const retirer = async (id: string) => {
+    const avant = plans;
+    setPlans((l) => l.filter((x) => x.id !== id));
+    try {
+      await deleteTenuePlanifiee(id);
+      flash("Tenue retirée");
+    } catch {
+      // Remise en place : la ligne est toujours en base, la masquer mentirait.
+      setPlans(avant);
+      flash("La suppression a échoué. Réessaie.");
+    }
+  };
+
+  const recommencer = () => {
+    setVue("etape");
+    setEtape(1);
+    setOcc(null);
+    setJour(null);
+    setMoment(null);
+    setLieu("");
+    setTypeLieu(null);
+    setDressingSeul(false);
+    setPrevision(null);
+    setPrevisionEtat("vide");
+  };
+
   const attend = etape === 4 && previsionEtat === "encours";
   const etapeValide =
     etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : etape === 3 ? !!lieu.trim() : true;
 
   const revenir = () => {
-    if (vue === "resultat") setVue("etape");
+    if (vue === "liste") setVue("intro");
+    else if (vue === "resultat") setVue("etape");
     else if (vue === "etape" && etape > 1) setEtape(etape - 1);
     else if (vue === "etape") setVue("intro");
     else actions.goHome();
@@ -464,6 +560,19 @@ export default function PlanifierScreen() {
                 </div>
               ))}
             </div>
+            {plans.length > 0 && (
+              <button
+                onClick={() => {
+                  setVue("liste");
+                  setOnglet("up");
+                }}
+                className="w-full flex items-center gap-3 mt-5 bg-card border border-border rounded-[20px] px-[15px] py-[13px] cursor-pointer text-left"
+              >
+                <span className="flex-1 text-[13px] font-medium text-ink">Mes tenues planifiées</span>
+                <span className="text-[11px] text-terracotta bg-warm-bg rounded-full px-[9px] py-[4px]">{plans.length}</span>
+              </button>
+            )}
+
             <div className="mt-5 rounded-[14px] bg-card border border-border px-[14px] py-3 text-[12px] text-muted-3 leading-[1.45]" style={{ textWrap: "pretty" }}>
               La météo du jour J est celle prévue sur place, dans la limite de ce que la prévision couvre —
               au-delà, l&apos;écran le dit plutôt que de l&apos;inventer. Rien n&apos;est conservé pour
@@ -738,15 +847,90 @@ export default function PlanifierScreen() {
                 </div>
 
                 <div className="text-[12px] text-muted leading-[1.5] mt-[14px] text-center" style={{ textWrap: "pretty" }}>
-                  Cette tenue n&apos;est pas conservée : la garder jusqu&apos;au jour J arrive avec la suite.
+                  Gardée, tu la retrouveras dans tes tenues planifiées jusqu&apos;au jour J.
                 </div>
               </>
             )}
           </>
         )}
+
+        {vue === "liste" && (
+          <>
+            <Surtitre>Planifier</Surtitre>
+            <TitreEtape a="Mes tenues" b="planifiées" />
+
+            <div className="flex gap-2 mt-4">
+              {([["up", `À venir${aVenir.length ? ` (${aVenir.length})` : ""}`], ["past", "Passées"]] as const).map(([cle, label]) => (
+                <button
+                  key={cle}
+                  onClick={() => setOnglet(cle)}
+                  aria-pressed={onglet === cle}
+                  className={
+                    "rounded-full px-4 text-[12.5px] cursor-pointer border transition-colors " +
+                    (onglet === cle ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-muted-3")
+                  }
+                  style={{ minHeight: 44 }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {listeAffichee.length === 0 ? (
+              <div className="mt-4 rounded-[20px] px-5 py-[26px] text-center text-[12.5px] text-muted leading-[1.5]" style={{ border: "1px dashed var(--color-sand-border)" }}>
+                {onglet === "up" ? "Rien de prévu pour l'instant." : "Tes tenues passées apparaîtront ici."}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-[9px] mt-4">
+                {listeAffichee.map((t) => {
+                  const d = new Date(`${t.jour}T12:00:00`);
+                  return (
+                    <div key={t.id} className="flex gap-3 items-center bg-card border border-border rounded-[20px] p-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] tracking-[.1em] uppercase text-terracotta">
+                          {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
+                        </div>
+                        <div className="font-serif text-[16px] text-ink mt-[3px]">{occasionShortLabel(t.occasion)}</div>
+                        <div className="text-[11.5px] text-muted mt-[2px]">
+                          {t.lieu} · {t.moment}
+                          {/* La prévision telle qu'elle était AU MOMENT DE
+                              PLANIFIER, jamais présentée comme celle du jour
+                              J : elle aura changé d'ici là. */}
+                          {t.temp != null && ` · ${t.temp}° prévus`}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => retirer(t.id)}
+                        aria-label={`Retirer la tenue du ${d.getDate()} ${MOIS[d.getMonth()]}`}
+                        className="w-11 h-11 flex-shrink-0 flex items-center justify-center cursor-pointer text-placeholder"
+                      >
+                        <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                          <path d="M5 7h14M10 7V5h4v2M7 7l1 12.5h8L17 7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-2 border-t border-border">
+      <div className="relative flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-2 border-t border-border">
+        {/* Ancré à la barre d'action elle-même (bottom: 100%) et non à une
+            hauteur devinée : la barre change de hauteur selon la vue — un
+            bouton, ou un bouton plus deux secondaires — et un toast posé à
+            une distance fixe finirait collé à l'un des deux cas. */}
+        {toast && (
+          <div
+            className="absolute inset-x-6 z-30 pointer-events-none rounded-[15px] px-4 py-[13px] text-[12.5px]"
+            style={{ bottom: "100%", marginBottom: 12, background: "var(--color-ink)", color: "var(--color-cream)" }}
+            aria-live="polite"
+          >
+            {toast}
+          </div>
+        )}
         {vue === "intro" && (
           <button
             onClick={() => {
@@ -792,14 +976,31 @@ export default function PlanifierScreen() {
             {attend ? "Un instant…" : etape === 4 ? "Voir ma tenue" : "Suivant"}
           </button>
         )}
+        {vue === "liste" && (
+          <button
+            onClick={recommencer}
+            className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
+            style={{ minHeight: 52 }}
+          >
+            + Planifier une tenue
+          </button>
+        )}
         {vue === "resultat" && (
           <>
+            {/* « Garder cette tenue » existe désormais vraiment (lot 3). Elle
+                est désactivée quand il n'y a pas de tenue à garder — un état
+                vide ne se planifie pas — et pendant l'écriture, pour qu'un
+                double tap ne parte pas deux fois. */}
             <button
-              onClick={actions.goHome}
-              className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
-              style={{ minHeight: 52 }}
+              onClick={garder}
+              disabled={enregistrement || !tenue || tenue.noCompleteOutfit}
+              className="w-full rounded-full text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer disabled:cursor-not-allowed"
+              style={{
+                minHeight: 52,
+                background: enregistrement || !tenue || tenue.noCompleteOutfit ? "var(--color-cream-dark-soft)" : "var(--color-terracotta-deep)",
+              }}
             >
-              Terminer
+              {enregistrement ? "Un instant…" : "Garder cette tenue"}
             </button>
             <div className="flex gap-2">
               <button
