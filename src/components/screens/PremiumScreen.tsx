@@ -116,14 +116,33 @@ interface Formule {
 }
 
 /**
- * Les deux formules de la maquette. Les montants y sont écrits en dur : ils
- * viendront des stores le jour où l'achat existera, chacun affichant le prix
- * localisé de son produit. En attendant, une seule source ici plutôt que
- * deux formulations à recoller.
+ * Les deux formules. Les montants sont écrits en dur : ils viendront des
+ * stores le jour où l'achat existera, chacun affichant le prix localisé de
+ * son produit. En attendant, une seule source ici plutôt que deux
+ * formulations à recoller.
+ *
+ * TARIFS ARBITRÉS LE 24/09/2026 : 4,99 € / mois, 54,99 € / an.
+ *
+ * Les deux chiffres dérivés ne sont pas écrits à l'estime, ils se recalculent
+ * depuis ces deux-là :
+ *
+ *   mensualisé annuel  54,99 / 12          = 4,5825   -> « 4,58 € / mois »
+ *   douze mensualités  4,99 x 12           = 59,88 €
+ *   économie           59,88 - 54,99       = 4,89 €
+ *   part économisée    4,89 / 59,88        = 8,166 %  -> « 8 % »
+ *
+ * ARRONDI VERS LE BAS, jamais vers le haut : 8,166 % s'affiche 8 % et non 9 %.
+ * Un pourcentage d'économie est une promesse chiffrée ; l'arrondir dans le
+ * sens qui arrange est le genre de détail qui se vérifie en trente secondes
+ * avec une calculatrice.
+ *
+ * Pour mémoire, les tarifs précédents (3,99 / 29,99) donnaient 37 %. Le
+ * nouveau couple ramène l'écart à 8 % — c'est un arbitrage de prix, pas une
+ * erreur de calcul, et l'écran l'affiche tel quel.
  */
 const FORMULES: Formule[] = [
-  { id: "annuel", label: "Premium annuel", prix: "29,99 € / an", sous: "2,50 € / mois", economie: "Économisez 37 %" },
-  { id: "mensuel", label: "Premium mensuel", prix: "3,99 € / mois", sous: "Sans engagement" },
+  { id: "annuel", label: "Premium annuel", prix: "54,99 € / an", sous: "4,58 € / mois", economie: "Économisez 8 %" },
+  { id: "mensuel", label: "Premium mensuel", prix: "4,99 € / mois", sous: "Sans engagement" },
 ];
 
 export default function PremiumScreen() {
