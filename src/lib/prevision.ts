@@ -39,6 +39,23 @@ export type MomentJournee = "Matin" | "Après-midi" | "Soirée" | "Toute la jour
  * les trois autres d'un bloc plutôt que d'être leur moyenne : un créneau ne
  * doit peser qu'une fois.
  */
+/**
+ * HORIZON RÉEL DE LA PRÉVISION, EN JOURS PLEINS À PARTIR DE DEMAIN.
+ *
+ * Ce n'est pas un réglage : c'est la capacité de l'endpoint réellement
+ * appelé. La fonction Edge `weather` en mode `forecast` interroge
+ * /data/2.5/forecast, qui rend 5 jours par pas de 3 h sur le palier gratuit
+ * d'OpenWeather (40 créneaux). Aucune ville n'en obtient davantage, donc la
+ * borne est connue AVANT même de savoir où l'on va — ce qui permet de
+ * l'annoncer dès l'étape « Pour quand ? », avant l'étape « Où ».
+ *
+ * `joursCouverts` reste la source de vérité une fois la réponse reçue : elle
+ * dérive la couverture des créneaux effectivement rendus, qui peuvent être
+ * moins nombreux (fin de journée, réponse partielle). Cette constante ne sert
+ * qu'à ce qu'on peut dire AVANT l'appel ; elle ne le remplace jamais.
+ */
+export const HORIZON_PREVISION_JOURS = 5;
+
 const FENETRES: Record<MomentJournee, [number, number]> = {
   Matin: [6, 12],
   "Après-midi": [12, 18],

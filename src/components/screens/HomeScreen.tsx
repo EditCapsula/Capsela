@@ -1096,9 +1096,21 @@ export default function HomeScreen() {
                 Un dîner samedi ? Une escapade ? Une semaine chargée ?
               </div>
             </div>
-            <span className="inline-flex items-center gap-[4px] rounded-full bg-card px-[9px] py-[4px] text-[9.5px] tracking-[.1em] uppercase text-terracotta flex-shrink-0 whitespace-nowrap">
-              <span aria-hidden="true">✦</span> Premium
-            </span>
+            {/* La pastille devient l'entrée de la page Premium (24/09/2026).
+                Elle était purement décorative : elle nommait une offre sans
+                dire où la voir, c'est-à-dire exactement l'entrée qui ne mène
+                nulle part que cet écran a déjà corrigée deux fois. Le dessin
+                ne change pas d'un pixel ; seule la zone touchable est portée
+                au plancher de 44 px, reprise en marge négative. */}
+            <button
+              onClick={actions.goPremium}
+              aria-label="Découvrir Capsela Premium"
+              className="flex-shrink-0 flex items-center cursor-pointer py-[13px] -my-[13px]"
+            >
+              <span className="inline-flex items-center gap-[4px] rounded-full bg-card px-[9px] py-[4px] text-[9.5px] tracking-[.1em] uppercase text-terracotta whitespace-nowrap">
+                <span aria-hidden="true">✦</span> Premium
+              </span>
+            </button>
           </div>
           {/* Deux actions VISUELLEMENT DISTINCTES (demandé) : chacune porte son
               propre glyphe au trait — un calendrier, une valise — là où les

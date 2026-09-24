@@ -263,6 +263,8 @@ export interface AppState {
   profileReturn: Screen;
   /** Écran vers lequel revenir en quittant Informations légales (toujours "profile" en pratique). */
   legalReturn: Screen;
+  /** Écran d'où l'on est entré dans Premium — on y revient en fermant. */
+  premiumReturn: Screen;
   /** Clé de l'étape (ex. "taille"), pas un index — le nombre d'étapes n'est plus fixe (Tâche 4, arbitrages 20/08/2026). */
   profileSetupStep: string;
   profileSetupFromEdit: boolean;
@@ -402,4 +404,5 @@ export type Screen =
   // Destinations Premium (brief Accueil 22/09/2026) — écrans d'attente
   // assumés, branchés pour que la carte ne mène pas dans le vide.
   | "planifier"
-  | "valise";
+  | "valise"
+  | "premium";
