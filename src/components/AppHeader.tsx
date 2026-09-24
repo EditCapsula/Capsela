@@ -39,8 +39,22 @@ export default function AppHeader({
           <button
             onClick={onBack}
             aria-label={backLabel}
+            /* 34 px dessinés, 44 px touchables (23/09/2026, parcours
+               « Planifier ») : le padding déborde la gouttière et la marge
+               négative le reprend, donc la mise en page ne bouge pas d'un
+               pixel — même technique que « Voir tout » sur l'accueil. Le
+               plancher de 44 px compte particulièrement ici : dans un
+               parcours à CTA propre, la barre d'onglets est masquée et ce
+               chevron est la SEULE sortie.
+
+               La taille est portée à 44 et reprise par -5 px de marge, plutôt
+               que 34 + padding + `box-content` : `* { box-sizing: border-box }`
+               est déclaré HORS couche dans globals.css, et une règle sans
+               couche l'emporte sur une utilitaire de Tailwind quelle que soit
+               sa spécificité — `box-content` restait donc sans effet (vérifié
+               en rendu : boxSizing calculé à border-box). */
             className={
-              "w-[34px] h-[34px] flex items-center justify-center cursor-pointer " +
+              "w-11 h-11 -m-[5px] flex items-center justify-center cursor-pointer " +
               (dark ? "text-cream" : "text-ink")
             }
           >
