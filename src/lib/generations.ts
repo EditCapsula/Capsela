@@ -24,8 +24,11 @@ export interface QuotaGeneration {
   /** false = la limite était déjà atteinte, rien n'a été consommé. */
   consomme: boolean;
   utilisees: number;
+  /** Limite EFFECTIVE du jour : la base + le bonus vidéo éventuel. */
   limite: number;
   premium: boolean;
+  /** 1 quand une vidéo a déjà été récompensée aujourd'hui, 0 sinon. */
+  bonus: number;
 }
 
 /**
@@ -81,6 +84,11 @@ export function lireQuota(data: unknown): QuotaGeneration | null {
   return {
     consomme: q.consomme,
     utilisees: q.utilisees,
+    // `bonus` est arrivé avec la migration 0033. Absent (base à 0032, ou
+    // réponse tronquée), il vaut 0 : aucune vidéo récompensée ce jour-là.
+    // Le lire en optionnel évite que l'app cesse de fonctionner entre les
+    // deux migrations.
+    bonus: typeof q.bonus === "number" ? q.bonus : 0,
     // La limite vient de la base, jamais de la constante d'affichage : si les
     // deux divergeaient un jour, c'est la base qui a raison — c'est elle qui
     // l'applique. La constante ne sert qu'à écrire le chiffre sur la vitrine.
@@ -91,3 +99,31 @@ export function lireQuota(data: unknown): QuotaGeneration | null {
 
 /** Le chiffre annoncé sur l'écran Premium, pour n'avoir qu'une source côté client. */
 export const LIMITE_AFFICHEE = GENERATIONS_GRATUITES_PAR_JOUR;
+
+/**
+ * Consomme une génération APRÈS une vidéo regardée jusqu'au bout.
+ *
+ * POURQUOI PLUSIEURS ESSAIS, ET POURQUOI CE N'EST PAS UNE BOUCLE DE SECOURS :
+ * le bonus n'est pas accordé par le téléphone. C'est le réseau publicitaire
+ * qui appelle notre serveur quand il a constaté le visionnage, et cet appel
+ * peut arriver une fraction de seconde après la fin de la vidéo — parfois
+ * après que l'écran est revenu. Redemander n'est donc pas réessayer un appel
+ * qui a échoué : c'est attendre un évènement extérieur dont on ne contrôle
+ * pas l'instant.
+ *
+ * Redemander est sans danger : tant que le bonus n'est pas là, la base refuse
+ * et N'INCRÉMENTE RIEN — c'est le `where` de sa clause de conflit qui le
+ * garantit, pas une précaution d'ici.
+ *
+ * Le nombre d'essais est borné et court. Au-delà, on rend le dernier quota
+ * connu et l'écran dit que la vidéo n'a pas abouti, plutôt que de tourner.
+ */
+export async function consommerApresVideo(essais = 4, attenteMs = 900): Promise<QuotaGeneration | null> {
+  let dernier: QuotaGeneration | null = null;
+  for (let i = 0; i < essais; i++) {
+    dernier = await consommerGeneration();
+    if (generationAutorisee(dernier)) return dernier;
+    if (i < essais - 1) await new Promise((r) => setTimeout(r, attenteMs));
+  }
+  return dernier;
+}
