@@ -1103,7 +1103,7 @@ export default function HomeScreen() {
                 ne change pas d'un pixel ; seule la zone touchable est portée
                 au plancher de 44 px, reprise en marge négative. */}
             <button
-              onClick={actions.goPremium}
+              onClick={() => actions.goPremium()}
               aria-label="Découvrir Capsela Premium"
               className="flex-shrink-0 flex items-center cursor-pointer py-[13px] -my-[13px]"
             >
@@ -1117,7 +1117,18 @@ export default function HomeScreen() {
               deux précédentes partageaient un carré plein indistinct. */}
           <div className="grid grid-cols-2 gap-[10px] mt-[13px]" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
             <ActionSuite onClick={actions.goPlanifier} label="Planifier une tenue" glyphe={GLYPHE_CALENDRIER} />
-            <ActionSuite onClick={actions.goValise} label="Préparer une valise" glyphe={GLYPHE_VALISE} />
+            {/* « Préparer une valise » MÈNE À PREMIUM (24/09/2026, arbitré).
+                Elle menait jusqu'ici à un écran d'attente dont le seul rôle
+                déclaré était « que l'entrée ne mène pas dans le vide » — un
+                écran qui ne lit rien, n'appelle rien, et renvoyait vers la
+                capsule. Premium dit la même chose en la vendant, et l'écran
+                d'attente est supprimé plutôt que laissé inaccessible.
+
+                Planifier n'est PAS passée derrière ce mur : elle fonctionne,
+                et personne ne peut encore s'abonner — la mettre derrière un
+                paywall qui n'encaisse pas reviendrait à la retirer à tout le
+                monde. */}
+            <ActionSuite onClick={() => actions.goPremium("valise")} label="Préparer une valise" glyphe={GLYPHE_VALISE} />
           </div>
         </div>
       </div>

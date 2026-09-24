@@ -16,7 +16,6 @@ import CapsuleScreen from "./screens/CapsuleScreen";
 import TenuesScreen from "./screens/TenuesScreen";
 import HistoryScreen from "./screens/HistoryScreen";
 import PlanifierScreen from "./screens/PlanifierScreen";
-import ValiseScreen from "./screens/ValiseScreen";
 import PremiumScreen from "./screens/PremiumScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
@@ -117,7 +116,6 @@ function Screens() {
         {state.screen === "tenues" && <TenuesScreen />}
         {state.screen === "history" && <HistoryScreen />}
         {state.screen === "planifier" && <PlanifierScreen />}
-        {state.screen === "valise" && <ValiseScreen />}
         {state.screen === "premium" && <PremiumScreen />}
         {state.screen === "neverworn" && <NeverWornScreen />}
         {state.screen === "profileSetup" && <ProfileSetupScreen />}

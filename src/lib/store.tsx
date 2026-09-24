@@ -90,6 +90,7 @@ function buildInitialState(): AppState {
     profileReturn: "home",
     legalReturn: "profile",
     premiumReturn: "home",
+    premiumOrigine: null,
     profileSetupStep: "genre",
     profileSetupFromEdit: false,
     profileSetupReturn: "profileEdit",
@@ -170,14 +171,13 @@ export interface Actions {
   goTenues: () => void;
   goHistory: () => void;
   goPlanifier: () => void;
-  goValise: () => void;
   goNeverWorn: () => void;
   goWardrobePieces: () => void;
   goProfile: () => void;
   goProfileEdit: () => void;
   goLegal: () => void;
   /** Ouvre la page Premium en mémorisant d'où l'on vient. */
-  goPremium: () => void;
+  goPremium: (origine?: "valise") => void;
   backFromLegal: () => void;
   goLogin: () => void;
   /**
@@ -786,14 +786,18 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     goHistory: () => go("history"),
     goPlanifier: () => go("planifier"),
-    goValise: () => go("valise"),
     goNeverWorn: () => go("neverworn"),
     goWardrobePieces: () => go("wardrobePieces"),
     goProfile: () => setState((s) => ({ ...s, profileReturn: s.screen === "profile" ? s.profileReturn : s.screen, screen: "profile" })),
     goProfileEdit: () => go("profileEdit"),
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
-    goPremium: () =>
-      setState((s) => ({ ...s, premiumReturn: s.screen === "premium" ? s.premiumReturn : s.screen, screen: "premium" })),
+    goPremium: (origine) =>
+      setState((s) => ({
+        ...s,
+        premiumReturn: s.screen === "premium" ? s.premiumReturn : s.screen,
+        premiumOrigine: origine ?? null,
+        screen: "premium",
+      })),
     backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
     goLogin: () => go("login"),
     goProfileSetup: (stepKey = "genre", fromEdit = false) =>

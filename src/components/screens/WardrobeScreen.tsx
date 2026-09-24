@@ -298,7 +298,7 @@ export default function WardrobeScreen() {
             après avoir photographié et renseigné une pièce, coûte bien plus
             qu'un détour annoncé d'avance. */}
         <button
-          onClick={dressingPlein ? actions.goPremium : actions.openAdd}
+          onClick={() => (dressingPlein ? actions.goPremium() : actions.openAdd())}
           aria-label={dressingPlein ? "Dressing complet — découvrir Premium" : "Ajouter une pièce à mon dressing"}
           className={
             "flex items-center gap-[6px] rounded-full px-[14px] text-[12.5px] whitespace-nowrap flex-shrink-0 cursor-pointer " +

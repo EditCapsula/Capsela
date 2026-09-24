@@ -174,6 +174,29 @@ export default function PremiumScreen() {
           Des outils pour aller plus loin avec ta garde-robe.
         </div>
 
+        {/* « CE QUE TU VOULAIS FAIRE » (maquette Premium Gates). Quelqu'un qui
+            arrive ici après avoir touché « Préparer une valise » n'a pas la
+            même question en tête que quelqu'un qui explore l'offre depuis la
+            pastille ✦ : le rappel lui dit qu'on a compris sa demande, et que
+            c'est bien elle qui est derrière l'abonnement.
+
+            Rien ne s'affiche quand l'origine est inconnue — un encart qui
+            annoncerait « ce que tu voulais faire » sans savoir quoi serait
+            une phrase pour rien. */}
+        {state.premiumOrigine === "valise" && (
+          <div className="flex items-start gap-[11px] mt-[14px] bg-warm-bg rounded-[16px] px-[14px] py-[13px]">
+            <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">
+              <Glyphe>{G_VALISE}</Glyphe>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[10.5px] tracking-[.14em] uppercase text-terracotta">
+                Ce que tu voulais faire
+              </span>
+              <span className="block text-[13px] text-ink leading-[1.4] mt-[3px]">Préparer une valise</span>
+            </span>
+          </div>
+        )}
+
         <div className="mt-[18px]" style={{ borderTop: "1px solid var(--color-border)" }}>
           {AVANTAGES.map((a) => (
             <div key={a.titre} className="py-[14px]" style={{ borderBottom: "1px solid var(--color-border)" }}>

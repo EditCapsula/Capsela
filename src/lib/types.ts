@@ -265,6 +265,15 @@ export interface AppState {
   legalReturn: Screen;
   /** Écran d'où l'on est entré dans Premium — on y revient en fermant. */
   premiumReturn: Screen;
+  /**
+   * Fonctionnalité qui a conduit à l'écran Premium, ou null quand on y est
+   * venu de soi-même (la pastille ✦ de l'accueil).
+   *
+   * Sert à la ligne « Ce que tu voulais faire » de la maquette Premium Gates :
+   * quelqu'un qui arrive là après avoir touché « Préparer une valise » n'a pas
+   * la même question en tête que quelqu'un qui explore l'offre.
+   */
+  premiumOrigine: "valise" | null;
   /** Clé de l'étape (ex. "taille"), pas un index — le nombre d'étapes n'est plus fixe (Tâche 4, arbitrages 20/08/2026). */
   profileSetupStep: string;
   profileSetupFromEdit: boolean;
@@ -404,5 +413,4 @@ export type Screen =
   // Destinations Premium (brief Accueil 22/09/2026) — écrans d'attente
   // assumés, branchés pour que la carte ne mène pas dans le vide.
   | "planifier"
-  | "valise"
   | "premium";
