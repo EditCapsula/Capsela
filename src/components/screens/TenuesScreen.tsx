@@ -767,6 +767,52 @@ export default function TenuesScreen() {
               <span aria-hidden="true">✦</span> Avis d&apos;un proche
             </button>
           </div>
+
+          {/* « Autre tenue » REVIENT DANS LA CARD (24/09/2026, demandé). Il
+              avait été déplacé en bas d'écran le 22/09 sous la forme d'un
+              pavé « Pas complètement convaincue ? », retiré du même coup :
+              deux emplacements pour une même action n'auraient rien réglé.
+
+              Sa place ici est cohérente avec ce que la card est devenue — on
+              y lit ce que c'est, pourquoi, à quoi ça ressemble, puis ce qu'on
+              peut en faire : la porter, l'enregistrer, la montrer, ou en voir
+              une autre. Son rang se lit à sa forme, pas à sa position : le
+              CTA est plein, les deux secondaires translucides, celui-ci n'est
+              qu'un texte.
+
+              Comportement strictement inchangé — en mode exploration, rejoue
+              un tirage sur la capsule explorée, jamais regen()/wardrobePool
+              (recette 24/08/2026). N'a de sens que s'il y a une tenue à
+              régénérer, d'où la même garde qu'avant.
+
+              Le glyphe est dessiné et non le caractère ↻ : sur le terracotta,
+              un caractère système impose son dessin et sa graisse (même
+              arbitrage que les glyphes d'occasion, 23/09). Ce n'est pas une
+              flèche de navigation — la convention du 23/09 vise les CTA
+              principaux qui mènent ailleurs, celui-ci rejoue sur place.
+
+              44 px de hauteur pour 12,5 px de texte : le plancher tactile de
+              l'app. Le crème sur terracotta-deep donne 4,51:1, au-dessus du
+              seuil AA du petit texte. */}
+          {!noCompleteOutfit && (
+            <button
+              onClick={state.exploredStyleId ? actions.viewExploredOutfit : actions.regenOutfit}
+              className="mt-[2px] w-full flex items-center justify-center gap-[7px] text-[12.5px] text-cream cursor-pointer"
+              style={{ minHeight: 44 }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                <path
+                  d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+                <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Autre tenue
+            </button>
+          )}
         </div>
       )}
 
@@ -1114,34 +1160,6 @@ export default function TenuesScreen() {
             </button>
           </div>
         </div>
-      )}
-
-      {/* ALTERNATIVE — en bas, jamais à hauteur du look recommandé.
-          « ↻ Autre tenue » était un lien de 12 px posé à droite du titre, donc
-          à égalité visuelle avec la recommandation elle-même. Ici, la
-          proposition est claire sur son rang : on la lit après avoir vu la
-          tenue et ses pièces.
-
-          En mode exploration, rejoue un tirage sur la capsule explorée —
-          jamais regen()/wardrobePool (recette 24/08/2026). Comportement
-          inchangé, seule la place et la formulation bougent. */}
-      {!noCompleteOutfit && (
-        <button
-          onClick={state.exploredStyleId ? actions.viewExploredOutfit : actions.regenOutfit}
-          className="mt-[18px] w-full flex items-center gap-3 text-left bg-card border border-border rounded-[18px] px-4 py-[14px] cursor-pointer"
-        >
-          <span aria-hidden="true" className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
-          <span className="flex-1 min-w-0">
-            <span className="block text-[12.5px] text-[#3F3B34] leading-[1.4]">Pas complètement convaincue ?</span>
-            <span className="block text-[13px] text-ink mt-[2px]">Voir une autre tenue</span>
-          </span>
-          <span
-            aria-hidden="true"
-            className="w-9 h-9 rounded-full bg-terracotta text-cream flex items-center justify-center text-[14px] flex-shrink-0"
-          >
-            →
-          </span>
-        </button>
       )}
 
       {/* LES DEUX FEUILLES. BottomSheet existe depuis le 24/08 (écran Ajouter)
