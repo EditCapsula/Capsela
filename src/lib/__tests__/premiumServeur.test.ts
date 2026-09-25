@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { REGLES_ACCES } from "../autorisations";
 import { estActif } from "../premium";
 import {
   assertPremium,
+  autoriserFonctionnalite,
   estActif as estActifServeur,
+  REGLES_ACCES as REGLES_ACCES_SERVEUR,
   type LecteurPremium,
 } from "../../../supabase/functions/_shared/premium.ts";
 
@@ -68,5 +71,24 @@ describe("assertPremium — refus AVANT tout appel au modèle", () => {
 
   it("exception réseau : refus aussi", async () => {
     expect((await assertPremium(client({ data: null, error: null }, true), { id: "u1" }, MAINTENANT)).ok).toBe(false);
+  });
+});
+
+describe("autoriserFonctionnalite — une règle, la même des deux côtés", () => {
+  it("les règles serveur sont celles de l'app (miroir)", () => {
+    expect(REGLES_ACCES_SERVEUR).toEqual(REGLES_ACCES);
+  });
+
+  it("AVIS_DE_STYLISTE : Premium confirmé seulement", async () => {
+    const premium = client({ data: { actif: true, expire_le: null }, error: null });
+    const gratuit = client({ data: null, error: null });
+    const panne = client({ data: null, error: { message: "timeout" } });
+    expect(await autoriserFonctionnalite(premium, { id: "u1" }, "AVIS_DE_STYLISTE", MAINTENANT)).toEqual({ ok: true });
+    expect((await autoriserFonctionnalite(gratuit, { id: "u1" }, "AVIS_DE_STYLISTE", MAINTENANT)).ok).toBe(false);
+    expect(await autoriserFonctionnalite(panne, { id: "u1" }, "AVIS_DE_STYLISTE", MAINTENANT)).toEqual({
+      ok: false,
+      statut: 503,
+      raison: "statut_illisible",
+    });
   });
 });

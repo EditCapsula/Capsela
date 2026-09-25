@@ -77,3 +77,33 @@ export async function assertPremium(
     return { ok: false, statut: 503, raison: "statut_illisible" };
   }
 }
+
+/**
+ * Règles d'accès côté serveur — COPIE de REGLES_ACCES (src/lib/autorisations.ts),
+ * vérifiée par test miroir. Une fonctionnalité, une règle (arbitrage du
+ * 25/09/2026, point 8).
+ */
+export const REGLES_ACCES = {
+  AVIS_DE_STYLISTE: "PREMIUM_REQUIRED",
+} as const;
+
+/**
+ * Autorisation d'utiliser une fonctionnalité — contrôle n° 3 de l'endpoint,
+ * après l'authentification. PREMIUM_REQUIRED : `assertPremium`, donc refus si
+ * le statut n'est pas CONFIRMÉ (pas de confirmation Premium = pas d'appel
+ * OpenAI).
+ *
+ * À ARBITRER: quota d'analyses par utilisateur Premium (point 8) — aucun
+ * quota appliqué tant qu'il n'est pas tranché ; il s'ajouterait ici.
+ */
+export async function autoriserFonctionnalite(
+  client: LecteurPremium,
+  user: { id: string },
+  fonctionnalite: keyof typeof REGLES_ACCES,
+  maintenant = new Date()
+): Promise<VerdictPremium> {
+  switch (REGLES_ACCES[fonctionnalite]) {
+    case "PREMIUM_REQUIRED":
+      return assertPremium(client, user, maintenant);
+  }
+}

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS, WEATHER_ICONS } from "@/lib/data";
@@ -12,6 +13,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { explainRecommendation } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
+import { decisionAcces } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
 import { useCapsela, defaultOccasionToday } from "@/lib/store";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
@@ -518,18 +520,27 @@ export default function HomeScreen() {
   const { state, geoCity, geoLoading, vestiairePool, weather, etatPremium, actions } = useCapsela();
 
   /**
-   * AVIS DE STYLISTE — accès (docs/avis-de-styliste.md, sections 4 et 5).
-   * Premium CONFIRMÉ → écran direct ; tout autre statut → Premium Gate.
+   * AVIS DE STYLISTE — accès (docs/avis-de-styliste.md sections 4 et 5,
+   * arbitrages du 25/09/2026). Règle unique AVIS_DE_STYLISTE →
+   * PREMIUM_REQUIRED (autorisations.ts) : Premium confirmé → écran ; gratuit,
+   * expiré, démo → Premium Gate. Un statut encore inconnu n'est jamais pris
+   * pour du Premium : la carte passe en vérification, le statut est relu, et
+   * seul un Premium confirmé ouvre l'écran — sinon, le Gate.
    *
-   * À ARBITRER: distinction Free / sans abonnement / non connecté (point 9,
-   * « pas de préférence » le 25/09/2026). Retenu, le plus réversible : tout
-   * statut autre que "premium" — gratuit, inconnu, mode démo — voit le Gate.
-   * C'est l'inverse de la règle « échoue en ouvrant » des autres limites
-   * (premium.ts) : ici un accès accordé à tort déclencherait un appel payant.
+   * Le Gate est une feuille posée sur l'écran courant : « Plus tard » la
+   * referme et l'on reste exactement là où l'on était.
    */
   const [gateAvisStyliste, setGateAvisStyliste] = useState(false);
-  const ouvrirAvisStyliste = () => {
-    if (etatPremium === "premium") actions.goAvisStyliste();
+  const [verificationAvis, setVerificationAvis] = useState(false);
+  const ouvrirAvisStyliste = async () => {
+    if (verificationAvis) return;
+    const decision = decisionAcces("AVIS_DE_STYLISTE", etatPremium, false);
+    if (decision === "acces") return actions.goAvisStyliste();
+    if (decision === "gate") return setGateAvisStyliste(true);
+    setVerificationAvis(true);
+    const etat = await actions.verifierEtatPremium();
+    setVerificationAvis(false);
+    if (decisionAcces("AVIS_DE_STYLISTE", etat, true) === "acces") actions.goAvisStyliste();
     else setGateAvisStyliste(true);
   };
 
@@ -1182,6 +1193,7 @@ export default function HomeScreen() {
       <div className="px-6 mt-4">
         <button
           onClick={ouvrirAvisStyliste}
+          aria-busy={verificationAvis}
           className="w-full min-w-0 text-left bg-card border border-border rounded-[22px] px-4 pt-[15px] pb-[6px] cursor-pointer transition-opacity active:opacity-90"
         >
           <span className="flex items-start justify-between gap-3">
@@ -1194,8 +1206,11 @@ export default function HomeScreen() {
             Montre ta tenue à Capsela et découvre ce qui fonctionne, ce que tu peux ajuster et les pièces de ton dressing à
             essayer.
           </span>
-          <span className="flex items-center min-h-[44px] mt-[2px] text-[12px] tracking-[.1em] uppercase text-terracotta">
+          {/* Vérification du statut (point 7) : l'indicateur de chargement de
+              l'app, à la place d'aucun texte nouveau. */}
+          <span className="flex items-center gap-[10px] min-h-[44px] mt-[2px] text-[12px] tracking-[.1em] uppercase text-terracotta">
             Obtenir mon avis
+            {verificationAvis && <LoadingSpinner size={22} />}
           </span>
         </button>
       </div>

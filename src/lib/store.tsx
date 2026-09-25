@@ -32,6 +32,7 @@ import { choisirMeteo, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosit
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
+import { etatSimule, lireProfilSimule } from "./simulationPremium";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
@@ -189,6 +190,13 @@ export interface Actions {
   goPremium: (origine?: "valise") => void;
   /** Écran « Avis de styliste » (docs/avis-de-styliste.md). Réservé Premium : l'accueil ouvre le Premium Gate à la place pour tout autre statut. */
   goAvisStyliste: () => void;
+  /**
+   * Relit le statut Premium quand il est encore inconnu, avant de trancher un
+   * accès (arbitrage du 25/09/2026, point 7). Rend le statut obtenu — jamais
+   * "premium" par défaut : sans Supabase, sans session, ou au-delà de 5 s, il
+   * reste "inconnu", et la règle d'accès montre alors le Premium Gate.
+   */
+  verifierEtatPremium: () => Promise<EtatPremium>;
   backFromLegal: () => void;
   goLogin: () => void;
   /**
@@ -458,9 +466,19 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   }, [etatPremium]);
   useEffect(() => {
     if (!ready) return;
+    // Simulation du statut Premium : développement uniquement (null en
+    // production, cf. simulationPremium.ts) — elle prime sur la base, y
+    // compris en mode démo, pour parcourir chaque cas d'accès.
+    // La condition sur NODE_ENV est écrite ICI, en constante, et pas seulement
+    // dans lireProfilSimule : Next la remplace par "production" au build, le
+    // minifieur réduit `simule` à null et retire tout le code de simulation du
+    // bundle (vérifié le 25/09/2026 : plus aucune chaîne de simulation dans out/).
+    const simule = process.env.NODE_ENV !== "production" ? lireProfilSimule() : null;
     if (!isSupabaseConfigured || !userId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      /* eslint-disable react-hooks/set-state-in-effect */
+      if (simule) setEtatPremium(etatSimule(simule));
       setDressingLoaded(true);
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
     let cancelled = false;
@@ -482,7 +500,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       fetchEtatPremium(userId),
     ]).then(([items, history, savedLooks, avis, premium]) => {
       if (cancelled) return;
-      setEtatPremium(premium);
+      setEtatPremium(simule ? etatSimule(simule) : premium);
       setState((s) => ({
         ...s,
         items,
@@ -880,6 +898,16 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: "premium",
       })),
     goAvisStyliste: () => go("avisStyliste"),
+    verifierEtatPremium: async () => {
+      const simule = process.env.NODE_ENV !== "production" ? lireProfilSimule() : null;
+      if (simule) return etatSimule(simule);
+      if (!isSupabaseConfigured || !userId) return "inconnu";
+      // À ARBITRER: délai maximal de la vérification (valeur réversible : 5 s).
+      const delai = new Promise<EtatPremium>((resolve) => setTimeout(() => resolve("inconnu"), 5000));
+      const etat = await Promise.race([fetchEtatPremium(userId), delai]);
+      if (etat !== "inconnu") setEtatPremium(etat);
+      return etat;
+    },
     backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
     goLogin: () => go("login"),
     goProfileSetup: (stepKey = "genre", fromEdit = false) =>
