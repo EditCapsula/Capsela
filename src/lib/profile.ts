@@ -379,3 +379,62 @@ export function tailleBasLabelFor(gender: Gender | null): string {
 }
 
 export const WORK_DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+/**
+ * COMPLÉTUDE DU PROFIL STYLE (refonte du profil, 25/09/2026).
+ *
+ * Aucun pourcentage inventé : la complétude est le rapport entre les champs
+ * du profil style qui s'APPLIQUENT à cette personne et ceux qui sont
+ * renseignés. Un champ sans aucune valeur possible pour son genre n'est pas
+ * « manquant », il n'existe pas pour elle : la morphologie côté Homme
+ * (taxonomie non activée, Tâche 4) ou tant que le genre n'est pas connu —
+ * même règle que GENDER_DEPENDENT_FIELDS.valuesFor.
+ *
+ * Une valeur « à revalider » (stockée mais hors des valeurs de son genre)
+ * compte comme manquante : elle n'est plus une réponse valable.
+ *
+ * Les tailles ne comptent comme renseignées que complètes (haut, bas,
+ * pointure) : chacune pré-remplit l'ajout d'une pièce de sa catégorie.
+ */
+export type ChampProfilStyle = "genre" | "style" | "morphologie" | "palette" | "tailles";
+
+export interface ChampCompletude {
+  cle: ChampProfilStyle;
+  libelle: string;
+  renseigne: boolean;
+}
+
+export function champsProfilStyle(profile: Profile): ChampCompletude[] {
+  const morpho = GENDER_DEPENDENT_FIELDS.find((f) => f.key === "morphology")!;
+  const champs: ChampCompletude[] = [
+    { cle: "genre", libelle: "Genre", renseigne: Boolean(genderLabel(profile.gender)) },
+    { cle: "style", libelle: "Style", renseigne: Boolean(styleLabel(profile.styles[0], profile.gender)) },
+  ];
+  if (morpho.valuesFor(profile.gender).length > 0) {
+    champs.push({
+      cle: "morphologie",
+      libelle: "Morphologie",
+      renseigne: Boolean(profile.morphology) && !fieldNeedsRevalidation(morpho, profile),
+    });
+  }
+  champs.push(
+    { cle: "palette", libelle: "Palette", renseigne: profile.paletteCouleurs.length > 0 },
+    { cle: "tailles", libelle: "Tailles", renseigne: Boolean(profile.tailleHaut && profile.tailleBas && profile.pointure) }
+  );
+  return champs;
+}
+
+export interface Completude {
+  total: number;
+  renseignes: number;
+  manquants: ChampCompletude[];
+  /** Arrondi à l'entier — calculé, jamais écrit en dur. */
+  pourcentage: number;
+}
+
+export function completudeProfil(profile: Profile): Completude {
+  const champs = champsProfilStyle(profile);
+  const manquants = champs.filter((c) => !c.renseigne);
+  const renseignes = champs.length - manquants.length;
+  return { total: champs.length, renseignes, manquants, pourcentage: Math.round((renseignes / champs.length) * 100) };
+}
