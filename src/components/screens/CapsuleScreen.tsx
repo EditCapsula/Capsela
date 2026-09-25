@@ -88,6 +88,21 @@ function occasionPhraseFor(occasion: OccasionKey, workMode: WorkMode, dateContex
 }
 
 
+/**
+ * Visuel de chaque saison (fournis le 25/09/2026 : natures mortes sans
+ * personne, 1536 × 1024). Convertis en WebP 1200 × 800, qualité 82 — la
+ * largeur couvre le plus grand affichage (432 px de contenu) en écran haute
+ * densité ; 617 Ko les quatre au lieu de 10,2 Mo en PNG, PSNR ≥ 34,8 dB
+ * (Été, le plus détaillé). Une seule image chargée à la fois : celle de la
+ * saison affichée.
+ */
+const VISUEL_SAISON: Record<CapsuleSeason, string> = {
+  Printemps: "/images/saisons/printemps.webp",
+  Été: "/images/saisons/ete.webp",
+  Automne: "/images/saisons/automne.webp",
+  Hiver: "/images/saisons/hiver.webp",
+};
+
 /** « 1 pièce » / « 12 pièces ». */
 function pieces(n: number): string {
   return `${n} ${n > 1 ? "pièces" : "pièce"}`;
@@ -402,6 +417,22 @@ export default function CapsuleScreen() {
               </button>
             );
           })}
+        </div>
+
+        {/* Bandeau de saison, sous le sélecteur : il change avec lui. Ratio
+            d'origine (3:2) conservé tel quel — aucun recadrage — et
+            dimensions déclarées pour que rien ne saute au chargement. */}
+        <div className="mt-[16px] rounded-[20px] overflow-hidden border border-border bg-card" style={{ aspectRatio: "3/2" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={capsuleSeason}
+            src={VISUEL_SAISON[capsuleSeason]}
+            alt=""
+            width={1200}
+            height={800}
+            decoding="async"
+            className="w-full h-full object-cover block"
+          />
         </div>
 
         {/* Introduction : une phrase dont chaque partie est vraie de la
