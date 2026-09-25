@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import BottomSheet from "@/components/BottomSheet";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
@@ -190,6 +191,25 @@ const DOW = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const DOW_LONG = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
+/**
+ * « Demain », « Dans 3 jours », ou rien.
+ *
+ * L'indicateur NE DOUBLE JAMAIS LA DATE au-delà d'une semaine : « DANS 24
+ * JOURS » à côté de « DIM. 19 OCT. » est deux fois la même information, et la
+ * moins utile des deux gagne en place. Au-delà, la date parle seule.
+ */
+function echeanceCourte(jour: string, aujourdhui: string): string | null {
+  const a = Date.parse(`${jour}T12:00:00`);
+  const b = Date.parse(`${aujourdhui}T12:00:00`);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  const n = Math.round((a - b) / 86400000);
+  if (n < 0) return null;
+  if (n === 0) return "Aujourd'hui";
+  if (n === 1) return "Demain";
+  if (n <= 7) return `Dans ${n} jours`;
+  return null;
+}
+
 function dansNJours(n: number): Date {
   const d = new Date();
   d.setHours(12, 0, 0, 0);
@@ -270,10 +290,14 @@ function LigneChoix({
 }
 
 export default function PlanifierScreen() {
-  const { state, weather, defaultCapsule, actions } = useCapsela();
+  const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
   const { profile, userId } = useAuth();
 
-  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste">("intro");
+  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail">("intro");
+  /** Tenue planifiée ouverte en détail, ou dont le menu « … » est déplié. */
+  const [planOuvert, setPlanOuvert] = useState<TenuePlanifiee | null>(null);
+  const [menuPlan, setMenuPlan] = useState<TenuePlanifiee | null>(null);
+  const [aSupprimer, setASupprimer] = useState<TenuePlanifiee | null>(null);
   const [etape, setEtape] = useState(1);
   const [occ, setOcc] = useState<OccasionKey | null>(null);
   const [workMode, setWorkMode] = useState<WorkMode>("Présentiel");
@@ -337,6 +361,7 @@ export default function PlanifierScreen() {
   const [prevision, setPrevision] = useState<Prevision | null>(null);
   const [previsionEtat, setPrevisionEtat] = useState<"vide" | "encours" | "faite">("vide");
 
+  const occLongDe = (k: OccasionKey) => OCCASIONS.find(([x]) => x === k)?.[1] ?? occasionShortLabel(k);
   const occLabel = occ && occ !== "all" ? occasionShortLabel(occ) : "";
   const occLong = occ ? (OCCASIONS.find(([k]) => k === occ)?.[1] ?? "") : "";
 
@@ -445,6 +470,24 @@ export default function PlanifierScreen() {
     const source = dressingSeul ? state.items : [...state.items, ...defaultCapsule];
     return tenue.ids.map((id) => source.find((i) => i.id === id)).filter((i): i is Item => !!i);
   }, [tenue, state.items, defaultCapsule, dressingSeul]);
+
+  /**
+   * POOL DE RÉSOLUTION STABLE pour les tenues DÉJÀ PLANIFIÉES — le même que
+   * LookDetailScreen et HistoryScreen, et pour la même raison : `wardrobePool`
+   * ne contient que les suggestions de la capsule du style COURANT, alors
+   * qu'une tenue gardée il y a trois semaines peut référencer des pièces
+   * d'une autre capsule. `state.items + vestiairePool` couvre l'intégralité
+   * du possible, quel que soit le style du moment.
+   *
+   * CE QUI LEVAIT MA RÉSERVE DU LOT 3. J'avais écarté les vignettes en
+   * disant qu'une pièce résolue sur le pool courant pouvait montrer autre
+   * chose que la tenue gardée. Avec ce pool-ci, les pièces du catalogue se
+   * résolvent TOUJOURS — seule une pièce du dressing supprimée depuis
+   * manque, et elle manque en silence plutôt que d'être remplacée.
+   */
+  const poolStable = useMemo(() => [...state.items, ...vestiairePool], [state.items, vestiairePool]);
+  const piecesDuPlan = (t: TenuePlanifiee): Item[] =>
+    t.pieceIds.map((id) => poolStable.find((i) => i.id === id)).filter((i): i is Item => !!i);
 
   const idsDressing = useMemo(() => new Set(state.items.map((i) => i.id)), [state.items]);
   const nbDressing = pieces.filter((p) => idsDressing.has(p.id)).length;
@@ -647,7 +690,10 @@ export default function PlanifierScreen() {
   }, [etape, vue]);
 
   const revenir = () => {
-    if (vue === "liste") setVue("intro");
+    if (vue === "detail") {
+      setPlanOuvert(null);
+      setVue("liste");
+    } else if (vue === "liste") setVue("intro");
     else if (vue === "resultat") setVue("etape");
     else if (vue === "etape" && etape > 1) setEtape(etape - 1);
     else if (vue === "etape") setVue("intro");
@@ -1138,6 +1184,56 @@ export default function PlanifierScreen() {
           </>
         )}
 
+        {/* LE DÉTAIL MONTRE LA TENUE GARDÉE, PAS UNE TENUE RECALCULÉE.
+            Réutiliser la vue « resultat » aurait été plus court, mais elle
+            rejoue le moteur : on aurait affiché une autre tenue que celle
+            qu'elle a enregistrée, sous le titre de celle-ci. */}
+        {vue === "detail" && planOuvert && (() => {
+          const t = planOuvert;
+          const d = new Date(`${t.jour}T12:00:00`);
+          const pieces = piecesDuPlan(t);
+          const manquantes = t.pieceIds.length - pieces.length;
+          return (
+            <>
+              <Surtitre>Tenue planifiée</Surtitre>
+              <TitreEtape a={occasionShortLabel(t.occasion)} b={t.lieu.trim() ? `· ${t.lieu.trim()}` : ""} />
+              <div className="text-[11px] tracking-[.14em] uppercase text-muted mt-[7px]">
+                {DOW_LONG[d.getDay()]} {d.getDate()} {MOIS[d.getMonth()]} · {t.moment}
+              </div>
+
+              {pieces.length > 0 ? (
+                <div className="mt-[14px] rounded-[24px] p-4" style={{ background: "var(--color-terracotta-deep)" }}>
+                  <OutfitComposition items={pieces} variant="hero" />
+                </div>
+              ) : (
+                <div className="mt-[14px] bg-card border border-border rounded-[20px] p-[15px] text-[12px] text-muted-3 leading-[1.5]">
+                  Les pièces de cette tenue ne sont plus dans ton dressing.
+                </div>
+              )}
+
+              {/* On dit ce qui manque plutôt que de compléter avec autre
+                  chose : une pièce retirée du dressing depuis la
+                  planification ne doit pas être remplacée en silence. */}
+              {manquantes > 0 && pieces.length > 0 && (
+                <div className="text-[12px] text-muted mt-3 leading-[1.45]">
+                  {manquantes === 1 ? "Une pièce de cette tenue n'est plus" : `${manquantes} pièces de cette tenue ne sont plus`} dans
+                  ton dressing.
+                </div>
+              )}
+
+              <div className="mt-[14px] bg-card border border-border rounded-[20px] p-[15px]">
+                <div className="font-serif text-[18px] text-ink">Le contexte</div>
+                <div className="text-[12px] text-muted-3 leading-[1.6] mt-2">
+                  {occLongDe(t.occasion)}
+                  {t.sousChoix ? ` · ${t.sousChoix}` : ""}
+                  {t.typeLieu ? ` · ${t.typeLieu}` : ""}
+                  {t.temp != null ? ` · ${t.temp}°${t.weatherLabel ? ` ${t.weatherLabel.toLowerCase()}` : ""} prévus à la planification` : ""}
+                </div>
+              </div>
+            </>
+          );
+        })()}
+
         {vue === "liste" && (
           <>
             <Surtitre>Planifier</Surtitre>
@@ -1161,36 +1257,118 @@ export default function PlanifierScreen() {
             </div>
 
             {listeAffichee.length === 0 ? (
-              <div className="mt-4 rounded-[20px] px-5 py-[26px] text-center text-[12px] text-muted leading-[1.5]" style={{ border: "1px dashed var(--color-sand-border)" }}>
-                {onglet === "up" ? "Rien de prévu pour l'instant." : "Tes tenues passées apparaîtront ici."}
+              /* ÉTAT VIDE — deux textes, parce que les deux situations ne se
+                 ressemblent pas : à venir, il y a quelque chose à faire ;
+                 passées, il n'y a qu'à attendre. Le CTA du pied de page dit
+                 déjà « Planifier une tenue », donc l'état vide « à venir »
+                 ne le répète pas en bouton. */
+              <div
+                className="mt-4 rounded-[20px] px-5 py-[30px] text-center"
+                style={{ border: "1px dashed var(--color-sand-border)" }}
+              >
+                <div className="font-serif text-[18px] text-ink leading-[1.25]">
+                  {onglet === "up" ? "Aucune tenue planifiée" : "Aucune tenue passée"}
+                </div>
+                <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
+                  {onglet === "up"
+                    ? "Prépare ton prochain moment, et laisse Capsela composer le look."
+                    : "Tes tenues planifiées apparaîtront ici une fois leur date passée."}
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-[9px] mt-4">
+              <div className="flex flex-col gap-3 mt-4">
                 {listeAffichee.map((t) => {
                   const d = new Date(`${t.jour}T12:00:00`);
+                  const pieces = piecesDuPlan(t);
+                  const echeance = onglet === "up" ? echeanceCourte(t.jour, jourLocal()) : null;
+                  const passee = onglet === "past";
                   return (
-                    <div key={t.id} className="flex gap-3 items-center bg-card border border-border rounded-[20px] p-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">
-                          {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
-                        </div>
-                        <div className="font-serif text-[15px] text-ink mt-[3px]">{occasionShortLabel(t.occasion)}</div>
-                        <div className="text-[11px] text-muted mt-[2px]">
-                          {t.lieu} · {t.moment}
-                          {/* La prévision telle qu'elle était AU MOMENT DE
-                              PLANIFIER, jamais présentée comme celle du jour
-                              J : elle aura changé d'ici là. */}
-                          {t.temp != null && ` · ${t.temp}° prévus`}
-                        </div>
-                      </div>
+                    <div
+                      key={t.id}
+                      className="relative bg-card border border-border rounded-[20px] overflow-hidden"
+                      style={{ opacity: passee ? 0.78 : 1 }}
+                    >
+                      {/* TOUTE LA CARTE EST CLIQUABLE, et le « … » est posé
+                          PAR-DESSUS plutôt que dedans : un bouton imbriqué
+                          dans un bouton est invalide en HTML. Le conteneur
+                          reste un <div>, la zone cliquable est un <button>
+                          qui couvre le contenu, le menu flotte au-dessus. */}
                       <button
-                        onClick={() => retirer(t.id)}
-                        aria-label={`Retirer la tenue du ${d.getDate()} ${MOIS[d.getMonth()]}`}
-                        className="w-11 h-11 flex-shrink-0 flex items-center justify-center cursor-pointer text-placeholder"
+                        onClick={() => {
+                          setPlanOuvert(t);
+                          setVue("detail");
+                        }}
+                        className="w-full text-left cursor-pointer"
                       >
-                        <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                          <path d="M5 7h14M10 7V5h4v2M7 7l1 12.5h8L17 7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        {/* L'APERÇU DU LOOK — vraies pièces, vrais visuels,
+                            via le même composant que la page Tenue. Rien ne
+                            s'affiche quand aucune pièce ne se résout : une
+                            tuile vide dirait moins que pas de tuile. */}
+                        {pieces.length > 0 && (
+                          <div className="px-3 pt-3">
+                            <div className="rounded-[15px] overflow-hidden" style={{ background: "var(--color-warm-bg)" }}>
+                              {/* TROIS PIÈCES AU PLUS DANS L'APERÇU. Mesuré :
+                                  au-delà, `compact` passe sur un second rang
+                                  et la carte gagne ~145 px — la date, le lieu
+                                  et la météo tombent alors sous le pli, ce
+                                  que le §20 du brief interdit. La carte sert
+                                  à RECONNAÎTRE le look, pas à l'inventorier ;
+                                  « Voir la tenue » montre tout. */}
+                              <OutfitComposition items={pieces.slice(0, 3)} variant="compact" />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="px-4 pt-[13px] pb-[14px]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Tenue planifiée</span>
+                            {echeance && (
+                              <span className="text-[10px] tracking-[.14em] uppercase text-muted">· {echeance}</span>
+                            )}
+                          </div>
+
+                          <div className="font-serif text-[18px] text-ink leading-[1.2] mt-[5px]">
+                            {occasionShortLabel(t.occasion)}
+                          </div>
+
+                          {/* DATE ET LIEU SUR DEUX LIGNES. Réunis, ils
+                              donnaient « Sens, Bourgogne-Franche-Comté,
+                              France · Après-midi » — une ligne où le moment
+                              se perdait derrière le pays. */}
+                          <div className="text-[11px] tracking-[.14em] uppercase text-muted mt-[7px]">
+                            {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]} · {t.moment}
+                          </div>
+                          {t.lieu.trim() && (
+                            <div className="text-[12px] text-muted-3 mt-[3px] truncate">{t.lieu}</div>
+                          )}
+
+                          {/* LA MÉTÉO N'EST PAS RAPPELÉE AU SERVEUR : elle a
+                              été enregistrée avec la tenue (planned_outfits.
+                              temp / weather_label), telle qu'elle était au
+                              moment de planifier. Ouvrir cet écran ne
+                              déclenche donc aucun appel. Et rien ne s'affiche
+                              quand rien n'a été enregistré — jamais une
+                              météo inventée. */}
+                          {t.temp != null && (
+                            <>
+                              <div className="border-t border-border mt-[11px]" />
+                              <div className="text-[12px] text-muted-3 mt-[10px]">
+                                {t.temp}°{t.weatherLabel ? ` · ${t.weatherLabel}` : ""}
+                                <span className="text-muted"> — prévus à la planification</span>
+                              </div>
+                            </>
+                          )}
+
+                          <div className="text-[12px] text-terracotta mt-[11px]">Voir la tenue →</div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => setMenuPlan(t)}
+                        aria-label={`Actions pour la tenue du ${d.getDate()} ${MOIS[d.getMonth()]}`}
+                        className="absolute top-[6px] right-[6px] w-11 h-11 flex items-center justify-center cursor-pointer text-muted"
+                      >
+                        <span aria-hidden="true" className="text-[17px] leading-none">⋯</span>
                       </button>
                     </div>
                   );
@@ -1271,7 +1449,7 @@ export default function PlanifierScreen() {
             className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
             style={{ minHeight: 52 }}
           >
-            + Planifier un nouvel évènement
+            + Planifier une tenue
           </button>
         )}
         {vue === "resultat" && (
@@ -1323,6 +1501,83 @@ export default function PlanifierScreen() {
         )}
       </div>
 
+      {/* LE MENU « … » — BottomSheet, le seul composant modal de l'app. Il
+          n'existe pas de popover, et en créer un pour trois lignes ajouterait
+          un motif à maintenir. La corbeille quitte la carte : une action
+          destructive ne doit pas être la plus visible des secondaires. */}
+      <BottomSheet title="Cette tenue planifiée" open={!!menuPlan} onClose={() => setMenuPlan(null)}>
+        <div className="flex flex-col">
+          <button
+            onClick={() => {
+              const t = menuPlan;
+              setMenuPlan(null);
+              if (t) { setPlanOuvert(t); setVue("detail"); }
+            }}
+            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
+            style={{ minHeight: 52 }}
+          >
+            Voir la tenue
+          </button>
+          <button
+            onClick={() => {
+              const t = menuPlan;
+              setMenuPlan(null);
+              if (!t) return;
+              /* « Modifier cet évènement » rouvre le parcours PRÉ-REMPLI avec
+                 ce qui avait été choisi : repartir de zéro obligerait à
+                 ressaisir ce qu'on vient de lire à l'écran. */
+              setOcc(t.occasion);
+              setMoment(t.moment);
+              setLieu(t.lieu);
+              setTypeLieu(t.typeLieu);
+              setDressingSeul(t.dressingSeul);
+              setVue("etape");
+              setEtape(1);
+            }}
+            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
+            style={{ minHeight: 52 }}
+          >
+            Modifier cet évènement
+          </button>
+          <button
+            onClick={() => { const t = menuPlan; setMenuPlan(null); setASupprimer(t); }}
+            className="text-left px-1 py-[14px] text-[13px] text-terracotta cursor-pointer"
+            style={{ minHeight: 52 }}
+          >
+            Supprimer
+          </button>
+        </div>
+      </BottomSheet>
+
+      {/* CONFIRMATION — la suppression retire une ligne de la base et n'a
+          aucune annulation après coup. Elle se demande. */}
+      <BottomSheet title="Supprimer cette tenue planifiée ?" open={!!aSupprimer} onClose={() => setASupprimer(null)}>
+        <div className="flex flex-col">
+          <div className="text-[13px] text-muted-3 leading-[1.5]">
+            La tenue et sa planification seront supprimées. Tes pièces, elles, restent dans ton dressing.
+          </div>
+          <button
+            onClick={() => {
+              const t = aSupprimer;
+              setASupprimer(null);
+              if (!t) return;
+              if (planOuvert?.id === t.id) { setPlanOuvert(null); setVue("liste"); }
+              retirer(t.id);
+            }}
+            className="w-full rounded-full bg-terracotta-deep text-cream text-[12px] tracking-[.1em] uppercase cursor-pointer mt-4"
+            style={{ minHeight: 52 }}
+          >
+            Supprimer
+          </button>
+          <button
+            onClick={() => setASupprimer(null)}
+            className="w-full text-[12px] text-muted-3 cursor-pointer mt-1"
+            style={{ minHeight: 44 }}
+          >
+            Annuler
+          </button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }
