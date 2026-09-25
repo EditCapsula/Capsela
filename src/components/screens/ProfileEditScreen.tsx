@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { I_CINTRE, I_ETINCELLE, I_GENRE, I_INTENSITE, I_METRE, I_PALETTE, I_SILHOUETTE, LigneProfil, PastillesPalette, Surtitre, resumeTailles } from "@/components/ProfilUI";
 import { useAuth } from "@/lib/auth";
 import { CITIES } from "@/lib/data";
 import { jourLocal } from "@/lib/outfitFeedback";
+import { fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import { useCapsela } from "@/lib/store";
 import {
   GENDERS,
@@ -121,11 +122,40 @@ export default function ProfileEditScreen() {
   // VILLE ET DATE DE NAISSANCE (demandé le 25/09/2026 : elles n'avaient
   // aucun écran de modification). Deux feuilles, comme le genre.
   //
-  // La ville se CHOISIT dans CITIES, elle ne se tape pas : c'est la seule
-  // liste que l'app sait lire (store.tsx, profileCityFallback — une ville
-  // hors liste retomberait silencieusement sur la première). Proposer une
-  // saisie libre ferait croire à une ville prise en compte qui ne l'est pas.
+  // LA VILLE : N'IMPORTE LAQUELLE, TROUVÉE PAR LA RECHERCHE (correctif
+  // météo du 25/09/2026). Sa météo réelle est désormais demandée par son nom
+  // (fetchWeatherByCity) : elle n'a plus à figurer dans CITIES. La recherche
+  // passe par l'autocomplétion de Planifier (fetchVilles, même service), et
+  // on n'enregistre qu'une ville PROPOSÉE — jamais une saisie libre, qu'une
+  // faute de frappe rendrait introuvable sans que rien ne le dise. CITIES
+  // reste en raccourcis quand la recherche est vide.
   const [villeOuverte, setVilleOuverte] = useState(false);
+  const [recherche, setRecherche] = useState("");
+  const [suggestions, setSuggestions] = useState<VilleSuggeree[] | null>([]);
+  useEffect(() => {
+    const q = recherche.trim();
+    if (!villeOuverte || q.length < 2) return;
+    let annule = false;
+    const t = setTimeout(() => {
+      fetchVilles(q)
+        .then((v) => {
+          if (!annule) setSuggestions(v);
+        })
+        .catch(() => {
+          if (!annule) setSuggestions(null);
+        });
+    }, 280);
+    return () => {
+      annule = true;
+      clearTimeout(t);
+    };
+  }, [recherche, villeOuverte]);
+  const enRecherche = recherche.trim().length >= 2;
+  const choisirVille = (nom: string) => {
+    setVilleOuverte(false);
+    setRecherche("");
+    if (nom !== profile.city) saveProfile({ ...profile, city: nom });
+  };
   const [dateOuverte, setDateOuverte] = useState(false);
   const [dateBrouillon, setDateBrouillon] = useState(profile.birthdate ?? "");
   // Bornes de la date : jamais dans le futur, jamais avant 1900. Calculées à
@@ -246,31 +276,57 @@ export default function ProfileEditScreen() {
         <div className="text-[12px] text-muted leading-[1.45] mb-3">
           Utilisée pour la météo quand la géolocalisation n&apos;est pas disponible.
         </div>
-        <div className="flex flex-col max-h-[52vh] overflow-y-auto -mx-1 px-1" role="radiogroup" aria-label="Ville">
-          {CITIES.map((c) => {
-            const actif = profile.city === c.city;
-            return (
-              <button
-                key={c.city}
-                role="radio"
-                aria-checked={actif}
-                onClick={() => {
-                  setVilleOuverte(false);
-                  if (!actif) saveProfile({ ...profile, city: c.city });
-                }}
-                className="flex items-center justify-between gap-3 min-h-[48px] px-1 border-b border-border last:border-b-0 text-left cursor-pointer"
-              >
-                <span className={"text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>
-                  {c.city} <span className="text-muted">· {c.country}</span>
-                </span>
-                {actif && (
-                  <span aria-hidden="true" className="text-terracotta text-[14px]">
-                    ✓
+        <input
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder="Rechercher une ville"
+          aria-label="Rechercher une ville"
+          autoComplete="off"
+          autoCapitalize="words"
+          className="w-full bg-card border border-border rounded-[14px] px-4 min-h-[48px] text-[14px] text-ink font-sans"
+        />
+        <div className="flex flex-col max-h-[46vh] overflow-y-auto -mx-1 px-1 mt-2" role="radiogroup" aria-label="Ville">
+          {enRecherche ? (
+            suggestions === null ? (
+              <div className="text-[12px] text-muted py-3 px-1">Recherche indisponible pour l&apos;instant — efface pour choisir dans la liste.</div>
+            ) : suggestions.length === 0 ? (
+              <div className="text-[12px] text-muted py-3 px-1">Aucune ville trouvée.</div>
+            ) : (
+              suggestions.map((v) => (
+                <button
+                  key={`${v.lat},${v.lon}`}
+                  role="radio"
+                  aria-checked={profile.city === v.name}
+                  onClick={() => choisirVille(v.name)}
+                  className="flex items-center gap-3 min-h-[48px] px-1 border-b border-border last:border-b-0 text-left cursor-pointer"
+                >
+                  <span className="text-[13px] text-ink truncate">{libelleVille(v)}</span>
+                </button>
+              ))
+            )
+          ) : (
+            CITIES.map((c) => {
+              const actif = profile.city === c.city;
+              return (
+                <button
+                  key={c.city}
+                  role="radio"
+                  aria-checked={actif}
+                  onClick={() => choisirVille(c.city)}
+                  className="flex items-center justify-between gap-3 min-h-[48px] px-1 border-b border-border last:border-b-0 text-left cursor-pointer"
+                >
+                  <span className={"text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>
+                    {c.city} <span className="text-muted">· {c.country}</span>
                   </span>
-                )}
-              </button>
-            );
-          })}
+                  {actif && (
+                    <span aria-hidden="true" className="text-terracotta text-[14px]">
+                      ✓
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
         </div>
       </BottomSheet>
 

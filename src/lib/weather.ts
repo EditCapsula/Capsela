@@ -43,6 +43,68 @@ export async function fetchWeatherByCoords(lat: number, lon: number): Promise<Ci
 }
 
 /**
+ * Météo ACTUELLE d'une ville, par son nom (correctif du 25/09/2026). Même
+ * fonction Edge et même appel que par coordonnées — `{ city }` au lieu de
+ * `{ lat, lon }`, un chemin que la fonction sert depuis toujours : aucun
+ * redéploiement. Null en mode démo, en cas d'échec ou de réponse mal formée.
+ */
+export async function fetchWeatherByCity(city: string): Promise<City | null> {
+  if (!isSupabaseConfigured) return null;
+  const nom = city.trim();
+  if (!nom) return null;
+  try {
+    const { data, error } = await getSupabase().functions.invoke("weather", { body: { city: nom } });
+    if (error || !data || data.error || typeof data.temp !== "number" || typeof data.label !== "string") return null;
+    return {
+      city: typeof data.city === "string" && data.city ? data.city : nom,
+      country: typeof data.country === "string" ? data.country : "",
+      temp: data.temp,
+      label: data.label,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** D'où vient la météo affichée — dit à l'écran, jamais tu. */
+export type SourceMeteo = "position" | "ville" | "derniere_position" | "defaut";
+
+/**
+ * LA RÈGLE UNIQUE DU CHOIX DE LA MÉTÉO (correctif du 25/09/2026).
+ *
+ * Avant : position en direct, sinon DERNIÈRE POSITION CONNUE, sinon une
+ * entrée de CITIES — dont la température est écrite en dur (Paris 24°,
+ * Ensoleillé). Trois défauts : la ville du profil n'était jamais interrogée ;
+ * la dernière position gardait la température du jour où elle avait été
+ * enregistrée, présentée comme celle d'aujourd'hui ; et elle passait devant
+ * la ville même quand « Utiliser la météo de ma position » était désactivé.
+ *
+ * Désormais, dans l'ordre :
+ *   1. la position en direct, si la géolocalisation l'a donnée ;
+ *   2. la VRAIE météo actuelle de la ville du profil ;
+ *   3. la dernière position connue — seulement si la météo de position est
+ *      activée : c'est un repli de la géolocalisation, pas de la ville ;
+ *   4. des valeurs par défaut, annoncées comme telles à l'écran. La ville
+ *      affichée reste celle du profil : on ne montre pas « Paris » à qui
+ *      habite ailleurs, et l'écran dit que la météo est indisponible.
+ */
+export function choisirMeteo(e: {
+  live: City | null;
+  ville: City | null;
+  derniere: City | null;
+  geoActive: boolean;
+  villeProfil: string;
+  defauts: City[];
+}): { city: City; source: SourceMeteo } {
+  if (e.live) return { city: e.live, source: "position" };
+  if (e.ville) return { city: e.ville, source: "ville" };
+  if (e.geoActive && e.derniere) return { city: e.derniere, source: "derniere_position" };
+  const nom = e.villeProfil.trim();
+  const base = e.defauts.find((c) => c.city === nom) ?? e.defauts[0];
+  return { city: { ...base, city: nom || base.city }, source: "defaut" };
+}
+
+/**
  * Prévision pour un lieu nommé — null si indisponible, l'appelant affiche
  * alors « pas encore de prévision » plutôt qu'une valeur inventée.
  *

@@ -90,7 +90,7 @@ function ExploreStyleCard({
 }
 
 export default function TenuesScreen() {
-  const { state, weather, geoCity, geoLoading, geoIsLive, wardrobePool, vestiairePool, actions } = useCapsela();
+  const { state, weather, geoCity, geoLoading, geoIsLive, sourceMeteo, wardrobePool, vestiairePool, actions } = useCapsela();
 
   /**
    * LIMITE DE GÉNÉRATIONS — « Autre tenue », 2 par jour sans abonnement.
@@ -562,9 +562,17 @@ export default function TenuesScreen() {
               {geoCity.temp}° · {geoCity.label}
             </span>
           </div>
+          {/* LA SOURCE DE LA MÉTÉO, DITE TELLE QU'ELLE EST (correctif du
+              25/09/2026). « Position par défaut » couvrait jusqu'ici trois
+              situations différentes — dont des températures écrites en dur,
+              présentées comme la météo du jour. */}
           {!geoIsLive && (
             <div className="text-[10px] text-placeholder mt-[6px] px-[5px]">
-              Position par défaut — active la géolocalisation pour ta météo du jour exacte.
+              {sourceMeteo === "ville"
+                ? "Météo actuelle de ta ville — active la géolocalisation pour celle de ta position."
+                : sourceMeteo === "derniere_position"
+                  ? "Position indisponible — dernière météo enregistrée à ta position."
+                  : "Météo indisponible pour l'instant — tenue composée sur des valeurs par défaut."}
             </div>
           )}
         </>

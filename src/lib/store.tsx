@@ -28,7 +28,7 @@ import {
   uploadDressingPhoto,
 } from "./dressing";
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
-import { fetchWeatherByCoords, getBrowserPosition } from "./weather";
+import { choisirMeteo, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
@@ -327,6 +327,8 @@ interface CapselaContextValue {
   geoLoading: boolean;
   /** true si geoCity reflète une position géolocalisée en direct (pas un fallback à signaler comme tel). */
   geoIsLive: boolean;
+  /** D'où vient geoCity : position en direct, météo réelle de la ville du profil, dernière position connue, ou valeurs par défaut (cf. choisirMeteo). */
+  sourceMeteo: SourceMeteo;
   /** Capsule par défaut personnalisée (suggestions du catalogue). */
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
@@ -549,10 +551,53 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // position courante). Résolu (succès, échec ou géoloc désactivée) : ville
   // en direct, sinon dernière position connue, sinon la ville de profil —
   // geoIsLive distingue ce cas pour l'indiquer clairement à l'écran.
-  const geoLoading = geoStatus === "loading";
+  // MÉTÉO RÉELLE DE LA VILLE DU PROFIL (correctif du 25/09/2026). Elle
+  // n'était jamais demandée : le repli était une entrée de CITIES, à
+  // température écrite en dur. Demandée à chaque changement de ville, une
+  // fois le profil chargé (sinon on interrogerait la ville par défaut avant
+  // la vraie).
+  const [meteoVille, setMeteoVille] = useState<City | null>(null);
+  const [villeStatus, setVilleStatus] = useState<"loading" | "done">("loading");
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    if (!isSupabaseConfigured || !profile.city.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMeteoVille(null);
+      setVilleStatus("done");
+      return;
+    }
+    setVilleStatus("loading");
+    // 4 s au plus : la tenue attend cette réponse quand aucune position
+    // n'est disponible (cf. geoLoading) — un service lent ne doit pas la
+    // bloquer. Passé ce délai, repli annoncé comme tel à l'écran.
+    Promise.race([
+      fetchWeatherByCity(profile.city),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+    ]).then((w) => {
+      if (cancelled) return;
+      setMeteoVille(w);
+      setVilleStatus("done");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, profile.city]);
+
   const geoIsLive = geoStatus === "success";
-  const profileCityFallback = CITIES.find((c) => c.city === profile.city) ?? CITIES[0];
-  const geoCity: City = liveWeather ?? lastKnownCity ?? profileCityFallback;
+  // En attente tant que la position se cherche, OU tant que la météo de la
+  // ville se cherche alors qu'aucune position n'est là pour la remplacer :
+  // la tenue n'est jamais composée sur des valeurs par défaut puis changée
+  // sous les yeux quand la vraie météo arrive.
+  const geoLoading = geoStatus === "loading" || (!liveWeather && villeStatus === "loading");
+  const { city: geoCity, source: sourceMeteo } = choisirMeteo({
+    live: liveWeather,
+    ville: meteoVille,
+    derniere: lastKnownCity,
+    geoActive: profile.prefs.geoConsent && profile.prefs.weatherFromGeo,
+    villeProfil: profile.city,
+    defauts: CITIES,
+  });
   // La capsule par défaut (defaultCapsule ci-dessous) est composée pour la
   // saison CALENDAIRE courante (currentSeasonKey(), ex. "Été" en août),
   // volontairement indépendante de la météo réelle du jour — décidé, cf. son
@@ -1677,6 +1722,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     geoCity,
     geoLoading,
     geoIsLive,
+    sourceMeteo,
     defaultCapsule,
     wardrobePool,
     vestiairePool,
