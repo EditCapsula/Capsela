@@ -341,6 +341,8 @@ export interface JournalInsights {
   topOccasionShort: string | null;
   /** Part (0-100) des tenues du mois relevant de l'occasion dominante. */
   topOccasionShare: number | null;
+  /** Mois civil de référence (0-11) — celui de toutes les valeurs ci-dessus, pour le nommer à l'écran sans le déduire d'une tenue. */
+  mois: number;
 }
 
 /**
@@ -375,7 +377,7 @@ export function journalInsights(history: HistoryEntry[]): JournalInsights {
     topOccasionShare = Math.round((topCount / monthHistory.length) * 100);
   }
 
-  return { wornThisMonth, distinctPiecesWornThisMonth, topOccasion, topOccasionShort, topOccasionShare };
+  return { wornThisMonth, distinctPiecesWornThisMonth, topOccasion, topOccasionShort, topOccasionShare, mois: now.getMonth() };
 }
 
 /** Nouveaux looks enregistrés (Créer un look) ce mois-ci — distinct des tenues portées : ne compte que les looks explicitement sauvegardés. */
