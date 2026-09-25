@@ -3,17 +3,16 @@
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { OutfitComposition } from "@/components/OutfitComposition";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { useAuth } from "@/lib/auth";
 import { MONTHS_FR, occasionShortLabel } from "@/lib/data";
 import { nounInfoOf } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import {
+  capsuleJournal,
   etatDePort,
   journalEntries,
   journalInsights,
-  journalStats,
   moisAnnee,
   moisDepuis,
   mostWornPieces,
@@ -132,35 +131,66 @@ function jamaisPorte(item: Item): string {
   return nounInfoOf(item).gender === "f" ? "Jamais portée" : "Jamais porté";
 }
 
-/** Ce que dit la carte d'une pièce qui attend : jamais portée, ou depuis combien de temps. */
+/**
+ * Le statut d'une pièce qui attend, dit sans mélange (audit du 25/09) :
+ * « Jamais porté(e) » ou la durée depuis son dernier port — « 8 mois ».
+ */
 function statutAttente(item: Item, port: EtatDePort): string {
   if (port.moisSansPort == null) return jamaisPorte(item);
-  return `Il y a ${port.moisSansPort} mois`;
+  return `${port.moisSansPort} mois`;
 }
 
-/** Une tenue de l'historique, son visuel d'abord (§12). */
+/**
+ * Un look de l'historique, son visuel d'abord.
+ *
+ * LE LOOK COMPLET (audit du 25/09) : toutes ses pièces, sur une seule
+ * bande, et non plus les trois premières. Aucune image de tenue n'existe
+ * (rien n'est photographié ni généré) — le visuel du look, ce sont ses
+ * pièces. Bande à hauteur fixe : la carte ne change pas de taille avec le
+ * nombre de pièces, chaque pièce se contient dans sa part de largeur.
+ */
 function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void }) {
   const quand =
     entry.period === "today" ? `Aujourd'hui · ${entry.jour}` : entry.period === "yesterday" ? `Hier · ${entry.jour}` : entry.rel;
   return (
     <button
       onClick={onOpen}
-      className="w-full bg-card border border-border rounded-[20px] overflow-hidden text-left cursor-pointer"
+      className="w-full bg-card border border-border rounded-[20px] overflow-hidden text-left cursor-pointer px-3 pt-[12px] pb-[13px]"
       aria-label={`${quand}${entry.hasOccasion ? `, ${entry.occLabel}` : ""} : ${entry.summary}. Voir la tenue`}
     >
-      <div className="px-4 pt-[13px] text-[10px] tracking-[.14em] uppercase text-muted">{quand}</div>
-      <div className="px-3 pt-[10px]">
-        <div className="rounded-[15px] overflow-hidden" style={{ background: "var(--color-warm-bg)" }}>
-          {/* Trois pièces au plus : mesuré sur Mes tenues planifiées, au-delà
-              `compact` ouvre un second rang (~145 px) — la carte sert à
-              reconnaître la tenue, la liste en dessous la nomme en entier. */}
-          <OutfitComposition items={entry.swatches.slice(0, 3)} variant="compact" />
-        </div>
-      </div>
-      <div className="px-4 pt-[11px] pb-[14px]">
-        {entry.hasOccasion && <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">{entry.occLabel}</div>}
-        <div className="text-[12px] text-muted-3 leading-[1.45] mt-[3px] line-clamp-2">{entry.summary}</div>
-      </div>
+      <span className="flex items-center justify-between gap-2 px-1">
+        <span className="text-[13px] text-ink first-letter:uppercase">{quand}</span>
+        {entry.hasOccasion && (
+          <span className="text-[9px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[9px] py-[3px] truncate max-w-[55%]">
+            {entry.occLabel}
+          </span>
+        )}
+      </span>
+      <span className="mt-[10px] flex gap-[6px] rounded-[15px] bg-warm-bg p-[8px]" style={{ height: 96 }}>
+        {entry.swatches.map((p) => {
+          const img = resolveItemImage(p);
+          return (
+            <span key={p.id} className="flex-1 min-w-0 h-full flex items-center justify-center">
+              {img.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={img.url}
+                  alt=""
+                  loading="lazy"
+                  className={img.kind === "photo" ? "w-full h-full object-cover" : "max-w-full max-h-full object-contain"}
+                  style={{ borderRadius: 8 }}
+                />
+              ) : (
+                <span className="block w-full rounded-[8px]" style={{ height: "80%", maxWidth: 56, background: p.hex }} />
+              )}
+            </span>
+          );
+        })}
+      </span>
+      <span className="flex items-end gap-2 mt-[9px] px-1">
+        <span className="flex-1 min-w-0 text-[12px] text-muted-3 leading-[1.45] line-clamp-2">{entry.summary}</span>
+        <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0">›</span>
+      </span>
     </button>
   );
 }
@@ -191,7 +221,6 @@ export default function HistoryScreen() {
   const possedees = new Map(state.items.map((i) => [i.id, i]));
   const ouvrirPiece = (item: Item) => actions.openItem(item.id, !possedees.has(item.id));
 
-  const stats = journalStats(state.items, state.history);
   const insights = journalInsights(state.history);
   const entries = journalEntries(state.history, resolvePool);
   const fetiches = mostWornPieces(state.history, resolvePool, 3);
@@ -203,14 +232,24 @@ export default function HistoryScreen() {
   // aussi celles qui n'ont pas été portées de toute leur dernière saison.
   // Une pièce mise de côté pour vendre n'y figure plus : on ne propose pas
   // de tenue avec ce qu'elle a décidé de laisser partir.
+  //
+  // TROIS ÉTATS, JAMAIS MÉLANGÉS (audit du 25/09) : le placard montre les
+  // pièces JAMAIS PORTÉES et celles À REDÉCOUVRIR (portées, pas depuis leur
+  // dernière saison). Celles qui atteignent le seuil de vente vont dans
+  // « À envisager de vendre » — sauf si elle a choisi de les garder : elles
+  // reviennent alors ici, parmi celles à redécouvrir.
   const placard = wardrobePool
     .filter((item) => possedees.get(item.id)?.revente !== "de_cote")
     .map((item) => ({ item, port: etatDePort(item, state.history) }))
-    .filter(({ port }) => port.etat !== "recente")
+    .filter(
+      ({ item, port }) =>
+        port.etat === "jamais" || port.etat === "delaissee" || (port.etat === "a_vendre" && possedees.get(item.id)?.revente === "gardee")
+    )
     // Jamais portées d'abord, puis de la plus récente à la plus ancienne
     // absence — l'ordre de l'exemple du brief.
     .sort((a, b) => (a.port.moisSansPort ?? -1) - (b.port.moisSansPort ?? -1));
   const jamaisPortees = placard.filter(({ port }) => port.dernierPort == null).length;
+  const aRedecouvrir = placard.length - jamaisPortees;
 
   // ── REVENTE ─────────────────────────────────────────────────────────
   // Uniquement des pièces du dressing réel : une suggestion ne s'achète pas,
@@ -274,8 +313,8 @@ export default function HistoryScreen() {
           Pièces <span className="italic text-terracotta">à vendre</span>
         </div>
         <div className="text-[13px] text-muted-3 leading-[1.5] mt-[10px]">
-          Ces pièces n&apos;ont pas été portées depuis longtemps. Tu décides, pièce par pièce : rien ne quitte ton
-          dressing sans toi.
+          Ces pièces n&apos;ont pas trouvé leur moment depuis longtemps. Tu décides, pièce par pièce : rien ne quitte
+          ton dressing sans toi.
         </div>
 
         {avis && (
@@ -448,11 +487,11 @@ export default function HistoryScreen() {
       ? `Ce mois-ci, ${insights.wornThisMonth} ${pl(insights.wornThisMonth, "tenue a rejoint", "tenues ont rejoint")} ton journal.`
       : `Ta dernière tenue notée date du ${entries[0].jour}.`;
 
-  // « Pièces utilisées » : la même base que le pourcentage quand il existe
-  // (pièces du dressing réel déjà portées), sinon toutes les pièces
-  // distinctes de l'historique — pour que les deux chiffres ne se
-  // contredisent jamais.
-  const piecesUtilisees = stats.hasItems ? stats.worn : new Set(state.history.flatMap((h) => h.pieceIds)).size;
+  // UNE SEULE BASE pour le bilan (cf. capsuleJournal) : le pool affiché et
+  // l'historique réel — la même que le placard, les pièces fétiches et la
+  // timeline. « Pièces utilisées » = pièces uniques portées au moins une
+  // fois ; le pourcentage en découle.
+  const capsule = capsuleJournal(wardrobePool, state.history);
   const moisCourant = MONTHS_FR[new Date(entries[0].ts).getMonth()];
 
   const occasionsPresentes = [...new Set(entries.filter((e) => e.hasOccasion).map((e) => e.occasion))];
@@ -473,31 +512,32 @@ export default function HistoryScreen() {
       {/* BILAN — une métrique principale, deux secondaires, chacune dite en
           toutes lettres (§6 : pas de petit chiffre sans contexte). */}
       <div className="mt-5 bg-card border border-border rounded-[20px] px-5 py-[18px]">
-        {stats.hasItems ? (
+        {capsule.total > 0 && (
           <>
             <div className="flex items-baseline gap-[10px]">
-              <span className="font-serif text-[34px] leading-none text-ink">{stats.pctWorn} %</span>
+              <span className="font-serif text-[34px] leading-none text-ink">{capsule.pourcentage} %</span>
               <span className="text-[13px] text-muted-3">de ta capsule portée</span>
             </div>
             <div className="h-px bg-border my-[15px]" />
           </>
-        ) : null}
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <div className="font-serif text-[21px] leading-none text-ink">{entries.length}</div>
             <div className="text-[12px] text-muted mt-[5px]">{pl(entries.length, "tenue portée", "tenues portées")}</div>
           </div>
           <div>
-            <div className="font-serif text-[21px] leading-none text-ink">{piecesUtilisees}</div>
-            <div className="text-[12px] text-muted mt-[5px]">{pl(piecesUtilisees, "pièce utilisée", "pièces utilisées")}</div>
+            <div className="font-serif text-[21px] leading-none text-ink">{capsule.portees}</div>
+            <div className="text-[12px] text-muted mt-[5px]">{pl(capsule.portees, "pièce utilisée", "pièces utilisées")}</div>
           </div>
         </div>
       </div>
 
       {/* TON STYLE CE MOIS-CI — la carte n'existe que s'il y a une tendance
-          (3 tenues ce mois-ci au moins, cf. journalInsights) ; les deux
-          constats en dessous, seulement s'ils sont vrais. */}
-      {(moment || jamaisPortees > 0 || newLooks > 0) && (
+          (3 tenues ce mois-ci au moins, cf. journalInsights). Le compte des
+          pièces jamais portées N'EST PLUS RÉPÉTÉ ICI (audit du 25/09) : il
+          doublait celui d'« À sortir du placard », seul endroit où il vit. */}
+      {(moment || newLooks > 0) && (
         <section className="mt-[30px]" aria-labelledby="journal-style">
           <Surtitre>
             <span id="journal-style">Ton style ce mois-ci</span>
@@ -513,15 +553,8 @@ export default function HistoryScreen() {
               </div>
             </div>
           )}
-          {(jamaisPortees > 0 || newLooks > 0) && (
+          {newLooks > 0 && (
             <ul className="mt-3 flex flex-col gap-2">
-              {jamaisPortees > 0 && (
-                <li className="text-[13px] text-ink leading-[1.45] flex gap-[10px]">
-                  <span className="text-terracotta flex-shrink-0" aria-hidden="true">—</span>
-                  {jamaisPortees} {pl(jamaisPortees, "pièce attend", "pièces attendent")} encore{" "}
-                  {pl(jamaisPortees, "sa", "leur")} première sortie.
-                </li>
-              )}
               {newLooks > 0 && (
                 <li className="text-[13px] text-ink leading-[1.45] flex gap-[10px]">
                   <span className="text-terracotta flex-shrink-0" aria-hidden="true">—</span>
@@ -570,7 +603,10 @@ export default function HistoryScreen() {
           </Surtitre>
           <div className="text-[13px] text-ink leading-[1.45] mt-[6px]">
             {placard.length} {pl(placard.length, "pièce de ta capsule attend", "pièces de ta capsule attendent")} encore{" "}
-            {pl(placard.length, "son", "leur")} moment.
+            {pl(placard.length, "son", "leur")} moment
+            {jamaisPortees > 0 && aRedecouvrir > 0
+              ? ` : ${jamaisPortees} jamais ${pl(jamaisPortees, "portée", "portées")}, ${aRedecouvrir} à redécouvrir.`
+              : "."}
           </div>
           <ul className="scrollarea flex gap-[10px] overflow-x-auto mt-3 pb-[2px]">
             {placard.slice(0, PLACARD_MAX).map(({ item, port }) => (
@@ -581,8 +617,13 @@ export default function HistoryScreen() {
                   aria-label={`${item.name}, ${statutAttente(item, port).toLowerCase()}`}
                 >
                   <Vignette item={item} className="w-full" pad={6} />
-                  <div className="text-[12px] text-ink mt-[6px] leading-[1.25] line-clamp-2">{item.name}</div>
-                  <div className="text-[11px] text-terracotta mt-[2px]">{statutAttente(item, port)}</div>
+                  {/* Le statut en pastille, comme sur la maquette : « JAMAIS
+                      PORTÉE » ou « 8 MOIS » — les deux états ne se confondent
+                      jamais. */}
+                  <span className="inline-block mt-[7px] rounded-full bg-warm-bg px-[8px] py-[2px] text-[9px] tracking-[.1em] uppercase text-terracotta">
+                    {statutAttente(item, port)}
+                  </span>
+                  <div className="text-[12px] text-ink mt-[4px] leading-[1.25] line-clamp-2">{item.name}</div>
                 </button>
               </li>
             ))}
@@ -597,46 +638,61 @@ export default function HistoryScreen() {
         </section>
       )}
 
-      {/* REVENTE — seulement s'il y a une pièce candidate ou déjà mise de
-          côté (§18, état 8 : jamais de section vide). Une suggestion, rien
-          d'automatique. */}
-      {(aVendre.length > 0 || deCote.length > 0) && (
-        <section className="mt-[22px] bg-card border border-border rounded-[20px] px-5 py-[18px]" aria-labelledby="journal-revente">
-          <Surtitre>
-            <span id="journal-revente">Faire de la place</span>
-          </Surtitre>
-          {aVendre.length > 0 ? (
-            <>
-              <div className="font-serif text-[18px] leading-[1.3] text-ink mt-[8px]">
-                {aVendre.length === 1
-                  ? "Une pièce n'a pas été portée depuis deux saisons."
-                  : `${aVendre.length} pièces n'ont pas été portées depuis deux saisons.`}
-              </div>
-              <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]">
-                Tu pourrais envisager de {pl(aVendre.length, "la", "les")} vendre pour faire de la place dans ta capsule.
-              </div>
-            </>
-          ) : (
-            <div className="font-serif text-[18px] leading-[1.3] text-ink mt-[8px]">
-              {deCote.length} {pl(deCote.length, "pièce mise", "pièces mises")} de côté pour vendre.
+      {/* À ENVISAGER DE VENDRE — seulement si des pièces atteignent
+          réellement le seuil (etatDePort « a_vendre » : pas portées des deux
+          dernières saisons écoulées). Jamais de section vide, rien
+          d'automatique. La phrase ne dit « plus de 12 mois » que si c'est
+          vrai pour TOUTES : une pièce jamais portée arrivée en janvier peut
+          atteindre le seuil (présente toute la saison chaude et au moins 30
+          jours de la froide) sans avoir un an de dressing. */}
+      {aVendre.length > 0 && (() => {
+        const durees = aVendre.map(({ item, port }) => port.moisSansPort ?? (item.createdAt ? moisDepuis(item.createdAt) : 0));
+        const plusDunAn = durees.every((m) => m >= 12);
+        const depuis = plusDunAn ? "depuis plus de 12 mois" : "depuis deux saisons";
+        return (
+          <section className="mt-[22px] bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[18px]" aria-labelledby="journal-revente">
+            <div id="journal-revente" className="text-[11px] tracking-[.16em] uppercase text-terracotta">
+              À envisager de vendre
             </div>
-          )}
-          <button
-            onClick={() => {
-              setAvis(null);
-              setVue("vendre");
-            }}
-            className="mt-[12px] min-h-[44px] text-[12px] tracking-[.1em] uppercase text-terracotta cursor-pointer"
-          >
-            {aVendre.length > 0 ? "Voir les pièces à vendre →" : "Voir mes pièces mises de côté →"}
-          </button>
-        </section>
+            <div className="font-serif text-[18px] leading-[1.3] text-ink mt-[8px]">
+              {aVendre.length === 1
+                ? `Une pièce n'a pas été portée ${depuis}.`
+                : `${aVendre.length} pièces n'ont pas été portées ${depuis}.`}
+            </div>
+            <div className="text-[13px] text-warm-text-2 leading-[1.5] mt-[6px]">
+              {aVendre.length === 1 ? "Elle n'a pas trouvé son moment" : "Elles n'ont pas trouvé leur moment"} depuis longtemps. Tu
+              pourrais envisager de {pl(aVendre.length, "la", "les")} vendre pour faire de la place dans ta capsule.
+            </div>
+            <button
+              onClick={() => {
+                setAvis(null);
+                setVue("vendre");
+              }}
+              className="mt-[12px] min-h-[44px] text-[12px] tracking-[.1em] uppercase text-terracotta cursor-pointer"
+            >
+              Voir les pièces →
+            </button>
+          </section>
+        );
+      })()}
+      {/* Pièces déjà mises de côté, sans candidate nouvelle : un simple lien
+          pour y revenir, pas une section « à vendre ». */}
+      {aVendre.length === 0 && deCote.length > 0 && (
+        <button
+          onClick={() => {
+            setAvis(null);
+            setVue("vendre");
+          }}
+          className="mt-[14px] min-h-[44px] text-[12px] text-terracotta cursor-pointer"
+        >
+          {deCote.length} {pl(deCote.length, "pièce mise", "pièces mises")} de côté pour vendre →
+        </button>
       )}
 
       {/* HISTORIQUE — les dernières tenues, visuel en tête (§12). */}
       <section className="mt-[30px]" aria-labelledby="journal-historique">
         <Surtitre>
-          <span id="journal-historique">{historiqueComplet ? "Tout mon journal" : "Tes dernières tenues"}</span>
+          <span id="journal-historique">{historiqueComplet ? "Tout mon journal" : "Tes derniers looks"}</span>
         </Surtitre>
 
         {!historiqueComplet ? (
