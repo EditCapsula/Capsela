@@ -3,11 +3,11 @@
 import { useCapsela } from "@/lib/store";
 import type { Screen } from "@/lib/types";
 
-type IconName = "home" | "hanger" | "sparkle" | "capsule" | "journal";
+type IconName = "home" | "hanger" | "sparkle" | "capsule" | "journal" | "calendrier";
 
 /**
  * Hauteur de la pastille de sélection — icône 19px + 5px de respiration de
- * part et d'autre. Réservée sur les CINQ onglets, pas seulement l'actif :
+ * part et d'autre. Réservée sur les SIX onglets, pas seulement l'actif :
  * sinon l'onglet actif grandit et pousse son libellé 5px plus bas que ses
  * voisins (mesuré en rendu le 23/09/2026 sur la planche de variantes). La
  * pastille inactive est simplement transparente.
@@ -53,6 +53,18 @@ function TabIcon({ name, actif }: { name: IconName; actif: boolean }) {
           <path d="M4 9V6.5A1.5 1.5 0 015.5 5H9M15 5h3.5A1.5 1.5 0 0120 6.5V9M20 15v2.5a1.5 1.5 0 01-1.5 1.5H15M9 19H5.5A1.5 1.5 0 014 17.5V15" />
         </svg>
       );
+    case "calendrier":
+      // Le MÊME dessin que le glyphe d'occasion de PlanifierScreen
+      // (G_CALENDRIER) : l'onglet et l'écran qu'il ouvre doivent porter la
+      // même icône, sinon rien ne dit que l'un mène à l'autre.
+      return (
+        <svg {...common} strokeWidth={1.6 + p} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="6" width="16" height="14" rx="2" />
+          <line x1="4" y1="10" x2="20" y2="10" />
+          <line x1="8.5" y1="3.5" x2="8.5" y2="7" />
+          <line x1="15.5" y1="3.5" x2="15.5" y2="7" />
+        </svg>
+      );
     case "journal":
       // Livre ouvert (recette 24/08/2026, signalé : l'icône lignes suggérait
       // une liste, pas un journal) — deux pages symétriques de part et
@@ -73,6 +85,40 @@ const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<
   { label: "Tenue", icon: "sparkle", screen: "tenues", go: (a) => a.goTenues() },
   { label: "Capsule", icon: "capsule", screen: "capsule", go: (a) => a.goCapsule() },
   { label: "Journal", icon: "journal", screen: "history", go: (a) => a.goHistory() },
+  /**
+   * PLANIFIER, SIXIÈME ONGLET (24/09/2026, demandé : « il manque l'entrée
+   * Planifier dans le menu »).
+   *
+   * MESURÉ AVANT D'ÊTRE AJOUTÉ, ET LA MESURE A CHANGÉ LE CODE.
+   *
+   * Relevés en rendu réel à 320 px — la largeur la plus étroite supportée —
+   * tous les libellés forcés en semi-gras, c'est-à-dire dans l'état actif,
+   * le plus large : Tenue 32,6 — Accueil 43,1 — Capsule 45,7 — Journal 45,9
+   * — Planifier 49,8 — Dressing 50,4.
+   *
+   * Avec le `px-2` d'origine, l'emplacement faisait 50,7 px : « Dressing »
+   * actif passait avec 0,3 px. Ce n'est pas une marge, c'est une coïncidence
+   * de métriques — une police de repli, ou le réglage de taille de texte du
+   * téléphone, et le libellé débordait SUR SON VOISIN, puisqu'il est en
+   * `nowrap` sans ellipse.
+   *
+   * Deux corrections, mesurées : le rembourrage horizontal de la barre passe
+   * à `px-0.5`, ce qui porte l'emplacement à 52,7 px et la pire marge à
+   * 2,3 px ; et le libellé reçoit un filet `overflow-hidden text-ellipsis`,
+   * pour que le pire cas restant soit une ellipse discrète plutôt que deux
+   * libellés qui se chevauchent.
+   *
+   * Ces chiffres sont écrits ici parce qu'ils ferment une porte : un septième
+   * onglet ne passerait pas, et un libellé plus long que « Dressing » non plus.
+   *
+   * L'ONGLET EST UNE ENTRÉE, PAS UNE DESTINATION QUI RESTE. `planifier` est
+   * dans FLOW_SCREENS (App.tsx) : la barre disparaît une fois le parcours
+   * ouvert, parce que l'écran pose son propre bouton pleine largeur là où
+   * elle se trouverait. L'onglet ne s'affichera donc jamais en actif — c'est
+   * assumé, et c'est le comportement d'une entrée modale. La sortie se fait
+   * par le chevron du bandeau, qui remonte les étapes une à une.
+   */
+  { label: "Planifier", icon: "calendrier", screen: "planifier", go: (a) => a.goPlanifier() },
 ];
 
 export default function TabBar() {
@@ -93,7 +139,7 @@ export default function TabBar() {
       // pastille apporte elle-même 5px au-dessus du glyphe, donc l'air
       // au-dessus des icônes passe de 11 à 13 tout en ne rendant la barre
       // que 6px plus haute — « légèrement », pas « plus imposante ».
-      className="absolute left-0 right-0 bottom-0 z-20 bg-cream border-t border-border flex items-center justify-around px-2 pt-[8px]"
+      className="absolute left-0 right-0 bottom-0 z-20 bg-cream border-t border-border flex items-center justify-around px-0.5 pt-[8px]"
       // pb (correctif 20/08/2026, contenu masqué par la navigation basse) :
       // étend la nav elle-même dans la safe-area (encoche/barre de gestes)
       // au lieu de laisser son padding de confort (22px) s'arrêter avant —
@@ -130,7 +176,14 @@ export default function TabBar() {
               <TabIcon name={tab.icon} actif={active} />
             </span>
             <span
-              className="text-[9.5px] tracking-[.05em] uppercase whitespace-nowrap"
+              // `max-w-full overflow-hidden text-ellipsis` : un filet, pas une
+              // mise en page. À la mesure, le pire cas garde de la marge — mais
+              // le libellé est en `nowrap`, donc un débordement se verrait
+              // déborder SUR LE VOISIN, sans coupure. Une police de repli ou un
+              // réglage de taille de texte du téléphone suffirait. Avec ce
+              // filet, le pire cas devient une ellipse discrète au lieu de deux
+              // libellés qui se chevauchent.
+              className="max-w-full overflow-hidden text-ellipsis text-[9.5px] tracking-[.05em] uppercase whitespace-nowrap"
               style={{ fontWeight: active ? 600 : 400 }}
             >
               {tab.label}

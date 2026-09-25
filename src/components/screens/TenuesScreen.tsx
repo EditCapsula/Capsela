@@ -1263,28 +1263,60 @@ export default function TenuesScreen() {
           -ci une seule action ; un composant qui absorberait les deux prendrait
           plus de paramètres qu'il n'économise de lignes.
 
-          Le titre ne nomme pas de jour. « Un évènement samedi ? » se lit très
-          bien sur une maquette et devient faux cinq jours sur sept ; calculer
-          le prochain samedi le rendrait vrai sans le rendre pertinent — rien
-          ne dit que l'évènement tombe un samedi.
+          Le titre ne nomme NI JOUR NI TYPE D'ÉVÈNEMENT. « Un évènement
+          samedi ? » se lit très bien sur une maquette et devient faux cinq
+          jours sur sept ; calculer le prochain samedi le rendrait vrai sans le
+          rendre pertinent. « Une occasion à venir ? » tient pour un
+          restaurant, un mariage, un entretien ou un voyage — c'est-à-dire pour
+          les dix occasions du référentiel, sans en privilégier une.
+
+          Contenu arrêté le 24/09/2026 : surtitre, titre, promesse,
+          description, CTA. Quatre niveaux plutôt que deux, parce que le bloc
+          devait dire ce que Capsela FAIT — « Capsela compose le look » — et
+          pas seulement ce qu'il demande.
 
           Placée après les conseils et avant les feuilles : c'est la fin de la
           lecture de la tenue du jour, donc le moment où regarder plus loin. */}
       <button
         onClick={actions.goPlanifier}
-        className="w-full text-left bg-warm-bg border border-sand-border rounded-[22px] px-4 py-[16px] mt-4 cursor-pointer flex items-center gap-3 transition-opacity active:opacity-80"
+        className="w-full text-left bg-warm-bg border border-sand-border rounded-[22px] px-4 py-[16px] mt-4 cursor-pointer transition-opacity active:opacity-80"
       >
-        <span className="flex-1 min-w-0">
-          <span className="block font-serif text-[18px] text-ink leading-[1.2]" style={{ textWrap: "balance" }}>
-            Un évènement à venir ?
-          </span>
-          <span className="block text-[11.5px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
-            Une occasion, une date, un lieu — et la tenue est prête d&apos;avance.
-          </span>
+        {/* Surtitre : 10,5 px / .14em terracotta — la forme de CET écran, celle
+            de « Nos conseils pour sublimer cette tenue » quelques lignes plus
+            haut et de « Une autre piste ». Pas le 11 px / .16em majoritaire
+            ailleurs dans l'app : le voisin immédiat prime sur la moyenne. */}
+        <span className="block text-[10.5px] tracking-[.14em] uppercase text-terracotta">À préparer</span>
+
+        {/* Le titre reste l'élément le plus fort du bloc — et reste sous la
+            tenue du jour, qui porte un serif plus grand. */}
+        <span className="block font-serif text-[18px] text-ink leading-[1.2] mt-[7px]" style={{ textWrap: "balance" }}>
+          Une occasion à venir ?
         </span>
-        <span aria-hidden="true" className="flex-shrink-0 text-terracotta text-[15px]">
-          →
+
+        {/* La promesse. En ink et non en muted : c'est le bénéfice, il ne doit
+            pas se lire comme la suite de la description. */}
+        <span className="block text-[13px] text-ink leading-[1.4] mt-[5px]" style={{ textWrap: "pretty" }}>
+          Planifie ta tenue à l&apos;avance.
         </span>
+
+        <span className="block text-[11.5px] text-muted leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
+          Donne-nous l&apos;occasion, la date et le lieu. Capsela compose le look.
+        </span>
+
+        {/* CTA TEXTUEL, PAS UN BOUTON PLEIN LARGEUR. C'est la forme déjà
+            utilisée quatre fois sur cet écran — « Ajouter une pièce → »,
+            « Compléter mon dressing → » : `mt-[10px] inline-block text-[12px]
+            text-terracotta`. Rien de neuf, donc rien à harmoniser plus tard.
+
+            UN <span> ET NON UN <button> : la carte entière est déjà cliquable,
+            et imbriquer un bouton dans un bouton est invalide en HTML autant
+            qu'ambigu pour une lectrice d'écran. Le CTA est ici une indication
+            visuelle de ce que fait la carte, pas une seconde cible.
+
+            La flèche est dans le texte, comme dans les quatre autres, et non
+            posée à droite de la carte : à droite, elle désignait la carte
+            entière sans dire ce qu'elle faisait. */}
+        <span className="mt-[10px] inline-block text-[12px] text-terracotta">Planifier une tenue →</span>
       </button>
 
       {/* LES DEUX FEUILLES. BottomSheet existe depuis le 24/08 (écran Ajouter)
