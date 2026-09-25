@@ -20,3 +20,7 @@ Décisions prises par la Product Owner sur les points « À ARBITRER » de `docs
 | 25/09/2026 | 4 — Aucune pièce / dressing vide | Section masquée. | Lot 4 |
 | 25/09/2026 | 5 — Nombre de pièces | 3 au maximum. | Lot 4 |
 | 25/09/2026 | 17 — Clic sur une pièce | Fiche de la pièce (écran existant), retour vers le résultat conservé en mémoire. | Lot 4 |
+| 25/09/2026 | 19 — Place dans le Journal | Section dédiée « Mes avis de styliste » (un avis reçu n'est pas une tenue portée) : table `avis_styliste` à part, jamais `outfit_history`. Section masquée s'il n'y a aucun avis ou si la migration 0036 n'est pas exécutée. | Lot 5 (migration 0036, à exécuter à la main) |
+| 25/09/2026 | 2 — Durée de conservation de la photo | Conservée tant que l'avis existe, dans un bucket privé (`avis-styliste-photos`, URL signées), supprimée avec l'avis ou le compte. | Lot 5 |
+| 25/09/2026 | Nouveau — Suppression d'un avis | Possible, avec confirmation ; supprime la ligne puis la photo. Libellés non fournis (TODO_COPY). | Lot 5 |
+| 25/09/2026 | Nouveau — Pièce retirée du dressing | Masquée dans « Avec ton dressing » de l'avis enregistré ; section masquée s'il n'en reste aucune. | Lot 5 |

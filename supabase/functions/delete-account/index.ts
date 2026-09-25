@@ -88,7 +88,21 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Compte Auth — cascade profiles/dressing_items/outfit_history/saved_looks.
+    // 1 bis. Photos des avis de styliste enregistrés (bucket PRIVÉ, migration
+    // 0036) — pas cascadées par SQL non plus. Avant la migration, le bucket
+    // n'existe pas : l'erreur est journalisée et la suppression continue.
+    const { data: photosAvis, error: listAvisErr } = await supabaseAdmin.storage.from("avis-styliste-photos").list(userId);
+    if (listAvisErr) {
+      console.error(JSON.stringify({ user_id: userId, step: "list_avis_storage", error: listAvisErr.message }));
+    } else if (photosAvis?.length) {
+      const chemins = photosAvis.map((f) => `${userId}/${f.name}`);
+      const { error: removeAvisErr } = await supabaseAdmin.storage.from("avis-styliste-photos").remove(chemins);
+      if (removeAvisErr) {
+        console.error(JSON.stringify({ user_id: userId, step: "remove_avis_storage", error: removeAvisErr.message }));
+      }
+    }
+
+    // 2. Compte Auth — cascade profiles/dressing_items/outfit_history/saved_looks/avis_styliste.
     const { error: delErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (delErr) throw delErr;
 

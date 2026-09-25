@@ -34,6 +34,7 @@ import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
 import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
+import { enregistrerAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
@@ -86,6 +87,8 @@ export type AnalyseAvis =
 export interface SessionAvisStyliste {
   photo: PhotoAvis | null;
   analyse: AnalyseAvis;
+  /** Enregistrement du résultat dans le Journal — toujours une action explicite (§14). */
+  enregistrement: "aucun" | "en_cours" | "fait" | "echec";
 }
 
 /** Écrans qui s'ouvrent depuis le profil : jamais retenus comme « retour » du profil. */
@@ -229,6 +232,18 @@ export interface Actions {
    * envoi). Elle continue si l'on quitte l'écran (point 16).
    */
   lancerAvisStyliste: () => void;
+  /**
+   * « Enregistrer dans mon journal » : le résultat affiché et sa photo
+   * (arbitré). Action volontaire, jamais automatique ; ignorée pendant un
+   * enregistrement ou après un succès (pas de doublon, §14).
+   */
+  enregistrerAvisStyliste: () => void;
+  /** Charge les avis enregistrés (Journal). */
+  chargerAvisEnregistres: () => void;
+  /** Ouvre un avis enregistré en consultation. */
+  ouvrirAvisEnregistre: (id: string) => void;
+  /** Supprime un avis enregistré et sa photo (§14). Rend false en cas d'échec — l'avis reste alors affiché. */
+  supprimerAvisEnregistre: (id: string) => Promise<boolean>;
   backFromLegal: () => void;
   goLogin: () => void;
   /**
@@ -410,6 +425,14 @@ interface CapselaContextValue {
    * SEULEMENT : rien n'est persisté, tout disparaît à la fermeture de l'app.
    */
   avisStyliste: SessionAvisStyliste;
+  /**
+   * Avis enregistrés dans le Journal (migration 0036) — null tant qu'ils
+   * n'ont pas été chargés (au premier affichage du Journal). Liste vide
+   * avant la migration : la section reste masquée.
+   */
+  avisEnregistres: AvisEnregistre[] | null;
+  /** Avis enregistré ouvert en consultation. */
+  avisEnregistreActif: AvisEnregistre | null;
   actions: Actions;
 }
 
@@ -501,7 +524,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   /* Comme poolRef/weatherRef : saveItem lit stateRef.current et non le rendu
      courant, il lui faut donc une référence et pas la valeur capturée. */
   const etatPremiumRef = useRef<EtatPremium>("inconnu");
-  const [avisStyliste, setAvisStyliste] = useState<SessionAvisStyliste>({ photo: null, analyse: { etat: "inactive" } });
+  const [avisStyliste, setAvisStyliste] = useState<SessionAvisStyliste>({ photo: null, analyse: { etat: "inactive" }, enregistrement: "aucun" });
   const avisStylisteRef = useRef(avisStyliste);
   useEffect(() => {
     avisStylisteRef.current = avisStyliste;
@@ -512,6 +535,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   /* Posé de façon synchrone au clic : deux clics rapprochés n'envoient
      qu'une analyse, même avant le rendu suivant. */
   const analyseAvisEnCoursRef = useRef(false);
+  const [avisEnregistres, setAvisEnregistres] = useState<AvisEnregistre[] | null>(null);
+  const [avisEnregistreActifId, setAvisEnregistreActifId] = useState<string | null>(null);
+  const avisEnregistreActif = avisEnregistres?.find((a) => a.id === avisEnregistreActifId) ?? null;
   useEffect(() => {
     etatPremiumRef.current = etatPremium;
   }, [etatPremium]);
@@ -954,13 +980,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       if (avant && avant.url !== photo?.url) URL.revokeObjectURL(avant.url);
       jetonAvisRef.current += 1;
       analyseAvisEnCoursRef.current = false;
-      const suivant: SessionAvisStyliste = { photo, analyse: { etat: "inactive" } };
+      const suivant: SessionAvisStyliste = { photo, analyse: { etat: "inactive" }, enregistrement: "aucun" };
       avisStylisteRef.current = suivant;
       setAvisStyliste(suivant);
     },
     revenirAApercuAvis: () => {
       if (analyseAvisEnCoursRef.current) return;
-      const suivant: SessionAvisStyliste = { photo: avisStylisteRef.current.photo, analyse: { etat: "inactive" } };
+      const suivant: SessionAvisStyliste = { photo: avisStylisteRef.current.photo, analyse: { etat: "inactive" }, enregistrement: "aucun" };
       avisStylisteRef.current = suivant;
       setAvisStyliste(suivant);
     },
@@ -969,13 +995,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       if (!photo || analyseAvisEnCoursRef.current) return;
       analyseAvisEnCoursRef.current = true;
       const jeton = ++jetonAvisRef.current;
-      avisStylisteRef.current = { photo, analyse: { etat: "en_cours" } };
+      avisStylisteRef.current = { photo, analyse: { etat: "en_cours" }, enregistrement: "aucun" };
       setAvisStyliste(avisStylisteRef.current);
       void demanderAvis(photo.fichier, contexteDepuisProfil(profile)).then((r) => {
         if (jeton !== jetonAvisRef.current) return;
         analyseAvisEnCoursRef.current = false;
         const suivant: SessionAvisStyliste = {
           photo,
+          enregistrement: "aucun",
           analyse: r.ok
             ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing }
             : { etat: "echouee", code: r.code, raison: r.raison },
@@ -983,6 +1010,48 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         avisStylisteRef.current = suivant;
         setAvisStyliste(suivant);
       });
+    },
+    enregistrerAvisStyliste: () => {
+      const session = avisStylisteRef.current;
+      if (session.analyse.etat !== "reussie" || session.enregistrement === "en_cours" || session.enregistrement === "fait") return;
+      if (!userId) {
+        avisStylisteRef.current = { ...session, enregistrement: "echec" };
+        setAvisStyliste(avisStylisteRef.current);
+        return;
+      }
+      const analyse = session.analyse;
+      const jeton = jetonAvisRef.current;
+      avisStylisteRef.current = { ...session, enregistrement: "en_cours" };
+      setAvisStyliste(avisStylisteRef.current);
+      void enregistrerAvis(userId, {
+        analyseId: analyse.analyseId,
+        avis: analyse.avis,
+        pieces: analyse.dressing,
+        photo: session.photo?.fichier ?? null,
+      }).then((enregistre) => {
+        if (enregistre) setAvisEnregistres(null); // relu au prochain affichage du Journal
+        if (jeton !== jetonAvisRef.current) return;
+        avisStylisteRef.current = { ...avisStylisteRef.current, enregistrement: enregistre ? "fait" : "echec" };
+        setAvisStyliste(avisStylisteRef.current);
+      });
+    },
+    chargerAvisEnregistres: () => {
+      if (!userId) {
+        setAvisEnregistres([]);
+        return;
+      }
+      void listerAvis(userId).then(setAvisEnregistres);
+    },
+    ouvrirAvisEnregistre: (id) => {
+      setAvisEnregistreActifId(id);
+      go("avisEnregistre");
+    },
+    supprimerAvisEnregistre: async (id) => {
+      const avis = avisEnregistres?.find((a) => a.id === id);
+      if (!avis) return false;
+      const ok = await supprimerAvis(avis);
+      if (ok) setAvisEnregistres((l) => (l ? l.filter((a) => a.id !== id) : l));
+      return ok;
     },
     verifierEtatPremium: async () => {
       const simule = process.env.NODE_ENV !== "production" ? lireProfilSimule() : null;
@@ -1851,6 +1920,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     dressingLoaded,
     etatPremium,
     avisStyliste,
+    avisEnregistres,
+    avisEnregistreActif,
     actions,
   };
 

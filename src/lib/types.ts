@@ -425,4 +425,6 @@ export type Screen =
   | "premium"
   // Avis de styliste (Premium, 25/09/2026, docs/avis-de-styliste.md) —
   // ouvert depuis la carte « Besoin d'un regard ? » de l'accueil.
-  | "avisStyliste";
+  | "avisStyliste"
+  // Avis de styliste enregistré, rouvert depuis le Journal.
+  | "avisEnregistre";
