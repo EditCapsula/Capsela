@@ -201,8 +201,8 @@ export interface Actions {
   goHistory: () => void;
   goPlanifier: () => void;
   goNeverWorn: () => void;
-  /** `groupe` : identifiant d'un groupe du vestiaire (dressingEcran.ts) — n'affiche que ses pièces. */
-  goWardrobePieces: (groupe?: string) => void;
+  /** `filtre` : carte du vestiaire — n'affiche que les pièces de ses catégories techniques. */
+  goWardrobePieces: (filtre?: { libelle: string; categories: CategoryKey[] }) => void;
   goLooks: () => void;
   goProfile: () => void;
   goProfileEdit: () => void;
@@ -962,7 +962,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goHistory: () => go("history"),
     goPlanifier: () => go("planifier"),
     goNeverWorn: () => go("neverworn"),
-    goWardrobePieces: (groupe) => setState((s) => ({ ...s, filtrePieces: groupe ?? null, screen: "wardrobePieces" })),
+    goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobePieces" })),
     goLooks: () => go("looks"),
     // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
     // Avant : revenir de « Modifier » au profil enregistrait « Modifier »
