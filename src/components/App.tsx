@@ -19,6 +19,7 @@ import PlanifierScreen from "./screens/PlanifierScreen";
 import PremiumScreen from "./screens/PremiumScreen";
 import AvisStylisteScreen from "./screens/AvisStylisteScreen";
 import AvisEnregistreScreen from "./screens/AvisEnregistreScreen";
+import LooksScreen from "./screens/LooksScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import ProfileScreen from "./screens/ProfileScreen";
@@ -123,6 +124,7 @@ function Screens() {
         {state.screen === "premium" && <PremiumScreen />}
         {state.screen === "avisStyliste" && <AvisStylisteScreen />}
         {state.screen === "avisEnregistre" && <AvisEnregistreScreen />}
+        {state.screen === "looks" && <LooksScreen />}
         {state.screen === "neverworn" && <NeverWornScreen />}
         {state.screen === "profileSetup" && <ProfileSetupScreen />}
         {state.screen === "profile" && <ProfileScreen />}

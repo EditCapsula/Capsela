@@ -6,6 +6,8 @@ import { useCapsela } from "@/lib/store";
 import { daysSinceWorn, wearCounts } from "@/lib/selectors";
 import { wornAgo } from "@/lib/data";
 import BoutonRetour from "@/components/BoutonRetour";
+import { useAuth } from "@/lib/auth";
+import { GROUPES_VESTIAIRE, libelleGroupe } from "@/lib/dressingEcran";
 
 /**
  * "Mes pièces" (recette 24/08/2026, mockup fourni) — grille plate 2 colonnes
@@ -40,7 +42,11 @@ import BoutonRetour from "@/components/BoutonRetour";
  */
 export default function WardrobePiecesScreen() {
   const { state, actions } = useCapsela();
-  const items = state.items;
+  const { profile } = useAuth();
+  // Ouvert depuis une catégorie du vestiaire (refonte Dressing, 25/09/2026) :
+  // seules ses pièces, et un « Tout afficher » pour revenir à l'ensemble.
+  const groupe = GROUPES_VESTIAIRE.find((g) => g.id === state.filtrePieces) ?? null;
+  const items = groupe ? state.items.filter((i) => groupe.cats.includes(i.cat)) : state.items;
   const counts = wearCounts(state.history);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selection, setSelection] = useState<Set<number>>(new Set());
@@ -110,6 +116,15 @@ export default function WardrobePiecesScreen() {
           )
         )}
       </div>
+
+      {groupe && !selectionMode && (
+        <div className="flex items-baseline justify-between gap-3 mt-[6px] text-[12px]">
+          <span className="text-ink">{libelleGroupe(groupe, profile.gender)}</span>
+          <button onClick={() => actions.goWardrobePieces()} className="text-terracotta flex-shrink-0 cursor-pointer py-[13px] -my-[13px]">
+            Tout afficher
+          </button>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <div className="text-[12px] text-muted leading-[1.5] mt-3">

@@ -183,6 +183,8 @@ function buildInitialState(): AppState {
     lookDraftOccasion: "all",
     lookDraftDismissed: [],
     activeLookId: null,
+    lookReturn: "wardrobe",
+    filtrePieces: null,
   };
 }
 
@@ -199,7 +201,9 @@ export interface Actions {
   goHistory: () => void;
   goPlanifier: () => void;
   goNeverWorn: () => void;
-  goWardrobePieces: () => void;
+  /** `groupe` : identifiant d'un groupe du vestiaire (dressingEcran.ts) — n'affiche que ses pièces. */
+  goWardrobePieces: (groupe?: string) => void;
+  goLooks: () => void;
   goProfile: () => void;
   goProfileEdit: () => void;
   /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
@@ -933,6 +937,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   }
 
   const go = (screen: Screen) => setState((s) => ({ ...s, screen }));
+  /** Ouvre le formulaire d'ajout, ou Premium quand la limite gratuite est atteinte (cf. openAdd). */
+  const ouvrirAjout = (ouvrir: (s: AppState) => AppState) =>
+    setState((s) =>
+      peutAjouter(etatPremiumRef.current, s.items.length)
+        ? ouvrir(s)
+        : { ...s, premiumReturn: s.screen, premiumOrigine: null, screen: "premium" }
+    );
 
   const actions: Actions = {
     go,
@@ -951,7 +962,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goHistory: () => go("history"),
     goPlanifier: () => go("planifier"),
     goNeverWorn: () => go("neverworn"),
-    goWardrobePieces: () => go("wardrobePieces"),
+    goWardrobePieces: (groupe) => setState((s) => ({ ...s, filtrePieces: groupe ?? null, screen: "wardrobePieces" })),
+    goLooks: () => go("looks"),
     // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
     // Avant : revenir de « Modifier » au profil enregistrait « Modifier »
     // comme écran de retour, et le chevron du profil y renvoyait — profil →
@@ -1073,10 +1085,18 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         profileSetupFromEdit: fromEdit,
         profileSetupReturn: s.screen,
       })),
-    openAdd: () => go("add"),
-    openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
+    // LIMITE DU DRESSING GRATUIT À L'OUVERTURE DU FORMULAIRE (25/09/2026,
+    // refonte Dressing : « aucune possibilité silencieuse d'ajouter une 21e
+    // pièce »). saveItem refusait déjà la 21e pièce, mais EN SILENCE, après
+    // la photo et la saisie : depuis l'Accueil, la Tenue, la Capsule, « Mes
+    // pièces » ou la création de look, le formulaire s'ouvrait puis
+    // n'enregistrait rien. Les trois portes d'entrée du formulaire mènent
+    // désormais à Premium d'emblée. Même règle, même source (peutAjouter) :
+    // un droit inconnu n'applique aucune limite ; la garde de saveItem reste.
+    openAdd: () => ouvrirAjout((s) => ({ ...s, screen: "add" })),
+    openAddBag: () => ouvrirAjout((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
     openAddForCategory: (cat) =>
-      setState((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),
+      ouvrirAjout((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),
     addBack: () =>
       setState((s) => ({
         ...s,
@@ -1857,8 +1877,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       const look: SavedLook = { id: "look" + Date.now(), ...base };
       setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
     },
-    openLook: (id) => setState((s) => ({ ...s, activeLookId: id, screen: "lookDetail" })),
-    closeLookDetail: () => setState((s) => ({ ...s, activeLookId: null, screen: "wardrobe" })),
+    openLook: (id) =>
+      setState((s) => ({ ...s, activeLookId: id, lookReturn: s.screen === "looks" ? "looks" : "wardrobe", screen: "lookDetail" })),
+    closeLookDetail: () => setState((s) => ({ ...s, activeLookId: null, screen: s.lookReturn })),
     deleteActiveLook: () => {
       const s = stateRef.current;
       const deletedId = s.activeLookId;
@@ -1866,7 +1887,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         ...st,
         savedLooks: st.savedLooks.filter((l) => l.id !== deletedId),
         activeLookId: null,
-        screen: "wardrobe",
+        screen: st.lookReturn,
       }));
       if (deletedId && isSupabaseConfigured && userId) {
         deleteSavedLook(deletedId).catch((err) => reportDressingError("deleteSavedLook", err));

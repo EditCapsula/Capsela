@@ -170,7 +170,11 @@ export default function TabBar() {
               style={{
                 height: PASTILLE_H,
                 paddingInline: PASTILLE_PX,
-                background: active ? "var(--color-warm-bg)" : "transparent",
+                // Plus de fond sous l'onglet actif (refonte Dressing, 25/09/2026 :
+                // « pas de gros bloc coloré ») : la couleur terracotta, le trait
+                // renforcé de l'icône et le semi-gras portent seuls l'état actif.
+                // La pastille garde sa hauteur réservée — aucun libellé ne bouge.
+                background: "transparent",
               }}
             >
               <TabIcon name={tab.icon} actif={active} />

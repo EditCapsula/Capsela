@@ -390,6 +390,10 @@ export interface AppState {
   lookDraftDismissed: string[];
   /** Id du look actuellement ouvert dans l'écran de détail. */
   activeLookId: string | null;
+  /** Écran où revient le détail d'un look : le Dressing, ou « Mes looks » d'où il a été ouvert. */
+  lookReturn: "wardrobe" | "looks";
+  /** Groupe du vestiaire (dressingEcran.ts) qui filtre « Mes pièces » ; null = toutes les pièces. */
+  filtrePieces: string | null;
 }
 
 export type Screen =
@@ -419,6 +423,8 @@ export type Screen =
   | "lookDetail"
   | "itemOutfits"
   | "wardrobePieces"
+  // Tous les looks (refonte Dressing, 25/09/2026) — « Mes looks · Voir tout ».
+  | "looks"
   // Destinations Premium (brief Accueil 22/09/2026) — écrans d'attente
   // assumés, branchés pour que la carte ne mène pas dans le vide.
   | "planifier"
