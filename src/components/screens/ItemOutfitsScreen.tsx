@@ -170,8 +170,8 @@ export default function ItemOutfitsScreen() {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] tracking-[.16em] uppercase text-terracotta">Autour de cette pièce</div>
-          <div className="font-serif text-[19px] text-ink leading-[1.2] mt-[3px]">{pivot.name}</div>
+          <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">Autour de cette pièce</div>
+          <div className="font-serif text-[18px] text-ink leading-[1.2] mt-[3px]">{pivot.name}</div>
           <div className="text-[12px] text-muted mt-[3px]">
             {CATLABEL[pivot.cat]}
             {metaParts.length ? " · " + metaParts.join(" · ") : ""}
@@ -186,7 +186,7 @@ export default function ItemOutfitsScreen() {
           {showSeasonBadge && (
             <div className="inline-flex items-center gap-2 mt-[7px] rounded-full bg-warm-bg border border-warm-border" style={{ padding: "5px 11px 5px 9px" }}>
               <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-gold" />
-              <span className="text-[10px] tracking-[.13em] uppercase text-terracotta">{seasonLabel}</span>
+              <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">{seasonLabel}</span>
             </div>
           )}
         </div>
@@ -201,7 +201,7 @@ export default function ItemOutfitsScreen() {
           d'affichage strictement inchangés. */}
       <div className="flex items-center flex-wrap gap-x-3 gap-y-[10px] mt-[12px]">
           {hasSuggestedPieces && (
-            <div className="flex-1 min-w-[150px] text-[11.5px] text-muted leading-[1.4]">
+            <div className="flex-1 min-w-[150px] text-[11px] text-muted leading-[1.4]">
               Les pièces complémentaires viennent de ta capsule {suggestionSeason}.
             </div>
           )}
@@ -218,14 +218,14 @@ export default function ItemOutfitsScreen() {
                     href={pivot.affLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block bg-terracotta active:bg-terracotta-hover text-cream rounded-full py-[10px] px-[16px] text-[12px] tracking-[.06em] uppercase cursor-pointer whitespace-nowrap"
+                    className="inline-block bg-terracotta active:bg-terracotta-hover text-cream rounded-full py-[10px] px-[16px] text-[12px] tracking-[.1em] uppercase cursor-pointer whitespace-nowrap"
                   >
                     Acheter ↗
                   </a>
                 )}
                 <button
                   onClick={() => actions.startReplace(pivot)}
-                  className="inline-block border border-border-soft text-terracotta rounded-full py-[10px] px-[16px] text-[12.5px] cursor-pointer whitespace-nowrap"
+                  className="inline-block border border-border-soft text-terracotta rounded-full py-[10px] px-[16px] text-[12px] cursor-pointer whitespace-nowrap"
                 >
                   J&apos;ai déjà
                 </button>
@@ -270,7 +270,7 @@ export default function ItemOutfitsScreen() {
           <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
             Pas encore assez de pièces compatibles pour créer plusieurs looks avec cet article.
           </div>
-          <button onClick={actions.openAdd} className="mt-[12px] inline-block text-[12.5px] text-terracotta cursor-pointer">
+          <button onClick={actions.openAdd} className="mt-[12px] inline-block text-[12px] text-terracotta cursor-pointer">
             Compléter mon dressing →
           </button>
         </div>
@@ -347,7 +347,7 @@ export default function ItemOutfitsScreen() {
                           les plus longs ("Prête à sortir de l'ordinaire") sur
                           deux lignes dès 390px, sans rien gagner. */}
                       <div className="mt-[8px]">
-                        <div className="font-serif text-[14px] text-ink leading-[1.25]">{insight.title}</div>
+                        <div className="font-serif text-[15px] text-ink leading-[1.25]">{insight.title}</div>
                         <div className="text-[12px] text-[#3F3B34] mt-[2px] leading-[1.4] line-clamp-3">{insight.sentence}</div>
                       </div>
                       <span className="mt-[6px] inline-block text-[12px] text-terracotta">Voir cette tenue →</span>

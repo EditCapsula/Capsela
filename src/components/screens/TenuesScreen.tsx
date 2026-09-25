@@ -527,7 +527,7 @@ export default function TenuesScreen() {
       <AppHeader />
 
       <div className="mt-[18px]">
-        <div className="text-[11px] tracking-[.18em] uppercase text-muted">{dateText}</div>
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted">{dateText}</div>
         {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
             (23/09/2026) : répété ici, il salue une deuxième fois dans la même
             session et ne dit rien de l'écran. Le titre annonce désormais ce
@@ -537,7 +537,7 @@ export default function TenuesScreen() {
             « Le look du jour » qui vivait
             DANS la card terracotta est supprimée du même coup — elle ferait
             doublon à deux cents pixels d'écart. */}
-        <div className="font-serif text-[30px] leading-[1.12] text-ink mt-[6px]">
+        <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
           Ma <span className="italic text-terracotta">tenue du jour</span>
         </div>
       </div>
@@ -563,7 +563,7 @@ export default function TenuesScreen() {
             </span>
           </div>
           {!geoIsLive && (
-            <div className="text-[10.5px] text-placeholder mt-[6px] px-[5px]">
+            <div className="text-[10px] text-placeholder mt-[6px] px-[5px]">
               Position par défaut — active la géolocalisation pour ta météo du jour exacte.
             </div>
           )}
@@ -594,7 +594,7 @@ export default function TenuesScreen() {
           onClick={() => setFeuille("occasion")}
           aria-haspopup="dialog"
           aria-label={`Occasion : ${libelleOccasion}. Changer d'occasion`}
-          className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-terracotta-deep text-cream"
+          className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12px] cursor-pointer bg-terracotta-deep text-cream"
           style={{ minHeight: 46 }}
         >
           {/* Glyphes dessinés depuis le 23/09, après la planche de
@@ -615,7 +615,7 @@ export default function TenuesScreen() {
             onClick={() => setFeuille("sous")}
             aria-haspopup="dialog"
             aria-label={`${sousChoix.titre} ${sousChoix.courant}. Changer`}
-            className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12.5px] cursor-pointer bg-warm-bg text-sand-text border border-sand-border"
+            className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12px] cursor-pointer bg-warm-bg text-sand-text border border-sand-border"
             style={{ minHeight: 46 }}
           >
             {sousChoix.glyphe}
@@ -629,7 +629,7 @@ export default function TenuesScreen() {
         <div className="mt-[14px] flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1 min-w-0">
-            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
+            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">
               En voyage longue distance ? Pense aux bas de contention pour limiter les jambes lourdes.
             </div>
           </div>
@@ -708,7 +708,7 @@ export default function TenuesScreen() {
               key === "recommande" ? (
                 <span
                   key={key}
-                  className="text-[9.5px] tracking-[.06em] uppercase rounded-full px-[9px] py-[3px]"
+                  className="text-[9px] tracking-[.06em] uppercase rounded-full px-[9px] py-[3px]"
                   style={{ background: "rgba(243,238,229,.22)", color: "#FBF3EA" }}
                 >
                   {BADGE_RECOMMANDE}
@@ -716,7 +716,7 @@ export default function TenuesScreen() {
               ) : (
                 <span
                   key={key}
-                  className="text-[9.5px] tracking-[.06em] uppercase rounded-full px-[9px] py-[3px]"
+                  className="text-[9px] tracking-[.06em] uppercase rounded-full px-[9px] py-[3px]"
                   style={{ border: "1px solid rgba(243,238,229,.38)", color: "#F0DDCF" }}
                 >
                   {BADGE_REGISTRE}
@@ -793,7 +793,7 @@ export default function TenuesScreen() {
               <span className="w-8 h-8 rounded-full bg-cream text-terracotta flex items-center justify-center text-base flex-shrink-0">
                 ✓
               </span>
-              <div className="text-[13.5px] text-cream">Bonne journée avec cette tenue !</div>
+              <div className="text-[13px] text-cream">Bonne journée avec cette tenue !</div>
             </div>
           ) : (
             <button
@@ -833,7 +833,7 @@ export default function TenuesScreen() {
               disabled={!canSaveOutfit}
               title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces à cette tenue pour l'enregistrer."}
               aria-pressed={isOutfitSaved}
-              className={"flex items-center justify-center gap-[6px] rounded-full text-[12.5px] " + (canSaveOutfit ? "cursor-pointer" : "cursor-default opacity-45")}
+              className={"flex items-center justify-center gap-[6px] rounded-full text-[12px] " + (canSaveOutfit ? "cursor-pointer" : "cursor-default opacity-45")}
               style={{
                 minHeight: 46,
                 background: isOutfitSaved ? "rgba(243,238,229,.3)" : "rgba(243,238,229,.14)",
@@ -846,7 +846,7 @@ export default function TenuesScreen() {
             </button>
             <button
               onClick={actions.openOpinionShare}
-              className="flex items-center justify-center gap-[6px] rounded-full text-[12.5px] cursor-pointer"
+              className="flex items-center justify-center gap-[6px] rounded-full text-[12px] cursor-pointer"
               style={{
                 minHeight: 46,
                 background: "rgba(243,238,229,.14)",
@@ -889,7 +889,7 @@ export default function TenuesScreen() {
               onClick={autreTenue}
               disabled={tirageEnCours}
               aria-busy={tirageEnCours}
-              className="mt-[2px] w-full flex items-center justify-center gap-[7px] text-[12.5px] text-cream cursor-pointer disabled:cursor-not-allowed"
+              className="mt-[2px] w-full flex items-center justify-center gap-[7px] text-[12px] text-cream cursor-pointer disabled:cursor-not-allowed"
               style={{ minHeight: 44, opacity: tirageEnCours ? 0.6 : 1 }}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -915,23 +915,23 @@ export default function TenuesScreen() {
           recalculé/inventé ici. Sobre, typographique, sans illustration. */}
       {!geoLoading && emptyState && (
         <div className="mt-2 mb-4 bg-card border border-border rounded-[14px] px-4 py-[26px] text-center">
-          <div className="font-serif text-[16px] text-ink leading-[1.3]">{emptyState.title}</div>
+          <div className="font-serif text-[15px] text-ink leading-[1.3]">{emptyState.title}</div>
           <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[8px]">{emptyState.body}</div>
           {emptyState.ctaLabel && emptyState.onCta && (
-            <button onClick={emptyState.onCta} className="mt-[14px] inline-block text-[12.5px] text-terracotta cursor-pointer">
+            <button onClick={emptyState.onCta} className="mt-[14px] inline-block text-[12px] text-terracotta cursor-pointer">
               {emptyState.ctaLabel}
             </button>
           )}
 
           {!exploring ? (
-            <button onClick={handleExploreStyles} className="mt-[10px] block mx-auto text-[12.5px] text-terracotta cursor-pointer">
+            <button onClick={handleExploreStyles} className="mt-[10px] block mx-auto text-[12px] text-terracotta cursor-pointer">
               Explorer d&apos;autres styles →
             </button>
           ) : compatibleStyles.length > 0 ? (
             <div className="mt-[18px] text-left">
-              <div className="text-[10.5px] tracking-[.14em] uppercase text-terracotta">✦ Une autre piste</div>
-              <div className="font-serif text-[16px] text-ink leading-[1.25] mt-[4px]">Explore un autre univers</div>
-              <div className="text-[12.5px] text-muted leading-[1.5] mt-[6px]">
+              <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">✦ Une autre piste</div>
+              <div className="font-serif text-[15px] text-ink leading-[1.25] mt-[4px]">Explore un autre univers</div>
+              <div className="text-[12px] text-muted leading-[1.5] mt-[6px]">
                 Découvre les capsules qui peuvent compléter ton dressing pour cette occasion. Ton style personnel reste
                 inchangé.
               </div>
@@ -956,7 +956,7 @@ export default function TenuesScreen() {
               )}
             </div>
           ) : (
-            <div className="mt-[14px] text-[12.5px] text-muted leading-[1.5]">
+            <div className="mt-[14px] text-[12px] text-muted leading-[1.5]">
               Aucun autre style ne permet encore de couvrir cette occasion avec ta capsule actuelle.
             </div>
           )}
@@ -1029,7 +1029,7 @@ export default function TenuesScreen() {
                         />
                       ) : (
                         <span
-                          className="absolute left-[7px] bottom-[6px] text-[8.5px] tracking-[.05em]"
+                          className="absolute left-[7px] bottom-[6px] text-[9px] tracking-[.05em]"
                           style={{ color: "rgba(243,238,229,.9)", textShadow: "0 1px 2px rgba(0,0,0,.35)" }}
                         >
                           {CATLABEL[it.cat].toUpperCase()}
@@ -1053,11 +1053,11 @@ export default function TenuesScreen() {
                       ⇄
                     </button>
                   </div>
-                  <div className="text-[11.5px] text-ink leading-[1.25] mt-[8px]">{it.name}</div>
-                  <div className="text-[10.5px] text-muted mt-[2px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
+                  <div className="text-[11px] text-ink leading-[1.25] mt-[8px]">{it.name}</div>
+                  <div className="text-[10px] text-muted mt-[2px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
                   {/* Provenance à la pièce — la même séparation que les badges
                       du héros, jamais un second calcul. */}
-                  <div className="text-[10.5px] mt-[1px]" style={{ color: suggested ? "#8C5540" : "#7B7366" }}>
+                  <div className="text-[10px] mt-[1px]" style={{ color: suggested ? "#8C5540" : "#7B7366" }}>
                     {suggested ? "Capsule" : "Ton dressing"}
                   </div>
                 </div>
@@ -1067,14 +1067,14 @@ export default function TenuesScreen() {
 
       {!noCompleteOutfit && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
         <div className="mt-4 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
-          <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
+          <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
         </div>
       )}
 
       {!noCompleteOutfit && lookScore.proactives.length > 0 && (
         <div className="mt-4 flex items-center gap-[7px]">
           <span className="font-serif italic text-[13px] text-terracotta">✦</span>
-          <span className="text-[10.5px] tracking-[.14em] uppercase text-terracotta">Nos conseils pour sublimer cette tenue</span>
+          <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Nos conseils pour sublimer cette tenue</span>
         </div>
       )}
 
@@ -1106,15 +1106,15 @@ export default function TenuesScreen() {
                             <button
                               onClick={() => setLayeringInfoOpen((v) => !v)}
                               aria-label="Qu'est-ce que le layering ?"
-                              className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10.5px] text-terracotta flex items-center justify-center cursor-pointer"
+                              className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10px] text-terracotta flex items-center justify-center cursor-pointer"
                             >
                               i
                             </button>
                           </div>
                         )}
-                        <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
+                        <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
                         {key === "layer" && layeringInfoOpen && (
-                          <div className="text-[11.5px] text-muted mt-[6px] leading-[1.4]">
+                          <div className="text-[11px] text-muted mt-[6px] leading-[1.4]">
                             Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un
                             débardeur sous une chemise oversize ouverte.
                           </div>
@@ -1148,7 +1148,7 @@ export default function TenuesScreen() {
                               filter: "grayscale(55%) opacity(.8)",
                             }}
                           />
-                          <span className="absolute top-[7px] left-[7px] bg-terracotta text-cream text-[8.5px] tracking-[.08em] uppercase rounded-full py-[3px] px-[8px]">
+                          <span className="absolute top-[7px] left-[7px] bg-terracotta text-cream text-[9px] tracking-[.08em] uppercase rounded-full py-[3px] px-[8px]">
                             Suggérée
                           </span>
                         </div>
@@ -1188,7 +1188,7 @@ export default function TenuesScreen() {
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">✦</span>
           <div className="flex-1">
-            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{missingText}</div>
+            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{missingText}</div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
               Ajouter une pièce →
             </button>
@@ -1208,7 +1208,7 @@ export default function TenuesScreen() {
                 démontré. Le bandeau porte maintenant ce que la pastille ne peut
                 pas dire — la DIMENSION du repli — au lieu de répéter le mot du
                 badge. */}
-            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
+            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">
               Pour cette occasion, Capsela privilégie un registre plus sobre, composé avec les pièces de {sourceLabel}.
             </div>
             {/* Le lien ouvre le formulaire d'ajout — il dit donc ce qu'il
@@ -1230,7 +1230,7 @@ export default function TenuesScreen() {
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">✦</span>
           <div className="flex-1">
-            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
+            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">
               {occasionElargieText(occasionLabelCourant)}
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
@@ -1244,7 +1244,7 @@ export default function TenuesScreen() {
         <div className="mt-4 flex items-start gap-[11px] bg-warm-bg border-[1.5px] border-terracotta rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta">!</span>
           <div className="flex-1">
-            <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">
+            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">
               Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
@@ -1285,7 +1285,7 @@ export default function TenuesScreen() {
             de « Nos conseils pour sublimer cette tenue » quelques lignes plus
             haut et de « Une autre piste ». Pas le 11 px / .16em majoritaire
             ailleurs dans l'app : le voisin immédiat prime sur la moyenne. */}
-        <span className="block text-[10.5px] tracking-[.14em] uppercase text-terracotta">À préparer</span>
+        <span className="block text-[10px] tracking-[.14em] uppercase text-terracotta">À préparer</span>
 
         {/* Le titre reste l'élément le plus fort du bloc — et reste sous la
             tenue du jour, qui porte un serif plus grand. */}
@@ -1299,7 +1299,7 @@ export default function TenuesScreen() {
           Planifie ta tenue à l&apos;avance.
         </span>
 
-        <span className="block text-[11.5px] text-muted leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
+        <span className="block text-[11px] text-muted leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
           Donne-nous l&apos;occasion, la date et le lieu. Capsela compose le look.
         </span>
 
@@ -1380,11 +1380,11 @@ export default function TenuesScreen() {
             >
               <span className="flex-1 min-w-0">
                 <span className="block text-[13px] font-medium text-ink">Regarder une vidéo</span>
-                <span className="block text-[11.5px] text-muted leading-[1.45] mt-[2px]">
+                <span className="block text-[11px] text-muted leading-[1.45] mt-[2px]">
                   Environ 30 secondes, une seule fois par jour.
                 </span>
               </span>
-              <span className="flex-shrink-0 text-[11px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[9px] py-[4px]">
+              <span className="flex-shrink-0 text-[11px] tracking-[.16em] uppercase text-terracotta bg-warm-bg rounded-full px-[9px] py-[4px]">
                 +1 tenue
               </span>
             </button>
@@ -1395,7 +1395,7 @@ export default function TenuesScreen() {
           {tempsVideo === "lecture" && (
             <div className="mt-3 bg-card border border-border rounded-[16px] px-[14px] py-[13px]" aria-live="polite">
               <div className="text-[13px] font-medium text-ink">Vidéo en cours…</div>
-              <div className="text-[11.5px] text-muted leading-[1.45] mt-[2px]">
+              <div className="text-[11px] text-muted leading-[1.45] mt-[2px]">
                 Encore quelques secondes avant ta nouvelle tenue.
               </div>
             </div>
@@ -1405,7 +1405,7 @@ export default function TenuesScreen() {
               et le quota sont intacts — et sans nouvel essai automatique. */}
           {tempsVideo === "echec" && (
             <div className="mt-3 bg-card border border-border rounded-[16px] px-[14px] py-[13px]" aria-live="polite">
-              <div className="text-[12.5px] text-muted-3 leading-[1.45]">
+              <div className="text-[12px] text-muted-3 leading-[1.45]">
                 La vidéo n&apos;a pas pu se charger. Rien n&apos;est perdu : ta tenue et tes tirages du jour sont
                 intacts.
               </div>
@@ -1423,7 +1423,7 @@ export default function TenuesScreen() {
           </button>
           <button
             onClick={() => setQuotaAtteint(false)}
-            className="w-full rounded-full text-[12.5px] text-muted-3 cursor-pointer mt-1"
+            className="w-full rounded-full text-[12px] text-muted-3 cursor-pointer mt-1"
             style={{ minHeight: 44 }}
           >
             Plus tard
@@ -1453,8 +1453,8 @@ export default function TenuesScreen() {
                   <GlypheOccasion occasion={key} taille={19} />
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className={"text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
-                  <div className="text-[11.5px] text-muted mt-[2px]">{sub}</div>
+                  <div className={"text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
+                  <div className="text-[11px] text-muted mt-[2px]">{sub}</div>
                 </div>
                 <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
                   ✓
@@ -1482,8 +1482,8 @@ export default function TenuesScreen() {
                 vers la gauche et cassait la colonne des dix autres. */}
             <span aria-hidden="true" className="flex-shrink-0" style={{ width: 19 }} />
             <div className="flex-1 min-w-0">
-              <div className={"text-[13.5px] " + (state.occasion === "all" ? "text-terracotta" : "text-ink")}>Peu importe</div>
-              <div className="text-[11.5px] text-muted mt-[2px]">Sans occasion particulière</div>
+              <div className={"text-[13px] " + (state.occasion === "all" ? "text-terracotta" : "text-ink")}>Peu importe</div>
+              <div className="text-[11px] text-muted mt-[2px]">Sans occasion particulière</div>
             </div>
             <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (state.occasion === "all" ? "text-terracotta" : "text-transparent")}>
               ✓
@@ -1510,7 +1510,7 @@ export default function TenuesScreen() {
                 <span className={actif ? "text-terracotta" : "text-muted"}>
                   <GlypheSousChoix valeur={v} taille={19} />
                 </span>
-                <div className={"flex-1 min-w-0 text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{v}</div>
+                <div className={"flex-1 min-w-0 text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>{v}</div>
                 <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
                   ✓
                 </span>
@@ -1532,10 +1532,10 @@ export default function TenuesScreen() {
           style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 14px)" }}
         >
           <div className="flex items-center gap-3 bg-ink rounded-full py-[12px] pl-4 pr-[6px] shadow-lg">
-            <span className="flex-1 min-w-0 text-[12.5px] text-cream truncate">{toast.text}</span>
+            <span className="flex-1 min-w-0 text-[12px] text-cream truncate">{toast.text}</span>
             <button
               onClick={toast.onUndo}
-              className="flex-shrink-0 text-[12px] text-terracotta tracking-[.02em] cursor-pointer py-[7px] px-[11px]"
+              className="flex-shrink-0 text-[12px] text-terracotta tracking-[.1em] cursor-pointer py-[7px] px-[11px]"
             >
               Annuler
             </button>

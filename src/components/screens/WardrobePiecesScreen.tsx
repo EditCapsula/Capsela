@@ -70,13 +70,13 @@ export default function WardrobePiecesScreen() {
       <div className="flex items-center justify-between gap-3 mt-[10px]">
         <div className="flex items-center gap-[14px] min-w-0">
           <BoutonRetour onClick={actions.goWardrobe} label="Revenir au dressing" className="flex-shrink-0" />
-          <div className="font-serif text-[20px] text-ink truncate">Mes pièces</div>
+          <div className="font-serif text-[21px] text-ink truncate">Mes pièces</div>
         </div>
         <button onClick={actions.openAdd} className="flex items-center gap-[7px] flex-shrink-0 cursor-pointer">
           <span className="w-[30px] h-[30px] rounded-full bg-terracotta text-cream flex items-center justify-center text-[16px] flex-shrink-0">
             +
           </span>
-          <span className="text-[11.5px] text-ink">Ajouter</span>
+          <span className="text-[11px] text-ink">Ajouter</span>
         </button>
       </div>
 
@@ -96,14 +96,14 @@ export default function WardrobePiecesScreen() {
             : `${items.length} ${items.length === 1 ? "pièce" : "pièces"}`}
         </div>
         {selectionMode ? (
-          <button onClick={quitterSelection} className="text-[12.5px] text-muted flex-shrink-0 cursor-pointer py-[4px]">
+          <button onClick={quitterSelection} className="text-[12px] text-muted flex-shrink-0 cursor-pointer py-[4px]">
             Annuler
           </button>
         ) : (
           items.length > 0 && (
             <button
               onClick={() => setSelectionMode(true)}
-              className="text-[12.5px] text-terracotta flex-shrink-0 cursor-pointer py-[4px]"
+              className="text-[12px] text-terracotta flex-shrink-0 cursor-pointer py-[4px]"
             >
               Sélectionner
             </button>
@@ -112,7 +112,7 @@ export default function WardrobePiecesScreen() {
       </div>
 
       {items.length === 0 ? (
-        <div className="text-[12.5px] text-muted leading-[1.5] mt-3">
+        <div className="text-[12px] text-muted leading-[1.5] mt-3">
           Tes pièces apparaîtront ici au fur et à mesure que tu les ajoutes à ton dressing.
         </div>
       ) : (
@@ -158,7 +158,7 @@ export default function WardrobePiecesScreen() {
                   )}
                   {isToday && !selectionMode && (
                     <span
-                      className="absolute top-[8px] right-[8px] text-[9.5px] tracking-[.04em] text-cream rounded-full px-[8px] py-[3px]"
+                      className="absolute top-[8px] right-[8px] text-[9px] tracking-[.04em] text-cream rounded-full px-[8px] py-[3px]"
                       style={{ background: "rgba(166,105,80,.92)" }}
                     >
                       Aujourd&apos;hui
@@ -184,7 +184,7 @@ export default function WardrobePiecesScreen() {
         <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[480px] px-6 pb-[18px] pt-[14px] bg-gradient-to-t from-cream via-cream to-transparent">
           <button
             onClick={() => setConfirmOpen(true)}
-            className="w-full text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
+            className="w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
           >
             Retirer {selection.size} {selection.size === 1 ? "pièce" : "pièces"}
           </button>
@@ -203,7 +203,7 @@ export default function WardrobePiecesScreen() {
         </div>
         <button
           onClick={supprimer}
-          className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
+          className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
         >
           Retirer définitivement
         </button>

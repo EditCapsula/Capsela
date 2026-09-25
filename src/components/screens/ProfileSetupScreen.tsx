@@ -64,7 +64,7 @@ function OptionRow({
     <button
       onClick={onClick}
       className={
-        "flex items-center gap-3 px-4 py-[15px] rounded-[14px] cursor-pointer text-[13.5px] leading-[1.4] text-left border " +
+        "flex items-center gap-3 px-4 py-[15px] rounded-[14px] cursor-pointer text-[13px] leading-[1.4] text-left border " +
         (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
       }
     >
@@ -250,11 +250,11 @@ export default function ProfileSetupScreen() {
       </div>
 
       <div className="mt-[26px]">
-        <div className="text-[11px] tracking-[.18em] uppercase text-terracotta">{meta.kicker}</div>
+        <div className="text-[11px] tracking-[.16em] uppercase text-terracotta">{meta.kicker}</div>
         <div className="font-serif text-[27px] leading-[1.15] text-ink mt-3">{meta.title}</div>
-        <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">{meta.subtitle}</div>
+        <div className="text-[13px] text-muted mt-[10px] leading-[1.5]">{meta.subtitle}</div>
         {meta.key === "pal_couleurs" && draft.paletteCouleurs.length > 0 && (
-          <div className="text-[12.5px] text-muted mt-[6px]">
+          <div className="text-[12px] text-muted mt-[6px]">
             {draft.paletteCouleurs.length} sur {MAX_PALETTE_COULEURS} couleur{draft.paletteCouleurs.length > 1 ? "s" : ""} sélectionnée
             {draft.paletteCouleurs.length > 1 ? "s" : ""}
           </div>
@@ -317,7 +317,7 @@ export default function ProfileSetupScreen() {
         <div className="mt-6 bg-card border border-border rounded-[18px] p-[18px]">
           {recapRows.map((r) => (
             <div key={r.label} className="flex items-center gap-3 py-[11px] border-b border-border last:border-b-0">
-              <span className="w-[70px] flex-shrink-0 text-[11px] tracking-[.1em] uppercase text-muted">{r.label}</span>
+              <span className="w-[70px] flex-shrink-0 text-[11px] tracking-[.16em] uppercase text-muted">{r.label}</span>
               <div className="flex items-center gap-[6px] flex-wrap flex-1 min-w-0">
                 {r.swatches.map((hex) => (
                   <span
@@ -326,7 +326,7 @@ export default function ProfileSetupScreen() {
                     style={{ background: hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }}
                   />
                 ))}
-                <span className="text-[12.5px] text-ink">{r.value}</span>
+                <span className="text-[12px] text-ink">{r.value}</span>
               </div>
             </div>
           ))}
@@ -433,13 +433,13 @@ export default function ProfileSetupScreen() {
             ))}
           </div>
           <button onClick={() => setGuideOpen(!guideOpen)} className="flex items-center gap-[7px] mt-[18px] cursor-pointer">
-            <span className="text-[12.5px] text-terracotta">Comment savoir quelle est ma morphologie ?</span>
+            <span className="text-[12px] text-terracotta">Comment savoir quelle est ma morphologie ?</span>
           </button>
           {guideOpen && (
             <div className="bg-card border border-border rounded-[14px] px-4 py-[14px] mt-[10px] flex flex-col gap-[11px]">
               {MORPHOLOGIES.map((m) => (
                 <div key={m}>
-                  <div className="text-[12.5px] text-ink font-semibold">{MORPHOLOGY_LABELS[m]}</div>
+                  <div className="text-[12px] text-ink font-semibold">{MORPHOLOGY_LABELS[m]}</div>
                   <div className="text-[12px] text-muted mt-[2px] leading-[1.4]">{MORPHO_HINTS[m]}</div>
                 </div>
               ))}

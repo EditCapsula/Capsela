@@ -190,7 +190,7 @@ function PiluleAction({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-between gap-2 rounded-full px-4 text-[12.5px] font-semibold text-ink cursor-pointer active:opacity-80"
+      className="w-full flex items-center justify-between gap-2 rounded-full px-4 text-[12px] font-semibold text-ink cursor-pointer active:opacity-80"
       style={{ minHeight: 44, background: sur === "warm" ? "var(--color-card)" : "var(--color-cream)" }}
     >
       {children}
@@ -314,7 +314,7 @@ export default function WardrobeScreen() {
           onClick={() => (dressingPlein ? actions.goPremium() : actions.openAdd())}
           aria-label={dressingPlein ? "Dressing complet — découvrir Premium" : "Ajouter une pièce à mon dressing"}
           className={
-            "flex items-center gap-[6px] rounded-full px-[14px] text-[12.5px] whitespace-nowrap flex-shrink-0 cursor-pointer " +
+            "flex items-center gap-[6px] rounded-full px-[14px] text-[12px] whitespace-nowrap flex-shrink-0 cursor-pointer " +
             (items.length > 0
               ? "bg-terracotta active:bg-terracotta-hover text-cream"
               : "bg-card border border-border text-terracotta")
@@ -405,7 +405,7 @@ export default function WardrobeScreen() {
             {ETINCELLE}
             <div className="font-serif text-[18px] text-ink">Déjà envie d&apos;inspiration ?</div>
           </div>
-          <div className="text-[12.5px] leading-[1.5] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
+          <div className="text-[12px] leading-[1.5] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
             Découvre ta capsule personnalisée et quelques idées de looks, même sans pièces dans ton dressing.
           </div>
           <div className="mt-[10px]">
@@ -435,8 +435,8 @@ export default function WardrobeScreen() {
                     ))}
                   </div>
                   <div className="px-3 pt-[10px] pb-3">
-                    <div className="font-serif text-[14px] leading-[1.25] text-ink">{OCC_LABELS[occasion]}</div>
-                    <div className="text-[10.5px] text-terracotta mt-1">Idée Capsela</div>
+                    <div className="font-serif text-[15px] leading-[1.25] text-ink">{OCC_LABELS[occasion]}</div>
+                    <div className="text-[10px] text-terracotta mt-1">Idée Capsela</div>
                   </div>
                 </div>
               ))}
@@ -565,12 +565,12 @@ export default function WardrobeScreen() {
                 longs passent à la ligne. Sans cette hauteur, une carte sur
                 deux dépassait ses voisines — vu en capture. */}
             <div
-              className="font-serif text-[14px] text-ink mt-2 mx-1 leading-[1.2]"
+              className="font-serif text-[15px] text-ink mt-2 mx-1 leading-[1.2]"
               style={{ minHeight: "2.4em" }}
             >
               {g.label}
             </div>
-            <div className="text-[10.5px] text-muted mt-[2px] mx-1">
+            <div className="text-[10px] text-muted mt-[2px] mx-1">
               {g.items.length} {g.items.length <= 1 ? "pièce" : "pièces"}
             </div>
           </button>
@@ -631,7 +631,7 @@ export default function WardrobeScreen() {
           )}
 
           {filteredLooks.length === 0 ? (
-            <div className="text-[12.5px] text-muted leading-[1.5] mt-3">
+            <div className="text-[12px] text-muted leading-[1.5] mt-3">
               Aucun look dans cette catégorie pour l&apos;instant.
             </div>
           ) : (
@@ -728,7 +728,7 @@ export default function WardrobeScreen() {
           <div className="font-serif text-[18px] leading-[1.25] text-ink mt-2">
             {wishlistCount} {wishlistCount === 1 ? "look contient" : "looks contiennent"} des pièces suggérées
           </div>
-          <div className="text-[12.5px] leading-[1.5] mt-[5px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
+          <div className="text-[12px] leading-[1.5] mt-[5px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
             Découvre des alternatives ou ajoute-les à ton dressing.
           </div>
           <div className="mt-3">

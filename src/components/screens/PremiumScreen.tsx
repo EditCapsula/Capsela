@@ -189,7 +189,7 @@ export default function PremiumScreen() {
               <Glyphe>{G_VALISE}</Glyphe>
             </span>
             <span className="min-w-0">
-              <span className="block text-[10.5px] tracking-[.14em] uppercase text-terracotta">
+              <span className="block text-[10px] tracking-[.14em] uppercase text-terracotta">
                 Ce que tu voulais faire
               </span>
               <span className="block text-[13px] text-ink leading-[1.4] mt-[3px]">Préparer une valise</span>
@@ -204,14 +204,14 @@ export default function PremiumScreen() {
                 <span className="text-terracotta-deep">
                   <Glyphe>{a.glyphe}</Glyphe>
                 </span>
-                <div className="font-serif text-[17px] text-ink leading-[1.2]">{a.titre}</div>
+                <div className="font-serif text-[18px] text-ink leading-[1.2]">{a.titre}</div>
                 {a.bientot && (
-                  <span className="text-[9.5px] tracking-[.1em] uppercase text-muted bg-chip-soft-bg rounded-full px-[9px] py-[4px] whitespace-nowrap">
+                  <span className="text-[9px] tracking-[.1em] uppercase text-muted bg-chip-soft-bg rounded-full px-[9px] py-[4px] whitespace-nowrap">
                     Bientôt
                   </span>
                 )}
               </div>
-              <div className="text-[12.5px] text-muted-3 leading-[1.5] mt-1" style={{ textWrap: "pretty" }}>
+              <div className="text-[12px] text-muted-3 leading-[1.5] mt-1" style={{ textWrap: "pretty" }}>
                 {a.desc}
               </div>
             </div>
@@ -261,7 +261,7 @@ export default function PremiumScreen() {
                   >
                     {f.prix}
                   </span>
-                  <span className="block text-[11.5px] text-muted-3 mt-[2px]">{f.sous}</span>
+                  <span className="block text-[11px] text-muted-3 mt-[2px]">{f.sous}</span>
                   {f.economie && (
                     <span className="inline-flex items-center gap-[5px] mt-[6px] text-[11px] font-semibold text-terracotta-deep bg-warm-bg border border-sand-border rounded-full px-[9px] py-[3px] whitespace-nowrap">
                       <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor" style={{ display: "block" }}>
@@ -280,7 +280,7 @@ export default function PremiumScreen() {
       <div className="relative flex-shrink-0 px-6 pt-[10px] pb-[18px] border-t border-border">
         {note && (
           <div
-            className="absolute inset-x-6 z-30 pointer-events-none rounded-[15px] px-4 py-[13px] text-[12.5px]"
+            className="absolute inset-x-6 z-30 pointer-events-none rounded-[15px] px-4 py-[13px] text-[12px]"
             style={{ bottom: "100%", marginBottom: 12, background: "var(--color-ink)", color: "var(--color-cream)" }}
             aria-live="polite"
           >
@@ -292,7 +292,7 @@ export default function PremiumScreen() {
           <div className="text-[10px] tracking-[.14em] uppercase text-muted">Offre sélectionnée</div>
           <div className="flex items-baseline flex-wrap gap-x-[10px] gap-y-[2px] mt-[2px]">
             <span className="font-serif text-[21px] text-ink leading-[1.2] whitespace-nowrap">{choisie.prix}</span>
-            <span className="text-[11.5px] text-muted-3 whitespace-nowrap">
+            <span className="text-[11px] text-muted-3 whitespace-nowrap">
               {choisie.sous}
               {choisie.economie ? ` · ${choisie.economie}` : ""}
             </span>
@@ -313,14 +313,14 @@ export default function PremiumScreen() {
           Me prévenir à l&apos;ouverture
         </button>
 
-        <div className="text-[11.5px] text-muted leading-[1.45] mt-[10px] text-center" style={{ textWrap: "pretty" }}>
+        <div className="text-[11px] text-muted leading-[1.45] mt-[10px] text-center" style={{ textWrap: "pretty" }}>
           L&apos;abonnement n&apos;est pas encore ouvert. Rien ne t&apos;est facturé.
         </div>
 
         <div className="flex items-center justify-center mt-[2px]">
           <button
             onClick={actions.goLegal}
-            className="text-[11.5px] text-muted cursor-pointer px-[10px] flex items-center"
+            className="text-[11px] text-muted cursor-pointer px-[10px] flex items-center"
             style={{ minHeight: 44 }}
           >
             Conditions et confidentialité

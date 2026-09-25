@@ -60,7 +60,7 @@ function MoodboardCard({ id, className }: { id: StyleId; className?: string }) {
         />
       )}
       <div className="absolute bottom-0 left-0 right-0 px-[9px] py-[7px] bg-gradient-to-t from-black/45 to-transparent">
-        <div className="text-[10.5px] text-white font-medium leading-[1.2]">{cfg.label}</div>
+        <div className="text-[10px] text-white font-medium leading-[1.2]">{cfg.label}</div>
       </div>
     </div>
   );
@@ -152,7 +152,7 @@ export default function OnboardingScreen() {
                       <div className="w-7 h-7 rounded-full bg-card border border-border flex items-center justify-center text-terracotta text-[13px] flex-shrink-0">
                         {f.glyph}
                       </div>
-                      <div className="text-[10.5px] text-ink font-medium mt-[6px] leading-[1.2]">{f.label}</div>
+                      <div className="text-[10px] text-ink font-medium mt-[6px] leading-[1.2]">{f.label}</div>
                       <div className="text-[9px] text-muted mt-[2px] leading-[1.25]">{f.desc}</div>
                     </div>
                   ))}
@@ -165,10 +165,10 @@ export default function OnboardingScreen() {
                     <div className="bg-cream rounded-[13px] overflow-hidden px-[10px] pt-[10px] pb-[9px] h-full flex flex-col">
                       <div className="text-[9px] text-ink font-serif text-center mb-[8px]">Tenue du jour</div>
                       <div className="flex gap-[5px] mb-[8px]">
-                        <div className="flex-1 bg-card rounded-[8px] px-[6px] py-[5px] text-[7px] text-ink leading-[1.3]">
+                        <div className="flex-1 bg-card rounded-[8px] px-[6px] py-[5px] text-[9px] text-ink leading-[1.3]">
                           ☀️ 22° · Paris
                         </div>
-                        <div className="flex-1 bg-card rounded-[8px] px-[6px] py-[5px] text-[7px] text-ink leading-[1.3]">
+                        <div className="flex-1 bg-card rounded-[8px] px-[6px] py-[5px] text-[9px] text-ink leading-[1.3]">
                           Travail / Bureau
                         </div>
                       </div>
@@ -178,10 +178,10 @@ export default function OnboardingScreen() {
                         ))}
                       </div>
                       <div className="flex-1" />
-                      <div className="bg-ink text-cream text-center rounded-full py-[6px] text-[7.5px] mb-[5px]">
+                      <div className="bg-ink text-cream text-center rounded-full py-[6px] text-[9px] mb-[5px]">
                         Voir le détail
                       </div>
-                      <div className="border border-border text-ink text-center rounded-full py-[6px] text-[7.5px]">
+                      <div className="border border-border text-ink text-center rounded-full py-[6px] text-[9px]">
                         Plus d’idées
                       </div>
                     </div>
@@ -213,7 +213,7 @@ export default function OnboardingScreen() {
                   {slide.glyph}
                 </div>
                 <div
-                  className="absolute bottom-[14px] left-4 text-[10px] tracking-[.18em] uppercase"
+                  className="absolute bottom-[14px] left-4 text-[10px] tracking-[.14em] uppercase"
                   style={{ color: slide.tagColor }}
                 >
                   {slide.tag}
@@ -221,7 +221,7 @@ export default function OnboardingScreen() {
               </div>
             )}
             <div className={kickerBlockMt}>
-              <div className="text-[11px] tracking-[.2em] uppercase text-terracotta">{slide.kicker}</div>
+              <div className="text-[11px] tracking-[.16em] uppercase text-terracotta">{slide.kicker}</div>
               <div className="font-serif text-[31px] leading-[1.08] tracking-[-.01em] text-ink mt-3">{slide.title}</div>
               <div className={bodyClass}>{slide.body}</div>
             </div>

@@ -19,7 +19,7 @@ export default function LegalScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px] mt-[10px]">
         <BoutonRetour onClick={actions.backFromLegal} label="Revenir à l'écran précédent" />
-        <div className="font-serif text-[24px] text-ink">Informations légales</div>
+        <div className="font-serif text-[27px] text-ink">Informations légales</div>
       </div>
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden mt-5">
@@ -29,7 +29,7 @@ export default function LegalScreen() {
             className="flex items-center justify-between gap-3 px-4 py-[15px] border-b border-border last:border-b-0 cursor-pointer"
           >
             <div className="min-w-0">
-              <div className="text-[13.5px] text-ink">{r.label}</div>
+              <div className="text-[13px] text-ink">{r.label}</div>
               <div className="text-[11px] text-muted mt-[2px]">{r.sub}</div>
             </div>
             <span className="text-terracotta text-[16px] flex-shrink-0">›</span>

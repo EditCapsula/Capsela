@@ -34,14 +34,14 @@ function GenderModal({
       onClick={onClose}
     >
       <div className="w-full max-w-[440px] bg-cream rounded-t-[22px] px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
-        <div className="font-serif text-[19px] text-ink mb-[16px]">Modifier mon genre</div>
+        <div className="font-serif text-[18px] text-ink mb-[16px]">Modifier mon genre</div>
         <div className="flex flex-col gap-[10px]">
           {GENDERS.map((g) => (
             <button
               key={g.key}
               onClick={() => onSelect(g.key)}
               className={
-                "text-left px-4 py-[15px] rounded-[14px] cursor-pointer text-[13.5px] border " +
+                "text-left px-4 py-[15px] rounded-[14px] cursor-pointer text-[13px] border " +
                 (current === g.key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
               }
             >
@@ -49,7 +49,7 @@ function GenderModal({
             </button>
           ))}
         </div>
-        <button onClick={onClose} className="mt-[18px] w-full text-center text-[12.5px] text-muted cursor-pointer">
+        <button onClick={onClose} className="mt-[18px] w-full text-center text-[12px] text-muted cursor-pointer">
           Annuler
         </button>
       </div>
@@ -72,7 +72,7 @@ function RevalidationSheet({ field, onDismiss, onEdit }: { field: GenderDependen
       onClick={onDismiss}
     >
       <div className="w-full max-w-[440px] bg-cream rounded-t-[22px] px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
-        <div className="font-serif text-[19px] text-ink mb-[8px]">{field.fieldLabel} est à mettre à jour</div>
+        <div className="font-serif text-[18px] text-ink mb-[8px]">{field.fieldLabel} est à mettre à jour</div>
         <div className="text-[13px] text-muted leading-[1.5] mb-[20px]">
           Les propositions évoluent selon ton profil. Choisis celle qui te correspond le mieux aujourd&apos;hui.
         </div>
@@ -82,7 +82,7 @@ function RevalidationSheet({ field, onDismiss, onEdit }: { field: GenderDependen
         >
           {field.ctaLabel}
         </button>
-        <button onClick={onDismiss} className="mt-[14px] w-full text-center text-[12.5px] text-muted cursor-pointer">
+        <button onClick={onDismiss} className="mt-[14px] w-full text-center text-[12px] text-muted cursor-pointer">
           Plus tard
         </button>
       </div>
@@ -213,7 +213,7 @@ export default function ProfileEditScreen() {
 
       <div className="flex items-center justify-between mt-[26px] mb-[11px]">
         <span className="text-[11px] tracking-[.16em] uppercase text-muted">Ma silhouette</span>
-        <button onClick={() => actions.goProfileSetup("taille", true)} className="text-[12.5px] text-terracotta cursor-pointer">
+        <button onClick={() => actions.goProfileSetup("taille", true)} className="text-[12px] text-terracotta cursor-pointer">
           Modifier
         </button>
       </div>
@@ -224,30 +224,30 @@ export default function ProfileEditScreen() {
           ["Pointure", profile.pointure],
         ].map(([label, value]) => (
           <div key={label} className="flex-1 bg-card border border-border rounded-2xl p-4 text-center">
-            <div className="text-[11.5px] text-muted">{label}</div>
-            <div className="font-serif text-[22px] text-ink mt-[6px]">{value || "—"}</div>
+            <div className="text-[11px] text-muted">{label}</div>
+            <div className="font-serif text-[21px] text-ink mt-[6px]">{value || "—"}</div>
           </div>
         ))}
       </div>
       {profile.gender !== "homme" && (
         <div className="bg-card border border-border rounded-2xl p-4 mt-[10px]">
-          <div className="text-[11.5px] text-muted">Morphologie</div>
-          <div className="text-[13.5px] text-ink mt-[6px]">{morphologyLabel(profile.morphology) || "—"}</div>
+          <div className="text-[11px] text-muted">Morphologie</div>
+          <div className="text-[13px] text-ink mt-[6px]">{morphologyLabel(profile.morphology) || "—"}</div>
         </div>
       )}
 
       <div className="flex items-center justify-between mt-[26px] mb-[11px]">
         <span className="text-[11px] tracking-[.16em] uppercase text-muted">Mes goûts</span>
-        <button onClick={() => actions.goProfileSetup("pal_couleurs", true)} className="text-[12.5px] text-terracotta cursor-pointer">
+        <button onClick={() => actions.goProfileSetup("pal_couleurs", true)} className="text-[12px] text-terracotta cursor-pointer">
           Modifier
         </button>
       </div>
       <div className="bg-card border border-border rounded-2xl p-4">
-        <div className="text-[11.5px] text-muted">Palette</div>
-        <div className="text-[13.5px] text-ink mt-[6px] leading-[1.4]">{paletteSummary(profile)}</div>
+        <div className="text-[11px] text-muted">Palette</div>
+        <div className="text-[13px] text-ink mt-[6px] leading-[1.4]">{paletteSummary(profile)}</div>
         <div className="h-px bg-border my-[14px]" />
-        <div className="text-[11.5px] text-muted">Style</div>
-        <div className="text-[13.5px] text-ink mt-[6px]">{styleLabel(profile.styles[0], profile.gender) || "—"}</div>
+        <div className="text-[11px] text-muted">Style</div>
+        <div className="text-[13px] text-ink mt-[6px]">{styleLabel(profile.styles[0], profile.gender) || "—"}</div>
       </div>
 
       <SectionLabel>Compte</SectionLabel>
@@ -284,14 +284,14 @@ export default function ProfileEditScreen() {
       <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px]">
         <div className="flex-1 pr-3">
           <span className="text-[13px] text-ink">Autoriser la géolocalisation</span>
-          <div className="text-[11.5px] text-muted mt-[2px] leading-[1.35]">Pour situer ta ville et adapter tes tenues.</div>
+          <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">Pour situer ta ville et adapter tes tenues.</div>
         </div>
         <Toggle on={prefs.geoConsent} onClick={() => setPrefs({ geoConsent: !prefs.geoConsent })} />
       </div>
       <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px] mt-[9px]">
         <div className="flex-1 pr-3">
           <span className="text-[13px] text-ink">Utiliser la météo de ma position</span>
-          <div className="text-[11.5px] text-muted mt-[2px] leading-[1.35]">
+          <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">
             Sinon, la météo de ta ville renseignée est utilisée.
           </div>
         </div>
@@ -312,7 +312,7 @@ export default function ProfileEditScreen() {
               key={key}
               onClick={() => setPrefs({ unitSystem: key })}
               className={
-                "px-[14px] py-[11px] rounded-full text-[12.5px] cursor-pointer font-sans border " +
+                "px-[14px] py-[11px] rounded-full text-[12px] cursor-pointer font-sans border " +
                 (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
               }
             >
@@ -349,7 +349,7 @@ export default function ProfileEditScreen() {
       <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px] mt-[22px]">
         <div>
           <div className="text-[13px] text-ink">Je suis en congés</div>
-          <div className="text-[11.5px] text-muted mt-[2px]">Met en pause les recommandations liées au travail.</div>
+          <div className="text-[11px] text-muted mt-[2px]">Met en pause les recommandations liées au travail.</div>
         </div>
         <Toggle on={prefs.onVacation} onClick={() => setPrefs({ onVacation: !prefs.onVacation })} />
       </div>
@@ -397,7 +397,7 @@ function AnalyticsPreference() {
       <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px]">
         <div className="flex-1 pr-3">
           <span className="text-[13px] text-ink">Autoriser les statistiques d&apos;usage</span>
-          <div className="text-[11.5px] text-muted mt-[2px] leading-[1.35]">
+          <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">
             Établies par Google Analytics, pour améliorer l&apos;application. Aucune incidence sur son fonctionnement.
           </div>
         </div>

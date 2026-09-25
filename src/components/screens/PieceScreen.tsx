@@ -16,7 +16,7 @@ const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3">
-      <span className="text-[11px] tracking-[.08em] uppercase text-placeholder flex-shrink-0">{label}</span>
+      <span className="text-[11px] tracking-[.16em] uppercase text-placeholder flex-shrink-0">{label}</span>
       <span className="text-[13px] text-ink text-right">{value}</span>
     </div>
   );
@@ -25,7 +25,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 function CharRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="flex items-center gap-[8px] text-[11px] tracking-[.08em] uppercase text-placeholder flex-shrink-0">
+      <span className="flex items-center gap-[8px] text-[11px] tracking-[.16em] uppercase text-placeholder flex-shrink-0">
         <span className="text-terracotta flex-shrink-0">{icon}</span>
         {label}
       </span>
@@ -246,12 +246,12 @@ export default function PieceScreen() {
             className="inline-flex items-center gap-[6px] mt-4 text-[9px] tracking-[.08em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px] cursor-pointer"
           >
             Suggestion
-            <span className="w-[13px] h-[13px] rounded-full border border-[#C9966F] text-[8px] normal-case flex items-center justify-center">
+            <span className="w-[13px] h-[13px] rounded-full border border-[#C9966F] text-[9px] normal-case flex items-center justify-center">
               i
             </span>
           </button>
           {suggestionInfoOpen && (
-            <div className="mt-[9px] bg-[#F0E5D6] rounded-[11px] px-3 py-[11px] text-[11.5px] text-[#3F3B34] leading-[1.5]">
+            <div className="mt-[9px] bg-[#F0E5D6] rounded-[11px] px-3 py-[11px] text-[11px] text-[#3F3B34] leading-[1.5]">
               Cette pièce vient de ta capsule de départ : tu n&apos;as pas encore ajouté de pièce de cette catégorie à
               ton dressing. Ajoute-la si tu l&apos;as déjà, ou remplace-la par une des tiennes.
             </div>
@@ -259,8 +259,8 @@ export default function PieceScreen() {
         </div>
       )}
 
-      <div className="text-[11px] tracking-[.14em] uppercase text-muted mt-[14px]">{eyebrow}</div>
-      <div className="font-serif text-[24px] text-ink mt-1">{displayName}</div>
+      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[14px]">{eyebrow}</div>
+      <div className="font-serif text-[27px] text-ink mt-1">{displayName}</div>
       {synthesis && <div className="text-[13px] text-warm-text mt-[6px]">{synthesis}</div>}
 
       {!suggested && (
@@ -323,7 +323,7 @@ export default function PieceScreen() {
               href={active.affLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-[10px] block w-full text-center border border-border-soft text-terracotta rounded-full py-[13px] text-[12.5px] cursor-pointer"
+              className="mt-[10px] block w-full text-center border border-border-soft text-terracotta rounded-full py-[13px] text-[12px] cursor-pointer"
             >
               Acheter
             </a>
@@ -339,7 +339,7 @@ export default function PieceScreen() {
           </button>
           <button
             onClick={() => setLookSheetOpen(true)}
-            className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[14px] text-[12.5px] tracking-[.08em] uppercase cursor-pointer"
+            className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase cursor-pointer"
           >
             ♡ Ajouter à un look
           </button>
@@ -354,7 +354,7 @@ export default function PieceScreen() {
               </span>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] text-ink">Cette pièce dort dans ton dressing.</div>
-                <div className="text-[11.5px] text-terracotta mt-[3px]">Que faire avec ? →</div>
+                <div className="text-[11px] text-terracotta mt-[3px]">Que faire avec ? →</div>
               </div>
               <span className="text-terracotta text-[16px] flex-shrink-0">›</span>
             </button>
@@ -410,7 +410,7 @@ export default function PieceScreen() {
               setConfirmRemove(false);
               actions.removeActive();
             }}
-            className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
+            className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
           >
             Retirer définitivement
           </button>
@@ -427,7 +427,7 @@ export default function PieceScreen() {
         <BottomSheet title="Ajouter à un look" open={lookSheetOpen} onClose={() => setLookSheetOpen(false)}>
           <div className="flex flex-col gap-[8px]">
             {addableLooks.length === 0 && state.savedLooks.length > 0 && (
-              <div className="text-[12.5px] text-muted mb-[6px]">Cette pièce fait déjà partie de tous tes looks enregistrés.</div>
+              <div className="text-[12px] text-muted mb-[6px]">Cette pièce fait déjà partie de tous tes looks enregistrés.</div>
             )}
             {addableLooks.map((look) => (
               <button
@@ -439,7 +439,7 @@ export default function PieceScreen() {
                 className="flex items-center justify-between gap-3 bg-card border border-border rounded-[14px] px-4 py-[13px] cursor-pointer text-left"
               >
                 <div className="min-w-0">
-                  <div className="text-[13.5px] text-ink truncate">{look.name}</div>
+                  <div className="text-[13px] text-ink truncate">{look.name}</div>
                   <div className="text-[11px] text-muted mt-[2px]">
                     {look.pieceIds.length} {look.pieceIds.length > 1 ? "pièces" : "pièce"}
                   </div>

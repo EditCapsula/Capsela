@@ -34,10 +34,10 @@ export default function LookDetailScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
         <BoutonRetour onClick={actions.closeLookDetail} label="Revenir à l'écran précédent" />
-        <div className="font-serif text-[22px] text-ink">{look.name}</div>
+        <div className="font-serif text-[21px] text-ink">{look.name}</div>
       </div>
 
-      <div className={"text-[10px] tracking-[.06em] uppercase mt-5 " + (wishlist ? "text-terracotta" : look.source === "saved" ? "text-terracotta" : "text-muted")}>
+      <div className={"text-[10px] tracking-[.14em] uppercase mt-5 " + (wishlist ? "text-terracotta" : look.source === "saved" ? "text-terracotta" : "text-muted")}>
         {wishlist ? "✦ Suggéré (Wishlist)" : look.source === "saved" ? "♡ Enregistré" : "✦ Créé par moi"}
       </div>
       <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[6px] mb-3">
@@ -74,13 +74,13 @@ export default function LookDetailScreen() {
                   )}
                 </div>
                 {suggested && (
-                  <span className="absolute top-[4px] left-[4px] bg-terracotta text-cream text-[7.5px] tracking-[.06em] uppercase rounded-full py-[2px] px-[6px]">
+                  <span className="absolute top-[4px] left-[4px] bg-terracotta text-cream text-[9px] tracking-[.06em] uppercase rounded-full py-[2px] px-[6px]">
                     Suggérée
                   </span>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-[14.5px] text-ink">{it.name}</div>
+                <div className="text-[14px] text-ink">{it.name}</div>
                 <div className="text-[11px] text-muted mt-[3px]">
                   {CATLABEL[isBag(it) ? "sac" : it.cat]} · {it.color}
                 </div>
@@ -98,7 +98,7 @@ export default function LookDetailScreen() {
       </button>
       <button
         onClick={actions.deleteActiveLook}
-        className="mt-[10px] w-full text-center border border-border-soft text-rust rounded-full py-[13px] text-[12.5px] cursor-pointer"
+        className="mt-[10px] w-full text-center border border-border-soft text-rust rounded-full py-[13px] text-[12px] cursor-pointer"
       >
         Supprimer ce look
       </button>

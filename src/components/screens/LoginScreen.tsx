@@ -52,7 +52,7 @@ export default function LoginScreen() {
             <span className="w-[52px] h-[52px] rounded-full bg-[#F0E5D6] text-terracotta flex items-center justify-center text-[22px] mb-4">
               ✉
             </span>
-            <div className="font-serif text-[19px] text-ink">Lien envoyé</div>
+            <div className="font-serif text-[18px] text-ink">Lien envoyé</div>
             <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[260px]">
               Si un compte existe pour {email.trim() || "cette adresse"}, tu recevras un lien pour réinitialiser ton
               mot de passe.
@@ -70,8 +70,8 @@ export default function LoginScreen() {
         ) : (
           <>
             <div className="mt-[30px]">
-              <div className="font-serif text-[30px] leading-[1.12] text-ink">Mot de passe oublié</div>
-              <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">
+              <div className="font-serif text-[27px] leading-[1.12] text-ink">Mot de passe oublié</div>
+              <div className="text-[13px] text-muted mt-[10px] leading-[1.5]">
                 Indique ton adresse e-mail, on t&apos;enverra un lien pour le réinitialiser.
               </div>
             </div>
@@ -106,10 +106,10 @@ export default function LoginScreen() {
       </div>
 
       <div className="mt-[30px]">
-        <div className="font-serif text-[30px] leading-[1.12] text-ink">
+        <div className="font-serif text-[27px] leading-[1.12] text-ink">
           Content de te <span className="italic text-terracotta">revoir</span>
         </div>
-        <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">
+        <div className="text-[13px] text-muted mt-[10px] leading-[1.5]">
           Connecte-toi pour retrouver ton dressing et ta tenue du jour.
         </div>
       </div>
@@ -123,7 +123,7 @@ export default function LoginScreen() {
 
       <div className="flex items-center gap-[11px] my-[22px]">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-[10.5px] tracking-[.16em] uppercase text-placeholder">ou par e-mail</span>
+        <span className="text-[10px] tracking-[.14em] uppercase text-placeholder">ou par e-mail</span>
         <div className="flex-1 h-px bg-border" />
       </div>
 
@@ -156,13 +156,13 @@ export default function LoginScreen() {
 
       <button
         onClick={() => setForgotOpen(true)}
-        className="mt-3 self-end text-[12.5px] text-terracotta cursor-pointer"
+        className="mt-3 self-end text-[12px] text-terracotta cursor-pointer"
       >
         Mot de passe oublié ?
       </button>
 
       {auth.error && (
-        <div className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12.5px] text-rust leading-[1.45]">
+        <div className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {auth.error}
         </div>
       )}

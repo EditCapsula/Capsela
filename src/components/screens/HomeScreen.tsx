@@ -331,7 +331,7 @@ function CardModule({
       <div className="flex items-start justify-between gap-3 px-[16px] pt-[15px]">
         <div className="min-w-0">
           <div className="font-serif text-[18px] text-ink leading-[1.18]">{titre}</div>
-          <div className="text-[11.5px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
+          <div className="text-[11px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
             {sousTitre}
           </div>
         </div>
@@ -444,7 +444,7 @@ function FilmstripLooks({
                 <VignetteLook key={p.id} piece={p} />
               ))}
             </div>
-            <div className="text-[8.5px] text-muted mt-[4px] px-[2px] overflow-hidden text-ellipsis whitespace-nowrap">
+            <div className="text-[9px] text-muted mt-[4px] px-[2px] overflow-hidden text-ellipsis whitespace-nowrap">
               {look.name}
             </div>
           </div>
@@ -718,7 +718,7 @@ export default function HomeScreen() {
           de l'en-tête : le gain vient de la taille du serif, pas d'un
           interlignage ou d'une marge supplémentaires. */}
       <div className="px-6 mt-[18px]">
-        <div className="text-[11px] tracking-[.18em] uppercase text-muted">Aujourd&apos;hui</div>
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted">Aujourd&apos;hui</div>
         <div className="font-serif text-[34px] leading-[1.08] text-ink mt-[6px]">
           Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
         </div>
@@ -816,7 +816,7 @@ export default function HomeScreen() {
             dur donnait trois lignes au lieu de deux sous 360 px. */}
         <div className="relative z-10 flex flex-col" style={{ gridArea: "pile", padding: 22 }}>
           <div
-            className="font-serif text-[20px] min-[380px]:text-[26px] text-cream leading-[1.14]"
+            className="font-serif text-[21px] min-[380px]:text-[26px] text-cream leading-[1.14]"
             style={avecComposition ? { maxWidth: "42%" } : undefined}
           >
             {hasOutfit
@@ -826,7 +826,7 @@ export default function HomeScreen() {
                 : "Découvre ta tenue du jour"}
           </div>
           <div
-            className="text-[12.5px] mt-[8px] leading-[1.35]"
+            className="text-[12px] mt-[8px] leading-[1.35]"
             style={{ color: "rgba(243,238,229,.84)", maxWidth: avecComposition ? "38%" : 230 }}
           >
             {/* L'icône vient de WEATHER_ICONS, la seule table de l'app, lue
@@ -968,14 +968,14 @@ export default function HomeScreen() {
                 <div className="flex items-center gap-[8px] flex-wrap">
                   <button
                     onClick={() => actions.setOutfitFeedback("adore")}
-                    className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
+                    className="inline-flex items-center gap-[6px] rounded-full text-[11px] cursor-pointer px-[13px]"
                     style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
                   >
                     <span aria-hidden="true">♡</span> J&apos;adore cette tenue
                   </button>
                   <button
                     onClick={() => actions.setOutfitFeedback("pas_aujourdhui")}
-                    className="inline-flex items-center gap-[6px] rounded-full text-[11.5px] cursor-pointer px-[13px]"
+                    className="inline-flex items-center gap-[6px] rounded-full text-[11px] cursor-pointer px-[13px]"
                     style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
                   >
                     <span aria-hidden="true">✕</span> Pas pour moi
@@ -1006,7 +1006,7 @@ export default function HomeScreen() {
           d'écart se verraient. */}
       <div className="mx-6 mt-7">
         <div className="font-serif text-[21px] leading-[1.18] text-ink">Ton dressing, autrement</div>
-        <div className="text-[12.5px] text-muted leading-[1.45] mt-[5px]">
+        <div className="text-[12px] text-muted leading-[1.45] mt-[5px]">
           Tes pièces, ton style, en un coup d&apos;œil.
         </div>
       </div>
@@ -1092,7 +1092,7 @@ export default function HomeScreen() {
               <div className="font-serif text-[18px] text-ink leading-[1.2]" style={{ textWrap: "balance" }}>
                 Et si on préparait la suite ?
               </div>
-              <div className="text-[11.5px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
+              <div className="text-[11px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
                 Un dîner samedi ? Une escapade ? Une semaine chargée ?
               </div>
             </div>
@@ -1107,7 +1107,7 @@ export default function HomeScreen() {
               aria-label="Découvrir Capsela Premium"
               className="flex-shrink-0 flex items-center cursor-pointer py-[13px] -my-[13px]"
             >
-              <span className="inline-flex items-center gap-[4px] rounded-full bg-card px-[9px] py-[4px] text-[9.5px] tracking-[.1em] uppercase text-terracotta whitespace-nowrap">
+              <span className="inline-flex items-center gap-[4px] rounded-full bg-card px-[9px] py-[4px] text-[9px] tracking-[.1em] uppercase text-terracotta whitespace-nowrap">
                 <span aria-hidden="true">✦</span> Premium
               </span>
             </button>
