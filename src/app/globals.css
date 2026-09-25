@@ -127,6 +127,24 @@ input.capin::placeholder {
   }
 }
 
+/**
+ * Apparition des pièces d'une catégorie développée (écran Capsule, polish du
+ * 25/09/2026) : un fondu et 6 px de montée, 240 ms — assez pour voir d'où
+ * viennent les pièces, trop peu pour devenir un effet. Appliquée via
+ * `motion-safe:`, donc jamais jouée si le téléphone demande moins
+ * d'animations.
+ */
+@keyframes capsule-apparition {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Utilitaire de la police manuscrite. Déclaré à la main : le jeton --font-hand
    n'appartient pas aux familles que Tailwind génère automatiquement. */
 .font-hand {

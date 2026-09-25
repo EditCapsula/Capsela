@@ -90,37 +90,23 @@ function enumeration(parties: string[]): string {
 }
 
 /**
- * Courte description d'une pièce clé, écrite uniquement depuis ses données :
- * indispensable (donnée catalogue) et occasions (celles que la sélection
- * compte). Trois occasions au plus ; au-delà, « et plus encore » plutôt
- * qu'une liste. Chaîne vide si rien n'est connu — l'écran n'affiche alors
- * que le nom.
- */
-export function descriptionPieceCle(it: Item): string {
-  const occ = occasionsTriees(it).map((o) => OCCASION_EN_PHRASE[o]);
-  const lieux = occ.length > 3 ? occ.slice(0, 3).join(", ") + " et plus encore" : enumeration(occ);
-  if (it.estBasiqueCapsule) return lieux ? `Un indispensable, à porter ${lieux}.` : "Un indispensable de la saison.";
-  return lieux ? `À porter ${lieux}.` : "";
-}
-
-/**
- * Introduction éditoriale de la capsule — une phrase, dont chaque partie
- * n'apparaît que si la capsule affichée la rend vraie :
+ * Introduction éditoriale de la capsule — une phrase courte (polish du
+ * 25/09/2026 : lisible d'un coup d'œil), dont chaque partie n'apparaît que si
+ * la capsule affichée la rend vraie :
  * - « des essentiels » : au moins une pièce indispensable (`estBasiqueCapsule`) ;
- * - « des pièces dans ta palette » : au moins une teinte exactement choisie ;
- * - « quelques touches » : au moins une pièce statement (`isStatement`, la
- *   même lecture que la place réservée de la sélection).
- * Sans aucune des trois, un texte fixe qui n'affirme rien de la sélection.
+ * - « des pièces de caractère » : au moins une pièce statement (`isStatement`,
+ *   la même lecture que la place réservée de la sélection).
+ * La palette n'y figure plus : la ligne « Pensées pour … ta palette » de
+ * l'en-tête le dit déjà, juste au-dessus.
+ * Sans aucune des deux, un texte fixe qui n'affirme rien de la sélection.
  */
-export function introCapsule(capsule: Item[], profile: Profile): string {
-  const palette = paletteHexes(profile).map((h) => h.toLowerCase());
-  const parties: string[] = [];
-  if (capsule.some((it) => it.estBasiqueCapsule)) parties.push("des essentiels faciles à associer");
-  if (palette.length && capsule.some((it) => palette.includes(it.hex.toLowerCase()))) parties.push("des pièces dans ta palette");
-  if (capsule.some((it) => isStatement(it))) parties.push("quelques touches pour renouveler tes tenues");
-  if (!parties.length) return "Une base cohérente pour composer tes tenues, pièce après pièce.";
-  const phrase = enumeration(parties);
-  return phrase.charAt(0).toUpperCase() + phrase.slice(1) + ".";
+export function introCapsule(capsule: Item[]): string {
+  const essentiels = capsule.some((it) => it.estBasiqueCapsule);
+  const caractere = capsule.some((it) => isStatement(it));
+  if (essentiels && caractere) return "Des essentiels faciles à associer, et quelques pièces de caractère.";
+  if (essentiels) return "Des essentiels faciles à associer.";
+  if (caractere) return "Quelques pièces de caractère pour varier tes tenues.";
+  return "Une base cohérente pour composer tes tenues.";
 }
 
 export interface RaisonSuggestion {
