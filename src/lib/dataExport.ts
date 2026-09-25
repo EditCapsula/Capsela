@@ -9,6 +9,7 @@
 // user_id est une ceinture par-dessus les bretelles : si une politique RLS
 // venait à être élargie par erreur, l'export resterait correct.
 
+import { BUCKET_AVIS, estTableAbsente } from "./avisJournal";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 
 const BUCKET_PHOTOS = "dressing-photos";
@@ -29,6 +30,8 @@ export interface ExportDonnees {
   looks_enregistres: Record<string, unknown>[];
   historique_tenues: Record<string, unknown>[];
   photos_dressing: ExportPhoto[];
+  /** Avis de styliste enregistrés (migration 0036), chacun avec l'URL signée (7 jours) de sa photo privée. */
+  avis_styliste: Record<string, unknown>[];
   note: string;
 }
 
@@ -56,24 +59,39 @@ export async function buildDataExport(userId: string, email: string | null): Pro
   }
   const supabase = getSupabase();
 
-  const [profil, dressing, looks, historique, photos] = await Promise.all([
+  const [profil, dressing, looks, historique, photos, avisStyliste] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
     supabase.from("dressing_items").select("*").eq("user_id", userId).order("id"),
     supabase.from("saved_looks").select("*").eq("user_id", userId).order("id"),
     supabase.from("outfit_history").select("*").eq("user_id", userId).order("occurred_at"),
     supabase.storage.from(BUCKET_PHOTOS).list(userId, { limit: 1000 }),
+    supabase.from("avis_styliste").select("*").eq("user_id", userId).order("created_at"),
   ]);
 
   // Une erreur sur n'importe quelle partie rend l'export incomplet, donc
   // faux au regard de l'article 20 : mieux vaut échouer que livrer un
   // fichier silencieusement amputé.
+  //
+  // Seule exception : la table des avis de styliste ABSENTE (migration 0036
+  // pas encore exécutée) — il n'y a alors aucun avis, et l'export est
+  // complet sans elle. Toute autre erreur sur cette table fait échouer
+  // l'export, comme pour les autres.
+  const erreurAvis = avisStyliste.error && !estTableAbsente(avisStyliste.error) ? avisStyliste.error : null;
   const premiereErreur =
-    profil.error || dressing.error || looks.error || historique.error || photos.error;
+    profil.error || dressing.error || looks.error || historique.error || photos.error || erreurAvis;
   if (premiereErreur) {
     throw new Error(`Export interrompu : ${premiereErreur.message}`);
   }
 
   const fichiers = photos.data ?? [];
+  const lignesAvis = (avisStyliste.error ? [] : avisStyliste.data ?? []) as Record<string, unknown>[];
+  const cheminsAvis = lignesAvis.map((l) => l.photo_path).filter((c): c is string => typeof c === "string" && c.length > 0);
+  const urlsAvis = new Map<string, string>();
+  if (cheminsAvis.length) {
+    const { data: signees, error: erreurSignature } = await supabase.storage.from(BUCKET_AVIS).createSignedUrls(cheminsAvis, 7 * 24 * 3600);
+    if (erreurSignature) throw new Error(`Export interrompu : ${erreurSignature.message}`);
+    for (const s of signees ?? []) if (s.path && s.signedUrl) urlsAvis.set(s.path, s.signedUrl);
+  }
   return {
     export_genere_le: new Date().toISOString(),
     format: "JSON, encodage UTF-8",
@@ -87,6 +105,10 @@ export async function buildDataExport(userId: string, email: string | null): Pro
       taille_octets: (f.metadata?.size as number | undefined) ?? null,
       ajoutee_le: f.created_at ?? null,
       url: supabase.storage.from(BUCKET_PHOTOS).getPublicUrl(`${userId}/${f.name}`).data.publicUrl,
+    })),
+    avis_styliste: lignesAvis.map((l) => ({
+      ...l,
+      photo_url: typeof l.photo_path === "string" ? urlsAvis.get(l.photo_path) ?? null : null,
     })),
     note:
       "Les visuels du catalogue ne figurent pas dans cet export : ce sont des illustrations génériques, communes à toutes les utilisatrices, et non des données personnelles.",

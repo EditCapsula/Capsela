@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import AvisEnregistresJournal from "@/components/AvisEnregistresJournal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { useAuth } from "@/lib/auth";
@@ -246,7 +247,14 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
 }
 
 export default function HistoryScreen() {
-  const { state, wardrobePool, vestiairePool, actions, dressingLoaded } = useCapsela();
+  const { state, wardrobePool, vestiairePool, actions, dressingLoaded, avisEnregistres } = useCapsela();
+
+  // Avis de styliste enregistrés : lus au premier affichage du Journal (et
+  // relus après un nouvel enregistrement, qui remet la liste à null).
+  useEffect(() => {
+    if (avisEnregistres === null) actions.chargerAvisEnregistres();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avisEnregistres]);
   const { profile } = useAuth();
   const [vue, setVue] = useState<"journal" | "vendre">("journal");
   const [historiqueComplet, setHistoriqueComplet] = useState(false);
@@ -518,6 +526,8 @@ export default function HistoryScreen() {
           ))}
         </ul>
 
+        <AvisEnregistresJournal avis={avisEnregistres} onOuvrir={actions.ouvrirAvisEnregistre} />
+
         {/* Le parcours existant de la tenue du jour — aucun nouveau parcours (§3). */}
         <button
           onClick={actions.goTenues}
@@ -753,6 +763,8 @@ export default function HistoryScreen() {
           {deCote.length} {pl(deCote.length, "pièce mise", "pièces mises")} de côté pour vendre →
         </button>
       )}
+
+      <AvisEnregistresJournal avis={avisEnregistres} onOuvrir={actions.ouvrirAvisEnregistre} />
 
       {/* HISTORIQUE — les dernières tenues, visuel en tête (§12). */}
       <section className="mt-[30px]" aria-labelledby="journal-historique">

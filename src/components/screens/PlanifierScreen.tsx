@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
@@ -281,19 +282,6 @@ function LigneChoix({
         />
       </span>
     </button>
-  );
-}
-
-/**
- * Le badge Premium — le dessin exact de la pastille de l'accueil (« Et si on
- * préparait la suite ? ») : même taille, même couleur, même glyphe ✦. Aucune
- * couleur propre au Premium. Informatif, jamais un bouton.
- */
-function BadgePremium() {
-  return (
-    <span className="inline-flex items-center gap-[4px] rounded-full bg-warm-bg px-[9px] py-[4px] text-[9px] tracking-[.1em] uppercase text-terracotta whitespace-nowrap">
-      <span aria-hidden="true">✦</span> Premium
-    </span>
   );
 }
 

@@ -32,6 +32,9 @@ import { choisirMeteo, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosit
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
+import { etatSimule, lireProfilSimule } from "./simulationPremium";
+import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
+import { enregistrerAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
@@ -68,6 +71,25 @@ import type {
   TravelMode,
   WorkMode,
 } from "./types";
+
+/** Photo préparée de l'Avis de styliste (cf. photoAvis.ts) — URL locale blob:, jamais envoyée hors analyse. */
+export interface PhotoAvis {
+  fichier: File;
+  url: string;
+  largeur: number;
+  hauteur: number;
+}
+export type AnalyseAvis =
+  | { etat: "inactive" }
+  | { etat: "en_cours" }
+  | { etat: "reussie"; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[] }
+  | { etat: "echouee"; code: Extract<ResultatDemande, { ok: false }>["code"]; raison?: Extract<ResultatDemande, { ok: false }>["raison"] };
+export interface SessionAvisStyliste {
+  photo: PhotoAvis | null;
+  analyse: AnalyseAvis;
+  /** Enregistrement du résultat dans le Journal — toujours une action explicite (§14). */
+  enregistrement: "aucun" | "en_cours" | "fait" | "echec";
+}
 
 /** Écrans qui s'ouvrent depuis le profil : jamais retenus comme « retour » du profil. */
 const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileEdit", "profileSetup", "preferences", "account", "legal"]);
@@ -161,6 +183,8 @@ function buildInitialState(): AppState {
     lookDraftOccasion: "all",
     lookDraftDismissed: [],
     activeLookId: null,
+    lookReturn: "wardrobe",
+    filtrePieces: null,
   };
 }
 
@@ -177,7 +201,9 @@ export interface Actions {
   goHistory: () => void;
   goPlanifier: () => void;
   goNeverWorn: () => void;
-  goWardrobePieces: () => void;
+  /** `groupe` : identifiant d'un groupe du vestiaire (dressingEcran.ts) — n'affiche que ses pièces. */
+  goWardrobePieces: (groupe?: string) => void;
+  goLooks: () => void;
   goProfile: () => void;
   goProfileEdit: () => void;
   /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
@@ -187,6 +213,41 @@ export interface Actions {
   goLegal: () => void;
   /** Ouvre la page Premium en mémorisant d'où l'on vient. */
   goPremium: (origine?: "valise") => void;
+  /** Écran « Avis de styliste » (docs/avis-de-styliste.md). Réservé Premium : l'accueil ouvre le Premium Gate à la place pour tout autre statut. */
+  goAvisStyliste: () => void;
+  /**
+   * Relit le statut Premium quand il est encore inconnu, avant de trancher un
+   * accès (arbitrage du 25/09/2026, point 7). Rend le statut obtenu — jamais
+   * "premium" par défaut : sans Supabase, sans session, ou au-delà de 5 s, il
+   * reste "inconnu", et la règle d'accès montre alors le Premium Gate.
+   */
+  verifierEtatPremium: () => Promise<EtatPremium>;
+  /**
+   * Pose (ou retire, avec null) la photo de l'Avis de styliste. Toute
+   * nouvelle photo remet l'analyse à zéro ; l'URL locale de la précédente est
+   * libérée. Sert aussi à « Nouvelle analyse » et à la suppression.
+   */
+  definirPhotoAvis: (photo: PhotoAvis | null) => void;
+  /** Revient à l'aperçu de la photo actuelle, sans la perdre (après une erreur). */
+  revenirAApercuAvis: () => void;
+  /**
+   * Lance l'analyse de la photo posée — uniquement sur « Analyser ma tenue »
+   * [DÉCIDÉ]. Ignorée si une analyse est déjà en cours (pas de double
+   * envoi). Elle continue si l'on quitte l'écran (point 16).
+   */
+  lancerAvisStyliste: () => void;
+  /**
+   * « Enregistrer dans mon journal » : le résultat affiché et sa photo
+   * (arbitré). Action volontaire, jamais automatique ; ignorée pendant un
+   * enregistrement ou après un succès (pas de doublon, §14).
+   */
+  enregistrerAvisStyliste: () => void;
+  /** Charge les avis enregistrés (Journal). */
+  chargerAvisEnregistres: () => void;
+  /** Ouvre un avis enregistré en consultation. */
+  ouvrirAvisEnregistre: (id: string) => void;
+  /** Supprime un avis enregistré et sa photo (§14). Rend false en cas d'échec — l'avis reste alors affiché. */
+  supprimerAvisEnregistre: (id: string) => Promise<boolean>;
   backFromLegal: () => void;
   goLogin: () => void;
   /**
@@ -360,6 +421,22 @@ interface CapselaContextValue {
    * — et dans cet état AUCUNE limite ne s'applique (cf. premium.ts).
    */
   etatPremium: EtatPremium;
+  /**
+   * Session de l'Avis de styliste (arbitrage du 25/09/2026, point 16) :
+   * photo préparée, état de l'analyse, résultat. Dans le store et non dans
+   * l'écran pour qu'une analyse lancée continue si l'on quitte l'écran, et
+   * soit retrouvée — en cours, réussie ou échouée — en y revenant. EN MÉMOIRE
+   * SEULEMENT : rien n'est persisté, tout disparaît à la fermeture de l'app.
+   */
+  avisStyliste: SessionAvisStyliste;
+  /**
+   * Avis enregistrés dans le Journal (migration 0036) — null tant qu'ils
+   * n'ont pas été chargés (au premier affichage du Journal). Liste vide
+   * avant la migration : la section reste masquée.
+   */
+  avisEnregistres: AvisEnregistre[] | null;
+  /** Avis enregistré ouvert en consultation. */
+  avisEnregistreActif: AvisEnregistre | null;
   actions: Actions;
 }
 
@@ -451,14 +528,38 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   /* Comme poolRef/weatherRef : saveItem lit stateRef.current et non le rendu
      courant, il lui faut donc une référence et pas la valeur capturée. */
   const etatPremiumRef = useRef<EtatPremium>("inconnu");
+  const [avisStyliste, setAvisStyliste] = useState<SessionAvisStyliste>({ photo: null, analyse: { etat: "inactive" }, enregistrement: "aucun" });
+  const avisStylisteRef = useRef(avisStyliste);
+  useEffect(() => {
+    avisStylisteRef.current = avisStyliste;
+  }, [avisStyliste]);
+  /* Jeton de la session en cours : une réponse qui arrive après un
+     changement de photo (ou « Nouvelle analyse ») est ignorée. */
+  const jetonAvisRef = useRef(0);
+  /* Posé de façon synchrone au clic : deux clics rapprochés n'envoient
+     qu'une analyse, même avant le rendu suivant. */
+  const analyseAvisEnCoursRef = useRef(false);
+  const [avisEnregistres, setAvisEnregistres] = useState<AvisEnregistre[] | null>(null);
+  const [avisEnregistreActifId, setAvisEnregistreActifId] = useState<string | null>(null);
+  const avisEnregistreActif = avisEnregistres?.find((a) => a.id === avisEnregistreActifId) ?? null;
   useEffect(() => {
     etatPremiumRef.current = etatPremium;
   }, [etatPremium]);
   useEffect(() => {
     if (!ready) return;
+    // Simulation du statut Premium : développement uniquement (null en
+    // production, cf. simulationPremium.ts) — elle prime sur la base, y
+    // compris en mode démo, pour parcourir chaque cas d'accès.
+    // La condition sur NODE_ENV est écrite ICI, en constante, et pas seulement
+    // dans lireProfilSimule : Next la remplace par "production" au build, le
+    // minifieur réduit `simule` à null et retire tout le code de simulation du
+    // bundle (vérifié le 25/09/2026 : plus aucune chaîne de simulation dans out/).
+    const simule = process.env.NODE_ENV !== "production" ? lireProfilSimule() : null;
     if (!isSupabaseConfigured || !userId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      /* eslint-disable react-hooks/set-state-in-effect */
+      if (simule) setEtatPremium(etatSimule(simule));
       setDressingLoaded(true);
+      /* eslint-enable react-hooks/set-state-in-effect */
       return;
     }
     let cancelled = false;
@@ -480,7 +581,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       fetchEtatPremium(userId),
     ]).then(([items, history, savedLooks, avis, premium]) => {
       if (cancelled) return;
-      setEtatPremium(premium);
+      setEtatPremium(simule ? etatSimule(simule) : premium);
       setState((s) => ({
         ...s,
         items,
@@ -836,6 +937,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   }
 
   const go = (screen: Screen) => setState((s) => ({ ...s, screen }));
+  /** Ouvre le formulaire d'ajout, ou Premium quand la limite gratuite est atteinte (cf. openAdd). */
+  const ouvrirAjout = (ouvrir: (s: AppState) => AppState) =>
+    setState((s) =>
+      peutAjouter(etatPremiumRef.current, s.items.length)
+        ? ouvrir(s)
+        : { ...s, premiumReturn: s.screen, premiumOrigine: null, screen: "premium" }
+    );
 
   const actions: Actions = {
     go,
@@ -854,7 +962,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goHistory: () => go("history"),
     goPlanifier: () => go("planifier"),
     goNeverWorn: () => go("neverworn"),
-    goWardrobePieces: () => go("wardrobePieces"),
+    goWardrobePieces: (groupe) => setState((s) => ({ ...s, filtrePieces: groupe ?? null, screen: "wardrobePieces" })),
+    goLooks: () => go("looks"),
     // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
     // Avant : revenir de « Modifier » au profil enregistrait « Modifier »
     // comme écran de retour, et le chevron du profil y renvoyait — profil →
@@ -877,6 +986,95 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         premiumOrigine: origine ?? null,
         screen: "premium",
       })),
+    goAvisStyliste: () => go("avisStyliste"),
+    definirPhotoAvis: (photo) => {
+      const avant = avisStylisteRef.current.photo;
+      if (avant && avant.url !== photo?.url) URL.revokeObjectURL(avant.url);
+      jetonAvisRef.current += 1;
+      analyseAvisEnCoursRef.current = false;
+      const suivant: SessionAvisStyliste = { photo, analyse: { etat: "inactive" }, enregistrement: "aucun" };
+      avisStylisteRef.current = suivant;
+      setAvisStyliste(suivant);
+    },
+    revenirAApercuAvis: () => {
+      if (analyseAvisEnCoursRef.current) return;
+      const suivant: SessionAvisStyliste = { photo: avisStylisteRef.current.photo, analyse: { etat: "inactive" }, enregistrement: "aucun" };
+      avisStylisteRef.current = suivant;
+      setAvisStyliste(suivant);
+    },
+    lancerAvisStyliste: () => {
+      const photo = avisStylisteRef.current.photo;
+      if (!photo || analyseAvisEnCoursRef.current) return;
+      analyseAvisEnCoursRef.current = true;
+      const jeton = ++jetonAvisRef.current;
+      avisStylisteRef.current = { photo, analyse: { etat: "en_cours" }, enregistrement: "aucun" };
+      setAvisStyliste(avisStylisteRef.current);
+      void demanderAvis(photo.fichier, contexteDepuisProfil(profile)).then((r) => {
+        if (jeton !== jetonAvisRef.current) return;
+        analyseAvisEnCoursRef.current = false;
+        const suivant: SessionAvisStyliste = {
+          photo,
+          enregistrement: "aucun",
+          analyse: r.ok
+            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing }
+            : { etat: "echouee", code: r.code, raison: r.raison },
+        };
+        avisStylisteRef.current = suivant;
+        setAvisStyliste(suivant);
+      });
+    },
+    enregistrerAvisStyliste: () => {
+      const session = avisStylisteRef.current;
+      if (session.analyse.etat !== "reussie" || session.enregistrement === "en_cours" || session.enregistrement === "fait") return;
+      if (!userId) {
+        avisStylisteRef.current = { ...session, enregistrement: "echec" };
+        setAvisStyliste(avisStylisteRef.current);
+        return;
+      }
+      const analyse = session.analyse;
+      const jeton = jetonAvisRef.current;
+      avisStylisteRef.current = { ...session, enregistrement: "en_cours" };
+      setAvisStyliste(avisStylisteRef.current);
+      void enregistrerAvis(userId, {
+        analyseId: analyse.analyseId,
+        avis: analyse.avis,
+        pieces: analyse.dressing,
+        photo: session.photo?.fichier ?? null,
+      }).then((enregistre) => {
+        if (enregistre) setAvisEnregistres(null); // relu au prochain affichage du Journal
+        if (jeton !== jetonAvisRef.current) return;
+        avisStylisteRef.current = { ...avisStylisteRef.current, enregistrement: enregistre ? "fait" : "echec" };
+        setAvisStyliste(avisStylisteRef.current);
+      });
+    },
+    chargerAvisEnregistres: () => {
+      if (!userId) {
+        setAvisEnregistres([]);
+        return;
+      }
+      void listerAvis(userId).then(setAvisEnregistres);
+    },
+    ouvrirAvisEnregistre: (id) => {
+      setAvisEnregistreActifId(id);
+      go("avisEnregistre");
+    },
+    supprimerAvisEnregistre: async (id) => {
+      const avis = avisEnregistres?.find((a) => a.id === id);
+      if (!avis) return false;
+      const ok = await supprimerAvis(avis);
+      if (ok) setAvisEnregistres((l) => (l ? l.filter((a) => a.id !== id) : l));
+      return ok;
+    },
+    verifierEtatPremium: async () => {
+      const simule = process.env.NODE_ENV !== "production" ? lireProfilSimule() : null;
+      if (simule) return etatSimule(simule);
+      if (!isSupabaseConfigured || !userId) return "inconnu";
+      // À ARBITRER: délai maximal de la vérification (valeur réversible : 5 s).
+      const delai = new Promise<EtatPremium>((resolve) => setTimeout(() => resolve("inconnu"), 5000));
+      const etat = await Promise.race([fetchEtatPremium(userId), delai]);
+      if (etat !== "inconnu") setEtatPremium(etat);
+      return etat;
+    },
     backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
     goLogin: () => go("login"),
     goProfileSetup: (stepKey = "genre", fromEdit = false) =>
@@ -887,10 +1085,18 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         profileSetupFromEdit: fromEdit,
         profileSetupReturn: s.screen,
       })),
-    openAdd: () => go("add"),
-    openAddBag: () => setState((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
+    // LIMITE DU DRESSING GRATUIT À L'OUVERTURE DU FORMULAIRE (25/09/2026,
+    // refonte Dressing : « aucune possibilité silencieuse d'ajouter une 21e
+    // pièce »). saveItem refusait déjà la 21e pièce, mais EN SILENCE, après
+    // la photo et la saisie : depuis l'Accueil, la Tenue, la Capsule, « Mes
+    // pièces » ou la création de look, le formulaire s'ouvrait puis
+    // n'enregistrait rien. Les trois portes d'entrée du formulaire mènent
+    // désormais à Premium d'emblée. Même règle, même source (peutAjouter) :
+    // un droit inconnu n'applique aucune limite ; la garde de saveItem reste.
+    openAdd: () => ouvrirAjout((s) => ({ ...s, screen: "add" })),
+    openAddBag: () => ouvrirAjout((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
     openAddForCategory: (cat) =>
-      setState((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),
+      ouvrirAjout((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),
     addBack: () =>
       setState((s) => ({
         ...s,
@@ -1671,8 +1877,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       const look: SavedLook = { id: "look" + Date.now(), ...base };
       setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
     },
-    openLook: (id) => setState((s) => ({ ...s, activeLookId: id, screen: "lookDetail" })),
-    closeLookDetail: () => setState((s) => ({ ...s, activeLookId: null, screen: "wardrobe" })),
+    openLook: (id) =>
+      setState((s) => ({ ...s, activeLookId: id, lookReturn: s.screen === "looks" ? "looks" : "wardrobe", screen: "lookDetail" })),
+    closeLookDetail: () => setState((s) => ({ ...s, activeLookId: null, screen: s.lookReturn })),
     deleteActiveLook: () => {
       const s = stateRef.current;
       const deletedId = s.activeLookId;
@@ -1680,7 +1887,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         ...st,
         savedLooks: st.savedLooks.filter((l) => l.id !== deletedId),
         activeLookId: null,
-        screen: "wardrobe",
+        screen: st.lookReturn,
       }));
       if (deletedId && isSupabaseConfigured && userId) {
         deleteSavedLook(deletedId).catch((err) => reportDressingError("deleteSavedLook", err));
@@ -1733,6 +1940,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     vestiairePool,
     dressingLoaded,
     etatPremium,
+    avisStyliste,
+    avisEnregistres,
+    avisEnregistreActif,
     actions,
   };
 
