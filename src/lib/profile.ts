@@ -187,7 +187,7 @@ export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardCo
     romantique: { label: "Romantique", desc: "Douceur, fluidité et détails féminins.", asset: styleVisualUrl("femme", "romantique") },
     boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: styleVisualUrl("femme", "boheme") },
     streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("femme", "streetwear") },
-    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: styleVisualUrl("femme", "preppy") },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: styleVisualUrl("femme", "preppy") },
     glamour: { label: "Glamour", desc: "Sophistiqué, audacieux et résolument élégant.", asset: styleVisualUrl("femme", "glamour") },
   },
   homme: {
@@ -198,7 +198,7 @@ export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardCo
     romantique: { label: "Créatif / Artistique", desc: "Original, expressif, hors des codes classiques.", asset: "" },
     boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: styleVisualUrl("homme", "boheme") },
     streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("homme", "streetwear") },
-    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: styleVisualUrl("homme", "preppy") },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: styleVisualUrl("homme", "preppy") },
     // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS), entrée conservée uniquement pour styleLabel().
     glamour: { label: "Élégant / Sophistiqué", desc: "Raffiné, maîtrisé et résolument chic.", asset: "" },
   },
