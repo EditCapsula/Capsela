@@ -252,6 +252,40 @@ export function moisAnnee(ts: number): string {
   return MONTHS[d.getMonth()] + " " + d.getFullYear();
 }
 
+/**
+ * LA BASE UNIQUE DES CHIFFRES DU JOURNAL (audit du 25/09/2026).
+ *
+ * L'incohérence corrigée : « 1 pièce utilisée » et « 33 % de ta capsule
+ * portée » venaient de journalStats — pièces du DRESSING RÉEL seulement, via
+ * le champ figé Item.worn — pendant que « 17 pièces attendent », les pièces
+ * fétiches et la timeline lisaient l'HISTORIQUE sur le pool affiché (dressing
+ * réel + suggestions de la capsule). Une utilisatrice qui porte surtout des
+ * pièces de sa capsule voyait donc 1 pièce utilisée à côté de 17 pièces
+ * non portées et de trois pièces fétiches.
+ *
+ * Une seule base désormais, pour toutes les métriques du Journal : le pool
+ * affiché (la capsule telle qu'elle la voit), et l'historique réel.
+ *   portees + jamais === total,  pourcentage = portees / total.
+ * journalStats reste inchangée : « Mes pièces » et « Jamais portées »
+ * continuent de compter le dressing réel, ce qui est leur périmètre.
+ */
+export interface CapsuleJournal {
+  total: number;
+  /** Pièces uniques du pool présentes dans au moins une tenue portée. */
+  portees: number;
+  /** Pièces du pool absentes de tout l'historique. */
+  jamais: number;
+  pourcentage: number;
+}
+
+export function capsuleJournal(pool: Item[], history: HistoryEntry[]): CapsuleJournal {
+  const portesIds = new Set(history.flatMap((h) => h.pieceIds));
+  const ids = new Set(pool.map((i) => i.id));
+  const total = ids.size;
+  const portees = [...ids].filter((id) => portesIds.has(id)).length;
+  return { total, portees, jamais: total - portees, pourcentage: total ? Math.round((portees / total) * 100) : 0 };
+}
+
 export interface JournalStats {
   total: number;
   worn: number;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { etatDePort, moisAnnee } from "../selectors";
+import { capsuleJournal, etatDePort, moisAnnee } from "../selectors";
 import type { HistoryEntry, Item, Season } from "../types";
 
 // Même découpage que lastCompletedSeasonWindow : dates LOCALES, comme lui.
@@ -83,5 +83,33 @@ describe("etatDePort — portée", () => {
 describe("moisAnnee", () => {
   it("mois en toutes lettres et année", () => {
     expect(moisAnnee(t(2025, 10, 5))).toBe("octobre 2025");
+  });
+});
+
+describe("capsuleJournal — une seule base pour les chiffres du Journal", () => {
+  const pool = [piece("Toutes saisons", undefined, 1), piece("Toutes saisons", undefined, 2), piece("Toutes saisons", undefined, 3)];
+
+  it("portées + jamais = total, et le pourcentage en découle", () => {
+    const c = capsuleJournal(pool, [porte(t(2026, 9, 20), 1), porte(t(2026, 9, 21), 1)]);
+    expect(c).toEqual({ total: 3, portees: 1, jamais: 2, pourcentage: 33 });
+  });
+
+  it("une pièce portée plusieurs fois ne compte qu'une fois", () => {
+    const h = [porte(t(2026, 9, 20), 2), porte(t(2026, 9, 21), 2), porte(t(2026, 9, 22), 2)];
+    expect(capsuleJournal(pool, h).portees).toBe(1);
+  });
+
+  it("les suggestions de la capsule comptent comme les pièces réelles — c'est ce qui manquait", () => {
+    // Aucune date d'ajout ni champ worn : ce sont des suggestions, portées.
+    const h = [porte(t(2026, 9, 20), 1), porte(t(2026, 9, 20), 3)];
+    expect(capsuleJournal(pool, h)).toMatchObject({ portees: 2, jamais: 1 });
+  });
+
+  it("une pièce de l'historique sortie du pool n'est pas comptée dans la capsule", () => {
+    expect(capsuleJournal(pool, [porte(t(2026, 9, 20), 99)])).toMatchObject({ portees: 0, jamais: 3 });
+  });
+
+  it("pool vide : pas de division par zéro", () => {
+    expect(capsuleJournal([], [])).toEqual({ total: 0, portees: 0, jamais: 0, pourcentage: 0 });
   });
 });
