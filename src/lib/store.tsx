@@ -238,8 +238,12 @@ export interface Actions {
    * cette pièce" section 4 : ne jamais redemander une information déjà
    * disponible). Chaque champ reste modifiable normalement ensuite (mêmes
    * drapeaux *Touched que la détection par nom/photo).
+   *
+   * `retour` (25/09/2026, « Je possède déjà cette pièce » de l'écran
+   * Capsule) : écran où revenir après l'enregistrement ou l'abandon. Omis,
+   * le repli habituel s'applique — ItemOutfits et Pièce n'en changent pas.
    */
-  startReplace: (item: Item) => void;
+  startReplace: (item: Item, retour?: Screen) => void;
   /** Ouvre l'écran Ajouter en mode édition pour une pièce réelle du dressing ("Modifier les informations"/"Changer la photo", recette 24/08/2026) — préremplit tous les champs, saveItem met alors à jour cette ligne plutôt que d'en créer une nouvelle. */
   startEditItem: (item: Item) => void;
   setCatFilter: (k: CategoryKey | "all") => void;
@@ -967,11 +971,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
     dismissSuggested: (id) =>
       setState((s) => ({ ...s, suggestedExcluded: [...s.suggestedExcluded, id] })),
-    startReplace: (item) =>
+    startReplace: (item, retour) =>
       setState((s) => {
         const img = resolveItemImage(item);
         return {
           ...s,
+          ...(retour ? { addReturn: retour } : {}),
           replacingId: item.id,
           addName: item.name,
           addNameTouched: true,

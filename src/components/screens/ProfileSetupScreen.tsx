@@ -21,6 +21,7 @@ import {
   exposedStyleIds,
   paletteColorName,
   styleConfigFor,
+  VISUELS_ETAPE_STYLE_FEMME,
   tailleBasLabelFor,
   taillesBasFor,
   type Intensite,
@@ -460,6 +461,10 @@ export default function ProfileSetupScreen() {
           {exposedStyleIds(draft.gender).map((id) => {
             const cfg = styleConfigFor(draft.gender)[id];
             const on = draft.styles[0] === id;
+            // Côté femme (et genre non renseigné, qui affiche la grille
+            // femme) : les flat lays du 25/09, en portrait. Côté homme :
+            // inchangé.
+            const visuelFemme = draft.gender !== "homme" ? VISUELS_ETAPE_STYLE_FEMME[id] : null;
             return (
               <button
                 key={id}
@@ -474,6 +479,27 @@ export default function ProfileSetupScreen() {
                 }
                 style={{ background: on ? "#F6EBE2" : "#FBF8F3" }}
               >
+                {visuelFemme ? (
+                  /* LE FORMAT EXACT DU VISUEL (3:4), et non le 5:4 des
+                     anciennes cartes : dans un cadre paysage, un flat lay
+                     portrait perdait ~40 % de sa hauteur. Ici rien n'est
+                     rogné ni déformé — `cover` sur un cadre au même ratio que
+                     l'image. Dimensions déclarées : la place est réservée
+                     avant le chargement. Aucun élément par-dessus, hormis le
+                     contrôle de sélection existant. */
+                  <div className="w-full flex-shrink-0 bg-[#E6DCCB]" style={{ aspectRatio: "3/4" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={visuelFemme}
+                      alt=""
+                      width={900}
+                      height={1200}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover block"
+                    />
+                  </div>
+                ) : (
                 <div
                   className="w-full flex-shrink-0"
                   style={{
@@ -491,6 +517,7 @@ export default function ProfileSetupScreen() {
                     backgroundRepeat: "no-repeat",
                   }}
                 />
+                )}
                 <span
                   className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-[1.5px]"
                   style={{ background: on ? "#A66950" : "#FFFFFF", borderColor: on ? "#A66950" : "#B08968" }}

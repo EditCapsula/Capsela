@@ -187,7 +187,7 @@ export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardCo
     romantique: { label: "Romantique", desc: "Douceur, fluidité et détails féminins.", asset: styleVisualUrl("femme", "romantique") },
     boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: styleVisualUrl("femme", "boheme") },
     streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("femme", "streetwear") },
-    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: styleVisualUrl("femme", "preppy") },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: styleVisualUrl("femme", "preppy") },
     glamour: { label: "Glamour", desc: "Sophistiqué, audacieux et résolument élégant.", asset: styleVisualUrl("femme", "glamour") },
   },
   homme: {
@@ -198,7 +198,7 @@ export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardCo
     romantique: { label: "Créatif / Artistique", desc: "Original, expressif, hors des codes classiques.", asset: "" },
     boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: styleVisualUrl("homme", "boheme") },
     streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("homme", "streetwear") },
-    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collegiate.", asset: styleVisualUrl("homme", "preppy") },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: styleVisualUrl("homme", "preppy") },
     // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS), entrée conservée uniquement pour styleLabel().
     glamour: { label: "Élégant / Sophistiqué", desc: "Raffiné, maîtrisé et résolument chic.", asset: "" },
   },
@@ -218,6 +218,30 @@ export const EXPOSED_STYLE_IDS: Record<"femme" | "homme", StyleId[]> = {
 export function exposedStyleIds(gender: Gender | null): StyleId[] {
   return EXPOSED_STYLE_IDS[gender === "homme" ? "homme" : "femme"];
 }
+
+/**
+ * VISUELS DE L'ÉTAPE « STYLE », CÔTÉ FEMME (fournis le 25/09/2026) — des
+ * flat lays éditoriaux, sans personne, au format portrait 900 × 1200 (3:4
+ * exact), servis depuis public/images/styles/. Fournis en PNG (12,2 Mo les
+ * huit), convertis en WebP qualité 82 (842 Ko) : écart mesuré ≥ 35,7 dB de
+ * PSNR sur l'image la plus détaillée, sans différence visible à 100 %.
+ *
+ * UNE RÉFÉRENCE PROPRE À CET ÉCRAN, et non un remplacement de
+ * STYLE_CONFIG[…].asset : ces images-là sont aussi lues par les cartes
+ * « Explorer d'autres styles » (TenuesScreen) et par l'onboarding d'accueil
+ * (OnboardingScreen), hors du périmètre demandé. Les ids restent ceux de
+ * StyleId : aucune donnée métier ne change.
+ */
+export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
+  minimaliste: "/images/styles/minimaliste.webp",
+  casual_chic: "/images/styles/casual-chic.webp",
+  classique_chic: "/images/styles/classique-chic.webp",
+  romantique: "/images/styles/romantique.webp",
+  boheme: "/images/styles/boheme.webp",
+  streetwear: "/images/styles/streetwear.webp",
+  preppy: "/images/styles/preppy.webp",
+  glamour: "/images/styles/glamour.webp",
+};
 
 export function styleConfigFor(gender: Gender | null): Record<StyleId, StyleCardConfig> {
   return STYLE_CONFIG[gender === "homme" ? "homme" : "femme"];
