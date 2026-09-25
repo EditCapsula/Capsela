@@ -2,8 +2,11 @@
 
 import { useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import BottomSheet from "@/components/BottomSheet";
 import { I_CINTRE, I_ETINCELLE, I_GENRE, I_INTENSITE, I_METRE, I_PALETTE, I_SILHOUETTE, LigneProfil, PastillesPalette, Surtitre, resumeTailles } from "@/components/ProfilUI";
 import { useAuth } from "@/lib/auth";
+import { CITIES } from "@/lib/data";
+import { jourLocal } from "@/lib/outfitFeedback";
 import { useCapsela } from "@/lib/store";
 import {
   GENDERS,
@@ -115,6 +118,26 @@ export default function ProfileEditScreen() {
     if (file) setPhotoUrl(URL.createObjectURL(file));
   };
 
+  // VILLE ET DATE DE NAISSANCE (demandé le 25/09/2026 : elles n'avaient
+  // aucun écran de modification). Deux feuilles, comme le genre.
+  //
+  // La ville se CHOISIT dans CITIES, elle ne se tape pas : c'est la seule
+  // liste que l'app sait lire (store.tsx, profileCityFallback — une ville
+  // hors liste retomberait silencieusement sur la première). Proposer une
+  // saisie libre ferait croire à une ville prise en compte qui ne l'est pas.
+  const [villeOuverte, setVilleOuverte] = useState(false);
+  const [dateOuverte, setDateOuverte] = useState(false);
+  const [dateBrouillon, setDateBrouillon] = useState(profile.birthdate ?? "");
+  // Bornes de la date : jamais dans le futur, jamais avant 1900. Calculées à
+  // l'ouverture de la feuille (un clic), pas pendant le rendu.
+  const [aujourdhui, setAujourdhui] = useState("");
+  const ouvrirDate = () => {
+    setDateBrouillon(profile.birthdate ?? "");
+    setAujourdhui(jourLocal());
+    setDateOuverte(true);
+  };
+  const dateValide = /^\d{4}-\d{2}-\d{2}$/.test(dateBrouillon) && dateBrouillon >= "1900-01-01" && dateBrouillon <= aujourdhui;
+
   const birthdateText = profile.birthdate
     ? new Date(profile.birthdate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : null;
@@ -133,9 +156,8 @@ export default function ProfileEditScreen() {
         Ces informations aident Capsela à te recommander des tenues qui te ressemblent.
       </div>
 
-      {/* MON IDENTITÉ. Ville et date de naissance sont AFFICHÉES sans chevron :
-          aucun écran ne permet de les modifier aujourd'hui (la date n'est
-          saisie qu'à l'inscription). Un chevron promettrait un écran absent. */}
+      {/* MON IDENTITÉ. Chaque ligne ouvre son éditeur : étape « prenom » du
+          questionnaire, feuilles pour le genre, la ville et la date. */}
       <Surtitre icone={I_GENRE}>Mon identité</Surtitre>
       <div className="bg-card border border-border rounded-[20px] overflow-hidden">
         <input ref={photoInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
@@ -156,9 +178,9 @@ export default function ProfileEditScreen() {
           <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
         </button>
         <LigneInfo label="Prénom" valeur={profile.displayName || "Non renseigné"} renseigne={Boolean(profile.displayName)} onClick={() => actions.goProfileSetup("prenom", true)} />
-        <LigneInfo label="Ville" valeur={profile.city} renseigne />
+        <LigneInfo label="Ville" valeur={profile.city} renseigne onClick={() => setVilleOuverte(true)} />
         <LigneInfo label="Genre" valeur={genderLabel(profile.gender) || "Non renseigné"} renseigne={Boolean(profile.gender)} onClick={() => setGenderModalOpen(true)} />
-        <LigneInfo label="Date de naissance" valeur={birthdateText || "Non renseignée"} renseigne={Boolean(birthdateText)} />
+        <LigneInfo label="Date de naissance" valeur={birthdateText || "Non renseignée"} renseigne={Boolean(birthdateText)} onClick={ouvrirDate} />
       </div>
 
       <Surtitre icone={I_SILHOUETTE}>Ma silhouette</Surtitre>
@@ -219,6 +241,81 @@ export default function ProfileEditScreen() {
       >
         Enregistrer mes modifications
       </button>
+
+      <BottomSheet title="Ta ville" open={villeOuverte} onClose={() => setVilleOuverte(false)}>
+        <div className="text-[12px] text-muted leading-[1.45] mb-3">
+          Utilisée pour la météo quand la géolocalisation n&apos;est pas disponible.
+        </div>
+        <div className="flex flex-col max-h-[52vh] overflow-y-auto -mx-1 px-1" role="radiogroup" aria-label="Ville">
+          {CITIES.map((c) => {
+            const actif = profile.city === c.city;
+            return (
+              <button
+                key={c.city}
+                role="radio"
+                aria-checked={actif}
+                onClick={() => {
+                  setVilleOuverte(false);
+                  if (!actif) saveProfile({ ...profile, city: c.city });
+                }}
+                className="flex items-center justify-between gap-3 min-h-[48px] px-1 border-b border-border last:border-b-0 text-left cursor-pointer"
+              >
+                <span className={"text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>
+                  {c.city} <span className="text-muted">· {c.country}</span>
+                </span>
+                {actif && (
+                  <span aria-hidden="true" className="text-terracotta text-[14px]">
+                    ✓
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet title="Ta date de naissance" open={dateOuverte} onClose={() => setDateOuverte(false)}>
+        <label htmlFor="date-naissance" className="block text-[12px] text-muted leading-[1.45] mb-2">
+          Elle reste privée et n&apos;est jamais affichée ailleurs que sur ton profil.
+        </label>
+        <input
+          id="date-naissance"
+          type="date"
+          value={dateBrouillon}
+          min="1900-01-01"
+          max={aujourdhui || undefined}
+          onChange={(e) => setDateBrouillon(e.target.value)}
+          className="w-full bg-card border border-border rounded-[14px] px-4 min-h-[48px] text-[14px] text-ink font-sans"
+          style={{ colorScheme: "light" }}
+        />
+        {dateBrouillon && !dateValide && (
+          <div className="text-[12px] text-rust mt-2" role="alert">
+            Choisis une date passée, après 1900.
+          </div>
+        )}
+        <button
+          disabled={!dateValide}
+          onClick={() => {
+            setDateOuverte(false);
+            saveProfile({ ...profile, birthdate: dateBrouillon });
+          }}
+          className="mt-4 w-full rounded-full bg-terracotta text-cream text-[12px] tracking-[.1em] uppercase cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ minHeight: 48 }}
+        >
+          Enregistrer
+        </button>
+        {profile.birthdate && (
+          <button
+            onClick={() => {
+              setDateOuverte(false);
+              saveProfile({ ...profile, birthdate: null });
+            }}
+            className="mt-2 w-full text-center text-[12px] text-muted min-h-[44px] cursor-pointer"
+          >
+            Retirer ma date de naissance
+          </button>
+        )}
+      </BottomSheet>
 
       {genderModalOpen && <GenderModal current={profile.gender} onSelect={changeGender} onClose={() => setGenderModalOpen(false)} />}
       {revalidateField && (
