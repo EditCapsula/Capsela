@@ -3,13 +3,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CATS } from "../data";
 import {
-  GROUPES_VESTIAIRE,
+  DRESSING_GROUPS,
   associationsNouvelles,
   categoriesManquantes,
   choisirADecouvrir,
   groupesDuVestiaire,
   syntheseDressing,
-  visuelGroupe,
 } from "../dressingEcran";
 import type { CategoryKey, Item } from "../types";
 
@@ -18,40 +17,69 @@ function piece(id: number, cat: CategoryKey): Item {
 }
 
 describe("groupes du vestiaire — configuration", () => {
-  it("chaque catégorie de CATS appartient à exactement un groupe : aucune pièce ne peut disparaître", () => {
+  it("femme : chaque catégorie de CATS dans exactement une carte", () => {
     for (const [cat] of CATS) {
-      expect(GROUPES_VESTIAIRE.filter((g) => g.cats.includes(cat)).map((g) => g.id)).toHaveLength(1);
+      expect(DRESSING_GROUPS.femme.filter((g) => g.categories.includes(cat))).toHaveLength(1);
     }
   });
 
-  it("chaque visuel annoncé existe dans public/, pour les deux profils", () => {
-    for (const g of GROUPES_VESTIAIRE) {
-      for (const genre of ["femme", "homme"] as const) {
-        expect(existsSync(join(process.cwd(), "public", visuelGroupe(g, genre)))).toBe(true);
+  it("homme : la configuration demandée, sans robes, combinaisons ni jupes", () => {
+    expect(DRESSING_GROUPS.homme.map((g) => g.label)).toEqual([
+      "Hauts & mailles",
+      "Pantalons, jeans & shorts",
+      "Vestes & manteaux",
+      "Chaussures",
+      "Sacs",
+      "Bijoux & accessoires",
+    ]);
+    const couvertes = DRESSING_GROUPS.homme.flatMap((g) => g.categories);
+    expect(new Set(couvertes).size).toBe(couvertes.length);
+    expect(couvertes).not.toContain("robe");
+    expect(couvertes).not.toContain("jupe");
+  });
+
+  it("catégories techniques inchangées : chaque clé existe dans CATS", () => {
+    const cles = new Set(CATS.map(([c]) => c));
+    for (const g of DRESSING_GROUPS.femme) for (const c of g.categories) expect(cles.has(c)).toBe(true);
+  });
+
+  it("chaque visuel d'une carte existe dans public/", () => {
+    const tout = CATS.map(([c], i) => piece(i + 1, c));
+    for (const genre of ["femme", "homme"] as const) {
+      for (const g of groupesDuVestiaire(tout, genre)) {
+        expect(existsSync(join(process.cwd(), "public", g.visuel))).toBe(true);
       }
     }
   });
 });
 
 describe("groupesDuVestiaire", () => {
-  const dressing = [piece(1, "robe"), piece(2, "jean"), piece(3, "pantalon"), piece(4, "bijou")];
+  const dressing = [piece(1, "robe"), piece(2, "jean"), piece(3, "pantalon"), piece(4, "bijou"), piece(5, "pull"), piece(6, "haut")];
 
-  it("seulement les groupes où il y a des pièces, dans l'ordre de la configuration, pièces cumulées", () => {
-    expect(groupesDuVestiaire(dressing, "femme").map((g) => [g.id, g.nbPieces])).toEqual([
-      ["robes-combinaisons", 1],
-      ["pantalons-jeans-shorts", 2],
-      ["bijoux-accessoires", 1],
+  it("seulement les cartes où il y a des pièces, dans l'ordre, compteur = somme des catégories techniques", () => {
+    expect(groupesDuVestiaire(dressing, "femme").map((g) => [g.libelle, g.nbPieces, g.categories])).toEqual([
+      ["Robes & combinaisons", 1, ["robe", "combinaison"]],
+      ["Hauts & mailles", 2, ["haut", "pull"]],
+      ["Pantalons, jeans & shorts", 2, ["pantalon", "jean", "short"]],
+      ["Bijoux & accessoires", 1, ["bijou", "accessoire"]],
     ]);
   });
 
-  it("libellé et visuel suivent le profil ; repli sur le visuel femme quand le profil homme n'en a pas", () => {
+  it("homme : visuels homme ; une robe saisie garde sa carte (visuel femme), en fin de liste", () => {
     const homme = groupesDuVestiaire(dressing, "homme");
-    expect(homme.find((g) => g.id === "bijoux-accessoires")).toMatchObject({ libelle: "Accessoires", visuel: "/images/categories/homme_bijoux-accessoires.webp" });
-    expect(homme.find((g) => g.id === "robes-combinaisons")?.visuel).toBe("/images/categories/femme_robes-combinaisons.webp");
-    expect(groupesDuVestiaire(dressing, null).find((g) => g.id === "bijoux-accessoires")?.libelle).toBe("Accessoires & bijoux");
+    expect(homme.map((g) => g.id)).toEqual(["hauts", "pantalons-jeans-shorts", "bijoux-accessoires", "robes-combinaisons"]);
+    expect(homme[0].visuel).toBe("/images/categories/homme_hauts.webp");
+    expect(homme[3].visuel).toBe("/images/categories/femme_robes-combinaisons.webp");
   });
 
-  it("dressing vide : aucun groupe", () => {
+  it("toute pièce appartient à une carte, quel que soit le profil", () => {
+    const tout = CATS.map(([c], i) => piece(i + 1, c));
+    for (const genre of ["femme", "homme", null] as const) {
+      expect(groupesDuVestiaire(tout, genre).reduce((n, g) => n + g.nbPieces, 0)).toBe(tout.length);
+    }
+  });
+
+  it("dressing vide : aucune carte", () => {
     expect(groupesDuVestiaire([], "femme")).toEqual([]);
   });
 });

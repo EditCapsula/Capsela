@@ -343,7 +343,7 @@ export default function WardrobeScreen() {
         {groupes.map((g) => (
           <button
             key={g.id}
-            onClick={() => actions.goWardrobePieces(g.id)}
+            onClick={() => actions.goWardrobePieces({ libelle: g.libelle, categories: g.categories })}
             aria-label={`${g.libelle} : ${g.nbPieces} ${g.nbPieces <= 1 ? "pièce" : "pièces"}`}
             className="flex-none text-left cursor-pointer active:opacity-80"
             style={{ width: 136, scrollSnapAlign: "start" }}
@@ -360,7 +360,7 @@ export default function WardrobeScreen() {
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
             </div>
-            {/* Deux lignes réservées : « Pantalons & jeans » passe à la ligne
+            {/* Deux lignes réservées : « Pantalons, jeans & shorts » passe à la ligne
                 à 136 px, ses voisines non — sans cette hauteur, les compteurs
                 ne seraient plus alignés. */}
             <div className="font-serif text-[15px] text-ink leading-[1.2] mt-[10px] px-[2px]" style={{ minHeight: "2.4em" }}>

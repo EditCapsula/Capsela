@@ -14,86 +14,78 @@ import type { CategoryKey, Item } from "./types";
 // ── CATÉGORIES DU VESTIAIRE ────────────────────────────────────────────
 
 /**
- * Regroupements d'affichage des 14 catégories de `CATS` (data.ts).
+ * Regroupements D'AFFICHAGE des cartes « Mon vestiaire », par profil.
  *
- * UNE CONFIGURATION, PAS UN TEST DE GENRE DANS L'ÉCRAN. Chaque groupe dit
- * quelles catégories il couvre, sous quel libellé et avec quel visuel selon
- * le profil. Ajouter « Cravates » ou « Maillots de bain » plus tard = une
- * ligne ici (et un visuel), sans toucher à l'écran.
+ * CONFIGURATION LOCALE ET NON DESTRUCTIVE (arbitrage du 25/09/2026, « impact
+ * minimal ») : elle ne sert qu'à construire les cartes de cette section. Les
+ * 14 catégories techniques de `CATS` (data.ts) restent ce qu'elles sont
+ * partout ailleurs — « haut » reste « haut », « pull » reste « pull » —, sans
+ * renommage ni migration. Une carte ne fait que les additionner, et son clic
+ * filtre « Mes pièces » sur ces mêmes catégories techniques.
  *
- * POURQUOI PAS « CHEMISES » NI « COSTUMES » (arbitrage recommandé, retenu le
- * 25/09/2026) : les données ne les distinguent pas. « Haut » couvre T-shirts,
- * chemises et blouses, dont le sous-type est facultatif ; aucune catégorie
- * « costume » n'existe. Un rangement fondé sur un champ facultatif mettrait
- * une chemise sans sous-type dans « Hauts » et sa voisine dans « Chemises ».
+ * Ajouter « Cravates » ou « Maillots de bain » plus tard = une ligne ici (et
+ * un visuel), sans toucher à l'écran.
  *
  * LES VISUELS sont les visuels éditoriaux livrés le 25/09/2026
- * (public/images/categories/, 480×640, réduits depuis 900×1200). Le profil
- * homme n'en a pas pour Robes ni Jupes : le visuel femme sert de repli, pour
- * qu'une pièce possédée ne soit jamais présentée sans image.
- *
- * Toutes les catégories de CATS sont couvertes : aucune pièce du dressing
- * ne peut tomber hors d'un groupe (vérifié par les tests).
+ * (public/images/categories/<profil>_<id>.webp, 480×640).
  */
-export interface GroupeVestiaire {
+export interface GroupeDressing {
   id: string;
-  cats: CategoryKey[];
-  libelle: string;
-  /** Libellé propre à un profil, quand il diffère. */
-  libelleProfil?: Partial<Record<Gender, string>>;
-  /** Profils pour lesquels un visuel existe, dans l'ordre de repli. */
-  visuels: Gender[];
+  label: string;
+  categories: CategoryKey[];
 }
 
-export const GROUPES_VESTIAIRE: GroupeVestiaire[] = [
-  { id: "robes-combinaisons", cats: ["robe", "combinaison"], libelle: "Robes & combinaisons", visuels: ["femme"] },
-  { id: "hauts", cats: ["haut", "pull"], libelle: "Hauts", visuels: ["femme", "homme"] },
-  { id: "jupes", cats: ["jupe"], libelle: "Jupes", visuels: ["femme"] },
-  { id: "pantalons-jeans-shorts", cats: ["pantalon", "jean", "short"], libelle: "Pantalons & jeans", visuels: ["femme", "homme"] },
-  { id: "vestes-manteaux", cats: ["veste", "manteau"], libelle: "Vestes & manteaux", visuels: ["femme", "homme"] },
-  { id: "chaussures", cats: ["chaussures"], libelle: "Chaussures", visuels: ["femme", "homme"] },
-  { id: "sacs", cats: ["sac"], libelle: "Sacs", visuels: ["femme", "homme"] },
-  {
-    id: "bijoux-accessoires",
-    cats: ["accessoire", "bijou"],
-    libelle: "Accessoires & bijoux",
-    libelleProfil: { homme: "Accessoires" },
-    visuels: ["femme", "homme"],
-  },
-];
+const ROBES: GroupeDressing = { id: "robes-combinaisons", label: "Robes & combinaisons", categories: ["robe", "combinaison"] };
+const HAUTS: GroupeDressing = { id: "hauts", label: "Hauts & mailles", categories: ["haut", "pull"] };
+const JUPES: GroupeDressing = { id: "jupes", label: "Jupes", categories: ["jupe"] };
+const BAS: GroupeDressing = { id: "pantalons-jeans-shorts", label: "Pantalons, jeans & shorts", categories: ["pantalon", "jean", "short"] };
+const VESTES: GroupeDressing = { id: "vestes-manteaux", label: "Vestes & manteaux", categories: ["veste", "manteau"] };
+const CHAUSSURES: GroupeDressing = { id: "chaussures", label: "Chaussures", categories: ["chaussures"] };
+const SACS: GroupeDressing = { id: "sacs", label: "Sacs", categories: ["sac"] };
+const BIJOUX: GroupeDressing = { id: "bijoux-accessoires", label: "Bijoux & accessoires", categories: ["bijou", "accessoire"] };
+
+export const DRESSING_GROUPS: Record<Gender, GroupeDressing[]> = {
+  femme: [ROBES, HAUTS, JUPES, BAS, VESTES, CHAUSSURES, SACS, BIJOUX],
+  homme: [HAUTS, BAS, VESTES, CHAUSSURES, SACS, BIJOUX],
+};
 
 export interface GroupeAffiche {
   id: string;
   libelle: string;
   visuel: string;
   nbPieces: number;
-  /** Catégories couvertes — pour filtrer l'écran « Mes pièces ». */
-  cats: CategoryKey[];
-}
-
-export function libelleGroupe(g: GroupeVestiaire, gender: Gender | null): string {
-  return (gender && g.libelleProfil?.[gender]) || g.libelle;
-}
-
-/** Visuel du groupe pour ce profil ; repli sur le premier visuel existant. */
-export function visuelGroupe(g: GroupeVestiaire, gender: Gender | null): string {
-  const profil = gender && g.visuels.includes(gender) ? gender : g.visuels[0];
-  return `/images/categories/${profil}_${g.id}.webp`;
+  /** Catégories techniques additionnées — et filtre de « Mes pièces ». */
+  categories: CategoryKey[];
 }
 
 /**
- * Groupes à afficher : SEULEMENT ceux où l'utilisatrice possède des pièces
- * (brief du 25/09/2026, point 6 — un vestiaire personnel, pas un formulaire
- * à remplir). Ordre de la configuration.
+ * Cartes à afficher : SEULEMENT les groupes où l'utilisatrice possède des
+ * pièces (brief du 25/09/2026, point 6), dans l'ordre de la configuration ;
+ * le compteur est la somme des pièces de leurs catégories techniques.
+ *
+ * AUCUNE PIÈCE SANS CARTE. La configuration homme ne prévoit ni robes, ni
+ * combinaisons, ni jupes ; si une telle pièce est pourtant saisie, sa carte
+ * « femme » s'affiche en fin de liste (avec son visuel) plutôt que de laisser
+ * la pièce hors du vestiaire. Sans profil renseigné : configuration femme,
+ * la seule qui couvre les 14 catégories.
  */
 export function groupesDuVestiaire(items: Item[], gender: Gender | null): GroupeAffiche[] {
-  return GROUPES_VESTIAIRE.map((g) => ({
-    id: g.id,
-    libelle: libelleGroupe(g, gender),
-    visuel: visuelGroupe(g, gender),
-    nbPieces: items.filter((i) => g.cats.includes(i.cat)).length,
-    cats: g.cats,
-  })).filter((g) => g.nbPieces > 0);
+  const profil: Gender = gender ?? "femme";
+  const propres = DRESSING_GROUPS[profil];
+  const couvertes = new Set(propres.flatMap((g) => g.categories));
+  const replis = DRESSING_GROUPS.femme.filter((g) => g.categories.every((c) => !couvertes.has(c)));
+  return [
+    ...propres.map((g) => ({ g, visuel: profil })),
+    ...replis.map((g) => ({ g, visuel: "femme" as Gender })),
+  ]
+    .map(({ g, visuel }) => ({
+      id: g.id,
+      libelle: g.label,
+      visuel: `/images/categories/${visuel}_${g.id}.webp`,
+      nbPieces: items.filter((i) => g.categories.includes(i.cat)).length,
+      categories: g.categories,
+    }))
+    .filter((g) => g.nbPieces > 0);
 }
 
 // ── SYNTHÈSE DE L'EN-TÊTE ──────────────────────────────────────────────

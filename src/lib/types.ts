@@ -392,8 +392,8 @@ export interface AppState {
   activeLookId: string | null;
   /** Écran où revient le détail d'un look : le Dressing, ou « Mes looks » d'où il a été ouvert. */
   lookReturn: "wardrobe" | "looks";
-  /** Groupe du vestiaire (dressingEcran.ts) qui filtre « Mes pièces » ; null = toutes les pièces. */
-  filtrePieces: string | null;
+  /** Carte du vestiaire qui filtre « Mes pièces » sur ses catégories techniques ; null = toutes les pièces. */
+  filtrePieces: { libelle: string; categories: CategoryKey[] } | null;
 }
 
 export type Screen =
