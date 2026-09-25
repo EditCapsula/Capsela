@@ -44,10 +44,10 @@ export default function AuthScreen() {
       </div>
 
       <div className="mt-[22px]">
-        <div className="font-serif text-[30px] leading-[1.12] text-ink">
+        <div className="font-serif text-[27px] leading-[1.12] text-ink">
           Crée ton <span className="italic text-terracotta">compte</span>
         </div>
-        <div className="text-[13.5px] text-muted mt-[10px] leading-[1.5]">
+        <div className="text-[13px] text-muted mt-[10px] leading-[1.5]">
           Pour recevoir ta tenue du jour et sauvegarder ton dressing, où que tu sois.
         </div>
       </div>
@@ -61,7 +61,7 @@ export default function AuthScreen() {
 
       <div className="flex items-center gap-[11px] my-[22px]">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-[10.5px] tracking-[.16em] uppercase text-placeholder">ou par e-mail</span>
+        <span className="text-[10px] tracking-[.14em] uppercase text-placeholder">ou par e-mail</span>
         <div className="flex-1 h-px bg-border" />
       </div>
 
@@ -119,12 +119,12 @@ export default function AuthScreen() {
       </div>
 
       {auth.error && (
-        <div className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12.5px] text-rust leading-[1.45]">
+        <div className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {auth.error}
         </div>
       )}
       {confirmPending && (
-        <div className="mt-4 bg-warm-bg border border-warm-border rounded-xl px-4 py-3 text-[12.5px] text-warm-text-2 leading-[1.5]">
+        <div className="mt-4 bg-warm-bg border border-warm-border rounded-xl px-4 py-3 text-[12px] text-warm-text-2 leading-[1.5]">
           <span className="font-semibold">Vérifie ta boîte mail.</span> On t&apos;a envoyé un lien de
           confirmation à {email.trim()}. Clique dessus, puis reviens te connecter.
         </div>

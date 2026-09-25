@@ -177,7 +177,7 @@ function Marque({ children }: { children: React.ReactNode }) {
 function ChipTenue({ children }: { children: React.ReactNode }) {
   return (
     <span
-      className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap text-[11.5px]"
+      className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap text-[11px]"
       style={{ height: 30, padding: "0 12px", background: "rgba(29,26,22,.62)", color: "#FBF3EA" }}
     >
       {children}
@@ -329,7 +329,7 @@ export default function OpinionShareScreen() {
 
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pb-5">
         {titre}
-        <div className="text-[12.5px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
+        <div className="text-[12px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
           Envoie ta tenue à quelqu&apos;un de confiance et demande-lui ce qu&apos;il en pense.
         </div>
 
@@ -463,8 +463,8 @@ export default function OpinionShareScreen() {
           style={{ opacity: optionImageActive ? 1 : 0.55 }}
         >
           <span className="flex-1 min-w-0">
-            <span className="block text-[13.5px] text-ink">Partager l&apos;image de la tenue</span>
-            <span className="block text-[11.5px] text-muted leading-[1.45] mt-[3px]">
+            <span className="block text-[13px] text-ink">Partager l&apos;image de la tenue</span>
+            <span className="block text-[11px] text-muted leading-[1.45] mt-[3px]">
               {!imageComposable
                 ? "Aucun visuel n'est disponible pour cette tenue."
                 : !peutPartagerFichier
@@ -491,13 +491,13 @@ export default function OpinionShareScreen() {
         </button>
 
         {note && (
-          <div className="mt-[14px] text-[12.5px] text-muted leading-[1.5]" aria-live="polite">
+          <div className="mt-[14px] text-[12px] text-muted leading-[1.5]" aria-live="polite">
             {note}
           </div>
         )}
 
         {/* Rappel unique : aucune réponse ne revient dans l'application. */}
-        <div className="mt-[14px] text-[11.5px] text-muted leading-[1.45]">
+        <div className="mt-[14px] text-[11px] text-muted leading-[1.45]">
           La réponse de ton proche arrivera là où tu as partagé, pas dans l&apos;application.
         </div>
       </div>
@@ -524,7 +524,7 @@ export default function OpinionShareScreen() {
             aria-live="polite"
           >
             <div
-              className="rounded-[15px] bg-ink text-cream text-[12.5px] leading-[1.45]"
+              className="rounded-[15px] bg-ink text-cream text-[12px] leading-[1.45]"
               style={{ padding: "13px 16px" }}
             >
               {toast}
@@ -563,7 +563,7 @@ export default function OpinionShareScreen() {
             <span>{etat === "partage" ? "Préparation…" : "Partager ma tenue"}</span>
           </button>
         ) : (
-          <div className="text-[12.5px] text-muted leading-[1.5] py-1">
+          <div className="text-[12px] text-muted leading-[1.5] py-1">
             Ton navigateur ne propose pas de partage. Copie le message pour l&apos;envoyer toi-même.
           </div>
         )}
@@ -573,7 +573,7 @@ export default function OpinionShareScreen() {
             onClick={() => copier()}
             disabled={etat === "partage"}
             className={
-              "w-full flex items-center justify-center gap-2 rounded-full bg-card border border-border text-[12.5px] " +
+              "w-full flex items-center justify-center gap-2 rounded-full bg-card border border-border text-[12px] " +
               (etat === "partage" ? "cursor-not-allowed opacity-60" : "cursor-pointer")
             }
             style={{ minHeight: 44, color: "var(--color-muted-3)" }}

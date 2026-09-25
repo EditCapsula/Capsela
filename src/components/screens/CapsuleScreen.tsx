@@ -151,8 +151,8 @@ export default function CapsuleScreen() {
       <AppHeader />
 
       <div className="mt-[18px]">
-        <div className="text-[11px] tracking-[.18em] uppercase text-muted">Ta capsule</div>
-        <div className="font-serif text-[28px] leading-[1.15] text-ink mt-[6px]">
+        <div className="text-[11px] tracking-[.16em] uppercase text-muted">Ta capsule</div>
+        <div className="font-serif text-[27px] leading-[1.15] text-ink mt-[6px]">
           Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
         </div>
         <div className="text-[12px] text-muted leading-[1.5] mt-[8px]">
@@ -206,7 +206,7 @@ export default function CapsuleScreen() {
             <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
             <div className="flex-1 min-w-0">
               <div className="text-[13px] text-ink leading-[1.4]">Tu explores le style {exploredStyleLabel}</div>
-              <div className="text-[12.5px] text-[#3F3B34] leading-[1.45] mt-[3px]">
+              <div className="text-[12px] text-[#3F3B34] leading-[1.45] mt-[3px]">
                 Cette capsule permet de composer une tenue pour{" "}
                 {occasionPhraseFor(state.occasion || "all", state.workMode, state.dateContext)}.
               </div>
@@ -234,7 +234,7 @@ export default function CapsuleScreen() {
             <button
               key={s}
               onClick={() => actions.setCapsuleSeason(s)}
-              className="flex-none py-[9px] px-4 rounded-full text-[12.5px] cursor-pointer border whitespace-nowrap"
+              className="flex-none py-[9px] px-4 rounded-full text-[12px] cursor-pointer border whitespace-nowrap"
               style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB", color: on ? "#F3EEE5" : "#1D1A16" }}
             >
               {s}
@@ -295,10 +295,10 @@ export default function CapsuleScreen() {
                             )
                           )}
                         </div>
-                        <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
+                        <div className="text-[11px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
                           {it.name}
                         </div>
-                        <div className="text-[9.5px] text-terracotta mt-[1px]">Suggestion</div>
+                        <div className="text-[9px] text-terracotta mt-[1px]">Suggestion</div>
                       </button>
                     );
                   })}

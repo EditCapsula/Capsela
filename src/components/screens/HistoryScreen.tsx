@@ -158,8 +158,8 @@ export default function HistoryScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <AppHeader />
 
-      <div className="mt-[18px] text-[11px] tracking-[.18em] uppercase text-muted">{countText}</div>
-      <div className="font-serif text-[28px] text-ink mt-[6px]">Ton journal</div>
+      <div className="mt-[18px] text-[11px] tracking-[.16em] uppercase text-muted">{countText}</div>
+      <div className="font-serif text-[27px] text-ink mt-[6px]">Ton journal</div>
 
       {/* Rotation réelle du dressing (recette 23/08/2026) : quatre repères
           d'un coup d'œil — le "% déjà porté" reste visible mais partage la
@@ -198,7 +198,7 @@ export default function HistoryScreen() {
 
           <button
             onClick={actions.goNeverWorn}
-            className="mt-[10px] w-full text-center text-[12.5px] text-terracotta cursor-pointer"
+            className="mt-[10px] w-full text-center text-[12px] text-terracotta cursor-pointer"
           >
             Voir les pièces jamais portées ›
           </button>
@@ -227,11 +227,11 @@ export default function HistoryScreen() {
             {stats.never > 0 && (
               <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col">
                 <HangerIcon className="text-terracotta" />
-                <div className="font-serif text-[22px] leading-[.9] text-ink mt-[10px]">{stats.never}</div>
+                <div className="font-serif text-[21px] leading-[.9] text-ink mt-[10px]">{stats.never}</div>
                 <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">
                   pièce{stats.never <= 1 ? "" : "s"} pas encore portée{stats.never <= 1 ? "" : "s"}
                 </div>
-                <button onClick={actions.goNeverWorn} className="text-[10.5px] text-terracotta text-left cursor-pointer mt-[9px]">
+                <button onClick={actions.goNeverWorn} className="text-[10px] text-terracotta text-left cursor-pointer mt-[9px]">
                   Les redécouvrir →
                 </button>
               </div>
@@ -239,19 +239,19 @@ export default function HistoryScreen() {
             {newLooks > 0 && (
               <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col">
                 <StarIcon className="text-terracotta" />
-                <div className="font-serif text-[22px] leading-[.9] text-ink mt-[10px]">{newLooks}</div>
+                <div className="font-serif text-[21px] leading-[.9] text-ink mt-[10px]">{newLooks}</div>
                 <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">
                   nouveau{newLooks <= 1 ? "" : "x"} look{newLooks <= 1 ? "" : "s"} créé{newLooks <= 1 ? "" : "s"}
                 </div>
-                <div className="text-[10.5px] text-terracotta mt-[9px]">Bravo !</div>
+                <div className="text-[10px] text-terracotta mt-[9px]">Bravo !</div>
               </div>
             )}
             {topWorn.length > 0 && (
               <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col">
                 <TShirtIcon className="text-terracotta" />
-                <div className="font-serif text-[22px] leading-[.9] text-ink mt-[10px]">{topWorn[0].count}</div>
+                <div className="font-serif text-[21px] leading-[.9] text-ink mt-[10px]">{topWorn[0].count}</div>
                 <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">fois portée</div>
-                <div className="text-[10.5px] text-terracotta leading-[1.25] mt-[9px]">Ta pièce la plus polyvalente</div>
+                <div className="text-[10px] text-terracotta leading-[1.25] mt-[9px]">Ta pièce la plus polyvalente</div>
               </div>
             )}
           </div>
@@ -317,7 +317,7 @@ export default function HistoryScreen() {
               Voir tout ›
             </button>
           </div>
-          <div className="text-[12.5px] text-[#3F3B34] leading-[1.45] mb-[12px]">
+          <div className="text-[12px] text-[#3F3B34] leading-[1.45] mb-[12px]">
             {toRediscover.length} pièce{toRediscover.length <= 1 ? "" : "s"} de ta capsule n&apos;{toRediscover.length <= 1 ? "a" : "ont"}{" "}
             pas encore été portée{toRediscover.length <= 1 ? "" : "s"}.
           </div>
@@ -379,7 +379,7 @@ export default function HistoryScreen() {
                         {showRel ? <span className="text-[13px] text-ink">{h.rel}</span> : <span />}
                         <div className="flex items-center gap-[8px]">
                           {h.hasOccasion && (
-                            <span className="text-[10px] tracking-[.08em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px]">
+                            <span className="text-[10px] tracking-[.14em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px]">
                               {h.occLabel}
                             </span>
                           )}
@@ -421,7 +421,7 @@ export default function HistoryScreen() {
           {hasMoreHistory && (
             <button
               onClick={() => setHistoryExpanded((v) => !v)}
-              className="w-full text-center text-[12.5px] text-terracotta cursor-pointer py-2"
+              className="w-full text-center text-[12px] text-terracotta cursor-pointer py-2"
             >
               {historyExpanded ? "Voir moins ⌃" : "Voir plus d'historique ⌄"}
             </button>
@@ -432,7 +432,7 @@ export default function HistoryScreen() {
           <span className="w-14 h-14 rounded-full bg-[#F0E5D6] text-terracotta flex items-center justify-center text-[24px] mb-4">
             ✦
           </span>
-          <div className="font-serif text-[19px] leading-[1.3] text-ink">Rien à raconter pour l&apos;instant</div>
+          <div className="font-serif text-[18px] leading-[1.3] text-ink">Rien à raconter pour l&apos;instant</div>
           <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[250px]">
             Porte une tenue pour commencer ton journal.
           </div>

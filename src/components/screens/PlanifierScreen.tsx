@@ -249,7 +249,7 @@ function LigneChoix({
     >
       {glyphe && <span className={"flex-shrink-0 " + (actif ? "text-terracotta-deep" : "text-muted-3")}>{glyphe}</span>}
       <span className="flex-1 min-w-0">
-        <span className="block text-[13.5px] font-medium text-ink">{titre}</span>
+        <span className="block text-[13px] font-medium text-ink">{titre}</span>
         {sousTitre && <span className="block text-[11px] text-muted mt-[2px]">{sousTitre}</span>}
       </span>
       <span
@@ -737,7 +737,7 @@ export default function PlanifierScreen() {
                     <Glyphe>{g}</Glyphe>
                   </span>
                   <div className="min-w-0">
-                    <div className="text-[13.5px] font-semibold text-ink">{t}</div>
+                    <div className="text-[13px] font-medium text-ink">{t}</div>
                     <div className="text-[12px] text-muted leading-[1.45] mt-[2px]">{s}</div>
                   </div>
                 </div>
@@ -772,7 +772,7 @@ export default function PlanifierScreen() {
           <>
             <Surtitre>{ETAPES[etape][0]}</Surtitre>
             <TitreEtape a={ETAPES[etape][1]} b={ETAPES[etape][2]} />
-            <div className="text-[12.5px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
+            <div className="text-[12px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
               {ETAPES[etape][3]}
             </div>
 
@@ -824,8 +824,8 @@ export default function PlanifierScreen() {
                           <GlypheOccasion occasion={key} taille={19} />
                         </span>
                         <span className="flex-1 min-w-0">
-                          <span className={"block text-[13.5px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</span>
-                          <span className="block text-[11.5px] text-muted mt-[2px]">{desc}</span>
+                          <span className={"block text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</span>
+                          <span className="block text-[11px] text-muted mt-[2px]">{desc}</span>
                         </span>
                         {/* Pastille pleine à la sélection plutôt que la coche
                             nue de la feuille : hors feuille, une coche seule
@@ -849,7 +849,7 @@ export default function PlanifierScreen() {
 
                       {avecSousChoix && (
                         <div className="pb-3 pt-1" style={{ borderTop: "1px solid var(--color-warm-border)" }}>
-                          <div className="text-[12.5px] text-ink mt-2 px-1">{sousChoix.titre}</div>
+                          <div className="text-[12px] text-ink mt-2 px-1">{sousChoix.titre}</div>
                           <div className="flex flex-wrap gap-2 mt-2 px-1">
                             {sousChoix.valeurs.map((v) => {
                               const on = sousChoix.courant === v;
@@ -859,7 +859,7 @@ export default function PlanifierScreen() {
                                   onClick={() => sousChoix.choisir(v)}
                                   aria-pressed={on}
                                   className={
-                                    "inline-flex items-center gap-[7px] rounded-full px-[14px] text-[12.5px] cursor-pointer border transition-colors " +
+                                    "inline-flex items-center gap-[7px] rounded-full px-[14px] text-[12px] cursor-pointer border transition-colors " +
                                     (on
                                       ? "bg-terracotta border-terracotta text-cream"
                                       : "bg-card border-sand-border text-muted-3")
@@ -914,13 +914,13 @@ export default function PlanifierScreen() {
                         </span>
                         <span
                           className={
-                            "block font-serif text-[19px] mt-[2px] " +
+                            "block font-serif text-[18px] mt-[2px] " +
                             (on ? "text-cream" : couvert ? "text-ink" : "text-muted-3")
                           }
                         >
                           {d.getDate()}
                         </span>
-                        <span className={"block text-[8.5px] " + (on ? "text-cream" : "text-muted")}>
+                        <span className={"block text-[9px] " + (on ? "text-cream" : "text-muted")}>
                           {MOIS[d.getMonth()]}
                         </span>
                       </button>
@@ -938,7 +938,7 @@ export default function PlanifierScreen() {
                     );
                   })}
                 </div>
-                <div className="text-[11.5px] text-muted leading-[1.45] mt-[9px]" style={{ textWrap: "pretty" }}>
+                <div className="text-[11px] text-muted leading-[1.45] mt-[9px]" style={{ textWrap: "pretty" }}>
                   {jour != null && jour > HORIZON_PREVISION_JOURS
                     ? `La prévision météo ne va pas jusque-là : elle couvre ${HORIZON_PREVISION_JOURS} jours. La tenue sera composée sur la saison, sans météo du jour J.`
                     : `La prévision météo couvre les ${HORIZON_PREVISION_JOURS} prochains jours. Au-delà du filet, la tenue se compose sur la saison seule.`}
@@ -1003,7 +1003,7 @@ export default function PlanifierScreen() {
                   </div>
                 )}
                 {ville && (
-                  <div className="text-[11.5px] text-muted mt-2">
+                  <div className="text-[11px] text-muted mt-2">
                     Météo demandée pour {ville.name}, à ses coordonnées exactes.
                   </div>
                 )}
@@ -1048,11 +1048,11 @@ export default function PlanifierScreen() {
             {/* 9,5 px / .1em : la forme des deux autres pastilles terracotta de
                 l'app (accueil, Valise). Le 10 px d'ici était un troisième
                 réglage pour le même objet. */}
-            <span className="inline-block text-[9.5px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
+            <span className="inline-block text-[9px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
               {occLong}
             </span>
             <TitreEtape a={occLabel} b={lieu.trim() ? `· ${lieu.trim()}` : ""} />
-            <div className="text-[12.5px] text-muted mt-[6px]">
+            <div className="text-[12px] text-muted mt-[6px]">
               {dateLongue.charAt(0).toUpperCase() + dateLongue.slice(1)}
               {moment ? ` · ${moment}` : ""}
               {typeLieu ? ` · ${typeLieu}` : ""}
@@ -1063,7 +1063,7 @@ export default function PlanifierScreen() {
                 <div className="font-serif text-[18px] text-ink">
                   {emptyStateCopy(tenue.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").title}
                 </div>
-                <div className="text-[12.5px] text-muted-3 leading-[1.5] mt-2">
+                <div className="text-[12px] text-muted-3 leading-[1.5] mt-2">
                   {emptyStateCopy(tenue.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").body}
                 </div>
               </div>
@@ -1071,9 +1071,9 @@ export default function PlanifierScreen() {
               <>
                 <div className="mt-[14px] rounded-[24px] p-4" style={{ background: "var(--color-terracotta-deep)" }}>
                   <div className="flex items-center justify-between gap-[10px]">
-                    <span className="text-[10.5px] tracking-[.14em] uppercase text-cream">Tenue préparée</span>
+                    <span className="text-[10px] tracking-[.14em] uppercase text-cream">Tenue préparée</span>
                     <span
-                      className="text-[10.5px] text-cream rounded-full px-[11px] py-[5px] whitespace-nowrap"
+                      className="text-[10px] text-cream rounded-full px-[11px] py-[5px] whitespace-nowrap"
                       style={{ background: "rgba(251,243,234,.2)" }}
                     >
                       {jour === 1 ? "Demain" : `Dans ${jour} jours`}
@@ -1096,7 +1096,7 @@ export default function PlanifierScreen() {
                         <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">
                           <Glyphe taille={16}>{G_COCHE}</Glyphe>
                         </span>
-                        <span className="text-[12.5px] text-muted-3 leading-[1.45]">{r}</span>
+                        <span className="text-[12px] text-muted-3 leading-[1.45]">{r}</span>
                       </div>
                     ))}
                   </div>
@@ -1113,8 +1113,8 @@ export default function PlanifierScreen() {
                   className="w-full flex gap-3 items-center mt-[14px] bg-card border border-border rounded-[20px] p-[14px] cursor-pointer text-left"
                 >
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[13.5px] font-medium text-ink">Uniquement mon dressing</span>
-                    <span className="block text-[11.5px] text-muted leading-[1.45] mt-[3px]">
+                    <span className="block text-[13px] font-medium text-ink">Uniquement mon dressing</span>
+                    <span className="block text-[11px] text-muted leading-[1.45] mt-[3px]">
                       Sans compléter avec des pièces de ta capsule.
                     </span>
                   </span>
@@ -1150,7 +1150,7 @@ export default function PlanifierScreen() {
                   onClick={() => setOnglet(cle)}
                   aria-pressed={onglet === cle}
                   className={
-                    "rounded-full px-4 text-[12.5px] cursor-pointer border transition-colors " +
+                    "rounded-full px-4 text-[12px] cursor-pointer border transition-colors " +
                     (onglet === cle ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-muted-3")
                   }
                   style={{ minHeight: 44 }}
@@ -1161,7 +1161,7 @@ export default function PlanifierScreen() {
             </div>
 
             {listeAffichee.length === 0 ? (
-              <div className="mt-4 rounded-[20px] px-5 py-[26px] text-center text-[12.5px] text-muted leading-[1.5]" style={{ border: "1px dashed var(--color-sand-border)" }}>
+              <div className="mt-4 rounded-[20px] px-5 py-[26px] text-center text-[12px] text-muted leading-[1.5]" style={{ border: "1px dashed var(--color-sand-border)" }}>
                 {onglet === "up" ? "Rien de prévu pour l'instant." : "Tes tenues passées apparaîtront ici."}
               </div>
             ) : (
@@ -1171,11 +1171,11 @@ export default function PlanifierScreen() {
                   return (
                     <div key={t.id} className="flex gap-3 items-center bg-card border border-border rounded-[20px] p-3">
                       <div className="flex-1 min-w-0">
-                        <div className="text-[10px] tracking-[.1em] uppercase text-terracotta">
+                        <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">
                           {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
                         </div>
-                        <div className="font-serif text-[16px] text-ink mt-[3px]">{occasionShortLabel(t.occasion)}</div>
-                        <div className="text-[11.5px] text-muted mt-[2px]">
+                        <div className="font-serif text-[15px] text-ink mt-[3px]">{occasionShortLabel(t.occasion)}</div>
+                        <div className="text-[11px] text-muted mt-[2px]">
                           {t.lieu} · {t.moment}
                           {/* La prévision telle qu'elle était AU MOMENT DE
                               PLANIFIER, jamais présentée comme celle du jour
@@ -1208,7 +1208,7 @@ export default function PlanifierScreen() {
             une distance fixe finirait collé à l'un des deux cas. */}
         {toast && (
           <div
-            className="absolute inset-x-6 z-30 pointer-events-none rounded-[15px] px-4 py-[13px] text-[12.5px]"
+            className="absolute inset-x-6 z-30 pointer-events-none rounded-[15px] px-4 py-[13px] text-[12px]"
             style={{ bottom: "100%", marginBottom: 12, background: "var(--color-ink)", color: "var(--color-cream)" }}
             aria-live="polite"
           >
@@ -1306,14 +1306,14 @@ export default function PlanifierScreen() {
                   setVue("etape");
                   setEtape(1);
                 }}
-                className="flex-1 rounded-full bg-card border border-border text-[12.5px] text-muted-3 cursor-pointer"
+                className="flex-1 rounded-full bg-card border border-border text-[12px] text-muted-3 cursor-pointer"
                 style={{ minHeight: 44 }}
               >
                 Modifier cet évènement
               </button>
               <button
                 onClick={() => setTirage(tirage + 1)}
-                className="flex-1 rounded-full bg-card border border-terracotta text-[12.5px] font-medium text-terracotta cursor-pointer"
+                className="flex-1 rounded-full bg-card border border-terracotta text-[12px] font-medium text-terracotta cursor-pointer"
                 style={{ minHeight: 44 }}
               >
                 Une autre tenue

@@ -115,12 +115,12 @@ export default function ProfileScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <div className="flex items-center gap-[14px]">
         <BoutonRetour onClick={() => actions.go(state.profileReturn)} label="Revenir à l'écran précédent" />
-        <div className="font-serif text-[24px] text-ink">Ton profil</div>
+        <div className="font-serif text-[27px] text-ink">Ton profil</div>
       </div>
 
       <div className="bg-ink rounded-[20px] p-5 mt-5 flex items-center gap-[14px]">
         <div className="w-[56px] h-[56px] rounded-full bg-terracotta flex items-center justify-center flex-shrink-0">
-          <span className="font-serif text-[22px] text-cream">{initial}</span>
+          <span className="font-serif text-[21px] text-cream">{initial}</span>
         </div>
         <div className="min-w-0">
           {/* Même règle que dans la liste ci-dessous : une absence ne se
@@ -128,14 +128,14 @@ export default function ProfileScreen() {
               invite, pas un nom. */}
           <div
             className={
-              "font-serif text-[19px] truncate " + (profile.displayName ? "text-cream" : "text-cream-dark-muted")
+              "font-serif text-[18px] truncate " + (profile.displayName ? "text-cream" : "text-cream-dark-muted")
             }
           >
             {profile.displayName || "Ton nom"}
           </div>
-          <div className="text-[12.5px] text-cream-dark-muted mt-[3px] truncate">{email ?? "non renseignée"}</div>
+          <div className="text-[12px] text-cream-dark-muted mt-[3px] truncate">{email ?? "non renseignée"}</div>
           {demoMode && (
-            <div className="text-[11.5px] text-gold mt-[5px]">Mode démo — les données restent sur cet appareil</div>
+            <div className="text-[11px] text-gold mt-[5px]">Mode démo — les données restent sur cet appareil</div>
           )}
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function ProfileScreen() {
           className="w-full text-left bg-[#F6EBE2] border border-terracotta rounded-2xl p-4 mt-5 cursor-pointer"
         >
           <div className="text-[11px] tracking-[.16em] uppercase text-terracotta">À compléter</div>
-          <div className="text-[13.5px] text-ink mt-[6px]">{toRevalidate.fieldLabel} est à mettre à jour.</div>
+          <div className="text-[13px] text-ink mt-[6px]">{toRevalidate.fieldLabel} est à mettre à jour.</div>
         </button>
       )}
 
@@ -167,7 +167,7 @@ export default function ProfileScreen() {
               <span className="flex items-center gap-[6px]">
                 <span
                   className={
-                    "text-[13.5px] text-right leading-[1.4] " + (r.renseigne ? "text-ink" : "text-placeholder")
+                    "text-[13px] text-right leading-[1.4] " + (r.renseigne ? "text-ink" : "text-placeholder")
                   }
                 >
                   {r.value}
@@ -199,7 +199,7 @@ export default function ProfileScreen() {
                 ))}
               </span>
             ) : (
-              <span className="text-[13.5px] text-placeholder">Non renseignée</span>
+              <span className="text-[13px] text-placeholder">Non renseignée</span>
             )}
             <span className="text-placeholder">›</span>
           </span>
@@ -228,14 +228,14 @@ export default function ProfileScreen() {
           onClick={actions.goLegal}
           className="flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4 w-full text-left cursor-pointer"
         >
-          <span className="text-[13.5px] text-ink">Informations légales</span>
+          <span className="text-[13px] text-ink">Informations légales</span>
           <span className="text-placeholder">›</span>
         </button>
         <button
           onClick={actions.goLegal}
           className="flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4 w-full text-left cursor-pointer"
         >
-          <span className="text-[13.5px] text-ink">Confidentialité et données</span>
+          <span className="text-[13px] text-ink">Confidentialité et données</span>
           <span className="text-placeholder">›</span>
         </button>
         {/* Portabilité (article 20 du RGPD) — placée juste avant la
@@ -248,7 +248,7 @@ export default function ProfileScreen() {
             disabled={exporting}
             className="flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4 w-full text-left cursor-pointer disabled:opacity-60"
           >
-            <span className="text-[13.5px] text-ink">
+            <span className="text-[13px] text-ink">
               {exporting ? "Préparation du fichier…" : "Télécharger mes données"}
             </span>
             <span className="text-placeholder">›</span>
@@ -258,12 +258,12 @@ export default function ProfileScreen() {
           onClick={openDeleteConfirm}
           className="flex items-center justify-between px-4 py-[15px] border-b border-border last:border-b-0 gap-4 w-full text-left cursor-pointer"
         >
-          <span className="text-[13.5px] text-rust">Supprimer mon compte</span>
+          <span className="text-[13px] text-rust">Supprimer mon compte</span>
           <span className="text-rust">›</span>
         </button>
       </div>
 
-      {exportError && <div className="mt-[10px] text-[12.5px] text-rust leading-[1.5]">{exportError}</div>}
+      {exportError && <div className="mt-[10px] text-[12px] text-rust leading-[1.5]">{exportError}</div>}
 
       {/* Déconnexion avant la signature de version, et non après : une action
           ne se place pas sous la ligne qui clôt l'écran. py-3 lui donne au
@@ -271,7 +271,7 @@ export default function ProfileScreen() {
           hauteur propre, seulement celle de son texte. */}
       <button
         onClick={handleSignOut}
-        className="mt-[22px] w-full text-center text-[12.5px] text-terracotta cursor-pointer py-3"
+        className="mt-[22px] w-full text-center text-[12px] text-terracotta cursor-pointer py-3"
       >
         Se déconnecter
       </button>
@@ -283,12 +283,12 @@ export default function ProfileScreen() {
           enregistrées, tes looks et les informations de ton profil seront supprimés — il ne sera plus possible de
           les récupérer.
         </div>
-        {error && <div className="mt-[14px] text-[12.5px] text-rust leading-[1.5]">{error}</div>}
+        {error && <div className="mt-[14px] text-[12px] text-rust leading-[1.5]">{error}</div>}
         <button
           onClick={handleDeleteAccount}
           disabled={deleting}
           className={
-            "mt-[22px] w-full text-center rounded-full py-[14px] text-[12.5px] tracking-[.1em] uppercase " +
+            "mt-[22px] w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase " +
             (deleting ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-rust text-cream cursor-pointer")
           }
         >

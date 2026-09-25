@@ -46,7 +46,7 @@ export default function BottomSheet({
             <span className="w-[38px] h-[4px] rounded-full" style={{ background: "#DFD3BE" }} />
           </div>
           <div className="flex items-center justify-between px-6 pt-[13px] pb-[11px] flex-shrink-0 border-b border-border">
-            <span className="font-serif text-[17px] text-ink">{title}</span>
+            <span className="font-serif text-[18px] text-ink">{title}</span>
             <button
               onClick={onClose}
               aria-label="Fermer"

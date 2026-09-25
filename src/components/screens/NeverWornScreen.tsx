@@ -28,21 +28,21 @@ export default function NeverWornScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <div className="flex items-center gap-[14px]">
         <BoutonRetour onClick={actions.goTenues} label="Revenir à la tenue du jour" />
-        <div className="font-serif text-[25px] text-ink">Jamais portées</div>
+        <div className="font-serif text-[27px] text-ink">Jamais portées</div>
       </div>
 
       <div className="mt-4 flex items-center gap-[11px] bg-warm-bg border border-warm-border rounded-2xl px-4 py-[12px]">
         <span className="font-serif text-[26px] leading-[.9] text-terracotta flex-shrink-0">{neverWorn.length}</span>
         <div className="min-w-0">
-          <div className="text-[13.5px] text-ink leading-[1.3]">{neverWorn.length === 1 ? "pièce à redécouvrir" : "pièces à redécouvrir"}</div>
-          <div className="text-[11.5px] text-warm-text-2 leading-[1.4] mt-[2px]">
+          <div className="text-[13px] text-ink leading-[1.3]">{neverWorn.length === 1 ? "pièce à redécouvrir" : "pièces à redécouvrir"}</div>
+          <div className="text-[11px] text-warm-text-2 leading-[1.4] mt-[2px]">
             {neverWorn.length === 1 ? "Elle n'a" : "Elles n'ont"} encore jamais été {neverWorn.length === 1 ? "portée" : "portées"}. Découvre de nouvelles façons de {neverWorn.length === 1 ? "l'intégrer" : "les intégrer"} à tes tenues.
           </div>
         </div>
       </div>
 
       {neverWorn.length === 0 && (
-        <div className="text-[12.5px] text-muted mt-4 leading-[1.5]">
+        <div className="text-[12px] text-muted mt-4 leading-[1.5]">
           Aucune pièce de ton dressing n&apos;attend son tour pour l&apos;instant.
         </div>
       )}
@@ -78,7 +78,7 @@ export default function NeverWornScreen() {
                 <div className="flex-1 min-w-0 text-left">
                   <div className="text-[14px] text-ink truncate">{displayName(it)}</div>
                   <div className="text-[11px] text-muted mt-[2px]">{CATLABEL[it.cat]} · {it.color}</div>
-                  {ago && <div className="text-[10.5px] text-placeholder mt-[3px]">{ago} · Jamais portée</div>}
+                  {ago && <div className="text-[10px] text-placeholder mt-[3px]">{ago} · Jamais portée</div>}
                 </div>
               </div>
 
@@ -94,7 +94,7 @@ export default function NeverWornScreen() {
                         e.stopPropagation();
                         actions.openItemOutfits(it.id, false);
                       }}
-                      className="text-[11.5px] text-cream bg-terracotta active:bg-terracotta-hover rounded-full py-[8px] px-[14px] cursor-pointer"
+                      className="text-[11px] text-cream bg-terracotta active:bg-terracotta-hover rounded-full py-[8px] px-[14px] cursor-pointer"
                     >
                       Voir des tenues
                     </button>
@@ -103,7 +103,7 @@ export default function NeverWornScreen() {
                         e.stopPropagation();
                         actions.openItem(it.id, false);
                       }}
-                      className="text-[11.5px] text-muted underline cursor-pointer"
+                      className="text-[11px] text-muted underline cursor-pointer"
                     >
                       Envisager de la revendre
                     </button>
@@ -116,7 +116,7 @@ export default function NeverWornScreen() {
                       e.stopPropagation();
                       actions.openItemOutfits(it.id, false);
                     }}
-                    className="text-[11.5px] text-terracotta cursor-pointer"
+                    className="text-[11px] text-terracotta cursor-pointer"
                   >
                     Voir des tenues ›
                   </button>

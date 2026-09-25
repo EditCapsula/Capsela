@@ -138,7 +138,7 @@ export default function CreateLookScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
         <BoutonRetour onClick={actions.cancelCreateLook} label="Annuler et revenir" />
-        <div className="font-serif text-[22px] text-ink">Créer un look</div>
+        <div className="font-serif text-[21px] text-ink">Créer un look</div>
       </div>
       <div className="text-[13px] text-muted mt-4 leading-[1.5]">
         Choisis les pièces de ton dressing à combiner.
@@ -166,13 +166,13 @@ export default function CreateLookScreen() {
               style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB" }}
             >
               <div
-                className="flex items-center gap-[7px] text-[12.5px] whitespace-nowrap"
+                className="flex items-center gap-[7px] text-[12px] whitespace-nowrap"
                 style={{ color: on ? "#F3EEE5" : "#1D1A16" }}
               >
                 <GlypheOccasion occasion={key} taille={15} />
                 {label}
               </div>
-              <div className="text-[10.5px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
+              <div className="text-[10px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
                 {sub}
               </div>
             </button>
@@ -214,7 +214,7 @@ export default function CreateLookScreen() {
               );
             })}
           </span>
-          {count > 4 && <span className="text-[10.5px] text-placeholder flex-shrink-0">+{count - 4}</span>}
+          {count > 4 && <span className="text-[10px] text-placeholder flex-shrink-0">+{count - 4}</span>}
           <span className="flex-1" />
           <span className="text-[12px] text-terracotta flex-shrink-0">Modifier ›</span>
         </button>
@@ -278,10 +278,10 @@ export default function CreateLookScreen() {
                       </span>
                     )}
                   </div>
-                  <div className="text-[11.5px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
+                  <div className="text-[11px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
                     {it.name}
                   </div>
-                  <div className="text-[9.5px] text-placeholder mt-[1px]">{CATLABEL[it.cat]}</div>
+                  <div className="text-[9px] text-placeholder mt-[1px]">{CATLABEL[it.cat]}</div>
                 </button>
               );
             })}
@@ -298,7 +298,7 @@ export default function CreateLookScreen() {
               <span className="w-9 h-9 rounded-full bg-cream border border-border text-terracotta flex items-center justify-center flex-shrink-0">
                 <PlusIcon />
               </span>
-              <span className="text-[11.5px] text-ink leading-[1.25]">Ajouter {ADD_TILE_LABEL[g.key]}</span>
+              <span className="text-[11px] text-ink leading-[1.25]">Ajouter {ADD_TILE_LABEL[g.key]}</span>
             </button>
           </div>
         </div>
@@ -308,7 +308,7 @@ export default function CreateLookScreen() {
         <div className="flex items-center gap-[9px] mt-6">
           <span className="text-[11px] tracking-[.16em] uppercase text-muted">Ce look</span>
           {lookScore.badge === "recommande" && (
-            <span className="text-[9.5px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
+            <span className="text-[9px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
               Recommandé
             </span>
           )}
@@ -321,7 +321,7 @@ export default function CreateLookScreen() {
           simple texte, en plus du bouton de fermeture. */}
       {count >= 2 && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
         <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
-          <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
+          <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
         </div>
       )}
 
@@ -335,7 +335,7 @@ export default function CreateLookScreen() {
                 {p.key === "layer" && (
                   <div className="text-[10px] tracking-[.14em] uppercase text-terracotta mb-[6px]">Layering</div>
                 )}
-                <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
+                <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
                 {target && (
                   <button
                     onClick={() => goToCategory(target.cats)}
@@ -358,7 +358,7 @@ export default function CreateLookScreen() {
 
       {blockingHits.length > 0 && (
         <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
-          <div className="text-[12.5px] text-[#3F3B34] leading-[1.45]">{blockingHits[0].message}</div>
+          <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{blockingHits[0].message}</div>
         </div>
       )}
 
@@ -382,7 +382,7 @@ export default function CreateLookScreen() {
         Enregistrer ce look {count > 0 ? `(${count})` : ""}
       </button>
       {!canSave && (
-        <div className="text-center text-[11.5px] text-terracotta mt-[10px]">
+        <div className="text-center text-[11px] text-terracotta mt-[10px]">
           {count < 2 ? "Choisis au moins 2 pièces pour enregistrer ce look." : blockingHits.find((h) => h.hard)?.message}
         </div>
       )}

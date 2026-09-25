@@ -123,7 +123,7 @@ function GalerieIcon() {
 /** Pastille "détecté par Capsela" (recette 24/08/2026) — un seul marqueur commun partout, jamais de pourcentage de confiance. */
 function AiTag() {
   return (
-    <span className="inline-flex items-center gap-[3px] text-[9.5px] tracking-[.03em] text-terracotta bg-[#F0E5D6] rounded-full py-[2px] px-[7px] flex-shrink-0">
+    <span className="inline-flex items-center gap-[3px] text-[9px] tracking-[.03em] text-terracotta bg-[#F0E5D6] rounded-full py-[2px] px-[7px] flex-shrink-0">
       <SparkleIcon /> IA
     </span>
   );
@@ -157,7 +157,7 @@ function SelectField({
       {icon && <span className="absolute left-[13px] top-1/2 -translate-y-1/2 text-terracotta pointer-events-none">{icon}</span>}
       <select
         className={
-          "capin w-full bg-card border border-border rounded-xl py-[13px] pr-[30px] text-[13.5px] text-ink font-sans cursor-pointer " +
+          "capin w-full bg-card border border-border rounded-xl py-[13px] pr-[30px] text-[13px] text-ink font-sans cursor-pointer " +
           (icon ? "pl-[34px]" : "pl-[13px]")
         }
         style={{ appearance: "none", WebkitAppearance: "none" }}
@@ -392,7 +392,7 @@ export default function AddScreen() {
         )}
       </div>
       {shoeTypeMissing && (
-        <div className="text-[11.5px] text-terracotta mt-[8px]">Choisis un type de chaussure pour pouvoir ajouter cette pièce.</div>
+        <div className="text-[11px] text-terracotta mt-[8px]">Choisis un type de chaussure pour pouvoir ajouter cette pièce.</div>
       )}
 
       {/* "Analysé par Capsela" (recette 24/08/2026) — couleur/matière estimée/
@@ -411,8 +411,8 @@ export default function AddScreen() {
               style={{ background: state.addColor.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }}
             />
             <div>
-              <div className="text-[10px] tracking-[.08em] uppercase text-muted">Couleur</div>
-              <div className="text-[12.5px] text-ink mt-[2px] leading-[1.2]">{state.addColor.name}</div>
+              <div className="text-[10px] tracking-[.14em] uppercase text-muted">Couleur</div>
+              <div className="text-[12px] text-ink mt-[2px] leading-[1.2]">{state.addColor.name}</div>
             </div>
           </div>
           <div className="flex flex-col items-center gap-[7px]">
@@ -420,8 +420,8 @@ export default function AddScreen() {
               <FabricIcon />
             </span>
             <div>
-              <div className="text-[10px] tracking-[.08em] uppercase text-muted">Matière estimée</div>
-              <div className="text-[12.5px] text-ink mt-[2px] leading-[1.2]">{state.addMatiere || "Non précisée"}</div>
+              <div className="text-[10px] tracking-[.14em] uppercase text-muted">Matière estimée</div>
+              <div className="text-[12px] text-ink mt-[2px] leading-[1.2]">{state.addMatiere || "Non précisée"}</div>
             </div>
           </div>
           {coupeApplicable && (
@@ -430,15 +430,15 @@ export default function AddScreen() {
                 <FitIcon />
               </span>
               <div>
-                <div className="text-[10px] tracking-[.08em] uppercase text-muted">Coupe</div>
-                <div className="text-[12.5px] text-ink mt-[2px] leading-[1.2]">{state.addCoupe || "Non précisée"}</div>
+                <div className="text-[10px] tracking-[.14em] uppercase text-muted">Coupe</div>
+                <div className="text-[12px] text-ink mt-[2px] leading-[1.2]">{state.addCoupe || "Non précisée"}</div>
               </div>
             </div>
           )}
         </div>
         <button
           onClick={() => setSheet("characteristics")}
-          className="mt-[14px] text-[12.5px] text-terracotta cursor-pointer flex items-center gap-[4px]"
+          className="mt-[14px] text-[12px] text-terracotta cursor-pointer flex items-center gap-[4px]"
         >
           Modifier ces caractéristiques ›
         </button>
@@ -476,19 +476,19 @@ export default function AddScreen() {
             </span>
           ))
         ) : (
-          <span className="text-[12.5px] text-muted">Aucune occasion sélectionnée.</span>
+          <span className="text-[12px] text-muted">Aucune occasion sélectionnée.</span>
         )}
       </div>
       <button
         onClick={() => setSheet("occasions")}
-        className="mt-[10px] text-[12.5px] text-terracotta cursor-pointer flex items-center gap-[4px]"
+        className="mt-[10px] text-[12px] text-terracotta cursor-pointer flex items-center gap-[4px]"
       >
         Modifier les occasions ›
       </button>
 
       <div className="flex items-start gap-[8px] mt-6 text-muted">
         <InfoIcon className="mt-[2px] flex-shrink-0" />
-        <span className="text-[11.5px] leading-[1.45]">Tu pourras modifier toutes ces informations à tout moment.</span>
+        <span className="text-[11px] leading-[1.45]">Tu pourras modifier toutes ces informations à tout moment.</span>
       </div>
 
       <button
@@ -501,12 +501,12 @@ export default function AddScreen() {
         {state.editingId != null ? "Enregistrer les modifications" : "Ajouter à mon dressing"}
       </button>
       {blocked && !state.addPhotoUploading && (
-        <div className="text-center text-[11.5px] text-terracotta mt-[10px]">
+        <div className="text-center text-[11px] text-terracotta mt-[10px]">
           {shoeTypeMissing ? "Confirme le type de chaussure pour pouvoir ajouter cette pièce." : "Confirme la saison pour pouvoir ajouter cette pièce."}
         </div>
       )}
       {state.addPhotoUploading && (
-        <div className="text-center text-[11.5px] text-terracotta mt-[10px]">Envoi de la photo en cours…</div>
+        <div className="text-center text-[11px] text-terracotta mt-[10px]">Envoi de la photo en cours…</div>
       )}
 
       <BottomSheet
@@ -555,7 +555,7 @@ export default function AddScreen() {
                     boxShadow: on ? "0 0 0 3px #F3EEE5 inset" : "none",
                   }}
                 />
-                <span className={"text-[9.5px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>
+                <span className={"text-[9px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>
               </button>
             );
           })}
@@ -599,7 +599,7 @@ export default function AddScreen() {
       </BottomSheet>
 
       <BottomSheet title="Occasions" open={sheet === "occasions"} onClose={() => setSheet(null)}>
-        <div className="text-[12.5px] text-muted mb-[16px] leading-[1.45]">Plusieurs choix possibles.</div>
+        <div className="text-[12px] text-muted mb-[16px] leading-[1.45]">Plusieurs choix possibles.</div>
         <div className="flex gap-2 flex-wrap">
           {OCCASIONS.map(([key]) => (
             <button
