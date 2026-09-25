@@ -1,21 +1,22 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useRef, useState } from "react";
+import AppHeader from "@/components/AppHeader";
+import BottomSheet from "@/components/BottomSheet";
+import { I_CINTRE, I_ETINCELLE, I_GENRE, I_INTENSITE, I_METRE, I_PALETTE, I_SILHOUETTE, LigneProfil, PastillesPalette, Surtitre, resumeTailles } from "@/components/ProfilUI";
 import { useAuth } from "@/lib/auth";
+import { CITIES } from "@/lib/data";
+import { jourLocal } from "@/lib/outfitFeedback";
 import { useCapsela } from "@/lib/store";
-import { readConsent, setConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
-import BoutonRetour from "@/components/BoutonRetour";
 import {
   GENDERS,
-  WORK_DAYS,
   applyGenderChange,
+  champsProfilStyle,
   genderLabel,
   morphologyLabel,
-  paletteSummary,
   styleLabel,
   type Gender,
   type GenderDependentField,
-  type ProfilePrefs,
 } from "@/lib/profile";
 
 export function GenderModal({
@@ -90,41 +91,16 @@ export function RevalidationSheet({ field, onDismiss, onEdit }: { field: GenderD
   );
 }
 
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-11 h-[26px] rounded-full cursor-pointer relative flex-shrink-0 transition-colors"
-      style={{ background: on ? "#A66950" : "#E6DCCB" }}
-    >
-      <span
-        className="absolute top-[3px] w-5 h-5 rounded-full bg-cream transition-all"
-        style={{ left: on ? 21 : 3 }}
-      />
-    </button>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[26px] mb-[11px]">{children}</div>;
-}
-
 export default function ProfileEditScreen() {
-  const { profile, email, signOut, saveProfile } = useAuth();
-  const { state, actions } = useCapsela();
+  const { profile, email, saveProfile } = useAuth();
+  const { actions } = useCapsela();
 
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
-  const prefs = profile.prefs;
-  const setPrefs = (p: Partial<ProfilePrefs>) => saveProfile({ ...profile, prefs: { ...prefs, ...p } });
-
   const [genderModalOpen, setGenderModalOpen] = useState(false);
   const [revalidateField, setRevalidateField] = useState<GenderDependentField | null>(null);
-  // Mécanique générique de revalidation (recette 20/08/2026, branchée sur
-  // la morphologie) : applyGenderChange efface silencieusement les champs
-  // non applicables au nouveau genre (ex. morphologie côté Homme, taxonomie
-  // non activée — jamais de modale pour un champ sans aucun écran de
-  // resaisie, cf. Tâche 4) et ne renvoie un champ à revalider que s'il
-  // reste une vraie valeur incompatible parmi de vraies valeurs possibles.
+  // Mécanique générique de revalidation (recette 20/08/2026) : applyGenderChange
+  // efface silencieusement les champs non applicables au nouveau genre et ne
+  // renvoie un champ à revalider que s'il reste une vraie valeur incompatible.
   const changeGender = (g: Gender) => {
     setGenderModalOpen(false);
     if (g === profile.gender) return;
@@ -133,21 +109,8 @@ export default function ProfileEditScreen() {
     if (revalidate) setRevalidateField(revalidate);
   };
 
-  const [nameDraft, setNameDraft] = useState(profile.displayName);
-  // Le profil se charge de façon asynchrone (Supabase) après le montage —
-  // resynchronise le brouillon si la vraie valeur arrive/change entre-temps
-  // (ajustement pendant le rendu, jamais dans un effet, pour ne jamais
-  // écraser une saisie en cours après le premier chargement).
-  const [lastSeenName, setLastSeenName] = useState(profile.displayName);
-  if (profile.displayName !== lastSeenName) {
-    setLastSeenName(profile.displayName);
-    setNameDraft(profile.displayName);
-  }
-  const commitName = () => {
-    const trimmed = nameDraft.trim();
-    if (trimmed !== profile.displayName) saveProfile({ ...profile, displayName: trimmed });
-  };
-
+  // Photo : locale à l'appareil (blob:), comme avant — l'envoi vers le
+  // stockage n'est pas branché pour l'avatar.
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,215 +118,206 @@ export default function ProfileEditScreen() {
     if (file) setPhotoUrl(URL.createObjectURL(file));
   };
 
+  // VILLE ET DATE DE NAISSANCE (demandé le 25/09/2026 : elles n'avaient
+  // aucun écran de modification). Deux feuilles, comme le genre.
+  //
+  // La ville se CHOISIT dans CITIES, elle ne se tape pas : c'est la seule
+  // liste que l'app sait lire (store.tsx, profileCityFallback — une ville
+  // hors liste retomberait silencieusement sur la première). Proposer une
+  // saisie libre ferait croire à une ville prise en compte qui ne l'est pas.
+  const [villeOuverte, setVilleOuverte] = useState(false);
+  const [dateOuverte, setDateOuverte] = useState(false);
+  const [dateBrouillon, setDateBrouillon] = useState(profile.birthdate ?? "");
+  // Bornes de la date : jamais dans le futur, jamais avant 1900. Calculées à
+  // l'ouverture de la feuille (un clic), pas pendant le rendu.
+  const [aujourdhui, setAujourdhui] = useState("");
+  const ouvrirDate = () => {
+    setDateBrouillon(profile.birthdate ?? "");
+    setAujourdhui(jourLocal());
+    setDateOuverte(true);
+  };
+  const dateValide = /^\d{4}-\d{2}-\d{2}$/.test(dateBrouillon) && dateBrouillon >= "1900-01-01" && dateBrouillon <= aujourdhui;
+
   const birthdateText = profile.birthdate
     ? new Date(profile.birthdate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
     : null;
-
-  const handleSignOut = async () => {
-    await signOut();
-    actions.goWelcome();
-  };
+  const champs = champsProfilStyle(profile);
+  const renseigne = (cle: string) => champs.find((c) => c.cle === cle)?.renseigne ?? false;
+  const tailles = resumeTailles(profile);
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
-      <BoutonRetour onClick={actions.goProfile} label="Revenir au profil" />
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+      <AppHeader showAvatar={false} onBack={actions.goProfile} backLabel="Revenir au profil" />
+      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[18px]">Profil</div>
+      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+        Personnaliser <span className="italic text-terracotta">mon profil</span>
+      </div>
+      <div className="text-[13px] text-muted-3 leading-[1.5] mt-[8px]">
+        Ces informations aident Capsela à te recommander des tenues qui te ressemblent.
+      </div>
 
-      <div className="flex flex-col items-center text-center mt-[6px]">
-        <div
-          className="w-24 h-24 rounded-full bg-terracotta flex items-center justify-center overflow-hidden bg-cover bg-center"
-          style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}
-        >
-          {!photoUrl && <span className="font-serif italic text-[40px] text-cream">{initial}</span>}
-        </div>
+      {/* MON IDENTITÉ. Chaque ligne ouvre son éditeur : étape « prenom » du
+          questionnaire, feuilles pour le genre, la ville et la date. */}
+      <Surtitre icone={I_GENRE}>Mon identité</Surtitre>
+      <div className="bg-card border border-border rounded-[20px] overflow-hidden">
         <input ref={photoInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
-        <button onClick={() => photoInputRef.current?.click()} className="text-[12px] text-terracotta mt-[10px] cursor-pointer">
-          Modifier ma photo
-        </button>
-        <div className="text-[11px] text-muted mt-[6px] leading-[1.5] max-w-[270px]">
-          Optionnelle. Sans photo, ton avatar reste l&apos;initiale de ton prénom. Elle sert uniquement à
-          personnaliser ton profil — jamais partagée, jamais vendue.
-        </div>
-        <input
-          value={nameDraft}
-          onChange={(e) => setNameDraft(e.target.value)}
-          onBlur={commitName}
-          placeholder="Ton nom"
-          className="font-serif text-[30px] text-ink mt-4 text-center bg-transparent border-none outline-none w-full placeholder:text-placeholder"
-        />
-        <div className="text-[13px] text-muted mt-[6px]">{profile.city}</div>
         <button
-          onClick={() => setGenderModalOpen(true)}
-          className="text-[12px] text-terracotta bg-[#f0e5d6] rounded-full px-[13px] py-[5px] mt-2 cursor-pointer"
+          onClick={() => photoInputRef.current?.click()}
+          className="w-full flex items-center gap-[13px] px-4 py-[12px] text-left cursor-pointer border-b border-border"
         >
-          {profile.gender ? genderLabel(profile.gender) : "Renseigner mon genre"}
+          <span
+            className="w-11 h-11 rounded-full bg-terracotta flex items-center justify-center flex-shrink-0 overflow-hidden bg-cover bg-center"
+            style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}
+          >
+            {!photoUrl && <span className="font-serif text-[18px] text-cream">{initial}</span>}
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block font-serif text-[16px] text-ink">Photo de profil</span>
+            <span className="block text-[12px] text-muted mt-[2px]">Optionnelle, jamais partagée.</span>
+          </span>
+          <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
         </button>
-        {birthdateText && <div className="text-[13px] text-muted mt-1">🎂 {birthdateText}</div>}
+        <LigneInfo label="Prénom" valeur={profile.displayName || "Non renseigné"} renseigne={Boolean(profile.displayName)} onClick={() => actions.goProfileSetup("prenom", true)} />
+        <LigneInfo label="Ville" valeur={profile.city} renseigne onClick={() => setVilleOuverte(true)} />
+        <LigneInfo label="Genre" valeur={genderLabel(profile.gender) || "Non renseigné"} renseigne={Boolean(profile.gender)} onClick={() => setGenderModalOpen(true)} />
+        <LigneInfo label="Date de naissance" valeur={birthdateText || "Non renseignée"} renseigne={Boolean(birthdateText)} onClick={ouvrirDate} />
       </div>
 
-      <div className="flex gap-3 mt-[26px]">
-        <button onClick={actions.goWardrobe} className="flex-1 bg-card border border-border rounded-2xl p-[18px] text-center cursor-pointer">
-          <div className="font-serif text-[30px] text-ink">{state.items.length}</div>
-          <div className="text-[12px] text-muted mt-1">pièces ›</div>
-        </button>
-        <button onClick={actions.goHistory} className="flex-1 bg-card border border-border rounded-2xl p-[18px] text-center cursor-pointer">
-          <div className="font-serif text-[30px] text-ink">{state.lookCount}</div>
-          <div className="text-[12px] text-muted mt-1">looks portés ›</div>
-        </button>
-      </div>
-
-      <div className="flex items-center justify-between mt-[26px] mb-[11px]">
-        <span className="text-[11px] tracking-[.16em] uppercase text-muted">Ma silhouette</span>
-        <button onClick={() => actions.goProfileSetup("taille", true)} className="text-[12px] text-terracotta cursor-pointer">
-          Modifier
-        </button>
-      </div>
-      <div className="flex gap-[10px]">
-        {[
-          ["Haut", profile.tailleHaut],
-          ["Bas", profile.tailleBas],
-          ["Pointure", profile.pointure],
-        ].map(([label, value]) => (
-          <div key={label} className="flex-1 bg-card border border-border rounded-2xl p-4 text-center">
-            <div className="text-[11px] text-muted">{label}</div>
-            <div className="font-serif text-[21px] text-ink mt-[6px]">{value || "—"}</div>
-          </div>
-        ))}
-      </div>
-      {profile.gender !== "homme" && (
-        <div className="bg-card border border-border rounded-2xl p-4 mt-[10px]">
-          <div className="text-[11px] text-muted">Morphologie</div>
-          <div className="text-[13px] text-ink mt-[6px]">{morphologyLabel(profile.morphology) || "—"}</div>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mt-[26px] mb-[11px]">
-        <span className="text-[11px] tracking-[.16em] uppercase text-muted">Mes goûts</span>
-        <button onClick={() => actions.goProfileSetup("pal_couleurs", true)} className="text-[12px] text-terracotta cursor-pointer">
-          Modifier
-        </button>
-      </div>
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <div className="text-[11px] text-muted">Palette</div>
-        <div className="text-[13px] text-ink mt-[6px] leading-[1.4]">{paletteSummary(profile)}</div>
-        <div className="h-px bg-border my-[14px]" />
-        <div className="text-[11px] text-muted">Style</div>
-        <div className="text-[13px] text-ink mt-[6px]">{styleLabel(profile.styles[0], profile.gender) || "—"}</div>
-      </div>
-
-      <SectionLabel>Compte</SectionLabel>
-      <div className="flex flex-col gap-[10px]">
-        <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px]">
-          <span className="text-[13px] text-muted">E-mail</span>
-          <span className="text-[13px] text-ink">{email ?? "non renseignée"}</span>
-        </div>
-        <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px] cursor-pointer">
-          <span className="text-[13px] text-ink">Gérer mon mot de passe</span>
-          <span className="text-placeholder">›</span>
-        </div>
-      </div>
-      <button onClick={handleSignOut} className="mt-3 w-full text-center text-[13px] text-terracotta cursor-pointer">
-        Se déconnecter
-      </button>
-
-      <SectionLabel>Notifications</SectionLabel>
-      <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px]">
-        <span className="text-[13px] text-ink">Recevoir ma tenue du jour</span>
-        <Toggle on={prefs.notifEnabled} onClick={() => setPrefs({ notifEnabled: !prefs.notifEnabled })} />
-      </div>
-      <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px] mt-[9px]">
-        <span className="text-[13px] text-ink">Heure de réception</span>
-        <input
-          type="time"
-          value={prefs.notifTime}
-          onChange={(e) => setPrefs({ notifTime: e.target.value })}
-          className="border-none bg-transparent text-[13px] text-ink font-sans outline-none"
+      <Surtitre icone={I_SILHOUETTE}>Ma silhouette</Surtitre>
+      <div className="bg-card border border-border rounded-[20px] overflow-hidden">
+        {champs.some((c) => c.cle === "morphologie") && (
+          <LigneProfil
+            icone={I_SILHOUETTE}
+            titre="Morphologie"
+            valeur={renseigne("morphologie") ? morphologyLabel(profile.morphology) : "Non renseignée"}
+            renseigne={renseigne("morphologie")}
+            onClick={() => actions.goProfileSetup("morpho", true)}
+          />
+        )}
+        <LigneProfil
+          icone={I_METRE}
+          titre="Tailles"
+          valeur={tailles.length ? tailles.join(" · ") : "Non renseignées"}
+          renseigne={tailles.length > 0}
+          onClick={() => actions.goProfileSetup("taille", true)}
         />
       </div>
 
-      <SectionLabel>Localisation &amp; météo</SectionLabel>
-      <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px]">
-        <div className="flex-1 pr-3">
-          <span className="text-[13px] text-ink">Autoriser la géolocalisation</span>
-          <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">Pour situer ta ville et adapter tes tenues.</div>
-        </div>
-        <Toggle on={prefs.geoConsent} onClick={() => setPrefs({ geoConsent: !prefs.geoConsent })} />
-      </div>
-      <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px] mt-[9px]">
-        <div className="flex-1 pr-3">
-          <span className="text-[13px] text-ink">Utiliser la météo de ma position</span>
-          <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">
-            Sinon, la météo de ta ville renseignée est utilisée.
-          </div>
-        </div>
-        <Toggle on={prefs.weatherFromGeo} onClick={() => setPrefs({ weatherFromGeo: !prefs.weatherFromGeo })} />
-      </div>
-
-      <AnalyticsPreference />
-      <div className="flex gap-2 mt-[9px]">
-        {(
-          [
-            ["metric", "Métrique (°C, cm)"],
-            ["imperial", "Impérial (°F, in)"],
-          ] as const
-        ).map(([key, label]) => {
-          const on = prefs.unitSystem === key;
-          return (
-            <button
-              key={key}
-              onClick={() => setPrefs({ unitSystem: key })}
-              className={
-                "px-[14px] py-[11px] rounded-full text-[12px] cursor-pointer font-sans border " +
-                (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
-              }
-            >
-              {label}
-            </button>
-          );
-        })}
+      {/* MES GOÛTS. « Préférences vestimentaires » : seule l'intensité des
+          couleurs existe dans le modèle aujourd'hui — pas de matières, coupes
+          ni occasions favorites à inventer. La ligne ouvre son étape. */}
+      <Surtitre icone={I_ETINCELLE}>Mes goûts</Surtitre>
+      <div className="bg-card border border-border rounded-[20px] overflow-hidden">
+        <LigneProfil
+          icone={I_PALETTE}
+          titre="Palette"
+          valeur={<PastillesPalette couleurs={profile.paletteCouleurs} />}
+          renseigne={profile.paletteCouleurs.length > 0}
+          onClick={() => actions.goProfileSetup("pal_couleurs", true)}
+        />
+        <LigneProfil
+          icone={I_CINTRE}
+          titre="Style"
+          valeur={styleLabel(profile.styles[0], profile.gender) || "Non renseigné"}
+          renseigne={Boolean(styleLabel(profile.styles[0], profile.gender))}
+          onClick={() => actions.goProfileSetup("style", true)}
+        />
+        <LigneProfil
+          icone={I_INTENSITE}
+          titre="Préférences vestimentaires"
+          valeur={profile.paletteIntensite ? `Intensité : ${profile.paletteIntensite}` : "Non renseignées"}
+          renseigne={Boolean(profile.paletteIntensite)}
+          explication="Intensité des couleurs que tu portes volontiers."
+          onClick={() => actions.goProfileSetup("pal_intensite", true)}
+        />
       </div>
 
-      <SectionLabel>Jours travaillés</SectionLabel>
-      <div className="text-[12px] text-muted mb-[11px] leading-[1.4] -mt-1">
-        Utilisés pour adapter tes recommandations (tenues de travail vs week-end).
-      </div>
-      <div className="flex gap-[6px]">
-        {WORK_DAYS.map((d) => {
-          const on = prefs.workDays.includes(d);
-          return (
-            <button
-              key={d}
-              onClick={() =>
-                setPrefs({ workDays: on ? prefs.workDays.filter((x) => x !== d) : [...prefs.workDays, d] })
-              }
-              className={
-                "flex-1 text-center py-[10px] px-1 rounded-full text-[12px] cursor-pointer font-sans border " +
-                (on ? "bg-ink text-cream border-ink" : "bg-card text-muted border-border")
-              }
-            >
-              {d}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px] mt-[22px]">
-        <div>
-          <div className="text-[13px] text-ink">Je suis en congés</div>
-          <div className="text-[11px] text-muted mt-[2px]">Met en pause les recommandations liées au travail.</div>
-        </div>
-        <Toggle on={prefs.onVacation} onClick={() => setPrefs({ onVacation: !prefs.onVacation })} />
-      </div>
-
+      {/* Chaque modification est enregistrée dès qu'elle est faite (comme
+          avant) : ce bouton ramène au profil, où tout est déjà à jour. */}
       <button
         onClick={actions.goProfile}
-        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full text-[13px] tracking-[.1em] uppercase cursor-pointer"
+        style={{ minHeight: 52 }}
       >
-        Enregistrer
+        Enregistrer mes modifications
       </button>
 
-      {genderModalOpen && (
-        <GenderModal current={profile.gender} onSelect={changeGender} onClose={() => setGenderModalOpen(false)} />
-      )}
+      <BottomSheet title="Ta ville" open={villeOuverte} onClose={() => setVilleOuverte(false)}>
+        <div className="text-[12px] text-muted leading-[1.45] mb-3">
+          Utilisée pour la météo quand la géolocalisation n&apos;est pas disponible.
+        </div>
+        <div className="flex flex-col max-h-[52vh] overflow-y-auto -mx-1 px-1" role="radiogroup" aria-label="Ville">
+          {CITIES.map((c) => {
+            const actif = profile.city === c.city;
+            return (
+              <button
+                key={c.city}
+                role="radio"
+                aria-checked={actif}
+                onClick={() => {
+                  setVilleOuverte(false);
+                  if (!actif) saveProfile({ ...profile, city: c.city });
+                }}
+                className="flex items-center justify-between gap-3 min-h-[48px] px-1 border-b border-border last:border-b-0 text-left cursor-pointer"
+              >
+                <span className={"text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>
+                  {c.city} <span className="text-muted">· {c.country}</span>
+                </span>
+                {actif && (
+                  <span aria-hidden="true" className="text-terracotta text-[14px]">
+                    ✓
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet title="Ta date de naissance" open={dateOuverte} onClose={() => setDateOuverte(false)}>
+        <label htmlFor="date-naissance" className="block text-[12px] text-muted leading-[1.45] mb-2">
+          Elle reste privée et n&apos;est jamais affichée ailleurs que sur ton profil.
+        </label>
+        <input
+          id="date-naissance"
+          type="date"
+          value={dateBrouillon}
+          min="1900-01-01"
+          max={aujourdhui || undefined}
+          onChange={(e) => setDateBrouillon(e.target.value)}
+          className="w-full bg-card border border-border rounded-[14px] px-4 min-h-[48px] text-[14px] text-ink font-sans"
+          style={{ colorScheme: "light" }}
+        />
+        {dateBrouillon && !dateValide && (
+          <div className="text-[12px] text-rust mt-2" role="alert">
+            Choisis une date passée, après 1900.
+          </div>
+        )}
+        <button
+          disabled={!dateValide}
+          onClick={() => {
+            setDateOuverte(false);
+            saveProfile({ ...profile, birthdate: dateBrouillon });
+          }}
+          className="mt-4 w-full rounded-full bg-terracotta text-cream text-[12px] tracking-[.1em] uppercase cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ minHeight: 48 }}
+        >
+          Enregistrer
+        </button>
+        {profile.birthdate && (
+          <button
+            onClick={() => {
+              setDateOuverte(false);
+              saveProfile({ ...profile, birthdate: null });
+            }}
+            className="mt-2 w-full text-center text-[12px] text-muted min-h-[44px] cursor-pointer"
+          >
+            Retirer ma date de naissance
+          </button>
+        )}
+      </BottomSheet>
+
+      {genderModalOpen && <GenderModal current={profile.gender} onSelect={changeGender} onClose={() => setGenderModalOpen(false)} />}
       {revalidateField && (
         <RevalidationSheet
           field={revalidateField}
@@ -378,31 +332,25 @@ export default function ProfileEditScreen() {
   );
 }
 
-/**
- * Retrait du consentement aux mesures d'audience — obligatoire et aussi
- * simple à actionner que l'acceptation initiale (CNIL). Affiché seulement
- * si une mesure est réellement configurée : sans NEXT_PUBLIC_GA_ID, ce
- * réglage n'aurait aucun objet.
- *
- * Lit le même store que le bandeau (lib/consent.ts), donc les deux restent
- * synchronisés sans passer par le profil serveur — le consentement aux
- * cookies s'attache à l'appareil, pas au compte.
- */
-function AnalyticsPreference() {
-  const consent = useSyncExternalStore(subscribeConsent, readConsent, () => "unknown" as ConsentState);
-  if (!process.env.NEXT_PUBLIC_GA_ID) return null;
-  return (
+/** Ligne libellé / valeur de « Mon identité ». Sans onClick : affichée, pas modifiable, et sans chevron. */
+function LigneInfo({ label, valeur, renseigne, onClick }: { label: string; valeur: string; renseigne: boolean; onClick?: () => void }) {
+  const contenu = (
     <>
-      <SectionLabel>Mesure d&apos;audience</SectionLabel>
-      <div className="flex items-center justify-between bg-card border border-border rounded-[14px] px-4 py-[14px]">
-        <div className="flex-1 pr-3">
-          <span className="text-[13px] text-ink">Autoriser les statistiques d&apos;usage</span>
-          <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">
-            Établies par Google Analytics, pour améliorer l&apos;application. Aucune incidence sur son fonctionnement.
-          </div>
-        </div>
-        <Toggle on={consent === "granted"} onClick={() => setConsent(consent === "granted" ? "denied" : "granted")} />
-      </div>
+      <span className="text-[13px] text-muted w-[118px] flex-shrink-0">{label}</span>
+      <span className={"flex-1 min-w-0 text-[13px] break-words " + (renseigne ? "text-ink" : "text-placeholder")}>{valeur}</span>
+      {onClick && (
+        <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">
+          ›
+        </span>
+      )}
     </>
+  );
+  const cls = "w-full flex items-center gap-3 px-4 py-[14px] text-left border-b border-border last:border-b-0";
+  return onClick ? (
+    <button onClick={onClick} className={cls + " cursor-pointer"}>
+      {contenu}
+    </button>
+  ) : (
+    <div className={cls}>{contenu}</div>
   );
 }
