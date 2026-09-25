@@ -219,6 +219,28 @@ export function exposedStyleIds(gender: Gender | null): StyleId[] {
   return EXPOSED_STYLE_IDS[gender === "homme" ? "homme" : "femme"];
 }
 
+/**
+ * VISUELS DE L'ÉTAPE « STYLE », CÔTÉ FEMME (fournis le 25/09/2026) — des
+ * flat lays éditoriaux, sans personne, au format portrait 308 × 412 (3:4),
+ * servis depuis public/images/styles/.
+ *
+ * UNE RÉFÉRENCE PROPRE À CET ÉCRAN, et non un remplacement de
+ * STYLE_CONFIG[…].asset : ces images-là sont aussi lues par les cartes
+ * « Explorer d'autres styles » (TenuesScreen) et par l'onboarding d'accueil
+ * (OnboardingScreen), hors du périmètre demandé. Les ids restent ceux de
+ * StyleId : aucune donnée métier ne change.
+ */
+export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
+  minimaliste: "/images/styles/minimaliste.png",
+  casual_chic: "/images/styles/casual-chic.png",
+  classique_chic: "/images/styles/classique-chic.png",
+  romantique: "/images/styles/romantique.png",
+  boheme: "/images/styles/boheme.png",
+  streetwear: "/images/styles/streetwear.png",
+  preppy: "/images/styles/preppy.png",
+  glamour: "/images/styles/glamour.png",
+};
+
 export function styleConfigFor(gender: Gender | null): Record<StyleId, StyleCardConfig> {
   return STYLE_CONFIG[gender === "homme" ? "homme" : "femme"];
 }
