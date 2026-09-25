@@ -33,6 +33,7 @@ import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } 
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
+import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type ResultatDemande } from "./avisStylisteClient";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
@@ -69,6 +70,23 @@ import type {
   TravelMode,
   WorkMode,
 } from "./types";
+
+/** Photo préparée de l'Avis de styliste (cf. photoAvis.ts) — URL locale blob:, jamais envoyée hors analyse. */
+export interface PhotoAvis {
+  fichier: File;
+  url: string;
+  largeur: number;
+  hauteur: number;
+}
+export type AnalyseAvis =
+  | { etat: "inactive" }
+  | { etat: "en_cours" }
+  | { etat: "reussie"; analyseId: string; avis: AvisStyliste }
+  | { etat: "echouee"; code: Extract<ResultatDemande, { ok: false }>["code"]; raison?: Extract<ResultatDemande, { ok: false }>["raison"] };
+export interface SessionAvisStyliste {
+  photo: PhotoAvis | null;
+  analyse: AnalyseAvis;
+}
 
 /** Écrans qui s'ouvrent depuis le profil : jamais retenus comme « retour » du profil. */
 const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileEdit", "profileSetup", "preferences", "account", "legal"]);
@@ -197,6 +215,20 @@ export interface Actions {
    * reste "inconnu", et la règle d'accès montre alors le Premium Gate.
    */
   verifierEtatPremium: () => Promise<EtatPremium>;
+  /**
+   * Pose (ou retire, avec null) la photo de l'Avis de styliste. Toute
+   * nouvelle photo remet l'analyse à zéro ; l'URL locale de la précédente est
+   * libérée. Sert aussi à « Nouvelle analyse » et à la suppression.
+   */
+  definirPhotoAvis: (photo: PhotoAvis | null) => void;
+  /** Revient à l'aperçu de la photo actuelle, sans la perdre (après une erreur). */
+  revenirAApercuAvis: () => void;
+  /**
+   * Lance l'analyse de la photo posée — uniquement sur « Analyser ma tenue »
+   * [DÉCIDÉ]. Ignorée si une analyse est déjà en cours (pas de double
+   * envoi). Elle continue si l'on quitte l'écran (point 16).
+   */
+  lancerAvisStyliste: () => void;
   backFromLegal: () => void;
   goLogin: () => void;
   /**
@@ -370,6 +402,14 @@ interface CapselaContextValue {
    * — et dans cet état AUCUNE limite ne s'applique (cf. premium.ts).
    */
   etatPremium: EtatPremium;
+  /**
+   * Session de l'Avis de styliste (arbitrage du 25/09/2026, point 16) :
+   * photo préparée, état de l'analyse, résultat. Dans le store et non dans
+   * l'écran pour qu'une analyse lancée continue si l'on quitte l'écran, et
+   * soit retrouvée — en cours, réussie ou échouée — en y revenant. EN MÉMOIRE
+   * SEULEMENT : rien n'est persisté, tout disparaît à la fermeture de l'app.
+   */
+  avisStyliste: SessionAvisStyliste;
   actions: Actions;
 }
 
@@ -461,6 +501,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   /* Comme poolRef/weatherRef : saveItem lit stateRef.current et non le rendu
      courant, il lui faut donc une référence et pas la valeur capturée. */
   const etatPremiumRef = useRef<EtatPremium>("inconnu");
+  const [avisStyliste, setAvisStyliste] = useState<SessionAvisStyliste>({ photo: null, analyse: { etat: "inactive" } });
+  const avisStylisteRef = useRef(avisStyliste);
+  useEffect(() => {
+    avisStylisteRef.current = avisStyliste;
+  }, [avisStyliste]);
+  /* Jeton de la session en cours : une réponse qui arrive après un
+     changement de photo (ou « Nouvelle analyse ») est ignorée. */
+  const jetonAvisRef = useRef(0);
+  /* Posé de façon synchrone au clic : deux clics rapprochés n'envoient
+     qu'une analyse, même avant le rendu suivant. */
+  const analyseAvisEnCoursRef = useRef(false);
   useEffect(() => {
     etatPremiumRef.current = etatPremium;
   }, [etatPremium]);
@@ -898,6 +949,39 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: "premium",
       })),
     goAvisStyliste: () => go("avisStyliste"),
+    definirPhotoAvis: (photo) => {
+      const avant = avisStylisteRef.current.photo;
+      if (avant && avant.url !== photo?.url) URL.revokeObjectURL(avant.url);
+      jetonAvisRef.current += 1;
+      analyseAvisEnCoursRef.current = false;
+      const suivant: SessionAvisStyliste = { photo, analyse: { etat: "inactive" } };
+      avisStylisteRef.current = suivant;
+      setAvisStyliste(suivant);
+    },
+    revenirAApercuAvis: () => {
+      if (analyseAvisEnCoursRef.current) return;
+      const suivant: SessionAvisStyliste = { photo: avisStylisteRef.current.photo, analyse: { etat: "inactive" } };
+      avisStylisteRef.current = suivant;
+      setAvisStyliste(suivant);
+    },
+    lancerAvisStyliste: () => {
+      const photo = avisStylisteRef.current.photo;
+      if (!photo || analyseAvisEnCoursRef.current) return;
+      analyseAvisEnCoursRef.current = true;
+      const jeton = ++jetonAvisRef.current;
+      avisStylisteRef.current = { photo, analyse: { etat: "en_cours" } };
+      setAvisStyliste(avisStylisteRef.current);
+      void demanderAvis(photo.fichier, contexteDepuisProfil(profile)).then((r) => {
+        if (jeton !== jetonAvisRef.current) return;
+        analyseAvisEnCoursRef.current = false;
+        const suivant: SessionAvisStyliste = {
+          photo,
+          analyse: r.ok ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis } : { etat: "echouee", code: r.code, raison: r.raison },
+        };
+        avisStylisteRef.current = suivant;
+        setAvisStyliste(suivant);
+      });
+    },
     verifierEtatPremium: async () => {
       const simule = process.env.NODE_ENV !== "production" ? lireProfilSimule() : null;
       if (simule) return etatSimule(simule);
@@ -1764,6 +1848,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     vestiairePool,
     dressingLoaded,
     etatPremium,
+    avisStyliste,
     actions,
   };
 

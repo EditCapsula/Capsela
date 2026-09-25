@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BadgePremium from "@/components/BadgePremium";
-import BottomSheet from "@/components/BottomSheet";
+import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
@@ -1215,35 +1215,15 @@ export default function HomeScreen() {
         </button>
       </div>
 
-      {/* Premium Gate [DÉCIDÉ], section 5 : libellés exacts. Forme arbitrée
-          le 25/09/2026 : feuille modale, comme le Gate du quota « Autre
-          tenue » (TenuesScreen) ; « Plus tard » la referme et laisse sur
-          l'accueil. Aucune publicité récompensée n'y est proposée.
-          À ARBITRER: visuel du Gate (section 5) — aucun tant qu'il n'est pas
-          fourni. */}
-      <BottomSheet title="Et si on regardait ta tenue ?" open={gateAvisStyliste} onClose={() => setGateAvisStyliste(false)}>
-        <div className="text-[13px] text-ink leading-[1.55]">
-          Envoie une photo de ton look et laisse Capsela te donner un avis personnalisé sur ce qui fonctionne et ce que tu
-          pourrais ajuster.
-        </div>
-        <button
-          onClick={() => {
-            setGateAvisStyliste(false);
-            actions.goPremium();
-          }}
-          className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer mt-5"
-          style={{ minHeight: 52 }}
-        >
-          Découvrir Premium
-        </button>
-        <button
-          onClick={() => setGateAvisStyliste(false)}
-          className="w-full rounded-full text-[12px] text-muted-3 cursor-pointer mt-1"
-          style={{ minHeight: 44 }}
-        >
-          Plus tard
-        </button>
-      </BottomSheet>
+      {/* Premium Gate [DÉCIDÉ] §5 — composant unique, cf. GateAvisStyliste. */}
+      <GateAvisStyliste
+        open={gateAvisStyliste}
+        onClose={() => setGateAvisStyliste(false)}
+        onDecouvrirPremium={() => {
+          setGateAvisStyliste(false);
+          actions.goPremium();
+        }}
+      />
     </div>
   );
 }

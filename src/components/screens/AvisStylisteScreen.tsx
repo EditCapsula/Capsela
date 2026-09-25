@@ -1,73 +1,116 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
+import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { reactionErreur } from "@/lib/avisStylisteClient";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
-import { useCapsela } from "@/lib/store";
+import { useCapsela, type PhotoAvis } from "@/lib/store";
 
 /*
- * AVIS DE STYLISTE — écrans 1 à 4 (docs/avis-de-styliste.md, sections 3, 4,
- * 6 et 11).
+ * AVIS DE STYLISTE — écrans du MVP (docs/avis-de-styliste.md, sections 3, 4,
+ * 6, 8, 15), hors « Avec ton dressing » et hors enregistrement Journal (lots
+ * suivants).
  *
- * LOT 2 (photo, 25/09/2026) : prendre ou importer une photo, la préparer
- * (photoAvis.ts), l'afficher en aperçu, la remplacer ou la supprimer. La photo
- * ne quitte PAS le téléphone : elle vit dans l'état de cet écran et disparaît
- * avec lui. « Analyser ma tenue » est posé mais inactif — l'envoi relève du
- * lot 3, et ne partira que sur ce clic [DÉCIDÉ].
+ * LOT 2 : photo (photoAvis.ts). LOT 3 : analyse. La photo, l'état de
+ * l'analyse et le résultat vivent dans le store (session en mémoire, point
+ * 16) : une analyse lancée continue si l'on quitte l'écran, et l'écran la
+ * retrouve — en cours, réussie ou échouée — quand on y revient.
  *
- * ACCÈS. On n'arrive ici qu'à un statut Premium confirmé (règle
- * AVIS_DE_STYLISTE → PREMIUM_REQUIRED, autorisations.ts). Ce masquage n'est
- * pas une protection : le contrôle qui compte est serveur (assertPremium).
+ * ACCÈS. On n'arrive ici qu'à un statut Premium confirmé (AVIS_DE_STYLISTE →
+ * PREMIUM_REQUIRED). Le contrôle qui compte est serveur : si la fonction
+ * refuse (compte non Premium), l'écran montre le Premium Gate ; si elle ne
+ * peut pas vérifier le statut, un message d'erreur et « Réessayer » — jamais
+ * le Gate (arbitré).
  *
  * POSITIONNEMENT [DÉCIDÉ] : un conseil de styliste, jamais un « outil
  * d'analyse IA » — aucun de ces mots n'apparaît à l'écran.
  *
  * CAMÉRA [HYPOTHÈSE TECHNIQUE retenue] : le champ fichier avec
- * `capture="environment"`, comme l'ajout d'une pièce (AddScreen). Pas de
- * composant caméra : l'app est une page web statique, sans plugin natif. Un
- * refus d'autorisation n'est donc pas détectable par l'app (le système gère
- * la caméra) ; l'alternative recommandée par la spec — l'import — reste
- * toujours proposée à côté.
+ * `capture="environment"`, comme l'ajout d'une pièce (AddScreen). Un refus
+ * d'autorisation n'est pas détectable par une page web ; l'import reste
+ * toujours proposé à côté.
  */
 
 /**
- * Libellés. Ceux de la spec sont repris tels quels. Pour les autres :
- * - proposition de la spec, affichée en attendant sa validation ;
- * - aucun texte dans la spec : placeholder TODO_COPY.
+ * Libellés. Ceux de la spec sont repris tels quels ; les propositions de la
+ * spec sont affichées en attendant leur validation ; sans aucun texte dans la
+ * spec : placeholder TODO_COPY.
  */
 const TEXTES = {
-  prendre: "Prendre une photo", // spec §3, §6
-  importer: "Importer une photo", // spec §3, §6
-  analyser: "Analyser ma tenue", // spec §3, §4, §6
-  changer: "Changer de photo", // spec §4, §6
-  retour: "Retour", // spec §6, écran 13 (CTA secondaire)
+  prendre: "Prendre une photo", // §3, §6
+  importer: "Importer une photo", // §3, §6
+  analyser: "Analyser ma tenue", // §3, §4, §6
+  changer: "Changer de photo", // §4, §6
+  retour: "Retour", // §6, écran 13
+  reessayer: "Réessayer", // §4, §15
+  ceQuiFonctionne: "Ce qui fonctionne", // décision produit n° 9
+  monConseil: "Mon conseil", // décision produit n° 9
+  aTester: "À tester", // décision produit n° 9
+  enregistrer: "Enregistrer dans mon journal", // §3, §12
+  nouvelle: "Nouvelle analyse", // §3, §12
   // TODO_COPY : suppression de la photo avant analyse ([RECOMMANDÉ] §6 et §11, sans libellé).
   supprimer: "TODO_COPY",
+  // TODO_COPY : message d'attente pendant l'analyse (§6, « libellé À ARBITRER »).
+  attente: "TODO_COPY",
   // TODO_COPY : proposition de la spec (§15, « Fichier invalide »), non validée.
   fichierInvalide: "Ce fichier ne peut pas être utilisé. Choisis une autre photo.",
 };
 
-type Photo = { fichier: File; url: string; largeur: number; hauteur: number };
-type Vue = "initial" | "preparation" | "apercu" | "invalide";
+const BOUTON_PRINCIPAL =
+  "w-full rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-center text-[13px] tracking-[.1em] uppercase py-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+const BOUTON_SECONDAIRE = "w-full rounded-full border border-border-soft text-terracotta text-center text-[13px] py-[14px] cursor-pointer";
+const LIEN = "w-full text-center text-[12px] text-muted py-[10px] cursor-pointer";
+
+function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?: string }) {
+  return (
+    <div
+      className="mx-auto rounded-[20px] overflow-hidden border border-border bg-card"
+      style={{ aspectRatio: `${photo.largeur} / ${photo.hauteur}`, maxHeight: hauteurMax, maxWidth: "100%" }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={photo.url} alt="" className="w-full h-full object-contain block" />
+    </div>
+  );
+}
+
+function Section({ titre, children }: { titre: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-[26px]">
+      <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[10px]">{titre}</div>
+      {children}
+    </section>
+  );
+}
+
+function Points({ points }: { points: string[] }) {
+  return (
+    <ul className="flex flex-col gap-[10px]">
+      {points.map((p, i) => (
+        <li key={i} className="flex items-start gap-[10px] text-[14px] text-ink leading-[1.5]">
+          <span aria-hidden="true" className="text-terracotta text-[11px] mt-[4px] flex-shrink-0">
+            ✦
+          </span>
+          {p}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function AvisStylisteScreen() {
-  const { actions } = useCapsela();
+  const { actions, avisStyliste } = useCapsela();
+  const { photo, analyse } = avisStyliste;
   const cameraRef = useRef<HTMLInputElement>(null);
   const galerieRef = useRef<HTMLInputElement>(null);
-  const [vue, setVue] = useState<Vue>("initial");
-  const [photo, setPhoto] = useState<Photo | null>(null);
+  /** États propres à la sélection d'une photo, avant qu'elle ne rejoigne la session. */
+  const [selection, setSelection] = useState<"aucune" | "preparation" | "invalide">("aucune");
   const [sources, setSources] = useState(false);
-
-  // L'aperçu est une URL locale (blob:) : la libérer dès qu'elle est remplacée
-  // ou que l'écran se ferme — rien de la photo ne doit survivre à l'écran.
-  useEffect(() => {
-    return () => {
-      if (photo) URL.revokeObjectURL(photo.url);
-    };
-  }, [photo]);
+  /** Refus serveur « non Premium » déjà vu et refermé : ne pas rouvrir le Gate à chaque rendu. */
+  const [gateFerme, setGateFerme] = useState<string | null>(null);
 
   const choisir = (source: "camera" | "galerie") => {
     setSources(false);
@@ -82,21 +125,145 @@ export default function AvisStylisteScreen() {
     e.target.value = "";
     if (!fichier) return;
     setSources(false);
-    setVue("preparation");
+    setSelection("preparation");
     const r = await preparerPhotoAvis(fichier);
     if (!r.ok) {
-      // Photo invalide : l'éventuelle photo précédente est conservée (voir « Changer de photo »).
-      setVue("invalide");
+      // La photo précédente, s'il y en a une, reste en place (cf. « Retour »).
+      setSelection("invalide");
       return;
     }
-    setPhoto({ fichier: r.fichier, url: URL.createObjectURL(r.fichier), largeur: r.largeur, hauteur: r.hauteur });
-    setVue("apercu");
+    actions.definirPhotoAvis({ fichier: r.fichier, url: URL.createObjectURL(r.fichier), largeur: r.largeur, hauteur: r.hauteur });
+    setSelection("aucune");
   };
 
-  const supprimer = () => {
-    setPhoto(null);
-    setVue("initial");
-  };
+  const reaction = analyse.etat === "echouee" ? reactionErreur(analyse.code, analyse.raison) : null;
+  const cleRefus = analyse.etat === "echouee" ? `${analyse.code}:${photo?.url ?? ""}` : null;
+  const gateOuvert = reaction?.action === "gate" && gateFerme !== cleRefus;
+
+  let contenu: React.ReactNode;
+  if (selection === "preparation") {
+    contenu = (
+      <div className="mt-[60px] flex justify-center" aria-busy="true">
+        <LoadingSpinner size={56} />
+      </div>
+    );
+  } else if (selection === "invalide") {
+    contenu = (
+      <div className="mt-[30px]">
+        <div className="bg-card border border-border rounded-[20px] px-4 py-[16px] text-[13px] text-ink leading-[1.55]" role="alert">
+          {TEXTES.fichierInvalide}
+        </div>
+        <button type="button" onClick={() => setSources(true)} className={BOUTON_PRINCIPAL + " mt-[16px]"}>
+          {TEXTES.changer}
+        </button>
+        {photo && (
+          <button type="button" onClick={() => setSelection("aucune")} className={LIEN + " mt-[6px]"}>
+            {TEXTES.retour}
+          </button>
+        )}
+      </div>
+    );
+  } else if (!photo) {
+    // Écran 1 — choix de la source.
+    // À ARBITRER: illustration de l'écran 1 (§6). Conseil de cadrage
+    // ([RECOMMANDÉ] §6) : sans libellé validé, non affiché (TODO_COPY).
+    contenu = (
+      <div className="mt-[34px] flex flex-col gap-[10px]">
+        <button type="button" onClick={() => choisir("camera")} className={BOUTON_PRINCIPAL}>
+          {TEXTES.prendre}
+        </button>
+        <button type="button" onClick={() => choisir("galerie")} className={BOUTON_SECONDAIRE}>
+          {TEXTES.importer}
+        </button>
+      </div>
+    );
+  } else if (analyse.etat === "en_cours") {
+    // Écran 5 — analyse. Aucun « Annuler » : l'analyse continue même si l'on
+    // quitte l'écran (point 16) ; le CTA a disparu, donc pas de double envoi.
+    contenu = (
+      <div className="mt-[24px]" aria-busy="true">
+        <Apercu photo={photo} hauteurMax="36vh" />
+        <div className="mt-[26px] flex flex-col items-center gap-[12px]">
+          <LoadingSpinner size={56} />
+          <div className="text-[13px] text-muted-3 text-center">{TEXTES.attente}</div>
+        </div>
+      </div>
+    );
+  } else if (analyse.etat === "reussie") {
+    // Écrans 6 à 9 et 12, en un écran unique qui défile — À ARBITRER: écran
+    // unique ou écrans séparés (point 12) ; l'écran unique est le plus
+    // réversible. L'avis global est toujours lu en premier, les points forts
+    // avant le conseil [§6].
+    const { avis } = analyse;
+    contenu = (
+      <div className="mt-[22px]">
+        <Apercu photo={photo} hauteurMax="30vh" />
+        <div className="mt-[20px] font-serif text-[19px] leading-[1.35] text-ink">{avis.overallAssessment}</div>
+        <Section titre={TEXTES.ceQuiFonctionne}>
+          <Points points={avis.strengths} />
+        </Section>
+        <Section titre={TEXTES.monConseil}>
+          <div className="bg-warm-bg border border-warm-border rounded-[18px] px-4 py-[14px] text-[14px] text-ink leading-[1.5]">{avis.mainAdvice}</div>
+        </Section>
+        <Section titre={TEXTES.aTester}>
+          <Points points={avis.suggestions} />
+        </Section>
+        {/* « Avec ton dressing » : lot suivant, selon la méthode arbitrée (point 3). */}
+        <div className="mt-[30px] flex flex-col gap-[10px]">
+          {/* Enregistrement Journal : lot suivant (points 2 et 19). */}
+          <button type="button" disabled className={BOUTON_PRINCIPAL}>
+            {TEXTES.enregistrer}
+          </button>
+          {/* À ARBITRER: avertir avant de quitter un résultat non enregistré
+              (point 18) — aucun avertissement en attendant, le plus réversible. */}
+          <button type="button" onClick={() => actions.definirPhotoAvis(null)} className={BOUTON_SECONDAIRE}>
+            {TEXTES.nouvelle}
+          </button>
+        </div>
+      </div>
+    );
+  } else if (reaction && reaction.action !== "gate") {
+    // Écran 13 — erreur : message humain, jamais technique, et une sortie.
+    contenu = (
+      <div className="mt-[24px]">
+        <Apercu photo={photo} hauteurMax="30vh" />
+        <div className="mt-[20px] bg-card border border-border rounded-[20px] px-4 py-[16px]" role="alert">
+          <div className="text-[14px] text-ink leading-[1.5]">{reaction.message}</div>
+          {reaction.action === "reessayer" && reaction.sousTexte && (
+            <div className="text-[12px] text-muted mt-[4px] leading-[1.45]">{reaction.sousTexte}</div>
+          )}
+        </div>
+        {reaction.action === "reessayer" ? (
+          <button type="button" onClick={actions.lancerAvisStyliste} className={BOUTON_PRINCIPAL + " mt-[16px]"}>
+            {TEXTES.reessayer}
+          </button>
+        ) : (
+          <button type="button" onClick={() => setSources(true)} className={BOUTON_PRINCIPAL + " mt-[16px]"}>
+            {TEXTES.changer}
+          </button>
+        )}
+        <button type="button" onClick={actions.revenirAApercuAvis} className={LIEN + " mt-[6px]"}>
+          {TEXTES.retour}
+        </button>
+      </div>
+    );
+  } else {
+    // Écran 4 — photo sélectionnée. L'analyse ne part que sur ce clic [DÉCIDÉ].
+    contenu = (
+      <div className="mt-[24px]">
+        <Apercu photo={photo} />
+        <button type="button" onClick={actions.lancerAvisStyliste} className={BOUTON_PRINCIPAL + " mt-[20px]"}>
+          {TEXTES.analyser}
+        </button>
+        <button type="button" onClick={() => setSources(true)} className={BOUTON_SECONDAIRE + " mt-[10px]"}>
+          {TEXTES.changer}
+        </button>
+        <button type="button" onClick={() => actions.definirPhotoAvis(null)} className={LIEN + " mt-[4px]"}>
+          {TEXTES.supprimer}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
@@ -117,112 +284,36 @@ export default function AvisStylisteScreen() {
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={recevoir} className="hidden" />
       <input ref={galerieRef} type="file" accept="image/*" onChange={recevoir} className="hidden" />
 
-      {vue === "initial" && (
-        <>
-          {/* À ARBITRER: illustration de l'écran 1 (section 6) — aucune tant
-              qu'elle n'est pas fournie. Conseil de cadrage ([RECOMMANDÉ] §6,
-              « tenue entière, bonne lumière ») : sans libellé validé, non
-              affiché — cf. TODO_COPY du rapport de lot. */}
-          <div className="mt-[34px] flex flex-col gap-[10px]">
-            <button
-              type="button"
-              onClick={() => choisir("camera")}
-              className="w-full rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-center text-[13px] tracking-[.1em] uppercase py-4 cursor-pointer"
-            >
-              {TEXTES.prendre}
-            </button>
-            <button
-              type="button"
-              onClick={() => choisir("galerie")}
-              className="w-full rounded-full border border-border-soft text-terracotta text-center text-[13px] py-[15px] cursor-pointer"
-            >
-              {TEXTES.importer}
-            </button>
-          </div>
-        </>
-      )}
-
-      {vue === "preparation" && (
-        <div className="mt-[60px] flex justify-center" aria-busy="true">
-          <LoadingSpinner size={56} />
-        </div>
-      )}
-
-      {vue === "invalide" && (
-        <div className="mt-[30px]">
-          <div className="bg-card border border-border rounded-[20px] px-4 py-[16px] text-[13px] text-ink leading-[1.55]" role="alert">
-            {TEXTES.fichierInvalide}
-          </div>
-          <button
-            type="button"
-            onClick={() => setSources(true)}
-            className="mt-[16px] w-full rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-center text-[13px] tracking-[.1em] uppercase py-4 cursor-pointer"
-          >
-            {TEXTES.changer}
-          </button>
-          {photo && (
-            <button
-              type="button"
-              onClick={() => setVue("apercu")}
-              className="mt-[6px] w-full text-center text-[12px] text-muted py-[10px] cursor-pointer"
-            >
-              {/* Revenir à la photo déjà valide, sans rien perdre. */}
-              {TEXTES.retour}
-            </button>
-          )}
-        </div>
-      )}
-
-      {vue === "apercu" && photo && (
-        <div className="mt-[24px]">
-          {/* Aperçu local, au ratio de la photo, sans recadrage ; borné en
-              hauteur pour laisser les actions visibles. */}
-          <div className="mx-auto rounded-[20px] overflow-hidden border border-border bg-card" style={{ aspectRatio: `${photo.largeur} / ${photo.hauteur}`, maxHeight: "52vh", maxWidth: "100%" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo.url} alt="" className="w-full h-full object-contain block" />
-          </div>
-          {/* L'analyse ne part que sur ce clic [DÉCIDÉ] — inactif au lot 2. */}
-          <button
-            type="button"
-            disabled
-            className="mt-[20px] w-full rounded-full bg-terracotta text-cream text-center text-[13px] tracking-[.1em] uppercase py-4 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {TEXTES.analyser}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSources(true)}
-            className="mt-[10px] w-full rounded-full border border-border-soft text-terracotta text-center text-[13px] py-[13px] cursor-pointer"
-          >
-            {TEXTES.changer}
-          </button>
-          <button type="button" onClick={supprimer} className="mt-[4px] w-full text-center text-[12px] text-muted py-[10px] cursor-pointer">
-            {TEXTES.supprimer}
-          </button>
-        </div>
-      )}
+      {contenu}
 
       {/* « Changer de photo » : retour au choix de la source (spec §3). La photo
           actuelle reste en place tant qu'une nouvelle photo valide ne l'a pas
           remplacée — annuler ne fait rien perdre. */}
       <BottomSheet title={TEXTES.changer} open={sources} onClose={() => setSources(false)}>
         <div className="flex flex-col gap-[10px]">
-          <button
-            type="button"
-            onClick={() => choisir("camera")}
-            className="w-full rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-center text-[13px] tracking-[.1em] uppercase py-4 cursor-pointer"
-          >
+          <button type="button" onClick={() => choisir("camera")} className={BOUTON_PRINCIPAL}>
             {TEXTES.prendre}
           </button>
-          <button
-            type="button"
-            onClick={() => choisir("galerie")}
-            className="w-full rounded-full border border-border-soft text-terracotta text-center text-[13px] py-[15px] cursor-pointer"
-          >
+          <button type="button" onClick={() => choisir("galerie")} className={BOUTON_SECONDAIRE}>
             {TEXTES.importer}
           </button>
         </div>
       </BottomSheet>
+
+      {/* Refus serveur « non Premium » (compte gratuit ou expiré) : le même Gate
+          que l'accueil. « Plus tard » laisse sur cet écran, photo intacte. */}
+      <GateAvisStyliste
+        open={gateOuvert}
+        onClose={() => {
+          setGateFerme(cleRefus);
+          actions.revenirAApercuAvis();
+        }}
+        onDecouvrirPremium={() => {
+          setGateFerme(cleRefus);
+          actions.revenirAApercuAvis();
+          actions.goPremium();
+        }}
+      />
     </div>
   );
 }
