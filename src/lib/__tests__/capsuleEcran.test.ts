@@ -3,7 +3,6 @@ import { computeDefaultCapsule } from "../capsule";
 import type { CatalogItem } from "../catalog";
 import {
   alternativesDeRemplacement,
-  descriptionPieceCle,
   introCapsule,
   piecesCles,
   piecesDuDressingPourSaison,
@@ -53,32 +52,18 @@ describe("piecesCles", () => {
   });
 });
 
-describe("descriptionPieceCle — écrite depuis les données, rien d'autre", () => {
-  it("indispensable et occasions déclarées", () => {
-    const p = piece(1, { estBasiqueCapsule: true, occasion: ["travail_formel", "quotidien"] });
-    expect(descriptionPieceCle(p)).toBe("Un indispensable, à porter au quotidien et au travail.");
-  });
-
-  it("au-delà de trois occasions, pas de liste interminable", () => {
-    const p = piece(1, { occasion: ["quotidien", "travail_formel", "soiree", "voyage"] });
-    expect(descriptionPieceCle(p)).toBe("À porter au quotidien, au travail, en sortie et plus encore.");
-  });
-});
-
-describe("introCapsule — chaque partie doit être vraie de la capsule affichée", () => {
+describe("introCapsule — courte, et vraie de la capsule affichée", () => {
   it("rien de notable : le texte fixe, qui n'affirme rien", () => {
-    expect(introCapsule([piece(1, { statement: false })], profil())).toBe("Une base cohérente pour composer tes tenues, pièce après pièce.");
+    expect(introCapsule([piece(1, { statement: false })])).toBe("Une base cohérente pour composer tes tenues.");
   });
 
-  it("les trois parties quand la capsule les rend vraies", () => {
-    const capsule = [piece(1, { estBasiqueCapsule: true, statement: false }), piece(2, { hex: "#AA0000", statement: true })];
-    expect(introCapsule(capsule, profil({ paletteCouleurs: ["#aa0000"] }))).toBe(
-      "Des essentiels faciles à associer, des pièces dans ta palette et quelques touches pour renouveler tes tenues."
-    );
+  it("essentiels et pièces de caractère quand la capsule les contient", () => {
+    const capsule = [piece(1, { estBasiqueCapsule: true, statement: false }), piece(2, { statement: true })];
+    expect(introCapsule(capsule)).toBe("Des essentiels faciles à associer, et quelques pièces de caractère.");
   });
 
-  it("pas de palette déclarée : la palette n'est pas citée", () => {
-    expect(introCapsule([piece(1, { estBasiqueCapsule: true, statement: false })], profil())).toBe("Des essentiels faciles à associer.");
+  it("sans pièce de caractère, elles ne sont pas annoncées", () => {
+    expect(introCapsule([piece(1, { estBasiqueCapsule: true, statement: false })])).toBe("Des essentiels faciles à associer.");
   });
 });
 

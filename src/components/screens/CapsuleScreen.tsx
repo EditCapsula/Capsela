@@ -13,7 +13,6 @@ import {
 } from "@/lib/capsule";
 import {
   alternativesDeRemplacement,
-  descriptionPieceCle,
   introCapsule,
   piecesCles,
   piecesDuDressingPourSaison,
@@ -24,6 +23,7 @@ import { useAuth } from "@/lib/auth";
 import { silhouetteForme, styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
+import { analyserImage, placementDansCadre, type Analyse } from "@/lib/cadrageImage";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 
 /*
@@ -103,13 +103,65 @@ const VISUEL_SAISON: Record<CapsuleSeason, string> = {
   Hiver: "/images/saisons/hiver.webp",
 };
 
+/** Pièces montrées par catégorie tant qu'elle n'est pas développée — une ligne de la grille. */
+const PIECES_PAR_DEFAUT = 3;
+
+/** Chevron de développement d'une catégorie : il pivote, rien d'autre ne bouge. */
+function Chevron({ ouvert }: { ouvert: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transform: ouvert ? "rotate(180deg)" : "none", transition: "transform .2s ease" }}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
 /** « 1 pièce » / « 12 pièces ». */
 function pieces(n: number): string {
   return `${n} ${n > 1 ? "pièces" : "pièce"}`;
 }
 
-/** Vignette d'une pièce : même rendu qu'avant la refonte (image entière, jamais recadrée, sur fond crème ; à défaut sa couleur). */
-function Vignette({ item, arrondi = 12, marge = 8 }: { item: Item; arrondi?: number; marge?: number }) {
+/**
+ * Mesures déjà faites, par URL, pour toute la session : une image n'est
+ * analysée qu'une fois, quel que soit le nombre de vignettes qui la montrent.
+ * null = mesure impossible, on garde l'affichage contenu.
+ */
+const cadrages = new Map<string, (Analyse & { ratio: number }) | null>();
+
+/**
+ * Seules les images servies par Supabase Storage sont mesurées : il envoie
+ * `Access-Control-Allow-Origin: *` (vérifié le 25/09/2026), condition pour lire
+ * les pixels. Une image d'un autre domaine (affiliée) chargée en CORS sans
+ * cet en-tête ne s'afficherait plus du tout : elle reste en affichage contenu.
+ */
+function mesurable(url: string): boolean {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return Boolean(base) && url.startsWith(`${base}/storage/v1/object/public/`);
+}
+
+/** Ratio largeur / hauteur de toutes les vignettes de l'écran. */
+const RATIO_VIGNETTE = 4 / 5;
+
+/**
+ * Vignette d'une pièce, à présence normalisée (polish du 25/09/2026, cf.
+ * cadrageImage.ts) : zone image identique partout, et la pièce — pas l'image —
+ * remplit la même part de cette zone, sans déformation ni recadrage.
+ *
+ * Tant que la mesure n'est pas faite, l'image reste invisible (une fraction de
+ * seconde, le temps du chargement) : sinon elle apparaîtrait petite puis
+ * sauterait à sa taille normalisée. Mesure impossible : affichage contenu,
+ * comme avant.
+ */
+function Vignette({ item, arrondi = 14, marge = 0.1 }: { item: Item; arrondi?: number; marge?: number }) {
   const image = resolveItemImage(item);
   return (
     <div
@@ -122,14 +174,7 @@ function Vignette({ item, arrondi = 12, marge = 8 }: { item: Item; arrondi?: num
       }}
     >
       {image.url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={image.url}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", padding: marge, boxSizing: "border-box" }}
-        />
+        <ImageCadree key={image.url} url={image.url} marge={marge} />
       ) : (
         item.imageStatus === "generating" && (
           <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
@@ -139,33 +184,95 @@ function Vignette({ item, arrondi = 12, marge = 8 }: { item: Item; arrondi?: num
   );
 }
 
+function ImageCadree({ url, marge }: { url: string; marge: number }) {
+  const analysable = mesurable(url);
+  const [cadrage, setCadrage] = useState(() => (cadrages.has(url) ? cadrages.get(url) : undefined));
+  const enAttente = analysable && cadrage === undefined;
+  const place = cadrage ? placementDansCadre(cadrage.boite, cadrage.ratio, RATIO_VIGNETTE, marge) : null;
+  const pad = `${marge * 100}%`;
+  return (
+    <>
+      {/* Fond opaque mesuré : le cadre le prolonge, pour qu'aucun rectangle
+          plus clair ou plus gris ne se découpe autour de la pièce. */}
+      {cadrage?.fond && <span className="absolute inset-0" style={{ background: cadrage.fond }} />}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        crossOrigin={analysable ? "anonymous" : undefined}
+        onLoad={(e) => {
+          if (!analysable) return;
+          // Une autre vignette de la même image a pu mesurer entre-temps :
+          // reprendre sa mesure, sans quoi celle-ci resterait invisible.
+          const deja = cadrages.get(url);
+          const mesure = deja !== undefined ? deja : analyserImage(e.currentTarget);
+          cadrages.set(url, mesure);
+          setCadrage(mesure);
+        }}
+        onError={() => {
+          cadrages.set(url, null);
+          setCadrage(null);
+        }}
+        className="transition-opacity duration-200"
+        style={
+          place
+            ? { position: "absolute", width: `${place.largeur}%`, height: `${place.hauteur}%`, left: `${place.gauche}%`, top: `${place.haut}%`, maxWidth: "none", opacity: 1 }
+            : {
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                objectPosition: "center",
+                padding: pad,
+                boxSizing: "border-box",
+                opacity: enAttente ? 0 : 1,
+              }
+        }
+      />
+    </>
+  );
+}
+
 /**
  * Statut d'une pièce, identique partout sur l'écran : une ligne de texte sous
- * l'image, pas un badge posé dessus. Le glyphe porte la différence autant que
- * la couleur — ✓ encre pour ce qui est à toi, ✦ terracotta pour ce que
- * Capsela propose — pour rester lisible sans distinguer les couleurs.
+ * le nom, pas un badge posé sur l'image. Le glyphe porte la différence autant
+ * que la couleur — ✓ pour ce qui est à toi, ✦ terracotta pour ce que Capsela
+ * propose — pour rester lisible sans distinguer les couleurs.
  */
 function Statut({ possedee }: { possedee: boolean }) {
-  return possedee ? (
-    <span className="inline-flex items-center gap-[4px] text-[10px] text-muted-3">
-      <span aria-hidden="true" className="text-ink">✓</span>
-      Dans ton dressing
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-[4px] text-[10px] text-terracotta">
-      <span aria-hidden="true">✦</span>
-      Suggestion
+  // Une seule ligne, de hauteur fixe : « Dans ton dressing » passait sur deux
+  // lignes dans une carte de 97 px (360 px d'écran) et rendait les cartes
+  // inégales (mesuré : 195 contre 189 px).
+  return (
+    <span
+      className={
+        "flex items-center gap-[3px] h-[14px] text-[10px] leading-[14px] whitespace-nowrap overflow-hidden " +
+        (possedee ? "text-muted" : "text-terracotta")
+      }
+    >
+      <span aria-hidden="true" className="flex-shrink-0">{possedee ? "✓" : "✦"}</span>
+      <span className="truncate">{possedee ? "Dans ton dressing" : "Suggestion"}</span>
     </span>
   );
 }
 
+/**
+ * Nom d'une pièce : deux lignes au plus, et TOUJOURS la hauteur de deux
+ * lignes (min-h = 2 × interligne) — un nom court ne fait pas remonter le
+ * statut, un nom long ne déséquilibre pas la rangée.
+ */
+function NomPiece({ nom }: { nom: string }) {
+  return <div className="text-[12px] text-ink leading-[16px] min-h-[32px] line-clamp-2 mt-[8px]">{nom}</div>;
+}
+
 function CartePiece({ item, possedee, onClick, className = "" }: { item: Item; possedee: boolean; onClick: () => void; className?: string }) {
   return (
-    <button onClick={onClick} className={"text-left cursor-pointer " + className} aria-label={`${item.name}, ${possedee ? "dans ton dressing" : "suggestion"}`}>
+    <button onClick={onClick} className={"min-w-0 text-left cursor-pointer " + className} aria-label={`${item.name}, ${possedee ? "dans ton dressing" : "suggestion"}`}>
       <Vignette item={item} />
-      {/* Deux lignes plutôt qu'une ellipse : « T-shirt coton col rond » tient
-          entier, un nom plus long ne mange pas le statut. */}
-      <div className="text-[11.5px] text-ink mt-[7px] leading-[1.3] line-clamp-2">{item.name}</div>
+      <NomPiece nom={item.name} />
       <div className="mt-[3px]">
         <Statut possedee={possedee} />
       </div>
@@ -248,7 +355,7 @@ export default function CapsuleScreen() {
     [exploredStyleId, state.items, capsuleSeason]
   );
   const cles = useMemo(() => piecesCles(capsule), [capsule]);
-  const intro = useMemo(() => introCapsule(capsule, capsuleProfile), [capsule, capsuleProfile]);
+  const intro = useMemo(() => introCapsule(capsule), [capsule]);
 
   const groups = CATS.map(([key, , plural]) => {
     const siennes = possedees.filter((i) => i.cat === key);
@@ -256,8 +363,9 @@ export default function CapsuleScreen() {
     return { key, label: plural, siennes, suggestions, total: siennes.length + suggestions.length };
   }).filter((g) => g.total > 0);
 
-  // « Voir tout » déplie la rangée en grille, sur place : aucune navigation
-  // nouvelle. Remis à zéro au changement de saison (clé du conteneur).
+  // Catégories développées (clic sur l'en-tête), sur place : aucune
+  // navigation nouvelle. L'état vit dans l'écran et survit donc à un
+  // changement de saison — une catégorie ouverte le reste.
   const [deplies, setDeplies] = useState<CategoryKey[]>([]);
 
   const [fiche, setFiche] = useState<Fiche | null>(null);
@@ -419,10 +527,13 @@ export default function CapsuleScreen() {
           })}
         </div>
 
-        {/* Bandeau de saison, sous le sélecteur : il change avec lui. Ratio
-            d'origine (3:2) conservé tel quel — aucun recadrage — et
-            dimensions déclarées pour que rien ne saute au chargement. */}
-        <div className="mt-[16px] rounded-[20px] overflow-hidden border border-border bg-card" style={{ aspectRatio: "3/2" }}>
+        {/* Bandeau de saison, sous le sélecteur : il change avec lui.
+            16:9 depuis le polish du 25/09/2026 (3:2 auparavant) : il
+            introduit la saison sans occuper l'écran — à 390 px, 36 px de
+            moins, pris pour moitié en haut et en bas, où les visuels n'ont que
+            du décor (branchages, ciel, rebord de pierre). Dimensions déclarées
+            pour que rien ne saute au chargement. */}
+        <div className="mt-[16px] rounded-[20px] overflow-hidden border border-border bg-card" style={{ aspectRatio: "16/9" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             key={capsuleSeason}
@@ -435,47 +546,40 @@ export default function CapsuleScreen() {
           />
         </div>
 
-        {/* Introduction : une phrase dont chaque partie est vraie de la
-            capsule affichée (introCapsule). Filet terracotta plutôt qu'un
-            encadré, pour qu'elle reste une respiration et pas une carte. */}
+        {/* Introduction : une phrase courte, vraie de la capsule affichée
+            (introCapsule). Filet terracotta plutôt qu'un encadré, pour
+            qu'elle reste une respiration et pas une carte. */}
         {capsule.length > 0 && (
-          <div className="mt-[18px] border-l-2 border-terracotta pl-[12px] font-serif italic text-[14px] text-ink leading-[1.5]">
+          <div className="mt-[16px] border-l-2 border-terracotta pl-[12px] font-serif italic text-[14px] text-ink leading-[1.45]">
             {intro}
           </div>
         )}
 
-        {/* PIÈCES CLÉS — secondaires par rapport à la capsule : une liste
-            compacte dans une seule carte, pas des vignettes géantes. Masquées
-            sous deux pièces, où « pièces clés » ne voudrait plus rien dire. */}
+        {/* PIÈCES CLÉS — trois cartes sur une ligne, strictement identiques
+            (même vignette, même nom sur deux lignes réservées), sans
+            description : le nom suffit. Masquées sous deux pièces, où
+            « pièces clés » ne voudrait plus rien dire. */}
         {cles.length >= 2 && (
-          <div className="mt-[26px]">
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[10px]">
+          <div className="mt-[30px]">
+            <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[12px]">
               {cles.length} pièces clés cette saison
             </div>
-            <div className="bg-card border border-border rounded-[20px] overflow-hidden">
-              {cles.map((it) => {
-                const description = descriptionPieceCle(it);
-                return (
-                  <button
-                    key={it.id}
-                    onClick={() => ouvrir(it, false)}
-                    className="w-full flex items-center gap-[13px] px-[14px] py-[12px] border-b border-border last:border-b-0 text-left cursor-pointer"
-                  >
-                    <div className="w-[52px] flex-shrink-0">
-                      <Vignette item={it} arrondi={10} marge={5} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] text-ink leading-[1.3]">{it.name}</div>
-                      {description && <div className="text-[11px] text-muted leading-[1.4] mt-[3px]">{description}</div>}
-                    </div>
-                    <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-3 gap-[10px]">
+              {cles.map((it) => (
+                <button key={it.id} onClick={() => ouvrir(it, false)} className="min-w-0 text-left cursor-pointer" aria-label={`${it.name}, pièce clé`}>
+                  <Vignette item={it} />
+                  <NomPiece nom={it.name} />
+                </button>
+              ))}
             </div>
           </div>
         )}
 
+        {/* CATÉGORIES. Trois pièces par défaut, sur une grille de trois
+            colonnes identique aux pièces clés ; l'en-tête entier développe la
+            catégorie (plus de « Voir tout »). Les pièces supplémentaires ne
+            sont montées qu'une fois la catégorie ouverte : aucune image
+            chargée pour rien. */}
         <div key={capsuleSeason}>
           {groups.map((g) => {
             const deplie = deplies.includes(g.key);
@@ -483,64 +587,59 @@ export default function CapsuleScreen() {
               ...g.siennes.map((it) => ({ it, possedee: true })),
               ...g.suggestions.map((it) => ({ it, possedee: false })),
             ];
-            return (
-              <section key={g.key} className="mt-[28px]">
-                <div className="flex items-end justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-[12px] tracking-[.1em] uppercase font-semibold text-ink">{g.label}</div>
-                    <div className="text-[11px] text-muted mt-[2px]">{pieces(g.total)}</div>
-                  </div>
-                  {/* À partir de trois cartes, la rangée déborde à 360 px. */}
-                  {cartes.length >= 3 && (
-                    <button
-                      onClick={() => setDeplies((d) => (deplie ? d.filter((k) => k !== g.key) : [...d, g.key]))}
-                      aria-expanded={deplie}
-                      className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer py-[4px]"
-                    >
-                      {deplie ? "Réduire" : "Voir tout →"}
-                    </button>
-                  )}
+            const extensible = cartes.length > PIECES_PAR_DEFAUT;
+            const visibles = deplie ? cartes : cartes.slice(0, PIECES_PAR_DEFAUT);
+            const basculer = () => setDeplies((d) => (deplie ? d.filter((k) => k !== g.key) : [...d, g.key]));
+            const entete = (
+              <>
+                <div className="min-w-0">
+                  <div className="text-[12px] tracking-[.12em] uppercase font-semibold text-ink">{g.label}</div>
+                  <div className="text-[11px] text-muted mt-[2px]">{pieces(g.total)}</div>
                 </div>
-                {deplie ? (
-                  <div className="grid grid-cols-3 gap-x-[10px] gap-y-[16px] mt-[12px]">
-                    {cartes.map(({ it, possedee }) => (
-                      <CartePiece key={it.id} item={it} possedee={possedee} onClick={() => ouvrir(it, possedee)} />
-                    ))}
-                  </div>
-                ) : (
-                  // Débord `-mx-6 px-6` : la rangée se coupe au bord de l'écran,
-                  // et la carte tronquée dit qu'on peut faire défiler. Sans
-                  // scroll-padding, l'aimantation collait la première carte au
-                  // bord de l'écran, hors de la marge (mesuré à 360 px).
-                  <div
-                    className="scrollarea flex gap-[10px] overflow-x-auto mt-[12px] pb-[2px] -mx-6 px-6"
-                    style={{ scrollSnapType: "x mandatory", scrollPaddingInline: 24 }}
-                  >
-                    {cartes.map(({ it, possedee }) => (
-                      <CartePiece
-                        key={it.id}
-                        item={it}
-                        possedee={possedee}
-                        onClick={() => ouvrir(it, possedee)}
-                        className="flex-none w-[112px] [scroll-snap-align:start]"
-                      />
-                    ))}
-                  </div>
+                {extensible && (
+                  <span aria-hidden="true" className="flex-shrink-0 text-muted">
+                    <Chevron ouvert={deplie} />
+                  </span>
                 )}
+              </>
+            );
+            return (
+              <section key={g.key} className="mt-[30px]">
+                {extensible ? (
+                  <button
+                    onClick={basculer}
+                    aria-expanded={deplie}
+                    aria-label={`${g.label}, ${pieces(g.total)}, ${deplie ? "réduire" : "tout afficher"}`}
+                    className="w-full flex items-center justify-between gap-3 text-left cursor-pointer"
+                  >
+                    {entete}
+                  </button>
+                ) : (
+                  <div className="flex items-center justify-between gap-3">{entete}</div>
+                )}
+                <div className="grid grid-cols-3 gap-x-[10px] gap-y-[18px] mt-[12px]">
+                  {visibles.map(({ it, possedee }, i) => (
+                    <CartePiece
+                      key={it.id}
+                      item={it}
+                      possedee={possedee}
+                      onClick={() => ouvrir(it, possedee)}
+                      className={i >= PIECES_PAR_DEFAUT ? "motion-safe:animate-[capsule-apparition_240ms_ease-out_both]" : ""}
+                    />
+                  ))}
+                </div>
               </section>
             );
           })}
         </div>
 
         {/* L'ajout d'une pièce passe après la découverte (25/09/2026) : c'est
-            Capsela qui prépare, pas l'utilisatrice qui remplit. Même action
-            qu'avant (openAdd). */}
-        <div className="mt-[34px] bg-card border border-border rounded-[20px] px-4 py-[16px]">
-          <div className="font-serif text-[16px] text-ink leading-[1.3]">Une pièce manque dans ta capsule ?</div>
-          <div className="text-[12px] text-muted leading-[1.5] mt-[4px]">
-            Ajoute celles que tu possèdes : Capsela les utilise pour composer tes tenues.
-          </div>
-          <button onClick={actions.openAdd} className="mt-[10px] text-[13px] text-terracotta cursor-pointer py-[4px]">
+            Capsela qui prépare, pas l'utilisatrice qui remplit. Depuis le
+            polish, deux lignes centrées sans encadré, pour ne pas concurrencer
+            le bouton principal. Même action qu'avant (openAdd). */}
+        <div className="mt-[40px] text-center">
+          <div className="text-[12px] text-muted">Une pièce manque dans ta capsule ?</div>
+          <button onClick={actions.openAdd} className="mt-[2px] text-[13px] text-terracotta cursor-pointer py-[8px] px-2">
             + Ajouter une pièce que je possède
           </button>
         </div>
@@ -581,27 +680,31 @@ export default function CapsuleScreen() {
       >
         {pieceFiche && fiche?.vue === "detail" && (
           <>
-            <div className="flex items-start gap-[14px]">
-              <div className="w-[96px] flex-shrink-0">
-                <Vignette item={pieceFiche} arrondi={14} marge={8} />
-              </div>
-              <div className="flex-1 min-w-0">
+            {/* Hiérarchie du polish (25/09/2026) : la pièce d'abord, puis ce
+                qu'elle est, pourquoi elle est là, et une seule action
+                dominante. Les écarts verticaux séparent ces temps plutôt que
+                de tout rapprocher. */}
+            <div className="w-[148px] mx-auto">
+              <Vignette item={pieceFiche} arrondi={18} marge={0.08} />
+            </div>
+            <div className="text-center mt-[18px]">
+              <div className="flex justify-center">
                 <Statut possedee={false} />
-                <div className="font-serif text-[19px] text-ink leading-[1.2] mt-[5px]">{pieceFiche.name}</div>
-                {/* Pas de phrase d'occasions ici : elle redirait mot pour mot la
-                    raison « Se porte… » juste en dessous (vu en rendu). */}
-                {syntheseFiche && <div className="text-[12px] text-muted mt-[4px]">{syntheseFiche}</div>}
               </div>
+              <div className="font-serif text-[22px] text-ink leading-[1.2] mt-[8px]">{pieceFiche.name}</div>
+              {/* Pas de phrase d'occasions ici : elle redirait mot pour mot la
+                  raison « Se porte… » juste en dessous (vu en rendu). */}
+              {syntheseFiche && <div className="text-[12px] text-muted mt-[6px]">{syntheseFiche}</div>}
             </div>
 
             {/* Seulement les raisons que la sélection a réellement lues
                 (raisonsSuggestion) ; aucune, et la section disparaît. */}
             {raisons.length > 0 && (
-              <div className="mt-[20px]">
-                <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[8px]">Pourquoi Capsela te la propose ?</div>
-                <ul className="flex flex-col gap-[7px]">
+              <div className="mt-[28px]">
+                <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[12px]">Pourquoi Capsela te la propose ?</div>
+                <ul className="flex flex-col gap-[10px]">
                   {raisons.map((r) => (
-                    <li key={r.cle} className="flex items-start gap-[9px] text-[13px] text-ink leading-[1.4]">
+                    <li key={r.cle} className="flex items-start gap-[10px] text-[13px] text-ink leading-[1.45]">
                       <span aria-hidden="true" className="text-terracotta text-[11px] mt-[2px]">✦</span>
                       {r.texte}
                     </li>
@@ -610,31 +713,37 @@ export default function CapsuleScreen() {
               </div>
             )}
 
+            {/* 1. Seule action dominante : le bouton principal de Capsela,
+                terracotta, comme « Découvrir mes tenues » (le noir rompait la
+                hiérarchie de l'écran). */}
             <button
               onClick={() => {
                 setFiche(null);
                 actions.openItemOutfits(pieceFiche.id);
               }}
-              className="mt-[22px] w-full bg-ink text-cream text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase cursor-pointer"
+              className="mt-[30px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
             >
               Voir des tenues avec cette pièce
             </button>
+            {/* 2. Secondaire important : contour, sans fond. */}
             <button
               onClick={() => {
                 setFiche(null);
                 actions.startReplace(pieceFiche, "capsule");
               }}
-              className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"
+              className="mt-[12px] w-full border border-border-soft text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"
             >
               Je possède déjà cette pièce
             </button>
+            {/* 3. Secondaire : simple lien. */}
             <button
               onClick={() => setFiche({ id: pieceFiche.id, vue: "remplacer" })}
-              className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"
+              className="mt-[6px] w-full text-center text-[13px] text-terracotta py-[11px] cursor-pointer"
             >
               Remplacer cette pièce
             </button>
-            <button onClick={() => pasInteressee(pieceFiche)} className="mt-[8px] w-full text-center text-[12px] text-muted py-[10px] cursor-pointer">
+            {/* 4. Tertiaire, discret. */}
+            <button onClick={() => pasInteressee(pieceFiche)} className="w-full text-center text-[12px] text-muted py-[9px] cursor-pointer">
               {profile.gender === "homme" ? "Je ne suis pas intéressé" : "Je ne suis pas intéressée"}
             </button>
           </>
@@ -663,7 +772,7 @@ export default function CapsuleScreen() {
                     className="flex items-center gap-[12px] bg-card border border-border rounded-[16px] px-[12px] py-[10px] text-left cursor-pointer"
                   >
                     <div className="w-[48px] flex-shrink-0">
-                      <Vignette item={a.piece} arrondi={9} marge={4} />
+                      <Vignette item={a.piece} arrondi={10} marge={0.08} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[13px] text-ink leading-[1.3]">{a.piece.name}</div>
