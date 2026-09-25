@@ -5,7 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { useAuth } from "@/lib/auth";
-import { MONTHS_FR, occasionShortLabel } from "@/lib/data";
+import { DAYS_FR, MONTHS_FR, occasionShortLabel } from "@/lib/data";
 import { nounInfoOf } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import {
@@ -137,7 +137,9 @@ function jamaisPorte(item: Item): string {
  */
 function statutAttente(item: Item, port: EtatDePort): string {
   if (port.moisSansPort == null) return jamaisPorte(item);
-  return `${port.moisSansPort} mois`;
+  // Au-delà d'un an, la durée exacte n'apporte plus rien : « 12 mois+ »
+  // (brief Journal V2 final). Pas un seuil métier : l'affichage seulement.
+  return port.moisSansPort >= 12 ? "12 mois+" : `${port.moisSansPort} mois`;
 }
 
 /** Jauge en anneau : la part de la capsule déjà portée, le chiffre écrit au centre. */
@@ -187,18 +189,29 @@ function AnneauCapsule({ pourcentage }: { pourcentage: number }) {
  * nombre de pièces, chaque pièce se contient dans sa part de largeur.
  */
 function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void }) {
+  // « Aujourd'hui », « Hier », puis le jour de la semaine en toutes lettres
+  // pour les sept derniers jours ; au-delà, la date abrégée suffit.
   const quand =
-    entry.period === "today" ? `Aujourd'hui · ${entry.jour}` : entry.period === "yesterday" ? `Hier · ${entry.jour}` : entry.rel;
+    entry.period === "today"
+      ? `Aujourd'hui · ${entry.jour}`
+      : entry.period === "yesterday"
+        ? `Hier · ${entry.jour}`
+        : entry.period === "week"
+          ? `${DAYS_FR[new Date(entry.ts).getDay()]} · ${entry.jour}`
+          : entry.rel;
   return (
     <button
       onClick={onOpen}
       className="w-full bg-card border border-border rounded-[20px] overflow-hidden text-left cursor-pointer px-3 pt-[12px] pb-[13px]"
       aria-label={`${quand}${entry.hasOccasion ? `, ${entry.occLabel}` : ""} : ${entry.summary}. Voir la tenue`}
     >
-      <span className="flex items-center justify-between gap-2 px-1">
-        <span className="text-[13px] text-ink first-letter:uppercase">{quand}</span>
+      {/* Date et occasion sur une ligne quand elles tiennent ; sinon le badge
+          passe dessous. Rien n'est tronqué : mesuré à 360 px, « Quotidien /
+          Décontracté » était coupé et la date passait sur deux lignes. */}
+      <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-[6px] px-1">
+        <span className="text-[13px] text-ink whitespace-nowrap first-letter:uppercase">{quand}</span>
         {entry.hasOccasion && (
-          <span className="text-[9px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[9px] py-[3px] truncate max-w-[55%]">
+          <span className="text-[9px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[9px] py-[3px] whitespace-nowrap">
             {entry.occLabel}
           </span>
         )}
@@ -466,7 +479,7 @@ export default function HistoryScreen() {
           Ton style <span className="italic text-terracotta">commence ici.</span>
         </div>
         <div className="text-[13px] text-muted-3 leading-[1.5] mt-[10px]">
-          Chaque tenue que tu portes enrichit ton journal et permet à Capsela de mieux comprendre ton style.
+          Chaque tenue que tu portes enrichit ton journal et aide Capsela à mieux comprendre ton style.
         </div>
 
         {/* VISUEL D'ÉTAT VIDE (fournis le 25/09/2026) : des vêtements à
@@ -529,7 +542,9 @@ export default function HistoryScreen() {
   // timeline. « Pièces utilisées » = pièces uniques portées au moins une
   // fois ; le pourcentage en découle.
   const capsule = capsuleJournal(wardrobePool, state.history);
-  const moisCourant = MONTHS_FR[new Date(entries[0].ts).getMonth()];
+  // Le mois de référence de journalInsights, et non celui de la dernière
+  // tenue : sans tenue ce mois-ci, ce dernier nommait le mois précédent.
+  const moisCourant = MONTHS_FR[insights.mois];
 
   const occasionsPresentes = [...new Set(entries.filter((e) => e.hasOccasion).map((e) => e.occasion))];
   const entreesFiltrees = filtre === "toutes" ? entries : entries.filter((e) => e.occasion === filtre);
@@ -574,15 +589,27 @@ export default function HistoryScreen() {
         </div>
       </div>
 
-      {/* TON STYLE CE MOIS-CI — la carte n'existe que s'il y a une tendance
-          (3 tenues ce mois-ci au moins, cf. journalInsights). Le compte des
-          pièces jamais portées N'EST PLUS RÉPÉTÉ ICI (audit du 25/09) : il
-          doublait celui d'« À sortir du placard », seul endroit où il vit. */}
-      {(moment || newLooks > 0) && (
-        <section className="mt-[30px]" aria-labelledby="journal-style">
+      {/* TON STYLE CE MOIS-CI. Une tendance ne se dit qu'à partir de 3 tenues
+          dans le mois (règle existante de journalInsights) ; en dessous, la
+          carte le dit simplement — jamais de conclusion inventée, et plus de
+          section qui disparaît sans explication (brief Journal V2 final). Le
+          compte des pièces jamais portées vit dans « À sortir du placard ». */}
+      <section className="mt-[30px]" aria-labelledby="journal-style">
           <Surtitre>
             <span id="journal-style">Ton style ce mois-ci</span>
           </Surtitre>
+          {!(moment && insights.topOccasionShare != null) && (
+            <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[16px]">
+              <div className="font-serif text-[18px] leading-[1.3] text-ink">
+                {insights.wornThisMonth > 0 ? "Pas encore de tendance ce mois-ci." : `Aucune tenue notée en ${moisCourant} pour l'instant.`}
+              </div>
+              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[6px]">
+                {insights.wornThisMonth > 0
+                  ? `${insights.wornThisMonth} ${pl(insights.wornThisMonth, "tenue notée", "tenues notées")} en ${moisCourant} : ton style du mois se dessinera à partir de 3.`
+                  : "Ton style du mois se dessinera au fil de tes tenues."}
+              </div>
+            </div>
+          )}
           {moment && insights.topOccasionShare != null && (
             <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[18px]">
               <div className="font-serif text-[21px] leading-[1.25] text-ink" style={{ textWrap: "balance" }}>
@@ -604,8 +631,7 @@ export default function HistoryScreen() {
               )}
             </ul>
           )}
-        </section>
-      )}
+      </section>
 
       {/* TES PIÈCES FÉTICHES */}
       {fetiches.length > 0 && (
@@ -645,9 +671,7 @@ export default function HistoryScreen() {
           <div className="text-[13px] text-ink leading-[1.45] mt-[6px]">
             {placard.length} {pl(placard.length, "pièce de ta capsule attend", "pièces de ta capsule attendent")} encore{" "}
             {pl(placard.length, "son", "leur")} moment
-            {jamaisPortees > 0 && aRedecouvrir > 0
-              ? ` : ${jamaisPortees} jamais ${pl(jamaisPortees, "portée", "portées")}, ${aRedecouvrir} à redécouvrir.`
-              : "."}
+            {jamaisPortees > 0 && aRedecouvrir > 0 ? ` : ${jamaisPortees} à porter, ${aRedecouvrir} à redécouvrir.` : "."}
           </div>
           <ul className="scrollarea flex gap-[10px] overflow-x-auto mt-3 pb-[2px]">
             {placard.slice(0, PLACARD_MAX).map(({ item, port }) => (
@@ -701,7 +725,7 @@ export default function HistoryScreen() {
                 : `${aVendre.length} pièces n'ont pas été portées ${depuis}.`}
             </div>
             <div className="text-[13px] text-warm-text-2 leading-[1.5] mt-[6px]">
-              {aVendre.length === 1 ? "Elle n'a pas trouvé son moment" : "Elles n'ont pas trouvé leur moment"} depuis longtemps. Tu
+              {aVendre.length === 1 ? "Elle n'a pas trouvé sa place" : "Elles n'ont pas trouvé leur place"} dans tes looks depuis longtemps. Tu
               pourrais envisager de {pl(aVendre.length, "la", "les")} vendre pour faire de la place dans ta capsule.
             </div>
             <button
