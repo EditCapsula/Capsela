@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { resolveItemImage } from "@/lib/catalogImages";
+import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import {
   dailyActivity,
@@ -123,6 +124,14 @@ const RANK_BADGE = ["bg-terracotta", "bg-ink", "bg-gold"];
 
 export default function HistoryScreen() {
   const { state, wardrobePool, vestiairePool, actions } = useCapsela();
+  const { profile } = useAuth();
+  /* Même règle que `journalGender` sur l'accueil, et même repli sur « femme »
+     quand le genre n'est pas renseigné — une seule convention pour les deux
+     endroits qui servent ces planches. */
+  const visuelVide =
+    profile.gender === "homme"
+      ? "/editorial/capsela_journal_empty_homme.webp"
+      : "/editorial/capsela_journal_empty_femme.webp";
   // Pool de résolution stable (correctif 20/08/2026) : wardrobePool bascule
   // dynamiquement vers les pièces réelles dès qu'il y en a dans une
   // catégorie, ce qui peut faire disparaître d'anciennes suggestions
@@ -428,11 +437,34 @@ export default function HistoryScreen() {
           )}
         </div>
       ) : (
-        <div className="mt-[34px] flex flex-col items-center text-center px-4 py-9">
-          <span className="w-14 h-14 rounded-full bg-[#F0E5D6] text-terracotta flex items-center justify-center text-[24px] mb-4">
-            ✦
-          </span>
-          <div className="font-serif text-[18px] leading-[1.3] text-ink">Rien à raconter pour l&apos;instant</div>
+        <div className="mt-[26px] flex flex-col items-center text-center">
+          {/* VISUEL D'ÉTAT VIDE (fournis le 25/09/2026). Il remplace la
+              pastille ✦ de 56 px : sur un écran qui n'a rien à montrer, une
+              planche de styliste dit ce que le journal contiendra, là où un
+              glyphe ne disait que « c'est vide ».
+
+              CHOISI SUR LE GENRE DÉCLARÉ, comme les photos éditoriales de
+              repli de l'accueil (`journalGender`, HomeScreen). Le brief du
+              23/09 interdisait de choisir un JEU DE MANNEQUINS selon le genre
+              pour illustrer les looks de quelqu'un ; il a été réglé en
+              montrant ses vrais looks, et le repli éditorial a été conservé
+              tel quel. Ces deux planches sont des à-plats de vêtements, sans
+              personne dessus — elles n'exposent donc personne à se
+              reconnaître ou non dans un modèle.
+
+              `unoptimized` de fait : pas de next/image, l'export statique
+              (output: "export") ne l'embarque pas. D'où le <img> et les
+              dimensions écrites, qui réservent la place avant chargement. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={visuelVide}
+            alt="Une planche de styliste à plat : une veste, un haut, un pantalon, des chaussures et un sac posés sur des socles clairs"
+            width={720}
+            height={731}
+            loading="lazy"
+            className="w-full max-w-[280px] h-auto rounded-[20px]"
+          />
+          <div className="font-serif text-[18px] leading-[1.3] text-ink mt-5">Rien à raconter pour l&apos;instant</div>
           <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[250px]">
             Porte une tenue pour commencer ton journal.
           </div>

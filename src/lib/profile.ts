@@ -1,3 +1,6 @@
+import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
+export { PAL_COULEURS } from "./palCouleurs";
+import { PAL_COULEURS } from "./palCouleurs";
 /** Genre — 2 valeurs (Tâche 3, arbitrages du 20/08/2026 : "Neutre / non-binaire" et "Préfère ne pas dire" retirés). */
 export type Gender = "femme" | "homme";
 
@@ -20,8 +23,17 @@ export interface Profile {
   gender: Gender | null;
   /** Palette personnelle (recette 12/08/2026, champ unique depuis le 20/08/2026 — fusion base/neutres/accents, Tâche 8). */
   paletteCouleurs: string[];
+  /**
+   * LEGACY, LECTURE SEULE. L'étape « tons chauds / tons froids » est retirée
+   * de l'onboarding le 25/09/2026 : une affinité déclarée n'est pas une
+   * colorimétrie, et la laisser côtoyer une vraie analyse entretenait la
+   * confusion. La colonne reste en base et reste lue — on n'écrase pas ce
+   * que des profils ont déjà renseigné — mais plus rien ne l'écrit.
+   */
   paletteAffinite: Affinite | null;
   paletteIntensite: Intensite | null;
+  /** Résultat d'analyse colorimétrique, ou `{ statut: "aucune" }`. */
+  colorimetrie: Colorimetrie;
   tailleHaut: string | null;
   tailleBas: string | null;
   pointure: string | null;
@@ -50,6 +62,7 @@ export const EMPTY_PROFILE: Profile = {
   paletteCouleurs: [],
   paletteAffinite: null,
   paletteIntensite: null,
+  colorimetrie: COLORIMETRIE_VIDE,
   tailleHaut: null,
   tailleBas: null,
   pointure: null,
@@ -78,29 +91,6 @@ export function genderLabel(g: Gender | null): string {
  * couleurs vives) — ne pas réordonner sans revalidation, la grille 4
  * colonnes de ProfileSetupScreen s'appuie sur cet ordre exact.
  */
-export const PAL_COULEURS: [string, string][] = [
-  ["Noir", "#2A2724"],
-  ["Marine", "#3A4152"],
-  ["Gris", "#8E8B85"],
-  ["Blanc / écru", "#EDE4D6"],
-  ["Blanc", "#F7F4EE"],
-  ["Crème", "#E7DCC8"],
-  ["Sable", "#DCCFBC"],
-  ["Beige", "#CDBBA2"],
-  ["Taupe", "#A8967C"],
-  ["Chocolat", "#5A4436"],
-  ["Camel", "#C08A5E"],
-  ["Kaki", "#6E7358"],
-  ["Vert bouteille", "#3C5347"],
-  ["Bordeaux", "#6E3B3A"],
-  ["Prune", "#5B3A4A"],
-  ["Rouge", "#933B33"],
-  ["Terracotta", "#A66950"],
-  ["Rose poudré", "#D6A9A0"],
-  ["Corail", "#CF7358"],
-  ["Moutarde", "#C29A3D"],
-  ["Bleu", "#4A6280"],
-];
 export const MIN_PALETTE_COULEURS = 1;
 export const MAX_PALETTE_COULEURS = 6;
 
