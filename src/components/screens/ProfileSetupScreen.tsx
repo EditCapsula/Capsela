@@ -492,8 +492,8 @@ export default function ProfileSetupScreen() {
                     <img
                       src={visuelFemme}
                       alt=""
-                      width={308}
-                      height={412}
+                      width={900}
+                      height={1200}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover block"

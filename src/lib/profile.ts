@@ -221,8 +221,10 @@ export function exposedStyleIds(gender: Gender | null): StyleId[] {
 
 /**
  * VISUELS DE L'ÉTAPE « STYLE », CÔTÉ FEMME (fournis le 25/09/2026) — des
- * flat lays éditoriaux, sans personne, au format portrait 308 × 412 (3:4),
- * servis depuis public/images/styles/.
+ * flat lays éditoriaux, sans personne, au format portrait 900 × 1200 (3:4
+ * exact), servis depuis public/images/styles/. Fournis en PNG (12,2 Mo les
+ * huit), convertis en WebP qualité 82 (842 Ko) : écart mesuré ≥ 35,7 dB de
+ * PSNR sur l'image la plus détaillée, sans différence visible à 100 %.
  *
  * UNE RÉFÉRENCE PROPRE À CET ÉCRAN, et non un remplacement de
  * STYLE_CONFIG[…].asset : ces images-là sont aussi lues par les cartes
@@ -231,14 +233,14 @@ export function exposedStyleIds(gender: Gender | null): StyleId[] {
  * StyleId : aucune donnée métier ne change.
  */
 export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
-  minimaliste: "/images/styles/minimaliste.png",
-  casual_chic: "/images/styles/casual-chic.png",
-  classique_chic: "/images/styles/classique-chic.png",
-  romantique: "/images/styles/romantique.png",
-  boheme: "/images/styles/boheme.png",
-  streetwear: "/images/styles/streetwear.png",
-  preppy: "/images/styles/preppy.png",
-  glamour: "/images/styles/glamour.png",
+  minimaliste: "/images/styles/minimaliste.webp",
+  casual_chic: "/images/styles/casual-chic.webp",
+  classique_chic: "/images/styles/classique-chic.webp",
+  romantique: "/images/styles/romantique.webp",
+  boheme: "/images/styles/boheme.webp",
+  streetwear: "/images/styles/streetwear.webp",
+  preppy: "/images/styles/preppy.webp",
+  glamour: "/images/styles/glamour.webp",
 };
 
 export function styleConfigFor(gender: Gender | null): Record<StyleId, StyleCardConfig> {
