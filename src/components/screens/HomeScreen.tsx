@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import BadgePremium from "@/components/BadgePremium";
+import BottomSheet from "@/components/BottomSheet";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS, WEATHER_ICONS } from "@/lib/data";
@@ -513,7 +515,23 @@ export default function HomeScreen() {
    * existera, cet état sera alimenté par elle au montage plutôt que remis à
    * zéro à chaque visite.
    */
-  const { state, geoCity, geoLoading, vestiairePool, weather, actions } = useCapsela();
+  const { state, geoCity, geoLoading, vestiairePool, weather, etatPremium, actions } = useCapsela();
+
+  /**
+   * AVIS DE STYLISTE — accès (docs/avis-de-styliste.md, sections 4 et 5).
+   * Premium CONFIRMÉ → écran direct ; tout autre statut → Premium Gate.
+   *
+   * À ARBITRER: distinction Free / sans abonnement / non connecté (point 9,
+   * « pas de préférence » le 25/09/2026). Retenu, le plus réversible : tout
+   * statut autre que "premium" — gratuit, inconnu, mode démo — voit le Gate.
+   * C'est l'inverse de la règle « échoue en ouvrant » des autres limites
+   * (premium.ts) : ici un accès accordé à tort déclencherait un appel payant.
+   */
+  const [gateAvisStyliste, setGateAvisStyliste] = useState(false);
+  const ouvrirAvisStyliste = () => {
+    if (etatPremium === "premium") actions.goAvisStyliste();
+    else setGateAvisStyliste(true);
+  };
 
   /**
    * L'avis du jour vient désormais du store, donc de la base (0029), et non
@@ -1147,6 +1165,70 @@ export default function HomeScreen() {
           </div>
         </div>
       </div>
+
+      {/* 5. BESOIN D'UN REGARD ? (arbitré le 25/09/2026). Section à part, et
+          non une troisième action de « Et si on préparait la suite ? » :
+          planifier et préparer une valise anticipent, l'avis de styliste
+          porte sur une tenue qu'on a déjà. Même système de titre que « Ton
+          dressing, autrement », même carte que les modules (fond carte, rayon
+          22, titre serif 18) : présente, jamais dominante. Libellés fournis
+          le 25/09/2026. « Demander un avis » (écran Tenue, partage à un
+          proche) est une autre fonctionnalité et n'est pas touché. */}
+      <div className="mx-6 mt-7">
+        <div className="font-serif text-[21px] leading-[1.18] text-ink">
+          Besoin d&apos;un <span className="italic text-terracotta">regard</span> ?
+        </div>
+      </div>
+      <div className="px-6 mt-4">
+        <button
+          onClick={ouvrirAvisStyliste}
+          className="w-full min-w-0 text-left bg-card border border-border rounded-[22px] px-4 pt-[15px] pb-[6px] cursor-pointer transition-opacity active:opacity-90"
+        >
+          <span className="flex items-start justify-between gap-3">
+            <span className="font-serif text-[18px] text-ink leading-[1.2]">
+              Avis de <span className="italic text-terracotta">styliste</span>
+            </span>
+            <BadgePremium />
+          </span>
+          <span className="block text-[11px] text-muted leading-[1.45] mt-[6px]" style={{ textWrap: "pretty" }}>
+            Montre ta tenue à Capsela et découvre ce qui fonctionne, ce que tu peux ajuster et les pièces de ton dressing à
+            essayer.
+          </span>
+          <span className="flex items-center min-h-[44px] mt-[2px] text-[12px] tracking-[.1em] uppercase text-terracotta">
+            Obtenir mon avis
+          </span>
+        </button>
+      </div>
+
+      {/* Premium Gate [DÉCIDÉ], section 5 : libellés exacts. Forme arbitrée
+          le 25/09/2026 : feuille modale, comme le Gate du quota « Autre
+          tenue » (TenuesScreen) ; « Plus tard » la referme et laisse sur
+          l'accueil. Aucune publicité récompensée n'y est proposée.
+          À ARBITRER: visuel du Gate (section 5) — aucun tant qu'il n'est pas
+          fourni. */}
+      <BottomSheet title="Et si on regardait ta tenue ?" open={gateAvisStyliste} onClose={() => setGateAvisStyliste(false)}>
+        <div className="text-[13px] text-ink leading-[1.55]">
+          Envoie une photo de ton look et laisse Capsela te donner un avis personnalisé sur ce qui fonctionne et ce que tu
+          pourrais ajuster.
+        </div>
+        <button
+          onClick={() => {
+            setGateAvisStyliste(false);
+            actions.goPremium();
+          }}
+          className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer mt-5"
+          style={{ minHeight: 52 }}
+        >
+          Découvrir Premium
+        </button>
+        <button
+          onClick={() => setGateAvisStyliste(false)}
+          className="w-full rounded-full text-[12px] text-muted-3 cursor-pointer mt-1"
+          style={{ minHeight: 44 }}
+        >
+          Plus tard
+        </button>
+      </BottomSheet>
     </div>
   );
 }

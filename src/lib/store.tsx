@@ -187,6 +187,8 @@ export interface Actions {
   goLegal: () => void;
   /** Ouvre la page Premium en mémorisant d'où l'on vient. */
   goPremium: (origine?: "valise") => void;
+  /** Écran « Avis de styliste » (docs/avis-de-styliste.md). Réservé Premium : l'accueil ouvre le Premium Gate à la place pour tout autre statut. */
+  goAvisStyliste: () => void;
   backFromLegal: () => void;
   goLogin: () => void;
   /**
@@ -877,6 +879,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         premiumOrigine: origine ?? null,
         screen: "premium",
       })),
+    goAvisStyliste: () => go("avisStyliste"),
     backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
     goLogin: () => go("login"),
     goProfileSetup: (stepKey = "genre", fromEdit = false) =>

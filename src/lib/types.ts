@@ -422,4 +422,7 @@ export type Screen =
   // Destinations Premium (brief Accueil 22/09/2026) — écrans d'attente
   // assumés, branchés pour que la carte ne mène pas dans le vide.
   | "planifier"
-  | "premium";
+  | "premium"
+  // Avis de styliste (Premium, 25/09/2026, docs/avis-de-styliste.md) —
+  // ouvert depuis la carte « Besoin d'un regard ? » de l'accueil.
+  | "avisStyliste";
