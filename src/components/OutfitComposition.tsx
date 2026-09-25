@@ -156,11 +156,14 @@ const TIER_SPAN: Record<CompositionVariant, Record<CompositionTier, { col: numbe
  * n'autorise à transporter une mesure prise sur l'écran Tenue vers un écran
  * qui empile plusieurs compositions par page.
  */
+/** Unité de rangée de "hero" — exportée pour que l'écran Tenue dimensionne sa zone fixe sur la même mesure. */
+export const UNITE_HERO = "clamp(15.33px, calc(5.667vw - 4px), 20.67px)";
+
 const VARIANT_CONFIG: Record<CompositionVariant, { cols: number; rowHeight: string; gap: number; radius: number; pad: number }> = {
   // Unité en tiers de rangée, calée sur l'ancienne (cf. ci-dessus). Retrait
   // intérieur ramené de 8 à 2 px : il servait à détacher la pièce de sa tuile
   // beige, qui n'existe plus — la gouttière de 6 px sépare désormais seule.
-  hero: { cols: 4, rowHeight: "clamp(15.33px, calc(5.667vw - 4px), 20.67px)", gap: 6, radius: 14, pad: 2 },
+  hero: { cols: 4, rowHeight: UNITE_HERO, gap: 6, radius: 14, pad: 2 },
   // Le vêtement est le contenu principal de la card (recette 26/08/2026,
   // 3e passe — signalé : vignettes trop petites pour reconnaître une pièce).
   // Rangée portée de ~39px à ~51px à 390px, soit +30% en linéaire et +70% en
@@ -197,11 +200,21 @@ export function OutfitComposition({
   items,
   variant = "hero",
   anchorId,
+  ajustee = false,
 }: {
   items: Item[];
   variant?: CompositionVariant;
   /** Id de la pièce pivot à distinguer par un contour terracotta — jamais utilisé pour un autre état UI (brief design 22/08/2026, section 2). */
   anchorId?: number;
+  /**
+   * La composition remplit la hauteur de son parent au lieu de la dicter
+   * (brief du 25/09, point 5 — hero de l'écran Tenue). Chaque rangée garde sa
+   * taille naturelle AU PLUS (minmax(0, unité)) : une tenue courte est
+   * centrée, jamais agrandie ; une tenue longue voit toutes ses rangées
+   * réduites d'autant, les proportions entre pièces restant celles calibrées
+   * ci-dessus. Le parent doit avoir une hauteur définie.
+   */
+  ajustee?: boolean;
 }) {
   const cfg = VARIANT_CONFIG[variant];
   // "hero" repose sur le terracotta de la card Tenue, pas sur le fond de
@@ -212,7 +225,9 @@ export function OutfitComposition({
       style={{
         display: "grid",
         gridTemplateColumns: `repeat(${cfg.cols}, 1fr)`,
-        gridAutoRows: cfg.rowHeight,
+        gridAutoRows: ajustee ? `minmax(0, ${cfg.rowHeight})` : cfg.rowHeight,
+        height: ajustee ? "100%" : undefined,
+        alignContent: ajustee ? "center" : undefined,
         // Flux normal, jamais "dense" (recette 26/08/2026) : le remplissage
         // dense remonte les petites pièces dans les trous laissés par les
         // grandes, si bien qu'une même catégorie changeait de place d'une

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
@@ -698,8 +698,24 @@ export default function TenuesScreen() {
               côte, et la phrase passe alors proprement dessous au lieu d'être
               tronquée ou de pousser la card. La gouttière verticale (gap-y)
               existe pour ce cas-là seulement. */}
+          {/* ZONE HERO À HAUTEUR FIXE (brief du 25/09, point 5). Elle
+              contient la ligne de badges, la composition et la provenance :
+              les trois variaient d'une tenue à l'autre (nombre de rangées,
+              badges qui passent à la ligne à 320 px, une ou deux pastilles
+              de provenance), et poussaient d'autant « Porter cette tenue »,
+              les deux secondaires et « Autre tenue ». La composition prend
+              ce qui reste (flex-1) et s'y ajuste (cf. `ajustee`) : la card
+              ne dépend plus du vêtement affiché.
+
+              Hauteur calée sur 13 unités de rangée — entre une tenue sans
+              veste (10) et avec veste (16), les deux cas courants — plus
+              l'en-tête et la provenance sur une ligne. Mesuré à 14 : une
+              tenue de 4 pièces flottait dans ~90 px de vide en haut et en
+              bas. À 13, une tenue courte est centrée avec un peu d'air, une
+              tenue avec veste est ramenée à ~80 % — réduite, jamais rognée. */}
+          <div className="flex flex-col" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px + 92px)` }}>
           {(badges.length > 0 || recommendationText) && (
-          <div className="flex items-center flex-wrap gap-x-[10px] gap-y-[5px]">
+          <div className="flex-shrink-0 flex items-center flex-wrap gap-x-[10px] gap-y-[5px]">
             {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la
                 qualité vient du score, le registre du repli de formalité. Sur
                 fond terracotta, la hiérarchie passe par le remplissage —
@@ -740,8 +756,10 @@ export default function TenuesScreen() {
           </div>
           )}
 
-          <div className="mt-[13px]">
-            <OutfitComposition items={outfitPieces} variant="hero" />
+          <div className="flex-1 min-h-0 mt-[13px]">
+            <OutfitComposition items={outfitPieces} variant="hero" ajustee />
+          </div>
+          <div className="flex-shrink-0">
             {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.
                 La maquette les pose en surimpression en bas à gauche du
                 flat-lay. Essayé, capturé : à 390 px, les ballerines
@@ -783,13 +801,16 @@ export default function TenuesScreen() {
               </div>
             )}
           </div>
+          </div>
 
           {/* ACTION PRINCIPALE. Elle reste dans la card, au-dessus de tout
               avertissement — un bouton dont la position dépend du nombre de
               bannières n'est pas un bouton principal. 52 px : cible tactile
               du brief, et le plus grand élément cliquable de l'écran. */}
           {state.outfitValidated ? (
-            <div className="mt-[14px] flex items-center gap-3 rounded-full py-[13px] px-4" style={{ background: "rgba(29,26,22,.28)" }}>
+            /* Même hauteur que le bouton qu'il remplace (50 px) : valider la
+               tenue ne doit pas déplacer les actions en dessous. */
+            <div className="mt-[14px] flex items-center gap-3 rounded-full py-[9px] px-4" style={{ minHeight: 50, background: "rgba(29,26,22,.28)" }}>
               <span className="w-8 h-8 rounded-full bg-cream text-terracotta flex items-center justify-center text-base flex-shrink-0">
                 ✓
               </span>

@@ -18,7 +18,7 @@ import {
   type ProfilePrefs,
 } from "@/lib/profile";
 
-function GenderModal({
+export function GenderModal({
   current,
   onSelect,
   onClose,
@@ -64,7 +64,7 @@ function GenderModal({
  * "incompatible", jamais de redirection forcée vers le questionnaire
  * d'onboarding (seul un clic explicite sur le CTA ouvre l'étape dédiée).
  */
-function RevalidationSheet({ field, onDismiss, onEdit }: { field: GenderDependentField; onDismiss: () => void; onEdit: () => void }) {
+export function RevalidationSheet({ field, onDismiss, onEdit }: { field: GenderDependentField; onDismiss: () => void; onEdit: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center"
