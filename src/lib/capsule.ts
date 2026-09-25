@@ -426,6 +426,19 @@ export function morphologieOrienteLaSelection(morphology: string | null | undefi
   return morphology != null && MORPHOLOGIES_AVEC_DIRECTION.includes(morphology);
 }
 
+/**
+ * True si la sélection a compté cette pièce au titre de la morphologie
+ * déclarée (rang 4 de `pickBestMarginal`). Exportée le 25/09/2026 pour la
+ * fiche d'une suggestion de l'écran Capsule, qui ne doit dire « pensée aussi
+ * pour ta silhouette » que d'une pièce dont c'est vrai. Lecture seule de
+ * `axeDirection`, que le moteur utilise : l'affichage ne peut pas diverger.
+ * La saturation ne s'annulant jamais (cf. SATURATION), un axe non nul vaut
+ * toujours une valeur strictement positive.
+ */
+export function pieceOrienteeParMorphologie(it: Item, morphology: string | null | undefined): boolean {
+  return axeDirection(it, morphology ?? null) !== null;
+}
+
 /** Extrémité sur laquelle la pièce apporte une direction utile à cette morphologie, ou null. */
 function axeDirection(it: Item, morphology: string | null): "haut" | "bas" | null {
   if (!morphologieOrienteLaSelection(morphology)) return null;
