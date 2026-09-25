@@ -22,7 +22,7 @@ import {
   type GenderDependentField,
 } from "@/lib/profile";
 import { APP_VERSION } from "@/lib/data";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 
 /*
  * TON PROFIL — refonte du 25/09/2026 (brief « Refonte UX/UI du profil » et
@@ -269,13 +269,19 @@ export default function ProfileScreen() {
   return (
     // pb-safe-nav : dégagement sous la navigation fixe, zone système comprise.
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <div className="flex items-start gap-[14px]">
-        <BoutonRetour onClick={() => actions.go(state.profileReturn)} label="Revenir à l'écran précédent" />
-        <div className="min-w-0 pt-[2px]">
-          <div className="font-serif text-[27px] leading-[1.12] text-ink">Ton profil</div>
-          <div className="text-[13px] text-muted leading-[1.45] mt-[4px]">Tout ce qui aide Capsela à mieux te conseiller.</div>
-        </div>
+      {/* LE BANDEAU DE TOUTES LES PAGES (signalé le 25/09 : « pas raccord
+          avec les autres pages au niveau du header, des marges »). Le profil
+          posait son propre en-tête — retour et titre sur une ligne, sans
+          logo — quand Dressing, Capsule, Journal ou Planifier ouvrent sur
+          AppHeader, puis surtitre et titre 27 px. Même structure ici ; le
+          retour occupe la gouttière gauche du bandeau, et l'avatar n'y est
+          pas : on est déjà sur le profil. */}
+      <AppHeader showAvatar={false} onBack={() => actions.go(state.profileReturn)} backLabel="Revenir à l'écran précédent" />
+      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[18px]">Profil</div>
+      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+        Ton <span className="italic text-terracotta">profil</span>
       </div>
+      <div className="text-[13px] text-muted-3 leading-[1.5] mt-[8px]">Tout ce qui aide Capsela à mieux te conseiller.</div>
 
       {/* IDENTITÉ, ALLÉGÉE : la carte noire dominait la page. Elle garde
           l'initiale, le nom, l'e-mail — et « Modifier » ouvre l'écran

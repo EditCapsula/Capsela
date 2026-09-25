@@ -140,6 +140,43 @@ function statutAttente(item: Item, port: EtatDePort): string {
   return `${port.moisSansPort} mois`;
 }
 
+/** Jauge en anneau : la part de la capsule déjà portée, le chiffre écrit au centre. */
+function AnneauCapsule({ pourcentage }: { pourcentage: number }) {
+  const taille = 92;
+  const trait = 7;
+  const r = (taille - trait) / 2;
+  const c = 2 * Math.PI * r;
+  const plein = (Math.min(100, Math.max(0, pourcentage)) / 100) * c;
+  return (
+    <div className="relative flex-shrink-0" style={{ width: taille, height: taille }} role="img" aria-label={`${pourcentage} % de ta capsule portée`}>
+      <svg width={taille} height={taille} viewBox={`0 0 ${taille} ${taille}`} aria-hidden="true" style={{ display: "block" }}>
+        <circle cx={taille / 2} cy={taille / 2} r={r} fill="none" stroke="var(--color-warm-bg)" strokeWidth={trait} />
+        {plein > 0 && (
+          <circle
+            cx={taille / 2}
+            cy={taille / 2}
+            r={r}
+            fill="none"
+            stroke="var(--color-terracotta)"
+            strokeWidth={trait}
+            strokeLinecap="round"
+            strokeDasharray={`${plein} ${c - plein}`}
+            transform={`rotate(-90 ${taille / 2} ${taille / 2})`}
+          />
+        )}
+      </svg>
+      <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="font-serif text-[21px] leading-none text-ink">{pourcentage} %</span>
+        <span className="text-[9px] text-muted leading-[1.2] mt-[4px]">
+          de ta capsule
+          <br />
+          portée
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Un look de l'historique, son visuel d'abord.
  *
@@ -511,24 +548,28 @@ export default function HistoryScreen() {
 
       {/* BILAN — une métrique principale, deux secondaires, chacune dite en
           toutes lettres (§6 : pas de petit chiffre sans contexte). */}
-      <div className="mt-5 bg-card border border-border rounded-[20px] px-5 py-[18px]">
+      {/* L'ANNEAU de la maquette (signalé le 25/09 : « il manque le graphe »).
+          Une jauge, pas un graphique : une seule valeur rapportée à un
+          total. Le pourcentage est écrit au centre en toutes lettres — la
+          couleur ne porte jamais seule l'information. Arc terracotta sur
+          piste sable : 3,4:1, au-dessus du seuil de 3:1 d'un élément
+          graphique. Les deux chiffres secondaires sont à droite, séparés par
+          des filets, comme sur la maquette. */}
+      <div className="mt-5 bg-card border border-border rounded-[20px] px-4 py-4 flex items-center gap-3">
         {capsule.total > 0 && (
           <>
-            <div className="flex items-baseline gap-[10px]">
-              <span className="font-serif text-[34px] leading-none text-ink">{capsule.pourcentage} %</span>
-              <span className="text-[13px] text-muted-3">de ta capsule portée</span>
-            </div>
-            <div className="h-px bg-border my-[15px]" />
+            <AnneauCapsule pourcentage={capsule.pourcentage} />
+            <span aria-hidden="true" className="self-stretch w-px bg-border flex-shrink-0" />
           </>
         )}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
+        <div className="flex-1 min-w-0 grid grid-cols-2">
+          <div className="pr-2">
             <div className="font-serif text-[21px] leading-none text-ink">{entries.length}</div>
-            <div className="text-[12px] text-muted mt-[5px]">{pl(entries.length, "tenue portée", "tenues portées")}</div>
+            <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(entries.length, "tenue portée", "tenues portées")}</div>
           </div>
-          <div>
+          <div className="pl-3 border-l border-border">
             <div className="font-serif text-[21px] leading-none text-ink">{capsule.portees}</div>
-            <div className="text-[12px] text-muted mt-[5px]">{pl(capsule.portees, "pièce utilisée", "pièces utilisées")}</div>
+            <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(capsule.portees, "pièce utilisée", "pièces utilisées")}</div>
           </div>
         </div>
       </div>
