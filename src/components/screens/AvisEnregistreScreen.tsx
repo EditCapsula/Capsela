@@ -20,13 +20,14 @@ import { useCapsela } from "@/lib/store";
  */
 
 const TEXTES = {
-  // TODO_COPY : suppression d'un avis enregistré (arbitré le 25/09/2026, sans libellés).
-  supprimer: "TODO_COPY",
-  titreConfirmation: "TODO_COPY",
-  texteConfirmation: "TODO_COPY",
-  confirmer: "TODO_COPY",
-  echecSuppression: "TODO_COPY",
-  annuler: "Annuler", // libellé commun de l'app (PieceScreen, AccountScreen)
+  // Suppression d'un avis enregistré — libellés validés le 25/09/2026.
+  // « Annuler » conserve l'avis ; « Supprimer l'avis » efface l'avis ET sa photo.
+  supprimer: "Supprimer l'avis",
+  titreConfirmation: "Supprimer cet avis ?",
+  texteConfirmation: "Cet avis et la photo associée seront définitivement supprimés de ton Journal.",
+  confirmer: "Supprimer l'avis",
+  echecSuppression: "Impossible de supprimer cet avis pour le moment. Réessaie.",
+  annuler: "Annuler", // validé le 25/09/2026 ; libellé commun de l'app (PieceScreen, AccountScreen)
 };
 
 const formatDate = (t: number) => new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });

@@ -51,8 +51,7 @@ const TEXTES = {
   enregistrer: "Enregistrer dans mon journal", // §3, §12
   nouvelle: "Nouvelle analyse", // §3, §12
   enregistre: "Enregistré", // §4 (état « Enregistré » après succès)
-  // TODO_COPY : proposition de la spec (§15, « Problème de stockage »), non validée.
-  enregistrementEchoue: "L'enregistrement n'a pas abouti. Réessaie.",
+  enregistrementEchoue: "Impossible d'enregistrer ton avis pour le moment. Réessaie.", // validé le 25/09/2026
   // TODO_COPY : suppression de la photo avant analyse ([RECOMMANDÉ] §6 et §11, sans libellé).
   supprimer: "TODO_COPY",
   // TODO_COPY : message d'attente pendant l'analyse (§6, « libellé À ARBITRER »).
