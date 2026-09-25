@@ -145,6 +145,113 @@ export function inactivityInfo(item: Item): InactivityInfo {
   return { inactive: true, periodLabel };
 }
 
+/**
+ * La saison la plus récente déjà entièrement écoulée, quel que soit son type
+ * (printemps/été OU automne/hiver) — celle des deux fenêtres de
+ * lastCompletedSeasonWindow qui s'est terminée le plus tard. Sert de
+ * "dernière saison" à une pièce "Toutes saisons", qui n'en a pas de propre.
+ */
+function lastCompletedAnyWindow(now: number): { start: number; end: number } {
+  const chaude = lastCompletedSeasonWindow("Printemps / Été", now)!;
+  const froide = lastCompletedSeasonWindow("Automne / Hiver", now)!;
+  return chaude.end > froide.end ? chaude : froide;
+}
+
+/**
+ * Les deux saisons écoulées les plus récentes, bout à bout — soit une année
+ * pleine, jamais une durée fixe de 365 jours : même découpage au 1er mars et
+ * au 1er septembre que lastCompletedSeasonWindow. `ancienneFin` est la fin de
+ * la plus ancienne des deux, pour vérifier la présence minimale.
+ */
+function deuxDernieresSaisons(now: number): { start: number; end: number; ancienneFin: number } {
+  const chaude = lastCompletedSeasonWindow("Printemps / Été", now)!;
+  const froide = lastCompletedSeasonWindow("Automne / Hiver", now)!;
+  const ancienne = chaude.start < froide.start ? chaude : froide;
+  return { start: ancienne.start, end: Math.max(chaude.end, froide.end), ancienneFin: ancienne.end };
+}
+
+const MS_PAR_MOIS = 30.4375 * 24 * 60 * 60 * 1000;
+
+/**
+ * Où en est une pièce dans sa vie portée (refonte du Journal, 25/09/2026).
+ * Les quatre cas du brief, §7 :
+ *
+ * - "jamais"    : aucune entrée d'historique ne la contient ;
+ * - "recente"   : portée pendant sa dernière saison écoulée, ou depuis ;
+ * - "delaissee" : pas portée de toute sa dernière saison écoulée, alors
+ *                 qu'elle était déjà là — « À sortir du placard » ;
+ * - "a_vendre"  : pas portée des deux dernières saisons écoulées, bout à
+ *                 bout (une année pleine) — « à envisager de vendre ».
+ *
+ * AUCUN SEUIL NOUVEAU. Règle arbitrée le 25/09/2026 (« Règle existante, par
+ * saison ») : on reprend les fenêtres de inactivityInfo (1er mars / 1er
+ * septembre, jamais une ancienneté brute en mois) et son seuil de présence
+ * MIN_SEASON_PRESENCE_MS. inactivityInfo reste inchangée : elle ne parle que
+ * des pièces jamais portées, et deux écrans en dépendent (Jamais portées,
+ * fiche pièce). Cette fonction-ci couvre en plus les pièces portées il y a
+ * longtemps, qu'elle ignorait.
+ *
+ * Une pièce d'été non portée cet hiver n'est jamais "délaissée" pour ça : on
+ * compare au printemps/été écoulé. Une pièce "Toutes saisons" est comparée à
+ * la plus récente saison écoulée, quelle qu'elle soit.
+ *
+ * "a_vendre" n'est rendu que pour une pièce du dressing réel (createdAt
+ * connu) : une suggestion du catalogue ne s'achète pas, elle ne se revend
+ * donc pas. Pour une pièce jamais portée, la même exigence de présence
+ * s'applique : ajoutée il y a trois semaines, elle n'est candidate à rien.
+ *
+ * Le dernier port est lu dans l'historique réel (comme daysSinceWorn),
+ * jamais dans Item.worn, figé par la dernière action « porter ».
+ */
+export type EtatPort = "jamais" | "recente" | "delaissee" | "a_vendre";
+
+export interface EtatDePort {
+  etat: EtatPort;
+  /** Horodatage du dernier port réel, null si jamais portée. */
+  dernierPort: number | null;
+  /** Mois pleins écoulés depuis le dernier port, null si jamais portée. */
+  moisSansPort: number | null;
+}
+
+export function etatDePort(item: Item, history: HistoryEntry[], now: number = Date.now()): EtatDePort {
+  let dernier: number | null = null;
+  let premier: number | null = null;
+  for (const h of history) {
+    if (!h.pieceIds.includes(item.id)) continue;
+    if (dernier == null || h.ts > dernier) dernier = h.ts;
+    if (premier == null || h.ts < premier) premier = h.ts;
+  }
+  const annee = deuxDernieresSaisons(now);
+  // Présente depuis quand : son ajout au dressing, ou à défaut son premier
+  // port (on ne porte pas une pièce qu'on n'a pas encore).
+  const presenceDepuis = Math.min(item.createdAt ?? Infinity, premier ?? Infinity);
+  const presenteToutLAnnee =
+    item.createdAt != null && annee.ancienneFin - Math.max(presenceDepuis, annee.start) >= MIN_SEASON_PRESENCE_MS;
+
+  if (dernier == null) {
+    return { etat: presenteToutLAnnee ? "a_vendre" : "jamais", dernierPort: null, moisSansPort: null };
+  }
+
+  const moisSansPort = moisDepuis(dernier, now);
+  const saison = item.season === "Toutes saisons" ? lastCompletedAnyWindow(now) : lastCompletedSeasonWindow(item.season, now)!;
+  if (dernier >= saison.start) return { etat: "recente", dernierPort: dernier, moisSansPort };
+
+  if (dernier < annee.start && presenteToutLAnnee) return { etat: "a_vendre", dernierPort: dernier, moisSansPort };
+  const presenceSaison = saison.end - Math.max(presenceDepuis, saison.start);
+  return { etat: presenceSaison >= MIN_SEASON_PRESENCE_MS ? "delaissee" : "recente", dernierPort: dernier, moisSansPort };
+}
+
+/** Mois pleins écoulés depuis un horodatage — même mesure pour « sans port » et « dans ton dressing depuis ». */
+export function moisDepuis(ts: number, now: number = Date.now()): number {
+  return Math.max(0, Math.floor((now - ts) / MS_PAR_MOIS));
+}
+
+/** « octobre 2025 » — le mois et l'année d'un dernier port, sans le jour : à cette distance, le jour ne dit plus rien. */
+export function moisAnnee(ts: number): string {
+  const d = new Date(ts);
+  return MONTHS[d.getMonth()] + " " + d.getFullYear();
+}
+
 export interface JournalStats {
   total: number;
   worn: number;
@@ -194,6 +301,8 @@ export function journalStats(items: Item[], history: HistoryEntry[]): JournalSta
 export interface JournalInsights {
   wornThisMonth: number;
   distinctPiecesWornThisMonth: number;
+  /** Occasion dominante du mois, null si moins de 3 tenues ce mois-ci — la clé, pour qu'un écran puisse en tirer sa propre phrase. */
+  topOccasion: OccasionKey | null;
   /** Libellé court de l'occasion dominante du mois (ex. "Quotidien"), null si moins de 3 tenues ce mois-ci. */
   topOccasionShort: string | null;
   /** Part (0-100) des tenues du mois relevant de l'occasion dominante. */
@@ -222,15 +331,17 @@ export function journalInsights(history: HistoryEntry[]): JournalInsights {
     if (!h.occasion || h.occasion === "all") return;
     occCounts.set(h.occasion, (occCounts.get(h.occasion) || 0) + 1);
   });
+  let topOccasion: OccasionKey | null = null;
   let topOccasionShort: string | null = null;
   let topOccasionShare: number | null = null;
   if (occCounts.size > 0 && monthHistory.length >= 3) {
     const [topKey, topCount] = [...occCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+    topOccasion = topKey;
     topOccasionShort = occasionShortLabel(topKey);
     topOccasionShare = Math.round((topCount / monthHistory.length) * 100);
   }
 
-  return { wornThisMonth, distinctPiecesWornThisMonth, topOccasionShort, topOccasionShare };
+  return { wornThisMonth, distinctPiecesWornThisMonth, topOccasion, topOccasionShort, topOccasionShare };
 }
 
 /** Nouveaux looks enregistrés (Créer un look) ce mois-ci — distinct des tenues portées : ne compte que les looks explicitement sauvegardés. */
@@ -278,6 +389,9 @@ export type JournalPeriod = "today" | "yesterday" | "week" | "earlier";
 
 export interface JournalEntry {
   id: string;
+  ts: number;
+  /** « 25 septembre », avec l'année si ce n'est pas l'année en cours. */
+  jour: string;
   rel: string;
   period: JournalPeriod;
   hasOccasion: boolean;
@@ -307,9 +421,12 @@ export function journalEntries(history: HistoryEntry[], pool: Item[]): JournalEn
       const rel = diff <= 0 ? "Aujourd'hui" : diff === 1 ? "Hier" : DAYS_SHORT[d.getDay()] + " " + d.getDate() + " " + MONTHS[d.getMonth()];
       const period: JournalPeriod = diff <= 0 ? "today" : diff === 1 ? "yesterday" : diff <= 6 ? "week" : "earlier";
       const pcs = h.pieceIds.map((id) => pool.find((i) => i.id === id)).filter(Boolean) as Item[];
+      const jour = d.getDate() + " " + MONTHS[d.getMonth()] + (d.getFullYear() !== todayMid.getFullYear() ? " " + d.getFullYear() : "");
       const occ = h.occasion && h.occasion !== "all" ? OCC_LABELS[h.occasion] : "";
       return {
         id: h.id,
+        ts: h.ts,
+        jour,
         rel,
         period,
         hasOccasion: !!occ,

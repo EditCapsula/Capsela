@@ -22,6 +22,7 @@ import {
   insertSavedLook,
   upsertOutfitFeedback,
   updateDressingItem,
+  updateDressingItemRevente,
   updateDressingItemWorn,
   updateSavedLook,
   uploadDressingPhoto,
@@ -51,6 +52,7 @@ import type {
   BijouType,
   CapsuleSeason,
   CategoryKey,
+  ChoixRevente,
   City,
   Coupe,
   DateContext,
@@ -209,6 +211,15 @@ export interface Actions {
   /** Affiche une combinaison choisie depuis ce module sur l'écran Tenue — jamais un enregistrement automatique comme portée. */
   viewItemOutfit: (ids: number[], occasion: OccasionKey) => void;
   removeActive: () => void;
+  /**
+   * Enregistre le choix de l'utilisatrice face à une suggestion de revente
+   * du Journal (« Garder dans mon dressing » / « Mettre de côté pour
+   * vendre », null pour revenir sur son choix). Ne retire JAMAIS la pièce
+   * du dressing. Résout à false si l'écriture échoue — l'état local est
+   * alors remis comme avant, pour ne pas afficher un choix qui disparaîtrait
+   * au prochain chargement.
+   */
+  choisirRevente: (id: number, choix: ChoixRevente | null) => Promise<boolean>;
   /** Retire plusieurs pièces du dressing d'un coup (sélection multiple depuis "Mes pièces"). Les pièces suggérées ne passent jamais par ici. */
   removeItems: (ids: number[]) => void;
   /** Écarte une suggestion de la capsule par défaut. */
@@ -1357,6 +1368,25 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       if (isSupabaseConfigured && userId) {
         if (wornUpdate) updateDressingItemWorn([wornUpdate]).catch((err) => reportDressingError("updateDressingItemWorn", err));
         insertOutfitHistoryEntry(userId, entry).catch((err) => reportDressingError("insertOutfitHistoryEntry", err));
+      }
+    },
+    choisirRevente: async (id, choix) => {
+      const avant = stateRef.current.items.find((it) => it.id === id);
+      if (!avant) return false;
+      const precedent = avant.revente;
+      const poser = (valeur: ChoixRevente | undefined) =>
+        setState((st) => ({ ...st, items: st.items.map((it) => (it.id === id ? { ...it, revente: valeur } : it)) }));
+      poser(choix ?? undefined);
+      if (!isSupabaseConfigured || !userId) return true;
+      try {
+        await updateDressingItemRevente(id, choix);
+        return true;
+      } catch (err) {
+        // Cas attendu tant que la migration 0035 n'est pas exécutée : la
+        // colonne n'existe pas. Pas de bandeau global — l'écran le dit.
+        console.error("[dressing] échec updateDressingItemRevente", err);
+        poser(precedent);
+        return false;
       }
     },
     wearActiveToday: () => {

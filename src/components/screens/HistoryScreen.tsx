@@ -2,19 +2,42 @@
 
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { OutfitComposition } from "@/components/OutfitComposition";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { useAuth } from "@/lib/auth";
+import { MONTHS_FR, occasionShortLabel } from "@/lib/data";
+import { nounInfoOf } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import {
-  dailyActivity,
+  etatDePort,
   journalEntries,
   journalInsights,
   journalStats,
+  moisAnnee,
+  moisDepuis,
   mostWornPieces,
-  neverWornInPool,
   newLooksThisMonth,
+  type EtatDePort,
+  type JournalEntry,
   type JournalPeriod,
 } from "@/lib/selectors";
+import type { ChoixRevente, Item, OccasionKey } from "@/lib/types";
+
+/*
+ * LE JOURNAL — refonte du 25/09/2026 (brief « Refonte UX du Journal »).
+ *
+ * L'ancien écran empilait quatre tuiles de chiffres, un bandeau, un carrousel
+ * d'insights, un top 3 et « À redécouvrir » avant la première tenue : un
+ * tableau de bord. L'ordre est désormais celui d'une lecture — ce que tu as
+ * porté, ce que ça dit de toi, ce qui attend dans ton placard, ce que tu
+ * pourrais laisser partir, puis tes dernières tenues.
+ *
+ * AUCUN CHIFFRE N'EST ÉCRIT EN DUR. Tout vient de l'historique réel
+ * (journalStats, journalInsights, mostWornPieces, journalEntries) et de
+ * etatDePort pour le placard et la revente. Une section sans donnée n'est
+ * pas affichée — jamais de « 0 pièce » ni de carte vide.
+ */
 
 const PERIOD_BUCKETS: { key: JournalPeriod; label: string }[] = [
   { key: "today", label: "Aujourd'hui" },
@@ -23,108 +46,135 @@ const PERIOD_BUCKETS: { key: JournalPeriod; label: string }[] = [
   { key: "earlier", label: "Plus tôt" },
 ];
 
+/** Tenues visibles sur le Journal avant « Voir tout mon journal » (§12 : pas d'historique interminable). */
+const APERCU_HISTORIQUE = 3;
+/** Pas de chargement de l'historique complet. */
 const HISTORY_PAGE_SIZE = 5;
+/** Cartes du carrousel « À sortir du placard » — le compte annoncé, lui, porte sur toutes. */
+const PLACARD_MAX = 10;
 
-function SparkleIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" className={className} fill="currentColor">
-      <path d="M12 2l2.1 7.9L22 12l-7.9 2.1L12 22l-2.1-7.9L2 12l7.9-2.1L12 2z" />
-    </svg>
-  );
+/**
+ * Pour quoi le dressing a surtout servi ce mois-ci, dit comme une phrase et
+ * non comme un pourcentage de catégorie (§1 du brief). Une entrée par
+ * occasion existante — aucune occasion inventée.
+ */
+const MOMENT_DE_L_OCCASION: Record<Exclude<OccasionKey, "all">, string> = {
+  quotidien: "ton quotidien",
+  travail_formel: "tes journées de travail",
+  entretien: "tes rendez-vous",
+  date: "tes rendez-vous à deux",
+  soiree: "tes sorties",
+  festive: "tes soirées festives",
+  sport: "tes séances de sport",
+  cocooning: "tes moments cocooning",
+  voyage: "tes voyages",
+  evenement_perso: "tes cérémonies",
+};
+
+const pl = (n: number, un: string, plusieurs: string) => (n <= 1 ? un : plusieurs);
+
+function Surtitre({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`text-[11px] tracking-[.16em] uppercase text-muted ${className}`}>{children}</div>;
 }
 
-function CalendarIcon({ className = "" }: { className?: string }) {
+/* Icônes linéaires 1,6 — même trait que le reste de l'app. */
+function IconeCintre() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-      <rect x="3.5" y="5" width="17" height="15.5" rx="2.2" />
-      <path d="M3.5 9.5h17M8 3v3.6M16 3v3.6" />
-    </svg>
-  );
-}
-
-function HangerIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 3.2a1.5 1.5 0 1 1 1.3 2.3L12 7" />
       <path d="M12 7l9.3 6.6a1.4 1.4 0 0 1-.9 2.5H3.6a1.4 1.4 0 0 1-.9-2.5L12 7z" />
     </svg>
   );
 }
-
-function InfoIcon({ className = "" }: { className?: string }) {
+function IconeGraphique() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 11.2v5.3M12 7.8v.01" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 20h16" />
+      <path d="M7 16v-4M12 16V8M17 16v-6" />
+    </svg>
+  );
+}
+function IconeIdee() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 18h6M10 21h4M8 14.5A5.5 5.5 0 1 1 16 14.5c-.7.8-1.3 1.6-1.4 2.5H9.4c-.1-.9-.7-1.7-1.4-2.5z" />
     </svg>
   );
 }
 
-function StarIcon({ className = "" }: { className?: string }) {
+/** Visuel d'une pièce : image produit ou photo si elle existe, sinon sa pastille de couleur — jamais une image inventée. */
+function Vignette({ item, className = "", pad = 6 }: { item: Item; className?: string; pad?: number }) {
+  const img = resolveItemImage(item);
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" className={className} fill="currentColor">
-      <path d="M12 2.5l2.7 6.6 7.1.6-5.4 4.7 1.6 6.9L12 17.4l-6 3.9 1.6-6.9-5.4-4.7 7.1-.6L12 2.5z" />
-    </svg>
+    <div
+      className={`rounded-[12px] overflow-hidden flex-shrink-0 ${className}`}
+      style={
+        img.url
+          ? { aspectRatio: "4/5", background: "var(--color-warm-bg)", padding: img.kind === "photo" ? 0 : pad }
+          : { aspectRatio: "4/5", background: item.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
+      }
+    >
+      {img.url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          loading="lazy"
+          src={img.url}
+          alt=""
+          style={{ width: "100%", height: "100%", objectFit: img.kind === "photo" ? "cover" : "contain", objectPosition: "center" }}
+        />
+      )}
+    </div>
   );
 }
 
-function TShirtIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 4L4 7.2l2.4 2.6L8 8.4V20h8V8.4l1.6 1.4 2.4-2.6L16 4l-4 1.8L8 4z" />
-    </svg>
-  );
+/** « Jamais portée » / « Jamais porté », accordé au genre du vêtement (même détection que la fiche pièce). */
+function jamaisPorte(item: Item): string {
+  return nounInfoOf(item).gender === "f" ? "Jamais portée" : "Jamais porté";
 }
 
-function Donut({ pct, size = 52 }: { pct: number; size?: number }) {
-  const stroke = 5.5;
-  const r = size / 2 - stroke / 2;
-  const c = 2 * Math.PI * r;
-  const filled = (Math.min(100, Math.max(0, pct)) / 100) * c;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#EFE7DA" strokeWidth={stroke} />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={r}
-        fill="none"
-        stroke="#A66950"
-        strokeWidth={stroke}
-        strokeDasharray={`${filled} ${c - filled}`}
-        strokeLinecap="round"
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
-      <text x="50%" y="52%" textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.27} fill="#1D1A16" fontWeight={600}>
-        {pct}%
-      </text>
-    </svg>
-  );
+/** Ce que dit la carte d'une pièce qui attend : jamais portée, ou depuis combien de temps. */
+function statutAttente(item: Item, port: EtatDePort): string {
+  if (port.moisSansPort == null) return jamaisPorte(item);
+  return `Il y a ${port.moisSansPort} mois`;
 }
 
-function Sparkline({ values, width = 104, height = 32 }: { values: number[]; width?: number; height?: number }) {
-  const max = Math.max(1, ...values);
-  const stepX = width / Math.max(1, values.length - 1);
-  const points = values.map((v, i) => {
-    const x = i * stepX;
-    const y = height - (v / max) * (height - 6) - 3;
-    return [x, y];
-  });
-  const path = "M" + points.map(([x, y]) => `${x},${y}`).join(" L");
-  const [lx, ly] = points[points.length - 1];
+/** Une tenue de l'historique, son visuel d'abord (§12). */
+function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void }) {
+  const quand =
+    entry.period === "today" ? `Aujourd'hui · ${entry.jour}` : entry.period === "yesterday" ? `Hier · ${entry.jour}` : entry.rel;
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} fill="none" className="flex-shrink-0">
-      <path d={path} stroke="#A66950" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={lx} cy={ly} r="2.6" fill="#A66950" />
-    </svg>
+    <button
+      onClick={onOpen}
+      className="w-full bg-card border border-border rounded-[20px] overflow-hidden text-left cursor-pointer"
+      aria-label={`${quand}${entry.hasOccasion ? `, ${entry.occLabel}` : ""} : ${entry.summary}. Voir la tenue`}
+    >
+      <div className="px-4 pt-[13px] text-[10px] tracking-[.14em] uppercase text-muted">{quand}</div>
+      <div className="px-3 pt-[10px]">
+        <div className="rounded-[15px] overflow-hidden" style={{ background: "var(--color-warm-bg)" }}>
+          {/* Trois pièces au plus : mesuré sur Mes tenues planifiées, au-delà
+              `compact` ouvre un second rang (~145 px) — la carte sert à
+              reconnaître la tenue, la liste en dessous la nomme en entier. */}
+          <OutfitComposition items={entry.swatches.slice(0, 3)} variant="compact" />
+        </div>
+      </div>
+      <div className="px-4 pt-[11px] pb-[14px]">
+        {entry.hasOccasion && <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">{entry.occLabel}</div>}
+        <div className="text-[12px] text-muted-3 leading-[1.45] mt-[3px] line-clamp-2">{entry.summary}</div>
+      </div>
+    </button>
   );
 }
-
-const RANK_BADGE = ["bg-terracotta", "bg-ink", "bg-gold"];
 
 export default function HistoryScreen() {
-  const { state, wardrobePool, vestiairePool, actions } = useCapsela();
+  const { state, wardrobePool, vestiairePool, actions, dressingLoaded } = useCapsela();
   const { profile } = useAuth();
+  const [vue, setVue] = useState<"journal" | "vendre">("journal");
+  const [historiqueComplet, setHistoriqueComplet] = useState(false);
+  const [pages, setPages] = useState(1);
+  const [filtre, setFiltre] = useState<OccasionKey | "toutes">("toutes");
+  const [enCours, setEnCours] = useState<number | null>(null);
+  const [avis, setAvis] = useState<{ ton: "ok" | "erreur"; texte: string; annuler?: { id: number; choix: ChoixRevente | null } } | null>(null);
+
   /* Même règle que `journalGender` sur l'accueil, et même repli sur « femme »
      quand le genre n'est pas renseigné — une seule convention pour les deux
      endroits qui servent ces planches. */
@@ -132,329 +182,224 @@ export default function HistoryScreen() {
     profile.gender === "homme"
       ? "/editorial/capsela_journal_empty_homme.webp"
       : "/editorial/capsela_journal_empty_femme.webp";
+
   // Pool de résolution stable (correctif 20/08/2026) : wardrobePool bascule
-  // dynamiquement vers les pièces réelles dès qu'il y en a dans une
-  // catégorie, ce qui peut faire disparaître d'anciennes suggestions
-  // catalogue pourtant bien présentes dans l'historique — d'où les
-  // placeholders beige constatés. state.items + vestiairePool couvre
-  // toujours l'intégralité des pièces possibles, réelles ou suggérées.
+  // vers les pièces réelles dès qu'il y en a dans une catégorie, ce qui
+  // ferait disparaître d'anciennes suggestions pourtant présentes dans
+  // l'historique. state.items + vestiairePool couvre toutes les pièces.
   const resolvePool = [...state.items, ...vestiairePool];
+  const possedees = new Map(state.items.map((i) => [i.id, i]));
+  const ouvrirPiece = (item: Item) => actions.openItem(item.id, !possedees.has(item.id));
 
   const stats = journalStats(state.items, state.history);
   const insights = journalInsights(state.history);
   const entries = journalEntries(state.history, resolvePool);
-  const topWorn = mostWornPieces(state.history, resolvePool, 3);
-  const toRediscover = neverWornInPool(wardrobePool, state.history).slice(0, 6);
+  const fetiches = mostWornPieces(state.history, resolvePool, 3);
   const newLooks = newLooksThisMonth(state.savedLooks);
-  const activity = dailyActivity(state.history, 10);
-  const countText = entries.length + (entries.length <= 1 ? " tenue portée" : " tenues portées");
 
-  const [historyExpanded, setHistoryExpanded] = useState(false);
-  const visibleEntries = historyExpanded ? entries : entries.slice(0, HISTORY_PAGE_SIZE);
-  const hasMoreHistory = entries.length > HISTORY_PAGE_SIZE;
+  // ── À SORTIR DU PLACARD ─────────────────────────────────────────────
+  // Le pool affiché (pièces réelles + suggestions de la capsule), comme
+  // l'ancien « À redécouvrir » — mais plus seulement les jamais portées :
+  // aussi celles qui n'ont pas été portées de toute leur dernière saison.
+  // Une pièce mise de côté pour vendre n'y figure plus : on ne propose pas
+  // de tenue avec ce qu'elle a décidé de laisser partir.
+  const placard = wardrobePool
+    .filter((item) => possedees.get(item.id)?.revente !== "de_cote")
+    .map((item) => ({ item, port: etatDePort(item, state.history) }))
+    .filter(({ port }) => port.etat !== "recente")
+    // Jamais portées d'abord, puis de la plus récente à la plus ancienne
+    // absence — l'ordre de l'exemple du brief.
+    .sort((a, b) => (a.port.moisSansPort ?? -1) - (b.port.moisSansPort ?? -1));
+  const jamaisPortees = placard.filter(({ port }) => port.dernierPort == null).length;
 
-  const bannerText = !stats.hasItems
-    ? ""
-    : stats.pctWorn >= 100
-      ? "Bravo ! Tu utilises pleinement ta capsule. Continue comme ça, chaque pièce compte."
-      : stats.pctWorn >= 50
-        ? `Tu es sur la bonne voie : ${stats.pctWorn}% de ta capsule déjà portée.`
-        : `${stats.pctWorn}% de ta capsule déjà portée — encore ${stats.never} pièce${stats.never <= 1 ? "" : "s"} à découvrir.`;
+  // ── REVENTE ─────────────────────────────────────────────────────────
+  // Uniquement des pièces du dressing réel : une suggestion ne s'achète pas,
+  // elle ne se revend pas. « gardee » : elle a dit non, on ne repropose pas.
+  const aVendre = state.items
+    .map((item) => ({ item, port: etatDePort(item, state.history) }))
+    .filter(({ item, port }) => port.etat === "a_vendre" && !item.revente)
+    .sort((a, b) => (b.port.moisSansPort ?? Infinity) - (a.port.moisSansPort ?? Infinity));
+  const deCote = state.items.filter((i) => i.revente === "de_cote");
 
-  const hasMonthlyInsights = insights.topOccasionShare != null || stats.never > 0 || newLooks > 0 || topWorn.length > 0;
+  const choisir = async (item: Item, choix: ChoixRevente | null) => {
+    const precedent = item.revente ?? null;
+    setEnCours(item.id);
+    setAvis(null);
+    const ok = await actions.choisirRevente(item.id, choix);
+    setEnCours(null);
+    if (!ok) {
+      setAvis({ ton: "erreur", texte: "Ton choix n'a pas pu être enregistré. Réessaie dans un instant." });
+      return;
+    }
+    // Accordé au genre du vêtement : « Le jean droit est mis de côté ».
+    const f = nounInfoOf(item).gender === "f";
+    const e = f ? "e" : "";
+    const texte =
+      choix === "gardee"
+        ? `${item.name} reste dans ton dressing. ${f ? "Elle" : "Il"} ne te sera plus proposé${e} ici.`
+        : choix === "de_cote"
+          ? `${item.name} est mis${e} de côté pour vendre. ${f ? "Elle" : "Il"} reste dans ton dressing tant que tu ne ${f ? "la" : "le"} retires pas.`
+          : `${item.name} n'est plus mis${e} de côté.`;
+    setAvis({ ton: "ok", texte, annuler: choix ? { id: item.id, choix: precedent } : undefined });
+  };
 
-  return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
-      <AppHeader />
+  // ── CHARGEMENT ──────────────────────────────────────────────────────
+  // Sans cet état, une utilisatrice qui a un historique verrait l'état vide
+  // et son « Choisir ma première tenue » le temps du chargement.
+  if (!dressingLoaded) {
+    return (
+      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+        <AppHeader />
+        <div className="flex justify-center mt-16" aria-live="polite">
+          <LoadingSpinner size={56} />
+          <span className="sr-only">Chargement de ton journal…</span>
+        </div>
+      </div>
+    );
+  }
 
-      <div className="mt-[18px] text-[11px] tracking-[.16em] uppercase text-muted">{countText}</div>
-      <div className="font-serif text-[27px] text-ink mt-[6px]">Ton journal</div>
+  // ── PIÈCES À VENDRE ─────────────────────────────────────────────────
+  if (vue === "vendre") {
+    return (
+      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+        <AppHeader
+          onBack={() => {
+            setVue("journal");
+            setAvis(null);
+          }}
+          backLabel="Revenir au journal"
+        />
+        <Surtitre className="mt-[18px]">Faire de la place</Surtitre>
+        <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+          Pièces <span className="italic text-terracotta">à vendre</span>
+        </div>
+        <div className="text-[13px] text-muted-3 leading-[1.5] mt-[10px]">
+          Ces pièces n&apos;ont pas été portées depuis longtemps. Tu décides, pièce par pièce : rien ne quitte ton
+          dressing sans toi.
+        </div>
 
-      {/* Rotation réelle du dressing (recette 23/08/2026) : quatre repères
-          d'un coup d'œil — le "% déjà porté" reste visible mais partage la
-          vedette avec l'activité récente, jamais seul en hero. */}
-      {stats.hasItems && (
-        <>
-          <div className="grid grid-cols-4 gap-[7px] mt-5">
-            <div className="bg-ink rounded-[16px] p-[11px] flex flex-col min-h-[92px]">
-              <SparkleIcon className="text-[#D9CBB6]" />
-              <div className="font-serif text-[21px] leading-[.9] text-cream mt-[13px]">{stats.pctWorn}%</div>
-              <div className="text-[9px] text-[#B3AA9B] mt-[4px] leading-[1.25]">déjà porté</div>
-            </div>
-            <div className="bg-card border border-border rounded-[16px] p-[11px] flex flex-col min-h-[92px]">
-              <CalendarIcon className="text-terracotta" />
-              <div className="font-serif text-[21px] leading-[.9] text-ink mt-[13px]">{stats.wornThisWeek}</div>
-              <div className="text-[9px] text-muted mt-[4px] leading-[1.25]">cette semaine</div>
-            </div>
-            <div className="bg-card border border-border rounded-[16px] p-[11px] flex flex-col min-h-[92px]">
-              <CalendarIcon className="text-terracotta" />
-              <div className="font-serif text-[21px] leading-[.9] text-ink mt-[13px]">{insights.wornThisMonth}</div>
-              <div className="text-[9px] text-muted mt-[4px] leading-[1.25]">ce mois-ci</div>
-            </div>
-            <div className="bg-card border border-border rounded-[16px] p-[11px] flex flex-col min-h-[92px]">
-              <HangerIcon className="text-terracotta" />
-              <div className="font-serif text-[21px] leading-[.9] text-ink mt-[13px]">{insights.distinctPiecesWornThisMonth}</div>
-              <div className="text-[9px] text-muted mt-[4px] leading-[1.25]">pièces ce mois-ci</div>
-            </div>
-          </div>
-
-          {bannerText && (
-            <div className="mt-3 bg-warm-bg border border-warm-border rounded-2xl px-4 py-[13px] flex items-center justify-between gap-3">
-              <div className="text-[12px] text-warm-text-2 leading-[1.45]">{bannerText}</div>
-              <Sparkline values={activity} />
-            </div>
-          )}
-
-          <button
-            onClick={actions.goNeverWorn}
-            className="mt-[10px] w-full text-center text-[12px] text-terracotta cursor-pointer"
+        {avis && (
+          <div
+            role={avis.ton === "erreur" ? "alert" : "status"}
+            className={`mt-4 rounded-[16px] px-4 py-[12px] text-[12px] leading-[1.45] flex items-start gap-3 ${
+              avis.ton === "erreur" ? "bg-warm-bg border border-warm-border text-rust" : "bg-warm-bg border border-warm-border text-warm-text-2"
+            }`}
           >
-            Voir les pièces jamais portées ›
-          </button>
-        </>
-      )}
-
-      {/* Ce que Capsela apprend de toi (recette 23/08/2026) — remplace le
-          simple récapitulatif de chiffres par des constats concrets, chacun
-          dérivé de l'historique réel, jamais d'une valeur inventée. */}
-      {hasMonthlyInsights && (
-        <div className="mt-[26px]">
-          <div className="flex items-center gap-[6px] mb-3">
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted">Tes insights du mois</div>
-            <InfoIcon className="text-placeholder" />
-          </div>
-          <div className="scrollarea flex gap-[9px] overflow-x-auto pb-[2px]">
-            {insights.topOccasionShare != null && insights.topOccasionShort && (
-              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col gap-[9px]">
-                <Donut pct={insights.topOccasionShare} />
-                <div>
-                  <div className="text-[12px] text-ink leading-[1.3]">de looks {insights.topOccasionShort}</div>
-                  <div className="text-[10px] text-muted mt-[2px]">Ton style du mois</div>
-                </div>
-              </div>
-            )}
-            {stats.never > 0 && (
-              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col">
-                <HangerIcon className="text-terracotta" />
-                <div className="font-serif text-[21px] leading-[.9] text-ink mt-[10px]">{stats.never}</div>
-                <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">
-                  pièce{stats.never <= 1 ? "" : "s"} pas encore portée{stats.never <= 1 ? "" : "s"}
-                </div>
-                <button onClick={actions.goNeverWorn} className="text-[10px] text-terracotta text-left cursor-pointer mt-[9px]">
-                  Les redécouvrir →
-                </button>
-              </div>
-            )}
-            {newLooks > 0 && (
-              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col">
-                <StarIcon className="text-terracotta" />
-                <div className="font-serif text-[21px] leading-[.9] text-ink mt-[10px]">{newLooks}</div>
-                <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">
-                  nouveau{newLooks <= 1 ? "" : "x"} look{newLooks <= 1 ? "" : "s"} créé{newLooks <= 1 ? "" : "s"}
-                </div>
-                <div className="text-[10px] text-terracotta mt-[9px]">Bravo !</div>
-              </div>
-            )}
-            {topWorn.length > 0 && (
-              <div className="flex-none w-[132px] bg-card border border-border rounded-[16px] p-[13px] flex flex-col">
-                <TShirtIcon className="text-terracotta" />
-                <div className="font-serif text-[21px] leading-[.9] text-ink mt-[10px]">{topWorn[0].count}</div>
-                <div className="text-[10px] text-muted mt-[4px] leading-[1.3]">fois portée</div>
-                <div className="text-[10px] text-terracotta leading-[1.25] mt-[9px]">Ta pièce la plus polyvalente</div>
-              </div>
+            <span className="flex-1 min-w-0">{avis.texte}</span>
+            {avis.annuler && (
+              <button
+                onClick={() => {
+                  const cible = state.items.find((i) => i.id === avis.annuler!.id);
+                  if (cible) void choisir(cible, avis.annuler!.choix);
+                }}
+                className="text-terracotta underline underline-offset-2 flex-shrink-0 min-h-[24px] cursor-pointer"
+              >
+                Annuler
+              </button>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Top 3 des pièces les plus portées (recette 23/08/2026). */}
-      {topWorn.length > 0 && (
-        <div className="mt-[26px]">
-          <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-3">Tes 3 pièces les plus portées</div>
-          <div className="scrollarea flex gap-[12px] overflow-x-auto pt-[6px] pb-[2px]">
-            {topWorn.map(({ item, count }, idx) => {
-              const img = resolveItemImage(item);
+        {aVendre.length > 0 ? (
+          <div className="flex flex-col gap-3 mt-5">
+            {aVendre.map(({ item, port }) => {
+              const occupe = enCours === item.id;
               return (
-                <button
-                  key={item.id}
-                  onClick={() => actions.openItemOutfits(item.id)}
-                  className="flex-none w-[86px] text-left cursor-pointer"
-                >
-                  <div className="relative">
-                    <span
-                      className={`absolute top-[4px] left-[4px] z-10 w-[19px] h-[19px] rounded-full flex items-center justify-center text-[10px] text-cream shadow-[0_1px_3px_rgba(29,26,22,.25)] ${RANK_BADGE[idx]}`}
-                    >
-                      {idx + 1}
-                    </span>
-                    <div
-                      className="w-full rounded-[10px] overflow-hidden"
-                      style={
-                        img.url
-                          ? { aspectRatio: "4/5", background: "#F3EDE1", padding: 6 }
-                          : { aspectRatio: "4/5", background: item.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
-                      }
-                    >
-                      {img.url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img loading="lazy"
-                          src={img.url}
-                          alt={item.name}
-                          style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
-                        />
-                      )}
+                <div key={item.id} className="bg-card border border-border rounded-[20px] p-[14px]" aria-busy={occupe}>
+                  <button onClick={() => ouvrirPiece(item)} className="w-full flex gap-[13px] text-left cursor-pointer">
+                    <Vignette item={item} className="w-[72px]" pad={5} />
+                    <div className="flex-1 min-w-0 pt-[2px]">
+                      <div className="font-serif text-[18px] leading-[1.2] text-ink">{item.name}</div>
+                      <div className="text-[12px] text-muted-3 mt-[5px] leading-[1.4]">
+                        {port.dernierPort != null
+                          ? `Dernier port : ${moisAnnee(port.dernierPort)}`
+                          : `${jamaisPorte(item)} depuis son arrivée${item.createdAt ? ` en ${moisAnnee(item.createdAt)}` : ""}`}
+                      </div>
+                      <div className="text-[10px] tracking-[.14em] uppercase text-terracotta mt-[7px]">
+                        {port.moisSansPort != null
+                          ? `${port.moisSansPort} mois sans sortie`
+                          : item.createdAt
+                            ? `Dans ton dressing depuis ${moisDepuis(item.createdAt)} mois`
+                            : "Deux saisons sans sortie"}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-[11px] text-ink mt-[6px] leading-[1.25] line-clamp-2">
-                    {item.name}
-                  </div>
-                  <div className="text-[10px] text-terracotta mt-[1px]">
-                    {count} fois
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* À redécouvrir (recette 20/08/2026) — boucle Journal → pièce sous-utilisée → "Voir des idées de tenues". */}
-      {toRediscover.length > 0 && (
-        <div className="mt-[26px] bg-card border border-border rounded-[16px] px-4 py-[15px]">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-[11px] tracking-[.16em] uppercase text-terracotta">À redécouvrir</div>
-            <button onClick={actions.goNeverWorn} className="text-[11px] text-terracotta cursor-pointer">
-              Voir tout ›
-            </button>
-          </div>
-          <div className="text-[12px] text-[#3F3B34] leading-[1.45] mb-[12px]">
-            {toRediscover.length} pièce{toRediscover.length <= 1 ? "" : "s"} de ta capsule n&apos;{toRediscover.length <= 1 ? "a" : "ont"}{" "}
-            pas encore été portée{toRediscover.length <= 1 ? "" : "s"}.
-          </div>
-          <div className="scrollarea flex gap-[10px] overflow-x-auto pb-[2px]">
-            {toRediscover.map((item) => {
-              const img = resolveItemImage(item);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => actions.openItemOutfits(item.id)}
-                  className="flex-none w-[86px] text-left cursor-pointer"
-                >
-                  <div
-                    className="w-full rounded-[9px] overflow-hidden"
-                    style={
-                      img.url
-                        ? { aspectRatio: "4/5", background: "#F3EDE1", padding: 5 }
-                        : { aspectRatio: "4/5", background: item.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
-                    }
-                  >
-                    {img.url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img loading="lazy"
-                        src={img.url}
-                        alt={item.name}
-                        style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
-                      />
-                    )}
-                  </div>
-                  <div className="text-[11px] text-ink mt-[6px] leading-[1.25] line-clamp-2">
-                    {item.name}
-                  </div>
-                  <div className="text-[10px] text-terracotta mt-[1px] leading-[1.25]">Voir des idées de tenues ›</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {entries.length > 0 ? (
-        <div className="mt-[26px]">
-          <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-3">Tes dernières tenues</div>
-          {PERIOD_BUCKETS.map(({ key, label }) => {
-            const group = visibleEntries.filter((e) => e.period === key);
-            if (group.length === 0) return null;
-            const showRel = key !== "today" && key !== "yesterday";
-            return (
-              <div key={key} className="mb-[22px] last:mb-0">
-                <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-3">{label}</div>
-                <div className="flex flex-col gap-[11px]">
-                  {group.map((h) => (
+                  </button>
+                  <div className="flex flex-col gap-2 mt-[14px]">
                     <button
-                      key={h.id}
-                      onClick={() => actions.viewItemOutfit(h.pieceIds, h.occasion)}
-                      className="bg-card border border-border rounded-2xl px-[15px] py-[14px] text-left cursor-pointer w-full"
+                      disabled={occupe}
+                      onClick={() => void choisir(item, "gardee")}
+                      className="w-full min-h-[46px] rounded-full border border-border-soft text-ink text-[12px] tracking-[.1em] uppercase cursor-pointer disabled:opacity-50"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        {showRel ? <span className="text-[13px] text-ink">{h.rel}</span> : <span />}
-                        <div className="flex items-center gap-[8px]">
-                          {h.hasOccasion && (
-                            <span className="text-[10px] tracking-[.14em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px]">
-                              {h.occLabel}
-                            </span>
-                          )}
-                          <span className="text-muted text-[13px]">›</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-[7px] mt-[11px]">
-                        {h.swatches.map((p) => {
-                          const img = resolveItemImage(p);
-                          return (
-                            <div
-                              key={p.id}
-                              className="w-[34px] h-[42px] rounded-md flex-shrink-0 overflow-hidden"
-                              style={
-                                img.url
-                                  ? { background: "#F3EDE1", padding: 3 }
-                                  : { background: p.hex, boxShadow: "inset 0 0 0 1px rgba(30,26,22,.06)" }
-                              }
-                            >
-                              {img.url && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img loading="lazy"
-                                  src={img.url}
-                                  alt=""
-                                  style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
-                                />
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="text-[11px] text-muted mt-[9px] leading-[1.4]">{h.summary}</div>
+                      Garder dans mon dressing
                     </button>
-                  ))}
+                    <button
+                      disabled={occupe}
+                      onClick={() => void choisir(item, "de_cote")}
+                      className="w-full min-h-[46px] rounded-full bg-ink text-cream text-[12px] tracking-[.1em] uppercase cursor-pointer disabled:opacity-50"
+                    >
+                      Mettre de côté pour vendre
+                    </button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-          {hasMoreHistory && (
-            <button
-              onClick={() => setHistoryExpanded((v) => !v)}
-              className="w-full text-center text-[12px] text-terracotta cursor-pointer py-2"
-            >
-              {historyExpanded ? "Voir moins ⌃" : "Voir plus d'historique ⌄"}
-            </button>
-          )}
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-6 bg-card border border-border rounded-[20px] px-5 py-[18px] text-[13px] text-muted-3 leading-[1.5]">
+            Plus aucune pièce à examiner pour l&apos;instant. Le journal te préviendra si l&apos;une d&apos;elles attend trop longtemps.
+          </div>
+        )}
+
+        {deCote.length > 0 && (
+          <div className="mt-[30px]">
+            <Surtitre>Mises de côté pour vendre</Surtitre>
+            <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
+              Elles restent dans ton dressing. Capsela ne vend rien pour toi : c&apos;est une simple note.
+            </div>
+            <div className="flex flex-col gap-[10px] mt-3">
+              {deCote.map((item) => (
+                <div key={item.id} className="bg-card border border-border rounded-[16px] p-[12px] flex items-center gap-[12px]" aria-busy={enCours === item.id}>
+                  <Vignette item={item} className="w-[44px]" pad={3} />
+                  <div className="flex-1 min-w-0 text-[13px] text-ink leading-[1.3]">{item.name}</div>
+                  <button
+                    disabled={enCours === item.id}
+                    onClick={() => void choisir(item, null)}
+                    className="text-[12px] text-terracotta min-h-[44px] px-1 flex-shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    Annuler
+                    <span className="sr-only"> la mise de côté de {item.name}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── ÉTAT VIDE ───────────────────────────────────────────────────────
+  // Aucune tenue portée : ni chiffres à zéro, ni « À redécouvrir », ni
+  // historique vide (§3). Seulement ce que le journal deviendra.
+  if (entries.length === 0) {
+    return (
+      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+        <AppHeader />
+        <Surtitre className="mt-[18px]">Ton journal</Surtitre>
+        <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+          Ton style <span className="italic text-terracotta">commence ici.</span>
         </div>
-      ) : (
-        <div className="mt-[26px] flex flex-col items-center text-center">
-          {/* VISUEL D'ÉTAT VIDE (fournis le 25/09/2026). Il remplace la
-              pastille ✦ de 56 px : sur un écran qui n'a rien à montrer, une
-              planche de styliste dit ce que le journal contiendra, là où un
-              glyphe ne disait que « c'est vide ».
+        <div className="text-[13px] text-muted-3 leading-[1.5] mt-[10px]">
+          Chaque tenue que tu portes enrichit ton journal et permet à Capsela de mieux comprendre ton style.
+        </div>
 
-              CHOISI SUR LE GENRE DÉCLARÉ, comme les photos éditoriales de
-              repli de l'accueil (`journalGender`, HomeScreen). Le brief du
-              23/09 interdisait de choisir un JEU DE MANNEQUINS selon le genre
-              pour illustrer les looks de quelqu'un ; il a été réglé en
-              montrant ses vrais looks, et le repli éditorial a été conservé
-              tel quel. Ces deux planches sont des à-plats de vêtements, sans
-              personne dessus — elles n'exposent donc personne à se
-              reconnaître ou non dans un modèle.
-
-              `unoptimized` de fait : pas de next/image, l'export statique
-              (output: "export") ne l'embarque pas. D'où le <img> et les
-              dimensions écrites, qui réservent la place avant chargement. */}
+        {/* VISUEL D'ÉTAT VIDE (fournis le 25/09/2026) : des vêtements à
+            plat, sans personne — §2 du brief. Choisi sur le genre déclaré,
+            comme les photos éditoriales de repli de l'accueil ; « femme »
+            par défaut, comme elles. Dimensions écrites : la place est
+            réservée avant l'arrivée de l'image (pas de next/image en export
+            statique). */}
+        <div className="mt-5 flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={visuelVide}
@@ -462,20 +407,309 @@ export default function HistoryScreen() {
             width={720}
             height={731}
             loading="lazy"
-            className="w-full max-w-[280px] h-auto rounded-[20px]"
+            decoding="async"
+            className="w-full max-w-[250px] h-auto rounded-[20px]"
           />
-          <div className="font-serif text-[18px] leading-[1.3] text-ink mt-5">Rien à raconter pour l&apos;instant</div>
-          <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[250px]">
-            Porte une tenue pour commencer ton journal.
-          </div>
-          <button
-            onClick={actions.goTenues}
-            className="mt-5 bg-ink text-cream rounded-full py-[15px] px-[26px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
-          >
-            Choisir ma tenue du jour
-          </button>
         </div>
+
+        <ul className="grid grid-cols-3 gap-2 mt-6">
+          {[
+            { icone: <IconeCintre />, a: "Garde une trace", b: "de tes tenues" },
+            { icone: <IconeGraphique />, a: "Découvre", b: "tes habitudes" },
+            { icone: <IconeIdee />, a: "Obtiens des idées", b: "personnalisées" },
+          ].map(({ icone, a, b }) => (
+            <li key={a} className="flex flex-col items-center text-center">
+              <span className="w-[38px] h-[38px] rounded-full bg-[#F0E5D6] text-terracotta flex items-center justify-center">{icone}</span>
+              <span className="text-[11px] text-ink leading-[1.35] mt-[8px]">
+                {a}
+                <br />
+                {b}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        {/* Le parcours existant de la tenue du jour — aucun nouveau parcours (§3). */}
+        <button
+          onClick={actions.goTenues}
+          className="mt-7 w-full min-h-[52px] bg-ink text-cream rounded-full text-[13px] tracking-[.1em] uppercase cursor-pointer"
+        >
+          Choisir ma première tenue
+        </button>
+      </div>
+    );
+  }
+
+  // ── JOURNAL REMPLI ──────────────────────────────────────────────────
+  const moment = insights.topOccasion && insights.topOccasion !== "all" ? MOMENT_DE_L_OCCASION[insights.topOccasion] : null;
+  const phraseEnTete = moment
+    ? `Ce mois-ci, tes tenues ont surtout accompagné ${moment}.`
+    : insights.wornThisMonth > 0
+      ? `Ce mois-ci, ${insights.wornThisMonth} ${pl(insights.wornThisMonth, "tenue a rejoint", "tenues ont rejoint")} ton journal.`
+      : `Ta dernière tenue notée date du ${entries[0].jour}.`;
+
+  // « Pièces utilisées » : la même base que le pourcentage quand il existe
+  // (pièces du dressing réel déjà portées), sinon toutes les pièces
+  // distinctes de l'historique — pour que les deux chiffres ne se
+  // contredisent jamais.
+  const piecesUtilisees = stats.hasItems ? stats.worn : new Set(state.history.flatMap((h) => h.pieceIds)).size;
+  const moisCourant = MONTHS_FR[new Date(entries[0].ts).getMonth()];
+
+  const occasionsPresentes = [...new Set(entries.filter((e) => e.hasOccasion).map((e) => e.occasion))];
+  const entreesFiltrees = filtre === "toutes" ? entries : entries.filter((e) => e.occasion === filtre);
+  const entreesVisibles = entreesFiltrees.slice(0, pages * HISTORY_PAGE_SIZE);
+
+  return (
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+      <AppHeader />
+
+      {/* EN-TÊTE */}
+      <Surtitre className="mt-[18px]">Ton journal</Surtitre>
+      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+        {entries.length} <span className="italic text-terracotta">{pl(entries.length, "tenue portée", "tenues portées")}</span>
+      </div>
+      <div className="text-[13px] text-muted-3 leading-[1.5] mt-[8px]">{phraseEnTete}</div>
+
+      {/* BILAN — une métrique principale, deux secondaires, chacune dite en
+          toutes lettres (§6 : pas de petit chiffre sans contexte). */}
+      <div className="mt-5 bg-card border border-border rounded-[20px] px-5 py-[18px]">
+        {stats.hasItems ? (
+          <>
+            <div className="flex items-baseline gap-[10px]">
+              <span className="font-serif text-[34px] leading-none text-ink">{stats.pctWorn} %</span>
+              <span className="text-[13px] text-muted-3">de ta capsule portée</span>
+            </div>
+            <div className="h-px bg-border my-[15px]" />
+          </>
+        ) : null}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <div className="font-serif text-[21px] leading-none text-ink">{entries.length}</div>
+            <div className="text-[12px] text-muted mt-[5px]">{pl(entries.length, "tenue portée", "tenues portées")}</div>
+          </div>
+          <div>
+            <div className="font-serif text-[21px] leading-none text-ink">{piecesUtilisees}</div>
+            <div className="text-[12px] text-muted mt-[5px]">{pl(piecesUtilisees, "pièce utilisée", "pièces utilisées")}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* TON STYLE CE MOIS-CI — la carte n'existe que s'il y a une tendance
+          (3 tenues ce mois-ci au moins, cf. journalInsights) ; les deux
+          constats en dessous, seulement s'ils sont vrais. */}
+      {(moment || jamaisPortees > 0 || newLooks > 0) && (
+        <section className="mt-[30px]" aria-labelledby="journal-style">
+          <Surtitre>
+            <span id="journal-style">Ton style ce mois-ci</span>
+          </Surtitre>
+          {moment && insights.topOccasionShare != null && (
+            <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[18px]">
+              <div className="font-serif text-[21px] leading-[1.25] text-ink" style={{ textWrap: "balance" }}>
+                Ton dressing est particulièrement sollicité pour <span className="italic text-terracotta">{moment}</span>.
+              </div>
+              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[10px]">
+                {insights.topOccasionShare} % de tes tenues de {moisCourant} étaient pensées pour cette occasion, sur{" "}
+                {insights.wornThisMonth} {pl(insights.wornThisMonth, "tenue", "tenues")} {pl(insights.wornThisMonth, "notée", "notées")}.
+              </div>
+            </div>
+          )}
+          {(jamaisPortees > 0 || newLooks > 0) && (
+            <ul className="mt-3 flex flex-col gap-2">
+              {jamaisPortees > 0 && (
+                <li className="text-[13px] text-ink leading-[1.45] flex gap-[10px]">
+                  <span className="text-terracotta flex-shrink-0" aria-hidden="true">—</span>
+                  {jamaisPortees} {pl(jamaisPortees, "pièce attend", "pièces attendent")} encore{" "}
+                  {pl(jamaisPortees, "sa", "leur")} première sortie.
+                </li>
+              )}
+              {newLooks > 0 && (
+                <li className="text-[13px] text-ink leading-[1.45] flex gap-[10px]">
+                  <span className="text-terracotta flex-shrink-0" aria-hidden="true">—</span>
+                  {newLooks} {pl(newLooks, "nouveau look ajouté", "nouveaux looks ajoutés")} ce mois-ci.
+                </li>
+              )}
+            </ul>
+          )}
+        </section>
       )}
+
+      {/* TES PIÈCES FÉTICHES */}
+      {fetiches.length > 0 && (
+        <section className="mt-[30px]" aria-labelledby="journal-fetiches">
+          <Surtitre>
+            <span id="journal-fetiches">Tes pièces fétiches</span>
+          </Surtitre>
+          <div className="mt-3 bg-card border border-border rounded-[20px] px-4 py-[6px]">
+            {fetiches.map(({ item, count }, idx) => (
+              <button
+                key={item.id}
+                onClick={() => ouvrirPiece(item)}
+                className="w-full flex items-center gap-[13px] py-[10px] text-left cursor-pointer border-b border-border last:border-b-0"
+              >
+                <span className="font-serif text-[18px] text-terracotta w-[14px] flex-shrink-0 text-center">{idx + 1}</span>
+                <Vignette item={item} className="w-[44px]" pad={3} />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[13px] text-ink leading-[1.3] line-clamp-2">{item.name}</span>
+                  <span className="block text-[12px] text-muted mt-[2px]">
+                    {nounInfoOf(item).gender === "f" ? "Portée" : "Porté"} {count} fois
+                  </span>
+                </span>
+                <span className="text-muted text-[13px] flex-shrink-0" aria-hidden="true">›</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* À SORTIR DU PLACARD — jamais portées ET pas portées de toute leur
+          dernière saison (etatDePort), avec la durée. */}
+      {placard.length > 0 && (
+        <section className="mt-[30px]" aria-labelledby="journal-placard">
+          <Surtitre className="text-terracotta">
+            <span id="journal-placard">À sortir du placard</span>
+          </Surtitre>
+          <div className="text-[13px] text-ink leading-[1.45] mt-[6px]">
+            {placard.length} {pl(placard.length, "pièce de ta capsule attend", "pièces de ta capsule attendent")} encore{" "}
+            {pl(placard.length, "son", "leur")} moment.
+          </div>
+          <ul className="scrollarea flex gap-[10px] overflow-x-auto mt-3 pb-[2px]">
+            {placard.slice(0, PLACARD_MAX).map(({ item, port }) => (
+              <li key={item.id} className="flex-none w-[96px]">
+                <button
+                  onClick={() => ouvrirPiece(item)}
+                  className="w-full text-left cursor-pointer"
+                  aria-label={`${item.name}, ${statutAttente(item, port).toLowerCase()}`}
+                >
+                  <Vignette item={item} className="w-full" pad={6} />
+                  <div className="text-[12px] text-ink mt-[6px] leading-[1.25] line-clamp-2">{item.name}</div>
+                  <div className="text-[11px] text-terracotta mt-[2px]">{statutAttente(item, port)}</div>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={() => actions.openItemOutfits(placard[0].item.id, !possedees.has(placard[0].item.id))}
+            className="mt-3 min-h-[44px] text-[12px] text-terracotta cursor-pointer"
+            aria-label={`Voir les idées de tenues avec ${placard[0].item.name}`}
+          >
+            Voir les idées de tenues →
+          </button>
+        </section>
+      )}
+
+      {/* REVENTE — seulement s'il y a une pièce candidate ou déjà mise de
+          côté (§18, état 8 : jamais de section vide). Une suggestion, rien
+          d'automatique. */}
+      {(aVendre.length > 0 || deCote.length > 0) && (
+        <section className="mt-[22px] bg-card border border-border rounded-[20px] px-5 py-[18px]" aria-labelledby="journal-revente">
+          <Surtitre>
+            <span id="journal-revente">Faire de la place</span>
+          </Surtitre>
+          {aVendre.length > 0 ? (
+            <>
+              <div className="font-serif text-[18px] leading-[1.3] text-ink mt-[8px]">
+                {aVendre.length === 1
+                  ? "Une pièce n'a pas été portée depuis deux saisons."
+                  : `${aVendre.length} pièces n'ont pas été portées depuis deux saisons.`}
+              </div>
+              <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]">
+                Tu pourrais envisager de {pl(aVendre.length, "la", "les")} vendre pour faire de la place dans ta capsule.
+              </div>
+            </>
+          ) : (
+            <div className="font-serif text-[18px] leading-[1.3] text-ink mt-[8px]">
+              {deCote.length} {pl(deCote.length, "pièce mise", "pièces mises")} de côté pour vendre.
+            </div>
+          )}
+          <button
+            onClick={() => {
+              setAvis(null);
+              setVue("vendre");
+            }}
+            className="mt-[12px] min-h-[44px] text-[12px] tracking-[.1em] uppercase text-terracotta cursor-pointer"
+          >
+            {aVendre.length > 0 ? "Voir les pièces à vendre →" : "Voir mes pièces mises de côté →"}
+          </button>
+        </section>
+      )}
+
+      {/* HISTORIQUE — les dernières tenues, visuel en tête (§12). */}
+      <section className="mt-[30px]" aria-labelledby="journal-historique">
+        <Surtitre>
+          <span id="journal-historique">{historiqueComplet ? "Tout mon journal" : "Tes dernières tenues"}</span>
+        </Surtitre>
+
+        {!historiqueComplet ? (
+          <div className="flex flex-col gap-3 mt-3">
+            {entries.slice(0, APERCU_HISTORIQUE).map((e) => (
+              <CarteTenue key={e.id} entry={e} onOpen={() => actions.viewItemOutfit(e.pieceIds, e.occasion)} />
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Filtre discret (§13), seulement s'il départage vraiment : au
+                moins deux occasions présentes dans l'historique. */}
+            {occasionsPresentes.length >= 2 && (
+              <div className="scrollarea flex gap-2 overflow-x-auto mt-3 pb-[2px]">
+                {(["toutes", ...occasionsPresentes] as const).map((o) => {
+                  const actif = filtre === o;
+                  return (
+                    <button
+                      key={o}
+                      aria-pressed={actif}
+                      onClick={() => {
+                        setFiltre(o);
+                        setPages(1);
+                      }}
+                      className={`flex-none min-h-[36px] px-[14px] rounded-full text-[12px] cursor-pointer border ${
+                        actif ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
+                      }`}
+                    >
+                      {o === "toutes" ? "Toutes les tenues" : occasionShortLabel(o)}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {PERIOD_BUCKETS.map(({ key, label }) => {
+              const groupe = entreesVisibles.filter((e) => e.period === key);
+              if (groupe.length === 0) return null;
+              return (
+                <div key={key} className="mt-4">
+                  {/* « Aujourd'hui » et « Hier » sont déjà en tête de leur
+                      carte : le titre de groupe les répéterait mot pour mot. */}
+                  {key !== "today" && key !== "yesterday" && (
+                    <div className="text-[10px] tracking-[.14em] uppercase text-muted mb-[10px]">{label}</div>
+                  )}
+                  <div className="flex flex-col gap-3">
+                    {groupe.map((e) => (
+                      <CarteTenue key={e.id} entry={e} onOpen={() => actions.viewItemOutfit(e.pieceIds, e.occasion)} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {entreesVisibles.length < entreesFiltrees.length && (
+              <button onClick={() => setPages((p) => p + 1)} className="mt-3 w-full min-h-[44px] text-[12px] text-terracotta cursor-pointer">
+                Afficher plus de tenues
+              </button>
+            )}
+          </>
+        )}
+
+        {entries.length > APERCU_HISTORIQUE && (
+          <button
+            onClick={() => {
+              setHistoriqueComplet((v) => !v);
+              setPages(1);
+              setFiltre("toutes");
+            }}
+            className="mt-3 w-full min-h-[44px] text-[12px] tracking-[.1em] uppercase text-terracotta cursor-pointer"
+          >
+            {historiqueComplet ? "Réduire mon journal" : "Voir tout mon journal →"}
+          </button>
+        )}
+      </section>
     </div>
   );
 }
