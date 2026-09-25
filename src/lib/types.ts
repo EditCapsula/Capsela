@@ -191,7 +191,11 @@ export interface Item {
   capsuleSeasons?: CapsuleSeason[];
   /** Date d'ajout au dressing réel (recette 24/08/2026, module revente contextuel de PieceScreen) — timestamp ms, mappé depuis created_at (dressing_items). Absent pour une pièce du catalogue vestiaire_universel/catalog.ts, qui n'a pas cette notion. */
   createdAt?: number;
+  /** Choix de l'utilisatrice face à une suggestion de revente du Journal (refonte 25/09/2026, colonne revente de dressing_items, migration 0035) — "gardee" : elle la garde, on ne la lui repropose plus ; "de_cote" : mise de côté pour vendre, la pièce reste dans son dressing. Absent = aucun choix. Jamais posé par l'app sans action explicite. */
+  revente?: ChoixRevente;
 }
+
+export type ChoixRevente = "gardee" | "de_cote";
 
 export interface City {
   city: string;

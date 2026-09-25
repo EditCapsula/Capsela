@@ -5,6 +5,7 @@ import type {
   AccessoireType,
   BijouType,
   CategoryKey,
+  ChoixRevente,
   Coupe,
   HistoryEntry,
   Item,
@@ -49,6 +50,8 @@ interface DressingItemRow {
   worn: number | null;
   worn_prev: number | null;
   created_at: string;
+  /** Migration 0035 — absente de la ligne tant qu'elle n'est pas exécutée. */
+  revente?: string | null;
 }
 
 function rowToItem(row: DressingItemRow): Item {
@@ -73,6 +76,7 @@ function rowToItem(row: DressingItemRow): Item {
     worn: row.worn,
     wornPrev: row.worn_prev ?? undefined,
     createdAt: new Date(row.created_at).getTime(),
+    revente: row.revente === "gardee" || row.revente === "de_cote" ? row.revente : undefined,
   };
 }
 
@@ -279,6 +283,18 @@ export async function updateDressingItem(id: number, item: Omit<Item, "id">): Pr
   const { user_id: _userId, ...patch } = row;
   void _userId;
   const { error } = await getSupabase().from("dressing_items").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Enregistre le choix de revente d'une pièce (migration 0035). VOLONTAIREMENT
+ * HORS de itemToRow : y ajouter `revente` enverrait la colonne à chaque
+ * insertion et à chaque modification de pièce — et tant que la migration
+ * n'est pas exécutée, TOUTES ces écritures échoueraient. Isolée ici, seule
+ * cette action-là échoue, et l'appelant le dit.
+ */
+export async function updateDressingItemRevente(id: number, revente: ChoixRevente | null): Promise<void> {
+  const { error } = await getSupabase().from("dressing_items").update({ revente }).eq("id", id);
   if (error) throw error;
 }
 
