@@ -737,7 +737,7 @@ export default function PlanifierScreen() {
                     <Glyphe>{g}</Glyphe>
                   </span>
                   <div className="min-w-0">
-                    <div className="text-[13px] font-semibold text-ink">{t}</div>
+                    <div className="text-[13px] font-medium text-ink">{t}</div>
                     <div className="text-[12px] text-muted leading-[1.45] mt-[2px]">{s}</div>
                   </div>
                 </div>

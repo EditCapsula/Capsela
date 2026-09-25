@@ -1186,7 +1186,7 @@ export default function TenuesScreen() {
 
       {!noCompleteOutfit && missingText && (
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-          <span className="font-serif italic text-[15px] text-terracotta">✦</span>
+          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1">
             <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{missingText}</div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
@@ -1198,7 +1198,7 @@ export default function TenuesScreen() {
 
       {formalityDowngraded && !noCompleteOutfit && (
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-          <span className="font-serif italic text-[15px] text-terracotta">✦</span>
+          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1">
             {/* Ancien texte : « Ta capsule n\'a pas de tenue suffisamment
                 habillée pour cette occasion. On te propose l\'alternative la
@@ -1228,7 +1228,7 @@ export default function TenuesScreen() {
 
       {occasionElargie && !noCompleteOutfit && occasionLabelCourant && (
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-          <span className="font-serif italic text-[15px] text-terracotta">✦</span>
+          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1">
             <div className="text-[12px] text-[#3F3B34] leading-[1.45]">
               {occasionElargieText(occasionLabelCourant)}
