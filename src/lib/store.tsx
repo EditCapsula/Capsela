@@ -33,7 +33,7 @@ import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } 
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
-import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type ResultatDemande } from "./avisStylisteClient";
+import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
@@ -81,7 +81,7 @@ export interface PhotoAvis {
 export type AnalyseAvis =
   | { etat: "inactive" }
   | { etat: "en_cours" }
-  | { etat: "reussie"; analyseId: string; avis: AvisStyliste }
+  | { etat: "reussie"; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[] }
   | { etat: "echouee"; code: Extract<ResultatDemande, { ok: false }>["code"]; raison?: Extract<ResultatDemande, { ok: false }>["raison"] };
 export interface SessionAvisStyliste {
   photo: PhotoAvis | null;
@@ -976,7 +976,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         analyseAvisEnCoursRef.current = false;
         const suivant: SessionAvisStyliste = {
           photo,
-          analyse: r.ok ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis } : { etat: "echouee", code: r.code, raison: r.raison },
+          analyse: r.ok
+            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing }
+            : { etat: "echouee", code: r.code, raison: r.raison },
         };
         avisStylisteRef.current = suivant;
         setAvisStyliste(suivant);

@@ -19,7 +19,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAdminKey } from "../_shared/adminKey.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import type { LecteurPremium } from "../_shared/premium.ts";
-import { DELAI_PAR_DEFAUT_MS, MODELE_PAR_DEFAUT, traiterDemandeAvis } from "../_shared/avisStyliste.ts";
+import { DELAI_PAR_DEFAUT_MS, MODELE_PAR_DEFAUT, traiterDemandeAvis, type PieceDressing } from "../_shared/avisStyliste.ts";
 
 function reponse(statut: number, corps: unknown): Response {
   return new Response(JSON.stringify(corps), {
@@ -74,6 +74,14 @@ Deno.serve(async (req) => {
     // (§23, table dédiée ou outil analytics) — en attendant, les logs de la
     // fonction, qui ne contiennent ni photo, ni conseil, ni identité.
     journaliser: (ligne) => console.log(JSON.stringify(ligne)),
+    // Pièces lues par le serveur, filtrées sur l'identifiant du JWT : jamais
+    // celles d'un autre compte. "*" plutôt qu'une liste de colonnes : la
+    // colonne `revente` n'existe qu'une fois la migration 0035 exécutée.
+    lireDressing: async (userId) => {
+      const { data, error } = await admin.from("dressing_items").select("*").eq("user_id", userId);
+      if (error || !Array.isArray(data)) return [];
+      return data as PieceDressing[];
+    },
     maintenant: () => Date.now(),
     nouvelId: () => crypto.randomUUID(),
     modele: Deno.env.get("STYLIST_ADVICE_MODEL") || MODELE_PAR_DEFAUT,

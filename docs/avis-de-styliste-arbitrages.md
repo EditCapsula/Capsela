@@ -16,3 +16,7 @@ Décisions prises par la Product Owner sur les points « À ARBITRER » de `docs
 | 25/09/2026 | 7 — Affichage partiel | Jamais : une réponse incomplète est invalide (une relance, puis « Impossible d'analyser ta tenue pour le moment. »). | Lot 3 |
 | 25/09/2026 | 13 — Personnalisation | Style, morphologie si renseignée (déclarée, jamais déduite de l'image), palette de couleurs préférées, colorimétrie analysée. Jamais nom, email ni identifiant. Garde-fous : la morphologie n'oriente que des suggestions de vêtements, en termes positifs ; le serveur rejette toute réponse contenant une note, la mention d'IA ou un mot interdit du projet (cacher, dissimuler, camoufler, corriger, défaut, grossir, amincir, peu flatteur). | Lot 3 |
 | 25/09/2026 | 15 — Délai et relances | 45 s par appel ; une relance automatique, uniquement sur réponse invalide (pas sur délai dépassé ni erreur de l'API). | Lot 3 |
+| 25/09/2026 | 3 — Méthode « Avec ton dressing » | Option A : le modèle décrit jusqu'à 3 besoins (catégorie, type de pièce, couleurs, matières, lien vers le conseil ou une suggestion) ; le serveur cherche dans le dressing de l'utilisatrice (lu par l'identifiant du JWT). Le dressing n'est jamais envoyé à OpenAI. | Lot 4 |
+| 25/09/2026 | 4 — Aucune pièce / dressing vide | Section masquée. | Lot 4 |
+| 25/09/2026 | 5 — Nombre de pièces | 3 au maximum. | Lot 4 |
+| 25/09/2026 | 17 — Clic sur une pièce | Fiche de la pièce (écran existant), retour vers le résultat conservé en mémoire. | Lot 4 |

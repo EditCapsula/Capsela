@@ -7,8 +7,10 @@ import BoutonRetour from "@/components/BoutonRetour";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { reactionErreur } from "@/lib/avisStylisteClient";
+import { resolveItemImage } from "@/lib/catalogImages";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
+import type { Item } from "@/lib/types";
 
 /*
  * AVIS DE STYLISTE — écrans du MVP (docs/avis-de-styliste.md, sections 3, 4,
@@ -50,6 +52,7 @@ const TEXTES = {
   ceQuiFonctionne: "Ce qui fonctionne", // décision produit n° 9
   monConseil: "Mon conseil", // décision produit n° 9
   aTester: "À tester", // décision produit n° 9
+  avecTonDressing: "Avec ton dressing", // décision produit n° 9
   enregistrer: "Enregistrer dans mon journal", // §3, §12
   nouvelle: "Nouvelle analyse", // §3, §12
   // TODO_COPY : suppression de la photo avant analyse ([RECOMMANDÉ] §6 et §11, sans libellé).
@@ -101,8 +104,27 @@ function Points({ points }: { points: string[] }) {
   );
 }
 
+/** Carte d'une pièce du dressing : visuel et nom (§6, écran 10), toute la carte est le bouton. */
+function CartePieceDressing({ item, onClick }: { item: Item; onClick: () => void }) {
+  const image = resolveItemImage(item);
+  return (
+    <button type="button" onClick={onClick} className="min-w-0 text-left cursor-pointer">
+      <div
+        className="w-full rounded-[14px] border border-border overflow-hidden"
+        style={{ aspectRatio: "4/5", background: image.url ? "#F3EDE1" : item.hex }}
+      >
+        {image.url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image.url} alt="" loading="lazy" className="w-full h-full object-contain block" style={{ padding: 6, boxSizing: "border-box" }} />
+        )}
+      </div>
+      <div className="text-[12px] text-ink leading-[16px] min-h-[32px] line-clamp-2 mt-[8px]">{item.name}</div>
+    </button>
+  );
+}
+
 export default function AvisStylisteScreen() {
-  const { actions, avisStyliste } = useCapsela();
+  const { state, actions, avisStyliste } = useCapsela();
   const { photo, analyse } = avisStyliste;
   const cameraRef = useRef<HTMLInputElement>(null);
   const galerieRef = useRef<HTMLInputElement>(null);
@@ -208,7 +230,26 @@ export default function AvisStylisteScreen() {
         <Section titre={TEXTES.aTester}>
           <Points points={avis.suggestions} />
         </Section>
-        {/* « Avec ton dressing » : lot suivant, selon la méthode arbitrée (point 3). */}
+        {/* « Avec ton dressing » (§12, option A arbitrée) : uniquement des pièces
+            choisies par le serveur dans le dressing de l'utilisatrice, et
+            encore présentes au moment de l'affichage (une pièce retirée depuis
+            disparaît). Aucune : section masquée (point 4). Clic : fiche de la
+            pièce, le résultat restant en mémoire pour le retour (point 17). */}
+        {(() => {
+          const pieces = analyse.dressing
+            .map((p) => state.items.find((i) => i.id === p.id))
+            .filter((i): i is Item => Boolean(i));
+          if (!pieces.length) return null;
+          return (
+            <Section titre={TEXTES.avecTonDressing}>
+              <div className="grid grid-cols-3 gap-[10px]">
+                {pieces.map((it) => (
+                  <CartePieceDressing key={it.id} item={it} onClick={() => actions.openItem(it.id, false)} />
+                ))}
+              </div>
+            </Section>
+          );
+        })()}
         <div className="mt-[30px] flex flex-col gap-[10px]">
           {/* Enregistrement Journal : lot suivant (points 2 et 19). */}
           <button type="button" disabled className={BOUTON_PRINCIPAL}>

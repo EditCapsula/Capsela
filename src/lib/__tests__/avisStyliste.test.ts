@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   APPELS_MAX,
+  choisirPiecesDressing,
   construireRequeteOpenAI,
   dimensionsJpeg,
   extraireTexteReponse,
@@ -12,8 +13,10 @@ import {
   validerImage,
   validerReponse,
   violationCharte,
+  type BesoinDressing,
   type DependancesAvis,
   type JournalUsage,
+  type PieceDressing,
 } from "../../../supabase/functions/_shared/avisStyliste.ts";
 import type { LecteurPremium } from "../../../supabase/functions/_shared/premium.ts";
 
@@ -35,6 +38,7 @@ const AVIS = {
   strengths: ["Le camel et le crème se répondent très bien.", "La coupe droite du pantalon donne une ligne nette."],
   mainAdvice: "Pour donner davantage de relief, tu pourrais marquer la taille avec une ceinture structurée.",
   suggestions: ["Tu pourrais essayer des mocassins.", "Une autre option serait d'ajouter un bijou doré discret."],
+  dressingNeeds: [] as unknown[],
 };
 const reponseOpenAI = (contenu: unknown, extra: Record<string, unknown> = {}) => ({
   status: "completed",
@@ -53,8 +57,10 @@ function deps(opts: {
   premium?: LecteurPremium;
   reponses?: Array<{ ok: boolean; json: unknown } | "reseau" | "attente">;
   delaiMs?: number;
+  dressing?: PieceDressing[];
 } = {}) {
   const appels: unknown[] = [];
+  const lecturesDressing: string[] = [];
   const journal: JournalUsage[] = [];
   const file = [...(opts.reponses ?? [{ ok: true, json: reponseOpenAI(AVIS) }])];
   const d: DependancesAvis = {
@@ -68,12 +74,16 @@ function deps(opts: {
       return Promise.resolve(r);
     },
     journaliser: (l) => journal.push(l),
+    lireDressing: async (userId) => {
+      lecturesDressing.push(userId);
+      return opts.dressing ?? [];
+    },
     maintenant: () => 0,
     nouvelId: () => "analyse-1",
     modele: "modele-test",
     delaiMs: opts.delaiMs ?? 1000,
   };
-  return { d, appels, journal };
+  return { d, appels, journal, lecturesDressing };
 }
 const AUTH = "Bearer jwt-ok";
 
@@ -121,6 +131,7 @@ describe("traiterDemandeAvis — ordre des contrôles (TEST 06 à 09)", () => {
       ok: true,
       analyseId: "analyse-1",
       avis: { overallAssessment: AVIS.overallAssessment, strengths: AVIS.strengths, mainAdvice: AVIS.mainAdvice, suggestions: AVIS.suggestions },
+      dressing: [],
     });
     expect(appels).toHaveLength(1);
   });
@@ -161,7 +172,7 @@ describe("traiterDemandeAvis — ordre des contrôles (TEST 06 à 09)", () => {
     const { d, journal } = deps();
     await traiterDemandeAvis(AUTH, { image: IMAGE, contexte: { style: ["Romantique"] } }, d);
     expect(journal).toEqual([
-      { evenement: "stylist_advice", analyse_id: "analyse-1", statut: "ok", modele: "modele-test", appels: 1, tokens_entree: 1000, tokens_sortie: 200, duree_ms: 0 },
+      { evenement: "stylist_advice", analyse_id: "analyse-1", statut: "ok", modele: "modele-test", appels: 1, tokens_entree: 1000, tokens_sortie: 200, duree_ms: 0, pieces_dressing: 0 },
     ]);
     const brut = JSON.stringify(journal);
     expect(brut).not.toContain("base64");
@@ -268,5 +279,83 @@ describe("contexte de personnalisation", () => {
 
   it("sans contexte, rien n'est inventé", () => {
     expect(formulerContexte({})).toBe("Aucun contexte de profil n'est renseigné.");
+  });
+});
+
+/* ───────── « Avec ton dressing » (option A) ───────── */
+
+const piece = (id: number, cat: string, name: string, over: Partial<PieceDressing> = {}): PieceDressing => ({
+  id, cat, name, color: null, matiere: null, subtype: null, shoe_type: null, sac_type: null, bijou_type: null, accessoire_type: null, ...over,
+});
+const besoin = (over: Partial<BesoinDressing>): BesoinDressing => ({ categorie: "accessoire", motsCles: [], couleurs: [], matieres: [], lien: "mainAdvice", ...over });
+
+describe("choisirPiecesDressing — seulement des pièces réelles et pertinentes", () => {
+  const dressing = [
+    piece(1, "accessoire", "Foulard soie", { accessoire_type: "Foulard", color: "Bordeaux" }),
+    piece(2, "accessoire", "Ceinture cuir chocolat", { accessoire_type: "Ceinture", color: "Chocolat", matiere: "Cuir" }),
+    piece(3, "chaussures", "Mocassins marron", { shoe_type: "Mocassins", color: "Marron" }),
+    piece(4, "veste", "Blazer camel", { color: "Camel" }),
+    piece(5, "accessoire", "Ceinture tressée noire", { accessoire_type: "Ceinture", color: "Noir" }),
+  ];
+
+  it("exemple de la spec : ceinture, blazer, mocassins — une pièce par besoin, le conseil principal d'abord", () => {
+    const besoins = [
+      besoin({ categorie: "chaussures", motsCles: ["mocassins"], lien: "suggestion:1" }),
+      besoin({ categorie: "accessoire", motsCles: ["ceinture"], couleurs: ["chocolat"], matieres: ["cuir"] }),
+      besoin({ categorie: "veste", motsCles: ["blazer"], lien: "suggestion:2" }),
+    ];
+    expect(choisirPiecesDressing(besoins, dressing)).toEqual([
+      { id: 2, lien: "mainAdvice" },
+      { id: 3, lien: "suggestion:1" },
+      { id: 4, lien: "suggestion:2" },
+    ]);
+  });
+
+  it("aucune pièce forcée : même catégorie mais autre type → rien", () => {
+    expect(choisirPiecesDressing([besoin({ motsCles: ["chapeau"] })], dressing)).toEqual([]);
+  });
+
+  it("3 pièces au plus, jamais deux fois la même", () => {
+    const besoins = [1, 2, 3, 4].map((n) => besoin({ motsCles: ["ceinture"], lien: `suggestion:${n}` }));
+    const r = choisirPiecesDressing(besoins, dressing);
+    expect(r.map((p) => p.id)).toEqual([2, 5]);
+    expect(choisirPiecesDressing([besoin({ categorie: "veste", motsCles: ["blazer"] }), ...besoins], dressing)).toHaveLength(3);
+  });
+
+  it("une pièce mise de côté pour vendre n'est pas proposée", () => {
+    const d = [piece(2, "accessoire", "Ceinture cuir", { accessoire_type: "Ceinture", revente: "de_cote" })];
+    expect(choisirPiecesDressing([besoin({ motsCles: ["ceinture"] })], d)).toEqual([]);
+  });
+
+  it("dressing vide : rien (section masquée)", () => {
+    expect(choisirPiecesDressing([besoin({ motsCles: ["ceinture"] })], [])).toEqual([]);
+  });
+});
+
+describe("traiterDemandeAvis — « Avec ton dressing » côté serveur", () => {
+  const avecBesoins = { ...AVIS, dressingNeeds: [{ categorie: "accessoire", motsCles: ["ceinture"], couleurs: [], matieres: [], lien: "mainAdvice", numeroSuggestion: null }] };
+
+  it("le dressing lu est celui de l'utilisateur du JWT, et seules ses pièces sortent", async () => {
+    const { d, lecturesDressing, journal } = deps({
+      reponses: [{ ok: true, json: reponseOpenAI(avecBesoins) }],
+      dressing: [piece(42, "accessoire", "Ceinture cuir", { accessoire_type: "Ceinture" })],
+    });
+    const r = await traiterDemandeAvis(AUTH, { image: IMAGE }, d);
+    expect(r.corps).toMatchObject({ ok: true, dressing: [{ id: 42, lien: "mainAdvice" }] });
+    expect(lecturesDressing).toEqual(["u1"]);
+    expect(journal[0].pieces_dressing).toBe(1);
+  });
+
+  it("sans besoin exprimé, le dressing n'est même pas lu", async () => {
+    const { d, lecturesDressing } = deps();
+    await traiterDemandeAvis(AUTH, { image: IMAGE }, d);
+    expect(lecturesDressing).toEqual([]);
+  });
+
+  it("un besoin mal formé (catégorie inconnue, suggestion inexistante) est ignoré, pas la réponse", async () => {
+    const r = await traiterDemandeAvis(AUTH, { image: IMAGE }, deps({
+      reponses: [{ ok: true, json: reponseOpenAI({ ...AVIS, dressingNeeds: [{ categorie: "ovni", motsCles: [], couleurs: [], matieres: [], lien: "mainAdvice", numeroSuggestion: null }, { categorie: "sac", motsCles: ["cabas"], couleurs: [], matieres: [], lien: "suggestion", numeroSuggestion: 9 }] }) }],
+    }).d);
+    expect(r.corps).toMatchObject({ ok: true, dressing: [] });
   });
 });

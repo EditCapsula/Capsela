@@ -70,3 +70,13 @@ describe("estAvis — garde-fou d'affichage", () => {
     expect(estAvis({ overallAssessment: "a", strengths: ["x"], mainAdvice: "b", suggestions: ["c"] })).toBe(true);
   });
 });
+
+describe("piecesSuggerees — identifiants reçus du serveur", () => {
+  it("ne garde que des entrées bien formées, 3 au plus", async () => {
+    const { piecesSuggerees } = await import("../avisStylisteClient");
+    expect(
+      piecesSuggerees([{ id: 1, lien: "mainAdvice" }, { id: "2", lien: "x" }, { id: 3 }, { id: 4, lien: "suggestion:1" }, { id: 5, lien: "a" }, { id: 6, lien: "b" }])
+    ).toEqual([{ id: 1, lien: "mainAdvice" }, { id: 4, lien: "suggestion:1" }, { id: 5, lien: "a" }]);
+    expect(piecesSuggerees(undefined)).toEqual([]);
+  });
+});

@@ -5,6 +5,7 @@ import type {
   AvisStyliste,
   CodeErreurAvis,
   ContexteAvis,
+  PieceSuggeree,
   RaisonInexploitable,
   ReponseAvis,
 } from "../../supabase/functions/_shared/avisStyliste.ts";
@@ -20,7 +21,7 @@ import type {
  * de l'afficher.
  */
 
-export type { AvisStyliste };
+export type { AvisStyliste, PieceSuggeree };
 
 const noms = (hexes: string[] | undefined) =>
   (hexes ?? []).map((h) => paletteColorName(h)).filter((n): n is string => Boolean(n));
@@ -51,7 +52,7 @@ export function contexteDepuisProfil(profile: Profile): ContexteAvis {
 }
 
 export type ResultatDemande =
-  | { ok: true; analyseId: string; avis: AvisStyliste }
+  | { ok: true; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[] }
   | { ok: false; code: CodeErreurAvis | "reseau"; raison?: RaisonInexploitable };
 
 function lireFichierEnDataUrl(fichier: File): Promise<string> {
@@ -69,6 +70,14 @@ export function estAvis(v: unknown): v is AvisStyliste {
   const o = v as Record<string, unknown>;
   const chaines = (x: unknown) => Array.isArray(x) && x.length > 0 && x.every((s) => typeof s === "string" && s.trim());
   return typeof o.overallAssessment === "string" && typeof o.mainAdvice === "string" && chaines(o.strengths) && chaines(o.suggestions);
+}
+
+/** Pièces suggérées reçues : identifiants numériques uniquement, 3 au plus (point 5). */
+export function piecesSuggerees(v: unknown): PieceSuggeree[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter((p): p is PieceSuggeree => !!p && typeof p === "object" && Number.isInteger((p as PieceSuggeree).id) && typeof (p as PieceSuggeree).lien === "string")
+    .slice(0, 3);
 }
 
 /**
@@ -96,7 +105,9 @@ export async function demanderAvis(fichier: File, contexte: ContexteAvis): Promi
       return { ok: false, code: "reseau" };
     }
     const corps = data as ReponseAvis | null;
-    if (corps && corps.ok && estAvis(corps.avis)) return { ok: true, analyseId: corps.analyseId, avis: corps.avis };
+    if (corps && corps.ok && estAvis(corps.avis)) {
+      return { ok: true, analyseId: corps.analyseId, avis: corps.avis, dressing: piecesSuggerees(corps.dressing) };
+    }
     return { ok: false, code: "reponse_invalide" };
   } catch {
     return { ok: false, code: "reseau" };

@@ -39,8 +39,15 @@ export type CodeErreurAvis =
   | "reponse_invalide" // 502
   | "configuration"; // 500
 
+/** Pièce du dressing retenue pour « Avec ton dressing » : son identifiant et le conseil auquel elle répond. */
+export interface PieceSuggeree {
+  id: number;
+  /** "mainAdvice", ou "suggestion:N" (N à partir de 1). */
+  lien: string;
+}
+
 export type ReponseAvis =
-  | { ok: true; analyseId: string; avis: AvisStyliste }
+  | { ok: true; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[] }
   | { ok: false; code: CodeErreurAvis; raison?: RaisonInexploitable };
 
 /* ─────────────────────────── Paramètres arbitrés ─────────────────────────── */
@@ -148,6 +155,120 @@ export function formulerContexte(c: ContexteAvis): string {
   return lignes.length ? `Contexte (profil Capsela) :\n${lignes.join("\n")}` : "Aucun contexte de profil n'est renseigné.";
 }
 
+/* ─────────────────────────── « Avec ton dressing » ─────────────────────────── */
+
+/** Les 14 catégories de Capsela (src/lib/data.ts, CATS ; contrainte de dressing_items, migration 0021). */
+export const CATEGORIES = [
+  "haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison",
+  "veste", "manteau", "chaussures", "sac", "bijou", "accessoire",
+] as const;
+export type Categorie = (typeof CATEGORIES)[number];
+
+/** Nombre maximal de pièces affichées (arbitré, point 5). */
+export const PIECES_DRESSING_MAX = 3;
+
+/**
+ * Besoin décrit par le modèle — option A arbitrée (point 3) : il ne voit
+ * jamais le dressing, il décrit ce qui aiderait à appliquer SON conseil ; le
+ * serveur cherche ensuite parmi les pièces de l'utilisatrice.
+ */
+export interface BesoinDressing {
+  categorie: Categorie;
+  motsCles: string[];
+  couleurs: string[];
+  matieres: string[];
+  /** "mainAdvice" ou "suggestion:N". */
+  lien: string;
+}
+
+/** Pièce du dressing telle que lue par le serveur (colonnes de dressing_items). */
+export interface PieceDressing {
+  id: number;
+  cat: string;
+  name: string;
+  color: string | null;
+  matiere: string | null;
+  subtype: string | null;
+  shoe_type: string | null;
+  sac_type: string | null;
+  bijou_type: string | null;
+  accessoire_type: string | null;
+  revente?: string | null;
+}
+
+/** Minuscules, sans accents, sans « s » final : « Mocassins » et « mocassin » se rejoignent. */
+function forme(t: string): string {
+  return t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9œ ]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((m) => (m.length > 3 ? m.replace(/[sx]$/, "") : m))
+    .join(" ");
+}
+
+const contient = (botte: string, aiguille: string) => {
+  const a = forme(aiguille);
+  return a.length >= 3 && forme(botte).includes(a);
+};
+
+/**
+ * Choix des pièces à montrer, sans score nouveau ni pièce forcée :
+ * - même catégorie que le besoin ;
+ * - si le besoin nomme un type de pièce (motsCles), l'un doit se retrouver
+ *   dans le nom ou le type de la pièce ; sinon, sa couleur ou sa matière ;
+ * - à égalité, type > couleur > matière, puis l'identifiant (déterministe) ;
+ * - une pièce « mise de côté pour vendre » (revente = de_cote) n'est pas
+ *   proposée — le statut le plus proche d'un article retiré qui existe ;
+ * - une pièce au plus par besoin, jamais deux fois la même, 3 au total, le
+ *   conseil principal d'abord.
+ * Aucune correspondance : liste vide, et la section est masquée (point 4).
+ */
+export function choisirPiecesDressing(besoins: BesoinDressing[], pieces: PieceDressing[], max = PIECES_DRESSING_MAX): PieceSuggeree[] {
+  const ordonnes = [...besoins.filter((b) => b.lien === "mainAdvice"), ...besoins.filter((b) => b.lien !== "mainAdvice")];
+  const retenues: PieceSuggeree[] = [];
+  const pris = new Set<number>();
+  for (const besoin of ordonnes) {
+    if (retenues.length >= max) break;
+    let meilleure: { id: number; score: number } | null = null;
+    for (const p of pieces) {
+      if (p.cat !== besoin.categorie || pris.has(p.id) || p.revente === "de_cote") continue;
+      const texte = [p.name, p.subtype, p.shoe_type, p.sac_type, p.bijou_type, p.accessoire_type].filter(Boolean).join(" ");
+      const type = besoin.motsCles.some((m) => contient(texte, m));
+      const couleur = besoin.couleurs.some((c) => Boolean(p.color) && (contient(p.color!, c) || contient(c, p.color!)));
+      const matiere = besoin.matieres.some((m) => Boolean(p.matiere) && (contient(p.matiere!, m) || contient(m, p.matiere!)));
+      const pertinente = besoin.motsCles.length ? type : couleur || matiere;
+      if (!pertinente) continue;
+      const score = (type ? 4 : 0) + (couleur ? 2 : 0) + (matiere ? 1 : 0);
+      if (!meilleure || score > meilleure.score || (score === meilleure.score && p.id < meilleure.id)) meilleure = { id: p.id, score };
+    }
+    if (meilleure) {
+      pris.add(meilleure.id);
+      retenues.push({ id: meilleure.id, lien: besoin.lien });
+    }
+  }
+  return retenues;
+}
+
+/** Besoins lus dans la réponse ; toute entrée mal formée est écartée (ils ne sont jamais affichés tels quels). */
+export function lireBesoins(brut: unknown, nbSuggestions: number): BesoinDressing[] {
+  if (!Array.isArray(brut)) return [];
+  const chaines = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim().slice(0, 40)).slice(0, 4) : []);
+  const besoins: BesoinDressing[] = [];
+  for (const b of brut.slice(0, 5)) {
+    if (!b || typeof b !== "object") continue;
+    const o = b as Record<string, unknown>;
+    if (!CATEGORIES.includes(o.categorie as Categorie)) continue;
+    const n = typeof o.numeroSuggestion === "number" ? Math.trunc(o.numeroSuggestion) : null;
+    const lien = o.lien === "mainAdvice" ? "mainAdvice" : o.lien === "suggestion" && n && n >= 1 && n <= nbSuggestions ? `suggestion:${n}` : null;
+    if (!lien) continue;
+    besoins.push({ categorie: o.categorie as Categorie, motsCles: chaines(o.motsCles), couleurs: chaines(o.couleurs), matieres: chaines(o.matieres), lien });
+  }
+  return besoins;
+}
+
 /* ─────────────────────────── Charte et instructions ─────────────────────────── */
 
 /** Mots interdits du projet (CLAUDE.md) — un message morphologique négatif n'est jamais affiché. */
@@ -164,6 +285,7 @@ export const INSTRUCTIONS = [
   "Formule les suggestions au conditionnel (« Tu pourrais essayer… », « Une autre option serait… »). Ne propose pas d'acheter quoi que ce soit.",
   "Ne parle jamais d'intelligence artificielle ni d'analyse automatique : tu es une styliste qui donne son avis.",
   `Format : overallAssessment = 1 à 2 phrases (${LIMITES.phraseDemandee} caractères au plus), avis global bienveillant ; strengths = ${LIMITES.pointsMin} à ${LIMITES.pointsMax} points forts, une phrase chacun (${LIMITES.pointDemande} caractères au plus) ; mainAdvice = un seul ajustement prioritaire (${LIMITES.phraseDemandee} caractères au plus) ; suggestions = ${LIMITES.pointsMin} à ${LIMITES.pointsMax} pistes à tester, une phrase chacune (${LIMITES.pointDemande} caractères au plus).`,
+  `dressingNeeds : jusqu'à ${PIECES_DRESSING_MAX} pièces qu'elle pourrait AJOUTER pour appliquer ton conseil principal ou une suggestion — jamais une pièce déjà visible sur la photo. Pour chacune : categorie (parmi ${CATEGORIES.join(", ")}), motsCles = le type de pièce en un ou deux mots (ex. « ceinture », « mocassins », « blazer »), couleurs et matieres souhaitées (listes courtes, éventuellement vides), lien = "mainAdvice" ou "suggestion" avec numeroSuggestion (à partir de 1, sinon null). Liste vide si aucune pièce ne s'impose.`,
   "Si la photo ne permet pas de lire la tenue (trop floue, trop sombre, aucune tenue visible), réponds isAnalyzable = false avec la raison (blurry, too_dark, no_garment ou other) et laisse les champs de texte vides. Sinon, isAnalyzable = true et unanalyzableReason = null.",
 ].join("\n");
 
@@ -171,7 +293,7 @@ export const INSTRUCTIONS = [
 export const SCHEMA_REPONSE = {
   type: "object",
   additionalProperties: false,
-  required: ["isAnalyzable", "unanalyzableReason", "overallAssessment", "strengths", "mainAdvice", "suggestions"],
+  required: ["isAnalyzable", "unanalyzableReason", "overallAssessment", "strengths", "mainAdvice", "suggestions", "dressingNeeds"],
   properties: {
     isAnalyzable: { type: "boolean" },
     unanalyzableReason: { type: ["string", "null"], enum: ["blurry", "too_dark", "no_garment", "other", null] },
@@ -179,6 +301,22 @@ export const SCHEMA_REPONSE = {
     strengths: { type: "array", items: { type: "string" } },
     mainAdvice: { type: "string" },
     suggestions: { type: "array", items: { type: "string" } },
+    dressingNeeds: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["categorie", "motsCles", "couleurs", "matieres", "lien", "numeroSuggestion"],
+        properties: {
+          categorie: { type: "string", enum: CATEGORIES },
+          motsCles: { type: "array", items: { type: "string" } },
+          couleurs: { type: "array", items: { type: "string" } },
+          matieres: { type: "array", items: { type: "string" } },
+          lien: { type: "string", enum: ["mainAdvice", "suggestion"] },
+          numeroSuggestion: { type: ["integer", "null"] },
+        },
+      },
+    },
   },
 } as const;
 
@@ -268,7 +406,7 @@ export function violationCharte(textes: string[]): string | null {
 }
 
 export type Verdict =
-  | { etat: "valide"; avis: AvisStyliste }
+  | { etat: "valide"; avis: AvisStyliste; besoins: BesoinDressing[] }
   | { etat: "inexploitable"; raison: RaisonInexploitable }
   | { etat: "invalide"; motif: string };
 
@@ -311,7 +449,7 @@ export function validerReponse(texteJson: string | null): Verdict {
   const avis: AvisStyliste = { overallAssessment, strengths: strengths!, mainAdvice, suggestions: suggestions! };
   const faute = violationCharte([overallAssessment, mainAdvice, ...avis.strengths, ...avis.suggestions]);
   if (faute) return { etat: "invalide", motif: `charte:${faute}` };
-  return { etat: "valide", avis };
+  return { etat: "valide", avis, besoins: lireBesoins(o.dressingNeeds, avis.suggestions.length) };
 }
 
 /* ─────────────────────────── Validation du fichier ─────────────────────────── */
@@ -382,6 +520,8 @@ export interface JournalUsage {
   tokens_entree: number;
   tokens_sortie: number;
   duree_ms: number;
+  /** Nombre de pièces du dressing affichées (§16, dressing_items_count). */
+  pieces_dressing: number;
   motif_rejet?: string;
 }
 
@@ -392,6 +532,12 @@ export interface DependancesAvis {
   /** POST à l'API Responses. Lève en cas d'échec réseau ou d'annulation. */
   appelerModele(requete: ReturnType<typeof construireRequeteOpenAI>, signal: AbortSignal): Promise<{ ok: boolean; json: unknown }>;
   journaliser(ligne: JournalUsage): void;
+  /**
+   * Pièces du dressing de CET utilisateur (identifiant issu du JWT validé) —
+   * la seule source des pièces affichées : aucune pièce d'un autre compte ne
+   * peut en sortir. Un échec rend une liste vide (section masquée).
+   */
+  lireDressing(userId: string): Promise<PieceDressing[]>;
   maintenant(): number;
   nouvelId(): string;
   modele: string;
@@ -436,6 +582,7 @@ export async function traiterDemandeAvis(
   let tokensEntree = 0;
   let tokensSortie = 0;
   let dernierMotif = "";
+  let piecesDressing = 0;
   const journal = (statut: JournalUsage["statut"]) =>
     deps.journaliser({
       evenement: "stylist_advice",
@@ -446,6 +593,7 @@ export async function traiterDemandeAvis(
       tokens_entree: tokensEntree,
       tokens_sortie: tokensSortie,
       duree_ms: deps.maintenant() - debut,
+      pieces_dressing: piecesDressing,
       ...(dernierMotif ? { motif_rejet: dernierMotif } : {}),
     });
 
@@ -472,8 +620,11 @@ export async function traiterDemandeAvis(
     }
     const v = validerReponse(extraireTexteReponse(reponse.json));
     if (v.etat === "valide") {
+      const pieces = v.besoins.length ? await deps.lireDressing(user.id).catch(() => [] as PieceDressing[]) : [];
+      const dressing = choisirPiecesDressing(v.besoins, pieces);
+      piecesDressing = dressing.length;
       journal("ok");
-      return { statut: 200, corps: { ok: true, analyseId, avis: v.avis } };
+      return { statut: 200, corps: { ok: true, analyseId, avis: v.avis, dressing } };
     }
     if (v.etat === "inexploitable") {
       journal("photo_inexploitable");
