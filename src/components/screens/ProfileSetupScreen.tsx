@@ -5,9 +5,10 @@ import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
+import { EtapeColorimetrie, ResultatColorimetrie } from "@/components/EtapesColorimetrie";
+import { colorimetrieUtilisable, COLORIMETRIE_VIDE, paletteCapsela, type Colorimetrie } from "@/lib/colorimetrie";
 import FilEtapes from "@/components/FilEtapes";
 import {
-  AFFINITE_OPTIONS,
   GENDERS,
   INTENSITE_OPTIONS,
   MAX_PALETTE_COULEURS,
@@ -22,7 +23,6 @@ import {
   styleConfigFor,
   tailleBasLabelFor,
   taillesBasFor,
-  type Affinite,
   type Intensite,
   type Profile,
 } from "@/lib/profile";
@@ -36,9 +36,29 @@ import {
 const ALL_STEPS = [
   { key: "prenom", kicker: "Toi", title: "Comment tu t'appelles ?", subtitle: "Pour personnaliser ton expérience Capsela." },
   { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
-  { key: "pal_couleurs", kicker: "Ta palette", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis de 1 à 6 couleurs — celles qui reviennent le plus souvent dans tes tenues." },
-  { key: "pal_ressenti", kicker: "Ta palette", title: "Deux précisions rapides", subtitle: "Elles affinent nos suggestions, sans jamais écarter une couleur que tu as choisie." },
-  { key: "pal_recap", kicker: "Ta palette", title: "Voilà ta palette", subtitle: "Tu pourras la retoucher quand tu veux depuis ton profil." },
+  /**
+   * LES CINQ ÉTAPES COULEUR (25/09/2026, maquette « Onboarding Couleurs »).
+   *
+   * Le parcours précédent en comptait TROIS, pas quatre comme le brief le
+   * supposait : `pal_couleurs` → `pal_ressenti` → `pal_recap`, l'affinité et
+   * l'intensité étant déjà fusionnées dans « Deux précisions rapides ».
+   * Il n'y avait donc pas d'étape affinité à supprimer, mais une étape à
+   * scinder.
+   *
+   * L'AFFINITÉ DISPARAÎT, ET C'EST LE FOND DU CHANGEMENT. Demander « tes
+   * couleurs penchent plutôt vers le chaud ou le froid ? » à côté d'une vraie
+   * analyse colorimétrique entretenait la confusion entre ce qu'on aime et ce
+   * qui nous va. Le champ reste en base, lu, mais plus rien ne l'écrit.
+   *
+   * Aucun titre ne dit « palette » ni « colorimétrie » avant l'étape qui en
+   * parle : le surtitre de la première est « Tes couleurs », pas « Ta
+   * palette ».
+   */
+  { key: "pal_couleurs", kicker: "Tes couleurs", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis 1 à 6 couleurs que tu portes ou aimerais porter souvent." },
+  { key: "pal_intensite", kicker: "Ton style", title: "Quelle intensité portes-tu volontiers ?", subtitle: "Cela nous aide à créer des looks dans ton style." },
+  { key: "colorimetrie", kicker: "Ta colorimétrie", title: "Et si on trouvait les couleurs qui te mettent naturellement en valeur ?", subtitle: "Une photo suffit. Capsela étudie les tonalités de ta peau, de tes cheveux et de tes yeux pour personnaliser tes recommandations." },
+  { key: "colorimetrie_resultat", kicker: "Ta colorimétrie", title: "Voilà ce que dit ton analyse", subtitle: "Un repère pour t'inspirer, pas une règle : tu peux porter toutes les couleurs que tu aimes." },
+  { key: "pal_recap", kicker: "Voilà ta palette Capsela", title: "Ce que tu aimes × ce qui te met en valeur", subtitle: "Capsela combine tes préférences et ta colorimétrie pour des recommandations qui te ressemblent." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
   { key: "style", kicker: "Style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis celui qui correspond le mieux à ta façon de t'habiller." },
   { key: "morpho", kicker: "Morphologie", title: "Et ta silhouette ?", subtitle: "Pour affiner nos recommandations de coupes." },
@@ -152,8 +172,20 @@ export default function ProfileSetupScreen() {
   // Étape "prenom" masquée dès qu'un prénom est déjà connu (saisi à
   // l'inscription par e-mail, ou repris des métadonnées Google) — jamais
   // redemandé pour rien (correctif 24/08/2026).
+  /**
+   * L'ÉTAPE RÉSULTAT N'EXISTE QUE S'IL Y A UN RÉSULTAT. Passer l'analyse, ou
+   * la voir échouer, mène directement au récapitulatif — le brief le demande,
+   * et un écran de résultat vide serait de toute façon absurde.
+   *
+   * Un filtre plutôt qu'un saut d'index : la progression reste DÉRIVÉE de la
+   * liste d'étapes. Elle annonce donc 4 tant qu'aucune analyse n'a abouti, 5
+   * dès qu'une a réussi — elle ne promet jamais un écran qui ne viendra pas.
+   */
   const STEPS = ALL_STEPS.filter(
-    (s) => (s.key !== "morpho" || draft.gender === "femme") && (s.key !== "prenom" || !profile.displayName.trim())
+    (s) =>
+      (s.key !== "morpho" || draft.gender === "femme") &&
+      (s.key !== "prenom" || !profile.displayName.trim()) &&
+      (s.key !== "colorimetrie_resultat" || colorimetrieUtilisable(draft.colorimetrie))
   );
   const [step, setStep] = useState(() =>
     Math.max(0, STEPS.findIndex((s) => s.key === (state.profileSetupStep || "genre")))
@@ -185,7 +217,7 @@ export default function ProfileSetupScreen() {
   // l'ordre de ALL_STEPS). Seul le groupe palette (pal_couleurs → pal_ressenti
   // → pal_recap) reste multi-étapes même en édition : ces trois étapes
   // forment un seul geste ("Mes goûts"), jamais séparables.
-  const PALETTE_GROUP = ["pal_couleurs", "pal_ressenti", "pal_recap"];
+  const PALETTE_GROUP = ["pal_couleurs", "pal_intensite", "colorimetrie", "colorimetrie_resultat", "pal_recap"];
   const entryStepKey = state.profileSetupStep || "genre";
   const editGroupEndKey = PALETTE_GROUP.includes(entryStepKey) ? "pal_recap" : entryStepKey;
   const editGroupEndIndex = STEPS.findIndex((s) => s.key === editGroupEndKey);
@@ -220,8 +252,23 @@ export default function ProfileSetupScreen() {
       value: draft.paletteCouleurs.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
       swatches: draft.paletteCouleurs,
     },
-    { label: "Affinité", value: draft.paletteAffinite || "non précisée", swatches: [] as string[] },
     { label: "Intensité", value: draft.paletteIntensite || "non précisée", swatches: [] as string[] },
+    {
+      label: "Analyse",
+      // « Pas encore analysée » et non « aucune » : l'analyse est à venir,
+      // pas refusée.
+      value: colorimetrieUtilisable(draft.colorimetrie)
+        ? draft.colorimetrie.libelle || "Analysée"
+        : "Pas encore analysée",
+      swatches: [] as string[],
+    },
+    {
+      // CALCULÉE, JAMAIS STOCKÉE (brief §2). Sans colorimétrie elle vaut les
+      // préférences seules — ce qui est juste, pas un repli.
+      label: "Ta palette",
+      value: "",
+      swatches: paletteCapsela(draft.paletteCouleurs, draft.colorimetrie),
+    },
   ];
 
   // Contenu de l'écran, identique quelle que soit l'étape — extrait dans
@@ -255,8 +302,17 @@ export default function ProfileSetupScreen() {
         <div className="text-[13px] text-muted mt-[10px] leading-[1.5]">{meta.subtitle}</div>
         {meta.key === "pal_couleurs" && draft.paletteCouleurs.length > 0 && (
           <div className="text-[12px] text-muted mt-[6px]">
-            {draft.paletteCouleurs.length} sur {MAX_PALETTE_COULEURS} couleur{draft.paletteCouleurs.length > 1 ? "s" : ""} sélectionnée
+            {draft.paletteCouleurs.length} / {MAX_PALETTE_COULEURS} sélectionnée
             {draft.paletteCouleurs.length > 1 ? "s" : ""}
+          </div>
+        )}
+        {/* LA PHRASE QUI ÉVITE LE MALENTENDU CENTRAL de ce parcours : aimer
+            une couleur et être mise en valeur par elle sont deux choses, et
+            l'app en fait deux étapes distinctes. Sans cette mention, la
+            première étape se lit comme une colorimétrie déclarative. */}
+        {meta.key === "pal_couleurs" && (
+          <div className="text-[12px] text-muted-3 mt-[10px] leading-[1.45]" style={{ textWrap: "pretty" }}>
+            Tes préférences sont indépendantes de ta colorimétrie.
           </div>
         )}
       </div>
@@ -290,27 +346,50 @@ export default function ProfileSetupScreen() {
         <PaletteDots options={PAL_COULEURS} selected={draft.paletteCouleurs} onSelect={toggleCouleur} />
       )}
 
-      {meta.key === "pal_ressenti" && (
-        <div className="mt-[26px]">
-          <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[11px]">
-            Tes couleurs penchent plutôt vers…
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {AFFINITE_OPTIONS.map((a: Affinite) => (
-              <button key={a} onClick={() => patch({ paletteAffinite: a })} className={chipCls(draft.paletteAffinite === a)}>
-                {a}
-              </button>
-            ))}
-          </div>
-          <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-[11px]">Et leur intensité ?</div>
-          <div className="flex gap-2 flex-wrap">
-            {INTENSITE_OPTIONS.map((it: Intensite) => (
-              <button key={it} onClick={() => patch({ paletteIntensite: it })} className={chipCls(draft.paletteIntensite === it)}>
-                {it}
-              </button>
-            ))}
-          </div>
+      {/* L'intensité seule, en cartes radio pleine largeur plutôt qu'en chips
+          (maquette du 25/09) : quatre libellés longs en chips produisaient
+          deux rangs irréguliers. `OptionRow` est le composant déjà utilisé
+          par l'étape Genre — même marque de sélection, même hauteur. */}
+      {meta.key === "pal_intensite" && (
+        <div className="flex flex-col gap-[10px] mt-[26px]">
+          {INTENSITE_OPTIONS.map((it: Intensite) => (
+            <OptionRow
+              key={it}
+              label={it}
+              on={draft.paletteIntensite === it}
+              onClick={() => patch({ paletteIntensite: it })}
+            />
+          ))}
         </div>
+      )}
+
+      {meta.key === "colorimetrie" && (
+        <EtapeColorimetrie
+          colorimetrie={draft.colorimetrie}
+          /* L'ÉTAPE AVANCE ELLE-MÊME, parce que le bouton générique est
+             masqué ici : c'est elle qui porte ses sorties.
+             Une analyse réussie enchaîne sur son résultat ; une erreur
+             reste sur place, où l'écran propose de reprendre ou de passer —
+             jamais d'avancer vers un résultat qui n'existe pas. */
+          onResultat={(c: Colorimetrie) => {
+            patch({ colorimetrie: c });
+            if (colorimetrieUtilisable(c)) setStep(step + 1);
+          }}
+          onPasser={() => {
+            patch({ colorimetrie: COLORIMETRIE_VIDE });
+            setStep(step + 1);
+          }}
+        />
+      )}
+
+      {meta.key === "colorimetrie_resultat" && (
+        <ResultatColorimetrie
+          colorimetrie={draft.colorimetrie}
+          onRefaire={() => {
+            patch({ colorimetrie: COLORIMETRIE_VIDE });
+            setStep(Math.max(0, step - 1));
+          }}
+        />
       )}
 
       {meta.key === "pal_recap" && (
@@ -452,7 +531,13 @@ export default function ProfileSetupScreen() {
     </>
   );
 
-  const continueButton = (
+  /**
+   * L'ÉTAPE COLORIMÉTRIE PORTE SES PROPRES ACTIONS — « Prendre une photo »,
+   * « Choisir une photo », « Passer pour l'instant », ou « Reprendre » selon
+   * son état. Un « Continuer » générique en dessous serait une troisième
+   * sortie, et la seule qui ne dirait pas ce qu'elle fait.
+   */
+  const continueButton = meta.key === "colorimetrie" ? null : (
     <button
       onClick={canContinue ? next : undefined}
       disabled={!canContinue}
@@ -461,7 +546,14 @@ export default function ProfileSetupScreen() {
         (canContinue ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
       }
     >
-      {isLast ? (state.profileSetupFromEdit ? "Enregistrer les modifications" : "Terminer mon profil") : "Continuer"}
+      {isLast
+        ? state.profileSetupFromEdit
+          ? "Enregistrer les modifications"
+          : // « Commencer l'expérience » plutôt que « Terminer mon profil »
+            // (maquette du 25/09) : ce qui compte à cet instant n'est pas ce
+            // qu'on achève, c'est ce qui s'ouvre.
+            "Commencer l'expérience"
+        : "Continuer"}
     </button>
   );
 

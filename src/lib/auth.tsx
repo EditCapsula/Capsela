@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { DEFAULT_PREFS, EMPTY_PROFILE, type Profile } from "./profile";
 import { consumeSignupIntent, forgetSignupIntent } from "./signupIntent";
@@ -61,6 +62,10 @@ function rowToProfile(row: Record<string, unknown>): Profile {
     paletteCouleurs: (row.palette_couleurs as string[]) ?? [],
     paletteAffinite: (row.palette_affinite as Profile["paletteAffinite"]) ?? null,
     paletteIntensite: (row.palette_intensite as Profile["paletteIntensite"]) ?? null,
+    // jsonb : la colonne a un défaut `{"statut":"aucune"}`, mais une ligne
+    // antérieure à la migration 0034 peut rendre null. Le repli n'est pas une
+    // précaution de style, c'est le cas de toutes les lignes existantes.
+    colorimetrie: (row.colorimetrie as Colorimetrie) ?? COLORIMETRIE_VIDE,
     tailleHaut: (row.taille_haut as string) ?? null,
     tailleBas: (row.taille_bas as string) ?? null,
     pointure: (row.pointure as string) ?? null,
@@ -78,8 +83,12 @@ function profileToRow(p: Profile) {
     birthdate: p.birthdate,
     gender: p.gender,
     palette_couleurs: p.paletteCouleurs,
-    palette_affinite: p.paletteAffinite,
+    // `palette_affinite` n'est PLUS ÉCRITE (25/09/2026) : l'étape qui la
+    // renseignait est retirée de l'onboarding. La colonne reste, et reste
+    // lue, pour ne pas effacer ce que des profils ont déjà déclaré — mais la
+    // réécrire à chaque sauvegarde la remettrait à null pour tout le monde.
     palette_intensite: p.paletteIntensite,
+    colorimetrie: p.colorimetrie,
     taille_haut: p.tailleHaut,
     taille_bas: p.tailleBas,
     pointure: p.pointure,
