@@ -420,11 +420,23 @@ export default function WardrobeScreen() {
               <div className="font-serif text-[18px] text-ink">Pour commencer</div>
             </div>
             <div className="text-[12px] text-muted mt-1">Quelques idées de tenues inspirées de ton style.</div>
+            {/* DE VRAIES TENUES DU MOTEUR, ET ELLES S'OUVRENT (brief du 25/09,
+                point 6). Elles sortaient déjà de generateOutfitWithFallback
+                sur la capsule par défaut — le même appel, les mêmes
+                paramètres que la tenue du jour — mais ne menaient nulle part.
+                Le clic passe par viewItemOutfit : l'écran Tenue affiche CETTE
+                tenue (mêmes pièces, pas un nouveau tirage) avec son occasion,
+                marquée comme choisie à la main pour qu'aucune régénération
+                automatique ne la remplace. « Autre tenue » y retire ensuite
+                dans la même occasion. Dressing vide : le pool de génération
+                y est la capsule par défaut, donc chaque pièce se résout. */}
             <div className="grid grid-cols-2 gap-[10px] mt-3">
               {inspirations.map(({ occasion, pieces }) => (
-                <div
+                <button
                   key={occasion}
-                  className="bg-card rounded-[20px] overflow-hidden"
+                  onClick={() => actions.viewItemOutfit(pieces.map((p) => p.id), occasion)}
+                  aria-label={`Voir la tenue ${OCC_LABELS[occasion]} proposée par Capsela`}
+                  className="bg-card rounded-[20px] overflow-hidden text-left cursor-pointer"
                   style={{ border: "1px dashed var(--color-sand-border)" }}
                 >
                   <div className="grid grid-cols-2 gap-[2px] p-[6px]" style={{ background: "var(--color-warm-bg)" }}>
@@ -435,10 +447,11 @@ export default function WardrobeScreen() {
                     ))}
                   </div>
                   <div className="px-3 pt-[10px] pb-3">
-                    <div className="font-serif text-[15px] leading-[1.25] text-ink">{OCC_LABELS[occasion]}</div>
-                    <div className="text-[10px] text-terracotta mt-1">Idée Capsela</div>
+                    <div className="text-[10px] text-terracotta">Idée Capsela</div>
+                    <div className="font-serif text-[15px] leading-[1.25] text-ink mt-[3px]">{OCC_LABELS[occasion]}</div>
+                    <div className="text-[11px] text-terracotta mt-[6px]">Voir la tenue →</div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </>

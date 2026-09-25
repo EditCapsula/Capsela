@@ -1005,7 +1005,14 @@ export default function HomeScreen() {
           comme tous les autres écrans. Deux registres à deux cents pixels
           d'écart se verraient. */}
       <div className="mx-6 mt-7">
-        <div className="font-serif text-[21px] leading-[1.18] text-ink">Ton dressing, autrement</div>
+        {/* SYSTÈME ÉDITORIAL DES TITRES (brief du 25/09, point 9) : titre à
+            l'encre, UN mot ou une expression clé en italique terracotta —
+            jamais deux. Même traitement que « Bonjour, … », « La capsule … »
+            et les titres de Planifier. Le titre du hero, posé sur le
+            terracotta, en est exclu : l'accent y serait invisible. */}
+        <div className="font-serif text-[21px] leading-[1.18] text-ink">
+          Ton dressing, <span className="italic text-terracotta">autrement</span>
+        </div>
         <div className="text-[12px] text-muted leading-[1.45] mt-[5px]">
           Tes pièces, ton style, en un coup d&apos;œil.
         </div>
@@ -1020,7 +1027,11 @@ export default function HomeScreen() {
                éditorial arrivera, il se substitue à ce seul appel. */}
         <CardModule
           onClick={dressingVide ? actions.openAdd : actions.goWardrobe}
-          titre="Ton dressing"
+          titre={
+            <>
+              Ton <span className="italic text-terracotta">dressing</span>
+            </>
+          }
           sousTitre={dressingVide ? "Ajoute tes pièces pour créer tes premiers looks." : resumeDressing}
           cta={dressingVide ? "Ajouter mes pièces" : "Explorer ton dressing"}
           fond="#F2E9DA"
@@ -1065,7 +1076,11 @@ export default function HomeScreen() {
                photos éditoriales restent le repli tant qu'aucun look n'existe. */}
         <CardModule
           onClick={actions.goHistory}
-          titre="Ton style évolue"
+          titre={
+            <>
+              Ton style <span className="italic text-terracotta">évolue</span>
+            </>
+          }
           sousTitre={resumeJournal}
           cta="Voir ton journal"
           fond="#F2E9DA"
@@ -1090,7 +1105,7 @@ export default function HomeScreen() {
                   ligne, la pastille Premium lui prenant ~110 px. balance
                   répartit les deux lignes et supprime l'orphelin. */}
               <div className="font-serif text-[18px] text-ink leading-[1.2]" style={{ textWrap: "balance" }}>
-                Et si on préparait la suite ?
+                Et si on préparait <span className="italic text-terracotta">la suite</span> ?
               </div>
               <div className="text-[11px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
                 Un dîner samedi ? Une escapade ? Une semaine chargée ?

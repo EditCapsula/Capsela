@@ -6,7 +6,9 @@ import BottomSheet from "@/components/BottomSheet";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
+import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
+import { resolveItemImage } from "@/lib/catalogImages";
 import { CATS, DATE_CONTEXTS, OCCASIONS, occasionShortLabel } from "@/lib/data";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { generateOutfitWithFallback } from "@/lib/logic";
@@ -85,25 +87,18 @@ function Glyphe({ taille = 19, children }: { taille?: number; children: React.Re
   );
 }
 
-const G_CALENDRIER = (
+/** Même dessin que le glyphe valise de l'accueil (« Et si on préparait la suite ? »). */
+const G_VALISE = (
   <>
-    <rect x="4" y="6" width="16" height="14" rx="2" {...T} />
-    <line x1="4" y1="10" x2="20" y2="10" {...T} />
-    <line x1="8.5" y1="3.5" x2="8.5" y2="7" {...T} />
-    <line x1="15.5" y1="3.5" x2="15.5" y2="7" {...T} />
+    <rect x="3" y="7.5" width="18" height="13" rx="2.5" {...T} />
+    <path d="M9 7.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2.5M9.5 11.5v5M14.5 11.5v5" {...T} />
   </>
 );
+
 const G_CINTRE = (
   <>
     <path d="M12 6a2 2 0 1 1 2 2v1.4" {...T} />
     <path d="M14 9.4 3.9 16.2a1 1 0 0 0 .6 1.8h15a1 1 0 0 0 .6-1.8L14 9.4z" {...T} />
-  </>
-);
-const G_MAIN = (
-  <>
-    <path d="M9 11.5V5.8a1.4 1.4 0 0 1 2.8 0v5.2" {...T} />
-    <path d="M11.8 10.6V9.3a1.4 1.4 0 0 1 2.8 0v1.8" {...T} />
-    <path d="M14.6 10.9V9.9a1.4 1.4 0 0 1 2.8 0v5.3a4.8 4.8 0 0 1-4.8 4.8h-1a4 4 0 0 1-3.3-1.8L6 14.8a1.3 1.3 0 0 1 2.1-1.5l.9 1.2" {...T} />
   </>
 );
 const G_NUAGE = (
@@ -289,6 +284,72 @@ function LigneChoix({
   );
 }
 
+/**
+ * Le badge Premium — le dessin exact de la pastille de l'accueil (« Et si on
+ * préparait la suite ? ») : même taille, même couleur, même glyphe ✦. Aucune
+ * couleur propre au Premium. Informatif, jamais un bouton.
+ */
+function BadgePremium() {
+  return (
+    <span className="inline-flex items-center gap-[4px] rounded-full bg-warm-bg px-[9px] py-[4px] text-[9px] tracking-[.1em] uppercase text-terracotta whitespace-nowrap">
+      <span aria-hidden="true">✦</span> Premium
+    </span>
+  );
+}
+
+/**
+ * Une carte du hub. Toute la carte est le bouton (pattern des cartes de
+ * l'accueil) ; le CTA est un <span>, pour ne pas imbriquer deux éléments
+ * interactifs. Le badge est sur sa propre ligne, au-dessus du titre, à côté
+ * du glyphe : il ne peut ni chevaucher le titre ni le faire passer à la ligne,
+ * quelle que soit la largeur (brief §16).
+ */
+function CartePlanifier({
+  glyphe,
+  titre,
+  accroche,
+  points,
+  note,
+  cta,
+  onClick,
+}: {
+  glyphe: React.ReactNode;
+  titre: [string, string];
+  accroche: string;
+  points: string[];
+  note?: string;
+  cta: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-card border border-border rounded-[24px] px-[18px] pt-[16px] pb-[14px] cursor-pointer"
+    >
+      <span className="flex items-center justify-between gap-3">
+        <span className="w-10 h-10 flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">
+          <Glyphe>{glyphe}</Glyphe>
+        </span>
+        <BadgePremium />
+      </span>
+      <span className="block font-serif text-[21px] leading-[1.18] text-ink mt-[12px]">
+        {titre[0]} <span className="italic text-terracotta">{titre[1]}</span>
+      </span>
+      <span className="block text-[10px] tracking-[.14em] uppercase text-terracotta mt-[6px]">{accroche}</span>
+      <span className="flex flex-col gap-[5px] mt-[12px]">
+        {points.map((l) => (
+          <span key={l} className="flex items-center gap-[9px] text-[13px] text-ink">
+            <span aria-hidden="true" className="w-[5px] h-[5px] rounded-full bg-terracotta flex-shrink-0" />
+            {l}
+          </span>
+        ))}
+      </span>
+      {note && <span className="block text-[12px] text-muted leading-[1.45] mt-[10px]">{note}</span>}
+      <span className="mt-[8px] flex items-center min-h-[44px] text-[12px] tracking-[.1em] uppercase text-terracotta">{cta} →</span>
+    </button>
+  );
+}
+
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
   const { profile, userId } = useAuth();
@@ -296,6 +357,8 @@ export default function PlanifierScreen() {
   const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail">("intro");
   /** Tenue planifiée ouverte en détail, ou dont le menu « … » est déplié. */
   const [planOuvert, setPlanOuvert] = useState<TenuePlanifiee | null>(null);
+  /** D'où le détail a été ouvert — le hub ou la liste complète — pour que le retour y ramène. */
+  const [retourDetail, setRetourDetail] = useState<"intro" | "liste">("liste");
   const [menuPlan, setMenuPlan] = useState<TenuePlanifiee | null>(null);
   const [aSupprimer, setASupprimer] = useState<TenuePlanifiee | null>(null);
   const [etape, setEtape] = useState(1);
@@ -526,6 +589,11 @@ export default function PlanifierScreen() {
     if (previsionEtat !== "faite") {
       // Avant l'appel il n'y a rien à annoncer sur la météo — seulement à dire
       // ce qu'il manque pour l'obtenir. Une phrase produit, pas un disclaimer.
+      // Au-delà de l'horizon, promettre « la météo prévue sur place »
+      // serait faux avant même l'appel (brief du 25/09, point 3).
+      if (jour != null && jour > HORIZON_PREVISION_JOURS) {
+        return `Pas de prévision pour cette date : la tenue sera composée sur la météo d'aujourd'hui.`;
+      }
       return `Indique la ville : la tenue tiendra compte de la météo prévue sur place.`;
     }
     if (meteoMoment) {
@@ -603,6 +671,25 @@ export default function PlanifierScreen() {
 
   const { aVenir, passees } = repartirParEcheance(plans);
   const listeAffichee = onglet === "up" ? aVenir : passees;
+  /** Onglets À venir / Passées — un seul rendu, partagé par le hub et la liste complète. */
+  const ongletsPlans = (
+    <div className="flex gap-2">
+              {([["up", `À venir${aVenir.length ? ` (${aVenir.length})` : ""}`], ["past", "Passées"]] as const).map(([cle, label]) => (
+                <button
+                  key={cle}
+                  onClick={() => setOnglet(cle)}
+                  aria-pressed={onglet === cle}
+                  className={
+                    "rounded-full px-4 text-[12px] cursor-pointer border transition-colors " +
+                    (onglet === cle ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-muted-3")
+                  }
+                  style={{ minHeight: 44 }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+  );
 
   /**
    * « Garder cette tenue ». L'écriture précède l'affichage : la liste n'est
@@ -629,7 +716,7 @@ export default function PlanifierScreen() {
       setPlans((l) => [...l.filter((x) => x.id !== ligne.id), ligne]);
       setVue("liste");
       setOnglet("up");
-      flash("Ajoutée à tes tenues planifiées");
+      flash("C'est noté. Ta tenue t'attendra dans ton planning jusqu'au jour J.");
     } catch {
       flash("L'enregistrement a échoué. Réessaie.");
     } finally {
@@ -692,7 +779,7 @@ export default function PlanifierScreen() {
   const revenir = () => {
     if (vue === "detail") {
       setPlanOuvert(null);
-      setVue("liste");
+      setVue(retourDetail);
     } else if (vue === "liste") setVue("intro");
     else if (vue === "resultat") setVue("etape");
     else if (vue === "etape" && etape > 1) setEtape(etape - 1);
@@ -726,13 +813,29 @@ export default function PlanifierScreen() {
   const ETAPES: Record<number, [string, string, string, string]> = {
     1: ["Étape 1 sur 3", "Quelle est", "l'occasion ?", "Choisis ce qui est prévu ce jour-là."],
     2: ["Étape 2 sur 3", "Pour", "quand ?", "La date fixe la saison de la tenue."],
-    3: ["Étape 3 sur 3", "Où", "seras-tu ?", "La ville donne la météo prévue sur place."],
+    // Le type de lieu n'entre PAS dans le moteur (cf. TYPES_LIEU_PAR_OCCASION) :
+    // écrire « le lieu affine la tenue » serait faux. Il précise l'occasion.
+    3: [
+      "Étape 3 sur 3",
+      "Où",
+      "seras-tu ?",
+      typesLieuProposes.length > 0
+        ? "La ville nous aide pour la météo. Le type de lieu précise ton occasion."
+        : "La ville nous aide pour la météo.",
+    ],
   };
 
   return (
     <div className="absolute inset-0 flex flex-col bg-cream">
       <div className="flex-shrink-0 px-6 pt-[6px]">
-        <AppHeader showAvatar={false} onBack={revenir} backLabel={vue === "intro" ? "Revenir à l'accueil" : "Revenir à l'étape précédente"} />
+        {/* LE BANDEAU COMMUN, AVATAR COMPRIS (brief du 25/09, point 8). Le hub
+            est une page de premier niveau, ouverte depuis la barre de
+            navigation : pas de retour, comme Dressing ou Journal. Les vues
+            suivantes gardent le chevron, qui remonte le parcours. */}
+        <AppHeader
+          onBack={vue === "intro" ? undefined : revenir}
+          backLabel={vue === "liste" || (vue === "detail" && retourDetail === "intro") ? "Revenir à Planifier" : "Revenir à l'étape précédente"}
+        />
       </div>
 
       {/* Le fil de l'onboarding, repris tel quel (24/09/2026, demandé). Il
@@ -746,71 +849,131 @@ export default function PlanifierScreen() {
         </div>
       )}
 
-      <div ref={zoneScroll} className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 pb-5">
+      <div ref={zoneScroll} className={"scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 " + (vue === "intro" ? "pb-safe-nav" : "pb-5")}>
+        {/* LE HUB « PLANIFIER » — brief « Page Planifier, design + UX »
+            (transmis le 25/09/2026, source de vérité). Trois questions dans
+            l'ordre du brief : que puis-je planifier, comment commencer,
+            qu'ai-je déjà planifié. La promesse d'abord, puis les deux
+            parcours, puis les planifications. */}
         {vue === "intro" && (
           <>
             <Surtitre>Planifier</Surtitre>
-            <TitreEtape a="Le bon look," b="au bon moment" />
-            {/* Visuel dédié (24/09/2026, fourni) — il remplace l'emprunt à
-                l'état vide du Dressing. Le ratio du conteneur suit celui de
-                l'image (1,433) plutôt que l'inverse : en gardant 1,5 avec un
-                objectFit cover, on rognait 5 % de la hauteur, donc le carnet
-                « Mes tenues » qui est le sujet. */}
-            <div className="mt-4 rounded-[24px] overflow-hidden bg-warm-bg" style={{ aspectRatio: "1.433" }}>
-              {/* <img> et non next/image : l'export statique (output: "export",
-                  nécessaire à l'empaquetage Capacitor) n'embarque pas
-                  l'optimiseur d'images. Même convention que l'accueil et le
-                  dressing. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/editorial/capsela_planifier_intro.webp"
-                alt="Un carnet « Mes tenues » posé sur une coiffeuse, devant un miroir et un portant"
-                width={874}
-                height={610}
-                loading="lazy"
-                decoding="async"
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            <TitreEtape a="Anticipe tes moments." b="Capsela s'occupe du look." />
+            <div className="text-[13px] text-muted-3 leading-[1.5] mt-[10px]" style={{ textWrap: "pretty" }}>
+              Des tenues pensées pour tes occasions et tes voyages, selon ton style, ta météo et ton dressing.
+            </div>
+
+            {/* LES DEUX CARTES SONT DE MÊME RANG (mise à jour du brief, 25/09) :
+                deux usages Premium d'un même territoire, même structure, même
+                badge, même CTA. Aucune n'a donc de visuel photo : le brief en
+                demande deux de qualité comparable, et seul celui de la tenue
+                existe dans public/editorial — en montrer un sur une seule
+                carte recréerait la hiérarchie que le brief interdit. Chaque
+                carte porte son glyphe. Le jour où le visuel valise arrive, les
+                deux reçoivent leur bandeau ensemble. */}
+            <div className="flex flex-col gap-3 mt-5">
+              <CartePlanifier
+                glyphe={G_CINTRE}
+                titre={["Planifier", "une tenue"]}
+                accroche="Le bon look, au bon moment."
+                points={["Une occasion", "Une date et un lieu", "Une tenue personnalisée"]}
+                note={`Météo prévue jusqu'à ${HORIZON_PREVISION_JOURS} jours à l'avance.`}
+                cta="Planifier une tenue"
+                onClick={recommencer}
+              />
+              {/* Le parcours valise n'existe pas encore : la carte mène à la
+                  page Premium, avec le rappel « Ce que tu voulais faire »,
+                  comme depuis l'accueil (arbitré le 24/09). */}
+              <CartePlanifier
+                glyphe={G_VALISE}
+                titre={["Préparer", "ma valise"]}
+                accroche="Toute ta garde-robe pensée pour ton voyage."
+                points={["Une destination et des dates", "La météo sur place", "Ton programme d'activités", "Le bon bagage", "Une sélection de looks optimisée"]}
+                cta="Préparer ma valise"
+                onClick={() => actions.goPremium("valise")}
               />
             </div>
-            <div className="flex flex-col gap-[14px] mt-5">
-              {([
-                [G_CALENDRIER, "Décris le rendez-vous", "Une occasion, une date, un lieu."],
-                [G_CINTRE, "Capsela compose la tenue", "Le vrai moteur, sur ton dressing et ta capsule."],
-                [G_MAIN, "Tu gardes la main", "Une autre proposition, ou tu reprends les réponses."],
-              ] as const).map(([g, t, s]) => (
-                <div key={t} className="flex gap-[13px] items-start">
-                  <span className="w-10 h-10 flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">
-                    <Glyphe>{g}</Glyphe>
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-[13px] font-medium text-ink">{t}</div>
-                    <div className="text-[12px] text-muted leading-[1.45] mt-[2px]">{s}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {plans.length > 0 && (
-              <button
-                onClick={() => {
-                  setVue("liste");
-                  setOnglet("up");
-                }}
-                className="w-full flex items-center gap-3 mt-5 bg-card border border-border rounded-[20px] px-[15px] py-[13px] cursor-pointer text-left"
-              >
-                <span className="flex-1 text-[13px] font-medium text-ink">Mes tenues planifiées</span>
-                <span className="text-[11px] text-terracotta bg-warm-bg rounded-full px-[9px] py-[4px]">{plans.length}</span>
-              </button>
-            )}
 
-            {/* LE PAVÉ EXPLICATIF EST RETIRÉ (recette 24/09/2026). Il annonçait
-                deux choses. La première — « la météo du jour J est celle prévue
-                sur place » — est une mécanique interne : elle se constate à
-                l'étape 3, où la phrase météo nomme la ville, l'amplitude et la
-                limite de la prévision. La seconde — « rien n'est conservé pour
-                l'instant » — était devenue FAUSSE au lot 3 : `planned_outfits`
-                existe, « Garder cette tenue » écrit dedans, et la liste « Mes
-                tenues planifiées » la relit. Un avertissement périmé sur un
-                écran d'accueil coûte plus cher que pas d'avertissement. */}
+            {/* MES PLANIFICATIONS (brief §9-11). Seules les tenues existent en
+                base (planned_outfits) : aucune valise ne peut encore y
+                figurer. Trois au plus ici, « Voir tout » ouvre la liste
+                complète existante. */}
+            <div className="flex items-center justify-between gap-3 mt-[30px]">
+              <Surtitre>Mes planifications</Surtitre>
+              {plans.length > 0 && (
+                <button
+                  onClick={() => setVue("liste")}
+                  className="text-[12px] text-terracotta cursor-pointer min-h-[44px] -my-[12px] flex items-center"
+                >
+                  Voir tout →
+                </button>
+              )}
+            </div>
+            {plans.length > 0 && <div className="mt-3">{ongletsPlans}</div>}
+
+            {listeAffichee.length === 0 ? (
+              <div
+                className="mt-3 rounded-[20px] px-5 py-[24px] text-center"
+                style={{ border: "1px dashed var(--color-sand-border)" }}
+              >
+                <div className="font-serif text-[18px] text-ink leading-[1.25]">
+                  {onglet === "up" || plans.length === 0 ? "Aucune planification pour le moment." : "Aucune planification passée."}
+                </div>
+                {(onglet === "up" || plans.length === 0) && (
+                  <>
+                    <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
+                      Planifie ton prochain moment ou prépare ton prochain voyage.
+                    </div>
+                    <button onClick={recommencer} className="mt-[6px] min-h-[44px] text-[12px] text-terracotta cursor-pointer">
+                      Créer une planification →
+                    </button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-[10px] mt-3">
+                {listeAffichee.slice(0, 3).map((t) => {
+                  const d = new Date(`${t.jour}T12:00:00`);
+                  const apercu = piecesDuPlan(t).slice(0, 4);
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        setPlanOuvert(t);
+                        setRetourDetail("intro");
+                        setVue("detail");
+                      }}
+                      className="w-full flex items-center gap-3 bg-card border border-border rounded-[20px] p-[10px] text-left cursor-pointer"
+                      style={{ opacity: onglet === "past" ? 0.78 : 1 }}
+                    >
+                      {/* L'image EST la tenue planifiée : ses pièces
+                          enregistrées, jamais un visuel générique (§10). */}
+                      <span className="w-[64px] h-[64px] flex-shrink-0 rounded-[14px] bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
+                        {apercu.map((p) => {
+                          const img = resolveItemImage(p);
+                          return img.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img key={p.id} src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+                          ) : (
+                            <span key={p.id} className="block w-full h-full rounded-[4px]" style={{ background: p.hex }} />
+                          );
+                        })}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-serif text-[15px] text-ink leading-[1.25]">{occasionShortLabel(t.occasion)}</span>
+                        {/* Synthétique (brief §12) : la date et la ville, sur
+                            une ligne. La région et le pays restent au détail. */}
+                        <span className="block text-[12px] text-muted mt-[3px] truncate">
+                          {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
+                          {t.lieu.trim() ? ` · ${t.lieu.split(",")[0].trim()}` : ` · ${t.moment}`}
+                        </span>
+                      </span>
+                      <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0 pr-1">›</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
 
@@ -847,7 +1010,16 @@ export default function PlanifierScreen() {
                          son sous-choix : c'est ce qui dit que les deux vont
                          ensemble. Les autres restent des lignes nues séparées
                          par un filet, comme dans la feuille de Tenue. */
-                      className={actif ? "rounded-[14px] bg-warm-bg px-3 my-1" : "border-b border-[#EFE7DA] last:border-b-0"}
+                      /* SANS EXPANSION (brief du 25/09, point 4). La teinte
+                         déborde dans la gouttière (-mx-3 px-3) au lieu de
+                         repousser le contenu, et la ligne garde son filet
+                         (transparent) : même hauteur, même alignement que les
+                         autres. Seul le sous-choix, quand il existe, ajoute
+                         de la hauteur — c'est du contenu, pas du rembourrage. */
+                      className={
+                        "border-b last:border-b-0 " +
+                        (actif ? "rounded-[14px] bg-warm-bg -mx-3 px-3 border-transparent" : "border-[#EFE7DA]")
+                      }
                     >
                       <button
                         onClick={() => {
@@ -935,59 +1107,82 @@ export default function PlanifierScreen() {
                     laisser croire que la météo du jour J est connue. D'où le
                     filet après le dernier jour couvert, la teinte plus discrète
                     au-delà, le nom accessible qui le dit, et la légende. */}
-                <div className="scrollarea flex gap-[7px] overflow-x-auto mt-4 -mx-6 px-6">
-                  {Array.from({ length: JOURS_PROPOSES }, (_, i) => i + 1).map((n) => {
-                    const d = dansNJours(n);
-                    const on = jour === n;
-                    const couvert = n <= HORIZON_PREVISION_JOURS;
-                    const bouton = (
-                      <button
-                        key={n}
-                        onClick={() => setJour(n)}
-                        aria-pressed={on}
-                        aria-label={
-                          `${DOW_LONG[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}` +
-                          (couvert ? "" : " — au-delà de la prévision météo")
-                        }
-                        className={
-                          "flex-shrink-0 w-[54px] rounded-[16px] py-[7px] cursor-pointer border transition-colors " +
-                          (on ? "bg-terracotta-deep border-terracotta-deep" : "bg-card border-border")
-                        }
-                        style={{ minHeight: 66 }}
-                      >
-                        <span className={"block text-[9px] tracking-[.08em] uppercase " + (on ? "text-cream" : "text-muted")}>
-                          {DOW[d.getDay()]}
-                        </span>
-                        <span
-                          className={
-                            "block font-serif text-[18px] mt-[2px] " +
-                            (on ? "text-cream" : couvert ? "text-ink" : "text-muted-3")
-                          }
-                        >
-                          {d.getDate()}
-                        </span>
-                        <span className={"block text-[9px] " + (on ? "text-cream" : "text-muted")}>
-                          {MOIS[d.getMonth()]}
-                        </span>
-                      </button>
-                    );
-                    if (n !== HORIZON_PREVISION_JOURS) return bouton;
-                    return (
-                      <div key={n} className="flex-shrink-0 flex gap-[7px]">
-                        {bouton}
+                {/* DEUX GROUPES NOMMÉS (brief du 25/09, point 3) : « Météo
+                    prévue » au-dessus des jours que la prévision couvre,
+                    « Saison uniquement » au-dessus des autres. Le filet et la
+                    teinte ne suffisaient pas à dire lesquels ; le nom le dit. */}
+                <div className="scrollarea flex gap-[7px] overflow-x-auto mt-4 -mx-6 px-6 items-end">
+                  {([
+                    ["Météo prévue", 1, HORIZON_PREVISION_JOURS],
+                    // « Sans prévision » et non « Saison uniquement » : vérifié,
+                    // au-delà de l'horizon le moteur reçoit la météo
+                    // D'AUJOURD'HUI (meteoUtilisee retombe sur `weather`), pas
+                    // une météo de saison. Le libellé dit ce qui se passe.
+                    ["Sans prévision", HORIZON_PREVISION_JOURS + 1, JOURS_PROPOSES],
+                  ] as const).map(([titreGroupe, de, a], g) => (
+                    <div key={titreGroupe} className="flex-shrink-0 flex gap-[7px]">
+                      {g > 0 && (
                         <span
                           aria-hidden="true"
                           className="flex-shrink-0 self-stretch"
                           style={{ width: 1, background: "var(--color-sand-border)" }}
                         />
+                      )}
+                      <div className="flex-shrink-0">
+                        <div
+                          className={
+                            "text-[9px] tracking-[.1em] uppercase mb-[6px] whitespace-nowrap " + (g === 0 ? "text-terracotta" : "text-muted")
+                          }
+                        >
+                          {titreGroupe}
+                        </div>
+                        <div className="flex gap-[7px]">
+                          {Array.from({ length: a - de + 1 }, (_, i) => de + i).map((n) => {
+                          const d = dansNJours(n);
+                          const on = jour === n;
+                          const couvert = n <= HORIZON_PREVISION_JOURS;
+                          const bouton = (
+                            <button
+                              key={n}
+                              onClick={() => setJour(n)}
+                              aria-pressed={on}
+                              aria-label={
+                                `${DOW_LONG[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}` +
+                                (couvert ? "" : " — au-delà de la prévision météo")
+                              }
+                              className={
+                                "flex-shrink-0 w-[54px] rounded-[16px] py-[7px] cursor-pointer border transition-colors " +
+                                (on ? "bg-terracotta-deep border-terracotta-deep" : "bg-card border-border")
+                              }
+                              style={{ minHeight: 66 }}
+                            >
+                              <span className={"block text-[9px] tracking-[.08em] uppercase " + (on ? "text-cream" : "text-muted")}>
+                                {DOW[d.getDay()]}
+                              </span>
+                              <span
+                                className={
+                                  "block font-serif text-[18px] mt-[2px] " +
+                                  (on ? "text-cream" : couvert ? "text-ink" : "text-muted-3")
+                                }
+                              >
+                                {d.getDate()}
+                              </span>
+                              <span className={"block text-[9px] " + (on ? "text-cream" : "text-muted")}>
+                                {MOIS[d.getMonth()]}
+                              </span>
+                            </button>
+                          );
+                            return bouton;
+                          })}
+                        </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
                 <div className="text-[11px] text-muted leading-[1.45] mt-[9px]" style={{ textWrap: "pretty" }}>
                   {jour != null && jour > HORIZON_PREVISION_JOURS
-                    ? `La prévision météo ne va pas jusque-là : elle couvre ${HORIZON_PREVISION_JOURS} jours. La tenue sera composée sur la saison, sans météo du jour J.`
-                    : `La prévision météo couvre les ${HORIZON_PREVISION_JOURS} prochains jours. Au-delà du filet, la tenue se compose sur la saison seule.`}
+                    ? `La prévision météo ne va pas jusque-là : elle couvre ${HORIZON_PREVISION_JOURS} jours. La tenue sera composée sur la météo d'aujourd'hui, pas sur celle du jour J.`
+                    : `La prévision météo couvre les ${HORIZON_PREVISION_JOURS} prochains jours. Au-delà, pas de météo du jour J : la tenue se compose sur celle d'aujourd'hui.`}
                 </div>
                 <div className="mt-5">
                   <Surtitre>À quel moment ?</Surtitre>
@@ -1059,8 +1254,14 @@ export default function PlanifierScreen() {
                     exactement ce qu'elle a à demander. */}
                 {typesLieuProposes.length > 0 && (
                   <>
-                    <div className="mt-5">
+                    {/* UNE PRÉCISION DE L'OCCASION, PAS UNE NOUVELLE QUESTION
+                        (brief du 25/09, point 2) : la ligne sous le surtitre
+                        rattache le choix à l'occasion déjà donnée. */}
+                    <div className="mt-6">
                       <Surtitre>Type de lieu · facultatif</Surtitre>
+                      <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">
+                        Pour ton occasion « {occLabel} », si tu veux la préciser.
+                      </div>
                     </div>
                     <div className="flex flex-col gap-[7px] mt-3">
                       {typesLieuProposes.map(([t, d]) => (
@@ -1177,7 +1378,10 @@ export default function PlanifierScreen() {
                 </button>
 
                 <div className="text-[12px] text-muted leading-[1.5] mt-[14px] text-center" style={{ textWrap: "pretty" }}>
-                  Gardée, tu la retrouveras dans tes tenues planifiées jusqu&apos;au jour J.
+                  {/* Avant l'enregistrement : une invitation, pas un constat —
+                      « C'est noté » ne se dit qu'une fois la ligne écrite
+                      (toast de garder()). Pas d'emoji : la DA n'en a pas. */}
+                  Garde-la, elle t&apos;attendra dans ton planning jusqu&apos;au jour J.
                 </div>
               </>
             )}
@@ -1239,22 +1443,7 @@ export default function PlanifierScreen() {
             <Surtitre>Planifier</Surtitre>
             <TitreEtape a="Mes tenues" b="planifiées" />
 
-            <div className="flex gap-2 mt-4">
-              {([["up", `À venir${aVenir.length ? ` (${aVenir.length})` : ""}`], ["past", "Passées"]] as const).map(([cle, label]) => (
-                <button
-                  key={cle}
-                  onClick={() => setOnglet(cle)}
-                  aria-pressed={onglet === cle}
-                  className={
-                    "rounded-full px-4 text-[12px] cursor-pointer border transition-colors " +
-                    (onglet === cle ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-muted-3")
-                  }
-                  style={{ minHeight: 44 }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <div className="mt-4">{ongletsPlans}</div>
 
             {listeAffichee.length === 0 ? (
               /* ÉTAT VIDE — deux textes, parce que les deux situations ne se
@@ -1296,6 +1485,7 @@ export default function PlanifierScreen() {
                       <button
                         onClick={() => {
                           setPlanOuvert(t);
+                          setRetourDetail("liste");
                           setVue("detail");
                         }}
                         className="w-full text-left cursor-pointer"
@@ -1379,6 +1569,9 @@ export default function PlanifierScreen() {
         )}
       </div>
 
+      {/* Le hub n'a pas de barre d'action : ses deux cartes portent chacune
+          leur CTA, et la barre de navigation reprend sa place en pied. */}
+      {vue !== "intro" && (
       <div className="relative flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-2 border-t border-border">
         {/* Ancré à la barre d'action elle-même (bottom: 100%) et non à une
             hauteur devinée : la barre change de hauteur selon la vue — un
@@ -1392,18 +1585,6 @@ export default function PlanifierScreen() {
           >
             {toast}
           </div>
-        )}
-        {vue === "intro" && (
-          <button
-            onClick={() => {
-              setVue("etape");
-              setEtape(1);
-            }}
-            className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
-            style={{ minHeight: 52 }}
-          >
-            Commencer
-          </button>
         )}
         {vue === "etape" && (
           <button
@@ -1500,6 +1681,15 @@ export default function PlanifierScreen() {
           </>
         )}
       </div>
+      )}
+
+      {/* LA BARRE DE NAVIGATION SUR LE HUB (brief du 25/09, points 7-8, et
+          brief Planifier §12). Planifier est un onglet : on y arrive par la
+          barre, elle doit y rester, avec son onglet actif. Le MÊME composant
+          que partout — pas une seconde navigation. Elle s'efface pendant le
+          parcours, dont le bouton principal occupe le pied d'écran (cf.
+          FLOW_SCREENS, App.tsx) : c'est la seule vue sans barre d'action. */}
+      {vue === "intro" && <TabBar />}
 
       {/* LE MENU « … » — BottomSheet, le seul composant modal de l'app. Il
           n'existe pas de popover, et en créer un pour trois lignes ajouterait
