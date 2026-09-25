@@ -69,6 +69,9 @@ import type {
   WorkMode,
 } from "./types";
 
+/** Écrans qui s'ouvrent depuis le profil : jamais retenus comme « retour » du profil. */
+const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileEdit", "profileSetup", "preferences", "account", "legal"]);
+
 /** Occasion par défaut suggérée en arrivant sur "Tenue du jour" sans choix explicite (recette 13/08/2026) — toujours modifiable manuellement ensuite. */
 const DAYS_S = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 export function defaultOccasionToday(prefs: ProfilePrefs): OccasionKey {
@@ -177,6 +180,10 @@ export interface Actions {
   goWardrobePieces: () => void;
   goProfile: () => void;
   goProfileEdit: () => void;
+  /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
+  goPreferences: () => void;
+  /** Compte : e-mail, confidentialité et données, légal, suppression, déconnexion. */
+  goAccount: () => void;
   goLegal: () => void;
   /** Ouvre la page Premium en mémorisant d'où l'on vient. */
   goPremium: (origine?: "valise") => void;
@@ -799,8 +806,20 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goPlanifier: () => go("planifier"),
     goNeverWorn: () => go("neverworn"),
     goWardrobePieces: () => go("wardrobePieces"),
-    goProfile: () => setState((s) => ({ ...s, profileReturn: s.screen === "profile" ? s.profileReturn : s.screen, screen: "profile" })),
+    // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
+    // Avant : revenir de « Modifier » au profil enregistrait « Modifier »
+    // comme écran de retour, et le chevron du profil y renvoyait — profil →
+    // édition → profil → édition, en boucle. Depuis un sous-écran du profil,
+    // on garde l'écran d'où l'on était venu au départ.
+    goProfile: () =>
+      setState((s) => ({
+        ...s,
+        profileReturn: SOUS_ECRANS_PROFIL.has(s.screen) ? s.profileReturn : s.screen,
+        screen: "profile",
+      })),
     goProfileEdit: () => go("profileEdit"),
+    goPreferences: () => go("preferences"),
+    goAccount: () => go("account"),
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
     goPremium: (origine) =>
       setState((s) => ({

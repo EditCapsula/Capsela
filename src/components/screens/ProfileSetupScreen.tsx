@@ -230,9 +230,21 @@ export default function ProfileSetupScreen() {
   };
 
   const next = () => (isLast ? finish() : setStep(step + 1));
+  // EN MODIFICATION, LE RETOUR RAMÈNE À L'ÉCRAN D'APPEL (25/09/2026). Avant,
+  // ouvrir « Style » depuis le profil puis toucher le chevron remontait les
+  // étapes précédentes de l'onboarding (Tailles, Palette…) au lieu de rendre
+  // la main. On ne recule plus qu'à l'intérieur du groupe édité (la palette
+  // et ses étapes), puis on revient d'où l'on venait : Ton profil ou
+  // Personnaliser mon profil.
+  const entryIndex = Math.max(0, STEPS.findIndex((s) => s.key === entryStepKey));
   const back = () => {
+    if (state.profileSetupFromEdit) {
+      if (step > entryIndex) setStep(step - 1);
+      else actions.go(state.profileSetupReturn);
+      return;
+    }
     if (step > 0) setStep(step - 1);
-    else if (state.profileSetupFromEdit || profile.completed) actions.goProfile();
+    else if (profile.completed) actions.goProfile();
   };
   const showBack = step > 0 || state.profileSetupFromEdit || profile.completed;
 

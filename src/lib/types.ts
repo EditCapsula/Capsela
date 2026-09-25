@@ -407,6 +407,11 @@ export type Screen =
   | "profileSetup"
   | "profile"
   | "profileEdit"
+  // Architecture du profil (25/09/2026) : quatre espaces distincts — Ton
+  // profil (consulter), Personnaliser (profileEdit, modifier), Préférences
+  // Capsela (régler l'application), Mon compte (gérer compte et données).
+  | "preferences"
+  | "account"
   | "legal"
   | "login"
   | "opinionShare"
