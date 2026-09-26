@@ -27,9 +27,16 @@ describe("ligneVersAvis — lecture d'un avis enregistré", () => {
       analyseId: "an-1",
       avis: resultat,
       pieces: [{ id: 12, lien: "Pour le conseil" }],
+      reconnaissance: [],
       photoPath: "u1/p.jpg",
       photoUrl: "https://signee",
     });
+  });
+
+  it("reconnaissance : lue si la colonne existe (migration 0037), vide sinon", () => {
+    const r = [{ categorie: "pantalon", libelle: "jean bleu", pieceId: 7, statut: "corrigee", candidats: [] }];
+    expect(ligneVersAvis(ligne({ pieces_reconnues: r }))?.reconnaissance).toEqual(r);
+    expect(ligneVersAvis(ligne())?.reconnaissance).toEqual([]);
   });
 
   it("résultat mal formé : ignoré, jamais affiché tel quel", () => {

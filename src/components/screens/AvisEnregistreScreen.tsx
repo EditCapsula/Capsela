@@ -3,10 +3,13 @@
 import { useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
+import EtMaintenantAvis from "@/components/EtMaintenantAvis";
+import PiecesReconnues from "@/components/PiecesReconnues";
 import AppHeader from "@/components/AppHeader";
 import { LienRetour } from "@/components/BoutonRetour";
 import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
+import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela } from "@/lib/store";
 
 /*
@@ -38,6 +41,7 @@ export default function AvisEnregistreScreen() {
   const { state, actions, avisEnregistreActif: avis } = useCapsela();
   const [confirmation, setConfirmation] = useState(false);
   const [suppression, setSuppression] = useState<"aucune" | "en_cours" | "echec">("aucune");
+  const [correctionRefusee, setCorrectionRefusee] = useState(false);
 
   if (!avis) {
     // Arrivée sans avis (rechargement de la liste, suppression) : retour au Journal.
@@ -88,6 +92,30 @@ export default function AvisEnregistreScreen() {
       )}
 
       <ResultatAvis avis={avis.avis} pieces={avis.pieces} items={state.items} onOuvrirPiece={(id) => actions.openItem(id, false)} />
+
+      {/* La même couche qu'au résultat (26/09/2026) : les pièces reconnues,
+          corrigeables, et les actions sur la composition. Un avis enregistré
+          avant la reconnaissance n'en a pas : rien ne s'affiche. */}
+      <PiecesReconnues
+        reconnaissance={avis.reconnaissance}
+        dressing={state.items}
+        onCorriger={(index, pieceId) => {
+          setCorrectionRefusee(false);
+          void actions.corrigerReconnaissanceEnregistree(avis.id, index, pieceId).then((ok) => setCorrectionRefusee(!ok));
+        }}
+        onOuvrirPiece={(id) => actions.openItem(id, false)}
+        etatJournal={correctionRefusee ? "echec" : undefined}
+        messageEchec="Ta correction n'a pas pu être gardée. Réessaie dans un instant."
+      />
+      {avis.reconnaissance.length > 0 && (
+        <EtMaintenantAvis
+          composition={compositionReconnue(avis.reconnaissance, state.items)}
+          tenueDuJourPortee={state.outfitValidated}
+          onPorter={(ids) => actions.reWear(ids, { rester: true })}
+          onVoirTenue={actions.goTenues}
+          onPlanifier={actions.planifierComposition}
+        />
+      )}
 
       <button type="button" onClick={() => setConfirmation(true)} className="mt-[30px] w-full text-center text-[12px] text-rust py-[10px] cursor-pointer">
         {TEXTES.supprimer}

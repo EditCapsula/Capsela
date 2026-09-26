@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
 import EtMaintenantAvis from "@/components/EtMaintenantAvis";
+import PiecesReconnues from "@/components/PiecesReconnues";
 import AppHeader from "@/components/AppHeader";
 import { LienRetour } from "@/components/BoutonRetour";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
@@ -13,8 +14,8 @@ import { premiumRequis } from "@/lib/autorisations";
 import { useAuth } from "@/lib/auth";
 import { contexteDepuisProfil, etapesAnalyse, personnalisationAvis, phraseAnalyse, reactionErreur } from "@/lib/avisStylisteClient";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
+import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
-import type { Item } from "@/lib/types";
 
 /*
  * AVIS DE STYLISTE — écrans du MVP (docs/avis-de-styliste.md, sections 3, 4,
@@ -329,17 +330,26 @@ export default function AvisStylisteScreen() {
           onOuvrirPiece={(id) => actions.openItem(id, false)}
           personnalisation={personnalisationAvis(contexte)}
         />
-        {/* ET MAINTENANT ? (V2) — la tenue reconnue dans le dressing, et ce
-            qu'on peut en faire avec les fonctionnalités existantes. La clé
-            réinitialise les pièces retirées à chaque nouvel avis. */}
-        <EtMaintenantAvis
-          key={analyse.analyseId}
-          pieces={analyse.portees.map((id) => state.items.find((i) => i.id === id)).filter((i): i is Item => !!i)}
-          tenueDuJourPortee={state.outfitValidated}
-          onPorter={(ids) => actions.reWear(ids, { rester: true })}
-          onVoirTenue={actions.goTenues}
-          onPlanifier={actions.planifierComposition}
+        {/* PHOTO → PIÈCES DU DRESSING → COMPOSITION → ACTIONS (26/09/2026).
+            Les pièces reconnues se vérifient et se corrigent ici ; la
+            composition qui en sort est la seule que lisent les actions. */}
+        <PiecesReconnues
+          reconnaissance={analyse.reconnaissance}
+          dressing={state.items}
+          onCorriger={actions.corrigerReconnaissanceAvis}
+          onOuvrirPiece={(id) => actions.openItem(id, false)}
+          etatJournal={avisStyliste.reconnaissanceJournal}
+          onReessayerJournal={actions.reessayerReconnaissanceJournal}
         />
+        {analyse.reconnaissance.length > 0 && (
+          <EtMaintenantAvis
+            composition={compositionReconnue(analyse.reconnaissance, state.items)}
+            tenueDuJourPortee={state.outfitValidated}
+            onPorter={(ids) => actions.reWear(ids, { rester: true })}
+            onVoirTenue={actions.goTenues}
+            onPlanifier={actions.planifierComposition}
+          />
+        )}
         {/* STATUT JOURNAL (V2, 26/09/2026). L'avis part dans le Journal dès
             qu'il arrive (lancerAvisStyliste) : l'écran dit où il en est, sans
             jamais proposer d'« enregistrer » ce qui l'est déjà. En cas

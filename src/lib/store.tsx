@@ -34,7 +34,8 @@ import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
 import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
-import { enregistrerAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
+import { enregistrerAvis, enregistrerReconnaissanceAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
+import { corrigerReconnaissance, type VetementReconnu } from "./reconnaissance";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import {
   choisirVariation,
@@ -89,13 +90,27 @@ export interface PhotoAvis {
 export type AnalyseAvis =
   | { etat: "inactive" }
   | { etat: "en_cours" }
-  | { etat: "reussie"; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[]; portees: number[] }
+  | {
+      etat: "reussie";
+      analyseId: string;
+      avis: AvisStyliste;
+      dressing: PieceSuggeree[];
+      /** Pièces du dressing reconnues sur la photo, corrections comprises (reconnaissance.ts) — la composition que lisent toutes les actions. */
+      reconnaissance: VetementReconnu[];
+    }
   | { etat: "echouee"; code: Extract<ResultatDemande, { ok: false }>["code"]; raison?: Extract<ResultatDemande, { ok: false }>["raison"] };
 export interface SessionAvisStyliste {
   photo: PhotoAvis | null;
   analyse: AnalyseAvis;
-  /** Enregistrement du résultat dans le Journal — toujours une action explicite (§14). */
+  /** Enregistrement du résultat dans le Journal — automatique à la réception (26/09/2026). */
   enregistrement: "aucun" | "en_cours" | "fait" | "echec";
+  /** Identifiant de l'avis une fois enregistré : c'est lui que la reconnaissance met à jour. */
+  avisEnregistreId?: string;
+  /**
+   * Report de la reconnaissance (et de ses corrections) sur l'avis enregistré
+   * — écriture isolée, qui échoue seule avant la migration 0037.
+   */
+  reconnaissanceJournal?: "en_cours" | "faite" | "echec";
 }
 
 /** Écrans qui s'ouvrent depuis le profil : jamais retenus comme « retour » du profil. */
@@ -253,6 +268,12 @@ export interface Actions {
    * un succès (pas de doublon, §14).
    */
   enregistrerAvisStyliste: () => void;
+  /** L'utilisatrice associe une autre pièce (ou aucune) au vêtement `index` de l'avis affiché ; reportée sur l'avis enregistré. */
+  corrigerReconnaissanceAvis: (index: number, pieceId: number | null) => void;
+  /** Nouvel essai du report de la reconnaissance dans le Journal. */
+  reessayerReconnaissanceJournal: () => void;
+  /** Même correction, sur un avis rouvert depuis le Journal. false : non gardée (et retirée de l'écran). */
+  corrigerReconnaissanceEnregistree: (avisId: string, index: number, pieceId: number | null) => Promise<boolean>;
   /** Charge les avis enregistrés (Journal). */
   chargerAvisEnregistres: () => void;
   /** Ouvre un avis enregistré en consultation (depuis le Journal ou la liste complète, qui est retenue pour le retour). */
@@ -570,6 +591,29 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const [avisEnregistreActifId, setAvisEnregistreActifId] = useState<string | null>(null);
   const [avisEnregistreRetour, setAvisEnregistreRetour] = useState<Screen>("history");
   const avisEnregistreActif = avisEnregistres?.find((a) => a.id === avisEnregistreActifId) ?? null;
+  /** Numéro de la dernière écriture de reconnaissance : seule sa réponse fait foi. */
+  const ecritureReconnaissanceRef = useRef(0);
+  /**
+   * Reporte la reconnaissance actuelle sur l'avis enregistré — sans effet
+   * tant qu'il ne l'est pas (l'enregistrement la reportera à son tour). Deux
+   * corrections rapides : la dernière écriture seule décide de l'état affiché.
+   */
+  const synchroniserReconnaissance = () => {
+    const session = avisStylisteRef.current;
+    if (session.analyse.etat !== "reussie" || !session.avisEnregistreId) return;
+    const numero = ++ecritureReconnaissanceRef.current;
+    const jeton = jetonAvisRef.current;
+    const avisId = session.avisEnregistreId;
+    const reconnaissance = session.analyse.reconnaissance;
+    avisStylisteRef.current = { ...session, reconnaissanceJournal: "en_cours" };
+    setAvisStyliste(avisStylisteRef.current);
+    void enregistrerReconnaissanceAvis(avisId, reconnaissance).then((ok) => {
+      if (numero !== ecritureReconnaissanceRef.current || jeton !== jetonAvisRef.current) return;
+      if (ok) setAvisEnregistres((l) => (l ? l.map((a) => (a.id === avisId ? { ...a, reconnaissance } : a)) : l));
+      avisStylisteRef.current = { ...avisStylisteRef.current, reconnaissanceJournal: ok ? "faite" : "echec" };
+      setAvisStyliste(avisStylisteRef.current);
+    });
+  };
   useEffect(() => {
     etatPremiumRef.current = etatPremium;
   }, [etatPremium]);
@@ -1110,7 +1154,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           photo,
           enregistrement: "aucun",
           analyse: r.ok
-            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing, portees: r.portees }
+            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing, reconnaissance: r.reconnaissance }
             : { etat: "echouee", code: r.code, raison: r.raison },
         };
         avisStylisteRef.current = suivant;
@@ -1143,9 +1187,30 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }).then((enregistre) => {
         if (enregistre) setAvisEnregistres(null); // relu au prochain affichage du Journal
         if (jeton !== jetonAvisRef.current) return;
-        avisStylisteRef.current = { ...avisStylisteRef.current, enregistrement: enregistre ? "fait" : "echec" };
+        avisStylisteRef.current = { ...avisStylisteRef.current, enregistrement: enregistre ? "fait" : "echec", avisEnregistreId: enregistre?.id };
         setAvisStyliste(avisStylisteRef.current);
+        // La reconnaissance suit l'avis, dans une écriture à part.
+        if (enregistre && analyse.reconnaissance.length) synchroniserReconnaissance();
       });
+    },
+    corrigerReconnaissanceAvis: (index, pieceId) => {
+      const session = avisStylisteRef.current;
+      if (session.analyse.etat !== "reussie") return;
+      avisStylisteRef.current = { ...session, analyse: { ...session.analyse, reconnaissance: corrigerReconnaissance(session.analyse.reconnaissance, index, pieceId) } };
+      setAvisStyliste(avisStylisteRef.current);
+      synchroniserReconnaissance();
+    },
+    reessayerReconnaissanceJournal: () => synchroniserReconnaissance(),
+    corrigerReconnaissanceEnregistree: async (avisId, index, pieceId) => {
+      const avis = avisEnregistres?.find((a) => a.id === avisId);
+      if (!avis) return false;
+      const corrigee = corrigerReconnaissance(avis.reconnaissance, index, pieceId);
+      const remplacer = (r: VetementReconnu[]) => setAvisEnregistres((l) => (l ? l.map((a) => (a.id === avisId ? { ...a, reconnaissance: r } : a)) : l));
+      remplacer(corrigee);
+      const ok = await enregistrerReconnaissanceAvis(avisId, corrigee);
+      // Refusée : la correction est retirée — l'écran ne montre jamais ce qui n'est pas gardé.
+      if (!ok) remplacer(avis.reconnaissance);
+      return ok;
     },
     chargerAvisEnregistres: () => {
       if (!userId) {

@@ -59,6 +59,18 @@ import type { Item, OccasionKey } from "@/lib/types";
  *   - Le gros bouton « Voir ma tenue du jour » est retiré : l'onglet Tenue est
  *     dans la barre du bas. Il ne reste qu'un lien discret, dans le seul cas
  *     où il sert (dressing proche de la limite, sans association nouvelle).
+ *
+ * POLISH V3 (26/09/2026) — réduire, pas ajouter ; mesuré avant/après sur les
+ * mêmes données (banc de rendu), aucune donnée ni règle métier touchée :
+ *   - Mes looks : carrousel horizontal (~1,5 carte visible) au lieu de la
+ *     grille ; « + Créer » dans l'en-tête ; « Voir tout → » au bout du
+ *     carrousel, seul chemin vers l'écran « Mes looks » ; « ✦ Suggéré » sur
+ *     la ligne de la date (CarteLook compacte).
+ *   - ✦ À découvrir : un encart — miniatures et « Découvrir → » sur une
+ *     ligne, sans le libellé d'occasion sous chaque tenue.
+ *   - À redécouvrir : deux miniatures un peu plus grandes, texte en serif.
+ *   - Mon vestiaire : cartes un peu plus larges et moins hautes, légendes
+ *     sur une ligne quand elles tiennent.
  */
 
 /**
@@ -68,7 +80,8 @@ import type { Item, OccasionKey } from "@/lib/types";
 const OCCASIONS_ASSOCIATIONS: OccasionKey[] = ["quotidien", "travail_formel", "soiree"];
 /** Les deux occasions des idées d'inspiration du dressing vide. */
 const OCCASIONS_INSPIRATION: OccasionKey[] = ["quotidien", "travail_formel"];
-const LOOKS_AFFICHES = 4;
+/** Looks du carrousel ; au-delà, « Voir tout → » au bout mène à l'écran « Mes looks ». */
+const LOOKS_CARROUSEL = 8;
 
 const PLUS = (
   <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -126,6 +139,45 @@ function Associations({
   );
 }
 
+/**
+ * Les associations de « ✦ À découvrir », en encart (polish V3) : de petites
+ * mosaïques et « Découvrir → » sur une seule ligne. Chaque mosaïque ouvre sa
+ * tenue ; « Découvrir → » ouvre la première. L'occasion n'est plus écrite
+ * sous chaque tenue — elle reste dans le nom accessible et sur l'écran Tenue.
+ */
+function AssociationsCompactes({
+  tenues,
+  onOuvrir,
+}: {
+  tenues: { occasion: OccasionKey; pieces: Item[] }[];
+  onOuvrir: (t: { occasion: OccasionKey; pieces: Item[] }) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 mt-3">
+      <div className="flex gap-[8px] min-w-0">
+        {tenues.map((t) => (
+          <button
+            key={t.occasion}
+            onClick={() => onOuvrir(t)}
+            aria-label={`Voir la tenue ${OCC_LABELS[t.occasion]} proposée par Capsela`}
+            className="flex-none grid grid-cols-2 gap-[3px] p-[4px] rounded-[12px] cursor-pointer active:opacity-80"
+            style={{ width: 52, background: "var(--color-cream)" }}
+          >
+            {Array.from({ length: 4 }, (_, i) => t.pieces[i]).map((p, i) => (
+              <span key={p ? p.id : `vide-${i}`} className="block" style={{ aspectRatio: "1" }}>
+                {p ? <VisuelPiece piece={p} alt="" radius={6} /> : null}
+              </span>
+            ))}
+          </button>
+        ))}
+      </div>
+      <Lien onClick={() => onOuvrir(tenues[0])} label={`Découvrir la tenue ${OCC_LABELS[tenues[0].occasion]} proposée par Capsela`}>
+        Découvrir →
+      </Lien>
+    </div>
+  );
+}
+
 export default function WardrobeScreen() {
   const { state, actions, vestiairePool, defaultCapsule, weather, dressingLoaded, etatPremium } = useCapsela();
   const { profile } = useAuth();
@@ -137,6 +189,7 @@ export default function WardrobeScreen() {
   const neverWorn = useMemo(() => neverWornItems(items), [items]);
   const groupes = useMemo(() => groupesDuVestiaire(items, profile.gender), [items, profile.gender]);
   const synthese = syntheseDressing(etatPremium, items.length, groupes.length);
+  const libellesLongs = groupes.some((g) => g.libelle.length > 21);
 
   /**
    * Tenues composées par le moteur, TIRÉES UNE SEULE FOIS par mémo :
@@ -309,15 +362,17 @@ export default function WardrobeScreen() {
                 aria-label={`${neverWorn.length} ${pluriel ? "pièces jamais portées" : "pièce jamais portée"}. Voir`}
                 className="w-full flex items-center gap-[14px] mt-3 text-left cursor-pointer active:opacity-80"
               >
-                <span className="flex gap-[6px] flex-shrink-0">
-                  {neverWorn.slice(0, 3).map((p) => (
-                    <span key={p.id} className="block" style={{ width: 42, height: 54 }}>
-                      <VisuelPiece piece={p} alt={p.name} radius={10} />
+                {/* Deux miniatures, de même taille et au même ratio qu'avant
+                    (42 × 54 → 50 × 64) : une respiration, pas une carte. */}
+                <span className="flex gap-[8px] flex-shrink-0">
+                  {neverWorn.slice(0, 2).map((p) => (
+                    <span key={p.id} className="block" style={{ width: 50, height: 64 }}>
+                      <VisuelPiece piece={p} alt={p.name} radius={12} />
                     </span>
                   ))}
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-[14px] text-ink leading-[1.3]">
+                  <span className="block t-titre-vignette text-ink">
                     {neverWorn.length} {pluriel ? "pièces jamais portées" : "pièce jamais portée"}
                   </span>
                   {toutesInactives && (
@@ -339,6 +394,9 @@ export default function WardrobeScreen() {
       {/* `-mx-6 px-6` : le carrousel touche les bords de l'écran, son
           débordement reste DANS son conteneur ; première et dernière carte
           alignées sur le texte. */}
+      {/* Largeur : deux cartes entières et le bord de la troisième, qui dit
+          qu'il y en a d'autres (148 px à 390 px de large, 142 au plus étroit).
+          Hauteur : 5/6 au lieu de 3/4 — l'image reste le sujet. */}
       <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 -mx-6 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
         {groupes.map((g) => (
           <button
@@ -346,9 +404,9 @@ export default function WardrobeScreen() {
             onClick={() => actions.goWardrobePieces({ libelle: g.libelle, categories: g.categories })}
             aria-label={`${g.libelle} : ${g.nbPieces} ${g.nbPieces <= 1 ? "pièce" : "pièces"}`}
             className="flex-none text-left cursor-pointer active:opacity-80"
-            style={{ width: 136, scrollSnapAlign: "start" }}
+            style={{ width: "clamp(142px, calc((100% + 6px) / 2.35), 152px)", scrollSnapAlign: "start" }}
           >
-            <div className="overflow-hidden rounded-[20px]" style={{ aspectRatio: "3 / 4", background: "var(--color-warm-bg)" }}>
+            <div className="overflow-hidden rounded-[20px]" style={{ aspectRatio: "5 / 6", background: "var(--color-warm-bg)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={g.visuel}
@@ -360,11 +418,18 @@ export default function WardrobeScreen() {
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
             </div>
-            {/* Deux lignes réservées : « Pantalons, jeans & shorts » passe à la ligne
-                à 136 px, ses voisines non — sans cette hauteur, les compteurs
-                ne seraient plus alignés. */}
-            <div className="t-titre-vignette text-ink mt-[10px] px-[2px]" style={{ minHeight: "2.4em" }}>
-              {g.libelle}
+            {/* Légende éditoriale : 13 px pour que « Robes & combinaisons »
+                tienne sur une ligne dès 360 px de large (mesuré : 138 px pour
+                une carte de 142, marges comprises). Seul « Pantalons, jeans & shorts » (153 px)
+                passe à la ligne, après la virgule — l'espace
+                insécable après « & » l'empêche de finir une ligne. La seconde
+                ligne n'est réservée que si ce libellé est dans le carrousel :
+                les compteurs restent alignés sans vide inutile ailleurs. */}
+            <div
+              className="font-serif text-ink mt-[10px] px-[2px]"
+              style={{ fontSize: 13, lineHeight: 1.25, minHeight: libellesLongs ? "2.5em" : undefined, textWrap: "balance" }}
+            >
+              {g.libelle.replace(/ & /g, " &\u00a0")}
             </div>
             <div className="text-[11px] text-muted mt-[2px] px-[2px]">
               {g.nbPieces} {g.nbPieces <= 1 ? "pièce" : "pièces"}
@@ -373,23 +438,22 @@ export default function WardrobeScreen() {
         ))}
       </div>
 
-      {/* ── MES LOOKS ───────────────────────────────────────────────────── */}
-      <TitreSection action={state.savedLooks.length > 0 ? <Lien onClick={actions.goLooks}>Voir tout →</Lien> : undefined}>
+      {/* ── MES LOOKS ─ « + Créer » dans l'en-tête, puis un carrousel. */}
+      <TitreSection
+        action={
+          <Lien onClick={() => actions.goCreateLook()} label="Créer un nouveau look">
+            {PLUS}
+            Créer
+          </Lien>
+        }
+      >
         Mes looks
       </TitreSection>
 
       {state.savedLooks.length === 0 ? (
-        <>
-          <div className="text-[13px] leading-[1.55] mt-3" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
-            Compose tes tenues préférées et retrouve-les ici.
-          </div>
-          <div className="mt-4">
-            <Lien onClick={() => actions.goCreateLook()}>
-              {PLUS}
-              Composer mon premier look
-            </Lien>
-          </div>
-        </>
+        <div className="text-[13px] leading-[1.55] mt-3" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
+          Compose tes tenues préférées et retrouve-les ici.
+        </div>
       ) : (
         <>
           <div className="mt-4">
@@ -398,48 +462,60 @@ export default function WardrobeScreen() {
           {looks.length === 0 ? (
             <div className="text-[12px] text-muted leading-[1.5] mt-4">Aucun look dans cette catégorie pour l&apos;instant.</div>
           ) : (
-            <div className="grid grid-cols-2 gap-x-[14px] gap-y-[24px] mt-5">
-              {looks.slice(0, LOOKS_AFFICHES).map((look) => {
+            /* ~1,5 carte visible : (largeur + 10 px) / 1,5 — la moitié de la
+               suivante suggère le geste. Seul ce conteneur défile en largeur. */
+            <div
+              data-carrousel="looks"
+              className="scrollarea flex gap-[14px] overflow-x-auto mt-5 -mx-6 px-6 pb-[2px]"
+              style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}
+            >
+              {looks.slice(0, LOOKS_CARROUSEL).map((look) => {
                 const pieces = look.pieceIds
                   .map((id) => resolvePool.find((i) => i.id === id))
                   .filter((it): it is Item => Boolean(it));
                 return (
-                  <CarteLook
-                    key={look.id}
-                    look={look}
-                    pieces={pieces}
-                    porte={lookWornCount(look, state.history)}
-                    suggere={isWishlistLook(look)}
-                    onOuvrir={() => actions.openLook(look.id)}
-                  />
+                  <div key={look.id} className="flex-none flex" style={{ width: "calc((100% + 10px) / 1.5)", scrollSnapAlign: "start" }}>
+                    <CarteLook
+                      look={look}
+                      pieces={pieces}
+                      porte={lookWornCount(look, state.history)}
+                      suggere={isWishlistLook(look)}
+                      onOuvrir={() => actions.openLook(look.id)}
+                      compacte
+                    />
+                  </div>
                 );
               })}
+              {/* « Voir tout → » au bout du carrousel : le même lien qu'avant,
+                  déplacé — l'écran « Mes looks » garde tous les looks et le
+                  filtre des looks suggérés. */}
+              <div className="flex-none flex items-center pr-2" style={{ minHeight: 120 }}>
+                <Lien onClick={actions.goLooks} label="Voir tous mes looks">
+                  Voir tout →
+                </Lien>
+              </div>
             </div>
           )}
-          <div className="mt-5">
-            <Lien onClick={() => actions.goCreateLook()} label="Créer un nouveau look">
-              {PLUS}
-              Créer un look
-            </Lien>
-          </div>
         </>
       )}
 
       {/* ── ✦ À DÉCOUVRIR ─ le pont vers ce que Capsela peut faire avec ce
              dressing. Jamais une vitrine : aucune pièce à acheter ici. */}
       {aDecouvrir && (
-        <div className="mt-10 rounded-[24px] px-5 pt-5 pb-6" style={{ background: "var(--color-warm-bg)" }}>
+        <div className="mt-10 rounded-[24px] px-5 py-[18px]" style={{ background: "var(--color-warm-bg)" }}>
           <div className="t-surtitre text-terracotta">✦ À découvrir</div>
           {aDecouvrir.cas === "associations" && (
             <>
-              <div className="t-titre-section text-ink mt-3">
+              <div className="t-titre-section text-ink mt-2">
                 Ton dressing peut <span className="italic text-terracotta">déjà faire plus</span>
               </div>
-              <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
+              {/* « avec tes pièces » retiré (polish V3) : le titre dit déjà
+                  « ton dressing », et la phrase tient sur une ligne. */}
+              <div className="text-[13px] leading-[1.55] mt-1" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
                 Capsela a imaginé {aDecouvrir.nombre}{" "}
-                {aDecouvrir.nombre === 1 ? "nouvelle association" : "nouvelles associations"} avec tes pièces.
+                {aDecouvrir.nombre === 1 ? "nouvelle association" : "nouvelles associations"}.
               </div>
-              <Associations tenues={tenuesMoteur} onOuvrir={ouvrirTenue} />
+              <AssociationsCompactes tenues={tenuesMoteur} onOuvrir={ouvrirTenue} />
             </>
           )}
           {aDecouvrir.cas === "proche_limite" && (
@@ -451,7 +527,7 @@ export default function WardrobeScreen() {
                 Découvre de nouvelles façons de les porter.
               </div>
               {tenuesMoteur.length > 0 ? (
-                <Associations tenues={tenuesMoteur} onOuvrir={ouvrirTenue} />
+                <AssociationsCompactes tenues={tenuesMoteur} onOuvrir={ouvrirTenue} />
               ) : (
                 <div className="mt-4">
                   <Lien onClick={actions.goTenues}>Découvrir ma tenue du jour →</Lien>

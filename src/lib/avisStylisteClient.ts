@@ -1,4 +1,5 @@
 import { colorimetrieUtilisable } from "./colorimetrie";
+import { lireReconnaissance, type VetementReconnu } from "./reconnaissance";
 import { morphologyLabel, paletteColorName, styleLabel, type Profile } from "./profile";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type {
@@ -52,7 +53,7 @@ export function contexteDepuisProfil(profile: Profile): ContexteAvis {
 }
 
 export type ResultatDemande =
-  | { ok: true; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[]; portees: number[] }
+  | { ok: true; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[]; reconnaissance: VetementReconnu[] }
   | { ok: false; code: CodeErreurAvis | "reseau"; raison?: RaisonInexploitable };
 
 function lireFichierEnDataUrl(fichier: File): Promise<string> {
@@ -81,16 +82,6 @@ export function piecesSuggerees(v: unknown): PieceSuggeree[] {
 }
 
 /**
- * Pièces reconnues sur la photo (V2) : identifiants entiers, sans doublon, six
- * au plus. Absentes (fonction pas encore redéployée) : liste vide, et la
- * section « Et maintenant ? » ne s'affiche pas.
- */
-export function piecesPortees(v: unknown): number[] {
-  if (!Array.isArray(v)) return [];
-  return [...new Set(v.filter((id): id is number => Number.isInteger(id)))].slice(0, 6);
-}
-
-/**
  * Envoie la photo préparée (JPEG, cf. photoAvis.ts) et le contexte. Ne lève
  * jamais. Sans Supabase (mode démo), aucune analyse réelle : erreur réseau.
  */
@@ -116,7 +107,7 @@ export async function demanderAvis(fichier: File, contexte: ContexteAvis): Promi
     }
     const corps = data as ReponseAvis | null;
     if (corps && corps.ok && estAvis(corps.avis)) {
-      return { ok: true, analyseId: corps.analyseId, avis: corps.avis, dressing: piecesSuggerees(corps.dressing), portees: piecesPortees(corps.portees) };
+      return { ok: true, analyseId: corps.analyseId, avis: corps.avis, dressing: piecesSuggerees(corps.dressing), reconnaissance: lireReconnaissance(corps.reconnaissance) };
     }
     return { ok: false, code: "reponse_invalide" };
   } catch {

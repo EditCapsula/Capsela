@@ -10,7 +10,7 @@ import {
   lireVetements,
   MOTS_INTERDITS,
   nettoyerContexte,
-  reconnaitrePiecesPortees,
+  reconnaitrePieces,
   traiterDemandeAvis,
   validerImage,
   validerReponse,
@@ -159,6 +159,7 @@ describe("traiterDemandeAvis — ordre des contrôles (TEST 06 à 09)", () => {
       analyseId: "analyse-1",
       avis: { overallAssessment: AVIS.overallAssessment, strengths: AVIS.strengths, mainAdvice: AVIS.mainAdvice, suggestions: AVIS.suggestions },
       dressing: [],
+      reconnaissance: [],
       portees: [],
     });
     expect(appels).toHaveLength(1);
@@ -388,33 +389,52 @@ describe("traiterDemandeAvis — « Avec ton dressing » côté serveur", () => 
   });
 });
 
-/* ───────── Pièces portées (V2, 26/09/2026) ───────── */
+/* ───────── Pièces portées : reconnaissance (26/09/2026) ───────── */
 
-describe("reconnaitrePiecesPortees — n'affirmer que ce qui concorde", () => {
+describe("reconnaitrePieces — n'affirmer que ce qui concorde, sans jamais choisir au hasard", () => {
   const dressing = [
     piece(10, "haut", "Top camisole satin", { color: "Cuivre", matiere: "Satin" }),
     piece(11, "pantalon", "Pantalon large crème", { color: "Crème" }),
     piece(12, "pantalon", "Pantalon large noir", { color: "Noir" }),
     piece(13, "sac", "Sac structuré cognac", { sac_type: "Sac à main", color: "Cognac" }),
     piece(14, "chaussures", "Sandales dorées", { shoe_type: "Sandales", color: "Doré", revente: "de_cote" }),
+    piece(15, "pantalon", "Jean droit", { color: "Bleu" }),
+    piece(16, "pantalon", "Jean mom", { color: "Bleu" }),
   ];
   const v = (categorie: VetementVisible["categorie"], motsCles: string[], couleurs: string[] = [], matieres: string[] = []): VetementVisible => ({ categorie, motsCles, couleurs, matieres });
+  const ids = (r: ReturnType<typeof reconnaitrePieces>) => r.map((x) => x.pieceId);
 
   it("la tenue de l'exemple : camisole, pantalon crème, sac — la bonne couleur est retenue", () => {
-    expect(reconnaitrePiecesPortees([v("haut", ["camisole"], ["cuivré"]), v("pantalon", ["pantalon"], ["crème"]), v("sac", ["sac"], ["cognac"])], dressing)).toEqual([10, 11, 13]);
+    const r = reconnaitrePieces([v("haut", ["camisole"], ["cuivré"]), v("pantalon", ["pantalon"], ["crème"]), v("sac", ["sac"], ["cognac"])], dressing);
+    expect(ids(r)).toEqual([10, 11, 13]);
+    expect(r.every((x) => x.statut === "reconnue")).toBe(true);
+    expect(r[1]).toMatchObject({ libelle: "pantalon crème", candidats: [12] });
   });
 
-  it("couleur contraire : rien, plutôt qu'une pièce qui n'est pas celle de la photo", () => {
-    expect(reconnaitrePiecesPortees([v("pantalon", ["pantalon"], ["bleu"])], dressing)).toEqual([]);
+  it("couleur contraire : non reconnue, les pièces de la catégorie restent proposées", () => {
+    const [r] = reconnaitrePieces([v("pantalon", ["pantalon"], ["vert"])], dressing);
+    expect(r).toMatchObject({ pieceId: null, statut: "non_reconnue", libelle: "pantalon vert" });
+    expect(r.candidats).toEqual([11, 12]);
   });
 
-  it("type absent du dressing, pièce mise de côté : rien", () => {
-    expect(reconnaitrePiecesPortees([v("haut", ["chemise"])], dressing)).toEqual([]);
-    expect(reconnaitrePiecesPortees([v("chaussures", ["sandales"], ["doré"])], dressing)).toEqual([]);
+  it("deux pièces également probables : non reconnue, les deux en candidats", () => {
+    const [r] = reconnaitrePieces([v("pantalon", ["jean"], ["bleu"])], dressing);
+    expect(r).toMatchObject({ pieceId: null, statut: "non_reconnue" });
+    expect(r.candidats).toEqual([15, 16]);
+  });
+
+  it("type absent du dressing, pièce mise de côté : non reconnue, sans candidat inventé", () => {
+    expect(reconnaitrePieces([v("haut", ["chemise"])], dressing)[0]).toMatchObject({ pieceId: null, candidats: [] });
+    expect(reconnaitrePieces([v("chaussures", ["sandales"], ["doré"])], dressing)[0]).toMatchObject({ pieceId: null, candidats: [] });
   });
 
   it("jamais deux fois la même pièce", () => {
-    expect(reconnaitrePiecesPortees([v("pantalon", ["pantalon"], ["crème"]), v("pantalon", ["pantalon"], ["crème"])], dressing)).toEqual([11]);
+    expect(ids(reconnaitrePieces([v("pantalon", ["pantalon"], ["crème"]), v("pantalon", ["pantalon"], ["crème"])], dressing))).toEqual([11, null]);
+  });
+
+  it("« Voir dans mon dressing » n'a pas changé avec l'évaluation commune", () => {
+    // La règle d'un besoin reste plus souple : sans type demandé, la couleur suffit.
+    expect(choisirPiecesDressing([besoin({ categorie: "pantalon", couleurs: ["noir"] })], dressing)).toEqual([{ id: 12, lien: "mainAdvice" }]);
   });
 
   it("lireVetements écarte les entrées sans type ou hors catégories, et borne à six", () => {
@@ -428,20 +448,28 @@ describe("reconnaitrePiecesPortees — n'affirmer que ce qui concorde", () => {
   });
 });
 
-describe("traiterDemandeAvis — pièces portées", () => {
-  it("rend les pièces reconnues et les compte au journal, sans les y écrire", async () => {
+describe("traiterDemandeAvis — reconnaissance", () => {
+  it("rend la reconnaissance (et les ids pour l'app précédente), comptée au journal sans y être écrite", async () => {
     const { d, journal, lecturesDressing } = deps({
-      reponses: [{ ok: true, json: reponseOpenAI({ ...AVIS, visibleGarments: [{ categorie: "pantalon", motsCles: ["jean"], couleurs: ["bleu"], matieres: [] }] }) }],
+      reponses: [{ ok: true, json: reponseOpenAI({ ...AVIS, visibleGarments: [{ categorie: "pantalon", motsCles: ["jean"], couleurs: ["bleu"], matieres: [] }, { categorie: "haut", motsCles: ["chemise"], couleurs: [], matieres: [] }] }) }],
       dressing: [piece(7, "pantalon", "Jean droit", { color: "Bleu" })],
     });
     const r = await traiterDemandeAvis(AUTH, { image: IMAGE }, d);
-    expect(r.corps).toMatchObject({ ok: true, portees: [7] });
+    expect(r.corps).toMatchObject({
+      ok: true,
+      portees: [7],
+      reconnaissance: [
+        { categorie: "pantalon", pieceId: 7, statut: "reconnue" },
+        { categorie: "haut", libelle: "chemise", pieceId: null, statut: "non_reconnue" },
+      ],
+    });
     expect(lecturesDressing).toEqual(["u1"]);
     expect(journal[0].pieces_reconnues).toBe(1);
+    expect(JSON.stringify(journal)).not.toContain("chemise");
   });
 
   it("une liste de vêtements mal formée n'invalide pas l'avis", async () => {
     const r = await traiterDemandeAvis(AUTH, { image: IMAGE }, deps({ reponses: [{ ok: true, json: reponseOpenAI({ ...AVIS, visibleGarments: "?" }) }] }).d);
-    expect(r.corps).toMatchObject({ ok: true, portees: [] });
+    expect(r.corps).toMatchObject({ ok: true, portees: [], reconnaissance: [] });
   });
 });

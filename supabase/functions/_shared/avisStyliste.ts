@@ -53,10 +53,15 @@ export type ReponseAvis =
       avis: AvisStyliste;
       dressing: PieceSuggeree[];
       /**
-       * Pièces du dressing RECONNUES sur la photo (Avis de styliste V2,
-       * 26/09/2026) : la composition de la tenue analysée, pour la porter
-       * aujourd'hui ou la planifier sans la recomposer. Absent d'une réponse
-       * d'avant la V2 : l'app le lit comme une liste vide.
+       * Vêtements visibles reliés au dressing (26/09/2026) : la composition
+       * de la tenue analysée, corrigeable dans l'app. Absent d'une réponse
+       * plus ancienne : l'app le lit comme une liste vide.
+       */
+      reconnaissance: VetementReconnu[];
+      /**
+       * Compatibilité avec l'app de la V2 (déployée avant la reconnaissance
+       * détaillée) : les seules pièces reconnues. À retirer quand plus aucune
+       * version de l'app ne le lit.
        */
       portees: number[];
     }
@@ -184,11 +189,7 @@ export const PIECES_DRESSING_MAX = 3;
  * jamais le dressing, il décrit ce qui aiderait à appliquer SON conseil ; le
  * serveur cherche ensuite parmi les pièces de l'utilisatrice.
  */
-export interface BesoinDressing {
-  categorie: Categorie;
-  motsCles: string[];
-  couleurs: string[];
-  matieres: string[];
+export interface BesoinDressing extends DescriptionPiece {
   /** "mainAdvice" ou "suggestion:N". */
   lien: string;
 }
@@ -226,6 +227,48 @@ const contient = (botte: string, aiguille: string) => {
   return a.length >= 3 && forme(botte).includes(a);
 };
 
+/** Ce que le modèle décrit d'une pièce — un besoin (à ajouter) ou un vêtement visible (porté). */
+export interface DescriptionPiece {
+  categorie: Categorie;
+  motsCles: string[];
+  couleurs: string[];
+  matieres: string[];
+}
+
+/** Concordance d'une pièce du dressing avec une description. */
+export interface Concordance {
+  /** Un des types décrits se retrouve dans le nom ou le type de la pièce. */
+  type: boolean;
+  /** La couleur décrite concorde avec celle de la pièce. */
+  couleur: boolean;
+  /** La description ET la pièce ont une couleur : leur désaccord est alors un signal. */
+  couleurComparable: boolean;
+  matiere: boolean;
+}
+
+/**
+ * LA SEULE ÉVALUATION D'UNE PIÈCE, partagée par « Voir dans mon dressing »
+ * (choisirPiecesDressing) et par la reconnaissance des pièces portées
+ * (reconnaitrePieces) — refonte du 26/09/2026 : la reconnaissance recopiait
+ * cette boucle. Rend null pour une pièce hors de la catégorie ou « mise de
+ * côté pour vendre » (revente = de_cote), le statut le plus proche d'un
+ * article retiré qui existe. Chaque usage applique ensuite sa propre règle
+ * d'acceptation ; l'ordre, lui, est commun (scoreConcordance).
+ */
+export function evaluerPiece(d: DescriptionPiece, p: PieceDressing): Concordance | null {
+  if (p.cat !== d.categorie || p.revente === "de_cote") return null;
+  const texte = [p.name, p.subtype, p.shoe_type, p.sac_type, p.bijou_type, p.accessoire_type].filter(Boolean).join(" ");
+  return {
+    type: d.motsCles.some((m) => contient(texte, m)),
+    couleur: d.couleurs.some((c) => Boolean(p.color) && (contient(p.color!, c) || contient(c, p.color!))),
+    couleurComparable: d.couleurs.length > 0 && Boolean(p.color),
+    matiere: d.matieres.some((m) => Boolean(p.matiere) && (contient(p.matiere!, m) || contient(m, p.matiere!))),
+  };
+}
+
+/** Ordre commun : type > couleur > matière. */
+export const scoreConcordance = (c: Concordance) => (c.type ? 4 : 0) + (c.couleur ? 2 : 0) + (c.matiere ? 1 : 0);
+
 /**
  * Choix des pièces à montrer, sans score nouveau ni pièce forcée :
  * - même catégorie que le besoin ;
@@ -246,14 +289,12 @@ export function choisirPiecesDressing(besoins: BesoinDressing[], pieces: PieceDr
     if (retenues.length >= max) break;
     let meilleure: { id: number; score: number } | null = null;
     for (const p of pieces) {
-      if (p.cat !== besoin.categorie || pris.has(p.id) || p.revente === "de_cote") continue;
-      const texte = [p.name, p.subtype, p.shoe_type, p.sac_type, p.bijou_type, p.accessoire_type].filter(Boolean).join(" ");
-      const type = besoin.motsCles.some((m) => contient(texte, m));
-      const couleur = besoin.couleurs.some((c) => Boolean(p.color) && (contient(p.color!, c) || contient(c, p.color!)));
-      const matiere = besoin.matieres.some((m) => Boolean(p.matiere) && (contient(p.matiere!, m) || contient(m, p.matiere!)));
-      const pertinente = besoin.motsCles.length ? type : couleur || matiere;
+      if (pris.has(p.id)) continue;
+      const c = evaluerPiece(besoin, p);
+      if (!c) continue;
+      const pertinente = besoin.motsCles.length ? c.type : c.couleur || c.matiere;
       if (!pertinente) continue;
-      const score = (type ? 4 : 0) + (couleur ? 2 : 0) + (matiere ? 1 : 0);
+      const score = scoreConcordance(c);
       if (!meilleure || score > meilleure.score || (score === meilleure.score && p.id < meilleure.id)) meilleure = { id: p.id, score };
     }
     if (meilleure) {
@@ -289,12 +330,7 @@ export function lireBesoins(brut: unknown, nbSuggestions: number): BesoinDressin
  * jamais le dressing ; il décrit ce qui est porté, et le serveur cherche
  * parmi les pièces de l'utilisatrice.
  */
-export interface VetementVisible {
-  categorie: Categorie;
-  motsCles: string[];
-  couleurs: string[];
-  matieres: string[];
-}
+export type VetementVisible = DescriptionPiece;
 
 /** Six pièces au plus : une tenue complète, accessoires compris. */
 export const VETEMENTS_VISIBLES_MAX = 6;
@@ -321,35 +357,68 @@ export function lireVetements(brut: unknown): VetementVisible[] {
 }
 
 /**
- * Reconnaît les pièces du dressing portées sur la photo. Plus exigeant que
- * choisirPiecesDressing, parce que l'affirmation est plus forte (« tu portes
- * cette pièce », pas « cette pièce pourrait aller ») :
- * - même catégorie ET type retrouvé dans le nom ou le type de la pièce ;
- * - si le vêtement a une couleur et la pièce aussi, elles doivent concorder ;
- * - une pièce « mise de côté pour vendre » n'est pas reconnue ;
- * - à égalité, la matière départage, puis l'identifiant (déterministe) ;
- * - jamais deux fois la même pièce.
- * L'utilisatrice peut retirer à l'écran une pièce mal reconnue : c'est une
- * proposition, pas un fait enregistré.
+ * Un vêtement visible, relié (ou non) au dressing. C'est la couche de données
+ * entre l'avis et les actions de l'app (Porter aujourd'hui, Planifier,
+ * Journal) : elle voyage telle quelle jusqu'à l'app, qui la laisse corriger.
  */
-export function reconnaitrePiecesPortees(vetements: VetementVisible[], pieces: PieceDressing[]): number[] {
-  const retenues: number[] = [];
-  for (const v of vetements) {
-    let meilleure: { id: number; score: number } | null = null;
-    for (const p of pieces) {
-      if (p.cat !== v.categorie || retenues.includes(p.id) || p.revente === "de_cote") continue;
-      const texte = [p.name, p.subtype, p.shoe_type, p.sac_type, p.bijou_type, p.accessoire_type].filter(Boolean).join(" ");
-      if (!v.motsCles.some((m) => contient(texte, m))) continue;
-      const couleurDite = v.couleurs.length > 0 && Boolean(p.color);
-      const couleur = couleurDite && v.couleurs.some((c) => contient(p.color!, c) || contient(c, p.color!));
-      if (couleurDite && !couleur) continue;
-      const matiere = v.matieres.some((m) => Boolean(p.matiere) && (contient(p.matiere!, m) || contient(m, p.matiere!)));
-      const score = (couleur ? 2 : 0) + (matiere ? 1 : 0);
-      if (!meilleure || score > meilleure.score || (score === meilleure.score && p.id < meilleure.id)) meilleure = { id: p.id, score };
-    }
-    if (meilleure) retenues.push(meilleure.id);
-  }
-  return retenues;
+export interface VetementReconnu {
+  categorie: Categorie;
+  /** Ce que la styliste voit sur la photo, en deux ou trois mots (« pantalon noir ») — affiché pour une pièce non reconnue. */
+  libelle: string;
+  /** Pièce du dressing retenue, ou null. */
+  pieceId: number | null;
+  /**
+   * "reconnue" : une pièce concorde, sans rivale ; "non_reconnue" : aucune
+   * pièce assez fiable, ou plusieurs également probables. "corrigee" n'est
+   * posé que par l'app, quand l'utilisatrice choisit elle-même.
+   */
+  statut: "reconnue" | "non_reconnue" | "corrigee";
+  /** Autres pièces possibles, les plus probables d'abord — la liste proposée par « Modifier ». */
+  candidats: number[];
+}
+
+/** Pièces proposées au plus par « Modifier », en tête de liste. */
+export const CANDIDATS_MAX = 5;
+
+/**
+ * La règle d'une pièce PORTÉE, plus exigeante que celle d'un besoin, parce
+ * que l'affirmation est plus forte (« tu portes cette pièce », pas « cette
+ * pièce pourrait aller ») : le type doit se retrouver, et la couleur
+ * concorder dès que la photo et la pièce en ont une.
+ */
+export const estPortee = (c: Concordance) => c.type && (!c.couleurComparable || c.couleur);
+
+/**
+ * Reconnaît les pièces du dressing portées sur la photo (même évaluation que
+ * « Voir dans mon dressing », règle estPortee) :
+ * - une seule pièce la plus probable : reconnue ;
+ * - PLUSIEURS PIÈCES ÉGALEMENT PROBABLES (deux jeans bleus) : non reconnue,
+ *   les deux en candidats — on ne choisit jamais au hasard ;
+ * - aucune : non reconnue, jamais de correspondance inventée ;
+ * - jamais deux fois la même pièce.
+ * Les candidats : d'abord les pièces portables écartées, puis celles de la
+ * catégorie qui concordent au moins en partie.
+ */
+export function reconnaitrePieces(vetements: VetementVisible[], pieces: PieceDressing[]): VetementReconnu[] {
+  const prises = new Set<number>();
+  return vetements.map((v) => {
+    const evaluees = pieces
+      .map((p) => ({ id: p.id, c: evaluerPiece(v, p) }))
+      .filter((e): e is { id: number; c: Concordance } => e.c !== null && !prises.has(e.id))
+      .map((e) => ({ id: e.id, portee: estPortee(e.c), partielle: e.c.type || e.c.couleur, score: scoreConcordance(e.c) }))
+      .sort((a, b) => Number(b.portee) - Number(a.portee) || b.score - a.score || a.id - b.id);
+    const portables = evaluees.filter((e) => e.portee);
+    const seule = portables.length > 0 && (portables.length === 1 || portables[1].score < portables[0].score);
+    const pieceId = seule ? portables[0].id : null;
+    if (pieceId !== null) prises.add(pieceId);
+    return {
+      categorie: v.categorie,
+      libelle: [v.motsCles[0], v.couleurs[0]].filter(Boolean).join(" ").toLowerCase(),
+      pieceId,
+      statut: pieceId !== null ? ("reconnue" as const) : ("non_reconnue" as const),
+      candidats: evaluees.filter((e) => e.id !== pieceId && (e.portee || e.partielle)).slice(0, CANDIDATS_MAX).map((e) => e.id),
+    };
+  });
 }
 
 /* ─────────────────────────── Charte et instructions ─────────────────────────── */
@@ -727,11 +796,12 @@ export async function traiterDemandeAvis(
       // vêtements visibles à reconnaître.
       const pieces = v.besoins.length || v.vetements.length ? await deps.lireDressing(user.id).catch(() => [] as PieceDressing[]) : [];
       const dressing = choisirPiecesDressing(v.besoins, pieces);
-      const portees = reconnaitrePiecesPortees(v.vetements, pieces);
+      const reconnaissance = reconnaitrePieces(v.vetements, pieces);
+      const portees = reconnaissance.flatMap((r) => (r.pieceId !== null ? [r.pieceId] : []));
       piecesDressing = dressing.length;
       piecesReconnues = portees.length;
       journal("ok");
-      return { statut: 200, corps: { ok: true, analyseId, avis: v.avis, dressing, portees } };
+      return { statut: 200, corps: { ok: true, analyseId, avis: v.avis, dressing, reconnaissance, portees } };
     }
     if (v.etat === "inexploitable") {
       journal("photo_inexploitable");
