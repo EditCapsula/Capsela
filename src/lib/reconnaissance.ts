@@ -21,7 +21,7 @@ import type { VetementReconnu } from "../../supabase/functions/_shared/avisStyli
 
 export type { VetementReconnu };
 
-const STATUTS = new Set<VetementReconnu["statut"]>(["reconnue", "non_reconnue", "corrigee"]);
+const STATUTS = new Set<VetementReconnu["statut"]>(["reconnue", "non_reconnue", "corrigee", "ignoree"]);
 
 /** Six vêtements au plus (VETEMENTS_VISIBLES_MAX côté serveur), cinq candidats chacun. */
 export function lireReconnaissance(v: unknown): VetementReconnu[] {
@@ -37,8 +37,16 @@ export function lireReconnaissance(v: unknown): VetementReconnu[] {
       categorie: o.categorie as VetementReconnu["categorie"],
       libelle: typeof o.libelle === "string" ? o.libelle.trim().slice(0, 60) : "",
       pieceId,
-      // Un statut « reconnue » sans pièce ne veut rien dire : il est lu non reconnu.
-      statut: pieceId === null ? "non_reconnue" : (o.statut as VetementReconnu["statut"]),
+      // Un statut « reconnue » sans pièce ne veut rien dire : il est lu non
+      // reconnu. « Mis de côté » n'existe que sans pièce.
+      statut:
+        pieceId === null
+          ? o.statut === "ignoree"
+            ? "ignoree"
+            : "non_reconnue"
+          : o.statut === "ignoree"
+            ? "corrigee"
+            : (o.statut as VetementReconnu["statut"]),
       candidats: entiers(o.candidats).filter((id) => id !== pieceId),
     });
   }
@@ -63,6 +71,42 @@ export function corrigerReconnaissance(r: VetementReconnu[], index: number, piec
     }
     return v;
   });
+}
+
+/**
+ * Le choix de l'utilisatrice sur un vêtement (26/09/2026) : une pièce du
+ * dressing, aucune (null, « Ce n'est aucune de mes pièces »), ou « ignoree »
+ * — « Continuer sans l'associer » : le vêtement reste sans pièce, mais il est
+ * mis de côté plutôt qu'en attente. Rien ne bloque : l'avis et les autres
+ * pièces restent utilisables.
+ */
+export type ChoixReconnaissance = number | null | "ignoree";
+
+export function appliquerChoix(r: VetementReconnu[], index: number, choix: ChoixReconnaissance): VetementReconnu[] {
+  if (choix !== "ignoree") return corrigerReconnaissance(r, index, choix);
+  if (!r[index]) return r;
+  return r.map((v, i) =>
+    i !== index
+      ? v
+      : { ...v, pieceId: null, statut: "ignoree", candidats: [...new Set([...(v.pieceId !== null ? [v.pieceId] : []), ...v.candidats])].slice(0, 5) }
+  );
+}
+
+/**
+ * L'état affiché d'un vêtement (26/09/2026 — « Non reconnue » disait mal
+ * qu'on avait reconnu le vêtement sans trouver sa pièce) :
+ *   · "associee"    : une pièce du dressing, encore présente ;
+ *   · "a_identifier" : pas de pièce retenue, mais le serveur hésite entre
+ *                      plusieurs pièces du dressing (candidats présents) ;
+ *   · "a_associer"  : aucune pièce du dressing ne lui ressemble ;
+ *   · "ignoree"     : l'utilisatrice a continué sans l'associer.
+ */
+export type EtatVetement = "associee" | "a_identifier" | "a_associer" | "ignoree";
+
+export function etatVetement(v: VetementReconnu, dressing: Item[]): EtatVetement {
+  if (v.pieceId !== null && dressing.some((i) => i.id === v.pieceId)) return "associee";
+  if (v.statut === "ignoree") return "ignoree";
+  return v.candidats.some((id) => dressing.some((i) => i.id === id)) ? "a_identifier" : "a_associer";
 }
 
 /**
