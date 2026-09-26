@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import BottomSheet from "@/components/BottomSheet";
+import BoutonRetour, { LienRetour } from "@/components/BoutonRetour";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
-import { BAS_CATS, CATS, CATLABEL, OCCASIONS } from "@/lib/data";
+import { BAS_CATS, CATS, OCCASIONS } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -16,8 +18,31 @@ import {
 } from "@/lib/logic";
 import { rolePieceOf } from "@/lib/attributes";
 import { paletteHexes } from "@/lib/profile";
-import type { CategoryKey, Item } from "@/lib/types";
-import BoutonRetour from "@/components/BoutonRetour";
+import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
+
+/*
+ * « CRÉER UN LOOK » — refonte du 26/09/2026, faite avec les briques déjà en
+ * place ailleurs plutôt qu'avec de nouvelles :
+ *
+ *   · en-tête : celui des sous-écrans du Dressing (Mes pièces, Jamais
+ *     portées) — BoutonRetour cerclé + titre de section ;
+ *   · occasion : le chip et la feuille de l'écran Tenue, au lieu d'une
+ *     rangée de dix pastilles qui occupait toute une ligne ;
+ *   · « Ton look · N pièces » : le résumé devient le centre de l'écran —
+ *     les pièces choisies, en vignettes, chacune retirable ;
+ *   · pièces : la carte de « Mes pièces » (photo 4/5, arrondi 14, pastille
+ *     de sélection), rangées dans le carrousel de « Mon vestiaire » ;
+ *     « + Ajouter une robe » devient un lien en bout de rangée au lieu d'une
+ *     tuile aussi grande qu'une pièce ;
+ *   · « + Ajouter une pièce » : la feuille du bas (BottomSheet), catégorie
+ *     puis pièces, pour choisir sans faire défiler tout le dressing ;
+ *   · bouton principal : fixé au-dessus de la barre du bas, comme celui de
+ *     la Capsule.
+ *
+ * Rien ne change dans les règles : mêmes filtres d'occasion, mêmes
+ * incompatibilités (R-B5, jamais deux pièces de base), même score, même
+ * enregistrement (saveLook), même minimum de deux pièces.
+ */
 
 const TOP_BOTTOM_CATS = new Set(["haut", ...BAS_CATS, "jupe"]);
 
@@ -39,14 +64,6 @@ const ADD_TILE_LABEL: Record<CategoryKey, string> = {
   accessoire: "un accessoire",
 };
 
-function HangerIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3.2a1.9 1.9 0 00-.6 3.7v1.1L4.6 12.9a1.4 1.4 0 00.8 2.55h13.2a1.4 1.4 0 00.8-2.55L12.6 8V6.9A1.9 1.9 0 0012 3.2z" />
-      <line x1="4.8" y1="18.6" x2="19.2" y2="18.6" />
-    </svg>
-  );
-}
 function PlusIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -62,18 +79,62 @@ const PROACTIVE_TARGET_CATS: Record<string, { cats: CategoryKey[]; label: string
   veste_soir: { cats: ["veste", "manteau"], label: "Voir les vestes →" },
 };
 
+/** Largeur des cartes de « Mon vestiaire » (Dressing) : deux cartes entières et le bord de la troisième. */
+const LARGEUR_CARTE = "clamp(142px, calc((100% + 6px) / 2.35), 152px)";
+
+/** Lien d'action discret du Dressing : terracotta, sans fond ni contour, cible de 44 px. */
+const CLASSE_LIEN = "inline-flex items-center gap-[6px] text-[12px] text-terracotta cursor-pointer flex-shrink-0 py-[13px] -my-[13px] whitespace-nowrap";
+
+/** Le visuel d'une pièce tel que « Mes pièces » le montre : sa photo en plein cadre, ou l'aplat de sa couleur. */
+function PhotoPiece({ item, arrondi = 14, children }: { item: Item; arrondi?: number; children?: React.ReactNode }) {
+  const image = resolveItemImage(item);
+  return (
+    <div
+      className="relative w-full border border-border overflow-hidden"
+      style={
+        image.url
+          ? { aspectRatio: "4/5", borderRadius: arrondi, backgroundImage: `url(${image.url})`, backgroundSize: "cover", backgroundPosition: "center" }
+          : { aspectRatio: "4/5", borderRadius: arrondi, background: item.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
+      }
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Pastille de sélection de « Mes pièces » : cercle vide, coche terracotta une fois choisie. */
+function PastilleSelection({ on }: { on: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="absolute top-[8px] left-[8px] w-[22px] h-[22px] rounded-full border flex items-center justify-center text-[12px]"
+      style={
+        on
+          ? { background: "rgba(166,105,80,.95)", borderColor: "rgba(166,105,80,.95)", color: "#F3EEE5" }
+          : { background: "rgba(243,238,229,.85)", borderColor: "rgba(29,26,22,.18)", color: "transparent" }
+      }
+    >
+      ✓
+    </span>
+  );
+}
+
 export default function CreateLookScreen() {
   const { state, weather, actions } = useCapsela();
   const { profile } = useAuth();
   const items = state.items;
   const groupRefs = useRef<Partial<Record<CategoryKey, HTMLDivElement | null>>>({});
+  const [feuille, setFeuille] = useState<null | "occasion" | "ajout">(null);
+  const [categorieFeuille, setCategorieFeuille] = useState<CategoryKey | null>(null);
+  const [nommer, setNommer] = useState(false);
 
   const draftPieces = state.lookDraftIds
     .map((id) => items.find((i) => i.id === id))
     .filter((it): it is Item => Boolean(it));
   const hasRobeOrCombi = draftPieces.some((i) => i.cat === "robe" || i.cat === "combinaison");
   const hasTopBottom = draftPieces.some((i) => TOP_BOTTOM_CATS.has(i.cat));
-  const occFormality = (OCCASIONS.find(([key]) => key === state.lookDraftOccasion) || [])[3] || 0;
+  const occasionDraft = OCCASIONS.find(([key]) => key === state.lookDraftOccasion);
+  const occFormality = (occasionDraft || [])[3] || 0;
   const dressy = occFormality >= 3;
 
   // Brief design section 4 — "jamais 2 pièces base ensemble" : une 2e pièce
@@ -101,8 +162,22 @@ export default function CreateLookScreen() {
       const withoutBaskets = visible.filter((i) => i.shoeType !== "Baskets");
       if (withoutBaskets.length) visible = withoutBaskets;
     }
-    return { key, label: plural.toUpperCase(), items: visible };
+    return { key, label: plural, items: visible };
   }).filter((g) => g.items.length > 0);
+
+  // R-B5 — une robe/combinaison exclut haut/bas et réciproquement :
+  // structurellement incompatibles, jamais juste une préférence de style —
+  // retiré du picker. Brief design section 4 — "jamais 2 pièces base
+  // ensemble" : une fois une pièce base du haut/pull sélectionnée, toute
+  // autre pièce base du même groupe devient indisponible (repli si aucune
+  // pièce calque n'existe dans le dressing, cf. ci-dessus).
+  const estBloquee = (it: Item) => {
+    if (state.lookDraftIds.includes(it.id)) return false;
+    const robeConflict =
+      (TOP_BOTTOM_CATS.has(it.cat) && hasRobeOrCombi) || ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom);
+    const baseLayerConflict = TOP_LAYER_CATS.includes(it.cat) && rolePieceOf(it) === "base" && topDraftBaseSelected && hasCalqueOption;
+    return robeConflict || baseLayerConflict;
+  };
 
   const dismissed = new Set(state.lookDraftDismissed || []);
   const lookScore = computeLookScore(
@@ -118,6 +193,7 @@ export default function CreateLookScreen() {
 
   const count = state.lookDraftIds.length;
   const canSave = count >= 2 && !hardBlocked;
+  const messageCta = count === 1 ? "Choisis au moins 2 pièces pour enregistrer ce look." : count >= 2 ? blockingHits.find((h) => h.hard)?.message : undefined;
 
   // "Voir les X →" (recette 24/08/2026, point 5) : scrolle vers la
   // catégorie déjà visible dans le picker si le dressing en contient, sinon
@@ -134,258 +210,361 @@ export default function CreateLookScreen() {
     actions.openAddForCategory(cats[0]);
   };
 
+  const ouvrirAjout = () => {
+    setCategorieFeuille(null);
+    setFeuille("ajout");
+  };
+  const groupeFeuille = groups.find((g) => g.key === categorieFeuille) ?? null;
+  // Dans la feuille, choisir une pièce la place dans le look et referme :
+  // la pièce apparaît aussitôt dans « Ton look ». La retirer d'ici laisse la
+  // feuille ouverte, pour en choisir une autre.
+  const basculerDepuisFeuille = (id: number) => {
+    const ajout = !state.lookDraftIds.includes(id);
+    actions.toggleLookDraftPiece(id);
+    if (ajout) setFeuille(null);
+  };
+  const choisirOccasion = (key: OccasionKey) => {
+    // setLookDraftOccasion bascule : repasser l'occasion active la retirerait.
+    if (key !== state.lookDraftOccasion) actions.setLookDraftOccasion(key);
+    setFeuille(null);
+  };
+
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
-      <div className="flex items-center gap-[14px]">
-        <BoutonRetour onClick={actions.cancelCreateLook} label="Annuler et revenir" />
-        <div className="t-titre-section text-ink">Créer un look</div>
-      </div>
-      <div className="text-[13px] text-muted mt-4 leading-[1.5]">
-        Choisis les pièces de ton dressing à combiner.
-        <br />
-        Tu pourras le reporter d&apos;un tap.
+    <>
+      <div
+        className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]"
+        // Réserve la barre du bas ET le bouton principal qui flotte au-dessus (même calcul que la Capsule).
+        style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 112px)" }}
+      >
+        <div className="flex items-center gap-[14px] mt-[10px]">
+          <BoutonRetour onClick={actions.cancelCreateLook} label="Annuler et revenir au dressing" className="flex-shrink-0" />
+          <div className="t-titre-section text-ink">Créer un look</div>
+        </div>
+        <div className="t-chapeau text-muted mt-4">
+          Choisis les pièces de ton dressing à combiner.
+          <br />
+          Tu pourras le reporter d&apos;un tap.
+        </div>
+
+        {items.length === 0 ? (
+          <div className="mt-6 bg-card border border-border rounded-2xl px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
+            Ton dressing est encore vide — ajoute quelques pièces réelles pour pouvoir composer un look.
+          </div>
+        ) : (
+          <>
+            {/* ── OCCASION ─ le chip de l'écran Tenue : l'occasion choisie,
+                   ou l'invitation à en choisir une ; la feuille liste les dix. */}
+            <div className="mt-6 t-surtitre text-muted">
+              Occasion <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
+            </div>
+            <button
+              onClick={() => setFeuille("occasion")}
+              aria-haspopup="dialog"
+              aria-label={occasionDraft ? `Occasion : ${occasionDraft[1]}. Changer d'occasion` : "Choisir une occasion"}
+              className={
+                "mt-[9px] inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12px] cursor-pointer " +
+                (occasionDraft ? "bg-terracotta-deep text-cream" : "bg-warm-bg text-sand-text border border-sand-border")
+              }
+              style={{ minHeight: 46 }}
+            >
+              {occasionDraft && <GlypheOccasion occasion={occasionDraft[0]} />}
+              <span className="whitespace-nowrap">{occasionDraft ? occasionDraft[1] : "Choisir une occasion"}</span>
+              <span aria-hidden="true" className="text-[9px] opacity-70">
+                ▾
+              </span>
+            </button>
+
+            {/* ── TON LOOK ─ les pièces choisies, en vignettes : le look tel
+                   qu'il sera enregistré. Chacune se retire d'un tap. */}
+            <div className="flex items-baseline justify-between gap-[10px] mt-8">
+              <div className="t-surtitre text-muted whitespace-nowrap">
+                Ton look{count > 0 && ` · ${count} ${count > 1 ? "pièces" : "pièce"}`}
+              </div>
+              <button onClick={ouvrirAjout} aria-haspopup="dialog" className={CLASSE_LIEN}>
+                + Ajouter une pièce
+              </button>
+            </div>
+            <div className="scrollarea flex items-start gap-[10px] overflow-x-auto mt-3 -mx-6 px-6 pt-[2px] pb-[2px]" aria-label="Pièces de ton look">
+              {draftPieces.map((it) => (
+                <div key={it.id} className="flex-none w-[84px] motion-safe:animate-[capsule-apparition_220ms_ease-out_both]">
+                  <div className="relative">
+                    <PhotoPiece item={it} arrondi={12} />
+                    <button
+                      onClick={() => actions.toggleLookDraftPiece(it.id)}
+                      aria-label={`Retirer ${it.name} du look`}
+                      className="absolute -top-[6px] -right-[6px] w-11 h-11 flex items-start justify-end p-[10px] cursor-pointer"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="w-[22px] h-[22px] rounded-full border flex items-center justify-center text-[10px] text-ink"
+                        style={{ background: "rgba(243,238,229,.92)", borderColor: "rgba(29,26,22,.18)" }}
+                      >
+                        ✕
+                      </span>
+                    </button>
+                  </div>
+                  <div className="text-[11px] text-muted mt-[6px] leading-[1.25] truncate">{it.name}</div>
+                </div>
+              ))}
+              <button onClick={ouvrirAjout} aria-label="Ajouter une pièce au look" aria-haspopup="dialog" className="flex-none w-[84px] text-left cursor-pointer">
+                <span
+                  className="flex items-center justify-center rounded-[12px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card"
+                  style={{ aspectRatio: "4/5" }}
+                >
+                  <span className="w-9 h-9 rounded-full bg-cream border border-border text-terracotta flex items-center justify-center">
+                    <PlusIcon />
+                  </span>
+                </span>
+              </button>
+              {count === 0 && (
+                <div className="flex-1 min-w-[140px] self-center text-[12px] text-muted leading-[1.5] pr-2">
+                  Choisis une première pièce, ici ou dans les rangées ci-dessous.
+                </div>
+              )}
+            </div>
+
+            {/* Sous les vignettes plutôt que dans l'en-tête : à côté du
+                compte et de « + Ajouter une pièce », la ligne débordait. */}
+            {count >= 2 && lookScore.badge === "recommande" && (
+              <div className="mt-3">
+                <span className="t-pastille text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">Recommandé</span>
+              </div>
+            )}
+
+            {/* Conseils Capsela (recette 24/08/2026, points 4/5) — jamais avant 2
+                pièces sélectionnées (rien de pertinent à évaluer avant), et
+                actionnables via un lien "Voir les...". Placés sous le look
+                qu'ils commentent, en retrait : ils ne passent jamais devant. */}
+            {count >= 2 && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
+              <div className="mt-4 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
+                <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
+              </div>
+            )}
+
+            {count >= 2 &&
+              lookScore.proactives.map((p) => {
+                const target = PROACTIVE_TARGET_CATS[p.key];
+                return (
+                  <div key={p.key} className="relative mt-3 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+                    <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
+                    <div className="flex-1 min-w-0 pr-[18px]">
+                      {p.key === "layer" && <div className="t-label text-terracotta mb-[6px]">Layering</div>}
+                      <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
+                      {target && (
+                        <button onClick={() => goToCategory(target.cats)} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
+                          {target.label}
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => actions.dismissLookDraftSuggestion(p.key)}
+                      aria-label="Ignorer ce conseil"
+                      className="absolute top-[10px] right-[10px] w-5 h-5 rounded-full flex items-center justify-center text-[12px] text-placeholder cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+
+            {blockingHits.length > 0 && (
+              <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
+                <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{blockingHits[0].message}</div>
+              </div>
+            )}
+
+            {/* ── LES PIÈCES DU DRESSING ─ une rangée par catégorie, les
+                   cartes de « Mes pièces » ; l'ajout d'une nouvelle pièce en
+                   bout de rangée, en lien. */}
+            {groups.map((g) => (
+              <div key={g.key} ref={(el) => { groupRefs.current[g.key] = el; }} className="mt-8" style={{ scrollMarginTop: 12 }}>
+                <div className="t-groupe text-ink">
+                  {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
+                </div>
+                <div className="scrollarea flex items-start gap-[12px] overflow-x-auto mt-3 -mx-6 px-6 pb-[2px]" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
+                  {g.items.map((it) => {
+                    const on = state.lookDraftIds.includes(it.id);
+                    const blocked = estBloquee(it);
+                    return (
+                      <button
+                        key={it.id}
+                        onClick={() => !blocked && actions.toggleLookDraftPiece(it.id)}
+                        disabled={blocked}
+                        aria-pressed={on}
+                        className={"flex-none text-left " + (blocked ? "cursor-not-allowed" : "cursor-pointer")}
+                        style={{ width: LARGEUR_CARTE, scrollSnapAlign: "start", opacity: blocked ? 0.3 : 1 }}
+                      >
+                        <PhotoPiece item={it}>
+                          <PastilleSelection on={on} />
+                        </PhotoPiece>
+                        <div className="text-[13px] text-ink mt-[8px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">{it.name}</div>
+                      </button>
+                    );
+                  })}
+                  <div className="flex-none flex items-center pr-2" style={{ minHeight: 120, alignSelf: "stretch" }}>
+                    <button onClick={() => actions.openAddForCategory(g.key)} className={CLASSE_LIEN}>
+                      + Ajouter {ADD_TILE_LABEL[g.key]}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {/* ── NOM DU LOOK ─ facultatif : un lien, puis le champ d'origine.
+                   Sans nom, saveLook garde « Look du JJ/MM ». */}
+            <div className="flex items-baseline justify-between gap-[10px] mt-10">
+              <div className="t-surtitre text-muted">
+                Nom du look <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
+              </div>
+              {!nommer && !state.lookDraftName && (
+                <button onClick={() => setNommer(true)} className={CLASSE_LIEN}>
+                  Donner un nom →
+                </button>
+              )}
+            </div>
+            {(nommer || state.lookDraftName) && (
+              <input
+                className="capin mt-3 w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
+                value={state.lookDraftName}
+                onChange={(e) => actions.setLookDraftName(e.target.value)}
+                placeholder="ex. Look bureau"
+                aria-label="Nom du look"
+                // Ouvert à la demande : le champ prend la main tout de suite.
+                autoFocus={nommer && !state.lookDraftName}
+              />
+            )}
+          </>
+        )}
       </div>
 
-      {items.length === 0 && (
-        <div className="mt-6 bg-card border border-border rounded-2xl px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
-          Ton dressing est encore vide — ajoute quelques pièces réelles pour pouvoir composer un look.
+      {/* Bouton principal, fixe au-dessus de la barre du bas (celui de la
+          Capsule). Le dégradé crème empêche les cartes qui défilent dessous
+          de se lire à travers. */}
+      {items.length > 0 && (
+        <div
+          className="absolute inset-x-0 z-10 px-6 pt-[14px] pointer-events-none"
+          style={{
+            bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))",
+            paddingBottom: 12,
+            background: "linear-gradient(to top, var(--color-cream) 70%, rgba(243,238,229,0))",
+          }}
+        >
+          {messageCta && (
+            <div className="text-center text-[11px] text-terracotta mb-[8px]" role="status">
+              {messageCta}
+            </div>
+          )}
+          <button
+            onClick={actions.saveLook}
+            disabled={!canSave}
+            className={
+              "pointer-events-auto w-full text-center rounded-full py-4 t-bouton " +
+              (canSave ? "bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer" : "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed")
+            }
+          >
+            Enregistrer ce look {count > 0 ? `(${count})` : ""}
+          </button>
         </div>
       )}
 
-      <div className="mt-6 t-surtitre text-muted">
-        Occasion <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
-      </div>
-      <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[9px]">
-        {OCCASIONS.map(([key, label, sub]) => {
-          const on = state.lookDraftOccasion === key;
-          return (
-            <button
-              key={key}
-              onClick={() => actions.setLookDraftOccasion(key)}
-              className="flex-none text-left py-[10px] px-[15px] rounded-full cursor-pointer border"
-              style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB" }}
-            >
-              <div
-                className="flex items-center gap-[7px] text-[12px] whitespace-nowrap"
-                style={{ color: on ? "#F3EEE5" : "#1D1A16" }}
+      <BottomSheet title="Pour quelle occasion ?" open={feuille === "occasion"} onClose={() => setFeuille(null)}>
+        <div className="flex flex-col">
+          {OCCASIONS.map(([key, label, sub]) => {
+            const actif = state.lookDraftOccasion === key;
+            return (
+              <button
+                key={key}
+                onClick={() => choisirOccasion(key)}
+                aria-pressed={actif}
+                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                style={{ minHeight: 52 }}
               >
-                <GlypheOccasion occasion={key} taille={15} />
-                {label}
-              </div>
-              <div className="text-[10px] mt-[2px] whitespace-nowrap" style={{ color: on ? "#B98A6E" : "#7B7366" }}>
-                {sub}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Résumé compact (recette 24/08/2026, point 3) — remplace le gros
-          bloc "Ce look" par une ligne courte + vignettes, placée sous
-          l'occasion plutôt qu'après les grilles : la sélection en cours
-          reste visible sans avoir à scroller. "Modifier" scrolle simplement
-          vers la première catégorie du picker, déjà juste en dessous — rien
-          d'autre à "modifier" que ce qui est déjà affiché sur cet écran. */}
-      {count > 0 && (
-        <button
-          onClick={() => groups[0] && groupRefs.current[groups[0].key]?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          className="w-full flex items-center gap-3 mt-4 bg-card border border-border rounded-[14px] px-4 py-[13px] cursor-pointer text-left"
-        >
-          <span className="w-8 h-8 rounded-full bg-warm-bg text-warm-text flex items-center justify-center flex-shrink-0">
-            <HangerIcon />
-          </span>
-          <span className="text-[13px] text-ink flex-shrink-0">
-            {count} {count > 1 ? "pièces sélectionnées" : "pièce sélectionnée"}
-          </span>
-          <span className="flex items-center -space-x-[6px] flex-shrink-0">
-            {draftPieces.slice(0, 4).map((it) => {
-              const img = resolveItemImage(it);
-              return (
-                <span
-                  key={it.id}
-                  className="w-7 h-7 rounded-[8px] border-2 border-cream overflow-hidden flex-shrink-0"
-                  style={img.url ? { background: "#F3EDE1" } : { background: it.hex }}
-                >
-                  {img.url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img loading="lazy" src={img.url} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }} />
-                  )}
+                <span className={actif ? "text-terracotta" : "text-muted"}>
+                  <GlypheOccasion occasion={key} taille={19} />
                 </span>
-              );
-            })}
-          </span>
-          {count > 4 && <span className="text-[10px] text-placeholder flex-shrink-0">+{count - 4}</span>}
-          <span className="flex-1" />
-          <span className="text-[12px] text-terracotta flex-shrink-0">Modifier ›</span>
-        </button>
-      )}
+                <div className="flex-1 min-w-0">
+                  <div className={"text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
+                  <div className="text-[11px] text-muted mt-[2px]">{sub}</div>
+                </div>
+                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
+                  ✓
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {occasionDraft && (
+          <button
+            onClick={() => {
+              actions.setLookDraftOccasion(state.lookDraftOccasion);
+              setFeuille(null);
+            }}
+            className="mt-2 w-full text-center text-[12px] text-muted min-h-[44px] cursor-pointer"
+          >
+            Sans occasion précise
+          </button>
+        )}
+      </BottomSheet>
 
-      {groups.map((g) => (
-        <div key={g.key} ref={(el) => { groupRefs.current[g.key] = el; }}>
-          <div className="mt-6 mb-3 t-groupe text-ink">
-            {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
-          </div>
-          <div className="grid grid-cols-2 gap-x-[10px] gap-y-4">
-            {g.items.map((it) => {
-              const on = state.lookDraftIds.includes(it.id);
-              // R-B5 — une robe/combinaison exclut haut/bas et réciproquement :
-              // structurellement incompatibles, jamais juste une préférence de
-              // style (contrairement à R-B6 ci-dessous) — retiré du picker.
-              const robeConflict =
-                !on &&
-                ((TOP_BOTTOM_CATS.has(it.cat) && hasRobeOrCombi) ||
-                  ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom));
-              // Brief design section 4 — "jamais 2 pièces base ensemble" : une
-              // fois une pièce base du haut/pull sélectionnée, toute autre
-              // pièce base du même groupe devient indisponible (repli si
-              // aucune pièce calque n'existe dans le dressing, cf. ci-dessus).
-              const baseLayerConflict =
-                !on &&
-                TOP_LAYER_CATS.includes(it.cat) &&
-                rolePieceOf(it) === "base" &&
-                topDraftBaseSelected &&
-                hasCalqueOption;
-              const blocked = robeConflict || baseLayerConflict;
-              const img = resolveItemImage(it);
+      <BottomSheet title={groupeFeuille ? groupeFeuille.label : "Ajouter une pièce"} open={feuille === "ajout"} onClose={() => setFeuille(null)}>
+        {groupeFeuille ? (
+          <>
+            <LienRetour onClick={() => setCategorieFeuille(null)} label="Revenir aux catégories" texte="Catégories" />
+            <div className="grid grid-cols-3 gap-x-[10px] gap-y-[14px] mt-2">
+              {groupeFeuille.items.map((it) => {
+                const on = state.lookDraftIds.includes(it.id);
+                const blocked = estBloquee(it);
+                return (
+                  <button
+                    key={it.id}
+                    onClick={() => !blocked && basculerDepuisFeuille(it.id)}
+                    disabled={blocked}
+                    aria-pressed={on}
+                    className={"text-left min-w-0 " + (blocked ? "cursor-not-allowed" : "cursor-pointer")}
+                    style={{ opacity: blocked ? 0.3 : 1 }}
+                  >
+                    <PhotoPiece item={it} arrondi={12}>
+                      <PastilleSelection on={on} />
+                    </PhotoPiece>
+                    <div className="text-[11px] text-ink mt-[6px] leading-[1.25] truncate">{it.name}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col">
+            {groups.map((g) => {
+              const choisies = draftPieces.filter((p) => p.cat === g.key).length;
               return (
                 <button
-                  key={it.id}
-                  onClick={() => !blocked && actions.toggleLookDraftPiece(it.id)}
-                  disabled={blocked}
-                  className={"text-left " + (blocked ? "cursor-not-allowed" : "cursor-pointer")}
-                  style={{ opacity: blocked ? 0.3 : 1 }}
+                  key={g.key}
+                  onClick={() => setCategorieFeuille(g.key)}
+                  className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                  style={{ minHeight: 52 }}
                 >
-                  <div
-                    className="relative w-full rounded-[11px] overflow-hidden"
-                    style={{
-                      aspectRatio: "4/5",
-                      background: img.url ? "#F3EDE1" : it.hex,
-                      border: on ? "2px solid #A66950" : "1px solid #E6DCCB",
-                      boxShadow: on ? "0 0 0 2px #F3EEE5 inset" : "inset 0 0 0 1px rgba(29,26,22,.06)",
-                    }}
-                  >
-                    {img.url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img loading="lazy"
-                        src={img.url}
-                        alt={it.name}
-                        style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", padding: 10, boxSizing: "border-box" }}
-                      />
-                    )}
-                    {on && (
-                      <span className="absolute top-[7px] right-[7px] w-5 h-5 rounded-full bg-terracotta text-cream flex items-center justify-center text-[11px]">
-                        ✓
+                  <span className="flex -space-x-[10px] flex-shrink-0" aria-hidden="true">
+                    {g.items.slice(0, 2).map((it) => (
+                      <span key={it.id} className="block w-[30px]">
+                        <PhotoPiece item={it} arrondi={8} />
                       </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-ink mt-[6px] leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">
-                    {it.name}
-                  </div>
-                  <div className="text-[9px] text-placeholder mt-[1px]">{CATLABEL[it.cat]}</div>
+                    ))}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[13px] text-ink">{g.label}</span>
+                    <span className="block text-[11px] text-muted mt-[2px]">
+                      {g.items.length} {g.items.length > 1 ? "pièces" : "pièce"}
+                      {choisies > 0 && ` · ${choisies} dans ton look`}
+                    </span>
+                  </span>
+                  <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">
+                    ›
+                  </span>
                 </button>
               );
             })}
-            {/* h-full plutôt qu'un aspect-ratio estimé (correctif 25/08/2026,
-                signalé : tuile "Ajouter..." plus haute que les tuiles de
-                pièces) — grid-cols-2 étire par défaut chaque cellule à la
-                hauteur de sa ligne de grille (déterminée par la tuile
-                pièce, photo + légende), h-full suffit donc à égaler
-                exactement cette hauteur sans avoir à la recalculer. */}
-            <button
-              onClick={() => actions.openAddForCategory(g.key)}
-              className="h-full flex flex-col items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card cursor-pointer text-center px-2"
-            >
-              <span className="w-9 h-9 rounded-full bg-cream border border-border text-terracotta flex items-center justify-center flex-shrink-0">
-                <PlusIcon />
-              </span>
-              <span className="text-[11px] text-ink leading-[1.25]">Ajouter {ADD_TILE_LABEL[g.key]}</span>
-            </button>
           </div>
-        </div>
-      ))}
-
-      {count >= 2 && (
-        <div className="flex items-center gap-[9px] mt-6">
-          <span className="t-surtitre text-muted">Ce look</span>
-          {lookScore.badge === "recommande" && (
-            <span className="t-pastille text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
-              Recommandé
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Conseils Capsela (recette 24/08/2026, points 4/5) — jamais avant 2
-          pièces sélectionnées (rien de pertinent à évaluer avant), et
-          désormais actionnables via un lien "Voir les..." plutôt qu'un
-          simple texte, en plus du bouton de fermeture. */}
-      {count >= 2 && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
-        <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
-          <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
-        </div>
-      )}
-
-      {count >= 2 &&
-        lookScore.proactives.map((p) => {
-          const target = PROACTIVE_TARGET_CATS[p.key];
-          return (
-            <div key={p.key} className="relative mt-3 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-              <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
-              <div className="flex-1 min-w-0 pr-[18px]">
-                {p.key === "layer" && (
-                  <div className="t-label text-terracotta mb-[6px]">Layering</div>
-                )}
-                <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
-                {target && (
-                  <button
-                    onClick={() => goToCategory(target.cats)}
-                    className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer"
-                  >
-                    {target.label}
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => actions.dismissLookDraftSuggestion(p.key)}
-                aria-label="Ignorer ce conseil"
-                className="absolute top-[10px] right-[10px] w-5 h-5 rounded-full flex items-center justify-center text-[12px] text-placeholder cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-          );
-        })}
-
-      {blockingHits.length > 0 && (
-        <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
-          <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{blockingHits[0].message}</div>
-        </div>
-      )}
-
-      <div className="t-surtitre text-muted mt-6 mb-3">
-        Nom du look <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
-      </div>
-      <input
-        className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
-        value={state.lookDraftName}
-        onChange={(e) => actions.setLookDraftName(e.target.value)}
-        placeholder="ex. Look bureau"
-      />
-
-      <button
-        onClick={actions.saveLook}
-        className={
-          "mt-7 w-full text-center rounded-full py-4 t-bouton " +
-          (canSave ? "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer" : "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed")
-        }
-      >
-        Enregistrer ce look {count > 0 ? `(${count})` : ""}
-      </button>
-      {!canSave && (
-        <div className="text-center text-[11px] text-terracotta mt-[10px]">
-          {count < 2 ? "Choisis au moins 2 pièces pour enregistrer ce look." : blockingHits.find((h) => h.hard)?.message}
-        </div>
-      )}
-    </div>
+        )}
+      </BottomSheet>
+    </>
   );
 }
