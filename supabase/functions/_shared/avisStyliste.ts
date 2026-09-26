@@ -369,10 +369,11 @@ export interface VetementReconnu {
   pieceId: number | null;
   /**
    * "reconnue" : une pièce concorde, sans rivale ; "non_reconnue" : aucune
-   * pièce assez fiable, ou plusieurs également probables. "corrigee" n'est
-   * posé que par l'app, quand l'utilisatrice choisit elle-même.
+   * pièce assez fiable, ou plusieurs également probables. "corrigee" et
+   * "ignoree" ne sont posés que par l'app : l'utilisatrice a choisi la pièce
+   * elle-même, ou continué sans l'associer (26/09/2026).
    */
-  statut: "reconnue" | "non_reconnue" | "corrigee";
+  statut: "reconnue" | "non_reconnue" | "corrigee" | "ignoree";
   /** Autres pièces possibles, les plus probables d'abord — la liste proposée par « Modifier ». */
   candidats: number[];
 }

@@ -16,8 +16,12 @@ import type { Item } from "@/lib/types";
  *
  * LA TENUE EST LA COMPOSITION RECONNUE (compositionReconnue) : les pièces que
  * la section « Pièces reconnues » montre et laisse corriger, rien d'autre.
- * Sans socle (haut + bas, ou robe / combinaison), pas d'action — la règle
- * même du moteur.
+ *
+ * NON BLOQUANT (26/09/2026) : les actions restent visibles même sans socle
+ * (haut + bas, ou robe / combinaison — la règle du moteur). La règle ne se
+ * dit qu'au moment où une action en a besoin, en message contextuel, avec
+ * « Associer une pièce → » ; jamais de « Continuer » vers une tenue
+ * incomplète (arbitrage validé le 26/09).
  */
 
 const LIBELLES: Record<ActionAvis, { principal: string; secondaire: string }> = {
@@ -41,14 +45,23 @@ export default function EtMaintenantAvis({
   onPlanifier: (ids: number[], demain: boolean) => void;
 }) {
   const [portee, setPortee] = useState<string | null>(null);
+  const [manque, setManque] = useState<ActionAvis | null>(null);
   const ids = composition.map((p) => p.id);
   const cle = ids.join(",");
-  const actions = prioriserActionsAvis({ heure: new Date().getHours(), tenueDuJourPortee, composable: compositionUtilisable(composition) });
+  const composable = compositionUtilisable(composition);
+  // L'ordre des actions ne dépend que de l'heure et de la tenue du jour ;
+  // la composition, elle, n'est vérifiée qu'au clic.
+  const actions = prioriserActionsAvis({ heure: new Date().getHours(), tenueDuJourPortee, composable: true });
   // En soirée, « Planifier cette tenue » se dit « pour une autre date ».
   const libelleSecondaire = (a: ActionAvis) =>
     a === "planifier" ? (actions?.principale === "demain" ? "Planifier une autre date →" : "Planifier pour une autre date →") : LIBELLES[a].secondaire;
 
   const agir = (a: ActionAvis) => {
+    if (!composable) {
+      setManque(a);
+      return;
+    }
+    setManque(null);
     if (a === "porter") {
       onPorter(ids);
       setPortee(cle);
@@ -72,10 +85,12 @@ export default function EtMaintenantAvis({
             </>
           )}
         </div>
-        {actions ? (
+        {actions && (
           <>
             <div className="text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
-              Avec {composition.length > 1 ? `les ${composition.length} pièces reconnues` : "la pièce reconnue"} dans ton dressing.
+              {composable
+                ? "Tu peux maintenant l'utiliser dans Capsela."
+                : "Une fois les pièces principales associées, tu pourras la porter ou la planifier."}
             </div>
             <div className="mt-[14px]">
               {/* La confirmation ne vaut que pour la composition portée : une
@@ -106,12 +121,25 @@ export default function EtMaintenantAvis({
                   {libelleSecondaire(a)}
                 </button>
               ))}
+              {/* Le message ne vient qu'au clic, et dit ce qui manque — pas une erreur. */}
+              {manque && !composable && (
+                <div className="mt-[8px] bg-warm-bg border border-warm-border rounded-[16px] px-4 py-[12px] motion-safe:animate-[capsule-apparition_220ms_ease-out_both]" role="status">
+                  <div className="text-[13px] text-ink leading-[1.45]">
+                    Pour {manque === "porter" ? "porter" : "planifier"} cette tenue, il me manque encore une pièce principale : un haut et un bas, ou une robe.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      document.getElementById("avis-pieces-reconnues")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                    className="mt-[4px] t-lien text-terracotta min-h-[40px] cursor-pointer"
+                  >
+                    Associer une pièce →
+                  </button>
+                </div>
+              )}
             </div>
           </>
-        ) : (
-          <div className="mt-[6px] text-[12px] text-muted-3 leading-[1.45]">
-            Pour la porter ou la planifier, associe au moins un haut et un bas, ou une robe, dans les pièces reconnues.
-          </div>
         )}
       </div>
     </section>

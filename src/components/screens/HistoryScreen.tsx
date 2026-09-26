@@ -25,6 +25,7 @@ import {
   type JournalEntry,
   type JournalPeriod,
 } from "@/lib/selectors";
+import { OCCASIONS_EDITORIALES, titreStyle } from "@/lib/occasionEditoriale";
 import type { ChoixRevente, Item, OccasionKey } from "@/lib/types";
 
 /*
@@ -75,44 +76,22 @@ const MOMENT_DE_L_OCCASION: Record<Exclude<OccasionKey, "all">, string> = {
 };
 
 /**
- * « TON STYLE CE MOIS-CI » (carte éditoriale, 26/09/2026) — ce que la carte
- * dit de chaque occasion. ARBITRAGE ÉDITORIAL : des mots, une entrée par
- * occasion existante ; les chiffres, eux, viennent tous de styleDuMois.
- *   · sujet  : « Le travail domine ton dressing ce mois-ci » ;
- *   · insight : « Ton dressing accompagne surtout ton quotidien professionnel » ;
- *   · cta    : le filtre du journal complet sur cette occasion.
+ * Une barre segmentée : un segment par tenue analysée, pleins pour
+ * l'occasion principale (brief du 26/09/2026 — les points ronds ne se
+ * lisaient pas assez). Le ratio est aussi écrit à côté, en toutes lettres :
+ * la couleur ne porte jamais seule l'information.
  */
-const STYLE_OCCASION: Record<Exclude<OccasionKey, "all">, { sujet: string; pluriel: boolean; insight: string; cta: string }> = {
-  quotidien: { sujet: "Le quotidien", pluriel: false, insight: "tes journées de tous les jours", cta: "Voir mes looks du quotidien" },
-  travail_formel: { sujet: "Le travail", pluriel: false, insight: "ton quotidien professionnel", cta: "Voir mes looks travail" },
-  entretien: { sujet: "Les rendez-vous importants", pluriel: true, insight: "tes moments importants", cta: "Voir mes looks rendez-vous" },
-  date: { sujet: "Les rendez-vous à deux", pluriel: true, insight: "tes tête-à-tête", cta: "Voir mes looks date" },
-  soiree: { sujet: "Les sorties", pluriel: true, insight: "tes sorties entre amis", cta: "Voir mes looks sortie" },
-  festive: { sujet: "Les soirées festives", pluriel: true, insight: "tes soirées festives", cta: "Voir mes looks soirée" },
-  sport: { sujet: "Le sport", pluriel: false, insight: "tes moments actifs", cta: "Voir mes looks sport" },
-  cocooning: { sujet: "Le cocooning", pluriel: false, insight: "tes moments à la maison", cta: "Voir mes looks cocooning" },
-  voyage: { sujet: "Les voyages", pluriel: true, insight: "tes déplacements", cta: "Voir mes looks voyage" },
-  evenement_perso: { sujet: "Les cérémonies", pluriel: true, insight: "tes grandes occasions", cta: "Voir mes looks cérémonie" },
-};
-
-/** Au-delà, un point par tenue ne se lit plus : le ratio écrit suffit. */
-const POINTS_MAX = 12;
-
-/**
- * Un point par tenue analysée : pleins pour l'occasion principale, cerclés
- * pour les autres. La forme distingue les deux, pas seulement la couleur ;
- * le nom accessible dit le ratio en toutes lettres.
- */
-function PointsTenues({ compte, total }: { compte: number; total: number }) {
+function BarreTenues({ compte, total }: { compte: number; total: number }) {
   return (
-    <div className="flex items-center gap-[6px]" role="img" aria-label={`${compte} ${compte > 1 ? "tenues" : "tenue"} sur ${total}`}>
-      {Array.from({ length: total }, (_, i) => (
-        <span
-          key={i}
-          aria-hidden="true"
-          className={"w-[9px] h-[9px] rounded-full " + (i < compte ? "bg-terracotta" : "border-[1.5px] border-terracotta/45")}
-        />
-      ))}
+    <div className="flex items-center gap-[10px]">
+      <div className={"flex-1 flex " + (total > 15 ? "gap-[2px]" : "gap-[3px]")} aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => (
+          <span key={i} className={"flex-1 h-[6px] rounded-full " + (i < compte ? "bg-terracotta" : "bg-sand-border")} />
+        ))}
+      </div>
+      <span className="text-[12px] text-warm-text-2 whitespace-nowrap flex-shrink-0">
+        {compte} sur {total}
+      </span>
     </div>
   );
 }
@@ -609,7 +588,7 @@ export default function HistoryScreen() {
     ? `Ce mois-ci, tes tenues ont surtout accompagné ${moment}.`
     : insights.wornThisMonth > 0
       ? `Ce mois-ci, ${insights.wornThisMonth} ${pl(insights.wornThisMonth, "tenue a rejoint", "tenues ont rejoint")} ton journal.`
-      : `Ta dernière tenue notée date du ${entries[0].jour}.`;
+      : `Ta dernière tenue portée date du ${entries[0].jour}.`;
 
   // UNE SEULE BASE pour le bilan (cf. capsuleJournal) : le pool affiché et
   // l'historique réel — la même que les pièces fétiches et la timeline (le
@@ -693,27 +672,24 @@ export default function HistoryScreen() {
         </Surtitre>
         {style.etat === "tendance" ? (
           (() => {
-            const o = STYLE_OCCASION[style.occasion];
-            const verbe = style.majorite
-              ? `${o.pluriel ? "dominent" : "domine"} ton dressing ce mois-ci`
-              : `${o.pluriel ? "arrivent" : "arrive"} en tête ce mois-ci`;
-            // Le visuel de la tenue de travail n'illustre que le travail :
-            // un mois de sorties n'a pas de visuel plutôt qu'un faux.
-            const visuel =
-              style.occasion === "travail_formel" || style.occasion === "entretien"
-                ? profile.gender === "homme"
-                  ? "/editorial/capsela_planifier_tenue_homme.webp"
-                  : "/editorial/capsela_planifier_tenue_femme.webp"
-                : null;
+            // Tout ce que la carte dit et montre de l'occasion vient d'une
+            // seule source (OCCASIONS_EDITORIALES) ; les chiffres, de
+            // styleDuMois. Sans visuel pour cette occasion, pas d'image de
+            // repli : le texte prend toute la largeur.
+            const o = OCCASIONS_EDITORIALES[style.occasion];
             return (
-              <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 pt-[16px] pb-[18px]">
-                <div className="flex gap-4">
+              <div className="mt-3 bg-warm-bg border border-warm-border rounded-[22px] px-5 pt-[16px] pb-[18px] overflow-hidden">
+                <div className="flex gap-[14px]">
                   <div className="flex-1 min-w-0">
-                    <span className="inline-block t-pastille text-terracotta bg-card rounded-full px-[9px] py-[3px]">Occasion principale</span>
+                    {/* Le nom de l'occasion en pastille, seul : plus de surtitre
+                        « Occasion principale » (retiré le 26/09/2026, demandé). */}
+                    <span className="inline-block t-pastille text-terracotta bg-card rounded-full px-[9px] py-[4px] whitespace-nowrap">
+                      {o.libelle}
+                    </span>
                     <div className="t-titre-section text-ink mt-[10px]" style={{ textWrap: "balance" }}>
-                      <span className="italic text-terracotta">{o.sujet}</span> {verbe}
+                      {titreStyle(o, style.majorite)}
                     </div>
-                    <div className="flex items-baseline gap-[10px] mt-[12px]">
+                    <div className="mt-[12px]">
                       <span className="sr-only">
                         {style.compte} {pl(style.compte, "tenue", "tenues")} sur {style.total}
                       </span>
@@ -722,30 +698,34 @@ export default function HistoryScreen() {
                       </span>
                     </div>
                     <div className="text-[12px] text-warm-text-2 leading-[1.4] mt-[4px]">
-                      {pl(style.compte, "tenue pensée", "tenues pensées")} pour {MOMENT_DE_L_OCCASION[style.occasion]}
+                      {pl(style.compte, "tenue pensée", "tenues pensées")} pour {o.pour}
                     </div>
                   </div>
-                  {visuel && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={visuel}
-                      alt=""
-                      width={900}
-                      height={1350}
-                      loading="lazy"
-                      decoding="async"
-                      className="flex-shrink-0 w-[84px] h-auto self-start rounded-[14px] object-cover"
-                      style={{ aspectRatio: "2 / 3" }}
-                    />
+                  {/* Le visuel en pleine page de magazine : environ 38 % de la
+                      carte, collé à son bord droit et à son haut (il déborde
+                      de la marge intérieure), entier au format 3:4, sans cadre
+                      ni ombre. */}
+                  {o.visuel && (
+                    <div className="flex-shrink-0 -mr-5 -mt-[16px] self-start" style={{ width: "calc((100% + 20px) * 0.4)" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={o.visuel.src}
+                        alt={o.visuel.alt}
+                        width={900}
+                        height={1200}
+                        loading="lazy"
+                        decoding="async"
+                        className="block w-full h-auto object-cover rounded-bl-[22px]"
+                        style={{ aspectRatio: "3 / 4" }}
+                      />
+                    </div>
                   )}
                 </div>
-                {style.total <= POINTS_MAX && (
-                  <div className="mt-[12px]">
-                    <PointsTenues compte={style.compte} total={style.total} />
-                  </div>
-                )}
+                <div className="mt-[16px]">
+                  <BarreTenues compte={style.compte} total={style.total} />
+                </div>
                 <div className="text-[13px] text-muted-3 leading-[1.45] mt-[12px]">
-                  Ton dressing accompagne {style.majorite ? "surtout" : "d'abord"} {o.insight}.
+                  {style.majorite ? o.insight : `Ton dressing accompagne d'abord ${o.pour}.`}
                 </div>
                 <button
                   onClick={() => voirOccasion(style.occasion)}
@@ -761,7 +741,7 @@ export default function HistoryScreen() {
           <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[16px]">
             <div className="t-titre-carte text-ink">
               {style.etat === "vide"
-                ? `Aucune tenue notée en ${moisCourant} pour l'instant`
+                ? `Aucune tenue portée en ${moisCourant} pour l'instant`
                 : style.etat === "egalite"
                   ? "Aucune occasion ne se détache encore"
                   : "Pas encore de tendance ce mois-ci"}
@@ -770,10 +750,10 @@ export default function HistoryScreen() {
               {style.etat === "vide"
                 ? "Ton style du mois se dessinera au fil de tes tenues."
                 : style.etat === "peu"
-                  ? `${style.total} ${pl(style.total, "tenue notée", "tenues notées")} en ${moisCourant} : ton style du mois se dessinera à partir de ${STYLE_DU_MOIS_MINIMUM}.`
+                  ? `${style.total} ${pl(style.total, "tenue portée", "tenues portées")} en ${moisCourant} : ton style du mois se dessinera à partir de ${STYLE_DU_MOIS_MINIMUM}.`
                   : style.etat === "egalite"
                     ? `Tes ${style.total} tenues de ${moisCourant} se partagent entre plusieurs occasions, sans qu'une passe devant.`
-                    : `${style.total} tenues notées en ${moisCourant}, sans occasion précisée.`}
+                    : `${style.total} tenues portées en ${moisCourant}, sans occasion précisée.`}
             </div>
           </div>
         )}
@@ -886,7 +866,7 @@ export default function HistoryScreen() {
                 : `${aVendre.length} pièces n'ont pas été portées ${depuis}`}
             </div>
             <div className="text-[13px] text-warm-text-2 leading-[1.5] mt-[6px]">
-              {aVendre.length === 1 ? "Elle n'a pas trouvé sa place" : "Elles n'ont pas trouvé leur place"} dans tes looks depuis longtemps. Tu
+              {aVendre.length === 1 ? "Elle n'a pas trouvé sa place" : "Elles n'ont pas trouvé leur place"} dans tes tenues depuis longtemps. Tu
               pourrais envisager de {pl(aVendre.length, "la", "les")} vendre pour faire de la place dans ta capsule.
             </div>
             <button
@@ -924,30 +904,25 @@ export default function HistoryScreen() {
 
       {/* HISTORIQUE — les dernières tenues, visuel en tête (§12). */}
       <section className="mt-[30px]" style={{ scrollMarginTop: 12 }} aria-labelledby="journal-historique">
-        <Surtitre>
-          <span id="journal-historique">{historiqueComplet ? "Tout mon journal" : "Tes derniers looks"}</span>
-        </Surtitre>
-        {/* Le compte du mois et « Voir tout » sur une ligne, juste au-dessus
-            des cartes qu'ils décrivent (26/09/2026) : ce sont les tenues
-            notées, les mêmes que les cartes — pas les looks enregistrés,
-            qui vivent dans « Mes looks ». */}
-        {!historiqueComplet && (insights.wornThisMonth > 0 || entries.length > APERCU_HISTORIQUE) && (
-          <div className="flex items-baseline justify-between gap-3 mt-[6px]">
-            <span className="text-[13px] text-ink leading-[1.45]">
-              {insights.wornThisMonth > 0 &&
-                `${insights.wornThisMonth} ${pl(insights.wornThisMonth, "tenue notée", "tenues notées")} ce mois-ci`}
-            </span>
-            {entries.length > APERCU_HISTORIQUE && (
-              <button
-                onClick={ouvrirJournalComplet}
-                aria-label="Voir tout mon journal"
-                className="text-[12px] text-terracotta cursor-pointer flex-shrink-0 whitespace-nowrap py-[13px] -my-[13px]"
-              >
-                Voir tout →
-              </button>
-            )}
-          </div>
-        )}
+        {/* « Voir les 23 → » sur la ligne du titre (26/09/2026, règle de
+            vocabulaire) : le compte exact de ce que la liste complète ouvre —
+            des tenues portées, pas des looks enregistrés (« Mes looks »). Pas
+            de compte du mois ici : l'en-tête dit le total, la carte « Ton
+            style ce mois-ci » le mois. */}
+        <div className="flex items-baseline justify-between gap-3">
+          <Surtitre>
+            <span id="journal-historique">{historiqueComplet ? "Tout mon journal" : "Tes dernières tenues"}</span>
+          </Surtitre>
+          {!historiqueComplet && entries.length > APERCU_HISTORIQUE && (
+            <button
+              onClick={ouvrirJournalComplet}
+              aria-label={`Voir les ${entries.length} tenues portées`}
+              className="text-[12px] text-terracotta cursor-pointer flex-shrink-0 whitespace-nowrap py-[13px] -my-[13px]"
+            >
+              Voir les {entries.length} →
+            </button>
+          )}
+        </div>
 
         {!historiqueComplet ? (
           <div className="flex flex-col gap-3 mt-3">

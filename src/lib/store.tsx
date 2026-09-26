@@ -35,7 +35,7 @@ import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
 import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
 import { enregistrerAvis, enregistrerReconnaissanceAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
-import { corrigerReconnaissance, type VetementReconnu } from "./reconnaissance";
+import { appliquerChoix, type ChoixReconnaissance, type VetementReconnu } from "./reconnaissance";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
 import {
   choisirVariation,
@@ -271,11 +271,11 @@ export interface Actions {
    */
   enregistrerAvisStyliste: () => void;
   /** L'utilisatrice associe une autre pièce (ou aucune) au vêtement `index` de l'avis affiché ; reportée sur l'avis enregistré. */
-  corrigerReconnaissanceAvis: (index: number, pieceId: number | null) => void;
+  corrigerReconnaissanceAvis: (index: number, choix: ChoixReconnaissance) => void;
   /** Nouvel essai du report de la reconnaissance dans le Journal. */
   reessayerReconnaissanceJournal: () => void;
   /** Même correction, sur un avis rouvert depuis le Journal. false : non gardée (et retirée de l'écran). */
-  corrigerReconnaissanceEnregistree: (avisId: string, index: number, pieceId: number | null) => Promise<boolean>;
+  corrigerReconnaissanceEnregistree: (avisId: string, index: number, choix: ChoixReconnaissance) => Promise<boolean>;
   /** Charge les avis enregistrés (Journal). */
   chargerAvisEnregistres: () => void;
   /** Ouvre un avis enregistré en consultation (depuis le Journal ou la liste complète, qui est retenue pour le retour). */
@@ -1207,7 +1207,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     corrigerReconnaissanceAvis: (index, pieceId) => {
       const session = avisStylisteRef.current;
       if (session.analyse.etat !== "reussie") return;
-      avisStylisteRef.current = { ...session, analyse: { ...session.analyse, reconnaissance: corrigerReconnaissance(session.analyse.reconnaissance, index, pieceId) } };
+      avisStylisteRef.current = { ...session, analyse: { ...session.analyse, reconnaissance: appliquerChoix(session.analyse.reconnaissance, index, pieceId) } };
       setAvisStyliste(avisStylisteRef.current);
       synchroniserReconnaissance();
     },
@@ -1215,7 +1215,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     corrigerReconnaissanceEnregistree: async (avisId, index, pieceId) => {
       const avis = avisEnregistres?.find((a) => a.id === avisId);
       if (!avis) return false;
-      const corrigee = corrigerReconnaissance(avis.reconnaissance, index, pieceId);
+      const corrigee = appliquerChoix(avis.reconnaissance, index, pieceId);
       const remplacer = (r: VetementReconnu[]) => setAvisEnregistres((l) => (l ? l.map((a) => (a.id === avisId ? { ...a, reconnaissance: r } : a)) : l));
       remplacer(corrigee);
       const ok = await enregistrerReconnaissanceAvis(avisId, corrigee);

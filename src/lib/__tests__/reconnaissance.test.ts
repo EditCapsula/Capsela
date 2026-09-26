@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compositionReconnue, compositionUtilisable, corrigerReconnaissance, lireReconnaissance, piecesPourModifier, type VetementReconnu } from "../reconnaissance";
+import { appliquerChoix, compositionReconnue, compositionUtilisable, corrigerReconnaissance, etatVetement, lireReconnaissance, piecesPourModifier, type VetementReconnu } from "../reconnaissance";
 import type { CategoryKey, Item } from "../types";
 
 const piece = (id: number, cat: CategoryKey): Item => ({ id, name: `${cat} ${id}`, cat, color: "Noir", hex: "#000", season: "Toutes saisons", worn: null });
@@ -77,5 +77,37 @@ describe("piecesPourModifier — ce que propose « Modifier »", () => {
 
   it("un candidat retiré du dressing n'est pas proposé", () => {
     expect(piecesPourModifier([v("sac", null, [77])], 0, DRESSING).map((i) => i.id)).toEqual([4]);
+  });
+});
+
+describe("Continuer sans l'associer — non bloquant (26/09/2026)", () => {
+  it("appliquerChoix « ignoree » : sans pièce, mis de côté, la pièce écartée reste proposée", () => {
+    const c = appliquerChoix([v("pantalon", 2, [3])], 0, "ignoree");
+    expect(c[0]).toMatchObject({ pieceId: null, statut: "ignoree", candidats: [2, 3] });
+  });
+
+  it("appliquerChoix avec une pièce : la correction habituelle", () => {
+    expect(appliquerChoix([v("pantalon", null)], 0, 6)[0]).toMatchObject({ pieceId: 6, statut: "corrigee" });
+  });
+
+  it("« ignoree » se relit tel quel sans pièce ; avec une pièce, c'est un choix de l'utilisatrice", () => {
+    const r = lireReconnaissance([
+      { categorie: "sac", libelle: "mini sac", pieceId: null, statut: "ignoree", candidats: [] },
+      { categorie: "sac", libelle: "mini sac", pieceId: 4, statut: "ignoree", candidats: [] },
+    ]);
+    expect(r.map((x) => x.statut)).toEqual(["ignoree", "corrigee"]);
+  });
+});
+
+describe("etatVetement — Associée / À identifier / À associer", () => {
+  it("les quatre états", () => {
+    expect(etatVetement(v("pantalon", 2), DRESSING)).toBe("associee");
+    expect(etatVetement(v("pantalon", null, [3]), DRESSING)).toBe("a_identifier");
+    expect(etatVetement(v("pantalon", null, [99]), DRESSING)).toBe("a_associer");
+    expect(etatVetement({ ...v("sac", null), statut: "ignoree" }, DRESSING)).toBe("ignoree");
+  });
+
+  it("une pièce retirée du dressing depuis : plus associée", () => {
+    expect(etatVetement(v("pantalon", 99), DRESSING)).toBe("a_associer");
   });
 });
