@@ -44,6 +44,7 @@ import {
   piecesPrincipales,
   swapOutfitPiece,
   violatesOuterwearRule,
+  type ItemOutfitVariation,
 } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import {
@@ -149,6 +150,7 @@ function buildInitialState(): AppState {
     activeSuggested: false,
     pieceReturn: "wardrobe",
     itemOutfitsReturn: "capsule",
+    ideesTenuesPretes: null,
     catFilter: "all",
     addName: "",
     addNameTouched: false,
@@ -298,6 +300,14 @@ export interface Actions {
   openAddBag: () => void;
   /** Ouvre l'ajout pré-rempli sur une catégorie donnée, en mémorisant l'écran d'origine pour y revenir (recette 24/08/2026, tuile "Ajouter un/une..." de Créer un look) — jamais utilisé pour openAdd/startReplace/startEditItem, qui gardent leur repli habituel. */
   openAddForCategory: (cat: CategoryKey) => void;
+  /**
+   * « Ajouter cette pièce à mon dressing » depuis un vêtement NON RECONNU
+   * d'un avis de styliste (26/09/2026) : le formulaire d'ajout s'ouvre sur sa
+   * catégorie, le nom repris de ce que la styliste a vu (« Sandales noir »),
+   * modifiable. L'enregistrement ramène à l'avis, où la pièce peut être
+   * associée.
+   */
+  ajouterPieceNonReconnue: (cat: CategoryKey, nom: string) => void;
   addBack: () => void;
   setAuthName: (v: string) => void;
   onbBack: () => void;
@@ -311,7 +321,8 @@ export interface Actions {
    * (suggested = false) — sans quoi activeSuggested resterait figé à true
    * au retour sur PieceScreen et l'afficherait à tort comme une suggestion.
    */
-  openItemOutfits: (id: number, suggested?: boolean) => void;
+  /** `variations` : idées déjà calculées pour cette pièce (calculerIdeesTenues), reprises telles quelles à l'arrivée. */
+  openItemOutfits: (id: number, suggested?: boolean, variations?: ItemOutfitVariation[]) => void;
   /** Affiche une combinaison choisie depuis ce module sur l'écran Tenue — jamais un enregistrement automatique comme portée. */
   viewItemOutfit: (ids: number[], occasion: OccasionKey) => void;
   removeActive: () => void;
@@ -1265,12 +1276,26 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     openAddBag: () => ouvrirAjout((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
     openAddForCategory: (cat) =>
       ouvrirAjout((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),
+    ajouterPieceNonReconnue: (cat, nom) =>
+      ouvrirAjout((s) => ({
+        ...s,
+        addCat: cat,
+        addCatTouched: true,
+        // Touché : la suggestion automatique de nom ne l'écrase pas.
+        addName: nom,
+        addNameTouched: nom.length > 0,
+        addReturn: s.screen,
+        screen: "add",
+      })),
     addBack: () =>
       setState((s) => ({
         ...s,
         replacingId: null,
         editingId: null,
         addReturn: null,
+        // Un nom prérempli depuis un avis ne survit pas à l'abandon : il
+        // réapparaîtrait au prochain ajout, sans rapport avec lui.
+        ...(s.addReturn === "avisStyliste" || s.addReturn === "avisEnregistre" ? { addName: "", addNameTouched: false } : {}),
         screen: s.addReturn || (s.editingId != null ? "piece" : "wardrobe"),
       })),
     setAuthName: (v) => setState((s) => ({ ...s, authName: v })),
@@ -1282,8 +1307,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
     openItem: (id, suggested = false) =>
       setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" })),
-    openItemOutfits: (id, suggested = true) =>
-      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, itemOutfitsReturn: s.screen, screen: "itemOutfits" })),
+    openItemOutfits: (id, suggested = true, variations) =>
+      setState((s) => ({
+        ...s,
+        activeId: id,
+        activeSuggested: suggested,
+        itemOutfitsReturn: s.screen,
+        ideesTenuesPretes: variations ? { pivotId: id, variations } : null,
+        screen: "itemOutfits",
+      })),
     // Affiche la combinaison choisie sur l'écran Tenue (recette 19/08/2026) :
     // conserve l'occasion correspondante, jamais d'enregistrement comme
     // portée ni de remplacement automatique en dehors de ce clic explicite.

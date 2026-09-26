@@ -19,6 +19,12 @@ import type { Item } from "@/lib/types";
  * juge possibles d'abord, puis le reste de la catégorie (piecesPourModifier)
  * — et « Ce n'est aucune de mes pièces ». Chaque choix passe par
  * corrigerReconnaissance : la composition des actions suit, le Journal aussi.
+ *
+ * Un vêtement non reconnu — ou mal reconnu, depuis « Modifier » — peut
+ * aussi être AJOUTÉ au dressing (26/09/2026) :
+ * « Ajouter cette pièce à mon dressing » ouvre le formulaire sur sa
+ * catégorie, avec le nom repris de ce que la styliste a vu. De retour ici,
+ * la nouvelle pièce figure parmi celles proposées par « Associer ».
  */
 
 const libelleCategorie = (cat: string) => CATS.find(([k]) => k === cat)?.[1] ?? cat;
@@ -28,6 +34,7 @@ export default function PiecesReconnues({
   dressing,
   onCorriger,
   onOuvrirPiece,
+  onAjouterPiece,
   etatJournal,
   onReessayerJournal,
   messageEchec = "Ces pièces n'ont pas pu être gardées avec l'avis dans ton Journal.",
@@ -36,6 +43,8 @@ export default function PiecesReconnues({
   dressing: Item[];
   onCorriger: (index: number, pieceId: number | null) => void;
   onOuvrirPiece: (id: number) => void;
+  /** Vêtement non reconnu → formulaire d'ajout prérempli (catégorie, nom suggéré). */
+  onAjouterPiece?: (categorie: VetementReconnu["categorie"], nom: string) => void;
   /** Report des corrections dans le Journal : seul l'échec se dit. */
   etatJournal?: "en_cours" | "faite" | "echec";
   onReessayerJournal?: () => void;
@@ -135,6 +144,26 @@ export default function PiecesReconnues({
               <button type="button" onClick={() => choisir(null)} className="mt-[14px] w-full text-center text-[13px] text-muted-3 py-[10px] cursor-pointer border-t border-border">
                 Ce n&apos;est aucune de mes pièces
               </button>
+            )}
+            {/* Aussi depuis « Modifier » (26/09/2026) : la pièce reconnue n'est
+                pas la bonne, et la bonne n'est pas encore dans le dressing. */}
+            {onAjouterPiece && (
+              <div className="mt-[16px] pt-[14px] border-t border-border">
+                <div className="text-[12px] text-muted-3 leading-[1.45]">
+                  {ouvert.pieceId === null ? "Elle n'est pas encore dans ton dressing ?" : "Ce n'est pas elle, et la bonne n'est pas encore dans ton dressing ?"}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nom = ouvert.libelle ? ouvert.libelle.charAt(0).toUpperCase() + ouvert.libelle.slice(1) : "";
+                    setChoix(null);
+                    onAjouterPiece(ouvert.categorie, nom);
+                  }}
+                  className="mt-[10px] w-full min-h-[48px] rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-[13px] px-4 cursor-pointer"
+                >
+                  {ouvert.libelle ? `Ajouter « ${ouvert.libelle} » à mon dressing` : "Ajouter cette pièce à mon dressing"}
+                </button>
+              </div>
             )}
           </>
         )}

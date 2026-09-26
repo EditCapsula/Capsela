@@ -1,6 +1,6 @@
 import { MONTHS_FR, OCC_LABELS, occasionShortLabel } from "./data";
 import { isCatalogId } from "./catalog";
-import { occasionsOf } from "./capsule";
+import { capsuleSeasonBucket, occasionsOf, saisonCalendairePour } from "./capsule";
 import type { CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
 
 /**
@@ -378,6 +378,57 @@ export function journalInsights(history: HistoryEntry[]): JournalInsights {
   }
 
   return { wornThisMonth, distinctPiecesWornThisMonth, topOccasion, topOccasionShort, topOccasionShare, mois: now.getMonth() };
+}
+
+/**
+ * « TON STYLE CE MOIS-CI » (carte éditoriale du Journal, 26/09/2026) : pour
+ * quelle occasion les tenues du mois ont surtout été pensées, en NOMBRES
+ * ABSOLUS — « 5 / 7 », jamais « 71 % », plus honnête sur un petit volume.
+ *
+ * Mêmes données et même seuil que journalInsights (mois civil en cours,
+ * 3 tenues au moins), avec deux cas qu'il ne distinguait pas :
+ *   · "sans_occasion" : assez de tenues, mais aucune n'a d'occasion notée ;
+ *   · "egalite" : deux occasions ou plus à égalité en tête — aucune ne
+ *     « domine », la carte ne l'affirme donc pas.
+ * `majorite` dit si l'occasion dépasse la moitié des tenues : c'est ce qui
+ * autorise « domine » plutôt que « arrive en tête ».
+ */
+export type StyleDuMois =
+  | { etat: "vide"; total: 0 }
+  | { etat: "peu" | "sans_occasion" | "egalite"; total: number }
+  | { etat: "tendance"; total: number; occasion: Exclude<OccasionKey, "all">; compte: number; majorite: boolean };
+
+/** Sous 3 tenues dans le mois, pas de tendance — la règle de journalInsights. */
+export const STYLE_DU_MOIS_MINIMUM = 3;
+
+export function styleDuMois(history: HistoryEntry[], now: number = Date.now()): StyleDuMois {
+  const n = new Date(now);
+  const mois = history.filter((h) => {
+    const d = new Date(h.ts);
+    return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+  });
+  const total = mois.length;
+  if (total === 0) return { etat: "vide", total: 0 };
+  if (total < STYLE_DU_MOIS_MINIMUM) return { etat: "peu", total };
+  const comptes = new Map<Exclude<OccasionKey, "all">, number>();
+  for (const h of mois) {
+    if (!h.occasion || h.occasion === "all") continue;
+    comptes.set(h.occasion, (comptes.get(h.occasion) || 0) + 1);
+  }
+  if (comptes.size === 0) return { etat: "sans_occasion", total };
+  const tries = [...comptes.entries()].sort((a, b) => b[1] - a[1]);
+  if (tries.length > 1 && tries[1][1] === tries[0][1]) return { etat: "egalite", total };
+  const [occasion, compte] = tries[0];
+  return { etat: "tendance", total, occasion, compte, majorite: compte * 2 > total };
+}
+
+/**
+ * Une pièce se porte-t-elle dans la saison en cours ? Même règle que la
+ * capsule et le filtre saisonnier du moteur (capsuleSeasonBucket) : sa
+ * saison est celle du moment, ou « Toutes saisons ».
+ */
+export function deLaSaisonEnCours(item: Item, now: number = Date.now()): boolean {
+  return item.season === "Toutes saisons" || item.season === capsuleSeasonBucket(saisonCalendairePour(new Date(now)));
 }
 
 /** Nouveaux looks enregistrés (Créer un look) ce mois-ci — distinct des tenues portées : ne compte que les looks explicitement sauvegardés. */

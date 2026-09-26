@@ -10,7 +10,7 @@ import { describeOutfitVariation, getOutfitsForItem, outfitFormality, type ItemO
 import { paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import type { OccasionKey } from "@/lib/types";
+import type { CapsuleSeason, Item, OccasionKey } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
 
 /**
@@ -29,6 +29,24 @@ import BoutonRetour from "@/components/BoutonRetour";
  * défaut) ; badge saison strictement lu depuis capsuleSeasons (colonne
  * saison_capsule de vestiaire_universel), jamais déduit du type de pièce.
  */
+/**
+ * Les idées de tenues d'une pièce, telles que cet écran les calcule — sorti
+ * le 26/09/2026 pour que « Jamais portées » annonce le même nombre, avec les
+ * mêmes paramètres (pool, saison de capsule, météo représentative, palette,
+ * genre). Le tirage restant aléatoire, les idées calculées là-bas sont
+ * ensuite transmises ici (ideesTenuesPretes) plutôt que recalculées.
+ */
+export function calculerIdeesTenues(
+  pivot: Item,
+  wardrobePool: Item[],
+  capsuleSeason: CapsuleSeason,
+  preferredHexes: string[],
+  gender: "femme" | "homme" | null
+): ItemOutfitVariation[] {
+  const pool = wardrobePool.some((i) => i.id === pivot.id) ? wardrobePool : [...wardrobePool, pivot];
+  return getOutfitsForItem(pivot.id, pool, representativeWeatherFor(capsuleSeason), preferredHexes, {}, gender, capsuleSeason);
+}
+
 export default function ItemOutfitsScreen() {
   const { state, wardrobePool, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
@@ -47,17 +65,22 @@ export default function ItemOutfitsScreen() {
   );
 
   const capsuleSeason = state.capsuleSeason || currentSeasonKey();
-  const weather = useMemo(() => representativeWeatherFor(capsuleSeason), [capsuleSeason]);
   const preferredHexes = useMemo(() => paletteHexes(profile), [profile]);
 
+  const pretes = state.ideesTenuesPretes;
   const variations = useMemo(
     // capsuleSeason transmis explicitement (correctif 29/08/2026) : le
     // référentiel saisonnier vient de la capsule affichée, jamais de la
     // température représentative — 16 °C au printemps basculait le bucket
     // météo en "Automne / Hiver" et écartait les pièces Printemps/Été de
     // leur propre capsule. La météo continue de gouverner la température.
-    () => (!pivot ? [] : getOutfitsForItem(pivot.id, pool, weather, preferredHexes, {}, profile.gender, capsuleSeason)),
-    [pivot, pool, weather, preferredHexes, profile.gender, capsuleSeason]
+    () =>
+      !pivot
+        ? []
+        : pretes && pretes.pivotId === pivot.id
+          ? pretes.variations
+          : calculerIdeesTenues(pivot, wardrobePool, capsuleSeason, preferredHexes, profile.gender),
+    [pivot, pretes, wardrobePool, preferredHexes, profile.gender, capsuleSeason]
   );
 
   // Génération à la demande du visuel de la pièce pivot (correctif 23/08/2026,
