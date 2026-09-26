@@ -42,7 +42,7 @@ function Puce({ children }: { children: React.ReactNode }) {
 function Groupe({ titre, sous, hexes }: { titre: string; sous?: string; hexes: string[] }) {
   return (
     <div className="mt-5">
-      <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">{titre}</div>
+      <div className="t-label text-terracotta">{titre}</div>
       {sous && <div className="text-[12px] text-muted mt-[3px]">{sous}</div>}
       <div className="flex flex-wrap gap-[10px] mt-[10px]">
         {hexes.map((h) => (
@@ -97,7 +97,7 @@ export function EtapeColorimetrie({
     return (
       <div className="mt-[26px]">
         <div className="bg-card border border-border rounded-[20px] px-[16px] py-[15px]">
-          <div className="font-serif text-[18px] text-ink leading-[1.25]">L&apos;analyse arrive bientôt</div>
+          <div className="t-titre-carte text-ink">L&apos;analyse arrive bientôt</div>
           <div className="text-[13px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
             Elle n&apos;est pas encore disponible. Tes couleurs préférées suffisent pour commencer — tu pourras
             lancer l&apos;analyse depuis ton profil dès qu&apos;elle ouvrira.
@@ -114,7 +114,7 @@ export function EtapeColorimetrie({
   if (encours) {
     return (
       <div className="mt-[26px] bg-card border border-border rounded-[20px] px-[16px] py-[18px]" aria-live="polite">
-        <div className="font-serif text-[18px] text-ink">Analyse en cours…</div>
+        <div className="t-titre-carte text-ink">Analyse en cours…</div>
         <div className="flex flex-col gap-[9px] mt-[14px]">
           <Puce>Tonalités de la peau</Puce>
           <Puce>Couleur des cheveux</Puce>
@@ -135,7 +135,7 @@ export function EtapeColorimetrie({
         </div>
         <button
           onClick={() => onResultat(COLORIMETRIE_VIDE)}
-          className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer mt-4"
+          className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4"
           style={{ minHeight: 52 }}
         >
           Reprendre une photo
@@ -161,7 +161,7 @@ export function EtapeColorimetrie({
         </div>
         <button
           onClick={lancer}
-          className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer mt-4"
+          className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4"
           style={{ minHeight: 52 }}
         >
           Analyser ma colorimétrie
@@ -186,7 +186,7 @@ export function EtapeColorimetrie({
         </div>
       )}
       <div className="bg-card border border-border rounded-[20px] px-[16px] py-[15px]">
-        <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">Pour une analyse fiable</div>
+        <div className="t-label text-terracotta">Pour une analyse fiable</div>
         <div className="flex flex-col gap-[9px] mt-[11px]">
           <Puce>Lumière naturelle</Puce>
           <Puce>Visage de face</Puce>
@@ -204,7 +204,7 @@ export function EtapeColorimetrie({
       <input ref={galerie} type="file" accept="image/*" onChange={choisir("galerie")} className="hidden" />
       <button
         onClick={() => camera.current?.click()}
-        className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer mt-4"
+        className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4"
         style={{ minHeight: 52 }}
       >
         Prendre une photo
@@ -233,11 +233,11 @@ export function ResultatColorimetrie({
       {/* Le badge dépend de la PRÉSENCE d'un score, jamais d'un seuil deviné :
           un service qui n'en rend pas ne doit pas faire afficher « fiable ». */}
       {c.confiance !== undefined && (
-        <span className="inline-block text-[10px] tracking-[.14em] uppercase text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
+        <span className="inline-block t-label text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
           Analyse fiable
         </span>
       )}
-      {c.libelle && <div className="font-serif text-[21px] text-ink mt-[10px]">{c.libelle}</div>}
+      {c.libelle && <div className="t-titre-section text-ink mt-[10px]">{c.libelle}</div>}
 
       <Groupe titre="Couleurs signature" hexes={c.signature ?? []} />
       {!!c.neutres?.length && <Groupe titre="Neutres" hexes={c.neutres} />}

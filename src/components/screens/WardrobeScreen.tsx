@@ -80,7 +80,7 @@ const PLUS = (
 function TitreSection({ children, action, className = "mt-10" }: { children: React.ReactNode; action?: React.ReactNode; className?: string }) {
   return (
     <div className={`flex items-baseline justify-between gap-[10px] ${className}`}>
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted">{children}</div>
+      <div className="t-surtitre text-muted">{children}</div>
       {action}
     </div>
   );
@@ -177,8 +177,8 @@ export default function WardrobeScreen() {
   const enTete = (
     <>
       <AppHeader />
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[14px]">Mon dressing</div>
-      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+      <div className="t-surtitre text-muted mt-[14px]">Mon dressing</div>
+      <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
         Ton vestiaire, <span className="italic text-terracotta">à ton image.</span>
       </div>
       <div className="flex items-baseline justify-between gap-[10px] mt-[14px]">
@@ -233,7 +233,7 @@ export default function WardrobeScreen() {
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         </div>
-        <div className="font-serif text-[24px] leading-[1.15] text-ink mt-5">
+        <div className="t-titre-section text-ink mt-5">
           Ton dressing <span className="italic text-terracotta">commence ici</span>
         </div>
         <div className="text-[13px] leading-[1.55] mt-2" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
@@ -242,7 +242,7 @@ export default function WardrobeScreen() {
         </div>
         <button
           onClick={actions.openAdd}
-          className="w-full flex items-center justify-center gap-2 mt-5 rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 mt-5 rounded-full bg-terracotta active:bg-terracotta-hover text-cream t-bouton cursor-pointer"
           style={{ minHeight: 52 }}
         >
           {PLUS}
@@ -254,7 +254,7 @@ export default function WardrobeScreen() {
             par viewItemOutfit : l'écran Tenue affiche CETTE tenue, marquée
             comme choisie à la main (brief du 25/09, point 6). */}
         <TitreSection>✦ À découvrir</TitreSection>
-        <div className="font-serif text-[20px] leading-[1.25] text-ink mt-3">
+        <div className="t-titre-section text-ink mt-3">
           Déjà envie <span className="italic text-terracotta">d&apos;inspiration ?</span>
         </div>
         <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
@@ -280,13 +280,13 @@ export default function WardrobeScreen() {
           d'ouvrir un formulaire qui refuserait d'enregistrer à la fin. */}
       {synthese.complet && (
         <div className="mt-6">
-          <div className="font-serif text-[19px] leading-[1.2] text-ink">Dressing complet</div>
+          <div className="t-titre-section text-ink">Dressing complet</div>
           <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
             {`Ton vestiaire contient déjà ${items.length} pièces. Passe à Premium pour continuer à l'enrichir.`}
           </div>
           <button
             onClick={() => actions.goPremium()}
-            className="mt-4 rounded-full px-5 text-[12px] tracking-[.08em] uppercase text-terracotta cursor-pointer active:opacity-80"
+            className="mt-4 rounded-full px-5 t-bouton text-terracotta cursor-pointer active:opacity-80"
             style={{ minHeight: 44, border: "1px solid var(--color-terracotta)" }}
           >
             Découvrir Premium
@@ -363,7 +363,7 @@ export default function WardrobeScreen() {
             {/* Deux lignes réservées : « Pantalons, jeans & shorts » passe à la ligne
                 à 136 px, ses voisines non — sans cette hauteur, les compteurs
                 ne seraient plus alignés. */}
-            <div className="font-serif text-[15px] text-ink leading-[1.2] mt-[10px] px-[2px]" style={{ minHeight: "2.4em" }}>
+            <div className="t-titre-vignette text-ink mt-[10px] px-[2px]" style={{ minHeight: "2.4em" }}>
               {g.libelle}
             </div>
             <div className="text-[11px] text-muted mt-[2px] px-[2px]">
@@ -429,10 +429,10 @@ export default function WardrobeScreen() {
              dressing. Jamais une vitrine : aucune pièce à acheter ici. */}
       {aDecouvrir && (
         <div className="mt-10 rounded-[24px] px-5 pt-5 pb-6" style={{ background: "var(--color-warm-bg)" }}>
-          <div className="text-[11px] tracking-[.16em] uppercase text-terracotta">✦ À découvrir</div>
+          <div className="t-surtitre text-terracotta">✦ À découvrir</div>
           {aDecouvrir.cas === "associations" && (
             <>
-              <div className="font-serif text-[20px] leading-[1.25] text-ink mt-3">
+              <div className="t-titre-section text-ink mt-3">
                 Ton dressing peut <span className="italic text-terracotta">déjà faire plus.</span>
               </div>
               <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
@@ -444,7 +444,7 @@ export default function WardrobeScreen() {
           )}
           {aDecouvrir.cas === "proche_limite" && (
             <>
-              <div className="font-serif text-[20px] leading-[1.25] text-ink mt-3">
+              <div className="t-titre-section text-ink mt-3">
                 Tu as déjà {aDecouvrir.nbPieces} <span className="italic text-terracotta">pièces.</span>
               </div>
               <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
@@ -461,7 +461,7 @@ export default function WardrobeScreen() {
           )}
           {aDecouvrir.cas === "manque" && (
             <>
-              <div className="font-serif text-[20px] leading-[1.25] text-ink mt-3">
+              <div className="t-titre-section text-ink mt-3">
                 Une pièce pourrait ouvrir <span className="italic text-terracotta">de nouveaux looks.</span>
               </div>
               <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>

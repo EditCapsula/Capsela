@@ -143,7 +143,7 @@ export default function ItemOutfitsScreen() {
           dans le viewport. */}
       <div className="flex items-center gap-[14px]">
         <BoutonRetour onClick={() => actions.go(state.itemOutfitsReturn)} label="Revenir à l'écran précédent" className="flex-shrink-0" />
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted">Les idées de tenues</div>
+        <div className="t-surtitre text-muted">Les idées de tenues</div>
       </div>
 
       {/* Fiche compacte de la pièce. "Autour de cette pièce" (brief design
@@ -170,8 +170,8 @@ export default function ItemOutfitsScreen() {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">Autour de cette pièce</div>
-          <div className="font-serif text-[18px] text-ink leading-[1.2] mt-[3px]">{pivot.name}</div>
+          <div className="t-label text-terracotta">Autour de cette pièce</div>
+          <div className="t-titre-carte text-ink mt-[3px]">{pivot.name}</div>
           <div className="text-[12px] text-muted mt-[3px]">
             {CATLABEL[pivot.cat]}
             {metaParts.length ? " · " + metaParts.join(" · ") : ""}
@@ -186,7 +186,7 @@ export default function ItemOutfitsScreen() {
           {showSeasonBadge && (
             <div className="inline-flex items-center gap-2 mt-[7px] rounded-full bg-warm-bg border border-warm-border" style={{ padding: "5px 11px 5px 9px" }}>
               <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-gold" />
-              <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">{seasonLabel}</span>
+              <span className="t-label text-terracotta">{seasonLabel}</span>
             </div>
           )}
         </div>
@@ -218,7 +218,7 @@ export default function ItemOutfitsScreen() {
                     href={pivot.affLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block bg-terracotta active:bg-terracotta-hover text-cream rounded-full py-[10px] px-[16px] text-[12px] tracking-[.1em] uppercase cursor-pointer whitespace-nowrap"
+                    className="inline-block bg-terracotta active:bg-terracotta-hover text-cream rounded-full py-[10px] px-[16px] t-cta cursor-pointer whitespace-nowrap"
                   >
                     Acheter ↗
                   </a>
@@ -305,7 +305,7 @@ export default function ItemOutfitsScreen() {
                   sections par occasion) : le nombre reste secondaire visuellement
                   par rapport au nom de l'occasion. */}
               <div className="flex items-baseline gap-[6px] mb-[9px]">
-                <span className="text-[11px] tracking-[.16em] uppercase text-muted">{OCC_LABELS[group.occasion]}</span>
+                <span className="t-surtitre text-muted">{OCC_LABELS[group.occasion]}</span>
                 <span className="text-[10px] text-placeholder">
                   · {withPieces.length} idée{withPieces.length > 1 ? "s" : ""}
                 </span>
@@ -347,7 +347,7 @@ export default function ItemOutfitsScreen() {
                           les plus longs ("Prête à sortir de l'ordinaire") sur
                           deux lignes dès 390px, sans rien gagner. */}
                       <div className="mt-[8px]">
-                        <div className="font-serif text-[15px] text-ink leading-[1.25]">{insight.title}</div>
+                        <div className="t-titre-vignette text-ink">{insight.title}</div>
                         <div className="text-[12px] text-[#3F3B34] mt-[2px] leading-[1.4] line-clamp-3">{insight.sentence}</div>
                       </div>
                       <span className="mt-[6px] inline-block text-[12px] text-terracotta">Voir cette tenue →</span>

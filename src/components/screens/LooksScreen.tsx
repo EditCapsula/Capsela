@@ -39,7 +39,7 @@ export default function LooksScreen() {
           + Créer un look
         </button>
       </div>
-      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[18px]">
+      <div className="t-titre-ecran text-ink mt-[18px]">
         Mes <span className="italic text-terracotta">looks</span>
       </div>
 

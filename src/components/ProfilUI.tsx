@@ -76,7 +76,7 @@ export function Surtitre({ icone, children }: { icone: React.ReactNode; children
   return (
     <div className="flex items-center gap-[8px] text-terracotta mt-7 mb-[10px]">
       <Icone taille={16}>{icone}</Icone>
-      <span className="text-[11px] tracking-[.16em] uppercase text-muted">{children}</span>
+      <span className="t-surtitre text-muted">{children}</span>
     </div>
   );
 }
@@ -106,7 +106,7 @@ export function LigneProfil({
         <Icone>{icone}</Icone>
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block font-serif text-[16px] leading-[1.25] text-ink">{titre}</span>
+        <span className="block t-titre-ligne text-ink">{titre}</span>
         <span className={"block text-[13px] leading-[1.4] mt-[2px] " + (renseigne ? "text-ink" : "text-placeholder")}>{valeur}</span>
         {renseigne && explication && <span className="block text-[12px] text-muted leading-[1.4] mt-[3px]">{explication}</span>}
       </span>

@@ -18,6 +18,7 @@ import {
   moisDepuis,
   mostWornPieces,
   newLooksThisMonth,
+  nomCourtPiece,
   type EtatDePort,
   type JournalEntry,
   type JournalPeriod,
@@ -74,7 +75,7 @@ const MOMENT_DE_L_OCCASION: Record<Exclude<OccasionKey, "all">, string> = {
 const pl = (n: number, un: string, plusieurs: string) => (n <= 1 ? un : plusieurs);
 
 function Surtitre({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`text-[11px] tracking-[.16em] uppercase text-muted ${className}`}>{children}</div>;
+  return <div className={`t-surtitre text-muted ${className}`}>{children}</div>;
 }
 
 /* Icônes linéaires 1,6 — même trait que le reste de l'app. */
@@ -169,7 +170,7 @@ function AnneauCapsule({ pourcentage }: { pourcentage: number }) {
         )}
       </svg>
       <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="font-serif text-[21px] leading-none text-ink">{pourcentage} %</span>
+        <span className="t-chiffre text-ink">{pourcentage} %</span>
         <span className="text-[9px] text-muted leading-[1.2] mt-[4px]">
           de ta capsule
           <br />
@@ -212,7 +213,7 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
       <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-[6px] px-1">
         <span className="text-[13px] text-ink whitespace-nowrap first-letter:uppercase">{quand}</span>
         {entry.hasOccasion && (
-          <span className="text-[9px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[9px] py-[3px] whitespace-nowrap">
+          <span className="t-pastille text-terracotta bg-warm-bg rounded-full px-[9px] py-[3px] whitespace-nowrap">
             {entry.occLabel}
           </span>
         )}
@@ -367,10 +368,10 @@ export default function HistoryScreen() {
           backLabel="Revenir au journal"
         />
         <Surtitre className="mt-[18px]">Faire de la place</Surtitre>
-        <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+        <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
           Pièces <span className="italic text-terracotta">à vendre</span>
         </div>
-        <div className="text-[13px] text-muted-3 leading-[1.5] mt-[10px]">
+        <div className="t-chapeau text-muted-3 mt-[10px]">
           Ces pièces n&apos;ont pas trouvé leur moment depuis longtemps. Tu décides, pièce par pièce : rien ne quitte
           ton dressing sans toi.
         </div>
@@ -406,13 +407,13 @@ export default function HistoryScreen() {
                   <button onClick={() => ouvrirPiece(item)} className="w-full flex gap-[13px] text-left cursor-pointer">
                     <Vignette item={item} className="w-[72px]" pad={5} />
                     <div className="flex-1 min-w-0 pt-[2px]">
-                      <div className="font-serif text-[18px] leading-[1.2] text-ink">{item.name}</div>
+                      <div className="t-titre-carte text-ink">{item.name}</div>
                       <div className="text-[12px] text-muted-3 mt-[5px] leading-[1.4]">
                         {port.dernierPort != null
                           ? `Dernier port : ${moisAnnee(port.dernierPort)}`
                           : `${jamaisPorte(item)} depuis son arrivée${item.createdAt ? ` en ${moisAnnee(item.createdAt)}` : ""}`}
                       </div>
-                      <div className="text-[10px] tracking-[.14em] uppercase text-terracotta mt-[7px]">
+                      <div className="t-label text-terracotta mt-[7px]">
                         {port.moisSansPort != null
                           ? `${port.moisSansPort} mois sans sortie`
                           : item.createdAt
@@ -425,14 +426,14 @@ export default function HistoryScreen() {
                     <button
                       disabled={occupe}
                       onClick={() => void choisir(item, "gardee")}
-                      className="w-full min-h-[46px] rounded-full border border-border-soft text-ink text-[12px] tracking-[.1em] uppercase cursor-pointer disabled:opacity-50"
+                      className="w-full min-h-[46px] rounded-full border border-border-soft text-ink t-bouton cursor-pointer disabled:opacity-50"
                     >
                       Garder dans mon dressing
                     </button>
                     <button
                       disabled={occupe}
                       onClick={() => void choisir(item, "de_cote")}
-                      className="w-full min-h-[46px] rounded-full bg-ink text-cream text-[12px] tracking-[.1em] uppercase cursor-pointer disabled:opacity-50"
+                      className="w-full min-h-[46px] rounded-full bg-ink text-cream t-bouton cursor-pointer disabled:opacity-50"
                     >
                       Mettre de côté pour vendre
                     </button>
@@ -483,10 +484,10 @@ export default function HistoryScreen() {
       <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
         <AppHeader />
         <Surtitre className="mt-[18px]">Ton journal</Surtitre>
-        <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+        <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
           Ton style <span className="italic text-terracotta">commence ici.</span>
         </div>
-        <div className="text-[13px] text-muted-3 leading-[1.5] mt-[10px]">
+        <div className="t-chapeau text-muted-3 mt-[10px]">
           Chaque tenue que tu portes enrichit ton journal et aide Capsela à mieux comprendre ton style.
         </div>
 
@@ -531,7 +532,7 @@ export default function HistoryScreen() {
         {/* Le parcours existant de la tenue du jour — aucun nouveau parcours (§3). */}
         <button
           onClick={actions.goTenues}
-          className="mt-7 w-full min-h-[52px] bg-ink text-cream rounded-full text-[13px] tracking-[.1em] uppercase cursor-pointer"
+          className="mt-7 w-full min-h-[52px] bg-ink text-cream rounded-full t-bouton cursor-pointer"
         >
           Choisir ma première tenue
         </button>
@@ -566,10 +567,10 @@ export default function HistoryScreen() {
 
       {/* EN-TÊTE */}
       <Surtitre className="mt-[18px]">Ton journal</Surtitre>
-      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+      <div className="t-titre-ecran text-ink mt-[6px]">
         {entries.length} <span className="italic text-terracotta">{pl(entries.length, "tenue portée", "tenues portées")}</span>
       </div>
-      <div className="text-[13px] text-muted-3 leading-[1.5] mt-[8px]">{phraseEnTete}</div>
+      <div className="t-chapeau text-muted-3 mt-[8px]">{phraseEnTete}</div>
 
       {/* BILAN — une métrique principale, deux secondaires, chacune dite en
           toutes lettres (§6 : pas de petit chiffre sans contexte). */}
@@ -589,11 +590,11 @@ export default function HistoryScreen() {
         )}
         <div className="flex-1 min-w-0 grid grid-cols-2">
           <div className="pr-2">
-            <div className="font-serif text-[21px] leading-none text-ink">{entries.length}</div>
+            <div className="t-chiffre text-ink">{entries.length}</div>
             <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(entries.length, "tenue portée", "tenues portées")}</div>
           </div>
           <div className="pl-3 border-l border-border">
-            <div className="font-serif text-[21px] leading-none text-ink">{capsule.portees}</div>
+            <div className="t-chiffre text-ink">{capsule.portees}</div>
             <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(capsule.portees, "pièce utilisée", "pièces utilisées")}</div>
           </div>
         </div>
@@ -610,7 +611,7 @@ export default function HistoryScreen() {
           </Surtitre>
           {!(moment && insights.topOccasionShare != null) && (
             <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[16px]">
-              <div className="font-serif text-[18px] leading-[1.3] text-ink">
+              <div className="t-titre-carte text-ink">
                 {insights.wornThisMonth > 0 ? "Pas encore de tendance ce mois-ci." : `Aucune tenue notée en ${moisCourant} pour l'instant.`}
               </div>
               <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[6px]">
@@ -622,7 +623,7 @@ export default function HistoryScreen() {
           )}
           {moment && insights.topOccasionShare != null && (
             <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[18px]">
-              <div className="font-serif text-[21px] leading-[1.25] text-ink" style={{ textWrap: "balance" }}>
+              <div className="t-titre-section text-ink" style={{ textWrap: "balance" }}>
                 Ton dressing est particulièrement sollicité pour <span className="italic text-terracotta">{moment}</span>.
               </div>
               <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[10px]">
@@ -649,25 +650,40 @@ export default function HistoryScreen() {
           <Surtitre>
             <span id="journal-fetiches">Tes pièces fétiches</span>
           </Surtitre>
-          <div className="mt-3 bg-card border border-border rounded-[20px] px-4 py-[6px]">
-            {fetiches.map(({ item, count }, idx) => (
-              <button
-                key={item.id}
-                onClick={() => ouvrirPiece(item)}
-                className="w-full flex items-center gap-[13px] py-[10px] text-left cursor-pointer border-b border-border last:border-b-0"
-              >
-                <span className="font-serif text-[18px] text-terracotta w-[14px] flex-shrink-0 text-center">{idx + 1}</span>
-                <Vignette item={item} className="w-[44px]" pad={3} />
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[13px] text-ink leading-[1.3] line-clamp-2">{item.name}</span>
-                  <span className="block text-[12px] text-muted mt-[2px]">
-                    {nounInfoOf(item).gender === "f" ? "Portée" : "Porté"} {count} fois
-                  </span>
-                </span>
-                <span className="text-muted text-[13px] flex-shrink-0" aria-hidden="true">›</span>
-              </button>
-            ))}
-          </div>
+          {/* Vitrine horizontale (26/09/2026) : les trois pièces visibles
+              ensemble, sans défilement — une liste verticale à vignettes de
+              44 px prenait trop de hauteur pour trois pièces. Même vignette
+              4/5 que « À sortir du placard », le rang posé sur l'image. Nom
+              court sur deux lignes au plus, hauteur réservée : un nom long ne
+              décale ni la carte ni le nombre de ports. */}
+          <ol className="mt-3 grid grid-cols-3 gap-[10px]">
+            {fetiches.map(({ item, count }, idx) => {
+              const ports = `${nounInfoOf(item).gender === "f" ? "Portée" : "Porté"} ${count} fois`;
+              return (
+                <li key={item.id} className="min-w-0">
+                  <button
+                    onClick={() => ouvrirPiece(item)}
+                    className="w-full text-left cursor-pointer"
+                    aria-label={`${idx + 1}. ${item.name}, ${ports.toLowerCase()}`}
+                  >
+                    <span className="relative block">
+                      <Vignette item={item} className="w-full" pad={6} />
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-[6px] left-[6px] w-[22px] h-[22px] rounded-full bg-card flex items-center justify-center font-serif text-[13px] leading-none text-terracotta"
+                      >
+                        {idx + 1}
+                      </span>
+                    </span>
+                    <span className="text-[12px] text-ink leading-[1.25] mt-[7px] line-clamp-2 min-h-[2.5em]">
+                      {nomCourtPiece(item.name)}
+                    </span>
+                    <span className="block text-[11px] text-muted mt-[2px]">{ports}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
         </section>
       )}
 
@@ -695,7 +711,7 @@ export default function HistoryScreen() {
                   {/* Le statut en pastille, comme sur la maquette : « JAMAIS
                       PORTÉE » ou « 8 MOIS » — les deux états ne se confondent
                       jamais. */}
-                  <span className="inline-block mt-[7px] rounded-full bg-warm-bg px-[8px] py-[2px] text-[9px] tracking-[.1em] uppercase text-terracotta">
+                  <span className="inline-block mt-[7px] rounded-full bg-warm-bg px-[8px] py-[2px] t-pastille text-terracotta">
                     {statutAttente(item, port)}
                   </span>
                   <div className="text-[12px] text-ink mt-[4px] leading-[1.25] line-clamp-2">{item.name}</div>
@@ -726,10 +742,10 @@ export default function HistoryScreen() {
         const depuis = plusDunAn ? "depuis plus de 12 mois" : "depuis deux saisons";
         return (
           <section className="mt-[22px] bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[18px]" aria-labelledby="journal-revente">
-            <div id="journal-revente" className="text-[11px] tracking-[.16em] uppercase text-terracotta">
+            <div id="journal-revente" className="t-surtitre text-terracotta">
               À envisager de vendre
             </div>
-            <div className="font-serif text-[18px] leading-[1.3] text-ink mt-[8px]">
+            <div className="t-titre-carte text-ink mt-[8px]">
               {aVendre.length === 1
                 ? `Une pièce n'a pas été portée ${depuis}.`
                 : `${aVendre.length} pièces n'ont pas été portées ${depuis}.`}
@@ -743,7 +759,7 @@ export default function HistoryScreen() {
                 setAvis(null);
                 setVue("vendre");
               }}
-              className="mt-[12px] min-h-[44px] text-[12px] tracking-[.1em] uppercase text-terracotta cursor-pointer"
+              className="mt-[12px] min-h-[44px] t-lien text-terracotta cursor-pointer"
             >
               Voir les pièces →
             </button>
@@ -812,7 +828,7 @@ export default function HistoryScreen() {
                   {/* « Aujourd'hui » et « Hier » sont déjà en tête de leur
                       carte : le titre de groupe les répéterait mot pour mot. */}
                   {key !== "today" && key !== "yesterday" && (
-                    <div className="text-[10px] tracking-[.14em] uppercase text-muted mb-[10px]">{label}</div>
+                    <div className="t-label text-muted mb-[10px]">{label}</div>
                   )}
                   <div className="flex flex-col gap-3">
                     {groupe.map((e) => (
@@ -837,7 +853,7 @@ export default function HistoryScreen() {
               setPages(1);
               setFiltre("toutes");
             }}
-            className="mt-3 w-full min-h-[44px] text-[12px] tracking-[.1em] uppercase text-terracotta cursor-pointer"
+            className="mt-3 w-full min-h-[44px] t-lien text-terracotta cursor-pointer"
           >
             {historiqueComplet ? "Réduire mon journal" : "Voir tout mon journal →"}
           </button>

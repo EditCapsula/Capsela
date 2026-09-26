@@ -102,11 +102,11 @@ export default function ProfileScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <AppHeader showAvatar={false} onBack={() => actions.go(state.profileReturn)} backLabel="Revenir à l'écran précédent" />
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[18px]">Profil</div>
-      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+      <div className="t-surtitre text-muted mt-[18px]">Profil</div>
+      <div className="t-titre-ecran text-ink mt-[6px]">
         Ton <span className="italic text-terracotta">profil</span>
       </div>
-      <div className="text-[13px] text-muted-3 leading-[1.5] mt-[8px]">Tout ce qui aide Capsela à mieux te conseiller.</div>
+      <div className="t-chapeau text-muted-3 mt-[8px]">Tout ce qui aide Capsela à mieux te conseiller.</div>
 
       {/* IDENTITÉ — « Gérer mon compte » mène au compte, jamais à l'édition du
           profil : ce sont deux espaces différents. */}
@@ -115,7 +115,7 @@ export default function ProfileScreen() {
           <span className="font-serif text-[21px] text-cream">{initial}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <div className={"font-serif text-[18px] leading-[1.2] break-words " + (profile.displayName ? "text-ink" : "text-placeholder")}>
+          <div className={"t-titre-carte break-words " + (profile.displayName ? "text-ink" : "text-placeholder")}>
             {profile.displayName || "Ton nom"}
           </div>
           <div className="text-[12px] text-muted mt-[2px]">{demoMode ? "Mode démo — les données restent sur cet appareil" : "Compte personnel"}</div>
@@ -135,7 +135,7 @@ export default function ProfileScreen() {
           onClick={() => ouvrirChamp("morphologie")}
           className="w-full text-left bg-[#F6EBE2] border border-terracotta rounded-2xl p-4 mt-5 cursor-pointer"
         >
-          <div className="text-[11px] tracking-[.16em] uppercase text-terracotta">À compléter</div>
+          <div className="t-surtitre text-terracotta">À compléter</div>
           <div className="text-[13px] text-ink mt-[6px]">{toRevalidate.fieldLabel} est à mettre à jour.</div>
         </button>
       )}
@@ -212,7 +212,7 @@ export default function ProfileScreen() {
               <Icone taille={17}>{I_GRAPHIQUE}</Icone>
             </span>
             <div className="min-w-0 flex-1">
-              <div className="font-serif text-[18px] leading-[1.25] text-ink">
+              <div className="t-titre-carte text-ink">
                 Ton profil est <span className="italic text-terracotta">presque prêt</span>
               </div>
               <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[4px]">
@@ -235,7 +235,7 @@ export default function ProfileScreen() {
           </div>
           <button
             onClick={actions.goProfileEdit}
-            className="mt-[14px] w-full rounded-full bg-terracotta text-cream text-[12px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-[14px] w-full rounded-full bg-terracotta text-cream t-bouton cursor-pointer"
             style={{ minHeight: 44 }}
           >
             Personnaliser mon profil
@@ -244,7 +244,7 @@ export default function ProfileScreen() {
       ) : (
         <button
           onClick={actions.goProfileEdit}
-          className="mt-4 w-full rounded-full border border-terracotta text-terracotta text-[12px] tracking-[.1em] uppercase cursor-pointer"
+          className="mt-4 w-full rounded-full border border-terracotta text-terracotta t-bouton cursor-pointer"
           style={{ minHeight: 44 }}
         >
           Personnaliser mon profil
@@ -256,17 +256,17 @@ export default function ProfileScreen() {
       <Surtitre icone={I_CINTRE}>Ton Capsela</Surtitre>
       <div className="grid grid-cols-2 gap-[10px]">
         <button onClick={actions.goWardrobe} className="bg-card border border-border rounded-[20px] p-4 text-center cursor-pointer">
-          <div className="font-serif text-[21px] leading-none text-ink">{nbPieces}</div>
+          <div className="t-chiffre text-ink">{nbPieces}</div>
           <div className="text-[12px] text-muted mt-[6px]">{nbPieces <= 1 ? "pièce dans ton dressing" : "pièces dans ton dressing"}</div>
         </button>
         {nbLooks > 0 ? (
           <button onClick={actions.goHistory} className="bg-card border border-border rounded-[20px] p-4 text-center cursor-pointer">
-            <div className="font-serif text-[21px] leading-none text-ink">{nbLooks}</div>
+            <div className="t-chiffre text-ink">{nbLooks}</div>
             <div className="text-[12px] text-muted mt-[6px]">{nbLooks <= 1 ? "look porté" : "looks portés"}</div>
           </button>
         ) : (
           <div className="bg-card border border-border rounded-[20px] p-4 text-center">
-            <div className="font-serif text-[21px] leading-none text-ink">0</div>
+            <div className="t-chiffre text-ink">0</div>
             <div className="text-[12px] text-muted mt-[6px]">look porté</div>
           </div>
         )}

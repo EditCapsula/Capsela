@@ -13,7 +13,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { explainRecommendation } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
-import { decisionAcces } from "@/lib/autorisations";
+import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
 import { useCapsela, defaultOccasionToday } from "@/lib/store";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
@@ -334,7 +334,7 @@ function CardModule({
     >
       <div className="flex items-start justify-between gap-3 px-[16px] pt-[15px]">
         <div className="min-w-0">
-          <div className="font-serif text-[18px] text-ink leading-[1.18]">{titre}</div>
+          <div className="t-titre-carte text-ink">{titre}</div>
           <div className="text-[11px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
             {sousTitre}
           </div>
@@ -521,8 +521,9 @@ export default function HomeScreen() {
 
   /**
    * AVIS DE STYLISTE — accès (docs/avis-de-styliste.md sections 4 et 5,
-   * arbitrages du 25/09/2026). Règle unique AVIS_DE_STYLISTE →
-   * PREMIUM_REQUIRED (autorisations.ts) : Premium confirmé → écran ; gratuit,
+   * arbitrages du 25/09/2026). Règle unique AVIS_DE_STYLISTE (autorisations.ts).
+   * En phase de test (26/09/2026), ACCES_LIBRE : la carte ouvre l'écran, sans
+   * badge ni Gate. Sous PREMIUM_REQUIRED : Premium confirmé → écran ; gratuit,
    * expiré, démo → Premium Gate. Un statut encore inconnu n'est jamais pris
    * pour du Premium : la carte passe en vérification, le statut est relu, et
    * seul un Premium confirmé ouvre l'écran — sinon, le Gate.
@@ -747,8 +748,8 @@ export default function HomeScreen() {
           de l'en-tête : le gain vient de la taille du serif, pas d'un
           interlignage ou d'une marge supplémentaires. */}
       <div className="px-6 mt-[18px]">
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted">Aujourd&apos;hui</div>
-        <div className="font-serif text-[34px] leading-[1.08] text-ink mt-[6px]">
+        <div className="t-surtitre text-muted">Aujourd&apos;hui</div>
+        <div className="t-display text-ink mt-[6px]">
           Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
         </div>
       </div>
@@ -949,7 +950,7 @@ export default function HomeScreen() {
             onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
             // 13 px / .1em / capitales : la convention des 20 CTA principaux
             // de l'app (23/09/2026). Ce bouton en était l'exception.
-            className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full text-[13px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full t-bouton cursor-pointer"
             style={{ minHeight: 50 }}
           >
             {hasOutfit
@@ -1039,7 +1040,7 @@ export default function HomeScreen() {
             jamais deux. Même traitement que « Bonjour, … », « La capsule … »
             et les titres de Planifier. Le titre du hero, posé sur le
             terracotta, en est exclu : l'accent y serait invisible. */}
-        <div className="font-serif text-[21px] leading-[1.18] text-ink">
+        <div className="t-titre-section text-ink">
           Ton dressing, <span className="italic text-terracotta">autrement</span>
         </div>
         <div className="text-[12px] text-muted leading-[1.45] mt-[5px]">
@@ -1133,7 +1134,7 @@ export default function HomeScreen() {
                   après « suite » et laissait le « ? » SEUL sur la deuxième
                   ligne, la pastille Premium lui prenant ~110 px. balance
                   répartit les deux lignes et supprime l'orphelin. */}
-              <div className="font-serif text-[18px] text-ink leading-[1.2]" style={{ textWrap: "balance" }}>
+              <div className="t-titre-carte text-ink" style={{ textWrap: "balance" }}>
                 Et si on préparait <span className="italic text-terracotta">la suite</span> ?
               </div>
               <div className="text-[11px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
@@ -1151,7 +1152,7 @@ export default function HomeScreen() {
               aria-label="Découvrir Capsela Premium"
               className="flex-shrink-0 flex items-center cursor-pointer py-[13px] -my-[13px]"
             >
-              <span className="inline-flex items-center gap-[4px] rounded-full bg-card px-[9px] py-[4px] text-[9px] tracking-[.1em] uppercase text-terracotta whitespace-nowrap">
+              <span className="inline-flex items-center gap-[4px] rounded-full bg-card px-[9px] py-[4px] t-pastille text-terracotta whitespace-nowrap">
                 <span aria-hidden="true">✦</span> Premium
               </span>
             </button>
@@ -1186,7 +1187,7 @@ export default function HomeScreen() {
           le 25/09/2026. « Demander un avis » (écran Tenue, partage à un
           proche) est une autre fonctionnalité et n'est pas touché. */}
       <div className="mx-6 mt-7">
-        <div className="font-serif text-[21px] leading-[1.18] text-ink">
+        <div className="t-titre-section text-ink">
           Besoin d&apos;un <span className="italic text-terracotta">regard</span> ?
         </div>
       </div>
@@ -1197,10 +1198,10 @@ export default function HomeScreen() {
           className="w-full min-w-0 text-left bg-card border border-border rounded-[22px] px-4 pt-[15px] pb-[6px] cursor-pointer transition-opacity active:opacity-90"
         >
           <span className="flex items-start justify-between gap-3">
-            <span className="font-serif text-[18px] text-ink leading-[1.2]">
+            <span className="t-titre-carte text-ink">
               Avis de <span className="italic text-terracotta">styliste</span>
             </span>
-            <BadgePremium />
+            {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
           </span>
           <span className="block text-[11px] text-muted leading-[1.45] mt-[6px]" style={{ textWrap: "pretty" }}>
             Montre ta tenue à Capsela et découvre ce qui fonctionne, ce que tu peux ajuster et les pièces de ton dressing à
@@ -1208,7 +1209,7 @@ export default function HomeScreen() {
           </span>
           {/* Vérification du statut (point 7) : l'indicateur de chargement de
               l'app, à la place d'aucun texte nouveau. */}
-          <span className="flex items-center gap-[10px] min-h-[44px] mt-[2px] text-[12px] tracking-[.1em] uppercase text-terracotta">
+          <span className="flex items-center gap-[10px] min-h-[44px] mt-[2px] t-cta text-terracotta">
             Obtenir mon avis
             {verificationAvis && <LoadingSpinner size={22} />}
           </span>

@@ -4,6 +4,7 @@ import { estActif } from "../premium";
 import {
   assertPremium,
   autoriserFonctionnalite,
+  autoriserSelonRegle,
   estActif as estActifServeur,
   REGLES_ACCES as REGLES_ACCES_SERVEUR,
   type LecteurPremium,
@@ -79,13 +80,21 @@ describe("autoriserFonctionnalite — une règle, la même des deux côtés", ()
     expect(REGLES_ACCES_SERVEUR).toEqual(REGLES_ACCES);
   });
 
-  it("AVIS_DE_STYLISTE : Premium confirmé seulement", async () => {
+  it("phase de test — AVIS_DE_STYLISTE en accès libre : accordé sans lire premium_access", async () => {
+    const gratuit = client({ data: null, error: null });
+    const panne = client({ data: null, error: { message: "timeout" } });
+    expect(await autoriserFonctionnalite(gratuit, { id: "u1" }, "AVIS_DE_STYLISTE", MAINTENANT)).toEqual({ ok: true });
+    expect(await autoriserFonctionnalite(panne, { id: "u1" }, "AVIS_DE_STYLISTE", MAINTENANT)).toEqual({ ok: true });
+    expect([...gratuit.lu, ...panne.lu]).toEqual([]);
+  });
+
+  it("PREMIUM_REQUIRED (règle du lancement) : Premium confirmé seulement", async () => {
     const premium = client({ data: { actif: true, expire_le: null }, error: null });
     const gratuit = client({ data: null, error: null });
     const panne = client({ data: null, error: { message: "timeout" } });
-    expect(await autoriserFonctionnalite(premium, { id: "u1" }, "AVIS_DE_STYLISTE", MAINTENANT)).toEqual({ ok: true });
-    expect((await autoriserFonctionnalite(gratuit, { id: "u1" }, "AVIS_DE_STYLISTE", MAINTENANT)).ok).toBe(false);
-    expect(await autoriserFonctionnalite(panne, { id: "u1" }, "AVIS_DE_STYLISTE", MAINTENANT)).toEqual({
+    expect(await autoriserSelonRegle(premium, { id: "u1" }, "PREMIUM_REQUIRED", MAINTENANT)).toEqual({ ok: true });
+    expect((await autoriserSelonRegle(gratuit, { id: "u1" }, "PREMIUM_REQUIRED", MAINTENANT)).ok).toBe(false);
+    expect(await autoriserSelonRegle(panne, { id: "u1" }, "PREMIUM_REQUIRED", MAINTENANT)).toEqual({
       ok: false,
       statut: 503,
       raison: "statut_illisible",

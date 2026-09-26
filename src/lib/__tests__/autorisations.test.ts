@@ -1,24 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { decisionAcces, reactionRefusServeur } from "../autorisations";
+import { decisionAcces, decisionSelonRegle, premiumRequis, reactionRefusServeur } from "../autorisations";
 import { etatSimule, PROFILS_SIMULES, resoudreProfilSimule } from "../simulationPremium";
 
 const MAINTENANT = new Date("2026-09-25T12:00:00Z");
 
-describe("decisionAcces — AVIS_DE_STYLISTE → PREMIUM_REQUIRED", () => {
+describe("phase de test (26/09/2026) — AVIS_DE_STYLISTE → ACCES_LIBRE", () => {
+  it("accès direct quel que soit le statut, sans vérification ni Gate", () => {
+    for (const etat of ["premium", "gratuit", "inconnu"] as const) {
+      expect(decisionAcces("AVIS_DE_STYLISTE", etat, false)).toBe("acces");
+    }
+  });
+
+  it("pas de badge Premium tant que la fonctionnalité est libre", () => {
+    expect(premiumRequis("AVIS_DE_STYLISTE")).toBe(false);
+  });
+});
+
+// La règle du lancement reste testée telle quelle : repasser
+// AVIS_DE_STYLISTE à "PREMIUM_REQUIRED" réactive exactement ce comportement.
+describe("decisionSelonRegle — PREMIUM_REQUIRED (règle du lancement)", () => {
   it("Premium confirmé : accès", () => {
-    expect(decisionAcces("AVIS_DE_STYLISTE", "premium", false)).toBe("acces");
+    expect(decisionSelonRegle("PREMIUM_REQUIRED", "premium", false)).toBe("acces");
   });
 
   it("gratuit (y compris abonnement expiré) : Premium Gate", () => {
-    expect(decisionAcces("AVIS_DE_STYLISTE", "gratuit", false)).toBe("gate");
+    expect(decisionSelonRegle("PREMIUM_REQUIRED", "gratuit", false)).toBe("gate");
   });
 
   it("inconnu : jamais pris pour du Premium — vérification d'abord", () => {
-    expect(decisionAcces("AVIS_DE_STYLISTE", "inconnu", false)).toBe("verification");
+    expect(decisionSelonRegle("PREMIUM_REQUIRED", "inconnu", false)).toBe("verification");
   });
 
   it("toujours inconnu après vérification : comportement sûr, le Gate", () => {
-    expect(decisionAcces("AVIS_DE_STYLISTE", "inconnu", true)).toBe("gate");
+    expect(decisionSelonRegle("PREMIUM_REQUIRED", "inconnu", true)).toBe("gate");
   });
 });
 
@@ -31,10 +45,10 @@ describe("reactionRefusServeur — Gate pour un refus d'abonnement, erreur pour 
 describe("simulation du statut Premium — parcours de chaque profil", () => {
   const parcours = (profil: (typeof PROFILS_SIMULES)[number]) => {
     const etat = etatSimule(profil, MAINTENANT);
-    const d = decisionAcces("AVIS_DE_STYLISTE", etat, false);
-    return d === "verification" ? decisionAcces("AVIS_DE_STYLISTE", etat, true) : d;
+    const d = decisionSelonRegle("PREMIUM_REQUIRED", etat, false);
+    return d === "verification" ? decisionSelonRegle("PREMIUM_REQUIRED", etat, true) : d;
   };
-  it("PREMIUM_ACTIVE → accès ; FREE, EXPIRED, UNKNOWN, DEMO → Gate", () => {
+  it("sous PREMIUM_REQUIRED : PREMIUM_ACTIVE → accès ; FREE, EXPIRED, UNKNOWN, DEMO → Gate", () => {
     expect(PROFILS_SIMULES.map((p) => [p, parcours(p)])).toEqual([
       ["PREMIUM_ACTIVE", "acces"],
       ["FREE", "gate"],

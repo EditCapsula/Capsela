@@ -144,7 +144,7 @@ function TitreSection({
   return (
     <div className="flex items-center justify-between gap-[10px] mt-6">
       <div className="flex items-center gap-2 min-w-0">
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted">{children}</div>
+        <div className="t-surtitre text-muted">{children}</div>
         {marque}
       </div>
       {action}
@@ -296,8 +296,8 @@ export default function OpinionShareScreen() {
 
   const titre = (
     <>
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-3">Demander un avis</div>
-      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+      <div className="t-surtitre text-muted mt-3">Demander un avis</div>
+      <div className="t-titre-ecran text-ink mt-[6px]">
         Un avis de <span className="italic text-terracotta">confiance</span>
       </div>
     </>
@@ -314,7 +314,7 @@ export default function OpinionShareScreen() {
           </div>
           <button
             onClick={actions.closeOpinionShare}
-            className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
           >
             Retour à ma tenue
           </button>
@@ -329,7 +329,7 @@ export default function OpinionShareScreen() {
 
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pb-5">
         {titre}
-        <div className="text-[12px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
+        <div className="t-chapeau text-muted mt-[6px]" style={{ textWrap: "pretty" }}>
           Envoie ta tenue à quelqu&apos;un de confiance et demande-lui ce qu&apos;il en pense.
         </div>
 
@@ -537,7 +537,7 @@ export default function OpinionShareScreen() {
             disabled={etat === "partage"}
             aria-busy={etat === "partage"}
             className={
-              "w-full flex items-center justify-center gap-[9px] rounded-full text-[13px] tracking-[.1em] uppercase bg-terracotta text-cream " +
+              "w-full flex items-center justify-center gap-[9px] rounded-full t-bouton bg-terracotta text-cream " +
               (etat === "partage" ? "cursor-not-allowed opacity-60" : "active:bg-terracotta-hover cursor-pointer")
             }
             style={{ minHeight: 52 }}

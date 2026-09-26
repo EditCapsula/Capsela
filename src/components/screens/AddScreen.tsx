@@ -132,7 +132,7 @@ function AiTag() {
 function FieldLabel({ children, ai }: { children: React.ReactNode; ai?: boolean }) {
   return (
     <div className="flex items-center gap-[8px] mt-6 mb-[11px]">
-      <span className="text-[11px] tracking-[.16em] uppercase text-muted">{children}</span>
+      <span className="t-surtitre text-muted">{children}</span>
       {ai && <AiTag />}
     </div>
   );
@@ -274,7 +274,7 @@ export default function AddScreen() {
           <BoutonRetour onClick={actions.addBack} label="Revenir à l'écran précédent" />
         </div>
         <div className="text-center px-[46px]">
-          <div className="font-serif text-[21px] text-ink leading-[1.2]">
+          <div className="t-titre-section text-ink">
             {state.editingId != null ? "Modifier la pièce" : state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce"}
           </div>
         </div>
@@ -349,17 +349,17 @@ export default function AddScreen() {
 
       <div className="flex items-center gap-[16px] mt-6 mb-[11px]">
         <div className="flex items-center gap-[6px] flex-1">
-          <span className="text-[11px] tracking-[.16em] uppercase text-muted">Catégorie</span>
+          <span className="t-surtitre text-muted">Catégorie</span>
           {catIsAi && <AiTag />}
         </div>
         {typeOptions && typeOptions.length > 0 && (
           <div className="flex items-center gap-[6px] flex-1">
-            <span className="text-[11px] tracking-[.16em] uppercase text-muted">Type</span>
+            <span className="t-surtitre text-muted">Type</span>
             {typeIsAi && <AiTag />}
           </div>
         )}
         {sizeApplicable && (
-          <div className="w-[76px] flex-shrink-0 text-[11px] tracking-[.16em] uppercase text-muted">
+          <div className="w-[76px] flex-shrink-0 t-surtitre text-muted">
             {isShoe ? "Pointure" : "Taille"}
           </div>
         )}
@@ -401,7 +401,7 @@ export default function AddScreen() {
           "Modifier ces caractéristiques" (bottom sheet), rien n'est perdu. */}
       <div className="mt-6 bg-card border border-border rounded-[16px] px-4 py-[16px]">
         <div className="flex items-center gap-[7px] mb-[14px]">
-          <span className="text-[11px] tracking-[.16em] uppercase text-ink font-semibold">Analysé par L&apos;édit Capsela</span>
+          <span className="t-surtitre text-ink font-semibold">Analysé par L&apos;édit Capsela</span>
           {characteristicsAi && <AiTag />}
         </div>
         <div className="grid grid-cols-3 gap-[8px] text-center">
@@ -411,7 +411,7 @@ export default function AddScreen() {
               style={{ background: state.addColor.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }}
             />
             <div>
-              <div className="text-[10px] tracking-[.14em] uppercase text-muted">Couleur</div>
+              <div className="t-label text-muted">Couleur</div>
               <div className="text-[12px] text-ink mt-[2px] leading-[1.2]">{state.addColor.name}</div>
             </div>
           </div>
@@ -420,7 +420,7 @@ export default function AddScreen() {
               <FabricIcon />
             </span>
             <div>
-              <div className="text-[10px] tracking-[.14em] uppercase text-muted">Matière estimée</div>
+              <div className="t-label text-muted">Matière estimée</div>
               <div className="text-[12px] text-ink mt-[2px] leading-[1.2]">{state.addMatiere || "Non précisée"}</div>
             </div>
           </div>
@@ -430,7 +430,7 @@ export default function AddScreen() {
                 <FitIcon />
               </span>
               <div>
-                <div className="text-[10px] tracking-[.14em] uppercase text-muted">Coupe</div>
+                <div className="t-label text-muted">Coupe</div>
                 <div className="text-[12px] text-ink mt-[2px] leading-[1.2]">{state.addCoupe || "Non précisée"}</div>
               </div>
             </div>
@@ -464,7 +464,7 @@ export default function AddScreen() {
       />
 
       <div className="flex items-center gap-[8px] mt-6 mb-[11px]">
-        <span className="text-[11px] tracking-[.16em] uppercase text-muted">Occasions recommandées</span>
+        <span className="t-surtitre text-muted">Occasions recommandées</span>
         {occasionsIsAi && <AiTag />}
       </div>
       <div className="flex gap-2 flex-wrap">
@@ -494,7 +494,7 @@ export default function AddScreen() {
       <button
         onClick={save}
         className={
-          "mt-6 w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
+          "mt-6 w-full text-center rounded-full py-4 t-bouton " +
           (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer")
         }
       >
@@ -537,7 +537,7 @@ export default function AddScreen() {
       </BottomSheet>
 
       <BottomSheet title="Caractéristiques" open={sheet === "characteristics"} onClose={() => setSheet(null)}>
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[11px]">Couleur dominante</div>
+        <div className="t-surtitre text-muted mb-[11px]">Couleur dominante</div>
         <div className="grid grid-cols-4 gap-x-2 gap-y-[18px]">
           {colorPalette.map(([name, hex]) => {
             const on = state.addColor.hex === hex;
@@ -561,7 +561,7 @@ export default function AddScreen() {
           })}
         </div>
 
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[26px] mb-[11px]">
+        <div className="t-surtitre text-muted mt-[26px] mb-[11px]">
           Matière <span className="opacity-60 normal-case tracking-normal">(estimation, jamais garantie sur photo)</span>
         </div>
         <select
@@ -579,7 +579,7 @@ export default function AddScreen() {
 
         {coupeApplicable && (
           <>
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[26px] mb-[11px]">Coupe</div>
+            <div className="t-surtitre text-muted mt-[26px] mb-[11px]">Coupe</div>
             <div className="flex gap-2 flex-wrap">
               {COUPES.map((c) => (
                 <button key={c} onClick={() => actions.setAddCoupe(c)} className={chipCls(state.addCoupe === c)}>
@@ -592,7 +592,7 @@ export default function AddScreen() {
 
         <button
           onClick={() => setSheet(null)}
-          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
+          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] t-bouton cursor-pointer"
         >
           Terminé
         </button>
@@ -614,7 +614,7 @@ export default function AddScreen() {
         </div>
         <button
           onClick={() => setSheet(null)}
-          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
+          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] t-bouton cursor-pointer"
         >
           Terminé
         </button>

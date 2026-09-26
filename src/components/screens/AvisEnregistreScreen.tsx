@@ -5,6 +5,7 @@ import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
 import ResultatAvis from "@/components/ResultatAvis";
+import { premiumRequis } from "@/lib/autorisations";
 import { useCapsela } from "@/lib/store";
 
 /*
@@ -61,11 +62,11 @@ export default function AvisEnregistreScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <div className="flex items-center justify-between">
         <BoutonRetour onClick={actions.goHistory} label="Revenir au journal" />
-        <BadgePremium />
+        {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
       </div>
 
       <div className="mt-[22px]">
-        <div className="font-serif text-[27px] leading-[1.12] text-ink">
+        <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>
         <div className="text-[13px] text-muted-3 mt-[8px]">{formatDate(avis.creeLe)}</div>
@@ -95,7 +96,7 @@ export default function AvisEnregistreScreen() {
           type="button"
           onClick={supprimer}
           disabled={suppression === "en_cours"}
-          className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer disabled:opacity-60"
+          className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer disabled:opacity-60"
         >
           {TEXTES.confirmer}
         </button>

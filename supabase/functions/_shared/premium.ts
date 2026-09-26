@@ -83,9 +83,17 @@ export async function assertPremium(
  * vérifiée par test miroir. Une fonctionnalité, une règle (arbitrage du
  * 25/09/2026, point 8).
  */
-export const REGLES_ACCES = {
-  AVIS_DE_STYLISTE: "PREMIUM_REQUIRED",
-} as const;
+export type RegleAcces = "PREMIUM_REQUIRED" | "ACCES_LIBRE";
+
+/**
+ * PHASE DE TEST (26/09/2026) : ACCES_LIBRE, cf. src/lib/autorisations.ts. Tout
+ * compte AUTHENTIFIÉ passe, sans lecture de `premium_access` ; chaque demande
+ * déclenche donc un appel payant au modèle. Au lancement : "PREMIUM_REQUIRED"
+ * des deux côtés, puis redéployer `stylist-advice`.
+ */
+export const REGLES_ACCES: Record<"AVIS_DE_STYLISTE", RegleAcces> = {
+  AVIS_DE_STYLISTE: "ACCES_LIBRE",
+};
 
 /**
  * Autorisation d'utiliser une fonctionnalité — contrôle n° 3 de l'endpoint,
@@ -102,7 +110,19 @@ export async function autoriserFonctionnalite(
   fonctionnalite: keyof typeof REGLES_ACCES,
   maintenant = new Date()
 ): Promise<VerdictPremium> {
-  switch (REGLES_ACCES[fonctionnalite]) {
+  return autoriserSelonRegle(client, user, REGLES_ACCES[fonctionnalite], maintenant);
+}
+
+/** Le verdict pour une règle donnée — séparé pour que PREMIUM_REQUIRED reste testée pendant la phase d'accès libre. */
+export async function autoriserSelonRegle(
+  client: LecteurPremium,
+  user: { id: string },
+  regle: RegleAcces,
+  maintenant = new Date()
+): Promise<VerdictPremium> {
+  switch (regle) {
+    case "ACCES_LIBRE":
+      return { ok: true };
     case "PREMIUM_REQUIRED":
       return assertPremium(client, user, maintenant);
   }

@@ -527,7 +527,7 @@ export default function TenuesScreen() {
       <AppHeader />
 
       <div className="mt-[18px]">
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted">{dateText}</div>
+        <div className="t-surtitre text-muted">{dateText}</div>
         {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
             (23/09/2026) : répété ici, il salue une deuxième fois dans la même
             session et ne dit rien de l'écran. Le titre annonce désormais ce
@@ -537,7 +537,7 @@ export default function TenuesScreen() {
             « Le look du jour » qui vivait
             DANS la card terracotta est supprimée du même coup — elle ferait
             doublon à deux cents pixels d'écart. */}
-        <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+        <div className="t-titre-ecran text-ink mt-[6px]">
           Ma <span className="italic text-terracotta">tenue du jour</span>
         </div>
       </div>
@@ -594,7 +594,7 @@ export default function TenuesScreen() {
           elle, deux pastilles posées sous la météo ne disent pas ce qu'elles
           gouvernent — on les lit comme un filtre, pas comme le contexte qui
           produit la tenue. */}
-      <div className="mt-5 text-[11px] tracking-[.16em] uppercase text-muted">
+      <div className="mt-5 t-surtitre text-muted">
         Qu&apos;est-ce qui est prévu aujourd&apos;hui ?
       </div>
       <div className="flex items-center gap-2 mt-[9px] flex-wrap">
@@ -732,7 +732,7 @@ export default function TenuesScreen() {
               key === "recommande" ? (
                 <span
                   key={key}
-                  className="text-[9px] tracking-[.06em] uppercase rounded-full px-[9px] py-[3px]"
+                  className="t-pastille rounded-full px-[9px] py-[3px]"
                   style={{ background: "rgba(243,238,229,.22)", color: "#FBF3EA" }}
                 >
                   {BADGE_RECOMMANDE}
@@ -740,7 +740,7 @@ export default function TenuesScreen() {
               ) : (
                 <span
                   key={key}
-                  className="text-[9px] tracking-[.06em] uppercase rounded-full px-[9px] py-[3px]"
+                  className="t-pastille rounded-full px-[9px] py-[3px]"
                   style={{ border: "1px solid rgba(243,238,229,.38)", color: "#F0DDCF" }}
                 >
                   {BADGE_REGISTRE}
@@ -838,7 +838,7 @@ export default function TenuesScreen() {
               // plus tôt en prenant l'accueil pour référence, alors que
               // l'accueil était lui-même l'exception.
               className={
-                "mt-[14px] w-full flex items-center justify-center rounded-full text-[13px] tracking-[.1em] uppercase " +
+                "mt-[14px] w-full flex items-center justify-center rounded-full t-bouton " +
                 (vesteWithoutBase ? "cursor-not-allowed" : "bg-cream text-ink cursor-pointer")
               }
               style={{
@@ -944,7 +944,7 @@ export default function TenuesScreen() {
           recalculé/inventé ici. Sobre, typographique, sans illustration. */}
       {!geoLoading && emptyState && (
         <div className="mt-2 mb-4 bg-card border border-border rounded-[14px] px-4 py-[26px] text-center">
-          <div className="font-serif text-[15px] text-ink leading-[1.3]">{emptyState.title}</div>
+          <div className="t-titre-vignette text-ink">{emptyState.title}</div>
           <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[8px]">{emptyState.body}</div>
           {emptyState.ctaLabel && emptyState.onCta && (
             <button onClick={emptyState.onCta} className="mt-[14px] inline-block text-[12px] text-terracotta cursor-pointer">
@@ -958,8 +958,8 @@ export default function TenuesScreen() {
             </button>
           ) : compatibleStyles.length > 0 ? (
             <div className="mt-[18px] text-left">
-              <div className="text-[10px] tracking-[.14em] uppercase text-terracotta">✦ Une autre piste</div>
-              <div className="font-serif text-[15px] text-ink leading-[1.25] mt-[4px]">Explore un autre univers</div>
+              <div className="t-label text-terracotta">✦ Une autre piste</div>
+              <div className="t-titre-vignette text-ink mt-[4px]">Explore un autre univers</div>
               <div className="text-[12px] text-muted leading-[1.5] mt-[6px]">
                 Découvre les capsules qui peuvent compléter ton dressing pour cette occasion. Ton style personnel reste
                 inchangé.
@@ -978,7 +978,7 @@ export default function TenuesScreen() {
               {selectedExploreStyle && (
                 <button
                   onClick={handleConfirmExploredStyle}
-                  className="mt-[16px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
+                  className="mt-[16px] w-full text-center rounded-full py-4 t-bouton bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
                 >
                   Explorer la capsule {styleConfigFor(profile.gender)[selectedExploreStyle].label}
                 </button>
@@ -997,7 +997,7 @@ export default function TenuesScreen() {
           terminait par un bouton crème détaché de son bord, criant depuis
           qu'elle descend jusqu'au sien. */}
       {!geoLoading && outfitPieces.length > 0 && (
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[26px] mb-[10px]">
+        <div className="t-surtitre text-muted mt-[26px] mb-[10px]">
           Les {outfitPieces.length} pièces
         </div>
       )}
@@ -1103,7 +1103,7 @@ export default function TenuesScreen() {
       {!noCompleteOutfit && lookScore.proactives.length > 0 && (
         <div className="mt-4 flex items-center gap-[7px]">
           <span className="font-serif italic text-[13px] text-terracotta">✦</span>
-          <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Nos conseils pour sublimer cette tenue</span>
+          <span className="t-label text-terracotta">Nos conseils pour sublimer cette tenue</span>
         </div>
       )}
 
@@ -1131,7 +1131,7 @@ export default function TenuesScreen() {
                       <div className="flex-1 min-w-0">
                         {key === "layer" && (
                           <div className="flex items-center gap-[6px] mb-[6px]">
-                            <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Layering</span>
+                            <span className="t-label text-terracotta">Layering</span>
                             <button
                               onClick={() => setLayeringInfoOpen((v) => !v)}
                               aria-label="Qu'est-ce que le layering ?"
@@ -1177,7 +1177,7 @@ export default function TenuesScreen() {
                               filter: "grayscale(55%) opacity(.8)",
                             }}
                           />
-                          <span className="absolute top-[7px] left-[7px] bg-terracotta text-cream text-[9px] tracking-[.08em] uppercase rounded-full py-[3px] px-[8px]">
+                          <span className="absolute top-[7px] left-[7px] bg-terracotta text-cream t-pastille rounded-full py-[3px] px-[8px]">
                             Suggérée
                           </span>
                         </div>
@@ -1314,11 +1314,11 @@ export default function TenuesScreen() {
             de « Nos conseils pour sublimer cette tenue » quelques lignes plus
             haut et de « Une autre piste ». Pas le 11 px / .16em majoritaire
             ailleurs dans l'app : le voisin immédiat prime sur la moyenne. */}
-        <span className="block text-[10px] tracking-[.14em] uppercase text-terracotta">À préparer</span>
+        <span className="block t-label text-terracotta">À préparer</span>
 
         {/* Le titre reste l'élément le plus fort du bloc — et reste sous la
             tenue du jour, qui porte un serif plus grand. */}
-        <span className="block font-serif text-[18px] text-ink leading-[1.2] mt-[7px]" style={{ textWrap: "balance" }}>
+        <span className="block t-titre-carte text-ink mt-[7px]" style={{ textWrap: "balance" }}>
           Une occasion à venir ?
         </span>
 
@@ -1378,7 +1378,7 @@ export default function TenuesScreen() {
             et de nouvelles propositions arrivent demain matin.
           </div>
           <div className="flex items-center gap-[10px] mt-4 bg-warm-bg rounded-[14px] px-[14px] py-3">
-            <span className="text-[11px] tracking-[.16em] uppercase text-terracotta">
+            <span className="t-surtitre text-terracotta">
               {GENERATIONS_GRATUITES_PAR_JOUR} / {GENERATIONS_GRATUITES_PAR_JOUR}
             </span>
             <span className="flex-1 min-w-0 text-[12px] text-muted-3 leading-[1.45]">
@@ -1413,7 +1413,7 @@ export default function TenuesScreen() {
                   Environ 30 secondes, une seule fois par jour.
                 </span>
               </span>
-              <span className="flex-shrink-0 text-[11px] tracking-[.16em] uppercase text-terracotta bg-warm-bg rounded-full px-[9px] py-[4px]">
+              <span className="flex-shrink-0 t-surtitre text-terracotta bg-warm-bg rounded-full px-[9px] py-[4px]">
                 +1 tenue
               </span>
             </button>
@@ -1445,7 +1445,7 @@ export default function TenuesScreen() {
               setQuotaAtteint(false);
               actions.goPremium();
             }}
-            className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer mt-4"
+            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4"
             style={{ minHeight: 52 }}
           >
             Découvrir Premium

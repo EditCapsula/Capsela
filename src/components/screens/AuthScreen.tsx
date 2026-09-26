@@ -44,10 +44,10 @@ export default function AuthScreen() {
       </div>
 
       <div className="mt-[22px]">
-        <div className="font-serif text-[27px] leading-[1.12] text-ink">
+        <div className="t-titre-ecran text-ink">
           Crée ton <span className="italic text-terracotta">compte</span>
         </div>
-        <div className="text-[13px] text-muted mt-[10px] leading-[1.5]">
+        <div className="t-chapeau text-muted mt-[10px]">
           Pour recevoir ta tenue du jour et sauvegarder ton dressing, où que tu sois.
         </div>
       </div>
@@ -61,7 +61,7 @@ export default function AuthScreen() {
 
       <div className="flex items-center gap-[11px] my-[22px]">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-[10px] tracking-[.14em] uppercase text-placeholder">ou par e-mail</span>
+        <span className="t-label text-placeholder">ou par e-mail</span>
         <div className="flex-1 h-px bg-border" />
       </div>
 
@@ -133,7 +133,7 @@ export default function AuthScreen() {
       <button
         onClick={submitEmail}
         className={
-          "mt-5 text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer text-cream " +
+          "mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream " +
           (busy ? "bg-[#bd8a75]" : "bg-terracotta active:bg-terracotta-hover")
         }
       >

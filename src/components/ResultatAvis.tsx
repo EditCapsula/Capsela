@@ -25,7 +25,7 @@ const TITRES = {
 function Section({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
     <section className="mt-[26px]">
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[10px]">{titre}</div>
+      <div className="t-surtitre text-muted mb-[10px]">{titre}</div>
       {children}
     </section>
   );

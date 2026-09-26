@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   APPELS_MAX,
   choisirPiecesDressing,
@@ -18,7 +18,7 @@ import {
   type JournalUsage,
   type PieceDressing,
 } from "../../../supabase/functions/_shared/avisStyliste.ts";
-import type { LecteurPremium } from "../../../supabase/functions/_shared/premium.ts";
+import { REGLES_ACCES, type LecteurPremium } from "../../../supabase/functions/_shared/premium.ts";
 
 /* ───────── Fixtures ───────── */
 
@@ -97,22 +97,45 @@ describe("traiterDemandeAvis — ordre des contrôles (TEST 06 à 09)", () => {
     expect(appels).toHaveLength(0);
   });
 
-  it("TEST 08 — compte gratuit qui appelle l'endpoint directement : 403, aucun appel", async () => {
-    const { d, appels } = deps({ premium: lecteur({ data: null, error: null }) });
-    expect(await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).toEqual({ statut: 403, corps: { ok: false, code: "non_premium" } });
-    expect(appels).toHaveLength(0);
-  });
-
-  it("abonnement expiré : 403, aucun appel", async () => {
-    const { d, appels } = deps({ premium: lecteur({ data: { actif: true, expire_le: "2020-01-01T00:00:00Z" }, error: null }) });
-    expect((await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).statut).toBe(403);
-    expect(appels).toHaveLength(0);
-  });
-
-  it("TEST 06/07 — statut Premium illisible (erreur Supabase) : 503 fail-closed, aucun appel", async () => {
+  it("phase de test (ACCES_LIBRE) — compte gratuit, photo valide : 200, un appel", async () => {
+    expect(REGLES_ACCES.AVIS_DE_STYLISTE).toBe("ACCES_LIBRE");
     const { d, appels } = deps({ premium: lecteur({ data: null, error: { message: "relation does not exist" } }) });
-    expect(await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).toEqual({ statut: 503, corps: { ok: false, code: "statut_indisponible" } });
-    expect(appels).toHaveLength(0);
+    expect((await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).statut).toBe(200);
+    expect(appels).toHaveLength(1);
+  });
+
+  // Règle du lancement : on bascule la règle comme le fera la réactivation
+  // du paywall, et les refus restent ceux arbitrés le 25/09/2026.
+  describe("sous PREMIUM_REQUIRED", () => {
+    beforeEach(() => {
+      REGLES_ACCES.AVIS_DE_STYLISTE = "PREMIUM_REQUIRED";
+    });
+    afterEach(() => {
+      REGLES_ACCES.AVIS_DE_STYLISTE = "ACCES_LIBRE";
+    });
+
+    it("TEST 08 — compte gratuit qui appelle l'endpoint directement : 403, aucun appel", async () => {
+      const { d, appels } = deps({ premium: lecteur({ data: null, error: null }) });
+      expect(await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).toEqual({ statut: 403, corps: { ok: false, code: "non_premium" } });
+      expect(appels).toHaveLength(0);
+    });
+
+    it("abonnement expiré : 403, aucun appel", async () => {
+      const { d, appels } = deps({ premium: lecteur({ data: { actif: true, expire_le: "2020-01-01T00:00:00Z" }, error: null }) });
+      expect((await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).statut).toBe(403);
+      expect(appels).toHaveLength(0);
+    });
+
+    it("TEST 06/07 — statut Premium illisible (erreur Supabase) : 503 fail-closed, aucun appel", async () => {
+      const { d, appels } = deps({ premium: lecteur({ data: null, error: { message: "relation does not exist" } }) });
+      expect(await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).toEqual({ statut: 503, corps: { ok: false, code: "statut_indisponible" } });
+      expect(appels).toHaveLength(0);
+    });
+
+    it("TEST 09 — Premium, photo valide : 200", async () => {
+      const { d } = deps();
+      expect((await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).statut).toBe(200);
+    });
   });
 
   it("fichier invalide : 400, aucun appel", async () => {

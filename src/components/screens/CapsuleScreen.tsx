@@ -432,8 +432,8 @@ export default function CapsuleScreen() {
         <AppHeader />
 
         <div className="mt-[18px]">
-          <div className="text-[11px] tracking-[.16em] uppercase text-muted">Ta capsule</div>
-          <div className="font-serif text-[27px] leading-[1.15] text-ink mt-[6px]">
+          <div className="t-surtitre text-muted">Ta capsule</div>
+          <div className="t-titre-ecran text-ink mt-[6px]">
             Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
           </div>
           {/*
@@ -504,7 +504,7 @@ export default function CapsuleScreen() {
             </div>
             <button
               onClick={actions.viewExploredOutfit}
-              className="mt-[14px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
+              className="mt-[14px] w-full text-center rounded-full py-4 t-bouton bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
             >
               Voir ma tenue
             </button>
@@ -561,7 +561,7 @@ export default function CapsuleScreen() {
             « pièces clés » ne voudrait plus rien dire. */}
         {cles.length >= 2 && (
           <div className="mt-[30px]">
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[12px]">
+            <div className="t-surtitre text-muted mb-[12px]">
               {cles.length} pièces clés cette saison
             </div>
             <div className="grid grid-cols-3 gap-[10px]">
@@ -593,7 +593,7 @@ export default function CapsuleScreen() {
             const entete = (
               <>
                 <div className="min-w-0">
-                  <div className="text-[12px] tracking-[.12em] uppercase font-semibold text-ink">{g.label}</div>
+                  <div className="t-groupe text-ink">{g.label}</div>
                   <div className="text-[11px] text-muted mt-[2px]">{pieces(g.total)}</div>
                 </div>
                 {extensible && (
@@ -657,7 +657,7 @@ export default function CapsuleScreen() {
       >
         <button
           onClick={actions.goTenues}
-          className="pointer-events-auto w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+          className="pointer-events-auto w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
         >
           ✦ Découvrir mes tenues
         </button>
@@ -691,7 +691,7 @@ export default function CapsuleScreen() {
               <div className="flex justify-center">
                 <Statut possedee={false} />
               </div>
-              <div className="font-serif text-[22px] text-ink leading-[1.2] mt-[8px]">{pieceFiche.name}</div>
+              <div className="t-titre-section text-ink mt-[8px]">{pieceFiche.name}</div>
               {/* Pas de phrase d'occasions ici : elle redirait mot pour mot la
                   raison « Se porte… » juste en dessous (vu en rendu). */}
               {syntheseFiche && <div className="text-[12px] text-muted mt-[6px]">{syntheseFiche}</div>}
@@ -701,7 +701,7 @@ export default function CapsuleScreen() {
                 (raisonsSuggestion) ; aucune, et la section disparaît. */}
             {raisons.length > 0 && (
               <div className="mt-[28px]">
-                <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[12px]">Pourquoi Capsela te la propose ?</div>
+                <div className="t-surtitre text-muted mb-[12px]">Pourquoi Capsela te la propose ?</div>
                 <ul className="flex flex-col gap-[10px]">
                   {raisons.map((r) => (
                     <li key={r.cle} className="flex items-start gap-[10px] text-[13px] text-ink leading-[1.45]">
@@ -721,7 +721,7 @@ export default function CapsuleScreen() {
                 setFiche(null);
                 actions.openItemOutfits(pieceFiche.id);
               }}
-              className="mt-[30px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+              className="mt-[30px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
             >
               Voir des tenues avec cette pièce
             </button>

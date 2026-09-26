@@ -138,7 +138,7 @@ export default function CreateLookScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
         <BoutonRetour onClick={actions.cancelCreateLook} label="Annuler et revenir" />
-        <div className="font-serif text-[21px] text-ink">Créer un look</div>
+        <div className="t-titre-section text-ink">Créer un look</div>
       </div>
       <div className="text-[13px] text-muted mt-4 leading-[1.5]">
         Choisis les pièces de ton dressing à combiner.
@@ -152,7 +152,7 @@ export default function CreateLookScreen() {
         </div>
       )}
 
-      <div className="mt-6 text-[11px] tracking-[.16em] uppercase text-muted">
+      <div className="mt-6 t-surtitre text-muted">
         Occasion <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
       </div>
       <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[9px]">
@@ -222,7 +222,7 @@ export default function CreateLookScreen() {
 
       {groups.map((g) => (
         <div key={g.key} ref={(el) => { groupRefs.current[g.key] = el; }}>
-          <div className="mt-6 mb-3 text-[12px] tracking-[.1em] uppercase text-ink font-semibold">
+          <div className="mt-6 mb-3 t-groupe text-ink">
             {g.label} <span className="text-placeholder font-normal">({g.items.length})</span>
           </div>
           <div className="grid grid-cols-2 gap-x-[10px] gap-y-4">
@@ -306,9 +306,9 @@ export default function CreateLookScreen() {
 
       {count >= 2 && (
         <div className="flex items-center gap-[9px] mt-6">
-          <span className="text-[11px] tracking-[.16em] uppercase text-muted">Ce look</span>
+          <span className="t-surtitre text-muted">Ce look</span>
           {lookScore.badge === "recommande" && (
-            <span className="text-[9px] tracking-[.06em] uppercase text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
+            <span className="t-pastille text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">
               Recommandé
             </span>
           )}
@@ -333,7 +333,7 @@ export default function CreateLookScreen() {
               <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
               <div className="flex-1 min-w-0 pr-[18px]">
                 {p.key === "layer" && (
-                  <div className="text-[10px] tracking-[.14em] uppercase text-terracotta mb-[6px]">Layering</div>
+                  <div className="t-label text-terracotta mb-[6px]">Layering</div>
                 )}
                 <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
                 {target && (
@@ -362,7 +362,7 @@ export default function CreateLookScreen() {
         </div>
       )}
 
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-6 mb-3">
+      <div className="t-surtitre text-muted mt-6 mb-3">
         Nom du look <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
       </div>
       <input
@@ -375,7 +375,7 @@ export default function CreateLookScreen() {
       <button
         onClick={actions.saveLook}
         className={
-          "mt-7 w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
+          "mt-7 w-full text-center rounded-full py-4 t-bouton " +
           (canSave ? "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer" : "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed")
         }
       >

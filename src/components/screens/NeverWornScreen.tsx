@@ -28,11 +28,11 @@ export default function NeverWornScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <div className="flex items-center gap-[14px]">
         <BoutonRetour onClick={actions.goTenues} label="Revenir à la tenue du jour" />
-        <div className="font-serif text-[27px] text-ink">Jamais portées</div>
+        <div className="t-titre-section text-ink">Jamais portées</div>
       </div>
 
       <div className="mt-4 flex items-center gap-[11px] bg-warm-bg border border-warm-border rounded-2xl px-4 py-[12px]">
-        <span className="font-serif text-[26px] leading-[.9] text-terracotta flex-shrink-0">{neverWorn.length}</span>
+        <span className="t-chiffre text-terracotta flex-shrink-0">{neverWorn.length}</span>
         <div className="min-w-0">
           <div className="text-[13px] text-ink leading-[1.3]">{neverWorn.length === 1 ? "pièce à redécouvrir" : "pièces à redécouvrir"}</div>
           <div className="text-[11px] text-warm-text-2 leading-[1.4] mt-[2px]">
