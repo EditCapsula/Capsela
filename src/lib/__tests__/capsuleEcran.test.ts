@@ -4,12 +4,14 @@ import type { CatalogItem } from "../catalog";
 import {
   alternativesDeRemplacement,
   introCapsule,
+  margeVignette,
   piecesCles,
   piecesDuDressingPourSaison,
   raisonsSuggestion,
 } from "../capsuleEcran";
 import { EMPTY_PROFILE, type Profile } from "../profile";
-import type { Item, Season } from "../types";
+import { CATS } from "../data";
+import type { CategoryKey, Item, Season } from "../types";
 import { at, item } from "./fixtures";
 
 function piece(id: number, over: Partial<Item> = {}): Item {
@@ -138,5 +140,27 @@ describe("alternativesDeRemplacement — les choix du moteur, pas un second mote
         expect(a.piece.cat).toBe("haut");
       }
     });
+  });
+});
+
+describe("margeVignette — poids visuel par famille (polish V2)", () => {
+  it("une seule marge pour tous les vêtements", () => {
+    const vetements: CategoryKey[] = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau"];
+    expect(new Set(vetements.map(margeVignette)).size).toBe(1);
+  });
+
+  it("chaque catégorie de CATS a une famille", () => {
+    for (const [cat] of CATS) expect(margeVignette(cat)).toBeGreaterThan(0);
+  });
+
+  it("un bijou garde plus de vide autour de lui qu'un accessoire, un sac, une chaussure ou un vêtement", () => {
+    expect(margeVignette("bijou")).toBeGreaterThan(margeVignette("accessoire"));
+    expect(margeVignette("accessoire")).toBeGreaterThan(margeVignette("chaussures"));
+    expect(margeVignette("chaussures")).toBeGreaterThan(margeVignette("sac"));
+    expect(margeVignette("sac")).toBeGreaterThan(margeVignette("manteau"));
+  });
+
+  it("la zone utile reste large : jamais moins de la moitié du cadre", () => {
+    for (const [cat] of CATS) expect(1 - 2 * margeVignette(cat)).toBeGreaterThanOrEqual(0.5);
   });
 });
