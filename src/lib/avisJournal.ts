@@ -1,4 +1,5 @@
 import { estAvis, piecesSuggerees, type AvisStyliste, type PieceSuggeree } from "./avisStylisteClient";
+import { lireReconnaissance, type VetementReconnu } from "./reconnaissance";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 
 /*
@@ -25,6 +26,8 @@ export interface AvisEnregistre {
   analyseId: string;
   avis: AvisStyliste;
   pieces: PieceSuggeree[];
+  /** Pièces reconnues sur la photo, corrections comprises (migration 0037) — [] avant elle, ou pour un avis plus ancien. */
+  reconnaissance: VetementReconnu[];
   photoPath: string | null;
   /** URL signée, remplie à la lecture ; null si pas de photo ou signature impossible. */
   photoUrl: string | null;
@@ -36,6 +39,8 @@ interface LigneAvis {
   analyse_id: string;
   resultat: unknown;
   pieces_dressing: unknown;
+  /** Absente avant la migration 0037 : `select("*")` ne la rend simplement pas. */
+  pieces_reconnues?: unknown;
   photo_path: string | null;
 }
 
@@ -49,6 +54,7 @@ export function ligneVersAvis(l: LigneAvis, photoUrl: string | null = null): Avi
     analyseId: String(l.analyse_id ?? ""),
     avis: l.resultat,
     pieces: piecesSuggerees(l.pieces_dressing),
+    reconnaissance: lireReconnaissance(l.pieces_reconnues),
     photoPath: typeof l.photo_path === "string" ? l.photo_path : null,
     photoUrl,
   };
@@ -102,6 +108,24 @@ export async function enregistrerAvis(
   } catch {
     if (chemin) await supabase.storage.from(BUCKET_AVIS).remove([chemin]).catch(() => undefined);
     return null;
+  }
+}
+
+/**
+ * Écrit la reconnaissance (corrections comprises) sur un avis enregistré.
+ * ISOLÉE de l'insertion (règle du projet) : avant la migration 0037 —
+ * colonne absente, ou pas de droit de mise à jour —, elle échoue seule et
+ * l'écran le dit ; l'avis, lui, est bien enregistré. Une mise à jour refusée
+ * par RLS ne lève pas d'erreur : elle ne touche aucune ligne, d'où la
+ * relecture de l'identifiant.
+ */
+export async function enregistrerReconnaissanceAvis(avisId: string, reconnaissance: VetementReconnu[]): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { data, error } = await getSupabase().from("avis_styliste").update({ pieces_reconnues: reconnaissance }).eq("id", avisId).select("id");
+    return !error && Array.isArray(data) && data.length === 1;
+  } catch {
+    return false;
   }
 }
 
