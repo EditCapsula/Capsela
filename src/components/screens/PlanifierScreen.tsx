@@ -888,9 +888,10 @@ export default function PlanifierScreen() {
             {/* VISUELS (recette du 26/09/2026) : chaque carte reçoit un bandeau
                 éditorial qui dit son usage — une tenue pour « Planifier une
                 tenue », la valise ouverte pour « Préparer ma valise ». Visuels
-                fournis par la propriétaire le même jour, pour un profil femme.
-                Pas de visuel inventé pour ce qui n'en a pas encore (profil
-                homme) : la carte garde alors sa forme d'avant, glyphe seul. */}
+                fournis par la propriétaire le même jour : les deux pour un profil
+                femme, la valise pour un profil homme. Pas de visuel inventé pour
+                ce qui n'en a pas encore (tenue homme) : la carte garde alors sa
+                forme d'avant, glyphe seul. */}
             <div className="flex flex-col gap-3 mt-5">
               <CartePlanifier
                 glyphe={G_CINTRE}
@@ -912,7 +913,13 @@ export default function PlanifierScreen() {
                 points={["Une destination et des dates", "La météo sur place", "Ton programme d'activités", "Le bon bagage", "Une sélection de looks optimisée"]}
                 cta="Préparer ma valise"
                 onClick={() => actions.goPremium("valise")}
-                visuel={profile.gender === "femme" ? "/editorial/capsela_planifier_valise_femme.webp" : undefined}
+                visuel={
+                  profile.gender === "femme"
+                    ? "/editorial/capsela_planifier_valise_femme.webp"
+                    : profile.gender === "homme"
+                      ? "/editorial/capsela_planifier_valise_homme.webp"
+                      : undefined
+                }
                 cadrage="center 60%"
               />
             </div>
