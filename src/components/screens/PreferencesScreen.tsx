@@ -34,7 +34,7 @@ export function Toggle({ on, onClick, label }: { on: boolean; onClick: () => voi
 function Section({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
     <>
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-7 mb-[10px]">{titre}</div>
+      <div className="t-surtitre text-muted mt-7 mb-[10px]">{titre}</div>
       <div className="bg-card border border-border rounded-[20px] overflow-hidden">{children}</div>
     </>
   );
@@ -57,11 +57,11 @@ export default function PreferencesScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <AppHeader showAvatar={false} onBack={actions.goProfile} backLabel="Revenir au profil" />
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[18px]">Profil</div>
-      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+      <div className="t-surtitre text-muted mt-[18px]">Profil</div>
+      <div className="t-titre-ecran text-ink mt-[6px]">
         Préférences <span className="italic text-terracotta">Capsela</span>
       </div>
-      <div className="text-[13px] text-muted-3 leading-[1.5] mt-[8px]">
+      <div className="t-chapeau text-muted-3 mt-[8px]">
         Personnalise le fonctionnement de l&apos;application selon ton mode de vie.
       </div>
 
@@ -189,7 +189,7 @@ export default function PreferencesScreen() {
             setConfirmerReinit(false);
             saveProfile({ ...profile, prefs: DEFAULT_PREFS });
           }}
-          className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase bg-ink text-cream cursor-pointer"
+          className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-ink text-cream cursor-pointer"
         >
           Réinitialiser
         </button>

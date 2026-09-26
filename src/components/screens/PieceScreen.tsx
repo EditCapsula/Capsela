@@ -16,7 +16,7 @@ const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3">
-      <span className="text-[11px] tracking-[.16em] uppercase text-placeholder flex-shrink-0">{label}</span>
+      <span className="t-surtitre text-placeholder flex-shrink-0">{label}</span>
       <span className="text-[13px] text-ink text-right">{value}</span>
     </div>
   );
@@ -25,7 +25,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 function CharRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="flex items-center gap-[8px] text-[11px] tracking-[.16em] uppercase text-placeholder flex-shrink-0">
+      <span className="flex items-center gap-[8px] t-surtitre text-placeholder flex-shrink-0">
         <span className="text-terracotta flex-shrink-0">{icon}</span>
         {label}
       </span>
@@ -243,7 +243,7 @@ export default function PieceScreen() {
         <div>
           <button
             onClick={() => setSuggestionInfoOpen((v) => !v)}
-            className="inline-flex items-center gap-[6px] mt-4 text-[9px] tracking-[.08em] uppercase text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px] cursor-pointer"
+            className="inline-flex items-center gap-[6px] mt-4 t-pastille text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px] cursor-pointer"
           >
             Suggestion
             <span className="w-[13px] h-[13px] rounded-full border border-[#C9966F] text-[9px] normal-case flex items-center justify-center">
@@ -259,8 +259,8 @@ export default function PieceScreen() {
         </div>
       )}
 
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[14px]">{eyebrow}</div>
-      <div className="font-serif text-[27px] text-ink mt-1">{displayName}</div>
+      <div className="t-surtitre text-muted mt-[14px]">{eyebrow}</div>
+      <div className="t-titre-ecran text-ink mt-1">{displayName}</div>
       {synthesis && <div className="text-[13px] text-warm-text mt-[6px]">{synthesis}</div>}
 
       {!suggested && (
@@ -314,7 +314,7 @@ export default function PieceScreen() {
         <>
           <button
             onClick={() => actions.startReplace(active)}
-            className="mt-[18px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-[18px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] t-bouton cursor-pointer"
           >
             J&apos;ai déjà ça
           </button>
@@ -333,13 +333,13 @@ export default function PieceScreen() {
         <>
           <button
             onClick={() => actions.openItemOutfits(active.id, false)}
-            className="mt-[18px] w-full bg-ink text-cream text-center rounded-full py-[15px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-[18px] w-full bg-ink text-cream text-center rounded-full py-[15px] t-bouton cursor-pointer"
           >
             Voir des tenues avec cette pièce
           </button>
           <button
             onClick={() => setLookSheetOpen(true)}
-            className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[14px] t-bouton cursor-pointer"
           >
             ♡ Ajouter à un look
           </button>
@@ -410,7 +410,7 @@ export default function PieceScreen() {
               setConfirmRemove(false);
               actions.removeActive();
             }}
-            className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
+            className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer"
           >
             Retirer définitivement
           </button>
@@ -453,7 +453,7 @@ export default function PieceScreen() {
               setLookSheetOpen(false);
               actions.goCreateLook(active.id);
             }}
-            className="mt-[14px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
+            className="mt-[14px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] t-bouton cursor-pointer"
           >
             + Créer un nouveau look
           </button>

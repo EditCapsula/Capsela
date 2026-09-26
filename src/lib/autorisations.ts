@@ -9,11 +9,31 @@ import type { EtatPremium } from "./premium";
  * `autoriserFonctionnalite` (supabase/functions/_shared/premium.ts).
  */
 
-export const REGLES_ACCES = {
-  AVIS_DE_STYLISTE: "PREMIUM_REQUIRED",
-} as const;
+/**
+ * PHASE DE TEST (26/09/2026) : l'Avis de styliste est en ACCES_LIBRE tant que
+ * Capsela n'est pas lancée publiquement — la propriétaire doit pouvoir le
+ * tester en production sans abonnement. La logique Premium reste entière
+ * (PREMIUM_REQUIRED ci-dessous, Gate, contrôle serveur) : pour remettre le
+ * paywall au lancement, repasser la valeur à "PREMIUM_REQUIRED" ICI ET dans
+ * supabase/functions/_shared/premium.ts (le test miroir exige les deux), puis
+ * redéployer la fonction `stylist-advice`.
+ */
+export const REGLES_ACCES: Record<"AVIS_DE_STYLISTE", RegleAcces> = {
+  AVIS_DE_STYLISTE: "ACCES_LIBRE",
+};
+
+/**
+ * - PREMIUM_REQUIRED : réservé à un Premium confirmé ;
+ * - ACCES_LIBRE : ouvert à tout compte, sans lire le statut Premium.
+ */
+export type RegleAcces = "PREMIUM_REQUIRED" | "ACCES_LIBRE";
 
 export type Fonctionnalite = keyof typeof REGLES_ACCES;
+
+/** La fonctionnalité est-elle réservée au Premium ? Pilote aussi le badge Premium affiché à côté d'elle. */
+export function premiumRequis(fonctionnalite: Fonctionnalite): boolean {
+  return REGLES_ACCES[fonctionnalite] === "PREMIUM_REQUIRED";
+}
 
 /**
  * - "acces" : ouvrir la fonctionnalité ;
@@ -32,7 +52,14 @@ export type DecisionAcces = "acces" | "verification" | "gate";
  * comportement sûr — le Gate.
  */
 export function decisionAcces(fonctionnalite: Fonctionnalite, etat: EtatPremium, verificationFaite: boolean): DecisionAcces {
-  switch (REGLES_ACCES[fonctionnalite]) {
+  return decisionSelonRegle(REGLES_ACCES[fonctionnalite], etat, verificationFaite);
+}
+
+/** La décision pour une règle donnée — séparée pour que PREMIUM_REQUIRED reste testée pendant la phase d'accès libre. */
+export function decisionSelonRegle(regle: RegleAcces, etat: EtatPremium, verificationFaite: boolean): DecisionAcces {
+  switch (regle) {
+    case "ACCES_LIBRE":
+      return "acces";
     case "PREMIUM_REQUIRED":
       if (etat === "premium") return "acces";
       if (etat === "inconnu" && !verificationFaite) return "verification";

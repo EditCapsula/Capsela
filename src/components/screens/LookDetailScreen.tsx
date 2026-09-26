@@ -34,13 +34,13 @@ export default function LookDetailScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
       <div className="flex items-center gap-[14px]">
         <BoutonRetour onClick={actions.closeLookDetail} label="Revenir à l'écran précédent" />
-        <div className="font-serif text-[21px] text-ink">{look.name}</div>
+        <div className="t-titre-section text-ink">{look.name}</div>
       </div>
 
-      <div className={"text-[10px] tracking-[.14em] uppercase mt-5 " + (wishlist ? "text-terracotta" : look.source === "saved" ? "text-terracotta" : "text-muted")}>
+      <div className={"t-label mt-5 " + (wishlist ? "text-terracotta" : look.source === "saved" ? "text-terracotta" : "text-muted")}>
         {wishlist ? "✦ Suggéré (Wishlist)" : look.source === "saved" ? "♡ Enregistré" : "✦ Créé par moi"}
       </div>
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[6px] mb-3">
+      <div className="t-surtitre text-muted mt-[6px] mb-3">
         {pieces.length} {pieces.length === 1 ? "pièce" : "pièces"}
         {look.occasion ? " · " + OCC_LABELS[look.occasion] : ""}
       </div>
@@ -74,7 +74,7 @@ export default function LookDetailScreen() {
                   )}
                 </div>
                 {suggested && (
-                  <span className="absolute top-[4px] left-[4px] bg-terracotta text-cream text-[9px] tracking-[.06em] uppercase rounded-full py-[2px] px-[6px]">
+                  <span className="absolute top-[4px] left-[4px] bg-terracotta text-cream t-pastille rounded-full py-[2px] px-[6px]">
                     Suggérée
                   </span>
                 )}
@@ -92,7 +92,7 @@ export default function LookDetailScreen() {
 
       <button
         onClick={() => actions.wearLookToday(look.id)}
-        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
       >
         Porter aujourd&apos;hui
       </button>

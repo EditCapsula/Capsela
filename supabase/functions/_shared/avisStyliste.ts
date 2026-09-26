@@ -564,7 +564,8 @@ export async function traiterDemandeAvis(
   const user = jwt ? await deps.authentifier(jwt).catch(() => null) : null;
   if (!user) return erreur(401, "non_authentifie");
 
-  // 2. Autorisation : Premium CONFIRMÉ, sinon refus — fail-closed.
+  // 2. Autorisation selon REGLES_ACCES : Premium CONFIRMÉ (refus fail-closed
+  //    sinon), ou accès libre pendant la phase de test (26/09/2026).
   const verdict = await autoriserFonctionnalite(deps.lecteurPremium, user, "AVIS_DE_STYLISTE");
   if (!verdict.ok) return verdict.statut === 403 ? erreur(403, "non_premium") : erreur(503, "statut_indisponible");
 

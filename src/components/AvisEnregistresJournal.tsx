@@ -18,7 +18,7 @@ export default function AvisEnregistresJournal({ avis, onOuvrir }: { avis: AvisE
   if (!avis?.length) return null;
   return (
     <section className="mt-[30px]" aria-labelledby="journal-avis-styliste">
-      <div id="journal-avis-styliste" className="text-[11px] tracking-[.16em] uppercase text-muted mb-[10px]">
+      <div id="journal-avis-styliste" className="t-surtitre text-muted mb-[10px]">
         {TITRE}
       </div>
       <div className="bg-card border border-border rounded-[20px] overflow-hidden">

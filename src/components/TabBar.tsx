@@ -187,7 +187,7 @@ export default function TabBar() {
               // réglage de taille de texte du téléphone suffirait. Avec ce
               // filet, le pire cas devient une ellipse discrète au lieu de deux
               // libellés qui se chevauchent.
-              className="max-w-full overflow-hidden text-ellipsis text-[9px] tracking-[.05em] uppercase whitespace-nowrap"
+              className="max-w-full overflow-hidden text-ellipsis t-nav whitespace-nowrap"
               style={{ fontWeight: active ? 600 : 400 }}
             >
               {tab.label}

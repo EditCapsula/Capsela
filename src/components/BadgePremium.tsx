@@ -12,7 +12,7 @@ export default function BadgePremium({ fond = "warm" }: { fond?: "warm" | "carte
   return (
     <span
       className={
-        "inline-flex items-center gap-[4px] rounded-full px-[9px] py-[4px] text-[9px] tracking-[.1em] uppercase text-terracotta whitespace-nowrap " +
+        "inline-flex items-center gap-[4px] rounded-full px-[9px] py-[4px] t-pastille text-terracotta whitespace-nowrap " +
         (fond === "warm" ? "bg-warm-bg" : "bg-card")
       }
     >

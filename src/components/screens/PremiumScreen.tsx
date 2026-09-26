@@ -164,13 +164,13 @@ export default function PremiumScreen() {
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-2 pb-5">
         <div className="flex items-center gap-[10px]">
           <span aria-hidden="true" style={{ width: 22, height: 1, background: "var(--color-terracotta)" }} />
-          <span className="text-[11px] tracking-[.16em] uppercase text-muted">Capsela Premium</span>
+          <span className="t-surtitre text-muted">Capsela Premium</span>
         </div>
 
-        <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[10px]" style={{ textWrap: "balance" }}>
+        <div className="t-titre-ecran text-ink mt-[10px]" style={{ textWrap: "balance" }}>
           Un peu plus de place, <span className="italic text-terracotta">un peu d&apos;avance</span>
         </div>
-        <div className="text-[13px] text-muted-3 leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
+        <div className="t-chapeau text-muted-3 mt-2" style={{ textWrap: "pretty" }}>
           Des outils pour aller plus loin avec ta garde-robe.
         </div>
 
@@ -189,7 +189,7 @@ export default function PremiumScreen() {
               <Glyphe>{G_VALISE}</Glyphe>
             </span>
             <span className="min-w-0">
-              <span className="block text-[10px] tracking-[.14em] uppercase text-terracotta">
+              <span className="block t-label text-terracotta">
                 Ce que tu voulais faire
               </span>
               <span className="block text-[13px] text-ink leading-[1.4] mt-[3px]">Préparer une valise</span>
@@ -204,9 +204,9 @@ export default function PremiumScreen() {
                 <span className="text-terracotta-deep">
                   <Glyphe>{a.glyphe}</Glyphe>
                 </span>
-                <div className="font-serif text-[18px] text-ink leading-[1.2]">{a.titre}</div>
+                <div className="t-titre-carte text-ink">{a.titre}</div>
                 {a.bientot && (
-                  <span className="text-[9px] tracking-[.1em] uppercase text-muted bg-chip-soft-bg rounded-full px-[9px] py-[4px] whitespace-nowrap">
+                  <span className="t-pastille text-muted bg-chip-soft-bg rounded-full px-[9px] py-[4px] whitespace-nowrap">
                     Bientôt
                   </span>
                 )}
@@ -219,7 +219,7 @@ export default function PremiumScreen() {
         </div>
 
         <div className="mt-[22px]">
-          <span className="text-[11px] tracking-[.16em] uppercase text-muted">Choisis ta formule</span>
+          <span className="t-surtitre text-muted">Choisis ta formule</span>
         </div>
 
         <div role="radiogroup" aria-label="Formule d'abonnement" className="flex flex-col gap-2 mt-[10px]">
@@ -250,13 +250,13 @@ export default function PremiumScreen() {
                 </span>
                 <span className="flex-1 min-w-0">
                   <span
-                    className="block text-[10px] tracking-[.14em] uppercase font-semibold"
+                    className="block t-label font-semibold"
                     style={{ color: on ? "var(--color-terracotta-deep)" : "var(--color-muted)" }}
                   >
                     {f.label}
                   </span>
                   <span
-                    className="block font-serif text-[21px] leading-[1.2] mt-[3px] whitespace-nowrap"
+                    className="block t-chiffre mt-[3px] whitespace-nowrap"
                     style={{ color: on ? "var(--color-ink)" : "var(--color-muted-3)" }}
                   >
                     {f.prix}
@@ -289,9 +289,9 @@ export default function PremiumScreen() {
         )}
 
         <div aria-live="polite">
-          <div className="text-[10px] tracking-[.14em] uppercase text-muted">Offre sélectionnée</div>
+          <div className="t-label text-muted">Offre sélectionnée</div>
           <div className="flex items-baseline flex-wrap gap-x-[10px] gap-y-[2px] mt-[2px]">
-            <span className="font-serif text-[21px] text-ink leading-[1.2] whitespace-nowrap">{choisie.prix}</span>
+            <span className="t-chiffre text-ink whitespace-nowrap">{choisie.prix}</span>
             <span className="text-[11px] text-muted-3 whitespace-nowrap">
               {choisie.sous}
               {choisie.economie ? ` · ${choisie.economie}` : ""}
@@ -307,7 +307,7 @@ export default function PremiumScreen() {
             setNote(true);
             setTimeout(() => setNote(false), 2600);
           }}
-          className="w-full rounded-full mt-2 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+          className="w-full rounded-full mt-2 t-bouton cursor-pointer"
           style={{ minHeight: 52, background: "var(--color-ink)", color: "var(--color-cream)" }}
         >
           Me prévenir à l&apos;ouverture

@@ -74,7 +74,7 @@ export default function WardrobePiecesScreen() {
       <div className="flex items-center justify-between gap-3 mt-[10px]">
         <div className="flex items-center gap-[14px] min-w-0">
           <BoutonRetour onClick={actions.goWardrobe} label="Revenir au dressing" className="flex-shrink-0" />
-          <div className="font-serif text-[21px] text-ink truncate">Mes pièces</div>
+          <div className="t-titre-section text-ink truncate">Mes pièces</div>
         </div>
         <button onClick={actions.openAdd} className="flex items-center gap-[7px] flex-shrink-0 cursor-pointer">
           <span className="w-[30px] h-[30px] rounded-full bg-terracotta text-cream flex items-center justify-center text-[16px] flex-shrink-0">
@@ -92,7 +92,7 @@ export default function WardrobePiecesScreen() {
           la couleur que l'app réserve aux actions — et juste au-dessus de la
           grille sur laquelle il agit. */}
       <div className="flex items-baseline justify-between gap-3 mt-4">
-        <div className="text-[11px] tracking-[.16em] uppercase text-muted">
+        <div className="t-surtitre text-muted">
           {selectionMode
             ? selection.size === 0
               ? "Touche les pièces à retirer"
@@ -197,7 +197,7 @@ export default function WardrobePiecesScreen() {
         <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[480px] px-6 pb-[18px] pt-[14px] bg-gradient-to-t from-cream via-cream to-transparent">
           <button
             onClick={() => setConfirmOpen(true)}
-            className="w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
+            className="w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer"
           >
             Retirer {selection.size} {selection.size === 1 ? "pièce" : "pièces"}
           </button>
@@ -216,7 +216,7 @@ export default function WardrobePiecesScreen() {
         </div>
         <button
           onClick={supprimer}
-          className="mt-[22px] w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase bg-rust text-cream cursor-pointer"
+          className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer"
         >
           Retirer définitivement
         </button>

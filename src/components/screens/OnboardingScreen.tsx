@@ -213,7 +213,7 @@ export default function OnboardingScreen() {
                   {slide.glyph}
                 </div>
                 <div
-                  className="absolute bottom-[14px] left-4 text-[10px] tracking-[.14em] uppercase"
+                  className="absolute bottom-[14px] left-4 t-label"
                   style={{ color: slide.tagColor }}
                 >
                   {slide.tag}
@@ -221,8 +221,8 @@ export default function OnboardingScreen() {
               </div>
             )}
             <div className={kickerBlockMt}>
-              <div className="text-[11px] tracking-[.16em] uppercase text-terracotta">{slide.kicker}</div>
-              <div className="font-serif text-[31px] leading-[1.08] tracking-[-.01em] text-ink mt-3">{slide.title}</div>
+              <div className="t-surtitre text-terracotta">{slide.kicker}</div>
+              <div className="t-display text-ink mt-3">{slide.title}</div>
               <div className={bodyClass}>{slide.body}</div>
             </div>
           </div>
@@ -254,7 +254,7 @@ export default function OnboardingScreen() {
           </div>
           <button
             onClick={actions.onbNext}
-            className="bg-ink text-cream rounded-full py-[14px] px-[26px] text-[13px] tracking-[.1em] uppercase cursor-pointer"
+            className="bg-ink text-cream rounded-full py-[14px] px-[26px] t-bouton cursor-pointer"
           >
             {cta}
           </button>

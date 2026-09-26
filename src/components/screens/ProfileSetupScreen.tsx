@@ -310,9 +310,9 @@ export default function ProfileSetupScreen() {
       </div>
 
       <div className="mt-[26px]">
-        <div className="text-[11px] tracking-[.16em] uppercase text-terracotta">{meta.kicker}</div>
-        <div className="font-serif text-[27px] leading-[1.15] text-ink mt-3">{meta.title}</div>
-        <div className="text-[13px] text-muted mt-[10px] leading-[1.5]">{meta.subtitle}</div>
+        <div className="t-surtitre text-terracotta">{meta.kicker}</div>
+        <div className="t-titre-ecran text-ink mt-3">{meta.title}</div>
+        <div className="t-chapeau text-muted mt-[10px]">{meta.subtitle}</div>
         {meta.key === "pal_couleurs" && draft.paletteCouleurs.length > 0 && (
           <div className="text-[12px] text-muted mt-[6px]">
             {draft.paletteCouleurs.length} / {MAX_PALETTE_COULEURS} sélectionnée
@@ -409,7 +409,7 @@ export default function ProfileSetupScreen() {
         <div className="mt-6 bg-card border border-border rounded-[18px] p-[18px]">
           {recapRows.map((r) => (
             <div key={r.label} className="flex items-center gap-3 py-[11px] border-b border-border last:border-b-0">
-              <span className="w-[70px] flex-shrink-0 text-[11px] tracking-[.16em] uppercase text-muted">{r.label}</span>
+              <span className="w-[70px] flex-shrink-0 t-surtitre text-muted">{r.label}</span>
               <div className="flex items-center gap-[6px] flex-wrap flex-1 min-w-0">
                 {r.swatches.map((hex) => (
                   <span
@@ -427,7 +427,7 @@ export default function ProfileSetupScreen() {
 
       {meta.key === "taille" && (
         <div className="mt-[26px]">
-          <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[11px]">Taille de haut</div>
+          <div className="t-surtitre text-muted mb-[11px]">Taille de haut</div>
           <div className="flex gap-2 flex-wrap">
             {TAILLES_HAUT.map((t) => (
               <button key={t} onClick={() => patch({ tailleHaut: t })} className={chipCls(draft.tailleHaut === t)}>
@@ -435,7 +435,7 @@ export default function ProfileSetupScreen() {
               </button>
             ))}
           </div>
-          <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[22px] mb-[11px]">
+          <div className="t-surtitre text-muted mt-[22px] mb-[11px]">
             {tailleBasLabelFor(draft.gender)}
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -445,7 +445,7 @@ export default function ProfileSetupScreen() {
               </button>
             ))}
           </div>
-          <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[22px] mb-[11px]">Pointure</div>
+          <div className="t-surtitre text-muted mt-[22px] mb-[11px]">Pointure</div>
           <input
             inputMode="numeric"
             className="capin bg-card border border-border rounded-[14px] px-[17px] py-[13px] text-[14px] text-ink font-sans w-[120px]"
@@ -529,7 +529,7 @@ export default function ProfileSetupScreen() {
                   )}
                 </span>
                 <div className="px-[13px] py-[11px]">
-                  <div className="font-serif text-[15px] text-ink leading-[1.2]">{cfg.label}</div>
+                  <div className="t-titre-vignette text-ink">{cfg.label}</div>
                   <div className="text-[11px] text-muted mt-[4px] leading-[1.35]">{cfg.desc}</div>
                 </div>
               </button>
@@ -581,7 +581,7 @@ export default function ProfileSetupScreen() {
       onClick={canContinue ? next : undefined}
       disabled={!canContinue}
       className={
-        "mt-[22px] text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase " +
+        "mt-[22px] text-center rounded-full py-4 t-bouton " +
         (canContinue ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
       }
     >

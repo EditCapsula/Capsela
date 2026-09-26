@@ -14,6 +14,7 @@ import {
 import {
   alternativesDeRemplacement,
   introCapsule,
+  margeVignette,
   piecesCles,
   piecesDuDressingPourSaison,
   raisonsSuggestion,
@@ -103,10 +104,15 @@ const VISUEL_SAISON: Record<CapsuleSeason, string> = {
   Hiver: "/images/saisons/hiver.webp",
 };
 
-/** Pièces montrées par catégorie tant qu'elle n'est pas développée — une ligne de la grille. */
-const PIECES_PAR_DEFAUT = 3;
+/**
+ * Catégories ouvertes à l'arrivée (polish V2, 26/09/2026) : les deux
+ * premières — les hauts et la maille, dans l'ordre de CATS. Les suivantes
+ * sont repliées en une ligne (nom, nombre de pièces) : toutes restent
+ * accessibles, mais la page ne s'ouvre plus sur un catalogue.
+ */
+const OUVERTES_PAR_DEFAUT = 2;
 
-/** Chevron de développement d'une catégorie : il pivote, rien d'autre ne bouge. */
+/** Chevron d'une catégorie : › repliée, ˄ ouverte. Il pivote, rien d'autre ne bouge. */
 function Chevron({ ouvert }: { ouvert: boolean }) {
   return (
     <svg
@@ -118,7 +124,7 @@ function Chevron({ ouvert }: { ouvert: boolean }) {
       strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ transform: ouvert ? "rotate(180deg)" : "none", transition: "transform .2s ease" }}
+      style={{ transform: ouvert ? "rotate(180deg)" : "rotate(-90deg)", transition: "transform .2s ease" }}
     >
       <path d="M6 9l6 6 6-6" />
     </svg>
@@ -161,7 +167,7 @@ const RATIO_VIGNETTE = 4 / 5;
  * sauterait à sa taille normalisée. Mesure impossible : affichage contenu,
  * comme avant.
  */
-function Vignette({ item, arrondi = 14, marge = 0.1 }: { item: Item; arrondi?: number; marge?: number }) {
+function Vignette({ item, arrondi = 14, marge = margeVignette(item.cat) }: { item: Item; arrondi?: number; marge?: number }) {
   const image = resolveItemImage(item);
   return (
     <div
@@ -363,10 +369,10 @@ export default function CapsuleScreen() {
     return { key, label: plural, siennes, suggestions, total: siennes.length + suggestions.length };
   }).filter((g) => g.total > 0);
 
-  // Catégories développées (clic sur l'en-tête), sur place : aucune
-  // navigation nouvelle. L'état vit dans l'écran et survit donc à un
-  // changement de saison — une catégorie ouverte le reste.
-  const [deplies, setDeplies] = useState<CategoryKey[]>([]);
+  // Catégories ouvertes ou repliées À LA MAIN, par rapport à leur état
+  // d'arrivée (OUVERTES_PAR_DEFAUT) : un clic bascule. Sur place, aucune
+  // navigation nouvelle ; l'état survit au changement de saison.
+  const [bascules, setBascules] = useState<CategoryKey[]>([]);
 
   const [fiche, setFiche] = useState<Fiche | null>(null);
   // Relue à chaque rendu plutôt que figée à l'ouverture : la génération de son
@@ -432,8 +438,8 @@ export default function CapsuleScreen() {
         <AppHeader />
 
         <div className="mt-[18px]">
-          <div className="text-[11px] tracking-[.16em] uppercase text-muted">Ta capsule</div>
-          <div className="font-serif text-[27px] leading-[1.15] text-ink mt-[6px]">
+          <div className="t-surtitre text-muted">Ta capsule</div>
+          <div className="t-titre-ecran text-ink mt-[6px]">
             Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
           </div>
           {/*
@@ -504,7 +510,7 @@ export default function CapsuleScreen() {
             </div>
             <button
               onClick={actions.viewExploredOutfit}
-              className="mt-[14px] w-full text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
+              className="mt-[14px] w-full text-center rounded-full py-4 t-bouton bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
             >
               Voir ma tenue
             </button>
@@ -518,8 +524,13 @@ export default function CapsuleScreen() {
               <button
                 key={s}
                 onClick={() => actions.setCapsuleSeason(s)}
-                className="flex-none py-[9px] px-4 rounded-full text-[12px] cursor-pointer border whitespace-nowrap"
-                style={{ background: on ? "#1D1A16" : "#FBF8F3", borderColor: on ? "#1D1A16" : "#E6DCCB", color: on ? "#F3EEE5" : "#1D1A16" }}
+                aria-pressed={on}
+                className={
+                  "flex-none py-[9px] px-4 rounded-full text-[12px] cursor-pointer border whitespace-nowrap " +
+                  // Actif en terracotta profond (polish V2) : le même fond plein
+                  // que le chip d'occasion actif de la Tenue, plutôt que l'encre.
+                  (on ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-ink")
+                }
               >
                 {s}
               </button>
@@ -528,12 +539,12 @@ export default function CapsuleScreen() {
         </div>
 
         {/* Bandeau de saison, sous le sélecteur : il change avec lui.
-            16:9 depuis le polish du 25/09/2026 (3:2 auparavant) : il
-            introduit la saison sans occuper l'écran — à 390 px, 36 px de
-            moins, pris pour moitié en haut et en bas, où les visuels n'ont que
-            du décor (branchages, ciel, rebord de pierre). Dimensions déclarées
-            pour que rien ne saute au chargement. */}
-        <div className="mt-[16px] rounded-[20px] overflow-hidden border border-border bg-card" style={{ aspectRatio: "16/9" }}>
+            2:1 depuis le polish V2 du 26/09/2026 (16:9 le 25/09, 3:2
+            auparavant) : il installe la saison sans monopoliser le premier
+            écran — à 390 px, 20 px de moins, pris en haut et en bas, où les
+            visuels n'ont que du décor (branchages, ciel, rebord de pierre).
+            Dimensions déclarées pour que rien ne saute au chargement. */}
+        <div className="mt-[16px] rounded-[20px] overflow-hidden border border-border bg-card" style={{ aspectRatio: "2/1" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             key={capsuleSeason}
@@ -558,12 +569,12 @@ export default function CapsuleScreen() {
         {/* PIÈCES CLÉS — trois cartes sur une ligne, strictement identiques
             (même vignette, même nom sur deux lignes réservées), sans
             description : le nom suffit. Masquées sous deux pièces, où
-            « pièces clés » ne voudrait plus rien dire. */}
+            « pièces clés » ne voudrait plus rien dire. Sous-titre du brief
+            polish V2 (26/09/2026). */}
         {cles.length >= 2 && (
           <div className="mt-[30px]">
-            <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[12px]">
-              {cles.length} pièces clés cette saison
-            </div>
+            <div className="t-surtitre text-muted">Les {cles.length} pièces clés</div>
+            <div className="text-[12px] text-muted mt-[4px] mb-[12px]">Celles qui donnent le ton à ta capsule.</div>
             <div className="grid grid-cols-3 gap-[10px]">
               {cles.map((it) => (
                 <button key={it.id} onClick={() => ouvrir(it, false)} className="min-w-0 text-left cursor-pointer" aria-label={`${it.name}, pièce clé`}>
@@ -575,69 +586,74 @@ export default function CapsuleScreen() {
           </div>
         )}
 
-        {/* CATÉGORIES. Trois pièces par défaut, sur une grille de trois
-            colonnes identique aux pièces clés ; l'en-tête entier développe la
-            catégorie (plus de « Voir tout »). Les pièces supplémentaires ne
-            sont montées qu'une fois la catégorie ouverte : aucune image
-            chargée pour rien. */}
-        <div key={capsuleSeason}>
-          {groups.map((g) => {
-            const deplie = deplies.includes(g.key);
+        {/* CATÉGORIES (polish V2, 26/09/2026). Une liste calme, filet entre
+            chaque ligne : les deux premières catégories ouvertes, les autres
+            repliées en une ligne — le nom d'abord, le nombre de pièces
+            ensuite, le chevron pour l'état. L'en-tête entier ouvre ou referme.
+            Ouverte, une catégorie montre TOUTES ses pièces sur une rangée qui
+            défile : deux cartes entières et le bord de la troisième, qui dit
+            qu'il y en a d'autres sans « Voir tout ». Les cartes d'une
+            catégorie repliée ne sont pas montées : aucune image chargée pour
+            rien. L'état vit dans l'écran et survit au changement de saison. */}
+        <div key={capsuleSeason} className="mt-[30px] border-t border-border">
+          {groups.map((g, idx) => {
+            const ouverte = idx < OUVERTES_PAR_DEFAUT !== bascules.includes(g.key);
             const cartes = [
               ...g.siennes.map((it) => ({ it, possedee: true })),
               ...g.suggestions.map((it) => ({ it, possedee: false })),
             ];
-            const extensible = cartes.length > PIECES_PAR_DEFAUT;
-            const visibles = deplie ? cartes : cartes.slice(0, PIECES_PAR_DEFAUT);
-            const basculer = () => setDeplies((d) => (deplie ? d.filter((k) => k !== g.key) : [...d, g.key]));
-            const entete = (
-              <>
-                <div className="min-w-0">
-                  <div className="text-[12px] tracking-[.12em] uppercase font-semibold text-ink">{g.label}</div>
-                  <div className="text-[11px] text-muted mt-[2px]">{pieces(g.total)}</div>
-                </div>
-                {extensible && (
-                  <span aria-hidden="true" className="flex-shrink-0 text-muted">
-                    <Chevron ouvert={deplie} />
-                  </span>
-                )}
-              </>
-            );
+            const basculer = () => setBascules((b) => (b.includes(g.key) ? b.filter((k) => k !== g.key) : [...b, g.key]));
             return (
-              <section key={g.key} className="mt-[30px]">
-                {extensible ? (
-                  <button
-                    onClick={basculer}
-                    aria-expanded={deplie}
-                    aria-label={`${g.label}, ${pieces(g.total)}, ${deplie ? "réduire" : "tout afficher"}`}
-                    className="w-full flex items-center justify-between gap-3 text-left cursor-pointer"
+              <section key={g.key} className="border-b border-border">
+                <button
+                  onClick={basculer}
+                  aria-expanded={ouverte}
+                  aria-label={`${g.label}, ${pieces(g.total)}, ${ouverte ? "replier" : "afficher les pièces"}`}
+                  className="w-full min-h-[60px] py-[12px] flex items-center justify-between gap-3 text-left cursor-pointer"
+                >
+                  <span className="min-w-0">
+                    <span className="block t-groupe text-ink">{g.label}</span>
+                    <span className="block text-[11px] text-muted mt-[3px]">{pieces(g.total)}</span>
+                  </span>
+                  <span aria-hidden="true" className="flex-shrink-0 text-muted">
+                    <Chevron ouvert={ouverte} />
+                  </span>
+                </button>
+                {ouverte && (
+                  <div
+                    className={
+                      "scrollarea -mx-6 px-6 scroll-px-6 flex gap-[12px] overflow-x-auto snap-x snap-mandatory pt-[2px] pb-[22px] " +
+                      // Ouverte à la main : les cartes entrent en fondu ; les
+                      // deux catégories ouvertes à l'arrivée, elles, sont là.
+                      (bascules.includes(g.key) ? "motion-safe:animate-[capsule-apparition_240ms_ease-out_both]" : "")
+                    }
                   >
-                    {entete}
-                  </button>
-                ) : (
-                  <div className="flex items-center justify-between gap-3">{entete}</div>
+                    {cartes.map(({ it, possedee }) => (
+                      <CartePiece
+                        key={it.id}
+                        item={it}
+                        possedee={possedee}
+                        onClick={() => ouvrir(it, possedee)}
+                        className="flex-none w-[42%] snap-start"
+                      />
+                    ))}
+                  </div>
                 )}
-                <div className="grid grid-cols-3 gap-x-[10px] gap-y-[18px] mt-[12px]">
-                  {visibles.map(({ it, possedee }, i) => (
-                    <CartePiece
-                      key={it.id}
-                      item={it}
-                      possedee={possedee}
-                      onClick={() => ouvrir(it, possedee)}
-                      className={i >= PIECES_PAR_DEFAUT ? "motion-safe:animate-[capsule-apparition_240ms_ease-out_both]" : ""}
-                    />
-                  ))}
-                </div>
               </section>
             );
           })}
         </div>
 
+        {/* Ce à quoi sert la capsule, juste avant l'action principale : elle
+            nourrit les tenues (le pool de la tenue du jour est composé depuis
+            la capsule et le dressing, composeWardrobePool). */}
+        {capsule.length > 0 && <div className="mt-[34px] text-center text-[13px] text-muted-3">Ta capsule sert à composer tes tenues.</div>}
+
         {/* L'ajout d'une pièce passe après la découverte (25/09/2026) : c'est
             Capsela qui prépare, pas l'utilisatrice qui remplit. Depuis le
             polish, deux lignes centrées sans encadré, pour ne pas concurrencer
             le bouton principal. Même action qu'avant (openAdd). */}
-        <div className="mt-[40px] text-center">
+        <div className="mt-[28px] text-center">
           <div className="text-[12px] text-muted">Une pièce manque dans ta capsule ?</div>
           <button onClick={actions.openAdd} className="mt-[2px] text-[13px] text-terracotta cursor-pointer py-[8px] px-2">
             + Ajouter une pièce que je possède
@@ -657,7 +673,10 @@ export default function CapsuleScreen() {
       >
         <button
           onClick={actions.goTenues}
-          className="pointer-events-auto w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+          // Terracotta profond (polish V2) : crème sur terracotta ne donnait
+          // que 3,8:1 de contraste, sous le seuil AA du texte courant ; 4,5:1
+          // sur le fond profond, déjà celui des boutons pleins de Planifier.
+          className="pointer-events-auto w-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
         >
           ✦ Découvrir mes tenues
         </button>
@@ -691,7 +710,7 @@ export default function CapsuleScreen() {
               <div className="flex justify-center">
                 <Statut possedee={false} />
               </div>
-              <div className="font-serif text-[22px] text-ink leading-[1.2] mt-[8px]">{pieceFiche.name}</div>
+              <div className="t-titre-section text-ink mt-[8px]">{pieceFiche.name}</div>
               {/* Pas de phrase d'occasions ici : elle redirait mot pour mot la
                   raison « Se porte… » juste en dessous (vu en rendu). */}
               {syntheseFiche && <div className="text-[12px] text-muted mt-[6px]">{syntheseFiche}</div>}
@@ -701,7 +720,7 @@ export default function CapsuleScreen() {
                 (raisonsSuggestion) ; aucune, et la section disparaît. */}
             {raisons.length > 0 && (
               <div className="mt-[28px]">
-                <div className="text-[11px] tracking-[.16em] uppercase text-muted mb-[12px]">Pourquoi Capsela te la propose ?</div>
+                <div className="t-surtitre text-muted mb-[12px]">Pourquoi Capsela te la propose ?</div>
                 <ul className="flex flex-col gap-[10px]">
                   {raisons.map((r) => (
                     <li key={r.cle} className="flex items-start gap-[10px] text-[13px] text-ink leading-[1.45]">
@@ -721,7 +740,7 @@ export default function CapsuleScreen() {
                 setFiche(null);
                 actions.openItemOutfits(pieceFiche.id);
               }}
-              className="mt-[30px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+              className="mt-[30px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
             >
               Voir des tenues avec cette pièce
             </button>

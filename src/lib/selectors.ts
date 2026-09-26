@@ -421,6 +421,19 @@ export function mostWornPieces(history: HistoryEntry[], pool: Item[], limit = 3)
     .filter((x): x is MostWornPiece => Boolean(x));
 }
 
+/**
+ * Nom court d'une pièce, pour les vignettes étroites (vitrine « Tes pièces
+ * fétiches », 26/09/2026 : trois cartes sur une ligne, ~85 px de large à
+ * 320 px). Les noms du vestiaire donnent parfois deux appellations séparées
+ * par « / » (« Sandales plates / Tropéziennes », « Panier / Sac en rafia ») :
+ * on garde la première, l'image dit le reste. Sans « / », le nom est rendu
+ * tel quel — la troncature sur deux lignes reste à la charge de l'affichage.
+ */
+export function nomCourtPiece(nom: string): string {
+  const premier = nom.split(" / ")[0].trim();
+  return premier || nom.trim();
+}
+
 export type JournalPeriod = "today" | "yesterday" | "week" | "earlier";
 
 export interface JournalEntry {

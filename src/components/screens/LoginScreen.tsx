@@ -52,7 +52,7 @@ export default function LoginScreen() {
             <span className="w-[52px] h-[52px] rounded-full bg-[#F0E5D6] text-terracotta flex items-center justify-center text-[22px] mb-4">
               ✉
             </span>
-            <div className="font-serif text-[18px] text-ink">Lien envoyé</div>
+            <div className="t-titre-carte text-ink">Lien envoyé</div>
             <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[260px]">
               Si un compte existe pour {email.trim() || "cette adresse"}, tu recevras un lien pour réinitialiser ton
               mot de passe.
@@ -62,7 +62,7 @@ export default function LoginScreen() {
                 setForgotOpen(false);
                 setForgotSent(false);
               }}
-              className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+              className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
             >
               Retour à la connexion
             </button>
@@ -70,8 +70,8 @@ export default function LoginScreen() {
         ) : (
           <>
             <div className="mt-[30px]">
-              <div className="font-serif text-[27px] leading-[1.12] text-ink">Mot de passe oublié</div>
-              <div className="text-[13px] text-muted mt-[10px] leading-[1.5]">
+              <div className="t-titre-ecran text-ink">Mot de passe oublié</div>
+              <div className="t-chapeau text-muted mt-[10px]">
                 Indique ton adresse e-mail, on t&apos;enverra un lien pour le réinitialiser.
               </div>
             </div>
@@ -86,7 +86,7 @@ export default function LoginScreen() {
             </div>
             <button
               onClick={() => setForgotSent(true)}
-              className="mt-5 text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer text-cream bg-terracotta active:bg-terracotta-hover"
+              className="mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream bg-terracotta active:bg-terracotta-hover"
             >
               Envoyer le lien
             </button>
@@ -106,10 +106,10 @@ export default function LoginScreen() {
       </div>
 
       <div className="mt-[30px]">
-        <div className="font-serif text-[27px] leading-[1.12] text-ink">
+        <div className="t-titre-ecran text-ink">
           Content de te <span className="italic text-terracotta">revoir</span>
         </div>
-        <div className="text-[13px] text-muted mt-[10px] leading-[1.5]">
+        <div className="t-chapeau text-muted mt-[10px]">
           Connecte-toi pour retrouver ton dressing et ta tenue du jour.
         </div>
       </div>
@@ -123,7 +123,7 @@ export default function LoginScreen() {
 
       <div className="flex items-center gap-[11px] my-[22px]">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-[10px] tracking-[.14em] uppercase text-placeholder">ou par e-mail</span>
+        <span className="t-label text-placeholder">ou par e-mail</span>
         <div className="flex-1 h-px bg-border" />
       </div>
 
@@ -170,7 +170,7 @@ export default function LoginScreen() {
       <button
         onClick={submit}
         className={
-          "mt-5 text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer text-cream " +
+          "mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream " +
           (busy ? "bg-[#bd8a75]" : "bg-terracotta active:bg-terracotta-hover")
         }
       >

@@ -36,7 +36,7 @@ export function GenderModal({
       onClick={onClose}
     >
       <div className="w-full max-w-[440px] bg-cream rounded-t-[22px] px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
-        <div className="font-serif text-[18px] text-ink mb-[16px]">Modifier mon genre</div>
+        <div className="t-titre-carte text-ink mb-[16px]">Modifier mon genre</div>
         <div className="flex flex-col gap-[10px]">
           {GENDERS.map((g) => (
             <button
@@ -74,13 +74,13 @@ export function RevalidationSheet({ field, onDismiss, onEdit }: { field: GenderD
       onClick={onDismiss}
     >
       <div className="w-full max-w-[440px] bg-cream rounded-t-[22px] px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
-        <div className="font-serif text-[18px] text-ink mb-[8px]">{field.fieldLabel} est à mettre à jour</div>
+        <div className="t-titre-carte text-ink mb-[8px]">{field.fieldLabel} est à mettre à jour</div>
         <div className="text-[13px] text-muted leading-[1.5] mb-[20px]">
           Les propositions évoluent selon ton profil. Choisis celle qui te correspond le mieux aujourd&apos;hui.
         </div>
         <button
           onClick={onEdit}
-          className="w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 text-[13px] tracking-[.1em] uppercase cursor-pointer"
+          className="w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
         >
           {field.ctaLabel}
         </button>
@@ -178,11 +178,11 @@ export default function ProfileEditScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <AppHeader showAvatar={false} onBack={actions.goProfile} backLabel="Revenir au profil" />
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[18px]">Profil</div>
-      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+      <div className="t-surtitre text-muted mt-[18px]">Profil</div>
+      <div className="t-titre-ecran text-ink mt-[6px]">
         Personnaliser <span className="italic text-terracotta">mon profil</span>
       </div>
-      <div className="text-[13px] text-muted-3 leading-[1.5] mt-[8px]">
+      <div className="t-chapeau text-muted-3 mt-[8px]">
         Ces informations aident Capsela à te recommander des tenues qui te ressemblent.
       </div>
 
@@ -202,7 +202,7 @@ export default function ProfileEditScreen() {
             {!photoUrl && <span className="font-serif text-[18px] text-cream">{initial}</span>}
           </span>
           <span className="flex-1 min-w-0">
-            <span className="block font-serif text-[16px] text-ink">Photo de profil</span>
+            <span className="block t-titre-ligne text-ink">Photo de profil</span>
             <span className="block text-[12px] text-muted mt-[2px]">Optionnelle, jamais partagée.</span>
           </span>
           <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
@@ -266,7 +266,7 @@ export default function ProfileEditScreen() {
           avant) : ce bouton ramène au profil, où tout est déjà à jour. */}
       <button
         onClick={actions.goProfile}
-        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full text-[13px] tracking-[.1em] uppercase cursor-pointer"
+        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full t-bouton cursor-pointer"
         style={{ minHeight: 52 }}
       >
         Enregistrer mes modifications
@@ -355,7 +355,7 @@ export default function ProfileEditScreen() {
             setDateOuverte(false);
             saveProfile({ ...profile, birthdate: dateBrouillon });
           }}
-          className="mt-4 w-full rounded-full bg-terracotta text-cream text-[12px] tracking-[.1em] uppercase cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="mt-4 w-full rounded-full bg-terracotta text-cream t-bouton cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ minHeight: 48 }}
         >
           Enregistrer

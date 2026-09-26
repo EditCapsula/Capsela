@@ -46,6 +46,115 @@
   --color-cream-dark-soft: #d9cbb6;
 }
 
+/*
+ * HIÉRARCHIE TYPOGRAPHIQUE (audit du 26/09/2026). Chaque rôle a UN
+ * traitement, repris des valeurs déjà dominantes dans l'app — aucune taille
+ * nouvelle, aucune police nouvelle : Fraunces pour les titres et les chiffres,
+ * Manrope pour le reste. Les jetons ne portent pas la couleur (un surtitre
+ * peut être terracotta ou gris selon la section) ni les marges.
+ *
+ * Serif (Fraunces) :
+ *   t-display         34 / 1.08  — le « Bonjour » de l'accueil, le titre de l'onboarding
+ *   t-titre-ecran     27 / 1.12  — titre d'écran, second temps en italique terracotta
+ *   t-titre-section   21 / 1.18  — titre de section ; titre d'un écran secondaire posé
+ *                                  sur la ligne du bouton retour
+ *   t-titre-carte     18 / 1.2   — titre de carte, de feuille (BottomSheet)
+ *   t-titre-ligne     16 / 1.25  — libellé d'une ligne de réglage (profil)
+ *   t-titre-vignette  15 / 1.25  — nom sous une vignette, carte compacte
+ *   t-chiffre         21 / 1     — chiffres et statistiques
+ * Sans (Manrope) :
+ *   t-chapeau         13 / 1.5   — phrase sous un titre d'écran
+ *   t-surtitre        11, capitales, .16em — surtitre de section et d'écran
+ *   t-label           10, capitales, .14em — étiquette dans une carte
+ *   t-groupe          12, capitales, .1em, demi-gras — en-tête d'un groupe de liste
+ *   t-pastille         9, capitales, .1em — pastilles et badges
+ *   t-bouton          13, capitales, .1em — bouton plein ou à contour
+ *   t-cta             12, capitales, .1em — action en bas de carte, sans fond
+ *   t-lien            12 — lien texte, casse normale, suivi de « → »
+ *   t-nav              9, capitales, .05em — libellés de la barre du bas
+ *
+ * Le texte courant garde ses tailles (13 corps, 12 secondaire, 11 légende),
+ * déjà homogènes : son interlignage suit la densité de chaque bloc.
+ */
+@utility t-display {
+  font-family: var(--font-serif);
+  font-size: 34px;
+  line-height: 1.08;
+}
+@utility t-titre-ecran {
+  font-family: var(--font-serif);
+  font-size: 27px;
+  line-height: 1.12;
+}
+@utility t-titre-section {
+  font-family: var(--font-serif);
+  font-size: 21px;
+  line-height: 1.18;
+}
+@utility t-titre-carte {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.2;
+}
+@utility t-titre-ligne {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.25;
+}
+@utility t-titre-vignette {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.25;
+}
+@utility t-chiffre {
+  font-family: var(--font-serif);
+  font-size: 21px;
+  line-height: 1;
+}
+@utility t-chapeau {
+  font-size: 13px;
+  line-height: 1.5;
+}
+@utility t-surtitre {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+@utility t-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+@utility t-groupe {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+@utility t-pastille {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+@utility t-bouton {
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+@utility t-cta {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+@utility t-lien {
+  font-size: 12px;
+}
+@utility t-nav {
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 * {
   box-sizing: border-box;
 }

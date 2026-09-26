@@ -31,6 +31,41 @@ export function piecesDuDressingPourSaison(items: Item[], saison: CapsuleSeason)
 }
 
 /**
+ * Poids visuel d'une vignette, par famille (polish Capsule V2, 26/09/2026).
+ *
+ * La vignette agrandit déjà chaque pièce jusqu'à ce que le rectangle qu'elle
+ * occupe remplisse la zone utile du cadre (cadrageImage.ts) : le vide très
+ * variable que laissent les images du catalogue ne compte plus. Mais avec une
+ * seule marge pour tous, une paire de boucles d'oreilles remplissait son cadre
+ * autant qu'un manteau, et une paire de chaussures, posée à plat, en occupait
+ * toute la largeur. La marge dépend donc de la famille : homogène entre deux
+ * vêtements, entre deux chaussures, entre deux sacs — et un bijou reste plus
+ * petit qu'un manteau, comme sur une page de magazine.
+ *
+ * ARBITRAGE ÉDITORIAL : les valeurs sont réglées à l'œil, sur des images de
+ * banc aux marges internes volontairement inégales. Vide conservé de chaque
+ * côté, en fraction du cadre.
+ */
+export type FamilleVisuelle = "vetement" | "chaussures" | "sac" | "bijou" | "accessoire";
+
+export function familleVisuelle(cat: CategoryKey): FamilleVisuelle {
+  if (cat === "chaussures" || cat === "sac" || cat === "bijou" || cat === "accessoire") return cat;
+  return "vetement";
+}
+
+const MARGE_FAMILLE: Record<FamilleVisuelle, number> = {
+  vetement: 0.08,
+  chaussures: 0.15,
+  sac: 0.13,
+  bijou: 0.24,
+  accessoire: 0.18,
+};
+
+export function margeVignette(cat: CategoryKey): number {
+  return MARGE_FAMILLE[familleVisuelle(cat)];
+}
+
+/**
  * Familles des « pièces clés », dans l'ordre d'affichage : ce qu'on met
  * par-dessus, la maille ou le haut qui s'y glisse, la chaussure du quotidien.
  */

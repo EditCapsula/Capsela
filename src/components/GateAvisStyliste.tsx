@@ -29,7 +29,7 @@ export default function GateAvisStyliste({
       </div>
       <button
         onClick={onDecouvrirPremium}
-        className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer mt-5"
+        className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-5"
         style={{ minHeight: 52 }}
       >
         Découvrir Premium

@@ -27,7 +27,7 @@ import { useCapsela } from "@/lib/store";
 function Section({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
     <>
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-7 mb-[10px]">{titre}</div>
+      <div className="t-surtitre text-muted mt-7 mb-[10px]">{titre}</div>
       <div className="bg-card border border-border rounded-[20px] overflow-hidden">{children}</div>
     </>
   );
@@ -83,11 +83,11 @@ export default function AccountScreen() {
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <AppHeader showAvatar={false} onBack={actions.goProfile} backLabel="Revenir au profil" />
-      <div className="text-[11px] tracking-[.16em] uppercase text-muted mt-[18px]">Profil</div>
-      <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]">
+      <div className="t-surtitre text-muted mt-[18px]">Profil</div>
+      <div className="t-titre-ecran text-ink mt-[6px]">
         Mon <span className="italic text-terracotta">compte</span>
       </div>
-      <div className="text-[13px] text-muted-3 leading-[1.5] mt-[8px]">Ton compte, tes données, et ce que tu en fais.</div>
+      <div className="t-chapeau text-muted-3 mt-[8px]">Ton compte, tes données, et ce que tu en fais.</div>
 
       <Section titre="Compte">
         <div className="flex items-center justify-between gap-3 px-4 py-[14px] border-b border-border">
@@ -170,7 +170,7 @@ export default function AccountScreen() {
           onClick={handleDeleteAccount}
           disabled={deleting}
           className={
-            "mt-[22px] w-full text-center rounded-full py-[14px] text-[12px] tracking-[.1em] uppercase " +
+            "mt-[22px] w-full text-center rounded-full py-[14px] t-bouton " +
             (deleting ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-rust text-cream cursor-pointer")
           }
         >

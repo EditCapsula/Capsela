@@ -222,13 +222,13 @@ const WORK_MODES: WorkMode[] = ["Présentiel", "Télétravail"];
  * que l'app utilisait déjà.
  */
 function Surtitre({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] tracking-[.16em] uppercase text-muted">{children}</div>;
+  return <div className="t-surtitre text-muted">{children}</div>;
 }
 
 /** Titre éditorial en deux temps — la seconde moitié en italique terracotta. */
 function TitreEtape({ a, b }: { a: string; b: string }) {
   return (
-    <div className="font-serif text-[27px] leading-[1.12] text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+    <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
       {a} <span className="italic text-terracotta">{b}</span>
     </div>
   );
@@ -320,10 +320,10 @@ function CartePlanifier({
         </span>
         <BadgePremium />
       </span>
-      <span className="block font-serif text-[21px] leading-[1.18] text-ink mt-[12px]">
+      <span className="block t-titre-section text-ink mt-[12px]">
         {titre[0]} <span className="italic text-terracotta">{titre[1]}</span>
       </span>
-      <span className="block text-[10px] tracking-[.14em] uppercase text-terracotta mt-[6px]">{accroche}</span>
+      <span className="block t-label text-terracotta mt-[6px]">{accroche}</span>
       <span className="flex flex-col gap-[5px] mt-[12px]">
         {points.map((l) => (
           <span key={l} className="flex items-center gap-[9px] text-[13px] text-ink">
@@ -333,7 +333,7 @@ function CartePlanifier({
         ))}
       </span>
       {note && <span className="block text-[12px] text-muted leading-[1.45] mt-[10px]">{note}</span>}
-      <span className="mt-[8px] flex items-center min-h-[44px] text-[12px] tracking-[.1em] uppercase text-terracotta">{cta} →</span>
+      <span className="mt-[8px] flex items-center min-h-[44px] t-cta text-terracotta">{cta} →</span>
     </button>
   );
 }
@@ -847,7 +847,7 @@ export default function PlanifierScreen() {
           <>
             <Surtitre>Planifier</Surtitre>
             <TitreEtape a="Anticipe tes moments." b="Capsela s'occupe du look." />
-            <div className="text-[13px] text-muted-3 leading-[1.5] mt-[10px]" style={{ textWrap: "pretty" }}>
+            <div className="t-chapeau text-muted-3 mt-[10px]" style={{ textWrap: "pretty" }}>
               Des tenues pensées pour tes occasions et tes voyages, selon ton style, ta météo et ton dressing.
             </div>
 
@@ -904,7 +904,7 @@ export default function PlanifierScreen() {
                 className="mt-3 rounded-[20px] px-5 py-[24px] text-center"
                 style={{ border: "1px dashed var(--color-sand-border)" }}
               >
-                <div className="font-serif text-[18px] text-ink leading-[1.25]">
+                <div className="t-titre-carte text-ink">
                   {onglet === "up" || plans.length === 0 ? "Aucune planification pour le moment." : "Aucune planification passée."}
                 </div>
                 {(onglet === "up" || plans.length === 0) && (
@@ -948,7 +948,7 @@ export default function PlanifierScreen() {
                         })}
                       </span>
                       <span className="flex-1 min-w-0">
-                        <span className="block font-serif text-[15px] text-ink leading-[1.25]">{occasionShortLabel(t.occasion)}</span>
+                        <span className="block t-titre-vignette text-ink">{occasionShortLabel(t.occasion)}</span>
                         {/* Synthétique (brief §12) : la date et la ville, sur
                             une ligne. La région et le pays restent au détail. */}
                         <span className="block text-[12px] text-muted mt-[3px] truncate">
@@ -969,7 +969,7 @@ export default function PlanifierScreen() {
           <>
             <Surtitre>{ETAPES[etape][0]}</Surtitre>
             <TitreEtape a={ETAPES[etape][1]} b={ETAPES[etape][2]} />
-            <div className="text-[12px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
+            <div className="t-chapeau text-muted mt-[6px]" style={{ textWrap: "pretty" }}>
               {ETAPES[etape][3]}
             </div>
 
@@ -1119,7 +1119,7 @@ export default function PlanifierScreen() {
                       <div className="flex-shrink-0">
                         <div
                           className={
-                            "text-[9px] tracking-[.1em] uppercase mb-[6px] whitespace-nowrap " + (g === 0 ? "text-terracotta" : "text-muted")
+                            "t-pastille mb-[6px] whitespace-nowrap " + (g === 0 ? "text-terracotta" : "text-muted")
                           }
                         >
                           {titreGroupe}
@@ -1144,7 +1144,7 @@ export default function PlanifierScreen() {
                               }
                               style={{ minHeight: 66 }}
                             >
-                              <span className={"block text-[9px] tracking-[.08em] uppercase " + (on ? "text-cream" : "text-muted")}>
+                              <span className={"block t-pastille " + (on ? "text-cream" : "text-muted")}>
                                 {DOW[d.getDay()]}
                               </span>
                               <span
@@ -1283,7 +1283,7 @@ export default function PlanifierScreen() {
             {/* 9,5 px / .1em : la forme des deux autres pastilles terracotta de
                 l'app (accueil, Valise). Le 10 px d'ici était un troisième
                 réglage pour le même objet. */}
-            <span className="inline-block text-[9px] tracking-[.1em] uppercase text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
+            <span className="inline-block t-pastille text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
               {occLong}
             </span>
             <TitreEtape a={occLabel} b={lieu.trim() ? `· ${lieu.trim()}` : ""} />
@@ -1295,7 +1295,7 @@ export default function PlanifierScreen() {
 
             {tenue.noCompleteOutfit ? (
               <div className="mt-[14px] bg-card border border-border rounded-[20px] p-[15px]">
-                <div className="font-serif text-[18px] text-ink">
+                <div className="t-titre-carte text-ink">
                   {emptyStateCopy(tenue.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").title}
                 </div>
                 <div className="text-[12px] text-muted-3 leading-[1.5] mt-2">
@@ -1306,7 +1306,7 @@ export default function PlanifierScreen() {
               <>
                 <div className="mt-[14px] rounded-[24px] p-4" style={{ background: "var(--color-terracotta-deep)" }}>
                   <div className="flex items-center justify-between gap-[10px]">
-                    <span className="text-[10px] tracking-[.14em] uppercase text-cream">Tenue préparée</span>
+                    <span className="t-label text-cream">Tenue préparée</span>
                     <span
                       className="text-[10px] text-cream rounded-full px-[11px] py-[5px] whitespace-nowrap"
                       style={{ background: "rgba(251,243,234,.2)" }}
@@ -1320,7 +1320,7 @@ export default function PlanifierScreen() {
                 </div>
 
                 <div className="mt-[14px] bg-card border border-border rounded-[20px] p-[15px]">
-                  <div className="font-serif text-[18px] text-ink">Pourquoi ce look ?</div>
+                  <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
                   <div className="flex flex-col gap-2 mt-[10px]">
                     {[
                       `Pensée pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`,
@@ -1389,7 +1389,7 @@ export default function PlanifierScreen() {
             <>
               <Surtitre>Tenue planifiée</Surtitre>
               <TitreEtape a={occasionShortLabel(t.occasion)} b={t.lieu.trim() ? `· ${t.lieu.trim()}` : ""} />
-              <div className="text-[11px] tracking-[.14em] uppercase text-muted mt-[7px]">
+              <div className="t-surtitre text-muted mt-[7px]">
                 {DOW_LONG[d.getDay()]} {d.getDate()} {MOIS[d.getMonth()]} · {t.moment}
               </div>
 
@@ -1414,7 +1414,7 @@ export default function PlanifierScreen() {
               )}
 
               <div className="mt-[14px] bg-card border border-border rounded-[20px] p-[15px]">
-                <div className="font-serif text-[18px] text-ink">Le contexte</div>
+                <div className="t-titre-carte text-ink">Le contexte</div>
                 <div className="text-[12px] text-muted-3 leading-[1.6] mt-2">
                   {occLongDe(t.occasion)}
                   {t.sousChoix ? ` · ${t.sousChoix}` : ""}
@@ -1443,7 +1443,7 @@ export default function PlanifierScreen() {
                 className="mt-4 rounded-[20px] px-5 py-[30px] text-center"
                 style={{ border: "1px dashed var(--color-sand-border)" }}
               >
-                <div className="font-serif text-[18px] text-ink leading-[1.25]">
+                <div className="t-titre-carte text-ink">
                   {onglet === "up" ? "Aucune tenue planifiée" : "Aucune tenue passée"}
                 </div>
                 <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
@@ -1499,13 +1499,13 @@ export default function PlanifierScreen() {
 
                         <div className="px-4 pt-[13px] pb-[14px]">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] tracking-[.14em] uppercase text-terracotta">Tenue planifiée</span>
+                            <span className="t-label text-terracotta">Tenue planifiée</span>
                             {echeance && (
-                              <span className="text-[10px] tracking-[.14em] uppercase text-muted">· {echeance}</span>
+                              <span className="t-label text-muted">· {echeance}</span>
                             )}
                           </div>
 
-                          <div className="font-serif text-[18px] text-ink leading-[1.2] mt-[5px]">
+                          <div className="t-titre-carte text-ink mt-[5px]">
                             {occasionShortLabel(t.occasion)}
                           </div>
 
@@ -1513,7 +1513,7 @@ export default function PlanifierScreen() {
                               donnaient « Sens, Bourgogne-Franche-Comté,
                               France · Après-midi » — une ligne où le moment
                               se perdait derrière le pays. */}
-                          <div className="text-[11px] tracking-[.14em] uppercase text-muted mt-[7px]">
+                          <div className="t-surtitre text-muted mt-[7px]">
                             {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]} · {t.moment}
                           </div>
                           {t.lieu.trim() && (
@@ -1603,7 +1603,7 @@ export default function PlanifierScreen() {
                 });
             }}
             disabled={!etapeValide || attend}
-            className="w-full rounded-full text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer disabled:cursor-not-allowed"
+            className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
             style={{
               minHeight: 52,
               background: etapeValide && !attend ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
@@ -1615,7 +1615,7 @@ export default function PlanifierScreen() {
         {vue === "liste" && (
           <button
             onClick={recommencer}
-            className="w-full rounded-full bg-terracotta-deep text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer"
+            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
             style={{ minHeight: 52 }}
           >
             + Planifier une tenue
@@ -1630,7 +1630,7 @@ export default function PlanifierScreen() {
             <button
               onClick={garder}
               disabled={enregistrement || !tenue || tenue.noCompleteOutfit}
-              className="w-full rounded-full text-cream text-[13px] tracking-[.1em] uppercase cursor-pointer disabled:cursor-not-allowed"
+              className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
               style={{
                 minHeight: 52,
                 background: enregistrement || !tenue || tenue.noCompleteOutfit ? "var(--color-cream-dark-soft)" : "var(--color-terracotta-deep)",
@@ -1742,7 +1742,7 @@ export default function PlanifierScreen() {
               if (planOuvert?.id === t.id) { setPlanOuvert(null); setVue("liste"); }
               retirer(t.id);
             }}
-            className="w-full rounded-full bg-terracotta-deep text-cream text-[12px] tracking-[.1em] uppercase cursor-pointer mt-4"
+            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4"
             style={{ minHeight: 52 }}
           >
             Supprimer

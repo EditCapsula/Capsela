@@ -7,6 +7,7 @@ import BoutonRetour from "@/components/BoutonRetour";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ResultatAvis from "@/components/ResultatAvis";
+import { premiumRequis } from "@/lib/autorisations";
 import { reactionErreur } from "@/lib/avisStylisteClient";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
@@ -21,8 +22,9 @@ import { useCapsela, type PhotoAvis } from "@/lib/store";
  * 16) : une analyse lancée continue si l'on quitte l'écran, et l'écran la
  * retrouve — en cours, réussie ou échouée — quand on y revient.
  *
- * ACCÈS. On n'arrive ici qu'à un statut Premium confirmé (AVIS_DE_STYLISTE →
- * PREMIUM_REQUIRED). Le contrôle qui compte est serveur : si la fonction
+ * ACCÈS. Règle AVIS_DE_STYLISTE (autorisations.ts) : ACCES_LIBRE en phase de
+ * test (26/09/2026), PREMIUM_REQUIRED au lancement — on n'arrive alors ici
+ * qu'à un statut Premium confirmé. Le contrôle qui compte est serveur : si la fonction
  * refuse (compte non Premium), l'écran montre le Premium Gate ; si elle ne
  * peut pas vérifier le statut, un message d'erreur et « Réessayer » — jamais
  * le Gate (arbitré).
@@ -61,7 +63,7 @@ const TEXTES = {
 };
 
 const BOUTON_PRINCIPAL =
-  "w-full rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-center text-[13px] tracking-[.1em] uppercase py-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+  "w-full rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-center t-bouton py-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 const BOUTON_SECONDAIRE = "w-full rounded-full border border-border-soft text-terracotta text-center text-[13px] py-[14px] cursor-pointer";
 const LIEN = "w-full text-center text-[12px] text-muted py-[10px] cursor-pointer";
 
@@ -181,7 +183,7 @@ export default function AvisStylisteScreen() {
               après succès — un même résultat ne s'enregistre pas deux fois ;
               en cas d'échec, message et nouvel essai, résultat intact. */}
           {enregistrement === "fait" ? (
-            <div className="w-full rounded-full bg-warm-bg border border-warm-border text-terracotta text-center text-[13px] tracking-[.1em] uppercase py-4" role="status">
+            <div className="w-full rounded-full bg-warm-bg border border-warm-border text-terracotta text-center t-bouton py-4" role="status">
               ✓ {TEXTES.enregistre}
             </div>
           ) : (
@@ -249,15 +251,15 @@ export default function AvisStylisteScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <div className="flex items-center justify-between">
         <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" />
-        <BadgePremium />
+        {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
       </div>
 
       <div className="mt-[22px]">
-        <div className="font-serif text-[27px] leading-[1.12] text-ink">
+        <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>
         {/* Promesse [DÉCIDÉ], section 1. */}
-        <div className="text-[14px] text-muted-3 leading-[1.5] mt-[10px]">Montre-moi ta tenue, je te donne mon avis.</div>
+        <div className="t-chapeau text-muted-3 mt-[10px]">Montre-moi ta tenue, je te donne mon avis.</div>
       </div>
 
       {/* Champs natifs, invisibles : la caméra arrière, et la galerie / les fichiers. */}

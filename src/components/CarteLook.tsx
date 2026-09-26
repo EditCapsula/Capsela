@@ -108,7 +108,7 @@ export default function CarteLook({
     >
       <MosaiquePieces pieces={pieces} />
       <div className="px-[2px] pt-[10px]">
-        <div className="font-serif text-[15px] text-ink leading-[1.25] overflow-hidden text-ellipsis whitespace-nowrap">{look.name}</div>
+        <div className="t-titre-vignette text-ink overflow-hidden text-ellipsis whitespace-nowrap">{look.name}</div>
         <div className="text-[11px] text-muted mt-[3px]">
           {date}
           {porte > 0 && ` · Porté ${porte} fois`}
