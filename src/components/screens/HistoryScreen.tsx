@@ -25,6 +25,7 @@ import {
   type JournalEntry,
   type JournalPeriod,
 } from "@/lib/selectors";
+import { OCCASIONS_EDITORIALES, titreStyle } from "@/lib/occasionEditoriale";
 import type { ChoixRevente, Item, OccasionKey } from "@/lib/types";
 
 /*
@@ -75,63 +76,22 @@ const MOMENT_DE_L_OCCASION: Record<Exclude<OccasionKey, "all">, string> = {
 };
 
 /**
- * « TON STYLE CE MOIS-CI » (carte éditoriale, 26/09/2026) — ce que la carte
- * dit de chaque occasion. ARBITRAGE ÉDITORIAL : des mots, une entrée par
- * occasion existante ; les chiffres, eux, viennent tous de styleDuMois.
- *   · sujet  : « Le travail domine ton dressing ce mois-ci » ;
- *   · insight : « Ton dressing accompagne surtout ton quotidien professionnel » ;
- *   · cta    : le filtre du journal complet sur cette occasion.
+ * Une barre segmentée : un segment par tenue analysée, pleins pour
+ * l'occasion principale (brief du 26/09/2026 — les points ronds ne se
+ * lisaient pas assez). Le ratio est aussi écrit à côté, en toutes lettres :
+ * la couleur ne porte jamais seule l'information.
  */
-const STYLE_OCCASION: Record<Exclude<OccasionKey, "all">, { sujet: string; pluriel: boolean; insight: string; cta: string }> = {
-  quotidien: { sujet: "Le quotidien", pluriel: false, insight: "tes journées de tous les jours", cta: "Voir mes tenues du quotidien" },
-  travail_formel: { sujet: "Le travail", pluriel: false, insight: "ton quotidien professionnel", cta: "Voir mes tenues travail" },
-  entretien: { sujet: "Les rendez-vous importants", pluriel: true, insight: "tes moments importants", cta: "Voir mes tenues rendez-vous" },
-  date: { sujet: "Les rendez-vous à deux", pluriel: true, insight: "tes tête-à-tête", cta: "Voir mes tenues date" },
-  soiree: { sujet: "Les sorties", pluriel: true, insight: "tes sorties entre amis", cta: "Voir mes tenues sortie" },
-  festive: { sujet: "Les soirées festives", pluriel: true, insight: "tes soirées festives", cta: "Voir mes tenues soirée" },
-  sport: { sujet: "Le sport", pluriel: false, insight: "tes moments actifs", cta: "Voir mes tenues sport" },
-  cocooning: { sujet: "Le cocooning", pluriel: false, insight: "tes moments à la maison", cta: "Voir mes tenues cocooning" },
-  voyage: { sujet: "Les voyages", pluriel: true, insight: "tes déplacements", cta: "Voir mes tenues voyage" },
-  evenement_perso: { sujet: "Les cérémonies", pluriel: true, insight: "tes grandes occasions", cta: "Voir mes tenues cérémonie" },
-};
-
-/**
- * Le visuel de la carte, par occasion — les visuels éditoriaux unisexes
- * fournis le 26/09/2026 (sans mannequin ni texte : l'occasion est dite par
- * l'interface). Une seule image pour les profils femme et homme.
- * Rendez-vous important et Sortie festive n'en ont pas reçu : pas de visuel
- * plutôt qu'un voisin approximatif (règle validée le 26/09 : mieux vaut une
- * carte sans visuel qu'une image qui ne correspond pas à la statistique).
- */
-const VISUEL_OCCASION: Partial<Record<Exclude<OccasionKey, "all">, string>> = {
-  quotidien: "/editorial/occasions/capsela_occasion_quotidien.webp",
-  travail_formel: "/editorial/occasions/capsela_occasion_travail.webp",
-  date: "/editorial/occasions/capsela_occasion_date.webp",
-  soiree: "/editorial/occasions/capsela_occasion_soiree.webp",
-  sport: "/editorial/occasions/capsela_occasion_sport.webp",
-  cocooning: "/editorial/occasions/capsela_occasion_cocooning.webp",
-  voyage: "/editorial/occasions/capsela_occasion_deplacement.webp",
-  evenement_perso: "/editorial/occasions/capsela_occasion_evenement.webp",
-};
-
-/** Au-delà, un point par tenue ne se lit plus : le ratio écrit suffit. */
-const POINTS_MAX = 12;
-
-/**
- * Un point par tenue analysée : pleins pour l'occasion principale, cerclés
- * pour les autres. La forme distingue les deux, pas seulement la couleur ;
- * le nom accessible dit le ratio en toutes lettres.
- */
-function PointsTenues({ compte, total }: { compte: number; total: number }) {
+function BarreTenues({ compte, total }: { compte: number; total: number }) {
   return (
-    <div className="flex items-center gap-[6px]" role="img" aria-label={`${compte} ${compte > 1 ? "tenues" : "tenue"} sur ${total}`}>
-      {Array.from({ length: total }, (_, i) => (
-        <span
-          key={i}
-          aria-hidden="true"
-          className={"w-[9px] h-[9px] rounded-full " + (i < compte ? "bg-terracotta" : "border-[1.5px] border-terracotta/45")}
-        />
-      ))}
+    <div className="flex items-center gap-[10px]">
+      <div className={"flex-1 flex " + (total > 15 ? "gap-[2px]" : "gap-[3px]")} aria-hidden="true">
+        {Array.from({ length: total }, (_, i) => (
+          <span key={i} className={"flex-1 h-[6px] rounded-full " + (i < compte ? "bg-terracotta" : "bg-sand-border")} />
+        ))}
+      </div>
+      <span className="text-[12px] text-warm-text-2 whitespace-nowrap flex-shrink-0">
+        {compte} sur {total}
+      </span>
     </div>
   );
 }
@@ -712,22 +672,26 @@ export default function HistoryScreen() {
         </Surtitre>
         {style.etat === "tendance" ? (
           (() => {
-            const o = STYLE_OCCASION[style.occasion];
-            const verbe = style.majorite
-              ? `${o.pluriel ? "dominent" : "domine"} ton dressing ce mois-ci`
-              : `${o.pluriel ? "arrivent" : "arrive"} en tête ce mois-ci`;
-            // Un visuel seulement pour une occasion qui en a un vrai
-            // (VISUEL_OCCASION) ; sinon la carte prend toute la largeur.
-            const visuel = VISUEL_OCCASION[style.occasion] ?? null;
+            // Tout ce que la carte dit et montre de l'occasion vient d'une
+            // seule source (OCCASIONS_EDITORIALES) ; les chiffres, de
+            // styleDuMois. Sans visuel pour cette occasion, pas d'image de
+            // repli : le texte prend toute la largeur.
+            const o = OCCASIONS_EDITORIALES[style.occasion];
             return (
-              <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 pt-[16px] pb-[18px]">
-                <div className="flex gap-4">
+              <div className="mt-3 bg-warm-bg border border-warm-border rounded-[22px] px-5 pt-[16px] pb-[18px] overflow-hidden">
+                <div className="flex gap-[14px]">
                   <div className="flex-1 min-w-0">
-                    <span className="inline-block t-pastille text-terracotta bg-card rounded-full px-[9px] py-[3px]">Occasion principale</span>
+                    {/* Le surtitre, puis le nom de l'occasion en pastille : sur une
+                        seule ligne chacun (réunis, ils passaient à la ligne dans
+                        la colonne de texte, à côté du visuel). */}
+                    <div className="t-label text-muted">Occasion principale</div>
+                    <span className="inline-block mt-[6px] t-pastille text-terracotta bg-card rounded-full px-[9px] py-[4px] whitespace-nowrap">
+                      {o.libelle}
+                    </span>
                     <div className="t-titre-section text-ink mt-[10px]" style={{ textWrap: "balance" }}>
-                      <span className="italic text-terracotta">{o.sujet}</span> {verbe}
+                      {titreStyle(o, style.majorite)}
                     </div>
-                    <div className="flex items-baseline gap-[10px] mt-[12px]">
+                    <div className="mt-[12px]">
                       <span className="sr-only">
                         {style.compte} {pl(style.compte, "tenue", "tenues")} sur {style.total}
                       </span>
@@ -736,30 +700,34 @@ export default function HistoryScreen() {
                       </span>
                     </div>
                     <div className="text-[12px] text-warm-text-2 leading-[1.4] mt-[4px]">
-                      {pl(style.compte, "tenue pensée", "tenues pensées")} pour {MOMENT_DE_L_OCCASION[style.occasion]}
+                      {pl(style.compte, "tenue pensée", "tenues pensées")} pour {o.pour}
                     </div>
                   </div>
-                  {visuel && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={visuel}
-                      alt=""
-                      width={900}
-                      height={1200}
-                      loading="lazy"
-                      decoding="async"
-                      className="flex-shrink-0 w-[84px] h-auto self-start rounded-[14px] object-cover"
-                      style={{ aspectRatio: "3 / 4" }}
-                    />
+                  {/* Le visuel en pleine page de magazine : environ 38 % de la
+                      carte, collé à son bord droit et à son haut (il déborde
+                      de la marge intérieure), entier au format 3:4, sans cadre
+                      ni ombre. */}
+                  {o.visuel && (
+                    <div className="flex-shrink-0 -mr-5 -mt-[16px] self-start" style={{ width: "calc((100% + 20px) * 0.4)" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={o.visuel.src}
+                        alt={o.visuel.alt}
+                        width={900}
+                        height={1200}
+                        loading="lazy"
+                        decoding="async"
+                        className="block w-full h-auto object-cover rounded-bl-[22px]"
+                        style={{ aspectRatio: "3 / 4" }}
+                      />
+                    </div>
                   )}
                 </div>
-                {style.total <= POINTS_MAX && (
-                  <div className="mt-[12px]">
-                    <PointsTenues compte={style.compte} total={style.total} />
-                  </div>
-                )}
+                <div className="mt-[16px]">
+                  <BarreTenues compte={style.compte} total={style.total} />
+                </div>
                 <div className="text-[13px] text-muted-3 leading-[1.45] mt-[12px]">
-                  Ton dressing accompagne {style.majorite ? "surtout" : "d'abord"} {o.insight}.
+                  {style.majorite ? o.insight : `Ton dressing accompagne d'abord ${o.pour}.`}
                 </div>
                 <button
                   onClick={() => voirOccasion(style.occasion)}
