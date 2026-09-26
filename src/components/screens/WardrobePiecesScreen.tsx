@@ -5,6 +5,7 @@ import BottomSheet from "@/components/BottomSheet";
 import { useCapsela } from "@/lib/store";
 import { daysSinceWorn, wearCounts } from "@/lib/selectors";
 import { wornAgo } from "@/lib/data";
+import { participePorte, participePorteMaj } from "@/lib/logic";
 import BoutonRetour from "@/components/BoutonRetour";
 
 /**
@@ -185,7 +186,12 @@ export default function WardrobePiecesScreen() {
                   {it.name}
                 </div>
                 <div className="text-[11px] text-placeholder mt-[2px]">
-                  {neverWorn ? "Jamais porté" : count > 0 ? `Porté ${count} fois` : wornAgo(days)}
+                  {/* Accordé à la pièce (participePorte, 26/09/2026) : « Jamais portées » pour des bottines. */}
+                  {neverWorn
+                    ? "Jamais " + participePorte(it)
+                    : count > 0
+                      ? `${participePorteMaj(it)} ${count} fois`
+                      : wornAgo(days).replace(/^Porté/, participePorteMaj(it))}
                 </div>
               </button>
             );

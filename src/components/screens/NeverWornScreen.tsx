@@ -5,7 +5,7 @@ import { CATLABEL } from "@/lib/data";
 import { suggestName } from "@/lib/attributes";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { currentSeasonKey } from "@/lib/capsule";
-import { nounInfoOf, type ItemOutfitVariation } from "@/lib/logic";
+import { participePorte, type ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -52,8 +52,8 @@ function displayName(it: Item): string {
   return suggestName(it.cat, it.subtype, it.matiere, it.color);
 }
 
-/** « Jamais portée » / « Jamais porté », accordé au genre du vêtement (même détection que la fiche pièce). */
-const jamaisPorte = (it: Item) => (nounInfoOf(it).gender === "f" ? "Jamais portée" : "Jamais porté");
+/** « Jamais porté(e)(s) », accordé au genre et au nombre de la pièce (participePorte). */
+const jamaisPorte = (it: Item) => "Jamais " + participePorte(it);
 
 function CartePiece({
   item,
