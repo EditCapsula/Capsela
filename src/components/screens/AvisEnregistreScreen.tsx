@@ -104,6 +104,7 @@ export default function AvisEnregistreScreen() {
           void actions.corrigerReconnaissanceEnregistree(avis.id, index, pieceId).then((ok) => setCorrectionRefusee(!ok));
         }}
         onOuvrirPiece={(id) => actions.openItem(id, false)}
+        onAjouterPiece={actions.ajouterPieceNonReconnue}
         etatJournal={correctionRefusee ? "echec" : undefined}
         messageEchec="Ta correction n'a pas pu être gardée. Réessaie dans un instant."
       />

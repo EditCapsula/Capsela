@@ -338,6 +338,7 @@ export default function AvisStylisteScreen() {
           dressing={state.items}
           onCorriger={actions.corrigerReconnaissanceAvis}
           onOuvrirPiece={(id) => actions.openItem(id, false)}
+          onAjouterPiece={actions.ajouterPieceNonReconnue}
           etatJournal={avisStyliste.reconnaissanceJournal}
           onReessayerJournal={actions.reessayerReconnaissanceJournal}
         />

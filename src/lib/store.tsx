@@ -298,6 +298,14 @@ export interface Actions {
   openAddBag: () => void;
   /** Ouvre l'ajout pré-rempli sur une catégorie donnée, en mémorisant l'écran d'origine pour y revenir (recette 24/08/2026, tuile "Ajouter un/une..." de Créer un look) — jamais utilisé pour openAdd/startReplace/startEditItem, qui gardent leur repli habituel. */
   openAddForCategory: (cat: CategoryKey) => void;
+  /**
+   * « Ajouter cette pièce à mon dressing » depuis un vêtement NON RECONNU
+   * d'un avis de styliste (26/09/2026) : le formulaire d'ajout s'ouvre sur sa
+   * catégorie, le nom repris de ce que la styliste a vu (« Sandales noir »),
+   * modifiable. L'enregistrement ramène à l'avis, où la pièce peut être
+   * associée.
+   */
+  ajouterPieceNonReconnue: (cat: CategoryKey, nom: string) => void;
   addBack: () => void;
   setAuthName: (v: string) => void;
   onbBack: () => void;
@@ -1265,12 +1273,26 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     openAddBag: () => ouvrirAjout((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
     openAddForCategory: (cat) =>
       ouvrirAjout((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),
+    ajouterPieceNonReconnue: (cat, nom) =>
+      ouvrirAjout((s) => ({
+        ...s,
+        addCat: cat,
+        addCatTouched: true,
+        // Touché : la suggestion automatique de nom ne l'écrase pas.
+        addName: nom,
+        addNameTouched: nom.length > 0,
+        addReturn: s.screen,
+        screen: "add",
+      })),
     addBack: () =>
       setState((s) => ({
         ...s,
         replacingId: null,
         editingId: null,
         addReturn: null,
+        // Un nom prérempli depuis un avis ne survit pas à l'abandon : il
+        // réapparaîtrait au prochain ajout, sans rapport avec lui.
+        ...(s.addReturn === "avisStyliste" || s.addReturn === "avisEnregistre" ? { addName: "", addNameTouched: false } : {}),
         screen: s.addReturn || (s.editingId != null ? "piece" : "wardrobe"),
       })),
     setAuthName: (v) => setState((s) => ({ ...s, authName: v })),
