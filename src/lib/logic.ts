@@ -2510,6 +2510,24 @@ export function nounInfoOf(it: Item): NounInfo {
 }
 
 /**
+ * « porté », « portée », « portés », « portées » — le participe accordé à la
+ * pièce, genre ET nombre (26/09/2026, signalé : « Jamais portée » pour des
+ * bottines). Une paire de chaussures porte son type dans shoeType plutôt que
+ * dans subtype : il est lu en repli, sans quoi des mocassins seraient
+ * accordés au féminin de « chaussures ».
+ */
+export function participePorte(it: Item): string {
+  const info = it.cat === "chaussures" && !it.subtype && it.shoeType ? nounInfoOf({ ...it, subtype: it.shoeType }) : nounInfoOf(it);
+  return "porté" + (info.gender === "f" ? "e" : "") + (info.plural ? "s" : "");
+}
+
+/** Le même, avec la majuscule d'un début de libellé : « Portées 3 fois ». */
+export const participePorteMaj = (it: Item) => {
+  const p = participePorte(it);
+  return p.charAt(0).toUpperCase() + p.slice(1);
+};
+
+/**
  * Accord des rares couleurs qui sont de vrais adjectifs variables en
  * français (blanc/noir/gris, doré/argenté/cuivré). Toutes les autres
  * couleurs de la palette Capsela sont des noms employés comme couleur

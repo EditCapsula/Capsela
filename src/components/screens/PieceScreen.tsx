@@ -5,7 +5,7 @@ import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { bestStyleFor } from "@/lib/capsule";
 import { isCoupeApplicable, isSizeApplicable, suggestName } from "@/lib/attributes";
 import { daysSinceWorn, inactivityInfo } from "@/lib/selectors";
-import { nounInfoOf } from "@/lib/logic";
+import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import BottomSheet from "@/components/BottomSheet";
@@ -167,14 +167,11 @@ export default function PieceScreen() {
   // second moteur d'accord. wornAgo() est toujours au masculin par défaut
   // ("Porté hier") ; seul son participe de tête est ré-accordé, le reste de
   // la phrase ne varie jamais avec le genre.
-  const feminine = nounInfoOf(active).gender === "f";
+  // Nombre aussi depuis le 26/09/2026 (participePorte) : « Jamais portées »
+  // pour des bottines, « Portés hier » pour des mocassins.
   const wornStatusLabel = pNever
-    ? feminine
-      ? "Jamais portée"
-      : "Jamais porté"
-    : feminine
-      ? wornAgo(daysWorn ?? active.worn).replace(/^Porté/, "Portée")
-      : wornAgo(daysWorn ?? active.worn);
+    ? "Jamais " + participePorte(active)
+    : wornAgo(daysWorn ?? active.worn).replace(/^Porté/, participePorteMaj(active));
 
   // Type unifié (chaussure/sac/bijou/accessoire/sous-type générique) — même
   // hiérarchie que typeOptionsFor/typeValue côté AddScreen, en lecture seule ici.

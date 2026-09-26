@@ -7,7 +7,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { useAuth } from "@/lib/auth";
 import { DAYS_FR, MONTHS_FR, occasionShortLabel } from "@/lib/data";
-import { nounInfoOf } from "@/lib/logic";
+import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import {
   capsuleJournal,
@@ -173,9 +173,9 @@ function Vignette({ item, className = "", pad = 6 }: { item: Item; className?: s
   );
 }
 
-/** « Jamais portée » / « Jamais porté », accordé au genre du vêtement (même détection que la fiche pièce). */
+/** « Jamais porté », « portée », « portés », « portées » : accordé au genre et au nombre de la pièce (participePorte). */
 function jamaisPorte(item: Item): string {
-  return nounInfoOf(item).gender === "f" ? "Jamais portée" : "Jamais porté";
+  return "Jamais " + participePorte(item);
 }
 
 /**
@@ -383,15 +383,19 @@ export default function HistoryScreen() {
       setAvis({ ton: "erreur", texte: "Ton choix n'a pas pu être enregistré. Réessaie dans un instant." });
       return;
     }
-    // Accordé au genre du vêtement : « Le jean droit est mis de côté ».
-    const f = nounInfoOf(item).gender === "f";
-    const e = f ? "e" : "";
+    // Accordé au genre ET au nombre du vêtement (participePorte) : « Le jean
+    // droit est mis de côté », « Les bottines sont mises de côté ».
+    const accord = participePorte(item).slice("porté".length);
+    const f = accord.startsWith("e");
+    const pluriel = accord.endsWith("s");
+    const pronom = pluriel ? (f ? "Elles" : "Ils") : f ? "Elle" : "Il";
+    const mis = "mis" + (f ? "e" : "") + (f && pluriel ? "s" : "");
     const texte =
       choix === "gardee"
-        ? `${item.name} reste dans ton dressing. ${f ? "Elle" : "Il"} ne te sera plus proposé${e} ici.`
+        ? `${item.name} ${pluriel ? "restent" : "reste"} dans ton dressing. ${pronom} ne te ${pluriel ? "seront" : "sera"} plus proposé${accord} ici.`
         : choix === "de_cote"
-          ? `${item.name} est mis${e} de côté pour vendre. ${f ? "Elle" : "Il"} reste dans ton dressing tant que tu ne ${f ? "la" : "le"} retires pas.`
-          : `${item.name} n'est plus mis${e} de côté.`;
+          ? `${item.name} ${pluriel ? "sont" : "est"} ${mis} de côté pour vendre. ${pronom} ${pluriel ? "restent" : "reste"} dans ton dressing tant que tu ne ${pluriel ? "les" : f ? "la" : "le"} retires pas.`
+          : `${item.name} ${pluriel ? "ne sont" : "n'est"} plus ${mis} de côté.`;
     setAvis({ ton: "ok", texte, annuler: choix ? { id: item.id, choix: precedent } : undefined });
   };
 
@@ -789,7 +793,7 @@ export default function HistoryScreen() {
               décale ni la carte ni le nombre de ports. */}
           <ol className="mt-3 grid grid-cols-3 gap-[10px]">
             {fetiches.map(({ item, count }, idx) => {
-              const ports = `${nounInfoOf(item).gender === "f" ? "Portée" : "Porté"} ${count} fois`;
+              const ports = `${participePorteMaj(item)} ${count} fois`;
               return (
                 <li key={item.id} className="min-w-0">
                   <button
