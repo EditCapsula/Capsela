@@ -681,11 +681,9 @@ export default function HistoryScreen() {
               <div className="mt-3 bg-warm-bg border border-warm-border rounded-[22px] px-5 pt-[16px] pb-[18px] overflow-hidden">
                 <div className="flex gap-[14px]">
                   <div className="flex-1 min-w-0">
-                    {/* Le surtitre, puis le nom de l'occasion en pastille : sur une
-                        seule ligne chacun (réunis, ils passaient à la ligne dans
-                        la colonne de texte, à côté du visuel). */}
-                    <div className="t-label text-muted">Occasion principale</div>
-                    <span className="inline-block mt-[6px] t-pastille text-terracotta bg-card rounded-full px-[9px] py-[4px] whitespace-nowrap">
+                    {/* Le nom de l'occasion en pastille, seul : plus de surtitre
+                        « Occasion principale » (retiré le 26/09/2026, demandé). */}
+                    <span className="inline-block t-pastille text-terracotta bg-card rounded-full px-[9px] py-[4px] whitespace-nowrap">
                       {o.libelle}
                     </span>
                     <div className="t-titre-section text-ink mt-[10px]" style={{ textWrap: "balance" }}>
