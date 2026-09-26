@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
+import { emailPlausible } from "@/lib/motDePasse";
 
 const INPUT_CLS =
   "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
@@ -17,6 +18,8 @@ export default function LoginScreen() {
   const [pwVisible, setPwVisible] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [forgotBusy, setForgotBusy] = useState(false);
+  const [forgotErreur, setForgotErreur] = useState<string | null>(null);
 
   const submit = async () => {
     if (busy) return;
@@ -39,30 +42,47 @@ export default function LoginScreen() {
     setBusy(false);
   };
 
+  /**
+   * MOT DE PASSE OUBLIÉ (recette du 26/09/2026). Jusqu'ici le bouton ne
+   * faisait qu'afficher « Lien envoyé » ; il appelle désormais
+   * `resetPasswordForEmail` (Supabase Auth). La confirmation ne dit jamais si
+   * l'adresse a un compte : même phrase dans les deux cas.
+   */
+  const envoyerLien = async () => {
+    if (forgotBusy) return;
+    if (!emailPlausible(email)) return setForgotErreur("Cette adresse e-mail ne semble pas complète.");
+    setForgotErreur(null);
+    setForgotBusy(true);
+    const issue = await auth.demanderLienReinitialisation(email);
+    setForgotBusy(false);
+    if (issue === "envoye") setForgotSent(true);
+    else if (issue === "demo") setForgotErreur("Mode démo : aucun e-mail ne peut être envoyé.");
+    else if (issue === "trop_de_tentatives") setForgotErreur("Trop de demandes — réessaie dans quelques minutes.");
+    else setForgotErreur("Connexion impossible. Vérifie ton réseau et réessaie.");
+  };
+  const fermerOubli = () => {
+    setForgotOpen(false);
+    setForgotSent(false);
+    setForgotErreur(null);
+  };
+
   if (forgotOpen) {
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
-        <BoutonRetour onClick={() => {
-            setForgotOpen(false);
-            setForgotSent(false);
-          }} label="Revenir à la connexion" />
+        <BoutonRetour onClick={fermerOubli} label="Revenir à la connexion" />
 
         {forgotSent ? (
           <div className="mt-[30px] flex flex-col items-center text-center px-[10px] py-5">
-            <span className="w-[52px] h-[52px] rounded-full bg-[#F0E5D6] text-terracotta flex items-center justify-center text-[22px] mb-4">
+            <span className="w-[52px] h-[52px] rounded-full bg-warm-bg text-terracotta flex items-center justify-center text-[22px] mb-4">
               ✉
             </span>
-            <div className="t-titre-carte text-ink">Lien envoyé</div>
-            <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[260px]">
-              Si un compte existe pour {email.trim() || "cette adresse"}, tu recevras un lien pour réinitialiser ton
-              mot de passe.
+            <div className="t-titre-carte text-ink">Vérifie ta boîte mail</div>
+            <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[280px]">
+              Si un compte correspond à cette adresse, tu recevras un e-mail pour réinitialiser ton mot de passe.
             </div>
             <button
-              onClick={() => {
-                setForgotOpen(false);
-                setForgotSent(false);
-              }}
-              className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
+              onClick={fermerOubli}
+              className="mt-[22px] w-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
             >
               Retour à la connexion
             </button>
@@ -70,25 +90,35 @@ export default function LoginScreen() {
         ) : (
           <>
             <div className="mt-[30px]">
-              <div className="t-titre-ecran text-ink">Mot de passe oublié</div>
+              <div className="t-titre-ecran text-ink">
+                Réinitialiser mon <span className="italic text-terracotta">mot de passe</span>
+              </div>
               <div className="t-chapeau text-muted mt-[10px]">
-                Indique ton adresse e-mail, on t&apos;enverra un lien pour le réinitialiser.
+                Entre ton adresse e-mail et nous t&apos;enverrons un lien pour créer un nouveau mot de passe.
               </div>
             </div>
-            <div className="mt-[26px]">
+            <label className="mt-[26px] flex flex-col gap-[6px]">
+              <span className="t-label text-muted">E-mail</span>
               <input
                 type="email"
+                autoComplete="email"
                 className={INPUT_CLS}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Adresse e-mail"
               />
-            </div>
+            </label>
+            {forgotErreur && (
+              <div role="alert" className="mt-3 text-[12px] text-rust leading-[1.5]">
+                {forgotErreur}
+              </div>
+            )}
             <button
-              onClick={() => setForgotSent(true)}
-              className="mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream bg-terracotta active:bg-terracotta-hover"
+              onClick={envoyerLien}
+              disabled={forgotBusy}
+              className="mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream bg-terracotta-deep active:bg-terracotta-hover disabled:opacity-60"
             >
-              Envoyer le lien
+              {forgotBusy ? "Un instant…" : "Recevoir le lien"}
             </button>
           </>
         )}

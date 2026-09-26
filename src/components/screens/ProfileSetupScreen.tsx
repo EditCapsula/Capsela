@@ -185,7 +185,10 @@ export default function ProfileSetupScreen() {
   const STEPS = ALL_STEPS.filter(
     (s) =>
       (s.key !== "morpho" || draft.gender === "femme") &&
-      (s.key !== "prenom" || !profile.displayName.trim()) &&
+      // L'étape prénom n'est posée qu'à qui n'en a pas — sauf quand on vient
+      // explicitement la modifier (Mon compte → Prénom, 26/09/2026) : sans
+      // cette exception, l'édition ouvrait l'étape « genre ».
+      (s.key !== "prenom" || !profile.displayName.trim() || (state.profileSetupFromEdit && state.profileSetupStep === "prenom")) &&
       (s.key !== "colorimetrie_resultat" || colorimetrieUtilisable(draft.colorimetrie))
   );
   const [step, setStep] = useState(() =>
@@ -235,8 +238,8 @@ export default function ProfileSetupScreen() {
   // ouvrir « Style » depuis le profil puis toucher le chevron remontait les
   // étapes précédentes de l'onboarding (Tailles, Palette…) au lieu de rendre
   // la main. On ne recule plus qu'à l'intérieur du groupe édité (la palette
-  // et ses étapes), puis on revient d'où l'on venait : Ton profil ou
-  // Personnaliser mon profil.
+  // et ses étapes), puis on revient d'où l'on venait : Mon profil ou
+  // Mon compte.
   const entryIndex = Math.max(0, STEPS.findIndex((s) => s.key === entryStepKey));
   const back = () => {
     if (state.profileSetupFromEdit) {

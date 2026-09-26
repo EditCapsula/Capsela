@@ -53,8 +53,14 @@ export type MomentJournee = "Matin" | "Après-midi" | "Soirée" | "Toute la jour
  * dérive la couverture des créneaux effectivement rendus, qui peuvent être
  * moins nombreux (fin de journée, réponse partielle). Cette constante ne sert
  * qu'à ce qu'on peut dire AVANT l'appel ; elle ne le remplace jamais.
+ *
+ * 4 ET NON 5 (recette du 26/09/2026). Les 40 créneaux couvrent 120 h À
+ * PARTIR DE MAINTENANT, pas cinq journées pleines à partir de demain : J+5
+ * n'est jamais couvert en entier (demandé à 15 h, sa soirée n'a aucune
+ * donnée ; demandé à 1 h, presque rien). J+4 l'est toujours. Annoncer J+5
+ * dans « Météo prévue » promettait une prévision qui manquait souvent.
  */
-export const HORIZON_PREVISION_JOURS = 5;
+export const HORIZON_PREVISION_JOURS = 4;
 
 const FENETRES: Record<MomentJournee, [number, number]> = {
   Matin: [6, 12],

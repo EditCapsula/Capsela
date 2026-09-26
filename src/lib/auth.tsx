@@ -6,6 +6,7 @@ import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { DEFAULT_PREFS, EMPTY_PROFILE, type Profile } from "./profile";
 import { consumeSignupIntent, forgetSignupIntent } from "./signupIntent";
+import { lireRetourLien, messageErreurNouveauMotDePasse, PARAM_RECUPERATION } from "./motDePasse";
 
 const DEMO_KEY = "capsela.demo.auth";
 
@@ -50,6 +51,19 @@ export interface AuthContextValue {
   deleteAccount: () => Promise<boolean>;
   saveProfile: (p: Profile) => Promise<void>;
   clearError: () => void;
+  /**
+   * RÉINITIALISATION DU MOT DE PASSE (recette du 26/09/2026, cf. motDePasse.ts).
+   * `recuperation` : "active" quand l'app s'ouvre depuis le lien de l'e-mail
+   * (session de récupération ouverte par Supabase), "lien_invalide" quand le
+   * lien a expiré ou a déjà servi.
+   */
+  recuperation: "aucune" | "active" | "lien_invalide";
+  /** Envoie le lien de réinitialisation. Ne dit JAMAIS si l'adresse a un compte : "envoye" dans les deux cas. */
+  demanderLienReinitialisation: (email: string) => Promise<"envoye" | "demo" | "trop_de_tentatives" | "erreur_reseau">;
+  /** Enregistre le nouveau mot de passe dans la session de récupération ; null si réussi, sinon le message à afficher. */
+  enregistrerNouveauMotDePasse: (motDePasse: string) => Promise<string | null>;
+  /** Referme le parcours de récupération (URL nettoyée, session de récupération fermée si `deconnecter`). */
+  terminerRecuperation: (deconnecter: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -117,6 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const [error, setError] = useState<string | null>(null);
   const [justSignedUp, setJustSignedUp] = useState(false);
+  const [recuperation, setRecuperation] = useState<AuthContextValue["recuperation"]>("aucune");
 
   const loadProfile = useCallback(async (authUser: User) => {
     const { data } = await getSupabase().from("profiles").select("*").eq("id", authUser.id).maybeSingle();
@@ -144,6 +159,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Retour du lien de l'e-mail : lu dans l'URL AVANT tout, pour ne pas
+    // dépendre du seul événement PASSWORD_RECOVERY, qui peut partir avant
+    // que l'abonnement ci-dessous soit posé.
+    const retour = lireRetourLien(window.location.href);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (retour === "recuperation") setRecuperation("active");
+    else if (retour === "lien_invalide") setRecuperation("lien_invalide");
+
     if (!isSupabaseConfigured) {
       // Lecture localStorage après montage uniquement : le rendu serveur n'y a pas accès,
       // et un état initial différent côté client provoquerait un mismatch d'hydratation.
@@ -151,7 +174,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const raw = localStorage.getItem(DEMO_KEY);
         if (raw) {
           const demo = JSON.parse(raw) as DemoAuth;
-          // eslint-disable-next-line react-hooks/set-state-in-effect
           setDemoUser(demo);
           setProfile(demo.profile ?? EMPTY_PROFILE);
         }
@@ -171,7 +193,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "PASSWORD_RECOVERY") setRecuperation("active");
       const u = session?.user ?? null;
       setUser(u);
       if (u) {
@@ -321,6 +344,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (err) setError("Impossible d'enregistrer le profil : " + err.message);
   };
 
+  const demanderLienReinitialisation: AuthContextValue["demanderLienReinitialisation"] = async (adresse) => {
+    // Mode démo : aucun service d'e-mail. Le dire plutôt que prétendre avoir envoyé.
+    if (!isSupabaseConfigured) return "demo";
+    try {
+      const { error: err } = await getSupabase().auth.resetPasswordForEmail(adresse.trim(), {
+        redirectTo: `${window.location.origin}/?${PARAM_RECUPERATION}=1`,
+      });
+      if (!err) return "envoye";
+      const m = err.message.toLowerCase();
+      if (m.includes("rate limit") || err.status === 429) return "trop_de_tentatives";
+      if (m.includes("fetch") || m.includes("network")) return "erreur_reseau";
+      // Toute autre réponse (adresse inconnue comprise) : même issue qu'un
+      // envoi réussi — ne jamais révéler si un compte existe.
+      return "envoye";
+    } catch {
+      return "erreur_reseau";
+    }
+  };
+
+  const enregistrerNouveauMotDePasse: AuthContextValue["enregistrerNouveauMotDePasse"] = async (motDePasse) => {
+    if (!isSupabaseConfigured) return "Mode démo : aucun mot de passe n'est enregistré.";
+    try {
+      const { error: err } = await getSupabase().auth.updateUser({ password: motDePasse });
+      return err ? messageErreurNouveauMotDePasse(err.message) : null;
+    } catch (e) {
+      return messageErreurNouveauMotDePasse(e instanceof Error ? e.message : "network");
+    }
+  };
+
+  const terminerRecuperation: AuthContextValue["terminerRecuperation"] = async (deconnecter) => {
+    setRecuperation("aucune");
+    // L'URL garde le marqueur et le code : les retirer évite qu'un
+    // rechargement rouvre le parcours.
+    window.history.replaceState(null, "", window.location.pathname);
+    if (deconnecter && isSupabaseConfigured) await getSupabase().auth.signOut();
+  };
+
   const value: AuthContextValue = {
     ready,
     signedIn: Boolean(user || demoUser),
@@ -337,6 +397,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     deleteAccount,
     saveProfile,
     clearError: () => setError(null),
+    recuperation,
+    demanderLienReinitialisation,
+    enregistrerNouveauMotDePasse,
+    terminerRecuperation,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

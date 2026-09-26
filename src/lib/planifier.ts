@@ -153,3 +153,14 @@ export function repartirParEcheance(
   passees.sort((a, b) => b.jour.localeCompare(a.jour));
   return { aVenir, passees };
 }
+
+/**
+ * La ville d'un lieu enregistré, telle que l'utilisatrice l'a donnée (recette
+ * du 26/09/2026 : ne jamais afficher une précision qu'elle n'a pas fournie).
+ * Une suggestion choisie est stockée en « Paris, Île-de-France, France » :
+ * la ville est le premier segment. Une saisie libre sans virgule reste telle
+ * quelle.
+ */
+export function villeDuLieu(lieu: string): string {
+  return lieu.split(",")[0].trim();
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { repartirParEcheance, type TenuePlanifiee } from "../planifier";
+import { repartirParEcheance, villeDuLieu, type TenuePlanifiee } from "../planifier";
 
 const t = (jour: string, moment: TenuePlanifiee["moment"] = "Matin"): TenuePlanifiee => ({
   id: jour + moment,
@@ -51,5 +51,17 @@ describe("tenues planifiées — répartition entre les deux onglets", () => {
     const r = repartirParEcheance([], "2026-09-24");
     expect(r.aVenir).toEqual([]);
     expect(r.passees).toEqual([]);
+  });
+});
+
+describe("villeDuLieu — la ville donnée, sans précision ajoutée", () => {
+  it("garde la ville d'une suggestion choisie", () => {
+    expect(villeDuLieu("Paris, Île-de-France, France")).toBe("Paris");
+  });
+  it("rend une saisie libre telle quelle", () => {
+    expect(villeDuLieu("  Lyon ")).toBe("Lyon");
+  });
+  it("lieu vide : chaîne vide", () => {
+    expect(villeDuLieu("")).toBe("");
   });
 });

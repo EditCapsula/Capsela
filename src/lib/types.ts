@@ -1,4 +1,5 @@
 import type { StyleId } from "./profile";
+import type { TenuePlanifiee } from "./planifier";
 
 export type CategoryKey =
   | "haut"
@@ -281,7 +282,7 @@ export interface AppState {
   /** Clé de l'étape (ex. "taille"), pas un index — le nombre d'étapes n'est plus fixe (Tâche 4, arbitrages 20/08/2026). */
   profileSetupStep: string;
   profileSetupFromEdit: boolean;
-  /** Écran vers lequel revenir en terminant une édition ciblée (ex. "profile" depuis Ton profil, "profileEdit" depuis Modifier mon profil). */
+  /** Écran vers lequel revenir en terminant une édition ciblée (ex. "profile" depuis Mon profil, "account" depuis Mon compte). */
   profileSetupReturn: Screen;
   onbStep: number;
   authName: string;
@@ -381,6 +382,28 @@ export interface AppState {
    * moment-là. L'écran retrouve la ligne qui correspond à ses pièces.
    */
   outfitFeedbackDuJour: { jour: string; pieceIds: number[]; verdict: "adore" | "pas_aujourdhui" }[];
+  /**
+   * Clés principales (clePrincipale, logic.ts) des tenues déjà proposées puis
+   * quittées par « Autre tenue » ou « Pas pour moi », pour la session : la
+   * suivante n'y retombe pas (A → B → A). En mémoire seulement.
+   */
+  tenuesVues: string[];
+  /**
+   * « Demander l'avis d'un proche » depuis une tenue PLANIFIÉE (recette du
+   * 26/09/2026) : ce que l'écran de partage décrit à la place de la tenue du
+   * jour, et le plan à rouvrir au retour. null : la tenue du jour, comme avant.
+   */
+  avisSource: {
+    pieceIds: number[];
+    occasion: OccasionKey;
+    temp: number | null;
+    label: string | null;
+    /** Première ligne du message, ex. « Ma tenue pour samedi 4 octobre ». */
+    intitule: string;
+    plan: TenuePlanifiee;
+  } | null;
+  /** Plan à rouvrir en revenant sur Planifier après le partage ; consommé à l'ouverture. */
+  planARouvrir: TenuePlanifiee | null;
   savedLooks: SavedLook[];
   /** Pièces choisies dans l'écran de création de look, avant sauvegarde. */
   lookDraftIds: number[];
@@ -410,7 +433,6 @@ export type Screen =
   | "neverworn"
   | "profileSetup"
   | "profile"
-  | "profileEdit"
   // Architecture du profil (25/09/2026) : quatre espaces distincts — Ton
   // profil (consulter), Personnaliser (profileEdit, modifier), Préférences
   // Capsela (régler l'application), Mon compte (gérer compte et données).

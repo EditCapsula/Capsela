@@ -589,8 +589,10 @@ export function buildOpinionMessageParts(args: {
   occasion: OccasionKey;
   temp: number | null | undefined;
   conditionMeteo: string | null | undefined;
+  /** Première ligne ; « Ma tenue du jour » par défaut, « Ma tenue pour samedi 4 octobre » pour une tenue planifiée. */
+  intitule?: string;
 }): OpinionMessageParts {
-  const { pieces, occasion, temp, conditionMeteo } = args;
+  const { pieces, occasion, temp, conditionMeteo, intitule = "Ma tenue du jour" } = args;
 
   const contexte: string[] = [];
   if (occasion !== "all" && OCC_LABELS[occasion]) contexte.push(OCC_LABELS[occasion]);
@@ -599,7 +601,7 @@ export function buildOpinionMessageParts(args: {
   }
 
   return {
-    titre: contexte.length ? `Ma tenue du jour — ${contexte.join(" · ")}` : "Ma tenue du jour",
+    titre: contexte.length ? `${intitule} — ${contexte.join(" · ")}` : intitule,
     pieces: pieces.map((p) => p.name),
     question: "Qu'est-ce que tu en penses ?",
   };

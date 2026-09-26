@@ -17,7 +17,7 @@ import { jourLocal } from "@/lib/outfitFeedback";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { saisonCalendairePour, weatherForDay } from "@/lib/capsule";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
-import { deleteTenuePlanifiee, fetchTenuesPlanifiees, repartirParEcheance, upsertTenuePlanifiee, type TenuePlanifiee } from "@/lib/planifier";
+import { deleteTenuePlanifiee, fetchTenuesPlanifiees, repartirParEcheance, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { paletteHexes } from "@/lib/profile";
 import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
@@ -101,9 +101,6 @@ const G_CINTRE = (
     <path d="M12 6a2 2 0 1 1 2 2v1.4" {...T} />
     <path d="M14 9.4 3.9 16.2a1 1 0 0 0 .6 1.8h15a1 1 0 0 0 .6-1.8L14 9.4z" {...T} />
   </>
-);
-const G_NUAGE = (
-  <path d="M7.6 18.2h9.2a3.7 3.7 0 0 0 .4-7.4 5.6 5.6 0 0 0-10.8 1 3.2 3.2 0 0 0 1.2 6.4z" {...T} />
 );
 const G_EPINGLE = (
   <>
@@ -300,7 +297,13 @@ function CartePlanifier({
   note,
   cta,
   onClick,
+  visuel,
+  cadrage = "center 38%",
 }: {
+  /** Bandeau éditorial en tête de carte — absent tant que le visuel n'existe pas. */
+  visuel?: string;
+  /** `object-position` du bandeau : chaque visuel a son sujet à une hauteur différente. */
+  cadrage?: string;
   glyphe: React.ReactNode;
   titre: [string, string];
   accroche: string;
@@ -312,8 +315,23 @@ function CartePlanifier({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-card border border-border rounded-[24px] px-[18px] pt-[16px] pb-[14px] cursor-pointer"
+      className="w-full text-left bg-card border border-border rounded-[24px] px-[18px] pt-[16px] pb-[14px] cursor-pointer overflow-hidden"
     >
+      {visuel && (
+        // Bandeau à fond perdu : les marges négatives annulent le padding de la
+        // carte, `overflow-hidden` arrondit ses coins hauts. 3:2, cadré sur le
+        // sujet (la tenue, la valise ouverte).
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={visuel}
+          alt=""
+          width={900}
+          height={600}
+          decoding="async"
+          className="block -mx-[18px] -mt-[16px] mb-[14px] max-w-none object-cover"
+          style={{ width: "calc(100% + 36px)", aspectRatio: "3/2", objectPosition: cadrage }}
+        />
+      )}
       <span className="flex items-center justify-between gap-3">
         <span className="w-10 h-10 flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">
           <Glyphe>{glyphe}</Glyphe>
@@ -342,11 +360,19 @@ export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
   const { profile, userId } = useAuth();
 
-  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail">("intro");
+  // Retour de « Demander l'avis d'un proche » : le plan partagé se rouvre,
+  // plutôt que de laisser sur le hub (l'état de cet écran est local).
+  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail">(() =>
+    state.planARouvrir ? "detail" : "intro"
+  );
   /** Tenue planifiée ouverte en détail, ou dont le menu « … » est déplié. */
-  const [planOuvert, setPlanOuvert] = useState<TenuePlanifiee | null>(null);
+  const [planOuvert, setPlanOuvert] = useState<TenuePlanifiee | null>(() => state.planARouvrir);
   /** D'où le détail a été ouvert — le hub ou la liste complète — pour que le retour y ramène. */
-  const [retourDetail, setRetourDetail] = useState<"intro" | "liste">("liste");
+  const [retourDetail, setRetourDetail] = useState<"intro" | "liste">(() => (state.planARouvrir ? "intro" : "liste"));
+  useEffect(() => {
+    if (state.planARouvrir) actions.oublierPlanARouvrir();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [menuPlan, setMenuPlan] = useState<TenuePlanifiee | null>(null);
   const [aSupprimer, setASupprimer] = useState<TenuePlanifiee | null>(null);
   const [etape, setEtape] = useState(1);
@@ -489,11 +515,25 @@ export default function PlanifierScreen() {
    * Ce que le moteur reçoit. La saison vient de la DATE PLANIFIÉE et non du
    * jour courant : une tenue préparée pour le 1er septembre depuis le 29 août
    * relève de l'automne.
+   *
+   * Sans prévision pour le créneau (au-delà de l'horizon, ou lieu sans
+   * réponse), la température reste celle d'aujourd'hui — la seule mesurée —
+   * mais la saison reste celle de la date (recette du 26/09/2026) : jusque-là
+   * le moteur recevait la saison du jour, et « La date fixe la saison de la
+   * tenue » était faux au-delà de l'horizon.
    */
   const meteoUtilisee =
     meteoMoment && dateChoisie
       ? weatherForDay(meteoMoment.temp, meteoMoment.label, saisonCalendairePour(dateChoisie))
-      : weather;
+      : dateChoisie
+        ? weatherForDay(weather.temp, weather.label, saisonCalendairePour(dateChoisie))
+        : weather;
+  /**
+   * La ville telle que l'utilisatrice l'a donnée — le nom de la suggestion
+   * choisie, ou le premier segment de sa saisie —, jamais une précision
+   * qu'elle n'a pas fournie (recette du 26/09/2026, cf. villeDuLieu).
+   */
+  const villeAffichee = ville?.name ?? villeDuLieu(lieu);
 
   const tenue = useMemo(() => {
     if (!occ) return null;
@@ -574,28 +614,22 @@ export default function PlanifierScreen() {
    */
   const phraseMeteo = (() => {
     const aujourdhui = `${weather.temp}°, ${weather.label.toLowerCase()}`;
-    if (previsionEtat !== "faite") {
-      // Avant l'appel il n'y a rien à annoncer sur la météo — seulement à dire
-      // ce qu'il manque pour l'obtenir. Une phrase produit, pas un disclaimer.
-      // Au-delà de l'horizon, promettre « la météo prévue sur place »
-      // serait faux avant même l'appel (brief du 25/09, point 3).
-      if (jour != null && jour > HORIZON_PREVISION_JOURS) {
-        return `Pas de prévision pour cette date : la tenue sera composée sur la météo d'aujourd'hui.`;
-      }
-      return `Indique la ville : la tenue tiendra compte de la météo prévue sur place.`;
-    }
+    // Avant l'appel, rien à dire : la phrase n'est plus affichée pendant les
+    // étapes (recette du 26/09/2026 — une question par étape, la météo n'en
+    // est pas une), seulement dans « Pourquoi ce look ? », après l'appel.
+    if (previsionEtat !== "faite") return "";
     if (meteoMoment) {
       const amplitude =
         meteoMoment.tempMin === meteoMoment.tempMax
           ? `${meteoMoment.temp}°`
           : `de ${meteoMoment.tempMin}° à ${meteoMoment.tempMax}°`;
-      return `Prévision à ${prevision?.city || lieu.trim()} pour ce moment : ${amplitude}, ${meteoMoment.label.toLowerCase()}. La tenue en tient compte.`;
+      return `Prévision à ${villeAffichee} pour ce moment : ${amplitude}, ${meteoMoment.label.toLowerCase()}. La tenue en tient compte.`;
     }
     if (prevision && dernierJourConnu && dateChoisie && jourLocal(dateChoisie) > dernierJourConnu) {
       const d = new Date(`${dernierJourConnu}T12:00:00`);
-      return `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue est composée sur la météo d'aujourd'hui — ${aujourdhui}.`;
+      return `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue suit la saison de la date et la météo d'aujourd'hui — ${aujourdhui}.`;
     }
-    return `Pas de prévision disponible pour ce lieu. La tenue est composée sur la météo d'aujourd'hui — ${aujourdhui}.`;
+    return `Pas de prévision disponible pour ce lieu. La tenue suit la saison de la date et la météo d'aujourd'hui — ${aujourdhui}.`;
   })();
 
   /**
@@ -846,19 +880,18 @@ export default function PlanifierScreen() {
         {vue === "intro" && (
           <>
             <Surtitre>Planifier</Surtitre>
-            <TitreEtape a="Anticipe tes moments." b="Capsela s'occupe du look." />
+            <TitreEtape a="Anticipe tes moments." b="Capsela s'occupe du look" />
             <div className="t-chapeau text-muted-3 mt-[10px]" style={{ textWrap: "pretty" }}>
               Des tenues pensées pour tes occasions et tes voyages, selon ton style, ta météo et ton dressing.
             </div>
 
-            {/* LES DEUX CARTES SONT DE MÊME RANG (mise à jour du brief, 25/09) :
-                deux usages Premium d'un même territoire, même structure, même
-                badge, même CTA. Aucune n'a donc de visuel photo : le brief en
-                demande deux de qualité comparable, et seul celui de la tenue
-                existe dans public/editorial — en montrer un sur une seule
-                carte recréerait la hiérarchie que le brief interdit. Chaque
-                carte porte son glyphe. Le jour où le visuel valise arrive, les
-                deux reçoivent leur bandeau ensemble. */}
+            {/* VISUELS (recette du 26/09/2026) : chaque carte reçoit un bandeau
+                éditorial qui dit son usage — une tenue pour « Planifier une
+                tenue », la valise ouverte pour « Préparer ma valise ». Visuels
+                fournis par la propriétaire le même jour : les deux pour un profil
+                femme, la valise pour un profil homme. Pas de visuel inventé pour
+                ce qui n'en a pas encore (tenue homme) : la carte garde alors sa
+                forme d'avant, glyphe seul. */}
             <div className="flex flex-col gap-3 mt-5">
               <CartePlanifier
                 glyphe={G_CINTRE}
@@ -868,6 +901,7 @@ export default function PlanifierScreen() {
                 note={`Météo prévue jusqu'à ${HORIZON_PREVISION_JOURS} jours à l'avance.`}
                 cta="Planifier une tenue"
                 onClick={recommencer}
+                visuel={profile.gender === "femme" ? "/editorial/capsela_planifier_tenue_femme.webp" : undefined}
               />
               {/* Le parcours valise n'existe pas encore : la carte mène à la
                   page Premium, avec le rappel « Ce que tu voulais faire »,
@@ -879,6 +913,14 @@ export default function PlanifierScreen() {
                 points={["Une destination et des dates", "La météo sur place", "Ton programme d'activités", "Le bon bagage", "Une sélection de looks optimisée"]}
                 cta="Préparer ma valise"
                 onClick={() => actions.goPremium("valise")}
+                visuel={
+                  profile.gender === "femme"
+                    ? "/editorial/capsela_planifier_valise_femme.webp"
+                    : profile.gender === "homme"
+                      ? "/editorial/capsela_planifier_valise_homme.webp"
+                      : undefined
+                }
+                cadrage="center 60%"
               />
             </div>
 
@@ -905,7 +947,7 @@ export default function PlanifierScreen() {
                 style={{ border: "1px dashed var(--color-sand-border)" }}
               >
                 <div className="t-titre-carte text-ink">
-                  {onglet === "up" || plans.length === 0 ? "Aucune planification pour le moment." : "Aucune planification passée."}
+                  {onglet === "up" || plans.length === 0 ? "Aucune planification pour le moment" : "Aucune planification passée"}
                 </div>
                 {(onglet === "up" || plans.length === 0) && (
                   <>
@@ -953,7 +995,7 @@ export default function PlanifierScreen() {
                             une ligne. La région et le pays restent au détail. */}
                         <span className="block text-[12px] text-muted mt-[3px] truncate">
                           {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
-                          {t.lieu.trim() ? ` · ${t.lieu.split(",")[0].trim()}` : ` · ${t.moment}`}
+                          {villeDuLieu(t.lieu) ? ` · ${villeDuLieu(t.lieu)}` : ` · ${t.moment}`}
                         </span>
                       </span>
                       <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0 pr-1">›</span>
@@ -1102,10 +1144,9 @@ export default function PlanifierScreen() {
                 <div className="scrollarea flex gap-[7px] overflow-x-auto mt-4 -mx-6 px-6 items-end">
                   {([
                     ["Météo prévue", 1, HORIZON_PREVISION_JOURS],
-                    // « Sans prévision » et non « Saison uniquement » : vérifié,
-                    // au-delà de l'horizon le moteur reçoit la météo
-                    // D'AUJOURD'HUI (meteoUtilisee retombe sur `weather`), pas
-                    // une météo de saison. Le libellé dit ce qui se passe.
+                    // « Sans prévision » : au-delà de l'horizon, pas de météo
+                    // du jour J — le moteur reçoit la saison de la date et la
+                    // température d'aujourd'hui (meteoUtilisee).
                     ["Sans prévision", HORIZON_PREVISION_JOURS + 1, JOURS_PROPOSES],
                   ] as const).map(([titreGroupe, de, a], g) => (
                     <div key={titreGroupe} className="flex-shrink-0 flex gap-[7px]">
@@ -1169,8 +1210,8 @@ export default function PlanifierScreen() {
                 </div>
                 <div className="text-[11px] text-muted leading-[1.45] mt-[9px]" style={{ textWrap: "pretty" }}>
                   {jour != null && jour > HORIZON_PREVISION_JOURS
-                    ? `La prévision météo ne va pas jusque-là : elle couvre ${HORIZON_PREVISION_JOURS} jours. La tenue sera composée sur la météo d'aujourd'hui, pas sur celle du jour J.`
-                    : `La prévision météo couvre les ${HORIZON_PREVISION_JOURS} prochains jours. Au-delà, pas de météo du jour J : la tenue se compose sur celle d'aujourd'hui.`}
+                    ? `Pas de prévision météo si loin : elle couvre ${HORIZON_PREVISION_JOURS} jours. La tenue suivra la saison de cette date, sans la météo du jour J.`
+                    : `La prévision météo couvre les ${HORIZON_PREVISION_JOURS} prochains jours. Au-delà, la tenue suit la saison de la date, sans météo du jour J.`}
                 </div>
                 <div className="mt-5">
                   <Surtitre>À quel moment ?</Surtitre>
@@ -1233,7 +1274,7 @@ export default function PlanifierScreen() {
                 )}
                 {ville && (
                   <div className="text-[11px] text-muted mt-2">
-                    Météo demandée pour {ville.name}, à ses coordonnées exactes.
+                    Ville choisie : {ville.name}
                   </div>
                 )}
                 {/* Le type de lieu ne s'affiche que pour les occasions où il
@@ -1267,14 +1308,12 @@ export default function PlanifierScreen() {
               </>
             )}
 
-            <div className="flex gap-[10px] items-start mt-[18px] bg-warm-bg rounded-[14px] px-[14px] py-3">
-              <span className="flex-shrink-0 mt-[1px]" style={{ color: "var(--color-gold)" }}>
-                <Glyphe taille={17}>{G_NUAGE}</Glyphe>
-              </span>
-              <div className="text-[12px] text-muted-3 leading-[1.45]" style={{ textWrap: "pretty" }}>
-                {previsionEtat === "encours" ? "Prévision en cours de récupération…" : phraseMeteo}
-              </div>
-            </div>
+            {/* L'encart météo commun aux trois étapes est retiré (recette du
+                26/09/2026) : il affichait « Indique la ville… » dès l'étape
+                Occasion et redoublait la légende des dates et le sous-titre du
+                lieu. Chaque étape pose une question ; la météo n'en est pas
+                une. Elle est dite une fois par étape où elle compte (légende
+                des dates, sous-titre du lieu), puis dans « Pourquoi ce look ? ». */}
           </>
         )}
 
@@ -1286,7 +1325,7 @@ export default function PlanifierScreen() {
             <span className="inline-block t-pastille text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
               {occLong}
             </span>
-            <TitreEtape a={occLabel} b={lieu.trim() ? `· ${lieu.trim()}` : ""} />
+            <TitreEtape a={occLabel} b={villeAffichee ? `· ${villeAffichee}` : ""} />
             <div className="text-[12px] text-muted mt-[6px]">
               {dateLongue.charAt(0).toUpperCase() + dateLongue.slice(1)}
               {moment ? ` · ${moment}` : ""}
@@ -1388,7 +1427,7 @@ export default function PlanifierScreen() {
           return (
             <>
               <Surtitre>Tenue planifiée</Surtitre>
-              <TitreEtape a={occasionShortLabel(t.occasion)} b={t.lieu.trim() ? `· ${t.lieu.trim()}` : ""} />
+              <TitreEtape a={occasionShortLabel(t.occasion)} b={villeDuLieu(t.lieu) ? `· ${villeDuLieu(t.lieu)}` : ""} />
               <div className="t-surtitre text-muted mt-[7px]">
                 {DOW_LONG[d.getDay()]} {d.getDate()} {MOIS[d.getMonth()]} · {t.moment}
               </div>
@@ -1422,6 +1461,30 @@ export default function PlanifierScreen() {
                   {t.temp != null ? ` · ${t.temp}°${t.weatherLabel ? ` ${t.weatherLabel.toLowerCase()}` : ""} prévus à la planification` : ""}
                 </div>
               </div>
+
+              {/* AVIS D'UN PROCHE (recette du 26/09/2026) — une sollicitation
+                  externe, distincte de « J'adore » et « Pas pour moi » (avis
+                  personnels). Même écran de partage que la tenue du jour,
+                  qui décrit ici la tenue planifiée : ses pièces, son occasion,
+                  la prévision enregistrée — pas la météo d'aujourd'hui. */}
+              {pieces.length > 0 && (
+                <button
+                  onClick={() =>
+                    actions.openOpinionShare({
+                      pieceIds: t.pieceIds,
+                      occasion: t.occasion,
+                      temp: t.temp,
+                      label: t.weatherLabel,
+                      intitule: `Ma tenue pour ${DOW_LONG[d.getDay()].toLowerCase()} ${d.getDate()} ${MOIS[d.getMonth()]}`,
+                      plan: t,
+                    })
+                  }
+                  className="mt-[14px] w-full flex items-center justify-center gap-[6px] rounded-full border border-terracotta text-terracotta t-bouton cursor-pointer"
+                  style={{ minHeight: 50 }}
+                >
+                  <span aria-hidden="true">✦</span> Demander l&apos;avis d&apos;un proche
+                </button>
+              )}
             </>
           );
         })()}
@@ -1517,7 +1580,7 @@ export default function PlanifierScreen() {
                             {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]} · {t.moment}
                           </div>
                           {t.lieu.trim() && (
-                            <div className="text-[12px] text-muted-3 mt-[3px] truncate">{t.lieu}</div>
+                            <div className="text-[12px] text-muted-3 mt-[3px] truncate">{villeDuLieu(t.lieu)}</div>
                           )}
 
                           {/* LA MÉTÉO N'EST PAS RAPPELÉE AU SERVEUR : elle a

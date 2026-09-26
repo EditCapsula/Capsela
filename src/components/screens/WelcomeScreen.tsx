@@ -19,7 +19,7 @@ export default function WelcomeScreen() {
         <div className="font-serif italic text-[21px] text-cream-dark-soft mt-5 leading-[1.35]">
           La bonne tenue,
           <br />
-          au bon moment.
+          au bon moment
         </div>
         <div className="text-[13px] text-cream-dark-muted mt-4 leading-[1.55] max-w-[280px]">
           Des idées de tenues adaptées à ton style, à la météo et à tes occasions — pensées à partir de

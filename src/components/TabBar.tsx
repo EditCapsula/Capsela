@@ -132,7 +132,7 @@ export default function TabBar() {
       // zIndex:5) — aucun conteneur intermédiaire ne crée de contexte
       // d'empilement propre, donc ces valeurs se comparent directement entre
       // elles, indépendamment de l'ordre dans le DOM. z-20 reste sous les
-      // modales plein écran (z-50, ex. ProfileEditScreen) qui doivent
+      // modales plein écran (z-50, ex. GenderModal de ProfilUI) qui doivent
       // continuer de recouvrir la nav.
       //
       // pt (23/09/2026, pastille de sélection) : 8 et non plus 11. La

@@ -316,7 +316,7 @@ export default function CapsuleScreen() {
   // PieceScreen et ItemOutfitsScreen).
 
   // Style renseigné en profil (recette 25/08/2026) — premier style choisi,
-  // même convention que ProfileScreen/ProfileEditScreen (styleLabel(profile.styles[0], ...)) ;
+  // même convention que ProfileScreen (styleLabel(profile.styles[0], ...)) ;
   // "" si aucun style n'a été renseigné, jamais un style inventé.
   const userStyleLabel = styleLabel(profile.styles[0], profile.gender);
   // Style exploré (recette 24/08/2026) — n'affecte que ce libellé d'affichage,

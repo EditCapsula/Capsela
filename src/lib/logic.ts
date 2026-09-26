@@ -1360,6 +1360,19 @@ const FORMALITY_FALLBACK_CHAIN: Record<number, number[]> = {
 };
 
 /** Une tenue a un socle vestimentaire valide : haut+bas, ou une pièce robe/combinaison — jamais seulement chaussures/accessoires (section 5, "lunettes + mocassins ≠ tenue valide"). */
+/**
+ * La tenue a-t-elle un socle — haut + bas, ou robe / combinaison ? Même règle
+ * que le moteur (hasCoreOutfit), sur des pièces déjà résolues. Exportée pour
+ * que l'affichage ne présente jamais comme « prête » une tenue réduite à un
+ * sac (recette du 26/09/2026).
+ */
+export function tenueAUnSocle(items: Item[]): boolean {
+  return hasCoreOutfit(
+    items.map((i) => i.id),
+    items
+  );
+}
+
 function hasCoreOutfit(ids: number[], pool: Item[], leviers?: LeviersMesure): boolean {
   const items = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
   if (items.some((i) => i.cat === "robe" || i.cat === "combinaison")) return true;
@@ -2662,4 +2675,97 @@ export function describeOutfitVariation(
     ? `${picked.map(pieceBase).join(" et ")} ${agreeColorForGroup(picked[0].color!, picked)}`
     : picked.map(pieceLabel).join(" et ");
   return { title, sentence: `Avec ${piecesText}, ${closer}` };
+}
+
+/*
+ * VARIATION RÉELLE ENTRE DEUX TENUES (recette du 26/09/2026).
+ *
+ * « Autre tenue » rendait parfois la même tenue avec un autre bijou : la seule
+ * garde était une identité stricte des ids, qu'un accessoire suffit à rompre.
+ * Une nouvelle tenue se juge désormais sur ses PIÈCES PRINCIPALES — les
+ * vêtements et les chaussures, la même notion que les idées de tenues
+ * (getOutfitsForItem, `structuralCats`) : sac, bijou et accessoire n'en font
+ * pas partie.
+ *
+ * Pas de règle fixe du type « toujours deux pièces » : la variation est
+ * substantielle si le SOCLE change (haut, maille, bas, jupe, robe,
+ * combinaison — ce qui fait la silhouette), ou si au moins deux pièces
+ * principales changent (chaussures + veste, par exemple). Changer seulement
+ * les chaussures d'une même robe n'est pas une nouvelle tenue.
+ *
+ * Ces fonctions ne composent rien : elles jugent des tenues produites par le
+ * moteur, dont toutes les règles (morphologie et style via la capsule, météo,
+ * occasion, formalité, R-B*) restent celles de generateOutfit.
+ */
+
+/** Catégories des pièces principales d'une tenue. */
+export const CATEGORIES_PRINCIPALES: CategoryKey[] = [...CLOTHING_CATS, "chaussures"];
+/** Le socle : ce qui fait la silhouette. */
+const CATEGORIES_SOCLE: CategoryKey[] = [...TOP_OR_BOTTOM_CATS, ...ONEPIECE_CATS];
+
+/** Ids des pièces principales, triés. Une pièce introuvable dans le pool est ignorée. */
+export function piecesPrincipales(ids: number[], pool: Item[], cats: CategoryKey[] = CATEGORIES_PRINCIPALES): number[] {
+  return [...new Set(ids)]
+    .filter((id) => {
+      const it = pool.find((p) => p.id === id);
+      return !!it && cats.includes(it.cat);
+    })
+    .sort((a, b) => a - b);
+}
+
+/** Clé d'une tenue réduite à ses pièces principales — deux tenues qui ne diffèrent que par un accessoire ont la même. */
+export function clePrincipale(ids: number[], pool: Item[]): string {
+  return piecesPrincipales(ids, pool).join(",");
+}
+
+/**
+ * Nombre de pièces principales changées entre deux tenues. Un remplacement
+ * compte pour UN changement (une pièce retirée, une autre à sa place), d'où
+ * le maximum des deux différences plutôt que leur somme.
+ */
+export function ecartPrincipal(avant: number[], apres: number[], pool: Item[]): number {
+  const a = new Set(piecesPrincipales(avant, pool));
+  const b = new Set(piecesPrincipales(apres, pool));
+  let retirees = 0;
+  let ajoutees = 0;
+  a.forEach((id) => !b.has(id) && retirees++);
+  b.forEach((id) => !a.has(id) && ajoutees++);
+  return Math.max(retirees, ajoutees);
+}
+
+/** La nouvelle tenue est-elle réellement une autre tenue que la précédente ? */
+export function varieSubstantiellement(avant: number[], apres: number[], pool: Item[]): boolean {
+  if (!apres.length) return false;
+  if (!piecesPrincipales(avant, pool).length) return true;
+  const socleAvant = piecesPrincipales(avant, pool, CATEGORIES_SOCLE).join(",");
+  const socleApres = piecesPrincipales(apres, pool, CATEGORIES_SOCLE).join(",");
+  return socleAvant !== socleApres || ecartPrincipal(avant, apres, pool) >= 2;
+}
+
+/**
+ * Tire jusqu'à `essais` tenues et garde la première qui varie
+ * substantiellement de `courante` sans retomber sur une tenue déjà vue ou
+ * refusée (`evitees`, clés principales). À défaut, la plus éloignée — jamais
+ * rien : l'appelant décide s'il tente autre chose (`substantielle` faux).
+ */
+export function choisirVariation<T>(
+  tirer: () => T,
+  idsDe: (t: T) => number[],
+  courante: number[],
+  evitees: Set<string>,
+  pool: Item[],
+  essais = 12
+): { choix: T; substantielle: boolean } {
+  let meilleur: { choix: T; score: number } | null = null;
+  for (let i = 0; i < essais; i++) {
+    const t = tirer();
+    const ids = idsDe(t);
+    const nouvelle = varieSubstantiellement(courante, ids, pool);
+    const dejaVue = evitees.has(clePrincipale(ids, pool));
+    if (nouvelle && !dejaVue) return { choix: t, substantielle: true };
+    // Préférence : nouvelle > déjà vue mais différente > simple écart.
+    const score = (nouvelle ? 1000 : 0) + (dejaVue ? 0 : 100) + ecartPrincipal(courante, ids, pool);
+    if (!meilleur || score > meilleur.score) meilleur = { choix: t, score };
+  }
+  return { choix: (meilleur as { choix: T }).choix, substantielle: false };
 }

@@ -441,7 +441,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     bg: "#E7DCCB",
     glyphColor: "rgba(166,105,80,.28)",
     tagColor: "#8A6B4A",
-    title: "Un dressing pensé pour toi.",
+    title: "Un dressing pensé pour toi",
     body: "Indique ton style et L’Édit Capsela te propose une sélection de pièces qui te ressemble. Tu peux ensuite la personnaliser avec les vêtements que tu possèdes déjà.",
   },
   // Visuel remplacé par un aperçu de capsule (recette 26/08/2026, même
@@ -455,7 +455,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     bg: "#D9C9B2",
     glyphColor: "rgba(166,105,80,.26)",
     tagColor: "#7C6A4F",
-    title: "30 à 40 pièces, choisies avec soin.",
+    title: "30 à 40 pièces, choisies avec soin",
     body: "Capsela construit une capsule cohérente à partir de ton style. Garde ce qui te plaît, remplace certaines pièces et fais-la évoluer avec ton dressing.",
   },
   // Visuel remplacé par un mini-aperçu d'écran (recette 26/08/2026, même
@@ -469,7 +469,7 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     bg: "#C9B29A",
     glyphColor: "rgba(166,105,80,.24)",
     tagColor: "#6E5B43",
-    title: "S’habiller devient simple.",
+    title: "S’habiller devient simple",
     body: "Chaque jour, Capsela compose des tenues adaptées à ton style, à la météo et à tes occasions, avec tes pièces et celles qui peuvent compléter ton dressing.",
   },
 ];

@@ -6,12 +6,13 @@ import BadgePremium from "@/components/BadgePremium";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
-import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
+import { useQuotaTenues } from "@/components/QuotaTenues";
+import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS, WEATHER_ICONS } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
-import { explainRecommendation } from "@/lib/logic";
+import { explainRecommendation, tenueAUnSocle } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
@@ -511,13 +512,24 @@ function ActionSuite({ onClick, label, glyphe }: { onClick: () => void; label: s
 }
 
 export default function HomeScreen() {
-  /**
-   * Avis du jour — local, et volontairement non persisté pour l'instant :
-   * la table `outfit_feedback` est proposée et attend validation. Dès qu'elle
-   * existera, cet état sera alimenté par elle au montage plutôt que remis à
-   * zéro à chaque visite.
-   */
   const { state, geoCity, geoLoading, vestiairePool, weather, etatPremium, actions } = useCapsela();
+
+  /**
+   * « PAS POUR MOI » PROPOSE UNE AUTRE TENUE (recette du 26/09/2026) — et
+   * c'est un avis : le refus est enregistré (outfit_feedback), puis la
+   * tenue suivante l'évite (regenOutfit). Le tirage compte comme une
+   * alternative du quota gratuit, exactement comme « Autre tenue »
+   * (arbitrage de la propriétaire) : même quota, même Gate (QuotaTenues).
+   */
+  const quota = useQuotaTenues();
+  const [cleRefusee, setCleRefusee] = useState<string | null>(null);
+  const cleCourante = clePieces(state.outfit).join(",");
+  const autreProposee = cleRefusee !== null && cleRefusee !== cleCourante;
+  const pasPourMoi = () => {
+    setCleRefusee(cleCourante);
+    actions.setOutfitFeedback("pas_aujourdhui");
+    quota.demander(actions.regenOutfit);
+  };
 
   /**
    * AVIS DE STYLISTE — accès (docs/avis-de-styliste.md sections 4 et 5,
@@ -569,18 +581,23 @@ export default function HomeScreen() {
   // Lecture seule des données déjà disponibles ailleurs dans l'app
   // (météo/localisation, occasion auto-sélectionnée, tenue déjà déterminée) —
   // jamais de génération de tenue ni d'appel image depuis cet écran.
-  const hasOutfit = state.outfit.length > 0;
-  const occasionKey = state.occasion && state.occasion !== "all" ? state.occasion : defaultOccasionToday(profile.prefs);
-  const occasionLabel = OCC_LABELS[occasionKey];
-
   // Pool de résolution stable : wardrobePool ne contient, par catégorie, que
   // les pièces réelles ou les suggestions de la capsule du profil courant,
   // alors que state.outfit peut venir d'un style exploré ou d'une entrée
   // d'historique rejouée.
   const resolvePool = [...state.items, ...vestiairePool];
-  const outfitPieces = hasOutfit
-    ? state.outfit.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it))
-    : [];
+  const piecesResolues = state.outfit
+    .map((id) => resolvePool.find((i) => i.id === id))
+    .filter((it): it is Item => Boolean(it));
+  // « Ta tenue est prête » exige un SOCLE résolu — haut + bas, ou robe
+  // (recette du 26/09/2026) : une tenue réduite à un sac, parce que ses
+  // autres pièces ne se résolvaient plus, s'affichait comme prête. Le store
+  // la recompose (réparation) ; d'ici là, la card n'annonce rien de faux.
+  const hasOutfit = piecesResolues.length > 0 && tenueAUnSocle(piecesResolues);
+  const occasionKey = state.occasion && state.occasion !== "all" ? state.occasion : defaultOccasionToday(profile.prefs);
+  const occasionLabel = OCC_LABELS[occasionKey];
+
+  const outfitPieces = hasOutfit ? piecesResolues : [];
 
   // Même phrase d'explication que la page Tenue (explainRecommendation) — pas
   // de température affichée tant que la géolocalisation n'a pas résolu la
@@ -629,12 +646,9 @@ export default function HomeScreen() {
   })();
 
   /*
-   * `tenueEnregistree` est retiré le 22/09 au soir : « J'adore » n'appelle
-   * plus toggleSaveOutfitLook. Enregistrer une tenue et l'aimer sont deux
-   * gestes différents — le premier la range dans Mes looks, le second donne
-   * un avis. Les confondre aurait rempli Mes looks de tenues qu'on a
-   * seulement trouvées jolies. L'avis ira dans `outfit_feedback` une fois la
-   * migration passée.
+   * « J'ADORE » ENREGISTRE LA TENUE (recette du 26/09/2026, qui revient sur
+   * l'arbitrage du 22/09) : l'avis est gardé dans `outfit_feedback` ET la
+   * tenue rejoint « Mes looks », sans doublon (enregistrerTenueSiAbsente).
    */
   /**
    * AUCUNE TENUE POSSIBLE — et non « pas encore de tenue ».
@@ -968,17 +982,10 @@ export default function HomeScreen() {
               couleur et du poids, jamais d'une cible trop petite pour le
               pouce.
 
-              Ils n'écrivent rien pour l'instant. Le brief interdit de créer
-              une table sans validation ; la table `outfit_feedback` est
-              proposée et attend son exécution. Tant qu'elle n'existe pas,
-              brancher une écriture ferait échouer l'appel en production —
-              donc la réponse est locale, et la persistance viendra quand la
-              migration sera passée. C'est dit ici pour que personne ne prenne
-              ce silence pour un oubli.
-
-              « Pas pour moi » ne régénère PAS la tenue : le brief l'exige, et
-              c'est l'inverse de ce que j'avais branché quelques heures plus
-              tôt. Régénérer ferait de ce bouton une action, pas un avis. */}
+              Les deux avis sont enregistrés (outfit_feedback). Depuis la
+              recette du 26/09/2026, ils ont aussi une conséquence : « J'adore »
+              range la tenue dans Mes looks ; « Pas pour moi » en propose une
+              autre, qui évite celle-ci. */}
           {hasOutfit && (
             <div className="mt-[13px]" aria-live="polite">
               {avisDuJour ? (
@@ -990,12 +997,18 @@ export default function HomeScreen() {
                   className="font-serif italic text-[13px] text-left cursor-pointer"
                   style={{ color: "#F0DDCF", minHeight: 44 }}
                 >
-                  {avisDuJour === "adore"
-                    ? "Noté — on garde cette direction."
-                    : "Pas de souci, on t'en propose une autre demain."}
+                  {/* « Pas pour toi » reste vrai dans les deux issues : une
+                      autre tenue arrive, ou le Gate du quota explique pourquoi
+                      pas aujourd'hui. */}
+                  {avisDuJour === "adore" ? "Ajoutée à tes looks — on garde cette direction." : "Noté, pas pour toi."}
                 </button>
               ) : (
                 <div className="flex items-center gap-[8px] flex-wrap">
+                  {autreProposee && (
+                    <span className="w-full font-serif italic text-[13px]" style={{ color: "#F0DDCF" }}>
+                      Voici une autre proposition.
+                    </span>
+                  )}
                   <button
                     onClick={() => actions.setOutfitFeedback("adore")}
                     className="inline-flex items-center gap-[6px] rounded-full text-[11px] cursor-pointer px-[13px]"
@@ -1004,7 +1017,8 @@ export default function HomeScreen() {
                     <span aria-hidden="true">♡</span> J&apos;adore cette tenue
                   </button>
                   <button
-                    onClick={() => actions.setOutfitFeedback("pas_aujourdhui")}
+                    onClick={pasPourMoi}
+                    disabled={quota.tirageEnCours}
                     className="inline-flex items-center gap-[6px] rounded-full text-[11px] cursor-pointer px-[13px]"
                     style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
                   >
@@ -1215,6 +1229,9 @@ export default function HomeScreen() {
           </span>
         </button>
       </div>
+
+      {/* Quota « Pas pour moi » : même feuille que « Autre tenue ». */}
+      {quota.feuille}
 
       {/* Premium Gate [DÉCIDÉ] §5 — composant unique, cf. GateAvisStyliste. */}
       <GateAvisStyliste

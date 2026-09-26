@@ -18,12 +18,12 @@ import HistoryScreen from "./screens/HistoryScreen";
 import PlanifierScreen from "./screens/PlanifierScreen";
 import PremiumScreen from "./screens/PremiumScreen";
 import AvisStylisteScreen from "./screens/AvisStylisteScreen";
+import NouveauMotDePasseScreen from "./screens/NouveauMotDePasseScreen";
 import AvisEnregistreScreen from "./screens/AvisEnregistreScreen";
 import LooksScreen from "./screens/LooksScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
 import ProfileScreen from "./screens/ProfileScreen";
-import ProfileEditScreen from "./screens/ProfileEditScreen";
 import PreferencesScreen from "./screens/PreferencesScreen";
 import AccountScreen from "./screens/AccountScreen";
 import LegalScreen from "./screens/LegalScreen";
@@ -81,6 +81,17 @@ function Screens() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, signedIn, justSignedUp, profileCompleted]);
 
+  // Récupération du mot de passe (recette du 26/09/2026) : ouverte depuis le
+  // lien de l'e-mail, elle passe devant tout le reste — la session qu'elle
+  // ouvre ne doit mener nulle part avant que le mot de passe soit choisi.
+  if (ready && auth.recuperation !== "aucune") {
+    return (
+      <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden">
+        <NouveauMotDePasseScreen />
+      </div>
+    );
+  }
+
   if (!ready) {
     return (
       <div className="relative w-full max-w-[480px] mx-auto h-dvh flex items-center justify-center bg-cream">
@@ -128,7 +139,6 @@ function Screens() {
         {state.screen === "neverworn" && <NeverWornScreen />}
         {state.screen === "profileSetup" && <ProfileSetupScreen />}
         {state.screen === "profile" && <ProfileScreen />}
-        {state.screen === "profileEdit" && <ProfileEditScreen />}
         {state.screen === "preferences" && <PreferencesScreen />}
         {state.screen === "account" && <AccountScreen />}
         {state.screen === "legal" && <LegalScreen />}
