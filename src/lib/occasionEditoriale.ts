@@ -1,3 +1,4 @@
+import { occasionShortLabel } from "./data";
 import type { OccasionKey } from "./types";
 
 /*
@@ -5,24 +6,29 @@ import type { OccasionKey } from "./types";
  * montre pour une occasion (26/09/2026). Les chiffres viennent tous de
  * styleDuMois (selectors.ts) ; ce module ne porte que les mots et l'image.
  *
+ * LES NOMS SONT CEUX DE L'APPLICATION (harmonisés le 26/09/2026, demandé) :
+ * le nom affiché est occasionShortLabel — le même que les pastilles du filtre
+ * du Journal, que le bouton de la carte ouvre —, et titres, phrases et
+ * boutons emploient les mêmes mots (« Voyage » et non « Déplacement »,
+ * « Sortie », « Cérémonie »).
+ *
  * LES VISUELS sont les huit visuels éditoriaux unisexes fournis le 26/09/2026
  * (900 × 1200, sans personne ni texte), copiés tels quels dans
  * public/editorial/occasions. Une seule image pour les profils femme et homme :
- * elle montre l'univers de l'occasion, jamais une silhouette. L'occasion
- * elle-même est dite par l'interface.
+ * elle montre l'univers de l'occasion, jamais une silhouette.
+ * Rendez-vous important reprend le visuel Travail et Sortie festive celui de
+ * Sortie / Soirée (décidé le 26/09/2026) : deux univers voisins, choisis
+ * explicitement — jamais un repli automatique.
  *
- * Rendez-vous important et Sortie festive n'ont pas reçu de visuel : leur
- * carte s'affiche sans image, en pleine largeur. JAMAIS le visuel d'une autre
- * occasion en repli — une image fausse contredirait la statistique.
+ * ARBITRAGE ÉDITORIAL : les titres et les insights.
  *
- * ARBITRAGE ÉDITORIAL : les titres et les insights (formulations du brief du
- * 26/09/2026 pour les huit occasions illustrées).
+ * « rendez\u2011vous » porte un trait d'union insécable dans les textes de la
+ * colonne étroite (titre, « tenues pensées pour ») : la ligne ne se coupe
+ * jamais en « rendez- / vous ».
  */
 
 export interface OccasionEditoriale {
-  /** Le nom de l'occasion tel que la carte l'affiche : « Travail », « Déplacement ». */
-  libelle: string;
-  /** Sujet du titre : « Le travail », « Les soirées ». */
+  /** Sujet du titre : « Le travail », « Les sorties ». */
   sujet: string;
   pluriel: boolean;
   /** Verbe et complément quand l'occasion dépasse la moitié des tenues : « domine ton dressing ». */
@@ -33,7 +39,7 @@ export interface OccasionEditoriale {
   insight: string;
   /** Libellé du bouton qui ouvre le journal filtré (sans la flèche). */
   cta: string;
-  /** Visuel éditorial et son texte alternatif — absent tant qu'aucun asset n'existe. */
+  /** Visuel éditorial et son texte alternatif (qui décrit l'image) — absent tant qu'aucun asset n'est choisi. */
   visuel?: { src: string; alt: string };
 }
 
@@ -41,78 +47,74 @@ const V = (nom: string, univers: string) => ({
   src: `/editorial/occasions/capsela_editorial_${nom}_unisex_900x1200.jpg`,
   alt: `Scène éditoriale représentant l'univers ${univers}`,
 });
+const DOMINE = { singulier: "domine ton dressing", pluriel: "dominent ton dressing" };
+const RYTHME = { singulier: "rythme ton dressing", pluriel: "rythment ton dressing" };
 
 export const OCCASIONS_EDITORIALES: Record<Exclude<OccasionKey, "all">, OccasionEditoriale> = {
   quotidien: {
-    libelle: "Quotidien",
     sujet: "Le quotidien",
     pluriel: false,
-    verbe: { singulier: "domine ton dressing", pluriel: "dominent ton dressing" },
+    verbe: DOMINE,
     pour: "ton quotidien",
     insight: "Ton dressing accompagne surtout tes journées de tous les jours.",
     cta: "Voir mes tenues du quotidien",
     visuel: V("quotidien", "du quotidien"),
   },
   travail_formel: {
-    libelle: "Travail",
     sujet: "Le travail",
     pluriel: false,
-    verbe: { singulier: "domine ton dressing", pluriel: "dominent ton dressing" },
+    verbe: DOMINE,
     pour: "tes journées de travail",
     insight: "Ton dressing accompagne surtout ton quotidien professionnel.",
     cta: "Voir mes tenues travail",
     visuel: V("travail", "du travail"),
   },
   entretien: {
-    libelle: "Rendez-vous important",
-    sujet: "Les rendez-vous importants",
+    sujet: "Les rendez\u2011vous importants",
     pluriel: true,
-    verbe: { singulier: "rythme ton dressing", pluriel: "rythment ton dressing" },
-    pour: "tes rendez-vous importants",
+    verbe: RYTHME,
+    pour: "tes rendez\u2011vous importants",
     insight: "Ton dressing t'accompagne surtout dans tes moments importants.",
     cta: "Voir mes tenues rendez-vous",
+    visuel: V("travail", "du travail"),
   },
   date: {
-    libelle: "Date",
-    sujet: "Les rendez-vous",
+    sujet: "Les rendez\u2011vous à deux",
     pluriel: true,
-    verbe: { singulier: "rythme ton dressing", pluriel: "rythment ton dressing" },
-    pour: "tes rendez-vous à deux",
+    verbe: RYTHME,
+    pour: "tes rendez\u2011vous à deux",
     insight: "Ton dressing fait une belle place à tes rendez-vous à deux.",
     cta: "Voir mes tenues date",
     visuel: V("date", "d'un rendez-vous à deux"),
   },
   soiree: {
-    libelle: "Soirée",
-    sujet: "Les soirées",
+    sujet: "Les sorties",
     pluriel: true,
-    verbe: { singulier: "rythme ton dressing", pluriel: "rythment ton dressing" },
-    pour: "tes soirées",
+    verbe: RYTHME,
+    pour: "tes sorties",
     insight: "Ton dressing révèle une vraie place pour les silhouettes de soirée.",
-    cta: "Voir mes tenues soirée",
+    cta: "Voir mes tenues sortie",
     visuel: V("soiree", "d'une soirée"),
   },
   festive: {
-    libelle: "Sortie festive",
-    sujet: "Les soirées festives",
+    sujet: "Les sorties festives",
     pluriel: true,
-    verbe: { singulier: "rythme ton dressing", pluriel: "rythment ton dressing" },
-    pour: "tes soirées festives",
+    verbe: RYTHME,
+    pour: "tes sorties festives",
     insight: "Ton dressing révèle une vraie place pour tes soirées festives.",
-    cta: "Voir mes tenues festives",
+    cta: "Voir mes tenues sortie festive",
+    visuel: V("soiree", "d'une soirée"),
   },
   sport: {
-    libelle: "Sport",
     sujet: "Le sport",
     pluriel: false,
-    verbe: { singulier: "rythme ton dressing", pluriel: "rythment ton dressing" },
+    verbe: RYTHME,
     pour: "tes séances de sport",
     insight: "Ton dressing s'adapte particulièrement à tes moments actifs.",
     cta: "Voir mes tenues sport",
     visuel: V("sport", "du sport"),
   },
   cocooning: {
-    libelle: "Cocooning",
     sujet: "Le cocooning",
     pluriel: false,
     verbe: { singulier: "s'invite dans ton dressing", pluriel: "s'invitent dans ton dressing" },
@@ -122,26 +124,27 @@ export const OCCASIONS_EDITORIALES: Record<Exclude<OccasionKey, "all">, Occasion
     visuel: V("cocooning", "du cocooning"),
   },
   voyage: {
-    libelle: "Déplacement",
-    sujet: "Les déplacements",
+    sujet: "Les voyages",
     pluriel: true,
-    verbe: { singulier: "rythme ton dressing", pluriel: "rythment ton dressing" },
-    pour: "tes déplacements",
-    insight: "Ton dressing t'accompagne surtout dans tes déplacements.",
-    cta: "Voir mes tenues déplacement",
-    visuel: V("deplacement", "des déplacements"),
+    verbe: RYTHME,
+    pour: "tes voyages",
+    insight: "Ton dressing t'accompagne surtout dans tes voyages.",
+    cta: "Voir mes tenues voyage",
+    visuel: V("deplacement", "du voyage"),
   },
   evenement_perso: {
-    libelle: "Événement",
-    sujet: "Les événements",
+    sujet: "Les cérémonies",
     pluriel: true,
-    verbe: { singulier: "rythme ton dressing", pluriel: "rythment ton dressing" },
-    pour: "tes événements",
+    verbe: RYTHME,
+    pour: "tes cérémonies",
     insight: "Ton dressing se met au diapason de tes grandes occasions.",
-    cta: "Voir mes tenues événement",
-    visuel: V("evenement", "d'un événement"),
+    cta: "Voir mes tenues cérémonie",
+    visuel: V("evenement", "d'une cérémonie"),
   },
 };
+
+/** Le nom de l'occasion tel que la carte l'affiche : celui de l'application (pastilles du filtre du Journal). */
+export const libelleOccasion = (occasion: Exclude<OccasionKey, "all">) => occasionShortLabel(occasion);
 
 /**
  * Le titre de la carte. « Domine », « rythme », « s'invite » seulement quand
@@ -149,6 +152,6 @@ export const OCCASIONS_EDITORIALES: Record<Exclude<OccasionKey, "all">, Occasion
  * sinon elle « arrive en tête » — jamais une domination qu'elle n'a pas.
  */
 export function titreStyle(o: OccasionEditoriale, majorite: boolean): string {
-  const verbe = majorite ? (o.pluriel ? o.verbe.pluriel : o.verbe.singulier) : o.pluriel ? "arrivent en tête de ton dressing" : "arrive en tête de ton dressing";
+  const verbe = majorite ? (o.pluriel ? o.verbe.pluriel : o.verbe.singulier) : o.pluriel ? "arrivent en tête" : "arrive en tête";
   return `${o.sujet} ${verbe} ce mois-ci`;
 }
