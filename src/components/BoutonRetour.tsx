@@ -83,3 +83,26 @@ export default function BoutonRetour({
     </button>
   );
 }
+
+/**
+ * RETOUR DANS LE CONTENU — « ← Retour » sous l'en-tête global (brief Avis de
+ * styliste V2, 26/09/2026 : sur une page secondaire, l'en-tête de Capsela
+ * reste entier — logo centré, profil à droite — et le retour descend dans le
+ * contenu). Même chevron dessiné que le bouton cerclé ; texte visible, et
+ * nom accessible qui dit la destination.
+ */
+export function LienRetour({ onClick, label, texte = "Retour" }: { onClick: () => void; label: string; texte?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="-ml-[6px] min-h-[44px] pr-3 flex items-center gap-[2px] text-[13px] text-muted-3 cursor-pointer active:text-ink"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+        <path d="M15 5 8 12l7 7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {texte}
+    </button>
+  );
+}

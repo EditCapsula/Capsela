@@ -404,6 +404,13 @@ export interface AppState {
   } | null;
   /** Plan à rouvrir en revenant sur Planifier après le partage ; consommé à l'ouverture. */
   planARouvrir: TenuePlanifiee | null;
+  /**
+   * Composition à planifier, venue d'un avis de styliste (V2, 26/09/2026) :
+   * les pièces reconnues sur la photo, et « demain » si c'est l'action
+   * choisie. Planifier la reprend telle quelle, sans passer par le moteur ;
+   * consommée à l'ouverture, comme planARouvrir.
+   */
+  planComposition: { pieceIds: number[]; demain: boolean } | null;
   savedLooks: SavedLook[];
   /** Pièces choisies dans l'écran de création de look, avant sauvegarde. */
   lookDraftIds: number[];
@@ -455,4 +462,6 @@ export type Screen =
   // ouvert depuis la carte « Besoin d'un regard ? » de l'accueil.
   | "avisStyliste"
   // Avis de styliste enregistré, rouvert depuis le Journal.
-  | "avisEnregistre";
+  | "avisEnregistre"
+  // Tous les avis enregistrés (« Voir tout » de « Mes avis de styliste »).
+  | "avisTous";

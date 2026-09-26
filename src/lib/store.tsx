@@ -89,7 +89,7 @@ export interface PhotoAvis {
 export type AnalyseAvis =
   | { etat: "inactive" }
   | { etat: "en_cours" }
-  | { etat: "reussie"; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[] }
+  | { etat: "reussie"; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[]; portees: number[] }
   | { etat: "echouee"; code: Extract<ResultatDemande, { ok: false }>["code"]; raison?: Extract<ResultatDemande, { ok: false }>["raison"] };
 export interface SessionAvisStyliste {
   photo: PhotoAvis | null;
@@ -187,6 +187,7 @@ function buildInitialState(): AppState {
     tenuesVues: [],
     avisSource: null,
     planARouvrir: null,
+    planComposition: null,
     savedLooks: [],
     lookDraftIds: [],
     lookDraftName: "",
@@ -246,15 +247,20 @@ export interface Actions {
    */
   lancerAvisStyliste: () => void;
   /**
-   * « Enregistrer dans mon journal » : le résultat affiché et sa photo
-   * (arbitré). Action volontaire, jamais automatique ; ignorée pendant un
-   * enregistrement ou après un succès (pas de doublon, §14).
+   * Enregistre dans le Journal le résultat affiché et sa photo. Appelée
+   * automatiquement à la réception de l'avis (26/09/2026), et par
+   * « Réessayer » après un échec ; ignorée pendant un enregistrement ou après
+   * un succès (pas de doublon, §14).
    */
   enregistrerAvisStyliste: () => void;
   /** Charge les avis enregistrés (Journal). */
   chargerAvisEnregistres: () => void;
-  /** Ouvre un avis enregistré en consultation. */
+  /** Ouvre un avis enregistré en consultation (depuis le Journal ou la liste complète, qui est retenue pour le retour). */
   ouvrirAvisEnregistre: (id: string) => void;
+  /** Referme un avis enregistré : retour à l'écran d'où il a été ouvert. */
+  fermerAvisEnregistre: () => void;
+  /** Tous les avis enregistrés (« Voir tout » du Journal). */
+  goAvisTous: () => void;
   /** Supprime un avis enregistré et sa photo (§14). Rend false en cas d'échec — l'avis reste alors affiché. */
   supprimerAvisEnregistre: (id: string) => Promise<boolean>;
   backFromLegal: () => void;
@@ -369,12 +375,21 @@ export interface Actions {
   wearActiveToday: () => void;
   correctPiece: (id: number) => void;
   correctActive: () => void;
-  reWear: (ids: number[]) => void;
+  /**
+   * Fait de ces pièces la tenue du jour, à valider sur l'écran Tenue. Par
+   * défaut, ouvre cet écran ; `rester` garde l'écran courant (« Porter
+   * aujourd'hui » d'un avis de styliste, qui confirme sur place).
+   */
+  reWear: (ids: number[], options?: { rester?: boolean }) => void;
   /** Sans argument : la tenue du jour. Avec : une tenue planifiée (cf. AppState.avisSource). */
   openOpinionShare: (source?: AppState["avisSource"]) => void;
   closeOpinionShare: () => void;
   /** Planifier a rouvert le plan au retour du partage. */
   oublierPlanARouvrir: () => void;
+  /** Ouvre Planifier avec cette composition déjà faite (avis de styliste), pour demain ou une date à choisir. */
+  planifierComposition: (ids: number[], demain: boolean) => void;
+  /** Planifier a repris la composition. */
+  oublierPlanComposition: () => void;
 
   /** seedId : préremplit lookDraftIds avec cette pièce (recette 24/08/2026, PieceScreen "Ajouter à un look → Créer un nouveau look") — jamais renseigné hors de ce parcours. */
   goCreateLook: (seedId?: number) => void;
@@ -553,6 +568,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const analyseAvisEnCoursRef = useRef(false);
   const [avisEnregistres, setAvisEnregistres] = useState<AvisEnregistre[] | null>(null);
   const [avisEnregistreActifId, setAvisEnregistreActifId] = useState<string | null>(null);
+  const [avisEnregistreRetour, setAvisEnregistreRetour] = useState<Screen>("history");
   const avisEnregistreActif = avisEnregistres?.find((a) => a.id === avisEnregistreActifId) ?? null;
   useEffect(() => {
     etatPremiumRef.current = etatPremium;
@@ -1094,11 +1110,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           photo,
           enregistrement: "aucun",
           analyse: r.ok
-            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing }
+            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing, portees: r.portees }
             : { etat: "echouee", code: r.code, raison: r.raison },
         };
         avisStylisteRef.current = suivant;
         setAvisStyliste(suivant);
+        // ENREGISTREMENT AUTOMATIQUE (26/09/2026, brief « Mes avis de
+        // styliste ») : un avis reçu rejoint le Journal sans geste de plus —
+        // il apparaît en tête de la section. La décision d'origine (§14,
+        // action volontaire) est levée ; l'avis reste supprimable depuis son
+        // détail, photo comprise. Un échec est dit à l'écran, avec Réessayer.
+        if (r.ok) actions.enregistrerAvisStyliste();
       });
     },
     enregistrerAvisStyliste: () => {
@@ -1134,8 +1156,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     },
     ouvrirAvisEnregistre: (id) => {
       setAvisEnregistreActifId(id);
+      setAvisEnregistreRetour(stateRef.current.screen === "avisTous" ? "avisTous" : "history");
       go("avisEnregistre");
     },
+    fermerAvisEnregistre: () => go(avisEnregistreRetour),
+    goAvisTous: () => go("avisTous"),
     supprimerAvisEnregistre: async (id) => {
       const avis = avisEnregistres?.find((a) => a.id === id);
       if (!avis) return false;
@@ -1818,12 +1843,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }));
       if (wornUpdate && isSupabaseConfigured && userId) updateDressingItemWorn([wornUpdate]).catch((err) => reportDressingError("updateDressingItemWorn", err));
     },
-    reWear: (ids) =>
+    reWear: (ids, options) =>
       setState((s) => ({
         ...s,
         outfit: ids.filter((id) => findPiece(poolRef.current, id, vestiaireRef.current)),
         outfitValidated: false,
-        screen: "tenues",
+        screen: options?.rester ? s.screen : "tenues",
       })),
 
     openOpinionShare: (source) => setState((s) => ({ ...s, avisSource: source ?? null, screen: "opinionShare" })),
@@ -1835,6 +1860,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           : { ...s, screen: "tenues" }
       ),
     oublierPlanARouvrir: () => setState((s) => (s.planARouvrir ? { ...s, planARouvrir: null } : s)),
+    planifierComposition: (ids, demain) => setState((s) => ({ ...s, planComposition: { pieceIds: ids, demain }, screen: "planifier" })),
+    oublierPlanComposition: () => setState((s) => (s.planComposition ? { ...s, planComposition: null } : s)),
 
     goCreateLook: (seedId) =>
       setState((s) => ({

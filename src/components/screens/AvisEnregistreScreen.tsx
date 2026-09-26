@@ -3,7 +3,8 @@
 import { useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
+import { LienRetour } from "@/components/BoutonRetour";
 import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
 import { useCapsela } from "@/lib/store";
@@ -42,7 +43,8 @@ export default function AvisEnregistreScreen() {
     // Arrivée sans avis (rechargement de la liste, suppression) : retour au Journal.
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-        <BoutonRetour onClick={actions.goHistory} label="Revenir au journal" />
+        <AppHeader />
+        <LienRetour onClick={actions.fermerAvisEnregistre} label="Revenir" />
       </div>
     );
   }
@@ -52,7 +54,7 @@ export default function AvisEnregistreScreen() {
     const ok = await actions.supprimerAvisEnregistre(avis.id);
     if (ok) {
       setConfirmation(false);
-      actions.goHistory();
+      actions.fermerAvisEnregistre();
     } else {
       setSuppression("echec");
     }
@@ -60,22 +62,28 @@ export default function AvisEnregistreScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <div className="flex items-center justify-between">
-        <BoutonRetour onClick={actions.goHistory} label="Revenir au journal" />
+      {/* En-tête global de Capsela, entier (brief V2 du 26/09/2026) ; le
+          retour, dans le contenu, ramène d'où l'avis a été ouvert — Journal
+          ou liste complète. */}
+      <AppHeader />
+      <div className="flex items-center justify-between gap-3">
+        <LienRetour onClick={actions.fermerAvisEnregistre} label="Revenir" />
         {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
       </div>
 
-      <div className="mt-[22px]">
+      <div className="mt-[8px]">
         <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>
         <div className="text-[13px] text-muted-3 mt-[8px]">{formatDate(avis.creeLe)}</div>
       </div>
 
+      {/* La photo en héros, comme sur le résultat d'origine (optimisation du
+          parcours, 26/09/2026) : ~78 % de la largeur, plafonnée en hauteur. */}
       {avis.photoUrl && (
-        <div className="mt-[22px] mx-auto rounded-[20px] overflow-hidden border border-border bg-card" style={{ maxHeight: "30vh", width: "fit-content", maxWidth: "100%" }}>
+        <div className="mt-[22px] mx-auto rounded-[22px] overflow-hidden border border-border bg-card" style={{ width: "78%" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={avis.photoUrl} alt="" className="block max-w-full object-contain" style={{ maxHeight: "30vh" }} />
+          <img src={avis.photoUrl} alt="Ta tenue" className="block w-full object-contain" style={{ maxHeight: "62vh" }} />
         </div>
       )}
 

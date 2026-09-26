@@ -363,14 +363,23 @@ export default function PlanifierScreen() {
   // Retour de « Demander l'avis d'un proche » : le plan partagé se rouvre,
   // plutôt que de laisser sur le hub (l'état de cet écran est local).
   const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail">(() =>
-    state.planARouvrir ? "detail" : "intro"
+    state.planARouvrir ? "detail" : state.planComposition ? "etape" : "intro"
   );
+  /**
+   * COMPOSITION IMPOSÉE (Avis de styliste V2, 26/09/2026) : les pièces
+   * reconnues sur la photo d'un avis. Le parcours reste le même — occasion,
+   * date, lieu —, mais la tenue n'est pas recomposée par le moteur : c'est
+   * celle de la photo qui est gardée. « Planifier une tenue » depuis le hub
+   * repart sans elle (recommencer).
+   */
+  const [composition, setComposition] = useState<number[] | null>(() => state.planComposition?.pieceIds ?? null);
   /** Tenue planifiée ouverte en détail, ou dont le menu « … » est déplié. */
   const [planOuvert, setPlanOuvert] = useState<TenuePlanifiee | null>(() => state.planARouvrir);
   /** D'où le détail a été ouvert — le hub ou la liste complète — pour que le retour y ramène. */
   const [retourDetail, setRetourDetail] = useState<"intro" | "liste">(() => (state.planARouvrir ? "intro" : "liste"));
   useEffect(() => {
     if (state.planARouvrir) actions.oublierPlanARouvrir();
+    if (state.planComposition) actions.oublierPlanComposition();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [menuPlan, setMenuPlan] = useState<TenuePlanifiee | null>(null);
@@ -392,7 +401,8 @@ export default function PlanifierScreen() {
    * ligne qui n'est plus la première.
    */
   const [dateContext, setDateContext] = useState<DateContext>(DATE_CONTEXTS[0][0]);
-  const [jour, setJour] = useState<number | null>(null);
+  // « Planifier pour demain » depuis un avis : la date est déjà connue.
+  const [jour, setJour] = useState<number | null>(() => (state.planComposition?.demain ? 1 : null));
   const [moment, setMoment] = useState<MomentJournee | null>(null);
   const [lieu, setLieu] = useState("");
   /**
@@ -557,10 +567,13 @@ export default function PlanifierScreen() {
   }, [occ, dressingSeul, state.items, defaultCapsule, meteoUtilisee, workMode, dateContext, profile, tirage]);
 
   const pieces: Item[] = useMemo(() => {
+    if (composition) return composition.map((id) => state.items.find((i) => i.id === id)).filter((i): i is Item => !!i);
     if (!tenue) return [];
     const source = dressingSeul ? state.items : [...state.items, ...defaultCapsule];
     return tenue.ids.map((id) => source.find((i) => i.id === id)).filter((i): i is Item => !!i);
-  }, [tenue, state.items, defaultCapsule, dressingSeul]);
+  }, [composition, tenue, state.items, defaultCapsule, dressingSeul]);
+  /** Rien à garder : état vide du moteur — une composition imposée en a toujours une. */
+  const sansTenue = !composition && (!tenue || tenue.noCompleteOutfit);
 
   /**
    * POOL DE RÉSOLUTION STABLE pour les tenues DÉJÀ PLANIFIÉES — le même que
@@ -592,7 +605,9 @@ export default function PlanifierScreen() {
    * nulle à annoncer, c'est un terme qui n'a pas lieu d'être dans la phrase.
    */
   const pluriel = (n: number) => `${n} pièce${n > 1 ? "s" : ""}`;
-  const provenance = dressingSeul
+  const provenance = composition
+    ? "La tenue de ta photo, reconnue dans ton dressing"
+    : dressingSeul
     ? `${pluriel(pieces.length)} de ton dressing, sans complément`
     : nbDressing === 0
       ? `${pluriel(nbCapsule)} de ta capsule`
@@ -720,7 +735,7 @@ export default function PlanifierScreen() {
    * croit gardée et qui a disparu au rechargement coûte plus qu'un message.
    */
   const garder = async () => {
-    if (!userId || !occ || jour == null || !moment || !tenue || tenue.noCompleteOutfit) return;
+    if (!userId || !occ || jour == null || !moment || sansTenue) return;
     setEnregistrement(true);
     try {
       const ligne = await upsertTenuePlanifiee(userId, {
@@ -730,8 +745,9 @@ export default function PlanifierScreen() {
         sousChoix: sousChoix ? String(sousChoix.courant) : null,
         lieu: lieu.trim(),
         typeLieu,
-        dressingSeul,
-        pieceIds: tenue.ids,
+        // Une composition imposée ne vient que du dressing réel.
+        dressingSeul: composition ? true : dressingSeul,
+        pieceIds: composition ?? tenue!.ids,
         temp: meteoMoment ? meteoMoment.temp : null,
         weatherLabel: meteoMoment ? meteoMoment.label : null,
       });
@@ -760,6 +776,7 @@ export default function PlanifierScreen() {
   };
 
   const recommencer = () => {
+    setComposition(null);
     setVue("etape");
     setEtape(1);
     setOcc(null);
@@ -889,9 +906,9 @@ export default function PlanifierScreen() {
                 éditorial qui dit son usage — une tenue pour « Planifier une
                 tenue », la valise ouverte pour « Préparer ma valise ». Visuels
                 fournis par la propriétaire le même jour : les deux pour un profil
-                femme, la valise pour un profil homme. Pas de visuel inventé pour
-                ce qui n'en a pas encore (tenue homme) : la carte garde alors sa
-                forme d'avant, glyphe seul. */}
+                femme, la valise pour un profil homme ; la tenue homme a suivi
+                (26/09/2026). Sans genre renseigné, pas de visuel choisi au
+                hasard : la carte garde sa forme d'avant, glyphe seul. */}
             <div className="flex flex-col gap-3 mt-5">
               <CartePlanifier
                 glyphe={G_CINTRE}
@@ -901,7 +918,13 @@ export default function PlanifierScreen() {
                 note={`Météo prévue jusqu'à ${HORIZON_PREVISION_JOURS} jours à l'avance.`}
                 cta="Planifier une tenue"
                 onClick={recommencer}
-                visuel={profile.gender === "femme" ? "/editorial/capsela_planifier_tenue_femme.webp" : undefined}
+                visuel={
+                  profile.gender === "femme"
+                    ? "/editorial/capsela_planifier_tenue_femme.webp"
+                    : profile.gender === "homme"
+                      ? "/editorial/capsela_planifier_tenue_homme.webp"
+                      : undefined
+                }
               />
               {/* Le parcours valise n'existe pas encore : la carte mène à la
                   page Premium, avec le rappel « Ce que tu voulais faire »,
@@ -1014,6 +1037,16 @@ export default function PlanifierScreen() {
             <div className="t-chapeau text-muted mt-[6px]" style={{ textWrap: "pretty" }}>
               {ETAPES[etape][3]}
             </div>
+            {/* Venue d'un avis de styliste : la tenue est déjà faite, il ne
+                reste qu'à dire pour quoi, quand et où. */}
+            {composition && pieces.length > 0 && (
+              <div className="mt-[12px] inline-flex items-center gap-[8px] bg-warm-bg border border-warm-border rounded-full px-[12px] py-[6px] text-[12px] text-ink">
+                <span aria-hidden="true" className="text-terracotta">
+                  ✓
+                </span>
+                La tenue de ta photo est gardée · {pieces.length} pièce{pieces.length > 1 ? "s" : ""}
+              </div>
+            )}
 
             {etape === 1 && (
               /* LA MAQUETTE DU 24/09. Elle reprend les LIGNES de la feuille
@@ -1332,13 +1365,13 @@ export default function PlanifierScreen() {
               {typeLieu ? ` · ${typeLieu}` : ""}
             </div>
 
-            {tenue.noCompleteOutfit ? (
+            {sansTenue ? (
               <div className="mt-[14px] bg-card border border-border rounded-[20px] p-[15px]">
                 <div className="t-titre-carte text-ink">
-                  {emptyStateCopy(tenue.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").title}
+                  {emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").title}
                 </div>
                 <div className="text-[12px] text-muted-3 leading-[1.5] mt-2">
-                  {emptyStateCopy(tenue.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").body}
+                  {emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").body}
                 </div>
               </div>
             ) : (
@@ -1362,7 +1395,7 @@ export default function PlanifierScreen() {
                   <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
                   <div className="flex flex-col gap-2 mt-[10px]">
                     {[
-                      `Pensée pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`,
+                      `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`,
                       phraseMeteo,
                       provenance,
                     ].map((r) => (
@@ -1381,6 +1414,7 @@ export default function PlanifierScreen() {
                     la composition au-dessus se refait. Posé avant la
                     génération, il demandait de deviner ce qu'on préférerait
                     sans avoir rien vu. */}
+                {!composition && (
                 <button
                   onClick={() => setDressingSeul(!dressingSeul)}
                   aria-pressed={dressingSeul}
@@ -1403,6 +1437,7 @@ export default function PlanifierScreen() {
                     <span className="w-5 h-5 rounded-full bg-card" />
                   </span>
                 </button>
+                )}
 
                 <div className="text-[12px] text-muted leading-[1.5] mt-[14px] text-center" style={{ textWrap: "pretty" }}>
                   {/* Avant l'enregistrement : une invitation, pas un constat —
@@ -1692,11 +1727,11 @@ export default function PlanifierScreen() {
                 double tap ne parte pas deux fois. */}
             <button
               onClick={garder}
-              disabled={enregistrement || !tenue || tenue.noCompleteOutfit}
+              disabled={enregistrement || sansTenue}
               className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
               style={{
                 minHeight: 52,
-                background: enregistrement || !tenue || tenue.noCompleteOutfit ? "var(--color-cream-dark-soft)" : "var(--color-terracotta-deep)",
+                background: enregistrement || sansTenue ? "var(--color-cream-dark-soft)" : "var(--color-terracotta-deep)",
               }}
             >
               {enregistrement ? "Un instant…" : "Garder cette tenue"}
@@ -1721,13 +1756,17 @@ export default function PlanifierScreen() {
               >
                 Modifier cet évènement
               </button>
-              <button
-                onClick={() => setTirage(tirage + 1)}
-                className="flex-1 rounded-full bg-card border border-terracotta text-[12px] font-medium text-terracotta cursor-pointer"
-                style={{ minHeight: 44 }}
-              >
-                Une autre tenue
-              </button>
+              {/* Une composition imposée est LA tenue de la photo : pas de
+                  nouveau tirage. */}
+              {!composition && (
+                <button
+                  onClick={() => setTirage(tirage + 1)}
+                  className="flex-1 rounded-full bg-card border border-terracotta text-[12px] font-medium text-terracotta cursor-pointer"
+                  style={{ minHeight: 44 }}
+                >
+                  Une autre tenue
+                </button>
+              )}
             </div>
           </>
         )}

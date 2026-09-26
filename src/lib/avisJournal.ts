@@ -11,7 +11,8 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
  * accès sont isolés, aucune autre écriture n'en dépend.
  *
  * LA PHOTO : bucket PRIVÉ, lue par URL signée (1 h), jamais par URL publique.
- * Elle n'est écrite que sur « Enregistrer dans mon journal ».
+ * Elle est écrite avec l'avis, enregistré automatiquement dès sa réception
+ * (26/09/2026 ; auparavant sur « Enregistrer dans mon journal »).
  */
 
 export const BUCKET_AVIS = "avis-styliste-photos";
@@ -138,4 +139,26 @@ export async function supprimerAvis(avis: AvisEnregistre): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/* ───────── Présentation dans le Journal (26/09/2026) ───────── */
+
+/**
+ * Le verdict d'une carte, tiré de l'avis global RÉEL — aucune génération de
+ * plus, aucune note. La styliste ouvre souvent son avis par une formule
+ * courte (« Une tenue lumineuse et fluide : … ») : c'est elle, jusqu'à la
+ * première ponctuation forte, si elle fait entre 12 et 60 caractères. Sinon
+ * null — la carte montre alors l'avis global lui-même, tronqué.
+ */
+export function verdictCourt(avisGlobal: string): string | null {
+  const t = avisGlobal.trim();
+  const m = /^(.+?)\s*[:.;—!?]/.exec(t);
+  if (!m) return null;
+  const tete = m[1].trim();
+  return tete.length >= 12 && tete.length <= 60 ? tete : null;
+}
+
+/** Du plus récent au plus ancien, sur la date réellement enregistrée — sans modifier la liste reçue. */
+export function trierAvisRecents<T extends { creeLe: number }>(avis: T[]): T[] {
+  return [...avis].sort((a, b) => b.creeLe - a.creeLe);
 }

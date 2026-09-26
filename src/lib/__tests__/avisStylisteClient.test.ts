@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contexteDepuisProfil, estAvis, reactionErreur } from "../avisStylisteClient";
+import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, piecesPortees, prioriserActionsAvis, reactionErreur, repartirPiecesAvis } from "../avisStylisteClient";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 
 const profil = (over: Partial<Profile> = {}): Profile => ({ ...EMPTY_PROFILE, gender: "femme", displayName: "Angela", ...over });
@@ -78,5 +78,55 @@ describe("piecesSuggerees — identifiants reçus du serveur", () => {
       piecesSuggerees([{ id: 1, lien: "mainAdvice" }, { id: "2", lien: "x" }, { id: 3 }, { id: 4, lien: "suggestion:1" }, { id: 5, lien: "a" }, { id: 6, lien: "b" }])
     ).toEqual([{ id: 1, lien: "mainAdvice" }, { id: 4, lien: "suggestion:1" }, { id: 5, lien: "a" }]);
     expect(piecesSuggerees(undefined)).toEqual([]);
+  });
+});
+
+describe("présentation du résultat — uniquement des données réelles", () => {
+  const dressing = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  it("range chaque pièce sous le conseil ou sa suggestion, écarte celles qui ne sont plus au dressing", () => {
+    const r = repartirPiecesAvis(
+      [
+        { id: 1, lien: "mainAdvice" },
+        { id: 2, lien: "suggestion:2" },
+        { id: 9, lien: "suggestion:1" },
+        { id: 3, lien: "suggestion:7" },
+      ],
+      dressing,
+      3
+    );
+    expect(r.conseil.map((p) => p.id)).toEqual([1]);
+    expect(r.parSuggestion.map((l) => l.map((p) => p.id))).toEqual([[], [2], []]);
+    expect(r.autres.map((p) => p.id)).toEqual([3]);
+  });
+
+  it("personnalisation : seulement ce qui a été envoyé", () => {
+    expect(personnalisationAvis({})).toEqual([]);
+    expect(personnalisationAvis({ style: ["Minimaliste"], palette: ["Camel"] })).toEqual(["ton style Minimaliste", "tes couleurs"]);
+    expect(personnalisationAvis({ morphologie: "Taille bien marquée" })).toEqual(["ta silhouette"]);
+  });
+
+  it("étapes d'analyse : le style et les proportions ne sont annoncés que s'ils sont envoyés", () => {
+    expect(etapesAnalyse({})).toEqual(["Silhouette", "Couleurs", "Associations"]);
+    expect(etapesAnalyse({ style: ["Bohème"] })).toEqual(["Silhouette", "Couleurs", "Associations", "Ton style"]);
+    expect(etapesAnalyse({ style: ["Bohème"], morphologie: "x" })).toContain("Tes proportions");
+  });
+
+  it("phrase d'analyse : ne promet que ce qui a lieu", () => {
+    expect(phraseAnalyse({}, false)).toBe("Chaque tenue est unique.");
+    expect(phraseAnalyse({ style: ["Bohème"] }, true)).toBe("Chaque tenue est unique. Ton avis sera adapté à ton style et à ton dressing.");
+    expect(phraseAnalyse({}, true)).toBe("Chaque tenue est unique. Ton avis sera adapté à ton dressing.");
+  });
+
+  it("pièces portées : entiers, sans doublon, six au plus ; absentes = liste vide", () => {
+    expect(piecesPortees(undefined)).toEqual([]);
+    expect(piecesPortees([3, 3, "4", 5.5, 7])).toEqual([3, 7]);
+    expect(piecesPortees([1, 2, 3, 4, 5, 6, 7])).toHaveLength(6);
+  });
+
+  it("et maintenant : une action principale selon le contexte réel, rien sans composition", () => {
+    expect(prioriserActionsAvis({ heure: 10, tenueDuJourPortee: false, composable: true })).toEqual({ principale: "porter", secondaires: ["planifier"] });
+    expect(prioriserActionsAvis({ heure: 19, tenueDuJourPortee: false, composable: true })).toEqual({ principale: "demain", secondaires: ["planifier"] });
+    expect(prioriserActionsAvis({ heure: 10, tenueDuJourPortee: true, composable: true })?.principale).toBe("demain");
+    expect(prioriserActionsAvis({ heure: 10, tenueDuJourPortee: false, composable: false })).toBeNull();
   });
 });

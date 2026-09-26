@@ -47,7 +47,19 @@ export interface PieceSuggeree {
 }
 
 export type ReponseAvis =
-  | { ok: true; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[] }
+  | {
+      ok: true;
+      analyseId: string;
+      avis: AvisStyliste;
+      dressing: PieceSuggeree[];
+      /**
+       * Pièces du dressing RECONNUES sur la photo (Avis de styliste V2,
+       * 26/09/2026) : la composition de la tenue analysée, pour la porter
+       * aujourd'hui ou la planifier sans la recomposer. Absent d'une réponse
+       * d'avant la V2 : l'app le lit comme une liste vide.
+       */
+      portees: number[];
+    }
   | { ok: false; code: CodeErreurAvis; raison?: RaisonInexploitable };
 
 /* ─────────────────────────── Paramètres arbitrés ─────────────────────────── */
@@ -269,6 +281,77 @@ export function lireBesoins(brut: unknown, nbSuggestions: number): BesoinDressin
   return besoins;
 }
 
+/* ─────────────────────────── Pièces portées (V2) ─────────────────────────── */
+
+/**
+ * Vêtement VISIBLE sur la photo, décrit par le modèle (Avis de styliste V2,
+ * 26/09/2026). Même principe que les besoins (option A) : le modèle ne voit
+ * jamais le dressing ; il décrit ce qui est porté, et le serveur cherche
+ * parmi les pièces de l'utilisatrice.
+ */
+export interface VetementVisible {
+  categorie: Categorie;
+  motsCles: string[];
+  couleurs: string[];
+  matieres: string[];
+}
+
+/** Six pièces au plus : une tenue complète, accessoires compris. */
+export const VETEMENTS_VISIBLES_MAX = 6;
+
+/**
+ * Vêtements lus dans la réponse. Un vêtement sans type (motsCles vide) est
+ * écarté : sans type, rien ne permet d'affirmer qu'une pièce du dressing est
+ * celle de la photo. Une liste absente ou mal formée rend [] — jamais une
+ * réponse invalide : l'avis lui-même n'en dépend pas.
+ */
+export function lireVetements(brut: unknown): VetementVisible[] {
+  if (!Array.isArray(brut)) return [];
+  const chaines = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim().slice(0, 40)).slice(0, 4) : []);
+  const vetements: VetementVisible[] = [];
+  for (const b of brut.slice(0, VETEMENTS_VISIBLES_MAX)) {
+    if (!b || typeof b !== "object") continue;
+    const o = b as Record<string, unknown>;
+    if (!CATEGORIES.includes(o.categorie as Categorie)) continue;
+    const motsCles = chaines(o.motsCles);
+    if (!motsCles.length) continue;
+    vetements.push({ categorie: o.categorie as Categorie, motsCles, couleurs: chaines(o.couleurs), matieres: chaines(o.matieres) });
+  }
+  return vetements;
+}
+
+/**
+ * Reconnaît les pièces du dressing portées sur la photo. Plus exigeant que
+ * choisirPiecesDressing, parce que l'affirmation est plus forte (« tu portes
+ * cette pièce », pas « cette pièce pourrait aller ») :
+ * - même catégorie ET type retrouvé dans le nom ou le type de la pièce ;
+ * - si le vêtement a une couleur et la pièce aussi, elles doivent concorder ;
+ * - une pièce « mise de côté pour vendre » n'est pas reconnue ;
+ * - à égalité, la matière départage, puis l'identifiant (déterministe) ;
+ * - jamais deux fois la même pièce.
+ * L'utilisatrice peut retirer à l'écran une pièce mal reconnue : c'est une
+ * proposition, pas un fait enregistré.
+ */
+export function reconnaitrePiecesPortees(vetements: VetementVisible[], pieces: PieceDressing[]): number[] {
+  const retenues: number[] = [];
+  for (const v of vetements) {
+    let meilleure: { id: number; score: number } | null = null;
+    for (const p of pieces) {
+      if (p.cat !== v.categorie || retenues.includes(p.id) || p.revente === "de_cote") continue;
+      const texte = [p.name, p.subtype, p.shoe_type, p.sac_type, p.bijou_type, p.accessoire_type].filter(Boolean).join(" ");
+      if (!v.motsCles.some((m) => contient(texte, m))) continue;
+      const couleurDite = v.couleurs.length > 0 && Boolean(p.color);
+      const couleur = couleurDite && v.couleurs.some((c) => contient(p.color!, c) || contient(c, p.color!));
+      if (couleurDite && !couleur) continue;
+      const matiere = v.matieres.some((m) => Boolean(p.matiere) && (contient(p.matiere!, m) || contient(m, p.matiere!)));
+      const score = (couleur ? 2 : 0) + (matiere ? 1 : 0);
+      if (!meilleure || score > meilleure.score || (score === meilleure.score && p.id < meilleure.id)) meilleure = { id: p.id, score };
+    }
+    if (meilleure) retenues.push(meilleure.id);
+  }
+  return retenues;
+}
+
 /* ─────────────────────────── Charte et instructions ─────────────────────────── */
 
 /** Mots interdits du projet (CLAUDE.md) — un message morphologique négatif n'est jamais affiché. */
@@ -286,6 +369,7 @@ export const INSTRUCTIONS = [
   "Ne parle jamais d'intelligence artificielle ni d'analyse automatique : tu es une styliste qui donne son avis.",
   `Format : overallAssessment = 1 à 2 phrases (${LIMITES.phraseDemandee} caractères au plus), avis global bienveillant ; strengths = ${LIMITES.pointsMin} à ${LIMITES.pointsMax} points forts, une phrase chacun (${LIMITES.pointDemande} caractères au plus) ; mainAdvice = un seul ajustement prioritaire (${LIMITES.phraseDemandee} caractères au plus) ; suggestions = ${LIMITES.pointsMin} à ${LIMITES.pointsMax} pistes à tester, une phrase chacune (${LIMITES.pointDemande} caractères au plus).`,
   `dressingNeeds : jusqu'à ${PIECES_DRESSING_MAX} pièces qu'elle pourrait AJOUTER pour appliquer ton conseil principal ou une suggestion — jamais une pièce déjà visible sur la photo. Pour chacune : categorie (parmi ${CATEGORIES.join(", ")}), motsCles = le type de pièce en un ou deux mots (ex. « ceinture », « mocassins », « blazer »), couleurs et matieres souhaitées (listes courtes, éventuellement vides), lien = "mainAdvice" ou "suggestion" avec numeroSuggestion (à partir de 1, sinon null). Liste vide si aucune pièce ne s'impose.`,
+  `visibleGarments : les pièces PORTÉES visibles sur la photo (${VETEMENTS_VISIBLES_MAX} au plus, accessoires compris). Pour chacune : categorie (parmi ${CATEGORIES.join(", ")}), motsCles = le type de pièce en un ou deux mots (ex. « jean », « blazer », « sandales »), couleurs et matieres visibles (listes courtes, éventuellement vides). N'y mets que ce que tu vois nettement ; liste vide si la tenue est peu lisible.`,
   "Si la photo ne permet pas de lire la tenue (trop floue, trop sombre, aucune tenue visible), réponds isAnalyzable = false avec la raison (blurry, too_dark, no_garment ou other) et laisse les champs de texte vides. Sinon, isAnalyzable = true et unanalyzableReason = null.",
 ].join("\n");
 
@@ -293,7 +377,7 @@ export const INSTRUCTIONS = [
 export const SCHEMA_REPONSE = {
   type: "object",
   additionalProperties: false,
-  required: ["isAnalyzable", "unanalyzableReason", "overallAssessment", "strengths", "mainAdvice", "suggestions", "dressingNeeds"],
+  required: ["isAnalyzable", "unanalyzableReason", "overallAssessment", "strengths", "mainAdvice", "suggestions", "dressingNeeds", "visibleGarments"],
   properties: {
     isAnalyzable: { type: "boolean" },
     unanalyzableReason: { type: ["string", "null"], enum: ["blurry", "too_dark", "no_garment", "other", null] },
@@ -314,6 +398,20 @@ export const SCHEMA_REPONSE = {
           matieres: { type: "array", items: { type: "string" } },
           lien: { type: "string", enum: ["mainAdvice", "suggestion"] },
           numeroSuggestion: { type: ["integer", "null"] },
+        },
+      },
+    },
+    visibleGarments: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["categorie", "motsCles", "couleurs", "matieres"],
+        properties: {
+          categorie: { type: "string", enum: CATEGORIES },
+          motsCles: { type: "array", items: { type: "string" } },
+          couleurs: { type: "array", items: { type: "string" } },
+          matieres: { type: "array", items: { type: "string" } },
         },
       },
     },
@@ -406,7 +504,7 @@ export function violationCharte(textes: string[]): string | null {
 }
 
 export type Verdict =
-  | { etat: "valide"; avis: AvisStyliste; besoins: BesoinDressing[] }
+  | { etat: "valide"; avis: AvisStyliste; besoins: BesoinDressing[]; vetements: VetementVisible[] }
   | { etat: "inexploitable"; raison: RaisonInexploitable }
   | { etat: "invalide"; motif: string };
 
@@ -449,7 +547,7 @@ export function validerReponse(texteJson: string | null): Verdict {
   const avis: AvisStyliste = { overallAssessment, strengths: strengths!, mainAdvice, suggestions: suggestions! };
   const faute = violationCharte([overallAssessment, mainAdvice, ...avis.strengths, ...avis.suggestions]);
   if (faute) return { etat: "invalide", motif: `charte:${faute}` };
-  return { etat: "valide", avis, besoins: lireBesoins(o.dressingNeeds, avis.suggestions.length) };
+  return { etat: "valide", avis, besoins: lireBesoins(o.dressingNeeds, avis.suggestions.length), vetements: lireVetements(o.visibleGarments) };
 }
 
 /* ─────────────────────────── Validation du fichier ─────────────────────────── */
@@ -522,6 +620,8 @@ export interface JournalUsage {
   duree_ms: number;
   /** Nombre de pièces du dressing affichées (§16, dressing_items_count). */
   pieces_dressing: number;
+  /** Nombre de pièces du dressing reconnues sur la photo (V2) — un compte, jamais les pièces. */
+  pieces_reconnues: number;
   motif_rejet?: string;
 }
 
@@ -584,6 +684,7 @@ export async function traiterDemandeAvis(
   let tokensSortie = 0;
   let dernierMotif = "";
   let piecesDressing = 0;
+  let piecesReconnues = 0;
   const journal = (statut: JournalUsage["statut"]) =>
     deps.journaliser({
       evenement: "stylist_advice",
@@ -595,6 +696,7 @@ export async function traiterDemandeAvis(
       tokens_sortie: tokensSortie,
       duree_ms: deps.maintenant() - debut,
       pieces_dressing: piecesDressing,
+      pieces_reconnues: piecesReconnues,
       ...(dernierMotif ? { motif_rejet: dernierMotif } : {}),
     });
 
@@ -621,11 +723,15 @@ export async function traiterDemandeAvis(
     }
     const v = validerReponse(extraireTexteReponse(reponse.json));
     if (v.etat === "valide") {
-      const pieces = v.besoins.length ? await deps.lireDressing(user.id).catch(() => [] as PieceDressing[]) : [];
+      // Le dressing n'est lu que s'il sert : un besoin à satisfaire, ou des
+      // vêtements visibles à reconnaître.
+      const pieces = v.besoins.length || v.vetements.length ? await deps.lireDressing(user.id).catch(() => [] as PieceDressing[]) : [];
       const dressing = choisirPiecesDressing(v.besoins, pieces);
+      const portees = reconnaitrePiecesPortees(v.vetements, pieces);
       piecesDressing = dressing.length;
+      piecesReconnues = portees.length;
       journal("ok");
-      return { statut: 200, corps: { ok: true, analyseId, avis: v.avis, dressing } };
+      return { statut: 200, corps: { ok: true, analyseId, avis: v.avis, dressing, portees } };
     }
     if (v.etat === "inexploitable") {
       journal("photo_inexploitable");

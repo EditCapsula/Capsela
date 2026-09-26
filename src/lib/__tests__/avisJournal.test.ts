@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estTableAbsente, ligneVersAvis } from "../avisJournal";
+import { estTableAbsente, ligneVersAvis, trierAvisRecents, verdictCourt } from "../avisJournal";
 
 const resultat = {
   overallAssessment: "Une tenue équilibrée.",
@@ -60,5 +60,21 @@ describe("estTableAbsente — migration 0036 non exécutée", () => {
     expect(estTableAbsente({ code: "42501" })).toBe(false);
     expect(estTableAbsente(null)).toBe(false);
     expect(estTableAbsente(undefined)).toBe(false);
+  });
+});
+
+describe("carte du Journal — verdict et ordre, sans rien inventer", () => {
+  it("prend la formule d'ouverture de l'avis global, jusqu'à la première ponctuation forte", () => {
+    expect(verdictCourt("Une tenue lumineuse et fluide : le satin cuivré et le pantalon crème…")).toBe("Une tenue lumineuse et fluide");
+    expect(verdictCourt("Une belle association. Les couleurs se répondent.")).toBe("Une belle association");
+  });
+  it("aucune formule courte : null (la carte montre l'avis global tronqué)", () => {
+    expect(verdictCourt("Joli.")).toBeNull();
+    expect(verdictCourt("Ton ensemble fonctionne bien parce que les proportions sont équilibrées et que les matières se répondent, sans rupture")).toBeNull();
+  });
+  it("trie du plus récent au plus ancien sans toucher à la liste d'origine", () => {
+    const l = [{ creeLe: 1 }, { creeLe: 3 }, { creeLe: 2 }];
+    expect(trierAvisRecents(l).map((a) => a.creeLe)).toEqual([3, 2, 1]);
+    expect(l.map((a) => a.creeLe)).toEqual([1, 3, 2]);
   });
 });
