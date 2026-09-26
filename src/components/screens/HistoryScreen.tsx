@@ -527,7 +527,12 @@ export default function HistoryScreen() {
           ))}
         </ul>
 
-        <AvisEnregistresJournal avis={avisEnregistres} onOuvrir={actions.ouvrirAvisEnregistre} />
+        <AvisEnregistresJournal
+          avis={avisEnregistres}
+          onOuvrir={actions.ouvrirAvisEnregistre}
+          onVoirTout={actions.goAvisTous}
+          onAnalyser={actions.goAvisStyliste}
+        />
 
         {/* Le parcours existant de la tenue du jour — aucun nouveau parcours (§3). */}
         <button
@@ -780,7 +785,12 @@ export default function HistoryScreen() {
         </button>
       )}
 
-      <AvisEnregistresJournal avis={avisEnregistres} onOuvrir={actions.ouvrirAvisEnregistre} />
+      <AvisEnregistresJournal
+          avis={avisEnregistres}
+          onOuvrir={actions.ouvrirAvisEnregistre}
+          onVoirTout={actions.goAvisTous}
+          onAnalyser={actions.goAvisStyliste}
+        />
 
       {/* HISTORIQUE — les dernières tenues, visuel en tête (§12). */}
       <section className="mt-[30px]" aria-labelledby="journal-historique">

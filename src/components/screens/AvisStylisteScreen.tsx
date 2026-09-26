@@ -326,12 +326,17 @@ export default function AvisStylisteScreen() {
           personnalisation={personnalisationAvis(contexte)}
         />
         <div className="mt-[30px] flex flex-col gap-[10px]">
-          {/* ENREGISTREMENT (§14) : action volontaire, désactivée pendant
-              l'écriture. Après succès, l'état le dit en toutes lettres —
-              « Enregistré dans ton Journal ✓ » — avec le chemin pour l'y
-              retrouver ; un même résultat ne s'enregistre pas deux fois. En
-              cas d'échec, message et nouvel essai, résultat intact. */}
-          {enregistrement === "fait" ? (
+          {/* ENREGISTREMENT AUTOMATIQUE (26/09/2026) : l'avis part dans le
+              Journal dès qu'il arrive (lancerAvisStyliste). L'écran dit où il
+              en est — en cours, puis « Enregistré dans ton Journal ✓ » avec le
+              chemin pour l'y retrouver ; un même résultat ne s'enregistre
+              jamais deux fois. En cas d'échec, message et nouvel essai,
+              résultat intact. */}
+          {enregistrement === "en_cours" ? (
+            <div className="w-full rounded-[18px] bg-card border border-border px-4 py-[14px] text-[13px] text-muted-3" role="status">
+              Enregistrement dans ton Journal…
+            </div>
+          ) : enregistrement === "fait" ? (
             <div
               className="w-full rounded-[18px] bg-warm-bg border border-warm-border px-4 py-[12px] flex items-center justify-between gap-3 motion-safe:animate-[capsule-apparition_240ms_ease-out_both]"
               role="status"
@@ -342,7 +347,7 @@ export default function AvisStylisteScreen() {
               </button>
             </div>
           ) : (
-            <button type="button" onClick={actions.enregistrerAvisStyliste} disabled={enregistrement === "en_cours"} className={BOUTON_SECONDAIRE}>
+            <button type="button" onClick={actions.enregistrerAvisStyliste} className={BOUTON_SECONDAIRE}>
               {enregistrement === "echec" ? TEXTES.reessayer : TEXTES.enregistrer}
             </button>
           )}

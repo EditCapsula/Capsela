@@ -246,15 +246,20 @@ export interface Actions {
    */
   lancerAvisStyliste: () => void;
   /**
-   * « Enregistrer dans mon journal » : le résultat affiché et sa photo
-   * (arbitré). Action volontaire, jamais automatique ; ignorée pendant un
-   * enregistrement ou après un succès (pas de doublon, §14).
+   * Enregistre dans le Journal le résultat affiché et sa photo. Appelée
+   * automatiquement à la réception de l'avis (26/09/2026), et par
+   * « Réessayer » après un échec ; ignorée pendant un enregistrement ou après
+   * un succès (pas de doublon, §14).
    */
   enregistrerAvisStyliste: () => void;
   /** Charge les avis enregistrés (Journal). */
   chargerAvisEnregistres: () => void;
-  /** Ouvre un avis enregistré en consultation. */
+  /** Ouvre un avis enregistré en consultation (depuis le Journal ou la liste complète, qui est retenue pour le retour). */
   ouvrirAvisEnregistre: (id: string) => void;
+  /** Referme un avis enregistré : retour à l'écran d'où il a été ouvert. */
+  fermerAvisEnregistre: () => void;
+  /** Tous les avis enregistrés (« Voir tout » du Journal). */
+  goAvisTous: () => void;
   /** Supprime un avis enregistré et sa photo (§14). Rend false en cas d'échec — l'avis reste alors affiché. */
   supprimerAvisEnregistre: (id: string) => Promise<boolean>;
   backFromLegal: () => void;
@@ -553,6 +558,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const analyseAvisEnCoursRef = useRef(false);
   const [avisEnregistres, setAvisEnregistres] = useState<AvisEnregistre[] | null>(null);
   const [avisEnregistreActifId, setAvisEnregistreActifId] = useState<string | null>(null);
+  const [avisEnregistreRetour, setAvisEnregistreRetour] = useState<Screen>("history");
   const avisEnregistreActif = avisEnregistres?.find((a) => a.id === avisEnregistreActifId) ?? null;
   useEffect(() => {
     etatPremiumRef.current = etatPremium;
@@ -1099,6 +1105,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         };
         avisStylisteRef.current = suivant;
         setAvisStyliste(suivant);
+        // ENREGISTREMENT AUTOMATIQUE (26/09/2026, brief « Mes avis de
+        // styliste ») : un avis reçu rejoint le Journal sans geste de plus —
+        // il apparaît en tête de la section. La décision d'origine (§14,
+        // action volontaire) est levée ; l'avis reste supprimable depuis son
+        // détail, photo comprise. Un échec est dit à l'écran, avec Réessayer.
+        if (r.ok) actions.enregistrerAvisStyliste();
       });
     },
     enregistrerAvisStyliste: () => {
@@ -1134,8 +1146,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     },
     ouvrirAvisEnregistre: (id) => {
       setAvisEnregistreActifId(id);
+      setAvisEnregistreRetour(stateRef.current.screen === "avisTous" ? "avisTous" : "history");
       go("avisEnregistre");
     },
+    fermerAvisEnregistre: () => go(avisEnregistreRetour),
+    goAvisTous: () => go("avisTous"),
     supprimerAvisEnregistre: async (id) => {
       const avis = avisEnregistres?.find((a) => a.id === id);
       if (!avis) return false;

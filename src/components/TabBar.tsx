@@ -149,7 +149,9 @@ export default function TabBar() {
       style={{ paddingBottom: "calc(22px + env(safe-area-inset-bottom))" }}
     >
       {TABS.map((tab) => {
-        const active = state.screen === tab.screen;
+        // Les avis de styliste enregistrés (liste, détail) vivent dans le
+        // Journal : l'onglet reste allumé.
+        const active = state.screen === tab.screen || (tab.screen === "history" && (state.screen === "avisTous" || state.screen === "avisEnregistre"));
         const onClick = () => tab.go(actions);
         return (
           <button

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
 import { useCapsela } from "@/lib/store";
@@ -42,7 +42,7 @@ export default function AvisEnregistreScreen() {
     // Arrivée sans avis (rechargement de la liste, suppression) : retour au Journal.
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-        <BoutonRetour onClick={actions.goHistory} label="Revenir au journal" />
+        <AppHeader onBack={actions.fermerAvisEnregistre} backLabel="Revenir" />
       </div>
     );
   }
@@ -52,7 +52,7 @@ export default function AvisEnregistreScreen() {
     const ok = await actions.supprimerAvisEnregistre(avis.id);
     if (ok) {
       setConfirmation(false);
-      actions.goHistory();
+      actions.fermerAvisEnregistre();
     } else {
       setSuppression("echec");
     }
@@ -60,12 +60,17 @@ export default function AvisEnregistreScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <div className="flex items-center justify-between">
-        <BoutonRetour onClick={actions.goHistory} label="Revenir au journal" />
-        {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
-      </div>
+      {/* En-tête global de Capsela (brief du 26/09/2026 : le même sur toutes
+          les pages) ; le retour ramène d'où l'avis a été ouvert — Journal ou
+          liste complète. */}
+      <AppHeader onBack={actions.fermerAvisEnregistre} backLabel="Revenir" />
+      {premiumRequis("AVIS_DE_STYLISTE") && (
+        <div className="mt-[14px]">
+          <BadgePremium />
+        </div>
+      )}
 
-      <div className="mt-[22px]">
+      <div className="mt-[18px]">
         <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>

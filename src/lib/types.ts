@@ -455,4 +455,6 @@ export type Screen =
   // ouvert depuis la carte « Besoin d'un regard ? » de l'accueil.
   | "avisStyliste"
   // Avis de styliste enregistré, rouvert depuis le Journal.
-  | "avisEnregistre";
+  | "avisEnregistre"
+  // Tous les avis enregistrés (« Voir tout » de « Mes avis de styliste »).
+  | "avisTous";
