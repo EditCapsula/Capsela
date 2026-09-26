@@ -90,6 +90,7 @@ export default function CarteLook({
   porte,
   suggere,
   onOuvrir,
+  compacte = false,
 }: {
   look: SavedLook;
   pieces: Item[];
@@ -97,6 +98,12 @@ export default function CarteLook({
   porte: number;
   suggere: boolean;
   onOuvrir: () => void;
+  /**
+   * Carrousel du Dressing (polish V3, 26/09/2026) : l'indicateur devient
+   * « ✦ Suggéré », sur la ligne de la date — une occurrence discrète, et une
+   * ligne de moins par carte. « Mes looks » garde la forme longue.
+   */
+  compacte?: boolean;
 }) {
   const date = new Date(look.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
   return (
@@ -112,8 +119,9 @@ export default function CarteLook({
         <div className="text-[11px] text-muted mt-[3px]">
           {date}
           {porte > 0 && ` · Porté ${porte} fois`}
+          {compacte && suggere && <span className="text-terracotta"> · ✦ Suggéré</span>}
         </div>
-        {suggere && <div className="text-[10.5px] text-terracotta mt-[4px]">✦ Look suggéré par Capsela</div>}
+        {!compacte && suggere && <div className="text-[10.5px] text-terracotta mt-[4px]">✦ Look suggéré par Capsela</div>}
       </div>
     </button>
   );
