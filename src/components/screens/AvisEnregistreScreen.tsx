@@ -4,6 +4,7 @@ import { useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
 import AppHeader from "@/components/AppHeader";
+import { LienRetour } from "@/components/BoutonRetour";
 import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
 import { useCapsela } from "@/lib/store";
@@ -42,7 +43,8 @@ export default function AvisEnregistreScreen() {
     // Arrivée sans avis (rechargement de la liste, suppression) : retour au Journal.
     return (
       <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-        <AppHeader onBack={actions.fermerAvisEnregistre} backLabel="Revenir" />
+        <AppHeader />
+        <LienRetour onClick={actions.fermerAvisEnregistre} label="Revenir" />
       </div>
     );
   }
@@ -60,17 +62,16 @@ export default function AvisEnregistreScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      {/* En-tête global de Capsela (brief du 26/09/2026 : le même sur toutes
-          les pages) ; le retour ramène d'où l'avis a été ouvert — Journal ou
-          liste complète. */}
-      <AppHeader onBack={actions.fermerAvisEnregistre} backLabel="Revenir" />
-      {premiumRequis("AVIS_DE_STYLISTE") && (
-        <div className="mt-[14px]">
-          <BadgePremium />
-        </div>
-      )}
+      {/* En-tête global de Capsela, entier (brief V2 du 26/09/2026) ; le
+          retour, dans le contenu, ramène d'où l'avis a été ouvert — Journal
+          ou liste complète. */}
+      <AppHeader />
+      <div className="flex items-center justify-between gap-3">
+        <LienRetour onClick={actions.fermerAvisEnregistre} label="Revenir" />
+        {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
+      </div>
 
-      <div className="mt-[18px]">
+      <div className="mt-[8px]">
         <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>

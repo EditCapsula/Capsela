@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, reactionErreur, repartirPiecesAvis } from "../avisStylisteClient";
+import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, piecesPortees, prioriserActionsAvis, reactionErreur, repartirPiecesAvis } from "../avisStylisteClient";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 
 const profil = (over: Partial<Profile> = {}): Profile => ({ ...EMPTY_PROFILE, gender: "femme", displayName: "Angela", ...over });
@@ -105,9 +105,28 @@ describe("présentation du résultat — uniquement des données réelles", () =
     expect(personnalisationAvis({ morphologie: "Taille bien marquée" })).toEqual(["ta silhouette"]);
   });
 
-  it("étapes d'analyse : la comparaison au profil n'est annoncée que si elle a lieu", () => {
-    expect(etapesAnalyse({})).not.toContainEqual(expect.stringMatching(/compare/));
-    expect(etapesAnalyse({ style: ["Bohème"] })).toContain("Je compare avec ton style");
-    expect(etapesAnalyse({ style: ["Bohème"], morphologie: "x" })).toContain("Je compare avec ton style et ta morphologie");
+  it("étapes d'analyse : le style et les proportions ne sont annoncés que s'ils sont envoyés", () => {
+    expect(etapesAnalyse({})).toEqual(["Silhouette", "Couleurs", "Associations"]);
+    expect(etapesAnalyse({ style: ["Bohème"] })).toEqual(["Silhouette", "Couleurs", "Associations", "Ton style"]);
+    expect(etapesAnalyse({ style: ["Bohème"], morphologie: "x" })).toContain("Tes proportions");
+  });
+
+  it("phrase d'analyse : ne promet que ce qui a lieu", () => {
+    expect(phraseAnalyse({}, false)).toBe("Chaque tenue est unique.");
+    expect(phraseAnalyse({ style: ["Bohème"] }, true)).toBe("Chaque tenue est unique. Ton avis sera adapté à ton style et à ton dressing.");
+    expect(phraseAnalyse({}, true)).toBe("Chaque tenue est unique. Ton avis sera adapté à ton dressing.");
+  });
+
+  it("pièces portées : entiers, sans doublon, six au plus ; absentes = liste vide", () => {
+    expect(piecesPortees(undefined)).toEqual([]);
+    expect(piecesPortees([3, 3, "4", 5.5, 7])).toEqual([3, 7]);
+    expect(piecesPortees([1, 2, 3, 4, 5, 6, 7])).toHaveLength(6);
+  });
+
+  it("et maintenant : une action principale selon le contexte réel, rien sans composition", () => {
+    expect(prioriserActionsAvis({ heure: 10, tenueDuJourPortee: false, composable: true })).toEqual({ principale: "porter", secondaires: ["planifier"] });
+    expect(prioriserActionsAvis({ heure: 19, tenueDuJourPortee: false, composable: true })).toEqual({ principale: "demain", secondaires: ["planifier"] });
+    expect(prioriserActionsAvis({ heure: 10, tenueDuJourPortee: true, composable: true })?.principale).toBe("demain");
+    expect(prioriserActionsAvis({ heure: 10, tenueDuJourPortee: false, composable: false })).toBeNull();
   });
 });

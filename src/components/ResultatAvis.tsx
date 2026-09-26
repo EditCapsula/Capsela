@@ -63,7 +63,7 @@ function Points({ points }: { points: string[] }) {
   );
 }
 
-function Vignette({ item, taille }: { item: Item; taille: number }) {
+export function Vignette({ item, taille }: { item: Item; taille: number }) {
   const image = resolveItemImage(item);
   return (
     <span

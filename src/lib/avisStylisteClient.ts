@@ -52,7 +52,7 @@ export function contexteDepuisProfil(profile: Profile): ContexteAvis {
 }
 
 export type ResultatDemande =
-  | { ok: true; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[] }
+  | { ok: true; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[]; portees: number[] }
   | { ok: false; code: CodeErreurAvis | "reseau"; raison?: RaisonInexploitable };
 
 function lireFichierEnDataUrl(fichier: File): Promise<string> {
@@ -81,6 +81,16 @@ export function piecesSuggerees(v: unknown): PieceSuggeree[] {
 }
 
 /**
+ * Pièces reconnues sur la photo (V2) : identifiants entiers, sans doublon, six
+ * au plus. Absentes (fonction pas encore redéployée) : liste vide, et la
+ * section « Et maintenant ? » ne s'affiche pas.
+ */
+export function piecesPortees(v: unknown): number[] {
+  if (!Array.isArray(v)) return [];
+  return [...new Set(v.filter((id): id is number => Number.isInteger(id)))].slice(0, 6);
+}
+
+/**
  * Envoie la photo préparée (JPEG, cf. photoAvis.ts) et le contexte. Ne lève
  * jamais. Sans Supabase (mode démo), aucune analyse réelle : erreur réseau.
  */
@@ -106,7 +116,7 @@ export async function demanderAvis(fichier: File, contexte: ContexteAvis): Promi
     }
     const corps = data as ReponseAvis | null;
     if (corps && corps.ok && estAvis(corps.avis)) {
-      return { ok: true, analyseId: corps.analyseId, avis: corps.avis, dressing: piecesSuggerees(corps.dressing) };
+      return { ok: true, analyseId: corps.analyseId, avis: corps.avis, dressing: piecesSuggerees(corps.dressing), portees: piecesPortees(corps.portees) };
     }
     return { ok: false, code: "reponse_invalide" };
   } catch {
@@ -192,18 +202,57 @@ export function personnalisationAvis(c: ContexteAvis): string[] {
 }
 
 /**
- * Les temps de l'état d'analyse. Ils décrivent ce que la styliste regarde
- * réellement (vêtements, couleurs, associations — cf. INSTRUCTIONS) ; la
- * comparaison au profil n'est annoncée que si un style ou une morphologie a
- * été envoyé, et ne cite que ce qui l'a été.
+ * Les temps de l'état d'analyse (V2, 26/09/2026 : des mots, plus des phrases
+ * de « checklist technique »). Ils décrivent ce que la styliste regarde
+ * réellement (vêtements, couleurs, associations — cf. INSTRUCTIONS) ; « Ton
+ * style » et « Tes proportions » ne sont annoncés que si un style ou une
+ * morphologie a été envoyé.
  */
 export function etapesAnalyse(c: ContexteAvis): string[] {
-  const profil = [c.style?.length ? "ton style" : null, c.morphologie ? "ta morphologie" : null].filter(Boolean);
   return [
-    "J'observe la silhouette",
-    "J'analyse les couleurs",
-    "Je regarde les associations",
-    ...(profil.length ? [`Je compare avec ${profil.join(" et ")}`] : []),
-    "Je prépare mes conseils",
+    "Silhouette",
+    "Couleurs",
+    "Associations",
+    ...(c.style?.length ? ["Ton style"] : []),
+    ...(c.morphologie ? ["Tes proportions"] : []),
   ];
+}
+
+/**
+ * La phrase éditoriale sous l'état d'analyse. Elle ne promet que ce qui a
+ * lieu : « ton style » si un style est envoyé, « ton dressing » si le
+ * dressing réel a des pièces — le serveur y cherche alors celles qui
+ * appliquent le conseil (choisirPiecesDressing).
+ */
+export function phraseAnalyse(c: ContexteAvis, aDesPieces: boolean): string {
+  const adapte = [c.style?.length ? "à ton style" : null, aDesPieces ? "à ton dressing" : null].filter(Boolean);
+  return adapte.length ? `Chaque tenue est unique. Ton avis sera adapté ${adapte.join(" et ")}.` : "Chaque tenue est unique.";
+}
+
+/* ───────── « Et maintenant ? » (Avis de styliste V2, 26/09/2026) ───────── */
+
+export type ActionAvis = "porter" | "demain" | "planifier";
+
+/**
+ * Une action principale, une secondaire — jamais un mur de boutons. Le
+ * contexte ne vient que de ce que l'app sait réellement :
+ *   - l'heure locale : en soirée, la tenue sert plutôt demain ;
+ *   - la tenue du jour déjà validée comme portée : la remplacer n'a plus de
+ *     sens, on propose demain.
+ * Sans composition utilisable (pièces reconnues sans socle), aucune action :
+ * la section ne montre pas de bouton qui ne mènerait à rien.
+ * Pas de cas « Valise » : le parcours valise n'existe pas encore dans
+ * l'app (la carte du hub mène à Premium) — aucune action n'y renvoie.
+ * ARBITRAGE ÉDITORIAL : la soirée commence à 17 h.
+ */
+export const HEURE_SOIREE = 17;
+
+export function prioriserActionsAvis(ctx: {
+  heure: number;
+  tenueDuJourPortee: boolean;
+  composable: boolean;
+}): { principale: ActionAvis; secondaires: ActionAvis[] } | null {
+  if (!ctx.composable) return null;
+  if (ctx.heure >= HEURE_SOIREE || ctx.tenueDuJourPortee) return { principale: "demain", secondaires: ["planifier"] };
+  return { principale: "porter", secondaires: ["planifier"] };
 }

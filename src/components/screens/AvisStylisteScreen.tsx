@@ -3,15 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
-import BoutonRetour from "@/components/BoutonRetour";
+import EtMaintenantAvis from "@/components/EtMaintenantAvis";
+import AppHeader from "@/components/AppHeader";
+import { LienRetour } from "@/components/BoutonRetour";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
 import { useAuth } from "@/lib/auth";
-import { contexteDepuisProfil, etapesAnalyse, personnalisationAvis, reactionErreur } from "@/lib/avisStylisteClient";
+import { contexteDepuisProfil, etapesAnalyse, personnalisationAvis, phraseAnalyse, reactionErreur } from "@/lib/avisStylisteClient";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
+import type { Item } from "@/lib/types";
 
 /*
  * AVIS DE STYLISTE — écrans du MVP (docs/avis-de-styliste.md, sections 3, 4,
@@ -51,10 +54,11 @@ const TEXTES = {
   changer: "Changer de photo", // §4, §6
   retour: "Retour", // §6, écran 13
   reessayer: "Réessayer", // §4, §15
-  enregistrer: "Enregistrer dans mon journal", // §3, §12
   nouvelle: "Nouvelle analyse", // §3, §12
-  enregistre: "Enregistré dans ton Journal", // optimisation du parcours, 26/09/2026
-  voirJournal: "Voir mon Journal",
+  // V2 (26/09/2026) : l'enregistrement est automatique — plus de bouton
+  // « Enregistrer dans mon journal », qui suggérait une action manuelle.
+  enregistre: "Enregistré dans mon Journal",
+  voirJournal: "Voir dans mon Journal",
   enregistrementEchoue: "Impossible d'enregistrer ton avis pour le moment. Réessaie.", // validé le 25/09/2026
   // Le placeholder « TODO_COPY » s'affichait tel quel en production.
   supprimer: "Supprimer cette photo",
@@ -80,14 +84,14 @@ function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?:
 }
 
 /**
- * INTRODUCTION DU SERVICE (optimisation du parcours, 26/09/2026) : trois temps
- * très compacts, qui disent ce qui va se passer — sans promettre plus que ce
- * que fait réellement l'avis (vêtements, couleurs, associations).
+ * INTRODUCTION DU SERVICE (optimisation du parcours, 26/09/2026 ; allégée en
+ * V2) : trois temps très compacts, qui disent ce qui va se passer — sans
+ * promettre plus que ce que fait réellement l'avis.
  */
 const ETAPES_SERVICE: [string, string][] = [
-  ["Montre ta tenue", "Prends une photo ou choisis-la dans ta galerie."],
-  ["Capsela l'analyse", "Style, proportions, couleurs et associations."],
-  ["Reçois des conseils personnalisés", "Ce qui fonctionne et ce que tu peux tester."],
+  ["Montre ta tenue", "Photo ou galerie."],
+  ["Capsela l'analyse", "Style, couleurs, proportions."],
+  ["Reçois ton avis", "Conseils personnalisés."],
 ];
 
 function IntroService() {
@@ -126,7 +130,7 @@ function ConseilsPhoto() {
       </summary>
       <ul className="mt-[10px] flex flex-col gap-[6px] text-[13px] text-ink leading-[1.45]">
         <li>• Prends ta tenue en entier, de la tête aux chaussures</li>
-        <li>• Privilégie une lumière naturelle, face à une fenêtre</li>
+        <li>• Privilégie une lumière naturelle</li>
         <li>• Évite les photos trop recadrées ou floues</li>
       </ul>
     </details>
@@ -134,14 +138,15 @@ function ConseilsPhoto() {
 }
 
 /**
- * ÉTAT D'ANALYSE ÉDITORIAL. Les temps décrivent ce que la styliste regarde
- * réellement (etapesAnalyse) ; ils avancent au fil de l'attente, et le dernier
- * reste en cours tant que la réponse n'est pas là. Rien n'est ralenti : dès
- * que l'avis arrive, cet écran disparaît, quel que soit le temps affiché.
- * ARBITRAGE ÉDITORIAL : le rythme (1,2 s par temps) est un rendu, pas une
- * mesure de l'analyse.
+ * ÉTAT D'ANALYSE ÉDITORIAL (V2, 26/09/2026 : des mots plutôt qu'une
+ * checklist). Les temps décrivent ce que la styliste regarde réellement
+ * (etapesAnalyse) ; ils avancent au fil de l'attente, et le dernier reste en
+ * cours tant que la réponse n'est pas là. Rien n'est ralenti : dès que l'avis
+ * arrive, cet écran disparaît, quel que soit le temps affiché. Aucun
+ * pourcentage. ARBITRAGE ÉDITORIAL : le rythme (1,2 s par temps) est un
+ * rendu, pas une mesure de l'analyse.
  */
-function EtatAnalyse({ etapes }: { etapes: string[] }) {
+function EtatAnalyse({ etapes, phrase }: { etapes: string[]; phrase: string }) {
   const [faites, setFaites] = useState(0);
   useEffect(() => {
     if (faites >= etapes.length - 1) return;
@@ -149,34 +154,33 @@ function EtatAnalyse({ etapes }: { etapes: string[] }) {
     return () => clearTimeout(t);
   }, [faites, etapes.length]);
   return (
-    <div className="mt-[22px]" aria-busy="true" aria-live="polite">
+    <div className="mt-[22px] text-center" aria-busy="true" aria-live="polite">
       <div className="t-titre-carte text-ink">
         Analyse de <span className="italic text-terracotta">ta tenue…</span>
       </div>
       <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]">Je regarde chaque détail pour te donner un avis personnalisé.</div>
-      <ul className="mt-[16px] flex flex-col gap-[10px]">
+      <ul className="mt-[18px] inline-flex flex-col items-start gap-[9px] text-left">
         {etapes.map((e, i) => {
           const fait = i < faites;
           const enCours = i === faites;
           return (
-            <li
-              key={e}
-              className={"flex items-center gap-[10px] text-[13px] transition-opacity duration-300 " + (fait || enCours ? "opacity-100" : "opacity-45")}
-            >
-              <span
-                aria-hidden="true"
-                className={
-                  "w-[18px] h-[18px] flex-shrink-0 rounded-full flex items-center justify-center text-[10px] " +
-                  (fait ? "bg-terracotta text-cream" : "border border-terracotta text-terracotta " + (enCours ? "motion-safe:animate-pulse" : ""))
-                }
-              >
-                {fait ? "✓" : ""}
+            <li key={e} className={"flex items-center gap-[10px] text-[14px] transition-colors duration-300 " + (fait ? "text-ink" : "text-muted")}>
+              <span aria-hidden="true" className="w-[16px] flex-shrink-0 flex items-center justify-center text-terracotta">
+                {fait ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
+                ) : (
+                  <span className={"block w-[10px] h-[10px] rounded-full border border-terracotta/60 " + (enCours ? "motion-safe:animate-pulse" : "")} />
+                )}
               </span>
-              <span className={fait ? "text-ink" : "text-muted-3"}>{e}</span>
+              <span className="font-serif">{e}</span>
+              <span className="sr-only">{fait ? " : fait" : enCours ? " : en cours" : ""}</span>
             </li>
           );
         })}
       </ul>
+      <div className="font-serif italic text-[14px] text-muted-3 leading-[1.5] mt-[20px] max-w-[300px] mx-auto">{phrase}</div>
     </div>
   );
 }
@@ -306,7 +310,7 @@ export default function AvisStylisteScreen() {
     contenu = (
       <div className="mt-[24px]">
         <Apercu photo={photo} hauteurMax="30vh" />
-        <EtatAnalyse etapes={etapesAnalyse(contexte)} />
+        <EtatAnalyse etapes={etapesAnalyse(contexte)} phrase={phraseAnalyse(contexte, state.items.length > 0)} />
       </div>
     );
   } else if (analyse.etat === "reussie") {
@@ -325,42 +329,58 @@ export default function AvisStylisteScreen() {
           onOuvrirPiece={(id) => actions.openItem(id, false)}
           personnalisation={personnalisationAvis(contexte)}
         />
-        <div className="mt-[30px] flex flex-col gap-[10px]">
-          {/* ENREGISTREMENT AUTOMATIQUE (26/09/2026) : l'avis part dans le
-              Journal dès qu'il arrive (lancerAvisStyliste). L'écran dit où il
-              en est — en cours, puis « Enregistré dans ton Journal ✓ » avec le
-              chemin pour l'y retrouver ; un même résultat ne s'enregistre
-              jamais deux fois. En cas d'échec, message et nouvel essai,
-              résultat intact. */}
-          {enregistrement === "en_cours" ? (
-            <div className="w-full rounded-[18px] bg-card border border-border px-4 py-[14px] text-[13px] text-muted-3" role="status">
+        {/* ET MAINTENANT ? (V2) — la tenue reconnue dans le dressing, et ce
+            qu'on peut en faire avec les fonctionnalités existantes. La clé
+            réinitialise les pièces retirées à chaque nouvel avis. */}
+        <EtMaintenantAvis
+          key={analyse.analyseId}
+          pieces={analyse.portees.map((id) => state.items.find((i) => i.id === id)).filter((i): i is Item => !!i)}
+          tenueDuJourPortee={state.outfitValidated}
+          onPorter={(ids) => actions.reWear(ids, { rester: true })}
+          onVoirTenue={actions.goTenues}
+          onPlanifier={actions.planifierComposition}
+        />
+        {/* STATUT JOURNAL (V2, 26/09/2026). L'avis part dans le Journal dès
+            qu'il arrive (lancerAvisStyliste) : l'écran dit où il en est, sans
+            jamais proposer d'« enregistrer » ce qui l'est déjà. En cas
+            d'échec, message et nouvel essai, résultat intact ; un même
+            résultat ne s'enregistre jamais deux fois. */}
+        <div className="mt-[30px]">
+          {enregistrement === "en_cours" && (
+            <div className="text-[13px] text-muted-3 text-center py-[12px]" role="status">
               Enregistrement dans ton Journal…
             </div>
-          ) : enregistrement === "fait" ? (
+          )}
+          {enregistrement === "fait" && (
             <div
-              className="w-full rounded-[18px] bg-warm-bg border border-warm-border px-4 py-[12px] flex items-center justify-between gap-3 motion-safe:animate-[capsule-apparition_240ms_ease-out_both]"
+              className="w-full rounded-[18px] bg-warm-bg border border-warm-border px-4 pt-[12px] flex flex-col items-center text-center motion-safe:animate-[capsule-apparition_240ms_ease-out_both]"
               role="status"
             >
-              <span className="text-[13px] text-terracotta">{TEXTES.enregistre} ✓</span>
+              <span className="text-[13px] text-ink whitespace-nowrap">
+                <span aria-hidden="true" className="text-terracotta mr-[6px]">
+                  ✓
+                </span>
+                {TEXTES.enregistre}
+              </span>
               <button type="button" onClick={actions.goHistory} className="t-lien text-terracotta cursor-pointer min-h-[44px] flex-shrink-0">
                 {TEXTES.voirJournal} →
               </button>
             </div>
-          ) : (
-            <button type="button" onClick={actions.enregistrerAvisStyliste} className={BOUTON_SECONDAIRE}>
-              {enregistrement === "echec" ? TEXTES.reessayer : TEXTES.enregistrer}
-            </button>
           )}
           {enregistrement === "echec" && (
-            <div className="text-[12px] text-rust text-center leading-[1.45]" role="alert">
-              {TEXTES.enregistrementEchoue}
-            </div>
+            <>
+              <div className="text-[12px] text-rust text-center leading-[1.45]" role="alert">
+                {TEXTES.enregistrementEchoue}
+              </div>
+              <button type="button" onClick={actions.enregistrerAvisStyliste} className={BOUTON_SECONDAIRE + " mt-[10px]"}>
+                {TEXTES.reessayer}
+              </button>
+            </>
           )}
-          {/* L'action suivante : une nouvelle analyse, bouton principal. */}
-          <button type="button" onClick={() => actions.definirPhotoAvis(null)} className={BOUTON_PRINCIPAL}>
-            {TEXTES.nouvelle}
-          </button>
         </div>
+        <button type="button" onClick={() => actions.definirPhotoAvis(null)} className={LIEN + " mt-[10px]"}>
+          {TEXTES.nouvelle}
+        </button>
       </div>
     );
   } else if (reaction && reaction.action !== "gate") {
@@ -408,12 +428,16 @@ export default function AvisStylisteScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <div className="flex items-center justify-between">
-        <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" />
+      {/* EN-TÊTE GLOBAL (V2, 26/09/2026) : le même que sur toutes les pages —
+          logo centré, profil à droite — sur l'entrée, l'analyse et le
+          résultat. Le retour descend dans le contenu. */}
+      <AppHeader />
+      <div className="flex items-center justify-between gap-3">
+        <LienRetour onClick={actions.goHome} label="Revenir à l'accueil" />
         {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
       </div>
 
-      <div className="mt-[22px]">
+      <div className="mt-[8px]">
         <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>

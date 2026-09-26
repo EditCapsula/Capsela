@@ -89,7 +89,7 @@ export interface PhotoAvis {
 export type AnalyseAvis =
   | { etat: "inactive" }
   | { etat: "en_cours" }
-  | { etat: "reussie"; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[] }
+  | { etat: "reussie"; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[]; portees: number[] }
   | { etat: "echouee"; code: Extract<ResultatDemande, { ok: false }>["code"]; raison?: Extract<ResultatDemande, { ok: false }>["raison"] };
 export interface SessionAvisStyliste {
   photo: PhotoAvis | null;
@@ -187,6 +187,7 @@ function buildInitialState(): AppState {
     tenuesVues: [],
     avisSource: null,
     planARouvrir: null,
+    planComposition: null,
     savedLooks: [],
     lookDraftIds: [],
     lookDraftName: "",
@@ -374,12 +375,21 @@ export interface Actions {
   wearActiveToday: () => void;
   correctPiece: (id: number) => void;
   correctActive: () => void;
-  reWear: (ids: number[]) => void;
+  /**
+   * Fait de ces pièces la tenue du jour, à valider sur l'écran Tenue. Par
+   * défaut, ouvre cet écran ; `rester` garde l'écran courant (« Porter
+   * aujourd'hui » d'un avis de styliste, qui confirme sur place).
+   */
+  reWear: (ids: number[], options?: { rester?: boolean }) => void;
   /** Sans argument : la tenue du jour. Avec : une tenue planifiée (cf. AppState.avisSource). */
   openOpinionShare: (source?: AppState["avisSource"]) => void;
   closeOpinionShare: () => void;
   /** Planifier a rouvert le plan au retour du partage. */
   oublierPlanARouvrir: () => void;
+  /** Ouvre Planifier avec cette composition déjà faite (avis de styliste), pour demain ou une date à choisir. */
+  planifierComposition: (ids: number[], demain: boolean) => void;
+  /** Planifier a repris la composition. */
+  oublierPlanComposition: () => void;
 
   /** seedId : préremplit lookDraftIds avec cette pièce (recette 24/08/2026, PieceScreen "Ajouter à un look → Créer un nouveau look") — jamais renseigné hors de ce parcours. */
   goCreateLook: (seedId?: number) => void;
@@ -1100,7 +1110,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           photo,
           enregistrement: "aucun",
           analyse: r.ok
-            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing }
+            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing, portees: r.portees }
             : { etat: "echouee", code: r.code, raison: r.raison },
         };
         avisStylisteRef.current = suivant;
@@ -1833,12 +1843,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }));
       if (wornUpdate && isSupabaseConfigured && userId) updateDressingItemWorn([wornUpdate]).catch((err) => reportDressingError("updateDressingItemWorn", err));
     },
-    reWear: (ids) =>
+    reWear: (ids, options) =>
       setState((s) => ({
         ...s,
         outfit: ids.filter((id) => findPiece(poolRef.current, id, vestiaireRef.current)),
         outfitValidated: false,
-        screen: "tenues",
+        screen: options?.rester ? s.screen : "tenues",
       })),
 
     openOpinionShare: (source) => setState((s) => ({ ...s, avisSource: source ?? null, screen: "opinionShare" })),
@@ -1850,6 +1860,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           : { ...s, screen: "tenues" }
       ),
     oublierPlanARouvrir: () => setState((s) => (s.planARouvrir ? { ...s, planARouvrir: null } : s)),
+    planifierComposition: (ids, demain) => setState((s) => ({ ...s, planComposition: { pieceIds: ids, demain }, screen: "planifier" })),
+    oublierPlanComposition: () => setState((s) => (s.planComposition ? { ...s, planComposition: null } : s)),
 
     goCreateLook: (seedId) =>
       setState((s) => ({
