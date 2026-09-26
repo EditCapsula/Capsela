@@ -149,3 +149,61 @@ export function reactionErreur(code: CodeErreurAvis | "reseau", raison?: RaisonI
       return { action: "reessayer", message: MESSAGE_IMPOSSIBLE, sousTexte: SOUS_TEXTE_IMPOSSIBLE };
   }
 }
+
+/* ───────── Présentation du résultat (optimisation du parcours, 26/09/2026) ───────── */
+
+/**
+ * Les pièces du dressing que le serveur a rattachées à l'avis, rangées là où
+ * elles servent : sous le conseil ("mainAdvice") ou sous la suggestion N
+ * ("suggestion:N", N à partir de 1). Seules les pièces ENCORE dans le
+ * dressing sont gardées (arbitré) ; un lien illisible range la pièce dans
+ * `autres`, pour qu'aucune ne disparaisse sans raison.
+ */
+export function repartirPiecesAvis<T extends { id: number }>(
+  pieces: PieceSuggeree[],
+  dressing: T[],
+  nbSuggestions: number
+): { conseil: T[]; parSuggestion: T[][]; autres: T[] } {
+  const conseil: T[] = [];
+  const parSuggestion: T[][] = Array.from({ length: nbSuggestions }, () => []);
+  const autres: T[] = [];
+  for (const p of pieces) {
+    const piece = dressing.find((d) => d.id === p.id);
+    if (!piece) continue;
+    const m = /^suggestion:(\d+)$/.exec(p.lien);
+    if (p.lien === "mainAdvice") conseil.push(piece);
+    else if (m && Number(m[1]) >= 1 && Number(m[1]) <= nbSuggestions) parSuggestion[Number(m[1]) - 1].push(piece);
+    else autres.push(piece);
+  }
+  return { conseil, parSuggestion, autres };
+}
+
+/**
+ * Ce que l'avis a réellement pris en compte, dit en toutes lettres : SEULES
+ * les données envoyées à la styliste (contexteDepuisProfil) — jamais une
+ * personnalisation qui n'a pas eu lieu. Vide : la ligne ne s'affiche pas.
+ */
+export function personnalisationAvis(c: ContexteAvis): string[] {
+  const l: string[] = [];
+  if (c.style?.length) l.push(`ton style ${c.style[0]}`);
+  if (c.morphologie) l.push("ta silhouette");
+  if (c.palette?.length || c.colorimetrie) l.push("tes couleurs");
+  return l;
+}
+
+/**
+ * Les temps de l'état d'analyse. Ils décrivent ce que la styliste regarde
+ * réellement (vêtements, couleurs, associations — cf. INSTRUCTIONS) ; la
+ * comparaison au profil n'est annoncée que si un style ou une morphologie a
+ * été envoyé, et ne cite que ce qui l'a été.
+ */
+export function etapesAnalyse(c: ContexteAvis): string[] {
+  const profil = [c.style?.length ? "ton style" : null, c.morphologie ? "ta morphologie" : null].filter(Boolean);
+  return [
+    "J'observe la silhouette",
+    "J'analyse les couleurs",
+    "Je regarde les associations",
+    ...(profil.length ? [`Je compare avec ${profil.join(" et ")}`] : []),
+    "Je prépare mes conseils",
+  ];
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contexteDepuisProfil, estAvis, reactionErreur } from "../avisStylisteClient";
+import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, reactionErreur, repartirPiecesAvis } from "../avisStylisteClient";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 
 const profil = (over: Partial<Profile> = {}): Profile => ({ ...EMPTY_PROFILE, gender: "femme", displayName: "Angela", ...over });
@@ -78,5 +78,36 @@ describe("piecesSuggerees — identifiants reçus du serveur", () => {
       piecesSuggerees([{ id: 1, lien: "mainAdvice" }, { id: "2", lien: "x" }, { id: 3 }, { id: 4, lien: "suggestion:1" }, { id: 5, lien: "a" }, { id: 6, lien: "b" }])
     ).toEqual([{ id: 1, lien: "mainAdvice" }, { id: 4, lien: "suggestion:1" }, { id: 5, lien: "a" }]);
     expect(piecesSuggerees(undefined)).toEqual([]);
+  });
+});
+
+describe("présentation du résultat — uniquement des données réelles", () => {
+  const dressing = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  it("range chaque pièce sous le conseil ou sa suggestion, écarte celles qui ne sont plus au dressing", () => {
+    const r = repartirPiecesAvis(
+      [
+        { id: 1, lien: "mainAdvice" },
+        { id: 2, lien: "suggestion:2" },
+        { id: 9, lien: "suggestion:1" },
+        { id: 3, lien: "suggestion:7" },
+      ],
+      dressing,
+      3
+    );
+    expect(r.conseil.map((p) => p.id)).toEqual([1]);
+    expect(r.parSuggestion.map((l) => l.map((p) => p.id))).toEqual([[], [2], []]);
+    expect(r.autres.map((p) => p.id)).toEqual([3]);
+  });
+
+  it("personnalisation : seulement ce qui a été envoyé", () => {
+    expect(personnalisationAvis({})).toEqual([]);
+    expect(personnalisationAvis({ style: ["Minimaliste"], palette: ["Camel"] })).toEqual(["ton style Minimaliste", "tes couleurs"]);
+    expect(personnalisationAvis({ morphologie: "Taille bien marquée" })).toEqual(["ta silhouette"]);
+  });
+
+  it("étapes d'analyse : la comparaison au profil n'est annoncée que si elle a lieu", () => {
+    expect(etapesAnalyse({})).not.toContainEqual(expect.stringMatching(/compare/));
+    expect(etapesAnalyse({ style: ["Bohème"] })).toContain("Je compare avec ton style");
+    expect(etapesAnalyse({ style: ["Bohème"], morphologie: "x" })).toContain("Je compare avec ton style et ta morphologie");
   });
 });

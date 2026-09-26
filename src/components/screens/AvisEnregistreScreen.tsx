@@ -72,10 +72,12 @@ export default function AvisEnregistreScreen() {
         <div className="text-[13px] text-muted-3 mt-[8px]">{formatDate(avis.creeLe)}</div>
       </div>
 
+      {/* La photo en héros, comme sur le résultat d'origine (optimisation du
+          parcours, 26/09/2026) : ~78 % de la largeur, plafonnée en hauteur. */}
       {avis.photoUrl && (
-        <div className="mt-[22px] mx-auto rounded-[20px] overflow-hidden border border-border bg-card" style={{ maxHeight: "30vh", width: "fit-content", maxWidth: "100%" }}>
+        <div className="mt-[22px] mx-auto rounded-[22px] overflow-hidden border border-border bg-card" style={{ width: "78%" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={avis.photoUrl} alt="" className="block max-w-full object-contain" style={{ maxHeight: "30vh" }} />
+          <img src={avis.photoUrl} alt="Ta tenue" className="block w-full object-contain" style={{ maxHeight: "62vh" }} />
         </div>
       )}
 
