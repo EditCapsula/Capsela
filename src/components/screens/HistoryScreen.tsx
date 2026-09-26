@@ -25,7 +25,7 @@ import {
   type JournalEntry,
   type JournalPeriod,
 } from "@/lib/selectors";
-import { OCCASIONS_EDITORIALES, titreStyle } from "@/lib/occasionEditoriale";
+import { OCCASIONS_EDITORIALES, libelleOccasion, titreStyle } from "@/lib/occasionEditoriale";
 import type { ChoixRevente, Item, OccasionKey } from "@/lib/types";
 
 /*
@@ -677,6 +677,7 @@ export default function HistoryScreen() {
             // styleDuMois. Sans visuel pour cette occasion, pas d'image de
             // repli : le texte prend toute la largeur.
             const o = OCCASIONS_EDITORIALES[style.occasion];
+            const titre = titreStyle(o, style.majorite);
             return (
               <div className="mt-3 bg-warm-bg border border-warm-border rounded-[22px] px-5 pt-[16px] pb-[18px] overflow-hidden">
                 <div className="flex gap-[14px]">
@@ -684,10 +685,16 @@ export default function HistoryScreen() {
                     {/* Le nom de l'occasion en pastille, seul : plus de surtitre
                         « Occasion principale » (retiré le 26/09/2026, demandé). */}
                     <span className="inline-block t-pastille text-terracotta bg-card rounded-full px-[9px] py-[4px] whitespace-nowrap">
-                      {o.libelle}
+                      {libelleOccasion(style.occasion)}
                     </span>
-                    <div className="t-titre-section text-ink mt-[10px]" style={{ textWrap: "balance" }}>
-                      {titreStyle(o, style.majorite)}
+                    {/* Un titre long (« Les rendez-vous importants rythment… »)
+                        passe à la taille des titres de carte : à côté du visuel,
+                        il prenait jusqu'à six lignes à 360 px. */}
+                    <div
+                      className={(titre.length > 52 ? "t-titre-carte" : "t-titre-section") + " text-ink mt-[10px]"}
+                      style={{ textWrap: "balance" }}
+                    >
+                      {titre}
                     </div>
                     <div className="mt-[12px]">
                       <span className="sr-only">
@@ -706,7 +713,11 @@ export default function HistoryScreen() {
                       de la marge intérieure), entier au format 3:4, sans cadre
                       ni ombre. */}
                   {o.visuel && (
-                    <div className="flex-shrink-0 -mr-5 -mt-[16px] self-start" style={{ width: "calc((100% + 20px) * 0.4)" }}>
+                    <div
+                      className="flex-shrink-0 -mr-5 -mt-[16px] self-start"
+                      // Un peu plus étroit à côté d'un titre long, pour lui laisser la place.
+                      style={{ width: `calc((100% + 20px) * ${titre.length > 52 ? 0.36 : 0.4})` }}
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={o.visuel.src}
