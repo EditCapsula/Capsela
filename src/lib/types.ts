@@ -1,5 +1,6 @@
 import type { StyleId } from "./profile";
 import type { TenuePlanifiee } from "./planifier";
+import type { ItemOutfitVariation } from "./logic";
 
 export type CategoryKey =
   | "haut"
@@ -293,6 +294,12 @@ export interface AppState {
   pieceReturn: Screen;
   /** Écran vers lequel revenir en quittant le module "Comment porter cette pièce ?". */
   itemOutfitsReturn: Screen;
+  /**
+   * Idées de tenues déjà calculées pour une pièce (Jamais portées, 26/09/2026)
+   * : l'écran d'arrivée les reprend telles quelles au lieu de retirer au
+   * sort — « 4 tenues possibles » sur la carte, les quatre mêmes ensuite.
+   */
+  ideesTenuesPretes: { pivotId: number; variations: ItemOutfitVariation[] } | null;
 
   catFilter: CategoryKey | "all";
 

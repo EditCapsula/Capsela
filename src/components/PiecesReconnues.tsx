@@ -20,7 +20,8 @@ import type { Item } from "@/lib/types";
  * — et « Ce n'est aucune de mes pièces ». Chaque choix passe par
  * corrigerReconnaissance : la composition des actions suit, le Journal aussi.
  *
- * Un vêtement non reconnu peut aussi être AJOUTÉ au dressing (26/09/2026) :
+ * Un vêtement non reconnu — ou mal reconnu, depuis « Modifier » — peut
+ * aussi être AJOUTÉ au dressing (26/09/2026) :
  * « Ajouter cette pièce à mon dressing » ouvre le formulaire sur sa
  * catégorie, avec le nom repris de ce que la styliste a vu. De retour ici,
  * la nouvelle pièce figure parmi celles proposées par « Associer ».
@@ -144,9 +145,13 @@ export default function PiecesReconnues({
                 Ce n&apos;est aucune de mes pièces
               </button>
             )}
-            {ouvert.pieceId === null && onAjouterPiece && (
+            {/* Aussi depuis « Modifier » (26/09/2026) : la pièce reconnue n'est
+                pas la bonne, et la bonne n'est pas encore dans le dressing. */}
+            {onAjouterPiece && (
               <div className="mt-[16px] pt-[14px] border-t border-border">
-                <div className="text-[12px] text-muted-3 leading-[1.45]">Elle n&apos;est pas encore dans ton dressing ?</div>
+                <div className="text-[12px] text-muted-3 leading-[1.45]">
+                  {ouvert.pieceId === null ? "Elle n'est pas encore dans ton dressing ?" : "Ce n'est pas elle, et la bonne n'est pas encore dans ton dressing ?"}
+                </div>
                 <button
                   type="button"
                   onClick={() => {

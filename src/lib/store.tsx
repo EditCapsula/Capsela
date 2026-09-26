@@ -44,6 +44,7 @@ import {
   piecesPrincipales,
   swapOutfitPiece,
   violatesOuterwearRule,
+  type ItemOutfitVariation,
 } from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import {
@@ -149,6 +150,7 @@ function buildInitialState(): AppState {
     activeSuggested: false,
     pieceReturn: "wardrobe",
     itemOutfitsReturn: "capsule",
+    ideesTenuesPretes: null,
     catFilter: "all",
     addName: "",
     addNameTouched: false,
@@ -319,7 +321,8 @@ export interface Actions {
    * (suggested = false) — sans quoi activeSuggested resterait figé à true
    * au retour sur PieceScreen et l'afficherait à tort comme une suggestion.
    */
-  openItemOutfits: (id: number, suggested?: boolean) => void;
+  /** `variations` : idées déjà calculées pour cette pièce (calculerIdeesTenues), reprises telles quelles à l'arrivée. */
+  openItemOutfits: (id: number, suggested?: boolean, variations?: ItemOutfitVariation[]) => void;
   /** Affiche une combinaison choisie depuis ce module sur l'écran Tenue — jamais un enregistrement automatique comme portée. */
   viewItemOutfit: (ids: number[], occasion: OccasionKey) => void;
   removeActive: () => void;
@@ -1304,8 +1307,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
     openItem: (id, suggested = false) =>
       setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" })),
-    openItemOutfits: (id, suggested = true) =>
-      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, itemOutfitsReturn: s.screen, screen: "itemOutfits" })),
+    openItemOutfits: (id, suggested = true, variations) =>
+      setState((s) => ({
+        ...s,
+        activeId: id,
+        activeSuggested: suggested,
+        itemOutfitsReturn: s.screen,
+        ideesTenuesPretes: variations ? { pivotId: id, variations } : null,
+        screen: "itemOutfits",
+      })),
     // Affiche la combinaison choisie sur l'écran Tenue (recette 19/08/2026) :
     // conserve l'occasion correspondante, jamais d'enregistrement comme
     // portée ni de remplacement automatique en dehors de ce clic explicite.
