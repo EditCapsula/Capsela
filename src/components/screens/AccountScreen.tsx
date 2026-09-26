@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
+import { FeuilleDateNaissance, LigneInfo } from "@/components/ProfilUI";
 import { Toggle } from "@/components/screens/PreferencesScreen";
 import { useAuth } from "@/lib/auth";
 import { readConsent, setConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
@@ -34,7 +35,35 @@ function Section({ titre, children }: { titre: string; children: React.ReactNode
 }
 
 export default function AccountScreen() {
-  const { email, userId, demoMode, signOut, deleteAccount, error, clearError } = useAuth();
+  const { email, userId, demoMode, signOut, deleteAccount, error, clearError, demanderLienReinitialisation, profile } = useAuth();
+  /*
+   * DONNÉES PERSONNELLES (recette du 26/09/2026) : prénom, date de naissance
+   * et photo quittent « Personnaliser mon profil », fondu dans Mon profil —
+   * elles ne servent pas à conseiller, elles relèvent du compte.
+   */
+  const [dateOuverte, setDateOuverte] = useState(false);
+  // Photo : locale à l'appareil (blob:), comme avant — l'envoi vers le
+  // stockage n'est pas branché pour l'avatar.
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const initiale = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
+  const naissance = profile.birthdate
+    ? new Date(profile.birthdate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+  /**
+   * MOT DE PASSE (recette du 26/09/2026, option B du brief) : un lien de
+   * réinitialisation envoyé à l'adresse du compte, le même parcours sécurisé
+   * que « Mot de passe oublié ». Pas de changement direct ici : selon les
+   * réglages du projet, Supabase peut exiger une réauthentification pour un
+   * changement de mot de passe en session, que l'app ne sait pas encore mener.
+   */
+  const [lienMotDePasse, setLienMotDePasse] = useState<"repos" | "envoi" | "envoye" | "erreur">("repos");
+  const envoyerLienMotDePasse = async () => {
+    if (!email || lienMotDePasse === "envoi") return;
+    setLienMotDePasse("envoi");
+    const issue = await demanderLienReinitialisation(email);
+    setLienMotDePasse(issue === "envoye" ? "envoye" : "erreur");
+  };
   const { actions } = useCapsela();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -94,13 +123,67 @@ export default function AccountScreen() {
           <span className="text-[13px] text-muted flex-shrink-0">E-mail</span>
           <span className="text-[13px] text-ink text-right [overflow-wrap:anywhere]">{email ?? "Non renseigné"}</span>
         </div>
-        {/* Aucun parcours de mot de passe n'existe encore (« Mot de passe
-            oublié », à la connexion, n'appelle aucun service). La ligne le
-            dit plutôt que de promettre un écran. */}
-        <div className="flex items-center justify-between gap-3 px-4 py-[14px]">
-          <span className="text-[13px] text-muted flex-shrink-0">Mot de passe</span>
-          <span className="text-[12px] text-placeholder text-right">Bientôt modifiable ici</span>
-        </div>
+        {demoMode || !email ? (
+          <div className="flex items-center justify-between gap-3 px-4 py-[14px]">
+            <span className="text-[13px] text-muted flex-shrink-0">Mot de passe</span>
+            <span className="text-[12px] text-placeholder text-right">Indisponible en mode démo</span>
+          </div>
+        ) : (
+          <button
+            onClick={envoyerLienMotDePasse}
+            disabled={lienMotDePasse === "envoi" || lienMotDePasse === "envoye"}
+            className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer disabled:cursor-default"
+          >
+            <span className="text-[13px] text-muted flex-shrink-0">Mot de passe</span>
+            <span className="text-[12px] text-right" aria-live="polite">
+              {lienMotDePasse === "envoye" ? (
+                <span className="text-muted-3">Lien envoyé à ton adresse e-mail</span>
+              ) : lienMotDePasse === "erreur" ? (
+                <span className="text-rust">Envoi impossible — réessayer</span>
+              ) : lienMotDePasse === "envoi" ? (
+                <span className="text-muted-3">Envoi…</span>
+              ) : (
+                <span className="text-terracotta">Réinitialiser mon mot de passe ›</span>
+              )}
+            </span>
+          </button>
+        )}
+      </Section>
+
+      <Section titre="Données personnelles">
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) setPhotoUrl(URL.createObjectURL(file));
+          }}
+          className="hidden"
+        />
+        <button
+          onClick={() => photoInputRef.current?.click()}
+          className="w-full flex items-center gap-[13px] px-4 py-[12px] text-left cursor-pointer border-b border-border"
+        >
+          <span
+            className="w-11 h-11 rounded-full bg-terracotta flex items-center justify-center flex-shrink-0 overflow-hidden bg-cover bg-center"
+            style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}
+          >
+            {!photoUrl && <span className="font-serif text-[18px] text-cream">{initiale}</span>}
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block t-titre-ligne text-ink">Photo de profil</span>
+            <span className="block text-[12px] text-muted mt-[2px]">Optionnelle, jamais partagée.</span>
+          </span>
+          <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
+        </button>
+        <LigneInfo
+          label="Prénom"
+          valeur={profile.displayName || "Non renseigné"}
+          renseigne={Boolean(profile.displayName)}
+          onClick={() => actions.goProfileSetup("prenom", true)}
+        />
+        <LigneInfo label="Date de naissance" valeur={naissance || "Non renseignée"} renseigne={Boolean(naissance)} onClick={() => setDateOuverte(true)} />
       </Section>
 
       <Section titre="Confidentialité et données">
@@ -159,6 +242,7 @@ export default function AccountScreen() {
       </button>
       <div className="text-center text-[11px] text-placeholder mt-[6px]">L&apos;édit Capsela · v{APP_VERSION}</div>
 
+      <FeuilleDateNaissance open={dateOuverte} onClose={() => setDateOuverte(false)} />
       <BottomSheet title="Supprimer mon compte" open={confirmDelete} onClose={closeDeleteConfirm}>
         <div className="text-[13px] text-ink leading-[1.55]">
           Cette action est <span className="text-rust">définitive et irréversible</span>. Ton dressing, tes tenues

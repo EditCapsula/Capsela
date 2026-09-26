@@ -56,7 +56,11 @@ export async function fetchWeatherByCity(city: string): Promise<City | null> {
     const { data, error } = await getSupabase().functions.invoke("weather", { body: { city: nom } });
     if (error || !data || data.error || typeof data.temp !== "number" || typeof data.label !== "string") return null;
     return {
-      city: typeof data.city === "string" && data.city ? data.city : nom,
+      // LA VILLE DEMANDÉE, PAS CELLE QUE L'API RENVOIE (recette du 26/09/2026) :
+      // OpenWeather nomme sa station ou sa localité la plus proche — un
+      // quartier que l'utilisatrice n'a jamais choisi. Elle a donné une ville,
+      // on affiche cette ville ; la précision de l'API reste interne.
+      city: nom,
       country: typeof data.country === "string" ? data.country : "",
       temp: data.temp,
       label: data.label,
@@ -136,7 +140,11 @@ export async function fetchPrevisionByCity(city: string, coords?: { lat: number;
     // fonction de l'ancienne.
     if (!Array.isArray(data.slots) || !data.slots.length) return null;
     return {
-      city: typeof data.city === "string" ? data.city : nom,
+      // Le nom demandé (saisi, ou celui de la suggestion choisie), jamais le
+      // `city.name` de /forecast : interrogé par coordonnées, il rend la
+      // localité de la station (« Quartier du Palais-Royal » pour Paris).
+      // Même règle que fetchWeatherByCity (recette du 26/09/2026).
+      city: nom,
       country: typeof data.country === "string" ? data.country : "",
       timezone: typeof data.timezone === "number" ? data.timezone : 0,
       slots: data.slots.filter(

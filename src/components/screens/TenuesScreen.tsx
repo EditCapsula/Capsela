@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
+import { useQuotaTenues } from "@/components/QuotaTenues";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
@@ -14,9 +15,6 @@ import { useCapsela } from "@/lib/store";
 import { computeLookScore, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
-import { consommerApresVideo, consommerGeneration, generationAutorisee, type QuotaGeneration } from "@/lib/generations";
-import { fournisseurVideo, peutProposerVideo } from "@/lib/videoRecompense";
-import { GENERATIONS_GRATUITES_PAR_JOUR } from "@/lib/premium";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
@@ -92,92 +90,17 @@ function ExploreStyleCard({
 export default function TenuesScreen() {
   const { state, weather, geoCity, geoLoading, geoIsLive, sourceMeteo, wardrobePool, vestiairePool, actions } = useCapsela();
 
-  /**
-   * LIMITE DE GÉNÉRATIONS — « Autre tenue », 2 par jour sans abonnement.
-   *
-   * Le décompte est fait par la base (`consommer_generation`, migration 0032),
-   * jamais ici : un compteur côté navigateur se remet à zéro en vidant le
-   * stockage, ce qui n'est pas une limite mais une gêne pour les seules
-   * personnes honnêtes.
-   *
-   * SEUL CE BOUTON DÉCOMPTE. La tenue du jour, générée à l'ouverture, ne passe
-   * pas par là et n'est donc jamais bloquée — quelqu'un qui ouvre l'app et
-   * porte ce qu'on lui propose ne rencontre jamais cette limite.
-   *
-   * `generationAutorisee(null)` vaut true : tant que la migration 0032 n'est
-   * pas exécutée, l'appel échoue et personne n'est limité. C'est ce qui rend
-   * l'écran livrable avant la table.
-   */
-  const [quotaAtteint, setQuotaAtteint] = useState(false);
-  const [tirageEnCours, setTirageEnCours] = useState(false);
-  /** Dernier quota connu — sert à savoir si le bonus vidéo du jour est déjà pris. */
-  const [dernierQuota, setDernierQuota] = useState<QuotaGeneration | null>(null);
-  /**
-   * LES TROIS TEMPS DE LA VIDÉO RÉCOMPENSÉE (maquette Premium Gates).
-   * "propose" — la carte dans la feuille ; "lecture" — la vidéo tourne ;
-   * "echec"   — elle n'a pas pu se charger, et on le dit UNE fois.
-   */
-  const [tempsVideo, setTempsVideo] = useState<"propose" | "lecture" | "echec">("propose");
+  // Limite de générations et Gate « Tu as fait le tour pour aujourd'hui » :
+  // partagés avec « Pas pour moi » de l'accueil (recette du 26/09/2026), cf.
+  // QuotaTenues.tsx — un seul quota, un seul Gate.
+  const quota = useQuotaTenues();
 
   const rejouer = () => {
     if (state.exploredStyleId) actions.viewExploredOutfit();
     else actions.regenOutfit();
   };
-
-  const autreTenue = async () => {
-    if (tirageEnCours) return;
-    setTirageEnCours(true);
-    try {
-      const quota = await consommerGeneration();
-      setDernierQuota(quota);
-      if (!generationAutorisee(quota)) {
-        setTempsVideo("propose");
-        setQuotaAtteint(true);
-        return;
-      }
-      rejouer();
-    } finally {
-      setTirageEnCours(false);
-    }
-  };
-
-  /**
-   * REGARDER UNE VIDÉO POUR UNE TENUE DE PLUS.
-   *
-   * L'app ne s'accorde rien : elle lance la vidéo, puis redemande son quota.
-   * C'est le réseau publicitaire qui constate le visionnage et appelle notre
-   * fonction Edge, laquelle seule peut accorder (migration 0033 —
-   * `accorder_bonus_generation` est révoquée à `authenticated`).
-   *
-   * D'où `consommerApresVideo`, qui redemande quelques fois : la confirmation
-   * du réseau peut arriver après la fin de la vidéo. Redemander est sans
-   * danger, la base n'incrémente rien tant que le bonus n'est pas là.
-   *
-   * ÉCHEC SANS PERTE ET SANS BOUCLE : ni la tenue ni le quota ne bougent, le
-   * message est affiché une fois, et aucun nouvel essai n'est relancé tout
-   * seul — la maquette le demande explicitement.
-   */
-  const regarderVideo = async () => {
-    const f = fournisseurVideo();
-    if (!f || tempsVideo === "lecture") return;
-    setTempsVideo("lecture");
-    const issue = await f.montrer();
-    if (issue !== "vue") {
-      setTempsVideo("echec");
-      return;
-    }
-    const quota = await consommerApresVideo();
-    setDernierQuota(quota);
-    if (!generationAutorisee(quota)) {
-      setTempsVideo("echec");
-      return;
-    }
-    setQuotaAtteint(false);
-    setTempsVideo("propose");
-    rejouer();
-  };
-
-  const videoProposable = peutProposerVideo(fournisseurVideo(), (dernierQuota?.bonus ?? 0) > 0);
+  const autreTenue = () => quota.demander(rejouer);
+  const tirageEnCours = quota.tirageEnCours;
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
   /** Feuille ouverte, ou aucune. Une seule à la fois : les deux se répondent. */
@@ -874,7 +797,7 @@ export default function TenuesScreen() {
               {isOutfitSaved ? "Enregistrée" : "Enregistrer"}
             </button>
             <button
-              onClick={actions.openOpinionShare}
+              onClick={() => actions.openOpinionShare()}
               className="flex items-center justify-center gap-[6px] rounded-full text-[12px] cursor-pointer"
               style={{
                 minHeight: 46,
@@ -1356,109 +1279,7 @@ export default function TenuesScreen() {
           `aria-pressed` porte la sélection active plutôt qu'un simple ✓
           visuel : une lectrice d'écran doit savoir laquelle est choisie, pas
           seulement voir une coche. */}
-      {/* LA LIMITE ATTEINTE — feuille du même composant que les occasions,
-          comme la maquette Premium Gates le demande : « un seul composant, la
-          bottom sheet déjà utilisée ».
-
-          CE QUI MANQUE VOLONTAIREMENT PAR RAPPORT À LA MAQUETTE : la carte
-          « Regarder une vidéo » pour débloquer un tirage. Aucun SDK
-          publicitaire n'existe dans l'app, aucun fournisseur n'est choisi, et
-          un bouton qui n'ouvre aucune vidéo est exactement le genre de
-          promesse qu'on ne peut pas afficher. La maquette prévoit d'ailleurs
-          elle-même ce cas — « si la vidéo du jour a déjà été utilisée, la carte
-          disparaît : seul Premium reste proposé » : c'est cet état-là qui est
-          rendu, en attendant qu'un fournisseur soit arbitré.
-
-          Le compteur 2/2 est écrit à partir de la constante partagée avec
-          l'écran Premium, pas recopié. */}
-      <BottomSheet title="Tu as fait le tour pour aujourd'hui" open={quotaAtteint} onClose={() => setQuotaAtteint(false)}>
-        <div className="flex flex-col">
-          <div className="text-[13px] text-muted-3 leading-[1.5]" style={{ textWrap: "pretty" }}>
-            Tu as utilisé tes {GENERATIONS_GRATUITES_PAR_JOUR} alternatives gratuites du jour. Ta tenue reste là,
-            et de nouvelles propositions arrivent demain matin.
-          </div>
-          <div className="flex items-center gap-[10px] mt-4 bg-warm-bg rounded-[14px] px-[14px] py-3">
-            <span className="t-surtitre text-terracotta">
-              {GENERATIONS_GRATUITES_PAR_JOUR} / {GENERATIONS_GRATUITES_PAR_JOUR}
-            </span>
-            <span className="flex-1 min-w-0 text-[12px] text-muted-3 leading-[1.45]">
-              Avec Premium, autant de tenues que tu veux.
-            </span>
-          </div>
-
-          {/* LA CARTE VIDÉO N'EXISTE QUE SI UNE VIDÉO EXISTE.
-              `peutProposerVideo` est faux tant qu'aucun fournisseur n'est
-              enregistré — c'est-à-dire toujours, au 24/09/2026. Elle est donc
-              invisible en production, et le restera jusqu'à ce qu'un SDK soit
-              arbitré. Un bouton « Regarder une vidéo » qui n'ouvre aucune
-              vidéo est exactement la promesse qu'on ne peut pas afficher.
-
-              Elle disparaît aussi quand le bonus du jour est déjà pris : c'est
-              ce que la maquette décrit — « seul Premium reste proposé ».
-
-              Et elle disparaît APRÈS UN ÉCHEC. La maquette demande « pas de
-              nouvel essai en boucle » ; laisser la carte sous le message
-              d'échec reviendrait à inviter à retaper sur un fournisseur qui
-              vient de ne pas répondre. Rouvrir la feuille la ramène — ce
-              n'est pas une porte fermée, c'est une relance qui ne se fait pas
-              toute seule. */}
-          {videoProposable && tempsVideo === "propose" && (
-            <button
-              onClick={regarderVideo}
-              className="w-full flex items-center gap-[11px] text-left mt-3 bg-card border border-border rounded-[16px] px-[14px] py-[13px] cursor-pointer"
-            >
-              <span className="flex-1 min-w-0">
-                <span className="block text-[13px] font-medium text-ink">Regarder une vidéo</span>
-                <span className="block text-[11px] text-muted leading-[1.45] mt-[2px]">
-                  Environ 30 secondes, une seule fois par jour.
-                </span>
-              </span>
-              <span className="flex-shrink-0 t-surtitre text-terracotta bg-warm-bg rounded-full px-[9px] py-[4px]">
-                +1 tenue
-              </span>
-            </button>
-          )}
-
-          {/* Deuxième temps. La feuille reste ouverte : revenir sur une feuille
-              fermée puis rouverte ferait clignoter l'écran. */}
-          {tempsVideo === "lecture" && (
-            <div className="mt-3 bg-card border border-border rounded-[16px] px-[14px] py-[13px]" aria-live="polite">
-              <div className="text-[13px] font-medium text-ink">Vidéo en cours…</div>
-              <div className="text-[11px] text-muted leading-[1.45] mt-[2px]">
-                Encore quelques secondes avant ta nouvelle tenue.
-              </div>
-            </div>
-          )}
-
-          {/* Troisième temps, cas d'échec. Dit UNE fois, sans perte — la tenue
-              et le quota sont intacts — et sans nouvel essai automatique. */}
-          {tempsVideo === "echec" && (
-            <div className="mt-3 bg-card border border-border rounded-[16px] px-[14px] py-[13px]" aria-live="polite">
-              <div className="text-[12px] text-muted-3 leading-[1.45]">
-                La vidéo n&apos;a pas pu se charger. Rien n&apos;est perdu : ta tenue et tes tirages du jour sont
-                intacts.
-              </div>
-            </div>
-          )}
-          <button
-            onClick={() => {
-              setQuotaAtteint(false);
-              actions.goPremium();
-            }}
-            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4"
-            style={{ minHeight: 52 }}
-          >
-            Découvrir Premium
-          </button>
-          <button
-            onClick={() => setQuotaAtteint(false)}
-            className="w-full rounded-full text-[12px] text-muted-3 cursor-pointer mt-1"
-            style={{ minHeight: 44 }}
-          >
-            Plus tard
-          </button>
-        </div>
-      </BottomSheet>
+      {quota.feuille}
 
       <BottomSheet title="Qu'est-ce qui est prévu aujourd'hui ?" open={feuille === "occasion"} onClose={() => setFeuille(null)}>
         <div className="flex flex-col">

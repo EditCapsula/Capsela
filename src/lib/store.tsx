@@ -36,7 +36,14 @@ import { etatSimule, lireProfilSimule } from "./simulationPremium";
 import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSuggeree, type ResultatDemande } from "./avisStylisteClient";
 import { enregistrerAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
-import { generateOutfitWithFallback, swapOutfitPiece, violatesOuterwearRule } from "./logic";
+import {
+  choisirVariation,
+  clePrincipale,
+  generateOutfitWithFallback,
+  piecesPrincipales,
+  swapOutfitPiece,
+  violatesOuterwearRule,
+} from "./logic";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import {
   accessoireTypeFor,
@@ -92,7 +99,7 @@ export interface SessionAvisStyliste {
 }
 
 /** Écrans qui s'ouvrent depuis le profil : jamais retenus comme « retour » du profil. */
-const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileEdit", "profileSetup", "preferences", "account", "legal"]);
+const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileSetup", "preferences", "account", "legal"]);
 
 /** Occasion par défaut suggérée en arrivant sur "Tenue du jour" sans choix explicite (recette 13/08/2026) — toujours modifiable manuellement ensuite. */
 const DAYS_S = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -120,7 +127,7 @@ function buildInitialState(): AppState {
     premiumOrigine: null,
     profileSetupStep: "genre",
     profileSetupFromEdit: false,
-    profileSetupReturn: "profileEdit",
+    profileSetupReturn: "profile",
     onbStep: 0,
     authName: "",
     activeId: 0,
@@ -177,6 +184,9 @@ function buildInitialState(): AppState {
     lookCount: 0,
     history: [],
     outfitFeedbackDuJour: [],
+    tenuesVues: [],
+    avisSource: null,
+    planARouvrir: null,
     savedLooks: [],
     lookDraftIds: [],
     lookDraftName: "",
@@ -205,7 +215,6 @@ export interface Actions {
   goWardrobePieces: (filtre?: { libelle: string; categories: CategoryKey[] }) => void;
   goLooks: () => void;
   goProfile: () => void;
-  goProfileEdit: () => void;
   /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
   goPreferences: () => void;
   /** Compte : e-mail, confidentialité et données, légal, suppression, déconnexion. */
@@ -361,8 +370,11 @@ export interface Actions {
   correctPiece: (id: number) => void;
   correctActive: () => void;
   reWear: (ids: number[]) => void;
-  openOpinionShare: () => void;
+  /** Sans argument : la tenue du jour. Avec : une tenue planifiée (cf. AppState.avisSource). */
+  openOpinionShare: (source?: AppState["avisSource"]) => void;
   closeOpinionShare: () => void;
+  /** Planifier a rouvert le plan au retour du partage. */
+  oublierPlanARouvrir: () => void;
 
   /** seedId : préremplit lookDraftIds avec cette pièce (recette 24/08/2026, PieceScreen "Ajouter à un look → Créer un nouveau look") — jamais renseigné hors de ce parcours. */
   goCreateLook: (seedId?: number) => void;
@@ -726,10 +738,20 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // colonnes ne sont pas encore en place, on retombe silencieusement sur le
   // catalogue statique (CATALOG) — jamais d'écran vide en attendant.
   const [vestiairePool, setVestiairePool] = useState<CatalogItem[]>(CATALOG);
+  /**
+   * Le vestiaire Supabase a répondu (lignes, vide ou échec). La première
+   * tenue l'attend (recette du 26/09/2026) : générée sur CATALOG, le repli
+   * statique, elle référençait des ids qui n'existent plus une fois le
+   * vestiaire chargé — l'accueil n'affichait alors que les pièces réelles,
+   * parfois un sac seul.
+   */
+  const [vestiaireResolu, setVestiaireResolu] = useState(!isSupabaseConfigured);
   useEffect(() => {
     let cancelled = false;
     fetchVestiaireUniversel().then((rows) => {
-      if (!cancelled && rows.length) setVestiairePool(rows);
+      if (cancelled) return;
+      if (rows.length) setVestiairePool(rows);
+      setVestiaireResolu(true);
     });
     return () => {
       cancelled = true;
@@ -821,11 +843,53 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // pool/meteo surchargeables : les références ne sont mises à jour que par
   // un effet, donc encore périmées pendant le rendu où le profil vient de
   // changer. L'ajustement de style plus bas passe les valeurs fraîches.
+  /**
+   * Enregistre une tenue dans « Mes looks » SI AUCUN look ne rassemble déjà
+   * exactement ces pièces, quelle que soit sa source (recette du 26/09/2026,
+   * « J'adore cette tenue »). Contrairement à toggleSaveOutfitLook, jamais de
+   * suppression. Un double tap avant la réponse du réseau ne crée pas deux
+   * lignes : la clé est tenue « en cours » jusqu'au retour de l'insertion.
+   */
+  const looksEnCours = useRef(new Set<string>());
+  const enregistrerTenueSiAbsente = (outfit: number[], occasion: AppState["occasion"]) => {
+    const ids = clePieces(outfit);
+    if (ids.length < 2) return;
+    const cle = ids.join(",");
+    if (looksEnCours.current.has(cle)) return;
+    if (stateRef.current.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cle)) return;
+    const pieces = ids.map((id) => findPiece(poolRef.current, id, vestiaireRef.current)).filter((it): it is Item => Boolean(it));
+    if (violatesOuterwearRule(pieces)) return;
+    const now = new Date();
+    const base: Omit<SavedLook, "id"> = {
+      name: "Tenue du " + now.getDate().toString().padStart(2, "0") + "/" + (now.getMonth() + 1).toString().padStart(2, "0"),
+      pieceIds: ids,
+      createdAt: Date.now(),
+      occasion: occasion && occasion !== "all" ? occasion : undefined,
+      source: "saved",
+    };
+    if (isSupabaseConfigured && userId) {
+      looksEnCours.current.add(cle);
+      insertSavedLook(userId, base)
+        .then((look) => setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] })))
+        .catch((err) => reportDressingError("insertSavedLook", err))
+        .finally(() => looksEnCours.current.delete(cle));
+      return;
+    }
+    const look: SavedLook = { id: "look" + Date.now(), ...base };
+    setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
+  };
+
   const regen = (
     s: AppState,
     pool: Item[] = poolRef.current,
     w: Weather = weatherRef.current,
-    capsule: Item[] = capsuleRef.current
+    capsule: Item[] = capsuleRef.current,
+    /**
+     * Tirage de secours de « Autre tenue » (recette du 26/09/2026) : pool
+     * déjà composé par l'appelant, à ne pas recomposer. Absent : comportement
+     * d'origine.
+     */
+    secours?: { poolDejaCompose: true }
   ): AppState => {
     // Complétion par occasion (correctif 10/09/2026, signalé : « pourquoi je
     // n'ai pas de tenues de sport »). Une catégorie dont aucune pièce réelle
@@ -835,9 +899,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // pièces, parce qu'il est la seule occasion sans repli de formalité.
     // `composeWardrobePool` est idempotente sur un pool déjà composé : sur un
     // dressing vide, elle ne change rien.
-    const poolGeneration = s.occasion
-      ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion })
-      : pool;
+    const poolGeneration =
+      s.occasion && !secours ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion }) : pool;
     const result = generateOutfitWithFallback(
       poolGeneration,
       w,
@@ -901,11 +964,27 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // withDefaultOccasion ici, l'occasion resterait sur "all" et aucune card
   // n'apparaîtrait cochée à l'ouverture de Tenue.
   useEffect(() => {
-    if (ready && dressingLoaded && !geoLoading && !stateRef.current.outfit.length) {
+    if (ready && dressingLoaded && !geoLoading && vestiaireResolu && !stateRef.current.outfit.length) {
       setState((s) => regen(withDefaultOccasion(s)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, dressingLoaded, geoLoading, defaultCapsule]);
+  }, [ready, dressingLoaded, geoLoading, vestiaireResolu, defaultCapsule]);
+
+  // RÉPARATION D'UNE TENUE DEVENUE INCOMPLÈTE (recette du 26/09/2026). Si des
+  // pièces de la tenue affichée ne se retrouvent plus — vestiaire rechargé,
+  // pièce supprimée du dressing —, elle n'est plus la tenue proposée : on en
+  // compose une nouvelle, sur le vivier à jour. Ce n'est pas une alternative
+  // demandée, elle ne passe donc pas par le quota. L'exploration d'un style
+  // garde sa tenue (elle a son propre tirage).
+  useEffect(() => {
+    if (!ready || !dressingLoaded || geoLoading || !vestiaireResolu) return;
+    const s = stateRef.current;
+    if (!s.outfit.length || s.exploredStyleId) return;
+    const resolution = [...s.items, ...vestiairePool];
+    const perdue = s.outfit.some((id) => !resolution.some((p) => p.id === id));
+    if (perdue) setState((st) => regen(st, wardrobePool, weather, defaultCapsule));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vestiairePool, state.items, ready, dressingLoaded, geoLoading, vestiaireResolu]);
 
   // Changer de style (ou de genre) redéfinit la capsule par défaut, donc le
   // vivier de suggestions : la tenue affichée doit suivre immédiatement.
@@ -975,7 +1054,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         profileReturn: SOUS_ECRANS_PROFIL.has(s.screen) ? s.profileReturn : s.screen,
         screen: "profile",
       })),
-    goProfileEdit: () => go("profileEdit"),
     goPreferences: () => go("preferences"),
     goAccount: () => go("account"),
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
@@ -1529,20 +1607,25 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         // échapper au correctif du 15/09.
         const season = s.capsuleSeason || saisonCapsulePourMeteo(weatherRef.current.temp);
         const capsulePool = computeDefaultCapsule(exploredProfile, weatherRef.current, s.suggestedExcluded, season, vestiairePool);
-        const result = generateOutfitWithFallback(
-          capsulePool,
-          weatherRef.current,
-          s.occasion || "all",
-          s.workMode,
-          s.dateContext,
-          paletteHexes(profile),
-          profile.gender,
-          // Même saison que la capsule construite juste au-dessus : sans elle,
-          // la génération redérivait son bucket de la température réelle et
-          // pouvait écarter les pièces de la capsule qu'elle vient de recevoir
-          // (correctif 29/08/2026).
-          season
-        );
+        const tirer = () =>
+          generateOutfitWithFallback(
+            capsulePool,
+            weatherRef.current,
+            s.occasion || "all",
+            s.workMode,
+            s.dateContext,
+            paletteHexes(profile),
+            profile.gender,
+            // Même saison que la capsule construite juste au-dessus : sans elle,
+            // la génération redérivait son bucket de la température réelle et
+            // pouvait écarter les pièces de la capsule qu'elle vient de recevoir
+            // (correctif 29/08/2026).
+            season
+          );
+        // « Autre tenue » en exploration : même variation réelle que la tenue
+        // du jour (recette du 26/09/2026). Première ouverture : aucune tenue
+        // courante du style exploré, la première candidate convient.
+        const { choix: result } = choisirVariation(tirer, (r) => r.ids, s.outfit, new Set(s.tenuesVues), capsulePool);
         return {
           ...s,
           outfit: result.ids,
@@ -1579,17 +1662,48 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // suite sur exactement la même combinaison (comparaison par ensemble
     // d'ids, ordre indifférent) — sans garantie absolue si peu d'options
     // existent, jamais bloquant.
+    // VARIATION RÉELLE (recette du 26/09/2026). La garde d'avant — identité
+    // stricte des ids, 5 essais — laissait passer la même tenue avec un autre
+    // bijou. `choisirVariation` juge sur les pièces principales et évite les
+    // tenues déjà vues dans la session ou refusées aujourd'hui (« Pas pour
+    // moi »). Chaque candidate reste produite par le moteur, toutes règles
+    // comprises.
+    //
+    // SECOURS PAR LA CAPSULE (arbitrage de la propriétaire, même jour) : si le
+    // dressing seul ne permet aucune autre base — la priorité au réel verrouille
+    // le socle dès qu'une catégorie a une pièce réelle —, un second tour tire
+    // dans le dressing PRIVÉ des pièces principales réelles de la tenue quittée,
+    // complété par la capsule entière. Là où il reste d'autres pièces réelles,
+    // elles priment toujours (priorité au réel intacte, moteur inchangé) ; là
+    // où il n'en reste pas, la capsule prend le relais. Les filtres durs
+    // (météo, occasion, formalité, R-B*) ne bougent pas.
     regenOutfit: () =>
       setState((s) => {
-        const prevIds = new Set(s.outfit);
-        let next = regen(s);
-        let attempts = 0;
-        const sameAsBefore = (ids: number[]) => ids.length === prevIds.size && ids.every((id) => prevIds.has(id));
-        while (attempts < 5 && sameAsBefore(next.outfit)) {
-          next = regen(s);
-          attempts++;
+        const resolution = [...s.items, ...vestiaireRef.current];
+        const jour = jourLocal();
+        const evitees = new Set([
+          ...s.tenuesVues,
+          ...s.outfitFeedbackDuJour
+            .filter((a) => a.jour === jour && a.verdict === "pas_aujourdhui")
+            .map((a) => clePrincipale(a.pieceIds, resolution)),
+        ]);
+        const idsDe = (st: AppState) => st.outfit;
+        const premier = choisirVariation(() => regen(s), idsDe, s.outfit, evitees, resolution);
+        let choix = premier.choix;
+        if (!premier.substantielle) {
+          const quittees = new Set(piecesPrincipales(s.outfit, resolution));
+          const poolSecours = [...s.items.filter((i) => !quittees.has(i.id)), ...capsuleRef.current];
+          const secours = choisirVariation(
+            () => regen(s, poolSecours, weatherRef.current, capsuleRef.current, { poolDejaCompose: true }),
+            idsDe,
+            s.outfit,
+            evitees,
+            resolution
+          );
+          if (secours.substantielle) choix = secours.choix;
         }
-        return next;
+        const quittee = clePrincipale(s.outfit, resolution);
+        return { ...choix, tenuesVues: quittee ? [...s.tenuesVues, quittee].slice(-30) : s.tenuesVues };
       }),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
@@ -1712,8 +1826,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: "tenues",
       })),
 
-    openOpinionShare: () => go("opinionShare"),
-    closeOpinionShare: () => go("tenues"),
+    openOpinionShare: (source) => setState((s) => ({ ...s, avisSource: source ?? null, screen: "opinionShare" })),
+    // Retour à l'écran d'où l'on vient : la tenue du jour, ou le plan partagé.
+    closeOpinionShare: () =>
+      setState((s) =>
+        s.avisSource
+          ? { ...s, planARouvrir: s.avisSource.plan, avisSource: null, screen: "planifier" }
+          : { ...s, screen: "tenues" }
+      ),
+    oublierPlanARouvrir: () => setState((s) => (s.planARouvrir ? { ...s, planARouvrir: null } : s)),
 
     goCreateLook: (seedId) =>
       setState((s) => ({
@@ -1787,6 +1908,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       const avant = s.outfitFeedbackDuJour;
       const { liste: apres, retire } = appliquerAvis(avant, { jour, pieceIds, verdict });
       setState((st) => ({ ...st, outfitFeedbackDuJour: apres }));
+      // « J'adore » ENREGISTRE LE LOOK (recette du 26/09/2026) : un avis sans
+      // conséquence n'en était pas un. Idempotent — jamais deux copies —, et
+      // retirer l'avis ne supprime pas le look : il vit désormais dans « Mes
+      // looks », où elle peut le retirer elle-même.
+      if (verdict === "adore" && !retire) enregistrerTenueSiAbsente(s.outfit, s.occasion);
       if (!isSupabaseConfigured || !userId) return;
       const occasion = s.occasion && s.occasion !== "all" ? s.occasion : null;
       const ecriture = retire

@@ -227,7 +227,13 @@ export function OutfitComposition({
         gridTemplateColumns: `repeat(${cfg.cols}, 1fr)`,
         gridAutoRows: ajustee ? `minmax(0, ${cfg.rowHeight})` : cfg.rowHeight,
         height: ajustee ? "100%" : undefined,
-        alignContent: ajustee ? "center" : undefined,
+        // « safe center » et non « center » (recette du 26/09/2026, pièce
+        // coupée en haut) : si la composition dépasse la hauteur de la zone,
+        // un centrage simple la fait déborder VERS LE HAUT aussi, et le haut
+        // de la première pièce devient inatteignable. « safe » retombe alors
+        // sur un alignement en haut. Navigateur trop ancien : la valeur est
+        // ignorée, l'alignement par défaut (en haut) ne coupe rien non plus.
+        alignContent: ajustee ? "safe center" : undefined,
         // Flux normal, jamais "dense" (recette 26/08/2026) : le remplissage
         // dense remonte les petites pièces dans les trous laissés par les
         // grandes, si bien qu'une même catégorie changeait de place d'une
@@ -294,12 +300,12 @@ export function OutfitComposition({
               // Photo du dressing en retrait comme les visuels produit
               // (recette 26/08/2026, section 4) : à fond perdu, elle captait
               // le regard et devenait le point focal du look au lieu d'en
-              // être une pièce parmi d'autres. Toujours recadrée en "cover"
-              // (une photo n'est pas détourée), mais dans la zone de contenu.
+              // être une pièce parmi d'autres. Contenue dans la zone de contenu
+              // (plus recadrée en "cover" depuis le 26/09/2026).
               padding: cfg.pad,
               boxSizing: "border-box",
               background: sansTuile ? undefined : "#F3EDE1",
-              // Photo réelle : toujours en fond "cover" (jamais détourée).
+              // Photo réelle : en fond contenu (jamais détourée, jamais coupée).
               // Visuel produit : rendu par un <img> ci-dessous, pour que le
               // contour du pivot puisse épouser l'image elle-même.
               // Sans tuile, TOUT passe par un <img> ou par l'aplat de repli :
@@ -307,7 +313,9 @@ export function OutfitComposition({
               // il ne peut porter ni coins arrondis propres ni ombre douce.
               backgroundImage: !sansTuile && isRealPhoto && hasImg ? `url(${img.url})` : undefined,
               backgroundColor: sansTuile || hasImg ? undefined : it.hex,
-              backgroundSize: "cover",
+              // "contain" depuis la recette du 26/09/2026 : une pièce principale
+              // ne doit jamais être tronquée, photo comprise.
+              backgroundSize: "contain",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "center",
               backgroundOrigin: "content-box",
@@ -326,13 +334,16 @@ export function OutfitComposition({
                   alt=""
                   style={{
                     height: "100%",
-                    // Une photo du dressing n'est jamais détourée : elle
-                    // remplit sa cellule en "cover", comme avant. Un visuel
-                    // produit garde width:auto, donc sa boîte vaut exactement
-                    // l'image affichée et l'ombre en épouse la silhouette.
-                    width: isRealPhoto ? "100%" : "auto",
+                    // Une photo du dressing est désormais CONTENUE, comme un
+                    // visuel produit (recette du 26/09/2026) : en "cover",
+                    // une robe longue photographiée en portrait, posée dans
+                    // une cellule paysage, perdait son haut et son bas. La
+                    // photo garde son cadre (arrondi) mais la pièce reste
+                    // entière. width:auto : la boîte vaut l'image affichée,
+                    // l'ombre en épouse le contour.
+                    width: "auto",
                     maxWidth: "100%",
-                    objectFit: isRealPhoto ? "cover" : "contain",
+                    objectFit: "contain",
                     display: "block",
                     borderRadius: Math.max(2, cfg.radius - 4),
                     // Même ombre que HeroPiece sur l'accueil — c'est elle qui

@@ -179,7 +179,7 @@ export default function WardrobeScreen() {
       <AppHeader />
       <div className="t-surtitre text-muted mt-[14px]">Mon dressing</div>
       <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-        Ton vestiaire, <span className="italic text-terracotta">à ton image.</span>
+        Ton vestiaire, <span className="italic text-terracotta">à ton image</span>
       </div>
       <div className="flex items-baseline justify-between gap-[10px] mt-[14px]">
         <div className="text-[12px] text-muted">{dressingLoaded ? synthese.texte : " "}</div>
@@ -433,7 +433,7 @@ export default function WardrobeScreen() {
           {aDecouvrir.cas === "associations" && (
             <>
               <div className="t-titre-section text-ink mt-3">
-                Ton dressing peut <span className="italic text-terracotta">déjà faire plus.</span>
+                Ton dressing peut <span className="italic text-terracotta">déjà faire plus</span>
               </div>
               <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
                 Capsela a imaginé {aDecouvrir.nombre}{" "}
@@ -445,7 +445,7 @@ export default function WardrobeScreen() {
           {aDecouvrir.cas === "proche_limite" && (
             <>
               <div className="t-titre-section text-ink mt-3">
-                Tu as déjà {aDecouvrir.nbPieces} <span className="italic text-terracotta">pièces.</span>
+                Tu as déjà {aDecouvrir.nbPieces} <span className="italic text-terracotta">pièces</span>
               </div>
               <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
                 Découvre de nouvelles façons de les porter.
@@ -462,7 +462,7 @@ export default function WardrobeScreen() {
           {aDecouvrir.cas === "manque" && (
             <>
               <div className="t-titre-section text-ink mt-3">
-                Une pièce pourrait ouvrir <span className="italic text-terracotta">de nouveaux looks.</span>
+                Une pièce pourrait ouvrir <span className="italic text-terracotta">de nouveaux looks</span>
               </div>
               <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
                 Découvre les essentiels qui compléteraient ton vestiaire.

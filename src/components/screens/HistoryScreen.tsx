@@ -485,7 +485,7 @@ export default function HistoryScreen() {
         <AppHeader />
         <Surtitre className="mt-[18px]">Ton journal</Surtitre>
         <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-          Ton style <span className="italic text-terracotta">commence ici.</span>
+          Ton style <span className="italic text-terracotta">commence ici</span>
         </div>
         <div className="t-chapeau text-muted-3 mt-[10px]">
           Chaque tenue que tu portes enrichit ton journal et aide Capsela à mieux comprendre ton style.
@@ -612,7 +612,7 @@ export default function HistoryScreen() {
           {!(moment && insights.topOccasionShare != null) && (
             <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[16px]">
               <div className="t-titre-carte text-ink">
-                {insights.wornThisMonth > 0 ? "Pas encore de tendance ce mois-ci." : `Aucune tenue notée en ${moisCourant} pour l'instant.`}
+                {insights.wornThisMonth > 0 ? "Pas encore de tendance ce mois-ci" : `Aucune tenue notée en ${moisCourant} pour l'instant`}
               </div>
               <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[6px]">
                 {insights.wornThisMonth > 0
@@ -624,7 +624,7 @@ export default function HistoryScreen() {
           {moment && insights.topOccasionShare != null && (
             <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[18px]">
               <div className="t-titre-section text-ink" style={{ textWrap: "balance" }}>
-                Ton dressing est particulièrement sollicité pour <span className="italic text-terracotta">{moment}</span>.
+                Ton dressing est particulièrement sollicité pour <span className="italic text-terracotta">{moment}</span>
               </div>
               <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[10px]">
                 {insights.topOccasionShare} % de tes tenues de {moisCourant} étaient pensées pour cette occasion, sur{" "}
@@ -747,8 +747,8 @@ export default function HistoryScreen() {
             </div>
             <div className="t-titre-carte text-ink mt-[8px]">
               {aVendre.length === 1
-                ? `Une pièce n'a pas été portée ${depuis}.`
-                : `${aVendre.length} pièces n'ont pas été portées ${depuis}.`}
+                ? `Une pièce n'a pas été portée ${depuis}`
+                : `${aVendre.length} pièces n'ont pas été portées ${depuis}`}
             </div>
             <div className="text-[13px] text-warm-text-2 leading-[1.5] mt-[6px]">
               {aVendre.length === 1 ? "Elle n'a pas trouvé sa place" : "Elles n'ont pas trouvé leur place"} dans tes looks depuis longtemps. Tu

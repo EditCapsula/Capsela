@@ -18,15 +18,11 @@ export const LIMITE_DRESSING_GRATUIT = 20;
  * Générations de tenues offertes par jour sans abonnement — arbitré le
  * 24/09/2026.
  *
- * LA CONSTANTE EXISTE, LE COMPTEUR NON. Elle sert aujourd'hui uniquement à
- * écrire le chiffre à un seul endroit sur l'écran Premium, qui présente
- * l'avantage comme « bientôt ». Aucun appel du moteur n'est décompté : il
- * n'y a pas de persistance pour cela, et un compteur posé côté navigateur
- * se remettrait à zéro en vidant le stockage — un quota que l'on contourne
- * en rouvrant l'app n'est pas un quota, c'est une gêne pour les seules
- * personnes honnêtes. Le décompte a besoin d'une table et d'un RPC
- * `security definer` ; tant qu'ils n'existent pas, la constante ne fait que
- * de l'affichage.
+ * AFFICHAGE SEULEMENT. Le décompte, lui, est fait par la base :
+ * `consommer_generation()` (migrations 0032/0033, `security definer`) porte
+ * sa propre limite et la lève pour un compte Premium actif. Cette constante
+ * écrit le chiffre sur l'écran Premium ; le Gate de TenuesScreen annonce la
+ * limite que la base a renvoyée (bonus compris), pas celle-ci.
  */
 export const GENERATIONS_GRATUITES_PAR_JOUR = 2;
 

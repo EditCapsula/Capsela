@@ -19,18 +19,16 @@ import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT } from "@/lib/p
  * « Restaurer mon achat » est retiré pour la même raison : il n'y a aucun
  * achat à restaurer, et le proposer ferait croire qu'il y en a eu.
  *
- * LES QUATRE AVANTAGES NE SE VALENT PAS AUJOURD'HUI, et la page ne fait pas
- * semblant du contraire. « Planifier une tenue » fonctionne. Le dressing a
- * désormais une limite réelle, donc « Dressing illimité » veut dire quelque
- * chose. « Préparer une valise » et « Tenues sans limite » n'existent pas
- * encore : ils portent la mention « bientôt » plutôt que de figurer au même
- * rang que les deux autres — vendre quatre choses quand deux existent est le
- * genre de détail qui se remarque une fois payé.
+ * DISPONIBLE OU BIENTÔT, JAMAIS L'UN POUR L'AUTRE. Un avantage sans
+ * `bientot` fonctionne aujourd'hui ; un avantage `bientot` n'existe pas
+ * encore et le dit — vendre quatre choses quand deux existent est le genre de
+ * détail qui se remarque une fois payé.
  *
- * « Tenues sans limite » annonce un quota (2 générations par jour) QUI N'EST
- * PAS ENCORE APPLIQUÉ. C'est délibéré et c'est la raison de la mention
- * « bientôt » : la page décrit l'offre à venir, elle ne prétend pas que la
- * limite existe. Le jour où le compteur est posé, la mention tombe.
+ * « Tenues sans limite » est DISPONIBLE depuis la recette du 26/09/2026 : le
+ * quota gratuit (2 alternatives « Autre tenue » par jour) est appliqué par la
+ * base (`consommer_generation`, migrations 0032/0033), qui le lève pour un
+ * compte Premium actif (`premium_access`). La mention « bientôt » était
+ * restée d'avant le compteur.
  */
 
 const T = {
@@ -72,6 +70,14 @@ const G_VALISE = (
   </>
 );
 
+const G_REGARD = (
+  <>
+    <rect x="3.5" y="7" width="17" height="12" rx="2.5" {...T} />
+    <path d="M8.5 7l1.4-2.2h4.2L15.5 7" {...T} />
+    <circle cx="12" cy="13" r="3.2" {...T} />
+  </>
+);
+
 const G_ETINCELLE = (
   <>
     <path
@@ -97,7 +103,13 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
     glyphe: G_ETINCELLE,
     titre: "Tenues sans limite",
     desc: `Génère autant de tenues que tu veux. Sans abonnement, ${GENERATIONS_GRATUITES_PAR_JOUR} par jour.`,
-    bientot: true,
+  },
+  // Disponible (recette du 26/09/2026) : l'Avis de styliste fonctionne déjà,
+  // il n'est donc jamais « bientôt ». Même promesse que la carte de l'accueil.
+  {
+    glyphe: G_REGARD,
+    titre: "Avis de styliste",
+    desc: "Montre ta tenue à Capsela : ce qui fonctionne, ce que tu peux ajuster.",
   },
   {
     glyphe: G_VALISE,

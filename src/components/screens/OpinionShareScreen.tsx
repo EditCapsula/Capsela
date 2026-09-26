@@ -201,20 +201,30 @@ export default function OpinionShareScreen() {
 
   // Mêmes pièces que l'écran Tenue, résolues depuis la même source : le
   // message ne peut pas décrire une autre tenue que celle affichée.
+  //
+  // TENUE PLANIFIÉE (recette du 26/09/2026) : `avisSource` porte ses pièces,
+  // son occasion et la PRÉVISION enregistrée à la planification — jamais la
+  // météo d'aujourd'hui, qui ne dirait rien du jour J.
+  const source = state.avisSource;
   const pieces = useMemo<Item[]>(() => {
     const pool = [...state.items, ...vestiairePool];
-    return state.outfit.map((id) => pool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
-  }, [state.items, state.outfit, vestiairePool]);
+    const ids = source ? source.pieceIds : state.outfit;
+    return ids.map((id) => pool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
+  }, [state.items, state.outfit, vestiairePool, source]);
+  const occasionPartagee = source ? source.occasion : state.occasion || "all";
+  const tempPartagee = source ? source.temp : geoLoading ? null : geoCity.temp;
+  const meteoPartagee = source ? source.label : geoLoading ? null : geoCity.label;
 
   const parties = useMemo(
     () =>
       buildOpinionMessageParts({
         pieces,
-        occasion: state.occasion || "all",
-        temp: geoLoading ? null : geoCity.temp,
-        conditionMeteo: geoLoading ? null : geoCity.label,
+        occasion: occasionPartagee,
+        temp: tempPartagee,
+        conditionMeteo: meteoPartagee,
+        intitule: source?.intitule,
       }),
-    [pieces, state.occasion, geoLoading, geoCity.temp, geoCity.label]
+    [pieces, occasionPartagee, tempPartagee, meteoPartagee, source?.intitule]
   );
   const messageGenere = useMemo(() => formatOpinionMessage(parties), [parties]);
 
@@ -233,11 +243,12 @@ export default function OpinionShareScreen() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const occasionLabel = state.occasion && state.occasion !== "all" ? OCC_LABELS[state.occasion] : null;
+  const occasionLabel = occasionPartagee !== "all" ? OCC_LABELS[occasionPartagee] : null;
   const meteo =
-    !geoLoading && geoCity.temp != null && Number.isFinite(geoCity.temp)
-      ? `${Math.round(geoCity.temp)}°${geoCity.label ? ` · ${geoCity.label}` : ""}`
+    tempPartagee != null && Number.isFinite(tempPartagee)
+      ? `${Math.round(tempPartagee)}°${meteoPartagee ? ` · ${meteoPartagee}` : ""}`
       : null;
+  const retourLibelle = source ? "Retour à ma tenue planifiée" : "Retour à ma tenue";
 
   // Une image ne peut être composée que depuis des visuels réels : une tenue
   // dont aucune pièce n'a d'URL ne produirait qu'un aplat. L'option le dit
@@ -290,7 +301,7 @@ export default function OpinionShareScreen() {
 
   const enTete = (
     <div className="flex-shrink-0 px-6 pt-[6px]">
-      <AppHeader onBack={actions.closeOpinionShare} backLabel="Retour à ma tenue" />
+      <AppHeader onBack={actions.closeOpinionShare} backLabel={retourLibelle} />
     </div>
   );
 
@@ -316,7 +327,7 @@ export default function OpinionShareScreen() {
             onClick={actions.closeOpinionShare}
             className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
           >
-            Retour à ma tenue
+            {retourLibelle}
           </button>
         </div>
       </div>

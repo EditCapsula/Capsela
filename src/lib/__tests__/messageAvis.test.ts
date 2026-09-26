@@ -124,3 +124,19 @@ describe("parties du message et chaîne envoyée", () => {
     expect(buildOpinionMessage(vide)).not.toContain("•");
   });
 });
+
+describe("tenue planifiée — l'intitulé dit le jour J, pas « du jour »", () => {
+  it("remplace « Ma tenue du jour » et garde le contexte", () => {
+    const parts = buildOpinionMessageParts({
+      pieces: [],
+      occasion: "all",
+      temp: 18,
+      conditionMeteo: "Nuageux",
+      intitule: "Ma tenue pour samedi 4 oct.",
+    });
+    expect(parts.titre).toBe("Ma tenue pour samedi 4 oct. — 18° · Nuageux");
+  });
+  it("sans intitulé : inchangé", () => {
+    expect(buildOpinionMessageParts({ pieces: [], occasion: "all", temp: null, conditionMeteo: null }).titre).toBe("Ma tenue du jour");
+  });
+});
