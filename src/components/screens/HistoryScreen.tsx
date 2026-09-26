@@ -331,9 +331,12 @@ export default function HistoryScreen() {
   const style = styleDuMois(state.history);
 
   // ── À SORTIR DU PLACARD ─────────────────────────────────────────────
-  // Le pool affiché (pièces réelles + suggestions de la capsule), comme
-  // l'ancien « À redécouvrir » — mais plus seulement les jamais portées :
-  // aussi celles qui n'ont pas été portées de toute leur dernière saison.
+  // LES PIÈCES DU DRESSING SEULEMENT (26/09/2026, signalé : « pas logique
+  // dans le parcours ») : une suggestion de la capsule n'est pas dans le
+  // placard, elle ne peut pas « en sortir ». Jusque-là, le pool affiché
+  // (réel + suggestions), comme l'ancien « À redécouvrir ». Pas seulement
+  // les jamais portées : aussi celles qui n'ont pas été portées de toute
+  // leur dernière saison.
   // Une pièce mise de côté pour vendre n'y figure plus : on ne propose pas
   // de tenue avec ce qu'elle a décidé de laisser partir.
   //
@@ -347,13 +350,13 @@ export default function HistoryScreen() {
   // sans manches proposés fin septembre) : même règle que la capsule
   // (deLaSaisonEnCours). Une pièce d'été n'attend pas « son moment » en
   // automne — elle l'attend au printemps, et reviendra ici à ce moment-là.
-  const placard = wardrobePool
+  const placard = state.items
     .filter((item) => deLaSaisonEnCours(item))
-    .filter((item) => possedees.get(item.id)?.revente !== "de_cote")
+    .filter((item) => item.revente !== "de_cote")
     .map((item) => ({ item, port: etatDePort(item, state.history) }))
     .filter(
       ({ item, port }) =>
-        port.etat === "jamais" || port.etat === "delaissee" || (port.etat === "a_vendre" && possedees.get(item.id)?.revente === "gardee")
+        port.etat === "jamais" || port.etat === "delaissee" || (port.etat === "a_vendre" && item.revente === "gardee")
     )
     // Jamais portées d'abord, puis de la plus récente à la plus ancienne
     // absence — l'ordre de l'exemple du brief.
@@ -605,8 +608,8 @@ export default function HistoryScreen() {
       : `Ta dernière tenue notée date du ${entries[0].jour}.`;
 
   // UNE SEULE BASE pour le bilan (cf. capsuleJournal) : le pool affiché et
-  // l'historique réel — la même que le placard, les pièces fétiches et la
-  // timeline. « Pièces utilisées » = pièces uniques portées au moins une
+  // l'historique réel — la même que les pièces fétiches et la timeline (le
+  // placard, lui, ne lit plus que le dressing depuis le 26/09/2026). « Pièces utilisées » = pièces uniques portées au moins une
   // fois ; le pourcentage en découle.
   const capsule = capsuleJournal(wardrobePool, state.history);
   // Le mois de référence de journalInsights, et non celui de la dernière
@@ -823,7 +826,7 @@ export default function HistoryScreen() {
             <span id="journal-placard">À sortir du placard</span>
           </Surtitre>
           <div className="text-[13px] text-ink leading-[1.45] mt-[6px]">
-            {placard.length} {pl(placard.length, "pièce de ta capsule attend", "pièces de ta capsule attendent")} encore{" "}
+            {placard.length} {pl(placard.length, "pièce de ton dressing attend", "pièces de ton dressing attendent")} encore{" "}
             {pl(placard.length, "son", "leur")} moment
             {jamaisPortees > 0 && aRedecouvrir > 0 ? ` : ${jamaisPortees} à porter, ${aRedecouvrir} à redécouvrir.` : "."}
           </div>
@@ -848,7 +851,7 @@ export default function HistoryScreen() {
             ))}
           </ul>
           <button
-            onClick={() => actions.openItemOutfits(placard[0].item.id, !possedees.has(placard[0].item.id))}
+            onClick={() => actions.openItemOutfits(placard[0].item.id, false)}
             className="mt-3 min-h-[44px] text-[12px] text-terracotta cursor-pointer"
             aria-label={`Voir les idées de tenues avec ${placard[0].item.name}`}
           >
