@@ -1,6 +1,7 @@
 "use client";
 
 import { resolveItemImage } from "@/lib/catalogImages";
+import { composerTenue } from "@/lib/compositionEditoriale";
 import type { CategoryKey, Item } from "@/lib/types";
 
 /**
@@ -54,7 +55,9 @@ import type { CategoryKey, Item } from "@/lib/types";
  * Seul repère conservé : le contour terracotta du pivot (anchorId), qui n'a
  * aucune autre signification dans toute l'app.
  */
-export type CompositionVariant = "hero" | "compact";
+export type CompositionVariant = "hero" | "compact" | "editoriale";
+/** Les deux variantes en grille ; "editoriale" place ses pièces librement (CompositionEditoriale). */
+type VarianteGrille = Exclude<CompositionVariant, "editoriale">;
 type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
 type CompositionTier = "principal" | "chaussures" | "petit";
 
@@ -99,7 +102,7 @@ const TIER_OF_ROLE: Record<CompositionRole, CompositionTier> = {
  * et un accessoire passe de 4,4x à 2,1x. Les vêtements restent nettement les
  * plus grands, mais le contraste est moins marqué qu'avant.
  */
-const TIER_SPAN: Record<CompositionVariant, Record<CompositionTier, { col: number; row: number }>> = {
+const TIER_SPAN: Record<VarianteGrille, Record<CompositionTier, { col: number; row: number }>> = {
   // "hero" compte en TIERS DE RANGÉE depuis le 23/09/2026 (6/4/3 au lieu de
   // 2/1/1) : cf. le commentaire d'échelle sous VARIANT_CONFIG. Le vêtement
   // occupe exactement la même cellule qu'avant — 6 tiers valent les 2
@@ -159,7 +162,7 @@ const TIER_SPAN: Record<CompositionVariant, Record<CompositionTier, { col: numbe
 /** Unité de rangée de "hero" — exportée pour que l'écran Tenue dimensionne sa zone fixe sur la même mesure. */
 export const UNITE_HERO = "clamp(15.33px, calc(5.667vw - 4px), 20.67px)";
 
-const VARIANT_CONFIG: Record<CompositionVariant, { cols: number; rowHeight: string; gap: number; radius: number; pad: number }> = {
+const VARIANT_CONFIG: Record<VarianteGrille, { cols: number; rowHeight: string; gap: number; radius: number; pad: number }> = {
   // Unité en tiers de rangée, calée sur l'ancienne (cf. ci-dessus). Retrait
   // intérieur ramené de 8 à 2 px : il servait à détacher la pièce de sa tuile
   // beige, qui n'existe plus — la gouttière de 6 px sépare désormais seule.
@@ -201,6 +204,7 @@ export function OutfitComposition({
   variant = "hero",
   anchorId,
   ajustee = false,
+  label,
 }: {
   items: Item[];
   variant?: CompositionVariant;
@@ -215,7 +219,10 @@ export function OutfitComposition({
    * ci-dessus. Le parent doit avoir une hauteur définie.
    */
   ajustee?: boolean;
+  /** Nom accessible de la composition "editoriale" (les pièces sont nommées dans la liste qui suit). */
+  label?: string;
 }) {
+  if (variant === "editoriale") return <CompositionEditoriale items={items} label={label} />;
   const cfg = VARIANT_CONFIG[variant];
   // "hero" repose sur le terracotta de la card Tenue, pas sur le fond de
   // page : aucune tuile sous les pièces (cf. en-tête).
@@ -384,6 +391,70 @@ export function OutfitComposition({
                   }}
                 />
               )
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * "editoriale" — le hero du détail d'un look (27/09/2026, correctif « Hero du
+ * look »). Même composant, même rendu de pièce que "hero" (image détourée
+ * posée sur le fond, ombre portée par la silhouette, aplat de couleur pour
+ * une pièce sans visuel), mais sans grille : chaque pièce reçoit un
+ * emplacement carré selon sa catégorie et les autres pièces présentes
+ * (composerTenue, compositionEditoriale.ts). La zone prend la hauteur réelle
+ * des pièces : sa proportion suit la tenue, et rien n'est réduit d'un bloc.
+ *
+ * Une photo du dressing est posée ENTIÈRE, à son ratio (max-width /
+ * max-height, jamais de recadrage), avec des coins arrondis : sa boîte vaut
+ * l'image affichée, l'ombre en épouse le cadre. Aucun texte ni badge : la
+ * provenance reste dans « Les pièces de ce look ».
+ */
+function CompositionEditoriale({ items, label }: { items: Item[]; label?: string }) {
+  const { pieces, hauteur } = composerTenue(items);
+  if (!pieces.length) return null;
+  return (
+    <div role="img" aria-label={label} style={{ position: "relative", width: "100%", paddingTop: `${hauteur}%` }}>
+      {pieces.map(({ item: it, case: c }) => {
+        const img = resolveItemImage(it);
+        const photo = img.kind === "photo";
+        return (
+          <div
+            key={"edito-" + it.id}
+            style={{
+              position: "absolute",
+              left: `${c.x}%`,
+              width: `${c.cote}%`,
+              top: `${(c.y / hauteur) * 100}%`,
+              height: `${(c.cote / hauteur) * 100}%`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {img.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                loading="lazy"
+                src={img.url}
+                alt=""
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  width: "auto",
+                  height: "auto",
+                  display: "block",
+                  borderRadius: photo ? 12 : undefined,
+                  filter: photo
+                    ? "brightness(.94) contrast(1.04) saturate(.9) drop-shadow(0 6px 14px rgba(29,26,22,.18))"
+                    : "drop-shadow(0 6px 14px rgba(29,26,22,.18))",
+                }}
+              />
+            ) : (
+              <div style={{ width: "100%", height: "100%", borderRadius: 12, background: it.hex, opacity: 0.9 }} />
             )}
           </div>
         );
