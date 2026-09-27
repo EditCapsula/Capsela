@@ -33,6 +33,7 @@ import OpinionShareScreen from "./screens/OpinionShareScreen";
 import CreateLookScreen from "./screens/CreateLookScreen";
 import LookDetailScreen from "./screens/LookDetailScreen";
 import ItemOutfitsScreen from "./screens/ItemOutfitsScreen";
+import IdeeLookScreen from "./screens/IdeeLookScreen";
 import TabBar from "./TabBar";
 import CookieBanner from "./CookieBanner";
 import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
@@ -149,6 +150,7 @@ function Screens() {
         {state.screen === "createLook" && <CreateLookScreen />}
         {state.screen === "lookDetail" && <LookDetailScreen />}
         {state.screen === "itemOutfits" && <ItemOutfitsScreen />}
+        {state.screen === "ideeLook" && <IdeeLookScreen />}
       </div>
       {showTabbar && <TabBar />}
       <Analytics />

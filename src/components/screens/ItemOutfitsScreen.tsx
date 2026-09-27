@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import { CarteIdeeLook } from "@/components/CarteIdeeLook";
 import { isCatalogId } from "@/lib/catalog";
-import { CATLABEL, OCC_LABELS } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { currentSeasonKey, representativeWeatherFor } from "@/lib/capsule";
-import { describeOutfitVariation, getOutfitsForItem, outfitFormality, type ItemOutfitVariation } from "@/lib/logic";
+import { FAMILLES_LOOK, cleLook, decrireLooks, ideesDressingDAbord, ordonnerLooks, titreCommentPorter, type FamilleLook } from "@/lib/ideesLooks";
+import type { ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import type { CapsuleSeason, Item, OccasionKey } from "@/lib/types";
+import type { CapsuleSeason, Item } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
 
 /**
@@ -28,6 +28,16 @@ import BoutonRetour from "@/components/BoutonRetour";
  * pièce suggérée non possédée comblant une catégorie vide de la capsule par
  * défaut) ; badge saison strictement lu depuis capsuleSeasons (colonne
  * saison_capsule de vestiaire_universel), jamais déduit du type de pièce.
+ *
+ * REFONTE ÉDITORIALE DU 27/09/2026 (maquette « Comment porter … ? ») : titre
+ * accordé à la pièce, pastilles Quotidien / Travail / Sortie, grandes cartes
+ * (CarteIdeeLook) avec provenance explicite — pièces du dressing d'abord,
+ * suggestions de la capsule seulement là où le dressing n'a rien —, trois
+ * looks différenciés puis « Voir plus de looks ». Une carte ouvre le détail
+ * du look (IdeeLookScreen) ; « Porter ce look » y reprend le parcours de
+ * l'écran Tenue. Les dérivés sont purs et testés (ideesLooks.ts). Le badge de
+ * saison et la phrase « Les pièces complémentaires viennent de ta capsule »
+ * sont remplacés par la provenance de chaque look.
  */
 /**
  * Les idées de tenues d'une pièce, telles que cet écran les calcule — sorti
@@ -39,18 +49,23 @@ import BoutonRetour from "@/components/BoutonRetour";
 export function calculerIdeesTenues(
   pivot: Item,
   wardrobePool: Item[],
+  /** Le dressing réel (state.items) : ses pièces passent d'abord, cf. ideesDressingDAbord (27/09/2026). */
+  dressing: Item[],
   capsuleSeason: CapsuleSeason,
   preferredHexes: string[],
   gender: "femme" | "homme" | null
 ): ItemOutfitVariation[] {
-  const pool = wardrobePool.some((i) => i.id === pivot.id) ? wardrobePool : [...wardrobePool, pivot];
-  return getOutfitsForItem(pivot.id, pool, representativeWeatherFor(capsuleSeason), preferredHexes, {}, gender, capsuleSeason);
+  return ideesDressingDAbord(pivot, wardrobePool, dressing, capsuleSeason, preferredHexes, gender);
 }
 
 export default function ItemOutfitsScreen() {
   const { state, wardrobePool, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
-  const [occasionFilter, setOccasionFilter] = useState<OccasionKey | "all">("all");
+  const pretes = state.ideesTenuesPretes;
+  // La pastille choisie survit à l'aller-retour vers le détail d'un look
+  // (gardée avec les idées dans ideesTenuesPretes).
+  const [famille, setFamille] = useState<FamilleLook | null>(pretes?.pivotId === state.activeId ? (pretes.famille ?? null) : null);
+  const [toutVoir, setToutVoir] = useState(false);
 
   const pivot = wardrobePool.find((i) => i.id === state.activeId) || vestiairePool.find((i) => i.id === state.activeId);
 
@@ -67,7 +82,6 @@ export default function ItemOutfitsScreen() {
   const capsuleSeason = state.capsuleSeason || currentSeasonKey();
   const preferredHexes = useMemo(() => paletteHexes(profile), [profile]);
 
-  const pretes = state.ideesTenuesPretes;
   const variations = useMemo(
     // capsuleSeason transmis explicitement (correctif 29/08/2026) : le
     // référentiel saisonnier vient de la capsule affichée, jamais de la
@@ -79,8 +93,8 @@ export default function ItemOutfitsScreen() {
         ? []
         : pretes && pretes.pivotId === pivot.id
           ? pretes.variations
-          : calculerIdeesTenues(pivot, wardrobePool, capsuleSeason, preferredHexes, profile.gender),
-    [pivot, pretes, wardrobePool, preferredHexes, profile.gender, capsuleSeason]
+          : calculerIdeesTenues(pivot, wardrobePool, state.items, capsuleSeason, preferredHexes, profile.gender),
+    [pivot, pretes, wardrobePool, state.items, preferredHexes, profile.gender, capsuleSeason]
   );
 
   // Génération à la demande du visuel de la pièce pivot (correctif 23/08/2026,
@@ -101,6 +115,9 @@ export default function ItemOutfitsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pivot?.id]);
 
+  const looks = useMemo(() => ordonnerLooks(variations, state.items), [variations, state.items]);
+  const insights = useMemo(() => (pivot ? decrireLooks(variations, pool, pivot.id) : new Map()), [variations, pool, pivot]);
+
   if (!pivot) return null;
 
   // Déjà au dressing = pas un id de catalogue (statique 1001+ ou
@@ -112,185 +129,83 @@ export default function ItemOutfitsScreen() {
   // "déjà au dressing".
   const alreadyOwned = !isCatalogId(pivot.id) || state.suggestedExcluded.includes(pivot.id);
 
-  // Saison capsule (recette 23/08/2026) — strictement la colonne saison_capsule
-  // (vestiaire.ts), jamais déduite du type de vêtement ; absente pour une
-  // pièce du dressing réel ou du catalogue statique de secours.
-  const seasonLabel = !pivot.capsuleSeasons?.length
-    ? null
-    : pivot.capsuleSeasons.length === 1
-      ? `Capsule ${pivot.capsuleSeasons[0]}`
-      : pivot.capsuleSeasons.join(" · ");
-
-  const occasionsCovered = Array.from(new Set(variations.map((v) => v.occasion)));
   // Même critère que les idées elles-mêmes : la saison de la météo représentative de la capsule.
   const horsSaison = pivot.season !== "Toutes saisons" && !representativeWeatherFor(capsuleSeason).seasons.includes(pivot.season);
-  const filteredVariations = occasionFilter === "all" ? variations : variations.filter((v) => v.occasion === occasionFilter);
 
-  // Groupe par occasion en conservant l'ordre d'apparition (déjà celui de
-  // la taxonomie, cf. getOutfitsForItem), pour l'affichage en sections.
-  const grouped: { occasion: OccasionKey; items: ItemOutfitVariation[] }[] = [];
-  filteredVariations.forEach((v) => {
-    const group = grouped.find((g) => g.occasion === v.occasion);
-    if (group) group.items.push(v);
-    else grouped.push({ occasion: v.occasion, items: [v] });
-  });
+  // Une pastille n'existe que si elle a des looks : jamais de filtre vide.
+  const familles = FAMILLES_LOOK.filter((f) => looks.some((l) => l.famille === f.cle));
+  const familleActive = famille && familles.some((f) => f.cle === famille) ? famille : null;
+  const filtres = familleActive ? looks.filter((l) => l.famille === familleActive) : looks;
+  const visibles = toutVoir ? filtres : filtres.slice(0, 3);
+  const piecesDe = (ids: number[]) => ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
 
-  const pivotImage = resolveItemImage(pivot);
-  const metaParts = [pivot.color, pivot.matiere].filter(Boolean);
+  const titre = titreCommentPorter(pivot, alreadyOwned);
+  const DEBUT = "Comment porter ";
 
-  // Statut Dressing/Capsule d'une pièce (brief 26/08/2026, sections 2-3) —
-  // même règle que alreadyOwned pour le pivot : un id de catalogue non
-  // exclu par "J'ai déjà" est une suggestion, jamais une pièce possédée.
-  const pieceOwned = (id: number) => !isCatalogId(id) || state.suggestedExcluded.includes(id);
-  const hasSuggestedPieces = variations.some((v) => v.ids.some((id) => id !== pivot.id && !pieceOwned(id)));
-
-  // Saison citée dans la phrase de provenance — currentSeasonKey() et NON la
-  // variable capsuleSeason ci-dessus. Les deux diffèrent : capsuleSeason suit
-  // la saison parcourue sur l'écran Capsule (state.capsuleSeason) et ne sert
-  // ici qu'à calculer la météo de génération, alors que les pièces
-  // complémentaires viennent de wardrobePool, dont la part capsule est
-  // construite dans le store avec currentSeasonKey(). Citer capsuleSeason
-  // rendrait la phrase fausse dès qu'une autre saison a été parcourue.
-  const suggestionSeason = currentSeasonKey();
-  // Badge saison masqué quand il ferait doublon avec cette phrase (arbitrage
-  // 26/08/2026) : il ne décrit pas la même chose (les saisons déclarées de la
-  // PIÈCE, pas la provenance des compléments), mais se lit à l'identique quand
-  // il annonce la même saison. Conservé seulement s'il ajoute une information.
-  const pivotSeasons = pivot.capsuleSeasons ?? [];
-  const seasonAddsInfo = pivotSeasons.length > 1 || (pivotSeasons.length === 1 && pivotSeasons[0] !== suggestionSeason);
-  const showSeasonBadge = Boolean(seasonLabel) && (!hasSuggestedPieces || seasonAddsInfo);
+  const choisir = (f: FamilleLook | null) => {
+    setFamille(f);
+    setToutVoir(false);
+  };
+  const pastille = (actif: boolean) =>
+    "flex-none rounded-full px-4 py-[9px] text-[12px] whitespace-nowrap cursor-pointer " +
+    (actif ? "bg-terracotta active:bg-terracotta-hover text-cream" : "bg-card border border-border text-ink");
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      {/* En-tête compacté (recette 26/08/2026, refonte densité) : retour et
-          surtitre sur une même ligne — même motif que LookDetailScreen — au
-          lieu de deux blocs empilés, pour faire remonter les idées de tenues
-          dans le viewport. */}
-      <div className="flex items-center gap-[14px]">
-        <BoutonRetour onClick={() => actions.go(state.itemOutfitsReturn)} label="Revenir à l'écran précédent" className="flex-shrink-0" />
-        <div className="t-surtitre text-muted">Les idées de tenues</div>
-      </div>
+      <BoutonRetour onClick={() => actions.go(state.itemOutfitsReturn)} label="Revenir à l'écran précédent" />
 
-      {/* Fiche compacte de la pièce. "Autour de cette pièce" (brief design
-          22/08/2026, section 2) est devenu le surtitre DANS la colonne texte
-          plutôt qu'une ligne autonome : même information, une trentaine de
-          pixels de moins. Le contour terracotta de cette pièce dans chaque
-          composition plus bas n'a pas d'autre signification dans toute l'app. */}
-      <div className="flex items-center gap-[13px] mt-[14px]">
-        <div
-          className="relative flex-shrink-0 rounded-[14px] overflow-hidden"
-          style={
-            pivotImage.url
-              ? { width: 72, height: 86, background: "#F3EDE1", padding: 7 }
-              : { width: 72, height: 86, background: pivot.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
-          }
-        >
-          {pivotImage.url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img loading="lazy"
-              src={pivotImage.url}
-              alt={pivot.name}
-              style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center" }}
-            />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="t-label text-terracotta">Autour de cette pièce</div>
-          <div className="t-titre-carte text-ink mt-[3px]">{pivot.name}</div>
-          <div className="text-[12px] text-muted mt-[3px]">
-            {CATLABEL[pivot.cat]}
-            {metaParts.length ? " · " + metaParts.join(" · ") : ""}
-          </div>
-          {/* Badge saison capsule — masqué quand il ferait doublon avec la
-              phrase de provenance ci-dessous (arbitrage 26/08/2026) : il ne
-              s'affiche que s'il ajoute une information, c'est-à-dire quand la
-              pièce couvre plusieurs saisons ou une saison autre que la capsule
-              courante, ou quand la phrase elle-même est absente. Logé dans la
-              colonne texte : la vignette étant plus haute, il ne rallonge pas
-              la fiche. */}
-          {showSeasonBadge && (
-            <div className="inline-flex items-center gap-2 mt-[7px] rounded-full bg-warm-bg border border-warm-border" style={{ padding: "5px 11px 5px 9px" }}>
-              <span className="w-[6px] h-[6px] rounded-full flex-shrink-0 bg-gold" />
-              <span className="t-label text-terracotta">{seasonLabel}</span>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Titre accordé au nom de la pièce (titreCommentPorter) : « ton » pour
+          une pièce du dressing, article défini pour une suggestion. */}
+      <h1 className="t-titre-ecran text-ink mt-[14px]">
+        {DEBUT}
+        <em className="text-terracotta">{titre.slice(DEBUT.length)}</em>
+      </h1>
+      <p className="text-[13px] text-[#3F3B34] leading-[1.45] mt-[8px]">Des idées créées à partir de ta capsule.</p>
+      <p className="text-[12px] text-muted leading-[1.45] mt-[2px]">
+        Capsela privilégie tes pièces et complète avec des suggestions si nécessaire.
+      </p>
 
-      {/* Provenance des compléments + action secondaire sur une seule ligne
-          (brief 26/08/2026, hiérarchie cible). La saison citée est celle de la
-          capsule qui alimente RÉELLEMENT ces suggestions, cf. suggestionSeason.
-          "J'ai déjà" est passé en secondaire (outline) et en largeur
-          automatique : l'objectif de cet écran est de parcourir des idées de
-          tenues, pas de déclarer une possession — comportement et conditions
-          d'affichage strictement inchangés. */}
-      <div className="flex items-center flex-wrap gap-x-3 gap-y-[10px] mt-[12px]">
-          {hasSuggestedPieces && (
-            <div className="flex-1 min-w-[150px] text-[11px] text-muted leading-[1.4]">
-              Les pièces complémentaires viennent de ta capsule {suggestionSeason}.
-            </div>
-          )}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {alreadyOwned ? (
-              <span className="inline-flex items-center gap-[6px] rounded-full bg-warm-bg border border-warm-border" style={{ padding: "6px 12px" }}>
-                <span className="text-[10px] text-terracotta">✓</span>
-                <span className="text-[11px] text-ink">Dans mon dressing</span>
-              </span>
-            ) : (
-              <>
-                {pivot.affLink && (
-                  <a
-                    href={pivot.affLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block bg-terracotta active:bg-terracotta-hover text-cream rounded-full py-[10px] px-[16px] t-cta cursor-pointer whitespace-nowrap"
-                  >
-                    Acheter ↗
-                  </a>
-                )}
-                <button
-                  onClick={() => actions.startReplace(pivot)}
-                  className="inline-block border border-border-soft text-terracotta rounded-full py-[10px] px-[16px] text-[12px] cursor-pointer whitespace-nowrap"
-                >
-                  J&apos;ai déjà
-                </button>
-              </>
-          )}
-        </div>
-      </div>
-
-      {occasionsCovered.length > 0 && (
-        // Chip canonique du Design System (identique à WardrobeScreen) plutôt
-        // que des hex inline : l'état sélectionné était en `ink`, divergence
-        // introduite ici seulement. Débord `-mx-6 px-6` pour que la liste se
-        // coupe au bord de l'ÉCRAN et non au bord du contenu — la chip
-        // tronquée devient l'affordance naturelle du scroll horizontal.
-        <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[18px] -mx-6 px-6">
-          <button
-            onClick={() => setOccasionFilter("all")}
-            className={
-              "flex-none rounded-full px-4 py-[9px] text-[12px] whitespace-nowrap cursor-pointer " +
-              (occasionFilter === "all" ? "bg-terracotta active:bg-terracotta-hover text-cream" : "bg-card border border-border text-ink")
-            }
-          >
-            Tout
-          </button>
-          {occasionsCovered.map((occ) => (
-            <button
-              key={occ}
-              onClick={() => setOccasionFilter(occ)}
-              className={
-                "flex-none rounded-full px-4 py-[9px] text-[12px] whitespace-nowrap cursor-pointer " +
-                (occasionFilter === occ ? "bg-terracotta active:bg-terracotta-hover text-cream" : "bg-card border border-border text-ink")
-              }
+      {/* Pièce de la capsule, pas encore au dressing (ouverte depuis la
+          Capsule ou la Tenue) : ses deux actions d'origine restent, à leur
+          place de secondaires. Une pièce du dressing n'a rien ici. */}
+      {!alreadyOwned && (
+        <div className="flex items-center flex-wrap gap-2 mt-[12px]">
+          <span className="text-[12px] text-muted mr-1">Cette pièce est une suggestion de ta capsule.</span>
+          {pivot.affLink && (
+            <a
+              href={pivot.affLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block border border-border-soft text-terracotta rounded-full py-[8px] px-[14px] text-[12px] cursor-pointer whitespace-nowrap"
             >
-              {OCC_LABELS[occ]}
+              Acheter ↗
+            </a>
+          )}
+          <button
+            onClick={() => actions.startReplace(pivot)}
+            className="inline-block border border-border-soft text-terracotta rounded-full py-[8px] px-[14px] text-[12px] cursor-pointer whitespace-nowrap"
+          >
+            J&apos;ai déjà
+          </button>
+        </div>
+      )}
+
+      {familles.length > 0 && (
+        // Débord -mx-6 px-6 : la liste se coupe au bord de l'écran, la
+        // pastille tronquée signale le défilement.
+        <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[18px] -mx-6 px-6">
+          <button onClick={() => choisir(null)} aria-pressed={!familleActive} className={pastille(!familleActive)}>
+            Tous les looks
+          </button>
+          {familles.map((f) => (
+            <button key={f.cle} onClick={() => choisir(f.cle)} aria-pressed={familleActive === f.cle} className={pastille(familleActive === f.cle)}>
+              {f.libelle}
             </button>
           ))}
         </div>
       )}
 
-      {occasionsCovered.length === 0 ? (
+      {looks.length === 0 ? (
         <div className="mt-[22px] bg-card border border-border rounded-[14px] px-4 py-[18px]">
           {/* Une pièce hors de la saison de la capsule n'a pas d'idée pour une
               raison qui n'est pas le dressing (27/09/2026) : le dire, plutôt
@@ -312,89 +227,31 @@ export default function ItemOutfitsScreen() {
           )}
         </div>
       ) : (
-        grouped.map((group) => {
-          // Rang de formalité au sein de la section occasion (brief
-          // 26/08/2026, section 4) — 0 = variante la plus décontractée,
-          // groupSize - 1 = la plus habillée. Calculé une fois par section
-          // pour que describeOutfitVariation choisisse un titre réellement
-          // différenciant plutôt qu'un même titre générique répété.
-          const withPieces = group.items.map((variation) => ({
-            variation,
-            pieces: variation.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => Boolean(p)),
-          }));
-          const rankOf = new Map(
-            [...withPieces]
-              .sort((a, b) => outfitFormality(a.pieces, pivot.id) - outfitFormality(b.pieces, pivot.id))
-              .map((x, rank) => [x.variation, rank])
-          );
-          // Écart de formalité à la moyenne de la section — repli de titrage
-          // quand aucune dimension de diversité ne distingue l'idée (recette
-          // 26/08/2026). Un ÉCART, jamais un rang : deux tenues de formalité
-          // identique donnaient auparavant deux titres suggérant une
-          // progression inexistante, le tri sur ex æquo étant arbitraire.
-          const formalities = withPieces.map((x) => outfitFormality(x.pieces, pivot.id));
-          const avgFormality = formalities.reduce((sum, f) => sum + f, 0) / (formalities.length || 1);
-
-          return (
-            <div key={group.occasion} className="mt-[20px]">
-              {/* Compteur local plutôt qu'un total global (brief 26/08/2026,
-                  section 4 — "7 IDÉES DE TENUES" supprimé, redondant avec les
-                  sections par occasion) : le nombre reste secondaire visuellement
-                  par rapport au nom de l'occasion. */}
-              <div className="flex items-baseline gap-[6px] mb-[9px]">
-                <span className="t-surtitre text-muted">{OCC_LABELS[group.occasion]}</span>
-                <span className="text-[10px] text-placeholder">
-                  · {withPieces.length} idée{withPieces.length > 1 ? "s" : ""}
-                </span>
-              </div>
-              <div className="flex flex-col gap-[10px]">
-                {withPieces.map(({ variation, pieces }) => {
-                  const styleRank = rankOf.get(variation)!;
-                  const formalityGap = outfitFormality(pieces, pivot.id) - avgFormality;
-                  const insight = describeOutfitVariation(variation, pieces, pivot.id, styleRank, withPieces.length, formalityGap);
-                  return (
-                    // Card entièrement cliquable (section 8) : un seul vrai
-                    // élément interactif (button), jamais de bouton imbriqué —
-                    // "Voir cette tenue →" reste visible mais n'est qu'un span
-                    // stylé, l'action est portée par la card entière. Focus
-                    // visible au clavier via focus-visible:outline.
-                    <button
-                      key={variation.ids.join("-")}
-                      type="button"
-                      onClick={() => actions.viewItemOutfit(variation.ids, variation.occasion)}
-                      aria-label={`Voir la tenue : ${insight.title}`}
-                      className="w-full text-left bg-card border border-border rounded-[14px] p-[10px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
-                    >
-                      <OutfitComposition items={pieces} variant="compact" anchorId={pivot.id} />
-                      {/* Card en trois niveaux (recette 26/08/2026, 3e passe,
-                          section 6) : composition, titre, puis description et
-                          action. Aucun autre badge ni métadonnée — la
-                          provenance est portée une seule fois, par la phrase
-                          en haut d'écran. La description est
-                          bornée à 3 lignes : describeOutfitVariation produit
-                          parfois une phrase de 4-5 lignes qui à elle seule
-                          rendait les cards nettement plus hautes que la tenue
-                          affichée. Borne à 3 et non à 2 : une description
-                          courante ("Le blazer structuré structure la robe,
-                          tandis que...") tient en 2 lignes à 390px mais passe
-                          à 3 dès 360px — la borner à 2 la tronquerait sur les
-                          petits écrans, ce que le brief exclut.
-                          "Voir cette tenue →" reste sur sa propre ligne : le
-                          remonter sur celle du titre ferait passer les titres
-                          les plus longs ("Prête à sortir de l'ordinaire") sur
-                          deux lignes dès 390px, sans rien gagner. */}
-                      <div className="mt-[8px]">
-                        <div className="t-titre-vignette text-ink">{insight.title}</div>
-                        <div className="text-[12px] text-[#3F3B34] mt-[2px] leading-[1.4] line-clamp-3">{insight.sentence}</div>
-                      </div>
-                      <span className="mt-[6px] inline-block text-[12px] text-terracotta">Voir cette tenue →</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })
+        <>
+          <div className="flex flex-col gap-[16px] mt-[16px]">
+            {visibles.map((look) => (
+              <CarteIdeeLook
+                key={cleLook(look.variation.ids)}
+                look={look}
+                pieces={piecesDe(look.variation.ids)}
+                insight={insights.get(cleLook(look.variation.ids))}
+                dressing={state.items}
+                onOpen={() =>
+                  actions.openIdeeLook(pivot.id, variations, familleActive, {
+                    ids: look.variation.ids,
+                    occasion: look.variation.occasion,
+                    numero: look.numero,
+                  })
+                }
+              />
+            ))}
+          </div>
+          {!toutVoir && filtres.length > visibles.length && (
+            <button onClick={() => setToutVoir(true)} className="mt-[16px] mb-[6px] w-full text-center t-cta text-terracotta py-[10px] cursor-pointer">
+              Voir plus de looks →
+            </button>
+          )}
+        </>
       )}
     </div>
   );

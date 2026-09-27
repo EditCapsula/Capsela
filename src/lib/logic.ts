@@ -2565,6 +2565,39 @@ export const participePorteMaj = (it: Item) => {
 };
 
 /**
+ * Genre et nombre du NOM AFFICHÉ d'une pièce, lu sur ses premiers mots
+ * (27/09/2026, titre « Comment porter ton manteau chocolat ? »). Pas
+ * nounInfoOf : celui-ci accorde un groupe nominal construit depuis
+ * cat/subtype, alors qu'ici l'article précède le nom tel que l'utilisatrice
+ * l'a saisi — une « Chemise blanche » rangée en haut sans sous-type lirait
+ * « ton chemise ». Même table de genres que les descriptions de tenues,
+ * complétée des noms courants absents des sous-types. Aucun mot reconnu :
+ * null, et l'appelant choisit une formule sans article — jamais un accord
+ * deviné.
+ */
+const NOMS_DE_PIECE: Record<string, NounInfo> = {
+  ...Object.assign({}, ...Object.values(SUBTYPE_GENDER)),
+  haut: { gender: "m" }, pantalon: { gender: "m" }, jean: { gender: "m" }, jupe: { gender: "f" },
+  "jupe-culotte": { gender: "f" }, short: { gender: "m" }, bermuda: { gender: "m" }, legging: { gender: "m" },
+  jogging: { gender: "m" }, pantacourt: { gender: "m" }, robe: { gender: "f" }, veste: { gender: "f" },
+  blouson: { gender: "m" }, "tee-shirt": { gender: "m" }, tunique: { gender: "f" }, "marinière": { gender: "f" },
+  body: { gender: "m" }, bustier: { gender: "m" }, hoodie: { gender: "m" }, "pull-over": { gender: "m" },
+  kimono: { gender: "m" }, cape: { gender: "f" }, poncho: { gender: "m" }, sac: { gender: "m" },
+  besace: { gender: "f" }, chaussures: { gender: "f", plural: true }, derbies: { gender: "m", plural: true },
+  tongs: { gender: "f", plural: true }, mules: { gender: "f", plural: true }, sabots: { gender: "m", plural: true },
+  bonnet: { gender: "m" }, gants: { gender: "m", plural: true }, "béret": { gender: "m" }, cravate: { gender: "f" },
+};
+
+export function nounInfoDuNom(nom: string): NounInfo | null {
+  const bas = nom.trim().toLowerCase();
+  let trouve: { cle: string; info: NounInfo } | null = null;
+  for (const [cle, info] of Object.entries(NOMS_DE_PIECE)) {
+    if ((bas === cle || bas.startsWith(cle + " ")) && (!trouve || cle.length > trouve.cle.length)) trouve = { cle, info };
+  }
+  return trouve?.info ?? null;
+}
+
+/**
  * Accord des rares couleurs qui sont de vrais adjectifs variables en
  * français (blanc/noir/gris, doré/argenté/cuivré). Toutes les autres
  * couleurs de la palette Capsela sont des noms employés comme couleur

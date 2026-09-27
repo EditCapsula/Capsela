@@ -46,6 +46,7 @@ import {
   violatesOuterwearRule,
   type ItemOutfitVariation,
 } from "./logic";
+import type { FamilleLook } from "./ideesLooks";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import {
   accessoireTypeFor,
@@ -151,6 +152,7 @@ function buildInitialState(): AppState {
     pieceReturn: "wardrobe",
     itemOutfitsReturn: "capsule",
     ideesTenuesPretes: null,
+    ideeLookActive: null,
     catFilter: "all",
     addName: "",
     addNameTouched: false,
@@ -325,6 +327,9 @@ export interface Actions {
   openItemOutfits: (id: number, suggested?: boolean, variations?: ItemOutfitVariation[]) => void;
   /** Affiche une combinaison choisie depuis ce module sur l'écran Tenue — jamais un enregistrement automatique comme portée. */
   viewItemOutfit: (ids: number[], occasion: OccasionKey) => void;
+  openIdeeLook: (pivotId: number, variations: ItemOutfitVariation[], famille: FamilleLook | null, look: { ids: number[]; occasion: OccasionKey; numero: number }) => void;
+  closeIdeeLook: () => void;
+  enregistrerIdeeLook: (ids: number[], occasion: OccasionKey) => void;
   removeActive: () => void;
   /**
    * Enregistre le choix de l'utilisatrice face à une suggestion de revente
@@ -1316,6 +1321,33 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         ideesTenuesPretes: variations ? { pivotId: id, variations } : null,
         screen: "itemOutfits",
       })),
+    // Détail d'une idée de look (27/09/2026) : les idées de la page
+    // précédente et sa pastille sont gardées, le retour les retrouve telles
+    // quelles — jamais un nouveau tirage.
+    // La fiche d'une pièce du look, ouverte d'ici, déplace activeId et
+    // pieceReturn : le retour vers « Comment porter … ? » les rétablit, sans
+    // quoi la page afficherait les idées de la dernière pièce ouverte et la
+    // fiche d'origine reviendrait au détail du look.
+    openIdeeLook: (pivotId, variations, famille, look) =>
+      setState((s) => ({
+        ...s,
+        ideesTenuesPretes: { pivotId, variations, famille },
+        ideeLookActive: {
+          pivotId,
+          ...look,
+          avant: s.screen === "ideeLook" && s.ideeLookActive ? s.ideeLookActive.avant : { activeSuggested: s.activeSuggested, pieceReturn: s.pieceReturn },
+        },
+        screen: "ideeLook",
+      })),
+    closeIdeeLook: () =>
+      setState((s) =>
+        s.ideeLookActive
+          ? { ...s, activeId: s.ideeLookActive.pivotId, ...s.ideeLookActive.avant, screen: "itemOutfits" }
+          : { ...s, screen: "itemOutfits" }
+      ),
+    // « Enregistrer dans mes looks » : la même écriture que « J'adore cette
+    // tenue », sans doublon ni suppression (enregistrerTenueSiAbsente).
+    enregistrerIdeeLook: (ids, occasion) => enregistrerTenueSiAbsente(ids, occasion),
     // Affiche la combinaison choisie sur l'écran Tenue (recette 19/08/2026) :
     // conserve l'occasion correspondante, jamais d'enregistrement comme
     // portée ni de remplacement automatique en dehors de ce clic explicite.
