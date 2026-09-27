@@ -2,7 +2,7 @@
 
 Sep 27, 2026 · @Angela
 
-Ce document décrit le lot 1 de « Préparer sa valise », développé le 27/09/2026 d'après la maquette « Capsela · Exploration · Préparer sa valise ». Il documente le comportement réel du code ; la section « Lot 2 » est signalée comme à venir.
+Ce document décrit « Préparer sa valise » tel qu'il est codé : le lot 1 (27/09/2026, maquette « Exploration »), puis la refonte UX/UI du même jour (maquette « Parcours Ma valise », 10 écrans), qui l'a remplacé à l'écran sans toucher au moteur. Il documente le comportement réel du code.
 
 Les statuts reprennent la légende de `docs/avis-de-styliste.md` : **[DÉCIDÉ]**, **[RECOMMANDÉ]**, **[À ARBITRER]**, **[HYPOTHÈSE TECHNIQUE]**. Les seuils choisis sans mesure sont marqués **ARBITRAGE ÉDITORIAL**, au sens de la règle d'audit (AGENTS.md).
 
@@ -10,41 +10,51 @@ Les statuts reprennent la légende de `docs/avis-de-styliste.md` : **[DÉCIDÉ]*
 
 « Une valise. Plus de looks. Moins de pièces. » Capsela choisit **les pièces de ton dressing** à emporter, puis le moteur de tenues existant (`generateOutfitWithFallback`) compose les looks avec ces seules pièces. Il n'y a pas de second moteur : un choix de pièces, puis le moteur unique. [DÉCIDÉ]
 
-Tout ce qui s'affiche est compté, jamais estimé : « 8 pièces → 6 looks », ce sont 6 tenues réellement produites par le moteur avec ces 8 pièces. La formule combinatoire « N looks possibles » a été retirée de Capsule le 22/09/2026 (erreur de ×0,5 à ×1,7) et n'est pas réintroduite. [DÉCIDÉ]
+Tout ce qui s'affiche est compté, jamais estimé : « 12 pièces → 10 looks », ce sont 10 tenues réellement produites par le moteur avec ces 12 pièces. La formule combinatoire « N looks possibles » a été retirée de Capsule le 22/09/2026 (erreur de ×0,5 à ×1,7) et n'est pas réintroduite. [DÉCIDÉ]
 
-## 2. Parcours (lot 1)
+## 2. Parcours
 
-| Étape | Question | Ce qu'elle fait |
-| --- | --- | --- |
-| 1 / 4 | Où pars-tu ? + dates | Ville (autocomplétion de Planifier), départ et retour ; « 5 jours · 4 nuits ». Séjour de 21 jours au plus |
-| 2 / 4 | Quel bagage prends-tu ? | Fixe la capacité (section 3) |
-| 3 / 4 | Quel type de séjour ? | Présélectionne les occasions de l'étape 4, rien d'autre (section 4) |
-| 4 / 4 · facultatif | Qu'est-ce qui est prévu ? | Occasions du séjour (plusieurs). « Passer cette étape » garde la présélection du séjour, sinon « Quotidien » |
-| Chargement | Je prépare ta valise | Prévision du lieu, puis choix des pièces sur l'appareil |
-| Résultat | Ta valise | Carte héros, jauge, onglets Pièces et Looks, « Retirer », « Modifier », « Nouvelle valise » |
+Quatre questions, puis la génération et le résultat. Aucune cinquième question (brief de refonte). [DÉCIDÉ]
 
-Entrée : « Préparer une valise » sur l'Accueil (« Et si on préparait la suite ? »), selon la règle d'accès `PREPARER_VALISE` (section 7).
+| Écran | Contenu |
+| --- | --- |
+| 1 / 4 — Où pars-tu ? | Ville (autocomplétion de Planifier), « Tes lieux planifiés » (villes de tes tenues planifiées), dates départ / retour, « 9 jours · 8 nuits ». Séjour de 21 jours au plus. Si la prévision couvre le départ : « Berlin · 17° – 18° prévus » et un conseil (section 5) |
+| 2 / 4 — Quelle valise prends-tu ? | Grille 2 × 2, S / M / L / XL, capacité (section 3). Le glyphe valise de l'accueil grandit avec la taille |
+| 3 / 4 — Quel type de séjour ? | Cartes à visuel éditorial (10 types) et « Autre ». Présélectionne les occasions de l'écran 4 (section 4) |
+| 4 / 4 — Qu'est-ce qui est prévu ? | Occasions avec leurs glyphes, plusieurs choix. « Capsela a déjà préparé une première sélection selon ton séjour. Tu peux la modifier. » « Passer cette étape » garde la présélection, sinon « Quotidien » |
+| Génération | « Je prépare ta valise… » et quatre étapes cochées quand elles sont faites (section 6) |
+| Ta valise est prête | Période, durée, météo prévue s'il y en a ; « Une sélection pensée pour ton séjour, ta météo et ton dressing. » ; pièces → looks → occasions couvertes ; « Uniquement ton dressing » ; onglets **Looks** (par défaut) et **Pièces** ; « Ajuster ma valise », « Nouvelle valise » |
+| Détail d'un look | Nom fait de ses pièces, occasions en métadonnées, composition éditoriale, navigation 1 / N, pièces du look (« Dans N looks »), « Enregistrer dans mes looks » |
+| Détail d'une pièce | Visuel, nom, « Dans N looks », aperçus des looks où elle figure, occasions couvertes, « Remplacer », « Retirer de la valise » |
 
-**Écarts assumés avec la maquette** — chaque élément ci-dessous serait faux à l'écran s'il était repris tel quel :
+Entrée : « Préparer une valise » sur l'Accueil, selon la règle d'accès `PREPARER_VALISE` (section 9).
 
-- Pas de « Comment voyages-tu ? » au lot 1 : la question ne sert qu'à la tenue de trajet (lot 2), et « On s'en sert pour ta tenue de trajet » serait faux. [DÉCIDÉ]
-- Pas de « lieux favoris » : l'app n'en enregistre aucun. À la place, « Tes lieux planifiés » : les villes de tes tenues planifiées, des lieux réellement donnés. [DÉCIDÉ]
-- Pas de noms de looks inventés (« Balade dans l'Alfama ») : un look porte le nom de son occasion. [DÉCIDÉ]
-- Pas de durée de trajet (« Avion · 2 h 30 ») : aucune donnée. [DÉCIDÉ]
-- « 4 pièces polyvalentes couvrent 9 situations » devient « N pièces reviennent dans 3 looks ou plus » : une définition affichée telle quelle. [DÉCIDÉ]
-- Pas d'onglets Trajet ni Checklist au lot 1 : un onglet vide est une promesse, pas une fonction. [DÉCIDÉ]
-- Le détail d'un look n'est pas ouvrable au lot 1 : l'écran de détail existant est construit autour d'une pièce pivot. [À ARBITRER : lot 2]
+### Écarts assumés avec la maquette — une donnée qui n'existe pas ne s'affiche pas
 
-## 3. Capacité par bagage
+- **Noms de looks** (« City day », « Dîner en ville ») : aucune donnée ne les fournit. Un look porte le nom de ce qu'il contient (`resumeLook` : « Chemise · jean · sandales · sac ») et ses occasions en métadonnées, jamais sur le visuel. [DÉCIDÉ]
+- **« Pourquoi cette pièce ? »** : aucun système de justification stylistique n'existe. Le détail dit ce qui est compté : le nombre de looks, les occasions couvertes. [DÉCIDÉ]
+- **Cœur** : l'action réelle est « Enregistrer dans mes looks » (`enregistrerIdeeLook`, sans doublon). [DÉCIDÉ]
+- **Interrupteur « Uniquement ton dressing »** : il n'existe pas d'autre source. La ligne l'affirme, sans bascule. [DÉCIDÉ]
+- **Photos de valises et illustration de chargement** : aucun visuel de ce type dans le projet ; le glyphe valise existant en tient lieu. [DÉCIDÉ]
+- **Lieux favoris** : l'app n'en enregistre aucun ; « Tes lieux planifiés » les remplace. [DÉCIDÉ]
+- **Visuels « look » fournis** (`11_look_work_city`, `12_look_casual_city`) : non utilisés, ce ne sont pas les pièces de l'utilisatrice. [DÉCIDÉ]
+
+### Ce que la refonte a retiré du lot 2 non publié
+
+Le lot 2 (question du transport, tenue de trajet hors capacité, onglets Trajet et Checklist) n'a jamais été mis en production. Le brief de refonte fixe 4 questions et deux onglets : ces éléments sont retirés. Restent du lot 2 : l'enregistrement dans le compte, « Remplacer », « Ajouter une pièce » et « Optimiser ». [DÉCIDÉ]
+
+## 3. Capacité par valise
 
 | Taille | Libellé | Capacité |
 | --- | --- | --- |
 | S | Cabine souple | 8 pièces |
 | M | Cabine | 12 pièces |
-| L | Soute moyenne | 18 pièces |
-| XL | Grande soute | 24 pièces |
+| L | Grande valise | 18 pièces |
+| XL | Très grande valise | 24 pièces |
 
-Chaussures, sacs et accessoires compris ; ne dépend que de la taille, quel que soit le transport. **ARBITRAGE ÉDITORIAL** du 27/09/2026 (proposé, validé). [DÉCIDÉ]
+Chaussures, sacs et accessoires compris ; ne dépend que de la taille. Capacités : **ARBITRAGE ÉDITORIAL** du 27/09/2026. Libellés L et XL : brief de refonte (« Soute moyenne » / « Grande soute » se lisaient mal). [DÉCIDÉ]
+
+La capacité est un plafond, pas un objectif : le résultat met en avant « pièces → looks » et ne dit la capacité qu'en second (« Valise M · jusqu'à 12 pièces »). [DÉCIDÉ]
 
 ## 4. Type de séjour → occasions présélectionnées
 
@@ -62,59 +72,59 @@ Chaussures, sacs et accessoires compris ; ne dépend que de la taille, quel que 
 | Multi-activités | Quotidien, Sport, Sortie / Soirée |
 | Autre | aucune |
 
-Le type de séjour n'entre pas dans le moteur, qui ne connaît que des occasions. **ARBITRAGE ÉDITORIAL**, instruit type par type (liste « provisoire » de la maquette) : il ne s'étend pas à un type ajouté plus tard sans le même examen. [DÉCIDÉ]
+Le type de séjour n'entre pas dans le moteur, qui ne connaît que des occasions. **ARBITRAGE ÉDITORIAL**, instruit type par type. [DÉCIDÉ]
 
-## 5. Météo du séjour
+Visuels : `public/editorial/sejours/sejour_<type>.webp`, fournis le 27/09/2026 (unisexes, sans texte intégré), réencodés en 600 × 800. [DÉCIDÉ]
 
-- Prévision du lieu (`fetchPrevisionByCity`) pour chaque jour qu'elle couvre (4 jours), en « Toute la journée ».
-- Au-delà, la règle de Planifier : **saison de la date, température d'aujourd'hui**, et l'écran le dit (« Pas encore de prévision pour ces dates… »).
-- « 16° – 24° prévus sur place » n'apparaît que si tous les jours sont prévus ; « prévus sur 2 jours » si seulement une partie ; rien sinon. [DÉCIDÉ]
+## 5. Météo
 
-## 6. Choix des pièces (`src/lib/valise.ts`, testé)
+- Prévision du lieu (`fetchPrevisionByCity`) pour chaque jour qu'elle couvre (4 jours), en « Toute la journée ». Demandée dès l'écran 1 quand le départ est dans l'horizon, et réutilisée par la génération.
+- Au-delà, la règle de Planifier : **saison de la date, température d'aujourd'hui**, et l'écran le dit.
+- Résumé de l'écran 1 : seulement si au moins un jour est prévu. Conseil (`conseilMeteo`, **ARBITRAGE ÉDITORIAL**) : moins de 8° « Temps froid, prévois des pièces chaudes. » ; moins de 15° « Temps frais, prévois des couches. » ; minimum ≥ 23° « Temps chaud, privilégie les matières légères. » ; sinon « Températures douces, prévois des couches légères. » ; « De la pluie est prévue. » si c'est le cas. [DÉCIDÉ]
+
+## 6. Génération
+
+Quatre étapes, chacune cochée quand elle est faite : la météo (prévision ou règle de repli), le programme (situations occasion × météo), la sélection dans le dressing et l'optimisation (`composerValise`). Le calcul prend une fraction de seconde : chaque étape reste affichée un court instant (≈ 1,5 s au total) pour être lue. Rien n'est simulé. [DÉCIDÉ]
+
+## 7. Choix des pièces (`src/lib/valise.ts`, testé)
 
 1. **Situations** : une occasion sous une météo. Les jours de même météo (même saison, température à 3° près, même condition) ne font qu'une situation par occasion.
 2. **Tirages** : 10 tenues du moteur par situation, dans le dressing entier. Deux tenues qui ne diffèrent que par un accessoire sont le même look.
 3. **Couvrir** : tant qu'une situation n'a pas de look, la tenue qui en couvre une en ajoutant le moins de pièces. Jamais au-delà de la capacité ; une situation qui n'y tient pas reste sans look, et l'écran le dit.
 4. **Alléger** : retirer toute pièce dont l'absence garde chaque situation couverte et ne coûte pas plus d'un look.
 5. **Enrichir** : tant qu'il y a moins d'un look par jour, ajouter ce qui rapporte au moins un look par pièce ajoutée ; au-delà, seulement ce qui en rapporte au moins deux.
-6. **Looks finaux** : nouveaux tirages du moteur sur les seules pièces choisies. Une pièce qui ne figure dans aucun look final est laissée au placard.
+6. **Looks finaux** : nouveaux tirages du moteur sur les seules pièces choisies. Une pièce dans aucun look final est laissée au placard.
 
-Seuils (un look par jour, deux looks par pièce, 3 looks pour « polyvalente ») : **ARBITRAGE ÉDITORIAL**, à revoir sur des dressings réels. [DÉCIDÉ]
+Seuils : **ARBITRAGE ÉDITORIAL**, à revoir sur des dressings réels. Une tenue dont le moteur a dû élargir l'occasion le dit (« Occasion élargie »). [DÉCIDÉ]
 
-Une tenue dont le moteur a dû élargir l'occasion est gardée et le dit (« Occasion élargie »), comme sur Tenue. [DÉCIDÉ]
+## 8. Ajuster la valise
 
-**Retirer** une pièce recompte les looks avec les pièces restantes (même fonction, `looksDeLaValise`). Une pièce devenue sans look l'affiche (« Dans aucun look de la valise »). [DÉCIDÉ]
+« Ajuster ma valise » ouvre trois choix, tous déjà codés :
 
-**Jauge** (4 états, aucune alerte rouge) : ≤ 50 % Valise légère, ≤ 85 % Optimisée, ≤ 100 % Presque pleine, au-delà Capacité dépassée (inatteignable au lot 1, où rien n'ajoute de pièce au-delà de la capacité). [DÉCIDÉ]
+- **Retirer / remplacer une pièce** (onglet Pièces, ou détail de la pièce). Remplacer propose les pièces du même groupe absentes de la valise, chacune avec le nombre de looks que la valise aurait — compté par le moteur (`alternatives`).
+- **Ajouter une pièce de ton dressing** : les looks sont recomposés avec elle. Au-delà de la capacité, l'onglet Pièces propose « On allège un peu ? » et « Optimiser » (`allegement` : retirer d'abord ce qui sert le moins).
+- **Modifier le séjour** : retour aux quatre questions, réponses préremplies.
 
-Uniquement le dressing réel : on n'emporte pas une pièce qu'on n'a pas. Dressing vide : l'écran le dit et propose d'ajouter une pièce. [DÉCIDÉ]
+Chaque changement recompte les looks (`looksDeLaValise`). [DÉCIDÉ]
 
-## 7. Accès
+## 9. Accès
 
-Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie serveur pour le test miroir) :
+Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie serveur pour le test miroir) : fonctionnalité **Premium**, en **`ACCES_LIBRE`** pendant la phase de test, comme l'Avis de styliste. Au lancement : `PREMIUM_REQUIRED` des deux côtés ; aucune fonction serveur à redéployer. [DÉCIDÉ]
 
-- Fonctionnalité **Premium** (annoncée sur la page Premium, sans « Bientôt » depuis le 27/09/2026). [DÉCIDÉ]
-- **Phase de test : `ACCES_LIBRE`**, comme l'Avis de styliste, pour que la propriétaire puisse l'essayer en production sans abonnement. Au lancement : repasser à `PREMIUM_REQUIRED` des deux côtés. Aucun appel serveur ne sert la valise, rien à redéployer. [DÉCIDÉ]
-- Sous `PREMIUM_REQUIRED`, la règle commune du 25/09/2026 s'applique : Premium confirmé → parcours ; statut inconnu → vérification, puis page Premium s'il reste inconnu ; sinon page Premium avec « Ce que tu voulais faire : Préparer une valise ». [DÉCIDÉ]
+## 10. Conservation
 
-## 8. Conservation
+- Toujours **sur l'appareil** (`localStorage`, clé `capsela.valise.<userId>`), rouverte telle quelle tant que la date de retour n'est pas passée.
+- Et **dans le compte** quand la table `valises` existe (migration **0038**, à exécuter à la main) : une valise par compte, relue à l'ouverture, écrite un instant après chaque changement.
+- Avant la migration, l'écriture échoue sans rien casser, et l'écran dit « Enregistrée sur cet appareil seulement ». Après : « Enregistrée dans ton compte ». [DÉCIDÉ]
 
-Lot 1 : la valise est gardée **sur l'appareil** (`localStorage`, clé `capsela.valise.<userId>`), rouverte telle quelle tant que la date de retour n'est pas passée. [HYPOTHÈSE TECHNIQUE]
-
-## 9. Lot 2 (à venir)
-
-- Onglet **Trajet** : « Comment voyages-tu ? », tenue de trajet, pièces portées sur soi **hors capacité** (cas B, validé), carte « bas de contention » reprise de Tenue. [DÉCIDÉ : cas B]
-- Onglet **Checklist** (cocher ne change rien d'autre : ni Journal, ni historique de port).
-- **Remplacer**, **Optimiser** (capacité dépassée), **Porter pendant le trajet**.
-- **Enregistrement en base** : table `valises`, migration 0038 montrée avant. [À ARBITRER : schéma]
-
-## 10. Fichiers
+## 11. Fichiers
 
 | Fichier | Contenu |
 | --- | --- |
-| `src/lib/valise.ts` | Bagages, séjours, situations, choix des pièces, looks, jauge |
-| `src/lib/__tests__/valise.test.ts` | Tests (générateur de test et vrai moteur à aléa fixé) |
-| `src/components/screens/ValiseScreen.tsx` | Parcours, chargement, résultat |
+| `src/lib/valise.ts` | Bagages, séjours, situations, choix des pièces, looks, allègement, remplacement, occasions couvertes, `resumeLook`, `conseilMeteo` |
+| `src/lib/valises.ts` | Valise enregistrée : appareil et compte |
+| `src/lib/__tests__/valise.test.ts`, `valises.test.ts` | Tests (générateur de test et vrai moteur à aléa fixé) |
+| `src/components/screens/ValiseScreen.tsx` | Parcours, génération, résultat, détail look, détail pièce, feuilles Ajuster / Ajouter / Remplacer |
+| `public/editorial/sejours/` | Visuels des types de séjour |
+| `supabase/migrations/0038_valises.sql` | Table `valises` |
 | `src/lib/autorisations.ts`, `supabase/functions/_shared/premium.ts` | Règle `PREPARER_VALISE` |
-| `src/components/screens/HomeScreen.tsx` | Entrée « Préparer une valise » |
-| `src/components/screens/PremiumScreen.tsx` | Avantage sans « Bientôt » |
