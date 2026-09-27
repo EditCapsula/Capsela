@@ -39,6 +39,7 @@ import TabBar from "./TabBar";
 import CookieBanner from "./CookieBanner";
 import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
 import LoadingSpinner from "./LoadingSpinner";
+import ConfirmationAjout from "./ConfirmationAjout";
 
 /** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) — la barre d'onglets n'y a pas de sens. */
 const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup"]);
@@ -55,8 +56,11 @@ const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
  * exactement à cet endroit. Les deux se superposeraient. Le retour se fait
  * par le chevron du bandeau, qui remonte les étapes une à une puis rend la
  * main à l'accueil.
+ *
+ * « add » rejoint l'ensemble le 27/09/2026 (refonte « Ajouter une pièce ») :
+ * même raison, son « Ajouter au dressing » est désormais fixé en pied d'écran.
  */
-const FLOW_SCREENS = new Set(["planifier", "premium", "valise"]);
+const FLOW_SCREENS = new Set(["planifier", "premium", "valise", "add"]);
 
 function Screens() {
   const { state, actions } = useCapsela();
@@ -155,6 +159,7 @@ function Screens() {
         {state.screen === "ideeLook" && <IdeeLookScreen />}
       </div>
       {showTabbar && <TabBar />}
+      <ConfirmationAjout auDessusDeLaBarre={showTabbar} />
       <Analytics />
     </div>
   );

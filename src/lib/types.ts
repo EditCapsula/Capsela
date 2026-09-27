@@ -345,7 +345,9 @@ export interface AppState {
   addPhotoUploading: boolean;
   /** true pendant l'analyse de la photo par l'IA (recette 22/08/2026, pré-remplissage catégorie/couleur/matière...) — jamais bloquant pour la sauvegarde, juste un indicateur. */
   addPhotoAnalyzing: boolean;
-  /** null tant que l'utilisateur n'a pas confirmé — la sauvegarde est bloquée. */
+  /** true quand l'analyse de la photo a réellement rendu un résultat (27/09/2026) — seule condition des mentions « L'édit Capsela a analysé ta pièce » et « détectées ». addPhotoAnalyzing redevient false aussi en mode démo (aucune analyse) et sur un échec. */
+  addPhotoAnalysee: boolean;
+  /** null tant que l'utilisatrice n'a rien choisi — la sauvegarde retient alors saisonParDefaut (data.ts), affichée présélectionnée. Plus bloquante depuis le 27/09/2026. */
   addSeason: Season | null;
   /** Plusieurs choix possibles. */
   addOccasion: OccasionKey[];
@@ -384,6 +386,8 @@ export interface AppState {
   outfitValidated: boolean;
   /** Bandeau de diagnostic temporaire (correctif 22/08/2026, signalé : pièces ajoutées au dressing non conservées) — dernier échec Supabase dressing_items/outfit_history, affiché tel quel pour permettre le diagnostic sans console développeur (utile sur mobile). À retirer une fois la cause identifiée et corrigée. */
   dressingError: string | null;
+  /** Nom de la pièce qui vient d'entrer au dressing (27/09/2026) — affiche la confirmation « Pièce ajoutée à ton dressing » au-dessus de l'écran d'arrivée, jusqu'à sa fermeture ou son délai. Posé seulement une fois l'ajout réussi, jamais pour une modification. */
+  pieceAjoutee: { nom: string; jeton: number } | null;
   occasion: OccasionKey;
   /** true dès que l'utilisatrice a choisi une occasion elle-même (même pour revenir à "all") — désactive alors l'occasion par défaut auto-calculée (recette 13/08/2026) pour le reste de la session. */
   occasionManual: boolean;
