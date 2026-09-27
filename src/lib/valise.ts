@@ -1,6 +1,7 @@
 import { saisonCalendairePour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import { clePrincipale, generateOutfitWithFallback } from "./logic";
+import { composeWardrobePool } from "./selectors";
 import type { CategoryKey, Item, OccasionKey } from "./types";
 
 /*
@@ -543,3 +544,50 @@ export function conseilMeteo(meteos: MeteoJour[]): string | null {
           : "Températures douces, prévois des couches légères.";
   return pluie ? `${base} De la pluie est prévue.` : base;
 }
+
+// ── Compléter le dressing (27/09/2026) ───────────────────────────────────
+
+const TOUTES_CATEGORIES: CategoryKey[] = ["haut", "pull", "pantalon", "jean", "jupe", "short", "robe", "combinaison", "veste", "manteau", "chaussures", "sac", "bijou", "accessoire"];
+
+export interface Manque {
+  occasion: OccasionKey;
+  /** Catégories que le moteur a dû prendre dans la capsule pour composer ce look — ce qui manque au dressing. */
+  categories: CategoryKey[];
+  /** Le dressing a de quoi, mais pas la valise : c'est la capacité qui manque, pas une pièce. */
+  capacite: boolean;
+}
+
+/**
+ * CE QUI MANQUE AU DRESSING, pour chaque occasion restée sans look.
+ *
+ * La valise ne puise que dans le dressing. Pour dire quoi ajouter sans
+ * l'inventer, on demande au moteur le look de cette situation dans le pool
+ * habituel de l'app (composeWardrobePool : la capsule complète les catégories
+ * que le dressing n'a pas, ou pas pour cette occasion). Les catégories des
+ * pièces venues de la capsule sont ce qui manque. Si le moteur compose le
+ * look avec le dressing seul, c'est la place qui a manqué dans la valise.
+ */
+export function categoriesPourCompleter(
+  dressing: Item[],
+  capsule: Item[],
+  situations: SituationValise[],
+  indicesSansLook: number[],
+  generer: Generateur
+): Manque[] {
+  const out: Manque[] = [];
+  const idsDressing = new Set(dressing.map((i) => i.id));
+  for (const i of indicesSansLook) {
+    const s = situations[i];
+    if (!s || out.some((m) => m.occasion === s.occasion)) continue;
+    const pool = composeWardrobePool(dressing, capsule, TOUTES_CATEGORIES, { completerPourOccasion: s.occasion });
+    const t = generer(pool, s);
+    if (!t) continue;
+    const venues = t.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => !!p && !idsDressing.has(p.id));
+    const categories = [...new Set(venues.map((p) => p.cat))];
+    out.push({ occasion: s.occasion, categories, capacite: categories.length === 0 });
+  }
+  return out;
+}
+
+/** Nom court d'une catégorie, pour « Ajouter : veste, chaussures ». */
+export const nomCategorie = (c: CategoryKey) => CATEGORIE_COURTE[c];

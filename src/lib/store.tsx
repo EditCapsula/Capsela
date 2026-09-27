@@ -336,6 +336,8 @@ export interface Actions {
   openAddBag: () => void;
   /** Ouvre l'ajout pré-rempli sur une catégorie donnée, en mémorisant l'écran d'origine pour y revenir (recette 24/08/2026, tuile "Ajouter un/une..." de Créer un look) — jamais utilisé pour openAdd/startReplace/startEditItem, qui gardent leur repli habituel. */
   openAddForCategory: (cat: CategoryKey) => void;
+  /** Ouvre l'ajout d'une pièce au dressing et revient ensuite à l'écran courant (la valise invite à compléter le dressing). */
+  openAddEtRevenir: () => void;
   /**
    * « Ajouter cette pièce à mon dressing » depuis un vêtement NON RECONNU
    * d'un avis de styliste (26/09/2026) : le formulaire d'ajout s'ouvre sur sa
@@ -1524,6 +1526,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     openAddBag: () => ouvrirAjout((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
     openAddForCategory: (cat) =>
       ouvrirAjout((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),
+    openAddEtRevenir: () => ouvrirAjout((s) => ({ ...s, addReturn: s.screen, screen: "add" })),
     ajouterPieceNonReconnue: (cat, nom) =>
       ouvrirAjout((s) => ({
         ...s,

@@ -40,6 +40,12 @@ export interface ValiseGardee {
   pieceIds: number[];
   looks: LookValise[];
   situationsSansLook: number[];
+  /**
+   * Les pièces du dressing au moment du calcul (27/09/2026) : une pièce
+   * ajoutée depuis se reconnaît, et l'écran propose de recomposer la valise.
+   * Absent des valises plus anciennes.
+   */
+  dressingIds?: number[];
 }
 
 let compteur = 0;
@@ -134,7 +140,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -153,6 +159,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     situations: r.calcul?.situations ?? [],
     looks: r.calcul?.looks ?? [],
     situationsSansLook: r.calcul?.situationsSansLook ?? [],
+    ...(r.calcul?.dressingIds ? { dressingIds: r.calcul.dressingIds } : {}),
     // bigint[] revient parfois en chaînes côté PostgREST.
     pieceIds: nombres(r.piece_ids),
   };
@@ -167,7 +174,13 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
     sejour: v.sejour,
     occasions: v.occasions,
     piece_ids: v.pieceIds,
-    calcul: { meteos: v.meteos, situations: v.situations, looks: v.looks, situationsSansLook: v.situationsSansLook },
+    calcul: {
+      meteos: v.meteos,
+      situations: v.situations,
+      looks: v.looks,
+      situationsSansLook: v.situationsSansLook,
+      ...(v.dressingIds ? { dressingIds: v.dressingIds } : {}),
+    },
   };
 }
 

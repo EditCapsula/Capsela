@@ -107,6 +107,18 @@ Seuils : **ARBITRAGE ÉDITORIAL**, à revoir sur des dressings réels. Une tenue
 
 Chaque changement recompte les looks (`looksDeLaValise`). [DÉCIDÉ]
 
+## 8 bis. Inciter à compléter le dressing (27/09/2026)
+
+La valise ne puise que dans le dressing : quand il la limite, l'écran le dit et mène à l'ajout. [DÉCIDÉ]
+
+- **Écran 1** : « Ta valise sera composée avec les N pièces de ton dressing : plus il est complet, plus elle aura de looks. Ajouter des pièces ».
+- **Résultat — « Complète ton dressing »**, seulement sur un manque réel :
+  - une occasion **sans look**, ou couverte seulement par des looks **« élargis »** (pièces pensées pour d'autres occasions) ;
+  - **moins de looks que de jours** (« 3 looks pour 7 jours : quelques pièces de plus varieraient tes tenues »).
+- **Ce qui manque est dit par le moteur, pas inventé** (`categoriesPourCompleter`, testé) : pour chaque occasion concernée, le moteur compose le look dans le pool habituel de l'app (`composeWardrobePool` : la capsule complète le dressing) ; les catégories des pièces venues de la capsule sont ce qui manque (« il te manque [pantalon] [veste] »), chacune un bouton qui ouvre l'ajout sur cette catégorie. Si le dressing suffit, c'est la place qui a manqué, et l'écran le dit.
+- **Retour de l'ajout** : l'ajout revient à la valise (`openAddForCategory`, `openAddEtRevenir`). Une pièce ajoutée depuis le calcul se reconnaît (`dressingIds`, gardé dans `calcul`) : « Une nouvelle pièce dans ton dressing · Recomposer ma valise », qui relance le calcul avec les mêmes réponses, sur la même valise.
+- **Onglet Pièces** : « Une pièce qui n'est pas encore dans ton dressing ? L'ajouter à mon dressing », distinct de « Ajouter une pièce de ton dressing » (qui met une pièce du dressing dans la valise).
+
 ## 9. Accès
 
 Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie serveur pour le test miroir) : fonctionnalité **Premium**, en **`ACCES_LIBRE`** pendant la phase de test, comme l'Avis de styliste. Au lancement : `PREMIUM_REQUIRED` des deux côtés ; aucune fonction serveur à redéployer. [DÉCIDÉ]

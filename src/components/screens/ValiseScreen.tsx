@@ -16,11 +16,12 @@ import { villeDuLieu } from "@/lib/planifier";
 import { HORIZON_PREVISION_JOURS, previsionPour, type Prevision } from "@/lib/prevision";
 import { paletteHexes } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
-import type { Item, OccasionKey } from "@/lib/types";
+import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import {
   allegement,
   alternatives,
   amplitudePrevue,
+  categoriesPourCompleter,
   BAGAGES,
   capaciteDe,
   composerValise,
@@ -34,6 +35,7 @@ import {
   libelleDuree,
   looksDeLaValise,
   looksParPiece,
+  nomCategorie,
   occasionsCouvertes,
   occasionsDeLaPiece,
   occasionsDuLook,
@@ -263,7 +265,7 @@ const ETAPES_CALCUL: [React.ReactNode, string][] = [
 ];
 
 export default function ValiseScreen() {
-  const { state, weather, actions } = useCapsela();
+  const { state, weather, defaultCapsule, actions } = useCapsela();
   const { profile } = useAuth();
   const dressing = state.items;
   const generer = useMemo(() => generateurMoteur(paletteHexes(profile), profile.gender), [profile]);
@@ -352,8 +354,8 @@ export default function ValiseScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clePrevision]);
 
-  const meteosDe = (p: Prevision | null): MeteoJour[] =>
-    jours.map((j) => {
+  const meteosDe = (p: Prevision | null, js: string[] = jours): MeteoJour[] =>
+    js.map((j) => {
       const m = p ? previsionPour(p, j, "Toute la journée") : null;
       return m ? { jour: j, temp: m.temp, label: m.label, prevue: true } : { jour: j, temp: weather.temp, label: weather.label, prevue: false };
     });
@@ -394,24 +396,33 @@ export default function ValiseScreen() {
       actif.current = false;
     };
   }, []);
-  const preparer = async (passer: boolean) => {
-    if (!bagage) return;
-    const occ = occasionsRetenues(passer ? [] : occasions, sejour);
+  type Reponses = {
+    destination: string;
+    ville: VilleSuggeree | null;
+    depart: string;
+    retour: string;
+    bagage: TailleBagage;
+    sejour: TypeSejour | null;
+    occasions: OccasionKey[];
+  };
+  const lancer = async (rep: Reponses, idCible: string | null) => {
+    const joursRep = joursDuSejour(rep.depart, rep.retour);
+    const cle = rep.ville ? `${rep.ville.lat},${rep.ville.lon}` : villeDuLieu(rep.destination).toLowerCase();
     setFaites(0);
     setVue({ nom: "calcul" });
     const [p] = await Promise.all([
-      prevision && prevision.cle === clePrevision ? prevision.p : fetchPrevisionByCity(ville ? ville.name : destination.trim(), ville).catch(() => null),
+      prevision && prevision.cle === cle ? prevision.p : fetchPrevisionByCity(rep.ville ? rep.ville.name : rep.destination.trim(), rep.ville).catch(() => null),
       pause(450),
     ]);
-    const meteos = meteosDe(p);
+    const meteos = meteosDe(p, joursRep);
     if (!actif.current) return;
     setFaites(1);
-    const situations = situationsDuSejour(occ, meteos);
+    const situations = situationsDuSejour(rep.occasions, meteos);
     await pause(380);
     if (!actif.current) return;
     setFaites(2);
     await pause(30);
-    const r = composerValise(dressing, situations, capaciteDe(bagage), generer);
+    const r = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
     await pause(380);
     if (!actif.current) return;
     setFaites(3);
@@ -420,12 +431,39 @@ export default function ValiseScreen() {
     setFaites(4);
     await pause(260);
     if (!actif.current) return;
-    const id = idEnModification ?? nouvelIdLocal();
-    sauver({ version: 2, id, destination: nomVille, depart, retour, bagage, sejour, occasions: occ, meteos, situations, ...r });
+    const id = idCible ?? nouvelIdLocal();
+    sauver({
+      version: 2,
+      id,
+      destination: rep.ville ? rep.ville.name : villeDuLieu(rep.destination.trim()),
+      depart: rep.depart,
+      retour: rep.retour,
+      bagage: rep.bagage,
+      sejour: rep.sejour,
+      occasions: rep.occasions,
+      meteos,
+      situations,
+      ...r,
+      // Les pièces du dressing au moment du calcul : une pièce ajoutée
+      // ensuite se reconnaît, et l'écran propose de recomposer.
+      dressingIds: dressing.map((i) => i.id),
+    });
     actions.afficherValise(id);
     setIdEnModification(null);
     setOnglet("looks");
     setVue({ nom: "resultat" });
+  };
+  const preparer = (passer: boolean) => {
+    if (!bagage) return;
+    void lancer({ destination, ville, depart, retour, bagage, sejour, occasions: occasionsRetenues(passer ? [] : occasions, sejour) }, idEnModification);
+  };
+  /** Recomposer la valise affichée avec le dressing d'aujourd'hui (des pièces y ont été ajoutées) : mêmes réponses, même valise. */
+  const recomposer = () => {
+    if (!valise) return;
+    void lancer(
+      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions },
+      valise.id
+    );
   };
 
   /** Nouvelles pièces : les looks sont recomptés par le moteur. */
@@ -630,6 +668,21 @@ export default function ValiseScreen() {
           </>
         )}
 
+        {/* Dès la première question : la valise ne puise que dans le dressing
+            (27/09/2026). Le nombre dit, et le chemin pour le compléter. */}
+        {vue.nom === "etape" && etape === 1 && (
+          <div className="mt-5">
+            <CarteInfo glyphe={G_CINTRE}>
+              {dressing.length
+                ? `Ta valise sera composée avec les ${dressing.length} ${dressing.length > 1 ? "pièces" : "pièce"} de ton dressing : plus il est complet, plus elle aura de looks.`
+                : "Ta valise se compose avec les pièces de ton dressing, encore vide."}{" "}
+              <button onClick={actions.openAddEtRevenir} className="text-terracotta cursor-pointer">
+                Ajouter des pièces
+              </button>
+            </CarteInfo>
+          </div>
+        )}
+
         {/* ── 2. VALISE ── */}
         {vue.nom === "etape" && etape === 2 && (
           <>
@@ -805,7 +858,10 @@ export default function ValiseScreen() {
             ajouter={ajouter}
             remplacer={remplacer}
             enregistrerLook={actions.enregistrerIdeeLook}
-            ajouterAuDressing={actions.openAdd}
+            ajouterAuDressing={actions.openAddEtRevenir}
+            ajouterCategorie={actions.openAddForCategory}
+            capsule={defaultCapsule}
+            recomposer={recomposer}
             modifier={modifier}
             recommencer={recommencer}
             supprimer={supprimer}
@@ -816,7 +872,7 @@ export default function ValiseScreen() {
       {vue.nom === "etape" && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
           <button
-            onClick={() => (etape < 4 ? etapeValide && setEtape(etape + 1) : void preparer(false))}
+            onClick={() => (etape < 4 ? etapeValide && setEtape(etape + 1) : preparer(false))}
             disabled={!etapeValide}
             className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
             style={{ minHeight: 52, background: etapeValide ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)" }}
@@ -824,7 +880,7 @@ export default function ValiseScreen() {
             {etape < 4 ? "Continuer" : "Préparer ma valise"}
           </button>
           {etape === 4 && (
-            <button onClick={() => void preparer(true)} className="text-[12px] text-terracotta cursor-pointer py-[10px]">
+            <button onClick={() => preparer(true)} className="text-[12px] text-terracotta cursor-pointer py-[10px]">
               Passer cette étape
             </button>
           )}
@@ -854,6 +910,9 @@ function Resultat({
   remplacer,
   enregistrerLook,
   ajouterAuDressing,
+  ajouterCategorie,
+  capsule,
+  recomposer,
   modifier,
   recommencer,
   supprimer,
@@ -871,6 +930,9 @@ function Resultat({
   remplacer: (ancien: number, nouveau: number) => void;
   enregistrerLook: (ids: number[], occasion: OccasionKey) => void;
   ajouterAuDressing: () => void;
+  ajouterCategorie: (c: CategoryKey) => void;
+  capsule: Item[];
+  recomposer: () => void;
   modifier: () => void;
   recommencer: () => void;
   supprimer: () => void;
@@ -894,7 +956,29 @@ function Resultat({
   const pieceDe = (id: number) => pieces.find((p) => p.id === id);
   const occasionsDemandees = [...new Set(valise.situations.map((s) => s.occasion))];
   const occasionsSansLook = occasionsDemandees.filter((o) => !couvertes.includes(o));
+  /** Occasions couvertes seulement par des looks « élargis » : le dressing n'a pas de pièce déclarée pour elles. */
+  const occasionsElargies = occasionsDemandees.filter((o) => {
+    const siens = looks.filter((l) => occasionsDuLook(l, valise.situations).includes(o));
+    return siens.length > 0 && siens.every((l) => l.elargie);
+  });
+  const occasionsAManque = [...occasionsSansLook, ...occasionsElargies];
   const index = Math.min(indexLook, Math.max(0, looks.length - 1));
+  /** Pièces ajoutées au dressing depuis le calcul de la valise. */
+  const nouvelles = valise.dressingIds ? dressing.filter((i) => !valise.dressingIds!.includes(i.id)).length : 0;
+  /** Ce qui manque au dressing pour les occasions restées sans look — le moteur le dit, sur la capsule. */
+  const cleSansLook = occasionsAManque.join(",");
+  const manques = useMemo(
+    () =>
+      categoriesPourCompleter(
+        dressing,
+        capsule,
+        valise.situations,
+        valise.situations.map((_, i) => i).filter((i) => cleSansLook.split(",").includes(valise.situations[i].occasion)),
+        generer
+      ),
+    [dressing, capsule, valise.situations, cleSansLook, generer]
+  );
+  const peuDeLooks = looks.length > 0 && looks.length < nbJours;
   const numero = (i: number) => String(i + 1).padStart(2, "0");
 
   // Les looks de chaque pièce de remplacement sont comptés par le moteur à
@@ -1280,11 +1364,65 @@ function Resultat({
         </span>
       </div>
 
-      {occasionsSansLook.length > 0 && (
-        <div className="text-[12px] text-muted leading-[1.45] mt-3">
-          Pas encore de look {occasionsSansLook.map((o) => occasionShortLabel(o)).join(", ")} dans cette valise : ton dressing ou la taille de la valise ne le
-          permettent pas.
+      {/* COMPLÉTER LE DRESSING (27/09/2026) — la valise ne puise que dans
+          le dressing : quand il limite la valise, l'écran le dit et mène à
+          l'ajout. Seulement sur un manque réel : une occasion sans look, ou
+          moins de looks que de jours ; et, au retour d'un ajout, la
+          proposition de recomposer. */}
+      {nouvelles > 0 ? (
+        <div className="mt-4 bg-card border border-border rounded-[20px] p-[16px]">
+          <div className="t-titre-carte text-ink">
+            {nouvelles > 1 ? `${nouvelles} nouvelles pièces dans ton dressing` : "Une nouvelle pièce dans ton dressing"}
+          </div>
+          <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Recompose ta valise pour que Capsela en tienne compte.</div>
+          <button onClick={recomposer} className="w-full mt-3 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 46 }}>
+            Recomposer ma valise
+          </button>
         </div>
+      ) : (
+        (occasionsAManque.length > 0 || peuDeLooks) && (
+          <div className="mt-4 bg-card border border-border rounded-[20px] p-[16px]">
+            <div className="t-titre-carte text-ink">Complète ton dressing</div>
+            <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Ta valise se compose uniquement avec tes pièces : plus ton dressing est complet, plus elle a de looks.</div>
+            <div className="flex flex-col gap-3 mt-3">
+              {occasionsAManque.map((o) => {
+                const m = manques.find((x) => x.occasion === o);
+                const elargie = occasionsElargies.includes(o);
+                return (
+                  <div key={o} className="text-[12px] text-ink leading-[1.45]">
+                    <span className="block">
+                      {elargie ? `Tes looks ${occasionShortLabel(o)} empruntent des pièces pensées pour d'autres occasions` : `Pas encore de look ${occasionShortLabel(o)}`}
+                      {m?.capacite && !elargie ? " : ta valise manque de place pour lui." : m?.categories.length ? " : il te manque" : "."}
+                    </span>
+                    {m && m.categories.length > 0 && (
+                      <span className="flex flex-wrap gap-[6px] mt-[7px]">
+                        {m.categories.map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => ajouterCategorie(c)}
+                            aria-label={`Ajouter ${nomCategorie(c)} à ton dressing`}
+                            className="inline-flex items-center gap-[5px] rounded-full border border-terracotta text-terracotta px-[11px] text-[12px] cursor-pointer"
+                            style={{ minHeight: 36 }}
+                          >
+                            {G_PLUS} {nomCategorie(c)}
+                          </button>
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              {peuDeLooks && (
+                <div className="text-[12px] text-ink leading-[1.45]">
+                  {looks.length} {looks.length > 1 ? "looks" : "look"} pour {nbJours} jours : quelques pièces de plus varieraient tes tenues.
+                </div>
+              )}
+            </div>
+            <button onClick={ajouterAuDressing} className="mt-3 text-[12px] text-terracotta cursor-pointer min-h-[40px]">
+              Ajouter une pièce à mon dressing →
+            </button>
+          </div>
+        )
       )}
 
       <div className="mt-5">
@@ -1431,6 +1569,15 @@ function Resultat({
           >
             {G_PLUS} Ajouter une pièce de ton dressing
           </button>
+          {/* Deux ajouts différents, dits comme tels : ci-dessus une pièce du
+              dressing entre dans la valise ; ici, une pièce qu'on n'a pas
+              encore entre dans le dressing. */}
+          <div className="text-[12px] text-muted leading-[1.5] mt-4 text-center">
+            Une pièce qui n&apos;est pas encore dans ton dressing ?{" "}
+            <button onClick={ajouterAuDressing} className="text-terracotta cursor-pointer">
+              L&apos;ajouter à mon dressing
+            </button>
+          </div>
         </>
       )}
 
