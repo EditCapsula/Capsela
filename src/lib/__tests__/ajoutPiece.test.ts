@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { occasionsRetenues, suggestName, suggestOccasions } from "../attributes";
 import { saisonParDefaut, seasonSuggestion } from "../data";
+import { basculerSaison, libelleSaisons, saisonsDe, saisonsDepuisSeason, saisonsParDefaut, seasonDepuisSaisons } from "../saisons";
 
 // Refonte « Ajouter une pièce » (27/09/2026) : ce que l'écran propose sans
 // que l'utilisatrice ait rien saisi — nom, saison, occasions.
@@ -56,5 +57,44 @@ describe("occasionsRetenues", () => {
   it("garde la sélection de l'utilisatrice dès qu'elle l'a modifiée, même vide", () => {
     expect(occasionsRetenues(true, ["sport"], "robe")).toEqual(["sport"]);
     expect(occasionsRetenues(true, [], "robe")).toEqual([]);
+  });
+});
+
+describe("quatre saisons (saisons.ts)", () => {
+  it("déduit la valeur à trois choix que lit le moteur", () => {
+    expect(seasonDepuisSaisons(["Été"])).toBe("Printemps / Été");
+    expect(seasonDepuisSaisons(["Printemps", "Été"])).toBe("Printemps / Été");
+    expect(seasonDepuisSaisons(["Automne", "Hiver"])).toBe("Automne / Hiver");
+    expect(seasonDepuisSaisons(["Printemps", "Automne"])).toBe("Toutes saisons");
+    expect(seasonDepuisSaisons(["Printemps", "Été", "Automne", "Hiver"])).toBe("Toutes saisons");
+  });
+
+  it("aller-retour : une valeur à trois choix redevient elle-même", () => {
+    for (const s of ["Printemps / Été", "Automne / Hiver", "Toutes saisons"] as const) {
+      expect(seasonDepuisSaisons(saisonsDepuisSeason(s))).toBe(s);
+    }
+  });
+
+  it("propose la suggestion à l'ajout, sinon les quatre", () => {
+    expect(saisonsParDefaut("manteau", "Manteau")).toEqual(["Automne", "Hiver"]);
+    expect(saisonsParDefaut("robe", "Robe longue noire")).toEqual(["Printemps", "Été", "Automne", "Hiver"]);
+  });
+
+  it("lit les saisons enregistrées, sinon celles de la valeur à trois choix", () => {
+    expect(saisonsDe({ season: "Toutes saisons", saisons: ["Hiver", "Automne"] })).toEqual(["Automne", "Hiver"]);
+    expect(saisonsDe({ season: "Printemps / Été" })).toEqual(["Printemps", "Été"]);
+    expect(saisonsDe({ season: "Automne / Hiver", saisons: [] })).toEqual(["Automne", "Hiver"]);
+  });
+
+  it("coche dans l'ordre de l'année et ne décoche jamais la dernière", () => {
+    expect(basculerSaison(["Hiver"], "Printemps")).toEqual(["Printemps", "Hiver"]);
+    expect(basculerSaison(["Automne", "Hiver"], "Hiver")).toEqual(["Automne"]);
+    expect(basculerSaison(["Automne"], "Automne")).toEqual(["Automne"]);
+  });
+
+  it("libellé : « Toutes saisons » pour les quatre, sinon la liste", () => {
+    expect(libelleSaisons(["Automne", "Hiver"])).toBe("Automne · Hiver");
+    expect(libelleSaisons(["Été"])).toBe("Été");
+    expect(libelleSaisons(["Hiver", "Été", "Printemps", "Automne"])).toBe("Toutes saisons");
   });
 });

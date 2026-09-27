@@ -28,13 +28,15 @@ import {
   upsertOutfitFeedback,
   updateDressingItem,
   updateDressingItemRevente,
+  updateDressingItemSaisons,
   updateDressingItemWorn,
   updateSavedLook,
   uploadDressingPhoto,
 } from "./dressing";
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { choisirMeteo, fetchPrevisionByCity, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
-import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, saisonParDefaut, type Weather } from "./data";
+import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
+import { basculerSaison, saisonsDe, saisonsParDefaut, seasonDepuisSaisons } from "./saisons";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
@@ -82,7 +84,6 @@ import type {
   SacType,
   SavedLook,
   Screen,
-  Season,
   ShoeType,
   TravelMode,
   WorkMode,
@@ -176,8 +177,8 @@ function buildInitialState(): AppState {
     addPhotoAnalyzing: false,
     addPhotoAnalysee: false,
     // Aucun choix tant que l'utilisatrice n'en fait pas : saveItem retient
-    // alors saisonParDefaut (27/09/2026), que l'écran montre présélectionnée.
-    addSeason: null,
+    // alors saisonsParDefaut (27/09/2026), que l'écran montre présélectionnées.
+    addSaisons: null,
     addOccasion: ["travail_formel"],
     addOccasionTouched: false,
     addShoeType: null,
@@ -408,7 +409,8 @@ export interface Actions {
   setAddPhoto: (url: string | null) => void;
   /** Aperçu local immédiat puis upload réel vers Supabase Storage (bucket dressing-photos) — remplace addPhotoUrl par l'URL définitive une fois terminé. */
   uploadAddPhoto: (file: File) => void;
-  setAddSeason: (s: Season) => void;
+  /** Coche ou décoche une des quatre saisons (basculerSaison, saisons.ts) — la dernière restante reste cochée. */
+  basculerAddSaison: (s: CapsuleSeason) => void;
   /** Bascule l'occasion dans la sélection multiple. */
   setAddOccasion: (o: OccasionKey) => void;
   setAddShoeType: (t: ShoeType) => void;
@@ -1270,6 +1272,20 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
    * dépendrait relancerait son minuteur à chaque rendu de l'app. Ne referme
    * que SA confirmation : un second ajout entre-temps garde la sienne.
    */
+  /**
+   * Écrit les quatre saisons d'une pièce déjà enregistrée (migration 0040).
+   * Un échec — attendu tant que la migration n'est pas exécutée — retire les
+   * saisons de l'état local : l'écran montre alors ce qui est réellement en
+   * base, la valeur à trois choix, plutôt qu'un détail que le prochain
+   * chargement effacerait. Et il le dit (reportDressingError).
+   */
+  const enregistrerSaisons = (id: number, saisons: CapsuleSeason[]) => {
+    updateDressingItemSaisons(id, saisons).catch((err) => {
+      setState((st) => ({ ...st, items: st.items.map((it) => (it.id === id ? { ...it, saisons: undefined } : it)) }));
+      reportDressingError("updateDressingItemSaisons", err);
+    });
+  };
+
   const annoncerPieceAjoutee = (nom: string) => {
     const annonce = { nom, jeton: Date.now() };
     setState((st) => ({ ...st, pieceAjoutee: annonce }));
@@ -1691,7 +1707,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSize: null,
           addPhotoUrl: img.url ?? null,
           addPhotoAnalysee: false,
-          addSeason: item.season,
+          addSaisons: saisonsDe(item),
           addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
           addOccasionTouched: true,
           addShoeType: item.cat === "chaussures" ? item.shoeType ?? null : null,
@@ -1727,7 +1743,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSize: item.size ?? null,
           addPhotoUrl: item.photoUrl ?? img.url ?? null,
           addPhotoAnalysee: false,
-          addSeason: item.season,
+          addSaisons: saisonsDe(item),
           addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
           addOccasionTouched: true,
           addShoeType: item.cat === "chaussures" ? item.shoeType ?? null : null,
@@ -1857,7 +1873,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           reportDressingError("uploadDressingPhoto", err);
         });
     },
-    setAddSeason: (season) => setState((s) => ({ ...s, addSeason: season })),
+    basculerAddSaison: (saison) =>
+      setState((s) => ({
+        ...s,
+        addSaisons: basculerSaison(s.addSaisons ?? saisonsParDefaut(s.addCat, s.addName), saison),
+      })),
     setAddOccasion: (o) =>
       setState((s) => {
         // Part de ce que l'écran montre : tant que rien n'est touché, c'est la
@@ -1917,6 +1937,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // effacerait silencieusement le statut de port.
       const editingId = s.editingId;
       const addReturn = s.addReturn;
+      const saisons = s.addSaisons ?? saisonsParDefaut(s.addCat, s.addName);
       const original = editingId != null ? s.items.find((i) => i.id === editingId) : undefined;
       const base: Omit<Item, "id"> = {
         name: (s.addName || "").trim() || "Nouvelle pièce",
@@ -1925,7 +1946,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         color: s.addColor.name,
         hex: s.addColor.hex,
         size: s.addSize,
-        season: s.addSeason ?? saisonParDefaut(s.addCat, s.addName),
+        // Les quatre saisons choisies, et la valeur à trois choix qui en est
+        // déduite : c'est elle seule que lit le moteur (cf. saisons.ts).
+        season: seasonDepuisSaisons(saisons),
+        saisons,
         occasion: (() => {
           const retenues = occasionsRetenues(s.addOccasionTouched, s.addOccasion, s.addCat, s.addShoeType);
           return retenues.length ? retenues : undefined;
@@ -1971,7 +1995,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addAccessoireTypeTouched: false,
         addSubtype: null,
         addSubtypeTouched: false,
-        addSeason: null,
+        addSaisons: null,
         addShoeType: null,
         addShoeTypeTouched: false,
         addOccasion: ["travail_formel"],
@@ -1995,6 +2019,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         }));
         if (isSupabaseConfigured && userId) {
           updateDressingItem(editingId, base).catch((err) => reportDressingError("updateDressingItem", err));
+          enregistrerSaisons(editingId, saisons);
           deleteDressingPhotos(photos).catch((err) => reportDressingError("deleteDressingPhotos", err));
         }
         return;
@@ -2003,8 +2028,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         setState(resetFields);
         insertDressingItem(userId, base)
           .then((item) => {
-            setState((st) => ({ ...st, items: [item, ...st.items] }));
+            // La ligne insérée n'a pas encore ses saisons (écriture isolée,
+            // cf. updateDressingItemSaisons) : elles sont posées juste après.
+            setState((st) => ({ ...st, items: [{ ...item, saisons }, ...st.items] }));
             annoncerPieceAjoutee(item.name);
+            enregistrerSaisons(item.id, saisons);
           })
           .catch((err) => {
             // Échec réseau/RLS/contrainte : la pièce n'apparaît pas dans le dressing

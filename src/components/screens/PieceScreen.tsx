@@ -5,6 +5,7 @@ import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { bestStyleFor } from "@/lib/capsule";
 import { isCoupeApplicable, isSizeApplicable, suggestName } from "@/lib/attributes";
 import { daysSinceWorn, inactivityInfo } from "@/lib/selectors";
+import { libelleSaisons, saisonsDe } from "@/lib/saisons";
 import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -281,7 +282,7 @@ export default function PieceScreen() {
             label="Occasion"
             value={active.occasion && active.occasion.length ? active.occasion.map((o) => OCC_LABELS[o]).join(", ") : "—"}
           />
-          <InfoRow label="Saison" value={active.season} />
+          <InfoRow label="Saison" value={libelleSaisons(saisonsDe(active))} />
           {active.matiere && <InfoRow label="Matière" value={active.matiere} />}
           {active.coupe && <InfoRow label="Coupe" value={active.coupe} />}
           {active.sacType && <InfoRow label="Type de sac" value={active.sacType} />}
@@ -300,7 +301,7 @@ export default function PieceScreen() {
             label="Occasions"
             value={active.occasion && active.occasion.length ? active.occasion.map((o) => OCC_LABELS[o]).join(", ") : "Non renseignée"}
           />
-          <CharRow icon={<LeafIcon />} label="Saison" value={active.season} />
+          <CharRow icon={<LeafIcon />} label="Saison" value={libelleSaisons(saisonsDe(active))} />
           <CharRow icon={<FabricIcon />} label="Matière" value={active.matiere || "Non renseignée"} />
           {coupeApplicable && <CharRow icon={<TshirtIcon />} label="Coupe" value={active.coupe || "Non renseignée"} />}
           {typeValue && <CharRow icon={<HangerIcon />} label={isLength ? "Longueur" : "Type"} value={typeValue} />}
