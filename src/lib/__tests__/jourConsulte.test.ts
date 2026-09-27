@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_PREFS } from "../profile";
-import { JOUR_MAX, borneJour, complementTenue, dateDuJour, libelleJour, momentMessage, occasionParDefaut, quandPhrase } from "../jourConsulte";
+import { JOUR_MAX, borneJour, complementTenue, dateDuJour, libelleJour, libelleJourCourt, momentMessage, occasionParDefaut, quandPhrase } from "../jourConsulte";
 
 const DIMANCHE = new Date(2026, 8, 27, 15, 30); // dimanche 27 septembre 2026
 
@@ -20,6 +20,12 @@ describe("jourConsulte — une date, ses mots", () => {
     expect(libelleJour(0, dateDuJour(0, DIMANCHE))).toBe("Aujourd'hui · dimanche 27");
     expect(libelleJour(1, dateDuJour(1, DIMANCHE))).toBe("Demain · lundi 28");
     expect(libelleJour(2, dateDuJour(2, DIMANCHE))).toBe("Mardi 29 septembre");
+  });
+
+  it("le libellé court, sur la ligne de la localisation", () => {
+    expect(libelleJourCourt(0, DIMANCHE)).toBe("Aujourd'hui");
+    expect(libelleJourCourt(1, dateDuJour(1, DIMANCHE))).toBe("Demain");
+    expect(libelleJourCourt(2, dateDuJour(2, DIMANCHE))).toBe("Mar. 29");
   });
 
   it("le titre, la phrase, le message", () => {

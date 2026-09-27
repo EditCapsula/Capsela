@@ -18,10 +18,10 @@ Aucun écran météo, aucun écran calendrier, aucune préférence nouvelle n'a 
 
 ## 2. Ce que l'utilisatrice peut faire
 
-1. Sur l'Accueil ou sur Tenue, passer d'aujourd'hui aux 4 jours suivants avec `‹` / `›`, et revenir d'un tap avec « Aujourd'hui ».
+1. Sur l'Accueil ou sur Tenue, passer d'aujourd'hui aux 4 jours suivants avec `‹` / `›`, et revenir à aujourd'hui d'un tap sur le libellé du jour.
 2. Voir, pour le jour choisi, sa météo (prévision), une tenue composée pour ce jour, et l'occasion de ce jour selon « Mon rythme ».
 3. Ouvrir cette tenue avec « Voir ma tenue » : Tenue affiche le même jour, jamais aujourd'hui par défaut.
-4. Toucher la pastille météo (Accueil comme Tenue) pour ouvrir Préférences Capsela directement sur « Localisation & météo ».
+4. Toucher la ville et la météo (Accueil comme Tenue) pour ouvrir Préférences Capsela directement sur « Localisation & météo ».
 
 ## 3. Architecture
 
@@ -37,14 +37,15 @@ Aucun écran météo, aucun écran calendrier, aucune préférence nouvelle n'a 
 
 `JOUR_MAX` = `HORIZON_PREVISION_JOURS` (4) : la navigation s'arrête là où la prévision s'arrête, plutôt que de promettre une météo qu'elle n'a pas. [DÉCIDÉ]
 
-### 3.2 Deux composants partagés (option D)
+### 3.2 Un composant partagé (option D)
 
-`src/components/JourMeteo.tsx` :
+`src/components/JourMeteo.tsx` exporte `JourEtMeteo` : une seule ligne, en deux zones séparées d'un filet.
 
-- `SelecteurJour` — `‹ Aujourd'hui · dimanche 27 ›`, `‹ Demain · lundi 28 ›`, `‹ Mardi 29 septembre ›`, plus « Aujourd'hui » hors du jour même.
-- `PastilleMeteo` — ville, icône, température et condition du jour consulté, la source de la météo, et l'ouverture de « Localisation & météo ».
+- À gauche, le jour : `‹ Aujourd'hui ›`, `‹ Demain ›`, `‹ Mar. 29 ›` (`libelleJourCourt`). Hors du jour même, toucher le libellé ramène à aujourd'hui. Le nom accessible dit la date complète (`libelleJour` : « Mardi 29 septembre »).
+- À droite, la ville, l'icône et la température du jour consulté (la condition, « Nuageux », s'ajoute à partir de 400 px de large) ; toucher cette zone ouvre « Localisation & météo ».
+- Sous la ligne, la source de la météo quand elle n'est pas la position en direct, ou la règle de repli quand la prévision manque.
 
-Utilisés tels quels par `HomeScreen` et `TenuesScreen`. Une seule logique, une seule présentation : ce qui est choisi sur un écran est ce que l'autre affiche. [DÉCIDÉ]
+Utilisé tel quel par `HomeScreen` et `TenuesScreen`. Une seule logique, une seule présentation : ce qui est choisi sur un écran est ce que l'autre affiche. [DÉCIDÉ]
 
 ### 3.3 La météo d'un jour à venir
 
@@ -54,7 +55,7 @@ Réutilise ce que Planifier utilisait déjà :
 - `previsionPour(prévision, jour, "Toute la journée")` pour la température et la condition du jour ;
 - `weatherForDay(temp, condition, saisonCalendairePour(date))` : la saison est celle de LA DATE.
 
-Sans prévision (lieu sans réponse, fonction Edge `weather` antérieure à `mode=forecast`, ou mode démo), la règle déjà en place dans Planifier s'applique : **température mesurée aujourd'hui, saison de la date**, et la pastille l'écrit (« Prévision indisponible pour demain — tenue composée sur la saison de ce jour et la température d'aujourd'hui. »). Aucune météo n'est inventée ni affichée comme prévue. [DÉCIDÉ]
+Sans prévision (lieu sans réponse, fonction Edge `weather` antérieure à `mode=forecast`, ou mode démo), la règle déjà en place dans Planifier s'applique : **température mesurée aujourd'hui, saison de la date**, et la note sous la ligne l'écrit (« Prévision indisponible pour demain — tenue composée sur la saison de ce jour et la température d'aujourd'hui. »). Aucune météo n'est inventée ni affichée comme prévue. [DÉCIDÉ]
 
 `weather` (contexte) reste la météo d'aujourd'hui pour tout le reste : capsule par défaut, Dressing, Capsule. Seule la tenue suit le jour consulté (`weatherRef` = `meteoDuJour`, utilisée par `regen`). [DÉCIDÉ]
 
@@ -94,13 +95,16 @@ Les gardes sont aussi posées dans le store (`wearOutfitToday`, `setOutfitFeedba
 | --- | --- | --- |
 | A | Date en haut de chaque écran | Écartée : répète une information sans objet sur les écrans qui ne dépendent pas d'un jour (Dressing, Capsule, Profil) |
 | B | Date seulement là où le contenu dépend d'une date | Retenue sur le périmètre : seuls Accueil et Tenue la portent |
-| C | Date portée par le sélecteur | Retenue sur la forme : le sélecteur REMPLACE le surtitre qui portait la date |
+| C | Date portée par le sélecteur | Retenue sur la forme : aucun surtitre ne répète la date, le sélecteur la porte |
+
+**Placement : sur la ligne de la localisation.** Une première version plaçait le sélecteur à la place du surtitre, au-dessus du titre, et la météo sur une pastille en dessous. Écartée par la propriétaire le 27/09/2026 : la date doit être sur la même ligne que la localisation. Le jour et sa météo se lisent désormais ensemble, comme une seule information de contexte (« Demain · Paris 17° »), et l'écran gagne une ligne. [DÉCIDÉ]
 
 Concrètement [DÉCIDÉ] :
 
-- Accueil : le surtitre « Aujourd'hui » au-dessus de « Bonjour, … » est devenu le sélecteur.
-- Tenue : le surtitre « Dimanche 27 septembre » est devenu le sélecteur ; le titre s'accorde au jour (« Ma tenue du jour », « Ma tenue de demain », « Ma tenue du mardi 29 ») et la question aussi (« Qu'est-ce qui est prévu demain ? »).
-- La température n'est plus répétée dans la phrase de la card de l'Accueil : la pastille météo la porte (même arbitrage que Tenue le 23/09).
+- Accueil : le surtitre « Aujourd'hui » au-dessus de « Bonjour, … » est supprimé ; la ligne jour + météo est sous « Bonjour, … ».
+- Tenue : le surtitre « Dimanche 27 septembre » est supprimé ; la ligne jour + météo est sous le titre, qui s'accorde au jour (« Ma tenue du jour », « Ma tenue de demain », « Ma tenue du mardi 29 »), comme la question (« Qu'est-ce qui est prévu demain ? »).
+- Le libellé du jour est court sur la ligne (« Mar. 29 ») pour tenir à 360 px avec la ville et la température ; la date longue reste dans le titre de Tenue et dans le nom accessible.
+- La température n'est plus répétée dans la phrase de la card de l'Accueil : la ligne météo la porte (même arbitrage que Tenue le 23/09).
 
 ## 5. Où vit le sélecteur — décision
 
@@ -114,19 +118,19 @@ Concrètement [DÉCIDÉ] :
 ## 6. Préférences Capsela depuis la météo
 
 - `actions.goPreferences(section?)` mémorise l'écran d'origine (`preferencesReturn`) et la rubrique à montrer (`preferencesSection`). [DÉCIDÉ]
-- La pastille météo (Accueil, Tenue) et « Ta météo » (Mon profil) passent `"localisation"` : l'écran s'ouvre sur « Localisation & météo » (géolocalisation, météo de la position, ville, unités). [DÉCIDÉ]
+- La zone météo de la ligne (Accueil, Tenue) et « Ta météo » (Mon profil) passent `"localisation"` : l'écran s'ouvre sur « Localisation & météo » (géolocalisation, météo de la position, ville, unités). [DÉCIDÉ]
 - Le retour ramène à l'écran d'origine (Accueil, Tenue ou Profil). [DÉCIDÉ]
 
 ## 7. Fichiers
 
 | Fichier | Contenu |
 | --- | --- |
-| `src/lib/jourConsulte.ts` | `JOUR_MAX`, `dateDuJour`, `libelleJour`, `complementTenue`, `quandPhrase`, `momentMessage`, `occasionParDefaut` |
+| `src/lib/jourConsulte.ts` | `JOUR_MAX`, `dateDuJour`, `libelleJour`, `libelleJourCourt`, `complementTenue`, `quandPhrase`, `momentMessage`, `occasionParDefaut` |
 | `src/lib/__tests__/jourConsulte.test.ts` | Tests des dérivés |
 | `src/lib/store.tsx` | `jourDecalage`, prévision, `meteoDuJour`, `choisirJour`, tenues par jour, `goPreferences(section)`, `closePreferences` |
-| `src/components/JourMeteo.tsx` | `SelecteurJour`, `PastilleMeteo` |
-| `src/components/screens/HomeScreen.tsx` | Sélecteur, pastille météo, avis du jour limité au jour même |
-| `src/components/screens/TenuesScreen.tsx` | Sélecteur, titre et question du jour, pastille partagée, « Porter » réservé au jour même |
+| `src/components/JourMeteo.tsx` | `JourEtMeteo` : le jour et sa météo sur une ligne |
+| `src/components/screens/HomeScreen.tsx` | Ligne jour + météo, avis du jour limité au jour même |
+| `src/components/screens/TenuesScreen.tsx` | Ligne jour + météo, titre et question du jour, « Porter » réservé au jour même |
 | `src/components/screens/PreferencesScreen.tsx` | Ancre « Localisation & météo », retour à l'écran d'origine |
 
 ## 8. Limites et suites

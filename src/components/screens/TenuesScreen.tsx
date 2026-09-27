@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
-import { PastilleMeteo, SelecteurJour } from "@/components/JourMeteo";
+import { JourEtMeteo } from "@/components/JourMeteo";
 import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
@@ -490,9 +490,6 @@ export default function TenuesScreen() {
       <AppHeader />
 
       <div className="mt-[18px]">
-        {/* LA DATE EST PORTÉE PAR LE SÉLECTEUR (27/09/2026) : il remplace le
-            surtitre qui la répétait, et c'est lui qui change le jour. */}
-        <SelecteurJour />
         {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
             (23/09/2026) : répété ici, il salue une deuxième fois dans la même
             session et ne dit rien de l'écran. Le titre annonce désormais ce
@@ -502,14 +499,16 @@ export default function TenuesScreen() {
             « Le look du jour » qui vivait
             DANS la card terracotta est supprimée du même coup — elle ferait
             doublon à deux cents pixels d'écart. */}
-        <div className="t-titre-ecran text-ink mt-[6px]">
+        <div className="t-titre-ecran text-ink">
           Ma <span className="italic text-terracotta">tenue {complementTenue(decalage, dateConsultee)}</span>
         </div>
       </div>
 
-      {/* Ville et météo du jour consulté, et leur source — le composant
-          partagé avec l'Accueil ; il ouvre « Localisation & météo ». */}
-      <PastilleMeteo className="mt-5" />
+      {/* LE JOUR ET SA MÉTÉO, SUR UNE LIGNE (27/09/2026) — le composant
+          partagé avec l'Accueil. Il remplace le surtitre qui répétait la
+          date : les chevrons changent le jour, la météo ouvre
+          « Localisation & météo ». */}
+      <JourEtMeteo className="mt-5" />
 
       {/* SÉLECTEUR COMPACT (brief 22/09/2026).
           Les dix occasions défilaient ici en cartes de deux lignes, plus

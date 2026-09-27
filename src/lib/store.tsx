@@ -241,7 +241,7 @@ export interface Actions {
   goLooks: () => void;
   goProfile: () => void;
   /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
-  /** `section` : rubrique à amener dans la vue (la pastille météo de l'Accueil ouvre « Localisation & météo »). */
+  /** `section` : rubrique à amener dans la vue (la ligne météo de l’Accueil et de Tenue ouvre « Localisation & météo »). */
   goPreferences: (section?: "localisation") => void;
   /** Quitte les Préférences vers l'écran d'où elles ont été ouvertes. */
   closePreferences: () => void;

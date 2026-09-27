@@ -50,7 +50,7 @@ function Ligne({ children }: { children: React.ReactNode }) {
 export default function PreferencesScreen() {
   const { profile, saveProfile } = useAuth();
   const { state, actions } = useCapsela();
-  // Ouverture ciblée (27/09/2026) : la pastille météo de l'Accueil et « Ta
+  // Ouverture ciblée (27/09/2026) : la ligne météo (Accueil, Tenue) et « Ta
   // météo » du Profil amènent directement « Localisation & météo » dans la vue.
   useEffect(() => {
     if (state.preferencesSection !== "localisation") return;

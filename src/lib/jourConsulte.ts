@@ -34,6 +34,15 @@ export function libelleJour(decalage: number, d: Date): string {
   return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
 }
 
+const JOURS_ABREGES = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
+
+/** Libellé court, sur la ligne de la localisation : « Aujourd'hui », « Demain », « Mar. 29 ». */
+export function libelleJourCourt(decalage: number, d: Date): string {
+  if (decalage === 0) return "Aujourd'hui";
+  if (decalage === 1) return "Demain";
+  return `${JOURS_ABREGES[d.getDay()]} ${d.getDate()}`;
+}
+
 /** Le second temps du titre de Tenue : « du jour », « de demain », « du mardi 29 ». */
 export function complementTenue(decalage: number, d: Date): string {
   if (decalage === 0) return "du jour";

@@ -17,7 +17,7 @@ import { useAuth } from "@/lib/auth";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
-import { PastilleMeteo, SelecteurJour } from "@/components/JourMeteo";
+import { JourEtMeteo } from "@/components/JourMeteo";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
 
@@ -608,7 +608,7 @@ export default function HomeScreen() {
   // Même phrase d'explication que la page Tenue (explainRecommendation) — pas
   // de température affichée tant que la géolocalisation n'a pas résolu la
   // météo réelle du jour.
-  // La température est dans la pastille météo au-dessus depuis le 27/09/2026 :
+  // La température est sur la ligne jour + météo au-dessus depuis le 27/09/2026 :
   // la phrase de la card ne la répète plus (même arbitrage que Tenue, 23/09).
   const outfitQuote = outfitMoodPhrase(occasionKey, state.workMode, state.dateContext, meteoEnAttente ? null : meteoDuJour.temp);
 
@@ -761,16 +761,15 @@ export default function HomeScreen() {
           de l'en-tête : le gain vient de la taille du serif, pas d'un
           interlignage ou d'une marge supplémentaires. */}
       <div className="px-6 mt-[18px]">
-        {/* LE SÉLECTEUR DE JOUR remplace le surtitre « Aujourd'hui » (27/09/2026,
-            navigation par date) : même place, même typographie — secondaire
-            par rapport à la tenue, et partagé avec Tenue. */}
-        <SelecteurJour />
-        <div className="t-display text-ink mt-[6px]">
+        <div className="t-display text-ink">
           Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
         </div>
-        {/* LA MÉTÉO DU JOUR, CLIQUABLE : elle ouvre « Localisation & météo »
-            des Préférences — les réglages existants, aucun écran de plus. */}
-        <PastilleMeteo className="mt-4" />
+        {/* LE JOUR ET SA MÉTÉO, SUR UNE LIGNE (27/09/2026, navigation par
+            date) : le jour se change par ses chevrons, la météo ouvre
+            « Localisation & météo » des Préférences — les réglages existants,
+            aucun écran de plus. Composant partagé avec Tenue. Le surtitre
+            « Aujourd'hui » a disparu : la ligne porte la date. */}
+        <JourEtMeteo className="mt-4" />
       </div>
 
       {/* ══ Card héros — le moment visuel de la page ══════════════════════

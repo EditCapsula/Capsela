@@ -274,7 +274,7 @@ export interface AppState {
    * affichée (outfit et ses drapeaux) est celle de ce jour.
    */
   jourDecalage: number;
-  /** Écran vers lequel revenir en quittant Préférences Capsela (Profil, ou l'Accueil depuis la pastille météo). */
+  /** Écran vers lequel revenir en quittant Préférences Capsela (Profil, ou l’Accueil et Tenue depuis la ligne météo). */
   preferencesReturn: Screen;
   /** Rubrique à amener dans la vue à l'ouverture des Préférences — consommée une fois. */
   preferencesSection: "localisation" | null;
