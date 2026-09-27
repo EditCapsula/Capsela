@@ -80,6 +80,22 @@ export const I_COMPTE = (
   </>
 );
 export const I_GRAPHIQUE = <path d="M5 19.5h14M8 16v-4M12 16V8M16 16v-6" {...T} />;
+/* Ajoutées le 27/09/2026 (refonte Mon profil / Préférences) : même trait 1,6,
+   même grille 24 que les précédentes. */
+export const I_COURONNE = <path d="M4.5 17.5h15M5 17.5L3.8 8.2l4.6 3.6L12 5.5l3.6 6.3 4.6-3.6-1.2 9.3" {...T} />;
+export const I_REPERE = (
+  <>
+    <path d="M12 20.5s-6-5.3-6-10.2a6 6 0 0 1 12 0c0 4.9-6 10.2-6 10.2z" {...T} />
+    <circle cx="12" cy="10.3" r="2.2" {...T} />
+  </>
+);
+export const I_REGLAGES = (
+  <>
+    <circle cx="12" cy="12" r="3" {...T} />
+    <path d="M12 3.5v2.2M12 18.3v2.2M20.5 12h-2.2M5.7 12H3.5M18 6l-1.6 1.6M7.6 16.4L6 18M18 18l-1.6-1.6M7.6 7.6L6 6" {...T} />
+  </>
+);
+export const I_CLOCHE = <path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5H5l1.5-1.5zM10 20h4" {...T} />;
 
 export function Surtitre({ icone, children }: { icone: React.ReactNode; children: React.ReactNode }) {
   return (

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
+import { FeuilleVille, I_CALENDRIER, I_CLOCHE, I_GRAPHIQUE, I_REPERE, Surtitre } from "@/components/ProfilUI";
 import { useAuth } from "@/lib/auth";
 import { DEFAULT_PREFS, WORK_DAYS, type ProfilePrefs } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
@@ -31,10 +32,12 @@ export function Toggle({ on, onClick, label }: { on: boolean; onClick: () => voi
   );
 }
 
-function Section({ titre, children }: { titre: string; children: React.ReactNode }) {
+function Section({ titre, icone, children }: { titre: string; icone: React.ReactNode; children: React.ReactNode }) {
   return (
     <>
-      <div className="t-surtitre text-muted mt-7 mb-[10px]">{titre}</div>
+      {/* Le surtitre à pictogramme de Mon profil (27/09/2026) : les deux
+          écrans se lisent comme un seul espace. */}
+      <Surtitre icone={icone}>{titre}</Surtitre>
       <div className="bg-card border border-border rounded-[20px] overflow-hidden">{children}</div>
     </>
   );
@@ -50,6 +53,10 @@ export default function PreferencesScreen() {
   const prefs = profile.prefs;
   const setPrefs = (p: Partial<ProfilePrefs>) => saveProfile({ ...profile, prefs: { ...prefs, ...p } });
   const [confirmerReinit, setConfirmerReinit] = useState(false);
+  const [villeOuverte, setVilleOuverte] = useState(false);
+  // La pastille sélectionnée canonique de l'app (terracotta, cf. les filtres
+  // du Dressing et des idées de tenues) — elle était ici la seule en encre.
+  const pastille = (on: boolean) => (on ? "bg-terracotta text-cream border-terracotta" : "bg-card text-muted-3 border-border");
 
   // Lu sur l'appareil, jamais stocké : l'app n'a pas de réglage de fuseau.
   const fuseau = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -65,7 +72,7 @@ export default function PreferencesScreen() {
         Personnalise le fonctionnement de l&apos;application selon ton mode de vie.
       </div>
 
-      <Section titre="Notifications">
+      <Section titre="Notifications" icone={I_CLOCHE}>
         <Ligne>
           <span className="text-[13px] text-ink">Recevoir ma tenue du jour</span>
           <Toggle on={prefs.notifEnabled} onClick={() => setPrefs({ notifEnabled: !prefs.notifEnabled })} label="Recevoir ma tenue du jour" />
@@ -84,7 +91,7 @@ export default function PreferencesScreen() {
         </Ligne>
       </Section>
 
-      <Section titre="Localisation & météo">
+      <Section titre="Localisation & météo" icone={I_REPERE}>
         <Ligne>
           <div className="flex-1 min-w-0 pr-2">
             <div className="text-[13px] text-ink">Autoriser la géolocalisation</div>
@@ -95,11 +102,25 @@ export default function PreferencesScreen() {
         <Ligne>
           <div className="flex-1 min-w-0 pr-2">
             <div className="text-[13px] text-ink">Utiliser la météo de ma position</div>
-            <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">Sinon, la météo de ta ville renseignée est utilisée.</div>
+            <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">Sinon, la météo de la ville renseignée est utilisée.</div>
           </div>
           <Toggle on={prefs.weatherFromGeo} onClick={() => setPrefs({ weatherFromGeo: !prefs.weatherFromGeo })} label="Utiliser la météo de ma position" />
         </Ligne>
-        <div className="flex gap-2 px-4 py-[14px]">
+        {/* LA VILLE (27/09/2026) : réglée ici, avec la géolocalisation dont
+            elle est le relais — la ligne « Ta météo » de Mon profil y mène. */}
+        <button
+          onClick={() => setVilleOuverte(true)}
+          className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer border-b border-border"
+        >
+          <span className="text-[13px] text-ink">Ville</span>
+          <span className="flex items-center gap-[10px] min-w-0">
+            <span className={"text-[13px] truncate " + (profile.city ? "text-muted-3" : "text-placeholder")}>{profile.city || "Non renseignée"}</span>
+            <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
+          </span>
+        </button>
+        <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-[14px]">
+          <span className="text-[13px] text-ink">Unités</span>
+          <span className="flex gap-2">
           {(
             [
               ["metric", "Métrique (°C, cm)"],
@@ -112,19 +133,17 @@ export default function PreferencesScreen() {
                 key={key}
                 onClick={() => setPrefs({ unitSystem: key })}
                 aria-pressed={on}
-                className={
-                  "px-[14px] min-h-[40px] rounded-full text-[12px] cursor-pointer font-sans border " +
-                  (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
-                }
+                className={"px-[14px] min-h-[40px] rounded-full text-[12px] cursor-pointer font-sans border " + pastille(on)}
               >
                 {label}
               </button>
             );
           })}
+          </span>
         </div>
       </Section>
 
-      <Section titre="Mon rythme">
+      <Section titre="Mon rythme" icone={I_CALENDRIER}>
         <div className="px-4 py-[14px] border-b border-border">
           <div className="text-[13px] text-ink">Jours travaillés</div>
           <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">
@@ -138,10 +157,7 @@ export default function PreferencesScreen() {
                   key={d}
                   onClick={() => setPrefs({ workDays: on ? prefs.workDays.filter((x) => x !== d) : [...prefs.workDays, d] })}
                   aria-pressed={on}
-                  className={
-                    "flex-1 text-center min-h-[38px] px-1 rounded-full text-[12px] cursor-pointer font-sans border " +
-                    (on ? "bg-ink text-cream border-ink" : "bg-card text-muted border-border")
-                  }
+                  className={"flex-1 text-center min-h-[38px] px-1 rounded-full text-[12px] cursor-pointer font-sans border " + pastille(on)}
                 >
                   {d}
                 </button>
@@ -161,7 +177,7 @@ export default function PreferencesScreen() {
       {/* AUTRES. Langue et fuseau sont AFFICHÉS, pas réglables : l'app n'existe
           qu'en français et n'a aucun réglage de fuseau (celui-ci est lu sur
           l'appareil). Un chevron promettrait un écran qui n'existe pas. */}
-      <Section titre="Autres">
+      <Section titre="Autres" icone={I_GRAPHIQUE}>
         <Ligne>
           <span className="text-[13px] text-ink">Langue</span>
           <span className="text-[13px] text-muted-3">Français</span>
@@ -178,6 +194,8 @@ export default function PreferencesScreen() {
           <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
         </button>
       </Section>
+
+      <FeuilleVille open={villeOuverte} onClose={() => setVilleOuverte(false)} />
 
       <BottomSheet title="Réinitialiser les préférences" open={confirmerReinit} onClose={() => setConfirmerReinit(false)}>
         <div className="text-[13px] text-ink leading-[1.55]">

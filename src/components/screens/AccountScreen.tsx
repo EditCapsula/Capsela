@@ -64,7 +64,9 @@ export default function AccountScreen() {
     const issue = await demanderLienReinitialisation(email);
     setLienMotDePasse(issue === "envoye" ? "envoye" : "erreur");
   };
-  const { actions } = useCapsela();
+  const { actions, etatPremium } = useCapsela();
+  // L'offre lue par premium.ts ; « inconnu » n'est jamais affiché comme « Gratuit ».
+  const offre = etatPremium === "premium" ? "Premium" : etatPremium === "gratuit" ? "Gratuit" : "En cours de vérification";
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -114,18 +116,30 @@ export default function AccountScreen() {
       <AppHeader showAvatar={false} onBack={actions.goProfile} backLabel="Revenir au profil" />
       <div className="t-surtitre text-muted mt-[18px]">Profil</div>
       <div className="t-titre-ecran text-ink mt-[6px]">
-        Mon <span className="italic text-terracotta">compte</span>
+        Gérer mon <span className="italic text-terracotta">compte</span>
       </div>
-      <div className="t-chapeau text-muted-3 mt-[8px]">Ton compte, tes données, et ce que tu en fais.</div>
+      <div className="t-chapeau text-muted-3 mt-[8px]">Toutes les informations liées à ton compte Capsela.</div>
 
       <Section titre="Compte">
         <div className="flex items-center justify-between gap-3 px-4 py-[14px] border-b border-border">
           <span className="text-[13px] text-muted flex-shrink-0">E-mail</span>
           <span className="text-[13px] text-ink text-right [overflow-wrap:anywhere]">{email ?? "Non renseigné"}</span>
         </div>
+        {/* MON ABONNEMENT (27/09/2026) : l'offre en cours, qui ouvre l'écran
+            Premium existant — pas de prix ici. */}
+        <button
+          onClick={() => actions.goPremium()}
+          className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer border-b border-border"
+        >
+          <span className="text-[13px] text-muted flex-shrink-0">Mon abonnement</span>
+          <span className="flex items-center gap-[10px]">
+            <span className="text-[13px] text-ink">{offre}</span>
+            <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
+          </span>
+        </button>
         {demoMode || !email ? (
           <div className="flex items-center justify-between gap-3 px-4 py-[14px]">
-            <span className="text-[13px] text-muted flex-shrink-0">Mot de passe</span>
+            <span className="text-[13px] text-muted flex-shrink-0">Modifier mon mot de passe</span>
             <span className="text-[12px] text-placeholder text-right">Indisponible en mode démo</span>
           </div>
         ) : (
@@ -134,7 +148,7 @@ export default function AccountScreen() {
             disabled={lienMotDePasse === "envoi" || lienMotDePasse === "envoye"}
             className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer disabled:cursor-default"
           >
-            <span className="text-[13px] text-muted flex-shrink-0">Mot de passe</span>
+            <span className="text-[13px] text-muted flex-shrink-0">Modifier mon mot de passe</span>
             <span className="text-[12px] text-right" aria-live="polite">
               {lienMotDePasse === "envoye" ? (
                 <span className="text-muted-3">Lien envoyé à ton adresse e-mail</span>
@@ -143,14 +157,15 @@ export default function AccountScreen() {
               ) : lienMotDePasse === "envoi" ? (
                 <span className="text-muted-3">Envoi…</span>
               ) : (
-                <span className="text-terracotta">Réinitialiser mon mot de passe ›</span>
+                <span className="text-terracotta">Recevoir un lien ›</span>
               )}
             </span>
           </button>
         )}
       </Section>
 
-      <Section titre="Données personnelles">
+      {/* « Modifier mes informations » : prénom, date de naissance, photo. */}
+      <Section titre="Mes informations">
         <input
           ref={photoInputRef}
           type="file"
