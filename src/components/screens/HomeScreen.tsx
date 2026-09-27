@@ -564,6 +564,26 @@ export default function HomeScreen() {
   };
 
   /**
+   * PRÉPARER UNE VALISE (27/09/2026, docs/valise.md) — même décision d'accès
+   * que l'Avis de styliste, règle PREPARER_VALISE. En ACCES_LIBRE (phase de
+   * test), la carte ouvre le parcours. Sous PREMIUM_REQUIRED, un refus mène à
+   * la page Premium avec « Ce que tu voulais faire : Préparer une valise »,
+   * comme avant l'existence du parcours.
+   */
+  const [verificationValise, setVerificationValise] = useState(false);
+  const ouvrirValise = async () => {
+    if (verificationValise) return;
+    const decision = decisionAcces("PREPARER_VALISE", etatPremium, false);
+    if (decision === "acces") return actions.goValise();
+    if (decision === "gate") return actions.goPremium("valise");
+    setVerificationValise(true);
+    const etat = await actions.verifierEtatPremium();
+    setVerificationValise(false);
+    if (decisionAcces("PREPARER_VALISE", etat, true) === "acces") actions.goValise();
+    else actions.goPremium("valise");
+  };
+
+  /**
    * L'avis du jour vient désormais du store, donc de la base (0029), et non
    * plus d'un useState local qui disparaissait au rechargement.
    *
@@ -1176,18 +1196,16 @@ export default function HomeScreen() {
               deux précédentes partageaient un carré plein indistinct. */}
           <div className="grid grid-cols-2 gap-[10px] mt-[13px]" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
             <ActionSuite onClick={actions.goPlanifier} label="Planifier une tenue" glyphe={GLYPHE_CALENDRIER} />
-            {/* « Préparer une valise » MÈNE À PREMIUM (24/09/2026, arbitré).
-                Elle menait jusqu'ici à un écran d'attente dont le seul rôle
-                déclaré était « que l'entrée ne mène pas dans le vide » — un
-                écran qui ne lit rien, n'appelle rien, et renvoyait vers la
-                capsule. Premium dit la même chose en la vendant, et l'écran
-                d'attente est supprimé plutôt que laissé inaccessible.
+            {/* « Préparer une valise » MÈNE AU PARCOURS depuis le 27/09/2026
+                (lot 1, docs/valise.md), selon la règle d'accès PREPARER_VALISE
+                (ouvrirValise). Du 24 au 27/09, faute de parcours, elle menait
+                à la page Premium, qui l'annonçait « bientôt ».
 
                 Planifier n'est PAS passée derrière ce mur : elle fonctionne,
                 et personne ne peut encore s'abonner — la mettre derrière un
                 paywall qui n'encaisse pas reviendrait à la retirer à tout le
                 monde. */}
-            <ActionSuite onClick={() => actions.goPremium("valise")} label="Préparer une valise" glyphe={GLYPHE_VALISE} />
+            <ActionSuite onClick={ouvrirValise} label="Préparer une valise" glyphe={GLYPHE_VALISE} />
           </div>
         </div>
       </div>
