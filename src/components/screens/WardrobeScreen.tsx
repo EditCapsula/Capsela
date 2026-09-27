@@ -178,6 +178,66 @@ function AssociationsCompactes({
   );
 }
 
+/**
+ * « TON DRESSING PEUT DÉJÀ FAIRE PLUS » EN GRAND (27/09/2026, parcours
+ * « Tenue ») : la première association trouvée par le moteur, montrée avec
+ * les visuels réels des pièces — assez grande pour qu'on y voie un look —,
+ * son occasion (la seule chose que le moteur sait d'elle : pas de nom
+ * inventé), et « Voir le look → », qui l'ouvre sur l'écran Tenue comme
+ * avant. Les autres associations restent accessibles en vignettes.
+ */
+function ApercuAssociation({
+  tenues,
+  onOuvrir,
+}: {
+  tenues: { occasion: OccasionKey; pieces: Item[] }[];
+  onOuvrir: (t: { occasion: OccasionKey; pieces: Item[] }) => void;
+}) {
+  const [premiere, ...autres] = tenues;
+  const visibles = premiere.pieces.slice(0, 4);
+  return (
+    <div className="mt-4">
+      <button
+        onClick={() => onOuvrir(premiere)}
+        aria-label={`Voir le look ${OCC_LABELS[premiere.occasion]} proposé par Capsela`}
+        className="w-full text-left cursor-pointer active:opacity-90"
+      >
+        <div className="grid gap-[6px] p-[6px] rounded-[18px]" style={{ gridTemplateColumns: `repeat(${visibles.length}, minmax(0, 1fr))`, background: "var(--color-cream)" }}>
+          {visibles.map((p) => (
+            <div key={p.id} style={{ aspectRatio: "3 / 4" }}>
+              <VisuelPiece piece={p} alt={p.name} radius={12} />
+            </div>
+          ))}
+        </div>
+        <div className="flex items-baseline justify-between gap-3 mt-[10px]">
+          <span className="text-[13px] text-ink">{OCC_LABELS[premiere.occasion]}</span>
+          <span className="flex-shrink-0 text-[12px] text-terracotta">Voir le look →</span>
+        </div>
+      </button>
+      {autres.length > 0 && (
+        <div className="flex items-center gap-[8px] mt-[12px]">
+          <span className="text-[11px] text-muted">Autres idées</span>
+          {autres.map((t) => (
+            <button
+              key={t.occasion}
+              onClick={() => onOuvrir(t)}
+              aria-label={`Voir la tenue ${OCC_LABELS[t.occasion]} proposée par Capsela`}
+              className="flex-none grid grid-cols-2 gap-[3px] p-[4px] rounded-[12px] cursor-pointer active:opacity-80"
+              style={{ width: 44, background: "var(--color-cream)" }}
+            >
+              {Array.from({ length: 4 }, (_, i) => t.pieces[i]).map((p, i) => (
+                <span key={p ? p.id : `vide-${i}`} className="block" style={{ aspectRatio: "1" }}>
+                  {p ? <VisuelPiece piece={p} alt="" radius={5} /> : null}
+                </span>
+              ))}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WardrobeScreen() {
   const { state, actions, vestiairePool, defaultCapsule, weather, dressingLoaded, etatPremium } = useCapsela();
   const { profile } = useAuth();
@@ -503,19 +563,20 @@ export default function WardrobeScreen() {
              dressing. Jamais une vitrine : aucune pièce à acheter ici. */}
       {aDecouvrir && (
         <div className="mt-10 rounded-[24px] px-5 py-[18px]" style={{ background: "var(--color-warm-bg)" }}>
-          <div className="t-surtitre text-terracotta">✦ À découvrir</div>
+          <div className="t-surtitre text-terracotta">{aDecouvrir.cas === "associations" ? "✦ Une idée pour ton dressing" : "✦ À découvrir"}</div>
           {aDecouvrir.cas === "associations" && (
             <>
               <div className="t-titre-section text-ink mt-2">
                 Ton dressing peut <span className="italic text-terracotta">déjà faire plus</span>
               </div>
-              {/* « avec tes pièces » retiré (polish V3) : le titre dit déjà
-                  « ton dressing », et la phrase tient sur une ligne. */}
+              {/* « avec tes pièces » revient (27/09/2026) : c'est ce qui dit
+                  que l'association est faite de SES pièces — vrai, le pool
+                  est le dressing seul (cf. tenuesMoteur). */}
               <div className="text-[13px] leading-[1.55] mt-1" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
-                Capsela a imaginé {aDecouvrir.nombre}{" "}
-                {aDecouvrir.nombre === 1 ? "nouvelle association" : "nouvelles associations"}.
+                Capsela a trouvé {aDecouvrir.nombre === 1 ? "une nouvelle association" : `${aDecouvrir.nombre} nouvelles associations`} avec
+                tes pièces.
               </div>
-              <AssociationsCompactes tenues={tenuesMoteur} onOuvrir={ouvrirTenue} />
+              <ApercuAssociation tenues={tenuesMoteur} onOuvrir={ouvrirTenue} />
             </>
           )}
           {aDecouvrir.cas === "proche_limite" && (

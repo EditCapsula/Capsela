@@ -612,63 +612,90 @@ export function composeWardrobePool(
  * pas patrimoniale.
  */
 export interface OpinionMessageParts {
-  /** Première ligne : « Ma tenue du jour », suivie du contexte s'il existe. */
-  titre: string;
+  /** Signature d'ouverture : « L’édit Capsela ». */
+  marque: string;
+  /** « Angela te demande ton avis sur sa tenue. » — sans prénom : « On te demande ton avis sur cette tenue. » */
+  demande: string;
+  /** « Capsela lui propose cette tenue pour l’occasion « Quotidien / Décontracté » : » — sans occasion, sans elle. */
+  contexte: string;
   /** Un nom de pièce par entrée, SANS la puce — elle appartient au rendu. */
   pieces: string[];
-  /** La question ferme le message, toujours. */
+  /** « Météo : 19 °C · Nuageux » — null quand aucune température fiable n'existe. */
+  meteo: string | null;
+  /** La question, toujours. */
   question: string;
+  /** Où répondre : dans la conversation même, jamais dans Capsela. */
+  relance: string;
+  /** Signature de fin : « Tenue imaginée avec L’édit Capsela. » */
+  signature: string;
 }
+
+/** Le nom de marque tel qu'il apparaît dans le message. */
+export const MARQUE_CAPSELA = "L\u2019édit Capsela";
 
 /**
  * Les PARTIES du message, avant mise en forme.
  *
- * Ajoutées le 23/09/2026 avec la maquette « Demander un avis » : l'écran y
- * affiche le message en lecture sous forme composée — titre en gras, pièces
- * à puces terracotta, question en serif italique — et non plus dans une
- * zone de texte brute.
+ * POURQUOI LES PARTIES ET PAS UN DÉCOUPAGE DU TEXTE (23/09/2026). Le risque de
+ * cet écran n'est pas qu'il soit laid, c'est qu'il affiche autre chose que ce
+ * qu'il envoie. Un composant qui re-fendrait la chaîne sur "\n" serait une
+ * SECONDE implémentation du format, libre de dériver. Ici la chaîne est
+ * construite À PARTIR des parties : les deux ne peuvent pas diverger.
  *
- * POURQUOI LES PARTIES ET PAS UN DÉCOUPAGE DU TEXTE. Le risque de cet écran
- * n'est pas qu'il soit laid, c'est qu'il affiche autre chose que ce qu'il
- * envoie. Un composant qui re-fendrait la chaîne sur "\n" et retirerait les
- * puces à la main serait une SECONDE implémentation du format, libre de
- * dériver. Ici la chaîne est construite À PARTIR des parties : les deux ne
- * peuvent pas diverger, puisqu'il n'y a qu'une source.
+ * UN MESSAGE AUTONOME (27/09/2026, brief « Avis d’un proche »). Le proche le
+ * lit hors de Capsela : il doit comprendre qui demande, que Capsela a proposé
+ * la tenue, pour quelle occasion, et qu'il suffit de répondre dans la
+ * conversation. Aucun lien ni bouton vers Capsela — la réponse ne revient pas
+ * dans l'application.
+ *
+ * ARBITRAGES du 27/09/2026 par rapport à l'exemple du brief :
+ *   · PAS D'EMOJI : la prévisualisation est affichée telle quelle dans
+ *     l'écran, et la règle du projet exclut les emojis de l'interface ; le
+ *     message et son aperçu devant être identiques, aucun des deux n'en porte.
+ *   · « pour l’occasion « … » » plutôt que « pour son « … » » : juste quelle
+ *     que soit l'occasion (« son Sortie / Soirée » ne l'est pas).
+ *   · « Elle hésite encore » devient une relance sans genre — l'application
+ *     s'adresse aussi aux hommes, et aucun accord n'est déduit du profil.
+ *   · « Météo : » introduit la ligne météo, que l'emoji annonçait.
  */
 export function buildOpinionMessageParts(args: {
   pieces: Item[];
   occasion: OccasionKey;
   temp: number | null | undefined;
   conditionMeteo: string | null | undefined;
-  /** Première ligne ; « Ma tenue du jour » par défaut, « Ma tenue pour samedi 4 octobre » pour une tenue planifiée. */
-  intitule?: string;
+  /** Prénom du profil ; vide ou absent : formule sans prénom. Seul le premier mot est gardé. */
+  prenom?: string | null;
+  /** Tenue planifiée : « pour samedi 4 octobre ». Absent : la tenue du jour. */
+  moment?: string | null;
 }): OpinionMessageParts {
-  const { pieces, occasion, temp, conditionMeteo, intitule = "Ma tenue du jour" } = args;
-
-  const contexte: string[] = [];
-  if (occasion !== "all" && OCC_LABELS[occasion]) contexte.push(OCC_LABELS[occasion]);
-  if (temp != null && Number.isFinite(temp)) {
-    contexte.push(conditionMeteo ? `${Math.round(temp)}° · ${conditionMeteo}` : `${Math.round(temp)}°`);
-  }
+  const { pieces, occasion, temp, conditionMeteo } = args;
+  const prenom = args.prenom?.trim().split(/\s+/)[0] || null;
+  const moment = args.moment?.trim() ? ` ${args.moment.trim()}` : "";
+  const occasionLibelle = occasion !== "all" ? OCC_LABELS[occasion] : null;
+  const temperature = temp != null && Number.isFinite(temp) ? `${Math.round(temp)}\u00a0°C` : null;
+  const condition = conditionMeteo?.trim() || null;
 
   return {
-    titre: contexte.length ? `${intitule} — ${contexte.join(" · ")}` : intitule,
+    marque: MARQUE_CAPSELA,
+    demande: prenom ? `${prenom} te demande ton avis sur sa tenue${moment}.` : `On te demande ton avis sur cette tenue${moment}.`,
+    contexte: `Capsela ${prenom ? "lui " : ""}propose cette tenue${occasionLibelle ? ` pour l\u2019occasion «\u00a0${occasionLibelle}\u00a0»` : ""}\u00a0:`,
     pieces: pieces.map((p) => p.name),
-    question: "Qu'est-ce que tu en penses ?",
+    meteo: temperature ? `Météo : ${condition ? `${temperature} · ${condition}` : temperature}` : null,
+    question: "Tu en penses quoi ?",
+    relance: prenom ? "Un mot suffit : réponds-lui directement ici." : "Un mot suffit : réponds directement ici.",
+    signature: `Tenue imaginée avec ${MARQUE_CAPSELA}.`,
   };
 }
 
 /** Le message tel qu'il PART — assemblé depuis les parties, jamais à côté d'elles. */
 export function formatOpinionMessage(parts: OpinionMessageParts): string {
-  return [parts.titre, "", ...parts.pieces.map((n) => `• ${n}`), "", parts.question].join("\n");
+  const lignes = [parts.marque, "", parts.demande, "", parts.contexte, ...parts.pieces.map((n) => `• ${n}`)];
+  if (parts.meteo) lignes.push("", parts.meteo);
+  lignes.push("", parts.question, parts.relance, "", parts.signature);
+  return lignes.join("\n");
 }
 
 /** Le message complet, en une fois — forme d'appel historique, conservée. */
-export function buildOpinionMessage(args: {
-  pieces: Item[];
-  occasion: OccasionKey;
-  temp: number | null | undefined;
-  conditionMeteo: string | null | undefined;
-}): string {
+export function buildOpinionMessage(args: Parameters<typeof buildOpinionMessageParts>[0]): string {
   return formatOpinionMessage(buildOpinionMessageParts(args));
 }

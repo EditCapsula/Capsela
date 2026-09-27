@@ -268,6 +268,16 @@ export interface AppState {
   screen: Screen;
   /** Écran vers lequel revenir en quittant le profil (ouvert depuis l'avatar). */
   profileReturn: Screen;
+  /**
+   * Le jour consulté (navigation par date, 27/09/2026 — docs/navigation-par-date.md) :
+   * 0 aujourd'hui, 1 demain… jusqu'à JOUR_MAX (jourConsulte.ts). La tenue
+   * affichée (outfit et ses drapeaux) est celle de ce jour.
+   */
+  jourDecalage: number;
+  /** Écran vers lequel revenir en quittant Préférences Capsela (Profil, ou l’Accueil et Tenue depuis la ligne météo). */
+  preferencesReturn: Screen;
+  /** Rubrique à amener dans la vue à l'ouverture des Préférences — consommée une fois. */
+  preferencesSection: "localisation" | null;
   /** Écran vers lequel revenir en quittant Informations légales (toujours "profile" en pratique). */
   legalReturn: Screen;
   /** Écran d'où l'on est entré dans Premium — on y revient en fermant. */
@@ -419,9 +429,10 @@ export interface AppState {
     occasion: OccasionKey;
     temp: number | null;
     label: string | null;
-    /** Première ligne du message, ex. « Ma tenue pour samedi 4 octobre ». */
-    intitule: string;
-    plan: TenuePlanifiee;
+    /** Le jour J dans le message, ex. « pour samedi 4 octobre » (« … ton avis sur sa tenue pour samedi 4 octobre »). */
+    moment: string;
+    /** Le plan à rouvrir au retour ; absent pour la tenue d'un jour consulté depuis Tenue (retour à Tenue). */
+    plan?: TenuePlanifiee;
   } | null;
   /** Plan à rouvrir en revenant sur Planifier après le partage ; consommé à l'ouverture. */
   planARouvrir: TenuePlanifiee | null;

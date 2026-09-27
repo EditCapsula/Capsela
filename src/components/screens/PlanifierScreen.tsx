@@ -1510,7 +1510,7 @@ export default function PlanifierScreen() {
                       occasion: t.occasion,
                       temp: t.temp,
                       label: t.weatherLabel,
-                      intitule: `Ma tenue pour ${DOW_LONG[d.getDay()].toLowerCase()} ${d.getDate()} ${MOIS[d.getMonth()]}`,
+                      moment: `pour ${DOW_LONG[d.getDay()].toLowerCase()} ${d.getDate()} ${MOIS[d.getMonth()]}`,
                       plan: t,
                     })
                   }

@@ -26,6 +26,8 @@ Les tests ne couvrent que des fonctions pures de `src/lib` (environnement node, 
 
 Pour résoudre des pièces déjà enregistrées (historique, looks, tenues planifiées), utiliser `[...state.items, ...vestiairePool]` et non `wardrobePool`, qui change avec le dressing et le style.
 
+**Le jour consulté** (navigation par date, `docs/navigation-par-date.md`) : `state.jourDecalage` (0 aujourd'hui … `JOUR_MAX`), changé par `choisirJour`. La tenue affichée (`outfit` et ses drapeaux) est celle de ce jour ; `meteoDuJour` est la météo qu'elle reçoit (prévision du jour, sinon la règle de repli de Planifier), `weather` reste celle d'aujourd'hui pour le reste. Accueil et Tenue partagent `JourEtMeteo` (`src/components/JourMeteo.tsx`) : le jour et sa météo sur une même ligne ; l'occasion par défaut d'une date suit « Mon rythme » (`occasionParDefaut`, `jourConsulte.ts`).
+
 **Un seul moteur de tenues** : `generateOutfitWithFallback` (`logic.ts`), appelé par la tenue du jour (`regen` dans le store), Planifier et les idées du Dressing vide. Ne pas en écrire un second. Les dérivés d'affichage (Journal, états de port, complétude du profil) sont des fonctions pures dans `selectors.ts` et `profile.ts`, testées.
 
 **Données et Supabase.** Les accès passent par des modules dédiés (`dressing.ts`, `planifier.ts`, `premium.ts`, `generations.ts`, `auth.tsx`…). Sans les variables `NEXT_PUBLIC_SUPABASE_*`, l'app tourne en mode démo (`isSupabaseConfigured`). Les lectures échouent en douceur (`[]`, `null`, `"inconnu"`) et les paywalls échouent en ouvrant : un état inconnu n'applique aucune limite.

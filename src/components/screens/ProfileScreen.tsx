@@ -3,14 +3,16 @@
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import {
-  FeuilleVille,
   GenderModal,
   I_CINTRE,
+  I_COURONNE,
   I_ETINCELLE,
   I_GENRE,
   I_GRAPHIQUE,
   I_METRE,
   I_PALETTE,
+  I_REGLAGES,
+  I_REPERE,
   I_SILHOUETTE,
   Icone,
   LigneInfo,
@@ -34,7 +36,6 @@ import {
   type Gender,
   type GenderDependentField,
 } from "@/lib/profile";
-import { journalEntries } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 
 /*
@@ -47,8 +48,8 @@ import { useCapsela } from "@/lib/store";
  *   Ton style        Genre (feuille), Style, Morphologie, Palette (étapes du
  *                    questionnaire, retour ici)
  *   Mes tailles      Haut, Bas, Chaussures (étape « taille », retour ici)
- *   Ma capsule       pièces → Dressing ; looks portés → Journal
- *   Ta météo         la ville (feuille), qui sert à la météo
+ *   Ta météo         la ville et ce qu'elle fait (→ Préférences)
+ *   (Mon abonnement, sous l'identité ; « Ma capsule » retirée le 27/09/2026)
  *   Préférences      réglages de fonctionnement de l'app
  *
  * L'ADMINISTRATIF VIT DANS MON COMPTE (« Gérer mon compte ») : e-mail, mot de
@@ -74,10 +75,9 @@ function enumerer(mots: string[]): string {
 
 export default function ProfileScreen() {
   const { profile, email, demoMode, saveProfile } = useAuth();
-  const { state, actions, vestiairePool } = useCapsela();
+  const { state, actions, etatPremium } = useCapsela();
   const [genreOuvert, setGenreOuvert] = useState(false);
   const [aRevalider, setARevalider] = useState<GenderDependentField | null>(null);
-  const [villeOuverte, setVilleOuverte] = useState(false);
 
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
 
@@ -108,11 +108,12 @@ export default function ProfileScreen() {
     else actions.goProfileSetup("taille", true);
   };
 
-  // TON CAPSELA — les mêmes comptes que les écrans qui les détaillent : le
-  // dressing réel pour les pièces, les tenues portées du Journal (entrées
-  // dont les pièces se résolvent) pour les looks.
-  const nbPieces = state.items.length;
-  const nbLooks = journalEntries(state.history, [...state.items, ...vestiairePool]).length;
+  // L'offre, telle que premium.ts la lit (27/09/2026) — « inconnu » n'est
+  // jamais affiché comme « Gratuit » : on ne dit pas ce qu'on ne sait pas.
+  const offre = etatPremium === "premium" ? "Premium" : etatPremium === "gratuit" ? "Gratuit" : null;
+  // Ce que la ville fait réellement (store : choisirMeteo) — elle ne donne la
+  // météo que si la position n'est pas utilisée ou pas disponible.
+  const meteoDeLaPosition = profile.prefs.geoConsent && profile.prefs.weatherFromGeo;
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
@@ -133,8 +134,8 @@ export default function ProfileScreen() {
           <div className={"t-titre-carte break-words " + (profile.displayName ? "text-ink" : "text-placeholder")}>
             {profile.displayName || "Ton nom"}
           </div>
-          <div className="text-[12px] text-muted mt-[2px]">{demoMode ? "Mode démo — les données restent sur cet appareil" : "Compte personnel"}</div>
-          <div className="text-[12px] text-muted-3 mt-[1px] [overflow-wrap:anywhere]">{email ?? "E-mail non renseigné"}</div>
+          <div className="text-[12px] text-muted-3 mt-[2px] [overflow-wrap:anywhere]">{email ?? "E-mail non renseigné"}</div>
+          {demoMode && <div className="text-[12px] text-muted mt-[1px]">Mode démo — les données restent sur cet appareil</div>}
           <button
             onClick={actions.goAccount}
             className="mt-[8px] rounded-full border border-terracotta text-terracotta text-[12px] px-[14px] cursor-pointer"
@@ -143,6 +144,19 @@ export default function ProfileScreen() {
             Gérer mon compte ›
           </button>
         </div>
+      </div>
+
+      {/* MON ABONNEMENT (27/09/2026) — l'emplacement de la gestion de l'offre,
+          sans prix ni relance : une ligne sobre sous l'identité, qui ouvre
+          l'écran Premium existant. */}
+      <div className="bg-card border border-border rounded-[20px] overflow-hidden mt-3">
+        <LigneProfil
+          icone={I_COURONNE}
+          titre="Mon abonnement"
+          valeur={<span className="text-muted-3">{offre ? `Offre actuelle · ${offre}` : "Offre en cours de vérification"}</span>}
+          renseigne
+          onClick={() => actions.goPremium()}
+        />
       </div>
 
       {toRevalidate && (
@@ -261,55 +275,43 @@ export default function ProfileScreen() {
         </div>
       ) : null}
 
-      {/* TON CAPSELA — consultatif. Les pièces mènent au Dressing ; les looks
-          au Journal seulement s'il y a un historique à y lire. */}
-      <Surtitre icone={I_CINTRE}>Ma capsule</Surtitre>
-      <div className="grid grid-cols-2 gap-[10px]">
-        <button onClick={actions.goWardrobe} className="bg-card border border-border rounded-[20px] p-4 text-center cursor-pointer">
-          <div className="t-chiffre text-ink">{nbPieces}</div>
-          <div className="text-[12px] text-muted mt-[6px]">{nbPieces <= 1 ? "pièce dans ton dressing" : "pièces dans ton dressing"}</div>
-        </button>
-        {nbLooks > 0 ? (
-          <button onClick={actions.goHistory} className="bg-card border border-border rounded-[20px] p-4 text-center cursor-pointer">
-            <div className="t-chiffre text-ink">{nbLooks}</div>
-            <div className="text-[12px] text-muted mt-[6px]">{nbLooks <= 1 ? "look porté" : "looks portés"}</div>
-          </button>
-        ) : (
-          <div className="bg-card border border-border rounded-[20px] p-4 text-center">
-            <div className="t-chiffre text-ink">0</div>
-            <div className="text-[12px] text-muted mt-[6px]">look porté</div>
-          </div>
-        )}
-      </div>
-      <button
-        onClick={actions.goWardrobe}
-        className="mt-[10px] w-full bg-card border border-border rounded-[20px] min-h-[46px] text-[12px] text-terracotta cursor-pointer"
-      >
-        Compléter mon dressing ›
-      </button>
+      {/* « MA CAPSULE » RETIRÉE (27/09/2026) : pièces et looks portés ont leurs
+          espaces (Dressing, Journal) ; le profil reste ce que Capsela sait de
+          toi. Aucune donnée n'est supprimée, seul l'affichage quitte l'écran. */}
 
-      {/* TA MÉTÉO — la ville sert à la météo quand la position n'est pas
-          disponible : elle agit sur les recommandations, elle est donc ici. */}
+      {/* TA MÉTÉO — informative : la ville, et ce qu'elle fait vraiment ; les
+          réglages (géolocalisation, météo de la position, ville) vivent dans
+          Préférences Capsela, que la ligne ouvre. */}
       <Surtitre icone={I_GRAPHIQUE}>Ta météo</Surtitre>
       <div className="bg-card border border-border rounded-[20px] overflow-hidden">
-        <LigneInfo label="Ville" valeur={profile.city || "Non renseignée"} renseigne={Boolean(profile.city)} onClick={() => setVilleOuverte(true)} />
+        <LigneProfil
+          icone={I_REPERE}
+          titre={profile.city || "Ville non renseignée"}
+          valeur={
+            <span className="text-muted-3">
+              {meteoDeLaPosition
+                ? "Relais de ta position quand elle n'est pas disponible."
+                : "Météo utilisée pour tes recommandations."}
+            </span>
+          }
+          renseigne
+          onClick={() => actions.goPreferences("localisation")}
+        />
       </div>
 
       {/* PRÉFÉRENCES CAPSELA — le fonctionnement de l'app, pas l'identité :
           elles ont leur propre écran. */}
       <Surtitre icone={I_GRAPHIQUE}>Préférences Capsela</Surtitre>
-      <button
-        onClick={actions.goPreferences}
-        className="w-full flex items-center gap-[13px] bg-card border border-border rounded-[20px] px-4 py-[14px] text-left cursor-pointer"
-      >
-        <span className="flex-1 min-w-0">
-          <span className="block text-[13px] text-ink">Réglages de l&apos;application</span>
-          <span className="block text-[12px] text-muted leading-[1.4] mt-[2px]">Notifications, météo, localisation et habitudes</span>
-        </span>
-        <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
-      </button>
+      <div className="bg-card border border-border rounded-[20px] overflow-hidden">
+        <LigneProfil
+          icone={I_REGLAGES}
+          titre="Réglages de l'application"
+          valeur={<span className="text-muted-3">Notifications, météo, localisation et habitudes.</span>}
+          renseigne
+          onClick={() => actions.goPreferences()}
+        />
+      </div>
 
-      <FeuilleVille open={villeOuverte} onClose={() => setVilleOuverte(false)} />
       {genreOuvert && <GenderModal current={profile.gender} onSelect={changerGenre} onClose={() => setGenreOuvert(false)} />}
       {aRevalider && (
         <RevalidationSheet
