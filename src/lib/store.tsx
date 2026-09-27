@@ -4,7 +4,9 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
-import { computeDefaultCapsule, currentSeasonKey, saisonCapsulePourMeteo, weatherForDay } from "./capsule";
+import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsulePourMeteo, weatherForDay } from "./capsule";
+import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
+import { previsionPour, type Prevision } from "./prevision";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
@@ -28,7 +30,7 @@ import {
   uploadDressingPhoto,
 } from "./dressing";
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
-import { choisirMeteo, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
+import { choisirMeteo, fetchPrevisionByCity, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
@@ -119,11 +121,11 @@ export interface SessionAvisStyliste {
 const SOUS_ECRANS_PROFIL = new Set<Screen>(["profile", "profileSetup", "preferences", "account", "legal"]);
 
 /** Occasion par défaut suggérée en arrivant sur "Tenue du jour" sans choix explicite (recette 13/08/2026) — toujours modifiable manuellement ensuite. */
-const DAYS_S = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+// La règle vit dans jourConsulte.ts depuis le 27/09/2026 (occasionParDefaut),
+// pour s'appliquer aussi aux jours consultés à l'avance ; celle-ci en est la
+// forme « aujourd'hui », gardée pour ses appelants.
 export function defaultOccasionToday(prefs: ProfilePrefs): OccasionKey {
-  if (prefs.onVacation) return "cocooning";
-  const todayKey = DAYS_S[new Date().getDay()];
-  return prefs.workDays.includes(todayKey) ? "travail_formel" : "quotidien";
+  return occasionParDefaut(prefs, new Date());
 }
 
 /** Dernière position géolocalisée avec succès (persistée) — fallback prioritaire sur la ville de profil si la géolocalisation échoue ensuite (recette 17/08/2026). */
@@ -139,6 +141,9 @@ function buildInitialState(): AppState {
     addReturn: null,
     screen: "welcome",
     profileReturn: "home",
+    jourDecalage: 0,
+    preferencesReturn: "profile",
+    preferencesSection: null,
     legalReturn: "profile",
     premiumReturn: "home",
     premiumOrigine: null,
@@ -236,7 +241,13 @@ export interface Actions {
   goLooks: () => void;
   goProfile: () => void;
   /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
-  goPreferences: () => void;
+  /** `section` : rubrique à amener dans la vue (la pastille météo de l'Accueil ouvre « Localisation & météo »). */
+  goPreferences: (section?: "localisation") => void;
+  /** Quitte les Préférences vers l'écran d'où elles ont été ouvertes. */
+  closePreferences: () => void;
+  oublierSectionPreferences: () => void;
+  /** Change le jour consulté (0 aujourd'hui … JOUR_MAX) — Accueil et Tenue lisent le même. */
+  choisirJour: (decalage: number) => void;
   /** Compte : e-mail, confidentialité et données, légal, suppression, déconnexion. */
   goAccount: () => void;
   goLegal: () => void;
@@ -458,6 +469,10 @@ interface CapselaContextValue {
   geoIsLive: boolean;
   /** D'où vient geoCity : position en direct, météo réelle de la ville du profil, dernière position connue, ou valeurs par défaut (cf. choisirMeteo). */
   sourceMeteo: SourceMeteo;
+  /** Météo du jour consulté — celle que la tenue reçoit ; `weather` aujourd'hui (cf. docs/navigation-par-date.md). */
+  meteoDuJour: Weather;
+  /** Le jour consulté : sa date, sa prévision (null si aucune), et l'attente de celle-ci. */
+  jourConsulte: { decalage: number; date: Date; meteoPrevue: { temp: number; label: string } | null; previsionEnChargement: boolean };
   /** Capsule par défaut personnalisée (suggestions du catalogue). */
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
@@ -809,6 +824,47 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     [geoCity]
   );
 
+  /*
+   * LA MÉTÉO DU JOUR CONSULTÉ (navigation par date, 27/09/2026 —
+   * docs/navigation-par-date.md). Aujourd'hui : `weather`, inchangée. Un jour
+   * à venir : la prévision de la ville affichée (fetchPrevisionByCity +
+   * previsionPour, les mêmes que Planifier), sur toute la journée, avec la
+   * saison de LA DATE. Sans prévision (lieu sans réponse, fonction Edge
+   * antérieure à `mode=forecast`), la règle déjà en place dans Planifier :
+   * la température mesurée aujourd'hui, la saison de la date — et l'écran le
+   * dit. `weather` reste celle d'aujourd'hui pour tout le reste (capsule par
+   * défaut, Dressing, Capsule) : seule la tenue suit le jour consulté.
+   */
+  const dateConsultee = useMemo(() => dateDuJour(state.jourDecalage), [state.jourDecalage]);
+  const villeMeteo = geoCity.city;
+  const [previsionJour, setPrevisionJour] = useState<{ ville: string; prevision: Prevision | null } | null>(null);
+  useEffect(() => {
+    if (state.jourDecalage === 0 || geoLoading) return;
+    if (previsionJour && previsionJour.ville === villeMeteo) return;
+    let annule = false;
+    fetchPrevisionByCity(villeMeteo).then((prevision) => {
+      if (!annule) setPrevisionJour({ ville: villeMeteo, prevision });
+    });
+    return () => {
+      annule = true;
+    };
+  }, [state.jourDecalage, villeMeteo, geoLoading, previsionJour]);
+  const previsionEnChargement = state.jourDecalage > 0 && (geoLoading || !previsionJour || previsionJour.ville !== villeMeteo);
+  const meteoPrevue = useMemo(
+    () =>
+      state.jourDecalage > 0 && previsionJour?.ville === villeMeteo && previsionJour.prevision
+        ? previsionPour(previsionJour.prevision, jourLocal(dateConsultee), "Toute la journée")
+        : null,
+    [state.jourDecalage, previsionJour, villeMeteo, dateConsultee]
+  );
+  const meteoDuJour: Weather = useMemo(
+    () =>
+      state.jourDecalage === 0
+        ? weather
+        : weatherForDay(meteoPrevue ? meteoPrevue.temp : geoCity.temp, meteoPrevue ? meteoPrevue.label : geoCity.label, saisonCalendairePour(dateConsultee)),
+    [state.jourDecalage, weather, meteoPrevue, geoCity, dateConsultee]
+  );
+
   // Vestiaire universel (Supabase) : remplace le catalogue statique dès qu'il
   // est disponible. En mode démo, si la requête échoue, ou si la table/les
   // colonnes ne sont pas encore en place, on retombe silencieusement sur le
@@ -898,7 +954,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   );
 
   const poolRef = useRef(wardrobePool);
-  const weatherRef = useRef(weather);
+  // La météo de GÉNÉRATION : celle du jour consulté (navigation par date).
+  const weatherRef = useRef(meteoDuJour);
   // Repli de résolution des actions (findPiece) : poolRef ne sert qu'à la
   // génération et ne contient, par catégorie, que les pièces réelles ou les
   // suggestions de la capsule du profil courant. vestiaireRef couvre en plus
@@ -911,10 +968,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const capsuleRef = useRef<Item[]>(defaultCapsule);
   useEffect(() => {
     poolRef.current = wardrobePool;
-    weatherRef.current = weather;
+    weatherRef.current = meteoDuJour;
     vestiaireRef.current = vestiairePool;
     capsuleRef.current = defaultCapsule;
-  }, [wardrobePool, weather, vestiairePool, defaultCapsule]);
+  }, [wardrobePool, meteoDuJour, vestiairePool, defaultCapsule]);
 
   // pool/meteo surchargeables : les références ne sont mises à jour que par
   // un effet, donc encore périmées pendant le rendu où le profil vient de
@@ -1027,8 +1084,40 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // chips d'occasion. Factorisé pour rester identique quel que soit le
   // déclencheur de la toute première génération (goTenues ci-dessous, ou
   // l'effet "première tenue" indépendant de l'écran affiché).
+  // L'occasion par défaut est celle du JOUR CONSULTÉ (27/09/2026) : un lundi
+  // travaillé consulté dimanche reçoit l'occasion travail.
   const withDefaultOccasion = (s: AppState): AppState =>
-    s.occasionManual ? s : { ...s, occasion: defaultOccasionToday(profile.prefs) };
+    s.occasionManual ? s : { ...s, occasion: occasionParDefaut(profile.prefs, dateDuJour(s.jourDecalage)) };
+
+  /*
+   * UNE TENUE PAR JOUR CONSULTÉ (27/09/2026). Quitter un jour garde sa tenue
+   * (et ses drapeaux) sous sa date ; y revenir la rend telle quelle — jamais
+   * un nouveau tirage, et la tenue d'aujourd'hui (validée, notée) n'est pas
+   * écrasée par celle de demain. Un jour jamais vu attend sa météo, puis est
+   * composé par le même regen, avec l'occasion de son jour.
+   */
+  const tenuesParJourRef = useRef(new Map<string, Partial<AppState>>());
+  const instantaneTenue = (s: AppState): Partial<AppState> => ({
+    outfit: s.outfit,
+    outfitMissingCats: s.outfitMissingCats,
+    outfitFormalityDowngraded: s.outfitFormalityDowngraded,
+    outfitOccasionRelachee: s.outfitOccasionRelachee,
+    outfitNoCompleteOutfit: s.outfitNoCompleteOutfit,
+    outfitFailureReason: s.outfitFailureReason,
+    outfitValidated: s.outfitValidated,
+    dismissedSuggestions: s.dismissedSuggestions,
+    occasion: s.occasion,
+    occasionManual: s.occasionManual,
+    workMode: s.workMode,
+    dateContext: s.dateContext,
+  });
+  useEffect(() => {
+    if (state.jourDecalage === 0 || previsionEnChargement) return;
+    if (!ready || !dressingLoaded || geoLoading || !vestiaireResolu) return;
+    if (stateRef.current.outfit.length) return;
+    setState((s) => (s.outfit.length || s.jourDecalage === 0 ? s : regen(withDefaultOccasion(s), wardrobePool, meteoDuJour, defaultCapsule)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.jourDecalage, state.outfit.length, previsionEnChargement, meteoDuJour, ready, dressingLoaded, geoLoading, vestiaireResolu]);
 
   // Première tenue : dès que le profil est chargé (la capsule par défaut en
   // dépend) ET que la géolocalisation a fini de se résoudre (succès, échec
@@ -1112,8 +1201,34 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goTenues: () =>
       setState((s) => {
         const next: AppState = { ...s, screen: "tenues" };
-        return next.outfit.length ? next : regen(withDefaultOccasion(next));
+        // Un jour à venir sans tenue attend sa météo : l'effet du jour consulté le compose.
+        return next.outfit.length || next.jourDecalage > 0 ? next : regen(withDefaultOccasion(next));
       }),
+    choisirJour: (n) => {
+      const cible = borneJour(n);
+      const s = stateRef.current;
+      if (cible === s.jourDecalage) return;
+      tenuesParJourRef.current.set(jourLocal(dateDuJour(s.jourDecalage)), instantaneTenue(s));
+      const gardee = tenuesParJourRef.current.get(jourLocal(dateDuJour(cible)));
+      setState((st) =>
+        gardee
+          ? { ...st, ...gardee, jourDecalage: cible }
+          : {
+              ...st,
+              jourDecalage: cible,
+              outfit: [],
+              outfitMissingCats: [],
+              outfitFormalityDowngraded: false,
+              outfitOccasionRelachee: false,
+              outfitNoCompleteOutfit: false,
+              outfitFailureReason: null,
+              outfitValidated: false,
+              dismissedSuggestions: [],
+              occasion: occasionParDefaut(profile.prefs, dateDuJour(cible)),
+              occasionManual: false,
+            }
+      );
+    },
     goHistory: () => go("history"),
     goPlanifier: () => go("planifier"),
     goNeverWorn: () => go("neverworn"),
@@ -1130,7 +1245,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         profileReturn: SOUS_ECRANS_PROFIL.has(s.screen) ? s.profileReturn : s.screen,
         screen: "profile",
       })),
-    goPreferences: () => go("preferences"),
+    goPreferences: (section) =>
+      setState((s) => ({
+        ...s,
+        preferencesReturn: s.screen === "preferences" ? s.preferencesReturn : s.screen,
+        preferencesSection: section ?? null,
+        screen: "preferences",
+      })),
+    closePreferences: () => setState((s) => ({ ...s, screen: s.preferencesReturn })),
+    oublierSectionPreferences: () => setState((s) => (s.preferencesSection ? { ...s, preferencesSection: null } : s)),
     goAccount: () => go("account"),
     goLegal: () => setState((s) => ({ ...s, legalReturn: s.screen === "legal" ? s.legalReturn : s.screen, screen: "legal" })),
     goPremium: (origine) =>
@@ -1869,6 +1992,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // Garde anti double-clic (recette 19/08/2026) : une fois déjà
       // validée, un second appel n'enregistre jamais une deuxième entrée.
       if (s.outfitValidated) return;
+      // Un jour à venir ne se porte pas (navigation par date) : l'écran n'en
+      // propose pas l'action, et le Journal n'enregistre que le jour même.
+      if (s.jourDecalage > 0) return;
       // R-B9 — défense en profondeur : une veste/un manteau seul sans base ne peut pas être validé comme porté.
       const outfitPieces = s.outfit.map((id) => findPiece(poolRef.current, id, vestiaireRef.current)).filter((it): it is Item => Boolean(it));
       if (violatesOuterwearRule(outfitPieces)) return;
@@ -1984,9 +2110,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // Retour à l'écran d'où l'on vient : la tenue du jour, ou le plan partagé.
     closeOpinionShare: () =>
       setState((s) =>
-        s.avisSource
+        s.avisSource?.plan
           ? { ...s, planARouvrir: s.avisSource.plan, avisSource: null, screen: "planifier" }
-          : { ...s, screen: "tenues" }
+          : { ...s, avisSource: null, screen: "tenues" }
       ),
     oublierPlanARouvrir: () => setState((s) => (s.planARouvrir ? { ...s, planARouvrir: null } : s)),
     planifierComposition: (ids, demain) => setState((s) => ({ ...s, planComposition: { pieceIds: ids, demain }, screen: "planifier" })),
@@ -2058,7 +2184,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
      */
     setOutfitFeedback: (verdict) => {
       const s = stateRef.current;
-      if (!s.outfit.length) return;
+      // L'avis du jour porte sur la tenue d'aujourd'hui (outfit_feedback, clé jour).
+      if (!s.outfit.length || s.jourDecalage > 0) return;
       const pieceIds = clePieces(s.outfit);
       const jour = jourLocal();
       const avant = s.outfitFeedbackDuJour;
@@ -2217,6 +2344,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     geoLoading,
     geoIsLive,
     sourceMeteo,
+    meteoDuJour,
+    jourConsulte: {
+      decalage: state.jourDecalage,
+      date: dateConsultee,
+      meteoPrevue: meteoPrevue ? { temp: meteoPrevue.temp, label: meteoPrevue.label } : null,
+      previsionEnChargement,
+    },
     defaultCapsule,
     wardrobePool,
     vestiairePool,

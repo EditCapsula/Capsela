@@ -261,7 +261,7 @@ export default function OpinionShareScreen() {
     tempPartagee != null && Number.isFinite(tempPartagee)
       ? `${Math.round(tempPartagee)}°${meteoPartagee ? ` · ${meteoPartagee}` : ""}`
       : null;
-  const retourLibelle = source ? "Retour à ma tenue planifiée" : "Retour à ma tenue";
+  const retourLibelle = source?.plan ? "Retour à ma tenue planifiée" : "Retour à ma tenue";
 
   // Une image ne peut être composée que depuis des visuels réels : une tenue
   // dont aucune pièce n'a d'URL ne produirait qu'un aplat. L'option le dit

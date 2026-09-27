@@ -295,7 +295,7 @@ export default function ProfileScreen() {
             </span>
           }
           renseigne
-          onClick={actions.goPreferences}
+          onClick={() => actions.goPreferences("localisation")}
         />
       </div>
 
@@ -308,7 +308,7 @@ export default function ProfileScreen() {
           titre="Réglages de l'application"
           valeur={<span className="text-muted-3">Notifications, météo, localisation et habitudes.</span>}
           renseigne
-          onClick={actions.goPreferences}
+          onClick={() => actions.goPreferences()}
         />
       </div>
 

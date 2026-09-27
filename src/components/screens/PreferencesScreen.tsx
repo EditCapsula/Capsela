@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { FeuilleVille, I_CALENDRIER, I_CLOCHE, I_GRAPHIQUE, I_REPERE, Surtitre } from "@/components/ProfilUI";
@@ -32,14 +32,14 @@ export function Toggle({ on, onClick, label }: { on: boolean; onClick: () => voi
   );
 }
 
-function Section({ titre, icone, children }: { titre: string; icone: React.ReactNode; children: React.ReactNode }) {
+function Section({ titre, icone, id, children }: { titre: string; icone: React.ReactNode; id?: string; children: React.ReactNode }) {
   return (
-    <>
+    <div id={id} className="scroll-mt-4">
       {/* Le surtitre à pictogramme de Mon profil (27/09/2026) : les deux
           écrans se lisent comme un seul espace. */}
       <Surtitre icone={icone}>{titre}</Surtitre>
       <div className="bg-card border border-border rounded-[20px] overflow-hidden">{children}</div>
-    </>
+    </div>
   );
 }
 
@@ -49,7 +49,15 @@ function Ligne({ children }: { children: React.ReactNode }) {
 
 export default function PreferencesScreen() {
   const { profile, saveProfile } = useAuth();
-  const { actions } = useCapsela();
+  const { state, actions } = useCapsela();
+  // Ouverture ciblée (27/09/2026) : la pastille météo de l'Accueil et « Ta
+  // météo » du Profil amènent directement « Localisation & météo » dans la vue.
+  useEffect(() => {
+    if (state.preferencesSection !== "localisation") return;
+    document.getElementById("prefs-localisation")?.scrollIntoView({ block: "start" });
+    actions.oublierSectionPreferences();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.preferencesSection]);
   const prefs = profile.prefs;
   const setPrefs = (p: Partial<ProfilePrefs>) => saveProfile({ ...profile, prefs: { ...prefs, ...p } });
   const [confirmerReinit, setConfirmerReinit] = useState(false);
@@ -63,7 +71,11 @@ export default function PreferencesScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader showAvatar={false} onBack={actions.goProfile} backLabel="Revenir au profil" />
+      <AppHeader
+        showAvatar={false}
+        onBack={actions.closePreferences}
+        backLabel={state.preferencesReturn === "profile" ? "Revenir au profil" : "Revenir à l'écran précédent"}
+      />
       <div className="t-surtitre text-muted mt-[18px]">Profil</div>
       <div className="t-titre-ecran text-ink mt-[6px]">
         Préférences <span className="italic text-terracotta">Capsela</span>
@@ -91,7 +103,7 @@ export default function PreferencesScreen() {
         </Ligne>
       </Section>
 
-      <Section titre="Localisation & météo" icone={I_REPERE}>
+      <Section titre="Localisation & météo" icone={I_REPERE} id="prefs-localisation">
         <Ligne>
           <div className="flex-1 min-w-0 pr-2">
             <div className="text-[13px] text-ink">Autoriser la géolocalisation</div>

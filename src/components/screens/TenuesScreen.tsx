@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
+import { PastilleMeteo, SelecteurJour } from "@/components/JourMeteo";
 import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
-import { CATLABEL, DATE_CONTEXTS, DAYS_FR, MONTHS_FR, OCCASIONS, WEATHER_ICONS, isBag } from "@/lib/data";
+import { CATLABEL, DATE_CONTEXTS, OCCASIONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCapsulePourMeteo } from "@/lib/capsule";
@@ -14,6 +15,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
 import { statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
+import { complementTenue, momentMessage, quandPhrase } from "@/lib/jourConsulte";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
@@ -89,7 +91,12 @@ function ExploreStyleCard({
 }
 
 export default function TenuesScreen() {
-  const { state, weather, geoCity, geoLoading, geoIsLive, sourceMeteo, wardrobePool, vestiairePool, actions } = useCapsela();
+  const { state, weather, meteoDuJour, jourConsulte, geoLoading, wardrobePool, vestiairePool, actions } = useCapsela();
+  // En attente tant que la météo du jour consulté n'est pas connue : position,
+  // ou prévision d'un jour à venir (navigation par date, 27/09/2026).
+  const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
+  const { decalage, date: dateConsultee } = jourConsulte;
+  const quand = quandPhrase(decalage, dateConsultee);
 
   // Limite de générations et Gate « Tu as fait le tour pour aujourd'hui » :
   // partagés avec « Pas pour moi » de l'accueil (recette du 26/09/2026), cf.
@@ -128,7 +135,7 @@ export default function TenuesScreen() {
     setCompatibleStyles(
       findCompatibleStyles(
         profile,
-        weather,
+        meteoDuJour,
         state.occasion || "all",
         state.workMode,
         state.dateContext,
@@ -191,8 +198,6 @@ export default function TenuesScreen() {
       setToast(null);
     });
   }
-  const now = new Date();
-  const dateText = DAYS_FR[now.getDay()] + " " + now.getDate() + " " + MONTHS_FR[now.getMonth()];
 
   // Pool de résolution de la tenue affichée (recette 24/08/2026, retour
   // d'exploration) — en mode exploration, state.outfit contient des ids
@@ -419,7 +424,7 @@ export default function TenuesScreen() {
     state.occasion || "all",
     state.workMode,
     state.dateContext,
-    geoLoading ? null : geoCity.temp
+    meteoEnAttente ? null : meteoDuJour.temp
   );
 
 
@@ -430,7 +435,7 @@ export default function TenuesScreen() {
     paletteHexes(profile),
     profile.morphology,
     dismissed,
-    weather,
+    meteoDuJour,
     state.workMode,
     state.dateContext,
     displayPool
@@ -485,7 +490,9 @@ export default function TenuesScreen() {
       <AppHeader />
 
       <div className="mt-[18px]">
-        <div className="t-surtitre text-muted">{dateText}</div>
+        {/* LA DATE EST PORTÉE PAR LE SÉLECTEUR (27/09/2026) : il remplace le
+            surtitre qui la répétait, et c'est lui qui change le jour. */}
+        <SelecteurJour />
         {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
             (23/09/2026) : répété ici, il salue une deuxième fois dans la même
             session et ne dit rien de l'écran. Le titre annonce désormais ce
@@ -496,45 +503,13 @@ export default function TenuesScreen() {
             DANS la card terracotta est supprimée du même coup — elle ferait
             doublon à deux cents pixels d'écart. */}
         <div className="t-titre-ecran text-ink mt-[6px]">
-          Ma <span className="italic text-terracotta">tenue du jour</span>
+          Ma <span className="italic text-terracotta">tenue {complementTenue(decalage, dateConsultee)}</span>
         </div>
       </div>
 
-      {geoLoading ? (
-        <div className="flex items-center gap-[9px] bg-card border border-border rounded-full py-[10px] px-[15px] mt-5">
-          <span className="w-[9px] h-[9px] rounded-full flex-shrink-0 animate-pulse" style={{ background: "#B3AA9B" }} />
-          <div className="flex-1 min-w-0 text-[13px] text-muted">Localisation en cours…</div>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-[9px] bg-card border border-border rounded-full py-[10px] px-[15px] mt-5">
-            <span
-              className="w-[9px] h-[9px] rounded-full bg-terracotta flex-shrink-0"
-              style={{ boxShadow: "0 0 0 4px rgba(166,105,80,.16)" }}
-            />
-            <div className="flex-1 min-w-0 text-[13px] text-ink whitespace-nowrap overflow-hidden text-ellipsis">
-              {geoCity.city}
-            </div>
-            <span className="text-[13px] flex-shrink-0">{WEATHER_ICONS[geoCity.label] || "🌤️"}</span>
-            <span className="text-[12px] text-[#3F3B34] whitespace-nowrap flex-shrink-0">
-              {geoCity.temp}° · {geoCity.label}
-            </span>
-          </div>
-          {/* LA SOURCE DE LA MÉTÉO, DITE TELLE QU'ELLE EST (correctif du
-              25/09/2026). « Position par défaut » couvrait jusqu'ici trois
-              situations différentes — dont des températures écrites en dur,
-              présentées comme la météo du jour. */}
-          {!geoIsLive && (
-            <div className="text-[10px] text-placeholder mt-[6px] px-[5px]">
-              {sourceMeteo === "ville"
-                ? "Météo actuelle de ta ville — active la géolocalisation pour celle de ta position."
-                : sourceMeteo === "derniere_position"
-                  ? "Position indisponible — dernière météo enregistrée à ta position."
-                  : "Météo indisponible pour l'instant — tenue composée sur des valeurs par défaut."}
-            </div>
-          )}
-        </>
-      )}
+      {/* Ville et météo du jour consulté, et leur source — le composant
+          partagé avec l'Accueil ; il ouvre « Localisation & météo ». */}
+      <PastilleMeteo className="mt-5" />
 
       {/* SÉLECTEUR COMPACT (brief 22/09/2026).
           Les dix occasions défilaient ici en cartes de deux lignes, plus
@@ -553,7 +528,7 @@ export default function TenuesScreen() {
           gouvernent — on les lit comme un filtre, pas comme le contexte qui
           produit la tenue. */}
       <div className="mt-5 t-surtitre text-muted">
-        Qu&apos;est-ce qui est prévu aujourd&apos;hui ?
+        Qu&apos;est-ce qui est prévu {quand} ?
       </div>
       <div className="flex items-center gap-2 mt-[9px] flex-wrap">
         <button
@@ -652,7 +627,7 @@ export default function TenuesScreen() {
           deux couches partent ensemble — le panneau ici, les tuiles dans
           OutfitComposition — sinon le fond beige des tuiles resterait visible
           en damier sur le terracotta. */}
-      {!geoLoading && outfitPieces.length > 0 && (
+      {!meteoEnAttente && outfitPieces.length > 0 && (
         <div id="tenue-du-jour" className="mt-[22px] rounded-[24px] bg-terracotta-deep text-cream scroll-mt-4" style={{ padding: 16 }}>
           {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
               le 23/09). Conditionnelle depuis que le titre est parti : sans
@@ -798,7 +773,13 @@ export default function TenuesScreen() {
               avertissement — un bouton dont la position dépend du nombre de
               bannières n'est pas un bouton principal. 52 px : cible tactile
               du brief, et le plus grand élément cliquable de l'écran. */}
-          {state.outfitValidated ? (
+          {decalage > 0 ? (
+            /* UN JOUR À VENIR NE SE PORTE PAS ENCORE (27/09/2026) : le Journal
+               n'enregistre que le jour même. Même hauteur que le bouton. */
+            <div className="mt-[14px] flex items-center justify-center rounded-full text-[13px] text-cream text-center px-4" style={{ minHeight: 50, border: "1px dashed rgba(243,238,229,.4)" }}>
+              {`À porter ${quand} — enregistre-la ou demande un avis d'ici là.`}
+            </div>
+          ) : state.outfitValidated ? (
             /* Même hauteur que le bouton qu'il remplace (50 px) : valider la
                tenue ne doit pas déplacer les actions en dessous. */
             <div className="mt-[14px] flex items-center gap-3 rounded-full py-[9px] px-4" style={{ minHeight: 50, background: "rgba(29,26,22,.28)" }}>
@@ -864,7 +845,17 @@ export default function TenuesScreen() {
               {isOutfitSaved ? "Enregistrée" : "Enregistrer"}
             </button>
             <button
-              onClick={() => actions.openOpinionShare()}
+              onClick={() =>
+                decalage > 0
+                  ? actions.openOpinionShare({
+                      pieceIds: outfitIds,
+                      occasion: state.occasion || "all",
+                      temp: jourConsulte.meteoPrevue?.temp ?? null,
+                      label: jourConsulte.meteoPrevue?.label ?? null,
+                      moment: momentMessage(decalage, dateConsultee) ?? "",
+                    })
+                  : actions.openOpinionShare()
+              }
               className="flex items-center justify-center gap-[6px] rounded-full text-[12px] cursor-pointer"
               style={{
                 minHeight: 44,
@@ -891,7 +882,7 @@ export default function TenuesScreen() {
           déclencheurs, mêmes textes, même « Ajouter à la tenue » (avec son
           toast et son annulation) ; la pièce proposée est désormais celle du
           dressing quand il en a une (cf. computeLookScore). */}
-      {!geoLoading && outfitPieces.length > 0 && aCompleter && (
+      {!meteoEnAttente && outfitPieces.length > 0 && aCompleter && (
         <section aria-label="Compléter la tenue" className="mt-[22px]">
           <div className="flex items-center gap-[7px]">
             <span className="font-serif italic text-[13px] text-terracotta" aria-hidden="true">
@@ -1045,7 +1036,7 @@ export default function TenuesScreen() {
           (dressing/capsule) et à la raison structurée déjà connue du
           moteur (state.outfitFailureReason) — jamais un diagnostic
           recalculé/inventé ici. Sobre, typographique, sans illustration. */}
-      {!geoLoading && emptyState && (
+      {!meteoEnAttente && emptyState && (
         <div className="mt-2 mb-4 bg-card border border-border rounded-[14px] px-4 py-[26px] text-center">
           <div className="t-titre-vignette text-ink">{emptyState.title}</div>
           <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[8px]">{emptyState.body}</div>
@@ -1099,7 +1090,7 @@ export default function TenuesScreen() {
           Il n'avait aucune marge haute — invisible tant que la card se
           terminait par un bouton crème détaché de son bord, criant depuis
           qu'elle descend jusqu'au sien. */}
-      {!geoLoading && outfitPieces.length > 0 && (
+      {!meteoEnAttente && outfitPieces.length > 0 && (
         <div className="t-surtitre text-muted mt-[26px] mb-[10px]">
           Les pièces de ta tenue · {outfitPieces.length}
         </div>
@@ -1118,7 +1109,7 @@ export default function TenuesScreen() {
           de détail de LA tenue, chaque pièce ouvre le sien, et inventer une
           destination serait pire que de s'en passer. */}
       <div className="scrollarea flex gap-[10px] overflow-x-auto pb-[4px]" style={{ scrollSnapType: "x mandatory" }}>
-        {geoLoading
+        {meteoEnAttente
           ? [0, 1, 2].map((i) => (
               <div key={i} className="flex-none w-[112px]">
                 <div className="w-[112px] h-[112px] rounded-[13px] animate-pulse" style={{ background: "#EFE7D8" }} />
@@ -1318,7 +1309,7 @@ export default function TenuesScreen() {
           seulement voir une coche. */}
       {quota.feuille}
 
-      <BottomSheet title="Qu'est-ce qui est prévu aujourd'hui ?" open={feuille === "occasion"} onClose={() => setFeuille(null)}>
+      <BottomSheet title={`Qu'est-ce qui est prévu ${quand} ?`} open={feuille === "occasion"} onClose={() => setFeuille(null)}>
         <div className="flex flex-col">
           {OCCASIONS.map(([key, label, sub]) => {
             const actif = state.occasion === key;

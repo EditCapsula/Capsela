@@ -8,15 +8,17 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
-import { OCC_LABELS, WEATHER_ICONS } from "@/lib/data";
+import { OCC_LABELS } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
-import { explainRecommendation, tenueAUnSocle } from "@/lib/logic";
+import { outfitMoodPhrase, tenueAUnSocle } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
-import { useCapsela, defaultOccasionToday } from "@/lib/store";
+import { useCapsela } from "@/lib/store";
+import { PastilleMeteo, SelecteurJour } from "@/components/JourMeteo";
+import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
 
 /**
@@ -512,7 +514,10 @@ function ActionSuite({ onClick, label, glyphe }: { onClick: () => void; label: s
 }
 
 export default function HomeScreen() {
-  const { state, geoCity, geoLoading, vestiairePool, weather, etatPremium, actions } = useCapsela();
+  const { state, geoLoading, vestiairePool, weather, meteoDuJour, jourConsulte, etatPremium, actions } = useCapsela();
+  // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
+  const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
+  const jourAVenir = jourConsulte.decalage > 0;
 
   /**
    * « PAS POUR MOI » PROPOSE UNE AUTRE TENUE (recette du 26/09/2026) — et
@@ -594,7 +599,8 @@ export default function HomeScreen() {
   // autres pièces ne se résolvaient plus, s'affichait comme prête. Le store
   // la recompose (réparation) ; d'ici là, la card n'annonce rien de faux.
   const hasOutfit = piecesResolues.length > 0 && tenueAUnSocle(piecesResolues);
-  const occasionKey = state.occasion && state.occasion !== "all" ? state.occasion : defaultOccasionToday(profile.prefs);
+  const occasionKey =
+    state.occasion && state.occasion !== "all" ? state.occasion : occasionParDefaut(profile.prefs, jourConsulte.date);
   const occasionLabel = OCC_LABELS[occasionKey];
 
   const outfitPieces = hasOutfit ? piecesResolues : [];
@@ -602,7 +608,9 @@ export default function HomeScreen() {
   // Même phrase d'explication que la page Tenue (explainRecommendation) — pas
   // de température affichée tant que la géolocalisation n'a pas résolu la
   // météo réelle du jour.
-  const outfitQuote = explainRecommendation(occasionKey, state.workMode, state.dateContext, geoLoading ? null : geoCity.temp);
+  // La température est dans la pastille météo au-dessus depuis le 27/09/2026 :
+  // la phrase de la card ne la répète plus (même arbitrage que Tenue, 23/09).
+  const outfitQuote = outfitMoodPhrase(occasionKey, state.workMode, state.dateContext, meteoEnAttente ? null : meteoDuJour.temp);
 
   // Capsule calculée avec le même moteur que CapsuleScreen, jamais un second
   // calcul : saison/style/effectif affichés ici correspondent toujours
@@ -611,15 +619,6 @@ export default function HomeScreen() {
   const capsule = computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
   const capsuleStyleLabel = styleLabel(profile.styles[0], profile.gender);
 
-  /**
-   * Icône météo — lue en UN point, depuis la seule table de l'app
-   * (WEATHER_ICONS). Arbitré le 22/09 : on garde les emoji pour l'instant, et
-   * ce point unique est ce qui rendra un passage aux glyphes dessinés
-   * réversible en une table plutôt qu'en une chasse à travers l'écran.
-   * La source est `geoCity.label`, la condition COURANTE rendue par
-   * l'endpoint /weather d'OpenWeather — pas une prévision, pas une moyenne.
-   */
-  const iconeMeteo = WEATHER_ICONS[geoCity.label];
 
   /**
    * PROVENANCE DES PIÈCES — d'où vient la tenue du jour.
@@ -762,10 +761,16 @@ export default function HomeScreen() {
           de l'en-tête : le gain vient de la taille du serif, pas d'un
           interlignage ou d'une marge supplémentaires. */}
       <div className="px-6 mt-[18px]">
-        <div className="t-surtitre text-muted">Aujourd&apos;hui</div>
+        {/* LE SÉLECTEUR DE JOUR remplace le surtitre « Aujourd'hui » (27/09/2026,
+            navigation par date) : même place, même typographie — secondaire
+            par rapport à la tenue, et partagé avec Tenue. */}
+        <SelecteurJour />
         <div className="t-display text-ink mt-[6px]">
           Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
         </div>
+        {/* LA MÉTÉO DU JOUR, CLIQUABLE : elle ouvre « Localisation & météo »
+            des Préférences — les réglages existants, aucun écran de plus. */}
+        <PastilleMeteo className="mt-4" />
       </div>
 
       {/* ══ Card héros — le moment visuel de la page ══════════════════════
@@ -873,16 +878,6 @@ export default function HomeScreen() {
             className="text-[12px] mt-[8px] leading-[1.35]"
             style={{ color: "rgba(243,238,229,.84)", maxWidth: avecComposition ? "38%" : 230 }}
           >
-            {/* L'icône vient de WEATHER_ICONS, la seule table de l'app, lue
-                en UN point pour qu'un passage aux glyphes dessinés reste un
-                changement de table et non une chasse à travers l'écran.
-                Jamais affichée tant que la météo n'est pas résolue : une
-                icône par défaut serait une condition inventée. */}
-            {hasOutfit && !geoLoading && iconeMeteo && (
-              <span aria-hidden="true" className="mr-[5px]">
-                {iconeMeteo}
-              </span>
-            )}
             {hasOutfit
               ? outfitQuote
               : aucuneTenuePossible
@@ -986,7 +981,9 @@ export default function HomeScreen() {
               recette du 26/09/2026, ils ont aussi une conséquence : « J'adore »
               range la tenue dans Mes looks ; « Pas pour moi » en propose une
               autre, qui évite celle-ci. */}
-          {hasOutfit && (
+          {/* L'avis du jour porte sur la tenue d'AUJOURD'HUI (outfit_feedback,
+              clé jour) : pas de « J'adore » sur la tenue de demain. */}
+          {hasOutfit && !jourAVenir && (
             <div className="mt-[13px]" aria-live="polite">
               {avisDuJour ? (
                 // Cliquable : repasser le même verdict le retire. Sans ce
