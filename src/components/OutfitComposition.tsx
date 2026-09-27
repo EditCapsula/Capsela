@@ -413,12 +413,14 @@ export function OutfitComposition({
  * l'image affichée, l'ombre en épouse le cadre. Aucun texte ni badge : la
  * provenance reste dans « Les pièces de ce look ».
  */
+const FLEX = { debut: "flex-start", centre: "center", fin: "flex-end" } as const;
+
 function CompositionEditoriale({ items, label }: { items: Item[]; label?: string }) {
   const { pieces, hauteur } = composerTenue(items);
   if (!pieces.length) return null;
   return (
     <div role="img" aria-label={label} style={{ position: "relative", width: "100%", paddingTop: `${hauteur}%` }}>
-      {pieces.map(({ item: it, case: c }) => {
+      {pieces.map(({ item: it, case: c, aligne }) => {
         const img = resolveItemImage(it);
         const photo = img.kind === "photo";
         return (
@@ -431,8 +433,9 @@ function CompositionEditoriale({ items, label }: { items: Item[]; label?: string
               top: `${(c.y / hauteur) * 100}%`,
               height: `${(c.cote / hauteur) * 100}%`,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              // Calée vers le centre de la composition (cf. composerTenue).
+              justifyContent: FLEX[aligne.x],
+              alignItems: FLEX[aligne.y],
             }}
           >
             {img.url ? (

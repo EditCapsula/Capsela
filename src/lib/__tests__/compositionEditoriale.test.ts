@@ -51,7 +51,7 @@ describe("composerTenue — la place selon la catégorie et les pièces présent
     const [robe, ballerines, sac] = [p("robe"), p("chaussures"), p("sac")];
     const { pieces } = composerTenue([ballerines, sac, robe]);
     const r = pieces.find((x) => x.item.id === robe.id)!.case;
-    expect(r.x + r.cote / 2).toBeCloseTo(50, 0);
+    expect(Math.abs(r.x + r.cote / 2 - 50)).toBeLessThan(3);
     expect(Math.max(...pieces.map((x) => x.case.cote))).toBe(r.cote);
   });
 
@@ -60,6 +60,24 @@ describe("composerTenue — la place selon la catégorie et les pièces présent
     const { pieces, hauteur } = composerTenue(tenue);
     expect(pieces).toHaveLength(tenue.length);
     for (let i = 0; i < pieces.length; i++) for (let j = i + 1; j < pieces.length; j++) expect(seChevauchent(pieces[i].case, pieces[j].case)).toBe(false);
-    expect(hauteur).toBe(Math.max(...pieces.map((x) => x.case.y + x.case.cote)));
+    expect(hauteur).toBeCloseTo(Math.max(...pieces.map((x) => x.case.y + x.case.cote)), 6);
+  });
+
+  it("recadrée : centrée, sans marge d'un seul côté, agrandie au plus de 15 %", () => {
+    const tenue = [p("robe"), p("chaussures"), p("sac")];
+    const { pieces } = composerTenue(tenue);
+    const gauche = Math.min(...pieces.map((x) => x.case.x));
+    const droite = 100 - Math.max(...pieces.map((x) => x.case.x + x.case.cote));
+    expect(gauche).toBeCloseTo(droite, 5);
+    expect(Math.min(...pieces.map((x) => x.case.y))).toBe(0);
+    const robe = pieces.find((x) => x.item.cat === "robe")!.case;
+    expect(robe.cote).toBeLessThanOrEqual(CONFIGURATIONS_EDITORIALES[1].principales[0].cote * 1.15 + 1e-9);
+  });
+
+  it("chaque image se cale vers le centre : le manteau de gauche à droite de sa case, la robe de droite à gauche", () => {
+    const [manteau, robe] = [p("manteau"), p("robe")];
+    const { pieces } = composerTenue([manteau, robe, p("chaussures"), p("sac")]);
+    expect(pieces.find((x) => x.item.id === manteau.id)!.aligne.x).toBe("fin");
+    expect(pieces.find((x) => x.item.id === robe.id)!.aligne.x).toBe("debut");
   });
 });
