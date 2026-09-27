@@ -121,6 +121,18 @@ const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<
   { label: "Planifier", icon: "calendrier", screen: "planifier", go: (a) => a.goPlanifier() },
 ];
 
+/**
+ * « Comment porter … ? » et le détail d'un look (27/09/2026) : l'onglet d'où
+ * le parcours est parti reste allumé — ouvert depuis le Journal (via la fiche
+ * d'une pièce), c'est le Journal. Limité à ces deux écrans : les autres
+ * sous-écrans gardent leur comportement.
+ */
+function ongletDOrigine(state: ReturnType<typeof useCapsela>["state"]): Screen | null {
+  if (state.screen !== "itemOutfits" && state.screen !== "ideeLook") return null;
+  const origine = state.itemOutfitsReturn === "piece" ? state.pieceReturn : state.itemOutfitsReturn;
+  return origine === "wardrobePieces" || origine === "looks" ? "wardrobe" : origine;
+}
+
 export default function TabBar() {
   const { state, actions } = useCapsela();
 
@@ -151,7 +163,10 @@ export default function TabBar() {
       {TABS.map((tab) => {
         // Les avis de styliste enregistrés (liste, détail) vivent dans le
         // Journal : l'onglet reste allumé.
-        const active = state.screen === tab.screen || (tab.screen === "history" && (state.screen === "avisTous" || state.screen === "avisEnregistre"));
+        const active =
+          state.screen === tab.screen ||
+          (tab.screen === "history" && (state.screen === "avisTous" || state.screen === "avisEnregistre")) ||
+          ongletDOrigine(state) === tab.screen;
         const onClick = () => tab.go(actions);
         return (
           <button

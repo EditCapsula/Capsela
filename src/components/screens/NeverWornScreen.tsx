@@ -166,9 +166,11 @@ export default function NeverWornScreen() {
   const idsEnSaison = enSaison.map((it) => it.id).join(",");
   // Une passe par pièce de saison (≈ 40 ms chacune), mémoïsée : les idées ne
   // changent pas d'un rendu à l'autre, et ce sont elles qui partent au clic.
+  // Depuis le 27/09/2026 une passe fait deux tirages, le dressing d'abord
+  // (ideesDressingDAbord) : +11 ms mesurés sur un dressing de neuf pièces.
   const idees = useMemo(() => {
     const m = new Map<number, ItemOutfitVariation[]>();
-    for (const it of enSaison) m.set(it.id, calculerIdeesTenues(it, wardrobePool, capsuleSeason, preferredHexes, profile.gender));
+    for (const it of enSaison) m.set(it.id, calculerIdeesTenues(it, wardrobePool, state.items, capsuleSeason, preferredHexes, profile.gender));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsEnSaison, wardrobePool, capsuleSeason, preferredHexes, profile.gender]);

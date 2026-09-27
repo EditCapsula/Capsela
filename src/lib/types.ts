@@ -1,6 +1,7 @@
 import type { StyleId } from "./profile";
 import type { TenuePlanifiee } from "./planifier";
 import type { ItemOutfitVariation } from "./logic";
+import type { FamilleLook } from "./ideesLooks";
 
 export type CategoryKey =
   | "haut"
@@ -299,7 +300,20 @@ export interface AppState {
    * : l'écran d'arrivée les reprend telles quelles au lieu de retirer au
    * sort — « 4 tenues possibles » sur la carte, les quatre mêmes ensuite.
    */
-  ideesTenuesPretes: { pivotId: number; variations: ItemOutfitVariation[] } | null;
+  ideesTenuesPretes: { pivotId: number; variations: ItemOutfitVariation[]; famille?: FamilleLook | null } | null;
+  /**
+   * Le look ouvert depuis « Comment porter … ? » (Détail du look, 27/09/2026).
+   * Les idées de la page précédente sont gardées dans ideesTenuesPretes, pour
+   * qu'un retour retrouve les mêmes looks, sous la même pastille.
+   */
+  ideeLookActive: {
+    pivotId: number;
+    ids: number[];
+    occasion: OccasionKey;
+    numero: number;
+    /** La fiche d'une pièce ouverte depuis le détail remplace activeId et pieceReturn : on les rend au retour. */
+    avant: { activeSuggested: boolean; pieceReturn: Screen };
+  } | null;
 
   catFilter: CategoryKey | "all";
 
@@ -458,6 +472,8 @@ export type Screen =
   | "createLook"
   | "lookDetail"
   | "itemOutfits"
+  // Détail d'une idée de look (27/09/2026), ouvert depuis « Comment porter … ? ».
+  | "ideeLook"
   | "wardrobePieces"
   // Tous les looks (refonte Dressing, 25/09/2026) — « Mes looks · Voir tout ».
   | "looks"
