@@ -114,8 +114,8 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
   {
     glyphe: G_VALISE,
     titre: "Préparer une valise",
-    desc: "Indique ta destination et la durée, Capsela compose tes tenues.",
-    bientot: true,
+    // Disponible depuis le 27/09/2026 (lot 1, docs/valise.md) : plus « bientôt ».
+    desc: "Indique ta destination et tes dates, Capsela choisit les pièces à emporter et compose tes looks.",
   },
 ];
 

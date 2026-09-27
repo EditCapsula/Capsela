@@ -257,6 +257,8 @@ export interface Actions {
   goLegal: () => void;
   /** Ouvre la page Premium en mémorisant d'où l'on vient. */
   goPremium: (origine?: "valise") => void;
+  /** Préparer sa valise (docs/valise.md) — l'accueil décide de l'accès (règle PREPARER_VALISE). */
+  goValise: () => void;
   /** Écran « Avis de styliste » (docs/avis-de-styliste.md). Réservé Premium : l'accueil ouvre le Premium Gate à la place pour tout autre statut. */
   goAvisStyliste: () => void;
   /**
@@ -1285,6 +1287,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: "premium",
       })),
     goAvisStyliste: () => go("avisStyliste"),
+    goValise: () => go("valise"),
     definirPhotoAvis: (photo) => {
       const avant = avisStylisteRef.current.photo;
       if (avant && avant.url !== photo?.url) URL.revokeObjectURL(avant.url);

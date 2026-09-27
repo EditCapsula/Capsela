@@ -506,6 +506,8 @@ export type Screen =
   // assumés, branchés pour que la carte ne mène pas dans le vide.
   | "planifier"
   | "premium"
+  // Préparer sa valise (lot 1, 27/09/2026, docs/valise.md).
+  | "valise"
   // Avis de styliste (Premium, 25/09/2026, docs/avis-de-styliste.md) —
   // ouvert depuis la carte « Besoin d'un regard ? » de l'accueil.
   | "avisStyliste"
