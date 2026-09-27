@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { CarteIdeeLook } from "@/components/CarteIdeeLook";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { currentSeasonKey, representativeWeatherFor } from "@/lib/capsule";
+import { contexteCapsule, currentSeasonKey, estDeSaison, representativeWeatherFor } from "@/lib/capsule";
+import { enSaisons, saisonsDe } from "@/lib/saisons";
 import { FAMILLES_LOOK, cleLook, decrireLooks, ideesDressingDAbord, ordonnerLooks, titreCommentPorter, type FamilleLook } from "@/lib/ideesLooks";
 import type { ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
@@ -130,7 +131,12 @@ export default function ItemOutfitsScreen() {
   const alreadyOwned = !isCatalogId(pivot.id) || state.suggestedExcluded.includes(pivot.id);
 
   // Même critère que les idées elles-mêmes : la saison de la météo représentative de la capsule.
-  const horsSaison = pivot.season !== "Toutes saisons" && !representativeWeatherFor(capsuleSeason).seasons.includes(pivot.season);
+  // Une pièce qui porte ses quatre saisons (27/09/2026) est jugée comme le
+  // moteur la juge ici, sur la saison de la capsule (contexteCapsule) — la
+  // météo représentative du Printemps (14°) désignerait l'Automne.
+  const horsSaison = pivot.saisons?.length
+    ? !estDeSaison(pivot, contexteCapsule(capsuleSeason))
+    : pivot.season !== "Toutes saisons" && !representativeWeatherFor(capsuleSeason).seasons.includes(pivot.season);
 
   // Une pastille n'existe que si elle a des looks : jamais de filtre vide.
   const familles = FAMILLES_LOOK.filter((f) => looks.some((l) => l.famille === f.cle));
@@ -212,7 +218,7 @@ export default function ItemOutfitsScreen() {
               que d'inviter à ajouter des pièces qui n'y changeraient rien. */}
           {horsSaison ? (
             <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
-              Cette pièce se porte {pivot.season === "Printemps / Été" ? "au printemps et en été" : "en automne et en hiver"} : ses idées de tenues
+              Cette pièce se porte {enSaisons(saisonsDe(pivot))} : ses idées de tenues
               viendront avec sa saison.
             </div>
           ) : (

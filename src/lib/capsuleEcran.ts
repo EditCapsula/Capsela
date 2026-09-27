@@ -1,5 +1,5 @@
 import { isStatement } from "./attributes";
-import { capsuleSeasonBucket, occasionsOf, pieceOrienteeParMorphologie, styleFit } from "./capsule";
+import { contexteCapsule, estDeSaison, occasionsOf, pieceOrienteeParMorphologie, styleFit } from "./capsule";
 import { OCCASIONS } from "./data";
 import { paletteHexes, silhouetteForme, STYLE_ID_TO_CATALOG_LABEL, styleLabel, type Profile, type StyleId } from "./profile";
 import type { CapsuleSeason, CategoryKey, Item, OccasionKey } from "./types";
@@ -26,8 +26,10 @@ import type { CapsuleSeason, CategoryKey, Item, OccasionKey } from "./types";
  * déjà. Elle ne prend la place d'aucune suggestion.
  */
 export function piecesDuDressingPourSaison(items: Item[], saison: CapsuleSeason): Item[] {
-  const bucket = capsuleSeasonBucket(saison);
-  return items.filter((it) => it.season === bucket || it.season === "Toutes saisons");
+  // Quatre saisons d'une pièce quand elle les porte (27/09/2026) : une pièce
+  // cochée Été seul n'entre plus dans la capsule de Printemps.
+  const contexte = contexteCapsule(saison);
+  return items.filter((it) => estDeSaison(it, contexte));
 }
 
 /**
