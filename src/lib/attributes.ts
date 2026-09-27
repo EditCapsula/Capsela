@@ -240,6 +240,67 @@ export function suggestOccasions(cat: CategoryKey, shoeType?: ShoeType | null): 
 }
 
 /**
+ * Les occasions retenues pour la pièce en cours d'ajout (27/09/2026, refonte
+ * « Ajouter une pièce » : la section s'intitule « Occasions suggérées », elle
+ * doit donc montrer la suggestion de Capsela). Tant que l'utilisatrice n'a
+ * rien touché, c'est la suggestion pour la catégorie et le type de chaussure
+ * AFFICHÉS — et non la valeur figée à l'ouverture du formulaire, qui restait
+ * « Travail » quel que soit le chemin d'entrée (ouverture sur une catégorie,
+ * sac, pièce non reconnue) et ne suivait pas un changement de type de
+ * chaussure. Dès qu'elle en choisit une, sa sélection prime.
+ */
+export function occasionsRetenues(
+  touchees: boolean,
+  choisies: OccasionKey[],
+  cat: CategoryKey,
+  shoeType?: ShoeType | null
+): OccasionKey[] {
+  return touchees ? choisies : suggestOccasions(cat, shoeType);
+}
+
+/**
+ * Genre/nombre grammatical d'une catégorie, et accord des couleurs
+ * variables. Déplacés de logic.ts le 27/09/2026 (refonte « Ajouter une
+ * pièce », signalé : « Robe longue noir ») : suggestName, ci-dessous, en a
+ * besoin et logic.ts importe déjà ce module — l'inverse aurait créé un cycle.
+ * Même table, même accord : aucun second moteur d'accord.
+ */
+export type Gender = "m" | "f";
+export interface NounInfo { gender: Gender; plural?: boolean }
+
+export const CAT_GENDER: Record<CategoryKey, NounInfo> = {
+  haut: { gender: "m" }, pull: { gender: "m" }, pantalon: { gender: "m" }, jean: { gender: "m" },
+  jupe: { gender: "f" }, short: { gender: "m" }, robe: { gender: "f" }, combinaison: { gender: "f" },
+  veste: { gender: "f" }, manteau: { gender: "m" }, chaussures: { gender: "f", plural: true },
+  sac: { gender: "m" }, bijou: { gender: "m" }, accessoire: { gender: "m" },
+};
+
+/**
+ * Accord des rares couleurs qui sont de vrais adjectifs variables en
+ * français (blanc/noir/gris, doré/argenté/cuivré). Toutes les autres
+ * couleurs de la palette Capsela sont des noms employés comme couleur
+ * (kaki, marine, corail, terracotta, chocolat, moutarde, camel, taupe,
+ * denim, prune, bordeaux, crème, sable, brique, perle, bronze...) ou des
+ * couleurs composées (ex. "blanc cassé", "vert sauge", "gris clair") —
+ * grammaticalement invariables dans les deux cas, jamais accordées.
+ */
+const COLOR_AGREEMENT: Record<string, { m: string; f: string; mp: string; fp: string }> = {
+  blanc: { m: "blanc", f: "blanche", mp: "blancs", fp: "blanches" },
+  noir: { m: "noir", f: "noire", mp: "noirs", fp: "noires" },
+  gris: { m: "gris", f: "grise", mp: "gris", fp: "grises" },
+  "doré": { m: "doré", f: "dorée", mp: "dorés", fp: "dorées" },
+  "argenté": { m: "argenté", f: "argentée", mp: "argentés", fp: "argentées" },
+  "cuivré": { m: "cuivré", f: "cuivrée", mp: "cuivrés", fp: "cuivrées" },
+};
+
+export function agreeColor(colorName: string, info: NounInfo): string {
+  const forms = COLOR_AGREEMENT[colorName.trim().toLowerCase()];
+  if (!forms) return colorName.toLowerCase();
+  if (info.plural) return info.gender === "f" ? forms.fp : forms.mp;
+  return info.gender === "f" ? forms.f : forms.m;
+}
+
+/**
  * Nom composé automatiquement à la fin de l'analyse photo (recette
  * 24/08/2026, "Manteau en laine chocolat") — jamais imposé, appliqué
  * uniquement tant que l'utilisatrice n'a pas touché le champ elle-même
@@ -267,7 +328,11 @@ export function suggestName(
     parts.push(subtypeTrim.toLowerCase());
   }
   if (matiere) parts.push(`en ${matiere.toLowerCase()}`);
-  if (colorName) parts.push(colorName.toLowerCase());
+  // La couleur s'accorde au libellé de catégorie, toujours en tête du nom
+  // (27/09/2026, signalé : « Robe longue noir ») : « Robe longue noire »,
+  // « Chaussures blanches ». « en laine » n'est qu'un complément, il ne
+  // change pas le nom auquel la couleur se rapporte.
+  if (colorName) parts.push(agreeColor(colorName, CAT_GENDER[cat]));
   return parts.join(" ");
 }
 

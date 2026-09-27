@@ -4,6 +4,8 @@ import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effe
 import { isCatalogId } from "./catalog";
 import { capsuleSeasonBucket, currentSeasonKey } from "./capsule";
 import {
+  agreeColor,
+  CAT_GENDER,
   coupeOf,
   formalityOf,
   huesHarmonious,
@@ -14,6 +16,8 @@ import {
   matiereOf,
   metalOf,
   rolePieceOf,
+  type Gender,
+  type NounInfo,
 } from "./attributes";
 
 const BOTTOMS: CategoryKey[] = [...BAS_CATS, "jupe"];
@@ -2519,16 +2523,6 @@ function pieceBase(it: Item): string {
  * (tête du groupe nominal). Pour celles où le sous-type REMPLACE le nom
  * générique (NOUN_SUBTYPE_CATS), chaque sous-type a son propre genre.
  */
-type Gender = "m" | "f";
-interface NounInfo { gender: Gender; plural?: boolean }
-
-const CAT_GENDER: Record<CategoryKey, NounInfo> = {
-  haut: { gender: "m" }, pull: { gender: "m" }, pantalon: { gender: "m" }, jean: { gender: "m" },
-  jupe: { gender: "f" }, short: { gender: "m" }, robe: { gender: "f" }, combinaison: { gender: "f" },
-  veste: { gender: "f" }, manteau: { gender: "m" }, chaussures: { gender: "f", plural: true },
-  sac: { gender: "m" }, bijou: { gender: "m" }, accessoire: { gender: "m" },
-};
-
 const SUBTYPE_GENDER: Partial<Record<CategoryKey, Record<string, NounInfo>>> = {
   haut: {
     "t-shirt": { gender: "m" }, top: { gender: "m" }, "débardeur": { gender: "m" }, chemise: { gender: "f" },
@@ -2623,31 +2617,6 @@ export function nounInfoDuNom(nom: string): NounInfo | null {
     if ((bas === cle || bas.startsWith(cle + " ")) && (!trouve || cle.length > trouve.cle.length)) trouve = { cle, info };
   }
   return trouve?.info ?? null;
-}
-
-/**
- * Accord des rares couleurs qui sont de vrais adjectifs variables en
- * français (blanc/noir/gris, doré/argenté/cuivré). Toutes les autres
- * couleurs de la palette Capsela sont des noms employés comme couleur
- * (kaki, marine, corail, terracotta, chocolat, moutarde, camel, taupe,
- * denim, prune, bordeaux, crème, sable, brique, perle, bronze...) ou des
- * couleurs composées (ex. "blanc cassé", "vert sauge", "gris clair") —
- * grammaticalement invariables dans les deux cas, jamais accordées.
- */
-const COLOR_AGREEMENT: Record<string, { m: string; f: string; mp: string; fp: string }> = {
-  blanc: { m: "blanc", f: "blanche", mp: "blancs", fp: "blanches" },
-  noir: { m: "noir", f: "noire", mp: "noirs", fp: "noires" },
-  gris: { m: "gris", f: "grise", mp: "gris", fp: "grises" },
-  "doré": { m: "doré", f: "dorée", mp: "dorés", fp: "dorées" },
-  "argenté": { m: "argenté", f: "argentée", mp: "argentés", fp: "argentées" },
-  "cuivré": { m: "cuivré", f: "cuivrée", mp: "cuivrés", fp: "cuivrées" },
-};
-
-function agreeColor(colorName: string, info: NounInfo): string {
-  const forms = COLOR_AGREEMENT[colorName.trim().toLowerCase()];
-  if (!forms) return colorName.toLowerCase();
-  if (info.plural) return info.gender === "f" ? forms.fp : forms.mp;
-  return info.gender === "f" ? forms.f : forms.m;
 }
 
 /** Accord d'une couleur partagée par plusieurs pièces jointes par "et" — toujours pluriel ; masculin dès qu'au moins une pièce est masculine ("le masculin l'emporte", règle standard du français). */

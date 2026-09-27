@@ -16,13 +16,14 @@ import {
   SEASONS,
   SHOE_TYPES,
   SUBTYPES,
+  saisonParDefaut,
   seasonSuggestion,
 } from "@/lib/data";
-import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable } from "@/lib/attributes";
+import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable, occasionsRetenues } from "@/lib/attributes";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
-import type { AccessoireType, BijouType, CategoryKey, SacType, ShoeType } from "@/lib/types";
+import type { AccessoireType, BijouType, CategoryKey, OccasionKey, SacType, ShoeType } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
@@ -35,41 +36,6 @@ function chipCls(on: boolean): string {
   );
 }
 
-/** Variante du chip qui porte un glyphe : même fond, contenu mis en ligne. */
-function chipGlypheCls(on: boolean): string {
-  return chipCls(on) + " inline-flex items-center gap-[7px]";
-}
-
-function SparkleIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="9" height="9" viewBox="0 0 24 24" className={className} fill="currentColor">
-      <path d="M12 2l2.1 7.9L22 12l-7.9 2.1L12 22l-2.1-7.9L2 12l7.9-2.1L12 2z" />
-    </svg>
-  );
-}
-function HangerIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3.2a1.5 1.5 0 1 1 1.3 2.3L12 7" />
-      <path d="M12 7l9.3 6.6a1.4 1.4 0 0 1-.9 2.5H3.6a1.4 1.4 0 0 1-.9-2.5L12 7z" />
-    </svg>
-  );
-}
-function TshirtIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 4L4 7.2l2.4 2.6L8 8.4V20h8V8.4l1.6 1.4 2.4-2.6L16 4l-4 1.8L8 4z" />
-    </svg>
-  );
-}
-function LeafIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 15c0-7 5.5-11 16-11 0 11-4.5 16.5-11.5 16.5C5 20.5 4 18 4 15z" />
-      <path d="M5 20L15 10" />
-    </svg>
-  );
-}
 function FabricIcon({ className = "" }: { className?: string }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -120,47 +86,64 @@ function GalerieIcon() {
   );
 }
 
-/** Pastille "détecté par Capsela" (recette 24/08/2026) — un seul marqueur commun partout, jamais de pourcentage de confiance. */
-function AiTag() {
+/**
+ * Titre de section. Le ✦ terracotta signale ce que Capsela a proposé — le
+ * même signe qu'ailleurs dans l'app (Tenue, Capsule), et un seul : la refonte
+ * du 27/09/2026 retire les pastilles « IA » posées champ par champ, qui
+ * donnaient à l'écran un air d'outil technique plutôt que d'aide éditoriale.
+ */
+function TitreSection({ children, suggere }: { children: React.ReactNode; suggere?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-[3px] text-[9px] tracking-[.03em] text-terracotta bg-[#F0E5D6] rounded-full py-[2px] px-[7px] flex-shrink-0">
-      <SparkleIcon /> IA
-    </span>
-  );
-}
-
-function FieldLabel({ children, ai }: { children: React.ReactNode; ai?: boolean }) {
-  return (
-    <div className="flex items-center gap-[8px] mt-6 mb-[11px]">
-      <span className="t-surtitre text-muted">{children}</span>
-      {ai && <AiTag />}
+    <div className="flex items-center gap-[7px] mb-[11px]">
+      {suggere && (
+        <span className="font-serif italic text-[13px] text-terracotta" aria-hidden="true">
+          ✦
+        </span>
+      )}
+      <span className={"t-surtitre " + (suggere ? "text-terracotta" : "text-muted")}>{children}</span>
     </div>
   );
 }
 
-/** Select natif stylé en bouton compact (icône + valeur + chevron) — remplace les grilles de chips pour catégorie/type/taille/saison (recette 24/08/2026, signalé : trop de scroll). */
-function SelectField({
-  icon,
+/**
+ * Cellule de la carte des attributs essentiels : la valeur s'affiche en
+ * texte, sur deux lignes au besoin, et un select natif transparent couvre
+ * toute la cellule. Un select visible tronquait les libellés longs dès
+ * 360 px (« Chaussur… », « Veste / Blaz… »). Natif et non une liste maison :
+ * le sélecteur du système est celui que le pouce connaît, et il gère seul le
+ * clavier et l'accessibilité.
+ */
+function SelectNu({
+  label,
   value,
   onChange,
   options,
   placeholder,
+  enAttente,
 }: {
-  icon?: React.ReactNode;
+  label: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
   placeholder?: string;
+  /** Valeur requise encore vide : le libellé d'attente passe en terracotta. */
+  enAttente?: boolean;
 }) {
+  const affiche = options.find((o) => o.value === value)?.label ?? placeholder ?? "";
   return (
-    <div className="relative flex-1 min-w-0">
-      {icon && <span className="absolute left-[13px] top-1/2 -translate-y-1/2 text-terracotta pointer-events-none">{icon}</span>}
-      <select
+    <label className="relative block min-w-0 pl-[12px] pr-[22px] pt-[11px] pb-[12px] cursor-pointer">
+      <span className="t-label text-muted block">{label}</span>
+      <span
         className={
-          "capin w-full bg-card border border-border rounded-xl py-[13px] pr-[30px] text-[13px] text-ink font-sans cursor-pointer " +
-          (icon ? "pl-[34px]" : "pl-[13px]")
+          "block mt-[5px] text-[14px] font-medium leading-[1.25] break-words " + (enAttente ? "text-terracotta" : "text-ink")
         }
-        style={{ appearance: "none", WebkitAppearance: "none" }}
+        aria-hidden="true"
+      >
+        {affiche}
+      </span>
+      <select
+        aria-label={label}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -171,9 +154,25 @@ function SelectField({
           </option>
         ))}
       </select>
-      <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-muted pointer-events-none text-[10px]">▾</span>
-    </div>
+      <span className="absolute right-[10px] top-[33px] text-muted pointer-events-none text-[10px]" aria-hidden="true">
+        ▾
+      </span>
+    </label>
   );
+}
+
+/**
+ * Libellés d'occasion propres à cet écran (27/09/2026). « Date » se lit
+ * « Rendez-vous », comme le demande la refonte ; mais OCC_SHORT donne déjà
+ * « Rendez-vous » à `entretien` (« Rendez-vous important »), et deux chips
+ * portant le même mot seraient indiscernables. `entretien` prend donc ici
+ * « Entretien », tiré de son propre sous-libellé (« Entretien, réunion
+ * clé »). Les clés métier ne changent pas, les autres écrans non plus.
+ */
+function libelleOccasion(o: OccasionKey): string {
+  if (o === "date") return "Rendez-vous";
+  if (o === "entretien") return "Entretien";
+  return occasionShortLabel(o);
 }
 
 function typeOptionsFor(cat: CategoryKey): string[] | undefined {
@@ -184,6 +183,24 @@ function typeOptionsFor(cat: CategoryKey): string[] | undefined {
   return SUBTYPES[cat];
 }
 
+/**
+ * AJOUTER UNE PIÈCE — refonte du 27/09/2026.
+ *
+ * L'écran ne se lit plus comme un formulaire à remplir mais comme une
+ * vérification : Capsela a compris la pièce, l'utilisatrice relit, modifie
+ * au besoin, ajoute. Hiérarchie : photo, analyse, nom suggéré, attributs
+ * essentiels, caractéristiques, saison, occasions, puis l'action — fixée en
+ * pied d'écran, hors du défilement, pour rester sous le pouce.
+ *
+ * Ce qui ne bloque plus : la saison (saisonParDefaut, présélectionnée et
+ * modifiable). Ce qui bloque encore, parce que la sauvegarde elle-même
+ * l'exige (saveItem) : le type de chaussure (R-B6, nécessaire au moteur)
+ * et l'envoi de la photo en cours (jamais d'aperçu local persisté).
+ *
+ * Aucune mention d'analyse sans analyse réelle : « a analysé ta pièce » et
+ * « détectées » suivent addPhotoAnalysee, pas la seule présence d'une photo
+ * — en mode démo ou sur un échec de l'analyse, il n'y a rien eu à détecter.
+ */
 export default function AddScreen() {
   const { state, actions } = useCapsela();
   const { profile } = useAuth();
@@ -198,7 +215,15 @@ export default function AddScreen() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galerieInputRef = useRef<HTMLInputElement>(null);
   const [sourcePhoto, setSourcePhoto] = useState(false);
-  const [sheet, setSheet] = useState<"characteristics" | "occasions" | null>(null);
+  const [sheet, setSheet] = useState<"characteristics" | null>(null);
+  // Le nom s'affiche comme une proposition, pas comme un champ : l'input
+  // n'apparaît qu'à la demande (« Modifier le nom ») ou quand il n'y a encore
+  // aucun nom. Il reste affiché tant qu'il a le focus, sans quoi la première
+  // lettre tapée dans un champ vide le ferait disparaître.
+  const [nomEnEdition, setNomEnEdition] = useState(false);
+  // Les occasions montrent d'abord la sélection ; la liste complète s'ouvre
+  // sur place, sans feuille par-dessus.
+  const [toutesOccasions, setToutesOccasions] = useState(false);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     // Aperçu local instantané puis upload réel vers Supabase Storage
@@ -211,6 +236,7 @@ export default function AddScreen() {
     setSourcePhoto(false);
   };
 
+  const creation = state.editingId == null;
   const isShoe = state.addCat === "chaussures";
   const isSac = state.addCat === "sac";
   const isBijou = state.addCat === "bijou";
@@ -225,15 +251,23 @@ export default function AddScreen() {
 
   const colorPalette = isBijou ? PALETTE_BIJOU : PALETTE;
 
-  const suggestedSeason = seasonSuggestion(state.addCat, state.addName);
-  const seasonMissing = !state.addSeason;
+  // La saison affichée est celle qui sera enregistrée : le choix de
+  // l'utilisatrice, sinon saisonParDefaut — la même règle que saveItem.
+  // Des chips et non plus un <select> : le correctif du 10/09/2026 venait de
+  // ce qu'un select natif n'émet aucun `change` quand on re-choisit la valeur
+  // affichée ; ici, toucher le chip déjà sélectionné confirme simplement.
+  const saisonRetenue = state.addSeason ?? saisonParDefaut(state.addCat, state.addName);
+  // « Suggérée » seulement quand Capsela a vraiment une suggestion : le repli
+  // « Toutes saisons » est une valeur par défaut, pas une lecture de la pièce.
+  const saisonSuggeree = state.addSeason == null && seasonSuggestion(state.addCat, state.addName) != null;
+  const occasions = occasionsRetenues(state.addOccasionTouched, state.addOccasion, state.addCat, state.addShoeType);
+  const occasionsSuggerees = !state.addOccasionTouched;
+
   const shoeTypeMissing = isShoe && !state.addShoeType;
-  const subtypeMissing = false; // aucune catégorie n'exige de sous-type générique (seul le type de chaussure bloque, R-B6).
-  const blocked = seasonMissing || shoeTypeMissing || subtypeMissing || state.addPhotoUploading;
+  const blocked = shoeTypeMissing || state.addPhotoUploading;
 
   const typeOptions = typeOptionsFor(state.addCat);
   const typeValue = isShoe ? state.addShoeType : isSac ? state.addSacType : isBijou ? state.addBijouType : isAccessoire ? state.addAccessoireType : state.addSubtype;
-  const typeTouched = isShoe ? state.addShoeTypeTouched : isSac ? state.addSacTypeTouched : isBijou ? state.addBijouTypeTouched : isAccessoire ? state.addAccessoireTypeTouched : state.addSubtypeTouched;
   const setTypeValue = (v: string) => {
     if (isShoe) actions.setAddShoeType(v as ShoeType);
     else if (isSac) actions.setAddSacType(v as SacType);
@@ -242,272 +276,362 @@ export default function AddScreen() {
     else actions.setAddSubtype(v);
   };
 
-  const photoAnalyzed = Boolean(state.addPhotoUrl) && !state.addPhotoAnalyzing;
-  const nameIsAi = !state.addNameTouched && state.addName.trim().length > 0;
-  const catIsAi = !state.addCatTouched && photoAnalyzed;
-  const typeIsAi = !typeTouched && Boolean(typeValue);
-  const colorIsAi = !state.addColorTouched && photoAnalyzed;
-  const matiereIsAi = !state.addMatiereTouched && Boolean(state.addMatiere);
-  const coupeIsAi = !state.addCoupeTouched && Boolean(state.addCoupe);
-  const characteristicsAi = colorIsAi || matiereIsAi || coupeIsAi;
-  // La pastille « suggéré par l'IA » suit la valeur RETENUE, pas la
-  // suggestion : sur un champ encore vide elle annoncerait une valeur qui
-  // n'existe pas. La suggestion, elle, se lit dans le libellé du choix vide.
-  const seasonIsAi = Boolean(state.addSeason) && state.addSeason === suggestedSeason;
-  const occasionsIsAi = !state.addOccasionTouched;
+  const analysee = state.addPhotoAnalysee && creation;
+  const nomSuggere = analysee && !state.addNameTouched && state.addName.trim().length > 0;
+  const nomVisible = state.addName.trim().length > 0;
+  const matiereEstimee = analysee && !state.addMatiereTouched && Boolean(state.addMatiere);
+  // Caractéristiques encore vides : proposées à l'ajout, jamais affichées
+  // comme un manque (« Non précisée » répété, qui donnait l'impression que
+  // l'analyse avait échoué).
+  const matiereManquante = !state.addMatiere;
+  const coupeManquante = coupeApplicable && !state.addCoupe;
+
+  const titre = !creation ? "Modifier la pièce" : state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce";
+  const colonnesAttributs = [true, Boolean(typeOptions && typeOptions.length > 0), sizeApplicable].filter(Boolean).length;
 
   const save = () => {
     if (blocked) return;
     if (sizeApplicable && state.addSize == null && selectedSize) actions.setAddSize(selectedSize);
-    // Plus de repli sur la suggestion ici : il était inatteignable (`blocked`
-    // rendait la main avant) et il aurait de toute façon échoué — `saveItem`
-    // relit `stateRef.current`, que ce `setAddSeason` n'a pas encore mis à
-    // jour, et abandonne alors en silence sur son propre garde. Deux verrous
-    // pour la même cause ; la saison se confirme désormais dans le champ.
     actions.saveItem();
   };
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
-      <div className="relative pt-2">
-        <div className="absolute left-0 top-0">
-          <BoutonRetour onClick={actions.addBack} label="Revenir à l'écran précédent" />
-        </div>
-        <div className="text-center px-[46px]">
-          <div className="t-titre-section text-ink">
-            {state.editingId != null ? "Modifier la pièce" : state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce"}
+    <div className="absolute inset-0 flex flex-col bg-cream">
+      <div className="flex-shrink-0 px-6 pt-[8px] pb-[10px]">
+        <div className="relative">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2">
+            <BoutonRetour onClick={actions.addBack} label="Revenir à l'écran précédent" />
+          </div>
+          <div className="text-center px-[46px] min-h-[38px] flex items-center justify-center">
+            <div className="t-titre-section text-ink">{titre}</div>
           </div>
         </div>
       </div>
 
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={onPhotoChange} className="hidden" />
-      <input ref={galerieInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
-      <button
-        type="button"
-        onClick={() => setSourcePhoto(true)}
-        className={
-          "mt-[18px] w-full h-[190px] rounded-2xl flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
-          (state.addPhotoUrl ? "" : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
-        }
-        style={
-          state.addPhotoUrl
-            ? { backgroundImage: `url(${state.addPhotoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-            : undefined
-        }
-      >
-        {state.addPhotoUploading && (
-          <span
-            className="absolute inset-0 flex items-center justify-center text-[12px] text-cream"
-            style={{ background: "rgba(29,26,22,.45)" }}
-          >
-            Envoi de la photo…
-          </span>
-        )}
-        {state.addPhotoUrl ? (
-          <span
-            className="absolute bottom-3 right-3 flex items-center gap-[6px] text-[11px] text-cream rounded-full px-3 py-[6px]"
-            style={{ background: "rgba(29,26,22,.7)" }}
-          >
-            <CropIcon /> Changer la photo
-          </span>
-        ) : (
-          <>
-            <div className="w-[54px] h-[54px] rounded-full bg-ink text-cream flex items-center justify-center text-2xl">▢</div>
-            <div className="text-[13px] text-ink">Prendre la pièce en photo</div>
-            <div className="text-[11px] text-muted">ou importer depuis ta galerie</div>
-          </>
-        )}
-      </button>
-      {state.addPhotoAnalyzing && (
-        <div className="text-[12px] text-terracotta mt-[9px] leading-[1.4]">
-          Analyse de la photo… catégorie, couleur et matière vont se pré-remplir.
-        </div>
-      )}
-      {photoAnalyzed && state.editingId == null && (
-        <div className="text-[12px] text-muted mt-[9px] flex items-center gap-[5px]">
-          L&apos;édit Capsela a analysé ta photo <SparkleIcon className="text-terracotta" />
-        </div>
-      )}
+      <div className="scrollarea flex-1 overflow-y-auto px-6 pb-7">
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={onPhotoChange} className="hidden" />
+        <input ref={galerieInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
 
-      <FieldLabel ai={nameIsAi}>Nom de la pièce</FieldLabel>
-      <input
-        className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
-        value={state.addName}
-        onChange={(e) => actions.setAddName(e.target.value)}
-        placeholder="ex. Chemise en lin écrue"
-      />
+        {/* 1. La photo, premier élément de l'écran : plus haute qu'avant
+            (190 px fixes), proportionnelle à la largeur, bornée pour laisser
+            voir le nom sous la ligne de flottaison dès 360 px. */}
+        <button
+          type="button"
+          onClick={() => setSourcePhoto(true)}
+          aria-label={state.addPhotoUrl ? "Changer la photo" : "Ajouter une photo"}
+          className={
+            "mt-[4px] w-full rounded-2xl flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
+            (state.addPhotoUrl ? "bg-card" : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
+          }
+          style={{
+            height: "clamp(230px, 68vw, 300px)",
+            ...(state.addPhotoUrl
+              ? { backgroundImage: `url(${state.addPhotoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+              : {}),
+          }}
+        >
+          {state.addPhotoUploading && (
+            <span
+              className="absolute inset-0 flex items-center justify-center text-[12px] text-cream"
+              style={{ background: "rgba(29,26,22,.45)" }}
+            >
+              Envoi de la photo…
+            </span>
+          )}
+          {state.addPhotoUrl ? (
+            <span
+              className="absolute bottom-3 right-3 flex items-center gap-[6px] text-[11px] text-cream rounded-full px-3 py-[7px]"
+              style={{ background: "rgba(29,26,22,.7)" }}
+            >
+              <CropIcon /> Changer la photo
+            </span>
+          ) : (
+            <>
+              <div className="w-[54px] h-[54px] rounded-full bg-ink text-cream flex items-center justify-center">
+                <CameraIcon />
+              </div>
+              <div className="text-[13px] text-ink">Prendre la pièce en photo</div>
+              <div className="text-[11px] text-muted">ou importer depuis ta galerie</div>
+            </>
+          )}
+        </button>
 
-      <FieldLabel>
-        Marque <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
-      </FieldLabel>
-      <input
-        className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
-        value={state.addBrand}
-        onChange={(e) => actions.setAddBrand(e.target.value)}
-        placeholder="ex. Sézane"
-      />
-
-      <div className="flex items-center gap-[16px] mt-6 mb-[11px]">
-        <div className="flex items-center gap-[6px] flex-1">
-          <span className="t-surtitre text-muted">Catégorie</span>
-          {catIsAi && <AiTag />}
-        </div>
-        {typeOptions && typeOptions.length > 0 && (
-          <div className="flex items-center gap-[6px] flex-1">
-            <span className="t-surtitre text-muted">Type</span>
-            {typeIsAi && <AiTag />}
+        {/* 2. L'analyse : une phrase, pas un badge. */}
+        {state.addPhotoAnalyzing && (
+          <div className="mt-[14px] flex items-start gap-[10px] rounded-[16px] bg-warm-bg px-4 py-[12px]" role="status">
+            <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
+              ✦
+            </span>
+            <div className="min-w-0">
+              <div className="text-[13px] text-ink font-medium leading-[1.35]">L&apos;édit Capsela analyse ta pièce…</div>
+              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">
+                Catégorie, couleur et matière vont se préremplir.
+              </div>
+            </div>
           </div>
         )}
-        {sizeApplicable && (
-          <div className="w-[76px] flex-shrink-0 t-surtitre text-muted">
-            {isShoe ? "Pointure" : "Taille"}
+        {analysee && !state.addPhotoAnalyzing && (
+          <div className="mt-[14px] flex items-start gap-[10px] rounded-[16px] bg-warm-bg px-4 py-[12px]">
+            <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
+              ✦
+            </span>
+            <div className="min-w-0">
+              <div className="text-[13px] text-ink font-medium leading-[1.35]">L&apos;édit Capsela a analysé ta pièce</div>
+              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">
+                Vérifie les informations et complète si besoin.
+              </div>
+            </div>
           </div>
         )}
-      </div>
-      <div className="flex items-start gap-[8px]">
-        <SelectField
-          icon={<HangerIcon />}
-          value={state.addCat}
-          onChange={(v) => actions.setAddCat(v as CategoryKey)}
-          options={CATS.map(([key, label]) => ({ value: key, label }))}
-        />
-        {typeOptions && typeOptions.length > 0 && (
-          <SelectField
-            icon={<TshirtIcon />}
-            value={typeValue || ""}
-            onChange={setTypeValue}
-            options={typeOptions.map((t) => ({ value: t, label: t }))}
-            placeholder={isShoe ? "Choisir" : "Non précisé"}
+
+        {/* 3. Le nom : une proposition à relire, modifiable d'un geste. */}
+        <div className="mt-6">
+          <TitreSection suggere={nomSuggere}>{nomSuggere ? "Suggestion Capsela" : "Nom de la pièce"}</TitreSection>
+          {nomEnEdition || !nomVisible ? (
+            <input
+              className="capin w-full bg-card border border-border rounded-xl px-4 py-[13px] text-[15px] text-ink font-sans"
+              value={state.addName}
+              onChange={(e) => actions.setAddName(e.target.value)}
+              onFocus={() => setNomEnEdition(true)}
+              onBlur={() => setNomEnEdition(false)}
+              autoFocus={nomEnEdition}
+              enterKeyHint="done"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+              }}
+              placeholder="ex. Chemise en lin écrue"
+              aria-label="Nom de la pièce"
+            />
+          ) : (
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="t-titre-section text-ink min-w-0 break-words">{state.addName}</div>
+              <button
+                onClick={() => setNomEnEdition(true)}
+                className="t-lien text-terracotta cursor-pointer flex-shrink-0 py-[6px]"
+              >
+                Modifier le nom
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 4. La marque, secondaire. */}
+        <div className="mt-5">
+          <label className="block">
+            <span className="t-label text-muted">
+              Marque <span className="normal-case tracking-normal opacity-80">· optionnel</span>
+            </span>
+            <input
+              className="capin mt-[7px] w-full bg-transparent border-0 border-b border-border rounded-none px-0 py-[9px] text-[14px] text-ink font-sans"
+              value={state.addBrand}
+              onChange={(e) => actions.setAddBrand(e.target.value)}
+              placeholder="ex. Sézane"
+              enterKeyHint="done"
+            />
+          </label>
+        </div>
+
+        {/* 5. Les attributs essentiels, en une carte compacte. « Modèle » et
+            non « Coupe » : ce champ est le sous-type (Longue, Chemise,
+            Baskets…), alors que « Coupe » désigne déjà dans l'app un autre
+            champ — Serré, Ajusté, Ample —, affiché sous ce nom ici comme sur
+            la fiche de la pièce. Deux champs du même nom se confondraient. */}
+        <div
+          className="mt-6 bg-card border border-border rounded-[16px] grid divide-x divide-border"
+          style={{ gridTemplateColumns: colonnesAttributs === 3 ? "1.25fr 1.25fr .8fr" : colonnesAttributs === 2 ? "1fr 1fr" : "1fr" }}
+        >
+          <SelectNu
+            label="Catégorie"
+            value={state.addCat}
+            onChange={(v) => actions.setAddCat(v as CategoryKey)}
+            options={CATS.map(([key, label]) => ({ value: key, label }))}
           />
-        )}
-        {sizeApplicable && (
-          <div className="w-[76px] flex-shrink-0">
-            <SelectField
+          {typeOptions && typeOptions.length > 0 && (
+            <SelectNu
+              label="Modèle"
+              value={typeValue || ""}
+              onChange={setTypeValue}
+              options={typeOptions.map((t) => ({ value: t, label: t }))}
+              placeholder={isShoe ? "Choisir" : "À préciser"}
+              enAttente={shoeTypeMissing}
+            />
+          )}
+          {sizeApplicable && (
+            <SelectNu
+              label={isShoe ? "Pointure" : "Taille"}
               value={selectedSize ?? ""}
               onChange={(v) => actions.setAddSize(v)}
               options={sizes.map((t) => ({ value: t, label: t }))}
               placeholder="—"
             />
-          </div>
-        )}
-      </div>
-      {shoeTypeMissing && (
-        <div className="text-[11px] text-terracotta mt-[8px]">Choisis un type de chaussure pour pouvoir ajouter cette pièce.</div>
-      )}
-
-      {/* "Analysé par Capsela" (recette 24/08/2026) — couleur/matière estimée/
-          coupe repliées en résumé compact, jamais le nuancier complet ni la
-          liste des matières affichés d'office ; tout reste modifiable via
-          "Modifier ces caractéristiques" (bottom sheet), rien n'est perdu. */}
-      <div className="mt-6 bg-card border border-border rounded-[16px] px-4 py-[16px]">
-        <div className="flex items-center gap-[7px] mb-[14px]">
-          <span className="t-surtitre text-ink font-semibold">Analysé par L&apos;édit Capsela</span>
-          {characteristicsAi && <AiTag />}
-        </div>
-        <div className="grid grid-cols-3 gap-[8px] text-center">
-          <div className="flex flex-col items-center gap-[7px]">
-            <span
-              className="w-[34px] h-[34px] rounded-full flex-shrink-0"
-              style={{ background: state.addColor.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }}
-            />
-            <div>
-              <div className="t-label text-muted">Couleur</div>
-              <div className="text-[12px] text-ink mt-[2px] leading-[1.2]">{state.addColor.name}</div>
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-[7px]">
-            <span className="w-[34px] h-[34px] rounded-full bg-warm-bg flex items-center justify-center text-warm-text flex-shrink-0">
-              <FabricIcon />
-            </span>
-            <div>
-              <div className="t-label text-muted">Matière estimée</div>
-              <div className="text-[12px] text-ink mt-[2px] leading-[1.2]">{state.addMatiere || "Non précisée"}</div>
-            </div>
-          </div>
-          {coupeApplicable && (
-            <div className="flex flex-col items-center gap-[7px]">
-              <span className="w-[34px] h-[34px] rounded-full bg-warm-bg flex items-center justify-center text-warm-text flex-shrink-0">
-                <FitIcon />
-              </span>
-              <div>
-                <div className="t-label text-muted">Coupe</div>
-                <div className="text-[12px] text-ink mt-[2px] leading-[1.2]">{state.addCoupe || "Non précisée"}</div>
-              </div>
-            </div>
           )}
         </div>
-        <button
-          onClick={() => setSheet("characteristics")}
-          className="mt-[14px] text-[12px] text-terracotta cursor-pointer flex items-center gap-[4px]"
-        >
-          Modifier ces caractéristiques ›
-        </button>
-      </div>
 
-      {/* Le champ affiche le CHOIX, jamais la suggestion (correctif 10/09/2026,
-          signalé : « je ne peux pas ajouter la pièce »). Il affichait la
-          suggestion tant que rien n'était choisi — or un <select> natif
-          n'émet aucun `change` si on re-choisit la valeur déjà affichée. Confirmer la saison suggérée était donc
-          impossible : le champ paraissait rempli, le bouton restait grisé, et
-          le message demandait de confirmer ce qui semblait déjà l'être. Seule
-          issue : choisir une AUTRE saison, ce qui revenait à enregistrer une
-          donnée fausse pour contourner l'écran.
-          La suggestion reste visible, mais dans le libellé du choix vide :
-          n'importe quelle sélection change alors la valeur et émet `change`. */}
-      <FieldLabel ai={seasonIsAi}>Saison</FieldLabel>
-      <SelectField
-        icon={<LeafIcon />}
-        value={state.addSeason ?? ""}
-        onChange={(v) => actions.setAddSeason(v as (typeof SEASONS)[number])}
-        options={SEASONS.map((s) => ({ value: s, label: s }))}
-        placeholder={suggestedSeason ? `À confirmer — ${suggestedSeason} ?` : "À confirmer"}
-      />
-
-      <div className="flex items-center gap-[8px] mt-6 mb-[11px]">
-        <span className="t-surtitre text-muted">Occasions recommandées</span>
-        {occasionsIsAi && <AiTag />}
-      </div>
-      <div className="flex gap-2 flex-wrap">
-        {state.addOccasion.length > 0 ? (
-          state.addOccasion.map((o) => (
-            <span key={o} className={chipGlypheCls(true)}>
-              <GlypheOccasion occasion={o} taille={15} />
-              {occasionShortLabel(o)}
-            </span>
-          ))
-        ) : (
-          <span className="text-[12px] text-muted">Aucune occasion sélectionnée.</span>
-        )}
-      </div>
-      <button
-        onClick={() => setSheet("occasions")}
-        className="mt-[10px] text-[12px] text-terracotta cursor-pointer flex items-center gap-[4px]"
-      >
-        Modifier les occasions ›
-      </button>
-
-      <div className="flex items-start gap-[8px] mt-6 text-muted">
-        <InfoIcon className="mt-[2px] flex-shrink-0" />
-        <span className="text-[11px] leading-[1.45]">Tu pourras modifier toutes ces informations à tout moment.</span>
-      </div>
-
-      <button
-        onClick={save}
-        className={
-          "mt-6 w-full text-center rounded-full py-4 t-bouton " +
-          (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer")
-        }
-      >
-        {state.editingId != null ? "Enregistrer les modifications" : "Ajouter à mon dressing"}
-      </button>
-      {blocked && !state.addPhotoUploading && (
-        <div className="text-center text-[11px] text-terracotta mt-[10px]">
-          {shoeTypeMissing ? "Confirme le type de chaussure pour pouvoir ajouter cette pièce." : "Confirme la saison pour pouvoir ajouter cette pièce."}
+        {/* 6. Les caractéristiques : seulement ce qui est connu, et une
+            invitation discrète pour le reste. */}
+        <div className="mt-6 bg-card border border-border rounded-[16px] px-4 pt-[15px] pb-[14px]">
+          <TitreSection suggere={analysee}>{analysee ? "Caractéristiques détectées" : "Caractéristiques"}</TitreSection>
+          <div className="grid grid-cols-3 gap-[8px] text-center">
+            <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
+              <span
+                className="w-[38px] h-[38px] rounded-full flex-shrink-0"
+                style={{ background: state.addColor.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }}
+              />
+              <span className="min-w-0">
+                <span className="block text-[13px] text-ink leading-[1.2] break-words">{state.addColor.name}</span>
+                <span className="block t-label text-muted mt-[3px]">Couleur</span>
+              </span>
+            </button>
+            {matiereManquante ? (
+              <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
+                <span className="w-[38px] h-[38px] rounded-full border border-dashed border-warm-border flex items-center justify-center text-terracotta text-[16px] flex-shrink-0">
+                  +
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] text-terracotta leading-[1.2]">Ajouter</span>
+                  <span className="block t-label text-muted mt-[3px]">Matière</span>
+                </span>
+              </button>
+            ) : (
+              <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
+                <span className="w-[38px] h-[38px] rounded-full bg-warm-bg flex items-center justify-center text-warm-text flex-shrink-0">
+                  <FabricIcon />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] text-ink leading-[1.2] break-words">{state.addMatiere}</span>
+                  <span className="block t-label text-muted mt-[3px]">{matiereEstimee ? "Matière estimée" : "Matière"}</span>
+                </span>
+              </button>
+            )}
+            {coupeApplicable &&
+              (coupeManquante ? (
+                <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
+                  <span className="w-[38px] h-[38px] rounded-full border border-dashed border-warm-border flex items-center justify-center text-terracotta text-[16px] flex-shrink-0">
+                    +
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] text-terracotta leading-[1.2]">Ajouter</span>
+                    <span className="block t-label text-muted mt-[3px]">Coupe</span>
+                  </span>
+                </button>
+              ) : (
+                <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
+                  <span className="w-[38px] h-[38px] rounded-full bg-warm-bg flex items-center justify-center text-warm-text flex-shrink-0">
+                    <FitIcon />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] text-ink leading-[1.2] break-words">{state.addCoupe}</span>
+                    <span className="block t-label text-muted mt-[3px]">Coupe</span>
+                  </span>
+                </button>
+              ))}
+          </div>
+          <button
+            onClick={() => setSheet("characteristics")}
+            className="mt-[14px] t-lien text-terracotta cursor-pointer py-[4px]"
+          >
+            Modifier les caractéristiques →
+          </button>
         </div>
-      )}
-      {state.addPhotoUploading && (
-        <div className="text-center text-[11px] text-terracotta mt-[10px]">Envoi de la photo en cours…</div>
-      )}
+
+        {/* 7. La saison : une recommandation présélectionnée, jamais un verrou. */}
+        <div className="mt-7">
+          <TitreSection suggere={saisonSuggeree}>{saisonSuggeree ? "Saison suggérée" : "Saison"}</TitreSection>
+          <div className="flex gap-2 flex-wrap" role="radiogroup" aria-label="Saison">
+            {SEASONS.map((s) => {
+              const on = saisonRetenue === s;
+              return (
+                <button
+                  key={s}
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => actions.setAddSeason(s)}
+                  className={chipCls(on) + " inline-flex items-center gap-[6px]"}
+                >
+                  {on && <span aria-hidden="true">✓</span>}
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 8. Les occasions : la suggestion d'abord, la liste complète à la
+            demande. Jamais obligatoires. */}
+        <div className="mt-7">
+          <TitreSection suggere={occasionsSuggerees}>{occasionsSuggerees ? "Occasions suggérées" : "Occasions"}</TitreSection>
+          <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">
+            {occasionsSuggerees
+              ? "Capsela te suggère les occasions les plus adaptées à cette pièce."
+              : "Plusieurs choix possibles."}
+          </div>
+          {toutesOccasions ? (
+            <div className="flex gap-2 flex-wrap">
+              {OCCASIONS.map(([key]) => {
+                const on = occasions.includes(key);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => actions.setAddOccasion(key)}
+                    aria-pressed={on}
+                    className={chipCls(on) + " inline-flex items-center gap-[7px]"}
+                  >
+                    <GlypheOccasion occasion={key} taille={15} />
+                    {libelleOccasion(key)}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex gap-2 flex-wrap">
+              {occasions.length > 0 ? (
+                occasions.map((o) => (
+                  <span key={o} className={chipCls(true) + " inline-flex items-center gap-[7px] cursor-default"}>
+                    <GlypheOccasion occasion={o} taille={15} />
+                    {libelleOccasion(o)}
+                  </span>
+                ))
+              ) : (
+                <span className="text-[12px] text-muted">Aucune occasion choisie pour l&apos;instant.</span>
+              )}
+            </div>
+          )}
+          {!toutesOccasions && (
+            <button onClick={() => setToutesOccasions(true)} className="mt-[12px] t-lien text-terracotta cursor-pointer py-[4px]">
+              Modifier les occasions →
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-start gap-[8px] mt-7 text-muted">
+          <InfoIcon className="mt-[2px] flex-shrink-0" />
+          <span className="text-[11px] leading-[1.45]">Tu pourras modifier toutes ces informations à tout moment.</span>
+        </div>
+      </div>
+
+      {/* 9. L'action, fixée hors du défilement, au-dessus de la zone système.
+          Grisée seulement pour ce que saveItem exige réellement. */}
+      <div
+        className="flex-shrink-0 px-6 pt-[10px] border-t border-border bg-cream"
+        style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom))" }}
+      >
+        <button
+          onClick={save}
+          disabled={blocked}
+          className={
+            "w-full text-center rounded-full t-bouton " +
+            (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer")
+          }
+          style={{ minHeight: 52 }}
+        >
+          {!creation ? "Enregistrer les modifications" : "Ajouter au dressing"}
+        </button>
+        {state.addPhotoUploading ? (
+          <div className="text-center text-[11px] text-terracotta mt-[8px]">Envoi de la photo en cours…</div>
+        ) : shoeTypeMissing ? (
+          <div className="text-center text-[11px] text-terracotta mt-[8px]">Choisis le modèle de chaussures pour pouvoir les ajouter.</div>
+        ) : null}
+      </div>
 
       <BottomSheet
         title={state.addPhotoUrl ? "Changer la photo" : "Ajouter une photo"}
@@ -569,7 +693,7 @@ export default function AddScreen() {
           value={state.addMatiere ?? ""}
           onChange={(e) => actions.setAddMatiere((e.target.value || null) as typeof state.addMatiere)}
         >
-          <option value="">Non précisée</option>
+          <option value="">À préciser</option>
           {MATIERES.map((m) => (
             <option key={m} value={m}>
               {m}
@@ -590,28 +714,6 @@ export default function AddScreen() {
           </>
         )}
 
-        <button
-          onClick={() => setSheet(null)}
-          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] t-bouton cursor-pointer"
-        >
-          Terminé
-        </button>
-      </BottomSheet>
-
-      <BottomSheet title="Occasions" open={sheet === "occasions"} onClose={() => setSheet(null)}>
-        <div className="text-[12px] text-muted mb-[16px] leading-[1.45]">Plusieurs choix possibles.</div>
-        <div className="flex gap-2 flex-wrap">
-          {OCCASIONS.map(([key]) => (
-            <button
-              key={key}
-              onClick={() => actions.setAddOccasion(key)}
-              className={chipGlypheCls(state.addOccasion.includes(key))}
-            >
-              <GlypheOccasion occasion={key} taille={15} />
-              {occasionShortLabel(key)}
-            </button>
-          ))}
-        </div>
         <button
           onClick={() => setSheet(null)}
           className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] t-bouton cursor-pointer"

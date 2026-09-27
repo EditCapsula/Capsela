@@ -101,13 +101,32 @@ export const PALETTE: [string, string][] = [
 export const SEASONS: Season[] = ["Printemps / Été", "Automne / Hiver", "Toutes saisons"];
 
 /**
- * Pré-suggestion de saison à l'ajout d'une pièce : jamais appliquée d'office,
- * l'utilisateur doit toujours confirmer (contrainte produit).
+ * Pré-suggestion de saison à l'ajout d'une pièce, par catégorie et par nom.
+ * Longtemps « jamais appliquée d'office, l'utilisateur doit toujours
+ * confirmer » : cette contrainte produit est levée le 27/09/2026, cf.
+ * saisonParDefaut juste en dessous.
  */
 export function seasonSuggestion(cat: CategoryKey, name: string): Season | null {
   if (cat === "veste" || cat === "manteau" || cat === "pull") return "Automne / Hiver";
   if (/lin|short|débardeur|sandal|combinaison/.test((name || "").toLowerCase())) return "Printemps / Été";
   return null;
+}
+
+/**
+ * La saison retenue quand l'utilisatrice n'en a choisi aucune
+ * (27/09/2026, refonte « Ajouter une pièce » : « la saison ne doit plus
+ * empêcher l'ajout »). Jusque-là, la pièce ne s'enregistrait pas tant que la
+ * saison n'était pas confirmée à la main — la seule information secondaire
+ * qui bloquait l'action principale.
+ *
+ * La suggestion d'abord ; à défaut, « Toutes saisons », qui est déjà le repli
+ * du catalogue pour une saison inconnue (vestiaire.ts) : la pièce reste
+ * proposée par le moteur toute l'année plutôt que d'être écartée sur une
+ * saison que personne n'a donnée. L'écran l'affiche présélectionnée et
+ * modifiable : rien n'est enregistré sans avoir été montré.
+ */
+export function saisonParDefaut(cat: CategoryKey, name: string): Season {
+  return seasonSuggestion(cat, name) ?? "Toutes saisons";
 }
 
 /**
