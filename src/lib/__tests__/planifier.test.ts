@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { repartirParEcheance, villeDuLieu, type TenuePlanifiee } from "../planifier";
+import { plansDuJour, repartirParEcheance, villeDuLieu, type TenuePlanifiee } from "../planifier";
 
 const t = (jour: string, moment: TenuePlanifiee["moment"] = "Matin"): TenuePlanifiee => ({
   id: jour + moment,
@@ -63,5 +63,19 @@ describe("villeDuLieu — la ville donnée, sans précision ajoutée", () => {
   });
   it("lieu vide : chaîne vide", () => {
     expect(villeDuLieu("")).toBe("");
+  });
+});
+
+describe("plansDuJour — ce que l'Accueil et Tenue rappellent pour le jour consulté", () => {
+  it("seulement ce jour-là, dans l'ordre de la journée", () => {
+    const r = plansDuJour(
+      [t("2026-09-29", "Soirée"), t("2026-09-28", "Matin"), t("2026-09-29", "Matin"), t("2026-09-29", "Toute la journée")],
+      "2026-09-29"
+    );
+    expect(r.map((x) => x.moment)).toEqual(["Toute la journée", "Matin", "Soirée"]);
+  });
+
+  it("aucun plan ce jour-là : rien", () => {
+    expect(plansDuJour([t("2026-09-28")], "2026-09-29")).toEqual([]);
   });
 });
