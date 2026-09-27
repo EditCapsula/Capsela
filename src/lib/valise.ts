@@ -31,8 +31,10 @@ export type TailleBagage = "S" | "M" | "L" | "XL";
 export const BAGAGES: [TailleBagage, string, number][] = [
   ["S", "Cabine souple", 8],
   ["M", "Cabine", 12],
-  ["L", "Soute moyenne", 18],
-  ["XL", "Grande soute", 24],
+  // Libellés du brief de refonte (27/09/2026) : « Soute moyenne » et
+  // « Grande soute » se lisaient mal (« Grande suite »). Capacités inchangées.
+  ["L", "Grande valise", 18],
+  ["XL", "Très grande valise", 24],
 ];
 
 export const capaciteDe = (t: TailleBagage) => BAGAGES.find(([k]) => k === t)![2];
@@ -415,3 +417,129 @@ export const GROUPES_VALISE: [string, CategoryKey[]][] = [
   ["Sacs", ["sac"]],
   ["Bijoux & accessoires", ["bijou", "accessoire"]],
 ];
+
+// ── Ajuster la valise ────────────────────────────────────────────────────
+
+/**
+ * ALLÉGER UNE VALISE TROP PLEINE (« Optimiser », après un ajout qui dépasse
+ * la capacité) : on retire, une à une, la pièce qui figure dans le moins de
+ * looks, jusqu'à revenir à la capacité. Rend les pièces à retirer, dans
+ * l'ordre, avec les looks que chacune emporte avec elle.
+ */
+export function allegement(pieceIds: number[], looks: LookValise[], capacite: number): { id: number; looksPerdus: number }[] {
+  let restants = [...looks];
+  let dans = [...pieceIds];
+  const out: { id: number; looksPerdus: number }[] = [];
+  while (dans.length > capacite) {
+    const parPiece = looksParPiece(restants);
+    const id = dans.reduce((m, x) => ((parPiece.get(x) ?? 0) < (parPiece.get(m) ?? 0) ? x : m));
+    const looksPerdus = restants.filter((l) => l.ids.includes(id)).length;
+    out.push({ id, looksPerdus });
+    restants = restants.filter((l) => !l.ids.includes(id));
+    dans = dans.filter((x) => x !== id);
+  }
+  return out;
+}
+
+/**
+ * REMPLACER une pièce : les pièces du dressing du même groupe (Hauts, Bas…)
+ * absentes de la valise, chacune avec le nombre de looks que la valise
+ * aurait en l'échangeant — compté par le moteur, pas estimé. Les meilleures
+ * d'abord.
+ */
+export function alternatives(
+  id: number,
+  pieceIds: number[],
+  dressing: Item[],
+  situations: SituationValise[],
+  generer: Generateur,
+  tirages = 6
+): { item: Item; looks: number }[] {
+  const piece = dressing.find((p) => p.id === id);
+  if (!piece) return [];
+  const groupe = GROUPES_VALISE.find(([, cats]) => cats.includes(piece.cat))?.[1] ?? [piece.cat];
+  return dressing
+    .filter((p) => groupe.includes(p.cat) && !pieceIds.includes(p.id))
+    .map((p) => ({
+      item: p,
+      looks: looksDeLaValise([...pieceIds.filter((x) => x !== id), p.id], dressing, situations, generer, [], tirages).looks.length,
+    }))
+    .sort((a, b) => b.looks - a.looks);
+}
+
+// ── Présentation du résultat (refonte du 27/09/2026) ─────────────────────
+
+/** Les occasions d'un look : celles des situations auxquelles il répond, dans l'ordre, sans doublon. */
+export function occasionsDuLook(l: LookValise, situations: SituationValise[]): OccasionKey[] {
+  return [...new Set(l.situations.map((i) => situations[i]?.occasion).filter((o): o is OccasionKey => !!o))];
+}
+
+/** Les occasions que la valise couvre réellement : au moins un look pour chacune. */
+export function occasionsCouvertes(looks: LookValise[], situations: SituationValise[]): OccasionKey[] {
+  return [...new Set(looks.flatMap((l) => occasionsDuLook(l, situations)))];
+}
+
+/** Les occasions auxquelles une pièce sert : celles des looks où elle figure. */
+export function occasionsDeLaPiece(id: number, looks: LookValise[], situations: SituationValise[]): OccasionKey[] {
+  return occasionsCouvertes(
+    looks.filter((l) => l.ids.includes(id)),
+    situations
+  );
+}
+
+const CATEGORIE_COURTE: Record<CategoryKey, string> = {
+  haut: "haut",
+  pull: "pull",
+  pantalon: "pantalon",
+  jean: "jean",
+  jupe: "jupe",
+  short: "short",
+  robe: "robe",
+  combinaison: "combinaison",
+  veste: "veste",
+  manteau: "manteau",
+  chaussures: "chaussures",
+  sac: "sac",
+  bijou: "bijou",
+  accessoire: "accessoire",
+};
+const ORDRE_RESUME: CategoryKey[] = ["robe", "combinaison", "haut", "pull", "pantalon", "jean", "jupe", "short", "veste", "manteau", "chaussures", "sac", "bijou", "accessoire"];
+
+/**
+ * Le nom d'un look, fait de ses pièces : « Chemise · pantalon · mocassins ·
+ * sac ». La maquette titre « City day » ou « Dîner en ville » : aucune donnée
+ * ne fournit ces noms, on dit ce que le look contient. Le sous-type ou le
+ * type de chaussure quand il est connu, la catégorie sinon.
+ */
+export function resumeLook(pieces: Item[]): string {
+  const mots = [...pieces]
+    .sort((a, b) => ORDRE_RESUME.indexOf(a.cat) - ORDRE_RESUME.indexOf(b.cat))
+    .map((p) => (p.cat === "chaussures" ? p.shoeType : p.subtype) ?? CATEGORIE_COURTE[p.cat])
+    .map((m) => m.toLowerCase());
+  const uniques = [...new Set(mots)];
+  if (!uniques.length) return "";
+  const texte = uniques.join(" · ");
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
+}
+
+/**
+ * Le conseil sous la météo prévue (étape 1) — ARBITRAGE ÉDITORIAL du
+ * 27/09/2026, à partir des seules températures et conditions PRÉVUES : rien
+ * n'est dit quand il n'y a pas de prévision.
+ */
+export function conseilMeteo(meteos: MeteoJour[]): string | null {
+  const prevues = meteos.filter((m) => m.prevue);
+  if (!prevues.length) return null;
+  const min = Math.min(...prevues.map((m) => m.temp));
+  const max = Math.max(...prevues.map((m) => m.temp));
+  const pluie = prevues.some((m) => /pluie|pluvieux|averse|orage|bruine/i.test(m.label));
+  const base =
+    max < 8
+      ? "Temps froid, prévois des pièces chaudes."
+      : max < 15
+        ? "Temps frais, prévois des couches."
+        : min >= 23
+          ? "Temps chaud, privilégie les matières légères."
+          : "Températures douces, prévois des couches légères.";
+  return pluie ? `${base} De la pluie est prévue.` : base;
+}

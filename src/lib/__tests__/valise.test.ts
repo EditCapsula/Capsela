@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  allegement,
+  alternatives,
   amplitudePrevue,
+  BAGAGES,
+  conseilMeteo,
+  occasionsCouvertes,
+  occasionsDeLaPiece,
+  occasionsDuLook,
+  resumeLook,
   capaciteDe,
   composerValise,
   etatJauge,
@@ -28,6 +36,8 @@ const meteo = (jour: string, temp = 20, label = "Ensoleillé", prevue = false): 
 describe("valise — bagages, séjours, dates", () => {
   it("capacités arbitrées : S 8, M 12, L 18, XL 24", () => {
     expect(["S", "M", "L", "XL"].map((t) => capaciteDe(t as "S"))).toEqual([8, 12, 18, 24]);
+    // Libellés du brief de refonte : plus de « Grande soute » (lu « Grande suite »).
+    expect(BAGAGES.map(([, l]) => l)).toEqual(["Cabine souple", "Cabine", "Grande valise", "Très grande valise"]);
   });
 
   it("le type de séjour ne fait que présélectionner des occasions", () => {
@@ -197,5 +207,58 @@ describe("avec le vrai moteur — toutes les pièces viennent du dressing, chaqu
     } finally {
       Math.random = vrai;
     }
+  });
+});
+
+describe("ajuster — allègement et remplacement", () => {
+  it("allège en retirant d'abord ce qui sert le moins", () => {
+    const looks = [[1, 4, 7], [2, 4, 7], [3, 4, 7], [1, 5, 7]].map((ids) => ({ ids, situations: [0], elargie: false }));
+    // 7 pièces, capacité 5 : deux à retirer — d'abord 9 (dans aucun look), puis 2 (un seul look, la première à égalité).
+    expect(allegement([1, 2, 3, 4, 5, 7, 9], looks, 5)).toEqual([
+      { id: 9, looksPerdus: 0 },
+      { id: 2, looksPerdus: 1 },
+    ]);
+    expect(allegement([1, 4, 7], looks, 12)).toEqual([]);
+  });
+
+  it("remplacer : les pièces du même groupe absentes, classées par looks obtenus", () => {
+    const gen = fauxGenerateur({ quotidien: [[1, 4, 7], [2, 4, 7], [2, 5, 7]] });
+    const alt = alternatives(1, [1, 4, 7], DRESSING, S1(["quotidien"]), gen);
+    // Hauts absents de la valise : 2 et 3. Avec 2 à la place de 1 : le look 2-4-7 existe ; avec 3 : aucun.
+    expect(alt.map((a) => a.item.id)).toEqual([2, 3]);
+    expect(alt[0].looks).toBe(1);
+    expect(alt[1].looks).toBe(0);
+  });
+});
+
+describe("présentation du résultat — ce que l'écran affiche", () => {
+  const situations = situationsDuSejour(["quotidien", "soiree"], [meteo("2026-10-16")]);
+  const looks = [
+    { ids: [1, 4, 7], situations: [0], elargie: false },
+    { ids: [1, 5, 8], situations: [0, 1], elargie: false },
+  ];
+
+  it("occasions d'un look, couvertes par la valise, et d'une pièce", () => {
+    expect(occasionsDuLook(looks[1], situations)).toEqual(["quotidien", "soiree"]);
+    expect(occasionsCouvertes(looks, situations)).toEqual(["quotidien", "soiree"]);
+    expect(occasionsDeLaPiece(4, looks, situations)).toEqual(["quotidien"]);
+    expect(occasionsDeLaPiece(1, looks, situations)).toEqual(["quotidien", "soiree"]);
+  });
+
+  it("le nom d'un look dit ce qu'il contient, sans rien inventer", () => {
+    const robe: Item = { ...piece(6, "robe"), subtype: "Chemise" };
+    const baskets: Item = { ...piece(7, "chaussures"), shoeType: "Baskets" };
+    expect(resumeLook([baskets, piece(16, "sac"), robe, piece(9, "veste")])).toBe("Chemise · veste · baskets · sac");
+    expect(resumeLook([piece(1, "haut"), piece(4, "pantalon")])).toBe("Haut · pantalon");
+    expect(resumeLook([])).toBe("");
+  });
+
+  it("le conseil météo ne parle que des jours prévus", () => {
+    expect(conseilMeteo([meteo("2026-10-16", 17, "Nuageux", true), meteo("2026-10-17", 18, "Ensoleillé", true)])).toBe(
+      "Températures douces, prévois des couches légères."
+    );
+    expect(conseilMeteo([meteo("2026-10-16", 12, "Pluvieux", true)])).toBe("Temps frais, prévois des couches. De la pluie est prévue.");
+    expect(conseilMeteo([meteo("2026-10-16", 27, "Ensoleillé", true)])).toBe("Temps chaud, privilégie les matières légères.");
+    expect(conseilMeteo([meteo("2026-10-16", 20)])).toBeNull();
   });
 });
