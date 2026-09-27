@@ -122,6 +122,8 @@ export default function ItemOutfitsScreen() {
       : pivot.capsuleSeasons.join(" · ");
 
   const occasionsCovered = Array.from(new Set(variations.map((v) => v.occasion)));
+  // Même critère que les idées elles-mêmes : la saison de la météo représentative de la capsule.
+  const horsSaison = pivot.season !== "Toutes saisons" && !representativeWeatherFor(capsuleSeason).seasons.includes(pivot.season);
   const filteredVariations = occasionFilter === "all" ? variations : variations.filter((v) => v.occasion === occasionFilter);
 
   // Groupe par occasion en conservant l'ordre d'apparition (déjà celui de
@@ -290,12 +292,24 @@ export default function ItemOutfitsScreen() {
 
       {occasionsCovered.length === 0 ? (
         <div className="mt-[22px] bg-card border border-border rounded-[14px] px-4 py-[18px]">
-          <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
-            Pas encore assez de pièces compatibles pour créer plusieurs looks avec cet article.
-          </div>
-          <button onClick={actions.openAdd} className="mt-[12px] inline-block text-[12px] text-terracotta cursor-pointer">
-            Compléter mon dressing →
-          </button>
+          {/* Une pièce hors de la saison de la capsule n'a pas d'idée pour une
+              raison qui n'est pas le dressing (27/09/2026) : le dire, plutôt
+              que d'inviter à ajouter des pièces qui n'y changeraient rien. */}
+          {horsSaison ? (
+            <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
+              Cette pièce se porte {pivot.season === "Printemps / Été" ? "au printemps et en été" : "en automne et en hiver"} : ses idées de tenues
+              viendront avec sa saison.
+            </div>
+          ) : (
+            <>
+              <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
+                Pas encore assez de pièces compatibles pour créer plusieurs looks avec cet article.
+              </div>
+              <button onClick={actions.openAdd} className="mt-[12px] inline-block text-[12px] text-terracotta cursor-pointer">
+                Compléter mon dressing →
+              </button>
+            </>
+          )}
         </div>
       ) : (
         grouped.map((group) => {
