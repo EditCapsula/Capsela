@@ -8,6 +8,8 @@ import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCa
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
 import { previsionPour, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, type TenuePlanifiee } from "./planifier";
+import { avecValise, enregistrerValise, estIdLocal, fetchValises, garderValisesLocales, lireValisesLocales, supprimerValiseDuCompte, type ValiseGardee } from "./valises";
+import { decisionAcces } from "./autorisations";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
@@ -216,6 +218,10 @@ function buildInitialState(): AppState {
     tenuesPlanifiees: [],
     planRetour: null,
     planJour: null,
+    valises: [],
+    valiseOuverte: null,
+    valiseRetour: null,
+    valiseStatut: null,
     savedLooks: [],
     lookDraftIds: [],
     lookDraftName: "",
@@ -257,8 +263,19 @@ export interface Actions {
   goLegal: () => void;
   /** Ouvre la page Premium en mémorisant d'où l'on vient. */
   goPremium: (origine?: "valise") => void;
-  /** Préparer sa valise (docs/valise.md) — l'accueil décide de l'accès (règle PREPARER_VALISE). */
-  goValise: () => void;
+  /**
+   * Ouvre une valise (id) ou une nouvelle (null), selon la règle d'accès
+   * PREPARER_VALISE : sous PREMIUM_REQUIRED, un refus mène à la page Premium.
+   * Le retour ramène à l'écran d'origine (Accueil, Planifier).
+   */
+  ouvrirValise: (id: string | null) => Promise<void>;
+  /** Quitte l'écran Valise vers l'écran d'où il a été ouvert. */
+  quitterValise: () => void;
+  /** Change la valise affichée sans quitter l'écran (null : nouvelle valise). */
+  afficherValise: (id: string | null) => void;
+  /** Garde la valise : liste, appareil tout de suite, compte un instant après. */
+  sauverValise: (v: ValiseGardee) => void;
+  supprimerValise: (id: string) => void;
   /** Écran « Avis de styliste » (docs/avis-de-styliste.md). Réservé Premium : l'accueil ouvre le Premium Gate à la place pour tout autre statut. */
   goAvisStyliste: () => void;
   /**
@@ -718,6 +735,33 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     });
     return () => {
       cancelled = true;
+    };
+  }, [ready, userId]);
+
+  /*
+   * LES VALISES (27/09/2026) : celles de l'appareil d'abord, celles du
+   * compte ensuite, qui l'emportent. Une valise locale pas encore acceptée
+   * par le compte (hors ligne, ou avant la migration) reste dans la liste.
+   */
+  const minuteursValise = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const fileValises = useRef<Promise<void>>(Promise.resolve());
+  /** Identifiant local → identifiant du compte, une fois la valise insérée. */
+  const idsValisesCompte = useRef(new Map<string, string>());
+  useEffect(() => {
+    if (!ready) return;
+    const locales = lireValisesLocales(userId);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState((s) => ({ ...s, valises: locales }));
+    if (!userId) return;
+    let annule = false;
+    fetchValises(userId).then((duCompte) => {
+      if (annule || !duCompte) return;
+      const liste = [...duCompte, ...locales.filter((v) => estIdLocal(v.id))];
+      garderValisesLocales(userId, liste);
+      setState((s) => ({ ...s, valises: liste }));
+    });
+    return () => {
+      annule = true;
     };
   }, [ready, userId]);
 
@@ -1287,7 +1331,59 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         screen: "premium",
       })),
     goAvisStyliste: () => go("avisStyliste"),
-    goValise: () => go("valise"),
+    ouvrirValise: async (id) => {
+      const ouvrir = () =>
+        setState((s) => ({ ...s, valiseOuverte: id, valiseRetour: s.screen === "valise" ? s.valiseRetour : s.screen, screen: "valise" }));
+      const versPremium = () =>
+        setState((s) => ({ ...s, premiumReturn: s.screen === "premium" ? s.premiumReturn : s.screen, premiumOrigine: "valise", screen: "premium" }));
+      const decision = decisionAcces("PREPARER_VALISE", etatPremiumRef.current, false);
+      if (decision === "acces") return ouvrir();
+      if (decision === "gate") return versPremium();
+      const etat = await actions.verifierEtatPremium();
+      if (decisionAcces("PREPARER_VALISE", etat, true) === "acces") ouvrir();
+      else versPremium();
+    },
+    quitterValise: () => setState((s) => ({ ...s, screen: s.valiseRetour ?? "home", valiseRetour: null, valiseOuverte: null })),
+    afficherValise: (id) => setState((s) => ({ ...s, valiseOuverte: id })),
+    sauverValise: (v) => {
+      garderValisesLocales(userId, avecValise(stateRef.current.valises, v));
+      setState((s) => ({ ...s, valises: avecValise(s.valises, v) }));
+      if (!userId || !isSupabaseConfigured) {
+        setState((s) => ({ ...s, valiseStatut: "appareil" }));
+        return;
+      }
+      // Un instant après la dernière modification (plusieurs retraits ne font
+      // qu'une écriture), et à la file : une valise pas encore acceptée par le
+      // compte ne doit pas y être insérée deux fois.
+      const attente = minuteursValise.current.get(v.id);
+      if (attente) clearTimeout(attente);
+      minuteursValise.current.set(
+        v.id,
+        setTimeout(() => {
+          minuteursValise.current.delete(v.id);
+          fileValises.current = fileValises.current.then(async () => {
+            const idActuel = idsValisesCompte.current.get(v.id) ?? v.id;
+            const courante = stateRef.current.valises.find((x) => x.id === idActuel);
+            if (!courante) return;
+            const r = await enregistrerValise(userId, courante);
+            if (r.ok && r.id !== courante.id) {
+              idsValisesCompte.current.set(courante.id, r.id);
+              const renomme = (x: ValiseGardee) => (x.id === courante.id ? { ...x, id: r.id } : x);
+              garderValisesLocales(userId, stateRef.current.valises.map(renomme));
+              setState((s) => ({ ...s, valises: s.valises.map(renomme), valiseOuverte: s.valiseOuverte === courante.id ? r.id : s.valiseOuverte }));
+            }
+            setState((s) => ({ ...s, valiseStatut: r.ok ? "compte" : "appareil" }));
+          });
+        }, 500)
+      );
+    },
+    supprimerValise: (id) => {
+      const idCompte = idsValisesCompte.current.get(id) ?? id;
+      const reste = stateRef.current.valises.filter((x) => x.id !== id && x.id !== idCompte);
+      garderValisesLocales(userId, reste);
+      setState((s) => ({ ...s, valises: s.valises.filter((x) => x.id !== id && x.id !== idCompte), valiseOuverte: s.valiseOuverte === id ? null : s.valiseOuverte }));
+      void supprimerValiseDuCompte(idCompte);
+    },
     definirPhotoAvis: (photo) => {
       const avant = avisStylisteRef.current.photo;
       if (avant && avant.url !== photo?.url) URL.revokeObjectURL(avant.url);

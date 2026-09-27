@@ -1,24 +1,34 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { jourLocal } from "./outfitFeedback";
+import type { TenuePlanifiee } from "./planifier";
 import type { OccasionKey } from "./types";
 import type { LookValise, MeteoJour, SituationValise, TailleBagage, TypeSejour } from "./valise";
 
 /**
- * LA VALISE ENREGISTRÉE — accès à `valises` (migration 0038) et copie sur
- * l'appareil (docs/valise.md).
+ * LES VALISES ENREGISTRÉES — accès à `valises` (migrations 0038, 0039) et
+ * copie sur l'appareil (docs/valise.md).
  *
- * DEUX ENDROITS, UN SEUL ÉTAT. La valise est toujours gardée sur l'appareil
- * (localStorage), et en plus dans le compte quand la table existe. Avant la
- * migration, l'écriture en base échoue : la valise fonctionne quand même, et
- * l'écran dit où elle est gardée (« sur cet appareil » / « dans ton compte »)
- * plutôt que de laisser croire qu'elle suivra sur un autre téléphone.
+ * PLUSIEURS VALISES DEPUIS LE 27/09/2026 : elles remontent dans « Mes
+ * planifications » (Planifier), à venir jusqu'à leur date de retour, puis
+ * passées. « Nouvelle valise » en ajoute une au lieu de remplacer la
+ * précédente ; supprimer est une action explicite.
  *
- * Lecture qui rend null plutôt que de jeter ; écriture qui rend un booléen
- * (l'écran l'affiche) ; mode démo traité comme une base absente.
+ * DEUX ENDROITS, UNE SEULE LISTE. Les valises sont toujours gardées sur
+ * l'appareil (localStorage), et en plus dans le compte quand la table
+ * existe. Une valise créée hors ligne, ou avant la migration, porte un
+ * identifiant local (« local-… ») jusqu'à ce que le compte l'accepte ;
+ * l'écran dit où elle est gardée plutôt que de laisser croire qu'elle
+ * suivra sur un autre téléphone.
+ *
+ * Lecture qui rend null quand le compte n'est pas joignable ([] quand il
+ * répond sans valise) ; écriture qui rend un résultat que l'écran affiche ;
+ * mode démo traité comme un compte absent.
  */
 
 export interface ValiseGardee {
   version: 2;
+  /** Identifiant du compte (bigserial, en chaîne) ou local (« local-… ») tant qu'elle n'y est pas. */
+  id: string;
   destination: string;
   depart: string;
   retour: string;
@@ -32,46 +42,91 @@ export interface ValiseGardee {
   situationsSansLook: number[];
 }
 
-/** Valise du lot 1 (version 1), reprise sans rien perdre. */
-interface ValiseV1 extends Omit<ValiseGardee, "version"> {
-  version: 1;
+let compteur = 0;
+/** Identifiant d'une valise pas encore enregistrée dans le compte. */
+export const nouvelIdLocal = () => `local-${Date.now().toString(36)}-${(compteur++).toString(36)}`;
+export const estIdLocal = (id: string) => id.startsWith("local-");
+
+/** Valise du lot 1 (version 1) ou de la version à une seule valise, reprise sans rien perdre. */
+type ValiseAncienne = Omit<ValiseGardee, "version" | "id"> & { version: 1 | 2; id?: string };
+
+export function normaliserValise(v: ValiseAncienne | null | undefined): ValiseGardee | null {
+  if (!v || (v.version !== 1 && v.version !== 2)) return null;
+  return { ...v, version: 2, id: v.id ?? nouvelIdLocal() };
 }
 
-export function normaliserValise(v: ValiseGardee | ValiseV1 | null | undefined): ValiseGardee | null {
-  if (!v) return null;
-  if (v.version === 2) return v;
-  if (v.version === 1) return { ...v, version: 2 };
-  return null;
+/** Ajoute ou remplace une valise de la liste, par identifiant. */
+export function avecValise(liste: ValiseGardee[], v: ValiseGardee): ValiseGardee[] {
+  return liste.some((x) => x.id === v.id) ? liste.map((x) => (x.id === v.id ? v : x)) : [v, ...liste];
 }
 
-/** Un séjour terminé ne se rouvre pas : on repart d'une valise neuve. */
-export const valiseEnCours = (v: ValiseGardee | null, aujourdHui = jourLocal()) => (v && v.retour >= aujourdHui ? v : null);
+// ── Mes planifications : tenues et valises ──────────────────────────────
+
+export type Planification = { type: "tenue"; tenue: TenuePlanifiee } | { type: "valise"; valise: ValiseGardee };
+
+/**
+ * Tenues planifiées et valises, réparties entre « À venir » et « Passées ».
+ *
+ * Une valise est À VENIR JUSQU'À SON RETOUR : pendant le séjour, c'est
+ * encore elle qu'on ouvre. Une tenue bascule sur son jour (repartirParEcheance).
+ * À venir : la plus proche d'abord (départ d'une valise, jour d'une tenue) ;
+ * passées : la plus récente d'abord (retour d'une valise).
+ */
+export function repartirPlanifications(
+  tenues: readonly TenuePlanifiee[],
+  valises: readonly ValiseGardee[],
+  aujourdHui: string = jourLocal()
+): { aVenir: Planification[]; passees: Planification[] } {
+  const aVenir: [string, Planification][] = [];
+  const passees: [string, Planification][] = [];
+  for (const t of tenues) (t.jour >= aujourdHui ? aVenir : passees).push([t.jour, { type: "tenue", tenue: t }]);
+  for (const v of valises) {
+    if (v.retour >= aujourdHui) aVenir.push([v.depart, { type: "valise", valise: v }]);
+    else passees.push([v.retour, { type: "valise", valise: v }]);
+  }
+  aVenir.sort((a, b) => a[0].localeCompare(b[0]));
+  passees.sort((a, b) => b[0].localeCompare(a[0]));
+  return { aVenir: aVenir.map(([, p]) => p), passees: passees.map(([, p]) => p) };
+}
 
 // ── Sur l'appareil ───────────────────────────────────────────────────────
 
-const cleStockage = (userId: string | null) => `capsela.valise.${userId ?? "demo"}`;
+const cleListe = (userId: string | null) => `capsela.valises.${userId ?? "demo"}`;
+/** Clé de la version à une seule valise : reprise une fois, puis retirée. */
+const cleAncienne = (userId: string | null) => `capsela.valise.${userId ?? "demo"}`;
 
-export function lireValiseLocale(userId: string | null): ValiseGardee | null {
+export function lireValisesLocales(userId: string | null): ValiseGardee[] {
   try {
-    const raw = localStorage.getItem(cleStockage(userId));
-    return raw ? valiseEnCours(normaliserValise(JSON.parse(raw))) : null;
+    const raw = localStorage.getItem(cleListe(userId));
+    const liste = raw ? ((JSON.parse(raw) as ValiseAncienne[]).map(normaliserValise).filter(Boolean) as ValiseGardee[]) : [];
+    const ancienne = localStorage.getItem(cleAncienne(userId));
+    if (ancienne) {
+      const v = normaliserValise(JSON.parse(ancienne));
+      localStorage.removeItem(cleAncienne(userId));
+      if (v) {
+        const reprise = avecValise(liste, v);
+        garderValisesLocales(userId, reprise);
+        return reprise;
+      }
+    }
+    return liste;
   } catch {
-    return null;
+    return [];
   }
 }
 
-export function garderValiseLocale(userId: string | null, v: ValiseGardee | null) {
+export function garderValisesLocales(userId: string | null, liste: ValiseGardee[]) {
   try {
-    if (v) localStorage.setItem(cleStockage(userId), JSON.stringify(v));
-    else localStorage.removeItem(cleStockage(userId));
+    localStorage.setItem(cleListe(userId), JSON.stringify(liste));
   } catch {
-    // Stockage indisponible : la valise reste affichée, elle ne survivra pas au rechargement.
+    // Stockage indisponible : les valises restent affichées, elles ne survivront pas au rechargement.
   }
 }
 
 // ── Dans le compte ───────────────────────────────────────────────────────
 
 interface ValiseRow {
+  id?: number | string;
   destination: string;
   depart: string;
   retour: string;
@@ -87,6 +142,7 @@ const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Num
 export function rowToValise(r: ValiseRow): ValiseGardee {
   return {
     version: 2,
+    id: String(r.id),
     destination: r.destination,
     depart: r.depart,
     retour: r.retour,
@@ -102,7 +158,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
   };
 }
 
-export function valiseToRow(v: ValiseGardee): ValiseRow {
+export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
   return {
     destination: v.destination,
     depart: v.depart,
@@ -115,43 +171,52 @@ export function valiseToRow(v: ValiseGardee): ValiseRow {
   };
 }
 
-/** null en mode démo, sans ligne, ou en cas d'échec (table absente avant la migration comprise). */
-export async function fetchValise(userId: string): Promise<ValiseGardee | null> {
+/** null en mode démo ou en cas d'échec (table absente comprise) ; [] quand le compte n'a aucune valise. */
+export async function fetchValises(userId: string): Promise<ValiseGardee[] | null> {
   if (!isSupabaseConfigured) return null;
   try {
     const { data, error } = await getSupabase()
       .from("valises")
-      .select("destination, depart, retour, bagage, sejour, occasions, piece_ids, calcul")
+      .select("id, destination, depart, retour, bagage, sejour, occasions, piece_ids, calcul")
       .eq("user_id", userId)
-      .maybeSingle();
+      .order("depart", { ascending: false });
     if (error || !data) return null;
-    return valiseEnCours(rowToValise(data as ValiseRow));
+    return (data as ValiseRow[]).map(rowToValise);
   } catch {
     return null;
   }
 }
 
 /**
- * true si la valise est enregistrée dans le compte. Rien n'est journalisé :
- * la destination et les dates sont des données personnelles, et l'échec
- * attendu avant la migration n'apprendrait rien de plus que l'écran.
+ * Enregistre la valise dans le compte : met à jour la ligne si elle y est
+ * déjà, l'insère sinon et rend son nouvel identifiant. Rien n'est
+ * journalisé : la destination et les dates sont des données personnelles.
  */
-export async function enregistrerValise(userId: string, v: ValiseGardee): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
+export async function enregistrerValise(userId: string, v: ValiseGardee): Promise<{ ok: boolean; id: string }> {
+  if (!isSupabaseConfigured) return { ok: false, id: v.id };
   try {
-    const { error } = await getSupabase()
+    const ligne = { ...valiseToRow(v), updated_at: new Date().toISOString() };
+    if (!estIdLocal(v.id)) {
+      const { error } = await getSupabase().from("valises").update(ligne).eq("id", v.id).eq("user_id", userId);
+      return { ok: !error, id: v.id };
+    }
+    const { data, error } = await getSupabase()
       .from("valises")
-      .upsert({ user_id: userId, ...valiseToRow(v), updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-    return !error;
+      .insert({ user_id: userId, ...ligne })
+      .select("id")
+      .single();
+    if (error || !data) return { ok: false, id: v.id };
+    return { ok: true, id: String((data as { id: number | string }).id) };
   } catch {
-    return false;
+    return { ok: false, id: v.id };
   }
 }
 
-export async function supprimerValise(userId: string): Promise<boolean> {
-  if (!isSupabaseConfigured) return false;
+/** Une valise locale n'a rien à supprimer dans le compte. */
+export async function supprimerValiseDuCompte(id: string): Promise<boolean> {
+  if (!isSupabaseConfigured || estIdLocal(id)) return true;
   try {
-    const { error } = await getSupabase().from("valises").delete().eq("user_id", userId);
+    const { error } = await getSupabase().from("valises").delete().eq("id", id);
     return !error;
   } catch {
     return false;

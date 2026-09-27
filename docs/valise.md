@@ -111,20 +111,23 @@ Chaque changement recompte les looks (`looksDeLaValise`). [DÉCIDÉ]
 
 Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie serveur pour le test miroir) : fonctionnalité **Premium**, en **`ACCES_LIBRE`** pendant la phase de test, comme l'Avis de styliste. Au lancement : `PREMIUM_REQUIRED` des deux côtés ; aucune fonction serveur à redéployer. [DÉCIDÉ]
 
-## 10. Conservation
+## 10. Conservation et « Mes planifications »
 
-- Toujours **sur l'appareil** (`localStorage`, clé `capsela.valise.<userId>`), rouverte telle quelle tant que la date de retour n'est pas passée.
-- Et **dans le compte** quand la table `valises` existe (migration **0038**, à exécuter à la main) : une valise par compte, relue à l'ouverture, écrite un instant après chaque changement.
-- Avant la migration, l'écriture échoue sans rien casser, et l'écran dit « Enregistrée sur cet appareil seulement ». Après : « Enregistrée dans ton compte ». [DÉCIDÉ]
+- **Plusieurs valises** (27/09/2026). Elles remontent dans « Mes planifications » de Planifier, mêlées aux tenues planifiées (`repartirPlanifications`, testé) : **à venir jusqu'à la date de retour** (pendant le séjour, c'est encore elle qu'on ouvre), puis **passées**. À venir : la plus proche d'abord ; passées : la plus récente d'abord. Chaque ligne montre ses vraies pièces, la destination, les dates et le nombre de looks. [DÉCIDÉ]
+- Toucher une valise l'ouvre sur son résultat ; « retour » ramène à Planifier. La carte « Préparer ma valise » du hub ouvre le parcours (même règle d'accès que l'accueil, `ouvrirValise` dans le store). [DÉCIDÉ]
+- **« Nouvelle valise »** en ajoute une : la précédente reste. **Supprimer** est une action explicite (« Ajuster ma valise » → « Supprimer cette valise », avec confirmation). « Modifier le séjour » remplace la valise modifiée, sans en créer une autre. [DÉCIDÉ]
+- Toujours **sur l'appareil** (`localStorage`, clé `capsela.valises.<userId>` ; l'ancienne clé à valise unique est reprise une fois), et **dans le compte** : table `valises` (0038), plusieurs lignes par compte depuis **0039** (à exécuter à la main). Une valise créée hors ligne ou avant la migration porte un identifiant local (« local-… ») jusqu'à ce que le compte l'accepte. [DÉCIDÉ]
+- L'écran dit où elle est gardée : « Enregistrée dans ton compte » ou « Enregistrée sur cet appareil seulement » (identifiant local, ou dernière écriture refusée). Avant 0039, une deuxième valise ne peut pas entrer dans le compte : elle reste sur l'appareil, et l'écran le dit. [DÉCIDÉ]
 
 ## 11. Fichiers
 
 | Fichier | Contenu |
 | --- | --- |
 | `src/lib/valise.ts` | Bagages, séjours, situations, choix des pièces, looks, allègement, remplacement, occasions couvertes, `resumeLook`, `conseilMeteo` |
-| `src/lib/valises.ts` | Valise enregistrée : appareil et compte |
+| `src/lib/valises.ts` | Valises enregistrées : appareil et compte, `repartirPlanifications` |
 | `src/lib/__tests__/valise.test.ts`, `valises.test.ts` | Tests (générateur de test et vrai moteur à aléa fixé) |
 | `src/components/screens/ValiseScreen.tsx` | Parcours, génération, résultat, détail look, détail pièce, feuilles Ajuster / Ajouter / Remplacer |
 | `public/editorial/sejours/` | Visuels des types de séjour |
-| `supabase/migrations/0038_valises.sql` | Table `valises` |
+| `supabase/migrations/0038_valises.sql`, `0039_valises_plusieurs.sql` | Table `valises`, plusieurs valises par compte |
+| `src/components/screens/PlanifierScreen.tsx` | Valises dans « Mes planifications », carte « Préparer ma valise » |
 | `src/lib/autorisations.ts`, `supabase/functions/_shared/premium.ts` | Règle `PREPARER_VALISE` |

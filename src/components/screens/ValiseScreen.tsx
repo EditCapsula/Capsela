@@ -47,7 +47,7 @@ import {
   type TailleBagage,
   type TypeSejour,
 } from "@/lib/valise";
-import { enregistrerValise, fetchValise, garderValiseLocale, lireValiseLocale, supprimerValise, type ValiseGardee } from "@/lib/valises";
+import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 
 /**
@@ -264,58 +264,29 @@ const ETAPES_CALCUL: [React.ReactNode, string][] = [
 
 export default function ValiseScreen() {
   const { state, weather, actions } = useCapsela();
-  const { profile, userId } = useAuth();
+  const { profile } = useAuth();
   const dressing = state.items;
   const generer = useMemo(() => generateurMoteur(paletteHexes(profile), profile.gender), [profile]);
 
   const [vue, setVue] = useState<Vue>({ nom: "etape" });
   const [etape, setEtape] = useState(1);
-  const [valise, setValise] = useState<ValiseGardee | null>(null);
-  /** Où la valise est gardée — dit à l'écran, jamais supposé. */
-  const [gardeeOu, setGardeeOu] = useState<"compte" | "appareil" | null>(null);
-
-  // Relue après montage (jamais pendant le rendu initial : cf. auth.tsx) :
-  // l'appareil d'abord, le compte ensuite, qui l'emporte quand il répond.
-  useEffect(() => {
-    const locale = lireValiseLocale(userId);
-    /* eslint-disable react-hooks/set-state-in-effect */
-    if (locale) {
-      setValise(locale);
-      setGardeeOu("appareil");
-      setVue({ nom: "resultat" });
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
-    if (!userId) return;
-    let annule = false;
-    fetchValise(userId).then((duCompte) => {
-      if (annule || !duCompte) return;
-      setValise(duCompte);
-      setGardeeOu("compte");
-      setVue({ nom: "resultat" });
-      garderValiseLocale(userId, duCompte);
-    });
-    return () => {
-      annule = true;
-    };
-  }, [userId]);
-
   /**
-   * Toute modification passe par ici : l'état, l'appareil tout de suite, le
-   * compte un instant après (plusieurs retraits ne font qu'une écriture).
+   * LA VALISE AFFICHÉE vient du store (27/09/2026) : les valises sont une
+   * liste, gardée sur l'appareil et dans le compte, rappelée dans « Mes
+   * planifications ». `valiseOuverte` null : une nouvelle valise.
    */
-  const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sauver = (v: ValiseGardee) => {
-    setValise(v);
-    garderValiseLocale(userId, v);
-    if (minuteur.current) clearTimeout(minuteur.current);
-    if (!userId) {
-      setGardeeOu("appareil");
-      return;
-    }
-    minuteur.current = setTimeout(() => {
-      enregistrerValise(userId, v).then((ok) => setGardeeOu(ok ? "compte" : "appareil"));
-    }, 500);
-  };
+  const valise = state.valises.find((v) => v.id === state.valiseOuverte) ?? null;
+  /** La valise dont on modifie les réponses : la génération la remplace au lieu d'en créer une. */
+  const [idEnModification, setIdEnModification] = useState<string | null>(null);
+  /** Où elle est gardée, tel que c'est : une valise locale, ou dont la dernière écriture a échoué, ne suit pas sur un autre appareil. */
+  const gardeeOu: "compte" | "appareil" | null = !valise ? null : estIdLocal(valise.id) || state.valiseStatut === "appareil" ? "appareil" : "compte";
+  // Ouverte depuis Planifier (ou rouverte) : directement le résultat.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (valise && vue.nom === "etape" && !idEnModification) setVue({ nom: "resultat" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valise?.id]);
+  const sauver = actions.sauverValise;
 
   // ── Réponses ──
   const aujourdhui = jourLocal();
@@ -449,7 +420,10 @@ export default function ValiseScreen() {
     setFaites(4);
     await pause(260);
     if (!actif.current) return;
-    sauver({ version: 2, destination: nomVille, depart, retour, bagage, sejour, occasions: occ, meteos, situations, ...r });
+    const id = idEnModification ?? nouvelIdLocal();
+    sauver({ version: 2, id, destination: nomVille, depart, retour, bagage, sejour, occasions: occ, meteos, situations, ...r });
+    actions.afficherValise(id);
+    setIdEnModification(null);
     setOnglet("looks");
     setVue({ nom: "resultat" });
   };
@@ -460,14 +434,26 @@ export default function ValiseScreen() {
   const ajouter = (id: number) => valise && sauver(avecPieces(valise, [...valise.pieceIds, id]));
   const remplacer = (ancien: number, nouveau: number) => valise && sauver(avecPieces(valise, [...valise.pieceIds.filter((x) => x !== ancien), nouveau]));
 
+  /** « Nouvelle valise » : la précédente reste dans « Mes planifications ». */
   const recommencer = () => {
-    if (minuteur.current) clearTimeout(minuteur.current);
-    garderValiseLocale(userId, null);
-    if (userId) void supprimerValise(userId);
-    setValise(null);
-    setGardeeOu(null);
+    actions.afficherValise(null);
+    setIdEnModification(null);
+    setDestination("");
+    setVille(null);
+    setDepart("");
+    setRetour("");
+    setBagage(null);
+    setSejour(null);
+    setOccasions([]);
+    setOccasionsTouchees(false);
     setVue({ nom: "etape" });
     setEtape(1);
+  };
+
+  const supprimer = () => {
+    if (!valise) return;
+    actions.supprimerValise(valise.id);
+    actions.quitterValise();
   };
 
   /** Reprendre les réponses de la valise affichée, pour la modifier. */
@@ -481,6 +467,7 @@ export default function ValiseScreen() {
     setSejour(valise.sejour);
     setOccasions(valise.occasions);
     setOccasionsTouchees(true);
+    setIdEnModification(valise.id);
     setVue({ nom: "etape" });
     setEtape(1);
   };
@@ -489,7 +476,11 @@ export default function ValiseScreen() {
     if (vue.nom === "etape" && etape > 1) setEtape(etape - 1);
     else if (vue.nom === "look") setVue({ nom: "resultat" });
     else if (vue.nom === "piece") setVue(vue.depuis);
-    else actions.goHome();
+    else if (vue.nom === "etape" && idEnModification && valise) {
+      // Modification abandonnée : retour à la valise telle qu'elle était.
+      setIdEnModification(null);
+      setVue({ nom: "resultat" });
+    } else actions.quitterValise();
   };
   const libelleRetour =
     vue.nom === "etape" && etape > 1
@@ -500,7 +491,9 @@ export default function ValiseScreen() {
           ? vue.depuis.nom === "look"
             ? "Revenir au look"
             : "Revenir à ta valise"
-          : "Revenir à l'accueil";
+          : state.valiseRetour === "planifier"
+            ? "Revenir à Planifier"
+            : "Revenir à l'accueil";
 
   const presel = occasionsDuSejour(sejour);
 
@@ -815,6 +808,7 @@ export default function ValiseScreen() {
             ajouterAuDressing={actions.openAdd}
             modifier={modifier}
             recommencer={recommencer}
+            supprimer={supprimer}
           />
         )}
       </div>
@@ -862,6 +856,7 @@ function Resultat({
   ajouterAuDressing,
   modifier,
   recommencer,
+  supprimer,
 }: {
   vue: Vue;
   setVue: (v: Vue) => void;
@@ -878,9 +873,10 @@ function Resultat({
   ajouterAuDressing: () => void;
   modifier: () => void;
   recommencer: () => void;
+  supprimer: () => void;
 }) {
   const [indexLook, setIndexLook] = useState(0);
-  const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "remplacer"; id: number } | null>(null);
+  const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
   const toucher = useRef<number | null>(null);
 
@@ -939,6 +935,35 @@ function Resultat({
               </span>
             </button>
           ))}
+          {/* Supprimer est une action explicite depuis le 27/09/2026 : « Nouvelle
+              valise » garde la précédente dans « Mes planifications ». */}
+          <button onClick={() => setFeuille({ type: "supprimer" })} className="text-[12px] text-muted cursor-pointer mt-2 py-[10px]">
+            Supprimer cette valise
+          </button>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet title="Supprimer cette valise ?" open={feuille?.type === "supprimer"} onClose={() => setFeuille(null)}>
+        <div className="text-[13px] text-muted-3 leading-[1.5]">
+          <span className="block text-ink">
+            {valise.destination} · {libellePeriode(valise.depart, valise.retour)}
+          </span>
+          Elle disparaît de « Mes planifications ». Tes pièces restent dans ton dressing.
+        </div>
+        <div className="flex gap-2 mt-5">
+          <button onClick={() => setFeuille(null)} className="flex-1 rounded-full border border-border bg-card text-ink t-bouton cursor-pointer" style={{ minHeight: 48 }}>
+            Garder
+          </button>
+          <button
+            onClick={() => {
+              setFeuille(null);
+              supprimer();
+            }}
+            className="flex-1 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
+            style={{ minHeight: 48 }}
+          >
+            Supprimer
+          </button>
         </div>
       </BottomSheet>
 
