@@ -2236,6 +2236,42 @@ function selectDiverseVariations(
  * Jamais de permutations exhaustives : plafonds configurables, par défaut
  * 3 looks max par occasion, 18 au total.
  */
+/**
+ * UNE VESTE OU UN MANTEAU OUVERT DANS « LES IDÉES DE TENUES » (27/09/2026,
+ * signalé : « Pas encore assez de pièces compatibles » sur un manteau).
+ *
+ * generateOutfit ne choisit presque jamais de manteau — seulement par-dessus
+ * une chemise en Rendez-vous important, ou pour compenser un haut dont la
+ * température minimale est au-dessus de la météo, ce qui ne vaut que pour
+ * les pièces du catalogue. Un manteau du dressing n'apparaissait donc dans
+ * aucun tirage, et son écran restait vide. La règle du moteur n'est PAS
+ * changée (la tenue du jour et Planifier restent tels quels) : seul ce
+ * module, quand la pièce ouverte est une veste ou un manteau et qu'un tirage
+ * ne l'a pas retenue, la porte par-dessus la tenue tirée — si :
+ *   · sa saison est celle de la météo de la capsule (weather.seasons) ;
+ *   · sa plage de température, quand elle en a une, couvre cette météo ;
+ *   · l'occasion l'admet (applySportCocooningFilter : ni Sport ni Cocooning
+ *     pour un vêtement de dessus) ;
+ *   · la tenue n'a pas déjà la même fonction — un autre manteau pour un
+ *     manteau ; une veste, un manteau ou un calque pour une veste (même rôle
+ *     de superposition, cf. generateOutfit).
+ * Rend null sinon.
+ */
+function porterParDessus(ids: number[], pivot: Item, pool: Item[], occasion: OccasionKey, weather: Weather): number[] | null {
+  if (!OUTERWEAR_CATS.includes(pivot.cat)) return null;
+  if (pivot.season !== "Toutes saisons" && !weather.seasons.includes(pivot.season)) return null;
+  if (pivot.meteoMinTemp != null && weather.temp < pivot.meteoMinTemp) return null;
+  if (pivot.meteoMaxTemp != null && weather.temp > pivot.meteoMaxTemp) return null;
+  if (!applySportCocooningFilter([pivot], occasion).length) return null;
+  const pieces = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
+  const dejaCouvert =
+    pivot.cat === "manteau"
+      ? pieces.some((p) => p.cat === "manteau")
+      : pieces.some((p) => OUTERWEAR_CATS.includes(p.cat) || (TOP_LAYER_CATS.includes(p.cat) && rolePieceOf(p) === "calque"));
+  if (dejaCouvert) return null;
+  return [...ids, pivot.id];
+}
+
 export function getOutfitsForItem(
   pivotId: number,
   pool: Item[],
@@ -2290,8 +2326,9 @@ export function getOutfitsForItem(
     const candidates: ItemOutfitVariation[] = [];
     const localSeen = new Set<string>();
     for (let attempt = 0; attempt < attemptsPerOccasion; attempt++) {
-      const { ids } = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender, undefined, pivotId, capsuleSeason);
-      if (!ids.includes(pivotId)) continue;
+      const tirage = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender, undefined, pivotId, capsuleSeason).ids;
+      const ids = tirage.includes(pivotId) ? tirage : porterParDessus(tirage, pivot, pool, occasion, weather);
+      if (!ids) continue;
       const key = structuralKeyOf(ids);
       if (seenKeys.has(key) || localSeen.has(key)) continue;
       const outfitItems = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
