@@ -4,6 +4,7 @@ import {
   alternatives,
   amplitudePrevue,
   BAGAGES,
+  categoriesPourCompleter,
   conseilMeteo,
   occasionsCouvertes,
   occasionsDeLaPiece,
@@ -260,5 +261,27 @@ describe("présentation du résultat — ce que l'écran affiche", () => {
     expect(conseilMeteo([meteo("2026-10-16", 12, "Pluvieux", true)])).toBe("Temps frais, prévois des couches. De la pluie est prévue.");
     expect(conseilMeteo([meteo("2026-10-16", 27, "Ensoleillé", true)])).toBe("Temps chaud, privilégie les matières légères.");
     expect(conseilMeteo([meteo("2026-10-16", 20)])).toBeNull();
+  });
+});
+
+describe("categoriesPourCompleter — dire quoi ajouter au dressing, sans l'inventer", () => {
+  const situations = situationsDuSejour(["quotidien", "soiree"], [meteo("2026-10-16")]);
+  // Capsule : une robe (60) et des escarpins (61) ; le dressing n'a ni robe ni… rien pour la soirée.
+  const capsule = [piece(60, "robe"), piece(61, "chaussures")];
+  const dressing = [piece(1, "haut"), piece(4, "pantalon"), piece(7, "chaussures")];
+
+  it("les catégories que le moteur a dû prendre dans la capsule", () => {
+    const gen: Generateur = (pool, s) =>
+      s.occasion === "soiree" && pool.some((p) => p.id === 60) ? { ids: [60, 7], elargie: false } : { ids: [1, 4, 7], elargie: false };
+    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([{ occasion: "soiree", categories: ["robe"], capacite: false }]);
+  });
+
+  it("look possible avec le dressing seul : c'est la place qui a manqué, pas une pièce", () => {
+    const gen: Generateur = () => ({ ids: [1, 4, 7], elargie: false });
+    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([{ occasion: "soiree", categories: [], capacite: true }]);
+  });
+
+  it("une occasion n'est dite qu'une fois ; rien quand le moteur ne trouve rien", () => {
+    expect(categoriesPourCompleter(dressing, capsule, situations, [1], () => null)).toEqual([]);
   });
 });

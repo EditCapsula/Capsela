@@ -564,24 +564,11 @@ export default function HomeScreen() {
   };
 
   /**
-   * PRÉPARER UNE VALISE (27/09/2026, docs/valise.md) — même décision d'accès
-   * que l'Avis de styliste, règle PREPARER_VALISE. En ACCES_LIBRE (phase de
-   * test), la carte ouvre le parcours. Sous PREMIUM_REQUIRED, un refus mène à
-   * la page Premium avec « Ce que tu voulais faire : Préparer une valise »,
-   * comme avant l'existence du parcours.
+   * PRÉPARER UNE VALISE (27/09/2026, docs/valise.md) — la décision d'accès
+   * (règle PREPARER_VALISE) vit dans le store (`ouvrirValise`), partagée avec
+   * Planifier. Depuis l'accueil : une nouvelle valise.
    */
-  const [verificationValise, setVerificationValise] = useState(false);
-  const ouvrirValise = async () => {
-    if (verificationValise) return;
-    const decision = decisionAcces("PREPARER_VALISE", etatPremium, false);
-    if (decision === "acces") return actions.goValise();
-    if (decision === "gate") return actions.goPremium("valise");
-    setVerificationValise(true);
-    const etat = await actions.verifierEtatPremium();
-    setVerificationValise(false);
-    if (decisionAcces("PREPARER_VALISE", etat, true) === "acces") actions.goValise();
-    else actions.goPremium("valise");
-  };
+  const ouvrirValise = () => void actions.ouvrirValise(null);
 
   /**
    * L'avis du jour vient désormais du store, donc de la base (0029), et non

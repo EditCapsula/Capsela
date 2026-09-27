@@ -107,24 +107,39 @@ Seuils : **ARBITRAGE ÉDITORIAL**, à revoir sur des dressings réels. Une tenue
 
 Chaque changement recompte les looks (`looksDeLaValise`). [DÉCIDÉ]
 
+## 8 bis. Inciter à compléter le dressing (27/09/2026)
+
+La valise ne puise que dans le dressing : quand il la limite, l'écran le dit et mène à l'ajout. [DÉCIDÉ]
+
+- **Écran 1** : « Ta valise sera composée avec les N pièces de ton dressing : plus il est complet, plus elle aura de looks. Ajouter des pièces ».
+- **Résultat — « Complète ton dressing »**, seulement sur un manque réel :
+  - une occasion **sans look**, ou couverte seulement par des looks **« élargis »** (pièces pensées pour d'autres occasions) ;
+  - **moins de looks que de jours** (« 3 looks pour 7 jours : quelques pièces de plus varieraient tes tenues »).
+- **Ce qui manque est dit par le moteur, pas inventé** (`categoriesPourCompleter`, testé) : pour chaque occasion concernée, le moteur compose le look dans le pool habituel de l'app (`composeWardrobePool` : la capsule complète le dressing) ; les catégories des pièces venues de la capsule sont ce qui manque (« il te manque [pantalon] [veste] »), chacune un bouton qui ouvre l'ajout sur cette catégorie. Si le dressing suffit, c'est la place qui a manqué, et l'écran le dit.
+- **Retour de l'ajout** : l'ajout revient à la valise (`openAddForCategory`, `openAddEtRevenir`). Une pièce ajoutée depuis le calcul se reconnaît (`dressingIds`, gardé dans `calcul`) : « Une nouvelle pièce dans ton dressing · Recomposer ma valise », qui relance le calcul avec les mêmes réponses, sur la même valise.
+- **Onglet Pièces** : « Une pièce qui n'est pas encore dans ton dressing ? L'ajouter à mon dressing », distinct de « Ajouter une pièce de ton dressing » (qui met une pièce du dressing dans la valise).
+
 ## 9. Accès
 
 Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie serveur pour le test miroir) : fonctionnalité **Premium**, en **`ACCES_LIBRE`** pendant la phase de test, comme l'Avis de styliste. Au lancement : `PREMIUM_REQUIRED` des deux côtés ; aucune fonction serveur à redéployer. [DÉCIDÉ]
 
-## 10. Conservation
+## 10. Conservation et « Mes planifications »
 
-- Toujours **sur l'appareil** (`localStorage`, clé `capsela.valise.<userId>`), rouverte telle quelle tant que la date de retour n'est pas passée.
-- Et **dans le compte** quand la table `valises` existe (migration **0038**, à exécuter à la main) : une valise par compte, relue à l'ouverture, écrite un instant après chaque changement.
-- Avant la migration, l'écriture échoue sans rien casser, et l'écran dit « Enregistrée sur cet appareil seulement ». Après : « Enregistrée dans ton compte ». [DÉCIDÉ]
+- **Plusieurs valises** (27/09/2026). Elles remontent dans « Mes planifications » de Planifier, mêlées aux tenues planifiées (`repartirPlanifications`, testé) : **à venir jusqu'à la date de retour** (pendant le séjour, c'est encore elle qu'on ouvre), puis **passées**. À venir : la plus proche d'abord ; passées : la plus récente d'abord. Chaque ligne montre ses vraies pièces, la destination, les dates et le nombre de looks. [DÉCIDÉ]
+- Toucher une valise l'ouvre sur son résultat ; « retour » ramène à Planifier. La carte « Préparer ma valise » du hub ouvre le parcours (même règle d'accès que l'accueil, `ouvrirValise` dans le store). [DÉCIDÉ]
+- **« Nouvelle valise »** en ajoute une : la précédente reste. **Supprimer** est une action explicite (« Ajuster ma valise » → « Supprimer cette valise », avec confirmation). « Modifier le séjour » remplace la valise modifiée, sans en créer une autre. [DÉCIDÉ]
+- Toujours **sur l'appareil** (`localStorage`, clé `capsela.valises.<userId>` ; l'ancienne clé à valise unique est reprise une fois), et **dans le compte** : table `valises` (0038), plusieurs lignes par compte depuis **0039** (à exécuter à la main). Une valise créée hors ligne ou avant la migration porte un identifiant local (« local-… ») jusqu'à ce que le compte l'accepte. [DÉCIDÉ]
+- L'écran dit où elle est gardée : « Enregistrée dans ton compte » ou « Enregistrée sur cet appareil seulement » (identifiant local, ou dernière écriture refusée). Avant 0039, une deuxième valise ne peut pas entrer dans le compte : elle reste sur l'appareil, et l'écran le dit. [DÉCIDÉ]
 
 ## 11. Fichiers
 
 | Fichier | Contenu |
 | --- | --- |
 | `src/lib/valise.ts` | Bagages, séjours, situations, choix des pièces, looks, allègement, remplacement, occasions couvertes, `resumeLook`, `conseilMeteo` |
-| `src/lib/valises.ts` | Valise enregistrée : appareil et compte |
+| `src/lib/valises.ts` | Valises enregistrées : appareil et compte, `repartirPlanifications` |
 | `src/lib/__tests__/valise.test.ts`, `valises.test.ts` | Tests (générateur de test et vrai moteur à aléa fixé) |
 | `src/components/screens/ValiseScreen.tsx` | Parcours, génération, résultat, détail look, détail pièce, feuilles Ajuster / Ajouter / Remplacer |
 | `public/editorial/sejours/` | Visuels des types de séjour |
-| `supabase/migrations/0038_valises.sql` | Table `valises` |
+| `supabase/migrations/0038_valises.sql`, `0039_valises_plusieurs.sql` | Table `valises`, plusieurs valises par compte |
+| `src/components/screens/PlanifierScreen.tsx` | Valises dans « Mes planifications », carte « Préparer ma valise » |
 | `src/lib/autorisations.ts`, `supabase/functions/_shared/premium.ts` | Règle `PREPARER_VALISE` |

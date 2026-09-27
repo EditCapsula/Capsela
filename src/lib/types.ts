@@ -1,5 +1,6 @@
 import type { StyleId } from "./profile";
 import type { TenuePlanifiee } from "./planifier";
+import type { ValiseGardee } from "./valises";
 import type { ItemOutfitVariation } from "./logic";
 import type { FamilleLook } from "./ideesLooks";
 
@@ -457,6 +458,17 @@ export interface AppState {
   planRetour: "home" | "tenues" | null;
   /** Date préremplie (décalage en jours) par « Planifier une tenue pour … » de Tenue ; consommée à l'ouverture. */
   planJour: number | null;
+  /**
+   * LES VALISES (27/09/2026, docs/valise.md) : plusieurs, gardées sur
+   * l'appareil et dans le compte, rappelées dans « Mes planifications ».
+   */
+  valises: ValiseGardee[];
+  /** Valise affichée par l'écran Valise ; null : une nouvelle valise (les questions). */
+  valiseOuverte: string | null;
+  /** Écran d'où la valise a été ouverte (Accueil, Planifier) : « retour » y ramène. */
+  valiseRetour: Screen | null;
+  /** Où la dernière modification a été gardée — dit à l'écran, jamais supposé. */
+  valiseStatut: "compte" | "appareil" | null;
   savedLooks: SavedLook[];
   /** Pièces choisies dans l'écran de création de look, avant sauvegarde. */
   lookDraftIds: number[];

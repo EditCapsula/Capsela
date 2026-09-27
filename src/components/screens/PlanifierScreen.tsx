@@ -17,7 +17,8 @@ import { jourLocal } from "@/lib/outfitFeedback";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { saisonCalendairePour, weatherForDay } from "@/lib/capsule";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
-import { deleteTenuePlanifiee, fetchTenuesPlanifiees, repartirParEcheance, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
+import { deleteTenuePlanifiee, fetchTenuesPlanifiees, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
+import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { paletteHexes } from "@/lib/profile";
 import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
@@ -357,6 +358,52 @@ function CartePlanifier({
       </span>
       {note && <span className="block text-[12px] text-muted leading-[1.45] mt-[10px]">{note}</span>}
       <span className="mt-[8px] flex items-center min-h-[44px] t-cta text-terracotta">{cta} →</span>
+    </button>
+  );
+}
+
+/**
+ * UNE VALISE DANS « MES PLANIFICATIONS » (27/09/2026) — même carte que les
+ * tenues planifiées : l'aperçu est fait de ses vraies pièces, jamais d'un
+ * visuel générique ; la destination, les dates et le nombre de looks, comptés.
+ */
+function LigneValise({ v, dressing, passee, onClick }: { v: ValiseGardee; dressing: Item[]; passee: boolean; onClick: () => void }) {
+  const apercu = v.pieceIds
+    .map((id) => dressing.find((i) => i.id === id))
+    .filter((i): i is Item => !!i)
+    .slice(0, 4);
+  const a = new Date(`${v.depart}T12:00:00`);
+  const b = new Date(`${v.retour}T12:00:00`);
+  const nbLooks = v.looks.filter((l) => l.ids.every((id) => dressing.some((i) => i.id === id))).length;
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 bg-card border border-border rounded-[20px] p-[10px] text-left cursor-pointer"
+      style={{ opacity: passee ? 0.78 : 1 }}
+    >
+      <span className="w-[64px] h-[64px] flex-shrink-0 rounded-[14px] bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
+        {apercu.map((p) => {
+          const img = resolveItemImage(p);
+          return img.url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={p.id} src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+          ) : (
+            <span key={p.id} className="block w-full h-full rounded-[4px]" style={{ background: p.hex }} />
+          );
+        })}
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block t-label text-terracotta">Valise</span>
+        <span className="block t-titre-vignette text-ink mt-[2px] truncate">{v.destination}</span>
+        <span className="block text-[12px] text-muted mt-[3px] truncate">
+          {DOW[a.getDay()]}. {a.getDate()} {MOIS[a.getMonth()]}
+          {v.depart !== v.retour ? ` → ${DOW[b.getDay()]}. ${b.getDate()} ${MOIS[b.getMonth()]}` : ""}
+          {nbLooks ? ` · ${nbLooks} ${nbLooks > 1 ? "looks" : "look"}` : ""}
+        </span>
+      </span>
+      <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0 pr-1">
+        ›
+      </span>
     </button>
   );
 }
@@ -717,8 +764,14 @@ export default function PlanifierScreen() {
     setTimeout(() => setToast(null), 2600);
   };
 
-  const { aVenir, passees } = repartirParEcheance(plans);
+  /*
+   * MES PLANIFICATIONS : les tenues planifiées ET les valises (27/09/2026).
+   * Une valise est à venir jusqu'à son retour, puis passée
+   * (repartirPlanifications, testé).
+   */
+  const { aVenir, passees } = repartirPlanifications(plans, state.valises);
   const listeAffichee = onglet === "up" ? aVenir : passees;
+  const nbPlanifications = plans.length + state.valises.length;
   /** Onglets À venir / Passées — un seul rendu, partagé par le hub et la liste complète. */
   const ongletsPlans = (
     <div className="flex gap-2">
@@ -964,16 +1017,16 @@ export default function PlanifierScreen() {
                       : undefined
                 }
               />
-              {/* Le parcours valise n'existe pas encore : la carte mène à la
-                  page Premium, avec le rappel « Ce que tu voulais faire »,
-                  comme depuis l'accueil (arbitré le 24/09). */}
+              {/* Le parcours valise existe depuis le 27/09/2026 : même règle
+                  d'accès que l'accueil (PREPARER_VALISE, dans le store), et le
+                  retour ramène ici. */}
               <CartePlanifier
                 glyphe={G_VALISE}
                 titre={["Préparer", "ma valise"]}
                 accroche="Toute ta garde-robe pensée pour ton voyage."
                 points={["Une destination et des dates", "La météo sur place", "Ton programme d'activités", "Le bon bagage", "Une sélection de looks optimisée"]}
                 cta="Préparer ma valise"
-                onClick={() => actions.goPremium("valise")}
+                onClick={() => void actions.ouvrirValise(null)}
                 visuel={
                   profile.gender === "femme"
                     ? "/editorial/capsela_planifier_valise_femme.webp"
@@ -985,13 +1038,11 @@ export default function PlanifierScreen() {
               />
             </div>
 
-            {/* MES PLANIFICATIONS (brief §9-11). Seules les tenues existent en
-                base (planned_outfits) : aucune valise ne peut encore y
-                figurer. Trois au plus ici, « Voir tout » ouvre la liste
-                complète existante. */}
+            {/* MES PLANIFICATIONS (brief §9-11) : tenues planifiées et valises,
+                trois au plus ici, « Voir tout » ouvre la liste complète. */}
             <div className="flex items-center justify-between gap-3 mt-[30px]">
               <Surtitre>Mes planifications</Surtitre>
-              {plans.length > 0 && (
+              {nbPlanifications > 0 && (
                 <button
                   onClick={() => setVue("liste")}
                   className="text-[12px] text-terracotta cursor-pointer min-h-[44px] -my-[12px] flex items-center"
@@ -1000,7 +1051,7 @@ export default function PlanifierScreen() {
                 </button>
               )}
             </div>
-            {plans.length > 0 && <div className="mt-3">{ongletsPlans}</div>}
+            {nbPlanifications > 0 && <div className="mt-3">{ongletsPlans}</div>}
 
             {listeAffichee.length === 0 ? (
               <div
@@ -1008,9 +1059,9 @@ export default function PlanifierScreen() {
                 style={{ border: "1px dashed var(--color-sand-border)" }}
               >
                 <div className="t-titre-carte text-ink">
-                  {onglet === "up" || plans.length === 0 ? "Aucune planification pour le moment" : "Aucune planification passée"}
+                  {onglet === "up" || nbPlanifications === 0 ? "Aucune planification pour le moment" : "Aucune planification passée"}
                 </div>
-                {(onglet === "up" || plans.length === 0) && (
+                {(onglet === "up" || nbPlanifications === 0) && (
                   <>
                     <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
                       Planifie ton prochain moment ou prépare ton prochain voyage.
@@ -1023,7 +1074,18 @@ export default function PlanifierScreen() {
               </div>
             ) : (
               <div className="flex flex-col gap-[10px] mt-3">
-                {listeAffichee.slice(0, 3).map((t) => {
+                {listeAffichee.slice(0, 3).map((pl) => {
+                  if (pl.type === "valise")
+                    return (
+                      <LigneValise
+                        key={"valise-" + pl.valise.id}
+                        v={pl.valise}
+                        dressing={state.items}
+                        passee={onglet === "past"}
+                        onClick={() => void actions.ouvrirValise(pl.valise.id)}
+                      />
+                    );
+                  const t = pl.tenue;
                   const d = new Date(`${t.jour}T12:00:00`);
                   const apercu = piecesDuPlan(t).slice(0, 4);
                   return (
@@ -1565,7 +1627,7 @@ export default function PlanifierScreen() {
         {vue === "liste" && (
           <>
             <Surtitre>Planifier</Surtitre>
-            <TitreEtape a="Mes tenues" b="planifiées" />
+            <TitreEtape a="Mes" b="planifications" />
 
             <div className="mt-4">{ongletsPlans}</div>
 
@@ -1580,17 +1642,28 @@ export default function PlanifierScreen() {
                 style={{ border: "1px dashed var(--color-sand-border)" }}
               >
                 <div className="t-titre-carte text-ink">
-                  {onglet === "up" ? "Aucune tenue planifiée" : "Aucune tenue passée"}
+                  {onglet === "up" ? "Aucune planification à venir" : "Aucune planification passée"}
                 </div>
                 <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
                   {onglet === "up"
                     ? "Prépare ton prochain moment, et laisse Capsela composer le look."
-                    : "Tes tenues planifiées apparaîtront ici une fois leur date passée."}
+                    : "Tes tenues planifiées et tes valises apparaîtront ici une fois leur date passée."}
                 </div>
               </div>
             ) : (
               <div className="flex flex-col gap-3 mt-4">
-                {listeAffichee.map((t) => {
+                {listeAffichee.map((pl) => {
+                  if (pl.type === "valise")
+                    return (
+                      <LigneValise
+                        key={"valise-" + pl.valise.id}
+                        v={pl.valise}
+                        dressing={state.items}
+                        passee={onglet === "past"}
+                        onClick={() => void actions.ouvrirValise(pl.valise.id)}
+                      />
+                    );
+                  const t = pl.tenue;
                   const d = new Date(`${t.jour}T12:00:00`);
                   const pieces = piecesDuPlan(t);
                   const echeance = onglet === "up" ? echeanceCourte(t.jour, jourLocal()) : null;
