@@ -124,6 +124,8 @@ export interface Item {
   color: string;
   hex: string;
   season: Season;
+  /** Les quatre saisons choisies par l'utilisatrice (27/09/2026, colonne `saisons`, migration 0040). Absent pour une pièce enregistrée avant, ou tant que la migration n'est pas exécutée : saisonsDe (saisons.ts) retombe alors sur `season`. Le moteur ne lit que `season`, qui en est déduite. */
+  saisons?: CapsuleSeason[];
   /** Days since last worn. null = never worn. 0 = worn today. */
   worn: number | null;
   /** Value of `worn` before the most recent "worn today" action, for Corriger/undo. */
@@ -347,8 +349,8 @@ export interface AppState {
   addPhotoAnalyzing: boolean;
   /** true quand l'analyse de la photo a réellement rendu un résultat (27/09/2026) — seule condition des mentions « L'édit Capsela a analysé ta pièce » et « détectées ». addPhotoAnalyzing redevient false aussi en mode démo (aucune analyse) et sur un échec. */
   addPhotoAnalysee: boolean;
-  /** null tant que l'utilisatrice n'a rien choisi — la sauvegarde retient alors saisonParDefaut (data.ts), affichée présélectionnée. Plus bloquante depuis le 27/09/2026. */
-  addSeason: Season | null;
+  /** null tant que l'utilisatrice n'a rien touché — la sauvegarde retient alors saisonsParDefaut (saisons.ts), affichées présélectionnées. Quatre saisons au choix depuis le 27/09/2026, jamais bloquantes. */
+  addSaisons: CapsuleSeason[] | null;
   /** Plusieurs choix possibles. */
   addOccasion: OccasionKey[];
   /** true dès que l'utilisatrice modifie la sélection elle-même (recette 24/08/2026) — au-delà, ni suggestOccasions(cat) ni une nouvelle catégorie ne remplacent plus la sélection. */

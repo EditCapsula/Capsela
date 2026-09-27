@@ -13,12 +13,11 @@ import {
   PALETTE,
   PALETTE_BIJOU,
   SAC_TYPES,
-  SEASONS,
   SHOE_TYPES,
   SUBTYPES,
-  saisonParDefaut,
   seasonSuggestion,
 } from "@/lib/data";
+import { QUATRE_SAISONS, saisonsParDefaut } from "@/lib/saisons";
 import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable, occasionsRetenues } from "@/lib/attributes";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -192,8 +191,8 @@ function typeOptionsFor(cat: CategoryKey): string[] | undefined {
  * essentiels, caractéristiques, saison, occasions, puis l'action — fixée en
  * pied d'écran, hors du défilement, pour rester sous le pouce.
  *
- * Ce qui ne bloque plus : la saison (saisonParDefaut, présélectionnée et
- * modifiable). Ce qui bloque encore, parce que la sauvegarde elle-même
+ * Ce qui ne bloque plus : la saison (saisonsParDefaut, présélectionnées et
+ * modifiables, quatre saisons au choix). Ce qui bloque encore, parce que la sauvegarde elle-même
  * l'exige (saveItem) : le type de chaussure (R-B6, nécessaire au moteur)
  * et l'envoi de la photo en cours (jamais d'aperçu local persisté).
  *
@@ -251,15 +250,14 @@ export default function AddScreen() {
 
   const colorPalette = isBijou ? PALETTE_BIJOU : PALETTE;
 
-  // La saison affichée est celle qui sera enregistrée : le choix de
-  // l'utilisatrice, sinon saisonParDefaut — la même règle que saveItem.
-  // Des chips et non plus un <select> : le correctif du 10/09/2026 venait de
-  // ce qu'un select natif n'émet aucun `change` quand on re-choisit la valeur
-  // affichée ; ici, toucher le chip déjà sélectionné confirme simplement.
-  const saisonRetenue = state.addSeason ?? saisonParDefaut(state.addCat, state.addName);
-  // « Suggérée » seulement quand Capsela a vraiment une suggestion : le repli
-  // « Toutes saisons » est une valeur par défaut, pas une lecture de la pièce.
-  const saisonSuggeree = state.addSeason == null && seasonSuggestion(state.addCat, state.addName) != null;
+  // Les saisons affichées sont celles qui seront enregistrées : le choix de
+  // l'utilisatrice, sinon saisonsParDefaut — la même règle que saveItem.
+  // Quatre saisons cochables depuis le 27/09/2026 (saisons.ts).
+  const saisonsRetenues = state.addSaisons ?? saisonsParDefaut(state.addCat, state.addName);
+  // « Suggérées » seulement quand Capsela a vraiment une suggestion : le
+  // repli sur les quatre saisons est une valeur par défaut, pas une lecture
+  // de la pièce.
+  const saisonSuggeree = state.addSaisons == null && seasonSuggestion(state.addCat, state.addName) != null;
   const occasions = occasionsRetenues(state.addOccasionTouched, state.addOccasion, state.addCat, state.addShoeType);
   const occasionsSuggerees = !state.addOccasionTouched;
 
@@ -536,20 +534,23 @@ export default function AddScreen() {
 
         {/* 7. La saison : une recommandation présélectionnée, jamais un verrou. */}
         <div className="mt-7">
-          <TitreSection suggere={saisonSuggeree}>{saisonSuggeree ? "Saison suggérée" : "Saison"}</TitreSection>
-          <div className="flex gap-2 flex-wrap" role="radiogroup" aria-label="Saison">
-            {SEASONS.map((s) => {
-              const on = saisonRetenue === s;
+          <TitreSection suggere={saisonSuggeree}>{saisonSuggeree ? "Saisons suggérées" : "Saisons"}</TitreSection>
+          <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Plusieurs choix possibles.</div>
+          {/* Deux colonnes : quatre pastilles sur une ligne ne tiennent pas à
+              360 px avec leur coche (« Printemps ✓ »), et une grille égale se
+              lit mieux qu'un retour à la ligne au hasard des largeurs. */}
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Saisons">
+            {QUATRE_SAISONS.map((s) => {
+              const on = saisonsRetenues.includes(s);
               return (
                 <button
                   key={s}
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => actions.setAddSeason(s)}
-                  className={chipCls(on) + " inline-flex items-center gap-[6px]"}
+                  aria-pressed={on}
+                  onClick={() => actions.basculerAddSaison(s)}
+                  className={chipCls(on) + " inline-flex items-center justify-center gap-[6px]"}
                 >
-                  {on && <span aria-hidden="true">✓</span>}
                   {s}
+                  {on && <span aria-hidden="true">✓</span>}
                 </button>
               );
             })}

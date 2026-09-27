@@ -32,8 +32,10 @@ export default function ConfirmationAjout({ auDessusDeLaBarre }: { auDessusDeLaB
       }}
       role="status"
     >
-      <div className="flex items-center gap-3 bg-ink rounded-full py-[12px] pl-4 pr-[6px] shadow-lg">
-        <span className="flex-1 min-w-0 text-[12px] text-cream truncate">
+      {/* Le texte passe à la ligne plutôt que d'être coupé : à côté de « Voir
+          mon dressing », il ne tient pas sur une ligne dès 360 px. */}
+      <div className="flex items-center gap-3 bg-ink rounded-[22px] py-[10px] pl-4 pr-[6px] shadow-lg">
+        <span className="flex-1 min-w-0 text-[12px] text-cream leading-[1.35]">
           <span aria-hidden="true">✓ </span>Pièce ajoutée à ton dressing
         </span>
         {dejaAuDressing ? (
@@ -50,7 +52,7 @@ export default function ConfirmationAjout({ auDessusDeLaBarre }: { auDessusDeLaB
               fermerPieceAjoutee();
               actions.goWardrobe();
             }}
-            className="flex-shrink-0 text-[12px] text-terracotta tracking-[.1em] cursor-pointer py-[7px] px-[11px]"
+            className="flex-shrink-0 whitespace-nowrap text-[12px] text-terracotta cursor-pointer py-[7px] px-[11px]"
           >
             Voir mon dressing
           </button>

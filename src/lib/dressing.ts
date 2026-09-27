@@ -1,8 +1,10 @@
 import { accessoireTypeFor } from "./attributes";
 import { type Verdict, clePieces, jourLocal } from "./outfitFeedback";
+import { ordonnerSaisons } from "./saisons";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type {
   AccessoireType,
+  CapsuleSeason,
   BijouType,
   CategoryKey,
   ChoixRevente,
@@ -52,6 +54,8 @@ interface DressingItemRow {
   created_at: string;
   /** Migration 0035 — absente de la ligne tant qu'elle n'est pas exécutée. */
   revente?: string | null;
+  /** Migration 0040 — absente de la ligne tant qu'elle n'est pas exécutée. */
+  saisons?: string[] | null;
 }
 
 function rowToItem(row: DressingItemRow): Item {
@@ -64,6 +68,7 @@ function rowToItem(row: DressingItemRow): Item {
     hex: row.hex,
     size: row.size,
     season: row.season as Season,
+    saisons: row.saisons?.length ? ordonnerSaisons(row.saisons) : undefined,
     occasion: (row.occasion as OccasionKey[] | null) ?? undefined,
     shoeType: (row.shoe_type as ShoeType | null) ?? undefined,
     matiere: (row.matiere as Matiere | null) ?? undefined,
@@ -295,6 +300,17 @@ export async function updateDressingItem(id: number, item: Omit<Item, "id">): Pr
  */
 export async function updateDressingItemRevente(id: number, revente: ChoixRevente | null): Promise<void> {
   const { error } = await getSupabase().from("dressing_items").update({ revente }).eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Enregistre les quatre saisons d'une pièce (migration 0040). Même règle que
+ * `revente`, et pour la même raison : HORS de itemToRow. Tant que la colonne
+ * n'existe pas, seule cette écriture échoue ; la pièce, elle, est enregistrée
+ * avec sa valeur à trois choix (`season`), que le moteur lit seule.
+ */
+export async function updateDressingItemSaisons(id: number, saisons: CapsuleSeason[]): Promise<void> {
+  const { error } = await getSupabase().from("dressing_items").update({ saisons }).eq("id", id);
   if (error) throw error;
 }
 
