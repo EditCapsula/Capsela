@@ -4,6 +4,8 @@ import {
   alternatives,
   amplitudePrevue,
   BAGAGES,
+  MINIMUM_PIECES_VALISE,
+  pretPourUneValise,
   categoriesPourCompleter,
   conseilMeteo,
   occasionsCouvertes,
@@ -283,5 +285,30 @@ describe("categoriesPourCompleter — dire quoi ajouter au dressing, sans l'inve
 
   it("une occasion n'est dite qu'une fois ; rien quand le moteur ne trouve rien", () => {
     expect(categoriesPourCompleter(dressing, capsule, situations, [1], () => null)).toEqual([]);
+  });
+});
+
+describe("pretPourUneValise — de quoi remplir une valise S", () => {
+  it("le minimum est la capacité d'une valise S : 8 pièces", () => {
+    expect(MINIMUM_PIECES_VALISE).toBe(8);
+  });
+
+  it("8 pièces avec haut, bas et chaussures : prêt", () => {
+    const d = [1, 2, 3].map((i) => piece(i, "haut")).concat([piece(4, "pantalon"), piece(5, "jean"), piece(7, "chaussures"), piece(16, "sac"), piece(9, "veste")]);
+    expect(pretPourUneValise(d)).toEqual({ pret: true, manquePieces: 0, manqueBase: [] });
+  });
+
+  it("trop peu de pièces : combien il en manque", () => {
+    expect(pretPourUneValise(DRESSING.slice(0, 5))).toEqual({ pret: false, manquePieces: 3, manqueBase: ["chaussures"] });
+  });
+
+  it("assez de pièces mais pas de chaussures : pas prêt", () => {
+    const d = [1, 2, 3, 20, 21].map((i) => piece(i, "haut")).concat([piece(4, "pantalon"), piece(5, "jean"), piece(16, "sac")]);
+    expect(pretPourUneValise(d)).toEqual({ pret: false, manquePieces: 0, manqueBase: ["chaussures"] });
+  });
+
+  it("une robe tient lieu de haut et de bas", () => {
+    const d = [piece(6, "robe"), piece(7, "chaussures"), ...[30, 31, 32, 33, 34, 35].map((i) => piece(i, "accessoire"))];
+    expect(pretPourUneValise(d).manqueBase).toEqual([]);
   });
 });
