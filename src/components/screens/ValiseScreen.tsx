@@ -41,6 +41,8 @@ import {
   occasionsDuLook,
   occasionsDuSejour,
   occasionsRetenues,
+  MINIMUM_PIECES_VALISE,
+  pretPourUneValise,
   resumeLook,
   SEJOURS,
   situationsDuSejour,
@@ -534,6 +536,15 @@ export default function ValiseScreen() {
             : "Revenir à l'accueil";
 
   const presel = occasionsDuSejour(sejour);
+  /**
+   * LE MINIMUM POUR UNE NOUVELLE VALISE (27/09/2026) : de quoi remplir une
+   * valise S. En dessous, les questions ne s'ouvrent pas : l'écran dit ce
+   * qui manque et mène à l'ajout. Une valise existante reste consultable et
+   * modifiable.
+   */
+  const pret = pretPourUneValise(dressing);
+  const bloquee = vue.nom === "etape" && !idEnModification && !pret.pret;
+  const questions = vue.nom === "etape" && !bloquee;
 
   // ── Rendu ──
   return (
@@ -541,7 +552,7 @@ export default function ValiseScreen() {
       <div className="flex-shrink-0 px-6 pt-[6px]">
         <AppHeader onBack={vue.nom === "calcul" ? undefined : revenir} backLabel={libelleRetour} />
       </div>
-      {vue.nom === "etape" && (
+      {questions && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
           <FilEtapes total={4} courante={etape - 1} />
         </div>
@@ -551,8 +562,55 @@ export default function ValiseScreen() {
         ref={zoneScroll}
         className={"scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 " + (vue.nom === "etape" || vue.nom === "calcul" ? "pb-5" : "pb-safe-nav")}
       >
+        {/* ── AVANT LA PREMIÈRE QUESTION : LE MINIMUM ── */}
+        {bloquee && (
+          <>
+            <Surtitre>Ta valise</Surtitre>
+            <TitreEtape a="Ton dressing" b="d'abord" />
+            <div className="t-chapeau text-muted-3 mt-2">
+              Ta valise se compose uniquement avec tes pièces. Pour la préparer, il en faut au moins {MINIMUM_PIECES_VALISE}
+              {"\u00a0"}: de quoi remplir une valise S.
+            </div>
+            <div className="mt-5 bg-card border border-border rounded-[20px] p-[16px]">
+              <div className="flex items-baseline justify-between">
+                <span className="font-serif text-[20px] text-ink">
+                  {Math.min(dressing.length, MINIMUM_PIECES_VALISE)} / {MINIMUM_PIECES_VALISE} pièces
+                </span>
+                {pret.manquePieces > 0 && (
+                  <span className="text-[12px] text-terracotta">
+                    encore {pret.manquePieces} {pret.manquePieces > 1 ? "pièces" : "pièce"}
+                  </span>
+                )}
+              </div>
+              <div className="h-[5px] rounded-full mt-3 overflow-hidden" style={{ background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
+                <div className="h-full rounded-full bg-terracotta-deep" style={{ width: `${(Math.min(dressing.length, MINIMUM_PIECES_VALISE) / MINIMUM_PIECES_VALISE) * 100}%` }} />
+              </div>
+              {pret.manqueBase.length > 0 && (
+                <>
+                  <div className="text-[12px] text-ink leading-[1.45] mt-4">
+                    Il manque aussi la base d&apos;une tenue{"\u00a0"}:
+                  </div>
+                  <div className="flex flex-wrap gap-[6px] mt-[8px]">
+                    {pret.manqueBase.map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => actions.openAddForCategory(m === "bas" ? "pantalon" : m)}
+                        aria-label={`Ajouter ${m === "bas" ? "un bas" : m === "haut" ? "un haut" : "des chaussures"} à ton dressing`}
+                        className="inline-flex items-center gap-[5px] rounded-full border border-terracotta text-terracotta px-[12px] text-[12px] cursor-pointer"
+                        style={{ minHeight: 38 }}
+                      >
+                        {G_PLUS} {m === "bas" ? "un bas" : m === "haut" ? "un haut" : "des chaussures"}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
+
         {/* ── 1. DESTINATION ── */}
-        {vue.nom === "etape" && etape === 1 && (
+        {questions && etape === 1 && (
           <>
             <Surtitre>Ta valise · 1 / 4</Surtitre>
             <TitreEtape a="Où" b="pars-tu ?" />
@@ -670,7 +728,7 @@ export default function ValiseScreen() {
 
         {/* Dès la première question : la valise ne puise que dans le dressing
             (27/09/2026). Le nombre dit, et le chemin pour le compléter. */}
-        {vue.nom === "etape" && etape === 1 && (
+        {questions && etape === 1 && (
           <div className="mt-5">
             <CarteInfo glyphe={G_CINTRE}>
               {dressing.length
@@ -684,7 +742,7 @@ export default function ValiseScreen() {
         )}
 
         {/* ── 2. VALISE ── */}
-        {vue.nom === "etape" && etape === 2 && (
+        {questions && etape === 2 && (
           <>
             <Surtitre>Ta valise · 2 / 4</Surtitre>
             <TitreEtape a="Quelle valise" b="prends-tu ?" />
@@ -726,7 +784,7 @@ export default function ValiseScreen() {
         )}
 
         {/* ── 3. TYPE DE SÉJOUR ── */}
-        {vue.nom === "etape" && etape === 3 && (
+        {questions && etape === 3 && (
           <>
             <Surtitre>Ta valise · 3 / 4</Surtitre>
             <TitreEtape a="Quel type" b="de séjour ?" />
@@ -772,7 +830,7 @@ export default function ValiseScreen() {
         )}
 
         {/* ── 4. PROGRAMME / OCCASIONS ── */}
-        {vue.nom === "etape" && etape === 4 && (
+        {questions && etape === 4 && (
           <>
             <Surtitre>Ta valise · 4 / 4</Surtitre>
             <TitreEtape a="Qu'est-ce" b="qui est prévu ?" />
@@ -869,7 +927,7 @@ export default function ValiseScreen() {
         )}
       </div>
 
-      {vue.nom === "etape" && (
+      {questions && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
           <button
             onClick={() => (etape < 4 ? etapeValide && setEtape(etape + 1) : preparer(false))}
@@ -884,6 +942,14 @@ export default function ValiseScreen() {
               Passer cette étape
             </button>
           )}
+        </div>
+      )}
+
+      {bloquee && (
+        <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] border-t border-border">
+          <button onClick={actions.openAddEtRevenir} className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 52 }}>
+            Ajouter une pièce
+          </button>
         </div>
       )}
 

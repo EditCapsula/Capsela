@@ -1,6 +1,6 @@
 import { saisonCalendairePour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
-import { clePrincipale, generateOutfitWithFallback } from "./logic";
+import { categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
 import { composeWardrobePool } from "./selectors";
 import type { CategoryKey, Item, OccasionKey } from "./types";
 
@@ -591,3 +591,28 @@ export function categoriesPourCompleter(
 
 /** Nom court d'une catégorie, pour « Ajouter : veste, chaussures ». */
 export const nomCategorie = (c: CategoryKey) => CATEGORIE_COURTE[c];
+
+// ── Le minimum pour préparer une valise (27/09/2026) ─────────────────────
+
+/**
+ * POUR PRÉPARER UNE VALISE, IL FAUT DE QUOI REMPLIR LA PLUS PETITE (demandé
+ * le 27/09/2026) : autant de pièces que la capacité d'une valise S, et la
+ * base d'une tenue — un haut et un bas (ou une robe, une combinaison), et
+ * des chaussures. En dessous, la valise ne pourrait qu'être à moitié vide :
+ * l'écran le dit et mène à l'ajout, plutôt que de composer quand même.
+ */
+export const MINIMUM_PIECES_VALISE = capaciteDe("S");
+
+export interface PretPourValise {
+  pret: boolean;
+  /** Pièces qui manquent pour atteindre la capacité d'une valise S. */
+  manquePieces: number;
+  /** La base d'une tenue qui manque au dressing (règle d'isCompleteOutfit). */
+  manqueBase: ("haut" | "bas" | "chaussures")[];
+}
+
+export function pretPourUneValise(dressing: Item[]): PretPourValise {
+  const manquePieces = Math.max(0, MINIMUM_PIECES_VALISE - dressing.length);
+  const manqueBase = categoriesManquantes(dressing);
+  return { pret: manquePieces === 0 && manqueBase.length === 0, manquePieces, manqueBase };
+}

@@ -107,6 +107,10 @@ Seuils : **ARBITRAGE ÉDITORIAL**, à revoir sur des dressings réels. Une tenue
 
 Chaque changement recompte les looks (`looksDeLaValise`). [DÉCIDÉ]
 
+## 8 ter. Le minimum pour préparer une valise (27/09/2026)
+
+Pour une **nouvelle** valise, le dressing doit contenir de quoi remplir la plus petite : **autant de pièces que la capacité d'une valise S (8)** et **la base d'une tenue** — un haut et un bas, ou une robe / une combinaison, et des chaussures (`pretPourUneValise`, testé, règle d'`isCompleteOutfit`). En dessous, les questions ne s'ouvrent pas : écran « Ton dressing d'abord », « 6 / 8 pièces · encore 2 pièces », la base qui manque en boutons (« + des chaussures », ajout sur cette catégorie), et « Ajouter une pièce » ; l'ajout revient à la valise. Une valise existante reste consultable et modifiable. Seuil : **demandé par la propriétaire**. [DÉCIDÉ]
+
 ## 8 bis. Inciter à compléter le dressing (27/09/2026)
 
 La valise ne puise que dans le dressing : quand il la limite, l'écran le dit et mène à l'ajout. [DÉCIDÉ]
