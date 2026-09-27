@@ -164,3 +164,18 @@ export function repartirParEcheance(
 export function villeDuLieu(lieu: string): string {
   return lieu.split(",")[0].trim();
 }
+
+/**
+ * L'ordre d'une journée : la journée entière d'abord (elle couvre les autres),
+ * puis matin, après-midi, soirée.
+ */
+const ORDRE_MOMENTS: Record<MomentJournee, number> = { "Toute la journée": 0, Matin: 1, "Après-midi": 2, Soirée: 3 };
+
+/**
+ * Les tenues planifiées d'un jour (AAAA-MM-JJ, date locale), dans l'ordre de
+ * la journée — ce que l'Accueil et Tenue rappellent pour le jour consulté
+ * (27/09/2026, navigation par date reliée à Planifier).
+ */
+export function plansDuJour(tenues: readonly TenuePlanifiee[], jour: string): TenuePlanifiee[] {
+  return tenues.filter((t) => t.jour === jour).sort((a, b) => ORDRE_MOMENTS[a.moment] - ORDRE_MOMENTS[b.moment]);
+}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { JourEtMeteo } from "@/components/JourMeteo";
+import { PlansDuJour } from "@/components/PlansDuJour";
 import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
@@ -509,6 +510,9 @@ export default function TenuesScreen() {
           date : les chevrons changent le jour, la météo ouvre
           « Localisation & météo ». */}
       <JourEtMeteo className="mt-5" />
+      {/* Ce qui est planifié ce jour-là (Planifier) — le même rappel que
+          l'Accueil ; la tenue ci-dessous reste celle de « Mon rythme ». */}
+      <PlansDuJour depuis="tenues" className="mt-3" />
 
       {/* SÉLECTEUR COMPACT (brief 22/09/2026).
           Les dix occasions défilaient ici en cartes de deux lignes, plus
@@ -1259,9 +1263,14 @@ export default function TenuesScreen() {
           pas seulement ce qu'il demande.
 
           Placée après les conseils et avant les feuilles : c'est la fin de la
-          lecture de la tenue du jour, donc le moment où regarder plus loin. */}
+          lecture de la tenue du jour, donc le moment où regarder plus loin.
+
+          UN JOUR À VENIR (27/09/2026, navigation par date) : la card nomme
+          ce jour-là — vrai par construction, c'est le jour consulté — et
+          ouvre Planifier avec cette date déjà choisie. Aujourd'hui, elle
+          reste telle quelle : Planifier ne propose pas le jour même. */}
       <button
-        onClick={actions.goPlanifier}
+        onClick={decalage > 0 ? () => actions.planifierLeJour(decalage) : actions.goPlanifier}
         className="w-full text-left bg-warm-bg border border-sand-border rounded-[22px] px-4 py-[16px] mt-4 cursor-pointer transition-opacity active:opacity-80"
       >
         {/* Surtitre : 10,5 px / .14em terracotta — la forme de CET écran, celle
@@ -1275,11 +1284,13 @@ export default function TenuesScreen() {
             la card garde sa forme éditoriale mais ne rivalise plus avec la
             tenue du jour. La promesse « Capsela compose le look » reste. */}
         <span className="block t-titre-vignette text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-          Tu veux préparer une autre tenue ?
+          {decalage > 0 ? `Autre chose de prévu ${quand} ?` : "Tu veux préparer une autre tenue ?"}
         </span>
 
         <span className="block text-[12px] text-muted leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
-          Donne l&apos;occasion, la date et le lieu : Capsela compose le look.
+          {decalage > 0
+            ? "Donne l'occasion et le lieu : Capsela compose le look."
+            : "Donne l'occasion, la date et le lieu : Capsela compose le look."}
         </span>
 
         {/* CTA TEXTUEL, PAS UN BOUTON PLEIN LARGEUR. C'est la forme déjà
@@ -1295,7 +1306,9 @@ export default function TenuesScreen() {
             La flèche est dans le texte, comme dans les quatre autres, et non
             posée à droite de la carte : à droite, elle désignait la carte
             entière sans dire ce qu'elle faisait. */}
-        <span className="mt-[10px] inline-block text-[12px] text-terracotta">Planifier une tenue →</span>
+        <span className="mt-[10px] inline-block text-[12px] text-terracotta">
+          {decalage > 0 ? `Planifier une tenue pour ${quand} →` : "Planifier une tenue →"}
+        </span>
       </button>
 
       {/* LES DEUX FEUILLES. BottomSheet existe depuis le 24/08 (écran Ajouter)

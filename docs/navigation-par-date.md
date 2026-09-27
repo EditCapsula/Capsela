@@ -121,7 +121,22 @@ Concrètement [DÉCIDÉ] :
 - La zone météo de la ligne (Accueil, Tenue) et « Ta météo » (Mon profil) passent `"localisation"` : l'écran s'ouvre sur « Localisation & météo » (géolocalisation, météo de la position, ville, unités). [DÉCIDÉ]
 - Le retour ramène à l'écran d'origine (Accueil, Tenue ou Profil). [DÉCIDÉ]
 
-## 7. Fichiers
+## 7. Relier la date à Planifier
+
+Arrêté le 27/09/2026 (options 1 et 2 proposées à la propriétaire, acceptées).
+
+| Élément | Comportement | Statut |
+| --- | --- | --- |
+| Rappel des tenues planifiées | Sous la ligne jour + météo, l'Accueil et Tenue listent les tenues planifiées du jour consulté (`PlansDuJour`) : aperçu des pièces enregistrées, « Planifiée · Soirée », « Date · Lyon ». Rien sans plan ce jour-là | [DÉCIDÉ] |
+| Un rappel, pas un remplacement | La tenue proposée reste celle de « Mon rythme » : une journée peut avoir un dîner le soir et une tenue de travail le jour | [DÉCIDÉ] |
+| Ouvrir un plan | Toucher le rappel ouvre la fiche du plan dans Planifier (`ouvrirPlan`) ; le retour ramène à l'Accueil ou à Tenue (`planRetour`), y compris après « Demander l'avis d'un proche » | [DÉCIDÉ] |
+| Planifier le jour consulté | Sur Tenue, un jour à venir : la carte « À préparer » devient « Autre chose de prévu mardi ? » et ouvre Planifier avec cette date déjà choisie (`planifierLeJour`, `planJour`). Aujourd'hui : carte inchangée, Planifier ne proposant pas le jour même | [DÉCIDÉ] |
+| Retour depuis Planifier | Depuis l'étape 1, la fiche ou la liste après « Garder cette tenue », le retour ramène à l'écran d'origine ; dès que le hub de Planifier s'affiche, on est « dans » Planifier et ce retour ne vaut plus | [DÉCIDÉ] |
+| Données | Les tenues planifiées sont chargées par le store avec le dressing (`state.tenuesPlanifiees`) et rechargées à l'ouverture de Planifier, qui les lit et les écrit là. Vides en mode démo | [DÉCIDÉ] |
+
+Aucune migration : la table `planned_outfits` (0030) existe déjà.
+
+## 8. Fichiers
 
 | Fichier | Contenu |
 | --- | --- |
@@ -129,12 +144,15 @@ Concrètement [DÉCIDÉ] :
 | `src/lib/__tests__/jourConsulte.test.ts` | Tests des dérivés |
 | `src/lib/store.tsx` | `jourDecalage`, prévision, `meteoDuJour`, `choisirJour`, tenues par jour, `goPreferences(section)`, `closePreferences` |
 | `src/components/JourMeteo.tsx` | `JourEtMeteo` : le jour et sa météo sur une ligne |
+| `src/components/PlansDuJour.tsx` | Rappel des tenues planifiées du jour consulté |
+| `src/lib/planifier.ts` | `plansDuJour` (testé) |
+| `src/components/screens/PlanifierScreen.tsx` | Liste lue dans le store, date préremplie, retour vers l'Accueil ou Tenue |
 | `src/components/screens/HomeScreen.tsx` | Ligne jour + météo, avis du jour limité au jour même |
 | `src/components/screens/TenuesScreen.tsx` | Ligne jour + météo, titre et question du jour, « Porter » réservé au jour même |
 | `src/components/screens/PreferencesScreen.tsx` | Ancre « Localisation & météo », retour à l'écran d'origine |
 
-## 8. Limites et suites
+## 9. Limites et suites
 
 - **Prévision réelle non vérifiée en local.** L'environnement de développement tourne en mode démo, sans fonction Edge : le chemin « prévision disponible » n'a été exercé que par sa règle de repli. À vérifier en production (la fonction `weather` doit connaître `mode=forecast`). [À ARBITRER : recette]
-- **Tenue planifiée et jour consulté.** Une tenue planifiée pour une date (Planifier) ne remplace pas encore la tenue proposée ce jour-là dans la navigation par date. [À ARBITRER]
+- **Tenue planifiée et jour consulté.** Une tenue planifiée est rappelée le jour consulté (section 7), elle ne remplace pas la tenue proposée ce jour-là. Faire de la tenue planifiée la tenue du jour reste un arbitrage ouvert. [À ARBITRER]
 - **Garde en mémoire seulement.** Recharger l'application recompose les jours à venir. [HYPOTHÈSE TECHNIQUE]

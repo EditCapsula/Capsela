@@ -443,6 +443,20 @@ export interface AppState {
    * consommée à l'ouverture, comme planARouvrir.
    */
   planComposition: { pieceIds: number[]; demain: boolean } | null;
+  /**
+   * TENUES PLANIFIÉES (planned_outfits), montées dans le store le 27/09/2026 :
+   * elles ont désormais deux lecteurs — Planifier, et l'Accueil / Tenue qui
+   * rappellent celles du jour consulté. Vides en mode démo.
+   */
+  tenuesPlanifiees: TenuePlanifiee[];
+  /**
+   * Écran d'où Planifier a été ouvert sur un plan ou sur une date (Accueil,
+   * Tenue) : revenir de cette entrée y ramène au lieu du hub. Oublié dès que
+   * le hub de Planifier s'affiche, ou à l'ouverture ordinaire de Planifier.
+   */
+  planRetour: "home" | "tenues" | null;
+  /** Date préremplie (décalage en jours) par « Planifier une tenue pour … » de Tenue ; consommée à l'ouverture. */
+  planJour: number | null;
   savedLooks: SavedLook[];
   /** Pièces choisies dans l'écran de création de look, avant sauvegarde. */
   lookDraftIds: number[];

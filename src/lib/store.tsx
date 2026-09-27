@@ -7,6 +7,7 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsulePourMeteo, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
 import { previsionPour, type Prevision } from "./prevision";
+import { fetchTenuesPlanifiees, type TenuePlanifiee } from "./planifier";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
@@ -212,6 +213,9 @@ function buildInitialState(): AppState {
     avisSource: null,
     planARouvrir: null,
     planComposition: null,
+    tenuesPlanifiees: [],
+    planRetour: null,
+    planJour: null,
     savedLooks: [],
     lookDraftIds: [],
     lookDraftName: "",
@@ -438,6 +442,18 @@ export interface Actions {
   planifierComposition: (ids: number[], demain: boolean) => void;
   /** Planifier a repris la composition. */
   oublierPlanComposition: () => void;
+  /** Remplace la liste des tenues planifiées (Planifier : chargement, ajout, retrait). */
+  setTenuesPlanifiees: (maj: (l: TenuePlanifiee[]) => TenuePlanifiee[]) => void;
+  /** Ouvre le détail d'une tenue planifiée depuis l'Accueil ou Tenue ; le retour y ramène. */
+  ouvrirPlan: (t: TenuePlanifiee, depuis: "home" | "tenues") => void;
+  /** Ouvre Planifier depuis Tenue avec la date du jour consulté déjà choisie. */
+  planifierLeJour: (decalage: number) => void;
+  /** Planifier a repris la date préremplie. */
+  oublierPlanJour: () => void;
+  /** Quitte Planifier vers l'écran d'où il a été ouvert (planRetour). */
+  quitterPlanifier: () => void;
+  /** Le hub de Planifier s'est affiché : le retour vers l'Accueil ou Tenue ne vaut plus. */
+  oublierPlanRetour: () => void;
 
   /** seedId : préremplit lookDraftIds avec cette pièce (recette 24/08/2026, PieceScreen "Ajouter à un look → Créer un nouveau look") — jamais renseigné hors de ce parcours. */
   goCreateLook: (seedId?: number) => void;
@@ -670,6 +686,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       fetchDressingItems(userId),
       fetchOutfitHistory(userId),
       fetchSavedLooks(userId),
+      // Les tenues planifiées : l'Accueil et Tenue rappellent celles du jour
+      // consulté. La lecture ne jette jamais (rend [] en cas d'échec).
+      fetchTenuesPlanifiees(userId),
       // Les avis du jour sont chargés en bloc : la tenue n'est pas encore
       // générée ici, donc on ne peut pas cibler la sienne. Un échec ne doit
       // PAS priver l'utilisatrice de son dressing — l'avis est accessoire,
@@ -682,7 +701,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // pas, et cet état n'applique aucune limite. Un échec ici ne doit pas
       // enfermer quelqu'un hors de son propre dressing.
       fetchEtatPremium(userId),
-    ]).then(([items, history, savedLooks, avis, premium]) => {
+    ]).then(([items, history, savedLooks, tenuesPlanifiees, avis, premium]) => {
       if (cancelled) return;
       setEtatPremium(simule ? etatSimule(simule) : premium);
       setState((s) => ({
@@ -690,6 +709,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         items,
         history,
         savedLooks,
+        tenuesPlanifiees,
         outfitFeedbackDuJour: avis.map((a) => ({ jour: a.jour, pieceIds: a.piece_ids, verdict: a.verdict })),
       }));
       setDressingLoaded(true);
@@ -1230,7 +1250,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       );
     },
     goHistory: () => go("history"),
-    goPlanifier: () => go("planifier"),
+    // Ouverture ordinaire (barre du bas, cartes) : aucun retour particulier.
+    goPlanifier: () => setState((s) => ({ ...s, planRetour: null, planJour: null, screen: "planifier" })),
     goNeverWorn: () => go("neverworn"),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobePieces" })),
     goLooks: () => go("looks"),
@@ -2115,8 +2136,16 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           : { ...s, avisSource: null, screen: "tenues" }
       ),
     oublierPlanARouvrir: () => setState((s) => (s.planARouvrir ? { ...s, planARouvrir: null } : s)),
-    planifierComposition: (ids, demain) => setState((s) => ({ ...s, planComposition: { pieceIds: ids, demain }, screen: "planifier" })),
+    planifierComposition: (ids, demain) =>
+      setState((s) => ({ ...s, planComposition: { pieceIds: ids, demain }, planRetour: null, planJour: null, screen: "planifier" })),
     oublierPlanComposition: () => setState((s) => (s.planComposition ? { ...s, planComposition: null } : s)),
+    setTenuesPlanifiees: (maj) => setState((s) => ({ ...s, tenuesPlanifiees: maj(s.tenuesPlanifiees) })),
+    ouvrirPlan: (t, depuis) => setState((s) => ({ ...s, planARouvrir: t, planRetour: depuis, planJour: null, screen: "planifier" })),
+    planifierLeJour: (decalage) =>
+      setState((s) => ({ ...s, planJour: decalage, planRetour: "tenues", planComposition: null, screen: "planifier" })),
+    oublierPlanJour: () => setState((s) => (s.planJour != null ? { ...s, planJour: null } : s)),
+    quitterPlanifier: () => setState((s) => ({ ...s, screen: s.planRetour ?? "home", planRetour: null })),
+    oublierPlanRetour: () => setState((s) => (s.planRetour ? { ...s, planRetour: null } : s)),
 
     goCreateLook: (seedId) =>
       setState((s) => ({

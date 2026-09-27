@@ -21,6 +21,7 @@ import { deleteTenuePlanifiee, fetchTenuesPlanifiees, repartirParEcheance, upser
 import { paletteHexes } from "@/lib/profile";
 import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 
 /**
@@ -30,8 +31,12 @@ import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/li
  * celui-là fait le parcours en entier (intro, 4 étapes, résultat) sur le vrai
  * moteur et la vraie taxonomie.
  *
- * CE QUE LE LOT 1 NE FAIT PAS, ET POURQUOI C'EST ÉCRIT À L'ÉCRAN PLUTÔT QUE
- * SIMULÉ :
+ * CE QUE LE LOT 1 NE FAISAIT PAS, ET POURQUOI C'ÉTAIT ÉCRIT À L'ÉCRAN PLUTÔT
+ * QUE SIMULÉ. Historique : les points 1 et 2 sont levés depuis — prévision
+ * du lieu jusqu'à HORIZON_PREVISION_JOURS (fonction Edge `weather`,
+ * mode=forecast) et persistance dans `planned_outfits` (migration 0030),
+ * dans le store depuis le 27/09/2026 pour que l'Accueil et Tenue rappellent
+ * les tenues du jour consulté.
  *
  * 1. Pas de météo de prévision. `weather.ts` et la fonction Edge `weather`
  *    n'appellent que /data/2.5/weather — la météo ACTUELLE. La tenue est donc
@@ -362,8 +367,10 @@ export default function PlanifierScreen() {
 
   // Retour de « Demander l'avis d'un proche » : le plan partagé se rouvre,
   // plutôt que de laisser sur le hub (l'état de cet écran est local).
+  // « Planifier une tenue pour … » depuis Tenue (27/09/2026) : la date est
+  // déjà choisie, le parcours s'ouvre sur ses étapes.
   const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail">(() =>
-    state.planARouvrir ? "detail" : state.planComposition ? "etape" : "intro"
+    state.planARouvrir ? "detail" : state.planComposition || state.planJour != null ? "etape" : "intro"
   );
   /**
    * COMPOSITION IMPOSÉE (Avis de styliste V2, 26/09/2026) : les pièces
@@ -380,6 +387,7 @@ export default function PlanifierScreen() {
   useEffect(() => {
     if (state.planARouvrir) actions.oublierPlanARouvrir();
     if (state.planComposition) actions.oublierPlanComposition();
+    if (state.planJour != null) actions.oublierPlanJour();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [menuPlan, setMenuPlan] = useState<TenuePlanifiee | null>(null);
@@ -402,7 +410,8 @@ export default function PlanifierScreen() {
    */
   const [dateContext, setDateContext] = useState<DateContext>(DATE_CONTEXTS[0][0]);
   // « Planifier pour demain » depuis un avis : la date est déjà connue.
-  const [jour, setJour] = useState<number | null>(() => (state.planComposition?.demain ? 1 : null));
+  // Depuis Tenue, le jour consulté (planJour, toujours ≥ 1 : Planifier ne propose pas aujourd'hui).
+  const [jour, setJour] = useState<number | null>(() => (state.planComposition?.demain ? 1 : state.planJour));
   const [moment, setMoment] = useState<MomentJournee | null>(null);
   const [lieu, setLieu] = useState("");
   /**
@@ -435,12 +444,12 @@ export default function PlanifierScreen() {
   /**
    * TENUES PLANIFIÉES (table planned_outfits, migration 0030).
    *
-   * Gardées ICI et non dans le store : elles n'ont qu'un seul consommateur.
-   * Le jour où l'écran Tenue en aura besoin — « le jour J, ce look devient ta
-   * tenue du jour » — elles monteront dans le store comme savedLooks. Les y
-   * mettre avant leur second lecteur alourdirait le store sans rien régler.
+   * Dans le store depuis le 27/09/2026 : elles ont trouvé leur second
+   * lecteur — l'Accueil et Tenue rappellent celles du jour consulté. Cet
+   * écran les lit et les écrit là, pour que les trois voient la même liste.
    */
-  const [plans, setPlans] = useState<TenuePlanifiee[]>([]);
+  const plans = state.tenuesPlanifiees;
+  const setPlans = actions.setTenuesPlanifiees;
   const [enregistrement, setEnregistrement] = useState(false);
   const [onglet, setOnglet] = useState<"up" | "past">("up");
   const [toast, setToast] = useState<string | null>(null);
@@ -687,18 +696,20 @@ export default function PlanifierScreen() {
    * quittant l'étape 3, elle est presque toujours revenue quand on arrive
    * ici. Les étapes 1 à 3 ne sont jamais bloquées par elle.
    */
-  /* Chargement unique à l'ouverture de l'écran. `fetchTenuesPlanifiees` rend
-     [] en mode démo comme en cas d'échec : il n'y a donc pas d'état d'erreur
-     à afficher, seulement une liste vide. */
+  /* Rechargement à l'ouverture de l'écran (le store les charge déjà avec le
+     dressing) : une tenue planifiée depuis un autre appareil apparaît ici.
+     `fetchTenuesPlanifiees` rend [] en mode démo comme en cas d'échec — en
+     démo, on ne touche donc pas à la liste. */
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !isSupabaseConfigured) return;
     let annule = false;
     fetchTenuesPlanifiees(userId).then((r) => {
-      if (!annule) setPlans(r);
+      if (!annule) setPlans(() => r);
     });
     return () => {
       annule = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const flash = (m: string) => {
@@ -770,7 +781,7 @@ export default function PlanifierScreen() {
       flash("Tenue retirée");
     } catch {
       // Remise en place : la ligne est toujours en base, la masquer mentirait.
-      setPlans(avant);
+      setPlans(() => avant);
       flash("La suppression a échoué. Réessaie.");
     }
   };
@@ -815,7 +826,26 @@ export default function PlanifierScreen() {
     zoneScroll.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [etape, vue]);
 
+  /*
+   * OUVERT DEPUIS L'ACCUEIL OU TENUE (27/09/2026) sur un plan ou sur une date :
+   * revenir de cette entrée ramène à l'écran d'origine, pas au hub qu'on n'a
+   * jamais vu. Dès que le hub s'affiche, on est « dans » Planifier et ce
+   * retour ne vaut plus.
+   */
+  useEffect(() => {
+    if (vue === "intro" && state.planRetour) actions.oublierPlanRetour();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vue]);
+
+  const retourExterne =
+    state.planRetour != null &&
+    ((vue === "detail" && retourDetail === "intro") || vue === "liste" || (vue === "etape" && etape === 1));
+
   const revenir = () => {
+    if (retourExterne) {
+      actions.quitterPlanifier();
+      return;
+    }
     if (vue === "detail") {
       setPlanOuvert(null);
       setVue(retourDetail);
@@ -873,7 +903,15 @@ export default function PlanifierScreen() {
             suivantes gardent le chevron, qui remonte le parcours. */}
         <AppHeader
           onBack={vue === "intro" ? undefined : revenir}
-          backLabel={vue === "liste" || (vue === "detail" && retourDetail === "intro") ? "Revenir à Planifier" : "Revenir à l'étape précédente"}
+          backLabel={
+            retourExterne
+              ? state.planRetour === "tenues"
+                ? "Revenir à ta tenue"
+                : "Revenir à l'accueil"
+              : vue === "liste" || (vue === "detail" && retourDetail === "intro")
+                ? "Revenir à Planifier"
+                : "Revenir à l'étape précédente"
+          }
         />
       </div>
 

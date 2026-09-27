@@ -18,6 +18,7 @@ import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { JourEtMeteo } from "@/components/JourMeteo";
+import { PlansDuJour } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
 
@@ -770,6 +771,9 @@ export default function HomeScreen() {
             aucun écran de plus. Composant partagé avec Tenue. Le surtitre
             « Aujourd'hui » a disparu : la ligne porte la date. */}
         <JourEtMeteo className="mt-4" />
+        {/* Ce qui est planifié ce jour-là (Planifier) : un rappel qui mène à
+            la fiche du plan, sous la ligne du jour. Rien sans plan. */}
+        <PlansDuJour depuis="home" className="mt-3" />
       </div>
 
       {/* ══ Card héros — le moment visuel de la page ══════════════════════
