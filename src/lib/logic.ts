@@ -1787,7 +1787,7 @@ export interface LookScore {
   proactives: {
     key: string;
     text: string;
-    /** Pièce concrète du catalogue à suggérer (R-S13/R-S14 uniquement, recette 23/08/2026) — présent seulement si une pièce avec lien_affiliation a été trouvée dans le pool ; jamais pour R-S12 (layering). */
+    /** Pièce concrète à suggérer (R-S13/R-S14 uniquement, recette 23/08/2026) — une pièce du dressing en priorité depuis le 27/09/2026, sinon du catalogue ; absente si le pool n'en a aucune ; jamais pour R-S12 (layering). */
     suggestedId?: number;
   }[];
 }
@@ -1995,8 +1995,18 @@ export function computeLookScore(
       if (candidate.sacType) return p.sacType === candidate.sacType;
       return false;
     });
+  // UNE PIÈCE DU DRESSING D'ABORD (27/09/2026, parcours « Compléter la
+  // tenue »). La sélection était réservée aux pièces du catalogue : une
+  // utilisatrice qui possède une veste recevait « complète avec une veste »
+  // sans que la sienne lui soit proposée — wardrobePool ne contient alors
+  // aucune veste du catalogue, sa catégorie étant pourvue par le dressing.
+  // Les pièces possédées passent désormais en tête, le catalogue ensuite.
+  // Seule la PIÈCE proposée change : déclencheurs, textes et score intacts.
+  const dressingDAbord = (a: Item, b: Item) => Number(isCatalogId(a.id)) - Number(isCatalogId(b.id));
   const findSuggestedPiece = (cats: CategoryKey[], extra: (i: Item) => boolean): number | undefined =>
-    pool.find((i) => cats.includes(i.cat) && isCatalogId(i.id) && !pieceIds.has(i.id) && !hasSameSlot(i) && extra(i))?.id;
+    pool
+      .filter((i) => cats.includes(i.cat) && !pieceIds.has(i.id) && !hasSameSlot(i) && extra(i))
+      .sort(dressingDAbord)[0]?.id;
 
   // Un bijou doré/argenté/cuivré (palette PALETTE_BIJOU, data.ts) n'est pas
   // une "touche de couleur" — c'est une finition métallique, pas plus
@@ -2038,14 +2048,15 @@ export function computeLookScore(
     // n'importe quelle veste si le pool n'a aucune option décontractée
     // (même esprit que R-B16/R-S16, findSuggestedPiece ne permettant pas
     // ce classement par préférence).
-    const vesteManteauCandidates = pool.filter(
-      (i) =>
-        (i.cat === "veste" || i.cat === "manteau") &&
-        isCatalogId(i.id) &&
-        !pieceIds.has(i.id) &&
-        !hasSameSlot(i) &&
-        weather.seasons.includes(i.season)
-    );
+    const vesteManteauCandidates = pool
+      .filter(
+        (i) =>
+          (i.cat === "veste" || i.cat === "manteau") &&
+          !pieceIds.has(i.id) &&
+          !hasSameSlot(i) &&
+          weather.seasons.includes(i.season)
+      )
+      .sort(dressingDAbord);
     const decontracte = occasion === "sport" ? vesteManteauCandidates.filter((i) => formalityOf(i) <= 1) : [];
     proactives.push({
       key: "veste_soir",
@@ -2068,13 +2079,30 @@ export function computeLookScore(
  * tenue complète existe pour elle, jamais une compatibilité seulement
  * théorique).
  */
-function isCompleteOutfit(items: Item[]): boolean {
+export function isCompleteOutfit(items: Item[]): boolean {
   const cats = new Set(items.map((i) => i.cat));
   if (!cats.has("chaussures")) return false;
   if (cats.has("robe") || cats.has("combinaison")) return true;
   const hasTop = cats.has("haut") || cats.has("pull");
   const hasBottom = BOTTOMS.some((c) => cats.has(c));
   return hasTop && hasBottom;
+}
+
+/**
+ * Ce qui manque à une tenue pour remplir la structure minimale ci-dessus,
+ * dans les clés de `missingCats` (outfitCopy.MISSING_LABELS) — la même règle
+ * qu'isCompleteOutfit, dite pièce par pièce (27/09/2026, statut de la tenue
+ * du jour). Vide pour une tenue complète.
+ */
+export function categoriesManquantes(items: Item[]): ("haut" | "bas" | "chaussures")[] {
+  const cats = new Set(items.map((i) => i.cat));
+  const manquantes: ("haut" | "bas" | "chaussures")[] = [];
+  if (!cats.has("robe") && !cats.has("combinaison")) {
+    if (!cats.has("haut") && !cats.has("pull")) manquantes.push("haut");
+    if (!BOTTOMS.some((c) => cats.has(c))) manquantes.push("bas");
+  }
+  if (!cats.has("chaussures")) manquantes.push("chaussures");
+  return manquantes;
 }
 
 /**

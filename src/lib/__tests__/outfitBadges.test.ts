@@ -105,7 +105,11 @@ describe("libellés — l'écran rend la décision partagée, sans la contourner
     const s = source();
     // La ternaire d'origine testait formalityDowngraded pour CHOISIR un badge.
     expect(s).not.toMatch(/formalityDowngraded \?[\s\S]{0,400}lookScore\.badge/);
-    expect(s).toContain("badges.map((key)");
+    // badgesAffiches (27/09/2026) : la même liste, dont seule la pastille
+    // « Recommandé » est retirée tant que la tenue est « À compléter » —
+    // jamais « Plus sobre », donc aucune exclusivité entre les deux.
+    expect(s).toMatch(/badgesAffiches = statut\.cle === "a_completer" \? badges\.filter\(\(b\) => b !== "recommande"\) : badges/);
+    expect(s).toContain("badgesAffiches.map((key)");
   });
 
   // Le bandeau ne doit plus faire porter un manque sur le vestiaire.

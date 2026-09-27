@@ -12,7 +12,8 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCapsulePourMeteo } from "@/lib/capsule";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { computeLookScore, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
+import { categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
+import { statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
@@ -182,6 +183,9 @@ export default function TenuesScreen() {
     // que la couleur d'après la catégorie/le sous-type structurés, jamais un
     // nom entier) ; cette forme reste grammaticalement correcte quel que soit
     // le nom de la pièce, sans jamais inventer un accord.
+    // La tenue mise à jour se montre : le héros, juste au-dessus, remonte
+    // dans la vue avec sa nouvelle composition et son statut.
+    document.getElementById("tenue-du-jour")?.scrollIntoView({ behavior: "smooth", block: "start" });
     showToast(`✓ Ajouté à la tenue : ${piece.name}`, () => {
       actions.removePieceFromOutfit(piece.id);
       setToast(null);
@@ -350,7 +354,17 @@ export default function TenuesScreen() {
     return lignes;
   })();
 
-  const missingText = missingSuggestionText(state.outfitMissingCats || []);
+  // Ce qui manque : ce que le moteur a signalé (outfitMissingCats) ; à
+  // défaut, la structure minimale du moteur appliquée à la tenue affichée
+  // (27/09/2026) — une tenue modifiée ou rejouée depuis un autre écran
+  // n'arrive pas toujours avec les manques de son tirage. Signalé : robe +
+  // sac affichés « Recommandé » sans un mot sur les chaussures.
+  const categoriesAbsentes = state.outfitMissingCats?.length
+    ? state.outfitMissingCats
+    : outfitPieces.length && !isCompleteOutfit(outfitPieces)
+      ? categoriesManquantes(outfitPieces)
+      : [];
+  const missingText = missingSuggestionText(categoriesAbsentes);
   // Repli progressif de formalité (nouveau 21/08/2026, décidé) — calculé
   // par generateOutfitWithFallback (store.tsx), jamais recalculé ici :
   // bannière + badge distincts de missingText (rien ne manque, la
@@ -437,7 +451,28 @@ export default function TenuesScreen() {
   });
 
   const liveProactiveByKey = new Map(lookScore.proactives.map((p) => [p.key, p]));
+
+  /**
+   * OÙ EN EST LA TENUE (27/09/2026, parcours « Compléter la tenue ») — lu sur
+   * le moteur, jamais une règle nouvelle (cf. statutTenue.ts) : à compléter
+   * si un manque existe, un ajout conseillé si une suggestion propose une
+   * pièce précise, complète sinon.
+   */
+  const ajoutsConseilles = lookScore.proactives.filter(
+    (p) => p.suggestedId != null && displayPool.some((i) => i.id === p.suggestedId)
+  ).length;
+  const statut = statutTenue({
+    nbPieces: outfitPieces.length,
+    complete: !missingText && !vesteWithoutBase && isCompleteOutfit(outfitPieces),
+    ajoutsConseilles,
+    vientDEtreCompletee: recentlyAddedId != null,
+  });
+  // « Recommandé » ne se lit pas à côté de « À compléter » : la pastille de
+  // score est masquée tant qu'un manque existe (le score, lui, est inchangé).
+  const badgesAffiches = statut.cle === "a_completer" ? badges.filter((b) => b !== "recommande") : badges;
+
   const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)]));
+  const aCompleter = !noCompleteOutfit && (proactiveKeys.length > 0 || Boolean(missingText) || vesteWithoutBase);
 
   // pb-safe-nav (correctif 20/08/2026) remplace pb-24 : réserve la hauteur
   // réelle de la navigation basse + safe-area-inset-bottom + marge de
@@ -618,7 +653,7 @@ export default function TenuesScreen() {
           OutfitComposition — sinon le fond beige des tuiles resterait visible
           en damier sur le terracotta. */}
       {!geoLoading && outfitPieces.length > 0 && (
-        <div className="mt-[22px] rounded-[24px] bg-terracotta-deep text-cream" style={{ padding: 16 }}>
+        <div id="tenue-du-jour" className="mt-[22px] rounded-[24px] bg-terracotta-deep text-cream scroll-mt-4" style={{ padding: 16 }}>
           {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
               le 23/09). Conditionnelle depuis que le titre est parti : sans
               elle, une tenue sans badge NI phrase ouvrirait la card sur une
@@ -644,14 +679,39 @@ export default function TenuesScreen() {
               tenue de 4 pièces flottait dans ~90 px de vide en haut et en
               bas. À 13, une tenue courte est centrée avec un peu d'air, une
               tenue avec veste est ramenée à ~80 % — réduite, jamais rognée. */}
+          {/* STATUT ET CHANGEMENT (27/09/2026). En tête de la card : où en
+              est la tenue, puis « Autre tenue », remonté du pied de card —
+              une action de changement, pas un CTA de même rang que
+              « Porter cette tenue ». Hors de la zone à hauteur fixe. */}
+          <div className="flex items-center justify-between gap-3 mb-[12px]">
+            <span className="t-label" aria-live="polite" style={{ color: statut.cle === "a_completer" ? "#F0DDCF" : "#FBF3EA" }}>
+              {statut.cle === "complete" && <span aria-hidden="true">✦ </span>}
+              {statut.libelle}
+            </span>
+            {!noCompleteOutfit && (
+              <button
+                onClick={autreTenue}
+                disabled={tirageEnCours}
+                aria-busy={tirageEnCours}
+                className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-cream cursor-pointer disabled:cursor-not-allowed -my-[10px] py-[10px]"
+                style={{ opacity: tirageEnCours ? 0.6 : 1 }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                  <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Autre tenue
+              </button>
+            )}
+          </div>
           <div className="flex flex-col" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px + 92px)` }}>
-          {(badges.length > 0 || recommendationText) && (
+          {(badgesAffiches.length > 0 || recommendationText) && (
           <div className="flex-shrink-0 flex items-center flex-wrap gap-x-[10px] gap-y-[5px]">
             {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la
                 qualité vient du score, le registre du repli de formalité. Sur
                 fond terracotta, la hiérarchie passe par le remplissage —
                 pastille pleine pour le principal, détourée pour le registre. */}
-            {badges.map((key) =>
+            {badgesAffiches.map((key) =>
               key === "recommande" ? (
                 <span
                   key={key}
@@ -760,14 +820,19 @@ export default function TenuesScreen() {
               // seuls en casse de phrase — je les y avais mis quelques heures
               // plus tôt en prenant l'accueil pour référence, alors que
               // l'accueil était lui-même l'exception.
+              // À COMPLÉTER (27/09/2026) : le bouton reste actif — porter la
+              // tenue telle quelle est un choix légitime — mais passe au
+              // contour, pour ne pas dire que le parcours est terminé tant
+              // qu'un manque est signalé juste en dessous.
               className={
                 "mt-[14px] w-full flex items-center justify-center rounded-full t-bouton " +
-                (vesteWithoutBase ? "cursor-not-allowed" : "bg-cream text-ink cursor-pointer")
+                (vesteWithoutBase ? "cursor-not-allowed" : statut.cle === "a_completer" ? "text-cream cursor-pointer" : "bg-cream text-ink cursor-pointer")
               }
               style={{
                 minHeight: 50,
                 background: vesteWithoutBase ? "rgba(243,238,229,.38)" : undefined,
                 color: vesteWithoutBase ? "rgba(29,26,22,.5)" : undefined,
+                border: !vesteWithoutBase && statut.cle === "a_completer" ? "1px solid rgba(243,238,229,.6)" : undefined,
               }}
             >
               Porter cette tenue
@@ -786,10 +851,12 @@ export default function TenuesScreen() {
               title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces à cette tenue pour l'enregistrer."}
               aria-pressed={isOutfitSaved}
               className={"flex items-center justify-center gap-[6px] rounded-full text-[12px] " + (canSaveOutfit ? "cursor-pointer" : "cursor-default opacity-45")}
+              // Allégées le 27/09/2026 : un filet, sans aplat — elles restent
+              // lisibles et cliquables, mais ne rivalisent plus avec le CTA.
               style={{
-                minHeight: 46,
-                background: isOutfitSaved ? "rgba(243,238,229,.3)" : "rgba(243,238,229,.14)",
-                border: "1px solid rgba(243,238,229,.3)",
+                minHeight: 44,
+                background: isOutfitSaved ? "rgba(243,238,229,.18)" : "transparent",
+                border: "1px solid rgba(243,238,229,.24)",
                 color: "#FBF3EA",
               }}
             >
@@ -800,9 +867,9 @@ export default function TenuesScreen() {
               onClick={() => actions.openOpinionShare()}
               className="flex items-center justify-center gap-[6px] rounded-full text-[12px] cursor-pointer"
               style={{
-                minHeight: 46,
-                background: "rgba(243,238,229,.14)",
-                border: "1px solid rgba(243,238,229,.3)",
+                minHeight: 44,
+                background: "transparent",
+                border: "1px solid rgba(243,238,229,.24)",
                 color: "#FBF3EA",
               }}
             >
@@ -810,54 +877,167 @@ export default function TenuesScreen() {
             </button>
           </div>
 
-          {/* « Autre tenue » REVIENT DANS LA CARD (24/09/2026, demandé). Il
-              avait été déplacé en bas d'écran le 22/09 sous la forme d'un
-              pavé « Pas complètement convaincue ? », retiré du même coup :
-              deux emplacements pour une même action n'auraient rien réglé.
-
-              Sa place ici est cohérente avec ce que la card est devenue — on
-              y lit ce que c'est, pourquoi, à quoi ça ressemble, puis ce qu'on
-              peut en faire : la porter, l'enregistrer, la montrer, ou en voir
-              une autre. Son rang se lit à sa forme, pas à sa position : le
-              CTA est plein, les deux secondaires translucides, celui-ci n'est
-              qu'un texte.
-
-              Comportement strictement inchangé — en mode exploration, rejoue
-              un tirage sur la capsule explorée, jamais regen()/wardrobePool
-              (recette 24/08/2026). N'a de sens que s'il y a une tenue à
-              régénérer, d'où la même garde qu'avant.
-
-              Le glyphe est dessiné et non le caractère ↻ : sur le terracotta,
-              un caractère système impose son dessin et sa graisse (même
-              arbitrage que les glyphes d'occasion, 23/09). Ce n'est pas une
-              flèche de navigation — la convention du 23/09 vise les CTA
-              principaux qui mènent ailleurs, celui-ci rejoue sur place.
-
-              44 px de hauteur pour 12,5 px de texte : le plancher tactile de
-              l'app. Le crème sur terracotta-deep donne 4,51:1, au-dessus du
-              seuil AA du petit texte. */}
-          {!noCompleteOutfit && (
-            <button
-              onClick={autreTenue}
-              disabled={tirageEnCours}
-              aria-busy={tirageEnCours}
-              className="mt-[2px] w-full flex items-center justify-center gap-[7px] text-[12px] text-cream cursor-pointer disabled:cursor-not-allowed"
-              style={{ minHeight: 44, opacity: tirageEnCours ? 0.6 : 1 }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                <path
-                  d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-                <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Autre tenue
-            </button>
-          )}
+          {/* « Autre tenue » est remonté en tête de card le 27/09/2026 (cf.
+              la ligne de statut) : comportement et garde inchangés. */}
         </div>
+      )}
+
+      {/* ══ COMPLÉTER LA TENUE (27/09/2026) ══════════════════════════════
+          Ce que Capsela sait déjà de la tenue — un manque (outfitMissingCats
+          ou la structure minimale du moteur), une veste sans rien dessous,
+          les suggestions de computeLookScore — se lit JUSTE SOUS le héros,
+          et non plus après les pièces : c'est la suite du raisonnement, pas
+          une note de bas de page. Aucune règle nouvelle : mêmes
+          déclencheurs, mêmes textes, même « Ajouter à la tenue » (avec son
+          toast et son annulation) ; la pièce proposée est désormais celle du
+          dressing quand il en a une (cf. computeLookScore). */}
+      {!geoLoading && outfitPieces.length > 0 && aCompleter && (
+        <section aria-label="Compléter la tenue" className="mt-[22px]">
+          <div className="flex items-center gap-[7px]">
+            <span className="font-serif italic text-[13px] text-terracotta" aria-hidden="true">
+              ✦
+            </span>
+            <span className="t-label text-terracotta">Compléter la tenue</span>
+          </div>
+
+          {!noCompleteOutfit && missingText && (
+            <div className="mt-[12px] bg-card border border-border rounded-[20px] p-4">
+              <div className="t-label text-terracotta">À compléter</div>
+              <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{missingText}</div>
+              <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
+                Ajouter une pièce →
+              </button>
+            </div>
+          )}
+
+          {!noCompleteOutfit && vesteWithoutBase && (
+            <div className="mt-[12px] bg-warm-bg border-[1.5px] border-terracotta rounded-[20px] p-4">
+              <div className="t-label text-terracotta">À compléter</div>
+              <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">
+                Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.
+              </div>
+              <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
+                Choisir une pièce →
+              </button>
+            </div>
+          )}
+
+          {!noCompleteOutfit &&
+            proactiveKeys.map((key) => {
+              const frozen = dismissingEntries[key];
+              const p = liveProactiveByKey.get(key) ?? frozen?.p;
+              if (!p) return null;
+              const suggested = frozen?.suggested ?? (p.suggestedId != null ? displayPool.find((i) => i.id === p.suggestedId) : undefined);
+              const closing = Boolean(frozen);
+              const suggereeDuCatalogue = suggested ? isCatalogId(suggested.id) : false;
+              const image = suggested ? resolveItemImage(suggested) : null;
+              return (
+                <div
+                  key={key}
+                  className="overflow-hidden transition-all duration-300 ease-out"
+                  style={closing ? { opacity: 0, maxHeight: 0, marginTop: 0 } : { opacity: 1, maxHeight: 640, marginTop: 12 }}
+                >
+                  <div className="bg-card border border-border rounded-[20px] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-[6px]">
+                          {/* Pourquoi, avant quoi : le surtitre dit la raison
+                              (« À prévoir » pour la soirée fraîche), le texte
+                              du moteur dit la pièce. */}
+                          <span className="t-label text-terracotta">{surtitreSuggestion(key)}</span>
+                          {key === "layer" && (
+                            <button
+                              onClick={() => setLayeringInfoOpen((v) => !v)}
+                              aria-label="Qu'est-ce que le layering ?"
+                              className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10px] text-terracotta flex items-center justify-center cursor-pointer"
+                            >
+                              i
+                            </button>
+                          )}
+                        </div>
+                        <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{p.text}</div>
+                        {key === "layer" && layeringInfoOpen && (
+                          <div className="text-[11px] text-muted mt-[6px] leading-[1.4]">
+                            Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un
+                            débardeur sous une chemise oversize ouverte.
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => actions.dismissOutfitSuggestion(key)}
+                        className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer -my-[10px] py-[10px]"
+                      >
+                        Ignorer
+                      </button>
+                    </div>
+                    {suggested && image && (
+                      <div className="flex items-center gap-[14px] mt-[14px]">
+                        {/* Grande vignette : la pièce proposée est le sujet de
+                            la carte. Une pièce du dressing se montre telle
+                            quelle ; une suggestion de la capsule garde son
+                            traitement « aperçu » (légèrement atténuée) et sa
+                            pastille, pour ne jamais passer pour une pièce
+                            possédée. */}
+                        <div
+                          className="relative flex-shrink-0 w-[112px] h-[136px] rounded-[14px] overflow-hidden"
+                          style={{ background: image.url ? "#F3EDE1" : suggested.hex }}
+                        >
+                          {image.url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={image.url}
+                              alt=""
+                              loading="lazy"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: image.kind === "photo" ? "cover" : "contain",
+                                padding: image.kind === "photo" ? 0 : 8,
+                                boxSizing: "border-box",
+                                filter: suggereeDuCatalogue ? "grayscale(35%) opacity(.85)" : image.kind === "photo" ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
+                              }}
+                            />
+                          )}
+                          <span
+                            className={
+                              "absolute top-[7px] left-[7px] t-pastille rounded-full py-[3px] px-[8px] " +
+                              (suggereeDuCatalogue ? "bg-terracotta text-cream" : "bg-warm-bg text-ink border border-warm-border")
+                            }
+                          >
+                            {suggereeDuCatalogue ? "Suggérée" : "Ton dressing"}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[14px] text-ink leading-[1.3]">{suggested.name}</div>
+                          <div className="text-[11px] text-muted mt-[3px]">{CATLABEL[isBag(suggested) ? "sac" : suggested.cat]}</div>
+                          <div className="flex flex-col gap-[8px] mt-[12px]">
+                            <button
+                              onClick={() => handleAddSuggestedPiece(p, suggested)}
+                              className="inline-flex items-center justify-center gap-[6px] bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[11px] text-[12px] cursor-pointer"
+                            >
+                              <PlusIcon />
+                              Ajouter à la tenue
+                            </button>
+                            {suggereeDuCatalogue && suggested.affLink && (
+                              <a
+                                href={suggested.affLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-[6px] border border-border-soft text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
+                              >
+                                <BagIcon />
+                                <span className="underline underline-offset-2">Acheter cette pièce</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+        </section>
       )}
 
       {/* État vide (section 5/6/7/9) : microcopy neutre et orientée
@@ -921,7 +1101,7 @@ export default function TenuesScreen() {
           qu'elle descend jusqu'au sien. */}
       {!geoLoading && outfitPieces.length > 0 && (
         <div className="t-surtitre text-muted mt-[26px] mb-[10px]">
-          Les {outfitPieces.length} pièces
+          Les pièces de ta tenue · {outfitPieces.length}
         </div>
       )}
 
@@ -1023,131 +1203,6 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      {!noCompleteOutfit && lookScore.proactives.length > 0 && (
-        <div className="mt-4 flex items-center gap-[7px]">
-          <span className="font-serif italic text-[13px] text-terracotta">✦</span>
-          <span className="t-label text-terracotta">Nos conseils pour sublimer cette tenue</span>
-        </div>
-      )}
-
-      {!noCompleteOutfit &&
-        proactiveKeys.map((key) => {
-            const frozen = dismissingEntries[key];
-            const p = liveProactiveByKey.get(key) ?? frozen?.p;
-            if (!p) return null;
-            const suggested = frozen?.suggested ?? (p.suggestedId != null ? displayPool.find((i) => i.id === p.suggestedId) : undefined);
-            const closing = Boolean(frozen);
-            return (
-              <div
-                key={key}
-                className="overflow-hidden transition-all duration-300 ease-out"
-                style={closing ? { opacity: 0, maxHeight: 0, marginTop: 0 } : { opacity: 1, maxHeight: 600, marginTop: 16 }}
-              >
-                <div className="flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-                  <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
-                  <div className="flex-1 min-w-0">
-                    {/* "Ignorer" au même niveau que le conseil (correctif
-                        23/08/2026, signalé : détaché et créant du vide en bas
-                        de card) — retiré de son ancienne position en pied de
-                        card. */}
-                    <div className="flex items-start justify-between gap-[10px]">
-                      <div className="flex-1 min-w-0">
-                        {key === "layer" && (
-                          <div className="flex items-center gap-[6px] mb-[6px]">
-                            <span className="t-label text-terracotta">Layering</span>
-                            <button
-                              onClick={() => setLayeringInfoOpen((v) => !v)}
-                              aria-label="Qu'est-ce que le layering ?"
-                              className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10px] text-terracotta flex items-center justify-center cursor-pointer"
-                            >
-                              i
-                            </button>
-                          </div>
-                        )}
-                        <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
-                        {key === "layer" && layeringInfoOpen && (
-                          <div className="text-[11px] text-muted mt-[6px] leading-[1.4]">
-                            Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un
-                            débardeur sous une chemise oversize ouverte.
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => actions.dismissOutfitSuggestion(key)}
-                        className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer"
-                      >
-                        Ignorer
-                      </button>
-                    </div>
-                    {suggested && (
-                      // Visuel "fantôme" agrandi (recette 23/08/2026) — pièce
-                      // de la capsule pas encore ajoutée à la tenue :
-                      // désaturée + atténuée pour se lire comme un aperçu,
-                      // jamais confondue avec une pièce réelle de la
-                      // composition ci-dessus. Badge "Suggérée" superposé
-                      // plutôt qu'une simple mention textuelle, pour rester
-                      // lisible même si le nom de la pièce est long.
-                      <div className="flex items-start gap-[13px] mt-[13px]">
-                        <div className="relative flex-shrink-0">
-                          <div
-                            className="w-[92px] h-[110px] rounded-[11px]"
-                            style={{
-                              background: resolveItemImage(suggested).url ? "#F3EDE1" : suggested.hex,
-                              backgroundImage: resolveItemImage(suggested).url ? `url(${resolveItemImage(suggested).url})` : undefined,
-                              backgroundSize: "contain",
-                              backgroundRepeat: "no-repeat",
-                              backgroundPosition: "center",
-                              filter: "grayscale(55%) opacity(.8)",
-                            }}
-                          />
-                          <span className="absolute top-[7px] left-[7px] bg-terracotta text-cream t-pastille rounded-full py-[3px] px-[8px]">
-                            Suggérée
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0 pt-[2px]">
-                          <div className="text-[13px] text-ink leading-[1.25]">{suggested.name}</div>
-                          <div className="text-[11px] text-muted mt-[2px]">{CATLABEL[suggested.cat]}</div>
-                          <div className="flex flex-col gap-[8px] mt-[11px]">
-                            <button
-                              onClick={() => handleAddSuggestedPiece(p, suggested)}
-                              className="inline-flex items-center justify-center gap-[6px] bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[10px] text-[12px] cursor-pointer"
-                            >
-                              <PlusIcon />
-                              Ajouter à la tenue
-                            </button>
-                            {suggested.affLink && (
-                              <a
-                                href={suggested.affLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-[6px] border border-border-soft text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
-                              >
-                                <BagIcon />
-                                <span className="underline underline-offset-2">Acheter cette pièce</span>
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-      {!noCompleteOutfit && missingText && (
-        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
-          <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
-          <div className="flex-1">
-            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{missingText}</div>
-            <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
-              Ajouter une pièce →
-            </button>
-          </div>
-        </div>
-      )}
-
       {formalityDowngraded && !noCompleteOutfit && (
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
@@ -1192,20 +1247,6 @@ export default function TenuesScreen() {
         </div>
       )}
 
-      {!noCompleteOutfit && vesteWithoutBase && (
-        <div className="mt-4 flex items-start gap-[11px] bg-warm-bg border-[1.5px] border-terracotta rounded-[14px] px-4 py-[14px]">
-          <span className="font-serif italic text-[15px] text-terracotta">!</span>
-          <div className="flex-1">
-            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">
-              Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.
-            </div>
-            <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
-              Choisir une pièce →
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ENTRÉE VERS PLANIFIER (recette 24/09/2026, demandé).
           Mêmes classes que la card « Et si on préparait la suite ? » de
           l'accueil — bg-warm-bg, border-sand-border, rayon 22, serif 18 px,
@@ -1239,20 +1280,16 @@ export default function TenuesScreen() {
             ailleurs dans l'app : le voisin immédiat prime sur la moyenne. */}
         <span className="block t-label text-terracotta">À préparer</span>
 
-        {/* Le titre reste l'élément le plus fort du bloc — et reste sous la
-            tenue du jour, qui porte un serif plus grand. */}
-        <span className="block t-titre-carte text-ink mt-[7px]" style={{ textWrap: "balance" }}>
-          Une occasion à venir ?
+        {/* UN PROLONGEMENT, PAS UNE SECONDE TENUE (27/09/2026, parcours
+            « Tenue ») : titre au rang d'une vignette et une seule phrase —
+            la card garde sa forme éditoriale mais ne rivalise plus avec la
+            tenue du jour. La promesse « Capsela compose le look » reste. */}
+        <span className="block t-titre-vignette text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+          Tu veux préparer une autre tenue ?
         </span>
 
-        {/* La promesse. En ink et non en muted : c'est le bénéfice, il ne doit
-            pas se lire comme la suite de la description. */}
-        <span className="block text-[13px] text-ink leading-[1.4] mt-[5px]" style={{ textWrap: "pretty" }}>
-          Planifie ta tenue à l&apos;avance.
-        </span>
-
-        <span className="block text-[11px] text-muted leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
-          Donne-nous l&apos;occasion, la date et le lieu. Capsela compose le look.
+        <span className="block text-[12px] text-muted leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
+          Donne l&apos;occasion, la date et le lieu : Capsela compose le look.
         </span>
 
         {/* CTA TEXTUEL, PAS UN BOUTON PLEIN LARGEUR. C'est la forme déjà
