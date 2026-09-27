@@ -86,8 +86,10 @@ export default function IdeeLookScreen() {
     <div ref={haut} className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <BoutonRetour onClick={actions.closeIdeeLook} label="Revenir aux idées de tenues" />
 
-      <div className="rounded-[22px] bg-warm-bg px-[18px] py-[18px] mt-[14px]" style={{ height: "clamp(260px, 78vw, 340px)" }}>
-        <OutfitComposition items={pieces} variant="hero" ajustee />
+      {/* Composition éditoriale (27/09/2026) : une silhouette, pas une
+          grille — la zone prend la hauteur des pièces, proche du carré. */}
+      <div className="rounded-[22px] bg-warm-bg px-[16px] py-[20px] mt-[14px]">
+        <OutfitComposition items={pieces} variant="editoriale" label={"Composition du look : " + pieces.map((p) => p.name).join(", ")} />
       </div>
 
       <div className="t-label text-terracotta mt-[18px]">Look {actif.numero}</div>
