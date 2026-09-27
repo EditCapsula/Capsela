@@ -8,6 +8,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { OCC_LABELS } from "@/lib/data";
 import { composeOutfitImage } from "@/lib/outfitImage";
 import { buildOpinionMessageParts, formatOpinionMessage } from "@/lib/selectors";
+import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 
@@ -80,6 +81,15 @@ import type { Item } from "@/lib/types";
  * feuille est refermée sans destinataire. Ce cas ne confirme rien : l'écran
  * qui affirmait « Partagée par WhatsApp » sans rien envoyer est précisément ce
  * que cette page a remplacé.
+ *
+ * MESSAGE AUTONOME (27/09/2026, brief « Avis d’un proche ») : le proche le
+ * lit hors de Capsela. Signé « L’édit Capsela », il dit qui demande (prénom du
+ * profil), que Capsela a proposé la tenue, l'occasion, les pièces, la météo
+ * quand elle est connue, et qu'il suffit de répondre dans la conversation —
+ * jamais un lien ni un bouton vers l'application. Section « Ce que ton proche
+ * recevra » : l'aperçu est rendu depuis les mêmes parties que le texte
+ * partagé et copié (buildOpinionMessageParts). L'image partagée porte une
+ * signature discrète (outfitImage.ts).
  *
  * AUCUNE PROMESSE SUR LE RETOUR. La réponse du proche arrive là où il l'a
  * reçue. C'est dit une fois, sobrement, plutôt que laissé espérer. La maquette
@@ -189,6 +199,7 @@ type Etat = "defaut" | "partage";
 
 export default function OpinionShareScreen() {
   const { state, geoCity, geoLoading, vestiairePool, actions } = useCapsela();
+  const { profile } = useAuth();
   const [etat, setEtat] = useState<Etat>("defaut");
   const [avecImage, setAvecImage] = useState(true);
   const [edition, setEdition] = useState(false);
@@ -222,9 +233,11 @@ export default function OpinionShareScreen() {
         occasion: occasionPartagee,
         temp: tempPartagee,
         conditionMeteo: meteoPartagee,
-        intitule: source?.intitule,
+        // Le prénom du profil réel ; absent, le message s'en passe.
+        prenom: profile.displayName,
+        moment: source?.moment,
       }),
-    [pieces, occasionPartagee, tempPartagee, meteoPartagee, source?.intitule]
+    [pieces, occasionPartagee, tempPartagee, meteoPartagee, profile.displayName, source?.moment]
   );
   const messageGenere = useMemo(() => formatOpinionMessage(parties), [parties]);
 
@@ -391,8 +404,11 @@ export default function OpinionShareScreen() {
             />
           }
         >
-          Le message qui sera partagé
+          Ce que ton proche recevra
         </TitreSection>
+        <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[10px]">
+          Voici ce que ton proche recevra dans la conversation.
+        </div>
 
         {edition ? (
           <textarea
@@ -409,7 +425,7 @@ export default function OpinionShareScreen() {
             value={message}
             onChange={(e) => setBrouillon(e.target.value)}
             rows={Math.min(12, message.split("\n").length + 1)}
-            aria-label="Message qui sera partagé"
+            aria-label="Ce que ton proche recevra"
             className="w-full bg-card rounded-[20px] p-4 text-[13px] text-ink leading-[1.6] resize-y outline-none"
             style={{ fontFamily: "inherit", border: "1px solid var(--color-terracotta-deep)" }}
           />
@@ -423,9 +439,19 @@ export default function OpinionShareScreen() {
                 {message}
               </div>
             ) : (
+              // Même hiérarchie que le message qui part, ligne pour ligne :
+              // marque, demande, contexte, pièces, météo, question, signature.
+              // Seule la mise en forme est propre à l'écran ; chaque texte est
+              // une partie du message (buildOpinionMessageParts).
               <>
-                <div className="text-[13px] font-semibold leading-[1.45] text-ink">{parties.titre}</div>
-                <div className="flex flex-col gap-[2px] mt-[10px]">
+                {/* En casse réelle, pas en capitales d'étiquette : l'aperçu
+                    montre la marque exactement comme elle part. */}
+                <div className="font-serif italic text-[14px] text-terracotta leading-[1.3]">{parties.marque}</div>
+                <div className="text-[14px] font-semibold leading-[1.45] text-ink mt-[10px]">{parties.demande}</div>
+                <div className="text-[13px] leading-[1.55] mt-[10px]" style={{ color: "var(--color-muted-3)" }}>
+                  {parties.contexte}
+                </div>
+                <div className="flex flex-col gap-[2px] mt-[4px]">
                   {parties.pieces.map((nom, i) => (
                     <div
                       key={`${nom}-${i}`}
@@ -439,7 +465,12 @@ export default function OpinionShareScreen() {
                     </div>
                   ))}
                 </div>
-                <div className="font-serif italic text-[15px] text-ink mt-[10px]">{parties.question}</div>
+                {parties.meteo && <div className="text-[12px] text-muted leading-[1.5] mt-[10px]">{parties.meteo}</div>}
+                <div className="font-serif italic text-[15px] text-ink mt-[12px]">{parties.question}</div>
+                <div className="text-[13px] leading-[1.5] mt-[2px]" style={{ color: "var(--color-muted-3)" }}>
+                  {parties.relance}
+                </div>
+                <div className="text-[11px] text-muted italic mt-[12px]">{parties.signature}</div>
               </>
             )}
           </div>
@@ -507,9 +538,10 @@ export default function OpinionShareScreen() {
           </div>
         )}
 
-        {/* Rappel unique : aucune réponse ne revient dans l'application. */}
+        {/* Rappel unique, sous l'interrupteur : la réponse se fait dans la
+            conversation de partage — rien ne revient dans l'application. */}
         <div className="mt-[14px] text-[11px] text-muted leading-[1.45]">
-          La réponse de ton proche arrivera là où tu as partagé, pas dans l&apos;application.
+          Ton proche te répondra directement dans la conversation où tu partages cette tenue.
         </div>
       </div>
 

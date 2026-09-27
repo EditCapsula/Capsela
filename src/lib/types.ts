@@ -419,8 +419,8 @@ export interface AppState {
     occasion: OccasionKey;
     temp: number | null;
     label: string | null;
-    /** Première ligne du message, ex. « Ma tenue pour samedi 4 octobre ». */
-    intitule: string;
+    /** Le jour J dans le message, ex. « pour samedi 4 octobre » (« … ton avis sur sa tenue pour samedi 4 octobre »). */
+    moment: string;
     plan: TenuePlanifiee;
   } | null;
   /** Plan à rouvrir en revenant sur Planifier après le partage ; consommé à l'ouverture. */

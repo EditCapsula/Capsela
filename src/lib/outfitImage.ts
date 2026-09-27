@@ -66,6 +66,31 @@ export function caseDeLaPiece(
   };
 }
 
+/**
+ * SIGNATURE DISCRÈTE (27/09/2026, brief « Avis d’un proche ») : « L’édit
+ * Capsela » centré dans la marge du bas — aucune pièce n'y est jamais posée
+ * (caseDeLaPiece s'arrête à MARGE du bord) —, en crème à 70 %, dans la serif
+ * de l'application quand elle est chargée. Ni logo ni slogan : la tenue reste
+ * le contenu. Une police indisponible n'empêche rien : repli sur la serif du
+ * système.
+ */
+export const SIGNATURE_IMAGE = "L\u2019édit Capsela";
+
+async function signer(ctx: CanvasRenderingContext2D) {
+  const famille = getComputedStyle(document.documentElement).getPropertyValue("--font-fraunces").trim();
+  const police = `italic 30px ${famille ? `${famille}, ` : ""}serif`;
+  try {
+    await document.fonts?.load(police, SIGNATURE_IMAGE);
+  } catch {
+    // Police non chargeable : la serif du système suffit.
+  }
+  ctx.font = police;
+  ctx.fillStyle = "rgba(251, 243, 234, 0.7)";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(SIGNATURE_IMAGE, COTE / 2, COTE - MARGE / 2);
+}
+
 /** Charge une image en mode anonyme — seul mode qui laisse le canvas exportable. */
 function charge(url: string): Promise<HTMLImageElement | null> {
   return new Promise((resoudre) => {
@@ -103,6 +128,8 @@ export async function composeOutfitImage(urls: readonly string[]): Promise<File 
       const h = img.naturalHeight * echelle;
       ctx.drawImage(img, x + (taille - l) / 2, y + (taille - h) / 2, l, h);
     });
+
+    await signer(ctx);
 
     const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
     if (!blob) return null;
