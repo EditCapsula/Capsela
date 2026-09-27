@@ -98,6 +98,8 @@ export function representativeWeatherFor(season: CapsuleSeason, tempOverride?: n
     temp,
     label: season === "Été" ? "Ensoleillé" : "Nuageux",
     seasons: [weatherSeasonBucket(temp), "Toutes saisons"],
+    // Même référentiel que `seasons`, la température seule, sans calendrier.
+    saisons: [saisonThermique(temp)],
   };
 }
 
@@ -155,7 +157,76 @@ export function weatherForDay(temp: number, label: string, saisonCalendaire: Cap
   const calendarBucket = capsuleSeasonBucket(saisonCalendaire);
   const seasons: Season[] =
     calendarBucket === season ? [season, "Toutes saisons"] : [season, calendarBucket, "Toutes saisons"];
-  return { season, temp, label, seasons };
+  return { season, temp, label, seasons, saisons: saisonsDuJour(temp, saisonCalendaire) };
+}
+
+/**
+ * LES QUATRE SAISONS DANS LE MOTEUR (27/09/2026, demandé : « Je veux bien
+ * qu'il en tienne compte »).
+ *
+ * Une pièce du dressing peut porter ses quatre saisons (Item.saisons). Le
+ * moteur les lit désormais, mais en AFFINANT la règle en place, jamais en la
+ * remplaçant : `seasons` admet deux moitiés d'année — celle de la
+ * température (seuil 20°, weatherSeasonBucket) et celle du calendrier. Les
+ * saisons du jour gardent ces deux sources et choisissent, dans chacune, UNE
+ * saison :
+ *
+ *   · le calendrier donne sa saison telle quelle ;
+ *   · la température donne, dans sa moitié d'année, la saison dont la
+ *     température représentative est la plus proche — aucune constante
+ *     nouvelle : ≥ 20° → Été ; de 10° à 19° → Automne ; sous 10° → Hiver.
+ *
+ * CONSÉQUENCE DÉMONTRÉE (test ajoutPiece.test.ts, toutes les températures de
+ * −5° à 35° × les quatre saisons calendaires) : une pièce cochée sur une
+ * moitié d'année entière — Printemps + Été, Automne + Hiver — ou sur les
+ * quatre est admise exactement les mêmes jours qu'avant. Seules changent les
+ * pièces cochées autrement (une saison seule, Printemps + Automne…), qui
+ * étaient jusque-là ramenées à leur moitié d'année ou à « Toutes saisons ».
+ *
+ * L'asymétrie est héritée, et assumée : sous 20°, la règle d'origine admet
+ * les pièces d'automne-hiver même au printemps (un manteau à 15° en avril).
+ * La saison thermique d'une journée douce est donc l'Automne, jamais le
+ * Printemps — sans quoi le manteau coché Automne + Hiver disparaîtrait des
+ * journées fraîches d'avril, ce qu'il ne faisait pas.
+ */
+export function saisonThermique(temp: number): CapsuleSeason {
+  const moitie = weatherSeasonBucket(temp);
+  const candidates = CAPSULE_SEASONS.filter((s) => capsuleSeasonBucket(s) === moitie);
+  return candidates.reduce((meilleure, s) =>
+    Math.abs(REPRESENTATIVE_TEMP[s] - temp) < Math.abs(REPRESENTATIVE_TEMP[meilleure] - temp) ? s : meilleure
+  );
+}
+
+/** Les saisons du jour : celle du calendrier et la saison thermique, dans l'ordre de l'année. */
+export function saisonsDuJour(temp: number, saisonCalendaire: CapsuleSeason): CapsuleSeason[] {
+  const retenues = new Set<CapsuleSeason>([saisonCalendaire, saisonThermique(temp)]);
+  return CAPSULE_SEASONS.filter((s) => retenues.has(s));
+}
+
+/** Ce contre quoi une pièce est jugée de saison : les moitiés d'année admises, et les saisons du jour quand elles sont connues. */
+export interface ContexteSaisonnier {
+  seasons: Season[];
+  saisons?: CapsuleSeason[];
+}
+
+/** Le contexte d'une capsule de saison connue : sa moitié d'année, et elle seule en quatre saisons. */
+export function contexteCapsule(s: CapsuleSeason): ContexteSaisonnier {
+  return { seasons: [capsuleSeasonBucket(s), "Toutes saisons"], saisons: [s] };
+}
+
+/**
+ * Une pièce est-elle de saison ? Ses quatre saisons croisées avec celles du
+ * jour quand les deux sont connues ; sinon la règle d'origine, à
+ * l'identique (`seasons.includes(season)`) — pièces du catalogue, pièces
+ * enregistrées avant les quatre saisons.
+ */
+export function estDeSaison(item: Pick<Item, "season" | "saisons">, contexte: ContexteSaisonnier): boolean {
+  const duJour = contexte.saisons;
+  if (item.saisons?.length && duJour?.length) return item.saisons.some((s) => duJour.includes(s));
+  // « Toutes saisons » explicite : toutes les météos du moteur l'ont déjà
+  // dans `seasons` (weatherForDay, representativeWeatherFor), l'écrire ici
+  // ne change donc rien pour elles et protège un contexte qui l'oublierait.
+  return item.season === "Toutes saisons" || contexte.seasons.includes(item.season);
 }
 
 const STYLE_FIT: Record<string, RegExp> = {

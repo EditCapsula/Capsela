@@ -1,6 +1,7 @@
 import type {
   AccessoireType,
   BijouType,
+  CapsuleSeason,
   CategoryKey,
   City,
   DateContext,
@@ -335,6 +336,13 @@ export interface Weather {
   temp: number;
   label: string;
   seasons: Season[];
+  /**
+   * Les saisons du jour sur quatre valeurs (27/09/2026), pour les pièces qui
+   * portent leurs quatre saisons (Item.saisons). Posées par weatherForDay et
+   * representativeWeatherFor, cf. saisonsDuJour et estDeSaison (capsule.ts).
+   * Absentes : toutes les pièces sont jugées sur `seasons`, comme avant.
+   */
+  saisons?: CapsuleSeason[];
 }
 
 /**

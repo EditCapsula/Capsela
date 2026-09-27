@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { occasionsRetenues, suggestName, suggestOccasions } from "../attributes";
 import { saisonParDefaut, seasonSuggestion } from "../data";
-import { basculerSaison, libelleSaisons, saisonsDe, saisonsDepuisSeason, saisonsParDefaut, seasonDepuisSaisons } from "../saisons";
+import { basculerSaison, enSaisons, libelleSaisons, saisonsDe, saisonsDepuisSeason, saisonsParDefaut, seasonDepuisSaisons } from "../saisons";
+import { contexteCapsule, estDeSaison, representativeWeatherFor, saisonsDuJour, saisonThermique, weatherForDay } from "../capsule";
 
 // Refonte « Ajouter une pièce » (27/09/2026) : ce que l'écran propose sans
 // que l'utilisatrice ait rien saisi — nom, saison, occasions.
@@ -96,5 +97,57 @@ describe("quatre saisons (saisons.ts)", () => {
     expect(libelleSaisons(["Automne", "Hiver"])).toBe("Automne · Hiver");
     expect(libelleSaisons(["Été"])).toBe("Été");
     expect(libelleSaisons(["Hiver", "Été", "Printemps", "Automne"])).toBe("Toutes saisons");
+  });
+});
+
+describe("le moteur lit les quatre saisons (capsule.ts)", () => {
+  const CAL = ["Printemps", "Été", "Automne", "Hiver"] as const;
+  const TEMPS = [...Array.from({ length: 41 }, (_, i) => i - 5), 9.5, 19.5];
+  const LEGACY = ["Printemps / Été", "Automne / Hiver", "Toutes saisons"] as const;
+
+  it("saison thermique : ≥ 20° Été, 10–19° Automne, sous 10° Hiver", () => {
+    expect(saisonThermique(20)).toBe("Été");
+    expect(saisonThermique(19)).toBe("Automne");
+    expect(saisonThermique(10)).toBe("Automne");
+    expect(saisonThermique(9)).toBe("Hiver");
+    expect(saisonsDuJour(28, "Automne")).toEqual(["Été", "Automne"]);
+    expect(saisonsDuJour(15, "Printemps")).toEqual(["Printemps", "Automne"]);
+  });
+
+  it("une pièce sans quatre saisons est jugée exactement comme avant", () => {
+    for (const temp of TEMPS) for (const cal of CAL) {
+      const w = weatherForDay(temp, "Nuageux", cal);
+      for (const season of LEGACY) expect(estDeSaison({ season }, w), `${temp}° ${cal} ${season}`).toBe(w.seasons.includes(season));
+    }
+  });
+
+  it("DÉMONTRÉ : cocher une moitié d'année entière (ou les quatre) ne change aucune journée", () => {
+    for (const temp of TEMPS) for (const cal of CAL) {
+      const contextes = [weatherForDay(temp, "Nuageux", cal), representativeWeatherFor(cal, temp), contexteCapsule(cal)];
+      for (const ctx of contextes) for (const season of LEGACY) {
+        const avant = estDeSaison({ season }, ctx);
+        const apres = estDeSaison({ season, saisons: saisonsDepuisSeason(season) }, ctx);
+        expect(apres, `${temp}° ${cal} ${season}`).toBe(avant);
+      }
+    }
+  });
+
+  it("une pièce cochée autrement suit son choix", () => {
+    const robeEte = { season: seasonDepuisSaisons(["Été"]), saisons: ["Été" as const] };
+    const trench = { season: seasonDepuisSaisons(["Printemps", "Automne"]), saisons: ["Printemps" as const, "Automne" as const] };
+    // Avant : la robe d'été passait par le calendrier un 8° d'avril, le trench partout.
+    expect(estDeSaison(robeEte, weatherForDay(8, "Pluie", "Printemps"))).toBe(false);
+    expect(estDeSaison(robeEte, weatherForDay(27, "Ensoleillé", "Automne"))).toBe(true);
+    expect(estDeSaison(trench, weatherForDay(3, "Nuageux", "Hiver"))).toBe(false);
+    expect(estDeSaison(trench, weatherForDay(30, "Ensoleillé", "Été"))).toBe(false);
+    expect(estDeSaison(trench, weatherForDay(15, "Nuageux", "Printemps"))).toBe(true);
+    expect(estDeSaison(trench, contexteCapsule("Automne"))).toBe(true);
+    expect(estDeSaison(trench, contexteCapsule("Hiver"))).toBe(false);
+  });
+
+  it("phrase « se porte … »", () => {
+    expect(enSaisons(["Printemps", "Été"])).toBe("au printemps et en été");
+    expect(enSaisons(["Été"])).toBe("en été");
+    expect(enSaisons(["Hiver", "Printemps", "Automne"])).toBe("au printemps, en automne et en hiver");
   });
 });

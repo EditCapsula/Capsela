@@ -19,9 +19,10 @@ import type { CapsuleSeason, CategoryKey, Item, Season } from "./types";
  *   · saisons des deux moitiés          → « Toutes saisons »
  *
  * Le détail est conservé (colonne `saisons`, migration 0040) et affiché sur la
- * fiche de la pièce ; le moteur, lui, n'en tire rien de plus qu'avant — une
- * pièce « Printemps · Automne » reste proposée toute l'année. Le lui faire
- * lire changerait les tenues : c'est une mesure à part, pas un effet de bord.
+ * fiche de la pièce. Depuis le même jour, le moteur le lit aussi : cf.
+ * saisonsDuJour et estDeSaison (capsule.ts). Une moitié d'année cochée en
+ * entier y est jugée exactement comme avant (démontré par test) ; une pièce
+ * « Printemps · Automne » ne sort plus en plein été ni en plein hiver.
  */
 
 export const QUATRE_SAISONS: readonly CapsuleSeason[] = CAPSULE_SEASONS;
@@ -62,6 +63,19 @@ export function saisonsDe(item: Pick<Item, "season" | "saisons">): CapsuleSeason
 export function basculerSaison(saisons: readonly CapsuleSeason[], s: CapsuleSeason): CapsuleSeason[] {
   if (saisons.includes(s)) return saisons.length > 1 ? saisons.filter((x) => x !== s) : [...saisons];
   return ordonnerSaisons([...saisons, s]);
+}
+
+const EN_SAISON: Record<CapsuleSeason, string> = {
+  Printemps: "au printemps",
+  Été: "en été",
+  Automne: "en automne",
+  Hiver: "en hiver",
+};
+
+/** « au printemps et en été », « en été », « au printemps, en été et en automne » — pour une phrase « Cette pièce se porte … ». */
+export function enSaisons(saisons: readonly CapsuleSeason[]): string {
+  const parts = ordonnerSaisons(saisons).map((s) => EN_SAISON[s]);
+  return parts.length <= 1 ? parts.join("") : `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
 }
 
 /** « Automne · Hiver », « Été », « Toutes saisons » quand les quatre y sont. */

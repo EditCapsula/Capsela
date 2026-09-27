@@ -2,7 +2,7 @@ import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, Occ
 import type { Weather } from "./data";
 import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
-import { capsuleSeasonBucket, currentSeasonKey } from "./capsule";
+import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
 import {
   agreeColor,
   CAT_GENDER,
@@ -623,10 +623,10 @@ export function generateOutfit(
 ): GeneratedOutfit {
   // Référentiel saisonnier : celui de la capsule quand il est connu, sinon
   // celui que la météo porte (tenue du jour sous météo réelle, inchangée).
-  const seasonBucket = capsuleSeason ? capsuleSeasonBucket(capsuleSeason) : null;
-  const seasonPool = seasonBucket
-    ? pool.filter((i) => i.season === seasonBucket || i.season === "Toutes saisons")
-    : pool.filter((i) => weather.seasons.includes(i.season));
+  // Quatre saisons d'une pièce croisées avec celles du jour quand elle les
+  // porte (27/09/2026, estDeSaison) ; sinon la règle d'origine, à l'identique.
+  const contexteSaison = capsuleSeason ? contexteCapsule(capsuleSeason) : weather;
+  const seasonPool = pool.filter((i) => estDeSaison(i, contexteSaison));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
 
   // R-S15 — l'anti-répétition n'exclut plus jamais une pièce du pool en
@@ -1684,7 +1684,7 @@ export function evaluateBlocking(
   const hits: BlockingHit[] = [];
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
 
-  if (pieces.some((i) => i.season !== "Toutes saisons" && !weather.seasons.includes(i.season))) {
+  if (pieces.some((i) => !estDeSaison(i, weather))) {
     hits.push({ id: "R-B1", message: "Une pièce n'est pas vraiment de saison aujourd'hui." });
   }
 
@@ -2058,7 +2058,7 @@ export function computeLookScore(
           (i.cat === "veste" || i.cat === "manteau") &&
           !pieceIds.has(i.id) &&
           !hasSameSlot(i) &&
-          weather.seasons.includes(i.season)
+          estDeSaison(i, weather)
       )
       .sort(dressingDAbord);
     const decontracte = occasion === "sport" ? vesteManteauCandidates.filter((i) => formalityOf(i) <= 1) : [];
@@ -2291,7 +2291,7 @@ function selectDiverseVariations(
  */
 function porterParDessus(ids: number[], pivot: Item, pool: Item[], occasion: OccasionKey, weather: Weather): number[] | null {
   if (!OUTERWEAR_CATS.includes(pivot.cat)) return null;
-  if (pivot.season !== "Toutes saisons" && !weather.seasons.includes(pivot.season)) return null;
+  if (!estDeSaison(pivot, weather)) return null;
   if (pivot.meteoMinTemp != null && weather.temp < pivot.meteoMinTemp) return null;
   if (pivot.meteoMaxTemp != null && weather.temp > pivot.meteoMaxTemp) return null;
   if (!applySportCocooningFilter([pivot], occasion).length) return null;

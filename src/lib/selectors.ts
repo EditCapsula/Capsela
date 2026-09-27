@@ -1,6 +1,6 @@
 import { MONTHS_FR, OCC_LABELS, occasionShortLabel } from "./data";
 import { isCatalogId } from "./catalog";
-import { capsuleSeasonBucket, occasionsOf, saisonCalendairePour } from "./capsule";
+import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour } from "./capsule";
 import type { CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
 
 /**
@@ -425,10 +425,12 @@ export function styleDuMois(history: HistoryEntry[], now: number = Date.now()): 
 /**
  * Une pièce se porte-t-elle dans la saison en cours ? Même règle que la
  * capsule et le filtre saisonnier du moteur (capsuleSeasonBucket) : sa
- * saison est celle du moment, ou « Toutes saisons ».
+ * saison est celle du moment, ou « Toutes saisons ». Depuis le 27/09/2026,
+ * une pièce qui porte ses quatre saisons est jugée sur elles (estDeSaison,
+ * contexte de la saison calendaire) ; les autres, à l'identique.
  */
 export function deLaSaisonEnCours(item: Item, now: number = Date.now()): boolean {
-  return item.season === "Toutes saisons" || item.season === capsuleSeasonBucket(saisonCalendairePour(new Date(now)));
+  return estDeSaison(item, contexteCapsule(saisonCalendairePour(new Date(now))));
 }
 
 /** Nouveaux looks enregistrés (Créer un look) ce mois-ci — distinct des tenues portées : ne compte que les looks explicitement sauvegardés. */
