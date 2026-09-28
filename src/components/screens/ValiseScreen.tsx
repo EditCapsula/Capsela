@@ -50,6 +50,7 @@ import {
   type MeteoJour,
   type TailleBagage,
   type TypeSejour,
+  VISUEL_SEJOUR,
 } from "@/lib/valise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
@@ -84,19 +85,6 @@ import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } f
 const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 const DOW = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 
-/** Visuels éditoriaux des types de séjour (fournis le 27/09/2026, unisexes, sans texte intégré). « Autre » n'en a pas. */
-const VISUEL_SEJOUR: Partial<Record<TypeSejour, string>> = {
-  plage: "/editorial/sejours/sejour_plage.webp",
-  city_break: "/editorial/sejours/sejour_city_break.webp",
-  nature: "/editorial/sejours/sejour_nature.webp",
-  week_end: "/editorial/sejours/sejour_week_end.webp",
-  professionnel: "/editorial/sejours/sejour_professionnel.webp",
-  road_trip: "/editorial/sejours/sejour_road_trip.webp",
-  evenement: "/editorial/sejours/sejour_evenement.webp",
-  montagne: "/editorial/sejours/sejour_montagne.webp",
-  detente: "/editorial/sejours/sejour_detente.webp",
-  multi_activites: "/editorial/sejours/sejour_multi_activites.webp",
-};
 
 type Onglet = "looks" | "pieces";
 

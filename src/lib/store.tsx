@@ -8,7 +8,7 @@ import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCa
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
 import { previsionPour, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, type TenuePlanifiee } from "./planifier";
-import { avecValise, enregistrerValise, estIdLocal, fetchValises, garderValisesLocales, lireValisesLocales, supprimerValiseDuCompte, type ValiseGardee } from "./valises";
+import { avecValise, enregistrerValise, fetchValises, fusionnerValises, garderValisesLocales, lireValisesLocales, supprimerValiseDuCompte, type ValiseGardee } from "./valises";
 import { decisionAcces } from "./autorisations";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
@@ -766,7 +766,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     let annule = false;
     fetchValises(userId).then((duCompte) => {
       if (annule || !duCompte) return;
-      const liste = [...duCompte, ...locales.filter((v) => estIdLocal(v.id))];
+      const liste = fusionnerValises(duCompte, locales);
       garderValisesLocales(userId, liste);
       setState((s) => ({ ...s, valises: liste }));
     });
@@ -1108,8 +1108,16 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // pièces, parce qu'il est la seule occasion sans repli de formalité.
     // `composeWardrobePool` est idempotente sur un pool déjà composé : sur un
     // dressing vide, elle ne change rien.
+    //
+    // Et la capsule avant le relâchement (28/09/2026, signalé : une robe
+    // déclarée Sortie / Date / Cérémonie proposée pour le travail) : une pièce
+    // déclarée pour d'autres occasions n'entre plus dans ce pool, et une pièce
+    // hors saison ne bloque plus le secours de sa catégorie — cf.
+    // composeWardrobePool.
     const poolGeneration =
-      s.occasion && !secours ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion }) : pool;
+      s.occasion && !secours
+        ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion, saison: w, exclureHorsOccasion: true })
+        : pool;
     const result = generateOutfitWithFallback(
       poolGeneration,
       w,

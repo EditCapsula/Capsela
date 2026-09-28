@@ -1,6 +1,6 @@
 import { MONTHS_FR, OCC_LABELS, occasionShortLabel } from "./data";
 import { isCatalogId } from "./catalog";
-import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour } from "./capsule";
+import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour, type ContexteSaisonnier } from "./capsule";
 import type { CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
 
 /**
@@ -580,18 +580,55 @@ export function composeWardrobePool(
   items: Item[],
   capsule: Item[],
   cats: readonly CategoryKey[],
-  options?: { completerPourOccasion?: OccasionKey | null }
+  options?: {
+    completerPourOccasion?: OccasionKey | null;
+    /**
+     * LA CAPSULE AVANT LE RELÂCHEMENT (28/09/2026, signalé : une robe déclarée
+     * Sortie / Date / Cérémonie proposée pour « Travail / Bureau », capture à
+     * l'appui). Deux trous de la complétion, que ces deux options referment :
+     *
+     *   · `saison` — une pièce réelle qui déclare l'occasion mais n'est pas de
+     *     saison aujourd'hui (le filtre saisonnier du moteur l'écartera)
+     *     bloquait quand même la complétion de sa catégorie. Un haut de
+     *     travail en lin, un 17° de septembre, suffisait à priver la catégorie
+     *     de tout secours ; le moteur, sans haut régulier, avait alors le
+     *     droit de prendre une robe en relâchant l'occasion. Elle ne compte
+     *     plus comme « utilisable » que si elle est aussi de saison.
+     *   · `exclureHorsOccasion` — une pièce RÉELLE qui déclare explicitement
+     *     d'autres occasions n'entre plus dans le pool de celle-ci. Le moteur
+     *     ne s'en servait qu'en abandonnant l'occasion (barreaux 2 et 3 de
+     *     poolFor) : c'est exactement la robe de la capture. Ce sont désormais
+     *     les pièces de la capsule adaptées à l'occasion qui prennent le
+     *     relais. Une pièce sans occasion déclarée reste (la formalité décide,
+     *     comme avant), et les pièces du catalogue ne sont pas touchées.
+     *
+     * Absentes, le comportement est exactement celui d'avant : c'est ce qui
+     * permet de mesurer les deux bras dans une même exécution.
+     */
+    saison?: ContexteSaisonnier | null;
+    exclureHorsOccasion?: boolean;
+  }
 ): Item[] {
   const occasion = options?.completerPourOccasion ?? null;
+  const saison = options?.saison ?? null;
   return cats.flatMap((cat) => {
     const reelles = items.filter((i) => i.cat === cat);
     if (!reelles.length) return capsule.filter((i) => i.cat === cat);
     if (!occasion) return reelles;
-    if (reelles.some((i) => occasionsOf(i).includes(occasion))) return reelles;
+    const gardees = options?.exclureHorsOccasion
+      ? reelles.filter((i) => isCatalogId(i.id) || !i.occasion?.length || i.occasion.includes(occasion))
+      : reelles;
+    const utilisable = (i: Item) => occasionsOf(i).includes(occasion) && (!saison || estDeSaison(i, saison));
+    if (gardees.some(utilisable)) return gardees;
     const secours = capsule.filter(
-      (i) => i.cat === cat && !reelles.some((r) => r.id === i.id) && occasionsOf(i).includes(occasion)
+      (i) => i.cat === cat && !gardees.some((r) => r.id === i.id) && occasionsOf(i).includes(occasion)
     );
-    return [...reelles, ...secours];
+    // Rien d'adapté nulle part, ni chez elle ni dans la capsule : on rend ses
+    // pièces écartées plutôt que de vider la catégorie. Le moteur retombe
+    // alors sur son relâchement d'occasion, qu'il signale (occasionRelachee)
+    // — une tenue annoncée comme élargie vaut mieux que pas de tenue.
+    if (!secours.length) return reelles;
+    return [...gardees, ...secours];
   });
 }
 

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { composeWardrobePool } from "../selectors";
+import { weatherForDay } from "../capsule";
+import { CATS as CATEGORIES, type Weather } from "../data";
+import { generateOutfitWithFallback } from "../logic";
 import { item } from "./fixtures";
-import type { CategoryKey } from "../types";
+import type { CategoryKey, Item, OccasionKey, Season } from "../types";
 
 /**
  * La composition du pool décide de ce que le moteur a le DROIT de proposer.
@@ -67,5 +70,82 @@ describe("composeWardrobePool", () => {
     const une = composeWardrobePool([], capsule, CATS, { completerPourOccasion: "sport" });
     const deux = composeWardrobePool(une, capsule, CATS, { completerPourOccasion: "sport" });
     expect(ids(deux)).toEqual(ids(une));
+  });
+});
+
+/**
+ * LA CAPSULE AVANT LE RELÂCHEMENT (28/09/2026, signalé avec capture : une
+ * robe déclarée Sortie / Date / Cérémonie proposée pour « Travail / Bureau »).
+ * Pièces écrites à la main, occasions déclarées comme dans le dressing réel
+ * et comme dans vestiaire_universel ; ids ≥ 100000 pour le catalogue.
+ */
+describe("composeWardrobePool — capsule adaptée avant le relâchement", () => {
+  const P = (id: number, name: string, cat: CategoryKey, occasion: OccasionKey[], season: Season, extra: Partial<Item> = {}): Item =>
+    ({ id, name, cat, color: "Noir", hex: "#2A2724", worn: null, season, occasion, ...extra });
+  const STRICT = (w: Weather) => ({ completerPourOccasion: "travail_formel" as const, saison: w, exclureHorsOccasion: true });
+  const septembre17 = weatherForDay(17, "Nuageux", "Automne");
+
+  const robeSoiree = P(1, "Robe bordeaux", "robe", ["soiree", "date", "evenement_perso"], "Toutes saisons");
+  const robeSansOccasion = P(2, "Robe noire", "robe", [], "Toutes saisons");
+  const chemiseLin = P(3, "Chemise en lin", "haut", ["quotidien", "travail_formel"], "Printemps / Été", { subtype: "Chemise" });
+  const robeCapsuleTravail = P(100001, "Robe portefeuille", "robe", ["travail_formel", "date"], "Toutes saisons", { niveauFormalite: 3 });
+  const chemisierCapsule = P(100002, "Chemisier", "haut", ["travail_formel"], "Toutes saisons", { niveauFormalite: 3, subtype: "Chemisier" });
+
+  it("une pièce réelle déclarée pour d'autres occasions sort du pool ; sans déclaration, elle reste", () => {
+    const pool = composeWardrobePool([robeSoiree, robeSansOccasion], [robeCapsuleTravail], ["robe"], STRICT(septembre17));
+    expect(ids(pool)).toEqual([2, 100001]);
+  });
+
+  it("sans les options, rien ne change (bras « avant » de la mesure)", () => {
+    const pool = composeWardrobePool([robeSoiree], [robeCapsuleTravail], ["robe"], { completerPourOccasion: "travail_formel" });
+    expect(ids(pool)).toEqual([1, 100001]);
+  });
+
+  it("une pièce adaptée mais hors saison ne bloque plus le secours de sa catégorie", () => {
+    const avant = composeWardrobePool([chemiseLin], [chemisierCapsule], ["haut"], { completerPourOccasion: "travail_formel" });
+    const apres = composeWardrobePool([chemiseLin], [chemisierCapsule], ["haut"], STRICT(septembre17));
+    expect(ids(avant)).toEqual([3]);
+    expect(ids(apres)).toEqual([3, 100002]);
+  });
+
+  it("garde-fou : rien d'adapté ni au dressing ni en capsule, la catégorie n'est pas vidée", () => {
+    const pool = composeWardrobePool([robeSoiree], [], ["robe"], STRICT(septembre17));
+    expect(ids(pool)).toEqual([1]);
+  });
+
+  it("DÉMONTRÉ — la capture : la robe de soirée ne sort plus pour le travail", () => {
+    // Capsule sans robe de travail, hauts de travail d'été un 17° de septembre.
+    const dressing = [
+      robeSoiree,
+      chemiseLin,
+      P(4, "Top blanc", "haut", ["quotidien", "travail_formel"], "Printemps / Été", { subtype: "Top" }),
+      P(5, "Jean brut", "jean", ["quotidien"], "Toutes saisons"),
+      P(6, "Baskets", "chaussures", ["quotidien", "sport"], "Toutes saisons", { shoeType: "Baskets" }),
+    ];
+    const capsuleTest = [
+      chemisierCapsule,
+      P(100003, "Pantalon tailleur", "pantalon", ["travail_formel"], "Toutes saisons", { niveauFormalite: 3 }),
+      P(100004, "Ballerines", "chaussures", ["quotidien", "travail_formel"], "Toutes saisons", { niveauFormalite: 3, shoeType: "Ballerines" }),
+    ];
+    const cats = CATEGORIES.map(([k]) => k);
+    const base = composeWardrobePool(dressing, capsuleTest, cats);
+    const compter = (pool: Item[]) => {
+      let robe = 0;
+      const orig = Math.random;
+      let graine = 42;
+      Math.random = () => ((graine = (graine * 16807) % 2147483647) / 2147483647);
+      try {
+        for (let k = 0; k < 300; k++) {
+          if (generateOutfitWithFallback(pool, septembre17, "travail_formel", "Présentiel", "Verre", [], "femme").ids.includes(1)) robe++;
+        }
+      } finally {
+        Math.random = orig;
+      }
+      return robe;
+    };
+    const avant = compter(composeWardrobePool(base, capsuleTest, cats, { completerPourOccasion: "travail_formel" }));
+    const apres = compter(composeWardrobePool(base, capsuleTest, cats, STRICT(septembre17)));
+    expect(avant).toBeGreaterThan(0);
+    expect(apres).toBe(0);
   });
 });
