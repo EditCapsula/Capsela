@@ -19,6 +19,7 @@ import { saisonCalendairePour, weatherForDay } from "@/lib/capsule";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import { deleteTenuePlanifiee, fetchTenuesPlanifiees, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
+import { VISUEL_SEJOUR } from "@/lib/valise";
 import { paletteHexes } from "@/lib/profile";
 import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
@@ -364,10 +365,18 @@ function CartePlanifier({
 
 /**
  * UNE VALISE DANS « MES PLANIFICATIONS » (27/09/2026) — même carte que les
- * tenues planifiées : l'aperçu est fait de ses vraies pièces, jamais d'un
- * visuel générique ; la destination, les dates et le nombre de looks, comptés.
+ * tenues planifiées ; la destination, les dates et le nombre de looks, comptés.
+ *
+ * L'image est le visuel éditorial du TYPE DE SÉJOUR choisi (28/09/2026,
+ * demandé : « un visuel édito illustrant le type de vacances choisi ») — le
+ * même que la question « Quel type de séjour ? » de l'écran Valise. Il
+ * remplace l'ancienne mosaïque de pièces, qui montrait souvent une seule
+ * photo (un sac) perdue dans sa tuile. Sans type de séjour, ou pour « Autre »
+ * qui n'a pas de visuel, la mosaïque des vraies pièces reste : rien n'est
+ * inventé.
  */
 function LigneValise({ v, dressing, passee, onClick }: { v: ValiseGardee; dressing: Item[]; passee: boolean; onClick: () => void }) {
+  const visuel = v.sejour ? VISUEL_SEJOUR[v.sejour] : undefined;
   const apercu = v.pieceIds
     .map((id) => dressing.find((i) => i.id === id))
     .filter((i): i is Item => !!i)
@@ -381,17 +390,22 @@ function LigneValise({ v, dressing, passee, onClick }: { v: ValiseGardee; dressi
       className="w-full flex items-center gap-3 bg-card border border-border rounded-[20px] p-[10px] text-left cursor-pointer"
       style={{ opacity: passee ? 0.78 : 1 }}
     >
-      <span className="w-[64px] h-[64px] flex-shrink-0 rounded-[14px] bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
-        {apercu.map((p) => {
-          const img = resolveItemImage(p);
-          return img.url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={p.id} src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
-          ) : (
-            <span key={p.id} className="block w-full h-full rounded-[4px]" style={{ background: p.hex }} />
-          );
-        })}
-      </span>
+      {visuel ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={visuel} alt="" loading="lazy" className="w-[64px] h-[64px] flex-shrink-0 rounded-[14px] object-cover bg-warm-bg" />
+      ) : (
+        <span className="w-[64px] h-[64px] flex-shrink-0 rounded-[14px] bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
+          {apercu.map((p) => {
+            const img = resolveItemImage(p);
+            return img.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={p.id} src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+            ) : (
+              <span key={p.id} className="block w-full h-full rounded-[4px]" style={{ background: p.hex }} />
+            );
+          })}
+        </span>
+      )}
       <span className="flex-1 min-w-0">
         <span className="block t-label text-terracotta">Valise</span>
         <span className="block t-titre-vignette text-ink mt-[2px] truncate">{v.destination}</span>
@@ -1119,7 +1133,12 @@ export default function PlanifierScreen() {
                         })}
                       </span>
                       <span className="flex-1 min-w-0">
-                        <span className="block t-titre-vignette text-ink">{occasionShortLabel(t.occasion)}</span>
+                        {/* Même surtitre que la liste complète (« Tenue
+                            planifiée ») et que la carte valise (« Valise ») :
+                            dans une liste qui mêle les deux, il dit de quoi
+                            il s'agit avant le titre (28/09/2026, demandé). */}
+                        <span className="block t-label text-terracotta">Tenue planifiée</span>
+                        <span className="block t-titre-vignette text-ink mt-[2px]">{occasionShortLabel(t.occasion)}</span>
                         {/* Synthétique (brief §12) : la date et la ville, sur
                             une ligne. La région et le pays restent au détail. */}
                         <span className="block text-[12px] text-muted mt-[3px] truncate">

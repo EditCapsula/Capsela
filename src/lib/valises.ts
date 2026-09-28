@@ -66,6 +66,28 @@ export function avecValise(liste: ValiseGardee[], v: ValiseGardee): ValiseGardee
   return liste.some((x) => x.id === v.id) ? liste.map((x) => (x.id === v.id ? v : x)) : [v, ...liste];
 }
 
+/** Ce qui fait qu'une valise est la même : destination, dates, bagage, séjour. */
+const empreinte = (v: ValiseGardee) => [v.destination.trim().toLowerCase(), v.depart, v.retour, v.bagage, v.sejour ?? ""].join("|");
+
+/**
+ * Les valises du compte, puis celles de l'appareil qu'il n'a pas encore
+ * (28/09/2026, signalé : deux cartes « Rhodes » identiques dans « Mes
+ * planifications »).
+ *
+ * Une valise préparée porte d'abord un identifiant local ; une fois acceptée
+ * par le compte, elle est renommée sur l'appareil. Si l'app se ferme entre
+ * l'insertion et ce renommage, l'appareil garde la copie locale alors que le
+ * compte a déjà la sienne : au chargement suivant, les deux s'affichaient.
+ * Une copie locale identique à une valise du compte (même destination, mêmes
+ * dates, même bagage, même séjour) est donc écartée. Les valises du compte
+ * ne sont jamais fusionnées entre elles : deux lignes du compte sont deux
+ * valises que l'utilisatrice a préparées.
+ */
+export function fusionnerValises(duCompte: ValiseGardee[], locales: ValiseGardee[]): ValiseGardee[] {
+  const connues = new Set(duCompte.map(empreinte));
+  return [...duCompte, ...locales.filter((v) => estIdLocal(v.id) && !connues.has(empreinte(v)))];
+}
+
 // ── Mes planifications : tenues et valises ──────────────────────────────
 
 export type Planification = { type: "tenue"; tenue: TenuePlanifiee } | { type: "valise"; valise: ValiseGardee };

@@ -57,6 +57,25 @@ export type TypeSejour =
   | "autre";
 
 /**
+ * Visuels éditoriaux des types de séjour (fournis le 27/09/2026, unisexes,
+ * sans texte intégré). « Autre » n'en a pas. Ici plutôt que dans l'écran
+ * Valise depuis le 28/09/2026 : la carte de « Mes planifications » les montre
+ * aussi (demandé : « un visuel édito illustrant le type de vacances choisi »).
+ */
+export const VISUEL_SEJOUR: Partial<Record<TypeSejour, string>> = {
+  plage: "/editorial/sejours/sejour_plage.webp",
+  city_break: "/editorial/sejours/sejour_city_break.webp",
+  nature: "/editorial/sejours/sejour_nature.webp",
+  week_end: "/editorial/sejours/sejour_week_end.webp",
+  professionnel: "/editorial/sejours/sejour_professionnel.webp",
+  road_trip: "/editorial/sejours/sejour_road_trip.webp",
+  evenement: "/editorial/sejours/sejour_evenement.webp",
+  montagne: "/editorial/sejours/sejour_montagne.webp",
+  detente: "/editorial/sejours/sejour_detente.webp",
+  multi_activites: "/editorial/sejours/sejour_multi_activites.webp",
+};
+
+/**
  * LE TYPE DE SÉJOUR NE FAIT QU'UNE CHOSE : présélectionner les occasions de
  * la question suivante (« Qu'est-ce qui est prévu ? »), qui restent toutes
  * modifiables. Il n'entre pas dans le moteur, qui ne connaît que des

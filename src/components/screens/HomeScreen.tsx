@@ -912,21 +912,6 @@ export default function HomeScreen() {
             </div>
           )}
 
-          {/* OCCASION ÉLARGIE (28/09/2026, signalé : une robe de soirée
-              annoncée « Ta tenue est prête » pour le travail). L'écran Tenue
-              le disait déjà (occasionElargieText) ; l'accueil, lui, se taisait.
-              Depuis le même jour, la capsule prend le relais avant tout
-              relâchement : cette ligne ne paraît plus que si ni le dressing ni
-              la capsule n'ont de pièce adaptée — et alors, elle le dit. */}
-          {hasOutfit && state.outfitOccasionRelachee && (
-            <div
-              className="text-[11px] mt-[6px] leading-[1.35]"
-              style={{ color: "rgba(243,238,229,.84)", maxWidth: avecComposition ? "42%" : 240 }}
-            >
-              Occasion élargie, faute de pièce adaptée
-            </div>
-          )}
-
           {/* Le carton décoratif « Le look du jour » est retiré le
               22/09/2026, sur arbitrage. Il occupait la place où vient la
               ligne de feedback, et il aurait formé un troisième élément

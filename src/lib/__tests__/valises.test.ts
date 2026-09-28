@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avecValise, estIdLocal, normaliserValise, repartirPlanifications, rowToValise, valiseToRow, type ValiseGardee } from "../valises";
+import { avecValise, estIdLocal, fusionnerValises, normaliserValise, repartirPlanifications, rowToValise, valiseToRow, type ValiseGardee } from "../valises";
 import type { TenuePlanifiee } from "../planifier";
 
 const V2: ValiseGardee = {
@@ -17,6 +17,20 @@ const V2: ValiseGardee = {
   looks: [{ ids: [1, 4, 7], situations: [0], elargie: false }],
   situationsSansLook: [],
 };
+
+describe("fusionnerValises — compte et appareil (28/09/2026, deux « Rhodes »)", () => {
+  const locale = { ...V2, id: "local-abc" };
+  it("écarte la copie locale d'une valise que le compte a déjà", () => {
+    expect(fusionnerValises([V2], [locale]).map((v) => v.id)).toEqual(["12"]);
+    expect(fusionnerValises([V2], [{ ...locale, destination: " lisbonne " }]).map((v) => v.id)).toEqual(["12"]);
+  });
+  it("garde une valise locale différente, et jamais une valise du compte en double", () => {
+    expect(fusionnerValises([V2], [{ ...locale, retour: "2026-10-21" }]).map((v) => v.id)).toEqual(["12", "local-abc"]);
+    expect(fusionnerValises([V2, { ...V2, id: "13" }], []).map((v) => v.id)).toEqual(["12", "13"]);
+    // Une valise de l'appareil qui porte déjà un identifiant du compte vient du compte : elle n'est pas reprise.
+    expect(fusionnerValises([], [V2]).map((v) => v.id)).toEqual([]);
+  });
+});
 
 describe("valises — la valise enregistrée", () => {
   it("une valise du lot 1 ou à valise unique est reprise sans rien perdre, avec un identifiant local", () => {

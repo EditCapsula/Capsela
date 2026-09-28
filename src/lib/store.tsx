@@ -8,7 +8,7 @@ import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCa
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
 import { previsionPour, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, type TenuePlanifiee } from "./planifier";
-import { avecValise, enregistrerValise, estIdLocal, fetchValises, garderValisesLocales, lireValisesLocales, supprimerValiseDuCompte, type ValiseGardee } from "./valises";
+import { avecValise, enregistrerValise, fetchValises, fusionnerValises, garderValisesLocales, lireValisesLocales, supprimerValiseDuCompte, type ValiseGardee } from "./valises";
 import { decisionAcces } from "./autorisations";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
@@ -766,7 +766,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     let annule = false;
     fetchValises(userId).then((duCompte) => {
       if (annule || !duCompte) return;
-      const liste = [...duCompte, ...locales.filter((v) => estIdLocal(v.id))];
+      const liste = fusionnerValises(duCompte, locales);
       garderValisesLocales(userId, liste);
       setState((s) => ({ ...s, valises: liste }));
     });
