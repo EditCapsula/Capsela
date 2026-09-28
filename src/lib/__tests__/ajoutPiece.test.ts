@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { occasionsRetenues, suggestName, suggestOccasions } from "../attributes";
 import { saisonParDefaut, seasonSuggestion } from "../data";
-import { basculerSaison, enSaisons, libelleSaisons, saisonsDe, saisonsDepuisSeason, saisonsParDefaut, seasonDepuisSaisons } from "../saisons";
+import { basculerSaison, enSaisons, libelleSaisons, pourLaSaison, saisonPourIdees, saisonsDe, saisonsDepuisSeason, saisonsParDefaut, seasonDepuisSaisons } from "../saisons";
 import { contexteCapsule, estDeSaison, representativeWeatherFor, saisonsDuJour, saisonThermique, weatherForDay } from "../capsule";
 
 // Refonte « Ajouter une pièce » (27/09/2026) : ce que l'écran propose sans
@@ -143,6 +143,18 @@ describe("le moteur lit les quatre saisons (capsule.ts)", () => {
     expect(estDeSaison(trench, weatherForDay(15, "Nuageux", "Printemps"))).toBe(true);
     expect(estDeSaison(trench, contexteCapsule("Automne"))).toBe(true);
     expect(estDeSaison(trench, contexteCapsule("Hiver"))).toBe(false);
+  });
+
+  it("idées d'une pièce hors saison : sa saison la plus proche, l'avenir à égalité", () => {
+    const jupe = { season: "Printemps / Été" as const };
+    expect(saisonPourIdees(jupe, "Automne")).toBe("Été");
+    expect(saisonPourIdees(jupe, "Hiver")).toBe("Printemps");
+    expect(saisonPourIdees(jupe, "Été")).toBe("Été");
+    expect(saisonPourIdees({ season: "Toutes saisons" }, "Hiver")).toBe("Hiver");
+    const trench = { season: "Toutes saisons" as const, saisons: ["Printemps" as const, "Automne" as const] };
+    expect(saisonPourIdees(trench, "Été")).toBe("Automne");
+    expect(saisonPourIdees(trench, "Hiver")).toBe("Printemps");
+    expect(pourLaSaison("Été")).toBe("l'été");
   });
 
   it("phrase « se porte … »", () => {
