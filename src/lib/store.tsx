@@ -1108,8 +1108,16 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // pièces, parce qu'il est la seule occasion sans repli de formalité.
     // `composeWardrobePool` est idempotente sur un pool déjà composé : sur un
     // dressing vide, elle ne change rien.
+    //
+    // Et la capsule avant le relâchement (28/09/2026, signalé : une robe
+    // déclarée Sortie / Date / Cérémonie proposée pour le travail) : une pièce
+    // déclarée pour d'autres occasions n'entre plus dans ce pool, et une pièce
+    // hors saison ne bloque plus le secours de sa catégorie — cf.
+    // composeWardrobePool.
     const poolGeneration =
-      s.occasion && !secours ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion }) : pool;
+      s.occasion && !secours
+        ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion, saison: w, exclureHorsOccasion: true })
+        : pool;
     const result = generateOutfitWithFallback(
       poolGeneration,
       w,

@@ -607,7 +607,13 @@ export default function PlanifierScreen() {
     // pièce réelle ne déclare l'occasion se voit rendre celles de la capsule
     // qui la déclarent. « Uniquement mon dressing » court-circuite cette
     // complétion — c'est tout ce que ce réglage fait, et c'est suffisant.
-    const pool = dressingSeul ? state.items : composeWardrobePool(state.items, defaultCapsule, CAT_KEYS, { completerPourOccasion: occ });
+    const pool = dressingSeul
+      ? state.items
+      : composeWardrobePool(state.items, defaultCapsule, CAT_KEYS, {
+          completerPourOccasion: occ,
+          saison: meteoUtilisee,
+          exclureHorsOccasion: true,
+        });
     return generateOutfitWithFallback(
       pool,
       meteoUtilisee,
