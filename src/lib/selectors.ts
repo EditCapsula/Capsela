@@ -607,7 +607,35 @@ export function composeWardrobePool(
      */
     saison?: ContexteSaisonnier | null;
     exclureHorsOccasion?: boolean;
+    /**
+     * LES PIÈCES DE LA SAISON CONCERNÉE (28/09/2026, demandé : « elle doit
+     * proposer les chaussures de la saison concernée, quitte à privilégier
+     * des chaussures de la capsule »). Une catégorie dont AUCUNE pièce réelle
+     * n'est de cette saison — des bottines seules pour des idées d'été — se
+     * voit rendre les pièces de la capsule qui en sont. Les pièces réelles
+     * restent : le filtre saisonnier du moteur les écarte de lui-même tant
+     * qu'une pièce de saison existe. Absent : comportement d'origine.
+     */
+    completerPourSaison?: ContexteSaisonnier | null;
   }
+): Item[] {
+  const saisonConcernee = options?.completerPourSaison ?? null;
+  const base = composerParOccasion(items, capsule, cats, options);
+  if (!saisonConcernee) return base;
+  return cats.flatMap((cat) => {
+    const deLaCategorie = base.filter((i) => i.cat === cat);
+    const reelles = deLaCategorie.filter((i) => !isCatalogId(i.id));
+    if (!reelles.length || deLaCategorie.some((i) => estDeSaison(i, saisonConcernee))) return deLaCategorie;
+    const deSaison = capsule.filter((i) => i.cat === cat && !deLaCategorie.some((d) => d.id === i.id) && estDeSaison(i, saisonConcernee));
+    return [...deLaCategorie, ...deSaison];
+  });
+}
+
+function composerParOccasion(
+  items: Item[],
+  capsule: Item[],
+  cats: readonly CategoryKey[],
+  options?: { completerPourOccasion?: OccasionKey | null; saison?: ContexteSaisonnier | null; exclureHorsOccasion?: boolean }
 ): Item[] {
   const occasion = options?.completerPourOccasion ?? null;
   const saison = options?.saison ?? null;

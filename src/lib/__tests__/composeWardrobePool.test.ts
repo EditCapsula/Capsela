@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { composeWardrobePool } from "../selectors";
-import { weatherForDay } from "../capsule";
+import { contexteCapsule, weatherForDay } from "../capsule";
+import { ideesDressingDAbord } from "../ideesLooks";
 import { CATS as CATEGORIES, type Weather } from "../data";
 import { generateOutfitWithFallback } from "../logic";
 import { item } from "./fixtures";
@@ -111,6 +112,44 @@ describe("composeWardrobePool — capsule adaptée avant le relâchement", () =>
   it("garde-fou : rien d'adapté ni au dressing ni en capsule, la catégorie n'est pas vidée", () => {
     const pool = composeWardrobePool([robeSoiree], [], ["robe"], STRICT(septembre17));
     expect(ids(pool)).toEqual([1]);
+  });
+
+  it("completerPourSaison : des bottines seules pour l'été appellent les chaussures d'été de la capsule", () => {
+    const bottines = P(7, "Bottines", "chaussures", ["quotidien"], "Automne / Hiver", { shoeType: "Bottines" });
+    const sandales = P(100010, "Sandales", "chaussures", ["quotidien"], "Printemps / Été", { shoeType: "Sandales" });
+    const bottes = P(100011, "Bottes", "chaussures", ["quotidien"], "Automne / Hiver", { shoeType: "Bottes" });
+    const ete = contexteCapsule("Été");
+    expect(ids(composeWardrobePool([bottines], [sandales, bottes], ["chaussures"]))).toEqual([7]);
+    expect(ids(composeWardrobePool([bottines], [sandales, bottes], ["chaussures"], { completerPourSaison: ete }))).toEqual([7, 100010]);
+    // Une pièce réelle de saison suffit : rien n'est ajouté.
+    const espadrilles = P(8, "Espadrilles", "chaussures", ["quotidien"], "Printemps / Été", { shoeType: "Espadrilles" });
+    expect(ids(composeWardrobePool([bottines, espadrilles], [sandales], ["chaussures"], { completerPourSaison: ete }))).toEqual([7, 8]);
+  });
+
+  it("DÉMONTRÉ — la jupe d'été et les bottines : ses idées d'été n'ont plus de bottines", () => {
+    const jupe = P(20, "Jupe midi marine", "jupe", ["quotidien", "soiree"], "Printemps / Été");
+    const dressing = [
+      jupe,
+      P(21, "T-shirt blanc", "haut", ["quotidien"], "Toutes saisons", { subtype: "T-shirt", color: "Blanc", hex: "#F7F4EE" }),
+      P(22, "Bottines", "chaussures", ["quotidien", "soiree"], "Automne / Hiver", { shoeType: "Bottines" }),
+    ];
+    const capsuleEte = [
+      P(100020, "Sandales", "chaussures", ["quotidien", "soiree"], "Printemps / Été", { shoeType: "Sandales", niveauFormalite: 1 }),
+      P(100021, "Ballerines", "chaussures", ["quotidien", "soiree"], "Toutes saisons", { shoeType: "Ballerines", niveauFormalite: 3 }),
+      P(100022, "Blouse", "haut", ["quotidien", "soiree"], "Printemps / Été", { subtype: "Blouse", niveauFormalite: 3 }),
+    ];
+    const cats = CATEGORIES.map(([k]) => k);
+    const pool = composeWardrobePool(dressing, capsuleEte, cats, { completerPourSaison: contexteCapsule("Été") });
+    const orig = Math.random;
+    let graine = 7;
+    Math.random = () => ((graine = (graine * 16807) % 2147483647) / 2147483647);
+    try {
+      const idees = ideesDressingDAbord(jupe, pool, dressing, "Été", [], "femme");
+      expect(idees.length).toBeGreaterThan(0);
+      expect(idees.some((v) => v.ids.includes(22))).toBe(false);
+    } finally {
+      Math.random = orig;
+    }
   });
 
   it("DÉMONTRÉ — la capture : la robe de soirée ne sort plus pour le travail", () => {

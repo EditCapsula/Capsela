@@ -290,7 +290,8 @@ export interface TraceRepli {
 /** Les barreaux, dans l'ordre, pour chacune des deux échelles de `poolFor`. */
 const BARREAUX_ACCESSOIRES = [
   "saison + météo", "saison, météo relâchée", "hors saison + météo",
-  "hors saison, météo relâchée", "occasion relâchée + météo", "occasion et météo relâchées",
+  "hors saison, météo relâchée", "occasion relâchée, saison + météo", "occasion relâchée, saison, météo relâchée",
+  "occasion relâchée + météo", "occasion et météo relâchées",
 ] as const;
 const BARREAUX_VETEMENTS = [
   "saison + occasion + météo", "météo relâchée", "occasion relâchée + météo", "occasion et météo relâchées",
@@ -888,7 +889,15 @@ export function generateOutfit(
         applyTempFilter(seasonNoTemp), relacheMeteo(seasonNoTemp),
         applyTempFilter(fullNoTemp), relacheMeteo(fullNoTemp),
       ];
-      if (essential) ladder.push(applyTempFilter(fullNoOcc), relacheMeteo(fullNoOcc));
+      // Occasion relâchée : la saison d'abord (28/09/2026, demandé : « elle
+      // doit proposer les chaussures de la saison concernée »). Ces deux
+      // barreaux ne servent que si AUCUNE chaussure ne respecte l'occasion ;
+      // jusque-là, le tirage se faisait dans toutes les chaussures, et des
+      // bottines d'hiver sortaient pour une idée d'été à côté de sandales
+      // qui y avaient droit au même titre. Ils relâchent l'occasion comme les
+      // suivants (index ≥ 4, cf. noteRepli).
+      if (essential)
+        ladder.push(applyTempFilter(seasonNoOcc), relacheMeteo(seasonNoOcc), applyTempFilter(fullNoOcc), relacheMeteo(fullNoOcc));
       for (let i = 0; i < ladder.length; i++) {
         if (ladder[i].filter((x) => cats.includes(x.cat)).length) {
           noteRepli(cats, essential, i, BARREAUX_ACCESSOIRES, ladder);
