@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { CarteIdeeLook } from "@/components/CarteIdeeLook";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { contexteCapsule, currentSeasonKey, estDeSaison, representativeWeatherFor } from "@/lib/capsule";
-import { enSaisons, saisonsDe } from "@/lib/saisons";
+import { computeDefaultCapsule, contexteCapsule, currentSeasonKey, estDeSaison, representativeWeatherFor } from "@/lib/capsule";
+import { CATS } from "@/lib/data";
+import { enSaisons, pourLaSaison, saisonPourIdees, saisonsDe } from "@/lib/saisons";
+import { composeWardrobePool } from "@/lib/selectors";
 import { FAMILLES_LOOK, cleLook, decrireLooks, ideesDressingDAbord, ordonnerLooks, titreCommentPorter, type FamilleLook } from "@/lib/ideesLooks";
 import type { ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
@@ -59,6 +61,8 @@ export function calculerIdeesTenues(
   return ideesDressingDAbord(pivot, wardrobePool, dressing, capsuleSeason, preferredHexes, gender);
 }
 
+const CAT_KEYS = CATS.map(([k]) => k);
+
 export default function ItemOutfitsScreen() {
   const { state, wardrobePool, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
@@ -75,12 +79,26 @@ export default function ItemOutfitsScreen() {
   // cas ce n'est pas exactement la même ligne que celle cliquée). Hooks
   // toujours appelés (jamais après un retour conditionnel) : le garde-fou
   // "pivot manquant" est interne, le retour null n'intervient qu'au rendu.
+  const saisonCourante = state.capsuleSeason || currentSeasonKey();
+  // LES IDÉES VIENNENT DE LA SAISON DE LA PIÈCE (28/09/2026, demandé :
+  // « des suggestions de tenues même avec des saisons pas en cours »). Une
+  // pièce hors de la saison affichée n'avait aucune idée — l'écran disait
+  // d'attendre sa saison. Ses idées sont désormais tirées de la capsule de sa
+  // saison la plus proche (saisonPourIdees), composée comme le pool habituel :
+  // tes pièces d'abord, la capsule de cette saison pour compléter.
+  const capsuleSeason = pivot ? saisonPourIdees(pivot, saisonCourante) : saisonCourante;
+  const autreSaison = capsuleSeason !== saisonCourante;
+  const poolSaison = useMemo(() => {
+    if (!autreSaison) return wardrobePool;
+    const capsule = computeDefaultCapsule(profile, representativeWeatherFor(capsuleSeason), state.suggestedExcluded, capsuleSeason, vestiairePool);
+    return composeWardrobePool(state.items, capsule, CAT_KEYS);
+  }, [autreSaison, wardrobePool, profile, capsuleSeason, state.suggestedExcluded, vestiairePool, state.items]);
+
   const pool = useMemo(
-    () => (!pivot ? [] : wardrobePool.some((i) => i.id === pivot.id) ? wardrobePool : [...wardrobePool, pivot]),
-    [wardrobePool, pivot]
+    () => (!pivot ? [] : poolSaison.some((i) => i.id === pivot.id) ? poolSaison : [...poolSaison, pivot]),
+    [poolSaison, pivot]
   );
 
-  const capsuleSeason = state.capsuleSeason || currentSeasonKey();
   const preferredHexes = useMemo(() => paletteHexes(profile), [profile]);
 
   const variations = useMemo(
@@ -94,8 +112,8 @@ export default function ItemOutfitsScreen() {
         ? []
         : pretes && pretes.pivotId === pivot.id
           ? pretes.variations
-          : calculerIdeesTenues(pivot, wardrobePool, state.items, capsuleSeason, preferredHexes, profile.gender),
-    [pivot, pretes, wardrobePool, state.items, preferredHexes, profile.gender, capsuleSeason]
+          : calculerIdeesTenues(pivot, poolSaison, state.items, capsuleSeason, preferredHexes, profile.gender),
+    [pivot, pretes, poolSaison, state.items, preferredHexes, profile.gender, capsuleSeason]
   );
 
   // Génération à la demande du visuel de la pièce pivot (correctif 23/08/2026,
@@ -170,6 +188,13 @@ export default function ItemOutfitsScreen() {
       <p className="text-[12px] text-muted leading-[1.45] mt-[2px]">
         Capsela privilégie tes pièces et complète avec des suggestions si nécessaire.
       </p>
+      {/* La saison des idées, dite quand ce n'est pas celle en cours : sans
+          elle, des sandales proposées en automne sembleraient une erreur. */}
+      {autreSaison && (
+        <p className="text-[12px] text-terracotta leading-[1.45] mt-[8px]">
+          Cette pièce se porte {enSaisons(saisonsDe(pivot))} : voici des idées pour {pourLaSaison(capsuleSeason)}.
+        </p>
+      )}
 
       {/* Pièce de la capsule, pas encore au dressing (ouverte depuis la
           Capsule ou la Tenue) : ses deux actions d'origine restent, à leur

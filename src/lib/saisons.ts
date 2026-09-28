@@ -1,4 +1,4 @@
-import { CAPSULE_SEASONS, capsuleSeasonBucket } from "./capsule";
+import { CAPSULE_SEASONS, capsuleSeasonBucket, contexteCapsule, estDeSaison } from "./capsule";
 import { saisonParDefaut } from "./data";
 import type { CapsuleSeason, CategoryKey, Item, Season } from "./types";
 
@@ -77,6 +77,43 @@ export function enSaisons(saisons: readonly CapsuleSeason[]): string {
   const parts = ordonnerSaisons(saisons).map((s) => EN_SAISON[s]);
   return parts.length <= 1 ? parts.join("") : `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
 }
+
+/**
+ * La saison d'où tirer les idées de tenues d'une pièce (28/09/2026, demandé :
+ * « des suggestions de tenues même avec des saisons pas en cours », capture
+ * d'une jupe printemps-été ouverte en automne, écran vide). La saison en
+ * cours quand la pièce en est ; sinon, parmi les siennes, la plus proche dans
+ * l'année — en arrière ou en avant, l'avenir l'emportant à égalité : une
+ * pièce de printemps-été ouverte en automne prend l'été, ouverte en hiver le
+ * printemps.
+ */
+export function saisonPourIdees(pivot: Pick<Item, "season" | "saisons">, courante: CapsuleSeason): CapsuleSeason {
+  if (estDeSaison(pivot, contexteCapsule(courante))) return courante;
+  const i = QUATRE_SAISONS.indexOf(courante);
+  let meilleure = courante;
+  let meilleurEcart = Infinity;
+  for (const s of saisonsDe(pivot)) {
+    const j = QUATRE_SAISONS.indexOf(s);
+    const avant = (j - i + 4) % 4;
+    const arriere = (i - j + 4) % 4;
+    // Écart à la saison en cours, départagé en faveur de celle qui vient.
+    const ecart = Math.min(avant, arriere) * 2 + (avant <= arriere ? 0 : 1);
+    if (ecart < meilleurEcart) {
+      meilleurEcart = ecart;
+      meilleure = s;
+    }
+  }
+  return meilleure;
+}
+
+const POUR_LA_SAISON: Record<CapsuleSeason, string> = {
+  Printemps: "le printemps",
+  Été: "l'été",
+  Automne: "l'automne",
+  Hiver: "l'hiver",
+};
+/** « l'été », « le printemps » — pour « des idées pour l'été ». */
+export const pourLaSaison = (s: CapsuleSeason) => POUR_LA_SAISON[s];
 
 /** « Automne · Hiver », « Été », « Toutes saisons » quand les quatre y sont. */
 export function libelleSaisons(saisons: readonly CapsuleSeason[]): string {
