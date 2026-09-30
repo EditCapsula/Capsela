@@ -33,8 +33,17 @@ const ONEPIECE_CATS: CategoryKey[] = ["robe", "combinaison"];
 /** Catégories suivies pour l'anti-répétition (R-B7) et le calcul de formalité d'une tenue. Exporté pour CreateLookScreen (filtre dur du picker manuel, brief design section 4). */
 export const CLOTHING_CATS: CategoryKey[] = [...TOP_LAYER_CATS, ...BAS_CATS, "jupe", "robe", "combinaison", "veste", "manteau"];
 const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire"];
-/** Types de chaussures ouvertes exclus s'il est prévu de la pluie (R-B21) — uniquement les valeurs explicitement des sandales, jamais une extrapolation vers d'autres types semi-ouverts (mules, espadrilles...) non nommés par la demande. */
-const SANDAL_SHOE_TYPES: ShoeType[] = ["Sandales", "Sandales à talons"];
+/**
+ * Chaussures écartées sous la pluie ou la neige (R-B21). Jusqu'au 29/09/2026,
+ * les seules sandales ; ÉLARGI LE 30/09/2026 (signalé : chaussures ouvertes
+ * proposées sous la pluie ; liste arbitrée type par type le même jour) aux
+ * mules et slingbacks (pied ou talon découvert) et aux espadrilles (toile et
+ * semelle de corde, qui ne supportent pas l'eau). Les ballerines, mocassins,
+ * escarpins, derbies, baskets, bottines et bottes restent autorisés. Une
+ * chaussure sans type renseigné n'est pas écartée : rien ne dit qu'elle est
+ * ouverte.
+ */
+const CHAUSSURES_OUVERTES: ShoeType[] = ["Sandales", "Sandales à talons", "Mules", "Slingbacks", "Espadrilles"];
 
 /**
  * Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète
@@ -754,14 +763,15 @@ export function generateOutfit(
     if (weather.temp <= 22) {
       r = r.filter((i) => i.cat !== "short");
     }
-    // R-B21 (25/08/2026, signalé) — sandales jamais proposées s'il est
-    // prévu de la pluie, capsule ou dressing réel (jamais de distinction
-    // de source) : on privilégie les chaussures fermées. Règle de
+    // R-B21 (25/08/2026, signalé ; élargie le 30/09/2026) — chaussures
+    // ouvertes (CHAUSSURES_OUVERTES) jamais proposées sous la pluie ou la
+    // neige (isRainy), capsule ou dressing réel (jamais de distinction de
+    // source) : on privilégie les chaussures fermées. Règle de
     // catégorie dure, jamais relâchée — contrairement à R-B16 ci-dessus
     // (préférence molle sur les vestes/manteaux résistants à la pluie),
     // qui ne s'applique elle-même qu'à défaut d'alternative.
     if (isRainy(weather)) {
-      r = r.filter((i) => i.cat !== "chaussures" || !i.shoeType || !SANDAL_SHOE_TYPES.includes(i.shoeType));
+      r = r.filter((i) => i.cat !== "chaussures" || !i.shoeType || !CHAUSSURES_OUVERTES.includes(i.shoeType));
     }
     return r;
   };
@@ -1660,7 +1670,7 @@ export function swapOutfitPiece(
   }
   // R-B21 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (weather && isRainy(weather)) {
-    candidates = candidates.filter((i) => i.cat !== "chaussures" || !i.shoeType || !SANDAL_SHOE_TYPES.includes(i.shoeType));
+    candidates = candidates.filter((i) => i.cat !== "chaussures" || !i.shoeType || !CHAUSSURES_OUVERTES.includes(i.shoeType));
   }
   // R-B16 — symétrique de la préférence pluie appliquée dans generateOutfit,
   // molle jamais exclusive : ne filtre que s'il reste au moins une option.
