@@ -107,7 +107,8 @@ const pal = (nom: string): string => {
 /**
  * LA REPRÉSENTATION VISUELLE DE CHAQUE INTENSITÉ (30/09/2026, brief
  * « Intensité des couleurs ») : une phrase et cinq pastilles, affichées à
- * côté du libellé dans l'onboarding. Purement illustratif — l'option
+ * côté du libellé dans l'onboarding, et `libelleRecap` quand le libellé de
+ * l'option ne se suffit pas au récapitulatif. Purement illustratif — l'option
  * enregistrée reste le libellé d'INTENSITE_OPTIONS, et aucune de ces teintes
  * n'entre dans le moteur ni dans la palette de l'utilisatrice.
  *
@@ -116,7 +117,7 @@ const pal = (nom: string): string => {
  * personnelle n'a pas), une valeur propre à l'illustration, choisie pour
  * rester élégante : aucune teinte néon.
  */
-export const INTENSITE_VISUELS: Record<Intensite, { description: string; pastilles: string[] }> = {
+export const INTENSITE_VISUELS: Record<Intensite, { description: string; pastilles: string[]; libelleRecap?: string }> = {
   "Douces et discrètes": {
     description: "Des tons neutres et pastel, pour des looks tout en douceur.",
     // crème, beige clair, vieux rose, taupe clair, sauge très désaturée
@@ -133,6 +134,9 @@ export const INTENSITE_VISUELS: Record<Intensite, { description: string; pastill
   },
   "Un mélange": {
     description: "J'aime varier entre des tons doux, intenses et lumineux.",
+    // Au récapitulatif, « Un mélange » ne dit pas de quoi (30/09/2026, demandé) :
+    // on y écrit ce que le mélange contient. La valeur enregistrée ne change pas.
+    libelleRecap: "Tons doux, intenses et lumineux",
     // neutre clair, pastel, profonde, naturelle, lumineuse
     pastilles: [pal("Crème"), pal("Rose poudré"), pal("Bordeaux"), pal("Kaki"), "#E57C60"],
   },

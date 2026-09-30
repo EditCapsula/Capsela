@@ -328,7 +328,9 @@ export default function ProfileSetupScreen() {
     },
     {
       label: "Intensité",
-      value: draft.paletteIntensite || "non précisée",
+      value: draft.paletteIntensite
+        ? (INTENSITE_VISUELS[draft.paletteIntensite]?.libelleRecap ?? draft.paletteIntensite)
+        : "non précisée",
       // Les pastilles de l'étape Intensité (30/09/2026, demandé) : on retrouve
       // ici la famille choisie telle qu'on l'a vue. Illustration seulement,
       // comme sur l'étape — ce ne sont pas des couleurs choisies.
