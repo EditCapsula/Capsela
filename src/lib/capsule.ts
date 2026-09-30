@@ -171,6 +171,28 @@ export function saisonCapsulePourMeteo(
 }
 
 /**
+ * Seuil de « vraie chaleur » (arbitré le 30/09/2026, option 2 : le calendrier
+ * d'abord, sauf vraie chaleur). En automne-hiver calendaire, la moitié
+ * printemps-été n'est admise — pièces (`weatherForDay`) et vivier
+ * (`saisonCapsulePourMeteo`) — qu'à partir de cette température.
+ *
+ * Mesuré par `chaleur-hors-saison.audit.ts` (catalogue réel, 623 pièces, 8
+ * styles × 10 occasions × 8 tirages, dressing vide puis dressing synthétique
+ * du cas signalé), les deux leviers ensemble contre la règle d'origine, dans
+ * la même exécution. Automne entre 20° et 23° : pièces hors calendrier 73-76 %
+ * → 0 %, sandales 6 % → 0 %, « hors max » 0 → 0, « nue < min » 0 → 0,
+ * cellules 80 → 80 (72 → 72 sur le dressing synthétique). Rien ne se dégrade
+ * aux autres températures ni aux autres saisons. Étiquette : DÉMONTRÉ pour
+ * ces scénarios, pas au-delà.
+ */
+export const CHALEUR_HORS_SAISON = 24;
+
+/** La saison du vivier de la tenue du jour : la météo, bornée par le calendrier sous la vraie chaleur. */
+export function saisonCapsuleDuJour(temp: number, calendaire: CapsuleSeason = currentSeasonKey()): CapsuleSeason {
+  return saisonCapsulePourMeteo(temp, undefined, { calendaire, chaleurHorsSaison: CHALEUR_HORS_SAISON });
+}
+
+/**
  * La météo du jour telle que l'application la compose (extrait de store.tsx le
  * 14/09/2026 — implémentation UNIQUE, celle que le moteur exécute et celle que
  * les audits mesurent).

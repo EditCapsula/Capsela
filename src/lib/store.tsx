@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
-import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsulePourMeteo, weatherForDay } from "./capsule";
+import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
 import { previsionPour, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
@@ -903,7 +903,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // protège contre une pièce réellement inadaptée (ex. un short par 5°) —
   // ce bucket grossier n'est qu'un premier tri, pas la protection météo réelle.
   const weather: Weather = useMemo(
-    () => weatherForDay(geoCity.temp, geoCity.label, currentSeasonKey()),
+    () => weatherForDay(geoCity.temp, geoCity.label, currentSeasonKey(), CHALEUR_HORS_SAISON),
     [geoCity]
   );
 
@@ -944,7 +944,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     () =>
       state.jourDecalage === 0
         ? weather
-        : weatherForDay(meteoPrevue ? meteoPrevue.temp : geoCity.temp, meteoPrevue ? meteoPrevue.label : geoCity.label, saisonCalendairePour(dateConsultee)),
+        : weatherForDay(meteoPrevue ? meteoPrevue.temp : geoCity.temp, meteoPrevue ? meteoPrevue.label : geoCity.label, saisonCalendairePour(dateConsultee), CHALEUR_HORS_SAISON),
     [state.jourDecalage, weather, meteoPrevue, geoCity, dateConsultee]
   );
 
@@ -1013,7 +1013,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   //
   // L'écran Capsule, lui, reste calendaire — il calcule sa propre capsule
   // depuis `state.capsuleSeason || currentSeasonKey()` et n'utilise pas celle-ci.
-  const saisonTenue = saisonCapsulePourMeteo(weather.temp);
+  const saisonTenue = saisonCapsuleDuJour(weather.temp);
   const defaultCapsule = useMemo(
     () => computeDefaultCapsule(profile, weather, state.suggestedExcluded, saisonTenue, vestiairePool),
     [profile, weather, state.suggestedExcluded, saisonTenue, vestiairePool]
@@ -2138,7 +2138,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         // choisie sur l'écran Capsule, c'est la météo qui décide, pas le
         // calendrier — une tenue explorée est une tenue, elle ne doit pas
         // échapper au correctif du 15/09.
-        const season = s.capsuleSeason || saisonCapsulePourMeteo(weatherRef.current.temp);
+        const season = s.capsuleSeason || saisonCapsuleDuJour(weatherRef.current.temp);
         const capsulePool = computeDefaultCapsule(exploredProfile, weatherRef.current, s.suggestedExcluded, season, vestiairePool);
         const tirer = () =>
           generateOutfitWithFallback(

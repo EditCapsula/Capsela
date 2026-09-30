@@ -20,7 +20,7 @@ import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { generateOutfitWithFallback, titreLookDuJour } from "@/lib/logic";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
-import { saisonCalendairePour, weatherForDay } from "@/lib/capsule";
+import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "@/lib/capsule";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import { deleteTenuePlanifiee, fetchTenuesPlanifiees, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
@@ -672,9 +672,9 @@ export default function PlanifierScreen() {
    */
   const meteoUtilisee =
     meteoMoment && dateChoisie
-      ? weatherForDay(meteoMoment.temp, meteoMoment.label, saisonCalendairePour(dateChoisie))
+      ? weatherForDay(meteoMoment.temp, meteoMoment.label, saisonCalendairePour(dateChoisie), CHALEUR_HORS_SAISON)
       : dateChoisie
-        ? weatherForDay(weather.temp, weather.label, saisonCalendairePour(dateChoisie))
+        ? weatherForDay(weather.temp, weather.label, saisonCalendairePour(dateChoisie), CHALEUR_HORS_SAISON)
         : weather;
   /**
    * La ville telle que l'utilisatrice l'a donnée — le nom de la suggestion
