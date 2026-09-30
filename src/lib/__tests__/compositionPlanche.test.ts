@@ -21,9 +21,11 @@ describe("GABARITS_PLANCHE — une silhouette hiérarchisée, pas une grille", (
       }
     });
 
-    it(`${nom} : héro > surcouche > bas > chaussures ≥ sac > accessoires`, () => {
-      for (const e of autres) expect(aire(g.hero)).toBeGreaterThan(aire(e));
-      if (g.dessus && g.bas) expect(aire(g.dessus)).toBeGreaterThan(aire(g.bas));
+    it(`${nom} : héro et bas en tête, surcouche sous le héro, puis chaussures ≥ sac > accessoires`, () => {
+      for (const e of autres) expect(aire(g.hero)).toBeGreaterThanOrEqual(aire(e));
+      // Le bas n'est pas écrasé par le haut (30/09/2026) : ils forment la silhouette.
+      if (g.bas) expect(aire(g.bas)).toBeGreaterThanOrEqual(aire(g.hero) * 0.85);
+      if (g.dessus) expect(aire(g.dessus)).toBeLessThan(aire(g.hero));
       if (g.dessus) expect(aire(g.dessus)).toBeGreaterThan(aire(g.chaussures));
       if (g.bas) expect(aire(g.bas)).toBeGreaterThan(aire(g.chaussures));
       expect(aire(g.chaussures)).toBeGreaterThanOrEqual(aire(g.sac));
