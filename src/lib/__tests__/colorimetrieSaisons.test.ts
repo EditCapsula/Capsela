@@ -140,18 +140,17 @@ describe("réponses gardées et « Pourquoi cette palette ? »", () => {
     }
   });
 
-  it("chaque réponse a sa vignette, sauf « Je ne sais pas »", () => {
+  it("chaque réponse a sa vignette ; « Je ne sais pas » partage le lin neutre", () => {
     for (const q of QUESTIONS_COLORIMETRIE) {
       for (const r of q.reponses) {
-        if (r.libelle === "Je ne sais pas") expect(r.visuel).toBeNull();
-        else expect(r.visuel).toMatch(/^\/onboarding\/colorimetrie\/[a-z-]+\.webp$/);
+        expect(r.visuel).toMatch(/^\/onboarding\/colorimetrie\/[a-z-]+\.webp$/);
+        if (r.libelle === "Je ne sais pas") expect(r.visuel).toBe("/onboarding/colorimetrie/neutre-lin.webp");
       }
     }
   });
 
-  it("le visuel éditorial n'est posé que sur la saison qu'il représente", () => {
-    expect(SAISONS.printemps.visuel).toBeTruthy();
-    expect(SAISONS.ete.visuel ?? SAISONS.automne.visuel ?? SAISONS.hiver.visuel).toBeUndefined();
+  it("chaque saison a son propre visuel éditorial, jamais celui d'une autre", () => {
+    for (const k of SAISONS_CLES) expect(SAISONS[k].visuel).toBe(`/onboarding/colorimetrie/palette-${k}.webp`);
   });
 });
 

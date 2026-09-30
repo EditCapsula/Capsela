@@ -55,21 +55,18 @@ résultat s'affiche sans « Pourquoi cette palette ? ».
 ### Les visuels
 
 Le ZIP fourni (`Capsela_Onboarding_Visuals.zip`) contient des découpes de la
-maquette, avec du texte d'interface et des boutons radio. Seules les
-vignettes de réponse et le tissu du résultat en ont été extraits, dans
-`public/onboarding/colorimetrie/` (76 Ko, WebP). La maquette complète n'est
-pas affichée.
+maquette, avec du texte d'interface et des boutons radio : il a servi de
+référence. Les visuels affichés sont ceux fournis ensuite en haute
+définition, le 30/09/2026, recadrés et compressés dans
+`public/onboarding/colorimetrie/` (WebP, environ 580 Ko au total). La
+maquette complète n'est pas affichée.
 
-Deux limites :
-- **Résolution** : les vignettes ne font qu'environ 50 px dans la source.
-  Elles sont affichées à 44 px, donc un peu douces sur un écran haute
-  densité. Des sources en haute définition (au moins 150 px) les rendraient
-  nettes.
-- **Un seul visuel de résultat, pour le Printemps** : corail, moutarde, rose.
-  Il n'est affiché que pour cette saison, puisque les autres placeraient
-  certaines de ces couleurs « avec modération ». Il en faudrait un par saison.
-- « Je ne sais pas » reçoit une vignette neutre (« ? »), faute d'image
-  honnête.
+- **Un visuel de résultat par saison** (fournis le 30/09/2026) : tissus
+  drapés aux couleurs de la saison, relus un par un. Aucun ne montre les
+  teintes « avec modération » de sa saison. Toutes les vignettes de réponse
+  viennent désormais de sources HD (288 px servis pour 44 px affichés).
+- « Je ne sais pas » reçoit un lin beige uni, neutre : il ne suggère
+  aucune réponse.
 
 Chaque saison (`SAISONS`) porte des couleurs signature, des neutres et des
 couleurs « avec modération », toutes prises dans `PAL_COULEURS`.
