@@ -1,0 +1,87 @@
+import { describe, expect, it } from "vitest";
+import { MOMENTS_TENUE_DU_JOUR, alerteMeteoPlan, planPourTenueDuJour, sousChoixDuPlan } from "../planDuJour";
+import { plansDuJour, type TenuePlanifiee } from "../planifier";
+import type { MomentJournee } from "../prevision";
+import type { CategoryKey, Item } from "../types";
+
+// La tenue planifiée devient la tenue du jour, selon le moment (option C, 30/09/2026).
+
+const plan = (id: string, moment: MomentJournee, pieceIds: number[] = [1, 2, 3], over: Partial<TenuePlanifiee> = {}): TenuePlanifiee => ({
+  id,
+  jour: "2026-10-02",
+  moment,
+  occasion: "travail_formel",
+  sousChoix: "Présentiel",
+  lieu: "Paris, Île-de-France, France",
+  typeLieu: null,
+  dressingSeul: false,
+  pieceIds,
+  temp: 18,
+  weatherLabel: "Nuageux",
+  ...over,
+});
+const piece = (id: number, cat: CategoryKey, over: Partial<Item> = {}): Item =>
+  ({ id, name: `${cat} ${id}`, cat, color: "Noir", hex: "#2A2724", season: "Toutes saisons", worn: null, ...over }) as Item;
+const DRESSING = [{ id: 1 }, { id: 2 }, { id: 3 }];
+
+describe("planPourTenueDuJour", () => {
+  it("la journée, le matin et l'après-midi font la tenue du jour ; la soirée, jamais", () => {
+    expect(MOMENTS_TENUE_DU_JOUR).toEqual(["Toute la journée", "Matin", "Après-midi"]);
+    for (const m of MOMENTS_TENUE_DU_JOUR) expect(planPourTenueDuJour([plan("a", m)], DRESSING, [])).toEqual({ etat: "applicable", plan: plan("a", m) });
+    expect(planPourTenueDuJour([plan("a", "Soirée")], DRESSING, [])).toBeNull();
+  });
+
+  it("travail le jour et dîner le soir : le plan de journée fait la tenue, le dîner reste un rappel", () => {
+    const plans = plansDuJour([plan("diner", "Soirée"), plan("bureau", "Matin")], "2026-10-02");
+    expect(planPourTenueDuJour(plans, DRESSING, [])).toMatchObject({ etat: "applicable", plan: { id: "bureau" } });
+  });
+
+  it("dans l'ordre de la journée : « Toute la journée » passe avant le matin", () => {
+    const plans = plansDuJour([plan("matin", "Matin"), plan("jour", "Toute la journée")], "2026-10-02");
+    expect(planPourTenueDuJour(plans, DRESSING, [])?.plan.id).toBe("jour");
+  });
+
+  it("un plan écarté (« Voir une autre proposition ») ne revient pas ; le suivant peut prendre sa place", () => {
+    const plans = plansDuJour([plan("matin", "Matin"), plan("aprem", "Après-midi")], "2026-10-02");
+    expect(planPourTenueDuJour(plans, DRESSING, ["matin"])?.plan.id).toBe("aprem");
+    expect(planPourTenueDuJour(plans, DRESSING, ["matin", "aprem"])).toBeNull();
+  });
+
+  it("une pièce sortie du dressing : incomplet, jamais imposé", () => {
+    expect(planPourTenueDuJour([plan("a", "Matin", [1, 2, 99])], DRESSING, [])).toEqual({ etat: "incomplet", plan: plan("a", "Matin", [1, 2, 99]), manquantes: 1 });
+    expect(planPourTenueDuJour([plan("a", "Matin", [])], DRESSING, [])?.etat).toBe("incomplet");
+  });
+
+  it("aucun plan ce jour-là : rien", () => {
+    expect(planPourTenueDuJour([], DRESSING, [])).toBeNull();
+  });
+});
+
+describe("sousChoixDuPlan", () => {
+  it("rend le mode de travail ou le contexte de date, s'ils sont valides", () => {
+    expect(sousChoixDuPlan({ occasion: "travail_formel", sousChoix: "Télétravail" })).toEqual({ workMode: "Télétravail" });
+    expect(sousChoixDuPlan({ occasion: "date", sousChoix: "Verre" })).toEqual({ dateContext: "Verre" });
+    expect(sousChoixDuPlan({ occasion: "date", sousChoix: "Inconnu" })).toEqual({});
+    expect(sousChoixDuPlan({ occasion: "quotidien", sousChoix: null })).toEqual({});
+  });
+});
+
+describe("alerteMeteoPlan — un constat sur les pièces, jamais deviné", () => {
+  const sandales = piece(5, "chaussures", { shoeType: "Sandales" });
+  const mocassins = piece(6, "chaussures", { shoeType: "Mocassins" });
+
+  it("chaussures ouvertes sous la pluie", () => {
+    expect(alerteMeteoPlan([sandales], { temp: 16, label: "Pluie légère" })).toMatch(/pluie/i);
+    expect(alerteMeteoPlan([mocassins], { temp: 16, label: "Pluie légère" })).toBeNull();
+    expect(alerteMeteoPlan([sandales], { temp: 16, label: "Ensoleillé" })).toBeNull();
+  });
+
+  it("pièce hors de ses bornes de température déclarées", () => {
+    const lin = piece(7, "haut", { meteoMinTemp: 18 });
+    const laine = piece(8, "pull", { meteoMaxTemp: 15 });
+    expect(alerteMeteoPlan([lin], { temp: 11, label: "Nuageux" })).toBe("Il fera 11° : plus frais que ce que certaines pièces de cette tenue supportent.");
+    expect(alerteMeteoPlan([laine], { temp: 24, label: "Ensoleillé" })).toMatch(/plus chaud/);
+    expect(alerteMeteoPlan([lin], { temp: 20, label: "Nuageux" })).toBeNull();
+    expect(alerteMeteoPlan([laine], { temp: 12, label: "Nuageux" })).toBeNull();
+  });
+});
