@@ -9,6 +9,7 @@ import type {
   PieceSuggeree,
   RaisonInexploitable,
   ReponseAvis,
+  TitresAvis,
 } from "../../supabase/functions/_shared/avisStyliste.ts";
 
 /*
@@ -22,7 +23,7 @@ import type {
  * de l'afficher.
  */
 
-export type { AvisStyliste, PieceSuggeree };
+export type { AvisStyliste, PieceSuggeree, TitresAvis };
 
 const noms = (hexes: string[] | undefined) =>
   (hexes ?? []).map((h) => paletteColorName(h)).filter((n): n is string => Boolean(n));
@@ -71,6 +72,39 @@ export function estAvis(v: unknown): v is AvisStyliste {
   const o = v as Record<string, unknown>;
   const chaines = (x: unknown) => Array.isArray(x) && x.length > 0 && x.every((s) => typeof s === "string" && s.trim());
   return typeof o.overallAssessment === "string" && typeof o.mainAdvice === "string" && chaines(o.strengths) && chaines(o.suggestions);
+}
+
+/**
+ * LES TITRES À AFFICHER (30/09/2026). Le serveur les a validés à la
+ * génération (lireTitres), mais un avis enregistré revient de la base : ici,
+ * seul ce qui a la forme attendue passe — chaînes courtes, un titre par point
+ * et par piste. Un groupe douteux est écarté, jamais réparé : l'avis s'affiche
+ * alors sans ce titre, comme un avis d'avant les titres. Les listes fermées
+ * restent l'affaire du serveur ; un titre de raison inconnu prend
+ * simplement le pictogramme générique.
+ */
+export function titresAffichables(avis: AvisStyliste): TitresAvis {
+  const brut: unknown = (avis as { titres?: unknown }).titres;
+  if (!brut || typeof brut !== "object") return {};
+  const t = brut as Record<string, unknown>;
+  const court = (x: unknown, max: number) => (typeof x === "string" && x.trim() && x.trim().length <= max ? x.trim() : null);
+  const serie = (x: unknown, n: number | null, max: number): string[] | undefined => {
+    if (!Array.isArray(x) || x.length === 0 || (n !== null && x.length !== n)) return undefined;
+    const l = x.map((v) => court(v, max));
+    return l.every(Boolean) ? (l as string[]) : undefined;
+  };
+  const out: TitresAvis = {};
+  const verdict = court(t.verdict, 40);
+  if (verdict) out.verdict = verdict as TitresAvis["verdict"];
+  const etiquettes = serie(t.etiquettes, null, 30);
+  if (etiquettes) out.etiquettes = etiquettes.slice(0, 3);
+  const pointsForts = serie(t.pointsForts, avis.strengths.length, 40);
+  if (pointsForts) out.pointsForts = pointsForts as TitresAvis["pointsForts"];
+  const conseil = court(t.conseil, 40);
+  if (conseil) out.conseil = conseil;
+  const suggestions = serie(t.suggestions, avis.suggestions.length, 40);
+  if (suggestions) out.suggestions = suggestions;
+  return out;
 }
 
 /** Pièces suggérées reçues : identifiants numériques uniquement, 3 au plus (point 5). */

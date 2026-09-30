@@ -288,6 +288,20 @@ Ces champs ne font pas partie de la structure décidée. Ils sont proposés parc
 
 Une seule des options A et B doit être retenue (voir section 12). Dans l'option B, le serveur doit vérifier que chaque identifiant renvoyé existe bien dans le dressing de l'utilisateur.
 
+### Titres de l'avis \[DÉCIDÉ le 30/09/2026\]
+
+Refonte de la page « Avis de styliste » : la styliste produit aussi les titres qui structurent la page. Sortie du modèle (`SCHEMA_REPONSE`), puis champ `titres` de l'avis (`AvisStyliste.titres`, enregistré avec lui dans `avis_styliste.resultat`, sans migration) :
+
+| Sortie du modèle | `titres.` | Règle | Exemple |
+| --- | --- | --- | --- |
+| `verdictTitle` | `verdict` | Liste fermée `TITRES_VERDICT` : Très réussi, Réussi, Bien vu, À affiner | Très réussi |
+| `verdictTags` | `etiquettes` | 2 à 3 étiquettes sur la tenue, jamais sur le corps, 30 caractères au plus | Palette harmonieuse |
+| `strengthTitles` | `pointsForts` | Un par point fort, même ordre, liste fermée `TITRES_RAISON` (chaque mot a son pictogramme) : Structure, Proportions, Harmonie, Couleurs, Matières, Équilibre, Accessoires, Style | Structure |
+| `adviceTitle` | `conseil` | 3 à 5 mots à l'impératif, 40 caractères au plus | Marque la taille |
+| `suggestionTitles` | `suggestions` | Un par piste, même ordre, action à l'infinitif, 40 caractères au plus | Remplacer le top noir |
+
+Validation (`lireTitres`) : un groupe mal formé est écarté seul — l'avis reste valide et s'affiche sans ce titre, sans relance payante. La charte, elle, s'applique aux titres comme à tout texte affiché : une faute rend l'avis invalide. Côté app, `titresAffichables` ne laisse passer que des titres bien formés (un avis enregistré revient de la base). Un avis antérieur n'a pas de titres et s'affiche comme avant ; rien n'est complété côté app. Les nouveaux avis ne portent de titres qu'une fois la fonction Edge `stylist-advice` redéployée.
+
 ## 9. Personnalisation
 
 Seules les données stylistiques utiles au conseil sont transmises au modèle ; rien n'est déduit de l'image sur la personne elle-même.
