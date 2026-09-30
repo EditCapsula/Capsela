@@ -189,20 +189,36 @@ function EtatAnalyse({ etapes, phrase }: { etapes: string[]; phrase: string }) {
 /**
  * LA PHOTO EN HÉROS du résultat : ~78 % de la largeur (plafonnée en hauteur
  * pour une photo très verticale), coins arrondis, agrandissable d'un tap.
+ *
+ * Exportée (30/09/2026) pour l'avis rouvert depuis le Journal, qui n'a que
+ * l'URL de sa photo : sans dimensions connues, la photo garde ses proportions
+ * naturelles, entière, plafonnée en hauteur.
  */
-function PhotoHeros({ photo }: { photo: PhotoAvis }) {
+export function PhotoHeros({ url, largeur, hauteur, taille = "78%" }: { url: string; largeur?: number; hauteur?: number; taille?: string }) {
   const [plein, setPlein] = useState(false);
+  const ratio = largeur && hauteur ? `${largeur} / ${hauteur}` : undefined;
   return (
     <>
       <button
         type="button"
         onClick={() => setPlein(true)}
         aria-label="Agrandir la photo"
-        className="block mx-auto rounded-[22px] overflow-hidden border border-border bg-card cursor-zoom-in motion-safe:animate-[capsule-apparition_320ms_ease-out_both]"
-        style={{ width: "78%", aspectRatio: `${photo.largeur} / ${photo.hauteur}`, maxHeight: "62vh" }}
+        className="relative block mx-auto rounded-[22px] overflow-hidden border border-border bg-card cursor-zoom-in motion-safe:animate-[capsule-apparition_320ms_ease-out_both]"
+        style={{ width: taille, aspectRatio: ratio, maxHeight: "62vh" }}
       >
+        {/* Seul élément posé sur la photo : il dit qu'elle s'agrandit. */}
+        <span aria-hidden="true" className="absolute top-[10px] right-[10px] w-[30px] h-[30px] rounded-full flex items-center justify-center text-cream" style={{ background: "rgba(29,26,22,.32)" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" style={{ display: "block" }}>
+            <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photo.url} alt="Ta tenue" className="w-full h-full object-cover block" />
+        <img
+          src={url}
+          alt="Ta tenue"
+          className={ratio ? "w-full h-full object-cover block" : "w-full h-auto object-contain block"}
+          style={ratio ? undefined : { maxHeight: "62vh" }}
+        />
       </button>
       {plein && (
         <button
@@ -213,7 +229,7 @@ function PhotoHeros({ photo }: { photo: PhotoAvis }) {
           style={{ background: "rgba(29,26,22,.88)" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photo.url} alt="Ta tenue" className="max-w-full max-h-full object-contain rounded-[14px]" />
+          <img src={url} alt="Ta tenue" className="max-w-full max-h-full object-contain rounded-[14px]" />
         </button>
       )}
     </>
@@ -322,7 +338,7 @@ export default function AvisStylisteScreen() {
     const enregistrement = avisStyliste.enregistrement;
     contenu = (
       <div className="mt-[22px]">
-        <PhotoHeros photo={photo} />
+        <PhotoHeros url={photo.url} largeur={photo.largeur} hauteur={photo.hauteur} />
         <ResultatAvis
           avis={analyse.avis}
           pieces={analyse.dressing}

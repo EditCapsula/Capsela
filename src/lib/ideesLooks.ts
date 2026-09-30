@@ -1,4 +1,4 @@
-import { representativeWeatherFor } from "./capsule";
+import { contexteCapsule, estDeSaison, representativeWeatherFor } from "./capsule";
 import { OCCASIONS } from "./data";
 import { describeOutfitVariation, getOutfitsForItem, nounInfoDuNom, outfitFormality, type ItemOutfitVariation, type OutfitStyleInsight } from "./logic";
 import type { CapsuleSeason, Item, OccasionKey } from "./types";
@@ -48,7 +48,14 @@ export function ideesDressingDAbord(
   const meteo = representativeWeatherFor(capsuleSeason);
   const tirer = (p: Item[]) => getOutfitsForItem(pivot.id, p, meteo, preferredHexes, {}, gender, capsuleSeason);
   if (!dressing) return tirer(pool);
-  const duDressing = tirer(pool.filter((it) => it.id === pivot.id || sourcePiece(it.id, dressing) === "owned"));
+  // Le dressing seul, mais DE LA SAISON des idées (28/09/2026) : des bottines
+  // d'automne ne complètent pas une idée d'été — sans ce filtre, la tenue
+  // « entièrement de ton dressing » l'emportait sur les chaussures d'été de
+  // la capsule. La pièce pivot reste, quelle que soit sa saison.
+  const deSaison = contexteCapsule(capsuleSeason);
+  const duDressing = tirer(
+    pool.filter((it) => it.id === pivot.id || (sourcePiece(it.id, dressing) === "owned" && estDeSaison(it, deSaison)))
+  );
   const couvertes = new Set(duDressing.map((v) => v.occasion));
   const completees = tirer(pool).filter((v) => !couvertes.has(v.occasion));
   const rang = (o: OccasionKey) => OCCASIONS.findIndex(([k]) => k === o);

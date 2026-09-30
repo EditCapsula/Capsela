@@ -63,8 +63,20 @@ export function calculerIdeesTenues(
 
 const CAT_KEYS = CATS.map(([k]) => k);
 
+/**
+ * Le pool des idées d'une saison (28/09/2026) : le dressing, la capsule de
+ * cette saison pour les catégories qu'il n'a pas, et — demandé : « elle doit
+ * proposer les chaussures de la saison concernée, quitte à privilégier des
+ * chaussures de la capsule » — la capsule aussi pour les catégories où il n'a
+ * rien DE CETTE SAISON (composeWardrobePool, completerPourSaison). Le même
+ * pour cet écran et pour « Jamais portées », qui annonce le nombre d'idées.
+ */
+export function poolPourIdees(dressing: Item[], capsule: Item[], saison: CapsuleSeason): Item[] {
+  return composeWardrobePool(dressing, capsule, CAT_KEYS, { completerPourSaison: contexteCapsule(saison) });
+}
+
 export default function ItemOutfitsScreen() {
-  const { state, wardrobePool, vestiairePool, actions } = useCapsela();
+  const { state, wardrobePool, vestiairePool, defaultCapsule, actions } = useCapsela();
   const { profile } = useAuth();
   const pretes = state.ideesTenuesPretes;
   // La pastille choisie survit à l'aller-retour vers le détail d'un look
@@ -89,10 +101,11 @@ export default function ItemOutfitsScreen() {
   const capsuleSeason = pivot ? saisonPourIdees(pivot, saisonCourante) : saisonCourante;
   const autreSaison = capsuleSeason !== saisonCourante;
   const poolSaison = useMemo(() => {
-    if (!autreSaison) return wardrobePool;
-    const capsule = computeDefaultCapsule(profile, representativeWeatherFor(capsuleSeason), state.suggestedExcluded, capsuleSeason, vestiairePool);
-    return composeWardrobePool(state.items, capsule, CAT_KEYS);
-  }, [autreSaison, wardrobePool, profile, capsuleSeason, state.suggestedExcluded, vestiairePool, state.items]);
+    const capsule = autreSaison
+      ? computeDefaultCapsule(profile, representativeWeatherFor(capsuleSeason), state.suggestedExcluded, capsuleSeason, vestiairePool)
+      : defaultCapsule;
+    return poolPourIdees(state.items, capsule, capsuleSeason);
+  }, [autreSaison, defaultCapsule, profile, capsuleSeason, state.suggestedExcluded, vestiairePool, state.items]);
 
   const pool = useMemo(
     () => (!pivot ? [] : poolSaison.some((i) => i.id === pivot.id) ? poolSaison : [...poolSaison, pivot]),

@@ -7,7 +7,11 @@ import {
   extraireTexteReponse,
   formulerContexte,
   INSTRUCTIONS,
+  lireTitres,
   lireVetements,
+  SCHEMA_REPONSE,
+  TITRES_RAISON,
+  TITRES_VERDICT,
   MOTS_INTERDITS,
   nettoyerContexte,
   reconnaitrePieces,
@@ -228,6 +232,59 @@ describe("validerReponse", () => {
 
   it("rejette une réponse qui enfreint la charte", () => {
     expect(validerReponse(JSON.stringify({ ...AVIS, overallAssessment: "Je te donne 7/10 pour cette tenue." }))).toEqual({ etat: "invalide", motif: "charte:note" });
+  });
+});
+
+describe("titres de l'avis (30/09/2026) — groupe par groupe, la charte seule bloque", () => {
+  const TITRES = {
+    verdictTitle: "Très réussi",
+    verdictTags: ["Palette harmonieuse", "Facile à porter"],
+    strengthTitles: ["Couleurs", "Structure"],
+    adviceTitle: "Marque la taille",
+    suggestionTitles: ["Changer de chaussures", "Ajouter un bijou"],
+  };
+
+  it("une réponse complète garde tous ses titres, dans l'ordre des points", () => {
+    const v = validerReponse(JSON.stringify({ ...AVIS, ...TITRES }));
+    expect(v.etat).toBe("valide");
+    if (v.etat !== "valide") return;
+    expect(v.avis.titres).toEqual({
+      verdict: "Très réussi",
+      etiquettes: ["Palette harmonieuse", "Facile à porter"],
+      pointsForts: ["Couleurs", "Structure"],
+      conseil: "Marque la taille",
+      suggestions: ["Changer de chaussures", "Ajouter un bijou"],
+    });
+  });
+
+  it("sans titres (réponse d'avant, ou tout écarté) : l'avis reste valide, sans clé titres", () => {
+    const v = validerReponse(JSON.stringify(AVIS));
+    expect(v.etat).toBe("valide");
+    if (v.etat === "valide") expect(v.avis).not.toHaveProperty("titres");
+  });
+
+  it("un groupe mal formé est écarté seul, sans relance", () => {
+    const t = lireTitres(
+      { ...TITRES, verdictTitle: "Parfait", strengthTitles: ["Couleurs"], verdictTags: ["x".repeat(40), "Facile à porter"], suggestionTitles: ["Changer de chaussures", ""] },
+      2,
+      2
+    );
+    expect(t).toEqual({ conseil: "Marque la taille" });
+    expect(lireTitres({ ...TITRES, strengthTitles: ["Couleurs", "Silhouette"] }, 2, 2)?.pointsForts).toBeUndefined();
+    expect(lireTitres({}, 2, 2)).toBeUndefined();
+  });
+
+  it("un titre qui enfreint la charte rend l'avis invalide, comme tout texte affiché", () => {
+    expect(validerReponse(JSON.stringify({ ...AVIS, ...TITRES, adviceTitle: "Cacher les hanches" }))).toEqual({ etat: "invalide", motif: "charte:cacher" });
+    expect(validerReponse(JSON.stringify({ ...AVIS, ...TITRES, verdictTags: ["Look 9/10", "Facile à porter"] }))).toEqual({ etat: "invalide", motif: "charte:note" });
+  });
+
+  it("le schéma impose les listes fermées, et les consignes les nomment", () => {
+    const p = SCHEMA_REPONSE.properties;
+    expect(SCHEMA_REPONSE.required).toEqual(expect.arrayContaining(["verdictTitle", "verdictTags", "strengthTitles", "adviceTitle", "suggestionTitles"]));
+    expect(p.verdictTitle.enum).toEqual([...TITRES_VERDICT, null]);
+    expect(p.strengthTitles.items.enum).toEqual(TITRES_RAISON);
+    for (const t of [...TITRES_VERDICT, ...TITRES_RAISON]) expect(INSTRUCTIONS).toContain(t);
   });
 });
 

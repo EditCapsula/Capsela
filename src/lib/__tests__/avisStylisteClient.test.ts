@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, prioriserActionsAvis, reactionErreur, repartirPiecesAvis } from "../avisStylisteClient";
+import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, prioriserActionsAvis, reactionErreur, repartirPiecesAvis, titresAffichables, type AvisStyliste } from "../avisStylisteClient";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 
 const profil = (over: Partial<Profile> = {}): Profile => ({ ...EMPTY_PROFILE, gender: "femme", displayName: "Angela", ...over });
@@ -122,5 +122,23 @@ describe("présentation du résultat — uniquement des données réelles", () =
     expect(prioriserActionsAvis({ heure: 19, tenueDuJourPortee: false, composable: true })).toEqual({ principale: "demain", secondaires: ["planifier"] });
     expect(prioriserActionsAvis({ heure: 10, tenueDuJourPortee: true, composable: true })?.principale).toBe("demain");
     expect(prioriserActionsAvis({ heure: 10, tenueDuJourPortee: false, composable: false })).toBeNull();
+  });
+});
+
+describe("titresAffichables — un avis relu de la base n'affiche que des titres bien formés", () => {
+  const base: AvisStyliste = { overallAssessment: "Juste.", strengths: ["a", "b"], mainAdvice: "c", suggestions: ["d", "e", "f"] };
+
+  it("avis d'avant les titres : rien", () => {
+    expect(titresAffichables(base)).toEqual({});
+  });
+
+  it("garde ce qui a la forme attendue", () => {
+    const avis = { ...base, titres: { verdict: "Réussi", etiquettes: ["Palette douce"], pointsForts: ["Couleurs", "Style"], conseil: "Ose la couleur", suggestions: ["Un", "Deux", "Trois"] } } as AvisStyliste;
+    expect(titresAffichables(avis)).toEqual(avis.titres);
+  });
+
+  it("écarte un groupe douteux sans le réparer : compte faux, mauvais type, texte trop long", () => {
+    const avis = { ...base, titres: { verdict: 7, etiquettes: "Palette", pointsForts: ["Couleurs"], conseil: "x".repeat(60), suggestions: ["Un", "Deux", "Trois"] } } as unknown as AvisStyliste;
+    expect(titresAffichables(avis)).toEqual({ suggestions: ["Un", "Deux", "Trois"] });
   });
 });

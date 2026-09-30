@@ -13,7 +13,7 @@ import { deLaSaisonEnCours, neverWornItems, inactivityInfo } from "@/lib/selecto
 import type { Item } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
 import { MosaiquePieces, VisuelPiece } from "@/components/CarteLook";
-import { calculerIdeesTenues } from "@/components/screens/ItemOutfitsScreen";
+import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
 
 /*
  * « JAMAIS PORTÉES » — refonte éditoriale du 26/09/2026 : non plus « voici
@@ -155,7 +155,7 @@ function CartePiece({
 }
 
 export default function NeverWornScreen() {
-  const { state, wardrobePool, actions } = useCapsela();
+  const { state, wardrobePool, defaultCapsule, actions } = useCapsela();
   const { profile } = useAuth();
   const neverWorn = neverWornItems(state.items);
   const enSaison = neverWorn.filter((it) => deLaSaisonEnCours(it));
@@ -168,13 +168,16 @@ export default function NeverWornScreen() {
   // changent pas d'un rendu à l'autre, et ce sont elles qui partent au clic.
   // Depuis le 27/09/2026 une passe fait deux tirages, le dressing d'abord
   // (ideesDressingDAbord) : +11 ms mesurés sur un dressing de neuf pièces.
+  // Même pool que « Comment porter … ? » (poolPourIdees, 28/09/2026) : les
+  // idées annoncées ici sont celles qu'on trouve en arrivant là-bas.
+  const poolIdees = useMemo(() => poolPourIdees(state.items, defaultCapsule, capsuleSeason), [state.items, defaultCapsule, capsuleSeason]);
   const idees = useMemo(() => {
     const m = new Map<number, ItemOutfitVariation[]>();
-    for (const it of enSaison) m.set(it.id, calculerIdeesTenues(it, wardrobePool, state.items, capsuleSeason, preferredHexes, profile.gender));
+    for (const it of enSaison) m.set(it.id, calculerIdeesTenues(it, poolIdees, state.items, capsuleSeason, preferredHexes, profile.gender));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsEnSaison, wardrobePool, capsuleSeason, preferredHexes, profile.gender]);
-  const poolApercus = useMemo(() => [...wardrobePool, ...state.items], [wardrobePool, state.items]);
+  }, [idsEnSaison, poolIdees, capsuleSeason, preferredHexes, profile.gender]);
+  const poolApercus = useMemo(() => [...poolIdees, ...wardrobePool, ...state.items], [poolIdees, wardrobePool, state.items]);
 
   const n = neverWorn.length;
   // Hors saison = l'autre moitié de l'année (« Toutes saisons » est toujours de saison).

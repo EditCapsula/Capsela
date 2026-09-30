@@ -6,13 +6,13 @@ import BadgePremium from "@/components/BadgePremium";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
+import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
-import { outfitMoodPhrase, tenueAUnSocle } from "@/lib/logic";
+import { qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
@@ -20,167 +20,78 @@ import { useCapsela } from "@/lib/store";
 import { JourEtMeteo } from "@/components/JourMeteo";
 import { PlansDuJour } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
-import type { CategoryKey, Item, SavedLook } from "@/lib/types";
+import type { Item, SavedLook } from "@/lib/types";
 
 /**
- * Flat-lay éditorial de la card héros (refonte 21/09/2026, maquette V3) —
- * même source que la page Tenue (state.outfit), jamais un recalcul.
+ * LES SIX EMPLACEMENTS DU CHARGEMENT de la card « Look du jour » (28/09/2026,
+ * maquette « Capsela compose ta tenue… »). Des silhouettes de pièces — veste,
+ * t-shirt, pantalon, chaussures, sac, ceinture — en crème très translucide sur
+ * le terracotta, et un anneau fin au centre qui tourne lentement. Ce ne sont
+ * pas les pièces à venir : le moteur n'a encore rien choisi, les silhouettes
+ * disent seulement ce qu'on compose.
  *
- * Ce qui change par rapport à la version du 20/08 : la composition ne vit plus
- * dans une boîte de 148 px intercalée entre le texte et les boutons, elle
- * occupe TOUTE la card, texte et actions passant par-dessus. C'est ce qui fait
- * basculer la page d'une card informative à un vrai moment visuel — le teaser
- * ne pouvait pas tenir ce rôle tant qu'il était un bandeau au milieu.
- *
- * La sélection reste inchangée : priorité stricte (robe/combinaison seule
- * sinon haut + bas, puis chaussures, sac, au plus un accessoire) et un rôle
- * par pièce.
+ * L'anneau reprend l'animation du spinner de l'app (loading-spinner-arc, 1,4 s
+ * par tour, arrêtée si le téléphone demande moins d'animations), en crème : le
+ * spinner d'origine est terracotta, invisible sur ce fond.
  */
-function isOnePieceCat(cat: CategoryKey) {
-  return cat === "robe" || cat === "combinaison";
-}
-function isTopCat(cat: CategoryKey) {
-  return cat === "haut" || cat === "pull";
-}
-function isBottomCat(cat: CategoryKey) {
-  return cat === "pantalon" || cat === "jean" || cat === "jupe" || cat === "short";
-}
-function isAccessoryCat(cat: CategoryKey) {
-  return cat === "bijou" || cat === "accessoire";
-}
+const SILHOUETTES_PIECES: { nom: string; dessin: React.ReactNode }[] = [
+  { nom: "veste", dessin: <path d="M17 8l-9 5v27h10V21l6 9 6-9v19h10V13l-9-5-7 11z" /> },
+  { nom: "haut", dessin: <path d="M17 9l-9 5 3 8 5-2v19h16V20l5 2 3-8-9-5c-1.5 3-4 4.6-7 4.6S18.5 12 17 9z" /> },
+  { nom: "bas", dessin: <path d="M15 7h18l2 34h-8l-3-21-3 21h-8z" /> },
+  { nom: "chaussures", dessin: <path d="M5 31c6 0 9-6 14-6s7 5 14 5c5 0 9 2 9 5v2H5z" /> },
+  {
+    nom: "sac",
+    dessin: (
+      <>
+        <path d="M11 20h26l3 20H8z" />
+        <path d="M18 20v-3a6 6 0 0 1 12 0v3" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      </>
+    ),
+  },
+  {
+    nom: "accessoire",
+    dessin: (
+      <>
+        <path d="M4 21h40v7H4z" />
+        <rect x="17" y="18" width="10" height="13" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5" />
+      </>
+    ),
+  },
+];
 
-/** Sélectionne 3 à 5 pièces représentatives, jamais plus d'un accessoire. */
-function selectHomePieces(items: Item[]): Item[] {
-  const onePiece = items.find((it) => isOnePieceCat(it.cat));
-  const core: Item[] = [];
-  if (onePiece) {
-    core.push(onePiece);
-  } else {
-    const top = items.find((it) => isTopCat(it.cat));
-    const bottom = items.find((it) => isBottomCat(it.cat));
-    if (top) core.push(top);
-    if (bottom) core.push(bottom);
-  }
-  const shoes = items.find((it) => it.cat === "chaussures");
-  if (shoes) core.push(shoes);
-  const bag = items.find((it) => it.cat === "sac");
-  if (bag) core.push(bag);
-  const accessory = items.find((it) => isAccessoryCat(it.cat));
-  if (accessory && core.length < 5) core.push(accessory);
-  return core.slice(0, 5);
-}
-
-type HomeRole = "onepiece" | "haut" | "bas" | "chaussures" | "sac" | "petit";
-function homeRoleOf(cat: CategoryKey): HomeRole {
-  if (isOnePieceCat(cat)) return "onepiece";
-  if (isTopCat(cat)) return "haut";
-  if (isBottomCat(cat)) return "bas";
-  if (cat === "chaussures") return "chaussures";
-  if (cat === "sac") return "sac";
-  return "petit";
-}
-
-type HeroSlot = { left: number; top: number; w: number; h: number; z: number };
-
-/**
- * Emplacements en % de la CARD ENTIÈRE, et non plus d'un cluster interne à
- * 82 % : c'est la condition pour que les pièces atteignent la taille de la
- * maquette, sur une card deux fois plus haute qu'avant. Les chevauchements
- * sont volontaires et faibles — le haut mord sur le bas, les chaussures sur
- * le bas, le sac sur le coin haut du bas — jamais au point de masquer une
- * pièce principale, d'où les z-index.
- *
- * LES % SONT RELATIFS À LA ZONE DE COMPOSITION, pas à la card : cette zone
- * s'arrête 66 px avant le bas (22 de padding + 44 de rangée badge/bouton).
- * Aucune pièce ne peut donc atteindre les boutons, quelle que soit la hauteur
- * de la card — c'est une borne structurelle, elle ne se recalcule pas.
- *
- * Elle remplace deux tentatives arithmétiques qui ont échoué l'une après
- * l'autre : d'abord des chaussures descendant à 88 % de la card, franchement
- * sous le bouton ; puis une jupe mordant encore 1,5 px sur la rangée entre 360
- * et 390 px. La leçon est que la hauteur disponible dépend de la hauteur de la
- * card, laquelle dépend du contenu : la calculer revenait à poursuivre une
- * cible mobile.
- *
- * LA SEULE CONTRAINTE QUI RESTE ARITHMÉTIQUE est horizontale, et elle a été
- * vérifiée sur 320 / 360 / 375 / 390 / 412 / 430 / 480 px, pour les deux
- * compositions. Le titre est borné à 42 % de la card et la météo à 38 %, donc
- * aucune pièce ne commence avant 44 % (le haut, dans la bande du titre) ni
- * 40 % (les chaussures, dans celle de la météo). C'est cette contrainte qui
- * fixe le décalage du cluster vers la droite, pas l'esthétique.
- *
- * Le titre descend à 20 px sous 380 px de large : à 26 px, la colonne tombe à
- * 92 px et « Ta tenue est prête » se brisait en QUATRE lignes pour trois mots.
- *
- * Largeurs conformes au brief : haut 40 %, bas 46 %, sac 24 %, chaussures 28 %.
- */
-const HERO_SLOTS_ONEPIECE: Record<HomeRole, HeroSlot> = {
-  onepiece: { left: 44, top: 4, w: 44, h: 86, z: 3 },
-  haut: { left: 44, top: 4, w: 44, h: 86, z: 3 },
-  bas: { left: 44, top: 4, w: 44, h: 86, z: 3 },
-  chaussures: { left: 40, top: 62, w: 28, h: 34, z: 4 },
-  sac: { left: 74, top: 4, w: 24, h: 32, z: 2 },
-  petit: { left: 80, top: 66, w: 17, h: 24, z: 2 },
-};
-const HERO_SLOTS_STANDARD: Record<HomeRole, HeroSlot> = {
-  onepiece: { left: 44, top: 8, w: 40, h: 52, z: 3 },
-  haut: { left: 44, top: 8, w: 40, h: 52, z: 3 },
-  bas: { left: 52, top: 26, w: 46, h: 62, z: 2 },
-  chaussures: { left: 40, top: 50, w: 28, h: 35, z: 4 },
-  sac: { left: 74, top: 4, w: 24, h: 32, z: 1 },
-  petit: { left: 80, top: 54, w: 17, h: 24, z: 1 },
-};
-
-/**
- * Une pièce du flat-lay. `<img>` plutôt que `background-image` (brief V3) :
- * `object-fit: contain` garantit la même absence de déformation qu'un
- * `background-size: contain`, mais l'élément devient chargeable en différé et
- * remplaçable par un repli visible quand le fichier manque.
- *
- * `alt=""` est ici le bon alt, pas un oubli : ces images vivent DANS un bouton
- * qui porte déjà son intitulé (« Voir ma tenue »). Leur donner un nom
- * allongerait le nom accessible du bouton de quatre ou cinq libellés produit
- * sans rien apprendre à qui l'écoute.
- */
-function HeroPiece({ item, slot, eager }: { item: Item; slot: HeroSlot; eager: boolean }) {
-  const [failed, setFailed] = useState(false);
-  const img = resolveItemImage(item);
-  const showImg = Boolean(img.url) && !failed;
+function EmplacementsLook() {
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: slot.left + "%",
-        top: slot.top + "%",
-        width: slot.w + "%",
-        height: slot.h + "%",
-        zIndex: slot.z,
-      }}
-    >
-      {showImg ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={img.url}
-          alt=""
-          decoding="async"
-          loading={eager ? "eager" : "lazy"}
-          onError={() => setFailed(true)}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            display: "block",
-            // Ombre très douce, portée par la silhouette détourée et non par
-            // une boîte : un box-shadow dessinerait le rectangle de l'image.
-            filter: "drop-shadow(0 6px 14px rgba(29,26,22,.18))",
-          }}
-        />
-      ) : (
-        // Repli quand la pièce n'a aucun visuel : un aplat de sa couleur
-        // dominante, pour qu'elle reste présente dans la composition plutôt
-        // que de laisser un trou.
-        <div style={{ width: "100%", height: "100%", borderRadius: 10, background: item.hex, opacity: 0.9 }} />
-      )}
+    <div className="relative mt-[16px] grid grid-cols-3 gap-[8px]" aria-hidden="true">
+      {SILHOUETTES_PIECES.map((s) => (
+        <div
+          key={s.nom}
+          className="rounded-[14px] flex items-center justify-center"
+          style={{ aspectRatio: "1 / 1.1", background: "rgba(243,238,229,.10)", color: "rgba(243,238,229,.2)" }}
+        >
+          <svg viewBox="0 0 48 48" width="58%" height="58%" fill="currentColor">
+            {s.dessin}
+          </svg>
+        </div>
+      ))}
+      <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <span className="relative block" style={{ width: 42, height: 42 }}>
+          <svg width="42" height="42" viewBox="0 0 42 42" className="absolute inset-0">
+            <circle cx="21" cy="21" r="20" fill="none" stroke="rgba(243,238,229,.22)" strokeWidth="1.5" />
+          </svg>
+          <svg width="42" height="42" viewBox="0 0 42 42" className="absolute inset-0 loading-spinner-arc">
+            <circle
+              cx="21"
+              cy="21"
+              r="20"
+              fill="none"
+              stroke="rgba(243,238,229,.85)"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 20 * 0.28} ${2 * Math.PI * 20 * 0.72}`}
+            />
+          </svg>
+        </span>
+      </span>
     </div>
   );
 }
@@ -613,12 +524,10 @@ export default function HomeScreen() {
 
   const outfitPieces = hasOutfit ? piecesResolues : [];
 
-  // Même phrase d'explication que la page Tenue (explainRecommendation) — pas
-  // de température affichée tant que la géolocalisation n'a pas résolu la
-  // météo réelle du jour.
-  // La température est sur la ligne jour + météo au-dessus depuis le 27/09/2026 :
-  // la phrase de la card ne la répète plus (même arbitrage que Tenue, 23/09).
-  const outfitQuote = outfitMoodPhrase(occasionKey, state.workMode, state.dateContext, meteoEnAttente ? null : meteoDuJour.temp);
+  // Le qualificatif sous le titre (qualificatifLook) : celui de la météo, sans
+  // jamais présenter comme une option une veste que la tenue contient. Aucune
+  // température affichée : elle est sur la ligne jour + météo, juste au-dessus.
+  const qualificatif = qualificatifLook(meteoEnAttente ? null : meteoDuJour.temp, outfitPieces);
 
   // Capsule calculée avec le même moteur que CapsuleScreen, jamais un second
   // calcul : saison/style/effectif affichés ici correspondent toujours
@@ -626,31 +535,6 @@ export default function HomeScreen() {
   const capsuleSeason = state.capsuleSeason || currentSeasonKey();
   const capsule = computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
   const capsuleStyleLabel = styleLabel(profile.styles[0], profile.gender);
-
-
-  /**
-   * PROVENANCE DES PIÈCES — d'où vient la tenue du jour.
-   *
-   * `isCatalogId` sépare une pièce réellement possédée d'une suggestion de
-   * la capsule : la même séparation que l'écran Tenue, jamais un second
-   * calcul. Le dressing passe toujours en premier, même quand il n'apporte
-   * qu'une pièce — c'est la hiérarchie du produit, pas un tri par quantité.
-   *
-   * Rien n'est dit quand il n'y a pas de tenue, et jamais « 0 pièce ».
-   */
-  const provenanceTexte = (() => {
-    const total = outfitPieces.length;
-    if (!total) return null;
-    const capsule = outfitPieces.filter((it) => isCatalogId(it.id)).length;
-    const dressing = total - capsule;
-    const pieces = (n: number) => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
-    // Même règle que l'écran Tenue : une source unique s'énonce, deux
-    // sources se comptent. Les deux écrans disent la même chose du même
-    // calcul, il serait absurde qu'ils ne la disent pas pareil.
-    if (!capsule) return `Une sélection de ${pieces(dressing)} de ton dressing`;
-    if (!dressing) return `Une sélection de ${pieces(capsule)} de ta capsule`;
-    return `${pieces(dressing)} de ton dressing + ${pieces(capsule)} de ta capsule`;
-  })();
 
   /*
    * « J'ADORE » ENREGISTRE LA TENUE (recette du 26/09/2026, qui revient sur
@@ -730,35 +614,6 @@ export default function HomeScreen() {
     [state.savedLooks]
   );
 
-  const heroSlots = outfitPieces.some((it) => isOnePieceCat(it.cat)) ? HERO_SLOTS_ONEPIECE : HERO_SLOTS_STANDARD;
-  const heroPieces = selectHomePieces(outfitPieces);
-  /**
-   * LA ZONE DE COMPOSITION S'ARRÊTE OÙ LES PIÈCES S'ARRÊTENT.
-   *
-   * Les emplacements sont des pourcentages, et le plus bas d'entre eux ne
-   * descend pas jusqu'en bas : sur la table standard, le bas s'achève à 88 %.
-   * Les 12 % restants étaient invisibles tant que la rangée d'actions les
-   * recouvrait. Depuis qu'elle a sa propre rangée (22/09), ils forment une
-   * bande de terracotta vide sous la composition — signalé le soir même.
-   *
-   * L'étendue est LUE dans la table active, jamais écrite en dur : la zone
-   * est raccourcie d'autant, et les emplacements renormalisés du même
-   * facteur. Les pièces gardent donc exactement leur taille et leurs
-   * positions relatives ; seule la zone cesse de dépasser sous elles. Si une
-   * table d'emplacements change un jour, le calcul suit.
-   */
-  const etenduePct = Math.max(...Object.values(heroSlots).map((s) => s.top + s.h));
-  const facteurZone = 100 / etenduePct;
-  const heroSlotsAjustes = Object.fromEntries(
-    Object.entries(heroSlots).map(([role, s]) => [role, { ...s, top: s.top * facteurZone, h: s.h * facteurZone }])
-  ) as typeof heroSlots;
-  /** Le ratio 1/1.28 de la maquette, ramené à l'étendue réelle des pièces. */
-  const zoneRatioPct = 78.125 * (etenduePct / 100);
-
-
-  /** La card ne prend la géométrie de la maquette que si elle a vraiment une composition à montrer. */
-  const avecComposition = hasOutfit && heroPieces.length > 0;
-
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-[100px]">
       <div className="px-6">
@@ -783,242 +638,153 @@ export default function HomeScreen() {
         <PlansDuJour depuis="home" className="mt-3" />
       </div>
 
-      {/* ══ Card héros — le moment visuel de la page ══════════════════════
-          LA HAUTEUR EST LE MAXIMUM ENTRE LE RATIO ET LE CONTENU, et c'est une
-          correction, pas un raffinement. La première version calait le ratio
-          1.28/1 en hauteur ferme et posait la rangée badge + bouton en absolu
-          à 18 px du bas. À 320 px de large, cette rangée ne tenait plus sur
-          une ligne : elle passait à deux, grandissait vers le HAUT et
-          recouvrait la phrase météo. Aucun calcul de slots n'aurait rattrapé
-          cela — il fallait supprimer la contrainte, pas l'ajuster.
-          Deux cellules de grille superposées : un cale-ratio qui ne contient
-          rien, et le contenu. La ligne prend la plus haute des deux, donc le
-          texte et les boutons ne peuvent PLUS se rencontrer, par construction
-          et non par arithmétique.
-          Sans tenue, la card reste en hauteur automatique : imposer le ratio à
-          un état sans image produirait 330 px de terracotta vide, ce qui n'est
-          pas éditorial mais creux. */}
-      {/* LA CARD N'EST PLUS UN BOUTON (22/09/2026). Elle en était un, donc
-          tout y était cliquable — pratique tant qu'elle ne portait qu'une
-          action. Y loger le feedback imposait d'imbriquer des boutons dans un
-          bouton, ce que le HTML interdit. La card devient un conteneur, et
-          « Voir ma tenue » un vrai bouton.
+      {/* ══ Card héros « LOOK DU JOUR » — refonte du 28/09/2026 ════════════
+          L'ACCUEIL MONTRE TOUT LE LOOK. La card n'en montrait qu'un extrait
+          (au plus cinq pièces, sans veste ni ceinture) et renvoyait à l'écran
+          Tenue pour découvrir le reste. Elle en est désormais la projection
+          complète ; l'écran Tenue sert à l'approfondir.
 
-          Gain accessoire : le nom accessible de l'ancien bouton concaténait
-          tout le texte de la card — titre, météo, occasion, libellé — et se
-          lisait d'un bloc. Chaque action porte maintenant le sien. */}
+          UNE SEULE REPRÉSENTATION POUR LES DEUX ÉCRANS : OutfitComposition,
+          variante "hero", ajustée dans une zone de même mesure (UNITE_HERO)
+          que sur l'écran Tenue, alimentée par la même tenue (state.outfit).
+          Mêmes pièces, mêmes images, même ordre, par construction — aucune
+          sélection propre à l'accueil.
+
+          TROIS ÉTATS, qui ne partagent que le surtitre :
+            · la tenue est là — titre éditorial, qualificatif, composition,
+              occasion, « Découvrir le look », avis ;
+            · le moteur n'a rien pu composer — le message et le CTA d'avant,
+              qui mènent au dressing ;
+            · sinon, elle se compose (profil, dressing, vestiaire ou
+              localisation pas encore prêts) — six emplacements discrets et un
+              anneau fin, qui n'apparaissent qu'après 300 ms : une génération
+              rapide ne fait jamais clignoter le chargement. */}
       <div
-        className="mx-6 mt-6 bg-terracotta rounded-[24px] relative overflow-hidden text-left grid"
-        style={{
-          width: "calc(100% - 48px)",
-          // DEUX RANGÉES, et c'est un correctif (22/09/2026). La card n'en
-          // avait qu'une : la couche des pièces s'y arrêtait à une distance
-          // ÉCRITE EN DUR du bas (66 px = 22 de padding + 44 de bouton).
-          // Ajouter la ligne de feedback a fait grandir la zone basse, la
-          // borne est devenue fausse, et à 320 px les chaussons repassaient
-          // par-dessus le badge « Travail / Bureau » — exactement le défaut
-          // corrigé le 21/09, revenu par une autre porte.
-          // Les pièces vivent maintenant dans la rangée « pile », les actions
-          // dans « actions » : aucune distance à tenir à jour, et les deux ne
-          // peuvent plus se rencontrer.
-          gridTemplateAreas: '"pile" "actions"',
-          gridTemplateColumns: "1fr",
-          gridTemplateRows: "1fr auto",
-        }}
+        className="mx-6 mt-6 bg-terracotta rounded-[24px] text-left"
+        style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}
       >
-        {avecComposition && (
-          <>
-            {/* LA ZONE DE COMPOSITION GARDE SON RATIO, quoi qu'il arrive au
-                texte. Cale-ratio et couche des pièces sont le MÊME élément :
-                1 / 1.28 = 78,125 % de la largeur, plafonné à 330 px, jamais
-                sous 275.
-
-                Signalé le 22/09 au soir, et c'est moi qui l'avais cassé le
-                jour même. En passant la card à deux rangées, la couche des
-                pièces est devenue `inset-0` de la rangée haute — laquelle
-                grandit avec le texte. Les emplacements étant définis en
-                POURCENTAGES de cette zone, une phrase météo de quatre lignes
-                étirait toute la composition : chaussures descendues sur la
-                jupe, sac remonté, terracotta vide en bas à gauche. Le ratio
-                de la maquette n'était plus respecté dès que le texte
-                dépassait.
-
-                Les lier rend la chose impossible : la zone des pièces ne
-                dépend plus que de la largeur de la card. Si le texte a besoin
-                de plus de place, la rangée grandit SOUS la composition, qui
-                ne bouge pas.
-
-                `zIndex: 0` explicite : les enfants s'empilent entre 1 et 4 et
-                doivent rester sous le texte, en z-10. */}
-            <div
-              aria-hidden="true"
-              className="relative self-start w-full"
-              style={{
-                gridArea: "pile",
-                paddingTop: `${zoneRatioPct}%`,
-                minHeight: 275 * (etenduePct / 100),
-                maxHeight: 330 * (etenduePct / 100),
-                zIndex: 0,
-              }}
-            >
-              <div className="absolute inset-0">
-                {heroPieces.map((it) => (
-                  <HeroPiece key={"hero-" + it.id} item={it} slot={heroSlotsAjustes[homeRoleOf(it.cat)]} eager />
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Aucun <br /> forcé dans le titre : il se replie seul dans sa
-            colonne, ce qui reste juste quel que soit l'appareil. Un saut en
-            dur donnait trois lignes au lieu de deux sous 360 px. */}
-        <div className="relative z-10 flex flex-col" style={{ gridArea: "pile", padding: 22 }}>
-          <div
-            className="font-serif text-[21px] min-[380px]:text-[26px] text-cream leading-[1.14]"
-            style={avecComposition ? { maxWidth: "42%" } : undefined}
-          >
-            {hasOutfit
-              ? "Ta tenue est prête"
-              : aucuneTenuePossible
-                ? "On prépare ta première tenue"
-                : "Découvre ta tenue du jour"}
-          </div>
-          <div
-            className="text-[12px] mt-[8px] leading-[1.35]"
-            style={{ color: "rgba(243,238,229,.84)", maxWidth: avecComposition ? "38%" : 230 }}
-          >
-            {hasOutfit
-              ? outfitQuote
-              : aucuneTenuePossible
-                ? dressingVide
-                  ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
-                  : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."
-                : "Une sélection pensée pour toi, ta journée et la météo."}
-          </div>
-
-          {/* PROVENANCE — la fonction pédagogique du brief : faire comprendre
-              que Capsela part de ce qu'on possède et complète si nécessaire.
-              Comptée depuis la tenue réelle (isCatalogId), jamais écrite en
-              dur, et absente quand il n'y a pas de tenue. Volontairement plus
-              discrète que la phrase météo : elle explique, elle n'annonce
-              pas. */}
-          {provenanceTexte && (
-            <div
-              className="text-[11px] mt-[6px] leading-[1.35]"
-              style={{ color: "rgba(243,238,229,.62)", maxWidth: avecComposition ? "42%" : 240 }}
-            >
-              {provenanceTexte}
-            </div>
-          )}
-
-          {/* Le carton décoratif « Le look du jour » est retiré le
-              22/09/2026, sur arbitrage. Il occupait la place où vient la
-              ligne de feedback, et il aurait formé un troisième élément
-              d'allure cliquable dans une card censée n'en porter qu'une. Il
-              n'existait ni comme donnée ni comme visuel : rien ne se perd
-              qu'un ornement. */}
-
+        <div className="flex items-center gap-[7px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
+          <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
+            ✦
+          </span>
+          Look du jour
         </div>
 
-        {/* LA BANDE D'ACTIONS — sa propre rangée de grille. Elle prend la
-            hauteur qu'il lui faut, badge et bouton sur une ou deux lignes
-            selon la largeur, et la composition au-dessus s'ajuste d'elle-même
-            puisque la première rangée vaut 1fr. Plus aucune distance au bas de
-            la card n'est écrite quelque part. */}
-        <div className="relative z-10 flex flex-col" style={{ gridArea: "actions", padding: "0 22px 22px" }}>
-          {/* L'OCCASION SUR SA PROPRE LIGNE, à gauche (demandé le 22/09 au
-              soir). Elle partageait sa ligne avec le CTA, qui se retrouvait
-              donc poussé à droite sur une demi-largeur : le bouton principal
-              de la page était le plus étroit de ses éléments. Elle redevient
-              ce qu'elle est — une étiquette de contexte — et cesse de
-              disputer la place à l'action. */}
-          {hasOutfit && occasionLabel && (
-            <div className="pt-[14px]">
-              {/* Le glyphe de l'occasion, comme sur l'écran Tenue. Ce n'est
-                  pas un sélecteur mais une étiquette de contexte : il est
-                  posé à 13 px, plus petit qu'ailleurs, pour rester en
-                  dessous du poids du libellé. */}
-              <span
-                className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
-                style={{
-                  fontSize: 9.5,
-                  letterSpacing: ".08em",
-                  background: "rgba(243,238,229,.22)",
-                  color: "#FBF3EA",
-                  borderRadius: 100,
-                  padding: "8px 14px",
-                }}
-              >
-                <GlypheOccasion occasion={occasionKey} taille={13} />
-                {occasionLabel}
-              </span>
+        {hasOutfit ? (
+          // Une clé par état : sans elle, React réutilise le même <div> d'un
+          // état à l'autre et l'animation, de même nom, ne se rejoue pas —
+          // l'arrivée de la tenue se ferait sans fondu (mesuré en rendu).
+          <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
+            <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
+              {titreLookDuJour(occasionKey, state.workMode, state.dateContext)}
             </div>
-          )}
+            {qualificatif && (
+              <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
+                {qualificatif}
+              </div>
+            )}
+            {/* Toutes les pièces du look, sans exception. Zone de même mesure
+                que celle de l'écran Tenue, composition ajustée dedans : une
+                tenue de six pièces tient sans que la card s'allonge d'autant. */}
+            <div className="mt-[14px]" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px)` }}>
+              <OutfitComposition items={outfitPieces} variant="hero" ajustee />
+            </div>
+          </div>
+        ) : aucuneTenuePossible ? (
+          <>
+            <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
+              On prépare ta première tenue
+            </div>
+            <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
+              {dressingVide
+                ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
+                : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."}
+            </div>
+          </>
+        ) : (
+          <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
+            <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
+              Capsela compose ta tenue…
+            </div>
+            <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
+              {jourAVenir
+                ? "Sélection des pièces adaptées à ton programme de ce jour-là."
+                : "Sélection des pièces adaptées à ton programme d'aujourd'hui."}
+            </div>
+            <EmplacementsLook />
+          </div>
+        )}
 
-          {/* LE CTA PREND TOUTE LA LARGEUR, 50 px. C'est la seule action
-              pleine de la card ; tout le reste y est translucide ou discret,
-              et la hiérarchie passe par là plutôt que par une couleur. */}
-          {/* PAS DE CTA MORT (§9.3). Quand le moteur n'a rien produit,
-              « Voir ma tenue » mènerait à un écran vide : le bouton conduit
-              alors au dressing, qui est l'endroit où la situation se
-              débloque. Vers l'ajout direct si le dressing est vide, vers sa
-              liste sinon — un même libellé pour deux situations en rendrait
-              une des deux fausse. */}
+        {/* L'OCCASION, étiquette de contexte : dans les trois états sauf
+            « aucune tenue », où elle serait la raison même de l'échec. */}
+        {!aucuneTenuePossible && occasionLabel && (
+          <div className="pt-[16px]">
+            <span
+              className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
+              style={{
+                fontSize: 9.5,
+                letterSpacing: ".08em",
+                background: "rgba(243,238,229,.22)",
+                color: "#FBF3EA",
+                borderRadius: 100,
+                padding: "8px 14px",
+              }}
+            >
+              <GlypheOccasion occasion={occasionKey} taille={13} />
+              {occasionLabel}
+            </span>
+          </div>
+        )}
+
+        {/* LE CTA, pleine largeur, seule action pleine de la card. Pas pendant
+            le chargement : il n'y a encore rien à découvrir. PAS DE CTA MORT
+            (§9.3) : sans tenue possible, il mène au dressing. */}
+        {(hasOutfit || aucuneTenuePossible) && (
           <button
             onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
-            // 13 px / .1em / capitales : la convention des 20 CTA principaux
-            // de l'app (23/09/2026). Ce bouton en était l'exception.
-            className="mt-[12px] w-full flex items-center justify-center bg-cream text-ink rounded-full t-bouton cursor-pointer"
+            className="mt-[12px] w-full flex items-center justify-center gap-[8px] bg-cream text-ink rounded-full t-bouton cursor-pointer"
             style={{ minHeight: 50 }}
           >
-            {hasOutfit
-              ? "Voir ma tenue"
-              : aucuneTenuePossible
-                ? dressingVide
-                  ? "Ajouter mes pièces"
-                  : "Voir mon dressing"
-                : "Découvrir ma tenue"}
+            {hasOutfit ? (
+              <>
+                Découvrir le look <span aria-hidden="true">→</span>
+              </>
+            ) : dressingVide ? (
+              "Ajouter mes pièces"
+            ) : (
+              "Voir mon dressing"
+            )}
           </button>
+        )}
 
-          {/* FEEDBACK — deux boutons DISCRETS, jamais concurrents du CTA :
-              translucides, sous lui, mais à 44 px comme toute cible
-              tactile (§7). Ils étaient à 38 : la discrétion doit venir de la
-              couleur et du poids, jamais d'une cible trop petite pour le
-              pouce.
-
-              Les deux avis sont enregistrés (outfit_feedback). Depuis la
-              recette du 26/09/2026, ils ont aussi une conséquence : « J'adore »
-              range la tenue dans Mes looks ; « Pas pour moi » en propose une
-              autre, qui évite celle-ci. */}
-          {/* L'avis du jour porte sur la tenue d'AUJOURD'HUI (outfit_feedback,
-              clé jour) : pas de « J'adore » sur la tenue de demain. */}
-          {hasOutfit && !jourAVenir && (
-            <div className="mt-[13px]" aria-live="polite">
-              {avisDuJour ? (
-                // Cliquable : repasser le même verdict le retire. Sans ce
-                // geste, un tap involontaire serait définitif pour la journée.
-                <button
-                  onClick={() => actions.setOutfitFeedback(avisDuJour)}
-                  aria-label="Revenir sur mon avis"
-                  className="font-serif italic text-[13px] text-left cursor-pointer"
-                  style={{ color: "#F0DDCF", minHeight: 44 }}
-                >
-                  {/* « Pas pour toi » reste vrai dans les deux issues : une
-                      autre tenue arrive, ou le Gate du quota explique pourquoi
-                      pas aujourd'hui. */}
-                  {avisDuJour === "adore" ? "Ajoutée à tes looks — on garde cette direction." : "Noté, pas pour toi."}
-                </button>
-              ) : (
-                <div className="flex items-center gap-[8px] flex-wrap">
-                  {autreProposee && (
-                    <span className="w-full font-serif italic text-[13px]" style={{ color: "#F0DDCF" }}>
-                      Voici une autre proposition.
-                    </span>
-                  )}
+        {/* FEEDBACK — deux boutons discrets, jamais concurrents du CTA :
+            translucides, sous lui, à 44 px comme toute cible tactile. Logique
+            inchangée : « J'adore » range la tenue dans Mes looks, « Pas pour
+            moi » en propose une autre. Pas sur la tenue d'un jour à venir. */}
+        {hasOutfit && !jourAVenir && (
+          <div className="mt-[12px]" aria-live="polite">
+            {avisDuJour ? (
+              // Cliquable : repasser le même verdict le retire. Sans ce
+              // geste, un tap involontaire serait définitif pour la journée.
+              <button
+                onClick={() => actions.setOutfitFeedback(avisDuJour)}
+                aria-label="Revenir sur mon avis"
+                className="font-serif italic text-[13px] text-left cursor-pointer"
+                style={{ color: "#F0DDCF", minHeight: 44 }}
+              >
+                {avisDuJour === "adore" ? "Ajoutée à tes looks — on garde cette direction." : "Noté, pas pour toi."}
+              </button>
+            ) : (
+              <>
+                {autreProposee && (
+                  <div className="font-serif italic text-[13px] mb-[6px]" style={{ color: "#F0DDCF" }}>
+                    Voici une autre proposition.
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-[8px]">
                   <button
                     onClick={() => actions.setOutfitFeedback("adore")}
-                    className="inline-flex items-center gap-[6px] rounded-full text-[11px] cursor-pointer px-[13px]"
+                    className="inline-flex items-center justify-center gap-[5px] rounded-full text-[12px] whitespace-nowrap cursor-pointer px-[6px]"
                     style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
                   >
                     <span aria-hidden="true">♡</span> J&apos;adore cette tenue
@@ -1026,16 +792,16 @@ export default function HomeScreen() {
                   <button
                     onClick={pasPourMoi}
                     disabled={quota.tirageEnCours}
-                    className="inline-flex items-center gap-[6px] rounded-full text-[11px] cursor-pointer px-[13px]"
+                    className="inline-flex items-center justify-center gap-[5px] rounded-full text-[12px] whitespace-nowrap cursor-pointer px-[6px]"
                     style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
                   >
                     <span aria-hidden="true">✕</span> Pas pour moi
                   </button>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ══ TON DRESSING, AUTREMENT ═══════════════════════════════════

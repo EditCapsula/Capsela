@@ -23,6 +23,39 @@ export interface AvisStyliste {
   strengths: string[];
   mainAdvice: string;
   suggestions: string[];
+  /**
+   * Les titres de l'avis (30/09/2026, refonte « Avis de styliste ») : absents
+   * d'un avis plus ancien, et chaque groupe peut manquer seul — l'app affiche
+   * alors le texte sans titre, comme avant. Jamais complétés côté app.
+   */
+  titres?: TitresAvis;
+}
+
+/**
+ * Titre du verdict : une LISTE FERMÉE, pas une formulation libre — un verdict
+ * est ce qui se lit en premier, il ne doit jamais pouvoir dire autre chose que
+ * ces quatre nuances, toutes bienveillantes.
+ */
+export const TITRES_VERDICT = ["Très réussi", "Réussi", "Bien vu", "À affiner"] as const;
+export type TitreVerdict = (typeof TITRES_VERDICT)[number];
+
+/**
+ * Titre d'un point fort : liste fermée, dont chaque mot a son pictogramme dans
+ * l'app (ResultatAvis) — l'icône se lit du titre, rien n'est deviné.
+ */
+export const TITRES_RAISON = ["Structure", "Proportions", "Harmonie", "Couleurs", "Matières", "Équilibre", "Accessoires", "Style"] as const;
+export type TitreRaison = (typeof TITRES_RAISON)[number];
+
+export interface TitresAvis {
+  verdict?: TitreVerdict;
+  /** 2 ou 3 étiquettes courtes sur la tenue (« Palette harmonieuse »). */
+  etiquettes?: string[];
+  /** Un titre par point fort, dans le même ordre. */
+  pointsForts?: TitreRaison[];
+  /** Le titre du conseil principal (« Marque la taille »). */
+  conseil?: string;
+  /** Un titre par piste à tester, dans le même ordre (« Remplacer le top noir »). */
+  suggestions?: string[];
 }
 
 export type RaisonInexploitable = "blurry" | "too_dark" | "no_garment" | "other";
@@ -89,6 +122,13 @@ export const LIMITES = {
   pointMax: 180,
   phraseDemandee: 220,
   phraseMax: 280,
+  // Titres (30/09/2026) : même marge d'environ 25 % entre demandé et vérifié.
+  etiquettesMin: 2,
+  etiquettesMax: 3,
+  etiquetteDemandee: 24,
+  etiquetteMax: 30,
+  titreDemande: 32,
+  titreMax: 40,
 } as const;
 
 /** Fichier accepté par le serveur : le JPEG que prépare l'app (1200 px, cf. photoAvis.ts). */
@@ -440,14 +480,29 @@ export const INSTRUCTIONS = [
   `Format : overallAssessment = 1 à 2 phrases (${LIMITES.phraseDemandee} caractères au plus), avis global bienveillant ; strengths = ${LIMITES.pointsMin} à ${LIMITES.pointsMax} points forts, une phrase chacun (${LIMITES.pointDemande} caractères au plus) ; mainAdvice = un seul ajustement prioritaire (${LIMITES.phraseDemandee} caractères au plus) ; suggestions = ${LIMITES.pointsMin} à ${LIMITES.pointsMax} pistes à tester, une phrase chacune (${LIMITES.pointDemande} caractères au plus).`,
   `dressingNeeds : jusqu'à ${PIECES_DRESSING_MAX} pièces qu'elle pourrait AJOUTER pour appliquer ton conseil principal ou une suggestion — jamais une pièce déjà visible sur la photo. Pour chacune : categorie (parmi ${CATEGORIES.join(", ")}), motsCles = le type de pièce en un ou deux mots (ex. « ceinture », « mocassins », « blazer »), couleurs et matieres souhaitées (listes courtes, éventuellement vides), lien = "mainAdvice" ou "suggestion" avec numeroSuggestion (à partir de 1, sinon null). Liste vide si aucune pièce ne s'impose.`,
   `visibleGarments : les pièces PORTÉES visibles sur la photo (${VETEMENTS_VISIBLES_MAX} au plus, accessoires compris). Pour chacune : categorie (parmi ${CATEGORIES.join(", ")}), motsCles = le type de pièce en un ou deux mots (ex. « jean », « blazer », « sandales »), couleurs et matieres visibles (listes courtes, éventuellement vides). N'y mets que ce que tu vois nettement ; liste vide si la tenue est peu lisible.`,
-  "Si la photo ne permet pas de lire la tenue (trop floue, trop sombre, aucune tenue visible), réponds isAnalyzable = false avec la raison (blurry, too_dark, no_garment ou other) et laisse les champs de texte vides. Sinon, isAnalyzable = true et unanalyzableReason = null.",
+  `Titres : verdictTitle = celui de ces titres qui résume le mieux ton avis : ${TITRES_VERDICT.join(", ")} ; verdictTags = ${LIMITES.etiquettesMin} à ${LIMITES.etiquettesMax} étiquettes de deux ou trois mots sur la TENUE — ses couleurs, ses coupes, son allure (ex. « Palette harmonieuse », « Facile à porter ») —, jamais sur le corps (${LIMITES.etiquetteDemandee} caractères au plus chacune) ; strengthTitles = pour chaque point fort, dans le même ordre, le mot qui le résume parmi ${TITRES_RAISON.join(", ")} ; adviceTitle = le conseil principal en trois à cinq mots, à l'impératif (ex. « Marque la taille ») ; suggestionTitles = pour chaque piste, dans le même ordre, une action courte à l'infinitif (ex. « Remplacer le top noir ») — ${LIMITES.titreDemande} caractères au plus pour ces deux derniers. Le titre nomme l'action ; la phrase du conseil ou de la piste la précise sans le répéter mot pour mot.`,
+  "Si la photo ne permet pas de lire la tenue (trop floue, trop sombre, aucune tenue visible), réponds isAnalyzable = false avec la raison (blurry, too_dark, no_garment ou other), laisse les champs de texte et les listes vides et verdictTitle = null. Sinon, isAnalyzable = true et unanalyzableReason = null.",
 ].join("\n");
 
 /** Schéma JSON imposé à la sortie du modèle (sortie structurée stricte) [HYPOTHÈSE TECHNIQUE §10, retenue]. */
 export const SCHEMA_REPONSE = {
   type: "object",
   additionalProperties: false,
-  required: ["isAnalyzable", "unanalyzableReason", "overallAssessment", "strengths", "mainAdvice", "suggestions", "dressingNeeds", "visibleGarments"],
+  required: [
+    "isAnalyzable",
+    "unanalyzableReason",
+    "overallAssessment",
+    "strengths",
+    "mainAdvice",
+    "suggestions",
+    "verdictTitle",
+    "verdictTags",
+    "strengthTitles",
+    "adviceTitle",
+    "suggestionTitles",
+    "dressingNeeds",
+    "visibleGarments",
+  ],
   properties: {
     isAnalyzable: { type: "boolean" },
     unanalyzableReason: { type: ["string", "null"], enum: ["blurry", "too_dark", "no_garment", "other", null] },
@@ -455,6 +510,11 @@ export const SCHEMA_REPONSE = {
     strengths: { type: "array", items: { type: "string" } },
     mainAdvice: { type: "string" },
     suggestions: { type: "array", items: { type: "string" } },
+    verdictTitle: { type: ["string", "null"], enum: [...TITRES_VERDICT, null] },
+    verdictTags: { type: "array", items: { type: "string" } },
+    strengthTitles: { type: "array", items: { type: "string", enum: TITRES_RAISON } },
+    adviceTitle: { type: "string" },
+    suggestionTitles: { type: "array", items: { type: "string" } },
     dressingNeeds: {
       type: "array",
       items: {
@@ -573,6 +633,34 @@ export function violationCharte(textes: string[]): string | null {
   return null;
 }
 
+/**
+ * LES TITRES, LUS GROUPE PAR GROUPE (30/09/2026). Un groupe mal formé — titre
+ * hors liste, compte différent du nombre de points, texte trop long — est
+ * simplement écarté : les titres enrichissent l'avis, ils ne justifient pas une
+ * relance payante, et l'avis reste lisible sans eux. Seule la CHARTE est
+ * bloquante (validerReponse) : un titre qui l'enfreint rend l'avis invalide,
+ * comme n'importe quel autre texte affiché.
+ */
+export function lireTitres(o: Record<string, unknown>, nbPoints: number, nbSuggestions: number): TitresAvis | undefined {
+  const court = (x: unknown, max: number) => (typeof x === "string" && x.trim() && x.trim().length <= max ? x.trim() : null);
+  const titres: TitresAvis = {};
+  if (TITRES_VERDICT.includes(o.verdictTitle as TitreVerdict)) titres.verdict = o.verdictTitle as TitreVerdict;
+  if (Array.isArray(o.verdictTags)) {
+    const e = o.verdictTags.map((x) => court(x, LIMITES.etiquetteMax));
+    if (e.length >= LIMITES.etiquettesMin && e.length <= LIMITES.etiquettesMax && e.every(Boolean)) titres.etiquettes = e as string[];
+  }
+  if (Array.isArray(o.strengthTitles) && o.strengthTitles.length === nbPoints && o.strengthTitles.every((t) => TITRES_RAISON.includes(t as TitreRaison))) {
+    titres.pointsForts = o.strengthTitles as TitreRaison[];
+  }
+  const conseil = court(o.adviceTitle, LIMITES.titreMax);
+  if (conseil) titres.conseil = conseil;
+  if (Array.isArray(o.suggestionTitles) && o.suggestionTitles.length === nbSuggestions) {
+    const t = o.suggestionTitles.map((x) => court(x, LIMITES.titreMax));
+    if (t.every(Boolean)) titres.suggestions = t as string[];
+  }
+  return Object.keys(titres).length ? titres : undefined;
+}
+
 export type Verdict =
   | { etat: "valide"; avis: AvisStyliste; besoins: BesoinDressing[]; vetements: VetementVisible[] }
   | { etat: "inexploitable"; raison: RaisonInexploitable }
@@ -614,8 +702,17 @@ export function validerReponse(texteJson: string | null): Verdict {
     if (!l || l.length < LIMITES.pointsMin || l.length > LIMITES.pointsMax) return { etat: "invalide", motif: `${nom}:nombre` };
     if (l.some((p) => !p || p.length > LIMITES.pointMax)) return { etat: "invalide", motif: `${nom}:longueur` };
   }
-  const avis: AvisStyliste = { overallAssessment, strengths: strengths!, mainAdvice, suggestions: suggestions! };
-  const faute = violationCharte([overallAssessment, mainAdvice, ...avis.strengths, ...avis.suggestions]);
+  const titres = lireTitres(o, strengths!.length, suggestions!.length);
+  const avis: AvisStyliste = { overallAssessment, strengths: strengths!, mainAdvice, suggestions: suggestions!, ...(titres ? { titres } : {}) };
+  const faute = violationCharte([
+    overallAssessment,
+    mainAdvice,
+    ...avis.strengths,
+    ...avis.suggestions,
+    ...(titres?.etiquettes ?? []),
+    ...(titres?.conseil ? [titres.conseil] : []),
+    ...(titres?.suggestions ?? []),
+  ]);
   if (faute) return { etat: "invalide", motif: `charte:${faute}` };
   return { etat: "valide", avis, besoins: lireBesoins(o.dressingNeeds, avis.suggestions.length), vetements: lireVetements(o.visibleGarments) };
 }
