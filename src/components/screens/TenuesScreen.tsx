@@ -21,6 +21,7 @@ import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadg
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { DateContext, Item, TravelMode, WorkMode } from "@/lib/types";
 
@@ -439,7 +440,8 @@ export default function TenuesScreen() {
     meteoDuJour,
     state.workMode,
     state.dateContext,
-    displayPool
+    displayPool,
+    colorimetrieMoteur(profile.colorimetrie)
   );
 
   // Union clés vivantes (lookScore.proactives) + clés en cours de

@@ -1,8 +1,9 @@
 import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, CATLABEL, FALLBACK_HEX, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
+import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
+import { accordVisage, candidatsCouleur, colorimetriePourPivot, type ColorimetrieMoteur } from "./colorimetrieMoteur";
 import {
   agreeColor,
   CAT_GENDER,
@@ -672,8 +673,17 @@ export function generateOutfit(
    */
   capsuleSeason?: CapsuleSeason | null,
   /** Leviers de mesure — inertes par défaut, cf. LeviersMesure. */
-  leviers?: LeviersMesure
+  leviers?: LeviersMesure,
+  /**
+   * Colorimétrie du profil (30/09/2026, colorimetrieMoteur.ts) : près du
+   * visage, les couleurs de la saison sont préférées et celles « avec
+   * modération » évitées quand une alternative existe. Non renseignée, le
+   * tirage est STRICTEMENT celui d'avant — c'est aussi le bras « avant »
+   * des mesures (AGENTS.md).
+   */
+  colorimetrie?: ColorimetrieMoteur | null
 ): GeneratedOutfit {
+  const colo = colorimetrie ?? null;
   // Référentiel saisonnier : celui de la capsule quand il est connu, sinon
   // celui que la météo porte (tenue du jour sous météo réelle, inchangée).
   // Quatre saisons d'une pièce croisées avec celles du jour quand elle les
@@ -1033,8 +1043,11 @@ export function generateOutfit(
     // filtre (correctif 20/08/2026) : sinon il ne matche jamais la palette
     // et se fait donc écarter à CHAQUE tirage dès qu'une alternative dans
     // la palette existe — en pratique jamais choisi, pas juste "moins".
-    const preferred = preferredHexes.length ? base.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX) : [];
-    const candidates = harmonize(preferred.length ? preferred : base, chosen, essential);
+    //
+    // Colorimétrie (30/09/2026) : candidatsCouleur rend exactement la règle
+    // ci-dessus sans colorimétrie ou loin du visage, et y ajoute les paliers
+    // de la saison près du visage.
+    const candidates = harmonize(candidatsCouleur(base, preferredHexes, colo), chosen, essential);
     const picked = rand(candidates);
     if (picked) chosen.push(picked);
     return picked;
@@ -1160,9 +1173,8 @@ export function generateOutfit(
       const nonChemise = hautPool.filter((i) => !["Chemise", "Chemisier"].includes(i.subtype ?? ""));
       if (nonChemise.length) hautPool = nonChemise;
     }
-    // Même exemption FALLBACK_HEX que dans pick() ci-dessus.
-    const hautPreferred = preferredHexes.length ? hautPool.filter((i) => preferredHexes.includes(i.hex) || i.hex === FALLBACK_HEX) : [];
-    const h = rand(harmonize(hautPreferred.length ? hautPreferred : hautPool, chosen, true));
+    // Même règle que dans pick() ci-dessus (exemption FALLBACK_HEX comprise).
+    const h = rand(harmonize(candidatsCouleur(hautPool, preferredHexes, colo), chosen, true));
     if (h) chosen.push(h);
     primaryTop = h;
     const b = pick(BOTTOMS);
@@ -1234,7 +1246,9 @@ export function generateOutfit(
   // dans la tenue (même rôle de superposition, cf. plus haut).
   if (useRobe && !dressy && !hasVeste && Math.random() < 0.3) {
     const robeLayerCandidates = hardBase.filter((i) => TOP_LAYER_CATS.includes(i.cat) && rolePieceOf(i) === "calque");
-    const robeLayer = rand(harmonize(robeLayerCandidates, chosen, false));
+    // Calque près du visage : la colorimétrie s'y applique (sans préférence
+    // de palette, qui n'y a jamais joué — sans colorimétrie, liste inchangée).
+    const robeLayer = rand(harmonize(candidatsCouleur(robeLayerCandidates, [], colo), chosen, false));
     if (robeLayer) { chosen.push(robeLayer); ids.push(robeLayer.id); }
   }
   // R-B8 — superposition hauts/pulls_gilets (TOP_LAYER_CATS) : une 2e pièce
@@ -1283,7 +1297,7 @@ export function generateOutfit(
           // Mailles fermées — règle active par défaut (arbitrage 31/08/2026).
           (leviers?.superpositionMaillesFermees === true || !(isClosedKnit(firstLayer) && isClosedKnit(i)))
       );
-      const layer = rand(harmonize(layerCandidates, chosen, false));
+      const layer = rand(harmonize(candidatsCouleur(layerCandidates, [], colo), chosen, false));
       if (layer) { chosen.push(layer); ids.push(layer.id); }
     }
   }
@@ -1384,7 +1398,8 @@ export function generateOutfit(
         // En Sport, la gourde est déjà ajoutée systématiquement ci-dessus.
         (occasion !== "sport" || i.accessoireType !== "Gourde")
     );
-    const ac = rand(harmonize(accessoireBase, chosen, false));
+    // Foulard, écharpe : près du visage (candidatsCouleur ; sans colorimétrie, liste inchangée).
+    const ac = rand(harmonize(candidatsCouleur(accessoireBase, [], colo), chosen, false));
     if (ac) chosen.push(ac);
     if (ac && !ids.includes(ac.id)) ids.push(ac.id);
   }
@@ -1493,11 +1508,12 @@ function attemptCoreOutfit(
   gender: "femme" | "homme" | null,
   formalityOverride: number,
   capsuleSeason?: CapsuleSeason | null,
-  leviers?: LeviersMesure
+  leviers?: LeviersMesure,
+  colorimetrie?: ColorimetrieMoteur | null
 ): GeneratedOutfit {
-  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers);
+  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers, colorimetrie);
   for (let attempt = 1; attempt < MAX_ATTEMPTS_PER_TIER && !hasCoreOutfit(result.ids, pool, leviers); attempt++) {
-    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers);
+    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers, colorimetrie);
   }
   return result;
 }
@@ -1526,12 +1542,14 @@ export function generateOutfitWithFallback(
    */
   capsuleSeason?: CapsuleSeason | null,
   /** Leviers de mesure — inertes par défaut, cf. LeviersMesure. */
-  leviers?: LeviersMesure
+  leviers?: LeviersMesure,
+  /** Colorimétrie du profil — cf. generateOutfit ; non renseignée, comportement d'origine. */
+  colorimetrie?: ColorimetrieMoteur | null
 ): GeneratedOutfitWithFallback {
   const requestedFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
   const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
   for (const tier of chain) {
-    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason, leviers);
+    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason, leviers, colorimetrie);
     if (hasCoreOutfit(result.ids, pool, leviers)) {
       return { ...result, requestedFormality, resolvedFormality: tier, formalityDowngraded: tier !== requestedFormality, noCompleteOutfit: false };
     }
@@ -1564,7 +1582,7 @@ export function generateOutfitWithFallback(
   if (!hasStructuralOption) {
     reason = "missing_required_category";
   } else {
-    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason, leviers);
+    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason, leviers, colorimetrie);
     reason = hasCoreOutfit(probe.ids, pool, leviers) ? "formality_gap" : "no_match";
   }
   return {
@@ -1881,7 +1899,9 @@ export function computeLookScore(
    * autres appelants (CreateLookScreen, getOutfitsForItem) n'ont pas besoin
    * de cette suggestion et continuent de fonctionner sans y toucher.
    */
-  pool: Item[] = []
+  pool: Item[] = [],
+  /** Colorimétrie du profil — R-S18 (bonus seul). Non renseignée, score d'origine. */
+  colorimetrie?: ColorimetrieMoteur | null
 ): LookScore {
   const clothing = pieces.filter((i) => CLOTHING_CATS.includes(i.cat));
   const accessories = pieces.filter((i) => ACCESSORY_CATS.includes(i.cat));
@@ -1963,6 +1983,10 @@ export function computeLookScore(
 
   // R-S10 — palette personnelle du profil (préférence molle, jamais exclusive)
   if (paletteHexList.length && pieces.some((i) => paletteHexList.includes(i.hex))) bonuses.push(10);
+
+  // R-S18 (30/09/2026) — couleurs de sa saison près du visage, aucune « avec
+  // modération » : un bonus, jamais une pénalité, donc jamais de bandeau.
+  if (accordVisage(pieces, colorimetrie ?? null)) bonuses.push(10);
 
   // R-S11 — layering réussi (base + calque en contexte décontracté)
   const tops = pieces.filter((i) => TOP_LAYER_CATS.includes(i.cat));
@@ -2374,10 +2398,13 @@ export function getOutfitsForItem(
   opts: { maxPerOccasion?: number; maxTotal?: number; attemptsPerOccasion?: number } = {},
   gender: "femme" | "homme" | null = null,
   /** Saison de la capsule dont `pool` est issu — cf. generateOutfit. L'écran « Comment porter cette pièce ? » raisonne toujours sur une saison de capsule explicite. */
-  capsuleSeason?: CapsuleSeason | null
+  capsuleSeason?: CapsuleSeason | null,
+  /** Colorimétrie du profil — cf. generateOutfit ; la teinte du pivot y est tenue pour accordée (colorimetriePourPivot). */
+  colorimetrie?: ColorimetrieMoteur | null
 ): ItemOutfitVariation[] {
   const pivot = pool.find((i) => i.id === pivotId);
   if (!pivot) return [];
+  const coloPivot = colorimetriePourPivot(colorimetrie ?? null, pivot);
 
   const maxPerOccasion = opts.maxPerOccasion ?? 3;
   const maxTotal = opts.maxTotal ?? 18;
@@ -2420,7 +2447,7 @@ export function getOutfitsForItem(
     const candidates: ItemOutfitVariation[] = [];
     const localSeen = new Set<string>();
     for (let attempt = 0; attempt < attemptsPerOccasion; attempt++) {
-      const tirage = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender, undefined, pivotId, capsuleSeason).ids;
+      const tirage = generateOutfit(pool, weather, occasion, "Présentiel", "Verre", effectiveHexes, gender, undefined, pivotId, capsuleSeason, undefined, coloPivot).ids;
       const ids = tirage.includes(pivotId) ? tirage : porterParDessus(tirage, pivot, pool, occasion, weather);
       if (!ids) continue;
       const key = structuralKeyOf(ids);
@@ -2428,7 +2455,7 @@ export function getOutfitsForItem(
       const outfitItems = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => Boolean(p));
       if (!isCompleteOutfit(outfitItems)) continue;
       localSeen.add(key);
-      const { score } = computeLookScore(outfitItems, occasion, preferredHexes, null, new Set(), weather, "Présentiel", "Verre");
+      const { score } = computeLookScore(outfitItems, occasion, preferredHexes, null, new Set(), weather, "Présentiel", "Verre", [], colorimetrie);
       candidates.push({ occasion, ids, score });
     }
     const top = selectDiverseVariations(candidates, pool, Math.min(maxPerOccasion, maxTotal - results.length));

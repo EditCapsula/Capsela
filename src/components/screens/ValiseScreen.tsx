@@ -15,6 +15,7 @@ import { jourLocal } from "@/lib/outfitFeedback";
 import { villeDuLieu } from "@/lib/planifier";
 import { HORIZON_PREVISION_JOURS, previsionPour, type Prevision } from "@/lib/prevision";
 import { paletteHexes } from "@/lib/profile";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { useCapsela } from "@/lib/store";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import {
@@ -258,7 +259,7 @@ export default function ValiseScreen() {
   const { state, weather, defaultCapsule, actions } = useCapsela();
   const { profile } = useAuth();
   const dressing = state.items;
-  const generer = useMemo(() => generateurMoteur(paletteHexes(profile), profile.gender), [profile]);
+  const generer = useMemo(() => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie)), [profile]);
 
   const [vue, setVue] = useState<Vue>({ nom: "etape" });
   const [etape, setEtape] = useState(1);

@@ -1,5 +1,6 @@
 import { saisonCalendairePour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
+import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import { categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
 import { composeWardrobePool } from "./selectors";
 import type { CategoryKey, Item, OccasionKey } from "./types";
@@ -197,10 +198,15 @@ export interface TenueMoteur {
 /** Tire une tenue pour une situation dans un pool donné — le moteur par défaut, remplaçable en test. */
 export type Generateur = (pool: Item[], s: SituationValise) => TenueMoteur | null;
 
-export function generateurMoteur(couleurs: string[], genre: "femme" | "homme" | null): Generateur {
+export function generateurMoteur(
+  couleurs: string[],
+  genre: "femme" | "homme" | null,
+  /** Colorimétrie du profil (30/09/2026) — cf. generateOutfit. */
+  colorimetrie: ColorimetrieMoteur | null = null
+): Generateur {
   return (pool, s) => {
     if (!pool.length) return null;
-    const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre);
+    const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     return r.noCompleteOutfit || !r.ids.length ? null : { ids: r.ids, elargie: r.occasionRelachee };
   };
 }

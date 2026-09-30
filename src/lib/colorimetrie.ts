@@ -3,8 +3,9 @@ import { PAL_COULEURS } from "./palCouleurs";
 /**
  * COLORIMÉTRIE ET PALETTE CAPSELA.
  *
- * Trois choses vivent ici, et une seule touche la base : le type persisté,
- * le calcul de la palette affichée, et l'interface d'analyse.
+ * Vivent ici : le type persisté, les quatre saisons, le questionnaire et le
+ * calcul de la palette affichée. Ce que le moteur de tenues en fait est dans
+ * colorimetrieMoteur.ts (30/09/2026).
  *
  * NOMMAGE EN FRANÇAIS, comme les quarante autres fichiers du dépôt. Le brief
  * proposait `colorPreferences` / `intensityPreference` / `colorimetry` ;
@@ -37,7 +38,12 @@ export interface Colorimetrie {
   /** 0..1, absent si le service ne le rend pas — le badge dépend de sa présence. */
   confiance?: number;
   analyseeLe?: string;
-  source?: "camera" | "galerie";
+  /**
+   * D'où vient le résultat. Seul le questionnaire l'écrit depuis le
+   * 30/09/2026 (analyse photo abandonnée « pour le moment ») ; "camera" et
+   * "galerie" restent lisibles pour les profils écrits par la démo d'avant.
+   */
+  source?: "camera" | "galerie" | "questionnaire";
 }
 
 export const COLORIMETRIE_VIDE: Colorimetrie = { statut: "aucune" };
@@ -62,11 +68,11 @@ export const PALETTE_CAPSELA_NEUTRES = 2;
  *   3. les autres signatures ;
  *   4. jusqu'à deux neutres, pour que la palette soit portable.
  *
- * CE QUI EST EN « AVEC MODÉRATION » N'EST PAS RETIRÉ DU MOTEUR. Ce calcul ne
- * sert qu'à l'affichage : `paletteHexes(profile)` continue de rendre TOUTES
- * les préférences, y compris celles-là. Une couleur qu'elle a choisie ne
- * disparaît pas de ses tenues parce qu'une analyse la place loin du visage —
- * la nuance appartient à l'écran, pas à la sélection.
+ * Ce calcul ne sert qu'à l'affichage. Le moteur, lui, lit la colorimétrie
+ * par colorimetrieMoteur.ts (30/09/2026, demandé : « on doit tenir compte de
+ * la colorimétrie dans les recommandations de tenues ») : il éloigne du
+ * visage les couleurs « avec modération » sans jamais les retirer des
+ * tenues — elles restent possibles en bas, en chaussures, en sac.
  *
  * Sans colorimétrie, la palette EST la liste des préférences. C'est le cas
  * « passer l'analyse », et il doit rendre quelque chose de juste, pas un vide.
@@ -141,54 +147,166 @@ export function lireColorimetrie(data: unknown, source: Colorimetrie["source"]):
   return c;
 }
 
-/**
- * LE SERVICE D'ANALYSE N'EXISTE PAS AU 25/09/2026.
+/*
+ * LES QUATRE SAISONS (30/09/2026, confirmé par la propriétaire : quatre
+ * plutôt que douze — plus fiable par questionnaire, et plus lisible).
  *
- * `colorimetrieDisponible()` est le seul endroit qui le dit, et toute
- * l'interface en découle : quand elle rend false, l'étape ne propose PAS de
- * prendre une photo — elle annonce que l'analyse arrive et propose de passer.
- * Un bouton « Prendre une photo » qui n'analyse rien serait la promesse qu'on
- * ne peut pas afficher, exactement comme la vidéo récompensée sans régie.
+ * Le questionnaire ne rend qu'une SAISON ; les couleurs viennent toujours
+ * d'ici, et le moteur de tenues lit les mêmes.
  *
- * Le mock ne s'active que derrière `NEXT_PUBLIC_COLORIMETRIE_MOCK=1`, et
- * l'écran affiche alors « Résultat de démonstration ». Jamais de faux
- * résultat silencieux.
+ * Toutes les teintes sont des hex de PAL_COULEURS (vérifié par les tests) :
+ * les mêmes que l'étape « Tes couleurs », pour que la palette Capsela les
+ * croise sans conversion. ARBITRAGE ÉDITORIAL : le choix des couleurs de
+ * chaque saison, sur les vingt et une de la palette de l'app.
  */
-export function colorimetrieMockActive(): boolean {
-  return process.env.NEXT_PUBLIC_COLORIMETRIE_MOCK === "1";
-}
+export type SaisonCle = "printemps" | "ete" | "automne" | "hiver";
+export const SAISONS_CLES: SaisonCle[] = ["printemps", "ete", "automne", "hiver"];
 
-export function colorimetrieDisponible(): boolean {
-  // Le jour où un service existe, c'est ici qu'il s'ajoute — et nulle part
-  // ailleurs dans l'interface.
-  return colorimetrieMockActive();
-}
-
-/** Résultat de démonstration — n'est atteint que si le drapeau est posé. */
-const DEMO: Record<string, unknown> = {
-  saison: "automne_chaud",
-  libelle: "Automne chaud",
-  signature: ["#A66950", "#C08A5E", "#C29A3D", "#6E7358", "#6E3B3A"],
-  neutres: ["#5A4436", "#E7DCC8", "#A8967C", "#CDBBA2"],
-  moderation: ["#2A2724", "#8E8B85", "#D6A9A0"],
-  confiance: 0.82,
+const hexDe = (nom: string): string => {
+  const hex = PAL_COULEURS.find(([n]) => n === nom)?.[1];
+  if (!hex) throw new Error(`Teinte absente de PAL_COULEURS : ${nom}`);
+  return hex;
 };
 
-/**
- * Point d'entrée unique de l'analyse. Ne jette jamais : une erreur devient
- * `{ statut: "erreur" }`, que l'écran traite comme « réessayer ou passer ».
+export const SAISONS: Record<SaisonCle, { libelle: string; description: string; signature: string[]; neutres: string[]; moderation: string[] }> = {
+  printemps: {
+    libelle: "Printemps lumineux",
+    description: "Des couleurs chaudes et claires, qui illuminent.",
+    signature: ["Corail", "Camel", "Moutarde", "Rose poudré"].map(hexDe),
+    neutres: ["Crème", "Sable", "Beige", "Blanc / écru"].map(hexDe),
+    moderation: ["Noir", "Prune", "Gris"].map(hexDe),
+  },
+  ete: {
+    libelle: "Été doux",
+    description: "Des couleurs fraîches et adoucies, tout en nuances.",
+    signature: ["Rose poudré", "Bleu", "Prune", "Marine"].map(hexDe),
+    neutres: ["Blanc", "Gris", "Taupe"].map(hexDe),
+    moderation: ["Moutarde", "Corail", "Noir"].map(hexDe),
+  },
+  automne: {
+    libelle: "Automne chaleureux",
+    description: "Des couleurs chaudes et profondes, riches et naturelles.",
+    signature: ["Terracotta", "Camel", "Moutarde", "Kaki", "Bordeaux"].map(hexDe),
+    neutres: ["Chocolat", "Crème", "Taupe", "Beige"].map(hexDe),
+    moderation: ["Noir", "Gris", "Rose poudré"].map(hexDe),
+  },
+  hiver: {
+    libelle: "Hiver contrasté",
+    description: "Des couleurs froides et franches, en contraste.",
+    signature: ["Rouge", "Bordeaux", "Prune", "Vert bouteille", "Marine"].map(hexDe),
+    neutres: ["Noir", "Blanc", "Gris"].map(hexDe),
+    moderation: ["Camel", "Moutarde", "Beige"].map(hexDe),
+  },
+};
+
+export const estSaison = (v: unknown): v is SaisonCle => typeof v === "string" && (SAISONS_CLES as string[]).includes(v);
+
+/** Le résultat d'une saison, quelle que soit la façon dont elle a été trouvée. */
+export function colorimetrieDeSaison(saison: SaisonCle, source: NonNullable<Colorimetrie["source"]>): Colorimetrie {
+  const s = SAISONS[saison];
+  return lireColorimetrie({ saison, libelle: s.libelle, signature: s.signature, neutres: s.neutres, moderation: s.moderation }, source);
+}
+
+/*
+ * LE QUESTIONNAIRE (30/09/2026, seule voie retenue : « on va partir sur le
+ * questionnaire plutôt, pas d'analyse photo pour le moment »). Cinq questions sur des traits DÉCLARÉS — bijoux, blanc préféré,
+ * couleur de cheveux d'origine, couleur des yeux, couleurs complimentées.
+ * Aucune question ne porte sur la couleur de peau : la règle du projet
+ * reste entière pour ce chemin.
+ *
+ * Deux axes, comme dans la méthode des saisons : la CHALEUR (tons chauds
+ * positifs, froids négatifs) et la PROFONDEUR (profond positif, clair
+ * négatif). Chaud et clair : printemps ; froid et clair : été ; chaud et
+ * profond : automne ; froid et profond : hiver. Une profondeur nulle compte
+ * comme claire. Une chaleur nulle — trop de « Je ne sais pas » ou de « Les
+ * deux » — ne tranche pas : aucune saison n'est inventée, l'écran le dit.
+ *
+ * ARBITRAGE ÉDITORIAL : les points de chaque réponse, instruits réponse par
+ * réponse, à revoir sur des profils réels.
  */
-export async function analyserColorimetrie(
-  _image: Blob,
-  source: Colorimetrie["source"]
-): Promise<Colorimetrie> {
-  if (!colorimetrieDisponible()) return { statut: "erreur" };
-  try {
-    // Mock : le seul chemin existant aujourd'hui. Le délai imite l'attente
-    // réelle pour que l'écran d'analyse soit vu et mesuré.
-    await new Promise((r) => setTimeout(r, 2200));
-    return lireColorimetrie(DEMO, source);
-  } catch {
-    return { statut: "erreur" };
-  }
+export interface ReponseQuestion {
+  libelle: string;
+  chaleur: number;
+  profondeur: number;
+}
+export interface QuestionColorimetrie {
+  id: string;
+  question: string;
+  reponses: ReponseQuestion[];
+}
+
+const NSP: ReponseQuestion = { libelle: "Je ne sais pas", chaleur: 0, profondeur: 0 };
+
+export const QUESTIONS_COLORIMETRIE: QuestionColorimetrie[] = [
+  {
+    id: "bijoux",
+    question: "Quels bijoux te mettent le plus en valeur ?",
+    reponses: [
+      { libelle: "Dorés", chaleur: 2, profondeur: 0 },
+      { libelle: "Argentés", chaleur: -2, profondeur: 0 },
+      { libelle: "Les deux", chaleur: 0, profondeur: 0 },
+      NSP,
+    ],
+  },
+  {
+    id: "blanc",
+    question: "Près du visage, quel blanc préfères-tu ?",
+    reponses: [
+      { libelle: "Un blanc pur", chaleur: -1, profondeur: 0 },
+      { libelle: "Un écru ou un crème", chaleur: 1, profondeur: 0 },
+      { libelle: "Les deux", chaleur: 0, profondeur: 0 },
+      NSP,
+    ],
+  },
+  {
+    id: "cheveux",
+    question: "Quelle est ta couleur de cheveux d'origine ?",
+    reponses: [
+      { libelle: "Blond clair ou cendré", chaleur: -1, profondeur: -1 },
+      { libelle: "Blond doré, roux ou cuivré", chaleur: 2, profondeur: 0 },
+      { libelle: "Châtain", chaleur: 0, profondeur: 1 },
+      { libelle: "Brun foncé ou noir", chaleur: 0, profondeur: 2 },
+    ],
+  },
+  {
+    id: "yeux",
+    question: "De quelle couleur sont tes yeux ?",
+    reponses: [
+      { libelle: "Bleus ou gris", chaleur: -1, profondeur: -1 },
+      { libelle: "Verts ou noisette", chaleur: 1, profondeur: 0 },
+      { libelle: "Marron", chaleur: 0, profondeur: 1 },
+      { libelle: "Marron très foncé ou noirs", chaleur: 0, profondeur: 2 },
+    ],
+  },
+  {
+    id: "compliments",
+    question: "Quelles couleurs te valent le plus de compliments ?",
+    reponses: [
+      { libelle: "Des pastels frais", chaleur: -1, profondeur: -1 },
+      { libelle: "Des tons chauds et lumineux, corail ou pêche", chaleur: 1, profondeur: -1 },
+      { libelle: "Des tons terreux, moutarde, kaki ou rouille", chaleur: 1, profondeur: 1 },
+      { libelle: "Des couleurs franches, le noir et le blanc", chaleur: -1, profondeur: 1 },
+      NSP,
+    ],
+  },
+];
+
+/**
+ * La saison des réponses (un indice de réponse par question, dans l'ordre de
+ * QUESTIONS_COLORIMETRIE), ou null quand elles ne permettent pas de trancher
+ * le chaud et le froid. Une réponse absente ou hors liste ne compte pas.
+ */
+export function saisonDuQuestionnaire(reponses: (number | null | undefined)[]): SaisonCle | null {
+  let chaleur = 0;
+  let profondeur = 0;
+  QUESTIONS_COLORIMETRIE.forEach((q, i) => {
+    const r = reponses[i];
+    const choisie = typeof r === "number" ? q.reponses[r] : undefined;
+    if (!choisie) return;
+    chaleur += choisie.chaleur;
+    profondeur += choisie.profondeur;
+  });
+  if (chaleur === 0) return null;
+  if (chaleur > 0) return profondeur > 0 ? "automne" : "printemps";
+  return profondeur > 0 ? "hiver" : "ete";
 }

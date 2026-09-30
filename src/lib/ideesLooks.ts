@@ -1,4 +1,5 @@
 import { contexteCapsule, estDeSaison, representativeWeatherFor } from "./capsule";
+import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import { OCCASIONS } from "./data";
 import { describeOutfitVariation, getOutfitsForItem, nounInfoDuNom, outfitFormality, type ItemOutfitVariation, type OutfitStyleInsight } from "./logic";
 import type { CapsuleSeason, Item, OccasionKey } from "./types";
@@ -42,11 +43,13 @@ export function ideesDressingDAbord(
   dressing: Item[] | null,
   capsuleSeason: CapsuleSeason,
   preferredHexes: string[],
-  gender: "femme" | "homme" | null
+  gender: "femme" | "homme" | null,
+  /** Colorimétrie du profil (30/09/2026) — cf. getOutfitsForItem. */
+  colorimetrie: ColorimetrieMoteur | null = null
 ): ItemOutfitVariation[] {
   const pool = wardrobePool.some((i) => i.id === pivot.id) ? wardrobePool : [...wardrobePool, pivot];
   const meteo = representativeWeatherFor(capsuleSeason);
-  const tirer = (p: Item[]) => getOutfitsForItem(pivot.id, p, meteo, preferredHexes, {}, gender, capsuleSeason);
+  const tirer = (p: Item[]) => getOutfitsForItem(pivot.id, p, meteo, preferredHexes, {}, gender, capsuleSeason, colorimetrie);
   if (!dressing) return tirer(pool);
   // Le dressing seul, mais DE LA SAISON des idées (28/09/2026) : des bottines
   // d'automne ne complètent pas une idée d'été — sans ce filtre, la tenue

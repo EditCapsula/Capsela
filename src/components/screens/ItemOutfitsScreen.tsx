@@ -11,6 +11,7 @@ import { composeWardrobePool } from "@/lib/selectors";
 import { FAMILLES_LOOK, cleLook, decrireLooks, ideesDressingDAbord, ordonnerLooks, titreCommentPorter, type FamilleLook } from "@/lib/ideesLooks";
 import type { ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
+import { colorimetrieMoteur, type ColorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import type { CapsuleSeason, Item } from "@/lib/types";
@@ -56,9 +57,10 @@ export function calculerIdeesTenues(
   dressing: Item[],
   capsuleSeason: CapsuleSeason,
   preferredHexes: string[],
-  gender: "femme" | "homme" | null
+  gender: "femme" | "homme" | null,
+  colorimetrie: ColorimetrieMoteur | null = null
 ): ItemOutfitVariation[] {
-  return ideesDressingDAbord(pivot, wardrobePool, dressing, capsuleSeason, preferredHexes, gender);
+  return ideesDressingDAbord(pivot, wardrobePool, dressing, capsuleSeason, preferredHexes, gender, colorimetrie);
 }
 
 const CAT_KEYS = CATS.map(([k]) => k);
@@ -113,6 +115,7 @@ export default function ItemOutfitsScreen() {
   );
 
   const preferredHexes = useMemo(() => paletteHexes(profile), [profile]);
+  const colorimetrie = useMemo(() => colorimetrieMoteur(profile.colorimetrie), [profile]);
 
   const variations = useMemo(
     // capsuleSeason transmis explicitement (correctif 29/08/2026) : le
@@ -125,8 +128,8 @@ export default function ItemOutfitsScreen() {
         ? []
         : pretes && pretes.pivotId === pivot.id
           ? pretes.variations
-          : calculerIdeesTenues(pivot, poolSaison, state.items, capsuleSeason, preferredHexes, profile.gender),
-    [pivot, pretes, poolSaison, state.items, preferredHexes, profile.gender, capsuleSeason]
+          : calculerIdeesTenues(pivot, poolSaison, state.items, capsuleSeason, preferredHexes, profile.gender, colorimetrie),
+    [pivot, pretes, poolSaison, state.items, preferredHexes, profile.gender, capsuleSeason, colorimetrie]
   );
 
   // Génération à la demande du visuel de la pièce pivot (correctif 23/08/2026,
