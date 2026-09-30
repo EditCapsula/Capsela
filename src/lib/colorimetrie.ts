@@ -276,8 +276,9 @@ export function colorimetrieDeSaison(
  * chaque phrase « chaude » vient d'une réponse de chaleur positive, etc.
  *
  * `visuel` : la vignette de la réponse (public/onboarding/colorimetrie,
- * découpée dans les visuels du 30/09/2026) ; null pour « Je ne sais pas »,
- * qui n'a pas d'image honnête et reçoit une vignette neutre.
+ * visuels HD du 30/09/2026). « Je ne sais pas » reçoit un lin beige uni —
+ * une matière neutre, sans nuance chaude ni froide, qui ne suggère aucune
+ * réponse. `null` reste possible (OptionRow dessine alors une vignette « ? »).
  *
  * ARBITRAGE ÉDITORIAL : les points de chaque réponse, instruits réponse par
  * réponse, à revoir sur des profils réels.
@@ -301,7 +302,7 @@ export interface QuestionColorimetrie {
 
 const V = (nom: string) => `/onboarding/colorimetrie/${nom}.webp`;
 const NEUTRE = "Sans préférence marquée, ce critère reste neutre.";
-const NSP: ReponseQuestion = { libelle: "Je ne sais pas", chaleur: 0, profondeur: 0, explication: NEUTRE, visuel: null };
+const NSP: ReponseQuestion = { libelle: "Je ne sais pas", chaleur: 0, profondeur: 0, explication: NEUTRE, visuel: V("neutre-lin") };
 
 export const QUESTIONS_COLORIMETRIE: QuestionColorimetrie[] = [
   {

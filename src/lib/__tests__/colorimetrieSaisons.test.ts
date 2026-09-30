@@ -140,11 +140,11 @@ describe("réponses gardées et « Pourquoi cette palette ? »", () => {
     }
   });
 
-  it("chaque réponse a sa vignette, sauf « Je ne sais pas »", () => {
+  it("chaque réponse a sa vignette ; « Je ne sais pas » partage le lin neutre", () => {
     for (const q of QUESTIONS_COLORIMETRIE) {
       for (const r of q.reponses) {
-        if (r.libelle === "Je ne sais pas") expect(r.visuel).toBeNull();
-        else expect(r.visuel).toMatch(/^\/onboarding\/colorimetrie\/[a-z-]+\.webp$/);
+        expect(r.visuel).toMatch(/^\/onboarding\/colorimetrie\/[a-z-]+\.webp$/);
+        if (r.libelle === "Je ne sais pas") expect(r.visuel).toBe("/onboarding/colorimetrie/neutre-lin.webp");
       }
     }
   });
