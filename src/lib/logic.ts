@@ -280,7 +280,24 @@ export interface LeviersMesure {
    * perdre. Sur dix journées et 1600 tenues par bras, aucune occasion perdue.
    */
   replMeteoRelacheMax?: boolean;
+  /**
+   * Reproduit le comportement d'AVANT le 30/09/2026 : par temps frais, la
+   * veste n'était qu'un tirage à 30 % (vesteProbability), et quand il
+   * échouait la tenue partait sans couche avec, sous la tenue, la suggestion
+   * « compléter avec une veste, il va faire frais ce soir » (R-S14). Conservé
+   * pour qu'un audit retrouve la ligne de base dans la même exécution.
+   *
+   * Ce qui a changé et pourquoi. Signalé le 30/09 sur un top sans manches à
+   * 18° : la veste qu'il lui faut arrivait en repli, dans une carte sous la
+   * tenue, au lieu d'en faire partie. Elle entre désormais dans la tenue
+   * elle-même (cf. `vesteFraicheRequise` dans generateOutfit) ; la suggestion
+   * ne reste que là où le pool n'a aucune veste de saison à offrir.
+   */
+  vesteFraicheFacultative?: boolean;
 }
+
+/** Sous cette température, une tenue sans couche de dessus est à compléter d'une veste (R-S14) — le seuil de la suggestion, désormais aussi celui de la veste intégrée. */
+export const SEUIL_SOIREE_FRAICHE = 21;
 
 /**
  * Un événement de trace. Cf. LeviersMesure.traceRepli.
@@ -1220,8 +1237,20 @@ export function generateOutfit(
   // veste + layering proposés ensemble) — une veste et un calque (chemise
   // ouverte, cardigan, gilet, sweat) jouent le même rôle de superposition ;
   // cumuler les deux est redondant et encombre visuellement la silhouette.
+  // Veste intégrée par temps frais (30/09/2026) : un haut de base, à
+  // SEUIL_SOIREE_FRAICHE ou en dessous, part avec sa veste — jamais un pull
+  // (déjà une couche), une robe, ni Sport et Cocooning (R-S14 les traite à
+  // part). Un « haut » est un vêtement de base au sens de R-B9 : la veste
+  // ne crée aucune violation. Sans veste de saison dans le pool, pick() ne
+  // rend rien et la suggestion R-S14 reste le repli.
+  const vesteFraicheRequise =
+    !leviers?.vesteFraicheFacultative &&
+    occasion !== "cocooning" &&
+    occasion !== "sport" &&
+    weather.temp <= SEUIL_SOIREE_FRAICHE &&
+    primaryTop?.cat === "haut";
   let hasVeste = !!compensatingVeste;
-  if (!hasVeste && (forceEntretienVeste || Math.random() < vesteProbability(occasion))) {
+  if (!hasVeste && (forceEntretienVeste || vesteFraicheRequise || Math.random() < vesteProbability(occasion))) {
     const v = pick(["veste"], forceEntretienVeste);
     if (v) {
       hasVeste = true;
@@ -2130,7 +2159,7 @@ export function computeLookScore(
 
   // R-S14 — soirée fraîche : exclue en Cocooning (R-B12), pas de sens à suggérer une veste chez soi.
   const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau");
-  if (occasion !== "cocooning" && weather.temp <= 21 && !hasOuterwear && !dismissed.has("veste_soir")) {
+  if (occasion !== "cocooning" && weather.temp <= SEUIL_SOIREE_FRAICHE && !hasOuterwear && !dismissed.has("veste_soir")) {
     // Occasion sport (recette 25/08/2026, signalé : blazer structuré
     // suggéré sur une tenue baskets + short cycliste) — préférence molle
     // pour une veste décontractée (formalityOf <= 1, ex. coupe-vent/
