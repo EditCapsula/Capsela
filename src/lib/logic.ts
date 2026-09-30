@@ -409,6 +409,39 @@ export function outfitMoodPhrase(
   return weatherQualifier(Math.round(temp));
 }
 
+/**
+ * LE TITRE DE LA CARD « LOOK DU JOUR » DE L'ACCUEIL (28/09/2026, refonte
+ * du hero : « Ta tenue est prête » ressemblait à un message système). Même
+ * tournure que la phrase d'explication — occasionPhrase, donc le même
+ * contexte réel : « Une silhouette pensée pour ta journée au bureau. »,
+ * « … pour ton dîner. », « … pour ta sortie. » — jamais « bureau » écrit en
+ * dur.
+ */
+export function titreLookDuJour(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext): string {
+  return `Une silhouette pensée pour ${occasionPhrase(occasion, workMode, dateContext)}.`;
+}
+
+/** Catégories qui font d'une pièce la couche de dessus d'une tenue. */
+const COUCHE_DE_DESSUS: CategoryKey[] = ["veste", "manteau"];
+
+/**
+ * Le qualificatif sous ce titre, en phrase (majuscule, point). Celui de la
+ * météo (weatherQualifier), sauf une tournure : entre 12° et 19°, « une
+ * couche en plus si besoin » présentait comme une option la veste que la
+ * tenue CONTIENT déjà (signalé le 28/09/2026). Quand une veste ou un manteau
+ * fait partie du look, la tenue se dit « confortable et structurée » ; sans
+ * couche de dessus, le conseil reste. Aucune donnée métier nouvelle : la
+ * catégorie des pièces affichées suffit. Sans température connue, rien — le
+ * titre porte déjà l'occasion.
+ */
+export function qualificatifLook(temp: number | null | undefined, pieces: Pick<Item, "cat">[]): string | null {
+  if (temp == null || !Number.isFinite(temp)) return null;
+  const t = Math.round(temp);
+  const avecDessus = pieces.some((p) => COUCHE_DE_DESSUS.includes(p.cat));
+  const q = t >= 12 && t < 20 && avecDessus ? "confortable et structurée" : weatherQualifier(t);
+  return q.charAt(0).toUpperCase() + q.slice(1) + ".";
+}
+
 export function explainRecommendation(
   occasion: OccasionKey,
   workMode: WorkMode,
