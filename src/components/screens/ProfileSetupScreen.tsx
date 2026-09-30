@@ -326,7 +326,17 @@ export default function ProfileSetupScreen() {
       value: draft.paletteCouleurs.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
       swatches: draft.paletteCouleurs,
     },
-    { label: "Intensité", value: draft.paletteIntensite || "non précisée", swatches: [] as string[] },
+    {
+      label: "Intensité",
+      value: draft.paletteIntensite
+        ? (INTENSITE_VISUELS[draft.paletteIntensite]?.libelleRecap ?? draft.paletteIntensite)
+        : "non précisée",
+      // Les pastilles de l'étape Intensité (30/09/2026, demandé) : on retrouve
+      // ici la famille choisie telle qu'on l'a vue. Illustration seulement,
+      // comme sur l'étape — ce ne sont pas des couleurs choisies.
+      // Une valeur venue d'une version antérieure et absente de la table n'affiche rien plutôt que de planter.
+      swatches: (draft.paletteIntensite && INTENSITE_VISUELS[draft.paletteIntensite]?.pastilles) || ([] as string[]),
+    },
     {
       label: "Analyse",
       // « Pas encore analysée » et non « aucune » : l'analyse est à venir,

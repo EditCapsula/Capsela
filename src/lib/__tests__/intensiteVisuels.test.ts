@@ -28,4 +28,9 @@ describe("INTENSITE_VISUELS — une illustration par option, sans seconde liste 
     const hexPal = new Set(PAL_COULEURS.map(([, h]) => h));
     for (const hex of INTENSITE_VISUELS["Profondes et intenses"].pastilles) expect(hexPal.has(hex)).toBe(true);
   });
+
+  it("au récapitulatif, « Un mélange » dit ce qu'il contient ; les autres gardent leur libellé", () => {
+    expect(INTENSITE_VISUELS["Un mélange"].libelleRecap).toBe("Tons doux, intenses et lumineux");
+    for (const o of INTENSITE_OPTIONS.filter((x) => x !== "Un mélange")) expect(INTENSITE_VISUELS[o].libelleRecap).toBeUndefined();
+  });
 });
