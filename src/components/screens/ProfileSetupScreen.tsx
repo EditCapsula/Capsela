@@ -11,6 +11,7 @@ import FilEtapes from "@/components/FilEtapes";
 import {
   GENDERS,
   INTENSITE_OPTIONS,
+  INTENSITE_VISUELS,
   MAX_PALETTE_COULEURS,
   MIN_PALETTE_COULEURS,
   MORPHOLOGIES,
@@ -56,7 +57,7 @@ const ALL_STEPS = [
    * palette ».
    */
   { key: "pal_couleurs", kicker: "Tes couleurs", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis 1 à 6 couleurs que tu portes ou aimerais porter souvent." },
-  { key: "pal_intensite", kicker: "Ton style", title: "Quelle intensité portes-tu volontiers ?", subtitle: "Cela nous aide à créer des looks dans ton style." },
+  { key: "pal_intensite", kicker: "Ton style", title: "Quelle intensité de couleurs portes-tu volontiers ?", subtitle: "Cela nous aide à créer des looks dans ton style." },
   { key: "colorimetrie", kicker: "Ta colorimétrie", title: "Et si on trouvait les couleurs qui te mettent naturellement en valeur ?", subtitle: "Une photo suffit. Capsela étudie les tonalités de ta peau, de tes cheveux et de tes yeux pour personnaliser tes recommandations." },
   { key: "colorimetrie_resultat", kicker: "Ta colorimétrie", title: "Voilà ce que dit ton analyse", subtitle: "Un repère pour t'inspirer, pas une règle : tu peux porter toutes les couleurs que tu aimes." },
   { key: "pal_recap", kicker: "Voilà ta palette Capsela", title: "Ce que tu aimes × ce qui te met en valeur", subtitle: "Capsela combine tes préférences et ta colorimétrie pour des recommandations qui te ressemblent." },
@@ -72,24 +73,81 @@ function chipCls(on: boolean): string {
   );
 }
 
+/**
+ * Carte radio pleine largeur de l'onboarding (Genre, Intensité). Toute la
+ * carte est le bouton ; `aria-pressed` dit l'état aux lecteurs d'écran.
+ *
+ * `description` et `pastilles` (30/09/2026, étape Intensité) sont
+ * facultatifs : sans eux, la carte est exactement celle d'avant. Les
+ * pastilles illustrent une famille de couleurs — décoratives, le libellé
+ * reste la seule information (aria-hidden).
+ */
 function OptionRow({
   label,
   on,
   onClick,
+  description,
+  pastilles,
 }: {
   label: string;
   on: boolean;
   onClick: () => void;
+  description?: string;
+  pastilles?: string[];
 }) {
   return (
     <button
       onClick={onClick}
+      aria-pressed={on}
       className={
         "flex items-center gap-3 px-4 py-[15px] rounded-[14px] cursor-pointer text-[13px] leading-[1.4] text-left border " +
         (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
       }
     >
-      <span className="flex-1">{label}</span>
+      <span className="flex-1 min-w-0">
+        {/* Libellé et pastilles sur une ligne, la phrase dessous sur toute
+            la largeur : dans une colonne étroite à côté des pastilles, elle
+            passait sur quatre lignes à 360 px. */}
+        <span className="flex items-center gap-2">
+          <span className="flex-1 min-w-0">{label}</span>
+          {pastilles && (
+            /* L'ÉVENTAIL SUR LES PETITS ÉCRANS : sous ~380 px, les pastilles
+               se chevauchent de 3 px au plus plutôt que de
+               rapetisser à 16 px ou de faire passer le libellé sur deux
+               lignes — mesuré à 360, 375 et 390 px. Au-delà, elles
+               s'espacent. Un liseré de la couleur de la carte sépare deux
+               pastilles qui se touchent. Par une marge gauche : un `gap`
+               négatif n'existe pas en CSS. */
+            <span aria-hidden="true" className="flex items-center flex-shrink-0">
+              {pastilles.map((hex, i) => (
+                <span
+                  key={i}
+                  className="block rounded-full"
+                  style={{
+                    marginLeft: i === 0 ? 0 : "clamp(-3px, calc((100vw - 380px) * 0.3), 6px)",
+                    width: "clamp(20px, 5.6vw, 24px)",
+                    height: "clamp(20px, 5.6vw, 24px)",
+                    background: hex,
+                    // Liseré couleur de carte (crème, ou encre une fois sélectionnée), puis un filet à peine
+                    // visible qui détache les teintes claires de la carte claire et les profondes de l'encre.
+                    boxShadow: on
+                      ? "0 0 0 1.5px var(--color-ink), 0 0 0 2.5px rgba(243,238,229,.28)"
+                      : "0 0 0 1.5px var(--color-card), inset 0 0 0 1px rgba(29,26,22,.09)",
+                  }}
+                />
+              ))}
+            </span>
+          )}
+        </span>
+        {description && (
+          <span
+            className="block text-[11.5px] leading-[1.45] mt-[4px]"
+            style={{ color: on ? "rgba(243,238,229,.72)" : "var(--color-muted)", textWrap: "pretty" }}
+          >
+            {description}
+          </span>
+        )}
+      </span>
       <span
         className={
           "w-5 h-5 rounded-full flex-shrink-0 text-[11px] flex items-center justify-center " +
@@ -365,13 +423,18 @@ export default function ProfileSetupScreen() {
       {/* L'intensité seule, en cartes radio pleine largeur plutôt qu'en chips
           (maquette du 25/09) : quatre libellés longs en chips produisaient
           deux rangs irréguliers. `OptionRow` est le composant déjà utilisé
-          par l'étape Genre — même marque de sélection, même hauteur. */}
+          par l'étape Genre — même marque de sélection. Depuis le 30/09/2026,
+          chaque carte montre aussi cinq pastilles de sa famille de couleurs
+          et une phrase (INTENSITE_VISUELS) : on compare les quatre d'un coup
+          d'œil, sans que le choix enregistré change. */}
       {meta.key === "pal_intensite" && (
         <div className="flex flex-col gap-[10px] mt-[26px]">
           {INTENSITE_OPTIONS.map((it: Intensite) => (
             <OptionRow
               key={it}
               label={it}
+              description={INTENSITE_VISUELS[it].description}
+              pastilles={INTENSITE_VISUELS[it].pastilles}
               on={draft.paletteIntensite === it}
               onClick={() => patch({ paletteIntensite: it })}
             />
