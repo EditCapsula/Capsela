@@ -38,7 +38,7 @@ Pour résoudre des pièces déjà enregistrées (historique, looks, tenues plani
 
 - Interface, commentaires et messages de commit en français. Les commentaires expliquent le POURQUOI et datent les arbitrages : les lire avant de modifier une règle.
 - Aucune donnée inventée à l'écran : une section sans donnée ne s'affiche pas. Une phrase qui affirme qu'une donnée « sert à » quelque chose doit être vraie dans le code.
-- Jamais de message morphologique négatif. Interdits : cacher, dissimuler, camoufler, corriger, défaut, grossir, amincir, peu flatteur. Aucune logique fondée sur la couleur de peau, la morphologie, l'âge ou le genre apparents.
+- Jamais de message morphologique négatif. Interdits : cacher, dissimuler, camoufler, corriger, défaut, grossir, amincir, peu flatteur. Aucune logique fondée sur la couleur de peau, la morphologie, l'âge ou le genre apparents. **Une seule exception encadrée** (arbitrée le 30/09/2026) : l'analyse de colorimétrie par photo (`supabase/functions/_shared/colorimetrie.ts`, `docs/colorimetrie.md`) — consentement explicite avant l'envoi, sortie limitée à une saison parmi quatre, couleurs tirées de la table `SAISONS` de l'app et jamais du modèle, photo ni conservée ni journalisée, résultat réservé à l'affichage (le moteur de tenues n'en lit rien), photo fermée tant que `NEXT_PUBLIC_COLORIMETRIE_PHOTO` n'est pas posé après la revue juridique. Ne pas l'étendre à un autre usage sans nouvel arbitrage.
 - Design system : tokens de `src/app/globals.css` (crème, terracotta, encre), Fraunces pour les titres (27 px pour un titre d'écran, second temps en italique terracotta), Manrope pour le reste. Pas d'emoji dans l'interface.
 
 ## Rendu local dans l'environnement cloud
