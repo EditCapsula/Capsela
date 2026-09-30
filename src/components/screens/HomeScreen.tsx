@@ -701,8 +701,14 @@ export default function HomeScreen() {
                 donnée (82 % de la largeur, mesuré le 30/09 : la partie peinte
                 d'une planche va de 0,78 à 0,94 fois la largeur ; l'ancienne
                 mesure de grille laissait jusqu'à 60 px vides en haut et en
-                bas). La planche s'y ajuste : la card ne bouge pas avec la tenue. */}
-            <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
+                bas). La planche s'y ajuste : la card ne bouge pas avec la tenue.
+
+                90 % ICI, et non 82 % comme Tenue et la tenue planifiée
+                (30/09/2026, demandé : « cela reste petit sur la home, augmente
+                toutes les pièces de 10 % ») : les annotations prennent leur
+                marge sur l'accueil seulement ; 10 % de hauteur de plus rendent
+                aux pièces les 10 % demandés. */}
+            <div className="mt-[12px]" style={{ aspectRatio: "100 / 90" }}>
               <OutfitComposition items={outfitPieces} variant="planche" annotations={annotations} />
             </div>
           </div>
