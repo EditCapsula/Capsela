@@ -44,6 +44,14 @@ export interface Colorimetrie {
    * "galerie" restent lisibles pour les profils écrits par la démo d'avant.
    */
   source?: "camera" | "galerie" | "questionnaire";
+  /**
+   * Les réponses au questionnaire, par identifiant de question (30/09/2026) :
+   * « Pourquoi cette palette ? » les relit, même en revenant plus tard sur
+   * l'étape. Jsonb libre — aucune migration (la contrainte de 0034 ne porte
+   * que sur `statut`). Absentes d'un profil plus ancien : la section ne
+   * s'affiche pas plutôt que d'inventer une explication.
+   */
+  reponses?: Record<string, number>;
 }
 
 export const COLORIMETRIE_VIDE: Colorimetrie = { statut: "aucune" };
@@ -168,31 +176,54 @@ const hexDe = (nom: string): string => {
   return hex;
 };
 
-export const SAISONS: Record<SaisonCle, { libelle: string; description: string; signature: string[]; neutres: string[]; moderation: string[] }> = {
+export interface Saison {
+  libelle: string;
+  /** La phrase sous le titre du résultat (brief du 30/09/2026). */
+  description: string;
+  /** « Résultat : une palette … » — dit ce que les deux axes ont donné, rien de plus. */
+  nature: string;
+  signature: string[];
+  neutres: string[];
+  moderation: string[];
+  /**
+   * Visuel éditorial du résultat, quand il en existe un QUI CORRESPOND à la
+   * saison. Le seul fourni (30/09/2026) est une palette de printemps —
+   * corail, moutarde, rose : l'afficher pour un Hiver contrasté montrerait
+   * des couleurs que le résultat place justement loin du visage.
+   */
+  visuel?: string;
+}
+
+export const SAISONS: Record<SaisonCle, Saison> = {
   printemps: {
     libelle: "Printemps lumineux",
-    description: "Des couleurs chaudes et claires, qui illuminent.",
+    description: "Des couleurs chaudes et claires qui illuminent naturellement ton teint.",
+    nature: "chaude et lumineuse",
     signature: ["Corail", "Camel", "Moutarde", "Rose poudré"].map(hexDe),
     neutres: ["Crème", "Sable", "Beige", "Blanc / écru"].map(hexDe),
     moderation: ["Noir", "Prune", "Gris"].map(hexDe),
+    visuel: "/onboarding/colorimetrie/palette-printemps.webp",
   },
   ete: {
     libelle: "Été doux",
-    description: "Des couleurs fraîches et adoucies, tout en nuances.",
+    description: "Des couleurs fraîches et adoucies qui subliment ton teint tout en nuances.",
+    nature: "fraîche et douce",
     signature: ["Rose poudré", "Bleu", "Prune", "Marine"].map(hexDe),
     neutres: ["Blanc", "Gris", "Taupe"].map(hexDe),
     moderation: ["Moutarde", "Corail", "Noir"].map(hexDe),
   },
   automne: {
     libelle: "Automne chaleureux",
-    description: "Des couleurs chaudes et profondes, riches et naturelles.",
+    description: "Des couleurs chaudes et profondes qui réchauffent naturellement ton teint.",
+    nature: "chaude et profonde",
     signature: ["Terracotta", "Camel", "Moutarde", "Kaki", "Bordeaux"].map(hexDe),
     neutres: ["Chocolat", "Crème", "Taupe", "Beige"].map(hexDe),
     moderation: ["Noir", "Gris", "Rose poudré"].map(hexDe),
   },
   hiver: {
     libelle: "Hiver contrasté",
-    description: "Des couleurs froides et franches, en contraste.",
+    description: "Des couleurs froides et franches qui révèlent l'éclat de ton teint.",
+    nature: "froide et contrastée",
     signature: ["Rouge", "Bordeaux", "Prune", "Vert bouteille", "Marine"].map(hexDe),
     neutres: ["Noir", "Blanc", "Gris"].map(hexDe),
     moderation: ["Camel", "Moutarde", "Beige"].map(hexDe),
@@ -201,18 +232,30 @@ export const SAISONS: Record<SaisonCle, { libelle: string; description: string; 
 
 export const estSaison = (v: unknown): v is SaisonCle => typeof v === "string" && (SAISONS_CLES as string[]).includes(v);
 
-/** Le résultat d'une saison, quelle que soit la façon dont elle a été trouvée. */
-export function colorimetrieDeSaison(saison: SaisonCle, source: NonNullable<Colorimetrie["source"]>): Colorimetrie {
+/** Le résultat d'une saison, avec les réponses qui l'ont donnée quand elles existent. */
+export function colorimetrieDeSaison(
+  saison: SaisonCle,
+  source: NonNullable<Colorimetrie["source"]>,
+  reponses?: Record<string, number>
+): Colorimetrie {
   const s = SAISONS[saison];
-  return lireColorimetrie({ saison, libelle: s.libelle, signature: s.signature, neutres: s.neutres, moderation: s.moderation }, source);
+  const c = lireColorimetrie({ saison, libelle: s.libelle, signature: s.signature, neutres: s.neutres, moderation: s.moderation }, source);
+  if (reponses && Object.keys(reponses).length) c.reponses = { ...reponses };
+  return c;
 }
 
 /*
  * LE QUESTIONNAIRE (30/09/2026, seule voie retenue : « on va partir sur le
- * questionnaire plutôt, pas d'analyse photo pour le moment »). Cinq questions sur des traits DÉCLARÉS — bijoux, blanc préféré,
- * couleur de cheveux d'origine, couleur des yeux, couleurs complimentées.
- * Aucune question ne porte sur la couleur de peau : la règle du projet
- * reste entière pour ce chemin.
+ * questionnaire plutôt, pas d'analyse photo pour le moment »). Quatre
+ * questions sur des traits DÉCLARÉS — métal, blanc préféré, couleur de
+ * cheveux d'origine, couleur des yeux. Aucune ne porte sur la couleur de
+ * peau : la règle du projet reste entière.
+ *
+ * QUATRE ET NON PLUS CINQ (brief « Refonte UX/UI du parcours colorimétrie »,
+ * 30/09/2026) : « Quelles couleurs te valent le plus de compliments ? » est
+ * retirée, jugée trop subjective. Mesuré dans la même exécution sur toutes
+ * les combinaisons de réponses : la répartition bouge à peine — « pas de
+ * saison nette » 17,2 % → 18,8 %, chaque saison à moins de 1,5 point.
  *
  * Deux axes, comme dans la méthode des saisons : la CHALEUR (tons chauds
  * positifs, froids négatifs) et la PROFONDEUR (profond positif, clair
@@ -221,6 +264,15 @@ export function colorimetrieDeSaison(saison: SaisonCle, source: NonNullable<Colo
  * comme claire. Une chaleur nulle — trop de « Je ne sais pas » ou de « Les
  * deux » — ne tranche pas : aucune saison n'est inventée, l'écran le dit.
  *
+ * `explication` : la phrase de « Pourquoi cette palette ? ». Elle dit ce que
+ * la réponse apporte SUR LES DEUX AXES, et rien d'autre — une réponse qui ne
+ * pèse pas le dit (« ce critère reste neutre »). Les tests vérifient que
+ * chaque phrase « chaude » vient d'une réponse de chaleur positive, etc.
+ *
+ * `visuel` : la vignette de la réponse (public/onboarding/colorimetrie,
+ * découpée dans les visuels du 30/09/2026) ; null pour « Je ne sais pas »,
+ * qui n'a pas d'image honnête et reçoit une vignette neutre.
+ *
  * ARBITRAGE ÉDITORIAL : les points de chaque réponse, instruits réponse par
  * réponse, à revoir sur des profils réels.
  */
@@ -228,68 +280,100 @@ export interface ReponseQuestion {
   libelle: string;
   chaleur: number;
   profondeur: number;
+  explication: string;
+  visuel: string | null;
 }
 export interface QuestionColorimetrie {
   id: string;
   question: string;
+  /** Titre de la ligne dans « Pourquoi cette palette ? ». */
+  titreExplication: string;
+  /** Ce que l'écran d'analyse dit relire. */
+  analyse: string;
   reponses: ReponseQuestion[];
 }
 
-const NSP: ReponseQuestion = { libelle: "Je ne sais pas", chaleur: 0, profondeur: 0 };
+const V = (nom: string) => `/onboarding/colorimetrie/${nom}.webp`;
+const NEUTRE = "Sans préférence marquée, ce critère reste neutre.";
+const NSP: ReponseQuestion = { libelle: "Je ne sais pas", chaleur: 0, profondeur: 0, explication: NEUTRE, visuel: null };
 
 export const QUESTIONS_COLORIMETRIE: QuestionColorimetrie[] = [
   {
     id: "bijoux",
-    question: "Quels bijoux te mettent le plus en valeur ?",
+    question: "Quel métal te met le plus en valeur ?",
+    titreExplication: "Tes bijoux",
+    analyse: "Ton métal préféré",
     reponses: [
-      { libelle: "Dorés", chaleur: 2, profondeur: 0 },
-      { libelle: "Argentés", chaleur: -2, profondeur: 0 },
-      { libelle: "Les deux", chaleur: 0, profondeur: 0 },
+      { libelle: "Doré", chaleur: 2, profondeur: 0, explication: "Ton choix du doré suggère une harmonie plutôt chaude.", visuel: V("metal-dore") },
+      { libelle: "Argenté", chaleur: -2, profondeur: 0, explication: "Ton choix de l'argenté suggère une harmonie plutôt froide.", visuel: V("metal-argente") },
+      { libelle: "Les deux", chaleur: 0, profondeur: 0, explication: "Les deux te vont : ce critère reste neutre.", visuel: V("metal-les-deux") },
       NSP,
     ],
   },
   {
     id: "blanc",
     question: "Près du visage, quel blanc préfères-tu ?",
+    titreExplication: "Ton blanc préféré",
+    analyse: "Ton blanc près du visage",
     reponses: [
-      { libelle: "Un blanc pur", chaleur: -1, profondeur: 0 },
-      { libelle: "Un écru ou un crème", chaleur: 1, profondeur: 0 },
-      { libelle: "Les deux", chaleur: 0, profondeur: 0 },
+      { libelle: "Un blanc pur", chaleur: -1, profondeur: 0, explication: "Le blanc pur semble plus net près de ton visage : une nuance plutôt froide.", visuel: V("blanc-pur") },
+      { libelle: "Un écru ou un crème", chaleur: 1, profondeur: 0, explication: "L'écru et le crème semblent plus doux près de ton visage : une nuance plutôt chaude.", visuel: V("blanc-ecru") },
+      { libelle: "Les deux", chaleur: 0, profondeur: 0, explication: "Les deux te vont : ce critère reste neutre.", visuel: V("blanc-les-deux") },
       NSP,
     ],
   },
   {
     id: "cheveux",
     question: "Quelle est ta couleur de cheveux d'origine ?",
+    titreExplication: "Tes cheveux",
+    analyse: "Ta couleur naturelle de cheveux",
     reponses: [
-      { libelle: "Blond clair ou cendré", chaleur: -1, profondeur: -1 },
-      { libelle: "Blond doré, roux ou cuivré", chaleur: 2, profondeur: 0 },
-      { libelle: "Châtain", chaleur: 0, profondeur: 1 },
-      { libelle: "Brun foncé ou noir", chaleur: 0, profondeur: 2 },
+      { libelle: "Blond clair ou cendré", chaleur: -1, profondeur: -1, explication: "Ta couleur naturelle apporte de la clarté et une nuance plutôt fraîche.", visuel: V("cheveux-blond-clair") },
+      { libelle: "Blond doré, roux ou cuivré", chaleur: 2, profondeur: 0, explication: "Ta couleur naturelle apporte une chaleur marquée.", visuel: V("cheveux-blond-dore") },
+      { libelle: "Châtain", chaleur: 0, profondeur: 1, explication: "Ta couleur naturelle apporte une profondeur intermédiaire.", visuel: V("cheveux-chatain") },
+      { libelle: "Brun foncé ou noir", chaleur: 0, profondeur: 2, explication: "Ta couleur naturelle apporte une profondeur marquée.", visuel: V("cheveux-brun") },
     ],
   },
   {
     id: "yeux",
     question: "De quelle couleur sont tes yeux ?",
+    titreExplication: "Tes yeux",
+    analyse: "La couleur de tes yeux",
     reponses: [
-      { libelle: "Bleus ou gris", chaleur: -1, profondeur: -1 },
-      { libelle: "Verts ou noisette", chaleur: 1, profondeur: 0 },
-      { libelle: "Marron", chaleur: 0, profondeur: 1 },
-      { libelle: "Marron très foncé ou noirs", chaleur: 0, profondeur: 2 },
-    ],
-  },
-  {
-    id: "compliments",
-    question: "Quelles couleurs te valent le plus de compliments ?",
-    reponses: [
-      { libelle: "Des pastels frais", chaleur: -1, profondeur: -1 },
-      { libelle: "Des tons chauds et lumineux, corail ou pêche", chaleur: 1, profondeur: -1 },
-      { libelle: "Des tons terreux, moutarde, kaki ou rouille", chaleur: 1, profondeur: 1 },
-      { libelle: "Des couleurs franches, le noir et le blanc", chaleur: -1, profondeur: 1 },
-      NSP,
+      { libelle: "Bleus ou gris", chaleur: -1, profondeur: -1, explication: "Leur tonalité claire apporte une note fraîche.", visuel: V("yeux-bleus") },
+      { libelle: "Verts ou noisette", chaleur: 1, profondeur: 0, explication: "Leur tonalité apporte une note chaude.", visuel: V("yeux-verts") },
+      { libelle: "Marron", chaleur: 0, profondeur: 1, explication: "Leur tonalité ajoute de la profondeur.", visuel: V("yeux-marron") },
+      { libelle: "Marron très foncé ou noirs", chaleur: 0, profondeur: 2, explication: "Leur tonalité renforce le contraste.", visuel: V("yeux-tres-fonces") },
     ],
   },
 ];
+
+/** Les réponses (un indice par question, dans l'ordre) rangées par identifiant de question — ce que le profil garde. */
+export function reponsesParQuestion(reponses: (number | null | undefined)[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  QUESTIONS_COLORIMETRIE.forEach((q, i) => {
+    const r = reponses[i];
+    if (typeof r === "number" && q.reponses[r]) out[q.id] = r;
+  });
+  return out;
+}
+
+/** Le chemin inverse, pour reprendre un questionnaire déjà rempli. */
+export function reponsesEnListe(reponses: Record<string, number> | undefined): (number | null)[] {
+  return QUESTIONS_COLORIMETRIE.map((q) => {
+    const r = reponses?.[q.id];
+    return typeof r === "number" && q.reponses[r] ? r : null;
+  });
+}
+
+/** « Pourquoi cette palette ? » : une ligne par réponse enregistrée, dans l'ordre des questions. Vide sans réponses. */
+export function explicationsDesReponses(reponses: Record<string, number> | undefined): { titre: string; texte: string }[] {
+  if (!reponses) return [];
+  return QUESTIONS_COLORIMETRIE.flatMap((q) => {
+    const r = q.reponses[reponses[q.id] ?? -1];
+    return r ? [{ titre: q.titreExplication, texte: r.explication }] : [];
+  });
+}
 
 /**
  * La saison des réponses (un indice de réponse par question, dans l'ordre de

@@ -7,23 +7,77 @@ Arbitrages de la propriétaire, 30/09/2026 :
 - un effet réel sur les tenues : « on doit tenir compte de la colorimétrie
   dans les recommandations de tenues ».
 
-## Le questionnaire
+## Le parcours (refonte UX/UI du 30/09/2026)
 
-L'étape « Ta colorimétrie » de l'onboarding pose cinq questions
-(`QUESTIONS_COLORIMETRIE`, `src/lib/colorimetrie.ts`) : bijoux, blanc préféré
-près du visage, couleur de cheveux d'origine, couleur des yeux, couleurs qui
-valent des compliments. **Aucune ne porte sur la peau** (vérifié par les
-tests). Chaque réponse ajoute des points sur deux axes, la chaleur et la
-profondeur ; `saisonDuQuestionnaire` en déduit Printemps lumineux, Été doux,
-Automne chaleureux ou Hiver contrasté. Une chaleur nulle (« Je ne sais pas »,
-« Les deux ») ne tranche pas : l'écran le dit, et aucune saison n'est
-inventée.
+Brief « Refonte UX/UI du parcours colorimétrie » : plus court, plus éditorial,
+orienté conseil. La logique (`saisonDuQuestionnaire`, `SAISONS`, le moteur)
+n'a pas changé ; seuls le questionnaire et les écrans ont évolué.
+
+1. **Présentation** : titre, sous-titre, trois repères (environ 1 minute,
+   sans photo, résultat personnalisé), « Commencer », « Passer pour
+   l'instant ».
+2. **Quatre questions** (`QUESTIONS_COLORIMETRIE`) : métal, blanc près du
+   visage, couleur de cheveux d'origine, couleur des yeux. Une réponse se
+   choisit, puis « Continuer » (« Voir mon résultat » à la dernière). La
+   progression « 1 / 4 » remplace le fil de l'onboarding pendant les
+   questions : un seul compteur à l'écran. Le retour de l'en-tête remonte
+   d'une question (`colorimetrieParcours.ts`).
+3. **Analyse** : 1,7 s (0,9 s en mouvement réduit). Le calcul est instantané ;
+   l'écran relit les éléments réellement croisés, puis passe la main.
+4. **Résultat** : la saison en titre, sa phrase, le nuancier (signature,
+   neutres, à porter avec modération), le visuel éditorial quand il
+   correspond à la saison, « Pourquoi cette palette ? » (une ligne par
+   réponse, relue depuis `colorimetrie.reponses`), et « Ta palette est un
+   repère, pas une règle ».
+5. **Et maintenant ?** : trois bénéfices, chacun vrai dans le moteur ;
+   « Continuer mon profil », « Modifier ma colorimétrie » (reprend le
+   questionnaire avec les réponses données).
+6. **Pas de saison nette** : jamais un échec. L'écran dit ce que cela
+   signifie ; « Continuer » garde les préférences de couleurs seules,
+   « Refaire le questionnaire » repart de zéro.
+
+**Aucune question ne porte sur la peau** (vérifié par les tests). Chaque
+réponse ajoute des points sur deux axes, la chaleur et la profondeur. Une
+chaleur nulle (« Je ne sais pas », « Les deux ») ne tranche pas.
+
+La question « Quelles couleurs te valent le plus de compliments ? » a été
+retirée, parce que le brief la juge trop subjective. Sur toutes les
+combinaisons de réponses, dans la même exécution, la répartition bouge à
+peine : « pas de saison nette » passe de 17,2 % à 18,8 %, et chaque saison
+reste à moins de 1,5 point (**DÉMONTRÉ**, sur l'énumération des réponses,
+pas sur des profils réels).
+
+Les réponses sont enregistrées dans `profiles.colorimetrie`, un jsonb, sous
+`reponses`. Aucune migration n'est nécessaire, car la contrainte de 0034 ne
+porte que sur `statut`. Un profil plus ancien n'a pas ces réponses : son
+résultat s'affiche sans « Pourquoi cette palette ? ».
+
+### Les visuels
+
+Le ZIP fourni (`Capsela_Onboarding_Visuals.zip`) contient des découpes de la
+maquette, avec du texte d'interface et des boutons radio. Seules les
+vignettes de réponse et le tissu du résultat en ont été extraits, dans
+`public/onboarding/colorimetrie/` (76 Ko, WebP). La maquette complète n'est
+pas affichée.
+
+Deux limites :
+- **Résolution** : les vignettes ne font qu'environ 50 px dans la source.
+  Elles sont affichées à 44 px, donc un peu douces sur un écran haute
+  densité. Des sources en haute définition (au moins 150 px) les rendraient
+  nettes.
+- **Un seul visuel de résultat, pour le Printemps** : corail, moutarde, rose.
+  Il n'est affiché que pour cette saison, puisque les autres placeraient
+  certaines de ces couleurs « avec modération ». Il en faudrait un par saison.
+- « Je ne sais pas » reçoit une vignette neutre (« ? »), faute d'image
+  honnête.
 
 Chaque saison (`SAISONS`) porte des couleurs signature, des neutres et des
 couleurs « avec modération », toutes prises dans `PAL_COULEURS`.
 
-**ARBITRAGE ÉDITORIAL** : les points de chaque réponse et les couleurs de
-chaque saison, à revoir sur des profils réels.
+**ARBITRAGE ÉDITORIAL** : les points de chaque réponse, les phrases de
+« Pourquoi cette palette ? » (vérifiées par les tests contre les points :
+« chaude » vient d'une chaleur positive, etc.) et les couleurs de chaque
+saison, à revoir sur des profils réels.
 
 ## L'effet sur les tenues (`src/lib/colorimetrieMoteur.ts`)
 

@@ -64,3 +64,37 @@ export default function FilEtapes({
     </div>
   );
 }
+
+/**
+ * PROGRESSION D'UN QUESTIONNAIRE COURT (30/09/2026, parcours colorimétrie).
+ *
+ * Le brief l'impose : un seul langage de progression, « 1 / 4 » sur une
+ * barre fine, sans fil d'Ariane, sans points, sans « Question 2 sur 4 ».
+ * Elle REMPLACE le fil d'étapes de l'onboarding le temps des questions — les
+ * deux ensemble seraient deux compteurs pour un même écran. Ici la barre dit
+ * le chemin parcouru, et c'est voulu : dans un questionnaire, c'est ce qui
+ * reste qui rassure.
+ */
+export function ProgressionQuestions({ courante, total }: { courante: number; total: number }) {
+  const n = Math.min(total, Math.max(1, courante + 1));
+  return (
+    <div
+      role="progressbar"
+      aria-valuemin={1}
+      aria-valuemax={total}
+      aria-valuenow={n}
+      aria-label={`Question ${n} sur ${total}`}
+      className="flex flex-col items-center gap-[7px]"
+    >
+      <div className="w-[120px] h-[2px] rounded-full bg-dots overflow-hidden">
+        <div
+          className="h-full rounded-full bg-terracotta motion-safe:transition-[width] motion-safe:duration-300 motion-safe:ease-out"
+          style={{ width: `${(n / total) * 100}%` }}
+        />
+      </div>
+      <span aria-hidden="true" className="text-[11px] tracking-[.14em] text-muted tabular-nums">
+        {n} / {total}
+      </span>
+    </div>
+  );
+}

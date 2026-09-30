@@ -1,210 +1,342 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import OptionRow from "@/components/OptionRow";
 import {
-  colorimetrieDeSaison,
   colorimetrieUtilisable,
   estSaison,
+  explicationsDesReponses,
   QUESTIONS_COLORIMETRIE,
   SAISONS,
-  saisonDuQuestionnaire,
   type Colorimetrie,
+  type QuestionColorimetrie,
 } from "@/lib/colorimetrie";
 import { paletteColorName } from "@/lib/profile";
 
 /**
- * LES DEUX ÉCRANS DE COLORIMÉTRIE (25/09/2026 ; questionnaire le 30/09/2026,
- * docs/colorimetrie.md).
+ * LES ÉCRANS DU PARCOURS COLORIMÉTRIE (25/09/2026 ; refonte UX/UI le
+ * 30/09/2026, brief « Refonte UX/UI du parcours colorimétrie »).
  *
- * Sortis de ProfileSetupScreen parce qu'ils portent leur propre machine à
- * états — présentation, questions, réponses qui ne tranchent pas — là où
- * toutes les autres étapes sont un choix et rien de plus.
+ * Ces composants ne dessinent QUE le corps de chaque écran. Le titre, le bouton
+ * retour, la progression et le bouton principal sont ceux de l'onboarding
+ * (ProfileSetupScreen), pilotés par la machine à états colorimetrieParcours.ts :
+ * un seul en-tête, un seul pied d'écran, comme toutes les autres étapes.
  *
- * LE QUESTIONNAIRE EST LA SEULE VOIE (arbitré le 30/09/2026 : « pas
- * d'analyse photo pour le moment »). Aucun bouton photo : l'écran ne demande
- * jamais le visage de personne.
- *
- * `onResultat` ne reçoit QUE des résultats exploitables : des réponses qui ne
- * tranchent pas restent dans cet écran, qui propose de reprendre ou de
- * passer. Rien d'indécis n'est donc enregistré dans le profil.
+ * Le questionnaire est la seule voie (arbitré le 30/09/2026 : « pas
+ * d'analyse photo pour le moment ») : aucun écran ne demande de photo.
  */
 
-function Groupe({ titre, sous, hexes }: { titre: string; sous?: string; hexes: string[] }) {
+const T = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+
+/* ───────── Pictogrammes au trait, même famille que le reste de l'app ───────── */
+
+const PICTOS = {
+  horloge: <><circle cx="12" cy="12" r="8.5" {...T} /><path d="M12 7.5V12l3 2" {...T} /></>,
+  sansPhoto: <><path d="M4 8.5h3l1.5-2h7l1.5 2h3v10H4z" {...T} /><circle cx="12" cy="13" r="3.2" {...T} /><path d="M3.5 4.5l17 16" {...T} /></>,
+  etoile: <path d="M12 3.5l1.9 5.6 5.6 1.9-5.6 1.9L12 18.5l-1.9-5.6L4.5 11l5.6-1.9z" {...T} />,
+  bijoux: <><circle cx="12" cy="14" r="5.5" {...T} /><path d="M9.5 5.5h5l-2.5 3z" {...T} /></>,
+  blanc: <><path d="M5 5h14v14H5z" {...T} /><path d="M5 12c3-2 5 2 8 0s4-1 6 0" {...T} /></>,
+  cheveux: <><path d="M8 4c2.5 3-2.5 5.5 0 8.5S5.5 18 8 20" {...T} /><path d="M12 4c2.5 3-2.5 5.5 0 8.5S9.5 18 12 20" {...T} /><path d="M16 4c2.5 3-2.5 5.5 0 8.5s-2.5 5.5 0 7.5" {...T} /></>,
+  yeux: <><path d="M3 12s3.5-5.5 9-5.5 9 5.5 9 5.5-3.5 5.5-9 5.5S3 12 3 12z" {...T} /><circle cx="12" cy="12" r="2.6" {...T} /></>,
+  tenue: <path d="M9 4c.8 1.4 5.2 1.4 6 0l4 2 1 4-2.5 1V20h-11v-9L4 10l1-4z" {...T} />,
+  harmonie: <><circle cx="9" cy="10" r="4.5" {...T} /><circle cx="15" cy="10" r="4.5" {...T} /><circle cx="12" cy="15" r="4.5" {...T} /></>,
+  cintre: <><path d="M12 7.5a2 2 0 1 0-2-2" {...T} /><path d="M12 7.5v1.5L3.5 15.5c-.8.6-.4 1.5.6 1.5h15.8c1 0 1.4-.9.6-1.5L12 9" {...T} /></>,
+  repere: <><path d="M12 3.5l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9v-5z" {...T} /><path d="M9 12l2 2 4-4" {...T} /></>,
+};
+type Picto = keyof typeof PICTOS;
+
+function Pictogramme({ nom, taille = 20, className = "text-terracotta" }: { nom: Picto; taille?: number; className?: string }) {
   return (
-    <div className="mt-5">
-      <div className="t-label text-terracotta">{titre}</div>
-      {sous && <div className="text-[12px] text-muted mt-[3px]">{sous}</div>}
-      <div className="flex flex-wrap gap-[10px] mt-[10px]">
-        {hexes.map((h) => (
-          <div key={h} className="flex flex-col items-center" style={{ width: 62 }}>
+    <svg width={taille} height={taille} viewBox="0 0 24 24" aria-hidden="true" className={"flex-shrink-0 " + className} style={{ display: "block" }}>
+      {PICTOS[nom]}
+    </svg>
+  );
+}
+
+/* ───────── 1. Présentation ───────── */
+
+/** La réassurance, en trois repères — chacun vrai : quatre questions, aucune photo, un résultat tiré de ses réponses. */
+export function IntroColorimetrie() {
+  const reperes: [Picto, string][] = [
+    ["horloge", "Environ 1 minute"],
+    ["sansPhoto", "Sans photo"],
+    ["etoile", "Résultat personnalisé"],
+  ];
+  return (
+    <div className="mt-[26px] grid grid-cols-3 gap-[10px]">
+      {reperes.map(([p, texte]) => (
+        <div key={texte} className="bg-card border border-border rounded-[16px] px-[8px] py-[14px] flex flex-col items-center gap-[8px] text-center">
+          <Pictogramme nom={p} />
+          <span className="text-[12px] leading-[1.3] text-muted-3" style={{ textWrap: "balance" }}>
+            {texte}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ───────── 2. Une question ───────── */
+
+export function QuestionColorimetrieCartes({
+  question,
+  choisie,
+  onChoisir,
+}: {
+  question: QuestionColorimetrie;
+  choisie: number | null;
+  onChoisir: (indice: number) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-[10px] mt-[22px]" role="group" aria-label={question.question}>
+      {question.reponses.map((r, i) => (
+        <OptionRow key={r.libelle} accent vignette={r.visuel} label={r.libelle} on={choisie === i} onClick={() => onChoisir(i)} />
+      ))}
+    </div>
+  );
+}
+
+/* ───────── 3. L'analyse ───────── */
+
+const ETAPES_ANALYSE = [...QUESTIONS_COLORIMETRIE.map((q) => q.analyse), "Ton contraste naturel"];
+
+/**
+ * UNE MICRO-ANIMATION, PAS UNE ATTENTE (brief, §8). Le calcul est instantané
+ * (saisonDuQuestionnaire) : l'écran relit les cinq éléments que le calcul
+ * croise réellement — les quatre réponses, et le contraste qui naît de la
+ * profondeur — en 1,7 s au total, puis passe la main. Mouvement réduit : tout
+ * est coché d'emblée, et l'écran ne reste que 0,9 s.
+ */
+export function AnalyseColorimetrie({ onFini }: { onFini: () => void }) {
+  const [reduit] = useState(() => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+  const [faits, setFaits] = useState(reduit ? ETAPES_ANALYSE.length : 0);
+  const fin = useRef(onFini);
+  useEffect(() => {
+    fin.current = onFini;
+  }, [onFini]);
+  useEffect(() => {
+    const PAS = 220;
+    const minuteries = reduit ? [] : ETAPES_ANALYSE.map((_, i) => setTimeout(() => setFaits(i + 1), 150 + i * PAS));
+    minuteries.push(setTimeout(() => fin.current(), reduit ? 900 : 150 + ETAPES_ANALYSE.length * PAS + 450));
+    return () => minuteries.forEach(clearTimeout);
+  }, [reduit]);
+  const complet = faits >= ETAPES_ANALYSE.length;
+  return (
+    <div className="mt-[22px]" aria-live="polite">
+      {/* Une rosace de nuances autour de l'étoile de Capsela : décorative, elle
+          ne montre aucune palette (le résultat n'est pas encore affiché). */}
+      <div aria-hidden="true" className="relative mx-auto mb-[24px]" style={{ width: 118, height: 118 }}>
+        {(["#CF7358", "#9AA389", "#DCCFBC", "#D6A9A0", "#A8967C"] as const).map((c, i) => {
+          const a = (i / 5) * 2 * Math.PI - Math.PI / 2;
+          return (
             <span
-              className="w-[38px] h-[38px] rounded-full"
-              style={{ background: h, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }}
+              key={c}
+              className="absolute rounded-full"
+              style={{ width: 48, height: 48, left: 35 + Math.cos(a) * 30, top: 35 + Math.sin(a) * 30, background: c, opacity: 0.72 }}
             />
-            <span className="text-[10px] text-muted mt-[5px] text-center leading-[1.2]">{paletteColorName(h) ?? ""}</span>
-          </div>
+          );
+        })}
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span className="w-[40px] h-[40px] rounded-full bg-cream flex items-center justify-center">
+            <span className="etoile-pouls">
+              <Pictogramme nom="etoile" taille={20} />
+            </span>
+          </span>
+        </span>
+      </div>
+      <ul className="flex flex-col gap-[12px]">
+        {ETAPES_ANALYSE.map((e, i) => {
+          const fait = i < faits;
+          return (
+            <li key={e} className="flex items-center gap-[12px]">
+              <span
+                aria-hidden="true"
+                className={
+                  "w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-200 " +
+                  (fait ? "bg-terracotta" : "border-[1.5px] border-dots")
+                }
+              >
+                {fait && (
+                  <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                    <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </span>
+              <span className={"text-[14px] transition-colors duration-200 " + (fait ? "text-ink" : "text-muted")}>{e}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <div className={"font-serif italic text-[18px] text-terracotta mt-[26px] transition-opacity duration-300 " + (complet ? "opacity-100" : "opacity-0")}>
+        Ta palette se dessine…
+      </div>
+    </div>
+  );
+}
+
+/* ───────── 4. Pas de saison nette ───────── */
+
+/** Jamais un échec : l'écran dit ce que la réponse signifie, et ce que Capsela fait à la place. */
+export function IndecisColorimetrie() {
+  return (
+    <div className="mt-[24px]">
+      {/* Trois nuances qui se superposent : l'idée d'une gamme large, sans
+          prétendre montrer une palette qui n'a pas été trouvée. Décoratif. */}
+      <div aria-hidden="true" className="relative h-[92px] mx-auto" style={{ width: 150 }}>
+        {(
+          [
+            ["#A8967C", 0, 12],
+            ["#9AA389", 44, 0],
+            ["#D6A9A0", 88, 16],
+          ] as const
+        ).map(([c, x, y]) => (
+          <span key={c} className="absolute rounded-full" style={{ width: 70, height: 70, left: x - 4, top: y, background: c, opacity: 0.55 }} />
         ))}
       </div>
+      <div className="bg-card border border-border rounded-[18px] px-[16px] py-[15px] mt-[22px]">
+        <div className="t-titre-carte text-ink">Ce que cela signifie</div>
+        <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
+          Tu peux probablement porter une large gamme de couleurs. Capsela privilégiera les teintes qui fonctionnent le mieux
+          avec tes préférences et ton dressing.
+        </div>
+      </div>
     </div>
   );
 }
 
-const BOUTON_PRINCIPAL = "w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4";
-const LIEN = "w-full text-[13px] text-terracotta cursor-pointer mt-1";
-const LIEN_DISCRET = "w-full text-[12px] text-muted cursor-pointer mt-2";
+/* ───────── 5. Le résultat ───────── */
 
-type Mode = "presentation" | "questions" | "indecis";
-
-export function EtapeColorimetrie({
-  onResultat,
-  onPasser,
-}: {
-  onResultat: (c: Colorimetrie) => void;
-  onPasser: () => void;
-}) {
-  const [mode, setMode] = useState<Mode>("presentation");
-  const [reponses, setReponses] = useState<(number | null)[]>(() => QUESTIONS_COLORIMETRIE.map(() => null));
-  const [question, setQuestion] = useState(0);
-
-  const passer = (
-    <button onClick={onPasser} className={LIEN_DISCRET} style={{ minHeight: 44 }}>
-      Passer pour l&apos;instant
-    </button>
-  );
-
-  const commencer = () => {
-    setReponses(QUESTIONS_COLORIMETRIE.map(() => null));
-    setQuestion(0);
-    setMode("questions");
-  };
-
-  const repondre = (indice: number) => {
-    const suite = reponses.map((r, i) => (i === question ? indice : r));
-    setReponses(suite);
-    if (question < QUESTIONS_COLORIMETRIE.length - 1) {
-      setQuestion(question + 1);
-      return;
-    }
-    const saison = saisonDuQuestionnaire(suite);
-    if (saison) onResultat(colorimetrieDeSaison(saison, "questionnaire"));
-    else setMode("indecis");
-  };
-
-  if (mode === "questions") {
-    const q = QUESTIONS_COLORIMETRIE[question];
-    return (
-      <div className="mt-[26px]">
-        <div className="t-label text-terracotta">
-          Question {question + 1} sur {QUESTIONS_COLORIMETRIE.length}
-        </div>
-        <div className="t-titre-carte text-ink mt-[8px]" style={{ textWrap: "pretty" }}>
-          {q.question}
-        </div>
-        <div className="flex flex-col gap-[10px] mt-4" role="group" aria-label={q.question}>
-          {q.reponses.map((r, i) => (
-            <OptionRow key={r.libelle} label={r.libelle} on={reponses[question] === i} onClick={() => repondre(i)} />
-          ))}
-        </div>
-        <button
-          onClick={() => (question > 0 ? setQuestion(question - 1) : setMode("presentation"))}
-          className={LIEN + " mt-3"}
-          style={{ minHeight: 44 }}
-        >
-          {question > 0 ? "Question précédente" : "Revenir à la présentation"}
-        </button>
-      </div>
-    );
-  }
-
-  // Réponses qui ne tranchent pas : on le dit, on n'invente pas.
-  if (mode === "indecis") {
-    return (
-      <div className="mt-[26px]">
-        <div className="bg-card border border-border rounded-[20px] px-[16px] py-[15px]">
-          <div className="t-titre-carte text-ink">Pas de saison nette</div>
-          <div className="text-[13px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
-            Tes réponses ne penchent ni vers les tons chauds, ni vers les tons froids. Plutôt que de choisir au hasard,
-            Capsela garde tes couleurs préférées.
-          </div>
-        </div>
-        <button onClick={commencer} className={BOUTON_PRINCIPAL} style={{ minHeight: 52 }}>
-          Reprendre les questions
-        </button>
-        {passer}
-      </div>
-    );
-  }
-
+function Nuancier({ titre, hexes }: { titre: string; hexes: string[] }) {
+  if (!hexes.length) return null;
+  // Espaces insécables DANS un nom : « Blanc / écru » ne se coupe jamais en deux lignes.
+  const noms = hexes.map((h) => paletteColorName(h)?.replace(/ /g, "\u00a0")).filter(Boolean);
   return (
-    <div className="mt-[26px]">
-      <div className="bg-card border border-border rounded-[20px] px-[16px] py-[15px]">
-        <div className="t-titre-carte text-ink">Cinq questions rapides</div>
-        <div className="text-[13px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
-          Sur tes bijoux, ton blanc préféré, tes cheveux, tes yeux et les couleurs qu&apos;on te complimente.
-        </div>
+    <div className="mt-[18px] first:mt-0">
+      <div className="t-label text-terracotta">{titre}</div>
+      <div className="flex flex-wrap gap-[7px] mt-[9px]" aria-hidden="true">
+        {hexes.map((h) => (
+          <span key={h} className="w-[28px] h-[28px] rounded-full" style={{ background: h, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }} />
+        ))}
       </div>
-      <button onClick={commencer} className={BOUTON_PRINCIPAL} style={{ minHeight: 52 }}>
-        Commencer
-      </button>
-      {passer}
+      <div className="text-[12px] text-muted leading-[1.45] mt-[7px]" style={{ textWrap: "pretty" }}>
+        {noms.join("\u00a0· ")}
+      </div>
     </div>
   );
 }
 
-export function ResultatColorimetrie({
-  colorimetrie,
-  onRefaire,
-}: {
-  colorimetrie: Colorimetrie;
-  onRefaire: () => void;
-}) {
+const PICTO_EXPLICATION: Record<string, Picto> = {
+  "Tes bijoux": "bijoux",
+  "Ton blanc préféré": "blanc",
+  "Tes cheveux": "cheveux",
+  "Tes yeux": "yeux",
+};
+
+/**
+ * Le titre (« Printemps lumineux ») et sa phrase sont l'en-tête de l'étape ;
+ * ici : le nuancier, le visuel quand il correspond à la saison, « Pourquoi
+ * cette palette ? » quand les réponses sont connues, et le repère.
+ */
+export function ResultatColorimetrie({ colorimetrie }: { colorimetrie: Colorimetrie }) {
   if (!colorimetrieUtilisable(colorimetrie)) return null;
   const c = colorimetrie;
   const saison = estSaison(c.saison) ? SAISONS[c.saison] : null;
-  // Seul le questionnaire écrit un résultat depuis le 30/09/2026 ; un profil
-  // plus ancien, écrit par la démo photo, n'affiche simplement pas l'origine.
-  const origine = c.source === "questionnaire" ? "D'après tes réponses" : null;
+  const explications = explicationsDesReponses(c.reponses);
   return (
-    <div className="mt-[26px]">
-      {/* Le badge dépend de la PRÉSENCE d'un score, jamais d'un seuil deviné :
-          un service qui n'en rend pas ne doit pas faire afficher « fiable ».
-          Le questionnaire n'en rend pas (30/09/2026). */}
-      {c.confiance !== undefined && (
-        <span className="inline-block t-label text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px] mr-2">
-          Analyse fiable
-        </span>
-      )}
-      {origine && <div className="t-label text-terracotta">{origine}</div>}
-      {c.libelle && <div className="t-titre-section text-ink mt-[10px]">{c.libelle}</div>}
-      {saison && (
-        <div className="text-[13px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
-          {saison.description}
+    <div className="mt-[22px]">
+      <div className="flex gap-[16px] items-start">
+        <div className="flex-1 min-w-0">
+          <Nuancier titre="Couleurs signature" hexes={c.signature ?? []} />
+          <Nuancier titre="Neutres" hexes={c.neutres ?? []} />
+          {/* « À porter avec modération », jamais « à éviter » : un placement,
+              pas une interdiction. Le moteur les éloigne du visage sans les
+              retirer des tenues (colorimetrieMoteur.ts). */}
+          <Nuancier titre="À porter avec modération" hexes={c.moderation ?? []} />
         </div>
-      )}
-
-      <Groupe titre="Couleurs signature" hexes={c.signature ?? []} />
-      {!!c.neutres?.length && <Groupe titre="Neutres" hexes={c.neutres} />}
-      {/* « Avec modération » n'apparaît QUE si le résultat le porte, et ne dit
-          jamais « à éviter » : le sous-titre nomme un placement, pas une
-          interdiction. Le moteur les éloigne du visage sans les retirer des
-          tenues (colorimetrieMoteur.ts). */}
-      {!!c.moderation?.length && (
-        <Groupe titre="Avec modération" sous="Plutôt loin du visage" hexes={c.moderation} />
-      )}
-
-      {/* VRAI DANS LE CODE (colorimetrieMoteur.ts) : les couleurs de la saison
-          sont préférées pour les pièces portées près du visage, celles « avec
-          modération » y sont évitées quand une autre pièce convient, et
-          restent possibles partout ailleurs. */}
-      <div className="text-[13px] text-muted-3 leading-[1.5] mt-5" style={{ textWrap: "pretty" }}>
-        Capsela en tient compte dans tes tenues : tes couleurs signature et neutres près du visage, celles « avec
-        modération » plutôt en bas, en chaussures ou en sac.
+        {saison?.visuel && (
+          <div
+            className="flex-shrink-0 overflow-hidden bg-warm-bg"
+            style={{ width: "36%", maxWidth: 150, aspectRatio: "120 / 245", borderRadius: "999px 999px 20px 20px" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={saison.visuel} alt="" width={240} height={490} decoding="async" className="w-full h-full object-cover block" />
+          </div>
+        )}
       </div>
 
-      <button onClick={onRefaire} className="w-full text-[13px] text-terracotta cursor-pointer mt-3" style={{ minHeight: 44 }}>
-        Refaire le questionnaire
-      </button>
+      {explications.length > 0 && (
+        <section className="mt-[32px]">
+          <h2 className="t-titre-section text-ink">Pourquoi cette palette ?</h2>
+          <p className="text-[13px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
+            Capsela croise tes réponses pour trouver les nuances qui s&apos;harmonisent avec toi.
+          </p>
+          <ul className="flex flex-col gap-[14px] mt-[16px]">
+            {explications.map((e) => (
+              <li key={e.titre} className="flex gap-[12px] items-start">
+                <span className="w-[34px] h-[34px] rounded-full bg-warm-bg flex items-center justify-center flex-shrink-0">
+                  <Pictogramme nom={PICTO_EXPLICATION[e.titre] ?? "etoile"} taille={18} />
+                </span>
+                <span className="min-w-0 pt-[1px]">
+                  <span className="block text-[13.5px] font-semibold text-ink">{e.titre}</span>
+                  <span className="block text-[13px] text-muted-3 leading-[1.45] mt-[2px]" style={{ textWrap: "pretty" }}>
+                    {e.texte}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          {saison && (
+            <div className="bg-warm-bg rounded-[16px] px-[16px] py-[13px] mt-[18px] text-[13px] text-muted-3 leading-[1.5]" style={{ textWrap: "pretty" }}>
+              <span className="font-semibold text-ink">Résultat :</span> une palette {saison.nature}, utilisée par Capsela pour
+              personnaliser tes recommandations.
+            </div>
+          )}
+        </section>
+      )}
+
+      <div className="bg-card border border-border rounded-[18px] px-[16px] py-[15px] mt-[24px] flex gap-[12px] items-start">
+        <Pictogramme nom="repere" taille={22} />
+        <div className="min-w-0">
+          <div className="font-serif text-[17px] leading-[1.25] text-ink">Ta palette est un repère, pas une règle.</div>
+          <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
+            Tu peux porter toutes les couleurs que tu aimes. Capsela utilise simplement cette palette pour privilégier les
+            associations qui te mettent naturellement en valeur.
+          </div>
+        </div>
+      </div>
     </div>
+  );
+}
+
+/* ───────── 6. Et maintenant ? ───────── */
+
+/**
+ * TROIS BÉNÉFICES, CHACUN VRAI DANS LE CODE (colorimetrieMoteur.ts). Le
+ * deuxième du brief (« les recommandations tiennent compte des couleurs
+ * entre elles ») décrivait l'harmonie des couleurs, qui existe mais ne dépend
+ * pas de la palette : sa phrase dit ici ce que la palette change réellement.
+ */
+export function SuiteColorimetrie() {
+  const benefices: [Picto, string, string][] = [
+    ["tenue", "Des tenues plus personnalisées", "Capsela privilégie les couleurs de ta palette pour les pièces portées près du visage."],
+    ["harmonie", "Des associations plus harmonieuses", "Les couleurs à porter avec modération passent plutôt en bas, en chaussures ou en sac."],
+    ["cintre", "Un dressing plus cohérent", "Ta colorimétrie est prise en compte dans tes futures recommandations."],
+  ];
+  return (
+    <ul className="mt-[24px] flex flex-col gap-[10px]">
+      {benefices.map(([p, titre, texte]) => (
+        <li key={titre} className="bg-card border border-border rounded-[16px] px-[14px] py-[12px] flex gap-[12px] items-start">
+          <span className="w-[34px] h-[34px] rounded-full bg-warm-bg flex items-center justify-center flex-shrink-0">
+            <Pictogramme nom={p} taille={18} />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[14px] font-semibold text-ink">{titre}</span>
+            <span className="block text-[13px] text-muted-3 leading-[1.45] mt-[3px]" style={{ textWrap: "pretty" }}>
+              {texte}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
