@@ -10,6 +10,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
+import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -869,28 +870,20 @@ export default function PlanifierScreen() {
   const nbPlanifications = plans.length + state.valises.length;
   /**
    * Onglets À venir / Passées — un seul rendu, partagé par le hub et la liste
-   * complète. Allégés le 30/09/2026 (brief « Refonte premium ») : l'actif
-   * garde le terracotta plein, l'inactif n'est plus qu'un libellé discret —
-   * plus des boutons d'application côte à côte. 44 px de cible tactile.
+   * complète. Depuis le 30/09/2026, le composant d'onglets de l'app
+   * (SegmentedControl, celui du Dressing, de la Valise et de Mes looks) : les
+   * onglets de Planifier étaient les seuls à avoir leur propre dessin.
    */
   const ongletsPlans = (
-    <div role="tablist" aria-label="Looks à venir ou passés" className="flex items-center gap-1">
-      {([["up", `À venir${aVenir.length ? ` (${aVenir.length})` : ""}`], ["past", "Passées"]] as const).map(([cle, label]) => (
-        <button
-          key={cle}
-          role="tab"
-          aria-selected={onglet === cle}
-          onClick={() => setOnglet(cle)}
-          className={
-            "rounded-full px-4 text-[12px] cursor-pointer transition-colors duration-200 " +
-            (onglet === cle ? "bg-terracotta-deep text-cream" : "text-muted-3 active:bg-chip-soft-bg")
-          }
-          style={{ minHeight: 44 }}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      ariaLabel="Looks à venir ou passés"
+      segments={[
+        { key: "up", label: `À venir${aVenir.length ? ` (${aVenir.length})` : ""}` },
+        { key: "past", label: "Passées" },
+      ]}
+      actif={onglet}
+      onChange={setOnglet}
+    />
   );
 
   /**
@@ -936,7 +929,7 @@ export default function PlanifierScreen() {
       flash(
         !ancienRetire
           ? "La nouvelle date est gardée. L'ancienne n'a pas pu être retirée : supprime-la depuis ta liste."
-          : "C'est noté. Ta tenue t'attendra dans ton planning jusqu'au jour J."
+          : "C'est noté. Ton look t'attendra jusqu'au jour J."
       );
     } catch {
       flash("L'enregistrement a échoué. Réessaie.");
@@ -950,7 +943,7 @@ export default function PlanifierScreen() {
     setPlans((l) => l.filter((x) => x.id !== id));
     try {
       await deleteTenuePlanifiee(id);
-      flash("Tenue retirée");
+      flash("Look retiré");
     } catch {
       // Remise en place : la ligne est toujours en base, la masquer mentirait.
       setPlans(() => avant);
@@ -1140,9 +1133,7 @@ export default function PlanifierScreen() {
         </div>
       )}
 
-      <div ref={zoneScroll} className={"scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 " + (vue === "intro" || vue === "detail" ? "pb-safe-nav" : vue === "liste" ? "" : "pb-5")}
-        style={vue === "liste" ? { paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 86px)" } : undefined}
-      >
+      <div ref={zoneScroll} className={"scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 " + (vue === "intro" || vue === "detail" ? "pb-safe-nav" : "pb-5")}>
         {/* LE HUB « PLANIFIER » — brief « Page Planifier, design + UX »
             (transmis le 25/09/2026, source de vérité). Trois questions dans
             l'ordre du brief : que puis-je planifier, comment commencer,
@@ -1204,7 +1195,7 @@ export default function PlanifierScreen() {
             {/* MES PLANIFICATIONS (brief §9-11) : tenues planifiées et valises,
                 trois au plus ici, « Voir tout » ouvre la liste complète. */}
             <div className="flex items-center justify-between gap-3 mt-[30px]">
-              <Surtitre>Mes planifications</Surtitre>
+              <Surtitre>Mes looks à venir</Surtitre>
               {nbPlanifications > 0 && (
                 <button
                   onClick={() => setVue("liste")}
@@ -1222,7 +1213,7 @@ export default function PlanifierScreen() {
                 style={{ border: "1px dashed var(--color-sand-border)" }}
               >
                 <div className="t-titre-carte text-ink">
-                  {onglet === "up" || nbPlanifications === 0 ? "Aucune planification pour le moment" : "Aucune planification passée"}
+                  {onglet === "up" || nbPlanifications === 0 ? "Aucun look planifié pour le moment" : "Aucun look passé"}
                 </div>
                 {(onglet === "up" || nbPlanifications === 0) && (
                   <>
@@ -1230,7 +1221,7 @@ export default function PlanifierScreen() {
                       Planifie ton prochain moment ou prépare ton prochain voyage.
                     </div>
                     <button onClick={recommencer} className="mt-[6px] min-h-[44px] text-[12px] text-terracotta cursor-pointer">
-                      Créer une planification →
+                      Planifier un look →
                     </button>
                   </>
                 )}
@@ -1280,7 +1271,7 @@ export default function PlanifierScreen() {
                             planifiée ») et que la carte valise (« Valise ») :
                             dans une liste qui mêle les deux, il dit de quoi
                             il s'agit avant le titre (28/09/2026, demandé). */}
-                        <span className="block t-label text-terracotta">Tenue planifiée</span>
+                        <span className="block t-label text-terracotta">Look planifié</span>
                         <span className="block t-titre-vignette text-ink mt-[2px]">{occasionShortLabel(t.occasion)}</span>
                         {/* Synthétique (brief §12) : la date et la ville, sur
                             une ligne. La région et le pays restent au détail. */}
@@ -1754,7 +1745,7 @@ export default function PlanifierScreen() {
             <>
               {/* INTRODUCTION — type d'écran, occasion et ville, puis date et
                   moment sur une ligne légère, avec leurs icônes. */}
-              <Surtitre>Tenue planifiée</Surtitre>
+              <Surtitre>Look planifié</Surtitre>
               <TitreEtape a={occasionShortLabel(t.occasion)} b={villePlan ? `· ${villePlan}` : ""} />
               <div className="flex items-center flex-wrap gap-x-[10px] gap-y-[4px] text-[12px] text-muted-3 mt-[9px]">
                 <span className="inline-flex items-center gap-[6px]">
@@ -1781,7 +1772,7 @@ export default function PlanifierScreen() {
                   s'adapte pas à elles, et rien ne bouge en dessous. */}
               <div className="mt-[18px] bg-terracotta rounded-[24px] text-left" style={{ padding: "20px 18px 20px" }}>
                 <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16]">
-                  {passee ? "Ta tenue était planifiée" : "Ta tenue est planifiée"}
+                  {passee ? "Ton look était planifié" : "Ton look est planifié"}
                 </div>
                 <div className="font-serif italic text-[15px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.86)" }}>
                   {phrase}
@@ -1795,7 +1786,7 @@ export default function PlanifierScreen() {
                       className="h-full rounded-[16px] flex items-center justify-center text-center px-6 text-[13px] leading-[1.5]"
                       style={{ background: "rgba(243,238,229,.10)", color: "rgba(243,238,229,.86)" }}
                     >
-                      Les pièces de cette tenue ne sont plus dans ton dressing.
+                      Les pièces de ce look ne sont plus dans ton dressing.
                     </div>
                   )}
                 </div>
@@ -1815,7 +1806,7 @@ export default function PlanifierScreen() {
                   planification ne doit pas être remplacée en silence. */}
               {manquantes > 0 && pieces.length > 0 && (
                 <div className="text-[12px] text-muted mt-3 leading-[1.45]">
-                  {manquantes === 1 ? "Une pièce de cette tenue n'est plus" : `${manquantes} pièces de cette tenue ne sont plus`} dans
+                  {manquantes === 1 ? "Une pièce de ce look n'est plus" : `${manquantes} pièces de ce look ne sont plus`} dans
                   ton dressing.
                 </div>
               )}
@@ -1860,7 +1851,7 @@ export default function PlanifierScreen() {
                       {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
                     </span>
                     <span className="block text-[13px] text-ink leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
-                      Obtiens un regard expert sur cette tenue avant le jour J.
+                      Obtiens un regard expert sur ce look avant le jour J.
                     </span>
                   </span>
                   <span className="flex-shrink-0 text-sand-text">
@@ -1898,7 +1889,7 @@ export default function PlanifierScreen() {
                   className="w-full flex items-center justify-center gap-[8px] rounded-full border border-terracotta text-terracotta t-bouton cursor-pointer"
                   style={{ minHeight: 50 }}
                 >
-                  <span aria-hidden="true">♡</span> Modifier cette tenue
+                  <span aria-hidden="true">♡</span> Modifier ce look
                 </button>
               </div>
 
@@ -1934,8 +1925,8 @@ export default function PlanifierScreen() {
                     }}
                   />
                 )}
-                {pieces.length > 0 && <LigneOption label="Dupliquer cette tenue" onClick={() => repartirDuPlan(t, "dupliquer")} />}
-                <LigneOption label="Supprimer cette tenue" danger onClick={() => setASupprimer(t)} />
+                {pieces.length > 0 && <LigneOption label="Dupliquer ce look" onClick={() => repartirDuPlan(t, "dupliquer")} />}
+                <LigneOption label="Supprimer ce look" danger onClick={() => setASupprimer(t)} />
               </div>
             </>
           );
@@ -1966,7 +1957,7 @@ export default function PlanifierScreen() {
 
       {/* Le hub n'a pas de barre d'action : ses deux cartes portent chacune
           leur CTA, et la barre de navigation reprend sa place en pied. */}
-      {vue !== "intro" && vue !== "detail" && vue !== "liste" && (
+      {vue !== "intro" && vue !== "detail" && (
       <div className="relative flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-2 border-t border-border">
         {/* Ancré à la barre d'action elle-même (bottom: 100%) et non à une
             hauteur devinée : la barre change de hauteur selon la vue — un
@@ -2017,6 +2008,18 @@ export default function PlanifierScreen() {
             }}
           >
             {attend ? "Un instant…" : etape === 3 ? "Voir ma tenue" : "Suivant"}
+          </button>
+        )}
+        {/* « + PLANIFIER UN LOOK » (30/09/2026) : la barre d'action pleine
+            largeur de tous les écrans, pas une pastille flottante qui
+            n'existait nulle part ailleurs. */}
+        {vue === "liste" && (
+          <button
+            onClick={recommencer}
+            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
+            style={{ minHeight: 52 }}
+          >
+            + Planifier un look
           </button>
         )}
         {vue === "resultat" && (
@@ -2079,35 +2082,7 @@ export default function PlanifierScreen() {
           que partout — pas une seconde navigation. Elle s'efface pendant le
           parcours, dont le bouton principal occupe le pied d'écran (cf.
           FLOW_SCREENS, App.tsx) : c'est la seule vue sans barre d'action. */}
-      {/* « + PLANIFIER UN LOOK » (30/09/2026) : une pastille terracotta qui
-          flotte au-dessus de la barre de navigation — la page est un onglet,
-          la barre y reste, avec Planifier actif. Le message de confirmation
-          se pose juste au-dessus de la pastille. */}
-      {vue === "liste" && (
-        <div
-          className="absolute inset-x-6 z-30 flex flex-col items-center pointer-events-none"
-          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 12px)" }}
-        >
-          {toast && (
-            <div
-              className="w-full mb-3 rounded-[15px] px-4 py-[13px] text-[12px]"
-              style={{ background: "var(--color-ink)", color: "var(--color-cream)" }}
-              aria-live="polite"
-            >
-              {toast}
-            </div>
-          )}
-          <button
-            onClick={recommencer}
-            className="pointer-events-auto rounded-full bg-terracotta-deep text-cream t-bouton px-[26px] cursor-pointer transition-transform active:scale-[.97]"
-            style={{ minHeight: 50, boxShadow: "0 6px 18px rgba(29,26,22,.14)" }}
-          >
-            + Planifier un look
-          </button>
-        </div>
-      )}
-
-      {(vue === "intro" || vue === "detail" || vue === "liste") && <TabBar />}
+      {(vue === "intro" || vue === "detail") && <TabBar />}
 
       {/* LE MENU « … » — BottomSheet, le seul composant modal de l'app. Il
           n'existe pas de popover, et en créer un pour trois lignes ajouterait
@@ -2159,10 +2134,10 @@ export default function PlanifierScreen() {
 
       {/* CONFIRMATION — la suppression retire une ligne de la base et n'a
           aucune annulation après coup. Elle se demande. */}
-      <BottomSheet title="Supprimer cette tenue planifiée ?" open={!!aSupprimer} onClose={() => setASupprimer(null)}>
+      <BottomSheet title="Supprimer ce look ?" open={!!aSupprimer} onClose={() => setASupprimer(null)}>
         <div className="flex flex-col">
           <div className="text-[13px] text-muted-3 leading-[1.5]">
-            La tenue et sa planification seront supprimées. Tes pièces, elles, restent dans ton dressing.
+            Ce look sera retiré de ton agenda. Tes pièces, elles, restent dans ton dressing.
           </div>
           <button
             onClick={() => {

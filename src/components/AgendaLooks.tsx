@@ -99,12 +99,12 @@ export default function AgendaLooks({
 
   return (
     <>
-      {/* L'EN-TÊTE — le titre au corps du « Bonjour » de l'accueil (t-display),
-          « looks » dans l'italique terracotta des mots éditoriaux. */}
+      {/* L'EN-TÊTE — titre d'écran comme tous les autres (t-titre-ecran, 27 px :
+          le brief demandait plus grand, la cohérence avec l'app l'a emporté le
+          30/09/2026), « looks » dans l'italique terracotta des mots éditoriaux. */}
       <div className="t-surtitre text-muted">Planifier</div>
-      <h1 className="t-display text-ink mt-[8px]">
-        Mes <span className="italic text-terracotta">looks</span>
-        <br />à venir
+      <h1 className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+        Mes <span className="italic text-terracotta">looks</span> à venir
       </h1>
       {sousTitre && <div className="t-chapeau text-muted-3 mt-[8px]">{sousTitre}</div>}
 
@@ -119,16 +119,13 @@ export default function AgendaLooks({
             </div>
           </div>
         ) : (
-          /* L'ÉTAT VIDE — une invitation, pas un constat. Le bouton est celui
-             du pied de page, toujours visible : il n'est pas répété ici. */
-          <div className="mt-[22px] rounded-[24px] bg-warm-bg px-6 py-[38px] text-center motion-safe:animate-[capsule-apparition_420ms_ease-out_both]">
-            <div aria-hidden="true" className="font-serif italic text-[22px] leading-none text-terracotta">
-              ✦
-            </div>
-            <div className="t-titre-ecran text-ink mt-[14px]" style={{ textWrap: "balance" }}>
-              Ton prochain look <span className="italic text-terracotta">commence ici.</span>
-            </div>
-            <div className="t-chapeau text-muted-3 mt-[10px]" style={{ textWrap: "pretty" }}>
+          /* L'ÉTAT VIDE — une invitation, pas un constat, dans la forme des
+             autres états vides de l'app (cadre en pointillés, titre de carte :
+             Tenue, hub Planifier). Le bouton est celui du pied de page,
+             toujours visible : il n'est pas répété ici. */
+          <div className="mt-4 rounded-[20px] px-5 py-[30px] text-center" style={{ border: "1px dashed var(--color-sand-border)" }}>
+            <div className="t-titre-carte text-ink">Ton prochain look commence ici.</div>
+            <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
               Planifie une tenue pour une occasion, un voyage ou simplement demain.
             </div>
           </div>
@@ -378,12 +375,13 @@ function ProchainLook({
             </p>
           </div>
 
+          {/* L'action en bas de carte, sans fond (t-cta) : la même forme que
+              « Préparer ma valise → » sur les cartes du hub. */}
           <button
             onClick={() => onOuvrir(t)}
-            className="mt-[16px] inline-flex items-center gap-[8px] rounded-full border border-terracotta text-terracotta t-bouton px-[20px] cursor-pointer transition-transform active:scale-[.97]"
-            style={{ minHeight: 44 }}
+            className="mt-[10px] t-cta text-terracotta min-h-[44px] flex items-center cursor-pointer active:opacity-70"
           >
-            Voir le look <span aria-hidden="true">→</span>
+            Voir le look&nbsp;<span aria-hidden="true">→</span>
           </button>
         </div>
       </div>
