@@ -149,9 +149,8 @@ describe("réponses gardées et « Pourquoi cette palette ? »", () => {
     }
   });
 
-  it("le visuel éditorial n'est posé que sur la saison qu'il représente", () => {
-    expect(SAISONS.printemps.visuel).toBeTruthy();
-    expect(SAISONS.ete.visuel ?? SAISONS.automne.visuel ?? SAISONS.hiver.visuel).toBeUndefined();
+  it("chaque saison a son propre visuel éditorial, jamais celui d'une autre", () => {
+    for (const k of SAISONS_CLES) expect(SAISONS[k].visuel).toBe(`/onboarding/colorimetrie/palette-${k}.webp`);
   });
 });
 

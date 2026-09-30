@@ -186,10 +186,13 @@ export interface Saison {
   neutres: string[];
   moderation: string[];
   /**
-   * Visuel éditorial du résultat, quand il en existe un QUI CORRESPOND à la
-   * saison. Le seul fourni (30/09/2026) est une palette de printemps —
-   * corail, moutarde, rose : l'afficher pour un Hiver contrasté montrerait
-   * des couleurs que le résultat place justement loin du visage.
+   * Visuel éditorial du résultat — UN PAR SAISON, jamais partagé : une
+   * palette de printemps (corail, moutarde) affichée pour un Hiver contrasté
+   * montrerait des couleurs que le résultat place justement loin du visage.
+   * Les quatre ont été fournis le 30/09/2026 et relus couleur par couleur :
+   * aucun ne montre les teintes « avec modération » de sa saison. Facultatif
+   * dans le type : une saison sans visuel s'afficherait sans, plutôt qu'avec
+   * celui d'une autre.
    */
   visuel?: string;
 }
@@ -211,6 +214,7 @@ export const SAISONS: Record<SaisonCle, Saison> = {
     signature: ["Rose poudré", "Bleu", "Prune", "Marine"].map(hexDe),
     neutres: ["Blanc", "Gris", "Taupe"].map(hexDe),
     moderation: ["Moutarde", "Corail", "Noir"].map(hexDe),
+    visuel: "/onboarding/colorimetrie/palette-ete.webp",
   },
   automne: {
     libelle: "Automne chaleureux",
@@ -219,6 +223,7 @@ export const SAISONS: Record<SaisonCle, Saison> = {
     signature: ["Terracotta", "Camel", "Moutarde", "Kaki", "Bordeaux"].map(hexDe),
     neutres: ["Chocolat", "Crème", "Taupe", "Beige"].map(hexDe),
     moderation: ["Noir", "Gris", "Rose poudré"].map(hexDe),
+    visuel: "/onboarding/colorimetrie/palette-automne.webp",
   },
   hiver: {
     libelle: "Hiver contrasté",
@@ -227,6 +232,7 @@ export const SAISONS: Record<SaisonCle, Saison> = {
     signature: ["Rouge", "Bordeaux", "Prune", "Vert bouteille", "Marine"].map(hexDe),
     neutres: ["Noir", "Blanc", "Gris"].map(hexDe),
     moderation: ["Camel", "Moutarde", "Beige"].map(hexDe),
+    visuel: "/onboarding/colorimetrie/palette-hiver.webp",
   },
 };
 

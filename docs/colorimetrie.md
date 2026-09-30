@@ -65,9 +65,11 @@ Deux limites :
   Elles sont affichées à 44 px, donc un peu douces sur un écran haute
   densité. Des sources en haute définition (au moins 150 px) les rendraient
   nettes.
-- **Un seul visuel de résultat, pour le Printemps** : corail, moutarde, rose.
-  Il n'est affiché que pour cette saison, puisque les autres placeraient
-  certaines de ces couleurs « avec modération ». Il en faudrait un par saison.
+- **Un visuel de résultat par saison** (fournis le 30/09/2026) : tissus
+  drapés aux couleurs de la saison, relus un par un. Aucun ne montre les
+  teintes « avec modération » de sa saison. Les vignettes du métal et des
+  yeux ont aussi été remplacées par des sources HD ; celles du blanc et des
+  cheveux restent à remplacer.
 - « Je ne sais pas » reçoit une vignette neutre (« ? »), faute d'image
   honnête.
 
