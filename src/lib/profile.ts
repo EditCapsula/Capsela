@@ -97,6 +97,47 @@ export const MAX_PALETTE_COULEURS = 6;
 export const AFFINITE_OPTIONS: Affinite[] = ["Tons chauds", "Tons froids", "Les deux", "Je ne sais pas"];
 export const INTENSITE_OPTIONS: Intensite[] = ["Douces et discrètes", "Profondes et intenses", "Lumineuses", "Un mélange"];
 
+/** Hex d'une teinte de la palette personnelle, par son nom — pour ne pas recopier les valeurs. */
+const pal = (nom: string): string => {
+  const hex = PAL_COULEURS.find(([n]) => n === nom)?.[1];
+  if (!hex) throw new Error(`Teinte absente de PAL_COULEURS : ${nom}`);
+  return hex;
+};
+
+/**
+ * LA REPRÉSENTATION VISUELLE DE CHAQUE INTENSITÉ (30/09/2026, brief
+ * « Intensité des couleurs ») : une phrase et cinq pastilles, affichées à
+ * côté du libellé dans l'onboarding. Purement illustratif — l'option
+ * enregistrée reste le libellé d'INTENSITE_OPTIONS, et aucune de ces teintes
+ * n'entre dans le moteur ni dans la palette de l'utilisatrice.
+ *
+ * Les teintes viennent de PAL_COULEURS quand elle en a une qui convient ;
+ * sinon (tons clairs désaturés, couleurs lumineuses, que la palette
+ * personnelle n'a pas), une valeur propre à l'illustration, choisie pour
+ * rester élégante : aucune teinte néon.
+ */
+export const INTENSITE_VISUELS: Record<Intensite, { description: string; pastilles: string[] }> = {
+  "Douces et discrètes": {
+    description: "Des tons neutres et pastel, pour des looks tout en douceur.",
+    // crème, beige clair, vieux rose, taupe clair, sauge très désaturée
+    pastilles: [pal("Crème"), pal("Sable"), pal("Rose poudré"), "#BDB2A3", "#B8BEAF"],
+  },
+  "Profondes et intenses": {
+    description: "Des couleurs riches et affirmées, pour plus de caractère.",
+    pastilles: [pal("Bordeaux"), pal("Marine"), pal("Vert bouteille"), pal("Chocolat"), pal("Prune")],
+  },
+  Lumineuses: {
+    description: "Des teintes claires et éclatantes, pour des looks qui illuminent.",
+    // jaune soleil, corail, rose vif, turquoise, bleu lumineux
+    pastilles: ["#E6C24F", "#E57C60", "#D65C82", "#3E9E9A", "#5B93CF"],
+  },
+  "Un mélange": {
+    description: "J'aime varier entre des tons doux, intenses et lumineux.",
+    // neutre clair, pastel, profonde, naturelle, lumineuse
+    pastilles: [pal("Crème"), pal("Rose poudré"), pal("Bordeaux"), pal("Kaki"), "#E57C60"],
+  },
+};
+
 /** Cherche le nom d'une teinte hex dans la palette personnelle. */
 export function paletteColorName(hex: string): string | null {
   return PAL_COULEURS.find(([, h]) => h === hex)?.[0] ?? null;
