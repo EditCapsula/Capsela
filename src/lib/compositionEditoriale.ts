@@ -357,6 +357,28 @@ const DESSUS: CategoryKey[] = ["veste", "manteau"];
 const AGRANDISSEMENT_MAX_PLANCHE = 1.15;
 
 /**
+ * LES FORMES DE LA SILHOUETTE DE CHARGEMENT du « Look du jour » (30/09/2026,
+ * brief « Optimisation du loading ») : une forme abstraite par pièce
+ * structurante — héro, surcouche, bas, chaussures, sac —, posée par
+ * composerPlanche aux MÊMES emplacements que les pièces du look final. Une
+ * forme n'est pas une pièce : elle ne porte qu'une catégorie, jamais un nom ni
+ * une image. Bijoux et accessoires n'en ont pas : petits et facultatifs, ils
+ * ajouteraient du bruit à une silhouette qui doit rester calme.
+ *
+ * `photo` : la pièce a une photo du dressing (le haut photographié porté). Sa
+ * forme est alors un cadre de photo, pas un vêtement dessiné : c'est une
+ * photo qui va arriver à cet emplacement, et à peu près à ce format.
+ */
+export function formesSilhouette(
+  pieces: { cat: CategoryKey; photoUrl?: string | null }[]
+): { id: number; cat: CategoryKey; photo: boolean; photoUrl?: string | null }[] {
+  // photoUrl est transmis à composerPlanche, qui en fait le héro parmi les hauts — comme dans le look final.
+  return pieces
+    .filter((p) => p.cat !== "bijou" && p.cat !== "accessoire")
+    .map((p, id) => ({ id, cat: p.cat, photo: Boolean(p.photoUrl), photoUrl: p.photoUrl }));
+}
+
+/**
  * Place les pièces d'une tenue sur la planche. `photo` dit si la pièce a une
  * photo de l'utilisatrice (photoUrl) : parmi les hauts, celui-là devient le
  * héro. Rend les pièces dans l'ordre d'empilement, et la hauteur de la planche

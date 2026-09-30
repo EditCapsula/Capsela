@@ -86,6 +86,16 @@ const ACCESSOIRES_SPORT: ReadonlySet<AccessoireType> = new Set<AccessoireType>([
 ]);
 
 /**
+ * Contexte « à la maison » — Cocooning, ou Télétravail (sous-contexte de
+ * travail_formel), jamais Présentiel. Partagé par R-B13/R-B14/R-B17, et lu
+ * tel quel par le chargement du « Look du jour » (30/09/2026) : sans sac chez
+ * soi (R-B14), la silhouette qui s'y compose n'en dessine pas.
+ */
+export function estContexteMaison(occasion: OccasionKey, workMode: WorkMode = "Présentiel"): boolean {
+  return occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail");
+}
+
+/**
  * R-B11 (Sport, liste blanche stricte) + R-B12/R-B13/R-B14 (Cocooning,
  * exclusions symétriques) — jamais relâchées, quelle que soit la source du
  * pool. Extrait de generateOutfit pour être réutilisé tel quel par le
@@ -133,7 +143,7 @@ export function applySportCocooningFilter(items: Item[], occasion: OccasionKey, 
   // Contexte "à la maison" — Cocooning, ou Télétravail (sous-contexte de
   // travail_formel) : partagé par plusieurs règles (R-B13/R-B14/R-B17),
   // jamais en Présentiel.
-  const isHomeContext = occasion === "cocooning" || (occasion === "travail_formel" && workMode === "Télétravail");
+  const isHomeContext = estContexteMaison(occasion, workMode);
   if (occasion === "cocooning") {
     // R-B12 — pas de veste/manteau chez soi (Cocooning uniquement — en
     // Télétravail on peut porter un gilet/une veste, rien ne l'interdit).

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { GABARITS_PLANCHE, PROFONDEUR_PLANCHE, composerPlanche, libelleAnnotation, type EmplacementPlanche, type RolePlanche } from "../compositionEditoriale";
+import {
+  GABARITS_PLANCHE,
+  PROFONDEUR_PLANCHE,
+  composerPlanche,
+  formesSilhouette,
+  libelleAnnotation,
+  type EmplacementPlanche,
+  type RolePlanche,
+} from "../compositionEditoriale";
 import type { CategoryKey } from "../types";
 
 // La planche des heros « Look du jour », « Tenue du jour », « Tenue planifiée » (30/09/2026).
@@ -147,5 +155,44 @@ describe("libelleAnnotation — la provenance réelle, accordée", () => {
   it("bijoux et accessoires : pas d'annotation", () => {
     expect(libelleAnnotation("bijou", true)).toBeNull();
     expect(libelleAnnotation("accessoire", false)).toBeNull();
+  });
+});
+
+describe("formesSilhouette — le chargement du Look du jour annonce la planche à venir", () => {
+  // Les cas du brief du 30/09/2026 (point 16).
+  const CAS: [string, [CategoryKey, string?][]][] = [
+    ["haut + pantalon + chaussures", [["haut"], ["pantalon"], ["chaussures"]]],
+    ["haut + jupe + chaussures + sac", [["haut"], ["jupe"], ["chaussures"], ["sac"]]],
+    ["haut + jupe + blazer + chaussures + sac", [["haut"], ["jupe"], ["veste"], ["chaussures"], ["sac"]]],
+    ["haut + pantalon + manteau + chaussures + sac", [["haut"], ["pantalon"], ["manteau"], ["chaussures"], ["sac"]]],
+    ["robe + manteau + chaussures + sac", [["robe"], ["manteau"], ["chaussures"], ["sac"]]],
+    ["haut photographié + jupe + veste + chaussures + sac", [["haut"], ["jupe"], ["veste"], ["chaussures"], ["sac"], ["haut", "photo.jpg"]]],
+  ];
+  for (const [nom, pieces] of CAS) {
+    it(`${nom} : mêmes rôles, mêmes emplacements que la planche finale`, () => {
+      const tenue = pieces.map(([cat, photo]) => p(cat, photo));
+      const finale = composerPlanche(tenue);
+      const silhouette = composerPlanche(formesSilhouette(tenue));
+      expect(silhouette.hauteur).toBeCloseTo(finale.hauteur);
+      expect(silhouette.pieces.map((x) => [x.role, x.item.cat, x.case])).toEqual(finale.pieces.map((x) => [x.role, x.item.cat, x.case]));
+    });
+  }
+
+  it("la pièce photographiée est une forme de photo, et reste le héro", () => {
+    const formes = formesSilhouette([p("haut"), p("jupe"), p("haut", "photo.jpg")]);
+    const { pieces } = composerPlanche(formes);
+    const hero = pieces.find((x) => x.role === "hero");
+    expect(hero?.item.photo).toBe(true);
+    expect(pieces.filter((x) => x.item.photo)).toHaveLength(1);
+  });
+
+  it("ni bijou ni accessoire : aucune forme pour les petites pièces", () => {
+    const formes = formesSilhouette([p("haut"), p("pantalon"), p("bijou"), p("accessoire"), p("chaussures")]);
+    expect(formes.map((f) => f.cat)).toEqual(["haut", "pantalon", "chaussures"]);
+  });
+
+  it("la silhouette attendue avant la tenue : un haut, un bas, des chaussures, un sac", () => {
+    const { pieces } = composerPlanche(formesSilhouette([{ cat: "haut" }, { cat: "pantalon" }, { cat: "chaussures" }, { cat: "sac" }]));
+    expect(pieces.map((x) => x.role).sort()).toEqual(["bas", "chaussures", "hero", "sac"]);
   });
 });

@@ -6,13 +6,13 @@ import BadgePremium from "@/components/BadgePremium";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
-import { qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
+import { estContexteMaison, qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
@@ -20,81 +20,7 @@ import { useCapsela } from "@/lib/store";
 import { JourEtMeteo } from "@/components/JourMeteo";
 import { PlansDuJour } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
-import type { Item, SavedLook } from "@/lib/types";
-
-/**
- * LES SIX EMPLACEMENTS DU CHARGEMENT de la card « Look du jour » (28/09/2026,
- * maquette « Capsela compose ta tenue… »). Des silhouettes de pièces — veste,
- * t-shirt, pantalon, chaussures, sac, ceinture — en crème très translucide sur
- * le terracotta, et un anneau fin au centre qui tourne lentement. Ce ne sont
- * pas les pièces à venir : le moteur n'a encore rien choisi, les silhouettes
- * disent seulement ce qu'on compose.
- *
- * L'anneau reprend l'animation du spinner de l'app (loading-spinner-arc, 1,4 s
- * par tour, arrêtée si le téléphone demande moins d'animations), en crème : le
- * spinner d'origine est terracotta, invisible sur ce fond.
- */
-const SILHOUETTES_PIECES: { nom: string; dessin: React.ReactNode }[] = [
-  { nom: "veste", dessin: <path d="M17 8l-9 5v27h10V21l6 9 6-9v19h10V13l-9-5-7 11z" /> },
-  { nom: "haut", dessin: <path d="M17 9l-9 5 3 8 5-2v19h16V20l5 2 3-8-9-5c-1.5 3-4 4.6-7 4.6S18.5 12 17 9z" /> },
-  { nom: "bas", dessin: <path d="M15 7h18l2 34h-8l-3-21-3 21h-8z" /> },
-  { nom: "chaussures", dessin: <path d="M5 31c6 0 9-6 14-6s7 5 14 5c5 0 9 2 9 5v2H5z" /> },
-  {
-    nom: "sac",
-    dessin: (
-      <>
-        <path d="M11 20h26l3 20H8z" />
-        <path d="M18 20v-3a6 6 0 0 1 12 0v3" fill="none" stroke="currentColor" strokeWidth="2.5" />
-      </>
-    ),
-  },
-  {
-    nom: "accessoire",
-    dessin: (
-      <>
-        <path d="M4 21h40v7H4z" />
-        <rect x="17" y="18" width="10" height="13" rx="2" fill="none" stroke="currentColor" strokeWidth="2.5" />
-      </>
-    ),
-  },
-];
-
-function EmplacementsLook() {
-  return (
-    <div className="relative mt-[16px] grid grid-cols-3 gap-[8px]" aria-hidden="true">
-      {SILHOUETTES_PIECES.map((s) => (
-        <div
-          key={s.nom}
-          className="rounded-[14px] flex items-center justify-center"
-          style={{ aspectRatio: "1 / 1.1", background: "rgba(243,238,229,.10)", color: "rgba(243,238,229,.2)" }}
-        >
-          <svg viewBox="0 0 48 48" width="58%" height="58%" fill="currentColor">
-            {s.dessin}
-          </svg>
-        </div>
-      ))}
-      <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <span className="relative block" style={{ width: 42, height: 42 }}>
-          <svg width="42" height="42" viewBox="0 0 42 42" className="absolute inset-0">
-            <circle cx="21" cy="21" r="20" fill="none" stroke="rgba(243,238,229,.22)" strokeWidth="1.5" />
-          </svg>
-          <svg width="42" height="42" viewBox="0 0 42 42" className="absolute inset-0 loading-spinner-arc">
-            <circle
-              cx="21"
-              cy="21"
-              r="20"
-              fill="none"
-              stroke="rgba(243,238,229,.85)"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 20 * 0.28} ${2 * Math.PI * 20 * 0.72}`}
-            />
-          </svg>
-        </span>
-      </span>
-    </div>
-  );
-}
+import type { CategoryKey, Item, SavedLook } from "@/lib/types";
 
 /**
  * Emplacement en %, légèrement pivoté — la géométrie des collages éditoriaux.
@@ -555,6 +481,19 @@ export default function HomeScreen() {
    */
   const aucuneTenuePossible = !hasOutfit && state.outfitNoCompleteOutfit;
 
+  /**
+   * LA SILHOUETTE ATTENDUE, avant que la tenue soit composée (chargement,
+   * 30/09/2026). Le moteur n'a rien choisi : on ne dessine que ce qu'on sait.
+   * Un haut, un bas, des chaussures — le socle de toute tenue hors robe — et
+   * un sac, sauf à la maison, où le moteur n'en met jamais (R-B14, la même
+   * règle : estContexteMaison). Ni robe ni surcouche : elles dépendent des
+   * pièces et de leur météo, que seul le moteur tranche. Dès que la tenue
+   * existe, la silhouette prend ses catégories réelles (ZoneLookDuJour).
+   */
+  const categoriesAttendues: CategoryKey[] = estContexteMaison(occasionKey, state.workMode)
+    ? ["haut", "pantalon", "chaussures"]
+    : ["haut", "pantalon", "chaussures", "sac"];
+
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
 
@@ -657,9 +596,17 @@ export default function HomeScreen() {
             · le moteur n'a rien pu composer — le message et le CTA d'avant,
               qui mènent au dressing ;
             · sinon, elle se compose (profil, dressing, vestiaire ou
-              localisation pas encore prêts) — six emplacements discrets et un
-              anneau fin, qui n'apparaissent qu'après 300 ms : une génération
-              rapide ne fait jamais clignoter le chargement. */}
+              localisation pas encore prêts) — une silhouette abstraite aux
+              emplacements du look et « Sélection des pièces en cours », qui
+              n'apparaissent qu'après 300 ms : une génération rapide ne fait
+              jamais clignoter le chargement (30/09/2026, à la place de six
+              cases et d'un anneau qui tournait : « on doit sentir que Capsela
+              compose une silhouette, pas qu'elle charge six produits »).
+
+          LA ZONE DE COMPOSITION EST COMMUNE AU CHARGEMENT ET AU LOOK : seul le
+          texte au-dessus change d'un état à l'autre. Elle reste montée, à la
+          même place et à la même hauteur ; la planche y remplace la
+          silhouette en fondu (ZoneLookDuJour). */}
       <div
         className="mx-6 mt-6 bg-terracotta rounded-[24px] text-left"
         style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}
@@ -671,17 +618,43 @@ export default function HomeScreen() {
           Look du jour
         </div>
 
-        {hasOutfit ? (
-          // Une clé par état : sans elle, React réutilise le même <div> d'un
-          // état à l'autre et l'animation, de même nom, ne se rejoue pas —
-          // l'arrivée de la tenue se ferait sans fondu (mesuré en rendu).
-          <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
+        {aucuneTenuePossible ? (
+          <>
             <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
-              {titreLookDuJour(occasionKey, state.workMode, state.dateContext)}
+              On prépare ta première tenue
             </div>
-            {qualificatif && (
-              <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
-                {qualificatif}
+            <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
+              {dressingVide
+                ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
+                : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."}
+            </div>
+          </>
+        ) : (
+          <>
+            {hasOutfit ? (
+              // Une clé par état : sans elle, React réutilise le même <div> d'un
+              // état à l'autre et l'animation, de même nom, ne se rejoue pas —
+              // l'arrivée de la tenue se ferait sans fondu (mesuré en rendu).
+              <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
+                <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
+                  {titreLookDuJour(occasionKey, state.workMode, state.dateContext)}
+                </div>
+                {qualificatif && (
+                  <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
+                    {qualificatif}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
+                <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
+                  Capsela compose ta tenue…
+                </div>
+                <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
+                  {jourAVenir
+                    ? "Une silhouette pensée pour ton programme de ce jour-là."
+                    : "Une silhouette pensée pour ton programme d'aujourd'hui."}
+                </div>
               </div>
             )}
             {/* Toutes les pièces du look, sans exception, en PLANCHE (30/09/2026,
@@ -701,38 +674,16 @@ export default function HomeScreen() {
                 inchangée. La planche sait toujours les dessiner (prop
                 `annotations`, libelleAnnotation) si elles reviennent. */}
             <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
-              <OutfitComposition items={outfitPieces} variant="planche" />
-            </div>
-          </div>
-        ) : aucuneTenuePossible ? (
-          <>
-            <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
-              On prépare ta première tenue
-            </div>
-            <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
-              {dressingVide
-                ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
-                : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."}
+              <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} />
             </div>
           </>
-        ) : (
-          <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
-            <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
-              Capsela compose ta tenue…
-            </div>
-            <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
-              {jourAVenir
-                ? "Sélection des pièces adaptées à ton programme de ce jour-là."
-                : "Sélection des pièces adaptées à ton programme d'aujourd'hui."}
-            </div>
-            <EmplacementsLook />
-          </div>
         )}
 
         {/* L'OCCASION, étiquette de contexte : dans les trois états sauf
             « aucune tenue », où elle serait la raison même de l'échec. */}
         {!aucuneTenuePossible && occasionLabel && (
-          <div className="pt-[16px]">
+          // Secondaire pendant le chargement : le contexte, pas le sujet.
+          <div className="pt-[16px] transition-opacity duration-300" style={{ opacity: hasOutfit ? 1 : 0.72 }}>
             <span
               className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
               style={{
@@ -753,6 +704,8 @@ export default function HomeScreen() {
         {/* LE CTA, pleine largeur, seule action pleine de la card. Pas pendant
             le chargement : il n'y a encore rien à découvrir. PAS DE CTA MORT
             (§9.3) : sans tenue possible, il mène au dressing. */}
+        {/* Pendant le chargement, la ligne d'attente tient la place du CTA. */}
+        {!hasOutfit && !aucuneTenuePossible && <StatutComposition />}
         {(hasOutfit || aucuneTenuePossible) && (
           <button
             onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
