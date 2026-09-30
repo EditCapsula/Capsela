@@ -1,4 +1,4 @@
-import { saisonCalendairePour, weatherForDay } from "./capsule";
+import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import { categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
@@ -172,7 +172,7 @@ export function situationsDuSejour(occasions: OccasionKey[], meteos: MeteoJour[]
     const cle = `${saison}|${Math.round(m.temp / 3)}|${m.label}`;
     const g = groupes.get(cle);
     if (g) g.jours.push(m.jour);
-    else groupes.set(cle, { meteo: weatherForDay(m.temp, m.label, saison), jours: [m.jour] });
+    else groupes.set(cle, { meteo: weatherForDay(m.temp, m.label, saison, CHALEUR_HORS_SAISON), jours: [m.jour] });
   }
   const out: SituationValise[] = [];
   for (const occasion of occasions) for (const g of groupes.values()) out.push({ occasion, meteo: g.meteo, jours: g.jours });
