@@ -720,42 +720,37 @@ function CompositionPlanche({
 
 /*
  * LA SILHOUETTE DE CHARGEMENT du « Look du jour » (30/09/2026, brief
- * « Optimisation du loading ») : des formes de vêtement abstraites, crème
- * translucide sur le terracotta, posées par composerPlanche aux emplacements
- * mêmes où arriveront les pièces du look — la planche finale s'y substitue en
- * fondu, sans que rien ne change de place. Aucune image, aucun nom : une forme
- * ne dit que la famille de la pièce.
+ * « Optimisation du loading ») : des dessins de vêtements au trait crème sur le
+ * terracotta, posés par composerPlanche aux emplacements mêmes où arriveront
+ * les pièces du look — la planche finale s'y substitue en fondu, sans que rien
+ * ne change de place. Aucun nom : un dessin ne dit que la famille de la pièce.
  *
- * Chaque forme a les proportions d'une pièce photographiée de sa catégorie et
- * se cale dans son emplacement comme l'image s'y calera (même `aligne`).
+ * Les dessins (public/loader/, 30/09/2026) remplacent les tracés vectoriels
+ * dessinés dans le code, jugés trop schématiques par la propriétaire. Ils ont
+ * été découpés dans sa planche, fond transparent conservé. Chacun se cale dans
+ * son emplacement comme l'image de la pièce s'y calera (même `aligne`).
  * Changer de formes (la structure du look vient d'être connue) déplace les
  * emplacements en 500 ms au lieu de les redessiner.
  */
-type Forme = { vb: [number, number]; d: string; trait?: string };
-const FORME_HAUT: Forme = { vb: [100, 92], d: "M34 6C40 15 60 15 66 6L90 18L98 42L82 47L78 34V88C60 91 40 91 22 88V34L18 47L2 42L10 18Z" };
-const FORME_PANTALON: Forme = { vb: [64, 120], d: "M8 4H56L60 116H38L32 38L26 116H4Z", trait: "M8 13H56" };
-const FORMES: Partial<Record<CategoryKey, Forme>> = {
-  haut: FORME_HAUT,
-  pull: FORME_HAUT,
-  pantalon: FORME_PANTALON,
-  jean: FORME_PANTALON,
-  jupe: { vb: [90, 90], d: "M22 4H68L86 84C60 89 30 89 4 84Z", trait: "M22 12H68" },
-  short: { vb: [80, 62], d: "M8 4H72L78 56H46L40 24L34 56H2Z", trait: "M8 12H72" },
-  robe: { vb: [80, 150], d: "M28 4C33 11 47 11 52 4L58 8L56 34C54 44 56 50 60 58L76 142C52 148 28 148 4 142L20 58C24 50 26 44 24 34L22 8Z" },
-  combinaison: {
-    vb: [80, 150],
-    d: "M28 4C33 11 47 11 52 4L58 8L56 34C55 44 58 52 60 60L66 146H46L40 78L34 146H14L20 60C22 52 25 44 24 34L22 8Z",
-  },
-  veste: { vb: [100, 110], d: "M36 4L50 30L64 4L88 14L98 70L86 72L82 44V104H18V44L14 72L2 70L12 14Z", trait: "M36 4L44 48L50 30L56 48L64 4" },
-  manteau: { vb: [90, 150], d: "M32 4L45 28L58 4L80 12L88 96L78 98L74 44L76 146H14L16 44L12 98L2 96L10 12Z", trait: "M32 4L39 44L45 28L51 44L58 4" },
-  chaussures: { vb: [100, 60], d: "M4 50C4 44 10 42 18 42C34 42 46 38 58 26C64 20 70 12 78 10C86 8 92 12 94 18L96 56H90L88 34C80 44 64 54 40 56H10C6 56 4 54 4 50Z" },
-  sac: { vb: [100, 90], d: "M12 34H88L94 84C94 87 92 88 89 88H11C8 88 6 87 6 84Z", trait: "M32 34C32 8 68 8 68 34" },
+const DESSIN_HAUT = "/loader/haut.webp";
+const DESSIN_PANTALON = "/loader/pantalon.webp";
+const DESSINS: Partial<Record<CategoryKey, string>> = {
+  haut: DESSIN_HAUT,
+  pull: DESSIN_HAUT,
+  pantalon: DESSIN_PANTALON,
+  jean: DESSIN_PANTALON,
+  jupe: "/loader/jupe.webp",
+  short: "/loader/short.webp",
+  robe: "/loader/robe.webp",
+  combinaison: "/loader/combinaison.webp",
+  veste: "/loader/veste.webp",
+  manteau: "/loader/manteau.webp",
+  chaussures: "/loader/chaussures.webp",
+  sac: "/loader/sac.webp",
 };
-/** La pièce photographiée : un cadre au format courant d'une photo portée (4:5), un haut esquissé au centre. */
-const FORME_PHOTO: Forme = {
-  vb: [80, 100],
-  d: "M14 0H66A14 14 0 0 1 80 14V86A14 14 0 0 1 66 100H14A14 14 0 0 1 0 86V14A14 14 0 0 1 14 0Z",
-};
+/** La pièce photographiée : un cadre au format courant d'une photo portée (4:5), le dessin du haut au centre. */
+const CADRE_PHOTO = "M14 0H66A14 14 0 0 1 80 14V86A14 14 0 0 1 66 100H14A14 14 0 0 1 0 86V14A14 14 0 0 1 14 0Z";
+const POSITION = { debut: "0%", centre: "50%", fin: "100%" } as const;
 const ALIGNE_SVG = { debut: "Min", centre: "Mid", fin: "Max" } as const;
 
 export function SilhouettePlanche({ formes }: { formes: { cat: CategoryKey; photoUrl?: string | null }[] }) {
@@ -765,7 +760,10 @@ export function SilhouettePlanche({ formes }: { formes: { cat: CategoryKey; phot
     <div aria-hidden="true" className="w-full h-full flex items-center justify-center" style={{ containerType: "size" }}>
       <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / hauteur}))`, aspectRatio: `100 / ${hauteur}` }}>
         {pieces.map(({ item, role, case: c, aligne }, i) => {
-          const f = item.photo ? FORME_PHOTO : (FORMES[item.cat] ?? FORME_HAUT);
+          const delais = {
+            ["--delai-entree" as string]: `${300 + i * 140}ms`,
+            ["--delai-souffle" as string]: `${1200 + i * 380}ms`,
+          };
           return (
             // Clé par RÔLE, pas par catégorie : quand la structure change, l'emplacement glisse au lieu de disparaître.
             <div
@@ -780,34 +778,27 @@ export function SilhouettePlanche({ formes }: { formes: { cat: CategoryKey; phot
                 zIndex: i + 1,
               }}
             >
-              <svg
-                viewBox={`0 0 ${f.vb[0]} ${f.vb[1]}`}
-                preserveAspectRatio={`x${ALIGNE_SVG[aligne.x]}Y${ALIGNE_SVG[aligne.y]} meet`}
-                className="silhouette-forme"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  overflow: "visible",
-                  ["--delai-entree" as string]: `${300 + i * 140}ms`,
-                  ["--delai-souffle" as string]: `${1200 + i * 380}ms`,
-                }}
-              >
-                <path d={f.d} fill="rgba(243,238,229,.15)" stroke="rgba(243,238,229,.46)" strokeWidth={1.1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                {f.trait && (
-                  <path d={f.trait} fill="none" stroke="rgba(243,238,229,.34)" strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                )}
-                {item.photo && (
-                  <path
-                    d={FORME_HAUT.d}
-                    transform="translate(20 32) scale(.4)"
-                    fill="none"
-                    stroke="rgba(243,238,229,.34)"
-                    strokeWidth={1.1}
-                    strokeLinejoin="round"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                )}
-              </svg>
+              {item.photo ? (
+                <div className="silhouette-forme relative w-full h-full" style={delais}>
+                  <svg
+                    viewBox="0 0 80 100"
+                    preserveAspectRatio={`x${ALIGNE_SVG[aligne.x]}Y${ALIGNE_SVG[aligne.y]} meet`}
+                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}
+                  >
+                    <path d={CADRE_PHOTO} fill="rgba(243,238,229,.15)" stroke="rgba(243,238,229,.46)" strokeWidth={1.1} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                    <image href={DESSIN_HAUT} x={22} y={30} width={36} height={40} preserveAspectRatio="xMidYMid meet" opacity={0.8} />
+                  </svg>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- export statique, images servies telles quelles
+                <img
+                  src={DESSINS[item.cat] ?? DESSIN_HAUT}
+                  alt=""
+                  decoding="async"
+                  className="silhouette-forme block w-full h-full"
+                  style={{ objectFit: "contain", objectPosition: `${POSITION[aligne.x]} ${POSITION[aligne.y]}`, ...delais }}
+                />
+              )}
             </div>
           );
         })}

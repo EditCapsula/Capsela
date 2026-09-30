@@ -14,7 +14,7 @@ const ATTENTE_MAX_IMAGES = 2500;
  * Une seule zone, de même proportion dans les deux états et qui reste montée
  * de l'un à l'autre : la card ne change pas de hauteur à l'arrivée du look.
  * Deux calques superposés :
- *   · la SILHOUETTE (SilhouettePlanche), des formes abstraites aux
+ *   · la SILHOUETTE (SilhouettePlanche), des dessins de vêtements aux
  *     emplacements de la planche ;
  *   · la PLANCHE du look (OutfitComposition "planche"), transparente tant que
  *     ses images ne sont pas chargées et cadrées.
