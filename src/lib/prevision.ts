@@ -121,11 +121,11 @@ export function joursCouverts(prevision: Prevision): string[] {
  * l'inverse. À défaut, le libellé le plus fréquent ; à égalité, le plus
  * précoce.
  *
- * Le test est `labelPrecipitation` et NON `isRainy` : « Pluvieux », le
- * libellé de la pluie ordinaire, ne satisfait pas `isRainy` (cf. le défaut
- * documenté dans data.ts). Utiliser `isRainy` ici aurait fait gagner
+ * Le test est `labelPrecipitation` (le vocabulaire), pas `isRainy` (la règle
+ * de composition). Jusqu'au 30/09/2026, `isRainy` ignorait « Pluvieux », le
+ * libellé de la pluie ordinaire : l'utiliser ici aurait fait gagner
  * « Ensoleillé » sur une matinée de pluie — vérifié par un test qui a échoué
- * avant d'être compris.
+ * avant d'être compris. Les deux reconnaissent désormais les mêmes libellés.
  */
 export function previsionPour(
   prevision: Prevision,

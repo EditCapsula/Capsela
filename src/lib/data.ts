@@ -370,38 +370,28 @@ export function isSunny(weather: Weather): boolean {
 }
 
 /**
- * Météo pluvieuse — R-B16 (préférence pour une veste/un manteau
- * resiste_pluie quand il pleut).
+ * Temps de précipitations, pour les règles de composition (R-B16 veste qui
+ * résiste à la pluie, R-B21 chaussures ouvertes écartées).
  *
- * Signature élargie à `{ label }` le 23/09/2026 : la prévision agrège
- * plusieurs créneaux horaires et doit savoir lequel prime AVANT d'avoir
- * construit un `Weather`. Recopier la regex là-bas aurait fait deux
- * définitions d'une même question, dont une qui finit par diverger.
- * `Weather` satisfait cette forme, aucun appelant ne change.
+ * CORRIGÉ LE 30/09/2026 (signalé : « il pleut et l'application me propose des
+ * chaussures ouvertes » ; arbitré le même jour). La fonction Edge `weather`
+ * appelle la pluie ordinaire « Pluvieux » (condition OpenWeather `Rain`, de
+ * loin la plus fréquente) ; l'ancien test `/pluie|orage/i` ne la reconnaissait
+ * pas, et le moteur composait comme par temps sec. Couvre désormais tout le
+ * vocabulaire réellement produit — celui de la fonction Edge (Pluvieux, Pluie
+ * légère, Orageux, Neigeux) et celui de la liste `CITIES` simulée —, NEIGE
+ * COMPRISE (arbitré : sous la neige non plus, pas de chaussures ouvertes).
  */
 export function isRainy(weather: { label: string }): boolean {
-  return /pluie|orage/i.test(weather.label);
+  return /pluie|pluvieux|averse|bruine|orage|neige/i.test(weather.label);
 }
 
 /**
  * Libellé décrivant des précipitations — question de VOCABULAIRE, distincte
- * de la règle de composition `isRainy` juste au-dessus.
- *
- * DÉFAUT MESURÉ LE 23/09/2026, NON CORRIGÉ ICI, À ARBITRER. La fonction Edge
- * `weather` traduit la condition OpenWeather `Rain` — la pluie ordinaire, de
- * loin la plus fréquente — par « Pluvieux ». Or `isRainy` teste
- * `/pluie|orage/i`, et « Pluvieux » ne contient pas « pluie » :
- *
- *   Pluvieux      -> isRainy faux    (Rain)
- *   Pluie légère  -> isRainy VRAI    (Drizzle)
- *   Orageux       -> isRainy VRAI    (Thunderstorm)
- *   Neigeux       -> isRainy faux    (Snow)
- *
- * R-B16 (préférer une veste resiste_pluie quand il pleut) se déclenche donc
- * pour la bruine et l'orage, mais PAS pour la pluie. Élargir `isRainy`
- * changerait le comportement du moteur, ce qui n'est pas une correction à
- * prendre en passant : la règle reste inchangée tant qu'elle n'est pas
- * arbitrée.
+ * de la règle de composition `isRainy` juste au-dessus. Les deux reconnaissent
+ * les mêmes libellés depuis le 30/09/2026 (le défaut du 23/09 — « Pluvieux »
+ * ignoré par `isRainy` — est corrigé là-haut) ; elles restent séparées parce
+ * qu'elles ne répondent pas à la même question.
  *
  * Cette fonction-ci ne sert qu'à choisir quel libellé afficher et transmettre
  * quand plusieurs créneaux sont agrégés (cf. prevision.ts) : elle ne décide
