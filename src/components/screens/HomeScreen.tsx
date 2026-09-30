@@ -6,7 +6,8 @@ import BadgePremium from "@/components/BadgePremium";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
-import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
+import { OutfitComposition } from "@/components/OutfitComposition";
+import { libelleAnnotation } from "@/lib/compositionEditoriale";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
@@ -523,6 +524,14 @@ export default function HomeScreen() {
   const occasionLabel = OCC_LABELS[occasionKey];
 
   const outfitPieces = hasOutfit ? piecesResolues : [];
+  // Annotations manuscrites de la planche (30/09/2026) : « Ton haut » pour une
+  // pièce du dressing, « La jupe » pour une suggestion de la capsule.
+  const idsDressing = new Set(state.items.map((i) => i.id));
+  const annotations: Record<number, string> = {};
+  for (const piece of outfitPieces) {
+    const texte = libelleAnnotation(piece.cat, idsDressing.has(piece.id));
+    if (texte) annotations[piece.id] = texte;
+  }
 
   // Le qualificatif sous le titre (qualificatifLook) : celui de la météo, sans
   // jamais présenter comme une option une veste que la tenue contient. Aucune
@@ -645,8 +654,9 @@ export default function HomeScreen() {
           complète ; l'écran Tenue sert à l'approfondir.
 
           UNE SEULE REPRÉSENTATION POUR LES DEUX ÉCRANS : OutfitComposition,
-          variante "hero", ajustée dans une zone de même mesure (UNITE_HERO)
-          que sur l'écran Tenue, alimentée par la même tenue (state.outfit).
+          variante "planche" depuis le 30/09/2026 (d'abord "hero"), dans une
+          zone de même proportion que sur l'écran Tenue, alimentée par la même
+          tenue (state.outfit).
           Mêmes pièces, mêmes images, même ordre, par construction — aucune
           sélection propre à l'accueil.
 
@@ -683,11 +693,17 @@ export default function HomeScreen() {
                 {qualificatif}
               </div>
             )}
-            {/* Toutes les pièces du look, sans exception. Zone de même mesure
-                que celle de l'écran Tenue, composition ajustée dedans : une
-                tenue de six pièces tient sans que la card s'allonge d'autant. */}
-            <div className="mt-[14px]" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px)` }}>
-              <OutfitComposition items={outfitPieces} variant="hero" ajustee />
+            {/* Toutes les pièces du look, sans exception, en PLANCHE (30/09/2026,
+                brief « Refonte du hero Look du jour ») : une silhouette et non
+                une grille — la pièce héro (robe, ou haut photographié porté),
+                la surcouche derrière, le bas devant, chaussures et sac en
+                finition (composerPlanche). Zone de hauteur FIXE à largeur
+                donnée (82 % de la largeur, mesuré le 30/09 : la partie peinte
+                d'une planche va de 0,78 à 0,94 fois la largeur ; l'ancienne
+                mesure de grille laissait jusqu'à 60 px vides en haut et en
+                bas). La planche s'y ajuste : la card ne bouge pas avec la tenue. */}
+            <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
+              <OutfitComposition items={outfitPieces} variant="planche" annotations={annotations} />
             </div>
           </div>
         ) : aucuneTenuePossible ? (

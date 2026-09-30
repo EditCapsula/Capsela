@@ -1,7 +1,8 @@
 "use client";
 
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { composerTenue } from "@/lib/compositionEditoriale";
+import { composerPlanche, composerTenue } from "@/lib/compositionEditoriale";
 import type { CategoryKey, Item } from "@/lib/types";
 
 /**
@@ -55,9 +56,9 @@ import type { CategoryKey, Item } from "@/lib/types";
  * Seul repère conservé : le contour terracotta du pivot (anchorId), qui n'a
  * aucune autre signification dans toute l'app.
  */
-export type CompositionVariant = "hero" | "compact" | "editoriale";
+export type CompositionVariant = "hero" | "compact" | "editoriale" | "planche";
 /** Les deux variantes en grille ; "editoriale" place ses pièces librement (CompositionEditoriale). */
-type VarianteGrille = Exclude<CompositionVariant, "editoriale">;
+type VarianteGrille = Exclude<CompositionVariant, "editoriale" | "planche">;
 type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
 type CompositionTier = "principal" | "chaussures" | "petit";
 
@@ -205,6 +206,7 @@ export function OutfitComposition({
   anchorId,
   ajustee = false,
   label,
+  annotations,
 }: {
   items: Item[];
   variant?: CompositionVariant;
@@ -221,8 +223,14 @@ export function OutfitComposition({
   ajustee?: boolean;
   /** Nom accessible de la composition "editoriale" (les pièces sont nommées dans la liste qui suit). */
   label?: string;
+  /**
+   * "planche" seulement : le texte des annotations manuscrites, par pièce
+   * (libelleAnnotation). Une pièce absente de la table n'est pas annotée.
+   */
+  annotations?: Record<number, string>;
 }) {
   if (variant === "editoriale") return <CompositionEditoriale items={items} label={label} />;
+  if (variant === "planche") return <CompositionPlanche items={items} label={label} annotations={annotations} />;
   const cfg = VARIANT_CONFIG[variant];
   // "hero" repose sur le terracotta de la card Tenue, pas sur le fond de
   // page : aucune tuile sous les pièces (cf. en-tête).
@@ -462,6 +470,219 @@ function CompositionEditoriale({ items, label }: { items: Item[]; label?: string
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * "planche" — les heros « Look du jour », « Tenue du jour » et « Tenue
+ * planifiée » (30/09/2026). Les pièces sont posées par composerPlanche : la
+ * pièce héro (robe, ou haut photographié porté), la surcouche derrière, le bas
+ * devant à cheval sur le héro, chaussures et sac en finition, avec de légers
+ * chevauchements et l'empilement de la profondeur.
+ *
+ * REMPLIT SON PARENT, qui doit avoir une hauteur définie (la zone à hauteur
+ * fixe de chaque hero) : la planche, dont la proportion suit la tenue, y est
+ * ajustée entière — jamais rognée, jamais déformée — grâce aux unités de
+ * conteneur (cqw, cqh). Une tenue courte est agrandie jusqu'aux bords de la
+ * zone, une tenue avec manteau réduite d'autant : la card ne bouge pas.
+ *
+ * Même rendu de pièce que "editoriale" : image entière à son ratio, calée vers
+ * le centre de la planche ; une photo de l'utilisatrice garde ses coins
+ * arrondis ; une pièce sans visuel est un aplat de sa couleur.
+ */
+/** Agrandissement maximal au cadrage sur les pixels peints : au-delà, une image du catalogue se lirait floue. */
+const CADRAGE_MAX = 1.25;
+
+function CompositionPlanche({ items, label, annotations }: { items: Item[]; label?: string; annotations?: Record<number, string> }) {
+  const { pieces, notes: toutesNotes, hauteur } = composerPlanche(items, { annotations: Boolean(annotations) });
+  const notes = annotations ? toutesNotes.filter((n) => annotations[n.item.id]) : [];
+  const zoneRef = useRef<HTMLDivElement | null>(null);
+  const planRef = useRef<HTMLDivElement | null>(null);
+  /*
+   * CADRAGE SUR CE QUI EST PEINT (30/09/2026, demandé : « moins d'espace vide
+   * en haut et en bas de la composition »). composerPlanche recadre sur les
+   * EMPLACEMENTS ; or une image « contenue » dans le sien n'en occupe qu'une
+   * partie — un haut presque carré dans un emplacement vertical y laissait
+   * jusqu'à 60 px vides au-dessus. Une fois les images chargées, on mesure
+   * l'union de ce qui est réellement affiché et on l'ajuste à la zone
+   * (agrandie au plus de CADRAGE_MAX, jamais rognée, recentrée). La zone garde
+   * sa hauteur : seule la planche bouge dedans. Recalculé au redimensionnement.
+   */
+  // Le cadrage vaut pour UNE tenue dans UNE taille de zone : sa clé change, il est ignoré et remesuré.
+  const [taille, setTaille] = useState("");
+  const cle = pieces.map((p) => p.item.id).join(",") + "|" + notes.map((n) => annotations?.[n.item.id]).join(",") + "|" + taille;
+  const [mesure, setMesure] = useState<{ cle: string; s: number; ox: number; oy: number; dx: number; dy: number } | null>(null);
+  const cadrage = mesure?.cle === cle ? mesure : null;
+  const mesurer = useCallback(() => {
+    const zone = zoneRef.current;
+    const plan = planRef.current;
+    if (!zone || !plan) return;
+    const els = [...plan.querySelectorAll<HTMLElement>("[data-peint]")];
+    if (els.some((el) => el instanceof HTMLImageElement && !el.complete)) return;
+    const rz = zone.getBoundingClientRect();
+    const rp = plan.getBoundingClientRect();
+    const rs = els.map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
+    if (!rs.length || rz.width === 0 || rz.height === 0) return;
+    const g = Math.min(...rs.map((r) => r.left));
+    const d = Math.max(...rs.map((r) => r.right));
+    const h = Math.min(...rs.map((r) => r.top));
+    const b = Math.max(...rs.map((r) => r.bottom));
+    const sc = Math.max(1, Math.min(CADRAGE_MAX, rz.width / (d - g), rz.height / (b - h)));
+    setMesure({
+      cle,
+      s: sc,
+      // Origine au centre de l'union, dans le repère de la planche ; translation vers le centre de la zone.
+      ox: (g + d) / 2 - rp.left,
+      oy: (h + b) / 2 - rp.top,
+      dx: rz.left + rz.width / 2 - (g + d) / 2,
+      dy: rz.top + rz.height / 2 - (h + b) / 2,
+    });
+  }, [cle]);
+  // Mesure sur la planche BRUTE (sans transformation) : au rendu suivant d'une clé nouvelle.
+  useLayoutEffect(() => {
+    if (cadrage) return;
+    const id = requestAnimationFrame(mesurer);
+    return () => cancelAnimationFrame(id);
+  }, [cadrage, mesurer]);
+  useLayoutEffect(() => {
+    const zone = zoneRef.current;
+    if (!zone || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setTaille(`${zone.clientWidth}x${zone.clientHeight}`));
+    ro.observe(zone);
+    return () => ro.disconnect();
+  }, []);
+
+  if (!pieces.length) return null;
+  const surChargement = () => {
+    if (!cadrage) mesurer();
+  };
+  return (
+    <div
+      ref={zoneRef}
+      role={label ? "img" : undefined}
+      aria-label={label}
+      className="w-full h-full flex items-center justify-center"
+      style={{ containerType: "size" }}
+    >
+      <div
+        ref={planRef}
+        style={{
+          position: "relative",
+          width: `min(100cqw, calc(100cqh * ${100 / hauteur}))`,
+          aspectRatio: `100 / ${hauteur}`,
+          transformOrigin: cadrage ? `${cadrage.ox}px ${cadrage.oy}px` : undefined,
+          transform: cadrage ? `translate(${cadrage.dx}px, ${cadrage.dy}px) scale(${cadrage.s})` : undefined,
+        }}
+      >
+        {pieces.map(({ item: it, case: c, aligne }, i) => {
+          const img = resolveItemImage(it);
+          const photo = img.kind === "photo";
+          return (
+            <div
+              key={"planche-" + it.id}
+              style={{
+                position: "absolute",
+                left: `${c.x}%`,
+                width: `${c.l}%`,
+                top: `${(c.y / hauteur) * 100}%`,
+                height: `${(c.h / hauteur) * 100}%`,
+                zIndex: i + 1,
+                display: "flex",
+                justifyContent: FLEX[aligne.x],
+                alignItems: FLEX[aligne.y],
+              }}
+            >
+              {img.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  data-peint=""
+                  src={img.url}
+                  alt={label ? "" : it.name}
+                  onLoad={surChargement}
+                  onError={surChargement}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    width: "auto",
+                    height: "auto",
+                    display: "block",
+                    borderRadius: photo ? 18 : undefined,
+                    filter: photo
+                      ? "brightness(.96) contrast(1.03) saturate(.94) drop-shadow(0 8px 18px rgba(29,26,22,.2))"
+                      : "drop-shadow(0 6px 12px rgba(29,26,22,.16))",
+                  }}
+                />
+              ) : (
+                <div
+                  data-peint=""
+                  role={label ? undefined : "img"}
+                  aria-label={label ? undefined : it.name}
+                  style={{ width: "100%", height: "100%", borderRadius: 14, background: it.hex, opacity: 0.9 }}
+                />
+              )}
+            </div>
+          );
+        })}
+        {notes.length > 0 && (
+          /* LES ANNOTATIONS (30/09/2026, carte de l'accueil) : décoratives —
+             les pièces sont déjà nommées pour les lecteurs d'écran. Les
+             flèches, tracées dans le repère de la planche, suivent le
+             cadrage ; le texte est contre-agrandi pour garder la même taille
+             d'une tenue à l'autre. */
+          <>
+            <svg
+              aria-hidden="true"
+              viewBox={`0 0 100 ${hauteur}`}
+              preserveAspectRatio="none"
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible", pointerEvents: "none", zIndex: pieces.length + 1 }}
+            >
+              {notes.map(({ item, fleche: f }) => {
+                // Pointe : deux traits courts, orientés sur la fin de la courbe.
+                const a = Math.atan2(f.y2 - f.cy, f.x2 - f.cx);
+                const p = 2.6;
+                const d1 = `M ${f.x2 - p * Math.cos(a - 0.5)} ${f.y2 - p * Math.sin(a - 0.5)} L ${f.x2} ${f.y2} L ${f.x2 - p * Math.cos(a + 0.5)} ${f.y2 - p * Math.sin(a + 0.5)}`;
+                return (
+                  <g key={"fleche-" + item.id} fill="none" stroke="rgba(251,243,234,.78)" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke">
+                    <path d={`M ${f.x1} ${f.y1} Q ${f.cx} ${f.cy} ${f.x2} ${f.y2}`} vectorEffect="non-scaling-stroke" />
+                    <path d={d1} vectorEffect="non-scaling-stroke" />
+                  </g>
+                );
+              })}
+            </svg>
+            {notes.map(({ item, boite: b, fleche: f }) => {
+              const versGauche = f.x2 < b.x + b.l / 2;
+              return (
+                <div
+                  key={"note-" + item.id}
+                  aria-hidden="true"
+                  data-peint=""
+                  className="font-hand"
+                  style={{
+                    position: "absolute",
+                    left: `${b.x}%`,
+                    width: `${b.l}%`,
+                    top: `${(b.y / hauteur) * 100}%`,
+                    height: `${(b.h / hauteur) * 100}%`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: versGauche ? "flex-start" : "flex-end",
+                    whiteSpace: "nowrap",
+                    fontSize: 17,
+                    lineHeight: 1,
+                    color: "rgba(251,243,234,.9)",
+                    zIndex: pieces.length + 2,
+                    transform: `rotate(-4deg)${cadrage ? ` scale(${1 / cadrage.s})` : ""}`,
+                    transformOrigin: versGauche ? "left center" : "right center",
+                  }}
+                >
+                  {annotations?.[item.id]}
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
     </div>
   );
 }

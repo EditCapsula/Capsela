@@ -8,7 +8,7 @@ import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
-import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
+import { OutfitComposition } from "@/components/OutfitComposition";
 import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -1783,8 +1783,9 @@ export default function PlanifierScreen() {
               </div>
 
               {/* LE HERO. Même famille que la carte « Look du jour » de
-                  l'accueil : terracotta, titre serif crème, composition
-                  OutfitComposition ajustée dans une zone de hauteur FIXE (même
+                  l'accueil : terracotta, titre serif crème, pièces en planche
+                  (OutfitComposition "planche", 30/09/2026 — la même silhouette
+                  que l'accueil et l'écran Tenue) dans une zone de hauteur FIXE (même
                   mesure que l'accueil et l'écran Tenue). Une robe longue ou
                   des chaussures horizontales s'adaptent à la zone ; la zone ne
                   s'adapte pas à elles, et rien ne bouge en dessous. */}
@@ -1795,9 +1796,10 @@ export default function PlanifierScreen() {
                 <div className="font-serif italic text-[15px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.86)" }}>
                   {phrase}
                 </div>
-                <div className="mt-[14px]" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px)` }}>
+                {/* Même zone que la carte de l'accueil : 82 % de la largeur. */}
+                <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
                   {pieces.length > 0 ? (
-                    <OutfitComposition items={pieces} variant="hero" ajustee />
+                    <OutfitComposition items={pieces} variant="planche" />
                   ) : (
                     <div
                       className="h-full rounded-[16px] flex items-center justify-center text-center px-6 text-[13px] leading-[1.5]"

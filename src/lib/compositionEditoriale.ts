@@ -1,3 +1,4 @@
+import { CAT_GENDER } from "./attributes";
 import type { CategoryKey, Item } from "./types";
 
 /*
@@ -188,4 +189,308 @@ export function composerTenue<T extends Pick<Item, "id" | "cat">>(
     };
   });
   return { pieces, hauteur };
+}
+
+/*
+ * LA PLANCHE DU LOOK — les heros « Look du jour » (accueil), « Tenue du jour »
+ * et « Tenue planifiée » (30/09/2026, brief « Refonte du hero Look du jour » :
+ * « Voici la silhouette que Capsela a imaginée pour moi aujourd'hui »).
+ *
+ * Une autre hiérarchie que composerTenue (détail d'un look), décidée par ce
+ * brief pour ces trois heros seulement — ARBITRAGE ÉDITORIAL, qui ne vaut pas
+ * pour le détail d'un look sans nouvelle décision :
+ *   1. la pièce HÉRO : la robe ou la combinaison ; sinon le haut, et d'abord
+ *      celui que l'utilisatrice a photographié porté — c'est une pièce de son
+ *      dressing, le point d'ancrage de la tenue ;
+ *   2. la SURCOUCHE (veste, blazer, manteau ; sinon un second haut, gilet ou
+ *      pull porté par-dessus) : derrière, plus grande que le sac ou les
+ *      chaussures, jamais au point d'écraser le héro ;
+ *   3. le BAS, posé devant, à cheval sur le héro : les deux se lisent comme
+ *      une silhouette ;
+ *   4. les chaussures, 5. le sac et les petits accessoires, en finition.
+ *
+ * Des emplacements RECTANGULAIRES (les vêtements ne sont pas carrés), qui se
+ * chevauchent légèrement là où la planche d'un styliste le ferait : le bas
+ * sur le bord du héro, les chaussures au pied de la silhouette, le sac contre
+ * le bas. L'ordre d'empilement suit la profondeur (surcouche derrière,
+ * accessoires devant). Seules les pièces présentes sont posées, puis la
+ * planche est recadrée sur elles : aucun emplacement vide.
+ */
+
+export type RolePlanche = "hero" | "dessus" | "bas" | "chaussures" | "sac" | "petit";
+
+export interface EmplacementPlanche {
+  /** Bord gauche, bord haut, largeur et hauteur, en % de la largeur de la planche. */
+  x: number;
+  y: number;
+  l: number;
+  h: number;
+}
+
+/**
+ * Une annotation manuscrite : sa boîte (mêmes unités que les emplacements) et
+ * le point visé par sa flèche, en fraction de l'emplacement de la pièce.
+ */
+interface NoteGabarit {
+  boite: EmplacementPlanche;
+  cible: [number, number];
+}
+
+interface GabaritPlanche {
+  hero: EmplacementPlanche;
+  dessus?: EmplacementPlanche;
+  bas?: EmplacementPlanche;
+  chaussures: EmplacementPlanche;
+  sac: EmplacementPlanche;
+  petits: EmplacementPlanche[];
+  /**
+   * Annotations « Ton haut », « Ta veste »… (30/09/2026, carte de l'accueil).
+   * Dans les marges de chaque silhouette, jamais sur une pièce (vérifié par
+   * les tests). Quatre au plus : avec une surcouche, le bas n'est pas annoté —
+   * sa place, entre le héro et la veste, est prise par les vêtements.
+   */
+  notes: Partial<Record<RolePlanche, NoteGabarit>>;
+}
+
+/** Les gabarits, par silhouette. Exposés pour les tests (hiérarchie, chevauchements bornés). */
+export const GABARITS_PLANCHE: Record<"haut" | "hautDessus" | "hautManteau" | "robe" | "robeDessus", GabaritPlanche> = {
+  // Haut + bas (+ chaussures, sac) : le héro à gauche, le bas à droite et plus bas.
+  haut: {
+    hero: { x: 0, y: 0, l: 50, h: 66 },
+    bas: { x: 45, y: 12, l: 36, h: 58 },
+    chaussures: { x: 10, y: 60, l: 34, h: 24 },
+    sac: { x: 64, y: 58, l: 28, h: 26 },
+    petits: [
+      { x: 83, y: 4, l: 16, h: 16 },
+      { x: 84, y: 24, l: 14, h: 14 },
+    ],
+    notes: {
+      hero: { boite: { x: 2, y: -10, l: 28, h: 8 }, cible: [0.3, 0.08] },
+      bas: { boite: { x: 50, y: 1, l: 28, h: 8 }, cible: [0.45, 0.06] },
+      chaussures: { boite: { x: 8, y: 86, l: 32, h: 8 }, cible: [0.5, 0.75] },
+      sac: { boite: { x: 64, y: 86, l: 28, h: 8 }, cible: [0.45, 0.75] },
+    },
+  },
+  // Haut + veste / blazer + bas : la veste derrière à droite, le bas devant, entre les deux.
+  hautDessus: {
+    hero: { x: 0, y: 6, l: 46, h: 62 },
+    dessus: { x: 54, y: 0, l: 44, h: 60 },
+    bas: { x: 41, y: 20, l: 30, h: 52 },
+    chaussures: { x: 8, y: 64, l: 34, h: 24 },
+    sac: { x: 64, y: 58, l: 28, h: 26 },
+    petits: [
+      { x: 88, y: 62, l: 12, h: 12 },
+      { x: 44, y: 74, l: 12, h: 12 },
+    ],
+    notes: {
+      hero: { boite: { x: 2, y: -5, l: 28, h: 8 }, cible: [0.3, 0.08] },
+      dessus: { boite: { x: 68, y: -11, l: 28, h: 8 }, cible: [0.7, 0.08] },
+      chaussures: { boite: { x: 8, y: 90, l: 32, h: 8 }, cible: [0.5, 0.75] },
+      sac: { boite: { x: 64, y: 86, l: 28, h: 8 }, cible: [0.45, 0.75] },
+    },
+  },
+  // Même silhouette, manteau : plus haut que la veste, jamais plus grand que le héro.
+  hautManteau: {
+    hero: { x: 0, y: 6, l: 48, h: 64 },
+    dessus: { x: 52, y: 0, l: 46, h: 64 },
+    bas: { x: 43, y: 22, l: 28, h: 50 },
+    chaussures: { x: 8, y: 64, l: 34, h: 24 },
+    sac: { x: 62, y: 62, l: 28, h: 26 },
+    petits: [
+      { x: 88, y: 70, l: 12, h: 12 },
+      { x: 44, y: 76, l: 12, h: 12 },
+    ],
+    notes: {
+      hero: { boite: { x: 2, y: -5, l: 28, h: 8 }, cible: [0.3, 0.08] },
+      dessus: { boite: { x: 68, y: -11, l: 30, h: 8 }, cible: [0.7, 0.08] },
+      chaussures: { boite: { x: 8, y: 90, l: 32, h: 8 }, cible: [0.5, 0.75] },
+      sac: { boite: { x: 62, y: 90, l: 28, h: 8 }, cible: [0.45, 0.75] },
+    },
+  },
+  // Robe seule : la robe au centre-gauche, sac et chaussures à sa droite.
+  robe: {
+    hero: { x: 14, y: 0, l: 44, h: 80 },
+    chaussures: { x: 54, y: 56, l: 34, h: 24 },
+    sac: { x: 58, y: 22, l: 28, h: 26 },
+    petits: [
+      { x: 0, y: 10, l: 16, h: 16 },
+      { x: 2, y: 30, l: 14, h: 14 },
+    ],
+    notes: {
+      hero: { boite: { x: 16, y: -10, l: 28, h: 8 }, cible: [0.4, 0.08] },
+      sac: { boite: { x: 60, y: 12, l: 28, h: 8 }, cible: [0.5, 0.25] },
+      chaussures: { boite: { x: 56, y: 82, l: 32, h: 8 }, cible: [0.5, 0.75] },
+    },
+  },
+  // Robe + veste ou manteau : la surcouche derrière, à droite.
+  robeDessus: {
+    hero: { x: 0, y: 0, l: 44, h: 80 },
+    dessus: { x: 44, y: 2, l: 46, h: 60 },
+    chaussures: { x: 34, y: 62, l: 34, h: 24 },
+    sac: { x: 68, y: 56, l: 28, h: 26 },
+    petits: [
+      { x: 88, y: 4, l: 12, h: 12 },
+      { x: 90, y: 20, l: 10, h: 10 },
+    ],
+    notes: {
+      hero: { boite: { x: 2, y: -10, l: 28, h: 8 }, cible: [0.4, 0.06] },
+      dessus: { boite: { x: 50, y: -9, l: 28, h: 8 }, cible: [0.5, 0.08] },
+      chaussures: { boite: { x: 32, y: 88, l: 32, h: 8 }, cible: [0.5, 0.75] },
+      sac: { boite: { x: 68, y: 84, l: 28, h: 8 }, cible: [0.45, 0.75] },
+    },
+  },
+};
+
+/** Profondeur : ce qui est derrière d'abord. */
+export const PROFONDEUR_PLANCHE: Record<RolePlanche, number> = { dessus: 1, hero: 2, bas: 3, petit: 4, chaussures: 5, sac: 5 };
+
+const HAUTS: CategoryKey[] = ["haut", "pull"];
+const BAS: CategoryKey[] = ["pantalon", "jean", "jupe", "short"];
+const ROBES: CategoryKey[] = ["robe", "combinaison"];
+const DESSUS: CategoryKey[] = ["veste", "manteau"];
+
+/** Agrandissement maximal au recadrage (même borne que composerTenue). */
+const AGRANDISSEMENT_MAX_PLANCHE = 1.15;
+
+/**
+ * Place les pièces d'une tenue sur la planche. `photo` dit si la pièce a une
+ * photo de l'utilisatrice (photoUrl) : parmi les hauts, celui-là devient le
+ * héro. Rend les pièces dans l'ordre d'empilement, et la hauteur de la planche
+ * en % de sa largeur.
+ */
+export interface NotePlanche<T> {
+  item: T;
+  role: RolePlanche;
+  boite: EmplacementPlanche;
+  /** La flèche : départ au bord de la boîte, arrivée sur la pièce, point de contrôle de la courbe. */
+  fleche: { x1: number; y1: number; cx: number; cy: number; x2: number; y2: number };
+}
+
+export function composerPlanche<T extends Pick<Item, "id" | "cat"> & { photoUrl?: string | null }>(
+  items: T[],
+  options: { annotations?: boolean } = {}
+): {
+  pieces: { item: T; role: RolePlanche; case: EmplacementPlanche; aligne: { x: Calage; y: Calage } }[];
+  notes: NotePlanche<T>[];
+  hauteur: number;
+} {
+  const reste = [...items];
+  const prendre = (pred: (it: T) => boolean) => {
+    const i = reste.findIndex(pred);
+    return i < 0 ? undefined : reste.splice(i, 1)[0];
+  };
+  const robe = prendre((it) => ROBES.includes(it.cat));
+  const hero =
+    robe ??
+    prendre((it) => HAUTS.includes(it.cat) && Boolean(it.photoUrl)) ??
+    prendre((it) => it.cat === "haut") ??
+    prendre((it) => it.cat === "pull");
+  const dessus = prendre((it) => DESSUS.includes(it.cat)) ?? (hero ? prendre((it) => HAUTS.includes(it.cat)) : undefined);
+  const bas = robe ? undefined : prendre((it) => BAS.includes(it.cat));
+  // Sans haut ni robe (cas limite), la première pièce principale restante tient le rôle de héro.
+  const heroFinal = hero ?? bas ?? dessus;
+  if (!heroFinal) return { pieces: [], notes: [], hauteur: 0 };
+  const basFinal = heroFinal === bas ? undefined : bas;
+  const dessusFinal = heroFinal === dessus ? undefined : dessus;
+
+  const gabarit =
+    robe || !basFinal
+      ? GABARITS_PLANCHE[dessusFinal ? "robeDessus" : "robe"]
+      : dessusFinal
+        ? GABARITS_PLANCHE[dessusFinal.cat === "manteau" ? "hautManteau" : "hautDessus"]
+        : GABARITS_PLANCHE.haut;
+
+  const libres = [...gabarit.petits];
+  const poses: { item: T; role: RolePlanche; case: EmplacementPlanche }[] = [];
+  const poser = (item: T | undefined, role: RolePlanche, c: EmplacementPlanche | undefined) => {
+    if (item && c) poses.push({ item, role, case: c });
+  };
+  poser(heroFinal, "hero", gabarit.hero);
+  poser(dessusFinal, "dessus", gabarit.dessus);
+  poser(basFinal, "bas", gabarit.bas ?? libres.shift());
+  poser(prendre((it) => it.cat === "chaussures"), "chaussures", gabarit.chaussures);
+  poser(prendre((it) => it.cat === "sac"), "sac", gabarit.sac);
+  // Le reste — bijoux, accessoires, pièces en surnombre — sur les emplacements de finition libres.
+  reste.forEach((it) => poser(it, "petit", libres.shift()));
+
+  // Les annotations des pièces posées : elles comptent dans le recadrage, les
+  // pièces rétrécissent d'autant pour leur laisser la marge.
+  const notesBrutes = options.annotations
+    ? poses.flatMap((p) => {
+        const n = gabarit.notes[p.role];
+        return n ? [{ ...p, note: n }] : [];
+      })
+    : [];
+  const boites = [...poses.map((p) => p.case), ...notesBrutes.map((n) => n.note.boite)];
+  const minX = Math.min(...boites.map((c) => c.x));
+  const maxX = Math.max(...boites.map((c) => c.x + c.l));
+  const minY = Math.min(...boites.map((c) => c.y));
+  const maxY = Math.max(...boites.map((c) => c.y + c.h));
+  const k = Math.min(AGRANDISSEMENT_MAX_PLANCHE, 100 / (maxX - minX));
+  const decalage = (100 - (maxX - minX) * k) / 2;
+  const hauteur = (maxY - minY) * k;
+  const calage = (centre: number, milieu: number, etendue: number): Calage =>
+    centre < milieu - etendue * 0.08 ? "fin" : centre > milieu + etendue * 0.08 ? "debut" : "centre";
+  const tx = (x: number) => decalage + (x - minX) * k;
+  const ty = (y: number) => (y - minY) * k;
+
+  const notes: NotePlanche<T>[] = notesBrutes.map(({ item, role, case: c, note }) => {
+    const b = note.boite;
+    const x2 = c.x + c.l * note.cible[0];
+    const y2 = c.y + c.h * note.cible[1];
+    // Départ au bord de la boîte tourné vers la pièce, un peu décalé du centre.
+    const dessous = y2 > b.y + b.h;
+    const x1 = b.x + b.l * (x2 > b.x + b.l / 2 ? 0.62 : 0.38);
+    const y1 = dessous ? b.y + b.h + 0.5 : b.y - 0.5;
+    // Courbe à la main : le contrôle s'écarte vers l'extérieur de la planche.
+    const cx = (x1 + x2) / 2 + (x2 < 50 ? -5 : 5);
+    const cy = (y1 + y2) / 2;
+    return {
+      item,
+      role,
+      boite: { x: tx(b.x), y: ty(b.y), l: b.l * k, h: b.h * k },
+      fleche: { x1: tx(x1), y1: ty(y1), cx: tx(cx), cy: ty(cy), x2: tx(x2), y2: ty(y2) },
+    };
+  });
+
+  return {
+    notes,
+    pieces: poses
+      .map(({ item, role, case: c }) => {
+        const r = { x: decalage + (c.x - minX) * k, y: (c.y - minY) * k, l: c.l * k, h: c.h * k };
+        return { item, role, case: r, aligne: { x: calage(r.x + r.l / 2, 50, 100), y: calage(r.y + r.h / 2, hauteur / 2, hauteur) } };
+      })
+      .sort((a, b) => PROFONDEUR_PLANCHE[a.role] - PROFONDEUR_PLANCHE[b.role]),
+    hauteur,
+  };
+}
+
+/**
+ * Le texte d'une annotation : « Ton haut », « Ta veste », « Tes chaussures »
+ * pour une pièce du DRESSING ; « Le sac », « La jupe », « Les chaussures » pour
+ * une suggestion de la capsule — une information vraie, lue sur la
+ * provenance réelle, jamais un style d'écriture. Accord sur le genre de la
+ * catégorie (CAT_GENDER, le même que pour les noms de pièces).
+ */
+const NOM_ANNOTATION: Partial<Record<CategoryKey, string>> = {
+  haut: "haut",
+  pull: "pull",
+  pantalon: "pantalon",
+  jean: "jean",
+  jupe: "jupe",
+  short: "short",
+  robe: "robe",
+  combinaison: "combinaison",
+  veste: "veste",
+  manteau: "manteau",
+  chaussures: "chaussures",
+  sac: "sac",
+};
+
+export function libelleAnnotation(cat: CategoryKey, duDressing: boolean): string | null {
+  const nom = NOM_ANNOTATION[cat];
+  if (!nom) return null;
+  const g = CAT_GENDER[cat];
+  const article = g.plural ? (duDressing ? "Tes" : "Les") : g.gender === "f" ? (duDressing ? "Ta" : "La") : duDressing ? "Ton" : "Le";
+  return `${article} ${nom}`;
 }
