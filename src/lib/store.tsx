@@ -585,12 +585,13 @@ interface CapselaContextValue {
  * pointer le même fichier.
  */
 function photosDevenuesOrphelines(retirees: Item[], conservees: Item[]): string[] {
-  const encoreUtilisees = new Set(conservees.map((it) => it.photoUrl).filter(Boolean));
+  // Comparaison par CHEMIN, pas par URL : deux URL signées d'un même fichier
+  // diffèrent par leur jeton (bucket privé, 30/09/2026).
+  const encoreUtilisees = new Set(conservees.map((it) => dressingPhotoPath(it.photoUrl)).filter(Boolean));
   const chemins = new Set<string>();
   for (const it of retirees) {
-    if (encoreUtilisees.has(it.photoUrl)) continue;
     const chemin = dressingPhotoPath(it.photoUrl);
-    if (chemin) chemins.add(chemin);
+    if (chemin && !encoreUtilisees.has(chemin)) chemins.add(chemin);
   }
   return [...chemins];
 }
@@ -2074,7 +2075,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         const avant = stateRef.current.items;
         const ancienne = avant.find((it) => it.id === editingId);
         const photos =
-          ancienne && ancienne.photoUrl !== base.photoUrl
+          ancienne && dressingPhotoPath(ancienne.photoUrl) !== dressingPhotoPath(base.photoUrl)
             ? photosDevenuesOrphelines([ancienne], avant.filter((it) => it.id !== editingId))
             : [];
         setState((st) => ({

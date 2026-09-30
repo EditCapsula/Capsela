@@ -151,7 +151,8 @@ const cadrages = new Map<string, (Analyse & { ratio: number }) | null>();
  */
 function mesurable(url: string): boolean {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  return Boolean(base) && url.startsWith(`${base}/storage/v1/object/public/`);
+  // Publique ou signée (photos du dressing, bucket privé depuis le 30/09/2026) : même en-tête CORS.
+  return Boolean(base) && (url.startsWith(`${base}/storage/v1/object/public/`) || url.startsWith(`${base}/storage/v1/object/sign/`));
 }
 
 /** Ratio largeur / hauteur de toutes les vignettes de l'écran. */
