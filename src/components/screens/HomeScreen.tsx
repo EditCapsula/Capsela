@@ -7,7 +7,6 @@ import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
-import { libelleAnnotation } from "@/lib/compositionEditoriale";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
@@ -524,14 +523,6 @@ export default function HomeScreen() {
   const occasionLabel = OCC_LABELS[occasionKey];
 
   const outfitPieces = hasOutfit ? piecesResolues : [];
-  // Annotations manuscrites de la planche (30/09/2026) : « Ton haut » pour une
-  // pièce du dressing, « La jupe » pour une suggestion de la capsule.
-  const idsDressing = new Set(state.items.map((i) => i.id));
-  const annotations: Record<number, string> = {};
-  for (const piece of outfitPieces) {
-    const texte = libelleAnnotation(piece.cat, idsDressing.has(piece.id));
-    if (texte) annotations[piece.id] = texte;
-  }
 
   // Le qualificatif sous le titre (qualificatifLook) : celui de la météo, sans
   // jamais présenter comme une option une veste que la tenue contient. Aucune
@@ -701,9 +692,16 @@ export default function HomeScreen() {
                 donnée (82 % de la largeur, mesuré le 30/09 : la partie peinte
                 d'une planche va de 0,78 à 0,94 fois la largeur ; l'ancienne
                 mesure de grille laissait jusqu'à 60 px vides en haut et en
-                bas). La planche s'y ajuste : la card ne bouge pas avec la tenue. */}
+                bas). La planche s'y ajuste : la card ne bouge pas avec la tenue.
+
+                SANS ANNOTATIONS (30/09/2026, demandé : « je veux que la hauteur
+                reste la même ; enlève les annotations et réaugmente de 15 % ») :
+                les « Ton haut », « Ta veste »… prenaient une marge autour des
+                pièces ; sans elles, les pièces la reprennent, à hauteur de card
+                inchangée. La planche sait toujours les dessiner (prop
+                `annotations`, libelleAnnotation) si elles reviennent. */}
             <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
-              <OutfitComposition items={outfitPieces} variant="planche" annotations={annotations} />
+              <OutfitComposition items={outfitPieces} variant="planche" />
             </div>
           </div>
         ) : aucuneTenuePossible ? (
