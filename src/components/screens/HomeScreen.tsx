@@ -6,7 +6,7 @@ import BadgePremium from "@/components/BadgePremium";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
-import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
+import { OutfitComposition } from "@/components/OutfitComposition";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
@@ -645,8 +645,9 @@ export default function HomeScreen() {
           complète ; l'écran Tenue sert à l'approfondir.
 
           UNE SEULE REPRÉSENTATION POUR LES DEUX ÉCRANS : OutfitComposition,
-          variante "hero", ajustée dans une zone de même mesure (UNITE_HERO)
-          que sur l'écran Tenue, alimentée par la même tenue (state.outfit).
+          variante "planche" depuis le 30/09/2026 (d'abord "hero"), dans une
+          zone de même proportion que sur l'écran Tenue, alimentée par la même
+          tenue (state.outfit).
           Mêmes pièces, mêmes images, même ordre, par construction — aucune
           sélection propre à l'accueil.
 
@@ -687,10 +688,12 @@ export default function HomeScreen() {
                 brief « Refonte du hero Look du jour ») : une silhouette et non
                 une grille — la pièce héro (robe, ou haut photographié porté),
                 la surcouche derrière, le bas devant, chaussures et sac en
-                finition (composerPlanche). Zone de même mesure que celle de
-                l'écran Tenue, la planche ajustée dedans : la card ne s'allonge
-                pas avec la tenue. */}
-            <div className="mt-[14px]" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px)` }}>
+                finition (composerPlanche). Zone de hauteur FIXE à largeur
+                donnée (82 % de la largeur, mesuré le 30/09 : la partie peinte
+                d'une planche va de 0,78 à 0,94 fois la largeur ; l'ancienne
+                mesure de grille laissait jusqu'à 60 px vides en haut et en
+                bas). La planche s'y ajuste : la card ne bouge pas avec la tenue. */}
+            <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
               <OutfitComposition items={outfitPieces} variant="planche" />
             </div>
           </div>

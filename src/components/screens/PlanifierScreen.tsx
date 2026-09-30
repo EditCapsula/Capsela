@@ -8,7 +8,7 @@ import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import FilEtapes from "@/components/FilEtapes";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
-import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
+import { OutfitComposition } from "@/components/OutfitComposition";
 import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
 import { resolveItemImage } from "@/lib/catalogImages";
@@ -1796,7 +1796,8 @@ export default function PlanifierScreen() {
                 <div className="font-serif italic text-[15px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.86)" }}>
                   {phrase}
                 </div>
-                <div className="mt-[14px]" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px)` }}>
+                {/* Même zone que la carte de l'accueil : 82 % de la largeur. */}
+                <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
                   {pieces.length > 0 ? (
                     <OutfitComposition items={pieces} variant="planche" />
                   ) : (

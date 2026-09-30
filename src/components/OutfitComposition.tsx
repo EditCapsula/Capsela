@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { composerPlanche, composerTenue } from "@/lib/compositionEditoriale";
 import type { CategoryKey, Item } from "@/lib/types";
@@ -484,17 +485,89 @@ function CompositionEditoriale({ items, label }: { items: Item[]; label?: string
  * le centre de la planche ; une photo de l'utilisatrice garde ses coins
  * arrondis ; une pièce sans visuel est un aplat de sa couleur.
  */
+/** Agrandissement maximal au cadrage sur les pixels peints : au-delà, une image du catalogue se lirait floue. */
+const CADRAGE_MAX = 1.25;
+
 function CompositionPlanche({ items, label }: { items: Item[]; label?: string }) {
   const { pieces, hauteur } = composerPlanche(items);
+  const zoneRef = useRef<HTMLDivElement | null>(null);
+  const planRef = useRef<HTMLDivElement | null>(null);
+  /*
+   * CADRAGE SUR CE QUI EST PEINT (30/09/2026, demandé : « moins d'espace vide
+   * en haut et en bas de la composition »). composerPlanche recadre sur les
+   * EMPLACEMENTS ; or une image « contenue » dans le sien n'en occupe qu'une
+   * partie — un haut presque carré dans un emplacement vertical y laissait
+   * jusqu'à 60 px vides au-dessus. Une fois les images chargées, on mesure
+   * l'union de ce qui est réellement affiché et on l'ajuste à la zone
+   * (agrandie au plus de CADRAGE_MAX, jamais rognée, recentrée). La zone garde
+   * sa hauteur : seule la planche bouge dedans. Recalculé au redimensionnement.
+   */
+  // Le cadrage vaut pour UNE tenue dans UNE taille de zone : sa clé change, il est ignoré et remesuré.
+  const [taille, setTaille] = useState("");
+  const cle = pieces.map((p) => p.item.id).join(",") + "|" + taille;
+  const [mesure, setMesure] = useState<{ cle: string; s: number; ox: number; oy: number; dx: number; dy: number } | null>(null);
+  const cadrage = mesure?.cle === cle ? mesure : null;
+  const mesurer = useCallback(() => {
+    const zone = zoneRef.current;
+    const plan = planRef.current;
+    if (!zone || !plan) return;
+    const els = [...plan.querySelectorAll<HTMLElement>("[data-peint]")];
+    if (els.some((el) => el instanceof HTMLImageElement && !el.complete)) return;
+    const rz = zone.getBoundingClientRect();
+    const rp = plan.getBoundingClientRect();
+    const rs = els.map((el) => el.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0);
+    if (!rs.length || rz.width === 0 || rz.height === 0) return;
+    const g = Math.min(...rs.map((r) => r.left));
+    const d = Math.max(...rs.map((r) => r.right));
+    const h = Math.min(...rs.map((r) => r.top));
+    const b = Math.max(...rs.map((r) => r.bottom));
+    const sc = Math.max(1, Math.min(CADRAGE_MAX, rz.width / (d - g), rz.height / (b - h)));
+    setMesure({
+      cle,
+      s: sc,
+      // Origine au centre de l'union, dans le repère de la planche ; translation vers le centre de la zone.
+      ox: (g + d) / 2 - rp.left,
+      oy: (h + b) / 2 - rp.top,
+      dx: rz.left + rz.width / 2 - (g + d) / 2,
+      dy: rz.top + rz.height / 2 - (h + b) / 2,
+    });
+  }, [cle]);
+  // Mesure sur la planche BRUTE (sans transformation) : au rendu suivant d'une clé nouvelle.
+  useLayoutEffect(() => {
+    if (cadrage) return;
+    const id = requestAnimationFrame(mesurer);
+    return () => cancelAnimationFrame(id);
+  }, [cadrage, mesurer]);
+  useLayoutEffect(() => {
+    const zone = zoneRef.current;
+    if (!zone || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setTaille(`${zone.clientWidth}x${zone.clientHeight}`));
+    ro.observe(zone);
+    return () => ro.disconnect();
+  }, []);
+
   if (!pieces.length) return null;
+  const surChargement = () => {
+    if (!cadrage) mesurer();
+  };
   return (
     <div
+      ref={zoneRef}
       role={label ? "img" : undefined}
       aria-label={label}
       className="w-full h-full flex items-center justify-center"
       style={{ containerType: "size" }}
     >
-      <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / hauteur}))`, aspectRatio: `100 / ${hauteur}` }}>
+      <div
+        ref={planRef}
+        style={{
+          position: "relative",
+          width: `min(100cqw, calc(100cqh * ${100 / hauteur}))`,
+          aspectRatio: `100 / ${hauteur}`,
+          transformOrigin: cadrage ? `${cadrage.ox}px ${cadrage.oy}px` : undefined,
+          transform: cadrage ? `translate(${cadrage.dx}px, ${cadrage.dy}px) scale(${cadrage.s})` : undefined,
+        }}
+      >
         {pieces.map(({ item: it, case: c, aligne }, i) => {
           const img = resolveItemImage(it);
           const photo = img.kind === "photo";
@@ -516,9 +589,11 @@ function CompositionPlanche({ items, label }: { items: Item[]; label?: string })
               {img.url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  loading="lazy"
+                  data-peint=""
                   src={img.url}
                   alt={label ? "" : it.name}
+                  onLoad={surChargement}
+                  onError={surChargement}
                   style={{
                     maxWidth: "100%",
                     maxHeight: "100%",
@@ -532,7 +607,12 @@ function CompositionPlanche({ items, label }: { items: Item[]; label?: string })
                   }}
                 />
               ) : (
-                <div role={label ? undefined : "img"} aria-label={label ? undefined : it.name} style={{ width: "100%", height: "100%", borderRadius: 14, background: it.hex, opacity: 0.9 }} />
+                <div
+                  data-peint=""
+                  role={label ? undefined : "img"}
+                  aria-label={label ? undefined : it.name}
+                  style={{ width: "100%", height: "100%", borderRadius: 14, background: it.hex, opacity: 0.9 }}
+                />
               )}
             </div>
           );

@@ -5,7 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { JourEtMeteo } from "@/components/JourMeteo";
 import { PlansDuJour } from "@/components/PlansDuJour";
-import { OutfitComposition, UNITE_HERO } from "@/components/OutfitComposition";
+import { OutfitComposition } from "@/components/OutfitComposition";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { CATLABEL, DATE_CONTEXTS, OCCASIONS, isBag } from "@/lib/data";
@@ -631,7 +631,7 @@ export default function TenuesScreen() {
           OutfitComposition — sinon le fond beige des tuiles resterait visible
           en damier sur le terracotta. */}
       {!meteoEnAttente && outfitPieces.length > 0 && (
-        <div id="tenue-du-jour" className="mt-[22px] rounded-[24px] bg-terracotta-deep text-cream scroll-mt-4" style={{ padding: 16 }}>
+        <div id="tenue-du-jour" className="mt-[22px] rounded-[24px] bg-terracotta-deep text-cream scroll-mt-4" style={{ padding: 16, containerType: "inline-size" }}>
           {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
               le 23/09). Conditionnelle depuis que le titre est parti : sans
               elle, une tenue sans badge NI phrase ouvrirait la card sur une
@@ -682,7 +682,11 @@ export default function TenuesScreen() {
               </button>
             )}
           </div>
-          <div className="flex flex-col" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px + 92px)` }}>
+          {/* Hauteur FIXE à largeur donnée depuis le 30/09/2026 : 82 % de la
+              largeur de la card pour la planche (la même proportion que
+              l'accueil et la tenue planifiée), plus la ligne de badges et la
+              provenance. Les unités de conteneur (cqw) portent sur la card. */}
+          <div className="flex flex-col" style={{ height: "calc(82cqw + 70px)" }}>
           {(badgesAffiches.length > 0 || recommendationText) && (
           <div className="flex-shrink-0 flex items-center flex-wrap gap-x-[10px] gap-y-[5px]">
             {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la
