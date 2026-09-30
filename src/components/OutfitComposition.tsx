@@ -206,6 +206,7 @@ export function OutfitComposition({
   anchorId,
   ajustee = false,
   label,
+  annotations,
 }: {
   items: Item[];
   variant?: CompositionVariant;
@@ -222,9 +223,14 @@ export function OutfitComposition({
   ajustee?: boolean;
   /** Nom accessible de la composition "editoriale" (les pièces sont nommées dans la liste qui suit). */
   label?: string;
+  /**
+   * "planche" seulement : le texte des annotations manuscrites, par pièce
+   * (libelleAnnotation). Une pièce absente de la table n'est pas annotée.
+   */
+  annotations?: Record<number, string>;
 }) {
   if (variant === "editoriale") return <CompositionEditoriale items={items} label={label} />;
-  if (variant === "planche") return <CompositionPlanche items={items} label={label} />;
+  if (variant === "planche") return <CompositionPlanche items={items} label={label} annotations={annotations} />;
   const cfg = VARIANT_CONFIG[variant];
   // "hero" repose sur le terracotta de la card Tenue, pas sur le fond de
   // page : aucune tuile sous les pièces (cf. en-tête).
@@ -488,8 +494,9 @@ function CompositionEditoriale({ items, label }: { items: Item[]; label?: string
 /** Agrandissement maximal au cadrage sur les pixels peints : au-delà, une image du catalogue se lirait floue. */
 const CADRAGE_MAX = 1.25;
 
-function CompositionPlanche({ items, label }: { items: Item[]; label?: string }) {
-  const { pieces, hauteur } = composerPlanche(items);
+function CompositionPlanche({ items, label, annotations }: { items: Item[]; label?: string; annotations?: Record<number, string> }) {
+  const { pieces, notes: toutesNotes, hauteur } = composerPlanche(items, { annotations: Boolean(annotations) });
+  const notes = annotations ? toutesNotes.filter((n) => annotations[n.item.id]) : [];
   const zoneRef = useRef<HTMLDivElement | null>(null);
   const planRef = useRef<HTMLDivElement | null>(null);
   /*
@@ -504,7 +511,7 @@ function CompositionPlanche({ items, label }: { items: Item[]; label?: string })
    */
   // Le cadrage vaut pour UNE tenue dans UNE taille de zone : sa clé change, il est ignoré et remesuré.
   const [taille, setTaille] = useState("");
-  const cle = pieces.map((p) => p.item.id).join(",") + "|" + taille;
+  const cle = pieces.map((p) => p.item.id).join(",") + "|" + notes.map((n) => annotations?.[n.item.id]).join(",") + "|" + taille;
   const [mesure, setMesure] = useState<{ cle: string; s: number; ox: number; oy: number; dx: number; dy: number } | null>(null);
   const cadrage = mesure?.cle === cle ? mesure : null;
   const mesurer = useCallback(() => {
@@ -617,6 +624,64 @@ function CompositionPlanche({ items, label }: { items: Item[]; label?: string })
             </div>
           );
         })}
+        {notes.length > 0 && (
+          /* LES ANNOTATIONS (30/09/2026, carte de l'accueil) : décoratives —
+             les pièces sont déjà nommées pour les lecteurs d'écran. Les
+             flèches, tracées dans le repère de la planche, suivent le
+             cadrage ; le texte est contre-agrandi pour garder la même taille
+             d'une tenue à l'autre. */
+          <>
+            <svg
+              aria-hidden="true"
+              viewBox={`0 0 100 ${hauteur}`}
+              preserveAspectRatio="none"
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible", pointerEvents: "none", zIndex: pieces.length + 1 }}
+            >
+              {notes.map(({ item, fleche: f }) => {
+                // Pointe : deux traits courts, orientés sur la fin de la courbe.
+                const a = Math.atan2(f.y2 - f.cy, f.x2 - f.cx);
+                const p = 2.6;
+                const d1 = `M ${f.x2 - p * Math.cos(a - 0.5)} ${f.y2 - p * Math.sin(a - 0.5)} L ${f.x2} ${f.y2} L ${f.x2 - p * Math.cos(a + 0.5)} ${f.y2 - p * Math.sin(a + 0.5)}`;
+                return (
+                  <g key={"fleche-" + item.id} fill="none" stroke="rgba(251,243,234,.78)" strokeWidth={1.3} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke">
+                    <path d={`M ${f.x1} ${f.y1} Q ${f.cx} ${f.cy} ${f.x2} ${f.y2}`} vectorEffect="non-scaling-stroke" />
+                    <path d={d1} vectorEffect="non-scaling-stroke" />
+                  </g>
+                );
+              })}
+            </svg>
+            {notes.map(({ item, boite: b, fleche: f }) => {
+              const versGauche = f.x2 < b.x + b.l / 2;
+              return (
+                <div
+                  key={"note-" + item.id}
+                  aria-hidden="true"
+                  data-peint=""
+                  className="font-hand"
+                  style={{
+                    position: "absolute",
+                    left: `${b.x}%`,
+                    width: `${b.l}%`,
+                    top: `${(b.y / hauteur) * 100}%`,
+                    height: `${(b.h / hauteur) * 100}%`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: versGauche ? "flex-start" : "flex-end",
+                    whiteSpace: "nowrap",
+                    fontSize: 17,
+                    lineHeight: 1,
+                    color: "rgba(251,243,234,.9)",
+                    zIndex: pieces.length + 2,
+                    transform: `rotate(-4deg)${cadrage ? ` scale(${1 / cadrage.s})` : ""}`,
+                    transformOrigin: versGauche ? "left center" : "right center",
+                  }}
+                >
+                  {annotations?.[item.id]}
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
     </div>
   );

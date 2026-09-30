@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GABARITS_PLANCHE, PROFONDEUR_PLANCHE, composerPlanche, type EmplacementPlanche, type RolePlanche } from "../compositionEditoriale";
+import { GABARITS_PLANCHE, PROFONDEUR_PLANCHE, composerPlanche, libelleAnnotation, type EmplacementPlanche, type RolePlanche } from "../compositionEditoriale";
 import type { CategoryKey } from "../types";
 
 // La planche des heros « Look du jour », « Tenue du jour », « Tenue planifiée » (30/09/2026).
@@ -92,6 +92,58 @@ describe("composerPlanche — les rôles lus sur la tenue réelle", () => {
   });
 
   it("une tenue vide ne pose rien", () => {
-    expect(composerPlanche([])).toEqual({ pieces: [], hauteur: 0 });
+    expect(composerPlanche([])).toEqual({ pieces: [], notes: [], hauteur: 0 });
+  });
+});
+
+describe("annotations manuscrites — en marge, jamais sur une pièce", () => {
+  for (const [nom, g] of Object.entries(GABARITS_PLANCHE)) {
+    it(`${nom} : chaque boîte est dans la largeur, hors de toute pièce et des autres boîtes`, () => {
+      const cases = [g.hero, g.dessus, g.bas, g.chaussures, g.sac, ...g.petits].filter((e): e is EmplacementPlanche => Boolean(e));
+      const boites = Object.values(g.notes).map((n) => n!.boite);
+      for (const b of boites) {
+        expect(b.x).toBeGreaterThanOrEqual(0);
+        expect(b.x + b.l).toBeLessThanOrEqual(100);
+        for (const c of cases) expect(recouvrement(b, c)).toBe(0);
+      }
+      for (let i = 0; i < boites.length; i++) for (let j = i + 1; j < boites.length; j++) expect(recouvrement(boites[i], boites[j])).toBe(0);
+    });
+  }
+
+  it("seules les pièces posées sont annotées, et la flèche arrive sur sa pièce", () => {
+    const items = [p("haut", "https://photo"), p("jupe"), p("chaussures")];
+    const { pieces, notes } = composerPlanche(items, { annotations: true });
+    expect(notes.map((n) => n.role).sort()).toEqual(["bas", "chaussures", "hero"]);
+    for (const n of notes) {
+      const c = pieces.find((x) => x.item.id === n.item.id)!.case;
+      expect(n.fleche.x2).toBeGreaterThanOrEqual(c.x);
+      expect(n.fleche.x2).toBeLessThanOrEqual(c.x + c.l);
+      expect(n.fleche.y2).toBeGreaterThanOrEqual(c.y);
+      expect(n.fleche.y2).toBeLessThanOrEqual(c.y + c.h);
+    }
+    // Sans l'option, aucune annotation, et la planche est la même qu'avant.
+    expect(composerPlanche(items).notes).toEqual([]);
+  });
+
+  it("avec une surcouche, le bas n'est pas annoté (sa place est prise)", () => {
+    const { notes } = composerPlanche([p("haut"), p("jupe"), p("veste"), p("chaussures"), p("sac")], { annotations: true });
+    expect(notes.map((n) => n.role).sort()).toEqual(["chaussures", "dessus", "hero", "sac"]);
+  });
+});
+
+describe("libelleAnnotation — la provenance réelle, accordée", () => {
+  it("pièce du dressing : Ton / Ta / Tes", () => {
+    expect(libelleAnnotation("haut", true)).toBe("Ton haut");
+    expect(libelleAnnotation("veste", true)).toBe("Ta veste");
+    expect(libelleAnnotation("chaussures", true)).toBe("Tes chaussures");
+  });
+  it("suggestion de la capsule : Le / La / Les", () => {
+    expect(libelleAnnotation("sac", false)).toBe("Le sac");
+    expect(libelleAnnotation("jupe", false)).toBe("La jupe");
+    expect(libelleAnnotation("chaussures", false)).toBe("Les chaussures");
+  });
+  it("bijoux et accessoires : pas d'annotation", () => {
+    expect(libelleAnnotation("bijou", true)).toBeNull();
+    expect(libelleAnnotation("accessoire", false)).toBeNull();
   });
 });

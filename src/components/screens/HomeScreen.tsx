@@ -7,6 +7,7 @@ import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
+import { libelleAnnotation } from "@/lib/compositionEditoriale";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
@@ -523,6 +524,14 @@ export default function HomeScreen() {
   const occasionLabel = OCC_LABELS[occasionKey];
 
   const outfitPieces = hasOutfit ? piecesResolues : [];
+  // Annotations manuscrites de la planche (30/09/2026) : « Ton haut » pour une
+  // pièce du dressing, « La jupe » pour une suggestion de la capsule.
+  const idsDressing = new Set(state.items.map((i) => i.id));
+  const annotations: Record<number, string> = {};
+  for (const piece of outfitPieces) {
+    const texte = libelleAnnotation(piece.cat, idsDressing.has(piece.id));
+    if (texte) annotations[piece.id] = texte;
+  }
 
   // Le qualificatif sous le titre (qualificatifLook) : celui de la météo, sans
   // jamais présenter comme une option une veste que la tenue contient. Aucune
@@ -694,7 +703,7 @@ export default function HomeScreen() {
                 mesure de grille laissait jusqu'à 60 px vides en haut et en
                 bas). La planche s'y ajuste : la card ne bouge pas avec la tenue. */}
             <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
-              <OutfitComposition items={outfitPieces} variant="planche" />
+              <OutfitComposition items={outfitPieces} variant="planche" annotations={annotations} />
             </div>
           </div>
         ) : aucuneTenuePossible ? (
