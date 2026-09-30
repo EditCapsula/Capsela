@@ -22,6 +22,31 @@ export function capsuleSeasonBucket(s: CapsuleSeason): Season {
   return s === "Printemps" || s === "Été" ? "Printemps / Été" : "Automne / Hiver";
 }
 
+/*
+ * LE CALENDRIER D'ABORD, SAUF VRAIE CHALEUR (arbitrage du 30/09/2026, option 2,
+ * après la capture « 21° le 30 septembre, et un haut sans manches avec des
+ * sandales au bureau »).
+ *
+ * Depuis le 15/09, la température l'emporte sur le calendrier dès 20° : une
+ * soirée douce d'automne compte déjà comme de l'été. `chaleurHorsSaison`
+ * relève ce seuil quand le calendrier est en automne-hiver : la moitié
+ * printemps-été de la température n'y est admise qu'à partir de lui. Le côté
+ * froid n'est pas touché (un manteau à 15° en avril reste possible) : la
+ * décision ne porte que sur la chaleur.
+ *
+ * Paramètre facultatif : omis, la règle d'origine s'applique à l'identique —
+ * c'est ce qui permet de mesurer l'avant et l'après dans la même exécution
+ * (AGENTS.md). [EN MESURE — pas encore branché en production.]
+ */
+
+/** La moitié d'année que la température impose, une fois le calendrier consulté. */
+export function moitieThermique(temp: number, calendaire?: CapsuleSeason, chaleurHorsSaison?: number): Season {
+  const moitie = weatherSeasonBucket(temp);
+  if (chaleurHorsSaison == null || !calendaire) return moitie;
+  const duCalendrier = capsuleSeasonBucket(calendaire);
+  return duCalendrier === "Automne / Hiver" && moitie === "Printemps / Été" && temp < chaleurHorsSaison ? duCalendrier : moitie;
+}
+
 export type { CapsuleSeason };
 export const CAPSULE_SEASONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
 
@@ -132,10 +157,15 @@ export function representativeWeatherFor(season: CapsuleSeason, tempOverride?: n
  */
 export function saisonCapsulePourMeteo(
   temp: number,
-  tempRepresentative?: Partial<Record<CapsuleSeason, number>>
+  tempRepresentative?: Partial<Record<CapsuleSeason, number>>,
+  /** Levier en mesure (30/09/2026) : en automne-hiver calendaire, le vivier reste dans cette moitié d'année sous `chaleurHorsSaison`. Omis : règle d'origine. */
+  calendrier?: { calendaire: CapsuleSeason; chaleurHorsSaison: number }
 ): CapsuleSeason {
   const reference = (s: CapsuleSeason) => tempRepresentative?.[s] ?? REPRESENTATIVE_TEMP[s];
-  return CAPSULE_SEASONS.reduce((meilleure, s) =>
+  const garde =
+    calendrier && capsuleSeasonBucket(calendrier.calendaire) === "Automne / Hiver" && temp < calendrier.chaleurHorsSaison;
+  const candidates = garde ? CAPSULE_SEASONS.filter((s) => capsuleSeasonBucket(s) === "Automne / Hiver") : CAPSULE_SEASONS;
+  return candidates.reduce((meilleure, s) =>
     Math.abs(reference(s) - temp) < Math.abs(reference(meilleure) - temp) ? s : meilleure
   );
 }
@@ -152,12 +182,15 @@ export function saisonCapsulePourMeteo(
  * bucket grossier n'est qu'un premier tri — la protection météo réelle reste
  * meteoMinTemp/meteoMaxTemp, appliquée par applyTempFilter (logic.ts).
  */
-export function weatherForDay(temp: number, label: string, saisonCalendaire: CapsuleSeason): Weather {
+export function weatherForDay(temp: number, label: string, saisonCalendaire: CapsuleSeason, chaleurHorsSaison?: number): Weather {
   const season = weatherSeasonBucket(temp);
+  // `season` décrit la température et ne bouge pas ; seule l'admission des
+  // pièces (`seasons`, `saisons`) consulte le calendrier (levier du 30/09).
+  const admise = moitieThermique(temp, saisonCalendaire, chaleurHorsSaison);
   const calendarBucket = capsuleSeasonBucket(saisonCalendaire);
   const seasons: Season[] =
-    calendarBucket === season ? [season, "Toutes saisons"] : [season, calendarBucket, "Toutes saisons"];
-  return { season, temp, label, seasons, saisons: saisonsDuJour(temp, saisonCalendaire) };
+    calendarBucket === admise ? [admise, "Toutes saisons"] : [admise, calendarBucket, "Toutes saisons"];
+  return { season, temp, label, seasons, saisons: saisonsDuJour(temp, saisonCalendaire, chaleurHorsSaison) };
 }
 
 /**
@@ -189,8 +222,7 @@ export function weatherForDay(temp: number, label: string, saisonCalendaire: Cap
  * Printemps — sans quoi le manteau coché Automne + Hiver disparaîtrait des
  * journées fraîches d'avril, ce qu'il ne faisait pas.
  */
-export function saisonThermique(temp: number): CapsuleSeason {
-  const moitie = weatherSeasonBucket(temp);
+export function saisonThermique(temp: number, moitie: Season = weatherSeasonBucket(temp)): CapsuleSeason {
   const candidates = CAPSULE_SEASONS.filter((s) => capsuleSeasonBucket(s) === moitie);
   return candidates.reduce((meilleure, s) =>
     Math.abs(REPRESENTATIVE_TEMP[s] - temp) < Math.abs(REPRESENTATIVE_TEMP[meilleure] - temp) ? s : meilleure
@@ -198,8 +230,8 @@ export function saisonThermique(temp: number): CapsuleSeason {
 }
 
 /** Les saisons du jour : celle du calendrier et la saison thermique, dans l'ordre de l'année. */
-export function saisonsDuJour(temp: number, saisonCalendaire: CapsuleSeason): CapsuleSeason[] {
-  const retenues = new Set<CapsuleSeason>([saisonCalendaire, saisonThermique(temp)]);
+export function saisonsDuJour(temp: number, saisonCalendaire: CapsuleSeason, chaleurHorsSaison?: number): CapsuleSeason[] {
+  const retenues = new Set<CapsuleSeason>([saisonCalendaire, saisonThermique(temp, moitieThermique(temp, saisonCalendaire, chaleurHorsSaison))]);
   return CAPSULE_SEASONS.filter((s) => retenues.has(s));
 }
 
