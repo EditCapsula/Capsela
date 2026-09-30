@@ -1783,8 +1783,9 @@ export default function PlanifierScreen() {
               </div>
 
               {/* LE HERO. Même famille que la carte « Look du jour » de
-                  l'accueil : terracotta, titre serif crème, composition
-                  OutfitComposition ajustée dans une zone de hauteur FIXE (même
+                  l'accueil : terracotta, titre serif crème, pièces en planche
+                  (OutfitComposition "planche", 30/09/2026 — la même silhouette
+                  que l'accueil et l'écran Tenue) dans une zone de hauteur FIXE (même
                   mesure que l'accueil et l'écran Tenue). Une robe longue ou
                   des chaussures horizontales s'adaptent à la zone ; la zone ne
                   s'adapte pas à elles, et rien ne bouge en dessous. */}
@@ -1797,7 +1798,7 @@ export default function PlanifierScreen() {
                 </div>
                 <div className="mt-[14px]" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px)` }}>
                   {pieces.length > 0 ? (
-                    <OutfitComposition items={pieces} variant="hero" ajustee />
+                    <OutfitComposition items={pieces} variant="planche" />
                   ) : (
                     <div
                       className="h-full rounded-[16px] flex items-center justify-center text-center px-6 text-[13px] leading-[1.5]"

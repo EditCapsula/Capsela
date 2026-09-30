@@ -1,7 +1,7 @@
 "use client";
 
 import { resolveItemImage } from "@/lib/catalogImages";
-import { composerTenue } from "@/lib/compositionEditoriale";
+import { composerPlanche, composerTenue } from "@/lib/compositionEditoriale";
 import type { CategoryKey, Item } from "@/lib/types";
 
 /**
@@ -55,9 +55,9 @@ import type { CategoryKey, Item } from "@/lib/types";
  * Seul repère conservé : le contour terracotta du pivot (anchorId), qui n'a
  * aucune autre signification dans toute l'app.
  */
-export type CompositionVariant = "hero" | "compact" | "editoriale";
+export type CompositionVariant = "hero" | "compact" | "editoriale" | "planche";
 /** Les deux variantes en grille ; "editoriale" place ses pièces librement (CompositionEditoriale). */
-type VarianteGrille = Exclude<CompositionVariant, "editoriale">;
+type VarianteGrille = Exclude<CompositionVariant, "editoriale" | "planche">;
 type CompositionRole = "outerwear" | "onepiece" | "haut" | "pantalon" | "chaussures" | "sac" | "petit";
 type CompositionTier = "principal" | "chaussures" | "petit";
 
@@ -223,6 +223,7 @@ export function OutfitComposition({
   label?: string;
 }) {
   if (variant === "editoriale") return <CompositionEditoriale items={items} label={label} />;
+  if (variant === "planche") return <CompositionPlanche items={items} label={label} />;
   const cfg = VARIANT_CONFIG[variant];
   // "hero" repose sur le terracotta de la card Tenue, pas sur le fond de
   // page : aucune tuile sous les pièces (cf. en-tête).
@@ -462,6 +463,81 @@ function CompositionEditoriale({ items, label }: { items: Item[]; label?: string
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * "planche" — les heros « Look du jour », « Tenue du jour » et « Tenue
+ * planifiée » (30/09/2026). Les pièces sont posées par composerPlanche : la
+ * pièce héro (robe, ou haut photographié porté), la surcouche derrière, le bas
+ * devant à cheval sur le héro, chaussures et sac en finition, avec de légers
+ * chevauchements et l'empilement de la profondeur.
+ *
+ * REMPLIT SON PARENT, qui doit avoir une hauteur définie (la zone à hauteur
+ * fixe de chaque hero) : la planche, dont la proportion suit la tenue, y est
+ * ajustée entière — jamais rognée, jamais déformée — grâce aux unités de
+ * conteneur (cqw, cqh). Une tenue courte est agrandie jusqu'aux bords de la
+ * zone, une tenue avec manteau réduite d'autant : la card ne bouge pas.
+ *
+ * Même rendu de pièce que "editoriale" : image entière à son ratio, calée vers
+ * le centre de la planche ; une photo de l'utilisatrice garde ses coins
+ * arrondis ; une pièce sans visuel est un aplat de sa couleur.
+ */
+function CompositionPlanche({ items, label }: { items: Item[]; label?: string }) {
+  const { pieces, hauteur } = composerPlanche(items);
+  if (!pieces.length) return null;
+  return (
+    <div
+      role={label ? "img" : undefined}
+      aria-label={label}
+      className="w-full h-full flex items-center justify-center"
+      style={{ containerType: "size" }}
+    >
+      <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / hauteur}))`, aspectRatio: `100 / ${hauteur}` }}>
+        {pieces.map(({ item: it, case: c, aligne }, i) => {
+          const img = resolveItemImage(it);
+          const photo = img.kind === "photo";
+          return (
+            <div
+              key={"planche-" + it.id}
+              style={{
+                position: "absolute",
+                left: `${c.x}%`,
+                width: `${c.l}%`,
+                top: `${(c.y / hauteur) * 100}%`,
+                height: `${(c.h / hauteur) * 100}%`,
+                zIndex: i + 1,
+                display: "flex",
+                justifyContent: FLEX[aligne.x],
+                alignItems: FLEX[aligne.y],
+              }}
+            >
+              {img.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  loading="lazy"
+                  src={img.url}
+                  alt={label ? "" : it.name}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    width: "auto",
+                    height: "auto",
+                    display: "block",
+                    borderRadius: photo ? 18 : undefined,
+                    filter: photo
+                      ? "brightness(.96) contrast(1.03) saturate(.94) drop-shadow(0 8px 18px rgba(29,26,22,.2))"
+                      : "drop-shadow(0 6px 12px rgba(29,26,22,.16))",
+                  }}
+                />
+              ) : (
+                <div role={label ? undefined : "img"} aria-label={label ? undefined : it.name} style={{ width: "100%", height: "100%", borderRadius: 14, background: it.hex, opacity: 0.9 }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

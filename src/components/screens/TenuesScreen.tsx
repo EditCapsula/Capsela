@@ -726,7 +726,9 @@ export default function TenuesScreen() {
           )}
 
           <div className="flex-1 min-h-0 mt-[13px]">
-            <OutfitComposition items={outfitPieces} variant="hero" ajustee />
+            {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
+                planifiée : la même silhouette sur les trois heros. */}
+            <OutfitComposition items={outfitPieces} variant="planche" />
           </div>
           <div className="flex-shrink-0">
             {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.

@@ -683,11 +683,15 @@ export default function HomeScreen() {
                 {qualificatif}
               </div>
             )}
-            {/* Toutes les pièces du look, sans exception. Zone de même mesure
-                que celle de l'écran Tenue, composition ajustée dedans : une
-                tenue de six pièces tient sans que la card s'allonge d'autant. */}
+            {/* Toutes les pièces du look, sans exception, en PLANCHE (30/09/2026,
+                brief « Refonte du hero Look du jour ») : une silhouette et non
+                une grille — la pièce héro (robe, ou haut photographié porté),
+                la surcouche derrière, le bas devant, chaussures et sac en
+                finition (composerPlanche). Zone de même mesure que celle de
+                l'écran Tenue, la planche ajustée dedans : la card ne s'allonge
+                pas avec la tenue. */}
             <div className="mt-[14px]" style={{ height: `calc(13 * ${UNITE_HERO} + 12 * 6px)` }}>
-              <OutfitComposition items={outfitPieces} variant="hero" ajustee />
+              <OutfitComposition items={outfitPieces} variant="planche" />
             </div>
           </div>
         ) : aucuneTenuePossible ? (
