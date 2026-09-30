@@ -206,7 +206,8 @@ export function composerTenue<T extends Pick<Item, "id" | "cat">>(
  *      pull porté par-dessus) : derrière, plus grande que le sac ou les
  *      chaussures, jamais au point d'écraser le héro ;
  *   3. le BAS, posé devant, à cheval sur le héro : les deux se lisent comme
- *      une silhouette ;
+ *      une silhouette — d'où des emplacements de surface presque égale
+ *      (30/09/2026 : avec le haut deux fois plus grand, le bas était écrasé) ;
  *   4. les chaussures, 5. le sac et les petits accessoires, en finition.
  *
  * Des emplacements RECTANGULAIRES (les vêtements ne sont pas carrés), qui se
@@ -255,56 +256,59 @@ interface GabaritPlanche {
 /** Les gabarits, par silhouette. Exposés pour les tests (hiérarchie, chevauchements bornés). */
 export const GABARITS_PLANCHE: Record<"haut" | "hautDessus" | "hautManteau" | "robe" | "robeDessus", GabaritPlanche> = {
   // Haut + bas (+ chaussures, sac) : le héro à gauche, le bas à droite et plus bas.
+  // Emplacements de surface presque égale (30/09/2026, signalé : « le haut est
+  // trop grand par rapport au bas ») : ils forment ensemble la silhouette ; le
+  // héro reste le point focal par sa place, à gauche et en premier.
   haut: {
-    hero: { x: 0, y: 0, l: 50, h: 66 },
-    bas: { x: 45, y: 12, l: 36, h: 58 },
-    chaussures: { x: 10, y: 60, l: 34, h: 24 },
-    sac: { x: 64, y: 58, l: 28, h: 26 },
+    hero: { x: 0, y: 4, l: 42, h: 58 },
+    bas: { x: 38, y: 6, l: 38, h: 64 },
+    chaussures: { x: 6, y: 60, l: 32, h: 22 },
+    sac: { x: 62, y: 62, l: 26, h: 24 },
     petits: [
-      { x: 83, y: 4, l: 16, h: 16 },
-      { x: 84, y: 24, l: 14, h: 14 },
+      { x: 80, y: 4, l: 16, h: 16 },
+      { x: 82, y: 24, l: 14, h: 14 },
     ],
     notes: {
-      hero: { boite: { x: 2, y: -10, l: 28, h: 8 }, cible: [0.3, 0.08] },
-      bas: { boite: { x: 50, y: 1, l: 28, h: 8 }, cible: [0.45, 0.06] },
-      chaussures: { boite: { x: 8, y: 86, l: 32, h: 8 }, cible: [0.5, 0.75] },
-      sac: { boite: { x: 64, y: 86, l: 28, h: 8 }, cible: [0.45, 0.75] },
+      hero: { boite: { x: 2, y: -6, l: 28, h: 8 }, cible: [0.3, 0.08] },
+      bas: { boite: { x: 46, y: -4, l: 28, h: 8 }, cible: [0.45, 0.06] },
+      chaussures: { boite: { x: 6, y: 84, l: 32, h: 8 }, cible: [0.5, 0.75] },
+      sac: { boite: { x: 60, y: 88, l: 28, h: 8 }, cible: [0.45, 0.75] },
     },
   },
   // Haut + veste / blazer + bas : la veste derrière à droite, le bas devant, entre les deux.
   hautDessus: {
-    hero: { x: 0, y: 6, l: 46, h: 62 },
-    dessus: { x: 54, y: 0, l: 44, h: 60 },
-    bas: { x: 41, y: 20, l: 30, h: 52 },
-    chaussures: { x: 8, y: 64, l: 34, h: 24 },
-    sac: { x: 64, y: 58, l: 28, h: 26 },
+    hero: { x: 0, y: 8, l: 40, h: 56 },
+    dessus: { x: 58, y: 0, l: 38, h: 54 },
+    bas: { x: 36, y: 14, l: 34, h: 62 },
+    chaussures: { x: 4, y: 62, l: 32, h: 22 },
+    sac: { x: 62, y: 58, l: 26, h: 24 },
     petits: [
-      { x: 88, y: 62, l: 12, h: 12 },
-      { x: 44, y: 74, l: 12, h: 12 },
+      { x: 86, y: 56, l: 12, h: 12 },
+      { x: 40, y: 78, l: 10, h: 10 },
     ],
     notes: {
-      hero: { boite: { x: 2, y: -5, l: 28, h: 8 }, cible: [0.3, 0.08] },
-      dessus: { boite: { x: 68, y: -11, l: 28, h: 8 }, cible: [0.7, 0.08] },
-      chaussures: { boite: { x: 8, y: 90, l: 32, h: 8 }, cible: [0.5, 0.75] },
-      sac: { boite: { x: 64, y: 86, l: 28, h: 8 }, cible: [0.45, 0.75] },
+      hero: { boite: { x: 2, y: -4, l: 28, h: 8 }, cible: [0.3, 0.08] },
+      dessus: { boite: { x: 64, y: -10, l: 28, h: 8 }, cible: [0.7, 0.08] },
+      chaussures: { boite: { x: 4, y: 86, l: 32, h: 8 }, cible: [0.5, 0.75] },
+      sac: { boite: { x: 60, y: 84, l: 28, h: 8 }, cible: [0.45, 0.75] },
     },
   },
   // Même silhouette, manteau : plus haut que la veste, jamais plus grand que le héro.
   hautManteau: {
-    hero: { x: 0, y: 6, l: 48, h: 64 },
-    dessus: { x: 52, y: 0, l: 46, h: 64 },
-    bas: { x: 43, y: 22, l: 28, h: 50 },
-    chaussures: { x: 8, y: 64, l: 34, h: 24 },
-    sac: { x: 62, y: 62, l: 28, h: 26 },
+    hero: { x: 0, y: 6, l: 42, h: 58 },
+    dessus: { x: 56, y: 0, l: 40, h: 60 },
+    bas: { x: 38, y: 16, l: 34, h: 62 },
+    chaussures: { x: 4, y: 62, l: 32, h: 22 },
+    sac: { x: 62, y: 64, l: 26, h: 24 },
     petits: [
-      { x: 88, y: 70, l: 12, h: 12 },
-      { x: 44, y: 76, l: 12, h: 12 },
+      { x: 88, y: 66, l: 12, h: 12 },
+      { x: 44, y: 80, l: 12, h: 12 },
     ],
     notes: {
-      hero: { boite: { x: 2, y: -5, l: 28, h: 8 }, cible: [0.3, 0.08] },
-      dessus: { boite: { x: 68, y: -11, l: 30, h: 8 }, cible: [0.7, 0.08] },
-      chaussures: { boite: { x: 8, y: 90, l: 32, h: 8 }, cible: [0.5, 0.75] },
-      sac: { boite: { x: 62, y: 90, l: 28, h: 8 }, cible: [0.45, 0.75] },
+      hero: { boite: { x: 2, y: -4, l: 28, h: 8 }, cible: [0.3, 0.08] },
+      dessus: { boite: { x: 64, y: -10, l: 30, h: 8 }, cible: [0.7, 0.08] },
+      chaussures: { boite: { x: 4, y: 86, l: 32, h: 8 }, cible: [0.5, 0.75] },
+      sac: { boite: { x: 60, y: 90, l: 28, h: 8 }, cible: [0.45, 0.75] },
     },
   },
   // Robe seule : la robe au centre-gauche, sac et chaussures à sa droite.
