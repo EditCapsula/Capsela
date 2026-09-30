@@ -22,6 +22,15 @@ import type { Item } from "@/lib/types";
  * dit qu'au moment où une action en a besoin, en message contextuel, avec
  * « Associer une pièce → » ; jamais de « Continuer » vers une tenue
  * incomplète (arbitrage validé le 26/09).
+ *
+ * « PROLONGER LE LOOK » (30/09/2026, brief « Avis du styliste ») : le
+ * surtitre change, la carte devient éditoriale. Un avis rouvert depuis le
+ * Journal impose son ordre (`actionsImposees`) : « Planifier pour demain »
+ * en principal, « Planifier une autre date → » en lien — l'avis peut dater
+ * de plusieurs jours, « Porter aujourd'hui » n'y est plus la suite logique.
+ * Le brief écrivait « découvre une nouvelle association demain » : faux, la
+ * tenue planifiée est celle de la photo, pas une nouvelle. La phrase dit ce
+ * qui se passe.
  */
 
 const LIBELLES: Record<ActionAvis, { principal: string; secondaire: string }> = {
@@ -36,6 +45,7 @@ export default function EtMaintenantAvis({
   onPorter,
   onVoirTenue,
   onPlanifier,
+  actionsImposees,
 }: {
   /** La composition reconnue, déjà résolue dans le dressing. */
   composition: Item[];
@@ -43,6 +53,8 @@ export default function EtMaintenantAvis({
   onPorter: (ids: number[]) => void;
   onVoirTenue: () => void;
   onPlanifier: (ids: number[], demain: boolean) => void;
+  /** Ordre imposé des actions (avis rouvert depuis le Journal) ; absent : selon l'heure (prioriserActionsAvis). */
+  actionsImposees?: { principale: ActionAvis; secondaires: ActionAvis[] };
 }) {
   const [portee, setPortee] = useState<string | null>(null);
   const [manque, setManque] = useState<ActionAvis | null>(null);
@@ -51,7 +63,7 @@ export default function EtMaintenantAvis({
   const composable = compositionUtilisable(composition);
   // L'ordre des actions ne dépend que de l'heure et de la tenue du jour ;
   // la composition, elle, n'est vérifiée qu'au clic.
-  const actions = prioriserActionsAvis({ heure: new Date().getHours(), tenueDuJourPortee, composable: true });
+  const actions = actionsImposees ?? prioriserActionsAvis({ heure: new Date().getHours(), tenueDuJourPortee, composable: true });
   // En soirée, « Planifier cette tenue » se dit « pour une autre date ».
   const libelleSecondaire = (a: ActionAvis) =>
     a === "planifier" ? (actions?.principale === "demain" ? "Planifier une autre date →" : "Planifier pour une autre date →") : LIBELLES[a].secondaire;
@@ -70,11 +82,18 @@ export default function EtMaintenantAvis({
 
   return (
     <section className="mt-[30px] motion-safe:animate-[capsule-apparition_320ms_ease-out_both]" aria-labelledby="avis-et-maintenant">
-      <div id="avis-et-maintenant" className="t-surtitre text-muted">
-        Et maintenant ?
-      </div>
-      <div className="mt-[10px] bg-card border border-border rounded-[20px] px-4 py-[16px]">
-        <div className="t-titre-carte text-ink">
+      {/* Carte centrée, surtitre dedans sous l'icône de Planifier (maquette du 30/09/2026). */}
+      <div className="bg-card border border-[#EFE7DA] rounded-[22px] px-[18px] py-[20px] text-center">
+        <span aria-hidden="true" className="flex justify-center text-terracotta">
+          <svg width="22" height="22" viewBox="0 0 24 24" style={{ display: "block" }}>
+            <rect x="4" y="6" width="16" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M4 10h16M8.5 3.5V7M15.5 3.5V7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </span>
+        <div id="avis-et-maintenant" className="t-surtitre text-muted mt-[10px]">
+          Prolonger le look
+        </div>
+        <div className="t-titre-section text-ink mt-[8px]">
           {actions?.principale === "demain" ? (
             <>
               Une idée pour <span className="italic text-terracotta">demain ?</span>
@@ -87,16 +106,18 @@ export default function EtMaintenantAvis({
         </div>
         {actions && (
           <>
-            <div className="text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
-              {composable
-                ? "Tu peux maintenant l'utiliser dans Capsela."
-                : "Une fois les pièces principales associées, tu pourras la porter ou la planifier."}
+            <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]">
+              {!composable
+                ? "Une fois les pièces principales associées, tu pourras la porter ou la planifier."
+                : actions.principale === "demain"
+                  ? "Garde cette tenue pour demain, ou choisis une autre date."
+                  : "Tu peux maintenant l'utiliser dans Capsela."}
             </div>
-            <div className="mt-[14px]">
+            <div className="mt-[16px]">
               {/* La confirmation ne vaut que pour la composition portée : une
                   correction ensuite rend l'action à nouveau disponible. */}
               {portee === cle ? (
-                <div className="w-full rounded-full bg-warm-bg border border-warm-border pl-4 pr-3 flex items-center justify-between gap-3" role="status">
+                <div className="w-full rounded-full bg-warm-bg border border-warm-border pl-4 pr-3 flex items-center justify-between gap-3 text-left" role="status">
                   <span className="text-[13px] text-ink">
                     <span aria-hidden="true" className="text-terracotta mr-[6px]">
                       ✓
@@ -111,7 +132,8 @@ export default function EtMaintenantAvis({
                 <button
                   type="button"
                   onClick={() => agir(actions.principale)}
-                  className="w-full rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-center t-bouton py-[14px] cursor-pointer"
+                  className="w-full rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center t-bouton cursor-pointer"
+                  style={{ minHeight: 52 }}
                 >
                   {LIBELLES[actions.principale].principal}
                 </button>
@@ -123,7 +145,7 @@ export default function EtMaintenantAvis({
               ))}
               {/* Le message ne vient qu'au clic, et dit ce qui manque — pas une erreur. */}
               {manque && !composable && (
-                <div className="mt-[8px] bg-warm-bg border border-warm-border rounded-[16px] px-4 py-[12px] motion-safe:animate-[capsule-apparition_220ms_ease-out_both]" role="status">
+                <div className="mt-[8px] bg-warm-bg border border-warm-border rounded-[16px] px-4 py-[12px] text-left motion-safe:animate-[capsule-apparition_220ms_ease-out_both]" role="status">
                   <div className="text-[13px] text-ink leading-[1.45]">
                     Pour {manque === "porter" ? "porter" : "planifier"} cette tenue, il me manque encore une pièce principale : un haut et un bas, ou une robe.
                   </div>

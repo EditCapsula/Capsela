@@ -38,15 +38,20 @@ import type { Item } from "@/lib/types";
  * sorties : « Ajouter cette pièce au dressing » (formulaire prérempli,
  * retour ici) et « Continuer sans l'associer ». Rien ne bloque : l'avis reste
  * lu, les autres pièces restent utilisables.
+ *
+ * REFONTE ÉDITORIALE (30/09/2026, brief « Avis du styliste ») : chaque carte
+ * dit la catégorie, puis le nom, puis l'état — les quatre états métier
+ * ci-dessus, inchangés. Sous la liste, un seul encart, « Une pièce n'est pas
+ * la bonne ? », qui ouvre la même feuille de correction.
  */
 
 const libelleCategorie = (cat: string) => CATS.find(([k]) => k === cat)?.[1] ?? cat;
 const majuscule = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 const PASTILLE: Record<EtatVetement, { texte: string; classe: string }> = {
-  associee: { texte: "✓ Associée", classe: "bg-[#E7EEDF] text-[#5B7A5E]" },
-  a_identifier: { texte: "À identifier", classe: "border border-terracotta/45 text-terracotta" },
-  a_associer: { texte: "À associer", classe: "bg-warm-bg text-terracotta" },
+  associee: { texte: "Associée ✓", classe: "bg-warm-bg text-terracotta" },
+  a_identifier: { texte: "À identifier", classe: "border border-warm-border text-muted-3" },
+  a_associer: { texte: "À associer", classe: "border border-warm-border text-muted-3" },
   ignoree: { texte: "Sans association", classe: "border border-border text-muted" },
 };
 
@@ -89,7 +94,9 @@ export default function PiecesReconnues({
 
   const etats = reconnaissance.map((v) => etatVetement(v, dressing));
   const principalesAssociees = compositionUtilisable(compositionReconnue(reconnaissance, dressing));
-  const enAttente = etats.some((e) => e === "a_associer" || e === "a_identifier");
+  // « Modifier les pièces → » ouvre la feuille sur la première pièce qui
+  // attend une réponse ; si toutes sont associées, sur la première.
+  const aRevoir = Math.max(0, etats.findIndex((e) => e === "a_identifier" || e === "a_associer"));
 
   const ouvert = choix !== null ? reconnaissance[choix] : null;
   const etatOuvert = choix !== null ? etats[choix] : null;
@@ -105,16 +112,17 @@ export default function PiecesReconnues({
     <>
     <section className="mt-[30px] motion-safe:animate-[capsule-apparition_320ms_ease-out_both]" aria-labelledby="avis-pieces-reconnues">
       <div id="avis-pieces-reconnues" className="t-surtitre text-muted" style={{ scrollMarginTop: 12 }}>
-        Pièces reconnues sur la photo
+        Les pièces reconnues sur la photo
       </div>
-      <ul className="mt-[10px] flex flex-col gap-[8px]">
+      <ul className="mt-[12px] flex flex-col gap-[8px]">
         {reconnaissance.map((v, i) => {
           // Une pièce supprimée du dressing depuis l'analyse n'est plus associée (etatVetement).
           const item = etats[i] === "associee" ? dressing.find((d) => d.id === v.pieceId) : undefined;
-          const titre = item ? item.name : libelleCategorie(v.categorie);
-          // Pour une pièce associée, ce que la styliste a vu seulement s'il dit autre chose que son nom.
-          const vu = v.libelle && v.libelle.trim().toLowerCase() !== item?.name.trim().toLowerCase() ? majuscule(v.libelle) : "";
-          const detail = item ? (v.statut === "corrigee" ? "Choisie par toi" : vu) : majuscule(v.libelle);
+          const categorie = libelleCategorie(v.categorie);
+          // Le nom de la pièce du dressing ; sinon ce que la styliste a vu ; sinon la catégorie seule.
+          // Sous la catégorie : le nom de la pièce du dressing, sinon ce que la styliste a vu.
+          const titre = item ? item.name : majuscule(v.libelle) || "Pièce vue sur la photo";
+          const detail = item && v.statut === "corrigee" ? "choisie par toi" : "";
           const pastille = PASTILLE[etats[i]];
           return (
             <li key={i}>
@@ -122,22 +130,25 @@ export default function PiecesReconnues({
                 type="button"
                 onClick={() => setChoix(i)}
                 aria-haspopup="dialog"
-                aria-label={`${titre}${detail ? `, ${detail}` : ""} : ${pastille.texte.replace("✓ ", "")}. ${item ? "Modifier" : "Associer une pièce"}`}
-                className="w-full flex items-center gap-[12px] bg-card border border-border rounded-[18px] pl-[10px] pr-3 py-[9px] text-left cursor-pointer active:bg-warm-bg/60"
+                aria-label={`${categorie}, ${titre}${detail ? `, ${detail}` : ""} : ${pastille.texte.replace(" ✓", "")}. ${item ? "Modifier" : "Associer une pièce"}`}
+                className="w-full flex items-center gap-[12px] bg-card border border-[#EFE7DA] rounded-[20px] pl-[10px] pr-[12px] py-[10px] text-left cursor-pointer active:bg-warm-bg/60"
               >
-                {item ? <Vignette item={item} taille={48} /> : <Pictogramme taille={48} />}
+                {item ? <Vignette item={item} taille={56} /> : <Pictogramme taille={56} />}
                 <span className="flex-1 min-w-0">
-                  <span className="block t-titre-ligne text-ink truncate">{titre}</span>
-                  {detail && <span className="block text-[12px] text-muted leading-[1.35] mt-[2px] line-clamp-2">{detail}</span>}
+                  <span className="block t-titre-ligne text-ink leading-[1.25] truncate">{categorie}</span>
+                  <span className="block text-[12px] text-muted leading-[1.35] mt-[2px] line-clamp-2">
+                    {titre}
+                    {detail && ` · ${detail}`}
+                  </span>
                 </span>
                 {/* La clé suit l'état : la pastille réapparaît en douceur quand il change. */}
                 <span
                   key={etats[i]}
-                  className={"flex-shrink-0 t-pastille rounded-full px-[9px] py-[4px] whitespace-nowrap motion-safe:animate-[capsule-apparition_220ms_ease-out_both] " + pastille.classe}
+                  className={"flex-shrink-0 t-pastille rounded-full px-[9px] py-[5px] whitespace-nowrap motion-safe:animate-[capsule-apparition_220ms_ease-out_both] " + pastille.classe}
                 >
                   {pastille.texte}
                 </span>
-                <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">
+                <span aria-hidden="true" className="text-placeholder text-[17px] flex-shrink-0">
                   ›
                 </span>
               </button>
@@ -146,29 +157,27 @@ export default function PiecesReconnues({
         })}
       </ul>
 
-      {principalesAssociees ? (
-        <div className="mt-[12px] flex items-start gap-[10px] bg-warm-bg border border-warm-border rounded-[18px] px-4 py-[12px]" role="status">
-          <span aria-hidden="true" className="text-terracotta text-[14px] leading-[1.3]">
-            ✦
+      {/* « UNE PIÈCE N'EST PAS LA BONNE ? » (30/09/2026). Le brief proposait
+          « Corrige l'association pour améliorer ton avis du styliste » :
+          faux — une correction ne change pas l'avis, déjà rendu. Elle change
+          la tenue que Capsela peut porter ou planifier (compositionReconnue),
+          et c'est ce que dit la phrase. */}
+      <div className="mt-[14px] flex items-start gap-[12px] bg-warm-bg border border-warm-border rounded-[20px] px-4 py-[14px]">
+        <span aria-hidden="true" className="text-terracotta flex-shrink-0 mt-[1px]">
+          <Icone taille={18}>{I_CINTRE}</Icone>
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-serif text-[16px] text-ink leading-[1.3]">Une pièce n&apos;est pas la bonne ?</span>
+          <span className="block text-[12px] text-warm-text-2 leading-[1.45] mt-[4px]">
+            {principalesAssociees
+              ? "Associe la bonne pièce de ton dressing : c'est cette tenue que Capsela portera ou planifiera."
+              : "Associe tes pièces principales pour porter ou planifier cette tenue. L'avis reste le même."}
           </span>
-          <span className="text-[12px] text-warm-text-2 leading-[1.45]">
-            <span className="block text-[13px] text-ink">Les pièces principales sont associées</span>
-            Cette tenue peut maintenant être portée ou planifiée dans Capsela.
-          </span>
-        </div>
-      ) : (
-        enAttente && (
-          <div className="mt-[12px] flex items-start gap-[10px] bg-warm-bg border border-warm-border rounded-[18px] px-4 py-[12px]">
-            <span aria-hidden="true" className="text-terracotta flex-shrink-0 mt-[1px]">
-              <Icone taille={18}>{I_CINTRE}</Icone>
-            </span>
-            <span className="text-[12px] text-warm-text-2 leading-[1.45]">
-              <span className="block t-label text-terracotta mb-[3px]">Tu ne trouves pas la bonne pièce ?</span>
-              Tu peux l&apos;ajouter à ton dressing, ou continuer sans l&apos;associer : l&apos;avis reste le même.
-            </span>
-          </div>
-        )
-      )}
+          <button type="button" onClick={() => setChoix(aRevoir)} className="t-lien text-terracotta min-h-[44px] cursor-pointer">
+            <span className="underline underline-offset-[3px]">Modifier les pièces</span> →
+          </button>
+        </span>
+      </div>
 
       {etatJournal === "echec" && (
         <div className="mt-[8px] text-[12px] text-rust leading-[1.45]" role="alert">

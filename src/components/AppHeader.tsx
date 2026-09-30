@@ -23,12 +23,18 @@ export default function AppHeader({
   dark = false,
   onBack,
   backLabel = "Revenir à l'écran précédent",
+  action,
 }: {
   showAvatar?: boolean;
   dark?: boolean;
   onBack?: () => void;
   /** Destination réelle plutôt que « Retour » : c'est ce qu'une lectrice d'écran entend. */
   backLabel?: string;
+  /**
+   * Un bouton à la place de l'avatar, dans la même gouttière de 34 px — le
+   * menu « ••• » d'un avis de styliste (30/09/2026). Le logo reste centré.
+   */
+  action?: React.ReactNode;
 }) {
   const { profile, email } = useAuth();
   const { actions } = useCapsela();
@@ -61,7 +67,7 @@ export default function AppHeader({
         <img src="/logo-full.svg" alt="L'édit Capsela" className="h-11 w-auto" />
       )}
       <div className="w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center">
-        {showAvatar && (
+        {action ?? (showAvatar && (
           <button
             onClick={actions.goProfile}
             className={
@@ -71,7 +77,7 @@ export default function AppHeader({
           >
             {initial}
           </button>
-        )}
+        ))}
       </div>
     </div>
   );
