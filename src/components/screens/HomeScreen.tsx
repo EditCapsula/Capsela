@@ -18,7 +18,7 @@ import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { JourEtMeteo } from "@/components/JourMeteo";
-import { PlansDuJour } from "@/components/PlansDuJour";
+import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
 
@@ -356,6 +356,7 @@ export default function HomeScreen() {
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
+  const planApplique = usePlanApplique();
 
   /**
    * « PAS POUR MOI » PROPOSE UNE AUTRE TENUE (recette du 26/09/2026) — et
@@ -615,7 +616,9 @@ export default function HomeScreen() {
           <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
             ✦
           </span>
-          Look du jour
+          {/* « Ta tenue planifiée » quand la tenue affichée vient de Planifier
+              (option C, 30/09/2026) : l'étiquette dit d'où elle vient. */}
+          {planApplique && hasOutfit ? "Ta tenue planifiée" : "Look du jour"}
         </div>
 
         {aucuneTenuePossible ? (
@@ -722,6 +725,26 @@ export default function HomeScreen() {
               "Voir mon dressing"
             )}
           </button>
+        )}
+
+        {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu,
+            et le retour à la proposition de Capsela. Jamais de changement
+            d'office : la tenue reste celle qu'elle a choisie. */}
+        {planApplique && hasOutfit && (
+          <div className="mt-[10px] text-center">
+            {planApplique.alerte && (
+              <div className="text-[12.5px] leading-[1.4] mb-[2px]" style={{ color: "#F0DDCF", textWrap: "pretty" }}>
+                {planApplique.alerte}
+              </div>
+            )}
+            <button
+              onClick={actions.voirAutreProposition}
+              className="text-[13px] underline underline-offset-[3px] cursor-pointer"
+              style={{ color: "#FBF3EA", minHeight: 44 }}
+            >
+              Voir une autre proposition
+            </button>
+          </div>
         )}
 
         {/* FEEDBACK — deux boutons discrets, jamais concurrents du CTA :

@@ -386,6 +386,14 @@ export interface AppState {
   /** Raison structurée de l'échec (recette 22/08/2026, brief design "empty state") — null quand outfitNoCompleteOutfit est false. Dérivée de signaux déjà calculés par le moteur (présence de catégories dans le pool, probe à formalité 0), jamais un diagnostic inventé côté UI. */
   outfitFailureReason: OutfitFailureReason | null;
   outfitValidated: boolean;
+  /**
+   * La tenue planifiée devenue tenue du jour (planDuJour.ts, 30/09/2026) —
+   * son identifiant, ou null quand la tenue affichée est la proposition de
+   * Capsela. Gardée avec la tenue de chaque jour consulté.
+   */
+  planAppliqueId: string | null;
+  /** Plans écartés par « Voir une autre proposition » : ils ne reviennent plus imposer leur tenue. */
+  plansEcartes: string[];
   /** Bandeau de diagnostic temporaire (correctif 22/08/2026, signalé : pièces ajoutées au dressing non conservées) — dernier échec Supabase dressing_items/outfit_history, affiché tel quel pour permettre le diagnostic sans console développeur (utile sur mobile). À retirer une fois la cause identifiée et corrigée. */
   dressingError: string | null;
   /** Nom de la pièce qui vient d'entrer au dressing (27/09/2026) — affiche la confirmation « Pièce ajoutée à ton dressing » au-dessus de l'écran d'arrivée, jusqu'à sa fermeture ou son délai. Posé seulement une fois l'ajout réussi, jamais pour une modification. */

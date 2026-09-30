@@ -127,8 +127,11 @@ Arrêté le 27/09/2026 (options 1 et 2 proposées à la propriétaire, acceptée
 
 | Élément | Comportement | Statut |
 | --- | --- | --- |
-| Rappel des tenues planifiées | Sous la ligne jour + météo, l'Accueil et Tenue listent les tenues planifiées du jour consulté (`PlansDuJour`) : aperçu des pièces enregistrées, « Planifiée · Soirée », « Date · Lyon ». Rien sans plan ce jour-là | [DÉCIDÉ] |
-| Un rappel, pas un remplacement | La tenue proposée reste celle de « Mon rythme » : une journée peut avoir un dîner le soir et une tenue de travail le jour | [DÉCIDÉ] |
+| Rappel des tenues planifiées | Sous la ligne jour + météo, l'Accueil et Tenue listent les tenues planifiées du jour consulté (`PlansDuJour`) : aperçu des pièces enregistrées, « Ce soir », « Planifiée · Matin », « Date · Lyon ». Rien sans plan ce jour-là. Le plan devenu tenue du jour n'y figure pas | [DÉCIDÉ] |
+| La tenue planifiée devient la tenue du jour, selon le moment | Arrêté le 30/09/2026 (option C), en remplacement du « rappel, pas un remplacement » du 27/09 et en accord avec la décision Notion du 14/09 précisée. Un plan « Toute la journée », « Matin » ou « Après-midi » DEVIENT la tenue du jour : ses pièces, son occasion et son sous-choix, étiquetés « Ta tenue planifiée ». Un plan « Soirée » reste un rappel « Ce soir » et la tenue du jour reste celle de « Mon rythme » : une journée peut avoir une tenue de travail le jour et un dîner le soir. Plusieurs plans de journée : le premier dans l'ordre de la journée (`planPourTenueDuJour`, `src/lib/planDuJour.ts`) | [DÉCIDÉ] |
+| Voir une autre proposition | L'Accueil (« Voir une autre proposition ») et Tenue (« Autre proposition ») rendent la proposition de Capsela ; le plan écarté ne revient pas de la session (`plansEcartes`) et reprend sa place de rappel. Ce retour ne compte pas dans les « Autre tenue » gratuites (`voirAutreProposition`) | [DÉCIDÉ] |
+| Pièce sortie du dressing | Le plan n'est pas imposé (une tenue à trou n'est pas une tenue) : la proposition reste, et le rappel dit « Une pièce n'est plus dans ton dressing » | [DÉCIDÉ] |
+| Météo qui contredit le plan | La tenue a été choisie sur une prévision. Si la météo du jour la contredit, une ligne le dit, sans jamais changer la tenue d'office : chaussures ouvertes sous la pluie, pièce hors de ses bornes de température déclarées (`alerteMeteoPlan`). Rien d'autre n'est deviné | [DÉCIDÉ] |
 | Ouvrir un plan | Toucher le rappel ouvre la fiche du plan dans Planifier (`ouvrirPlan`) ; le retour ramène à l'Accueil ou à Tenue (`planRetour`), y compris après « Demander l'avis d'un proche » | [DÉCIDÉ] |
 | Planifier le jour consulté | Sur Tenue, un jour à venir : la carte « À préparer » devient « Autre chose de prévu mardi ? » et ouvre Planifier avec cette date déjà choisie (`planifierLeJour`, `planJour`). Aujourd'hui : carte inchangée, Planifier ne proposant pas le jour même | [DÉCIDÉ] |
 | Retour depuis Planifier | Depuis l'étape 1, la fiche ou la liste après « Garder cette tenue », le retour ramène à l'écran d'origine ; dès que le hub de Planifier s'affiche, on est « dans » Planifier et ce retour ne vaut plus | [DÉCIDÉ] |
@@ -144,7 +147,8 @@ Aucune migration : la table `planned_outfits` (0030) existe déjà.
 | `src/lib/__tests__/jourConsulte.test.ts` | Tests des dérivés |
 | `src/lib/store.tsx` | `jourDecalage`, prévision, `meteoDuJour`, `choisirJour`, tenues par jour, `goPreferences(section)`, `closePreferences` |
 | `src/components/JourMeteo.tsx` | `JourEtMeteo` : le jour et sa météo sur une ligne |
-| `src/components/PlansDuJour.tsx` | Rappel des tenues planifiées du jour consulté |
+| `src/components/PlansDuJour.tsx` | Rappel des tenues planifiées du jour consulté ; `usePlanApplique` (plan devenu tenue du jour, alerte météo) |
+| `src/lib/planDuJour.ts` | `planPourTenueDuJour`, `sousChoixDuPlan`, `alerteMeteoPlan` (testés, `__tests__/planDuJour.test.ts`) |
 | `src/lib/planifier.ts` | `plansDuJour` (testé) |
 | `src/components/screens/PlanifierScreen.tsx` | Liste lue dans le store, date préremplie, retour vers l'Accueil ou Tenue |
 | `src/components/screens/HomeScreen.tsx` | Ligne jour + météo, avis du jour limité au jour même |
@@ -154,5 +158,6 @@ Aucune migration : la table `planned_outfits` (0030) existe déjà.
 ## 9. Limites et suites
 
 - **Prévision réelle non vérifiée en local.** L'environnement de développement tourne en mode démo, sans fonction Edge : le chemin « prévision disponible » n'a été exercé que par sa règle de repli. À vérifier en production (la fonction `weather` doit connaître `mode=forecast`). [À ARBITRER : recette]
-- **Tenue planifiée et jour consulté.** Une tenue planifiée est rappelée le jour consulté (section 7), elle ne remplace pas la tenue proposée ce jour-là. Faire de la tenue planifiée la tenue du jour reste un arbitrage ouvert. [À ARBITRER]
+- **Tenue planifiée et jour consulté.** Tranché le 30/09/2026 (option C, section 7). Limite connue : l'alerte météo ne voit que ce que les pièces déclarent (type de chaussures, bornes de température) ; une pièce sans bornes ne déclenche rien. [DÉCIDÉ]
+- **Plans écartés en mémoire seulement.** « Voir une autre proposition » vaut pour la session : recharger l'application réapplique le plan. [HYPOTHÈSE TECHNIQUE]
 - **Garde en mémoire seulement.** Recharger l'application recompose les jours à venir. [HYPOTHÈSE TECHNIQUE]

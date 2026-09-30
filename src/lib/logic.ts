@@ -44,7 +44,7 @@ const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire
  * chaussure sans type renseigné n'est pas écartée : rien ne dit qu'elle est
  * ouverte.
  */
-const CHAUSSURES_OUVERTES: ShoeType[] = ["Sandales", "Sandales à talons", "Mules", "Slingbacks", "Espadrilles"];
+export const CHAUSSURES_OUVERTES: ShoeType[] = ["Sandales", "Sandales à talons", "Mules", "Slingbacks", "Espadrilles"];
 
 /**
  * Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète

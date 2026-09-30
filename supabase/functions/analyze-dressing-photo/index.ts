@@ -10,7 +10,7 @@
 // dans l'éditeur en ligne du dashboard Supabase (Edge Functions → Deploy a
 // new function), sans CLI ni structure multi-fichiers.
 //
-// Entrée : { photo_url: string } — URL publique du bucket dressing-photos,
+// Entrée : { photo_url: string } — URL signée du bucket dressing-photos (privé depuis le 30/09/2026 ; publique avant),
 // déjà obtenue par uploadDressingPhoto AVANT l'appel (jamais une blob: URL,
 // inaccessible côté serveur).
 //

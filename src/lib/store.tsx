@@ -7,7 +7,8 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsulePourMeteo, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
 import { previsionPour, type Prevision } from "./prevision";
-import { fetchTenuesPlanifiees, type TenuePlanifiee } from "./planifier";
+import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
+import { planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
 import { avecValise, enregistrerValise, fetchValises, fusionnerValises, garderValisesLocales, lireValisesLocales, supprimerValiseDuCompte, type ValiseGardee } from "./valises";
 import { decisionAcces } from "./autorisations";
 import { fetchVestiaireUniversel } from "./vestiaire";
@@ -203,6 +204,8 @@ function buildInitialState(): AppState {
     outfitNoCompleteOutfit: false,
     outfitFailureReason: null,
     outfitValidated: false,
+    planAppliqueId: null,
+    plansEcartes: [],
     dressingError: null,
     pieceAjoutee: null,
     occasion: "all",
@@ -476,6 +479,8 @@ export interface Actions {
   setTenuesPlanifiees: (maj: (l: TenuePlanifiee[]) => TenuePlanifiee[]) => void;
   /** Ouvre le détail d'une tenue planifiée depuis l'Accueil ou Tenue ; le retour y ramène. */
   ouvrirPlan: (t: TenuePlanifiee, depuis: "home" | "tenues") => void;
+  /** Quitte la tenue planifiée du jour pour la proposition de Capsela (le plan est écarté ce jour-là). */
+  voirAutreProposition: () => void;
   /** Ouvre Planifier depuis Tenue avec la date du jour consulté déjà choisie. */
   planifierLeJour: (decalage: number) => void;
   /** Planifier a repris la date préremplie. */
@@ -580,12 +585,13 @@ interface CapselaContextValue {
  * pointer le même fichier.
  */
 function photosDevenuesOrphelines(retirees: Item[], conservees: Item[]): string[] {
-  const encoreUtilisees = new Set(conservees.map((it) => it.photoUrl).filter(Boolean));
+  // Comparaison par CHEMIN, pas par URL : deux URL signées d'un même fichier
+  // diffèrent par leur jeton (bucket privé, 30/09/2026).
+  const encoreUtilisees = new Set(conservees.map((it) => dressingPhotoPath(it.photoUrl)).filter(Boolean));
   const chemins = new Set<string>();
   for (const it of retirees) {
-    if (encoreUtilisees.has(it.photoUrl)) continue;
     const chemin = dressingPhotoPath(it.photoUrl);
-    if (chemin) chemins.add(chemin);
+    if (chemin && !encoreUtilisees.has(chemin)) chemins.add(chemin);
   }
   return [...chemins];
 }
@@ -1161,6 +1167,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       outfitFailureReason: result.reason ?? null,
       outfitValidated: false,
       dismissedSuggestions: [],
+      // Une nouvelle proposition remplace la tenue planifiée : ce plan est
+      // écarté pour de bon, sinon l'effet ci-dessous le réimposerait aussitôt.
+      planAppliqueId: null,
+      plansEcartes: s.planAppliqueId && !s.plansEcartes.includes(s.planAppliqueId) ? [...s.plansEcartes, s.planAppliqueId] : s.plansEcartes,
     };
   };
 
@@ -1195,6 +1205,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     outfitFailureReason: s.outfitFailureReason,
     outfitValidated: s.outfitValidated,
     dismissedSuggestions: s.dismissedSuggestions,
+    planAppliqueId: s.planAppliqueId,
     occasion: s.occasion,
     occasionManual: s.occasionManual,
     workMode: s.workMode,
@@ -1239,6 +1250,46 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     if (perdue) setState((st) => regen(st, wardrobePool, weather, defaultCapsule));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vestiairePool, state.items, ready, dressingLoaded, geoLoading, vestiaireResolu]);
+
+  /*
+   * LA TENUE PLANIFIÉE DEVIENT LA TENUE DU JOUR (option C, 30/09/2026,
+   * planDuJour.ts) : un plan « Toute la journée », « Matin » ou « Après-midi »
+   * du jour consulté remplace la proposition, avec son occasion et son
+   * sous-choix. Jamais pendant l'exploration d'un style, jamais par-dessus une
+   * tenue déjà portée ce jour-là, jamais un plan écarté. Un plan retiré de
+   * Planifier, ou devenu incomplet (pièce sortie du dressing), rend la main à
+   * la proposition de Capsela — le rappel du plan dit pourquoi.
+   */
+  useEffect(() => {
+    if (!ready || !dressingLoaded || geoLoading || !vestiaireResolu) return;
+    const s = stateRef.current;
+    if (s.exploredStyleId || s.outfitValidated) return;
+    const plans = plansDuJour(s.tenuesPlanifiees, jourLocal(dateDuJour(s.jourDecalage)));
+    const choix = planPourTenueDuJour(plans, [...s.items, ...vestiairePool], s.plansEcartes);
+    if (choix?.etat === "applicable") {
+      const { plan } = choix;
+      const memes = s.outfit.length === plan.pieceIds.length && plan.pieceIds.every((id) => s.outfit.includes(id));
+      if (s.planAppliqueId === plan.id && memes) return;
+      setState((st) => ({
+        ...st,
+        ...sousChoixDuPlan(plan),
+        outfit: [...plan.pieceIds],
+        outfitMissingCats: [],
+        outfitFormalityDowngraded: false,
+        outfitOccasionRelachee: false,
+        outfitNoCompleteOutfit: false,
+        outfitFailureReason: null,
+        outfitValidated: false,
+        dismissedSuggestions: [],
+        occasion: plan.occasion,
+        occasionManual: false,
+        planAppliqueId: plan.id,
+      }));
+    } else if (s.planAppliqueId) {
+      setState((st) => regen(withDefaultOccasion({ ...st, occasionManual: false }), wardrobePool, meteoDuJour, defaultCapsule));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.tenuesPlanifiees, state.jourDecalage, state.items, state.outfit.length, state.plansEcartes, vestiairePool, ready, dressingLoaded, geoLoading, vestiaireResolu]);
 
   // Changer de style (ou de genre) redéfinit la capsule par défaut, donc le
   // vivier de suggestions : la tenue affichée doit suivre immédiatement.
@@ -1340,6 +1391,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
               outfitFailureReason: null,
               outfitValidated: false,
               dismissedSuggestions: [],
+              planAppliqueId: null,
               occasion: occasionParDefaut(profile.prefs, dateDuJour(cible)),
               occasionManual: false,
             }
@@ -2023,7 +2075,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         const avant = stateRef.current.items;
         const ancienne = avant.find((it) => it.id === editingId);
         const photos =
-          ancienne && ancienne.photoUrl !== base.photoUrl
+          ancienne && dressingPhotoPath(ancienne.photoUrl) !== dressingPhotoPath(base.photoUrl)
             ? photosDevenuesOrphelines([ancienne], avant.filter((it) => it.id !== editingId))
             : [];
         setState((st) => ({
@@ -2326,6 +2378,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     oublierPlanComposition: () => setState((s) => (s.planComposition ? { ...s, planComposition: null } : s)),
     setTenuesPlanifiees: (maj) => setState((s) => ({ ...s, tenuesPlanifiees: maj(s.tenuesPlanifiees) })),
     ouvrirPlan: (t, depuis) => setState((s) => ({ ...s, planARouvrir: t, planRetour: depuis, planJour: null, screen: "planifier" })),
+    // Pas une « autre tenue » au sens du quota : on revient à la proposition
+    // du jour, avec l'occasion de « Mon rythme ». regen écarte le plan.
+    voirAutreProposition: () =>
+      setState((s) => (s.planAppliqueId ? regen(withDefaultOccasion({ ...s, occasionManual: false })) : s)),
     planifierLeJour: (decalage) =>
       setState((s) => ({ ...s, planJour: decalage, planRetour: "tenues", planComposition: null, screen: "planifier" })),
     oublierPlanJour: () => setState((s) => (s.planJour != null ? { ...s, planJour: null } : s)),

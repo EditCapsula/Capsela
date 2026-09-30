@@ -29,6 +29,7 @@ export interface ExportDonnees {
   dressing: Record<string, unknown>[];
   looks_enregistres: Record<string, unknown>[];
   historique_tenues: Record<string, unknown>[];
+  /** Photos du dressing, chacune avec son URL signée (7 jours) — bucket privé. */
   photos_dressing: ExportPhoto[];
   /** Avis de styliste enregistrés (migration 0036), chacun avec l'URL signée (7 jours) de sa photo privée. */
   avis_styliste: Record<string, unknown>[];
@@ -84,6 +85,16 @@ export async function buildDataExport(userId: string, email: string | null): Pro
   }
 
   const fichiers = photos.data ?? [];
+  // Bucket privé depuis le 30/09/2026 : une URL publique n'ouvrirait plus
+  // rien. URL signées 7 jours, comme pour les avis de styliste.
+  const urlsPhotos = new Map<string, string>();
+  if (fichiers.length) {
+    const { data: signees, error: erreurSignature } = await supabase.storage
+      .from(BUCKET_PHOTOS)
+      .createSignedUrls(fichiers.map((f) => `${userId}/${f.name}`), 7 * 24 * 3600);
+    if (erreurSignature) throw new Error(`Export interrompu : ${erreurSignature.message}`);
+    for (const s of signees ?? []) if (s.path && s.signedUrl) urlsPhotos.set(s.path, s.signedUrl);
+  }
   const lignesAvis = (avisStyliste.error ? [] : avisStyliste.data ?? []) as Record<string, unknown>[];
   const cheminsAvis = lignesAvis.map((l) => l.photo_path).filter((c): c is string => typeof c === "string" && c.length > 0);
   const urlsAvis = new Map<string, string>();
@@ -104,7 +115,7 @@ export async function buildDataExport(userId: string, email: string | null): Pro
       nom: f.name,
       taille_octets: (f.metadata?.size as number | undefined) ?? null,
       ajoutee_le: f.created_at ?? null,
-      url: supabase.storage.from(BUCKET_PHOTOS).getPublicUrl(`${userId}/${f.name}`).data.publicUrl,
+      url: urlsPhotos.get(`${userId}/${f.name}`) ?? supabase.storage.from(BUCKET_PHOTOS).getPublicUrl(`${userId}/${f.name}`).data.publicUrl,
     })),
     avis_styliste: lignesAvis.map((l) => ({
       ...l,

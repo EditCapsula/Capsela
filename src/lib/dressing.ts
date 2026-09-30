@@ -103,7 +103,8 @@ function itemToRow(item: Omit<Item, "id">, userId: string) {
     bijou_type: item.bijouType ?? null,
     accessoire_type: item.accessoireType ?? null,
     subtype: item.subtype ?? null,
-    photo_url: item.photoUrl ?? null,
+    // Jamais l'URL signée en base : elle expire. Cf. urlPhotoCanonique.
+    photo_url: urlPhotoCanonique(item.photoUrl) ?? null,
     worn: item.worn ?? null,
     worn_prev: item.wornPrev ?? null,
   };
@@ -122,7 +123,7 @@ export async function fetchDressingItems(userId: string): Promise<Item[]> {
       console.error("[dressing] échec fetchDressingItems", error);
       return [];
     }
-    return (data as DressingItemRow[]).map(rowToItem);
+    return await signerPhotosDressing((data as DressingItemRow[]).map(rowToItem));
   } catch (err) {
     console.error("[dressing] échec fetchDressingItems", err);
     return [];
@@ -188,8 +189,9 @@ export async function compressDressingPhoto(file: File): Promise<File> {
 
 /**
  * Upload la photo réelle d'une pièce vers le bucket dressing-photos (cf.
- * migration 0023) et renvoie son URL publique définitive — remplace
+ * migration 0023) et renvoie une URL SIGNÉE pour l'afficher — remplace
  * l'ancienne URL locale (blob:) qui redevenait invalide au rechargement.
+ * C'est la forme canonique (urlPhotoCanonique) qui sera enregistrée.
  * Chemin {user_id}/{uuid}.{ext} : l'UUID évite toute collision entre deux
  * photos, l'extension est déduite du type MIME du fichier — celui du fichier
  * COMPRESSÉ, qui n'est pas forcément celui d'origine.
@@ -202,8 +204,11 @@ export async function uploadDressingPhoto(userId: string, file: File): Promise<s
     .storage.from("dressing-photos")
     .upload(path, photo, { contentType: photo.type, upsert: false });
   if (error) throw error;
-  const { data } = getSupabase().storage.from("dressing-photos").getPublicUrl(path);
-  return data.publicUrl;
+  const { data: signee } = await getSupabase().storage.from("dressing-photos").createSignedUrl(path, DUREE_URL_PHOTO_DRESSING_S);
+  if (signee?.signedUrl) return signee.signedUrl;
+  // Signature impossible : l'URL publique, lisible tant que le bucket l'est
+  // encore. La base reçoit de toute façon la forme canonique.
+  return getSupabase().storage.from("dressing-photos").getPublicUrl(path).data.publicUrl;
 }
 
 /**
@@ -238,7 +243,8 @@ export async function insertDressingItem(userId: string, item: Omit<Item, "id">)
     .select()
     .single();
   if (error || !data) throw error ?? new Error("Échec de l'insertion dans dressing_items");
-  return rowToItem(data as DressingItemRow);
+  // La ligne rend la forme canonique ; l'écran garde l'URL signée qu'il affiche déjà.
+  return { ...rowToItem(data as DressingItemRow), photoUrl: item.photoUrl };
 }
 
 /**
@@ -251,18 +257,97 @@ export async function insertDressingItem(userId: string, item: Omit<Item, "id">)
  * tout le monde.
  */
 const PREFIXE_PHOTOS_DRESSING = "/storage/v1/object/public/dressing-photos/";
+/** Même bucket, URL signée (bucket privé, 30/09/2026) : `/object/sign/…?token=`. */
+const PREFIXE_PHOTOS_DRESSING_SIGNEE = "/storage/v1/object/sign/dressing-photos/";
+
+/*
+ * BUCKET PRIVÉ, URL SIGNÉES (30/09/2026). Le bucket était public (0023) : une
+ * URL suffisait pour voir la photo, et ce sont des photos personnelles — dont
+ * des hauts photographiés portés. Il passe en privé, comme celui des avis de
+ * styliste (0036).
+ *
+ * LA BASE NE CHANGE PAS DE FORMAT. `photo_url` garde l'URL publique de
+ * l'objet, qui n'est plus qu'un repère (bucket privé : elle ne donne accès à
+ * rien) ; aucune donnée à migrer, et le code d'avant reste lisible. En
+ * mémoire, `photoUrl` porte une URL signée, créée à la lecture du dressing et
+ * après chaque upload ; avant toute écriture, elle redevient la forme
+ * canonique — une URL signée expire, elle ne doit jamais être enregistrée.
+ *
+ * L'ORDRE DE MISE EN PRODUCTION NE CASSE RIEN : une URL signée se lit aussi
+ * sur un bucket public. Ce code part d'abord, le SQL qui rend le bucket privé
+ * ensuite.
+ */
+
+/**
+ * Durée des URL signées des photos du dressing. 24 h, et non l'heure des avis
+ * de styliste : le dressing est lu une fois par session, pas à chaque écran,
+ * et une vignette qui expire en cours d'usage s'afficherait vide. Une URL
+ * transmise par erreur ne vaut plus rien le lendemain — contre toujours avec
+ * le bucket public. [HYPOTHÈSE TECHNIQUE]
+ */
+export const DUREE_URL_PHOTO_DRESSING_S = 24 * 3600;
+
+/** L'URL désigne-t-elle une photo du bucket dressing-photos ? Rend l'index et le préfixe trouvés. */
+function prefixePhoto(url: string): { i: number; prefixe: string } | null {
+  for (const prefixe of [PREFIXE_PHOTOS_DRESSING, PREFIXE_PHOTOS_DRESSING_SIGNEE]) {
+    const i = url.indexOf(prefixe);
+    if (i !== -1) return { i, prefixe };
+  }
+  return null;
+}
 
 /**
  * Chemin de l'objet à l'intérieur du bucket dressing-photos, ou null si
  * l'URL n'en vient pas (image de catalogue, blob: local, champ vide).
  * Null est le résultat sûr : il ne déclenche aucune suppression.
+ * URL publique ou signée : même chemin, donc même fichier.
  */
 export function dressingPhotoPath(url: string | null | undefined): string | null {
   if (!url) return null;
-  const i = url.indexOf(PREFIXE_PHOTOS_DRESSING);
-  if (i === -1) return null;
-  const chemin = url.slice(i + PREFIXE_PHOTOS_DRESSING.length).split("?")[0];
+  const trouve = prefixePhoto(url);
+  if (!trouve) return null;
+  const chemin = url.slice(trouve.i + trouve.prefixe.length).split("?")[0];
   return chemin ? decodeURIComponent(chemin) : null;
+}
+
+/**
+ * La forme enregistrée en base : l'URL publique de l'objet, sans jeton.
+ * Toute autre URL (catalogue, blob: local) est rendue telle quelle.
+ */
+export function urlPhotoCanonique(url: string | undefined): string | undefined {
+  if (!url) return url;
+  const trouve = prefixePhoto(url);
+  if (!trouve) return url;
+  const chemin = url.slice(trouve.i + trouve.prefixe.length).split("?")[0];
+  return chemin ? url.slice(0, trouve.i) + PREFIXE_PHOTOS_DRESSING + chemin : url;
+}
+
+/**
+ * Remplace, pour l'affichage, l'URL de chaque photo personnelle par une URL
+ * signée — un seul appel pour tout le dressing. En cas d'échec, les pièces
+ * sont rendues telles quelles : la photo reste visible tant que le bucket est
+ * public, et rien d'autre du dressing n'est perdu.
+ */
+async function signerPhotosDressing(items: Item[]): Promise<Item[]> {
+  const chemins = [...new Set(items.map((it) => dressingPhotoPath(it.photoUrl)).filter((c): c is string => Boolean(c)))];
+  if (!chemins.length) return items;
+  try {
+    const { data, error } = await getSupabase().storage.from("dressing-photos").createSignedUrls(chemins, DUREE_URL_PHOTO_DRESSING_S);
+    if (error || !data) {
+      console.error("[dressing] échec de signature des photos", error);
+      return items;
+    }
+    const urls = new Map<string, string>();
+    for (const s of data) if (s.path && s.signedUrl) urls.set(s.path, s.signedUrl);
+    return items.map((it) => {
+      const chemin = dressingPhotoPath(it.photoUrl);
+      const signee = chemin ? urls.get(chemin) : undefined;
+      return signee ? { ...it, photoUrl: signee } : it;
+    });
+  } catch (err) {
+    console.error("[dressing] échec de signature des photos", err);
+    return items;
+  }
 }
 
 /**

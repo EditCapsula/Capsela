@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { JourEtMeteo } from "@/components/JourMeteo";
-import { PlansDuJour } from "@/components/PlansDuJour";
+import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
@@ -110,6 +110,8 @@ export default function TenuesScreen() {
     else actions.regenOutfit();
   };
   const autreTenue = () => quota.demander(rejouer);
+  // La tenue planifiée devenue tenue du jour (option C, 30/09/2026).
+  const planApplique = usePlanApplique();
   const tirageEnCours = quota.tirageEnCours;
   const { profile } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
@@ -513,7 +515,8 @@ export default function TenuesScreen() {
           « Localisation & météo ». */}
       <JourEtMeteo className="mt-5" />
       {/* Ce qui est planifié ce jour-là (Planifier) — le même rappel que
-          l'Accueil ; la tenue ci-dessous reste celle de « Mon rythme ». */}
+          l'Accueil. Un plan de journée est devenu la tenue ci-dessous (option C,
+          30/09/2026) ; restent ici la soirée et les plans écartés ou incomplets. */}
       <PlansDuJour depuis="tenues" className="mt-3" />
 
       {/* SÉLECTEUR COMPACT (brief 22/09/2026).
@@ -664,11 +667,26 @@ export default function TenuesScreen() {
               une action de changement, pas un CTA de même rang que
               « Porter cette tenue ». Hors de la zone à hauteur fixe. */}
           <div className="flex items-center justify-between gap-3 mb-[12px]">
-            <span className="t-label" aria-live="polite" style={{ color: statut.cle === "a_completer" ? "#F0DDCF" : "#FBF3EA" }}>
-              {statut.cle === "complete" && <span aria-hidden="true">✦ </span>}
-              {statut.libelle}
+            {/* TENUE PLANIFIÉE (option C) : l'étiquette dit d'où vient la
+                tenue, et le bouton de changement revient à la proposition de
+                Capsela — sans passer par le quota d'« Autre tenue », ce n'est
+                pas une alternative demandée. */}
+            <span className="t-label" aria-live="polite" style={{ color: statut.cle === "a_completer" && !planApplique ? "#F0DDCF" : "#FBF3EA" }}>
+              {(planApplique || statut.cle === "complete") && <span aria-hidden="true">✦ </span>}
+              {planApplique ? "Ta tenue planifiée" : statut.libelle}
             </span>
-            {!noCompleteOutfit && (
+            {planApplique ? (
+              <button
+                onClick={actions.voirAutreProposition}
+                className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-cream cursor-pointer -my-[10px] py-[10px]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                  <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Autre proposition
+              </button>
+            ) : !noCompleteOutfit && (
               <button
                 onClick={autreTenue}
                 disabled={tirageEnCours}
@@ -684,6 +702,13 @@ export default function TenuesScreen() {
               </button>
             )}
           </div>
+          {/* Ce que la météo du jour dit de la tenue planifiée (choisie sur une
+              prévision) : un constat, jamais un changement d'office. */}
+          {planApplique?.alerte && (
+            <div className="text-[12.5px] leading-[1.4] -mt-[4px] mb-[12px]" style={{ color: "#F0DDCF", textWrap: "pretty" }}>
+              {planApplique.alerte}
+            </div>
+          )}
           {/* Hauteur FIXE à largeur donnée depuis le 30/09/2026 : 82 % de la
               largeur de la card pour la planche (la même proportion que
               l'accueil et la tenue planifiée), plus la ligne de badges et la
