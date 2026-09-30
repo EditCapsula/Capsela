@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import AgendaLooks from "@/components/AgendaLooks";
 import AppHeader from "@/components/AppHeader";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
@@ -214,25 +215,6 @@ const JOURS_PROPOSES = 21;
 const DOW = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const DOW_LONG = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
-
-/**
- * « Demain », « Dans 3 jours », ou rien.
- *
- * L'indicateur NE DOUBLE JAMAIS LA DATE au-delà d'une semaine : « DANS 24
- * JOURS » à côté de « DIM. 19 OCT. » est deux fois la même information, et la
- * moins utile des deux gagne en place. Au-delà, la date parle seule.
- */
-function echeanceCourte(jour: string, aujourdhui: string): string | null {
-  const a = Date.parse(`${jour}T12:00:00`);
-  const b = Date.parse(`${aujourdhui}T12:00:00`);
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
-  const n = Math.round((a - b) / 86400000);
-  if (n < 0) return null;
-  if (n === 0) return "Aujourd'hui";
-  if (n === 1) return "Demain";
-  if (n <= 7) return `Dans ${n} jours`;
-  return null;
-}
 
 function dansNJours(n: number): Date {
   const d = new Date();
@@ -885,24 +867,30 @@ export default function PlanifierScreen() {
   const { aVenir, passees } = repartirPlanifications(plans, state.valises);
   const listeAffichee = onglet === "up" ? aVenir : passees;
   const nbPlanifications = plans.length + state.valises.length;
-  /** Onglets À venir / Passées — un seul rendu, partagé par le hub et la liste complète. */
+  /**
+   * Onglets À venir / Passées — un seul rendu, partagé par le hub et la liste
+   * complète. Allégés le 30/09/2026 (brief « Refonte premium ») : l'actif
+   * garde le terracotta plein, l'inactif n'est plus qu'un libellé discret —
+   * plus des boutons d'application côte à côte. 44 px de cible tactile.
+   */
   const ongletsPlans = (
-    <div className="flex gap-2">
-              {([["up", `À venir${aVenir.length ? ` (${aVenir.length})` : ""}`], ["past", "Passées"]] as const).map(([cle, label]) => (
-                <button
-                  key={cle}
-                  onClick={() => setOnglet(cle)}
-                  aria-pressed={onglet === cle}
-                  className={
-                    "rounded-full px-4 text-[12px] cursor-pointer border transition-colors " +
-                    (onglet === cle ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-muted-3")
-                  }
-                  style={{ minHeight: 44 }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+    <div role="tablist" aria-label="Looks à venir ou passés" className="flex items-center gap-1">
+      {([["up", `À venir${aVenir.length ? ` (${aVenir.length})` : ""}`], ["past", "Passées"]] as const).map(([cle, label]) => (
+        <button
+          key={cle}
+          role="tab"
+          aria-selected={onglet === cle}
+          onClick={() => setOnglet(cle)}
+          className={
+            "rounded-full px-4 text-[12px] cursor-pointer transition-colors duration-200 " +
+            (onglet === cle ? "bg-terracotta-deep text-cream" : "text-muted-3 active:bg-chip-soft-bg")
+          }
+          style={{ minHeight: 44 }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
   );
 
   /**
@@ -1152,7 +1140,9 @@ export default function PlanifierScreen() {
         </div>
       )}
 
-      <div ref={zoneScroll} className={"scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 " + (vue === "intro" || vue === "detail" ? "pb-safe-nav" : "pb-5")}>
+      <div ref={zoneScroll} className={"scrollarea flex-1 min-h-0 overflow-y-auto px-6 pt-4 " + (vue === "intro" || vue === "detail" ? "pb-safe-nav" : vue === "liste" ? "" : "pb-5")}
+        style={vue === "liste" ? { paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 86px)" } : undefined}
+      >
         {/* LE HUB « PLANIFIER » — brief « Page Planifier, design + UX »
             (transmis le 25/09/2026, source de vérité). Trois questions dans
             l'ordre du brief : que puis-je planifier, comment commencer,
@@ -1951,151 +1941,32 @@ export default function PlanifierScreen() {
           );
         })()}
 
+        {/* « MES LOOKS À VENIR » (30/09/2026, brief « Refonte premium de la
+            page Mes planifications ») : l'agenda de looks — le prochain en
+            grand, les suivants en frise, les voyages en contexte. Mêmes
+            données et mêmes actions que la liste d'avant (AgendaLooks). */}
         {vue === "liste" && (
-          <>
-            <Surtitre>Planifier</Surtitre>
-            <TitreEtape a="Mes" b="planifications" />
-
-            <div className="mt-4">{ongletsPlans}</div>
-
-            {listeAffichee.length === 0 ? (
-              /* ÉTAT VIDE — deux textes, parce que les deux situations ne se
-                 ressemblent pas : à venir, il y a quelque chose à faire ;
-                 passées, il n'y a qu'à attendre. Le CTA du pied de page dit
-                 déjà « Planifier une tenue », donc l'état vide « à venir »
-                 ne le répète pas en bouton. */
-              <div
-                className="mt-4 rounded-[20px] px-5 py-[30px] text-center"
-                style={{ border: "1px dashed var(--color-sand-border)" }}
-              >
-                <div className="t-titre-carte text-ink">
-                  {onglet === "up" ? "Aucune planification à venir" : "Aucune planification passée"}
-                </div>
-                <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
-                  {onglet === "up"
-                    ? "Prépare ton prochain moment, et laisse Capsela composer le look."
-                    : "Tes tenues planifiées et tes valises apparaîtront ici une fois leur date passée."}
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3 mt-4">
-                {listeAffichee.map((pl) => {
-                  if (pl.type === "valise")
-                    return (
-                      <LigneValise
-                        key={"valise-" + pl.valise.id}
-                        v={pl.valise}
-                        dressing={state.items}
-                        passee={onglet === "past"}
-                        onClick={() => void actions.ouvrirValise(pl.valise.id)}
-                      />
-                    );
-                  const t = pl.tenue;
-                  const d = new Date(`${t.jour}T12:00:00`);
-                  const pieces = piecesDuPlan(t);
-                  const echeance = onglet === "up" ? echeanceCourte(t.jour, jourLocal()) : null;
-                  const passee = onglet === "past";
-                  return (
-                    <div
-                      key={t.id}
-                      className="relative bg-card border border-border rounded-[20px] overflow-hidden"
-                      style={{ opacity: passee ? 0.78 : 1 }}
-                    >
-                      {/* TOUTE LA CARTE EST CLIQUABLE, et le « … » est posé
-                          PAR-DESSUS plutôt que dedans : un bouton imbriqué
-                          dans un bouton est invalide en HTML. Le conteneur
-                          reste un <div>, la zone cliquable est un <button>
-                          qui couvre le contenu, le menu flotte au-dessus. */}
-                      <button
-                        onClick={() => {
-                          setPlanOuvert(t);
-                          setRetourDetail("liste");
-                          setVue("detail");
-                        }}
-                        className="w-full text-left cursor-pointer"
-                      >
-                        {/* L'APERÇU DU LOOK — vraies pièces, vrais visuels,
-                            via le même composant que la page Tenue. Rien ne
-                            s'affiche quand aucune pièce ne se résout : une
-                            tuile vide dirait moins que pas de tuile. */}
-                        {pieces.length > 0 && (
-                          <div className="px-3 pt-3">
-                            <div className="rounded-[15px] overflow-hidden" style={{ background: "var(--color-warm-bg)" }}>
-                              {/* TROIS PIÈCES AU PLUS DANS L'APERÇU. Mesuré :
-                                  au-delà, `compact` passe sur un second rang
-                                  et la carte gagne ~145 px — la date, le lieu
-                                  et la météo tombent alors sous le pli, ce
-                                  que le §20 du brief interdit. La carte sert
-                                  à RECONNAÎTRE le look, pas à l'inventorier ;
-                                  « Voir la tenue » montre tout. */}
-                              <OutfitComposition items={pieces.slice(0, 3)} variant="compact" />
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="px-4 pt-[13px] pb-[14px]">
-                          <div className="flex items-center gap-2">
-                            <span className="t-label text-terracotta">Tenue planifiée</span>
-                            {echeance && (
-                              <span className="t-label text-muted">· {echeance}</span>
-                            )}
-                          </div>
-
-                          <div className="t-titre-carte text-ink mt-[5px]">
-                            {occasionShortLabel(t.occasion)}
-                          </div>
-
-                          {/* DATE ET LIEU SUR DEUX LIGNES. Réunis, ils
-                              donnaient « Sens, Bourgogne-Franche-Comté,
-                              France · Après-midi » — une ligne où le moment
-                              se perdait derrière le pays. */}
-                          <div className="t-surtitre text-muted mt-[7px]">
-                            {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]} · {t.moment}
-                          </div>
-                          {t.lieu.trim() && (
-                            <div className="text-[12px] text-muted-3 mt-[3px] truncate">{villeDuLieu(t.lieu)}</div>
-                          )}
-
-                          {/* LA MÉTÉO N'EST PAS RAPPELÉE AU SERVEUR : elle a
-                              été enregistrée avec la tenue (planned_outfits.
-                              temp / weather_label), telle qu'elle était au
-                              moment de planifier. Ouvrir cet écran ne
-                              déclenche donc aucun appel. Et rien ne s'affiche
-                              quand rien n'a été enregistré — jamais une
-                              météo inventée. */}
-                          {t.temp != null && (
-                            <>
-                              <div className="border-t border-border mt-[11px]" />
-                              <div className="text-[12px] text-muted-3 mt-[10px]">
-                                {t.temp}°{t.weatherLabel ? ` · ${t.weatherLabel}` : ""}
-                                <span className="text-muted"> — prévus à la planification</span>
-                              </div>
-                            </>
-                          )}
-
-                          <div className="text-[12px] text-terracotta mt-[11px]">Voir la tenue →</div>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => setMenuPlan(t)}
-                        aria-label={`Actions pour la tenue du ${d.getDate()} ${MOIS[d.getMonth()]}`}
-                        className="absolute top-[6px] right-[6px] w-11 h-11 flex items-center justify-center cursor-pointer text-muted"
-                      >
-                        <span aria-hidden="true" className="text-[17px] leading-none">⋯</span>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
+          <AgendaLooks
+            onglet={onglet}
+            onglets={ongletsPlans}
+            aVenir={aVenir}
+            passees={passees}
+            piecesDuPlan={piecesDuPlan}
+            dressing={state.items}
+            onOuvrir={(t) => {
+              setPlanOuvert(t);
+              setRetourDetail("liste");
+              setVue("detail");
+            }}
+            onMenu={setMenuPlan}
+            onOuvrirValise={(v) => void actions.ouvrirValise(v.id)}
+          />
         )}
       </div>
 
       {/* Le hub n'a pas de barre d'action : ses deux cartes portent chacune
           leur CTA, et la barre de navigation reprend sa place en pied. */}
-      {vue !== "intro" && vue !== "detail" && (
+      {vue !== "intro" && vue !== "detail" && vue !== "liste" && (
       <div className="relative flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-2 border-t border-border">
         {/* Ancré à la barre d'action elle-même (bottom: 100%) et non à une
             hauteur devinée : la barre change de hauteur selon la vue — un
@@ -2146,15 +2017,6 @@ export default function PlanifierScreen() {
             }}
           >
             {attend ? "Un instant…" : etape === 3 ? "Voir ma tenue" : "Suivant"}
-          </button>
-        )}
-        {vue === "liste" && (
-          <button
-            onClick={recommencer}
-            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
-            style={{ minHeight: 52 }}
-          >
-            + Planifier une tenue
           </button>
         )}
         {vue === "resultat" && (
@@ -2217,13 +2079,41 @@ export default function PlanifierScreen() {
           que partout — pas une seconde navigation. Elle s'efface pendant le
           parcours, dont le bouton principal occupe le pied d'écran (cf.
           FLOW_SCREENS, App.tsx) : c'est la seule vue sans barre d'action. */}
-      {(vue === "intro" || vue === "detail") && <TabBar />}
+      {/* « + PLANIFIER UN LOOK » (30/09/2026) : une pastille terracotta qui
+          flotte au-dessus de la barre de navigation — la page est un onglet,
+          la barre y reste, avec Planifier actif. Le message de confirmation
+          se pose juste au-dessus de la pastille. */}
+      {vue === "liste" && (
+        <div
+          className="absolute inset-x-6 z-30 flex flex-col items-center pointer-events-none"
+          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 12px)" }}
+        >
+          {toast && (
+            <div
+              className="w-full mb-3 rounded-[15px] px-4 py-[13px] text-[12px]"
+              style={{ background: "var(--color-ink)", color: "var(--color-cream)" }}
+              aria-live="polite"
+            >
+              {toast}
+            </div>
+          )}
+          <button
+            onClick={recommencer}
+            className="pointer-events-auto rounded-full bg-terracotta-deep text-cream t-bouton px-[26px] cursor-pointer transition-transform active:scale-[.97]"
+            style={{ minHeight: 50, boxShadow: "0 6px 18px rgba(29,26,22,.14)" }}
+          >
+            + Planifier un look
+          </button>
+        </div>
+      )}
+
+      {(vue === "intro" || vue === "detail" || vue === "liste") && <TabBar />}
 
       {/* LE MENU « … » — BottomSheet, le seul composant modal de l'app. Il
           n'existe pas de popover, et en créer un pour trois lignes ajouterait
           un motif à maintenir. La corbeille quitte la carte : une action
           destructive ne doit pas être la plus visible des secondaires. */}
-      <BottomSheet title="Cette tenue planifiée" open={!!menuPlan} onClose={() => setMenuPlan(null)}>
+      <BottomSheet title="Ce look" open={!!menuPlan} onClose={() => setMenuPlan(null)}>
         <div className="flex flex-col">
           <button
             onClick={() => {
@@ -2234,7 +2124,7 @@ export default function PlanifierScreen() {
             className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
             style={{ minHeight: 52 }}
           >
-            Voir la tenue
+            Voir le look
           </button>
           <button
             onClick={() => {
@@ -2246,7 +2136,7 @@ export default function PlanifierScreen() {
             className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
             style={{ minHeight: 52 }}
           >
-            Modifier cet évènement
+            Modifier ce look
           </button>
           <button
             onClick={() => { const t = menuPlan; setMenuPlan(null); setASupprimer(t); }}
