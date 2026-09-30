@@ -7,13 +7,11 @@ import {
   colorimetrieUtilisable,
   estSaison,
   saisonDuQuestionnaire,
-  type MotifPhoto,
 } from "../colorimetrie";
-import { messageEchecPhoto } from "../colorimetrieClient";
 import { PAL_COULEURS } from "../palCouleurs";
 import { MOTS_INTERDITS } from "../../../supabase/functions/_shared/avisStyliste.ts";
 
-// Colorimétrie en quatre saisons, par questionnaire ou par photo (30/09/2026).
+// Colorimétrie en quatre saisons, par questionnaire (30/09/2026).
 
 const HEX_PALETTE = new Set(PAL_COULEURS.map(([, h]) => h));
 /** Indice de la réponse dont le libellé commence par `debut`, pour la question `id`. */
@@ -26,7 +24,7 @@ const r = (id: string, debut: string) => {
 /** Réponses dans l'ordre de QUESTIONS_COLORIMETRIE. */
 const reponses = (o: Record<string, string>) => QUESTIONS_COLORIMETRIE.map((q) => r(q.id, o[q.id]));
 
-describe("SAISONS — une seule table pour la photo et le questionnaire", () => {
+describe("SAISONS — une seule table pour l'écran et le moteur", () => {
   it("quatre saisons, toutes décrites", () => {
     expect(SAISONS_CLES).toEqual(["printemps", "ete", "automne", "hiver"]);
     for (const k of SAISONS_CLES) {
@@ -115,20 +113,11 @@ describe("règles du projet", () => {
     }
   });
 
-  it("aucun mot interdit dans les questions, les saisons ni les messages d'échec", () => {
-    const motifs: (MotifPhoto | undefined)[] = ["lumiere", "filtre", "visage_non_visible", "plusieurs_personnes", "indetermine", undefined];
+  it("aucun mot interdit dans les questions ni les saisons", () => {
     const textes = [
       ...QUESTIONS_COLORIMETRIE.flatMap((q) => [q.question, ...q.reponses.map((x) => x.libelle)]),
       ...SAISONS_CLES.flatMap((k) => [SAISONS[k].libelle, SAISONS[k].description]),
-      ...motifs.map(messageEchecPhoto),
     ].map((t) => t.toLowerCase());
     for (const t of textes) for (const m of MOTS_INTERDITS) expect(t).not.toContain(m);
-  });
-
-  it("un message propre à chaque motif d'échec photo", () => {
-    const motifs: MotifPhoto[] = ["lumiere", "filtre", "visage_non_visible", "plusieurs_personnes", "indetermine"];
-    const messages = motifs.map(messageEchecPhoto);
-    expect(new Set(messages).size).toBe(motifs.length);
-    expect(messages).not.toContain(messageEchecPhoto(undefined));
   });
 });

@@ -26,6 +26,7 @@ import { deleteTenuePlanifiee, fetchTenuesPlanifiees, upsertTenuePlanifiee, vill
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { VISUEL_SEJOUR } from "@/lib/valise";
 import { paletteHexes } from "@/lib/profile";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -702,7 +703,10 @@ export default function PlanifierScreen() {
       workMode,
       dateContext,
       paletteHexes(profile),
-      profile.gender
+      profile.gender,
+      undefined,
+      undefined,
+      colorimetrieMoteur(profile.colorimetrie)
     );
     // `tirage` est une dépendance délibérée : c'est le bouton « Autre
     // proposition ». Sans elle, redemander une tenue rendrait la même.

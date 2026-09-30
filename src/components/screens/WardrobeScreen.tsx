@@ -17,6 +17,7 @@ import {
 import { generateOutfitWithFallback } from "@/lib/logic";
 import { filtrerLooks, type FiltreLooks } from "@/lib/looksFiltre";
 import { paletteHexes } from "@/lib/profile";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { inactivityInfo, isWishlistLook, lookWornCount, neverWornItems } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import type { Item, OccasionKey } from "@/lib/types";
@@ -269,7 +270,7 @@ export default function WardrobeScreen() {
     if (pool.length === 0) return [];
     const tenues = (vide ? OCCASIONS_INSPIRATION : OCCASIONS_ASSOCIATIONS)
       .map((occasion) => {
-        const r = generateOutfitWithFallback(pool, weather, occasion, state.workMode, state.dateContext, paletteHexes(profile), profile.gender);
+        const r = generateOutfitWithFallback(pool, weather, occasion, state.workMode, state.dateContext, paletteHexes(profile), profile.gender, undefined, undefined, colorimetrieMoteur(profile.colorimetrie));
         const pieces = r.ids.map((id) => pool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
         return { occasion, ids: pieces.map((p) => p.id), pieces };
       })

@@ -7,6 +7,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { currentSeasonKey } from "@/lib/capsule";
 import { participePorte, type ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { deLaSaisonEnCours, neverWornItems, inactivityInfo } from "@/lib/selectors";
@@ -163,6 +164,7 @@ export default function NeverWornScreen() {
 
   const capsuleSeason = state.capsuleSeason || currentSeasonKey();
   const preferredHexes = useMemo(() => paletteHexes(profile), [profile]);
+  const colorimetrie = useMemo(() => colorimetrieMoteur(profile.colorimetrie), [profile]);
   const idsEnSaison = enSaison.map((it) => it.id).join(",");
   // Une passe par pièce de saison (≈ 40 ms chacune), mémoïsée : les idées ne
   // changent pas d'un rendu à l'autre, et ce sont elles qui partent au clic.
@@ -173,10 +175,10 @@ export default function NeverWornScreen() {
   const poolIdees = useMemo(() => poolPourIdees(state.items, defaultCapsule, capsuleSeason), [state.items, defaultCapsule, capsuleSeason]);
   const idees = useMemo(() => {
     const m = new Map<number, ItemOutfitVariation[]>();
-    for (const it of enSaison) m.set(it.id, calculerIdeesTenues(it, poolIdees, state.items, capsuleSeason, preferredHexes, profile.gender));
+    for (const it of enSaison) m.set(it.id, calculerIdeesTenues(it, poolIdees, state.items, capsuleSeason, preferredHexes, profile.gender, colorimetrie));
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsEnSaison, poolIdees, capsuleSeason, preferredHexes, profile.gender]);
+  }, [idsEnSaison, poolIdees, capsuleSeason, preferredHexes, profile.gender, colorimetrie]);
   const poolApercus = useMemo(() => [...poolIdees, ...wardrobePool, ...state.items], [poolIdees, wardrobePool, state.items]);
 
   const n = neverWorn.length;

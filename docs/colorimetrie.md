@@ -1,93 +1,144 @@
-# Colorimétrie — questionnaire et photo
+# Colorimétrie — questionnaire et moteur de tenues
 
-Arbitré le 30/09/2026. La demande : « la photo et une alternative
-questionnaire ».
+Arbitrages de la propriétaire, 30/09/2026 :
 
-## Ce que la fonctionnalité fait
+- quatre saisons ;
+- le questionnaire seul — « pas d'analyse photo pour le moment » ;
+- un effet réel sur les tenues : « on doit tenir compte de la colorimétrie
+  dans les recommandations de tenues ».
 
-L'étape « Ta colorimétrie » de l'onboarding trouve une **saison** parmi quatre
-— Printemps lumineux, Été doux, Automne chaleureux, Hiver contrasté — puis
-montre ses couleurs signature, ses neutres et ses couleurs « avec modération »
-(plutôt loin du visage). Le résultat entre dans la palette Capsela
-(`paletteCapsela`, récapitulatif) et dans le contexte de l'avis de styliste
-(`contexteDepuisProfil`).
+## Le questionnaire
 
-**Il ne change pas le moteur de tenues.** `paletteHexes(profile)` continue de
-rendre toutes les préférences, y compris celles placées « avec modération ».
+L'étape « Ta colorimétrie » de l'onboarding pose cinq questions
+(`QUESTIONS_COLORIMETRIE`, `src/lib/colorimetrie.ts`) : bijoux, blanc préféré
+près du visage, couleur de cheveux d'origine, couleur des yeux, couleurs qui
+valent des compliments. **Aucune ne porte sur la peau** (vérifié par les
+tests). Chaque réponse ajoute des points sur deux axes, la chaleur et la
+profondeur ; `saisonDuQuestionnaire` en déduit Printemps lumineux, Été doux,
+Automne chaleureux ou Hiver contrasté. Une chaleur nulle (« Je ne sais pas »,
+« Les deux ») ne tranche pas : l'écran le dit, et aucune saison n'est
+inventée.
 
-## Deux chemins, une seule table
+Chaque saison (`SAISONS`) porte des couleurs signature, des neutres et des
+couleurs « avec modération », toutes prises dans `PAL_COULEURS`.
 
-| | Questionnaire | Photo |
-|---|---|---|
-| Disponible | toujours | seulement si `NEXT_PUBLIC_COLORIMETRIE_PHOTO=1` (ou le mock) |
-| Entrée | 5 réponses déclarées | une photo de visage, avec consentement |
-| Sortie | une saison, ou « ne tranche pas » | une saison, ou un motif d'échec |
-| Couleurs | `SAISONS` (`src/lib/colorimetrie.ts`) | `SAISONS`, jamais le modèle |
+**ARBITRAGE ÉDITORIAL** : les points de chaque réponse et les couleurs de
+chaque saison, à revoir sur des profils réels.
 
-Les deux chemins rendent une **saison**, jamais une couleur : un service
-externe ne peut pas inventer une teinte. Toutes les teintes de `SAISONS` sont
-des couleurs de `PAL_COULEURS` (vérifié par les tests).
+## L'effet sur les tenues (`src/lib/colorimetrieMoteur.ts`)
 
-### Le questionnaire
+Le principe des saisons : une couleur agit surtout **près du visage**. Hauts,
+pulls, robes, combinaisons, vestes, manteaux, foulards et écharpes y sont ;
+bas, chaussures, sacs et ceintures n'y sont pas.
 
-Cinq questions (`QUESTIONS_COLORIMETRIE`) : bijoux, blanc préféré près du
-visage, couleur de cheveux d'origine, couleur des yeux, couleurs qui valent
-des compliments. **Aucune ne porte sur la peau.** Chaque réponse ajoute des
-points sur deux axes, la chaleur et la profondeur ; `saisonDuQuestionnaire`
-les combine. Une chaleur nulle (« Je ne sais pas », « Les deux ») ne tranche
-pas : l'écran le dit, et aucune saison n'est inventée.
+1. Près du visage, une couleur « avec modération » est évitée quand une autre
+   pièce convient. Elle n'est jamais retirée des tenues : elle reste possible
+   en bas, en chaussures, en sac, et près du visage faute d'alternative.
+2. Près du visage, ses couleurs préférées et celles de sa saison (signature
+   et neutres) sont préférées, au même titre les unes que les autres.
+3. Les bijoux suivent le métal de la saison : doré pour Printemps et Automne,
+   argenté pour Été et Hiver.
+4. R-S18 : +10 au score d'une tenue dont une pièce du visage est de sa saison
+   et aucune « avec modération ». C'est un bonus seulement : aucune pénalité,
+   donc aucun bandeau.
 
-Les points de chaque réponse et le choix des couleurs de chaque saison sont
-un **ARBITRAGE ÉDITORIAL**, à revoir sur des profils réels.
+Loin du visage, la préférence de palette d'origine (R-S10) s'applique seule,
+à l'identique. Aucune de ces règles n'écarte une catégorie ni ne vide un
+tirage.
 
-### La photo
+Toute la génération en tient compte : tenue du jour, exploration de style,
+Planifier, valise, idées du Dressing vide, « Comment porter cette pièce ? »
+et « Jamais portées ». Pour les idées autour d'une pièce, la teinte de cette
+pièce est tenue pour accordée, sinon une pièce « avec modération » ne
+sortirait jamais de ses propres idées.
 
-- Fonction Edge `analyser-colorimetrie` ; toute la logique dans
-  `supabase/functions/_shared/colorimetrie.ts`, testée
-  (`colorimetrieServeur.test.ts`).
-- Ordre des contrôles : session valide, puis **`consentement === true`**, puis
-  JPEG valide (`validerImage`, repris de l'avis de styliste). Aucun appel au
-  modèle avant les trois.
-- Sortie structurée stricte à deux champs fermés : `qualite` (ok, lumiere,
-  filtre, visage_non_visible, plusieurs_personnes) et `saison` (les quatre, ou
-  indetermine). Le modèle ne peut écrire aucun texte libre.
-- `store: false`, détail d'image `low`, aucune relance automatique, délai de
-  30 s. Le journal ne contient que des codes et des comptes de tokens.
-- Côté app (`colorimetrieClient.ts`) : la photo est ré-encodée
-  (`preparerPhotoAvis`, EXIF et GPS retirés), envoyée une fois, jamais
-  téléversée dans le stockage.
-- Pas de score de confiance : le badge « Analyse fiable » ne s'affiche donc
-  pas.
+### Deux palettes, une correspondance
 
-## Le cadre de l'exception (CLAUDE.md)
+Les pièces du dressing prennent leurs couleurs dans `PALETTE` (27 teintes,
+`data.ts`), la colorimétrie dans `PAL_COULEURS` (21 teintes). Seules neuf
+ont le même hex. La couleur la plus proche en RGB se trompe (Chocolat →
+Bordeaux, Corail → Camel, Bleu ciel → Beige), donc la correspondance est
+écrite à la main (`TEINTE_DU_DRESSING`). Vert sauge n'a pas d'équivalent
+honnête : la colorimétrie ne dit rien de ces pièces, ni des pièces sans
+couleur renseignée.
 
-La règle du projet interdit toute logique fondée sur la couleur de peau.
-L'analyse photo en est la **seule exception**, encadrée par : le consentement
-explicite pour chaque photo, la sortie limitée à une saison, les couleurs
-tirées de l'app, l'absence de conservation, l'usage réservé à l'affichage, et
-l'interrupteur fermé en production tant que la revue juridique n'est pas
-faite.
+## Mesure (`scripts/colorimetrie-moteur.audit.ts`)
 
-## Avant d'ouvrir la photo en production
+Trois bras dans la même exécution, avec la même graine pour chaque tirage :
 
-1. **Revue juridique** : une photo de visage envoyée à un prestataire hors UE
-   peut révéler une donnée sensible (RGPD, article 9). À faire valider : le
-   texte du consentement (`EtapesColorimetrie.tsx`), la politique de
-   confidentialité, le transfert vers OpenAI et sa durée de rétention côté
-   prestataire.
-2. **Déployer la fonction** : `supabase functions deploy analyser-colorimetrie`
-   (le secret `OPENAI_API_KEY` existe déjà ; `COLORIMETRIE_MODEL` est
-   facultatif).
-3. **Vérifier la migration 0034** (`profiles.colorimetrie`) — sans elle, le
-   résultat ne s'enregistre pas.
-4. Poser `NEXT_PUBLIC_COLORIMETRIE_PHOTO=1` dans Vercel.
+- « avant », sans colorimétrie ;
+- « union », la règle retenue ;
+- « palier », une première version où « préférée ET de la saison » passait
+  avant tout, conservée comme levier `strategie`.
 
-Sans l'étape 4, l'app ne montre que le questionnaire.
+La mesure couvre 4 saisons × 2 préférences (aucune ; Noir + Marine + Camel)
+× 10 occasions × 40 tirages.
 
-## Limites connues
+**Périmètre** : le scénario A a tourné sur le catalogue de repli
+(`catalog.ts`, sans styles), car Supabase n'est pas joignable depuis
+l'environnement de développement. Le scénario B porte sur un dressing
+synthétique de 36 pièces. Rien ne s'extrapole d'un scénario à l'autre, ni
+au catalogue réel.
 
-- Aucune limite d'usage par compte sur la fonction photo : chaque analyse est
-  un appel payant. À ajouter si l'usage le justifie.
-- La fiabilité du questionnaire et de la photo n'est pas mesurée
-  (**NON DÉMONTRÉ**) : le résultat est présenté comme « un repère pour
-  t'inspirer, pas une règle ».
+### Pièce « avec modération » près du visage
+
+Part des tenues qui en contiennent une :
+
+| Scénario | Saison | Sans préf. avant → après | Noir+Marine+Camel avant → après |
+|---|---|---|---|
+| A capsule | Printemps | 14,4 → 3,8 % | 23,7 → 3,8 % |
+| A capsule | Été | 26,3 → 16,1 % | 34,4 → 16,4 % |
+| A capsule | Automne | 22,4 → 7,0 % | 26,9 → 6,9 % |
+| A capsule | Hiver | 16,4 → 15,1 % | 15,5 → 15,1 % |
+| B dressing | Printemps | 57,1 → 0,0 % | 66,3 → 0,0 % |
+| B dressing | Été | 51,5 → 0,0 % | 66,0 → 0,0 % |
+| B dressing | Automne | 64,3 → 32,4 % | 72,3 → 32,6 % |
+| B dressing | Hiver | 23,1 → 0,0 % | 34,0 → 0,0 % |
+
+### Conclusions
+
+- **DÉMONTRÉ** (dans ces deux scénarios) :
+  - la part de tenues avec une couleur « avec modération » près du visage
+    baisse dans toutes les cellules ;
+  - la pièce principale (haut ou robe) est plus souvent de la saison, par
+    exemple de 33 % à 100 % en Automne sans préférence (B) ;
+  - aucune tenue n'est perdue (même nombre de tirages sans tenue dans les
+    deux bras) ;
+  - les couleurs « avec modération » restent aussi présentes loin du
+    visage : elles sont déplacées, pas retirées ;
+  - une couleur préférée reste dans 97 à 100 % des tenues.
+- **Coût DÉMONTRÉ** : moins de tenues distinctes.
+  - B sans préférence : 1 012 → 704 à 812 (−20 à −30 %).
+  - B avec préférence : 855 → 573 à 677.
+  - La version « palier » tombait à 257 à 581, d'où le choix de l'union.
+- **Résidus expliqués par les données** : quand le pool n'offre aucune autre
+  pièce du visage, la règle laisse la pièce « avec modération ». Exemples :
+  en B Automne, un foulard rose poudré et une écharpe noire, tous deux
+  « avec modération » ; en A Hiver, une capsule dont le manteau est camel.
+- **NON DÉMONTRÉ** : l'effet sur le catalogue réel (623 pièces), à mesurer
+  avec cet audit une fois Supabase joignable ; la justesse du questionnaire
+  lui-même.
+- **ARBITRAGE ÉDITORIAL** :
+  - la zone du visage ;
+  - l'union plutôt que les paliers ;
+  - le métal des bijoux ;
+  - la correspondance des teintes.
+
+## Un défaut voisin, relevé et non corrigé ici
+
+R-S10 (préférence de palette) compare les hex **exacts**. Or 12 des 21
+couleurs de `PAL_COULEURS` n'ont pas le même hex dans la palette du dressing
+(Terracotta, Moutarde, Kaki, Corail, Chocolat, Sable, Gris, Rose poudré,
+Vert bouteille) ou n'y existent pas (Rouge, Bleu, Beige). Une préférence
+« Terracotta » ne reconnaît donc aucun terracotta du dressing.
+`teinteDe` corrigerait cela. C'est un levier distinct, à mesurer séparément
+(règle d'audit, point 3).
+
+## L'analyse photo, retirée
+
+Une analyse par photo a été codée puis retirée le 30/09/2026, avant tout
+déploiement : fonction Edge, consentement, sortie limitée à une saison. Elle
+reste dans l'historique git (commit `96b8f4f`). La rétablir demanderait une
+revue juridique : une photo de visage peut révéler une donnée sensible (RGPD,
+article 9). Il faudrait aussi rouvrir la règle de CLAUDE.md sur la couleur de
+peau.

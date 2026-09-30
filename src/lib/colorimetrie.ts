@@ -3,8 +3,9 @@ import { PAL_COULEURS } from "./palCouleurs";
 /**
  * COLORIMÉTRIE ET PALETTE CAPSELA.
  *
- * Trois choses vivent ici, et une seule touche la base : le type persisté,
- * le calcul de la palette affichée, et l'interface d'analyse.
+ * Vivent ici : le type persisté, les quatre saisons, le questionnaire et le
+ * calcul de la palette affichée. Ce que le moteur de tenues en fait est dans
+ * colorimetrieMoteur.ts (30/09/2026).
  *
  * NOMMAGE EN FRANÇAIS, comme les quarante autres fichiers du dépôt. Le brief
  * proposait `colorPreferences` / `intensityPreference` / `colorimetry` ;
@@ -37,14 +38,13 @@ export interface Colorimetrie {
   /** 0..1, absent si le service ne le rend pas — le badge dépend de sa présence. */
   confiance?: number;
   analyseeLe?: string;
-  /** D'où vient le résultat : une photo (appareil ou galerie) ou le questionnaire (30/09/2026). */
+  /**
+   * D'où vient le résultat. Seul le questionnaire l'écrit depuis le
+   * 30/09/2026 (analyse photo abandonnée « pour le moment ») ; "camera" et
+   * "galerie" restent lisibles pour les profils écrits par la démo d'avant.
+   */
   source?: "camera" | "galerie" | "questionnaire";
-  /** Pourquoi une analyse photo n'a pas abouti, pour le dire à l'écran (jamais persisté comme résultat). */
-  motif?: MotifPhoto;
 }
-
-/** Ce qui rend une photo inexploitable, tel que le service le rend (liste fermée). */
-export type MotifPhoto = "lumiere" | "filtre" | "visage_non_visible" | "plusieurs_personnes" | "indetermine";
 
 export const COLORIMETRIE_VIDE: Colorimetrie = { statut: "aucune" };
 
@@ -68,11 +68,11 @@ export const PALETTE_CAPSELA_NEUTRES = 2;
  *   3. les autres signatures ;
  *   4. jusqu'à deux neutres, pour que la palette soit portable.
  *
- * CE QUI EST EN « AVEC MODÉRATION » N'EST PAS RETIRÉ DU MOTEUR. Ce calcul ne
- * sert qu'à l'affichage : `paletteHexes(profile)` continue de rendre TOUTES
- * les préférences, y compris celles-là. Une couleur qu'elle a choisie ne
- * disparaît pas de ses tenues parce qu'une analyse la place loin du visage —
- * la nuance appartient à l'écran, pas à la sélection.
+ * Ce calcul ne sert qu'à l'affichage. Le moteur, lui, lit la colorimétrie
+ * par colorimetrieMoteur.ts (30/09/2026, demandé : « on doit tenir compte de
+ * la colorimétrie dans les recommandations de tenues ») : il éloigne du
+ * visage les couleurs « avec modération » sans jamais les retirer des
+ * tenues — elles restent possibles en bas, en chaussures, en sac.
  *
  * Sans colorimétrie, la palette EST la liste des préférences. C'est le cas
  * « passer l'analyse », et il doit rendre quelque chose de juste, pas un vide.
@@ -148,13 +148,11 @@ export function lireColorimetrie(data: unknown, source: Colorimetrie["source"]):
 }
 
 /*
- * LES QUATRE SAISONS (30/09/2026, arbitré : quatre plutôt que douze — plus
- * fiable, surtout par questionnaire, et plus lisible).
+ * LES QUATRE SAISONS (30/09/2026, confirmé par la propriétaire : quatre
+ * plutôt que douze — plus fiable par questionnaire, et plus lisible).
  *
- * UNE SEULE TABLE POUR LES DEUX CHEMINS. Le questionnaire et l'analyse photo
- * ne rendent qu'une SAISON ; les couleurs viennent toujours d'ici. Un service
- * externe ne peut donc jamais inventer une couleur : il choisit parmi quatre
- * mots, et la palette présentée est celle que Capsela a composée.
+ * Le questionnaire ne rend qu'une SAISON ; les couleurs viennent toujours
+ * d'ici, et le moteur de tenues lit les mêmes.
  *
  * Toutes les teintes sont des hex de PAL_COULEURS (vérifié par les tests) :
  * les mêmes que l'étape « Tes couleurs », pour que la palette Capsela les
@@ -210,8 +208,8 @@ export function colorimetrieDeSaison(saison: SaisonCle, source: NonNullable<Colo
 }
 
 /*
- * LE QUESTIONNAIRE (30/09/2026, demandé : la photo ET une alternative sans
- * photo). Cinq questions sur des traits DÉCLARÉS — bijoux, blanc préféré,
+ * LE QUESTIONNAIRE (30/09/2026, seule voie retenue : « on va partir sur le
+ * questionnaire plutôt, pas d'analyse photo pour le moment »). Cinq questions sur des traits DÉCLARÉS — bijoux, blanc préféré,
  * couleur de cheveux d'origine, couleur des yeux, couleurs complimentées.
  * Aucune question ne porte sur la couleur de peau : la règle du projet
  * reste entière pour ce chemin.
@@ -311,25 +309,4 @@ export function saisonDuQuestionnaire(reponses: (number | null | undefined)[]): 
   if (chaleur === 0) return null;
   if (chaleur > 0) return profondeur > 0 ? "automne" : "printemps";
   return profondeur > 0 ? "hiver" : "ete";
-}
-
-/*
- * L'ANALYSE PHOTO (30/09/2026). Le service existe désormais (fonction Edge
- * `analyser-colorimetrie`, cf. colorimetrieClient.ts), mais il ne s'ouvre
- * qu'une fois la revue juridique faite : une photo de visage, envoyée à un
- * prestataire hors UE, dont la carnation peut révéler une donnée sensible
- * (RGPD, article 9). D'où un interrupteur explicite, NEXT_PUBLIC_COLORIMETRIE_PHOTO=1,
- * à poser dans Vercel le jour où c'est validé. Sans lui, l'étape ne propose
- * que le questionnaire — jamais un bouton photo qui n'analyserait rien.
- *
- * Le mock reste possible derrière NEXT_PUBLIC_COLORIMETRIE_MOCK=1, et l'écran
- * affiche alors « Résultat de démonstration ». Jamais de faux résultat silencieux.
- */
-export function colorimetrieMockActive(): boolean {
-  return process.env.NEXT_PUBLIC_COLORIMETRIE_MOCK === "1";
-}
-
-/** L'analyse photo est-elle proposée ? */
-export function colorimetrieDisponible(): boolean {
-  return colorimetrieMockActive() || process.env.NEXT_PUBLIC_COLORIMETRIE_PHOTO === "1";
 }

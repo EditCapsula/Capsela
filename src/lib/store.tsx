@@ -55,6 +55,7 @@ import {
 } from "./logic";
 import type { FamilleLook } from "./ideesLooks";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
+import { colorimetrieMoteur } from "./colorimetrieMoteur";
 import {
   accessoireTypeFor,
   detectAccessoireType,
@@ -1125,7 +1126,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       s.workMode,
       s.dateContext,
       paletteHexes(profile),
-      profile.gender
+      profile.gender,
+      undefined,
+      undefined,
+      // La colorimétrie du profil (30/09/2026) : couleurs de sa saison près du visage.
+      colorimetrieMoteur(profile.colorimetrie)
     );
     // Tracking (repli progressif de formalité, section 8 du brief 21/08/2026)
     // — pas de pipeline analytics dans ce prototype : log console en
@@ -2096,7 +2101,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             // la génération redérivait son bucket de la température réelle et
             // pouvait écarter les pièces de la capsule qu'elle vient de recevoir
             // (correctif 29/08/2026).
-            season
+            season,
+            undefined,
+            colorimetrieMoteur(profile.colorimetrie)
           );
         // « Autre tenue » en exploration : même variation réelle que la tenue
         // du jour (recette du 26/09/2026). Première ouverture : aucune tenue

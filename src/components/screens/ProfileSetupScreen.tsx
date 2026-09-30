@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 import { EtapeColorimetrie, ResultatColorimetrie } from "@/components/EtapesColorimetrie";
-import { colorimetrieDisponible, colorimetrieUtilisable, COLORIMETRIE_VIDE, paletteCapsela, type Colorimetrie } from "@/lib/colorimetrie";
+import { colorimetrieUtilisable, COLORIMETRIE_VIDE, paletteCapsela, type Colorimetrie } from "@/lib/colorimetrie";
 import FilEtapes from "@/components/FilEtapes";
 import OptionRow from "@/components/OptionRow";
 import {
@@ -59,8 +59,8 @@ const ALL_STEPS = [
    */
   { key: "pal_couleurs", kicker: "Tes couleurs", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis 1 à 6 couleurs que tu portes ou aimerais porter souvent." },
   { key: "pal_intensite", kicker: "Ton style", title: "Quelle intensité de couleurs portes-tu volontiers ?", subtitle: "Cela nous aide à créer des looks dans ton style." },
-  { key: "colorimetrie", kicker: "Ta colorimétrie", title: "Et si on trouvait les couleurs qui te mettent naturellement en valeur ?", subtitle: "Cinq questions suffisent. Capsela en déduit ta saison et les couleurs qui s'accordent avec toi, pour composer ta palette." },
-  { key: "colorimetrie_resultat", kicker: "Ta colorimétrie", title: "Voilà ce que dit ton analyse", subtitle: "Un repère pour t'inspirer, pas une règle : tu peux porter toutes les couleurs que tu aimes." },
+  { key: "colorimetrie", kicker: "Ta colorimétrie", title: "Et si on trouvait les couleurs qui te mettent naturellement en valeur ?", subtitle: "Cinq questions suffisent. Capsela en déduit ta saison et en tient compte dans tes tenues." },
+  { key: "colorimetrie_resultat", kicker: "Ta colorimétrie", title: "Voilà ta saison", subtitle: "Un repère pour t'inspirer, pas une règle : tu peux porter toutes les couleurs que tu aimes." },
   { key: "pal_recap", kicker: "Voilà ta palette Capsela", title: "Ce que tu aimes × ce qui te met en valeur", subtitle: "Capsela combine tes préférences et ta colorimétrie pour des recommandations qui te ressemblent." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
   { key: "style", kicker: "Style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis celui qui correspond le mieux à ta façon de t'habiller." },
@@ -252,12 +252,13 @@ export default function ProfileSetupScreen() {
       swatches: (draft.paletteIntensite && INTENSITE_VISUELS[draft.paletteIntensite]?.pastilles) || ([] as string[]),
     },
     {
-      label: "Analyse",
-      // « Pas encore analysée » et non « aucune » : l'analyse est à venir,
+      // « Saison » depuis le questionnaire (30/09/2026) : ce n'est plus une
+      // analyse. « Pas encore définie » et non « aucune » : elle est à venir,
       // pas refusée.
+      label: "Saison",
       value: colorimetrieUtilisable(draft.colorimetrie)
-        ? draft.colorimetrie.libelle || "Analysée"
-        : "Pas encore analysée",
+        ? draft.colorimetrie.libelle || "Définie"
+        : "Pas encore définie",
       swatches: [] as string[],
     },
     {
@@ -297,13 +298,7 @@ export default function ProfileSetupScreen() {
       <div className="mt-[26px]">
         <div className="t-surtitre text-terracotta">{meta.kicker}</div>
         <div className="t-titre-ecran text-ink mt-3">{meta.title}</div>
-        <div className="t-chapeau text-muted mt-[10px]">
-          {/* La photo n'est proposée qu'une fois ouverte (colorimetrieDisponible) :
-              le chapeau ne l'annonce pas avant. */}
-          {meta.key === "colorimetrie" && colorimetrieDisponible()
-            ? "Cinq questions ou une photo suffisent. Capsela en déduit ta saison et les couleurs qui s'accordent avec toi, pour composer ta palette."
-            : meta.subtitle}
-        </div>
+        <div className="t-chapeau text-muted mt-[10px]">{meta.subtitle}</div>
         {meta.key === "pal_couleurs" && draft.paletteCouleurs.length > 0 && (
           <div className="text-[12px] text-muted mt-[6px]">
             {draft.paletteCouleurs.length} / {MAX_PALETTE_COULEURS} sélectionnée
@@ -376,11 +371,10 @@ export default function ProfileSetupScreen() {
         <EtapeColorimetrie
           /* L'ÉTAPE AVANCE ELLE-MÊME, parce que le bouton générique est
              masqué ici : c'est elle qui porte ses sorties.
-             Elle ne rend que des résultats exploitables (questionnaire ou
-             photo), qui enchaînent sur l'écran de résultat ; un échec reste
-             sur place, où l'écran propose de reprendre, de répondre aux
-             questions ou de passer — jamais d'avancer vers un résultat qui
-             n'existe pas. `step + 1` est bien le résultat : l'étape existe
+             Elle ne rend que des résultats exploitables, qui enchaînent sur
+             l'écran de résultat ; des réponses qui ne tranchent pas restent
+             sur place, où l'écran propose de reprendre ou de passer —
+             jamais d'avancer vers un résultat qui n'existe pas. `step + 1` est bien le résultat : l'étape existe
              dès que le brouillon porte une colorimétrie utilisable. */
           onResultat={(c: Colorimetrie) => {
             patch({ colorimetrie: c });

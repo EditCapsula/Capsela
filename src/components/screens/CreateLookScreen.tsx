@@ -18,6 +18,7 @@ import {
 } from "@/lib/logic";
 import { rolePieceOf } from "@/lib/attributes";
 import { paletteHexes } from "@/lib/profile";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 
 /*
@@ -186,7 +187,11 @@ export default function CreateLookScreen() {
     paletteHexes(profile),
     profile.morphology,
     dismissed,
-    weather
+    weather,
+    undefined,
+    undefined,
+    undefined,
+    colorimetrieMoteur(profile.colorimetrie)
   );
   const blockingHits = evaluateBlocking(draftPieces, state.lookDraftOccasion, weather);
   const hardBlocked = blockingHits.some((h) => h.hard);
