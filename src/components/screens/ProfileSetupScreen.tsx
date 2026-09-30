@@ -5,9 +5,39 @@ import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
-import { EtapeColorimetrie, ResultatColorimetrie } from "@/components/EtapesColorimetrie";
-import { colorimetrieUtilisable, COLORIMETRIE_VIDE, paletteCapsela, type Colorimetrie } from "@/lib/colorimetrie";
-import FilEtapes from "@/components/FilEtapes";
+import {
+  AnalyseColorimetrie,
+  IndecisColorimetrie,
+  IntroColorimetrie,
+  QuestionColorimetrieCartes,
+  ResultatColorimetrie,
+  SuiteColorimetrie,
+} from "@/components/EtapesColorimetrie";
+import {
+  colorimetrieDeSaison,
+  colorimetrieUtilisable,
+  COLORIMETRIE_VIDE,
+  estSaison,
+  paletteCapsela,
+  QUESTIONS_COLORIMETRIE,
+  reponsesEnListe,
+  reponsesParQuestion,
+  SAISONS,
+} from "@/lib/colorimetrie";
+import {
+  NB_QUESTIONS,
+  choisir,
+  commencer,
+  conclure,
+  continuer,
+  derniereQuestion,
+  parcoursInitial,
+  peutContinuer,
+  recommencer,
+  retour as retourColorimetrie,
+  type ParcoursColorimetrie,
+} from "@/lib/colorimetrieParcours";
+import FilEtapes, { ProgressionQuestions } from "@/components/FilEtapes";
 import OptionRow from "@/components/OptionRow";
 import {
   GENDERS,
@@ -59,8 +89,16 @@ const ALL_STEPS = [
    */
   { key: "pal_couleurs", kicker: "Tes couleurs", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis 1 à 6 couleurs que tu portes ou aimerais porter souvent." },
   { key: "pal_intensite", kicker: "Ton style", title: "Quelle intensité de couleurs portes-tu volontiers ?", subtitle: "Cela nous aide à créer des looks dans ton style." },
-  { key: "colorimetrie", kicker: "Ta colorimétrie", title: "Et si on trouvait les couleurs qui te mettent naturellement en valeur ?", subtitle: "Cinq questions suffisent. Capsela en déduit ta saison et en tient compte dans tes tenues." },
-  { key: "colorimetrie_resultat", kicker: "Ta colorimétrie", title: "Voilà ta saison", subtitle: "Un repère pour t'inspirer, pas une règle : tu peux porter toutes les couleurs que tu aimes." },
+  /*
+   * LE PARCOURS COLORIMÉTRIE (refonte UX/UI du 30/09/2026) : présentation,
+   * quatre questions, analyse, résultat, « Et maintenant ? ». Les sous-écrans
+   * de l'étape « colorimetrie » ont leur propre en-tête (enTeteColorimetrie
+   * plus bas) ; ces textes-ci sont ceux de la présentation. Le titre du
+   * résultat est la saison trouvée.
+   */
+  { key: "colorimetrie", kicker: "Ta colorimétrie", title: "Et si on trouvait les couleurs qui te mettent naturellement en valeur ?", subtitle: "Quatre questions rapides pour déterminer ta palette et personnaliser tes recommandations." },
+  { key: "colorimetrie_resultat", kicker: "Ta palette", title: "Ta palette", subtitle: "" },
+  { key: "colorimetrie_suite", kicker: "Ta colorimétrie", title: "Et maintenant ?", subtitle: "Capsela utilise ta palette pour personnaliser ton expérience." },
   { key: "pal_recap", kicker: "Voilà ta palette Capsela", title: "Ce que tu aimes × ce qui te met en valeur", subtitle: "Capsela combine tes préférences et ta colorimétrie pour des recommandations qui te ressemblent." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
   { key: "style", kicker: "Style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis celui qui correspond le mieux à ta façon de t'habiller." },
@@ -161,12 +199,15 @@ export default function ProfileSetupScreen() {
       // explicitement la modifier (Mon compte → Prénom, 26/09/2026) : sans
       // cette exception, l'édition ouvrait l'étape « genre ».
       (s.key !== "prenom" || !profile.displayName.trim() || (state.profileSetupFromEdit && state.profileSetupStep === "prenom")) &&
-      (s.key !== "colorimetrie_resultat" || colorimetrieUtilisable(draft.colorimetrie))
+      ((s.key !== "colorimetrie_resultat" && s.key !== "colorimetrie_suite") || colorimetrieUtilisable(draft.colorimetrie))
   );
   const [step, setStep] = useState(() =>
     Math.max(0, STEPS.findIndex((s) => s.key === (state.profileSetupStep || "genre")))
   );
   const [guideOpen, setGuideOpen] = useState(false);
+  // Le parcours colorimétrie (colorimetrieParcours.ts). Repris avec les
+  // réponses déjà enregistrées : revenir sur l'étape montre ce qu'on avait choisi.
+  const [colo, setColo] = useState<ParcoursColorimetrie>(() => parcoursInitial(reponsesEnListe(profile.colorimetrie?.reponses)));
 
   const patch = (p: Partial<Profile>) => setDraft((d) => ({ ...d, ...p }));
 
@@ -193,7 +234,7 @@ export default function ProfileSetupScreen() {
   // l'ordre de ALL_STEPS). Seul le groupe palette (pal_couleurs → pal_ressenti
   // → pal_recap) reste multi-étapes même en édition : ces trois étapes
   // forment un seul geste ("Mes goûts"), jamais séparables.
-  const PALETTE_GROUP = ["pal_couleurs", "pal_intensite", "colorimetrie", "colorimetrie_resultat", "pal_recap"];
+  const PALETTE_GROUP = ["pal_couleurs", "pal_intensite", "colorimetrie", "colorimetrie_resultat", "colorimetrie_suite", "pal_recap"];
   const entryStepKey = state.profileSetupStep || "genre";
   const editGroupEndKey = PALETTE_GROUP.includes(entryStepKey) ? "pal_recap" : entryStepKey;
   const editGroupEndIndex = STEPS.findIndex((s) => s.key === editGroupEndKey);
@@ -205,7 +246,13 @@ export default function ProfileSetupScreen() {
     else actions.goHome();
   };
 
-  const next = () => (isLast ? finish() : setStep(step + 1));
+  const next = () => {
+    if (isLast) return finish();
+    // En arrivant sur la colorimétrie PAR L'AVANT, on commence par sa
+    // présentation — même si le questionnaire avait déjà été parcouru.
+    if (STEPS[step + 1]?.key === "colorimetrie") setColo((p) => ({ ...p, vue: "presentation", question: 0 }));
+    setStep(step + 1);
+  };
   // EN MODIFICATION, LE RETOUR RAMÈNE À L'ÉCRAN D'APPEL (25/09/2026). Avant,
   // ouvrir « Style » depuis le profil puis toucher le chevron remontait les
   // étapes précédentes de l'onboarding (Tailles, Palette…) au lieu de rendre
@@ -214,6 +261,12 @@ export default function ProfileSetupScreen() {
   // Mon compte.
   const entryIndex = Math.max(0, STEPS.findIndex((s) => s.key === entryStepKey));
   const back = () => {
+    // Dans le parcours colorimétrie, le retour remonte d'abord d'une question
+    // (le brief retire « Question précédente » : c'est ce bouton qui le fait).
+    if (STEPS[step]?.key === "colorimetrie") {
+      const precedent = retourColorimetrie(colo);
+      if (precedent) return setColo(precedent);
+    }
     if (state.profileSetupFromEdit) {
       if (step > entryIndex) setStep(step - 1);
       else actions.go(state.profileSetupReturn);
@@ -222,9 +275,43 @@ export default function ProfileSetupScreen() {
     if (step > 0) setStep(step - 1);
     else if (profile.completed) actions.goProfile();
   };
-  const showBack = step > 0 || state.profileSetupFromEdit || profile.completed;
-
   const meta = STEPS[step];
+  const enQuestion = meta.key === "colorimetrie" && colo.vue === "question";
+  const enAnalyse = meta.key === "colorimetrie" && colo.vue === "analyse";
+  // Aucun retour pendant l'analyse : elle dure moins de deux secondes.
+  const showBack = !enAnalyse && (step > 0 || state.profileSetupFromEdit || profile.completed || (meta.key === "colorimetrie" && colo.vue !== "presentation"));
+  const indexColorimetrie = STEPS.findIndex((s) => s.key === "colorimetrie");
+
+  /** Fin de l'analyse : le résultat (étape suivante), ou « Pas de saison nette » sur place. */
+  const finAnalyse = () => {
+    const { parcours, saison } = conclure(colo);
+    setColo(parcours);
+    if (!saison) return;
+    patch({ colorimetrie: colorimetrieDeSaison(saison, "questionnaire", reponsesParQuestion(colo.reponses)) });
+    setStep(step + 1);
+  };
+  const passerColorimetrie = () => {
+    patch({ colorimetrie: COLORIMETRIE_VIDE });
+    setStep(step + 1);
+  };
+
+  /** L'en-tête de chaque écran : celui de l'étape, sauf dans le parcours colorimétrie où il suit le sous-écran. */
+  const saisonResultat = estSaison(draft.colorimetrie?.saison) ? SAISONS[draft.colorimetrie.saison] : null;
+  const enTete: { kicker: string | null; title: string; subtitle: string | null } =
+    meta.key === "colorimetrie" && colo.vue === "question"
+      ? { kicker: "Ta colorimétrie", title: QUESTIONS_COLORIMETRIE[colo.question].question, subtitle: null }
+      : meta.key === "colorimetrie" && colo.vue === "analyse"
+        ? { kicker: "Analyse en cours", title: "Capsela analyse tes réponses…", subtitle: null }
+        : meta.key === "colorimetrie" && colo.vue === "indecis"
+          ? {
+              kicker: "Ta colorimétrie",
+              title: "Pas de saison nette",
+              subtitle:
+                "Tes réponses ne penchent pas clairement vers une saison chaude ou froide. Plutôt que de choisir au hasard, Capsela conserve tes préférences de couleurs pour personnaliser tes recommandations.",
+            }
+          : meta.key === "colorimetrie_resultat"
+            ? { kicker: meta.kicker, title: draft.colorimetrie?.libelle || meta.title, subtitle: saisonResultat?.description ?? null }
+            : { kicker: meta.kicker, title: meta.title, subtitle: meta.subtitle || null };
   const taillesBas = taillesBasFor(draft.gender);
   // Seules les étapes style et palette exigent une sélection non vide
   // (styles : recette 20/08/2026 ; palette : Tâche 8, min 1 couleur) — les
@@ -289,16 +376,27 @@ export default function ProfileSetupScreen() {
         {showBack ? (
           <BoutonRetour onClick={back} label="Revenir à l'étape précédente" />
         ) : (
-          <div className="w-[38px]" />
+          // 38 × 38 : la rangée garde sa hauteur sans bouton (analyse) — sinon
+          // tout l'écran remontait d'un cran entre la dernière question et l'analyse.
+          <div className="w-[38px] h-[38px]" />
         )}
-        <FilEtapes total={STEPS.length} courante={step} />
+        {/* UN SEUL LANGAGE DE PROGRESSION (brief colorimétrie) : pendant les
+            questions, « 1 / 4 » remplace le fil de l'onboarding ; pendant
+            l'analyse, aucun compteur. */}
+        {enQuestion ? (
+          <ProgressionQuestions courante={colo.question} total={NB_QUESTIONS} />
+        ) : enAnalyse ? (
+          <div />
+        ) : (
+          <FilEtapes total={STEPS.length} courante={step} />
+        )}
         <div className="w-[38px]" />
       </div>
 
       <div className="mt-[26px]">
-        <div className="t-surtitre text-terracotta">{meta.kicker}</div>
-        <div className="t-titre-ecran text-ink mt-3">{meta.title}</div>
-        <div className="t-chapeau text-muted mt-[10px]">{meta.subtitle}</div>
+        {enTete.kicker && <div className="t-surtitre text-terracotta">{enTete.kicker}</div>}
+        <div className="t-titre-ecran text-ink mt-3" style={{ textWrap: "balance" }}>{enTete.title}</div>
+        {enTete.subtitle && <div className="t-chapeau text-muted mt-[10px]">{enTete.subtitle}</div>}
         {meta.key === "pal_couleurs" && draft.paletteCouleurs.length > 0 && (
           <div className="text-[12px] text-muted mt-[6px]">
             {draft.paletteCouleurs.length} / {MAX_PALETTE_COULEURS} sélectionnée
@@ -367,35 +465,20 @@ export default function ProfileSetupScreen() {
         </div>
       )}
 
-      {meta.key === "colorimetrie" && (
-        <EtapeColorimetrie
-          /* L'ÉTAPE AVANCE ELLE-MÊME, parce que le bouton générique est
-             masqué ici : c'est elle qui porte ses sorties.
-             Elle ne rend que des résultats exploitables, qui enchaînent sur
-             l'écran de résultat ; des réponses qui ne tranchent pas restent
-             sur place, où l'écran propose de reprendre ou de passer —
-             jamais d'avancer vers un résultat qui n'existe pas. `step + 1` est bien le résultat : l'étape existe
-             dès que le brouillon porte une colorimétrie utilisable. */
-          onResultat={(c: Colorimetrie) => {
-            patch({ colorimetrie: c });
-            setStep(step + 1);
-          }}
-          onPasser={() => {
-            patch({ colorimetrie: COLORIMETRIE_VIDE });
-            setStep(step + 1);
-          }}
+      {/* Le corps du parcours colorimétrie ; son bouton principal et son lien
+          secondaire sont dans le pied d'écran (piedColorimetrie). */}
+      {meta.key === "colorimetrie" && colo.vue === "presentation" && <IntroColorimetrie />}
+      {meta.key === "colorimetrie" && colo.vue === "question" && (
+        <QuestionColorimetrieCartes
+          question={QUESTIONS_COLORIMETRIE[colo.question]}
+          choisie={colo.reponses[colo.question]}
+          onChoisir={(i) => setColo((p) => choisir(p, i))}
         />
       )}
-
-      {meta.key === "colorimetrie_resultat" && (
-        <ResultatColorimetrie
-          colorimetrie={draft.colorimetrie}
-          onRefaire={() => {
-            patch({ colorimetrie: COLORIMETRIE_VIDE });
-            setStep(Math.max(0, step - 1));
-          }}
-        />
-      )}
+      {meta.key === "colorimetrie" && colo.vue === "analyse" && <AnalyseColorimetrie onFini={finAnalyse} />}
+      {meta.key === "colorimetrie" && colo.vue === "indecis" && <IndecisColorimetrie />}
+      {meta.key === "colorimetrie_resultat" && <ResultatColorimetrie colorimetrie={draft.colorimetrie} />}
+      {meta.key === "colorimetrie_suite" && <SuiteColorimetrie />}
 
       {meta.key === "pal_recap" && (
         <div className="mt-6 bg-card border border-border rounded-[18px] p-[18px]">
@@ -558,34 +641,84 @@ export default function ProfileSetupScreen() {
         </>
       )}
 
-      {meta.key !== "pal_couleurs" && <div className="flex-1" />}
+      {!["pal_couleurs", "colorimetrie", "colorimetrie_resultat", "colorimetrie_suite"].includes(meta.key) && <div className="flex-1" />}
     </>
   );
 
   /**
-   * L'ÉTAPE COLORIMÉTRIE PORTE SES PROPRES ACTIONS — « Prendre une photo »,
-   * « Choisir une photo », « Passer pour l'instant », ou « Reprendre » selon
-   * son état. Un « Continuer » générique en dessous serait une troisième
-   * sortie, et la seule qui ne dirait pas ce qu'elle fait.
+   * LE PIED D'ÉCRAN : un bouton principal, et au plus un lien discret. Le
+   * parcours colorimétrie y met ses propres libellés (« Commencer »,
+   * « Continuer », « Voir mon résultat », « Continuer mon profil ») ; pendant
+   * l'analyse, il n'y a rien à toucher.
    */
-  const continueButton = meta.key === "colorimetrie" ? null : (
-    <button
-      onClick={canContinue ? next : undefined}
-      disabled={!canContinue}
-      className={
-        "mt-[22px] text-center rounded-full py-4 t-bouton " +
-        (canContinue ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
+  type Pied = { libelle: string; onClick: () => void; actif: boolean; lien?: { libelle: string; onClick: () => void } } | null;
+  const piedColorimetrie = (): Pied | undefined => {
+    if (meta.key === "colorimetrie") {
+      switch (colo.vue) {
+        case "presentation":
+          return { libelle: "Commencer", onClick: () => setColo(commencer), actif: true, lien: { libelle: "Passer pour l'instant", onClick: passerColorimetrie } };
+        case "question":
+          return { libelle: derniereQuestion(colo) ? "Voir mon résultat" : "Continuer", onClick: () => setColo(continuer), actif: peutContinuer(colo) };
+        case "analyse":
+          return null;
+        case "indecis":
+          return { libelle: "Continuer", onClick: passerColorimetrie, actif: true, lien: { libelle: "Refaire le questionnaire", onClick: () => setColo(recommencer()) } };
       }
-    >
-      {isLast
-        ? state.profileSetupFromEdit
-          ? "Enregistrer les modifications"
-          : // « Commencer l'expérience » plutôt que « Terminer mon profil »
-            // (maquette du 25/09) : ce qui compte à cet instant n'est pas ce
-            // qu'on achève, c'est ce qui s'ouvre.
-            "Commencer l'expérience"
-        : "Continuer"}
-    </button>
+    }
+    if (meta.key === "colorimetrie_suite") {
+      return {
+        libelle: "Continuer mon profil",
+        onClick: next,
+        actif: true,
+        // Reprend le questionnaire avec les réponses déjà données : on
+        // modifie, on ne recommence pas de zéro. Le résultat actuel reste
+        // tant qu'un nouveau n'est pas trouvé.
+        lien: {
+          libelle: "Modifier ma colorimétrie",
+          onClick: () => {
+            setColo(commencer(parcoursInitial(reponsesEnListe(draft.colorimetrie?.reponses))));
+            setStep(Math.max(0, indexColorimetrie));
+          },
+        },
+      };
+    }
+    return undefined;
+  };
+  const piedSpecifique = piedColorimetrie();
+  const pied: Pied =
+    piedSpecifique !== undefined
+      ? piedSpecifique
+      : {
+          libelle: isLast
+            ? state.profileSetupFromEdit
+              ? "Enregistrer les modifications"
+              : // « Commencer l'expérience » plutôt que « Terminer mon profil »
+                // (maquette du 25/09) : ce qui compte à cet instant n'est pas ce
+                // qu'on achève, c'est ce qui s'ouvre.
+                "Commencer l'expérience"
+            : "Continuer",
+          onClick: next,
+          actif: canContinue,
+        };
+
+  const continueButton = pied && (
+    <>
+      <button
+        onClick={pied.actif ? pied.onClick : undefined}
+        disabled={!pied.actif}
+        className={
+          "mt-[22px] w-full text-center rounded-full py-4 t-bouton " +
+          (pied.actif ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
+        }
+      >
+        {pied.libelle}
+      </button>
+      {pied.lien && (
+        <button onClick={pied.lien.onClick} className="w-full text-[13px] text-muted cursor-pointer mt-1" style={{ minHeight: 44 }}>
+          {pied.lien.libelle}
+        </button>
+      )}
+    </>
   );
 
   // pal_couleurs : layout à deux zones distinctes (correctif 24/08/2026,
@@ -599,16 +732,21 @@ export default function ProfileSetupScreen() {
   // séparation que TabBar.tsx, seul autre élément fixe du Design System.
   // Toutes les autres étapes gardent la structure historique à zone
   // scrollable unique, strictement inchangée.
-  if (meta.key === "pal_couleurs") {
+  // Le parcours colorimétrie prend la même structure (30/09/2026) : son
+  // bouton reste accessible sans défiler, même quand le résultat est long.
+  const deuxZones = ["pal_couleurs", "colorimetrie", "colorimetrie_resultat", "colorimetrie_suite"].includes(meta.key);
+  if (deuxZones) {
     return (
       <div className="absolute inset-0 flex flex-col">
         <div className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">{pageBody}</div>
-        <div
-          className="flex-shrink-0 px-7 bg-cream border-t border-border flex flex-col"
-          style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}
-        >
-          {continueButton}
-        </div>
+        {continueButton && (
+          <div
+            className="flex-shrink-0 px-7 bg-cream border-t border-border flex flex-col"
+            style={{ paddingBottom: pied?.lien ? "calc(4px + env(safe-area-inset-bottom))" : "calc(16px + env(safe-area-inset-bottom))" }}
+          >
+            {continueButton}
+          </div>
+        )}
       </div>
     );
   }

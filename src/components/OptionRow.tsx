@@ -10,6 +10,16 @@
  * facultatifs : sans eux, la carte est exactement celle d'avant. Les
  * pastilles illustrent une famille de couleurs — décoratives, le libellé
  * reste la seule information (aria-hidden).
+ *
+ * `accent` et `vignette` (30/09/2026, parcours colorimétrie, brief « Refonte
+ * UX/UI ») : la variante « conseil » — fond clair, bordure fine qui passe en
+ * terracotta à la sélection, fond à peine teinté, coche pleine. La sélection
+ * ne repose jamais sur la seule couleur : la coche apparaît, et
+ * `aria-pressed` la dit. La bordure garde la même épaisseur dans les deux
+ * états, pour qu'aucune carte ne bouge d'un pixel au toucher (même motif que
+ * les cartes de style). La vignette est une image carrée de 44 px à gauche ;
+ * `null` dessine une vignette neutre (« Je ne sais pas » n'a pas d'image
+ * honnête). Sans `accent`, la carte est exactement celle d'avant.
  */
 export default function OptionRow({
   label,
@@ -17,13 +27,57 @@ export default function OptionRow({
   onClick,
   description,
   pastilles,
+  accent = false,
+  vignette,
 }: {
   label: string;
   on: boolean;
   onClick: () => void;
   description?: string;
   pastilles?: string[];
+  accent?: boolean;
+  vignette?: string | null;
 }) {
+  if (accent) {
+    return (
+      <button
+        onClick={onClick}
+        aria-pressed={on}
+        className={
+          "w-full flex items-center gap-[14px] pl-[10px] pr-4 py-[9px] rounded-[16px] cursor-pointer text-left border-[1.5px] transition-colors duration-150 " +
+          (on ? "border-terracotta" : "border-border bg-card")
+        }
+        style={on ? { background: "#F6EBE2" } : undefined}
+      >
+        {vignette !== undefined && (
+          <span aria-hidden="true" className="w-[44px] h-[44px] rounded-[12px] overflow-hidden flex-shrink-0 bg-warm-bg flex items-center justify-center">
+            {vignette ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={vignette} alt="" width={44} height={44} decoding="async" className="w-full h-full object-cover block" />
+            ) : (
+              <span className="font-serif text-[20px] leading-none text-terracotta" style={{ opacity: 0.55 }}>
+                ?
+              </span>
+            )}
+          </span>
+        )}
+        <span className="flex-1 min-w-0 text-[14px] leading-[1.35] text-ink">{label}</span>
+        <span
+          aria-hidden="true"
+          className={
+            "w-[22px] h-[22px] rounded-full flex-shrink-0 flex items-center justify-center " +
+            (on ? "bg-terracotta" : "border-[1.5px] border-dots")
+          }
+        >
+          {on && (
+            <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+              <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </span>
+      </button>
+    );
+  }
   return (
     <button
       onClick={onClick}
