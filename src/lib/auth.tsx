@@ -5,6 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { DEFAULT_PREFS, EMPTY_PROFILE, type Profile } from "./profile";
+import { effacerDonneesLocales } from "./donneesLocales";
 import { consumeSignupIntent, forgetSignupIntent } from "./signupIntent";
 import { lireRetourLien, messageErreurNouveauMotDePasse, PARAM_RECUPERATION } from "./motDePasse";
 
@@ -31,6 +32,12 @@ export interface AuthContextValue {
    * flag (cf. AuthScreen.submitEmail).
    */
   justSignedUp: boolean;
+  /**
+   * Le profil du compte connecté est chargé (01/10/2026). Tant qu'il ne l'est
+   * pas, `profile` vaut EMPTY_PROFILE : on n'en tire aucune conclusion (« pas de
+   * date de naissance », « profil incomplet »). Toujours vrai en mode démo.
+   */
+  profileLoaded: boolean;
   /** Mode démo : pas de credentials Supabase configurés. */
   demoMode: boolean;
   email: string | null;
@@ -131,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const [error, setError] = useState<string | null>(null);
   const [justSignedUp, setJustSignedUp] = useState(false);
+  const [profilChargeReel, setProfilChargeReel] = useState(false);
   const [recuperation, setRecuperation] = useState<AuthContextValue["recuperation"]>("aucune");
 
   const loadProfile = useCallback(async (authUser: User) => {
@@ -156,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       displayName: loaded.displayName || meta?.display_name || metaFirstName || "",
       birthdate: loaded.birthdate || meta?.birthdate || null,
     });
+    setProfilChargeReel(true);
   }, []);
 
   useEffect(() => {
@@ -202,6 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setJustSignedUp(consumeSignupIntent());
       } else {
         setProfile(EMPTY_PROFILE);
+        setProfilChargeReel(false);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -309,6 +319,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // stocké localement (persistDemo(null), contrairement à signOut qui le
       // conserve pour permettre une reconnexion avec le même e-mail).
       persistDemo(null);
+      effacerDonneesLocales(null);
       setJustSignedUp(false);
       setProfile(EMPTY_PROFILE);
       return true;
@@ -323,6 +334,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Nettoyage local best-effort — le compte est déjà supprimé côté
       // serveur à ce stade, cet appel échouerait silencieusement sans
       // conséquence si le token est déjà invalidé.
+      effacerDonneesLocales(user.id);
       await getSupabase().auth.signOut();
       return true;
     } catch (e) {
@@ -385,6 +397,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ready,
     signedIn: Boolean(user || demoUser),
     justSignedUp,
+    profileLoaded: !isSupabaseConfigured || profilChargeReel,
     demoMode: !isSupabaseConfigured,
     email: user?.email ?? demoUser?.email ?? null,
     userId: user?.id ?? null,

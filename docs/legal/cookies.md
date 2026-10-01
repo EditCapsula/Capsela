@@ -15,7 +15,7 @@ refusés, mais ne servent à rien d'autre.
 | --- | --- | --- |
 | `sb-…-auth-token` (cookie, parfois découpé en plusieurs) | Garder ta session ouverte | Jusqu'à 400 jours, ou jusqu'à ta déconnexion |
 | `sb-…-auth-token-code-verifier` (cookie) | Sécuriser la connexion avec Google et la réinitialisation du mot de passe | Le temps de l'opération |
-| `capsela.analyticsConsent` (stockage local) | Retenir ton choix sur la mesure d'audience | Jusqu'à ce que tu le changes |
+| `capsela.analyticsConsent` (stockage local) | Retenir ton choix sur la mesure d'audience | Six mois, puis la question est reposée |
 | `capsela.lastKnownCity` (stockage local) | Afficher la météo de ta dernière ville plus vite | Jusqu'à la prochaine mise à jour |
 | `capsela.valises.…` (stockage local) | Garder tes valises disponibles sur l'appareil | Jusqu'à leur suppression |
 | `capsela.authIntent` (stockage de session) | Revenir au bon écran après l'inscription | Jusqu'à la fermeture de l'onglet |

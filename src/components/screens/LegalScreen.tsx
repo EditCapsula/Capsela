@@ -1,16 +1,12 @@
 "use client";
 
 import { APP_VERSION } from "@/lib/data";
+import { DOCUMENTS_LEGAUX, urlLegale } from "@/lib/legal/documents";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 
-const LEGAL_ROWS = [
-  { label: "Mentions légales", sub: "Éditeur, hébergeur, contact" },
-  { label: "Politique de confidentialité", sub: "Données collectées et usages" },
-  { label: "Conditions générales d'utilisation", sub: "Règles du service" },
-  { label: "Tes droits (RGPD)", sub: "Accès, rectification, suppression" },
-  { label: "Cookies et traceurs", sub: "Préférences de mesure" },
-];
+// Les CGV ne figurent pas ici tant que Premium ne s'achète pas (docs/legal/README.md).
+const LEGAL_ROWS = DOCUMENTS_LEGAUX.filter((d) => d.slug !== "cgv");
 
 export default function LegalScreen() {
   const { actions } = useCapsela();
@@ -24,16 +20,19 @@ export default function LegalScreen() {
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden mt-5">
         {LEGAL_ROWS.map((r) => (
-          <div
-            key={r.label}
+          <a
+            key={r.slug}
+            href={urlLegale(r.slug)}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-between gap-3 px-4 py-[15px] border-b border-border last:border-b-0 cursor-pointer"
           >
             <div className="min-w-0">
-              <div className="text-[13px] text-ink">{r.label}</div>
-              <div className="text-[11px] text-muted mt-[2px]">{r.sub}</div>
+              <div className="text-[13px] text-ink">{r.titre}</div>
+              <div className="text-[11px] text-muted mt-[2px]">{r.sousTitre}</div>
             </div>
             <span className="text-terracotta text-[16px] flex-shrink-0">›</span>
-          </div>
+          </a>
         ))}
       </div>
 

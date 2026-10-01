@@ -33,6 +33,12 @@ export interface ExportDonnees {
   photos_dressing: ExportPhoto[];
   /** Avis de styliste enregistrés (migration 0036), chacun avec l'URL signée (7 jours) de sa photo privée. */
   avis_styliste: Record<string, unknown>[];
+  /** Tenues planifiées (migration 0030) — données fournies par l'utilisatrice. */
+  tenues_planifiees: Record<string, unknown>[];
+  /** Valises (migrations 0038 et 0039) — données fournies par l'utilisatrice. */
+  valises: Record<string, unknown>[];
+  /** Verdicts du jour sur la tenue portée (migration 0029) — données fournies par l'utilisatrice. */
+  verdicts_du_jour: Record<string, unknown>[];
   note: string;
 }
 
@@ -60,26 +66,40 @@ export async function buildDataExport(userId: string, email: string | null): Pro
   }
   const supabase = getSupabase();
 
-  const [profil, dressing, looks, historique, photos, avisStyliste] = await Promise.all([
+  const [profil, dressing, looks, historique, photos, avisStyliste, planifiees, valises, verdicts] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
     supabase.from("dressing_items").select("*").eq("user_id", userId).order("id"),
     supabase.from("saved_looks").select("*").eq("user_id", userId).order("id"),
     supabase.from("outfit_history").select("*").eq("user_id", userId).order("occurred_at"),
     supabase.storage.from(BUCKET_PHOTOS).list(userId, { limit: 1000 }),
     supabase.from("avis_styliste").select("*").eq("user_id", userId).order("created_at"),
+    supabase.from("planned_outfits").select("*").eq("user_id", userId).order("jour"),
+    supabase.from("valises").select("*").eq("user_id", userId),
+    supabase.from("outfit_feedback").select("*").eq("user_id", userId).order("jour"),
   ]);
 
   // Une erreur sur n'importe quelle partie rend l'export incomplet, donc
   // faux au regard de l'article 20 : mieux vaut échouer que livrer un
   // fichier silencieusement amputé.
   //
-  // Seule exception : la table des avis de styliste ABSENTE (migration 0036
-  // pas encore exécutée) — il n'y a alors aucun avis, et l'export est
-  // complet sans elle. Toute autre erreur sur cette table fait échouer
+  // Seule exception : une table récente ABSENTE (migration pas encore
+  // exécutée : avis de styliste 0036, tenues planifiées 0030, valises 0038,
+  // verdicts du jour 0029) — il n'y a alors aucune ligne, et l'export est
+  // complet sans elle. Toute autre erreur sur ces tables fait échouer
   // l'export, comme pour les autres.
-  const erreurAvis = avisStyliste.error && !estTableAbsente(avisStyliste.error) ? avisStyliste.error : null;
+  const erreurTolerante = (r: { error: { code?: string; message: string } | null }) =>
+    r.error && !estTableAbsente(r.error) ? r.error : null;
+  const erreurAvis = erreurTolerante(avisStyliste);
   const premiereErreur =
-    profil.error || dressing.error || looks.error || historique.error || photos.error || erreurAvis;
+    profil.error ||
+    dressing.error ||
+    looks.error ||
+    historique.error ||
+    photos.error ||
+    erreurAvis ||
+    erreurTolerante(planifiees) ||
+    erreurTolerante(valises) ||
+    erreurTolerante(verdicts);
   if (premiereErreur) {
     throw new Error(`Export interrompu : ${premiereErreur.message}`);
   }
@@ -117,6 +137,9 @@ export async function buildDataExport(userId: string, email: string | null): Pro
       ajoutee_le: f.created_at ?? null,
       url: urlsPhotos.get(`${userId}/${f.name}`) ?? supabase.storage.from(BUCKET_PHOTOS).getPublicUrl(`${userId}/${f.name}`).data.publicUrl,
     })),
+    tenues_planifiees: (planifiees.error ? [] : planifiees.data ?? []) as Record<string, unknown>[],
+    valises: (valises.error ? [] : valises.data ?? []) as Record<string, unknown>[],
+    verdicts_du_jour: (verdicts.error ? [] : verdicts.data ?? []) as Record<string, unknown>[],
     avis_styliste: lignesAvis.map((l) => ({
       ...l,
       photo_url: typeof l.photo_path === "string" ? urlsAvis.get(l.photo_path) ?? null : null,

@@ -11,7 +11,8 @@ profil » et dans « Dressing ».
 
 **Télécharger**
 « Mon compte → Télécharger mes données » : un fichier avec ton profil, ton
-dressing, tes looks, ton historique, tes avis et les liens vers tes photos.
+dressing, tes looks, tes tenues planifiées, tes valises, ton historique, tes
+verdicts du jour, tes avis et les liens vers tes photos.
 Les liens des photos restent valables 7 jours.
 
 **Supprimer**

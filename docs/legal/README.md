@@ -54,37 +54,47 @@ Rien de cela n'est dans le code ni dans les docs ; je ne l'ai pas inventé.
 
 ## Écarts entre le code et ce que les textes devront pouvoir dire
 
-Ce que j'ai relevé en écrivant, par ordre d'importance. Aucun n'est encore
-traité.
+Relevés en écrivant, par ordre d'importance. État au 01/10/2026.
 
-1. **Export incomplet** (droit à la portabilité) : `dataExport.ts` n'inclut
-   ni les looks planifiés (`planned_outfits`), ni les valises, ni les
-   verdicts du jour (`outfit_feedback`), ni le statut Premium, ni le
-   compteur de tenues. Les trois premiers sont des données fournies par
-   l'utilisatrice : ils doivent y être. Correction simple.
-2. **Photo du dressing envoyée avec ses métadonnées dans un cas rare** : si la
-   compression échoue (ou grossit le fichier), `compressDressingPhoto` envoie
-   l'original, EXIF et GPS compris. La photo d'avis, elle, est refusée dans
-   ce cas. À aligner.
-3. **Liens « Acheter »** : une pièce du catalogue dont `lien_affiliation` est
-   rempli affiche « Acheter » / « Acheter cette pièce ». Le point 16 dit
-   qu'aucune source commerciale n'est branchée au lancement : à vérifier en
-   base (`select count(*) from vestiaire_universel where lien_affiliation is
-   not null;`). Si des liens existent et restent, ils doivent être signalés
-   comme liens commerciaux.
-4. **Inscription** : pas d'âge minimum, et « En continuant, tu acceptes nos
-   Conditions et notre Politique de confidentialité » n'est pas cliquable.
-   Les deux textes doivent être accessibles AVANT la création du compte.
-5. **Géolocalisation activée d'office** dans les préférences
-   (`geoConsent: true`). Le navigateur demande quand même l'autorisation, ce
-   qui recueille le consentement ; le texte le décrit ainsi. Un réglage
-   désactivé au départ serait plus prudent.
-6. **Suppression du compte** : les données du compte sont effacées côté
-   serveur, mais l'appareil garde deux clés locales (valises en cache,
-   dernière ville). À vider à la déconnexion qui suit la suppression.
-7. **Consentement à la mesure d'audience sans échéance** : la CNIL recommande
-   de redemander le choix après 6 mois. Le choix est aujourd'hui conservé
-   sans limite.
+1. **Export incomplet** : **traité.** `dataExport.ts` inclut désormais les
+   tenues planifiées, les valises et les verdicts du jour (une table absente,
+   migration non exécutée, donne une liste vide). Le statut Premium et le
+   compteur de tenues n'y figurent toujours pas : ce ne sont pas des données
+   fournies par l'utilisatrice.
+2. **Photo du dressing envoyée avec ses métadonnées** : **traité.**
+   `compressDressingPhoto` refuse (`PhotoNonPreparee`) une photo qu'elle ne sait
+   pas ré-encoder, et envoie toujours le JPEG ré-encodé. L'arbitrage du
+   10/09 (« ne jamais bloquer l'ajout ») cède devant celui-ci.
+3. **Liens « Acheter »** : **à vérifier en base** —
+   `select count(*) from vestiaire_universel where lien_affiliation is not
+   null;`. Si des liens existent et restent, ils doivent être signalés comme
+   liens commerciaux. Non traité.
+4. **Inscription** : **traité.** Date de naissance obligatoire, inscription
+   refusée sous 15 ans (`ageMinimum.ts`), et « Conditions » et « Politique de
+   confidentialité » sont des liens vers les pages publiques `/legal/cgu` et
+   `/legal/confidentialite`. « Continuer avec Google » demande la date juste
+   après la connexion (`DateNaissanceScreen`) à tout compte connecté sans date
+   dont le profil n'est pas terminé ; sous 15 ans, le compte qui vient d'être
+   créé est supprimé. Le contrôle est déclaratif : il ne prouve pas l'âge.
+5. **Géolocalisation activée d'office** (`geoConsent: true`) : non traité.
+   Le navigateur demande l'autorisation, ce qui recueille le consentement ;
+   un réglage désactivé au départ serait plus prudent. À arbitrer.
+6. **Suppression du compte** : **traité.** Les valises en cache, la dernière
+   ville et l'intention d'inscription sont effacées de l'appareil
+   (`donneesLocales.ts`). Le choix de mesure d'audience reste : il tient à
+   l'appareil.
+7. **Consentement à la mesure d'audience sans échéance** : **traité.** Le
+   choix expire au bout de six mois (183 jours) et la question est reposée ;
+   un choix enregistré avant la règle, sans date, est redemandé une fois.
 8. **Sentry** : le stockage des adresses IP se désactive dans le tableau de
    bord Sentry (Settings → Security & Privacy → « Prevent Storing of IP
-   Addresses »). Le texte suppose que c'est fait.
+   Addresses »). Le texte suppose que c'est fait. Hors code : à faire.
+
+## Pages publiques
+
+Les six textes sont publiés par l'app sur `/legal/<page>` (`mentions-legales`,
+`confidentialite`, `cgu`, `droits-rgpd`, `cookies`, `cgv`), rendus à la
+compilation depuis ce dossier. Une page qui contient encore un
+`[À COMPLÉTER]` ou un `[À VÉRIFIER]` affiche « Version provisoire ». La liste
+« Informations légales » de l'app y renvoie, hors CGV (Premium ne s'achète pas
+encore).

@@ -29,7 +29,9 @@ Contact pour toute question sur tes données : [À COMPLÉTER — adresse e-mail
 
 - ton prénom, ton adresse e-mail et ton mot de passe (conservé sous forme
   chiffrée, jamais lisible, y compris par nous) ;
-- ta date de naissance, si tu choisis de la donner (elle est facultative) ;
+- ta date de naissance, demandée quand tu crées ton compte (par e-mail, ou
+  juste après la connexion avec Google), pour vérifier l'âge minimum (15 ans) ;
+  sous cet âge, le compte est supprimé aussitôt ;
 - si tu te connectes avec Google : ton nom tel que Google nous le transmet et
   ton adresse e-mail.
 
@@ -77,7 +79,9 @@ afficher la météo plus vite à l'ouverture suivante.
 - **Photos du dressing** : enregistrées dans un espace de stockage privé.
   Elles ne sont accessibles qu'à toi, par des liens temporaires. Quand tu
   ajoutes une photo, elle peut être analysée pour préremplir la fiche de la
-  pièce (catégorie, couleur…) ; ces suggestions ne sont jamais imposées.
+  pièce (catégorie, couleur…) ; ces suggestions ne sont jamais imposées. Les
+  métadonnées de la photo (dont la position GPS) sont retirées avant l'envoi ;
+  une photo qui ne peut pas être préparée ainsi est refusée.
 - **Photos d'avis de styliste** : la photo de ta tenue est envoyée pour
   l'analyse, puis n'est conservée que si tu enregistres l'avis dans ton
   Journal. Dans ce cas, elle est stockée dans un espace privé et supprimée

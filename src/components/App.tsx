@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CapselaProvider, useCapsela } from "@/lib/store";
@@ -25,6 +25,8 @@ import AvisEnregistreScreen from "./screens/AvisEnregistreScreen";
 import LooksScreen from "./screens/LooksScreen";
 import NeverWornScreen from "./screens/NeverWornScreen";
 import ProfileSetupScreen from "./screens/ProfileSetupScreen";
+import DateNaissanceScreen from "./screens/DateNaissanceScreen";
+import { doitDemanderNaissance } from "@/lib/ageMinimum";
 import ProfileScreen from "./screens/ProfileScreen";
 import PreferencesScreen from "./screens/PreferencesScreen";
 import AccountScreen from "./screens/AccountScreen";
@@ -79,6 +81,7 @@ function Screens() {
   // justSignedUp doivent rester en dépendance pour que l'effet se redéclenche dès qu'ils
   // sont prêts, même si signedIn est passé à true avant que le profil ne soit chargé.
   const { ready, signedIn, justSignedUp } = auth;
+  const [refusAge, setRefusAge] = useState<string | null>(null);
   const profileCompleted = auth.profile.completed;
   useEffect(() => {
     if (ready && signedIn && PRE_AUTH_SCREENS.has(state.screen)) {
@@ -95,6 +98,25 @@ function Screens() {
     return (
       <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden">
         <NouveauMotDePasseScreen />
+      </div>
+    );
+  }
+
+  // Date de naissance (01/10/2026) : demandée avant tout autre écran à un compte
+  // connecté qui n'en a pas et dont le profil n'est pas terminé — en pratique
+  // le compte qui vient d'être créé avec Google. `refusAge` garde le message
+  // de refus affiché après la suppression du compte, qui ferme la session.
+  if (ready && (refusAge || doitDemanderNaissance({ signedIn, profileLoaded: auth.profileLoaded, birthdate: auth.profile.birthdate, completed: profileCompleted }))) {
+    return (
+      <div className="relative w-full max-w-[480px] mx-auto h-dvh flex flex-col bg-cream overflow-hidden">
+        <DateNaissanceScreen
+          refus={refusAge}
+          onRefus={setRefusAge}
+          onQuitter={() => {
+            setRefusAge(null);
+            actions.goWelcome();
+          }}
+        />
       </div>
     );
   }
