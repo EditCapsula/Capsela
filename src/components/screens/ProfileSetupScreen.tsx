@@ -477,7 +477,7 @@ export default function ProfileSetupScreen() {
       )}
       {meta.key === "colorimetrie" && colo.vue === "analyse" && <AnalyseColorimetrie onFini={finAnalyse} />}
       {meta.key === "colorimetrie" && colo.vue === "indecis" && <IndecisColorimetrie />}
-      {meta.key === "colorimetrie_resultat" && <ResultatColorimetrie colorimetrie={draft.colorimetrie} />}
+      {meta.key === "colorimetrie_resultat" && <ResultatColorimetrie colorimetrie={draft.colorimetrie} intensite={draft.paletteIntensite} />}
       {meta.key === "colorimetrie_suite" && <SuiteColorimetrie />}
 
       {meta.key === "pal_recap" && (
