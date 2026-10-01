@@ -113,8 +113,10 @@ export function proprePourSaison(it: Item, saison: CapsuleSeason): boolean {
  * pièces propres à cette saison (proprePourSaison) passent avant les autres ;
  * et en Automne ou Hiver, la famille « maille ou haut » ne retient que des
  * pulls — un haut léger, même « toutes saisons », ne donne pas le ton d'une
- * capsule d'hiver (ARBITRAGE ÉDITORIAL : une famille sans pull laisse sa
- * place à la suivante). Omise, la règle d'origine.
+ * capsule d'hiver, SAUF un haut dont les manches sont renseignées « longues »
+ * (Item.manches, migration 0042) ; une famille sans pull ni haut à manches
+ * longues laisse sa place à la suivante (ARBITRAGE ÉDITORIAL). Omise, la
+ * règle d'origine.
  */
 export function piecesCles(capsule: Item[], max = 3, saison?: CapsuleSeason): Item[] {
   const retenues: Item[] = [];
@@ -123,7 +125,7 @@ export function piecesCles(capsule: Item[], max = 3, saison?: CapsuleSeason): It
     if (retenues.length >= max) break;
     let candidates = capsule.filter((it) => famille.includes(it.cat));
     if (saison) {
-      if (froid && famille.includes("haut")) candidates = candidates.filter((it) => it.cat === "pull");
+      if (froid && famille.includes("haut")) candidates = candidates.filter((it) => it.cat === "pull" || it.manches === "longues");
       const propres = candidates.filter((it) => proprePourSaison(it, saison));
       if (propres.length) candidates = propres;
     }

@@ -300,6 +300,13 @@ export interface LeviersMesure {
    * une sortie festive. Conservé pour qu'un audit retrouve la ligne de base.
    */
   sansSandalesDeFeteEnAutomne?: boolean;
+  /**
+   * Reproduit le comportement d'AVANT le 01/10/2026 : la longueur des manches
+   * (Item.manches, migration 0042) n'est pas lue. La veste par temps frais
+   * était forcée pour tout « haut », et aucun haut n'était préféré au
+   * thermomètre. Conservé pour qu'un audit retrouve la ligne de base.
+   */
+  manchesIgnorees?: boolean;
 }
 
 /** Sous cette température, une tenue sans couche de dessus est à compléter d'une veste (R-S14) — le seuil de la suggestion, désormais aussi celui de la veste intégrée. */
@@ -1208,6 +1215,23 @@ export function generateOutfit(
       const nonChemise = hautPool.filter((i) => !["Chemise", "Chemisier"].includes(i.subtype ?? ""));
       if (nonChemise.length) hautPool = nonChemise;
     }
+    // Manches longues par temps frais (01/10/2026, demandé : « ajouter la
+    // notion de manches longues », usage « tenue du jour ») — préférence
+    // molle, jamais exclusive : à SEUIL_SOIREE_FRAICHE ou en dessous, un haut
+    // à manches longues est tiré de préférence quand le pool en compte au
+    // moins un. Ni Sport ni Cocooning (tenues techniques ou d'intérieur), et
+    // jamais quand l'appelant impose une pièce (pinnedId), qui doit rester
+    // tirable. Sans donnée de manches dans le pool, rien ne change.
+    if (
+      !leviers?.manchesIgnorees &&
+      pinnedId == null &&
+      weather.temp <= SEUIL_SOIREE_FRAICHE &&
+      occasion !== "sport" &&
+      occasion !== "cocooning"
+    ) {
+      const longues = hautPool.filter((i) => i.manches === "longues");
+      if (longues.length) hautPool = longues;
+    }
     // Même règle que dans pick() ci-dessus (exemption FALLBACK_HEX comprise).
     const h = rand(harmonize(candidatsCouleur(hautPool, preferredHexes, colo), chosen, true));
     if (h) chosen.push(h);
@@ -1266,7 +1290,11 @@ export function generateOutfit(
     occasion !== "cocooning" &&
     occasion !== "sport" &&
     weather.temp <= SEUIL_SOIREE_FRAICHE &&
-    primaryTop?.cat === "haut";
+    primaryTop?.cat === "haut" &&
+    // Longueur des manches (01/10/2026) : un haut à manches longues ne
+    // l'exige pas — la veste y reste un tirage à part. Inconnue (aucune
+    // donnée), le comportement est celui d'avant : la veste est forcée.
+    (leviers?.manchesIgnorees || primaryTop.manches !== "longues");
   let hasVeste = !!compensatingVeste;
   if (!hasVeste && (forceEntretienVeste || vesteFraicheRequise || Math.random() < vesteProbability(occasion))) {
     const v = pick(["veste"], forceEntretienVeste);

@@ -1,4 +1,5 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
+import { manchesDepuis } from "./manches";
 import { detectAccessoireType, detectBijouType, detectMatiere, detectSacType } from "./attributes";
 import type { CatalogItem } from "./catalog";
 import { FALLBACK_HEX } from "./data";
@@ -86,6 +87,8 @@ export interface VestiaireRow {
   meteo_max_temp: number | null;
   resiste_pluie: boolean | null;
   saison_capsule: string | null;
+  /** Migration 0042 — absente de la ligne tant qu'elle n'est pas exécutée. */
+  manches?: string | null;
   est_basique_capsule: boolean | null;
   name: string | null;
   sous_type: string | null;
@@ -365,6 +368,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     hex,
     season: mapSaisonToSeason(row.saison_capsule),
     capsuleSeasons: parseCapsuleSeasons(row.saison_capsule),
+    manches: manchesDepuis(row.manches),
     worn: null,
     shoeType: cat === "chaussures" ? SHOE_TYPE_MAP[(row.sous_type || "").trim().toLowerCase()] : undefined,
     matiere: mapMatiere(row.matiere),

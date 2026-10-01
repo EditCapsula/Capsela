@@ -1,5 +1,6 @@
 "use client";
 
+import { aDesManches, MANCHES } from "@/lib/manches";
 import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
@@ -556,6 +557,33 @@ export default function AddScreen() {
             })}
           </div>
         </div>
+
+        {/* Les manches (01/10/2026) : seulement pour les pièces qui en ont, jamais
+            obligatoires ni présélectionnées — une longueur inconnue reste
+            inconnue, le moteur la traite alors comme avant. Rappeler le choix
+            actif le retire. */}
+        {aDesManches(state.addCat) && (
+          <div className="mt-7">
+            <TitreSection suggere={false}>Manches</TitreSection>
+            <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Facultatif.</div>
+            <div className="flex gap-2 flex-wrap" role="group" aria-label="Manches">
+              {MANCHES.map(({ valeur, libelle }) => {
+                const on = state.addManches === valeur;
+                return (
+                  <button
+                    key={valeur}
+                    aria-pressed={on}
+                    onClick={() => actions.setAddManches(valeur)}
+                    className={chipCls(on) + " inline-flex items-center gap-[6px]"}
+                  >
+                    {libelle}
+                    {on && <span aria-hidden="true">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 8. Les occasions : la suggestion d'abord, la liste complète à la
             demande. Jamais obligatoires. */}
