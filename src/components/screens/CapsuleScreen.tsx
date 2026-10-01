@@ -105,6 +105,22 @@ const VISUEL_SAISON: Record<CapsuleSeason, string> = {
 };
 
 /**
+ * Visuels des quatre saisons pour un profil Homme (fournis le 01/10/2026, même
+ * esprit : natures mortes sans texte ni personne). Planche 2 × 2 découpée en
+ * quatre WebP de 768 × 512 — ratio 3:2 des visuels Femme, découpe à la frontière
+ * des quadrants, aucun recadrage — qualité 82, 55 à 81 Ko chacun. Pas agrandis à
+ * 1200 px : un agrandissement n'ajoute aucun détail. Même composant, même cadre ;
+ * seul le fichier change. Si l'un manque, le visuel Femme de la même saison
+ * prend le relais (onError ci-dessous) : jamais d'image cassée.
+ */
+const VISUEL_SAISON_HOMME: Record<CapsuleSeason, string> = {
+  Printemps: "/images/saisons/homme-printemps.webp",
+  Été: "/images/saisons/homme-ete.webp",
+  Automne: "/images/saisons/homme-automne.webp",
+  Hiver: "/images/saisons/homme-hiver.webp",
+};
+
+/**
  * Catégories ouvertes à l'arrivée (polish V2, 26/09/2026) : les deux
  * premières — les hauts et la maille, dans l'ordre de CATS. Les suivantes
  * sont repliées en une ligne (nom, nombre de pièces) : toutes restent
@@ -549,11 +565,16 @@ export default function CapsuleScreen() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             key={capsuleSeason}
-            src={VISUEL_SAISON[capsuleSeason]}
+            src={profile.gender === "homme" ? VISUEL_SAISON_HOMME[capsuleSeason] : VISUEL_SAISON[capsuleSeason]}
             alt=""
-            width={1200}
-            height={800}
+            width={profile.gender === "homme" ? 768 : 1200}
+            height={profile.gender === "homme" ? 512 : 800}
             decoding="async"
+            onError={(e) => {
+              // Visuel Homme absent : le visuel générique de la saison, une seule fois.
+              const repli = VISUEL_SAISON[capsuleSeason];
+              if (!e.currentTarget.src.endsWith(repli)) e.currentTarget.src = repli;
+            }}
             className="w-full h-full object-cover block"
           />
         </div>
