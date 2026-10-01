@@ -294,6 +294,12 @@ export interface LeviersMesure {
    * ne reste que là où le pool n'a aucune veste de saison à offrir.
    */
   vesteFraicheFacultative?: boolean;
+  /**
+   * Reproduit le comportement d'AVANT le 01/10/2026 : en automne, les
+   * sandales à talons n'étaient jamais de saison, même pour une cérémonie ou
+   * une sortie festive. Conservé pour qu'un audit retrouve la ligne de base.
+   */
+  sansSandalesDeFeteEnAutomne?: boolean;
 }
 
 /** Sous cette température, une tenue sans couche de dessus est à compléter d'une veste (R-S14) — le seuil de la suggestion, désormais aussi celui de la veste intégrée. */
@@ -706,7 +712,19 @@ export function generateOutfit(
   // Quatre saisons d'une pièce croisées avec celles du jour quand elle les
   // porte (27/09/2026, estDeSaison) ; sinon la règle d'origine, à l'identique.
   const contexteSaison = capsuleSeason ? contexteCapsule(capsuleSeason) : weather;
-  const seasonPool = pool.filter((i) => estDeSaison(i, contexteSaison));
+  // Sandales à talons de fête en automne (01/10/2026, demandé : « pour une
+  // cérémonie ou une soirée festive tu peux proposer des sandales à talons
+  // même en automne »). Exemption de SAISON pour cette seule chaussure et ces
+  // deux seules occasions ; la température (meteo_min_temp), la pluie (R-B21)
+  // et le reste de la tenue restent soumis aux règles habituelles.
+  const automne = Boolean(contexteSaison.saisons?.includes("Automne"));
+  const sandaleDeFete = (i: Item): boolean =>
+    !leviers?.sansSandalesDeFeteEnAutomne &&
+    automne &&
+    (occasion === "festive" || occasion === "evenement_perso") &&
+    i.cat === "chaussures" &&
+    i.shoeType === "Sandales à talons";
+  const seasonPool = pool.filter((i) => estDeSaison(i, contexteSaison) || sandaleDeFete(i));
   const seasonBase = seasonPool.length >= 4 ? seasonPool : pool;
 
   // R-S15 — l'anti-répétition n'exclut plus jamais une pièce du pool en
