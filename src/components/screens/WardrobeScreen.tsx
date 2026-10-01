@@ -14,6 +14,7 @@ import {
   categoriesManquantes,
   choisirADecouvrir,
   groupesDuVestiaire,
+  enteteDressing,
   syntheseDressing,
 } from "@/lib/dressingEcran";
 import { generateOutfitWithFallback } from "@/lib/logic";
@@ -192,6 +193,7 @@ export default function WardrobeScreen() {
   const neverWorn = useMemo(() => neverWornItems(items), [items]);
   const groupes = useMemo(() => groupesDuVestiaire(items, profile.gender), [items, profile.gender]);
   const synthese = syntheseDressing(etatPremium, items.length, groupes.length);
+  const resume = enteteDressing(etatPremium, items.length, groupes.length);
   const libellesLongs = groupes.some((g) => g.libelle.length > 21);
 
   /**
@@ -260,8 +262,12 @@ export default function WardrobeScreen() {
       <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
         Ton vestiaire, <span className="italic text-terracotta">à ton image</span>
       </div>
-      <div className="flex items-baseline justify-between gap-[10px] mt-[14px]">
-        <div className="text-[12px] text-muted">{dressingLoaded ? synthese.texte : " "}</div>
+      {/* Le total, comme la Capsule : une ligne en serif, puis le détail en petit. */}
+      {dressingLoaded && items.length > 0 && (
+        <div className="font-serif text-[17px] text-ink leading-[1.3] mt-[10px]">{resume.titre}</div>
+      )}
+      <div className="flex items-baseline justify-between gap-[10px] mt-[2px]">
+        <div className="text-[12px] text-muted">{!dressingLoaded ? " " : items.length > 0 ? resume.detail : synthese.texte}</div>
         {/* Un lien, plus un bouton plein : le brief demande des CTA moins
             présents. Retiré au dressing complet — il ouvrirait un formulaire
             qui ne peut plus enregistrer ; le bloc Premium ci-dessous le

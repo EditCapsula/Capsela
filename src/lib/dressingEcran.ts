@@ -116,6 +116,21 @@ export function syntheseDressing(
   return { texte: nbPieces === 0 ? compte : `${compte} · ${categories(nbCategories)}`, complet };
 }
 
+/**
+ * L'en-tête du Dressing, en deux lignes (01/10/2026, signalé : « le nombre total
+ * de pièces est manquant contrairement à la capsule » — il était là, en petit
+ * gris). Ligne forte, comme « 39 pièces sélectionnées pour toi » de la Capsule :
+ * « 7 pièces dans ton dressing ». Ligne de détail : les catégories, et — en
+ * gratuit vérifié seulement, comme `syntheseDressing` — les places restantes
+ * avant la limite. Premium ou droit inconnu : aucune limite annoncée.
+ */
+export function enteteDressing(etat: EtatPremium, nbPieces: number, nbCategories: number): { titre: string; detail: string } {
+  const restantes = etat === "gratuit" ? Math.max(0, LIMITE_DRESSING_GRATUIT - nbPieces) : null;
+  const parts = [categories(nbCategories)];
+  if (restantes !== null) parts.push(restantes === 0 ? "dressing complet" : `${restantes} ${restantes === 1 ? "place restante" : "places restantes"}`);
+  return { titre: `${pieces(nbPieces)} dans ton dressing`, detail: parts.join(" · ") };
+}
+
 // ── À DÉCOUVRIR ────────────────────────────────────────────────────────
 
 const cle = (ids: number[]) => [...ids].sort((a, b) => a - b).join(",");

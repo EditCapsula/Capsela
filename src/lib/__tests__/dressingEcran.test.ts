@@ -10,6 +10,7 @@ import {
   categoriesManquantes,
   choisirADecouvrir,
   groupesDuVestiaire,
+  enteteDressing,
   syntheseDressing,
 } from "../dressingEcran";
 import type { CategoryKey, Item } from "../types";
@@ -152,5 +153,18 @@ describe("assezDuDressing — une association complétée par la capsule reste �
   });
   it("accepte une tenue entièrement du dressing", () => {
     expect(assezDuDressing([1, 2, 3], dressing)).toBe(true);
+  });
+});
+
+describe("enteteDressing — le total en ligne forte, comme la Capsule", () => {
+  it("gratuit : le total, les catégories et les places restantes", () => {
+    expect(enteteDressing("gratuit", 7, 3)).toEqual({ titre: "7 pièces dans ton dressing", detail: "3 catégories · 13 places restantes" });
+    expect(enteteDressing("gratuit", 19, 5).detail).toBe("5 catégories · 1 place restante");
+    expect(enteteDressing("gratuit", 20, 5).detail).toBe("5 catégories · dressing complet");
+    expect(enteteDressing("gratuit", 23, 6).detail).toBe("6 catégories · dressing complet");
+  });
+  it("Premium ou droit non vérifié : aucune limite annoncée", () => {
+    expect(enteteDressing("premium", 7, 3)).toEqual({ titre: "7 pièces dans ton dressing", detail: "3 catégories" });
+    expect(enteteDressing("inconnu", 1, 1)).toEqual({ titre: "1 pièce dans ton dressing", detail: "1 catégorie" });
   });
 });
