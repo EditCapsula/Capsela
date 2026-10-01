@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AGE_MINIMUM, ageEn, messageAge, verifierAge } from "../ageMinimum";
+import { AGE_MINIMUM, ageEn, doitDemanderNaissance, messageAge, verifierAge } from "../ageMinimum";
 
 const AUJOURDHUI = new Date("2026-10-01T10:00:00Z");
 
@@ -34,5 +34,22 @@ describe("verifierAge", () => {
     expect(messageAge("trop_jeune")).toContain("15 ans");
     expect(messageAge("manquante")).toContain("date de naissance");
     expect(messageAge("invalide")).toContain("pas valide");
+  });
+});
+
+describe("doitDemanderNaissance — après la connexion Google", () => {
+  const base = { signedIn: true, profileLoaded: true, birthdate: null, completed: false };
+  it("un compte connecté, sans date et au profil inachevé : on la demande", () => {
+    expect(doitDemanderNaissance(base)).toBe(true);
+  });
+  it("jamais avant que le profil soit chargé — il vaut alors EMPTY_PROFILE", () => {
+    expect(doitDemanderNaissance({ ...base, profileLoaded: false })).toBe(false);
+  });
+  it("jamais hors connexion", () => {
+    expect(doitDemanderNaissance({ ...base, signedIn: false })).toBe(false);
+  });
+  it("jamais à un compte qui a déjà une date, ou dont le profil est terminé", () => {
+    expect(doitDemanderNaissance({ ...base, birthdate: "1990-01-01" })).toBe(false);
+    expect(doitDemanderNaissance({ ...base, completed: true })).toBe(false);
   });
 });

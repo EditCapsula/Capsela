@@ -69,11 +69,13 @@ Relevés en écrivant, par ordre d'importance. État au 01/10/2026.
    `select count(*) from vestiaire_universel where lien_affiliation is not
    null;`. Si des liens existent et restent, ils doivent être signalés comme
    liens commerciaux. Non traité.
-4. **Inscription** : **traité pour l'e-mail.** Date de naissance obligatoire,
-   inscription refusée sous 15 ans (`ageMinimum.ts`), et « Conditions » et
-   « Politique de confidentialité » sont des liens vers les pages publiques
-   `/legal/cgu` et `/legal/confidentialite`. **Reste :** « Continuer avec
-   Google » ne demande pas la date de naissance ; l'âge n'y est pas contrôlé.
+4. **Inscription** : **traité.** Date de naissance obligatoire, inscription
+   refusée sous 15 ans (`ageMinimum.ts`), et « Conditions » et « Politique de
+   confidentialité » sont des liens vers les pages publiques `/legal/cgu` et
+   `/legal/confidentialite`. « Continuer avec Google » demande la date juste
+   après la connexion (`DateNaissanceScreen`) à tout compte connecté sans date
+   dont le profil n'est pas terminé ; sous 15 ans, le compte qui vient d'être
+   créé est supprimé. Le contrôle est déclaratif : il ne prouve pas l'âge.
 5. **Géolocalisation activée d'office** (`geoConsent: true`) : non traité.
    Le navigateur demande l'autorisation, ce qui recueille le consentement ;
    un réglage désactivé au départ serait plus prudent. À arbitrer.

@@ -29,9 +29,9 @@ Contact pour toute question sur tes données : [À COMPLÉTER — adresse e-mail
 
 - ton prénom, ton adresse e-mail et ton mot de passe (conservé sous forme
   chiffrée, jamais lisible, y compris par nous) ;
-- ta date de naissance, demandée quand tu crées ton compte par e-mail, pour
-  vérifier l'âge minimum (15 ans) ; avec Google, elle n'est pas demandée à
-  l'inscription ;
+- ta date de naissance, demandée quand tu crées ton compte (par e-mail, ou
+  juste après la connexion avec Google), pour vérifier l'âge minimum (15 ans) ;
+  sous cet âge, le compte est supprimé aussitôt ;
 - si tu te connectes avec Google : ton nom tel que Google nous le transmet et
   ton adresse e-mail.
 

@@ -32,6 +32,12 @@ export interface AuthContextValue {
    * flag (cf. AuthScreen.submitEmail).
    */
   justSignedUp: boolean;
+  /**
+   * Le profil du compte connecté est chargé (01/10/2026). Tant qu'il ne l'est
+   * pas, `profile` vaut EMPTY_PROFILE : on n'en tire aucune conclusion (« pas de
+   * date de naissance », « profil incomplet »). Toujours vrai en mode démo.
+   */
+  profileLoaded: boolean;
   /** Mode démo : pas de credentials Supabase configurés. */
   demoMode: boolean;
   email: string | null;
@@ -132,6 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
   const [error, setError] = useState<string | null>(null);
   const [justSignedUp, setJustSignedUp] = useState(false);
+  const [profilChargeReel, setProfilChargeReel] = useState(false);
   const [recuperation, setRecuperation] = useState<AuthContextValue["recuperation"]>("aucune");
 
   const loadProfile = useCallback(async (authUser: User) => {
@@ -157,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       displayName: loaded.displayName || meta?.display_name || metaFirstName || "",
       birthdate: loaded.birthdate || meta?.birthdate || null,
     });
+    setProfilChargeReel(true);
   }, []);
 
   useEffect(() => {
@@ -203,6 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setJustSignedUp(consumeSignupIntent());
       } else {
         setProfile(EMPTY_PROFILE);
+        setProfilChargeReel(false);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -388,6 +397,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ready,
     signedIn: Boolean(user || demoUser),
     justSignedUp,
+    profileLoaded: !isSupabaseConfigured || profilChargeReel,
     demoMode: !isSupabaseConfigured,
     email: user?.email ?? demoUser?.email ?? null,
     userId: user?.id ?? null,

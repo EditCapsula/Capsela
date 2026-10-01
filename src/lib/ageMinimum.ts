@@ -39,3 +39,15 @@ export function messageAge(raison: RaisonAge): string {
   if (raison === "invalide") return "Cette date de naissance n'est pas valide.";
   return `Il faut avoir au moins ${AGE_MINIMUM} ans pour créer un compte.`;
 }
+
+/**
+ * Faut-il demander la date de naissance ? (01/10/2026) Le compte créé avec
+ * Google n'en reçoit aucune : elle est demandée juste après la connexion, avant
+ * le questionnaire. La règle ne vise que les comptes SANS date ET dont le
+ * profil n'est pas terminé — un compte déjà installé n'est jamais renvoyé vers
+ * un écran bloquant (règle du 17/08/2026) — et seulement une fois le profil
+ * chargé : avant, il vaut EMPTY_PROFILE et tout compte semblerait sans date.
+ */
+export function doitDemanderNaissance(e: { signedIn: boolean; profileLoaded: boolean; birthdate: string | null; completed: boolean }): boolean {
+  return e.signedIn && e.profileLoaded && !e.birthdate && !e.completed;
+}
