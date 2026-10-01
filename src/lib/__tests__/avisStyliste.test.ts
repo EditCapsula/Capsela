@@ -530,3 +530,22 @@ describe("traiterDemandeAvis — reconnaissance", () => {
     expect(r.corps).toMatchObject({ ok: true, portees: [], reconnaissance: [] });
   });
 });
+
+describe("avis du styliste — la colorimétrie, quand elle existe", () => {
+  it("le contexte la donne au modèle avec des couleurs « à doser » jamais interdites", () => {
+    const t = formulerContexte({ colorimetrie: { saison: "Automne chaleureux", signature: ["Terracotta", "Camel"], neutres: ["Crème"], loinDuVisage: ["Noir"] } });
+    expect(t).toContain("Sa colorimétrie : Automne chaleureux.");
+    expect(t).toContain("Couleurs signature : Terracotta, Camel.");
+    expect(t).toContain("Neutres : Crème.");
+    expect(t).toContain("Couleurs à doser selon ses envies (jamais interdites) : Noir.");
+  });
+  it("sans colorimétrie, le contexte n'en dit rien", () => {
+    expect(formulerContexte({ style: ["Casual chic"] })).not.toContain("colorimétrie");
+  });
+  it("les instructions disent comment s'en servir : un repère, jamais un jugement sur le teint", () => {
+    expect(INSTRUCTIONS).toContain("ses couleurs signature et ses neutres");
+    expect(INSTRUCTIONS).toContain("jamais interdites");
+    expect(INSTRUCTIONS).toContain("repère, pas une règle");
+    expect(INSTRUCTIONS).toContain("Sans colorimétrie dans le contexte, n'en invente aucune");
+  });
+});
