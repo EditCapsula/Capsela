@@ -79,6 +79,27 @@ const FAMILLES_CLES: CategoryKey[][] = [
 ];
 
 /**
+ * Une pièce est-elle PROPRE à la saison de la capsule — et pas seulement
+ * compatible avec elle ? (01/10/2026, demandé : « les pièces clés doivent être
+ * cohérentes avec la saison »). Un t-shirt « toutes saisons » est de saison
+ * partout, donc en hiver aussi, et c'est ce qui le faisait sortir parmi les
+ * trois pièces clés d'une capsule d'hiver.
+ *
+ * Trois lectures, de la plus précise à la moins : les saisons cochées d'une
+ * pièce réelle (sans les quatre) ; la saison déclarée d'une pièce du catalogue,
+ * quand ce n'est pas « Toutes saisons » ; ses saisons de capsule
+ * (saison_capsule), quand elles n'en couvrent pas quatre. Aucune lecture d'un
+ * nom : une pièce sans aucune de ces données est neutre, ni propre ni
+ * contraire à la saison.
+ */
+export function proprePourSaison(it: Item, saison: CapsuleSeason): boolean {
+  const ctx = contexteCapsule(saison);
+  if (it.saisons?.length) return it.saisons.length < 4 && it.saisons.includes(saison);
+  if (it.season !== "Toutes saisons") return estDeSaison(it, ctx);
+  return Boolean(it.capsuleSeasons?.length && it.capsuleSeasons.length < 4 && it.capsuleSeasons.includes(saison));
+}
+
+/**
  * Jusqu'à 3 pièces clés, choisies PARMI les suggestions de la capsule.
  *
  * Il n'existait aucun mécanisme de « pièce clé » : règle simple et
@@ -87,12 +108,27 @@ const FAMILLES_CLES: CategoryKey[][] = [
  * que la sélection privilégie déjà), sinon la première de la famille dans
  * l'ordre de la capsule. La 4ᵉ famille ne sert que si l'une des trois
  * premières est vide.
+ *
+ * `saison` (01/10/2026) : la capsule affichée. Dans chaque famille, les
+ * pièces propres à cette saison (proprePourSaison) passent avant les autres ;
+ * et en Automne ou Hiver, la famille « maille ou haut » ne retient que des
+ * pulls — un haut léger, même « toutes saisons », ne donne pas le ton d'une
+ * capsule d'hiver, SAUF un haut dont les manches sont renseignées « longues »
+ * (Item.manches, migration 0042) ; une famille sans pull ni haut à manches
+ * longues laisse sa place à la suivante (ARBITRAGE ÉDITORIAL). Omise, la
+ * règle d'origine.
  */
-export function piecesCles(capsule: Item[], max = 3): Item[] {
+export function piecesCles(capsule: Item[], max = 3, saison?: CapsuleSeason): Item[] {
   const retenues: Item[] = [];
+  const froid = saison === "Automne" || saison === "Hiver";
   for (const famille of FAMILLES_CLES) {
     if (retenues.length >= max) break;
-    const candidates = capsule.filter((it) => famille.includes(it.cat));
+    let candidates = capsule.filter((it) => famille.includes(it.cat));
+    if (saison) {
+      if (froid && famille.includes("haut")) candidates = candidates.filter((it) => it.cat === "pull" || it.manches === "longues");
+      const propres = candidates.filter((it) => proprePourSaison(it, saison));
+      if (propres.length) candidates = propres;
+    }
     const choix = candidates.find((it) => it.estBasiqueCapsule) ?? candidates[0];
     if (choix) retenues.push(choix);
   }

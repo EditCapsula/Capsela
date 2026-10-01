@@ -1,5 +1,6 @@
 import { accessoireTypeFor } from "./attributes";
 import { type Verdict, clePieces, jourLocal } from "./outfitFeedback";
+import { manchesDepuis } from "./manches";
 import { ordonnerSaisons } from "./saisons";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type {
@@ -11,6 +12,7 @@ import type {
   Coupe,
   HistoryEntry,
   Item,
+  Manches,
   Matiere,
   OccasionKey,
   PhotoAnalysis,
@@ -56,6 +58,8 @@ interface DressingItemRow {
   revente?: string | null;
   /** Migration 0040 — absente de la ligne tant qu'elle n'est pas exécutée. */
   saisons?: string[] | null;
+  /** Migration 0042 — absente de la ligne tant qu'elle n'est pas exécutée. */
+  manches?: string | null;
 }
 
 function rowToItem(row: DressingItemRow): Item {
@@ -69,6 +73,7 @@ function rowToItem(row: DressingItemRow): Item {
     size: row.size,
     season: row.season as Season,
     saisons: row.saisons?.length ? ordonnerSaisons(row.saisons) : undefined,
+    manches: manchesDepuis(row.manches),
     occasion: (row.occasion as OccasionKey[] | null) ?? undefined,
     shoeType: (row.shoe_type as ShoeType | null) ?? undefined,
     matiere: (row.matiere as Matiere | null) ?? undefined,
@@ -396,6 +401,17 @@ export async function updateDressingItemRevente(id: number, revente: ChoixRevent
  */
 export async function updateDressingItemSaisons(id: number, saisons: CapsuleSeason[]): Promise<void> {
   const { error } = await getSupabase().from("dressing_items").update({ saisons }).eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Enregistre la longueur des manches d'une pièce (migration 0042). Même règle
+ * que `saisons` et `revente`, pour la même raison : HORS de itemToRow. Tant que
+ * la colonne n'existe pas, seule cette écriture échoue — et l'appelant ne
+ * l'émet que lorsque la valeur change.
+ */
+export async function updateDressingItemManches(id: number, manches: Manches | null): Promise<void> {
+  const { error } = await getSupabase().from("dressing_items").update({ manches }).eq("id", id);
   if (error) throw error;
 }
 

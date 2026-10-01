@@ -1385,33 +1385,6 @@ export default function TenuesScreen() {
               </button>
             );
           })}
-          {/* « Peu importe » n'est pas un ajout de taxonomie : "all" est la
-              valeur initiale du store, et l'ancien sélecteur permettait d'y
-              revenir en recliquant l'occasion active. La feuille n'ayant pas
-              ce geste, l'entrée rend ce retour possible plutôt que de le
-              supprimer en silence. */}
-          <button
-            onClick={() => {
-              actions.setOccasion("all");
-              setFeuille(null);
-            }}
-            aria-pressed={state.occasion === "all"}
-            className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-t border-[#EFE7DA]"
-            style={{ minHeight: 52 }}
-          >
-            {/* Place du glyphe RÉSERVÉE, pas remplie : "all" est l'absence
-                d'occasion, lui dessiner une icône inventerait un contexte.
-                Mais sans cette cale, cette seule ligne se décalait de 19 px
-                vers la gauche et cassait la colonne des dix autres. */}
-            <span aria-hidden="true" className="flex-shrink-0" style={{ width: 19 }} />
-            <div className="flex-1 min-w-0">
-              <div className={"text-[13px] " + (state.occasion === "all" ? "text-terracotta" : "text-ink")}>Peu importe</div>
-              <div className="text-[11px] text-muted mt-[2px]">Sans occasion particulière</div>
-            </div>
-            <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (state.occasion === "all" ? "text-terracotta" : "text-transparent")}>
-              ✓
-            </span>
-          </button>
         </div>
       </BottomSheet>
 

@@ -126,6 +126,8 @@ export interface Item {
   season: Season;
   /** Les quatre saisons choisies par l'utilisatrice (27/09/2026, colonne `saisons`, migration 0040). Absent pour une pièce enregistrée avant, ou tant que la migration n'est pas exécutée : saisonsDe (saisons.ts) retombe alors sur `season`. Le moteur ne lit que `season`, qui en est déduite. */
   saisons?: CapsuleSeason[];
+  /** Longueur des manches (01/10/2026, colonne `manches`, migration 0042). Absent = inconnue : le moteur se comporte alors comme avant. Jamais déduite d'un nom. */
+  manches?: Manches;
   /** Days since last worn. null = never worn. 0 = worn today. */
   worn: number | null;
   /** Value of `worn` before the most recent "worn today" action, for Corriger/undo. */
@@ -200,6 +202,8 @@ export interface Item {
   /** Choix de l'utilisatrice face à une suggestion de revente du Journal (refonte 25/09/2026, colonne revente de dressing_items, migration 0035) — "gardee" : elle la garde, on ne la lui repropose plus ; "de_cote" : mise de côté pour vendre, la pièce reste dans son dressing. Absent = aucun choix. Jamais posé par l'app sans action explicite. */
   revente?: ChoixRevente;
 }
+
+export type Manches = "sans" | "courtes" | "longues";
 
 export type ChoixRevente = "gardee" | "de_cote";
 
@@ -351,6 +355,8 @@ export interface AppState {
   addPhotoAnalysee: boolean;
   /** null tant que l'utilisatrice n'a rien touché — la sauvegarde retient alors saisonsParDefaut (saisons.ts), affichées présélectionnées. Quatre saisons au choix depuis le 27/09/2026, jamais bloquantes. */
   addSaisons: CapsuleSeason[] | null;
+  /** Longueur des manches choisie dans le formulaire (01/10/2026) ; null tant qu'elle n'est pas renseignée. */
+  addManches: Manches | null;
   /** Plusieurs choix possibles. */
   addOccasion: OccasionKey[];
   /** true dès que l'utilisatrice modifie la sélection elle-même (recette 24/08/2026) — au-delà, ni suggestOccasions(cat) ni une nouvelle catégorie ne remplacent plus la sélection. */
