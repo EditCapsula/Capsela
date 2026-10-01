@@ -17,6 +17,9 @@
 -- colonnes qu'une migration plus récente retire (palette_base, palette_neutres,
 -- palette_accents, retirées par 0018).
 --
+-- 0002 n'est pas testée : la table `pieces` est un schéma obsolète jamais branché
+-- au code (cf. l'en-tête de 0021) ; son absence en base est sans effet.
+--
 -- Vérifié en rejouant 0001 à 0042 dans l'ordre sur un PostgreSQL 16 neuf (avec de
 -- simples bouchons pour auth et storage) : toutes les lignes sortent « complète ».
 -- Ce rejeu a révélé que 0033 échouait à cause d'un type de retour de fonction
@@ -36,11 +39,6 @@ with attendu(migration, type, objet, parent) as (
     ('0001', 'politique', 'Users can read own profile', ''),
     ('0001', 'politique', 'Users can update own profile', ''),
     ('0001', 'table', 'profiles', ''),
-    ('0002', 'politique', 'Users can delete own pieces', ''),
-    ('0002', 'politique', 'Users can insert own pieces', ''),
-    ('0002', 'politique', 'Users can read own pieces', ''),
-    ('0002', 'politique', 'Users can update own pieces', ''),
-    ('0002', 'table', 'pieces', ''),
     ('0003', 'colonne', 'couleur_dominante', 'vestiaire_universel'),
     ('0003', 'colonne', 'genre', 'vestiaire_universel'),
     ('0003', 'colonne', 'hex', 'vestiaire_universel'),

@@ -28,7 +28,9 @@ fait de ton côté, avec la commande ou le réglage indiqué.
    mais la limite quotidienne de tenues peut mal se lire — à contrôler.
 3. **0041 (bucket privé)** : le code qui signe les URL des photos est en
    production depuis la PR 77. Ordre respecté si 0041 est passée après.
-4. **0042 (manches)** : à exécuter ; le champ « Manches » fonctionne sans, mais
+4. **0002 (table `pieces`)** : schéma obsolète, jamais branché au code (cf. 0021) ;
+   son absence en base est sans effet, le script ne la teste plus.
+5. **0042 (manches)** : à exécuter ; le champ « Manches » fonctionne sans, mais
    l'enregistrement d'une longueur échoue à l'écran tant qu'elle manque.
 
 ## 9. Fonctions Edge
