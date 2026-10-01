@@ -7,8 +7,9 @@ import CarteLook, { MosaiquePieces, ONGLETS_LOOKS, VisuelPiece } from "@/compone
 import LoadingSpinner from "@/components/LoadingSpinner";
 import SegmentedControl from "@/components/SegmentedControl";
 import { useAuth } from "@/lib/auth";
-import { OCC_LABELS } from "@/lib/data";
+import { CATS, OCC_LABELS } from "@/lib/data";
 import {
+  assezDuDressing,
   associationsNouvelles,
   categoriesManquantes,
   choisirADecouvrir,
@@ -19,7 +20,7 @@ import { generateOutfitWithFallback } from "@/lib/logic";
 import { filtrerLooks, type FiltreLooks } from "@/lib/looksFiltre";
 import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
-import { inactivityInfo, isWishlistLook, lookWornCount, neverWornItems } from "@/lib/selectors";
+import { composeWardrobePool, inactivityInfo, isWishlistLook, lookWornCount, neverWornItems } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import type { Item, OccasionKey } from "@/lib/types";
 
@@ -200,12 +201,39 @@ export default function WardrobeScreen() {
   const libellesLongs = groupes.some((g) => g.libelle.length > 21);
 
   /**
+   * Une tenue du moteur pour une occasion. Dressing rempli (01/10/2026,
+   * demandé : « si une tenue n'est pas complètement complète avec les éléments
+   * du dressing, on ajoute des suggestions de la capsule ») : le pool est celui
+   * de la tenue du jour — `composeWardrobePool`, les pièces réelles d'abord, la
+   * capsule seulement là où une catégorie n'a aucune pièce réelle utilisable
+   * pour l'occasion et la saison. Elle doit garder au moins
+   * MIN_PIECES_DRESSING_ASSOCIATION pièces du dressing, sinon elle n'est pas
+   * « avec tes pièces ». Dressing vide : la capsule, comme avant. Le moteur
+   * n'est pas modifié, seulement appelé avec les mêmes arguments.
+   */
+  const composerTenue = (occasion: OccasionKey) => {
+    const vide = items.length === 0;
+    const pool = vide
+      ? defaultCapsule
+      : composeWardrobePool(items, defaultCapsule, CATS.map(([k]) => k), { completerPourOccasion: occasion, saison: weather, exclureHorsOccasion: true });
+    if (pool.length === 0) return null;
+    const r = generateOutfitWithFallback(pool, weather, occasion, state.workMode, state.dateContext, paletteHexes(profile), profile.gender, undefined, undefined, colorimetrieMoteur(profile.colorimetrie));
+    const pieces = r.ids.map((id) => pool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
+    if (pieces.length === 0) return null;
+    if (!vide && !assezDuDressing(pieces.map((p) => p.id), items)) return null;
+    return { occasion, ids: pieces.map((p) => p.id), pieces };
+  };
+
+  /**
    * Tenues composées par le moteur, TIRÉES UNE SEULE FOIS par mémo :
    * `generateOutfitWithFallback` tire au hasard à chaque appel, et des
    * vignettes qui changeraient au moindre re-rendu se liraient comme un bug.
    *
-   * Dressing rempli : le pool est `items` SEUL — « avec tes pièces » doit
-   * être vrai, aucune suggestion du catalogue ne s'y glisse. Seules les
+   * Dressing rempli : voir composerTenue — les pièces du dressing d'abord,
+   * complétées par la capsule là où il manque une catégorie (01/10/2026) ;
+   * « avec tes pièces » reste vrai parce qu'au moins
+   * MIN_PIECES_DRESSING_ASSOCIATION pièces sont les siennes, et la carte dit
+   * combien de suggestions s'y ajoutent. Seules les
    * associations NOUVELLES sont gardées (ni un look enregistré, ni une tenue
    * déjà portée). Dressing vide : la capsule par défaut, comme avant (idées
    * d'inspiration). Le moteur n'est pas modifié, seulement appelé, avec les
@@ -213,38 +241,31 @@ export default function WardrobeScreen() {
    */
   const tenuesMoteur = useMemo(() => {
     const vide = items.length === 0;
-    const pool = vide ? defaultCapsule : items;
-    if (pool.length === 0) return [];
+    if (vide && defaultCapsule.length === 0) return [];
     const tenues = (vide ? OCCASIONS_INSPIRATION : OCCASIONS_ASSOCIATIONS)
-      .map((occasion) => {
-        const r = generateOutfitWithFallback(pool, weather, occasion, state.workMode, state.dateContext, paletteHexes(profile), profile.gender, undefined, undefined, colorimetrieMoteur(profile.colorimetrie));
-        const pieces = r.ids.map((id) => pool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
-        return { occasion, ids: pieces.map((p) => p.id), pieces };
-      })
-      .filter((t) => t.pieces.length > 0);
+      .map((occasion) => composerTenue(occasion))
+      .filter((t): t is NonNullable<typeof t> => t !== null);
     if (vide) return tenues;
     return associationsNouvelles(tenues, [...state.savedLooks.map((l) => l.pieceIds), ...state.history.map((h) => h.pieceIds)]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, defaultCapsule, weather, state.workMode, state.dateContext, profile, state.savedLooks, state.history]);
 
   /**
    * D'autres tenues du même moteur, pour la section secondaire de « À
-   * découvrir » : pool = le dressing seul, jamais la capsule, seulement des
-   * associations nouvelles et distinctes des trois principales. Dressing vide :
+   * découvrir » : même composition que les trois principales (composerTenue),
+   * seulement des associations nouvelles et distinctes d'elles. Dressing vide :
    * aucune (le bloc ne s'affiche pas).
    */
   const autresIdees = useMemo(() => {
     if (items.length === 0) return [];
-    const tenues = OCCASIONS_AUTRES_IDEES.map((occasion) => {
-      const r = generateOutfitWithFallback(items, weather, occasion, state.workMode, state.dateContext, paletteHexes(profile), profile.gender, undefined, undefined, colorimetrieMoteur(profile.colorimetrie));
-      const pieces = r.ids.map((id) => items.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
-      return { occasion, ids: pieces.map((p) => p.id), pieces };
-    }).filter((t) => t.pieces.length > 0);
+    const tenues = OCCASIONS_AUTRES_IDEES.map((occasion) => composerTenue(occasion)).filter((t): t is NonNullable<typeof t> => t !== null);
     return associationsNouvelles(tenues, [
       ...tenuesMoteur.map((t) => t.ids),
       ...state.savedLooks.map((l) => l.pieceIds),
       ...state.history.map((h) => h.pieceIds),
     ]);
-  }, [items, weather, state.workMode, state.dateContext, profile, state.savedLooks, state.history, tenuesMoteur]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, defaultCapsule, weather, state.workMode, state.dateContext, profile, state.savedLooks, state.history, tenuesMoteur]);
 
   const aDecouvrir = choisirADecouvrir({
     etat: etatPremium,
@@ -544,7 +565,7 @@ export default function WardrobeScreen() {
                 Capsela a trouvé {aDecouvrir.nombre === 1 ? "une nouvelle association" : `${aDecouvrir.nombre} nouvelles associations`} avec
                 tes pièces.
               </div>
-              <AssociationsDressing tenues={tenuesMoteur} autres={autresIdees} onOuvrir={ouvrirTenue} onVoirToutes={actions.goTenues} />
+              <AssociationsDressing tenues={tenuesMoteur} autres={autresIdees} dressing={items} onOuvrir={ouvrirTenue} onVoirToutes={actions.goTenues} />
             </>
           )}
           {aDecouvrir.cas === "proche_limite" && (

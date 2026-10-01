@@ -3,6 +3,7 @@
 import { VisuelPiece } from "@/components/CarteLook";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { OCC_LABELS } from "@/lib/data";
+import { provenanceLook } from "@/lib/ideesLooks";
 import { titreEditorialOccasion } from "@/lib/logic";
 import type { Item, OccasionKey } from "@/lib/types";
 
@@ -16,9 +17,10 @@ import type { Item, OccasionKey } from "@/lib/types";
  * moteur donne déjà à cette occasion (titreEditorialOccasion), et son propre
  * « Voir le look → ». Aucun numéro : la carte se reconnaît à son contenu.
  *
- * Carrousel horizontal avec accroche : la carte suivante dépasse, ce qui dit
- * qu'on peut défiler, sans qu'aucune carte ne soit réduite à une vignette. Une
- * seule carte : elle prend la largeur.
+ * Trois cartes côte à côte, comme la maquette fournie le 01/10/2026 (une première
+ * version en carrousel a été écartée) : planche, occasion en serif, phrase
+ * éditoriale en retrait, bouton « Voir le look → » plein. Moins de trois
+ * tenues : les cartes se partagent la largeur.
  *
  * « Autres idées avec tes pièces » reste en retrait : de petites mosaïques, un
  * libellé muet, un lien. Rien ici ne choisit une pièce ni une occasion — les
@@ -30,7 +32,8 @@ export interface TenueIdee {
   pieces: Item[];
 }
 
-function CarteLookIdee({ tenue, seule, onOuvrir }: { tenue: TenueIdee; seule: boolean; onOuvrir: (t: TenueIdee) => void }) {
+function CarteLookIdee({ tenue, dressing, onOuvrir }: { tenue: TenueIdee; dressing: Item[]; onOuvrir: (t: TenueIdee) => void }) {
+  const { suggestions } = provenanceLook(tenue.pieces.map((p) => p.id), dressing);
   const occasion = OCC_LABELS[tenue.occasion];
   const phrase = titreEditorialOccasion(tenue.occasion);
   return (
@@ -38,17 +41,23 @@ function CarteLookIdee({ tenue, seule, onOuvrir }: { tenue: TenueIdee; seule: bo
       type="button"
       onClick={() => onOuvrir(tenue)}
       aria-label={`Voir le look ${occasion} : ${phrase}`}
-      className="flex-none text-left cursor-pointer active:opacity-90 outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
-      style={{ width: seule ? "100%" : "min(236px, 66vw)", scrollSnapAlign: "start" }}
+      className="min-w-0 text-left cursor-pointer active:opacity-90 rounded-[18px] p-[6px] flex flex-col outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
+      style={{ background: "var(--color-cream)" }}
     >
-      <div className="rounded-[18px] overflow-hidden" style={{ background: "var(--color-cream)", height: "clamp(210px, 60vw, 250px)" }}>
+      <div className="rounded-[13px] overflow-hidden w-full" style={{ aspectRatio: "3 / 4", background: "var(--color-warm-bg)" }}>
         <OutfitComposition items={tenue.pieces} variant="planche" label={`Composition du look : ${tenue.pieces.map((p) => p.name).join(", ")}`} />
       </div>
-      <div className="t-label text-muted mt-[12px]">{occasion}</div>
-      <div className="t-titre-carte text-ink mt-[4px]" style={{ textWrap: "balance" }}>
-        {phrase}
+      <div className="px-[3px] pt-[9px] flex-1">
+        <div className="font-serif text-[13px] leading-[1.2] text-ink">{occasion}</div>
+        <div className="text-[11px] leading-[1.35] text-muted mt-[3px]">{phrase}</div>
+        {/* Une tenue complétée par la capsule le dit : « 1 suggestion » — jamais le silence sur ce qui n'est pas dans le dressing. */}
+        {suggestions > 0 && (
+          <div className="text-[10px] leading-[1.3] text-terracotta mt-[5px]">
+            ✦ {suggestions} suggestion{suggestions > 1 ? "s" : ""}
+          </div>
+        )}
       </div>
-      <div className="text-[12px] text-terracotta mt-[8px]">Voir le look →</div>
+      <span className="mt-[9px] w-full rounded-full bg-terracotta text-cream text-[11px] py-[8px] text-center whitespace-nowrap">Voir le look →</span>
     </button>
   );
 }
@@ -56,6 +65,7 @@ function CarteLookIdee({ tenue, seule, onOuvrir }: { tenue: TenueIdee; seule: bo
 export default function AssociationsDressing({
   tenues,
   autres,
+  dressing,
   onOuvrir,
   onVoirToutes,
 }: {
@@ -63,18 +73,18 @@ export default function AssociationsDressing({
   tenues: TenueIdee[];
   /** D'autres tenues du même moteur, mises en retrait ; vide : la section ne s'affiche pas. */
   autres: TenueIdee[];
+  /** Le dressing réel : ce qui n'y est pas, dans une tenue, est une suggestion de la capsule. */
+  dressing: Item[];
   onOuvrir: (t: TenueIdee) => void;
   onVoirToutes: () => void;
 }) {
   return (
     <div className="mt-5">
-      <div
-        className="scrollarea flex gap-[14px] overflow-x-auto -mx-5 px-5 pb-[2px]"
-        style={{ scrollPaddingInline: 20, scrollSnapType: "x proximity" }}
-        data-carrousel="associations"
-      >
+      {/* Trois cartes côte à côte (maquette du 01/10/2026) : la rangée déborde un peu
+          de l'encart (-mx-3) pour que chacune garde une largeur lisible dès 360 px. */}
+      <div className="grid gap-[8px] -mx-3" style={{ gridTemplateColumns: `repeat(${Math.min(tenues.length, 3)}, minmax(0, 1fr))` }} data-associations>
         {tenues.map((t) => (
-          <CarteLookIdee key={t.occasion} tenue={t} seule={tenues.length === 1} onOuvrir={onOuvrir} />
+          <CarteLookIdee key={t.occasion} tenue={t} dressing={dressing} onOuvrir={onOuvrir} />
         ))}
       </div>
 

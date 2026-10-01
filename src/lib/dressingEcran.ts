@@ -138,6 +138,21 @@ export function associationsNouvelles<T extends { ids: number[] }>(tenues: T[], 
   return gardees;
 }
 
+/**
+ * Nombre minimal de pièces DU DRESSING dans une association pour qu'elle se dise
+ * « avec tes pièces » (01/10/2026, demandé : une tenue incomplète se complète de
+ * suggestions de la capsule). Sous ce seuil, ce serait un look de la capsule
+ * habillé de ses pièces : il n'a plus sa place dans « Ton dressing peut déjà
+ * faire plus ». ARBITRAGE ÉDITORIAL, à ajuster.
+ */
+export const MIN_PIECES_DRESSING_ASSOCIATION = 2;
+
+/** L'association contient assez de pièces du dressing — les autres sont des suggestions de la capsule. */
+export function assezDuDressing(ids: number[], dressing: Item[], minimum = MIN_PIECES_DRESSING_ASSOCIATION): boolean {
+  const miennes = new Set(dressing.map((i) => i.id));
+  return ids.filter((id) => miennes.has(id)).length >= minimum;
+}
+
 /** Catégories de la capsule calculée dont le dressing n'a encore aucune pièce. */
 export function categoriesManquantes(capsule: Item[], items: Item[]): CategoryKey[] {
   const possedees = new Set(items.map((i) => i.cat));
