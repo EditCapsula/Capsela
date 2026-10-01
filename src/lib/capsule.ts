@@ -444,6 +444,14 @@ export type SelectionStrategy = {
    */
   maillesFermeesEte?: "exclues" | "admises";
   /**
+   * Manteaux d'automne-hiver dans une capsule Été. "exclus" est la production
+   * depuis le 01/10/2026 (signalé : « le manteau cape structuré apparaît dans
+   * une capsule été ») ; "admis" reproduit le comportement d'avant, pour qu'un
+   * audit mesure l'avant et l'après dans la même exécution. Même convention
+   * que `maillesFermeesEte` : seul "admis" désactive la règle.
+   */
+  manteauHorsSaisonEte?: "exclu" | "admis";
+  /**
    * Température représentative de chaque saison de capsule, pour les seules
    * saisons qu'on veut déplacer. Absent — le cas de la production, qui ne
    * renseigne jamais ce paramètre — `REPRESENTATIVE_TEMP` s'applique
@@ -959,7 +967,20 @@ export function computeDefaultCapsule(
         // réintroduirait depuis `sourcePool` exactement ce qu'elle vient
         // d'écarter. Invariant posé le 31/08/2026 : une maille fermée ne doit
         // pas pouvoir réapparaître indirectement dans une capsule Été.
-        !(seasonKey === "Été" && strategy.maillesFermeesEte !== "admises" && fermetureMaille(it) === "fermée")
+        !(seasonKey === "Été" && strategy.maillesFermeesEte !== "admises" && fermetureMaille(it) === "fermée") &&
+        // Un manteau d'automne-hiver ne revient pas par ce filet dans une capsule
+        // Été (01/10/2026) : sans manteau de saison retenu, `sourcePool` — non
+        // filtré par saison — ressortait le premier manteau venu, d'hiver. Une
+        // capsule Été sans manteau est valide ; le trench « Toutes saisons »,
+        // lui, reste éligible. Le Printemps n'est pas concerné : un manteau à
+        // 15° en avril reste possible.
+        !(
+          seasonKey === "Été" &&
+          cat === "manteau" &&
+          strategy.manteauHorsSaisonEte !== "admis" &&
+          it.season !== bucket &&
+          it.season !== "Toutes saisons"
+        )
     );
     const fav = pool.filter((it) => favColors.includes(it.hex));
     const pickFrom = fav.length ? fav : pool;
