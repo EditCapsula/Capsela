@@ -6,6 +6,7 @@ import {
   introCapsule,
   margeVignette,
   piecesCles,
+  proprePourSaison,
   piecesDuDressingPourSaison,
   raisonsSuggestion,
 } from "../capsuleEcran";
@@ -51,6 +52,51 @@ describe("piecesCles", () => {
 
   it("capsule vide : aucune pièce clé", () => {
     expect(piecesCles([])).toEqual([]);
+  });
+});
+
+describe("piecesCles — cohérentes avec la saison (01/10/2026)", () => {
+  const tshirt = piece(1, { cat: "haut", estBasiqueCapsule: true, capsuleSeasons: ["Printemps", "Été", "Automne", "Hiver"] });
+  const pull = piece(2, { cat: "pull", season: "Automne / Hiver", capsuleSeasons: ["Automne", "Hiver"] });
+  const baskets = piece(3, { cat: "chaussures", estBasiqueCapsule: true });
+  const bottines = piece(4, { cat: "chaussures", season: "Automne / Hiver", capsuleSeasons: ["Automne", "Hiver"] });
+  const sandales = piece(5, { cat: "chaussures", season: "Printemps / Été", capsuleSeasons: ["Été"] });
+  const capsule = [tshirt, pull, baskets, bottines, sandales];
+
+  it("sans saison, la règle d'origine : l'indispensable d'abord", () => {
+    expect(piecesCles(capsule).map((i) => i.id)).toEqual([1, 3]);
+  });
+
+  it("en hiver : le pull, pas le t-shirt toutes saisons ; les bottines, pas les baskets", () => {
+    expect(piecesCles(capsule, 3, "Hiver").map((i) => i.id)).toEqual([2, 4]);
+  });
+
+  it("en automne, un haut sans pull dans la capsule laisse sa place à la famille suivante", () => {
+    expect(piecesCles([tshirt, baskets, piece(6, { cat: "pantalon" })], 3, "Automne").map((i) => i.id)).toEqual([3, 6]);
+  });
+
+  it("en été : les sandales, et le haut reste admis", () => {
+    expect(piecesCles(capsule, 3, "Été").map((i) => i.id)).toEqual([1, 5]);
+  });
+
+  it("une famille sans pièce propre garde ses pièces neutres", () => {
+    expect(piecesCles([baskets], 3, "Hiver").map((i) => i.id)).toEqual([3]);
+  });
+});
+
+describe("proprePourSaison", () => {
+  it("une pièce réelle : ses saisons cochées, sans les quatre", () => {
+    expect(proprePourSaison(piece(1, { saisons: ["Automne", "Hiver"] }), "Hiver")).toBe(true);
+    expect(proprePourSaison(piece(1, { saisons: ["Été"] }), "Hiver")).toBe(false);
+    expect(proprePourSaison(piece(1, { saisons: ["Printemps", "Été", "Automne", "Hiver"] }), "Hiver")).toBe(false);
+  });
+  it("une pièce du catalogue : sa saison déclarée, sinon ses saisons de capsule sans les quatre", () => {
+    expect(proprePourSaison(piece(1, { season: "Automne / Hiver" }), "Automne")).toBe(true);
+    expect(proprePourSaison(piece(1, { season: "Toutes saisons", capsuleSeasons: ["Printemps", "Hiver"] }), "Hiver")).toBe(true);
+    expect(proprePourSaison(piece(1, { season: "Toutes saisons", capsuleSeasons: ["Printemps", "Été", "Automne", "Hiver"] }), "Hiver")).toBe(false);
+  });
+  it("sans aucune donnée : neutre, jamais propre", () => {
+    expect(proprePourSaison(piece(1), "Hiver")).toBe(false);
   });
 });
 

@@ -361,7 +361,7 @@ export default function CapsuleScreen() {
     () => (exploredStyleId ? [] : piecesDuDressingPourSaison(state.items, capsuleSeason)),
     [exploredStyleId, state.items, capsuleSeason]
   );
-  const cles = useMemo(() => piecesCles(capsule), [capsule]);
+  const cles = useMemo(() => piecesCles(capsule, 3, capsuleSeason), [capsule, capsuleSeason]);
   const intro = useMemo(() => introCapsule(capsule), [capsule]);
 
   const groups = CATS.map(([key, , plural]) => {
