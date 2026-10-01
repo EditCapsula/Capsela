@@ -19,8 +19,10 @@ import type { Item, OccasionKey } from "@/lib/types";
  *
  * Trois cartes côte à côte, comme la maquette fournie le 01/10/2026 (une première
  * version en carrousel a été écartée) : planche, occasion en serif, phrase
- * éditoriale en retrait, bouton « Voir le look → » plein. Moins de trois
- * tenues : les cartes se partagent la largeur.
+ * éditoriale en retrait, bouton « Voir le look → » plein. La largeur d'une carte
+ * est TOUJOURS un tiers de la rangée : avec deux tenues seulement, la grille ne
+ * les élargit pas (signalé : « beaucoup trop grand », 2 associations). Image
+ * en 8/9, la proportion de la maquette.
  *
  * « Autres idées avec tes pièces » reste en retrait : de petites mosaïques, un
  * libellé muet, un lien. Rien ici ne choisit une pièce ni une occasion — les
@@ -44,7 +46,7 @@ function CarteLookIdee({ tenue, dressing, onOuvrir }: { tenue: TenueIdee; dressi
       className="min-w-0 text-left cursor-pointer active:opacity-90 rounded-[18px] p-[6px] flex flex-col outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
       style={{ background: "var(--color-cream)" }}
     >
-      <div className="rounded-[13px] overflow-hidden w-full" style={{ aspectRatio: "3 / 4", background: "var(--color-warm-bg)" }}>
+      <div className="rounded-[13px] overflow-hidden w-full" style={{ aspectRatio: "8 / 9", background: "var(--color-warm-bg)" }}>
         <OutfitComposition items={tenue.pieces} variant="planche" label={`Composition du look : ${tenue.pieces.map((p) => p.name).join(", ")}`} />
       </div>
       <div className="px-[3px] pt-[9px] flex-1">
@@ -82,7 +84,7 @@ export default function AssociationsDressing({
     <div className="mt-5">
       {/* Trois cartes côte à côte (maquette du 01/10/2026) : la rangée déborde un peu
           de l'encart (-mx-3) pour que chacune garde une largeur lisible dès 360 px. */}
-      <div className="grid gap-[8px] -mx-3" style={{ gridTemplateColumns: `repeat(${Math.min(tenues.length, 3)}, minmax(0, 1fr))` }} data-associations>
+      <div className="grid gap-[8px] -mx-3" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }} data-associations>
         {tenues.map((t) => (
           <CarteLookIdee key={t.occasion} tenue={t} dressing={dressing} onOuvrir={onOuvrir} />
         ))}
