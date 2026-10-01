@@ -683,10 +683,15 @@ export default function HomeScreen() {
         )}
 
         {/* L'OCCASION, étiquette de contexte : dans les trois états sauf
-            « aucune tenue », où elle serait la raison même de l'échec. */}
+            « aucune tenue », où elle serait la raison même de l'échec.
+            PLEINE OPACITÉ PENDANT LE CHARGEMENT (01/10/2026, signalé : « lorsque
+            la page charge, le hero n'affiche pas le label de l'occasion »).
+            Elle était posée à 72 % « pour rester secondaire », et sur le
+            terracotta sa pastille translucide devenait presque invisible : elle
+            est dans la page dès le premier rendu (mesuré), mais ne se lisait
+            pas. Le contexte du look est la première chose qu'on veut savoir. */}
         {!aucuneTenuePossible && occasionLabel && (
-          // Secondaire pendant le chargement : le contexte, pas le sujet.
-          <div className="pt-[16px] transition-opacity duration-300" style={{ opacity: hasOutfit ? 1 : 0.72 }}>
+          <div className="pt-[16px]">
             <span
               className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
               style={{
