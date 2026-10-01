@@ -4,10 +4,13 @@ import { describe, expect, it } from "vitest";
 import { CATS } from "../data";
 import {
   DRESSING_GROUPS,
+  MIN_PIECES_DRESSING_ASSOCIATION,
+  assezDuDressing,
   associationsNouvelles,
   categoriesManquantes,
   choisirADecouvrir,
   groupesDuVestiaire,
+  enteteDressing,
   syntheseDressing,
 } from "../dressingEcran";
 import type { CategoryKey, Item } from "../types";
@@ -133,5 +136,35 @@ describe("choisirADecouvrir", () => {
 
   it("dressing vide : pas de section", () => {
     expect(choisirADecouvrir({ ...base, nbPieces: 0, nbManques: 5 })).toBeNull();
+  });
+});
+
+describe("assezDuDressing — une association complétée par la capsule reste « avec tes pièces »", () => {
+  const dressing = [{ id: 1 }, { id: 2 }, { id: 3 }] as never[];
+  it("le seuil est de deux pièces du dressing", () => {
+    expect(MIN_PIECES_DRESSING_ASSOCIATION).toBe(2);
+  });
+  it("accepte une tenue dont deux pièces sont au dressing, le reste étant des suggestions", () => {
+    expect(assezDuDressing([1, 2, 100901], dressing)).toBe(true);
+  });
+  it("refuse une tenue qui n'a qu'une pièce du dressing ou aucune", () => {
+    expect(assezDuDressing([1, 100901, 100902], dressing)).toBe(false);
+    expect(assezDuDressing([100901, 100902], dressing)).toBe(false);
+  });
+  it("accepte une tenue entièrement du dressing", () => {
+    expect(assezDuDressing([1, 2, 3], dressing)).toBe(true);
+  });
+});
+
+describe("enteteDressing — le total en ligne forte, comme la Capsule", () => {
+  it("gratuit : le total, les catégories et les places restantes", () => {
+    expect(enteteDressing("gratuit", 7, 3)).toEqual({ titre: "7 pièces dans ton dressing", detail: "3 catégories · 13 places restantes" });
+    expect(enteteDressing("gratuit", 19, 5).detail).toBe("5 catégories · 1 place restante");
+    expect(enteteDressing("gratuit", 20, 5).detail).toBe("5 catégories · dressing complet");
+    expect(enteteDressing("gratuit", 23, 6).detail).toBe("6 catégories · dressing complet");
+  });
+  it("Premium ou droit non vérifié : aucune limite annoncée", () => {
+    expect(enteteDressing("premium", 7, 3)).toEqual({ titre: "7 pièces dans ton dressing", detail: "3 catégories" });
+    expect(enteteDressing("inconnu", 1, 1)).toEqual({ titre: "1 pièce dans ton dressing", detail: "1 catégorie" });
   });
 });

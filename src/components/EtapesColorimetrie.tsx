@@ -11,7 +11,7 @@ import {
   type Colorimetrie,
   type QuestionColorimetrie,
 } from "@/lib/colorimetrie";
-import { paletteColorName } from "@/lib/profile";
+import { INTENSITE_VISUELS, paletteColorName, type Intensite } from "@/lib/profile";
 
 /**
  * LES ÉCRANS DU PARCOURS COLORIMÉTRIE (25/09/2026 ; refonte UX/UI le
@@ -206,95 +206,113 @@ export function IndecisColorimetrie() {
 
 /* ───────── 5. Le résultat ───────── */
 
-function Nuancier({ titre, hexes }: { titre: string; hexes: string[] }) {
+/**
+ * Un groupe de couleurs de la palette : pastilles ET noms, pastille par pastille
+ * (une pastille sans nom n'écrit rien). `grande` : les couleurs signature, le
+ * cœur de la page ; les autres groupes sont plus petits (refonte du 01/10/2026).
+ * Les noms ne se coupent jamais en deux (espaces insécables).
+ */
+function Nuancier({ titre, hexes, grande = false }: { titre: string; hexes: string[]; grande?: boolean }) {
   if (!hexes.length) return null;
-  // Espaces insécables DANS un nom : « Blanc / écru » ne se coupe jamais en deux lignes.
-  const noms = hexes.map((h) => paletteColorName(h)?.replace(/ /g, "\u00a0")).filter(Boolean);
+  const taille = grande ? 46 : 32;
   return (
-    <div className="mt-[18px] first:mt-0">
+    <div className="mt-[22px] first:mt-0">
       <div className="t-label text-terracotta">{titre}</div>
-      <div className="flex flex-wrap gap-[7px] mt-[9px]" aria-hidden="true">
-        {hexes.map((h) => (
-          <span key={h} className="w-[28px] h-[28px] rounded-full" style={{ background: h, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }} />
-        ))}
-      </div>
-      <div className="text-[12px] text-muted leading-[1.45] mt-[7px]" style={{ textWrap: "pretty" }}>
-        {noms.join("\u00a0· ")}
-      </div>
+      {/* Les couleurs signature (cinq) se partagent la largeur : jamais une pastille seule sur une deuxième ligne, même à 360 px. */}
+      <ul
+        className={grande ? "grid gap-x-[6px] gap-y-[12px] mt-[11px]" : "flex flex-wrap gap-x-[10px] gap-y-[12px] mt-[11px]"}
+        style={grande ? { gridTemplateColumns: "repeat(5, minmax(0, 1fr))" } : undefined}
+      >
+        {hexes.map((h) => {
+          const nom = paletteColorName(h)?.replace(/ /g, "\u00a0");
+          return (
+            <li key={h} className="flex flex-col items-center text-center" style={grande ? undefined : { width: 56 }}>
+              <span aria-hidden="true" className="rounded-full block" style={{ width: taille, height: taille, background: h, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }} />
+              {nom && <span className={"mt-[6px] leading-[1.25] " + (grande ? "text-[11.5px] text-ink" : "text-[11px] text-muted")}>{nom}</span>}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
 
-const PICTO_EXPLICATION: Record<string, Picto> = {
-  "Tes bijoux": "bijoux",
-  "Ton blanc préféré": "blanc",
-  "Tes cheveux": "cheveux",
-  "Tes yeux": "yeux",
-};
-
 /**
- * Le titre (« Printemps lumineux ») et sa phrase sont l'en-tête de l'étape ;
- * ici : le nuancier, le visuel quand il correspond à la saison, « Pourquoi
- * cette palette ? » quand les réponses sont connues, et le repère.
+ * Le titre (« Automne chaleureux ») et sa phrase sont l'en-tête de l'étape ;
+ * ici, dans l'ordre : le visuel de la saison, la palette, « Pourquoi cette
+ * palette ? » quand les réponses sont connues, « Ton approche couleur » quand
+ * l'intensité est choisie, et le repère. Refonte du 01/10/2026 : la palette
+ * devient le contenu principal, le visuel passe d'une vignette à un vrai
+ * moment éditorial.
  */
-export function ResultatColorimetrie({ colorimetrie }: { colorimetrie: Colorimetrie }) {
+export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie: Colorimetrie; intensite?: Intensite | null }) {
   if (!colorimetrieUtilisable(colorimetrie)) return null;
   const c = colorimetrie;
   const saison = estSaison(c.saison) ? SAISONS[c.saison] : null;
   const explications = explicationsDesReponses(c.reponses);
+  const approche = intensite ? INTENSITE_VISUELS[intensite] : null;
   return (
-    <div className="mt-[22px]">
-      <div className="flex gap-[16px] items-start">
-        <div className="flex-1 min-w-0">
-          <Nuancier titre="Couleurs signature" hexes={c.signature ?? []} />
-          <Nuancier titre="Neutres" hexes={c.neutres ?? []} />
-          {/* « À porter avec modération », jamais « à éviter » : un placement,
-              pas une interdiction. Le moteur les éloigne du visage sans les
-              retirer des tenues (colorimetrieMoteur.ts). */}
-          <Nuancier titre="À porter avec modération" hexes={c.moderation ?? []} />
+    <div className="mt-[20px]">
+      {saison?.visuel && (
+        // Le cadre des visuels éditoriaux de l'app (Capsule : arrondi 20, filet léger),
+        // en 4/3 : le visuel est portrait (450 × 919), le centre — étoffes et feuille —
+        // reste visible ; la largeur d'un smartphone suffit sans l'agrandir au-delà.
+        <div className="rounded-[20px] overflow-hidden border border-border bg-warm-bg" style={{ aspectRatio: "4 / 3" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={saison.visuel} alt="" width={450} height={338} decoding="async" className="w-full h-full object-cover block" style={{ objectPosition: "center 52%" }} />
         </div>
-        {saison?.visuel && (
-          <div
-            className="flex-shrink-0 overflow-hidden bg-warm-bg"
-            style={{ width: "36%", maxWidth: 150, aspectRatio: "120 / 245", borderRadius: "999px 999px 20px 20px" }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={saison.visuel} alt="" width={240} height={490} decoding="async" className="w-full h-full object-cover block" />
-          </div>
-        )}
+      )}
+
+      <div className={saison?.visuel ? "mt-[26px]" : ""}>
+        <Nuancier titre="Couleurs signature" hexes={c.signature ?? []} grande />
+        <Nuancier titre="Neutres" hexes={c.neutres ?? []} />
+        {/* « À doser selon tes envies », jamais « à éviter » ni « à porter avec
+            modération » : un repère, pas une interdiction. Le moteur les éloigne
+            du visage sans les retirer des tenues (colorimetrieMoteur.ts). */}
+        <Nuancier titre="À doser selon tes envies" hexes={c.moderation ?? []} />
       </div>
 
       {explications.length > 0 && (
-        <section className="mt-[32px]">
+        <section className="mt-[34px]">
           <h2 className="t-titre-section text-ink">Pourquoi cette palette ?</h2>
           <p className="text-[13px] text-muted leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
             Capsela croise tes réponses pour trouver les nuances qui s&apos;harmonisent avec toi.
           </p>
-          <ul className="flex flex-col gap-[14px] mt-[16px]">
+          <ul className="mt-[8px]">
             {explications.map((e) => (
-              <li key={e.titre} className="flex gap-[12px] items-start">
-                <span className="w-[34px] h-[34px] rounded-full bg-warm-bg flex items-center justify-center flex-shrink-0">
-                  <Pictogramme nom={PICTO_EXPLICATION[e.titre] ?? "etoile"} taille={18} />
-                </span>
-                <span className="min-w-0 pt-[1px]">
-                  <span className="block text-[13.5px] font-semibold text-ink">{e.titre}</span>
-                  <span className="block text-[13px] text-muted-3 leading-[1.45] mt-[2px]" style={{ textWrap: "pretty" }}>
-                    {e.texte}
-                  </span>
+              <li key={e.titre} className="py-[12px] border-b border-border last:border-b-0">
+                <span className="block text-[13.5px] font-semibold text-ink">{e.titre}</span>
+                <span className="block text-[13px] text-muted-3 leading-[1.45] mt-[2px]" style={{ textWrap: "pretty" }}>
+                  {e.texte}
                 </span>
               </li>
             ))}
           </ul>
-          {saison && (
-            <div className="bg-warm-bg rounded-[16px] px-[16px] py-[13px] mt-[18px] text-[13px] text-muted-3 leading-[1.5]" style={{ textWrap: "pretty" }}>
-              <span className="font-semibold text-ink">Résultat :</span> une palette {saison.nature}, utilisée par Capsela pour
-              personnaliser tes recommandations.
-            </div>
-          )}
         </section>
       )}
 
-      <div className="bg-card border border-border rounded-[18px] px-[16px] py-[15px] mt-[24px] flex gap-[12px] items-start">
+      {/* La préférence d'intensité (étape « Quelle intensité de couleurs… ») : un
+          goût de style, indépendant de la saison — elle ne sert pas au calcul de la
+          colorimétrie, seulement au choix des pièces proposées (intensiteConflict,
+          capsule.ts). Absente : rien n'est affiché. */}
+      {approche && intensite && (
+        <section className="mt-[30px]">
+          <div className="t-label text-terracotta">Ton approche couleur</div>
+          <div className="flex items-center justify-between gap-[12px] mt-[8px]">
+            <div className="font-serif text-[19px] leading-[1.2] text-ink">{approche.libelleRecap ?? intensite}</div>
+            <div className="flex gap-[5px] flex-shrink-0" aria-hidden="true">
+              {approche.pastilles.map((h) => (
+                <span key={h} className="w-[16px] h-[16px] rounded-full" style={{ background: h, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }} />
+              ))}
+            </div>
+          </div>
+          <p className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
+            {approche.description} Ce choix de style complète ta palette sans la modifier.
+          </p>
+        </section>
+      )}
+
+      <div className="bg-card border border-border rounded-[18px] px-[16px] py-[15px] mt-[30px] flex gap-[12px] items-start">
         <Pictogramme nom="repere" taille={22} />
         <div className="min-w-0">
           <div className="font-serif text-[17px] leading-[1.25] text-ink">Ta palette est un repère, pas une règle.</div>
@@ -319,7 +337,7 @@ export function ResultatColorimetrie({ colorimetrie }: { colorimetrie: Colorimet
 export function SuiteColorimetrie() {
   const benefices: [Picto, string, string][] = [
     ["tenue", "Des tenues plus personnalisées", "Capsela privilégie les couleurs de ta palette pour les pièces portées près du visage."],
-    ["harmonie", "Des associations plus harmonieuses", "Les couleurs à porter avec modération passent plutôt en bas, en chaussures ou en sac."],
+    ["harmonie", "Des associations plus harmonieuses", "Les couleurs à doser selon tes envies passent plutôt en bas, en chaussures ou en sac."],
     ["cintre", "Un dressing plus cohérent", "Ta colorimétrie est prise en compte dans tes futures recommandations."],
   ];
   return (

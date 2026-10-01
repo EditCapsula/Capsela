@@ -2567,6 +2567,18 @@ const OCCASION_STYLE_TITLES: Partial<Record<OccasionKey, string[]>> = {
 const DEFAULT_STYLE_TITLES = ["Une tenue simple", "Une tenue équilibrée", "Une tenue plus habillée"];
 
 /**
+ * Phrase éditoriale d'une tenue seule, pour une occasion (01/10/2026) : le
+ * titre NEUTRE de la table ci-dessus — celui que styleTitleFor donne à la
+ * première idée d'une occasion, sans promesse de progression. Sert aux cartes
+ * de « Ton dressing peut déjà faire plus », où aucune pièce pivot ni variante
+ * n'existe. Aucune règle de génération n'est touchée.
+ */
+export function titreEditorialOccasion(occasion: OccasionKey): string {
+  const tiers = OCCASION_STYLE_TITLES[occasion] || DEFAULT_STYLE_TITLES;
+  return tiers[1] ?? tiers[0];
+}
+
+/**
  * Formalité moyenne des pièces vêtement/chaussures d'un look, hors pivot
  * (recette 26/08/2026) — sert uniquement à classer entre elles les
  * variantes d'une même occasion, de la plus décontractée à la plus

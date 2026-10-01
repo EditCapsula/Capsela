@@ -116,6 +116,21 @@ export function syntheseDressing(
   return { texte: nbPieces === 0 ? compte : `${compte} · ${categories(nbCategories)}`, complet };
 }
 
+/**
+ * L'en-tête du Dressing, en deux lignes (01/10/2026, signalé : « le nombre total
+ * de pièces est manquant contrairement à la capsule » — il était là, en petit
+ * gris). Ligne forte, comme « 39 pièces sélectionnées pour toi » de la Capsule :
+ * « 7 pièces dans ton dressing ». Ligne de détail : les catégories, et — en
+ * gratuit vérifié seulement, comme `syntheseDressing` — les places restantes
+ * avant la limite. Premium ou droit inconnu : aucune limite annoncée.
+ */
+export function enteteDressing(etat: EtatPremium, nbPieces: number, nbCategories: number): { titre: string; detail: string } {
+  const restantes = etat === "gratuit" ? Math.max(0, LIMITE_DRESSING_GRATUIT - nbPieces) : null;
+  const parts = [categories(nbCategories)];
+  if (restantes !== null) parts.push(restantes === 0 ? "dressing complet" : `${restantes} ${restantes === 1 ? "place restante" : "places restantes"}`);
+  return { titre: `${pieces(nbPieces)} dans ton dressing`, detail: parts.join(" · ") };
+}
+
 // ── À DÉCOUVRIR ────────────────────────────────────────────────────────
 
 const cle = (ids: number[]) => [...ids].sort((a, b) => a - b).join(",");
@@ -136,6 +151,21 @@ export function associationsNouvelles<T extends { ids: number[] }>(tenues: T[], 
     gardees.push(t);
   }
   return gardees;
+}
+
+/**
+ * Nombre minimal de pièces DU DRESSING dans une association pour qu'elle se dise
+ * « avec tes pièces » (01/10/2026, demandé : une tenue incomplète se complète de
+ * suggestions de la capsule). Sous ce seuil, ce serait un look de la capsule
+ * habillé de ses pièces : il n'a plus sa place dans « Ton dressing peut déjà
+ * faire plus ». ARBITRAGE ÉDITORIAL, à ajuster.
+ */
+export const MIN_PIECES_DRESSING_ASSOCIATION = 2;
+
+/** L'association contient assez de pièces du dressing — les autres sont des suggestions de la capsule. */
+export function assezDuDressing(ids: number[], dressing: Item[], minimum = MIN_PIECES_DRESSING_ASSOCIATION): boolean {
+  const miennes = new Set(dressing.map((i) => i.id));
+  return ids.filter((id) => miennes.has(id)).length >= minimum;
 }
 
 /** Catégories de la capsule calculée dont le dressing n'a encore aucune pièce. */
