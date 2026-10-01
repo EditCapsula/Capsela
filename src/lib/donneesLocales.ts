@@ -12,7 +12,14 @@
 /** Les clés locales liées à un compte. `null` : le mode démo, dont les valises sont rangées sous « demo » (valises.ts). */
 export function clesLocalesDuCompte(userId: string | null): string[] {
   const compte = userId ?? "demo";
-  return ["capsela.lastKnownCity", "capsela.authIntent", `capsela.valises.${compte}`, `capsela.valise.${compte}`];
+  return [
+    "capsela.lastKnownCity",
+    "capsela.authIntent",
+    `capsela.valises.${compte}`,
+    `capsela.valise.${compte}`,
+    // Les tenues recommandées ces derniers jours (recommandationsRecentes.ts).
+    `capsela.recommandees.${compte}`,
+  ];
 }
 
 /** Efface ces clés. Défensif : le stockage peut manquer ou jeter (navigation privée), et rien ne doit alors échouer. */

@@ -134,3 +134,9 @@ secret ne porte le préfixe `NEXT_PUBLIC_`.
 - **Formule Supabase** : le plan gratuit met le projet en pause après une
   semaine d'inactivité et n'a pas de sauvegarde quotidienne. Pour un lancement,
   prévoir le plan payant et activer les sauvegardes.
+
+## Bucket `capsule-images` (01/10/2026)
+
+Bucket public créé à la main le 14/08/2026, absent de tout le dépôt. Inspecté
+(`supabase/verification/bucket_capsule_images.sql`) : vide, sans politique, aucune
+ligne de la base n'y renvoyait. **Supprimé** le 01/10/2026.
