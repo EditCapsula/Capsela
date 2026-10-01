@@ -36,6 +36,14 @@ import { buildImagePrompt, CATEGORY_CANON, CATEGORY_FOLDER, type TrendRule, type
 import { computeVisualKey, normalizeVisualColor, normalizeVisualSubtype } from "../_shared/visualKey.ts";
 import { toWebp } from "../_shared/webp.ts";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
+import { authentifier, consommerQuota, estAppelantAdmin, jetonDepuisEntete, limiteDepuisEnv } from "../_shared/protection.ts";
+
+// Plafond de demandes par compte et par jour (01/10/2026). Un visuel déjà prêt
+// est rendu sans coût, mais un seul compte ne doit pas pouvoir épuiser, par ses
+// appels, le plafond quotidien de génération qui sert tout le monde. Secret
+// MAX_CATALOG_IMAGE_REQUESTS_PER_USER_PER_DAY ; une valeur illisible ne retire
+// jamais le plafond.
+const DEFAULT_DAILY_REQUESTS_PER_USER = 300;
 
 const BUCKET = "catalog-images";
 // Catégories où le rendu visuel ne dépend pas vraiment du genre affiché —
@@ -112,12 +120,28 @@ Deno.serve(async (req) => {
   }
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+  // Protection (01/10/2026, cf. _shared/protection.ts) : une utilisatrice
+  // connectée, jamais la clé `anon` seule, plafonnée par compte et par jour.
+  // L'administration (la clé privilégiée : workflows GitHub, scripts de
+  // maintenance) passe sans quota, et SEULE elle peut forcer une régénération.
+  const estAdmin = estAppelantAdmin(req.headers.get("Authorization"), req.headers.get("apikey"), serviceRoleKey);
+  if (!estAdmin) {
+    const utilisatrice = await authentifier(supabase, jetonDepuisEntete(req.headers.get("Authorization")));
+    if (!utilisatrice) return jsonError("Non authentifié.", 401);
+    const limite = limiteDepuisEnv(Deno.env.get("MAX_CATALOG_IMAGE_REQUESTS_PER_USER_PER_DAY"), DEFAULT_DAILY_REQUESTS_PER_USER);
+    const quota = await consommerQuota(supabase, utilisatrice.id, "generate-catalog-image", limite);
+    if (quota === "limite") return jsonError("Limite quotidienne de demandes atteinte.", 429);
+    if (quota === "indisponible") return jsonError("Service momentanément indisponible.", 503);
+  }
+
   let itemId: number;
   let forceRegenerate = false;
   try {
     const body = await req.json();
     itemId = Number(body.item_id);
-    forceRegenerate = body.force_regenerate === true;
+    // Seule l'administration peut forcer : « réservé à un usage admin futur »
+    // jusqu'ici, mais rien ne l'empêchait pour un appelant quelconque.
+    forceRegenerate = body.force_regenerate === true && estAdmin;
     if (!Number.isFinite(itemId)) throw new Error("item_id invalide");
   } catch {
     return jsonError("item_id manquant ou invalide.", 400);
