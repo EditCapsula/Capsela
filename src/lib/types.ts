@@ -287,6 +287,13 @@ export interface AppState {
   preferencesSection: "localisation" | null;
   /** Écran vers lequel revenir en quittant Informations légales (toujours "profile" en pratique). */
   legalReturn: Screen;
+  /**
+   * Texte légal ouvert (slug de legal/documents.ts), ou null. Affiché en
+   * calque par-dessus l'écran courant (01/10/2026, demandé : « dans la même
+   * fenêtre que l'app ») : l'écran dessous reste monté, une inscription en
+   * cours ne perd pas sa saisie.
+   */
+  legalDoc: string | null;
   /** Écran d'où l'on est entré dans Premium — on y revient en fermant. */
   premiumReturn: Screen;
   /**

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { messageAge, verifierAge, AGE_MINIMUM } from "@/lib/ageMinimum";
 import { useAuth } from "@/lib/auth";
-import { urlLegale } from "@/lib/legal/documents";
+import { useCapsela } from "@/lib/store";
 
 const INPUT_CLS =
   "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
@@ -29,6 +29,7 @@ export default function DateNaissanceScreen({
   onQuitter: () => void;
 }) {
   const auth = useAuth();
+  const { actions } = useCapsela();
   const [naissance, setNaissance] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -99,9 +100,9 @@ export default function DateNaissanceScreen({
       </button>
       <div className="text-[11px] text-placeholder text-center mt-4 leading-[1.5]">
         Pourquoi ? Voir notre{" "}
-        <a href={urlLegale("confidentialite")} target="_blank" rel="noopener noreferrer" className="text-muted underline">
+        <button type="button" onClick={() => actions.openLegalDoc("confidentialite")} className="text-muted underline cursor-pointer">
           Politique de confidentialité
-        </a>
+        </button>
         .
       </div>
       <div className="flex-1" />
