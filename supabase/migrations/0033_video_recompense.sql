@@ -30,6 +30,16 @@
 alter table public.generation_quota
   add column if not exists bonus integer not null default 0;
 
+-- `drop function if exists` (01/10/2026) : la fonction rend désormais une
+-- colonne de plus (`bonus`), et PostgreSQL refuse de changer le type de retour
+-- d'une fonction par `create or replace` (« cannot change return type of
+-- existing function »). Sans ce `drop`, cette migration ÉCHOUE dès que 0032 a
+-- été exécutée — c'est-à-dire toujours — et, passée dans l'éditeur SQL, tout
+-- le script est annulé : ni la colonne `bonus` ni `accorder_bonus_generation`
+-- n'existent alors. Relevé en rejouant les migrations 0001 à 0042 dans l'ordre
+-- sur une base neuve. Les droits sont reposés plus bas, après la création.
+drop function if exists public.consommer_generation();
+
 -- La limite effective du jour devient `2 + bonus`. Le reste de la fonction est
 -- inchangé — y compris le `where` de la clause de conflit, qui reste le seul
 -- endroit où la limite s'applique réellement.
