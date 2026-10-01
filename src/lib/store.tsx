@@ -40,6 +40,8 @@ import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { choisirMeteo, fetchPrevisionByCity, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { aDesManches } from "./manches";
+import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
+import { ecrireRecommandation, lireRecommandations, type TableRecommandations } from "./recommandationsRecentes";
 import { basculerSaison, saisonsDe, saisonsParDefaut, seasonDepuisSaisons } from "./saisons";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
@@ -1102,6 +1104,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
   };
 
+  // Les recommandations des derniers jours, gardées sur l'appareil
+  // (recommandationsRecentes.ts) : lues une fois le compte connu, mises à jour
+  // à chaque tenue affichée. La diversification les lit dans regen.
+  const recommandeesRef = useRef<TableRecommandations>({});
+  useEffect(() => {
+    recommandeesRef.current = lireRecommandations(userId, jourLocal());
+  }, [userId]);
+
   const regen = (
     s: AppState,
     pool: Item[] = poolRef.current,
@@ -1132,19 +1142,32 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       s.occasion && !secours
         ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion, saison: w, exclureHorsOccasion: true })
         : pool;
-    const result = generateOutfitWithFallback(
-      poolGeneration,
-      w,
-      s.occasion || "all",
-      s.workMode,
-      s.dateContext,
-      paletteHexes(profile),
-      profile.gender,
-      undefined,
-      undefined,
+    // DIVERSIFICATION SUR CINQ JOURS (01/10/2026, diversite.ts). La date du jour
+    // consulté recalcule la météo (w), l'occasion (s.occasion) ET la fenêtre des
+    // cinq jours précédents : ce qui a été porté, planifié ou déjà recommandé,
+    // et la tenue actuellement affichée (« Autre tenue »). Le moteur d'origine
+    // reste seul juge de l'éligibilité — météo, occasion, saison, règles ; la
+    // couche ne départage que des tenues qu'il a déjà produites.
+    const recents = recentsDuJour({
+      jour: jourLocal(dateDuJour(s.jourDecalage)),
+      portees: s.history,
+      planifiees: s.tenuesPlanifiees,
+      recommandees: recommandeesRef.current,
+      actuelle: s.outfit.length ? { ids: s.outfit, temp: w.temp, label: w.label } : null,
+    });
+    const result = genererTenueDiversifiee({
+      pool: poolGeneration,
+      weather: w,
+      occasion: s.occasion || "all",
+      workMode: s.workMode,
+      dateContext: s.dateContext,
+      preferredHexes: paletteHexes(profile),
+      gender: profile.gender,
+      morphology: profile.morphology,
       // La colorimétrie du profil (30/09/2026) : couleurs de sa saison près du visage.
-      colorimetrieMoteur(profile.colorimetrie)
-    );
+      colorimetrie: colorimetrieMoteur(profile.colorimetrie),
+      recents,
+    });
     // Tracking (repli progressif de formalité, section 8 du brief 21/08/2026)
     // — pas de pipeline analytics dans ce prototype : log console en
     // attendant, pour repérer les couples occasion×style×genre×saison qui
@@ -1225,6 +1248,20 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setState((s) => (s.outfit.length || s.jourDecalage === 0 ? s : regen(withDefaultOccasion(s), wardrobePool, meteoDuJour, defaultCapsule)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.jourDecalage, state.outfit.length, previsionEnChargement, meteoDuJour, ready, dressingLoaded, geoLoading, vestiaireResolu]);
+
+  // Mémorise la tenue AFFICHÉE pour le jour consulté, avec sa météo : c'est ce
+  // que les jours suivants éviteront de reproposer. Jamais pendant l'exploration
+  // d'un style (tenue hors profil) ni tant qu'aucune tenue n'existe.
+  useEffect(() => {
+    if (!ready || !dressingLoaded || !state.outfit.length || state.exploredStyleId) return;
+    recommandeesRef.current = ecrireRecommandation(
+      userId,
+      jourLocal(dateDuJour(state.jourDecalage)),
+      { ids: state.outfit, temp: meteoDuJour.temp, label: meteoDuJour.label },
+      jourLocal()
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.outfit, state.jourDecalage, state.exploredStyleId, ready, dressingLoaded, userId]);
 
   // Première tenue : dès que le profil est chargé (la capsule par défaut en
   // dépend) ET que la géolocalisation a fini de se résoudre (succès, échec

@@ -16,7 +16,13 @@ function stockageFactice(initial: Record<string, string>) {
 
 describe("clesLocalesDuCompte", () => {
   it("valises (les deux clés), dernière ville et intention d'inscription", () => {
-    expect(clesLocalesDuCompte("u1")).toEqual(["capsela.lastKnownCity", "capsela.authIntent", "capsela.valises.u1", "capsela.valise.u1"]);
+    expect(clesLocalesDuCompte("u1")).toEqual([
+      "capsela.lastKnownCity",
+      "capsela.authIntent",
+      "capsela.valises.u1",
+      "capsela.valise.u1",
+      "capsela.recommandees.u1",
+    ]);
   });
   it("le mode démo range ses valises sous « demo »", () => {
     expect(clesLocalesDuCompte(null)).toContain("capsela.valises.demo");
