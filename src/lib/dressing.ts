@@ -150,17 +150,30 @@ export const PHOTO_QUALITE = 0.8;
  * facturé à chaque affichage : six vignettes à 3 Mo, ce sont 18 Mo servis
  * chaque fois qu'on ouvre « Mes pièces ».
  *
- * NE JAMAIS BLOQUER L'AJOUT. Tout ce qui peut manquer — un navigateur sans
- * `createImageBitmap`, un rendu serveur sans `document`, un canvas refusé, un
- * fichier qui n'est pas une image — rend le fichier d'origine plutôt que de
- * lever. Une photo lourde vaut mieux qu'une pièce qu'on ne peut pas ajouter.
+ * UNE PHOTO QU'ON NE PEUT PAS RÉ-ENCODER EST REFUSÉE (arbitré le 01/10/2026,
+ * docs/legal/README.md, écart 2). Jusqu'ici, tout ce qui pouvait manquer — un
+ * navigateur sans `createImageBitmap`, un rendu sans `document`, un canvas
+ * refusé, un fichier illisible — rendait le fichier d'origine « pour ne jamais
+ * bloquer l'ajout », et le gardait aussi quand le JPEG ré-encodé était plus
+ * lourd. Or le ré-encodage par canvas est ce qui retire l'EXIF, donc la
+ * position GPS : ces replis envoyaient la photo brute, métadonnées comprises.
+ * Même règle que la photo d'avis (photoAvis.ts) : le JPEG produit est toujours
+ * celui qu'on envoie, même plus lourd que l'original, et un fichier qu'on ne
+ * sait pas ré-encoder lève PhotoNonPreparee, que l'écran dit en clair.
  *
- * Et jamais de résultat pire que l'entrée : si le ré-encodage produit un
- * fichier plus gros (petite image déjà optimisée), on garde l'original.
+ * Seul un fichier qui n'est pas une image passe tel quel : il n'a pas d'EXIF
+ * à retirer, et ce n'est pas une photo.
  */
+export class PhotoNonPreparee extends Error {
+  constructor() {
+    super("Cette photo n'a pas pu être préparée. Essaie avec une autre image (JPEG ou PNG).");
+    this.name = "PhotoNonPreparee";
+  }
+}
+
 export async function compressDressingPhoto(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
-  if (typeof createImageBitmap !== "function" || typeof document === "undefined") return file;
+  if (typeof createImageBitmap !== "function" || typeof document === "undefined") throw new PhotoNonPreparee();
   let bitmap: ImageBitmap | null = null;
   try {
     // `imageOrientation` applique l'orientation EXIF : sans elle, les photos
@@ -173,7 +186,7 @@ export async function compressDressingPhoto(file: File): Promise<File> {
     canvas.width = largeur;
     canvas.height = hauteur;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return file;
+    if (!ctx) throw new PhotoNonPreparee();
     // Fond blanc avant le dessin : le JPEG ignore la transparence et rendrait
     // noir le fond d'un PNG détouré.
     ctx.fillStyle = "#ffffff";
@@ -182,11 +195,11 @@ export async function compressDressingPhoto(file: File): Promise<File> {
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/jpeg", PHOTO_QUALITE)
     );
-    if (!blob || blob.size >= file.size) return file;
+    if (!blob) throw new PhotoNonPreparee();
     const nom = file.name.replace(/\.[^.]+$/, "") || "photo";
     return new File([blob], `${nom}.jpg`, { type: "image/jpeg", lastModified: file.lastModified });
-  } catch {
-    return file;
+  } catch (err) {
+    throw err instanceof PhotoNonPreparee ? err : new PhotoNonPreparee();
   } finally {
     bitmap?.close();
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it, afterEach, vi } from "vitest";
-import { compressDressingPhoto, PHOTO_COTE_MAX } from "../dressing";
+import { compressDressingPhoto, PhotoNonPreparee, PHOTO_COTE_MAX } from "../dressing";
 
 /**
  * Ce qui est vérifié ici, c'est l'ORCHESTRATION : l'échelle calculée, le fond
@@ -8,8 +8,10 @@ import { compressDressingPhoto, PHOTO_COTE_MAX } from "../dressing";
  * celui du navigateur — il n'est pas simulable en Node et n'est donc pas
  * couvert : c'est le passage sur appareil réel qui le valide.
  *
- * Les replis comptent plus que la compression. Une photo lourde n'empêche
- * personne d'ajouter une pièce ; une exception, si.
+ * Les REFUS comptent plus que la compression (arbitré le 01/10/2026) : le
+ * ré-encodage par canvas est ce qui retire l'EXIF et la position GPS. Une
+ * photo qu'on ne sait pas ré-encoder est refusée (PhotoNonPreparee), jamais
+ * envoyée telle quelle ; le JPEG produit est toujours celui qu'on envoie.
  */
 
 type CanvasFactice = {
@@ -94,25 +96,32 @@ describe("compressDressingPhoto", () => {
     expect(sortie.size).toBe(200_000);
   });
 
-  it("garde l'original si le ré-encodage l'alourdit", async () => {
+  it("envoie toujours le JPEG ré-encodé, même plus lourd que l'original — l'original garde son EXIF", async () => {
     installerNavigateur({ width: 300, height: 300 }, 90_000);
     const entree = photo(40_000);
-    expect(await compressDressingPhoto(entree)).toBe(entree);
+    const sortie = await compressDressingPhoto(entree);
+    expect(sortie).not.toBe(entree);
+    expect(sortie.type).toBe("image/jpeg");
+    expect(sortie.size).toBe(90_000);
   });
 
-  it("rend l'original sans navigateur — l'ajout d'une pièce ne doit jamais échouer ici", async () => {
+  it("refuse la photo sans navigateur capable de la ré-encoder, au lieu de l'envoyer brute", async () => {
     (globalThis as Record<string, unknown>).createImageBitmap = undefined;
-    const entree = photo(8_400_000);
-    expect(await compressDressingPhoto(entree)).toBe(entree);
+    await expect(compressDressingPhoto(photo(8_400_000))).rejects.toBeInstanceOf(PhotoNonPreparee);
   });
 
-  it("rend l'original si le décodage lève", async () => {
+  it("refuse la photo si le décodage lève", async () => {
     installerNavigateur({ width: 2000, height: 2000 }, 100_000);
     (globalThis as Record<string, unknown>).createImageBitmap = vi.fn(async () => {
       throw new Error("format non décodable");
     });
-    const entree = photo(3_000_000);
-    expect(await compressDressingPhoto(entree)).toBe(entree);
+    await expect(compressDressingPhoto(photo(3_000_000))).rejects.toBeInstanceOf(PhotoNonPreparee);
+  });
+
+  it("refuse la photo si le canvas ne rend aucun fichier", async () => {
+    const canvas = installerNavigateur({ width: 800, height: 800 }, 10);
+    canvas.toBlob = (cb) => cb(null);
+    await expect(compressDressingPhoto(photo(500_000))).rejects.toThrow("n'a pas pu être préparée");
   });
 
   it("ne touche pas à ce qui n'est pas une image", async () => {

@@ -33,6 +33,7 @@ import {
   updateDressingItemSaisons,
   updateDressingItemWorn,
   updateSavedLook,
+  PhotoNonPreparee,
   uploadDressingPhoto,
 } from "./dressing";
 import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
@@ -1956,7 +1957,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           // Échec : jamais persister l'aperçu blob (invalide au rechargement,
           // cf. bug signalé) — repasse à "pas de photo" plutôt qu'une photo cassée.
           setState((s) => ({ ...s, addPhotoUrl: null, addPhotoUploading: false }));
-          reportDressingError("uploadDressingPhoto", err);
+          // Photo qu'on ne sait pas ré-encoder (EXIF et GPS ne partent jamais) :
+          // le message dit quoi faire, sans préfixe technique.
+          if (err instanceof PhotoNonPreparee) setState((s) => ({ ...s, dressingError: err.message }));
+          else reportDressingError("uploadDressingPhoto", err);
         });
     },
     basculerAddSaison: (saison) =>

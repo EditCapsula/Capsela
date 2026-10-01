@@ -3,6 +3,8 @@
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { markSignupIntent, useAuth } from "@/lib/auth";
+import { messageAge, verifierAge } from "@/lib/ageMinimum";
+import { urlLegale } from "@/lib/legal/documents";
 import { useCapsela } from "@/lib/store";
 
 const INPUT_CLS =
@@ -17,8 +19,19 @@ export default function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [confirmPending, setConfirmPending] = useState(false);
 
+  const [erreurAge, setErreurAge] = useState<string | null>(null);
+
   const submitEmail = async () => {
     if (busy) return;
+    // Âge minimum (01/10/2026) : la date de naissance est obligatoire, et
+    // l'inscription refusée sous AGE_MINIMUM ans. Le contrôle se fait ici,
+    // avant toute création de compte.
+    const age = verifierAge(birthdate);
+    if (!age.ok) {
+      setErreurAge(messageAge(age.raison));
+      return;
+    }
+    setErreurAge(null);
     setBusy(true);
     const res = await auth.signUpEmail(state.authName.trim(), email.trim(), password, birthdate);
     setBusy(false);
@@ -105,6 +118,7 @@ export default function AuthScreen() {
             style={{ colorScheme: "light", color: birthdate ? undefined : "transparent" }}
             value={birthdate}
             onChange={(e) => setBirthdate(e.target.value)}
+            max={new Date().toISOString().slice(0, 10)}
             aria-label="Date de naissance"
           />
           {!birthdate && (
@@ -118,6 +132,11 @@ export default function AuthScreen() {
         </div>
       </div>
 
+      {erreurAge && (
+        <div role="alert" className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
+          {erreurAge}
+        </div>
+      )}
       {auth.error && (
         <div className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {auth.error}
@@ -141,8 +160,15 @@ export default function AuthScreen() {
       </button>
 
       <div className="text-[11px] text-placeholder text-center mt-4 leading-[1.5]">
-        En continuant, tu acceptes nos <span className="text-muted">Conditions</span> et notre{" "}
-        <span className="text-muted">Politique de confidentialité</span>.
+        En continuant, tu acceptes nos{" "}
+        <a href={urlLegale("cgu")} target="_blank" rel="noopener noreferrer" className="text-muted underline">
+          Conditions
+        </a>{" "}
+        et notre{" "}
+        <a href={urlLegale("confidentialite")} target="_blank" rel="noopener noreferrer" className="text-muted underline">
+          Politique de confidentialité
+        </a>
+        .
       </div>
 
       {auth.demoMode && (
