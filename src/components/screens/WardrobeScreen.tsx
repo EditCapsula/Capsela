@@ -81,12 +81,6 @@ import type { Item, OccasionKey } from "@/lib/types";
  * pour que les tenues proposées ne se ressemblent pas.
  */
 const OCCASIONS_ASSOCIATIONS: OccasionKey[] = ["quotidien", "travail_formel", "soiree"];
-/**
- * « Autres idées avec tes pièces » (01/10/2026) : d'autres contextes, mis en
- * retrait sous les trois looks. Même moteur, mêmes arguments ; ces tenues ne
- * comptent pas dans « N nouvelles associations ».
- */
-const OCCASIONS_AUTRES_IDEES: OccasionKey[] = ["date", "voyage", "festive"];
 /** Les deux occasions des idées d'inspiration du dressing vide. */
 const OCCASIONS_INSPIRATION: OccasionKey[] = ["quotidien", "travail_formel"];
 /** Looks du carrousel ; au-delà, « Voir tout → » au bout mène à l'écran « Mes looks ». */
@@ -249,23 +243,6 @@ export default function WardrobeScreen() {
     return associationsNouvelles(tenues, [...state.savedLooks.map((l) => l.pieceIds), ...state.history.map((h) => h.pieceIds)]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, defaultCapsule, weather, state.workMode, state.dateContext, profile, state.savedLooks, state.history]);
-
-  /**
-   * D'autres tenues du même moteur, pour la section secondaire de « À
-   * découvrir » : même composition que les trois principales (composerTenue),
-   * seulement des associations nouvelles et distinctes d'elles. Dressing vide :
-   * aucune (le bloc ne s'affiche pas).
-   */
-  const autresIdees = useMemo(() => {
-    if (items.length === 0) return [];
-    const tenues = OCCASIONS_AUTRES_IDEES.map((occasion) => composerTenue(occasion)).filter((t): t is NonNullable<typeof t> => t !== null);
-    return associationsNouvelles(tenues, [
-      ...tenuesMoteur.map((t) => t.ids),
-      ...state.savedLooks.map((l) => l.pieceIds),
-      ...state.history.map((h) => h.pieceIds),
-    ]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, defaultCapsule, weather, state.workMode, state.dateContext, profile, state.savedLooks, state.history, tenuesMoteur]);
 
   const aDecouvrir = choisirADecouvrir({
     etat: etatPremium,
@@ -565,7 +542,7 @@ export default function WardrobeScreen() {
                 Capsela a trouvé {aDecouvrir.nombre === 1 ? "une nouvelle association" : `${aDecouvrir.nombre} nouvelles associations`} avec
                 tes pièces.
               </div>
-              <AssociationsDressing tenues={tenuesMoteur} autres={autresIdees} dressing={items} onOuvrir={ouvrirTenue} onVoirToutes={actions.goTenues} />
+              <AssociationsDressing tenues={tenuesMoteur} dressing={items} onOuvrir={ouvrirTenue} />
             </>
           )}
           {aDecouvrir.cas === "proche_limite" && (

@@ -1,6 +1,5 @@
 "use client";
 
-import { VisuelPiece } from "@/components/CarteLook";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { OCC_LABELS } from "@/lib/data";
 import { provenanceLook } from "@/lib/ideesLooks";
@@ -17,10 +16,10 @@ import type { Item, OccasionKey } from "@/lib/types";
  * (titreEditorialOccasion), « ✦ N suggestion(s) » si la capsule en complète, et son
  * propre « Voir le look → ». Aucun numéro : la carte se reconnaît à son contenu.
  *
- * « Autres idées avec tes pièces » reste en retrait, séparée d'un filet : de
- * petites mosaïques d'autres tenues (jamais celles des cartes), un libellé muet,
- * un lien. Rien ici ne choisit une pièce ni une occasion — les tenues arrivent
- * toutes composées (WardrobeScreen.tenuesMoteur).
+ * Plus de section « Autres idées avec tes pièces » (retirée le 01/10/2026,
+ * demandé : le bloc propose déjà toutes les associations). Rien ici ne choisit
+ * une pièce ni une occasion — les tenues arrivent toutes composées
+ * (WardrobeScreen.tenuesMoteur).
  */
 
 export interface TenueIdee {
@@ -81,19 +80,14 @@ function CarteLookIdee({
 
 export default function AssociationsDressing({
   tenues,
-  autres,
   dressing,
   onOuvrir,
-  onVoirToutes,
 }: {
   /** Les associations nouvelles du moteur — ce que dit la phrase « Capsela a trouvé N nouvelles associations ». */
   tenues: TenueIdee[];
-  /** D'autres tenues du même moteur, mises en retrait ; vide : la section ne s'affiche pas. */
-  autres: TenueIdee[];
   /** Le dressing réel : ce qui n'y est pas, dans une tenue, est une suggestion de la capsule. */
   dressing: Item[];
   onOuvrir: (t: TenueIdee) => void;
-  onVoirToutes: () => void;
 }) {
   return (
     <div className="mt-5">
@@ -110,38 +104,6 @@ export default function AssociationsDressing({
         ))}
       </div>
 
-      {autres.length > 0 && (
-        <div className="mt-[22px] pt-[14px] border-t border-border">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] text-muted">Autres idées avec tes pièces</span>
-            <button
-              type="button"
-              onClick={onVoirToutes}
-              className="inline-flex items-center text-[12px] text-terracotta cursor-pointer flex-shrink-0 py-[13px] -my-[13px] whitespace-nowrap"
-            >
-              Voir toutes les idées →
-            </button>
-          </div>
-          <div className="flex gap-[8px] mt-[10px]">
-            {autres.map((t) => (
-              <button
-                key={t.occasion}
-                type="button"
-                onClick={() => onOuvrir(t)}
-                aria-label={`Voir la tenue ${OCC_LABELS[t.occasion]} proposée par Capsela`}
-                className="flex-none grid grid-cols-2 gap-[3px] p-[4px] rounded-[12px] cursor-pointer active:opacity-80"
-                style={{ width: 52, background: "var(--color-cream)" }}
-              >
-                {Array.from({ length: 4 }, (_, i) => t.pieces[i]).map((p, i) => (
-                  <span key={p ? p.id : `vide-${i}`} className="block" style={{ aspectRatio: "1" }}>
-                    {p ? <VisuelPiece piece={p} alt="" radius={6} /> : null}
-                  </span>
-                ))}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
