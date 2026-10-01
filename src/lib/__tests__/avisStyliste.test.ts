@@ -7,6 +7,7 @@ import {
   extraireTexteReponse,
   formulerContexte,
   INSTRUCTIONS,
+  LIMITE_AVIS_MENSUELLE,
   lireTitres,
   lireVetements,
   SCHEMA_REPONSE,
@@ -66,10 +67,15 @@ function deps(opts: {
   reponses?: Array<{ ok: boolean; json: unknown } | "reseau" | "attente">;
   delaiMs?: number;
   dressing?: PieceDressing[];
+  quota?: "ok" | "limite" | "indisponible";
+  utilisees?: number;
+  limite?: number;
 } = {}) {
   const appels: unknown[] = [];
   const lecturesDressing: string[] = [];
   const journal: JournalUsage[] = [];
+  const consommations: string[] = [];
+  const rendus: string[] = [];
   const file = [...(opts.reponses ?? [{ ok: true, json: reponseOpenAI(AVIS) }])];
   const d: DependancesAvis = {
     authentifier: async (jwt) => (jwt === "jwt-ok" ? { id: "u1" } : null),
@@ -90,8 +96,18 @@ function deps(opts: {
     nouvelId: () => "analyse-1",
     modele: "modele-test",
     delaiMs: opts.delaiMs ?? 1000,
+    quotaMensuel: {
+      limite: opts.limite ?? 5,
+      consommer: async (userId) => {
+        consommations.push(userId);
+        return { issue: opts.quota ?? "ok", utilisees: opts.utilisees ?? 1 };
+      },
+      rendre: async (userId) => {
+        rendus.push(userId);
+      },
+    },
   };
-  return { d, appels, journal, lecturesDressing };
+  return { d, appels, journal, lecturesDressing, consommations, rendus };
 }
 const AUTH = "Bearer jwt-ok";
 
@@ -165,6 +181,7 @@ describe("traiterDemandeAvis — ordre des contrôles (TEST 06 à 09)", () => {
       dressing: [],
       reconnaissance: [],
       portees: [],
+      restants: 4,
     });
     expect(appels).toHaveLength(1);
   });
@@ -547,5 +564,64 @@ describe("avis du styliste — la colorimétrie, quand elle existe", () => {
     expect(INSTRUCTIONS).toContain("jamais interdites");
     expect(INSTRUCTIONS).toContain("repère, pas une règle");
     expect(INSTRUCTIONS).toContain("Sans colorimétrie dans le contexte, n'en invente aucune");
+  });
+});
+
+describe("traiterDemandeAvis — plafond mensuel de 5 avis", () => {
+  it("le plafond par défaut est de 5 par mois", () => {
+    expect(LIMITE_AVIS_MENSUELLE).toBe(5);
+  });
+
+  it("sous le plafond : l'unité est consommée et les avis restants sont rendus", async () => {
+    const { d, appels, consommations } = deps({ utilisees: 2 });
+    const r = await traiterDemandeAvis(AUTH, { image: IMAGE }, d);
+    expect(r.statut).toBe(200);
+    expect(r.corps).toMatchObject({ ok: true, restants: 3 });
+    expect(consommations).toEqual(["u1"]);
+    expect(appels).toHaveLength(1);
+  });
+
+  it("au cinquième avis, il reste zéro", async () => {
+    const { d } = deps({ utilisees: 5 });
+    expect((await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).corps).toMatchObject({ ok: true, restants: 0 });
+  });
+
+  it("plafond atteint : 429, aucun appel au modèle", async () => {
+    const { d, appels, journal } = deps({ quota: "limite", utilisees: 5 });
+    expect(await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).toEqual({ statut: 429, corps: { ok: false, code: "quota_atteint" } });
+    expect(appels).toHaveLength(0);
+    expect(journal.at(-1)?.statut).toBe("quota_atteint");
+  });
+
+  it("quota illisible : 503 fail-closed, aucun appel au modèle", async () => {
+    const { d, appels } = deps({ quota: "indisponible" });
+    expect(await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).toEqual({ statut: 503, corps: { ok: false, code: "statut_indisponible" } });
+    expect(appels).toHaveLength(0);
+  });
+
+  it("une photo invalide ne consomme rien", async () => {
+    const { d, consommations } = deps();
+    expect((await traiterDemandeAvis(AUTH, { image: "pas une image" }, d)).statut).toBe(400);
+    expect(consommations).toHaveLength(0);
+  });
+
+  it("un non authentifié ne consomme rien", async () => {
+    const { d, consommations } = deps();
+    await traiterDemandeAvis(null, { image: IMAGE }, d);
+    expect(consommations).toHaveLength(0);
+  });
+
+  it("échec du service (modèle, réponse invalide) : l'unité est rendue", async () => {
+    for (const reponses of [["reseau"], [{ ok: false, json: null }], [{ ok: true, json: { output: [] } }, { ok: true, json: { output: [] } }]] as never[][]) {
+      const { d, rendus } = deps({ reponses });
+      expect((await traiterDemandeAvis(AUTH, { image: IMAGE }, d)).statut).toBeGreaterThanOrEqual(502);
+      expect(rendus).toEqual(["u1"]);
+    }
+  });
+
+  it("photo inexploitable : l'unité n'est PAS rendue (l'appel payant a eu lieu)", async () => {
+    const { d, rendus } = deps({ reponses: [{ ok: true, json: reponseOpenAI({ unusable: true, reason: "blurry" }) }] });
+    const r = await traiterDemandeAvis(AUTH, { image: IMAGE }, d);
+    if (r.statut === 422) expect(rendus).toHaveLength(0);
   });
 });

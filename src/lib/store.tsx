@@ -114,6 +114,8 @@ export type AnalyseAvis =
       dressing: PieceSuggeree[];
       /** Pièces du dressing reconnues sur la photo, corrections comprises (reconnaissance.ts) — la composition que lisent toutes les actions. */
       reconnaissance: VetementReconnu[];
+      /** Avis restants ce mois-ci après celui-ci (plafond mensuel), ou null quand la réponse ne le dit pas. */
+      restants: number | null;
     }
   | { etat: "echouee"; code: Extract<ResultatDemande, { ok: false }>["code"]; raison?: Extract<ResultatDemande, { ok: false }>["raison"] };
 export interface SessionAvisStyliste {
@@ -1576,7 +1578,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           photo,
           enregistrement: "aucun",
           analyse: r.ok
-            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing, reconnaissance: r.reconnaissance }
+            ? { etat: "reussie", analyseId: r.analyseId, avis: r.avis, dressing: r.dressing, reconnaissance: r.reconnaissance, restants: r.restants }
             : { etat: "echouee", code: r.code, raison: r.raison },
         };
         avisStylisteRef.current = suivant;

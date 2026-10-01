@@ -408,6 +408,14 @@ export default function AvisStylisteScreen() {
         <button type="button" onClick={() => actions.definirPhotoAvis(null)} className={LIEN + " mt-[10px]"}>
           {TEXTES.nouvelle}
         </button>
+        {/* Le plafond mensuel, dit à l'utilisatrice (01/10/2026) : seulement si le serveur l'a rendu. */}
+        {analyse.restants !== null && (
+          <div className="text-[12px] text-muted mt-[8px] leading-[1.45]">
+            {analyse.restants === 0
+              ? "C'était ton dernier avis de styliste de ce mois-ci."
+              : `Il te reste ${analyse.restants} avis de styliste ce mois-ci.`}
+          </div>
+        )}
       </div>
     );
   } else if (reaction && reaction.action !== "gate") {
@@ -417,11 +425,11 @@ export default function AvisStylisteScreen() {
         <Apercu photo={photo} hauteurMax="30vh" />
         <div className="mt-[20px] bg-card border border-border rounded-[20px] px-4 py-[16px]" role="alert">
           <div className="text-[14px] text-ink leading-[1.5]">{reaction.message}</div>
-          {reaction.action === "reessayer" && reaction.sousTexte && (
+          {(reaction.action === "reessayer" || reaction.action === "limite") && reaction.sousTexte && (
             <div className="text-[12px] text-muted mt-[4px] leading-[1.45]">{reaction.sousTexte}</div>
           )}
         </div>
-        {reaction.action === "reessayer" ? (
+        {reaction.action === "limite" ? null : reaction.action === "reessayer" ? (
           <button type="button" onClick={actions.lancerAvisStyliste} className={BOUTON_PRINCIPAL + " mt-[16px]"}>
             {TEXTES.reessayer}
           </button>
