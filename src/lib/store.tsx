@@ -158,6 +158,7 @@ function buildInitialState(): AppState {
     preferencesReturn: "profile",
     preferencesSection: null,
     legalReturn: "profile",
+    legalDoc: null,
     premiumReturn: "home",
     premiumOrigine: null,
     profileSetupStep: "genre",
@@ -277,6 +278,9 @@ export interface Actions {
   /** Compte : e-mail, confidentialité et données, légal, suppression, déconnexion. */
   goAccount: () => void;
   goLegal: () => void;
+  /** Ouvre un texte légal par-dessus l'écran courant (01/10/2026) — sans quitter l'app ni perdre la saisie en cours. */
+  openLegalDoc: (slug: string) => void;
+  closeLegalDoc: () => void;
   /** Ouvre la page Premium en mémorisant d'où l'on vient. */
   goPremium: (origine?: "valise") => void;
   /**
@@ -1662,6 +1666,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       return etat;
     },
     backFromLegal: () => setState((s) => ({ ...s, screen: s.legalReturn || "profile" })),
+    openLegalDoc: (slug) => setState((s) => ({ ...s, legalDoc: slug })),
+    closeLegalDoc: () => setState((s) => ({ ...s, legalDoc: null })),
     goLogin: () => go("login"),
     goProfileSetup: (stepKey = "genre", fromEdit = false) =>
       setState((s) => ({

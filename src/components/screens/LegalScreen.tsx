@@ -1,7 +1,7 @@
 "use client";
 
 import { APP_VERSION } from "@/lib/data";
-import { DOCUMENTS_LEGAUX, urlLegale } from "@/lib/legal/documents";
+import { DOCUMENTS_LEGAUX } from "@/lib/legal/documents";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 
@@ -20,19 +20,18 @@ export default function LegalScreen() {
 
       <div className="bg-card border border-border rounded-2xl overflow-hidden mt-5">
         {LEGAL_ROWS.map((r) => (
-          <a
+          <button
             key={r.slug}
-            href={urlLegale(r.slug)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between gap-3 px-4 py-[15px] border-b border-border last:border-b-0 cursor-pointer"
+            type="button"
+            onClick={() => actions.openLegalDoc(r.slug)}
+            className="w-full text-left flex items-center justify-between gap-3 px-4 py-[15px] border-b border-border last:border-b-0 cursor-pointer"
           >
             <div className="min-w-0">
               <div className="text-[13px] text-ink">{r.titre}</div>
               <div className="text-[11px] text-muted mt-[2px]">{r.sousTitre}</div>
             </div>
             <span className="text-terracotta text-[16px] flex-shrink-0">›</span>
-          </a>
+          </button>
         ))}
       </div>
 

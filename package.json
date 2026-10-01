@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "legal:generer": "node scripts/generer-legal.mjs",
+    "predev": "npm run legal:generer",
+    "prebuild": "npm run legal:generer",
     "dev": "next dev",
     "build": "next build",
     "start": "npx --yes serve@latest out",

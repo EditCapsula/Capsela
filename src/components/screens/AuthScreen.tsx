@@ -4,7 +4,6 @@ import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { markSignupIntent, useAuth } from "@/lib/auth";
 import { messageAge, verifierAge } from "@/lib/ageMinimum";
-import { urlLegale } from "@/lib/legal/documents";
 import { useCapsela } from "@/lib/store";
 
 const INPUT_CLS =
@@ -161,13 +160,13 @@ export default function AuthScreen() {
 
       <div className="text-[11px] text-placeholder text-center mt-4 leading-[1.5]">
         En continuant, tu acceptes nos{" "}
-        <a href={urlLegale("cgu")} target="_blank" rel="noopener noreferrer" className="text-muted underline">
+        <button type="button" onClick={() => actions.openLegalDoc("cgu")} className="text-muted underline cursor-pointer">
           Conditions
-        </a>{" "}
+        </button>{" "}
         et notre{" "}
-        <a href={urlLegale("confidentialite")} target="_blank" rel="noopener noreferrer" className="text-muted underline">
+        <button type="button" onClick={() => actions.openLegalDoc("confidentialite")} className="text-muted underline cursor-pointer">
           Politique de confidentialité
-        </a>
+        </button>
         .
       </div>
 

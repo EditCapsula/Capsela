@@ -1,5 +1,6 @@
 "use client";
 
+import LegalDocOverlay from "@/components/legal/LegalDocOverlay";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -117,6 +118,7 @@ function Screens() {
             actions.goWelcome();
           }}
         />
+        <LegalDocOverlay />
       </div>
     );
   }
@@ -181,6 +183,7 @@ function Screens() {
         {state.screen === "ideeLook" && <IdeeLookScreen />}
       </div>
       {showTabbar && <TabBar />}
+      <LegalDocOverlay />
       <ConfirmationAjout auDessusDeLaBarre={showTabbar} />
       <Analytics />
     </div>
