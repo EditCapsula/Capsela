@@ -177,7 +177,7 @@ function PaletteDots({
 }
 
 export default function ProfileSetupScreen() {
-  const { profile, saveProfile } = useAuth();
+  const { profile, saveProfile, saveColorimetrie } = useAuth();
   const { state, actions } = useCapsela();
   const [draft, setDraft] = useState<Profile>(profile);
   // Étape "prenom" masquée dès qu'un prénom est déjà connu (saisi à
@@ -287,7 +287,11 @@ export default function ProfileSetupScreen() {
     const { parcours, saison } = conclure(colo);
     setColo(parcours);
     if (!saison) return;
-    patch({ colorimetrie: colorimetrieDeSaison(saison, "questionnaire", reponsesParQuestion(colo.reponses)) });
+    const resultat = colorimetrieDeSaison(saison, "questionnaire", reponsesParQuestion(colo.reponses));
+    patch({ colorimetrie: resultat });
+    // Enregistré dès que le résultat s'affiche (01/10/2026, demandé) : fermer l'app avant la fin
+    // du parcours ne le perd plus. Seule la colorimétrie est écrite, pas le profil entier.
+    void saveColorimetrie(resultat);
     setStep(step + 1);
   };
   const passerColorimetrie = () => {

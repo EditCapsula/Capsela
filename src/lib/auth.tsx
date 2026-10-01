@@ -57,6 +57,12 @@ export interface AuthContextValue {
   /** Supprime définitivement le compte (Edge Function delete-account, cf. son en-tête) et déconnecte. Renvoie false + error rempli en cas d'échec — jamais de déconnexion locale silencieuse si la suppression serveur a échoué. */
   deleteAccount: () => Promise<boolean>;
   saveProfile: (p: Profile) => Promise<void>;
+  /**
+   * Enregistre SEULEMENT la colorimétrie du profil, dès que son résultat est affiché
+   * (01/10/2026, demandé) — sans attendre la fin du parcours, et sans écrire le reste
+   * d'un profil encore incomplet. L'échec est signalé par `error`, jamais silencieux.
+   */
+  saveColorimetrie: (c: Colorimetrie) => Promise<void>;
   clearError: () => void;
   /**
    * RÉINITIALISATION DU MOT DE PASSE (recette du 26/09/2026, cf. motDePasse.ts).
@@ -356,6 +362,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (err) setError("Impossible d'enregistrer le profil : " + err.message);
   };
 
+  const saveColorimetrie = async (c: Colorimetrie) => {
+    setProfile((p) => ({ ...p, colorimetrie: c }));
+    if (!isSupabaseConfigured) {
+      if (demoUser) persistDemo({ ...demoUser, profile: { ...profile, colorimetrie: c } });
+      return;
+    }
+    if (!user) return;
+    // Seules `id` et `colorimetrie` sont écrites : l'upsert ne touche pas aux autres colonnes
+    // d'une ligne existante, et en crée une aux valeurs par défaut sinon (aucune colonne
+    // obligatoire sans défaut, cf. 0001_profiles.sql).
+    const { error: err } = await getSupabase().from("profiles").upsert({ id: user.id, colorimetrie: c });
+    if (err) setError("Impossible d'enregistrer ta colorimétrie : " + err.message);
+  };
+
   const demanderLienReinitialisation: AuthContextValue["demanderLienReinitialisation"] = async (adresse) => {
     // Mode démo : aucun service d'e-mail. Le dire plutôt que prétendre avoir envoyé.
     if (!isSupabaseConfigured) return "demo";
@@ -409,6 +429,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     deleteAccount,
     saveProfile,
+    saveColorimetrie,
     clearError: () => setError(null),
     recuperation,
     demanderLienReinitialisation,
