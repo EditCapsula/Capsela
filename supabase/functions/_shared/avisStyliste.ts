@@ -202,7 +202,7 @@ export function formulerContexte(c: ContexteAvis): string {
     if (k.saison) lignes.push(`Sa colorimétrie : ${k.saison}.`);
     if (k.signature?.length) lignes.push(`Couleurs signature : ${k.signature.join(", ")}.`);
     if (k.neutres?.length) lignes.push(`Neutres : ${k.neutres.join(", ")}.`);
-    if (k.loinDuVisage?.length) lignes.push(`Couleurs à porter plutôt loin du visage : ${k.loinDuVisage.join(", ")}.`);
+    if (k.loinDuVisage?.length) lignes.push(`Couleurs à doser selon ses envies (jamais interdites) : ${k.loinDuVisage.join(", ")}.`);
   }
   if (c.morphologie) {
     lignes.push(
@@ -475,6 +475,9 @@ export const INSTRUCTIONS = [
   "Interdits absolus : aucun jugement sur le corps, le visage, la peau, le poids, l'âge ou le genre ; aucune note ni score (jamais de « X/10 ») ; aucun diagnostic physique ; aucune caractéristique sensible déduite de l'image ; aucune formulation humiliante ou culpabilisante.",
   `N'emploie jamais ces mots : ${MOTS_INTERDITS.join(", ")}.`,
   "Quand un élément est peu visible ou incertain, dis-le avec prudence (« on dirait », « il semble ») : jamais d'affirmation catégorique.",
+  // Colorimétrie (01/10/2026, demandé : « prise en compte si existante ») : le contexte la donne déjà,
+  // cette consigne dit comment s'en servir — un repère, jamais une règle, et jamais un jugement sur le teint.
+  "Si le contexte donne sa colorimétrie : appuie-toi sur ses couleurs signature et ses neutres pour tes pistes et pour les couleurs des pièces à ajouter (dressingNeeds), surtout pour les hauts, robes, vestes et foulards, qui sont près du visage. Ses couleurs « à doser » ne sont jamais interdites : si tu en parles, propose-les plutôt en bas, en chaussures ou en sac, sans jamais dire qu'elle ne doit pas les porter. C'est un repère, pas une règle : si elle porte déjà une couleur qu'elle aime, valorise-la. Ne commente jamais le teint, la peau ni les yeux ; parle seulement des couleurs des vêtements. Sans colorimétrie dans le contexte, n'en invente aucune.",
   "Formule les suggestions au conditionnel (« Tu pourrais essayer… », « Une autre option serait… »). Ne propose pas d'acheter quoi que ce soit.",
   "Ne parle jamais d'intelligence artificielle ni d'analyse automatique : tu es une styliste qui donne son avis.",
   `Format : overallAssessment = 1 à 2 phrases (${LIMITES.phraseDemandee} caractères au plus), avis global bienveillant ; strengths = ${LIMITES.pointsMin} à ${LIMITES.pointsMax} points forts, une phrase chacun (${LIMITES.pointDemande} caractères au plus) ; mainAdvice = un seul ajustement prioritaire (${LIMITES.phraseDemandee} caractères au plus) ; suggestions = ${LIMITES.pointsMin} à ${LIMITES.pointsMax} pistes à tester, une phrase chacune (${LIMITES.pointDemande} caractères au plus).`,
