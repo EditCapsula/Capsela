@@ -35,27 +35,46 @@ fait de ton côté, avec la commande ou le réglage indiqué.
 
 ## 9. Fonctions Edge
 
-Sept fonctions dans `supabase/functions/`. Chacune se déploie en collant son
-fichier dans le tableau de bord (Edge Functions → Deploy a new function), ou
-`supabase functions deploy <nom>`. Les trois qui importent `_shared/` demandent
-la CLI ou un fichier unique.
+Sept fonctions dans `supabase/functions/`. **Elles se déploient toutes seules** :
+le workflow « Déployer les fonctions Supabase » (`.github/workflows/`) les met en
+ligne à chaque merge dans `main` qui touche `supabase/functions/`, avec le secret
+GitHub `SUPABASE_ACCESS_TOKEN`. Vérifie dans l'onglet Actions qu'il est passé
+après un merge. (Plusieurs fonctions importent `_shared/` : elles ne se collent
+plus dans l'éditeur du tableau de bord.)
 
 | Fonction | Rôle | Secrets | JWT vérifié ? | Lancement P0 |
 | --- | --- | --- | --- | --- |
 | `weather` | météo, prévisions (`mode=forecast`), villes (`mode=geo`) | `OPENWEATHER_API_KEY` | non (par conception) | **requise** ; redéployer la dernière version (le client détecte l'ancienne par la forme de sa réponse) |
-| `analyze-dressing-photo` | préremplit la fiche d'une pièce depuis sa photo | `OPENAI_API_KEY`, `PHOTO_ANALYSIS_MODEL` (option) | **non** | requise pour le préremplissage |
-| `generate-catalog-image` | visuels du catalogue | `OPENAI_API_KEY`, `IMAGE_GENERATION_MODEL`/`_QUALITY`, `MAX_IMAGE_GENERATIONS_PER_DAY` (options), clé admin | **non** | requise si des visuels manquent |
+| `analyze-dressing-photo` | préremplit la fiche d'une pièce depuis sa photo | `OPENAI_API_KEY`, `PHOTO_ANALYSIS_MODEL`, `MAX_PHOTO_ANALYSES_PER_USER_PER_DAY` (options) | **oui** (depuis le 01/10) + 40 analyses par compte et par jour + photo de la requérante seule | requise pour le préremplissage |
+| `generate-catalog-image` | visuels du catalogue | `OPENAI_API_KEY`, `IMAGE_GENERATION_MODEL`/`_QUALITY`, `MAX_IMAGE_GENERATIONS_PER_DAY`, `MAX_CATALOG_IMAGE_REQUESTS_PER_USER_PER_DAY` (options), clé admin | **oui** (depuis le 01/10) + 300 demandes par compte et par jour ; `force_regenerate` réservé à l'administration | requise si des visuels manquent |
 | `delete-account` | suppression du compte (RGPD) | `SUPABASE_SERVICE_ROLE_KEY` ou `SB_SECRET_KEY` | oui (id lu dans le JWT) | **requise** : sans elle, la suppression et le refus sous 15 ans échouent |
 | `stylist-advice` | avis de styliste | `OPENAI_API_KEY`, `STYLIST_ADVICE_MODEL`, `STYLIST_ADVICE_TIMEOUT_MS` (options), clé admin | oui | requise si l'avis est ouvert |
 | `video-recompense` | bonus après vidéo | — | — | **inutile** : aucun fournisseur, l'app n'affiche jamais la carte vidéo |
 | `recompress-legacy-images` | maintenance du stock PNG | `RECOMPRESS_ADMIN_KEY` | clé dédiée | à supprimer une fois le stock épuisé |
 
-**Risque de coût à traiter.** `analyze-dressing-photo` et `generate-catalog-image`
-ne vérifient aucun JWT : la clé `anon`, publique dans le navigateur, suffit à les
-appeler en boucle et à consommer des crédits OpenAI. `generate-catalog-image` a
-un plafond quotidien (`MAX_IMAGE_GENERATIONS_PER_DAY`, **à fixer**) ;
-`analyze-dressing-photo` n'en a aucun. À faire : exiger un JWT d'utilisatrice
-connectée, et plafonner par compte et par jour. Je peux l'écrire.
+**Risque de coût : traité le 01/10/2026** (migration `0043_edge_usage_quota.sql`,
+`_shared/protection.ts`). `analyze-dressing-photo` et `generate-catalog-image`
+ne vérifiaient aucune identité : la clé `anon`, publique dans le navigateur,
+suffisait à les appeler en boucle et à consommer des crédits OpenAI.
+Désormais :
+
+- elles exigent le JWT d'une utilisatrice connectée (la clé `anon` seule est
+  refusée, 401) ;
+- chaque compte a un plafond par jour (429 au-delà), tenu en base par
+  `consommer_edge_quota` ;
+- `analyze-dressing-photo` n'analyse que la photo de dressing de la requérante
+  (URL du stockage du projet, sous son dossier) ;
+- `force_regenerate` n'est honoré que pour l'administration ;
+- l'administration (la clé privilégiée : scripts et workflows GitHub de
+  génération du catalogue) passe sans quota ;
+- si le quota ne peut pas être vérifié (migration absente), la fonction refuse
+  (503) plutôt que de laisser le coût ouvert.
+
+**Ordre à respecter : exécuter la migration 0043 AVANT de merger**, puisque le
+merge déploie les fonctions. Sans elle, le préremplissage par photo et la
+génération de visuels s'arrêtent (503) jusqu'à son exécution. `weather` reste
+ouverte par conception ; `stylist-advice` et `delete-account` vérifiaient déjà
+l'identité.
 
 Test d'une fonction déployée (remplace `<ref>` et `<anon>`) :
 

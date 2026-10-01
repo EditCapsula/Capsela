@@ -5,10 +5,9 @@
 // configuré) — endpoint différent (classification vision, pas génération),
 // jamais de nouveau fournisseur.
 //
-// Fichier volontairement autonome (aucun import vers ../_shared/*, contrairement
-// à generate-catalog-image) : déployable en copiant-collant ce seul fichier
-// dans l'éditeur en ligne du dashboard Supabase (Edge Functions → Deploy a
-// new function), sans CLI ni structure multi-fichiers.
+// Depuis le 01/10/2026 elle importe ../_shared/ (protection.ts, adminKey.ts) :
+// elle ne se colle plus dans l'éditeur du tableau de bord, elle se déploie par
+// le workflow « Déployer les fonctions Supabase » ou la CLI.
 //
 // Entrée : { photo_url: string } — URL signée du bucket dressing-photos (privé depuis le 30/09/2026 ; publique avant),
 // déjà obtenue par uploadDressingPhoto AVANT l'appel (jamais une blob: URL,
@@ -35,6 +34,23 @@
 //
 // Déploiement avec la CLI (équivalent) :
 //   supabase functions deploy analyze-dressing-photo
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
+import {
+  authentifier,
+  consommerQuota,
+  estAppelantAdmin,
+  jetonDepuisEntete,
+  limiteDepuisEnv,
+  urlPhotoAutorisee,
+} from "../_shared/protection.ts";
+
+// Plafond d'analyses par compte et par jour (01/10/2026) : une analyse est un
+// appel OpenAI vision payant. Modifiable par le secret
+// MAX_PHOTO_ANALYSES_PER_USER_PER_DAY ; une valeur absente ou illisible ne
+// retire jamais le plafond.
+const DEFAULT_DAILY_LIMIT_PER_USER = 40;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -137,6 +153,18 @@ Deno.serve(async (req) => {
   const model = Deno.env.get("PHOTO_ANALYSIS_MODEL") || DEFAULT_MODEL;
   if (!openaiKey) return jsonError("Configuration serveur incomplète (OPENAI_API_KEY).", 500);
 
+  // Protection (01/10/2026, cf. _shared/protection.ts) : une utilisatrice
+  // connectée, jamais la clé `anon` seule ; une photo qui est la SIENNE ; un
+  // plafond par compte et par jour. L'administration (la clé privilégiée)
+  // passe, sans quota, pour les essais et la maintenance.
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const cleAdmin = getAdminKey();
+  if (!supabaseUrl || !cleAdmin) return jsonError(ADMIN_KEY_MISSING, 500);
+  const admin = createClient(supabaseUrl, cleAdmin);
+  const estAdmin = estAppelantAdmin(req.headers.get("Authorization"), req.headers.get("apikey"), cleAdmin);
+  const utilisatrice = estAdmin ? null : await authentifier(admin, jetonDepuisEntete(req.headers.get("Authorization")));
+  if (!estAdmin && !utilisatrice) return jsonError("Non authentifié.", 401);
+
   let photoUrl: string;
   try {
     const body = await req.json();
@@ -144,6 +172,15 @@ Deno.serve(async (req) => {
     if (!photoUrl.startsWith("http")) throw new Error("photo_url invalide");
   } catch {
     return jsonError("photo_url manquante ou invalide.", 400);
+  }
+  if (utilisatrice && !urlPhotoAutorisee(photoUrl, supabaseUrl, utilisatrice.id)) {
+    return jsonError("Cette photo n'est pas une photo de ton dressing.", 403);
+  }
+  if (utilisatrice) {
+    const limite = limiteDepuisEnv(Deno.env.get("MAX_PHOTO_ANALYSES_PER_USER_PER_DAY"), DEFAULT_DAILY_LIMIT_PER_USER);
+    const quota = await consommerQuota(admin, utilisatrice.id, "analyze-dressing-photo", limite);
+    if (quota === "limite") return jsonError("Limite quotidienne d'analyses atteinte.", 429);
+    if (quota === "indisponible") return jsonError("Service momentanément indisponible.", 503);
   }
 
   try {
