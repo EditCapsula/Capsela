@@ -187,7 +187,7 @@ export default function IdeeLookScreen() {
         }}
         disabled={enregistre || demande}
         aria-pressed={enregistre}
-        className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[14px] t-bouton cursor-pointer disabled:cursor-default"
+        className="mt-[10px] w-full border border-border text-terracotta text-center rounded-full py-[14px] t-bouton cursor-pointer disabled:cursor-default"
       >
         {enregistre ? "✓ Enregistré dans mes looks" : demande ? "Enregistrement…" : "Enregistrer dans mes looks"}
       </button>

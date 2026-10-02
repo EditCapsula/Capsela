@@ -464,7 +464,7 @@ export default function HistoryScreen() {
                     <button
                       disabled={occupe}
                       onClick={() => void choisir(item, "gardee")}
-                      className="w-full min-h-[46px] rounded-full border border-border-soft text-ink t-bouton cursor-pointer disabled:opacity-50"
+                      className="w-full min-h-[46px] rounded-full border border-border text-ink t-bouton cursor-pointer disabled:opacity-50"
                     >
                       Garder dans mon dressing
                     </button>

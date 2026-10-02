@@ -18,7 +18,7 @@ export default function LegalScreen() {
         <div className="t-titre-section text-ink">Informations légales</div>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden mt-5">
+      <div className="bg-card border border-border rounded-[16px] overflow-hidden mt-5">
         {LEGAL_ROWS.map((r) => (
           <button
             key={r.slug}

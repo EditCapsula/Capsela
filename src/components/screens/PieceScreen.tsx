@@ -324,7 +324,7 @@ export default function PieceScreen() {
               href={active.affLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-[10px] block w-full text-center border border-border-soft text-terracotta rounded-full py-[13px] text-[12px] cursor-pointer"
+              className="mt-[10px] block w-full text-center border border-border text-terracotta rounded-full py-[13px] text-[12px] cursor-pointer"
             >
               Acheter
             </a>
@@ -340,7 +340,7 @@ export default function PieceScreen() {
           </button>
           <button
             onClick={() => setLookSheetOpen(true)}
-            className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[14px] t-bouton cursor-pointer"
+            className="mt-[10px] w-full border border-border text-terracotta text-center rounded-full py-[14px] t-bouton cursor-pointer"
           >
             ♡ Ajouter à un look
           </button>

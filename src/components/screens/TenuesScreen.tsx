@@ -1073,7 +1073,7 @@ export default function TenuesScreen() {
                                 href={suggested.affLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-[6px] border border-border-soft text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
+                                className="inline-flex items-center justify-center gap-[6px] border border-border text-terracotta rounded-full py-[10px] text-[12px] cursor-pointer"
                               >
                                 <BagIcon />
                                 <span className="underline underline-offset-2">Acheter cette pièce</span>

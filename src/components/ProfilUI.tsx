@@ -154,7 +154,7 @@ export function PastillesPalette({ couleurs }: { couleurs: string[] }) {
         hex ? (
           <span key={i} className="w-[20px] h-[20px] rounded-full flex-shrink-0" style={{ background: hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} />
         ) : (
-          <span key={i} className="w-[20px] h-[20px] rounded-full flex-shrink-0 border border-border-soft" />
+          <span key={i} className="w-[20px] h-[20px] rounded-full flex-shrink-0 border border-border" />
         )
       )}
     </span>

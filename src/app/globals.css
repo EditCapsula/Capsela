@@ -26,7 +26,6 @@
   --color-gold: #c9966f;
   --color-card: #fbf8f3;
   --color-border: #e6dccb;
-  --color-border-soft: #e6dccb;
   --color-muted: #7b7366;
   /* Retirés le 02/10/2026 (audit design system) : muted-2, muted-4, chip-soft-text et chip-soft-border n'avaient aucun usage ;
      muted-2 et muted-4 doublaient muted et muted-3 à l'identique. Le terracotta de marque est #a66950 (arbitré le 02/10/2026). */
@@ -43,7 +42,6 @@
   --color-success: #5b7a5e;
   --color-success-bg: #e7eedf;
   --color-dots: #dfd3be;
-  --color-cream-dark-muted: #b3aa9b;
   --color-cream-dark-soft: #d9cbb6;
 }
 

@@ -772,7 +772,7 @@ export default function CapsuleScreen() {
                 setFiche(null);
                 actions.startReplace(pieceFiche, "capsule");
               }}
-              className="mt-[12px] w-full border border-border-soft text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"
+              className="mt-[12px] w-full border border-border text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"
             >
               Je possède déjà cette pièce
             </button>

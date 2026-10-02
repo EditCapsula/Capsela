@@ -253,7 +253,7 @@ export default function CreateLookScreen() {
         </div>
 
         {items.length === 0 ? (
-          <div className="mt-6 bg-card border border-border rounded-2xl px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
+          <div className="mt-6 bg-card border border-border rounded-[16px] px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
             Ton dressing est encore vide — ajoute quelques pièces réelles pour pouvoir composer un look.
           </div>
         ) : (

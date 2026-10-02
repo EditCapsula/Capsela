@@ -223,14 +223,14 @@ export default function ItemOutfitsScreen() {
               href={pivot.affLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block border border-border-soft text-terracotta rounded-full py-[8px] px-[14px] text-[12px] cursor-pointer whitespace-nowrap"
+              className="inline-block border border-border text-terracotta rounded-full py-[8px] px-[14px] text-[12px] cursor-pointer whitespace-nowrap"
             >
               Acheter ↗
             </a>
           )}
           <button
             onClick={() => actions.startReplace(pivot)}
-            className="inline-block border border-border-soft text-terracotta rounded-full py-[8px] px-[14px] text-[12px] cursor-pointer whitespace-nowrap"
+            className="inline-block border border-border text-terracotta rounded-full py-[8px] px-[14px] text-[12px] cursor-pointer whitespace-nowrap"
           >
             J&apos;ai déjà
           </button>

@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import AppHeader from "@/components/AppHeader";
-import { LienRetour } from "@/components/BoutonRetour";
 import { CarteAvis } from "@/components/AvisEnregistresJournal";
 import { trierAvisRecents } from "@/lib/avisJournal";
 import { useCapsela } from "@/lib/store";
@@ -25,9 +24,8 @@ export default function AvisTousScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader />
-      <LienRetour onClick={actions.goHistory} label="Revenir au journal" />
-      <div className="t-surtitre text-muted mt-[8px]">Journal</div>
+      <AppHeader onBack={actions.goHistory} backLabel="Revenir au journal" />
+      <div className="t-surtitre text-muted mt-[18px]">Journal</div>
       <div className="t-titre-ecran text-ink mt-[6px]">
         Mes avis de <span className="italic text-terracotta">styliste</span>
       </div>

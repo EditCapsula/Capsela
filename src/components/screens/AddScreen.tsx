@@ -319,7 +319,7 @@ export default function AddScreen() {
           onClick={() => setSourcePhoto(true)}
           aria-label={state.addPhotoUrl ? "Changer la photo" : "Ajouter une photo"}
           className={
-            "mt-[4px] w-full rounded-2xl flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
+            "mt-[4px] w-full rounded-[16px] flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
             (state.addPhotoUrl ? "bg-card" : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
           }
           style={{

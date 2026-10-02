@@ -99,7 +99,7 @@ export default function LookDetailScreen() {
       </button>
       <button
         onClick={actions.deleteActiveLook}
-        className="mt-[10px] w-full text-center border border-border-soft text-rust rounded-full py-[13px] text-[12px] cursor-pointer"
+        className="mt-[10px] w-full text-center border border-border text-rust rounded-full py-[13px] text-[12px] cursor-pointer"
       >
         Supprimer ce look
       </button>

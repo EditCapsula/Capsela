@@ -7,7 +7,6 @@ import { IconeAvis, PastilleIcone, type NomIconeAvis } from "@/components/Icones
 import EtMaintenantAvis from "@/components/EtMaintenantAvis";
 import PiecesReconnues from "@/components/PiecesReconnues";
 import AppHeader from "@/components/AppHeader";
-import BoutonRetour from "@/components/BoutonRetour";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ResultatAvis from "@/components/ResultatAvis";
@@ -72,7 +71,7 @@ const TEXTES = {
 
 const BOUTON_PRINCIPAL =
   "w-full rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-center t-bouton py-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
-const BOUTON_SECONDAIRE = "w-full rounded-full border border-border-soft text-terracotta text-center text-[13px] py-[14px] cursor-pointer";
+const BOUTON_SECONDAIRE = "w-full rounded-full border border-border text-terracotta text-center text-[13px] py-[14px] cursor-pointer";
 const LIEN = "w-full text-center text-[12px] text-muted py-[10px] cursor-pointer";
 
 function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?: string }) {
@@ -613,15 +612,14 @@ export default function AvisStylisteScreen() {
       {/* EN-TÊTE GLOBAL (V2, 26/09/2026) : le même que sur toutes les pages —
           logo centré, profil à droite — sur l'entrée, l'analyse et le
           résultat. Le retour descend dans le contenu. */}
-      <AppHeader />
-      <div className="flex items-center justify-between gap-3">
-        <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" />
-        {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
-      </div>
-
+      {/* Le retour dans le bandeau, comme sur Compte, Profil, Préférences, Premium, Planifier, Valise (02/10/2026). */}
+      <AppHeader onBack={actions.goHome} backLabel="Revenir à l'accueil" />
       {/* Le même en-tête que les autres écrans : surtitre, titre de 27 px dont le second temps est en italique
           terracotta, chapeau (02/10/2026, signalé : la ligne en serif gras ne ressemblait à aucune autre page). */}
-      <div className="t-surtitre text-muted mt-[8px]">Ton look, vu par Capsela</div>
+      <div className="flex items-center justify-between gap-3 mt-[18px]">
+        <div className="t-surtitre text-muted">Ton look, vu par Capsela</div>
+        {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
+      </div>
       <div className="t-titre-ecran text-ink mt-[6px]">
         Avis de <span className="italic text-terracotta">styliste</span>
       </div>
