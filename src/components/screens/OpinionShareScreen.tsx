@@ -575,16 +575,7 @@ export default function OpinionShareScreen() {
           </div>
         )}
         {peutPartager ? (
-          <button
-            onClick={partager}
-            disabled={etat === "partage"}
-            aria-busy={etat === "partage"}
-            className={
-              "w-full flex items-center justify-center gap-[9px] rounded-full t-bouton bg-terracotta text-cream " +
-              (etat === "partage" ? "cursor-not-allowed opacity-60" : "active:bg-terracotta-hover cursor-pointer")
-            }
-            style={{ minHeight: 52 }}
-          >
+          <Button onClick={partager} disabled={etat === "partage"} aria-busy={etat === "partage"} className="gap-[9px]">
             {etat === "partage" ? (
               <span
                 aria-hidden="true"
@@ -604,7 +595,7 @@ export default function OpinionShareScreen() {
               </svg>
             )}
             <span>{etat === "partage" ? "Préparation…" : "Partager ma tenue"}</span>
-          </button>
+          </Button>
         ) : (
           <div className="text-[12px] text-muted leading-[1.5] py-1">
             Ton navigateur ne propose pas de partage. Copie le message pour l&apos;envoyer toi-même.

@@ -645,17 +645,9 @@ export default function AddScreen() {
         className="flex-shrink-0 px-6 pt-[10px] border-t border-border bg-cream"
         style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom))" }}
       >
-        <button
-          onClick={save}
-          disabled={blocked}
-          className={
-            "w-full text-center rounded-full t-bouton " +
-            (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer")
-          }
-          style={{ minHeight: 52 }}
-        >
+        <Button onClick={save} disabled={blocked}>
           {!creation ? "Enregistrer les modifications" : "Ajouter au dressing"}
-        </button>
+        </Button>
         {state.addPhotoUploading ? (
           <div className="text-center text-[11px] text-terracotta mt-[8px]">Envoi de la photo en cours…</div>
         ) : shoeTypeMissing ? (

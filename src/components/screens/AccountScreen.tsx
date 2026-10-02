@@ -10,6 +10,7 @@ import { readConsent, setConsent, subscribeConsent, type ConsentState } from "@/
 import { APP_VERSION } from "@/lib/data";
 import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport";
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 /*
  * MON COMPTE (architecture du profil, 25/09/2026) : le compte et ses données,
@@ -265,16 +266,9 @@ export default function AccountScreen() {
           récupérer.
         </div>
         {error && <div className="mt-[14px] text-[12px] text-rust leading-[1.5]">{error}</div>}
-        <button
-          onClick={handleDeleteAccount}
-          disabled={deleting}
-          className={
-            "mt-[22px] w-full text-center rounded-full py-[14px] t-bouton " +
-            (deleting ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-rust text-cream cursor-pointer")
-          }
-        >
+        <Button variante="destructif" className="mt-[22px]" onClick={handleDeleteAccount} disabled={deleting}>
           {deleting ? "Suppression en cours…" : "Supprimer définitivement"}
-        </button>
+        </Button>
         <button onClick={closeDeleteConfirm} disabled={deleting} className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer">
           Annuler
         </button>

@@ -59,6 +59,7 @@ import {
   type Intensite,
   type Profile,
 } from "@/lib/profile";
+import Button from "@/components/Button";
 
 /**
  * Étape Morphologie exclue pour les profils Homme (Tâche 4, arbitrages du
@@ -707,16 +708,9 @@ export default function ProfileSetupScreen() {
 
   const continueButton = pied && (
     <>
-      <button
-        onClick={pied.actif ? pied.onClick : undefined}
-        disabled={!pied.actif}
-        className={
-          "mt-[22px] w-full text-center rounded-full py-4 t-bouton " +
-          (pied.actif ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
-        }
-      >
+      <Button className="mt-[22px]" onClick={pied.actif ? pied.onClick : undefined} disabled={!pied.actif}>
         {pied.libelle}
-      </button>
+      </Button>
       {pied.lien && (
         <button onClick={pied.lien.onClick} className="w-full text-[13px] text-muted cursor-pointer mt-1" style={{ minHeight: 44 }}>
           {pied.lien.libelle}

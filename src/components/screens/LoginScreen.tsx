@@ -196,15 +196,9 @@ export default function LoginScreen() {
         </div>
       )}
 
-      <button
-        onClick={submit}
-        className={
-          "mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream " +
-          (busy ? "bg-[#bd8a75]" : "bg-terracotta active:bg-terracotta-hover")
-        }
-      >
+      <Button pleine={false} className="mt-5" onClick={submit} disabled={busy}>
         {busy ? "Un instant…" : "Se connecter"}
-      </button>
+      </Button>
 
       <div className="flex-1" />
       <div className="text-center pt-4 pb-[6px] text-[13px] text-muted">

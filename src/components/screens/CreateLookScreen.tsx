@@ -21,6 +21,7 @@ import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 /*
  * « CRÉER UN LOOK » — refonte du 26/09/2026, faite avec les briques déjà en
@@ -459,16 +460,9 @@ export default function CreateLookScreen() {
               {messageCta}
             </div>
           )}
-          <button
-            onClick={actions.saveLook}
-            disabled={!canSave}
-            className={
-              "pointer-events-auto w-full text-center rounded-full py-4 t-bouton " +
-              (canSave ? "bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer" : "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed")
-            }
-          >
+          <Button className="pointer-events-auto" onClick={actions.saveLook} disabled={!canSave}>
             Enregistrer ce look {count > 0 ? `(${count})` : ""}
-          </button>
+          </Button>
         </div>
       )}
 

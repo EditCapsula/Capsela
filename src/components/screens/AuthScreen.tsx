@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import { markSignupIntent, useAuth } from "@/lib/auth";
 import { messageAge, verifierAge } from "@/lib/ageMinimum";
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 const INPUT_CLS =
   "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
@@ -148,15 +149,9 @@ export default function AuthScreen() {
         </div>
       )}
 
-      <button
-        onClick={submitEmail}
-        className={
-          "mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream " +
-          (busy ? "bg-[#bd8a75]" : "bg-terracotta active:bg-terracotta-hover")
-        }
-      >
+      <Button pleine={false} className="mt-5" onClick={submitEmail} disabled={busy}>
         {busy ? "Un instant…" : "Créer mon compte"}
-      </button>
+      </Button>
 
       <div className="text-[11px] text-placeholder text-center mt-4 leading-[1.5]">
         En continuant, tu acceptes nos{" "}
