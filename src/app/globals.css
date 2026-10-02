@@ -36,6 +36,15 @@
   --color-warm-text: #8a6b4a;
   --color-warm-text-2: #7c5a43;
   --color-chip-soft-bg: #efe7da;
+  /* Ajoutés le 02/10/2026 (audit design system) : des valeurs écrites en dur dans les écrans, reprises à l'identique. */
+  --color-ink-soft: #3f3b34;
+  --color-divider: #efe7da;
+  --color-photo-bg: #f3ede1;
+  --color-selected-bg: #f6ebe2;
+  --color-error-bg: #f4e2da;
+  --color-error-border: #dcb2a0;
+  --color-on-terracotta: #fbf3ea;
+  --color-on-terracotta-soft: #f0ddcf;
   --color-rust: #9e4b2e;
   --color-sage: #8fb27a;
   /* Réussite (badge « Recommandé »), 02/10/2026 : les deux valeurs étaient écrites en dur dans CreateLookScreen. */

@@ -554,7 +554,7 @@ export default function HistoryScreen() {
             { icone: <IconeIdee />, a: "Obtiens des idées", b: "personnalisées" },
           ].map(({ icone, a, b }) => (
             <li key={a} className="flex flex-col items-center text-center">
-              <span className="w-[38px] h-[38px] rounded-full bg-[#F0E5D6] text-terracotta flex items-center justify-center">{icone}</span>
+              <span className="w-[38px] h-[38px] rounded-full bg-warm-bg text-terracotta flex items-center justify-center">{icone}</span>
               <span className="text-[11px] text-ink leading-[1.35] mt-[8px]">
                 {a}
                 <br />

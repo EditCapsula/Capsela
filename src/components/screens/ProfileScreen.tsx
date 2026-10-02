@@ -163,7 +163,7 @@ export default function ProfileScreen() {
       {toRevalidate && (
         <button
           onClick={() => ouvrirChamp("morphologie")}
-          className="w-full text-left bg-[#F6EBE2] border border-terracotta rounded-[16px] p-4 mt-5 cursor-pointer"
+          className="w-full text-left bg-selected-bg border border-terracotta rounded-[16px] p-4 mt-5 cursor-pointer"
         >
           <div className="t-surtitre text-terracotta">À compléter</div>
           <div className="text-[13px] text-ink mt-[6px]">{toRevalidate.fieldLabel} est à mettre à jour.</div>

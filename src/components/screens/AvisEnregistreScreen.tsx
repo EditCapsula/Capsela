@@ -158,7 +158,7 @@ export default function AvisEnregistreScreen() {
                 setMenu(false);
                 document.getElementById("avis-pieces-reconnues")?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
-              className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
+              className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-divider"
               style={{ minHeight: 52 }}
             >
               {TEXTES.modifierPieces}

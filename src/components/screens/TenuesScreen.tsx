@@ -75,9 +75,9 @@ function ExploreStyleCard({
     <button
       onClick={onClick}
       className={"relative flex-none w-[124px] text-left rounded-[14px] overflow-hidden border-[1.5px] cursor-pointer " + (selected ? "border-terracotta" : "border-border")}
-      style={{ background: selected ? "#F6EBE2" : "#FBF8F3" }}
+      style={{ background: selected ? "var(--color-selected-bg)" : "var(--color-card)" }}
     >
-      <div className="w-full aspect-[4/5] relative" style={{ background: "#E6DCCB" }}>
+      <div className="w-full aspect-[4/5] relative" style={{ background: "var(--color-border)" }}>
         {cfg.asset && !failed && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={cfg.asset} alt="" onError={() => setFailed(true)} className="absolute inset-0 w-full h-full object-cover" />
@@ -615,7 +615,7 @@ export default function TenuesScreen() {
         <div className="mt-[14px] flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1 min-w-0">
-            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">
+            <div className="text-[12px] text-ink-soft leading-[1.45]">
               En voyage longue distance ? Pense aux bas de contention pour limiter les jambes lourdes.
             </div>
           </div>
@@ -708,7 +708,7 @@ export default function TenuesScreen() {
                 tenue, et le bouton de changement revient à la proposition de
                 Capsela — sans passer par le quota d'« Autre tenue », ce n'est
                 pas une alternative demandée. */}
-            <span className="t-label" aria-live="polite" style={{ color: statut.cle === "a_completer" && !planApplique ? "#F0DDCF" : "#FBF3EA" }}>
+            <span className="t-label" aria-live="polite" style={{ color: statut.cle === "a_completer" && !planApplique ? "var(--color-on-terracotta-soft)" : "var(--color-on-terracotta)" }}>
               {(planApplique || statut.cle === "complete") && <span aria-hidden="true">✦ </span>}
               {planApplique ? "Ta tenue planifiée" : statut.libelle}
             </span>
@@ -742,7 +742,7 @@ export default function TenuesScreen() {
           {/* Ce que la météo du jour dit de la tenue planifiée (choisie sur une
               prévision) : un constat, jamais un changement d'office. */}
           {planApplique?.alerte && (
-            <div className="text-[12.5px] leading-[1.4] -mt-[4px] mb-[12px]" style={{ color: "#F0DDCF", textWrap: "pretty" }}>
+            <div className="text-[12.5px] leading-[1.4] -mt-[4px] mb-[12px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
               {planApplique.alerte}
             </div>
           )}
@@ -817,7 +817,7 @@ export default function TenuesScreen() {
                   <span
                     key={p.cle}
                     className="inline-flex items-center gap-[7px] rounded-full pl-[6px] pr-[11px] py-[4px] text-[11px] leading-[1.25]"
-                    style={{ background: "rgba(74,36,24,.72)", color: "#FBF3EA" }}
+                    style={{ background: "rgba(74,36,24,.72)", color: "var(--color-on-terracotta)" }}
                   >
                     <span
                       aria-hidden="true"
@@ -874,7 +874,7 @@ export default function TenuesScreen() {
               className="mt-[14px] disabled:opacity-100 disabled:cursor-not-allowed"
               style={{
                 background: vesteWithoutBase ? "rgba(243,238,229,.38)" : statut.cle === "a_completer" ? "transparent" : undefined,
-                color: vesteWithoutBase ? "rgba(29,26,22,.5)" : statut.cle === "a_completer" ? "#F3EEE5" : undefined,
+                color: vesteWithoutBase ? "rgba(29,26,22,.5)" : statut.cle === "a_completer" ? "var(--color-cream)" : undefined,
                 border: !vesteWithoutBase && statut.cle === "a_completer" ? "1px solid rgba(243,238,229,.6)" : undefined,
               }}
             >
@@ -941,7 +941,7 @@ export default function TenuesScreen() {
           {!noCompleteOutfit && missingText && (
             <div className="mt-[12px] bg-card border border-border rounded-[20px] p-4">
               <div className="t-label text-terracotta">À compléter</div>
-              <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{missingText}</div>
+              <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{missingText}</div>
               <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
                 Ajouter une pièce →
               </button>
@@ -951,7 +951,7 @@ export default function TenuesScreen() {
           {!noCompleteOutfit && vesteWithoutBase && (
             <div className="mt-[12px] bg-warm-bg border-[1.5px] border-terracotta rounded-[20px] p-4">
               <div className="t-label text-terracotta">À compléter</div>
-              <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">
+              <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">
                 Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.
               </div>
               <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
@@ -993,7 +993,7 @@ export default function TenuesScreen() {
                             </button>
                           )}
                         </div>
-                        <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{p.text}</div>
+                        <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{p.text}</div>
                         {key === "layer" && layeringInfoOpen && (
                           <div className="text-[11px] text-muted mt-[6px] leading-[1.4]">
                             Le layering, c&apos;est superposer plusieurs pièces pour un effet stylé — par exemple un
@@ -1018,7 +1018,7 @@ export default function TenuesScreen() {
                             possédée. */}
                         <div
                           className="relative flex-shrink-0 w-[112px] h-[136px] rounded-[14px] overflow-hidden"
-                          style={{ background: image.url ? "#F3EDE1" : suggested.hex }}
+                          style={{ background: image.url ? "var(--color-photo-bg)" : suggested.hex }}
                         >
                           {image.url && (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -1095,7 +1095,7 @@ export default function TenuesScreen() {
       {!meteoEnAttente && emptyState && (
         <div className="mt-2 mb-4 bg-card border border-border rounded-[14px] px-4 py-[26px] text-center">
           <div className="t-titre-vignette text-ink">{emptyState.title}</div>
-          <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[8px]">{emptyState.body}</div>
+          <div className="text-[13px] text-ink-soft leading-[1.5] mt-[8px]">{emptyState.body}</div>
           {emptyState.ctaLabel && emptyState.onCta && (
             <button onClick={emptyState.onCta} className="mt-[14px] inline-block text-[12px] text-terracotta cursor-pointer">
               {emptyState.ctaLabel}
@@ -1183,7 +1183,7 @@ export default function TenuesScreen() {
                       aria-label={`${it.name} — ${CATLABEL[isBag(it) ? "sac" : it.cat]}. Voir le détail`}
                       className="block w-[112px] h-[112px] rounded-[13px] overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
                       style={{
-                        background: resolvedImage.url ? "#F3EDE1" : it.hex,
+                        background: resolvedImage.url ? "var(--color-photo-bg)" : it.hex,
                         boxShadow: recentlyAddedId === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)",
                       }}
                     >
@@ -1245,7 +1245,7 @@ export default function TenuesScreen() {
 
       {!noCompleteOutfit && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
         <div className="mt-4 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
-          <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
+          <div className="text-[12px] text-ink-soft leading-[1.45]">{lookScore.adjustMessage}</div>
         </div>
       )}
 
@@ -1261,7 +1261,7 @@ export default function TenuesScreen() {
                 démontré. Le bandeau porte maintenant ce que la pastille ne peut
                 pas dire — la DIMENSION du repli — au lieu de répéter le mot du
                 badge. */}
-            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">
+            <div className="text-[12px] text-ink-soft leading-[1.45]">
               Pour cette occasion, Capsela privilégie un registre plus sobre, composé avec les pièces de {sourceLabel}.
             </div>
             {/* Le lien ouvre le formulaire d'ajout — il dit donc ce qu'il
@@ -1283,7 +1283,7 @@ export default function TenuesScreen() {
         <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1">
-            <div className="text-[12px] text-[#3F3B34] leading-[1.45]">
+            <div className="text-[12px] text-ink-soft leading-[1.45]">
               {occasionElargieText(occasionLabelCourant)}
             </div>
             <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
@@ -1385,7 +1385,7 @@ export default function TenuesScreen() {
                   setFeuille(null);
                 }}
                 aria-pressed={actif}
-                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-divider last:border-b-0"
                 style={{ minHeight: 52 }}
               >
                 {/* Le même glyphe que sur le chip : la feuille est l'endroit
@@ -1419,7 +1419,7 @@ export default function TenuesScreen() {
                   setFeuille(null);
                 }}
                 aria-pressed={actif}
-                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-divider last:border-b-0"
                 style={{ minHeight: 52 }}
               >
                 <span className={actif ? "text-terracotta" : "text-muted"}>

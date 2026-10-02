@@ -112,7 +112,7 @@ function PolaroidPhoto({ photo, slot }: { photo: EditorialPhoto; slot: BoardSlot
         height: slot.h + "%",
         transform: `rotate(${slot.rotate}deg)`,
         zIndex: slot.z,
-        background: "#FBF8F3",
+        background: "var(--color-card)",
         padding: 4,
         paddingBottom: 8,
         borderRadius: 4,
@@ -133,7 +133,7 @@ function PolaroidPhoto({ photo, slot }: { photo: EditorialPhoto; slot: BoardSlot
           style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 2, display: "block" }}
         />
       ) : (
-        <div style={{ width: "100%", height: "100%", borderRadius: 2, background: "#EFE7DA" }} />
+        <div style={{ width: "100%", height: "100%", borderRadius: 2, background: "var(--color-chip-soft-bg)" }} />
       )}
     </div>
   );
@@ -277,7 +277,7 @@ function FilmstripLooks({
             className="flex-none flex flex-col"
             style={{
               width: 108,
-              background: "#FBF8F3",
+              background: "var(--color-card)",
               padding: 5,
               paddingBottom: 7,
               borderRadius: 5,
@@ -306,7 +306,7 @@ function VignetteLook({ piece }: { piece: Item }) {
   const img = resolveItemImage(piece);
   const showImg = Boolean(img.url) && !failed;
   return (
-    <div style={{ borderRadius: 3, overflow: "hidden", background: showImg ? "#F3EDE1" : piece.hex }}>
+    <div style={{ borderRadius: 3, overflow: "hidden", background: showImg ? "var(--color-photo-bg)" : piece.hex }}>
       {showImg && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -700,7 +700,7 @@ export default function HomeScreen() {
                 fontSize: 9.5,
                 letterSpacing: ".08em",
                 background: "rgba(243,238,229,.22)",
-                color: "#FBF3EA",
+                color: "var(--color-on-terracotta)",
                 borderRadius: 100,
                 padding: "8px 14px",
               }}
@@ -740,14 +740,14 @@ export default function HomeScreen() {
         {planApplique && hasOutfit && (
           <div className="mt-[10px] text-center">
             {planApplique.alerte && (
-              <div className="text-[12.5px] leading-[1.4] mb-[2px]" style={{ color: "#F0DDCF", textWrap: "pretty" }}>
+              <div className="text-[12.5px] leading-[1.4] mb-[2px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
                 {planApplique.alerte}
               </div>
             )}
             <button
               onClick={actions.voirAutreProposition}
               className="text-[13px] underline underline-offset-[3px] cursor-pointer"
-              style={{ color: "#FBF3EA", minHeight: 44 }}
+              style={{ color: "var(--color-on-terracotta)", minHeight: 44 }}
             >
               Voir une autre proposition
             </button>
@@ -767,14 +767,14 @@ export default function HomeScreen() {
                 onClick={() => actions.setOutfitFeedback(avisDuJour)}
                 aria-label="Revenir sur mon avis"
                 className="font-serif italic text-[13px] text-left cursor-pointer"
-                style={{ color: "#F0DDCF", minHeight: 44 }}
+                style={{ color: "var(--color-on-terracotta-soft)", minHeight: 44 }}
               >
                 {avisDuJour === "adore" ? "Ajoutée à tes looks — on garde cette direction." : "Noté, pas pour toi."}
               </button>
             ) : (
               <>
                 {autreProposee && (
-                  <div className="font-serif italic text-[13px] mb-[6px]" style={{ color: "#F0DDCF" }}>
+                  <div className="font-serif italic text-[13px] mb-[6px]" style={{ color: "var(--color-on-terracotta-soft)" }}>
                     Voici une autre proposition.
                   </div>
                 )}

@@ -265,7 +265,7 @@ function LigneOption({
       onClick={onClick}
       disabled={disabled}
       className={
-        "w-full flex items-center justify-between gap-3 text-left text-[13px] border-b border-[#EFE7DA] last:border-b-0 cursor-pointer disabled:cursor-default " +
+        "w-full flex items-center justify-between gap-3 text-left text-[13px] border-b border-divider last:border-b-0 cursor-pointer disabled:cursor-default " +
         (danger ? "text-terracotta" : "text-ink")
       }
       style={{ minHeight: 52 }}
@@ -1347,7 +1347,7 @@ export default function PlanifierScreen() {
                          de la hauteur — c'est du contenu, pas du rembourrage. */
                       className={
                         "border-b last:border-b-0 " +
-                        (actif ? "rounded-[14px] bg-warm-bg -mx-3 px-3 border-transparent" : "border-[#EFE7DA]")
+                        (actif ? "rounded-[14px] bg-warm-bg -mx-3 px-3 border-transparent" : "border-divider")
                       }
                     >
                       <button
@@ -1560,7 +1560,7 @@ export default function PlanifierScreen() {
                           setLieu(libelleVille(v));
                           setSuggestions([]);
                         }}
-                        className="flex items-center gap-[10px] text-left px-[14px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                        className="flex items-center gap-[10px] text-left px-[14px] cursor-pointer border-b border-divider last:border-b-0"
                         style={{ minHeight: 46 }}
                       >
                         <span aria-hidden="true" className="flex-shrink-0 text-muted">
@@ -1799,7 +1799,7 @@ export default function PlanifierScreen() {
                 <div className="pt-[16px]">
                   <span
                     className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
-                    style={{ fontSize: 9.5, letterSpacing: ".08em", background: "rgba(243,238,229,.22)", color: "#FBF3EA", borderRadius: 100, padding: "8px 14px" }}
+                    style={{ fontSize: 9.5, letterSpacing: ".08em", background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
                   >
                     <GlypheOccasion occasion={t.occasion} taille={13} />
                     {occLongDe(t.occasion)}
@@ -2082,7 +2082,7 @@ export default function PlanifierScreen() {
               setMenuPlan(null);
               if (t) { setPlanOuvert(t); setVue("detail"); }
             }}
-            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
+            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-divider"
             style={{ minHeight: 52 }}
           >
             Voir le look
@@ -2094,7 +2094,7 @@ export default function PlanifierScreen() {
               // Même geste que « Modifier cette tenue » du détail (repartirDuPlan).
               if (t) repartirDuPlan(t, "modifier");
             }}
-            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
+            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-divider"
             style={{ minHeight: 52 }}
           >
             Modifier ce look

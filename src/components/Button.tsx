@@ -79,7 +79,7 @@ export function BoutonDiscret({
         minHeight: 44,
         background: actif ? "rgba(243,238,229,.18)" : "transparent",
         border: "1px solid rgba(243,238,229,.24)",
-        color: "#FBF3EA",
+        color: "var(--color-on-terracotta)",
         ...style,
       }}
     >

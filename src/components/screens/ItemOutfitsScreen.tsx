@@ -200,7 +200,7 @@ export default function ItemOutfitsScreen() {
         {DEBUT}
         <em className="text-terracotta">{titre.slice(DEBUT.length)}</em>
       </h1>
-      <p className="text-[13px] text-[#3F3B34] leading-[1.45] mt-[8px]">Des idées créées à partir de ta capsule.</p>
+      <p className="text-[13px] text-ink-soft leading-[1.45] mt-[8px]">Des idées créées à partir de ta capsule.</p>
       <p className="text-[12px] text-muted leading-[1.45] mt-[2px]">
         Capsela privilégie tes pièces et complète avec des suggestions si nécessaire.
       </p>
@@ -258,13 +258,13 @@ export default function ItemOutfitsScreen() {
               raison qui n'est pas le dressing (27/09/2026) : le dire, plutôt
               que d'inviter à ajouter des pièces qui n'y changeraient rien. */}
           {horsSaison ? (
-            <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
+            <div className="text-[13px] text-ink-soft leading-[1.5]">
               Cette pièce se porte {enSaisons(saisonsDe(pivot))} : ses idées de tenues
               viendront avec sa saison.
             </div>
           ) : (
             <>
-              <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
+              <div className="text-[13px] text-ink-soft leading-[1.5]">
                 Pas encore assez de pièces compatibles pour créer plusieurs looks avec cet article.
               </div>
               <button onClick={actions.openAdd} className="mt-[12px] inline-block text-[12px] text-terracotta cursor-pointer">

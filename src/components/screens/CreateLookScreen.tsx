@@ -113,7 +113,7 @@ function PastilleSelection({ on }: { on: boolean }) {
       className="absolute top-[8px] left-[8px] w-[22px] h-[22px] rounded-full border flex items-center justify-center text-[12px]"
       style={
         on
-          ? { background: "rgba(166,105,80,.95)", borderColor: "rgba(166,105,80,.95)", color: "#F3EEE5" }
+          ? { background: "rgba(166,105,80,.95)", borderColor: "rgba(166,105,80,.95)", color: "var(--color-cream)" }
           : { background: "rgba(243,238,229,.85)", borderColor: "rgba(29,26,22,.18)", color: "transparent" }
       }
     >
@@ -344,7 +344,7 @@ export default function CreateLookScreen() {
                 qu'ils commentent, en retrait : ils ne passent jamais devant. */}
             {count >= 2 && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
               <div className="mt-4 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
-                <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{lookScore.adjustMessage}</div>
+                <div className="text-[12px] text-ink-soft leading-[1.45]">{lookScore.adjustMessage}</div>
               </div>
             )}
 
@@ -356,7 +356,7 @@ export default function CreateLookScreen() {
                     <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
                     <div className="flex-1 min-w-0 pr-[18px]">
                       {p.key === "layer" && <div className="t-label text-terracotta mb-[6px]">Layering</div>}
-                      <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{p.text}</div>
+                      <div className="text-[12px] text-ink-soft leading-[1.45]">{p.text}</div>
                       {target && (
                         <button onClick={() => goToCategory(target.cats)} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
                           {target.label}
@@ -376,7 +376,7 @@ export default function CreateLookScreen() {
 
             {blockingHits.length > 0 && (
               <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
-                <div className="text-[12px] text-[#3F3B34] leading-[1.45]">{blockingHits[0].message}</div>
+                <div className="text-[12px] text-ink-soft leading-[1.45]">{blockingHits[0].message}</div>
               </div>
             )}
 
@@ -475,7 +475,7 @@ export default function CreateLookScreen() {
                 key={key}
                 onClick={() => choisirOccasion(key)}
                 aria-pressed={actif}
-                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-divider last:border-b-0"
                 style={{ minHeight: 52 }}
               >
                 <span className={actif ? "text-terracotta" : "text-muted"}>
@@ -539,7 +539,7 @@ export default function CreateLookScreen() {
                 <button
                   key={g.key}
                   onClick={() => setCategorieFeuille(g.key)}
-                  className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                  className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-divider last:border-b-0"
                   style={{ minHeight: 52 }}
                 >
                   <span className="flex -space-x-[10px] flex-shrink-0" aria-hidden="true">

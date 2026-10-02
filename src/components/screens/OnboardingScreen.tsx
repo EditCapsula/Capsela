@@ -50,7 +50,7 @@ function MoodboardCard({ id, className }: { id: StyleId; className?: string }) {
   // de fond, jamais une icône d'image cassée.
   const [failed, setFailed] = useState(false);
   return (
-    <div className={"rounded-[14px] overflow-hidden bg-[#E6DCCB] relative " + (className || "")}>
+    <div className={"rounded-[14px] overflow-hidden bg-border relative " + (className || "")}>
       {cfg.asset && !failed && (
         // eslint-disable-next-line @next/next/no-img-element
         <img

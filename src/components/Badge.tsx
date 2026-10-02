@@ -22,8 +22,8 @@ const TONS: Record<string, { classe?: string; style?: CSSProperties }> = {
   possede: { classe: "bg-warm-bg text-ink border border-warm-border" },
   neutre: { classe: "bg-chip-soft-bg text-muted" },
   succes: { classe: "bg-success-bg text-success" },
-  surTerracotta: { style: { background: "rgba(243,238,229,.22)", color: "#FBF3EA" } },
-  surTerracottaContour: { style: { border: "1px solid rgba(243,238,229,.38)", color: "#F0DDCF" } },
+  surTerracotta: { style: { background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)" } },
+  surTerracottaContour: { style: { border: "1px solid rgba(243,238,229,.38)", color: "var(--color-on-terracotta-soft)" } },
 };
 
 const TAILLES = { m: "px-[9px] py-[4px]", s: "px-[8px] py-[3px]" } as const;

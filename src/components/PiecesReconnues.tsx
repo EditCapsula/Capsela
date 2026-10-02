@@ -131,7 +131,7 @@ export default function PiecesReconnues({
                 onClick={() => setChoix(i)}
                 aria-haspopup="dialog"
                 aria-label={`${categorie}, ${titre}${detail ? `, ${detail}` : ""} : ${pastille.texte.replace(" ✓", "")}. ${item ? "Modifier" : "Associer une pièce"}`}
-                className="w-full flex items-center gap-[12px] bg-card border border-[#EFE7DA] rounded-[20px] pl-[10px] pr-[12px] py-[10px] text-left cursor-pointer active:bg-warm-bg/60"
+                className="w-full flex items-center gap-[12px] bg-card border border-divider rounded-[20px] pl-[10px] pr-[12px] py-[10px] text-left cursor-pointer active:bg-warm-bg/60"
               >
                 {item ? <Vignette item={item} taille={56} /> : <Pictogramme taille={56} />}
                 <span className="flex-1 min-w-0">

@@ -705,7 +705,7 @@ export default function AddScreen() {
                       style={{
                         background: hex,
                         border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
-                        boxShadow: on ? "0 0 0 3px #F3EEE5 inset" : "none",
+                        boxShadow: on ? "0 0 0 3px var(--color-cream) inset" : "none",
                       }}
                     />
                     <span className={"text-[9px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>

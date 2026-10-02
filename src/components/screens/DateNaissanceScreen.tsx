@@ -84,12 +84,12 @@ export default function DateNaissanceScreen({
         aria-label="Date de naissance"
       />
       {erreur && (
-        <div role="alert" className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
+        <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {erreur}
         </div>
       )}
       {auth.error && (
-        <div role="alert" className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
+        <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {auth.error}
         </div>
       )}

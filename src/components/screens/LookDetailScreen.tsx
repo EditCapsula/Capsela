@@ -62,7 +62,7 @@ export default function LookDetailScreen() {
                   className="w-[58px] h-[70px] rounded-lg overflow-hidden"
                   style={
                     img.url
-                      ? { background: "#F3EDE1", filter: suggested ? "grayscale(55%) opacity(.8)" : undefined }
+                      ? { background: "var(--color-photo-bg)", filter: suggested ? "grayscale(55%) opacity(.8)" : undefined }
                       : { background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)", filter: suggested ? "grayscale(55%) opacity(.8)" : undefined }
                   }
                 >

@@ -189,7 +189,7 @@ function ChipTenue({ children }: { children: React.ReactNode }) {
   return (
     <span
       className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap text-[11px]"
-      style={{ height: 30, padding: "0 12px", background: "rgba(29,26,22,.62)", color: "#FBF3EA" }}
+      style={{ height: 30, padding: "0 12px", background: "rgba(29,26,22,.62)", color: "var(--color-on-terracotta)" }}
     >
       {children}
     </span>
@@ -584,7 +584,7 @@ export default function OpinionShareScreen() {
                   width: 16,
                   height: 16,
                   border: "2px solid rgba(251,243,234,.4)",
-                  borderTopColor: "#FBF3EA",
+                  borderTopColor: "var(--color-on-terracotta)",
                 }}
               />
             ) : (

@@ -193,7 +193,7 @@ function Vignette({ item, arrondi = 14, marge = margeVignette(item.cat) }: { ite
       style={{
         aspectRatio: "4/5",
         borderRadius: arrondi,
-        background: image.url ? "#F3EDE1" : item.hex,
+        background: image.url ? "var(--color-photo-bg)" : item.hex,
         boxShadow: image.url ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
       }}
     >
@@ -514,7 +514,7 @@ export default function CapsuleScreen() {
               <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] text-ink leading-[1.4]">Tu explores le style {exploredStyleLabel}</div>
-                <div className="text-[12px] text-[#3F3B34] leading-[1.45] mt-[3px]">
+                <div className="text-[12px] text-ink-soft leading-[1.45] mt-[3px]">
                   Cette capsule permet de composer une tenue pour{" "}
                   {occasionPhraseFor(state.occasion || "all", state.workMode, state.dateContext)}.
                 </div>

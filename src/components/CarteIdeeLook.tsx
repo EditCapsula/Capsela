@@ -57,7 +57,7 @@ export function CarteIdeeLook({
         {insight && (
           <>
             <div className="t-titre-carte text-ink mt-[5px]">{insight.title}</div>
-            <div className="text-[13px] text-[#3F3B34] leading-[1.45] mt-[5px] line-clamp-3">{insight.sentence}</div>
+            <div className="text-[13px] text-ink-soft leading-[1.45] mt-[5px] line-clamp-3">{insight.sentence}</div>
           </>
         )}
 
@@ -87,7 +87,7 @@ export function CarteIdeeLook({
                   className="w-full rounded-[10px] overflow-hidden"
                   style={
                     img.url
-                      ? { aspectRatio: "1", background: "#F3EDE1", padding: img.kind === "photo" ? 0 : 4 }
+                      ? { aspectRatio: "1", background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 4 }
                       : { aspectRatio: "1", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
                   }
                 >

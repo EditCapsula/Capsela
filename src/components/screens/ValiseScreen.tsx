@@ -226,7 +226,7 @@ function Vignette({ it, taille = 46 }: { it: Item; taille?: number }) {
   return (
     <span
       className="flex-shrink-0 rounded-[11px] overflow-hidden"
-      style={{ width: taille, height: taille, ...(img.url ? { background: "#F3EDE1", padding: img.kind === "photo" ? 0 : 3 } : { background: it.hex }) }}
+      style={{ width: taille, height: taille, ...(img.url ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 3 } : { background: it.hex }) }}
     >
       {img.url && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -240,7 +240,7 @@ function CarteInfo({ glyphe, children }: { glyphe: React.ReactNode; children: Re
   return (
     <div className="flex items-start gap-[10px] bg-warm-bg border border-sand-border rounded-[16px] px-[14px] py-[11px]">
       <span className="flex-shrink-0 text-terracotta mt-[1px]">{glyphe}</span>
-      <div className="flex-1 min-w-0 text-[12px] text-[#3F3B34] leading-[1.45]">{children}</div>
+      <div className="flex-1 min-w-0 text-[12px] text-ink-soft leading-[1.45]">{children}</div>
     </div>
   );
 }
@@ -1177,7 +1177,7 @@ function Resultat({
         <div className="flex gap-[14px] mt-3">
           <div
             className="flex-shrink-0 rounded-[18px] overflow-hidden"
-            style={{ width: "42%", aspectRatio: "4 / 5", ...(img.url ? { background: "#F3EDE1", padding: img.kind === "photo" ? 0 : 8 } : { background: p.hex }) }}
+            style={{ width: "42%", aspectRatio: "4 / 5", ...(img.url ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 8 } : { background: p.hex }) }}
           >
             {img.url && (
               // eslint-disable-next-line @next/next/no-img-element

@@ -47,7 +47,7 @@ export default function OptionRow({
           "w-full flex items-center gap-[14px] pl-[10px] pr-4 py-[9px] rounded-[16px] cursor-pointer text-left border-[1.5px] transition-colors duration-150 " +
           (on ? "border-terracotta" : "border-border bg-card")
         }
-        style={on ? { background: "#F6EBE2" } : undefined}
+        style={on ? { background: "var(--color-selected-bg)" } : undefined}
       >
         {vignette !== undefined && (
           <span aria-hidden="true" className="w-[44px] h-[44px] rounded-[12px] overflow-hidden flex-shrink-0 bg-warm-bg flex items-center justify-center">

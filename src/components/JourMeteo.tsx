@@ -98,7 +98,7 @@ export function JourEtMeteo({ className = "" }: { className?: string }) {
               <span className="w-[8px] h-[8px] rounded-full bg-terracotta flex-shrink-0" style={{ boxShadow: "0 0 0 3px rgba(166,105,80,.16)" }} />
               <span className="flex-1 min-w-0 text-[12px] text-ink whitespace-nowrap overflow-hidden text-ellipsis">{geoCity.city}</span>
               {temp != null && label && (
-                <span className="flex items-center gap-[5px] flex-shrink-0 text-[12px] text-[#3F3B34] whitespace-nowrap">
+                <span className="flex items-center gap-[5px] flex-shrink-0 text-[12px] text-ink-soft whitespace-nowrap">
                   <span aria-hidden="true">{WEATHER_ICONS[label] || "🌤️"}</span>
                   {temp}°<span className="hidden min-[400px]:inline"> · {label}</span>
                 </span>
