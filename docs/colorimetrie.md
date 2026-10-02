@@ -175,6 +175,28 @@ Part des tenues qui en contiennent une :
   - le métal des bijoux ;
   - la correspondance des teintes.
 
+## Palettes enrichies (02/10/2026)
+
+La palette personnelle passe de 21 à **46 teintes** (rangées par familles) et celle du
+dressing de 27 à **51**. Les anciennes teintes gardent leur code : les profils et les
+pièces enregistrés ne changent pas. Les ajouts ont le **même nom et le même code** dans
+les deux palettes (`NOMS_AJOUTES_AU_DRESSING`, `palCouleurs.ts`), plus Rouge, Bleu et
+Beige que le dressing n'avait pas ; la copie de la fonction Edge
+`analyze-dressing-photo` est tenue identique par un test.
+
+Mesure préalable (`scripts/palette-couverture.audit.ts`, catalogue réel de 623 pièces) :
+54 % des pièces ont un code identique à une teinte du dressing, 67 % à une teinte de la
+palette personnelle, 77 % sont lisibles par la colorimétrie. Les couleurs du catalogue
+sans correspondance (Bordeaux #7A3B3F : 25 pièces ; Gris anthracite, Marron, Rouge,
+Vieux rose, Vert forêt, Ivoire, Nude, Bleu nuit…) ont orienté les ajouts.
+
+**Restent à faire, non traités ici** :
+- **Placer chaque teinte ajoutée dans chaque saison** (signature, neutre, à doser) —
+  ARBITRAGE ÉDITORIAL. Tant que ce n'est pas fait, la colorimétrie ne dit rien d'elles.
+- **Le défaut de R-S10 (hex exacts)** : le Bordeaux du catalogue (#7A3B3F) n'est toujours
+  pas reconnu par la préférence « Bordeaux » (#6E3B3A). Le corriger touche au moteur : levier
+  distinct, à mesurer avant/après (règle d'audit, point 3).
+
 ## Un défaut voisin, relevé et non corrigé ici
 
 R-S10 (préférence de palette) compare les hex **exacts**. Or 12 des 21
