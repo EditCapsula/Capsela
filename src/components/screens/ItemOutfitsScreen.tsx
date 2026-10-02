@@ -196,11 +196,12 @@ export default function ItemOutfitsScreen() {
 
       {/* Titre accordé au nom de la pièce (titreCommentPorter) : « ton » pour
           une pièce du dressing, article défini pour une suggestion. */}
-      <h1 className="t-titre-ecran text-ink mt-[14px]">
+      <div className="t-surtitre text-muted mt-[14px]">Idées de looks</div>
+      <h1 className="t-titre-ecran text-ink mt-[6px]">
         {DEBUT}
         <em className="text-terracotta">{titre.slice(DEBUT.length)}</em>
       </h1>
-      <p className="text-[13px] text-ink-soft leading-[1.45] mt-[8px]">Des idées créées à partir de ta capsule.</p>
+      <p className="t-chapeau text-muted-3 mt-[8px]">Des idées créées à partir de ta capsule.</p>
       <p className="text-[12px] text-muted leading-[1.45] mt-[2px]">
         Capsela privilégie tes pièces et complète avec des suggestions si nécessaire.
       </p>

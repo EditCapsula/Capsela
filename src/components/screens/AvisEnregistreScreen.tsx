@@ -97,8 +97,9 @@ export default function AvisEnregistreScreen() {
         }
       />
 
-      {/* Titre d'écran en deux temps et date de l'avis, comme la maquette du 30/09/2026. */}
-      <div className="mt-[10px] flex items-start justify-between gap-3">
+      {/* Surtitre, titre en deux temps et chapeau (la date de l'avis) : le même en-tête que les autres écrans (02/10/2026). */}
+      <div className="t-surtitre text-muted mt-[18px]">Journal</div>
+      <div className="mt-[6px] flex items-start justify-between gap-3">
         <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>
@@ -108,7 +109,7 @@ export default function AvisEnregistreScreen() {
           </span>
         )}
       </div>
-      <div className="text-[13px] text-muted-3 mt-[6px]">{formatDate(avis.creeLe)}</div>
+      <div className="t-chapeau text-muted-3 mt-[8px]">{formatDate(avis.creeLe)}</div>
 
       {/* LA PHOTO, élément dominant du début de page : pleine largeur,
           entière, plafonnée en hauteur, rien par-dessus — et agrandissable
