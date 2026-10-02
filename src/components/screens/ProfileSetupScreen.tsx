@@ -152,14 +152,14 @@ function PaletteDots({
     <div className="grid grid-cols-4 gap-x-3 gap-y-5 mt-[26px]">
       {options.map(([name, hex]) => {
         const on = selected.includes(hex);
-        const checkColor = isLightColor(hex) ? "#A66950" : "#FFFFFF";
+        const checkColor = isLightColor(hex) ? "var(--color-terracotta)" : "#FFFFFF";
         return (
           <button key={hex} onClick={() => onSelect(hex)} className="flex flex-col items-center gap-[8px] cursor-pointer">
             <span
               className="w-11 h-11 rounded-full flex items-center justify-center"
               style={{
                 background: hex,
-                boxShadow: on ? "0 0 0 2px #A66950" : "inset 0 0 0 1px #E6DCCB",
+                boxShadow: on ? "0 0 0 2px var(--color-terracotta)" : "inset 0 0 0 1px #E6DCCB",
               }}
             >
               {on && (
@@ -599,7 +599,7 @@ export default function ProfileSetupScreen() {
                 )}
                 <span
                   className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-[1.5px]"
-                  style={{ background: on ? "#A66950" : "#FFFFFF", borderColor: on ? "#A66950" : "#B08968" }}
+                  style={{ background: on ? "var(--color-terracotta)" : "#FFFFFF", borderColor: on ? "var(--color-terracotta)" : "#B08968" }}
                 >
                   {on && (
                     <svg width="11" height="9" viewBox="0 0 11 9" fill="none">

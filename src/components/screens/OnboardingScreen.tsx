@@ -246,7 +246,7 @@ export default function OnboardingScreen() {
                 className="rounded-full inline-block"
                 style={
                   i === state.onbStep
-                    ? { width: 22, height: 7, background: "#A66950" }
+                    ? { width: 22, height: 7, background: "var(--color-terracotta)" }
                     : { width: 7, height: 7, background: "#DFD3BE" }
                 }
               />

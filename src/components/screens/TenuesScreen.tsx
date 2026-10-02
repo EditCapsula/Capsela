@@ -1214,7 +1214,7 @@ export default function TenuesScreen() {
                       className="block w-[112px] h-[112px] rounded-[13px] overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
                       style={{
                         background: resolvedImage.url ? "#F3EDE1" : it.hex,
-                        boxShadow: recentlyAddedId === it.id ? "0 0 0 1.5px #A66950" : "0 0 0 1.5px rgba(166,105,80,0)",
+                        boxShadow: recentlyAddedId === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)",
                       }}
                     >
                       {resolvedImage.url ? (

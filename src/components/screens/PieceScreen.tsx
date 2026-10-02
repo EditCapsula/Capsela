@@ -266,9 +266,9 @@ export default function PieceScreen() {
         <div className="flex items-center justify-center gap-[9px] mt-5 bg-card border border-border rounded-full px-4 py-[13px]">
           <span
             className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: pNever ? "#A66950" : "#7B7366" }}
+            style={{ background: pNever ? "var(--color-terracotta)" : "var(--color-muted)" }}
           />
-          <span className="text-[13px]" style={{ color: pNever ? "#A66950" : "#7B7366" }}>
+          <span className="text-[13px]" style={{ color: pNever ? "var(--color-terracotta)" : "var(--color-muted)" }}>
             {wornStatusLabel}
           </span>
         </div>

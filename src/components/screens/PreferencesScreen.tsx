@@ -25,7 +25,7 @@ export function Toggle({ on, onClick, label }: { on: boolean; onClick: () => voi
       aria-checked={on}
       aria-label={label}
       className="w-11 h-[26px] rounded-full cursor-pointer relative flex-shrink-0 transition-colors"
-      style={{ background: on ? "#A66950" : "#E6DCCB" }}
+      style={{ background: on ? "var(--color-terracotta)" : "var(--color-border)" }}
     >
       <span className="absolute top-[3px] w-5 h-5 rounded-full bg-cream transition-all" style={{ left: on ? 21 : 3 }} />
     </button>
