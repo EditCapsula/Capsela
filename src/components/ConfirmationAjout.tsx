@@ -34,7 +34,7 @@ export default function ConfirmationAjout({ auDessusDeLaBarre }: { auDessusDeLaB
     >
       {/* Le texte passe à la ligne plutôt que d'être coupé : à côté de « Voir
           mon dressing », il ne tient pas sur une ligne dès 360 px. */}
-      <div className="flex items-center gap-3 bg-ink rounded-[22px] py-[10px] pl-4 pr-[6px] shadow-lg">
+      <div className="flex items-center gap-3 bg-ink rounded-feuille py-[10px] pl-4 pr-[6px] shadow-lg">
         <span className="flex-1 min-w-0 text-[12px] text-cream leading-[1.35]">
           <span aria-hidden="true">✓ </span>Pièce ajoutée à ton dressing
         </span>

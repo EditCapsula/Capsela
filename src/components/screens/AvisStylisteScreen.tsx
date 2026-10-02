@@ -75,7 +75,7 @@ const LIEN = "w-full text-center text-[12px] text-muted py-[10px] cursor-pointer
 function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?: string }) {
   return (
     <div
-      className="mx-auto rounded-[20px] overflow-hidden border border-border bg-card"
+      className="mx-auto rounded-carte overflow-hidden border border-border bg-card"
       style={{ aspectRatio: `${photo.largeur} / ${photo.hauteur}`, maxHeight: hauteurMax, maxWidth: "100%" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -109,7 +109,7 @@ function IndicateurQuota({ quota }: { quota: QuotaAvis }) {
   const renouvellement = `Tes ${quota.limite} avis se renouvellent le ${prochainMois()}.`;
   if (niveau === "epuise") {
     return (
-      <div className="flex items-start gap-[10px] rounded-[16px] border border-border bg-card px-4 py-[12px]" role="status">
+      <div className="flex items-start gap-[10px] rounded-tuile border border-border bg-card px-4 py-[12px]" role="status">
         <span aria-hidden="true" className={"w-[8px] h-[8px] rounded-full flex-shrink-0 mt-[6px] " + COULEUR_NIVEAU.epuise} />
         <div className="min-w-0 text-[12px] leading-[1.5]">
           <div className="text-ink text-[13px]">{libelleQuota(quota)}</div>
@@ -182,7 +182,7 @@ function ExtraitAvis() {
     if (img && img.complete && img.naturalWidth === 0) setPhoto(false);
   }, []);
   return (
-    <section className="mt-[20px] flex gap-[14px] rounded-[20px] bg-warm-bg px-[16px] py-[14px]" aria-label="Extrait d'un avis">
+    <section className="mt-[20px] flex gap-[14px] rounded-carte bg-warm-bg px-[16px] py-[14px]" aria-label="Extrait d'un avis">
       {photo && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -193,7 +193,7 @@ function ExtraitAvis() {
           height={180}
           decoding="async"
           onError={() => setPhoto(false)}
-          className="w-[34%] max-w-[130px] flex-shrink-0 rounded-[14px] object-cover self-stretch"
+          className="w-[34%] max-w-[130px] flex-shrink-0 rounded-bloc object-cover self-stretch"
         />
       )}
       <div className="min-w-0 flex-1 py-[2px]">
@@ -316,7 +316,7 @@ export function PhotoHeros({ url, largeur, hauteur, taille = "78%" }: { url: str
         type="button"
         onClick={() => setPlein(true)}
         aria-label="Agrandir la photo"
-        className="relative block mx-auto rounded-[22px] overflow-hidden border border-border bg-card cursor-zoom-in motion-safe:animate-[capsule-apparition_320ms_ease-out_both]"
+        className="relative block mx-auto rounded-feuille overflow-hidden border border-border bg-card cursor-zoom-in motion-safe:animate-[capsule-apparition_320ms_ease-out_both]"
         style={{ width: taille, aspectRatio: ratio, maxHeight: "62vh" }}
       >
         {/* Seul élément posé sur la photo : il dit qu'elle s'agrandit. */}
@@ -342,7 +342,7 @@ export function PhotoHeros({ url, largeur, hauteur, taille = "78%" }: { url: str
           style={{ background: "rgba(29,26,22,.88)" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt="Ta tenue" className="max-w-full max-h-full object-contain rounded-[14px]" />
+          <img src={url} alt="Ta tenue" className="max-w-full max-h-full object-contain rounded-bloc" />
         </button>
       )}
     </>
@@ -420,7 +420,7 @@ export default function AvisStylisteScreen() {
   } else if (selection === "invalide") {
     contenu = (
       <div className="mt-[30px]">
-        <div className="bg-card border border-border rounded-[20px] px-4 py-[16px] text-[13px] text-ink leading-[1.55]" role="alert">
+        <div className="bg-card border border-border rounded-carte px-4 py-[16px] text-[13px] text-ink leading-[1.55]" role="alert">
           {TEXTES.fichierInvalide}
         </div>
         <Button className="mt-[16px]" onClick={() => setSources(true)}>
@@ -562,7 +562,7 @@ export default function AvisStylisteScreen() {
     contenu = (
       <div className="mt-[24px]">
         <Apercu photo={photo} hauteurMax="30vh" />
-        <div className="mt-[20px] bg-card border border-border rounded-[20px] px-4 py-[16px]" role="alert">
+        <div className="mt-[20px] bg-card border border-border rounded-carte px-4 py-[16px]" role="alert">
           <div className="text-[14px] text-ink leading-[1.5]">{reaction.message}</div>
           {(reaction.action === "reessayer" || reaction.action === "limite") && reaction.sousTexte && (
             <div className="text-[12px] text-muted mt-[4px] leading-[1.45]">{reaction.sousTexte}</div>

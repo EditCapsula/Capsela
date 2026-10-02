@@ -123,7 +123,7 @@ export default function AgendaLooks({
              autres états vides de l'app (cadre en pointillés, titre de carte :
              Tenue, hub Planifier). Le bouton est celui du pied de page,
              toujours visible : il n'est pas répété ici. */
-          <div className="mt-4 rounded-[20px] px-5 py-[30px] text-center" style={{ border: "1px dashed var(--color-sand-border)" }}>
+          <div className="mt-4 rounded-carte px-5 py-[30px] text-center" style={{ border: "1px dashed var(--color-sand-border)" }}>
             <div className="t-titre-carte text-ink">Ton prochain look commence ici.</div>
             <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
               Planifie une tenue pour une occasion, un voyage ou simplement demain.
@@ -144,7 +144,7 @@ export default function AgendaLooks({
                   <button
                     key={"voyage-" + v.id}
                     onClick={() => onOuvrirValise(v)}
-                    className="w-full text-left rounded-[20px] border border-border px-4 py-[11px] flex items-center gap-3 cursor-pointer transition-transform active:scale-[.99]"
+                    className="w-full text-left rounded-carte border border-border px-4 py-[11px] flex items-center gap-3 cursor-pointer transition-transform active:scale-[.99]"
                     style={{ opacity: passe ? 0.78 : 1 }}
                   >
                     <span className="flex-1 min-w-0">
@@ -314,7 +314,7 @@ function ProchainLook({
         {echeance && <div className="t-label text-terracotta">{echeance}</div>}
       </div>
 
-      <div className="mt-[12px] bg-card border border-border rounded-[24px] p-[10px]">
+      <div className="mt-[12px] bg-card border border-border rounded-hero p-[10px]">
         {/* L'OCCASION ET LA DATE AU-DESSUS DE L'IMAGE : le brief veut qu'on
             sache en trois secondes quel look, pour quoi, quand. Dessous, au
             premier écran d'un téléphone, elles tombaient sous le pli (mesuré

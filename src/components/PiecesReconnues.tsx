@@ -60,7 +60,7 @@ function Pictogramme({ taille }: { taille: number }) {
   return (
     <span
       aria-hidden="true"
-      className="flex-shrink-0 rounded-[12px] bg-warm-bg text-terracotta flex items-center justify-center"
+      className="flex-shrink-0 rounded-champ bg-warm-bg text-terracotta flex items-center justify-center"
       style={{ width: taille, aspectRatio: "4/5" }}
     >
       <Icone taille={Math.round(taille * 0.42)}>{I_CINTRE}</Icone>
@@ -131,7 +131,7 @@ export default function PiecesReconnues({
                 onClick={() => setChoix(i)}
                 aria-haspopup="dialog"
                 aria-label={`${categorie}, ${titre}${detail ? `, ${detail}` : ""} : ${pastille.texte.replace(" ✓", "")}. ${item ? "Modifier" : "Associer une pièce"}`}
-                className="w-full flex items-center gap-[12px] bg-card border border-divider rounded-[20px] pl-[10px] pr-[12px] py-[10px] text-left cursor-pointer active:bg-warm-bg/60"
+                className="w-full flex items-center gap-[12px] bg-card border border-divider rounded-carte pl-[10px] pr-[12px] py-[10px] text-left cursor-pointer active:bg-warm-bg/60"
               >
                 {item ? <Vignette item={item} taille={56} /> : <Pictogramme taille={56} />}
                 <span className="flex-1 min-w-0">
@@ -162,7 +162,7 @@ export default function PiecesReconnues({
           faux — une correction ne change pas l'avis, déjà rendu. Elle change
           la tenue que Capsela peut porter ou planifier (compositionReconnue),
           et c'est ce que dit la phrase. */}
-      <div className="mt-[14px] flex items-start gap-[12px] bg-warm-bg border border-warm-border rounded-[20px] px-4 py-[14px]">
+      <div className="mt-[14px] flex items-start gap-[12px] bg-warm-bg border border-warm-border rounded-carte px-4 py-[14px]">
         <span aria-hidden="true" className="text-terracotta flex-shrink-0 mt-[1px]">
           <Icone taille={18}>{I_CINTRE}</Icone>
         </span>
@@ -224,7 +224,7 @@ export default function PiecesReconnues({
                       <button
                         type="button"
                         onClick={() => choisir(p.id)}
-                        className="w-full flex items-center gap-[12px] py-[6px] px-[6px] -mx-[6px] text-left cursor-pointer rounded-[14px] active:bg-warm-bg"
+                        className="w-full flex items-center gap-[12px] py-[6px] px-[6px] -mx-[6px] text-left cursor-pointer rounded-bloc active:bg-warm-bg"
                       >
                         <Vignette item={p} taille={44} />
                         <span className="flex-1 min-w-0">

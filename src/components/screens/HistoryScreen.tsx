@@ -134,7 +134,7 @@ function Vignette({ item, className = "", pad = 6 }: { item: Item; className?: s
   const img = resolveItemImage(item);
   return (
     <div
-      className={`rounded-[12px] overflow-hidden flex-shrink-0 ${className}`}
+      className={`rounded-champ overflow-hidden flex-shrink-0 ${className}`}
       style={
         img.url
           ? { aspectRatio: "4/5", background: "var(--color-warm-bg)", padding: img.kind === "photo" ? 0 : pad }
@@ -230,7 +230,7 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
   return (
     <button
       onClick={onOpen}
-      className="w-full bg-card border border-border rounded-[20px] overflow-hidden text-left cursor-pointer px-3 pt-[12px] pb-[13px]"
+      className="w-full bg-card border border-border rounded-carte overflow-hidden text-left cursor-pointer px-3 pt-[12px] pb-[13px]"
       aria-label={`${quand}${entry.hasOccasion ? `, ${entry.occLabel}` : ""} : ${entry.summary}. Voir la tenue`}
     >
       {/* Date et occasion sur une ligne quand elles tiennent ; sinon le badge
@@ -244,7 +244,7 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
           </Badge>
         )}
       </span>
-      <span className="mt-[10px] flex gap-[6px] rounded-[15px] bg-warm-bg p-[8px]" style={{ height: 96 }}>
+      <span className="mt-[10px] flex gap-[6px] rounded-bloc bg-warm-bg p-[8px]" style={{ height: 96 }}>
         {entry.swatches.map((p) => {
           const img = resolveItemImage(p);
           return (
@@ -259,7 +259,7 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
                   style={{ borderRadius: 8 }}
                 />
               ) : (
-                <span className="block w-full rounded-[8px]" style={{ height: "80%", maxWidth: 56, background: p.hex }} />
+                <span className="block w-full rounded-mini" style={{ height: "80%", maxWidth: 56, background: p.hex }} />
               )}
             </span>
           );
@@ -418,7 +418,7 @@ export default function HistoryScreen() {
         {avis && (
           <div
             role={avis.ton === "erreur" ? "alert" : "status"}
-            className={`mt-4 rounded-[16px] px-4 py-[12px] text-[12px] leading-[1.45] flex items-start gap-3 ${
+            className={`mt-4 rounded-tuile px-4 py-[12px] text-[12px] leading-[1.45] flex items-start gap-3 ${
               avis.ton === "erreur" ? "bg-warm-bg border border-warm-border text-rust" : "bg-warm-bg border border-warm-border text-warm-text-2"
             }`}
           >
@@ -442,7 +442,7 @@ export default function HistoryScreen() {
             {aVendre.map(({ item, port }) => {
               const occupe = enCours === item.id;
               return (
-                <div key={item.id} className="bg-card border border-border rounded-[20px] p-[14px]" aria-busy={occupe}>
+                <div key={item.id} className="bg-card border border-border rounded-carte p-[14px]" aria-busy={occupe}>
                   <button onClick={() => ouvrirPiece(item)} className="w-full flex gap-[13px] text-left cursor-pointer">
                     <Vignette item={item} className="w-[72px]" pad={5} />
                     <div className="flex-1 min-w-0 pt-[2px]">
@@ -480,7 +480,7 @@ export default function HistoryScreen() {
             })}
           </div>
         ) : (
-          <div className="mt-6 bg-card border border-border rounded-[20px] px-5 py-[18px] text-[13px] text-muted-3 leading-[1.5]">
+          <div className="mt-6 bg-card border border-border rounded-carte px-5 py-[18px] text-[13px] text-muted-3 leading-[1.5]">
             Plus aucune pièce à examiner pour l&apos;instant. Le journal te préviendra si l&apos;une d&apos;elles attend trop longtemps.
           </div>
         )}
@@ -493,7 +493,7 @@ export default function HistoryScreen() {
             </div>
             <div className="flex flex-col gap-[10px] mt-3">
               {deCote.map((item) => (
-                <div key={item.id} className="bg-card border border-border rounded-[16px] p-[12px] flex items-center gap-[12px]" aria-busy={enCours === item.id}>
+                <div key={item.id} className="bg-card border border-border rounded-tuile p-[12px] flex items-center gap-[12px]" aria-busy={enCours === item.id}>
                   <Vignette item={item} className="w-[44px]" pad={3} />
                   <div className="flex-1 min-w-0 text-[13px] text-ink leading-[1.3]">{item.name}</div>
                   <button
@@ -543,7 +543,7 @@ export default function HistoryScreen() {
             height={731}
             loading="lazy"
             decoding="async"
-            className="w-full max-w-[250px] h-auto rounded-[20px]"
+            className="w-full max-w-[250px] h-auto rounded-carte"
           />
         </div>
 
@@ -639,7 +639,7 @@ export default function HistoryScreen() {
           piste sable : 3,4:1, au-dessus du seuil de 3:1 d'un élément
           graphique. Les deux chiffres secondaires sont à droite, séparés par
           des filets, comme sur la maquette. */}
-      <div className="mt-5 bg-card border border-border rounded-[20px] px-4 py-4 flex items-center gap-3">
+      <div className="mt-5 bg-card border border-border rounded-carte px-4 py-4 flex items-center gap-3">
         {capsule.total > 0 && (
           <>
             <AnneauCapsule pourcentage={capsule.pourcentage} />
@@ -678,7 +678,7 @@ export default function HistoryScreen() {
             const o = OCCASIONS_EDITORIALES[style.occasion];
             const titre = titreStyle(o, style.majorite);
             return (
-              <div className="mt-3 bg-warm-bg border border-warm-border rounded-[22px] px-5 pt-[16px] pb-[18px] overflow-hidden">
+              <div className="mt-3 bg-warm-bg border border-warm-border rounded-feuille px-5 pt-[16px] pb-[18px] overflow-hidden">
                 <div className="flex gap-[14px]">
                   <div className="flex-1 min-w-0">
                     {/* Le nom de l'occasion en pastille, seul : plus de surtitre
@@ -725,7 +725,7 @@ export default function HistoryScreen() {
                         height={1200}
                         loading="lazy"
                         decoding="async"
-                        className="block w-full h-auto object-cover rounded-bl-[22px]"
+                        className="block w-full h-auto object-cover rounded-bl-feuille"
                         style={{ aspectRatio: "3 / 4" }}
                       />
                     </div>
@@ -748,7 +748,7 @@ export default function HistoryScreen() {
             );
           })()
         ) : (
-          <div className="mt-3 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[16px]">
+          <div className="mt-3 bg-warm-bg border border-warm-border rounded-carte px-5 py-[16px]">
             <div className="t-titre-carte text-ink">
               {style.etat === "vide"
                 ? `Aucune tenue portée en ${moisCourant} pour l'instant`
@@ -866,7 +866,7 @@ export default function HistoryScreen() {
         const plusDunAn = durees.every((m) => m >= 12);
         const depuis = plusDunAn ? "depuis plus de 12 mois" : "depuis deux saisons";
         return (
-          <section className="mt-[22px] bg-warm-bg border border-warm-border rounded-[20px] px-5 py-[18px]" aria-labelledby="journal-revente">
+          <section className="mt-[22px] bg-warm-bg border border-warm-border rounded-carte px-5 py-[18px]" aria-labelledby="journal-revente">
             <div id="journal-revente" className="t-surtitre text-terracotta">
               À envisager de vendre
             </div>

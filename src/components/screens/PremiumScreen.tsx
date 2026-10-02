@@ -198,7 +198,7 @@ export default function PremiumScreen() {
             annoncerait « ce que tu voulais faire » sans savoir quoi serait
             une phrase pour rien. */}
         {state.premiumOrigine === "valise" && (
-          <div className="flex items-start gap-[11px] mt-[14px] bg-warm-bg rounded-[16px] px-[14px] py-[13px]">
+          <div className="flex items-start gap-[11px] mt-[14px] bg-warm-bg rounded-tuile px-[14px] py-[13px]">
             <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">
               <Glyphe>{G_VALISE}</Glyphe>
             </span>
@@ -245,7 +245,7 @@ export default function PremiumScreen() {
                 role="radio"
                 aria-checked={on}
                 onClick={() => setFormule(f.id)}
-                className="w-full flex items-center gap-[13px] text-left rounded-[20px] px-4 py-3 cursor-pointer transition-colors"
+                className="w-full flex items-center gap-[13px] text-left rounded-carte px-4 py-3 cursor-pointer transition-colors"
                 style={{
                   minHeight: 72,
                   background: on ? "var(--color-card)" : "rgba(251,248,243,.35)",
@@ -294,7 +294,7 @@ export default function PremiumScreen() {
       <div className="relative flex-shrink-0 px-6 pt-[10px] pb-[18px] border-t border-border">
         {note && (
           <div
-            className="absolute inset-x-6 z-30 pointer-events-none rounded-[15px] px-4 py-[13px] text-[12px]"
+            className="absolute inset-x-6 z-30 pointer-events-none rounded-bloc px-4 py-[13px] text-[12px]"
             style={{ bottom: "100%", marginBottom: 12, background: "var(--color-ink)", color: "var(--color-cream)" }}
             aria-live="polite"
           >

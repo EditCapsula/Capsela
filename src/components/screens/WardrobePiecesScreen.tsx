@@ -155,7 +155,7 @@ export default function WardrobePiecesScreen() {
                 className="text-left cursor-pointer"
               >
                 <div
-                  className="relative w-full rounded-[14px] border border-border overflow-hidden"
+                  className="relative w-full rounded-bloc border border-border overflow-hidden"
                   style={
                     it.photoUrl
                       ? { aspectRatio: "4/5", backgroundImage: `url(${it.photoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }

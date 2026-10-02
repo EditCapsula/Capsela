@@ -145,7 +145,7 @@ export function Vignette({ item, taille }: { item: Item; taille: number }) {
   const image = resolveItemImage(item);
   return (
     <span
-      className="block flex-shrink-0 rounded-[12px] border border-border overflow-hidden"
+      className="block flex-shrink-0 rounded-champ border border-border overflow-hidden"
       style={{ width: taille, aspectRatio: "4/5", background: image.url ? "var(--color-photo-bg)" : item.hex }}
     >
       {image.url && (
@@ -162,7 +162,7 @@ function PieceDuDressing({ item, onClick }: { item: Item; onClick: () => void })
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-[12px] text-left cursor-pointer rounded-[14px] transition-colors active:bg-card/60"
+      className="w-full flex items-center gap-[12px] text-left cursor-pointer rounded-bloc transition-colors active:bg-card/60"
       aria-label={`${item.name}, voir dans mon dressing`}
     >
       <Vignette item={item} taille={44} />
@@ -214,7 +214,7 @@ function CarteATester({
           type="button"
           onClick={() => onOuvrirPiece(it.id)}
           aria-label={`${num}. ${titre ? `${titre}. ` : ""}${texte} ${it.name}, voir dans mon dressing`}
-          className="w-full flex items-center gap-[12px] bg-card border border-divider rounded-[20px] pl-[10px] pr-[14px] py-[10px] text-left cursor-pointer active:bg-warm-bg/60"
+          className="w-full flex items-center gap-[12px] bg-card border border-divider rounded-carte pl-[10px] pr-[14px] py-[10px] text-left cursor-pointer active:bg-warm-bg/60"
         >
           <Vignette item={it} taille={56} />
           <span className="flex-1 min-w-0">
@@ -231,7 +231,7 @@ function CarteATester({
     );
   }
   return (
-    <li className="bg-card border border-divider rounded-[20px] px-4 py-[15px]">
+    <li className="bg-card border border-divider rounded-carte px-4 py-[15px]">
       <div className="flex items-start gap-[12px] text-[14px] text-ink leading-[1.5]">
         <span aria-hidden="true" className="font-serif italic text-[20px] leading-[1.05] text-terracotta flex-shrink-0 w-[26px]">
           {num}
@@ -274,7 +274,7 @@ export default function ResultatAvis({
   return (
     <>
       {/* LE VERDICT, carte éditoriale : la synthèse de la styliste, en serif. */}
-      <div className={"mt-[22px] bg-card border border-divider rounded-[22px] px-[18px] py-[18px] " + verdict.className} style={verdict.style}>
+      <div className={"mt-[22px] bg-card border border-divider rounded-feuille px-[18px] py-[18px] " + verdict.className} style={verdict.style}>
         <div className="t-label text-terracotta">
           <span aria-hidden="true">✦ </span>
           {TITRES.verdict}
@@ -317,7 +317,7 @@ export default function ResultatAvis({
 
       {avis.mainAdvice.trim() && (
         <Section rang={2} titre={TITRES.monConseil}>
-          <div className="bg-warm-bg border border-warm-border rounded-[20px] px-[18px] py-[16px]">
+          <div className="bg-warm-bg border border-warm-border rounded-carte px-[18px] py-[16px]">
             {titres.conseil && <div className="t-titre-carte text-ink mb-[6px]">{titres.conseil}</div>}
             <div className="text-[14px] text-ink leading-[1.55]">{avis.mainAdvice}</div>
             {conseil.length > 0 && (

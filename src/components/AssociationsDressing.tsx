@@ -47,7 +47,7 @@ function CarteLookIdee({
       type="button"
       onClick={() => onOuvrir(tenue)}
       aria-label={`Voir le look ${occasion} : ${phrase}`}
-      className="text-left cursor-pointer active:opacity-90 rounded-[20px] p-[8px] flex flex-col outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
+      className="text-left cursor-pointer active:opacity-90 rounded-carte p-[8px] flex flex-col outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
       style={{
         background: "var(--color-cream)",
         flex: largeur === "pleine" ? "1 1 100%" : "0 0 84%",
@@ -56,7 +56,7 @@ function CarteLookIdee({
       }}
     >
       {/* L'image est l'élément principal : une planche de pièces réelles, en 4/3, jamais une vignette. */}
-      <div className="rounded-[14px] overflow-hidden w-full" style={{ aspectRatio: "4 / 3", background: "var(--color-warm-bg)" }}>
+      <div className="rounded-bloc overflow-hidden w-full" style={{ aspectRatio: "4 / 3", background: "var(--color-warm-bg)" }}>
         <OutfitComposition items={tenue.pieces} variant="planche" label={`Composition du look : ${tenue.pieces.map((p) => p.name).join(", ")}`} />
       </div>
       <div className="px-[6px] pt-[12px] pb-[6px] flex flex-wrap items-end justify-between gap-x-[12px] gap-y-[10px]">

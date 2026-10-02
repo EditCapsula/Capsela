@@ -50,7 +50,7 @@ function MoodboardCard({ id, className }: { id: StyleId; className?: string }) {
   // de fond, jamais une icône d'image cassée.
   const [failed, setFailed] = useState(false);
   return (
-    <div className={"rounded-[14px] overflow-hidden bg-border relative " + (className || "")}>
+    <div className={"rounded-bloc overflow-hidden bg-border relative " + (className || "")}>
       {cfg.asset && !failed && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -125,7 +125,7 @@ export default function OnboardingScreen() {
                  dise la même chose à qui ne voit pas l'image.
 
                  `MoodboardCard` reste utilisée par la diapositive 2. */
-              <div className="rounded-[20px] overflow-hidden" style={{ background: slide.bg }}>
+              <div className="rounded-carte overflow-hidden" style={{ background: slide.bg }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/editorial/capsela_onboarding_styles.webp"
@@ -137,7 +137,7 @@ export default function OnboardingScreen() {
                 />
               </div>
             ) : isCapsulePreview ? (
-              <div className="rounded-[20px] p-[8px]" style={{ background: slide.bg }}>
+              <div className="rounded-carte p-[8px]" style={{ background: slide.bg }}>
                 <div className="flex gap-[6px]">
                   <MoodboardCard id="minimaliste" className="flex-1 aspect-[15/17]" />
                   <MoodboardCard id="casual_chic" className="flex-1 aspect-[15/17]" />
@@ -160,16 +160,16 @@ export default function OnboardingScreen() {
                 </div>
               </div>
             ) : isOutfitPreview ? (
-              <div className="rounded-[20px] p-[10px]" style={{ background: slide.bg }}>
+              <div className="rounded-carte p-[10px]" style={{ background: slide.bg }}>
                 <div className="flex gap-[10px] items-stretch">
                   <div className="flex-[1.3] bg-ink rounded-[18px] p-[6px]">
-                    <div className="bg-cream rounded-[13px] overflow-hidden px-[10px] pt-[10px] pb-[9px] h-full flex flex-col">
+                    <div className="bg-cream rounded-bloc overflow-hidden px-[10px] pt-[10px] pb-[9px] h-full flex flex-col">
                       <div className="text-[9px] text-ink font-serif text-center mb-[8px]">Tenue du jour</div>
                       <div className="flex gap-[5px] mb-[8px]">
-                        <div className="flex-1 bg-card rounded-[8px] px-[6px] py-[5px] text-[9px] text-ink leading-[1.3]">
+                        <div className="flex-1 bg-card rounded-mini px-[6px] py-[5px] text-[9px] text-ink leading-[1.3]">
                           ☀️ 22° · Paris
                         </div>
-                        <div className="flex-1 bg-card rounded-[8px] px-[6px] py-[5px] text-[9px] text-ink leading-[1.3]">
+                        <div className="flex-1 bg-card rounded-mini px-[6px] py-[5px] text-[9px] text-ink leading-[1.3]">
                           Travail / Bureau
                         </div>
                       </div>
@@ -207,7 +207,7 @@ export default function OnboardingScreen() {
               </div>
             ) : (
               <div
-                className="aspect-square max-h-[300px] rounded-[20px] relative flex items-center justify-center overflow-hidden"
+                className="aspect-square max-h-[300px] rounded-carte relative flex items-center justify-center overflow-hidden"
                 style={{ background: slide.bg }}
               >
                 <div className="font-serif italic text-[120px]" style={{ color: slide.glyphColor }}>

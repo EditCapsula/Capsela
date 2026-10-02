@@ -8,7 +8,7 @@ import { emailPlausible } from "@/lib/motDePasse";
 import Button from "@/components/Button";
 
 const INPUT_CLS =
-  "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
+  "capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
 
 export default function LoginScreen() {
   const { actions } = useCapsela();
@@ -191,7 +191,7 @@ export default function LoginScreen() {
       </button>
 
       {auth.error && (
-        <div className="mt-4 bg-error-bg border border-error-border rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
+        <div className="mt-4 bg-error-bg border border-error-border rounded-champ px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {auth.error}
         </div>
       )}

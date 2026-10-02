@@ -254,7 +254,7 @@ export default function ItemOutfitsScreen() {
       )}
 
       {looks.length === 0 ? (
-        <div className="mt-[22px] bg-card border border-border rounded-[14px] px-4 py-[18px]">
+        <div className="mt-[22px] bg-card border border-border rounded-bloc px-4 py-[18px]">
           {/* Une pièce hors de la saison de la capsule n'a pas d'idée pour une
               raison qui n'est pas le dressing (27/09/2026) : le dire, plutôt
               que d'inviter à ajouter des pièces qui n'y changeraient rien. */}

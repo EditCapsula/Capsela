@@ -56,10 +56,10 @@ export default function LookDetailScreen() {
           // pastille de couleur plate — app mode, le visuel prime.
           const suggested = isCatalogId(it.id);
           return (
-            <div key={it.id} className="flex items-center gap-[13px] bg-card border border-border rounded-[14px] p-[11px]">
+            <div key={it.id} className="flex items-center gap-[13px] bg-card border border-border rounded-bloc p-[11px]">
               <div className="relative flex-shrink-0">
                 <div
-                  className="w-[58px] h-[70px] rounded-lg overflow-hidden"
+                  className="w-[58px] h-[70px] rounded-mini overflow-hidden"
                   style={
                     img.url
                       ? { background: "var(--color-photo-bg)", filter: suggested ? "grayscale(55%) opacity(.8)" : undefined }

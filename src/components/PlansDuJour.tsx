@@ -65,7 +65,7 @@ export function PlansDuJour({ depuis, className = "" }: { depuis: "home" | "tenu
             className="w-full flex items-center gap-3 bg-card border border-border rounded-[18px] p-[7px] pr-3 text-left cursor-pointer transition-opacity active:opacity-80"
           >
             {apercu.length > 0 && (
-              <span aria-hidden="true" className="w-[46px] h-[46px] flex-shrink-0 rounded-[12px] bg-warm-bg grid grid-cols-2 gap-[2px] p-[3px] overflow-hidden">
+              <span aria-hidden="true" className="w-[46px] h-[46px] flex-shrink-0 rounded-champ bg-warm-bg grid grid-cols-2 gap-[2px] p-[3px] overflow-hidden">
                 {apercu.map((p) => {
                   const img = resolveItemImage(p);
                   return img.url ? (

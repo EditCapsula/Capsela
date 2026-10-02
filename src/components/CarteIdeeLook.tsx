@@ -42,13 +42,13 @@ export function CarteIdeeLook({
       type="button"
       onClick={onOpen}
       aria-label={`Voir le look ${look.numero}${insight ? " : " + insight.title : ""}`}
-      className="w-full text-left bg-card border border-border rounded-[20px] p-[12px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
+      className="w-full text-left bg-card border border-border rounded-carte p-[12px] cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
     >
       {/* Hauteur bornée (ajustee) : à hauteur naturelle, une tenue de cinq
           pièces faisait ~370 px à 390 px de large, et une seule carte
           dépassait l'écran. Les proportions entre pièces restent celles de
           la variante. */}
-      <div className="rounded-[14px] bg-warm-bg px-[14px] py-[14px]" style={{ height: "clamp(230px, 68vw, 290px)" }}>
+      <div className="rounded-bloc bg-warm-bg px-[14px] py-[14px]" style={{ height: "clamp(230px, 68vw, 290px)" }}>
         <OutfitComposition items={pieces} variant="hero" ajustee />
       </div>
 

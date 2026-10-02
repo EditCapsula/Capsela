@@ -8,7 +8,7 @@ import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
 
 const INPUT_CLS =
-  "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
+  "capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
 
 export default function AuthScreen() {
   const { state, actions } = useCapsela();
@@ -133,17 +133,17 @@ export default function AuthScreen() {
       </div>
 
       {erreurAge && (
-        <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
+        <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-champ px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {erreurAge}
         </div>
       )}
       {auth.error && (
-        <div className="mt-4 bg-error-bg border border-error-border rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
+        <div className="mt-4 bg-error-bg border border-error-border rounded-champ px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {auth.error}
         </div>
       )}
       {confirmPending && (
-        <div className="mt-4 bg-warm-bg border border-warm-border rounded-xl px-4 py-3 text-[12px] text-warm-text-2 leading-[1.5]">
+        <div className="mt-4 bg-warm-bg border border-warm-border rounded-champ px-4 py-3 text-[12px] text-warm-text-2 leading-[1.5]">
           <span className="font-semibold">Vérifie ta boîte mail.</span> On t&apos;a envoyé un lien de
           confirmation à {email.trim()}. Clique dessus, puis reviens te connecter.
         </div>

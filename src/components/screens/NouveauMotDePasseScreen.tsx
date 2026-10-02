@@ -7,7 +7,7 @@ import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
 
 const INPUT_CLS =
-  "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
+  "capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
 
 /**
  * « NOUVEAU MOT DE PASSE » — ouvert par le lien de réinitialisation reçu par

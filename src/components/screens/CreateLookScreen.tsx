@@ -254,7 +254,7 @@ export default function CreateLookScreen() {
         </div>
 
         {items.length === 0 ? (
-          <div className="mt-6 bg-card border border-border rounded-[16px] px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
+          <div className="mt-6 bg-card border border-border rounded-tuile px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
             Ton dressing est encore vide — ajoute quelques pièces réelles pour pouvoir composer un look.
           </div>
         ) : (
@@ -315,7 +315,7 @@ export default function CreateLookScreen() {
               ))}
               <button onClick={ouvrirAjout} aria-label="Ajouter une pièce au look" aria-haspopup="dialog" className="flex-none w-[84px] text-left cursor-pointer">
                 <span
-                  className="flex items-center justify-center rounded-[12px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card"
+                  className="flex items-center justify-center rounded-champ border-[1.5px] border-dashed border-[#d6c7ae] bg-card"
                   style={{ aspectRatio: "4/5" }}
                 >
                   <span className="w-9 h-9 rounded-full bg-cream border border-border text-terracotta flex items-center justify-center">
@@ -343,7 +343,7 @@ export default function CreateLookScreen() {
                 actionnables via un lien "Voir les...". Placés sous le look
                 qu'ils commentent, en retrait : ils ne passent jamais devant. */}
             {count >= 2 && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
-              <div className="mt-4 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
+              <div className="mt-4 bg-warm-bg border border-warm-border rounded-bloc px-4 py-[13px]">
                 <div className="text-[12px] text-ink-soft leading-[1.45]">{lookScore.adjustMessage}</div>
               </div>
             )}
@@ -352,7 +352,7 @@ export default function CreateLookScreen() {
               lookScore.proactives.map((p) => {
                 const target = PROACTIVE_TARGET_CATS[p.key];
                 return (
-                  <div key={p.key} className="relative mt-3 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+                  <div key={p.key} className="relative mt-3 flex items-start gap-[11px] bg-card border border-border rounded-bloc px-4 py-[14px]">
                     <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
                     <div className="flex-1 min-w-0 pr-[18px]">
                       {p.key === "layer" && <div className="t-label text-terracotta mb-[6px]">Layering</div>}
@@ -375,7 +375,7 @@ export default function CreateLookScreen() {
               })}
 
             {blockingHits.length > 0 && (
-              <div className="mt-3 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
+              <div className="mt-3 bg-warm-bg border border-warm-border rounded-bloc px-4 py-[13px]">
                 <div className="text-[12px] text-ink-soft leading-[1.45]">{blockingHits[0].message}</div>
               </div>
             )}
@@ -430,7 +430,7 @@ export default function CreateLookScreen() {
             </div>
             {(nommer || state.lookDraftName) && (
               <input
-                className="capin mt-3 w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
+                className="capin mt-3 w-full bg-card border border-border rounded-champ px-4 py-[14px] text-[14px] text-ink font-sans"
                 value={state.lookDraftName}
                 onChange={(e) => actions.setLookDraftName(e.target.value)}
                 placeholder="ex. Look bureau"

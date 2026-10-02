@@ -84,7 +84,7 @@ export default function EtMaintenantAvis({
   return (
     <section className="mt-[30px] motion-safe:animate-[capsule-apparition_320ms_ease-out_both]" aria-labelledby="avis-et-maintenant">
       {/* Carte centrée, surtitre dedans sous l'icône de Planifier (maquette du 30/09/2026). */}
-      <div className="bg-card border border-divider rounded-[22px] px-[18px] py-[20px] text-center">
+      <div className="bg-card border border-divider rounded-feuille px-[18px] py-[20px] text-center">
         <span aria-hidden="true" className="flex justify-center text-terracotta">
           <svg width="22" height="22" viewBox="0 0 24 24" style={{ display: "block" }}>
             <rect x="4" y="6" width="16" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -144,7 +144,7 @@ export default function EtMaintenantAvis({
               ))}
               {/* Le message ne vient qu'au clic, et dit ce qui manque — pas une erreur. */}
               {manque && !composable && (
-                <div className="mt-[8px] bg-warm-bg border border-warm-border rounded-[16px] px-4 py-[12px] text-left motion-safe:animate-[capsule-apparition_220ms_ease-out_both]" role="status">
+                <div className="mt-[8px] bg-warm-bg border border-warm-border rounded-tuile px-4 py-[12px] text-left motion-safe:animate-[capsule-apparition_220ms_ease-out_both]" role="status">
                   <div className="text-[13px] text-ink leading-[1.45]">
                     Pour {manque === "porter" ? "porter" : "planifier"} cette tenue, il me manque encore une pièce principale : un haut et un bas, ou une robe.
                   </div>

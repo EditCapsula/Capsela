@@ -304,7 +304,7 @@ function LigneChoix({
       onClick={onClick}
       aria-pressed={actif}
       className={
-        "flex items-center gap-3 w-full text-left rounded-[14px] px-[14px] py-2 cursor-pointer border transition-colors " +
+        "flex items-center gap-3 w-full text-left rounded-bloc px-[14px] py-2 cursor-pointer border transition-colors " +
         (actif ? "bg-warm-bg border-sand-border" : "bg-card border-border")
       }
       style={{ minHeight: 52 }}
@@ -364,7 +364,7 @@ function CartePlanifier({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left bg-card border border-border rounded-[24px] px-[18px] pt-[16px] pb-[14px] cursor-pointer overflow-hidden"
+      className="w-full text-left bg-card border border-border rounded-hero px-[18px] pt-[16px] pb-[14px] cursor-pointer overflow-hidden"
     >
       {visuel && (
         // Bandeau à fond perdu : les marges négatives annulent le padding de la
@@ -429,14 +429,14 @@ function LigneValise({ v, dressing, passee, onClick }: { v: ValiseGardee; dressi
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 bg-card border border-border rounded-[20px] p-[10px] text-left cursor-pointer"
+      className="w-full flex items-center gap-3 bg-card border border-border rounded-carte p-[10px] text-left cursor-pointer"
       style={{ opacity: passee ? 0.78 : 1 }}
     >
       {visuel ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={visuel} alt="" loading="lazy" className="w-[64px] h-[64px] flex-shrink-0 rounded-[14px] object-cover bg-warm-bg" />
+        <img src={visuel} alt="" loading="lazy" className="w-[64px] h-[64px] flex-shrink-0 rounded-bloc object-cover bg-warm-bg" />
       ) : (
-        <span className="w-[64px] h-[64px] flex-shrink-0 rounded-[14px] bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
+        <span className="w-[64px] h-[64px] flex-shrink-0 rounded-bloc bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
           {apercu.map((p) => {
             const img = resolveItemImage(p);
             return img.url ? (
@@ -1215,7 +1215,7 @@ export default function PlanifierScreen() {
 
             {listeAffichee.length === 0 ? (
               <div
-                className="mt-3 rounded-[20px] px-5 py-[24px] text-center"
+                className="mt-3 rounded-carte px-5 py-[24px] text-center"
                 style={{ border: "1px dashed var(--color-sand-border)" }}
               >
                 <div className="t-titre-carte text-ink">
@@ -1256,12 +1256,12 @@ export default function PlanifierScreen() {
                         setRetourDetail("intro");
                         setVue("detail");
                       }}
-                      className="w-full flex items-center gap-3 bg-card border border-border rounded-[20px] p-[10px] text-left cursor-pointer"
+                      className="w-full flex items-center gap-3 bg-card border border-border rounded-carte p-[10px] text-left cursor-pointer"
                       style={{ opacity: onglet === "past" ? 0.78 : 1 }}
                     >
                       {/* L'image EST la tenue planifiée : ses pièces
                           enregistrées, jamais un visuel générique (§10). */}
-                      <span className="w-[64px] h-[64px] flex-shrink-0 rounded-[14px] bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
+                      <span className="w-[64px] h-[64px] flex-shrink-0 rounded-bloc bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
                         {apercu.map((p) => {
                           const img = resolveItemImage(p);
                           return img.url ? (
@@ -1347,7 +1347,7 @@ export default function PlanifierScreen() {
                          de la hauteur — c'est du contenu, pas du rembourrage. */
                       className={
                         "border-b last:border-b-0 " +
-                        (actif ? "rounded-[14px] bg-warm-bg -mx-3 px-3 border-transparent" : "border-divider")
+                        (actif ? "rounded-bloc bg-warm-bg -mx-3 px-3 border-transparent" : "border-divider")
                       }
                     >
                       <button
@@ -1479,7 +1479,7 @@ export default function PlanifierScreen() {
                                 (couvert ? "" : " — au-delà de la prévision météo")
                               }
                               className={
-                                "flex-shrink-0 w-[54px] rounded-[16px] py-[7px] cursor-pointer border transition-colors " +
+                                "flex-shrink-0 w-[54px] rounded-tuile py-[7px] cursor-pointer border transition-colors " +
                                 (on ? "bg-terracotta-deep border-terracotta-deep" : "bg-card border-border")
                               }
                               style={{ minHeight: 66 }}
@@ -1525,7 +1525,7 @@ export default function PlanifierScreen() {
 
             {etape === 3 && (
               <>
-                <div className="flex items-center gap-[10px] mt-4 bg-card border border-border rounded-[14px] px-[14px]" style={{ minHeight: 48 }}>
+                <div className="flex items-center gap-[10px] mt-4 bg-card border border-border rounded-bloc px-[14px]" style={{ minHeight: 48 }}>
                   <span aria-hidden="true" className="flex-shrink-0 text-placeholder">
                     <Glyphe taille={17}>{G_LOUPE}</Glyphe>
                   </span>
@@ -1551,7 +1551,7 @@ export default function PlanifierScreen() {
                     moins précise. Rien n'est jamais bloqué par l'absence de
                     suggestion. */}
                 {suggestionsVisibles.length > 0 && (
-                  <div className="flex flex-col mt-2 bg-card border border-border rounded-[14px] overflow-hidden">
+                  <div className="flex flex-col mt-2 bg-card border border-border rounded-bloc overflow-hidden">
                     {suggestionsVisibles.map((v) => (
                       <button
                         key={`${v.lat},${v.lon}`}
@@ -1632,7 +1632,7 @@ export default function PlanifierScreen() {
             </div>
 
             {sansTenue ? (
-              <div className="mt-[14px] bg-card border border-border rounded-[20px] p-[15px]">
+              <div className="mt-[14px] bg-card border border-border rounded-carte p-[15px]">
                 <div className="t-titre-carte text-ink">
                   {emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").title}
                 </div>
@@ -1642,7 +1642,7 @@ export default function PlanifierScreen() {
               </div>
             ) : (
               <>
-                <div className="mt-[14px] rounded-[24px] p-4" style={{ background: "var(--color-terracotta-deep)" }}>
+                <div className="mt-[14px] rounded-hero p-4" style={{ background: "var(--color-terracotta-deep)" }}>
                   <div className="flex items-center justify-between gap-[10px]">
                     <span className="t-label text-cream">Tenue préparée</span>
                     <span
@@ -1657,7 +1657,7 @@ export default function PlanifierScreen() {
                   </div>
                 </div>
 
-                <div className="mt-[14px] bg-card border border-border rounded-[20px] p-[15px]">
+                <div className="mt-[14px] bg-card border border-border rounded-carte p-[15px]">
                   <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
                   <div className="flex flex-col gap-2 mt-[10px]">
                     {[
@@ -1684,7 +1684,7 @@ export default function PlanifierScreen() {
                 <button
                   onClick={() => setDressingSeul(!dressingSeul)}
                   aria-pressed={dressingSeul}
-                  className="w-full flex gap-3 items-center mt-[14px] bg-card border border-border rounded-[20px] p-[14px] cursor-pointer text-left"
+                  className="w-full flex gap-3 items-center mt-[14px] bg-card border border-border rounded-carte p-[14px] cursor-pointer text-left"
                 >
                   <span className="flex-1 min-w-0">
                     <span className="block text-[13px] font-medium text-ink">Uniquement mon dressing</span>
@@ -1776,7 +1776,7 @@ export default function PlanifierScreen() {
                   mesure que l'accueil et l'écran Tenue). Une robe longue ou
                   des chaussures horizontales s'adaptent à la zone ; la zone ne
                   s'adapte pas à elles, et rien ne bouge en dessous. */}
-              <div className="mt-[18px] bg-terracotta rounded-[24px] text-left" style={{ padding: "20px 18px 20px" }}>
+              <div className="mt-[18px] bg-terracotta rounded-hero text-left" style={{ padding: "20px 18px 20px" }}>
                 <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16]">
                   {passee ? "Ton look était planifié" : "Ton look est planifié"}
                 </div>
@@ -1789,7 +1789,7 @@ export default function PlanifierScreen() {
                     <OutfitComposition items={pieces} variant="planche" />
                   ) : (
                     <div
-                      className="h-full rounded-[16px] flex items-center justify-center text-center px-6 text-[13px] leading-[1.5]"
+                      className="h-full rounded-tuile flex items-center justify-center text-center px-6 text-[13px] leading-[1.5]"
                       style={{ background: "rgba(243,238,229,.10)", color: "rgba(243,238,229,.86)" }}
                     >
                       Les pièces de ce look ne sont plus dans ton dressing.
@@ -1822,7 +1822,7 @@ export default function PlanifierScreen() {
                   weather_label) et se dit comme telle : jamais une promesse
                   sur le temps qu'il fera. Sans prévision enregistrée, ni
                   température ni ligne météo. */}
-              <div className="mt-[14px] bg-card border border-border rounded-[20px] p-[15px] flex items-start gap-[12px]">
+              <div className="mt-[14px] bg-card border border-border rounded-carte p-[15px] flex items-start gap-[12px]">
                 <span className="flex-shrink-0 text-terracotta mt-[1px]">
                   <Glyphe taille={22}>{t.temp != null ? G_METEO : G_EPINGLE}</Glyphe>
                 </span>
@@ -1846,7 +1846,7 @@ export default function PlanifierScreen() {
                 <button
                   onClick={ouvrirAvisStyliste}
                   aria-busy={verificationAvis}
-                  className="mt-[14px] w-full text-left bg-warm-bg border border-warm-border rounded-[20px] px-[15px] py-[14px] flex items-center gap-[12px] cursor-pointer transition-opacity active:opacity-90"
+                  className="mt-[14px] w-full text-left bg-warm-bg border border-warm-border rounded-carte px-[15px] py-[14px] flex items-center gap-[12px] cursor-pointer transition-opacity active:opacity-90"
                 >
                   <span aria-hidden="true" className="flex-shrink-0 font-serif italic text-[20px] leading-none text-terracotta">
                     ✦
@@ -1902,7 +1902,7 @@ export default function PlanifierScreen() {
                   Déplacer et dupliquer reprennent la composition imposée ; la
                   suppression garde sa confirmation. */}
               <div className="t-surtitre text-muted mt-[28px]">Autres options</div>
-              <div className="mt-[8px] bg-card border border-border rounded-[20px] px-[15px]">
+              <div className="mt-[8px] bg-card border border-border rounded-carte px-[15px]">
                 {pieces.length > 0 && <LigneOption label="Changer la date ou le moment" onClick={() => repartirDuPlan(t, "deplacer")} />}
                 {pieces.length >= 2 && (
                   <LigneOption
@@ -1967,7 +1967,7 @@ export default function PlanifierScreen() {
             une distance fixe finirait collé à l'un des deux cas. */}
         {toast && (
           <div
-            className="absolute inset-x-6 z-30 pointer-events-none rounded-[15px] px-4 py-[13px] text-[12px]"
+            className="absolute inset-x-6 z-30 pointer-events-none rounded-bloc px-4 py-[13px] text-[12px]"
             style={{ bottom: "100%", marginBottom: 12, background: "var(--color-ink)", color: "var(--color-cream)" }}
             aria-live="polite"
           >

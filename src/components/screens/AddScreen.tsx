@@ -320,7 +320,7 @@ export default function AddScreen() {
           onClick={() => setSourcePhoto(true)}
           aria-label={state.addPhotoUrl ? "Changer la photo" : "Ajouter une photo"}
           className={
-            "mt-[4px] w-full rounded-[16px] flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
+            "mt-[4px] w-full rounded-tuile flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
             (state.addPhotoUrl ? "bg-card" : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
           }
           style={{
@@ -358,7 +358,7 @@ export default function AddScreen() {
 
         {/* 2. L'analyse : une phrase, pas un badge. */}
         {state.addPhotoAnalyzing && (
-          <div className="mt-[14px] flex items-start gap-[10px] rounded-[16px] bg-warm-bg px-4 py-[12px]" role="status">
+          <div className="mt-[14px] flex items-start gap-[10px] rounded-tuile bg-warm-bg px-4 py-[12px]" role="status">
             <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
               ✦
             </span>
@@ -371,7 +371,7 @@ export default function AddScreen() {
           </div>
         )}
         {analysee && !state.addPhotoAnalyzing && (
-          <div className="mt-[14px] flex items-start gap-[10px] rounded-[16px] bg-warm-bg px-4 py-[12px]">
+          <div className="mt-[14px] flex items-start gap-[10px] rounded-tuile bg-warm-bg px-4 py-[12px]">
             <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
               ✦
             </span>
@@ -389,7 +389,7 @@ export default function AddScreen() {
           <TitreSection suggere={nomSuggere}>{nomSuggere ? "Suggestion Capsela" : "Nom de la pièce"}</TitreSection>
           {nomEnEdition || !nomVisible ? (
             <input
-              className="capin w-full bg-card border border-border rounded-xl px-4 py-[13px] text-[15px] text-ink font-sans"
+              className="capin w-full bg-card border border-border rounded-champ px-4 py-[13px] text-[15px] text-ink font-sans"
               value={state.addName}
               onChange={(e) => actions.setAddName(e.target.value)}
               onFocus={() => setNomEnEdition(true)}
@@ -437,7 +437,7 @@ export default function AddScreen() {
             champ — Serré, Ajusté, Ample —, affiché sous ce nom ici comme sur
             la fiche de la pièce. Deux champs du même nom se confondraient. */}
         <div
-          className="mt-6 bg-card border border-border rounded-[16px] grid divide-x divide-border"
+          className="mt-6 bg-card border border-border rounded-tuile grid divide-x divide-border"
           style={{ gridTemplateColumns: colonnesAttributs === 3 ? "1.25fr 1.25fr .8fr" : colonnesAttributs === 2 ? "1fr 1fr" : "1fr" }}
         >
           <SelectNu
@@ -469,7 +469,7 @@ export default function AddScreen() {
 
         {/* 6. Les caractéristiques : seulement ce qui est connu, et une
             invitation discrète pour le reste. */}
-        <div className="mt-6 bg-card border border-border rounded-[16px] px-4 pt-[15px] pb-[14px]">
+        <div className="mt-6 bg-card border border-border rounded-tuile px-4 pt-[15px] pb-[14px]">
           <TitreSection suggere={analysee}>{analysee ? "Caractéristiques détectées" : "Caractéristiques"}</TitreSection>
           <div className="grid grid-cols-3 gap-[8px] text-center">
             <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
@@ -701,7 +701,7 @@ export default function AddScreen() {
                     className="flex flex-col items-center gap-[7px] cursor-pointer"
                   >
                     <span
-                      className="w-[38px] h-[38px] rounded-[11px]"
+                      className="w-[38px] h-[38px] rounded-champ"
                       style={{
                         background: hex,
                         border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
@@ -720,7 +720,7 @@ export default function AddScreen() {
           Matière <span className="opacity-60 normal-case tracking-normal">(estimation, jamais garantie sur photo)</span>
         </div>
         <select
-          className="capin w-full bg-card border border-border rounded-xl px-4 py-[14px] text-[14px] text-ink font-sans"
+          className="capin w-full bg-card border border-border rounded-champ px-4 py-[14px] text-[14px] text-ink font-sans"
           value={state.addMatiere ?? ""}
           onChange={(e) => actions.setAddMatiere((e.target.value || null) as typeof state.addMatiere)}
         >

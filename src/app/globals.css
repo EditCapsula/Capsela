@@ -45,6 +45,15 @@
   --color-error-border: #dcb2a0;
   --color-on-terracotta: #fbf3ea;
   --color-on-terracotta-soft: #f0ddcf;
+  /* Échelle de rayons (02/10/2026, audit design system : 15 valeurs écrites à la main). Les valeurs qui ne différaient que
+     d'un pixel sont réunies : 13 et 15 -> bloc (14), 11 -> champ (12). 10 et 18 restent à arbitrer. */
+  --radius-mini: 8px;
+  --radius-champ: 12px;
+  --radius-bloc: 14px;
+  --radius-tuile: 16px;
+  --radius-carte: 20px;
+  --radius-feuille: 22px;
+  --radius-hero: 24px;
   --color-rust: #9e4b2e;
   --color-sage: #8fb27a;
   /* Réussite (badge « Recommandé »), 02/10/2026 : les deux valeurs étaient écrites en dur dans CreateLookScreen. */

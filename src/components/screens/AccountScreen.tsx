@@ -30,7 +30,7 @@ function Section({ titre, children }: { titre: string; children: React.ReactNode
   return (
     <>
       <div className="t-surtitre text-muted mt-7 mb-[10px]">{titre}</div>
-      <div className="bg-card border border-border rounded-[20px] overflow-hidden">{children}</div>
+      <div className="bg-card border border-border rounded-carte overflow-hidden">{children}</div>
     </>
   );
 }
@@ -236,7 +236,7 @@ export default function AccountScreen() {
 
       <button
         onClick={actions.goLegal}
-        className="mt-3 w-full flex items-center justify-between gap-3 px-4 py-[14px] bg-card border border-border rounded-[20px] text-left cursor-pointer"
+        className="mt-3 w-full flex items-center justify-between gap-3 px-4 py-[14px] bg-card border border-border rounded-carte text-left cursor-pointer"
       >
         <span className="text-[13px] text-ink">Informations légales</span>
         <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
@@ -247,7 +247,7 @@ export default function AccountScreen() {
           clearError();
           setConfirmDelete(true);
         }}
-        className="mt-7 w-full flex items-center justify-between px-4 py-[13px] rounded-[16px] border border-border text-left cursor-pointer"
+        className="mt-7 w-full flex items-center justify-between px-4 py-[13px] rounded-tuile border border-border text-left cursor-pointer"
       >
         <span className="text-[13px] text-rust">Supprimer mon compte</span>
         <span aria-hidden="true" className="text-rust text-[15px]">›</span>

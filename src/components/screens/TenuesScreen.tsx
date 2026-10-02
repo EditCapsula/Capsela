@@ -74,7 +74,7 @@ function ExploreStyleCard({
   return (
     <button
       onClick={onClick}
-      className={"relative flex-none w-[124px] text-left rounded-[14px] overflow-hidden border-[1.5px] cursor-pointer " + (selected ? "border-terracotta" : "border-border")}
+      className={"relative flex-none w-[124px] text-left rounded-bloc overflow-hidden border-[1.5px] cursor-pointer " + (selected ? "border-terracotta" : "border-border")}
       style={{ background: selected ? "var(--color-selected-bg)" : "var(--color-card)" }}
     >
       <div className="w-full aspect-[4/5] relative" style={{ background: "var(--color-border)" }}>
@@ -612,7 +612,7 @@ export default function TenuesScreen() {
       </div>
 
       {state.occasion === "voyage" && state.travelMode === "Longue distance" && !state.travelTipDismissed && (
-        <div className="mt-[14px] flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+        <div className="mt-[14px] flex items-start gap-[11px] bg-card border border-border rounded-bloc px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1 min-w-0">
             <div className="text-[12px] text-ink-soft leading-[1.45]">
@@ -673,7 +673,7 @@ export default function TenuesScreen() {
           OutfitComposition — sinon le fond beige des tuiles resterait visible
           en damier sur le terracotta. */}
       {!meteoEnAttente && outfitPieces.length > 0 && (
-        <div id="tenue-du-jour" className="mt-[22px] rounded-[24px] bg-terracotta-deep text-cream scroll-mt-4" style={{ padding: 16, containerType: "inline-size" }}>
+        <div id="tenue-du-jour" className="mt-[22px] rounded-hero bg-terracotta-deep text-cream scroll-mt-4" style={{ padding: 16, containerType: "inline-size" }}>
           {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
               le 23/09). Conditionnelle depuis que le titre est parti : sans
               elle, une tenue sans badge NI phrase ouvrirait la card sur une
@@ -939,7 +939,7 @@ export default function TenuesScreen() {
           </div>
 
           {!noCompleteOutfit && missingText && (
-            <div className="mt-[12px] bg-card border border-border rounded-[20px] p-4">
+            <div className="mt-[12px] bg-card border border-border rounded-carte p-4">
               <div className="t-label text-terracotta">À compléter</div>
               <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{missingText}</div>
               <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
@@ -949,7 +949,7 @@ export default function TenuesScreen() {
           )}
 
           {!noCompleteOutfit && vesteWithoutBase && (
-            <div className="mt-[12px] bg-warm-bg border-[1.5px] border-terracotta rounded-[20px] p-4">
+            <div className="mt-[12px] bg-warm-bg border-[1.5px] border-terracotta rounded-carte p-4">
               <div className="t-label text-terracotta">À compléter</div>
               <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">
                 Ajoute un haut, une robe ou une combinaison sous ta veste pour compléter la tenue.
@@ -975,7 +975,7 @@ export default function TenuesScreen() {
                   className="overflow-hidden transition-all duration-300 ease-out"
                   style={closing ? { opacity: 0, maxHeight: 0, marginTop: 0 } : { opacity: 1, maxHeight: 640, marginTop: 12 }}
                 >
-                  <div className="bg-card border border-border rounded-[20px] p-4">
+                  <div className="bg-card border border-border rounded-carte p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-[6px]">
@@ -1017,7 +1017,7 @@ export default function TenuesScreen() {
                             pastille, pour ne jamais passer pour une pièce
                             possédée. */}
                         <div
-                          className="relative flex-shrink-0 w-[112px] h-[136px] rounded-[14px] overflow-hidden"
+                          className="relative flex-shrink-0 w-[112px] h-[136px] rounded-bloc overflow-hidden"
                           style={{ background: image.url ? "var(--color-photo-bg)" : suggested.hex }}
                         >
                           {image.url && (
@@ -1093,7 +1093,7 @@ export default function TenuesScreen() {
           moteur (state.outfitFailureReason) — jamais un diagnostic
           recalculé/inventé ici. Sobre, typographique, sans illustration. */}
       {!meteoEnAttente && emptyState && (
-        <div className="mt-2 mb-4 bg-card border border-border rounded-[14px] px-4 py-[26px] text-center">
+        <div className="mt-2 mb-4 bg-card border border-border rounded-bloc px-4 py-[26px] text-center">
           <div className="t-titre-vignette text-ink">{emptyState.title}</div>
           <div className="text-[13px] text-ink-soft leading-[1.5] mt-[8px]">{emptyState.body}</div>
           {emptyState.ctaLabel && emptyState.onCta && (
@@ -1167,7 +1167,7 @@ export default function TenuesScreen() {
         {meteoEnAttente
           ? [0, 1, 2].map((i) => (
               <div key={i} className="flex-none w-[112px]">
-                <div className="w-[112px] h-[112px] rounded-[13px] animate-pulse" style={{ background: "#EFE7D8" }} />
+                <div className="w-[112px] h-[112px] rounded-bloc animate-pulse" style={{ background: "#EFE7D8" }} />
                 <div className="h-[10px] w-3/4 rounded-full animate-pulse mt-[8px]" style={{ background: "#EFE7D8" }} />
                 <div className="h-[10px] w-1/2 rounded-full animate-pulse mt-[5px]" style={{ background: "#EFE7D8" }} />
               </div>
@@ -1181,7 +1181,7 @@ export default function TenuesScreen() {
                     <button
                       onClick={() => (suggested ? actions.openItemOutfits(it.id) : actions.openItem(it.id, false))}
                       aria-label={`${it.name} — ${CATLABEL[isBag(it) ? "sac" : it.cat]}. Voir le détail`}
-                      className="block w-[112px] h-[112px] rounded-[13px] overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
+                      className="block w-[112px] h-[112px] rounded-bloc overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
                       style={{
                         background: resolvedImage.url ? "var(--color-photo-bg)" : it.hex,
                         boxShadow: recentlyAddedId === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)",
@@ -1244,13 +1244,13 @@ export default function TenuesScreen() {
       </div>
 
       {!noCompleteOutfit && lookScore.badge === "ajuster" && lookScore.adjustMessage && (
-        <div className="mt-4 bg-warm-bg border border-warm-border rounded-[14px] px-4 py-[13px]">
+        <div className="mt-4 bg-warm-bg border border-warm-border rounded-bloc px-4 py-[13px]">
           <div className="text-[12px] text-ink-soft leading-[1.45]">{lookScore.adjustMessage}</div>
         </div>
       )}
 
       {formalityDowngraded && !noCompleteOutfit && (
-        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-bloc px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1">
             {/* Ancien texte : « Ta capsule n\'a pas de tenue suffisamment
@@ -1280,7 +1280,7 @@ export default function TenuesScreen() {
       )}
 
       {occasionElargie && !noCompleteOutfit && occasionLabelCourant && (
-        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-bloc px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1">
             <div className="text-[12px] text-ink-soft leading-[1.45]">
@@ -1323,7 +1323,7 @@ export default function TenuesScreen() {
           reste telle quelle : Planifier ne propose pas le jour même. */}
       <button
         onClick={decalage > 0 ? () => actions.planifierLeJour(decalage) : actions.goPlanifier}
-        className="w-full text-left bg-warm-bg border border-sand-border rounded-[22px] px-4 py-[16px] mt-4 cursor-pointer transition-opacity active:opacity-80"
+        className="w-full text-left bg-warm-bg border border-sand-border rounded-feuille px-4 py-[16px] mt-4 cursor-pointer transition-opacity active:opacity-80"
       >
         {/* Surtitre : 10,5 px / .14em terracotta — la forme de CET écran, celle
             de « Nos conseils pour sublimer cette tenue » quelques lignes plus

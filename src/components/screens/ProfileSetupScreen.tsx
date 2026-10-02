@@ -422,7 +422,7 @@ export default function ProfileSetupScreen() {
       {meta.key === "prenom" && (
         <div className="mt-[26px]">
           <input
-            className="capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full"
+            className="capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full"
             placeholder="Prénom"
             value={draft.displayName}
             onChange={(e) => patch({ displayName: e.target.value })}
@@ -528,7 +528,7 @@ export default function ProfileSetupScreen() {
           <div className="t-surtitre text-muted mt-[22px] mb-[11px]">Pointure</div>
           <input
             inputMode="numeric"
-            className="capin bg-card border border-border rounded-[14px] px-[17px] py-[13px] text-[14px] text-ink font-sans w-[120px]"
+            className="capin bg-card border border-border rounded-bloc px-[17px] py-[13px] text-[14px] text-ink font-sans w-[120px]"
             placeholder="Ex. 39"
             value={draft.pointure ?? ""}
             onChange={(e) => patch({ pointure: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) || null })}
@@ -554,7 +554,7 @@ export default function ProfileSetupScreen() {
                   // couleur change à la sélection, jamais la largeur, pour
                   // qu'aucune card ne bouge d'un pixel au clic (indépendant
                   // de box-sizing, garanti par construction).
-                  "relative text-left rounded-[16px] overflow-hidden border-[1.5px] cursor-pointer flex flex-col " +
+                  "relative text-left rounded-tuile overflow-hidden border-[1.5px] cursor-pointer flex flex-col " +
                   (on ? "border-terracotta" : "border-border")
                 }
                 style={{ background: on ? "var(--color-selected-bg)" : "var(--color-card)" }}
@@ -634,7 +634,7 @@ export default function ProfileSetupScreen() {
             <span className="text-[12px] text-terracotta">Comment savoir quelle est ma morphologie ?</span>
           </button>
           {guideOpen && (
-            <div className="bg-card border border-border rounded-[14px] px-4 py-[14px] mt-[10px] flex flex-col gap-[11px]">
+            <div className="bg-card border border-border rounded-bloc px-4 py-[14px] mt-[10px] flex flex-col gap-[11px]">
               {MORPHOLOGIES.map((m) => (
                 <div key={m}>
                   <div className="text-[12px] text-ink font-semibold">{MORPHOLOGY_LABELS[m]}</div>

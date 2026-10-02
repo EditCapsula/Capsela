@@ -34,11 +34,11 @@ export function CarteAvis({ avis, onOuvrir }: { avis: AvisEnregistre; onOuvrir: 
       type="button"
       onClick={() => onOuvrir(avis.id)}
       aria-label={`Avis de styliste du ${date} : ${verdict ?? avis.avis.overallAssessment}. Voir l'avis complet`}
-      className="w-full flex gap-[14px] bg-card border border-border rounded-[20px] p-[10px] text-left cursor-pointer transition-colors active:bg-warm-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
+      className="w-full flex gap-[14px] bg-card border border-border rounded-carte p-[10px] text-left cursor-pointer transition-colors active:bg-warm-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
     >
       {/* La photo d'abord : assez grande pour reconnaître la tenue, entière
           (portrait 4:5, cadrée en haut — là où se lit la tenue). */}
-      <span className="block self-start flex-shrink-0 w-[40%] max-w-[150px] rounded-[14px] overflow-hidden bg-warm-bg" style={{ aspectRatio: "4/5" }}>
+      <span className="block self-start flex-shrink-0 w-[40%] max-w-[150px] rounded-bloc overflow-hidden bg-warm-bg" style={{ aspectRatio: "4/5" }}>
         {avis.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={avis.photoUrl} alt={`Tenue analysée le ${date}`} loading="lazy" decoding="async" className="w-full h-full object-cover object-top block" />
@@ -102,7 +102,7 @@ export default function AvisEnregistresJournal({
         </>
       ) : (
         // ÉTAT VIDE : une invitation, jamais de fausse carte.
-        <div className="mt-[12px] bg-card border border-border rounded-[20px] px-4 py-[16px]">
+        <div className="mt-[12px] bg-card border border-border rounded-carte px-4 py-[16px]">
           <div className="t-titre-carte text-ink">
             Tes futurs avis de styliste <span className="italic text-terracotta">seront ici</span>
           </div>

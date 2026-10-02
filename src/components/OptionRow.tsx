@@ -44,13 +44,13 @@ export default function OptionRow({
         onClick={onClick}
         aria-pressed={on}
         className={
-          "w-full flex items-center gap-[14px] pl-[10px] pr-4 py-[9px] rounded-[16px] cursor-pointer text-left border-[1.5px] transition-colors duration-150 " +
+          "w-full flex items-center gap-[14px] pl-[10px] pr-4 py-[9px] rounded-tuile cursor-pointer text-left border-[1.5px] transition-colors duration-150 " +
           (on ? "border-terracotta" : "border-border bg-card")
         }
         style={on ? { background: "var(--color-selected-bg)" } : undefined}
       >
         {vignette !== undefined && (
-          <span aria-hidden="true" className="w-[44px] h-[44px] rounded-[12px] overflow-hidden flex-shrink-0 bg-warm-bg flex items-center justify-center">
+          <span aria-hidden="true" className="w-[44px] h-[44px] rounded-champ overflow-hidden flex-shrink-0 bg-warm-bg flex items-center justify-center">
             {vignette ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={vignette} alt="" width={44} height={44} decoding="async" className="w-full h-full object-cover block" />
@@ -83,7 +83,7 @@ export default function OptionRow({
       onClick={onClick}
       aria-pressed={on}
       className={
-        "flex items-center gap-3 px-4 py-[15px] rounded-[14px] cursor-pointer text-[13px] leading-[1.4] text-left border " +
+        "flex items-center gap-3 px-4 py-[15px] rounded-bloc cursor-pointer text-[13px] leading-[1.4] text-left border " +
         (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
       }
     >

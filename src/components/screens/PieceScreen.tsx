@@ -251,7 +251,7 @@ export default function PieceScreen() {
             </span>
           </button>
           {suggestionInfoOpen && (
-            <div className="mt-[9px] bg-warm-bg rounded-[11px] px-3 py-[11px] text-[11px] text-ink-soft leading-[1.5]">
+            <div className="mt-[9px] bg-warm-bg rounded-champ px-3 py-[11px] text-[11px] text-ink-soft leading-[1.5]">
               Cette pièce vient de ta capsule de départ : tu n&apos;as pas encore ajouté de pièce de cette catégorie à
               ton dressing. Ajoute-la si tu l&apos;as déjà, ou remplace-la par une des tiennes.
             </div>
@@ -276,7 +276,7 @@ export default function PieceScreen() {
       )}
 
       {suggested ? (
-        <div className="flex flex-col gap-[9px] mt-3 bg-card border border-border rounded-[14px] px-4 py-[14px]">
+        <div className="flex flex-col gap-[9px] mt-3 bg-card border border-border rounded-bloc px-4 py-[14px]">
           {active.brand && <InfoRow label="Marque" value={active.brand} />}
           <InfoRow label="Taille" value={active.size || "—"} />
           <InfoRow label="Style" value={bestStyleFor(active)} />
@@ -294,7 +294,7 @@ export default function PieceScreen() {
           {active.subtype && <InfoRow label={isLength ? "Longueur" : "Type"} value={active.subtype} />}
         </div>
       ) : (
-        <div className="flex flex-col gap-[11px] mt-3 bg-card border border-border rounded-[14px] px-4 py-[14px]">
+        <div className="flex flex-col gap-[11px] mt-3 bg-card border border-border rounded-bloc px-4 py-[14px]">
           {active.brand && <InfoRow label="Marque" value={active.brand} />}
           {sizeApplicable && (
             <CharRow icon={<TicketIcon />} label={isShoe ? "Pointure" : "Taille"} value={active.size || "Non renseignée"} />
@@ -346,7 +346,7 @@ export default function PieceScreen() {
           {dormant && (
             <button
               onClick={actions.goNeverWorn}
-              className="mt-[14px] w-full flex items-center gap-[12px] bg-warm-bg border border-warm-border rounded-[16px] px-4 py-[13px] cursor-pointer text-left"
+              className="mt-[14px] w-full flex items-center gap-[12px] bg-warm-bg border border-warm-border rounded-tuile px-4 py-[13px] cursor-pointer text-left"
             >
               <span className="w-[32px] h-[32px] rounded-full bg-terracotta text-cream flex items-center justify-center flex-shrink-0">
                 <BulbIcon />
@@ -434,7 +434,7 @@ export default function PieceScreen() {
                   actions.addPieceToLook(look.id, active.id);
                   setLookSheetOpen(false);
                 }}
-                className="flex items-center justify-between gap-3 bg-card border border-border rounded-[14px] px-4 py-[13px] cursor-pointer text-left"
+                className="flex items-center justify-between gap-3 bg-card border border-border rounded-bloc px-4 py-[13px] cursor-pointer text-left"
               >
                 <div className="min-w-0">
                   <div className="text-[13px] text-ink truncate">{look.name}</div>
