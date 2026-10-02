@@ -7,6 +7,7 @@ import { CITIES } from "@/lib/data";
 import { jourLocal } from "@/lib/outfitFeedback";
 import { GENDERS, type Gender, type GenderDependentField } from "@/lib/profile";
 import { fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
+import Button from "@/components/Button";
 
 /*
  * Éléments partagés par les écrans du profil (Mon profil, Mon compte) :
@@ -226,12 +227,11 @@ export function RevalidationSheet({ field, onDismiss, onEdit }: { field: GenderD
         <div className="text-[13px] text-muted leading-[1.5] mb-[20px]">
           Les propositions évoluent selon ton profil. Choisis celle qui te correspond le mieux aujourd&apos;hui.
         </div>
-        <button
+        <Button variante="principal"
           onClick={onEdit}
-          className="w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
         >
           {field.ctaLabel}
-        </button>
+        </Button>
         <button onClick={onDismiss} className="mt-[14px] w-full text-center text-[12px] text-muted cursor-pointer">
           Plus tard
         </button>
@@ -403,17 +403,15 @@ export function FeuilleDateNaissance({ open, onClose }: { open: boolean; onClose
           Choisis une date passée, après 1900.
         </div>
       )}
-      <button
+      <Button variante="principal" className="mt-4"
         disabled={!dateValide}
         onClick={() => {
           setDateOuverte(false);
           saveProfile({ ...profile, birthdate: dateBrouillon });
         }}
-        className="mt-4 w-full rounded-full bg-terracotta text-cream t-bouton cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-        style={{ minHeight: 48 }}
       >
         Enregistrer
-      </button>
+      </Button>
       {profile.birthdate && (
         <button
           onClick={() => {

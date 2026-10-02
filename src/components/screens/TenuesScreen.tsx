@@ -29,6 +29,7 @@ import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { DateContext, Item, TravelMode, WorkMode } from "@/lib/types";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 /** Icônes des CTA de pièce suggérée (recette 23/08/2026) — trait fin, même style que TabBar, jamais d'emoji. */
 function PlusIcon() {
@@ -1143,12 +1144,11 @@ export default function TenuesScreen() {
                 ))}
               </div>
               {selectedExploreStyle && (
-                <button
+                <Button variante="principal" className="mt-[16px]"
                   onClick={handleConfirmExploredStyle}
-                  className="mt-[16px] w-full text-center rounded-full py-4 t-bouton bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
                 >
                   Explorer la capsule {styleConfigFor(profile.gender)[selectedExploreStyle].label}
-                </button>
+                </Button>
               )}
             </div>
           ) : (

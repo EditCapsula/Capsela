@@ -12,6 +12,7 @@ import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
+import Button from "@/components/Button";
 
 const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
 
@@ -313,12 +314,11 @@ export default function PieceScreen() {
 
       {suggested ? (
         <>
-          <button
+          <Button variante="principal" className="mt-[18px]"
             onClick={() => actions.startReplace(active)}
-            className="mt-[18px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] t-bouton cursor-pointer"
           >
             J&apos;ai déjà ça
-          </button>
+          </Button>
           {active.affLink && (
             <a
               href={active.affLink}
@@ -332,18 +332,16 @@ export default function PieceScreen() {
         </>
       ) : (
         <>
-          <button
+          <Button variante="sombre" className="mt-[18px]"
             onClick={() => actions.openItemOutfits(active.id, false)}
-            className="mt-[18px] w-full bg-ink text-cream text-center rounded-full py-[15px] t-bouton cursor-pointer"
           >
             Voir des tenues avec cette pièce
-          </button>
-          <button
+          </Button>
+          <Button variante="secondaire" className="mt-[10px]"
             onClick={() => setLookSheetOpen(true)}
-            className="mt-[10px] w-full border border-border text-terracotta text-center rounded-full py-[14px] t-bouton cursor-pointer"
           >
             ♡ Ajouter à un look
-          </button>
+          </Button>
 
           {dormant && (
             <button
@@ -406,15 +404,14 @@ export default function PieceScreen() {
             Cette pièce quittera ton dressing et ne sera plus proposée dans tes tenues. Ton historique reste intact.{" "}
             <span className="text-rust">Cette action est définitive.</span>
           </div>
-          <button
+          <Button variante="destructif" className="mt-[22px]"
             onClick={() => {
               setConfirmRemove(false);
               actions.removeActive();
             }}
-            className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer"
           >
             Retirer définitivement
-          </button>
+          </Button>
           <button
             onClick={() => setConfirmRemove(false)}
             className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer"
@@ -449,15 +446,14 @@ export default function PieceScreen() {
               </button>
             ))}
           </div>
-          <button
+          <Button variante="principal" className="mt-[14px]"
             onClick={() => {
               setLookSheetOpen(false);
               actions.goCreateLook(active.id);
             }}
-            className="mt-[14px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] t-bouton cursor-pointer"
           >
             + Créer un nouveau look
-          </button>
+          </Button>
         </BottomSheet>
       )}
     </div>

@@ -26,6 +26,7 @@ import { useCapsela } from "@/lib/store";
 import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
 import type { AccessoireType, BijouType, CategoryKey, OccasionKey, SacType, ShoeType } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
+import Button from "@/components/Button";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
 const BOTTOM_SIZED: CategoryKey[] = [...BAS_CATS, "jupe", "combinaison"];
@@ -752,12 +753,11 @@ export default function AddScreen() {
           </>
         )}
 
-        <button
+        <Button variante="principal" className="mt-[26px]"
           onClick={() => setSheet(null)}
-          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] t-bouton cursor-pointer"
         >
           Terminé
-        </button>
+        </Button>
       </BottomSheet>
     </div>
   );

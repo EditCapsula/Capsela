@@ -1,4 +1,5 @@
 import BottomSheet from "@/components/BottomSheet";
+import Button from "@/components/Button";
 
 /**
  * Premium Gate de l'Avis de styliste — libellés EXACTS de la section 5 de
@@ -27,13 +28,11 @@ export default function GateAvisStyliste({
         Envoie une photo de ton look et laisse Capsela te donner un avis personnalisé sur ce qui fonctionne et ce que tu
         pourrais ajuster.
       </div>
-      <button
+      <Button variante="principal" className="mt-5"
         onClick={onDecouvrirPremium}
-        className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-5"
-        style={{ minHeight: 52 }}
       >
         Découvrir Premium
-      </button>
+      </Button>
       <button onClick={onClose} className="w-full rounded-full text-[12px] text-muted-3 cursor-pointer mt-1" style={{ minHeight: 44 }}>
         Plus tard
       </button>

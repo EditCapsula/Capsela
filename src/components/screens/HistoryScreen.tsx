@@ -28,6 +28,7 @@ import {
 import { OCCASIONS_EDITORIALES, libelleOccasion, titreStyle } from "@/lib/occasionEditoriale";
 import type { ChoixRevente, Item, OccasionKey } from "@/lib/types";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 /*
  * LE JOURNAL — refonte du 25/09/2026 (brief « Refonte UX du Journal »).
@@ -461,20 +462,18 @@ export default function HistoryScreen() {
                     </div>
                   </button>
                   <div className="flex flex-col gap-2 mt-[14px]">
-                    <button
+                    <Button variante="secondaire"
                       disabled={occupe}
                       onClick={() => void choisir(item, "gardee")}
-                      className="w-full min-h-[46px] rounded-full border border-border text-ink t-bouton cursor-pointer disabled:opacity-50"
                     >
                       Garder dans mon dressing
-                    </button>
-                    <button
+                    </Button>
+                    <Button variante="sombre"
                       disabled={occupe}
                       onClick={() => void choisir(item, "de_cote")}
-                      className="w-full min-h-[46px] rounded-full bg-ink text-cream t-bouton cursor-pointer disabled:opacity-50"
                     >
                       Mettre de côté pour vendre
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );
@@ -573,12 +572,11 @@ export default function HistoryScreen() {
         />
 
         {/* Le parcours existant de la tenue du jour — aucun nouveau parcours (§3). */}
-        <button
+        <Button variante="sombre" className="mt-7"
           onClick={actions.goTenues}
-          className="mt-7 w-full min-h-[52px] bg-ink text-cream rounded-full t-bouton cursor-pointer"
         >
           Choisir ma première tenue
-        </button>
+        </Button>
       </div>
     );
   }

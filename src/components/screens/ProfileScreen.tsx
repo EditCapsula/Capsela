@@ -37,6 +37,7 @@ import {
   type GenderDependentField,
 } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 /*
  * MON PROFIL — « qu'est-ce que Capsela doit savoir sur moi pour mieux me
@@ -265,13 +266,11 @@ export default function ProfileScreen() {
               </div>
             </div>
           </div>
-          <button
+          <Button variante="principal" className="mt-[14px]"
             onClick={() => ouvrirChamp(completude.manquants[0].cle)}
-            className="mt-[14px] w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
-            style={{ minHeight: 44 }}
           >
             Compléter mon profil
-          </button>
+          </Button>
         </div>
       ) : null}
 

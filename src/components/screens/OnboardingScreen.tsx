@@ -5,6 +5,7 @@ import { ONBOARDING_SLIDES } from "@/lib/data";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
 import { STYLE_CONFIG, type StyleId } from "@/lib/profile";
+import Button from "@/components/Button";
 
 /**
  * Cards de visuels de style (recette 26/08/2026) — réutilise les visuels
@@ -252,12 +253,11 @@ export default function OnboardingScreen() {
               />
             ))}
           </div>
-          <button
+          <Button variante="sombre" pleine={false} className="px-[26px]"
             onClick={actions.onbNext}
-            className="bg-ink text-cream rounded-full py-[14px] px-[26px] t-bouton cursor-pointer"
           >
             {cta}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

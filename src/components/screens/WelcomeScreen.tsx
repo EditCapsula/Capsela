@@ -1,6 +1,7 @@
 "use client";
 
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 export default function WelcomeScreen() {
   const { actions } = useCapsela();
@@ -27,12 +28,11 @@ export default function WelcomeScreen() {
         </div>
       </div>
       <div className="px-7 pb-10 flex flex-col gap-3">
-        <button
+        <Button variante="principal" pleine={false}
           onClick={actions.startOnb}
-          className="bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
         >
           Commencer
-        </button>
+        </Button>
         <button onClick={actions.goLogin} className="text-center py-2 text-[13px] text-placeholder cursor-pointer">
           J&apos;ai déjà un compte · <span className="text-gold">Se connecter</span>
         </button>

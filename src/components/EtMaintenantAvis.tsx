@@ -4,6 +4,7 @@ import { useState } from "react";
 import { prioriserActionsAvis, type ActionAvis } from "@/lib/avisStylisteClient";
 import { compositionUtilisable } from "@/lib/reconnaissance";
 import type { Item } from "@/lib/types";
+import Button from "@/components/Button";
 
 /*
  * « ET MAINTENANT ? » — Avis de styliste V2 (26/09/2026). Après l'avis,
@@ -129,14 +130,12 @@ export default function EtMaintenantAvis({
                   </button>
                 </div>
               ) : (
-                <button
+                <Button variante="principal"
                   type="button"
                   onClick={() => agir(actions.principale)}
-                  className="w-full rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center t-bouton cursor-pointer"
-                  style={{ minHeight: 52 }}
                 >
                   {LIBELLES[actions.principale].principal}
-                </button>
+                </Button>
               )}
               {actions.secondaires.map((a) => (
                 <button key={a} type="button" onClick={() => agir(a)} className="mt-[4px] w-full text-center t-lien text-terracotta min-h-[44px] cursor-pointer">

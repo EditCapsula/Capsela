@@ -4,6 +4,7 @@ import { useState } from "react";
 import { messageAge, verifierAge, AGE_MINIMUM } from "@/lib/ageMinimum";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 const INPUT_CLS =
   "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
@@ -58,9 +59,9 @@ export default function DateNaissanceScreen({
           On ne peut pas créer ton <span className="italic text-terracotta">compte</span>
         </div>
         <div className="t-chapeau text-muted mt-[10px]">{refus} Le compte qui venait d&apos;être créé a été supprimé.</div>
-        <button onClick={onQuitter} className="mt-7 text-center rounded-full py-4 t-bouton cursor-pointer text-cream bg-terracotta active:bg-terracotta-hover">
+        <Button variante="principal" pleine={false} className="mt-7" onClick={onQuitter}>
           Revenir à l&apos;accueil
-        </button>
+        </Button>
       </div>
     );
   }

@@ -32,6 +32,7 @@ import { useCapsela } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 /**
  * Planifier une tenue — maquette du 23/09/2026, LOT 1.
@@ -1872,7 +1873,7 @@ export default function PlanifierScreen() {
                   c'est-à-dire rouvrir le parcours pré-rempli (repartirDuPlan). */}
               <div className="mt-[22px] flex flex-col gap-[10px]">
                 {pieces.length > 0 && (
-                  <button
+                  <Button variante="principal"
                     onClick={() =>
                       actions.openOpinionShare({
                         pieceIds: t.pieceIds,
@@ -1883,19 +1884,15 @@ export default function PlanifierScreen() {
                         plan: t,
                       })
                     }
-                    className="w-full flex items-center justify-center gap-[8px] rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
-                    style={{ minHeight: 52 }}
                   >
                     <span aria-hidden="true">✦</span> Demander l&apos;avis d&apos;un proche
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button variante="contour"
                   onClick={() => repartirDuPlan(t, "modifier")}
-                  className="w-full flex items-center justify-center gap-[8px] rounded-full border border-terracotta text-terracotta t-bouton cursor-pointer"
-                  style={{ minHeight: 50 }}
                 >
                   <span aria-hidden="true">♡</span> Modifier ce look
-                </button>
+                </Button>
               </div>
 
               {/* AUTRES OPTIONS — uniquement des actions qui existent :
@@ -2144,7 +2141,7 @@ export default function PlanifierScreen() {
           <div className="text-[13px] text-muted-3 leading-[1.5]">
             Ce look sera retiré de ton agenda. Tes pièces, elles, restent dans ton dressing.
           </div>
-          <button
+          <Button variante="principal" className="mt-4"
             onClick={() => {
               const t = aSupprimer;
               setASupprimer(null);
@@ -2152,11 +2149,9 @@ export default function PlanifierScreen() {
               if (planOuvert?.id === t.id) { setPlanOuvert(null); setVue("liste"); }
               retirer(t.id);
             }}
-            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4"
-            style={{ minHeight: 52 }}
           >
             Supprimer
-          </button>
+          </Button>
           <button
             onClick={() => setASupprimer(null)}
             className="w-full text-[12px] text-muted-3 cursor-pointer mt-1"

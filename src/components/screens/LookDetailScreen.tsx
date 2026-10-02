@@ -7,6 +7,7 @@ import { isWishlistLook } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 export default function LookDetailScreen() {
   const { state, actions, vestiairePool } = useCapsela();
@@ -91,12 +92,11 @@ export default function LookDetailScreen() {
         })}
       </div>
 
-      <button
+      <Button variante="principal" className="mt-7"
         onClick={() => actions.wearLookToday(look.id)}
-        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
       >
         Porter aujourd&apos;hui
-      </button>
+      </Button>
       <button
         onClick={actions.deleteActiveLook}
         className="mt-[10px] w-full text-center border border-border text-rust rounded-full py-[13px] text-[12px] cursor-pointer"

@@ -8,6 +8,7 @@ import { wornAgo } from "@/lib/data";
 import { participePorte, participePorteMaj } from "@/lib/logic";
 import BoutonRetour from "@/components/BoutonRetour";
 import { teinteDe } from "@/lib/colorimetrieMoteur";
+import Button from "@/components/Button";
 
 /**
  * "Mes pièces" (recette 24/08/2026, mockup fourni) — grille plate 2 colonnes
@@ -204,12 +205,11 @@ export default function WardrobePiecesScreen() {
 
       {selectionMode && selection.size > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[480px] px-6 pb-[18px] pt-[14px] bg-gradient-to-t from-cream via-cream to-transparent">
-          <button
+          <Button variante="destructif"
             onClick={() => setConfirmOpen(true)}
-            className="w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer"
           >
             Retirer {selection.size} {selection.size === 1 ? "pièce" : "pièces"}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -223,12 +223,11 @@ export default function WardrobePiecesScreen() {
           {selection.size === 1 ? "ne sera plus proposée" : "ne seront plus proposées"} dans tes tenues. Ton historique
           reste intact. <span className="text-rust">Cette action est définitive.</span>
         </div>
-        <button
+        <Button variante="destructif" className="mt-[22px]"
           onClick={supprimer}
-          className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer"
         >
           Retirer définitivement
-        </button>
+        </Button>
         <button
           onClick={() => setConfirmOpen(false)}
           className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer"

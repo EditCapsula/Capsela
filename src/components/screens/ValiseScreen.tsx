@@ -55,6 +55,7 @@ import {
 } from "@/lib/valise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
+import Button from "@/components/Button";
 
 /**
  * PRÉPARER SA VALISE (docs/valise.md).
@@ -936,9 +937,9 @@ export default function ValiseScreen() {
 
       {bloquee && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] border-t border-border">
-          <button onClick={actions.openAddEtRevenir} className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 52 }}>
+          <Button variante="principal" onClick={actions.openAddEtRevenir}>
             Ajouter une pièce
-          </button>
+          </Button>
         </div>
       )}
 
@@ -1090,19 +1091,17 @@ function Resultat({
           Elle disparaît de « Mes planifications ». Tes pièces restent dans ton dressing.
         </div>
         <div className="flex gap-2 mt-5">
-          <button onClick={() => setFeuille(null)} className="flex-1 rounded-full border border-border bg-card text-ink t-bouton cursor-pointer" style={{ minHeight: 48 }}>
+          <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={() => setFeuille(null)}>
             Garder
-          </button>
-          <button
+          </Button>
+          <Button variante="principal" pleine={false} className="flex-1"
             onClick={() => {
               setFeuille(null);
               supprimer();
             }}
-            className="flex-1 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
-            style={{ minHeight: 48 }}
           >
             Supprimer
-          </button>
+          </Button>
         </div>
       </BottomSheet>
 
@@ -1430,9 +1429,9 @@ function Resultat({
             {nouvelles > 1 ? `${nouvelles} nouvelles pièces dans ton dressing` : "Une nouvelle pièce dans ton dressing"}
           </div>
           <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Recompose ta valise pour que Capsela en tienne compte.</div>
-          <button onClick={recomposer} className="w-full mt-3 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 46 }}>
+          <Button variante="principal" className="mt-3" onClick={recomposer}>
             Recomposer ma valise
-          </button>
+          </Button>
         </div>
       ) : (
         (occasionsAManque.length > 0 || peuDeLooks) && (
@@ -1576,9 +1575,9 @@ function Resultat({
                   );
                 })}
               </div>
-              <button onClick={() => retirer(aAlleger.map((a) => a.id))} className="w-full mt-3 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 44 }}>
+              <Button variante="principal" className="mt-3" onClick={() => retirer(aAlleger.map((a) => a.id))}>
                 Optimiser
-              </button>
+              </Button>
             </div>
           )}
           {GROUPES_VALISE.map(([titre, cats]) => {
@@ -1652,12 +1651,12 @@ function Pied({ gardeeOu, ajuster, recommencer, periode }: { gardeeOu: "compte" 
     <>
       {/* « Ajuster » dit qu'on retouche la sélection générée ; « Nouvelle valise » repart de zéro. */}
       <div className="flex gap-2 mt-7">
-        <button onClick={ajuster} className="flex-1 rounded-full border border-border bg-card text-ink t-bouton cursor-pointer" style={{ minHeight: 48 }}>
+        <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={ajuster}>
           Ajuster ma valise
-        </button>
-        <button onClick={recommencer} className="flex-1 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 48 }}>
+        </Button>
+        <Button variante="principal" pleine={false} className="flex-1" onClick={recommencer}>
           Nouvelle valise
-        </button>
+        </Button>
       </div>
       <div className="text-[11px] text-placeholder leading-[1.5] mt-4">
         {periode && <div>{periode}</div>}

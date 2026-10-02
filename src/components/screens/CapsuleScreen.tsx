@@ -26,6 +26,7 @@ import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { analyserImage, placementDansCadre, type Analyse } from "@/lib/cadrageImage";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
+import Button from "@/components/Button";
 
 /*
  * ÉCRAN CAPSULE — refonte éditoriale du 25/09/2026.
@@ -525,12 +526,11 @@ export default function CapsuleScreen() {
                 Revenir à mon style
               </button>
             </div>
-            <button
+            <Button variante="principal" className="mt-[14px]"
               onClick={actions.viewExploredOutfit}
-              className="mt-[14px] w-full text-center rounded-full py-4 t-bouton bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
             >
               Voir ma tenue
-            </button>
+            </Button>
           </div>
         )}
 
@@ -693,15 +693,14 @@ export default function CapsuleScreen() {
           background: "linear-gradient(to top, var(--color-cream) 70%, rgba(243,238,229,0))",
         }}
       >
-        <button
+        <Button variante="principal"
           onClick={actions.goTenues}
           // Terracotta profond (polish V2) : crème sur terracotta ne donnait
           // que 3,8:1 de contraste, sous le seuil AA du texte courant ; 4,5:1
           // sur le fond profond, déjà celui des boutons pleins de Planifier.
-          className="pointer-events-auto w-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
         >
           ✦ Découvrir mes tenues
-        </button>
+        </Button>
       </div>
 
       {toast && (
@@ -757,15 +756,14 @@ export default function CapsuleScreen() {
             {/* 1. Seule action dominante : le bouton principal de Capsela,
                 terracotta, comme « Découvrir mes tenues » (le noir rompait la
                 hiérarchie de l'écran). */}
-            <button
+            <Button variante="principal" className="mt-[30px]"
               onClick={() => {
                 setFiche(null);
                 actions.openItemOutfits(pieceFiche.id);
               }}
-              className="mt-[30px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
             >
               Voir des tenues avec cette pièce
-            </button>
+            </Button>
             {/* 2. Secondaire important : contour, sans fond. */}
             <button
               onClick={() => {

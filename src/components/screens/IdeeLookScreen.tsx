@@ -13,6 +13,7 @@ import { daysSinceWorn, wearCounts } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 /**
  * DÉTAIL D'UNE IDÉE DE LOOK (27/09/2026, maquette page 4) — ouvert depuis une
@@ -173,13 +174,12 @@ export default function IdeeLookScreen() {
         )}
       </div>
 
-      <button
+      <Button variante="principal" className="mt-[12px]"
         onClick={() => actions.viewItemOutfit(actif.ids, actif.occasion)}
-        className="mt-[12px] w-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] t-bouton cursor-pointer"
       >
         Porter ce look
-      </button>
-      <button
+      </Button>
+      <Button variante="secondaire" className="mt-[10px]"
         onClick={() => {
           if (enregistre || demande) return;
           setDemandeCle(cle);
@@ -187,10 +187,9 @@ export default function IdeeLookScreen() {
         }}
         disabled={enregistre || demande}
         aria-pressed={enregistre}
-        className="mt-[10px] w-full border border-border text-terracotta text-center rounded-full py-[14px] t-bouton cursor-pointer disabled:cursor-default"
       >
         {enregistre ? "✓ Enregistré dans mes looks" : demande ? "Enregistrement…" : "Enregistrer dans mes looks"}
-      </button>
+      </Button>
 
       {autres.length > 0 && (
         <>

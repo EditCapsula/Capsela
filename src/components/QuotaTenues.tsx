@@ -6,6 +6,7 @@ import { consommerApresVideo, consommerGeneration, generationAutorisee, type Quo
 import { GENERATIONS_GRATUITES_PAR_JOUR } from "@/lib/premium";
 import { useCapsela } from "@/lib/store";
 import { fournisseurVideo, peutProposerVideo } from "@/lib/videoRecompense";
+import Button from "@/components/Button";
 
 /**
  * QUOTA DES TENUES ET SON GATE — sortis de TenuesScreen le 26/09/2026 pour
@@ -198,16 +199,14 @@ export function useQuotaTenues() {
                 </div>
               </div>
             )}
-            <button
+            <Button variante="principal" className="mt-4"
               onClick={() => {
                 setQuotaAtteint(false);
                 actions.goPremium();
               }}
-              className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4"
-              style={{ minHeight: 52 }}
             >
               Découvrir Premium
-            </button>
+            </Button>
             <button
               onClick={() => setQuotaAtteint(false)}
               className="w-full rounded-full text-[12px] text-muted-3 cursor-pointer mt-1"

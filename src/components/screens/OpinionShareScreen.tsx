@@ -11,6 +11,7 @@ import { buildOpinionMessageParts, formatOpinionMessage } from "@/lib/selectors"
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
+import Button from "@/components/Button";
 
 /**
  * « Demander un avis » — mise en page de la maquette du 23/09/2026.
@@ -336,12 +337,11 @@ export default function OpinionShareScreen() {
           <div className="text-[13px] text-muted mt-6 leading-[1.5]">
             Il n&apos;y a pas de tenue à partager pour l&apos;instant.
           </div>
-          <button
+          <Button variante="principal" className="mt-[22px]"
             onClick={actions.closeOpinionShare}
-            className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
           >
             {retourLibelle}
-          </button>
+          </Button>
         </div>
       </div>
     );

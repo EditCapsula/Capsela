@@ -24,6 +24,7 @@ import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { composeWardrobePool, inactivityInfo, isWishlistLook, lookWornCount, neverWornItems } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import type { Item, OccasionKey } from "@/lib/types";
+import Button from "@/components/Button";
 
 /**
  * DRESSING — refonte éditoriale du 25/09/2026 (brief « Refonte UX/UI de la
@@ -325,14 +326,12 @@ export default function WardrobeScreen() {
           Ajoute quelques pièces que tu portes vraiment. Une photo suffit pour commencer. Pas besoin d&apos;ajouter toute ta
           garde-robe : commence avec 5 à 10 pièces que tu portes souvent.
         </div>
-        <button
+        <Button variante="principal" className="mt-5"
           onClick={actions.openAdd}
-          className="w-full flex items-center justify-center gap-2 mt-5 rounded-full bg-terracotta active:bg-terracotta-hover text-cream t-bouton cursor-pointer"
-          style={{ minHeight: 52 }}
         >
           {PLUS}
           Ajouter ma première pièce
-        </button>
+        </Button>
 
         {/* ✦ À DÉCOUVRIR, version dressing vide : la capsule et de vraies
             tenues du moteur tirées de la capsule par défaut. Le clic passe

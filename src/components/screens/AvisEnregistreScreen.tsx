@@ -11,6 +11,7 @@ import { PhotoHeros } from "@/components/screens/AvisStylisteScreen";
 import { premiumRequis } from "@/lib/autorisations";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 /*
  * AVIS DE STYLISTE ENREGISTRÉ — rouvert depuis le Journal (arbitrages du
@@ -184,14 +185,13 @@ export default function AvisEnregistreScreen() {
             {TEXTES.echecSuppression}
           </div>
         )}
-        <button
+        <Button variante="destructif" className="mt-[22px]"
           type="button"
           onClick={supprimer}
           disabled={suppression === "en_cours"}
-          className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer disabled:opacity-60"
         >
           {TEXTES.confirmer}
-        </button>
+        </Button>
         <button
           type="button"
           onClick={() => setConfirmation(false)}
