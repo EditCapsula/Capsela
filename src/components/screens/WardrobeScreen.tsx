@@ -368,13 +368,9 @@ export default function WardrobeScreen() {
           <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
             {`Ton vestiaire contient déjà ${items.length} pièces. Passe à Premium pour continuer à l'enrichir.`}
           </div>
-          <button
-            onClick={() => actions.goPremium()}
-            className="mt-4 rounded-full px-5 t-bouton text-terracotta cursor-pointer active:opacity-80"
-            style={{ minHeight: 44, border: "1px solid var(--color-terracotta)" }}
-          >
+          <Button variante="contour" pleine={false} className="mt-4" onClick={() => actions.goPremium()}>
             Découvrir Premium
-          </button>
+          </Button>
         </div>
       )}
 

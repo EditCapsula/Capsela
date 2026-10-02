@@ -1975,7 +1975,7 @@ export default function PlanifierScreen() {
           </div>
         )}
         {vue === "etape" && (
-          <button
+          <Button
             onClick={() => {
               if (!etapeValide || attend) return;
               if (etape < 3) {
@@ -2003,26 +2003,15 @@ export default function PlanifierScreen() {
                 });
             }}
             disabled={!etapeValide || attend}
-            className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
-            style={{
-              minHeight: 52,
-              background: etapeValide && !attend ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
-            }}
           >
             {attend ? "Un instant…" : etape === 3 ? "Voir ma tenue" : "Suivant"}
-          </button>
+          </Button>
         )}
         {/* « + PLANIFIER UN LOOK » (30/09/2026) : la barre d'action pleine
             largeur de tous les écrans, pas une pastille flottante qui
             n'existait nulle part ailleurs. */}
         {vue === "liste" && (
-          <button
-            onClick={recommencer}
-            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
-            style={{ minHeight: 52 }}
-          >
-            + Planifier un look
-          </button>
+          <Button onClick={recommencer}>+ Planifier un look</Button>
         )}
         {vue === "resultat" && (
           <>
@@ -2030,17 +2019,12 @@ export default function PlanifierScreen() {
                 est désactivée quand il n'y a pas de tenue à garder — un état
                 vide ne se planifie pas — et pendant l'écriture, pour qu'un
                 double tap ne parte pas deux fois. */}
-            <button
+            <Button
               onClick={garder}
               disabled={enregistrement || sansTenue}
-              className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
-              style={{
-                minHeight: 52,
-                background: enregistrement || sansTenue ? "var(--color-cream-dark-soft)" : "var(--color-terracotta-deep)",
-              }}
             >
               {enregistrement ? "Un instant…" : "Garder cette tenue"}
-            </button>
+            </Button>
             {/* MODIFIER À GAUCHE, PRINCIPAL À DROITE (recette 24/09/2026).
                 « Modifier » seul laissait croire qu'on retouchait la tenue ;
                 on retouche les réponses qui l'ont produite, d'où « cet

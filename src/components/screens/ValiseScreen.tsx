@@ -919,14 +919,12 @@ export default function ValiseScreen() {
 
       {questions && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
-          <button
+          <Button
             onClick={() => (etape < 4 ? etapeValide && setEtape(etape + 1) : preparer(false))}
             disabled={!etapeValide}
-            className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
-            style={{ minHeight: 52, background: etapeValide ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)" }}
           >
             {etape < 4 ? "Continuer" : "Préparer ma valise"}
-          </button>
+          </Button>
           {etape === 4 && (
             <button onClick={() => preparer(true)} className="text-[12px] text-terracotta cursor-pointer py-[10px]">
               Passer cette étape
@@ -1326,18 +1324,18 @@ function Resultat({
           })}
         </div>
         {/* L'action réelle derrière le cœur de la maquette : enregistrer le look dans « Mes looks ». */}
-        <button
+        <Button
+          variante={enregistre ? "secondaire" : "contour"}
+          className="mt-5"
           onClick={() => {
             if (enregistre) return;
             enregistrerLook(l.ids, occ[0] ?? "quotidien");
             setEnregistres((e) => [...e, cle]);
           }}
           disabled={enregistre}
-          className={"w-full mt-5 rounded-full border t-bouton cursor-pointer disabled:cursor-default " + (enregistre ? "border-border text-muted bg-card" : "border-terracotta text-terracotta")}
-          style={{ minHeight: 48 }}
         >
           {enregistre ? "Enregistré dans tes looks" : "Enregistrer dans mes looks"}
-        </button>
+        </Button>
         {feuilles}
       </>
     );

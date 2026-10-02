@@ -93,12 +93,9 @@ export default function DateNaissanceScreen({
           {auth.error}
         </div>
       )}
-      <button
-        onClick={continuer}
-        className={"mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream " + (envoi ? "bg-[#bd8a75]" : "bg-terracotta active:bg-terracotta-hover")}
-      >
+      <Button pleine={false} className="mt-5" onClick={continuer} disabled={envoi}>
         {envoi ? "Un instant…" : "Continuer"}
-      </button>
+      </Button>
       <div className="text-[11px] text-placeholder text-center mt-4 leading-[1.5]">
         Pourquoi ? Voir notre{" "}
         <button type="button" onClick={() => actions.openLegalDoc("confidentialite")} className="text-muted underline cursor-pointer">
