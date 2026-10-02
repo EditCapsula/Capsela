@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
+import { IconeAvis, PastilleIcone, type NomIconeAvis } from "@/components/IconesAvis";
 import EtMaintenantAvis from "@/components/EtMaintenantAvis";
 import PiecesReconnues from "@/components/PiecesReconnues";
 import AppHeader from "@/components/AppHeader";
@@ -91,10 +92,10 @@ function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?:
  * V2) : trois temps très compacts, qui disent ce qui va se passer — sans
  * promettre plus que ce que fait réellement l'avis.
  */
-const ETAPES_SERVICE: [string, string][] = [
-  ["Ta tenue", "Une photo de la tête aux pieds."],
-  ["Ton analyse", "Style · couleurs · silhouette."],
-  ["Ton avis", "Un verdict et des conseils personnalisés."],
+const ETAPES_SERVICE: [string, string, NomIconeAvis][] = [
+  ["Ta tenue", "Une photo de la tête aux pieds.", "camera"],
+  ["Ton analyse", "Style · couleurs · silhouette.", "etincelle"],
+  ["Ton avis", "Un verdict et des conseils personnalisés.", "bulle"],
 ];
 
 function IntroService() {
@@ -102,18 +103,72 @@ function IntroService() {
     <section className="mt-[22px]" aria-labelledby="avis-comment">
       <div id="avis-comment" className="t-surtitre text-muted">Comment ça marche</div>
       <ol className="mt-[12px] flex flex-col gap-[10px]">
-        {ETAPES_SERVICE.map(([titre, texte], i) => (
-          <li key={titre} className="flex items-start gap-[12px]">
-            <span aria-hidden="true" className="w-[28px] h-[28px] flex-shrink-0 rounded-full bg-warm-bg text-terracotta font-serif text-[12px] leading-none flex items-center justify-center">
+        {ETAPES_SERVICE.map(([titre, texte, icone], i) => (
+          <li key={titre} className="flex items-center gap-[12px]">
+            <span aria-hidden="true" className="w-[22px] flex-shrink-0 text-terracotta font-serif text-[13px] leading-none">
               {String(i + 1).padStart(2, "0")}
             </span>
-            <span className="min-w-0 pt-[1px]">
+            <PastilleIcone nom={icone} />
+            <span className="min-w-0">
               <span className="block text-[13px] text-ink font-medium">{titre}</span>
               <span className="block text-[12px] text-muted leading-[1.4]">{texte}</span>
             </span>
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+/**
+ * EXTRAIT D'UN AVIS (maquette du 02/10/2026) : montre ce que l'on reçoit. C'est un EXEMPLE, annoncé comme
+ * tel (« Extrait d'un avis ») : ses trois lignes reprennent les rubriques réelles d'un avis. La photo est
+ * facultative : posée dans public/images/avis/extrait-avis.webp, elle s'affiche à gauche ; absente, la carte
+ * reste pleine largeur, sans image cassée.
+ */
+const EXTRAIT: [NomIconeAvis, string, string][] = [
+  ["coeur", "Ce qui fonctionne", "Une silhouette équilibrée et moderne."],
+  ["ampoule", "Conseil du styliste", "Ajoute une touche de couleur pour illuminer ta tenue."],
+  ["cintre", "À tester", "3 idées d'association avec ton dressing."],
+];
+
+function ExtraitAvis() {
+  const [photo, setPhoto] = useState(true);
+  const imageRef = useRef<HTMLImageElement>(null);
+  // Une erreur de chargement qui survient avant l'hydratation n'atteint jamais onError : on relit l'état de l'image.
+  useEffect(() => {
+    const img = imageRef.current;
+    if (img && img.complete && img.naturalWidth === 0) setPhoto(false);
+  }, []);
+  return (
+    <section className="mt-[20px] flex gap-[10px] rounded-[20px] bg-warm-bg p-[10px]" aria-label="Extrait d'un avis">
+      {photo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          ref={imageRef}
+          src="/images/avis/extrait-avis.webp"
+          alt=""
+          width={120}
+          height={180}
+          decoding="async"
+          onError={() => setPhoto(false)}
+          className="w-[34%] max-w-[130px] flex-shrink-0 rounded-[14px] object-cover self-stretch"
+        />
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="t-label text-muted mb-[6px]">Extrait d&apos;un avis</div>
+        <ul className="flex flex-col gap-[6px]">
+          {EXTRAIT.map(([icone, titre, texte]) => (
+            <li key={titre} className="flex items-start gap-[8px] rounded-[12px] bg-card px-[10px] py-[7px]">
+              <span className="text-terracotta pt-[1px]"><IconeAvis nom={icone} taille={16} /></span>
+              <span className="min-w-0">
+                <span className="block text-[11.5px] text-ink font-medium leading-[1.3]">{titre}</span>
+                <span className="block text-[11px] text-muted leading-[1.35]">{texte}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -134,10 +189,20 @@ function ConseilsPhoto() {
           </svg>
         </span>
       </summary>
-      <ul className="mt-[10px] flex flex-col gap-[6px] text-[13px] text-ink leading-[1.45]">
-        <li>• Montre ta silhouette en entier</li>
-        <li>• Privilégie une lumière naturelle</li>
-        <li>• Garde ta tenue bien visible, sans recadrage ni flou</li>
+      <ul className="mt-[12px] flex flex-col gap-[10px]">
+        {[
+          ["silhouette", "Montre ta silhouette en entier", "De la tête aux chaussures."],
+          ["soleil", "Privilégie une lumière naturelle", "Pour des couleurs plus fidèles."],
+          ["cadre", "Garde ta tenue bien visible", "Évite les photos trop recadrées ou floues."],
+        ].map(([icone, titre, texte]) => (
+          <li key={titre} className="flex items-center gap-[12px]">
+            <PastilleIcone nom={icone as NomIconeAvis} taille={32} />
+            <span className="min-w-0">
+              <span className="block text-[13px] text-ink leading-[1.3]">{titre}</span>
+              <span className="block text-[12px] text-muted leading-[1.4]">{texte}</span>
+            </span>
+          </li>
+        ))}
       </ul>
     </details>
   );
@@ -331,6 +396,7 @@ export default function AvisStylisteScreen() {
     // l'action dominante ; la galerie est secondaire.
     contenu = (
       <>
+        <ExtraitAvis />
         <IntroService />
         <ConseilsPhoto />
         <div className="mt-[20px] flex flex-col gap-[6px]">
