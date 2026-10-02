@@ -3,16 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
+import { IconeAvis, PastilleIcone, type NomIconeAvis } from "@/components/IconesAvis";
 import EtMaintenantAvis from "@/components/EtMaintenantAvis";
 import PiecesReconnues from "@/components/PiecesReconnues";
 import AppHeader from "@/components/AppHeader";
-import { LienRetour } from "@/components/BoutonRetour";
+import BoutonRetour from "@/components/BoutonRetour";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
 import { useAuth } from "@/lib/auth";
-import { contexteDepuisProfil, etapesAnalyse, personnalisationAvis, phraseAnalyse, reactionErreur } from "@/lib/avisStylisteClient";
+import { contexteDepuisProfil, etapesAnalyse, libelleQuota, lireQuotaAvis, personnalisationAvis, phraseAnalyse, prochainMois, reactionErreur, type QuotaAvis } from "@/lib/avisStylisteClient";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
@@ -49,7 +50,9 @@ import { useCapsela, type PhotoAvis } from "@/lib/store";
  * spec : placeholder TODO_COPY.
  */
 const TEXTES = {
-  prendre: "Prendre une photo", // §3, §6
+  prendre: "Prendre une photo", // §3, §6 — dans la feuille « Changer de photo »
+  analyserEntree: "Analyser ma tenue", // 02/10/2026 : l'objectif est l'analyse, pas la prise de photo
+  galerie: "Choisir une photo dans ma galerie",
   importer: "Choisir dans ma galerie", // optimisation du parcours, 26/09/2026
   analyser: "Analyser ma tenue", // §3, §4, §6
   changer: "Changer de photo", // §4, §6
@@ -89,27 +92,84 @@ function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?:
  * V2) : trois temps très compacts, qui disent ce qui va se passer — sans
  * promettre plus que ce que fait réellement l'avis.
  */
-const ETAPES_SERVICE: [string, string][] = [
-  ["Montre ta tenue", "Photo ou galerie."],
-  ["Capsela l'analyse", "Style, couleurs, proportions."],
-  ["Reçois ton avis", "Conseils personnalisés."],
+const ETAPES_SERVICE: [string, string, NomIconeAvis][] = [
+  ["Ta tenue", "Une photo de la tête aux pieds.", "camera"],
+  ["Ton analyse", "Style · couleurs · silhouette.", "etincelle"],
+  ["Ton avis", "Un verdict et des conseils personnalisés.", "bulle"],
 ];
 
 function IntroService() {
   return (
-    <ol className="mt-[26px] flex flex-col gap-[12px]">
-      {ETAPES_SERVICE.map(([titre, texte], i) => (
-        <li key={titre} className="flex items-start gap-[12px]">
-          <span className="w-[26px] h-[26px] flex-shrink-0 rounded-full bg-warm-bg text-terracotta font-serif text-[13px] leading-none flex items-center justify-center">
-            {i + 1}
-          </span>
-          <span className="min-w-0 pt-[3px]">
-            <span className="block text-[13px] text-ink font-medium">{titre}</span>
-            <span className="block text-[12px] text-muted leading-[1.45] mt-[1px]">{texte}</span>
-          </span>
-        </li>
-      ))}
-    </ol>
+    <section className="mt-[22px]" aria-labelledby="avis-comment">
+      <div id="avis-comment" className="t-surtitre text-muted">Comment ça marche</div>
+      <ol className="mt-[12px] flex flex-col gap-[10px]">
+        {ETAPES_SERVICE.map(([titre, texte, icone], i) => (
+          <li key={titre} className="flex items-center gap-[12px]">
+            <span aria-hidden="true" className="w-[22px] flex-shrink-0 text-terracotta font-serif text-[13px] leading-none">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <PastilleIcone nom={icone} />
+            <span className="min-w-0">
+              <span className="block text-[13px] text-ink font-medium">{titre}</span>
+              <span className="block text-[12px] text-muted leading-[1.4]">{texte}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/**
+ * EXTRAIT D'UN AVIS (maquette du 02/10/2026) : montre ce que l'on reçoit. C'est un EXEMPLE, annoncé comme
+ * tel (« Extrait d'un avis ») : ses trois lignes reprennent les rubriques réelles d'un avis. La photo est
+ * facultative : posée dans public/images/avis/extrait-avis.webp, elle s'affiche à gauche ; absente, la carte
+ * reste pleine largeur, sans image cassée.
+ */
+const EXTRAIT: [NomIconeAvis, string, string][] = [
+  ["coeur", "Ce qui fonctionne", "Une silhouette équilibrée et moderne."],
+  ["ampoule", "Conseil du styliste", "Ajoute une touche de couleur pour illuminer ta tenue."],
+  ["cintre", "À tester", "3 idées d'association avec ton dressing."],
+];
+
+function ExtraitAvis() {
+  const [photo, setPhoto] = useState(true);
+  const imageRef = useRef<HTMLImageElement>(null);
+  // Une erreur de chargement qui survient avant l'hydratation n'atteint jamais onError : on relit l'état de l'image.
+  useEffect(() => {
+    const img = imageRef.current;
+    if (img && img.complete && img.naturalWidth === 0) setPhoto(false);
+  }, []);
+  return (
+    <section className="mt-[20px] flex gap-[10px] rounded-[20px] bg-warm-bg p-[10px]" aria-label="Extrait d'un avis">
+      {photo && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          ref={imageRef}
+          src="/images/avis/extrait-avis.webp"
+          alt=""
+          width={120}
+          height={180}
+          decoding="async"
+          onError={() => setPhoto(false)}
+          className="w-[34%] max-w-[130px] flex-shrink-0 rounded-[14px] object-cover self-stretch"
+        />
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="t-label text-muted mb-[6px]">Extrait d&apos;un avis</div>
+        <ul className="flex flex-col gap-[6px]">
+          {EXTRAIT.map(([icone, titre, texte]) => (
+            <li key={titre} className="flex items-start gap-[8px] rounded-[12px] bg-card px-[10px] py-[7px]">
+              <span className="text-terracotta pt-[1px]"><IconeAvis nom={icone} taille={16} /></span>
+              <span className="min-w-0">
+                <span className="block text-[11.5px] text-ink font-medium leading-[1.3]">{titre}</span>
+                <span className="block text-[11px] text-muted leading-[1.35]">{texte}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
 
@@ -120,7 +180,7 @@ function IntroService() {
  */
 function ConseilsPhoto() {
   return (
-    <details className="group mt-[22px] bg-card border border-border rounded-[18px] px-4 py-[12px]">
+    <details className="group mt-[18px] bg-card border border-border rounded-[18px] px-4 py-[12px]">
       <summary className="flex items-center justify-between gap-3 cursor-pointer list-none min-h-[28px]">
         <span className="t-surtitre text-muted">Pour un avis plus précis</span>
         <span aria-hidden="true" className="text-muted transition-transform duration-200 group-open:rotate-180">
@@ -129,10 +189,20 @@ function ConseilsPhoto() {
           </svg>
         </span>
       </summary>
-      <ul className="mt-[10px] flex flex-col gap-[6px] text-[13px] text-ink leading-[1.45]">
-        <li>• Prends ta tenue en entier, de la tête aux chaussures</li>
-        <li>• Privilégie une lumière naturelle</li>
-        <li>• Évite les photos trop recadrées ou floues</li>
+      <ul className="mt-[12px] flex flex-col gap-[10px]">
+        {[
+          ["silhouette", "Montre ta silhouette en entier", "De la tête aux chaussures."],
+          ["soleil", "Privilégie une lumière naturelle", "Pour des couleurs plus fidèles."],
+          ["cadre", "Garde ta tenue bien visible", "Évite les photos trop recadrées ou floues."],
+        ].map(([icone, titre, texte]) => (
+          <li key={titre} className="flex items-center gap-[12px]">
+            <PastilleIcone nom={icone as NomIconeAvis} taille={32} />
+            <span className="min-w-0">
+              <span className="block text-[13px] text-ink leading-[1.3]">{titre}</span>
+              <span className="block text-[12px] text-muted leading-[1.4]">{texte}</span>
+            </span>
+          </li>
+        ))}
       </ul>
     </details>
   );
@@ -252,6 +322,20 @@ export default function AvisStylisteScreen() {
   /** Refus serveur « non Premium » déjà vu et refermé : ne pas rouvrir le Gate à chaque rendu. */
   const [gateFerme, setGateFerme] = useState<string | null>(null);
 
+  /** Avis restants ce mois-ci, lus au serveur avant toute demande ; null tant qu'inconnu (rien n'est alors affiché ni bloqué). */
+  const [quota, setQuota] = useState<QuotaAvis | null>(null);
+  useEffect(() => {
+    if (photo) return;
+    let annule = false;
+    lireQuotaAvis().then((q) => {
+      if (!annule) setQuota(q);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [photo]);
+  const epuise = quota !== null && quota.restants <= 0;
+
   const choisir = (source: "camera" | "galerie") => {
     setSources(false);
     (source === "camera" ? cameraRef : galerieRef).current?.click();
@@ -279,6 +363,9 @@ export default function AvisStylisteScreen() {
   const reaction = analyse.etat === "echouee" ? reactionErreur(analyse.code, analyse.raison) : null;
   const cleRefus = analyse.etat === "echouee" ? `${analyse.code}:${photo?.url ?? ""}` : null;
   const gateOuvert = reaction?.action === "gate" && gateFerme !== cleRefus;
+
+  /** La promesse du service n'est dite qu'à l'entrée, avant qu'une photo n'existe. */
+  const introAffichee = selection === "aucune" && !photo;
 
   let contenu: React.ReactNode;
   if (selection === "preparation") {
@@ -309,15 +396,38 @@ export default function AvisStylisteScreen() {
     // l'action dominante ; la galerie est secondaire.
     contenu = (
       <>
+        <ExtraitAvis />
         <IntroService />
         <ConseilsPhoto />
-        <div className="mt-[22px] flex flex-col gap-[10px]">
-          <button type="button" onClick={() => choisir("camera")} className={BOUTON_PRINCIPAL}>
-            {TEXTES.prendre}
+        <div className="mt-[20px] flex flex-col gap-[6px]">
+          <button type="button" onClick={() => choisir("camera")} disabled={epuise} className={BOUTON_PRINCIPAL}>
+            {TEXTES.analyserEntree}
           </button>
-          <button type="button" onClick={() => choisir("galerie")} className={BOUTON_SECONDAIRE}>
-            {TEXTES.importer}
+          {/* Le quota, avant la demande, et secondaire : une phrase, jamais en couleur seule. Rien tant qu'il est inconnu. */}
+          {quota && !epuise && (
+            <div className="text-center text-[12px] text-muted leading-[1.45]" role="status">
+              {libelleQuota(quota)}
+            </div>
+          )}
+          {epuise && quota && (
+            <div className="text-center text-[12px] text-muted leading-[1.5] px-2" role="status">
+              <div className="text-ink">{libelleQuota(quota)}</div>
+              <div>Tes avis seront à nouveau disponibles le {prochainMois()}.</div>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => choisir("galerie")}
+            disabled={epuise}
+            className={BOUTON_SECONDAIRE + " mt-[6px] disabled:opacity-50 disabled:cursor-not-allowed"}
+          >
+            {TEXTES.galerie}
           </button>
+          {epuise && (
+            <button type="button" onClick={actions.goHistory} className={LIEN}>
+              {TEXTES.voirJournal} →
+            </button>
+          )}
         </div>
       </>
     );
@@ -468,16 +578,23 @@ export default function AvisStylisteScreen() {
           résultat. Le retour descend dans le contenu. */}
       <AppHeader />
       <div className="flex items-center justify-between gap-3">
-        <LienRetour onClick={actions.goHome} label="Revenir à l'accueil" />
+        <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" />
         {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
       </div>
 
-      <div className="mt-[8px]">
+      <div className="mt-[16px]">
         <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>
         {/* Promesse (optimisation du parcours, 26/09/2026). */}
-        <div className="t-chapeau text-muted-3 mt-[10px]">Un regard expert sur ta tenue, pensé pour ton style.</div>
+        {introAffichee ? (
+          <>
+            <div className="t-titre-ligne text-ink mt-[10px]">Ton look, vu par Capsela.</div>
+            <div className="t-chapeau text-muted-3 mt-[6px]">Un regard personnalisé sur ta silhouette, tes couleurs et l&apos;harmonie de ta tenue.</div>
+          </>
+        ) : (
+          <div className="t-chapeau text-muted-3 mt-[10px]">Un regard expert sur ta tenue, pensé pour ton style.</div>
+        )}
       </div>
 
       {/* Champs natifs, invisibles : la caméra arrière, et la galerie / les fichiers. */}

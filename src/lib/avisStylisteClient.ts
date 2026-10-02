@@ -157,6 +157,40 @@ export async function demanderAvis(fichier: File, contexte: ContexteAvis): Promi
   }
 }
 
+/** Les avis restants ce mois-ci et le plafond, tels que le serveur les tient (fonction `stylist-advice`, lecture seule). */
+export interface QuotaAvis {
+  restants: number;
+  limite: number;
+}
+
+/**
+ * LE QUOTA AVANT LA DEMANDE (02/10/2026, page « Avis de styliste »). La source de vérité reste le serveur
+ * (migration 0046, plafond de la fonction) : l'app ne le recalcule ni ne le recopie. Ne lève jamais ; toute
+ * impossibilité de lire (mode démo, réseau, fonction pas encore déployée, compteur illisible) rend `null` :
+ * l'app n'affiche alors aucun compteur et ne bloque rien (un état inconnu n'applique aucune limite).
+ */
+export async function lireQuotaAvis(): Promise<QuotaAvis | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await getSupabase().functions.invoke("stylist-advice", { body: { action: "quota" } });
+    if (error) return null;
+    const c = data as { ok?: unknown; restants?: unknown; limite?: unknown } | null;
+    if (c && c.ok === true && typeof c.restants === "number" && typeof c.limite === "number" && c.restants >= 0 && c.limite >= 1) {
+      return { restants: Math.min(c.restants, c.limite), limite: c.limite };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** La phrase du compteur sous le bouton, selon les avis restants. Jamais un nombre écrit en dur : il vient du serveur. */
+export function libelleQuota(q: QuotaAvis): string {
+  if (q.restants <= 0) return `Tes ${q.limite} avis du mois ont été utilisés`;
+  if (q.restants >= q.limite) return `${q.restants} avis disponibles ce mois-ci`;
+  return `${q.restants} ${q.restants > 1 ? "avis restants" : "avis restant"} ce mois-ci`;
+}
+
 /**
  * Message et action pour chaque échec (section 15). Libellés DÉCIDÉS repris
  * tels quels ; propositions de la spec affichées en attendant leur

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, prioriserActionsAvis, prochainMois, reactionErreur, repartirPiecesAvis, titresAffichables, type AvisStyliste } from "../avisStylisteClient";
+import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, libelleQuota, prioriserActionsAvis, prochainMois, reactionErreur, repartirPiecesAvis, titresAffichables, type AvisStyliste } from "../avisStylisteClient";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 
 const profil = (over: Partial<Profile> = {}): Profile => ({ ...EMPTY_PROFILE, gender: "femme", displayName: "Angela", ...over });
@@ -156,5 +156,20 @@ describe("plafond mensuel — réaction et date de reprise", () => {
       message: "Tu as utilisé tous tes avis de styliste de ce mois-ci.",
       sousTexte: "Le prochain sera disponible le 1er novembre.",
     });
+  });
+});
+
+describe("libelleQuota — le compteur sous le bouton", () => {
+  const q = (restants: number, limite = 5) => libelleQuota({ restants, limite });
+  it("tous les avis disponibles, puis restants, puis le dernier, puis plus aucun", () => {
+    expect(q(5)).toBe("5 avis disponibles ce mois-ci");
+    expect(q(4)).toBe("4 avis restants ce mois-ci");
+    expect(q(2)).toBe("2 avis restants ce mois-ci");
+    expect(q(1)).toBe("1 avis restant ce mois-ci");
+    expect(q(0)).toBe("Tes 5 avis du mois ont été utilisés");
+  });
+  it("le plafond vient du serveur, jamais d'une valeur écrite en dur", () => {
+    expect(q(0, 8)).toBe("Tes 8 avis du mois ont été utilisés");
+    expect(q(8, 8)).toBe("8 avis disponibles ce mois-ci");
   });
 });

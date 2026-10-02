@@ -17,6 +17,7 @@ import {
   nettoyerContexte,
   reconnaitrePieces,
   traiterDemandeAvis,
+  traiterLectureQuota,
   validerImage,
   validerReponse,
   violationCharte,
@@ -70,6 +71,8 @@ function deps(opts: {
   quota?: "ok" | "limite" | "indisponible";
   utilisees?: number;
   limite?: number;
+  /** Unités déjà consommées ce mois-ci pour la lecture seule ; null : illisible. */
+  lecture?: number | null;
 } = {}) {
   const appels: unknown[] = [];
   const lecturesDressing: string[] = [];
@@ -105,6 +108,7 @@ function deps(opts: {
       rendre: async (userId) => {
         rendus.push(userId);
       },
+      lire: async () => (opts.lecture === undefined ? 2 : opts.lecture),
     },
   };
   return { d, appels, journal, lecturesDressing, consommations, rendus };
@@ -623,5 +627,29 @@ describe("traiterDemandeAvis — plafond mensuel de 5 avis", () => {
     const { d, rendus } = deps({ reponses: [{ ok: true, json: reponseOpenAI({ unusable: true, reason: "blurry" }) }] });
     const r = await traiterDemandeAvis(AUTH, { image: IMAGE }, d);
     if (r.statut === 422) expect(rendus).toHaveLength(0);
+  });
+});
+
+describe("traiterLectureQuota — le nombre d'avis restants, sans rien consommer", () => {
+  it("rend les avis restants et le plafond, sans consommer ni appeler le modèle", async () => {
+    const { d, appels, consommations } = deps({ lecture: 2 });
+    expect(await traiterLectureQuota(AUTH, d)).toEqual({ statut: 200, corps: { ok: true, restants: 3, limite: 5 } });
+    expect(consommations).toHaveLength(0);
+    expect(appels).toHaveLength(0);
+  });
+  it("plafond atteint : 0 restant, jamais négatif", async () => {
+    const { d } = deps({ lecture: 7 });
+    expect((await traiterLectureQuota(AUTH, d)).corps).toEqual({ ok: true, restants: 0, limite: 5 });
+  });
+  it("aucun avis encore demandé ce mois-ci : le plafond entier", async () => {
+    const { d } = deps({ lecture: 0 });
+    expect((await traiterLectureQuota(AUTH, d)).corps).toEqual({ ok: true, restants: 5, limite: 5 });
+  });
+  it("non authentifié : 401 ; compteur illisible : 503 (l'app n'affiche alors rien)", async () => {
+    const { d } = deps();
+    expect(await traiterLectureQuota(null, d)).toEqual({ statut: 401, corps: { ok: false, code: "non_authentifie" } });
+    expect(await traiterLectureQuota("Bearer jeton-faux", d)).toEqual({ statut: 401, corps: { ok: false, code: "non_authentifie" } });
+    const illisible = deps({ lecture: null });
+    expect(await traiterLectureQuota(AUTH, illisible.d)).toEqual({ statut: 503, corps: { ok: false, code: "statut_indisponible" } });
   });
 });
