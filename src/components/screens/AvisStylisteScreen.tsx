@@ -399,11 +399,9 @@ export default function AvisStylisteScreen() {
         <ExtraitAvis />
         <IntroService />
         <ConseilsPhoto />
-        <div className="mt-[20px] flex flex-col gap-[6px]">
-          <button type="button" onClick={() => choisir("camera")} disabled={epuise} className={BOUTON_PRINCIPAL}>
-            {TEXTES.analyserEntree}
-          </button>
-          {/* Le quota, avant la demande, et secondaire : une phrase, jamais en couleur seule. Rien tant qu'il est inconnu. */}
+        <div className="mt-[20px] flex flex-col gap-[10px]">
+          {/* Le quota, AU-DESSUS des boutons (02/10/2026) : on le lit avant d'agir. Secondaire : une phrase, jamais en
+              couleur seule. Rien tant qu'il est inconnu. */}
           {quota && !epuise && (
             <div className="text-center text-[12px] text-muted leading-[1.45]" role="status">
               {libelleQuota(quota)}
@@ -415,11 +413,14 @@ export default function AvisStylisteScreen() {
               <div>Tes avis seront à nouveau disponibles le {prochainMois()}.</div>
             </div>
           )}
+          <button type="button" onClick={() => choisir("camera")} disabled={epuise} className={BOUTON_PRINCIPAL}>
+            {TEXTES.analyserEntree}
+          </button>
           <button
             type="button"
             onClick={() => choisir("galerie")}
             disabled={epuise}
-            className={BOUTON_SECONDAIRE + " mt-[6px] disabled:opacity-50 disabled:cursor-not-allowed"}
+            className={BOUTON_SECONDAIRE + " disabled:opacity-50 disabled:cursor-not-allowed"}
           >
             {TEXTES.galerie}
           </button>
