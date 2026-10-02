@@ -10,6 +10,7 @@ import {
   teinteDe,
 } from "../colorimetrieMoteur";
 import { FALLBACK_HEX, PALETTE, type Weather } from "../data";
+import { NOMS_AJOUTES_AU_DRESSING } from "../palCouleurs";
 import { computeLookScore, generateOutfitWithFallback } from "../logic";
 import { PAL_COULEURS } from "../palCouleurs";
 import type { CategoryKey, Item } from "../types";
@@ -36,7 +37,8 @@ describe("teinteDe — les couleurs du dressing lues dans la palette des saisons
   it("chaque teinte du dressing a une correspondance écrite, et une seule reste sans équivalent", () => {
     for (const [nom] of PALETTE) expect(nom in TEINTE_DU_DRESSING).toBe(true);
     const sans = PALETTE.filter(([nom]) => TEINTE_DU_DRESSING[nom] === null).map(([n]) => n);
-    expect(sans).toEqual(["Vert sauge"]);
+    // Vert sauge, et les teintes ajoutées le 02/10/2026 qu'aucune saison ne place encore (palCouleurs.ts).
+    expect(sans).toEqual(["Vert sauge", ...NOMS_AJOUTES_AU_DRESSING.filter((n) => !["Rouge", "Bleu", "Beige"].includes(n))]);
     for (const cible of Object.values(TEINTE_DU_DRESSING)) if (cible) expect(PAL_COULEURS.some(([n]) => n === cible)).toBe(true);
   });
 
@@ -50,7 +52,7 @@ describe("teinteDe — les couleurs du dressing lues dans la palette des saisons
 
   it("une couleur inconnue ne correspond à rien : repli, hex hors palette sans nom connu", () => {
     expect(teinteDe({ hex: FALLBACK_HEX, color: "Sable" })).toBeNull();
-    expect(teinteDe({ hex: "#123456", color: "Fuchsia" })).toBeNull();
+    expect(teinteDe({ hex: "#123456", color: "Mauve" })).toBeNull();
     // Un hex hors table mais un nom connu : le nom décide.
     expect(teinteDe({ hex: "#123456", color: "Bordeaux" })).toBe(pal("Bordeaux"));
   });

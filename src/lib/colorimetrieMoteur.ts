@@ -64,7 +64,7 @@ export function colorimetrieMoteur(c: Colorimetrie | null | undefined): Colorime
 
 /*
  * DEUX PALETTES, UNE CORRESPONDANCE. Les pièces du dressing prennent leurs
- * couleurs dans PALETTE (27 teintes, data.ts — AddScreen et l'analyse de
+ * couleurs dans PALETTE (51 teintes depuis le 02/10/2026, data.ts — AddScreen et l'analyse de
  * photo du dressing), la colorimétrie dans PAL_COULEURS (21 teintes). Seules
  * neuf ont le même hex. Le plus proche en RGB se trompe (mesuré : Chocolat →
  * Bordeaux, Corail → Camel, Bleu ciel → Beige) : la correspondance est donc
@@ -102,6 +102,36 @@ export const TEINTE_DU_DRESSING: Record<string, string | null> = {
   Prune: "Prune",
   Bordeaux: "Bordeaux",
   Noir: "Noir",
+  // Ajouts du 02/10/2026 (data.ts / palCouleurs.ts). Rouge, Bleu et Beige existaient déjà dans la
+  // palette personnelle, donc dans les saisons : ils se lisent comme eux-mêmes. Les autres teintes
+  // ajoutées ne sont encore placées dans AUCUNE saison : « sans équivalent » (null) tant que ce
+  // n'est pas arbitré — la colorimétrie ne dit rien d'elles, et une pièce de ces couleurs n'est ni
+  // favorisée ni écartée par elle. Les mapper vers elles-mêmes les ferait passer pour « hors
+  // saison » et changerait le comportement du moteur.
+  Rouge: "Rouge",
+  Bleu: "Bleu",
+  Beige: "Beige",
+  Marron: null,
+  Cognac: null,
+  "Rouge cerise": null,
+  "Vieux rose": null,
+  "Rose pâle": null,
+  Fuchsia: null,
+  Jaune: null,
+  Orange: null,
+  Abricot: null,
+  "Vert olive": null,
+  "Vert forêt": null,
+  Émeraude: null,
+  Menthe: null,
+  "Bleu nuit": null,
+  "Bleu cobalt": null,
+  Turquoise: null,
+  Lavande: null,
+  Ivoire: null,
+  Champagne: null,
+  Nude: null,
+  "Gris perle": null,
 };
 
 const cle = (s: string) => s.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");

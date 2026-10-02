@@ -11,6 +11,7 @@ import type {
   ShoeType,
   WorkMode,
 } from "./types";
+import { NOMS_AJOUTES_AU_DRESSING, PAL_COULEURS } from "./palCouleurs";
 
 /** Source unique du numéro de version — partagée entre l'écran Profil et l'écran Informations légales, pour éviter toute divergence d'affichage. */
 export const APP_VERSION = "1.4.0";
@@ -68,7 +69,13 @@ CATS.forEach(([key, label, plural]) => {
  */
 export const FALLBACK_HEX = "#DCCFBC";
 
-/** Palette de couleurs pour les pièces du dressing (27 teintes) — indépendante de la palette personnelle du profil. */
+/**
+ * Palette de couleurs pour les pièces du dressing : 27 teintes d'origine, plus 24 ajoutées le
+ * 02/10/2026 au code identique à celui de la palette personnelle du profil (palCouleurs.ts,
+ * NOMS_AJOUTES_AU_DRESSING). Les 27 d'origine gardent leur code : les pièces déjà enregistrées
+ * ne changent pas. La copie de la fonction Edge analyze-dressing-photo doit rester identique
+ * (test miroir).
+ */
 export const PALETTE: [string, string][] = [
   ["Blanc", "#F7F4EE"],
   ["Blanc cassé", "#EDE4D6"],
@@ -97,6 +104,7 @@ export const PALETTE: [string, string][] = [
   ["Prune", "#5B3A4A"],
   ["Bordeaux", "#6E3B3A"],
   ["Noir", "#2A2724"],
+  ...NOMS_AJOUTES_AU_DRESSING.map((nom): [string, string] => [nom, PAL_COULEURS.find(([n]) => n === nom)![1]]),
 ];
 
 export const SEASONS: Season[] = ["Printemps / Été", "Automne / Hiver", "Toutes saisons"];

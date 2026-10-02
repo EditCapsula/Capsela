@@ -104,6 +104,13 @@ const PALETTE: [string, string][] = [
   ["Rose poudré", "#D3AE9F"], ["Corail", "#C9846A"], ["Gris clair", "#C7C2B9"], ["Gris", "#9B968F"],
   ["Gris anthracite", "#4B4A47"], ["Bleu ciel", "#A9BFCB"], ["Denim", "#5E6E7C"], ["Marine", "#3A4152"],
   ["Prune", "#5B3A4A"], ["Bordeaux", "#6E3B3A"], ["Noir", "#2A2724"],
+  // Ajouts du 02/10/2026 — COPIE de src/lib/data.ts (PALETTE) ; le test miroir exige l'identique.
+  ["Rouge", "#933B33"], ["Bleu", "#4A6280"], ["Beige", "#CDBBA2"], ["Marron", "#964B00"],
+  ["Cognac", "#9A5B34"], ["Rouge cerise", "#A32B33"], ["Vieux rose", "#C08A85"], ["Rose pâle", "#EBCFCB"],
+  ["Fuchsia", "#B83B78"], ["Jaune", "#E0BE3C"], ["Orange", "#D9772B"], ["Abricot", "#E8A97E"],
+  ["Vert olive", "#6B6E4A"], ["Vert forêt", "#2F4A38"], ["Émeraude", "#1F6B58"], ["Menthe", "#B7D3C1"],
+  ["Bleu nuit", "#2B3350"], ["Bleu cobalt", "#1E4FA3"], ["Turquoise", "#3A9A9E"], ["Lavande", "#A99BC4"],
+  ["Ivoire", "#F0EAE0"], ["Champagne", "#E8D9B5"], ["Nude", "#D9BBA0"], ["Gris perle", "#D3D0CB"],
 ];
 const PALETTE_BIJOU: [string, string][] = [
   ["Doré", "#C9A24B"], ["Argenté", "#B9BEC4"], ["Cuivré", "#B8734A"], ["Or rose", "#D4A995"],
