@@ -9,6 +9,7 @@ import { participePorte, participePorteMaj } from "@/lib/logic";
 import BoutonRetour from "@/components/BoutonRetour";
 import { teinteDe } from "@/lib/colorimetrieMoteur";
 import Button from "@/components/Button";
+import EmptyState from "@/components/EmptyState";
 
 /**
  * "Mes pièces" (recette 24/08/2026, mockup fourni) — grille plate 2 colonnes
@@ -130,9 +131,7 @@ export default function WardrobePiecesScreen() {
       )}
 
       {items.length === 0 ? (
-        <div className="text-[12px] text-muted leading-[1.5] mt-3">
-          Tes pièces apparaîtront ici au fur et à mesure que tu les ajoutes à ton dressing.
-        </div>
+        <EmptyState className="mt-3">Tes pièces apparaîtront ici au fur et à mesure que tu les ajoutes à ton dressing.</EmptyState>
       ) : (
         <div className="grid grid-cols-2 gap-x-[12px] gap-y-[22px] mt-4">
           {items.map((it) => {

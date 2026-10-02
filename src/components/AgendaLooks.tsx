@@ -17,6 +17,7 @@ import { villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import type { DateContext, Item, WorkMode } from "@/lib/types";
 import type { Planification, ValiseGardee } from "@/lib/valises";
 import Card from "@/components/Card";
+import EmptyState from "@/components/EmptyState";
 
 /*
  * « MES LOOKS À VENIR » — la page « Mes planifications » de Planifier, refondue
@@ -113,23 +114,17 @@ export default function AgendaLooks({
 
       {vide ? (
         passe ? (
-          <div className="mt-[26px] text-center px-4">
-            <div className="t-titre-carte text-ink">Aucun look passé</div>
-            <div className="t-chapeau text-muted mt-2" style={{ textWrap: "pretty" }}>
-              Tes looks et tes voyages viendront ici une fois leur date passée.
-            </div>
-          </div>
+          <EmptyState forme="carte" className="mt-[26px]" titre="Aucun look passé">
+            Tes looks et tes voyages viendront ici une fois leur date passée.
+          </EmptyState>
         ) : (
           /* L'ÉTAT VIDE — une invitation, pas un constat, dans la forme des
              autres états vides de l'app (cadre en pointillés, titre de carte :
              Tenue, hub Planifier). Le bouton est celui du pied de page,
              toujours visible : il n'est pas répété ici. */
-          <div className="mt-4 rounded-carte px-5 py-[30px] text-center" style={{ border: "1px dashed var(--color-sand-border)" }}>
-            <div className="t-titre-carte text-ink">Ton prochain look commence ici.</div>
-            <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
-              Planifie une tenue pour une occasion, un voyage ou simplement demain.
-            </div>
-          </div>
+          <EmptyState forme="invitation" className="mt-4" titre="Ton prochain look commence ici.">
+            Planifie une tenue pour une occasion, un voyage ou simplement demain.
+          </EmptyState>
         )
       ) : (
         <>

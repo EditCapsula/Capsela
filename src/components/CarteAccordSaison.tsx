@@ -8,6 +8,7 @@ import type { ConseilCouleur } from "@/lib/conseilsCouleurs";
 import type { RetourAccord } from "@/lib/retoursAccords";
 import type { Item } from "@/lib/types";
 import Card from "@/components/Card";
+import EmptyState from "@/components/EmptyState";
 
 /**
  * La card « Accord de saison » (02/10/2026), avec trois gestes discrets sous le conseil :
@@ -139,7 +140,7 @@ export default function CarteAccordSaison({
             {`Voir ${dansDressing > 1 ? `les ${dansDressing} pièces` : "la pièce"} dans mon dressing`}
           </button>
         ) : (
-          <div className="mt-[16px] text-[12px] text-muted leading-[1.5]">Aucune pièce de cette couleur dans ton dressing pour l&apos;instant.</div>
+          <EmptyState className="mt-[16px]">Aucune pièce de cette couleur dans ton dressing pour l&apos;instant.</EmptyState>
         )}
       </BottomSheet>
     </Card>

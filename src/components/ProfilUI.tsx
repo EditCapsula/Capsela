@@ -9,6 +9,7 @@ import { GENDERS, type Gender, type GenderDependentField } from "@/lib/profile";
 import { fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import EmptyState from "@/components/EmptyState";
 
 /*
  * Éléments partagés par les écrans du profil (Mon profil, Mon compte) :
@@ -323,7 +324,7 @@ export function FeuilleVille({ open, onClose }: { open: boolean; onClose: () => 
           suggestions === null ? (
             <div className="text-[12px] text-muted py-3 px-1">Recherche indisponible pour l&apos;instant — efface pour choisir dans la liste.</div>
           ) : suggestions.length === 0 ? (
-            <div className="text-[12px] text-muted py-3 px-1">Aucune ville trouvée.</div>
+            <EmptyState className="py-3 px-1">Aucune ville trouvée.</EmptyState>
           ) : (
             suggestions.map((v) => (
               <button

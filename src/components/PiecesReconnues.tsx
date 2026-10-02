@@ -15,6 +15,7 @@ import {
   type VetementReconnu,
 } from "@/lib/reconnaissance";
 import type { Item } from "@/lib/types";
+import EmptyState from "@/components/EmptyState";
 
 /*
  * « PIÈCES RECONNUES SUR LA PHOTO » — refonte non bloquante (26/09/2026).
@@ -238,7 +239,7 @@ export default function PiecesReconnues({
               </>
             ) : (
               !pieceOuverte && (
-                <div className="text-[13px] text-muted-3 leading-[1.5] mt-[16px]">Aucune pièce similaire n&apos;est disponible dans ton dressing pour le moment.</div>
+                <EmptyState className="mt-[16px]">Aucune pièce similaire n&apos;est disponible dans ton dressing pour le moment.</EmptyState>
               )
             )}
 

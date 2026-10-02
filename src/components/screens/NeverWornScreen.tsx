@@ -16,6 +16,7 @@ import BoutonRetour from "@/components/BoutonRetour";
 import { MosaiquePieces, VisuelPiece } from "@/components/CarteLook";
 import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
 import Badge from "@/components/Badge";
+import EmptyState from "@/components/EmptyState";
 
 /*
  * « JAMAIS PORTÉES » — refonte éditoriale du 26/09/2026 : non plus « voici
@@ -254,7 +255,7 @@ export default function NeverWornScreen() {
               ))}
             </div>
           ) : (
-            <div className="text-[13px] text-muted-3 leading-[1.5] mt-6">Aucune pièce de cette saison n&apos;attend son tour pour l&apos;instant.</div>
+            <EmptyState className="mt-6">Aucune pièce de cette saison n&apos;attend son tour pour l&apos;instant.</EmptyState>
           )}
 
           {horsSaison.length > 0 && (

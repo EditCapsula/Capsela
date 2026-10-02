@@ -34,6 +34,7 @@ import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/li
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import EmptyState from "@/components/EmptyState";
 
 /**
  * Planifier une tenue — maquette du 23/09/2026, LOT 1.
@@ -1633,14 +1634,13 @@ export default function PlanifierScreen() {
             </div>
 
             {sansTenue ? (
-              <Card className="mt-[14px] p-[15px]">
-                <div className="t-titre-carte text-ink">
-                  {emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").title}
-                </div>
-                <div className="text-[12px] text-muted-3 leading-[1.5] mt-2">
-                  {emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").body}
-                </div>
-              </Card>
+              <EmptyState
+                forme="carte"
+                className="mt-[14px]"
+                titre={emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").title}
+              >
+                {emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").body}
+              </EmptyState>
             ) : (
               <>
                 <div className="mt-[14px] rounded-hero p-4" style={{ background: "var(--color-terracotta-deep)" }}>
