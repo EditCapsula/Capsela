@@ -6,7 +6,7 @@ import BottomSheet from "@/components/BottomSheet";
 import EtMaintenantAvis from "@/components/EtMaintenantAvis";
 import PiecesReconnues from "@/components/PiecesReconnues";
 import AppHeader from "@/components/AppHeader";
-import { LienRetour } from "@/components/BoutonRetour";
+import BoutonRetour from "@/components/BoutonRetour";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ResultatAvis from "@/components/ResultatAvis";
@@ -512,11 +512,11 @@ export default function AvisStylisteScreen() {
           résultat. Le retour descend dans le contenu. */}
       <AppHeader />
       <div className="flex items-center justify-between gap-3">
-        <LienRetour onClick={actions.goHome} label="Revenir à l'accueil" />
+        <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" />
         {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
       </div>
 
-      <div className="mt-[8px]">
+      <div className="mt-[16px]">
         <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>
