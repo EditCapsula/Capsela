@@ -239,3 +239,11 @@ jamais celle de la colorimétrie. La carte « Accord de saison » de l'écran Te
 sont réellement dans la tenue affichée ; la pointe de couleur est citée comme acquise si elle y est aussi, sinon suggérée.
 Quand une des couleurs est à modérer près du visage pour la personne (colorimétrie), la phrase s'adoucit (« à porter plutôt en
 touches près du visage »). Autres saisons : aucune règle, rien ne s'affiche.
+
+### Retours sur les accords (02/10/2026)
+
+La card porte « J'aime cette association » (réversible, `aria-pressed`) et « Pas pour moi » (secondaire), plus les couleurs citées,
+qui ouvrent la `BottomSheet` existante (détail, pièces de la tenue, nombre de pièces au dressing). Les retours sont gardés SUR
+L'APPAREIL, par compte (`capsela.accords.<compte>`, `retoursAccords.ts`), sans table ni migration, effacés avec le compte.
+Seul « Pas pour moi » a un effet : l'accord n'est plus proposé (la card reste en place jusqu'à la visite suivante). « J'aime »
+est enregistré sans effet : aucune personnalisation ne l'exploite encore.

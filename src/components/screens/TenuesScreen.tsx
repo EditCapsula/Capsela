@@ -13,6 +13,8 @@ import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour } from "@/lib/capsule";
 import { conseilCouleur } from "@/lib/conseilsCouleurs";
+import { accordsEcartes, lireRetours } from "@/lib/retoursAccords";
+import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
@@ -114,7 +116,7 @@ export default function TenuesScreen() {
   // La tenue planifiée devenue tenue du jour (option C, 30/09/2026).
   const planApplique = usePlanApplique();
   const tirageEnCours = quota.tirageEnCours;
-  const { profile } = useAuth();
+  const { profile, userId } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
   /** Feuille ouverte, ou aucune. Une seule à la fois : les deux se répondent. */
   const [feuille, setFeuille] = useState<null | "occasion" | "sous">(null);
@@ -238,7 +240,10 @@ export default function TenuesScreen() {
   // uniquement), garde la tenue du jour telle quelle : pièces possédées et
   // suggestions capsule peuvent s'y mélanger.
   const outfitIds = outfitPieces.map((it) => it.id);
-  const conseilCouleurDuJour = conseilCouleur(outfitPieces, saisonCalendairePour(dateConsultee), colorimetrieMoteur(profile.colorimetrie));
+  // Les accords écartés sont lus UNE FOIS à l'entrée de l'écran : « Pas pour moi » laisse la card en place
+  // jusqu'à la prochaine visite, elle ne disparaît pas sous les doigts.
+  const [accordsEcartesALEntree] = useState(() => accordsEcartes(lireRetours(userId)));
+  const conseilCouleurDuJour = conseilCouleur(outfitPieces, saisonCalendairePour(dateConsultee), colorimetrieMoteur(profile.colorimetrie), accordsEcartesALEntree);
   const canSaveOutfit = outfitIds.length >= 2;
   const outfitKey = [...outfitIds].sort((a, b) => a - b).join(",");
   const isOutfitSaved =
@@ -1070,10 +1075,13 @@ export default function TenuesScreen() {
           {/* Accord de saison (02/10/2026) : une phrase seulement quand les couleurs citées sont
               vraiment dans la tenue affichée, pour la saison de la date consultée. */}
           {!noCompleteOutfit && conseilCouleurDuJour && (
-            <div className="mt-[12px] bg-card border border-border rounded-[20px] p-4">
-              <div className="t-label text-terracotta">Accord de saison</div>
-              <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{conseilCouleurDuJour.texte}</div>
-            </div>
+            <CarteAccordSaison
+              conseil={conseilCouleurDuJour}
+              userId={userId}
+              piecesTenue={outfitPieces}
+              dressing={state.items}
+              colorimetrie={colorimetrieMoteur(profile.colorimetrie)}
+            />
           )}
         </section>
       )}

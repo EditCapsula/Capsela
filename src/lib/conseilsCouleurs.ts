@@ -68,7 +68,18 @@ export function phraseDe(r: RegleAssociation, pointePresente: boolean, adouci: b
     : `${maj(a)} et ${b} ensemble, c'est top pour l'${saison}. Avec une pointe ${pointe}, ce serait parfait.`;
 }
 
-export interface ConseilCouleur { texte: string; accord: [string, string]; pointePresente: boolean; adouci: boolean; }
+export interface ConseilCouleur {
+  texte: string;
+  accord: [string, string];
+  pointe: string;
+  /** Clé stable de l'accord (cleAccord), sous laquelle son retour est gardé. */
+  cle: string;
+  pointePresente: boolean;
+  adouci: boolean;
+}
+
+/** La clé d'un accord : sa saison et sa paire de couleurs, la pointe n'en fait pas partie. */
+export const cleAccord = (r: Pick<RegleAssociation, "saison" | "accord">): string => `${r.saison}|${r.accord[0]}+${r.accord[1]}`;
 
 /**
  * Le conseil d'une tenue pour la saison de l'année, ou null. Les accords qui ont déjà leur
@@ -77,11 +88,13 @@ export interface ConseilCouleur { texte: string; accord: [string, string]; point
 export function conseilCouleur(
   pieces: readonly Item[],
   saisonAnnee: CapsuleSeason,
-  colorimetrie: ColorimetrieMoteur | null = null
+  colorimetrie: ColorimetrieMoteur | null = null,
+  /** Les accords écartés par la personne (« Pas pour moi »), par cleAccord. */
+  ecartes: ReadonlySet<string> = new Set()
 ): ConseilCouleur | null {
   const teintes = new Set<string>();
   for (const p of pieces) { const t = teinteDe(p); if (t) teintes.add(t); }
-  const regles = REGLES_ASSOCIATION.filter((r) => r.saison === saisonAnnee);
+  const regles = REGLES_ASSOCIATION.filter((r) => r.saison === saisonAnnee && !ecartes.has(cleAccord(r)));
   const candidats = regles
     .filter((r) => r.accord.every((n) => { const h = hex(n); return !!h && teintes.has(h); }))
     .map((r) => ({ r, pointePresente: teintes.has(hex(r.pointe) ?? "") }))
@@ -94,6 +107,6 @@ export function conseilCouleur(
     const t = teinteDe(p);
     return !!t && colorimetrie.loinDuVisage.has(t) && choix.r.accord.some((n) => hex(n) === t);
   });
-  return { texte: phraseDe(choix.r, choix.pointePresente, adouci), accord: choix.r.accord, pointePresente: choix.pointePresente, adouci };
+  return { texte: phraseDe(choix.r, choix.pointePresente, adouci), accord: choix.r.accord, pointe: choix.r.pointe, cle: cleAccord(choix.r), pointePresente: choix.pointePresente, adouci };
 }
 
