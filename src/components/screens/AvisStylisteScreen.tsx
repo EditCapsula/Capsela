@@ -582,19 +582,16 @@ export default function AvisStylisteScreen() {
         {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
       </div>
 
-      <div className="mt-[16px]">
-        <div className="t-titre-ecran text-ink">
-          Avis de <span className="italic text-terracotta">styliste</span>
-        </div>
-        {/* Promesse (optimisation du parcours, 26/09/2026). */}
-        {introAffichee ? (
-          <>
-            <div className="t-titre-ligne text-ink mt-[10px]">Ton look, vu par Capsela.</div>
-            <div className="t-chapeau text-muted-3 mt-[6px]">Un regard personnalisé sur ta silhouette, tes couleurs et l&apos;harmonie de ta tenue.</div>
-          </>
-        ) : (
-          <div className="t-chapeau text-muted-3 mt-[10px]">Un regard expert sur ta tenue, pensé pour ton style.</div>
-        )}
+      {/* Le même en-tête que les autres écrans : surtitre, titre de 27 px dont le second temps est en italique
+          terracotta, chapeau (02/10/2026, signalé : la ligne en serif gras ne ressemblait à aucune autre page). */}
+      <div className="t-surtitre text-muted mt-[8px]">Ton look, vu par Capsela</div>
+      <div className="t-titre-ecran text-ink mt-[6px]">
+        Avis de <span className="italic text-terracotta">styliste</span>
+      </div>
+      <div className="t-chapeau text-muted-3 mt-[8px]">
+        {introAffichee
+          ? "Un regard personnalisé sur ta silhouette, tes couleurs et l'harmonie de ta tenue."
+          : "Un regard expert sur ta tenue, pensé pour ton style."}
       </div>
 
       {/* Champs natifs, invisibles : la caméra arrière, et la galerie / les fichiers. */}
