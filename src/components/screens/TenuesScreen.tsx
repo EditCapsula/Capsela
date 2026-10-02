@@ -11,7 +11,8 @@ import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { CATLABEL, DATE_CONTEXTS, OCCASIONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { computeDefaultCapsule, saisonCapsuleDuJour } from "@/lib/capsule";
+import { computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour } from "@/lib/capsule";
+import { conseilCouleur } from "@/lib/conseilsCouleurs";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
@@ -237,6 +238,7 @@ export default function TenuesScreen() {
   // uniquement), garde la tenue du jour telle quelle : pièces possédées et
   // suggestions capsule peuvent s'y mélanger.
   const outfitIds = outfitPieces.map((it) => it.id);
+  const conseilCouleurDuJour = conseilCouleur(outfitPieces, saisonCalendairePour(dateConsultee), colorimetrieMoteur(profile.colorimetrie));
   const canSaveOutfit = outfitIds.length >= 2;
   const outfitKey = [...outfitIds].sort((a, b) => a - b).join(",");
   const isOutfitSaved =
@@ -1064,6 +1066,15 @@ export default function TenuesScreen() {
                 </div>
               );
             })}
+
+          {/* Accord de saison (02/10/2026) : une phrase seulement quand les couleurs citées sont
+              vraiment dans la tenue affichée, pour la saison de la date consultée. */}
+          {!noCompleteOutfit && conseilCouleurDuJour && (
+            <div className="mt-[12px] bg-card border border-border rounded-[20px] p-4">
+              <div className="t-label text-terracotta">Accord de saison</div>
+              <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{conseilCouleurDuJour.texte}</div>
+            </div>
+          )}
         </section>
       )}
 

@@ -231,3 +231,11 @@ placées dans `SAISONS` (colorimetrie.ts), chacune en signature, neutre ou à mo
 Quand le seul haut tiré par le moteur est un calque (chemise oversize, gilet léger…), `generateOutfit` pose lui-même un
 haut de base dessous (pièces déjà admises par les règles dures, jamais deux chemises). La suggestion R-S12 « un débardeur
 ou un t-shirt dessous » ne reste que si le pool ne contient aucun haut de base.
+
+## Conseils d'association de couleurs (02/10/2026)
+
+`conseilsCouleurs.ts` : dix accords d'AUTOMNE (**ARBITRAGE ÉDITORIAL**, pas une mesure). La saison est celle de la date consultée,
+jamais celle de la colorimétrie. La carte « Accord de saison » de l'écran Tenue n'apparaît que si les deux couleurs de l'accord
+sont réellement dans la tenue affichée ; la pointe de couleur est citée comme acquise si elle y est aussi, sinon suggérée.
+Quand une des couleurs est à modérer près du visage pour la personne (colorimétrie), la phrase s'adoucit (« à porter plutôt en
+touches près du visage »). Autres saisons : aucune règle, rien ne s'affiche.
