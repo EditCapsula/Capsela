@@ -31,6 +31,7 @@ import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
+import Badge from "@/components/Badge";
 
 /**
  * Planifier une tenue — maquette du 23/09/2026, LOT 1.
@@ -1619,9 +1620,9 @@ export default function PlanifierScreen() {
             {/* 9,5 px / .1em : la forme des deux autres pastilles terracotta de
                 l'app (accueil, Valise). Le 10 px d'ici était un troisième
                 réglage pour le même objet. */}
-            <span className="inline-block t-pastille text-terracotta bg-warm-bg rounded-full px-[10px] py-[4px]">
+            <Badge>
               {occLong}
-            </span>
+            </Badge>
             <TitreEtape a={occLabel} b={villeAffichee ? `· ${villeAffichee}` : ""} />
             <div className="text-[12px] text-muted mt-[6px]">
               {dateLongue.charAt(0).toUpperCase() + dateLongue.slice(1)}

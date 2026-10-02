@@ -12,6 +12,7 @@ import { participePorte, participePorteMaj } from "@/lib/logic";
 import { daysSinceWorn, wearCounts } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
+import Badge from "@/components/Badge";
 
 /**
  * DÉTAIL D'UNE IDÉE DE LOOK (27/09/2026, maquette page 4) — ouvert depuis une
@@ -144,14 +145,9 @@ export default function IdeeLookScreen() {
               <div className="flex-1 min-w-0">
                 <div className="text-[14px] text-ink leading-[1.3] overflow-hidden text-ellipsis whitespace-nowrap">{it.name}</div>
                 {possedee && <div className="text-[11px] text-muted mt-[3px]">{usage(it)}</div>}
-                <span
-                  className={
-                    "inline-block t-pastille rounded-full py-[3px] px-[8px] mt-[6px] " +
-                    (possedee ? "bg-warm-bg text-ink border border-warm-border" : "bg-terracotta text-cream")
-                  }
-                >
+                <Badge tone={possedee ? "possede" : "plein"} taille="s" className="mt-[6px]">
                   {possedee ? "Dressing" : "À découvrir"}
-                </span>
+                </Badge>
               </div>
               <span className="text-muted text-[16px] flex-shrink-0" aria-hidden="true">
                 ›

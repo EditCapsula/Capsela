@@ -6,6 +6,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { isWishlistLook } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
+import Badge from "@/components/Badge";
 
 export default function LookDetailScreen() {
   const { state, actions, vestiairePool } = useCapsela();
@@ -74,9 +75,9 @@ export default function LookDetailScreen() {
                   )}
                 </div>
                 {suggested && (
-                  <span className="absolute top-[4px] left-[4px] bg-terracotta text-cream t-pastille rounded-full py-[2px] px-[6px]">
+                  <Badge tone="plein" taille="s" className="absolute top-[4px] left-[4px]">
                     Suggérée
-                  </span>
+                  </Badge>
                 )}
               </div>
               <div className="flex-1 min-w-0">

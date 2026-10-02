@@ -1,3 +1,5 @@
+import Badge from "@/components/Badge";
+
 /**
  * Le badge Premium — le dessin exact de la pastille de l'accueil (« Et si on
  * préparait la suite ? ») : même taille, même couleur, même glyphe ✦. Aucune
@@ -10,13 +12,8 @@
  */
 export default function BadgePremium({ fond = "warm" }: { fond?: "warm" | "carte" }) {
   return (
-    <span
-      className={
-        "inline-flex items-center gap-[4px] rounded-full px-[9px] py-[4px] t-pastille text-terracotta whitespace-nowrap " +
-        (fond === "warm" ? "bg-warm-bg" : "bg-card")
-      }
-    >
-      <span aria-hidden="true">✦</span> Premium
-    </span>
+    <Badge tone={fond === "warm" ? "doux" : "carte"} icone="✦">
+      Premium
+    </Badge>
   );
 }

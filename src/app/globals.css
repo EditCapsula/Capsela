@@ -39,6 +39,9 @@
   --color-chip-soft-bg: #efe7da;
   --color-rust: #9e4b2e;
   --color-sage: #8fb27a;
+  /* Réussite (badge « Recommandé »), 02/10/2026 : les deux valeurs étaient écrites en dur dans CreateLookScreen. */
+  --color-success: #5b7a5e;
+  --color-success-bg: #e7eedf;
   --color-dots: #dfd3be;
   --color-cream-dark-muted: #b3aa9b;
   --color-cream-dark-soft: #d9cbb6;
