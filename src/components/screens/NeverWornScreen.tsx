@@ -15,6 +15,7 @@ import type { Item } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
 import { MosaiquePieces, VisuelPiece } from "@/components/CarteLook";
 import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
+import Badge from "@/components/Badge";
 
 /*
  * « JAMAIS PORTÉES » — refonte éditoriale du 26/09/2026 : non plus « voici
@@ -95,7 +96,7 @@ function CartePiece({
             <VisuelPiece piece={item} alt="" radius={14} />
           </div>
         )}
-        <span className="absolute top-[12px] left-[12px] t-pastille text-terracotta bg-card rounded-full px-[9px] py-[4px]">{jamaisPorte(item)}</span>
+        <Badge tone="carte" className="absolute top-[12px] left-[12px]">{jamaisPorte(item)}</Badge>
       </button>
 
       <div className="px-[2px]">

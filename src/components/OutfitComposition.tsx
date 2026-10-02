@@ -314,7 +314,7 @@ export function OutfitComposition({
         // calculé pour se poser sur le beige ; sur le terracotta il ne
         // délimite plus rien.
         const shadows = [
-          ringOnCell && "0 0 0 1.5px #A66950",
+          ringOnCell && "0 0 0 1.5px var(--color-terracotta)",
           !sansTuile && !hasImg && "inset 0 0 0 1px rgba(29,26,22,.06)",
         ].filter(Boolean) as string[];
         return (
@@ -379,7 +379,7 @@ export function OutfitComposition({
                     filter: isRealPhoto
                       ? "brightness(.94) contrast(1.04) saturate(.9) drop-shadow(0 6px 14px rgba(29,26,22,.18))"
                       : "drop-shadow(0 6px 14px rgba(29,26,22,.18))",
-                    boxShadow: ringOnImage ? "0 0 0 1.5px #A66950" : undefined,
+                    boxShadow: ringOnImage ? "0 0 0 1.5px var(--color-terracotta)" : undefined,
                   }}
                 />
               ) : (
@@ -408,7 +408,7 @@ export function OutfitComposition({
                     objectFit: "contain",
                     display: "block",
                     borderRadius: Math.max(2, cfg.radius - 4),
-                    boxShadow: ringOnImage ? "0 0 0 1.5px #A66950" : undefined,
+                    boxShadow: ringOnImage ? "0 0 0 1.5px var(--color-terracotta)" : undefined,
                   }}
                 />
               )

@@ -21,6 +21,7 @@ import { JourEtMeteo } from "@/components/JourMeteo";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
+import Badge from "@/components/Badge";
 
 /**
  * Emplacement en %, légèrement pivoté — la géométrie des collages éditoriaux.
@@ -934,9 +935,7 @@ export default function HomeScreen() {
               aria-label="Découvrir Capsela Premium"
               className="flex-shrink-0 flex items-center cursor-pointer py-[13px] -my-[13px]"
             >
-              <span className="inline-flex items-center gap-[4px] rounded-full bg-card px-[9px] py-[4px] t-pastille text-terracotta whitespace-nowrap">
-                <span aria-hidden="true">✦</span> Premium
-              </span>
+              <Badge tone="carte" icone="✦">Premium</Badge>
             </button>
           </div>
           {/* Deux actions VISUELLEMENT DISTINCTES (demandé) : chacune porte son

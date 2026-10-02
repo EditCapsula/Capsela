@@ -27,6 +27,7 @@ import {
 } from "@/lib/selectors";
 import { OCCASIONS_EDITORIALES, libelleOccasion, titreStyle } from "@/lib/occasionEditoriale";
 import type { ChoixRevente, Item, OccasionKey } from "@/lib/types";
+import Badge from "@/components/Badge";
 
 /*
  * LE JOURNAL — refonte du 25/09/2026 (brief « Refonte UX du Journal »).
@@ -237,9 +238,9 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
       <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-[6px] px-1">
         <span className="text-[13px] text-ink whitespace-nowrap first-letter:uppercase">{quand}</span>
         {entry.hasOccasion && (
-          <span className="t-pastille text-terracotta bg-warm-bg rounded-full px-[9px] py-[3px] whitespace-nowrap">
+          <Badge taille="s">
             {entry.occLabel}
-          </span>
+          </Badge>
         )}
       </span>
       <span className="mt-[10px] flex gap-[6px] rounded-[15px] bg-warm-bg p-[8px]" style={{ height: 96 }}>
@@ -684,9 +685,9 @@ export default function HistoryScreen() {
                   <div className="flex-1 min-w-0">
                     {/* Le nom de l'occasion en pastille, seul : plus de surtitre
                         « Occasion principale » (retiré le 26/09/2026, demandé). */}
-                    <span className="inline-block t-pastille text-terracotta bg-card rounded-full px-[9px] py-[4px] whitespace-nowrap">
+                    <Badge tone="carte">
                       {libelleOccasion(style.occasion)}
-                    </span>
+                    </Badge>
                     {/* Un titre long (« Les rendez-vous importants rythment… »)
                         passe à la taille des titres de carte : à côté du visuel,
                         il prenait jusqu'à six lignes à 360 px. */}
@@ -837,9 +838,9 @@ export default function HistoryScreen() {
                   {/* Le statut en pastille, comme sur la maquette : « JAMAIS
                       PORTÉE » ou « 8 MOIS » — les deux états ne se confondent
                       jamais. */}
-                  <span className="inline-block mt-[7px] rounded-full bg-warm-bg px-[8px] py-[2px] t-pastille text-terracotta">
+                  <Badge taille="s" className="mt-[7px]">
                     {statutAttente(item, port)}
-                  </span>
+                  </Badge>
                   <div className="text-[12px] text-ink mt-[4px] leading-[1.25] line-clamp-2">{item.name}</div>
                 </button>
               </li>

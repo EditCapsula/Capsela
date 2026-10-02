@@ -20,6 +20,7 @@ import { rolePieceOf } from "@/lib/attributes";
 import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
+import Badge from "@/components/Badge";
 
 /*
  * « CRÉER UN LOOK » — refonte du 26/09/2026, faite avec les briques déjà en
@@ -332,7 +333,7 @@ export default function CreateLookScreen() {
                 compte et de « + Ajouter une pièce », la ligne débordait. */}
             {count >= 2 && lookScore.badge === "recommande" && (
               <div className="mt-3">
-                <span className="t-pastille text-[#5B7A5E] bg-[#E7EEDF] rounded-full px-[9px] py-[3px]">Recommandé</span>
+                <Badge tone="succes" taille="s">Recommandé</Badge>
               </div>
             )}
 

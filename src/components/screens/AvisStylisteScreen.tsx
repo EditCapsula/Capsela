@@ -13,7 +13,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
 import { useAuth } from "@/lib/auth";
-import { contexteDepuisProfil, etapesAnalyse, libelleQuota, lireQuotaAvis, personnalisationAvis, phraseAnalyse, prochainMois, reactionErreur, type QuotaAvis } from "@/lib/avisStylisteClient";
+import { contexteDepuisProfil, etapesAnalyse, libelleQuota, lireQuotaAvis, niveauQuota, noteQuota, personnalisationAvis, phraseAnalyse, prochainMois, reactionErreur, type QuotaAvis } from "@/lib/avisStylisteClient";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
@@ -98,6 +98,50 @@ const ETAPES_SERVICE: [string, string, NomIconeAvis][] = [
   ["Ton avis", "Un verdict et des conseils personnalisés.", "bulle"],
 ];
 
+/** La pastille de niveau : couleurs des jetons existants (sage, gold, terracotta, rust), jamais seules — le libellé dit la même chose. */
+const COULEUR_NIVEAU = { ample: "bg-sage", moyen: "bg-gold", dernier: "bg-terracotta", epuise: "bg-rust" } as const;
+
+/**
+ * LE QUOTA (maquette du 02/10/2026) : une pastille de niveau, la phrase, et un « i » qui dit quand les avis
+ * reviennent. Au-dessus des boutons. À zéro, une carte d'information (non cliquable) remplace la ligne.
+ */
+function IndicateurQuota({ quota }: { quota: QuotaAvis }) {
+  const [info, setInfo] = useState(false);
+  const niveau = niveauQuota(quota);
+  const note = noteQuota(quota);
+  const renouvellement = `Tes ${quota.limite} avis se renouvellent le ${prochainMois()}.`;
+  if (niveau === "epuise") {
+    return (
+      <div className="flex items-start gap-[10px] rounded-[16px] border border-border bg-card px-4 py-[12px]" role="status">
+        <span aria-hidden="true" className={"w-[8px] h-[8px] rounded-full flex-shrink-0 mt-[6px] " + COULEUR_NIVEAU.epuise} />
+        <div className="min-w-0 text-[12px] leading-[1.5]">
+          <div className="text-ink text-[13px]">{libelleQuota(quota)}</div>
+          <div className="text-muted">Tes avis seront à nouveau disponibles le {prochainMois()}.</div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div role="status">
+      <div className="flex items-center justify-center gap-[8px] text-[12px] text-muted leading-[1.45]">
+        <span aria-hidden="true" className={"w-[8px] h-[8px] rounded-full flex-shrink-0 " + COULEUR_NIVEAU[niveau]} />
+        <span>{libelleQuota(quota)}</span>
+        <button
+          type="button"
+          onClick={() => setInfo((v) => !v)}
+          aria-expanded={info}
+          aria-label="Quand mes avis se renouvellent-ils ?"
+          className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-gold text-[10px] text-terracotta flex items-center justify-center cursor-pointer"
+        >
+          i
+        </button>
+      </div>
+      {note && <div className="text-center text-[12px] text-muted leading-[1.45] mt-[2px]">{note}</div>}
+      {info && <div className="text-center text-[11.5px] text-muted leading-[1.45] mt-[4px]">{renouvellement}</div>}
+    </div>
+  );
+}
+
 function IntroService() {
   return (
     <section className="mt-[22px]" aria-labelledby="avis-comment">
@@ -141,7 +185,7 @@ function ExtraitAvis() {
     if (img && img.complete && img.naturalWidth === 0) setPhoto(false);
   }, []);
   return (
-    <section className="mt-[20px] flex gap-[10px] rounded-[20px] bg-warm-bg p-[10px]" aria-label="Extrait d'un avis">
+    <section className="mt-[20px] flex gap-[14px] rounded-[20px] bg-warm-bg px-[16px] py-[14px]" aria-label="Extrait d'un avis">
       {photo && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -155,15 +199,17 @@ function ExtraitAvis() {
           className="w-[34%] max-w-[130px] flex-shrink-0 rounded-[14px] object-cover self-stretch"
         />
       )}
-      <div className="min-w-0 flex-1">
-        <div className="t-label text-muted mb-[6px]">Extrait d&apos;un avis</div>
-        <ul className="flex flex-col gap-[6px]">
+      <div className="min-w-0 flex-1 py-[2px]">
+        <div className="t-label text-muted">Extrait d&apos;un avis</div>
+        {/* Du texte, pas des cartes (test utilisateur, 02/10/2026 : des blocs blancs arrondis avec icône se lisaient
+            comme des boutons). Une ligne par rubrique, séparées par un filet : rien ne ressemble à une action. */}
+        <ul className="mt-[4px]">
           {EXTRAIT.map(([icone, titre, texte]) => (
-            <li key={titre} className="flex items-start gap-[8px] rounded-[12px] bg-card px-[10px] py-[7px]">
-              <span className="text-terracotta pt-[1px]"><IconeAvis nom={icone} taille={16} /></span>
+            <li key={titre} className="flex items-start gap-[9px] py-[9px] border-b border-border last:border-b-0 last:pb-0">
+              <span className="text-terracotta pt-[1px]"><IconeAvis nom={icone} taille={15} /></span>
               <span className="min-w-0">
-                <span className="block text-[11.5px] text-ink font-medium leading-[1.3]">{titre}</span>
-                <span className="block text-[11px] text-muted leading-[1.35]">{texte}</span>
+                <span className="t-label block text-terracotta">{titre}</span>
+                <span className="block font-serif italic text-[13.5px] text-ink leading-[1.4] mt-[3px]">« {texte} »</span>
               </span>
             </li>
           ))}
@@ -399,33 +445,24 @@ export default function AvisStylisteScreen() {
         <ExtraitAvis />
         <IntroService />
         <ConseilsPhoto />
-        <div className="mt-[20px] flex flex-col gap-[6px]">
+        <div className="mt-[20px] flex flex-col gap-[10px]">
+          {/* Le quota, AU-DESSUS des boutons (02/10/2026) : on le lit avant d'agir. Secondaire : une phrase, jamais en
+              couleur seule. Rien tant qu'il est inconnu. */}
+          {quota && <IndicateurQuota quota={quota} />}
           <button type="button" onClick={() => choisir("camera")} disabled={epuise} className={BOUTON_PRINCIPAL}>
             {TEXTES.analyserEntree}
           </button>
-          {/* Le quota, avant la demande, et secondaire : une phrase, jamais en couleur seule. Rien tant qu'il est inconnu. */}
-          {quota && !epuise && (
-            <div className="text-center text-[12px] text-muted leading-[1.45]" role="status">
-              {libelleQuota(quota)}
-            </div>
-          )}
-          {epuise && quota && (
-            <div className="text-center text-[12px] text-muted leading-[1.5] px-2" role="status">
-              <div className="text-ink">{libelleQuota(quota)}</div>
-              <div>Tes avis seront à nouveau disponibles le {prochainMois()}.</div>
-            </div>
-          )}
           <button
             type="button"
             onClick={() => choisir("galerie")}
             disabled={epuise}
-            className={BOUTON_SECONDAIRE + " mt-[6px] disabled:opacity-50 disabled:cursor-not-allowed"}
+            className={BOUTON_SECONDAIRE + " disabled:opacity-50 disabled:cursor-not-allowed"}
           >
             {TEXTES.galerie}
           </button>
           {epuise && (
-            <button type="button" onClick={actions.goHistory} className={LIEN}>
-              {TEXTES.voirJournal} →
+            <button type="button" onClick={actions.goHistory} className={BOUTON_SECONDAIRE}>
+              {TEXTES.voirJournal}
             </button>
           )}
         </div>
@@ -582,19 +619,16 @@ export default function AvisStylisteScreen() {
         {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
       </div>
 
-      <div className="mt-[16px]">
-        <div className="t-titre-ecran text-ink">
-          Avis de <span className="italic text-terracotta">styliste</span>
-        </div>
-        {/* Promesse (optimisation du parcours, 26/09/2026). */}
-        {introAffichee ? (
-          <>
-            <div className="t-titre-ligne text-ink mt-[10px]">Ton look, vu par Capsela.</div>
-            <div className="t-chapeau text-muted-3 mt-[6px]">Un regard personnalisé sur ta silhouette, tes couleurs et l&apos;harmonie de ta tenue.</div>
-          </>
-        ) : (
-          <div className="t-chapeau text-muted-3 mt-[10px]">Un regard expert sur ta tenue, pensé pour ton style.</div>
-        )}
+      {/* Le même en-tête que les autres écrans : surtitre, titre de 27 px dont le second temps est en italique
+          terracotta, chapeau (02/10/2026, signalé : la ligne en serif gras ne ressemblait à aucune autre page). */}
+      <div className="t-surtitre text-muted mt-[8px]">Ton look, vu par Capsela</div>
+      <div className="t-titre-ecran text-ink mt-[6px]">
+        Avis de <span className="italic text-terracotta">styliste</span>
+      </div>
+      <div className="t-chapeau text-muted-3 mt-[8px]">
+        {introAffichee
+          ? "Un regard personnalisé sur ta silhouette, tes couleurs et l'harmonie de ta tenue."
+          : "Un regard expert sur ta tenue, pensé pour ton style."}
       </div>
 
       {/* Champs natifs, invisibles : la caméra arrière, et la galerie / les fichiers. */}

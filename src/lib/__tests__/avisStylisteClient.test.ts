@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, libelleQuota, prioriserActionsAvis, prochainMois, reactionErreur, repartirPiecesAvis, titresAffichables, type AvisStyliste } from "../avisStylisteClient";
+import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, libelleQuota, niveauQuota, noteQuota, prioriserActionsAvis, prochainMois, reactionErreur, repartirPiecesAvis, titresAffichables, type AvisStyliste } from "../avisStylisteClient";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 
 const profil = (over: Partial<Profile> = {}): Profile => ({ ...EMPTY_PROFILE, gender: "femme", displayName: "Angela", ...over });
@@ -171,5 +171,19 @@ describe("libelleQuota — le compteur sous le bouton", () => {
   it("le plafond vient du serveur, jamais d'une valeur écrite en dur", () => {
     expect(q(0, 8)).toBe("Tes 8 avis du mois ont été utilisés");
     expect(q(8, 8)).toBe("8 avis disponibles ce mois-ci");
+  });
+});
+
+describe("niveauQuota et noteQuota — les états de la maquette", () => {
+  const q = (restants: number, limite = 5) => ({ restants, limite });
+  it("3 avis ou plus : ample ; 2 : moyen ; le dernier : dernier ; aucun : épuisé", () => {
+    expect([5, 4, 3].map((n) => niveauQuota(q(n)))).toEqual(["ample", "ample", "ample"]);
+    expect(niveauQuota(q(2))).toBe("moyen");
+    expect(niveauQuota(q(1))).toBe("dernier");
+    expect(niveauQuota(q(0))).toBe("epuise");
+  });
+  it("une note d'accompagnement seulement pour le dernier avis", () => {
+    expect(noteQuota(q(1))).toBe("Utilise-le sur une tenue que tu veux vraiment affiner.");
+    for (const n of [0, 2, 3, 5]) expect(noteQuota(q(n))).toBeNull();
   });
 });

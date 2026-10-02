@@ -191,6 +191,21 @@ export function libelleQuota(q: QuotaAvis): string {
   return `${q.restants} ${q.restants > 1 ? "avis restants" : "avis restant"} ce mois-ci`;
 }
 
+/** Le niveau du quota, pour la pastille (maquette du 02/10/2026) : 3 avis ou plus, 2, le dernier, plus aucun. */
+export type NiveauQuota = "ample" | "moyen" | "dernier" | "epuise";
+
+export function niveauQuota(q: QuotaAvis): NiveauQuota {
+  if (q.restants <= 0) return "epuise";
+  if (q.restants === 1) return "dernier";
+  if (q.restants === 2) return "moyen";
+  return "ample";
+}
+
+/** Une ligne d'accompagnement quand il ne reste qu'un avis (texte de la maquette, sans donnée). */
+export function noteQuota(q: QuotaAvis): string | null {
+  return q.restants === 1 ? "Utilise-le sur une tenue que tu veux vraiment affiner." : null;
+}
+
 /**
  * Message et action pour chaque échec (section 15). Libellés DÉCIDÉS repris
  * tels quels ; propositions de la spec affichées en attendant leur

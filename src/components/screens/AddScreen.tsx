@@ -11,6 +11,7 @@ import {
   CATS,
   OCCASIONS,
   occasionShortLabel,
+  FAMILLES_COULEURS,
   PALETTE,
   PALETTE_BIJOU,
   SAC_TYPES,
@@ -249,7 +250,6 @@ export default function AddScreen() {
   const profileDefaultSize = isShoe ? profile.pointure : BOTTOM_SIZED.includes(state.addCat) ? profile.tailleBas : profile.tailleHaut;
   const selectedSize = state.addSize ?? profileDefaultSize;
 
-  const colorPalette = isBijou ? PALETTE_BIJOU : PALETTE;
 
   // Les saisons affichées sont celles qui seront enregistrées : le choix de
   // l'utilisatrice, sinon saisonsParDefaut — la même règle que saveItem.
@@ -691,28 +691,37 @@ export default function AddScreen() {
 
       <BottomSheet title="Caractéristiques" open={sheet === "characteristics"} onClose={() => setSheet(null)}>
         <div className="t-surtitre text-muted mb-[11px]">Couleur dominante</div>
-        <div className="grid grid-cols-4 gap-x-2 gap-y-[18px]">
-          {colorPalette.map(([name, hex]) => {
-            const on = state.addColor.hex === hex;
-            return (
-              <button
-                key={hex}
-                onClick={() => actions.setAddColor({ name, hex })}
-                className="flex flex-col items-center gap-[7px] cursor-pointer"
-              >
-                <span
-                  className="w-[38px] h-[38px] rounded-[11px]"
-                  style={{
-                    background: hex,
-                    border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
-                    boxShadow: on ? "0 0 0 3px #F3EEE5 inset" : "none",
-                  }}
-                />
-                <span className={"text-[9px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Les teintes du dressing, rangées par famille (clair vers foncé) ; les bijoux gardent leur liste de métaux. */}
+        {(isBijou
+          ? [{ libelle: "", pastilles: PALETTE_BIJOU }]
+          : FAMILLES_COULEURS.map((f) => ({ libelle: f.libelle, pastilles: f.noms.flatMap((n) => PALETTE.filter(([nom]) => nom === n)) }))
+        ).map((groupe, i) => (
+          <div key={groupe.libelle || "metaux"} className={i > 0 ? "mt-[20px]" : ""}>
+            {groupe.libelle && <div className="t-label text-muted mb-[10px]">{groupe.libelle}</div>}
+            <div className="grid grid-cols-4 gap-x-2 gap-y-[18px]">
+              {groupe.pastilles.map(([name, hex]) => {
+                const on = state.addColor.hex === hex;
+                return (
+                  <button
+                    key={hex}
+                    onClick={() => actions.setAddColor({ name, hex })}
+                    className="flex flex-col items-center gap-[7px] cursor-pointer"
+                  >
+                    <span
+                      className="w-[38px] h-[38px] rounded-[11px]"
+                      style={{
+                        background: hex,
+                        border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
+                        boxShadow: on ? "0 0 0 3px #F3EEE5 inset" : "none",
+                      }}
+                    />
+                    <span className={"text-[9px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
 
         <div className="t-surtitre text-muted mt-[26px] mb-[11px]">
           Matière <span className="opacity-60 normal-case tracking-normal">(estimation, jamais garantie sur photo)</span>

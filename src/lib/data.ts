@@ -299,6 +299,24 @@ export const ACCESSOIRE_TYPES: AccessoireType[] = [
   "Ceinture", "Foulard", "Écharpe", "Chapeau", "Casquette", "Lunettes", "Collants", "Chaussettes hautes", "Gourde",
 ];
 
+/**
+ * LES COULEURS DU DRESSING PAR FAMILLE (02/10/2026, signalé : la grille mélangeait les teintes, un beige à côté
+ * d'un bleu). Un ordre de LECTURE pour le sélecteur de la fiche pièce : du plus clair au plus foncé dans chaque
+ * famille. PALETTE garde son ordre (la copie de la fonction Edge `analyze-dressing-photo` doit lui rester
+ * identique) ; chaque teinte de PALETTE figure dans une seule famille (test).
+ */
+export const FAMILLES_COULEURS: { libelle: string; noms: string[] }[] = [
+  { libelle: "Blancs & écrus", noms: ["Blanc", "Ivoire", "Blanc cassé", "Crème"] },
+  { libelle: "Beiges & camel", noms: ["Champagne", "Sable", "Beige", "Nude", "Beige rosé", "Camel", "Caramel"] },
+  { libelle: "Jaunes & oranges", noms: ["Jaune", "Moutarde", "Abricot", "Orange"] },
+  { libelle: "Bruns & terres", noms: ["Cognac", "Marron", "Chocolat", "Corail", "Terracotta", "Rouille", "Brique"] },
+  { libelle: "Rouges", noms: ["Rouge", "Rouge cerise", "Bordeaux", "Prune"] },
+  { libelle: "Roses", noms: ["Rose pâle", "Rose poudré", "Vieux rose", "Fuchsia"] },
+  { libelle: "Verts", noms: ["Menthe", "Vert sauge", "Kaki", "Vert olive", "Vert forêt", "Vert bouteille", "Émeraude"] },
+  { libelle: "Bleus & violets", noms: ["Bleu ciel", "Turquoise", "Denim", "Bleu", "Bleu cobalt", "Marine", "Bleu nuit", "Lavande"] },
+  { libelle: "Gris & noirs", noms: ["Gris perle", "Gris clair", "Gris", "Taupe", "Gris anthracite", "Noir"] },
+];
+
 /** Palette dédiée au bijou (tons métalliques) — remplace la palette générale pour cette catégorie. */
 export const PALETTE_BIJOU: [string, string][] = [
   ["Doré", "#C9A24B"],

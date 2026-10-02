@@ -28,6 +28,7 @@ import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/p
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { DateContext, Item, TravelMode, WorkMode } from "@/lib/types";
+import Badge from "@/components/Badge";
 
 /** Icônes des CTA de pièce suggérée (recette 23/08/2026) — trait fin, même style que TabBar, jamais d'emoji. */
 function PlusIcon() {
@@ -757,21 +758,13 @@ export default function TenuesScreen() {
                 pastille pleine pour le principal, détourée pour le registre. */}
             {badgesAffiches.map((key) =>
               key === "recommande" ? (
-                <span
-                  key={key}
-                  className="t-pastille rounded-full px-[9px] py-[3px]"
-                  style={{ background: "rgba(243,238,229,.22)", color: "#FBF3EA" }}
-                >
+                <Badge key={key} tone="surTerracotta" taille="s">
                   {BADGE_RECOMMANDE}
-                </span>
+                </Badge>
               ) : (
-                <span
-                  key={key}
-                  className="t-pastille rounded-full px-[9px] py-[3px]"
-                  style={{ border: "1px solid rgba(243,238,229,.38)", color: "#F0DDCF" }}
-                >
+                <Badge key={key} tone="surTerracottaContour" taille="s">
                   {BADGE_REGISTRE}
-                </span>
+                </Badge>
               )
             )}
 
@@ -1060,14 +1053,9 @@ export default function TenuesScreen() {
                               }}
                             />
                           )}
-                          <span
-                            className={
-                              "absolute top-[7px] left-[7px] t-pastille rounded-full py-[3px] px-[8px] " +
-                              (suggereeDuCatalogue ? "bg-terracotta text-cream" : "bg-warm-bg text-ink border border-warm-border")
-                            }
-                          >
+                          <Badge tone={suggereeDuCatalogue ? "plein" : "possede"} taille="s" className="absolute top-[7px] left-[7px]">
                             {suggereeDuCatalogue ? "Suggérée" : "Ton dressing"}
-                          </span>
+                          </Badge>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-[14px] text-ink leading-[1.3]">{suggested.name}</div>
@@ -1214,7 +1202,7 @@ export default function TenuesScreen() {
                       className="block w-[112px] h-[112px] rounded-[13px] overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
                       style={{
                         background: resolvedImage.url ? "#F3EDE1" : it.hex,
-                        boxShadow: recentlyAddedId === it.id ? "0 0 0 1.5px #A66950" : "0 0 0 1.5px rgba(166,105,80,0)",
+                        boxShadow: recentlyAddedId === it.id ? "0 0 0 1.5px var(--color-terracotta)" : "0 0 0 1.5px rgba(166,105,80,0)",
                       }}
                     >
                       {resolvedImage.url ? (

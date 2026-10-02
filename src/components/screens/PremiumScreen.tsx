@@ -4,6 +4,7 @@ import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
 import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT } from "@/lib/premium";
+import Badge from "@/components/Badge";
 
 /**
  * Capsela Premium — maquette du 24/09/2026.
@@ -218,9 +219,9 @@ export default function PremiumScreen() {
                 </span>
                 <div className="t-titre-carte text-ink">{a.titre}</div>
                 {a.bientot && (
-                  <span className="t-pastille text-muted bg-chip-soft-bg rounded-full px-[9px] py-[4px] whitespace-nowrap">
+                  <Badge tone="neutre">
                     Bientôt
-                  </span>
+                  </Badge>
                 )}
               </div>
               <div className="text-[12px] text-muted-3 leading-[1.5] mt-1" style={{ textWrap: "pretty" }}>
