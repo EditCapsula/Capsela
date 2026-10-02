@@ -13,7 +13,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
 import { useAuth } from "@/lib/auth";
-import { contexteDepuisProfil, etapesAnalyse, libelleQuota, lireQuotaAvis, personnalisationAvis, phraseAnalyse, prochainMois, reactionErreur, type QuotaAvis } from "@/lib/avisStylisteClient";
+import { contexteDepuisProfil, etapesAnalyse, libelleQuota, lireQuotaAvis, niveauQuota, noteQuota, personnalisationAvis, phraseAnalyse, prochainMois, reactionErreur, type QuotaAvis } from "@/lib/avisStylisteClient";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
@@ -97,6 +97,50 @@ const ETAPES_SERVICE: [string, string, NomIconeAvis][] = [
   ["Ton analyse", "Style · couleurs · silhouette.", "etincelle"],
   ["Ton avis", "Un verdict et des conseils personnalisés.", "bulle"],
 ];
+
+/** La pastille de niveau : couleurs des jetons existants (sage, gold, terracotta, rust), jamais seules — le libellé dit la même chose. */
+const COULEUR_NIVEAU = { ample: "bg-sage", moyen: "bg-gold", dernier: "bg-terracotta", epuise: "bg-rust" } as const;
+
+/**
+ * LE QUOTA (maquette du 02/10/2026) : une pastille de niveau, la phrase, et un « i » qui dit quand les avis
+ * reviennent. Au-dessus des boutons. À zéro, une carte d'information (non cliquable) remplace la ligne.
+ */
+function IndicateurQuota({ quota }: { quota: QuotaAvis }) {
+  const [info, setInfo] = useState(false);
+  const niveau = niveauQuota(quota);
+  const note = noteQuota(quota);
+  const renouvellement = `Tes ${quota.limite} avis se renouvellent le ${prochainMois()}.`;
+  if (niveau === "epuise") {
+    return (
+      <div className="flex items-start gap-[10px] rounded-[16px] border border-border bg-card px-4 py-[12px]" role="status">
+        <span aria-hidden="true" className={"w-[8px] h-[8px] rounded-full flex-shrink-0 mt-[6px] " + COULEUR_NIVEAU.epuise} />
+        <div className="min-w-0 text-[12px] leading-[1.5]">
+          <div className="text-ink text-[13px]">{libelleQuota(quota)}</div>
+          <div className="text-muted">Tes avis seront à nouveau disponibles le {prochainMois()}.</div>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div role="status">
+      <div className="flex items-center justify-center gap-[8px] text-[12px] text-muted leading-[1.45]">
+        <span aria-hidden="true" className={"w-[8px] h-[8px] rounded-full flex-shrink-0 " + COULEUR_NIVEAU[niveau]} />
+        <span>{libelleQuota(quota)}</span>
+        <button
+          type="button"
+          onClick={() => setInfo((v) => !v)}
+          aria-expanded={info}
+          aria-label="Quand mes avis se renouvellent-ils ?"
+          className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-gold text-[10px] text-terracotta flex items-center justify-center cursor-pointer"
+        >
+          i
+        </button>
+      </div>
+      {note && <div className="text-center text-[12px] text-muted leading-[1.45] mt-[2px]">{note}</div>}
+      {info && <div className="text-center text-[11.5px] text-muted leading-[1.45] mt-[4px]">{renouvellement}</div>}
+    </div>
+  );
+}
 
 function IntroService() {
   return (
@@ -404,17 +448,7 @@ export default function AvisStylisteScreen() {
         <div className="mt-[20px] flex flex-col gap-[10px]">
           {/* Le quota, AU-DESSUS des boutons (02/10/2026) : on le lit avant d'agir. Secondaire : une phrase, jamais en
               couleur seule. Rien tant qu'il est inconnu. */}
-          {quota && !epuise && (
-            <div className="text-center text-[12px] text-muted leading-[1.45]" role="status">
-              {libelleQuota(quota)}
-            </div>
-          )}
-          {epuise && quota && (
-            <div className="text-center text-[12px] text-muted leading-[1.5] px-2" role="status">
-              <div className="text-ink">{libelleQuota(quota)}</div>
-              <div>Tes avis seront à nouveau disponibles le {prochainMois()}.</div>
-            </div>
-          )}
+          {quota && <IndicateurQuota quota={quota} />}
           <button type="button" onClick={() => choisir("camera")} disabled={epuise} className={BOUTON_PRINCIPAL}>
             {TEXTES.analyserEntree}
           </button>
@@ -427,8 +461,8 @@ export default function AvisStylisteScreen() {
             {TEXTES.galerie}
           </button>
           {epuise && (
-            <button type="button" onClick={actions.goHistory} className={LIEN}>
-              {TEXTES.voirJournal} →
+            <button type="button" onClick={actions.goHistory} className={BOUTON_SECONDAIRE}>
+              {TEXTES.voirJournal}
             </button>
           )}
         </div>
