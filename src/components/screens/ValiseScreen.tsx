@@ -673,7 +673,7 @@ export default function ValiseScreen() {
                 ],
                 ["Retour", retour, depart || aujourdhui, depart ? plusJours(depart, DUREE_MAX_JOURS - 1) : undefined, setRetour],
               ] as const).map(([titre, valeur, min, max, changer]) => (
-                <label key={titre} className="flex items-center gap-[9px] bg-card border border-border rounded-[18px] px-[12px] py-[10px] cursor-pointer min-w-0">
+                <label key={titre} className="flex items-center gap-[9px] bg-card border border-border rounded-carte px-[12px] py-[10px] cursor-pointer min-w-0">
                   <span className="flex-shrink-0 text-muted-3">{G_CALENDRIER}</span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-[11px] text-muted">{titre}</span>
@@ -786,7 +786,7 @@ export default function ValiseScreen() {
                     key={t}
                     onClick={() => choisirSejour(t)}
                     aria-pressed={on}
-                    className={"relative text-left rounded-[18px] overflow-hidden cursor-pointer border bg-card transition-colors " + (on ? "border-terracotta" : "border-border")}
+                    className={"relative text-left rounded-carte overflow-hidden cursor-pointer border bg-card transition-colors " + (on ? "border-terracotta" : "border-border")}
                     style={{ borderWidth: on ? 1.5 : 1 }}
                   >
                     {/* Visuel décoratif : le libellé dessous dit le séjour. */}
@@ -1176,7 +1176,7 @@ function Resultat({
         <Surtitre>Détail d&apos;une pièce</Surtitre>
         <div className="flex gap-[14px] mt-3">
           <div
-            className="flex-shrink-0 rounded-[18px] overflow-hidden"
+            className="flex-shrink-0 rounded-carte overflow-hidden"
             style={{ width: "42%", aspectRatio: "4 / 5", ...(img.url ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 8 } : { background: p.hex }) }}
           >
             {img.url && (
@@ -1198,7 +1198,7 @@ function Resultat({
                     key={l.ids.join(",")}
                     onClick={() => setVue({ nom: "look", index: i })}
                     aria-label={`Voir le look ${numero(i)}`}
-                    className="rounded-[10px] bg-warm-bg p-[3px] cursor-pointer grid grid-cols-2 gap-[2px] overflow-hidden"
+                    className="rounded-champ bg-warm-bg p-[3px] cursor-pointer grid grid-cols-2 gap-[2px] overflow-hidden"
                     style={{ height: 78 }}
                   >
                     {/* À cette taille, une composition ne se lit plus : un aperçu
@@ -1508,7 +1508,7 @@ function Resultat({
               aria-label={`Voir le look ${numero(index)} : ${resumeLook(piecesDuLook(l))}`}
               className="w-full text-left bg-card border border-border rounded-hero p-[10px] cursor-pointer"
             >
-              <div className="rounded-[18px] bg-warm-bg px-[12px] py-[14px]" style={{ height: "clamp(270px, 80vw, 340px)" }}>
+              <div className="rounded-carte bg-warm-bg px-[12px] py-[14px]" style={{ height: "clamp(270px, 80vw, 340px)" }}>
                 <OutfitComposition items={piecesDuLook(l)} variant="hero" ajustee />
               </div>
               <div className="px-[6px] pt-[12px] pb-[4px]">

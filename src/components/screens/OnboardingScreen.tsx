@@ -162,7 +162,7 @@ export default function OnboardingScreen() {
             ) : isOutfitPreview ? (
               <div className="rounded-carte p-[10px]" style={{ background: slide.bg }}>
                 <div className="flex gap-[10px] items-stretch">
-                  <div className="flex-[1.3] bg-ink rounded-[18px] p-[6px]">
+                  <div className="flex-[1.3] bg-ink rounded-carte p-[6px]">
                     <div className="bg-cream rounded-bloc overflow-hidden px-[10px] pt-[10px] pb-[9px] h-full flex flex-col">
                       <div className="text-[9px] text-ink font-serif text-center mb-[8px]">Tenue du jour</div>
                       <div className="flex gap-[5px] mb-[8px]">

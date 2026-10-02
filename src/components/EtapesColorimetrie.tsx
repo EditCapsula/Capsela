@@ -194,7 +194,7 @@ export function IndecisColorimetrie() {
           <span key={c} className="absolute rounded-full" style={{ width: 70, height: 70, left: x - 4, top: y, background: c, opacity: 0.55 }} />
         ))}
       </div>
-      <div className="bg-card border border-border rounded-[18px] px-[16px] py-[15px] mt-[22px]">
+      <div className="bg-card border border-border rounded-carte px-[16px] py-[15px] mt-[22px]">
         <div className="t-titre-carte text-ink">Ce que cela signifie</div>
         <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
           Tu peux probablement porter une large gamme de couleurs. Capsela privilégiera les teintes qui fonctionnent le mieux
@@ -315,7 +315,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
         </section>
       )}
 
-      <div className="bg-card border border-border rounded-[18px] px-[16px] py-[15px] mt-[30px] flex gap-[12px] items-start">
+      <div className="bg-card border border-border rounded-carte px-[16px] py-[15px] mt-[30px] flex gap-[12px] items-start">
         <Pictogramme nom="repere" taille={22} />
         <div className="min-w-0">
           <div className="font-serif text-[17px] leading-[1.25] text-ink">Ta palette est un repère, pas une règle.</div>

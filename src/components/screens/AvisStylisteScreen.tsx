@@ -223,7 +223,7 @@ function ExtraitAvis() {
  */
 function ConseilsPhoto() {
   return (
-    <details className="group mt-[18px] bg-card border border-border rounded-[18px] px-4 py-[12px]">
+    <details className="group mt-[18px] bg-card border border-border rounded-carte px-4 py-[12px]">
       <summary className="flex items-center justify-between gap-3 cursor-pointer list-none min-h-[28px]">
         <span className="t-surtitre text-muted">Pour un avis plus précis</span>
         <span aria-hidden="true" className="text-muted transition-transform duration-200 group-open:rotate-180">
@@ -519,7 +519,7 @@ export default function AvisStylisteScreen() {
           )}
           {enregistrement === "fait" && (
             <div
-              className="w-full rounded-[18px] bg-warm-bg border border-warm-border px-4 pt-[12px] flex flex-col items-center text-center motion-safe:animate-[capsule-apparition_240ms_ease-out_both]"
+              className="w-full rounded-carte bg-warm-bg border border-warm-border px-4 pt-[12px] flex flex-col items-center text-center motion-safe:animate-[capsule-apparition_240ms_ease-out_both]"
               role="status"
             >
               <span className="text-[13px] text-ink whitespace-nowrap">

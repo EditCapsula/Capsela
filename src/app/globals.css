@@ -46,7 +46,7 @@
   --color-on-terracotta: #fbf3ea;
   --color-on-terracotta-soft: #f0ddcf;
   /* Échelle de rayons (02/10/2026, audit design system : 15 valeurs écrites à la main). Les valeurs qui ne différaient que
-     d'un pixel sont réunies : 13 et 15 -> bloc (14), 11 -> champ (12). 10 et 18 restent à arbitrer. */
+     d'un pixel sont réunies : 13 et 15 -> bloc (14), 11 -> champ (12) ; arbitré le 02/10/2026 : 18 -> carte (20), 10 -> champ (12). */
   --radius-mini: 8px;
   --radius-champ: 12px;
   --radius-bloc: 14px;

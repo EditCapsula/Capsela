@@ -126,7 +126,7 @@ export default function IdeeLookScreen() {
               className="w-full text-left flex items-center gap-[12px] bg-card border border-border rounded-bloc p-[10px] cursor-pointer"
             >
               <div
-                className="w-[52px] h-[62px] rounded-[10px] overflow-hidden flex-shrink-0"
+                className="w-[52px] h-[62px] rounded-champ overflow-hidden flex-shrink-0"
                 style={
                   img.url
                     ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 4 }

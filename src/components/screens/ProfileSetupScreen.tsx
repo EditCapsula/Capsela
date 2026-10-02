@@ -486,7 +486,7 @@ export default function ProfileSetupScreen() {
       {meta.key === "colorimetrie_suite" && <SuiteColorimetrie />}
 
       {meta.key === "pal_recap" && (
-        <div className="mt-6 bg-card border border-border rounded-[18px] p-[18px]">
+        <div className="mt-6 bg-card border border-border rounded-carte p-[18px]">
           {recapRows.map((r) => (
             <div key={r.label} className="flex items-center gap-3 py-[11px] border-b border-border last:border-b-0">
               <span className="w-[70px] flex-shrink-0 t-surtitre text-muted">{r.label}</span>

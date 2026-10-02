@@ -217,7 +217,7 @@ export default function PieceScreen() {
       </div>
 
       <div
-        className="w-full rounded-[18px] border border-border overflow-hidden mt-[14px] relative"
+        className="w-full rounded-carte border border-border overflow-hidden mt-[14px] relative"
         style={
           resolvedImage.kind === "generated"
             ? { aspectRatio: "4/5", background: "var(--color-photo-bg)" }

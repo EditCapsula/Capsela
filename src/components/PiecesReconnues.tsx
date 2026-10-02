@@ -251,7 +251,7 @@ export default function PiecesReconnues({
                     onAjouterPiece(ouvert.categorie, majuscule(ouvert.libelle));
                   }}
                   className={
-                    "w-full flex items-center gap-[12px] rounded-[18px] px-4 py-[12px] text-left cursor-pointer " +
+                    "w-full flex items-center gap-[12px] rounded-carte px-4 py-[12px] text-left cursor-pointer " +
                     (proposees.length === 0 && !pieceOuverte
                       ? "bg-terracotta-deep active:bg-terracotta-hover text-cream"
                       : "bg-card border border-border text-ink active:bg-warm-bg")
@@ -275,7 +275,7 @@ export default function PiecesReconnues({
                 <button
                   type="button"
                   onClick={() => choisir("ignoree")}
-                  className="w-full flex items-center gap-[12px] rounded-[18px] px-4 py-[12px] text-left cursor-pointer bg-card border border-border text-ink active:bg-warm-bg"
+                  className="w-full flex items-center gap-[12px] rounded-carte px-4 py-[12px] text-left cursor-pointer bg-card border border-border text-ink active:bg-warm-bg"
                 >
                   <span className="flex-1 min-w-0">
                     <span className="block text-[14px]">Continuer sans l&apos;associer</span>

@@ -84,7 +84,7 @@ export function CarteIdeeLook({
             return (
               <div key={it.id} className="min-w-0">
                 <div
-                  className="w-full rounded-[10px] overflow-hidden"
+                  className="w-full rounded-champ overflow-hidden"
                   style={
                     img.url
                       ? { aspectRatio: "1", background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 4 }
