@@ -174,6 +174,15 @@ export function applySportCocooningFilter(items: Item[], occasion: OccasionKey, 
   return r;
 }
 
+/**
+ * Un col roulé se porte seul : son col fait le haut, un top dessous ne se verrait pas
+ * (02/10/2026, signalé sur une tenue de capsule : top en maille + pull col roulé).
+ * Arbitrage limité au COL ROULÉ — les autres pulls restent superposables (31/08/2026).
+ */
+function isColRoule(it: Item): boolean {
+  return it.cat === "pull" && /col roul/.test(`${it.subtype ?? ""} ${it.name || ""}`.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase());
+}
+
 /** R-B10 — deux chemises/chemisiers ensemble, quel que soit leur rôle de superposition. */
 function isShirtLike(it: Item): boolean {
   return it.subtype === "Chemise" || it.subtype === "Chemisier";
@@ -1369,6 +1378,8 @@ export function generateOutfit(
           // des écarts d'un ordre de grandeur.
           (rolePieceOf(i) === "calque" || (i.cat === "pull" && leviers?.pullNonSuperposable !== true)) &&
           !(isShirtLike(firstLayer) && isShirtLike(i)) &&
+          // Col roulé : jamais posé par-dessus un haut (02/10/2026).
+          !isColRoule(i) &&
           // Mailles fermées — règle active par défaut (arbitrage 31/08/2026).
           (leviers?.superpositionMaillesFermees === true || !(isClosedKnit(firstLayer) && isClosedKnit(i)))
       );

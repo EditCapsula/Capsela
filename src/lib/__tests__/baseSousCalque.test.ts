@@ -34,3 +34,21 @@ describe("un calque n'est jamais le seul haut quand une base existe", () => {
     expect(ids).not.toContain(ID(5));
   });
 });
+
+describe("un col roulé ne se superpose pas à un haut (02/10/2026)", () => {
+  it("jamais de haut + col roulé, tous tirages confondus", () => {
+    const colRoule = item({ id: 7, category: "pull", name: "Pull col roulé fin", sous_type: "Pull col roulé", meteo_min_temp: 0, meteo_max_temp: 26 });
+    const p: CatalogItem[] = [
+      item({ id: 4, category: "hauts", name: "Top en maille", sous_type: "Top", meteo_min_temp: 5, meteo_max_temp: 30 }),
+      colRoule,
+      item({ id: 2, category: "pantalons", name: "Pantalon droit", sous_type: "Pantalon", meteo_min_temp: 5, meteo_max_temp: 28 }),
+      item({ id: 3, category: "chaussures", name: "Mocassins", sous_type: "Mocassins", meteo_min_temp: 5, meteo_max_temp: 28 }),
+    ];
+    const idCol = item({ id: 7, category: "pull", name: "x" }).id;
+    const idTop = ID(4);
+    for (let n = 0; n < 300; n++) {
+      const { ids } = generateOutfit(p, MILD, "quotidien", "Présentiel", "Verre", [], "femme");
+      expect(ids.includes(idCol) && ids.includes(idTop), `tirage ${n}`).toBe(false);
+    }
+  });
+});
