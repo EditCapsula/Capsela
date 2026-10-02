@@ -64,7 +64,8 @@ export type RaisonInexploitable = "blurry" | "too_dark" | "no_garment" | "other"
 export type CodeErreurAvis =
   | "non_authentifie" // 401
   | "non_premium" // 403
-  | "statut_indisponible" // 503 — statut Premium invérifiable (fail-closed)
+  | "statut_indisponible" // 503 — statut Premium ou quota invérifiable (fail-closed)
+  | "quota_atteint" // 429 — plafond mensuel d'avis atteint
   | "fichier_invalide" // 400
   | "photo_inexploitable" // 422
   | "delai_depasse" // 504
@@ -97,6 +98,8 @@ export type ReponseAvis =
        * version de l'app ne le lit.
        */
       portees: number[];
+      /** Avis restants ce mois-ci, après celui-ci (plafond mensuel). */
+      restants: number;
     }
   | { ok: false; code: CodeErreurAvis; raison?: RaisonInexploitable };
 
@@ -108,6 +111,8 @@ export const MODELE_PAR_DEFAUT = "gpt-5.4-mini";
 export const DELAI_PAR_DEFAUT_MS = 45_000;
 /** Une relance automatique, et seulement sur réponse invalide (arbitré). */
 export const APPELS_MAX = 2;
+/** Avis par compte et par mois civil (UTC) — demandé le 01/10/2026 ; surchargeable par STYLIST_ADVICE_LIMITE_MENSUELLE. */
+export const LIMITE_AVIS_MENSUELLE = 5;
 
 /**
  * Nombre et longueur des éléments (arbitré : 2 à 3 points, textes courts).
@@ -812,6 +817,15 @@ export interface DependancesAvis {
   nouvelId(): string;
   modele: string;
   delaiMs: number;
+  /** Plafond mensuel (migration 0046). Consommé AVANT l'appel au modèle ; rendu si l'échec est celui du service. */
+  quotaMensuel: QuotaMensuel;
+}
+
+export interface QuotaMensuel {
+  /** Consomme une unité du mois. `utilisees` : unités consommées après cet appel, ou le plafond s'il est atteint. */
+  consommer(userId: string): Promise<{ issue: "ok" | "limite" | "indisponible"; utilisees: number }>;
+  rendre(userId: string): Promise<void>;
+  limite: number;
 }
 
 const erreur = (statut: number, code: CodeErreurAvis, raison?: RaisonInexploitable) => ({
@@ -870,6 +884,20 @@ export async function traiterDemandeAvis(
       ...(dernierMotif ? { motif_rejet: dernierMotif } : {}),
     });
 
+  // 4 bis. Plafond mensuel, après la validation du fichier (une photo refusée ne
+  //        consomme rien) et avant tout appel payant. Illisible : refus par prudence.
+  const quota = await deps.quotaMensuel.consommer(user.id).catch(() => ({ issue: "indisponible" as const, utilisees: 0 }));
+  if (quota.issue === "limite") {
+    journal("quota_atteint");
+    return erreur(429, "quota_atteint");
+  }
+  if (quota.issue === "indisponible") {
+    journal("statut_indisponible");
+    return erreur(503, "statut_indisponible");
+  }
+  // L'unité est rendue quand l'avis n'a pas pu être donné par la faute du service.
+  const rendreUnite = () => deps.quotaMensuel.rendre(user.id).catch(() => undefined);
+
   while (appels < APPELS_MAX) {
     appels += 1;
     const controleur = new AbortController();
@@ -881,6 +909,7 @@ export async function traiterDemandeAvis(
       clearTimeout(minuterie);
       const code = controleur.signal.aborted ? "delai_depasse" : "erreur_modele";
       journal(code);
+      await rendreUnite();
       return erreur(code === "delai_depasse" ? 504 : 502, code);
     }
     clearTimeout(minuterie);
@@ -889,6 +918,7 @@ export async function traiterDemandeAvis(
     tokensSortie += usage.sortie;
     if (!reponse.ok) {
       journal("erreur_modele");
+      await rendreUnite();
       return erreur(502, "erreur_modele");
     }
     const v = validerReponse(extraireTexteReponse(reponse.json));
@@ -902,7 +932,7 @@ export async function traiterDemandeAvis(
       piecesDressing = dressing.length;
       piecesReconnues = portees.length;
       journal("ok");
-      return { statut: 200, corps: { ok: true, analyseId, avis: v.avis, dressing, reconnaissance, portees } };
+      return { statut: 200, corps: { ok: true, analyseId, avis: v.avis, dressing, reconnaissance, portees, restants: Math.max(0, deps.quotaMensuel.limite - quota.utilisees) } };
     }
     if (v.etat === "inexploitable") {
       journal("photo_inexploitable");
@@ -911,5 +941,6 @@ export async function traiterDemandeAvis(
     dernierMotif = v.motif;
   }
   journal("reponse_invalide");
+  await rendreUnite();
   return erreur(502, "reponse_invalide");
 }

@@ -106,6 +106,14 @@ secret ne porte le préfixe `NEXT_PUBLIC_`.
 - **Formule Vercel** : le plan gratuit (Hobby) est réservé à un usage personnel
   non commercial d'après les conditions de Vercel — **à vérifier avant de
   vendre Premium**.
+- **Avis de styliste réservé au Premium (arbitré le 01/10/2026)** : au lancement
+  public, passer `AVIS_DE_STYLISTE` à `"PREMIUM_REQUIRED"` dans
+  `src/lib/autorisations.ts` ET `supabase/functions/_shared/premium.ts` (le test
+  miroir exige les deux), puis redéployer `stylist-advice`. Jusque-là l'avis reste
+  en accès libre pour être testé. Le plafond de **5 avis par mois** (migration
+  0046, à exécuter AVANT le déploiement de la fonction) s'applique déjà ; au
+  lancement il ne concerne plus que les Premium. Sans paiement branché, un compte
+  ne devient Premium que par une ligne `premium_access` ajoutée à la main.
 
 ## 12. Authentification (Supabase → Authentication)
 

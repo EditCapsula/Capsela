@@ -54,7 +54,7 @@ export function contexteDepuisProfil(profile: Profile): ContexteAvis {
 }
 
 export type ResultatDemande =
-  | { ok: true; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[]; reconnaissance: VetementReconnu[] }
+  | { ok: true; analyseId: string; avis: AvisStyliste; dressing: PieceSuggeree[]; reconnaissance: VetementReconnu[]; restants: number | null }
   | { ok: false; code: CodeErreurAvis | "reseau"; raison?: RaisonInexploitable };
 
 function lireFichierEnDataUrl(fichier: File): Promise<string> {
@@ -141,7 +141,15 @@ export async function demanderAvis(fichier: File, contexte: ContexteAvis): Promi
     }
     const corps = data as ReponseAvis | null;
     if (corps && corps.ok && estAvis(corps.avis)) {
-      return { ok: true, analyseId: corps.analyseId, avis: corps.avis, dressing: piecesSuggerees(corps.dressing), reconnaissance: lireReconnaissance(corps.reconnaissance) };
+      return {
+        ok: true,
+        analyseId: corps.analyseId,
+        avis: corps.avis,
+        dressing: piecesSuggerees(corps.dressing),
+        reconnaissance: lireReconnaissance(corps.reconnaissance),
+        // Avis restants ce mois-ci (plafond mensuel) : absent d'une ancienne réponse, alors rien n'est affiché.
+        restants: typeof corps.restants === "number" && corps.restants >= 0 ? corps.restants : null,
+      };
     }
     return { ok: false, code: "reponse_invalide" };
   } catch {
@@ -156,6 +164,7 @@ export async function demanderAvis(fichier: File, contexte: ContexteAvis): Promi
  */
 export type Reaction =
   | { action: "gate" }
+  | { action: "limite"; message: string; sousTexte: string }
   | { action: "changer_photo"; message: string }
   | { action: "reessayer"; message: string; sousTexte?: string };
 
@@ -167,8 +176,23 @@ const MESSAGE_SANS_TENUE = "Je ne vois pas de tenue sur cette photo. Essaie avec
 const MESSAGE_FICHIER = "Ce fichier ne peut pas être utilisé. Choisis une autre photo.";
 const MESSAGE_RESEAU = "Connexion interrompue. Vérifie ton réseau et réessaie.";
 
-export function reactionErreur(code: CodeErreurAvis | "reseau", raison?: RaisonInexploitable): Reaction {
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+/** « 1er novembre » : le jour où le plafond mensuel repart (mois civil UTC, comme le serveur). */
+export function prochainMois(maintenant: Date = new Date()): string {
+  const m = (maintenant.getUTCMonth() + 1) % 12;
+  return `1er ${MOIS[m]}`;
+}
+
+export function reactionErreur(code: CodeErreurAvis | "reseau", raison?: RaisonInexploitable, maintenant: Date = new Date()): Reaction {
   switch (code) {
+    case "quota_atteint":
+      return {
+        action: "limite",
+        // Sans le nombre : le plafond vit côté serveur (STYLIST_ADVICE_LIMITE_MENSUELLE), l'app ne le recopie pas.
+        message: "Tu as utilisé tous tes avis de styliste de ce mois-ci.",
+        sousTexte: `Le prochain sera disponible le ${prochainMois(maintenant)}.`,
+      };
     case "non_authentifie":
     case "non_premium":
       return { action: "gate" };

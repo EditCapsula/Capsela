@@ -13,13 +13,15 @@
 //   OPENAI_API_KEY               obligatoire (déjà utilisé par analyze-dressing-photo)
 //   STYLIST_ADVICE_MODEL         facultatif, défaut MODELE_PAR_DEFAUT
 //   STYLIST_ADVICE_TIMEOUT_MS    facultatif, défaut 45000 (arbitré)
+//   STYLIST_ADVICE_LIMITE_MENSUELLE  facultatif, défaut 5 avis par compte et par mois (migration 0046)
 //   SUPABASE_URL + SB_SECRET_KEY / SUPABASE_SERVICE_ROLE_KEY (cf. _shared/adminKey.ts)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAdminKey } from "../_shared/adminKey.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import type { LecteurPremium } from "../_shared/premium.ts";
-import { DELAI_PAR_DEFAUT_MS, MODELE_PAR_DEFAUT, traiterDemandeAvis, type PieceDressing } from "../_shared/avisStyliste.ts";
+import { limiteDepuisEnv } from "../_shared/protection.ts";
+import { DELAI_PAR_DEFAUT_MS, LIMITE_AVIS_MENSUELLE, MODELE_PAR_DEFAUT, traiterDemandeAvis, type PieceDressing } from "../_shared/avisStyliste.ts";
 
 function reponse(statut: number, corps: unknown): Response {
   return new Response(JSON.stringify(corps), {
@@ -50,6 +52,7 @@ Deno.serve(async (req) => {
   }
 
   const delai = Number(Deno.env.get("STYLIST_ADVICE_TIMEOUT_MS"));
+  const limite = limiteDepuisEnv(Deno.env.get("STYLIST_ADVICE_LIMITE_MENSUELLE"), LIMITE_AVIS_MENSUELLE);
   const resultat = await traiterDemandeAvis(req.headers.get("Authorization"), corps, {
     authentifier: async (jwt) => {
       const { data, error } = await admin.auth.getUser(jwt);
@@ -86,6 +89,24 @@ Deno.serve(async (req) => {
     nouvelId: () => crypto.randomUUID(),
     modele: Deno.env.get("STYLIST_ADVICE_MODEL") || MODELE_PAR_DEFAUT,
     delaiMs: Number.isFinite(delai) && delai > 0 ? delai : DELAI_PAR_DEFAUT_MS,
+    // Plafond mensuel tenu en base (migration 0046) : consommé avant l'appel payant,
+    // rendu si l'échec est celui du service.
+    quotaMensuel: {
+      limite,
+      consommer: async (userId) => {
+        try {
+          const { data, error } = await admin.rpc("consommer_quota_mensuel", { p_user: userId, p_fonction: "stylist-advice", p_limite: limite });
+          const ligne = Array.isArray(data) ? data[0] : data;
+          if (error || !ligne || typeof ligne.consomme !== "boolean") return { issue: "indisponible", utilisees: 0 };
+          return { issue: ligne.consomme ? "ok" : "limite", utilisees: Number(ligne.utilisees) || 0 };
+        } catch {
+          return { issue: "indisponible", utilisees: 0 };
+        }
+      },
+      rendre: async (userId) => {
+        await admin.rpc("rendre_quota_mensuel", { p_user: userId, p_fonction: "stylist-advice" });
+      },
+    },
   });
   return reponse(resultat.statut, resultat.corps);
 });

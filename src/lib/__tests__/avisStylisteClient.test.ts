@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, prioriserActionsAvis, reactionErreur, repartirPiecesAvis, titresAffichables, type AvisStyliste } from "../avisStylisteClient";
+import { contexteDepuisProfil, estAvis, etapesAnalyse, personnalisationAvis, phraseAnalyse, prioriserActionsAvis, prochainMois, reactionErreur, repartirPiecesAvis, titresAffichables, type AvisStyliste } from "../avisStylisteClient";
 import { EMPTY_PROFILE, type Profile } from "../profile";
 
 const profil = (over: Partial<Profile> = {}): Profile => ({ ...EMPTY_PROFILE, gender: "femme", displayName: "Angela", ...over });
@@ -140,5 +140,21 @@ describe("titresAffichables — un avis relu de la base n'affiche que des titres
   it("écarte un groupe douteux sans le réparer : compte faux, mauvais type, texte trop long", () => {
     const avis = { ...base, titres: { verdict: 7, etiquettes: "Palette", pointsForts: ["Couleurs"], conseil: "x".repeat(60), suggestions: ["Un", "Deux", "Trois"] } } as unknown as AvisStyliste;
     expect(titresAffichables(avis)).toEqual({ suggestions: ["Un", "Deux", "Trois"] });
+  });
+});
+
+describe("plafond mensuel — réaction et date de reprise", () => {
+  it("prochainMois : le 1er du mois suivant, décembre → janvier", () => {
+    expect(prochainMois(new Date("2026-10-15T12:00:00Z"))).toBe("1er novembre");
+    expect(prochainMois(new Date("2026-12-31T23:00:00Z"))).toBe("1er janvier");
+  });
+
+  it("quota atteint : un message sans bouton Réessayer, avec la date de reprise", () => {
+    const r = reactionErreur("quota_atteint", undefined, new Date("2026-10-15T12:00:00Z"));
+    expect(r).toEqual({
+      action: "limite",
+      message: "Tu as utilisé tous tes avis de styliste de ce mois-ci.",
+      sousTexte: "Le prochain sera disponible le 1er novembre.",
+    });
   });
 });

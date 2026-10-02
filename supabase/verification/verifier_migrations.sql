@@ -6,7 +6,7 @@
 -- laissé leur trace en base, d'après ce que chacune crée (tables, colonnes,
 -- fonctions, buckets, politiques RLS, contraintes, index).
 --
--- Généré à partir des fichiers 0001 à 0043. Une migration « complète » a
+-- Généré à partir des fichiers 0001 à 0046. Une migration « complète » a
 -- manquants = 0. Une migration qui ne crée rien de testable (0002, 0003 pour
 -- ses seules données…) peut ne pas apparaître.
 --
@@ -20,7 +20,7 @@
 -- 0002 n'est pas testée : la table `pieces` est un schéma obsolète jamais branché
 -- au code (cf. l'en-tête de 0021) ; son absence en base est sans effet.
 --
--- Vérifié en rejouant 0001 à 0043 dans l'ordre sur un PostgreSQL 16 neuf (avec de
+-- Vérifié en rejouant 0001 à 0046 dans l'ordre sur un PostgreSQL 16 neuf (avec de
 -- simples bouchons pour auth et storage) : toutes les lignes sortent « complète ».
 -- Ce rejeu a révélé que 0033 échouait à cause d'un type de retour de fonction
 -- modifié ; corrigé (drop function if exists).
@@ -142,7 +142,10 @@ with attendu(migration, type, objet, parent) as (
     ('0042', 'contrainte', 'vestiaire_universel_manches_check', ''),
     ('0043', 'table', 'edge_usage', ''),
     ('0043', 'fonction', 'consommer_edge_quota', ''),
-    ('0043', 'index', 'edge_usage_jour_idx', '')
+    ('0043', 'index', 'edge_usage_jour_idx', ''),
+    ('0046', 'table', 'edge_usage_mensuel', ''),
+    ('0046', 'fonction', 'consommer_quota_mensuel', ''),
+    ('0046', 'fonction', 'rendre_quota_mensuel', '')
 ),
 resultat as (
   select
