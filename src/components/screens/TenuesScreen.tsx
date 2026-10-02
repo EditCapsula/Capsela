@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { JourEtMeteo } from "@/components/JourMeteo";
@@ -13,7 +13,8 @@ import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour } from "@/lib/capsule";
 import { conseilCouleur } from "@/lib/conseilsCouleurs";
-import { accordsEcartes, lireRetours } from "@/lib/retoursAccords";
+import { accordsEcartes, basculerRetour, ecrireRetours, fusionnerRetours, lireRetours, type RetourAccord, type TableRetours } from "@/lib/retoursAccords";
+import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } from "@/lib/retoursAccordsCompte";
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -240,9 +241,36 @@ export default function TenuesScreen() {
   // uniquement), garde la tenue du jour telle quelle : pièces possédées et
   // suggestions capsule peuvent s'y mélanger.
   const outfitIds = outfitPieces.map((it) => it.id);
-  // Les accords écartés sont lus UNE FOIS à l'entrée de l'écran : « Pas pour moi » laisse la card en place
-  // jusqu'à la prochaine visite, elle ne disparaît pas sous les doigts.
-  const [accordsEcartesALEntree] = useState(() => accordsEcartes(lireRetours(userId)));
+  // Les retours sur les accords de saison : l'appareil d'abord (il répond tout de suite), puis le compte
+  // (table accord_retours, 0047) pour les retrouver d'un appareil à l'autre. Les accords écartés sont lus
+  // à l'entrée de l'écran : « Pas pour moi » laisse la card en place jusqu'à la prochaine visite, elle ne
+  // disparaît pas sous les doigts. Le compte ne modifie cette liste que si rien n'a encore été touché.
+  const [retoursAccords, setRetoursAccords] = useState<TableRetours>(() => lireRetours(userId));
+  const [accordsEcartesALEntree, setAccordsEcartesALEntree] = useState(() => accordsEcartes(lireRetours(userId)));
+  const retourDonne = useRef(false);
+  useEffect(() => {
+    if (!userId) return;
+    let annule = false;
+    lireRetoursDuCompte(userId).then((compte) => {
+      if (annule || !compte) return;
+      const { fusion, aEnvoyer } = fusionnerRetours(lireRetours(userId), compte);
+      ecrireRetours(userId, fusion);
+      setRetoursAccords(fusion);
+      if (!retourDonne.current) setAccordsEcartesALEntree(accordsEcartes(fusion));
+      void envoyerRetoursAuCompte(userId, aEnvoyer);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [userId]);
+  const donnerRetourAccord = (cle: string, retour: RetourAccord): RetourAccord | undefined => {
+    retourDonne.current = true;
+    const suite = basculerRetour(retoursAccords, cle, retour);
+    setRetoursAccords(suite);
+    ecrireRetours(userId, suite);
+    if (userId) void ecrireRetourDuCompte(userId, cle, suite[cle] ?? null);
+    return suite[cle];
+  };
   const conseilCouleurDuJour = conseilCouleur(outfitPieces, saisonCalendairePour(dateConsultee), colorimetrieMoteur(profile.colorimetrie), accordsEcartesALEntree);
   const canSaveOutfit = outfitIds.length >= 2;
   const outfitKey = [...outfitIds].sort((a, b) => a - b).join(",");
@@ -1077,7 +1105,8 @@ export default function TenuesScreen() {
           {!noCompleteOutfit && conseilCouleurDuJour && (
             <CarteAccordSaison
               conseil={conseilCouleurDuJour}
-              userId={userId}
+              retour={retoursAccords[conseilCouleurDuJour.cle]}
+              onRetour={(r) => donnerRetourAccord(conseilCouleurDuJour.cle, r)}
               piecesTenue={outfitPieces}
               dressing={state.items}
               colorimetrie={colorimetrieMoteur(profile.colorimetrie)}

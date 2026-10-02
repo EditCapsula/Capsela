@@ -61,3 +61,23 @@ export function ecrireRetours(userId: string | null, table: TableRetours): void 
     // Stockage indisponible.
   }
 }
+
+/**
+ * FUSION de ce que l'appareil garde et de ce que le compte garde (table accord_retours, 0047).
+ * Le compte l'emporte quand les deux ont un avis sur un même accord (c'est la version la plus à jour
+ * des appareils synchronisés) ; ce que seul l'appareil connaît est conservé, et renvoyé vers le compte
+ * (`aEnvoyer`). Pure.
+ */
+export function fusionnerRetours(local: TableRetours, compte: TableRetours): { fusion: TableRetours; aEnvoyer: TableRetours } {
+  const fusion: TableRetours = { ...local, ...compte };
+  const aEnvoyer: TableRetours = {};
+  for (const [cle, v] of Object.entries(local)) if (!(cle in compte)) aEnvoyer[cle] = v;
+  return { fusion, aEnvoyer };
+}
+
+/** La saison et les deux couleurs d'une clé d'accord (« Automne|Vieux rose+Marron »), pour la table. Pure. */
+export function decomposerCle(cle: string): { saison: string; couleurs: string[] } | null {
+  const [saison, paire] = cle.split("|");
+  const couleurs = (paire ?? "").split("+").filter(Boolean);
+  return saison && couleurs.length === 2 ? { saison, couleurs } : null;
+}

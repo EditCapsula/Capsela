@@ -247,3 +247,7 @@ qui ouvrent la `BottomSheet` existante (détail, pièces de la tenue, nombre de 
 L'APPAREIL, par compte (`capsela.accords.<compte>`, `retoursAccords.ts`), sans table ni migration, effacés avec le compte.
 Seul « Pas pour moi » a un effet : l'accord n'est plus proposé (la card reste en place jusqu'à la visite suivante). « J'aime »
 est enregistré sans effet : aucune personnalisation ne l'exploite encore.
+
+Depuis la migration `0047_accord_retours.sql` (exécutée à la main), les retours sont aussi rattachés au compte (table `accord_retours`, une ligne
+par accord et par personne) : ils suivent la personne d'un appareil à l'autre. Avant la migration, l'application fonctionne comme avant :
+l'appareil fait foi et l'envoi vers la table échoue sans bruit. À la lecture, le compte l'emporte, ce que seul l'appareil connaît est renvoyé.

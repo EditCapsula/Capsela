@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accordsEcartes, basculerRetour, cleRetoursAccords, nettoyer } from "../retoursAccords";
+import { accordsEcartes, basculerRetour, cleRetoursAccords, decomposerCle, fusionnerRetours, nettoyer } from "../retoursAccords";
 import { cleAccord, conseilCouleur, REGLES_ASSOCIATION } from "../conseilsCouleurs";
 import { PAL_COULEURS } from "../palCouleurs";
 import type { Item } from "../types";
@@ -36,5 +36,14 @@ describe("retours sur les accords", () => {
     const tenue = [p("Vieux rose"), p("Marron", "pantalon")];
     expect(conseilCouleur(tenue, "Automne")?.cle).toBe(K);
     expect(conseilCouleur(tenue, "Automne", null, new Set([K]))).toBeNull();
+  });
+  it("fusion : le compte l'emporte, l'appareil seul est conservé et renvoyé", () => {
+    const { fusion, aEnvoyer } = fusionnerRetours({ "Automne|A+B": "aime", "Automne|C+D": "aime" }, { "Automne|A+B": "pas_pour_moi", "Automne|E+F": "aime" });
+    expect(fusion).toEqual({ "Automne|A+B": "pas_pour_moi", "Automne|C+D": "aime", "Automne|E+F": "aime" });
+    expect(aEnvoyer).toEqual({ "Automne|C+D": "aime" });
+  });
+  it("décompose une clé d'accord pour la table", () => {
+    expect(decomposerCle(K)).toEqual({ saison: "Automne", couleurs: ["Vieux rose", "Marron"] });
+    expect(decomposerCle("n'importe quoi")).toBeNull();
   });
 });

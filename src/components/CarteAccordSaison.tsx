@@ -5,7 +5,7 @@ import BottomSheet from "@/components/BottomSheet";
 import { PAL_COULEURS } from "@/lib/palCouleurs";
 import { teinteDe, type ColorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import type { ConseilCouleur } from "@/lib/conseilsCouleurs";
-import { basculerRetour, ecrireRetours, lireRetours, type RetourAccord, type TableRetours } from "@/lib/retoursAccords";
+import type { RetourAccord } from "@/lib/retoursAccords";
 import type { Item } from "@/lib/types";
 
 /**
@@ -20,18 +20,20 @@ const hexDe = (nom: string) => PAL_COULEURS.find(([n]) => n === nom)?.[1];
 
 export default function CarteAccordSaison({
   conseil,
-  userId,
+  retour,
+  onRetour,
   piecesTenue,
   dressing,
   colorimetrie,
 }: {
   conseil: ConseilCouleur;
-  userId: string | null;
+  retour: RetourAccord | undefined;
+  /** Donne (ou retire) un retour ; rend l'état qui en résulte. */
+  onRetour: (r: RetourAccord) => RetourAccord | undefined;
   piecesTenue: readonly Item[];
   dressing: readonly Item[];
   colorimetrie: ColorimetrieMoteur | null;
 }) {
-  const [retours, setRetours] = useState<TableRetours>(() => lireRetours(userId));
   const [couleur, setCouleur] = useState<string | null>(null);
   // « Compris… » reste quelques secondes, puis laisse place à une mention discrète.
   const [confirmation, setConfirmation] = useState(false);
@@ -42,12 +44,9 @@ export default function CarteAccordSaison({
     return () => clearTimeout(t);
   }, [confirmation]);
 
-  const retour: RetourAccord | undefined = retours[conseil.cle];
   const donner = (r: RetourAccord) => {
-    const suite = basculerRetour(retours, conseil.cle, r);
-    setRetours(suite);
-    ecrireRetours(userId, suite);
-    setConfirmation(r === "pas_pour_moi" && suite[conseil.cle] === "pas_pour_moi");
+    const resultat = onRetour(r);
+    setConfirmation(r === "pas_pour_moi" && resultat === "pas_pour_moi");
   };
 
   const couleurs = [...conseil.accord, conseil.pointe];
