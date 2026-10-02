@@ -56,11 +56,10 @@ describe("palette du dressing enrichie", () => {
   it("aucune teinte ajoutée ne prend le code du repli « couleur inconnue »", () => {
     for (const nom of NOMS_AJOUTES_AU_DRESSING) expect(PALETTE.find(([n]) => n === nom)?.[1].toUpperCase()).not.toBe(FALLBACK_HEX.toUpperCase());
   });
-  it("la colorimétrie lit Rouge, Bleu et Beige (déjà dans les saisons) et ne dit RIEN des autres teintes ajoutées", () => {
+  it("la colorimétrie lit chaque teinte ajoutée sous son propre nom (placée par saison le 02/10/2026)", () => {
     for (const nom of NOMS_AJOUTES_AU_DRESSING) {
       const [, hex] = PALETTE.find(([n]) => n === nom)!;
-      const lue = ["Rouge", "Bleu", "Beige"].includes(nom);
-      expect(teinteDe({ hex, color: nom }), nom).toBe(lue ? PAL_COULEURS.find(([n]) => n === nom)![1] : null);
+      expect(teinteDe({ hex, color: nom }), nom).toBe(PAL_COULEURS.find(([n]) => n === nom)![1]);
     }
   });
 

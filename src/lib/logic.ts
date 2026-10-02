@@ -1376,6 +1376,26 @@ export function generateOutfit(
       if (layer) { chosen.push(layer); ids.push(layer.id); }
     }
   }
+  // BASE SOUS UN CALQUE SEUL (02/10/2026, signalé : une tenue 100 % capsule — chemise
+  // oversize, pantalon, mules — affichait « Un débardeur ou un t-shirt dessous
+  // compléterait cette tenue »). Quand le seul haut tiré est un calque (R-S12), le
+  // moteur pose lui-même un haut de base dessous, parmi les pièces déjà admises par
+  // les règles dures (météo, occasion, R-B10 : jamais deux chemises). Sans haut de
+  // base dans le pool, rien n'est forcé : la suggestion R-S12 reste le repli.
+  if (!useRobe && !dressy) {
+    const hautsDeLaTenue = chosen.filter((c) => TOP_LAYER_CATS.includes(c.cat));
+    if (hautsDeLaTenue.length === 1 && rolePieceOf(hautsDeLaTenue[0]) === "calque") {
+      const baseCandidates = hardBase.filter(
+        (i) =>
+          i.cat === "haut" &&
+          rolePieceOf(i) === "base" &&
+          !chosen.some((c) => c.id === i.id) &&
+          !(isShirtLike(hautsDeLaTenue[0]) && isShirtLike(i))
+      );
+      const base = rand(harmonize(candidatsCouleur(baseCandidates, [], colo), chosen, false));
+      if (base) { chosen.push(base); ids.push(base.id); }
+    }
+  }
   // R-B18 (nouveau 21/08/2026, "en été si la température est en dessous du
   // min pour un débardeur, il faut porter un gilet dessus") : le haut/la
   // robe retenu(e) plus haut peut être sous son propre meteo_min_temp — cas
@@ -2204,8 +2224,10 @@ export function computeLookScore(
   }
 
   // R-S14 — soirée fraîche : exclue en Cocooning (R-B12), pas de sens à suggérer une veste chez soi.
+  // Télétravail aussi (02/10/2026, signalé : « à prévoir » avec un blazer pour une journée chez soi).
+  const chezSoi = estContexteMaison(occasion, workMode);
   const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau");
-  if (occasion !== "cocooning" && weather.temp <= SEUIL_SOIREE_FRAICHE && !hasOuterwear && !dismissed.has("veste_soir")) {
+  if (!chezSoi && weather.temp <= SEUIL_SOIREE_FRAICHE && !hasOuterwear && !dismissed.has("veste_soir")) {
     // Occasion sport (recette 25/08/2026, signalé : blazer structuré
     // suggéré sur une tenue baskets + short cycliste) — préférence molle
     // pour une veste décontractée (formalityOf <= 1, ex. coupe-vent/

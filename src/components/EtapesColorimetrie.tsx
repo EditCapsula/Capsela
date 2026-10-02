@@ -8,6 +8,7 @@ import {
   explicationsDesReponses,
   QUESTIONS_COLORIMETRIE,
   SAISONS,
+  SIGNATURE_AFFICHEE_MAX,
   type Colorimetrie,
   type QuestionColorimetrie,
 } from "@/lib/colorimetrie";
@@ -215,13 +216,15 @@ export function IndecisColorimetrie() {
 function Nuancier({ titre, hexes, grande = false }: { titre: string; hexes: string[]; grande?: boolean }) {
   if (!hexes.length) return null;
   const taille = grande ? 46 : 32;
+  // Six pastilles : deux rangées de trois, jamais une pastille seule sur la seconde ligne.
+  const colonnes = hexes.length === SIGNATURE_AFFICHEE_MAX ? 3 : 5;
   return (
     <div className="mt-[22px] first:mt-0">
       <div className="t-label text-terracotta">{titre}</div>
-      {/* Les couleurs signature (cinq) se partagent la largeur : jamais une pastille seule sur une deuxième ligne, même à 360 px. */}
+      {/* Les couleurs signature (six au plus) se partagent la largeur : jamais une pastille seule sur une deuxième ligne, même à 360 px. */}
       <ul
         className={grande ? "grid gap-x-[6px] gap-y-[12px] mt-[11px]" : "flex flex-wrap gap-x-[10px] gap-y-[12px] mt-[11px]"}
-        style={grande ? { gridTemplateColumns: "repeat(5, minmax(0, 1fr))" } : undefined}
+        style={grande ? { gridTemplateColumns: `repeat(${colonnes}, minmax(0, 1fr))` } : undefined}
       >
         {hexes.map((h) => {
           const nom = paletteColorName(h)?.replace(/ /g, "\u00a0");
@@ -264,7 +267,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
       )}
 
       <div className={saison?.visuel ? "mt-[26px]" : ""}>
-        <Nuancier titre="Couleurs signature" hexes={c.signature ?? []} grande />
+        <Nuancier titre="Couleurs signature" hexes={(c.signature ?? []).slice(0, SIGNATURE_AFFICHEE_MAX)} grande />
         <Nuancier titre="Neutres" hexes={c.neutres ?? []} />
         {/* « À doser selon tes envies », jamais « à éviter » ni « à porter avec
             modération » : un repère, pas une interdiction. Le moteur les éloigne

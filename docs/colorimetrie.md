@@ -215,3 +215,19 @@ reste dans l'historique git (commit `96b8f4f`). La rétablir demanderait une
 revue juridique : une photo de visage peut révéler une donnée sensible (RGPD,
 article 9). Il faudrait aussi rouvrir la règle de CLAUDE.md sur la couleur de
 peau.
+
+## Répartition des couleurs ajoutées par saison (02/10/2026)
+
+**ARBITRAGE ÉDITORIAL** (tableau validé par la propriétaire, audité avant écriture) : les 25 teintes ajoutées sont
+placées dans `SAISONS` (colorimetrie.ts), chacune en signature, neutre ou à modérer selon la saison.
+
+- Les signatures d'origine de chaque saison restent EN TÊTE de liste : le résultat de celles qui les avaient déjà ne change pas.
+- Affichage : six couleurs signature au plus (`SIGNATURE_AFFICHEE_MAX`) ; c'est une limite d'affichage, le moteur garde toutes les signatures.
+- Les profils enregistrent des listes figées : `rafraichirColorimetrie` les relit depuis `SAISONS` à chaque chargement, sans écriture en base.
+- Chaque teinte du dressing est désormais lue par la colorimétrie sous son propre nom (`TEINTE_DU_DRESSING`) : plus aucune teinte « sans avis ».
+
+## Base sous un calque seul
+
+Quand le seul haut tiré par le moteur est un calque (chemise oversize, gilet léger…), `generateOutfit` pose lui-même un
+haut de base dessous (pièces déjà admises par les règles dures, jamais deux chemises). La suggestion R-S12 « un débardeur
+ou un t-shirt dessous » ne reste que si le pool ne contient aucun haut de base.
