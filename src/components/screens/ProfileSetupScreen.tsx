@@ -60,6 +60,8 @@ import {
   type Profile,
 } from "@/lib/profile";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
+import Input from "@/components/Input";
 
 /**
  * Étape Morphologie exclue pour les profils Homme (Tâche 4, arbitrages du
@@ -421,8 +423,7 @@ export default function ProfileSetupScreen() {
 
       {meta.key === "prenom" && (
         <div className="mt-[26px]">
-          <input
-            className="capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full"
+          <Input
             placeholder="Prénom"
             value={draft.displayName}
             onChange={(e) => patch({ displayName: e.target.value })}
@@ -486,7 +487,7 @@ export default function ProfileSetupScreen() {
       {meta.key === "colorimetrie_suite" && <SuiteColorimetrie />}
 
       {meta.key === "pal_recap" && (
-        <div className="mt-6 bg-card border border-border rounded-carte p-[18px]">
+        <Card className="mt-6 p-[18px]">
           {recapRows.map((r) => (
             <div key={r.label} className="flex items-center gap-3 py-[11px] border-b border-border last:border-b-0">
               <span className="w-[70px] flex-shrink-0 t-surtitre text-muted">{r.label}</span>
@@ -502,7 +503,7 @@ export default function ProfileSetupScreen() {
               </div>
             </div>
           ))}
-        </div>
+        </Card>
       )}
 
       {meta.key === "taille" && (
@@ -526,9 +527,9 @@ export default function ProfileSetupScreen() {
             ))}
           </div>
           <div className="t-surtitre text-muted mt-[22px] mb-[11px]">Pointure</div>
-          <input
+          <Input
             inputMode="numeric"
-            className="capin bg-card border border-border rounded-bloc px-[17px] py-[13px] text-[14px] text-ink font-sans w-[120px]"
+            className="w-[120px]"
             placeholder="Ex. 39"
             value={draft.pointure ?? ""}
             onChange={(e) => patch({ pointure: e.target.value.replace(/[^0-9]/g, "").slice(0, 2) || null })}
@@ -634,14 +635,14 @@ export default function ProfileSetupScreen() {
             <span className="text-[12px] text-terracotta">Comment savoir quelle est ma morphologie ?</span>
           </button>
           {guideOpen && (
-            <div className="bg-card border border-border rounded-bloc px-4 py-[14px] mt-[10px] flex flex-col gap-[11px]">
+            <Card rayon="bloc" className="px-4 py-[14px] mt-[10px] flex flex-col gap-[11px]">
               {MORPHOLOGIES.map((m) => (
                 <div key={m}>
                   <div className="text-[12px] text-ink font-semibold">{MORPHOLOGY_LABELS[m]}</div>
                   <div className="text-[12px] text-muted mt-[2px] leading-[1.4]">{MORPHO_HINTS[m]}</div>
                 </div>
               ))}
-            </div>
+            </Card>
           )}
         </>
       )}

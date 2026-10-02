@@ -7,6 +7,7 @@ import { teinteDe, type ColorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import type { ConseilCouleur } from "@/lib/conseilsCouleurs";
 import type { RetourAccord } from "@/lib/retoursAccords";
 import type { Item } from "@/lib/types";
+import Card from "@/components/Card";
 
 /**
  * La card « Accord de saison » (02/10/2026), avec trois gestes discrets sous le conseil :
@@ -60,7 +61,7 @@ export default function CarteAccordSaison({
     detail && colorimetrie ? (colorimetrie.harmonie.has(detail) ? "Une couleur de ta palette." : colorimetrie.loinDuVisage.has(detail) ? "À doser près du visage." : null) : null;
 
   return (
-    <div className="mt-[12px] bg-card border border-border rounded-carte p-4">
+    <Card className="mt-[12px] p-4">
       <div className="t-label text-terracotta">Accord de saison</div>
       <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{conseil.texte}</div>
 
@@ -141,6 +142,6 @@ export default function CarteAccordSaison({
           <div className="mt-[16px] text-[12px] text-muted leading-[1.5]">Aucune pièce de cette couleur dans ton dressing pour l&apos;instant.</div>
         )}
       </BottomSheet>
-    </div>
+    </Card>
   );
 }

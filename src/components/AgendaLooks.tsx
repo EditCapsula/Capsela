@@ -16,6 +16,7 @@ import { jourLocal } from "@/lib/outfitFeedback";
 import { villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import type { DateContext, Item, WorkMode } from "@/lib/types";
 import type { Planification, ValiseGardee } from "@/lib/valises";
+import Card from "@/components/Card";
 
 /*
  * « MES LOOKS À VENIR » — la page « Mes planifications » de Planifier, refondue
@@ -314,7 +315,7 @@ function ProchainLook({
         {echeance && <div className="t-label text-terracotta">{echeance}</div>}
       </div>
 
-      <div className="mt-[12px] bg-card border border-border rounded-hero p-[10px]">
+      <Card rayon="hero" className="mt-[12px] p-[10px]">
         {/* L'OCCASION ET LA DATE AU-DESSUS DE L'IMAGE : le brief veut qu'on
             sache en trois secondes quel look, pour quoi, quand. Dessous, au
             premier écran d'un téléphone, elles tombaient sous le pli (mesuré
@@ -384,7 +385,7 @@ function ProchainLook({
             Voir le look&nbsp;<span aria-hidden="true">→</span>
           </button>
         </div>
-      </div>
+      </Card>
     </section>
   );
 }

@@ -6,9 +6,7 @@ import { markSignupIntent, useAuth } from "@/lib/auth";
 import { messageAge, verifierAge } from "@/lib/ageMinimum";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
-
-const INPUT_CLS =
-  "capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
+import Input from "@/components/Input";
 
 export default function AuthScreen() {
   const { state, actions } = useCapsela();
@@ -79,22 +77,19 @@ export default function AuthScreen() {
       </div>
 
       <div className="flex flex-col gap-[10px]">
-        <input
-          className={INPUT_CLS}
+        <Input
           value={state.authName}
           onChange={(e) => actions.setAuthName(e.target.value)}
           placeholder="Prénom"
         />
-        <input
+        <Input
           type="email"
-          className={INPUT_CLS}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Adresse e-mail"
         />
-        <input
+        <Input
           type="password"
-          className={INPUT_CLS}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Mot de passe"
@@ -112,9 +107,8 @@ export default function AuthScreen() {
             superposeraient sur bureau. `pointer-events-none` laisse le
             toucher atteindre le champ, qui reste un vrai sélecteur de date. */}
         <div className="relative">
-          <input
+          <Input
             type="date"
-            className={INPUT_CLS}
             style={{ colorScheme: "light", color: birthdate ? undefined : "transparent" }}
             value={birthdate}
             onChange={(e) => setBirthdate(e.target.value)}

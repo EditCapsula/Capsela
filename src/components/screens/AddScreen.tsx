@@ -27,6 +27,8 @@ import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
 import type { AccessoireType, BijouType, CategoryKey, OccasionKey, SacType, ShoeType } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
+import Input, { Select } from "@/components/Input";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
 const BOTTOM_SIZED: CategoryKey[] = [...BAS_CATS, "jupe", "combinaison"];
@@ -388,8 +390,7 @@ export default function AddScreen() {
         <div className="mt-6">
           <TitreSection suggere={nomSuggere}>{nomSuggere ? "Suggestion Capsela" : "Nom de la pièce"}</TitreSection>
           {nomEnEdition || !nomVisible ? (
-            <input
-              className="capin w-full bg-card border border-border rounded-champ px-4 py-[13px] text-[15px] text-ink font-sans"
+            <Input
               value={state.addName}
               onChange={(e) => actions.setAddName(e.target.value)}
               onFocus={() => setNomEnEdition(true)}
@@ -436,8 +437,7 @@ export default function AddScreen() {
             Baskets…), alors que « Coupe » désigne déjà dans l'app un autre
             champ — Serré, Ajusté, Ample —, affiché sous ce nom ici comme sur
             la fiche de la pièce. Deux champs du même nom se confondraient. */}
-        <div
-          className="mt-6 bg-card border border-border rounded-tuile grid divide-x divide-border"
+        <Card rayon="tuile" className="mt-6 grid divide-x divide-border"
           style={{ gridTemplateColumns: colonnesAttributs === 3 ? "1.25fr 1.25fr .8fr" : colonnesAttributs === 2 ? "1fr 1fr" : "1fr" }}
         >
           <SelectNu
@@ -465,11 +465,11 @@ export default function AddScreen() {
               placeholder="—"
             />
           )}
-        </div>
+        </Card>
 
         {/* 6. Les caractéristiques : seulement ce qui est connu, et une
             invitation discrète pour le reste. */}
-        <div className="mt-6 bg-card border border-border rounded-tuile px-4 pt-[15px] pb-[14px]">
+        <Card rayon="tuile" className="mt-6 px-4 pt-[15px] pb-[14px]">
           <TitreSection suggere={analysee}>{analysee ? "Caractéristiques détectées" : "Caractéristiques"}</TitreSection>
           <div className="grid grid-cols-3 gap-[8px] text-center">
             <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
@@ -532,7 +532,7 @@ export default function AddScreen() {
           >
             Modifier les caractéristiques →
           </button>
-        </div>
+        </Card>
 
         {/* 7. La saison : une recommandation présélectionnée, jamais un verrou. */}
         <div className="mt-7">
@@ -719,8 +719,7 @@ export default function AddScreen() {
         <div className="t-surtitre text-muted mt-[26px] mb-[11px]">
           Matière <span className="opacity-60 normal-case tracking-normal">(estimation, jamais garantie sur photo)</span>
         </div>
-        <select
-          className="capin w-full bg-card border border-border rounded-champ px-4 py-[14px] text-[14px] text-ink font-sans"
+        <Select
           value={state.addMatiere ?? ""}
           onChange={(e) => actions.setAddMatiere((e.target.value || null) as typeof state.addMatiere)}
         >
@@ -730,7 +729,7 @@ export default function AddScreen() {
               {m}
             </option>
           ))}
-        </select>
+        </Select>
 
         {coupeApplicable && (
           <>

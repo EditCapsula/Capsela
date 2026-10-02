@@ -7,6 +7,7 @@ import { GENERATIONS_GRATUITES_PAR_JOUR } from "@/lib/premium";
 import { useCapsela } from "@/lib/store";
 import { fournisseurVideo, peutProposerVideo } from "@/lib/videoRecompense";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /**
  * QUOTA DES TENUES ET SON GATE — sortis de TenuesScreen le 26/09/2026 pour
@@ -181,23 +182,23 @@ export function useQuotaTenues() {
             {/* Deuxième temps. La feuille reste ouverte : revenir sur une feuille
                 fermée puis rouverte ferait clignoter l'écran. */}
             {tempsVideo === "lecture" && (
-              <div className="mt-3 bg-card border border-border rounded-tuile px-[14px] py-[13px]" aria-live="polite">
+              <Card rayon="tuile" className="mt-3 px-[14px] py-[13px]" aria-live="polite">
                 <div className="text-[13px] font-medium text-ink">Vidéo en cours…</div>
                 <div className="text-[11px] text-muted leading-[1.45] mt-[2px]">
                   Encore quelques secondes avant ta nouvelle tenue.
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Troisième temps, cas d'échec. Dit UNE fois, sans perte — la tenue
                 et le quota sont intacts — et sans nouvel essai automatique. */}
             {tempsVideo === "echec" && (
-              <div className="mt-3 bg-card border border-border rounded-tuile px-[14px] py-[13px]" aria-live="polite">
+              <Card rayon="tuile" className="mt-3 px-[14px] py-[13px]" aria-live="polite">
                 <div className="text-[12px] text-muted-3 leading-[1.45]">
                   La vidéo n&apos;a pas pu se charger. Rien n&apos;est perdu : ta tenue et tes tirages du jour sont
                   intacts.
                 </div>
-              </div>
+              </Card>
             )}
             <Button variante="principal" className="mt-4"
               onClick={() => {

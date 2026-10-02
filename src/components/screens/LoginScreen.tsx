@@ -6,9 +6,7 @@ import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 import { emailPlausible } from "@/lib/motDePasse";
 import Button from "@/components/Button";
-
-const INPUT_CLS =
-  "capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
+import Input from "@/components/Input";
 
 export default function LoginScreen() {
   const { actions } = useCapsela();
@@ -99,10 +97,9 @@ export default function LoginScreen() {
             </div>
             <label className="mt-[26px] flex flex-col gap-[6px]">
               <span className="t-label text-muted">E-mail</span>
-              <input
+              <Input
                 type="email"
                 autoComplete="email"
-                className={INPUT_CLS}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Adresse e-mail"
@@ -157,17 +154,16 @@ export default function LoginScreen() {
       </div>
 
       <div className="flex flex-col gap-3">
-        <input
+        <Input
           type="email"
-          className={INPUT_CLS}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Adresse e-mail"
         />
         <div className="relative">
-          <input
+          <Input
             type={pwVisible ? "text" : "password"}
-            className={INPUT_CLS + " pr-[46px]"}
+            className="pr-[46px]"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mot de passe"

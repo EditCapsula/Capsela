@@ -5,9 +5,7 @@ import { messageAge, verifierAge, AGE_MINIMUM } from "@/lib/ageMinimum";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
-
-const INPUT_CLS =
-  "capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
+import Input from "@/components/Input";
 
 /**
  * « DATE DE NAISSANCE » après la connexion Google (01/10/2026). La création de
@@ -74,9 +72,9 @@ export default function DateNaissanceScreen({
       <div className="t-chapeau text-muted mt-[10px]">
         Pour créer ton compte, indique ta date de naissance. Il faut avoir au moins {AGE_MINIMUM} ans.
       </div>
-      <input
+      <Input
         type="date"
-        className={INPUT_CLS + " mt-7"}
+        className="mt-7"
         style={{ colorScheme: "light" }}
         value={naissance}
         max={new Date().toISOString().slice(0, 10)}

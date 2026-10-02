@@ -7,6 +7,7 @@ import { DOCUMENTS_LEGAUX, estProvisoire } from "@/lib/legal/documents";
 import { CONTENU_LEGAL } from "@/lib/legal/contenu";
 import { lireMarkdown } from "@/lib/legal/markdown";
 import { useCapsela } from "@/lib/store";
+import Card from "@/components/Card";
 
 /**
  * Un texte légal, DANS la fenêtre de l'app (01/10/2026, demandé : « dans la même
@@ -41,9 +42,9 @@ export default function LegalDocOverlay() {
           <BoutonRetour onClick={actions.closeLegalDoc} label="Fermer et revenir à l'écran précédent" />
         </div>
         {estProvisoire(source) && (
-          <div className="mt-5 bg-card border border-border rounded-champ px-4 py-3 text-[12px] text-muted leading-[1.5]">
+          <Card rayon="champ" className="mt-5 px-4 py-3 text-[12px] text-muted leading-[1.5]">
             Version provisoire : certaines informations de l&apos;éditeur ne sont pas encore renseignées.
-          </div>
+          </Card>
         )}
         <div className="mt-4">
           <RenduMarkdown blocs={lireMarkdown(source)} />

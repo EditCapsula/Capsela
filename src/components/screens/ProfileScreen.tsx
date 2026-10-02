@@ -38,6 +38,7 @@ import {
 } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /*
  * MON PROFIL — « qu'est-ce que Capsela doit savoir sur moi pour mieux me
@@ -127,7 +128,7 @@ export default function ProfileScreen() {
 
       {/* IDENTITÉ — « Gérer mon compte » mène au compte, jamais à l'édition du
           profil : ce sont deux espaces différents. */}
-      <div className="bg-card border border-border rounded-carte p-4 mt-5 flex items-center gap-[14px]">
+      <Card className="p-4 mt-5 flex items-center gap-[14px]">
         <div className="w-[52px] h-[52px] rounded-full bg-terracotta flex items-center justify-center flex-shrink-0">
           <span className="font-serif text-[21px] text-cream">{initial}</span>
         </div>
@@ -145,12 +146,12 @@ export default function ProfileScreen() {
             Gérer mon compte ›
           </button>
         </div>
-      </div>
+      </Card>
 
       {/* MON ABONNEMENT (27/09/2026) — l'emplacement de la gestion de l'offre,
           sans prix ni relance : une ligne sobre sous l'identité, qui ouvre
           l'écran Premium existant. */}
-      <div className="bg-card border border-border rounded-carte overflow-hidden mt-3">
+      <Card className="overflow-hidden mt-3">
         <LigneProfil
           icone={I_COURONNE}
           titre="Mon abonnement"
@@ -158,7 +159,7 @@ export default function ProfileScreen() {
           renseigne
           onClick={() => actions.goPremium()}
         />
-      </div>
+      </Card>
 
       {toRevalidate && (
         <button
@@ -171,7 +172,7 @@ export default function ProfileScreen() {
       )}
 
       <Surtitre icone={I_ETINCELLE}>Ton style</Surtitre>
-      <div className="bg-card border border-border rounded-carte overflow-hidden">
+      <Card className="overflow-hidden">
         <LigneProfil
           icone={I_GENRE}
           titre="Genre"
@@ -212,12 +213,12 @@ export default function ProfileScreen() {
           explication="Oriente les couleurs de ta capsule et de tes tenues."
           onClick={() => ouvrirChamp("palette")}
         />
-      </div>
+      </Card>
 
       {/* MES TAILLES — une ligne par taille, toutes ouvrent l'étape « taille »
           du questionnaire (les trois s'y règlent ensemble). */}
       <Surtitre icone={I_METRE}>Mes tailles</Surtitre>
-      <div className="bg-card border border-border rounded-carte overflow-hidden">
+      <Card className="overflow-hidden">
         <LigneInfo
           label="Haut"
           valeur={profile.tailleHaut || "Non renseignée"}
@@ -231,7 +232,7 @@ export default function ProfileScreen() {
           renseigne={Boolean(profile.pointure)}
           onClick={() => ouvrirChamp("tailles")}
         />
-      </div>
+      </Card>
       <div className="text-[12px] text-muted leading-[1.45] mt-[8px] px-1">Pré-remplies quand tu ajoutes une pièce.</div>
 
       {/* COMPLÉTUDE — seulement quand il manque quelque chose (le pourcentage
@@ -282,7 +283,7 @@ export default function ProfileScreen() {
           réglages (géolocalisation, météo de la position, ville) vivent dans
           Préférences Capsela, que la ligne ouvre. */}
       <Surtitre icone={I_GRAPHIQUE}>Ta météo</Surtitre>
-      <div className="bg-card border border-border rounded-carte overflow-hidden">
+      <Card className="overflow-hidden">
         <LigneProfil
           icone={I_REPERE}
           titre={profile.city || "Ville non renseignée"}
@@ -296,12 +297,12 @@ export default function ProfileScreen() {
           renseigne
           onClick={() => actions.goPreferences("localisation")}
         />
-      </div>
+      </Card>
 
       {/* PRÉFÉRENCES CAPSELA — le fonctionnement de l'app, pas l'identité :
           elles ont leur propre écran. */}
       <Surtitre icone={I_GRAPHIQUE}>Préférences Capsela</Surtitre>
-      <div className="bg-card border border-border rounded-carte overflow-hidden">
+      <Card className="overflow-hidden">
         <LigneProfil
           icone={I_REGLAGES}
           titre="Réglages de l'application"
@@ -309,7 +310,7 @@ export default function ProfileScreen() {
           renseigne
           onClick={() => actions.goPreferences()}
         />
-      </div>
+      </Card>
 
       {genreOuvert && <GenderModal current={profile.gender} onSelect={changerGenre} onClose={() => setGenreOuvert(false)} />}
       {aRevalider && (

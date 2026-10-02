@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { DOCUMENTS_LEGAUX, SLUGS_LEGAUX, estProvisoire } from "@/lib/legal/documents";
 import { lireMarkdown } from "@/lib/legal/markdown";
 import { RenduMarkdown } from "@/components/legal/RenduMarkdown";
+import Card from "@/components/Card";
 
 /**
  * Page publique d'un texte légal (01/10/2026) — rendue à la compilation depuis
@@ -38,9 +39,9 @@ export default async function PageLegale({ params }: { params: Promise<{ slug: s
           ← Retour à l&apos;application
         </Link>
         {estProvisoire(source) && (
-          <div className="mt-5 bg-card border border-border rounded-champ px-4 py-3 text-[12px] text-muted leading-[1.5]">
+          <Card rayon="champ" className="mt-5 px-4 py-3 text-[12px] text-muted leading-[1.5]">
             Version provisoire : certaines informations de l&apos;éditeur ne sont pas encore renseignées.
-          </div>
+          </Card>
         )}
         <div className="mt-6">
           <RenduMarkdown blocs={blocs} />

@@ -27,6 +27,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { analyserImage, placementDansCadre, type Analyse } from "@/lib/cadrageImage";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /*
  * ÉCRAN CAPSULE — refonte éditoriale du 25/09/2026.
@@ -509,7 +510,7 @@ export default function CapsuleScreen() {
         </div>
 
         {exploredStyleLabel && (
-          <div className="mt-[14px] bg-card border border-border rounded-bloc px-4 py-[14px]">
+          <Card rayon="bloc" className="mt-[14px] px-4 py-[14px]">
             <div className="flex items-start gap-[11px]">
               <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
               <div className="flex-1 min-w-0">
@@ -531,7 +532,7 @@ export default function CapsuleScreen() {
             >
               Voir ma tenue
             </Button>
-          </div>
+          </Card>
         )}
 
         <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-[18px]">
@@ -561,7 +562,7 @@ export default function CapsuleScreen() {
             écran — à 390 px, 20 px de moins, pris en haut et en bas, où les
             visuels n'ont que du décor (branchages, ciel, rebord de pierre).
             Dimensions déclarées pour que rien ne saute au chargement. */}
-        <div className="mt-[16px] rounded-carte overflow-hidden border border-border bg-card" style={{ aspectRatio: "2/1" }}>
+        <Card className="mt-[16px] overflow-hidden" style={{ aspectRatio: "2/1" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             key={capsuleSeason}
@@ -577,7 +578,7 @@ export default function CapsuleScreen() {
             }}
             className="w-full h-full object-cover block"
           />
-        </div>
+        </Card>
 
         {/* Introduction : une phrase courte, vraie de la capsule affichée
             (introCapsule). Filet terracotta plutôt qu'un encadré, pour

@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /**
  * « Demander un avis » — mise en page de la maquette du 23/09/2026.
@@ -430,7 +431,7 @@ export default function OpinionShareScreen() {
             style={{ fontFamily: "inherit", border: "1px solid var(--color-terracotta-deep)" }}
           />
         ) : (
-          <div className="bg-card border border-border rounded-carte p-4">
+          <Card className="p-4">
             {modifie ? (
               // Une fois réécrit, le message n'a plus de structure connue : le
               // recomposer en titre/puces/question inventerait une forme que
@@ -473,7 +474,7 @@ export default function OpinionShareScreen() {
                 <div className="text-[11px] text-muted italic mt-[12px]">{parties.signature}</div>
               </>
             )}
-          </div>
+          </Card>
         )}
 
         {modifie && (
