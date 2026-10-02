@@ -13,6 +13,7 @@ import { daysSinceWorn, wearCounts } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 /**
  * DÉTAIL D'UNE IDÉE DE LOOK (27/09/2026, maquette page 4) — ouvert depuis une
@@ -97,7 +98,7 @@ export default function IdeeLookScreen() {
       {insight && (
         <>
           <h1 className="t-titre-section text-ink mt-[6px]">{insight.title}</h1>
-          <p className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{insight.sentence}</p>
+          <p className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{insight.sentence}</p>
         </>
       )}
 
@@ -128,7 +129,7 @@ export default function IdeeLookScreen() {
                 className="w-[52px] h-[62px] rounded-[10px] overflow-hidden flex-shrink-0"
                 style={
                   img.url
-                    ? { background: "#F3EDE1", padding: img.kind === "photo" ? 0 : 4 }
+                    ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 4 }
                     : { background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
                 }
               >
@@ -173,13 +174,12 @@ export default function IdeeLookScreen() {
         )}
       </div>
 
-      <button
+      <Button variante="principal" className="mt-[12px]"
         onClick={() => actions.viewItemOutfit(actif.ids, actif.occasion)}
-        className="mt-[12px] w-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] t-bouton cursor-pointer"
       >
         Porter ce look
-      </button>
-      <button
+      </Button>
+      <Button variante="secondaire" className="mt-[10px]"
         onClick={() => {
           if (enregistre || demande) return;
           setDemandeCle(cle);
@@ -187,10 +187,9 @@ export default function IdeeLookScreen() {
         }}
         disabled={enregistre || demande}
         aria-pressed={enregistre}
-        className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[14px] t-bouton cursor-pointer disabled:cursor-default"
       >
         {enregistre ? "✓ Enregistré dans mes looks" : demande ? "Enregistrement…" : "Enregistrer dans mes looks"}
-      </button>
+      </Button>
 
       {autres.length > 0 && (
         <>

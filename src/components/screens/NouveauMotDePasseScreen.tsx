@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { LONGUEUR_MIN_MOT_DE_PASSE, validerNouveauMotDePasse } from "@/lib/motDePasse";
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 const INPUT_CLS =
   "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
@@ -57,12 +58,11 @@ export default function NouveauMotDePasseScreen() {
           Il a expiré ou a déjà servi. Demande un nouveau lien depuis l&apos;écran de connexion, avec « Mot de passe
           oublié ? ».
         </div>
-        <button
+        <Button variante="principal" pleine={false} className="mt-7"
           onClick={allerALaConnexion}
-          className="mt-7 text-center rounded-full py-4 t-bouton cursor-pointer text-cream bg-terracotta-deep active:bg-terracotta-hover"
         >
           Retour à la connexion
-        </button>
+        </Button>
       </div>
     );
   }
@@ -74,12 +74,11 @@ export default function NouveauMotDePasseScreen() {
           Ton mot de passe a été <span className="italic text-terracotta">mis à jour</span>
         </div>
         <div className="t-chapeau text-muted mt-[10px]">Tu peux maintenant te connecter avec ton nouveau mot de passe.</div>
-        <button
+        <Button variante="principal" pleine={false} className="mt-7"
           onClick={allerALaConnexion}
-          className="mt-7 text-center rounded-full py-4 t-bouton cursor-pointer text-cream bg-terracotta-deep active:bg-terracotta-hover"
         >
           Se connecter
-        </button>
+        </Button>
       </div>
     );
   }
@@ -127,13 +126,12 @@ export default function NouveauMotDePasseScreen() {
             {erreur}
           </div>
         )}
-        <button
+        <Button variante="principal" pleine={false} className="mt-2"
           type="submit"
           disabled={envoi}
-          className="mt-2 text-center rounded-full py-4 t-bouton cursor-pointer text-cream bg-terracotta-deep active:bg-terracotta-hover disabled:opacity-60"
         >
           {envoi ? "Un instant…" : "Enregistrer mon nouveau mot de passe"}
-        </button>
+        </Button>
       </form>
     </div>
   );

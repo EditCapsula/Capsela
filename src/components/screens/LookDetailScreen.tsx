@@ -7,6 +7,7 @@ import { isWishlistLook } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 export default function LookDetailScreen() {
   const { state, actions, vestiairePool } = useCapsela();
@@ -61,7 +62,7 @@ export default function LookDetailScreen() {
                   className="w-[58px] h-[70px] rounded-lg overflow-hidden"
                   style={
                     img.url
-                      ? { background: "#F3EDE1", filter: suggested ? "grayscale(55%) opacity(.8)" : undefined }
+                      ? { background: "var(--color-photo-bg)", filter: suggested ? "grayscale(55%) opacity(.8)" : undefined }
                       : { background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)", filter: suggested ? "grayscale(55%) opacity(.8)" : undefined }
                   }
                 >
@@ -91,15 +92,14 @@ export default function LookDetailScreen() {
         })}
       </div>
 
-      <button
+      <Button variante="principal" className="mt-7"
         onClick={() => actions.wearLookToday(look.id)}
-        className="mt-7 w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
       >
         Porter aujourd&apos;hui
-      </button>
+      </Button>
       <button
         onClick={actions.deleteActiveLook}
-        className="mt-[10px] w-full text-center border border-border-soft text-rust rounded-full py-[13px] text-[12px] cursor-pointer"
+        className="mt-[10px] w-full text-center border border-border text-rust rounded-full py-[13px] text-[12px] cursor-pointer"
       >
         Supprimer ce look
       </button>

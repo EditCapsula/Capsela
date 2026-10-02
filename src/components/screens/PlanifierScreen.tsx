@@ -32,6 +32,7 @@ import { useCapsela } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 /**
  * Planifier une tenue — maquette du 23/09/2026, LOT 1.
@@ -264,7 +265,7 @@ function LigneOption({
       onClick={onClick}
       disabled={disabled}
       className={
-        "w-full flex items-center justify-between gap-3 text-left text-[13px] border-b border-[#EFE7DA] last:border-b-0 cursor-pointer disabled:cursor-default " +
+        "w-full flex items-center justify-between gap-3 text-left text-[13px] border-b border-divider last:border-b-0 cursor-pointer disabled:cursor-default " +
         (danger ? "text-terracotta" : "text-ink")
       }
       style={{ minHeight: 52 }}
@@ -1346,7 +1347,7 @@ export default function PlanifierScreen() {
                          de la hauteur — c'est du contenu, pas du rembourrage. */
                       className={
                         "border-b last:border-b-0 " +
-                        (actif ? "rounded-[14px] bg-warm-bg -mx-3 px-3 border-transparent" : "border-[#EFE7DA]")
+                        (actif ? "rounded-[14px] bg-warm-bg -mx-3 px-3 border-transparent" : "border-divider")
                       }
                     >
                       <button
@@ -1559,7 +1560,7 @@ export default function PlanifierScreen() {
                           setLieu(libelleVille(v));
                           setSuggestions([]);
                         }}
-                        className="flex items-center gap-[10px] text-left px-[14px] cursor-pointer border-b border-[#EFE7DA] last:border-b-0"
+                        className="flex items-center gap-[10px] text-left px-[14px] cursor-pointer border-b border-divider last:border-b-0"
                         style={{ minHeight: 46 }}
                       >
                         <span aria-hidden="true" className="flex-shrink-0 text-muted">
@@ -1798,7 +1799,7 @@ export default function PlanifierScreen() {
                 <div className="pt-[16px]">
                   <span
                     className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
-                    style={{ fontSize: 9.5, letterSpacing: ".08em", background: "rgba(243,238,229,.22)", color: "#FBF3EA", borderRadius: 100, padding: "8px 14px" }}
+                    style={{ fontSize: 9.5, letterSpacing: ".08em", background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
                   >
                     <GlypheOccasion occasion={t.occasion} taille={13} />
                     {occLongDe(t.occasion)}
@@ -1872,7 +1873,7 @@ export default function PlanifierScreen() {
                   c'est-à-dire rouvrir le parcours pré-rempli (repartirDuPlan). */}
               <div className="mt-[22px] flex flex-col gap-[10px]">
                 {pieces.length > 0 && (
-                  <button
+                  <Button variante="principal"
                     onClick={() =>
                       actions.openOpinionShare({
                         pieceIds: t.pieceIds,
@@ -1883,19 +1884,15 @@ export default function PlanifierScreen() {
                         plan: t,
                       })
                     }
-                    className="w-full flex items-center justify-center gap-[8px] rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
-                    style={{ minHeight: 52 }}
                   >
                     <span aria-hidden="true">✦</span> Demander l&apos;avis d&apos;un proche
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button variante="contour"
                   onClick={() => repartirDuPlan(t, "modifier")}
-                  className="w-full flex items-center justify-center gap-[8px] rounded-full border border-terracotta text-terracotta t-bouton cursor-pointer"
-                  style={{ minHeight: 50 }}
                 >
                   <span aria-hidden="true">♡</span> Modifier ce look
-                </button>
+                </Button>
               </div>
 
               {/* AUTRES OPTIONS — uniquement des actions qui existent :
@@ -1978,7 +1975,7 @@ export default function PlanifierScreen() {
           </div>
         )}
         {vue === "etape" && (
-          <button
+          <Button
             onClick={() => {
               if (!etapeValide || attend) return;
               if (etape < 3) {
@@ -2006,26 +2003,15 @@ export default function PlanifierScreen() {
                 });
             }}
             disabled={!etapeValide || attend}
-            className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
-            style={{
-              minHeight: 52,
-              background: etapeValide && !attend ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)",
-            }}
           >
             {attend ? "Un instant…" : etape === 3 ? "Voir ma tenue" : "Suivant"}
-          </button>
+          </Button>
         )}
         {/* « + PLANIFIER UN LOOK » (30/09/2026) : la barre d'action pleine
             largeur de tous les écrans, pas une pastille flottante qui
             n'existait nulle part ailleurs. */}
         {vue === "liste" && (
-          <button
-            onClick={recommencer}
-            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
-            style={{ minHeight: 52 }}
-          >
-            + Planifier un look
-          </button>
+          <Button onClick={recommencer}>+ Planifier un look</Button>
         )}
         {vue === "resultat" && (
           <>
@@ -2033,17 +2019,12 @@ export default function PlanifierScreen() {
                 est désactivée quand il n'y a pas de tenue à garder — un état
                 vide ne se planifie pas — et pendant l'écriture, pour qu'un
                 double tap ne parte pas deux fois. */}
-            <button
+            <Button
               onClick={garder}
               disabled={enregistrement || sansTenue}
-              className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
-              style={{
-                minHeight: 52,
-                background: enregistrement || sansTenue ? "var(--color-cream-dark-soft)" : "var(--color-terracotta-deep)",
-              }}
             >
               {enregistrement ? "Un instant…" : "Garder cette tenue"}
-            </button>
+            </Button>
             {/* MODIFIER À GAUCHE, PRINCIPAL À DROITE (recette 24/09/2026).
                 « Modifier » seul laissait croire qu'on retouchait la tenue ;
                 on retouche les réponses qui l'ont produite, d'où « cet
@@ -2101,7 +2082,7 @@ export default function PlanifierScreen() {
               setMenuPlan(null);
               if (t) { setPlanOuvert(t); setVue("detail"); }
             }}
-            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
+            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-divider"
             style={{ minHeight: 52 }}
           >
             Voir le look
@@ -2113,7 +2094,7 @@ export default function PlanifierScreen() {
               // Même geste que « Modifier cette tenue » du détail (repartirDuPlan).
               if (t) repartirDuPlan(t, "modifier");
             }}
-            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
+            className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-divider"
             style={{ minHeight: 52 }}
           >
             Modifier ce look
@@ -2144,7 +2125,7 @@ export default function PlanifierScreen() {
           <div className="text-[13px] text-muted-3 leading-[1.5]">
             Ce look sera retiré de ton agenda. Tes pièces, elles, restent dans ton dressing.
           </div>
-          <button
+          <Button variante="principal" className="mt-4"
             onClick={() => {
               const t = aSupprimer;
               setASupprimer(null);
@@ -2152,11 +2133,9 @@ export default function PlanifierScreen() {
               if (planOuvert?.id === t.id) { setPlanOuvert(null); setVue("liste"); }
               retirer(t.id);
             }}
-            className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer mt-4"
-            style={{ minHeight: 52 }}
           >
             Supprimer
-          </button>
+          </Button>
           <button
             onClick={() => setASupprimer(null)}
             className="w-full text-[12px] text-muted-3 cursor-pointer mt-1"

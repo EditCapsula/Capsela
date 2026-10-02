@@ -11,6 +11,7 @@ import { PhotoHeros } from "@/components/screens/AvisStylisteScreen";
 import { premiumRequis } from "@/lib/autorisations";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 /*
  * AVIS DE STYLISTE ENREGISTRÉ — rouvert depuis le Journal (arbitrages du
@@ -96,8 +97,9 @@ export default function AvisEnregistreScreen() {
         }
       />
 
-      {/* Titre d'écran en deux temps et date de l'avis, comme la maquette du 30/09/2026. */}
-      <div className="mt-[10px] flex items-start justify-between gap-3">
+      {/* Surtitre, titre en deux temps et chapeau (la date de l'avis) : le même en-tête que les autres écrans (02/10/2026). */}
+      <div className="t-surtitre text-muted mt-[18px]">Journal</div>
+      <div className="mt-[6px] flex items-start justify-between gap-3">
         <div className="t-titre-ecran text-ink">
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>
@@ -107,7 +109,7 @@ export default function AvisEnregistreScreen() {
           </span>
         )}
       </div>
-      <div className="text-[13px] text-muted-3 mt-[6px]">{formatDate(avis.creeLe)}</div>
+      <div className="t-chapeau text-muted-3 mt-[8px]">{formatDate(avis.creeLe)}</div>
 
       {/* LA PHOTO, élément dominant du début de page : pleine largeur,
           entière, plafonnée en hauteur, rien par-dessus — et agrandissable
@@ -157,7 +159,7 @@ export default function AvisEnregistreScreen() {
                 setMenu(false);
                 document.getElementById("avis-pieces-reconnues")?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
-              className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-[#EFE7DA]"
+              className="text-left px-1 py-[14px] text-[13px] text-ink cursor-pointer border-b border-divider"
               style={{ minHeight: 52 }}
             >
               {TEXTES.modifierPieces}
@@ -184,14 +186,13 @@ export default function AvisEnregistreScreen() {
             {TEXTES.echecSuppression}
           </div>
         )}
-        <button
+        <Button variante="destructif" className="mt-[22px]"
           type="button"
           onClick={supprimer}
           disabled={suppression === "en_cours"}
-          className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer disabled:opacity-60"
         >
           {TEXTES.confirmer}
-        </button>
+        </Button>
         <button
           type="button"
           onClick={() => setConfirmation(false)}

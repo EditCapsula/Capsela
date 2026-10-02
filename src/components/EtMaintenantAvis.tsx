@@ -4,6 +4,7 @@ import { useState } from "react";
 import { prioriserActionsAvis, type ActionAvis } from "@/lib/avisStylisteClient";
 import { compositionUtilisable } from "@/lib/reconnaissance";
 import type { Item } from "@/lib/types";
+import Button from "@/components/Button";
 
 /*
  * « ET MAINTENANT ? » — Avis de styliste V2 (26/09/2026). Après l'avis,
@@ -83,7 +84,7 @@ export default function EtMaintenantAvis({
   return (
     <section className="mt-[30px] motion-safe:animate-[capsule-apparition_320ms_ease-out_both]" aria-labelledby="avis-et-maintenant">
       {/* Carte centrée, surtitre dedans sous l'icône de Planifier (maquette du 30/09/2026). */}
-      <div className="bg-card border border-[#EFE7DA] rounded-[22px] px-[18px] py-[20px] text-center">
+      <div className="bg-card border border-divider rounded-[22px] px-[18px] py-[20px] text-center">
         <span aria-hidden="true" className="flex justify-center text-terracotta">
           <svg width="22" height="22" viewBox="0 0 24 24" style={{ display: "block" }}>
             <rect x="4" y="6" width="16" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -129,14 +130,12 @@ export default function EtMaintenantAvis({
                   </button>
                 </div>
               ) : (
-                <button
+                <Button variante="principal"
                   type="button"
                   onClick={() => agir(actions.principale)}
-                  className="w-full rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center t-bouton cursor-pointer"
-                  style={{ minHeight: 52 }}
                 >
                   {LIBELLES[actions.principale].principal}
-                </button>
+                </Button>
               )}
               {actions.secondaires.map((a) => (
                 <button key={a} type="button" onClick={() => agir(a)} className="mt-[4px] w-full text-center t-lien text-terracotta min-h-[44px] cursor-pointer">

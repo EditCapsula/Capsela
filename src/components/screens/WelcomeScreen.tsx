@@ -1,6 +1,7 @@
 "use client";
 
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 export default function WelcomeScreen() {
   const { actions } = useCapsela();
@@ -21,19 +22,18 @@ export default function WelcomeScreen() {
           <br />
           au bon moment
         </div>
-        <div className="text-[13px] text-cream-dark-muted mt-4 leading-[1.55] max-w-[280px]">
+        <div className="text-[13px] text-placeholder mt-4 leading-[1.55] max-w-[280px]">
           Des idées de tenues adaptées à ton style, à la météo et à tes occasions — pensées à partir de
           ta capsule et de ton dressing.
         </div>
       </div>
       <div className="px-7 pb-10 flex flex-col gap-3">
-        <button
+        <Button variante="principal" pleine={false}
           onClick={actions.startOnb}
-          className="bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
         >
           Commencer
-        </button>
-        <button onClick={actions.goLogin} className="text-center py-2 text-[13px] text-cream-dark-muted cursor-pointer">
+        </Button>
+        <button onClick={actions.goLogin} className="text-center py-2 text-[13px] text-placeholder cursor-pointer">
           J&apos;ai déjà un compte · <span className="text-gold">Se connecter</span>
         </button>
       </div>

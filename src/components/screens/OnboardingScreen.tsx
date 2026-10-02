@@ -5,6 +5,7 @@ import { ONBOARDING_SLIDES } from "@/lib/data";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
 import { STYLE_CONFIG, type StyleId } from "@/lib/profile";
+import Button from "@/components/Button";
 
 /**
  * Cards de visuels de style (recette 26/08/2026) — réutilise les visuels
@@ -49,7 +50,7 @@ function MoodboardCard({ id, className }: { id: StyleId; className?: string }) {
   // de fond, jamais une icône d'image cassée.
   const [failed, setFailed] = useState(false);
   return (
-    <div className={"rounded-[14px] overflow-hidden bg-[#E6DCCB] relative " + (className || "")}>
+    <div className={"rounded-[14px] overflow-hidden bg-border relative " + (className || "")}>
       {cfg.asset && !failed && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -252,12 +253,11 @@ export default function OnboardingScreen() {
               />
             ))}
           </div>
-          <button
+          <Button variante="sombre" pleine={false} className="px-[26px]"
             onClick={actions.onbNext}
-            className="bg-ink text-cream rounded-full py-[14px] px-[26px] t-bouton cursor-pointer"
           >
             {cta}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

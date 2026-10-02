@@ -11,6 +11,7 @@ import { buildOpinionMessageParts, formatOpinionMessage } from "@/lib/selectors"
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
+import Button from "@/components/Button";
 
 /**
  * « Demander un avis » — mise en page de la maquette du 23/09/2026.
@@ -188,7 +189,7 @@ function ChipTenue({ children }: { children: React.ReactNode }) {
   return (
     <span
       className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap text-[11px]"
-      style={{ height: 30, padding: "0 12px", background: "rgba(29,26,22,.62)", color: "#FBF3EA" }}
+      style={{ height: 30, padding: "0 12px", background: "rgba(29,26,22,.62)", color: "var(--color-on-terracotta)" }}
     >
       {children}
     </span>
@@ -336,12 +337,11 @@ export default function OpinionShareScreen() {
           <div className="text-[13px] text-muted mt-6 leading-[1.5]">
             Il n&apos;y a pas de tenue à partager pour l&apos;instant.
           </div>
-          <button
+          <Button variante="principal" className="mt-[22px]"
             onClick={actions.closeOpinionShare}
-            className="mt-[22px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
           >
             {retourLibelle}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -575,16 +575,7 @@ export default function OpinionShareScreen() {
           </div>
         )}
         {peutPartager ? (
-          <button
-            onClick={partager}
-            disabled={etat === "partage"}
-            aria-busy={etat === "partage"}
-            className={
-              "w-full flex items-center justify-center gap-[9px] rounded-full t-bouton bg-terracotta text-cream " +
-              (etat === "partage" ? "cursor-not-allowed opacity-60" : "active:bg-terracotta-hover cursor-pointer")
-            }
-            style={{ minHeight: 52 }}
-          >
+          <Button onClick={partager} disabled={etat === "partage"} aria-busy={etat === "partage"} className="gap-[9px]">
             {etat === "partage" ? (
               <span
                 aria-hidden="true"
@@ -593,7 +584,7 @@ export default function OpinionShareScreen() {
                   width: 16,
                   height: 16,
                   border: "2px solid rgba(251,243,234,.4)",
-                  borderTopColor: "#FBF3EA",
+                  borderTopColor: "var(--color-on-terracotta)",
                 }}
               />
             ) : (
@@ -604,7 +595,7 @@ export default function OpinionShareScreen() {
               </svg>
             )}
             <span>{etat === "partage" ? "Préparation…" : "Partager ma tenue"}</span>
-          </button>
+          </Button>
         ) : (
           <div className="text-[12px] text-muted leading-[1.5] py-1">
             Ton navigateur ne propose pas de partage. Copie le message pour l&apos;envoyer toi-même.

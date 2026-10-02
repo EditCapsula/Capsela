@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 import { emailPlausible } from "@/lib/motDePasse";
+import Button from "@/components/Button";
 
 const INPUT_CLS =
   "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
@@ -80,12 +81,11 @@ export default function LoginScreen() {
             <div className="text-[13px] text-muted mt-2 leading-[1.5] max-w-[280px]">
               Si un compte correspond à cette adresse, tu recevras un e-mail pour réinitialiser ton mot de passe.
             </div>
-            <button
+            <Button variante="principal" className="mt-[22px]"
               onClick={fermerOubli}
-              className="mt-[22px] w-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
             >
               Retour à la connexion
-            </button>
+            </Button>
           </div>
         ) : (
           <>
@@ -113,13 +113,12 @@ export default function LoginScreen() {
                 {forgotErreur}
               </div>
             )}
-            <button
+            <Button variante="principal" pleine={false} className="mt-5"
               onClick={envoyerLien}
               disabled={forgotBusy}
-              className="mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream bg-terracotta-deep active:bg-terracotta-hover disabled:opacity-60"
             >
               {forgotBusy ? "Un instant…" : "Recevoir le lien"}
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -192,20 +191,14 @@ export default function LoginScreen() {
       </button>
 
       {auth.error && (
-        <div className="mt-4 bg-[#f4e2da] border border-[#dcb2a0] rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
+        <div className="mt-4 bg-error-bg border border-error-border rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {auth.error}
         </div>
       )}
 
-      <button
-        onClick={submit}
-        className={
-          "mt-5 text-center rounded-full py-4 t-bouton cursor-pointer text-cream " +
-          (busy ? "bg-[#bd8a75]" : "bg-terracotta active:bg-terracotta-hover")
-        }
-      >
+      <Button pleine={false} className="mt-5" onClick={submit} disabled={busy}>
         {busy ? "Un instant…" : "Se connecter"}
-      </button>
+      </Button>
 
       <div className="flex-1" />
       <div className="text-center pt-4 pb-[6px] text-[13px] text-muted">

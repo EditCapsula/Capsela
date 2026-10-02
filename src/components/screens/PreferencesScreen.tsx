@@ -7,6 +7,7 @@ import { FeuilleVille, I_CALENDRIER, I_CLOCHE, I_GRAPHIQUE, I_REPERE, Surtitre }
 import { useAuth } from "@/lib/auth";
 import { DEFAULT_PREFS, WORK_DAYS, type ProfilePrefs } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
+import Button from "@/components/Button";
 
 /*
  * PRÉFÉRENCES CAPSELA (architecture du profil, 25/09/2026) : « comment je
@@ -214,15 +215,14 @@ export default function PreferencesScreen() {
           Notifications, météo, unités, jours travaillés et congés reviennent à leurs réglages d&apos;origine. Ton profil,
           ton dressing et tes looks ne changent pas.
         </div>
-        <button
+        <Button variante="sombre" className="mt-[22px]"
           onClick={() => {
             setConfirmerReinit(false);
             saveProfile({ ...profile, prefs: DEFAULT_PREFS });
           }}
-          className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-ink text-cream cursor-pointer"
         >
           Réinitialiser
-        </button>
+        </Button>
         <button onClick={() => setConfirmerReinit(false)} className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer">
           Annuler
         </button>

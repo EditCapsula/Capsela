@@ -22,6 +22,7 @@ import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
 import Badge from "@/components/Badge";
+import Button, { BoutonDiscret } from "@/components/Button";
 
 /**
  * Emplacement en %, légèrement pivoté — la géométrie des collages éditoriaux.
@@ -111,7 +112,7 @@ function PolaroidPhoto({ photo, slot }: { photo: EditorialPhoto; slot: BoardSlot
         height: slot.h + "%",
         transform: `rotate(${slot.rotate}deg)`,
         zIndex: slot.z,
-        background: "#FBF8F3",
+        background: "var(--color-card)",
         padding: 4,
         paddingBottom: 8,
         borderRadius: 4,
@@ -132,7 +133,7 @@ function PolaroidPhoto({ photo, slot }: { photo: EditorialPhoto; slot: BoardSlot
           style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 2, display: "block" }}
         />
       ) : (
-        <div style={{ width: "100%", height: "100%", borderRadius: 2, background: "#EFE7DA" }} />
+        <div style={{ width: "100%", height: "100%", borderRadius: 2, background: "var(--color-chip-soft-bg)" }} />
       )}
     </div>
   );
@@ -276,7 +277,7 @@ function FilmstripLooks({
             className="flex-none flex flex-col"
             style={{
               width: 108,
-              background: "#FBF8F3",
+              background: "var(--color-card)",
               padding: 5,
               paddingBottom: 7,
               borderRadius: 5,
@@ -305,7 +306,7 @@ function VignetteLook({ piece }: { piece: Item }) {
   const img = resolveItemImage(piece);
   const showImg = Boolean(img.url) && !failed;
   return (
-    <div style={{ borderRadius: 3, overflow: "hidden", background: showImg ? "#F3EDE1" : piece.hex }}>
+    <div style={{ borderRadius: 3, overflow: "hidden", background: showImg ? "var(--color-photo-bg)" : piece.hex }}>
       {showImg && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -699,7 +700,7 @@ export default function HomeScreen() {
                 fontSize: 9.5,
                 letterSpacing: ".08em",
                 background: "rgba(243,238,229,.22)",
-                color: "#FBF3EA",
+                color: "var(--color-on-terracotta)",
                 borderRadius: 100,
                 padding: "8px 14px",
               }}
@@ -716,10 +717,10 @@ export default function HomeScreen() {
         {/* Pendant le chargement, la ligne d'attente tient la place du CTA. */}
         {!hasOutfit && !aucuneTenuePossible && <StatutComposition />}
         {(hasOutfit || aucuneTenuePossible) && (
-          <button
+          <Button
+            variante="claire"
             onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
-            className="mt-[12px] w-full flex items-center justify-center gap-[8px] bg-cream text-ink rounded-full t-bouton cursor-pointer"
-            style={{ minHeight: 50 }}
+            className="mt-[12px]"
           >
             {hasOutfit ? (
               <>
@@ -730,7 +731,7 @@ export default function HomeScreen() {
             ) : (
               "Voir mon dressing"
             )}
-          </button>
+          </Button>
         )}
 
         {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu,
@@ -739,14 +740,14 @@ export default function HomeScreen() {
         {planApplique && hasOutfit && (
           <div className="mt-[10px] text-center">
             {planApplique.alerte && (
-              <div className="text-[12.5px] leading-[1.4] mb-[2px]" style={{ color: "#F0DDCF", textWrap: "pretty" }}>
+              <div className="text-[12.5px] leading-[1.4] mb-[2px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
                 {planApplique.alerte}
               </div>
             )}
             <button
               onClick={actions.voirAutreProposition}
               className="text-[13px] underline underline-offset-[3px] cursor-pointer"
-              style={{ color: "#FBF3EA", minHeight: 44 }}
+              style={{ color: "var(--color-on-terracotta)", minHeight: 44 }}
             >
               Voir une autre proposition
             </button>
@@ -766,33 +767,24 @@ export default function HomeScreen() {
                 onClick={() => actions.setOutfitFeedback(avisDuJour)}
                 aria-label="Revenir sur mon avis"
                 className="font-serif italic text-[13px] text-left cursor-pointer"
-                style={{ color: "#F0DDCF", minHeight: 44 }}
+                style={{ color: "var(--color-on-terracotta-soft)", minHeight: 44 }}
               >
                 {avisDuJour === "adore" ? "Ajoutée à tes looks — on garde cette direction." : "Noté, pas pour toi."}
               </button>
             ) : (
               <>
                 {autreProposee && (
-                  <div className="font-serif italic text-[13px] mb-[6px]" style={{ color: "#F0DDCF" }}>
+                  <div className="font-serif italic text-[13px] mb-[6px]" style={{ color: "var(--color-on-terracotta-soft)" }}>
                     Voici une autre proposition.
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-[8px]">
-                  <button
-                    onClick={() => actions.setOutfitFeedback("adore")}
-                    className="inline-flex items-center justify-center gap-[5px] rounded-full text-[12px] whitespace-nowrap cursor-pointer px-[6px]"
-                    style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
-                  >
+                <div className="grid grid-cols-2 gap-[9px]">
+                  <BoutonDiscret onClick={() => actions.setOutfitFeedback("adore")} className="whitespace-nowrap px-[6px]">
                     <span aria-hidden="true">♡</span> J&apos;adore cette tenue
-                  </button>
-                  <button
-                    onClick={pasPourMoi}
-                    disabled={quota.tirageEnCours}
-                    className="inline-flex items-center justify-center gap-[5px] rounded-full text-[12px] whitespace-nowrap cursor-pointer px-[6px]"
-                    style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
-                  >
+                  </BoutonDiscret>
+                  <BoutonDiscret onClick={pasPourMoi} disabled={quota.tirageEnCours} className="whitespace-nowrap px-[6px]">
                     <span aria-hidden="true">✕</span> Pas pour moi
-                  </button>
+                  </BoutonDiscret>
                 </div>
               </>
             )}

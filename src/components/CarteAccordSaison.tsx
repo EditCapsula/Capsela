@@ -62,7 +62,7 @@ export default function CarteAccordSaison({
   return (
     <div className="mt-[12px] bg-card border border-border rounded-[20px] p-4">
       <div className="t-label text-terracotta">Accord de saison</div>
-      <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{conseil.texte}</div>
+      <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{conseil.texte}</div>
 
       {/* Les couleurs citées : explorables, sans quitter l'écran. */}
       <ul className="flex flex-wrap items-center gap-x-[4px] gap-y-0 mt-[8px] -mx-[6px]">
@@ -114,7 +114,7 @@ export default function CarteAccordSaison({
         {detail && (
           <div className="flex items-center gap-[14px]">
             <span aria-hidden="true" className="w-[56px] h-[56px] rounded-full flex-shrink-0" style={{ background: detail, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.10)" }} />
-            <div className="text-[13px] text-[#3F3B34] leading-[1.5]">
+            <div className="text-[13px] text-ink-soft leading-[1.5]">
               {couleur === conseil.pointe && !conseil.pointePresente ? "La touche qui rendrait cet accord parfait." : "Une des couleurs de cet accord."}
               {rolePalette && <div className="text-[12px] text-muted mt-[2px]">{rolePalette}</div>}
             </div>
@@ -123,7 +123,7 @@ export default function CarteAccordSaison({
         {dansTenue.length > 0 && (
           <div className="mt-[16px]">
             <div className="t-label text-terracotta">Dans cette tenue</div>
-            <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{dansTenue.map((p) => p.name).join(", ")}</div>
+            <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{dansTenue.map((p) => p.name).join(", ")}</div>
           </div>
         )}
         {dansDressing > 0 && couleur && detail ? (

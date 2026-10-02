@@ -27,6 +27,8 @@ export default function LooksScreen() {
   const pool = useMemo(() => [...state.items, ...vestiairePool], [state.items, vestiairePool]);
   const looks = filtrerLooks(state.savedLooks, filtre);
   const nbSuggeres = state.savedLooks.filter(isWishlistLook).length;
+  /** Les looks de la personne : créés par elle ou enregistrés depuis une tenue (les suggestions de Capsela se comptent à part). */
+  const nbGardes = state.savedLooks.length - nbSuggeres;
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
@@ -39,9 +41,18 @@ export default function LooksScreen() {
           + Créer un look
         </button>
       </div>
-      <div className="t-titre-ecran text-ink mt-[18px]">
+      {/* Le même en-tête que les autres écrans : surtitre, titre de 27 px, chapeau (02/10/2026). */}
+      <div className="t-surtitre text-muted mt-[14px]">Dressing</div>
+      <div className="t-titre-ecran text-ink mt-[6px]">
         Mes <span className="italic text-terracotta">looks</span>
       </div>
+      {nbGardes > 0 && (
+        <div className="t-chapeau text-muted-3 mt-[8px]">
+          {nbGardes === 1
+            ? "1 look gardé, créé par toi ou enregistré depuis une tenue."
+            : `${nbGardes} looks gardés, créés par toi ou enregistrés depuis une tenue.`}
+        </div>
+      )}
 
       {state.savedLooks.length === 0 ? (
         <div className="text-[13px] leading-[1.55] mt-3" style={{ color: "var(--color-muted-3)" }}>

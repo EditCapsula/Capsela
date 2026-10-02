@@ -59,6 +59,7 @@ import {
   type Intensite,
   type Profile,
 } from "@/lib/profile";
+import Button from "@/components/Button";
 
 /**
  * Étape Morphologie exclue pour les profils Homme (Tâche 4, arbitrages du
@@ -159,7 +160,7 @@ function PaletteDots({
               className="w-11 h-11 rounded-full flex items-center justify-center"
               style={{
                 background: hex,
-                boxShadow: on ? "0 0 0 2px var(--color-terracotta)" : "inset 0 0 0 1px #E6DCCB",
+                boxShadow: on ? "0 0 0 2px var(--color-terracotta)" : "inset 0 0 0 1px var(--color-border)",
               }}
             >
               {on && (
@@ -556,7 +557,7 @@ export default function ProfileSetupScreen() {
                   "relative text-left rounded-[16px] overflow-hidden border-[1.5px] cursor-pointer flex flex-col " +
                   (on ? "border-terracotta" : "border-border")
                 }
-                style={{ background: on ? "#F6EBE2" : "#FBF8F3" }}
+                style={{ background: on ? "var(--color-selected-bg)" : "var(--color-card)" }}
               >
                 {visuelFemme ? (
                   /* LE FORMAT EXACT DU VISUEL (3:4), et non le 5:4 des
@@ -566,7 +567,7 @@ export default function ProfileSetupScreen() {
                      l'image. Dimensions déclarées : la place est réservée
                      avant le chargement. Aucun élément par-dessus, hormis le
                      contrôle de sélection existant. */
-                  <div className="w-full flex-shrink-0 bg-[#E6DCCB]" style={{ aspectRatio: "3/4" }}>
+                  <div className="w-full flex-shrink-0 bg-border" style={{ aspectRatio: "3/4" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={visuelFemme}
@@ -589,7 +590,7 @@ export default function ProfileSetupScreen() {
                     // Aplat beige toujours en fond : si l'URL Storage est vide, indisponible
                     // ou en échec de chargement, background-image ne dessine simplement rien
                     // par-dessus — jamais une icône d'image cassée (repli déjà natif, pas de JS).
-                    backgroundColor: "#E6DCCB",
+                    backgroundColor: "var(--color-border)",
                     ...(cfg.asset ? { backgroundImage: `url(${cfg.asset})` } : {}),
                     backgroundSize: "cover",
                     backgroundPosition: "center",
@@ -707,16 +708,9 @@ export default function ProfileSetupScreen() {
 
   const continueButton = pied && (
     <>
-      <button
-        onClick={pied.actif ? pied.onClick : undefined}
-        disabled={!pied.actif}
-        className={
-          "mt-[22px] w-full text-center rounded-full py-4 t-bouton " +
-          (pied.actif ? "cursor-pointer bg-terracotta active:bg-terracotta-hover text-cream" : "cursor-not-allowed bg-[#dccfbc] text-[#8a7c68]")
-        }
-      >
+      <Button className="mt-[22px]" onClick={pied.actif ? pied.onClick : undefined} disabled={!pied.actif}>
         {pied.libelle}
-      </button>
+      </Button>
       {pied.lien && (
         <button onClick={pied.lien.onClick} className="w-full text-[13px] text-muted cursor-pointer mt-1" style={{ minHeight: 44 }}>
           {pied.lien.libelle}

@@ -26,6 +26,7 @@ import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { analyserImage, placementDansCadre, type Analyse } from "@/lib/cadrageImage";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
+import Button from "@/components/Button";
 
 /*
  * ÉCRAN CAPSULE — refonte éditoriale du 25/09/2026.
@@ -192,7 +193,7 @@ function Vignette({ item, arrondi = 14, marge = margeVignette(item.cat) }: { ite
       style={{
         aspectRatio: "4/5",
         borderRadius: arrondi,
-        background: image.url ? "#F3EDE1" : item.hex,
+        background: image.url ? "var(--color-photo-bg)" : item.hex,
         boxShadow: image.url ? undefined : "inset 0 0 0 1px rgba(29,26,22,.06)",
       }}
     >
@@ -513,7 +514,7 @@ export default function CapsuleScreen() {
               <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] text-ink leading-[1.4]">Tu explores le style {exploredStyleLabel}</div>
-                <div className="text-[12px] text-[#3F3B34] leading-[1.45] mt-[3px]">
+                <div className="text-[12px] text-ink-soft leading-[1.45] mt-[3px]">
                   Cette capsule permet de composer une tenue pour{" "}
                   {occasionPhraseFor(state.occasion || "all", state.workMode, state.dateContext)}.
                 </div>
@@ -525,12 +526,11 @@ export default function CapsuleScreen() {
                 Revenir à mon style
               </button>
             </div>
-            <button
+            <Button variante="principal" className="mt-[14px]"
               onClick={actions.viewExploredOutfit}
-              className="mt-[14px] w-full text-center rounded-full py-4 t-bouton bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer"
             >
               Voir ma tenue
-            </button>
+            </Button>
           </div>
         )}
 
@@ -693,15 +693,14 @@ export default function CapsuleScreen() {
           background: "linear-gradient(to top, var(--color-cream) 70%, rgba(243,238,229,0))",
         }}
       >
-        <button
+        <Button variante="principal"
           onClick={actions.goTenues}
           // Terracotta profond (polish V2) : crème sur terracotta ne donnait
           // que 3,8:1 de contraste, sous le seuil AA du texte courant ; 4,5:1
           // sur le fond profond, déjà celui des boutons pleins de Planifier.
-          className="pointer-events-auto w-full bg-terracotta-deep active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
         >
           ✦ Découvrir mes tenues
-        </button>
+        </Button>
       </div>
 
       {toast && (
@@ -757,22 +756,21 @@ export default function CapsuleScreen() {
             {/* 1. Seule action dominante : le bouton principal de Capsela,
                 terracotta, comme « Découvrir mes tenues » (le noir rompait la
                 hiérarchie de l'écran). */}
-            <button
+            <Button variante="principal" className="mt-[30px]"
               onClick={() => {
                 setFiche(null);
                 actions.openItemOutfits(pieceFiche.id);
               }}
-              className="mt-[30px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-4 t-bouton cursor-pointer"
             >
               Voir des tenues avec cette pièce
-            </button>
+            </Button>
             {/* 2. Secondaire important : contour, sans fond. */}
             <button
               onClick={() => {
                 setFiche(null);
                 actions.startReplace(pieceFiche, "capsule");
               }}
-              className="mt-[12px] w-full border border-border-soft text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"
+              className="mt-[12px] w-full border border-border text-terracotta text-center rounded-full py-[13px] text-[13px] cursor-pointer"
             >
               Je possède déjà cette pièce
             </button>

@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
 import { GENERATIONS_GRATUITES_PAR_JOUR, LIMITE_DRESSING_GRATUIT } from "@/lib/premium";
 import Badge from "@/components/Badge";
+import Button from "@/components/Button";
 
 /**
  * Capsela Premium — maquette du 24/09/2026.
@@ -315,16 +316,16 @@ export default function PremiumScreen() {
         {/* Ce bouton ne prend pas d'argent, et son libellé ne le laisse pas
             croire. « S'abonner » sur un écran sans caisse est la promesse la
             plus coûteuse qu'on puisse faire ici. */}
-        <button
+        <Button
+          variante="sombre"
+          className="mt-2"
           onClick={() => {
             setNote(true);
             setTimeout(() => setNote(false), 2600);
           }}
-          className="w-full rounded-full mt-2 t-bouton cursor-pointer"
-          style={{ minHeight: 52, background: "var(--color-ink)", color: "var(--color-cream)" }}
         >
           Me prévenir à l&apos;ouverture
-        </button>
+        </Button>
 
         <div className="text-[11px] text-muted leading-[1.45] mt-[10px] text-center" style={{ textWrap: "pretty" }}>
           L&apos;abonnement n&apos;est pas encore ouvert. Rien ne t&apos;est facturé.

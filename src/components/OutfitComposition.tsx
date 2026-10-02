@@ -332,7 +332,7 @@ export function OutfitComposition({
               // (plus recadrée en "cover" depuis le 26/09/2026).
               padding: cfg.pad,
               boxSizing: "border-box",
-              background: sansTuile ? undefined : "#F3EDE1",
+              background: sansTuile ? undefined : "var(--color-photo-bg)",
               // Photo réelle : en fond contenu (jamais détourée, jamais coupée).
               // Visuel produit : rendu par un <img> ci-dessous, pour que le
               // contour du pivot puisse épouser l'image elle-même.

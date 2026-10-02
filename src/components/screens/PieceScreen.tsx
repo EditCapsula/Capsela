@@ -12,6 +12,7 @@ import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
+import Button from "@/components/Button";
 
 const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
 
@@ -219,7 +220,7 @@ export default function PieceScreen() {
         className="w-full rounded-[18px] border border-border overflow-hidden mt-[14px] relative"
         style={
           resolvedImage.kind === "generated"
-            ? { aspectRatio: "4/5", background: "#F3EDE1" }
+            ? { aspectRatio: "4/5", background: "var(--color-photo-bg)" }
             : resolvedImage.url
               ? { aspectRatio: "4/5", backgroundImage: `url(${resolvedImage.url})`, backgroundSize: "cover", backgroundPosition: "center" }
               : { aspectRatio: "4/5", background: active.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
@@ -242,7 +243,7 @@ export default function PieceScreen() {
         <div>
           <button
             onClick={() => setSuggestionInfoOpen((v) => !v)}
-            className="inline-flex items-center gap-[6px] mt-4 t-pastille text-terracotta bg-[#F0E5D6] rounded-full py-1 px-[10px] cursor-pointer"
+            className="inline-flex items-center gap-[6px] mt-4 t-pastille text-terracotta bg-warm-bg rounded-full py-1 px-[10px] cursor-pointer"
           >
             Suggestion
             <span className="w-[13px] h-[13px] rounded-full border border-[#C9966F] text-[9px] normal-case flex items-center justify-center">
@@ -250,7 +251,7 @@ export default function PieceScreen() {
             </span>
           </button>
           {suggestionInfoOpen && (
-            <div className="mt-[9px] bg-[#F0E5D6] rounded-[11px] px-3 py-[11px] text-[11px] text-[#3F3B34] leading-[1.5]">
+            <div className="mt-[9px] bg-warm-bg rounded-[11px] px-3 py-[11px] text-[11px] text-ink-soft leading-[1.5]">
               Cette pièce vient de ta capsule de départ : tu n&apos;as pas encore ajouté de pièce de cette catégorie à
               ton dressing. Ajoute-la si tu l&apos;as déjà, ou remplace-la par une des tiennes.
             </div>
@@ -313,18 +314,17 @@ export default function PieceScreen() {
 
       {suggested ? (
         <>
-          <button
+          <Button variante="principal" className="mt-[18px]"
             onClick={() => actions.startReplace(active)}
-            className="mt-[18px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[15px] t-bouton cursor-pointer"
           >
             J&apos;ai déjà ça
-          </button>
+          </Button>
           {active.affLink && (
             <a
               href={active.affLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-[10px] block w-full text-center border border-border-soft text-terracotta rounded-full py-[13px] text-[12px] cursor-pointer"
+              className="mt-[10px] block w-full text-center border border-border text-terracotta rounded-full py-[13px] text-[12px] cursor-pointer"
             >
               Acheter
             </a>
@@ -332,18 +332,16 @@ export default function PieceScreen() {
         </>
       ) : (
         <>
-          <button
+          <Button variante="sombre" className="mt-[18px]"
             onClick={() => actions.openItemOutfits(active.id, false)}
-            className="mt-[18px] w-full bg-ink text-cream text-center rounded-full py-[15px] t-bouton cursor-pointer"
           >
             Voir des tenues avec cette pièce
-          </button>
-          <button
+          </Button>
+          <Button variante="secondaire" className="mt-[10px]"
             onClick={() => setLookSheetOpen(true)}
-            className="mt-[10px] w-full border border-border-soft text-terracotta text-center rounded-full py-[14px] t-bouton cursor-pointer"
           >
             ♡ Ajouter à un look
-          </button>
+          </Button>
 
           {dormant && (
             <button
@@ -406,15 +404,14 @@ export default function PieceScreen() {
             Cette pièce quittera ton dressing et ne sera plus proposée dans tes tenues. Ton historique reste intact.{" "}
             <span className="text-rust">Cette action est définitive.</span>
           </div>
-          <button
+          <Button variante="destructif" className="mt-[22px]"
             onClick={() => {
               setConfirmRemove(false);
               actions.removeActive();
             }}
-            className="mt-[22px] w-full text-center rounded-full py-[14px] t-bouton bg-rust text-cream cursor-pointer"
           >
             Retirer définitivement
-          </button>
+          </Button>
           <button
             onClick={() => setConfirmRemove(false)}
             className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer"
@@ -449,15 +446,14 @@ export default function PieceScreen() {
               </button>
             ))}
           </div>
-          <button
+          <Button variante="principal" className="mt-[14px]"
             onClick={() => {
               setLookSheetOpen(false);
               actions.goCreateLook(active.id);
             }}
-            className="mt-[14px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] t-bouton cursor-pointer"
           >
             + Créer un nouveau look
-          </button>
+          </Button>
         </BottomSheet>
       )}
     </div>

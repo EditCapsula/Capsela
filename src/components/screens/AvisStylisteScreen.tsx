@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
+import Button from "@/components/Button";
 import { IconeAvis, PastilleIcone, type NomIconeAvis } from "@/components/IconesAvis";
 import EtMaintenantAvis from "@/components/EtMaintenantAvis";
 import PiecesReconnues from "@/components/PiecesReconnues";
 import AppHeader from "@/components/AppHeader";
-import BoutonRetour from "@/components/BoutonRetour";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import ResultatAvis from "@/components/ResultatAvis";
@@ -70,9 +70,6 @@ const TEXTES = {
   fichierInvalide: "Ce fichier ne peut pas être utilisé. Choisis une autre photo.",
 };
 
-const BOUTON_PRINCIPAL =
-  "w-full rounded-full bg-terracotta active:bg-terracotta-hover text-cream text-center t-bouton py-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
-const BOUTON_SECONDAIRE = "w-full rounded-full border border-border-soft text-terracotta text-center text-[13px] py-[14px] cursor-pointer";
 const LIEN = "w-full text-center text-[12px] text-muted py-[10px] cursor-pointer";
 
 function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?: string }) {
@@ -426,9 +423,9 @@ export default function AvisStylisteScreen() {
         <div className="bg-card border border-border rounded-[20px] px-4 py-[16px] text-[13px] text-ink leading-[1.55]" role="alert">
           {TEXTES.fichierInvalide}
         </div>
-        <button type="button" onClick={() => setSources(true)} className={BOUTON_PRINCIPAL + " mt-[16px]"}>
+        <Button className="mt-[16px]" onClick={() => setSources(true)}>
           {TEXTES.changer}
-        </button>
+        </Button>
         {photo && (
           <button type="button" onClick={() => setSelection("aucune")} className={LIEN + " mt-[6px]"}>
             {TEXTES.retour}
@@ -449,21 +446,16 @@ export default function AvisStylisteScreen() {
           {/* Le quota, AU-DESSUS des boutons (02/10/2026) : on le lit avant d'agir. Secondaire : une phrase, jamais en
               couleur seule. Rien tant qu'il est inconnu. */}
           {quota && <IndicateurQuota quota={quota} />}
-          <button type="button" onClick={() => choisir("camera")} disabled={epuise} className={BOUTON_PRINCIPAL}>
+          <Button onClick={() => choisir("camera")} disabled={epuise}>
             {TEXTES.analyserEntree}
-          </button>
-          <button
-            type="button"
-            onClick={() => choisir("galerie")}
-            disabled={epuise}
-            className={BOUTON_SECONDAIRE + " disabled:opacity-50 disabled:cursor-not-allowed"}
-          >
+          </Button>
+          <Button variante="secondaire" onClick={() => choisir("galerie")} disabled={epuise}>
             {TEXTES.galerie}
-          </button>
+          </Button>
           {epuise && (
-            <button type="button" onClick={actions.goHistory} className={BOUTON_SECONDAIRE}>
+            <Button variante="secondaire" onClick={actions.goHistory}>
               {TEXTES.voirJournal}
-            </button>
+            </Button>
           )}
         </div>
       </>
@@ -546,9 +538,9 @@ export default function AvisStylisteScreen() {
               <div className="text-[12px] text-rust text-center leading-[1.45]" role="alert">
                 {TEXTES.enregistrementEchoue}
               </div>
-              <button type="button" onClick={actions.enregistrerAvisStyliste} className={BOUTON_SECONDAIRE + " mt-[10px]"}>
+              <Button variante="secondaire" className="mt-[10px]" onClick={actions.enregistrerAvisStyliste}>
                 {TEXTES.reessayer}
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -577,13 +569,13 @@ export default function AvisStylisteScreen() {
           )}
         </div>
         {reaction.action === "limite" ? null : reaction.action === "reessayer" ? (
-          <button type="button" onClick={actions.lancerAvisStyliste} className={BOUTON_PRINCIPAL + " mt-[16px]"}>
+          <Button className="mt-[16px]" onClick={actions.lancerAvisStyliste}>
             {TEXTES.reessayer}
-          </button>
+          </Button>
         ) : (
-          <button type="button" onClick={() => setSources(true)} className={BOUTON_PRINCIPAL + " mt-[16px]"}>
+          <Button className="mt-[16px]" onClick={() => setSources(true)}>
             {TEXTES.changer}
-          </button>
+          </Button>
         )}
         <button type="button" onClick={actions.revenirAApercuAvis} className={LIEN + " mt-[6px]"}>
           {TEXTES.retour}
@@ -595,12 +587,12 @@ export default function AvisStylisteScreen() {
     contenu = (
       <div className="mt-[24px]">
         <Apercu photo={photo} />
-        <button type="button" onClick={actions.lancerAvisStyliste} className={BOUTON_PRINCIPAL + " mt-[20px]"}>
+        <Button className="mt-[20px]" onClick={actions.lancerAvisStyliste}>
           {TEXTES.analyser}
-        </button>
-        <button type="button" onClick={() => setSources(true)} className={BOUTON_SECONDAIRE + " mt-[10px]"}>
+        </Button>
+        <Button variante="secondaire" className="mt-[10px]" onClick={() => setSources(true)}>
           {TEXTES.changer}
-        </button>
+        </Button>
         <button type="button" onClick={() => actions.definirPhotoAvis(null)} className={LIEN + " mt-[4px]"}>
           {TEXTES.supprimer}
         </button>
@@ -613,15 +605,14 @@ export default function AvisStylisteScreen() {
       {/* EN-TÊTE GLOBAL (V2, 26/09/2026) : le même que sur toutes les pages —
           logo centré, profil à droite — sur l'entrée, l'analyse et le
           résultat. Le retour descend dans le contenu. */}
-      <AppHeader />
-      <div className="flex items-center justify-between gap-3">
-        <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" />
-        {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
-      </div>
-
+      {/* Le retour dans le bandeau, comme sur Compte, Profil, Préférences, Premium, Planifier, Valise (02/10/2026). */}
+      <AppHeader onBack={actions.goHome} backLabel="Revenir à l'accueil" />
       {/* Le même en-tête que les autres écrans : surtitre, titre de 27 px dont le second temps est en italique
           terracotta, chapeau (02/10/2026, signalé : la ligne en serif gras ne ressemblait à aucune autre page). */}
-      <div className="t-surtitre text-muted mt-[8px]">Ton look, vu par Capsela</div>
+      <div className="flex items-center justify-between gap-3 mt-[18px]">
+        <div className="t-surtitre text-muted">Ton look, vu par Capsela</div>
+        {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
+      </div>
       <div className="t-titre-ecran text-ink mt-[6px]">
         Avis de <span className="italic text-terracotta">styliste</span>
       </div>
@@ -642,12 +633,12 @@ export default function AvisStylisteScreen() {
           remplacée — annuler ne fait rien perdre. */}
       <BottomSheet title={TEXTES.changer} open={sources} onClose={() => setSources(false)}>
         <div className="flex flex-col gap-[10px]">
-          <button type="button" onClick={() => choisir("camera")} className={BOUTON_PRINCIPAL}>
+          <Button onClick={() => choisir("camera")}>
             {TEXTES.prendre}
-          </button>
-          <button type="button" onClick={() => choisir("galerie")} className={BOUTON_SECONDAIRE}>
+          </Button>
+          <Button variante="secondaire" onClick={() => choisir("galerie")}>
             {TEXTES.importer}
-          </button>
+          </Button>
         </div>
       </BottomSheet>
 

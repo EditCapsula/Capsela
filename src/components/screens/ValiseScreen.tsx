@@ -55,6 +55,7 @@ import {
 } from "@/lib/valise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
+import Button from "@/components/Button";
 
 /**
  * PRÉPARER SA VALISE (docs/valise.md).
@@ -225,7 +226,7 @@ function Vignette({ it, taille = 46 }: { it: Item; taille?: number }) {
   return (
     <span
       className="flex-shrink-0 rounded-[11px] overflow-hidden"
-      style={{ width: taille, height: taille, ...(img.url ? { background: "#F3EDE1", padding: img.kind === "photo" ? 0 : 3 } : { background: it.hex }) }}
+      style={{ width: taille, height: taille, ...(img.url ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 3 } : { background: it.hex }) }}
     >
       {img.url && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -239,7 +240,7 @@ function CarteInfo({ glyphe, children }: { glyphe: React.ReactNode; children: Re
   return (
     <div className="flex items-start gap-[10px] bg-warm-bg border border-sand-border rounded-[16px] px-[14px] py-[11px]">
       <span className="flex-shrink-0 text-terracotta mt-[1px]">{glyphe}</span>
-      <div className="flex-1 min-w-0 text-[12px] text-[#3F3B34] leading-[1.45]">{children}</div>
+      <div className="flex-1 min-w-0 text-[12px] text-ink-soft leading-[1.45]">{children}</div>
     </div>
   );
 }
@@ -918,14 +919,12 @@ export default function ValiseScreen() {
 
       {questions && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
-          <button
+          <Button
             onClick={() => (etape < 4 ? etapeValide && setEtape(etape + 1) : preparer(false))}
             disabled={!etapeValide}
-            className="w-full rounded-full text-cream t-bouton cursor-pointer disabled:cursor-not-allowed"
-            style={{ minHeight: 52, background: etapeValide ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)" }}
           >
             {etape < 4 ? "Continuer" : "Préparer ma valise"}
-          </button>
+          </Button>
           {etape === 4 && (
             <button onClick={() => preparer(true)} className="text-[12px] text-terracotta cursor-pointer py-[10px]">
               Passer cette étape
@@ -936,9 +935,9 @@ export default function ValiseScreen() {
 
       {bloquee && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] border-t border-border">
-          <button onClick={actions.openAddEtRevenir} className="w-full rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 52 }}>
+          <Button variante="principal" onClick={actions.openAddEtRevenir}>
             Ajouter une pièce
-          </button>
+          </Button>
         </div>
       )}
 
@@ -1090,19 +1089,17 @@ function Resultat({
           Elle disparaît de « Mes planifications ». Tes pièces restent dans ton dressing.
         </div>
         <div className="flex gap-2 mt-5">
-          <button onClick={() => setFeuille(null)} className="flex-1 rounded-full border border-border bg-card text-ink t-bouton cursor-pointer" style={{ minHeight: 48 }}>
+          <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={() => setFeuille(null)}>
             Garder
-          </button>
-          <button
+          </Button>
+          <Button variante="principal" pleine={false} className="flex-1"
             onClick={() => {
               setFeuille(null);
               supprimer();
             }}
-            className="flex-1 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer"
-            style={{ minHeight: 48 }}
           >
             Supprimer
-          </button>
+          </Button>
         </div>
       </BottomSheet>
 
@@ -1180,7 +1177,7 @@ function Resultat({
         <div className="flex gap-[14px] mt-3">
           <div
             className="flex-shrink-0 rounded-[18px] overflow-hidden"
-            style={{ width: "42%", aspectRatio: "4 / 5", ...(img.url ? { background: "#F3EDE1", padding: img.kind === "photo" ? 0 : 8 } : { background: p.hex }) }}
+            style={{ width: "42%", aspectRatio: "4 / 5", ...(img.url ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 8 } : { background: p.hex }) }}
           >
             {img.url && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -1327,18 +1324,18 @@ function Resultat({
           })}
         </div>
         {/* L'action réelle derrière le cœur de la maquette : enregistrer le look dans « Mes looks ». */}
-        <button
+        <Button
+          variante={enregistre ? "secondaire" : "contour"}
+          className="mt-5"
           onClick={() => {
             if (enregistre) return;
             enregistrerLook(l.ids, occ[0] ?? "quotidien");
             setEnregistres((e) => [...e, cle]);
           }}
           disabled={enregistre}
-          className={"w-full mt-5 rounded-full border t-bouton cursor-pointer disabled:cursor-default " + (enregistre ? "border-border text-muted bg-card" : "border-terracotta text-terracotta")}
-          style={{ minHeight: 48 }}
         >
           {enregistre ? "Enregistré dans tes looks" : "Enregistrer dans mes looks"}
-        </button>
+        </Button>
         {feuilles}
       </>
     );
@@ -1430,9 +1427,9 @@ function Resultat({
             {nouvelles > 1 ? `${nouvelles} nouvelles pièces dans ton dressing` : "Une nouvelle pièce dans ton dressing"}
           </div>
           <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Recompose ta valise pour que Capsela en tienne compte.</div>
-          <button onClick={recomposer} className="w-full mt-3 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 46 }}>
+          <Button variante="principal" className="mt-3" onClick={recomposer}>
             Recomposer ma valise
-          </button>
+          </Button>
         </div>
       ) : (
         (occasionsAManque.length > 0 || peuDeLooks) && (
@@ -1576,9 +1573,9 @@ function Resultat({
                   );
                 })}
               </div>
-              <button onClick={() => retirer(aAlleger.map((a) => a.id))} className="w-full mt-3 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 44 }}>
+              <Button variante="principal" className="mt-3" onClick={() => retirer(aAlleger.map((a) => a.id))}>
                 Optimiser
-              </button>
+              </Button>
             </div>
           )}
           {GROUPES_VALISE.map(([titre, cats]) => {
@@ -1652,12 +1649,12 @@ function Pied({ gardeeOu, ajuster, recommencer, periode }: { gardeeOu: "compte" 
     <>
       {/* « Ajuster » dit qu'on retouche la sélection générée ; « Nouvelle valise » repart de zéro. */}
       <div className="flex gap-2 mt-7">
-        <button onClick={ajuster} className="flex-1 rounded-full border border-border bg-card text-ink t-bouton cursor-pointer" style={{ minHeight: 48 }}>
+        <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={ajuster}>
           Ajuster ma valise
-        </button>
-        <button onClick={recommencer} className="flex-1 rounded-full bg-terracotta-deep text-cream t-bouton cursor-pointer" style={{ minHeight: 48 }}>
+        </Button>
+        <Button variante="principal" pleine={false} className="flex-1" onClick={recommencer}>
           Nouvelle valise
-        </button>
+        </Button>
       </div>
       <div className="text-[11px] text-placeholder leading-[1.5] mt-4">
         {periode && <div>{periode}</div>}

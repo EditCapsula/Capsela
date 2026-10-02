@@ -26,6 +26,7 @@ import { useCapsela } from "@/lib/store";
 import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
 import type { AccessoireType, BijouType, CategoryKey, OccasionKey, SacType, ShoeType } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
+import Button from "@/components/Button";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
 const BOTTOM_SIZED: CategoryKey[] = [...BAS_CATS, "jupe", "combinaison"];
@@ -319,7 +320,7 @@ export default function AddScreen() {
           onClick={() => setSourcePhoto(true)}
           aria-label={state.addPhotoUrl ? "Changer la photo" : "Ajouter une photo"}
           className={
-            "mt-[4px] w-full rounded-2xl flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
+            "mt-[4px] w-full rounded-[16px] flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
             (state.addPhotoUrl ? "bg-card" : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
           }
           style={{
@@ -644,17 +645,9 @@ export default function AddScreen() {
         className="flex-shrink-0 px-6 pt-[10px] border-t border-border bg-cream"
         style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom))" }}
       >
-        <button
-          onClick={save}
-          disabled={blocked}
-          className={
-            "w-full text-center rounded-full t-bouton " +
-            (blocked ? "bg-[#dccfbc] text-[#8a7c68] cursor-not-allowed" : "bg-terracotta active:bg-terracotta-hover text-cream cursor-pointer")
-          }
-          style={{ minHeight: 52 }}
-        >
+        <Button onClick={save} disabled={blocked}>
           {!creation ? "Enregistrer les modifications" : "Ajouter au dressing"}
-        </button>
+        </Button>
         {state.addPhotoUploading ? (
           <div className="text-center text-[11px] text-terracotta mt-[8px]">Envoi de la photo en cours…</div>
         ) : shoeTypeMissing ? (
@@ -712,7 +705,7 @@ export default function AddScreen() {
                       style={{
                         background: hex,
                         border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
-                        boxShadow: on ? "0 0 0 3px #F3EEE5 inset" : "none",
+                        boxShadow: on ? "0 0 0 3px var(--color-cream) inset" : "none",
                       }}
                     />
                     <span className={"text-[9px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>
@@ -752,12 +745,11 @@ export default function AddScreen() {
           </>
         )}
 
-        <button
+        <Button variante="principal" className="mt-[26px]"
           onClick={() => setSheet(null)}
-          className="mt-[26px] w-full bg-terracotta active:bg-terracotta-hover text-cream text-center rounded-full py-[14px] t-bouton cursor-pointer"
         >
           Terminé
-        </button>
+        </Button>
       </BottomSheet>
     </div>
   );

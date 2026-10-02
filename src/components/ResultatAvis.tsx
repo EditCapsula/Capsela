@@ -146,7 +146,7 @@ export function Vignette({ item, taille }: { item: Item; taille: number }) {
   return (
     <span
       className="block flex-shrink-0 rounded-[12px] border border-border overflow-hidden"
-      style={{ width: taille, aspectRatio: "4/5", background: image.url ? "#F3EDE1" : item.hex }}
+      style={{ width: taille, aspectRatio: "4/5", background: image.url ? "var(--color-photo-bg)" : item.hex }}
     >
       {image.url && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -214,7 +214,7 @@ function CarteATester({
           type="button"
           onClick={() => onOuvrirPiece(it.id)}
           aria-label={`${num}. ${titre ? `${titre}. ` : ""}${texte} ${it.name}, voir dans mon dressing`}
-          className="w-full flex items-center gap-[12px] bg-card border border-[#EFE7DA] rounded-[20px] pl-[10px] pr-[14px] py-[10px] text-left cursor-pointer active:bg-warm-bg/60"
+          className="w-full flex items-center gap-[12px] bg-card border border-divider rounded-[20px] pl-[10px] pr-[14px] py-[10px] text-left cursor-pointer active:bg-warm-bg/60"
         >
           <Vignette item={it} taille={56} />
           <span className="flex-1 min-w-0">
@@ -231,7 +231,7 @@ function CarteATester({
     );
   }
   return (
-    <li className="bg-card border border-[#EFE7DA] rounded-[20px] px-4 py-[15px]">
+    <li className="bg-card border border-divider rounded-[20px] px-4 py-[15px]">
       <div className="flex items-start gap-[12px] text-[14px] text-ink leading-[1.5]">
         <span aria-hidden="true" className="font-serif italic text-[20px] leading-[1.05] text-terracotta flex-shrink-0 w-[26px]">
           {num}
@@ -274,7 +274,7 @@ export default function ResultatAvis({
   return (
     <>
       {/* LE VERDICT, carte éditoriale : la synthèse de la styliste, en serif. */}
-      <div className={"mt-[22px] bg-card border border-[#EFE7DA] rounded-[22px] px-[18px] py-[18px] " + verdict.className} style={verdict.style}>
+      <div className={"mt-[22px] bg-card border border-divider rounded-[22px] px-[18px] py-[18px] " + verdict.className} style={verdict.style}>
         <div className="t-label text-terracotta">
           <span aria-hidden="true">✦ </span>
           {TITRES.verdict}
