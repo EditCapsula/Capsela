@@ -60,13 +60,21 @@ export function wearCounts(history: HistoryEntry[]): Map<number, number> {
  * port réel. null si la pièce n'apparaît dans aucune entrée d'historique
  * (jamais porté).
  */
-export function daysSinceWorn(history: HistoryEntry[], itemId: number): number | null {
+export function daysSinceWorn(history: HistoryEntry[], itemId: number, now: number = Date.now()): number | null {
   let latestTs: number | null = null;
   for (const h of history) {
     if (h.pieceIds.includes(itemId) && (latestTs == null || h.ts > latestTs)) latestTs = h.ts;
   }
   if (latestTs == null) return null;
-  return Math.max(0, Math.floor((Date.now() - latestTs) / 86400000));
+  // Jours CALENDAIRES (02/10/2026, signalé : « Aujourd'hui » sur une pièce non portée ce jour-là). L'ancien
+  // calcul comptait des tranches de 24 h : une pièce portée hier à 20 h restait « aujourd'hui » jusqu'à 20 h.
+  // On compare les minuits locaux ; round absorbe le changement d'heure (23 h ou 25 h dans la journée).
+  const minuit = (ms: number) => {
+    const d = new Date(ms);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+  return Math.max(0, Math.round((minuit(now) - minuit(latestTs)) / 86400000));
 }
 
 /**
