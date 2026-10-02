@@ -141,7 +141,7 @@ function ExtraitAvis() {
     if (img && img.complete && img.naturalWidth === 0) setPhoto(false);
   }, []);
   return (
-    <section className="mt-[20px] flex gap-[10px] rounded-[20px] bg-warm-bg p-[10px]" aria-label="Extrait d'un avis">
+    <section className="mt-[20px] flex gap-[14px] rounded-[20px] bg-warm-bg px-[16px] py-[14px]" aria-label="Extrait d'un avis">
       {photo && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -155,15 +155,17 @@ function ExtraitAvis() {
           className="w-[34%] max-w-[130px] flex-shrink-0 rounded-[14px] object-cover self-stretch"
         />
       )}
-      <div className="min-w-0 flex-1">
-        <div className="t-label text-muted mb-[6px]">Extrait d&apos;un avis</div>
-        <ul className="flex flex-col gap-[6px]">
+      <div className="min-w-0 flex-1 py-[2px]">
+        <div className="t-label text-muted">Extrait d&apos;un avis</div>
+        {/* Du texte, pas des cartes (test utilisateur, 02/10/2026 : des blocs blancs arrondis avec icône se lisaient
+            comme des boutons). Une ligne par rubrique, séparées par un filet : rien ne ressemble à une action. */}
+        <ul className="mt-[4px]">
           {EXTRAIT.map(([icone, titre, texte]) => (
-            <li key={titre} className="flex items-start gap-[8px] rounded-[12px] bg-card px-[10px] py-[7px]">
-              <span className="text-terracotta pt-[1px]"><IconeAvis nom={icone} taille={16} /></span>
+            <li key={titre} className="flex items-start gap-[9px] py-[9px] border-b border-border last:border-b-0 last:pb-0">
+              <span className="text-terracotta pt-[1px]"><IconeAvis nom={icone} taille={15} /></span>
               <span className="min-w-0">
-                <span className="block text-[11.5px] text-ink font-medium leading-[1.3]">{titre}</span>
-                <span className="block text-[11px] text-muted leading-[1.35]">{texte}</span>
+                <span className="t-label block text-terracotta">{titre}</span>
+                <span className="block font-serif italic text-[13.5px] text-ink leading-[1.4] mt-[3px]">« {texte} »</span>
               </span>
             </li>
           ))}
