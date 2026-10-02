@@ -56,6 +56,7 @@ import {
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import Button from "@/components/Button";
+import EmptyState from "@/components/EmptyState";
 
 /**
  * PRÉPARER SA VALISE (docs/valise.md).
@@ -1135,7 +1136,7 @@ function Resultat({
 
       <BottomSheet title={idRemplacee != null ? `Remplacer ${pieceDe(idRemplacee)?.name ?? "la pièce"}` : "Remplacer"} open={idRemplacee != null} onClose={() => setFeuille(null)}>
         {alts.length === 0 ? (
-          <div className="text-[13px] text-muted leading-[1.5]">Aucune autre pièce de cette famille dans ton dressing.</div>
+          <EmptyState>Aucune autre pièce de cette famille dans ton dressing.</EmptyState>
         ) : (
           <div className="flex flex-col gap-2">
             <div className="text-[12px] text-muted leading-[1.45] mb-1">Avec chacune, la valise compterait ce nombre de looks (aujourd&apos;hui : {looks.length}).</div>
@@ -1352,15 +1353,9 @@ function Resultat({
           {valise.destination} · {libellePeriode(valise.depart, valise.retour)}
         </Surtitre>
         <TitreEtape a="Ta" b="valise" />
-        <div className="mt-4 bg-card border border-border rounded-carte p-[16px]">
-          <div className="t-titre-carte text-ink">Ton dressing est vide</div>
-          <div className="text-[13px] text-muted-3 leading-[1.5] mt-2">
-            La valise se prépare avec les pièces que tu possèdes. Ajoute-les à ton dressing, et Capsela choisira celles à emporter.
-          </div>
-          <button onClick={ajouterAuDressing} className="mt-3 text-[12px] text-terracotta cursor-pointer">
-            Ajouter une pièce →
-          </button>
-        </div>
+        <EmptyState forme="carte" className="mt-4" titre="Ton dressing est vide" action={{ libelle: "Ajouter une pièce →", onClick: ajouterAuDressing }}>
+          La valise se prépare avec les pièces que tu possèdes. Ajoute-les à ton dressing, et Capsela choisira celles à emporter.
+        </EmptyState>
         <Pied gardeeOu={gardeeOu} ajuster={modifier} recommencer={recommencer} />
       </>
     );
@@ -1492,7 +1487,7 @@ function Resultat({
       {/* ── LOOKS ── une grande carte éditoriale à la fois, ← 1 / 8 → */}
       {onglet === "looks" &&
         (!l ? (
-          <div className="text-[13px] text-muted leading-[1.5] mt-4">Aucun look complet avec les pièces de cette valise.</div>
+          <EmptyState className="mt-4">Aucun look complet avec les pièces de cette valise.</EmptyState>
         ) : (
           <div className="mt-4">
             <button

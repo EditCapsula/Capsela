@@ -8,6 +8,7 @@ import { isWishlistLook, lookWornCount } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 import { filtrerLooks, type FiltreLooks } from "@/lib/looksFiltre";
+import EmptyState from "@/components/EmptyState";
 
 /**
  * « MES LOOKS » — tous les looks (refonte Dressing, 25/09/2026 ; arbitrage
@@ -55,9 +56,7 @@ export default function LooksScreen() {
       )}
 
       {state.savedLooks.length === 0 ? (
-        <div className="text-[13px] leading-[1.55] mt-3" style={{ color: "var(--color-muted-3)" }}>
-          Tes looks enregistrés et créés apparaîtront ici.
-        </div>
+        <EmptyState className="mt-3">Tes looks enregistrés et créés apparaîtront ici.</EmptyState>
       ) : (
         <>
           <div className="mt-5">
@@ -84,7 +83,7 @@ export default function LooksScreen() {
           )}
 
           {looks.length === 0 ? (
-            <div className="text-[12px] text-muted leading-[1.5] mt-5">Aucun look dans cette catégorie pour l&apos;instant.</div>
+            <EmptyState className="mt-5">Aucun look dans cette catégorie pour l&apos;instant.</EmptyState>
           ) : (
             <div className="grid grid-cols-2 gap-x-[14px] gap-y-[24px] mt-5">
               {looks.map((look) => {

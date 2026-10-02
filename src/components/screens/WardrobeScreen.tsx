@@ -25,6 +25,7 @@ import { composeWardrobePool, inactivityInfo, isWishlistLook, lookWornCount, nev
 import { useCapsela } from "@/lib/store";
 import type { Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
+import EmptyState from "@/components/EmptyState";
 
 /**
  * DRESSING — refonte éditoriale du 25/09/2026 (brief « Refonte UX/UI de la
@@ -487,7 +488,7 @@ export default function WardrobeScreen() {
             <SegmentedControl segments={ONGLETS_LOOKS} actif={filtreLooks} onChange={setFiltreLooks} ariaLabel="Filtrer mes looks" />
           </div>
           {looks.length === 0 ? (
-            <div className="text-[12px] text-muted leading-[1.5] mt-4">Aucun look dans cette catégorie pour l&apos;instant.</div>
+            <EmptyState className="mt-4">Aucun look dans cette catégorie pour l&apos;instant.</EmptyState>
           ) : (
             /* ~1,5 carte visible : (largeur + 10 px) / 1,5 — la moitié de la
                suivante suggère le geste. Seul ce conteneur défile en largeur. */
