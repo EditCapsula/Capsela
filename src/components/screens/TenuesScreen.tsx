@@ -1105,6 +1105,7 @@ export default function TenuesScreen() {
           {!noCompleteOutfit && conseilCouleurDuJour && (
             <CarteAccordSaison
               conseil={conseilCouleurDuJour}
+              onVoirDansDressing={(nom, hex) => actions.goWardrobePieces({ libelle: `Couleur : ${nom.toLowerCase()}`, teinte: hex, retour: "tenue" })}
               retour={retoursAccords[conseilCouleurDuJour.cle]}
               onRetour={(r) => donnerRetourAccord(conseilCouleurDuJour.cle, r)}
               piecesTenue={outfitPieces}

@@ -251,3 +251,10 @@ est enregistré sans effet : aucune personnalisation ne l'exploite encore.
 Depuis la migration `0047_accord_retours.sql` (exécutée à la main), les retours sont aussi rattachés au compte (table `accord_retours`, une ligne
 par accord et par personne) : ils suivent la personne d'un appareil à l'autre. Avant la migration, l'application fonctionne comme avant :
 l'appareil fait foi et l'envoi vers la table échoue sans bruit. À la lecture, le compte l'emporte, ce que seul l'appareil connaît est renvoyé.
+
+### Lien avec le dressing (02/10/2026)
+
+La feuille d'une couleur d'accord propose « Voir les N pièces dans mon dressing » quand le dressing en contient : l'écran « Mes pièces »
+s'ouvre filtré sur la teinte (`FiltrePieces.teinte`, lue par `teinteDe` : le nom et le code enregistrés par la détection de couleur
+suffisent, les pièces n'ont pas à changer). La flèche de retour ramène à la tenue (`retour: "tenue"`). Une pièce sans couleur renseignée
+n'est reconnue sous aucune teinte.

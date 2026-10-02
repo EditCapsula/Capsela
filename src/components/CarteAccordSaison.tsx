@@ -25,6 +25,7 @@ export default function CarteAccordSaison({
   piecesTenue,
   dressing,
   colorimetrie,
+  onVoirDansDressing,
 }: {
   conseil: ConseilCouleur;
   retour: RetourAccord | undefined;
@@ -33,6 +34,8 @@ export default function CarteAccordSaison({
   piecesTenue: readonly Item[];
   dressing: readonly Item[];
   colorimetrie: ColorimetrieMoteur | null;
+  /** Ouvre « Mes pièces » filtré sur cette teinte (nom PAL_COULEURS, et son hex). */
+  onVoirDansDressing: (nom: string, hex: string) => void;
 }) {
   const [couleur, setCouleur] = useState<string | null>(null);
   // « Compris… » reste quelques secondes, puis laisse place à une mention discrète.
@@ -123,9 +126,20 @@ export default function CarteAccordSaison({
             <div className="text-[13px] text-[#3F3B34] leading-[1.5] mt-[6px]">{dansTenue.map((p) => p.name).join(", ")}</div>
           </div>
         )}
-        <div className="mt-[16px] text-[12px] text-muted leading-[1.5]">
-          {dansDressing > 0 ? `${dansDressing} ${dansDressing > 1 ? "pièces" : "pièce"} de cette couleur dans ton dressing.` : "Aucune pièce de cette couleur dans ton dressing pour l'instant."}
-        </div>
+        {dansDressing > 0 && couleur && detail ? (
+          <button
+            onClick={() => {
+              setCouleur(null);
+              onVoirDansDressing(couleur, detail);
+            }}
+            className="mt-[16px] w-full rounded-full border border-terracotta text-terracotta text-[12px] cursor-pointer"
+            style={{ minHeight: 44 }}
+          >
+            {`Voir ${dansDressing > 1 ? `les ${dansDressing} pièces` : "la pièce"} dans mon dressing`}
+          </button>
+        ) : (
+          <div className="mt-[16px] text-[12px] text-muted leading-[1.5]">Aucune pièce de cette couleur dans ton dressing pour l&apos;instant.</div>
+        )}
       </BottomSheet>
     </div>
   );

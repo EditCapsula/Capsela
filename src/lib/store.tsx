@@ -95,6 +95,7 @@ import type {
   ShoeType,
   TravelMode,
   WorkMode,
+  FiltrePieces,
 } from "./types";
 
 /** Photo préparée de l'Avis de styliste (cf. photoAvis.ts) — URL locale blob:, jamais envoyée hors analyse. */
@@ -266,7 +267,7 @@ export interface Actions {
   goPlanifier: () => void;
   goNeverWorn: () => void;
   /** `filtre` : carte du vestiaire — n'affiche que les pièces de ses catégories techniques. */
-  goWardrobePieces: (filtre?: { libelle: string; categories: CategoryKey[] }) => void;
+  goWardrobePieces: (filtre?: FiltrePieces) => void;
   goLooks: () => void;
   goProfile: () => void;
   /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
