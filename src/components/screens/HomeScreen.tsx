@@ -22,6 +22,7 @@ import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
 import Badge from "@/components/Badge";
+import Button, { BoutonDiscret } from "@/components/Button";
 
 /**
  * Emplacement en %, légèrement pivoté — la géométrie des collages éditoriaux.
@@ -716,10 +717,10 @@ export default function HomeScreen() {
         {/* Pendant le chargement, la ligne d'attente tient la place du CTA. */}
         {!hasOutfit && !aucuneTenuePossible && <StatutComposition />}
         {(hasOutfit || aucuneTenuePossible) && (
-          <button
+          <Button
+            variante="claire"
             onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
-            className="mt-[12px] w-full flex items-center justify-center gap-[8px] bg-cream text-ink rounded-full t-bouton cursor-pointer"
-            style={{ minHeight: 50 }}
+            className="mt-[12px]"
           >
             {hasOutfit ? (
               <>
@@ -730,7 +731,7 @@ export default function HomeScreen() {
             ) : (
               "Voir mon dressing"
             )}
-          </button>
+          </Button>
         )}
 
         {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu,
@@ -777,22 +778,13 @@ export default function HomeScreen() {
                     Voici une autre proposition.
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-[8px]">
-                  <button
-                    onClick={() => actions.setOutfitFeedback("adore")}
-                    className="inline-flex items-center justify-center gap-[5px] rounded-full text-[12px] whitespace-nowrap cursor-pointer px-[6px]"
-                    style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
-                  >
+                <div className="grid grid-cols-2 gap-[9px]">
+                  <BoutonDiscret onClick={() => actions.setOutfitFeedback("adore")} className="whitespace-nowrap px-[6px]">
                     <span aria-hidden="true">♡</span> J&apos;adore cette tenue
-                  </button>
-                  <button
-                    onClick={pasPourMoi}
-                    disabled={quota.tirageEnCours}
-                    className="inline-flex items-center justify-center gap-[5px] rounded-full text-[12px] whitespace-nowrap cursor-pointer px-[6px]"
-                    style={{ minHeight: 44, background: "rgba(243,238,229,.12)", border: "1px solid rgba(243,238,229,.26)", color: "#F0DDCF" }}
-                  >
+                  </BoutonDiscret>
+                  <BoutonDiscret onClick={pasPourMoi} disabled={quota.tirageEnCours} className="whitespace-nowrap px-[6px]">
                     <span aria-hidden="true">✕</span> Pas pour moi
-                  </button>
+                  </BoutonDiscret>
                 </div>
               </>
             )}

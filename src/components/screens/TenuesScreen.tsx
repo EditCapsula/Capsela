@@ -29,7 +29,7 @@ import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { DateContext, Item, TravelMode, WorkMode } from "@/lib/types";
 import Badge from "@/components/Badge";
-import Button from "@/components/Button";
+import Button, { BoutonDiscret } from "@/components/Button";
 
 /** Icônes des CTA de pièce suggérée (recette 23/08/2026) — trait fin, même style que TabBar, jamais d'emoji. */
 function PlusIcon() {
@@ -854,12 +854,13 @@ export default function TenuesScreen() {
               <div className="text-[13px] text-cream">Bonne journée avec cette tenue !</div>
             </div>
           ) : (
-            <button
+            <Button
+              variante="claire"
               onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
               disabled={vesteWithoutBase}
               title={vesteWithoutBase ? "Ajoute un haut, une robe ou une combinaison sous ta veste." : undefined}
-              // MÊME BOUTON QUE « Voir ma tenue » SUR L'ACCUEIL, et tous deux
-              // alignés sur la convention de l'app (23/09/2026). Relevé sur
+              // LE MÊME BOUTON (Button « claire ») que « Découvrir le look » sur l'accueil
+              // (02/10/2026 ; avant, chaque écran écrivait le sien, alignés à la main le 23/09/2026). Relevé sur
               // les 26 boutons pleine largeur : 20 CTA principaux, dont la
               // forme dominante est 13 px / .1em / capitales (17 sur 20 en
               // .1em, 23 sur 26 en capitales). Ces deux héros étaient les
@@ -870,19 +871,15 @@ export default function TenuesScreen() {
               // tenue telle quelle est un choix légitime — mais passe au
               // contour, pour ne pas dire que le parcours est terminé tant
               // qu'un manque est signalé juste en dessous.
-              className={
-                "mt-[14px] w-full flex items-center justify-center rounded-full t-bouton " +
-                (vesteWithoutBase ? "cursor-not-allowed" : statut.cle === "a_completer" ? "text-cream cursor-pointer" : "bg-cream text-ink cursor-pointer")
-              }
+              className="mt-[14px] disabled:opacity-100 disabled:cursor-not-allowed"
               style={{
-                minHeight: 50,
-                background: vesteWithoutBase ? "rgba(243,238,229,.38)" : undefined,
-                color: vesteWithoutBase ? "rgba(29,26,22,.5)" : undefined,
+                background: vesteWithoutBase ? "rgba(243,238,229,.38)" : statut.cle === "a_completer" ? "transparent" : undefined,
+                color: vesteWithoutBase ? "rgba(29,26,22,.5)" : statut.cle === "a_completer" ? "#F3EEE5" : undefined,
                 border: !vesteWithoutBase && statut.cle === "a_completer" ? "1px solid rgba(243,238,229,.6)" : undefined,
               }}
             >
               Porter cette tenue
-            </button>
+            </Button>
           )}
 
           {/* Deux actions secondaires côte à côte, translucides : elles ne
@@ -891,25 +888,17 @@ export default function TenuesScreen() {
               (correctif 23/08 : le masquer le faisait disparaître de façon
               déroutante après une régénération). */}
           <div className="grid grid-cols-2 gap-[9px] mt-[9px]">
-            <button
+            <BoutonDiscret
               onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook()}
               disabled={!canSaveOutfit}
               title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces à cette tenue pour l'enregistrer."}
               aria-pressed={isOutfitSaved}
-              className={"flex items-center justify-center gap-[6px] rounded-full text-[12px] " + (canSaveOutfit ? "cursor-pointer" : "cursor-default opacity-45")}
-              // Allégées le 27/09/2026 : un filet, sans aplat — elles restent
-              // lisibles et cliquables, mais ne rivalisent plus avec le CTA.
-              style={{
-                minHeight: 44,
-                background: isOutfitSaved ? "rgba(243,238,229,.18)" : "transparent",
-                border: "1px solid rgba(243,238,229,.24)",
-                color: "#FBF3EA",
-              }}
+              actif={isOutfitSaved}
             >
               <span aria-hidden="true">{isOutfitSaved ? "♥" : "♡"}</span>
               {isOutfitSaved ? "Enregistrée" : "Enregistrer"}
-            </button>
-            <button
+            </BoutonDiscret>
+            <BoutonDiscret
               onClick={() =>
                 decalage > 0
                   ? actions.openOpinionShare({
@@ -921,16 +910,9 @@ export default function TenuesScreen() {
                     })
                   : actions.openOpinionShare()
               }
-              className="flex items-center justify-center gap-[6px] rounded-full text-[12px] cursor-pointer"
-              style={{
-                minHeight: 44,
-                background: "transparent",
-                border: "1px solid rgba(243,238,229,.24)",
-                color: "#FBF3EA",
-              }}
             >
               <span aria-hidden="true">✦</span> Avis d&apos;un proche
-            </button>
+            </BoutonDiscret>
           </div>
 
           {/* « Autre tenue » est remonté en tête de card le 27/09/2026 (cf.

@@ -11,6 +11,7 @@ import type { ButtonHTMLAttributes } from "react";
  *   destructif   crème sur rouille — supprimer, retirer
  *   secondaire   texte terracotta, filet — l'alternative à l'action principale
  *   contour      texte et filet terracotta — la seconde action d'une paire
+ *   claire       encre sur crème — l'action pleine posée SUR un fond terracotta (hero de l'accueil et de la tenue)
  *
  * Pleine largeur par défaut (`pleine={false}` pour un bouton à sa taille). 52 px de haut au moins : la cible
  * tactile reste confortable. Non migrés volontairement : les actions sans fond (`t-cta`, `t-lien`), les boutons
@@ -22,6 +23,7 @@ const VARIANTES = {
   destructif: "bg-rust text-cream",
   secondaire: "border border-border text-terracotta",
   contour: "border border-terracotta text-terracotta",
+  claire: "bg-cream text-ink",
 } as const;
 
 export type VarianteBouton = keyof typeof VARIANTES;
@@ -49,6 +51,37 @@ export default function Button({
         VARIANTES[variante] +
         (className ? " " + className : "")
       }
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * L'ACTION DISCRÈTE posée sur un fond terracotta (hero de l'accueil et de la tenue, 02/10/2026 : les deux écrans
+ * écrivaient chacun la leur, l'une à fond translucide, l'autre à filet). Un filet, sans aplat : elle ne peut pas
+ * être confondue avec l'action pleine. `actif` : un état coché (ex. « Enregistrée ») prend un léger aplat.
+ */
+export function BoutonDiscret({
+  actif = false,
+  className = "",
+  type = "button",
+  children,
+  style,
+  ...props
+}: { actif?: boolean } & ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type={type}
+      {...props}
+      className={"flex items-center justify-center gap-[6px] rounded-full text-[12px] cursor-pointer disabled:cursor-default disabled:opacity-45 " + className}
+      style={{
+        minHeight: 44,
+        background: actif ? "rgba(243,238,229,.18)" : "transparent",
+        border: "1px solid rgba(243,238,229,.24)",
+        color: "#FBF3EA",
+        ...style,
+      }}
     >
       {children}
     </button>
