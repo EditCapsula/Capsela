@@ -225,7 +225,7 @@ function Vignette({ it, taille = 46 }: { it: Item; taille?: number }) {
   const img = resolveItemImage(it);
   return (
     <span
-      className="flex-shrink-0 rounded-[11px] overflow-hidden"
+      className="flex-shrink-0 rounded-champ overflow-hidden"
       style={{ width: taille, height: taille, ...(img.url ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 3 } : { background: it.hex }) }}
     >
       {img.url && (
@@ -238,7 +238,7 @@ function Vignette({ it, taille = 46 }: { it: Item; taille?: number }) {
 
 function CarteInfo({ glyphe, children }: { glyphe: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-[10px] bg-warm-bg border border-sand-border rounded-[16px] px-[14px] py-[11px]">
+    <div className="flex items-start gap-[10px] bg-warm-bg border border-sand-border rounded-tuile px-[14px] py-[11px]">
       <span className="flex-shrink-0 text-terracotta mt-[1px]">{glyphe}</span>
       <div className="flex-1 min-w-0 text-[12px] text-ink-soft leading-[1.45]">{children}</div>
     </div>
@@ -561,7 +561,7 @@ export default function ValiseScreen() {
               Ta valise se compose uniquement avec tes pièces. Pour la préparer, il en faut au moins {MINIMUM_PIECES_VALISE}
               {"\u00a0"}: de quoi remplir une valise S.
             </div>
-            <div className="mt-5 bg-card border border-border rounded-[20px] p-[16px]">
+            <div className="mt-5 bg-card border border-border rounded-carte p-[16px]">
               <div className="flex items-baseline justify-between">
                 <span className="font-serif text-[20px] text-ink">
                   {Math.min(dressing.length, MINIMUM_PIECES_VALISE)} / {MINIMUM_PIECES_VALISE} pièces
@@ -620,7 +620,7 @@ export default function ValiseScreen() {
               />
             </div>
             {suggestionsVisibles.length > 0 && (
-              <div className="flex flex-col mt-2 bg-card border border-border rounded-[16px] overflow-hidden">
+              <div className="flex flex-col mt-2 bg-card border border-border rounded-tuile overflow-hidden">
                 {suggestionsVisibles.map((v) => (
                   <button
                     key={`${v.lat},${v.lon}`}
@@ -673,7 +673,7 @@ export default function ValiseScreen() {
                 ],
                 ["Retour", retour, depart || aujourdhui, depart ? plusJours(depart, DUREE_MAX_JOURS - 1) : undefined, setRetour],
               ] as const).map(([titre, valeur, min, max, changer]) => (
-                <label key={titre} className="flex items-center gap-[9px] bg-card border border-border rounded-[18px] px-[12px] py-[10px] cursor-pointer min-w-0">
+                <label key={titre} className="flex items-center gap-[9px] bg-card border border-border rounded-carte px-[12px] py-[10px] cursor-pointer min-w-0">
                   <span className="flex-shrink-0 text-muted-3">{G_CALENDRIER}</span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-[11px] text-muted">{titre}</span>
@@ -696,7 +696,7 @@ export default function ValiseScreen() {
             {/* Le résumé météo n'existe que si la prévision a répondu pour au
                 moins un jour du séjour — jamais une température supposée. */}
             {meteosEtape1 && amplitudeEtape1 && (
-              <div className="flex items-start gap-[12px] mt-5 bg-card border border-border rounded-[20px] px-[16px] py-[14px]">
+              <div className="flex items-start gap-[12px] mt-5 bg-card border border-border rounded-carte px-[16px] py-[14px]">
                 <span className="flex-shrink-0 text-terracotta mt-[2px]">{G_METEO}</span>
                 <div className="min-w-0">
                   <div className="text-[13px] text-ink">{nomVille}</div>
@@ -746,7 +746,7 @@ export default function ValiseScreen() {
                     aria-pressed={on}
                     aria-label={`${t}, ${libelle}, jusqu'à ${cap} pièces`}
                     className={
-                      "relative flex flex-col text-left rounded-[22px] px-[14px] pt-[14px] pb-[13px] cursor-pointer border transition-colors " +
+                      "relative flex flex-col text-left rounded-feuille px-[14px] pt-[14px] pb-[13px] cursor-pointer border transition-colors " +
                       (on ? "bg-warm-bg border-terracotta" : "bg-card border-border")
                     }
                     style={{ minHeight: 158, borderWidth: on ? 1.5 : 1 }}
@@ -786,7 +786,7 @@ export default function ValiseScreen() {
                     key={t}
                     onClick={() => choisirSejour(t)}
                     aria-pressed={on}
-                    className={"relative text-left rounded-[18px] overflow-hidden cursor-pointer border bg-card transition-colors " + (on ? "border-terracotta" : "border-border")}
+                    className={"relative text-left rounded-carte overflow-hidden cursor-pointer border bg-card transition-colors " + (on ? "border-terracotta" : "border-border")}
                     style={{ borderWidth: on ? 1.5 : 1 }}
                   >
                     {/* Visuel décoratif : le libellé dessous dit le séjour. */}
@@ -842,7 +842,7 @@ export default function ValiseScreen() {
                     }}
                     aria-pressed={on}
                     className={
-                      "flex items-center gap-[9px] text-left rounded-[16px] px-[12px] cursor-pointer border transition-colors " +
+                      "flex items-center gap-[9px] text-left rounded-tuile px-[12px] cursor-pointer border transition-colors " +
                       (on ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-ink")
                     }
                     style={{ minHeight: 56 }}
@@ -1063,7 +1063,7 @@ function Resultat({
                 if (titre !== "Ajouter une pièce de ton dressing") setFeuille(null);
                 f();
               }}
-              className="flex items-center gap-3 text-left bg-card border border-border rounded-[16px] px-[14px] cursor-pointer"
+              className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile px-[14px] cursor-pointer"
               style={{ minHeight: 60 }}
             >
               <span className="flex-shrink-0 text-terracotta">{glyphe}</span>
@@ -1119,7 +1119,7 @@ function Resultat({
                       setFeuille(null);
                     }}
                     aria-label={`Ajouter ${p.name} à la valise`}
-                    className="flex items-center gap-3 text-left bg-card border border-border rounded-[16px] p-[7px] cursor-pointer"
+                    className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer"
                   >
                     <Vignette it={p} taille={40} />
                     <span className="flex-1 min-w-0 text-[13px] text-ink truncate">{p.name}</span>
@@ -1147,7 +1147,7 @@ function Resultat({
                   setFeuille(null);
                   if (vue.nom === "piece") setVue(vue.depuis);
                 }}
-                className="flex items-center gap-3 text-left bg-card border border-border rounded-[16px] p-[7px] cursor-pointer"
+                className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer"
               >
                 <Vignette it={item} taille={40} />
                 <span className="flex-1 min-w-0">
@@ -1176,7 +1176,7 @@ function Resultat({
         <Surtitre>Détail d&apos;une pièce</Surtitre>
         <div className="flex gap-[14px] mt-3">
           <div
-            className="flex-shrink-0 rounded-[18px] overflow-hidden"
+            className="flex-shrink-0 rounded-carte overflow-hidden"
             style={{ width: "42%", aspectRatio: "4 / 5", ...(img.url ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 8 } : { background: p.hex }) }}
           >
             {img.url && (
@@ -1198,7 +1198,7 @@ function Resultat({
                     key={l.ids.join(",")}
                     onClick={() => setVue({ nom: "look", index: i })}
                     aria-label={`Voir le look ${numero(i)}`}
-                    className="rounded-[10px] bg-warm-bg p-[3px] cursor-pointer grid grid-cols-2 gap-[2px] overflow-hidden"
+                    className="rounded-champ bg-warm-bg p-[3px] cursor-pointer grid grid-cols-2 gap-[2px] overflow-hidden"
                     style={{ height: 78 }}
                   >
                     {/* À cette taille, une composition ne se lit plus : un aperçu
@@ -1280,7 +1280,7 @@ function Resultat({
           </div>
         )}
         {l.elargie && <div className="text-[11px] text-muted mt-2">Occasion élargie : ton dressing n&apos;a pas de pièce déclarée pour cette occasion.</div>}
-        <div className="rounded-[22px] bg-warm-bg px-[16px] py-[20px] mt-4">
+        <div className="rounded-feuille bg-warm-bg px-[16px] py-[20px] mt-4">
           <OutfitComposition items={items} variant="editoriale" label={"Composition du look : " + items.map((p) => p.name).join(", ")} />
         </div>
         <div className="flex items-center justify-between mt-3">
@@ -1310,7 +1310,7 @@ function Resultat({
           {items.map((p) => {
             const n = parPiece.get(p.id) ?? 0;
             return (
-              <button key={p.id} onClick={() => ouvrirPiece(p.id)} className="flex items-center gap-3 text-left bg-card border border-border rounded-[16px] p-[7px] cursor-pointer">
+              <button key={p.id} onClick={() => ouvrirPiece(p.id)} className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer">
                 <Vignette it={p} />
                 <span className="flex-1 min-w-0">
                   <span className="block text-[13px] text-ink truncate">{p.name}</span>
@@ -1352,7 +1352,7 @@ function Resultat({
           {valise.destination} · {libellePeriode(valise.depart, valise.retour)}
         </Surtitre>
         <TitreEtape a="Ta" b="valise" />
-        <div className="mt-4 bg-card border border-border rounded-[20px] p-[16px]">
+        <div className="mt-4 bg-card border border-border rounded-carte p-[16px]">
           <div className="t-titre-carte text-ink">Ton dressing est vide</div>
           <div className="text-[13px] text-muted-3 leading-[1.5] mt-2">
             La valise se prépare avec les pièces que tu possèdes. Ajoute-les à ton dressing, et Capsela choisira celles à emporter.
@@ -1389,7 +1389,7 @@ function Resultat({
 
       {/* LE RATIO PIÈCES → LOOKS, au centre de la fonctionnalité. La capacité
           n'est pas un objectif à remplir : elle est dite en second. */}
-      <div className="mt-3 rounded-[22px] px-[8px] py-[16px] text-cream grid" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: couvertes.length ? "1fr 1fr 1fr" : "1fr 1fr" }}>
+      <div className="mt-3 rounded-feuille px-[8px] py-[16px] text-cream grid" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: couvertes.length ? "1fr 1fr 1fr" : "1fr 1fr" }}>
         {(
           [
             [glypheValise(20), pieces.length, pieces.length > 1 ? "pièces" : "pièce"],
@@ -1422,7 +1422,7 @@ function Resultat({
           moins de looks que de jours ; et, au retour d'un ajout, la
           proposition de recomposer. */}
       {nouvelles > 0 ? (
-        <div className="mt-4 bg-card border border-border rounded-[20px] p-[16px]">
+        <div className="mt-4 bg-card border border-border rounded-carte p-[16px]">
           <div className="t-titre-carte text-ink">
             {nouvelles > 1 ? `${nouvelles} nouvelles pièces dans ton dressing` : "Une nouvelle pièce dans ton dressing"}
           </div>
@@ -1433,7 +1433,7 @@ function Resultat({
         </div>
       ) : (
         (occasionsAManque.length > 0 || peuDeLooks) && (
-          <div className="mt-4 bg-card border border-border rounded-[20px] p-[16px]">
+          <div className="mt-4 bg-card border border-border rounded-carte p-[16px]">
             <div className="t-titre-carte text-ink">Complète ton dressing</div>
             <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Ta valise se compose uniquement avec tes pièces : plus ton dressing est complet, plus elle a de looks.</div>
             <div className="flex flex-col gap-3 mt-3">
@@ -1506,9 +1506,9 @@ function Resultat({
                 setIndexLook(Math.max(0, Math.min(looks.length - 1, index + (dx < 0 ? 1 : -1))));
               }}
               aria-label={`Voir le look ${numero(index)} : ${resumeLook(piecesDuLook(l))}`}
-              className="w-full text-left bg-card border border-border rounded-[24px] p-[10px] cursor-pointer"
+              className="w-full text-left bg-card border border-border rounded-hero p-[10px] cursor-pointer"
             >
-              <div className="rounded-[18px] bg-warm-bg px-[12px] py-[14px]" style={{ height: "clamp(270px, 80vw, 340px)" }}>
+              <div className="rounded-carte bg-warm-bg px-[12px] py-[14px]" style={{ height: "clamp(270px, 80vw, 340px)" }}>
                 <OutfitComposition items={piecesDuLook(l)} variant="hero" ajustee />
               </div>
               <div className="px-[6px] pt-[12px] pb-[4px]">
@@ -1550,7 +1550,7 @@ function Resultat({
       {onglet === "pieces" && (
         <>
           {aAlleger.length > 0 && (
-            <div className="mt-4 bg-card border border-border rounded-[20px] p-[14px]">
+            <div className="mt-4 bg-card border border-border rounded-carte p-[14px]">
               <div className="t-titre-carte text-ink">On allège un peu ?</div>
               <div className="text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
                 {pieces.length - capacite} {pieces.length - capacite > 1 ? "pièces de trop" : "pièce de trop"} pour une valise {valise.bagage}. Voici celles qui servent
@@ -1591,7 +1591,7 @@ function Resultat({
                   {duGroupe.map((p) => {
                     const n = parPiece.get(p.id) ?? 0;
                     return (
-                      <div key={p.id} className="flex items-center bg-card border border-border rounded-[16px] pr-[2px]">
+                      <div key={p.id} className="flex items-center bg-card border border-border rounded-tuile pr-[2px]">
                         <button onClick={() => ouvrirPiece(p.id)} className="flex-1 min-w-0 flex items-center gap-3 text-left p-[7px] cursor-pointer" aria-label={`${p.name}, dans ${n} ${n > 1 ? "looks" : "look"}. Voir la pièce`}>
                           <Vignette it={p} />
                           <span className="flex-1 min-w-0">

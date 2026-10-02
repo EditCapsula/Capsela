@@ -7,7 +7,7 @@ import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
 
 const INPUT_CLS =
-  "capin bg-card border border-border rounded-[14px] px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
+  "capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
 
 /**
  * « DATE DE NAISSANCE » après la connexion Google (01/10/2026). La création de
@@ -84,12 +84,12 @@ export default function DateNaissanceScreen({
         aria-label="Date de naissance"
       />
       {erreur && (
-        <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
+        <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-champ px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {erreur}
         </div>
       )}
       {auth.error && (
-        <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-xl px-4 py-3 text-[12px] text-rust leading-[1.45]">
+        <div role="alert" className="mt-4 bg-error-bg border border-error-border rounded-champ px-4 py-3 text-[12px] text-rust leading-[1.45]">
           {auth.error}
         </div>
       )}

@@ -66,7 +66,7 @@ export function IntroColorimetrie() {
   return (
     <div className="mt-[26px] grid grid-cols-3 gap-[10px]">
       {reperes.map(([p, texte]) => (
-        <div key={texte} className="bg-card border border-border rounded-[16px] px-[8px] py-[14px] flex flex-col items-center gap-[8px] text-center">
+        <div key={texte} className="bg-card border border-border rounded-tuile px-[8px] py-[14px] flex flex-col items-center gap-[8px] text-center">
           <Pictogramme nom={p} />
           <span className="text-[12px] leading-[1.3] text-muted-3" style={{ textWrap: "balance" }}>
             {texte}
@@ -194,7 +194,7 @@ export function IndecisColorimetrie() {
           <span key={c} className="absolute rounded-full" style={{ width: 70, height: 70, left: x - 4, top: y, background: c, opacity: 0.55 }} />
         ))}
       </div>
-      <div className="bg-card border border-border rounded-[18px] px-[16px] py-[15px] mt-[22px]">
+      <div className="bg-card border border-border rounded-carte px-[16px] py-[15px] mt-[22px]">
         <div className="t-titre-carte text-ink">Ce que cela signifie</div>
         <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
           Tu peux probablement porter une large gamme de couleurs. Capsela privilégiera les teintes qui fonctionnent le mieux
@@ -260,7 +260,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
         // Le cadre des visuels éditoriaux de l'app (Capsule : arrondi 20, filet léger),
         // en 4/3 : le visuel est portrait (450 × 919), le centre — étoffes et feuille —
         // reste visible ; la largeur d'un smartphone suffit sans l'agrandir au-delà.
-        <div className="rounded-[20px] overflow-hidden border border-border bg-warm-bg" style={{ aspectRatio: "4 / 3" }}>
+        <div className="rounded-carte overflow-hidden border border-border bg-warm-bg" style={{ aspectRatio: "4 / 3" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={saison.visuel} alt="" width={450} height={338} decoding="async" className="w-full h-full object-cover block" style={{ objectPosition: "center 52%" }} />
         </div>
@@ -315,7 +315,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
         </section>
       )}
 
-      <div className="bg-card border border-border rounded-[18px] px-[16px] py-[15px] mt-[30px] flex gap-[12px] items-start">
+      <div className="bg-card border border-border rounded-carte px-[16px] py-[15px] mt-[30px] flex gap-[12px] items-start">
         <Pictogramme nom="repere" taille={22} />
         <div className="min-w-0">
           <div className="font-serif text-[17px] leading-[1.25] text-ink">Ta palette est un repère, pas une règle.</div>
@@ -346,7 +346,7 @@ export function SuiteColorimetrie() {
   return (
     <ul className="mt-[24px] flex flex-col gap-[10px]">
       {benefices.map(([p, titre, texte]) => (
-        <li key={titre} className="bg-card border border-border rounded-[16px] px-[14px] py-[12px] flex gap-[12px] items-start">
+        <li key={titre} className="bg-card border border-border rounded-tuile px-[14px] py-[12px] flex gap-[12px] items-start">
           <span className="w-[34px] h-[34px] rounded-full bg-warm-bg flex items-center justify-center flex-shrink-0">
             <Pictogramme nom={p} taille={18} />
           </span>

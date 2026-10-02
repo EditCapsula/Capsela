@@ -60,7 +60,7 @@ export default function CarteAccordSaison({
     detail && colorimetrie ? (colorimetrie.harmonie.has(detail) ? "Une couleur de ta palette." : colorimetrie.loinDuVisage.has(detail) ? "À doser près du visage." : null) : null;
 
   return (
-    <div className="mt-[12px] bg-card border border-border rounded-[20px] p-4">
+    <div className="mt-[12px] bg-card border border-border rounded-carte p-4">
       <div className="t-label text-terracotta">Accord de saison</div>
       <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{conseil.texte}</div>
 

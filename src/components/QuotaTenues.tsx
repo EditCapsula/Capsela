@@ -136,7 +136,7 @@ export function useQuotaTenues() {
               Tu as utilisé tes {limiteDuJour} alternatives gratuites du jour. Ta tenue reste là,
               et de nouvelles propositions arrivent demain matin.
             </div>
-            <div className="flex items-center gap-[10px] mt-4 bg-warm-bg rounded-[14px] px-[14px] py-3">
+            <div className="flex items-center gap-[10px] mt-4 bg-warm-bg rounded-bloc px-[14px] py-3">
               <span className="t-surtitre text-terracotta">
                 {limiteDuJour} / {limiteDuJour}
               </span>
@@ -164,7 +164,7 @@ export function useQuotaTenues() {
             {videoProposable && tempsVideo === "propose" && (
               <button
                 onClick={regarderVideo}
-                className="w-full flex items-center gap-[11px] text-left mt-3 bg-card border border-border rounded-[16px] px-[14px] py-[13px] cursor-pointer"
+                className="w-full flex items-center gap-[11px] text-left mt-3 bg-card border border-border rounded-tuile px-[14px] py-[13px] cursor-pointer"
               >
                 <span className="flex-1 min-w-0">
                   <span className="block text-[13px] font-medium text-ink">Regarder une vidéo</span>
@@ -181,7 +181,7 @@ export function useQuotaTenues() {
             {/* Deuxième temps. La feuille reste ouverte : revenir sur une feuille
                 fermée puis rouverte ferait clignoter l'écran. */}
             {tempsVideo === "lecture" && (
-              <div className="mt-3 bg-card border border-border rounded-[16px] px-[14px] py-[13px]" aria-live="polite">
+              <div className="mt-3 bg-card border border-border rounded-tuile px-[14px] py-[13px]" aria-live="polite">
                 <div className="text-[13px] font-medium text-ink">Vidéo en cours…</div>
                 <div className="text-[11px] text-muted leading-[1.45] mt-[2px]">
                   Encore quelques secondes avant ta nouvelle tenue.
@@ -192,7 +192,7 @@ export function useQuotaTenues() {
             {/* Troisième temps, cas d'échec. Dit UNE fois, sans perte — la tenue
                 et le quota sont intacts — et sans nouvel essai automatique. */}
             {tempsVideo === "echec" && (
-              <div className="mt-3 bg-card border border-border rounded-[16px] px-[14px] py-[13px]" aria-live="polite">
+              <div className="mt-3 bg-card border border-border rounded-tuile px-[14px] py-[13px]" aria-live="polite">
                 <div className="text-[12px] text-muted-3 leading-[1.45]">
                   La vidéo n&apos;a pas pu se charger. Rien n&apos;est perdu : ta tenue et tes tirages du jour sont
                   intacts.

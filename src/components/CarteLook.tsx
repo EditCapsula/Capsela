@@ -74,7 +74,7 @@ export function VisuelPiece({ piece, alt, radius }: { piece: Item; alt: string; 
 /** Quatre cases fixes : une tenue de deux pièces garde la hauteur d'une tenue de quatre. */
 export function MosaiquePieces({ pieces }: { pieces: Item[] }) {
   return (
-    <div className="grid grid-cols-2 gap-[5px] p-[7px] rounded-[20px]" style={{ background: "var(--color-warm-bg)" }}>
+    <div className="grid grid-cols-2 gap-[5px] p-[7px] rounded-carte" style={{ background: "var(--color-warm-bg)" }}>
       {Array.from({ length: 4 }, (_, i) => pieces[i]).map((p, i) => (
         <div key={p ? p.id : `vide-${i}`} style={{ aspectRatio: "1" }}>
           {p ? <VisuelPiece piece={p} alt={p.name} radius={13} /> : null}

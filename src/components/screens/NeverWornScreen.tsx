@@ -86,13 +86,13 @@ function CartePiece({
           // Sans photo, l'aplat de sa couleur (même repli que partout) —
           // en pastille : agrandi à toute la largeur, ce n'était qu'un mur
           // de couleur.
-          <div className="w-full rounded-[22px] flex items-center justify-center" style={{ aspectRatio: "2 / 1", background: "var(--color-warm-bg)" }}>
+          <div className="w-full rounded-feuille flex items-center justify-center" style={{ aspectRatio: "2 / 1", background: "var(--color-warm-bg)" }}>
             <span className="block w-[34%]" style={{ aspectRatio: "4 / 5" }}>
               <VisuelPiece piece={item} alt="" radius={14} />
             </span>
           </div>
         ) : (
-          <div className="w-full overflow-hidden rounded-[22px] p-3" style={{ aspectRatio: premiere ? "1 / 1" : "5 / 4", background: "var(--color-warm-bg)" }}>
+          <div className="w-full overflow-hidden rounded-feuille p-3" style={{ aspectRatio: premiere ? "1 / 1" : "5 / 4", background: "var(--color-warm-bg)" }}>
             <VisuelPiece piece={item} alt="" radius={14} />
           </div>
         )}
@@ -118,7 +118,7 @@ function CartePiece({
                   type="button"
                   tabIndex={-1}
                   onClick={onTenues}
-                  className="flex-none w-[68px] rounded-[20px] flex items-center justify-center text-[13px] text-terracotta cursor-pointer"
+                  className="flex-none w-[68px] rounded-carte flex items-center justify-center text-[13px] text-terracotta cursor-pointer"
                   style={{ aspectRatio: "1", background: "var(--color-warm-bg)" }}
                 >
                   +{reste}
@@ -222,7 +222,7 @@ export default function NeverWornScreen() {
           {/* SYNTHÈSE — le chiffre en grand, dans l'esprit d'une page de
               magazine ; toutes les pièces jamais portées, le même nombre que
               le Dressing. */}
-          <div className="mt-5 bg-warm-bg border border-warm-border rounded-[20px] px-5 py-4 flex items-center gap-4">
+          <div className="mt-5 bg-warm-bg border border-warm-border rounded-carte px-5 py-4 flex items-center gap-4">
             <span className="t-display text-terracotta flex-shrink-0" aria-hidden="true">
               {String(n).padStart(2, "0")}
             </span>
@@ -270,7 +270,7 @@ export default function NeverWornScreen() {
                 {horsSaison.map((it) => (
                   <li key={it.id} className="flex-none w-[96px]">
                     <button type="button" onClick={() => actions.openItem(it.id, false)} className="w-full text-left cursor-pointer active:opacity-80" aria-label={`${displayName(it)}, voir la pièce`}>
-                      <span className="block w-full rounded-[14px] p-[6px]" style={{ aspectRatio: "4 / 5", background: "var(--color-warm-bg)" }}>
+                      <span className="block w-full rounded-bloc p-[6px]" style={{ aspectRatio: "4 / 5", background: "var(--color-warm-bg)" }}>
                         <VisuelPiece piece={it} alt="" radius={10} />
                       </span>
                       <span className="block text-[12px] text-ink mt-[6px] leading-[1.25] line-clamp-2">{displayName(it)}</span>

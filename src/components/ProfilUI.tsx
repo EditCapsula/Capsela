@@ -184,7 +184,7 @@ export function GenderModal({
       style={{ background: "rgba(29,26,22,.45)" }}
       onClick={onClose}
     >
-      <div className="w-full max-w-[440px] bg-cream rounded-t-[22px] px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-[440px] bg-cream rounded-t-feuille px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
         <div className="t-titre-carte text-ink mb-[16px]">Modifier mon genre</div>
         <div className="flex flex-col gap-[10px]">
           {GENDERS.map((g) => (
@@ -192,7 +192,7 @@ export function GenderModal({
               key={g.key}
               onClick={() => onSelect(g.key)}
               className={
-                "text-left px-4 py-[15px] rounded-[14px] cursor-pointer text-[13px] border " +
+                "text-left px-4 py-[15px] rounded-bloc cursor-pointer text-[13px] border " +
                 (current === g.key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
               }
             >
@@ -222,7 +222,7 @@ export function RevalidationSheet({ field, onDismiss, onEdit }: { field: GenderD
       style={{ background: "rgba(29,26,22,.45)" }}
       onClick={onDismiss}
     >
-      <div className="w-full max-w-[440px] bg-cream rounded-t-[22px] px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-[440px] bg-cream rounded-t-feuille px-6 pt-6 pb-8" onClick={(e) => e.stopPropagation()}>
         <div className="t-titre-carte text-ink mb-[8px]">{field.fieldLabel} est à mettre à jour</div>
         <div className="text-[13px] text-muted leading-[1.5] mb-[20px]">
           Les propositions évoluent selon ton profil. Choisis celle qui te correspond le mieux aujourd&apos;hui.
@@ -316,7 +316,7 @@ export function FeuilleVille({ open, onClose }: { open: boolean; onClose: () => 
         aria-label="Rechercher une ville"
         autoComplete="off"
         autoCapitalize="words"
-        className="w-full bg-card border border-border rounded-[14px] px-4 min-h-[48px] text-[14px] text-ink font-sans"
+        className="w-full bg-card border border-border rounded-bloc px-4 min-h-[48px] text-[14px] text-ink font-sans"
       />
       <div className="flex flex-col max-h-[46vh] overflow-y-auto -mx-1 px-1 mt-2" role="radiogroup" aria-label="Ville">
         {enRecherche ? (
@@ -395,7 +395,7 @@ export function FeuilleDateNaissance({ open, onClose }: { open: boolean; onClose
         min="1900-01-01"
         max={aujourdhui || undefined}
         onChange={(e) => setDateBrouillon(e.target.value)}
-        className="w-full bg-card border border-border rounded-[14px] px-4 min-h-[48px] text-[14px] text-ink font-sans"
+        className="w-full bg-card border border-border rounded-bloc px-4 min-h-[48px] text-[14px] text-ink font-sans"
         style={{ colorScheme: "light" }}
       />
       {dateBrouillon && !dateValide && (

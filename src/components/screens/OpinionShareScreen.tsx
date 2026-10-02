@@ -364,7 +364,7 @@ export default function OpinionShareScreen() {
         >
           Ta tenue
         </TitreSection>
-        <div className="rounded-[24px] bg-terracotta-deep" style={{ padding: 16 }}>
+        <div className="rounded-hero bg-terracotta-deep" style={{ padding: 16 }}>
           <OutfitComposition items={pieces} variant="hero" />
           {(occasionLabel || meteo) && (
             <div className="flex flex-wrap items-center gap-[6px] mt-[12px]">
@@ -426,11 +426,11 @@ export default function OpinionShareScreen() {
             onChange={(e) => setBrouillon(e.target.value)}
             rows={Math.min(12, message.split("\n").length + 1)}
             aria-label="Ce que ton proche recevra"
-            className="w-full bg-card rounded-[20px] p-4 text-[13px] text-ink leading-[1.6] resize-y outline-none"
+            className="w-full bg-card rounded-carte p-4 text-[13px] text-ink leading-[1.6] resize-y outline-none"
             style={{ fontFamily: "inherit", border: "1px solid var(--color-terracotta-deep)" }}
           />
         ) : (
-          <div className="bg-card border border-border rounded-[20px] p-4">
+          <div className="bg-card border border-border rounded-carte p-4">
             {modifie ? (
               // Une fois réécrit, le message n'a plus de structure connue : le
               // recomposer en titre/puces/question inventerait une forme que
@@ -499,7 +499,7 @@ export default function OpinionShareScreen() {
           disabled={!optionImageActive}
           onClick={() => setAvecImage((v) => !v)}
           className={
-            "w-full flex items-center gap-[14px] text-left bg-card border border-border rounded-[20px] px-4 py-[14px] mt-4 " +
+            "w-full flex items-center gap-[14px] text-left bg-card border border-border rounded-carte px-4 py-[14px] mt-4 " +
             (optionImageActive ? "cursor-pointer" : "cursor-default")
           }
           style={{ opacity: optionImageActive ? 1 : 0.55 }}
@@ -567,7 +567,7 @@ export default function OpinionShareScreen() {
             aria-live="polite"
           >
             <div
-              className="rounded-[15px] bg-ink text-cream text-[12px] leading-[1.45]"
+              className="rounded-bloc bg-ink text-cream text-[12px] leading-[1.45]"
               style={{ padding: "13px 16px" }}
             >
               {toast}

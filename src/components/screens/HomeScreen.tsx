@@ -172,7 +172,7 @@ function CardModule({
     <button
       onClick={onClick}
       aria-label={cta}
-      className="w-full min-w-0 text-left cursor-pointer rounded-[22px] border border-border overflow-hidden box-border transition-opacity active:opacity-90"
+      className="w-full min-w-0 text-left cursor-pointer rounded-feuille border border-border overflow-hidden box-border transition-opacity active:opacity-90"
       style={{ background: fond }}
     >
       <div className="flex items-start justify-between gap-3 px-[16px] pt-[15px]">
@@ -344,7 +344,7 @@ function ActionSuite({ onClick, label, glyphe }: { onClick: () => void; label: s
   return (
     <button
       onClick={onClick}
-      className="min-w-0 text-left bg-card border border-border rounded-[14px] px-[12px] py-[11px] cursor-pointer flex flex-col justify-between transition-opacity active:opacity-80"
+      className="min-w-0 text-left bg-card border border-border rounded-bloc px-[12px] py-[11px] cursor-pointer flex flex-col justify-between transition-opacity active:opacity-80"
       style={{ minHeight: 68 }}
     >
       <span className="text-terracotta">{glyphe}</span>
@@ -611,7 +611,7 @@ export default function HomeScreen() {
           même place et à la même hauteur ; la planche y remplace la
           silhouette en fondu (ZoneLookDuJour). */}
       <div
-        className="mx-6 mt-6 bg-terracotta rounded-[24px] text-left"
+        className="mx-6 mt-6 bg-terracotta rounded-hero text-left"
         style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}
       >
         <div className="flex items-center gap-[7px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
@@ -902,7 +902,7 @@ export default function HomeScreen() {
                n'existe dans l'app : la card est visible pour tout le monde,
                et c'est ici que le test se posera le jour venu. Seule la
                présentation change. */}
-        <div className="bg-warm-bg border border-sand-border rounded-[22px] px-4 py-[16px]">
+        <div className="bg-warm-bg border border-sand-border rounded-feuille px-4 py-[16px]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               {/* balance et non pretty : mesuré à 390 px, le titre se coupait
@@ -966,7 +966,7 @@ export default function HomeScreen() {
         <button
           onClick={ouvrirAvisStyliste}
           aria-busy={verificationAvis}
-          className="w-full min-w-0 text-left bg-card border border-border rounded-[22px] px-4 pt-[15px] pb-[6px] cursor-pointer transition-opacity active:opacity-90"
+          className="w-full min-w-0 text-left bg-card border border-border rounded-feuille px-4 pt-[15px] pb-[6px] cursor-pointer transition-opacity active:opacity-90"
         >
           <span className="flex items-start justify-between gap-3">
             <span className="t-titre-carte text-ink">

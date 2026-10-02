@@ -39,7 +39,7 @@ export default function BottomSheet({
       <div className="absolute inset-0 bg-[rgba(29,26,22,.45)]" onClick={onClose} />
       <div className="absolute inset-x-0 bottom-0 top-0 mx-auto max-w-[480px] flex flex-col justify-end pointer-events-none">
         <div
-          className="pointer-events-auto bg-cream rounded-t-[22px] max-h-[85vh] flex flex-col"
+          className="pointer-events-auto bg-cream rounded-t-feuille max-h-[85vh] flex flex-col"
           style={{ boxShadow: "0 -10px 30px rgba(0,0,0,.18)" }}
         >
           <div className="flex items-center justify-center pt-[10px] flex-shrink-0">

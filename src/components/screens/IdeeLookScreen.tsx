@@ -90,7 +90,7 @@ export default function IdeeLookScreen() {
 
       {/* Composition éditoriale (27/09/2026) : une silhouette, pas une
           grille — la zone prend la hauteur des pièces, proche du carré. */}
-      <div className="rounded-[22px] bg-warm-bg px-[16px] py-[20px] mt-[14px]">
+      <div className="rounded-feuille bg-warm-bg px-[16px] py-[20px] mt-[14px]">
         <OutfitComposition items={pieces} variant="editoriale" label={"Composition du look : " + pieces.map((p) => p.name).join(", ")} />
       </div>
 
@@ -103,7 +103,7 @@ export default function IdeeLookScreen() {
       )}
 
       {infos.length > 0 && (
-        <div className="flex mt-[16px] bg-card border border-border rounded-[14px]">
+        <div className="flex mt-[16px] bg-card border border-border rounded-bloc">
           {infos.map((info, i) => (
             <div key={info.label} className={"flex-1 min-w-0 px-[14px] py-[11px] " + (i > 0 ? "border-l border-border" : "")}>
               <div className="t-label text-muted">{info.label}</div>
@@ -123,10 +123,10 @@ export default function IdeeLookScreen() {
               key={it.id}
               type="button"
               onClick={() => actions.openItem(it.id, !possedee)}
-              className="w-full text-left flex items-center gap-[12px] bg-card border border-border rounded-[14px] p-[10px] cursor-pointer"
+              className="w-full text-left flex items-center gap-[12px] bg-card border border-border rounded-bloc p-[10px] cursor-pointer"
             >
               <div
-                className="w-[52px] h-[62px] rounded-[10px] overflow-hidden flex-shrink-0"
+                className="w-[52px] h-[62px] rounded-champ overflow-hidden flex-shrink-0"
                 style={
                   img.url
                     ? { background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 4 }

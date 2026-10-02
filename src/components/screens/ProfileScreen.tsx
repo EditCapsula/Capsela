@@ -127,7 +127,7 @@ export default function ProfileScreen() {
 
       {/* IDENTITÉ — « Gérer mon compte » mène au compte, jamais à l'édition du
           profil : ce sont deux espaces différents. */}
-      <div className="bg-card border border-border rounded-[20px] p-4 mt-5 flex items-center gap-[14px]">
+      <div className="bg-card border border-border rounded-carte p-4 mt-5 flex items-center gap-[14px]">
         <div className="w-[52px] h-[52px] rounded-full bg-terracotta flex items-center justify-center flex-shrink-0">
           <span className="font-serif text-[21px] text-cream">{initial}</span>
         </div>
@@ -150,7 +150,7 @@ export default function ProfileScreen() {
       {/* MON ABONNEMENT (27/09/2026) — l'emplacement de la gestion de l'offre,
           sans prix ni relance : une ligne sobre sous l'identité, qui ouvre
           l'écran Premium existant. */}
-      <div className="bg-card border border-border rounded-[20px] overflow-hidden mt-3">
+      <div className="bg-card border border-border rounded-carte overflow-hidden mt-3">
         <LigneProfil
           icone={I_COURONNE}
           titre="Mon abonnement"
@@ -163,7 +163,7 @@ export default function ProfileScreen() {
       {toRevalidate && (
         <button
           onClick={() => ouvrirChamp("morphologie")}
-          className="w-full text-left bg-selected-bg border border-terracotta rounded-[16px] p-4 mt-5 cursor-pointer"
+          className="w-full text-left bg-selected-bg border border-terracotta rounded-tuile p-4 mt-5 cursor-pointer"
         >
           <div className="t-surtitre text-terracotta">À compléter</div>
           <div className="text-[13px] text-ink mt-[6px]">{toRevalidate.fieldLabel} est à mettre à jour.</div>
@@ -171,7 +171,7 @@ export default function ProfileScreen() {
       )}
 
       <Surtitre icone={I_ETINCELLE}>Ton style</Surtitre>
-      <div className="bg-card border border-border rounded-[20px] overflow-hidden">
+      <div className="bg-card border border-border rounded-carte overflow-hidden">
         <LigneProfil
           icone={I_GENRE}
           titre="Genre"
@@ -217,7 +217,7 @@ export default function ProfileScreen() {
       {/* MES TAILLES — une ligne par taille, toutes ouvrent l'étape « taille »
           du questionnaire (les trois s'y règlent ensemble). */}
       <Surtitre icone={I_METRE}>Mes tailles</Surtitre>
-      <div className="bg-card border border-border rounded-[20px] overflow-hidden">
+      <div className="bg-card border border-border rounded-carte overflow-hidden">
         <LigneInfo
           label="Haut"
           valeur={profile.tailleHaut || "Non renseignée"}
@@ -239,7 +239,7 @@ export default function ProfileScreen() {
           bouton ouvre directement le premier champ manquant : il n'y a plus
           d'écran d'édition intermédiaire (recette du 26/09/2026). */}
       {completude.manquants.length > 0 ? (
-        <div className="mt-4 bg-warm-bg border border-warm-border rounded-[20px] p-4">
+        <div className="mt-4 bg-warm-bg border border-warm-border rounded-carte p-4">
           <div className="flex items-start gap-[12px]">
             <span className="w-9 h-9 flex-shrink-0 rounded-full bg-card text-terracotta flex items-center justify-center">
               <Icone taille={17}>{I_GRAPHIQUE}</Icone>
@@ -282,7 +282,7 @@ export default function ProfileScreen() {
           réglages (géolocalisation, météo de la position, ville) vivent dans
           Préférences Capsela, que la ligne ouvre. */}
       <Surtitre icone={I_GRAPHIQUE}>Ta météo</Surtitre>
-      <div className="bg-card border border-border rounded-[20px] overflow-hidden">
+      <div className="bg-card border border-border rounded-carte overflow-hidden">
         <LigneProfil
           icone={I_REPERE}
           titre={profile.city || "Ville non renseignée"}
@@ -301,7 +301,7 @@ export default function ProfileScreen() {
       {/* PRÉFÉRENCES CAPSELA — le fonctionnement de l'app, pas l'identité :
           elles ont leur propre écran. */}
       <Surtitre icone={I_GRAPHIQUE}>Préférences Capsela</Surtitre>
-      <div className="bg-card border border-border rounded-[20px] overflow-hidden">
+      <div className="bg-card border border-border rounded-carte overflow-hidden">
         <LigneProfil
           icone={I_REGLAGES}
           titre="Réglages de l'application"

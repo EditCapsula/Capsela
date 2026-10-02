@@ -41,7 +41,7 @@ export default function LegalDocOverlay() {
           <BoutonRetour onClick={actions.closeLegalDoc} label="Fermer et revenir à l'écran précédent" />
         </div>
         {estProvisoire(source) && (
-          <div className="mt-5 bg-card border border-border rounded-xl px-4 py-3 text-[12px] text-muted leading-[1.5]">
+          <div className="mt-5 bg-card border border-border rounded-champ px-4 py-3 text-[12px] text-muted leading-[1.5]">
             Version provisoire : certaines informations de l&apos;éditeur ne sont pas encore renseignées.
           </div>
         )}

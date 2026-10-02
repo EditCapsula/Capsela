@@ -39,7 +39,7 @@ function Section({ titre, icone, id, children }: { titre: string; icone: React.R
       {/* Le surtitre à pictogramme de Mon profil (27/09/2026) : les deux
           écrans se lisent comme un seul espace. */}
       <Surtitre icone={icone}>{titre}</Surtitre>
-      <div className="bg-card border border-border rounded-[20px] overflow-hidden">{children}</div>
+      <div className="bg-card border border-border rounded-carte overflow-hidden">{children}</div>
     </div>
   );
 }

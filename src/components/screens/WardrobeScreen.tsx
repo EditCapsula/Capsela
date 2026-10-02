@@ -165,7 +165,7 @@ function AssociationsCompactes({
             key={t.occasion}
             onClick={() => onOuvrir(t)}
             aria-label={`Voir la tenue ${OCC_LABELS[t.occasion]} proposée par Capsela`}
-            className="flex-none grid grid-cols-2 gap-[3px] p-[4px] rounded-[12px] cursor-pointer active:opacity-80"
+            className="flex-none grid grid-cols-2 gap-[3px] p-[4px] rounded-champ cursor-pointer active:opacity-80"
             style={{ width: 52, background: "var(--color-cream)" }}
           >
             {Array.from({ length: 4 }, (_, i) => t.pieces[i]).map((p, i) => (
@@ -307,7 +307,7 @@ export default function WardrobeScreen() {
         {/* UNE SEULE action dominante. Visuel d'accueil livré le 23/09 : ratio
             tenu par aspect-ratio, dimensions déclarées pour que rien ne saute
             à l'arrivée de l'image. */}
-        <div className="mt-6 rounded-[24px] overflow-hidden" style={{ aspectRatio: "1.548", background: "var(--color-warm-bg)" }}>
+        <div className="mt-6 rounded-hero overflow-hidden" style={{ aspectRatio: "1.548", background: "var(--color-warm-bg)" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/editorial/capsela_dressing_empty.webp"
@@ -433,7 +433,7 @@ export default function WardrobeScreen() {
             className="flex-none text-left cursor-pointer active:opacity-80"
             style={{ width: "clamp(142px, calc((100% + 6px) / 2.35), 152px)", scrollSnapAlign: "start" }}
           >
-            <div className="overflow-hidden rounded-[20px]" style={{ aspectRatio: "5 / 6", background: "var(--color-warm-bg)" }}>
+            <div className="overflow-hidden rounded-carte" style={{ aspectRatio: "5 / 6", background: "var(--color-warm-bg)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={g.visuel}
@@ -529,7 +529,7 @@ export default function WardrobeScreen() {
       {/* ── ✦ À DÉCOUVRIR ─ le pont vers ce que Capsela peut faire avec ce
              dressing. Jamais une vitrine : aucune pièce à acheter ici. */}
       {aDecouvrir && (
-        <div className="mt-10 rounded-[24px] px-5 py-[18px]" style={{ background: "var(--color-warm-bg)" }}>
+        <div className="mt-10 rounded-hero px-5 py-[18px]" style={{ background: "var(--color-warm-bg)" }}>
           <div className="t-surtitre text-terracotta">{aDecouvrir.cas === "associations" ? "✦ Une idée pour ton dressing" : "✦ À découvrir"}</div>
           {aDecouvrir.cas === "associations" && (
             <>

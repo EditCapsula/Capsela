@@ -509,7 +509,7 @@ export default function CapsuleScreen() {
         </div>
 
         {exploredStyleLabel && (
-          <div className="mt-[14px] bg-card border border-border rounded-[14px] px-4 py-[14px]">
+          <div className="mt-[14px] bg-card border border-border rounded-bloc px-4 py-[14px]">
             <div className="flex items-start gap-[11px]">
               <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
               <div className="flex-1 min-w-0">
@@ -561,7 +561,7 @@ export default function CapsuleScreen() {
             écran — à 390 px, 20 px de moins, pris en haut et en bas, où les
             visuels n'ont que du décor (branchages, ciel, rebord de pierre).
             Dimensions déclarées pour que rien ne saute au chargement. */}
-        <div className="mt-[16px] rounded-[20px] overflow-hidden border border-border bg-card" style={{ aspectRatio: "2/1" }}>
+        <div className="mt-[16px] rounded-carte overflow-hidden border border-border bg-card" style={{ aspectRatio: "2/1" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             key={capsuleSeason}
@@ -808,7 +808,7 @@ export default function CapsuleScreen() {
                   <button
                     key={a.piece.id}
                     onClick={() => choisirAlternative(a)}
-                    className="flex items-center gap-[12px] bg-card border border-border rounded-[16px] px-[12px] py-[10px] text-left cursor-pointer"
+                    className="flex items-center gap-[12px] bg-card border border-border rounded-tuile px-[12px] py-[10px] text-left cursor-pointer"
                   >
                     <div className="w-[48px] flex-shrink-0">
                       <Vignette item={a.piece} arrondi={10} marge={0.08} />
