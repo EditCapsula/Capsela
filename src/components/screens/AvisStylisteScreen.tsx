@@ -12,7 +12,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ResultatAvis from "@/components/ResultatAvis";
 import { premiumRequis } from "@/lib/autorisations";
 import { useAuth } from "@/lib/auth";
-import { contexteDepuisProfil, etapesAnalyse, personnalisationAvis, phraseAnalyse, reactionErreur } from "@/lib/avisStylisteClient";
+import { contexteDepuisProfil, etapesAnalyse, libelleQuota, lireQuotaAvis, personnalisationAvis, phraseAnalyse, prochainMois, reactionErreur, type QuotaAvis } from "@/lib/avisStylisteClient";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
@@ -49,7 +49,9 @@ import { useCapsela, type PhotoAvis } from "@/lib/store";
  * spec : placeholder TODO_COPY.
  */
 const TEXTES = {
-  prendre: "Prendre une photo", // §3, §6
+  prendre: "Prendre une photo", // §3, §6 — dans la feuille « Changer de photo »
+  analyserEntree: "Analyser ma tenue", // 02/10/2026 : l'objectif est l'analyse, pas la prise de photo
+  galerie: "Choisir une photo dans ma galerie",
   importer: "Choisir dans ma galerie", // optimisation du parcours, 26/09/2026
   analyser: "Analyser ma tenue", // §3, §4, §6
   changer: "Changer de photo", // §4, §6
@@ -90,26 +92,29 @@ function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?:
  * promettre plus que ce que fait réellement l'avis.
  */
 const ETAPES_SERVICE: [string, string][] = [
-  ["Montre ta tenue", "Photo ou galerie."],
-  ["Capsela l'analyse", "Style, couleurs, proportions."],
-  ["Reçois ton avis", "Conseils personnalisés."],
+  ["Ta tenue", "Une photo de la tête aux pieds."],
+  ["Ton analyse", "Style · couleurs · silhouette."],
+  ["Ton avis", "Un verdict et des conseils personnalisés."],
 ];
 
 function IntroService() {
   return (
-    <ol className="mt-[26px] flex flex-col gap-[12px]">
-      {ETAPES_SERVICE.map(([titre, texte], i) => (
-        <li key={titre} className="flex items-start gap-[12px]">
-          <span className="w-[26px] h-[26px] flex-shrink-0 rounded-full bg-warm-bg text-terracotta font-serif text-[13px] leading-none flex items-center justify-center">
-            {i + 1}
-          </span>
-          <span className="min-w-0 pt-[3px]">
-            <span className="block text-[13px] text-ink font-medium">{titre}</span>
-            <span className="block text-[12px] text-muted leading-[1.45] mt-[1px]">{texte}</span>
-          </span>
-        </li>
-      ))}
-    </ol>
+    <section className="mt-[22px]" aria-labelledby="avis-comment">
+      <div id="avis-comment" className="t-surtitre text-muted">Comment ça marche</div>
+      <ol className="mt-[12px] flex flex-col gap-[10px]">
+        {ETAPES_SERVICE.map(([titre, texte], i) => (
+          <li key={titre} className="flex items-start gap-[12px]">
+            <span aria-hidden="true" className="w-[28px] h-[28px] flex-shrink-0 rounded-full bg-warm-bg text-terracotta font-serif text-[12px] leading-none flex items-center justify-center">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="min-w-0 pt-[1px]">
+              <span className="block text-[13px] text-ink font-medium">{titre}</span>
+              <span className="block text-[12px] text-muted leading-[1.4]">{texte}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -120,7 +125,7 @@ function IntroService() {
  */
 function ConseilsPhoto() {
   return (
-    <details className="group mt-[22px] bg-card border border-border rounded-[18px] px-4 py-[12px]">
+    <details className="group mt-[18px] bg-card border border-border rounded-[18px] px-4 py-[12px]">
       <summary className="flex items-center justify-between gap-3 cursor-pointer list-none min-h-[28px]">
         <span className="t-surtitre text-muted">Pour un avis plus précis</span>
         <span aria-hidden="true" className="text-muted transition-transform duration-200 group-open:rotate-180">
@@ -130,9 +135,9 @@ function ConseilsPhoto() {
         </span>
       </summary>
       <ul className="mt-[10px] flex flex-col gap-[6px] text-[13px] text-ink leading-[1.45]">
-        <li>• Prends ta tenue en entier, de la tête aux chaussures</li>
+        <li>• Montre ta silhouette en entier</li>
         <li>• Privilégie une lumière naturelle</li>
-        <li>• Évite les photos trop recadrées ou floues</li>
+        <li>• Garde ta tenue bien visible, sans recadrage ni flou</li>
       </ul>
     </details>
   );
@@ -252,6 +257,20 @@ export default function AvisStylisteScreen() {
   /** Refus serveur « non Premium » déjà vu et refermé : ne pas rouvrir le Gate à chaque rendu. */
   const [gateFerme, setGateFerme] = useState<string | null>(null);
 
+  /** Avis restants ce mois-ci, lus au serveur avant toute demande ; null tant qu'inconnu (rien n'est alors affiché ni bloqué). */
+  const [quota, setQuota] = useState<QuotaAvis | null>(null);
+  useEffect(() => {
+    if (photo) return;
+    let annule = false;
+    lireQuotaAvis().then((q) => {
+      if (!annule) setQuota(q);
+    });
+    return () => {
+      annule = true;
+    };
+  }, [photo]);
+  const epuise = quota !== null && quota.restants <= 0;
+
   const choisir = (source: "camera" | "galerie") => {
     setSources(false);
     (source === "camera" ? cameraRef : galerieRef).current?.click();
@@ -279,6 +298,9 @@ export default function AvisStylisteScreen() {
   const reaction = analyse.etat === "echouee" ? reactionErreur(analyse.code, analyse.raison) : null;
   const cleRefus = analyse.etat === "echouee" ? `${analyse.code}:${photo?.url ?? ""}` : null;
   const gateOuvert = reaction?.action === "gate" && gateFerme !== cleRefus;
+
+  /** La promesse du service n'est dite qu'à l'entrée, avant qu'une photo n'existe. */
+  const introAffichee = selection === "aucune" && !photo;
 
   let contenu: React.ReactNode;
   if (selection === "preparation") {
@@ -311,13 +333,35 @@ export default function AvisStylisteScreen() {
       <>
         <IntroService />
         <ConseilsPhoto />
-        <div className="mt-[22px] flex flex-col gap-[10px]">
-          <button type="button" onClick={() => choisir("camera")} className={BOUTON_PRINCIPAL}>
-            {TEXTES.prendre}
+        <div className="mt-[20px] flex flex-col gap-[6px]">
+          <button type="button" onClick={() => choisir("camera")} disabled={epuise} className={BOUTON_PRINCIPAL}>
+            {TEXTES.analyserEntree}
           </button>
-          <button type="button" onClick={() => choisir("galerie")} className={BOUTON_SECONDAIRE}>
-            {TEXTES.importer}
+          {/* Le quota, avant la demande, et secondaire : une phrase, jamais en couleur seule. Rien tant qu'il est inconnu. */}
+          {quota && !epuise && (
+            <div className="text-center text-[12px] text-muted leading-[1.45]" role="status">
+              {libelleQuota(quota)}
+            </div>
+          )}
+          {epuise && quota && (
+            <div className="text-center text-[12px] text-muted leading-[1.5] px-2" role="status">
+              <div className="text-ink">{libelleQuota(quota)}</div>
+              <div>Tes avis seront à nouveau disponibles le {prochainMois()}.</div>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => choisir("galerie")}
+            disabled={epuise}
+            className={BOUTON_SECONDAIRE + " mt-[6px] disabled:opacity-50 disabled:cursor-not-allowed"}
+          >
+            {TEXTES.galerie}
           </button>
+          {epuise && (
+            <button type="button" onClick={actions.goHistory} className={LIEN}>
+              {TEXTES.voirJournal} →
+            </button>
+          )}
         </div>
       </>
     );
@@ -477,7 +521,14 @@ export default function AvisStylisteScreen() {
           Avis de <span className="italic text-terracotta">styliste</span>
         </div>
         {/* Promesse (optimisation du parcours, 26/09/2026). */}
-        <div className="t-chapeau text-muted-3 mt-[10px]">Un regard expert sur ta tenue, pensé pour ton style.</div>
+        {introAffichee ? (
+          <>
+            <div className="t-titre-ligne text-ink mt-[10px]">Ton look, vu par Capsela.</div>
+            <div className="t-chapeau text-muted-3 mt-[6px]">Un regard personnalisé sur ta silhouette, tes couleurs et l&apos;harmonie de ta tenue.</div>
+          </>
+        ) : (
+          <div className="t-chapeau text-muted-3 mt-[10px]">Un regard expert sur ta tenue, pensé pour ton style.</div>
+        )}
       </div>
 
       {/* Champs natifs, invisibles : la caméra arrière, et la galerie / les fichiers. */}

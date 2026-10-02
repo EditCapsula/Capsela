@@ -825,7 +825,32 @@ export interface QuotaMensuel {
   /** Consomme une unité du mois. `utilisees` : unités consommées après cet appel, ou le plafond s'il est atteint. */
   consommer(userId: string): Promise<{ issue: "ok" | "limite" | "indisponible"; utilisees: number }>;
   rendre(userId: string): Promise<void>;
+  /** Unités consommées CE MOIS-CI, sans en consommer : null si illisible (lecture seule, 02/10/2026). */
+  lire(userId: string): Promise<number | null>;
   limite: number;
+}
+
+/** Réponse à la lecture du quota : le nombre d'avis restants, sans rien consommer. */
+export type ReponseQuota = { ok: true; restants: number; limite: number } | { ok: false; code: CodeErreurAvis };
+
+/**
+ * LECTURE DU QUOTA (02/10/2026, page « Avis de styliste ») : l'app affiche « N avis restants ce mois-ci »
+ * AVANT toute demande. Aucune lecture sans consommation n'existait : la table n'a aucune politique RLS,
+ * et le plafond vit côté serveur. Même authentification et même autorisation qu'une demande d'avis ; rien
+ * n'est consommé ni appelé. Illisible : 503, l'app n'affiche alors aucun compteur et ne bloque rien.
+ */
+export async function traiterLectureQuota(
+  enteteAuthorization: string | null,
+  deps: Pick<DependancesAvis, "authentifier" | "lecteurPremium" | "quotaMensuel">
+): Promise<{ statut: number; corps: ReponseQuota }> {
+  const jwt = (enteteAuthorization ?? "").replace(/^Bearer\s+/i, "").trim();
+  const user = jwt ? await deps.authentifier(jwt).catch(() => null) : null;
+  if (!user) return { statut: 401, corps: { ok: false, code: "non_authentifie" } };
+  const verdict = await autoriserFonctionnalite(deps.lecteurPremium, user, "AVIS_DE_STYLISTE");
+  if (!verdict.ok) return verdict.statut === 403 ? { statut: 403, corps: { ok: false, code: "non_premium" } } : { statut: 503, corps: { ok: false, code: "statut_indisponible" } };
+  const utilisees = await deps.quotaMensuel.lire(user.id).catch(() => null);
+  if (utilisees === null) return { statut: 503, corps: { ok: false, code: "statut_indisponible" } };
+  return { statut: 200, corps: { ok: true, restants: Math.max(0, deps.quotaMensuel.limite - utilisees), limite: deps.quotaMensuel.limite } };
 }
 
 const erreur = (statut: number, code: CodeErreurAvis, raison?: RaisonInexploitable) => ({

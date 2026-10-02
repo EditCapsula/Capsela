@@ -21,7 +21,7 @@ import { getAdminKey } from "../_shared/adminKey.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 import type { LecteurPremium } from "../_shared/premium.ts";
 import { limiteDepuisEnv } from "../_shared/protection.ts";
-import { DELAI_PAR_DEFAUT_MS, LIMITE_AVIS_MENSUELLE, MODELE_PAR_DEFAUT, traiterDemandeAvis, type PieceDressing } from "../_shared/avisStyliste.ts";
+import { DELAI_PAR_DEFAUT_MS, LIMITE_AVIS_MENSUELLE, MODELE_PAR_DEFAUT, traiterDemandeAvis, traiterLectureQuota, type DependancesAvis, type PieceDressing } from "../_shared/avisStyliste.ts";
 
 function reponse(statut: number, corps: unknown): Response {
   return new Response(JSON.stringify(corps), {
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
   const delai = Number(Deno.env.get("STYLIST_ADVICE_TIMEOUT_MS"));
   const limite = limiteDepuisEnv(Deno.env.get("STYLIST_ADVICE_LIMITE_MENSUELLE"), LIMITE_AVIS_MENSUELLE);
-  const resultat = await traiterDemandeAvis(req.headers.get("Authorization"), corps, {
+  const deps: DependancesAvis = {
     authentifier: async (jwt) => {
       const { data, error } = await admin.auth.getUser(jwt);
       return error || !data.user ? null : { id: data.user.id };
@@ -106,7 +106,26 @@ Deno.serve(async (req) => {
       rendre: async (userId) => {
         await admin.rpc("rendre_quota_mensuel", { p_user: userId, p_fonction: "stylist-advice" });
       },
+      // Lecture seule du mois civil UTC en cours (comme date_trunc('month', now()) de la migration 0046).
+      lire: async (userId) => {
+        const mois = `${new Date().toISOString().slice(0, 7)}-01`;
+        const { data, error } = await admin
+          .from("edge_usage_mensuel")
+          .select("n")
+          .eq("user_id", userId)
+          .eq("fonction", "stylist-advice")
+          .eq("mois", mois)
+          .maybeSingle();
+        if (error) return null;
+        return data ? Number((data as { n: number }).n) || 0 : 0;
+      },
     },
-  });
+  };
+  // Lecture du quota affiché sur la page : rien n'est consommé ni appelé.
+  if (corps && typeof corps === "object" && (corps as { action?: unknown }).action === "quota") {
+    const lecture = await traiterLectureQuota(req.headers.get("Authorization"), deps);
+    return reponse(lecture.statut, lecture.corps);
+  }
+  const resultat = await traiterDemandeAvis(req.headers.get("Authorization"), corps, deps);
   return reponse(resultat.statut, resultat.corps);
 });

@@ -895,3 +895,15 @@ Aucun des éléments ci-dessous n'est nécessaire au MVP ; ils ne doivent pas ê
 - [ ] Tous les critères de la section 20 vérifiés.
 - [ ] Tests de ton sur un jeu de photos varié : aucune note, aucun jugement corporel, aucune affirmation catégorique.
 - [ ] Aucun élément V2 développé.
+
+## Page d'entrée optimisée et quota visible (02/10/2026)
+
+La page d'entrée dit d'abord la promesse (« Ton look, vu par Capsela. »), puis « Comment ça marche » en trois temps compacts, l'accordéon
+« Pour un avis plus précis », le bouton « Analyser ma tenue », le quota, et « Choisir une photo dans ma galerie » (secondaire).
+
+**Le quota avant la demande.** Aucune lecture sans consommation n'existait (la table de la migration 0046 n'a aucune politique RLS). La fonction
+`stylist-advice` accepte donc `{ "action": "quota" }` (`traiterLectureQuota`, `_shared/avisStyliste.ts`) : même authentification et même autorisation
+qu'une demande, rien n'est consommé ni appelé, réponse `{ ok, restants, limite }` ; compteur illisible : 503. L'app (`lireQuotaAvis`) n'affiche rien et ne
+bloque rien quand elle ne sait pas (mode démo, réseau, fonction pas encore déployée). À 0 avis : bouton et galerie désactivés, « Tes N avis du mois ont
+été utilisés » et la date de renouvellement (1er du mois suivant, mois civil UTC, `prochainMois`). **Aucune règle de quota n'a changé** ; le plafond
+reste celui de la fonction (`STYLIST_ADVICE_LIMITE_MENSUELLE`). La fonction est redéployée par le workflow à la fusion dans main.
