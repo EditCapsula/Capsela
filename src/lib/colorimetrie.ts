@@ -61,6 +61,13 @@ export function colorimetrieUtilisable(c: Colorimetrie | null | undefined): bool
   return !!c && c.statut === "faite" && !!c.signature?.length;
 }
 
+/**
+ * Couleurs SIGNATURE AFFICHÉES au plus (arbitré le 02/10/2026) : une limite d'affichage, pas
+ * celle du moteur, qui garde toutes les signatures. Les signatures d'origine d'une saison
+ * viennent toujours en premier dans SAISONS : le résultat de celles qui l'ont déjà ne change pas.
+ */
+export const SIGNATURE_AFFICHEE_MAX = 6;
+
 /** Nombre maximal de couleurs dans la palette Capsela, et de neutres dedans. */
 export const PALETTE_CAPSELA_MAX = 8;
 export const PALETTE_CAPSELA_NEUTRES = 2;
@@ -102,7 +109,9 @@ export function paletteCapsela(preferences: string[], colorimetrie?: Colorimetri
 
   for (const h of signature) if (ensemblePrefs.has(h)) ajouter(h);
   for (const h of prefs) if (!signature.includes(h) && !moderation.has(h)) ajouter(h);
-  for (const h of signature) ajouter(h);
+  // Les signatures AFFICHÉES seulement : sinon une saison à dix signatures remplirait la
+  // palette et en chasserait les neutres, qui la rendent portable.
+  for (const h of signature.slice(0, SIGNATURE_AFFICHEE_MAX)) ajouter(h);
 
   let poses = 0;
   for (const h of neutres) {
@@ -202,36 +211,36 @@ export const SAISONS: Record<SaisonCle, Saison> = {
     libelle: "Printemps lumineux",
     description: "Des couleurs chaudes et claires qui illuminent naturellement ton teint.",
     nature: "chaude et lumineuse",
-    signature: ["Corail", "Camel", "Moutarde", "Rose poudré"].map(hexDe),
-    neutres: ["Crème", "Sable", "Beige", "Blanc / écru"].map(hexDe),
-    moderation: ["Noir", "Prune", "Gris"].map(hexDe),
+    signature: ["Corail", "Camel", "Moutarde", "Rose poudré", "Abricot", "Jaune", "Orange", "Rose pâle", "Turquoise"].map(hexDe),
+    neutres: ["Crème", "Sable", "Beige", "Blanc / écru", "Ivoire", "Champagne", "Nude"].map(hexDe),
+    moderation: ["Noir", "Prune", "Gris", "Gris anthracite", "Gris perle", "Fuchsia", "Lavande"].map(hexDe),
     visuel: "/onboarding/colorimetrie/palette-printemps.webp",
   },
   ete: {
     libelle: "Été doux",
     description: "Des couleurs fraîches et adoucies qui subliment ton teint tout en nuances.",
     nature: "fraîche et douce",
-    signature: ["Rose poudré", "Bleu", "Prune", "Marine"].map(hexDe),
-    neutres: ["Blanc", "Gris", "Taupe"].map(hexDe),
-    moderation: ["Moutarde", "Corail", "Noir"].map(hexDe),
+    signature: ["Rose poudré", "Bleu", "Prune", "Marine", "Lavande", "Bleu ciel", "Vieux rose", "Rose pâle", "Menthe", "Vert sauge", "Bleu nuit"].map(hexDe),
+    neutres: ["Blanc", "Gris", "Taupe", "Gris clair", "Gris perle"].map(hexDe),
+    moderation: ["Moutarde", "Corail", "Noir", "Marron", "Cognac", "Jaune", "Orange", "Abricot", "Vert olive"].map(hexDe),
     visuel: "/onboarding/colorimetrie/palette-ete.webp",
   },
   automne: {
     libelle: "Automne chaleureux",
     description: "Des couleurs chaudes et profondes qui réchauffent naturellement ton teint.",
     nature: "chaude et profonde",
-    signature: ["Terracotta", "Camel", "Moutarde", "Kaki", "Bordeaux"].map(hexDe),
-    neutres: ["Chocolat", "Crème", "Taupe", "Beige"].map(hexDe),
-    moderation: ["Noir", "Gris", "Rose poudré"].map(hexDe),
+    signature: ["Terracotta", "Camel", "Moutarde", "Kaki", "Bordeaux", "Vieux rose", "Cognac", "Marron", "Vert olive", "Vert forêt"].map(hexDe),
+    neutres: ["Chocolat", "Crème", "Taupe", "Beige", "Ivoire", "Champagne", "Nude"].map(hexDe),
+    moderation: ["Noir", "Gris", "Rose poudré", "Gris anthracite", "Gris clair", "Gris perle", "Rose pâle", "Fuchsia", "Menthe", "Bleu cobalt", "Turquoise", "Bleu ciel", "Lavande"].map(hexDe),
     visuel: "/onboarding/colorimetrie/palette-automne.webp",
   },
   hiver: {
     libelle: "Hiver contrasté",
     description: "Des couleurs froides et franches qui révèlent l'éclat de ton teint.",
     nature: "froide et contrastée",
-    signature: ["Rouge", "Bordeaux", "Prune", "Vert bouteille", "Marine"].map(hexDe),
-    neutres: ["Noir", "Blanc", "Gris"].map(hexDe),
-    moderation: ["Camel", "Moutarde", "Beige"].map(hexDe),
+    signature: ["Rouge", "Bordeaux", "Prune", "Vert bouteille", "Marine", "Bleu cobalt", "Émeraude", "Fuchsia", "Rouge cerise", "Vert forêt", "Bleu nuit"].map(hexDe),
+    neutres: ["Noir", "Blanc", "Gris", "Gris anthracite", "Gris clair", "Gris perle"].map(hexDe),
+    moderation: ["Camel", "Moutarde", "Beige", "Champagne", "Nude", "Marron", "Cognac", "Vieux rose", "Jaune", "Orange", "Abricot", "Vert olive", "Vert sauge"].map(hexDe),
     visuel: "/onboarding/colorimetrie/palette-hiver.webp",
   },
 };
@@ -248,6 +257,20 @@ export function colorimetrieDeSaison(
   const c = lireColorimetrie({ saison, libelle: s.libelle, signature: s.signature, neutres: s.neutres, moderation: s.moderation }, source);
   if (reponses && Object.keys(reponses).length) c.reponses = { ...reponses };
   return c;
+}
+
+/**
+ * LE RÉSULTAT AVEC LES LISTES ACTUELLES DE SA SAISON (02/10/2026). Un profil enregistre
+ * `signature`, `neutres` et `moderation` TELLES QU'ELLES ÉTAIENT le jour du questionnaire :
+ * quand SAISONS s'enrichit (46 teintes, répartition validée le 02/10/2026), les profils
+ * existants garderaient l'ancienne liste. On les relit donc depuis SAISONS à chaque chargement,
+ * sans rien réécrire en base. Les réponses, la date et la source sont conservées ; un résultat
+ * sans saison reconnue ou non exploitable est rendu tel quel.
+ */
+export function rafraichirColorimetrie(c: Colorimetrie): Colorimetrie {
+  if (!colorimetrieUtilisable(c) || !estSaison(c.saison)) return c;
+  const s = SAISONS[c.saison];
+  return { ...c, signature: [...s.signature], neutres: [...s.neutres], moderation: [...s.moderation] };
 }
 
 /*

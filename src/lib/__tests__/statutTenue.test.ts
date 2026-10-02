@@ -56,6 +56,15 @@ describe("computeLookScore — la veste d'une soirée fraîche vient d'abord du 
     expect(proactives.find((p) => p.key === "veste_soir")?.suggestedId).toBe(vesteDuDressing.id);
   });
 
+  it("chez soi (cocooning, télétravail) : aucun « à prévoir » avec une veste", () => {
+    const pool = [vesteDuCatalogue, vesteDuDressing, robe, chaussures];
+    const cle = (occ: "cocooning" | "travail_formel", mode: "Présentiel" | "Télétravail") =>
+      computeLookScore([robe, chaussures], occ, [], null, new Set(), meteo, mode, "Verre", pool).proactives.some((p) => p.key === "veste_soir");
+    expect(cle("cocooning", "Présentiel")).toBe(false);
+    expect(cle("travail_formel", "Télétravail")).toBe(false);
+    expect(cle("travail_formel", "Présentiel")).toBe(true);
+  });
+
   it("sans veste au dressing : celle du catalogue, comme avant", () => {
     const { proactives } = computeLookScore([robe, chaussures], "quotidien", [], null, new Set(), meteo, "Présentiel", "Verre", [vesteDuCatalogue, robe, chaussures]);
     expect(proactives.find((p) => p.key === "veste_soir")?.suggestedId).toBe(vesteDuCatalogue.id);

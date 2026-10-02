@@ -7,6 +7,7 @@ import { daysSinceWorn, wearCounts } from "@/lib/selectors";
 import { wornAgo } from "@/lib/data";
 import { participePorte, participePorteMaj } from "@/lib/logic";
 import BoutonRetour from "@/components/BoutonRetour";
+import { teinteDe } from "@/lib/colorimetrieMoteur";
 
 /**
  * "Mes pièces" (recette 24/08/2026, mockup fourni) — grille plate 2 colonnes
@@ -45,7 +46,9 @@ export default function WardrobePiecesScreen() {
   // seules les pièces de ses catégories techniques, et un « Tout afficher »
   // pour revenir à l'ensemble.
   const filtre = state.filtrePieces;
-  const items = filtre ? state.items.filter((i) => filtre.categories.includes(i.cat)) : state.items;
+  const items = filtre
+    ? state.items.filter((i) => (!filtre.categories || filtre.categories.includes(i.cat)) && (!filtre.teinte || teinteDe(i) === filtre.teinte))
+    : state.items;
   const counts = wearCounts(state.history);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selection, setSelection] = useState<Set<number>>(new Set());
@@ -74,7 +77,7 @@ export default function WardrobePiecesScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
       <div className="flex items-center justify-between gap-3 mt-[10px]">
         <div className="flex items-center gap-[14px] min-w-0">
-          <BoutonRetour onClick={actions.goWardrobe} label="Revenir au dressing" className="flex-shrink-0" />
+          <BoutonRetour onClick={filtre?.retour === "tenue" ? actions.goTenues : actions.goWardrobe} label={filtre?.retour === "tenue" ? "Revenir à ma tenue" : "Revenir au dressing"} className="flex-shrink-0" />
           <div className="t-titre-section text-ink truncate">Mes pièces</div>
         </div>
         <button onClick={actions.openAdd} className="flex items-center gap-[7px] flex-shrink-0 cursor-pointer">

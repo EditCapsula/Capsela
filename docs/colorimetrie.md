@@ -215,3 +215,46 @@ reste dans l'historique git (commit `96b8f4f`). La rétablir demanderait une
 revue juridique : une photo de visage peut révéler une donnée sensible (RGPD,
 article 9). Il faudrait aussi rouvrir la règle de CLAUDE.md sur la couleur de
 peau.
+
+## Répartition des couleurs ajoutées par saison (02/10/2026)
+
+**ARBITRAGE ÉDITORIAL** (tableau validé par la propriétaire, audité avant écriture) : les 25 teintes ajoutées sont
+placées dans `SAISONS` (colorimetrie.ts), chacune en signature, neutre ou à modérer selon la saison.
+
+- Les signatures d'origine de chaque saison restent EN TÊTE de liste : le résultat de celles qui les avaient déjà ne change pas.
+- Affichage : six couleurs signature au plus (`SIGNATURE_AFFICHEE_MAX`) ; c'est une limite d'affichage, le moteur garde toutes les signatures.
+- Les profils enregistrent des listes figées : `rafraichirColorimetrie` les relit depuis `SAISONS` à chaque chargement, sans écriture en base.
+- Chaque teinte du dressing est désormais lue par la colorimétrie sous son propre nom (`TEINTE_DU_DRESSING`) : plus aucune teinte « sans avis ».
+
+## Base sous un calque seul
+
+Quand le seul haut tiré par le moteur est un calque (chemise oversize, gilet léger…), `generateOutfit` pose lui-même un
+haut de base dessous (pièces déjà admises par les règles dures, jamais deux chemises). La suggestion R-S12 « un débardeur
+ou un t-shirt dessous » ne reste que si le pool ne contient aucun haut de base.
+
+## Conseils d'association de couleurs (02/10/2026)
+
+`conseilsCouleurs.ts` : dix accords d'AUTOMNE (**ARBITRAGE ÉDITORIAL**, pas une mesure). La saison est celle de la date consultée,
+jamais celle de la colorimétrie. La carte « Accord de saison » de l'écran Tenue n'apparaît que si les deux couleurs de l'accord
+sont réellement dans la tenue affichée ; la pointe de couleur est citée comme acquise si elle y est aussi, sinon suggérée.
+Quand une des couleurs est à modérer près du visage pour la personne (colorimétrie), la phrase s'adoucit (« à porter plutôt en
+touches près du visage »). Autres saisons : aucune règle, rien ne s'affiche.
+
+### Retours sur les accords (02/10/2026)
+
+La card porte « J'aime cette association » (réversible, `aria-pressed`) et « Pas pour moi » (secondaire), plus les couleurs citées,
+qui ouvrent la `BottomSheet` existante (détail, pièces de la tenue, nombre de pièces au dressing). Les retours sont gardés SUR
+L'APPAREIL, par compte (`capsela.accords.<compte>`, `retoursAccords.ts`), sans table ni migration, effacés avec le compte.
+Seul « Pas pour moi » a un effet : l'accord n'est plus proposé (la card reste en place jusqu'à la visite suivante). « J'aime »
+est enregistré sans effet : aucune personnalisation ne l'exploite encore.
+
+Depuis la migration `0047_accord_retours.sql` (exécutée à la main), les retours sont aussi rattachés au compte (table `accord_retours`, une ligne
+par accord et par personne) : ils suivent la personne d'un appareil à l'autre. Avant la migration, l'application fonctionne comme avant :
+l'appareil fait foi et l'envoi vers la table échoue sans bruit. À la lecture, le compte l'emporte, ce que seul l'appareil connaît est renvoyé.
+
+### Lien avec le dressing (02/10/2026)
+
+La feuille d'une couleur d'accord propose « Voir les N pièces dans mon dressing » quand le dressing en contient : l'écran « Mes pièces »
+s'ouvre filtré sur la teinte (`FiltrePieces.teinte`, lue par `teinteDe` : le nom et le code enregistrés par la détection de couleur
+suffisent, les pièces n'ont pas à changer). La flèche de retour ramène à la tenue (`retour: "tenue"`). Une pièce sans couleur renseignée
+n'est reconnue sous aucune teinte.

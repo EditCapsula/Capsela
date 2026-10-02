@@ -25,6 +25,18 @@ export type Season = "Printemps / Été" | "Automne / Hiver" | "Toutes saisons";
 /** Saison calendaire des 4 capsules par défaut (recette 12/08/2026) — distincte de Season (saison météo d'une pièce). */
 export type CapsuleSeason = "Printemps" | "Été" | "Automne" | "Hiver";
 
+/**
+ * Le filtre de l'écran « Mes pièces » : par catégories (cartes du Dressing) ou par teinte (feuille d'un
+ * accord de saison, 02/10/2026 ; `teinte` est un hex de PAL_COULEURS, lu par teinteDe). `retour: "tenue"` :
+ * la flèche de retour ramène à la tenue d'où l'on vient, pas au Dressing.
+ */
+export interface FiltrePieces {
+  libelle: string;
+  categories?: CategoryKey[];
+  teinte?: string;
+  retour?: "tenue";
+}
+
 export type OccasionKey =
   | "all"
   | "quotidien"
@@ -508,7 +520,7 @@ export interface AppState {
   /** Écran où revient le détail d'un look : le Dressing, ou « Mes looks » d'où il a été ouvert. */
   lookReturn: "wardrobe" | "looks";
   /** Carte du vestiaire qui filtre « Mes pièces » sur ses catégories techniques ; null = toutes les pièces. */
-  filtrePieces: { libelle: string; categories: CategoryKey[] } | null;
+  filtrePieces: FiltrePieces | null;
 }
 
 export type Screen =

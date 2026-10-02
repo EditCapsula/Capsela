@@ -22,6 +22,7 @@ describe("clesLocalesDuCompte", () => {
       "capsela.valises.u1",
       "capsela.valise.u1",
       "capsela.recommandees.u1",
+      "capsela.accords.u1",
     ]);
   });
   it("le mode démo range ses valises sous « demo »", () => {

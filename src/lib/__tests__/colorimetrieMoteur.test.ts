@@ -10,7 +10,6 @@ import {
   teinteDe,
 } from "../colorimetrieMoteur";
 import { FALLBACK_HEX, PALETTE, type Weather } from "../data";
-import { NOMS_AJOUTES_AU_DRESSING } from "../palCouleurs";
 import { computeLookScore, generateOutfitWithFallback } from "../logic";
 import { PAL_COULEURS } from "../palCouleurs";
 import type { CategoryKey, Item } from "../types";
@@ -34,11 +33,11 @@ const regleOrigine = (base: Item[], prefs: string[]) => {
 };
 
 describe("teinteDe — les couleurs du dressing lues dans la palette des saisons", () => {
-  it("chaque teinte du dressing a une correspondance écrite, et une seule reste sans équivalent", () => {
+  it("chaque teinte du dressing a une correspondance écrite, et aucune ne reste sans équivalent", () => {
     for (const [nom] of PALETTE) expect(nom in TEINTE_DU_DRESSING).toBe(true);
     const sans = PALETTE.filter(([nom]) => TEINTE_DU_DRESSING[nom] === null).map(([n]) => n);
-    // Vert sauge, et les teintes ajoutées le 02/10/2026 qu'aucune saison ne place encore (palCouleurs.ts).
-    expect(sans).toEqual(["Vert sauge", ...NOMS_AJOUTES_AU_DRESSING.filter((n) => !["Rouge", "Bleu", "Beige"].includes(n))]);
+    // Depuis le 02/10/2026, chaque teinte du dressing est placée par la colorimétrie : plus aucune sans équivalent.
+    expect(sans).toEqual([]);
     for (const cible of Object.values(TEINTE_DU_DRESSING)) if (cible) expect(PAL_COULEURS.some(([n]) => n === cible)).toBe(true);
   });
 
