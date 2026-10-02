@@ -8,6 +8,7 @@ import { jourLocal } from "@/lib/outfitFeedback";
 import { GENDERS, type Gender, type GenderDependentField } from "@/lib/profile";
 import { fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import Button from "@/components/Button";
+import Input from "@/components/Input";
 
 /*
  * Éléments partagés par les écrans du profil (Mon profil, Mon compte) :
@@ -309,14 +310,13 @@ export function FeuilleVille({ open, onClose }: { open: boolean; onClose: () => 
       <div className="text-[12px] text-muted leading-[1.45] mb-3">
         Utilisée pour la météo quand la géolocalisation n&apos;est pas disponible.
       </div>
-      <input
+      <Input
         value={recherche}
         onChange={(e) => setRecherche(e.target.value)}
         placeholder="Rechercher une ville"
         aria-label="Rechercher une ville"
         autoComplete="off"
         autoCapitalize="words"
-        className="w-full bg-card border border-border rounded-bloc px-4 min-h-[48px] text-[14px] text-ink font-sans"
       />
       <div className="flex flex-col max-h-[46vh] overflow-y-auto -mx-1 px-1 mt-2" role="radiogroup" aria-label="Ville">
         {enRecherche ? (
@@ -388,14 +388,13 @@ export function FeuilleDateNaissance({ open, onClose }: { open: boolean; onClose
       <label htmlFor="date-naissance" className="block text-[12px] text-muted leading-[1.45] mb-2">
         Elle reste privée et n&apos;est jamais affichée ailleurs que sur ton profil.
       </label>
-      <input
+      <Input
         id="date-naissance"
         type="date"
         value={dateBrouillon}
         min="1900-01-01"
         max={aujourdhui || undefined}
         onChange={(e) => setDateBrouillon(e.target.value)}
-        className="w-full bg-card border border-border rounded-bloc px-4 min-h-[48px] text-[14px] text-ink font-sans"
         style={{ colorScheme: "light" }}
       />
       {dateBrouillon && !dateValide && (

@@ -5,9 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { LONGUEUR_MIN_MOT_DE_PASSE, validerNouveauMotDePasse } from "@/lib/motDePasse";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
-
-const INPUT_CLS =
-  "capin bg-card border border-border rounded-bloc px-[17px] py-[15px] text-[14px] text-ink font-sans w-full";
+import Input from "@/components/Input";
 
 /**
  * « NOUVEAU MOT DE PASSE » — ouvert par le lien de réinitialisation reçu par
@@ -100,20 +98,18 @@ export default function NouveauMotDePasseScreen() {
       >
         <label className="flex flex-col gap-[6px]">
           <span className="t-label text-muted">Nouveau mot de passe</span>
-          <input
+          <Input
             type={visible ? "text" : "password"}
             autoComplete="new-password"
-            className={INPUT_CLS}
             value={motDePasse}
             onChange={(e) => setMotDePasse(e.target.value)}
           />
         </label>
         <label className="flex flex-col gap-[6px]">
           <span className="t-label text-muted">Confirmer le nouveau mot de passe</span>
-          <input
+          <Input
             type={visible ? "text" : "password"}
             autoComplete="new-password"
-            className={INPUT_CLS}
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
           />

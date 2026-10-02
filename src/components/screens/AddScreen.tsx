@@ -28,6 +28,7 @@ import type { AccessoireType, BijouType, CategoryKey, OccasionKey, SacType, Shoe
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import Input, { Select } from "@/components/Input";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
 const BOTTOM_SIZED: CategoryKey[] = [...BAS_CATS, "jupe", "combinaison"];
@@ -389,8 +390,7 @@ export default function AddScreen() {
         <div className="mt-6">
           <TitreSection suggere={nomSuggere}>{nomSuggere ? "Suggestion Capsela" : "Nom de la pièce"}</TitreSection>
           {nomEnEdition || !nomVisible ? (
-            <input
-              className="capin w-full bg-card border border-border rounded-champ px-4 py-[13px] text-[15px] text-ink font-sans"
+            <Input
               value={state.addName}
               onChange={(e) => actions.setAddName(e.target.value)}
               onFocus={() => setNomEnEdition(true)}
@@ -719,8 +719,7 @@ export default function AddScreen() {
         <div className="t-surtitre text-muted mt-[26px] mb-[11px]">
           Matière <span className="opacity-60 normal-case tracking-normal">(estimation, jamais garantie sur photo)</span>
         </div>
-        <select
-          className="capin w-full bg-card border border-border rounded-champ px-4 py-[14px] text-[14px] text-ink font-sans"
+        <Select
           value={state.addMatiere ?? ""}
           onChange={(e) => actions.setAddMatiere((e.target.value || null) as typeof state.addMatiere)}
         >
@@ -730,7 +729,7 @@ export default function AddScreen() {
               {m}
             </option>
           ))}
-        </select>
+        </Select>
 
         {coupeApplicable && (
           <>

@@ -23,6 +23,7 @@ import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+import Input from "@/components/Input";
 
 /*
  * « CRÉER UN LOOK » — refonte du 26/09/2026, faite avec les briques déjà en
@@ -430,8 +431,8 @@ export default function CreateLookScreen() {
               )}
             </div>
             {(nommer || state.lookDraftName) && (
-              <input
-                className="capin mt-3 w-full bg-card border border-border rounded-champ px-4 py-[14px] text-[14px] text-ink font-sans"
+              <Input
+                className="mt-3"
                 value={state.lookDraftName}
                 onChange={(e) => actions.setLookDraftName(e.target.value)}
                 placeholder="ex. Look bureau"
