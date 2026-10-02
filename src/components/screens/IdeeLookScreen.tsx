@@ -14,6 +14,7 @@ import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /**
  * DÉTAIL D'UNE IDÉE DE LOOK (27/09/2026, maquette page 4) — ouvert depuis une
@@ -103,14 +104,14 @@ export default function IdeeLookScreen() {
       )}
 
       {infos.length > 0 && (
-        <div className="flex mt-[16px] bg-card border border-border rounded-bloc">
+        <Card rayon="bloc" className="flex mt-[16px]">
           {infos.map((info, i) => (
             <div key={info.label} className={"flex-1 min-w-0 px-[14px] py-[11px] " + (i > 0 ? "border-l border-border" : "")}>
               <div className="t-label text-muted">{info.label}</div>
               <div className="text-[13px] text-ink mt-[3px]">{info.valeur}</div>
             </div>
           ))}
-        </div>
+        </Card>
       )}
 
       <div className="t-surtitre text-muted mt-[24px] mb-[10px]">Les pièces de ce look</div>

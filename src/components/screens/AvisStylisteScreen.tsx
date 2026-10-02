@@ -17,6 +17,7 @@ import { contexteDepuisProfil, etapesAnalyse, libelleQuota, lireQuotaAvis, nivea
 import { preparerPhotoAvis } from "@/lib/photoAvis";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
+import Card from "@/components/Card";
 
 /*
  * AVIS DE STYLISTE — écrans du MVP (docs/avis-de-styliste.md, sections 3, 4,
@@ -74,13 +75,12 @@ const LIEN = "w-full text-center text-[12px] text-muted py-[10px] cursor-pointer
 
 function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?: string }) {
   return (
-    <div
-      className="mx-auto rounded-carte overflow-hidden border border-border bg-card"
+    <Card className="mx-auto overflow-hidden"
       style={{ aspectRatio: `${photo.largeur} / ${photo.hauteur}`, maxHeight: hauteurMax, maxWidth: "100%" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={photo.url} alt="" className="w-full h-full object-contain block" />
-    </div>
+    </Card>
   );
 }
 
@@ -109,13 +109,13 @@ function IndicateurQuota({ quota }: { quota: QuotaAvis }) {
   const renouvellement = `Tes ${quota.limite} avis se renouvellent le ${prochainMois()}.`;
   if (niveau === "epuise") {
     return (
-      <div className="flex items-start gap-[10px] rounded-tuile border border-border bg-card px-4 py-[12px]" role="status">
+      <Card rayon="tuile" className="flex items-start gap-[10px] px-4 py-[12px]" role="status">
         <span aria-hidden="true" className={"w-[8px] h-[8px] rounded-full flex-shrink-0 mt-[6px] " + COULEUR_NIVEAU.epuise} />
         <div className="min-w-0 text-[12px] leading-[1.5]">
           <div className="text-ink text-[13px]">{libelleQuota(quota)}</div>
           <div className="text-muted">Tes avis seront à nouveau disponibles le {prochainMois()}.</div>
         </div>
-      </div>
+      </Card>
     );
   }
   return (
@@ -420,9 +420,9 @@ export default function AvisStylisteScreen() {
   } else if (selection === "invalide") {
     contenu = (
       <div className="mt-[30px]">
-        <div className="bg-card border border-border rounded-carte px-4 py-[16px] text-[13px] text-ink leading-[1.55]" role="alert">
+        <Card className="px-4 py-[16px] text-[13px] text-ink leading-[1.55]" role="alert">
           {TEXTES.fichierInvalide}
-        </div>
+        </Card>
         <Button className="mt-[16px]" onClick={() => setSources(true)}>
           {TEXTES.changer}
         </Button>
@@ -562,12 +562,12 @@ export default function AvisStylisteScreen() {
     contenu = (
       <div className="mt-[24px]">
         <Apercu photo={photo} hauteurMax="30vh" />
-        <div className="mt-[20px] bg-card border border-border rounded-carte px-4 py-[16px]" role="alert">
+        <Card className="mt-[20px] px-4 py-[16px]" role="alert">
           <div className="text-[14px] text-ink leading-[1.5]">{reaction.message}</div>
           {(reaction.action === "reessayer" || reaction.action === "limite") && reaction.sousTexte && (
             <div className="text-[12px] text-muted mt-[4px] leading-[1.45]">{reaction.sousTexte}</div>
           )}
-        </div>
+        </Card>
         {reaction.action === "limite" ? null : reaction.action === "reessayer" ? (
           <Button className="mt-[16px]" onClick={actions.lancerAvisStyliste}>
             {TEXTES.reessayer}

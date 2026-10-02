@@ -33,6 +33,7 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /**
  * Planifier une tenue — maquette du 23/09/2026, LOT 1.
@@ -1525,7 +1526,7 @@ export default function PlanifierScreen() {
 
             {etape === 3 && (
               <>
-                <div className="flex items-center gap-[10px] mt-4 bg-card border border-border rounded-bloc px-[14px]" style={{ minHeight: 48 }}>
+                <Card rayon="bloc" className="flex items-center gap-[10px] mt-4 px-[14px]" style={{ minHeight: 48 }}>
                   <span aria-hidden="true" className="flex-shrink-0 text-placeholder">
                     <Glyphe taille={17}>{G_LOUPE}</Glyphe>
                   </span>
@@ -1543,7 +1544,7 @@ export default function PlanifierScreen() {
                     autoComplete="off"
                     autoCapitalize="words"
                   />
-                </div>
+                </Card>
                 {/* Les suggestions ne s'affichent QUE si l'autocomplétion a
                     répondu quelque chose. `null` (mode démo, réseau, fonction
                     Edge pas encore redéployée) ne montre rien du tout : la
@@ -1551,7 +1552,7 @@ export default function PlanifierScreen() {
                     moins précise. Rien n'est jamais bloqué par l'absence de
                     suggestion. */}
                 {suggestionsVisibles.length > 0 && (
-                  <div className="flex flex-col mt-2 bg-card border border-border rounded-bloc overflow-hidden">
+                  <Card rayon="bloc" className="flex flex-col mt-2 overflow-hidden">
                     {suggestionsVisibles.map((v) => (
                       <button
                         key={`${v.lat},${v.lon}`}
@@ -1569,7 +1570,7 @@ export default function PlanifierScreen() {
                         <span className="flex-1 min-w-0 text-[13px] text-ink truncate">{libelleVille(v)}</span>
                       </button>
                     ))}
-                  </div>
+                  </Card>
                 )}
                 {ville && (
                   <div className="text-[11px] text-muted mt-2">
@@ -1632,14 +1633,14 @@ export default function PlanifierScreen() {
             </div>
 
             {sansTenue ? (
-              <div className="mt-[14px] bg-card border border-border rounded-carte p-[15px]">
+              <Card className="mt-[14px] p-[15px]">
                 <div className="t-titre-carte text-ink">
                   {emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").title}
                 </div>
                 <div className="text-[12px] text-muted-3 leading-[1.5] mt-2">
                   {emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").body}
                 </div>
-              </div>
+              </Card>
             ) : (
               <>
                 <div className="mt-[14px] rounded-hero p-4" style={{ background: "var(--color-terracotta-deep)" }}>
@@ -1657,7 +1658,7 @@ export default function PlanifierScreen() {
                   </div>
                 </div>
 
-                <div className="mt-[14px] bg-card border border-border rounded-carte p-[15px]">
+                <Card className="mt-[14px] p-[15px]">
                   <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
                   <div className="flex flex-col gap-2 mt-[10px]">
                     {[
@@ -1673,7 +1674,7 @@ export default function PlanifierScreen() {
                       </div>
                     ))}
                   </div>
-                </div>
+                </Card>
 
                 {/* L'ANCIENNE ÉTAPE 4, DEVENUE UN RÉGLAGE. Ici il a un effet
                     immédiat et visible : le pool change, `tenue` se recalcule,
@@ -1822,7 +1823,7 @@ export default function PlanifierScreen() {
                   weather_label) et se dit comme telle : jamais une promesse
                   sur le temps qu'il fera. Sans prévision enregistrée, ni
                   température ni ligne météo. */}
-              <div className="mt-[14px] bg-card border border-border rounded-carte p-[15px] flex items-start gap-[12px]">
+              <Card className="mt-[14px] p-[15px] flex items-start gap-[12px]">
                 <span className="flex-shrink-0 text-terracotta mt-[1px]">
                   <Glyphe taille={22}>{t.temp != null ? G_METEO : G_EPINGLE}</Glyphe>
                 </span>
@@ -1835,7 +1836,7 @@ export default function PlanifierScreen() {
                     </div>
                   )}
                 </div>
-              </div>
+              </Card>
 
               {/* AVIS DE STYLISTE — la fonctionnalité Premium existante (son
                   écran, sa décision d'accès, son Gate), mise en avant par le
@@ -1902,7 +1903,7 @@ export default function PlanifierScreen() {
                   Déplacer et dupliquer reprennent la composition imposée ; la
                   suppression garde sa confirmation. */}
               <div className="t-surtitre text-muted mt-[28px]">Autres options</div>
-              <div className="mt-[8px] bg-card border border-border rounded-carte px-[15px]">
+              <Card className="mt-[8px] px-[15px]">
                 {pieces.length > 0 && <LigneOption label="Changer la date ou le moment" onClick={() => repartirDuPlan(t, "deplacer")} />}
                 {pieces.length >= 2 && (
                   <LigneOption
@@ -1929,7 +1930,7 @@ export default function PlanifierScreen() {
                 )}
                 {pieces.length > 0 && <LigneOption label="Dupliquer ce look" onClick={() => repartirDuPlan(t, "dupliquer")} />}
                 <LigneOption label="Supprimer ce look" danger onClick={() => setASupprimer(t)} />
-              </div>
+              </Card>
             </>
           );
         })()}

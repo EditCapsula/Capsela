@@ -13,6 +13,7 @@ import {
   type QuestionColorimetrie,
 } from "@/lib/colorimetrie";
 import { INTENSITE_VISUELS, paletteColorName, type Intensite } from "@/lib/profile";
+import Card from "@/components/Card";
 
 /**
  * LES ÉCRANS DU PARCOURS COLORIMÉTRIE (25/09/2026 ; refonte UX/UI le
@@ -66,12 +67,12 @@ export function IntroColorimetrie() {
   return (
     <div className="mt-[26px] grid grid-cols-3 gap-[10px]">
       {reperes.map(([p, texte]) => (
-        <div key={texte} className="bg-card border border-border rounded-tuile px-[8px] py-[14px] flex flex-col items-center gap-[8px] text-center">
+        <Card rayon="tuile" className="px-[8px] py-[14px] flex flex-col items-center gap-[8px] text-center" key={texte}>
           <Pictogramme nom={p} />
           <span className="text-[12px] leading-[1.3] text-muted-3" style={{ textWrap: "balance" }}>
             {texte}
           </span>
-        </div>
+        </Card>
       ))}
     </div>
   );
@@ -194,13 +195,13 @@ export function IndecisColorimetrie() {
           <span key={c} className="absolute rounded-full" style={{ width: 70, height: 70, left: x - 4, top: y, background: c, opacity: 0.55 }} />
         ))}
       </div>
-      <div className="bg-card border border-border rounded-carte px-[16px] py-[15px] mt-[22px]">
+      <Card className="px-[16px] py-[15px] mt-[22px]">
         <div className="t-titre-carte text-ink">Ce que cela signifie</div>
         <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
           Tu peux probablement porter une large gamme de couleurs. Capsela privilégiera les teintes qui fonctionnent le mieux
           avec tes préférences et ton dressing.
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -315,7 +316,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
         </section>
       )}
 
-      <div className="bg-card border border-border rounded-carte px-[16px] py-[15px] mt-[30px] flex gap-[12px] items-start">
+      <Card className="px-[16px] py-[15px] mt-[30px] flex gap-[12px] items-start">
         <Pictogramme nom="repere" taille={22} />
         <div className="min-w-0">
           <div className="font-serif text-[17px] leading-[1.25] text-ink">Ta palette est un repère, pas une règle.</div>
@@ -324,7 +325,7 @@ export function ResultatColorimetrie({ colorimetrie, intensite }: { colorimetrie
             associations qui te mettent naturellement en valeur.
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

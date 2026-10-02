@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { DEFAULT_PREFS, WORK_DAYS, type ProfilePrefs } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /*
  * PRÉFÉRENCES CAPSELA (architecture du profil, 25/09/2026) : « comment je
@@ -39,7 +40,7 @@ function Section({ titre, icone, id, children }: { titre: string; icone: React.R
       {/* Le surtitre à pictogramme de Mon profil (27/09/2026) : les deux
           écrans se lisent comme un seul espace. */}
       <Surtitre icone={icone}>{titre}</Surtitre>
-      <div className="bg-card border border-border rounded-carte overflow-hidden">{children}</div>
+      <Card className="overflow-hidden">{children}</Card>
     </div>
   );
 }

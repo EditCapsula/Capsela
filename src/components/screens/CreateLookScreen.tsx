@@ -22,6 +22,7 @@ import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /*
  * « CRÉER UN LOOK » — refonte du 26/09/2026, faite avec les briques déjà en
@@ -254,9 +255,9 @@ export default function CreateLookScreen() {
         </div>
 
         {items.length === 0 ? (
-          <div className="mt-6 bg-card border border-border rounded-tuile px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
+          <Card rayon="tuile" className="mt-6 px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
             Ton dressing est encore vide — ajoute quelques pièces réelles pour pouvoir composer un look.
-          </div>
+          </Card>
         ) : (
           <>
             {/* ── OCCASION ─ le chip de l'écran Tenue : l'occasion choisie,
@@ -352,7 +353,7 @@ export default function CreateLookScreen() {
               lookScore.proactives.map((p) => {
                 const target = PROACTIVE_TARGET_CATS[p.key];
                 return (
-                  <div key={p.key} className="relative mt-3 flex items-start gap-[11px] bg-card border border-border rounded-bloc px-4 py-[14px]">
+                  <Card rayon="bloc" className="relative mt-3 flex items-start gap-[11px] px-4 py-[14px]" key={p.key}>
                     <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
                     <div className="flex-1 min-w-0 pr-[18px]">
                       {p.key === "layer" && <div className="t-label text-terracotta mb-[6px]">Layering</div>}
@@ -370,7 +371,7 @@ export default function CreateLookScreen() {
                     >
                       ✕
                     </button>
-                  </div>
+                  </Card>
                 );
               })}
 

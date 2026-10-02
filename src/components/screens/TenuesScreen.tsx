@@ -30,6 +30,7 @@ import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { DateContext, Item, TravelMode, WorkMode } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button, { BoutonDiscret } from "@/components/Button";
+import Card from "@/components/Card";
 
 /** Icônes des CTA de pièce suggérée (recette 23/08/2026) — trait fin, même style que TabBar, jamais d'emoji. */
 function PlusIcon() {
@@ -612,7 +613,7 @@ export default function TenuesScreen() {
       </div>
 
       {state.occasion === "voyage" && state.travelMode === "Longue distance" && !state.travelTipDismissed && (
-        <div className="mt-[14px] flex items-start gap-[11px] bg-card border border-border rounded-bloc px-4 py-[14px]">
+        <Card rayon="bloc" className="mt-[14px] flex items-start gap-[11px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1 min-w-0">
             <div className="text-[12px] text-ink-soft leading-[1.45]">
@@ -625,7 +626,7 @@ export default function TenuesScreen() {
           >
             ×
           </button>
-        </div>
+        </Card>
       )}
 
 
@@ -939,13 +940,13 @@ export default function TenuesScreen() {
           </div>
 
           {!noCompleteOutfit && missingText && (
-            <div className="mt-[12px] bg-card border border-border rounded-carte p-4">
+            <Card className="mt-[12px] p-4">
               <div className="t-label text-terracotta">À compléter</div>
               <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{missingText}</div>
               <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
                 Ajouter une pièce →
               </button>
-            </div>
+            </Card>
           )}
 
           {!noCompleteOutfit && vesteWithoutBase && (
@@ -975,7 +976,7 @@ export default function TenuesScreen() {
                   className="overflow-hidden transition-all duration-300 ease-out"
                   style={closing ? { opacity: 0, maxHeight: 0, marginTop: 0 } : { opacity: 1, maxHeight: 640, marginTop: 12 }}
                 >
-                  <div className="bg-card border border-border rounded-carte p-4">
+                  <Card className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-[6px]">
@@ -1066,7 +1067,7 @@ export default function TenuesScreen() {
                         </div>
                       </div>
                     )}
-                  </div>
+                  </Card>
                 </div>
               );
             })}
@@ -1093,7 +1094,7 @@ export default function TenuesScreen() {
           moteur (state.outfitFailureReason) — jamais un diagnostic
           recalculé/inventé ici. Sobre, typographique, sans illustration. */}
       {!meteoEnAttente && emptyState && (
-        <div className="mt-2 mb-4 bg-card border border-border rounded-bloc px-4 py-[26px] text-center">
+        <Card rayon="bloc" className="mt-2 mb-4 px-4 py-[26px] text-center">
           <div className="t-titre-vignette text-ink">{emptyState.title}</div>
           <div className="text-[13px] text-ink-soft leading-[1.5] mt-[8px]">{emptyState.body}</div>
           {emptyState.ctaLabel && emptyState.onCta && (
@@ -1138,7 +1139,7 @@ export default function TenuesScreen() {
               Aucun autre style ne permet encore de couvrir cette occasion avec ta capsule actuelle.
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Signalé le 22/09 : l'intitulé collait au bas de la card terracotta.
@@ -1250,7 +1251,7 @@ export default function TenuesScreen() {
       )}
 
       {formalityDowngraded && !noCompleteOutfit && (
-        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-bloc px-4 py-[14px]">
+        <Card rayon="bloc" className="mt-4 flex items-start gap-[11px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1">
             {/* Ancien texte : « Ta capsule n\'a pas de tenue suffisamment
@@ -1276,11 +1277,11 @@ export default function TenuesScreen() {
               Compléter mon dressing →
             </button>
           </div>
-        </div>
+        </Card>
       )}
 
       {occasionElargie && !noCompleteOutfit && occasionLabelCourant && (
-        <div className="mt-4 flex items-start gap-[11px] bg-card border border-border rounded-bloc px-4 py-[14px]">
+        <Card rayon="bloc" className="mt-4 flex items-start gap-[11px] px-4 py-[14px]">
           <span className="font-serif italic text-[15px] text-terracotta flex-shrink-0">✦</span>
           <div className="flex-1">
             <div className="text-[12px] text-ink-soft leading-[1.45]">
@@ -1290,7 +1291,7 @@ export default function TenuesScreen() {
               Ajouter une pièce pour cette occasion →
             </button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* ENTRÉE VERS PLANIFIER (recette 24/09/2026, demandé).

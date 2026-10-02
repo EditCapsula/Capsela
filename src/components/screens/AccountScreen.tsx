@@ -11,6 +11,7 @@ import { APP_VERSION } from "@/lib/data";
 import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /*
  * MON COMPTE (architecture du profil, 25/09/2026) : le compte et ses données,
@@ -30,7 +31,7 @@ function Section({ titre, children }: { titre: string; children: React.ReactNode
   return (
     <>
       <div className="t-surtitre text-muted mt-7 mb-[10px]">{titre}</div>
-      <div className="bg-card border border-border rounded-carte overflow-hidden">{children}</div>
+      <Card className="overflow-hidden">{children}</Card>
     </>
   );
 }

@@ -29,6 +29,7 @@ import { OCCASIONS_EDITORIALES, libelleOccasion, titreStyle } from "@/lib/occasi
 import type { ChoixRevente, Item, OccasionKey } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 /*
  * LE JOURNAL — refonte du 25/09/2026 (brief « Refonte UX du Journal »).
@@ -442,7 +443,7 @@ export default function HistoryScreen() {
             {aVendre.map(({ item, port }) => {
               const occupe = enCours === item.id;
               return (
-                <div key={item.id} className="bg-card border border-border rounded-carte p-[14px]" aria-busy={occupe}>
+                <Card className="p-[14px]" key={item.id} aria-busy={occupe}>
                   <button onClick={() => ouvrirPiece(item)} className="w-full flex gap-[13px] text-left cursor-pointer">
                     <Vignette item={item} className="w-[72px]" pad={5} />
                     <div className="flex-1 min-w-0 pt-[2px]">
@@ -475,14 +476,14 @@ export default function HistoryScreen() {
                       Mettre de côté pour vendre
                     </Button>
                   </div>
-                </div>
+                </Card>
               );
             })}
           </div>
         ) : (
-          <div className="mt-6 bg-card border border-border rounded-carte px-5 py-[18px] text-[13px] text-muted-3 leading-[1.5]">
+          <Card className="mt-6 px-5 py-[18px] text-[13px] text-muted-3 leading-[1.5]">
             Plus aucune pièce à examiner pour l&apos;instant. Le journal te préviendra si l&apos;une d&apos;elles attend trop longtemps.
-          </div>
+          </Card>
         )}
 
         {deCote.length > 0 && (
@@ -493,7 +494,7 @@ export default function HistoryScreen() {
             </div>
             <div className="flex flex-col gap-[10px] mt-3">
               {deCote.map((item) => (
-                <div key={item.id} className="bg-card border border-border rounded-tuile p-[12px] flex items-center gap-[12px]" aria-busy={enCours === item.id}>
+                <Card rayon="tuile" className="p-[12px] flex items-center gap-[12px]" key={item.id} aria-busy={enCours === item.id}>
                   <Vignette item={item} className="w-[44px]" pad={3} />
                   <div className="flex-1 min-w-0 text-[13px] text-ink leading-[1.3]">{item.name}</div>
                   <button
@@ -504,7 +505,7 @@ export default function HistoryScreen() {
                     Annuler
                     <span className="sr-only"> la mise de côté de {item.name}</span>
                   </button>
-                </div>
+                </Card>
               ))}
             </div>
           </div>
@@ -639,7 +640,7 @@ export default function HistoryScreen() {
           piste sable : 3,4:1, au-dessus du seuil de 3:1 d'un élément
           graphique. Les deux chiffres secondaires sont à droite, séparés par
           des filets, comme sur la maquette. */}
-      <div className="mt-5 bg-card border border-border rounded-carte px-4 py-4 flex items-center gap-3">
+      <Card className="mt-5 px-4 py-4 flex items-center gap-3">
         {capsule.total > 0 && (
           <>
             <AnneauCapsule pourcentage={capsule.pourcentage} />
@@ -656,7 +657,7 @@ export default function HistoryScreen() {
             <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(capsule.portees, "pièce utilisée", "pièces utilisées")}</div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* TON STYLE CE MOIS-CI — une carte éditoriale (26/09/2026) : ce que
           ton mois dit de ton style, puis l'accès aux tenues qui le disent.

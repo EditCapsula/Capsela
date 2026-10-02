@@ -8,6 +8,7 @@ import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 export default function LookDetailScreen() {
   const { state, actions, vestiairePool } = useCapsela();
@@ -56,7 +57,7 @@ export default function LookDetailScreen() {
           // pastille de couleur plate — app mode, le visuel prime.
           const suggested = isCatalogId(it.id);
           return (
-            <div key={it.id} className="flex items-center gap-[13px] bg-card border border-border rounded-bloc p-[11px]">
+            <Card rayon="bloc" className="flex items-center gap-[13px] p-[11px]" key={it.id}>
               <div className="relative flex-shrink-0">
                 <div
                   className="w-[58px] h-[70px] rounded-mini overflow-hidden"
@@ -87,7 +88,7 @@ export default function LookDetailScreen() {
                   {CATLABEL[isBag(it) ? "sac" : it.cat]} · {it.color}
                 </div>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

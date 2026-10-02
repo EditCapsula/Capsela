@@ -1,6 +1,7 @@
 "use client";
 
 import { trierAvisRecents, verdictCourt, type AvisEnregistre } from "@/lib/avisJournal";
+import Card from "@/components/Card";
 
 /*
  * « MES AVIS DE STYLISTE » DANS LE JOURNAL — la mémoire visuelle des avis
@@ -102,7 +103,7 @@ export default function AvisEnregistresJournal({
         </>
       ) : (
         // ÉTAT VIDE : une invitation, jamais de fausse carte.
-        <div className="mt-[12px] bg-card border border-border rounded-carte px-4 py-[16px]">
+        <Card className="mt-[12px] px-4 py-[16px]">
           <div className="t-titre-carte text-ink">
             Tes futurs avis de styliste <span className="italic text-terracotta">seront ici</span>
           </div>
@@ -112,7 +113,7 @@ export default function AvisEnregistresJournal({
           <button type="button" onClick={onAnalyser} className="mt-[10px] t-lien text-terracotta cursor-pointer min-h-[44px]">
             Analyser une tenue →
           </button>
-        </div>
+        </Card>
       )}
     </section>
   );

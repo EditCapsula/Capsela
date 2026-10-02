@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import type { CapsuleSeason, Item } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
+import Card from "@/components/Card";
 
 /**
  * Module "Les idées de tenues" (recette 19/08/2026, refonte UX/UI 22/08/2026,
@@ -254,7 +255,7 @@ export default function ItemOutfitsScreen() {
       )}
 
       {looks.length === 0 ? (
-        <div className="mt-[22px] bg-card border border-border rounded-bloc px-4 py-[18px]">
+        <Card rayon="bloc" className="mt-[22px] px-4 py-[18px]">
           {/* Une pièce hors de la saison de la capsule n'a pas d'idée pour une
               raison qui n'est pas le dressing (27/09/2026) : le dire, plutôt
               que d'inviter à ajouter des pièces qui n'y changeraient rien. */}
@@ -273,7 +274,7 @@ export default function ItemOutfitsScreen() {
               </button>
             </>
           )}
-        </div>
+        </Card>
       ) : (
         <>
           <div className="flex flex-col gap-[16px] mt-[16px]">

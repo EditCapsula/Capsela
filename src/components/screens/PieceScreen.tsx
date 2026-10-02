@@ -13,6 +13,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 
 const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
 
@@ -276,7 +277,7 @@ export default function PieceScreen() {
       )}
 
       {suggested ? (
-        <div className="flex flex-col gap-[9px] mt-3 bg-card border border-border rounded-bloc px-4 py-[14px]">
+        <Card rayon="bloc" className="flex flex-col gap-[9px] mt-3 px-4 py-[14px]">
           {active.brand && <InfoRow label="Marque" value={active.brand} />}
           <InfoRow label="Taille" value={active.size || "—"} />
           <InfoRow label="Style" value={bestStyleFor(active)} />
@@ -292,9 +293,9 @@ export default function PieceScreen() {
           {active.bijouType && <InfoRow label="Type de bijou" value={active.bijouType} />}
           {active.accessoireType && <InfoRow label="Type d'accessoire" value={active.accessoireType} />}
           {active.subtype && <InfoRow label={isLength ? "Longueur" : "Type"} value={active.subtype} />}
-        </div>
+        </Card>
       ) : (
-        <div className="flex flex-col gap-[11px] mt-3 bg-card border border-border rounded-bloc px-4 py-[14px]">
+        <Card rayon="bloc" className="flex flex-col gap-[11px] mt-3 px-4 py-[14px]">
           {active.brand && <InfoRow label="Marque" value={active.brand} />}
           {sizeApplicable && (
             <CharRow icon={<TicketIcon />} label={isShoe ? "Pointure" : "Taille"} value={active.size || "Non renseignée"} />
@@ -309,7 +310,7 @@ export default function PieceScreen() {
           <CharRow icon={<FabricIcon />} label="Matière" value={active.matiere || "Non renseignée"} />
           {coupeApplicable && <CharRow icon={<TshirtIcon />} label="Coupe" value={active.coupe || "Non renseignée"} />}
           {typeValue && <CharRow icon={<HangerIcon />} label={isLength ? "Longueur" : "Type"} value={typeValue} />}
-        </div>
+        </Card>
       )}
 
       {suggested ? (
