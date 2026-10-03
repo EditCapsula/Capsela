@@ -9,6 +9,8 @@ import AppHeader from "@/components/AppHeader";
 import ResultatAvis from "@/components/ResultatAvis";
 import { PhotoHeros } from "@/components/screens/AvisStylisteScreen";
 import { premiumRequis } from "@/lib/autorisations";
+import { useAuth } from "@/lib/auth";
+import { noteDeLAvis } from "@/lib/noteAvis";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
@@ -49,7 +51,8 @@ const TEXTES = {
 const formatDate = (t: number) => new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
 export default function AvisEnregistreScreen() {
-  const { state, actions, avisEnregistreActif: avis } = useCapsela();
+  const { state, weather, actions, avisEnregistreActif: avis } = useCapsela();
+  const { profile } = useAuth();
   const [confirmation, setConfirmation] = useState(false);
   const [suppression, setSuppression] = useState<"aucune" | "en_cours" | "echec">("aucune");
   const [correctionRefusee, setCorrectionRefusee] = useState(false);
@@ -120,7 +123,13 @@ export default function AvisEnregistreScreen() {
         </div>
       )}
 
-      <ResultatAvis avis={avis.avis} pieces={avis.pieces} items={state.items} onOuvrirPiece={(id) => actions.openItem(id, false)} />
+      <ResultatAvis
+        avis={avis.avis}
+        pieces={avis.pieces}
+        items={state.items}
+        onOuvrirPiece={(id) => actions.openItem(id, false)}
+        note={noteDeLAvis({ avis: avis.avis, pieces: avis.pieces, reconnaissance: avis.reconnaissance, dressing: state.items, profile, meteo: weather })}
+      />
 
       {/* La même couche qu'au résultat (26/09/2026) : les pièces reconnues,
           corrigeables, et les actions sur la composition. Un avis enregistré
