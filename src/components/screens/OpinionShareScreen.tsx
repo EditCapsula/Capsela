@@ -526,7 +526,7 @@ export default function OpinionShareScreen() {
               height: 26,
               padding: 3,
               justifyContent: imageJointe ? "flex-end" : "flex-start",
-              background: imageJointe ? "var(--color-terracotta)" : "#D9CDBB",
+              background: imageJointe ? "var(--color-terracotta)" : "var(--color-cream-dark-soft)",
             }}
           >
             <span className="rounded-full bg-card" style={{ width: 20, height: 20 }} />

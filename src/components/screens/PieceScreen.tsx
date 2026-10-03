@@ -247,7 +247,7 @@ export default function PieceScreen() {
             className="inline-flex items-center gap-[6px] mt-4 t-pastille text-terracotta bg-warm-bg rounded-full py-1 px-[10px] cursor-pointer"
           >
             Suggestion
-            <span className="w-[13px] h-[13px] rounded-full border border-[#C9966F] text-[9px] normal-case flex items-center justify-center">
+            <span className="w-[13px] h-[13px] rounded-full border border-gold text-[9px] normal-case flex items-center justify-center">
               i
             </span>
           </button>

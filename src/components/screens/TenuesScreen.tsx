@@ -988,7 +988,7 @@ export default function TenuesScreen() {
                             <button
                               onClick={() => setLayeringInfoOpen((v) => !v)}
                               aria-label="Qu'est-ce que le layering ?"
-                              className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-[#C9966F] text-[10px] text-terracotta flex items-center justify-center cursor-pointer"
+                              className="w-[17px] h-[17px] flex-shrink-0 rounded-full border border-gold text-[10px] text-terracotta flex items-center justify-center cursor-pointer"
                             >
                               i
                             </button>
@@ -1168,9 +1168,9 @@ export default function TenuesScreen() {
         {meteoEnAttente
           ? [0, 1, 2].map((i) => (
               <div key={i} className="flex-none w-[112px]">
-                <div className="w-[112px] h-[112px] rounded-bloc animate-pulse" style={{ background: "#EFE7D8" }} />
-                <div className="h-[10px] w-3/4 rounded-full animate-pulse mt-[8px]" style={{ background: "#EFE7D8" }} />
-                <div className="h-[10px] w-1/2 rounded-full animate-pulse mt-[5px]" style={{ background: "#EFE7D8" }} />
+                <div className="w-[112px] h-[112px] rounded-bloc animate-pulse" style={{ background: "var(--color-chip-soft-bg)" }} />
+                <div className="h-[10px] w-3/4 rounded-full animate-pulse mt-[8px]" style={{ background: "var(--color-chip-soft-bg)" }} />
+                <div className="h-[10px] w-1/2 rounded-full animate-pulse mt-[5px]" style={{ background: "var(--color-chip-soft-bg)" }} />
               </div>
             ))
           : outfitPieces.map((it) => {
@@ -1227,7 +1227,7 @@ export default function TenuesScreen() {
                       }}
                       aria-label={`Remplacer ${it.name}`}
                       className="absolute top-[5px] right-[5px] w-[26px] h-[26px] rounded-full flex items-center justify-center text-[13px] cursor-pointer"
-                      style={{ background: "rgba(251,248,243,.92)", color: "#7B7366", boxShadow: "0 1px 4px rgba(29,26,22,.14)" }}
+                      style={{ background: "rgba(251,248,243,.92)", color: "var(--color-muted)", boxShadow: "0 1px 4px rgba(29,26,22,.14)" }}
                     >
                       ⇄
                     </button>
@@ -1236,7 +1236,7 @@ export default function TenuesScreen() {
                   <div className="text-[10px] text-muted mt-[2px]">{CATLABEL[isBag(it) ? "sac" : it.cat]}</div>
                   {/* Provenance à la pièce — la même séparation que les badges
                       du héros, jamais un second calcul. */}
-                  <div className="text-[10px] mt-[1px]" style={{ color: suggested ? "#8C5540" : "#7B7366" }}>
+                  <div className="text-[10px] mt-[1px]" style={{ color: suggested ? "var(--color-sand-text)" : "var(--color-muted)" }}>
                     {suggested ? "Capsule" : "Ton dressing"}
                   </div>
                 </div>
