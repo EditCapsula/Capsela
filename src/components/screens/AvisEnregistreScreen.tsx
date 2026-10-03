@@ -9,6 +9,8 @@ import AppHeader from "@/components/AppHeader";
 import ResultatAvis from "@/components/ResultatAvis";
 import { PhotoHeros } from "@/components/screens/AvisStylisteScreen";
 import { premiumRequis } from "@/lib/autorisations";
+import { useAuth } from "@/lib/auth";
+import { noteDeLAvis } from "@/lib/noteAvis";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
@@ -49,7 +51,8 @@ const TEXTES = {
 const formatDate = (t: number) => new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
 export default function AvisEnregistreScreen() {
-  const { state, actions, avisEnregistreActif: avis } = useCapsela();
+  const { state, weather, actions, avisEnregistreActif: avis } = useCapsela();
+  const { profile } = useAuth();
   const [confirmation, setConfirmation] = useState(false);
   const [suppression, setSuppression] = useState<"aucune" | "en_cours" | "echec">("aucune");
   const [correctionRefusee, setCorrectionRefusee] = useState(false);
@@ -120,33 +123,41 @@ export default function AvisEnregistreScreen() {
         </div>
       )}
 
-      <ResultatAvis avis={avis.avis} pieces={avis.pieces} items={state.items} onOuvrirPiece={(id) => actions.openItem(id, false)} />
-
-      {/* La même couche qu'au résultat (26/09/2026) : les pièces reconnues,
-          corrigeables, et les actions sur la composition. Un avis enregistré
-          avant la reconnaissance n'en a pas : rien ne s'affiche. */}
-      <PiecesReconnues
-        reconnaissance={avis.reconnaissance}
-        dressing={state.items}
-        onCorriger={(index, pieceId) => {
-          setCorrectionRefusee(false);
-          void actions.corrigerReconnaissanceEnregistree(avis.id, index, pieceId).then((ok) => setCorrectionRefusee(!ok));
-        }}
+      <ResultatAvis
+        avis={avis.avis}
+        pieces={avis.pieces}
+        items={state.items}
         onOuvrirPiece={(id) => actions.openItem(id, false)}
-        onAjouterPiece={actions.ajouterPieceNonReconnue}
-        etatJournal={correctionRefusee ? "echec" : undefined}
-        messageEchec="Ta correction n'a pas pu être gardée. Réessaie dans un instant."
+        note={noteDeLAvis({ avis: avis.avis, pieces: avis.pieces, reconnaissance: avis.reconnaissance, dressing: state.items, profile, meteo: weather })}
+        /* La même couche qu'au résultat (26/09/2026) : les pièces reconnues, corrigeables, et les actions sur la composition.
+           Un avis enregistré avant la reconnaissance n'en a pas : pas d'onglet « Pièces ». */
+        piecesReconnues={
+          avis.reconnaissance.length > 0 ? (
+            <>
+              <PiecesReconnues
+                reconnaissance={avis.reconnaissance}
+                dressing={state.items}
+                onCorriger={(index, pieceId) => {
+                  setCorrectionRefusee(false);
+                  void actions.corrigerReconnaissanceEnregistree(avis.id, index, pieceId).then((ok) => setCorrectionRefusee(!ok));
+                }}
+                onOuvrirPiece={(id) => actions.openItem(id, false)}
+                onAjouterPiece={actions.ajouterPieceNonReconnue}
+                etatJournal={correctionRefusee ? "echec" : undefined}
+                messageEchec="Ta correction n'a pas pu être gardée. Réessaie dans un instant."
+              />
+              <EtMaintenantAvis
+                composition={compositionReconnue(avis.reconnaissance, state.items)}
+                tenueDuJourPortee={state.outfitValidated}
+                onPorter={(ids) => actions.reWear(ids, { rester: true })}
+                onVoirTenue={actions.goTenues}
+                onPlanifier={actions.planifierComposition}
+                actionsImposees={{ principale: "demain", secondaires: ["planifier"] }}
+              />
+            </>
+          ) : undefined
+        }
       />
-      {avis.reconnaissance.length > 0 && (
-        <EtMaintenantAvis
-          composition={compositionReconnue(avis.reconnaissance, state.items)}
-          tenueDuJourPortee={state.outfitValidated}
-          onPorter={(ids) => actions.reWear(ids, { rester: true })}
-          onVoirTenue={actions.goTenues}
-          onPlanifier={actions.planifierComposition}
-          actionsImposees={{ principale: "demain", secondaires: ["planifier"] }}
-        />
-      )}
 
       {/* LE MENU « ••• » — BottomSheet, le seul composant modal de l'app (même
           motif que le menu d'une tenue planifiée). */}

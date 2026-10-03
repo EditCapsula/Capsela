@@ -59,7 +59,7 @@ La fonctionnalité transforme un doute (« est-ce que ça va ? ») en un avis st
 - **Une analyse d'image décrit.** Avis de styliste conseille : il qualifie ce qui fonctionne et propose des ajustements.
 - **Un chatbot exige de savoir quoi demander.** Avis de styliste livre un format fixe et lisible (avis, points forts, conseil, suggestions), sans conversation à mener.
 - **Un outil générique ignore le contexte.** Avis de styliste peut s'appuyer sur le profil stylistique et le dressing de l'utilisateur (voir sections 9 et 12).
-- **Un outil générique n'a pas de ligne éditoriale.** Avis de styliste applique une charte stricte : bienveillance, aucun jugement sur le corps, aucune note (voir section 7).
+- **Un outil générique n'a pas de ligne éditoriale.** Avis de styliste applique une charte stricte : bienveillance, aucun jugement sur le corps ; aucune note produite par le modèle (voir section 7 ; la note de l'application, calculée, date du 03/10/2026, voir la dernière section).
 
 ## 3. Parcours utilisateur complet
 
@@ -208,7 +208,7 @@ Le conseil parle comme une styliste bienveillante qui tutoie : il valorise d'abo
 
 - Jugement sur le corps et body shaming.
 - Vocabulaire culpabilisant.
-- Notation de type « X/10 ».
+- Notation de type « X/10 » PRODUITE PAR LE MODÈLE. Depuis le 03/10/2026, l'application affiche sa propre note, calculée sur des règles (voir « Note sur 10 » en fin de document) : le modèle, lui, n'en produit toujours aucune et le contrôle de sortie serveur la rejette toujours.
 - Diagnostic physique.
 - Caractéristique sensible déduite de l'image.
 - Formulation humiliante.
@@ -220,7 +220,7 @@ Le conseil parle comme une styliste bienveillante qui tutoie : il valorise d'abo
 | --- | --- |
 | « Tu pourrais essayer… » | « Cette tenue ne te va pas. » |
 | « Pour donner davantage de relief… » | Toute formule qui vise la silhouette ou le physique |
-| « Une autre option serait… » | Toute note ou score |
+| « Une autre option serait… » | Toute note ou score dans le texte du modèle |
 
 ### Application technique
 
@@ -907,3 +907,28 @@ qu'une demande, rien n'est consommé ni appelé, réponse `{ ok, restants, limit
 bloque rien quand elle ne sait pas (mode démo, réseau, fonction pas encore déployée). À 0 avis : bouton et galerie désactivés, « Tes N avis du mois ont
 été utilisés » et la date de renouvellement (1er du mois suivant, mois civil UTC, `prochainMois`). **Aucune règle de quota n'a changé** ; le plafond
 reste celui de la fonction (`STYLIST_ADVICE_LIMITE_MENSUELLE`). La fonction est redéployée par le workflow à la fusion dans main.
+
+## Note sur 10 (03/10/2026)
+
+**ARBITRAGE ÉDITORIAL** de la propriétaire, qui renverse l'interdit « X/10 » de la section 7 pour la note CALCULÉE par l'application. Le modèle n'a pas changé : ses instructions, le contrôle de sortie serveur et le contrat de réponse sont intacts. Aucun appel au modèle supplémentaire, aucune colonne ajoutée : la note se dérive à la volée (`src/lib/noteTenue.ts`, `noteAvis.ts`) et un avis rouvert depuis le Journal se relit avec la même note.
+
+**Ce qu'elle évalue** : la tenue et sa cohérence, jamais la personne. Présentée comme un diagnostic de style (libellés « Une tenue harmonieuse », « Une base très réussie »…), sans rouge ni vert, sans jauge.
+
+**D'où elle vient** :
+
+| Dimension | Poids | Signal réutilisé |
+| --- | --- | --- |
+| Harmonie des couleurs | 25 % | `computeLookScore` : R-S1, R-S2, R-S3, R-S10, R-S18 |
+| Coordination des pièces | 20 % | R-S6, R-S8 (jusqu'à 8), R-S11 superposition (jusqu'à 10) |
+| Finition et accessoires | 10 % | R-S4, R-S5, R-S7, touche de couleur |
+| Lecture de la styliste | 45 % | le titre du verdict (liste fermée de l'avis) |
+
+La proposition du brief comptait « proportions / silhouette » (25 %) et « style » (20 %). Aucune n'est calculable : le terme morphologique du score (R-S9) a été retiré le 29/08/2026 et aucune règle ne compare les pièces au style déclaré. Leurs 45 % passent à la lecture de la styliste, qui reçoit déjà le style et la morphologie en contexte. Le modèle morphologique n'est ni touché ni dupliqué.
+
+**Quand il n'y a pas de note** : sans composition reconnue dans le dressing (deux pièces au moins, un haut et un bas ou une robe), l'avis s'affiche comme avant. Une dimension non évaluable (aucun accessoire reconnu, avis ancien sans titre de verdict) est écartée et ses points redistribués, jamais remplacée.
+
+**Libellés** : 9–10 « Une tenue très maîtrisée » · 8–8,9 « Une tenue harmonieuse » · 7–7,9 « Une base très réussie » · 6–6,9 « Une bonne base à affiner » · 5–5,9 « Une base intéressante » · < 5 « Une tenue à rééquilibrer ».
+
+**Mise en page** : note, libellé, synthèse, puis un menu d'onglets (« Atouts », « À améliorer », « À tester », « Pièces ») qui remplace l'empilement des sections (03/10/2026, « plus lisible à l'œil nu ») — un onglet sans contenu n'existe pas, et les quatre tiennent à 320 px. « À améliorer » : trois pistes au plus, le conseil de la styliste puis ce que les règles ont relevé sur cette tenue, avec la pièce du dressing quand il y en a une. « Pièces » : les pièces reconnues sur la photo et les actions sur la composition.
+
+**Reste à mesurer** : la distribution des notes sur de vrais avis. Les pondérations et les bases de chaque dimension sont une proposition produit, pas une mesure. Sur des tenues d'essai, la note tombe entre 6,5 et 9.

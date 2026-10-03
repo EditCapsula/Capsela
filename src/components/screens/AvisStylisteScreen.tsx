@@ -15,6 +15,7 @@ import { premiumRequis } from "@/lib/autorisations";
 import { useAuth } from "@/lib/auth";
 import { contexteDepuisProfil, etapesAnalyse, libelleQuota, lireQuotaAvis, niveauQuota, noteQuota, personnalisationAvis, phraseAnalyse, prochainMois, reactionErreur, type QuotaAvis } from "@/lib/avisStylisteClient";
 import { preparerPhotoAvis } from "@/lib/photoAvis";
+import { noteDeLAvis } from "@/lib/noteAvis";
 import { compositionReconnue } from "@/lib/reconnaissance";
 import { useCapsela, type PhotoAvis } from "@/lib/store";
 import Card from "@/components/Card";
@@ -167,19 +168,29 @@ function IntroService() {
  * réelles d'un avis. Les blocs se chevauchent légèrement et se décalent, comme sur la maquette ; ils restent
  * du TEXTE (test utilisateur du 02/10/2026 : des cartes avec icône en cercle se lisaient comme des boutons) :
  * pas de chevron, pas de coeur, pas d'état appuyé, pas de curseur main.
- * La photo est facultative : posée dans public/images/avis/extrait-avis.webp, elle s'affiche à gauche, en
+ * La photo est facultative : posée dans public/images/avis/extrait-avis.webp (extrait-avis-homme.webp pour un profil masculin), elle s'affiche à gauche, en
  * arche, et les blocs passent à sa droite ; absente, les blocs prennent toute la largeur, sans image cassée.
  */
-const EXTRAIT: [NomIconeAvis, string, string, string][] = [
+const EXTRAIT_FEMME: [NomIconeAvis, string, string, string][] = [
   ["etincelle", "Le verdict", "Une silhouette équilibrée et moderne", "L'association du blazer et du jean large met en valeur ta silhouette tout en restant confortable et tendance."],
   ["ampoule", "Conseil du styliste", "Ajoute une touche de couleur", "Une couleur chaude (camel, terracotta ou bordeaux) apportera de la profondeur à ta tenue."],
   ["cintre", "À tester", "3 idées d'associations avec ton dressing", ""],
 ];
+/** La variante masculine (maquette du 03/10/2026) : même exemple, autres pièces — le profil choisit, jamais la photo. */
+const EXTRAIT_HOMME: [NomIconeAvis, string, string, string][] = [
+  ["etincelle", "Le verdict", "Un look moderne et maîtrisé", "L'association de la surchemise et du chino crée une silhouette équilibrée, à la fois décontractée et élégante."],
+  ["ampoule", "Conseil du styliste", "Ajoute une pièce pour structurer", "Une veste plus ajustée ou un pull fin apportera plus de structure à l'ensemble."],
+  ["cintre", "À tester", "3 idées d'associations avec ton dressing", ""],
+];
 
 /** Les trois idées d'association du bloc « À tester » (recadrées depuis la maquette du 03/10/2026) : de l'illustration. */
-const LOOKS_EXTRAIT = ["/images/avis/extrait-look-1.webp", "/images/avis/extrait-look-2.webp", "/images/avis/extrait-look-3.webp"];
+const LOOKS_EXTRAIT_FEMME = ["/images/avis/extrait-look-1.webp", "/images/avis/extrait-look-2.webp", "/images/avis/extrait-look-3.webp"];
+const LOOKS_EXTRAIT_HOMME = ["/images/avis/extrait-look-homme-1.webp", "/images/avis/extrait-look-homme-2.webp", "/images/avis/extrait-look-homme-3.webp"];
 
-function ExtraitAvis() {
+function ExtraitAvis({ homme }: { homme: boolean }) {
+  const EXTRAIT = homme ? EXTRAIT_HOMME : EXTRAIT_FEMME;
+  const LOOKS_EXTRAIT = homme ? LOOKS_EXTRAIT_HOMME : LOOKS_EXTRAIT_FEMME;
+  const photoSrc = homme ? "/images/avis/extrait-avis-homme.webp" : "/images/avis/extrait-avis.webp";
   const [photo, setPhoto] = useState(true);
   const imageRef = useRef<HTMLImageElement>(null);
   // Une erreur de chargement qui survient avant l'hydratation n'atteint jamais onError : on relit l'état de l'image.
@@ -197,7 +208,7 @@ function ExtraitAvis() {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             ref={imageRef}
-            src="/images/avis/extrait-avis.webp"
+            src={photoSrc}
             alt=""
             width={258}
             height={864}
@@ -367,7 +378,7 @@ export function PhotoHeros({ url, largeur, hauteur, taille = "78%" }: { url: str
 }
 
 export default function AvisStylisteScreen() {
-  const { state, actions, avisStyliste } = useCapsela();
+  const { state, weather, actions, avisStyliste } = useCapsela();
   const { profile } = useAuth();
   const { photo, analyse } = avisStyliste;
   // Le contexte que la styliste reçoit (le même que lancerAvisStyliste) : il
@@ -456,7 +467,7 @@ export default function AvisStylisteScreen() {
     // l'action dominante ; la galerie est secondaire.
     contenu = (
       <>
-        <ExtraitAvis />
+        <ExtraitAvis homme={profile.gender === "homme"} />
         <IntroService />
         <ConseilsPhoto />
         <div className="mt-[20px] flex flex-col gap-[10px]">
@@ -501,28 +512,33 @@ export default function AvisStylisteScreen() {
           items={state.items}
           onOuvrirPiece={(id) => actions.openItem(id, false)}
           personnalisation={personnalisationAvis(contexte)}
+          note={noteDeLAvis({ avis: analyse.avis, pieces: analyse.dressing, reconnaissance: analyse.reconnaissance, dressing: state.items, profile, meteo: weather })}
+          /* PHOTO → PIÈCES DU DRESSING → COMPOSITION → ACTIONS (26/09/2026). Les pièces reconnues se vérifient et se
+             corrigent ici — depuis le 03/10/2026 dans l'onglet « Pièces » ; la composition qui en sort est la seule que
+             lisent les actions. */
+          piecesReconnues={
+            analyse.reconnaissance.length > 0 ? (
+              <>
+                <PiecesReconnues
+                  reconnaissance={analyse.reconnaissance}
+                  dressing={state.items}
+                  onCorriger={actions.corrigerReconnaissanceAvis}
+                  onOuvrirPiece={(id) => actions.openItem(id, false)}
+                  onAjouterPiece={actions.ajouterPieceNonReconnue}
+                  etatJournal={avisStyliste.reconnaissanceJournal}
+                  onReessayerJournal={actions.reessayerReconnaissanceJournal}
+                />
+                <EtMaintenantAvis
+                  composition={compositionReconnue(analyse.reconnaissance, state.items)}
+                  tenueDuJourPortee={state.outfitValidated}
+                  onPorter={(ids) => actions.reWear(ids, { rester: true })}
+                  onVoirTenue={actions.goTenues}
+                  onPlanifier={actions.planifierComposition}
+                />
+              </>
+            ) : undefined
+          }
         />
-        {/* PHOTO → PIÈCES DU DRESSING → COMPOSITION → ACTIONS (26/09/2026).
-            Les pièces reconnues se vérifient et se corrigent ici ; la
-            composition qui en sort est la seule que lisent les actions. */}
-        <PiecesReconnues
-          reconnaissance={analyse.reconnaissance}
-          dressing={state.items}
-          onCorriger={actions.corrigerReconnaissanceAvis}
-          onOuvrirPiece={(id) => actions.openItem(id, false)}
-          onAjouterPiece={actions.ajouterPieceNonReconnue}
-          etatJournal={avisStyliste.reconnaissanceJournal}
-          onReessayerJournal={actions.reessayerReconnaissanceJournal}
-        />
-        {analyse.reconnaissance.length > 0 && (
-          <EtMaintenantAvis
-            composition={compositionReconnue(analyse.reconnaissance, state.items)}
-            tenueDuJourPortee={state.outfitValidated}
-            onPorter={(ids) => actions.reWear(ids, { rester: true })}
-            onVoirTenue={actions.goTenues}
-            onPlanifier={actions.planifierComposition}
-          />
-        )}
         {/* STATUT JOURNAL (V2, 26/09/2026). L'avis part dans le Journal dès
             qu'il arrive (lancerAvisStyliste) : l'écran dit où il en est, sans
             jamais proposer d'« enregistrer » ce qui l'est déjà. En cas

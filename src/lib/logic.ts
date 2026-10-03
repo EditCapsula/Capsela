@@ -1974,6 +1974,8 @@ export interface LookScore {
   /** Message ciblé sur la règle de scoring la plus pénalisante, seulement si badge === "ajuster". */
   adjustMessage: string;
   /** Suggestions proactives dismissibles (R-S12/R-S13/R-S14) — indépendantes, plusieurs peuvent s'afficher à la fois. */
+  /** Ce que chaque règle a ajouté (+) ou retiré (−) au score de base 100 : la note de l'avis de styliste en lit les familles. */
+  regles: { regle: string; points: number; message?: string }[];
   proactives: {
     key: string;
     text: string;
@@ -2013,11 +2015,15 @@ export function computeLookScore(
   const accessories = pieces.filter((i) => ACCESSORY_CATS.includes(i.cat));
   const penalties: [number, string][] = [];
   const bonuses: number[] = [];
+  // Contribution de CHAQUE règle (03/10/2026, note de l'avis de styliste) : même arithmétique, simplement tracée.
+  const trace: LookScore["regles"] = [];
+  const bon = (regle: string, points: number) => { bonuses.push(points); trace.push({ regle, points }); };
+  const pen = (regle: string, points: number, message: string) => { penalties.push([points, message]); trace.push({ regle, points: -points, message }); };
 
   // R-S1 — sobriété chromatique
   const nonNeutralClothingHex = new Set(clothing.filter((i) => !isNeutralColor(i.color)).map((i) => i.hex));
   if (nonNeutralClothingHex.size > 3) {
-    penalties.push([10, "Cette tenue a beaucoup de couleurs, essaie d'en retirer une."]);
+    pen("R-S1", 10, "Cette tenue a beaucoup de couleurs, essaie d'en retirer une.");
   }
 
   // R-S2 — harmonie cercle chromatique (bijou exclu, simple accent métallique)
@@ -2031,7 +2037,7 @@ export function computeLookScore(
       }
     }
   }
-  if (harmonious) bonuses.push(15);
+  if (harmonious) bon("R-S2", 15);
 
   // R-S3 — règle 60/30/10 (approximation sur poids par catégorie, pas de vraie surface)
   const WEIGHT: Partial<Record<CategoryKey, number>> = {
@@ -2044,33 +2050,33 @@ export function computeLookScore(
   const sortedW = [...colorWeights.values()].sort((a, b) => b - a);
   const topShare = totalW ? sortedW[0] / totalW : 0;
   const secondShare = totalW && sortedW[1] ? sortedW[1] / totalW : 0;
-  if (topShare >= 0.5 && secondShare <= 0.35) bonuses.push(10);
+  if (topShare >= 0.5 && secondShare <= 0.35) bon("R-S3", 10);
 
   // R-S4 — mélange de métaux
   const metals = new Set(pieces.map(metalOf).filter((m) => m !== "aucun"));
-  if (metals.size > 1) penalties.push([5, "Tes bijoux mélangent or et argent."]);
+  if (metals.size > 1) pen("R-S4", 5, "Tes bijoux mélangent or et argent.");
 
   // R-S5 — une seule pièce statement
   const statementCount = pieces.filter(isStatement).length;
   if (statementCount >= 2) {
-    penalties.push([15, "Deux pièces qui attirent l'œil en même temps, essaie d'en adoucir une."]);
+    pen("R-S5", 15, "Deux pièces qui attirent l'œil en même temps, essaie d'en adoucir une.");
   }
 
   // R-S6 — cohérence chaussures/tenue
   const shoe = pieces.find((i) => i.cat === "chaussures");
   if (shoe && (isNeutralColor(shoe.color) || clothing.some((i) => i.hex === shoe.hex))) {
-    bonuses.push(10);
+    bon("R-S6", 10);
   }
 
   // R-S7 — compétition sac/chaussures
   const bag = pieces.find((i) => i.cat === "sac");
   if (bag && shoe && isStatement(bag) && isStatement(shoe)) {
-    penalties.push([10, "Ton sac et tes chaussures sont tous les deux très affirmés."]);
+    pen("R-S7", 10, "Ton sac et tes chaussures sont tous les deux très affirmés.");
   }
 
   // R-S8 — variété de matières (bijou exclu, pas de "matière" tissu pertinente)
   const matieres = new Set(pieces.filter((i) => i.cat !== "bijou").map(matiereOf));
-  if (matieres.size > 1) bonuses.push(5);
+  if (matieres.size > 1) bon("R-S8", 5);
 
   // R-S9 — RETIRÉE le 29/08/2026. Elle reposait sur morphoFit / morphoVigilance,
   // c'est-à-dire sur les mêmes expressions régulières que la sélection de
@@ -2088,11 +2094,11 @@ export function computeLookScore(
   // la sélection, pas ici.
 
   // R-S10 — palette personnelle du profil (préférence molle, jamais exclusive)
-  if (paletteHexList.length && pieces.some((i) => paletteHexList.includes(i.hex))) bonuses.push(10);
+  if (paletteHexList.length && pieces.some((i) => paletteHexList.includes(i.hex))) bon("R-S10", 10);
 
   // R-S18 (30/09/2026) — couleurs de sa saison près du visage, aucune « avec
   // modération » : un bonus, jamais une pénalité, donc jamais de bandeau.
-  if (accordVisage(pieces, colorimetrie ?? null)) bonuses.push(10);
+  if (accordVisage(pieces, colorimetrie ?? null)) bon("R-S18", 10);
 
   // R-S11 — layering réussi (base + calque en contexte décontracté)
   const tops = pieces.filter((i) => TOP_LAYER_CATS.includes(i.cat));
@@ -2100,7 +2106,7 @@ export function computeLookScore(
   const dressy = isDressy(occasion, workMode, dateContext);
   const hasBase = roles.includes("base");
   const hasCalque = roles.includes("calque");
-  if (hasBase && hasCalque && !dressy) bonuses.push(10);
+  if (hasBase && hasCalque && !dressy) bon("R-S11", 10);
 
   // R-S15 — anti-répétition graduée (reclassifiée depuis l'ex-R-B7 bloquant,
   // cf. moteur de règles section 20) : jamais un filtre dur qui exclurait
@@ -2114,9 +2120,9 @@ export function computeLookScore(
     null
   );
   if (mostRecentWorn != null) {
-    if (mostRecentWorn <= 1) penalties.push([30, "Cette tenue ressemble beaucoup à celle d'hier, essaie de varier une pièce."]);
-    else if (mostRecentWorn <= 3) penalties.push([15, "Cette tenue a été portée il y a peu, une petite variation la rafraîchirait."]);
-    else if (mostRecentWorn <= 14) penalties.push([5, "Cette tenue a déjà été portée récemment."]);
+    if (mostRecentWorn <= 1) pen("R-S15", 30, "Cette tenue ressemble beaucoup à celle d'hier, essaie de varier une pièce.");
+    else if (mostRecentWorn <= 3) pen("R-S15", 15, "Cette tenue a été portée il y a peu, une petite variation la rafraîchirait.");
+    else if (mostRecentWorn <= 14) pen("R-S15", 5, "Cette tenue a déjà été portée récemment.");
   }
 
   let score = 100;
@@ -2263,7 +2269,7 @@ export function computeLookScore(
     });
   }
 
-  return { score, badge, adjustMessage, proactives };
+  return { score, badge, adjustMessage, proactives, regles: trace };
 }
 
 /**
