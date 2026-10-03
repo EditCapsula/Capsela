@@ -929,6 +929,6 @@ La proposition du brief comptait « proportions / silhouette » (25 %) et « sty
 
 **Libellés** : 9–10 « Une tenue très maîtrisée » · 8–8,9 « Une tenue harmonieuse » · 7–7,9 « Une base très réussie » · 6–6,9 « Une bonne base à affiner » · 5–5,9 « Une base intéressante » · < 5 « Une tenue à rééquilibrer ».
 
-**Mise en page** : note, libellé, synthèse ; « Ce qui fonctionne » ; « À améliorer » (trois pistes au plus : le conseil de la styliste, puis ce que les règles ont relevé sur cette tenue, avec la pièce du dressing quand il y en a une) ; « À tester » ; pièces reconnues.
+**Mise en page** : note, libellé, synthèse, puis un menu d'onglets (« Atouts », « À améliorer », « À tester », « Pièces ») qui remplace l'empilement des sections (03/10/2026, « plus lisible à l'œil nu ») — un onglet sans contenu n'existe pas, et les quatre tiennent à 320 px. « À améliorer » : trois pistes au plus, le conseil de la styliste puis ce que les règles ont relevé sur cette tenue, avec la pièce du dressing quand il y en a une. « Pièces » : les pièces reconnues sur la photo et les actions sur la composition.
 
 **Reste à mesurer** : la distribution des notes sur de vrais avis. Les pondérations et les bases de chaque dimension sont une proposition produit, pas une mesure. Sur des tenues d'essai, la note tombe entre 6,5 et 9.

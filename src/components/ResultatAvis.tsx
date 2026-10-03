@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import SegmentedControl, { type Segment } from "@/components/SegmentedControl";
 import { repartirPiecesAvis, titresAffichables, type AvisStyliste, type PieceSuggeree } from "@/lib/avisStylisteClient";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { formaterNote, type NoteTenue } from "@/lib/noteTenue";
@@ -59,7 +61,7 @@ function apparition(rang: number) {
 function Section({ titre, rang, children }: { titre: React.ReactNode; rang: number; children: React.ReactNode }) {
   const a = apparition(rang);
   return (
-    <section className={"mt-[30px] " + a.className} style={a.style}>
+    <section className={"mt-[22px] " + a.className} style={a.style}>
       <div className="t-surtitre text-ink mb-[12px]">
         <span aria-hidden="true" className="text-terracotta">
           ✦{" "}
@@ -293,6 +295,8 @@ function BlocNote({ note, personnalisation }: { note: NoteTenue; personnalisatio
   );
 }
 
+type OngletAvis = "fonctionne" | "ameliorer" | "tester" | "pieces";
+
 /** Une piste d'amélioration : un titre court, son explication, et la pièce du dressing qui la réalise. */
 interface LigneAmelioration {
   titre?: string;
@@ -338,6 +342,7 @@ export default function ResultatAvis({
   onOuvrirPiece,
   personnalisation = [],
   note = null,
+  piecesReconnues,
 }: {
   avis: AvisStyliste;
   pieces: PieceSuggeree[];
@@ -348,7 +353,10 @@ export default function ResultatAvis({
   personnalisation?: string[];
   /** La note de la tenue (noteDeLAvis) — null quand elle n'est pas calculable : l'avis s'affiche alors sans note. */
   note?: NoteTenue | null;
+  /** Les pièces reconnues sur la photo et les actions sur la composition : le quatrième onglet. Absent : pas d'onglet. */
+  piecesReconnues?: React.ReactNode;
 }) {
+  const [choisi, setChoisi] = useState<OngletAvis | null>(null);
   // Trois au plus, comme le serveur l'exige déjà (LIMITES.pointsMax) : la
   // coupe ne sert que si un avis ancien en portait davantage.
   const pointsForts = avis.strengths.slice(0, 3);
@@ -356,6 +364,14 @@ export default function ResultatAvis({
   const { conseil, parSuggestion, autres } = repartirPiecesAvis(pieces, items, suggestions.length);
   const titres = titresAffichables(avis);
   const verdict = apparition(0);
+  const aAmeliorer = note ? note.ameliorations.length > 0 : avis.mainAdvice.trim().length > 0;
+  const onglets: Segment<OngletAvis>[] = [
+    ...(pointsForts.length > 0 ? [{ key: "fonctionne" as const, label: "Atouts" }] : []),
+    ...(aAmeliorer ? [{ key: "ameliorer" as const, label: "À améliorer" }] : []),
+    ...(suggestions.length > 0 || autres.length > 0 ? [{ key: "tester" as const, label: "À tester" }] : []),
+    ...(piecesReconnues ? [{ key: "pieces" as const, label: "Pièces" }] : []),
+  ];
+  const actif: OngletAvis = onglets.some((o) => o.key === choisi) ? (choisi as OngletAvis) : (onglets[0]?.key ?? "fonctionne");
   return (
     <>
       {/* LE VERDICT, carte éditoriale : la synthèse de la styliste, en serif. */}
@@ -410,46 +426,57 @@ export default function ResultatAvis({
         )}
       </div>
 
-      {/* Une section sans contenu ne s'affiche pas — un avis ancien ou tronqué ne montre pas de titre vide. */}
-      {pointsForts.length > 0 && (
-        <Section titre={TITRES.ceQuiFonctionne} rang={1}>
-          <Points points={pointsForts} titres={titres.pointsForts} />
-        </Section>
+      {/* LE MENU (03/10/2026, « plus lisible à l'œil nu ») : les sections ne s'empilent plus, on passe de l'une à l'autre.
+          Un onglet sans contenu n'existe pas — un avis ancien ou tronqué ne montre pas d'onglet vide — et l'onglet choisi
+          qui disparaîtrait (avis rechargé) cède la place au premier. */}
+      {onglets.length > 1 && (
+        <div className="mt-[22px]">
+          <SegmentedControl segments={onglets} actif={actif} onChange={setChoisi} ariaLabel="Les rubriques de l'avis" />
+        </div>
       )}
+      <div role="tabpanel" aria-label={onglets.find((o) => o.key === actif)?.label}>
+        {actif === "fonctionne" && pointsForts.length > 0 && (
+          <Section titre={TITRES.ceQuiFonctionne} rang={1}>
+            <Points points={pointsForts} titres={titres.pointsForts} />
+          </Section>
+        )}
 
-      {/* À AMÉLIORER (03/10/2026) : trois pistes au plus. Avec une note, le conseil de la styliste puis ce que les règles ont
-          relevé sur CETTE tenue (noteTenue) ; sans note, le conseil seul, comme avant — retitré. */}
-      {(note ? note.ameliorations.length > 0 : avis.mainAdvice.trim().length > 0) && (
-        <Section rang={2} titre={TITRES.aAmeliorer}>
-          <Ameliorations
-            lignes={note ? note.ameliorations : [{ titre: titres.conseil, texte: avis.mainAdvice, pieces: conseil }]}
-            intro={note ? (note.note >= 9 ? "Les détails qui peuvent encore la sublimer." : note.note >= 7 ? "Quelques optimisations pour aller plus loin." : "Des ajustements concrets, à ton rythme.") : undefined}
-            onOuvrirPiece={onOuvrirPiece}
-          />
-        </Section>
-      )}
+        {/* À AMÉLIORER (03/10/2026) : trois pistes au plus. Avec une note, le conseil de la styliste puis ce que les règles ont
+            relevé sur CETTE tenue (noteTenue) ; sans note, le conseil seul, comme avant — retitré. */}
+        {actif === "ameliorer" && aAmeliorer && (
+          <Section rang={2} titre={TITRES.aAmeliorer}>
+            <Ameliorations
+              lignes={note ? note.ameliorations : [{ titre: titres.conseil, texte: avis.mainAdvice, pieces: conseil }]}
+              intro={note ? (note.note >= 9 ? "Les détails qui peuvent encore la sublimer." : note.note >= 7 ? "Quelques optimisations pour aller plus loin." : "Des ajustements concrets, à ton rythme.") : undefined}
+              onOuvrirPiece={onOuvrirPiece}
+            />
+          </Section>
+        )}
 
-      {suggestions.length > 0 && (
-        <Section titre={TITRES.aTester} rang={3}>
-          <ul className="flex flex-col gap-[10px]">
-            {suggestions.map((s, i) => (
-              <CarteATester key={i} numero={i + 1} titre={titres.suggestions?.[i]} texte={s} pieces={parSuggestion[i] ?? []} onOuvrirPiece={onOuvrirPiece} />
-            ))}
-          </ul>
-        </Section>
-      )}
+        {actif === "tester" && suggestions.length > 0 && (
+          <Section titre={TITRES.aTester} rang={3}>
+            <ul className="flex flex-col gap-[10px]">
+              {suggestions.map((s, i) => (
+                <CarteATester key={i} numero={i + 1} titre={titres.suggestions?.[i]} texte={s} pieces={parSuggestion[i] ?? []} onOuvrirPiece={onOuvrirPiece} />
+              ))}
+            </ul>
+          </Section>
+        )}
 
-      {/* Filet de sécurité : une pièce dont le lien n'a pas pu être lu reste
-          visible ici plutôt que de disparaître. */}
-      {autres.length > 0 && (
-        <Section titre={TITRES.avecTonDressing} rang={4}>
-          <div className="flex flex-col gap-[10px]">
-            {autres.map((it) => (
-              <PieceDuDressing key={it.id} item={it} onClick={() => onOuvrirPiece(it.id)} />
-            ))}
-          </div>
-        </Section>
-      )}
+        {/* Filet de sécurité : une pièce dont le lien n'a pas pu être lu reste
+            visible ici plutôt que de disparaître. */}
+        {actif === "tester" && autres.length > 0 && (
+          <Section titre={TITRES.avecTonDressing} rang={4}>
+            <div className="flex flex-col gap-[10px]">
+              {autres.map((it) => (
+                <PieceDuDressing key={it.id} item={it} onClick={() => onOuvrirPiece(it.id)} />
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {actif === "pieces" && piecesReconnues}
+      </div>
     </>
   );
 }
