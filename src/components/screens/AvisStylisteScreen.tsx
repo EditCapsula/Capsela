@@ -89,10 +89,10 @@ function Apercu({ photo, hauteurMax = "52vh" }: { photo: PhotoAvis; hauteurMax?:
  * V2) : trois temps très compacts, qui disent ce qui va se passer — sans
  * promettre plus que ce que fait réellement l'avis.
  */
-const ETAPES_SERVICE: [string, string, NomIconeAvis][] = [
-  ["Ta tenue", "Une photo de la tête aux pieds.", "camera"],
-  ["Ton analyse", "Style · couleurs · silhouette.", "etincelle"],
-  ["Ton avis", "Un verdict et des conseils personnalisés.", "bulle"],
+const ETAPES_SERVICE: [string, string][] = [
+  ["Ta tenue", "Une photo de la tête aux pieds."],
+  ["Ton analyse", "Style · couleurs · silhouette."],
+  ["Ton avis", "Un verdict et des conseils personnalisés."],
 ];
 
 /** La pastille de niveau : couleurs des jetons existants (sage, gold, terracotta, rust), jamais seules — le libellé dit la même chose. */
@@ -142,15 +142,14 @@ function IndicateurQuota({ quota }: { quota: QuotaAvis }) {
 function IntroService() {
   return (
     <section className="mt-[26px]" aria-labelledby="avis-comment">
-      {/* Disposition de la maquette du 03/10/2026 : un titre serif, des numéros dans des cercles, l'icône, le texte. */}
+      {/* Disposition de la maquette du 03/10/2026 : un titre serif, des numéros dans des cercles, le texte (sans icône : validé le 03/10/2026, « trop d'icônes »). */}
       <h2 id="avis-comment" className="t-titre-section text-ink font-normal">Comment ça marche ?</h2>
       <ol className="mt-[14px] flex flex-col gap-[12px]">
-        {ETAPES_SERVICE.map(([titre, texte, icone], i) => (
+        {ETAPES_SERVICE.map(([titre, texte], i) => (
           <li key={titre} className="flex items-center gap-[12px]">
             <span aria-hidden="true" className="w-[34px] h-[34px] flex-shrink-0 rounded-full bg-warm-bg text-terracotta font-serif text-[13px] flex items-center justify-center">
               {String(i + 1).padStart(2, "0")}
             </span>
-            <PastilleIcone nom={icone} taille={40} />
             <span className="min-w-0">
               <span className="block t-titre-ligne text-ink">{titre}</span>
               <span className="block text-[13px] text-muted leading-[1.4]">{texte}</span>
@@ -172,9 +171,9 @@ function IntroService() {
  * arche, et les blocs passent à sa droite ; absente, les blocs prennent toute la largeur, sans image cassée.
  */
 const EXTRAIT: [NomIconeAvis, string, string, string][] = [
-  ["etincelle", "Le verdict", "Une silhouette équilibrée et moderne.", "L'association du blazer et du jean large met en valeur ta silhouette tout en restant confortable et tendance."],
-  ["ampoule", "Conseil du styliste", "Ajoute une touche de couleur.", "Une couleur chaude (camel, terracotta ou bordeaux) apportera de la profondeur à ta tenue."],
-  ["cintre", "À tester", "3 idées d'associations avec ton dressing.", ""],
+  ["etincelle", "Le verdict", "Une silhouette équilibrée et moderne", "L'association du blazer et du jean large met en valeur ta silhouette tout en restant confortable et tendance."],
+  ["ampoule", "Conseil du styliste", "Ajoute une touche de couleur", "Une couleur chaude (camel, terracotta ou bordeaux) apportera de la profondeur à ta tenue."],
+  ["cintre", "À tester", "3 idées d'associations avec ton dressing", ""],
 ];
 
 /** Les trois idées d'association du bloc « À tester » (recadrées depuis la maquette du 03/10/2026) : de l'illustration. */
