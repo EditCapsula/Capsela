@@ -141,18 +141,19 @@ function IndicateurQuota({ quota }: { quota: QuotaAvis }) {
 
 function IntroService() {
   return (
-    <section className="mt-[22px]" aria-labelledby="avis-comment">
-      <div id="avis-comment" className="t-surtitre text-muted">Comment ça marche</div>
-      <ol className="mt-[12px] flex flex-col gap-[10px]">
+    <section className="mt-[26px]" aria-labelledby="avis-comment">
+      {/* Disposition de la maquette du 03/10/2026 : un titre serif, des numéros dans des cercles, l'icône, le texte. */}
+      <h2 id="avis-comment" className="t-titre-section text-ink font-normal">Comment ça marche ?</h2>
+      <ol className="mt-[14px] flex flex-col gap-[12px]">
         {ETAPES_SERVICE.map(([titre, texte, icone], i) => (
           <li key={titre} className="flex items-center gap-[12px]">
-            <span aria-hidden="true" className="w-[22px] flex-shrink-0 text-terracotta font-serif text-[13px] leading-none">
+            <span aria-hidden="true" className="w-[34px] h-[34px] flex-shrink-0 rounded-full bg-warm-bg text-terracotta font-serif text-[13px] flex items-center justify-center">
               {String(i + 1).padStart(2, "0")}
             </span>
-            <PastilleIcone nom={icone} />
+            <PastilleIcone nom={icone} taille={40} />
             <span className="min-w-0">
-              <span className="block text-[13px] text-ink font-medium">{titre}</span>
-              <span className="block text-[12px] text-muted leading-[1.4]">{texte}</span>
+              <span className="block t-titre-ligne text-ink">{titre}</span>
+              <span className="block text-[13px] text-muted leading-[1.4]">{texte}</span>
             </span>
           </li>
         ))}
@@ -162,15 +163,18 @@ function IntroService() {
 }
 
 /**
- * EXTRAIT D'UN AVIS (maquette du 02/10/2026) : montre ce que l'on reçoit. C'est un EXEMPLE, annoncé comme
- * tel (« Extrait d'un avis ») : ses trois lignes reprennent les rubriques réelles d'un avis. La photo est
- * facultative : posée dans public/images/avis/extrait-avis.webp, elle s'affiche à gauche ; absente, la carte
- * reste pleine largeur, sans image cassée.
+ * EXTRAIT D'UN AVIS (maquette du 02/10/2026, disposition reprise le 03/10/2026) : montre ce que l'on reçoit.
+ * C'est un EXEMPLE, annoncé comme tel (« Extrait d'un avis ») : ses trois blocs reprennent les rubriques
+ * réelles d'un avis. Les blocs se chevauchent légèrement et se décalent, comme sur la maquette ; ils restent
+ * du TEXTE (test utilisateur du 02/10/2026 : des cartes avec icône en cercle se lisaient comme des boutons) :
+ * pas de chevron, pas de coeur, pas d'état appuyé, pas de curseur main.
+ * La photo est facultative : posée dans public/images/avis/extrait-avis.webp, elle s'affiche à gauche, en
+ * arche, et les blocs passent à sa droite ; absente, les blocs prennent toute la largeur, sans image cassée.
  */
-const EXTRAIT: [NomIconeAvis, string, string][] = [
-  ["coeur", "Ce qui fonctionne", "Une silhouette équilibrée et moderne."],
-  ["ampoule", "Conseil du styliste", "Ajoute une touche de couleur pour illuminer ta tenue."],
-  ["cintre", "À tester", "3 idées d'association avec ton dressing."],
+const EXTRAIT: [NomIconeAvis, string, string, string][] = [
+  ["etincelle", "Le verdict", "Une silhouette équilibrée et moderne.", "L'association du blazer et du jean large met en valeur ta silhouette tout en restant confortable et tendance."],
+  ["ampoule", "Conseil du styliste", "Ajoute une touche de couleur.", "Une couleur chaude (camel, terracotta ou bordeaux) apportera de la profondeur à ta tenue."],
+  ["cintre", "À tester", "3 idées d'associations avec ton dressing.", ""],
 ];
 
 function ExtraitAvis() {
@@ -181,33 +185,36 @@ function ExtraitAvis() {
     const img = imageRef.current;
     if (img && img.complete && img.naturalWidth === 0) setPhoto(false);
   }, []);
+  // Sans photo, le décalage d'une carte sur deux garde la disposition en escalier de la maquette.
+  const decalage = (i: number) => (photo ? "" : i === 1 ? "ml-[7%]" : "mr-[7%]");
   return (
-    <section className="mt-[20px] flex gap-[14px] rounded-carte bg-warm-bg px-[16px] py-[14px]" aria-label="Extrait d'un avis">
-      {photo && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          ref={imageRef}
-          src="/images/avis/extrait-avis.webp"
-          alt=""
-          width={120}
-          height={180}
-          decoding="async"
-          onError={() => setPhoto(false)}
-          className="w-[34%] max-w-[130px] flex-shrink-0 rounded-bloc object-cover self-stretch"
-        />
-      )}
-      <div className="min-w-0 flex-1 py-[2px]">
-        <div className="t-label text-muted">Extrait d&apos;un avis</div>
-        {/* Du texte, pas des cartes (test utilisateur, 02/10/2026 : des blocs blancs arrondis avec icône se lisaient
-            comme des boutons). Une ligne par rubrique, séparées par un filet : rien ne ressemble à une action. */}
-        <ul className="mt-[4px]">
-          {EXTRAIT.map(([icone, titre, texte]) => (
-            <li key={titre} className="flex items-start gap-[9px] py-[9px] border-b border-border last:border-b-0 last:pb-0">
-              <span className="text-terracotta pt-[1px]"><IconeAvis nom={icone} taille={15} /></span>
-              <span className="min-w-0">
-                <span className="t-label block text-terracotta">{titre}</span>
-                <span className="block font-serif italic text-[13.5px] text-ink leading-[1.4] mt-[3px]">« {texte} »</span>
-              </span>
+    <section className="mt-[22px]" aria-label="Extrait d'un avis">
+      <div className="t-label text-muted">Extrait d&apos;un avis</div>
+      <div className="mt-[10px] flex items-start">
+        {photo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            ref={imageRef}
+            src="/images/avis/extrait-avis.webp"
+            alt=""
+            width={258}
+            height={864}
+            decoding="async"
+            onError={() => setPhoto(false)}
+            className="w-[36%] flex-shrink-0 self-stretch object-cover object-top rounded-t-[999px] rounded-b-hero"
+          />
+        )}
+        <ul className={"min-w-0 flex flex-col gap-[8px] " + (photo ? "-ml-[8%] flex-1 mt-[18px]" : "w-full")}>
+          {EXTRAIT.map(([icone, etiquette, titre, texte], i) => (
+            <li key={etiquette} className={decalage(i)}>
+              <Card rayon="tuile" className="px-[14px] py-[12px] shadow-[0_6px_16px_rgba(29,26,22,.07)]">
+                <div className="flex items-center gap-[7px] text-terracotta">
+                  <IconeAvis nom={icone} taille={14} />
+                  <span className="t-label">{etiquette}</span>
+                </div>
+                <div className="font-serif text-[16px] leading-[1.25] text-ink mt-[6px]">{titre}</div>
+                {texte && <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{texte}</div>}
+              </Card>
             </li>
           ))}
         </ul>
@@ -232,18 +239,18 @@ function ConseilsPhoto() {
           </svg>
         </span>
       </summary>
-      <ul className="mt-[12px] flex flex-col gap-[10px]">
+      {/* Trois colonnes séparées par un filet, comme sur la maquette du 03/10/2026 ; l'icône au-dessus du texte
+          garde des lignes lisibles à 390 px (une colonne fait ~100 px). */}
+      <ul className="mt-[12px] grid grid-cols-3">
         {[
           ["silhouette", "Montre ta silhouette en entier", "De la tête aux chaussures."],
           ["soleil", "Privilégie une lumière naturelle", "Pour des couleurs plus fidèles."],
           ["cadre", "Garde ta tenue bien visible", "Évite les photos trop recadrées ou floues."],
         ].map(([icone, titre, texte]) => (
-          <li key={titre} className="flex items-center gap-[12px]">
-            <PastilleIcone nom={icone as NomIconeAvis} taille={32} />
-            <span className="min-w-0">
-              <span className="block text-[13px] text-ink leading-[1.3]">{titre}</span>
-              <span className="block text-[12px] text-muted leading-[1.4]">{texte}</span>
-            </span>
+          <li key={titre} className="px-[8px] first:pl-0 last:pr-0 border-l border-border first:border-l-0">
+            <PastilleIcone nom={icone as NomIconeAvis} taille={30} />
+            <span className="block text-[12px] text-ink leading-[1.3] mt-[8px]">{titre}</span>
+            <span className="block text-[11px] text-muted leading-[1.4] mt-[3px]">{texte}</span>
           </li>
         ))}
       </ul>
