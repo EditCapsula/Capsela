@@ -177,6 +177,9 @@ const EXTRAIT: [NomIconeAvis, string, string, string][] = [
   ["cintre", "À tester", "3 idées d'associations avec ton dressing.", ""],
 ];
 
+/** Les trois idées d'association du bloc « À tester » (recadrées depuis la maquette du 03/10/2026) : de l'illustration. */
+const LOOKS_EXTRAIT = ["/images/avis/extrait-look-1.webp", "/images/avis/extrait-look-2.webp", "/images/avis/extrait-look-3.webp"];
+
 function ExtraitAvis() {
   const [photo, setPhoto] = useState(true);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -214,6 +217,14 @@ function ExtraitAvis() {
                 </div>
                 <div className="font-serif text-[16px] leading-[1.25] text-ink mt-[6px]">{titre}</div>
                 {texte && <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{texte}</div>}
+                {etiquette === "À tester" && (
+                  <div className="grid grid-cols-3 gap-[6px] mt-[10px]">
+                    {LOOKS_EXTRAIT.map((src) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={src} src={src} alt="" width={144} height={290} decoding="async" loading="lazy" className="w-full aspect-[1/2] object-cover rounded-champ bg-photo-bg" />
+                    ))}
+                  </div>
+                )}
               </Card>
             </li>
           ))}
