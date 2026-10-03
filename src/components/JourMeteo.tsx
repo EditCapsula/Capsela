@@ -88,7 +88,7 @@ export function JourEtMeteo({ className = "" }: { className?: string }) {
         >
           {enAttente ? (
             <>
-              <span className="w-[8px] h-[8px] rounded-full flex-shrink-0 animate-pulse" style={{ background: "#B3AA9B" }} />
+              <span className="w-[8px] h-[8px] rounded-full flex-shrink-0 animate-pulse" style={{ background: "var(--color-placeholder)" }} />
               <span className="flex-1 min-w-0 text-[12px] text-muted whitespace-nowrap overflow-hidden text-ellipsis">
                 {geoLoading ? "Localisation…" : "Prévision…"}
               </span>

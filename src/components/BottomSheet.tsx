@@ -43,7 +43,7 @@ export default function BottomSheet({
           style={{ boxShadow: "0 -10px 30px rgba(0,0,0,.18)" }}
         >
           <div className="flex items-center justify-center pt-[10px] flex-shrink-0">
-            <span className="w-[38px] h-[4px] rounded-full" style={{ background: "#DFD3BE" }} />
+            <span className="w-[38px] h-[4px] rounded-full" style={{ background: "var(--color-warm-border)" }} />
           </div>
           <div className="flex items-center justify-between px-6 pt-[13px] pb-[11px] flex-shrink-0 border-b border-border">
             <span className="t-titre-carte text-ink">{title}</span>

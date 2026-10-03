@@ -57,6 +57,7 @@ import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
+import Card from "@/components/Card";
 
 /**
  * PRÉPARER SA VALISE (docs/valise.md).
@@ -562,7 +563,7 @@ export default function ValiseScreen() {
               Ta valise se compose uniquement avec tes pièces. Pour la préparer, il en faut au moins {MINIMUM_PIECES_VALISE}
               {"\u00a0"}: de quoi remplir une valise S.
             </div>
-            <div className="mt-5 bg-card border border-border rounded-carte p-[16px]">
+            <Card className="mt-5 p-[16px]">
               <div className="flex items-baseline justify-between">
                 <span className="font-serif text-[20px] text-ink">
                   {Math.min(dressing.length, MINIMUM_PIECES_VALISE)} / {MINIMUM_PIECES_VALISE} pièces
@@ -596,7 +597,7 @@ export default function ValiseScreen() {
                   </div>
                 </>
               )}
-            </div>
+            </Card>
           </>
         )}
 
@@ -621,7 +622,7 @@ export default function ValiseScreen() {
               />
             </div>
             {suggestionsVisibles.length > 0 && (
-              <div className="flex flex-col mt-2 bg-card border border-border rounded-tuile overflow-hidden">
+              <Card rayon="tuile" className="flex flex-col mt-2 overflow-hidden">
                 {suggestionsVisibles.map((v) => (
                   <button
                     key={`${v.lat},${v.lon}`}
@@ -634,7 +635,7 @@ export default function ValiseScreen() {
                     {libelleVille(v)}
                   </button>
                 ))}
-              </div>
+              </Card>
             )}
             {villesConnues.length > 0 && (
               <>
@@ -697,7 +698,7 @@ export default function ValiseScreen() {
             {/* Le résumé météo n'existe que si la prévision a répondu pour au
                 moins un jour du séjour — jamais une température supposée. */}
             {meteosEtape1 && amplitudeEtape1 && (
-              <div className="flex items-start gap-[12px] mt-5 bg-card border border-border rounded-carte px-[16px] py-[14px]">
+              <Card className="flex items-start gap-[12px] mt-5 px-[16px] py-[14px]">
                 <span className="flex-shrink-0 text-terracotta mt-[2px]">{G_METEO}</span>
                 <div className="min-w-0">
                   <div className="text-[13px] text-ink">{nomVille}</div>
@@ -712,7 +713,7 @@ export default function ValiseScreen() {
                   </div>
                   <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{conseilMeteo(meteosEtape1)}</div>
                 </div>
-              </div>
+              </Card>
             )}
           </>
         )}
@@ -1417,7 +1418,7 @@ function Resultat({
           moins de looks que de jours ; et, au retour d'un ajout, la
           proposition de recomposer. */}
       {nouvelles > 0 ? (
-        <div className="mt-4 bg-card border border-border rounded-carte p-[16px]">
+        <Card className="mt-4 p-[16px]">
           <div className="t-titre-carte text-ink">
             {nouvelles > 1 ? `${nouvelles} nouvelles pièces dans ton dressing` : "Une nouvelle pièce dans ton dressing"}
           </div>
@@ -1425,10 +1426,10 @@ function Resultat({
           <Button variante="principal" className="mt-3" onClick={recomposer}>
             Recomposer ma valise
           </Button>
-        </div>
+        </Card>
       ) : (
         (occasionsAManque.length > 0 || peuDeLooks) && (
-          <div className="mt-4 bg-card border border-border rounded-carte p-[16px]">
+          <Card className="mt-4 p-[16px]">
             <div className="t-titre-carte text-ink">Complète ton dressing</div>
             <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Ta valise se compose uniquement avec tes pièces : plus ton dressing est complet, plus elle a de looks.</div>
             <div className="flex flex-col gap-3 mt-3">
@@ -1468,7 +1469,7 @@ function Resultat({
             <button onClick={ajouterAuDressing} className="mt-3 text-[12px] text-terracotta cursor-pointer min-h-[40px]">
               Ajouter une pièce à mon dressing →
             </button>
-          </div>
+          </Card>
         )
       )}
 
@@ -1545,7 +1546,7 @@ function Resultat({
       {onglet === "pieces" && (
         <>
           {aAlleger.length > 0 && (
-            <div className="mt-4 bg-card border border-border rounded-carte p-[14px]">
+            <Card className="mt-4 p-[14px]">
               <div className="t-titre-carte text-ink">On allège un peu ?</div>
               <div className="text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
                 {pieces.length - capacite} {pieces.length - capacite > 1 ? "pièces de trop" : "pièce de trop"} pour une valise {valise.bagage}. Voici celles qui servent
@@ -1571,7 +1572,7 @@ function Resultat({
               <Button variante="principal" className="mt-3" onClick={() => retirer(aAlleger.map((a) => a.id))}>
                 Optimiser
               </Button>
-            </div>
+            </Card>
           )}
           {GROUPES_VALISE.map(([titre, cats]) => {
             const duGroupe = pieces.filter((p) => cats.includes(p.cat));
@@ -1586,7 +1587,7 @@ function Resultat({
                   {duGroupe.map((p) => {
                     const n = parPiece.get(p.id) ?? 0;
                     return (
-                      <div key={p.id} className="flex items-center bg-card border border-border rounded-tuile pr-[2px]">
+                      <Card key={p.id} rayon="tuile" className="flex items-center pr-[2px]">
                         <button onClick={() => ouvrirPiece(p.id)} className="flex-1 min-w-0 flex items-center gap-3 text-left p-[7px] cursor-pointer" aria-label={`${p.name}, dans ${n} ${n > 1 ? "looks" : "look"}. Voir la pièce`}>
                           <Vignette it={p} />
                           <span className="flex-1 min-w-0">
@@ -1602,7 +1603,7 @@ function Resultat({
                         <button onClick={() => retirer([p.id])} aria-label={`Retirer ${p.name} de la valise`} className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
                           {G_CROIX}
                         </button>
-                      </div>
+                      </Card>
                     );
                   })}
                 </div>

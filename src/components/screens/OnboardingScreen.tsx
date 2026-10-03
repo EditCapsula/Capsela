@@ -248,7 +248,7 @@ export default function OnboardingScreen() {
                 style={
                   i === state.onbStep
                     ? { width: 22, height: 7, background: "var(--color-terracotta)" }
-                    : { width: 7, height: 7, background: "#DFD3BE" }
+                    : { width: 7, height: 7, background: "var(--color-warm-border)" }
                 }
               />
             ))}

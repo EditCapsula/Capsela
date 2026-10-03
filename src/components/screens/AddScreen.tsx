@@ -704,7 +704,7 @@ export default function AddScreen() {
                       className="w-[38px] h-[38px] rounded-champ"
                       style={{
                         background: hex,
-                        border: on ? "2px solid #1D1A16" : "1px solid rgba(29,26,22,.12)",
+                        border: on ? "2px solid var(--color-ink)" : "1px solid rgba(29,26,22,.12)",
                         boxShadow: on ? "0 0 0 3px var(--color-cream) inset" : "none",
                       }}
                     />
