@@ -334,22 +334,24 @@ function LigneChoix({
 }
 
 /**
- * Une carte du hub. Toute la carte est le bouton (pattern des cartes de
- * l'accueil) ; le CTA est un <span>, pour ne pas imbriquer deux éléments
- * interactifs. Le badge est sur sa propre ligne, au-dessus du titre, à côté
- * du glyphe : il ne peut ni chevaucher le titre ni le faire passer à la ligne,
- * quelle que soit la largeur (brief §16).
+ * Une carte du hub (refonte du 04/10/2026, « hub Premium + hub personnel »). Le bandeau éditorial, le titre, le texte et
+ * le bouton de CRÉATION forment un seul <button> (pattern des cartes de l'accueil) ; le CTA est un <span>, pour ne pas
+ * imbriquer deux éléments interactifs. Ce qui a déjà été créé (`children`) se pose SOUS ce bouton, dans la même carte, et
+ * porte ses propres boutons : créer et consulter ne se mélangent pas. Le badge est sur sa propre ligne, au-dessus du
+ * titre, à côté du glyphe : il ne peut ni chevaucher le titre ni le faire passer à la ligne, quelle que soit la largeur
+ * (brief §16 du 25/09/2026).
  */
 function CartePlanifier({
   glyphe,
   titre,
   accroche,
-  points,
-  note,
+  description,
+  ligne,
   cta,
   onClick,
   visuel,
   cadrage = "center 38%",
+  children,
 }: {
   /** Bandeau éditorial en tête de carte — absent tant que le visuel n'existe pas. */
   visuel?: string;
@@ -358,52 +360,91 @@ function CartePlanifier({
   glyphe: React.ReactNode;
   titre: [string, string];
   accroche: string;
-  points: string[];
-  note?: string;
+  description: string;
+  /** Les étapes du parcours, sur une seule ligne. */
+  ligne: string;
   cta: string;
   onClick: () => void;
+  /** Ce qui existe déjà (tenues, valises), sous le bouton de création. */
+  children?: React.ReactNode;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full text-left bg-card border border-border rounded-hero px-[18px] pt-[16px] pb-[14px] cursor-pointer overflow-hidden"
-    >
-      {visuel && (
-        // Bandeau à fond perdu : les marges négatives annulent le padding de la
-        // carte, `overflow-hidden` arrondit ses coins hauts. 3:2, cadré sur le
-        // sujet (la tenue, la valise ouverte).
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={visuel}
-          alt=""
-          width={900}
-          height={600}
-          decoding="async"
-          className="block -mx-[18px] -mt-[16px] mb-[14px] max-w-none object-cover"
-          style={{ width: "calc(100% + 36px)", aspectRatio: "3/2", objectPosition: cadrage }}
-        />
-      )}
-      <span className="flex items-center justify-between gap-3">
-        <span className="w-10 h-10 flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">
-          <Glyphe>{glyphe}</Glyphe>
-        </span>
-        <BadgePremium />
-      </span>
-      <span className="block t-titre-section text-ink mt-[12px]">
-        {titre[0]} <span className="italic text-terracotta">{titre[1]}</span>
-      </span>
-      <span className="block t-label text-terracotta mt-[6px]">{accroche}</span>
-      <span className="flex flex-col gap-[5px] mt-[12px]">
-        {points.map((l) => (
-          <span key={l} className="flex items-center gap-[9px] text-[13px] text-ink">
-            <span aria-hidden="true" className="w-[5px] h-[5px] rounded-full bg-terracotta flex-shrink-0" />
-            {l}
+    <div className="bg-card border border-border rounded-hero overflow-hidden">
+      <button
+        onClick={onClick}
+        className="block w-full text-left px-[18px] pt-[16px] pb-[18px] cursor-pointer transition-opacity active:opacity-80"
+      >
+        {visuel && (
+          // Bandeau à fond perdu : les marges négatives annulent le padding du bouton, `overflow-hidden` de la carte
+          // arrondit ses coins hauts. 3:2, cadré sur le sujet (la tenue, la valise ouverte).
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={visuel}
+            alt=""
+            width={900}
+            height={600}
+            decoding="async"
+            className="block -mx-[18px] -mt-[16px] mb-[14px] max-w-none object-cover"
+            style={{ width: "calc(100% + 36px)", aspectRatio: "3/2", objectPosition: cadrage }}
+          />
+        )}
+        <span className="flex items-center justify-between gap-3">
+          <span className="w-10 h-10 flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">
+            <Glyphe>{glyphe}</Glyphe>
           </span>
-        ))}
+          <BadgePremium />
+        </span>
+        <span className="block t-titre-section text-ink mt-[12px]">
+          {titre[0]} <span className="italic text-terracotta">{titre[1]}</span>
+        </span>
+        <span className="block t-label text-terracotta mt-[6px]">{accroche}</span>
+        <span className="block text-[13px] text-ink-soft leading-[1.5] mt-[10px]" style={{ textWrap: "pretty" }}>
+          {description}
+        </span>
+        <span className="block text-[12px] text-muted leading-[1.45] mt-[8px]">{ligne}</span>
+        <span className="mt-[16px] flex items-center justify-center min-h-[52px] rounded-full bg-terracotta-deep text-cream t-bouton">{cta} →</span>
+      </button>
+      {children && <div className="border-t border-divider px-[18px] pt-[12px] pb-[8px]">{children}</div>}
+    </div>
+  );
+}
+
+/** L'en-tête de ce qui existe déjà dans une carte : « Tes tenues planifiées · 3 », et « Voir tout → » à droite. */
+function EnteteExistant({ titre, nombre, onVoirTout }: { titre: string; nombre: number; onVoirTout: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="t-surtitre text-muted">
+        {titre} <span className="text-terracotta">· {nombre}</span>
       </span>
-      {note && <span className="block text-[12px] text-muted leading-[1.45] mt-[10px]">{note}</span>}
-      <span className="mt-[8px] flex items-center min-h-[44px] t-cta text-terracotta">{cta} →</span>
-    </button>
+      <button onClick={onVoirTout} className="text-[12px] text-terracotta cursor-pointer min-h-[44px] flex items-center flex-shrink-0">
+        Voir tout →
+      </button>
+    </div>
+  );
+}
+
+/** La miniature d'une valise : le visuel du type de séjour, sinon la mosaïque de ses vraies pièces — rien n'est inventé. */
+function MiniatureValise({ v, dressing, taille }: { v: ValiseGardee; dressing: Item[]; taille: number }) {
+  const visuel = v.sejour ? VISUEL_SEJOUR[v.sejour] : undefined;
+  const apercu = v.pieceIds
+    .map((id) => dressing.find((i) => i.id === id))
+    .filter((i): i is Item => !!i)
+    .slice(0, 4);
+  return visuel ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={visuel} alt="" loading="lazy" className="flex-shrink-0 rounded-bloc object-cover bg-warm-bg" style={{ width: taille, height: taille }} />
+  ) : (
+    <span className="flex-shrink-0 rounded-bloc bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden" style={{ width: taille, height: taille }}>
+      {apercu.map((p) => {
+        const img = resolveItemImage(p);
+        return img.url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={p.id} src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+        ) : (
+          <span key={p.id} className="block w-full h-full rounded-[4px]" style={{ background: p.hex }} />
+        );
+      })}
+    </span>
   );
 }
 
@@ -874,7 +915,9 @@ export default function PlanifierScreen() {
    * (repartirPlanifications, testé).
    */
   const { aVenir, passees } = repartirPlanifications(plans, state.valises);
-  const listeAffichee = onglet === "up" ? aVenir : passees;
+  /** Ce que les cartes du hub rappellent : les tenues et les valises à venir, dans l'ordre des dates. */
+  const tenuesAVenir = aVenir.flatMap((p) => (p.type === "tenue" ? [p.tenue] : []));
+  const valisesAVenir = aVenir.flatMap((p) => (p.type === "valise" ? [p.valise] : []));
   const nbPlanifications = plans.length + state.valises.length;
   /**
    * Onglets À venir / Passées — un seul rendu, partagé par le hub et la liste
@@ -893,6 +936,51 @@ export default function PlanifierScreen() {
       onChange={setOnglet}
     />
   );
+
+  /**
+   * Une ligne d'une liste de planifications — valise ou tenue —, la même pour les « looks passés » du hub et pour tout
+   * endroit qui les rappelle. L'image EST la tenue planifiée : ses pièces enregistrées, jamais un visuel générique.
+   */
+  const ligneDePlan = (pl: (typeof aVenir)[number], passee: boolean) => {
+    if (pl.type === "valise")
+      return <LigneValise key={"valise-" + pl.valise.id} v={pl.valise} dressing={state.items} passee={passee} onClick={() => void actions.ouvrirValise(pl.valise.id)} />;
+    const t = pl.tenue;
+    const d = new Date(`${t.jour}T12:00:00`);
+    const apercu = piecesDuPlan(t).slice(0, 4);
+    return (
+      <button
+        key={t.id}
+        onClick={() => {
+          setPlanOuvert(t);
+          setRetourDetail("intro");
+          setVue("detail");
+        }}
+        className="w-full flex items-center gap-3 bg-card border border-border rounded-carte p-[10px] text-left cursor-pointer"
+        style={{ opacity: passee ? 0.78 : 1 }}
+      >
+        <span className="w-[64px] h-[64px] flex-shrink-0 rounded-bloc bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
+          {apercu.map((p) => {
+            const img = resolveItemImage(p);
+            return img.url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={p.id} src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+            ) : (
+              <span key={p.id} className="block w-full h-full rounded-[4px]" style={{ background: p.hex }} />
+            );
+          })}
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block t-label text-terracotta">Look planifié</span>
+          <span className="block t-titre-vignette text-ink mt-[2px]">{occasionShortLabel(t.occasion)}</span>
+          <span className="block text-[12px] text-muted mt-[3px] truncate">
+            {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
+            {villeDuLieu(t.lieu) ? ` · ${villeDuLieu(t.lieu)}` : ` · ${t.moment}`}
+          </span>
+        </span>
+        <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0 pr-1">›</span>
+      </button>
+    );
+  };
 
   /**
    * « Garder cette tenue ». L'écriture précède l'affichage : la liste n'est
@@ -1152,24 +1240,22 @@ export default function PlanifierScreen() {
             <Surtitre>Planifier</Surtitre>
             <TitreEtape a="Anticipe tes moments." b="Capsela s'occupe du look" />
             <div className="t-chapeau text-muted-3 mt-[10px]" style={{ textWrap: "pretty" }}>
-              Des tenues pensées pour tes occasions et tes voyages, selon ton style, ta météo et ton dressing.
+              Des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing.
             </div>
 
-            {/* VISUELS (recette du 26/09/2026) : chaque carte reçoit un bandeau
-                éditorial qui dit son usage — une tenue pour « Planifier une
-                tenue », la valise ouverte pour « Préparer ma valise ». Visuels
-                fournis par la propriétaire le même jour : les deux pour un profil
-                femme, la valise pour un profil homme ; la tenue homme a suivi
-                (26/09/2026). Sans genre renseigné, pas de visuel choisi au
-                hasard : la carte garde sa forme d'avant, glyphe seul. */}
-            <div className="flex flex-col gap-3 mt-5">
+            {/* LES DEUX VISUELS ÉDITORIAUX sont ceux d'avant (recette du 26/09/2026, fournis par la propriétaire) : une tenue
+                pour « Planifier une tenue », la valise ouverte pour « Préparer ma valise » — les deux pour un profil femme,
+                la valise et la tenue pour un profil homme. Sans genre renseigné, pas de visuel choisi au hasard : la
+                carte garde sa forme d'avant, glyphe seul. Ils inspirent et expliquent ; les pièces réelles de la personne
+                n'apparaissent que dans ce qu'elle a déjà créé, sous le bouton de création. */}
+            <div className="flex flex-col gap-4 mt-5">
               <CartePlanifier
                 glyphe={G_CINTRE}
                 titre={["Planifier", "une tenue"]}
                 accroche="Le bon look, au bon moment."
-                points={["Une occasion", "Une date et un lieu", "Une tenue personnalisée"]}
-                note={`Météo prévue jusqu'à ${HORIZON_PREVISION_JOURS} jours à l'avance.`}
-                cta="Planifier une tenue"
+                description="Pour un dîner, un rendez-vous, une cérémonie ou toute occasion particulière."
+                ligne="Occasion · date et lieu · tenue personnalisée"
+                cta={tenuesAVenir.length > 0 ? "Planifier une nouvelle tenue" : "Planifier une tenue"}
                 onClick={recommencer}
                 visuel={
                   profile.gender === "femme"
@@ -1178,16 +1264,70 @@ export default function PlanifierScreen() {
                       ? "/editorial/capsela_planifier_tenue_homme.webp"
                       : undefined
                 }
-              />
-              {/* Le parcours valise existe depuis le 27/09/2026 : même règle
-                  d'accès que l'accueil (PREPARER_VALISE, dans le store), et le
-                  retour ramène ici. */}
+              >
+                {/* Ce qui existe déjà : trois au plus, « Voir tout » ouvre la liste complète. Le premier est le prochain. */}
+                {tenuesAVenir.length > 0 && (
+                  <>
+                    <EnteteExistant
+                      titre="Tes tenues planifiées"
+                      nombre={tenuesAVenir.length}
+                      onVoirTout={() => {
+                        setOnglet("up");
+                        setVue("liste");
+                      }}
+                    />
+                    <div className="flex flex-col">
+                      {tenuesAVenir.slice(0, 3).map((t, i) => {
+                        const d = new Date(`${t.jour}T12:00:00`);
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() => {
+                              setPlanOuvert(t);
+                              setRetourDetail("intro");
+                              setVue("detail");
+                            }}
+                            className="flex items-center gap-3 py-[8px] text-left cursor-pointer min-h-[56px] transition-opacity active:opacity-70"
+                          >
+                            <span className="w-[44px] h-[44px] flex-shrink-0 rounded-champ bg-warm-bg grid grid-cols-2 gap-[2px] p-[3px] overflow-hidden">
+                              {piecesDuPlan(t)
+                                .slice(0, 4)
+                                .map((p) => {
+                                  const img = resolveItemImage(p);
+                                  return img.url ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img key={p.id} src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+                                  ) : (
+                                    <span key={p.id} className="block w-full h-full rounded-[3px]" style={{ background: p.hex }} />
+                                  );
+                                })}
+                            </span>
+                            <span className="flex-1 min-w-0">
+                              {i === 0 && <span className="block t-label text-terracotta">Ton prochain look</span>}
+                              <span className="block t-titre-vignette text-ink">{occasionShortLabel(t.occasion)}</span>
+                              <span className="block text-[12px] text-muted mt-[2px] truncate">
+                                {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
+                                {villeDuLieu(t.lieu) ? ` · ${villeDuLieu(t.lieu)}` : ""}
+                              </span>
+                            </span>
+                            <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0">›</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </CartePlanifier>
+
+              {/* Le parcours valise existe depuis le 27/09/2026 : même règle d'accès que l'accueil (PREPARER_VALISE, dans le
+                  store), et le retour ramène ici. */}
               <CartePlanifier
                 glyphe={G_VALISE}
                 titre={["Préparer", "ma valise"]}
-                accroche="Toute ta garde-robe pensée pour ton voyage."
-                points={["Une destination et des dates", "La météo sur place", "Ton programme d'activités", "Le bon bagage", "Une sélection de looks optimisée"]}
-                cta="Préparer ma valise"
+                accroche="Tous tes looks pour ton séjour."
+                description="Destination, météo, activités et dressing : Capsela prépare une sélection pensée pour ton voyage."
+                ligne="Destination · dates · météo · activités"
+                cta={valisesAVenir.length > 0 ? "Préparer une nouvelle valise" : "Préparer ma valise"}
                 onClick={() => void actions.ouvrirValise(null)}
                 visuel={
                   profile.gender === "femme"
@@ -1197,102 +1337,78 @@ export default function PlanifierScreen() {
                       : undefined
                 }
                 cadrage="center 60%"
-              />
-            </div>
-
-            {/* MES PLANIFICATIONS (brief §9-11) : tenues planifiées et valises,
-                trois au plus ici, « Voir tout » ouvre la liste complète. */}
-            <div className="flex items-center justify-between gap-3 mt-[30px]">
-              <Surtitre>Mes looks à venir</Surtitre>
-              {nbPlanifications > 0 && (
-                <button
-                  onClick={() => setVue("liste")}
-                  className="text-[12px] text-terracotta cursor-pointer min-h-[44px] -my-[12px] flex items-center"
-                >
-                  Voir tout →
-                </button>
-              )}
-            </div>
-            {nbPlanifications > 0 && <div className="mt-3">{ongletsPlans}</div>}
-
-            {listeAffichee.length === 0 ? (
-              <div
-                className="mt-3 rounded-carte px-5 py-[24px] text-center"
-                style={{ border: "1px dashed var(--color-sand-border)" }}
               >
-                <div className="t-titre-carte text-ink">
-                  {onglet === "up" || nbPlanifications === 0 ? "Aucun look planifié pour le moment" : "Aucun look passé"}
-                </div>
-                {(onglet === "up" || nbPlanifications === 0) && (
+                {valisesAVenir.length > 0 && (
                   <>
-                    <div className="text-[12px] text-muted leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
-                      Planifie ton prochain moment ou prépare ton prochain voyage.
+                    <EnteteExistant
+                      titre="Tes valises"
+                      nombre={valisesAVenir.length}
+                      onVoirTout={() => {
+                        setOnglet("up");
+                        setVue("liste");
+                      }}
+                    />
+                    <div className="flex flex-col">
+                      {valisesAVenir.slice(0, 2).map((v, i) => {
+                        const a = new Date(`${v.depart}T12:00:00`);
+                        const b = new Date(`${v.retour}T12:00:00`);
+                        const nbLooks = v.looks.filter((l) => l.ids.every((id) => state.items.some((it) => it.id === id))).length;
+                        const nbPieces = v.pieceIds.filter((id) => state.items.some((it) => it.id === id)).length;
+                        return (
+                          <button
+                            key={v.id}
+                            onClick={() => void actions.ouvrirValise(v.id)}
+                            className="flex items-center gap-3 py-[8px] text-left cursor-pointer min-h-[56px] transition-opacity active:opacity-70"
+                          >
+                            <MiniatureValise v={v} dressing={state.items} taille={44} />
+                            <span className="flex-1 min-w-0">
+                              {i === 0 && <span className="block t-label text-terracotta">Ton prochain départ</span>}
+                              <span className="block t-titre-vignette text-ink truncate">{v.destination}</span>
+                              <span className="block text-[12px] text-muted mt-[2px] truncate">
+                                {v.depart === v.retour
+                                  ? `${a.getDate()} ${MOIS[a.getMonth()]}`
+                                  : a.getMonth() === b.getMonth()
+                                    ? `${a.getDate()} → ${b.getDate()} ${MOIS[b.getMonth()]}`
+                                    : `${a.getDate()} ${MOIS[a.getMonth()]} → ${b.getDate()} ${MOIS[b.getMonth()]}`}
+                                {nbPieces ? ` · ${nbPieces} ${nbPieces > 1 ? "pièces" : "pièce"}` : ""}
+                                {nbLooks ? ` · ${nbLooks} ${nbLooks > 1 ? "looks" : "look"}` : ""}
+                              </span>
+                            </span>
+                            <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0">›</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <button onClick={recommencer} className="mt-[6px] min-h-[44px] text-[12px] text-terracotta cursor-pointer">
-                      Planifier un look →
-                    </button>
                   </>
                 )}
+              </CartePlanifier>
+            </div>
+
+            {/* TES PROCHAINS LOOKS : les prochains sont déjà dans les cartes ci-dessus — ne pas les répéter. Ici, sans
+                rien de créé, une phrase ; sinon, ce qui est passé (priorité 4), deux au plus. */}
+            {nbPlanifications === 0 ? (
+              <div className="mt-[30px]">
+                <Surtitre>Tes prochains looks</Surtitre>
+                <div className="text-[13px] text-muted leading-[1.5] mt-2">Tes prochains looks apparaîtront ici.</div>
               </div>
             ) : (
-              <div className="flex flex-col gap-[10px] mt-3">
-                {listeAffichee.slice(0, 3).map((pl) => {
-                  if (pl.type === "valise")
-                    return (
-                      <LigneValise
-                        key={"valise-" + pl.valise.id}
-                        v={pl.valise}
-                        dressing={state.items}
-                        passee={onglet === "past"}
-                        onClick={() => void actions.ouvrirValise(pl.valise.id)}
-                      />
-                    );
-                  const t = pl.tenue;
-                  const d = new Date(`${t.jour}T12:00:00`);
-                  const apercu = piecesDuPlan(t).slice(0, 4);
-                  return (
+              passees.length > 0 && (
+                <div className="mt-[30px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <Surtitre>Tes looks passés</Surtitre>
                     <button
-                      key={t.id}
                       onClick={() => {
-                        setPlanOuvert(t);
-                        setRetourDetail("intro");
-                        setVue("detail");
+                        setOnglet("past");
+                        setVue("liste");
                       }}
-                      className="w-full flex items-center gap-3 bg-card border border-border rounded-carte p-[10px] text-left cursor-pointer"
-                      style={{ opacity: onglet === "past" ? 0.78 : 1 }}
+                      className="text-[12px] text-terracotta cursor-pointer min-h-[44px] -my-[12px] flex items-center"
                     >
-                      {/* L'image EST la tenue planifiée : ses pièces
-                          enregistrées, jamais un visuel générique (§10). */}
-                      <span className="w-[64px] h-[64px] flex-shrink-0 rounded-bloc bg-warm-bg grid grid-cols-2 gap-[2px] p-[4px] overflow-hidden">
-                        {apercu.map((p) => {
-                          const img = resolveItemImage(p);
-                          return img.url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img key={p.id} src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
-                          ) : (
-                            <span key={p.id} className="block w-full h-full rounded-[4px]" style={{ background: p.hex }} />
-                          );
-                        })}
-                      </span>
-                      <span className="flex-1 min-w-0">
-                        {/* Même surtitre que la liste complète (« Tenue
-                            planifiée ») et que la carte valise (« Valise ») :
-                            dans une liste qui mêle les deux, il dit de quoi
-                            il s'agit avant le titre (28/09/2026, demandé). */}
-                        <span className="block t-label text-terracotta">Look planifié</span>
-                        <span className="block t-titre-vignette text-ink mt-[2px]">{occasionShortLabel(t.occasion)}</span>
-                        {/* Synthétique (brief §12) : la date et la ville, sur
-                            une ligne. La région et le pays restent au détail. */}
-                        <span className="block text-[12px] text-muted mt-[3px] truncate">
-                          {DOW[d.getDay()]}. {d.getDate()} {MOIS[d.getMonth()]}
-                          {villeDuLieu(t.lieu) ? ` · ${villeDuLieu(t.lieu)}` : ` · ${t.moment}`}
-                        </span>
-                      </span>
-                      <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0 pr-1">›</span>
+                      Voir tout →
                     </button>
-                  );
-                })}
-              </div>
+                  </div>
+                  <div className="flex flex-col gap-[10px] mt-3">{passees.slice(0, 2).map((pl) => ligneDePlan(pl, true))}</div>
+                </div>
+              )
             )}
           </>
         )}
