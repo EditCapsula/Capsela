@@ -8,7 +8,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
-import { jourDHier, texteHeroHier, texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
+import { jourCourtLong, jourDHier, texteHeroHier, texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { plansDuJour } from "@/lib/planifier";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
@@ -21,6 +21,8 @@ import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { styleLabel } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { JourEtMeteo } from "@/components/JourMeteo";
+import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@/lib/retro";
+import { dateDuJour } from "@/lib/jourConsulte";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item, SavedLook } from "@/lib/types";
@@ -468,6 +470,17 @@ export default function HomeScreen() {
    * le verdict d'un avis n'a que deux valeurs (outfit_feedback).
    */
   const [hierAdore, setHierAdore] = useState<string | null>(null);
+  /**
+   * LE RETOUR AUX TENUES PASSÉES (04/10/2026, « conserver l'historique ») : local à l'Accueil, indépendant du jour consulté
+   * du store (retro.ts). Le chevron gauche de la barre de date saute à la tenue passée précédente (déclarée portée, sinon
+   * planifiée) ; le hero la relit, sans rien composer ni écrire.
+   */
+  const [retro, setRetro] = useState(0);
+  const retours = useMemo(() => retoursAvecTenue(state.history, state.tenuesPlanifiees), [state.history, state.tenuesPlanifiees]);
+  const retroActif = jourConsulte.decalage === 0 ? retro : 0;
+  const dateRetro = dateDuJour(-retroActif);
+  const passee = retroActif > 0 ? tenuePassee(state.history, state.tenuesPlanifiees, jourLocal(dateRetro)) : null;
+  const piecesPassee = passee ? passee.pieceIds.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => Boolean(i)) : [];
   const planHero = planApplique && hasOutfit ? planApplique.plan : null;
   const texteHero = planHero ? texteHeroPlan(planHero) : null;
   const planHier =
@@ -602,10 +615,21 @@ export default function HomeScreen() {
             « Localisation & météo » des Préférences — les réglages existants,
             aucun écran de plus. Composant partagé avec Tenue. Le surtitre
             « Aujourd'hui » a disparu : la ligne porte la date. */}
-        <JourEtMeteo className="mt-4" />
+        <JourEtMeteo
+          className="mt-4"
+          retro={{
+            jours: retroActif,
+            date: dateRetro,
+            precedent: retourPrecedent(retours, retroActif),
+            suivant: retourSuivant(retours, retroActif),
+            temp: passee?.temp ?? null,
+            label: passee?.weatherLabel ?? null,
+            onChange: setRetro,
+          }}
+        />
         {/* Ce qui est planifié ce jour-là (Planifier) : un rappel qui mène à
             la fiche du plan, sous la ligne du jour. Rien sans plan. */}
-        <PlansDuJour depuis="home" className="mt-3" />
+        {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" />}
       </div>
 
       {/* ══ Card héros « LOOK DU JOUR » — refonte du 28/09/2026 ════════════
@@ -638,7 +662,38 @@ export default function HomeScreen() {
           texte au-dessus change d'un état à l'autre. Elle reste montée, à la
           même place et à la même hauteur ; la planche y remplace la
           silhouette en fondu (ZoneLookDuJour). */}
-      {planHier ? (
+      {passee ? (
+        <div className="mx-6 mt-6 bg-terracotta rounded-hero text-left" style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}>
+          <div className="flex items-center gap-[7px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
+            <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
+              ✦
+            </span>
+            {retroActif === 1 ? "Ton look d'hier" : `Ton look du ${jourCourtLong(jourLocal(dateRetro)).toLowerCase()}`}
+          </div>
+          <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
+            {passee.plan ? titreDuPlan(passee.plan) : OCC_LABELS[passee.occasion]}
+          </div>
+          <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
+            {passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l'avais planifiée."}
+          </div>
+          <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
+            <OutfitComposition items={piecesPassee} variant="planche" />
+          </div>
+          <div className="pt-[16px]">
+            <span
+              className="inline-flex items-center gap-[6px] whitespace-nowrap"
+              style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
+            >
+              <span aria-hidden="true">☾</span>
+              {retroActif === 1 ? "Hier" : jourCourtLong(jourLocal(dateRetro))}
+              {passee.temp != null ? ` · ${passee.temp}°` : ""}
+            </span>
+          </div>
+          <Button variante="claire" onClick={actions.goHistory} className="mt-[12px]">
+            Voir dans mon journal <span aria-hidden="true">→</span>
+          </Button>
+        </div>
+      ) : planHier ? (
         <div className="mx-6 mt-6 bg-terracotta rounded-hero text-left" style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}>
           <div className="flex items-center gap-[7px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
             <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">

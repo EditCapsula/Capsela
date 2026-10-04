@@ -32,16 +32,32 @@ function Chevron({ vers }: { vers: "gauche" | "droite" }) {
   );
 }
 
-export function JourEtMeteo({ className = "" }: { className?: string }) {
+/**
+ * LE RETOUR EN ARRIÈRE (Accueil seulement, 04/10/2026 — « conserver l'historique des tenues passées ») : un état LOCAL
+ * à l'écran, en jours, indépendant du jour consulté du store. `precedent` et `suivant` sont les retours où il y a une
+ * tenue à relire (retro.ts) ; la météo est celle ENREGISTRÉE avec la tenue, jamais une prévision.
+ */
+export interface RetroJour {
+  jours: number;
+  date: Date;
+  precedent: number | null;
+  suivant: number;
+  temp: number | null;
+  label: string | null;
+  onChange: (jours: number) => void;
+}
+
+export function JourEtMeteo({ className = "", retro }: { className?: string; retro?: RetroJour }) {
   const { geoCity, geoLoading, geoIsLive, sourceMeteo, jourConsulte, actions } = useCapsela();
   const { decalage, date, meteoPrevue, previsionEnChargement } = jourConsulte;
-  const enAttente = geoLoading || previsionEnChargement;
-  const temp = decalage === 0 ? geoCity.temp : meteoPrevue?.temp;
-  const label = decalage === 0 ? geoCity.label : meteoPrevue?.label;
+  const enRetro = Boolean(retro && retro.jours > 0 && decalage === 0);
+  const enAttente = !enRetro && (geoLoading || previsionEnChargement);
+  const temp = enRetro ? retro!.temp : decalage === 0 ? geoCity.temp : meteoPrevue?.temp;
+  const label = enRetro ? retro!.label : decalage === 0 ? geoCity.label : meteoPrevue?.label;
 
   // La source, dite telle qu'elle est (correctif météo du 25/09/2026), et pour
   // un jour à venir la règle de repli de Planifier quand la prévision manque.
-  const note = enAttente
+  const note = enAttente || enRetro
     ? null
     : decalage > 0
       ? meteoPrevue
@@ -63,18 +79,30 @@ export function JourEtMeteo({ className = "" }: { className?: string }) {
         {/* LE JOUR — ‹ libellé ›. Hors d'aujourd'hui, le libellé lui-même
             ramène à aujourd'hui d'un tap. */}
         <div className="flex items-center flex-shrink-0 pl-[4px]" role="group" aria-label="Jour de la tenue">
-          <button onClick={() => actions.choisirJour(decalage - 1)} disabled={decalage === 0} aria-label="Jour précédent" className={chevron}>
+          <button
+            onClick={() => (retro && decalage === 0 ? retro.precedent != null && retro.onChange(retro.precedent) : actions.choisirJour(decalage - 1))}
+            disabled={retro && decalage === 0 ? retro.precedent == null : decalage === 0}
+            aria-label={retro && decalage === 0 ? "Tenue passée précédente" : "Jour précédent"}
+            className={chevron}
+          >
             <Chevron vers="gauche" />
           </button>
           <button
-            onClick={() => decalage > 0 && actions.choisirJour(0)}
-            aria-label={decalage > 0 ? `${libelleJour(decalage, date)}. Revenir à aujourd'hui` : libelleJour(decalage, date)}
+            onClick={() => (enRetro ? retro!.onChange(0) : decalage > 0 && actions.choisirJour(0))}
+            aria-label={
+              enRetro ? `${libelleJour(-retro!.jours, retro!.date)}. Revenir à aujourd'hui` : decalage > 0 ? `${libelleJour(decalage, date)}. Revenir à aujourd'hui` : libelleJour(decalage, date)
+            }
             aria-live="polite"
-            className={"text-[12px] text-ink whitespace-nowrap py-[8px] " + (decalage > 0 ? "cursor-pointer" : "cursor-default")}
+            className={"text-[12px] text-ink whitespace-nowrap py-[8px] " + (enRetro || decalage > 0 ? "cursor-pointer" : "cursor-default")}
           >
-            {libelleJourCourt(decalage, date)}
+            {enRetro ? libelleJourCourt(-retro!.jours, retro!.date) : libelleJourCourt(decalage, date)}
           </button>
-          <button onClick={() => actions.choisirJour(decalage + 1)} disabled={decalage >= JOUR_MAX} aria-label="Jour suivant" className={chevron}>
+          <button
+            onClick={() => (enRetro ? retro!.onChange(retro!.suivant) : actions.choisirJour(decalage + 1))}
+            disabled={enRetro ? false : decalage >= JOUR_MAX}
+            aria-label={enRetro ? "Tenue passée suivante" : "Jour suivant"}
+            className={chevron}
+          >
             <Chevron vers="droite" />
           </button>
         </div>
@@ -97,7 +125,9 @@ export function JourEtMeteo({ className = "" }: { className?: string }) {
           ) : (
             <>
               <span className="w-[8px] h-[8px] rounded-full bg-terracotta flex-shrink-0" style={{ boxShadow: "0 0 0 3px rgba(166,105,80,.16)" }} />
-              <span className="flex-1 min-w-0 text-[12px] text-ink whitespace-nowrap overflow-hidden text-ellipsis">{geoCity.city}</span>
+              <span className="flex-1 min-w-0 text-[12px] text-ink whitespace-nowrap overflow-hidden text-ellipsis">
+                {enRetro ? (temp != null ? "Météo enregistrée" : "Météo non conservée") : geoCity.city}
+              </span>
               {temp != null && label && (
                 <span className="flex items-center gap-[5px] flex-shrink-0 text-[12px] text-ink-soft whitespace-nowrap">
                   <span aria-hidden="true">{WEATHER_ICONS[label] || "🌤️"}</span>
