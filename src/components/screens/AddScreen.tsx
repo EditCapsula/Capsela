@@ -28,6 +28,7 @@ import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
 import type { AccessoireType, BijouType, CategoryKey, OccasionKey, SacType, ShoeType } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 import Input, { Select } from "@/components/Input";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
@@ -37,6 +38,22 @@ function chipCls(on: boolean): string {
   return (
     "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border " +
     (on ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border")
+  );
+}
+
+/** Saison choisie : fond plein terracotta-deep (surface pleine, comme le chip d'occasion actif de la Tenue). */
+function chipSaisonCls(on: boolean): string {
+  return (
+    "px-2 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border inline-flex items-center justify-center gap-[5px] " +
+    (on ? "bg-terracotta-deep text-cream border-terracotta-deep" : "bg-card text-ink border-border")
+  );
+}
+
+/** Occasion retenue : contour terracotta sur fond doux — plusieurs peuvent l'être, le plein est réservé à la saison. */
+function chipOccasionCls(on: boolean): string {
+  return (
+    "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border inline-flex items-center gap-[7px] " +
+    (on ? "bg-warm-bg text-terracotta border-terracotta" : "bg-card text-ink border-border")
   );
 }
 
@@ -64,7 +81,7 @@ function PencilIcon({ className = "" }: { className?: string }) {
 }
 function CocheRonde() {
   return (
-    <span className="w-[16px] h-[16px] rounded-full bg-[#2f6b4a] text-cream flex items-center justify-center flex-shrink-0" aria-hidden="true">
+    <span className="w-[16px] h-[16px] rounded-full bg-success text-cream flex items-center justify-center flex-shrink-0" aria-hidden="true">
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 12.5l4.5 4.5L19 7.5" />
       </svg>
@@ -86,7 +103,8 @@ function TuileCaracteristique({
   attente?: boolean;
 }) {
   return (
-    <button onClick={onClick} className="flex items-center gap-[11px] rounded-tuile bg-card border border-border px-[12px] py-[11px] cursor-pointer text-left min-w-0">
+    <Card rayon="tuile" className="min-w-0">
+    <button onClick={onClick} className="w-full flex items-center gap-[11px] px-[12px] py-[11px] cursor-pointer text-left min-w-0">
       <span className={"w-[38px] h-[38px] rounded-full flex items-center justify-center flex-shrink-0 " + (attente ? "border border-dashed border-warm-border" : "bg-warm-bg text-warm-text")}>
         {pastille}
       </span>
@@ -95,6 +113,7 @@ function TuileCaracteristique({
         <span className="block text-[11px] text-muted mt-[2px]">{etiquette}</span>
       </span>
     </button>
+    </Card>
   );
 }
 function InfoIcon({ className = "" }: { className?: string }) {
@@ -169,7 +188,7 @@ function CaseSelect({
 }) {
   const affiche = options.find((o) => o.value === value)?.label ?? placeholder ?? "";
   return (
-    <label className="relative block min-w-0 rounded-tuile bg-card border border-border pl-[14px] pr-[26px] pt-[10px] pb-[11px] cursor-pointer focus-within:border-terracotta">
+    <Card as="label" rayon="tuile" className="relative block min-w-0 pl-[14px] pr-[26px] pt-[10px] pb-[11px] cursor-pointer focus-within:border-terracotta">
       <span className="t-label text-muted block">{label}</span>
       <span className={"block mt-[4px] text-[15px] font-serif leading-[1.25] break-words " + (enAttente ? "text-terracotta" : "text-ink")} aria-hidden="true">
         {affiche}
@@ -188,7 +207,7 @@ function CaseSelect({
           </option>
         ))}
       </select>
-    </label>
+    </Card>
   );
 }
 
@@ -378,7 +397,6 @@ export default function AddScreen() {
           {state.addPhotoUrl && (
             <span
               className="absolute top-3 right-3 w-[38px] h-[38px] rounded-full bg-cream border border-border flex items-center justify-center text-ink"
-              style={{ boxShadow: "0 2px 8px rgba(29,26,22,.12)" }}
               aria-hidden="true"
             >
               <PencilIcon />
@@ -387,7 +405,6 @@ export default function AddScreen() {
           {state.addPhotoUrl ? (
             <span
               className="absolute bottom-3 right-3 flex items-center gap-[6px] text-[11px] text-ink bg-cream border border-border rounded-full px-3 py-[8px]"
-              style={{ boxShadow: "0 2px 8px rgba(29,26,22,.12)" }}
             >
               <PencilIcon /> Modifier la photo
             </span>
@@ -480,7 +497,7 @@ export default function AddScreen() {
         <div className="mt-6">
           <TitreSection>Informations essentielles</TitreSection>
           <div className="grid grid-cols-2 gap-[10px]">
-            <label className="block rounded-tuile bg-card border border-border px-[14px] pt-[10px] pb-[11px] cursor-text focus-within:border-terracotta min-w-0">
+            <Card as="label" rayon="tuile" className="block px-[14px] pt-[10px] pb-[11px] cursor-text focus-within:border-terracotta min-w-0">
               <span className="t-label text-muted block">Marque</span>
               <input
                 className="capin mt-[4px] w-full min-w-0 bg-transparent border-0 p-0 text-[15px] font-serif text-ink"
@@ -490,7 +507,7 @@ export default function AddScreen() {
                 aria-label="Marque, optionnelle"
                 enterKeyHint="done"
               />
-            </label>
+            </Card>
             <CaseSelect
               label="Catégorie"
               value={state.addCat}
@@ -566,10 +583,7 @@ export default function AddScreen() {
                   key={s}
                   aria-pressed={on}
                   onClick={() => actions.basculerAddSaison(s)}
-                  className={
-                    "px-2 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border inline-flex items-center justify-center gap-[5px] " +
-                    (on ? "bg-terracotta-deep text-cream border-terracotta-deep" : "bg-card text-ink border-border")
-                  }
+                  className={chipSaisonCls(on)}
                 >
                   {s}
                   {on && <span aria-hidden="true" className="min-[380px]:hidden">✓</span>}
@@ -624,10 +638,7 @@ export default function AddScreen() {
                   key={key}
                   onClick={() => actions.setAddOccasion(key)}
                   aria-pressed={on}
-                  className={
-                    "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border inline-flex items-center gap-[7px] " +
-                    (on ? "bg-warm-bg text-terracotta border-terracotta" : "bg-card text-ink border-border")
-                  }
+                  className={chipOccasionCls(on)}
                 >
                   <GlypheOccasion occasion={key} taille={15} />
                   {libelleOccasion(key)}
