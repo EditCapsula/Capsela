@@ -18,6 +18,7 @@ import {
   generateurMoteur,
   joursDuSejour,
   libelleDuree,
+  pluieAnnoncee,
   looksDeLaValise,
   looksParPiece,
   nbPolyvalentes,
@@ -310,5 +311,17 @@ describe("pretPourUneValise — de quoi remplir une valise S", () => {
   it("une robe tient lieu de haut et de bas", () => {
     const d = [piece(6, "robe"), piece(7, "chaussures"), ...[30, 31, 32, 33, 34, 35].map((i) => piece(i, "accessoire"))];
     expect(pretPourUneValise(d).manqueBase).toEqual([]);
+  });
+});
+
+describe("pluieAnnoncee — la pluie de la prévision, jamais d'une météo de repli", () => {
+  it("vraie quand un jour prévu annonce de la pluie", () => {
+    expect(pluieAnnoncee([meteo("2026-10-16", 17, "Pluie légère", true)])).toBe(true);
+  });
+  it("fausse quand le ciel prévu est sec", () => {
+    expect(pluieAnnoncee([meteo("2026-10-16", 24, "Ensoleillé", true)])).toBe(false);
+  });
+  it("fausse quand le jour n'est pas une prévision, même si son libellé parle de pluie", () => {
+    expect(pluieAnnoncee([meteo("2026-10-16", 17, "Pluie", false)])).toBe(false);
   });
 });

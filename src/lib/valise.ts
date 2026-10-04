@@ -553,12 +553,17 @@ export function resumeLook(pieces: Item[]): string {
  * 27/09/2026, à partir des seules températures et conditions PRÉVUES : rien
  * n'est dit quand il n'y a pas de prévision.
  */
+/** De la pluie dans la PRÉVISION du séjour (jamais dans une météo de repli) : faux quand aucun jour n'est prévu ou que le ciel est sec. */
+export function pluieAnnoncee(meteos: MeteoJour[]): boolean {
+  return meteos.some((m) => m.prevue && /pluie|pluvieux|averse|orage|bruine/i.test(m.label));
+}
+
 export function conseilMeteo(meteos: MeteoJour[]): string | null {
   const prevues = meteos.filter((m) => m.prevue);
   if (!prevues.length) return null;
   const min = Math.min(...prevues.map((m) => m.temp));
   const max = Math.max(...prevues.map((m) => m.temp));
-  const pluie = prevues.some((m) => /pluie|pluvieux|averse|orage|bruine/i.test(m.label));
+  const pluie = pluieAnnoncee(meteos);
   const base =
     max < 8
       ? "Temps froid, prévois des pièces chaudes."

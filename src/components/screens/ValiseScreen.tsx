@@ -43,6 +43,7 @@ import {
   occasionsDuSejour,
   occasionsRetenues,
   MINIMUM_PIECES_VALISE,
+  pluieAnnoncee,
   pretPourUneValise,
   resumeLook,
   SEJOURS,
@@ -158,6 +159,14 @@ const G_METEO = svg(
   </>,
   26
 );
+const G_METEO_PETIT = svg(
+  <>
+    <circle cx="12" cy="12" r="4.2" {...trait} />
+    <path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.5 1.5M16.9 16.9l1.5 1.5M18.4 5.6l-1.5 1.5M7.1 16.9l-1.5 1.5" {...trait} />
+  </>,
+  20
+);
+const G_GOUTTE = svg(<path d="M12 3.5s5.5 6 5.5 10a5.5 5.5 0 0 1-11 0c0-4 5.5-10 5.5-10z" {...trait} />, 19);
 const G_AMPOULE = svg(
   <>
     <path d="M9 17.5h6M10 20.5h4M12 3.5a5.5 5.5 0 0 0-3.3 9.9c.6.5 1 1.2 1 2V16h4.6v-.6c0-.8.4-1.5 1-2A5.5 5.5 0 0 0 12 3.5z" {...trait} />
@@ -1344,7 +1353,6 @@ function Resultat({
   }
 
   // ── RÉSULTAT « TA VALISE » ──
-  const meteoTexte = amplitude ? `${libelleAmplitude(amplitude)} prévus${amplitude.jours < nbJours ? ` sur ${amplitude.jours} ${amplitude.jours > 1 ? "jours" : "jour"}` : ""}` : null;
 
   // Dressing vide : rien à emporter — on le dit, avec l'action qui débloque.
   if (!dressing.length) {
@@ -1363,45 +1371,103 @@ function Resultat({
   }
 
   const l = looks[index];
+  const pluie = pluieAnnoncee(valise.meteos);
+  /** La température d'un look : seulement celle des jours PRÉVUS qu'il habille — jamais une météo de repli présentée comme une prévision. */
+  const tempDuLook = (lk: LookValise) => {
+    const jours = new Set(lk.situations.flatMap((i) => valise.situations[i]?.jours ?? []));
+    return amplitudePrevue(valise.meteos.filter((m) => jours.has(m.jour)));
+  };
+  /** Le séjour est couvert : un look pour chaque occasion demandée, et de quoi varier sur la durée. C'est ce que dit le bloc de validation, rien de plus. */
+  const sejourCouvert = looks.length > 0 && occasionsAManque.length === 0 && !peuDeLooks;
+  const piecesRepetees = looks.length > 1 && pieces.some((p) => (parPiece.get(p.id) ?? 0) > 1);
+  const aOptimiser = nouvelles === 0 && (occasionsAManque.length > 0 || peuDeLooks);
+  const nbPieces = (n: number) => `${n} ${n > 1 ? "pièces" : "pièce"}`;
 
   return (
     <>
-      <Surtitre>
-        {valise.destination} · {libellePeriode(valise.depart, valise.retour)}
-      </Surtitre>
-      <TitreEtape a="Ta valise" b="est prête" />
-      <div className="t-chapeau text-muted-3 mt-2">{[meteoTexte, libelleDuree(nbJours)].filter(Boolean).join(" · ")}</div>
+      {/* 1 · OÙ VAIS-JE ? La destination est le premier élément éditorial. */}
+      <h1 className="font-serif uppercase text-terracotta text-[34px] leading-[1.05] tracking-[.02em] break-words" style={{ textWrap: "balance" }}>
+        {valise.destination}
+      </h1>
+      <div className="t-surtitre text-muted mt-[6px]">{libellePeriode(valise.depart, valise.retour)}</div>
+
+      {/* 2 · TA VALISE EST-ELLE PRÊTE ? */}
+      <div className="t-titre-ecran text-ink mt-[14px] flex items-center flex-wrap gap-x-[10px]">
+        <span>
+          Ta valise <span className="italic text-terracotta">est prête</span>
+        </span>
+        <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center flex-shrink-0">
+          {G_COCHE(14, "var(--color-cream)")}
+        </span>
+      </div>
+      <div className="t-chapeau text-muted-3 mt-[6px]">{libelleDuree(nbJours)}</div>
+
+      {/* La météo, compacte, et seulement celle qui est connue. */}
+      <div className="flex flex-wrap gap-x-5 gap-y-[10px] mt-4 text-[12px] text-ink">
+        {amplitude ? (
+          <>
+            <span className="inline-flex items-center gap-[9px]">
+              <span className="text-terracotta">{G_METEO_PETIT}</span>
+              <span className="leading-[1.25]">
+                <span className="block text-[13px] font-medium">{libelleAmplitude(amplitude)}</span>
+                <span className="block text-[11px] text-muted">prévus{amplitude.jours < nbJours ? ` sur ${amplitude.jours} ${amplitude.jours > 1 ? "jours" : "jour"}` : ""}</span>
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-[9px]">
+              <span className="text-terracotta">{G_GOUTTE}</span>
+              <span className="text-[13px] font-medium leading-[1.25]">{pluie ? "Pluie annoncée" : "Pas de pluie annoncée"}</span>
+            </span>
+          </>
+        ) : (
+          <span className="inline-flex items-center gap-[9px]">
+            <span className="text-muted">{G_METEO_PETIT}</span>
+            <span className="text-[13px] leading-[1.25]">Météo non disponible pour ces dates</span>
+          </span>
+        )}
+      </div>
       {amplitude?.jours !== nbJours && (
-        <div className="text-[11px] text-placeholder leading-[1.45] mt-[4px]">
+        <div className="text-[11px] text-placeholder leading-[1.45] mt-[8px]">
           {amplitude
             ? "Les autres jours, au-delà de la prévision, suivent la saison de leur date et la température d'aujourd'hui."
-            : "Pas encore de prévision pour ces dates : looks composés sur la saison du séjour et la température d'aujourd'hui."}
+            : "Les looks suivent la saison du séjour et la température d'aujourd'hui."}
         </div>
       )}
 
+      {/* 3 · EST-ELLE ADAPTÉE ? Dit seulement quand c'est vrai (voir sejourCouvert). */}
       <div className="mt-4">
-        <CarteInfo glyphe={G_AMPOULE}>Une sélection pensée pour ton séjour, ta météo et ton dressing.</CarteInfo>
+        {sejourCouvert ? (
+          <div className="flex items-start gap-[12px] rounded-tuile bg-success-bg border border-success px-[14px] py-[12px]" style={{ borderColor: "color-mix(in srgb, var(--color-success) 35%, transparent)" }}>
+            <span aria-hidden="true" className="w-[24px] h-[24px] rounded-full bg-success text-cream flex items-center justify-center flex-shrink-0 mt-[1px]">
+              {G_COCHE(13, "var(--color-cream)")}
+            </span>
+            <div className="min-w-0">
+              <div className="text-[13px] text-ink font-medium leading-[1.35]">Ta valise couvre les besoins de ton séjour.</div>
+              <div className="text-[12px] text-ink-soft leading-[1.45] mt-[2px]">Les looks ont été composés à partir de ton dressing et de la saison.</div>
+            </div>
+          </div>
+        ) : (
+          <CarteInfo glyphe={G_AMPOULE}>Une sélection pensée pour ton séjour, ta météo et ton dressing.</CarteInfo>
+        )}
       </div>
 
-      {/* LE RATIO PIÈCES → LOOKS, au centre de la fonctionnalité. La capacité
-          n'est pas un objectif à remplir : elle est dite en second. */}
-      <div className="mt-3 rounded-feuille px-[8px] py-[16px] text-cream grid" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: couvertes.length ? "1fr 1fr 1fr" : "1fr 1fr" }}>
+      {/* LE RATIO PIÈCES → LOOKS, au centre de la fonctionnalité — compact. La capacité n'est pas un objectif à remplir : elle est dite en second. */}
+      <Card rayon="tuile" className="mt-3 grid py-[14px]" style={{ gridTemplateColumns: couvertes.length ? "1fr 1fr 1fr" : "1fr 1fr" }}>
         {(
           [
-            [glypheValise(20), pieces.length, pieces.length > 1 ? "pièces" : "pièce"],
+            [glypheValise(18), pieces.length, pieces.length > 1 ? "pièces" : "pièce"],
             [G_CINTRE, looks.length, looks.length > 1 ? "looks" : "look"],
             ...(couvertes.length ? ([[G_ETINCELLE, couvertes.length, couvertes.length > 1 ? "occasions couvertes" : "occasion couverte"]] as const) : []),
           ] as const
         ).map(([glyphe, n, libelle], i) => (
-          <div key={libelle} className="flex flex-col items-center text-center px-[6px]" style={{ borderLeft: i ? "1px solid rgba(251,243,234,.22)" : undefined }}>
-            <span style={{ color: "rgba(251,243,234,.8)" }}>{glyphe}</span>
-            <span className="font-serif text-[26px] leading-none mt-[8px]">{n}</span>
-            <span className="text-[11px] leading-[1.25] mt-[5px]" style={{ color: "rgba(251,243,234,.85)" }}>
-              {libelle}
+          <div key={libelle} className="flex flex-col items-center text-center px-[6px]" style={{ borderLeft: i ? "1px solid var(--color-border)" : undefined }}>
+            <span className="flex items-center gap-[7px] text-terracotta">
+              {glyphe}
+              <span className="font-serif text-[26px] leading-none text-ink">{n}</span>
             </span>
+            <span className="text-[11px] leading-[1.25] mt-[6px] text-muted">{libelle}</span>
           </div>
         ))}
-      </div>
+      </Card>
       <div className="flex items-center justify-between gap-3 mt-3">
         <span className="inline-flex items-center gap-[7px] text-[12px] text-ink">
           <span className="text-terracotta">{G_COCHE(14)}</span>
@@ -1412,12 +1478,8 @@ function Resultat({
         </span>
       </div>
 
-      {/* COMPLÉTER LE DRESSING (27/09/2026) — la valise ne puise que dans
-          le dressing : quand il limite la valise, l'écran le dit et mène à
-          l'ajout. Seulement sur un manque réel : une occasion sans look, ou
-          moins de looks que de jours ; et, au retour d'un ajout, la
-          proposition de recomposer. */}
-      {nouvelles > 0 ? (
+      {/* Au retour d'un ajout au dressing : la proposition de recomposer. */}
+      {nouvelles > 0 && (
         <Card className="mt-4 p-[16px]">
           <div className="t-titre-carte text-ink">
             {nouvelles > 1 ? `${nouvelles} nouvelles pièces dans ton dressing` : "Une nouvelle pièce dans ton dressing"}
@@ -1427,50 +1489,6 @@ function Resultat({
             Recomposer ma valise
           </Button>
         </Card>
-      ) : (
-        (occasionsAManque.length > 0 || peuDeLooks) && (
-          <Card className="mt-4 p-[16px]">
-            <div className="t-titre-carte text-ink">Complète ton dressing</div>
-            <div className="text-[12px] text-muted-3 leading-[1.5] mt-[5px]">Ta valise se compose uniquement avec tes pièces : plus ton dressing est complet, plus elle a de looks.</div>
-            <div className="flex flex-col gap-3 mt-3">
-              {occasionsAManque.map((o) => {
-                const m = manques.find((x) => x.occasion === o);
-                const elargie = occasionsElargies.includes(o);
-                return (
-                  <div key={o} className="text-[12px] text-ink leading-[1.45]">
-                    <span className="block">
-                      {elargie ? `Tes looks ${occasionShortLabel(o)} empruntent des pièces pensées pour d'autres occasions` : `Pas encore de look ${occasionShortLabel(o)}`}
-                      {m?.capacite && !elargie ? " : ta valise manque de place pour lui." : m?.categories.length ? " : il te manque" : "."}
-                    </span>
-                    {m && m.categories.length > 0 && (
-                      <span className="flex flex-wrap gap-[6px] mt-[7px]">
-                        {m.categories.map((c) => (
-                          <button
-                            key={c}
-                            onClick={() => ajouterCategorie(c)}
-                            aria-label={`Ajouter ${nomCategorie(c)} à ton dressing`}
-                            className="inline-flex items-center gap-[5px] rounded-full border border-terracotta text-terracotta px-[11px] text-[12px] cursor-pointer"
-                            style={{ minHeight: 36 }}
-                          >
-                            {G_PLUS} {nomCategorie(c)}
-                          </button>
-                        ))}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-              {peuDeLooks && (
-                <div className="text-[12px] text-ink leading-[1.45]">
-                  {looks.length} {looks.length > 1 ? "looks" : "look"} pour {nbJours} jours : quelques pièces de plus varieraient tes tenues.
-                </div>
-              )}
-            </div>
-            <button onClick={ajouterAuDressing} className="mt-3 text-[12px] text-terracotta cursor-pointer min-h-[40px]">
-              Ajouter une pièce à mon dressing →
-            </button>
-          </Card>
-        )
       )}
 
       <div className="mt-5">
@@ -1485,62 +1503,208 @@ function Resultat({
         />
       </div>
 
-      {/* ── LOOKS ── une grande carte éditoriale à la fois, ← 1 / 8 → */}
-      {onglet === "looks" &&
-        (!l ? (
-          <EmptyState className="mt-4">Aucun look complet avec les pièces de cette valise.</EmptyState>
-        ) : (
-          <div className="mt-4">
-            <button
-              onClick={() => setVue({ nom: "look", index })}
-              onTouchStart={(e) => (toucher.current = e.touches[0].clientX)}
-              onTouchEnd={(e) => {
-                const dx = e.changedTouches[0].clientX - (toucher.current ?? e.changedTouches[0].clientX);
-                toucher.current = null;
-                if (Math.abs(dx) < 40) return;
-                e.preventDefault();
-                setIndexLook(Math.max(0, Math.min(looks.length - 1, index + (dx < 0 ? 1 : -1))));
-              }}
-              aria-label={`Voir le look ${numero(index)} : ${resumeLook(piecesDuLook(l))}`}
-              className="w-full text-left bg-card border border-border rounded-hero p-[10px] cursor-pointer"
-            >
-              <div className="rounded-carte bg-warm-bg px-[12px] py-[14px]" style={{ height: "clamp(270px, 80vw, 340px)" }}>
-                <OutfitComposition items={piecesDuLook(l)} variant="hero" ajustee />
-              </div>
-              <div className="px-[6px] pt-[12px] pb-[4px]">
-                <div className="t-label text-terracotta">Look {numero(index)}</div>
-                <div className="font-serif text-[18px] text-ink leading-[1.25] mt-[5px]">{resumeLook(piecesDuLook(l))}</div>
-                <div className="flex flex-wrap gap-[6px] mt-[10px]">
-                  {occasionsDuLook(l, valise.situations).map((o) => (
-                    <PuceOccasion key={o} occasion={o} />
-                  ))}
-                </div>
-                {l.elargie && <div className="text-[11px] text-muted mt-2">Occasion élargie</div>}
-              </div>
-            </button>
-            <div className="flex items-center justify-center gap-4 mt-2">
-              <button
-                onClick={() => setIndexLook(index - 1)}
-                disabled={index === 0}
-                aria-label="Look précédent"
-                className="w-[44px] h-[44px] flex items-center justify-center text-terracotta cursor-pointer disabled:opacity-30 disabled:cursor-default"
-              >
-                {chevron("g")}
-              </button>
-              <span className="text-[12px] text-muted min-w-[44px] text-center" aria-live="polite">
+      {/* 4 · QU'EST-CE QUE JE VAIS PORTER ? Une grande carte éditoriale à la fois. */}
+      {onglet === "looks" && (
+        <section className="mt-6" aria-labelledby="titre-looks">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 id="titre-looks" className="t-titre-section text-ink">
+              Tes looks pour le séjour
+            </h2>
+            {l && (
+              <span className="text-[12px] text-muted flex-shrink-0" aria-live="polite">
                 {index + 1} / {looks.length}
               </span>
-              <button
-                onClick={() => setIndexLook(index + 1)}
-                disabled={index >= looks.length - 1}
-                aria-label="Look suivant"
-                className="w-[44px] h-[44px] flex items-center justify-center text-terracotta cursor-pointer disabled:opacity-30 disabled:cursor-default"
-              >
-                {chevron("d")}
-              </button>
-            </div>
+            )}
           </div>
-        ))}
+          <div className="t-chapeau text-muted-3 mt-[4px]">Des tenues pensées à partir de ton dressing.</div>
+
+          {!l ? (
+            <EmptyState className="mt-4">Aucun look complet avec les pièces de cette valise.</EmptyState>
+          ) : (
+            <>
+              <Card
+                rayon="hero"
+                className="mt-4 p-[10px]"
+                onTouchStart={(e) => (toucher.current = e.touches[0].clientX)}
+                onTouchEnd={(e) => {
+                  const dx = e.changedTouches[0].clientX - (toucher.current ?? e.changedTouches[0].clientX);
+                  toucher.current = null;
+                  if (Math.abs(dx) < 40) return;
+                  setIndexLook(Math.max(0, Math.min(looks.length - 1, index + (dx < 0 ? 1 : -1))));
+                }}
+              >
+                <div className="relative">
+                  <button
+                    onClick={() => setVue({ nom: "look", index })}
+                    aria-label={`Voir le look ${numero(index)} : ${resumeLook(piecesDuLook(l))}`}
+                    className="block w-full rounded-carte bg-warm-bg px-[12px] py-[14px] cursor-pointer"
+                    style={{ height: "clamp(270px, 80vw, 340px)" }}
+                  >
+                    <OutfitComposition items={piecesDuLook(l)} variant="hero" ajustee />
+                  </button>
+                  {looks.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setIndexLook(index - 1)}
+                        disabled={index === 0}
+                        aria-label="Look précédent"
+                        className="absolute left-[8px] top-1/2 -translate-y-1/2 w-[44px] h-[44px] rounded-full bg-cream border border-border text-terracotta flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-default"
+                      >
+                        {chevron("g")}
+                      </button>
+                      <button
+                        onClick={() => setIndexLook(index + 1)}
+                        disabled={index >= looks.length - 1}
+                        aria-label="Look suivant"
+                        className="absolute right-[8px] top-1/2 -translate-y-1/2 w-[44px] h-[44px] rounded-full bg-cream border border-border text-terracotta flex items-center justify-center cursor-pointer disabled:opacity-30 disabled:cursor-default"
+                      >
+                        {chevron("d")}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <div className="px-[6px] pt-[14px] pb-[4px]">
+                  <div className="t-label text-terracotta">
+                    Look {index + 1} / {looks.length}
+                  </div>
+                  <div className="font-serif text-[20px] text-ink leading-[1.25] mt-[5px]">{resumeLook(piecesDuLook(l))}</div>
+
+                  <div className="flex flex-wrap items-center gap-[6px] mt-[10px]">
+                    {(() => {
+                      const t = tempDuLook(l);
+                      return t ? (
+                        <span className="inline-flex items-center gap-[5px] text-[12px] text-ink mr-1">
+                          <span className="text-terracotta">{G_METEO_PETIT}</span>
+                          {libelleAmplitude(t)}
+                        </span>
+                      ) : null;
+                    })()}
+                    {occasionsDuLook(l, valise.situations).map((o) => (
+                      <PuceOccasion key={o} occasion={o} />
+                    ))}
+                  </div>
+                  {l.elargie && <div className="text-[11px] text-muted mt-2">Occasion élargie</div>}
+
+                  <div className="text-[13px] text-ink mt-4">{nbPieces(l.ids.length)} de ta valise</div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {piecesDuLook(l).map((p) => (
+                      <button key={p.id} onClick={() => ouvrirPiece(p.id)} aria-label={`Voir la pièce : ${p.name}`} className="rounded-champ cursor-pointer">
+                        <Vignette it={p} taille={52} />
+                      </button>
+                    ))}
+                  </div>
+
+                  <Button variante="contour" className="mt-4" onClick={() => setVue({ nom: "look", index })}>
+                    Voir le look complet →
+                  </Button>
+                </div>
+              </Card>
+
+              {looks.length > 1 && (
+                <div role="group" aria-label="Choisir un look" className="flex flex-wrap justify-center mt-2">
+                  {looks.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setIndexLook(i)}
+                      aria-label={`Look ${i + 1} sur ${looks.length}`}
+                      aria-current={i === index ? "true" : undefined}
+                      className="w-[24px] h-[24px] flex items-center justify-center cursor-pointer"
+                    >
+                      <span className={"block rounded-full " + (i === index ? "w-[8px] h-[8px] bg-terracotta-deep" : "w-[7px] h-[7px] border border-placeholder")} />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* La répétition d'une pièce est le principe de la capsule : elle est dite comme telle. */}
+              {piecesRepetees && (
+                <div className="text-[12px] text-muted-3 leading-[1.5] text-center mt-2">
+                  Certaines pièces sont pensées pour être portées plusieurs fois et combinées différemment.
+                </div>
+              )}
+            </>
+          )}
+
+          {/* 5 · PUIS-JE L'AMÉLIORER ? « Nécessaire » (une occasion sans look) et « Optionnel » (plus de variété) sont dits comme tels. */}
+          {aOptimiser && (
+            <Card rayon="carte" className="mt-7 p-[16px]">
+              <div className="flex items-center gap-[9px]">
+                <span className="text-terracotta flex-shrink-0">{G_ETINCELLE}</span>
+                <h2 className="t-titre-carte text-ink">Optimise ta valise</h2>
+              </div>
+              <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">
+                {occasionsAManque.length > 0
+                  ? "Capsela a repéré ce qui compléterait tes looks pour tout ton séjour."
+                  : "Capsela a repéré quelques pièces qui pourraient enrichir tes looks et t'offrir plus de variété."}
+              </div>
+              <div className="flex flex-col gap-4 mt-4">
+                {occasionsAManque.map((o) => {
+                  const m = manques.find((x) => x.occasion === o);
+                  const elargie = occasionsElargies.includes(o);
+                  return (
+                    <div key={o}>
+                      <div className="t-label text-terracotta">Nécessaire</div>
+                      <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
+                        {elargie ? `Tes looks ${occasionShortLabel(o)} empruntent des pièces pensées pour d'autres occasions` : `Pas encore de look ${occasionShortLabel(o)}`}
+                        {m?.capacite && !elargie ? " : ta valise manque de place pour lui." : m?.categories.length ? " : il te manque" : "."}
+                      </div>
+                      {m && m.categories.length > 0 && (
+                        <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
+                          {m.categories.map((c) => (
+                            <Card key={c} rayon="tuile" className="relative">
+                              <button
+                                onClick={() => ajouterCategorie(c)}
+                                aria-label={`Ajouter ${nomCategorie(c)} à ton dressing`}
+                                className="w-full flex items-center gap-[10px] text-left pl-[10px] pr-[44px] py-[10px] min-h-[62px] cursor-pointer"
+                              >
+                                <span aria-hidden="true" className="w-[40px] h-[40px] rounded-champ bg-warm-bg text-terracotta flex items-center justify-center flex-shrink-0">
+                                  {G_CINTRE}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-[13px] text-ink leading-[1.2] break-words first-letter:uppercase">{nomCategorie(c)}</span>
+                                  <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">pour {occasionShortLabel(o)}</span>
+                                </span>
+                                <span aria-hidden="true" className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
+                                  {G_PLUS}
+                                </span>
+                              </button>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {peuDeLooks && (
+                  <div>
+                    <div className="t-label text-muted">Optionnel</div>
+                    <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
+                      {looks.length} {looks.length > 1 ? "looks" : "look"} pour {nbJours} jours : quelques pièces de plus varieraient tes tenues.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Ajouter une pièce : les deux parcours existants, dits comme tels. */}
+          <Card rayon="carte" className="mt-4 p-[16px]">
+            <div className="flex items-center gap-[9px]">
+              <span className="text-terracotta flex-shrink-0">{G_PLUS}</span>
+              <h2 className="t-titre-carte text-ink">Ajouter une pièce</h2>
+            </div>
+            <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">Ajoute une pièce depuis ton dressing ou en scannant une nouvelle pièce.</div>
+            <div className="flex flex-col min-[400px]:flex-row gap-2 mt-3">
+              <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={() => setFeuille({ type: "ajouter" })}>
+                Depuis mon dressing
+              </Button>
+              <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={ajouterAuDressing}>
+                Ajouter une nouvelle pièce
+              </Button>
+            </div>
+          </Card>
+        </section>
+      )}
 
       {/* ── PIÈCES ── regroupées, chacune justifiée par ses looks */}
       {onglet === "pieces" && (
@@ -1629,12 +1793,21 @@ function Resultat({
         </>
       )}
 
-      <Pied
-        gardeeOu={gardeeOu}
-        ajuster={() => setFeuille({ type: "ajuster" })}
-        recommencer={recommencer}
-        periode={`${dateCourte(valise.depart)} → ${dateCourte(valise.retour)}`}
-      />
+      {/* 6 · QUE PUIS-JE FAIRE MAINTENANT ? L'action dominante reste sous le pouce, posée sur la barre du bas : le défilement réserve déjà la hauteur de la barre (pb-safe-nav), le -16 px retire sa marge de confort. */}
+      <div
+        className="sticky z-10 -mx-6 px-6 pt-[10px] pb-[10px] mt-6 bg-cream border-t border-border"
+        style={{ bottom: "-16px" }}
+      >
+        <Button onClick={() => setFeuille({ type: "ajuster" })}>Ajuster ma valise →</Button>
+      </div>
+      <button onClick={recommencer} className="block mx-auto mt-1 t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[10px]">
+        Créer une autre valise
+      </button>
+      <div className="text-[11px] text-placeholder leading-[1.5] mt-2 text-center">
+        <div>{`${dateCourte(valise.depart)} → ${dateCourte(valise.retour)}`}</div>
+        {gardeeOu === "compte" && <div>Enregistrée dans ton compte.</div>}
+        {gardeeOu === "appareil" && <div>Enregistrée sur cet appareil seulement.</div>}
+      </div>
       {feuilles}
     </>
   );
