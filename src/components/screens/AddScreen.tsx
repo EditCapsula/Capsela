@@ -28,7 +28,6 @@ import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
 import type { AccessoireType, BijouType, CategoryKey, OccasionKey, SacType, ShoeType } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
-import Card from "@/components/Card";
 import Input, { Select } from "@/components/Input";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
@@ -61,6 +60,41 @@ function PencilIcon({ className = "" }: { className?: string }) {
       <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" />
       <path d="M14.5 7.5l3 3" />
     </svg>
+  );
+}
+function CocheRonde() {
+  return (
+    <span className="w-[16px] h-[16px] rounded-full bg-[#2f6b4a] text-cream flex items-center justify-center flex-shrink-0" aria-hidden="true">
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 12.5l4.5 4.5L19 7.5" />
+      </svg>
+    </span>
+  );
+}
+/** Tuile de « Caractéristiques » : la pastille (couleur ou icône) à gauche, la valeur et son étiquette à droite. */
+function TuileCaracteristique({
+  onClick,
+  etiquette,
+  valeur,
+  pastille,
+  attente,
+}: {
+  onClick: () => void;
+  etiquette: string;
+  valeur: string;
+  pastille: React.ReactNode;
+  attente?: boolean;
+}) {
+  return (
+    <button onClick={onClick} className="flex items-center gap-[11px] rounded-tuile bg-card border border-border px-[12px] py-[11px] cursor-pointer text-left min-w-0">
+      <span className={"w-[38px] h-[38px] rounded-full flex items-center justify-center flex-shrink-0 " + (attente ? "border border-dashed border-warm-border" : "bg-warm-bg text-warm-text")}>
+        {pastille}
+      </span>
+      <span className="min-w-0">
+        <span className={"block text-[14px] font-serif leading-[1.2] break-words " + (attente ? "text-terracotta" : "text-ink")}>{valeur}</span>
+        <span className="block text-[11px] text-muted mt-[2px]">{etiquette}</span>
+      </span>
+    </button>
   );
 }
 function InfoIcon({ className = "" }: { className?: string }) {
@@ -112,14 +146,12 @@ function TitreSection({ children, suggere }: { children: React.ReactNode; sugger
 }
 
 /**
- * Ligne de la carte « Informations essentielles » (04/10/2026) : le libellé à
- * gauche, la valeur à droite, une ligne par information — lisible dès 320 px
- * sans tronquer. La valeur s'affiche en texte (retour à la ligne possible) et
- * un select natif transparent couvre toute la ligne. Natif et non une liste
- * maison : le sélecteur du système est celui que le pouce connaît, et il gère
+ * Case de la grille « Informations essentielles » (04/10/2026, d'après la maquette validée) : deux cases par ligne,
+ * le libellé en petites capitales, la valeur dessous en Fraunces — sur deux lignes au besoin, jamais tronquée. Un
+ * select natif transparent couvre toute la case : c'est le sélecteur du système, que le pouce connaît, et il gère
  * seul le clavier et l'accessibilité.
  */
-function LigneSelect({
+function CaseSelect({
   label,
   value,
   onChange,
@@ -137,12 +169,12 @@ function LigneSelect({
 }) {
   const affiche = options.find((o) => o.value === value)?.label ?? placeholder ?? "";
   return (
-    <label className="relative flex items-center justify-between gap-3 px-4 py-[13px] min-h-[50px] cursor-pointer focus-within:bg-warm-bg">
-      <span className="t-label text-muted flex-shrink-0">{label}</span>
-      <span className={"min-w-0 flex items-center gap-[7px] text-[14px] font-medium leading-[1.25] text-right " + (enAttente ? "text-terracotta" : "text-ink")}>
-        <span className="break-words min-w-0" aria-hidden="true">{affiche}</span>
-        <span className="text-muted text-[10px] flex-shrink-0" aria-hidden="true">▾</span>
+    <label className="relative block min-w-0 rounded-tuile bg-card border border-border pl-[14px] pr-[26px] pt-[10px] pb-[11px] cursor-pointer focus-within:border-terracotta">
+      <span className="t-label text-muted block">{label}</span>
+      <span className={"block mt-[4px] text-[15px] font-serif leading-[1.25] break-words " + (enAttente ? "text-terracotta" : "text-ink")} aria-hidden="true">
+        {affiche}
       </span>
+      <span className="absolute right-[11px] top-1/2 -translate-y-1/2 text-muted text-[10px] pointer-events-none" aria-hidden="true">▾</span>
       <select
         aria-label={label}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -343,6 +375,15 @@ export default function AddScreen() {
               Envoi de la photo…
             </span>
           )}
+          {state.addPhotoUrl && (
+            <span
+              className="absolute top-3 right-3 w-[38px] h-[38px] rounded-full bg-cream border border-border flex items-center justify-center text-ink"
+              style={{ boxShadow: "0 2px 8px rgba(29,26,22,.12)" }}
+              aria-hidden="true"
+            >
+              <PencilIcon />
+            </span>
+          )}
           {state.addPhotoUrl ? (
             <span
               className="absolute bottom-3 right-3 flex items-center gap-[6px] text-[11px] text-ink bg-cream border border-border rounded-full px-3 py-[8px]"
@@ -394,9 +435,9 @@ export default function AddScreen() {
               </div>
             </div>
             {(detourageFait || (analysee && !analyseEnCours)) && (
-              <ul className="flex flex-wrap gap-x-4 gap-y-[4px] mt-[10px] ml-[25px] text-[12px] text-warm-text list-none p-0">
-                {detourageFait && <li>✓ Fond supprimé</li>}
-                {analysee && !analyseEnCours && <li>✓ Analyse terminée</li>}
+              <ul className="flex flex-wrap gap-x-4 gap-y-[6px] mt-[10px] ml-[25px] text-[12px] text-warm-text list-none p-0">
+                {detourageFait && <li className="flex items-center gap-[6px]"><CocheRonde />Fond supprimé</li>}
+                {analysee && !analyseEnCours && <li className="flex items-center gap-[6px]"><CocheRonde />Analyse terminée</li>}
               </ul>
             )}
           </div>
@@ -422,7 +463,7 @@ export default function AddScreen() {
               }}
               placeholder="ex. Chemise en lin écrue"
               aria-label="Nom de la pièce"
-              className="pr-[46px] font-medium"
+              className="pr-[46px] font-serif text-[17px]"
             />
             <span className="absolute right-[17px] top-1/2 -translate-y-1/2 text-muted pointer-events-none">
               <PencilIcon />
@@ -438,11 +479,11 @@ export default function AddScreen() {
             sous ce nom ici comme sur la fiche de la pièce. */}
         <div className="mt-6">
           <TitreSection>Informations essentielles</TitreSection>
-          <Card rayon="tuile" className="divide-y divide-border">
-            <label className="flex items-center justify-between gap-3 px-4 py-[13px] min-h-[50px] cursor-text focus-within:bg-warm-bg">
-              <span className="t-label text-muted flex-shrink-0">Marque</span>
+          <div className="grid grid-cols-2 gap-[10px]">
+            <label className="block rounded-tuile bg-card border border-border px-[14px] pt-[10px] pb-[11px] cursor-text focus-within:border-terracotta min-w-0">
+              <span className="t-label text-muted block">Marque</span>
               <input
-                className="capin min-w-0 flex-1 bg-transparent border-0 p-0 text-right text-[14px] font-medium text-ink font-sans"
+                className="capin mt-[4px] w-full min-w-0 bg-transparent border-0 p-0 text-[15px] font-serif text-ink"
                 value={state.addBrand}
                 onChange={(e) => actions.setAddBrand(e.target.value)}
                 placeholder="Optionnel"
@@ -450,14 +491,14 @@ export default function AddScreen() {
                 enterKeyHint="done"
               />
             </label>
-            <LigneSelect
+            <CaseSelect
               label="Catégorie"
               value={state.addCat}
               onChange={(v) => actions.setAddCat(v as CategoryKey)}
               options={CATS.map(([key, label]) => ({ value: key, label }))}
             />
             {typeOptions && typeOptions.length > 0 && (
-              <LigneSelect
+              <CaseSelect
                 label="Modèle"
                 value={typeValue || ""}
                 onChange={setTypeValue}
@@ -467,7 +508,7 @@ export default function AddScreen() {
               />
             )}
             {sizeApplicable && (
-              <LigneSelect
+              <CaseSelect
                 label={isShoe ? "Pointure" : "Taille"}
                 value={selectedSize ?? ""}
                 onChange={(v) => actions.setAddSize(v)}
@@ -475,84 +516,49 @@ export default function AddScreen() {
                 placeholder="—"
               />
             )}
-          </Card>
+          </div>
         </div>
 
         {/* 6. Les caractéristiques : seulement ce qui est connu, et une
-            invitation discrète pour le reste. */}
-        <Card rayon="tuile" className="mt-6 px-4 pt-[15px] pb-[14px]">
+            invitation discrète pour le reste. Chaque tuile ouvre la feuille de modification. */}
+        <div className="mt-6">
           <TitreSection suggere={analysee}>{analysee ? "Caractéristiques identifiées" : "Caractéristiques"}</TitreSection>
-          <div className="grid grid-cols-3 gap-[8px] text-center">
-            <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
-              <span
-                className="w-[38px] h-[38px] rounded-full flex-shrink-0"
-                style={{ background: state.addColor.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }}
+          <div className="grid grid-cols-2 gap-[10px]">
+            <TuileCaracteristique
+              onClick={() => setSheet("characteristics")}
+              etiquette="Couleur"
+              valeur={state.addColor.name}
+              pastille={<span className="w-full h-full rounded-full" style={{ background: state.addColor.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} />}
+            />
+            <TuileCaracteristique
+              onClick={() => setSheet("characteristics")}
+              etiquette={matiereEstimee ? "Matière estimée" : "Matière"}
+              valeur={matiereManquante ? "Ajouter" : state.addMatiere ?? ""}
+              attente={matiereManquante}
+              pastille={matiereManquante ? <span className="text-terracotta text-[16px]">+</span> : <FabricIcon />}
+            />
+            {coupeApplicable && (
+              <TuileCaracteristique
+                onClick={() => setSheet("characteristics")}
+                etiquette="Coupe"
+                valeur={coupeManquante ? "Ajouter" : state.addCoupe ?? ""}
+                attente={coupeManquante}
+                pastille={coupeManquante ? <span className="text-terracotta text-[16px]">+</span> : <FitIcon />}
               />
-              <span className="min-w-0">
-                <span className="block text-[13px] text-ink leading-[1.2] break-words">{state.addColor.name}</span>
-                <span className="block t-label text-muted mt-[3px]">Couleur</span>
-              </span>
-            </button>
-            {matiereManquante ? (
-              <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
-                <span className="w-[38px] h-[38px] rounded-full border border-dashed border-warm-border flex items-center justify-center text-terracotta text-[16px] flex-shrink-0">
-                  +
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[13px] text-terracotta leading-[1.2]">Ajouter</span>
-                  <span className="block t-label text-muted mt-[3px]">Matière</span>
-                </span>
-              </button>
-            ) : (
-              <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
-                <span className="w-[38px] h-[38px] rounded-full bg-warm-bg flex items-center justify-center text-warm-text flex-shrink-0">
-                  <FabricIcon />
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[13px] text-ink leading-[1.2] break-words">{state.addMatiere}</span>
-                  <span className="block t-label text-muted mt-[3px]">{matiereEstimee ? "Matière estimée" : "Matière"}</span>
-                </span>
-              </button>
             )}
-            {coupeApplicable &&
-              (coupeManquante ? (
-                <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
-                  <span className="w-[38px] h-[38px] rounded-full border border-dashed border-warm-border flex items-center justify-center text-terracotta text-[16px] flex-shrink-0">
-                    +
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[13px] text-terracotta leading-[1.2]">Ajouter</span>
-                    <span className="block t-label text-muted mt-[3px]">Coupe</span>
-                  </span>
-                </button>
-              ) : (
-                <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
-                  <span className="w-[38px] h-[38px] rounded-full bg-warm-bg flex items-center justify-center text-warm-text flex-shrink-0">
-                    <FitIcon />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[13px] text-ink leading-[1.2] break-words">{state.addCoupe}</span>
-                    <span className="block t-label text-muted mt-[3px]">Coupe</span>
-                  </span>
-                </button>
-              ))}
           </div>
-          <button
-            onClick={() => setSheet("characteristics")}
-            className="mt-[14px] t-lien text-terracotta cursor-pointer py-[4px]"
-          >
+          <button onClick={() => setSheet("characteristics")} className="mt-[12px] t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[4px]">
             Modifier les caractéristiques →
           </button>
-        </Card>
+        </div>
 
         {/* 7. La saison : une recommandation présélectionnée, jamais un verrou. */}
         <div className="mt-7">
           <TitreSection suggere={saisonSuggeree}>{saisonSuggeree ? "Saisons suggérées" : "Saisons"}</TitreSection>
           <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Quand portes-tu cette pièce ? Sélection multiple.</div>
-          {/* Deux colonnes : quatre pastilles sur une ligne ne tiennent pas à
-              360 px avec leur coche (« Printemps ✓ »), et une grille égale se
-              lit mieux qu'un retour à la ligne au hasard des largeurs. */}
-          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Saisons">
+          {/* Quatre pastilles sur une ligne dès 380 px (maquette du 04/10/2026), deux fois deux en deçà, où la
+              coche (« Printemps ✓ ») ne tient plus à côté du mot : au-delà, le fond plein dit seul le choix. */}
+          <div className="grid grid-cols-2 min-[380px]:grid-cols-4 gap-2" role="group" aria-label="Saisons">
             {QUATRE_SAISONS.map((s) => {
               const on = saisonsRetenues.includes(s);
               return (
@@ -560,10 +566,13 @@ export default function AddScreen() {
                   key={s}
                   aria-pressed={on}
                   onClick={() => actions.basculerAddSaison(s)}
-                  className={chipCls(on) + " inline-flex items-center justify-center gap-[6px]"}
+                  className={
+                    "px-2 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border inline-flex items-center justify-center gap-[5px] " +
+                    (on ? "bg-terracotta-deep text-cream border-terracotta-deep" : "bg-card text-ink border-border")
+                  }
                 >
                   {s}
-                  {on && <span aria-hidden="true">✓</span>}
+                  {on && <span aria-hidden="true" className="min-[380px]:hidden">✓</span>}
                 </button>
               );
             })}
@@ -615,10 +624,14 @@ export default function AddScreen() {
                   key={key}
                   onClick={() => actions.setAddOccasion(key)}
                   aria-pressed={on}
-                  className={chipCls(on) + " inline-flex items-center gap-[7px]"}
+                  className={
+                    "px-4 py-[11px] rounded-full text-[13px] cursor-pointer font-sans border inline-flex items-center gap-[7px] " +
+                    (on ? "bg-warm-bg text-terracotta border-terracotta" : "bg-card text-ink border-border")
+                  }
                 >
                   <GlypheOccasion occasion={key} taille={15} />
                   {libelleOccasion(key)}
+                  {on && <span aria-hidden="true">✓</span>}
                 </button>
               );
             })}
@@ -627,15 +640,10 @@ export default function AddScreen() {
             )}
           </div>
           {!toutesOccasions && (
-            <button onClick={() => setToutesOccasions(true)} className="mt-[12px] t-lien text-terracotta cursor-pointer py-[4px]">
+            <button onClick={() => setToutesOccasions(true)} className="mt-[12px] w-full rounded-full border border-border bg-card py-[13px] text-[13px] text-terracotta cursor-pointer font-sans">
               + Ajouter une autre occasion
             </button>
           )}
-        </div>
-
-        <div className="flex items-start gap-[8px] mt-7 text-muted">
-          <InfoIcon className="mt-[2px] flex-shrink-0" />
-          <span className="text-[11px] leading-[1.45]">Tout est modifiable depuis ton dressing.</span>
         </div>
       </div>
 
@@ -653,6 +661,10 @@ export default function AddScreen() {
         ) : shoeTypeMissing ? (
           <div className="text-center text-[11px] text-terracotta mt-[8px]">Choisis le modèle de chaussures pour pouvoir les ajouter.</div>
         ) : null}
+        <div className="flex items-center justify-center gap-[7px] mt-[9px] text-muted">
+          <InfoIcon className="flex-shrink-0" />
+          <span className="text-[11px] leading-[1.4]">Tout est modifiable depuis ton dressing.</span>
+        </div>
       </div>
 
       <BottomSheet
