@@ -50,7 +50,7 @@ import {
   pretPourUneValise,
   resumeLook,
   SEJOURS,
-  situationsDuSejour,
+  situationsDuProgramme,
   type LookValise,
   type MeteoJour,
   type TailleBagage,
@@ -58,6 +58,7 @@ import {
   VISUEL_SEJOUR,
 } from "@/lib/valise";
 import { selectionApercu } from "@/lib/valiseApercu";
+import { pieceLaPlusUtilisee, planningDuProgramme, type CreneauPlanning } from "@/lib/planningValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import {
   borneFrequence,
@@ -111,7 +112,10 @@ const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août"
 const DOW = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 
 
-type Onglet = "looks" | "pieces";
+type Onglet = "ensemble" | "looks" | "pieces" | "accessoires";
+
+/** Les groupes de pièces de l'onglet Accessoires ; tous les autres sont dans Pièces. */
+const GROUPES_ACCESSOIRES = ["Sacs", "Bijoux & accessoires"];
 
 /** « 16 → 20 oct. », « 30 sept. → 8 oct. » */
 function libellePeriode(depart: string, retour: string): string {
@@ -407,7 +411,7 @@ export default function ValiseScreen() {
     etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : etape === 3 ? sejour != null : true;
 
   const zoneScroll = useRef<HTMLDivElement | null>(null);
-  const [onglet, setOnglet] = useState<Onglet>("looks");
+  const [onglet, setOnglet] = useState<Onglet>("ensemble");
   const cleVue = vue.nom === "look" ? `look${vue.index}` : vue.nom === "piece" ? `piece${vue.id}` : vue.nom;
   useEffect(() => {
     zoneScroll.current?.scrollTo({ top: 0, behavior: "auto" });
@@ -457,7 +461,7 @@ export default function ValiseScreen() {
     const meteos = meteosDe(p, joursRep);
     if (!actif.current) return;
     setFaites(1);
-    const situations = situationsDuSejour(rep.occasions, meteos);
+    const situations = situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions);
     await pause(380);
     if (!actif.current) return;
     setFaites(2);
@@ -491,7 +495,7 @@ export default function ValiseScreen() {
     });
     actions.afficherValise(id);
     setIdEnModification(null);
-    setOnglet("looks");
+    setOnglet("ensemble");
     setVue({ nom: "resultat" });
   };
   const preparer = (passer: boolean) => {
@@ -1638,6 +1642,60 @@ function Resultat({
   /** Les pièces de l'aperçu : une sélection représentative (valiseApercu.ts), le reste compté. */
   const apercu = selectionApercu(pieces);
   const aOptimiser = nouvelles === 0 && (occasionsAManque.length > 0 || peuDeLooks);
+  /**
+   * LES LOOKS JOUR PAR JOUR (phase B, 04/10/2026) : le programme réparti sur les jours, un look de la valise par créneau
+   * (planningDuProgramme, pur et déterministe — recalculé ici, jamais stocké). Il n'existe que pour une valise préparée avec
+   * un programme ET dont les situations portent leurs occasions ; sinon, les looks s'affichent en carrousel, comme avant.
+   */
+  const joursDuSejourValise = joursDuSejour(valise.depart, valise.retour);
+  const planning: CreneauPlanning[] =
+    valise.programme?.length && valise.situations.some((x) => x.sousIds?.length)
+      ? planningDuProgramme(valise.programme, joursDuSejourValise, valise.situations, looks)
+      : [];
+  const aPlanning = planning.length > 0;
+  const planningParJour = joursDuSejourValise
+    .map((jour, i) => ({ jour, numero: i + 1, creneaux: planning.filter((c) => c.jour === jour) }))
+    .filter((j) => j.creneaux.length > 0);
+  const plusUtilisee = pieceLaPlusUtilisee(parPiece);
+  const pieceReutilisee = plusUtilisee ? pieces.find((p) => p.id === plusUtilisee.id) : undefined;
+  /** Une journée du planning : ses créneaux, chacun avec le look de la valise qui lui répond. */
+  const carteJour = (j: (typeof planningParJour)[number]) => (
+    <Card key={j.jour} rayon="carte" className="px-[14px] pt-[12px] pb-[6px]">
+      <div className="t-label text-terracotta">
+        Jour {j.numero} · {dateCourte(j.jour)}
+      </div>
+      <div className="flex flex-col">
+        {j.creneaux.map((c) => {
+          const lk = c.look != null ? looks[c.look] : null;
+          const items = lk ? piecesDuLook(lk) : [];
+          return lk ? (
+            <button
+              key={c.creneau + c.sousId}
+              onClick={() => setVue({ nom: "look", index: c.look as number })}
+              aria-label={`${c.libelle} : voir le look ${numero(c.look as number)}`}
+              className="flex items-center gap-3 py-[10px] text-left cursor-pointer min-h-[64px] border-t border-divider first:border-t-0 transition-opacity active:opacity-70"
+            >
+              <span className="flex gap-[3px] flex-shrink-0">
+                {items.slice(0, 3).map((p) => (
+                  <Vignette key={p.id} it={p} taille={36} />
+                ))}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block t-label text-muted">{c.libelle}</span>
+                <span className="block text-[13px] text-ink leading-[1.3] mt-[2px] truncate">{resumeLook(items)}</span>
+              </span>
+              <span aria-hidden="true" className="text-muted flex-shrink-0">{chevron("d")}</span>
+            </button>
+          ) : (
+            <div key={c.creneau + c.sousId} className="py-[10px] border-t border-divider first:border-t-0 min-h-[52px]">
+              <span className="block t-label text-muted">{c.libelle}</span>
+              <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[2px]">Aucun look de ta valise ne répond encore à cette occasion.</span>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
   const nbPieces = (n: number) => `${n} ${n > 1 ? "pièces" : "pièce"}`;
 
   return (
@@ -1710,6 +1768,25 @@ function Resultat({
         )}
       </div>
 
+      {/* LES ONGLETS (refonte du 04/10/2026) : Ensemble (la valise et ses premiers looks), Looks (jour par jour), Pièces,
+          Accessoires. « Ensemble » pour « Vue d'ensemble » : à 320 px, quatre segments ne portent pas le libellé complet. */}
+      <div className="mt-5">
+        <SegmentedControl
+          ariaLabel="Contenu de la valise"
+          serre
+          segments={[
+            { key: "ensemble", label: "Ensemble" },
+            { key: "looks", label: "Looks" },
+            { key: "pieces", label: "Pièces" },
+            { key: "accessoires", label: "Accessoires" },
+          ]}
+          actif={onglet}
+          onChange={setOnglet}
+        />
+      </div>
+
+      {onglet === "ensemble" && (
+        <>
       {/* LE RATIO PIÈCES → LOOKS, au centre de la fonctionnalité — compact. La capacité n'est pas un objectif à remplir : elle est dite en second. */}
       <div className="flex items-baseline justify-between gap-3 mt-6">
         <h2 className="t-titre-section text-ink">Ta valise</h2>
@@ -1743,6 +1820,12 @@ function Resultat({
           Valise {valise.bagage} · {depasse ? `${pieces.length - capacite} de trop` : `${pieces.length} / ${capacite} pièces`}
         </span>
       </div>
+      {/* Une métrique n'est dite que si elle est comptée : la pièce la plus réutilisée, et dans combien de looks. */}
+      {plusUtilisee && pieceReutilisee && (
+        <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
+          {pieceReutilisee.name} est utilisée dans {plusUtilisee.fois} looks.
+        </div>
+      )}
 
       {/* APERÇU DE TA VALISE : les pièces emportées, posées à plat comme sur une planche — le visuel de la valise vient du
           dressing de la personne, jamais d'une photo de destination. Une sélection représentative (valiseApercu.ts) ; chaque
@@ -1794,21 +1877,35 @@ function Resultat({
         </Card>
       )}
 
-      <div className="mt-5">
-        <SegmentedControl
-          ariaLabel="Contenu de la valise"
-          segments={[
-            { key: "looks", label: `Looks · ${looks.length}` },
-            { key: "pieces", label: `Pièces · ${pieces.length}` },
-          ]}
-          actif={onglet}
-          onChange={setOnglet}
-        />
-      </div>
+        </>
+      )}
 
       {/* 4 · QU'EST-CE QUE JE VAIS PORTER ? Une grande carte éditoriale à la fois. */}
-      {onglet === "looks" && (
+      {(onglet === "looks" || onglet === "ensemble") && (
         <section className="mt-6" aria-labelledby="titre-looks">
+          {aPlanning ? (
+            <>
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 id="titre-looks" className="t-titre-section text-ink">
+                  {onglet === "looks" ? "Tes looks jour par jour" : "Tes looks pour le séjour"}
+                </h2>
+                <span className="text-[12px] text-muted flex-shrink-0">{looks.length} {looks.length > 1 ? "looks" : "look"}</span>
+              </div>
+              <div className="t-chapeau text-muted-3 mt-[4px]">Chaque journée, et chaque soir, avec un look de ta valise.</div>
+              <div className="flex flex-col gap-[10px] mt-4">{(onglet === "looks" ? planningParJour : planningParJour.slice(0, 5)).map(carteJour)}</div>
+              {onglet === "ensemble" && planningParJour.length > 5 && (
+                <button onClick={() => setOnglet("looks")} className="mt-3 t-lien text-terracotta cursor-pointer min-h-[44px]">
+                  Voir tous les looks jour par jour →
+                </button>
+              )}
+              {piecesRepetees && (
+                <div className="text-[12px] text-muted-3 leading-[1.5] text-center mt-3">
+                  Certaines pièces sont pensées pour être portées plusieurs fois et combinées différemment.
+                </div>
+              )}
+            </>
+          ) : (
+            <>
           <div className="flex items-baseline justify-between gap-3">
             <h2 id="titre-looks" className="t-titre-section text-ink">
               Tes looks pour le séjour
@@ -1928,8 +2025,11 @@ function Resultat({
             </>
           )}
 
+            </>
+          )}
+
           {/* 5 · PUIS-JE L'AMÉLIORER ? « Nécessaire » (une occasion sans look) et « Optionnel » (plus de variété) sont dits comme tels. */}
-          {aOptimiser && (
+          {onglet === "ensemble" && aOptimiser && (
             <Card rayon="carte" className="mt-7 p-[16px]">
               <div className="flex items-center gap-[9px]">
                 <span className="text-terracotta flex-shrink-0">{G_ETINCELLE}</span>
@@ -1996,6 +2096,7 @@ function Resultat({
           )}
 
           {/* Ajouter une pièce : les deux parcours existants, dits comme tels. */}
+          {onglet === "ensemble" && (
           <Card rayon="carte" className="mt-4 p-[16px]">
             <div className="flex items-center gap-[9px]">
               <span className="text-terracotta flex-shrink-0">{G_PLUS}</span>
@@ -2011,13 +2112,14 @@ function Resultat({
               </Button>
             </div>
           </Card>
+          )}
         </section>
       )}
 
       {/* ── PIÈCES ── regroupées, chacune justifiée par ses looks */}
-      {onglet === "pieces" && (
+      {(onglet === "pieces" || onglet === "accessoires") && (
         <>
-          {aAlleger.length > 0 && (
+          {onglet === "pieces" && aAlleger.length > 0 && (
             <Card className="mt-4 p-[14px]">
               <div className="t-titre-carte text-ink">On allège un peu ?</div>
               <div className="text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
@@ -2046,7 +2148,7 @@ function Resultat({
               </Button>
             </Card>
           )}
-          {GROUPES_VALISE.map(([titre, cats]) => {
+          {GROUPES_VALISE.filter(([titre]) => (onglet === "accessoires") === GROUPES_ACCESSOIRES.includes(titre)).map(([titre, cats]) => {
             const duGroupe = pieces.filter((p) => cats.includes(p.cat));
             if (!duGroupe.length) return null;
             return (

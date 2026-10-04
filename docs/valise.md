@@ -175,3 +175,19 @@ Cinq écrans au lieu de quatre : l'étape 4 « Qu'est-ce qui est prévu ? » dev
 - **Morphologie.** Aucune logique morphologique propre à la valise ; le moteur de tenues actuel (où le terme morphologique est retiré depuis le 29/08/2026) est la source de vérité, sans divergence avec Tenue du jour. [DÉCIDÉ]
 - **Données.** Le programme est gardé dans `calcul` (jsonb) de `valises` : aucune colonne, aucune migration. Une valise d'avant (occasions mères seules) s'ouvre ; modifiée, elle reprend une entrée par occasion sans fréquence inventée.
 - **Ce que la phase A ne fait PAS.** Les fréquences et les contraintes (chaleur, marche, outdoor) sont enregistrées et affichées ; leur effet sur la génération (planning jour par jour, looks par créneau, filtre de pool par contrainte) est la phase B. Aujourd'hui, la génération reçoit les occasions mères du programme, comme avant.
+
+## Refonte « programme du séjour » — phase B (04/10/2026)
+
+**Le programme pilote la génération.** `situationsDuProgramme` (valise.ts) transforme chaque élément du programme en situations pour le moteur, avec sa contrainte et les `sousIds` qu'elle couvre. Le moteur reste `generateOutfitWithFallback` : aucune règle de style n'est ajoutée à la valise, aucun scoring morphologique (R-S9 retiré le 29/08/2026).
+
+**Contraintes = filtres de pool, pas de règles de style** (`filtrerParContrainte`, programmeValise.ts) :
+- chaleur (Plage, Piscine) : écarte manteaux, pulls, vestes, pièces « Automne / Hiver », bottes, bottines, chaussures d'intérieur ;
+- marche (Visites, Balade, Shopping, Excursion) : écarte escarpins, sandales à talons, chaussures d'intérieur ;
+- outdoor (Randonnée) : parmi les chaussures typées, ne garde que baskets, bottines, bottes ; une chaussure sans type reste.
+Pas de repli sur le pool complet : si le pool filtré ne permet aucune tenue, la situation reste sans look et l'écran le dit. ARBITRAGE ÉDITORIAL : il n'y a pas de maillot dans le modèle de pièces, Plage/Piscine ne se distinguent donc que par la chaleur.
+
+**Planning jour par jour** (`planningValise.ts`) : calculé à l'affichage, jamais stocké. Trajets : premier et dernier jour. Éléments « jour » et « soir » étalés sur les jours les moins chargés ; pour chaque créneau, le look de la valise qui répond à la situation correspondante, le moins utilisé d'abord. Aucun look adapté : le créneau le dit (« Aucun look de ta valise ne répond encore à cette occasion. »), rien n'est inventé.
+
+**Résultat à onglets** : Ensemble, Looks (jour par jour), Pièces, Accessoires (Sacs, Bijoux & accessoires). « Ensemble » plutôt que « Vue d'ensemble » : quatre segments ne portent pas le libellé complet à 320 px ; `SegmentedControl` reçoit une option `serre` pour ce cas.
+
+**Limite** : le planning n'existe que pour les valises générées avec ce code (les situations doivent porter des `sousIds`) ; une valise plus ancienne garde l'affichage précédent.

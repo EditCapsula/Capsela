@@ -34,11 +34,17 @@ export default function SegmentedControl<K extends string>({
   actif,
   onChange,
   ariaLabel,
+  serre,
 }: {
   segments: readonly Segment<K>[];
   actif: K;
   onChange: (key: K) => void;
   ariaLabel: string;
+  /**
+   * Quatre onglets (Ma valise, 04/10/2026) : « Accessoires » est coupé à 320 px avec le remplissage de 8 px — 4 px de
+   * moins par côté suffisent. Les écrans à trois onglets gardent l'aération d'origine.
+   */
+  serre?: boolean;
 }) {
   return (
     <div
@@ -61,7 +67,7 @@ export default function SegmentedControl<K extends string>({
             aria-selected={on}
             onClick={() => onChange(s.key)}
             className={
-              "flex items-center justify-center gap-[5px] rounded-full px-2 text-[12px] cursor-pointer transition-colors min-w-0 " +
+              "flex items-center justify-center gap-[5px] rounded-full " + (serre ? "px-1" : "px-2") + " text-[12px] cursor-pointer transition-colors min-w-0 " +
               (on ? "bg-card text-terracotta-deep" : "text-muted-3 active:bg-[rgba(251,248,243,.5)]")
             }
             /* 44 px et non les 36 de la maquette : c'est le plancher de cible

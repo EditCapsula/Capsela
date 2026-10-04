@@ -1,6 +1,6 @@
 import { OCCASIONS } from "./data";
-import type { OccasionKey } from "./types";
-import { libelleDuree, type MeteoJour, type TypeSejour } from "./valise";
+import type { Item, OccasionKey } from "./types";
+import type { MeteoJour, TypeSejour } from "./valise";
 
 /*
  * LE PROGRAMME D'UNE VALISE (phase A de la refonte du 04/10/2026) — « Capsela propose, l'utilisatrice ajuste ».
@@ -218,5 +218,30 @@ export function couvertureMeteo(meteos: readonly MeteoJour[]): CouvertureMeteo {
   };
 }
 
-/** « 20 → 29 oct. · 10 jours · 9 nuits » — la durée du séjour, pour la synthèse. */
-export const libelleSejourDuree = (nbJours: number): string => libelleDuree(nbJours);
+// ── Contraintes : ce qu'une sous-occasion demande au pool ────────────────
+
+/**
+ * Le pool d'une situation, filtré par la contrainte de sa sous-occasion (phase B, 04/10/2026). Un filtre sur le POOL, jamais
+ * une règle du moteur : le moteur reçoit un dressing sans les pièces qui n'ont pas leur place ici, et compose comme il le
+ * fait toujours. Seulement des constats lisibles sur les pièces (catégorie, saison, type de chaussures) ; une pièce dont le
+ * type n'est pas renseigné reste — rien n'est deviné. Il n'y a pas de maillot de bain ni de vêtement de plage dans le
+ * modèle : « chaleur » écarte ce qui est fait pour le froid, rien de plus.
+ */
+const CHAUSSURES_PAS_POUR_LA_MARCHE = ["Escarpins", "Sandales à talons", "Chaussures d'intérieur"];
+const CHAUSSURES_DE_PLEIN_AIR = ["Baskets", "Bottines", "Bottes"];
+const CHAUSSURES_PAS_POUR_LA_CHALEUR = ["Bottes", "Bottines", "Chaussures d'intérieur"];
+
+export function filtrerParContrainte(pool: Item[], contrainte?: Contrainte): Item[] {
+  if (!contrainte) return pool;
+  return pool.filter((it) => {
+    if (contrainte === "chaleur") {
+      if (["manteau", "pull", "veste"].includes(it.cat)) return false;
+      if (it.season === "Automne / Hiver") return false;
+      if (it.cat === "chaussures" && it.shoeType && CHAUSSURES_PAS_POUR_LA_CHALEUR.includes(it.shoeType)) return false;
+      return true;
+    }
+    if (it.cat !== "chaussures" || !it.shoeType) return true;
+    if (contrainte === "marche") return !CHAUSSURES_PAS_POUR_LA_MARCHE.includes(it.shoeType);
+    return CHAUSSURES_DE_PLEIN_AIR.includes(it.shoeType); // outdoor
+  });
+}

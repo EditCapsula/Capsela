@@ -1,4 +1,5 @@
 import { previsionPour, type Prevision } from "./prevision";
+import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -169,6 +170,10 @@ export interface SituationValise {
   occasion: OccasionKey;
   meteo: Weather;
   jours: string[];
+  /** La contrainte des sous-occasions qu'elle sert (chaleur, marche, outdoor) — filtre du pool, jamais une règle du moteur. */
+  contrainte?: Contrainte;
+  /** Les occasions du programme que ce look-type sert : plage et piscine partagent une situation, pas deux tenues. */
+  sousIds?: string[];
 }
 
 /**
@@ -176,7 +181,8 @@ export interface SituationValise {
  * condition) ne font qu'une situation par occasion : cinq jours de 20° au
  * soleil n'appellent pas cinq tenues de soirée différentes pour être couverts.
  */
-export function situationsDuSejour(occasions: OccasionKey[], meteos: MeteoJour[]): SituationValise[] {
+/** Les jours de même météo, regroupés (saison de date, température à 3° près, condition). */
+export function groupesMeteo(meteos: MeteoJour[]): { meteo: Weather; jours: string[] }[] {
   const groupes = new Map<string, { meteo: Weather; jours: string[] }>();
   for (const m of meteos) {
     const saison = saisonCalendairePour(dateDe(m.jour));
@@ -185,8 +191,42 @@ export function situationsDuSejour(occasions: OccasionKey[], meteos: MeteoJour[]
     if (g) g.jours.push(m.jour);
     else groupes.set(cle, { meteo: weatherForDay(m.temp, m.label, saison, CHALEUR_HORS_SAISON), jours: [m.jour] });
   }
+  return [...groupes.values()];
+}
+
+export function situationsDuSejour(occasions: OccasionKey[], meteos: MeteoJour[]): SituationValise[] {
   const out: SituationValise[] = [];
-  for (const occasion of occasions) for (const g of groupes.values()) out.push({ occasion, meteo: g.meteo, jours: g.jours });
+  for (const occasion of occasions) for (const g of groupesMeteo(meteos)) out.push({ occasion, meteo: g.meteo, jours: g.jours });
+  return out;
+}
+
+/**
+ * LES SITUATIONS D'UN PROGRAMME (phase B, 04/10/2026). Les occasions du programme qui partagent la même mère ET la même
+ * contrainte ne font QU'UNE situation par météo : plage et piscine (Quotidien, chaleur) demandent une tenue, pas deux — le
+ * moteur ne compose pas une tenue complète différente pour chaque occasion. Un trajet ne se joue que le jour du départ et
+ * celui du retour : sa météo est celle de ces deux jours. Programme vide : le repli d'avant (situationsDuSejour).
+ */
+export function situationsDuProgramme(programme: readonly ItemProgramme[], meteos: MeteoJour[], repli: OccasionKey[]): SituationValise[] {
+  const elements = programme.flatMap((it) => {
+    const e = elementProgramme(it.id);
+    return e ? [e] : [];
+  });
+  if (!elements.length) return situationsDuSejour(repli, meteos);
+  const tries = [...meteos].sort((a, b) => a.jour.localeCompare(b.jour));
+  const extremes = tries.length ? [tries[0], tries[tries.length - 1]].filter((m, i, l) => l.findIndex((x) => x.jour === m.jour) === i) : [];
+  const parGroupe = new Map<string, { mere: OccasionKey; contrainte?: Contrainte; trajet: boolean; sousIds: string[] }>();
+  for (const e of elements) {
+    const cle = `${e.mere}|${e.contrainte ?? ""}|${e.creneau === "trajet" ? "t" : ""}`;
+    const g = parGroupe.get(cle);
+    if (g) g.sousIds.push(e.id);
+    else parGroupe.set(cle, { mere: e.mere, contrainte: e.contrainte, trajet: e.creneau === "trajet", sousIds: [e.id] });
+  }
+  const out: SituationValise[] = [];
+  for (const g of parGroupe.values()) {
+    for (const m of groupesMeteo(g.trajet ? extremes : tries)) {
+      out.push({ occasion: g.mere, meteo: m.meteo, jours: m.jours, ...(g.contrainte ? { contrainte: g.contrainte } : {}), sousIds: g.sousIds });
+    }
+  }
   return out;
 }
 
@@ -215,7 +255,9 @@ export function generateurMoteur(
   /** Colorimétrie du profil (30/09/2026) — cf. generateOutfit. */
   colorimetrie: ColorimetrieMoteur | null = null
 ): Generateur {
-  return (pool, s) => {
+  return (poolComplet, s) => {
+    // La contrainte de la situation (chaleur, marche, outdoor) restreint le pool ; le moteur, lui, ne change pas.
+    const pool = filtrerParContrainte(poolComplet, s.contrainte);
     if (!pool.length) return null;
     const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
