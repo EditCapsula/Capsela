@@ -556,7 +556,7 @@ export default function HomeScreen() {
     const p = `${dressingCount} ${dressingCount <= 1 ? "pièce" : "pièces"}`;
     const n = state.savedLooks.length;
     if (!n) return `${p} dans ton dressing.`;
-    return `${p} · ${n} ${n <= 1 ? "look à découvrir" : "looks à découvrir"}`;
+    return `${p} · ${n} ${n <= 1 ? "look à retrouver" : "looks à retrouver"}`;
   }, [dressingCount, state.savedLooks.length]);
 
   /** Les looks du MOIS EN COURS, bornes locales — jamais un décalage UTC en début ou fin de mois. */
