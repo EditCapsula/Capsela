@@ -943,7 +943,7 @@ Script : `scripts/note-tenue.audit.ts` (`npx vitest run --config vitest.audit.co
 | Les dimensions calculées sont figées : couleurs à 7,0 pour 66 à 74 % des tenues, coordination à 8,0 pour 63 à 82 %, finition à 8,5 pour 77 à 84 %. | DÉMONTRÉ |
 | R-S1 (palette), R-S4 (métaux) et R-S7 (sac et chaussures) ne se déclenchent jamais sur ces capsules ; R-S8 (matières) se déclenche à 99 à 100 %, R-S6 à 80 %. | DÉMONTRÉ |
 | Critères : C1 et C2 tenus (par construction : la note est resserrée) ; C3 (au moins 15 % des tenues aléatoires sous 7) non tenu, 1,0 % ; C4 (aucune dimension figée) non tenu ; C5 (aucune règle inerte ou constante) non tenu. | DÉMONTRÉ |
-| La distribution sur de vrais avis : verdicts réels, pièces reconnues réelles, part d'avis qui auront une note. | NON DÉMONTRÉ — aucune de ces données n'est dans cette mesure |
+| La distribution sur de vrais avis : verdicts réels, pièces reconnues réelles, part d'avis qui auront une note. | NON DÉMONTRÉ — lecture agrégée autorisée le 04/10/2026 : la table `avis_styliste` ne contient AUCUN avis (0 ligne). Rien à mesurer avant le lancement ; `scripts/avis-reels-note.audit.ts` (comptages uniquement, jamais de texte, de photo ni d'identifiant) est prêt à être relancé. |
 | Que R-S1, R-S4 et R-S7 soient aussi inertes sur de vrais dressings (couleurs vives, bijoux de métaux différents) : le catalogue est sobre. | NON DÉMONTRÉ |
 | Que la note soit juste, c'est-à-dire qu'elle suive la qualité d'une tenue : cet audit ne mesure que sa forme. | NON DÉMONTRÉ |
 
