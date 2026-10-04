@@ -6,7 +6,10 @@ import BadgePremium from "@/components/BadgePremium";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
+import { OutfitComposition } from "@/components/OutfitComposition";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
+import { jourDHier, texteHeroHier, texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
+import { plansDuJour } from "@/lib/planifier";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
@@ -453,6 +456,31 @@ export default function HomeScreen() {
 
   const outfitPieces = hasOutfit ? piecesResolues : [];
 
+  /*
+   * LE HERO DYNAMIQUE (04/10/2026) — trois états qui portent un plan, un qui n'en porte pas :
+   *   · à venir / jour J : le plan du jour CONSULTÉ est la tenue affichée (planApplique, planDuJour.ts) ; le hero le dit
+   *     — « Look planifié » ou « Look du jour » — avec l'occasion et le lieu du plan, plus la petite card de rappel
+   *     qui répétait cette information (PlansDuJour ne montre plus que ce que le hero ne dit pas) ;
+   *   · le lendemain : un plan d'HIER que la personne n'a pas encore rangé dans « Mes looks » devient « Ton look d'hier »,
+   *     avec la question du retour. Seul le jour d'aujourd'hui y est sensible, jamais un jour consulté ;
+   *   · sans plan : le hero d'avant.
+   * « J'ai adoré » réutilise l'écriture de « J'adore » (enregistrer dans Mes looks) ; « C'était bien » n'existe pas,
+   * le verdict d'un avis n'a que deux valeurs (outfit_feedback).
+   */
+  const [hierAdore, setHierAdore] = useState<string | null>(null);
+  const planHero = planApplique && hasOutfit ? planApplique.plan : null;
+  const texteHero = planHero ? texteHeroPlan(planHero) : null;
+  const planHier =
+    !planApplique && jourConsulte.decalage === 0
+      ? (plansDuJour(state.tenuesPlanifiees, jourDHier()).find(
+          (t) =>
+            t.pieceIds.length > 0 &&
+            t.pieceIds.every((id) => resolvePool.some((i) => i.id === id)) &&
+            (hierAdore === t.id || !state.savedLooks.some((l) => memeTenue(l.pieceIds, t.pieceIds)))
+        ) ?? null)
+      : null;
+  const piecesHier = planHier ? planHier.pieceIds.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => Boolean(i)) : [];
+
   // Le qualificatif sous le titre (qualificatifLook) : celui de la météo, sans
   // jamais présenter comme une option une veste que la tenue contient. Aucune
   // température affichée : elle est sur la ligne jour + météo, juste au-dessus.
@@ -610,6 +638,55 @@ export default function HomeScreen() {
           texte au-dessus change d'un état à l'autre. Elle reste montée, à la
           même place et à la même hauteur ; la planche y remplace la
           silhouette en fondu (ZoneLookDuJour). */}
+      {planHier ? (
+        <div className="mx-6 mt-6 bg-terracotta rounded-hero text-left" style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}>
+          <div className="flex items-center gap-[7px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
+            <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
+              ✦
+            </span>
+            {texteHeroHier(planHier).surtitre}
+          </div>
+          <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">{titreDuPlan(planHier)}</div>
+          <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
+            {texteHeroHier(planHier).question}
+          </div>
+          <div className="font-serif italic text-[13px] leading-[1.4] mt-[3px]" style={{ color: "var(--color-on-terracotta-soft)" }}>
+            {texteHeroHier(planHier).mot}
+          </div>
+          <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
+            <OutfitComposition items={piecesHier} variant="planche" />
+          </div>
+          <div className="pt-[16px]">
+            <span
+              className="inline-flex items-center gap-[6px] whitespace-nowrap"
+              style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
+            >
+              <span aria-hidden="true">☾</span>
+              {texteHeroHier(planHier).badge}
+            </span>
+          </div>
+          <Button variante="claire" onClick={() => actions.ouvrirPlan(planHier, "home")} className="mt-[12px]">
+            Revoir le look <span aria-hidden="true">→</span>
+          </Button>
+          <div className="mt-[12px]" aria-live="polite">
+            {hierAdore === planHier.id ? (
+              <div className="font-serif italic text-[13px]" style={{ color: "var(--color-on-terracotta-soft)", minHeight: 44, display: "flex", alignItems: "center" }}>
+                Ajoutée à tes looks — on garde cette direction.
+              </div>
+            ) : (
+              <BoutonDiscret
+                onClick={() => {
+                  setHierAdore(planHier.id);
+                  actions.enregistrerIdeeLook(planHier.pieceIds, planHier.occasion);
+                }}
+                className="whitespace-nowrap px-[6px]"
+              >
+                <span aria-hidden="true">♡</span> J&apos;ai adoré
+              </BoutonDiscret>
+            )}
+          </div>
+        </div>
+      ) : (
       <div
         className="mx-6 mt-6 bg-terracotta rounded-hero text-left"
         style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}
@@ -620,7 +697,7 @@ export default function HomeScreen() {
           </span>
           {/* « Ta tenue planifiée » quand la tenue affichée vient de Planifier
               (option C, 30/09/2026) : l'étiquette dit d'où elle vient. */}
-          {planApplique && hasOutfit ? "Ta tenue planifiée" : "Look du jour"}
+          {texteHero ? texteHero.surtitre : "Look du jour"}
         </div>
 
         {aucuneTenuePossible ? (
@@ -642,11 +719,11 @@ export default function HomeScreen() {
               // l'arrivée de la tenue se ferait sans fondu (mesuré en rendu).
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
                 <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
-                  {titreLookDuJour(occasionKey, state.workMode, state.dateContext)}
+                  {planHero ? titreDuPlan(planHero) : titreLookDuJour(occasionKey, state.workMode, state.dateContext)}
                 </div>
-                {qualificatif && (
+                {(texteHero ? texteHero.sousTitre : qualificatif) && (
                   <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
-                    {qualificatif}
+                    {texteHero ? texteHero.sousTitre : qualificatif}
                   </div>
                 )}
               </div>
@@ -694,20 +771,31 @@ export default function HomeScreen() {
             pas. Le contexte du look est la première chose qu'on veut savoir. */}
         {!aucuneTenuePossible && occasionLabel && (
           <div className="pt-[16px]">
-            <span
-              className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
-              style={{
-                fontSize: 9.5,
-                letterSpacing: ".08em",
-                background: "rgba(243,238,229,.22)",
-                color: "var(--color-on-terracotta)",
-                borderRadius: 100,
-                padding: "8px 14px",
-              }}
-            >
-              <GlypheOccasion occasion={occasionKey} taille={13} />
-              {occasionLabel}
-            </span>
+            {texteHero ? (
+              // Un plan : le quand, pas l'occasion (déjà dans le titre) — « Dimanche 4 oct. · Soirée », « Aujourd'hui · Soirée ».
+              <span
+                className="inline-flex items-center gap-[6px] whitespace-nowrap"
+                style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
+              >
+                <span aria-hidden="true">{jourAVenir ? "▣" : "☀"}</span>
+                {texteHero.badge}
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
+                style={{
+                  fontSize: 9.5,
+                  letterSpacing: ".08em",
+                  background: "rgba(243,238,229,.22)",
+                  color: "var(--color-on-terracotta)",
+                  borderRadius: 100,
+                  padding: "8px 14px",
+                }}
+              >
+                <GlypheOccasion occasion={occasionKey} taille={13} />
+                {occasionLabel}
+              </span>
+            )}
           </div>
         )}
 
@@ -719,12 +807,20 @@ export default function HomeScreen() {
         {(hasOutfit || aucuneTenuePossible) && (
           <Button
             variante="claire"
-            onClick={aucuneTenuePossible ? (dressingVide ? actions.openAdd : actions.goWardrobe) : actions.goTenues}
+            onClick={
+              aucuneTenuePossible
+                ? dressingVide
+                  ? actions.openAdd
+                  : actions.goWardrobe
+                : planHero && jourAVenir
+                  ? () => actions.ouvrirPlan(planHero, "home")
+                  : actions.goTenues
+            }
             className="mt-[12px]"
           >
             {hasOutfit ? (
               <>
-                Découvrir le look <span aria-hidden="true">→</span>
+                {planHero ? (jourAVenir ? "Voir le look planifié" : "Voir mon look") : "Découvrir le look"} <span aria-hidden="true">→</span>
               </>
             ) : dressingVide ? (
               "Ajouter mes pièces"
@@ -791,6 +887,7 @@ export default function HomeScreen() {
           </div>
         )}
       </div>
+      )}
 
       {/* ══ TON DRESSING, AUTREMENT ═══════════════════════════════════
           Refonte du 23/09/2026, maquette annotée. Le hero au-dessus n'est
