@@ -1,5 +1,6 @@
 "use client";
 
+import { estPhotoDetouree } from "@/lib/dressing";
 import { aDesManches, MANCHES } from "@/lib/manches";
 import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
@@ -279,6 +280,7 @@ export default function AddScreen() {
   };
 
   const analysee = state.addPhotoAnalysee && creation;
+  const photoDetouree = estPhotoDetouree(state.addPhotoUrl);
   const nomSuggere = analysee && !state.addNameTouched && state.addName.trim().length > 0;
   const nomVisible = state.addName.trim().length > 0;
   const matiereEstimee = analysee && !state.addMatiereTouched && Boolean(state.addMatiere);
@@ -323,12 +325,18 @@ export default function AddScreen() {
           aria-label={state.addPhotoUrl ? "Changer la photo" : "Ajouter une photo"}
           className={
             "mt-[4px] w-full rounded-tuile flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
-            (state.addPhotoUrl ? "bg-card" : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
+            (state.addPhotoUrl ? (photoDetouree ? "bg-photo-bg" : "bg-card") : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
           }
           style={{
             height: "clamp(230px, 68vw, 300px)",
             ...(state.addPhotoUrl
-              ? { backgroundImage: `url(${state.addPhotoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+              ? {
+                  backgroundImage: `url(${state.addPhotoUrl})`,
+                  // Détourée : la pièce entière, sur la tuile — jamais recadrée comme une photo (04/10/2026).
+                  backgroundSize: photoDetouree ? "contain" : "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }
               : {}),
           }}
         >
@@ -369,6 +377,29 @@ export default function AddScreen() {
               <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">
                 Catégorie, couleur et matière vont se préremplir.
               </div>
+            </div>
+          </div>
+        )}
+        {/* 2 bis. Le détourage (04/10/2026) : une phrase, comme l'analyse. Rien n'est dit quand il n'est pas branché ou qu'il échoue. */}
+        {state.addPhotoDetourage === "en_cours" && (
+          <div className="mt-[14px] flex items-start gap-[10px] rounded-tuile bg-warm-bg px-4 py-[12px]" role="status">
+            <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
+              ✦
+            </span>
+            <div className="min-w-0">
+              <div className="text-[13px] text-ink font-medium leading-[1.35]">L&apos;édit Capsela retire le fond de ta photo…</div>
+              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">Ta pièce se mêlera mieux aux autres dans tes tenues.</div>
+            </div>
+          </div>
+        )}
+        {state.addPhotoDetourage === "fait" && (
+          <div className="mt-[14px] flex items-start gap-[10px] rounded-tuile bg-warm-bg px-4 py-[12px]">
+            <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
+              ✦
+            </span>
+            <div className="min-w-0">
+              <div className="text-[13px] text-ink font-medium leading-[1.35]">Le fond de ta photo a été retiré</div>
+              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">Reprends ou change la photo si le résultat ne te convient pas.</div>
             </div>
           </div>
         )}

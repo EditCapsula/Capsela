@@ -1,5 +1,7 @@
 "use client";
 
+import { estPhotoDetouree } from "@/lib/dressing";
+import { fondPhotoPiece } from "@/lib/catalogImages";
 import { useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { useCapsela } from "@/lib/store";
@@ -157,7 +159,7 @@ export default function WardrobePiecesScreen() {
                   className="relative w-full rounded-bloc border border-border overflow-hidden"
                   style={
                     it.photoUrl
-                      ? { aspectRatio: "4/5", backgroundImage: `url(${it.photoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+                      ? { aspectRatio: "4/5", ...fondPhotoPiece(it.photoUrl, estPhotoDetouree(it.photoUrl)) }
                       : { aspectRatio: "4/5", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
                   }
                 >

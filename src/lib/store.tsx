@@ -14,6 +14,7 @@ import { decisionAcces } from "./autorisations";
 import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
+  detourerPhoto,
   deleteDressingItem,
   deleteDressingPhotos,
   deleteOutfitFeedback,
@@ -188,6 +189,7 @@ function buildInitialState(): AppState {
     addPhotoUploading: false,
     addPhotoAnalyzing: false,
     addPhotoAnalysee: false,
+    addPhotoDetourage: "repos",
     // Aucun choix tant que l'utilisatrice n'en fait pas : saveItem retient
     // alors saisonsParDefaut (27/09/2026), que l'écran montre présélectionnées.
     addSaisons: null,
@@ -1838,6 +1840,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSize: null,
           addPhotoUrl: img.url ?? null,
           addPhotoAnalysee: false,
+          addPhotoDetourage: "repos",
           addSaisons: saisonsDe(item),
           addManches: item.manches ?? null,
           addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
@@ -1875,6 +1878,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSize: item.size ?? null,
           addPhotoUrl: item.photoUrl ?? img.url ?? null,
           addPhotoAnalysee: false,
+          addPhotoDetourage: "repos",
           addSaisons: saisonsDe(item),
           addManches: item.manches ?? null,
           addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
@@ -1942,7 +1946,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // jamais ce qui sera persisté au final (cf. photoUrl côté
       // insertDressingItem, uniquement rempli une fois l'URL définitive
       // obtenue ci-dessous).
-      setState((s) => ({ ...s, addPhotoUrl: URL.createObjectURL(file), addPhotoUploading: true, addPhotoAnalysee: false }));
+      setState((s) => ({ ...s, addPhotoUrl: URL.createObjectURL(file), addPhotoUploading: true, addPhotoAnalysee: false, addPhotoDetourage: "repos" }));
       if (!isSupabaseConfigured || !userId) {
         // Mode démo : pas de Storage à interroger, l'aperçu local reste tel quel.
         setState((s) => ({ ...s, addPhotoUploading: false }));
@@ -1997,7 +2001,24 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                 };
               });
             })
-            .catch(() => setState((s) => ({ ...s, addPhotoAnalyzing: false })));
+            .catch(() => setState((s) => ({ ...s, addPhotoAnalyzing: false })))
+            // Le détourage vient APRÈS l'analyse : elle lit la photo d'origine, que le détourage ne supprime
+            // qu'une fois remplacée. Jamais bloquant — rien n'est affiché de faux si le service n'est pas branché.
+            .then(() => {
+              setState((s) => (s.addPhotoUrl === url ? { ...s, addPhotoDetourage: "en_cours" } : s));
+              detourerPhoto(url).then((detouree) => {
+                // La photo a changé, ou la pièce est déjà enregistrée avec l'original : on n'y touche pas.
+                if (stateRef.current.addPhotoUrl !== url) return;
+                if (!detouree) {
+                  setState((s) => (s.addPhotoUrl === url ? { ...s, addPhotoDetourage: "repos" } : s));
+                  return;
+                }
+                setState((s) => (s.addPhotoUrl === url ? { ...s, addPhotoUrl: detouree, addPhotoDetourage: "fait" } : s));
+                // Un seul exemplaire de la photo dans le stockage : l'original part, la détourée reste.
+                const chemin = dressingPhotoPath(url);
+                if (chemin) deleteDressingPhotos([chemin]).catch((err) => console.error("[dressing] original non supprimé", err));
+              });
+            });
         })
         .catch((err) => {
           // Échec : jamais persister l'aperçu blob (invalide au rechargement,
@@ -2119,6 +2140,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addPhotoUploading: false,
         addPhotoAnalyzing: false,
         addPhotoAnalysee: false,
+        addPhotoDetourage: "repos",
         addCatTouched: false,
         addColorTouched: false,
         addMatiere: null,

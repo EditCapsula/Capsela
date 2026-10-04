@@ -7,7 +7,7 @@ import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { BAS_CATS, CATS, OCCASIONS } from "@/lib/data";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { resolveItemImage } from "@/lib/catalogImages";
+import { fondPhotoPiece, resolveItemImage } from "@/lib/catalogImages";
 import {
   CLOTHING_CATS,
   TOP_LAYER_CATS,
@@ -98,7 +98,7 @@ function PhotoPiece({ item, arrondi = 14, children }: { item: Item; arrondi?: nu
       className="relative w-full border border-border overflow-hidden"
       style={
         image.url
-          ? { aspectRatio: "4/5", borderRadius: arrondi, backgroundImage: `url(${image.url})`, backgroundSize: "cover", backgroundPosition: "center" }
+          ? { aspectRatio: "4/5", borderRadius: arrondi, ...fondPhotoPiece(image.url, image.kind === "detouree") }
           : { aspectRatio: "4/5", borderRadius: arrondi, background: item.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
       }
     >

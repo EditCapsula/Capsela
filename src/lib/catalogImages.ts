@@ -1,14 +1,15 @@
+import { estPhotoDetouree } from "./dressing";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type { Item } from "./types";
 import { VESTIAIRE_ID_OFFSET, isVestiaireId } from "./vestiaire";
 
 export interface ResolvedItemImage {
-  kind: "photo" | "affiliate" | "generated" | "placeholder";
+  kind: "photo" | "detouree" | "affiliate" | "generated" | "placeholder";
   url?: string;
 }
 
 /**
- * Priorité d'affichage impérative (recette 18/08/2026) : photo réelle du
+ * Priorité d'affichage impérative (recette 18/08/2026) : photo réelle (ou détourée) du
  * dressing utilisateur > image produit affiliée > image catalogue Capsela
  * générée > placeholder. Une image générique Capsela ne remplace jamais la
  * photo réelle d'une pièce ajoutée par l'utilisatrice, et on ne génère
@@ -20,10 +21,22 @@ export interface ResolvedItemImage {
  * existe (une image invalidée après coup ne doit jamais réapparaître).
  */
 export function resolveItemImage(item: Item): ResolvedItemImage {
-  if (item.photoUrl) return { kind: "photo", url: item.photoUrl };
+  // Une photo DÉTOURÉE (fond transparent, 04/10/2026) se montre comme un visuel produit — posée en « contain » sur la
+  // tuile, jamais recadrée comme une photo réelle. C'est le nom du fichier qui le dit (estPhotoDetouree).
+  if (item.photoUrl) return { kind: estPhotoDetouree(item.photoUrl) ? "detouree" : "photo", url: item.photoUrl };
   if (item.affiliateImageUrl) return { kind: "affiliate", url: item.affiliateImageUrl };
   if (item.imageUrl && item.imageStatus === "ready") return { kind: "generated", url: item.imageUrl };
   return { kind: "placeholder" };
+}
+
+/**
+ * Le fond d'une case qui montre la photo d'une pièce (04/10/2026) : une photo réelle remplit la case (« cover »), une
+ * photo DÉTOURÉE se montre entière sur la tuile (« contain », fond de tuile) — recadrée, la pièce serait tronquée.
+ */
+export function fondPhotoPiece(url: string, detouree: boolean): import("react").CSSProperties {
+  return detouree
+    ? { background: "var(--color-photo-bg)", backgroundImage: `url(${url})`, backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat" }
+    : { backgroundImage: `url(${url})`, backgroundSize: "cover", backgroundPosition: "center" };
 }
 
 /** Ids déjà en cours de génération cette session — jamais un second appel Edge Function tant que le premier n'a pas répondu. */

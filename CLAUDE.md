@@ -15,7 +15,7 @@ Les tests ne couvrent que des fonctions pures de `src/lib` (environnement node, 
 
 ## Architecture
 
-**Site entièrement statique.** `next.config.ts` fixe `output: "export"` (condition de l'empaquetage Capacitor) : aucune Route Handler, Server Action, `cookies()`/`headers()` ni `next/image` avec le loader par défaut — images en `<img>`. Ce qui demande un serveur passe par les fonctions Edge Supabase (`supabase/functions/` : `weather`, `analyze-dressing-photo`, `generate-catalog-image`, `delete-account`, `video-recompense`…).
+**Site entièrement statique.** `next.config.ts` fixe `output: "export"` (condition de l'empaquetage Capacitor) : aucune Route Handler, Server Action, `cookies()`/`headers()` ni `next/image` avec le loader par défaut — images en `<img>`. Ce qui demande un serveur passe par les fonctions Edge Supabase (`supabase/functions/` : `weather`, `analyze-dressing-photo`, `detourer-photo` (détourage des photos du dressing, `docs/detourage.md`), `generate-catalog-image`, `delete-account`, `video-recompense`…).
 
 **Une seule page, navigation par état.** `src/app/page.tsx` → `AppLoader` (import dynamique, `ssr: false`) → `App.tsx`, qui monte `AuthProvider` puis `CapselaProvider` et affiche l'écran désigné par `state.screen` (union `Screen` dans `src/lib/types.ts`). Il n'y a pas de routage par URL : on change d'écran par les actions du store (`goHome`, `goPlanifier`, `openItem`…). Un fichier par écran dans `src/components/screens/`. La barre du bas est masquée pour `NO_TABBAR_SCREENS` et `FLOW_SCREENS` (`App.tsx`) ; un écran de parcours peut la rendre lui-même sur sa vue d'accueil (cf. le hub de `PlanifierScreen`).
 

@@ -372,6 +372,8 @@ export interface AppState {
   addPhotoAnalyzing: boolean;
   /** true quand l'analyse de la photo a réellement rendu un résultat (27/09/2026) — seule condition des mentions « L'édit Capsela a analysé ta pièce » et « détectées ». addPhotoAnalyzing redevient false aussi en mode démo (aucune analyse) et sur un échec. */
   addPhotoAnalysee: boolean;
+  /** Le détourage de la photo (04/10/2026) : "en_cours" pendant l'appel, "fait" quand la photo affichée est la détourée. Jamais bloquant : un échec, ou un détourage non branché, redonne "repos" et la photo d'origine reste. */
+  addPhotoDetourage: "repos" | "en_cours" | "fait";
   /** null tant que l'utilisatrice n'a rien touché — la sauvegarde retient alors saisonsParDefaut (saisons.ts), affichées présélectionnées. Quatre saisons au choix depuis le 27/09/2026, jamais bloquantes. */
   addSaisons: CapsuleSeason[] | null;
   /** Longueur des manches choisie dans le formulaire (01/10/2026) ; null tant qu'elle n'est pas renseignée. */
