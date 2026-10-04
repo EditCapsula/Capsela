@@ -8,7 +8,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
-import { jourCourtLong, jourDHier, texteHeroHier, texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
+import { jourDHier, texteHeroHier, texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { plansDuJour } from "@/lib/planifier";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
@@ -668,7 +668,8 @@ export default function HomeScreen() {
             <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
               ✦
             </span>
-            {retroActif === 1 ? "Ton look d'hier" : `Ton look du ${jourCourtLong(jourLocal(dateRetro)).toLowerCase()}`}
+            {/* Le quand est dans la barre de date au-dessus (« Hier », « Dim. 27 ») : le hero ne le répète ni dans le surtitre ni dans un badge. */}
+            {retroActif === 1 ? "Ton look d'hier" : "Ton look passé"}
           </div>
           <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
             {passee.plan ? titreDuPlan(passee.plan) : OCC_LABELS[passee.occasion]}
@@ -679,17 +680,7 @@ export default function HomeScreen() {
           <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
             <OutfitComposition items={piecesPassee} variant="planche" />
           </div>
-          <div className="pt-[16px]">
-            <span
-              className="inline-flex items-center gap-[6px] whitespace-nowrap"
-              style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
-            >
-              <span aria-hidden="true">☾</span>
-              {retroActif === 1 ? "Hier" : jourCourtLong(jourLocal(dateRetro))}
-              {passee.temp != null ? ` · ${passee.temp}°` : ""}
-            </span>
-          </div>
-          <Button variante="claire" onClick={actions.goHistory} className="mt-[12px]">
+          <Button variante="claire" onClick={actions.goHistory} className="mt-[16px]">
             Voir dans mon journal <span aria-hidden="true">→</span>
           </Button>
         </div>

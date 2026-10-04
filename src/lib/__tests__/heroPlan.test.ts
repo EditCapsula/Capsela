@@ -32,7 +32,7 @@ describe("hero de l'accueil — textes d'une tenue planifiée", () => {
   it("le lendemain : la question, et un mot de soirée seulement pour une soirée", () => {
     expect(texteHeroHier({ moment: "Soirée" }).mot).toContain("soirée");
     expect(texteHeroHier({ moment: "Matin" }).mot).not.toContain("soirée");
-    expect(texteHeroHier({ moment: "Soirée" }).badge).toBe("Hier · Soirée");
+    expect(texteHeroHier({ moment: "Soirée" }).badge).toBe("Soirée");
   });
 
   it("le titre : l'occasion, puis la ville du lieu — sans lieu, l'occasion seule", () => {
