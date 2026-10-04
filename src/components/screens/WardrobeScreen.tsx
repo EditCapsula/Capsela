@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import AssociationsDressing from "@/components/AssociationsDressing";
 import CarteLook, { MosaiquePieces, ONGLETS_LOOKS, VisuelPiece } from "@/components/CarteLook";
@@ -25,6 +25,7 @@ import { composeWardrobePool, inactivityInfo, isWishlistLook, lookWornCount, nev
 import { useCapsela } from "@/lib/store";
 import type { Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
+import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
 
 /**
@@ -270,16 +271,8 @@ export default function WardrobeScreen() {
       )}
       <div className="flex items-baseline justify-between gap-[10px] mt-[2px]">
         <div className="text-[12px] text-muted">{!dressingLoaded ? " " : items.length > 0 ? resume.detail : synthese.texte}</div>
-        {/* Un lien, plus un bouton plein : le brief demande des CTA moins
-            présents. Retiré au dressing complet — il ouvrirait un formulaire
-            qui ne peut plus enregistrer ; le bloc Premium ci-dessous le
-            remplace. Dressing vide : l'action dominante est plus bas. */}
-        {dressingLoaded && items.length > 0 && !synthese.complet && (
-          <Lien onClick={actions.openAdd} label="Ajouter une pièce à mon dressing">
-            {PLUS}
-            Ajouter une pièce
-          </Lien>
-        )}
+        {/* « Ajouter une pièce » n'est plus dans l'en-tête (maquette du 04/10/2026, « une hiérarchie plus claire ») : le
+            nombre de pièces reste visible, l'action vit dans le bouton flottant et dans l'invitation ci-dessous. */}
       </div>
     </>
   );
@@ -357,8 +350,32 @@ export default function WardrobeScreen() {
   const looks = filtrerLooks(state.savedLooks, filtreLooks);
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+    <>
+    <div
+      className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]"
+      // Au-dessus de la barre du bas, plus la place du bouton flottant : il ne masque jamais la fin de la page.
+      style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 84px)" }}
+    >
       {enTete}
+
+      {/* UNE INVITATION CONTEXTUELLE, seulement tant que le dressing n'est pas plein : ajouter des pièces ouvre plus de
+          looks. Au dressing complet, le bloc Premium plus bas prend le relais. */}
+      {!synthese.complet && (
+        <Card rayon="tuile" className="mt-5">
+          <button onClick={actions.openAdd} className="w-full flex items-center gap-[14px] px-[14px] py-[14px] text-left cursor-pointer active:opacity-80">
+            <span aria-hidden="true" className="w-[48px] h-[48px] rounded-bloc bg-warm-bg text-terracotta-deep flex items-center justify-center flex-shrink-0">
+              {PLUS}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block t-titre-vignette text-ink">Complète ton dressing</span>
+              <span className="block text-[12px] leading-[1.45] mt-[3px]" style={{ color: "var(--color-muted-3)" }}>
+                Ajoute de nouvelles pièces pour encore plus de looks avec Capsela.
+              </span>
+            </span>
+            <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0">›</span>
+          </button>
+        </Card>
+      )}
 
       {/* DRESSING COMPLET (gratuit, 20 pièces) : présenté seulement quand la
           limite est atteinte — jamais avant. L'ajout mène à Premium au lieu
@@ -385,16 +402,18 @@ export default function WardrobeScreen() {
           return (
             <>
               <TitreSection>À redécouvrir</TitreSection>
+              <Card rayon="tuile" className="mt-3">
               <button
                 onClick={actions.goNeverWorn}
-                aria-label={`${neverWorn.length} ${pluriel ? "pièces attendent" : "pièce attend"} son moment, ${pluriel ? "jamais portées" : "jamais portée"}. Voir`}
-                className="w-full flex items-start gap-[14px] mt-3 text-left cursor-pointer active:opacity-80"
+                aria-label={`${pluriel ? `Voir les ${neverWorn.length} pièces` : "Voir la pièce"} qui ${pluriel ? "attendent" : "attend"} ${pluriel ? "leur" : "son"} moment, ${pluriel ? "jamais portées" : "jamais portée"}`}
+                className="w-full flex items-start gap-[14px] px-[14px] py-[14px] text-left cursor-pointer active:opacity-80"
               >
                 {/* Deux miniatures, de même taille et au même ratio qu'avant
                     (42 × 54 → 50 × 64) : une respiration, pas une carte. */}
                 <span className="flex gap-[8px] flex-shrink-0">
-                  {neverWorn.slice(0, 2).map((p) => (
-                    <span key={p.id} className="block" style={{ width: 50, height: 64 }}>
+                  {neverWorn.slice(0, 2).map((p, i) => (
+                    // La seconde miniature disparaît sous 360 px : le texte garde sa largeur.
+                    <span key={p.id} className={i === 1 ? "hidden min-[360px]:block" : "block"} style={{ width: 50, height: 64 }}>
                       <VisuelPiece piece={p} alt={p.name} radius={12} />
                     </span>
                   ))}
@@ -417,11 +436,10 @@ export default function WardrobeScreen() {
                         : "Tu ne l'as pas portée pendant sa dernière saison."
                       : `Capsela a repéré ${pluriel ? "des pièces qui pourraient" : "une pièce qui pourrait"} facilement trouver ${pluriel ? "leur" : "sa"} place dans tes prochains looks.`}
                   </span>
-                  <span className="block t-lien text-terracotta mt-[8px]">
-                    {pluriel ? `Voir les ${neverWorn.length} pièces` : "Voir la pièce"} →
-                  </span>
                 </span>
+                <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0 self-center">›</span>
               </button>
+              </Card>
             </>
           );
         })()}
@@ -591,5 +609,55 @@ export default function WardrobeScreen() {
         </div>
       )}
     </div>
+    {!synthese.complet && <BoutonAjoutFlottant onClick={actions.openAdd} />}
+    </>
+  );
+}
+
+/**
+ * LE BOUTON FLOTTANT « AJOUTER UNE PIÈCE » (maquette du 04/10/2026) : toujours à portée du pouce, au-dessus de la barre
+ * du bas. Étiqueté d'abord ; après trois usages, il se réduit au « + » — la personne sait ce qu'il fait. Le compte est
+ * gardé sur l'appareil (aucune donnée de compte) ; sans stockage, il reste étiqueté.
+ */
+const CLE_USAGES_AJOUT = "capsela.boutonAjout.usages";
+const USAGES_AVANT_REDUCTION = 3;
+
+function BoutonAjoutFlottant({ onClick }: { onClick: () => void }) {
+  const [reduit, setReduit] = useState(false);
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setReduit(Number(localStorage.getItem(CLE_USAGES_AJOUT) ?? 0) >= USAGES_AVANT_REDUCTION);
+    } catch {
+      // stockage indisponible : le bouton reste étiqueté
+    }
+  }, []);
+  return (
+    <button
+      onClick={() => {
+        try {
+          localStorage.setItem(CLE_USAGES_AJOUT, String(Number(localStorage.getItem(CLE_USAGES_AJOUT) ?? 0) + 1));
+        } catch {
+          // idem
+        }
+        onClick();
+      }}
+      aria-label="Ajouter une pièce à mon dressing"
+      className="absolute right-4 z-10 flex items-center gap-[10px] rounded-full bg-terracotta-deep text-cream cursor-pointer transition-transform active:scale-[.97]"
+      style={{
+        bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 12px)",
+        minHeight: 52,
+        minWidth: 52,
+        padding: reduit ? "0 16px" : "0 20px 0 16px",
+        boxShadow: "0 4px 14px rgba(29,26,22,.18)",
+      }}
+    >
+      <span aria-hidden="true" className="flex items-center justify-center">
+        <svg width="20" height="20" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      </span>
+      {!reduit && <span className="text-[13px] leading-[1.15] text-left">Ajouter<br />une pièce</span>}
+    </button>
   );
 }
