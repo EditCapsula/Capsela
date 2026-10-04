@@ -147,3 +147,13 @@ Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie 
 | `supabase/migrations/0038_valises.sql`, `0039_valises_plusieurs.sql` | Table `valises`, plusieurs valises par compte |
 | `src/components/screens/PlanifierScreen.tsx` | Valises dans « Mes planifications », carte « Préparer ma valise » |
 | `src/lib/autorisations.ts`, `supabase/functions/_shared/premium.ts` | Règle `PREPARER_VALISE` |
+
+## Écran résultat — refonte du 04/10/2026
+
+Hiérarchie : destination → « Ta valise est prête » → météo → couverture du séjour → ratio pièces/looks → looks → optimisation → ajout → action. Moteur, calculs et données inchangés ; seule la présentation a été reprise. Ce que l'écran ne montre PAS, faute de donnée :
+- le moment de la journée (« Midi à Dakar ») et la description d'un look : un look porte toujours le nom de ce qu'il contient (`resumeLook`) ;
+- « Chaud » et les mots de température : seule la plage prévue (`amplitudePrevue`) et la pluie annoncée (`pluieAnnoncee`, prévision seulement) sont affichées ; sans prévision, « Météo non disponible pour ces dates » ;
+- la température d'un look : seulement celle des jours PRÉVUS qu'il habille ;
+- le bloc vert « Ta valise couvre les besoins de ton séjour » n'apparaît que si c'est vrai (un look par occasion demandée, et au moins un look par jour) ; sinon, la phrase neutre d'avant ;
+- « Optimise ta valise » distingue « Nécessaire » (occasion sans look, catégories du moteur) et « Optionnel » (moins de looks que de jours) ; sans l'un ni l'autre, la section n'existe pas — aucune suggestion n'est inventée ;
+- pas d'image sur les suggestions : le moteur rend des catégories, pas des pièces.
