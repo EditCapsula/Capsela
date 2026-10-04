@@ -2,6 +2,7 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { jourLocal } from "./outfitFeedback";
 import type { TenuePlanifiee } from "./planifier";
 import type { OccasionKey } from "./types";
+import type { ItemProgramme } from "./programmeValise";
 import type { LookValise, MeteoJour, SituationValise, TailleBagage, TypeSejour } from "./valise";
 
 /**
@@ -46,6 +47,12 @@ export interface ValiseGardee {
    * Absent des valises plus anciennes.
    */
   dressingIds?: number[];
+  /**
+   * Le programme du séjour (refonte du 04/10/2026) : les occasions retenues — sous-occasions du voyage ou occasions de
+   * Capsela — et leur fréquence. Gardé dans `calcul` (jsonb) : aucune colonne, aucune migration. Absent des valises
+   * plus anciennes, qui n'ont que leurs occasions mères (`occasions`).
+   */
+  programme?: ItemProgramme[];
 }
 
 let compteur = 0;
@@ -162,7 +169,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "programme">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -182,6 +189,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     looks: r.calcul?.looks ?? [],
     situationsSansLook: r.calcul?.situationsSansLook ?? [],
     ...(r.calcul?.dressingIds ? { dressingIds: r.calcul.dressingIds } : {}),
+    ...(r.calcul?.programme?.length ? { programme: r.calcul.programme } : {}),
     // bigint[] revient parfois en chaînes côté PostgREST.
     pieceIds: nombres(r.piece_ids),
   };
@@ -202,6 +210,7 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
       looks: v.looks,
       situationsSansLook: v.situationsSansLook,
       ...(v.dressingIds ? { dressingIds: v.dressingIds } : {}),
+      ...(v.programme?.length ? { programme: v.programme } : {}),
     },
   };
 }

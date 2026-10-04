@@ -10,7 +10,7 @@ import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { OCCASIONS, occasionShortLabel } from "@/lib/data";
+import { occasionShortLabel } from "@/lib/data";
 import { jourLocal } from "@/lib/outfitFeedback";
 import { villeDuLieu } from "@/lib/planifier";
 import { HORIZON_PREVISION_JOURS, previsionPour, type Prevision } from "@/lib/prevision";
@@ -35,6 +35,7 @@ import {
   GROUPES_VALISE,
   joursDuSejour,
   libelleDuree,
+  libelleSejour,
   lookAChaussuresEtSac,
   looksDeLaValise,
   looksParPiece,
@@ -42,7 +43,6 @@ import {
   occasionsCouvertes,
   occasionsDeLaPiece,
   occasionsDuLook,
-  occasionsDuSejour,
   occasionsRetenues,
   MINIMUM_PIECES_VALISE,
   meteosPrevuesDuSejour,
@@ -59,6 +59,22 @@ import {
 } from "@/lib/valise";
 import { selectionApercu } from "@/lib/valiseApercu";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
+import {
+  borneFrequence,
+  couvertureMeteo,
+  elementProgramme,
+  frequenceAjoutee,
+  libelleFrequence,
+  occasionsDuProgramme,
+  occasionsProposees,
+  plafondFrequence,
+  programmeDepuisOccasions,
+  programmeParDefaut,
+  SOUS_OCCASIONS,
+  TOUS_LES_ELEMENTS,
+  type ElementProgramme,
+  type ItemProgramme,
+} from "@/lib/programmeValise";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
@@ -187,6 +203,13 @@ const G_CINTRE = svg(
 const G_ETINCELLE = svg(<path d="M12 3.5l1.7 5.3 5.3 1.7-5.3 1.7L12 17.5l-1.7-5.3L5 10.5l5.3-1.7z" {...trait} />, 18);
 const G_LISTE = svg(<path d="M9 7h11M9 12h11M9 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01" {...trait} strokeWidth={1.7} />, 18);
 const G_COCHE = (taille = 12, couleur = "currentColor") => svg(<path d="M5 12.5l4.5 4.5L19 7.5" {...trait} stroke={couleur} strokeWidth={2.2} />, taille);
+const G_CRAYON = svg(
+  <>
+    <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" {...trait} />
+    <path d="M14.5 7.5l3 3" {...trait} />
+  </>,
+  17
+);
 const G_CROIX = svg(<path d="M6 6l12 12M18 6L6 18" {...trait} strokeWidth={1.7} />, 14);
 const G_ECHANGE = svg(<path d="M7 7h11l-3-3M17 17H6l3 3" {...trait} />, 15);
 const G_PLUS = svg(<path d="M12 5v14M5 12h14" {...trait} strokeWidth={1.7} />, 15);
@@ -306,9 +329,13 @@ export default function ValiseScreen() {
   const [retour, setRetour] = useState("");
   const [bagage, setBagage] = useState<TailleBagage | null>(null);
   const [sejour, setSejour] = useState<TypeSejour | null>(null);
-  const [occasions, setOccasions] = useState<OccasionKey[]>([]);
-  // Les occasions suivent le séjour tant qu'on n'y a pas touché.
-  const [occasionsTouchees, setOccasionsTouchees] = useState(false);
+  /**
+   * LE PROGRAMME (refonte du 04/10/2026) : les occasions retenues et leur fréquence. Tant qu'on n'y a pas touché (`null`),
+   * il suit le séjour ET la durée — la proposition de Capsela (programmeParDefaut) ; dès qu'on le modifie, c'est le sien,
+   * borné par les jours du séjour (un changement de dates ne laisse jamais une fréquence au-dessus du plafond).
+   */
+  const [programmeManuel, setProgrammeManuel] = useState<ItemProgramme[] | null>(null);
+  const [feuilleOccasion, setFeuilleOccasion] = useState(false);
 
   const villeChoisieAffichee = ville != null && libelleVille(ville) === destination;
   useEffect(() => {
@@ -337,6 +364,13 @@ export default function ValiseScreen() {
   const jours = depart && retour && retour >= depart ? joursDuSejour(depart, retour) : [];
   const dureeOk = jours.length > 0 && dateDe(retour) <= dateDe(plusJours(depart, DUREE_MAX_JOURS - 1));
   const nomVille = ville ? ville.name : villeDuLieu(destination.trim());
+  const programme: ItemProgramme[] = programmeManuel
+    ? programmeManuel.flatMap((it) => {
+        const e = elementProgramme(it.id);
+        return e ? [{ id: it.id, frequence: borneFrequence(it.frequence, e.creneau, jours.length || 1) }] : [];
+      })
+    : programmeParDefaut(sejour, jours.length || 1);
+  const modifierProgramme = (f: (p: ItemProgramme[]) => ItemProgramme[]) => setProgrammeManuel(f(programme));
 
   /**
    * LA MÉTÉO SUR PLACE, DÈS L'ÉTAPE 1 — seulement quand la prévision peut la
@@ -379,10 +413,7 @@ export default function ValiseScreen() {
     zoneScroll.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [etape, cleVue, onglet]);
 
-  const choisirSejour = (t: TypeSejour) => {
-    setSejour(t);
-    if (!occasionsTouchees) setOccasions(occasionsDuSejour(t));
-  };
+  const choisirSejour = (t: TypeSejour) => setSejour(t);
 
   /**
    * LA GÉNÉRATION, EN QUATRE ÉTAPES RÉELLES — chacune cochée quand elle est
@@ -411,6 +442,8 @@ export default function ValiseScreen() {
     bagage: TailleBagage;
     sejour: TypeSejour | null;
     occasions: OccasionKey[];
+    /** Le programme du séjour (absent d'une valise recomposée qui n'en avait pas). */
+    programme?: ItemProgramme[];
   };
   const lancer = async (rep: Reponses, idCible: string | null) => {
     const joursRep = joursDuSejour(rep.depart, rep.retour);
@@ -448,6 +481,7 @@ export default function ValiseScreen() {
       bagage: rep.bagage,
       sejour: rep.sejour,
       occasions: rep.occasions,
+      ...(rep.programme?.length ? { programme: rep.programme } : {}),
       meteos,
       situations,
       ...r,
@@ -462,13 +496,19 @@ export default function ValiseScreen() {
   };
   const preparer = (passer: boolean) => {
     if (!bagage) return;
-    void lancer({ destination, ville, depart, retour, bagage, sejour, occasions: occasionsRetenues(passer ? [] : occasions, sejour) }, idEnModification);
+    // Les occasions que reçoit le moteur sont les MÈRES du programme (occasionsDuProgramme) : une sous-occasion hérite des
+    // règles de son occasion mère, le moteur ne connaît pas autre chose. Programme vide : le repli d'avant (le quotidien).
+    const retenu = passer ? [] : programme;
+    void lancer(
+      { destination, ville, depart, retour, bagage, sejour, occasions: occasionsRetenues(occasionsDuProgramme(retenu), sejour), programme: retenu },
+      idEnModification
+    );
   };
   /** Recomposer la valise affichée avec le dressing d'aujourd'hui (des pièces y ont été ajoutées) : mêmes réponses, même valise. */
   const recomposer = () => {
     if (!valise) return;
     void lancer(
-      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions },
+      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme },
       valise.id
     );
   };
@@ -489,8 +529,7 @@ export default function ValiseScreen() {
     setRetour("");
     setBagage(null);
     setSejour(null);
-    setOccasions([]);
-    setOccasionsTouchees(false);
+    setProgrammeManuel(null);
     setVue({ nom: "etape" });
     setEtape(1);
   };
@@ -510,8 +549,8 @@ export default function ValiseScreen() {
     setRetour(valise.retour);
     setBagage(valise.bagage);
     setSejour(valise.sejour);
-    setOccasions(valise.occasions);
-    setOccasionsTouchees(true);
+    // Une valise d'avant la refonte n'a que ses occasions mères : une entrée par occasion, sans fréquence inventée.
+    setProgrammeManuel(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1));
     setIdEnModification(valise.id);
     setVue({ nom: "etape" });
     setEtape(1);
@@ -540,7 +579,6 @@ export default function ValiseScreen() {
             ? "Revenir à Planifier"
             : "Revenir à l'accueil";
 
-  const presel = occasionsDuSejour(sejour);
   /**
    * LE MINIMUM POUR UNE NOUVELLE VALISE (27/09/2026) : de quoi remplir une
    * valise S. En dessous, les questions ne s'ouvrent pas : l'écran dit ce
@@ -559,7 +597,7 @@ export default function ValiseScreen() {
       </div>
       {questions && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
-          <FilEtapes total={4} courante={etape - 1} />
+          <FilEtapes total={5} courante={etape - 1} />
         </div>
       )}
 
@@ -617,7 +655,7 @@ export default function ValiseScreen() {
         {/* ── 1. DESTINATION ── */}
         {questions && etape === 1 && (
           <>
-            <Surtitre>Ta valise · 1 / 4</Surtitre>
+            <Surtitre>Ta valise · 1 / 5</Surtitre>
             <TitreEtape a="Où" b="pars-tu ?" />
             <Card rayon="pilule" className="flex items-center gap-[10px] mt-4 px-[16px]" style={{ minHeight: 50 }}>
               <span className="flex-shrink-0 text-placeholder">{G_EPINGLE}</span>
@@ -725,8 +763,19 @@ export default function ValiseScreen() {
                     )}
                   </div>
                   <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{conseilMeteo(meteosEtape1)}</div>
+                  {couvertureMeteo(meteosEtape1).sansPrevision.length > 0 && (
+                    <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
+                      {couvertureMeteo(meteosEtape1).sansPrevision.join(", ")} : prévisions météo non disponibles. Capsela adapte les looks selon la saison et le type de séjour.
+                    </div>
+                  )}
                 </div>
               </Card>
+            )}
+            {/* Aucune prévision pour ces dates : on le dit, sans température (la prévision ne va pas au-delà de quelques jours). */}
+            {jours.length > 0 && dureeOk && !(meteosEtape1 && amplitudeEtape1) && clePrevision == null && (
+              <div className="text-[12px] text-muted-3 leading-[1.5] mt-4">
+                Prévisions météo non disponibles pour ces dates. Capsela adapte les looks selon la saison et le type de séjour.
+              </div>
             )}
           </>
         )}
@@ -749,7 +798,7 @@ export default function ValiseScreen() {
         {/* ── 2. VALISE ── */}
         {questions && etape === 2 && (
           <>
-            <Surtitre>Ta valise · 2 / 4</Surtitre>
+            <Surtitre>Ta valise · 2 / 5</Surtitre>
             <TitreEtape a="Quelle valise" b="prends-tu ?" />
             <div className="grid grid-cols-2 gap-[10px] mt-5">
               {BAGAGES.map(([t, libelle, cap], i) => {
@@ -781,9 +830,9 @@ export default function ValiseScreen() {
               })}
             </div>
             <div className="text-[12px] text-muted leading-[1.5] mt-4">
-              Chaussures, sacs et accessoires compris.
+              La capacité inclut vêtements, chaussures, sacs et accessoires.
               <br />
-              La capacité ne dépend que de la taille de la valise.
+              Capsela cherche à maximiser tes looks avec l&apos;espace disponible.
             </div>
           </>
         )}
@@ -791,7 +840,7 @@ export default function ValiseScreen() {
         {/* ── 3. TYPE DE SÉJOUR ── */}
         {questions && etape === 3 && (
           <>
-            <Surtitre>Ta valise · 3 / 4</Surtitre>
+            <Surtitre>Ta valise · 3 / 5</Surtitre>
             <TitreEtape a="Quel type" b="de séjour ?" />
             <div className="grid grid-cols-2 gap-[10px] mt-5">
               {SEJOURS.filter(([t]) => VISUEL_SEJOUR[t]).map(([t, libelle]) => {
@@ -834,45 +883,200 @@ export default function ValiseScreen() {
           </>
         )}
 
-        {/* ── 4. PROGRAMME / OCCASIONS ── */}
+        {/* ── 4. PROGRAMME ── « Capsela propose, tu corriges » (refonte du 04/10/2026) : les occasions retenues pour ce
+            séjour, chacune avec sa fréquence — des jours, des soirs, des trajets —, que le jour et le soir d'une même
+            journée peuvent se partager. Les dix occasions de Capsela restent toutes à portée, derrière « Ajouter une
+            occasion ». */}
         {questions && etape === 4 && (
           <>
-            <Surtitre>Ta valise · 4 / 4</Surtitre>
+            <Surtitre>Ta valise · 4 / 5</Surtitre>
             <TitreEtape a="Qu'est-ce" b="qui est prévu ?" />
-            <div className="t-chapeau text-muted-3 mt-2">Sélectionne tout ce qui pourrait arriver pendant ton séjour.</div>
-            {presel.length > 0 && (
+            <div className="t-chapeau text-muted-3 mt-2">Capsela a préparé une première sélection selon ton séjour. Tu peux la modifier.</div>
+
+            {programme.length === 0 ? (
               <div className="mt-4">
-                <CarteInfo glyphe={G_AMPOULE}>Capsela a déjà préparé une première sélection selon ton séjour. Tu peux la modifier.</CarteInfo>
+                <CarteInfo glyphe={G_AMPOULE}>Rien n&apos;est retenu : Capsela préparera des tenues de tous les jours.</CarteInfo>
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-[8px] mt-4 list-none p-0" aria-label="Programme du séjour">
+                {programme.map((it) => {
+                  const e = elementProgramme(it.id);
+                  if (!e) return null;
+                  const plafond = plafondFrequence(e.creneau, jours.length || 1);
+                  const bouton = "w-[44px] h-[44px] flex items-center justify-center text-terracotta cursor-pointer disabled:opacity-30 disabled:cursor-default";
+                  return (
+                    <li key={it.id}>
+                      <Card rayon="tuile" className="flex items-center gap-[10px] pl-[12px] pr-[2px]">
+                        <span className="flex-shrink-0 text-terracotta">
+                          <GlypheOccasion occasion={e.mere} taille={18} />
+                        </span>
+                        <span className="flex-1 min-w-0 text-[13px] text-ink leading-[1.25] py-[10px]">{e.libelle}</span>
+                        <span className="flex items-center flex-shrink-0">
+                          <button
+                            onClick={() => modifierProgramme((p) => p.map((x) => (x.id === it.id ? { ...x, frequence: it.frequence - 1 } : x)))}
+                            disabled={it.frequence <= 1}
+                            aria-label={`Une fois de moins : ${e.libelle}`}
+                            className={bouton}
+                          >
+                            <span aria-hidden="true">−</span>
+                          </button>
+                          <span className="text-[12px] text-ink text-center min-w-[58px]" aria-live="polite">
+                            {libelleFrequence(e.creneau, it.frequence)}
+                          </span>
+                          <button
+                            onClick={() => modifierProgramme((p) => p.map((x) => (x.id === it.id ? { ...x, frequence: it.frequence + 1 } : x)))}
+                            disabled={it.frequence >= plafond}
+                            aria-label={`Une fois de plus : ${e.libelle}`}
+                            className={bouton}
+                          >
+                            <span aria-hidden="true">+</span>
+                          </button>
+                        </span>
+                        <button
+                          onClick={() => modifierProgramme((p) => p.filter((x) => x.id !== it.id))}
+                          aria-label={`Retirer ${e.libelle}`}
+                          className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer"
+                        >
+                          {G_CROIX}
+                        </button>
+                      </Card>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <div className="text-[11px] text-muted leading-[1.45] mt-[10px]">
+              Un jour peut avoir plusieurs occasions : les jours et les soirs se comptent à part, ils peuvent se chevaucher.
+            </div>
+
+            {/* Les propositions en second : un tap les ajoute. */}
+            {occasionsProposees(sejour, programme).length > 0 && (
+              <div className="flex flex-wrap gap-[8px] mt-4">
+                {occasionsProposees(sejour, programme).map((e) => (
+                  <button
+                    key={e.id}
+                    onClick={() => modifierProgramme((p) => [...p, { id: e.id, frequence: frequenceAjoutee(e, jours.length || 1) }])}
+                    className="inline-flex items-center gap-[7px] rounded-full border border-border bg-card px-[14px] text-[12px] text-ink cursor-pointer"
+                    style={{ minHeight: 44 }}
+                  >
+                    <span className="text-terracotta">{G_PLUS}</span>
+                    {e.libelle}
+                  </button>
+                ))}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-[8px] mt-4">
-              {OCCASIONS.filter(([k]) => k !== "all").map(([k, libelle]) => {
-                const on = occasions.includes(k);
-                return (
-                  <button
-                    key={k}
-                    onClick={() => {
-                      setOccasionsTouchees(true);
-                      setOccasions((l) => (l.includes(k) ? l.filter((x) => x !== k) : [...l, k]));
-                    }}
-                    aria-pressed={on}
-                    className={
-                      "flex items-center gap-[9px] text-left rounded-tuile px-[12px] cursor-pointer border transition-colors " +
-                      (on ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-ink")
-                    }
-                    style={{ minHeight: 56 }}
-                  >
-                    <span className={"flex-shrink-0 " + (on ? "text-cream" : "text-muted-3")}>
-                      <GlypheOccasion occasion={k} taille={18} />
-                    </span>
-                    <span className="flex-1 min-w-0 text-[12px] leading-[1.25]">{libelle}</span>
-                    {on && <span className="flex-shrink-0">{G_COCHE(12)}</span>}
-                  </button>
-                );
-              })}
-            </div>
+            <button onClick={() => setFeuilleOccasion(true)} className="mt-3 text-[12px] text-terracotta cursor-pointer min-h-[44px]">
+              + Ajouter une occasion
+            </button>
           </>
         )}
+
+        {/* ── 5. TON PROGRAMME EST PRÊT ── la synthèse avant la génération : chaque bloc se corrige d'un tap. */}
+        {questions && etape === 5 && (() => {
+          const meteo = couvertureMeteo(meteosEtape1 ?? jours.map((j) => ({ jour: j, temp: 0, label: "", prevue: false })));
+          const [, libelleBagageTexte, capaciteTexte] = BAGAGES.find(([t]) => t === bagage) ?? ["S", "", 0];
+          const bloc = (etapeCible: number, titre: string, corps: React.ReactNode) => (
+            <Card rayon="tuile" className="px-[14px] py-[12px]">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="t-label text-muted">{titre}</div>
+                  <div className="text-[13px] text-ink leading-[1.4] mt-[4px]">{corps}</div>
+                </div>
+                <button onClick={() => setEtape(etapeCible)} aria-label={`Modifier : ${titre.toLowerCase()}`} className="w-[44px] h-[44px] -mr-[8px] -mt-[8px] flex items-center justify-center flex-shrink-0 text-terracotta cursor-pointer">
+                  {G_CRAYON}
+                </button>
+              </div>
+            </Card>
+          );
+          return (
+            <>
+              <Surtitre>Ta valise · 5 / 5</Surtitre>
+              <TitreEtape a="Ton programme" b="est prêt" />
+              <div className="flex flex-col gap-[8px] mt-5">
+                {bloc(1, "Destination", nomVille || destination)}
+                {bloc(1, "Dates", <>{libellePeriode(depart, retour)} · {libelleDuree(jours.length)}</>)}
+                {bloc(
+                  1,
+                  "Météo",
+                  <>
+                    {meteo.avecPrevision.map((p) => (
+                      <span key={p} className="block">
+                        {p} · {amplitudeEtape1 ? libelleAmplitude(amplitudeEtape1) + " · " : ""}prévisions disponibles
+                      </span>
+                    ))}
+                    {meteo.sansPrevision.map((p) => (
+                      <span key={p} className="block text-muted-3">
+                        {p} · prévisions météo non disponibles
+                      </span>
+                    ))}
+                    {meteo.sansPrevision.length > 0 && (
+                      <span className="block text-[12px] text-muted mt-[3px]">Capsela adapte les looks selon la saison et le type de séjour.</span>
+                    )}
+                  </>
+                )}
+                {sejour && bloc(3, "Type de séjour", libelleSejour(sejour))}
+                {bagage && bloc(2, "Valise", <>{bagage} · {libelleBagageTexte} · jusqu&apos;à {capaciteTexte} pièces</>)}
+                {bloc(
+                  4,
+                  "Programme",
+                  programme.length ? (
+                    programme.map((it) => {
+                      const e = elementProgramme(it.id);
+                      return e ? (
+                        <span key={it.id} className="block">
+                          {e.libelle} · {libelleFrequence(e.creneau, it.frequence)}
+                        </span>
+                      ) : null;
+                    })
+                  ) : (
+                    "Des tenues de tous les jours"
+                  )
+                )}
+                <Card rayon="tuile" className="px-[14px] py-[12px]">
+                  <div className="t-label text-muted">Dressing utilisé</div>
+                  <div className="text-[13px] text-ink leading-[1.4] mt-[4px]">Ton dressing — {dressing.length} {dressing.length > 1 ? "pièces" : "pièce"}</div>
+                </Card>
+              </div>
+            </>
+          );
+        })()}
+
+        {/* Les occasions à ajouter : les sous-occasions du voyage, puis les dix occasions de Capsela — aucune n'est retirée. */}
+        <BottomSheet title="Ajouter une occasion" open={feuilleOccasion} onClose={() => setFeuilleOccasion(false)}>
+          {(
+            [
+              ["Pendant le séjour", SOUS_OCCASIONS],
+              ["Les occasions de Capsela", TOUS_LES_ELEMENTS.filter((e) => e.generique)],
+            ] as [string, ElementProgramme[]][]
+          ).map(([titre, liste]) => {
+            const dispo = liste.filter((e) => !programme.some((p) => p.id === e.id));
+            if (!dispo.length) return null;
+            return (
+              <section key={titre} className="mb-4">
+                <h3 className="t-surtitre text-muted">{titre}</h3>
+                <div className="flex flex-col gap-2 mt-2">
+                  {dispo.map((e) => (
+                    <button
+                      key={e.id}
+                      onClick={() => {
+                        modifierProgramme((p) => [...p, { id: e.id, frequence: frequenceAjoutee(e, jours.length || 1) }]);
+                        setFeuilleOccasion(false);
+                      }}
+                      className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile px-[12px] cursor-pointer"
+                      style={{ minHeight: 48 }}
+                    >
+                      <span className="flex-shrink-0 text-terracotta">
+                        <GlypheOccasion occasion={e.mere} taille={18} />
+                      </span>
+                      <span className="flex-1 min-w-0 text-[13px] text-ink">{e.libelle}</span>
+                      <span className="text-terracotta flex-shrink-0">{G_PLUS}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </BottomSheet>
 
         {/* ── 5. GÉNÉRATION ── */}
         {vue.nom === "calcul" && (
@@ -935,14 +1139,26 @@ export default function ValiseScreen() {
       {questions && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
           <Button
-            onClick={() => (etape < 4 ? etapeValide && setEtape(etape + 1) : preparer(false))}
+            onClick={() => (etape < 5 ? etapeValide && setEtape(etape + 1) : preparer(false))}
             disabled={!etapeValide}
           >
-            {etape < 4 ? "Continuer" : "Préparer ma valise"}
+            {etape < 5 ? "Continuer" : "Préparer ma valise"}
           </Button>
           {etape === 4 && (
-            <button onClick={() => preparer(true)} className="text-[12px] text-terracotta cursor-pointer py-[10px]">
+            // Passer : la proposition de Capsela, telle quelle — la synthèse la montre avant la génération.
+            <button
+              onClick={() => {
+                setProgrammeManuel(null);
+                setEtape(5);
+              }}
+              className="text-[12px] text-terracotta cursor-pointer py-[10px]"
+            >
               Passer cette étape
+            </button>
+          )}
+          {etape === 5 && (
+            <button onClick={() => setEtape(1)} className="text-[12px] text-terracotta cursor-pointer py-[10px]">
+              Modifier mes choix
             </button>
           )}
         </div>

@@ -79,3 +79,18 @@ describe("repartirPlanifications — tenues et valises dans « Mes planification
     expect(r.passees.map(cle)).toEqual(["v2", "t3"]);
   });
 });
+
+describe("valises — le programme du séjour (04/10/2026), gardé dans calcul sans migration", () => {
+  const base = { id: "1", destination: "Dakar", depart: "2026-10-20", retour: "2026-10-29", bagage: "M" as const, sejour: "plage" as const, occasions: ["quotidien" as const], meteos: [], situations: [], pieceIds: [1], looks: [], situationsSansLook: [] };
+  it("le programme part dans calcul et revient tel quel", () => {
+    const programme = [{ id: "visites", frequence: 4 }, { id: "trajet", frequence: 2 }];
+    const row = valiseToRow({ version: 2, ...base, programme });
+    expect(row.calcul.programme).toEqual(programme);
+    expect(rowToValise({ id: 1, ...row }).programme).toEqual(programme);
+  });
+  it("une valise d'avant (sans programme) s'ouvre sans programme", () => {
+    const row = valiseToRow({ version: 2, ...base });
+    expect("programme" in row.calcul).toBe(false);
+    expect(rowToValise({ id: 1, ...row }).programme).toBeUndefined();
+  });
+});
