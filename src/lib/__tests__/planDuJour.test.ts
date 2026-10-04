@@ -25,13 +25,12 @@ const piece = (id: number, cat: CategoryKey, over: Partial<Item> = {}): Item =>
 const DRESSING = [{ id: 1 }, { id: 2 }, { id: 3 }];
 
 describe("planPourTenueDuJour", () => {
-  it("la journée, le matin et l'après-midi font la tenue du jour ; la soirée, jamais", () => {
-    expect(MOMENTS_TENUE_DU_JOUR).toEqual(["Toute la journée", "Matin", "Après-midi"]);
+  it("tous les moments font la tenue du jour — la soirée aussi depuis le 04/10/2026 (hero de l'Accueil)", () => {
+    expect(MOMENTS_TENUE_DU_JOUR).toEqual(["Toute la journée", "Matin", "Après-midi", "Soirée"]);
     for (const m of MOMENTS_TENUE_DU_JOUR) expect(planPourTenueDuJour([plan("a", m)], DRESSING, [])).toEqual({ etat: "applicable", plan: plan("a", m) });
-    expect(planPourTenueDuJour([plan("a", "Soirée")], DRESSING, [])).toBeNull();
   });
 
-  it("travail le jour et dîner le soir : le plan de journée fait la tenue, le dîner reste un rappel", () => {
+  it("travail le jour et dîner le soir : le plan de journée passe avant, le dîner reste un rappel", () => {
     const plans = plansDuJour([plan("diner", "Soirée"), plan("bureau", "Matin")], "2026-10-02");
     expect(planPourTenueDuJour(plans, DRESSING, [])).toMatchObject({ etat: "applicable", plan: { id: "bureau" } });
   });

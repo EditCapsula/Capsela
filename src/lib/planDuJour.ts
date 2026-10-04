@@ -27,7 +27,14 @@ import type { DateContext, Item, WorkMode } from "./types";
  *     contredit, une ligne le signale — la tenue n'est jamais changée d'office.
  */
 
-export const MOMENTS_TENUE_DU_JOUR: readonly MomentJournee[] = ["Toute la journée", "Matin", "Après-midi"];
+/*
+ * RÉVISÉ LE 04/10/2026 (hero dynamique de l'Accueil, demandé) : « Soirée » rejoint les moments qui font la tenue du jour.
+ * L'arbitrage du 30/09 laissait la soirée en simple rappel « Ce soir » au-dessus du hero — une seconde carte qui répétait
+ * le hero. Un plan de soirée est désormais le hero (« Look du jour · Ta tenue est prête pour ce soir »), comme les autres,
+ * dans l'ordre de la journée : un plan de jour passe avant lui, et la soirée reste alors un rappel. « Voir une autre
+ * proposition » et l'alerte météo s'appliquent à lui comme aux autres.
+ */
+export const MOMENTS_TENUE_DU_JOUR: readonly MomentJournee[] = ["Toute la journée", "Matin", "Après-midi", "Soirée"];
 
 export type PlanDuJour =
   | { etat: "applicable"; plan: TenuePlanifiee }
