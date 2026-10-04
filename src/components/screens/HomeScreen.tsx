@@ -818,7 +818,7 @@ export default function HomeScreen() {
         {!aucuneTenuePossible && occasionLabel && (
           <div className="pt-[16px]">
             {texteHero ? (
-              // Un plan : le quand, pas l'occasion (déjà dans le titre) — « Dimanche 4 oct. · Soirée », « Aujourd'hui · Soirée ».
+              // Un plan : le quand, pas l'occasion (déjà dans le titre) — « Dimanche 4 oct. · Soirée » ; le jour même, seulement le moment (« Soirée »), « Aujourd'hui » étant dans la barre de date.
               <span
                 className="inline-flex items-center gap-[6px] whitespace-nowrap"
                 style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}

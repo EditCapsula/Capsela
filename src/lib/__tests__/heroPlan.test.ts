@@ -24,7 +24,7 @@ describe("hero de l'accueil — textes d'une tenue planifiée", () => {
     expect(texteHeroPlan({ jour: "2026-10-04", moment: "Soirée" }, "2026-10-04")).toEqual({
       surtitre: "Look du jour",
       sousTitre: "Ta tenue est prête pour ce soir.",
-      badge: "Aujourd'hui · Soirée",
+      badge: "Soirée",
     });
     expect(texteHeroPlan({ jour: "2026-10-04", moment: "Toute la journée" }, "2026-10-04").sousTitre).toBe("Ta tenue est prête pour aujourd'hui.");
   });

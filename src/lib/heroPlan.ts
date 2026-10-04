@@ -52,7 +52,8 @@ export interface TexteHeroPlan {
 /** Les textes du hero pour un plan à venir ou du jour. Un plan passé a ses propres textes (texteHeroHier). */
 export function texteHeroPlan(plan: Pick<TenuePlanifiee, "jour" | "moment">, aujourdhui: string = jourLocal()): TexteHeroPlan {
   if (etatDuPlan(plan, aujourdhui) === "jourJ") {
-    return { surtitre: "Look du jour", sousTitre: `Ta tenue est prête ${POUR_LE_MOMENT[plan.moment]}.`, badge: `Aujourd'hui · ${plan.moment}` };
+    // « Aujourd'hui » est déjà dans la barre de date au-dessus : le badge ne dit que le moment (04/10/2026, redondance signalée).
+    return { surtitre: "Look du jour", sousTitre: `Ta tenue est prête ${POUR_LE_MOMENT[plan.moment]}.`, badge: plan.moment };
   }
   const demain = (() => {
     const d = dateDe(aujourdhui);
