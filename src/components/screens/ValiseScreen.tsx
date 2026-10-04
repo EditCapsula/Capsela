@@ -1487,7 +1487,7 @@ function Resultat({
       </div>
 
       {/* APERÇU DE TA VALISE : les pièces emportées, posées à plat — c'est ce que la valise contient, avant les looks. Les
-          huit premières (dans l'ordre des groupes de la valise), chacune ouvre sa fiche ; le reste est compté. */}
+          douze premières (dans l'ordre des groupes de la valise), chacune ouvre sa fiche ; le reste est compté. */}
       <Card rayon="carte" className="mt-4 p-[14px]">
         <div className="flex items-center justify-between gap-3">
           <span className="t-label text-muted">Aperçu de ta valise</span>
