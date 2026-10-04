@@ -56,6 +56,8 @@ Chaussures, sacs et accessoires compris ; ne dépend que de la taille. Capacité
 
 La capacité est un plafond, pas un objectif : le résultat met en avant « pièces → looks » et ne dit la capacité qu'en second (« Valise M · jusqu'à 12 pièces »). [DÉCIDÉ]
 
+**Révisé le 04/10/2026** (demandé : « on est partie sur un nombre de pièces par type de valise », après une valise « prête » à 1 pièce sur 18) : la capacité reste le plafond, et devient aussi une CIBLE pour dire « prête ». Une valise n'est « prête » qu'avec au moins un look par occasion demandée ET `cibleDePieces` atteinte — 70 % de la capacité arrondi au supérieur (S 6, M 9, L 13, XL 17) —, sans dépasser le plafond. Sinon, « Ta valise à compléter », et l'écran dit combien de pièces manquent. Le compteur se lit « 1 / 18 pièces ». **Le 70 % est une proposition, à confirmer : ARBITRAGE ÉDITORIAL.** Le moteur ne change pas : il continue de composer avec le moins de pièces possible ; c'est la présentation qui ne dit plus « prête » avant la cible.
+
 ## 4. Type de séjour → occasions présélectionnées
 
 | Séjour | Occasions présélectionnées |

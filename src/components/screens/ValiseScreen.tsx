@@ -25,6 +25,7 @@ import {
   categoriesPourCompleter,
   BAGAGES,
   capaciteDe,
+  cibleDePieces,
   composerValise,
   conseilMeteo,
   dateDe,
@@ -1404,14 +1405,16 @@ function Resultat({
     return amplitudePrevue(meteosPrevues.filter((m) => jours.has(m.jour)));
   };
   /**
-   * « PRÊTE » n'est dit que si elle l'est (04/10/2026, signalé : « prête » pour 1 pièce et 0 look) : au moins un look,
-   * et un look pour chaque occasion demandée. La capacité (« jusqu'à 18 pièces ») n'est pas un objectif à remplir, mais
-   * une valise sans look, ou dont une occasion reste sans look, n'est pas prête : elle est à compléter, et « Optimise ta
-   * valise » dit par quoi.
+   * « PRÊTE » n'est dit que si elle l'est (04/10/2026, signalé : « prête » pour 1 pièce et 0 look, puis « on est partie
+   * sur un nombre de pièces par type de valise ») : au moins un look pour chaque occasion demandée, ET la cible de pièces
+   * du type de valise atteinte (cibleDePieces, 70 % de la capacité), sans dépasser la capacité. Sinon elle est à
+   * compléter, et l'écran dit par quoi.
    */
-  const prete = looks.length > 0 && occasionsAManque.length === 0;
-  /** Le séjour est couvert : un look pour chaque occasion demandée, et de quoi varier sur la durée. C'est ce que dit le bloc de validation, rien de plus. */
-  const sejourCouvert = looks.length > 0 && occasionsAManque.length === 0 && !peuDeLooks;
+  const cible = cibleDePieces(valise.bagage);
+  const manquePieces = Math.max(0, cible - pieces.length);
+  const prete = looks.length > 0 && occasionsAManque.length === 0 && manquePieces === 0 && !depasse;
+  /** Le séjour est couvert : une valise prête, et de quoi varier sur la durée. C'est ce que dit le bloc de validation, rien de plus. */
+  const sejourCouvert = prete && !peuDeLooks;
   const piecesRepetees = looks.length > 1 && pieces.some((p) => (parPiece.get(p.id) ?? 0) > 1);
   /** Les pièces de l'aperçu : une sélection représentative (valiseApercu.ts), le reste compté. */
   const apercu = selectionApercu(pieces);
@@ -1481,7 +1484,9 @@ function Resultat({
           <CarteInfo glyphe={G_AMPOULE}>
             {looks.length === 0
               ? "Aucun look complet avec ces pièces pour l'instant : ajoute des pièces à ton dressing, Capsela composera tes looks avec elles."
-              : "Une sélection pensée pour ton séjour, ta météo et ton dressing."}
+              : manquePieces > 0
+                ? `Ta valise compte ${pieces.length} ${pieces.length > 1 ? "pièces" : "pièce"} sur ${capacite} : ajoutes-en encore ${manquePieces} pour qu'elle soit prête.`
+                : "Une sélection pensée pour ton séjour, ta météo et ton dressing."}
           </CarteInfo>
         )}
       </div>
@@ -1516,7 +1521,7 @@ function Resultat({
           Uniquement ton dressing
         </span>
         <span className={"text-[11px] " + (depasse ? "text-terracotta" : "text-muted")}>
-          Valise {valise.bagage} · {depasse ? `${pieces.length - capacite} de trop` : `jusqu'à ${capacite} pièces`}
+          Valise {valise.bagage} · {depasse ? `${pieces.length - capacite} de trop` : `${pieces.length} / ${capacite} pièces`}
         </span>
       </div>
 

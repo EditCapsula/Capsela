@@ -41,6 +41,16 @@ export const BAGAGES: [TailleBagage, string, number][] = [
 ];
 
 export const capaciteDe = (t: TailleBagage) => BAGAGES.find(([k]) => k === t)![2];
+
+/**
+ * LA CIBLE DE PIÈCES D'UNE VALISE (04/10/2026, demandée : « on est partie sur un nombre de pièces par type de valise »).
+ * Jusqu'ici la capacité n'était qu'un plafond, et l'écran disait « prête » pour 1 pièce sur 18. Elle devient aussi une
+ * cible : une valise n'est dite « prête » qu'à partir de 70 % de sa capacité (S 6, M 9, L 13, XL 17), arrondie au
+ * supérieur. Le 70 % est une PROPOSITION du 04/10/2026, à confirmer : ARBITRAGE ÉDITORIAL, pas une mesure. Le plafond,
+ * lui, ne change pas (« On allège un peu ? » au-delà).
+ */
+export const PART_CIBLE_VALISE = 0.7;
+export const cibleDePieces = (t: TailleBagage) => Math.ceil(capaciteDe(t) * PART_CIBLE_VALISE);
 export const libelleBagage = (t: TailleBagage) => BAGAGES.find(([k]) => k === t)![1];
 
 // ── Types de séjour ──────────────────────────────────────────────────────

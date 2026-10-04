@@ -13,6 +13,7 @@ import {
   occasionsDuLook,
   resumeLook,
   capaciteDe,
+  cibleDePieces,
   composerValise,
   etatJauge,
   generateurMoteur,
@@ -354,5 +355,11 @@ describe("meteosPrevuesDuSejour — seulement les jours que la prévision d'aujo
 
   it("sans prévision : rien", () => {
     expect(meteosPrevuesDuSejour(null, ["2026-10-05"])).toEqual([]);
+  });
+});
+
+describe("cibleDePieces — 70 % de la capacité, arrondi au supérieur", () => {
+  it("S 6, M 9, L 13, XL 17", () => {
+    expect((["S", "M", "L", "XL"] as const).map((t) => cibleDePieces(t))).toEqual([6, 9, 13, 17]);
   });
 });
