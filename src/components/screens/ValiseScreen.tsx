@@ -54,6 +54,7 @@ import {
   type TypeSejour,
   VISUEL_SEJOUR,
 } from "@/lib/valise";
+import { selectionApercu } from "@/lib/valiseApercu";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
 import Button from "@/components/Button";
@@ -1380,8 +1381,8 @@ function Resultat({
   /** Le séjour est couvert : un look pour chaque occasion demandée, et de quoi varier sur la durée. C'est ce que dit le bloc de validation, rien de plus. */
   const sejourCouvert = looks.length > 0 && occasionsAManque.length === 0 && !peuDeLooks;
   const piecesRepetees = looks.length > 1 && pieces.some((p) => (parPiece.get(p.id) ?? 0) > 1);
-  /** Les pièces de l'aperçu : les douze premières, rangées comme dans l'onglet Pièces (hauts, bas, chaussures…). */
-  const apercu = GROUPES_VALISE.flatMap(([, cats]) => pieces.filter((p) => cats.includes(p.cat))).slice(0, 12);
+  /** Les pièces de l'aperçu : une sélection représentative (valiseApercu.ts), le reste compté. */
+  const apercu = selectionApercu(pieces);
   const aOptimiser = nouvelles === 0 && (occasionsAManque.length > 0 || peuDeLooks);
   const nbPieces = (n: number) => `${n} ${n > 1 ? "pièces" : "pièce"}`;
 
@@ -1486,22 +1487,32 @@ function Resultat({
         </span>
       </div>
 
-      {/* APERÇU DE TA VALISE : les pièces emportées, posées à plat — c'est ce que la valise contient, avant les looks. Les
-          douze premières (dans l'ordre des groupes de la valise), chacune ouvre sa fiche ; le reste est compté. */}
-      <Card rayon="carte" className="mt-4 p-[14px]">
+      {/* APERÇU DE TA VALISE : les pièces emportées, posées à plat comme sur une planche — le visuel de la valise vient du
+          dressing de la personne, jamais d'une photo de destination. Une sélection représentative (valiseApercu.ts) ; chaque
+          pièce ouvre sa fiche, le reste est compté. Grille de six colonnes à gabarits par rôle, légèrement décalés : une
+          composition asymétrique sans position absolue, qui s'adapte à toute largeur et à tout nombre de pièces. */}
+      <Card rayon="carte" className="mt-4 px-[14px] pt-[14px] pb-[16px]">
         <div className="flex items-center justify-between gap-3">
           <span className="t-label text-muted">Aperçu de ta valise</span>
           <span className="text-[11px] text-ink rounded-full bg-cream border border-border px-[10px] py-[3px]">{nbPieces(pieces.length)}</span>
         </div>
-        <ul className="grid grid-cols-4 gap-x-[6px] gap-y-[10px] mt-3 list-none p-0">
-          {apercu.map((p) => {
+        <ul className="grid grid-cols-6 gap-[8px] mt-3 list-none p-0" style={{ gridAutoRows: "clamp(40px, 11.5vw, 54px)", gridAutoFlow: "dense" }}>
+          {apercu.affichees.map(({ item: p, role, echelle }, i) => {
             const im = resolveItemImage(p);
+            const gabarit =
+              echelle === "grand"
+                ? role === "petit"
+                  ? "col-span-3 row-span-2"
+                  : "col-span-3 row-span-3"
+                : role === "chaussures" || role === "petit"
+                  ? "col-span-2 row-span-1"
+                  : "col-span-2 row-span-2";
             return (
-              <li key={p.id}>
-                <button onClick={() => ouvrirPiece(p.id)} aria-label={`Voir la pièce : ${p.name}`} className="block w-full aspect-square cursor-pointer">
+              <li key={p.id} className={gabarit} style={{ transform: i % 2 ? "translateY(4px)" : undefined }}>
+                <button onClick={() => ouvrirPiece(p.id)} aria-label={`Voir la pièce : ${p.name}`} className="block w-full h-full cursor-pointer">
                   {im.url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={im.url} alt="" loading="lazy" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 3px rgba(29,26,22,.12))" }} />
+                    <img src={im.url} alt="" loading="lazy" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 3px rgba(29,26,22,.14))" }} />
                   ) : (
                     <span className="block w-full h-full rounded-champ" style={{ background: p.hex }} />
                   )}
@@ -1509,10 +1520,8 @@ function Resultat({
               </li>
             );
           })}
-          {pieces.length > apercu.length && (
-            <li className="flex items-center justify-center text-[12px] text-muted aspect-square">+{pieces.length - apercu.length}</li>
-          )}
         </ul>
+        {apercu.reste > 0 && <div className="text-[12px] text-muted text-right mt-[14px]">+{apercu.reste} {apercu.reste > 1 ? "pièces" : "pièce"}</div>}
       </Card>
 
       {/* Au retour d'un ajout au dressing : la proposition de recomposer. */}
@@ -1682,8 +1691,13 @@ function Resultat({
                     <div key={o}>
                       <div className="t-label text-terracotta">Nécessaire</div>
                       <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
-                        {elargie ? `Tes looks ${occasionShortLabel(o)} empruntent des pièces pensées pour d'autres occasions` : `Pas encore de look ${occasionShortLabel(o)}`}
-                        {m?.capacite && !elargie ? " : ta valise manque de place pour lui." : m?.categories.length ? " : il te manque" : "."}
+                        {elargie
+                          ? `Tes looks ${occasionShortLabel(o)} empruntent des pièces pensées pour d'autres occasions${m?.categories.length ? " : ces pièces les compléteraient." : "."}`
+                          : m?.capacite
+                            ? `Pas encore de look ${occasionShortLabel(o)} : ta valise manque de place pour lui.`
+                            : m?.categories.length
+                              ? `Il manque une pièce pour couvrir ${occasionShortLabel(o)}.`
+                              : `Pas encore de look ${occasionShortLabel(o)}.`}
                       </div>
                       {m && m.categories.length > 0 && (
                         <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
@@ -1716,7 +1730,7 @@ function Resultat({
                   <div>
                     <div className="t-label text-muted">Optionnel</div>
                     <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
-                      {looks.length} {looks.length > 1 ? "looks" : "look"} pour {nbJours} jours : quelques pièces de plus varieraient tes tenues.
+                      Quelques pièces de plus ajouteraient de la variété à tes looks : {looks.length} {looks.length > 1 ? "looks" : "look"} pour {nbJours} jours.
                     </div>
                   </div>
                 )}
