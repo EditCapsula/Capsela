@@ -2614,7 +2614,9 @@ const DEFAULT_STYLE_TITLES = ["Une tenue simple", "Une tenue équilibrée", "Une
  */
 export function titreEditorialOccasion(occasion: OccasionKey): string {
   const tiers = OCCASION_STYLE_TITLES[occasion] || DEFAULT_STYLE_TITLES;
-  return tiers[1] ?? tiers[0];
+  const titre = tiers[1] ?? tiers[0];
+  // Une virgule pour respirer (04/10/2026), sur cette carte seulement : le titre de la table sert aussi aux écrans Tenue.
+  return titre === "Chic sans en faire trop" ? "Chic, sans en faire trop" : titre;
 }
 
 /**

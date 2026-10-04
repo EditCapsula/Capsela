@@ -100,7 +100,7 @@ export default function CarteLook({
   onOuvrir: () => void;
   /**
    * Carrousel du Dressing (polish V3, 26/09/2026) : l'indicateur devient
-   * « ✦ Suggéré », sur la ligne de la date — une occurrence discrète, et une
+   * « ✦ Suggéré par Capsela », sur la ligne de la date — une occurrence discrète, et une
    * ligne de moins par carte. « Mes looks » garde la forme longue.
    */
   compacte?: boolean;
@@ -119,7 +119,7 @@ export default function CarteLook({
         <div className="text-[11px] text-muted mt-[3px]">
           {date}
           {porte > 0 && ` · Porté ${porte} fois`}
-          {compacte && suggere && <span className="text-terracotta"> · ✦ Suggéré</span>}
+          {compacte && suggere && <span className="text-terracotta"> · ✦ Suggéré par Capsela</span>}
         </div>
         {!compacte && suggere && <div className="text-[10.5px] text-terracotta mt-[4px]">✦ Look suggéré par Capsela</div>}
       </div>

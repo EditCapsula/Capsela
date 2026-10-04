@@ -263,7 +263,7 @@ export default function WardrobeScreen() {
       <AppHeader />
       <div className="t-surtitre text-muted mt-[14px]">Mon dressing</div>
       <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-        Ton vestiaire, <span className="italic text-terracotta">à ton image</span>
+        Ton dressing, <span className="italic text-terracotta">à ton image</span>
       </div>
       {/* Le total, comme la Capsule : une ligne en serif, puis le détail en petit. */}
       {dressingLoaded && items.length > 0 && (
@@ -369,7 +369,7 @@ export default function WardrobeScreen() {
             <span className="flex-1 min-w-0">
               <span className="block t-titre-vignette text-ink">Complète ton dressing</span>
               <span className="block text-[12px] leading-[1.45] mt-[3px]" style={{ color: "var(--color-muted-3)" }}>
-                Ajoute de nouvelles pièces pour encore plus de looks avec Capsela.
+                Ajoute quelques pièces pour créer encore plus de looks avec Capsela.
               </span>
             </span>
             <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0">›</span>
@@ -384,7 +384,7 @@ export default function WardrobeScreen() {
         <div className="mt-6">
           <div className="t-titre-section text-ink">Dressing complet</div>
           <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
-            {`Ton vestiaire contient déjà ${items.length} pièces. Passe à Premium pour continuer à l'enrichir.`}
+            {`Ton dressing contient déjà ${items.length} pièces. Passe à Premium pour continuer à l'enrichir.`}
           </div>
           <Button variante="contour" pleine={false} className="mt-4" onClick={() => actions.goPremium()}>
             Découvrir Premium
@@ -419,10 +419,10 @@ export default function WardrobeScreen() {
                   ))}
                 </span>
                 <span className="flex-1 min-w-0">
-                  {/* « Attendent leur moment » d'abord (04/10/2026, parcours Redécouvrir) : la valeur avant le constat.
+                  {/* « À porter autrement » d'abord (04/10/2026, parcours Redécouvrir ; reformulé le 04/10/2026, « attendent leur moment » devenu « à porter autrement ») : la valeur avant le constat.
                       « Jamais portées » reste, en information secondaire — c'est ce que le compteur compte. */}
                   <span className="block t-titre-vignette text-ink">
-                    {neverWorn.length} {pluriel ? "pièces attendent leur moment" : "pièce attend son moment"}
+                    {neverWorn.length} {pluriel ? "pièces à porter autrement" : "pièce à porter autrement"}
                   </span>
                   <span className="block text-[12px] leading-[1.4] mt-[3px]" style={{ color: "var(--color-muted-3)" }}>
                     {neverWorn.length} {pluriel ? "pièces jamais portées" : "pièce jamais portée"}
@@ -434,7 +434,7 @@ export default function WardrobeScreen() {
                       ? pluriel
                         ? "Tu ne les as pas portées pendant leur dernière saison."
                         : "Tu ne l'as pas portée pendant sa dernière saison."
-                      : `Capsela a repéré ${pluriel ? "des pièces qui pourraient" : "une pièce qui pourrait"} facilement trouver ${pluriel ? "leur" : "sa"} place dans tes prochains looks.`}
+                      : `Capsela a repéré ${neverWorn.length} ${pluriel ? "pièces qui pourraient" : "pièce qui pourrait"} trouver ${pluriel ? "leur" : "sa"} place dans tes prochains looks.`}
                   </span>
                 </span>
                 <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0 self-center">›</span>
@@ -446,7 +446,7 @@ export default function WardrobeScreen() {
 
       {/* ── MON VESTIAIRE ─ le cœur de la page : un visuel éditorial par groupe. */}
       <TitreSection action={<Lien onClick={() => actions.goWardrobePieces()} label="Voir toutes mes pièces">Voir tout →</Lien>}>
-        Mon vestiaire
+        Mon dressing
       </TitreSection>
       {/* `-mx-6 px-6` : le carrousel touche les bords de l'écran, son
           débordement reste DANS son conteneur ; première et dernière carte
@@ -564,14 +564,13 @@ export default function WardrobeScreen() {
           {aDecouvrir.cas === "associations" && (
             <>
               <div className="t-titre-section text-ink mt-2">
-                Ton dressing peut <span className="italic text-terracotta">déjà faire plus</span>
+                Ton dressing peut <span className="italic text-terracotta">encore te surprendre</span>
               </div>
               {/* « avec tes pièces » revient (27/09/2026) : c'est ce qui dit
                   que l'association est faite de SES pièces — vrai, le pool
                   est le dressing seul (cf. tenuesMoteur). */}
               <div className="text-[13px] leading-[1.55] mt-1" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
-                Capsela a trouvé {aDecouvrir.nombre === 1 ? "une nouvelle association" : `${aDecouvrir.nombre} nouvelles associations`} avec
-                tes pièces.
+                Capsela a imaginé {aDecouvrir.nombre === 1 ? "une nouvelle façon" : `${aDecouvrir.nombre} nouvelles façons`} de porter tes pièces.
               </div>
               <AssociationsDressing tenues={tenuesMoteur} dressing={items} onOuvrir={ouvrirTenue} />
             </>
@@ -599,7 +598,7 @@ export default function WardrobeScreen() {
                 Une pièce pourrait ouvrir <span className="italic text-terracotta">de nouveaux looks</span>
               </div>
               <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
-                Découvre les essentiels qui compléteraient ton vestiaire.
+                Découvre les essentiels qui compléteraient ton dressing.
               </div>
               <div className="mt-4">
                 <Lien onClick={actions.goCapsule}>Découvrir ma capsule →</Lien>
