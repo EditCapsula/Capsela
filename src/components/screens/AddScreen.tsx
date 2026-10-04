@@ -21,7 +21,7 @@ import {
   seasonSuggestion,
 } from "@/lib/data";
 import { QUATRE_SAISONS, saisonsParDefaut } from "@/lib/saisons";
-import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable, occasionsRetenues } from "@/lib/attributes";
+import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable, occasionsRetenues, suggestOccasions } from "@/lib/attributes";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
@@ -55,10 +55,11 @@ function FitIcon({ className = "" }: { className?: string }) {
     </svg>
   );
 }
-function CropIcon({ className = "" }: { className?: string }) {
+function PencilIcon({ className = "" }: { className?: string }) {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-      <path d="M6 2v4M6 6H2M18 22v-4M18 18h4M6 6h12v12M18 18H6V6" />
+    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" />
+      <path d="M14.5 7.5l3 3" />
     </svg>
   );
 }
@@ -111,14 +112,14 @@ function TitreSection({ children, suggere }: { children: React.ReactNode; sugger
 }
 
 /**
- * Cellule de la carte des attributs essentiels : la valeur s'affiche en
- * texte, sur deux lignes au besoin, et un select natif transparent couvre
- * toute la cellule. Un select visible tronquait les libellés longs dès
- * 360 px (« Chaussur… », « Veste / Blaz… »). Natif et non une liste maison :
- * le sélecteur du système est celui que le pouce connaît, et il gère seul le
- * clavier et l'accessibilité.
+ * Ligne de la carte « Informations essentielles » (04/10/2026) : le libellé à
+ * gauche, la valeur à droite, une ligne par information — lisible dès 320 px
+ * sans tronquer. La valeur s'affiche en texte (retour à la ligne possible) et
+ * un select natif transparent couvre toute la ligne. Natif et non une liste
+ * maison : le sélecteur du système est celui que le pouce connaît, et il gère
+ * seul le clavier et l'accessibilité.
  */
-function SelectNu({
+function LigneSelect({
   label,
   value,
   onChange,
@@ -131,20 +132,16 @@ function SelectNu({
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
   placeholder?: string;
-  /** Valeur requise encore vide : le libellé d'attente passe en terracotta. */
+  /** Valeur requise encore vide : la valeur d'attente passe en terracotta. */
   enAttente?: boolean;
 }) {
   const affiche = options.find((o) => o.value === value)?.label ?? placeholder ?? "";
   return (
-    <label className="relative block min-w-0 pl-[12px] pr-[22px] pt-[11px] pb-[12px] cursor-pointer">
-      <span className="t-label text-muted block">{label}</span>
-      <span
-        className={
-          "block mt-[5px] text-[14px] font-medium leading-[1.25] break-words " + (enAttente ? "text-terracotta" : "text-ink")
-        }
-        aria-hidden="true"
-      >
-        {affiche}
+    <label className="relative flex items-center justify-between gap-3 px-4 py-[13px] min-h-[50px] cursor-pointer focus-within:bg-warm-bg">
+      <span className="t-label text-muted flex-shrink-0">{label}</span>
+      <span className={"min-w-0 flex items-center gap-[7px] text-[14px] font-medium leading-[1.25] text-right " + (enAttente ? "text-terracotta" : "text-ink")}>
+        <span className="break-words min-w-0" aria-hidden="true">{affiche}</span>
+        <span className="text-muted text-[10px] flex-shrink-0" aria-hidden="true">▾</span>
       </span>
       <select
         aria-label={label}
@@ -159,9 +156,6 @@ function SelectNu({
           </option>
         ))}
       </select>
-      <span className="absolute right-[10px] top-[33px] text-muted pointer-events-none text-[10px]" aria-hidden="true">
-        ▾
-      </span>
     </label>
   );
 }
@@ -221,13 +215,8 @@ export default function AddScreen() {
   const galerieInputRef = useRef<HTMLInputElement>(null);
   const [sourcePhoto, setSourcePhoto] = useState(false);
   const [sheet, setSheet] = useState<"characteristics" | null>(null);
-  // Le nom s'affiche comme une proposition, pas comme un champ : l'input
-  // n'apparaît qu'à la demande (« Modifier le nom ») ou quand il n'y a encore
-  // aucun nom. Il reste affiché tant qu'il a le focus, sans quoi la première
-  // lettre tapée dans un champ vide le ferait disparaître.
-  const [nomEnEdition, setNomEnEdition] = useState(false);
-  // Les occasions montrent d'abord la sélection ; la liste complète s'ouvre
-  // sur place, sans feuille par-dessus.
+  // Les occasions montrent d'abord les recommandées ; la liste complète
+  // s'ouvre sur place, sans feuille par-dessus.
   const [toutesOccasions, setToutesOccasions] = useState(false);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -280,9 +269,11 @@ export default function AddScreen() {
   };
 
   const analysee = state.addPhotoAnalysee && creation;
+  const analyseEnCours = state.addPhotoAnalyzing;
+  const detourageEnCours = state.addPhotoDetourage === "en_cours";
+  const detourageFait = state.addPhotoDetourage === "fait";
   const photoDetouree = estPhotoDetouree(state.addPhotoUrl);
   const nomSuggere = analysee && !state.addNameTouched && state.addName.trim().length > 0;
-  const nomVisible = state.addName.trim().length > 0;
   const matiereEstimee = analysee && !state.addMatiereTouched && Boolean(state.addMatiere);
   // Caractéristiques encore vides : proposées à l'ajout, jamais affichées
   // comme un manque (« Non précisée » répété, qui donnait l'impression que
@@ -291,7 +282,10 @@ export default function AddScreen() {
   const coupeManquante = coupeApplicable && !state.addCoupe;
 
   const titre = !creation ? "Modifier la pièce" : state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce";
-  const colonnesAttributs = [true, Boolean(typeOptions && typeOptions.length > 0), sizeApplicable].filter(Boolean).length;
+  // Les occasions recommandées d'abord (même ordre qu'à l'ouverture, donc stable quand on en bascule une), puis
+  // celles que la personne a choisies hors recommandation ; la liste complète, dans l'ordre de l'app.
+  const recommandees = suggestOccasions(state.addCat, state.addShoeType);
+  const occasionsEnTete = [...recommandees, ...occasions.filter((o) => !recommandees.includes(o))];
 
   const save = () => {
     if (blocked) return;
@@ -316,16 +310,17 @@ export default function AddScreen() {
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={onPhotoChange} className="hidden" />
         <input ref={galerieInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
 
-        {/* 1. La photo, premier élément de l'écran : plus haute qu'avant
-            (190 px fixes), proportionnelle à la largeur, bornée pour laisser
-            voir le nom sous la ligne de flottaison dès 360 px. */}
+        {/* 1. La photo, premier élément de l'écran : proportionnelle à la
+            largeur, bornée pour laisser voir le nom sous la ligne de flottaison
+            dès 360 px. Toute la carte ouvre le choix de la source ; le bouton
+            flottant « Modifier la photo » en est l'indication. */}
         <button
           type="button"
           onClick={() => setSourcePhoto(true)}
-          aria-label={state.addPhotoUrl ? "Changer la photo" : "Ajouter une photo"}
+          aria-label={state.addPhotoUrl ? "Modifier la photo" : "Ajouter une photo"}
           className={
-            "mt-[4px] w-full rounded-tuile flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden " +
-            (state.addPhotoUrl ? (photoDetouree ? "bg-photo-bg" : "bg-card") : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
+            "mt-[4px] w-full rounded-tuile flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta " +
+            (state.addPhotoUrl ? (photoDetouree ? "bg-photo-bg border border-border" : "bg-card border border-border") : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
           }
           style={{
             height: "clamp(230px, 68vw, 300px)",
@@ -350,10 +345,10 @@ export default function AddScreen() {
           )}
           {state.addPhotoUrl ? (
             <span
-              className="absolute bottom-3 right-3 flex items-center gap-[6px] text-[11px] text-cream rounded-full px-3 py-[7px]"
-              style={{ background: "rgba(29,26,22,.7)" }}
+              className="absolute bottom-3 right-3 flex items-center gap-[6px] text-[11px] text-ink bg-cream border border-border rounded-full px-3 py-[8px]"
+              style={{ boxShadow: "0 2px 8px rgba(29,26,22,.12)" }}
             >
-              <CropIcon /> Changer la photo
+              <PencilIcon /> Modifier la photo
             </span>
           ) : (
             <>
@@ -366,142 +361,127 @@ export default function AddScreen() {
           )}
         </button>
 
-        {/* 2. L'analyse : une phrase, pas un badge. */}
-        {state.addPhotoAnalyzing && (
-          <div className="mt-[14px] flex items-start gap-[10px] rounded-tuile bg-warm-bg px-4 py-[12px]" role="status">
-            <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
-              ✦
-            </span>
-            <div className="min-w-0">
-              <div className="text-[13px] text-ink font-medium leading-[1.35]">L&apos;édit Capsela analyse ta pièce…</div>
-              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">
-                Catégorie, couleur et matière vont se préremplir.
+        {/* 2. Un seul bloc pour tout ce que Capsela fait de la photo (04/10/2026) :
+            analyse et détourage ne s'annoncent plus par deux bandeaux. Chaque
+            coche suit un fait — « Fond supprimé » le détourage réellement
+            rendu, « Analyse terminée » l'analyse réellement faite ; rien n'est
+            dit quand le détourage n'est pas branché ou échoue. */}
+        {(analyseEnCours || detourageEnCours || analysee || detourageFait) && (
+          <div className="mt-[14px] rounded-tuile bg-warm-bg px-4 py-[13px]" role="status">
+            <div className="flex items-start gap-[10px]">
+              <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
+                ✦
+              </span>
+              <div className="min-w-0">
+                <div className="text-[13px] text-ink font-medium leading-[1.35]">
+                  {analyseEnCours
+                    ? "L'édit Capsela analyse ta pièce…"
+                    : detourageEnCours
+                      ? "L'édit Capsela retire le fond de ta photo…"
+                      : analysee
+                        ? "Pièce analysée par Capsela"
+                        : "Photo détourée par Capsela"}
+                </div>
+                <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">
+                  {analyseEnCours
+                    ? "Catégorie, couleur et matière vont se préremplir."
+                    : detourageEnCours
+                      ? "Ta pièce se mêlera mieux aux autres dans tes tenues."
+                      : analysee
+                        ? "Vérifie les informations détectées avant de l'ajouter."
+                        : "Reprends ou change la photo si le résultat ne te convient pas."}
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        {/* 2 bis. Le détourage (04/10/2026) : une phrase, comme l'analyse. Rien n'est dit quand il n'est pas branché ou qu'il échoue. */}
-        {state.addPhotoDetourage === "en_cours" && (
-          <div className="mt-[14px] flex items-start gap-[10px] rounded-tuile bg-warm-bg px-4 py-[12px]" role="status">
-            <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
-              ✦
-            </span>
-            <div className="min-w-0">
-              <div className="text-[13px] text-ink font-medium leading-[1.35]">L&apos;édit Capsela retire le fond de ta photo…</div>
-              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">Ta pièce se mêlera mieux aux autres dans tes tenues.</div>
-            </div>
-          </div>
-        )}
-        {state.addPhotoDetourage === "fait" && (
-          <div className="mt-[14px] flex items-start gap-[10px] rounded-tuile bg-warm-bg px-4 py-[12px]">
-            <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
-              ✦
-            </span>
-            <div className="min-w-0">
-              <div className="text-[13px] text-ink font-medium leading-[1.35]">Le fond de ta photo a été retiré</div>
-              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">Reprends ou change la photo si le résultat ne te convient pas.</div>
-            </div>
-          </div>
-        )}
-        {analysee && !state.addPhotoAnalyzing && (
-          <div className="mt-[14px] flex items-start gap-[10px] rounded-tuile bg-warm-bg px-4 py-[12px]">
-            <span className="font-serif italic text-[15px] text-terracotta leading-[1.3]" aria-hidden="true">
-              ✦
-            </span>
-            <div className="min-w-0">
-              <div className="text-[13px] text-ink font-medium leading-[1.35]">L&apos;édit Capsela a analysé ta pièce</div>
-              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">
-                Vérifie les informations et complète si besoin.
-              </div>
-            </div>
+            {(detourageFait || (analysee && !analyseEnCours)) && (
+              <ul className="flex flex-wrap gap-x-4 gap-y-[4px] mt-[10px] ml-[25px] text-[12px] text-warm-text list-none p-0">
+                {detourageFait && <li>✓ Fond supprimé</li>}
+                {analysee && !analyseEnCours && <li>✓ Analyse terminée</li>}
+              </ul>
+            )}
           </div>
         )}
 
-        {/* 3. Le nom : une proposition à relire, modifiable d'un geste. */}
+        {/* 3. Le nom : une proposition à relire, toujours modifiable — le champ
+            est visible, l'icône crayon le dit. */}
         <div className="mt-6">
-          <TitreSection suggere={nomSuggere}>{nomSuggere ? "Suggestion Capsela" : "Nom de la pièce"}</TitreSection>
-          {nomEnEdition || !nomVisible ? (
+          <TitreSection>Nom de la pièce</TitreSection>
+          {nomSuggere && (
+            <div className="flex items-center gap-[6px] mb-[8px] text-[12px] text-terracotta">
+              <span className="font-serif italic" aria-hidden="true">✦</span>
+              Nom suggéré par Capsela
+            </div>
+          )}
+          <div className="relative">
             <Input
               value={state.addName}
               onChange={(e) => actions.setAddName(e.target.value)}
-              onFocus={() => setNomEnEdition(true)}
-              onBlur={() => setNomEnEdition(false)}
-              autoFocus={nomEnEdition}
               enterKeyHint="done"
               onKeyDown={(e) => {
                 if (e.key === "Enter") e.currentTarget.blur();
               }}
               placeholder="ex. Chemise en lin écrue"
               aria-label="Nom de la pièce"
+              className="pr-[46px] font-medium"
             />
-          ) : (
-            <div className="flex items-baseline justify-between gap-3">
-              <div className="t-titre-section text-ink min-w-0 break-words">{state.addName}</div>
-              <button
-                onClick={() => setNomEnEdition(true)}
-                className="t-lien text-terracotta cursor-pointer flex-shrink-0 py-[6px]"
-              >
-                Modifier le nom
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* 4. La marque, secondaire. */}
-        <div className="mt-5">
-          <label className="block">
-            <span className="t-label text-muted">
-              Marque <span className="normal-case tracking-normal opacity-80">· optionnel</span>
+            <span className="absolute right-[17px] top-1/2 -translate-y-1/2 text-muted pointer-events-none">
+              <PencilIcon />
             </span>
-            <input
-              className="capin mt-[7px] w-full bg-transparent border-0 border-b border-border rounded-none px-0 py-[9px] text-[14px] text-ink font-sans"
-              value={state.addBrand}
-              onChange={(e) => actions.setAddBrand(e.target.value)}
-              placeholder="ex. Sézane"
-              enterKeyHint="done"
-            />
-          </label>
+          </div>
         </div>
 
-        {/* 5. Les attributs essentiels, en une carte compacte. « Modèle » et
-            non « Coupe » : ce champ est le sous-type (Longue, Chemise,
-            Baskets…), alors que « Coupe » désigne déjà dans l'app un autre
-            champ — Serré, Ajusté, Ample —, affiché sous ce nom ici comme sur
-            la fiche de la pièce. Deux champs du même nom se confondraient. */}
-        <Card rayon="tuile" className="mt-6 grid divide-x divide-border"
-          style={{ gridTemplateColumns: colonnesAttributs === 3 ? "1.25fr 1.25fr .8fr" : colonnesAttributs === 2 ? "1fr 1fr" : "1fr" }}
-        >
-          <SelectNu
-            label="Catégorie"
-            value={state.addCat}
-            onChange={(v) => actions.setAddCat(v as CategoryKey)}
-            options={CATS.map(([key, label]) => ({ value: key, label }))}
-          />
-          {typeOptions && typeOptions.length > 0 && (
-            <SelectNu
-              label="Modèle"
-              value={typeValue || ""}
-              onChange={setTypeValue}
-              options={typeOptions.map((t) => ({ value: t, label: t }))}
-              placeholder={isShoe ? "Choisir" : "À préciser"}
-              enAttente={shoeTypeMissing}
+        {/* 4. Les informations essentielles, en une carte : une ligne par
+            information. La marque y reste — facultative, modifiable, préremplie
+            seulement si l'analyse l'a lue. « Modèle » et non « Coupe » : ce champ
+            est le sous-type (Longue, Chemise, Baskets…), alors que « Coupe »
+            désigne dans l'app un autre champ — Serré, Ajusté, Ample — affiché
+            sous ce nom ici comme sur la fiche de la pièce. */}
+        <div className="mt-6">
+          <TitreSection>Informations essentielles</TitreSection>
+          <Card rayon="tuile" className="divide-y divide-border">
+            <label className="flex items-center justify-between gap-3 px-4 py-[13px] min-h-[50px] cursor-text focus-within:bg-warm-bg">
+              <span className="t-label text-muted flex-shrink-0">Marque</span>
+              <input
+                className="capin min-w-0 flex-1 bg-transparent border-0 p-0 text-right text-[14px] font-medium text-ink font-sans"
+                value={state.addBrand}
+                onChange={(e) => actions.setAddBrand(e.target.value)}
+                placeholder="Optionnel"
+                aria-label="Marque, optionnelle"
+                enterKeyHint="done"
+              />
+            </label>
+            <LigneSelect
+              label="Catégorie"
+              value={state.addCat}
+              onChange={(v) => actions.setAddCat(v as CategoryKey)}
+              options={CATS.map(([key, label]) => ({ value: key, label }))}
             />
-          )}
-          {sizeApplicable && (
-            <SelectNu
-              label={isShoe ? "Pointure" : "Taille"}
-              value={selectedSize ?? ""}
-              onChange={(v) => actions.setAddSize(v)}
-              options={sizes.map((t) => ({ value: t, label: t }))}
-              placeholder="—"
-            />
-          )}
-        </Card>
+            {typeOptions && typeOptions.length > 0 && (
+              <LigneSelect
+                label="Modèle"
+                value={typeValue || ""}
+                onChange={setTypeValue}
+                options={typeOptions.map((t) => ({ value: t, label: t }))}
+                placeholder={isShoe ? "Choisir" : "À préciser"}
+                enAttente={shoeTypeMissing}
+              />
+            )}
+            {sizeApplicable && (
+              <LigneSelect
+                label={isShoe ? "Pointure" : "Taille"}
+                value={selectedSize ?? ""}
+                onChange={(v) => actions.setAddSize(v)}
+                options={sizes.map((t) => ({ value: t, label: t }))}
+                placeholder="—"
+              />
+            )}
+          </Card>
+        </div>
 
         {/* 6. Les caractéristiques : seulement ce qui est connu, et une
             invitation discrète pour le reste. */}
         <Card rayon="tuile" className="mt-6 px-4 pt-[15px] pb-[14px]">
-          <TitreSection suggere={analysee}>{analysee ? "Caractéristiques détectées" : "Caractéristiques"}</TitreSection>
+          <TitreSection suggere={analysee}>{analysee ? "Caractéristiques identifiées" : "Caractéristiques"}</TitreSection>
           <div className="grid grid-cols-3 gap-[8px] text-center">
             <button onClick={() => setSheet("characteristics")} className="flex flex-col items-center gap-[7px] cursor-pointer min-w-0">
               <span
@@ -568,7 +548,7 @@ export default function AddScreen() {
         {/* 7. La saison : une recommandation présélectionnée, jamais un verrou. */}
         <div className="mt-7">
           <TitreSection suggere={saisonSuggeree}>{saisonSuggeree ? "Saisons suggérées" : "Saisons"}</TitreSection>
-          <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Plusieurs choix possibles.</div>
+          <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Quand portes-tu cette pièce ? Sélection multiple.</div>
           {/* Deux colonnes : quatre pastilles sur une ligne ne tiennent pas à
               360 px avec leur coche (« Printemps ✓ »), et une grille égale se
               lit mieux qu'un retour à la ligne au hasard des largeurs. */}
@@ -617,56 +597,45 @@ export default function AddScreen() {
           </div>
         )}
 
-        {/* 8. Les occasions : la suggestion d'abord, la liste complète à la
-            demande. Jamais obligatoires. */}
+        {/* 8. Les occasions : les recommandées d'abord (suggestOccasions, la
+            règle d'origine), la liste complète à la demande. Jamais
+            obligatoires ; aucune occasion n'est retirée de la liste. */}
         <div className="mt-7">
-          <TitreSection suggere={occasionsSuggerees}>{occasionsSuggerees ? "Occasions suggérées" : "Occasions"}</TitreSection>
+          <TitreSection suggere={occasionsSuggerees}>{occasionsSuggerees ? "Occasions recommandées" : "Occasions"}</TitreSection>
           <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">
             {occasionsSuggerees
-              ? "Capsela te suggère les occasions les plus adaptées à cette pièce."
-              : "Plusieurs choix possibles."}
+              ? "Capsela te recommande les occasions les plus adaptées à cette pièce."
+              : "Sélection multiple."}
           </div>
-          {toutesOccasions ? (
-            <div className="flex gap-2 flex-wrap">
-              {OCCASIONS.map(([key]) => {
-                const on = occasions.includes(key);
-                return (
-                  <button
-                    key={key}
-                    onClick={() => actions.setAddOccasion(key)}
-                    aria-pressed={on}
-                    className={chipCls(on) + " inline-flex items-center gap-[7px]"}
-                  >
-                    <GlypheOccasion occasion={key} taille={15} />
-                    {libelleOccasion(key)}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex gap-2 flex-wrap">
-              {occasions.length > 0 ? (
-                occasions.map((o) => (
-                  <span key={o} className={chipCls(true) + " inline-flex items-center gap-[7px] cursor-default"}>
-                    <GlypheOccasion occasion={o} taille={15} />
-                    {libelleOccasion(o)}
-                  </span>
-                ))
-              ) : (
-                <span className="text-[12px] text-muted">Aucune occasion choisie pour l&apos;instant.</span>
-              )}
-            </div>
-          )}
+          <div className="flex gap-2 flex-wrap" role="group" aria-label="Occasions">
+            {(toutesOccasions ? OCCASIONS.map(([key]) => key) : occasionsEnTete).map((key) => {
+              const on = occasions.includes(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => actions.setAddOccasion(key)}
+                  aria-pressed={on}
+                  className={chipCls(on) + " inline-flex items-center gap-[7px]"}
+                >
+                  <GlypheOccasion occasion={key} taille={15} />
+                  {libelleOccasion(key)}
+                </button>
+              );
+            })}
+            {!toutesOccasions && occasionsEnTete.length === 0 && (
+              <span className="text-[12px] text-muted">Aucune occasion choisie pour l&apos;instant.</span>
+            )}
+          </div>
           {!toutesOccasions && (
             <button onClick={() => setToutesOccasions(true)} className="mt-[12px] t-lien text-terracotta cursor-pointer py-[4px]">
-              Modifier les occasions →
+              + Ajouter une autre occasion
             </button>
           )}
         </div>
 
         <div className="flex items-start gap-[8px] mt-7 text-muted">
           <InfoIcon className="mt-[2px] flex-shrink-0" />
-          <span className="text-[11px] leading-[1.45]">Tu pourras modifier toutes ces informations à tout moment.</span>
+          <span className="text-[11px] leading-[1.45]">Tout est modifiable depuis ton dressing.</span>
         </div>
       </div>
 
