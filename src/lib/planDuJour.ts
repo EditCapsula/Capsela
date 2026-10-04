@@ -1,4 +1,4 @@
-import { DATE_CONTEXTS, isRainy, type Weather } from "./data";
+import { DATE_CONTEXTS, isRainy, labelPrecipitation, type Weather } from "./data";
 import { CHAUSSURES_OUVERTES } from "./logic";
 import type { TenuePlanifiee } from "./planifier";
 import type { MomentJournee } from "./prevision";
@@ -79,4 +79,23 @@ export function alerteMeteoPlan(pieces: readonly Item[], meteo: Pick<Weather, "t
     return `Il fera ${Math.round(meteo.temp)}° : plus chaud que ce que certaines pièces de cette tenue supportent.`;
   }
   return null;
+}
+
+/**
+ * LA PRÉVISION D'AUJOURD'HUI A-T-ELLE CHANGÉ DEPUIS LA PLANIFICATION ? (04/10/2026, « la tenue planifiée devait se
+ * mettre à jour » : la fiche d'un plan redemande la prévision du lieu du plan et la compare à celle ENREGISTRÉE.)
+ * Oui quand la température diffère d'au moins 3° — l'écart que le moteur ne confond pas avec du bruit — ou quand la
+ * pluie apparaît ou disparaît. Sans prévision enregistrée, il n'y a rien à comparer : false. Un constat, jamais un
+ * changement de tenue : la tenue planifiée garde ses pièces.
+ */
+export const ECART_TEMPERATURE_SIGNIFICATIF = 3;
+
+export function previsionAChange(
+  avant: { temp: number | null; weatherLabel: string | null },
+  apres: { temp: number; label: string }
+): boolean {
+  if (avant.temp == null) return false;
+  if (Math.abs(apres.temp - avant.temp) >= ECART_TEMPERATURE_SIGNIFICATIF) return true;
+  const pluieAvant = avant.weatherLabel ? labelPrecipitation(avant.weatherLabel) : false;
+  return pluieAvant !== labelPrecipitation(apres.label);
 }
