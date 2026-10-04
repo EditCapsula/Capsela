@@ -1,3 +1,4 @@
+import { previsionPour, type Prevision } from "./prevision";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -40,6 +41,16 @@ export const BAGAGES: [TailleBagage, string, number][] = [
 ];
 
 export const capaciteDe = (t: TailleBagage) => BAGAGES.find(([k]) => k === t)![2];
+
+/**
+ * LA CIBLE DE PIÈCES D'UNE VALISE (04/10/2026, demandée : « on est partie sur un nombre de pièces par type de valise »).
+ * Jusqu'ici la capacité n'était qu'un plafond, et l'écran disait « prête » pour 1 pièce sur 18. Elle devient aussi une
+ * cible : une valise n'est dite « prête » qu'à partir de 70 % de sa capacité (S 6, M 9, L 13, XL 17), arrondie au
+ * supérieur. Le 70 % est une PROPOSITION du 04/10/2026, à confirmer : ARBITRAGE ÉDITORIAL, pas une mesure. Le plafond,
+ * lui, ne change pas (« On allège un peu ? » au-delà).
+ */
+export const PART_CIBLE_VALISE = 0.7;
+export const cibleDePieces = (t: TailleBagage) => Math.ceil(capaciteDe(t) * PART_CIBLE_VALISE);
 export const libelleBagage = (t: TailleBagage) => BAGAGES.find(([k]) => k === t)![1];
 
 // ── Types de séjour ──────────────────────────────────────────────────────
@@ -553,6 +564,23 @@ export function resumeLook(pieces: Item[]): string {
  * 27/09/2026, à partir des seules températures et conditions PRÉVUES : rien
  * n'est dit quand il n'y a pas de prévision.
  */
+/**
+ * LA MÉTÉO PRÉVUE DU SÉJOUR, TELLE QU'ELLE EST AUJOURD'HUI (04/10/2026, signalé : « sois juste sur la météo »).
+ *
+ * `valise.meteos` est la météo figée AU CALCUL de la valise — c'est ce que le moteur a reçu, et on n'y touche pas.
+ * Mais ce qu'on AFFICHE comme prévision doit venir de la prévision du moment : une valise ouverte trois jours après
+ * son calcul ne présente plus comme « prévus » des jours qui sont passés, ni une température d'avant-hier.
+ * Seuls les jours que la prévision couvre rendent une entrée ; un jour passé, ou au-delà de l'horizon, n'en rend
+ * aucune — jamais une valeur de repli. Sans prévision (hors ligne, mode démo, ville inconnue) : liste vide.
+ */
+export function meteosPrevuesDuSejour(prevision: Prevision | null, jours: string[]): MeteoJour[] {
+  if (!prevision) return [];
+  return jours.flatMap((jour) => {
+    const m = previsionPour(prevision, jour, "Toute la journée");
+    return m ? [{ jour, temp: m.temp, label: m.label, prevue: true }] : [];
+  });
+}
+
 /** De la pluie dans la PRÉVISION du séjour (jamais dans une météo de repli) : faux quand aucun jour n'est prévu ou que le ciel est sec. */
 export function pluieAnnoncee(meteos: MeteoJour[]): boolean {
   return meteos.some((m) => m.prevue && /pluie|pluvieux|averse|orage|bruine/i.test(m.label));
