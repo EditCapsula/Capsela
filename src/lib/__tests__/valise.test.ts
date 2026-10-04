@@ -13,6 +13,8 @@ import {
   occasionsDuLook,
   resumeLook,
   capaciteDe,
+  completerChaussuresEtSac,
+  lookAChaussuresEtSac,
   cibleDePieces,
   composerValise,
   etatJauge,
@@ -361,5 +363,30 @@ describe("meteosPrevuesDuSejour — seulement les jours que la prévision d'aujo
 describe("cibleDePieces — 70 % de la capacité, arrondi au supérieur", () => {
   it("S 6, M 9, L 13, XL 17", () => {
     expect((["S", "M", "L", "XL"] as const).map((t) => cibleDePieces(t))).toEqual([6, 9, 13, 17]);
+  });
+});
+
+describe("chaussures et sac — la règle d'un look de valise", () => {
+  const pool = [piece(1, "haut"), piece(2, "jupe"), piece(3, "chaussures"), piece(4, "chaussures"), piece(5, "sac")];
+  it("une tenue sans chaussures ni sac est complétée avec des pièces du pool", () => {
+    const r = completerChaussuresEtSac([1, 2], pool, () => 0)!;
+    expect(r).toEqual([1, 2, 3, 5]);
+  });
+  it("une tenue déjà complète n'est pas touchée", () => {
+    expect(completerChaussuresEtSac([1, 2, 4, 5], pool, () => 0)).toEqual([1, 2, 4, 5]);
+  });
+  it("seul le manquant est ajouté", () => {
+    expect(completerChaussuresEtSac([1, 2, 3], pool, () => 0)).toEqual([1, 2, 3, 5]);
+  });
+  it("sans sac dans le pool, ce n'est pas un look de valise", () => {
+    expect(completerChaussuresEtSac([1, 2], pool.filter((p) => p.cat !== "sac"), () => 0)).toBeNull();
+  });
+  it("sans chaussures dans le pool non plus", () => {
+    expect(completerChaussuresEtSac([1, 2], pool.filter((p) => p.cat !== "chaussures"), () => 0)).toBeNull();
+  });
+  it("lookAChaussuresEtSac : les deux, ou rien", () => {
+    expect(lookAChaussuresEtSac([1, 2, 3, 5], pool)).toBe(true);
+    expect(lookAChaussuresEtSac([1, 2, 3], pool)).toBe(false);
+    expect(lookAChaussuresEtSac([1, 2, 5], pool)).toBe(false);
   });
 });

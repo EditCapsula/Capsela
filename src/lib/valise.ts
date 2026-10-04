@@ -218,9 +218,34 @@ export function generateurMoteur(
   return (pool, s) => {
     if (!pool.length) return null;
     const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
-    return r.noCompleteOutfit || !r.ids.length ? null : { ids: r.ids, elargie: r.occasionRelachee };
+    if (r.noCompleteOutfit || !r.ids.length) return null;
+    const ids = completerChaussuresEtSac(r.ids, pool);
+    return ids ? { ids, elargie: r.occasionRelachee } : null;
   };
 }
+
+/**
+ * UN LOOK DE VALISE A TOUJOURS UNE PAIRE DE CHAUSSURES ET UN SAC (04/10/2026, demandé : « pour les looks de valise, il faut
+ * toujours une paire de chaussures et un sac » — un look « Top · midi » sans chaussures ni sac ne se porte pas en voyage).
+ * Le moteur reste celui des tenues du jour ; la valise exige davantage : si sa tenue manque de chaussures ou de sac, une
+ * pièce de ce type, prise dans la valise (le pool), la complète. Sans pièce de ce type, la tenue n'est pas un look de valise
+ * (null) — « Optimise ta valise » dit alors ce qui manque. La pièce ajoutée est tirée au hasard parmi celles du pool, comme
+ * le moteur tire ses tenues : plusieurs tirages font apparaître plusieurs paires.
+ */
+export function completerChaussuresEtSac(ids: number[], pool: Item[], hasard: () => number = Math.random): number[] | null {
+  const sortie = [...ids];
+  for (const cat of ["chaussures", "sac"] as const) {
+    if (sortie.some((id) => pool.find((p) => p.id === id)?.cat === cat)) continue;
+    const candidats = pool.filter((p) => p.cat === cat && !sortie.includes(p.id));
+    if (!candidats.length) return null;
+    sortie.push(candidats[Math.min(candidats.length - 1, Math.floor(hasard() * candidats.length))].id);
+  }
+  return sortie;
+}
+
+/** Une tenue qui a des chaussures ET un sac — la règle des looks de valise (valises gardées avant le 04/10/2026 comprises). */
+export const lookAChaussuresEtSac = (ids: number[], pieces: Item[]): boolean =>
+  (["chaussures", "sac"] as const).every((cat) => ids.some((id) => pieces.find((p) => p.id === id)?.cat === cat));
 
 export interface LookValise {
   ids: number[];

@@ -159,3 +159,7 @@ Hiérarchie : destination → « Ta valise est prête » → météo → couvert
 - le bloc vert « Ta valise couvre les besoins de ton séjour » n'apparaît que si c'est vrai (un look par occasion demandée, et au moins un look par jour) ; sinon, la phrase neutre d'avant ;
 - « Optimise ta valise » distingue « Nécessaire » (occasion sans look, catégories du moteur) et « Optionnel » (moins de looks que de jours) ; sans l'un ni l'autre, la section n'existe pas — aucune suggestion n'est inventée ;
 - pas d'image sur les suggestions : le moteur rend des catégories, pas des pièces.
+
+## Chaussures et sac dans chaque look — 04/10/2026
+
+Demandé : « pour les looks de valise, il faut toujours une paire de chaussures et un sac ». Le moteur des tenues du jour est inchangé ; le générateur de la valise (`generateurMoteur`) complète une tenue qui manque de chaussures ou de sac avec une pièce de ce type prise dans la valise (`completerChaussuresEtSac`, tirage au hasard comme les tenues). Sans pièce de ce type, la tenue n'est pas un look de valise : « Optimise ta valise » dit ce qui manque. L'écran ne montre plus, pour les valises gardées avant cette règle, les looks qui n'ont pas les deux (`lookAChaussuresEtSac`) : « Recomposer » en refait avec. **Limite** : la pièce ajoutée n'est pas jugée par le moteur (compatibilité de style, de saison) — c'est un complément tiré parmi les pièces de la valise, pas une recommandation.
