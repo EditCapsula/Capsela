@@ -1362,7 +1362,9 @@ export default function PlanifierScreen() {
                       }}
                     />
                     <div className="flex flex-col">
-                      {valisesAVenir.slice(0, 2).map((v, i) => {
+                      {valisesAVenir.slice(0, 2).map((v) => {
+                        const enCours = v.depart <= jourLocal();
+                        const prochain = !enCours && valisesAVenir.find((x) => x.depart > jourLocal())?.id === v.id;
                         const a = new Date(`${v.depart}T12:00:00`);
                         const b = new Date(`${v.retour}T12:00:00`);
                         const nbLooks = v.looks.filter((l) => l.ids.every((id) => state.items.some((it) => it.id === id))).length;
@@ -1375,7 +1377,13 @@ export default function PlanifierScreen() {
                           >
                             <MiniatureValise v={v} dressing={state.items} taille={44} />
                             <span className="flex-1 min-w-0">
-                              {i === 0 && <span className="block t-label text-terracotta">Ton prochain départ</span>}
+                              {/* Une valise « à venir » le reste jusqu'à son retour : tant qu'on est parti, ce n'est plus un départ à
+                                  venir (04/10/2026, signalé : « prochain départ » pour un séjour commencé). */}
+                              {enCours ? (
+                                <span className="block t-label text-terracotta">Ton séjour en cours</span>
+                              ) : prochain ? (
+                                <span className="block t-label text-terracotta">Ton prochain départ</span>
+                              ) : null}
                               <span className="block t-titre-vignette text-ink truncate">{v.destination}</span>
                               <span className="block text-[12px] text-muted mt-[2px] truncate">
                                 {v.depart === v.retour
