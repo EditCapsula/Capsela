@@ -168,7 +168,7 @@ function CardModule({
 }: {
   onClick: () => void;
   titre: React.ReactNode;
-  sousTitre: string;
+  sousTitre: React.ReactNode;
   cta: string;
   fond: string;
   children: React.ReactNode;
@@ -555,8 +555,8 @@ export default function HomeScreen() {
   const resumeDressing = useMemo(() => {
     const p = `${dressingCount} ${dressingCount <= 1 ? "pièce" : "pièces"}`;
     const n = state.savedLooks.length;
-    if (!n) return `${p} dans ton vestiaire.`;
-    return `${p} · ${n} ${n <= 1 ? "look prêt à porter" : "looks prêts à porter"}`;
+    if (!n) return `${p} dans ton dressing.`;
+    return `${p} · ${n} ${n <= 1 ? "look à découvrir" : "looks à découvrir"}`;
   }, [dressingCount, state.savedLooks.length]);
 
   /** Les looks du MOIS EN COURS, bornes locales — jamais un décalage UTC en début ou fin de mois. */
@@ -568,7 +568,7 @@ export default function HomeScreen() {
 
   const resumeJournal = useMemo(() => {
     const m = looksDuMois.length;
-    if (m > 0) return `${m} ${m <= 1 ? "look enregistré" : "looks enregistrés"} ce mois-ci.`;
+    if (m > 0) return m <= 1 ? "1 nouveau look ce mois-ci." : `${m} nouveaux looks ce mois-ci.`;
     const t = state.savedLooks.length;
     if (t > 0) return `${t} ${t <= 1 ? "look enregistré" : "looks enregistrés"} en tout.`;
     return "Ton journal commence ici.";
@@ -586,9 +586,15 @@ export default function HomeScreen() {
     // react-hooks/preserve-manual-memoization, vue au lint). Deux
     // concaténations ne valent pas cette dette.
     const n = capsule.length;
-    const style = capsuleStyleLabel ? ` ${capsuleStyleLabel}` : "";
-    if (!n) return `Une sélection pensée pour ton style${style}.`;
-    return `Une sélection pensée pour ton style${style} · ${n} ${n <= 1 ? "pièce" : "pièces"}.`;
+    const phrase = `Une sélection pensée pour ton style${capsuleStyleLabel ? `, ${capsuleStyleLabel}` : ""}.`;
+    if (!n) return phrase;
+    return (
+      <>
+        {phrase}
+        <br />
+        {n} {n <= 1 ? "pièce" : "pièces"}
+      </>
+    );
   })();
 
   /** Les plus récents d'abord, au plus quatre : au-delà la bande se lit comme une liste. */
@@ -743,7 +749,7 @@ export default function HomeScreen() {
           </span>
           {/* « Ta tenue planifiée » quand la tenue affichée vient de Planifier
               (option C, 30/09/2026) : l'étiquette dit d'où elle vient. */}
-          {texteHero ? texteHero.surtitre : "Look du jour"}
+          {texteHero ? texteHero.surtitre : "Ton look du jour"}
         </div>
 
         {aucuneTenuePossible ? (
@@ -818,12 +824,12 @@ export default function HomeScreen() {
         {!aucuneTenuePossible && occasionLabel && (
           <div className="pt-[16px]">
             {texteHero ? (
-              // Un plan : le quand, pas l'occasion (déjà dans le titre) — « Dimanche 4 oct. · Soirée », « Aujourd'hui · Soirée ».
+              // Un plan : le quand, pas l'occasion (déjà dans le titre) — « Dimanche 4 oct. · Soirée » ; le jour même, « ✦ Ce soir · Soirée ».
               <span
                 className="inline-flex items-center gap-[6px] whitespace-nowrap"
                 style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
               >
-                <span aria-hidden="true">{jourAVenir ? "▣" : "☀"}</span>
+                <span aria-hidden="true">{jourAVenir ? "▣" : "✦"}</span>
                 {texteHero.badge}
               </span>
             ) : (
@@ -962,7 +968,7 @@ export default function HomeScreen() {
           Ton dressing, <span className="italic text-terracotta">autrement</span>
         </div>
         <div className="text-[12px] text-muted leading-[1.45] mt-[5px]">
-          Tes pièces, ton style, en un coup d&apos;œil.
+          Tes pièces. Ton style. De nouvelles idées.
         </div>
       </div>
 
@@ -1056,7 +1062,7 @@ export default function HomeScreen() {
                 Et si on préparait <span className="italic text-terracotta">la suite</span> ?
               </div>
               <div className="text-[11px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
-                Un dîner samedi ? Une escapade ? Une semaine chargée ?
+                Un dîner samedi ? Une escapade ? Une soirée spéciale ?
               </div>
             </div>
             {/* La pastille devient l'entrée de la page Premium (24/09/2026).

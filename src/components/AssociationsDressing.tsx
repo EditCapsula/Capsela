@@ -13,7 +13,7 @@ import type { Item, OccasionKey } from "@/lib/types";
  * forment un carrousel horizontal dont la carte suivante dépasse. Chaque carte est
  * une tenue complète — la planche de ses pièces réelles en 4/3, l'occasion, la
  * phrase éditoriale que le moteur donne déjà à cette occasion
- * (titreEditorialOccasion), « ✦ N suggestion(s) » si la capsule en complète, et son
+ * (titreEditorialOccasion), « ✦ N pièce(s) suggérée(s) » si la capsule en complète, et son
  * propre « Voir le look → ». Aucun numéro : la carte se reconnaît à son contenu.
  *
  * Plus de section « Autres idées avec tes pièces » (retirée le 01/10/2026,
@@ -65,11 +65,14 @@ function CarteLookIdee({
           <div className="t-titre-carte text-ink mt-[4px]" style={{ textWrap: "balance" }}>
             {phrase}
           </div>
-          {/* Une tenue complétée par la capsule le dit : « 1 suggestion » — jamais le silence sur ce qui n'est pas dans le dressing. */}
-          {suggestions > 0 && (
+          {/* Une tenue faite des seules pièces du dressing le dit, en une phrase ; une tenue complétée par la capsule dit ce qui n'y est pas
+              (« 1 pièce suggérée ») — jamais le silence, et jamais « imaginée à partir de ton dressing » quand ce serait faux. */}
+          {suggestions > 0 ? (
             <div className="text-[11px] leading-[1.3] text-terracotta mt-[5px]">
-              ✦ {suggestions} suggestion{suggestions > 1 ? "s" : ""}
+              ✦ {suggestions} {suggestions > 1 ? "pièces suggérées" : "pièce suggérée"}
             </div>
+          ) : (
+            <div className="text-[12px] leading-[1.4] text-muted-3 mt-[5px]">Une silhouette imaginée à partir de ton dressing.</div>
           )}
         </div>
         <span className="flex-shrink-0 rounded-full bg-terracotta text-cream text-[12px] px-[14px] py-[9px] whitespace-nowrap">Voir le look →</span>
