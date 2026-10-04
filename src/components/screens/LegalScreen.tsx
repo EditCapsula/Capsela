@@ -1,5 +1,6 @@
 "use client";
 
+import Rangee from "@/components/Rangee";
 import { APP_VERSION } from "@/lib/data";
 import { DOCUMENTS_LEGAUX } from "@/lib/legal/documents";
 import { useCapsela } from "@/lib/store";
@@ -21,18 +22,13 @@ export default function LegalScreen() {
 
       <Card rayon="tuile" className="overflow-hidden mt-5">
         {LEGAL_ROWS.map((r) => (
-          <button
-            key={r.slug}
-            type="button"
-            onClick={() => actions.openLegalDoc(r.slug)}
-            className="w-full text-left flex items-center justify-between gap-3 px-4 py-[15px] border-b border-border last:border-b-0 cursor-pointer"
-          >
+          <Rangee key={r.slug} onClick={() => actions.openLegalDoc(r.slug)} className="justify-between py-[15px]">
             <div className="min-w-0">
               <div className="text-[13px] text-ink">{r.titre}</div>
               <div className="text-[11px] text-muted mt-[2px]">{r.sousTitre}</div>
             </div>
             <span className="text-terracotta text-[16px] flex-shrink-0">›</span>
-          </button>
+          </Rangee>
         ))}
       </Card>
 

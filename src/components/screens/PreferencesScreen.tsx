@@ -1,5 +1,6 @@
 "use client";
 
+import Rangee from "@/components/Rangee";
 import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
@@ -46,7 +47,7 @@ function Section({ titre, icone, id, children }: { titre: string; icone: React.R
 }
 
 function Ligne({ children }: { children: React.ReactNode }) {
-  return <div className="flex items-center justify-between gap-3 px-4 py-[14px] border-b border-border last:border-b-0">{children}</div>;
+  return <Rangee className="justify-between">{children}</Rangee>;
 }
 
 export default function PreferencesScreen() {

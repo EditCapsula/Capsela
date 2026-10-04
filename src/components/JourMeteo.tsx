@@ -1,5 +1,6 @@
 "use client";
 
+import Card from "@/components/Card";
 import { WEATHER_ICONS } from "@/lib/data";
 import { JOUR_MAX, libelleJour, libelleJourCourt, quandPhrase } from "@/lib/jourConsulte";
 import { useCapsela } from "@/lib/store";
@@ -58,7 +59,7 @@ export function JourEtMeteo({ className = "" }: { className?: string }) {
 
   return (
     <div className={className}>
-      <div className="flex items-stretch bg-card border border-border rounded-full min-h-[46px]">
+      <Card rayon="pilule" className="flex items-stretch min-h-[46px]">
         {/* LE JOUR — ‹ libellé ›. Hors d'aujourd'hui, le libellé lui-même
             ramène à aujourd'hui d'un tap. */}
         <div className="flex items-center flex-shrink-0 pl-[4px]" role="group" aria-label="Jour de la tenue">
@@ -109,7 +110,7 @@ export function JourEtMeteo({ className = "" }: { className?: string }) {
             ›
           </span>
         </button>
-      </div>
+      </Card>
       {note && <div className="text-[10px] text-placeholder mt-[6px] px-[5px] leading-[1.4]">{note}</div>}
     </div>
   );

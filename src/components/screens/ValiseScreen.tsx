@@ -606,7 +606,7 @@ export default function ValiseScreen() {
           <>
             <Surtitre>Ta valise · 1 / 4</Surtitre>
             <TitreEtape a="Où" b="pars-tu ?" />
-            <div className="flex items-center gap-[10px] mt-4 bg-card border border-border rounded-full px-[16px]" style={{ minHeight: 50 }}>
+            <Card rayon="pilule" className="flex items-center gap-[10px] mt-4 px-[16px]" style={{ minHeight: 50 }}>
               <span className="flex-shrink-0 text-placeholder">{G_EPINGLE}</span>
               <input
                 className="capin flex-1 min-w-0 bg-transparent border-none text-[13px] font-medium text-ink"
@@ -620,7 +620,7 @@ export default function ValiseScreen() {
                 autoComplete="off"
                 autoCapitalize="words"
               />
-            </div>
+            </Card>
             {suggestionsVisibles.length > 0 && (
               <Card rayon="tuile" className="flex flex-col mt-2 overflow-hidden">
                 {suggestionsVisibles.map((v) => (
@@ -675,7 +675,7 @@ export default function ValiseScreen() {
                 ],
                 ["Retour", retour, depart || aujourdhui, depart ? plusJours(depart, DUREE_MAX_JOURS - 1) : undefined, setRetour],
               ] as const).map(([titre, valeur, min, max, changer]) => (
-                <label key={titre} className="flex items-center gap-[9px] bg-card border border-border rounded-carte px-[12px] py-[10px] cursor-pointer min-w-0">
+                <Card as="label" key={titre} className="flex items-center gap-[9px] px-[12px] py-[10px] cursor-pointer min-w-0">
                   <span className="flex-shrink-0 text-muted-3">{G_CALENDRIER}</span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-[11px] text-muted">{titre}</span>
@@ -689,7 +689,7 @@ export default function ValiseScreen() {
                       className="capin block w-full min-w-0 bg-transparent border-none font-serif text-[14px] text-ink mt-[1px] p-0"
                     />
                   </span>
-                </label>
+                </Card>
               ))}
             </div>
             {jours.length > 0 && (
