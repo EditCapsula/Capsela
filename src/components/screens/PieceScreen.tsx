@@ -265,7 +265,7 @@ export default function PieceScreen() {
       {synthesis && <div className="text-[13px] text-warm-text mt-[6px]">{synthesis}</div>}
 
       {!suggested && (
-        <div className="flex items-center justify-center gap-[9px] mt-5 bg-card border border-border rounded-full px-4 py-[13px]">
+        <Card rayon="pilule" className="flex items-center justify-center gap-[9px] mt-5 px-4 py-[13px]">
           <span
             className="w-2 h-2 rounded-full flex-shrink-0"
             style={{ background: pNever ? "var(--color-terracotta)" : "var(--color-muted)" }}
@@ -273,7 +273,7 @@ export default function PieceScreen() {
           <span className="text-[13px]" style={{ color: pNever ? "var(--color-terracotta)" : "var(--color-muted)" }}>
             {wornStatusLabel}
           </span>
-        </div>
+        </Card>
       )}
 
       {suggested ? (

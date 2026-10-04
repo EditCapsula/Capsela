@@ -261,7 +261,7 @@ function ExtraitAvis({ homme }: { homme: boolean }) {
  */
 function ConseilsPhoto() {
   return (
-    <details className="group mt-[18px] bg-card border border-border rounded-carte px-4 py-[12px]">
+    <Card as="details" className="group mt-[18px] px-4 py-[12px]">
       <summary className="flex items-center justify-between gap-3 cursor-pointer list-none min-h-[28px]">
         <span className="t-surtitre text-muted">Pour un avis plus précis</span>
         <span aria-hidden="true" className="text-muted transition-transform duration-200 group-open:rotate-180">
@@ -285,7 +285,7 @@ function ConseilsPhoto() {
           </li>
         ))}
       </ul>
-    </details>
+    </Card>
   );
 }
 

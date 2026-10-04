@@ -1,5 +1,6 @@
 "use client";
 
+import Card from "@/components/Card";
 import { useState } from "react";
 import { prioriserActionsAvis, type ActionAvis } from "@/lib/avisStylisteClient";
 import { compositionUtilisable } from "@/lib/reconnaissance";
@@ -84,7 +85,7 @@ export default function EtMaintenantAvis({
   return (
     <section className="mt-[30px] motion-safe:animate-[capsule-apparition_320ms_ease-out_both]" aria-labelledby="avis-et-maintenant">
       {/* Carte centrée, surtitre dedans sous l'icône de Planifier (maquette du 30/09/2026). */}
-      <div className="bg-card border border-divider rounded-feuille px-[18px] py-[20px] text-center">
+      <Card rayon="feuille" filet="fin" className="px-[18px] py-[20px] text-center">
         <span aria-hidden="true" className="flex justify-center text-terracotta">
           <svg width="22" height="22" viewBox="0 0 24 24" style={{ display: "block" }}>
             <rect x="4" y="6" width="16" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -162,7 +163,7 @@ export default function EtMaintenantAvis({
             </div>
           </>
         )}
-      </div>
+      </Card>
     </section>
   );
 }

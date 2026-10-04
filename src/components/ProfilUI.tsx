@@ -1,5 +1,6 @@
 "use client";
 
+import Rangee from "@/components/Rangee";
 import { useEffect, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { useAuth } from "@/lib/auth";
@@ -126,10 +127,7 @@ export function LigneProfil({
   onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-[13px] px-4 py-[14px] text-left cursor-pointer border-b border-border last:border-b-0"
-    >
+    <Rangee onClick={onClick} className="gap-[13px]">
       <span className="w-11 h-11 flex-shrink-0 rounded-full bg-warm-bg text-terracotta-deep flex items-center justify-center">
         <Icone>{icone}</Icone>
       </span>
@@ -139,7 +137,7 @@ export function LigneProfil({
         {renseigne && explication && <span className="block text-[12px] text-muted leading-[1.4] mt-[3px]">{explication}</span>}
       </span>
       <span aria-hidden="true" className="text-placeholder text-[15px] flex-shrink-0">›</span>
-    </button>
+    </Rangee>
   );
 }
 
@@ -255,14 +253,7 @@ export function LigneInfo({ label, valeur, renseigne, onClick }: { label: string
       )}
     </>
   );
-  const cls = "w-full flex items-center gap-3 px-4 py-[14px] text-left border-b border-border last:border-b-0";
-  return onClick ? (
-    <button onClick={onClick} className={cls + " cursor-pointer"}>
-      {contenu}
-    </button>
-  ) : (
-    <div className={cls}>{contenu}</div>
-  );
+  return <Rangee onClick={onClick} className={onClick ? undefined : "w-full text-left"}>{contenu}</Rangee>;
 }
 
 /**

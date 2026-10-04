@@ -1,5 +1,6 @@
 "use client";
 
+import Card from "@/components/Card";
 import { useState } from "react";
 import SegmentedControl, { type Segment } from "@/components/SegmentedControl";
 import { repartirPiecesAvis, titresAffichables, type AvisStyliste, type PieceSuggeree } from "@/lib/avisStylisteClient";
@@ -234,7 +235,7 @@ function CarteATester({
     );
   }
   return (
-    <li className="bg-card border border-divider rounded-carte px-4 py-[15px]">
+    <Card as="li" filet="fin" className="px-4 py-[15px]">
       <div className="flex items-start gap-[12px] text-[14px] text-ink leading-[1.5]">
         <span aria-hidden="true" className="font-serif italic text-[20px] leading-[1.05] text-terracotta flex-shrink-0 w-[26px]">
           {num}
@@ -248,7 +249,7 @@ function CarteATester({
           ))}
         </div>
       )}
-    </li>
+    </Card>
   );
 }
 
@@ -375,7 +376,7 @@ export default function ResultatAvis({
   return (
     <>
       {/* LE VERDICT, carte éditoriale : la synthèse de la styliste, en serif. */}
-      <div className={"mt-[22px] bg-card border border-divider rounded-feuille px-[18px] py-[18px] " + verdict.className} style={verdict.style}>
+      <Card rayon="feuille" filet="fin" className={"mt-[22px] px-[18px] py-[18px] " + verdict.className} style={verdict.style}>
         <div className="t-label text-terracotta">
           <span aria-hidden="true">✦ </span>
           {TITRES.verdict}
@@ -424,7 +425,7 @@ export default function ResultatAvis({
         {!note && personnalisation.length > 0 && (
           <div className="text-[12px] text-muted mt-[10px] leading-[1.45]">Avis donné en tenant compte de {joindre(personnalisation)}.</div>
         )}
-      </div>
+      </Card>
 
       {/* LE MENU (03/10/2026, « plus lisible à l'œil nu ») : les sections ne s'empilent plus, on passe de l'une à l'autre.
           Un onglet sans contenu n'existe pas — un avis ancien ou tronqué ne montre pas d'onglet vide — et l'onglet choisi

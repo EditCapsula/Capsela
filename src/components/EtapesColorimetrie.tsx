@@ -347,7 +347,7 @@ export function SuiteColorimetrie() {
   return (
     <ul className="mt-[24px] flex flex-col gap-[10px]">
       {benefices.map(([p, titre, texte]) => (
-        <li key={titre} className="bg-card border border-border rounded-tuile px-[14px] py-[12px] flex gap-[12px] items-start">
+        <Card as="li" key={titre} rayon="tuile" className="px-[14px] py-[12px] flex gap-[12px] items-start">
           <span className="w-[34px] h-[34px] rounded-full bg-warm-bg flex items-center justify-center flex-shrink-0">
             <Pictogramme nom={p} taille={18} />
           </span>
@@ -357,7 +357,7 @@ export function SuiteColorimetrie() {
               {texte}
             </span>
           </span>
-        </li>
+        </Card>
       ))}
     </ul>
   );
