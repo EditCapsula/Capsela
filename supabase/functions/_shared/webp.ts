@@ -8,7 +8,8 @@
 // (fiche détail plein écran PieceScreen, ratio 4/5, très en dessous de 800px
 // de large même en 2x retina sur mobile) ; toutes les autres cartes sont
 // nettement plus petites (jusqu'à 119px, cf. TenuesScreen/CapsuleScreen).
-export const MAX_IMAGE_DIMENSION = 800;
+import { MAX_IMAGE_DIMENSION, dimensionsProportionnelles } from "./dimensions.ts";
+export { MAX_IMAGE_DIMENSION };
 
 export interface EncodedImage {
   bytes: Uint8Array;
@@ -33,7 +34,7 @@ export async function toWebp(pngBytes: Uint8Array): Promise<EncodedImage> {
     const { default: encode } = await import("https://esm.sh/@jsquash/webp@1.4.0/encode.js");
     let imageData = await decode(pngBytes.buffer as ArrayBuffer);
     if (imageData.width > MAX_IMAGE_DIMENSION || imageData.height > MAX_IMAGE_DIMENSION) {
-      imageData = await resize(imageData, { width: MAX_IMAGE_DIMENSION, height: MAX_IMAGE_DIMENSION });
+      imageData = await resize(imageData, dimensionsProportionnelles(imageData.width, imageData.height));
     }
     const webpBuffer = await encode(imageData, { quality: 75 });
     return { bytes: new Uint8Array(webpBuffer), contentType: "image/webp", ext: "webp" };

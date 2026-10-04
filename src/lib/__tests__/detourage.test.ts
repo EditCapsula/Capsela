@@ -12,6 +12,7 @@ import {
   estPhotoDetouree as estPhotoDetoureeServeur,
   typeImage,
 } from "../../../supabase/functions/_shared/detourage.ts";
+import { dimensionsProportionnelles, MAX_IMAGE_DIMENSION } from "../../../supabase/functions/_shared/dimensions.ts";
 import { urlPhotoAutorisee } from "../../../supabase/functions/_shared/protection.ts";
 
 // Le détourage des photos du dressing (04/10/2026).
@@ -124,6 +125,28 @@ describe("detourerAvecFournisseur", () => {
     const enorme = new Uint8Array(TAILLE_RESULTAT_MAX_OCTETS + 1);
     enorme.set(PNG);
     expect(await code(enorme)).toEqual({ ok: false, code: "resultat_invalide" });
+  });
+});
+
+describe("le redimensionnement garde les proportions", () => {
+  it("une photo en portrait ou en paysage n'est plus écrasée dans un carré", () => {
+    expect(dimensionsProportionnelles(900, 1200)).toEqual({ width: 600, height: 800 });
+    expect(dimensionsProportionnelles(1200, 900)).toEqual({ width: 800, height: 600 });
+    expect(dimensionsProportionnelles(960, 1200)).toEqual({ width: 640, height: 800 });
+  });
+
+  it("une image carrée donne le même résultat qu'avant : le catalogue ne change pas", () => {
+    expect(dimensionsProportionnelles(1024, 1024)).toEqual({ width: MAX_IMAGE_DIMENSION, height: MAX_IMAGE_DIMENSION });
+  });
+
+  it("le rapport largeur / hauteur est conservé à l'arrondi près, et jamais une dimension nulle", () => {
+    for (const [l, h] of [[1200, 1600], [1080, 1920], [3000, 2000], [5000, 20], [20, 5000]] as const) {
+      const d = dimensionsProportionnelles(l, h);
+      expect(Math.max(d.width, d.height)).toBe(MAX_IMAGE_DIMENSION);
+      expect(d.width).toBeGreaterThanOrEqual(1);
+      expect(d.height).toBeGreaterThanOrEqual(1);
+      if (d.width > 20 && d.height > 20) expect(Math.abs(d.width / d.height - l / h)).toBeLessThan(0.01);
+    }
   });
 });
 
