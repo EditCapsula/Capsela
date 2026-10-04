@@ -189,7 +189,7 @@ export default function ItemOutfitsScreen() {
   };
   const pastille = (actif: boolean) =>
     "flex-none rounded-full px-4 py-[9px] text-[12px] whitespace-nowrap cursor-pointer " +
-    (actif ? "bg-terracotta active:bg-terracotta-hover text-cream" : "bg-card border border-border text-ink");
+    (actif ? "bg-ink border border-ink text-cream" : "bg-card border border-border text-ink");
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
@@ -202,9 +202,12 @@ export default function ItemOutfitsScreen() {
         {DEBUT}
         <em className="text-terracotta">{titre.slice(DEBUT.length)}</em>
       </h1>
-      <p className="t-chapeau text-muted-3 mt-[8px]">Des idées créées à partir de ta capsule.</p>
+      <p className="t-chapeau text-muted-3 mt-[8px]">
+        {alreadyOwned ? "Des idées pensées à partir de ton dressing." : "Des idées pensées à partir de ta capsule."}
+      </p>
+      {/* Le message du parcours, discret : le dressing d'abord (ideesDressingDAbord), les suggestions seulement en complément. */}
       <p className="text-[12px] text-muted leading-[1.45] mt-[2px]">
-        Capsela privilégie tes pièces et complète avec des suggestions si nécessaire.
+        {alreadyOwned ? "Capsela commence par ce que tu possèdes, et complète avec des suggestions si nécessaire." : "Capsela privilégie tes pièces et complète avec des suggestions si nécessaire."}
       </p>
       {/* La saison des idées, dite quand ce n'est pas celle en cours : sans
           elle, des sandales proposées en automne sembleraient une erreur. */}
@@ -278,9 +281,10 @@ export default function ItemOutfitsScreen() {
       ) : (
         <>
           <div className="flex flex-col gap-[16px] mt-[16px]">
-            {visibles.map((look) => (
+            {visibles.map((look, i) => (
               <CarteIdeeLook
                 key={cleLook(look.variation.ids)}
+                rang={i === 0 ? "premier" : "suivant"}
                 look={look}
                 pieces={piecesDe(look.variation.ids)}
                 insight={insights.get(cleLook(look.variation.ids))}
@@ -297,7 +301,7 @@ export default function ItemOutfitsScreen() {
           </div>
           {!toutVoir && filtres.length > visibles.length && (
             <button onClick={() => setToutVoir(true)} className="mt-[16px] mb-[6px] w-full text-center t-cta text-terracotta py-[10px] cursor-pointer">
-              Voir plus de looks →
+              {`Voir les ${filtres.length} façons de la porter →`}
             </button>
           )}
         </>

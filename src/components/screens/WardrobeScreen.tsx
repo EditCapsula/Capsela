@@ -387,8 +387,8 @@ export default function WardrobeScreen() {
               <TitreSection>À redécouvrir</TitreSection>
               <button
                 onClick={actions.goNeverWorn}
-                aria-label={`${neverWorn.length} ${pluriel ? "pièces jamais portées" : "pièce jamais portée"}. Voir`}
-                className="w-full flex items-center gap-[14px] mt-3 text-left cursor-pointer active:opacity-80"
+                aria-label={`${neverWorn.length} ${pluriel ? "pièces attendent" : "pièce attend"} son moment, ${pluriel ? "jamais portées" : "jamais portée"}. Voir`}
+                className="w-full flex items-start gap-[14px] mt-3 text-left cursor-pointer active:opacity-80"
               >
                 {/* Deux miniatures, de même taille et au même ratio qu'avant
                     (42 × 54 → 50 × 64) : une respiration, pas une carte. */}
@@ -400,16 +400,27 @@ export default function WardrobeScreen() {
                   ))}
                 </span>
                 <span className="flex-1 min-w-0">
+                  {/* « Attendent leur moment » d'abord (04/10/2026, parcours Redécouvrir) : la valeur avant le constat.
+                      « Jamais portées » reste, en information secondaire — c'est ce que le compteur compte. */}
                   <span className="block t-titre-vignette text-ink">
+                    {neverWorn.length} {pluriel ? "pièces attendent leur moment" : "pièce attend son moment"}
+                  </span>
+                  <span className="block text-[12px] leading-[1.4] mt-[3px]" style={{ color: "var(--color-muted-3)" }}>
                     {neverWorn.length} {pluriel ? "pièces jamais portées" : "pièce jamais portée"}
                   </span>
-                  {toutesInactives && (
-                    <span className="block text-[12px] leading-[1.4] mt-[3px]" style={{ color: "var(--color-muted-3)" }}>
-                      {pluriel ? "Tu ne les as pas portées pendant leur dernière saison." : "Tu ne l'as pas portée pendant sa dernière saison."}
-                    </span>
-                  )}
+                  {/* Une seule phrase d'appui : le second niveau (« pas portées pendant leur dernière saison »), quand il
+                      est vrai pour toutes, sinon la promesse du parcours. */}
+                  <span className="block text-[12px] leading-[1.45] mt-[6px]" style={{ color: "var(--color-muted-3)" }}>
+                    {toutesInactives
+                      ? pluriel
+                        ? "Tu ne les as pas portées pendant leur dernière saison."
+                        : "Tu ne l'as pas portée pendant sa dernière saison."
+                      : `Capsela a repéré ${pluriel ? "des pièces qui pourraient" : "une pièce qui pourrait"} facilement trouver ${pluriel ? "leur" : "sa"} place dans tes prochains looks.`}
+                  </span>
+                  <span className="block t-lien text-terracotta mt-[8px]">
+                    {pluriel ? `Voir les ${neverWorn.length} pièces` : "Voir la pièce"} →
+                  </span>
                 </span>
-                <span className="text-[12px] text-terracotta flex-shrink-0">Voir →</span>
               </button>
             </>
           );
