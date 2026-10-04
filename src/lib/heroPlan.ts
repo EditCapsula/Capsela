@@ -69,7 +69,7 @@ export function texteHeroHier(plan: Pick<TenuePlanifiee, "moment">): { surtitre:
     surtitre: "Ton look d'hier",
     question: "Comment était ta tenue ?",
     mot: plan.moment === "Soirée" ? "On espère que tu as passé une belle soirée." : "On espère que tout s'est bien passé.",
-    badge: `Hier · ${plan.moment}`,
+    badge: plan.moment, // « Hier » est déjà dans le surtitre : le badge ne dit que le moment
   };
 }
 
