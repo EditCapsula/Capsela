@@ -1,3 +1,4 @@
+import { previsionPour, type Prevision } from "./prevision";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -553,6 +554,23 @@ export function resumeLook(pieces: Item[]): string {
  * 27/09/2026, à partir des seules températures et conditions PRÉVUES : rien
  * n'est dit quand il n'y a pas de prévision.
  */
+/**
+ * LA MÉTÉO PRÉVUE DU SÉJOUR, TELLE QU'ELLE EST AUJOURD'HUI (04/10/2026, signalé : « sois juste sur la météo »).
+ *
+ * `valise.meteos` est la météo figée AU CALCUL de la valise — c'est ce que le moteur a reçu, et on n'y touche pas.
+ * Mais ce qu'on AFFICHE comme prévision doit venir de la prévision du moment : une valise ouverte trois jours après
+ * son calcul ne présente plus comme « prévus » des jours qui sont passés, ni une température d'avant-hier.
+ * Seuls les jours que la prévision couvre rendent une entrée ; un jour passé, ou au-delà de l'horizon, n'en rend
+ * aucune — jamais une valeur de repli. Sans prévision (hors ligne, mode démo, ville inconnue) : liste vide.
+ */
+export function meteosPrevuesDuSejour(prevision: Prevision | null, jours: string[]): MeteoJour[] {
+  if (!prevision) return [];
+  return jours.flatMap((jour) => {
+    const m = previsionPour(prevision, jour, "Toute la journée");
+    return m ? [{ jour, temp: m.temp, label: m.label, prevue: true }] : [];
+  });
+}
+
 /** De la pluie dans la PRÉVISION du séjour (jamais dans une météo de repli) : faux quand aucun jour n'est prévu ou que le ciel est sec. */
 export function pluieAnnoncee(meteos: MeteoJour[]): boolean {
   return meteos.some((m) => m.prevue && /pluie|pluvieux|averse|orage|bruine/i.test(m.label));

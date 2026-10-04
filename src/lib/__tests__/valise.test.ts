@@ -18,6 +18,7 @@ import {
   generateurMoteur,
   joursDuSejour,
   libelleDuree,
+  meteosPrevuesDuSejour,
   pluieAnnoncee,
   looksDeLaValise,
   looksParPiece,
@@ -323,5 +324,35 @@ describe("pluieAnnoncee — la pluie de la prévision, jamais d'une météo de r
   });
   it("fausse quand le jour n'est pas une prévision, même si son libellé parle de pluie", () => {
     expect(pluieAnnoncee([meteo("2026-10-16", 17, "Pluie", false)])).toBe(false);
+  });
+});
+
+describe("meteosPrevuesDuSejour — seulement les jours que la prévision d'aujourd'hui couvre", () => {
+  const h = (jour: string, heure: number) => Date.UTC(+jour.slice(0, 4), +jour.slice(5, 7) - 1, +jour.slice(8, 10), heure) / 1000;
+  const prevision = {
+    city: "Rhodes",
+    country: "GR",
+    timezone: 0,
+    slots: [
+      { ts: h("2026-10-05", 9), temp: 20, label: "Ensoleillé" },
+      { ts: h("2026-10-05", 15), temp: 24, label: "Ensoleillé" },
+      { ts: h("2026-10-06", 9), temp: 19, label: "Pluie légère" },
+    ],
+  };
+
+  it("rend les jours couverts, la moyenne de la journée et le libellé le plus contraignant", () => {
+    const r = meteosPrevuesDuSejour(prevision, ["2026-10-05", "2026-10-06"]);
+    expect(r).toEqual([
+      { jour: "2026-10-05", temp: 22, label: "Ensoleillé", prevue: true },
+      { jour: "2026-10-06", temp: 19, label: "Pluie légère", prevue: true },
+    ]);
+  });
+
+  it("un jour hors de la prévision (passé ou trop lointain) ne rend rien — jamais une valeur de repli", () => {
+    expect(meteosPrevuesDuSejour(prevision, ["2026-09-28", "2026-10-09"])).toEqual([]);
+  });
+
+  it("sans prévision : rien", () => {
+    expect(meteosPrevuesDuSejour(null, ["2026-10-05"])).toEqual([]);
   });
 });

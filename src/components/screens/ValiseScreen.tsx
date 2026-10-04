@@ -43,6 +43,7 @@ import {
   occasionsDuSejour,
   occasionsRetenues,
   MINIMUM_PIECES_VALISE,
+  meteosPrevuesDuSejour,
   pluieAnnoncee,
   pretPourUneValise,
   resumeLook,
@@ -1017,7 +1018,6 @@ function Resultat({
   const couvertes = occasionsCouvertes(looks, valise.situations);
   const depasse = etatJauge(pieces.length, capacite) === "depassee";
   const aAlleger = depasse ? allegement(ids, looks, capacite) : [];
-  const amplitude = amplitudePrevue(valise.meteos);
   const nbJours = valise.meteos.length;
   const pieceDe = (id: number) => pieces.find((p) => p.id === id);
   const occasionsDemandees = [...new Set(valise.situations.map((s) => s.occasion))];
@@ -1046,6 +1046,31 @@ function Resultat({
   );
   const peuDeLooks = looks.length > 0 && looks.length < nbJours;
   const numero = (i: number) => String(i + 1).padStart(2, "0");
+
+  /**
+   * LA MÉTÉO AFFICHÉE EST CELLE D'AUJOURD'HUI, pas celle du calcul (04/10/2026, « sois juste sur la météo ») : la
+   * prévision de l'application (fetchPrevisionByCity, comme Planifier et la création de la valise) est redemandée à
+   * l'ouverture, pour les jours qui ne sont pas passés et dans son horizon. `valise.meteos` reste ce que le moteur a
+   * reçu ; il ne sert plus à dire « prévu ».
+   */
+  const aujourdhui = jourLocal();
+  const joursAVenir = valise.meteos.map((m) => m.jour).filter((j) => j >= aujourdhui);
+  const villePrevision = joursAVenir.length > 0 && joursEntre(aujourdhui, joursAVenir[0]) <= HORIZON_PREVISION_JOURS ? valise.destination : null;
+  const [previsionVive, setPrevisionVive] = useState<{ ville: string; p: Prevision | null } | null>(null);
+  useEffect(() => {
+    if (!villePrevision) return;
+    let annule = false;
+    fetchPrevisionByCity(villePrevision)
+      .catch(() => null)
+      .then((p) => !annule && setPrevisionVive({ ville: villePrevision, p }));
+    return () => {
+      annule = true;
+    };
+  }, [villePrevision]);
+  /** Les jours du séjour que la prévision du moment couvre — vide tant qu'elle n'est pas arrivée, ou si elle manque. */
+  const meteosPrevues = previsionVive && previsionVive.ville === villePrevision ? meteosPrevuesDuSejour(previsionVive.p, joursAVenir) : [];
+  const amplitude = amplitudePrevue(meteosPrevues);
+  const previsionAttendue = villePrevision != null && !(previsionVive && previsionVive.ville === villePrevision);
 
   // Les looks de chaque pièce de remplacement sont comptés par le moteur à
   // l'ouverture de la feuille — pas avant, c'est le calcul le plus coûteux.
@@ -1372,11 +1397,11 @@ function Resultat({
   }
 
   const l = looks[index];
-  const pluie = pluieAnnoncee(valise.meteos);
+  const pluie = pluieAnnoncee(meteosPrevues);
   /** La température d'un look : seulement celle des jours PRÉVUS qu'il habille — jamais une météo de repli présentée comme une prévision. */
   const tempDuLook = (lk: LookValise) => {
     const jours = new Set(lk.situations.flatMap((i) => valise.situations[i]?.jours ?? []));
-    return amplitudePrevue(valise.meteos.filter((m) => jours.has(m.jour)));
+    return amplitudePrevue(meteosPrevues.filter((m) => jours.has(m.jour)));
   };
   /** Le séjour est couvert : un look pour chaque occasion demandée, et de quoi varier sur la durée. C'est ce que dit le bloc de validation, rien de plus. */
   const sejourCouvert = looks.length > 0 && occasionsAManque.length === 0 && !peuDeLooks;
@@ -1390,14 +1415,14 @@ function Resultat({
     <>
       {/* 1 · OÙ VAIS-JE ? La destination est le premier élément éditorial. */}
       <div className="t-surtitre text-muted">{libellePeriode(valise.depart, valise.retour)}</div>
-      <h1 className="font-serif text-ink text-[40px] leading-[1.05] mt-[6px] break-words" style={{ textWrap: "balance" }}>
+      <h1 className="font-serif text-terracotta text-[40px] leading-[1.05] mt-[6px] break-words" style={{ textWrap: "balance" }}>
         {valise.destination}
       </h1>
 
       {/* 2 · TA VALISE EST-ELLE PRÊTE ? */}
       <div className="t-titre-ecran text-ink mt-[14px] flex items-center flex-wrap gap-x-[10px]">
         <span>
-          Ta valise <span className="italic text-terracotta">est prête</span>
+          Ta valise <span className="italic">est prête</span>
         </span>
         <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center flex-shrink-0">
           {G_COCHE(14, "var(--color-cream)")}
@@ -1405,34 +1430,29 @@ function Resultat({
       </div>
       <div className="t-chapeau text-muted-3 mt-[6px]">{libelleDuree(nbJours)}</div>
 
-      {/* La météo, compacte, et seulement celle qui est connue. */}
-      <div className="flex flex-wrap gap-x-5 gap-y-[10px] mt-4 text-[12px] text-ink">
-        {amplitude ? (
-          <>
-            <span className="inline-flex items-center gap-[9px]">
-              <span className="text-terracotta">{G_METEO_PETIT}</span>
-              <span className="leading-[1.25]">
-                <span className="block text-[13px] font-medium">{libelleAmplitude(amplitude)}</span>
-                <span className="block text-[11px] text-muted">prévus{amplitude.jours < nbJours ? ` sur ${amplitude.jours} ${amplitude.jours > 1 ? "jours" : "jour"}` : ""}</span>
+      {/* La météo, compacte : celle de la prévision d'aujourd'hui, pour les jours qu'elle couvre — rien d'autre. */}
+      {(amplitude || !previsionAttendue) && (
+        <div className="flex flex-wrap gap-x-5 gap-y-[10px] mt-4 text-[12px] text-ink">
+          {amplitude ? (
+            <>
+              <span className="inline-flex items-center gap-[9px]">
+                <span className="text-terracotta">{G_METEO_PETIT}</span>
+                <span className="leading-[1.25]">
+                  <span className="block text-[13px] font-medium">{libelleAmplitude(amplitude)}</span>
+                  <span className="block text-[11px] text-muted">prévus {libellePeriode(meteosPrevues[0].jour, meteosPrevues[meteosPrevues.length - 1].jour)}</span>
+                </span>
               </span>
-            </span>
+              <span className="inline-flex items-center gap-[9px]">
+                <span className="text-terracotta">{G_GOUTTE}</span>
+                <span className="text-[13px] font-medium leading-[1.25]">{pluie ? "Pluie annoncée" : "Pas de pluie annoncée"}</span>
+              </span>
+            </>
+          ) : (
             <span className="inline-flex items-center gap-[9px]">
-              <span className="text-terracotta">{G_GOUTTE}</span>
-              <span className="text-[13px] font-medium leading-[1.25]">{pluie ? "Pluie annoncée" : "Pas de pluie annoncée"}</span>
+              <span className="text-muted">{G_METEO_PETIT}</span>
+              <span className="text-[13px] leading-[1.25]">Météo non disponible pour ces dates</span>
             </span>
-          </>
-        ) : (
-          <span className="inline-flex items-center gap-[9px]">
-            <span className="text-muted">{G_METEO_PETIT}</span>
-            <span className="text-[13px] leading-[1.25]">Météo non disponible pour ces dates</span>
-          </span>
-        )}
-      </div>
-      {amplitude?.jours !== nbJours && (
-        <div className="text-[11px] text-placeholder leading-[1.45] mt-[8px]">
-          {amplitude
-            ? "Les autres jours, au-delà de la prévision, suivent la saison de leur date et la température d'aujourd'hui."
-            : "Les looks suivent la saison du séjour et la température d'aujourd'hui."}
+          )}
         </div>
       )}
 
