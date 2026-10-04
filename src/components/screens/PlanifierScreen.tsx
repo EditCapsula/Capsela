@@ -19,6 +19,8 @@ import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { generateOutfitWithFallback, titreLookDuJour } from "@/lib/logic";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
+import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
+import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "@/lib/capsule";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
@@ -153,6 +155,14 @@ const G_METEO = (
   </>
 );
 const G_CHEVRON = <path d="M9.5 6l6 6-6 6" {...T} strokeWidth={1.7} />;
+const G_COCHE_PETITE = <path d="M5 12.5l4.5 4.5L19 7.5" {...T} strokeWidth={2.2} />;
+const G_CRAYON = (
+  <>
+    <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" {...T} />
+    <path d="M14.5 7.5l3 3" {...T} />
+  </>
+);
+const G_COEUR = <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" {...T} />;
 
 const MOMENTS: [MomentJournee, string][] = [
   ["Matin", "Avant midi"],
@@ -528,6 +538,9 @@ export default function PlanifierScreen() {
   const [composition, setComposition] = useState<number[] | null>(() => state.planComposition?.pieceIds ?? null);
   /** Tenue planifiée ouverte en détail, ou dont le menu « … » est déplié. */
   const [planOuvert, setPlanOuvert] = useState<TenuePlanifiee | null>(() => state.planARouvrir);
+  /** La météo du LIEU et du MOMENT du plan ouvert, aujourd'hui (useMeteoDuPlan) — null hors horizon ou sans réponse. */
+  const meteoPlanVive = useMeteoDuPlan(planOuvert);
+  const ecartJoursPlan = planOuvert ? ecartJoursDuPlan(planOuvert.jour) : null;
   /** D'où le détail a été ouvert — le hub ou la liste complète — pour que le retour y ramène. */
   const [retourDetail, setRetourDetail] = useState<"intro" | "liste">(() => (state.planARouvrir ? "intro" : "liste"));
   useEffect(() => {
@@ -1349,7 +1362,9 @@ export default function PlanifierScreen() {
                       }}
                     />
                     <div className="flex flex-col">
-                      {valisesAVenir.slice(0, 2).map((v, i) => {
+                      {valisesAVenir.slice(0, 2).map((v) => {
+                        const enCours = v.depart <= jourLocal();
+                        const prochain = !enCours && valisesAVenir.find((x) => x.depart > jourLocal())?.id === v.id;
                         const a = new Date(`${v.depart}T12:00:00`);
                         const b = new Date(`${v.retour}T12:00:00`);
                         const nbLooks = v.looks.filter((l) => l.ids.every((id) => state.items.some((it) => it.id === id))).length;
@@ -1362,7 +1377,13 @@ export default function PlanifierScreen() {
                           >
                             <MiniatureValise v={v} dressing={state.items} taille={44} />
                             <span className="flex-1 min-w-0">
-                              {i === 0 && <span className="block t-label text-terracotta">Ton prochain départ</span>}
+                              {/* Une valise « à venir » le reste jusqu'à son retour : tant qu'on est parti, ce n'est plus un départ à
+                                  venir (04/10/2026, signalé : « prochain départ » pour un séjour commencé). */}
+                              {enCours ? (
+                                <span className="block t-label text-terracotta">Ton séjour en cours</span>
+                              ) : prochain ? (
+                                <span className="block t-label text-terracotta">Ton prochain départ</span>
+                              ) : null}
                               <span className="block t-titre-vignette text-ink truncate">{v.destination}</span>
                               <span className="block text-[12px] text-muted mt-[2px] truncate">
                                 {v.depart === v.retour
@@ -1861,9 +1882,7 @@ export default function PlanifierScreen() {
           const phrase = titreLookDuJour(t.occasion, (t.sousChoix ?? "") as WorkMode, (t.sousChoix ?? "") as DateContext);
           // Occasion, précision, type de lieu, température : seulement ce qui
           // a été enregistré. La ville est dans le titre, la date au-dessus.
-          const contexte = [occLongDe(t.occasion), t.sousChoix, t.typeLieu, t.temp != null ? `${t.temp}°` : null]
-            .filter(Boolean)
-            .join(" · ");
+          const tempAffichee = meteoPlanVive && planOuvert?.id === t.id ? meteoPlanVive.temp : t.temp;
           return (
             <>
               {/* INTRODUCTION — type d'écran, occasion et ville, puis date et
@@ -1895,7 +1914,7 @@ export default function PlanifierScreen() {
                   s'adapte pas à elles, et rien ne bouge en dessous. */}
               <div className="mt-[18px] bg-terracotta rounded-hero text-left" style={{ padding: "20px 18px 20px" }}>
                 <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16]">
-                  {passee ? "Ton look était planifié" : "Ton look est planifié"}
+                  {passee ? "Ton look était planifié" : "Ton look est prêt."}
                 </div>
                 <div className="font-serif italic text-[15px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.86)" }}>
                   {phrase}
@@ -1913,13 +1932,24 @@ export default function PlanifierScreen() {
                     </div>
                   )}
                 </div>
+                {/* Confirmation discrète (maquette du 04/10/2026) : « Dans tes looks » dit que le look est enregistré ; sinon,
+                    l'occasion, comme avant. */}
                 <div className="pt-[16px]">
                   <span
-                    className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
-                    style={{ fontSize: 9.5, letterSpacing: ".08em", background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
+                    className="inline-flex items-center gap-[6px] whitespace-nowrap"
+                    style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
                   >
-                    <GlypheOccasion occasion={t.occasion} taille={13} />
-                    {occLongDe(t.occasion)}
+                    {dansMesLooks ? (
+                      <>
+                        <Glyphe taille={13}>{G_COCHE_PETITE}</Glyphe>
+                        Dans tes looks
+                      </>
+                    ) : (
+                      <span className="inline-flex items-center gap-[6px] uppercase" style={{ fontSize: 9.5, letterSpacing: ".08em" }}>
+                        <GlypheOccasion occasion={t.occasion} taille={13} />
+                        {occLongDe(t.occasion)}
+                      </span>
+                    )}
                   </span>
                 </div>
               </div>
@@ -1934,118 +1964,126 @@ export default function PlanifierScreen() {
                 </div>
               )}
 
-              {/* LE CONTEXTE — pourquoi cette tenue. La météo est celle
-                  ENREGISTRÉE au moment de planifier (planned_outfits.temp,
-                  weather_label) et se dit comme telle : jamais une promesse
-                  sur le temps qu'il fera. Sans prévision enregistrée, ni
-                  température ni ligne météo. */}
+              {/* LE CONTEXTE, compact : la météo d'abord quand elle est connue (celle d'aujourd'hui du lieu du plan, sinon
+                  celle enregistrée à la planification, dite comme telle), puis le type de lieu et le moment. */}
               <Card className="mt-[14px] p-[15px] flex items-start gap-[12px]">
                 <span className="flex-shrink-0 text-terracotta mt-[1px]">
-                  <Glyphe taille={22}>{t.temp != null ? G_METEO : G_EPINGLE}</Glyphe>
+                  <Glyphe taille={22}>{tempAffichee != null ? G_METEO : G_EPINGLE}</Glyphe>
                 </span>
                 <div className="min-w-0">
                   <div className="t-label text-muted">Le contexte</div>
-                  <div className="text-[13px] text-ink leading-[1.45] mt-[5px]">{contexte}</div>
-                  {t.temp != null && (
-                    <div className="text-[12px] text-muted leading-[1.45] mt-[3px]">
-                      {t.weatherLabel ? `${t.weatherLabel}, selon la prévision à la planification` : "Selon la prévision à la planification"}
-                    </div>
-                  )}
+                  <div className="text-[14px] text-ink font-medium leading-[1.35] mt-[5px]">
+                    {tempAffichee != null
+                      ? `${tempAffichee}°${(meteoPlanVive ? meteoPlanVive.label : t.weatherLabel) ? ` · ${meteoPlanVive ? meteoPlanVive.label : t.weatherLabel}` : ""}`
+                      : occLongDe(t.occasion)}
+                  </div>
+                  <div className="text-[12px] text-muted leading-[1.45] mt-[3px]">{[t.sousChoix, t.typeLieu, t.moment].filter(Boolean).join(" · ")}</div>
+                  {meteoPlanVive ? (
+                    <>
+                      {previsionAChange(t, meteoPlanVive) && (
+                        <div className="text-[12px] text-terracotta leading-[1.45] mt-[3px]">
+                          La prévision a changé depuis la planification{t.temp != null ? ` (${t.temp}°${t.weatherLabel ? `, ${t.weatherLabel.toLowerCase()}` : ""})` : ""}.
+                        </div>
+                      )}
+                      {alerteMeteoPlan(pieces, meteoPlanVive) && (
+                        <div className="text-[12px] text-terracotta leading-[1.45] mt-[3px]">{alerteMeteoPlan(pieces, meteoPlanVive)}</div>
+                      )}
+                      <div className="text-[11px] text-placeholder leading-[1.45] mt-[3px]">
+                        Prévision {ecartJoursPlan === 0 ? "d'aujourd'hui" : ecartJoursPlan === 1 ? "de demain" : "à jour"} à {villePlan || "ce lieu"}
+                      </div>
+                    </>
+                  ) : null}
                 </div>
               </Card>
 
-              {/* AVIS DE STYLISTE — la fonctionnalité Premium existante (son
-                  écran, sa décision d'accès, son Gate), mise en avant par le
-                  fond chaud et le badge, sans devenir le bouton principal.
-                  Pas sur une tenue passée : « avant le jour J » n'y a plus de
-                  sens. */}
+              {/* L'AVIS DE STYLISTE, mis en avant (maquette du 04/10/2026) — la fonctionnalité Premium existante (son
+                  écran, sa décision d'accès, son Gate), avec son propre CTA. Pas sur une tenue passée : « avant le jour J »
+                  n'y a plus de sens. */}
               {!passee && (
-                <button
-                  onClick={ouvrirAvisStyliste}
-                  aria-busy={verificationAvis}
-                  className="mt-[14px] w-full text-left bg-warm-bg border border-warm-border rounded-carte px-[15px] py-[14px] flex items-center gap-[12px] cursor-pointer transition-opacity active:opacity-90"
-                >
-                  <span aria-hidden="true" className="flex-shrink-0 font-serif italic text-[20px] leading-none text-terracotta">
-                    ✦
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="flex items-center gap-[8px] flex-wrap">
-                      <span className="t-label text-sand-text">Avis de styliste</span>
-                      {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
-                    </span>
-                    <span className="block text-[13px] text-ink leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
-                      Obtiens un regard expert sur ce look avant le jour J.
-                    </span>
-                  </span>
-                  <span className="flex-shrink-0 text-sand-text">
-                    {verificationAvis ? <LoadingSpinner size={20} /> : <Glyphe taille={16}>{G_CHEVRON}</Glyphe>}
-                  </span>
-                </button>
+                <div className="mt-[14px] bg-warm-bg border border-warm-border rounded-carte px-[16px] py-[16px]">
+                  {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
+                  <div className="font-serif text-[19px] text-ink leading-[1.2] mt-[2px]" style={{ textWrap: "balance" }}>
+                    Ton regard de styliste, avant le jour J.
+                  </div>
+                  <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
+                    Obtiens un regard expert sur ce look avant le jour J.
+                  </div>
+                  <Button variante="principal" className="mt-[14px]" onClick={ouvrirAvisStyliste} aria-busy={verificationAvis}>
+                    {verificationAvis ? <LoadingSpinner size={18} /> : <>Obtenir mon avis de styliste <span aria-hidden="true">→</span></>}
+                  </Button>
+                </div>
               )}
 
-              {/* LES ACTIONS. Principale : l'avis d'un proche (recette du
-                  26/09/2026) — même écran de partage que la tenue du jour,
-                  qui décrit ici la tenue planifiée : ses pièces, son
-                  occasion, la prévision enregistrée. Secondaire : modifier,
-                  c'est-à-dire rouvrir le parcours pré-rempli (repartirDuPlan). */}
-              <div className="mt-[22px] flex flex-col gap-[10px]">
+              {/* LES ACTIONS. Principale : modifier — rouvrir le parcours pré-rempli (repartirDuPlan). Secondaire : l'avis
+                  d'un proche (même écran de partage que la tenue du jour, qui décrit ici la tenue planifiée : ses pièces,
+                  son occasion, la prévision enregistrée). */}
+              <div className="mt-[18px] flex flex-col gap-[10px]">
+                <Card rayon="carte" className="" style={{ borderColor: "var(--color-terracotta)" }}>
+                  <button onClick={() => repartirDuPlan(t, "modifier")} className="w-full flex items-center gap-[14px] px-[16px] py-[14px] text-left cursor-pointer transition-opacity active:opacity-80" style={{ minHeight: 64 }}>
+                    <span aria-hidden="true" className="text-terracotta flex-shrink-0"><Glyphe taille={22}>{G_CRAYON}</Glyphe></span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[14px] text-ink font-medium">Modifier ce look</span>
+                      <span className="block text-[12px] text-muted mt-[2px]">Reprendre ce look pour l&apos;ajuster</span>
+                    </span>
+                    <span aria-hidden="true" className="text-muted flex-shrink-0"><Glyphe taille={15}>{G_CHEVRON}</Glyphe></span>
+                  </button>
+                </Card>
                 {pieces.length > 0 && (
-                  <Button variante="principal"
-                    onClick={() =>
-                      actions.openOpinionShare({
-                        pieceIds: t.pieceIds,
-                        occasion: t.occasion,
-                        temp: t.temp,
-                        label: t.weatherLabel,
-                        moment: `pour ${DOW_LONG[d.getDay()].toLowerCase()} ${d.getDate()} ${MOIS[d.getMonth()]}`,
-                        plan: t,
-                      })
-                    }
-                  >
-                    <span aria-hidden="true">✦</span> Demander l&apos;avis d&apos;un proche
-                  </Button>
+                  <Card rayon="carte">
+                    <button
+                      onClick={() =>
+                        actions.openOpinionShare({
+                          pieceIds: t.pieceIds,
+                          occasion: t.occasion,
+                          temp: t.temp,
+                          label: t.weatherLabel,
+                          moment: `pour ${DOW_LONG[d.getDay()].toLowerCase()} ${d.getDate()} ${MOIS[d.getMonth()]}`,
+                          plan: t,
+                        })
+                      }
+                      className="w-full flex items-center gap-[14px] px-[16px] py-[14px] text-left cursor-pointer transition-opacity active:opacity-80"
+                      style={{ minHeight: 64 }}
+                    >
+                      <span aria-hidden="true" className="text-terracotta flex-shrink-0"><Glyphe taille={22}>{G_COEUR}</Glyphe></span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[14px] text-ink font-medium">Demander l&apos;avis d&apos;un proche</span>
+                        <span className="block text-[12px] text-muted mt-[2px]">Partage ce look et demande leur avis</span>
+                      </span>
+                      <span aria-hidden="true" className="text-muted flex-shrink-0"><Glyphe taille={15}>{G_CHEVRON}</Glyphe></span>
+                    </button>
+                  </Card>
                 )}
-                <Button variante="contour"
-                  onClick={() => repartirDuPlan(t, "modifier")}
-                >
-                  <span aria-hidden="true">♡</span> Modifier ce look
-                </Button>
               </div>
 
-              {/* AUTRES OPTIONS — uniquement des actions qui existent :
-                  « Enregistrer dans une capsule » n'existe pas dans le produit,
-                  « Enregistrer dans mes looks » si (enregistrerIdeeLook, la
-                  même écriture que « J'adore » et les idées de looks).
-                  Déplacer et dupliquer reprennent la composition imposée ; la
-                  suppression garde sa confirmation. */}
-              <div className="t-surtitre text-muted mt-[28px]">Autres options</div>
-              <Card className="mt-[8px] px-[15px]">
-                {pieces.length > 0 && <LigneOption label="Changer la date ou le moment" onClick={() => repartirDuPlan(t, "deplacer")} />}
-                {pieces.length >= 2 && (
-                  <LigneOption
-                    label={
-                      dansMesLooks ? (
-                        <span className="text-muted-3">
-                          <span className="text-terracotta mr-[6px]" aria-hidden="true">
-                            ✓
-                          </span>
-                          Dans mes looks
-                        </span>
-                      ) : lookDemande === t.id ? (
-                        "Enregistrement…"
-                      ) : (
-                        "Enregistrer dans mes looks"
-                      )
-                    }
-                    disabled={dansMesLooks || lookDemande === t.id}
-                    onClick={() => {
-                      setLookDemande(t.id);
-                      actions.enregistrerIdeeLook(t.pieceIds, t.occasion);
-                    }}
-                  />
-                )}
-                {pieces.length > 0 && <LigneOption label="Dupliquer ce look" onClick={() => repartirDuPlan(t, "dupliquer")} />}
-                <LigneOption label="Supprimer ce look" danger onClick={() => setASupprimer(t)} />
+              {/* AUTRES OPTIONS, repliées (maquette du 04/10/2026) — uniquement des actions qui existent :
+                  « Enregistrer dans mes looks » (enregistrerIdeeLook, la même écriture que « J'adore » et les idées de
+                  looks) tant que le look n'y est pas ; une fois dedans, le badge du hero le dit. Déplacer et dupliquer
+                  reprennent la composition imposée ; la suppression garde sa confirmation. */}
+              <Card as="details" className="group mt-[14px]">
+                <summary className="flex items-center justify-between gap-3 px-[15px] cursor-pointer list-none text-[13px] text-ink [&::-webkit-details-marker]:hidden" style={{ minHeight: 52 }}>
+                  <span className="flex items-center gap-[12px]">
+                    <span aria-hidden="true" className="text-muted tracking-[.2em]">•••</span>
+                    Autres options
+                  </span>
+                  <span aria-hidden="true" className="text-muted transition-transform group-open:rotate-90">
+                    <Glyphe taille={15}>{G_CHEVRON}</Glyphe>
+                  </span>
+                </summary>
+                <div className="px-[15px] border-t border-divider">
+                  {pieces.length > 0 && <LigneOption label="Changer la date ou le moment" onClick={() => repartirDuPlan(t, "deplacer")} />}
+                  {pieces.length >= 2 && !dansMesLooks && (
+                    <LigneOption
+                      label={lookDemande === t.id ? "Enregistrement…" : "Enregistrer dans mes looks"}
+                      disabled={lookDemande === t.id}
+                      onClick={() => {
+                        setLookDemande(t.id);
+                        actions.enregistrerIdeeLook(t.pieceIds, t.occasion);
+                      }}
+                    />
+                  )}
+                  {pieces.length > 0 && <LigneOption label="Dupliquer ce look" onClick={() => repartirDuPlan(t, "dupliquer")} />}
+                  <LigneOption label="Supprimer ce look" danger onClick={() => setASupprimer(t)} />
+                </div>
               </Card>
             </>
           );

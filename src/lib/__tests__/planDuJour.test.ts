@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MOMENTS_TENUE_DU_JOUR, alerteMeteoPlan, planPourTenueDuJour, sousChoixDuPlan } from "../planDuJour";
+import { MOMENTS_TENUE_DU_JOUR, alerteMeteoPlan, planPourTenueDuJour, previsionAChange, sousChoixDuPlan } from "../planDuJour";
 import { plansDuJour, type TenuePlanifiee } from "../planifier";
 import type { MomentJournee } from "../prevision";
 import type { CategoryKey, Item } from "../types";
@@ -83,5 +83,22 @@ describe("alerteMeteoPlan — un constat sur les pièces, jamais deviné", () =>
     expect(alerteMeteoPlan([laine], { temp: 24, label: "Ensoleillé" })).toMatch(/plus chaud/);
     expect(alerteMeteoPlan([lin], { temp: 20, label: "Nuageux" })).toBeNull();
     expect(alerteMeteoPlan([laine], { temp: 12, label: "Nuageux" })).toBeNull();
+  });
+});
+
+describe("previsionAChange — la prévision d'aujourd'hui contre celle enregistrée à la planification", () => {
+  it("vraie à partir de 3° d'écart", () => {
+    expect(previsionAChange({ temp: 24, weatherLabel: "Ensoleillé" }, { temp: 21, label: "Ensoleillé" })).toBe(true);
+    expect(previsionAChange({ temp: 24, weatherLabel: "Ensoleillé" }, { temp: 27, label: "Ensoleillé" })).toBe(true);
+  });
+  it("fausse sous 3° quand le ciel reste du même type", () => {
+    expect(previsionAChange({ temp: 24, weatherLabel: "Ensoleillé" }, { temp: 22, label: "Nuageux" })).toBe(false);
+  });
+  it("vraie quand la pluie apparaît ou disparaît, même à température égale", () => {
+    expect(previsionAChange({ temp: 18, weatherLabel: "Ensoleillé" }, { temp: 18, label: "Pluie légère" })).toBe(true);
+    expect(previsionAChange({ temp: 18, weatherLabel: "Pluvieux" }, { temp: 18, label: "Ensoleillé" })).toBe(true);
+  });
+  it("sans prévision enregistrée, rien à comparer", () => {
+    expect(previsionAChange({ temp: null, weatherLabel: null }, { temp: 10, label: "Pluie" })).toBe(false);
   });
 });

@@ -6,6 +6,7 @@ import { jourLocal } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan } from "@/lib/planDuJour";
 import { plansDuJour, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { useCapsela } from "@/lib/store";
+import { useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import type { Item } from "@/lib/types";
 
 /**
@@ -16,12 +17,16 @@ import type { Item } from "@/lib/types";
  */
 export function usePlanApplique(): { plan: TenuePlanifiee; alerte: string | null } | null {
   const { state, vestiairePool, meteoDuJour } = useCapsela();
-  if (!state.planAppliqueId) return null;
-  const plan = state.tenuesPlanifiees.find((t) => t.id === state.planAppliqueId);
+  const plan = state.planAppliqueId ? (state.tenuesPlanifiees.find((t) => t.id === state.planAppliqueId) ?? null) : null;
+  // La météo du LIEU et du MOMENT du plan (useMeteoDuPlan), pas celle de la ville de la personne : un plan « Gagny, ce
+  // soir » ne se juge pas sur la météo de la journée ailleurs. Un plan sans lieu garde la météo du jour ; un plan avec
+  // lieu dont la prévision manque n'a pas d'alerte — rien n'est deviné.
+  const meteoPlan = useMeteoDuPlan(plan);
   if (!plan) return null;
   const pool: Item[] = [...state.items, ...vestiairePool];
   const pieces = plan.pieceIds.map((id) => pool.find((i) => i.id === id)).filter((i): i is Item => !!i);
-  return { plan, alerte: alerteMeteoPlan(pieces, meteoDuJour) };
+  const meteo = meteoPlan ?? (villeDuLieu(plan.lieu) ? null : meteoDuJour);
+  return { plan, alerte: meteo ? alerteMeteoPlan(pieces, meteo) : null };
 }
 
 /*

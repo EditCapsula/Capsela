@@ -65,9 +65,12 @@ function CartePiece({
   premiere,
   onOuvrir,
   onTenues,
+  toutDansLeDressing,
 }: {
   item: Item;
   idees: ItemOutfitVariation[];
+  /** Une idée se compose-t-elle entièrement avec le dressing réel ? */
+  toutDansLeDressing: (v: ItemOutfitVariation) => boolean;
   pool: Item[];
   premiere: boolean;
   onOuvrir: () => void;
@@ -126,13 +129,25 @@ function CartePiece({
                 </button>
               )}
             </div>
+            {/* « N façons de la porter » plutôt que « N tenues possibles » : la valeur, pas le décompte (04/10/2026).
+                « Avec ton dressing » n'est dit que si TOUTES les idées s'y composent entièrement ; sinon UNE raison, tirée
+                des idées elles-mêmes : combien se composent entièrement avec le dressing. Aucune donnée inventée. */}
             <div className="text-[13px] text-ink mt-[12px] flex items-center gap-[7px]">
               <span aria-hidden="true" className="text-terracotta text-[12px]">
                 ✦
               </span>
-              {idees.length} {idees.length > 1 ? "tenues possibles" : "tenue possible"}
+              {idees.length} {idees.length > 1 ? "façons de la porter" : "façon de la porter"}
+              {idees.every(toutDansLeDressing) ? " avec ton dressing" : ""}
             </div>
+            {!idees.every(toutDansLeDressing) && idees.some(toutDansLeDressing) && (
+              <div className="text-[12px] text-muted mt-[3px] ml-[19px]">
+                {idees.filter(toutDansLeDressing).length} {idees.filter(toutDansLeDressing).length > 1 ? "se composent" : "se compose"} entièrement avec ton dressing.
+              </div>
+            )}
           </>
+        )}
+        {idees.length === 0 && (
+          <div className="text-[12px] text-muted leading-[1.45] mt-[14px]">Capsela n&apos;a pas encore trouvé comment l&apos;intégrer à ton dressing.</div>
         )}
 
         <button
@@ -184,6 +199,7 @@ export default function NeverWornScreen() {
   const poolApercus = useMemo(() => [...poolIdees, ...wardrobePool, ...state.items], [poolIdees, wardrobePool, state.items]);
 
   const n = neverWorn.length;
+  const toutDansLeDressing = (v: ItemOutfitVariation) => v.ids.every((id) => state.items.some((it) => it.id === id));
   // Hors saison = l'autre moitié de l'année (« Toutes saisons » est toujours de saison).
   const ete = horsSaison[0]?.season === "Printemps / Été";
 
@@ -193,16 +209,16 @@ export default function NeverWornScreen() {
         <BoutonRetour onClick={actions.goTenues} label="Revenir à la tenue du jour" />
       </div>
 
-      <div className="t-surtitre text-muted mt-[18px]">Jamais portées</div>
+      <div className="t-surtitre text-muted mt-[18px]">À redécouvrir</div>
 
       {n === 0 ? (
         <>
-          <div className="t-titre-ecran text-ink mt-[6px]">
-            Tout est <span className="italic text-terracotta">porté</span>
+          <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+            Ton dressing est déjà <span className="italic text-terracotta">bien exploré</span>
           </div>
           <div className="t-chapeau text-muted-3 mt-[10px]">
             {state.items.length > 0
-              ? "Ton dressing ne contient aucune pièce oubliée. Capsela n'a rien trouvé à te faire redécouvrir pour le moment."
+              ? "Capsela te proposera ici les pièces qui méritent une seconde chance."
               : "Les pièces de ton dressing que tu n'as pas encore portées apparaîtront ici."}
           </div>
           <button
@@ -219,6 +235,9 @@ export default function NeverWornScreen() {
           <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
             Des pièces qui attendent <span className="italic text-terracotta">leur moment</span>
           </div>
+          <div className="t-chapeau text-muted-3 mt-[8px]" style={{ textWrap: "pretty" }}>
+            Ton dressing contient déjà plus de possibilités que tu ne le penses.
+          </div>
 
           {/* SYNTHÈSE — le chiffre en grand, dans l'esprit d'une page de
               magazine ; toutes les pièces jamais portées, le même nombre que
@@ -234,8 +253,8 @@ export default function NeverWornScreen() {
               </div>
               <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[4px]">
                 {n > 1
-                  ? "Capsela a repéré ces pièces encore jamais portées. Découvre comment les intégrer facilement à tes tenues."
-                  : "Capsela a repéré cette pièce encore jamais portée. Découvre comment l'intégrer facilement à tes tenues."}
+                  ? "Des pièces jamais portées, que Capsela peut réintégrer facilement dans tes looks."
+                  : "Une pièce jamais portée, que Capsela peut réintégrer facilement dans tes looks."}
               </div>
             </div>
           </div>
@@ -248,6 +267,7 @@ export default function NeverWornScreen() {
                   item={it}
                   idees={idees.get(it.id) ?? []}
                   pool={poolApercus}
+                  toutDansLeDressing={toutDansLeDressing}
                   premiere={i === 0}
                   onOuvrir={() => actions.openItem(it.id, false)}
                   onTenues={() => actions.openItemOutfits(it.id, false, idees.get(it.id))}

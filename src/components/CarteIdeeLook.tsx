@@ -1,6 +1,7 @@
 "use client";
 
 import { OutfitComposition } from "@/components/OutfitComposition";
+import { occasionShortLabel } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { sourcePiece, texteProvenance, type LookNumerote } from "@/lib/ideesLooks";
 import type { OutfitStyleInsight } from "@/lib/logic";
@@ -28,12 +29,19 @@ export function CarteIdeeLook({
   insight,
   dressing,
   onOpen,
+  rang = "defaut",
 }: {
   look: LookNumerote;
   pieces: Item[];
   insight: OutfitStyleInsight | undefined;
   dressing: Item[];
   onOpen: () => void;
+  /**
+   * La hiérarchie d'une liste de looks (04/10/2026, parcours Redécouvrir) : « premier » — la tête de l'ordre de
+   * ordonnerLooks, celui du dressing d'abord — a plus de place et un titre plus grand ; « suivant » est plus
+   * secondaire. Seule la mise en page change, jamais un classement : « défaut » est la carte d'avant.
+   */
+  rang?: "premier" | "suivant" | "defaut";
 }) {
   const { provenance } = look;
   const colonnes = pieces.length > 6 ? Math.ceil(pieces.length / 2) : Math.max(pieces.length, 4);
@@ -48,15 +56,21 @@ export function CarteIdeeLook({
           pièces faisait ~370 px à 390 px de large, et une seule carte
           dépassait l'écran. Les proportions entre pièces restent celles de
           la variante. */}
-      <div className="rounded-bloc bg-warm-bg px-[14px] py-[14px]" style={{ height: "clamp(230px, 68vw, 290px)" }}>
+      <div
+        className="rounded-bloc bg-warm-bg px-[14px] py-[14px]"
+        style={{ height: rang === "premier" ? "clamp(260px, 76vw, 330px)" : rang === "suivant" ? "clamp(200px, 58vw, 250px)" : "clamp(230px, 68vw, 290px)" }}
+      >
         <OutfitComposition items={pieces} variant="hero" ajustee />
       </div>
 
       <div className="px-[4px]">
-        <div className="t-label text-terracotta mt-[14px]">Look {look.numero}</div>
+        {/* Le numéro, puis l'occasion de ce look — celle que le moteur lui a donnée, rien d'autre. */}
+        <div className="t-label text-terracotta mt-[14px]">
+          Look {look.numero} · {occasionShortLabel(look.variation.occasion)}
+        </div>
         {insight && (
           <>
-            <div className="t-titre-carte text-ink mt-[5px]">{insight.title}</div>
+            <div className={(rang === "premier" ? "t-titre-section" : "t-titre-carte") + " text-ink mt-[5px]"}>{insight.title}</div>
             <div className="text-[13px] text-ink-soft leading-[1.45] mt-[5px] line-clamp-3">{insight.sentence}</div>
           </>
         )}
@@ -85,11 +99,13 @@ export function CarteIdeeLook({
               <div key={it.id} className="min-w-0">
                 <div
                   className="w-full rounded-champ overflow-hidden"
-                  style={
-                    img.url
+                  // Une suggestion se reconnaît d'un trait pointillé terracotta, discret : le dressing est à plat.
+                  style={{
+                    ...(img.url
                       ? { aspectRatio: "1", background: "var(--color-photo-bg)", padding: img.kind === "photo" ? 0 : 4 }
-                      : { aspectRatio: "1", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
-                  }
+                      : { aspectRatio: "1", background: it.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }),
+                    ...(catalogue ? { outline: "1px dashed var(--color-terracotta)", outlineOffset: -1 } : {}),
+                  }}
                 >
                   {img.url && (
                     // eslint-disable-next-line @next/next/no-img-element
