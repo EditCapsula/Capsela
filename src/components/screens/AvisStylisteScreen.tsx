@@ -190,6 +190,8 @@ const LOOKS_EXTRAIT_HOMME = ["/images/avis/extrait-look-homme-1.webp", "/images/
 function ExtraitAvis({ homme }: { homme: boolean }) {
   const EXTRAIT = homme ? EXTRAIT_HOMME : EXTRAIT_FEMME;
   const LOOKS_EXTRAIT = homme ? LOOKS_EXTRAIT_HOMME : LOOKS_EXTRAIT_FEMME;
+  /** La petite image du bloc « Conseil du styliste » (maquette du 03/10/2026) : la pièce ou l'accessoire que le conseil évoque. */
+  const imageConseil = homme ? "/images/avis/extrait-conseil-homme.webp" : "/images/avis/extrait-conseil.webp";
   const photoSrc = homme ? "/images/avis/extrait-avis-homme.webp" : "/images/avis/extrait-avis.webp";
   const [photo, setPhoto] = useState(true);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -221,12 +223,20 @@ function ExtraitAvis({ homme }: { homme: boolean }) {
           {EXTRAIT.map(([icone, etiquette, titre, texte], i) => (
             <li key={etiquette} className={decalage(i)}>
               <Card rayon="tuile" className="px-[14px] py-[12px] shadow-[0_6px_16px_rgba(29,26,22,.07)]">
-                <div className="flex items-center gap-[7px] text-terracotta">
-                  <IconeAvis nom={icone} taille={14} />
-                  <span className="t-label">{etiquette}</span>
+                <div className={etiquette === "Conseil du styliste" ? "flex items-start gap-[10px]" : undefined}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-[7px] text-terracotta">
+                      <IconeAvis nom={icone} taille={14} />
+                      <span className="t-label">{etiquette}</span>
+                    </div>
+                    <div className="font-serif text-[16px] leading-[1.25] text-ink mt-[6px]">{titre}</div>
+                    {texte && <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{texte}</div>}
+                  </div>
+                  {etiquette === "Conseil du styliste" && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={imageConseil} alt="" width={162} height={202} decoding="async" loading="lazy" className="w-[34%] max-w-[88px] flex-shrink-0 rounded-champ bg-photo-bg object-cover" />
+                  )}
                 </div>
-                <div className="font-serif text-[16px] leading-[1.25] text-ink mt-[6px]">{titre}</div>
-                {texte && <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{texte}</div>}
                 {etiquette === "À tester" && (
                   <div className="grid grid-cols-3 gap-[6px] mt-[10px]">
                     {LOOKS_EXTRAIT.map((src) => (
