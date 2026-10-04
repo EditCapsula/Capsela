@@ -20,6 +20,7 @@ import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { generateOutfitWithFallback, titreLookDuJour } from "@/lib/logic";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
+import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "@/lib/capsule";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
@@ -537,31 +538,9 @@ export default function PlanifierScreen() {
   const [composition, setComposition] = useState<number[] | null>(() => state.planComposition?.pieceIds ?? null);
   /** Tenue planifiée ouverte en détail, ou dont le menu « … » est déplié. */
   const [planOuvert, setPlanOuvert] = useState<TenuePlanifiee | null>(() => state.planARouvrir);
-  /**
-   * LA PRÉVISION D'AUJOURD'HUI POUR LE PLAN OUVERT (04/10/2026, « la tenue planifiée devait se mettre à jour… et il faut
-   * revoir l'appel de la météo »). La fiche ne se contentait que de la prévision ENREGISTRÉE à la planification : le jour
-   * J, elle disait encore la météo d'il y a des jours. Elle redemande maintenant la prévision DU LIEU DU PLAN (pas celle
-   * de la ville de la personne), pour un plan qui n'est pas passé et dans l'horizon de la prévision ; la prévision
-   * enregistrée reste le repli, dite comme telle. Rien n'est réécrit dans la base : la fiche constate, elle ne change pas la tenue.
-   */
-  const aujourdhuiPlan = jourLocal();
-  const ecartJoursPlan = planOuvert ? Math.round((new Date(`${planOuvert.jour}T12:00:00`).getTime() - new Date(`${aujourdhuiPlan}T12:00:00`).getTime()) / 86400000) : null;
-  const villePrevisionPlan = planOuvert && villeDuLieu(planOuvert.lieu) && ecartJoursPlan != null && ecartJoursPlan >= 0 && ecartJoursPlan <= HORIZON_PREVISION_JOURS ? villeDuLieu(planOuvert.lieu) : null;
-  const clePrevisionPlan = planOuvert && villePrevisionPlan ? `${planOuvert.id}|${villePrevisionPlan}` : null;
-  const [previsionPlan, setPrevisionPlan] = useState<{ cle: string; p: Prevision | null } | null>(null);
-  useEffect(() => {
-    if (!clePrevisionPlan || !villePrevisionPlan) return;
-    let annule = false;
-    fetchPrevisionByCity(villePrevisionPlan)
-      .catch(() => null)
-      .then((p) => !annule && setPrevisionPlan({ cle: clePrevisionPlan, p }));
-    return () => {
-      annule = true;
-    };
-  }, [clePrevisionPlan, villePrevisionPlan]);
-  /** La météo du moment du plan, aujourd'hui — null tant qu'elle n'est pas arrivée, ou si la prévision ne couvre pas ce moment. */
-  const meteoPlanVive =
-    planOuvert && previsionPlan && previsionPlan.cle === clePrevisionPlan && previsionPlan.p ? previsionPour(previsionPlan.p, planOuvert.jour, planOuvert.moment) : null;
+  /** La météo du LIEU et du MOMENT du plan ouvert, aujourd'hui (useMeteoDuPlan) — null hors horizon ou sans réponse. */
+  const meteoPlanVive = useMeteoDuPlan(planOuvert);
+  const ecartJoursPlan = planOuvert ? ecartJoursDuPlan(planOuvert.jour) : null;
   /** D'où le détail a été ouvert — le hub ou la liste complète — pour que le retour y ramène. */
   const [retourDetail, setRetourDetail] = useState<"intro" | "liste">(() => (state.planARouvrir ? "intro" : "liste"));
   useEffect(() => {
@@ -2005,9 +1984,7 @@ export default function PlanifierScreen() {
                         Prévision {ecartJoursPlan === 0 ? "d'aujourd'hui" : ecartJoursPlan === 1 ? "de demain" : "à jour"} à {villePlan || "ce lieu"}
                       </div>
                     </>
-                  ) : (
-                    t.temp != null && <div className="text-[11px] text-placeholder leading-[1.45] mt-[3px]">Selon la prévision à la planification</div>
-                  )}
+                  ) : null}
                 </div>
               </Card>
 
