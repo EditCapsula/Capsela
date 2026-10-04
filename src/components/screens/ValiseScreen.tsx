@@ -1403,6 +1403,13 @@ function Resultat({
     const jours = new Set(lk.situations.flatMap((i) => valise.situations[i]?.jours ?? []));
     return amplitudePrevue(meteosPrevues.filter((m) => jours.has(m.jour)));
   };
+  /**
+   * « PRÊTE » n'est dit que si elle l'est (04/10/2026, signalé : « prête » pour 1 pièce et 0 look) : au moins un look,
+   * et un look pour chaque occasion demandée. La capacité (« jusqu'à 18 pièces ») n'est pas un objectif à remplir, mais
+   * une valise sans look, ou dont une occasion reste sans look, n'est pas prête : elle est à compléter, et « Optimise ta
+   * valise » dit par quoi.
+   */
+  const prete = looks.length > 0 && occasionsAManque.length === 0;
   /** Le séjour est couvert : un look pour chaque occasion demandée, et de quoi varier sur la durée. C'est ce que dit le bloc de validation, rien de plus. */
   const sejourCouvert = looks.length > 0 && occasionsAManque.length === 0 && !peuDeLooks;
   const piecesRepetees = looks.length > 1 && pieces.some((p) => (parPiece.get(p.id) ?? 0) > 1);
@@ -1422,11 +1429,13 @@ function Resultat({
       {/* 2 · TA VALISE EST-ELLE PRÊTE ? */}
       <div className="t-titre-ecran text-ink mt-[14px] flex items-center flex-wrap gap-x-[10px]">
         <span>
-          Ta valise <span className="italic">est prête</span>
+          Ta valise <span className="italic">{prete ? "est prête" : "à compléter"}</span>
         </span>
-        <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center flex-shrink-0">
-          {G_COCHE(14, "var(--color-cream)")}
-        </span>
+        {prete && (
+          <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center flex-shrink-0">
+            {G_COCHE(14, "var(--color-cream)")}
+          </span>
+        )}
       </div>
       <div className="t-chapeau text-muted-3 mt-[6px]">{libelleDuree(nbJours)}</div>
 
@@ -1469,7 +1478,11 @@ function Resultat({
             </div>
           </div>
         ) : (
-          <CarteInfo glyphe={G_AMPOULE}>Une sélection pensée pour ton séjour, ta météo et ton dressing.</CarteInfo>
+          <CarteInfo glyphe={G_AMPOULE}>
+            {looks.length === 0
+              ? "Aucun look complet avec ces pièces pour l'instant : ajoute des pièces à ton dressing, Capsela composera tes looks avec elles."
+              : "Une sélection pensée pour ton séjour, ta météo et ton dressing."}
+          </CarteInfo>
         )}
       </div>
 
