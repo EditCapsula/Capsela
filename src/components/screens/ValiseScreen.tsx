@@ -39,6 +39,7 @@ import {
   lookAChaussuresEtSac,
   looksDeLaValise,
   looksParPiece,
+  SEUIL_POLYVALENTE,
   nomCategorie,
   occasionsCouvertes,
   occasionsDeLaPiece,
@@ -59,6 +60,7 @@ import {
 } from "@/lib/valise";
 import { selectionApercu } from "@/lib/valiseApercu";
 import { pieceLaPlusUtilisee, planningDuProgramme, type CreneauPlanning } from "@/lib/planningValise";
+import { LIBELLE_RAISON, apercuAllegement, avecTenue, joursDeLaPiece, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import {
   borneFrequence,
@@ -521,6 +523,8 @@ export default function ValiseScreen() {
   const avecPieces = (v: ValiseGardee, ids: number[]): ValiseGardee => ({ ...v, ...looksDeLaValise(ids, dressing, v.situations, generer, v.looks) });
   const retirer = (ids: number[]) => valise && sauver(avecPieces(valise, valise.pieceIds.filter((x) => !ids.includes(x))));
   const ajouter = (id: number) => valise && sauver(avecPieces(valise, [...valise.pieceIds, id]));
+  /** « Ajouter une tenue » : la tenue et les pièces qu'elle demande entrent dans la valise, sans recomposer le reste. */
+  const ajouterTenue = (t: TenueProposee, situation: number) => valise && sauver({ ...valise, ...avecTenue(valise, t, situation) });
   const remplacer = (ancien: number, nouveau: number) => valise && sauver(avecPieces(valise, [...valise.pieceIds.filter((x) => x !== ancien), nouveau]));
 
   /** « Nouvelle valise » : la précédente reste dans « Mes planifications ». */
@@ -1127,6 +1131,7 @@ export default function ValiseScreen() {
             generer={generer}
             retirer={retirer}
             ajouter={ajouter}
+            ajouterTenue={ajouterTenue}
             remplacer={remplacer}
             enregistrerLook={actions.enregistrerIdeeLook}
             ajouterAuDressing={actions.openAddEtRevenir}
@@ -1196,6 +1201,7 @@ function Resultat({
   generer,
   retirer,
   ajouter,
+  ajouterTenue,
   remplacer,
   enregistrerLook,
   ajouterAuDressing,
@@ -1216,6 +1222,7 @@ function Resultat({
   generer: ReturnType<typeof generateurMoteur>;
   retirer: (ids: number[]) => void;
   ajouter: (id: number) => void;
+  ajouterTenue: (t: TenueProposee, situation: number) => void;
   remplacer: (ancien: number, nouveau: number) => void;
   enregistrerLook: (ids: number[], occasion: OccasionKey) => void;
   ajouterAuDressing: () => void;
@@ -1227,7 +1234,7 @@ function Resultat({
   supprimer: () => void;
 }) {
   const [indexLook, setIndexLook] = useState(0);
-  const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | null>(null);
+  const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "alleger" } | { type: "tenue" } | { type: "checklist" } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
   const toucher = useRef<number | null>(null);
 
@@ -1304,6 +1311,40 @@ function Resultat({
     [idRemplacee, valise.pieceIds, valise.situations, dressing, generer]
   );
 
+  // « Alléger » : les pièces cochées ; « Ajouter une tenue » : la proposition du moteur pour la situation choisie (calculée au
+  // choix, pas à l'ouverture — c'est un calcul du moteur) ; « Check-list » : les pièces cochées, gardées sur l'appareil.
+  const [retirees, setRetirees] = useState<number[]>([]);
+  const [proposition, setProposition] = useState<{ situation: number; tenue: TenueProposee | null } | null>(null);
+  const cleCheck = `capsela.valise.check.${valise.id}`;
+  const [cochees, setCochees] = useState<{ id: string; ids: number[] } | null>(null);
+  const piecesCochees =
+    cochees && cochees.id === valise.id
+      ? cochees.ids
+      : (() => {
+          try {
+            const brut = localStorage.getItem(cleCheck);
+            return brut ? (JSON.parse(brut) as number[]) : [];
+          } catch {
+            return [];
+          }
+        })();
+  const cocher = (id: number) => {
+    const ids = piecesCochees.includes(id) ? piecesCochees.filter((x) => x !== id) : [...piecesCochees, id];
+    setCochees({ id: valise.id, ids });
+    try {
+      localStorage.setItem(cleCheck, JSON.stringify(ids));
+    } catch {
+      // Sans stockage, la coche tient le temps de l'écran : la check-list reste utilisable.
+    }
+  };
+  const proposer = (situation: number) => setProposition({ situation, tenue: nouvelleTenue(valise.situations[situation], valise.pieceIds, dressing, valise.looks, generer) });
+  /** Une situation, dite comme le programme : ses occasions (« Plage · Piscine »), à défaut l'occasion de Capsela. */
+  const libelleSituation = (i: number) => {
+    const s = valise.situations[i];
+    const noms = (s.sousIds ?? []).flatMap((id) => elementProgramme(id)?.libelle ?? []);
+    return noms.length ? noms.join(" · ") : occasionShortLabel(s.occasion);
+  };
+
   const piecesDuLook = (l: LookValise) => l.ids.map(pieceDe).filter((i): i is Item => !!i);
   const ouvrirPiece = (id: number) => setVue({ nom: "piece", id, depuis: vue });
 
@@ -1313,15 +1354,18 @@ function Resultat({
         <div className="flex flex-col gap-2">
           {(
             [
+              [G_ETINCELLE, "Alléger ma valise", "Voir ce qu'on peut retirer, avant de le faire.", () => setFeuille({ type: "alleger" })],
+              [G_CINTRE, "Ajouter une tenue", "Pour une occasion de ton séjour.", () => setFeuille({ type: "tenue" })],
               [G_ECHANGE, "Retirer ou remplacer une pièce", "Depuis l'onglet Pièces, sur chaque pièce.", () => (setOnglet("pieces"), setVue({ nom: "resultat" }))],
               [G_PLUS, "Ajouter une pièce de ton dressing", "Les looks sont recomposés avec elle.", () => setFeuille({ type: "ajouter" })],
+              [G_COCHE(18), "Check-list de départ", "Coche les pièces au fil de la préparation.", () => setFeuille({ type: "checklist" })],
               [G_CALENDRIER, "Modifier le séjour", "Destination, dates, valise ou programme.", modifier],
             ] as const
           ).map(([glyphe, titre, sous, f]) => (
             <button
               key={titre}
               onClick={() => {
-                if (titre !== "Ajouter une pièce de ton dressing") setFeuille(null);
+                setFeuille(null);
                 f();
               }}
               className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile px-[14px] cursor-pointer"
@@ -1421,6 +1465,199 @@ function Resultat({
             ))}
           </div>
         )}
+      </BottomSheet>
+
+      {/* ALLÉGER MA VALISE : on voit l'avant et l'après AVANT de retirer. Les pièces proposées sont celles qui n'atteignent pas
+          le seuil de polyvalence (SEUIL_POLYVALENTE) ; l'aperçu compte les looks conservés (un plancher : à l'enregistrement
+          le moteur recompose avec les pièces restantes). */}
+      <BottomSheet title="Alléger ma valise" open={feuille?.type === "alleger"} onClose={() => (setFeuille(null), setRetirees([]))}>
+        {(() => {
+          const candidates = piecesAllegeables(pieces, looks);
+          if (!candidates.length) return <EmptyState>Chaque pièce de ta valise revient dans au moins {SEUIL_POLYVALENTE} looks : rien à retirer sans perdre de variété.</EmptyState>;
+          const a = apercuAllegement(ids, looks, valise.situations, retirees);
+          return (
+            <>
+              <div className="text-[12px] text-muted leading-[1.45] mb-3">Choisis les pièces à retirer : tu vois ce que ta valise garde avant de valider.</div>
+              <div className="flex flex-col gap-2">
+                {candidates.map((c) => {
+                  const p = pieceDe(c.id);
+                  if (!p) return null;
+                  const coche = retirees.includes(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => setRetirees(coche ? retirees.filter((x) => x !== c.id) : [...retirees, c.id])}
+                      aria-pressed={coche}
+                      className={"flex items-center gap-3 text-left bg-card border rounded-tuile p-[7px] cursor-pointer " + (coche ? "border-terracotta-deep" : "border-border")}
+                    >
+                      <Vignette it={p} taille={40} />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[13px] text-ink truncate">{p.name}</span>
+                        <span className="block text-[11px] text-muted">
+                          {LIBELLE_RAISON[c.raison]}
+                          {c.looks > 0 ? ` · ${c.looks} ${c.looks > 1 ? "looks" : "look"}` : ""}
+                        </span>
+                      </span>
+                      <span aria-hidden="true" className={"w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 mr-2 " + (coche ? "bg-terracotta-deep text-cream" : "border border-border text-transparent")}>
+                        {G_COCHE(12, "currentColor")}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <Card rayon="tuile" className="mt-4 p-[14px]">
+                <div className="t-label text-muted">Avant → après</div>
+                {(
+                  [
+                    ["Pièces", a.piecesAvant, a.piecesApres],
+                    ["Looks conservés", a.looksAvant, a.looksApres],
+                  ] as const
+                ).map(([libelle, avant, apres]) => (
+                  <div key={libelle} className="flex items-baseline justify-between mt-2">
+                    <span className="text-[13px] text-ink">{libelle}</span>
+                    <span className="text-[13px] text-ink">
+                      {avant} → <span className="font-serif text-[18px]">{apres}</span>
+                    </span>
+                  </div>
+                ))}
+                {a.occasionsPerdues.length > 0 && (
+                  <div className="text-[12px] text-terracotta leading-[1.45] mt-3">
+                    Plus aucun look pour : {a.occasionsPerdues.map((o) => occasionShortLabel(o)).join(", ")}.
+                  </div>
+                )}
+                <div className="text-[11px] text-muted leading-[1.45] mt-3">Une fois retirées, Capsela recompose les looks avec les pièces restantes : tu peux en retrouver davantage.</div>
+              </Card>
+              <Button
+                variante="principal"
+                className="mt-4"
+                disabled={!retirees.length}
+                onClick={() => {
+                  retirer(retirees);
+                  setRetirees([]);
+                  setFeuille(null);
+                }}
+              >
+                {retirees.length ? `Retirer ${retirees.length} ${retirees.length > 1 ? "pièces" : "pièce"}` : "Choisis une pièce"}
+              </Button>
+            </>
+          );
+        })()}
+      </BottomSheet>
+
+      {/* AJOUTER UNE TENUE : pour une occasion du séjour, une tenue de plus — d'abord avec la valise, sinon avec le reste du
+          dressing, et la sheet dit alors quelles pièces s'ajoutent. Le moteur compose ; rien n'est inventé. */}
+      <BottomSheet title="Ajouter une tenue" open={feuille?.type === "tenue"} onClose={() => (setFeuille(null), setProposition(null))}>
+        {valise.situations.length === 0 ? (
+          <EmptyState>Aucune occasion à couvrir pour cette valise.</EmptyState>
+        ) : (
+          <>
+            <div className="text-[12px] text-muted leading-[1.45] mb-3">Pour quelle occasion ?</div>
+            <div className="flex flex-wrap gap-2">
+              {valise.situations.map((_, i) => {
+                const nb = looks.filter((l) => l.situations.includes(i)).length;
+                const actif = proposition?.situation === i;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => proposer(i)}
+                    aria-pressed={actif}
+                    className={"rounded-full border px-[14px] text-[12px] cursor-pointer " + (actif ? "bg-terracotta-deep text-cream border-terracotta-deep" : "bg-card text-ink border-border")}
+                    style={{ minHeight: 44 }}
+                  >
+                    {libelleSituation(i)} · {nb} {nb > 1 ? "looks" : "look"}
+                  </button>
+                );
+              })}
+            </div>
+            {proposition &&
+              (proposition.tenue ? (
+                (() => {
+                  const t = proposition.tenue;
+                  const piecesT = t.ids.map((id) => dressing.find((x) => x.id === id)).filter((x): x is Item => !!x);
+                  const total = new Set([...valise.pieceIds, ...t.ids]).size;
+                  return (
+                    <Card rayon="tuile" className="mt-4 p-[14px]">
+                      <div className="flex gap-[3px]">
+                        {piecesT.slice(0, 5).map((x) => (
+                          <Vignette key={x.id} it={x} taille={44} />
+                        ))}
+                      </div>
+                      <div className="text-[13px] text-ink leading-[1.35] mt-3">{resumeLook(piecesT)}</div>
+                      <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
+                        {t.ajouts.length
+                          ? `Elle demande ${t.ajouts.length} ${t.ajouts.length > 1 ? "pièces" : "pièce"} de ton dressing : ${t.ajouts.map((id) => dressing.find((x) => x.id === id)?.name ?? "").join(", ")}.`
+                          : "Elle se fait avec les pièces de ta valise."}
+                      </div>
+                      {total > capacite && (
+                        <div className="text-[12px] text-terracotta leading-[1.45] mt-[6px]">
+                          Ta valise passerait à {total} pièces pour une capacité de {capacite}.
+                        </div>
+                      )}
+                      <div className="flex gap-2 mt-4">
+                        <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={() => proposer(proposition.situation)}>
+                          Autre proposition
+                        </Button>
+                        <Button
+                          variante="principal"
+                          pleine={false}
+                          className="flex-1"
+                          onClick={() => {
+                            ajouterTenue(t, proposition.situation);
+                            setProposition(null);
+                            setFeuille(null);
+                          }}
+                        >
+                          Ajouter
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })()
+              ) : (
+                <div className="mt-4">
+                  <EmptyState>Aucune autre tenue possible pour cette occasion avec ton dressing.</EmptyState>
+                </div>
+              ))}
+          </>
+        )}
+      </BottomSheet>
+
+      {/* CHECK-LIST DE DÉPART : seulement les pièces de la valise — aucun autre objet n'est inventé. Gardée sur l'appareil. */}
+      <BottomSheet title="Check-list de départ" open={feuille?.type === "checklist"} onClose={() => setFeuille(null)}>
+        {(
+          [
+            ["À préparer", pieces.filter((p) => !piecesCochees.includes(p.id))],
+            ["Dans la valise", pieces.filter((p) => piecesCochees.includes(p.id))],
+          ] as const
+        ).map(([titre, liste]) => (
+          <section key={titre} className="mb-4">
+            <div className="flex items-baseline justify-between">
+              <h3 className="t-surtitre text-muted">{titre}</h3>
+              <span className="text-[12px] text-muted">{liste.length}</span>
+            </div>
+            <div className="flex flex-col gap-2 mt-2">
+              {liste.length === 0 && <div className="text-[12px] text-muted-3">{titre === "À préparer" ? "Tout est dans la valise." : "Rien encore."}</div>}
+              {liste.map((p) => {
+                const dedans = piecesCochees.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => cocher(p.id)}
+                    aria-pressed={dedans}
+                    aria-label={`${p.name} : ${dedans ? "remettre à préparer" : "mettre dans la valise"}`}
+                    className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer"
+                  >
+                    <Vignette it={p} taille={40} />
+                    <span className={"flex-1 min-w-0 text-[13px] truncate " + (dedans ? "text-muted line-through" : "text-ink")}>{p.name}</span>
+                    <span aria-hidden="true" className={"w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 mr-2 " + (dedans ? "bg-success text-cream" : "border border-border text-transparent")}>
+                      {G_COCHE(12, "currentColor")}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </BottomSheet>
     </>
   );
@@ -1762,7 +1999,14 @@ function Resultat({
             {looks.length === 0
               ? "Aucun look complet avec ces pièces pour l'instant : ajoute des pièces à ton dressing, Capsela composera tes looks avec elles."
               : manquePieces > 0
-                ? `Ta valise compte ${pieces.length} ${pieces.length > 1 ? "pièces" : "pièce"} sur ${capacite} : ajoutes-en encore ${manquePieces} pour qu'elle soit prête.`
+                ? (
+                  <>
+                    {`${manquePieces} ${manquePieces > 1 ? "pièces" : "pièce"} de plus compléteraient ta valise ${valise.bagage} (${pieces.length} sur ${cible} visées).`}
+                    <button onClick={() => setFeuille({ type: "ajouter" })} className="block mt-[6px] t-lien text-terracotta underline underline-offset-[3px] cursor-pointer">
+                      Trouver dans mon dressing
+                    </button>
+                  </>
+                )
                 : "Une sélection pensée pour ton séjour, ta météo et ton dressing."}
           </CarteInfo>
         )}
@@ -1794,12 +2038,14 @@ function Resultat({
           Voir toutes les pièces →
         </button>
       </div>
-      <Card rayon="tuile" className="mt-3 grid py-[14px]" style={{ gridTemplateColumns: couvertes.length ? "1fr 1fr 1fr" : "1fr 1fr" }}>
+      <Card rayon="tuile" className="mt-3 grid py-[14px]" style={{ gridTemplateColumns: nbJours > 0 ? "1fr 1fr 1fr" : "1fr 1fr" }}>
         {(
           [
             [glypheValise(18), pieces.length, pieces.length > 1 ? "pièces" : "pièce"],
             [G_CINTRE, looks.length, looks.length > 1 ? "looks" : "look"],
-            ...(couvertes.length ? ([[G_ETINCELLE, couvertes.length, couvertes.length > 1 ? "occasions couvertes" : "occasion couverte"]] as const) : []),
+            // La signature « 12 pièces · 18 looks · 10 jours » : le séjour est la troisième mesure ; les occasions couvertes
+            // sont dites par les blocs de l'onglet.
+            ...(nbJours > 0 ? ([[G_CALENDRIER, nbJours, nbJours > 1 ? "jours" : "jour"]] as const) : []),
           ] as const
         ).map(([glyphe, n, libelle], i) => (
           <div key={libelle} className="flex flex-col items-center text-center px-[6px]" style={{ borderLeft: i ? "1px solid var(--color-border)" : undefined }}>
@@ -2168,7 +2414,13 @@ function Resultat({
                             <span className="block text-[13px] text-ink truncate">{p.name}</span>
                             <span className={"block text-[11px] mt-[2px] " + (n ? "text-terracotta" : "text-muted")}>
                               {n ? `Dans ${n} ${n > 1 ? "looks" : "look"}` : "Dans aucun look de la valise"}
+                              {(() => {
+                                // Les jours où elle est portée, d'après le planning — rien sans planning.
+                                const portee = joursDeLaPiece(planning, looks, p.id, joursDuSejourValise);
+                                return portee.length ? ` · portée ${portee.map((j) => `J${j}`).join(", ")}` : "";
+                              })()}
                             </span>
+                            {n >= SEUIL_POLYVALENTE && <span className="block text-[11px] text-muted mt-[1px]">Pièce polyvalente</span>}
                           </span>
                         </button>
                         <button onClick={() => setFeuille({ type: "remplacer", id: p.id })} aria-label={`Remplacer ${p.name}`} className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
