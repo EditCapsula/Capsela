@@ -31,6 +31,7 @@ const jourSemaine = (d: Date) => DAYS_FR[d.getDay()].toLowerCase();
 export function libelleJour(decalage: number, d: Date): string {
   if (decalage === 0) return `Aujourd'hui · ${jourSemaine(d)} ${d.getDate()}`;
   if (decalage === 1) return `Demain · ${jourSemaine(d)} ${d.getDate()}`;
+  if (decalage === -1) return `Hier · ${jourSemaine(d)} ${d.getDate()}`;
   return `${DAYS_FR[d.getDay()]} ${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
 }
 
@@ -40,6 +41,7 @@ const JOURS_ABREGES = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 export function libelleJourCourt(decalage: number, d: Date): string {
   if (decalage === 0) return "Aujourd'hui";
   if (decalage === 1) return "Demain";
+  if (decalage === -1) return "Hier";
   return `${JOURS_ABREGES[d.getDay()]} ${d.getDate()}`;
 }
 

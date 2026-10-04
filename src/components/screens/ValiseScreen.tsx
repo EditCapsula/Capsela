@@ -35,6 +35,7 @@ import {
   GROUPES_VALISE,
   joursDuSejour,
   libelleDuree,
+  lookAChaussuresEtSac,
   looksDeLaValise,
   looksParPiece,
   nomCategorie,
@@ -1014,7 +1015,9 @@ function Resultat({
   // Une pièce supprimée du dressing depuis n'est plus dans la valise.
   const pieces = valise.pieceIds.map((id) => dressing.find((i) => i.id === id)).filter((i): i is Item => !!i);
   const ids = pieces.map((p) => p.id);
-  const looks = valise.looks.filter((l) => l.ids.every((id) => ids.includes(id)));
+  // Un look de valise a toujours chaussures et sac (lookAChaussuresEtSac) : les valises gardées avant cette règle ne montrent plus
+  // les looks qui n'en ont pas — « Recomposer » en refait avec.
+  const looks = valise.looks.filter((l) => l.ids.every((id) => ids.includes(id)) && lookAChaussuresEtSac(l.ids, pieces));
   const parPiece = looksParPiece(looks);
   const couvertes = occasionsCouvertes(looks, valise.situations);
   const depasse = etatJauge(pieces.length, capacite) === "depassee";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MOMENTS_TENUE_DU_JOUR, alerteMeteoPlan, planPourTenueDuJour, previsionAChange, sousChoixDuPlan } from "../planDuJour";
+import { MOMENTS_TENUE_DU_JOUR, alerteMeteoPlan, clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, previsionAChange, sousChoixDuPlan } from "../planDuJour";
 import { plansDuJour, type TenuePlanifiee } from "../planifier";
 import type { MomentJournee } from "../prevision";
 import type { CategoryKey, Item } from "../types";
@@ -99,5 +99,24 @@ describe("previsionAChange — la prévision d'aujourd'hui contre celle enregist
   });
   it("sans prévision enregistrée, rien à comparer", () => {
     expect(previsionAChange({ temp: null, weatherLabel: null }, { temp: 10, label: "Pluie" })).toBe(false);
+  });
+});
+
+describe("doitAppliquerPlan — les retouches de la personne ne sont pas annulées", () => {
+  const p = { id: "t1", pieceIds: [3, 1, 2] };
+  it("un plan pas encore appliqué s'applique", () => {
+    expect(doitAppliquerPlan(null, p, null)).toBe(true);
+  });
+  it("un plan déjà appliqué ne se rejoue pas, même si la tenue affichée a changé (veste ajoutée)", () => {
+    expect(doitAppliquerPlan("t1", p, clePlanApplique(p))).toBe(false);
+  });
+  it("un plan dont les pièces ont changé (modifié dans Planifier) se rejoue", () => {
+    expect(doitAppliquerPlan("t1", { id: "t1", pieceIds: [1, 2, 4] }, clePlanApplique(p))).toBe(true);
+  });
+  it("l'ordre des pièces ne compte pas", () => {
+    expect(clePlanApplique({ id: "t1", pieceIds: [2, 3, 1] })).toBe(clePlanApplique(p));
+  });
+  it("un autre plan s'applique", () => {
+    expect(doitAppliquerPlan("t1", { id: "t2", pieceIds: [3, 1, 2] }, clePlanApplique(p))).toBe(true);
   });
 });

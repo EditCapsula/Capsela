@@ -106,3 +106,18 @@ export function previsionAChange(
   const pluieAvant = avant.weatherLabel ? labelPrecipitation(avant.weatherLabel) : false;
   return pluieAvant !== labelPrecipitation(apres.label);
 }
+
+/**
+ * FAUT-IL (RÉ)APPLIQUER LE PLAN COMME TENUE DU JOUR ? (04/10/2026, signalé : « j'ajoute la veste et elle n'apparaît pas »)
+ *
+ * L'effet du store rejouait le plan chaque fois que la tenue affichée différait des pièces du plan — donc dès qu'on y
+ * AJOUTAIT, RETIRAIT ou REMPLAÇAIT une pièce : la modification était annulée à l'instant, et le toast « Ajouté à la tenue »
+ * mentait. Le plan n'est (ré)appliqué que s'il n'est pas déjà la tenue affichée, ou si SES pièces ont changé depuis la
+ * dernière application (plan modifié dans Planifier). Les retouches de la personne sur la tenue affichée sont à elle.
+ * `derniereCle` : « id|pièces triées » du plan tel qu'il a été appliqué la dernière fois ; null s'il ne l'a pas été.
+ */
+export const clePlanApplique = (plan: Pick<TenuePlanifiee, "id" | "pieceIds">): string => `${plan.id}|${[...new Set(plan.pieceIds)].sort((a, b) => a - b).join(",")}`;
+
+export function doitAppliquerPlan(planAppliqueId: string | null, plan: Pick<TenuePlanifiee, "id" | "pieceIds">, derniereCle: string | null): boolean {
+  return !(planAppliqueId === plan.id && derniereCle === clePlanApplique(plan));
+}
