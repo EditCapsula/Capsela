@@ -38,13 +38,24 @@ Jamais bloquant : si le détourage n'est pas branché, si le plafond du jour est
 
 Même protection qu'`analyze-dressing-photo` : personne connectée, photo qui est la sienne, plafond par compte et par jour (`consommer_edge_quota`, fonction `detourer-photo`, 10 par défaut, secret `MAX_DETOURAGES_PER_USER_PER_DAY`). **ARBITRAGE ÉDITORIAL provisoire** : le plafond est le seul garde-fou financier ; réserver le détourage à Premium, ou le lier à la vidéo récompensée, n'est pas décidé (question posée le 04/10/2026, sans réponse).
 
-Coût indicatif : environ 0,02 $ par image chez Photoroom d'après des comparatifs tiers (04/10/2026) ; **NON VÉRIFIÉ sur la page du fournisseur**, inaccessible depuis le conteneur de développement.
+Coût indicatif : 0,02 $ par image chez Photoroom (plan Basic), plus un éventuel minimum mensuel (voir plus bas) ; non vérifié sur la page des tarifs, inaccessible depuis le conteneur de développement.
 
-## Ce qui n'est PAS vérifié
+## Ce qui est confirmé, et ce qui ne l'est pas (04/10/2026)
 
-- **Le contrat d'appel au fournisseur** (point d'entrée `https://sdk.photoroom.com/v1/segment`, champ `image_file`, en-tête `x-api-key`, retour PNG à fond transparent) est écrit d'après la documentation publique telle qu'elle était connue. Il n'a été ni relu ni essayé. **DÉMONTRÉ** : le comportement de notre code face à chaque réponse possible, par des essais avec un faux réseau. **NON DÉMONTRÉ** : que le fournisseur réponde réellement ainsi.
-- **La qualité du détourage** sur de vrais vêtements (voiles, mailles, bijoux fins, chaussures sur fond clair) : aucun essai.
-- **L'endroit où le fournisseur traite les images et sa durée de conservation.**
+Le site et la documentation de Photoroom sont BLOQUÉS depuis le conteneur de développement : ce qui suit vient d'extraits de pages et de comparatifs (recherche web), pas d'une lecture des pages elles-mêmes.
+
+**Confirmé par les extraits de la documentation du fournisseur** : le point d'entrée `https://sdk.photoroom.com/v1/segment`, l'en-tête `x-api-key`, le champ `image_file`, un retour **PNG à fond transparent par défaut**, des entrées jusqu'à 25 mégapixels et 50 Mo (le contrat que `_shared/detourage.ts` implémente). Prix : **0,02 $ par image** sur le plan Basic, 10 images gratuites par mois.
+
+**DÉMONTRÉ** : le comportement de notre code face à chaque réponse possible du fournisseur, par des essais avec un faux réseau.
+
+**NON DÉMONTRÉ** :
+- **L'appel réel** : aucun essai n'a été fait, faute de clé.
+- **La qualité du détourage** sur de vrais vêtements (voiles, mailles, bijoux fins, chaussures sur fond clair). Les comparatifs qui la vantent émanent du fournisseur.
+- **Un minimum mensuel** : les plans Basic semblent commencer vers 20 $ par mois (récapitulatif tiers) ; non confirmé sur la page des tarifs.
+- **Le contrat de traitement des données (RGPD)** : le fournisseur se déclare conforme (SOC 2 Type 2) et dit effacer les images après chaque appel, mais héberge sur GCP et AWS **sans résidence de données européenne annoncée**, et ne semble proposer un contrat de traitement qu'en Enterprise. À obtenir et à lire avant le lancement.
+- **Les conditions d'utilisation du plan Basic** pour une application grand public.
+
+**Avant de s'engager** : essayer sur dix vraies pièces difficiles avec les 10 images gratuites. Le fournisseur est isolé dans `_shared/detourage.ts` : en changer (Bria via fal.ai à 0,018 $, remove.bg) ne touche que ce fichier.
 
 ## À faire avant le lancement
 

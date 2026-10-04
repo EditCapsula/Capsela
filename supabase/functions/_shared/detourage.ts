@@ -4,9 +4,9 @@
 //
 // POURQUOI UN FICHIER À PART ET UN FOURNISSEUR DERRIÈRE UNE FONCTION. Le service retenu (Photoroom, « Remove
 // Background ») est une proposition du 04/10/2026 ; en changer ne doit toucher que `detourerAvecFournisseur`. Le
-// contrat d'appel ci-dessous (point d'entrée, nom des champs, en-tête de clé) est écrit d'après la documentation
-// publique telle qu'elle était connue, SANS avoir pu la rouvrir depuis le conteneur de développement : à valider
-// contre la documentation du fournisseur et un vrai essai avant la mise en production.
+// contrat d'appel ci-dessous (point d'entrée, champ `image_file`, en-tête `x-api-key`, retour PNG transparent par
+// défaut) est CONFIRMÉ par des extraits de la documentation du fournisseur, mais jamais ESSAYÉ : aucune clé, et le site
+// est bloqué depuis le conteneur de développement. Voir docs/detourage.md pour ce qui reste à valider.
 
 /** Marque du fichier détouré, dans son nom : c'est elle, et non une colonne, qui dit qu'une photo est détourée. */
 export const MARQUE_DETOUREE = ".detouree.";
