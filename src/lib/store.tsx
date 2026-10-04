@@ -8,7 +8,7 @@ import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCa
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
 import { previsionPour, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
-import { planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
+import { clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
 import { avecValise, enregistrerValise, fetchValises, fusionnerValises, garderValisesLocales, lireValisesLocales, supprimerValiseDuCompte, type ValiseGardee } from "./valises";
 import { decisionAcces } from "./autorisations";
 import { fetchVestiaireUniversel } from "./vestiaire";
@@ -634,6 +634,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const { profile, ready, userId } = useAuth();
   const [state, setState] = useState<AppState>(buildInitialState);
   const stateRef = useRef(state);
+  /** « id|pièces » du dernier plan appliqué comme tenue du jour — pour ne pas défaire les retouches de la personne (doitAppliquerPlan). */
+  const planAppliqueCleRef = useRef<string | null>(null);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
@@ -1321,8 +1323,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     const choix = planPourTenueDuJour(plans, [...s.items, ...vestiairePool], s.plansEcartes);
     if (choix?.etat === "applicable") {
       const { plan } = choix;
-      const memes = s.outfit.length === plan.pieceIds.length && plan.pieceIds.every((id) => s.outfit.includes(id));
-      if (s.planAppliqueId === plan.id && memes) return;
+      // Les retouches de la personne sur la tenue du plan (ajouter une veste, remplacer une pièce) ne sont pas annulées :
+      // le plan n'est rejoué que s'il n'est pas déjà la tenue affichée, ou si ses pièces ont changé (doitAppliquerPlan).
+      if (!doitAppliquerPlan(s.planAppliqueId, plan, planAppliqueCleRef.current)) return;
+      planAppliqueCleRef.current = clePlanApplique(plan);
       setState((st) => ({
         ...st,
         ...sousChoixDuPlan(plan),
@@ -1339,6 +1343,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         planAppliqueId: plan.id,
       }));
     } else if (s.planAppliqueId) {
+      planAppliqueCleRef.current = null;
       setState((st) => regen(withDefaultOccasion({ ...st, occasionManual: false }), wardrobePool, meteoDuJour, defaultCapsule));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
