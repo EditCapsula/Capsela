@@ -9,7 +9,7 @@ import { libelleManches } from "@/lib/manches";
 import { libelleSaisons, saisonsDe } from "@/lib/saisons";
 import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
-import { resolveItemImage } from "@/lib/catalogImages";
+import { fondPhotoPiece, resolveItemImage } from "@/lib/catalogImages";
 import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
@@ -223,7 +223,7 @@ export default function PieceScreen() {
           resolvedImage.kind === "generated"
             ? { aspectRatio: "4/5", background: "var(--color-photo-bg)" }
             : resolvedImage.url
-              ? { aspectRatio: "4/5", backgroundImage: `url(${resolvedImage.url})`, backgroundSize: "cover", backgroundPosition: "center" }
+              ? { aspectRatio: "4/5", ...fondPhotoPiece(resolvedImage.url, resolvedImage.kind === "detouree") }
               : { aspectRatio: "4/5", background: active.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
         }
       >

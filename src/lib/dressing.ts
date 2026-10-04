@@ -253,6 +253,35 @@ export async function analyzeDressingPhoto(photoUrl: string): Promise<PhotoAnaly
   }
 }
 
+/**
+ * Marque d'une photo DÉTOURÉE, dans le nom du fichier (04/10/2026) : c'est elle, et non une colonne, qui dit
+ * qu'une pièce a un fond transparent — aucune migration, donc rien à exécuter avant. Doit rester identique à
+ * MARQUE_DETOUREE de supabase/functions/_shared/detourage.ts (un test le verrouille).
+ */
+export const MARQUE_PHOTO_DETOUREE = ".detouree.";
+
+/** Cette photo (URL signée, publique ou chemin) est-elle un détourage ? Seul le chemin compte, jamais la chaîne de requête. */
+export function estPhotoDetouree(url: string | null | undefined): boolean {
+  return Boolean(url) && (url as string).split("?")[0].includes(MARQUE_PHOTO_DETOUREE);
+}
+
+/**
+ * Retire le fond de la photo d'une pièce (Edge Function detourer-photo, qui appelle le service de détourage). Rend
+ * l'URL signée de la photo détourée, ou null — service non branché, plafond du jour atteint, photo refusée, réseau :
+ * jamais une erreur pour l'appelant, qui garde simplement la photo d'origine. Même principe qu'analyzeDressingPhoto.
+ */
+export async function detourerPhoto(photoUrl: string): Promise<string | null> {
+  try {
+    const { data, error } = await getSupabase().functions.invoke("detourer-photo", { body: { photo_url: photoUrl } });
+    // Un refus du serveur (503 « non_configure », 429 « quota_atteint »…) arrive en `error` : rien à signaler à la personne.
+    if (error || !data || (data as { ok?: boolean }).ok !== true) return null;
+    const url = (data as { photo_url?: unknown }).photo_url;
+    return typeof url === "string" && url.startsWith("http") && estPhotoDetouree(url) ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Insère la pièce et renvoie la ligne créée (id généré par Postgres) — l'appelant l'ajoute à son state une fois la promesse résolue. */
 export async function insertDressingItem(userId: string, item: Omit<Item, "id">): Promise<Item> {
   const { data, error } = await getSupabase()
