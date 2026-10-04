@@ -1380,16 +1380,18 @@ function Resultat({
   /** Le séjour est couvert : un look pour chaque occasion demandée, et de quoi varier sur la durée. C'est ce que dit le bloc de validation, rien de plus. */
   const sejourCouvert = looks.length > 0 && occasionsAManque.length === 0 && !peuDeLooks;
   const piecesRepetees = looks.length > 1 && pieces.some((p) => (parPiece.get(p.id) ?? 0) > 1);
+  /** Les pièces de l'aperçu : les douze premières, rangées comme dans l'onglet Pièces (hauts, bas, chaussures…). */
+  const apercu = GROUPES_VALISE.flatMap(([, cats]) => pieces.filter((p) => cats.includes(p.cat))).slice(0, 12);
   const aOptimiser = nouvelles === 0 && (occasionsAManque.length > 0 || peuDeLooks);
   const nbPieces = (n: number) => `${n} ${n > 1 ? "pièces" : "pièce"}`;
 
   return (
     <>
       {/* 1 · OÙ VAIS-JE ? La destination est le premier élément éditorial. */}
-      <h1 className="font-serif uppercase text-terracotta text-[34px] leading-[1.05] tracking-[.02em] break-words" style={{ textWrap: "balance" }}>
+      <div className="t-surtitre text-muted">{libellePeriode(valise.depart, valise.retour)}</div>
+      <h1 className="font-serif text-ink text-[40px] leading-[1.05] mt-[6px] break-words" style={{ textWrap: "balance" }}>
         {valise.destination}
       </h1>
-      <div className="t-surtitre text-muted mt-[6px]">{libellePeriode(valise.depart, valise.retour)}</div>
 
       {/* 2 · TA VALISE EST-ELLE PRÊTE ? */}
       <div className="t-titre-ecran text-ink mt-[14px] flex items-center flex-wrap gap-x-[10px]">
@@ -1451,6 +1453,12 @@ function Resultat({
       </div>
 
       {/* LE RATIO PIÈCES → LOOKS, au centre de la fonctionnalité — compact. La capacité n'est pas un objectif à remplir : elle est dite en second. */}
+      <div className="flex items-baseline justify-between gap-3 mt-6">
+        <h2 className="t-titre-section text-ink">Ta valise</h2>
+        <button onClick={() => setOnglet("pieces")} className="t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[6px] flex-shrink-0">
+          Voir toutes les pièces →
+        </button>
+      </div>
       <Card rayon="tuile" className="mt-3 grid py-[14px]" style={{ gridTemplateColumns: couvertes.length ? "1fr 1fr 1fr" : "1fr 1fr" }}>
         {(
           [
@@ -1477,6 +1485,35 @@ function Resultat({
           Valise {valise.bagage} · {depasse ? `${pieces.length - capacite} de trop` : `jusqu'à ${capacite} pièces`}
         </span>
       </div>
+
+      {/* APERÇU DE TA VALISE : les pièces emportées, posées à plat — c'est ce que la valise contient, avant les looks. Les
+          huit premières (dans l'ordre des groupes de la valise), chacune ouvre sa fiche ; le reste est compté. */}
+      <Card rayon="carte" className="mt-4 p-[14px]">
+        <div className="flex items-center justify-between gap-3">
+          <span className="t-label text-muted">Aperçu de ta valise</span>
+          <span className="text-[11px] text-ink rounded-full bg-cream border border-border px-[10px] py-[3px]">{nbPieces(pieces.length)}</span>
+        </div>
+        <ul className="grid grid-cols-4 gap-x-[6px] gap-y-[10px] mt-3 list-none p-0">
+          {apercu.map((p) => {
+            const im = resolveItemImage(p);
+            return (
+              <li key={p.id}>
+                <button onClick={() => ouvrirPiece(p.id)} aria-label={`Voir la pièce : ${p.name}`} className="block w-full aspect-square cursor-pointer">
+                  {im.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={im.url} alt="" loading="lazy" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 3px rgba(29,26,22,.12))" }} />
+                  ) : (
+                    <span className="block w-full h-full rounded-champ" style={{ background: p.hex }} />
+                  )}
+                </button>
+              </li>
+            );
+          })}
+          {pieces.length > apercu.length && (
+            <li className="flex items-center justify-center text-[12px] text-muted aspect-square">+{pieces.length - apercu.length}</li>
+          )}
+        </ul>
+      </Card>
 
       {/* Au retour d'un ajout au dressing : la proposition de recomposer. */}
       {nouvelles > 0 && (
