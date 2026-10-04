@@ -20,13 +20,13 @@ describe("hero de l'accueil — textes d'une tenue planifiée", () => {
     expect(texteHeroPlan({ jour: "2026-10-05", moment: "Matin" }, "2026-10-04").sousTitre).toBe("Ton look est prêt pour demain.");
   });
 
-  it("le jour J : « Look du jour », selon le moment", () => {
+  it("le jour J : « Ton look du jour », selon le moment", () => {
     expect(texteHeroPlan({ jour: "2026-10-04", moment: "Soirée" }, "2026-10-04")).toEqual({
-      surtitre: "Look du jour",
-      sousTitre: "Ta tenue est prête pour ce soir.",
-      badge: "Soirée",
+      surtitre: "Ton look du jour",
+      sousTitre: "Ta silhouette pour ce soir est prête.",
+      badge: "Ce soir · Soirée",
     });
-    expect(texteHeroPlan({ jour: "2026-10-04", moment: "Toute la journée" }, "2026-10-04").sousTitre).toBe("Ta tenue est prête pour aujourd'hui.");
+    expect(texteHeroPlan({ jour: "2026-10-04", moment: "Toute la journée" }, "2026-10-04").sousTitre).toBe("Ta silhouette pour aujourd'hui est prête.");
   });
 
   it("le lendemain : la question, et un mot de soirée seulement pour une soirée", () => {

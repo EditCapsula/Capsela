@@ -6,7 +6,7 @@ import { villeDuLieu, type TenuePlanifiee } from "./planifier";
  * LES TEXTES DU HERO DE L'ACCUEIL QUAND UNE TENUE EST PLANIFIÉE (04/10/2026, « hero dynamique selon le statut d'un
  * look planifié »). Quatre états, dont trois portent un plan :
  *   · à venir  — le jour consulté est un jour futur qui a un plan : « Look planifié », « prêt pour dimanche » ;
- *   · le jour J — « Look du jour », « Ta tenue est prête pour ce soir » ;
+ *   · le jour J — « Ton look du jour », « Ta silhouette pour ce soir est prête » ;
  *   · passé    — hier : « Ton look d'hier », « Comment était ta tenue ? » ;
  *   · sans plan — le hero d'avant, inchangé.
  * Pur et testé : aucun texte ne dépend d'autre chose que du plan et de la date.
@@ -36,6 +36,13 @@ export function etatDuPlan(plan: Pick<TenuePlanifiee, "jour">, aujourdhui: strin
   return plan.jour > aujourdhui ? "avenir" : plan.jour === aujourdhui ? "jourJ" : "passe";
 }
 
+const CE_MOMENT: Record<TenuePlanifiee["moment"], string> = {
+  Matin: "Ce matin",
+  "Après-midi": "Cet après-midi",
+  Soirée: "Ce soir",
+  "Toute la journée": "Aujourd'hui",
+};
+
 const POUR_LE_MOMENT: Record<TenuePlanifiee["moment"], string> = {
   Matin: "pour ce matin",
   "Après-midi": "pour cet après-midi",
@@ -52,8 +59,9 @@ export interface TexteHeroPlan {
 /** Les textes du hero pour un plan à venir ou du jour. Un plan passé a ses propres textes (texteHeroHier). */
 export function texteHeroPlan(plan: Pick<TenuePlanifiee, "jour" | "moment">, aujourdhui: string = jourLocal()): TexteHeroPlan {
   if (etatDuPlan(plan, aujourdhui) === "jourJ") {
-    // « Aujourd'hui » est déjà dans la barre de date au-dessus : le badge ne dit que le moment (04/10/2026, redondance signalée).
-    return { surtitre: "Look du jour", sousTitre: `Ta tenue est prête ${POUR_LE_MOMENT[plan.moment]}.`, badge: plan.moment };
+    // Textes arrêtés le 04/10/2026 (brief de rédaction de l'Accueil) : « Ton look du jour », « Ta silhouette pour ce soir est
+    // prête. », badge « Ce soir · Soirée ». Le premier mot du badge suit le moment, comme la phrase.
+    return { surtitre: "Ton look du jour", sousTitre: `Ta silhouette ${POUR_LE_MOMENT[plan.moment]} est prête.`, badge: `${CE_MOMENT[plan.moment]} · ${plan.moment}` };
   }
   const demain = (() => {
     const d = dateDe(aujourdhui);
