@@ -50,6 +50,7 @@ import {
   MORPHO_HINTS,
   PAL_COULEURS,
   TAILLES_HAUT,
+  basculerStyle,
   exposedStyleIds,
   paletteColorName,
   styleConfigFor,
@@ -104,7 +105,7 @@ const ALL_STEPS = [
   { key: "colorimetrie_suite", kicker: "Ta colorimétrie", title: "Et maintenant ?", subtitle: "Capsela utilise ta palette pour personnaliser ton expérience." },
   { key: "pal_recap", kicker: "Voilà ta palette Capsela", title: "Ce que tu aimes × ce qui te met en valeur", subtitle: "Capsela combine tes préférences et ta colorimétrie pour des recommandations qui te ressemblent." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
-  { key: "style", kicker: "Style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis celui qui correspond le mieux à ta façon de t'habiller." },
+  { key: "style", kicker: "Style", title: "Quels styles te ressemblent ?", subtitle: "Choisis-en un ou deux." },
   { key: "morpho", kicker: "Morphologie", title: "Et ta silhouette ?", subtitle: "Pour affiner nos recommandations de coupes." },
 ] as const;
 
@@ -224,10 +225,9 @@ export default function ProfileSetupScreen() {
     if (cur.length >= MAX_PALETTE_COULEURS) return;
     patch({ paletteCouleurs: [...cur, hex] });
   };
-  // Sélection unique (Tâche 7, arbitrages du 20/08/2026 — reconduit après
-  // un essai de multi-sélection le même jour) : un seul id stocké, la carte
-  // précédente se désélectionne automatiquement.
-  const selectStyle = (id: string) => patch({ styles: [id] });
+  // Un ou deux styles (05/10/2026 ; avant : sélection unique, arbitrage du 20/08/2026 reconduit après un essai de
+  // multi-sélection le même jour) : basculerStyle, le premier choisi est le principal.
+  const selectStyle = (id: string) => patch({ styles: basculerStyle(draft.styles, id) });
 
   // Édition ciblée d'une seule étape (recette 22/08/2026, signalé : "si je
   // change mon style je ne devrai pas avoir à chaque fois l'écran
@@ -541,7 +541,7 @@ export default function ProfileSetupScreen() {
         <div className="grid grid-cols-2 gap-[11px] mt-[26px]">
           {exposedStyleIds(draft.gender).map((id) => {
             const cfg = styleConfigFor(draft.gender)[id];
-            const on = draft.styles[0] === id;
+            const on = draft.styles.includes(id);
             // Côté femme (et genre non renseigné, qui affiche la grille
             // femme) : les flat lays du 25/09, en portrait. Côté homme :
             // inchangé.

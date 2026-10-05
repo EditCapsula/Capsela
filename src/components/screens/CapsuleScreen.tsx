@@ -21,7 +21,7 @@ import {
   type AlternativeRemplacement,
 } from "@/lib/capsuleEcran";
 import { useAuth } from "@/lib/auth";
-import { silhouetteForme, styleLabel } from "@/lib/profile";
+import { libelleStyles, silhouetteForme, styleLabel, stylesLabels } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { analyserImage, placementDansCadre, type Analyse } from "@/lib/cadrageImage";
@@ -334,10 +334,11 @@ export default function CapsuleScreen() {
   // par pièce, se fait à l'ouverture d'une fiche (celle de cet écran, comme
   // PieceScreen et ItemOutfitsScreen).
 
-  // Style renseigné en profil (recette 25/08/2026) — premier style choisi,
-  // même convention que ProfileScreen (styleLabel(profile.styles[0], ...)) ;
+  // Style renseigné en profil (recette 25/08/2026) — les styles choisis (deux au plus),
+  // même convention que ProfileScreen (libelleStyles) ;
   // "" si aucun style n'a été renseigné, jamais un style inventé.
-  const userStyleLabel = styleLabel(profile.styles[0], profile.gender);
+  const userStyleLabel = libelleStyles(profile.styles, profile.gender);
+  const nbStylesProfil = stylesLabels(profile.styles, profile.gender).length;
   // Style exploré (recette 24/08/2026) — n'affecte que ce libellé d'affichage,
   // jamais profile.styles ; la capsule ci-dessus est déjà calculée sur ce
   // même style temporaire.
@@ -369,11 +370,11 @@ export default function CapsuleScreen() {
       ? silhouetteForme(profile.morphology)
       : "";
     return [
-      userStyleLabel && { cle: "style", avant: "ton style ", valeur: userStyleLabel, etape: "style" },
+      userStyleLabel && { cle: "style", avant: nbStylesProfil > 1 ? "tes styles " : "ton style ", valeur: userStyleLabel, etape: "style" },
       aUnePalette && { cle: "palette", avant: "ta ", valeur: "palette", etape: "pal_couleurs" },
       forme && { cle: "morpho", avant: "ta silhouette ", valeur: forme, etape: "morpho" },
     ].filter((c): c is { cle: string; avant: string; valeur: string; etape: string } => Boolean(c));
-  }, [userStyleLabel, profile.paletteCouleurs, profile.paletteAffinite, profile.paletteIntensite, profile.morphology]);
+  }, [userStyleLabel, nbStylesProfil, profile.paletteCouleurs, profile.paletteAffinite, profile.paletteIntensite, profile.morphology]);
 
   const possedees = useMemo(
     () => (exploredStyleId ? [] : piecesDuDressingPourSaison(state.items, capsuleSeason)),

@@ -64,3 +64,7 @@ Le site et la documentation de Photoroom sont BLOQUÉS depuis le conteneur de d�
 3. **Essayer sur quelques vraies photos** (vêtement clair sur fond clair, maille, sac, chaussures) avant d'ouvrir à tous ; relire la documentation du fournisseur contre `_shared/detourage.ts`.
 4. Dire dans la **politique de confidentialité** et les **mentions légales** que les photos de vêtements sont traitées par un sous-traitant, lequel, où, combien de temps (les textes sont encore à compléter, `src/lib/legal/contenu.ts`).
 5. Décider **qui paie** (plafond seul, Premium, vidéo récompensée).
+
+## Photo qui n'est pas d'une pièce seule (05/10/2026)
+
+L'analyse (`analyze-dressing-photo`) rend aussi `photoType` : `seule`, `portee` ou `plusieurs`. À l'ajout, si la photo montre la pièce portée ou plusieurs pièces, l'écran le dit (`cadragePhoto.ts`) et invite à une photo de la pièce seule. **Rien n'est stocké** (aucune colonne, aucune migration) : l'avertissement n'existe qu'au moment de choisir la photo, pas ensuite dans le Dressing. Quand le modèle n'est pas sûr, rien n'est dit. **NON DÉMONTRÉ** : la fiabilité de cette lecture sur de vraies photos (aucun essai n'a été fait, faute de clé dans le conteneur). Le détourage reste appelé pour ces photos : sur une photo portée, il peut détourer la personne ; à revoir.

@@ -31,7 +31,7 @@ import {
   fieldNeedsRevalidation,
   genderLabel,
   morphologyLabel,
-  styleLabel,
+  libelleStyles,
   type ChampProfilStyle,
   type Gender,
   type GenderDependentField,
@@ -184,7 +184,7 @@ export default function ProfileScreen() {
         <LigneProfil
           icone={I_CINTRE}
           titre="Style"
-          valeur={styleLabel(profile.styles[0], profile.gender) || "Non renseigné"}
+          valeur={libelleStyles(profile.styles, profile.gender) || "Non renseigné"}
           renseigne={renseigne("style")}
           explication="Définit l'univers de tes recommandations."
           onClick={() => ouvrirChamp("style")}

@@ -405,7 +405,7 @@ export default function WardrobeScreen() {
               <Card rayon="tuile" className="mt-3">
               <button
                 onClick={actions.goNeverWorn}
-                aria-label={`${pluriel ? `Voir les ${neverWorn.length} pièces` : "Voir la pièce"} qui ${pluriel ? "attendent" : "attend"} ${pluriel ? "leur" : "son"} moment, ${pluriel ? "jamais portées" : "jamais portée"}`}
+                aria-label={`${pluriel ? `Voir les ${neverWorn.length} pièces` : "Voir la pièce"} à porter autrement, ${pluriel ? "jamais portées" : "jamais portée"}`}
                 className="w-full flex items-start gap-[14px] px-[14px] py-[14px] text-left cursor-pointer active:opacity-80"
               >
                 {/* Deux miniatures, de même taille et au même ratio qu'avant
@@ -425,7 +425,7 @@ export default function WardrobeScreen() {
                     {neverWorn.length} {pluriel ? "pièces à porter autrement" : "pièce à porter autrement"}
                   </span>
                   <span className="block text-[12px] leading-[1.4] mt-[3px]" style={{ color: "var(--color-muted-3)" }}>
-                    {neverWorn.length} {pluriel ? "pièces jamais portées" : "pièce jamais portée"}
+                    {pluriel ? "Jamais portées" : "Jamais portée"}
                   </span>
                   {/* Une seule phrase d'appui : le second niveau (« pas portées pendant leur dernière saison »), quand il
                       est vrai pour toutes, sinon la promesse du parcours. */}
@@ -434,7 +434,7 @@ export default function WardrobeScreen() {
                       ? pluriel
                         ? "Tu ne les as pas portées pendant leur dernière saison."
                         : "Tu ne l'as pas portée pendant sa dernière saison."
-                      : `Capsela a repéré ${neverWorn.length} ${pluriel ? "pièces qui pourraient" : "pièce qui pourrait"} trouver ${pluriel ? "leur" : "sa"} place dans tes prochains looks.`}
+                      : `${pluriel ? "Elles pourraient trouver leur" : "Elle pourrait trouver sa"} place dans tes prochains looks.`}
                   </span>
                 </span>
                 <span aria-hidden="true" className="text-muted text-[15px] flex-shrink-0 self-center">›</span>
