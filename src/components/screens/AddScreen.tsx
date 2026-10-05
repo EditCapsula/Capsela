@@ -1,5 +1,6 @@
 "use client";
 
+import { messageCadrage } from "@/lib/cadragePhoto";
 import { estPhotoDetouree } from "@/lib/dressing";
 import { aDesManches, MANCHES } from "@/lib/manches";
 import { useRef, useState } from "react";
@@ -457,6 +458,15 @@ export default function AddScreen() {
                 {analysee && !analyseEnCours && <li className="flex items-center gap-[6px]"><CocheRonde />Analyse terminée</li>}
               </ul>
             )}
+          </div>
+        )}
+
+        {/* Une photo qui n'est pas celle d'une pièce seule (05/10/2026) : dit à l'ajout, d'après ce que l'analyse a vu — jamais
+            stocké, jamais deviné (cadragePhoto.ts). */}
+        {creation && !analyseEnCours && messageCadrage(state.addPhotoCadrage) && (
+          <div className="mt-[10px] rounded-tuile bg-warm-bg border border-sand-border px-4 py-[12px]" role="status">
+            <div className="text-[13px] text-ink font-medium leading-[1.35]">{messageCadrage(state.addPhotoCadrage)!.titre}</div>
+            <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">{messageCadrage(state.addPhotoCadrage)!.texte}</div>
           </div>
         )}
 

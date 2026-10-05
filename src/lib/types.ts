@@ -270,7 +270,11 @@ export interface PhotoAnalysis {
   sacType?: SacType;
   bijouType?: BijouType;
   accessoireType?: AccessoireType;
+  /** Ce que montre la photo (05/10/2026) : l'article seul, porté, ou plusieurs articles. Absent quand le modèle n'est pas sûr. */
+  photoType?: CadragePhoto;
 }
+
+export type CadragePhoto = "seule" | "portee" | "plusieurs";
 
 export interface AppState {
   /** Dressing réel de l'utilisateur. Vide au départ : la capsule par défaut prend le relais. */
@@ -372,6 +376,8 @@ export interface AppState {
   addPhotoAnalyzing: boolean;
   /** true quand l'analyse de la photo a réellement rendu un résultat (27/09/2026) — seule condition des mentions « L'édit Capsela a analysé ta pièce » et « détectées ». addPhotoAnalyzing redevient false aussi en mode démo (aucune analyse) et sur un échec. */
   addPhotoAnalysee: boolean;
+  /** Ce que l'analyse a vu sur la photo (05/10/2026) : null tant qu'elle ne l'a pas dit, ou si elle n'est pas sûre. Sert seulement à avertir à l'ajout ; jamais stocké, aucune colonne. */
+  addPhotoCadrage: CadragePhoto | null;
   /** Le détourage de la photo (04/10/2026) : "en_cours" pendant l'appel, "fait" quand la photo affichée est la détourée. Jamais bloquant : un échec, ou un détourage non branché, redonne "repos" et la photo d'origine reste. */
   addPhotoDetourage: "repos" | "en_cours" | "fait";
   /** null tant que l'utilisatrice n'a rien touché — la sauvegarde retient alors saisonsParDefaut (saisons.ts), affichées présélectionnées. Quatre saisons au choix depuis le 27/09/2026, jamais bloquantes. */

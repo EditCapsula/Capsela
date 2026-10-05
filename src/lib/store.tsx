@@ -189,6 +189,7 @@ function buildInitialState(): AppState {
     addPhotoUploading: false,
     addPhotoAnalyzing: false,
     addPhotoAnalysee: false,
+    addPhotoCadrage: null,
     addPhotoDetourage: "repos",
     // Aucun choix tant que l'utilisatrice n'en fait pas : saveItem retient
     // alors saisonsParDefaut (27/09/2026), que l'écran montre présélectionnées.
@@ -1845,6 +1846,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSize: null,
           addPhotoUrl: img.url ?? null,
           addPhotoAnalysee: false,
+          addPhotoCadrage: null,
           addPhotoDetourage: "repos",
           addSaisons: saisonsDe(item),
           addManches: item.manches ?? null,
@@ -1883,6 +1885,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSize: item.size ?? null,
           addPhotoUrl: item.photoUrl ?? img.url ?? null,
           addPhotoAnalysee: false,
+          addPhotoCadrage: null,
           addPhotoDetourage: "repos",
           addSaisons: saisonsDe(item),
           addManches: item.manches ?? null,
@@ -1951,7 +1954,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // jamais ce qui sera persisté au final (cf. photoUrl côté
       // insertDressingItem, uniquement rempli une fois l'URL définitive
       // obtenue ci-dessous).
-      setState((s) => ({ ...s, addPhotoUrl: URL.createObjectURL(file), addPhotoUploading: true, addPhotoAnalysee: false, addPhotoDetourage: "repos" }));
+      setState((s) => ({ ...s, addPhotoUrl: URL.createObjectURL(file), addPhotoUploading: true, addPhotoAnalysee: false, addPhotoCadrage: null, addPhotoDetourage: "repos" }));
       if (!isSupabaseConfigured || !userId) {
         // Mode démo : pas de Storage à interroger, l'aperçu local reste tel quel.
         setState((s) => ({ ...s, addPhotoUploading: false }));
@@ -1989,6 +1992,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                   ...s,
                   addPhotoAnalyzing: false,
                   addPhotoAnalysee: analysee,
+                  addPhotoCadrage: a.photoType ?? null,
                   addCat: finalCat,
                   addColor: finalColor,
                   addMatiere: finalMatiere,
@@ -2145,6 +2149,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addPhotoUploading: false,
         addPhotoAnalyzing: false,
         addPhotoAnalysee: false,
+        addPhotoCadrage: null,
         addPhotoDetourage: "repos",
         addCatTouched: false,
         addColorTouched: false,
