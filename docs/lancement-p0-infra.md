@@ -134,6 +134,35 @@ secret ne porte le préfixe `NEXT_PUBLIC_`.
 - **Domaine propre** à brancher sur Vercel (aujourd'hui `*.vercel.app`) ; le
   mettre ensuite dans les mentions légales, les URL de redirection Supabase et
   `NEXT_PUBLIC_*` si besoin.
+- **`capsela.app` — état au 05/10/2026** (acheté chez OVH ; propriétaire, pas
+  vérifié depuis le conteneur de développement, dont le réseau est bloqué) :
+  - Vercel : domaine ajouté au projet (Settings → Domains), ligne `capsela.app`
+    en « Valid Configuration » d'après la propriétaire.
+  - Zone DNS OVH : `@` A `216.198.79.1` (valeur affichée par Vercel, et non
+    `76.76.21.21`, l'ancienne), `www` CNAME `cname.vercel-dns.com.`. Les A
+    `213.186.33.5` (page de parking OVH) et le TXT `www` « 3|welcome » ont été
+    supprimés : un CNAME ne cohabite pas avec d'autres entrées sur le même nom.
+  - E-mail : la boîte Zimbra Starter incluse a ajouté 3 MX et le SPF
+    `v=spf1 include:mx.ovh.com -all`. **À compléter** quand l'envoi des e-mails
+    de l'app (confirmation, mot de passe oublié) sera branché sur un service
+    dédié (Resend, Brevo…) : ajouter ce service au SPF et poser sa clé DKIM.
+  - Google (connexion) : origine JavaScript `https://capsela.app` ajoutée ;
+    l'URI de redirection reste celle de Supabase. Ajouter aussi
+    `https://capsela.vercel.app` tant que l'ancienne adresse sert.
+  - **À faire** : Supabase → Authentication → URL Configuration (Site URL
+    `https://capsela.app`, Redirect URLs `https://capsela.app/**` et
+    `https://www.capsela.app/**`, en gardant `*.vercel.app` le temps de la
+    transition) ; mentions légales ; puis rejouer connexion e-mail, mot de passe
+    oublié (le lien doit ouvrir `capsela.app`) et Google.
+- **Adresse de retour Google sur `*.supabase.co`** : l'URI de redirection
+  `https://<projet>.supabase.co/auth/v1/callback` ne change pas avec le domaine
+  de l'app. La remplacer par une adresse à soi (`api.capsela.app`) passe par
+  l'option payante *Custom Domains* de Supabase (plan payant requis ; tarif non
+  vérifié) : un CNAME et un TXT dans la zone OVH, puis la nouvelle URI ajoutée
+  dans Google en plus de l'ancienne. **ARBITRAGE ÉDITORIAL** : repoussé après le
+  lancement ; son seul effet visible est le nom affiché sur l'écran de
+  consentement Google, que le nom, le logo et le domaine renseignés dans cet
+  écran limitent déjà.
 - **Quotas Supabase** : un relevé du 26/08 notait un *Cached Egress* à 196 % du
   quota gratuit (5 Go), avec une période de grâce jusqu'au 22/09 après laquelle
   les requêtes renvoient 402. **Vérifie l'état du projet** (Settings → Usage) :
