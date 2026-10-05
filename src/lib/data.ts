@@ -459,60 +459,43 @@ export function addedAgo(createdAt: number | null | undefined): string | null {
   return "Ajoutée il y a +1 an";
 }
 
+/**
+ * LES CINQ ÉCRANS DE L'ONBOARDING (refonte du 05/10/2026, brief « Onboarding premium ») : l'histoire d'une phrase —
+ * Capsela comprend ton style, ton dressing, t'aide à t'habiller, t'accompagne quand tu pars — puis un cinquième écran qui
+ * ne présente plus rien et demande seulement le compte. Un sur-titre, un titre (la dernière ligne en italique terracotta,
+ * comme les titres d'écran de l'app), une phrase ; le visuel vit dans OnboardingScreen.tsx.
+ */
 export interface OnboardingSlide {
   kicker: string;
-  tag: string;
-  glyph: string;
-  bg: string;
-  glyphColor: string;
-  tagColor: string;
-  title: string;
+  /** Les lignes du titre ; la dernière passe en italique terracotta. */
+  title: string[];
   body: string;
 }
 
 export const ONBOARDING_SLIDES: OnboardingSlide[] = [
-  // Visuel remplacé par un moodboard de styles (recette 26/08/2026, direction
-  // adaptée d'une proposition externe) — cf. OnboardingScreen.tsx, qui
-  // affiche une grille de cards de style à la place du glyphe/tag ci-dessous
-  // pour ce slide précis. bg/glyph/glyphColor/tagColor/tag restent déclarés
-  // pour la cohérence de type avec les 2 autres slides, mais ne sont plus
-  // rendus pour celui-ci.
   {
     kicker: "Ton style",
-    tag: "ce que tu as déjà",
-    glyph: "1",
-    bg: "#E7DCCB",
-    glyphColor: "rgba(166,105,80,.28)",
-    tagColor: "#8A6B4A",
-    title: "Un dressing pensé pour toi",
-    body: "Indique ton style et L’Édit Capsela te propose une sélection de pièces qui te ressemble. Tu peux ensuite la personnaliser avec les vêtements que tu possèdes déjà.",
+    title: ["Un dressing", "qui te ressemble."],
+    body: "Indique ce que tu aimes. Capsela s’en sert pour imaginer des pièces, des associations et des tenues qui correspondent vraiment à ton style.",
   },
-  // Visuel remplacé par un aperçu de capsule (recette 26/08/2026, même
-  // direction que le slide 1) — cf. OnboardingScreen.tsx. tag/glyph/
-  // glyphColor/tagColor conservés pour la cohérence de type, non rendus
-  // pour ce slide.
   {
-    kicker: "Ta capsule",
-    tag: "30 à 40 pièces",
-    glyph: "2",
-    bg: "#D9C9B2",
-    glyphColor: "rgba(166,105,80,.26)",
-    tagColor: "#7C6A4F",
-    title: "30 à 40 pièces, choisies avec soin",
-    body: "Capsela construit une capsule cohérente à partir de ton style. Garde ce qui te plaît, remplace certaines pièces et fais-la évoluer avec ton dressing.",
+    kicker: "Ton dressing",
+    title: ["Tout ce que tu as.", "Tout ce que tu peux porter."],
+    body: "Ajoute les pièces que tu possèdes et laisse Capsela repérer celles qui vont ensemble. Ton dressing devient une source d’idées, pas une pile de vêtements.",
   },
-  // Visuel remplacé par un mini-aperçu d'écran (recette 26/08/2026, même
-  // direction que les slides 1 et 2) — cf. OnboardingScreen.tsx. tag/glyph/
-  // glyphColor/tagColor conservés pour la cohérence de type, non rendus
-  // pour ce slide.
   {
     kicker: "Tes tenues",
-    tag: "porte tout",
-    glyph: "3",
-    bg: "#C9B29A",
-    glyphColor: "rgba(166,105,80,.24)",
-    tagColor: "#6E5B43",
-    title: "S’habiller devient simple",
-    body: "Chaque jour, Capsela compose des tenues adaptées à ton style, à la météo et à tes occasions, avec tes pièces et celles qui peuvent compléter ton dressing.",
+    title: ["Chaque matin,", "tu sais quoi porter."],
+    body: "Capsela compose des tenues adaptées à ton style, à la météo et à tes occasions, avec tes pièces et celles qui peuvent compléter ton dressing.",
+  },
+  {
+    kicker: "Tes valises",
+    title: ["Partir devient", "plus simple."],
+    body: "Indique ta destination, tes dates et ton programme. Capsela sélectionne les pièces à emporter et compose tes tenues pour tout le séjour.",
+  },
+  {
+    kicker: "L’édit Capsela",
+    title: ["Ton dressing.", "Ton style.", "Ton quotidien."],
+    body: "Crée ton compte pour retrouver ton dressing, tes capsules, tes tenues et tes valises au même endroit, sur tous tes appareils.",
   },
 ];

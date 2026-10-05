@@ -376,6 +376,7 @@ export interface Actions {
   setAuthName: (v: string) => void;
   onbBack: () => void;
   onbNext: () => void;
+  onbPasser: () => void;
   openItem: (id: number, suggested?: boolean) => void;
   /**
    * Ouvre le module "Comment porter cette pièce ?" — pour une pièce de la
@@ -1727,8 +1728,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
     onbBack: () =>
       setState((s) => (s.onbStep === 0 ? { ...s, screen: "welcome" } : { ...s, onbStep: s.onbStep - 1 })),
+    // Cinq écrans (05/10/2026) : le dernier (index 4) est celui du compte ; son bouton mène au formulaire d'inscription.
     onbNext: () =>
-      setState((s) => (s.onbStep >= 2 ? { ...s, screen: "auth" } : { ...s, onbStep: s.onbStep + 1 })),
+      setState((s) => (s.onbStep >= 4 ? { ...s, screen: "auth" } : { ...s, onbStep: s.onbStep + 1 })),
+    // « Passer » va à l'écran du compte (le dernier), sans repasser par les explications.
+    onbPasser: () => setState((s) => ({ ...s, onbStep: 4 })),
 
     openItem: (id, suggested = false) =>
       setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, screen: "piece" })),
