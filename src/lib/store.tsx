@@ -643,7 +643,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
   // Garde-fou exploration de style (recette 24/08/2026) : un style exploré
   // devient invalide si le profil change de genre (styles exposés différents)
-  // ou si le style principal devient lui-même ce style exploré — jamais
+  // ou si l'un des styles du profil devient lui-même ce style exploré — jamais
   // laissé actif par erreur après un changement de profil fait ailleurs
   // (ProfileSetupScreen/ProfileEditScreen, hors de ce store). Ajustement
   // pendant le rendu (pattern React officiel, pas un effet) : évite un aller-
@@ -653,7 +653,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   if (profileStyleKey !== lastProfileStyleKey) {
     setLastProfileStyleKey(profileStyleKey);
     if (state.exploredStyleId) {
-      const stillValid = state.exploredStyleId !== profile.styles[0] && exposedStyleIds(profile.gender).includes(state.exploredStyleId);
+      const stillValid = !profile.styles.includes(state.exploredStyleId) && exposedStyleIds(profile.gender).includes(state.exploredStyleId);
       if (!stillValid) setState((s) => ({ ...s, exploredStyleId: null }));
     }
   }

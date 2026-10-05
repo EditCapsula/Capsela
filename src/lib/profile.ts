@@ -298,6 +298,36 @@ export function styleLabel(id: string | undefined | null, gender: Gender | null)
 }
 
 /**
+ * DEUX STYLES AU PLUS (05/10/2026, demandé : « choisir 2 ou 3 styles » ; arbitré à 2 : au-delà, la capsule — environ 30
+ * pièces hors sport — se dilue entre trop d'univers, et l'effet de 3 styles n'est pas mesuré). Le PREMIER choisi est le
+ * style principal : c'est lui que lisent les écrans à un seul style (exploration d'autres styles, styleCoverage) ; le
+ * second élargit seulement le catalogue d'où la capsule tire ses pièces (computeDefaultCapsule : « l'un des styles »).
+ * `profiles.styles` est déjà une liste : aucune migration. Reprend un essai de multi-sélection du 20/08/2026, abandonné
+ * alors sans raison écrite.
+ */
+export const MAX_STYLES = 2;
+
+/**
+ * Le choix d'un style : un style choisi se retire (le second devient alors le principal) ; un style absent s'ajoute ; à
+ * `MAX_STYLES`, il remplace le second — jamais le principal, qui ne change que si on le retire.
+ */
+export function basculerStyle(styles: readonly string[], id: string): string[] {
+  if (styles.includes(id)) return styles.filter((s) => s !== id);
+  if (styles.length >= MAX_STYLES) return [...styles.slice(0, MAX_STYLES - 1), id];
+  return [...styles, id];
+}
+
+/** Les libellés des styles choisis, dans l'ordre du choix, sans les ids inconnus du genre. */
+export function stylesLabels(styles: readonly string[], gender: Gender | null): string[] {
+  return styles.map((id) => styleLabel(id, gender)).filter(Boolean);
+}
+
+/** « Preppy », ou « Preppy et Casual chic » : le texte d'un profil à un ou deux styles. */
+export function libelleStyles(styles: readonly string[], gender: Gender | null): string {
+  return stylesLabels(styles, gender).join(" et ");
+}
+
+/**
  * Morphologie — taxonomie féminine uniquement en P0 (Tâche 5, arbitrages du
  * 20/08/2026). Valeurs préfixées `f_` : "Rectangle" et "Triangle inversé"
  * seront un jour partagés avec une taxonomie homme non activée, mais avec
@@ -477,7 +507,7 @@ export function champsProfilStyle(profile: Profile): ChampCompletude[] {
   const morpho = GENDER_DEPENDENT_FIELDS.find((f) => f.key === "morphology")!;
   const champs: ChampCompletude[] = [
     { cle: "genre", libelle: "Genre", renseigne: Boolean(genderLabel(profile.gender)) },
-    { cle: "style", libelle: "Style", renseigne: Boolean(styleLabel(profile.styles[0], profile.gender)) },
+    { cle: "style", libelle: "Style", renseigne: stylesLabels(profile.styles, profile.gender).length > 0 },
   ];
   if (morpho.valuesFor(profile.gender).length > 0) {
     champs.push({

@@ -18,7 +18,7 @@ import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { estContexteMaison, qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
-import { styleLabel } from "@/lib/profile";
+import { libelleStyles, stylesLabels } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
 import { JourEtMeteo } from "@/components/JourMeteo";
 import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@/lib/retro";
@@ -504,7 +504,8 @@ export default function HomeScreen() {
   // exactement à l'écran Capsule.
   const capsuleSeason = state.capsuleSeason || currentSeasonKey();
   const capsule = computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
-  const capsuleStyleLabel = styleLabel(profile.styles[0], profile.gender);
+  const capsuleStyleLabel = libelleStyles(profile.styles, profile.gender);
+  const nbStylesCapsule = stylesLabels(profile.styles, profile.gender).length;
 
   /*
    * « J'ADORE » ENREGISTRE LA TENUE (recette du 26/09/2026, qui revient sur
@@ -586,7 +587,7 @@ export default function HomeScreen() {
     // react-hooks/preserve-manual-memoization, vue au lint). Deux
     // concaténations ne valent pas cette dette.
     const n = capsule.length;
-    const phrase = `Une sélection pensée pour ton style${capsuleStyleLabel ? `, ${capsuleStyleLabel}` : ""}.`;
+    const phrase = `Une sélection pensée pour ${nbStylesCapsule > 1 ? "tes styles" : "ton style"}${capsuleStyleLabel ? `, ${capsuleStyleLabel}` : ""}.`;
     if (!n) return phrase;
     return (
       <>

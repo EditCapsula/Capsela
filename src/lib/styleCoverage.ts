@@ -23,7 +23,7 @@ import type { CapsuleSeason, DateContext, OccasionKey, WorkMode } from "./types"
 /**
  * Ne lit que ses paramètres, n'en mute aucun (profile/weather/excludedIds
  * compris) et ne touche jamais au store — un simple calcul pur rejouable à
- * volonté. Retourne uniquement les styles, autres que le style principal du
+ * volonté. Retourne uniquement les styles, autres que les styles du
  * profil, pour lesquels le moteur produit réellement une tenue complète pour
  * cette occasion précise (jamais une correspondance déduite de tags style ×
  * occasion).
@@ -38,11 +38,10 @@ export function findCompatibleStyles(
   excludedIds: number[],
   capsuleSeason: CapsuleSeason | null
 ): StyleId[] {
-  const mainStyle = profile.styles[0];
   const season = capsuleSeason || currentSeasonKey();
   const preferredHexes = paletteHexes(profile);
 
-  const candidates = exposedStyleIds(profile.gender).filter((id) => id !== mainStyle);
+  const candidates = exposedStyleIds(profile.gender).filter((id) => !profile.styles.includes(id));
 
   const compatible: StyleId[] = [];
   for (const styleId of candidates) {
