@@ -424,10 +424,12 @@ function occasionPhrase(occasion: OccasionKey, workMode: WorkMode, dateContext: 
 }
 
 /** Qualificatif court associé à la température — deuxième "raison" de explainRecommendation ci-dessous. */
+const QUALIFICATIF_12_19 = "confortable, une couche en plus si besoin";
+
 function weatherQualifier(t: number): string {
   if (t >= 27) return "légère et fraîche";
   if (t >= 20) return "légère et confortable";
-  if (t >= 12) return "confortable, une couche en plus si besoin";
+  if (t >= 12) return QUALIFICATIF_12_19;
   return "chaude et enveloppante";
 }
 
@@ -465,7 +467,11 @@ export function outfitMoodPhrase(
   if (temp == null || !Number.isFinite(temp)) {
     return `Pensée pour ${occasionPhrase(occasion, workMode, dateContext)}.`;
   }
-  return weatherQualifier(Math.round(temp));
+  const q = weatherQualifier(Math.round(temp));
+  // Sur l'écran Tenue seulement (05/10/2026, brief de rédaction) : « Confortable · Prévois une couche légère » à la place de
+  // « confortable, une couche en plus si besoin ». weatherQualifier, partagée avec l'accueil (qualificatifLook), n'est pas
+  // touchée : sa formulation y reste ce qu'elle était.
+  return q === QUALIFICATIF_12_19 ? "Confortable · Prévois une couche légère" : q;
 }
 
 /**
