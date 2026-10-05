@@ -424,7 +424,9 @@ function occasionPhrase(occasion: OccasionKey, workMode: WorkMode, dateContext: 
 }
 
 /** Qualificatif court associé à la température — deuxième "raison" de explainRecommendation ci-dessous. */
-const QUALIFICATIF_12_19 = "confortable, une couche en plus si besoin";
+// « Confortable · Prévois une couche légère » (brief de rédaction du 05/10/2026, écran Tenue puis accueil) ; en minuscule ici comme
+// les autres qualificatifs : l'accueil et l'écran Tenue y mettent la majuscule.
+const QUALIFICATIF_12_19 = "confortable · Prévois une couche légère";
 
 function weatherQualifier(t: number): string {
   if (t >= 27) return "légère et fraîche";
@@ -468,10 +470,9 @@ export function outfitMoodPhrase(
     return `Pensée pour ${occasionPhrase(occasion, workMode, dateContext)}.`;
   }
   const q = weatherQualifier(Math.round(temp));
-  // Sur l'écran Tenue seulement (05/10/2026, brief de rédaction) : « Confortable · Prévois une couche légère » à la place de
-  // « confortable, une couche en plus si besoin ». weatherQualifier, partagée avec l'accueil (qualificatifLook), n'est pas
-  // touchée : sa formulation y reste ce qu'elle était.
-  return q === QUALIFICATIF_12_19 ? "Confortable · Prévois une couche légère" : q;
+  // Sur l'écran Tenue, le conseil de 12° à 19° prend la majuscule (« Confortable · Prévois une couche légère ») ; les autres
+  // paliers restent ce qu'ils étaient. L'accueil dit la même chose, par qualificatifLook.
+  return q === QUALIFICATIF_12_19 ? q.charAt(0).toUpperCase() + q.slice(1) : q;
 }
 
 /**
