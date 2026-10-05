@@ -20,7 +20,7 @@ describe("qualificatifLook — une pièce du look n'est jamais présentée comme
   });
 
   it("sans couche de dessus, le conseil météo reste", () => {
-    expect(qualificatifLook(17, [{ cat: "haut" }, { cat: "pantalon" }])).toBe("Confortable, une couche en plus si besoin.");
+    expect(qualificatifLook(17, [{ cat: "haut" }, { cat: "pantalon" }])).toBe("Confortable · Prévois une couche légère.");
   });
 
   it("hors de 12–19°, le qualificatif météo d'origine, en phrase", () => {
