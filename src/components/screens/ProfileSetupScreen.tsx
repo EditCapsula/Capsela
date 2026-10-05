@@ -105,7 +105,7 @@ const ALL_STEPS = [
   { key: "colorimetrie_suite", kicker: "Ta colorimétrie", title: "Et maintenant ?", subtitle: "Capsela utilise ta palette pour personnaliser ton expérience." },
   { key: "pal_recap", kicker: "Voilà ta palette Capsela", title: "Ce que tu aimes × ce qui te met en valeur", subtitle: "Capsela combine tes préférences et ta colorimétrie pour des recommandations qui te ressemblent." },
   { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
-  { key: "style", kicker: "Style", title: "Quels styles te ressemblent ?", subtitle: "Choisis-en un ou deux : le premier est ton style principal." },
+  { key: "style", kicker: "Style", title: "Quels styles te ressemblent ?", subtitle: "Choisis-en un ou deux." },
   { key: "morpho", kicker: "Morphologie", title: "Et ta silhouette ?", subtitle: "Pour affiner nos recommandations de coupes." },
 ] as const;
 
