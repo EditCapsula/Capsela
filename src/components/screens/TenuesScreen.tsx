@@ -530,7 +530,7 @@ export default function TenuesScreen() {
   // l'encoche/la barre de gestes.
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <AppHeader />
+      <AppHeader onBack={actions.goHome} backLabel="Revenir à l'accueil" />
 
       <div className="mt-[18px]">
         {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
