@@ -7,8 +7,7 @@ import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import FilEtapes from "@/components/FilEtapes";
-import { LigneIcone, TuileIcone, TuileOccasion, type IconePlanifier } from "@/components/PlanifierUI";
+import { CalendrierMois, IconeTuile, LigneIcone, ProgressionLibelles, TuileIcone, TuileOccasion, type IconePlanifier } from "@/components/PlanifierUI";
 import { OCCASIONS_EDITORIALES } from "@/lib/occasionEditoriale";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
@@ -16,7 +15,7 @@ import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { CATS, DATE_CONTEXTS, OCCASIONS, occasionShortLabel } from "@/lib/data";
+import { CATS, DATE_CONTEXTS, OCCASIONS, occasionShortLabel, type Weather } from "@/lib/data";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { titreLookDuJour } from "@/lib/logic";
@@ -36,7 +35,6 @@ import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
-import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
@@ -136,7 +134,6 @@ const G_LOUPE = (
     <line x1="15.6" y1="15.6" x2="20" y2="20" {...T} />
   </>
 );
-const G_COCHE = <path d="M5 12.5l4.5 4.5L19 7.5" {...T} strokeWidth={1.8} />;
 /** Le dessin de l'onglet Planifier (TabBar) : la date d'une tenue planifiée porte l'icône de l'écran. */
 const G_CALENDRIER = (
   <>
@@ -232,7 +229,7 @@ const TYPES_LIEU_PAR_OCCASION: Partial<Record<OccasionKey, readonly string[]>> =
 
 const JOURS_PROPOSES = 21;
 /** Les noms sous les points du fil (maquettes du 07/10/2026) ; une tenue imposée n'a pas la dernière. */
-const LIBELLES_ETAPES = ["Occasion", "Quand", "Où", "Préférences"] as const;
+const LIBELLES_ETAPES = ["Occasion", "Où", "Quand", "Préférence"] as const;
 const ICONE_MOMENT: Record<string, IconePlanifier> = { Matin: "matin", "Après-midi": "apresmidi", Soirée: "soiree", "Toute la journée": "journee" };
 const ICONE_LIEU: Record<string, IconePlanifier> = { Restaurant: "restaurant", "Bar / Rooftop": "bar", "Lieu culturel": "culture", Extérieur: "exterieur", "Chez quelqu'un": "maison" };
 const DOW = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -479,6 +476,40 @@ function LigneValise({ v, dressing, passee, onClick }: { v: ValiseGardee; dressi
   );
 }
 
+/**
+ * Un tirage du moteur unique (generateOutfitWithFallback, via la préférence d'humeur) pour une planification. Même
+ * composition de pool que `regen` (store.tsx) : une catégorie dont aucune pièce réelle ne déclare l'occasion se voit rendre
+ * celles de la capsule qui la déclarent ; « Uniquement mon dressing » court-circuite cette complétion.
+ */
+function composerTenuePlan(e: {
+  items: Item[];
+  capsule: Item[];
+  occ: OccasionKey | null;
+  dressingSeul: boolean;
+  meteo: Weather;
+  workMode: WorkMode;
+  dateContext: DateContext;
+  profile: ReturnType<typeof useAuth>["profile"];
+  humeur: Humeur | null;
+}) {
+  if (!e.occ) return null;
+  const pool = e.dressingSeul
+    ? e.items
+    : composeWardrobePool(e.items, e.capsule, CAT_KEYS, { completerPourOccasion: e.occ, saison: e.meteo, exclureHorsOccasion: true });
+  return genererTenueHumeur({
+    pool,
+    weather: e.meteo,
+    occasion: e.occ,
+    workMode: e.workMode,
+    dateContext: e.dateContext,
+    preferredHexes: paletteHexes(e.profile),
+    gender: e.profile.gender,
+    morphology: e.profile.morphology,
+    colorimetrie: colorimetrieMoteur(e.profile.colorimetrie),
+    humeur: e.humeur,
+  });
+}
+
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, vestiairePool, etatPremium, actions } = useCapsela();
   const { profile, userId } = useAuth();
@@ -487,7 +518,7 @@ export default function PlanifierScreen() {
   // plutôt que de laisser sur le hub (l'état de cet écran est local).
   // « Planifier une tenue pour … » depuis Tenue (27/09/2026) : la date est
   // déjà choisie, le parcours s'ouvre sur ses étapes.
-  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail" | "confirmation">(() =>
+  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "alternatives" | "liste" | "detail" | "confirmation">(() =>
     state.planARouvrir ? "detail" : state.planComposition || state.planJour != null ? "etape" : "intro"
   );
   /**
@@ -562,6 +593,11 @@ export default function PlanifierScreen() {
   // Depuis Tenue, le jour consulté (planJour, toujours ≥ 1 : Planifier ne propose pas aujourd'hui).
   const [jour, setJour] = useState<number | null>(() => (state.planComposition?.demain ? 1 : state.planJour));
   const [moment, setMoment] = useState<MomentJournee | null>(null);
+  /** Le mois affiché par le calendrier de l'étape « Quand » : celui de la date déjà choisie, sinon le mois courant. */
+  const [moisAffiche, setMoisAffiche] = useState<Date>(() => {
+    const d = dansNJours(jour ?? 0);
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
   const [lieu, setLieu] = useState("");
   /**
    * VILLE CHOISIE DANS LES SUGGESTIONS, avec ses coordonnées — `null` tant
@@ -585,9 +621,6 @@ export default function PlanifierScreen() {
   const [composeDelaiOk, setComposeDelaiOk] = useState(false);
   const [coche, setCoche] = useState(0);
   const [dressingSeul, setDressingSeul] = useState(false);
-  // Incrémenté par « Autre proposition » — seule entrée du useMemo qui change
-  // alors, donc seul moyen de redemander un tirage sans toucher aux réponses.
-  const [tirage, setTirage] = useState(0);
   /**
    * Prévision du LIEU. Demandée en quittant l'étape 3, c'est-à-dire au moment
    * où le lieu est arrêté — pas à chaque frappe dans le champ. Le temps que
@@ -657,7 +690,7 @@ export default function PlanifierScreen() {
     lieu.trim().length < 2 || villeChoisieAffichee ? [] : (suggestions ?? []);
 
   useEffect(() => {
-    if (etape !== 3) return;
+    if (etape !== 2) return;
     const q = lieu.trim();
     if (q.length < 2 || villeChoisieAffichee) return;
     let annule = false;
@@ -688,6 +721,15 @@ export default function PlanifierScreen() {
    */
   const meteoMoment =
     prevision && dateChoisie && moment ? previsionPour(prevision, jourLocal(dateChoisie), moment) : null;
+  /** La météo de la journée entière à la date choisie — pour la carte de l'étape « Quand », avant que le moment soit choisi. */
+  const meteoJour = prevision && dateChoisie ? previsionPour(prevision, jourLocal(dateChoisie), "Toute la journée") : null;
+  /** Le premier jour où la prévision couvrira la date choisie : la date moins l'horizon de la prévision. */
+  const debutMeteo = (() => {
+    if (!dateChoisie) return "";
+    const d = new Date(dateChoisie);
+    d.setDate(d.getDate() - HORIZON_PREVISION_JOURS);
+    return `${d.getDate()} ${MOIS[d.getMonth()]}`;
+  })();
   /** Dernier jour réellement couvert — sert à dire jusqu'à quand on sait. */
   const dernierJourConnu = prevision ? joursCouverts(prevision).at(-1) : undefined;
   /**
@@ -714,35 +756,47 @@ export default function PlanifierScreen() {
    */
   const villeAffichee = ville?.name ?? villeDuLieu(lieu);
 
-  const tenue = useMemo(() => {
-    if (!occ) return null;
-    // Même composition que `regen` (store.tsx) : une catégorie dont aucune
-    // pièce réelle ne déclare l'occasion se voit rendre celles de la capsule
-    // qui la déclarent. « Uniquement mon dressing » court-circuite cette
-    // complétion — c'est tout ce que ce réglage fait, et c'est suffisant.
-    const pool = dressingSeul
-      ? state.items
-      : composeWardrobePool(state.items, defaultCapsule, CAT_KEYS, {
-          completerPourOccasion: occ,
-          saison: meteoUtilisee,
-          exclureHorsOccasion: true,
-        });
-    return genererTenueHumeur({
-      pool,
-      weather: meteoUtilisee,
-      occasion: occ,
-      workMode,
-      dateContext,
-      preferredHexes: paletteHexes(profile),
-      gender: profile.gender,
-      morphology: profile.morphology,
-      colorimetrie: colorimetrieMoteur(profile.colorimetrie),
-      humeur,
-    });
-    // `tirage` est une dépendance délibérée : c'est le bouton « Autre
-    // proposition ». Sans elle, redemander une tenue rendrait la même.
+  /** Les entrées du moteur pour cette planification — une seule description, pour la tenue et pour ses alternatives. */
+  const entreesMoteur = {
+    items: state.items,
+    capsule: defaultCapsule,
+    occ,
+    dressingSeul,
+    meteo: meteoUtilisee,
+    workMode,
+    dateContext,
+    profile,
+    humeur,
+  };
+  const tenue = useMemo(
+    () => composerTenuePlan(entreesMoteur),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [occ, dressingSeul, state.items, defaultCapsule, meteoUtilisee, workMode, dateContext, profile, tirage, humeur]);
+    [occ, dressingSeul, state.items, defaultCapsule, meteoUtilisee, workMode, dateContext, profile, humeur]
+  );
+  /** L'alternative choisie dans « Autres propositions » : valable tant que les paramètres qui l'ont produite ne changent pas. */
+  const cleParams = `${occ}|${dressingSeul}|${humeur}|${jour}|${moment}|${workMode}|${dateContext}`;
+  const [choixBrut, setChoixBrut] = useState<{ cle: string; ids: number[] } | null>(null);
+  const choisie = choixBrut?.cle === cleParams ? choixBrut.ids : null;
+  /** La proposition surlignée dans « Autres propositions » (index dans `propositions`), sinon celle qui est affichée. */
+  const [altSel, setAltSel] = useState(0);
+  const [altsBrut, setAltsBrut] = useState<{ cle: string; liste: number[][] } | null>(null);
+  const alternatives = altsBrut?.cle === cleParams ? altsBrut.liste : [];
+  const idsAffiches = composition ?? choisie ?? tenue?.ids ?? [];
+  /** Jusqu'à trois tenues différentes de celle affichée, tirées du même moteur avec les mêmes paramètres. */
+  const chercherAlternatives = () => {
+    const vues = new Set<string>([[...idsAffiches].sort().join(",")]);
+    const liste: number[][] = [];
+    for (let i = 0; i < 30 && liste.length < 3; i++) {
+      const t = composerTenuePlan(entreesMoteur);
+      if (!t || t.noCompleteOutfit || !t.ids.length) continue;
+      const cle = [...t.ids].sort().join(",");
+      if (vues.has(cle)) continue;
+      vues.add(cle);
+      liste.push(t.ids);
+    }
+    setAltsBrut({ cle: cleParams, liste });
+    setAltSel(0);
+  };
 
   const pieces: Item[] = useMemo(() => {
     // Pool stable et non le seul dressing : une tenue planifiée reprise telle
@@ -755,8 +809,9 @@ export default function PlanifierScreen() {
     }
     if (!tenue) return [];
     const source = dressingSeul ? state.items : [...state.items, ...defaultCapsule];
-    return tenue.ids.map((id) => source.find((i) => i.id === id)).filter((i): i is Item => !!i);
-  }, [composition, tenue, state.items, vestiairePool, defaultCapsule, dressingSeul]);
+    return idsAffiches.map((id) => source.find((i) => i.id === id)).filter((i): i is Item => !!i);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [composition, tenue, choisie, state.items, vestiairePool, defaultCapsule, dressingSeul]);
   /** Rien à garder : état vide du moteur — une composition imposée en a toujours une. */
   const sansTenue = !composition && (!tenue || tenue.noCompleteOutfit);
 
@@ -988,7 +1043,7 @@ export default function PlanifierScreen() {
         // Une composition imposée vient du dressing réel — sauf une tenue
         // planifiée reprise, qui garde ce qu'elle était.
         dressingSeul: composition ? (depuisPlan ? depuisPlan.plan.dressingSeul : true) : dressingSeul,
-        pieceIds: composition ?? tenue!.ids,
+        pieceIds: composition ?? choisie ?? tenue!.ids,
         temp: meteoMoment ? meteoMoment.temp : null,
         weatherLabel: meteoMoment ? meteoMoment.label : null,
       });
@@ -1095,13 +1150,16 @@ export default function PlanifierScreen() {
     setDepuisPlan({ plan: t, remplacer: mode !== "dupliquer" });
     setPlanOuvert(null);
     setVue("etape");
-    setEtape(mode === "modifier" ? 1 : 2);
+    setEtape(mode === "modifier" ? 1 : 3);
   };
 
-  const attend = previsionEtat === "encours";
+  /** Le message sous le bouton inactif : lié à l'état qui l'a provoqué, il disparaît dès qu'on change d'étape ou de choix. */
+  const [messageBrut, setMessageBrut] = useState<{ txt: string; cle: string } | null>(null);
+  const cleMessage = `${etape}|${occ}|${jour}|${moment}`;
+  const message = messageBrut?.cle === cleMessage ? messageBrut.txt : null;
   /** Quatre questions, trois pour une tenue imposée (sa composition est faite, la préférence n'aurait rien à départager). */
   const derniere = composition ? 3 : 4;
-  const etapeValide = etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : etape === 3 ? !!lieu.trim() : true;
+  const etapeValide = etape === 1 ? !!occ : etape === 3 ? jour != null && !!moment : true;
 
   // Écran de composition : la prévision doit être revenue ET un temps minimal écoulé, pour que la transition se lise.
   useEffect(() => {
@@ -1168,13 +1226,14 @@ export default function PlanifierScreen() {
     if (vue === "detail") {
       setPlanOuvert(null);
       setVue(retourDetail);
-    } else if (vue === "etape" && depuisPlan && etape === (composition ? 2 : 1)) {
+    } else if (vue === "etape" && depuisPlan && etape === (composition ? 3 : 1)) {
       // Parcours ouvert depuis le détail d'un plan : le retour y ramène.
       setPlanOuvert(depuisPlan.plan);
       setDepuisPlan(null);
       setComposition(null);
       setVue("detail");
-    } else if (vue === "liste" || vue === "confirmation") setVue("intro");
+    } else if (vue === "alternatives") setVue("resultat");
+    else if (vue === "liste" || vue === "confirmation") setVue("intro");
     else if (vue === "resultat") setVue("etape");
     else if (vue === "etape" && etape > 1) setEtape(etape - 1);
     else if (vue === "etape") setVue("intro");
@@ -1205,20 +1264,13 @@ export default function PlanifierScreen() {
    * étaient devenues fausses, ce qui est pire qu'inutile.
    */
   const ETAPES: Record<number, [string, string, string, string]> = {
-    1: [`Étape 1 sur ${derniere}`, "Quelle est", "l'occasion ?", "Choisis ce qui est prévu ce jour-là."],
-    2: [`Étape 2 sur ${derniere}`, "Pour", "quand ?", "La date fixe la saison de la tenue."],
-    // Le type de lieu n'entre PAS dans le moteur (cf. TYPES_LIEU_PAR_OCCASION) :
-    // écrire « le lieu affine la tenue » serait faux. Il précise l'occasion.
-    3: [
-      `Étape 3 sur ${derniere}`,
-      "Où",
-      "seras-tu ?",
-      typesLieuProposes.length > 0
-        ? "La ville nous aide pour la météo. Le type de lieu précise ton occasion."
-        : "La ville nous aide pour la météo.",
-    ],
+    1: [`Étape 1 sur ${derniere}`, "Quelle est", "l'occasion ?", "Choisis le moment à préparer, Capsela s’occupe du reste."],
+    // Le lieu sert à la prévision météo (et se range avec la tenue planifiée). Le type de lieu précise l'occasion : le
+    // moteur ne le lit pas (cf. TYPES_LIEU_PAR_OCCASION), la phrase ne dit donc pas qu'il « affine la tenue ».
+    2: [`Étape 2 sur ${derniere}`, "Où", "seras-tu ?", "Le lieu me permet de trouver la bonne météo."],
+    3: [`Étape 3 sur ${derniere}`, "Pour", "quand ?", "Capsela adapte la tenue au moment choisi et à la météo."],
     // Une préférence, pas un style : elle ne départage que des tenues déjà compatibles (humeur.ts).
-    4: [`Étape 4 sur ${derniere}`, "Une dernière", "préférence ?", "Facultatif. Elle ne change pas ce qui convient à ta météo ni à ton occasion."],
+    4: [`Étape 4 sur ${derniere}`, "Une dernière", "préférence ?", "Comment veux-tu te sentir dans cette tenue ?"],
   };
 
   return (
@@ -1249,7 +1301,7 @@ export default function PlanifierScreen() {
           écran centre déjà le logo juste au-dessus. */}
       {vue === "etape" && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
-          <FilEtapes total={derniere} courante={etape - 1} libelles={LIBELLES_ETAPES.slice(0, derniere)} />
+          <ProgressionLibelles libelles={LIBELLES_ETAPES.slice(0, derniere)} courante={etape - 1} />
         </div>
       )}
 
@@ -1449,11 +1501,15 @@ export default function PlanifierScreen() {
           <div className="flex flex-col items-center text-center pt-10" role="status" aria-live="polite">
             <LoadingSpinner size={56} />
             <TitreEtape a="Capsela compose" b="ta tenue…" />
-            <div className="t-chapeau text-muted mt-[6px]">Quelques instants, le temps de choisir les bonnes pièces.</div>
+            <div className="t-chapeau text-muted mt-[6px]">Je sélectionne les pièces les plus adaptées à ton moment.</div>
             <ul className="mt-8 flex flex-col gap-4 text-left w-full max-w-[300px]">
               {([
                 occ ? ["Ton occasion", occLabel] : null,
-                villeAffichee ? ["La météo", meteoMoment ? `${villeAffichee} · ${meteoMoment.temp}° · ${meteoMoment.label}` : villeAffichee] : null,
+                meteoMoment && villeAffichee
+                  ? ["La météo", `${villeAffichee} · ${meteoMoment.temp}° · ${meteoMoment.label}`]
+                  : villeAffichee || lieu.trim()
+                    ? ["Le lieu", villeAffichee || lieu.trim()]
+                    : null,
                 humeur ? ["Ta préférence", LIBELLE_HUMEUR[humeur]] : null,
                 profile.styles.length ? ["Ton style", libelleStyles(profile.styles, profile.gender)] : null,
                 ["Ton dressing", state.items.length ? `${state.items.length} pièce${state.items.length > 1 ? "s" : ""} disponible${state.items.length > 1 ? "s" : ""}` : "Complété par ta capsule"],
@@ -1506,13 +1562,12 @@ export default function PlanifierScreen() {
                  contexte du rendez-vous) naît dans un panneau sous la grille, à l'écran dès qu'on touche la tuile — le
                  défaut mesuré le 23/09 (question obligatoire sous le pli) ne revient pas : le panneau suit immédiatement. */
               <>
-                <div className="grid grid-cols-3 gap-x-[10px] gap-y-4 mt-5">
-                  {OCCASIONS.map(([key, label, desc]) => (
+                <div className="grid grid-cols-2 gap-x-3 gap-y-4 mt-5">
+                  {OCCASIONS.map(([key, label]) => (
                     <TuileOccasion
                       key={key}
                       src={key !== "all" ? OCCASIONS_EDITORIALES[key]?.visuel?.src : undefined}
                       label={label}
-                      desc={desc}
                       actif={occ === key}
                       onClick={() => {
                         setOcc(key);
@@ -1552,91 +1607,55 @@ export default function PlanifierScreen() {
               </>
             )}
 
-            {etape === 2 && (
+            {etape === 3 && (
               <>
-                {/* LES 21 JOURS RESTENT PROPOSÉS, MAIS LA BANDE DIT OÙ S'ARRÊTE
-                    LA PRÉVISION. Les retirer serait une autre erreur : on peut
-                    parfaitement préparer une tenue pour dans trois semaines, la
-                    saison et l'occasion suffisent. Ce qu'il ne faut pas, c'est
-                    laisser croire que la météo du jour J est connue. D'où le
-                    filet après le dernier jour couvert, la teinte plus discrète
-                    au-delà, le nom accessible qui le dit, et la légende. */}
-                {/* DEUX GROUPES NOMMÉS (brief du 25/09, point 3) : « Météo
-                    prévue » au-dessus des jours que la prévision couvre,
-                    « Saison uniquement » au-dessus des autres. Le filet et la
-                    teinte ne suffisaient pas à dire lesquels ; le nom le dit. */}
-                <div className="scrollarea flex gap-[7px] overflow-x-auto mt-4 -mx-6 px-6 items-end">
-                  {([
-                    ["Météo prévue", 1, HORIZON_PREVISION_JOURS],
-                    // « Sans prévision » : au-delà de l'horizon, pas de météo
-                    // du jour J — le moteur reçoit la saison de la date et la
-                    // température d'aujourd'hui (meteoUtilisee).
-                    ["Sans prévision", HORIZON_PREVISION_JOURS + 1, JOURS_PROPOSES],
-                  ] as const).map(([titreGroupe, de, a], g) => (
-                    <div key={titreGroupe} className="flex-shrink-0 flex gap-[7px]">
-                      {g > 0 && (
-                        <span
-                          aria-hidden="true"
-                          className="flex-shrink-0 self-stretch"
-                          style={{ width: 1, background: "var(--color-sand-border)" }}
-                        />
-                      )}
-                      <div className="flex-shrink-0">
-                        <div
-                          className={
-                            "t-pastille mb-[6px] whitespace-nowrap " + (g === 0 ? "text-terracotta" : "text-muted")
-                          }
-                        >
-                          {titreGroupe}
-                        </div>
-                        <div className="flex gap-[7px]">
-                          {Array.from({ length: a - de + 1 }, (_, i) => de + i).map((n) => {
-                          const d = dansNJours(n);
-                          const on = jour === n;
-                          const couvert = n <= HORIZON_PREVISION_JOURS;
-                          const bouton = (
-                            <button
-                              key={n}
-                              onClick={() => setJour(n)}
-                              aria-pressed={on}
-                              aria-label={
-                                `${DOW_LONG[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}` +
-                                (couvert ? "" : " — au-delà de la prévision météo")
-                              }
-                              className={
-                                "flex-shrink-0 w-[54px] rounded-tuile py-[7px] cursor-pointer border transition-colors " +
-                                (on ? "bg-terracotta-deep border-terracotta-deep" : "bg-card border-border")
-                              }
-                              style={{ minHeight: 66 }}
-                            >
-                              <span className={"block t-pastille " + (on ? "text-cream" : "text-muted")}>
-                                {DOW[d.getDay()]}
-                              </span>
-                              <span
-                                className={
-                                  "block font-serif text-[18px] mt-[2px] " +
-                                  (on ? "text-cream" : couvert ? "text-ink" : "text-muted-3")
-                                }
-                              >
-                                {d.getDate()}
-                              </span>
-                              <span className={"block text-[9px] " + (on ? "text-cream" : "text-muted")}>
-                                {MOIS[d.getMonth()]}
-                              </span>
-                            </button>
-                          );
-                            return bouton;
-                          })}
-                        </div>
+                {/* LE CALENDRIER MENSUEL (maquette Planifier V3, 07/10/2026), à la place de la bande de 21 jours : on peut
+                    préparer une tenue pour dans trois mois, la saison et l'occasion suffisent. Aujourd'hui est cerclé mais pas
+                    proposé — la tenue du jour se prépare depuis l'accueil (règle du 27/09/2026, planJour ≥ 1). */}
+                <CalendrierMois
+                  mois={moisAffiche}
+                  onMois={setMoisAffiche}
+                  aujourdhui={dansNJours(0)}
+                  premier={dansNJours(1)}
+                  choisi={dateChoisie}
+                  onChoisir={(d) => {
+                    const t0 = dansNJours(0);
+                    setJour(Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(t0.getFullYear(), t0.getMonth(), t0.getDate()).getTime()) / 86_400_000));
+                  }}
+                />
+                {/* LA CARTE MÉTÉO : dès qu'une date est choisie. Trois états, tous vrais — la prévision du lieu, ou la date
+                    à partir de laquelle elle existera, ou l'invitation à donner un lieu. Jamais une température inventée. */}
+                {jour != null && dateChoisie && (
+                  <Card rayon="bloc" className="mt-4 p-4" aria-live="polite">
+                    {!lieu.trim() ? (
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-3"><IconeTuile nom="nuage" /></span>
+                        <span className="flex-1 text-[13px] text-muted-3 leading-[1.45]">Ajoute un lieu pour que je tienne compte de la météo.</span>
+                        <button onClick={() => setEtape(2)} className="t-lien text-terracotta-deep cursor-pointer" style={{ minHeight: 44 }}>Ajouter</button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="text-[11px] text-muted leading-[1.45] mt-[9px]" style={{ textWrap: "pretty" }}>
-                  {jour != null && jour > HORIZON_PREVISION_JOURS
-                    ? `Pas de prévision météo si loin : elle couvre ${HORIZON_PREVISION_JOURS} jours. La tenue suivra la saison de cette date, sans la météo du jour J.`
-                    : `La prévision météo couvre les ${HORIZON_PREVISION_JOURS} prochains jours. Au-delà, la tenue suit la saison de la date, sans météo du jour J.`}
-                </div>
+                    ) : previsionEtat === "encours" ? (
+                      <div className="text-[13px] text-muted-3">Je regarde la météo à {villeAffichee || lieu.trim()}…</div>
+                    ) : meteoJour ? (
+                      <div className="flex items-center gap-3">
+                        <span className="text-terracotta-deep"><IconeTuile nom={/soleil|dégagé|ensoleill/i.test(meteoJour.label) ? "apresmidi" : "nuage"} taille={26} /></span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[12px] text-muted">{dateLongue.charAt(0).toUpperCase() + dateLongue.slice(1)} · {villeAffichee || lieu.trim()}</span>
+                          <span className="block t-titre-carte text-ink mt-[2px]">
+                            {meteoJour.tempMin === meteoJour.tempMax ? `${meteoJour.temp}°` : `${meteoJour.tempMin}° / ${meteoJour.tempMax}°`}
+                          </span>
+                          <span className="block text-[12px] text-muted-3 mt-[1px]">{meteoJour.label}</span>
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-3">
+                        <span className="text-muted-3"><IconeTuile nom="nuage" /></span>
+                        <span className="flex-1 text-[13px] text-muted-3 leading-[1.45]">
+                          La météo sera disponible plus près de la date, à partir du {debutMeteo} Je l’ajouterai à ta tenue.
+                        </span>
+                      </div>
+                    )}
+                  </Card>
+                )}
                 <div className="mt-5">
                   <Surtitre>À quel moment ?</Surtitre>
                 </div>
@@ -1648,7 +1667,7 @@ export default function PlanifierScreen() {
               </>
             )}
 
-            {etape === 3 && (
+            {etape === 2 && (
               <>
                 <Card rayon="bloc" className="flex items-center gap-[10px] mt-4 px-[14px]" style={{ minHeight: 48 }}>
                   <span aria-hidden="true" className="flex-shrink-0 text-placeholder">
@@ -1668,6 +1687,19 @@ export default function PlanifierScreen() {
                     autoComplete="off"
                     autoCapitalize="words"
                   />
+                  {lieu && (
+                    <button
+                      onClick={() => {
+                        setLieu("");
+                        setVille(null);
+                        setSuggestions(null);
+                      }}
+                      aria-label="Effacer le lieu"
+                      className="flex-shrink-0 w-[32px] h-[32px] flex items-center justify-center text-muted cursor-pointer"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                    </button>
+                  )}
                 </Card>
                 {/* Les suggestions ne s'affichent QUE si l'autocomplétion a
                     répondu quelque chose. `null` (mode démo, réseau, fonction
@@ -1711,7 +1743,7 @@ export default function PlanifierScreen() {
                         (brief du 25/09, point 2) : la ligne sous le surtitre
                         rattache le choix à l'occasion déjà donnée. */}
                     <div className="mt-6">
-                      <Surtitre>Type de lieu · facultatif</Surtitre>
+                      <Surtitre>Quel type de lieu ? · Facultatif</Surtitre>
                       <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">
                         Pour ton occasion « {occLabel} », si tu veux la préciser.
                       </div>
@@ -1755,23 +1787,19 @@ export default function PlanifierScreen() {
             {/* 9,5 px / .1em : la forme des deux autres pastilles terracotta de
                 l'app (accueil, Valise). Le 10 px d'ici était un troisième
                 réglage pour le même objet. */}
-            <Surtitre>Ta tenue est prête</Surtitre>
-            <div className="mt-2">
-            <Badge>
-              {occLong}
-            </Badge>
-            </div>
-            <TitreEtape a={occLabel} b={villeAffichee ? `· ${villeAffichee}` : ""} />
-            <div className="text-[12px] text-muted mt-[6px]">
-              {dateLongue.charAt(0).toUpperCase() + dateLongue.slice(1)}
+            <Surtitre>Tenue planifiée</Surtitre>
+            <TitreEtape a="Ta tenue est" b="prête" />
+            <div className="text-[13px] text-ink mt-[8px]">
+              {occLabel} · {dateLongue}
               {moment ? ` · ${moment}` : ""}
-              {typeLieu ? ` · ${typeLieu}` : ""}
             </div>
-            {villeAffichee && meteoMoment && (
-              <div className="text-[12px] text-muted mt-[2px]">
-                {villeAffichee} · {meteoMoment.temp}°
-              </div>
-            )}
+            <div className="text-[12px] text-muted mt-[2px]">
+              {meteoMoment && villeAffichee
+                ? `${villeAffichee} · ${meteoMoment.temp}° · ${meteoMoment.label}`
+                : !lieu.trim()
+                  ? "Lieu non précisé · météo non prise en compte"
+                  : `${villeAffichee || lieu.trim()} · météo disponible à partir du ${debutMeteo}`}
+            </div>
 
             {sansTenue ? (
               <EmptyState
@@ -1784,41 +1812,58 @@ export default function PlanifierScreen() {
             ) : (
               <>
                 <div className="mt-[14px] rounded-hero p-4" style={{ background: "var(--color-terracotta-deep)" }}>
-                  <div className="flex items-center justify-between gap-[10px]">
-                    <span className="t-label text-cream">Tenue préparée</span>
-                    <span
-                      className="text-[10px] text-cream rounded-full px-[11px] py-[5px] whitespace-nowrap"
-                      style={{ background: "rgba(251,243,234,.2)" }}
-                    >
-                      {jour === 1 ? "Demain" : `Dans ${jour} jours`}
-                    </span>
-                  </div>
+                  <span
+                    className="inline-block text-[10px] text-cream rounded-full px-[11px] py-[5px] whitespace-nowrap"
+                    style={{ background: "rgba(251,243,234,.2)" }}
+                  >
+                    {composition ? (depuisPlan ? "Tenue déjà planifiée" : "Tenue de ta photo") : dressingSeul || nbCapsule === 0 ? "100% ton dressing" : "Ton dressing + ta capsule"}
+                  </span>
                   <div className="mt-3">
                     <OutfitComposition items={pieces} variant="hero" />
                   </div>
                 </div>
 
-                <Card className="mt-[14px] p-[15px]">
+                {/* LES PIÈCES, en vignettes : de quoi la tenue est faite, d'un coup d'œil. */}
+                <div className="flex gap-2 mt-3" aria-label="Les pièces de la tenue" role="list">
+                  {pieces.slice(0, 4).map((p) => {
+                    const img = resolveItemImage(p);
+                    return (
+                      <span key={p.id} role="listitem" aria-label={p.name} className="flex-1 aspect-square rounded-bloc bg-card border border-border overflow-hidden flex items-center justify-center">
+                        {img.url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="block w-full h-full" style={{ background: p.hex }} />
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+
+                {/* « POURQUOI CE LOOK ? » : une liste, sans carte (non cliquable). Seuls les critères réellement utilisés par le
+                    moteur y figurent — le type de lieu n'y est pas, il n'entre pas dans le calcul. */}
+                <div id="pourquoi" className="mt-6">
                   <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
-                  <div className="flex flex-col gap-2 mt-[10px]">
+                  <ul className="mt-2">
                     {([
-                      ["Adaptée à ton occasion", `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`],
-                      ["Adaptée à la météo", phraseMeteo],
-                      [composition ? "Tenue de ta photo" : "Composée de tes pièces", provenance],
-                      ...(humeur && !composition ? [["Ta préférence", `« ${LIBELLE_HUMEUR[humeur]} » a départagé des tenues proches.`]] : []),
-                    ] as [string, string][]).map(([titre, texte]) => (
-                      <div key={titre} className="flex gap-[9px] items-start">
-                        <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">
-                          <Glyphe taille={16}>{G_COCHE}</Glyphe>
-                        </span>
+                      ["journee", "Ton occasion", `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`],
+                      ...(meteoMoment ? [["nuage", "La météo", phraseMeteo] as [IconePlanifier, string, string]] : []),
+                      ...(!composition && !dressingSeul && nbCapsule > 0 && profile.styles.length
+                        ? [["elegant", "Ton style", `Une base de ta capsule ${libelleStyles(profile.styles, profile.gender)}.`] as [IconePlanifier, string, string]]
+                        : []),
+                      ...(humeur && !composition ? [["confortable", "Ton envie", `« ${LIBELLE_HUMEUR[humeur]} » a départagé des tenues proches.`] as [IconePlanifier, string, string]] : []),
+                      ["cintre", composition ? "Ta tenue" : "Ton dressing", provenance],
+                    ] as [IconePlanifier, string, string][]).map(([icone, titre, texte]) => (
+                      <li key={titre} className="flex gap-3 items-start py-3 border-b border-border last:border-b-0">
+                        <span className="flex-shrink-0 text-terracotta mt-[1px]"><IconeTuile nom={icone} taille={18} /></span>
                         <span className="flex-1 min-w-0">
-                          <span className="block text-[12px] font-semibold text-ink">{titre}</span>
+                          <span className="block text-[13px] font-semibold text-ink">{titre}</span>
                           <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[1px]">{texte}</span>
                         </span>
-                      </div>
+                      </li>
                     ))}
-                  </div>
-                </Card>
+                  </ul>
+                </div>
 
                 {/* L'ANCIENNE ÉTAPE 4, DEVENUE UN RÉGLAGE. Ici il a un effet
                     immédiat et visible : le pool change, `tenue` se recalcule,
@@ -1850,16 +1895,72 @@ export default function PlanifierScreen() {
                 </button>
                 )}
 
-                <div className="text-[12px] text-muted leading-[1.5] mt-[14px] text-center" style={{ textWrap: "pretty" }}>
-                  {/* Avant l'enregistrement : une invitation, pas un constat —
-                      « C'est noté » ne se dit qu'une fois la ligne écrite
-                      (toast de garder()). Pas d'emoji : la DA n'en a pas. */}
-                  Garde-la, elle t&apos;attendra dans ton planning jusqu&apos;au jour J.
-                </div>
               </>
             )}
           </>
         )}
+
+        {vue === "alternatives" && (() => {
+          // La tenue affichée d'abord, puis les alternatives : on peut toujours revenir à celle d'avant.
+          const propositions: { ids: number[]; titre: string }[] = [
+            { ids: idsAffiches, titre: "Proposition actuelle" },
+            ...alternatives.map((ids, i) => ({ ids, titre: `Proposition ${i + 2}` })),
+          ];
+          const source = dressingSeul ? state.items : [...state.items, ...defaultCapsule];
+          return (
+            <>
+              <Surtitre>Tenue planifiée</Surtitre>
+              <TitreEtape a="Autres propositions" b="pour ce moment" />
+              <div className="t-chapeau text-muted mt-[6px]">Mêmes infos, nouvelles idées. Choisis celle qui te parle.</div>
+              {alternatives.length === 0 && (
+                <div className="text-[13px] text-muted-3 mt-4 leading-[1.5]">
+                  Le moteur n’a pas trouvé d’autre tenue avec ces mêmes informations. Tu peux modifier l’événement pour élargir la recherche.
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3 mt-4" role="radiogroup" aria-label="Propositions de tenue">
+                {propositions.map((pr, i) => {
+                  const ps = pr.ids.map((id) => source.find((x) => x.id === id) ?? poolStable.find((x) => x.id === id)).filter((x): x is Item => !!x);
+                  const on = altSel === i;
+                  return (
+                    <button
+                      key={pr.ids.join("-")}
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => setAltSel(i)}
+                      className="text-left rounded-carte bg-card p-3 cursor-pointer"
+                      style={{ border: `1.5px solid ${on ? "var(--color-terracotta-deep)" : "var(--color-border)"}` }}
+                    >
+                      <span className="grid grid-cols-2 gap-[4px] aspect-square">
+                        {ps.slice(0, 4).map((p) => {
+                          const img = resolveItemImage(p);
+                          return (
+                            <span key={p.id} className="rounded-champ bg-warm-bg overflow-hidden flex items-center justify-center">
+                              {img.url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={img.url} alt="" loading="lazy" className="w-full h-full object-contain" />
+                              ) : (
+                                <span className="block w-full h-full" style={{ background: p.hex }} />
+                              )}
+                            </span>
+                          );
+                        })}
+                      </span>
+                      <span className={"block text-[12px] mt-2 font-semibold " + (on ? "text-terracotta-deep" : "text-ink")}>{pr.titre}</span>
+                      <span className="block text-[11px] text-muted mt-[1px] truncate">{ps.slice(0, 2).map((p) => p.name).join(" · ")}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={chercherAlternatives}
+                className="w-full text-[13px] text-muted cursor-pointer underline mt-3"
+                style={{ minHeight: 44 }}
+              >
+                Voir d’autres idées
+              </button>
+            </>
+          );
+        })()}
 
         {vue === "confirmation" && gardee && (() => {
           const d = new Date(`${gardee.jour}T12:00:00`);
@@ -1873,7 +1974,7 @@ export default function PlanifierScreen() {
                 </svg>
               </span>
               <TitreEtape a="Tenue" b="enregistrée" />
-              <div className="t-chapeau text-muted mt-[6px]">Elle t’attend dans ton planning, le jour venu.</div>
+              <div className="t-chapeau text-muted mt-[6px]">Tu la retrouveras dans ton planning le jour venu.</div>
               <Card className="mt-6 w-full p-4 text-left">
                 <div className="flex items-center gap-3">
                   <span aria-hidden="true" className="flex gap-[4px] flex-shrink-0">
@@ -1903,17 +2004,6 @@ export default function PlanifierScreen() {
                   </span>
                 </div>
               </Card>
-              <div className="w-full mt-3 flex flex-col">
-                {([
-                  ["Voir dans mon calendrier", () => actions.goCalendrier()],
-                  ["Voir dans mon planning", () => { setVue("liste"); setOnglet("up"); }],
-                ] as [string, () => void][]).map(([libelle, onClick]) => (
-                  <button key={libelle} onClick={onClick} className="flex items-center justify-between py-3 border-b border-divider text-[13px] text-ink cursor-pointer text-left" style={{ minHeight: 48 }}>
-                    {libelle}
-                    <span aria-hidden="true" className="text-muted">›</span>
-                  </button>
-                ))}
-              </div>
             </div>
           );
         })()}
@@ -2194,39 +2284,51 @@ export default function PlanifierScreen() {
           </div>
         )}
         {vue === "etape" && !compose && (
-          <Button
-            onClick={() => {
-              if (!etapeValide || attend) return;
-              if (etape < 3) {
-                setEtape(etape + 1);
-                return;
-              }
-              /* LE LIEU EST ARRÊTÉ : c'est ici qu'on demande la prévision, et
-                 pas à chaque frappe dans le champ — un clic, une requête. Avec
-                 l'étape « préférence » (07/10/2026), la réponse revient pendant
-                 qu'on la remplit ; l'écran de composition attend le reste. La
-                 tenue n'est affichée qu'une fois la réponse revenue, jamais
-                 composée sur la météo du jour puis changée sous les yeux. Une
-                 prévision indisponible est une réponse, pas un échec : l'écran
-                 compose alors sur la météo actuelle et l'annonce. */
-              if (etape === 3) {
-                setPrevisionEtat("encours");
-                fetchPrevisionByCity(ville ? ville.name : lieu.trim(), ville)
-                  .then((p) => setPrevision(p))
-                  .catch(() => setPrevision(null))
-                  .finally(() => setPrevisionEtat("faite"));
-              }
-              if (etape < derniere) setEtape(etape + 1);
-              else {
-                setComposeDelaiOk(false);
-                setCoche(0);
-                setCompose(true);
-              }
-            }}
-            disabled={!etapeValide || attend}
-          >
-            {attend ? "Un instant…" : etape === derniere ? (etape === 4 ? "Composer ma tenue" : "Voir ma tenue") : "Suivant"}
-          </Button>
+          <>
+            {/* LE MESSAGE DU BOUTON INACTIF, dit au tap (maquette V3) : « Continuer » n'est pas un `disabled` muet. */}
+            {message && (
+              <div role="status" className="text-center text-[12px] text-terracotta-deep mb-2">
+                {message}
+              </div>
+            )}
+            <Button
+              onClick={() => {
+                if (!etapeValide) {
+                  setMessageBrut({
+                    txt: etape === 1 ? "Choisis une occasion pour continuer." : jour == null ? "Choisis une date pour continuer." : "Choisis le moment de ta journée.",
+                    cle: cleMessage,
+                  });
+                  return;
+                }
+                /* LE LIEU EST ARRÊTÉ en quittant l'étape « Où » : c'est ici qu'on demande la prévision, pas à chaque frappe —
+                   un clic, une requête. Elle sert à la carte météo de l'étape « Quand » (ordre Occasion → Où → Quand,
+                   maquette V3 du 07/10/2026) et à la composition. Un lieu vide est permis : on ne demande rien, la carte
+                   propose d'en ajouter un. Une prévision indisponible est une réponse, pas un échec. */
+                if (etape === 2) {
+                  setPrevision(null);
+                  if (lieu.trim()) {
+                    setPrevisionEtat("encours");
+                    fetchPrevisionByCity(ville ? ville.name : lieu.trim(), ville)
+                      .then((p) => setPrevision(p))
+                      .catch(() => setPrevision(null))
+                      .finally(() => setPrevisionEtat("faite"));
+                  } else {
+                    setPrevisionEtat("faite");
+                  }
+                }
+                if (etape < derniere) setEtape(etape + 1);
+                else {
+                  setComposeDelaiOk(false);
+                  setCoche(0);
+                  setCompose(true);
+                }
+              }}
+              aria-disabled={!etapeValide}
+              className={!etapeValide ? "opacity-50" : ""}
+            >
+              {etape === derniere ? (etape === 4 ? "Composer ma tenue" : "Voir ma tenue") : "Continuer"}
+            </Button>
+          </>
         )}
         {vue === "etape" && !compose && etape === 4 && (
           <button
@@ -2248,11 +2350,30 @@ export default function PlanifierScreen() {
         {vue === "liste" && (
           <Button onClick={recommencer}>+ Planifier un look</Button>
         )}
+        {vue === "alternatives" && (
+          <Button
+            onClick={() => {
+              const propositions = [idsAffiches, ...alternatives];
+              const ids = propositions[altSel] ?? idsAffiches;
+              if (ids !== idsAffiches) setChoixBrut({ cle: cleParams, ids });
+              setVue("resultat");
+            }}
+          >
+            Choisir cette tenue
+          </Button>
+        )}
         {vue === "confirmation" && (
           <>
-            <Button onClick={recommencer}>Nouvelle planification</Button>
-            <button onClick={actions.goHome} className="w-full text-[13px] text-muted cursor-pointer underline" style={{ minHeight: 44 }}>
-              Retour à l’accueil
+            <Button
+              onClick={() => {
+                setVue("liste");
+                setOnglet("up");
+              }}
+            >
+              Voir ma planification
+            </Button>
+            <button onClick={() => setVue("intro")} className="w-full text-[13px] text-muted cursor-pointer underline" style={{ minHeight: 44 }}>
+              Retour à Planifier
             </button>
           </>
         )}
@@ -2292,7 +2413,10 @@ export default function PlanifierScreen() {
                   nouveau tirage. */}
               {!composition && (
                 <button
-                  onClick={() => setTirage(tirage + 1)}
+                  onClick={() => {
+                    chercherAlternatives();
+                    setVue("alternatives");
+                  }}
                   className="flex-1 rounded-full bg-card border border-terracotta text-[12px] font-medium text-terracotta cursor-pointer"
                   style={{ minHeight: 44 }}
                 >
