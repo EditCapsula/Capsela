@@ -60,7 +60,7 @@ export function texteHeroPlan(plan: Pick<TenuePlanifiee, "jour" | "moment">, auj
   if (etatDuPlan(plan, aujourdhui) === "jourJ") {
     // Textes arrêtés le 04/10/2026 (brief de rédaction de l'Accueil) : « Ton look du jour », « Ta silhouette pour ce soir est
     // prête. », badge « Ce soir · Soirée ». Le premier mot du badge suit le moment, comme la phrase.
-    return { surtitre: "Ton look du jour", sousTitre: `Ta silhouette ${POUR_LE_MOMENT[plan.moment]} est prête.`, badge: `${CE_MOMENT[plan.moment]} · ${plan.moment}` };
+    return { surtitre: "Ta tenue du jour", sousTitre: `Ta silhouette ${POUR_LE_MOMENT[plan.moment]} est prête.`, badge: `${CE_MOMENT[plan.moment]} · ${plan.moment}` };
   }
   const demain = (() => {
     const d = dateDe(aujourdhui);

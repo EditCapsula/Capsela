@@ -409,7 +409,7 @@ export default function HomeScreen() {
           </span>
           {/* « Ta tenue planifiée » quand la tenue affichée vient de Planifier
               (option C, 30/09/2026) : l'étiquette dit d'où elle vient. */}
-          {texteHero ? texteHero.surtitre : "Ton look du jour"}
+          {texteHero ? texteHero.surtitre : "Ta tenue du jour"}
         </div>
 
         {aucuneTenuePossible ? (
@@ -532,7 +532,7 @@ export default function HomeScreen() {
           >
             {hasOutfit ? (
               <>
-                {planHero ? (jourAVenir ? "Voir le look planifié" : "Voir mon look") : "Découvrir le look"} <span aria-hidden="true">→</span>
+                {planHero ? (jourAVenir ? "Voir le look planifié" : "Voir mon look") : "Voir ma tenue"} <span aria-hidden="true">→</span>
               </>
             ) : dressingVide ? (
               "Ajouter mes pièces"
@@ -602,11 +602,11 @@ export default function HomeScreen() {
       )}
 
       {/* ══ AVEC CAPSELA ═══════════════════════════════════════════════
-          Refonte du 05/10/2026 : Aujourd'hui (la tenue) → Avec Capsela → Ton dressing → Ta capsule. Les trois entrées
+          Refonte du 05/10/2026 (titre « Pour aller plus loin » depuis la maquette du 07/10/2026) : Aujourd'hui (la tenue) → Pour aller plus loin → Ton dressing → Ta capsule. Les trois entrées
           sont des fonctionnalités qui existent, avec leurs parcours d'avant : Planifier, Valise, Avis de styliste.
           Aucun contenu éditorial inventé, aucun visuel de destination ni de personne : des objets et des matières. */}
       <TitreAccueil lien="Tout découvrir →" onLien={actions.goPremium} libelleLien="Découvrir Capsela Premium">
-        Avec Capsela
+        Pour aller plus loin
       </TitreAccueil>
       <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
         <CarteAvecCapsela
@@ -623,7 +623,7 @@ export default function HomeScreen() {
           onClick={ouvrirValise}
           glyphe={GLYPHE_VALISE}
           titre="Préparer une valise"
-          texte="Un week-end ou un voyage ? Capsela crée ta sélection."
+          texte="Un départ en vue ? Ta sélection pensée pour le séjour."
           visuel={`/editorial/capsela_planifier_valise_${profile.gender === "homme" ? "homme" : "femme"}.webp`}
           alt="Une valise ouverte, des vêtements pliés et des accessoires"
           cta="Préparer une valise"
@@ -654,7 +654,7 @@ export default function HomeScreen() {
           >
             <span className="block t-titre-carte text-ink">Ton dressing commence ici</span>
             <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[5px]">Ajoute quelques pièces pour que Capsela compose des tenues qui te ressemblent.</span>
-            <span className="block t-cta text-terracotta mt-[10px]">Ajouter mes pièces</span>
+            <span className="block t-cta text-terracotta mt-[10px]">Ajouter mes pièces <span aria-hidden="true">→</span></span>
           </button>
         </div>
       ) : (
@@ -700,11 +700,12 @@ export default function HomeScreen() {
           <span className="relative flex items-end justify-between gap-3 px-[16px] py-[16px]" style={{ minHeight: 132 }}>
             <span className="block min-w-0">
               <span className="block font-serif text-[20px] leading-[1.15]" style={{ color: "var(--color-on-terracotta)" }}>
-                Ma sélection de saison
+                {`Ma sélection ${/^[AÉEIOUH]/i.test(capsuleSeason) ? "d’" : "de "}${capsuleSeason.toLowerCase()}`}
               </span>
               <span className="block text-[12px] leading-[1.45] mt-[5px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
-                Des pièces clés pour des tenues faciles et élégantes tout au long de la saison.
-                {capsule.length > 0 && ` ${capsule.length} ${capsule.length <= 1 ? "pièce" : "pièces"}.`}
+                {capsule.length > 0
+                  ? `${capsule.length} ${capsule.length <= 1 ? "pièce pensée" : "pièces pensées"} pour composer facilement tes tenues cette saison.`
+                  : "Des pièces pensées pour composer facilement tes tenues cette saison."}
               </span>
             </span>
             {FLECHE_RONDE}
