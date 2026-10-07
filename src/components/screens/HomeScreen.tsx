@@ -6,13 +6,14 @@ import { OutfitComposition } from "@/components/OutfitComposition";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
 import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
-import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
+import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
 import { estContexteMaison, qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
 import { libelleStyles } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { JourEtMeteo } from "@/components/JourMeteo";
+import BarreDuJour from "@/components/BarreDuJour";
+import BadgePremium from "@/components/BadgePremium";
 import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@/lib/retro";
 import { dateDuJour } from "@/lib/jourConsulte";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
@@ -66,7 +67,7 @@ function ActionRonde({ icone, libelle, onClick, actif, disabled, label }: { icon
  * en colonne à droite et une flèche ronde. Toute la carte est le bouton.
  */
 function CarteUnivers({
-  onClick, glyphe, ligne1, ligne2, texte, accent, visuel, label, busy,
+  onClick, glyphe, ligne1, ligne2, texte, accent, visuel, label, busy, premium,
 }: {
   onClick: () => void;
   glyphe: React.ReactNode;
@@ -78,6 +79,8 @@ function CarteUnivers({
   visuel: string;
   label: string;
   busy?: boolean;
+  /** Le badge « Premium » de la maquette, posé en bas à gauche de la carte. */
+  premium?: boolean;
 }) {
   return (
     <button
@@ -96,6 +99,11 @@ function CarteUnivers({
           <path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
+      {premium && (
+        <span className="absolute left-3 bottom-3">
+          <BadgePremium />
+        </span>
+      )}
       <span className="flex flex-col pt-3 pb-10 pl-3 pr-2" style={{ width: "calc(100% - clamp(56px, 38%, 92px))" }}>
         <span className="w-9 h-9 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">{glyphe}</span>
         <span className="block font-serif text-[15px] leading-[1.15] text-ink mt-3">
@@ -253,7 +261,10 @@ export default function HomeScreen() {
     return { a: "Ta tenue", b: "du jour" };
   })();
   const sousTitreHero = texteHero ? texteHero.sousTitre : titreLookDuJour(occasionKey, state.workMode, state.dateContext);
-  const sauvegardee = avisDuJour === "adore";
+  const cleTenue = clePieces(state.outfit).join(",");
+  const sauvegardee = jourAVenir
+    ? state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue)
+    : avisDuJour === "adore";
   const genreVisuel = profile.gender === "homme" ? "homme" : "femme";
 
   return (
@@ -278,10 +289,9 @@ export default function HomeScreen() {
         </div>
         <p className="text-[13px] text-muted-3 leading-[1.45] mt-[6px]">Voici ta tenue du jour.</p>
         {/* LE JOUR ET SA MÉTÉO (navigation par date, partagée avec Tenue) : le jour se change par ses chevrons, la météo
-            ouvre les réglages « Localisation & météo ». La maquette montre aussi « Max · min » : le service météo ne donne
-            ici que la température et la condition, rien n'est inventé. */}
-        <JourEtMeteo
-          className="mt-3"
+            ouvre les réglages « Localisation & météo » (BarreDuJour, maquette V9). */}
+        <BarreDuJour
+          className="mt-1"
           retro={{
             jours: retroActif,
             date: dateRetro,
@@ -360,7 +370,7 @@ export default function HomeScreen() {
                   onClick={planHero && jourAVenir ? () => actions.ouvrirPlan(planHero, "home") : actions.goTenues}
                   className="!px-[18px]"
                 >
-                  {planHero && jourAVenir ? "Voir le look planifié" : "Voir le look"} <span aria-hidden="true">→</span>
+                  Voir le look <span aria-hidden="true">→</span>
                 </Button>
               </div>
             </>
@@ -388,7 +398,7 @@ export default function HomeScreen() {
 
         {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre idée »
             propose une autre tenue (l'ancien « Pas pour moi » : le refus est enregistré, la suivante l'évite, même quota). */}
-        {hasOutfit && !jourAVenir && !passee && (
+        {hasOutfit && !passee && (
           <div className="flex items-center gap-1 mt-1" style={{ gridColumn: "1 / -1" }} aria-live="polite">
             <ActionRonde
               icone={
@@ -398,7 +408,9 @@ export default function HomeScreen() {
               }
               libelle={sauvegardee ? "Sauvegardée" : "Sauvegarder"}
               actif={sauvegardee}
-              onClick={() => actions.setOutfitFeedback("adore")}
+              // Aujourd'hui : l'avis « J'adore » (enregistré, et la tenue rejoint Mes looks). Un autre jour : la tenue seule
+              // rejoint Mes looks — l'avis du jour ne porte que sur la tenue d'aujourd'hui.
+              onClick={() => (jourAVenir ? actions.toggleSaveOutfitLook() : actions.setOutfitFeedback("adore"))}
             />
             <span aria-hidden="true" className="w-px h-[22px] mx-2" style={{ background: "var(--color-sand-border)" }} />
             <ActionRonde
@@ -410,7 +422,7 @@ export default function HomeScreen() {
               libelle="Autre idée"
               label="Propose-moi une autre tenue"
               disabled={quota.tirageEnCours}
-              onClick={pasPourMoi}
+              onClick={jourAVenir ? () => quota.demander(actions.regenOutfit) : pasPourMoi}
             />
           </div>
         )}
@@ -467,6 +479,7 @@ export default function HomeScreen() {
             texte="Organise tes tenues à l’avance"
             visuel="/editorial/capsela_planifier_intro.webp"
             label="Planifier mes looks"
+            premium
           />
           <CarteUnivers
             onClick={ouvrirValise}
