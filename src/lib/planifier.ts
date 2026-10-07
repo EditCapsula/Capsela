@@ -1,4 +1,5 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
+import { HUMEURS, type Humeur } from "./humeur";
 import { jourLocal } from "./outfitFeedback";
 import type { MomentJournee } from "./prevision";
 import type { OccasionKey } from "./types";
@@ -31,6 +32,11 @@ export interface TenuePlanifiee {
   /** La PRÉVISION au moment de planifier, pas la météo du jour J. */
   temp: number | null;
   weatherLabel: string | null;
+  /**
+   * « Une dernière préférence ? » (07/10/2026) : lue et écrite À PART (colonne `mood_style`, migration 0048), jamais
+   * dans la requête principale — tant que la colonne n'existe pas, les tenues se chargent et s'enregistrent comme avant.
+   */
+  humeur?: Humeur | null;
 }
 
 interface PlannedOutfitRow {
@@ -78,10 +84,41 @@ export async function fetchTenuesPlanifiees(userId: string): Promise<TenuePlanif
       console.error("[planifier] échec fetchTenuesPlanifiees", error);
       return [];
     }
-    return (data as PlannedOutfitRow[]).map(rowToTenue);
+    const tenues = (data as PlannedOutfitRow[]).map(rowToTenue);
+    const humeurs = await fetchHumeursPlans(userId);
+    return tenues.map((t) => (humeurs[t.id] ? { ...t, humeur: humeurs[t.id] } : t));
   } catch (err) {
     console.error("[planifier] échec fetchTenuesPlanifiees", err);
     return [];
+  }
+}
+
+const CLES_HUMEUR: readonly string[] = HUMEURS.map((h) => h.key);
+
+/** Les préférences enregistrées, par id de tenue. {} si la colonne n'existe pas encore ou en cas d'échec : jamais bloquant. */
+async function fetchHumeursPlans(userId: string): Promise<Record<string, Humeur>> {
+  try {
+    const { data, error } = await getSupabase().from("planned_outfits").select("id, mood_style").eq("user_id", userId);
+    if (error || !data) return {};
+    const out: Record<string, Humeur> = {};
+    for (const r of data as { id: number | string; mood_style: string | null }[]) {
+      if (r.mood_style && CLES_HUMEUR.includes(r.mood_style)) out[String(r.id)] = r.mood_style as Humeur;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** Écrit la préférence d'une tenue planifiée. false si la colonne n'existe pas encore (migration non passée) ou en cas d'échec. */
+export async function enregistrerHumeurPlan(id: string, humeur: Humeur): Promise<boolean> {
+  try {
+    const { error } = await getSupabase().from("planned_outfits").update({ mood_style: humeur }).eq("id", id);
+    if (error) console.error("[planifier] échec enregistrerHumeurPlan", error);
+    return !error;
+  } catch (err) {
+    console.error("[planifier] échec enregistrerHumeurPlan", err);
+    return false;
   }
 }
 
