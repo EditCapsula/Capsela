@@ -68,7 +68,7 @@ export function ZoneLookDuJour({ pieces, categoriesAttendues }: { pieces: Item[]
 }
 
 /**
- * La ligne d'attente, sous la composition : une étoile qui pulse, le texte,
+ * La ligne d'attente (sur le fond sable du hero depuis la maquette V9, 07/10/2026 : texte en gris foncé, aligné à gauche), sous la composition : une étoile qui pulse, le texte,
  * trois points qui s'allument à tour de rôle — à la place de l'anneau qui
  * tournait. Même hauteur que le CTA « Découvrir le look », dont elle tient la
  * place : la card ne grandit pas quand il arrive.
@@ -77,8 +77,8 @@ export function StatutComposition() {
   return (
     <div
       // Même entrée différée que le reste du chargement : rien ne clignote si le look est prêt vite.
-      className="mt-[12px] flex items-center justify-center gap-[8px] text-[12.5px] motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]"
-      style={{ minHeight: 50, color: "rgba(243,238,229,.8)" }}
+      className="mt-[12px] flex items-center gap-[8px] text-[12px] motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]"
+      style={{ minHeight: 50, color: "var(--color-muted-3)" }}
     >
       <span aria-hidden="true" className="etoile-pouls font-serif italic text-[13px] leading-none">
         ✦

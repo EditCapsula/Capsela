@@ -47,16 +47,18 @@ export interface RetroJour {
   onChange: (jours: number) => void;
 }
 
-export function JourEtMeteo({ className = "", retro }: { className?: string; retro?: RetroJour }) {
-  const { geoCity, geoLoading, geoIsLive, sourceMeteo, jourConsulte, actions } = useCapsela();
+/**
+ * Les données du jour et de sa météo — une seule source pour la ligne « jour + météo » partagée avec Tenue (JourEtMeteo)
+ * et la barre de l'accueil (BarreDuJour, maquette V9, 07/10/2026) : le jour consulté ou la tenue passée relue, la météo
+ * qui va avec (jamais une prévision pour une tenue passée), et la note qui dit d'où elle vient.
+ */
+export function useDonneesJour(retro?: RetroJour) {
+  const { geoCity, geoLoading, geoIsLive, sourceMeteo, jourConsulte } = useCapsela();
   const { decalage, date, meteoPrevue, previsionEnChargement } = jourConsulte;
   const enRetro = Boolean(retro && retro.jours > 0 && decalage === 0);
   const enAttente = !enRetro && (geoLoading || previsionEnChargement);
   const temp = enRetro ? retro!.temp : decalage === 0 ? geoCity.temp : meteoPrevue?.temp;
   const label = enRetro ? retro!.label : decalage === 0 ? geoCity.label : meteoPrevue?.label;
-
-  // La source, dite telle qu'elle est (correctif météo du 25/09/2026), et pour
-  // un jour à venir la règle de repli de Planifier quand la prévision manque.
   const note = enAttente || enRetro
     ? null
     : decalage > 0
@@ -70,6 +72,12 @@ export function JourEtMeteo({ className = "", retro }: { className?: string; ret
           : sourceMeteo === "derniere_position"
             ? "Position indisponible — dernière météo enregistrée à ta position."
             : "Météo indisponible pour l'instant — tenue composée sur des valeurs par défaut.";
+  return { geoCity, geoLoading, decalage, date, enRetro, enAttente, temp, label, note };
+}
+
+export function JourEtMeteo({ className = "", retro }: { className?: string; retro?: RetroJour }) {
+  const { actions } = useCapsela();
+  const { geoCity, geoLoading, decalage, date, enRetro, enAttente, temp, label, note } = useDonneesJour(retro);
 
   const chevron = "w-[30px] h-[36px] flex items-center justify-center flex-shrink-0 cursor-pointer disabled:cursor-default disabled:opacity-30 text-terracotta";
 
