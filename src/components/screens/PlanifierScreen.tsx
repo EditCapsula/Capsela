@@ -1817,8 +1817,8 @@ export default function PlanifierScreen() {
                   >
                     {composition ? (depuisPlan ? "Tenue déjà planifiée" : "Tenue de ta photo") : dressingSeul || nbCapsule === 0 ? "100% ton dressing" : "Ton dressing + ta capsule"}
                   </span>
-                  <div className="mt-3">
-                    <OutfitComposition items={pieces} variant="hero" />
+                  <div className="mt-3" style={{ aspectRatio: "100 / 92" }}>
+                    <OutfitComposition items={pieces} variant="planche" />
                   </div>
                 </div>
 

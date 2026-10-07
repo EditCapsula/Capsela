@@ -381,6 +381,79 @@ function accentuerHero(g: GabaritPlanche): GabaritPlanche {
   };
 }
 
+/**
+ * LES GABARITS « FLAT LAY » (07/10/2026, prototype validé : planche de stylisme sur le terracotta). Une planche en hauteur
+ * (≈ 100 × 125) : le héro très grand, le bas qui le chevauche, les chaussures posées en diagonale sur le bas, le sac contre
+ * le héro, les accessoires en touches. Les chevauchements sont plus francs que dans GABARITS_PLANCHE (lequel reste celui
+ * des annotations manuscrites) : ils font la planche — chaque pièce garde l'essentiel de sa surface visible (cf. tests).
+ */
+export const GABARITS_FLATLAY: Record<keyof typeof GABARITS_PLANCHE, GabaritPlanche> = {
+  haut: {
+    hero: { x: 2, y: 0, l: 62, h: 66 },
+    bas: { x: 42, y: 42, l: 56, h: 52 },
+    chaussures: { x: 20, y: 84, l: 46, h: 26 },
+    sac: { x: 0, y: 58, l: 38, h: 34 },
+    petits: [
+      { x: 70, y: 0, l: 28, h: 22 },
+      { x: 4, y: 96, l: 16, h: 14 },
+    ],
+    notes: {},
+  },
+  hautDessus: {
+    hero: { x: 0, y: 8, l: 54, h: 58 },
+    dessus: { x: 46, y: 0, l: 54, h: 56 },
+    bas: { x: 36, y: 46, l: 50, h: 50 },
+    chaussures: { x: 4, y: 84, l: 44, h: 26 },
+    sac: { x: 62, y: 86, l: 34, h: 28 },
+    petits: [
+      { x: 0, y: 68, l: 16, h: 14 },
+      { x: 84, y: 62, l: 14, h: 12 },
+    ],
+    notes: {},
+  },
+  hautManteau: {
+    hero: { x: 0, y: 10, l: 56, h: 62 },
+    dessus: { x: 46, y: 0, l: 54, h: 62 },
+    bas: { x: 34, y: 54, l: 50, h: 46 },
+    chaussures: { x: 4, y: 88, l: 44, h: 26 },
+    sac: { x: 62, y: 88, l: 34, h: 28 },
+    petits: [
+      { x: 0, y: 70, l: 16, h: 14 },
+      { x: 86, y: 70, l: 12, h: 12 },
+    ],
+    notes: {},
+  },
+  robe: {
+    hero: { x: 18, y: 0, l: 58, h: 98 },
+    chaussures: { x: 52, y: 74, l: 44, h: 28 },
+    sac: { x: 0, y: 46, l: 34, h: 32 },
+    petits: [
+      { x: 76, y: 28, l: 22, h: 18 },
+      { x: 4, y: 86, l: 16, h: 14 },
+    ],
+    notes: {},
+  },
+  robeDessus: {
+    hero: { x: 0, y: 0, l: 56, h: 98 },
+    dessus: { x: 40, y: 4, l: 58, h: 70 },
+    chaussures: { x: 28, y: 84, l: 44, h: 26 },
+    sac: { x: 68, y: 74, l: 30, h: 30 },
+    petits: [
+      { x: 84, y: 0, l: 14, h: 12 },
+      { x: 2, y: 104, l: 14, h: 12 },
+    ],
+    notes: {},
+  },
+};
+
+/**
+ * LE « FLAT LAY » (07/10/2026, référence : une planche de stylisme — pièces posées en vrac, légèrement tournées) : chaque
+ * rôle a une inclinaison fixe en degrés — le héro presque droit, les chaussures franchement de biais, le sac et la
+ * surcouche en sens inverse. Fixe, jamais tirée au hasard : une même tenue se pose toujours pareil, et la planche d'un
+ * écran est celle des deux autres. Les petits accessoires alternent leur sens.
+ */
+export const ANGLE_PLANCHE: Record<RolePlanche, number> = { hero: -2, dessus: 4, bas: 2, chaussures: -12, sac: 5, petit: 9 };
+
 /** Profondeur : ce qui est derrière d'abord. */
 export const PROFONDEUR_PLANCHE: Record<RolePlanche, number> = { dessus: 1, hero: 2, bas: 3, petit: 4, chaussures: 5, sac: 5 };
 
@@ -432,7 +505,7 @@ export function composerPlanche<T extends Pick<Item, "id" | "cat"> & { photoUrl?
   items: T[],
   options: { annotations?: boolean; accentHero?: boolean } = {}
 ): {
-  pieces: { item: T; role: RolePlanche; case: EmplacementPlanche; aligne: { x: Calage; y: Calage } }[];
+  pieces: { item: T; role: RolePlanche; case: EmplacementPlanche; aligne: { x: Calage; y: Calage }; angle: number }[];
   notes: NotePlanche<T>[];
   hauteur: number;
 } {
@@ -455,14 +528,15 @@ export function composerPlanche<T extends Pick<Item, "id" | "cat"> & { photoUrl?
   const basFinal = heroFinal === bas ? undefined : bas;
   const dessusFinal = heroFinal === dessus ? undefined : dessus;
 
+  const GABARITS = options.annotations ? GABARITS_PLANCHE : GABARITS_FLATLAY;
   const gabaritBrut =
     robe || !basFinal
-      ? GABARITS_PLANCHE[dessusFinal ? "robeDessus" : "robe"]
+      ? GABARITS[dessusFinal ? "robeDessus" : "robe"]
       : dessusFinal
-        ? GABARITS_PLANCHE[dessusFinal.cat === "manteau" ? "hautManteau" : "hautDessus"]
-        : GABARITS_PLANCHE.haut;
+        ? GABARITS[dessusFinal.cat === "manteau" ? "hautManteau" : "hautDessus"]
+        : GABARITS.haut;
 
-  const gabarit = options.accentHero ? accentuerHero(gabaritBrut) : gabaritBrut;
+  const gabarit = options.accentHero && options.annotations ? accentuerHero(gabaritBrut) : gabaritBrut;
   const libres = [...gabarit.petits];
   const poses: { item: T; role: RolePlanche; case: EmplacementPlanche }[] = [];
   const poser = (item: T | undefined, role: RolePlanche, c: EmplacementPlanche | undefined) => {
@@ -519,9 +593,11 @@ export function composerPlanche<T extends Pick<Item, "id" | "cat"> & { photoUrl?
   return {
     notes,
     pieces: poses
-      .map(({ item, role, case: c }) => {
+      .map(({ item, role, case: c }, rang) => {
         const r = { x: decalage + (c.x - minX) * k, y: (c.y - minY) * k, l: c.l * k, h: c.h * k };
-        return { item, role, case: r, aligne: { x: calage(r.x + r.l / 2, 50, 100), y: calage(r.y + r.h / 2, hauteur / 2, hauteur) } };
+        // Les petits accessoires alternent leur sens (le rang parmi les petits, pas l'identifiant : la planche reste stable).
+        const angle = role === "petit" ? (poses.slice(0, rang).filter((q) => q.role === "petit").length % 2 === 0 ? 1 : -1) * ANGLE_PLANCHE.petit : ANGLE_PLANCHE[role];
+        return { item, role, case: r, angle, aligne: { x: calage(r.x + r.l / 2, 50, 100), y: calage(r.y + r.h / 2, hauteur / 2, hauteur) } };
       })
       .sort((a, b) => PROFONDEUR_PLANCHE[a.role] - PROFONDEUR_PLANCHE[b.role]),
     hauteur,

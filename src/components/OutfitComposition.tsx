@@ -611,7 +611,7 @@ function CompositionPlanche({
           transform: cadrage ? `translate(${cadrage.dx}px, ${cadrage.dy}px) scale(${cadrage.s})` : undefined,
         }}
       >
-        {pieces.map(({ item: it, case: c, aligne }, i) => {
+        {pieces.map(({ item: it, case: c, aligne, angle }, i) => {
           const img = resolveItemImage(it);
           const photo = img.kind === "photo";
           return (
@@ -644,6 +644,7 @@ function CompositionPlanche({
                     height: "auto",
                     display: "block",
                     borderRadius: photo ? 18 : undefined,
+                    transform: `rotate(${angle}deg)`,
                     filter: photo
                       ? "brightness(.96) contrast(1.03) saturate(.94) drop-shadow(0 8px 18px rgba(29,26,22,.2))"
                       : "drop-shadow(0 6px 12px rgba(29,26,22,.16))",
