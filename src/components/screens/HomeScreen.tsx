@@ -22,15 +22,6 @@ import type { CategoryKey, Item } from "@/lib/types";
 import Button from "@/components/Button";
 import { resolveItemImage } from "@/lib/catalogImages";
 
-const glypheCalendrier = (taille: number) => (
-  <svg width={taille} height={taille} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-    <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
-      <path d="M3.5 10h17M8 3.5v4M16 3.5v4" />
-    </g>
-  </svg>
-);
-
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
 const glypheUnivers = (d: string) => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -319,13 +310,7 @@ export default function HomeScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-[100px]">
       <div className="px-6">
         {/* Le calendrier est une entrée GLOBALE, pas un onglet : un bouton dans la gouttière gauche du bandeau (05/10/2026). */}
-        <AppHeader
-          gauche={
-            <button onClick={actions.goCalendrier} aria-label="Ouvrir mon calendrier" className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70">
-              {glypheCalendrier(24)}
-            </button>
-          }
-        />
+        <AppHeader />
       </div>
 
       {/* ══ MAQUETTE « ACCUEIL V9 » (07/10/2026), reprise intégralement : salutation, jour et météo, look du jour sur fond
@@ -335,7 +320,6 @@ export default function HomeScreen() {
         <div className="t-display text-ink">
           Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
         </div>
-        <p className="text-[13px] text-muted-3 leading-[1.45] mt-[6px]">Voici ta tenue du jour.</p>
         {/* LE JOUR ET SA MÉTÉO (navigation par date, partagée avec Tenue) : le jour se change par ses chevrons, la météo
             ouvre les réglages « Localisation & météo » (BarreDuJour, maquette V9). */}
         <BarreDuJour
