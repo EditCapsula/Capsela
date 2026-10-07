@@ -221,13 +221,13 @@ export default function CalendrierScreen() {
         <>
           <div className="t-titre-section text-ink mt-1">Rien de prévu</div>
           <p className="t-chapeau text-muted mt-2">Tu n’as pas encore prévu de tenue pour cette journée.</p>
-          <div className="mt-4"><Button variante="sombre" onClick={planifierSel}>Planifier une tenue →</Button></div>
+          <div className="mt-4"><Button variante="principal" onClick={planifierSel}>Planifier une tenue</Button></div>
         </>
       ) : ecart === 0 ? (
         <>
           <div className="t-titre-section text-ink mt-1">Ta tenue du jour</div>
           <p className="t-chapeau text-muted mt-2">Capsela te la propose dans l’onglet Aujourd’hui.</p>
-          <div className="mt-4"><Button variante="sombre" onClick={actions.goHome}>Voir ma tenue →</Button></div>
+          <div className="mt-4"><Button variante="principal" onClick={actions.goHome}>Voir ma tenue</Button></div>
         </>
       ) : (
         <p className="t-chapeau text-muted mt-2">Aucune tenue enregistrée pour cette journée.</p>
@@ -322,7 +322,7 @@ export default function CalendrierScreen() {
             <p className="t-chapeau text-muted mt-2">
               Les tenues que tu portes et celles que tu planifies s’afficheront ici.
             </p>
-            <div className="mt-4"><Button variante="sombre" onClick={actions.goPlanifier}>Planifier une tenue</Button></div>
+            <div className="mt-4"><Button variante="principal" onClick={actions.goPlanifier}>Planifier une tenue</Button></div>
           </div>
         )}
       </div>

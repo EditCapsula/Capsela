@@ -573,7 +573,7 @@ export default function HistoryScreen() {
         />
 
         {/* Le parcours existant de la tenue du jour — aucun nouveau parcours (§3). */}
-        <Button variante="sombre" className="mt-7"
+        <Button variante="principal" className="mt-7"
           onClick={actions.goTenues}
         >
           Choisir ma première tenue
