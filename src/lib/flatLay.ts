@@ -10,10 +10,7 @@ import type { CategoryKey } from "./types";
  * parts de LARGEUR DE ZONE, mesurées sur la partie visible de la pièce (les marges transparentes du catalogue sont retirées
  * à l'affichage, cf. catalogMarges.ts).
  *
- * ARBITRAGE ÉDITORIAL (08/10/2026) : le brief donne des parts de largeur (hero 32–38 %, bas 25–32 %, chaussures 18–22 %,
- * sac 15–20 %, accessoires 8–12 %). Appliquées à la colonne de droite du hero (≈ 52 % de la carte), elles rendraient les
- * pièces PLUS PETITES qu'avant — contre le retour répété « les pièces sont trop petites ». Les parts ci-dessous sont celles
- * du brief rapportées à cette zone (≈ ×1,9) : le rapport entre les pièces est celui du brief.
+ * Les tailles et positions viennent du gabarit de référence REF (maquette validée du 08/10/2026), pas de plages libres.
  */
 export type RoleFlatLay = "hero" | "secondaire" | "bas" | "chaussures" | "sac" | "accessoire";
 
@@ -26,7 +23,10 @@ export interface PieceFlatLay {
 
 export interface PlacementFlatLay {
   id: number;
+  cat: CategoryKey;
   role: RoleFlatLay;
+  /** L'échelle visuelle appliquée à cause de la catégorie (cf. PART_VISUELLE) — 1 pour la pièce de référence du rôle. */
+  visualScale: number;
   /** Centre de la pièce, en unités de la zone (100 de large). */
   x: number;
   y: number;
@@ -77,27 +77,61 @@ export function attribuerRoles<T extends { id: number; cat: CategoryKey }>(piece
   return sortie;
 }
 
-/** Plages de largeur (unités de zone) et d'inclinaison (degrés) par rôle. */
-const LARGEUR: Record<RoleFlatLay, [number, number]> = {
-  hero: [70, 79],
-  secondaire: [61, 70],
-  bas: [55, 66],
-  chaussures: [37, 46],
-  sac: [39, 49],
-  accessoire: [18, 24],
+/**
+ * LE GABARIT DE RÉFÉRENCE (08/10/2026, maquette validée « voici exactement ce que je veux ») : une planche à peu près CARRÉE
+ * (100 × 100), mesurée sur la maquette — le blazer héro en haut à droite, incliné de +8° et au fond ; le T-shirt en haut à
+ * gauche, incliné de −8° ; le pantalon en diagonale (−12°) qui passe sous le T-shirt et sur le blazer ; le sac en bas à
+ * gauche ; les baskets en bas à droite. Centres (x, y) et largeurs (l) en unités de la planche, angles en degrés.
+ *
+ * Les rôles sont ceux de attribuerRoles : ce gabarit vaut pour toute tenue (le héro prend la place du blazer). La graine ne
+ * fait varier que de petits écarts (±2 de position, ±3 % de taille, ±1,5° d'angle) et, hors veste héro, le miroir : le
+ * regard va du T-shirt au blazer, au pantalon, aux baskets — le sac fait contrepoids.
+ */
+const REF: Record<RoleFlatLay, { x: number; y: number; l: number; angle: number }> = {
+  hero: { x: 70, y: 33, l: 58, angle: 8 },
+  secondaire: { x: 27, y: 27, l: 49, angle: -8 },
+  bas: { x: 50, y: 62, l: 42, angle: -12 },
+  chaussures: { x: 80, y: 82, l: 36, angle: -10 },
+  sac: { x: 17, y: 71, l: 33, angle: -2 },
+  accessoire: { x: 8, y: 8, l: 16, angle: 10 },
 };
-const INCLINAISON: Record<RoleFlatLay, number> = { hero: 6, secondaire: 5, bas: 5, chaussures: 8, sac: 6, accessoire: 10 };
+/**
+ * LA TAILLE VISUELLE PAR CATÉGORIE (08/10/2026, « standard image flat lay ») : la part d'un canevas carré que doit occuper chaque
+ * type de pièce pour que toutes semblent photographiées ensemble — milieu des plages du standard (T-shirt, chemise, pull
+ * 75–80 ; blazer, veste 80–85 ; manteau, robe 85–90 ; pantalon 80–90 ; jupe 70–80 ; short 65–75 ; sac, chaussures 65–75 ;
+ * accessoire 50–75). Le moteur ne dépend pas du canevas des fichiers : il lit la boîte RÉELLE de l'objet (objectBounds) et
+ * en déduit sa taille ; ce tableau ne sert qu'à RAPPORTER la taille d'une pièce à celle de la pièce de référence de son rôle
+ * (visualScale) — une jupe en bas est un peu plus petite qu'un pantalon, un manteau un peu plus grand qu'un blazer.
+ */
+export const PART_VISUELLE: Record<CategoryKey, number> = {
+  haut: 77.5,
+  pull: 77.5,
+  veste: 82.5,
+  manteau: 87.5,
+  robe: 87.5,
+  combinaison: 87.5,
+  pantalon: 85,
+  jean: 85,
+  jupe: 75,
+  short: 70,
+  sac: 70,
+  chaussures: 70,
+  bijou: 62.5,
+  accessoire: 62.5,
+};
+/** La part visuelle de la pièce de référence de chaque rôle (celle sur laquelle les largeurs de REF ont été réglées). */
+const PART_REF: Record<RoleFlatLay, number> = { hero: 82.5, secondaire: 77.5, bas: 85, chaussures: 70, sac: 70, accessoire: 62.5 };
 
-/** Centres du gabarit (zone 100 × 134), le haut-gauche étant le point fort ; le miroir échange gauche et droite. */
-const CENTRES: Record<RoleFlatLay, [number, number]> = {
-  hero: [46, 48],
-  secondaire: [73, 20],
-  bas: [55, 76],
-  chaussures: [12, 107],
-  sac: [86, 104],
-  accessoire: [88, 10],
-};
-const CENTRES_ACCESSOIRES: [number, number][] = [[88, 10], [10, 90], [50, 122]];
+/** L'échelle visuelle d'une pièce dans son rôle : bornée, pour qu'une catégorie rare ne déséquilibre jamais la planche. */
+export function echelleVisuelle(role: RoleFlatLay, cat: CategoryKey): number {
+  return Math.min(1.12, Math.max(0.82, (PART_VISUELLE[cat] ?? PART_REF[role]) / PART_REF[role]));
+}
+
+const REF_ACCESSOIRES = [
+  { x: 8, y: 8, l: 16, angle: 10 },
+  { x: 52, y: 94, l: 18, angle: -8 },
+  { x: 92, y: 52, l: 14, angle: 12 },
+];
 
 /**
  * Profondeur (08/10/2026, demandé : « le manteau ou la veste doivent être derrière ») : la veste et le manteau sont
@@ -129,46 +163,39 @@ export function generateur(graine: string): () => number {
   };
 }
 
-/** Marge de sécurité autour de la composition, en unités de zone (≈ 14 px sur la colonne de droite à 390 px). */
-export const MARGE_SECURITE = 7;
+/** Marge de sécurité autour de la composition, en unités de zone (4 unités ≈ 7 px sur la colonne de droite à 390 px ; avec le padding de la carte, ≥ 16 px du bord). */
+export const MARGE_SECURITE = 4;
 
-export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZone = 134): { pieces: PlacementFlatLay[] } {
+export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZone = 112): { pieces: PlacementFlatLay[] } {
   const roles = attribuerRoles(pieces);
   if (!roles.length) return { pieces: [] };
   const alea = generateur(graine);
   const dans = (min: number, max: number) => min + (max - min) * alea();
-  // La veste ou le manteau héros se pose toujours à DROITE (08/10/2026, demandé), le haut passe donc à gauche ; sinon le sens est tiré.
+  // La veste ou le manteau héros se pose toujours à DROITE (maquette) : pas de miroir. Sinon le sens est tiré par la graine.
   const heroDessus = DESSUS.includes(roles[0].piece.cat);
-  const miroir = alea() < 0.5 || heroDessus;
+  const miroir = !heroDessus && alea() < 0.5;
   const nb = roles.length;
   // Peu de pièces : un peu plus grandes. Beaucoup : les secondaires et accessoires se réduisent.
-  const echelleGlobale = nb <= 3 ? 1.12 : 1;
+  const echelleGlobale = nb <= 3 ? 1.1 : 1;
   let rangAccessoire = 0;
 
   const brut = roles.map(({ piece, role }) => {
-    let [lMin, lMax] = LARGEUR[role];
-    if (nb >= 6 && (role === "secondaire" || role === "accessoire")) {
-      lMin *= 0.88;
-      lMax *= 0.88;
-    }
-    let l = dans(lMin, lMax) * echelleGlobale;
+    const ref = role === "accessoire" ? REF_ACCESSOIRES[rangAccessoire++ % REF_ACCESSOIRES.length] : REF[role];
+    const visualScale = echelleVisuelle(role, piece.cat);
+    let l = ref.l * visualScale * dans(0.97, 1.03) * echelleGlobale;
+    if (nb >= 6 && (role === "secondaire" || role === "accessoire")) l *= 0.88;
     const ratio = piece.ratio > 0 ? piece.ratio : 1;
     // Une pièce haute ne dépasse pas 78 % de la hauteur de la zone.
     const hMax = hauteurZone * 0.78;
     if (l / ratio > hMax) l = hMax * ratio;
-    let [cx, cy] = role === "accessoire" ? CENTRES_ACCESSOIRES[rangAccessoire++ % CENTRES_ACCESSOIRES.length] : CENTRES[role];
-    cx += dans(-3, 3);
-    cy += dans(-3, 3);
-    if (miroir) cx = 100 - cx;
-    if (heroDessus && role === "hero") cx += 9;
-    const lim = INCLINAISON[role];
-    let angle = dans(-lim, lim);
-    if (miroir) angle = -angle;
-    // Affinage du 08/10/2026 : le héro n'est jamais d'aplomb (au moins 2,5°, sinon son axe vertical raidit la planche) et le bas
-    // pivote de −3° à −5° à l'écran, miroir ou non.
-    if (role === "hero") angle = (alea() < 0.5 ? -1 : 1) * (heroDessus ? dans(4, 6) : dans(2.5, 4));
-    if (role === "bas") angle = -dans(3, 5);
-    return { id: piece.id, role, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
+    let cx = ref.x + dans(-2, 2);
+    const cy = ref.y + dans(-2, 2) + (hauteurZone - 100) / 2;
+    let angle = ref.angle + dans(-1.5, 1.5);
+    if (miroir) {
+      cx = 100 - cx;
+      angle = -angle;
+    }
+    return { id: piece.id, cat: piece.cat, role, visualScale, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
   });
 
   // La boîte de chaque pièce, tournée : son encombrement réel pour la zone de sécurité.
@@ -186,7 +213,7 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
   // Ajuster l'ensemble à la zone de sécurité : réduit s'il déborde, agrandi d'au plus 12 % s'il reste de la place.
   const largeurUtile = 100 - 2 * MARGE_SECURITE;
   const hauteurUtile = hauteurZone - 2 * MARGE_SECURITE;
-  const k = Math.min(largeurUtile / (x1 - x0), hauteurUtile / (y1 - y0), 1.12);
+  const k = Math.min(largeurUtile / (x1 - x0), hauteurUtile / (y1 - y0), 1.1);
   const cxEns = (x0 + x1) / 2;
   const cyEns = (y0 + y1) / 2;
   return {

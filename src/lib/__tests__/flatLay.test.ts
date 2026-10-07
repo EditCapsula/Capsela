@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MARGE_SECURITE, attribuerRoles, composerFlatLay, generateur, type PieceFlatLay } from "../flatLay";
+import { MARGE_SECURITE, PART_VISUELLE, attribuerRoles, composerFlatLay, echelleVisuelle, generateur, type PieceFlatLay } from "../flatLay";
 import type { CategoryKey } from "../types";
 
 let n = 0;
@@ -43,31 +43,35 @@ describe("composerFlatLay — déterministe, borné, sans grille", () => {
     expect(vues.size).toBeGreaterThan(6);
   });
 
-  it("les inclinaisons restent dans les plages du brief (pièce de rang : héro ±4 — ±6 pour une veste —, secondaire ±5, chaussures ±8, sac ±6, accessoires ±10)", () => {
-    const lim = { hero: 6, secondaire: 5, bas: 5, chaussures: 8, sac: 6, accessoire: 10 } as const;
+  it("les inclinaisons suivent la maquette, à 1,5° près (au signe près si la planche est en miroir)", () => {
+    const ref = { hero: 8, secondaire: -8, bas: -12, chaussures: -10, sac: -2 } as const;
     for (let i = 0; i < 40; i++)
-      for (const q of composerFlatLay(look(), "g" + i).pieces) expect(Math.abs(q.angle)).toBeLessThanOrEqual(lim[q.role] + 1e-9);
+      for (const q of composerFlatLay(look(), "g" + i).pieces) {
+        if (q.role in ref) expect(Math.abs(q.angle - ref[q.role as keyof typeof ref])).toBeLessThanOrEqual(1.5 + 1e-9);
+      }
   });
 
-  it("le héro n'est jamais d'aplomb et le bas pivote de −3° à −5°", () => {
+  it("une veste héro est toujours à droite, le haut à gauche, le bas entre les deux", () => {
     for (let i = 0; i < 40; i++) {
-      const { pieces } = composerFlatLay(look(), "a" + i);
-      expect(Math.abs(pieces.find((q) => q.role === "hero")!.angle)).toBeGreaterThanOrEqual(4); // une veste : 4° à 6°
-      const bas = pieces.find((q) => q.role === "bas")!.angle;
-      expect(bas).toBeLessThanOrEqual(-3);
-      expect(bas).toBeGreaterThanOrEqual(-5);
+      const par = Object.fromEntries(composerFlatLay(look(), "d" + i).pieces.map((q) => [q.role, q]));
+      expect(par.hero.x).toBeGreaterThan(par.bas.x);
+      expect(par.bas.x).toBeGreaterThan(par.secondaire.x);
+      expect(par.chaussures.x).toBeGreaterThan(par.sac.x);
     }
   });
 
-  it("tout reste dans la zone de sécurité, et la pièce héro est la plus grande (hors pièces très hautes)", () => {
+  it("tout reste dans la zone, rotation comprise, avec la marge de sécurité, et le héro est la plus grande pièce", () => {
     for (let i = 0; i < 40; i++) {
-      const { pieces } = composerFlatLay(look(), "z" + i);
+      const { pieces } = composerFlatLay(look(), "z" + i, 112);
       for (const q of pieces) {
-        expect(q.x - q.l / 2).toBeGreaterThanOrEqual(MARGE_SECURITE - 6);
-        expect(q.x + q.l / 2).toBeLessThanOrEqual(100 - MARGE_SECURITE + 6);
+        const r = (Math.abs(q.angle) * Math.PI) / 180;
+        const w = q.l * Math.cos(r) + q.h * Math.sin(r);
+        const h = q.l * Math.sin(r) + q.h * Math.cos(r);
+        expect(q.x - w / 2).toBeGreaterThanOrEqual(MARGE_SECURITE - 0.01);
+        expect(q.x + w / 2).toBeLessThanOrEqual(100 - MARGE_SECURITE + 0.01);
+        expect(q.y - h / 2).toBeGreaterThanOrEqual(MARGE_SECURITE - 0.01 + (112 - 112) / 2);
+        expect(q.y + h / 2).toBeLessThanOrEqual(112 - MARGE_SECURITE + 0.01);
       }
-      const hero = pieces.find((q) => q.role === "hero")!;
-      for (const q of pieces) if (q.role !== "hero") expect(hero.l).toBeGreaterThanOrEqual(q.l);
     }
   });
 
@@ -101,5 +105,36 @@ describe("generateur — stable", () => {
     const a = generateur("abc");
     const b = generateur("abc");
     expect([a(), a(), a()]).toEqual([b(), b(), b()]);
+  });
+});
+
+describe("echelleVisuelle — la taille se rapporte à la catégorie (standard image flat lay)", () => {
+  it("la pièce de référence de chaque rôle garde l'échelle 1", () => {
+    expect(echelleVisuelle("hero", "veste")).toBe(1);
+    expect(echelleVisuelle("secondaire", "haut")).toBe(1);
+    expect(echelleVisuelle("bas", "pantalon")).toBe(1);
+    expect(echelleVisuelle("chaussures", "chaussures")).toBe(1);
+    expect(echelleVisuelle("sac", "sac")).toBe(1);
+  });
+  it("une jupe ou un short en bas sont plus petits qu'un pantalon, un manteau plus grand qu'une veste", () => {
+    expect(echelleVisuelle("bas", "jupe")).toBeLessThan(1);
+    expect(echelleVisuelle("bas", "short")).toBeLessThan(echelleVisuelle("bas", "jupe"));
+    expect(echelleVisuelle("hero", "manteau")).toBeGreaterThan(1);
+    expect(echelleVisuelle("hero", "robe")).toBeGreaterThan(1);
+  });
+  it("l'échelle reste bornée et le standard couvre toutes les catégories", () => {
+    for (const cat of Object.keys(PART_VISUELLE) as CategoryKey[])
+      for (const role of ["hero", "secondaire", "bas", "chaussures", "sac", "accessoire"] as const) {
+        const e = echelleVisuelle(role, cat);
+        expect(e).toBeGreaterThanOrEqual(0.82);
+        expect(e).toBeLessThanOrEqual(1.12);
+      }
+  });
+  it("chaque placement porte sa catégorie et son échelle visuelle", () => {
+    const { pieces } = composerFlatLay([p("manteau", 0.9), p("pull", 0.9), p("jupe", 0.7)], "v");
+    const hero = pieces.find((q) => q.role === "hero")!;
+    expect(hero.cat).toBe("manteau");
+    expect(hero.visualScale).toBeGreaterThan(1);
+    expect(pieces.find((q) => q.role === "bas")!.visualScale).toBeLessThan(1);
   });
 });
