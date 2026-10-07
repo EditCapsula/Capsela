@@ -205,6 +205,9 @@ const SUBTYPE_EN: Record<string, string> = {
   caban: "pea coat",
   imperméable: "raincoat",
   perfecto: "leather jacket",
+  // « Veste effet cuir » (id 953, « Veste courte effet cuir ») : sans entrée, le sujet retombait sur « jacket » et la
+  // génération dessinait une veste quelconque (07/10/2026, signalé : mauvais visuel). La matière vient de `matiere`.
+  "veste effet cuir": "short waist-length jacket",
   // Bas
   legging: "leggings",
   jogging: "jogging pants",
@@ -427,6 +430,7 @@ const MATIERE_EN: Record<string, string> = {
   laine: "wool",
   soie: "silk",
   cuir: "leather",
+  "cuir / alternative": "faux leather",
   denim: "denim",
   "synthétique": "synthetic fabric",
 };

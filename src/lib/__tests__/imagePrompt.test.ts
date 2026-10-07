@@ -7,6 +7,15 @@ function subject(over: Parameters<typeof item>[0]): string {
   return buildImagePrompt(item(over)).prompt.split("\n")[0].toLowerCase();
 }
 
+describe("buildImagePrompt — Veste effet cuir", () => {
+  // 07/10/2026, signalé : « Veste courte effet cuir » (id 953) avait un visuel quelconque. Sans entrée pour son sous-type, le
+  // sujet retombait sur « jacket » : le prompt ne disait ni « courte » ni la matière. Le sujet est désormais une veste courte.
+  it("dessine une veste courte (« waist-length », jamais « cropped » : le prompt interdit déjà tout cadrage coupé)", () => {
+    const s = subject({ id: 953, category: "vestes_blazers", name: "Veste courte effet cuir", sous_type: "Veste effet cuir", couleur_dominante: "Noir" });
+    expect(s).toContain("short waist-length jacket");
+  });
+});
+
 describe("buildImagePrompt — vocabulaire", () => {
   it("ne laisse aucun libellé couleur français dans un prompt anglais", () => {
     // Correctif 26/08/2026 : 35 des 71 libellés de la base n'avaient aucune
