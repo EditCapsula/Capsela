@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { margesDe } from "@/lib/catalogMarges";
-import { resolveItemImage } from "@/lib/catalogImages";
+import { margesDe, ratioHero } from "@/lib/catalogMarges";
+import { resolveHeroImage } from "@/lib/catalogImages";
 import { composerFlatLay } from "@/lib/flatLay";
 import type { Item } from "@/lib/types";
 
@@ -32,14 +32,14 @@ export function FlatLayCapsela({
   attendre?: boolean;
   onPret?: () => void;
 }) {
-  const images = useMemo(() => pieces.map((it) => ({ it, img: resolveItemImage(it) })), [pieces]);
+  const images = useMemo(() => pieces.map((it) => ({ it, img: resolveHeroImage(it) })), [pieces]);
   const composition = useMemo(
     () =>
       composerFlatLay(
         images.map(({ it, img }) => {
           const m = margesDe(img.url);
           // Visuel du catalogue : le ratio de la partie visible ; photo du dressing : un portrait courant ; sans visuel : un carré.
-          const ratio = m ? (1 - m.g - m.d) / (1 - m.h - m.b) : img.kind === "placeholder" ? 1 : 0.8;
+          const ratio = m ? (1 - m.g - m.d) / (1 - m.h - m.b) : ratioHero(img.url) ?? (img.kind === "placeholder" ? 1 : 0.8);
           return { id: it.id, cat: it.cat, ratio };
         }),
         graine,

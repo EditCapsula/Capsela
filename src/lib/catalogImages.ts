@@ -30,6 +30,17 @@ export function resolveItemImage(item: Item): ResolvedItemImage {
 }
 
 /**
+ * L'image d'une pièce pour le FLAT LAY du hero (08/10/2026) : le visuel hero (pièce posée à plat) quand le catalogue en a un
+ * et que la pièce n'a ni photo de la personne ni photo affiliée ; sinon exactement resolveItemImage. Le visuel standard reste
+ * donc le repli de toute pièce sans visuel hero, avant comme après la migration 0049.
+ */
+export function resolveHeroImage(item: Item): ResolvedItemImage {
+  const standard = resolveItemImage(item);
+  if (standard.kind === "generated" && item.imageHeroUrl) return { kind: "generated", url: item.imageHeroUrl };
+  return standard;
+}
+
+/**
  * Le fond d'une case qui montre la photo d'une pièce (04/10/2026) : une photo réelle remplit la case (« cover »), une
  * photo DÉTOURÉE se montre entière sur la tuile (« contain », fond de tuile) — recadrée, la pièce serait tronquée.
  */

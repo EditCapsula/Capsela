@@ -200,6 +200,8 @@ export interface Item {
   imageVersion?: number;
   /** Vraie photo du produit affilié (distincte du simple lien de clic affLink) — prime sur imageUrl : jamais remplacée par un visuel généré artificiellement. */
   affiliateImageUrl?: string;
+  /** Visuel « hero » du catalogue (colonne url_image_hero, migration 0049) : la pièce posée à plat avec des plis naturels, pour le flat lay du hero de l'accueil. Ne remplace jamais imageUrl ; absent = on garde le visuel standard. */
+  imageHeroUrl?: string;
   /** Niveau de tendance visuelle pour la génération d'image (source : vestiaire_universel, recette 19/08/2026) — "contemporain" si absent. */
   niveauTendance?: "intemporel" | "contemporain" | "tendance";
   /** Silhouette/détails éditoriaux explicites pour la génération d'image — priment sur toute règle tendances_mode déduite. */

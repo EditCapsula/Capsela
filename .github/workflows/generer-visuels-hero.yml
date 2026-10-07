@@ -1,0 +1,31 @@
+name: Générer les visuels hero du catalogue (admin)
+
+# Déclenchement manuel uniquement. Génère le visuel « hero » (flat lay posé) des pièces dont on donne les ids — jamais un
+# balayage du catalogue : on valide d'abord un lot d'essai (6 à 8 pièces), puis on lance le reste par lots. ~0,04 $ par pièce.
+# Nécessite la migration 0049 (colonne url_image_hero) et les secrets OPENAI_API_KEY (côté Supabase) et SB_SECRET_KEY (ici).
+
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "Ids d'articles (vestiaire_universel.id) séparés par des virgules"
+        required: true
+      force:
+        description: "Régénérer même si un visuel hero existe"
+        type: boolean
+        default: false
+
+jobs:
+  hero:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/generer-visuels-hero.mjs
+        env:
+          SUPABASE_URL: https://tkrbzrazejrxavtfspll.supabase.co
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+          IDS: ${{ inputs.ids }}
+          FORCE: ${{ inputs.force && '1' || '0' }}
