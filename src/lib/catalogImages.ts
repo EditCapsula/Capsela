@@ -36,7 +36,9 @@ export function resolveItemImage(item: Item): ResolvedItemImage {
  */
 export function resolveHeroImage(item: Item): ResolvedItemImage {
   const standard = resolveItemImage(item);
-  if (standard.kind === "generated" && item.imageHeroUrl) return { kind: "generated", url: item.imageHeroUrl };
+  // Le visuel hero se suffit : une pièce dont le visuel standard est faux, absent ou pas prêt (collants, robe sans statut)
+  // s'affiche quand même avec lui. Une photo de la personne ou un produit affilié passent toujours devant.
+  if ((standard.kind === "generated" || standard.kind === "placeholder") && item.imageHeroUrl) return { kind: "generated", url: item.imageHeroUrl };
   return standard;
 }
 
