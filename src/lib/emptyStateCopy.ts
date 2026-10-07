@@ -81,3 +81,58 @@ export function emptyStateCopy(reason: OutfitFailureReason, sourceLabel: string)
       };
   }
 }
+
+/**
+ * L'ÉTAT « SANS TENUE » DE PLANIFIER (07/10/2026) — trois états distincts, jamais « Ta tenue est prête » quand rien n'a été composé :
+ *
+ *   vide     le dressing n'a AUCUNE pièce et l'utilisatrice a choisi « uniquement mon dressing » : rien ne peut être composé
+ *            tant qu'elle n'en ajoute pas. Sans ce choix, la capsule complète le pool : ce n'est pas un dressing vide qui
+ *            bloque, on retombe sur la raison du moteur.
+ *   manque   des pièces existent mais une pièce nécessaire manque (`missing_required_category`) ou le niveau d'habillé
+ *            demandé n'est pas atteignable (`formality_gap`) : ajouter une pièce débloque.
+ *   occasion `no_match` : les pièces existent et la structure est là, c'est la combinaison pour CETTE occasion qui manque.
+ *            Ajouter une pièce n'est pas la réponse annoncée par le moteur : on garde son texte, sans action d'ajout.
+ *
+ * La raison reste celle de `generateOutfitWithFallback`, seulement mise en mots (cf. plus haut).
+ */
+export type EtatSansTenue = "vide" | "manque" | "occasion";
+
+export interface SansTenueCopy {
+  etat: EtatSansTenue;
+  /** Les deux temps du titre d'écran (le second en italique terracotta). */
+  titreA: string;
+  titreB: string;
+  titre: string;
+  body: string;
+  /** Phrase d'appel, seulement pour le dressing vide. */
+  suite: string | null;
+  /** « Ajouter des pièces » est proposé. */
+  peutAjouter: boolean;
+}
+
+export function sansTenueCopy(nbPiecesDressing: number, dressingSeul: boolean, reason: OutfitFailureReason | undefined, sourceLabel: string): SansTenueCopy {
+  if (nbPiecesDressing === 0 && dressingSeul) {
+    return {
+      etat: "vide",
+      titreA: "Ton dressing est",
+      titreB: "encore vide",
+      titre: "Commençons par ton dressing",
+      body: "Ajoute quelques pièces pour que Capsela puisse composer une tenue à partir de ce que tu possèdes.",
+      suite: "Plus ton dressing s’enrichit, plus Capsela pourra créer des tenues qui te ressemblent.",
+      peutAjouter: true,
+    };
+  }
+  if (reason === "missing_required_category" || reason === "formality_gap") {
+    return {
+      etat: "manque",
+      titreA: "Il manque",
+      titreB: "quelques pièces",
+      titre: "Il manque quelques pièces",
+      body: "Capsela n’a pas trouvé dans ton dressing tout ce qu’il faut pour composer cette tenue.",
+      suite: null,
+      peutAjouter: true,
+    };
+  }
+  const c = emptyStateCopy(reason ?? "no_match", sourceLabel);
+  return { etat: "occasion", titreA: "Pas encore de", titreB: "tenue", titre: c.title, body: c.body, suite: null, peutAjouter: false };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { qualificatifLook, titreLookDuJour } from "../logic";
+import { qualificatifLook, sousTitreLookDuJour, titreLookDuJour } from "../logic";
 
 // Card « Look du jour » de l'accueil (28/09/2026) : ses deux lignes de texte.
 
@@ -30,5 +30,12 @@ describe("qualificatifLook — une pièce du look n'est jamais présentée comme
 
   it("sans température connue : rien", () => {
     expect(qualificatifLook(null, [{ cat: "veste" }])).toBeNull();
+  });
+});
+
+describe("sousTitreLookDuJour — la version courte du hero de l'accueil", () => {
+  it("dit « Pensée pour … » avec le même contexte réel", () => {
+    expect(sousTitreLookDuJour("travail_formel", "Présentiel", "Verre")).toBe("Pensée pour ta journée au bureau.");
+    expect(sousTitreLookDuJour("date", "Présentiel", "Restaurant / date romantique")).toBe("Pensée pour ton dîner.");
   });
 });

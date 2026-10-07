@@ -8,7 +8,7 @@ import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { estContexteMaison, qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
+import { estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle } from "@/lib/logic";
 import { libelleStyles } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -20,6 +20,7 @@ import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
 import Button from "@/components/Button";
+import { resolveItemImage } from "@/lib/catalogImages";
 
 const glypheCalendrier = (taille: number) => (
   <svg width={taille} height={taille} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -46,28 +47,29 @@ const D_VALISE = "M3 10a2.5 2.5 0 0 1 2.5-2.5h13A2.5 2.5 0 0 1 21 10v8a2.5 2.5 0
  * cible tactile de 48 px.
  */
 function ActionRonde({ icone, libelle, onClick, actif, disabled, label }: { icone: React.ReactNode; libelle: string; onClick: () => void; actif?: boolean; disabled?: boolean; label?: string }) {
+  // Polish du 07/10/2026 : une icône et un mot, sans pastille — le CTA « Voir le look » reste l'action dominante du hero.
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       aria-pressed={actif}
       aria-label={label}
-      className="inline-flex items-center gap-[9px] min-h-[48px] pr-2 text-[12.5px] font-medium text-muted-3 cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]"
+      className="inline-flex items-center gap-[7px] min-h-[44px] px-1 text-[12.5px] text-on-terracotta-soft cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]"
     >
-      <span className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center bg-card text-terracotta-deep" style={{ border: "1px solid var(--color-sand-border)" }}>
-        {icone}
-      </span>
+      <span className="flex-shrink-0 text-on-terracotta">{icone}</span>
       <span>{libelle}</span>
     </button>
   );
 }
 
 /**
- * Une carte de la grille « Tout pour ton style » : un rond à glyphe, un titre en deux lignes, une phrase, un visuel éditorial
- * en colonne à droite et une flèche ronde. Toute la carte est le bouton.
+ * Une carte de la grille « Tout pour ton style » : un glyphe, un titre en deux lignes, une phrase, un visuel éditorial en
+ * colonne à droite et une flèche simple. Toute la carte est le bouton. Polish du 07/10/2026 : moins « tableau de bord » —
+ * pas de pastille sous le glyphe ni de rond autour de la flèche, un visuel plus discret ; `surtitre` dit ce que la carte
+ * contient (« Mes pièces » / « Par Capsela »), pour que le dressing et la capsule ne se confondent pas.
  */
 function CarteUnivers({
-  onClick, glyphe, ligne1, ligne2, texte, accent, visuel, label, busy, premium,
+  onClick, glyphe, ligne1, ligne2, texte, accent, visuel, visuelNode, surtitre, label, busy, premium,
 }: {
   onClick: () => void;
   glyphe: React.ReactNode;
@@ -77,9 +79,12 @@ function CarteUnivers({
   /** Les styles de la personne, en terracotta après la phrase (carte capsule). */
   accent?: string;
   visuel: string;
+  /** Remplace la photo par une composition (la capsule, faite de ses vraies pièces). */
+  visuelNode?: React.ReactNode;
+  surtitre?: string;
   label: string;
   busy?: boolean;
-  /** Le badge « Premium » de la maquette, posé en bas à gauche de la carte. */
+  /** Le badge « Premium », posé en bas à gauche de la carte. */
   premium?: boolean;
 }) {
   return (
@@ -87,26 +92,32 @@ function CarteUnivers({
       onClick={onClick}
       aria-label={label}
       aria-busy={busy}
-      className="relative block min-w-0 text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
+      className="relative flex items-start min-w-0 text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
       style={{ minHeight: 156 }}
     >
       <span className="absolute top-0 right-0 bottom-0 bg-cream" style={{ width: "clamp(56px, 38%, 92px)" }} aria-hidden="true">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={visuel} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover block" />
+        {visuelNode ?? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={visuel} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover block opacity-90" />
+        )}
       </span>
-      <span aria-hidden="true" className="absolute right-[6px] bottom-[8px] w-7 h-7 rounded-full bg-card flex items-center justify-center text-ink">
+      <span
+        aria-hidden="true"
+        className="absolute right-[8px] bottom-[8px] w-7 h-7 rounded-full bg-card text-ink flex items-center justify-center"
+      >
         <svg width="13" height="13" viewBox="0 0 24 24" style={{ display: "block" }}>
-          <path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
       {premium && (
         <span className="absolute left-3 bottom-3">
-          <BadgePremium />
+          <BadgePremium fond="carte" />
         </span>
       )}
       <span className="flex flex-col pt-3 pb-10 pl-3 pr-2" style={{ width: "calc(100% - clamp(56px, 38%, 92px))" }}>
-        <span className="w-9 h-9 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">{glyphe}</span>
-        <span className="block font-serif text-[15px] leading-[1.15] text-ink mt-3">
+        <span className="flex items-center h-[22px] text-terracotta-deep">{glyphe}</span>
+        {surtitre && <span className="t-surtitre text-muted-3 mt-[8px] !text-[9px] whitespace-nowrap">{surtitre}</span>}
+        <span className={"block font-serif text-[15px] leading-[1.15] text-ink " + (surtitre ? "mt-[3px]" : "mt-3")}>
           {ligne1}
           <br />
           {ligne2}
@@ -120,8 +131,44 @@ function CarteUnivers({
   );
 }
 
+/**
+ * Le visuel de la carte capsule : QUATRE vraies pièces de la capsule de la personne (veste, bas, haut, sac), superposées en
+ * désordre éditorial — « Capsela a choisi ces pièces pour moi ». Sans au moins deux pièces illustrées, la photo d'ambiance
+ * reste (aucune pièce inventée).
+ */
+const GROUPES_CAPSULE: CategoryKey[][] = [["veste", "manteau"], ["pantalon", "jean", "jupe"], ["pull", "haut"], ["sac", "chaussures"]];
+const PLACES_CAPSULE = [
+  { left: "-6%", top: "2%", width: "66%", height: "42%" },
+  { left: "30%", top: "30%", width: "72%", height: "34%" },
+  { left: "0%", top: "52%", width: "56%", height: "44%" },
+  { left: "52%", top: "68%", width: "44%", height: "28%" },
+];
+function piecesDeLaCapsule(capsule: Item[]): { item: Item; url: string }[] {
+  const out: { item: Item; url: string }[] = [];
+  for (const groupe of GROUPES_CAPSULE) {
+    for (const it of capsule) {
+      if (!groupe.includes(it.cat)) continue;
+      const img = resolveItemImage(it);
+      if (img.kind === "placeholder" || !img.url) continue;
+      out.push({ item: it, url: img.url });
+      break;
+    }
+  }
+  return out;
+}
+function VisuelCapsule({ pieces }: { pieces: { item: Item; url: string }[] }) {
+  return (
+    <span className="block relative w-full h-full" style={{ background: "var(--color-warm-bg)" }}>
+      {pieces.map((p, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={p.item.id} src={p.url} alt="" loading="lazy" decoding="async" className="absolute object-contain" style={{ ...PLACES_CAPSULE[i], zIndex: i === 1 ? 2 : 1 }} />
+      ))}
+    </span>
+  );
+}
+
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, meteoDuJour, jourConsulte, actions } = useCapsela();
+  const { state, geoLoading, vestiairePool, defaultCapsule, meteoDuJour, jourConsulte, actions } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -247,6 +294,7 @@ export default function HomeScreen() {
     ? ["haut", "pantalon", "chaussures"]
     : ["haut", "pantalon", "chaussures", "sac"];
 
+  const piecesCapsule = useMemo(() => piecesDeLaCapsule(defaultCapsule), [defaultCapsule]);
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
 
@@ -260,7 +308,7 @@ export default function HomeScreen() {
     }
     return { a: "Ta tenue", b: "du jour" };
   })();
-  const sousTitreHero = texteHero ? texteHero.sousTitre : titreLookDuJour(occasionKey, state.workMode, state.dateContext);
+  const sousTitreHero = texteHero ? texteHero.sousTitre : sousTitreLookDuJour(occasionKey, state.workMode, state.dateContext);
   const cleTenue = clePieces(state.outfit).join(",");
   const sauvegardee = jourAVenir
     ? state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue)
@@ -308,41 +356,41 @@ export default function HomeScreen() {
 
       {/* LE LOOK DU JOUR : fond sable, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
           jour passé, aucune tenue possible, la tenue qui se compose, la tenue. */}
-      <div className="mx-6 mt-3 bg-warm-bg rounded-hero grid gap-2" style={{ gridTemplateColumns: "minmax(0,1.15fr) minmax(0,1fr)", padding: "20px 14px 10px 18px", minHeight: 270 }}>
+      <div className="mx-6 mt-3 rounded-hero grid gap-2" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: "minmax(0,0.86fr) minmax(0,1.14fr)", padding: "20px 14px 10px 18px", minHeight: 300 }}>
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">
-            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-on-terracotta" style={{ display: "block" }}>
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="t-surtitre text-terracotta-deep whitespace-nowrap">
+            <span className="t-surtitre text-on-terracotta whitespace-nowrap">
               {passee ? (retroActif === 1 ? "Ton look d’hier" : "Ton look passé") : texteHero ? texteHero.surtitre : "Ton look du jour"}
             </span>
           </div>
 
           {passee ? (
             <>
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+              <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
                 {passee.plan ? titreDuPlan(passee.plan) : OCC_LABELS[passee.occasion]}
               </div>
-              <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]">{passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l’avais planifiée."}</div>
+              <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]">{passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l’avais planifiée."}</div>
               <div className="mt-auto pt-4">
-                <Button variante="principal" pleine={false} onClick={actions.goHistory} className="!px-[18px]">
+                <Button variante="claire" pleine={false} onClick={actions.goHistory} className="!px-[18px]">
                   Voir dans mon journal
                 </Button>
               </div>
             </>
           ) : aucuneTenuePossible ? (
             <>
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
-                On prépare ta <span className="italic text-terracotta-deep">première tenue</span>
+              <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                On prépare ta <span className="italic text-on-terracotta-soft">première tenue</span>
               </div>
-              <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+              <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
                 {dressingVide
                   ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
                   : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."}
               </div>
               <div className="mt-auto pt-4">
-                <Button variante="principal" pleine={false} onClick={dressingVide ? actions.openAdd : actions.goWardrobe} className="!px-[18px]">
+                <Button variante="claire" pleine={false} onClick={dressingVide ? actions.openAdd : actions.goWardrobe} className="!px-[18px]">
                   {dressingVide ? "Ajouter mes pièces" : "Voir mon dressing"}
                 </Button>
               </div>
@@ -350,25 +398,25 @@ export default function HomeScreen() {
           ) : hasOutfit ? (
             <>
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
-                <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
                   {titreHero.a}
                   {titreHero.b && (
                     <>
                       <br />
-                      <span className="italic text-terracotta-deep">{titreHero.b}</span>
+                      <span className="italic text-on-terracotta-soft">{titreHero.b}</span>
                     </>
                   )}
                 </div>
-                <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+                <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
                   {sousTitreHero}
                 </div>
               </div>
               <div className="mt-auto pt-4">
                 <Button
-                  variante="principal"
+                  variante="claire"
                   pleine={false}
                   onClick={planHero && jourAVenir ? () => actions.ouvrirPlan(planHero, "home") : actions.goTenues}
-                  className="!px-[18px]"
+                  className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap"
                 >
                   Voir le look <span aria-hidden="true">→</span>
                 </Button>
@@ -376,11 +424,11 @@ export default function HomeScreen() {
             </>
           ) : (
             <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
-                Capsela compose <span className="italic text-terracotta-deep">ta tenue…</span>
+              <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                Capsela compose <span className="italic text-on-terracotta-soft">ta tenue…</span>
               </div>
-              <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]">
-                {jourAVenir ? "Une silhouette pensée pour ton programme de ce jour-là." : "Une silhouette pensée pour ton programme d’aujourd’hui."}
+              <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]">
+                {jourAVenir ? "Pensée pour ton programme de ce jour-là." : "Pensée pour ton programme d’aujourd’hui."}
               </div>
               <StatutComposition />
             </div>
@@ -388,18 +436,18 @@ export default function HomeScreen() {
         </div>
 
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
-        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 120" }}>
+        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 134", margin: "18px -8px -2px 0" }}>
           {passee ? (
-            <OutfitComposition items={piecesPassee} variant="planche" />
+            <OutfitComposition items={piecesPassee} variant="planche" accentHero />
           ) : aucuneTenuePossible ? null : (
-            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} />
+            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} accentHero />
           )}
         </div>
 
         {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre idée »
             propose une autre tenue (l'ancien « Pas pour moi » : le refus est enregistré, la suivante l'évite, même quota). */}
         {hasOutfit && !passee && (
-          <div className="flex items-center gap-1 mt-1" style={{ gridColumn: "1 / -1" }} aria-live="polite">
+          <div className="flex items-center mt-0" style={{ gridColumn: "1 / -1" }} aria-live="polite">
             <ActionRonde
               icone={
                 <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -412,7 +460,7 @@ export default function HomeScreen() {
               // rejoint Mes looks — l'avis du jour ne porte que sur la tenue d'aujourd'hui.
               onClick={() => (jourAVenir ? actions.toggleSaveOutfitLook() : actions.setOutfitFeedback("adore"))}
             />
-            <span aria-hidden="true" className="w-px h-[22px] mx-2" style={{ background: "var(--color-sand-border)" }} />
+            <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(251,243,234,.35)" }} />
             <ActionRonde
               icone={
                 <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -431,11 +479,11 @@ export default function HomeScreen() {
         {planApplique && hasOutfit && (
           <div className="text-center" style={{ gridColumn: "1 / -1" }}>
             {planApplique.alerte && (
-              <div className="text-[12.5px] text-muted-3 leading-[1.4] mb-[2px]" style={{ textWrap: "pretty" }}>
+              <div className="text-[12.5px] text-on-terracotta-soft leading-[1.4] mb-[2px]" style={{ textWrap: "pretty" }}>
                 {planApplique.alerte}
               </div>
             )}
-            <button onClick={actions.voirAutreProposition} className="text-[13px] underline underline-offset-[3px] text-terracotta-deep cursor-pointer" style={{ minHeight: 44 }}>
+            <button onClick={actions.voirAutreProposition} className="text-[13px] underline underline-offset-[3px] text-on-terracotta cursor-pointer" style={{ minHeight: 44 }}>
               Voir une autre proposition
             </button>
           </div>
@@ -444,11 +492,8 @@ export default function HomeScreen() {
 
       {/* ══ EXPLORER CAPSELA — « Tout pour ton style » : les quatre univers de l'app. */}
       <div className="px-6 mt-7">
-        <div className="flex items-center gap-[10px]">
-          <span aria-hidden="true" className="block w-[22px] h-px bg-terracotta" />
-          <span className="t-surtitre text-muted">Explorer Capsela</span>
-        </div>
-        <h2 className="t-titre-ecran text-ink mt-2">
+        <span className="t-surtitre text-muted-3 !text-[9.5px]">Explorer Capsela</span>
+        <h2 className="t-titre-ecran text-ink mt-1">
           Tout pour ton <span className="italic text-terracotta">style</span>
         </h2>
         <div className="grid grid-cols-2 gap-[10px] mt-[14px]">
@@ -457,6 +502,7 @@ export default function HomeScreen() {
             glyphe={glypheUnivers(D_DRESSING)}
             ligne1="Mon"
             ligne2="dressing"
+            surtitre="Mes pièces"
             texte="Ajoute et gère tes pièces"
             visuel="/editorial/capsela_dressing_banner.webp"
             label="Mon dressing"
@@ -466,9 +512,11 @@ export default function HomeScreen() {
             glyphe={glypheUnivers(D_CAPSULE)}
             ligne1="Ma"
             ligne2="capsule"
+            surtitre="Par Capsela"
             texte={profile.styles.length > 1 ? "Une sélection adaptée à tes styles" : "Une sélection adaptée à ton style"}
             accent={stylesDits || undefined}
             visuel="/editorial/capsela_capsule_banner.webp"
+            visuelNode={piecesCapsule.length >= 2 ? <VisuelCapsule pieces={piecesCapsule} /> : undefined}
             label="Ma capsule"
           />
           <CarteUnivers
@@ -489,6 +537,7 @@ export default function HomeScreen() {
             texte="Une sélection pensée pour ton voyage"
             visuel={`/editorial/capsela_planifier_valise_${genreVisuel}.webp`}
             label="Préparer une valise"
+            premium
           />
         </div>
       </div>

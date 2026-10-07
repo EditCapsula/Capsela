@@ -16,7 +16,7 @@ import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { CATS, DATE_CONTEXTS, OCCASIONS, occasionShortLabel, type Weather } from "@/lib/data";
-import { emptyStateCopy } from "@/lib/emptyStateCopy";
+import { sansTenueCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { titreLookDuJour } from "@/lib/logic";
 import { HUMEURS, LIBELLE_HUMEUR, genererTenueHumeur, type Humeur } from "@/lib/humeur";
@@ -814,6 +814,8 @@ export default function PlanifierScreen() {
   }, [composition, tenue, choisie, state.items, vestiairePool, defaultCapsule, dressingSeul]);
   /** Rien à garder : état vide du moteur — une composition imposée en a toujours une. */
   const sansTenue = !composition && (!tenue || tenue.noCompleteOutfit);
+  /** Les mots de l'état sans tenue : dressing vide, pièces manquantes, ou pas de combinaison pour l'occasion (emptyStateCopy.ts). */
+  const sansTenueTextes = sansTenue ? sansTenueCopy(state.items.length, dressingSeul, tenue?.reason, dressingSeul ? "ton dressing" : "ton dressing et ta capsule") : null;
 
   /**
    * POOL DE RÉSOLUTION STABLE pour les tenues DÉJÀ PLANIFIÉES — le même que
@@ -1787,8 +1789,8 @@ export default function PlanifierScreen() {
             {/* 9,5 px / .1em : la forme des deux autres pastilles terracotta de
                 l'app (accueil, Valise). Le 10 px d'ici était un troisième
                 réglage pour le même objet. */}
-            <Surtitre>Tenue planifiée</Surtitre>
-            <TitreEtape a="Ta tenue est" b="prête" />
+            <Surtitre>{sansTenueTextes ? "À préparer" : "Tenue planifiée"}</Surtitre>
+            {sansTenueTextes ? <TitreEtape a={sansTenueTextes.titreA} b={sansTenueTextes.titreB} /> : <TitreEtape a="Ta tenue est" b="prête" />}
             <div className="text-[13px] text-ink mt-[8px]">
               {occLabel} · {dateLongue}
               {moment ? ` · ${moment}` : ""}
@@ -1801,13 +1803,10 @@ export default function PlanifierScreen() {
                   : `${villeAffichee || lieu.trim()} · météo disponible à partir du ${debutMeteo}`}
             </div>
 
-            {sansTenue ? (
-              <EmptyState
-                forme="carte"
-                className="mt-[14px]"
-                titre={emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").title}
-              >
-                {emptyStateCopy(tenue?.reason ?? "no_match", dressingSeul ? "ton dressing" : "ton dressing et ta capsule").body}
+            {sansTenueTextes ? (
+              <EmptyState forme="carte" className="mt-[18px]" titre={sansTenueTextes.titre}>
+                {sansTenueTextes.body}
+                {sansTenueTextes.suite && <span className="block mt-2 text-muted">{sansTenueTextes.suite}</span>}
               </EmptyState>
             ) : (
               <>
@@ -2383,12 +2382,13 @@ export default function PlanifierScreen() {
                 est désactivée quand il n'y a pas de tenue à garder — un état
                 vide ne se planifie pas — et pendant l'écriture, pour qu'un
                 double tap ne parte pas deux fois. */}
-            <Button
-              onClick={garder}
-              disabled={enregistrement || sansTenue}
-            >
-              {enregistrement ? "Un instant…" : "Garder cette tenue"}
-            </Button>
+            {sansTenueTextes ? (
+              sansTenueTextes.peutAjouter && <Button onClick={actions.openAddEtRevenir}>Ajouter des pièces</Button>
+            ) : (
+              <Button onClick={garder} disabled={enregistrement}>
+                {enregistrement ? "Un instant…" : "Garder cette tenue"}
+              </Button>
+            )}
             {/* MODIFIER À GAUCHE, PRINCIPAL À DROITE (recette 24/09/2026).
                 « Modifier » seul laissait croire qu'on retouchait la tenue ;
                 on retouche les réponses qui l'ont produite, d'où « cet
@@ -2407,11 +2407,11 @@ export default function PlanifierScreen() {
                 className="flex-1 rounded-full bg-card border border-border text-[12px] text-muted-3 cursor-pointer"
                 style={{ minHeight: 44 }}
               >
-                Modifier cet évènement
+                {sansTenueTextes ? "Modifier cet événement" : "Modifier cet évènement"}
               </button>
               {/* Une composition imposée est LA tenue de la photo : pas de
-                  nouveau tirage. */}
-              {!composition && (
+                  nouveau tirage. Sans tenue, rien à régénérer. */}
+              {!composition && !sansTenueTextes && (
                 <button
                   onClick={() => {
                     chercherAlternatives();

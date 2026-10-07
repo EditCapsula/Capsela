@@ -54,7 +54,7 @@ export interface RetroJour {
  */
 export function useDonneesJour(retro?: RetroJour) {
   const { geoCity, geoLoading, geoIsLive, sourceMeteo, jourConsulte } = useCapsela();
-  const { decalage, date, meteoPrevue, previsionEnChargement } = jourConsulte;
+  const { decalage, date, meteoPrevue, amplitude, previsionEnChargement } = jourConsulte;
   const enRetro = Boolean(retro && retro.jours > 0 && decalage === 0);
   const enAttente = !enRetro && (geoLoading || previsionEnChargement);
   const temp = enRetro ? retro!.temp : decalage === 0 ? geoCity.temp : meteoPrevue?.temp;
@@ -72,7 +72,7 @@ export function useDonneesJour(retro?: RetroJour) {
           : sourceMeteo === "derniere_position"
             ? "Position indisponible — dernière météo enregistrée à ta position."
             : "Météo indisponible pour l'instant — tenue composée sur des valeurs par défaut.";
-  return { geoCity, geoLoading, decalage, date, enRetro, enAttente, temp, label, note };
+  return { geoCity, geoLoading, decalage, date, enRetro, enAttente, temp, label, note, amplitude: enRetro ? null : amplitude };
 }
 
 export function JourEtMeteo({ className = "", retro }: { className?: string; retro?: RetroJour }) {
