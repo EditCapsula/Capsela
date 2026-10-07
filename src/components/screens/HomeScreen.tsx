@@ -92,7 +92,7 @@ function CarteUnivers({
       onClick={onClick}
       aria-label={label}
       aria-busy={busy}
-      className="relative block min-w-0 text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
+      className="relative flex items-start min-w-0 text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
       style={{ minHeight: 156 }}
     >
       <span className="absolute top-0 right-0 bottom-0 bg-cream" style={{ width: "clamp(56px, 38%, 92px)" }} aria-hidden="true">
@@ -101,8 +101,14 @@ function CarteUnivers({
           <img src={visuel} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover block opacity-90" />
         )}
       </span>
-      <span aria-hidden="true" className="absolute top-[12px] text-[16px] leading-none text-ink" style={{ right: "calc(clamp(56px, 38%, 92px) + 10px)" }}>
-        →
+      <span
+        aria-hidden="true"
+        className="absolute top-[10px] w-7 h-7 rounded-full bg-terracotta-deep text-cream flex items-center justify-center"
+        style={{ right: "calc(clamp(56px, 38%, 92px) + 8px)" }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" style={{ display: "block" }}>
+          <path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </span>
       {premium && (
         <span className="absolute left-3 bottom-3">
@@ -110,8 +116,8 @@ function CarteUnivers({
         </span>
       )}
       <span className="flex flex-col pt-3 pb-10 pl-3 pr-2" style={{ width: "calc(100% - clamp(56px, 38%, 92px))" }}>
-        <span className="text-terracotta-deep">{glyphe}</span>
-        {surtitre && <span className="t-surtitre text-muted-3 mt-[10px] !text-[9px]">{surtitre}</span>}
+        <span className="flex items-center h-[22px] text-terracotta-deep">{glyphe}</span>
+        {surtitre && <span className="t-surtitre text-muted-3 mt-[8px] !text-[9px] whitespace-nowrap">{surtitre}</span>}
         <span className={"block font-serif text-[15px] leading-[1.15] text-ink " + (surtitre ? "mt-[3px]" : "mt-3")}>
           {ligne1}
           <br />
