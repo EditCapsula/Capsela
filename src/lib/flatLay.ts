@@ -80,21 +80,21 @@ export function attribuerRoles<T extends { id: number; cat: CategoryKey }>(piece
 /** Plages de largeur (unités de zone) et d'inclinaison (degrés) par rôle. */
 const LARGEUR: Record<RoleFlatLay, [number, number]> = {
   hero: [70, 79],
-  secondaire: [57, 66],
+  secondaire: [61, 70],
   bas: [55, 66],
   chaussures: [37, 46],
-  sac: [36, 46],
+  sac: [39, 49],
   accessoire: [18, 24],
 };
-const INCLINAISON: Record<RoleFlatLay, number> = { hero: 4, secondaire: 5, bas: 5, chaussures: 8, sac: 6, accessoire: 10 };
+const INCLINAISON: Record<RoleFlatLay, number> = { hero: 6, secondaire: 5, bas: 5, chaussures: 8, sac: 6, accessoire: 10 };
 
 /** Centres du gabarit (zone 100 × 134), le haut-gauche étant le point fort ; le miroir échange gauche et droite. */
 const CENTRES: Record<RoleFlatLay, [number, number]> = {
   hero: [46, 48],
-  secondaire: [71, 24],
-  bas: [60, 74],
-  chaussures: [14, 110],
-  sac: [86, 98],
+  secondaire: [73, 20],
+  bas: [55, 76],
+  chaussures: [12, 107],
+  sac: [86, 104],
   accessoire: [88, 10],
 };
 const CENTRES_ACCESSOIRES: [number, number][] = [[88, 10], [10, 90], [50, 122]];
@@ -160,13 +160,13 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
     cx += dans(-3, 3);
     cy += dans(-3, 3);
     if (miroir) cx = 100 - cx;
-    if (heroDessus && role === "hero") cx += 6;
+    if (heroDessus && role === "hero") cx += 9;
     const lim = INCLINAISON[role];
     let angle = dans(-lim, lim);
     if (miroir) angle = -angle;
     // Affinage du 08/10/2026 : le héro n'est jamais d'aplomb (au moins 2,5°, sinon son axe vertical raidit la planche) et le bas
     // pivote de −3° à −5° à l'écran, miroir ou non.
-    if (role === "hero") angle = (alea() < 0.5 ? -1 : 1) * dans(2.5, lim);
+    if (role === "hero") angle = (alea() < 0.5 ? -1 : 1) * (heroDessus ? dans(4, 6) : dans(2.5, 4));
     if (role === "bas") angle = -dans(3, 5);
     return { id: piece.id, role, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
   });
