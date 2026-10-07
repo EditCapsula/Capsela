@@ -375,7 +375,7 @@ export default function HomeScreen() {
         </div>
 
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
-        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 134", margin: "18px -8px -2px 0" }}>
+        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "14px -4px 0 0" }}>
           {passee ? (
             <FlatLayCapsela pieces={piecesPassee} graine={clePieces(piecesPassee.map((p) => p.id)).join(",")} />
           ) : aucuneTenuePossible ? null : (
