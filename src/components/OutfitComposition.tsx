@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { resolveItemImage } from "@/lib/catalogImages";
+import { margesDe, type Marges } from "@/lib/catalogMarges";
 import { composerPlanche, composerTenue, formesSilhouette } from "@/lib/compositionEditoriale";
 import type { CategoryKey, Item } from "@/lib/types";
 
@@ -629,7 +630,9 @@ function CompositionPlanche({
                 alignItems: FLEX[aligne.y],
               }}
             >
-              {img.url ? (
+              {img.url && margesDe(img.url) ? (
+                <PieceRecadree url={img.url} marges={margesDe(img.url)!} fente={c.l / c.h} angle={angle} nom={label ? "" : it.name} onCharge={surChargement} />
+              ) : img.url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   data-peint=""
@@ -720,6 +723,42 @@ function CompositionPlanche({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Une pièce du catalogue recadrée sur sa partie visible (cf. catalogMarges.ts) : l'image carrée est rognée de ses marges
+ * transparentes, puis « contenue » dans son emplacement — `fente` est le rapport largeur / hauteur de l'emplacement, dans
+ * le repère de la planche. L'ombre et l'inclinaison s'appliquent à l'ensemble ; l'image débordante est masquée.
+ */
+function PieceRecadree({ url, marges, fente, angle, nom, onCharge }: { url: string; marges: Marges; fente: number; angle: number; nom: string; onCharge: () => void }) {
+  const lc = 1 - marges.g - marges.d;
+  const hc = 1 - marges.h - marges.b;
+  const ratio = lc / hc;
+  const largeur = ratio > fente ? 100 : (ratio / fente) * 100;
+  const hauteur = ratio > fente ? (fente / ratio) * 100 : 100;
+  return (
+    <div
+      data-peint=""
+      style={{
+        position: "relative",
+        flexShrink: 0,
+        width: `${largeur}%`,
+        height: `${hauteur}%`,
+        overflow: "hidden",
+        transform: `rotate(${angle}deg)`,
+        filter: "drop-shadow(0 6px 12px rgba(29,26,22,.16))",
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt={nom}
+        onLoad={onCharge}
+        onError={onCharge}
+        style={{ position: "absolute", display: "block", maxWidth: "none", width: `${100 / lc}%`, height: `${100 / hc}%`, left: `${(-marges.g / lc) * 100}%`, top: `${(-marges.h / hc) * 100}%` }}
+      />
     </div>
   );
 }
