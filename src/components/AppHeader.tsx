@@ -42,6 +42,10 @@ export default function AppHeader({
 }) {
   const { profile, email } = useAuth();
   const { actions } = useCapsela();
+  // L'entrée GLOBALE du calendrier (05/10/2026), posée dans la gouttière gauche de TOUS les écrans de premier niveau
+  // (Accueil, Dressing, Capsule, Journal, Planifier) : un même bandeau partout (07/10/2026). Un écran à retour, à action
+  // ou d'avant-connexion garde sa gouttière.
+  const calendrierParDefaut = !onBack && gauche === undefined && !action && showAvatar && !dark;
   const initial = (profile.displayName || email || "C").trim().charAt(0).toUpperCase() || "C";
 
   return (
@@ -60,6 +64,16 @@ export default function AppHeader({
           <BoutonRetour onClick={onBack} label={backLabel} taille={34} sombre={dark} />
         )}
         {!onBack && gauche}
+        {calendrierParDefaut && (
+          <button onClick={actions.goCalendrier} aria-label="Ouvrir mon calendrier" className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70">
+            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+              <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
+                <path d="M3.5 10h17M8 3.5v4M16 3.5v4" />
+              </g>
+            </svg>
+          </button>
+        )}
       </div>
       {dark ? (
         <LogoCapsela taille="sm" claire />
