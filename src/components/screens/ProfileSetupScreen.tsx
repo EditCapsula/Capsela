@@ -51,6 +51,8 @@ import {
   PAL_COULEURS,
   TAILLES_HAUT,
   basculerStyle,
+  MAX_STYLES,
+  libelleStyles,
   exposedStyleIds,
   paletteColorName,
   styleConfigFor,
@@ -73,6 +75,15 @@ import Input from "@/components/Input";
 const ALL_STEPS = [
   { key: "prenom", kicker: "Toi", title: "Comment tu t'appelles ?", subtitle: "Pour personnaliser ton expérience Capsela." },
   { key: "genre", kicker: "Genre", title: "Comment tu te définis ?", subtitle: "Pour des suggestions plus justes, jamais pour t’enfermer dans une case." },
+  { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
+  { key: "style", kicker: "Ton style", title: "Quel style te ressemble le plus ?", subtitle: "Choisis 1 ou 2 styles maximum." },
+  { key: "morpho", kicker: "Ta silhouette", title: "Quelle est ta silhouette ?", subtitle: "Elle nous aide à te proposer des coupes et des proportions qui te mettent en valeur." },
+  /*
+   * ORDRE DU PARCOURS (07/10/2026, brief « Optimisation de l'onboarding ») : style, silhouette, couleurs, colorimétrie,
+   * profil — les goûts d'abord, la couleur ensuite, le récapitulatif en dernier (et il mène au dressing). Les tailles,
+   * simple donnée pratique, passent avant ces cinq sections et n'en font pas partie : le fil « n / N · Section » ne les
+   * compte pas.
+   */
   /**
    * LES CINQ ÉTAPES COULEUR (25/09/2026, maquette « Onboarding Couleurs »).
    *
@@ -92,7 +103,7 @@ const ALL_STEPS = [
    * palette ».
    */
   { key: "pal_couleurs", kicker: "Tes couleurs", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis 1 à 6 couleurs que tu portes ou aimerais porter souvent." },
-  { key: "pal_intensite", kicker: "Ton style", title: "Quelle intensité de couleurs portes-tu volontiers ?", subtitle: "Cela nous aide à créer des looks dans ton style." },
+  { key: "pal_intensite", kicker: "Tes couleurs", title: "Quelle intensité de couleurs portes-tu volontiers ?", subtitle: "Cela nous aide à créer des looks dans ton style." },
   /*
    * LE PARCOURS COLORIMÉTRIE (refonte UX/UI du 30/09/2026) : présentation,
    * quatre questions, analyse, résultat, « Et maintenant ? ». Les sous-écrans
@@ -100,13 +111,10 @@ const ALL_STEPS = [
    * plus bas) ; ces textes-ci sont ceux de la présentation. Le titre du
    * résultat est la saison trouvée.
    */
-  { key: "colorimetrie", kicker: "Ta colorimétrie", title: "Et si on trouvait les couleurs qui te mettent naturellement en valeur ?", subtitle: "Quatre questions rapides pour déterminer ta palette et personnaliser tes recommandations." },
+  { key: "colorimetrie", kicker: "Quatre questions rapides", title: "Ta colorimétrie", subtitle: "Découvrons les couleurs qui mettent naturellement ton teint en valeur." },
   { key: "colorimetrie_resultat", kicker: "Ta palette", title: "Ta palette", subtitle: "" },
   { key: "colorimetrie_suite", kicker: "Ta colorimétrie", title: "Et maintenant ?", subtitle: "Capsela utilise ta palette pour personnaliser ton expérience." },
-  { key: "pal_recap", kicker: "Voilà ta palette Capsela", title: "Ce que tu aimes × ce qui te met en valeur", subtitle: "Capsela combine tes préférences et ta colorimétrie pour des recommandations qui te ressemblent." },
-  { key: "taille", kicker: "Taille", title: "Quelles sont tes tailles habituelles ?", subtitle: "Ça nous aide à te proposer des tenues qui tombent bien." },
-  { key: "style", kicker: "Style", title: "Quels styles te ressemblent ?", subtitle: "Choisis-en un ou deux." },
-  { key: "morpho", kicker: "Morphologie", title: "Et ta silhouette ?", subtitle: "Pour affiner nos recommandations de coupes." },
+  { key: "pal_recap", kicker: "Ton profil", title: "Ton profil Capsela est prêt", subtitle: "Capsela combine tes goûts et ta colorimétrie pour des recommandations qui te ressemblent." },
 ] as const;
 
 function chipCls(on: boolean): string {
@@ -227,7 +235,15 @@ export default function ProfileSetupScreen() {
   };
   // Un ou deux styles (05/10/2026 ; avant : sélection unique, arbitrage du 20/08/2026 reconduit après un essai de
   // multi-sélection le même jour) : basculerStyle, le premier choisi est le principal.
-  const selectStyle = (id: string) => patch({ styles: basculerStyle(draft.styles, id) });
+  // Un troisième style est BLOQUÉ, pas substitué (07/10/2026) : le remplacer en silence changeait un choix sans le dire.
+  const selectStyle = (id: string) => {
+    if (!draft.styles.includes(id) && draft.styles.length >= MAX_STYLES) {
+      setStyleBloque(true);
+      return;
+    }
+    setStyleBloque(false);
+    patch({ styles: basculerStyle(draft.styles, id) });
+  };
 
   // Édition ciblée d'une seule étape (recette 22/08/2026, signalé : "si je
   // change mon style je ne devrai pas avoir à chaque fois l'écran
@@ -246,7 +262,8 @@ export default function ProfileSetupScreen() {
   const finish = async () => {
     await saveProfile({ ...draft, completed: true });
     if (state.profileSetupFromEdit) actions.go(state.profileSetupReturn);
-    else actions.goHome();
+    // Le parcours mène au dressing (07/10/2026) : « Créer mon dressing » ouvre l'ajout d'une pièce.
+    else actions.openAdd();
   };
 
   const next = () => {
@@ -320,6 +337,22 @@ export default function ProfileSetupScreen() {
             ? { kicker: meta.kicker, title: draft.colorimetrie?.libelle || meta.title, subtitle: saisonResultat?.description ?? null }
             : { kicker: meta.kicker, title: meta.title, subtitle: meta.subtitle || null };
   const taillesBas = taillesBasFor(draft.gender);
+  // Le fil d'Ariane discret (07/10/2026) : « 3 / 6 · Tes couleurs ». « Ton dressing » est la dernière section, ouverte
+  // par le récapitulatif ; la silhouette n'existe pas pour tous les profils (cf. STEPS), le compte suit donc le parcours servi.
+  const SECTIONS: { label: string; cles: string[] }[] = [
+    { label: "Ton style", cles: ["style"] },
+    ...(STEPS.some((x) => x.key === "morpho") ? [{ label: "Ta silhouette", cles: ["morpho"] }] : []),
+    { label: "Tes couleurs", cles: ["pal_couleurs", "pal_intensite"] },
+    { label: "Ta colorimétrie", cles: ["colorimetrie", "colorimetrie_resultat", "colorimetrie_suite"] },
+    { label: "Ton profil", cles: ["pal_recap"] },
+    { label: "Ton dressing", cles: [] },
+  ];
+  const sectionCourante = SECTIONS.findIndex((x) => x.cles.includes(meta.key));
+  const filDArianne =
+    !state.profileSetupFromEdit && !profile.completed && sectionCourante >= 0
+      ? `${sectionCourante + 1} / ${SECTIONS.length} · ${SECTIONS[sectionCourante].label}`
+      : null;
+  const [styleBloque, setStyleBloque] = useState(false);
   // Seules les étapes style et palette exigent une sélection non vide
   // (styles : recette 20/08/2026 ; palette : Tâche 8, min 1 couleur) — les
   // autres étapes gardent leur comportement existant, jamais bloquant.
@@ -329,6 +362,10 @@ export default function ProfileSetupScreen() {
     (meta.key !== "pal_couleurs" || draft.paletteCouleurs.length >= MIN_PALETTE_COULEURS);
 
   const recapRows = [
+    { label: "Style", value: libelleStyles(draft.styles, draft.gender) || "à choisir", swatches: [] as string[] },
+    ...(draft.gender === "femme" && draft.morphology
+      ? [{ label: "Silhouette", value: MORPHOLOGY_LABELS[draft.morphology], swatches: [] as string[] }]
+      : []),
     {
       label: "Couleurs",
       value: draft.paletteCouleurs.map(paletteColorName).filter(Boolean).join(", ") || "à choisir",
@@ -399,6 +436,11 @@ export default function ProfileSetupScreen() {
         )}
         <div className="w-[38px]" />
       </div>
+      {filDArianne && (
+        <div className="text-center text-[11px] text-muted mt-2" aria-live="polite">
+          {filDArianne}
+        </div>
+      )}
 
       <div className="mt-[26px]">
         {enTete.kicker && <div className="t-surtitre text-terracotta">{enTete.kicker}</div>}
@@ -490,7 +532,7 @@ export default function ProfileSetupScreen() {
         <Card className="mt-6 p-[18px]">
           {recapRows.map((r) => (
             <div key={r.label} className="flex items-center gap-3 py-[11px] border-b border-border last:border-b-0">
-              <span className="w-[70px] flex-shrink-0 t-surtitre text-muted">{r.label}</span>
+              <span className="w-[92px] flex-shrink-0 t-surtitre text-muted">{r.label}</span>
               <div className="flex items-center gap-[6px] flex-wrap flex-1 min-w-0">
                 {r.swatches.map((hex) => (
                   <span
@@ -537,6 +579,11 @@ export default function ProfileSetupScreen() {
         </div>
       )}
 
+      {meta.key === "style" && styleBloque && (
+        <p role="status" className="text-[12px] text-terracotta-deep mt-4 leading-[1.45]">
+          Tu peux choisir deux styles au maximum. Retire-en un pour en choisir un autre.
+        </p>
+      )}
       {meta.key === "style" && (
         <div className="grid grid-cols-2 gap-[11px] mt-[26px]">
           {exposedStyleIds(draft.gender).map((id) => {
@@ -662,7 +709,7 @@ export default function ProfileSetupScreen() {
     if (meta.key === "colorimetrie") {
       switch (colo.vue) {
         case "presentation":
-          return { libelle: "Commencer", onClick: () => setColo(commencer), actif: true, lien: { libelle: "Passer pour l'instant", onClick: passerColorimetrie } };
+          return { libelle: "Commencer l'analyse", onClick: () => setColo(commencer), actif: true, lien: { libelle: "Passer pour l'instant", onClick: passerColorimetrie } };
         case "question":
           return { libelle: derniereQuestion(colo) ? "Voir mon résultat" : "Continuer", onClick: () => setColo(continuer), actif: peutContinuer(colo) };
         case "analyse":
@@ -698,10 +745,9 @@ export default function ProfileSetupScreen() {
           libelle: isLast
             ? state.profileSetupFromEdit
               ? "Enregistrer les modifications"
-              : // « Commencer l'expérience » plutôt que « Terminer mon profil »
-                // (maquette du 25/09) : ce qui compte à cet instant n'est pas ce
-                // qu'on achève, c'est ce qui s'ouvre.
-                "Commencer l'expérience"
+              : // « Créer mon dressing » (07/10/2026, brief d'optimisation) : ce qui s'ouvre
+                // est l'ajout d'une première pièce, plus l'accueil.
+                "Créer mon dressing"
             : "Continuer",
           onClick: next,
           actif: canContinue,
