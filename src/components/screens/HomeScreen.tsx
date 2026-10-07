@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import BadgePremium from "@/components/BadgePremium";
-import GateAvisStyliste from "@/components/GateAvisStyliste";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
@@ -14,7 +12,6 @@ import { OCC_LABELS } from "@/lib/data";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { estContexteMaison, qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
-import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { groupesDuVestiaire } from "@/lib/dressingEcran";
 import { useCapsela } from "@/lib/store";
 import { JourEtMeteo } from "@/components/JourMeteo";
@@ -49,15 +46,6 @@ const FLECHE_RONDE = (
       <path d="M5 12h13M13 6.5l5.5 5.5L13 17.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   </span>
-);
-
-const GLYPHE_AVIS = (
-  <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-    <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3.5l1.7 5.1 5.1 1.7-5.1 1.7L12 17l-1.7-5.1-5.1-1.7 5.1-1.7L12 3.5z" />
-      <path d="M18.5 16.5v3M17 18h3" />
-    </g>
-  </svg>
 );
 
 /**
@@ -104,7 +92,7 @@ function CarteAvecCapsela({
       onClick={onClick}
       aria-label={cta}
       aria-busy={busy}
-      className="flex-none text-left bg-card border border-border rounded-feuille overflow-hidden cursor-pointer flex flex-col transition-opacity active:opacity-90"
+      className="flex-none text-left bg-card border border-border rounded-feuille overflow-hidden cursor-pointer flex flex-col motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
       style={{ width: "clamp(236px, 74%, 300px)", scrollSnapAlign: "start" }}
     >
       <span className="block px-[14px] pt-[14px]">
@@ -127,7 +115,7 @@ function CarteAvecCapsela({
 }
 
 export default function HomeScreen() {
-  const { state, geoLoading, geoCity, vestiairePool, weather, meteoDuJour, jourConsulte, etatPremium, actions } = useCapsela();
+  const { state, geoLoading, vestiairePool, weather, meteoDuJour, jourConsulte, actions } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -148,32 +136,6 @@ export default function HomeScreen() {
     setCleRefusee(cleCourante);
     actions.setOutfitFeedback("pas_aujourdhui");
     quota.demander(actions.regenOutfit);
-  };
-
-  /**
-   * AVIS DE STYLISTE — accès (docs/avis-de-styliste.md sections 4 et 5,
-   * arbitrages du 25/09/2026). Règle unique AVIS_DE_STYLISTE (autorisations.ts).
-   * En phase de test (26/09/2026), ACCES_LIBRE : la carte ouvre l'écran, sans
-   * badge ni Gate. Sous PREMIUM_REQUIRED : Premium confirmé → écran ; gratuit,
-   * expiré, démo → Premium Gate. Un statut encore inconnu n'est jamais pris
-   * pour du Premium : la carte passe en vérification, le statut est relu, et
-   * seul un Premium confirmé ouvre l'écran — sinon, le Gate.
-   *
-   * Le Gate est une feuille posée sur l'écran courant : « Plus tard » la
-   * referme et l'on reste exactement là où l'on était.
-   */
-  const [gateAvisStyliste, setGateAvisStyliste] = useState(false);
-  const [verificationAvis, setVerificationAvis] = useState(false);
-  const ouvrirAvisStyliste = async () => {
-    if (verificationAvis) return;
-    const decision = decisionAcces("AVIS_DE_STYLISTE", etatPremium, false);
-    if (decision === "acces") return actions.goAvisStyliste();
-    if (decision === "gate") return setGateAvisStyliste(true);
-    setVerificationAvis(true);
-    const etat = await actions.verifierEtatPremium();
-    setVerificationAvis(false);
-    if (decisionAcces("AVIS_DE_STYLISTE", etat, true) === "acces") actions.goAvisStyliste();
-    else setGateAvisStyliste(true);
   };
 
   /**
@@ -222,7 +184,10 @@ export default function HomeScreen() {
   const hasOutfit = piecesResolues.length > 0 && tenueAUnSocle(piecesResolues);
   const occasionKey =
     state.occasion && state.occasion !== "all" ? state.occasion : occasionParDefaut(profile.prefs, jourConsulte.date);
-  const occasionLabel = OCC_LABELS[occasionKey];
+  // Le contexte le plus précis que les données donnent : une occasion de travail dit « Journée de travail » ou « Télétravail »
+  // (le mode choisi), jamais le libellé générique « Travail / Bureau ».
+  const occasionLabel =
+    occasionKey === "travail_formel" ? (state.workMode === "Télétravail" ? "Télétravail" : "Journée de travail") : OCC_LABELS[occasionKey];
 
   const outfitPieces = hasOutfit ? piecesResolues : [];
 
@@ -322,7 +287,7 @@ export default function HomeScreen() {
         </div>
         {/* La promesse du jour, avec la ville de la météo affichée juste dessous : jamais un lieu écrit en dur. */}
         <p className="text-[14px] text-muted-3 leading-[1.45] mt-[6px]" style={{ textWrap: "pretty" }}>
-          Voici ta tenue du jour, pensée pour ta journée{geoCity?.city ? ` à ${geoCity.city}` : ""}.
+          Voici ta tenue du jour, pensée pour {state.jourDecalage === 0 ? "aujourd’hui" : "ce jour-là"}.
         </p>
         {/* LE JOUR ET SA MÉTÉO, SUR UNE LIGNE (27/09/2026, navigation par
             date) : le jour se change par ses chevrons, la météo ouvre
@@ -409,7 +374,7 @@ export default function HomeScreen() {
           </span>
           {/* « Ta tenue planifiée » quand la tenue affichée vient de Planifier
               (option C, 30/09/2026) : l'étiquette dit d'où elle vient. */}
-          {texteHero ? texteHero.surtitre : "Ta tenue du jour"}
+          {texteHero ? texteHero.surtitre : "Ton look du jour"}
         </div>
 
         {aucuneTenuePossible ? (
@@ -628,17 +593,6 @@ export default function HomeScreen() {
           alt="Une valise ouverte, des vêtements pliés et des accessoires"
           cta="Préparer une valise"
         />
-        <CarteAvecCapsela
-          onClick={ouvrirAvisStyliste}
-          glyphe={GLYPHE_AVIS}
-          titre="Avis de styliste"
-          texte="Obtiens un regard expert sur une tenue ou une pièce de ton dressing."
-          visuel={`/images/avis/extrait-conseil${profile.gender === "homme" ? "-homme" : ""}.webp`}
-          alt="Des accessoires et des pièces assorties, posés à plat"
-          cta="Obtenir mon avis de styliste"
-          badge={premiumRequis("AVIS_DE_STYLISTE") ? <BadgePremium /> : undefined}
-          busy={verificationAvis}
-        />
       </div>
 
       {/* ══ TON DRESSING ═════════════════════════════════════════════════
@@ -650,7 +604,7 @@ export default function HomeScreen() {
         <div className="mx-6 mt-4">
           <button
             onClick={actions.openAdd}
-            className="w-full text-left bg-card border border-border rounded-feuille px-4 py-[16px] cursor-pointer transition-opacity active:opacity-90"
+            className="w-full text-left bg-card border border-border rounded-feuille px-4 py-[16px] cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
           >
             <span className="block t-titre-carte text-ink">Ton dressing commence ici</span>
             <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[5px]">Ajoute quelques pièces pour que Capsela compose des tenues qui te ressemblent.</span>
@@ -691,7 +645,7 @@ export default function HomeScreen() {
         <button
           onClick={actions.goCapsule}
           aria-label="Voir ma capsule"
-          className="relative block w-full text-left rounded-feuille overflow-hidden cursor-pointer transition-opacity active:opacity-90"
+          className="relative block w-full text-left rounded-feuille overflow-hidden cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
           style={{ minHeight: 132, background: "var(--color-terracotta-deep)" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -716,15 +670,6 @@ export default function HomeScreen() {
       {/* Quota « Pas pour moi » : même feuille que « Autre tenue ». */}
       {quota.feuille}
 
-      {/* Premium Gate [DÉCIDÉ] §5 — composant unique, cf. GateAvisStyliste. */}
-      <GateAvisStyliste
-        open={gateAvisStyliste}
-        onClose={() => setGateAvisStyliste(false)}
-        onDecouvrirPremium={() => {
-          setGateAvisStyliste(false);
-          actions.goPremium();
-        }}
-      />
     </div>
   );
 }
