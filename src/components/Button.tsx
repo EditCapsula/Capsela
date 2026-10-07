@@ -44,7 +44,7 @@ export default function Button({
       type={type}
       {...props}
       className={
-        "rounded-full t-bouton text-center cursor-pointer min-h-[52px] items-center justify-center gap-[8px] disabled:opacity-50 disabled:cursor-not-allowed " +
+        "rounded-full t-bouton text-center cursor-pointer min-h-[52px] motion-safe:transition-transform motion-safe:active:scale-[.985] items-center justify-center gap-[8px] disabled:opacity-50 disabled:cursor-not-allowed " +
         // Un remplissage horizontal imposé par l'appelant (bouton à sa taille) remplace celui par défaut.
         (/(^|\s)px-/.test(className) ? "" : "px-5 ") +
         (pleine ? "flex w-full " : "inline-flex ") +
