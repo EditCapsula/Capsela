@@ -22,8 +22,8 @@ import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
 import Button, { BoutonDiscret } from "@/components/Button";
 
-const GLYPHE_CALENDRIER = (
-  <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+const glypheCalendrier = (taille: number) => (
+  <svg width={taille} height={taille} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
     <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
       <path d="M3.5 10h17M8 3.5v4M16 3.5v4" />
@@ -272,7 +272,7 @@ export default function HomeScreen() {
         <AppHeader
           gauche={
             <button onClick={actions.goCalendrier} aria-label="Ouvrir mon calendrier" className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70">
-              {GLYPHE_CALENDRIER}
+              {glypheCalendrier(24)}
             </button>
           }
         />
@@ -576,7 +576,7 @@ export default function HomeScreen() {
       <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
         <CarteAvecCapsela
           onClick={actions.goPlanifier}
-          glyphe={GLYPHE_CALENDRIER}
+          glyphe={glypheCalendrier(17)}
           titre="Planifier une tenue"
           texte="Une occasion en tête ? Capsela compose le look."
           visuel="/editorial/capsela_planifier_intro.webp"

@@ -41,7 +41,7 @@ Les valises (`state.valises`, `valises.ts`) remontent dans « Mes planifications
 - Interface, commentaires et messages de commit en français. Les commentaires expliquent le POURQUOI et datent les arbitrages : les lire avant de modifier une règle.
 - Aucune donnée inventée à l'écran : une section sans donnée ne s'affiche pas. Une phrase qui affirme qu'une donnée « sert à » quelque chose doit être vraie dans le code.
 - Jamais de message morphologique négatif. Interdits : cacher, dissimuler, camoufler, corriger, défaut, grossir, amincir, peu flatteur. Aucune logique fondée sur la couleur de peau, la morphologie, l'âge ou le genre apparents. La colorimétrie passe par un questionnaire sur des traits déclarés, jamais par une photo (arbitré le 30/09/2026 ; l'analyse photo, un temps codée, a été retirée — cf. `docs/colorimetrie.md`).
-- Design system : tokens de `src/app/globals.css` (crème, terracotta, encre), Fraunces pour les titres (27 px pour un titre d'écran, second temps en italique terracotta), Manrope pour le reste. Pas d'emoji dans l'interface.
+- Design system : tokens de `src/app/globals.css` (crème, terracotta, encre), Fraunces pour les titres (24 px pour un titre d'écran, second temps en italique terracotta), Manrope pour le reste. Pas d'emoji dans l'interface.
 
 ## Rendu local dans l'environnement cloud
 

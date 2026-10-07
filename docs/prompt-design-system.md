@@ -20,7 +20,7 @@ Tu conçois des écrans pour **Capsela**, une application mobile (site statique 
 
 ### Typographie
 - Titres et chiffres : **Fraunces**. Tout le reste : **Manrope**. Manuscrite (Caveat) : un seul usage, la phrase d'ambiance de la tenue.
-- Rôles : display 34 (le « Bonjour »), titre d'écran 27 (second temps en italique terracotta), titre de section 21, titre de carte 18, ligne 16, vignette 15, chiffre 21 ; chapeau 13, surtitre 11 capitales .16em, label 10, bouton 13 capitales .1em, lien 12 suivi de « → », barre du bas 9 capitales.
+- Rôles : display 34 (le « Bonjour »), titre d'écran 24 (second temps en italique terracotta), titre de section 21, titre de carte 18, ligne 16, vignette 15, chiffre 21 ; chapeau 13, surtitre 11 capitales .16em, label 10, bouton 13 capitales .1em, lien 12 suivi de « → », barre du bas 9 capitales.
 - Texte courant : 13 de corps, 12 secondaire, 11 légende.
 
 ### Formes
