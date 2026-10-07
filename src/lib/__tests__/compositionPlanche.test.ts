@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  GABARITS_FLATLAY,
   GABARITS_PLANCHE,
   PROFONDEUR_PLANCHE,
   composerPlanche,
@@ -197,23 +198,37 @@ describe("formesSilhouette — le chargement du Look du jour annonce la planche 
   });
 });
 
-describe("composerPlanche — accentHero", () => {
-  const pieces = [
-    { id: 1, cat: "haut" as const },
-    { id: 2, cat: "pantalon" as const },
-    { id: 3, cat: "chaussures" as const },
-    { id: 4, cat: "sac" as const },
-    { id: 5, cat: "bijou" as const },
-  ];
-  it("agrandit le héro et rétrécit les petits accessoires, sans toucher au sac ni aux chaussures (en proportion de la planche)", () => {
-    const a = composerPlanche(pieces);
-    const b = composerPlanche(pieces, { accentHero: true });
-    const surface = (r: { case: { l: number; h: number } }, h: number) => (r.case.l * r.case.h) / (100 * h);
-    const part = (res: typeof a, role: string) => {
-      const p = res.pieces.find((x) => x.role === role)!;
-      return surface(p, res.hauteur);
-    };
-    expect(part(b, "hero")).toBeGreaterThan(part(a, "hero"));
-    expect(part(b, "petit")).toBeLessThan(part(a, "petit"));
+describe("GABARITS_FLATLAY — la planche de stylisme (07/10/2026)", () => {
+  for (const [nom, g] of Object.entries(GABARITS_FLATLAY)) {
+    const poses: [RolePlanche, EmplacementPlanche][] = [["hero", g.hero], ["chaussures", g.chaussures], ["sac", g.sac]];
+    if (g.dessus) poses.push(["dessus", g.dessus]);
+    if (g.bas) poses.push(["bas", g.bas]);
+    g.petits.forEach((e) => poses.push(["petit", e]));
+
+    it(`${nom} : tout dans la largeur, le héro le plus grand, les petits les plus petits`, () => {
+      for (const [, e] of poses) {
+        expect(e.x).toBeGreaterThanOrEqual(0);
+        expect(e.x + e.l).toBeLessThanOrEqual(100);
+        expect(aire(g.hero)).toBeGreaterThanOrEqual(aire(e));
+      }
+      for (const e of g.petits) expect(aire(e)).toBeLessThan(aire(g.sac));
+    });
+
+    it(`${nom} : chaque pièce garde plus de la moitié de sa surface visible, le héro plus de 70 %`, () => {
+      for (let i = 0; i < poses.length; i++)
+        for (let j = i + 1; j < poses.length; j++) {
+          const [ri, ei] = poses[i];
+          const [rj, ej] = poses[j];
+          const derriere = PROFONDEUR_PLANCHE[ri] <= PROFONDEUR_PLANCHE[rj] ? ei : ej;
+          expect(recouvrement(ei, ej), `${ri}/${rj}`).toBeLessThanOrEqual(aire(derriere) * 0.5);
+        }
+      const cache = poses.filter(([r]) => r !== "hero").reduce((n, [r, e]) => (PROFONDEUR_PLANCHE[r] > PROFONDEUR_PLANCHE.hero ? n + recouvrement(g.hero, e) : n), 0);
+      expect(cache).toBeLessThanOrEqual(aire(g.hero) * 0.3);
+    });
+  }
+
+  it("composerPlanche utilise le flat lay sans annotations, les gabarits annotés avec", () => {
+    const pieces = [p("haut"), p("pantalon"), p("chaussures"), p("sac")];
+    expect(composerPlanche(pieces).hauteur).not.toBe(composerPlanche(pieces, { annotations: true }).hauteur);
   });
 });
