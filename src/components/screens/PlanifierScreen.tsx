@@ -8,6 +8,8 @@ import BottomSheet from "@/components/BottomSheet";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import FilEtapes from "@/components/FilEtapes";
+import { LigneIcone, TuileIcone, TuileOccasion, type IconePlanifier } from "@/components/PlanifierUI";
+import { OCCASIONS_EDITORIALES } from "@/lib/occasionEditoriale";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import SegmentedControl from "@/components/SegmentedControl";
@@ -28,7 +30,7 @@ import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } f
 import { deleteTenuePlanifiee, fetchTenuesPlanifiees, enregistrerHumeurPlan, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { VISUEL_SEJOUR } from "@/lib/valise";
-import { paletteHexes } from "@/lib/profile";
+import { libelleStyles, paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { composeWardrobePool } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
@@ -229,6 +231,10 @@ const TYPES_LIEU_PAR_OCCASION: Partial<Record<OccasionKey, readonly string[]>> =
 };
 
 const JOURS_PROPOSES = 21;
+/** Les noms sous les points du fil (maquettes du 07/10/2026) ; une tenue imposée n'a pas la dernière. */
+const LIBELLES_ETAPES = ["Occasion", "Quand", "Où", "Préférences"] as const;
+const ICONE_MOMENT: Record<string, IconePlanifier> = { Matin: "matin", "Après-midi": "apresmidi", Soirée: "soiree", "Toute la journée": "journee" };
+const ICONE_LIEU: Record<string, IconePlanifier> = { Restaurant: "restaurant", "Bar / Rooftop": "bar", "Lieu culturel": "culture", Extérieur: "exterieur", "Chez quelqu'un": "maison" };
 const DOW = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const DOW_LONG = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
@@ -299,51 +305,6 @@ function LigneOption({
  * 1,1:1 entre `card` et `warm-bg` — le même défaut que la barre d'onglets
  * avant le 23/09.
  */
-function LigneChoix({
-  actif,
-  titre,
-  sousTitre,
-  glyphe,
-  onClick,
-}: {
-  actif: boolean;
-  titre: string;
-  sousTitre?: string;
-  glyphe?: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={actif}
-      className={
-        "flex items-center gap-3 w-full text-left rounded-bloc px-[14px] py-2 cursor-pointer border transition-colors " +
-        (actif ? "bg-warm-bg border-sand-border" : "bg-card border-border")
-      }
-      style={{ minHeight: 52 }}
-    >
-      {glyphe && <span className={"flex-shrink-0 " + (actif ? "text-terracotta-deep" : "text-muted-3")}>{glyphe}</span>}
-      <span className="flex-1 min-w-0">
-        <span className="block text-[13px] font-medium text-ink">{titre}</span>
-        {sousTitre && <span className="block text-[11px] text-muted mt-[2px]">{sousTitre}</span>}
-      </span>
-      <span
-        aria-hidden="true"
-        className="w-5 h-5 flex-shrink-0 rounded-full flex items-center justify-center"
-        style={{
-          border: "1.5px solid " + (actif ? "var(--color-terracotta-deep)" : "var(--color-cream-dark-soft)"),
-          background: actif ? "var(--color-terracotta-deep)" : "transparent",
-        }}
-      >
-        <span
-          className="w-[7px] h-[7px] rounded-full"
-          style={{ background: actif ? "var(--color-card)" : "transparent" }}
-        />
-      </span>
-    </button>
-  );
-}
-
 /**
  * Une carte du hub (refonte du 04/10/2026, « hub Premium + hub personnel »). Le bandeau éditorial, le titre, le texte et
  * le bouton de CRÉATION forment un seul <button> (pattern des cartes de l'accueil) ; le CTA est un <span>, pour ne pas
@@ -526,7 +487,7 @@ export default function PlanifierScreen() {
   // plutôt que de laisser sur le hub (l'état de cet écran est local).
   // « Planifier une tenue pour … » depuis Tenue (27/09/2026) : la date est
   // déjà choisie, le parcours s'ouvre sur ses étapes.
-  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail">(() =>
+  const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "liste" | "detail" | "confirmation">(() =>
     state.planARouvrir ? "detail" : state.planComposition || state.planJour != null ? "etape" : "intro"
   );
   /**
@@ -619,6 +580,8 @@ export default function PlanifierScreen() {
   const [humeur, setHumeur] = useState<Humeur | null>(null);
   /** L'écran « Capsela compose ta tenue… » : affiché entre la dernière question et le résultat, le temps de la prévision. */
   const [compose, setCompose] = useState(false);
+  /** La tenue qui vient d'être gardée — pour l'écran de confirmation. */
+  const [gardee, setGardee] = useState<TenuePlanifiee | null>(null);
   const [composeDelaiOk, setComposeDelaiOk] = useState(false);
   const [coche, setCoche] = useState(0);
   const [dressingSeul, setDressingSeul] = useState(false);
@@ -1046,8 +1009,14 @@ export default function PlanifierScreen() {
         }
       }
       setDepuisPlan(null);
-      setVue("liste");
       setOnglet("up");
+      // Tout s'est bien passé : l'écran de confirmation. Sinon la liste, où le message d'échec est lisible.
+      if (ancienRetire && humeurGardee) {
+        setGardee(ligne);
+        setVue("confirmation");
+        return;
+      }
+      setVue("liste");
       flash(
         !ancienRetire
           ? "La nouvelle date est gardée. L'ancienne n'a pas pu être retirée : supprime-la depuis ta liste."
@@ -1205,7 +1174,7 @@ export default function PlanifierScreen() {
       setDepuisPlan(null);
       setComposition(null);
       setVue("detail");
-    } else if (vue === "liste") setVue("intro");
+    } else if (vue === "liste" || vue === "confirmation") setVue("intro");
     else if (vue === "resultat") setVue("etape");
     else if (vue === "etape" && etape > 1) setEtape(etape - 1);
     else if (vue === "etape") setVue("intro");
@@ -1280,7 +1249,7 @@ export default function PlanifierScreen() {
           écran centre déjà le logo juste au-dessus. */}
       {vue === "etape" && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
-          <FilEtapes total={derniere} courante={etape - 1} />
+          <FilEtapes total={derniere} courante={etape - 1} libelles={LIBELLES_ETAPES.slice(0, derniere)} />
         </div>
       )}
 
@@ -1481,18 +1450,32 @@ export default function PlanifierScreen() {
             <LoadingSpinner size={56} />
             <TitreEtape a="Capsela compose" b="ta tenue…" />
             <div className="t-chapeau text-muted mt-[6px]">Quelques instants, le temps de choisir les bonnes pièces.</div>
-            <ul className="mt-8 flex flex-col gap-3 text-left">
-              {[
-                occ ? `Ton occasion : ${occLabel}` : null,
-                ville || villeAffichee ? "La météo de ton lieu" : null,
-                humeur ? `Ta préférence : ${LIBELLE_HUMEUR[humeur]}` : null,
-                "Ton dressing et ta capsule",
-              ]
-                .filter((x): x is string => !!x)
-                .map((x, i) => (
-                  <li key={x} className="flex items-center gap-[10px] text-[13px]" style={{ color: coche > i ? "var(--color-ink)" : "var(--color-placeholder)" }}>
-                    <span aria-hidden="true" className="w-[18px] text-terracotta-deep">{coche > i ? "✓" : "·"}</span>
-                    {x}
+            <ul className="mt-8 flex flex-col gap-4 text-left w-full max-w-[300px]">
+              {([
+                occ ? ["Ton occasion", occLabel] : null,
+                villeAffichee ? ["La météo", meteoMoment ? `${villeAffichee} · ${meteoMoment.temp}° · ${meteoMoment.label}` : villeAffichee] : null,
+                humeur ? ["Ta préférence", LIBELLE_HUMEUR[humeur]] : null,
+                profile.styles.length ? ["Ton style", libelleStyles(profile.styles, profile.gender)] : null,
+                ["Ton dressing", state.items.length ? `${state.items.length} pièce${state.items.length > 1 ? "s" : ""} disponible${state.items.length > 1 ? "s" : ""}` : "Complété par ta capsule"],
+              ] as ([string, string] | null)[])
+                .filter((x): x is [string, string] => !!x)
+                .map(([titre, sous], i) => (
+                  <li key={titre} className="flex items-center gap-3" style={{ opacity: coche > i ? 1 : 0.45 }}>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[13px] text-ink">{titre}</span>
+                      <span className="block text-[11px] text-muted mt-[1px] truncate">{sous}</span>
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-cream"
+                      style={{ background: coche > i ? "var(--color-terracotta-deep)" : "transparent", border: coche > i ? "none" : "1.5px solid var(--color-cream-dark-soft)" }}
+                    >
+                      {coche > i && (
+                        <svg width="11" height="11" viewBox="0 0 24 24" style={{ display: "block" }}>
+                          <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </span>
                   </li>
                 ))}
             </ul>
@@ -1518,116 +1501,55 @@ export default function PlanifierScreen() {
             )}
 
             {etape === 1 && (
-              /* LA MAQUETTE DU 24/09. Elle reprend les LIGNES de la feuille
-                 d'occasion de l'écran Tenue — glyphe, libellé, description,
-                 marque de sélection, filets de séparation — mais posées à
-                 plat sur la page au lieu d'être dans une feuille.
-                 C'est le sens de « plus en lien avec la page Tenues » : ce
-                 sont ses lignes, ses glyphes, son vocabulaire.
-
-                 Ce que ce motif règle, et que ni la liste d'hier ni les chips
-                 de ce matin ne réglaient : LE SOUS-CHOIX EST DANS LA LIGNE
-                 SÉLECTIONNÉE. Il naît donc là où l'on vient de toucher,
-                 forcément à l'écran — le défaut mesuré le 23/09 (question
-                 obligatoire née 218 px sous le pli) ne peut plus se produire,
-                 sans mise en vue ni artifice. */
-              <div className="mt-5">
-                {OCCASIONS.map(([key, label, desc]) => {
-                  const actif = occ === key;
-                  const avecSousChoix = actif && !!sousChoix;
-                  return (
-                    <div
+              /* LES TUILES PHOTO (maquettes du 07/10/2026) : les huit visuels éditoriaux d'occasion de l'app, sans personne,
+                 trois par rangée. La sélection se lit par le contour ET la coche. Le sous-choix (Présentiel / Télétravail,
+                 contexte du rendez-vous) naît dans un panneau sous la grille, à l'écran dès qu'on touche la tuile — le
+                 défaut mesuré le 23/09 (question obligatoire sous le pli) ne revient pas : le panneau suit immédiatement. */
+              <>
+                <div className="grid grid-cols-3 gap-x-[10px] gap-y-4 mt-5">
+                  {OCCASIONS.map(([key, label, desc]) => (
+                    <TuileOccasion
                       key={key}
-                      /* La ligne active devient un panneau teinté qui ENGLOBE
-                         son sous-choix : c'est ce qui dit que les deux vont
-                         ensemble. Les autres restent des lignes nues séparées
-                         par un filet, comme dans la feuille de Tenue. */
-                      /* SANS EXPANSION (brief du 25/09, point 4). La teinte
-                         déborde dans la gouttière (-mx-3 px-3) au lieu de
-                         repousser le contenu, et la ligne garde son filet
-                         (transparent) : même hauteur, même alignement que les
-                         autres. Seul le sous-choix, quand il existe, ajoute
-                         de la hauteur — c'est du contenu, pas du rembourrage. */
-                      className={
-                        "border-b last:border-b-0 " +
-                        (actif ? "rounded-bloc bg-warm-bg -mx-3 px-3 border-transparent" : "border-divider")
-                      }
-                    >
-                      <button
-                        onClick={() => {
-                          setOcc(key);
-                          /* Le type de lieu déjà choisi ne survit pas à un
-                             changement d'occasion qui ne le propose plus —
-                             sinon `planned_outfits.type_lieu` recevrait un
-                             « Bar / Rooftop » sur un Voyage, choisi puis
-                             devenu invisible. Remis à zéro ici, à l'endroit
-                             où la décision se prend, plutôt que rattrapé
-                             après coup dans un effet. */
-                          const permis = TYPES_LIEU_PAR_OCCASION[key];
-                          if (!permis || !permis.includes(typeLieu ?? "")) setTypeLieu(null);
-                        }}
-                        aria-pressed={actif}
-                        className="flex items-center gap-3 w-full text-left px-1 py-[10px] cursor-pointer"
-                        style={{ minHeight: 52 }}
-                      >
-                        <span className={"flex-shrink-0 " + (actif ? "text-terracotta" : "text-muted")}>
-                          <GlypheOccasion occasion={key} taille={19} />
-                        </span>
-                        <span className="flex-1 min-w-0">
-                          <span className={"block text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</span>
-                          <span className="block text-[11px] text-muted mt-[2px]">{desc}</span>
-                        </span>
-                        {/* Pastille pleine à la sélection plutôt que la coche
-                            nue de la feuille : hors feuille, une coche seule
-                            se lit mal au milieu d'une liste longue. */}
-                        <span
-                          aria-hidden="true"
-                          className="w-[22px] h-[22px] flex-shrink-0 rounded-full flex items-center justify-center"
-                          style={{
-                            border: actif ? "none" : "1.5px solid var(--color-cream-dark-soft)",
-                            background: actif ? "var(--color-terracotta)" : "transparent",
-                            color: "var(--color-cream)",
-                          }}
-                        >
-                          {actif && (
-                            <svg width="12" height="12" viewBox="0 0 24 24" style={{ display: "block" }}>
-                              <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          )}
-                        </span>
-                      </button>
-
-                      {avecSousChoix && (
-                        <div className="pb-3 pt-1" style={{ borderTop: "1px solid var(--color-warm-border)" }}>
-                          <div className="text-[12px] text-ink mt-2 px-1">{sousChoix.titre}</div>
-                          <div className="flex flex-wrap gap-2 mt-2 px-1">
-                            {sousChoix.valeurs.map((v) => {
-                              const on = sousChoix.courant === v;
-                              return (
-                                <button
-                                  key={v}
-                                  onClick={() => sousChoix.choisir(v)}
-                                  aria-pressed={on}
-                                  className={
-                                    "inline-flex items-center gap-[7px] rounded-full px-[14px] text-[12px] cursor-pointer border transition-colors " +
-                                    (on
-                                      ? "bg-terracotta border-terracotta text-cream"
-                                      : "bg-card border-sand-border text-muted-3")
-                                  }
-                                  style={{ minHeight: 44 }}
-                                >
-                                  <GlypheSousChoix valeur={v} taille={16} />
-                                  <span className="whitespace-nowrap">{v}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
+                      src={key !== "all" ? OCCASIONS_EDITORIALES[key]?.visuel?.src : undefined}
+                      label={label}
+                      desc={desc}
+                      actif={occ === key}
+                      onClick={() => {
+                        setOcc(key);
+                        /* Le type de lieu déjà choisi ne survit pas à un changement d'occasion qui ne le propose plus —
+                           sinon `planned_outfits.type_lieu` recevrait un « Bar / Rooftop » sur un Voyage. */
+                        const permis = TYPES_LIEU_PAR_OCCASION[key];
+                        if (!permis || !permis.includes(typeLieu ?? "")) setTypeLieu(null);
+                      }}
+                    />
+                  ))}
+                </div>
+                {occ && sousChoix && (
+                  <div className="mt-5 rounded-bloc bg-warm-bg px-4 py-3" style={{ border: "1px solid var(--color-warm-border)" }}>
+                    <div className="text-[12px] text-ink">{sousChoix.titre}</div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {sousChoix.valeurs.map((v) => {
+                        const on = sousChoix.courant === v;
+                        return (
+                          <button
+                            key={v}
+                            onClick={() => sousChoix.choisir(v)}
+                            aria-pressed={on}
+                            className={
+                              "inline-flex items-center gap-[7px] rounded-full px-[14px] text-[12px] cursor-pointer border transition-colors " +
+                              (on ? "bg-terracotta border-terracotta text-cream" : "bg-card border-sand-border text-muted-3")
+                            }
+                            style={{ minHeight: 44 }}
+                          >
+                            <GlypheSousChoix valeur={v} taille={16} />
+                            <span className="whitespace-nowrap">{v}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                )}
+              </>
             )}
 
             {etape === 2 && (
@@ -1718,9 +1640,9 @@ export default function PlanifierScreen() {
                 <div className="mt-5">
                   <Surtitre>À quel moment ?</Surtitre>
                 </div>
-                <div className="flex flex-col gap-[7px] mt-3">
+                <div className="grid grid-cols-2 gap-[10px] mt-3">
                   {MOMENTS.map(([m, d]) => (
-                    <LigneChoix key={m} actif={moment === m} titre={m} sousTitre={d} onClick={() => setMoment(m)} />
+                    <TuileIcone key={m} icone={ICONE_MOMENT[m] ?? "journee"} label={m} sousTitre={d} actif={moment === m} onClick={() => setMoment(m)} hauteur={84} />
                   ))}
                 </div>
               </>
@@ -1794,13 +1716,13 @@ export default function PlanifierScreen() {
                         Pour ton occasion « {occLabel} », si tu veux la préciser.
                       </div>
                     </div>
-                    <div className="flex flex-col gap-[7px] mt-3">
-                      {typesLieuProposes.map(([t, d]) => (
-                        <LigneChoix
+                    <div className="grid grid-cols-3 gap-[10px] mt-3">
+                      {typesLieuProposes.map(([t]) => (
+                        <TuileIcone
                           key={t}
+                          icone={ICONE_LIEU[t] ?? "maison"}
+                          label={t}
                           actif={typeLieu === t}
-                          titre={t}
-                          sousTitre={d || undefined}
                           onClick={() => setTypeLieu(typeLieu === t ? null : t)}
                         />
                       ))}
@@ -1813,9 +1735,9 @@ export default function PlanifierScreen() {
             {etape === 4 && (
               <div className="flex flex-col gap-[7px] mt-4" role="radiogroup" aria-label="Préférence pour cet événement">
                 {HUMEURS.map((h) => (
-                  <LigneChoix key={h.key} actif={humeur === h.key} titre={h.label} onClick={() => setHumeur(humeur === h.key ? null : h.key)} />
+                  <LigneIcone key={h.key} icone={h.key} label={h.label} actif={humeur === h.key} onClick={() => setHumeur(humeur === h.key ? null : h.key)} />
                 ))}
-                <LigneChoix actif={humeur === null} titre="Aucune préférence" onClick={() => setHumeur(null)} />
+                <LigneIcone icone="aucune" label="Aucune préférence" actif={humeur === null} onClick={() => setHumeur(null)} />
               </div>
             )}
 
@@ -1879,17 +1801,20 @@ export default function PlanifierScreen() {
                 <Card className="mt-[14px] p-[15px]">
                   <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
                   <div className="flex flex-col gap-2 mt-[10px]">
-                    {[
-                      `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`,
-                      phraseMeteo,
-                      provenance,
-                      ...(humeur && !composition ? [`Ta préférence « ${LIBELLE_HUMEUR[humeur]} » a départagé des tenues proches.`] : []),
-                    ].map((r) => (
-                      <div key={r} className="flex gap-[9px] items-start">
+                    {([
+                      ["Adaptée à ton occasion", `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`],
+                      ["Adaptée à la météo", phraseMeteo],
+                      [composition ? "Tenue de ta photo" : "Composée de tes pièces", provenance],
+                      ...(humeur && !composition ? [["Ta préférence", `« ${LIBELLE_HUMEUR[humeur]} » a départagé des tenues proches.`]] : []),
+                    ] as [string, string][]).map(([titre, texte]) => (
+                      <div key={titre} className="flex gap-[9px] items-start">
                         <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">
                           <Glyphe taille={16}>{G_COCHE}</Glyphe>
                         </span>
-                        <span className="text-[12px] text-muted-3 leading-[1.45]">{r}</span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[12px] font-semibold text-ink">{titre}</span>
+                          <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[1px]">{texte}</span>
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -1935,6 +1860,63 @@ export default function PlanifierScreen() {
             )}
           </>
         )}
+
+        {vue === "confirmation" && gardee && (() => {
+          const d = new Date(`${gardee.jour}T12:00:00`);
+          const gardees = gardee.pieceIds.map((id) => poolStable.find((i) => i.id === id)).filter((i): i is Item => !!i);
+          const villeGardee = villeDuLieu(gardee.lieu);
+          return (
+            <div className="flex flex-col items-center text-center pt-6">
+              <span aria-hidden="true" className="w-[52px] h-[52px] rounded-full flex items-center justify-center bg-terracotta-deep text-cream">
+                <svg width="24" height="24" viewBox="0 0 24 24" style={{ display: "block" }}>
+                  <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <TitreEtape a="Tenue" b="enregistrée" />
+              <div className="t-chapeau text-muted mt-[6px]">Elle t’attend dans ton planning, le jour venu.</div>
+              <Card className="mt-6 w-full p-4 text-left">
+                <div className="flex items-center gap-3">
+                  <span aria-hidden="true" className="flex gap-[4px] flex-shrink-0">
+                    {gardees.slice(0, 3).map((p) => {
+                      const img = resolveItemImage(p);
+                      return (
+                        <span key={p.id} className="w-[38px] h-[38px] rounded-champ bg-warm-bg overflow-hidden flex items-center justify-center">
+                          {img.url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={img.url} alt="" className="w-full h-full object-contain" />
+                          ) : (
+                            <span className="block w-full h-full" style={{ background: p.hex }} />
+                          )}
+                        </span>
+                      );
+                    })}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block t-titre-vignette text-ink">
+                      {DOW_LONG[d.getDay()].charAt(0).toUpperCase() + DOW_LONG[d.getDay()].slice(1)} {d.getDate()} {MOIS[d.getMonth()]}
+                    </span>
+                    <span className="block text-[12px] text-muted mt-[2px]">
+                      {occasionShortLabel(gardee.occasion)} · {gardee.moment}
+                      {villeGardee ? ` · ${villeGardee}` : ""}
+                      {gardee.temp != null ? ` · ${Math.round(gardee.temp)}°` : ""}
+                    </span>
+                  </span>
+                </div>
+              </Card>
+              <div className="w-full mt-3 flex flex-col">
+                {([
+                  ["Voir dans mon calendrier", () => actions.goCalendrier()],
+                  ["Voir dans mon planning", () => { setVue("liste"); setOnglet("up"); }],
+                ] as [string, () => void][]).map(([libelle, onClick]) => (
+                  <button key={libelle} onClick={onClick} className="flex items-center justify-between py-3 border-b border-divider text-[13px] text-ink cursor-pointer text-left" style={{ minHeight: 48 }}>
+                    {libelle}
+                    <span aria-hidden="true" className="text-muted">›</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ══ DÉTAIL D'UNE TENUE PLANIFIÉE — refonte du 30/09/2026 ═════════
             LE DÉTAIL MONTRE LA TENUE GARDÉE, PAS UNE TENUE RECALCULÉE.
@@ -2243,14 +2225,36 @@ export default function PlanifierScreen() {
             }}
             disabled={!etapeValide || attend}
           >
-            {attend ? "Un instant…" : etape === derniere ? "Voir ma tenue" : "Suivant"}
+            {attend ? "Un instant…" : etape === derniere ? (etape === 4 ? "Composer ma tenue" : "Voir ma tenue") : "Suivant"}
           </Button>
+        )}
+        {vue === "etape" && !compose && etape === 4 && (
+          <button
+            onClick={() => {
+              setHumeur(null);
+              setComposeDelaiOk(false);
+              setCoche(0);
+              setCompose(true);
+            }}
+            className="w-full text-[13px] text-muted cursor-pointer underline"
+            style={{ minHeight: 44 }}
+          >
+            Passer cette étape
+          </button>
         )}
         {/* « + PLANIFIER UN LOOK » (30/09/2026) : la barre d'action pleine
             largeur de tous les écrans, pas une pastille flottante qui
             n'existait nulle part ailleurs. */}
         {vue === "liste" && (
           <Button onClick={recommencer}>+ Planifier un look</Button>
+        )}
+        {vue === "confirmation" && (
+          <>
+            <Button onClick={recommencer}>Nouvelle planification</Button>
+            <button onClick={actions.goHome} className="w-full text-[13px] text-muted cursor-pointer underline" style={{ minHeight: 44 }}>
+              Retour à l’accueil
+            </button>
+          </>
         )}
         {vue === "resultat" && (
           <>

@@ -34,12 +34,44 @@ export default function FilEtapes({
   total,
   courante,
   className = "",
+  libelles,
 }: {
   total: number;
   /** Index de l'étape en cours, à partir de 0. */
   courante: number;
   className?: string;
+  /**
+   * Un nom sous chaque point (parcours Planifier, 07/10/2026) : « Occasion · Quand · Où · Préférences ». Facultatif ; le
+   * nom accessible reste « Étape n sur N ».
+   */
+  libelles?: readonly string[];
 }) {
+  if (libelles && libelles.length === total) {
+    return (
+      <div
+        role="progressbar"
+        aria-valuemin={1}
+        aria-valuemax={total}
+        aria-valuenow={courante + 1}
+        aria-label={`Étape ${courante + 1} sur ${total} : ${libelles[courante]}`}
+        className={"flex items-start justify-center gap-4 " + className}
+      >
+        {libelles.map((l, i) => (
+          <span key={l} aria-hidden="true" className="flex flex-col items-center gap-[5px]">
+            <span
+              className="rounded-full inline-block"
+              style={
+                i === courante
+                  ? { width: 20, height: 6, background: "var(--color-terracotta)" }
+                  : { width: 6, height: 6, background: i < courante ? "var(--color-terracotta)" : "var(--color-dots)" }
+              }
+            />
+            <span className={"t-pastille " + (i === courante ? "text-ink font-semibold" : "text-muted")}>{l}</span>
+          </span>
+        ))}
+      </div>
+    );
+  }
   return (
     <div
       role="progressbar"
