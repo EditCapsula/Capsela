@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
 import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
@@ -298,7 +298,7 @@ export default function HomeScreen() {
 
       {/* LE LOOK DU JOUR : fond sable, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
           jour passé, aucune tenue possible, la tenue qui se compose, la tenue. */}
-      <div className="mx-6 mt-3 rounded-hero grid gap-2" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: "minmax(0,0.86fr) minmax(0,1.14fr)", padding: "20px 14px 10px 18px", minHeight: 300 }}>
+      <div className="mx-6 mt-3 rounded-hero grid gap-2" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: "minmax(0,0.8fr) minmax(0,1.2fr)", padding: "20px 14px 10px 18px", minHeight: 300 }}>
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">
             <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-on-terracotta" style={{ display: "block" }}>
@@ -380,9 +380,9 @@ export default function HomeScreen() {
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
         <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 134", margin: "18px -8px -2px 0" }}>
           {passee ? (
-            <OutfitComposition items={piecesPassee} variant="planche" accentHero />
+            <FlatLayCapsela pieces={piecesPassee} graine={clePieces(piecesPassee.map((p) => p.id)).join(",")} />
           ) : aucuneTenuePossible ? null : (
-            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} accentHero />
+            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} />
           )}
         </div>
 
