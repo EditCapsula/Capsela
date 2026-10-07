@@ -2,20 +2,15 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import BadgePremium from "@/components/BadgePremium";
-import GateAvisStyliste from "@/components/GateAvisStyliste";
-import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
 import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
-import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
-import { decisionAcces, premiumRequis } from "@/lib/autorisations";
+import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { estContexteMaison, qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
+import { libelleStyles } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
-import { groupesDuVestiaire } from "@/lib/dressingEcran";
 import { useCapsela } from "@/lib/store";
 import { JourEtMeteo } from "@/components/JourMeteo";
 import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@/lib/retro";
@@ -23,7 +18,7 @@ import { dateDuJour } from "@/lib/jourConsulte";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
-import Button, { BoutonDiscret } from "@/components/Button";
+import Button from "@/components/Button";
 
 const glypheCalendrier = (taille: number) => (
   <svg width={taille} height={taille} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -33,100 +28,92 @@ const glypheCalendrier = (taille: number) => (
     </g>
   </svg>
 );
-const GLYPHE_AVIS = (
-  <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-    <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3.5l1.7 5.1 5.1 1.7-5.1 1.7L12 17l-1.7-5.1-5.1-1.7 5.1-1.7L12 3.5z" />
-      <path d="M18.5 16.5v3M17 18h3" />
-    </g>
-  </svg>
-);
-const GLYPHE_VALISE = (
-  <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-    <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="7.5" width="18" height="13" rx="2.5" />
-      <path d="M9 7.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2.5M9.5 11.5v5M14.5 11.5v5" />
-    </g>
-  </svg>
-);
 
-/** Un chevron de carte : la flèche ronde décorative des cartes « Avec Capsela » (toute la carte est le bouton). */
-const FLECHE_RONDE = (
-  <span aria-hidden="true" className="flex items-center justify-center rounded-full bg-terracotta text-cream flex-shrink-0" style={{ width: 34, height: 34 }}>
-    <svg width="16" height="16" viewBox="0 0 24 24" style={{ display: "block" }}>
-      <path d="M5 12h13M13 6.5l5.5 5.5L13 17.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  </span>
+/** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
+const glypheUnivers = (d: string) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+    <path d={d} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
 );
+const D_DRESSING = "M10 6a2 2 0 1 1 2 2v1.5M12 9.5L3.4 16a1 1 0 0 0 .6 1.8h16a1 1 0 0 0 .6-1.8z";
+const D_CAPSULE = "M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3";
+const D_AGENDA = "M4.5 6h15v14h-15zM4.5 10h15M8.5 3.5v4M15.5 3.5v4";
+const D_VALISE = "M3 10a2.5 2.5 0 0 1 2.5-2.5h13A2.5 2.5 0 0 1 21 10v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18zM9 7.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2.5M9.5 11.5v5M14.5 11.5v5";
 
 /**
- * Un titre de section de l'Accueil : capitales espacées, comme « Mon dressing » du Dressing (même gabarit), avec son lien
- * à droite. Refonte du 05/10/2026 : Aujourd'hui → Avec Capsela → Ton dressing → Ta capsule.
+ * Une action discrète sous le look : un rond au trait, puis son libellé (« Sauvegarder », « Autre idée »). Un seul bouton,
+ * cible tactile de 48 px.
  */
-function TitreAccueil({ children, lien, onLien, libelleLien }: { children: React.ReactNode; lien?: string; onLien?: () => void; libelleLien?: string }) {
+function ActionRonde({ icone, libelle, onClick, actif, disabled, label }: { icone: React.ReactNode; libelle: string; onClick: () => void; actif?: boolean; disabled?: boolean; label?: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 mx-6 mt-9">
-      <h2 className="t-surtitre text-ink">{children}</h2>
-      {lien && onLien && (
-        <button onClick={onLien} aria-label={libelleLien ?? lien} className="t-lien text-terracotta cursor-pointer py-2 pl-3 whitespace-nowrap">
-          {lien}
-        </button>
-      )}
-    </div>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={actif}
+      aria-label={label}
+      className="inline-flex items-center gap-[9px] min-h-[48px] pr-2 text-[12.5px] font-medium text-muted-3 cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]"
+    >
+      <span className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center bg-card text-terracotta-deep" style={{ border: "1px solid var(--color-sand-border)" }}>
+        {icone}
+      </span>
+      <span>{libelle}</span>
+    </button>
   );
 }
 
-/** Une carte « Avec Capsela » : glyphe, titre, phrase, visuel éditorial, flèche. Un seul bouton, comme toute carte cliquable. */
-function CarteAvecCapsela({
-  onClick,
-  glyphe,
-  titre,
-  texte,
-  visuel,
-  alt,
-  cta,
-  badge,
-  busy,
+/**
+ * Une carte de la grille « Tout pour ton style » : un rond à glyphe, un titre en deux lignes, une phrase, un visuel éditorial
+ * en colonne à droite et une flèche ronde. Toute la carte est le bouton.
+ */
+function CarteUnivers({
+  onClick, glyphe, ligne1, ligne2, texte, accent, visuel, label, busy,
 }: {
   onClick: () => void;
   glyphe: React.ReactNode;
-  titre: string;
+  ligne1: string;
+  ligne2: string;
   texte: string;
+  /** Les styles de la personne, en terracotta après la phrase (carte capsule). */
+  accent?: string;
   visuel: string;
-  alt: string;
-  cta: string;
-  badge?: React.ReactNode;
+  label: string;
   busy?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      aria-label={cta}
+      aria-label={label}
       aria-busy={busy}
-      className="flex-none text-left bg-card border border-border rounded-feuille overflow-hidden cursor-pointer flex flex-col motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
-      style={{ width: "clamp(236px, 74%, 300px)", scrollSnapAlign: "start" }}
+      className="relative block min-w-0 text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
+      style={{ minHeight: 156 }}
     >
-      <span className="block px-[14px] pt-[14px]">
-        <span className="flex items-center justify-between gap-2">
-          <span className="text-terracotta">{glyphe}</span>
-          {badge}
-        </span>
-        <span className="block t-titre-carte text-ink mt-[8px]">{titre}</span>
-        <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[4px] min-h-[2.9em]" style={{ textWrap: "pretty" }}>
-          {texte}
-        </span>
-      </span>
-      <span className="relative block mt-[10px]" style={{ height: 104 }}>
+      <span className="absolute top-0 right-0 bottom-0 bg-cream" style={{ width: "clamp(56px, 38%, 92px)" }} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={visuel} alt={alt} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
-        <span className="absolute right-[12px] bottom-[10px]">{FLECHE_RONDE}</span>
+        <img src={visuel} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover block" />
+      </span>
+      <span aria-hidden="true" className="absolute right-[6px] bottom-[8px] w-7 h-7 rounded-full bg-card flex items-center justify-center text-ink">
+        <svg width="13" height="13" viewBox="0 0 24 24" style={{ display: "block" }}>
+          <path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+      <span className="flex flex-col pt-3 pb-10 pl-3 pr-2" style={{ width: "calc(100% - clamp(56px, 38%, 92px))" }}>
+        <span className="w-9 h-9 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">{glyphe}</span>
+        <span className="block font-serif text-[15px] leading-[1.15] text-ink mt-3">
+          {ligne1}
+          <br />
+          {ligne2}
+        </span>
+        <span className="block text-[11px] text-muted-3 leading-[1.4] mt-1" style={{ textWrap: "pretty" }}>
+          {texte}
+          {accent && <span className="text-terracotta-deep font-semibold"> {accent}</span>}
+        </span>
       </span>
     </button>
   );
 }
 
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, weather, meteoDuJour, jourConsulte, etatPremium, actions } = useCapsela();
+  const { state, geoLoading, vestiairePool, meteoDuJour, jourConsulte, actions } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -140,39 +127,9 @@ export default function HomeScreen() {
    * (arbitrage de la propriétaire) : même quota, même Gate (QuotaTenues).
    */
   const quota = useQuotaTenues();
-  const [cleRefusee, setCleRefusee] = useState<string | null>(null);
-  const cleCourante = clePieces(state.outfit).join(",");
-  const autreProposee = cleRefusee !== null && cleRefusee !== cleCourante;
   const pasPourMoi = () => {
-    setCleRefusee(cleCourante);
     actions.setOutfitFeedback("pas_aujourdhui");
     quota.demander(actions.regenOutfit);
-  };
-
-  /**
-   * AVIS DE STYLISTE — accès (docs/avis-de-styliste.md sections 4 et 5,
-   * arbitrages du 25/09/2026). Règle unique AVIS_DE_STYLISTE (autorisations.ts).
-   * En phase de test (26/09/2026), ACCES_LIBRE : la carte ouvre l'écran, sans
-   * badge ni Gate. Sous PREMIUM_REQUIRED : Premium confirmé → écran ; gratuit,
-   * expiré, démo → Premium Gate. Un statut encore inconnu n'est jamais pris
-   * pour du Premium : la carte passe en vérification, le statut est relu, et
-   * seul un Premium confirmé ouvre l'écran — sinon, le Gate.
-   *
-   * Le Gate est une feuille posée sur l'écran courant : « Plus tard » la
-   * referme et l'on reste exactement là où l'on était.
-   */
-  const [gateAvisStyliste, setGateAvisStyliste] = useState(false);
-  const [verificationAvis, setVerificationAvis] = useState(false);
-  const ouvrirAvisStyliste = async () => {
-    if (verificationAvis) return;
-    const decision = decisionAcces("AVIS_DE_STYLISTE", etatPremium, false);
-    if (decision === "acces") return actions.goAvisStyliste();
-    if (decision === "gate") return setGateAvisStyliste(true);
-    setVerificationAvis(true);
-    const etat = await actions.verifierEtatPremium();
-    setVerificationAvis(false);
-    if (decisionAcces("AVIS_DE_STYLISTE", etat, true) === "acces") actions.goAvisStyliste();
-    else setGateAvisStyliste(true);
   };
 
   /**
@@ -221,11 +178,6 @@ export default function HomeScreen() {
   const hasOutfit = piecesResolues.length > 0 && tenueAUnSocle(piecesResolues);
   const occasionKey =
     state.occasion && state.occasion !== "all" ? state.occasion : occasionParDefaut(profile.prefs, jourConsulte.date);
-  // Le contexte le plus précis que les données donnent : une occasion de travail dit « Journée de travail » ou « Télétravail »
-  // (le mode choisi), jamais le libellé générique « Travail / Bureau ».
-  const occasionLabel =
-    occasionKey === "travail_formel" ? (state.workMode === "Télétravail" ? "Télétravail" : "Journée de travail") : OCC_LABELS[occasionKey];
-
   const outfitPieces = hasOutfit ? piecesResolues : [];
 
   /*
@@ -254,12 +206,6 @@ export default function HomeScreen() {
   // jamais présenter comme une option une veste que la tenue contient. Aucune
   // température affichée : elle est sur la ligne jour + météo, juste au-dessus.
   const qualificatif = qualificatifLook(meteoEnAttente ? null : meteoDuJour.temp, outfitPieces);
-
-  // Capsule calculée avec le même moteur que CapsuleScreen, jamais un second
-  // calcul : saison/style/effectif affichés ici correspondent toujours
-  // exactement à l'écran Capsule.
-  const capsuleSeason = state.capsuleSeason || currentSeasonKey();
-  const capsule = computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
 
   /*
    * « J'ADORE » ENREGISTRE LA TENUE (recette du 26/09/2026, qui revient sur
@@ -296,11 +242,19 @@ export default function HomeScreen() {
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
 
-  /**
-   * LES CATÉGORIES DU DRESSING, avec leurs vrais effectifs (dressingEcran.groupesDuVestiaire — la même source que l'écran
-   * Dressing : jamais un chiffre écrit à la main). Une catégorie sans pièce n'est pas montrée.
-   */
-  const groupes = groupesDuVestiaire(state.items, profile.gender);
+  /** Les styles de la personne, dits en une fois dans la carte capsule : jamais un style écrit en dur. */
+  const stylesDits = libelleStyles(profile.styles, profile.gender);
+  const titreHero = (() => {
+    if (planHero) return { a: titreDuPlan(planHero), b: "" };
+    if (qualificatif) {
+      const mots = qualificatif.replace(/\.$/, "").split(" et ");
+      return { a: mots[0].charAt(0).toUpperCase() + mots[0].slice(1), b: mots.length > 1 ? `et ${mots.slice(1).join(" et ")}` : "" };
+    }
+    return { a: "Ta tenue", b: "du jour" };
+  })();
+  const sousTitreHero = texteHero ? texteHero.sousTitre : titreLookDuJour(occasionKey, state.workMode, state.dateContext);
+  const sauvegardee = avisDuJour === "adore";
+  const genreVisuel = profile.gender === "homme" ? "homme" : "femme";
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-[100px]">
@@ -315,24 +269,19 @@ export default function HomeScreen() {
         />
       </div>
 
-      {/* Salutation (t-display, 34 → 28 px le 07/10/2026, demandé : « trop grand »). Avant : présence renforcée (30 → 34 px) sans gonfler la hauteur
-          de l'en-tête : le gain vient de la taille du serif, pas d'un
-          interlignage ou d'une marge supplémentaires. */}
+      {/* ══ MAQUETTE « ACCUEIL V9 » (07/10/2026), reprise intégralement : salutation, jour et météo, look du jour sur fond
+          sable, puis une seule section « Tout pour ton style ». Les sections « Pour aller plus loin », « Ton dressing » (catégories)
+          et « Ta capsule » (bannière) et la carte Avis de styliste n'y figurent pas : l'avis reste accessible depuis le Journal. */}
       <div className="px-6 mt-[18px]">
         <div className="t-display text-ink">
           Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
         </div>
-        {/* La promesse du jour, avec la ville de la météo affichée juste dessous : jamais un lieu écrit en dur. */}
-        <p className="text-[14px] text-muted-3 leading-[1.45] mt-[6px]" style={{ textWrap: "pretty" }}>
-          Voici ta tenue du jour, pensée pour {state.jourDecalage === 0 ? "aujourd’hui" : "ce jour-là"}.
-        </p>
-        {/* LE JOUR ET SA MÉTÉO, SUR UNE LIGNE (27/09/2026, navigation par
-            date) : le jour se change par ses chevrons, la météo ouvre
-            « Localisation & météo » des Préférences — les réglages existants,
-            aucun écran de plus. Composant partagé avec Tenue. Le surtitre
-            « Aujourd'hui » a disparu : la ligne porte la date. */}
+        <p className="text-[13px] text-muted-3 leading-[1.45] mt-[6px]">Voici ta tenue du jour.</p>
+        {/* LE JOUR ET SA MÉTÉO (navigation par date, partagée avec Tenue) : le jour se change par ses chevrons, la météo
+            ouvre les réglages « Localisation & météo ». La maquette montre aussi « Max · min » : le service météo ne donne
+            ici que la température et la condition, rien n'est inventé. */}
         <JourEtMeteo
-          className="mt-4"
+          className="mt-3"
           retro={{
             jours: retroActif,
             date: dateRetro,
@@ -343,391 +292,196 @@ export default function HomeScreen() {
             onChange: setRetro,
           }}
         />
-        {/* Ce qui est planifié ce jour-là (Planifier) : un rappel qui mène à
-            la fiche du plan, sous la ligne du jour. Rien sans plan. */}
+        {/* Ce qui est planifié ce jour-là (Planifier) : un rappel qui mène à la fiche du plan. Rien sans plan. */}
         {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" />}
       </div>
 
-      {/* ══ Card héros « LOOK DU JOUR » — refonte du 28/09/2026 ════════════
-          L'ACCUEIL MONTRE TOUT LE LOOK. La card n'en montrait qu'un extrait
-          (au plus cinq pièces, sans veste ni ceinture) et renvoyait à l'écran
-          Tenue pour découvrir le reste. Elle en est désormais la projection
-          complète ; l'écran Tenue sert à l'approfondir.
-
-          UNE SEULE REPRÉSENTATION POUR LES DEUX ÉCRANS : OutfitComposition,
-          variante "planche" depuis le 30/09/2026 (d'abord "hero"), dans une
-          zone de même proportion que sur l'écran Tenue, alimentée par la même
-          tenue (state.outfit).
-          Mêmes pièces, mêmes images, même ordre, par construction — aucune
-          sélection propre à l'accueil.
-
-          TROIS ÉTATS, qui ne partagent que le surtitre :
-            · la tenue est là — titre éditorial, qualificatif, composition,
-              occasion, « Découvrir le look », avis ;
-            · le moteur n'a rien pu composer — le message et le CTA d'avant,
-              qui mènent au dressing ;
-            · sinon, elle se compose (profil, dressing, vestiaire ou
-              localisation pas encore prêts) — une silhouette abstraite aux
-              emplacements du look et « Sélection des pièces en cours », qui
-              n'apparaissent qu'après 300 ms : une génération rapide ne fait
-              jamais clignoter le chargement (30/09/2026, à la place de six
-              cases et d'un anneau qui tournait : « on doit sentir que Capsela
-              compose une silhouette, pas qu'elle charge six produits »).
-
-          LA ZONE DE COMPOSITION EST COMMUNE AU CHARGEMENT ET AU LOOK : seul le
-          texte au-dessus change d'un état à l'autre. Elle reste montée, à la
-          même place et à la même hauteur ; la planche y remplace la
-          silhouette en fondu (ZoneLookDuJour). */}
-      {passee ? (
-        <div className="mx-6 mt-6 bg-terracotta rounded-hero text-left" style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}>
-          <div className="flex items-center gap-[7px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
-            <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
-              ✦
+      {/* LE LOOK DU JOUR : fond sable, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
+          jour passé, aucune tenue possible, la tenue qui se compose, la tenue. */}
+      <div className="mx-6 mt-3 bg-warm-bg rounded-hero grid gap-2" style={{ gridTemplateColumns: "minmax(0,1.15fr) minmax(0,1fr)", padding: "20px 14px 10px 18px", minHeight: 270 }}>
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-[7px]">
+            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+              <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="t-surtitre text-terracotta-deep whitespace-nowrap">
+              {passee ? (retroActif === 1 ? "Ton look d’hier" : "Ton look passé") : texteHero ? texteHero.surtitre : "Ton look du jour"}
             </span>
-            {/* Le quand est dans la barre de date au-dessus (« Hier », « Dim. 27 ») : le hero ne le répète ni dans le surtitre ni dans un badge. */}
-            {retroActif === 1 ? "Ton look d'hier" : "Ton look passé"}
           </div>
-          <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
-            {passee.plan ? titreDuPlan(passee.plan) : OCC_LABELS[passee.occasion]}
-          </div>
-          <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
-            {passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l'avais planifiée."}
-          </div>
-          <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
-            <OutfitComposition items={piecesPassee} variant="planche" />
-          </div>
-          <Button variante="claire" onClick={actions.goHistory} className="mt-[16px]">
-            Voir dans mon journal <span aria-hidden="true">→</span>
-          </Button>
-        </div>
-      ) : (
-      <div
-        className="mx-6 mt-6 bg-terracotta rounded-hero text-left"
-        style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}
-      >
-        <div className="flex items-center gap-[7px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
-          <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
-            ✦
-          </span>
-          {/* « Ta tenue planifiée » quand la tenue affichée vient de Planifier
-              (option C, 30/09/2026) : l'étiquette dit d'où elle vient. */}
-          {texteHero ? texteHero.surtitre : "Ton look du jour"}
-        </div>
 
-        {aucuneTenuePossible ? (
-          <>
-            <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
-              On prépare ta première tenue
-            </div>
-            <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
-              {dressingVide
-                ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
-                : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."}
-            </div>
-          </>
-        ) : (
-          <>
-            {hasOutfit ? (
-              // Une clé par état : sans elle, React réutilise le même <div> d'un
-              // état à l'autre et l'animation, de même nom, ne se rejoue pas —
-              // l'arrivée de la tenue se ferait sans fondu (mesuré en rendu).
+          {passee ? (
+            <>
+              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                {passee.plan ? titreDuPlan(passee.plan) : OCC_LABELS[passee.occasion]}
+              </div>
+              <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]">{passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l’avais planifiée."}</div>
+              <div className="mt-auto pt-4">
+                <Button variante="principal" pleine={false} onClick={actions.goHistory} className="!px-[18px]">
+                  Voir dans mon journal
+                </Button>
+              </div>
+            </>
+          ) : aucuneTenuePossible ? (
+            <>
+              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                On prépare ta <span className="italic text-terracotta-deep">première tenue</span>
+              </div>
+              <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+                {dressingVide
+                  ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
+                  : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."}
+              </div>
+              <div className="mt-auto pt-4">
+                <Button variante="principal" pleine={false} onClick={dressingVide ? actions.openAdd : actions.goWardrobe} className="!px-[18px]">
+                  {dressingVide ? "Ajouter mes pièces" : "Voir mon dressing"}
+                </Button>
+              </div>
+            </>
+          ) : hasOutfit ? (
+            <>
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
-                <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
-                  {planHero ? titreDuPlan(planHero) : titreLookDuJour(occasionKey, state.workMode, state.dateContext)}
+                <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                  {titreHero.a}
+                  {titreHero.b && (
+                    <>
+                      <br />
+                      <span className="italic text-terracotta-deep">{titreHero.b}</span>
+                    </>
+                  )}
                 </div>
-                {(texteHero ? texteHero.sousTitre : qualificatif) && (
-                  <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
-                    {texteHero ? texteHero.sousTitre : qualificatif}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
-                <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">
-                  Capsela compose ta tenue…
-                </div>
-                <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
-                  {jourAVenir
-                    ? "Une silhouette pensée pour ton programme de ce jour-là."
-                    : "Une silhouette pensée pour ton programme d'aujourd'hui."}
+                <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+                  {sousTitreHero}
                 </div>
               </div>
-            )}
-            {/* Toutes les pièces du look, sans exception, en PLANCHE (30/09/2026,
-                brief « Refonte du hero Look du jour ») : une silhouette et non
-                une grille — la pièce héro (robe, ou haut photographié porté),
-                la surcouche derrière, le bas devant, chaussures et sac en
-                finition (composerPlanche). Zone de hauteur FIXE à largeur
-                donnée (82 % de la largeur, mesuré le 30/09 : la partie peinte
-                d'une planche va de 0,78 à 0,94 fois la largeur ; l'ancienne
-                mesure de grille laissait jusqu'à 60 px vides en haut et en
-                bas). La planche s'y ajuste : la card ne bouge pas avec la tenue.
-
-                SANS ANNOTATIONS (30/09/2026, demandé : « je veux que la hauteur
-                reste la même ; enlève les annotations et réaugmente de 15 % ») :
-                les « Ton haut », « Ta veste »… prenaient une marge autour des
-                pièces ; sans elles, les pièces la reprennent, à hauteur de card
-                inchangée. La planche sait toujours les dessiner (prop
-                `annotations`, libelleAnnotation) si elles reviennent. */}
-            <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
-              <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} />
+              <div className="mt-auto pt-4">
+                <Button
+                  variante="principal"
+                  pleine={false}
+                  onClick={planHero && jourAVenir ? () => actions.ouvrirPlan(planHero, "home") : actions.goTenues}
+                  className="!px-[18px]"
+                >
+                  {planHero && jourAVenir ? "Voir le look planifié" : "Voir le look"} <span aria-hidden="true">→</span>
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
+              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                Capsela compose <span className="italic text-terracotta-deep">ta tenue…</span>
+              </div>
+              <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]">
+                {jourAVenir ? "Une silhouette pensée pour ton programme de ce jour-là." : "Une silhouette pensée pour ton programme d’aujourd’hui."}
+              </div>
+              <StatutComposition />
             </div>
-          </>
-        )}
+          )}
+        </div>
 
-        {/* L'OCCASION, étiquette de contexte : dans les trois états sauf
-            « aucune tenue », où elle serait la raison même de l'échec.
-            PLEINE OPACITÉ PENDANT LE CHARGEMENT (01/10/2026, signalé : « lorsque
-            la page charge, le hero n'affiche pas le label de l'occasion »).
-            Elle était posée à 72 % « pour rester secondaire », et sur le
-            terracotta sa pastille translucide devenait presque invisible : elle
-            est dans la page dès le premier rendu (mesuré), mais ne se lisait
-            pas. Le contexte du look est la première chose qu'on veut savoir. */}
-        {!aucuneTenuePossible && occasionLabel && (
-          <div className="pt-[16px]">
-            {texteHero ? (
-              // Un plan : le quand, pas l'occasion (déjà dans le titre) — « Dimanche 4 oct. · Soirée » ; le jour même, « ✦ Ce soir · Soirée ».
-              <span
-                className="inline-flex items-center gap-[6px] whitespace-nowrap"
-                style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
-              >
-                <span aria-hidden="true">{jourAVenir ? "▣" : "✦"}</span>
-                {texteHero.badge}
-              </span>
-            ) : (
-              <span
-                className="inline-flex items-center gap-[6px] uppercase whitespace-nowrap"
-                style={{
-                  fontSize: 9.5,
-                  letterSpacing: ".08em",
-                  background: "rgba(243,238,229,.22)",
-                  color: "var(--color-on-terracotta)",
-                  borderRadius: 100,
-                  padding: "8px 14px",
-                }}
-              >
-                <GlypheOccasion occasion={occasionKey} taille={13} />
-                {occasionLabel}
-              </span>
-            )}
+        {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
+        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 120" }}>
+          {passee ? (
+            <OutfitComposition items={piecesPassee} variant="planche" />
+          ) : aucuneTenuePossible ? null : (
+            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} />
+          )}
+        </div>
+
+        {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre idée »
+            propose une autre tenue (l'ancien « Pas pour moi » : le refus est enregistré, la suivante l'évite, même quota). */}
+        {hasOutfit && !jourAVenir && !passee && (
+          <div className="flex items-center gap-1 mt-1" style={{ gridColumn: "1 / -1" }} aria-live="polite">
+            <ActionRonde
+              icone={
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                  <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" fill={sauvegardee ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              }
+              libelle={sauvegardee ? "Sauvegardée" : "Sauvegarder"}
+              actif={sauvegardee}
+              onClick={() => actions.setOutfitFeedback("adore")}
+            />
+            <span aria-hidden="true" className="w-px h-[22px] mx-2" style={{ background: "var(--color-sand-border)" }} />
+            <ActionRonde
+              icone={
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                  <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              }
+              libelle="Autre idée"
+              label="Propose-moi une autre tenue"
+              disabled={quota.tirageEnCours}
+              onClick={pasPourMoi}
+            />
           </div>
         )}
 
-        {/* LE CTA, pleine largeur, seule action pleine de la card. Pas pendant
-            le chargement : il n'y a encore rien à découvrir. PAS DE CTA MORT
-            (§9.3) : sans tenue possible, il mène au dressing. */}
-        {/* Pendant le chargement, la ligne d'attente tient la place du CTA. */}
-        {!hasOutfit && !aucuneTenuePossible && <StatutComposition />}
-        {(hasOutfit || aucuneTenuePossible) && (
-          <Button
-            variante="claire"
-            onClick={
-              aucuneTenuePossible
-                ? dressingVide
-                  ? actions.openAdd
-                  : actions.goWardrobe
-                : planHero && jourAVenir
-                  ? () => actions.ouvrirPlan(planHero, "home")
-                  : actions.goTenues
-            }
-            className="mt-[12px]"
-          >
-            {hasOutfit ? (
-              <>
-                {planHero ? (jourAVenir ? "Voir le look planifié" : "Voir mon look") : "Voir ma tenue"} <span aria-hidden="true">→</span>
-              </>
-            ) : dressingVide ? (
-              "Ajouter mes pièces"
-            ) : (
-              "Voir mon dressing"
-            )}
-          </Button>
-        )}
-
-        {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu,
-            et le retour à la proposition de Capsela. Jamais de changement
-            d'office : la tenue reste celle qu'elle a choisie. */}
+        {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu, et le retour à la proposition de Capsela. */}
         {planApplique && hasOutfit && (
-          <div className="mt-[10px] text-center">
+          <div className="text-center" style={{ gridColumn: "1 / -1" }}>
             {planApplique.alerte && (
-              <div className="text-[12.5px] leading-[1.4] mb-[2px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
+              <div className="text-[12.5px] text-muted-3 leading-[1.4] mb-[2px]" style={{ textWrap: "pretty" }}>
                 {planApplique.alerte}
               </div>
             )}
-            <button
-              onClick={actions.voirAutreProposition}
-              className="text-[13px] underline underline-offset-[3px] cursor-pointer"
-              style={{ color: "var(--color-on-terracotta)", minHeight: 44 }}
-            >
+            <button onClick={actions.voirAutreProposition} className="text-[13px] underline underline-offset-[3px] text-terracotta-deep cursor-pointer" style={{ minHeight: 44 }}>
               Voir une autre proposition
             </button>
           </div>
         )}
-
-        {/* FEEDBACK — deux boutons discrets, jamais concurrents du CTA :
-            translucides, sous lui, à 44 px comme toute cible tactile. Logique
-            inchangée : « J'adore » range la tenue dans Mes looks, « Pas pour
-            moi » en propose une autre. Pas sur la tenue d'un jour à venir. */}
-        {hasOutfit && !jourAVenir && (
-          <div className="mt-[12px]" aria-live="polite">
-            {avisDuJour ? (
-              // Cliquable : repasser le même verdict le retire. Sans ce
-              // geste, un tap involontaire serait définitif pour la journée.
-              <button
-                onClick={() => actions.setOutfitFeedback(avisDuJour)}
-                aria-label="Revenir sur mon avis"
-                className="font-serif italic text-[13px] text-left cursor-pointer"
-                style={{ color: "var(--color-on-terracotta-soft)", minHeight: 44 }}
-              >
-                {avisDuJour === "adore" ? "Ajoutée à tes looks — on garde cette direction." : "Noté, pas pour toi."}
-              </button>
-            ) : (
-              <>
-                {autreProposee && (
-                  <div className="font-serif italic text-[13px] mb-[6px]" style={{ color: "var(--color-on-terracotta-soft)" }}>
-                    Voici une autre proposition.
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-[9px]">
-                  <BoutonDiscret onClick={() => actions.setOutfitFeedback("adore")} className="whitespace-nowrap px-[6px]">
-                    <span aria-hidden="true">♡</span> J&apos;adore cette tenue
-                  </BoutonDiscret>
-                  <BoutonDiscret onClick={pasPourMoi} disabled={quota.tirageEnCours} className="whitespace-nowrap px-[6px]">
-                    <span aria-hidden="true">✕</span> Pas pour moi
-                  </BoutonDiscret>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-      )}
-
-      {/* ══ AVEC CAPSELA ═══════════════════════════════════════════════
-          Refonte du 05/10/2026 (titre « Pour aller plus loin » depuis la maquette du 07/10/2026) : Aujourd'hui (la tenue) → Pour aller plus loin → Ton dressing → Ta capsule. Les trois entrées
-          sont des fonctionnalités qui existent, avec leurs parcours d'avant : Planifier, Valise, Avis de styliste.
-          Aucun contenu éditorial inventé, aucun visuel de destination ni de personne : des objets et des matières. */}
-      <TitreAccueil lien="Tout découvrir →" onLien={actions.goPremium} libelleLien="Découvrir Capsela Premium">
-        Pour aller plus loin
-      </TitreAccueil>
-      <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
-        <CarteAvecCapsela
-          onClick={actions.goPlanifier}
-          glyphe={glypheCalendrier(17)}
-          titre="Planifier une tenue"
-          texte="Une occasion en tête ? Capsela compose le look."
-          visuel="/editorial/capsela_planifier_intro.webp"
-          alt="Un carnet de planning et un crayon"
-          cta="Planifier une tenue"
-        />
-        {/* « Préparer une valise » MÈNE AU PARCOURS (docs/valise.md), selon la règle d'accès PREPARER_VALISE (ouvrirValise). */}
-        <CarteAvecCapsela
-          onClick={ouvrirValise}
-          glyphe={GLYPHE_VALISE}
-          titre="Préparer une valise"
-          texte="Un départ en vue ? Ta sélection pensée pour le séjour."
-          visuel={`/editorial/capsela_planifier_valise_${profile.gender === "homme" ? "homme" : "femme"}.webp`}
-          alt="Une valise ouverte, des vêtements pliés et des accessoires"
-          cta="Préparer une valise"
-        />
-        <CarteAvecCapsela
-          onClick={ouvrirAvisStyliste}
-          glyphe={GLYPHE_AVIS}
-          titre="Avis de styliste"
-          texte="Obtiens un regard expert sur une tenue ou une pièce de ton dressing."
-          visuel={`/images/avis/extrait-conseil${profile.gender === "homme" ? "-homme" : ""}.webp`}
-          alt="Des accessoires et des pièces assorties, posés à plat"
-          cta="Obtenir mon avis de styliste"
-          badge={premiumRequis("AVIS_DE_STYLISTE") ? <BadgePremium /> : undefined}
-          busy={verificationAvis}
-        />
       </div>
 
-      {/* ══ TON DRESSING ═════════════════════════════════════════════════
-          L'aperçu des catégories, avec les effectifs réels. Dressing vide : une invitation, jamais une rangée vide. */}
-      <TitreAccueil lien={dressingVide ? undefined : "Voir tout →"} onLien={actions.goWardrobe} libelleLien="Voir tout mon dressing">
-        Ton dressing
-      </TitreAccueil>
-      {dressingVide ? (
-        <div className="mx-6 mt-4">
-          <button
-            onClick={actions.openAdd}
-            className="w-full text-left bg-card border border-border rounded-feuille px-4 py-[16px] cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
-          >
-            <span className="block t-titre-carte text-ink">Ton dressing commence ici</span>
-            <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[5px]">Ajoute quelques pièces pour que Capsela compose des tenues qui te ressemblent.</span>
-            <span className="block t-cta text-terracotta mt-[10px]">Ajouter mes pièces <span aria-hidden="true">→</span></span>
-          </button>
+      {/* ══ EXPLORER CAPSELA — « Tout pour ton style » : les quatre univers de l'app. */}
+      <div className="px-6 mt-7">
+        <div className="flex items-center gap-[10px]">
+          <span aria-hidden="true" className="block w-[22px] h-px bg-terracotta" />
+          <span className="t-surtitre text-muted">Explorer Capsela</span>
         </div>
-      ) : (
-        <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
-          {groupes.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => actions.goWardrobePieces({ libelle: g.libelle, categories: g.categories })}
-              aria-label={`${g.libelle} : ${g.nbPieces} ${g.nbPieces <= 1 ? "pièce" : "pièces"}`}
-              className="flex-none text-left cursor-pointer active:opacity-80"
-              style={{ width: 112, scrollSnapAlign: "start" }}
-            >
-              <span className="block overflow-hidden rounded-bloc" style={{ aspectRatio: "1 / 1", background: "var(--color-warm-bg)" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={g.visuel} alt="" width={480} height={640} loading="lazy" decoding="async" className="w-full h-full object-cover block" />
-              </span>
-              <span className="block font-serif text-[13px] text-ink leading-[1.25] mt-[8px] px-[2px]" style={{ minHeight: "2.5em", textWrap: "balance" }}>
-                {g.libelle.replace(/ & /g, " &\u00a0")}
-              </span>
-              <span className="block text-[11px] text-muted mt-[1px] px-[2px]">
-                {g.nbPieces} {g.nbPieces <= 1 ? "pièce" : "pièces"}
-              </span>
-            </button>
-          ))}
+        <h2 className="t-titre-ecran text-ink mt-2">
+          Tout pour ton <span className="italic text-terracotta">style</span>
+        </h2>
+        <div className="grid grid-cols-2 gap-[10px] mt-[14px]">
+          <CarteUnivers
+            onClick={actions.goWardrobe}
+            glyphe={glypheUnivers(D_DRESSING)}
+            ligne1="Mon"
+            ligne2="dressing"
+            texte="Ajoute et gère tes pièces"
+            visuel="/editorial/capsela_dressing_banner.webp"
+            label="Mon dressing"
+          />
+          <CarteUnivers
+            onClick={actions.goCapsule}
+            glyphe={glypheUnivers(D_CAPSULE)}
+            ligne1="Ma"
+            ligne2="capsule"
+            texte={profile.styles.length > 1 ? "Une sélection adaptée à tes styles" : "Une sélection adaptée à ton style"}
+            accent={stylesDits || undefined}
+            visuel="/editorial/capsela_capsule_banner.webp"
+            label="Ma capsule"
+          />
+          <CarteUnivers
+            onClick={actions.goPlanifier}
+            glyphe={glypheUnivers(D_AGENDA)}
+            ligne1="Planifier"
+            ligne2="mes looks"
+            texte="Organise tes tenues à l’avance"
+            visuel="/editorial/capsela_planifier_intro.webp"
+            label="Planifier mes looks"
+          />
+          <CarteUnivers
+            onClick={ouvrirValise}
+            glyphe={glypheUnivers(D_VALISE)}
+            ligne1="Préparer"
+            ligne2="une valise"
+            texte="Une sélection pensée pour ton voyage"
+            visuel={`/editorial/capsela_planifier_valise_${genreVisuel}.webp`}
+            label="Préparer une valise"
+          />
         </div>
-      )}
-
-      {/* ══ TA CAPSULE ═══════════════════════════════════════════════════
-          La capsule réelle, calculée comme l'écran Capsule (saison, style, effectif) : jamais écrite en dur. */}
-      <TitreAccueil lien="Voir ma capsule →" onLien={actions.goCapsule}>
-        {`Ta capsule ${capsuleSeason}`}
-      </TitreAccueil>
-      <div className="mx-6 mt-4">
-        <button
-          onClick={actions.goCapsule}
-          aria-label="Voir ma capsule"
-          className="relative block w-full text-left rounded-feuille overflow-hidden cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
-          style={{ minHeight: 132, background: "var(--color-terracotta-deep)" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/editorial/capsela_capsule_banner.webp" alt="" width={808} height={300} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
-          <span className="absolute inset-0" style={{ background: "rgba(29,26,22,.42)" }} aria-hidden="true" />
-          <span className="relative flex items-end justify-between gap-3 px-[16px] py-[16px]" style={{ minHeight: 132 }}>
-            <span className="block min-w-0">
-              <span className="block font-serif text-[20px] leading-[1.15]" style={{ color: "var(--color-on-terracotta)" }}>
-                {`Ma sélection ${/^[AÉEIOUH]/i.test(capsuleSeason) ? "d’" : "de "}${capsuleSeason.toLowerCase()}`}
-              </span>
-              <span className="block text-[12px] leading-[1.45] mt-[5px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
-                {capsule.length > 0
-                  ? `${capsule.length} ${capsule.length <= 1 ? "pièce pensée" : "pièces pensées"} pour composer facilement tes tenues cette saison.`
-                  : "Des pièces pensées pour composer facilement tes tenues cette saison."}
-              </span>
-            </span>
-            {FLECHE_RONDE}
-          </span>
-        </button>
       </div>
 
-      {/* Quota « Pas pour moi » : même feuille que « Autre tenue ». */}
+      {/* Quota « Autre idée » : même feuille que « Autre tenue ». */}
       {quota.feuille}
-
-
-      {/* Premium Gate [DÉCIDÉ] §5 — composant unique, cf. GateAvisStyliste. */}
-      <GateAvisStyliste
-        open={gateAvisStyliste}
-        onClose={() => setGateAvisStyliste(false)}
-        onDecouvrirPremium={() => {
-          setGateAvisStyliste(false);
-          actions.goPremium();
-        }}
-      />
     </div>
   );
 }
