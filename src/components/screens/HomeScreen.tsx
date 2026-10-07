@@ -103,8 +103,7 @@ function CarteUnivers({
       </span>
       <span
         aria-hidden="true"
-        className="absolute top-[10px] w-7 h-7 rounded-full bg-terracotta-deep text-cream flex items-center justify-center"
-        style={{ right: "calc(clamp(56px, 38%, 92px) + 8px)" }}
+        className="absolute right-[8px] bottom-[8px] w-7 h-7 rounded-full bg-card text-ink flex items-center justify-center"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" style={{ display: "block" }}>
           <path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -437,7 +436,7 @@ export default function HomeScreen() {
         </div>
 
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
-        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 134", margin: "-8px -8px -2px 0" }}>
+        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 134", margin: "18px -8px -2px 0" }}>
           {passee ? (
             <OutfitComposition items={piecesPassee} variant="planche" accentHero />
           ) : aucuneTenuePossible ? null : (
