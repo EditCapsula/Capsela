@@ -308,7 +308,7 @@ export default function HomeScreen() {
 
       {/* LE LOOK DU JOUR : fond sable, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
           jour passé, aucune tenue possible, la tenue qui se compose, la tenue. */}
-      <div className="mx-6 mt-3 bg-warm-bg rounded-hero grid gap-2" style={{ gridTemplateColumns: "minmax(0,1.15fr) minmax(0,1fr)", padding: "20px 14px 10px 18px", minHeight: 270 }}>
+      <div className="mx-6 mt-3 bg-warm-bg rounded-hero grid gap-2" style={{ gridTemplateColumns: "minmax(0,0.92fr) minmax(0,1.08fr)", padding: "20px 14px 10px 18px", minHeight: 300 }}>
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">
             <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
@@ -388,7 +388,7 @@ export default function HomeScreen() {
         </div>
 
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
-        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 120" }}>
+        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 128", margin: "-8px -8px -2px 0" }}>
           {passee ? (
             <OutfitComposition items={piecesPassee} variant="planche" />
           ) : aucuneTenuePossible ? null : (
