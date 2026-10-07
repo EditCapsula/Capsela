@@ -118,3 +118,15 @@ export function margesDe(url: string | undefined): Marges | null {
   const t = m ? MARGES[m[1]] : undefined;
   return t ? { g: t[0] / 1000, h: t[1] / 1000, d: t[2] / 1000, b: t[3] / 1000 } : null;
 }
+
+/**
+ * Le format (largeur / hauteur) d'un visuel HERO (08/10/2026), lu dans son nom : « …-r0.83.webp ». Un visuel hero est rogné sur
+ * la pièce à la génération (supabase/functions/_shared/heroImage.ts), il n'a donc pas besoin du tableau MARGES. Null pour tout
+ * autre fichier.
+ */
+export function ratioHero(url: string | undefined): number | null {
+  if (!url) return null;
+  const m = /-r(\d+\.\d{2})\.webp(?:\?.*)?$/.exec(url);
+  const r = m ? Number(m[1]) : NaN;
+  return Number.isFinite(r) && r > 0.1 && r < 10 ? r : null;
+}

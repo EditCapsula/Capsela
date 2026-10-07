@@ -81,6 +81,8 @@ export interface VestiaireRow {
   id: number;
   category: string | null;
   url_image: string | null;
+  /** Migration 0049 — visuel « hero » (flat lay), absent de la ligne tant qu'elle n'est pas exécutée. */
+  url_image_hero?: string | null;
   styles: string | null;
   morphologies: string | null;
   meteo_min_temp: number | null;
@@ -406,6 +408,7 @@ export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
     imageGeneratedAt: row.image_generated_at || undefined,
     imageVersion: row.image_version ?? undefined,
     affiliateImageUrl: row.affiliate_image_url || undefined,
+    imageHeroUrl: row.url_image_hero || undefined,
     niveauTendance: mapNiveauTendance(row.niveau_tendance),
     silhouetteMode: row.silhouette_mode || undefined,
     detailsMode: row.details_mode || undefined,
