@@ -7,6 +7,7 @@ import BoutonRetour from "@/components/BoutonRetour";
 import { emailPlausible } from "@/lib/motDePasse";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import LogoCapsela from "@/components/LogoCapsela";
 
 export default function LoginScreen() {
   const { actions } = useCapsela();
@@ -126,8 +127,7 @@ export default function LoginScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto flex flex-col px-7 pt-[14px] pb-[30px]">
       <div className="flex items-center justify-between">
         <BoutonRetour onClick={actions.goAuth} label="Revenir à la création de compte" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-full.svg" alt="L'édit Capsela" className="h-9 w-auto" />
+        <LogoCapsela />
         <div className="w-[38px] flex-shrink-0" />
       </div>
 

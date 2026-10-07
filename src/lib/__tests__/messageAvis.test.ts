@@ -10,7 +10,7 @@ const TENUE = [piece(11, "Blouse fluide à col lavallière"), piece(12, "Jupe mi
 const BASE = { pieces: TENUE, occasion: "travail_formel" as const, temp: 23.4, conditionMeteo: "Ensoleillé", prenom: "Angela" };
 
 describe("message envoyé à un proche — autonome, hors de Capsela", () => {
-  it("signé L’édit Capsela au début et à la fin", () => {
+  it("signé Capsela au début et à la fin", () => {
     const lignes = buildOpinionMessage(BASE).split("\n");
     expect(lignes[0]).toBe(MARQUE_CAPSELA);
     expect(lignes[lignes.length - 1]).toBe(`Tenue imaginée avec ${MARQUE_CAPSELA}.`);

@@ -4,7 +4,7 @@
 
 ## 1. Objet
 
-Les présentes conditions encadrent l'utilisation de L'édit Capsela
+Les présentes conditions encadrent l'utilisation de Capsela
 (« Capsela »), application qui aide à composer des tenues à partir de son
 dressing, de son style, de son agenda et de la météo. Elle est éditée par
 [À COMPLÉTER — éditeur] (voir les Mentions légales).

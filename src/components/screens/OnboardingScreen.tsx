@@ -9,7 +9,7 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 
 /*
- * L'ONBOARDING AVANT LE COMPTE (refonte du 05/10/2026, brief « Onboarding premium de L'édit Capsela »).
+ * L'ONBOARDING AVANT LE COMPTE (refonte du 05/10/2026, brief « Onboarding premium de Capsela »).
  *
  * Cinq écrans, une histoire : Capsela comprend ton style → ton dressing → t'aide à t'habiller → t'accompagne quand tu
  * pars → et le compte. Les quatre premiers ont la même forme (logo, « Passer », visuel, sur-titre, titre, phrase, points de
@@ -233,7 +233,7 @@ function VisuelValise() {
 
 function VisuelCompte() {
   return (
-    <div role="img" aria-label="Un téléphone affichant L'édit Capsela, posé parmi un sac, des lunettes et un magazine" className="relative rounded-carte overflow-hidden bg-border" style={{ height: "calc(var(--h-visuel) + 10px)" }}>
+    <div role="img" aria-label="Un téléphone affichant Capsela, posé parmi un sac, des lunettes et un magazine" className="relative rounded-carte overflow-hidden bg-border" style={{ height: "calc(var(--h-visuel) + 10px)" }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/onboarding/compte-telephone.webp" alt="" width={310} height={680} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 58%" }} />
     </div>
@@ -253,7 +253,7 @@ export default function OnboardingScreen() {
   const indice = Math.min(state.onbStep, ONBOARDING_SLIDES.length - 1);
   const slide = ONBOARDING_SLIDES[indice];
   const dernier = indice === ONBOARDING_SLIDES.length - 1;
-  const nbExplications = ONBOARDING_SLIDES.length - 1;
+  const nbEcrans = ONBOARDING_SLIDES.length;
 
   const visuels = [<VisuelStyle key="s" />, <VisuelDressing key="d" />, <VisuelTenue key="t" />, <VisuelValise key="v" />, <VisuelCompte key="c" />];
 
@@ -303,19 +303,11 @@ export default function OnboardingScreen() {
 
       {/* Pied fixe : même hauteur et mêmes marges (px-7) sur tous les écrans, safe-area incluse ; filet comme TabBar. */}
       <div className="flex-shrink-0 px-7 bg-cream border-t border-border" style={{ paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
-        {dernier ? (
-          <div className="flex flex-col gap-[10px] pt-4">
-            <Button variante="principal" onClick={actions.onbNext}>
-              Créer mon compte
-            </Button>
-            <Button variante="contour" onClick={actions.goLogin}>
-              J’ai déjà un compte
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between pt-4">
-            <div className="flex gap-[7px] items-center" role="img" aria-label={`Étape ${indice + 1} sur ${nbExplications}`}>
-              {Array.from({ length: nbExplications }, (_, i) => (
+        {/* Les cinq positions de la progression, sur tous les écrans : le dernier est le compte. */}
+        {(() => {
+          const points = (
+            <div className="flex gap-[7px] items-center" role="img" aria-label={`Écran ${indice + 1} sur ${nbEcrans}`}>
+              {Array.from({ length: nbEcrans }, (_, i) => (
                 <span
                   key={i}
                   className="rounded-full inline-block transition-[width,background-color] duration-300"
@@ -323,11 +315,26 @@ export default function OnboardingScreen() {
                 />
               ))}
             </div>
-            <Button variante="sombre" pleine={false} className="px-[26px]" onClick={actions.onbNext}>
-              Continuer
-            </Button>
-          </div>
-        )}
+          );
+          return dernier ? (
+            <div className="flex flex-col gap-[10px] pt-4">
+              <div className="flex justify-center pb-[2px]">{points}</div>
+              <Button variante="sombre" onClick={actions.onbNext}>
+                Créer mon compte
+              </Button>
+              <Button variante="contour" onClick={actions.goLogin}>
+                J’ai déjà un compte
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between pt-4">
+              {points}
+              <Button variante="sombre" pleine={false} className="px-[26px]" onClick={actions.onbNext}>
+                Continuer
+              </Button>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

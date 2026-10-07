@@ -74,7 +74,7 @@ export function caseDeLaPiece(
  * le contenu. Une police indisponible n'empêche rien : repli sur la serif du
  * système.
  */
-export const SIGNATURE_IMAGE = "L\u2019édit Capsela";
+export const SIGNATURE_IMAGE = "Capsela";
 
 async function signer(ctx: CanvasRenderingContext2D) {
   const famille = getComputedStyle(document.documentElement).getPropertyValue("--font-fraunces").trim();

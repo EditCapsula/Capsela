@@ -882,7 +882,7 @@ export default function HomeScreen() {
       {/* ══ TON DRESSING, AUTREMENT ═══════════════════════════════════
           Refonte du 23/09/2026, maquette annotée. Le hero au-dessus n'est
           PAS touché : ce bloc remplace exactement l'ancien rail
-          « Explore L'édit Capsela » (deux cards en demi-largeur + Journal +
+          « Explore Capsela » (deux cards en demi-largeur + Journal +
           Prépare la suite), et rien d'autre.
 
           La séquence voulue se lit de haut en bas : ta tenue -> ton dressing

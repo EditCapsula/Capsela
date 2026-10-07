@@ -434,9 +434,9 @@ export default function AddScreen() {
               <div className="min-w-0">
                 <div className="text-[13px] text-ink font-medium leading-[1.35]">
                   {analyseEnCours
-                    ? "L'édit Capsela analyse ta pièce…"
+                    ? "Capsela analyse ta pièce…"
                     : detourageEnCours
-                      ? "L'édit Capsela retire le fond de ta photo…"
+                      ? "Capsela retire le fond de ta photo…"
                       : analysee
                         ? "Pièce analysée par Capsela"
                         : "Photo détourée par Capsela"}

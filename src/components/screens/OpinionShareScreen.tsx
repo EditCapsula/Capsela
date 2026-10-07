@@ -85,7 +85,7 @@ import Card from "@/components/Card";
  * que cette page a remplacé.
  *
  * MESSAGE AUTONOME (27/09/2026, brief « Avis d’un proche ») : le proche le
- * lit hors de Capsela. Signé « L’édit Capsela », il dit qui demande (prénom du
+ * lit hors de Capsela. Signé « Capsela », il dit qui demande (prénom du
  * profil), que Capsela a proposé la tenue, l'occasion, les pièces, la météo
  * quand elle est connue, et qu'il suffit de répondre dans la conversation —
  * jamais un lien ni un bouton vers l'application. Section « Ce que ton proche

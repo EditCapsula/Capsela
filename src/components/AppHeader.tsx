@@ -3,12 +3,13 @@
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BoutonRetour from "@/components/BoutonRetour";
+import LogoCapsela from "@/components/LogoCapsela";
 
 /**
- * Bandeau de marque : logo complet L'édit Capsela centré, avatar profil à
+ * Bandeau de marque : logo Capsela centré, avatar profil à
  * droite (masqué sur les écrans d'avant-connexion et de profil). Sur fond
  * sombre (Premium), le logo complet (coloré pour fond clair) cède la place
- * à l'icône seule + "L'ÉDIT CAPSELA" (correctif 22/08/2026 : le résidu
+ * à l'icône seule + "CAPSELA" (correctif 22/08/2026 : le résidu
  * "CAPSELA" seul contrevenait au renommage produit complet).
  *
  * `onBack` (23/09/2026, maquette « Demander un avis ») remplit la gouttière
@@ -57,14 +58,9 @@ export default function AppHeader({
         )}
       </div>
       {dark ? (
-        <div className="flex items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.svg" alt="" className="h-6 w-auto" />
-          <span className="font-serif text-[15px] tracking-[.28em] pl-[.28em] text-cream">L&apos;ÉDIT CAPSELA</span>
-        </div>
+        <LogoCapsela taille="sm" claire />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src="/logo-full.svg" alt="L'édit Capsela" className="h-11 w-auto" />
+        <LogoCapsela />
       )}
       <div className="w-[34px] h-[34px] flex-shrink-0 flex items-center justify-center">
         {action ?? (showAvatar && (

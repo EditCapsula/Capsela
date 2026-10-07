@@ -2,7 +2,7 @@
 
 *Dernière mise à jour : [À COMPLÉTER — date de publication]*
 
-L'édit Capsela t'aide à composer tes tenues à partir de ton dressing, de ton
+Capsela t'aide à composer tes tenues à partir de ton dressing, de ton
 style, de ton agenda et de la météo. Pour cela, l'application a besoin de
 certaines informations sur toi. Cette page dit lesquelles, pourquoi, avec
 qui elles sont partagées, combien de temps elles sont gardées, et comment
@@ -19,7 +19,7 @@ En résumé :
 ## 1. Qui est responsable de tes données
 
 [À COMPLÉTER — nom ou raison sociale de l'éditeur, adresse], éditeur de
-L'édit Capsela, est responsable du traitement.
+Capsela, est responsable du traitement.
 
 Contact pour toute question sur tes données : [À COMPLÉTER — adresse e-mail].
 
@@ -119,7 +119,7 @@ proposés sont des suggestions.
 
 ## 4. Qui reçoit tes données
 
-Tes données ne sont accessibles qu'à l'équipe de L'édit Capsela, pour les
+Tes données ne sont accessibles qu'à l'équipe de Capsela, pour les
 besoins du service, et aux prestataires ci-dessous, qui agissent pour notre
 compte et selon nos instructions (sous-traitants au sens du RGPD).
 
