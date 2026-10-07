@@ -5,7 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import BarreDuJour from "@/components/BarreDuJour";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { CATLABEL, DATE_CONTEXTS, OCCASIONS, isBag } from "@/lib/data";
@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
 import { statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
+import { clePieces } from "@/lib/outfitFeedback";
 import { complementTenue, momentMessage, quandPhrase } from "@/lib/jourConsulte";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
@@ -751,7 +752,7 @@ export default function TenuesScreen() {
               largeur de la card pour la planche (la même proportion que
               l'accueil et la tenue planifiée), plus la ligne de badges et la
               provenance. Les unités de conteneur (cqw) portent sur la card. */}
-          <div className="flex flex-col" style={{ height: "calc(82cqw + 70px)" }}>
+          <div className="flex flex-col" style={{ height: "calc(112cqw + 70px)" }}>
           {(badgesAffiches.length > 0 || recommendationText) && (
           <div className="flex-shrink-0 flex items-center flex-wrap gap-x-[10px] gap-y-[5px]">
             {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la
@@ -786,10 +787,10 @@ export default function TenuesScreen() {
           </div>
           )}
 
-          <div className="flex-1 min-h-0 mt-[13px]">
+          <div className="relative flex-1 min-h-0 mt-[13px]">
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
-            <OutfitComposition items={outfitPieces} variant="planche" />
+            <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} />
           </div>
           <div className="flex-shrink-0">
             {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.

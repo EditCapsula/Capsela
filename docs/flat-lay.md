@@ -44,6 +44,25 @@ en bas est un peu plus petite qu'un pantalon, un manteau un peu plus grand qu'un
 Le gabarit de référence (`REF`) vient de la maquette validée ; la graine (l'identité du look) ne le fait varier que de ±2 de
 position, ±3 % de taille et ±1,5° d'angle. Une veste ou un manteau héro est toujours à droite et au fond.
 
+## Contextes (un moteur, des paramètres)
+
+Une même image de pièce sert partout ; `FlatLayCapsela` (`items`, `context`, `layoutSeed`) règle seulement taille, position,
+rotation, profondeur et composition selon le contexte (`CONTEXTES`, `src/lib/flatLay.ts`) :
+
+| Contexte | Zone (largeur 100) | Usage |
+|---|---|---|
+| `hero-home` | 100 × 112 (≈ 180 × 200 px à 390) | hero de l'accueil — compact, gabarit de la maquette validée |
+| `look-detail` | 100 × 126 (≈ 300 × 380 px) | écran Tenue du jour — héro plus grand, robe centrée avec sac et chaussures dessous, angles du brief |
+| `capsule`, `dressing`, `packing` | 100 × 100 | prévus, branchés au moteur, sans écran concerné pour l'instant |
+
+**Accessoires.** Un accessoire n'est affiché que s'il sert la composition : au plus 2 (3 en `look-detail`) — 1 ou 2 à partir de
+6 pièces —, un accessoire de tenue (ceinture, foulard) avant un bijou ; il prend l'emplacement qui le colle à la planche sans
+couvrir une pièce importante (≤ 12 % de sa surface) ; au-delà de 12 unités de la pièce la plus proche il est écarté. Le moteur
+rend aussi la liste des pièces écartées (`ecartees`).
+
+**Pièce facultative.** `visualScale`, `preferredRotation` (bornée) et `flatLayCompatible` (false = hors planche) peuvent être
+portés par une pièce ; le catalogue actuel ne les a pas, les défauts s'appliquent.
+
 ## Hero mobile (390 px)
 
 Carte ≈ 342 px de large (gouttière de 24 px). Colonne de la composition ≈ 60 % de la carte (grille 0,8fr / 1,2fr), zone

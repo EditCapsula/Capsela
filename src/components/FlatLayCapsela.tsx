@@ -3,11 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { margesDe, objectBounds, ratioHero } from "@/lib/catalogMarges";
 import { resolveHeroImage } from "@/lib/catalogImages";
-import { composerFlatLay } from "@/lib/flatLay";
+import { composerFlatLay, hauteurDuContexte, type ContexteFlatLay } from "@/lib/flatLay";
 import type { Item } from "@/lib/types";
-
-/** Hauteur de la zone, en unités de sa largeur (100) : le hero de l'accueil est un peu plus haut que large. */
-export const HAUTEUR_FLAT_LAY = 112;
 
 /**
  * LE FLAT LAY ÉDITORIAL DE CAPSELA (08/10/2026) — les pièces d'un look posées comme sur une planche de stylisme : une pièce
@@ -22,17 +19,23 @@ export const HAUTEUR_FLAT_LAY = 112;
  * `onPret` prévient l'appelant (le fondu depuis la silhouette de chargement).
  */
 export function FlatLayCapsela({
-  pieces,
-  graine,
+  items,
+  context = "hero-home",
+  layoutSeed,
   attendre = false,
   onPret,
 }: {
-  pieces: Item[];
-  graine: string;
+  items: Item[];
+  /** Où la planche s'affiche : elle règle la zone, la marge, le gabarit et le nombre d'accessoires (cf. CONTEXTES dans flatLay.ts). */
+  context?: ContexteFlatLay;
+  /** L'identité du look : la même graine donne toujours la même planche. */
+  layoutSeed: string;
   attendre?: boolean;
   onPret?: () => void;
 }) {
-  const images = useMemo(() => pieces.map((it) => ({ it, img: resolveHeroImage(it) })), [pieces]);
+  const HAUTEUR = hauteurDuContexte(context);
+  const graine = layoutSeed;
+  const images = useMemo(() => items.map((it) => ({ it, img: resolveHeroImage(it) })), [items]);
   const composition = useMemo(
     () =>
       composerFlatLay(
@@ -43,9 +46,9 @@ export function FlatLayCapsela({
           return { id: it.id, cat: it.cat, ratio };
         }),
         graine,
-        HAUTEUR_FLAT_LAY
+        { contexte: context }
       ).pieces,
-    [images, graine]
+    [images, graine, context]
   );
 
   // Toutes les images chargées (ou en échec) : la planche est prête.
@@ -72,7 +75,7 @@ export function FlatLayCapsela({
       className="absolute inset-0 w-full h-full flex items-center justify-center transition-opacity duration-[420ms] ease-out motion-reduce:transition-none"
       style={{ containerType: "size", opacity: attendre ? 0 : 1 }}
     >
-      <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / HAUTEUR_FLAT_LAY}))`, aspectRatio: `100 / ${HAUTEUR_FLAT_LAY}` }}>
+      <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / HAUTEUR}))`, aspectRatio: `100 / ${HAUTEUR}` }}>
         {composition.map((p) => {
           const entree = images.find(({ it }) => it.id === p.id)!;
           const { it, img } = entree;
@@ -80,7 +83,7 @@ export function FlatLayCapsela({
           const base = {
             position: "absolute" as const,
             left: `${p.x}%`,
-            top: `${(p.y / HAUTEUR_FLAT_LAY) * 100}%`,
+            top: `${(p.y / HAUTEUR) * 100}%`,
             width: `${p.l}%`,
             aspectRatio: `${p.l} / ${p.h}`,
             transform: `translate(-50%, -50%) rotate(${p.angle}deg)`,

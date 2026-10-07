@@ -62,7 +62,7 @@ export function ZoneLookDuJour({ pieces, categoriesAttendues, graine }: { pieces
         </div>
       )}
       <div className="absolute inset-0">
-        {pieces.length > 0 && <FlatLayCapsela key={graine} pieces={pieces} graine={graine} attendre={!apparue} onPret={reveler} />}
+        {pieces.length > 0 && <FlatLayCapsela key={graine} items={pieces} context="hero-home" layoutSeed={graine} attendre={!apparue} onPret={reveler} />}
       </div>
     </div>
   );
