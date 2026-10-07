@@ -381,6 +381,14 @@ function accentuerHero(g: GabaritPlanche): GabaritPlanche {
   };
 }
 
+/**
+ * LE « FLAT LAY » (07/10/2026, référence : une planche de stylisme — pièces posées en vrac, légèrement tournées) : chaque
+ * rôle a une inclinaison fixe en degrés — le héro presque droit, les chaussures franchement de biais, le sac et la
+ * surcouche en sens inverse. Fixe, jamais tirée au hasard : une même tenue se pose toujours pareil, et la planche d'un
+ * écran est celle des deux autres. Les petits accessoires alternent leur sens.
+ */
+export const ANGLE_PLANCHE: Record<RolePlanche, number> = { hero: -2, dessus: 4, bas: 2, chaussures: -12, sac: 5, petit: 9 };
+
 /** Profondeur : ce qui est derrière d'abord. */
 export const PROFONDEUR_PLANCHE: Record<RolePlanche, number> = { dessus: 1, hero: 2, bas: 3, petit: 4, chaussures: 5, sac: 5 };
 
@@ -432,7 +440,7 @@ export function composerPlanche<T extends Pick<Item, "id" | "cat"> & { photoUrl?
   items: T[],
   options: { annotations?: boolean; accentHero?: boolean } = {}
 ): {
-  pieces: { item: T; role: RolePlanche; case: EmplacementPlanche; aligne: { x: Calage; y: Calage } }[];
+  pieces: { item: T; role: RolePlanche; case: EmplacementPlanche; aligne: { x: Calage; y: Calage }; angle: number }[];
   notes: NotePlanche<T>[];
   hauteur: number;
 } {
@@ -519,9 +527,11 @@ export function composerPlanche<T extends Pick<Item, "id" | "cat"> & { photoUrl?
   return {
     notes,
     pieces: poses
-      .map(({ item, role, case: c }) => {
+      .map(({ item, role, case: c }, rang) => {
         const r = { x: decalage + (c.x - minX) * k, y: (c.y - minY) * k, l: c.l * k, h: c.h * k };
-        return { item, role, case: r, aligne: { x: calage(r.x + r.l / 2, 50, 100), y: calage(r.y + r.h / 2, hauteur / 2, hauteur) } };
+        // Les petits accessoires alternent leur sens (le rang parmi les petits, pas l'identifiant : la planche reste stable).
+        const angle = role === "petit" ? (poses.slice(0, rang).filter((q) => q.role === "petit").length % 2 === 0 ? 1 : -1) * ANGLE_PLANCHE.petit : ANGLE_PLANCHE[role];
+        return { item, role, case: r, angle, aligne: { x: calage(r.x + r.l / 2, 50, 100), y: calage(r.y + r.h / 2, hauteur / 2, hauteur) } };
       })
       .sort((a, b) => PROFONDEUR_PLANCHE[a.role] - PROFONDEUR_PLANCHE[b.role]),
     hauteur,
