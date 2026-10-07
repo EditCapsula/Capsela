@@ -67,7 +67,7 @@ describe("composerFlatLay — déterministe, borné, sans grille", () => {
   });
 
   it("la veste et le manteau sont toujours au fond, le bas puis le haut devant, puis chaussures, sac, accessoires", () => {
-    const z = (pieces: PieceFlatLay[]) => Object.fromEntries(composerFlatLay(pieces, "z").pieces.map((q, i) => [pieces.find((x) => x.id === q.id)!.cat, q.z]));
+    const z = (pieces: PieceFlatLay[]) => Object.fromEntries(composerFlatLay(pieces, "z").pieces.map((q) => [pieces.find((x) => x.id === q.id)!.cat, q.z]));
     const a = z(look());
     expect(a.veste).toBeLessThan(a.pantalon);
     expect(a.pantalon).toBeLessThan(a.haut);
