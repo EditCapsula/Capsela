@@ -353,17 +353,31 @@ export const GABARITS_PLANCHE: Record<"haut" | "hautDessus" | "hautManteau" | "r
  * centre. Chaussures et sac gardent leur taille. Les annotations ne sont pas utilisées avec cette option.
  */
 const ACCENT_HERO = 1.14;
+const COMPACT_X = 0.74;
+const ETIRE_Y = 1.3;
+/** Agrandissement maximal de la planche du hero : elle est resserrée, donc agrandie davantage pour remplir la largeur. */
+const AGRANDISSEMENT_MAX_HERO = 1.7;
 const REDUCTION_PETITS = 0.8;
+/** Planche en hauteur (zone du hero : plus haute que large) : les emplacements se resserrent en largeur et s'écartent en hauteur. */
+const SERRAGE_X = COMPACT_X;
+const ETIREMENT_Y = ETIRE_Y;
 function accentuerHero(g: GabaritPlanche): GabaritPlanche {
+  const pose = (c: EmplacementPlanche): EmplacementPlanche => ({ x: c.x * SERRAGE_X, y: c.y * ETIREMENT_Y, l: c.l, h: c.h });
   return {
     ...g,
-    hero: { ...g.hero, l: g.hero.l * ACCENT_HERO, h: g.hero.h * ACCENT_HERO },
-    petits: g.petits.map((c) => ({
-      x: c.x + (c.l * (1 - REDUCTION_PETITS)) / 2,
-      y: c.y + (c.h * (1 - REDUCTION_PETITS)) / 2,
-      l: c.l * REDUCTION_PETITS,
-      h: c.h * REDUCTION_PETITS,
-    })),
+    hero: pose({ ...g.hero, l: g.hero.l * ACCENT_HERO, h: g.hero.h * ACCENT_HERO }),
+    dessus: g.dessus && pose(g.dessus),
+    bas: g.bas && pose(g.bas),
+    chaussures: pose(g.chaussures),
+    sac: pose(g.sac),
+    petits: g.petits.map((c) =>
+      pose({
+        x: c.x + (c.l * (1 - REDUCTION_PETITS)) / 2,
+        y: c.y + (c.h * (1 - REDUCTION_PETITS)) / 2,
+        l: c.l * REDUCTION_PETITS,
+        h: c.h * REDUCTION_PETITS,
+      })
+    ),
   };
 }
 
@@ -475,7 +489,7 @@ export function composerPlanche<T extends Pick<Item, "id" | "cat"> & { photoUrl?
   const maxX = Math.max(...boites.map((c) => c.x + c.l));
   const minY = Math.min(...boites.map((c) => c.y));
   const maxY = Math.max(...boites.map((c) => c.y + c.h));
-  const k = Math.min(AGRANDISSEMENT_MAX_PLANCHE, 100 / (maxX - minX));
+  const k = Math.min(options.accentHero ? AGRANDISSEMENT_MAX_HERO : AGRANDISSEMENT_MAX_PLANCHE, 100 / (maxX - minX));
   const decalage = (100 - (maxX - minX) * k) / 2;
   const hauteur = (maxY - minY) * k;
   const calage = (centre: number, milieu: number, etendue: number): Calage =>

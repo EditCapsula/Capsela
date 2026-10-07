@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
-import { JourEtMeteo } from "@/components/JourMeteo";
+import BarreDuJour from "@/components/BarreDuJour";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { useQuotaTenues } from "@/components/QuotaTenues";
@@ -551,7 +551,7 @@ export default function TenuesScreen() {
           partagé avec l'Accueil. Il remplace le surtitre qui répétait la
           date : les chevrons changent le jour, la météo ouvre
           « Localisation & météo ». */}
-      <JourEtMeteo className="mt-5" />
+      <BarreDuJour className="mt-3" />
       {/* Ce qui est planifié ce jour-là (Planifier) — le même rappel que
           l'Accueil. Un plan de journée est devenu la tenue ci-dessous (option C,
           30/09/2026) ; restent ici la soirée et les plans écartés ou incomplets. */}
