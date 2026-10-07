@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BadgePremium from "@/components/BadgePremium";
 import GateAvisStyliste from "@/components/GateAvisStyliste";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
@@ -12,319 +11,19 @@ import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { estContexteMaison, qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
 import { useAuth } from "@/lib/auth";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
-import { libelleStyles, stylesLabels } from "@/lib/profile";
+import { groupesDuVestiaire } from "@/lib/dressingEcran";
 import { useCapsela } from "@/lib/store";
 import { JourEtMeteo } from "@/components/JourMeteo";
 import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@/lib/retro";
 import { dateDuJour } from "@/lib/jourConsulte";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
-import type { CategoryKey, Item, SavedLook } from "@/lib/types";
-import Badge from "@/components/Badge";
+import type { CategoryKey, Item } from "@/lib/types";
 import Button, { BoutonDiscret } from "@/components/Button";
-
-/**
- * Emplacement en %, légèrement pivoté — la géométrie des collages éditoriaux.
- *
- * Servait aussi aux planches de pièces réelles (StyleBoard) jusqu'au
- * 23/09/2026 : les deux cards de l'Accueil portent depuis des visuels
- * éditoriaux composés pour leur bande, et le reste du fichier a suivi.
- */
-type BoardSlot = { left: number; top: number; w: number; h: number; rotate: number; z: number };
-/**
- * Visuels éditoriaux génériques Capsela pour la card Journal (brief
- * 26/08/2026) — JAMAIS les photos personnelles de l'utilisatrice : le rôle de
- * ces images est d'illustrer le concept « tenues portées au quotidien »,
- * adapté uniquement au genre du profil.
- *
- * Les dimensions intrinsèques sont déclarées par fichier (relevées le
- * 21/09/2026) et non devinées : elles ne sont pas uniformes (480×600, 480×717,
- * 480×720), donc une valeur unique en aurait faussé deux sur trois.
- *
- * Ordre = priorité visuelle : la photo la plus lumineuse, à la silhouette la
- * plus lisible, vient en premier et reçoit toujours le plus grand emplacement.
- */
-type EditorialPhoto = { src: string; w: number; h: number };
-const JOURNAL_VISUALS: Record<"femme" | "homme", EditorialPhoto[]> = {
-  femme: [
-    { src: "/editorial/editcapsela-femme2-hp.jpg", w: 480, h: 720 },
-    { src: "/editorial/editcapsela-femme1-hp.jpg", w: 480, h: 600 },
-    { src: "/editorial/editcapsela-femme3-hp.jpg", w: 480, h: 600 },
-  ],
-  homme: [
-    { src: "/editorial/editcapsela-homme3-hp.jpg", w: 480, h: 720 },
-    { src: "/editorial/editcapsela-homme1-hp.jpg", w: 480, h: 600 },
-    { src: "/editorial/editcapsela-homme2-hp.jpg", w: 480, h: 717 },
-  ],
-};
-
-/**
- * Collage de photos éditoriales — repli de la card Dressing tant qu'aucune
- * pièce n'est saisie (brief 28/08/2026), et de « Ton style évolue » tant
- * qu'aucun look n'est enregistré. Même hauteur que StyleBoard, donc aucun
- * décalage au passage vide -> rempli.
- *
- * TROIS PHOTOS SÉPARÉES, et ce point ne se négocie pas. La maquette du
- * 23/09 propose à nouveau des tirages partiellement superposés, comme la V3
- * avant elle : le chevauchement a été SIGNALÉ CINQ FOIS par l'utilisatrice
- * avant d'être éliminé le 26/08/2026, quatre passes l'ayant réduit sans
- * jamais le supprimer. On ne le réintroduit pas au nom d'une direction
- * artistique.
- *
- * Géométrie vérifiée par calcul sur 320/360/390/412/430 px de large, ROTATION
- * COMPRISE — une boîte tournée déborde de sa boîte CSS : 3° sur ~55 px
- * ajoutent ~1,5 px de chaque côté, ce qui suffit à faire se toucher deux
- * photos calées au pixel près. Toute retouche de left/top/w/h/rotate doit
- * être revérifiée sur ces cinq largeurs, pas seulement à l'œil sur une seule.
- *
- * Ces images sont purement décoratives. Elles ne sont jamais comptées,
- * n'entrent ni dans wardrobePool ni dans le moteur.
- *
- * (POLAROID_SLOTS, la géométrie jumelle de l'ancienne card Journal, est
- * partie avec elle le 23/09 : le journal montre désormais les vrais looks.)
- */
-const EMPTY_BOARD_SLOTS: BoardSlot[] = [
-  { left: 5, top: 5, w: 43, h: 80, rotate: -3, z: 3 },
-  { left: 55, top: 5, w: 40, h: 40, rotate: 4, z: 2 },
-  { left: 55, top: 52, w: 40, h: 40, rotate: -2, z: 1 },
-];
-
-function EmptyDressingBoard({ visuals, height }: { visuals: EditorialPhoto[]; height: number }) {
-  return (
-    <div style={{ position: "relative", height }} aria-hidden="true">
-      {visuals.map((photo, i) => (
-        <PolaroidPhoto key={photo.src} photo={photo} slot={EMPTY_BOARD_SLOTS[i]} />
-      ))}
-    </div>
-  );
-}
-
-function PolaroidPhoto({ photo, slot }: { photo: EditorialPhoto; slot: BoardSlot }) {
-  const [failed, setFailed] = useState(false);
-  return (
-    <div
-      style={{
-        position: "absolute",
-        left: slot.left + "%",
-        top: slot.top + "%",
-        width: slot.w + "%",
-        height: slot.h + "%",
-        transform: `rotate(${slot.rotate}deg)`,
-        zIndex: slot.z,
-        background: "var(--color-card)",
-        padding: 4,
-        paddingBottom: 8,
-        borderRadius: 4,
-        boxSizing: "border-box",
-        boxShadow: "0 3px 9px rgba(29,26,22,.12)",
-      }}
-    >
-      {!failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={photo.src}
-          alt=""
-          width={photo.w}
-          height={photo.h}
-          decoding="async"
-          loading="lazy"
-          onError={() => setFailed(true)}
-          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 2, display: "block" }}
-        />
-      ) : (
-        <div style={{ width: "100%", height: "100%", borderRadius: 2, background: "var(--color-chip-soft-bg)" }} />
-      )}
-    </div>
-  );
-}
-
-/**
- * Card de module de la partie basse (maquette 23/09/2026) — titre, sous-titre,
- * flèche ronde, puis la planche.
- *
- * UN SEUL BOUTON, et pas une card contenant un bouton : la maquette rend la
- * flèche ronde comme unique affordance, mais toute la surface se tape. Deux
- * éléments focalisables pour une seule destination créeraient un doublon au
- * clavier et au lecteur d'écran. La flèche est donc décorative
- * (`aria-hidden`), et `cta` porte le nom accessible du bouton entier.
- *
- * Les planches sont déjà `aria-hidden` : purement décoratives, elles
- * répètent une information que le titre et le sous-titre donnent en toutes
- * lettres.
- */
-function CardModule({
-  onClick,
-  titre,
-  sousTitre,
-  cta,
-  fond,
-  children,
-}: {
-  onClick: () => void;
-  titre: React.ReactNode;
-  sousTitre: React.ReactNode;
-  cta: string;
-  fond: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={cta}
-      className="w-full min-w-0 text-left cursor-pointer rounded-feuille border border-border overflow-hidden box-border transition-opacity active:opacity-90"
-      style={{ background: fond }}
-    >
-      <div className="flex items-start justify-between gap-3 px-[16px] pt-[15px]">
-        <div className="min-w-0">
-          <div className="t-titre-carte text-ink">{titre}</div>
-          <div className="text-[11px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
-            {sousTitre}
-          </div>
-        </div>
-        <span
-          aria-hidden="true"
-          className="flex items-center justify-center rounded-full bg-terracotta text-cream flex-shrink-0"
-          style={{ width: 38, height: 38 }}
-        >
-          <svg width="17" height="17" viewBox="0 0 24 24" style={{ display: "block" }}>
-            <path
-              d="M5 12h13M13 6.5l5.5 5.5L13 17.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </span>
-      </div>
-      <div className="px-[14px] pt-[10px] pb-[14px]">{children}</div>
-    </button>
-  );
-}
-
-/**
- * Bande éditoriale d'une card de l'Accueil — livrée le 23/09/2026, composée
- * POUR ce format plutôt que recadrée depuis une photo classique.
- *
- * LA ZONE DE SÉCURITÉ EST LES 60 % CENTRAUX, et ce n'est pas une marge de
- * confort : la bande garde 150 px de haut à toutes les largeurs, donc son
- * ratio varie de 1,61:1 à 320 px à 2,68:1 dès 480 px. Mesuré sur la vraie
- * card — part de la source réellement visible :
- *
- *     320 px -> 59,9 %    390 px -> 77,2 %    480 px et + -> 99,5 %
- *
- * Le rognage est UNIQUEMENT latéral : la hauteur se remplit toujours
- * exactement (150 = 300 / 2), donc rien n'est jamais perdu en haut ni en bas.
- * Toute image de remplacement doit porter son sujet entre x=162 et x=646 sur
- * une source de 808 px, les côtés servant de prolongement.
- *
- * `width`/`height` sont déclarés : sans eux le navigateur ne réserve pas la
- * place et la card saute quand l'image arrive.
- */
-function BandeEditoriale({ src, alt }: { src: string; alt: string }) {
-  return (
-    <div style={{ height: 150, borderRadius: 14, overflow: "hidden", background: "var(--color-warm-bg)" }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        width={808}
-        height={300}
-        loading="lazy"
-        decoding="async"
-        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }}
-      />
-    </div>
-  );
-}
-
-/**
- * Bande de looks enregistrés — la planche de « Ton style évolue ».
- *
- * AUCUN CHEVAUCHEMENT, et ce point ne se négocie pas : le recouvrement des
- * tirages a été signalé CINQ FOIS avant d'être éliminé le 26/08/2026, et la
- * maquette qui le repropose ne le remet pas en cause. Ici il est impossible
- * par construction — les tirages sont posés dans une rangée flex avec
- * gouttière, pas en absolu. La rotation reste, bornée à 2°, et la gouttière
- * de 10 px la couvre largement (2° sur une boîte de 96 px de haut ajoutent
- * ~1,7 px de chaque côté).
- *
- * Chaque tirage montre les pièces RÉELLES du look, résolues sur le même pool
- * que partout ailleurs (pièces + vestiaire) : un look enregistré pendant
- * l'exploration d'un autre style reste lisible.
- */
-function FilmstripLooks({
-  looks,
-  resolvePool,
-  height,
-}: {
-  looks: SavedLook[];
-  resolvePool: Item[];
-  height: number;
-}) {
-  return (
-    <div className="scrollarea flex gap-[10px] overflow-x-auto" style={{ height }} aria-hidden="true">
-      {looks.map((look, i) => {
-        const pieces = look.pieceIds
-          .map((id) => resolvePool.find((it) => it.id === id))
-          .filter((it): it is Item => Boolean(it))
-          .slice(0, 4);
-        return (
-          <div
-            key={look.id}
-            className="flex-none flex flex-col"
-            style={{
-              width: 108,
-              background: "var(--color-card)",
-              padding: 5,
-              paddingBottom: 7,
-              borderRadius: 5,
-              boxSizing: "border-box",
-              transform: `rotate(${i % 2 === 0 ? -1.6 : 1.6}deg)`,
-              boxShadow: "0 3px 9px rgba(29,26,22,.12)",
-            }}
-          >
-            <div className="grid grid-cols-2 gap-[3px] flex-1 min-h-0">
-              {pieces.map((p) => (
-                <VignetteLook key={p.id} piece={p} />
-              ))}
-            </div>
-            <div className="text-[9px] text-muted mt-[4px] px-[2px] overflow-hidden text-ellipsis whitespace-nowrap">
-              {look.name}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function VignetteLook({ piece }: { piece: Item }) {
-  const [failed, setFailed] = useState(false);
-  const img = resolveItemImage(piece);
-  const showImg = Boolean(img.url) && !failed;
-  return (
-    <div style={{ borderRadius: 3, overflow: "hidden", background: showImg ? "var(--color-photo-bg)" : piece.hex }}>
-      {showImg && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={img.url}
-          alt=""
-          decoding="async"
-          loading="lazy"
-          onError={() => setFailed(true)}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-        />
-      )}
-    </div>
-  );
-}
 
 const GLYPHE_CALENDRIER = (
   <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -343,22 +42,92 @@ const GLYPHE_VALISE = (
   </svg>
 );
 
-/** Une des deux actions de « Prépare la suite » — glyphe propre à chacune. */
-function ActionSuite({ onClick, label, glyphe }: { onClick: () => void; label: string; glyphe: React.ReactNode }) {
+/** Un chevron de carte : la flèche ronde décorative des cartes « Avec Capsela » (toute la carte est le bouton). */
+const FLECHE_RONDE = (
+  <span aria-hidden="true" className="flex items-center justify-center rounded-full bg-terracotta text-cream flex-shrink-0" style={{ width: 34, height: 34 }}>
+    <svg width="16" height="16" viewBox="0 0 24 24" style={{ display: "block" }}>
+      <path d="M5 12h13M13 6.5l5.5 5.5L13 17.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  </span>
+);
+
+const GLYPHE_AVIS = (
+  <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+    <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.5l1.7 5.1 5.1 1.7-5.1 1.7L12 17l-1.7-5.1-5.1-1.7 5.1-1.7L12 3.5z" />
+      <path d="M18.5 16.5v3M17 18h3" />
+    </g>
+  </svg>
+);
+
+/**
+ * Un titre de section de l'Accueil : capitales espacées, comme « Mon dressing » du Dressing (même gabarit), avec son lien
+ * à droite. Refonte du 05/10/2026 : Aujourd'hui → Avec Capsela → Ton dressing → Ta capsule.
+ */
+function TitreAccueil({ children, lien, onLien, libelleLien }: { children: React.ReactNode; lien?: string; onLien?: () => void; libelleLien?: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 mx-6 mt-9">
+      <h2 className="t-surtitre text-ink">{children}</h2>
+      {lien && onLien && (
+        <button onClick={onLien} aria-label={libelleLien ?? lien} className="t-lien text-terracotta cursor-pointer py-2 pl-3 whitespace-nowrap">
+          {lien}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Une carte « Avec Capsela » : glyphe, titre, phrase, visuel éditorial, flèche. Un seul bouton, comme toute carte cliquable. */
+function CarteAvecCapsela({
+  onClick,
+  glyphe,
+  titre,
+  texte,
+  visuel,
+  alt,
+  cta,
+  badge,
+  busy,
+}: {
+  onClick: () => void;
+  glyphe: React.ReactNode;
+  titre: string;
+  texte: string;
+  visuel: string;
+  alt: string;
+  cta: string;
+  badge?: React.ReactNode;
+  busy?: boolean;
+}) {
   return (
     <button
       onClick={onClick}
-      className="min-w-0 text-left bg-card border border-border rounded-bloc px-[12px] py-[11px] cursor-pointer flex flex-col justify-between transition-opacity active:opacity-80"
-      style={{ minHeight: 68 }}
+      aria-label={cta}
+      aria-busy={busy}
+      className="flex-none text-left bg-card border border-border rounded-feuille overflow-hidden cursor-pointer flex flex-col transition-opacity active:opacity-90"
+      style={{ width: "clamp(236px, 74%, 300px)", scrollSnapAlign: "start" }}
     >
-      <span className="text-terracotta">{glyphe}</span>
-      <span className="text-[12px] text-ink leading-[1.3] mt-[9px]">{label}</span>
+      <span className="block px-[14px] pt-[14px]">
+        <span className="flex items-center justify-between gap-2">
+          <span className="text-terracotta">{glyphe}</span>
+          {badge}
+        </span>
+        <span className="block t-titre-carte text-ink mt-[8px]">{titre}</span>
+        <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[4px] min-h-[2.9em]" style={{ textWrap: "pretty" }}>
+          {texte}
+        </span>
+      </span>
+      <span className="relative block mt-[10px]" style={{ height: 104 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={visuel} alt={alt} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
+        <span className="absolute right-[12px] bottom-[10px]">{FLECHE_RONDE}</span>
+      </span>
     </button>
   );
 }
 
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, weather, meteoDuJour, jourConsulte, etatPremium, actions } = useCapsela();
+  const { state, geoLoading, geoCity, vestiairePool, weather, meteoDuJour, jourConsulte, etatPremium, actions } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -489,8 +258,6 @@ export default function HomeScreen() {
   // exactement à l'écran Capsule.
   const capsuleSeason = state.capsuleSeason || currentSeasonKey();
   const capsule = computeDefaultCapsule(profile, weather, state.suggestedExcluded, capsuleSeason, vestiairePool);
-  const capsuleStyleLabel = libelleStyles(profile.styles, profile.gender);
-  const nbStylesCapsule = stylesLabels(profile.styles, profile.gender).length;
 
   /*
    * « J'ADORE » ENREGISTRE LA TENUE (recette du 26/09/2026, qui revient sur
@@ -527,72 +294,23 @@ export default function HomeScreen() {
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
 
-  const journalGender: "femme" | "homme" = profile.gender === "homme" ? "homme" : "femme";
-  const journalVisuals = JOURNAL_VISUALS[journalGender];
-
   /**
-   * Les trois résumés chiffrés de la partie basse — TOUS lus des données
-   * réelles déjà en mémoire (aucune requête ajoutée : `savedLooks` est chargé
-   * au montage du store avec les pièces et l'historique).
-   *
-   * Un compteur à zéro ne s'écrit jamais : « 0 look enregistré ce mois-ci »
-   * est une donnée exacte et un mauvais accueil. La phrase change alors.
+   * LES CATÉGORIES DU DRESSING, avec leurs vrais effectifs (dressingEcran.groupesDuVestiaire — la même source que l'écran
+   * Dressing : jamais un chiffre écrit à la main). Une catégorie sans pièce n'est pas montrée.
    */
-  const resumeDressing = useMemo(() => {
-    const p = `${dressingCount} ${dressingCount <= 1 ? "pièce" : "pièces"}`;
-    const n = state.savedLooks.length;
-    if (!n) return `${p} dans ton dressing.`;
-    return `${p} · ${n} ${n <= 1 ? "look à retrouver" : "looks à retrouver"}`;
-  }, [dressingCount, state.savedLooks.length]);
-
-  /** Les looks du MOIS EN COURS, bornes locales — jamais un décalage UTC en début ou fin de mois. */
-  const looksDuMois = useMemo(() => {
-    const now = new Date();
-    const debut = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    return state.savedLooks.filter((l) => l.createdAt >= debut);
-  }, [state.savedLooks]);
-
-  const resumeJournal = useMemo(() => {
-    const m = looksDuMois.length;
-    if (m > 0) return m <= 1 ? "1 nouveau look ce mois-ci." : `${m} nouveaux looks ce mois-ci.`;
-    const t = state.savedLooks.length;
-    if (t > 0) return `${t} ${t <= 1 ? "look enregistré" : "looks enregistrés"} en tout.`;
-    return "Ton journal commence ici.";
-  }, [looksDuMois.length, state.savedLooks.length]);
-
-  /**
-   * « 0 pièce » ne s'écrit pas non plus pour la capsule. Elle n'est vide que
-   * si le vestiaire n'a pas pu être chargé — rare, mais alors la phrase doit
-   * rester juste sans exhiber un compteur à zéro.
-   */
-  const resumeCapsule = (() => {
-    // Sans useMemo, délibérément : `capsule` est recalculée à chaque rendu en
-    // amont, donc la mémoïser ici ne garderait rien — et le compilateur React
-    // refuse de l'optimiser sur une dépendance qu'il voit mutable (erreur
-    // react-hooks/preserve-manual-memoization, vue au lint). Deux
-    // concaténations ne valent pas cette dette.
-    const n = capsule.length;
-    const phrase = `Une sélection pensée pour ${nbStylesCapsule > 1 ? "tes styles" : "ton style"}${capsuleStyleLabel ? `, ${capsuleStyleLabel}` : ""}.`;
-    if (!n) return phrase;
-    return (
-      <>
-        {phrase}
-        <br />
-        {n} {n <= 1 ? "pièce" : "pièces"}
-      </>
-    );
-  })();
-
-  /** Les plus récents d'abord, au plus quatre : au-delà la bande se lit comme une liste. */
-  const looksRecents = useMemo(
-    () => [...state.savedLooks].sort((a, b) => b.createdAt - a.createdAt).slice(0, 4),
-    [state.savedLooks]
-  );
+  const groupes = groupesDuVestiaire(state.items, profile.gender);
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-[100px]">
       <div className="px-6">
-        <AppHeader />
+        {/* Le calendrier est une entrée GLOBALE, pas un onglet : un bouton dans la gouttière gauche du bandeau (05/10/2026). */}
+        <AppHeader
+          gauche={
+            <button onClick={actions.goCalendrier} aria-label="Ouvrir mon calendrier" className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70">
+              {GLYPHE_CALENDRIER}
+            </button>
+          }
+        />
       </div>
 
       {/* Salutation — présence renforcée (30 → 34 px) sans gonfler la hauteur
@@ -602,6 +320,10 @@ export default function HomeScreen() {
         <div className="t-display text-ink">
           Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
         </div>
+        {/* La promesse du jour, avec la ville de la météo affichée juste dessous : jamais un lieu écrit en dur. */}
+        <p className="text-[14px] text-muted-3 leading-[1.45] mt-[6px]" style={{ textWrap: "pretty" }}>
+          Voici ta tenue du jour, pensée pour ta journée{geoCity?.city ? ` à ${geoCity.city}` : ""}.
+        </p>
         {/* LE JOUR ET SA MÉTÉO, SUR UNE LIGNE (27/09/2026, navigation par
             date) : le jour se change par ses chevrons, la météo ouvre
             « Localisation & météo » des Préférences — les réglages existants,
@@ -879,197 +601,113 @@ export default function HomeScreen() {
       </div>
       )}
 
-      {/* ══ TON DRESSING, AUTREMENT ═══════════════════════════════════
-          Refonte du 23/09/2026, maquette annotée. Le hero au-dessus n'est
-          PAS touché : ce bloc remplace exactement l'ancien rail
-          « Explore Capsela » (deux cards en demi-largeur + Journal +
-          Prépare la suite), et rien d'autre.
-
-          La séquence voulue se lit de haut en bas : ta tenue -> ton dressing
-          -> ta capsule -> ton historique -> préparer la suite. Les deux
-          premières cards passent donc en PLEINE LARGEUR : à mi-largeur, leur
-          planche tombait à ~150 px et ne montrait plus une pièce, mais une
-          vignette.
-
-          TUTOIEMENT, alors que la maquette vouvoie ces quatre blocs
-          (« Votre dressing »). Arbitré : le hero juste au-dessus tutoie dans
-          la maquette elle-même (« Ta tenue est prête », « Bonjour, Angela »),
-          comme tous les autres écrans. Deux registres à deux cents pixels
-          d'écart se verraient. */}
-      <div className="mx-6 mt-7">
-        {/* SYSTÈME ÉDITORIAL DES TITRES (brief du 25/09, point 9) : titre à
-            l'encre, UN mot ou une expression clé en italique terracotta —
-            jamais deux. Même traitement que « Bonjour, … », « La capsule … »
-            et les titres de Planifier. Le titre du hero, posé sur le
-            terracotta, en est exclu : l'accent y serait invisible. */}
-        <div className="t-titre-section text-ink">
-          Ton dressing, <span className="italic text-terracotta">autrement</span>
-        </div>
-        <div className="text-[12px] text-muted leading-[1.45] mt-[5px]">
-          Tes pièces. Ton style. De nouvelles idées.
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3 px-6 mt-4">
-        {/* 1. TON DRESSING — planche faite de VRAIES pièces, effectif réel.
-               La maquette montre une photo de portant ; cet asset n'existe
-               pas, et le brief prévoit le cas (« utiliser les assets
-               existants si adaptés »). StyleBoard est mieux qu'une photo de
-               stock : ce sont ses pièces à elle. Le jour où un visuel
-               éditorial arrivera, il se substitue à ce seul appel. */}
-        <CardModule
-          onClick={dressingVide ? actions.openAdd : actions.goWardrobe}
-          titre={
-            <>
-              Ton <span className="italic text-terracotta">dressing</span>
-            </>
-          }
-          sousTitre={dressingVide ? "Ajoute tes pièces pour créer tes premiers looks." : resumeDressing}
-          cta={dressingVide ? "Ajouter mes pièces" : "Explorer ton dressing"}
-          fond="#F2E9DA"
-        >
-          {/* Visuel éditorial et non plus la planche des vraies pièces :
-              l'Accueil est un TEASER, le vestiaire réel s'ouvre d'un tap. La
-              planche y était forcément petite ; une composition pensée pour
-              cette bande porte mieux l'univers. Les pièces réelles restent
-              partout où elles informent — écran Dressing, Tenue, looks. */}
-          <BandeEditoriale
-            src="/editorial/capsela_dressing_banner.webp"
-            alt="Un portant de vêtements aux tons crème et terracotta, un panier, des chaussures et un sac"
-          />
-        </CardModule>
-
-        {/* 2. LA CAPSULE DU MOMENT — saison, style et effectif lus depuis la
-               capsule calculée, jamais écrits en dur : ce sont les valeurs
-               qu'affiche l'écran Capsule. */}
-        <CardModule
-          onClick={actions.goCapsule}
-          titre={
-            <>
-              La capsule <span className="italic text-terracotta">{capsuleSeason}</span>
-            </>
-          }
-          sousTitre={resumeCapsule}
-          cta="Découvrir ta capsule"
-          fond="#EBDFCC"
-        >
-          <BandeEditoriale
-            src="/editorial/capsela_capsule_banner.webp"
-            alt="Une planche de styliste à plat : pull écru, jean, mocassins, bijoux dorés et lunettes"
-          />
-        </CardModule>
-
-        {/* 3. TON STYLE ÉVOLUE — tes looks réels, pas des mannequins.
-               Arbitré : le code choisissait jusqu'ici le jeu de photos selon
-               le genre déclaré du profil, ce que le brief du 23/09 interdit
-               expressément. Montrer les looks enregistrés règle la question
-               de fond plutôt que de la déplacer — il n'y a plus de modèle à
-               choisir — et dit littéralement ce que le titre annonce. Les
-               photos éditoriales restent le repli tant qu'aucun look n'existe. */}
-        <CardModule
-          onClick={actions.goHistory}
-          titre={
-            <>
-              Ton style <span className="italic text-terracotta">évolue</span>
-            </>
-          }
-          sousTitre={resumeJournal}
-          cta="Voir ton journal"
-          fond="#F2E9DA"
-        >
-          {looksRecents.length > 0 ? (
-            <FilmstripLooks looks={looksRecents} resolvePool={resolvePool} height={150} />
-          ) : (
-            <EmptyDressingBoard visuals={journalVisuals} height={150} />
-          )}
-        </CardModule>
-
-        {/* 4. ET SI ON PRÉPARAIT LA SUITE ? — mêmes destinations, même badge,
-               même absence de paywall qu'avant. Aucun flag d'abonnement
-               n'existe dans l'app : la card est visible pour tout le monde,
-               et c'est ici que le test se posera le jour venu. Seule la
-               présentation change. */}
-        <div className="bg-warm-bg border border-sand-border rounded-feuille px-4 py-[16px]">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              {/* balance et non pretty : mesuré à 390 px, le titre se coupait
-                  après « suite » et laissait le « ? » SEUL sur la deuxième
-                  ligne, la pastille Premium lui prenant ~110 px. balance
-                  répartit les deux lignes et supprime l'orphelin. */}
-              <div className="t-titre-carte text-ink" style={{ textWrap: "balance" }}>
-                Et si on préparait <span className="italic text-terracotta">la suite</span> ?
-              </div>
-              <div className="text-[11px] text-muted leading-[1.45] mt-[5px]" style={{ textWrap: "pretty" }}>
-                Un dîner samedi ? Une escapade ? Une soirée spéciale ?
-              </div>
-            </div>
-            {/* La pastille devient l'entrée de la page Premium (24/09/2026).
-                Elle était purement décorative : elle nommait une offre sans
-                dire où la voir, c'est-à-dire exactement l'entrée qui ne mène
-                nulle part que cet écran a déjà corrigée deux fois. Le dessin
-                ne change pas d'un pixel ; seule la zone touchable est portée
-                au plancher de 44 px, reprise en marge négative. */}
-            <button
-              onClick={() => actions.goPremium()}
-              aria-label="Découvrir Capsela Premium"
-              className="flex-shrink-0 flex items-center cursor-pointer py-[13px] -my-[13px]"
-            >
-              <Badge tone="carte" icone="✦">Premium</Badge>
-            </button>
-          </div>
-          {/* Deux actions VISUELLEMENT DISTINCTES (demandé) : chacune porte son
-              propre glyphe au trait — un calendrier, une valise — là où les
-              deux précédentes partageaient un carré plein indistinct. */}
-          <div className="grid grid-cols-2 gap-[10px] mt-[13px]" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-            <ActionSuite onClick={actions.goPlanifier} label="Planifier une tenue" glyphe={GLYPHE_CALENDRIER} />
-            {/* « Préparer une valise » MÈNE AU PARCOURS depuis le 27/09/2026
-                (lot 1, docs/valise.md), selon la règle d'accès PREPARER_VALISE
-                (ouvrirValise). Du 24 au 27/09, faute de parcours, elle menait
-                à la page Premium, qui l'annonçait « bientôt ».
-
-                Planifier n'est PAS passée derrière ce mur : elle fonctionne,
-                et personne ne peut encore s'abonner — la mettre derrière un
-                paywall qui n'encaisse pas reviendrait à la retirer à tout le
-                monde. */}
-            <ActionSuite onClick={ouvrirValise} label="Préparer une valise" glyphe={GLYPHE_VALISE} />
-          </div>
-        </div>
-      </div>
-
-      {/* 5. BESOIN D'UN REGARD ? (arbitré le 25/09/2026). Section à part, et
-          non une troisième action de « Et si on préparait la suite ? » :
-          planifier et préparer une valise anticipent, l'avis de styliste
-          porte sur une tenue qu'on a déjà. Même système de titre que « Ton
-          dressing, autrement », même carte que les modules (fond carte, rayon
-          22, titre serif 18) : présente, jamais dominante. Libellés fournis
-          le 25/09/2026. « Demander un avis » (écran Tenue, partage à un
-          proche) est une autre fonctionnalité et n'est pas touché. */}
-      <div className="mx-6 mt-7">
-        <div className="t-titre-section text-ink">
-          Besoin d&apos;un <span className="italic text-terracotta">regard</span> ?
-        </div>
-      </div>
-      <div className="px-6 mt-4">
-        <button
+      {/* ══ AVEC CAPSELA ═══════════════════════════════════════════════
+          Refonte du 05/10/2026 : Aujourd'hui (la tenue) → Avec Capsela → Ton dressing → Ta capsule. Les trois entrées
+          sont des fonctionnalités qui existent, avec leurs parcours d'avant : Planifier, Valise, Avis de styliste.
+          Aucun contenu éditorial inventé, aucun visuel de destination ni de personne : des objets et des matières. */}
+      <TitreAccueil lien="Tout découvrir →" onLien={actions.goPremium} libelleLien="Découvrir Capsela Premium">
+        Avec Capsela
+      </TitreAccueil>
+      <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
+        <CarteAvecCapsela
+          onClick={actions.goPlanifier}
+          glyphe={GLYPHE_CALENDRIER}
+          titre="Planifier une tenue"
+          texte="Une occasion en tête ? Capsela compose le look."
+          visuel="/editorial/capsela_planifier_intro.webp"
+          alt="Un carnet de planning et un crayon"
+          cta="Planifier une tenue"
+        />
+        {/* « Préparer une valise » MÈNE AU PARCOURS (docs/valise.md), selon la règle d'accès PREPARER_VALISE (ouvrirValise). */}
+        <CarteAvecCapsela
+          onClick={ouvrirValise}
+          glyphe={GLYPHE_VALISE}
+          titre="Préparer une valise"
+          texte="Un week-end ou un voyage ? Capsela crée ta sélection."
+          visuel={`/editorial/capsela_planifier_valise_${profile.gender === "homme" ? "homme" : "femme"}.webp`}
+          alt="Une valise ouverte, des vêtements pliés et des accessoires"
+          cta="Préparer une valise"
+        />
+        <CarteAvecCapsela
           onClick={ouvrirAvisStyliste}
-          aria-busy={verificationAvis}
-          className="w-full min-w-0 text-left bg-card border border-border rounded-feuille px-4 pt-[15px] pb-[6px] cursor-pointer transition-opacity active:opacity-90"
+          glyphe={GLYPHE_AVIS}
+          titre="Avis de styliste"
+          texte="Obtiens un regard expert sur une tenue ou une pièce de ton dressing."
+          visuel={`/images/avis/extrait-conseil${profile.gender === "homme" ? "-homme" : ""}.webp`}
+          alt="Des accessoires et des pièces assorties, posés à plat"
+          cta="Obtenir mon avis de styliste"
+          badge={premiumRequis("AVIS_DE_STYLISTE") ? <BadgePremium /> : undefined}
+          busy={verificationAvis}
+        />
+      </div>
+
+      {/* ══ TON DRESSING ═════════════════════════════════════════════════
+          L'aperçu des catégories, avec les effectifs réels. Dressing vide : une invitation, jamais une rangée vide. */}
+      <TitreAccueil lien={dressingVide ? undefined : "Voir tout →"} onLien={actions.goWardrobe} libelleLien="Voir tout mon dressing">
+        Ton dressing
+      </TitreAccueil>
+      {dressingVide ? (
+        <div className="mx-6 mt-4">
+          <button
+            onClick={actions.openAdd}
+            className="w-full text-left bg-card border border-border rounded-feuille px-4 py-[16px] cursor-pointer transition-opacity active:opacity-90"
+          >
+            <span className="block t-titre-carte text-ink">Ton dressing commence ici</span>
+            <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[5px]">Ajoute quelques pièces pour que Capsela compose des tenues qui te ressemblent.</span>
+            <span className="block t-cta text-terracotta mt-[10px]">Ajouter mes pièces</span>
+          </button>
+        </div>
+      ) : (
+        <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
+          {groupes.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => actions.goWardrobePieces({ libelle: g.libelle, categories: g.categories })}
+              aria-label={`${g.libelle} : ${g.nbPieces} ${g.nbPieces <= 1 ? "pièce" : "pièces"}`}
+              className="flex-none text-left cursor-pointer active:opacity-80"
+              style={{ width: 112, scrollSnapAlign: "start" }}
+            >
+              <span className="block overflow-hidden rounded-bloc" style={{ aspectRatio: "1 / 1", background: "var(--color-warm-bg)" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={g.visuel} alt="" width={480} height={640} loading="lazy" decoding="async" className="w-full h-full object-cover block" />
+              </span>
+              <span className="block font-serif text-[13px] text-ink leading-[1.25] mt-[8px] px-[2px]" style={{ minHeight: "2.5em", textWrap: "balance" }}>
+                {g.libelle.replace(/ & /g, " &\u00a0")}
+              </span>
+              <span className="block text-[11px] text-muted mt-[1px] px-[2px]">
+                {g.nbPieces} {g.nbPieces <= 1 ? "pièce" : "pièces"}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ══ TA CAPSULE ═══════════════════════════════════════════════════
+          La capsule réelle, calculée comme l'écran Capsule (saison, style, effectif) : jamais écrite en dur. */}
+      <TitreAccueil lien="Voir ma capsule →" onLien={actions.goCapsule}>
+        {`Ta capsule ${capsuleSeason}`}
+      </TitreAccueil>
+      <div className="mx-6 mt-4">
+        <button
+          onClick={actions.goCapsule}
+          aria-label="Voir ma capsule"
+          className="relative block w-full text-left rounded-feuille overflow-hidden cursor-pointer transition-opacity active:opacity-90"
+          style={{ minHeight: 132, background: "var(--color-terracotta-deep)" }}
         >
-          <span className="flex items-start justify-between gap-3">
-            <span className="t-titre-carte text-ink">
-              Avis de <span className="italic text-terracotta">styliste</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/editorial/capsela_capsule_banner.webp" alt="" width={808} height={300} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
+          <span className="absolute inset-0" style={{ background: "rgba(29,26,22,.42)" }} aria-hidden="true" />
+          <span className="relative flex items-end justify-between gap-3 px-[16px] py-[16px]" style={{ minHeight: 132 }}>
+            <span className="block min-w-0">
+              <span className="block font-serif text-[20px] leading-[1.15]" style={{ color: "var(--color-on-terracotta)" }}>
+                Ma sélection de saison
+              </span>
+              <span className="block text-[12px] leading-[1.45] mt-[5px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
+                Des pièces clés pour des tenues faciles et élégantes tout au long de la saison.
+                {capsule.length > 0 && ` ${capsule.length} ${capsule.length <= 1 ? "pièce" : "pièces"}.`}
+              </span>
             </span>
-            {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
-          </span>
-          <span className="block text-[11px] text-muted leading-[1.45] mt-[6px]" style={{ textWrap: "pretty" }}>
-            Montre ta tenue à Capsela et découvre ce qui fonctionne, ce que tu peux ajuster et les pièces de ton dressing à
-            essayer.
-          </span>
-          {/* Vérification du statut (point 7) : l'indicateur de chargement de
-              l'app, à la place d'aucun texte nouveau. */}
-          <span className="flex items-center gap-[10px] min-h-[44px] mt-[2px] t-cta text-terracotta">
-            Obtenir mon avis
-            {verificationAvis && <LoadingSpinner size={22} />}
+            {FLECHE_RONDE}
           </span>
         </button>
       </div>

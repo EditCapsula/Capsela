@@ -502,7 +502,7 @@ export interface AppState {
    * Tenue) : revenir de cette entrée y ramène au lieu du hub. Oublié dès que
    * le hub de Planifier s'affiche, ou à l'ouverture ordinaire de Planifier.
    */
-  planRetour: "home" | "tenues" | null;
+  planRetour: "home" | "tenues" | "calendrier" | null;
   /** Date préremplie (décalage en jours) par « Planifier une tenue pour … » de Tenue ; consommée à l'ouverture. */
   planJour: number | null;
   /**
@@ -541,6 +541,7 @@ export type Screen =
   | "add"
   | "capsule"
   | "tenues"
+  | "calendrier"
   | "history"
   | "neverworn"
   | "profileSetup"

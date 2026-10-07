@@ -25,6 +25,7 @@ export default function AppHeader({
   onBack,
   backLabel = "Revenir à l'écran précédent",
   action,
+  gauche,
 }: {
   showAvatar?: boolean;
   dark?: boolean;
@@ -36,6 +37,8 @@ export default function AppHeader({
    * menu « ••• » d'un avis de styliste (30/09/2026). Le logo reste centré.
    */
   action?: React.ReactNode;
+  /** Un bouton dans la gouttière gauche quand il n'y a pas de retour (calendrier de l'accueil, 07/10/2026). */
+  gauche?: React.ReactNode;
 }) {
   const { profile, email } = useAuth();
   const { actions } = useCapsela();
@@ -56,6 +59,7 @@ export default function AppHeader({
              zone touchable reste à 44 px, le composant s'en charge. */
           <BoutonRetour onClick={onBack} label={backLabel} taille={34} sombre={dark} />
         )}
+        {!onBack && gauche}
       </div>
       {dark ? (
         <LogoCapsela taille="sm" claire />
