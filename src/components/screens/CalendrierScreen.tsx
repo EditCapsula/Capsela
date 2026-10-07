@@ -136,7 +136,7 @@ export default function CalendrierScreen() {
         style={{ background: choisie ? "var(--color-chip-soft-bg)" : "transparent" }}
       >
         <span
-          className="w-[28px] h-[28px] rounded-full flex items-center justify-center text-[14px] tabular-nums"
+          className="w-[28px] h-[28px] rounded-full flex items-center justify-center text-[13px] tabular-nums"
           style={{
             border: estAujourdhui ? "1.5px solid var(--color-terracotta)" : "1.5px solid transparent",
             color: jour < aujourdhui && !t ? "var(--color-muted)" : "var(--color-ink)",
@@ -165,7 +165,7 @@ export default function CalendrierScreen() {
       <button onClick={precedent} aria-label={`${nom} précédent`} className="w-[44px] h-[44px] flex items-center justify-center text-ink cursor-pointer">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
       </button>
-      <h2 className="font-serif text-[20px] text-ink" aria-live="polite">{libelle}</h2>
+      <h2 className="t-titre-section text-ink" aria-live="polite">{libelle}</h2>
       <button onClick={suivant} aria-label={`${nom} suivant`} className="w-[44px] h-[44px] flex items-center justify-center text-ink cursor-pointer">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
       </button>
@@ -179,7 +179,7 @@ export default function CalendrierScreen() {
         className="w-full flex items-center gap-3 py-3 border-b border-divider text-left cursor-pointer"
       >
         <span className="flex-1 min-w-0">
-          <span className="block text-[14px] text-ink font-semibold">{libelleLong(t.jour)}</span>
+          <span className="block text-[13px] text-ink font-semibold">{libelleLong(t.jour)}</span>
           <span className="block text-[12px] text-muted mt-[2px]">
             {NOM_STATUT[t.statut]} · {occasionShortLabel(t.occasion)}
           </span>
@@ -190,16 +190,16 @@ export default function CalendrierScreen() {
   );
 
   const panneau = (
-    <section aria-label={libelleLong(selection)} className="mt-5 rounded-carte bg-card border border-divider p-5">
+    <section aria-label={libelleLong(selection)} className="mt-5 rounded-carte bg-card border border-border p-5">
       <div className="t-surtitre text-terracotta">{ecart === 0 ? "Aujourd’hui" : libelleLong(selection)}</div>
-      {ecart === 0 && <div className="font-serif text-[20px] text-ink mt-1">{libelleLong(selection)}</div>}
+      {ecart === 0 && <div className="t-titre-section text-ink mt-1">{libelleLong(selection)}</div>}
       {tenueSel ? (
         <>
-          <div className="font-serif text-[20px] text-ink mt-1">{NOM_STATUT[tenueSel.statut]}</div>
+          <div className="t-titre-section text-ink mt-1">{NOM_STATUT[tenueSel.statut]}</div>
           <div className="flex flex-wrap gap-2 mt-3">
-            <span className="text-[12px] text-ink border border-divider rounded-full px-3 py-[4px]">{occasionShortLabel(tenueSel.occasion)}</span>
+            <span className="text-[12px] text-ink border border-border rounded-full px-3 py-[4px]">{occasionShortLabel(tenueSel.occasion)}</span>
             {tenueSel.temp != null && (
-              <span className="text-[12px] text-ink border border-divider rounded-full px-3 py-[4px]">
+              <span className="text-[12px] text-ink border border-border rounded-full px-3 py-[4px]">
                 {Math.round(tenueSel.temp)}°{tenueSel.weatherLabel ? ` · ${tenueSel.weatherLabel}` : ""}
               </span>
             )}
@@ -219,18 +219,18 @@ export default function CalendrierScreen() {
         </>
       ) : ecart >= 1 ? (
         <>
-          <div className="font-serif text-[20px] text-ink mt-1">Rien de prévu</div>
-          <p className="text-[14px] text-muted mt-2 leading-[1.5]">Tu n’as pas encore prévu de tenue pour cette journée.</p>
+          <div className="t-titre-section text-ink mt-1">Rien de prévu</div>
+          <p className="t-chapeau text-muted mt-2">Tu n’as pas encore prévu de tenue pour cette journée.</p>
           <div className="mt-4"><Button variante="sombre" onClick={planifierSel}>Planifier une tenue →</Button></div>
         </>
       ) : ecart === 0 ? (
         <>
-          <div className="font-serif text-[20px] text-ink mt-1">Ta tenue du jour</div>
-          <p className="text-[14px] text-muted mt-2 leading-[1.5]">Capsela te la propose dans l’onglet Aujourd’hui.</p>
+          <div className="t-titre-section text-ink mt-1">Ta tenue du jour</div>
+          <p className="t-chapeau text-muted mt-2">Capsela te la propose dans l’onglet Aujourd’hui.</p>
           <div className="mt-4"><Button variante="sombre" onClick={actions.goHome}>Voir ma tenue →</Button></div>
         </>
       ) : (
-        <p className="text-[14px] text-muted mt-2 leading-[1.5]">Aucune tenue enregistrée pour cette journée.</p>
+        <p className="t-chapeau text-muted mt-2">Aucune tenue enregistrée pour cette journée.</p>
       )}
     </section>
   );
@@ -242,7 +242,7 @@ export default function CalendrierScreen() {
       <div className="scrollarea flex-1 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
         <div className="flex items-center justify-between mb-3">
           <BoutonRetour onClick={actions.goHome} label="Revenir à l'accueil" taille={34} />
-          <h1 className="font-serif text-[20px] text-ink">Mon calendrier</h1>
+          <h1 className="t-titre-carte text-ink">Mon calendrier</h1>
           <button
             onClick={planifierSel}
             aria-label="Planifier une tenue"
@@ -318,8 +318,8 @@ export default function CalendrierScreen() {
 
         {calendrierVide && (
           <div className="mt-6 text-center">
-            <div className="font-serif text-[20px] text-ink">Ton calendrier est encore libre.</div>
-            <p className="text-[14px] text-muted mt-2 leading-[1.5]">
+            <div className="t-titre-section text-ink">Ton calendrier est encore libre.</div>
+            <p className="t-chapeau text-muted mt-2">
               Les tenues que tu portes et celles que tu planifies s’afficheront ici.
             </p>
             <div className="mt-4"><Button variante="sombre" onClick={actions.goPlanifier}>Planifier une tenue</Button></div>
