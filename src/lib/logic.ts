@@ -513,6 +513,19 @@ export function qualificatifLook(temp: number | null | undefined, pieces: Pick<I
   return q.charAt(0).toUpperCase() + q.slice(1) + ".";
 }
 
+/**
+ * Le TITRE du hero de l'accueil, tiré du qualificatif (08/10/2026, signalé en capture : « Confortable · Prévois une couche
+ * légère » occupait cinq lignes). Le qualificatif de 12° à 19° porte un conseil après « · » ; le titre n'est que le premier
+ * temps — « Confortable » — et se coupe en deux au « et » (« Légère / et confortable »). Le conseil n'est pas un titre : il
+ * reste sur l'écran Tenue.
+ */
+export function titreDuQualificatif(qualificatif: string): { a: string; b: string } {
+  const premier = qualificatif.replace(/\.$/, "").split(" · ")[0].trim();
+  const mots = premier.split(" et ");
+  const a = mots[0].charAt(0).toUpperCase() + mots[0].slice(1);
+  return { a, b: mots.length > 1 ? `et ${mots.slice(1).join(" et ")}` : "" };
+}
+
 export function explainRecommendation(
   occasion: OccasionKey,
   workMode: WorkMode,

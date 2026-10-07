@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { qualificatifLook, sousTitreLookDuJour, titreLookDuJour } from "../logic";
+import { qualificatifLook, sousTitreLookDuJour, titreDuQualificatif, titreLookDuJour } from "../logic";
 
 // Card « Look du jour » de l'accueil (28/09/2026) : ses deux lignes de texte.
 
@@ -37,5 +37,14 @@ describe("sousTitreLookDuJour — la version courte du hero de l'accueil", () =>
   it("dit « Pensée pour … » avec le même contexte réel", () => {
     expect(sousTitreLookDuJour("travail_formel", "Présentiel", "Verre")).toBe("Pensée pour ta journée au bureau.");
     expect(sousTitreLookDuJour("date", "Présentiel", "Restaurant / date romantique")).toBe("Pensée pour ton dîner.");
+  });
+});
+
+describe("titreDuQualificatif — un titre court, jamais le conseil", () => {
+  it("coupe au « et » et garde la majuscule", () => {
+    expect(titreDuQualificatif("Légère et confortable.")).toEqual({ a: "Légère", b: "et confortable" });
+  });
+  it("le conseil après « · » n'entre pas dans le titre (signalé : cinq lignes)", () => {
+    expect(titreDuQualificatif("Confortable · Prévois une couche légère.")).toEqual({ a: "Confortable", b: "" });
   });
 });
