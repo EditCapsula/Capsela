@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { emptyStateCopy } from "../emptyStateCopy";
+import { emptyStateCopy, sansTenueCopy } from "../emptyStateCopy";
 import type { OutfitFailureReason } from "../types";
 
 /**
@@ -117,5 +117,37 @@ describe("états vides — l'écran consomme le wording partagé sans le contour
 
   it("aucun libellé de badge concurrent n'est réintroduit", () => {
     expect(rendu()).not.toMatch(/>\s*Alternative\s*</);
+  });
+});
+
+describe("sansTenueCopy — trois états distincts de Planifier", () => {
+  it("dressing vide + « uniquement mon dressing » : l'état vide, avec l'appel à ajouter", () => {
+    const c = sansTenueCopy(0, true, "missing_required_category", "ton dressing");
+    expect(c.etat).toBe("vide");
+    expect(c.titreA + " " + c.titreB).toBe("Ton dressing est encore vide");
+    expect(c.titre).toBe("Commençons par ton dressing");
+    expect(c.suite).not.toBeNull();
+    expect(c.peutAjouter).toBe(true);
+  });
+
+  it("dressing vide mais capsule autorisée : on retombe sur la raison du moteur, pas sur « vide »", () => {
+    expect(sansTenueCopy(0, false, "missing_required_category", "ton dressing et ta capsule").etat).toBe("manque");
+    expect(sansTenueCopy(0, false, "no_match", "ton dressing et ta capsule").etat).toBe("occasion");
+  });
+
+  it("des pièces mais une pièce nécessaire ou un niveau d'habillé manquant : « Il manque quelques pièces »", () => {
+    for (const r of ["missing_required_category", "formality_gap"] as const) {
+      const c = sansTenueCopy(3, true, r, "ton dressing");
+      expect(c.etat).toBe("manque");
+      expect(c.titre).toBe("Il manque quelques pièces");
+      expect(c.body).toBe("Capsela n’a pas trouvé dans ton dressing tout ce qu’il faut pour composer cette tenue.");
+      expect(c.peutAjouter).toBe(true);
+    }
+  });
+
+  it("no_match : le texte du moteur, sans action d'ajout", () => {
+    const c = sansTenueCopy(5, true, "no_match", "ton dressing");
+    expect(c.etat).toBe("occasion");
+    expect(c.peutAjouter).toBe(false);
   });
 });
