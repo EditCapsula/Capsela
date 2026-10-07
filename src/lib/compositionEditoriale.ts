@@ -345,6 +345,28 @@ export const GABARITS_PLANCHE: Record<"haut" | "hautDessus" | "hautManteau" | "r
   },
 };
 
+/**
+ * LE HÉRO ACCENTUÉ (accueil, polish du 07/10/2026 : « la pièce principale doit être l'élément mode du hero ») : la
+ * hiérarchie pièce principale > sac et chaussures > petits accessoires, obtenue sans toucher aux gabarits partagés
+ * (Tenue, Planifier) — le héro grandit de 14 % depuis son coin (le bas, posé devant, le recouvre un peu plus : la
+ * composition reste une superposition, pas une grille), les petits accessoires rétrécissent de 20 % autour de leur
+ * centre. Chaussures et sac gardent leur taille. Les annotations ne sont pas utilisées avec cette option.
+ */
+const ACCENT_HERO = 1.14;
+const REDUCTION_PETITS = 0.8;
+function accentuerHero(g: GabaritPlanche): GabaritPlanche {
+  return {
+    ...g,
+    hero: { ...g.hero, l: g.hero.l * ACCENT_HERO, h: g.hero.h * ACCENT_HERO },
+    petits: g.petits.map((c) => ({
+      x: c.x + (c.l * (1 - REDUCTION_PETITS)) / 2,
+      y: c.y + (c.h * (1 - REDUCTION_PETITS)) / 2,
+      l: c.l * REDUCTION_PETITS,
+      h: c.h * REDUCTION_PETITS,
+    })),
+  };
+}
+
 /** Profondeur : ce qui est derrière d'abord. */
 export const PROFONDEUR_PLANCHE: Record<RolePlanche, number> = { dessus: 1, hero: 2, bas: 3, petit: 4, chaussures: 5, sac: 5 };
 
@@ -394,7 +416,7 @@ export interface NotePlanche<T> {
 
 export function composerPlanche<T extends Pick<Item, "id" | "cat"> & { photoUrl?: string | null }>(
   items: T[],
-  options: { annotations?: boolean } = {}
+  options: { annotations?: boolean; accentHero?: boolean } = {}
 ): {
   pieces: { item: T; role: RolePlanche; case: EmplacementPlanche; aligne: { x: Calage; y: Calage } }[];
   notes: NotePlanche<T>[];
@@ -419,13 +441,14 @@ export function composerPlanche<T extends Pick<Item, "id" | "cat"> & { photoUrl?
   const basFinal = heroFinal === bas ? undefined : bas;
   const dessusFinal = heroFinal === dessus ? undefined : dessus;
 
-  const gabarit =
+  const gabaritBrut =
     robe || !basFinal
       ? GABARITS_PLANCHE[dessusFinal ? "robeDessus" : "robe"]
       : dessusFinal
         ? GABARITS_PLANCHE[dessusFinal.cat === "manteau" ? "hautManteau" : "hautDessus"]
         : GABARITS_PLANCHE.haut;
 
+  const gabarit = options.accentHero ? accentuerHero(gabaritBrut) : gabaritBrut;
   const libres = [...gabarit.petits];
   const poses: { item: T; role: RolePlanche; case: EmplacementPlanche }[] = [];
   const poser = (item: T | undefined, role: RolePlanche, c: EmplacementPlanche | undefined) => {

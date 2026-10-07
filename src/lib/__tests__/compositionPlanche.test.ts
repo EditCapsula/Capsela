@@ -196,3 +196,24 @@ describe("formesSilhouette — le chargement du Look du jour annonce la planche 
     expect(pieces.map((x) => x.role).sort()).toEqual(["bas", "chaussures", "hero", "sac"]);
   });
 });
+
+describe("composerPlanche — accentHero", () => {
+  const pieces = [
+    { id: 1, cat: "haut" as const },
+    { id: 2, cat: "pantalon" as const },
+    { id: 3, cat: "chaussures" as const },
+    { id: 4, cat: "sac" as const },
+    { id: 5, cat: "bijou" as const },
+  ];
+  it("agrandit le héro et rétrécit les petits accessoires, sans toucher au sac ni aux chaussures (en proportion de la planche)", () => {
+    const a = composerPlanche(pieces);
+    const b = composerPlanche(pieces, { accentHero: true });
+    const surface = (r: { case: { l: number; h: number } }, h: number) => (r.case.l * r.case.h) / (100 * h);
+    const part = (res: typeof a, role: string) => {
+      const p = res.pieces.find((x) => x.role === role)!;
+      return surface(p, res.hauteur);
+    };
+    expect(part(b, "hero")).toBeGreaterThan(part(a, "hero"));
+    expect(part(b, "petit")).toBeLessThan(part(a, "petit"));
+  });
+});

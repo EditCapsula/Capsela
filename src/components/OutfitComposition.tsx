@@ -209,6 +209,7 @@ export function OutfitComposition({
   annotations,
   attendreCadrage,
   onCadree,
+  accentHero,
 }: {
   items: Item[];
   variant?: CompositionVariant;
@@ -240,10 +241,12 @@ export function OutfitComposition({
   attendreCadrage?: boolean;
   /** "planche" seulement : appelée quand le cadrage est mesuré, la planche prête à être montrée. */
   onCadree?: () => void;
+  /** "planche" seulement : la pièce principale plus grande, les petits accessoires plus petits (hero de l'accueil). */
+  accentHero?: boolean;
 }) {
   if (variant === "editoriale") return <CompositionEditoriale items={items} label={label} />;
   if (variant === "planche")
-    return <CompositionPlanche items={items} label={label} annotations={annotations} attendreCadrage={attendreCadrage} onCadree={onCadree} />;
+    return <CompositionPlanche items={items} label={label} annotations={annotations} attendreCadrage={attendreCadrage} onCadree={onCadree} accentHero={accentHero} />;
   const cfg = VARIANT_CONFIG[variant];
   // "hero" repose sur le terracotta de la card Tenue, pas sur le fond de
   // page : aucune tuile sous les pièces (cf. en-tête).
@@ -513,14 +516,16 @@ function CompositionPlanche({
   annotations,
   attendreCadrage = false,
   onCadree,
+  accentHero = false,
 }: {
   items: Item[];
   label?: string;
   annotations?: Record<number, string>;
   attendreCadrage?: boolean;
   onCadree?: () => void;
+  accentHero?: boolean;
 }) {
-  const { pieces, notes: toutesNotes, hauteur } = composerPlanche(items, { annotations: Boolean(annotations) });
+  const { pieces, notes: toutesNotes, hauteur } = composerPlanche(items, { annotations: Boolean(annotations), accentHero });
   const notes = annotations ? toutesNotes.filter((n) => annotations[n.item.id]) : [];
   const zoneRef = useRef<HTMLDivElement | null>(null);
   const planRef = useRef<HTMLDivElement | null>(null);
@@ -753,8 +758,8 @@ const CADRE_PHOTO = "M14 0H66A14 14 0 0 1 80 14V86A14 14 0 0 1 66 100H14A14 14 0
 const POSITION = { debut: "0%", centre: "50%", fin: "100%" } as const;
 const ALIGNE_SVG = { debut: "Min", centre: "Mid", fin: "Max" } as const;
 
-export function SilhouettePlanche({ formes }: { formes: { cat: CategoryKey; photoUrl?: string | null }[] }) {
-  const { pieces, hauteur } = composerPlanche(formesSilhouette(formes));
+export function SilhouettePlanche({ formes, accentHero = false }: { formes: { cat: CategoryKey; photoUrl?: string | null }[]; accentHero?: boolean }) {
+  const { pieces, hauteur } = composerPlanche(formesSilhouette(formes), { accentHero });
   if (!pieces.length) return null;
   return (
     <div aria-hidden="true" className="w-full h-full flex items-center justify-center" style={{ containerType: "size" }}>

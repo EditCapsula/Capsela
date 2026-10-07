@@ -487,6 +487,11 @@ export function titreLookDuJour(occasion: OccasionKey, workMode: WorkMode, dateC
   return `Une silhouette pensée pour ${occasionPhrase(occasion, workMode, dateContext)}.`;
 }
 
+/** Le sous-titre du hero de l'accueil (polish du 07/10/2026) : la phrase de titreLookDuJour, sans « Une silhouette » — « Pensée pour ta journée au bureau. » */
+export function sousTitreLookDuJour(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext): string {
+  return `Pensée pour ${occasionPhrase(occasion, workMode, dateContext)}.`;
+}
+
 /** Catégories qui font d'une pièce la couche de dessus d'une tenue. */
 const COUCHE_DE_DESSUS: CategoryKey[] = ["veste", "manteau"];
 
