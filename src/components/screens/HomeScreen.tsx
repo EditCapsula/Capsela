@@ -278,11 +278,11 @@ export default function HomeScreen() {
         />
       </div>
 
-      {/* Salutation — présence renforcée (30 → 34 px) sans gonfler la hauteur
+      {/* Salutation — 34 → 28 px le 07/10/2026 (demandé : « trop grand »). Avant : présence renforcée (30 → 34 px) sans gonfler la hauteur
           de l'en-tête : le gain vient de la taille du serif, pas d'un
           interlignage ou d'une marge supplémentaires. */}
       <div className="px-6 mt-[18px]">
-        <div className="t-display text-ink">
+        <div className="font-serif text-[28px] leading-[1.1] text-ink">
           Bonjour, <span className="italic text-terracotta">{firstNameOrYou}</span>
         </div>
         {/* La promesse du jour, avec la ville de la météo affichée juste dessous : jamais un lieu écrit en dur. */}
