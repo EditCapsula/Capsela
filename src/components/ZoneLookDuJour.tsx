@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { OutfitComposition, SilhouettePlanche } from "@/components/OutfitComposition";
+import { SilhouettePlanche } from "@/components/OutfitComposition";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import type { CategoryKey, Item } from "@/lib/types";
 
 /** Au-delà, la planche apparaît même si une image tarde : la silhouette ne doit pas masquer un look prêt. */
@@ -31,7 +32,7 @@ const ATTENTE_MAX_IMAGES = 2500;
  * chargement : une tenue qui en remplace une autre (« Pas pour moi », autre
  * jour) s'affiche comme avant, sans repasser par la silhouette.
  */
-export function ZoneLookDuJour({ pieces, categoriesAttendues, accentHero = false }: { pieces: Item[]; categoriesAttendues: CategoryKey[]; accentHero?: boolean }) {
+export function ZoneLookDuJour({ pieces, categoriesAttendues, graine }: { pieces: Item[]; categoriesAttendues: CategoryKey[]; graine: string }) {
   const [apparue, setApparue] = useState(false);
   const [effacee, setEffacee] = useState(false);
   // Retour au chargement : la prochaine tenue repassera par la silhouette.
@@ -57,11 +58,11 @@ export function ZoneLookDuJour({ pieces, categoriesAttendues, accentHero = false
             if (apparue && e.target === e.currentTarget) setEffacee(true);
           }}
         >
-          <SilhouettePlanche formes={formes} accentHero={accentHero} />
+          <SilhouettePlanche formes={formes} />
         </div>
       )}
       <div className="absolute inset-0">
-        <OutfitComposition items={pieces} variant="planche" attendreCadrage={!apparue} onCadree={reveler} accentHero={accentHero} />
+        {pieces.length > 0 && <FlatLayCapsela key={graine} pieces={pieces} graine={graine} attendre={!apparue} onPret={reveler} />}
       </div>
     </div>
   );

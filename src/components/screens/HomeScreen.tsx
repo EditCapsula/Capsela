@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
 import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
@@ -380,9 +380,9 @@ export default function HomeScreen() {
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
         <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 134", margin: "18px -8px -2px 0" }}>
           {passee ? (
-            <OutfitComposition items={piecesPassee} variant="planche" accentHero />
+            <FlatLayCapsela pieces={piecesPassee} graine={clePieces(piecesPassee.map((p) => p.id)).join(",")} />
           ) : aucuneTenuePossible ? null : (
-            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} accentHero />
+            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} />
           )}
         </div>
 
