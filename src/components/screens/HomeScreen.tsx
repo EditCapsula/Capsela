@@ -8,7 +8,7 @@ import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle } from "@/lib/logic";
+import { estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle, titreDuQualificatif } from "@/lib/logic";
 import { libelleStyles } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -251,10 +251,7 @@ export default function HomeScreen() {
   const stylesDits = libelleStyles(profile.styles, profile.gender);
   const titreHero = (() => {
     if (planHero) return { a: titreDuPlan(planHero), b: "" };
-    if (qualificatif) {
-      const mots = qualificatif.replace(/\.$/, "").split(" et ");
-      return { a: mots[0].charAt(0).toUpperCase() + mots[0].slice(1), b: mots.length > 1 ? `et ${mots.slice(1).join(" et ")}` : "" };
-    }
+    if (qualificatif) return titreDuQualificatif(qualificatif);
     return { a: "Ta tenue", b: "du jour" };
   })();
   const sousTitreHero = texteHero ? texteHero.sousTitre : sousTitreLookDuJour(occasionKey, state.workMode, state.dateContext);
