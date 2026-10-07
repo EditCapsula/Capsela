@@ -20,7 +20,6 @@ import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
 import Button from "@/components/Button";
-import { resolveItemImage } from "@/lib/catalogImages";
 
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
 const glypheUnivers = (d: string) => (
@@ -60,7 +59,7 @@ function ActionRonde({ icone, libelle, onClick, actif, disabled, label }: { icon
  * contient (« Mes pièces » / « Par Capsela »), pour que le dressing et la capsule ne se confondent pas.
  */
 function CarteUnivers({
-  onClick, glyphe, ligne1, ligne2, texte, accent, visuel, visuelNode, surtitre, label, busy, premium,
+  onClick, glyphe, ligne1, ligne2, texte, accent, visuel, surtitre, label, busy, premium,
 }: {
   onClick: () => void;
   glyphe: React.ReactNode;
@@ -70,8 +69,6 @@ function CarteUnivers({
   /** Les styles de la personne, en terracotta après la phrase (carte capsule). */
   accent?: string;
   visuel: string;
-  /** Remplace la photo par une composition (la capsule, faite de ses vraies pièces). */
-  visuelNode?: React.ReactNode;
   surtitre?: string;
   label: string;
   busy?: boolean;
@@ -87,10 +84,8 @@ function CarteUnivers({
       style={{ minHeight: 156 }}
     >
       <span className="absolute top-0 right-0 bottom-0 bg-cream" style={{ width: "clamp(56px, 38%, 92px)" }} aria-hidden="true">
-        {visuelNode ?? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={visuel} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover block opacity-90" />
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={visuel} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover block opacity-90" />
       </span>
       <span
         aria-hidden="true"
@@ -122,44 +117,8 @@ function CarteUnivers({
   );
 }
 
-/**
- * Le visuel de la carte capsule : QUATRE vraies pièces de la capsule de la personne (veste, bas, haut, sac), superposées en
- * désordre éditorial — « Capsela a choisi ces pièces pour moi ». Sans au moins deux pièces illustrées, la photo d'ambiance
- * reste (aucune pièce inventée).
- */
-const GROUPES_CAPSULE: CategoryKey[][] = [["veste", "manteau"], ["pantalon", "jean", "jupe"], ["pull", "haut"], ["sac", "chaussures"]];
-const PLACES_CAPSULE = [
-  { left: "-6%", top: "2%", width: "66%", height: "42%" },
-  { left: "30%", top: "30%", width: "72%", height: "34%" },
-  { left: "0%", top: "52%", width: "56%", height: "44%" },
-  { left: "52%", top: "68%", width: "44%", height: "28%" },
-];
-function piecesDeLaCapsule(capsule: Item[]): { item: Item; url: string }[] {
-  const out: { item: Item; url: string }[] = [];
-  for (const groupe of GROUPES_CAPSULE) {
-    for (const it of capsule) {
-      if (!groupe.includes(it.cat)) continue;
-      const img = resolveItemImage(it);
-      if (img.kind === "placeholder" || !img.url) continue;
-      out.push({ item: it, url: img.url });
-      break;
-    }
-  }
-  return out;
-}
-function VisuelCapsule({ pieces }: { pieces: { item: Item; url: string }[] }) {
-  return (
-    <span className="block relative w-full h-full" style={{ background: "var(--color-warm-bg)" }}>
-      {pieces.map((p, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={p.item.id} src={p.url} alt="" loading="lazy" decoding="async" className="absolute object-contain" style={{ ...PLACES_CAPSULE[i], zIndex: i === 1 ? 2 : 1 }} />
-      ))}
-    </span>
-  );
-}
-
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, defaultCapsule, meteoDuJour, jourConsulte, actions } = useCapsela();
+  const { state, geoLoading, vestiairePool, meteoDuJour, jourConsulte, actions } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -285,7 +244,6 @@ export default function HomeScreen() {
     ? ["haut", "pantalon", "chaussures"]
     : ["haut", "pantalon", "chaussures", "sac"];
 
-  const piecesCapsule = useMemo(() => piecesDeLaCapsule(defaultCapsule), [defaultCapsule]);
   const dressingCount = state.items.length;
   const dressingVide = dressingCount === 0;
 
@@ -500,7 +458,6 @@ export default function HomeScreen() {
             texte={profile.styles.length > 1 ? "Une sélection adaptée à tes styles" : "Une sélection adaptée à ton style"}
             accent={stylesDits || undefined}
             visuel="/editorial/capsela_capsule_banner.webp"
-            visuelNode={piecesCapsule.length >= 2 ? <VisuelCapsule pieces={piecesCapsule} /> : undefined}
             label="Ma capsule"
           />
           <CarteUnivers
