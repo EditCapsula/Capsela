@@ -4,10 +4,9 @@ import { villeDuLieu, type TenuePlanifiee } from "./planifier";
 
 /*
  * LES TEXTES DU HERO DE L'ACCUEIL QUAND UNE TENUE EST PLANIFIÉE (04/10/2026, « hero dynamique selon le statut d'un
- * look planifié »). Quatre états, dont trois portent un plan :
+ * look planifié »). Trois états :
  *   · à venir  — le jour consulté est un jour futur qui a un plan : « Look planifié », « prêt pour dimanche » ;
  *   · le jour J — « Ton look du jour », « Ta silhouette pour ce soir est prête » ;
- *   · passé    — hier : « Ton look d'hier », « Comment était ta tenue ? » ;
  *   · sans plan — le hero d'avant, inchangé.
  * Pur et testé : aucun texte ne dépend d'autre chose que du plan et de la date.
  */
@@ -71,20 +70,3 @@ export function texteHeroPlan(plan: Pick<TenuePlanifiee, "jour" | "moment">, auj
   const quand = plan.jour === demain ? "demain" : JOURS[dateDe(plan.jour).getDay()];
   return { surtitre: "Look planifié", sousTitre: `Ton look est prêt pour ${quand}.`, badge: `${jourCourtLong(plan.jour)} · ${plan.moment}` };
 }
-
-/** Le hero du lendemain : la question, puis un mot adapté au moment. */
-export function texteHeroHier(plan: Pick<TenuePlanifiee, "moment">): { surtitre: string; question: string; mot: string; badge: string } {
-  return {
-    surtitre: "Ton look d'hier",
-    question: "Comment était ta tenue ?",
-    mot: plan.moment === "Soirée" ? "On espère que tu as passé une belle soirée." : "On espère que tout s'est bien passé.",
-    badge: plan.moment, // « Hier » est déjà dans le surtitre : le badge ne dit que le moment
-  };
-}
-
-/** Le jour d'hier, en date locale. */
-export const jourDHier = (d: Date = new Date()): string => {
-  const h = new Date(d);
-  h.setDate(h.getDate() - 1);
-  return jourLocal(h);
-};

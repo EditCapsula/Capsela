@@ -8,8 +8,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
-import { jourDHier, texteHeroHier, texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
-import { plansDuJour } from "@/lib/planifier";
+import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
@@ -463,13 +462,10 @@ export default function HomeScreen() {
    *   · à venir / jour J : le plan du jour CONSULTÉ est la tenue affichée (planApplique, planDuJour.ts) ; le hero le dit
    *     — « Look planifié » ou « Look du jour » — avec l'occasion et le lieu du plan, plus la petite card de rappel
    *     qui répétait cette information (PlansDuJour ne montre plus que ce que le hero ne dit pas) ;
-   *   · le lendemain : un plan d'HIER que la personne n'a pas encore rangé dans « Mes looks » devient « Ton look d'hier »,
-   *     avec la question du retour. Seul le jour d'aujourd'hui y est sensible, jamais un jour consulté ;
    *   · sans plan : le hero d'avant.
-   * « J'ai adoré » réutilise l'écriture de « J'adore » (enregistrer dans Mes looks) ; « C'était bien » n'existe pas,
-   * le verdict d'un avis n'a que deux valeurs (outfit_feedback).
+   * À L'OUVERTURE, LE HERO MONTRE TOUJOURS LA TENUE D'AUJOURD'HUI, planifiée ou non (05/10/2026, signalé : « Ton look d'hier »
+   * s'affichait à la connexion). Le look d'hier n'a plus de hero propre : on le consulte avec la barre de date (retro, ci-dessous).
    */
-  const [hierAdore, setHierAdore] = useState<string | null>(null);
   /**
    * LE RETOUR AUX TENUES PASSÉES (04/10/2026, « conserver l'historique ») : local à l'Accueil, indépendant du jour consulté
    * du store (retro.ts). Le chevron gauche de la barre de date saute à la tenue passée précédente (déclarée portée, sinon
@@ -483,17 +479,6 @@ export default function HomeScreen() {
   const piecesPassee = passee ? passee.pieceIds.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => Boolean(i)) : [];
   const planHero = planApplique && hasOutfit ? planApplique.plan : null;
   const texteHero = planHero ? texteHeroPlan(planHero) : null;
-  const planHier =
-    !planApplique && jourConsulte.decalage === 0
-      ? (plansDuJour(state.tenuesPlanifiees, jourDHier()).find(
-          (t) =>
-            t.pieceIds.length > 0 &&
-            t.pieceIds.every((id) => resolvePool.some((i) => i.id === id)) &&
-            (hierAdore === t.id || !state.savedLooks.some((l) => memeTenue(l.pieceIds, t.pieceIds)))
-        ) ?? null)
-      : null;
-  const piecesHier = planHier ? planHier.pieceIds.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => Boolean(i)) : [];
-
   // Le qualificatif sous le titre (qualificatifLook) : celui de la météo, sans
   // jamais présenter comme une option une veste que la tenue contient. Aucune
   // température affichée : elle est sur la ligne jour + météo, juste au-dessus.
@@ -690,54 +675,6 @@ export default function HomeScreen() {
           <Button variante="claire" onClick={actions.goHistory} className="mt-[16px]">
             Voir dans mon journal <span aria-hidden="true">→</span>
           </Button>
-        </div>
-      ) : planHier ? (
-        <div className="mx-6 mt-6 bg-terracotta rounded-hero text-left" style={{ width: "calc(100% - 48px)", padding: "20px 18px 20px" }}>
-          <div className="flex items-center gap-[7px] t-label" style={{ color: "rgba(243,238,229,.86)" }}>
-            <span aria-hidden="true" className="font-serif italic text-[13px] leading-none">
-              ✦
-            </span>
-            {texteHeroHier(planHier).surtitre}
-          </div>
-          <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16] mt-[12px]">{titreDuPlan(planHier)}</div>
-          <div className="text-[13px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.84)" }}>
-            {texteHeroHier(planHier).question}
-          </div>
-          <div className="font-serif italic text-[13px] leading-[1.4] mt-[3px]" style={{ color: "var(--color-on-terracotta-soft)" }}>
-            {texteHeroHier(planHier).mot}
-          </div>
-          <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
-            <OutfitComposition items={piecesHier} variant="planche" />
-          </div>
-          <div className="pt-[16px]">
-            <span
-              className="inline-flex items-center gap-[6px] whitespace-nowrap"
-              style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
-            >
-              <span aria-hidden="true">☾</span>
-              {texteHeroHier(planHier).badge}
-            </span>
-          </div>
-          <Button variante="claire" onClick={() => actions.ouvrirPlan(planHier, "home")} className="mt-[12px]">
-            Revoir le look <span aria-hidden="true">→</span>
-          </Button>
-          <div className="mt-[12px]" aria-live="polite">
-            {hierAdore === planHier.id ? (
-              <div className="font-serif italic text-[13px]" style={{ color: "var(--color-on-terracotta-soft)", minHeight: 44, display: "flex", alignItems: "center" }}>
-                Ajoutée à tes looks — on garde cette direction.
-              </div>
-            ) : (
-              <BoutonDiscret
-                onClick={() => {
-                  setHierAdore(planHier.id);
-                  actions.enregistrerIdeeLook(planHier.pieceIds, planHier.occasion);
-                }}
-                className="whitespace-nowrap px-[6px]"
-              >
-                <span aria-hidden="true">♡</span> J&apos;ai adoré
-              </BoutonDiscret>
-            )}
-          </div>
         </div>
       ) : (
       <div
