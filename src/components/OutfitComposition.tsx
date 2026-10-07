@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { resolveItemImage } from "@/lib/catalogImages";
+import { resolveHeroImage, resolveItemImage } from "@/lib/catalogImages";
 import { margesDe, type Marges } from "@/lib/catalogMarges";
 import { composerPlanche, composerTenue, formesSilhouette } from "@/lib/compositionEditoriale";
 import type { CategoryKey, Item } from "@/lib/types";
@@ -613,7 +613,7 @@ function CompositionPlanche({
         }}
       >
         {pieces.map(({ item: it, case: c, aligne, angle }, i) => {
-          const img = resolveItemImage(it);
+          const img = resolveHeroImage(it);
           const photo = img.kind === "photo";
           return (
             <div
