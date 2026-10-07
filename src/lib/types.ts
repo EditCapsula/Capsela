@@ -374,7 +374,7 @@ export interface AppState {
   addPhotoUploading: boolean;
   /** true pendant l'analyse de la photo par l'IA (recette 22/08/2026, pré-remplissage catégorie/couleur/matière...) — jamais bloquant pour la sauvegarde, juste un indicateur. */
   addPhotoAnalyzing: boolean;
-  /** true quand l'analyse de la photo a réellement rendu un résultat (27/09/2026) — seule condition des mentions « L'édit Capsela a analysé ta pièce » et « détectées ». addPhotoAnalyzing redevient false aussi en mode démo (aucune analyse) et sur un échec. */
+  /** true quand l'analyse de la photo a réellement rendu un résultat (27/09/2026) — seule condition des mentions « Capsela a analysé ta pièce » et « détectées ». addPhotoAnalyzing redevient false aussi en mode démo (aucune analyse) et sur un échec. */
   addPhotoAnalysee: boolean;
   /** Ce que l'analyse a vu sur la photo (05/10/2026) : null tant qu'elle ne l'a pas dit, ou si elle n'est pas sûre. Sert seulement à avertir à l'ajout ; jamais stocké, aucune colonne. */
   addPhotoCadrage: CadragePhoto | null;
@@ -502,7 +502,7 @@ export interface AppState {
    * Tenue) : revenir de cette entrée y ramène au lieu du hub. Oublié dès que
    * le hub de Planifier s'affiche, ou à l'ouverture ordinaire de Planifier.
    */
-  planRetour: "home" | "tenues" | null;
+  planRetour: "home" | "tenues" | "calendrier" | null;
   /** Date préremplie (décalage en jours) par « Planifier une tenue pour … » de Tenue ; consommée à l'ouverture. */
   planJour: number | null;
   /**
@@ -541,6 +541,7 @@ export type Screen =
   | "add"
   | "capsule"
   | "tenues"
+  | "calendrier"
   | "history"
   | "neverworn"
   | "profileSetup"

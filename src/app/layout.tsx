@@ -29,7 +29,7 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "L'édit Capsela — ton styliste personnel, chaque matin",
+  title: "Capsela — ton styliste personnel, chaque matin",
   description:
     "Des tenues pensées pour ta silhouette, tes goûts, la météo et tes sorties — à partir de ton propre dressing.",
 };

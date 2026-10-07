@@ -23,7 +23,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const doc = DOCUMENTS_LEGAUX.find((d) => d.slug === slug);
-  return { title: doc ? `${doc.titre} — L'édit Capsela` : "L'édit Capsela" };
+  return { title: doc ? `${doc.titre} — Capsela` : "Capsela" };
 }
 
 export default async function PageLegale({ params }: { params: Promise<{ slug: string }> }) {

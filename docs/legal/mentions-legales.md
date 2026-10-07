@@ -4,7 +4,7 @@
 
 ## Éditeur
 
-L'application et le site L'édit Capsela sont édités par :
+L'application et le site Capsela sont édités par :
 
 - [À COMPLÉTER — nom et prénom, ou raison sociale]
 - [À COMPLÉTER — forme juridique (entreprise individuelle, SAS…) et capital social le cas échéant]
@@ -27,7 +27,7 @@ Données hébergées dans la région : [À COMPLÉTER — région Supabase du pr
 
 ## Propriété intellectuelle
 
-La marque L'édit Capsela, le logo, les textes, les illustrations, la charte
+La marque Capsela, le logo, les textes, les illustrations, la charte
 graphique et le code de l'application sont protégés par le droit de la
 propriété intellectuelle. Toute reproduction ou réutilisation sans
 autorisation écrite est interdite.

@@ -494,8 +494,8 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
     body: "Indique ta destination, tes dates et ton programme. Capsela sélectionne les pièces à emporter et compose tes tenues pour tout le séjour.",
   },
   {
-    kicker: "L’édit Capsela",
+    kicker: "Capsela",
     title: ["Ton dressing.", "Ton style.", "Ton quotidien."],
-    body: "Crée ton compte pour retrouver ton dressing, tes capsules, tes tenues et tes valises au même endroit, sur tous tes appareils.",
+    body: "Crée ton compte pour retrouver ton dressing, tes capsules, tes tenues et tes valises au même endroit.",
   },
 ];

@@ -17,14 +17,15 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { CATS, DATE_CONTEXTS, OCCASIONS, occasionShortLabel } from "@/lib/data";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
-import { generateOutfitWithFallback, titreLookDuJour } from "@/lib/logic";
+import { titreLookDuJour } from "@/lib/logic";
+import { HUMEURS, LIBELLE_HUMEUR, genererTenueHumeur, type Humeur } from "@/lib/humeur";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "@/lib/capsule";
 import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
-import { deleteTenuePlanifiee, fetchTenuesPlanifiees, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
+import { deleteTenuePlanifiee, fetchTenuesPlanifiees, enregistrerHumeurPlan, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { VISUEL_SEJOUR } from "@/lib/valise";
 import { paletteHexes } from "@/lib/profile";
@@ -611,6 +612,15 @@ export default function PlanifierScreen() {
   const [ville, setVille] = useState<VilleSuggeree | null>(null);
   const [suggestions, setSuggestions] = useState<VilleSuggeree[] | null>(null);
   const [typeLieu, setTypeLieu] = useState<string | null>(null);
+  /**
+   * « Une dernière préférence ? » (07/10/2026) : facultative, jamais mémorisée dans le profil. Elle ne fait que départager
+   * des tenues déjà compatibles (humeur.ts). Une composition imposée (photo d'un avis) n'a pas cette étape : sa tenue est faite.
+   */
+  const [humeur, setHumeur] = useState<Humeur | null>(null);
+  /** L'écran « Capsela compose ta tenue… » : affiché entre la dernière question et le résultat, le temps de la prévision. */
+  const [compose, setCompose] = useState(false);
+  const [composeDelaiOk, setComposeDelaiOk] = useState(false);
+  const [coche, setCoche] = useState(0);
   const [dressingSeul, setDressingSeul] = useState(false);
   // Incrémenté par « Autre proposition » — seule entrée du useMemo qui change
   // alors, donc seul moyen de redemander un tirage sans toucher aux réponses.
@@ -754,22 +764,22 @@ export default function PlanifierScreen() {
           saison: meteoUtilisee,
           exclureHorsOccasion: true,
         });
-    return generateOutfitWithFallback(
+    return genererTenueHumeur({
       pool,
-      meteoUtilisee,
-      occ,
+      weather: meteoUtilisee,
+      occasion: occ,
       workMode,
       dateContext,
-      paletteHexes(profile),
-      profile.gender,
-      undefined,
-      undefined,
-      colorimetrieMoteur(profile.colorimetrie)
-    );
+      preferredHexes: paletteHexes(profile),
+      gender: profile.gender,
+      morphology: profile.morphology,
+      colorimetrie: colorimetrieMoteur(profile.colorimetrie),
+      humeur,
+    });
     // `tirage` est une dépendance délibérée : c'est le bouton « Autre
     // proposition ». Sans elle, redemander une tenue rendrait la même.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [occ, dressingSeul, state.items, defaultCapsule, meteoUtilisee, workMode, dateContext, profile, tirage]);
+  }, [occ, dressingSeul, state.items, defaultCapsule, meteoUtilisee, workMode, dateContext, profile, tirage, humeur]);
 
   const pieces: Item[] = useMemo(() => {
     // Pool stable et non le seul dressing : une tenue planifiée reprise telle
@@ -1019,7 +1029,10 @@ export default function PlanifierScreen() {
         temp: meteoMoment ? meteoMoment.temp : null,
         weatherLabel: meteoMoment ? meteoMoment.label : null,
       });
-      setPlans((l) => [...l.filter((x) => x.id !== ligne.id), ligne]);
+      // La préférence s'écrit à part (colonne mood_style, migration 0048) : tant que la migration n'est pas passée,
+      // la tenue est gardée sans elle et l'échec est dit, jamais tu.
+      const humeurGardee = humeur && !composition ? await enregistrerHumeurPlan(ligne.id, humeur) : true;
+      setPlans((l) => [...l.filter((x) => x.id !== ligne.id), humeur && !composition && humeurGardee ? { ...ligne, humeur } : ligne]);
       // Remplacement : l'ancienne ligne n'est retirée qu'une fois la nouvelle
       // confirmée par la base. Même créneau : l'upsert l'a déjà écrasée.
       const ancien = depuisPlan?.remplacer && depuisPlan.plan.id !== ligne.id ? depuisPlan.plan : null;
@@ -1038,7 +1051,9 @@ export default function PlanifierScreen() {
       flash(
         !ancienRetire
           ? "La nouvelle date est gardée. L'ancienne n'a pas pu être retirée : supprime-la depuis ta liste."
-          : "C'est noté. Ton look t'attendra jusqu'au jour J."
+          : !humeurGardee
+            ? "Tenue enregistrée. Ta préférence n'a pas pu l'être : elle ne sera pas rappelée à l'ouverture."
+            : "Tenue enregistrée. Tu la retrouveras dans ton planning le jour venu."
       );
     } catch {
       flash("L'enregistrement a échoué. Réessaie.");
@@ -1072,6 +1087,7 @@ export default function PlanifierScreen() {
     setVille(null);
     setSuggestions(null);
     setTypeLieu(null);
+    setHumeur(null);
     setDressingSeul(false);
     setPrevision(null);
     setPrevisionEtat("vide");
@@ -1102,6 +1118,7 @@ export default function PlanifierScreen() {
     setVille(null);
     setSuggestions(null);
     setTypeLieu(t.typeLieu);
+    setHumeur(t.humeur ?? null);
     setDressingSeul(t.dressingSeul);
     setPrevision(null);
     setPrevisionEtat("vide");
@@ -1113,7 +1130,29 @@ export default function PlanifierScreen() {
   };
 
   const attend = previsionEtat === "encours";
-  const etapeValide = etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : !!lieu.trim();
+  /** Quatre questions, trois pour une tenue imposée (sa composition est faite, la préférence n'aurait rien à départager). */
+  const derniere = composition ? 3 : 4;
+  const etapeValide = etape === 1 ? !!occ : etape === 2 ? jour != null && !!moment : etape === 3 ? !!lieu.trim() : true;
+
+  // Écran de composition : la prévision doit être revenue ET un temps minimal écoulé, pour que la transition se lise.
+  useEffect(() => {
+    if (!compose) return;
+    const tDelai = setTimeout(() => setComposeDelaiOk(true), 2000);
+    const tCoche = setInterval(() => setCoche((c) => c + 1), 450);
+    return () => {
+      clearTimeout(tDelai);
+      clearInterval(tCoche);
+    };
+  }, [compose]);
+  useEffect(() => {
+    if (!compose || !composeDelaiOk || previsionEtat === "encours") return;
+    // En rappel (et non en direct) : la fin de la composition est une conséquence du temps écoulé et de la prévision.
+    const t = setTimeout(() => {
+      setCompose(false);
+      setVue("resultat");
+    }, 0);
+    return () => clearTimeout(t);
+  }, [compose, composeDelaiOk, previsionEtat]);
 
   /**
    * REMONTER EN HAUT À CHAQUE CHANGEMENT D'ÉTAPE (recette 24/09/2026).
@@ -1152,6 +1191,7 @@ export default function PlanifierScreen() {
     ((vue === "detail" && retourDetail === "intro") || vue === "liste" || (vue === "etape" && etape === 1));
 
   const revenir = () => {
+    if (compose) return;
     if (retourExterne) {
       actions.quitterPlanifier();
       return;
@@ -1196,18 +1236,20 @@ export default function PlanifierScreen() {
    * étaient devenues fausses, ce qui est pire qu'inutile.
    */
   const ETAPES: Record<number, [string, string, string, string]> = {
-    1: ["Étape 1 sur 3", "Quelle est", "l'occasion ?", "Choisis ce qui est prévu ce jour-là."],
-    2: ["Étape 2 sur 3", "Pour", "quand ?", "La date fixe la saison de la tenue."],
+    1: [`Étape 1 sur ${derniere}`, "Quelle est", "l'occasion ?", "Choisis ce qui est prévu ce jour-là."],
+    2: [`Étape 2 sur ${derniere}`, "Pour", "quand ?", "La date fixe la saison de la tenue."],
     // Le type de lieu n'entre PAS dans le moteur (cf. TYPES_LIEU_PAR_OCCASION) :
     // écrire « le lieu affine la tenue » serait faux. Il précise l'occasion.
     3: [
-      "Étape 3 sur 3",
+      `Étape 3 sur ${derniere}`,
       "Où",
       "seras-tu ?",
       typesLieuProposes.length > 0
         ? "La ville nous aide pour la météo. Le type de lieu précise ton occasion."
         : "La ville nous aide pour la météo.",
     ],
+    // Une préférence, pas un style : elle ne départage que des tenues déjà compatibles (humeur.ts).
+    4: [`Étape 4 sur ${derniere}`, "Une dernière", "préférence ?", "Facultatif. Elle ne change pas ce qui convient à ta météo ni à ton occasion."],
   };
 
   return (
@@ -1238,7 +1280,7 @@ export default function PlanifierScreen() {
           écran centre déjà le logo juste au-dessus. */}
       {vue === "etape" && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
-          <FilEtapes total={3} courante={etape - 1} />
+          <FilEtapes total={derniere} courante={etape - 1} />
         </div>
       )}
 
@@ -1434,7 +1476,29 @@ export default function PlanifierScreen() {
           </>
         )}
 
-        {vue === "etape" && (
+        {vue === "etape" && compose && (
+          <div className="flex flex-col items-center text-center pt-10" role="status" aria-live="polite">
+            <LoadingSpinner size={56} />
+            <TitreEtape a="Capsela compose" b="ta tenue…" />
+            <div className="t-chapeau text-muted mt-[6px]">Quelques instants, le temps de choisir les bonnes pièces.</div>
+            <ul className="mt-8 flex flex-col gap-3 text-left">
+              {[
+                occ ? `Ton occasion : ${occLabel}` : null,
+                ville || villeAffichee ? "La météo de ton lieu" : null,
+                humeur ? `Ta préférence : ${LIBELLE_HUMEUR[humeur]}` : null,
+                "Ton dressing et ta capsule",
+              ]
+                .filter((x): x is string => !!x)
+                .map((x, i) => (
+                  <li key={x} className="flex items-center gap-[10px] text-[13px]" style={{ color: coche > i ? "var(--color-ink)" : "var(--color-placeholder)" }}>
+                    <span aria-hidden="true" className="w-[18px] text-terracotta-deep">{coche > i ? "✓" : "·"}</span>
+                    {x}
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
+        {vue === "etape" && !compose && (
           <>
             <Surtitre>{ETAPES[etape][0]}</Surtitre>
             <TitreEtape a={ETAPES[etape][1]} b={ETAPES[etape][2]} />
@@ -1746,6 +1810,15 @@ export default function PlanifierScreen() {
               </>
             )}
 
+            {etape === 4 && (
+              <div className="flex flex-col gap-[7px] mt-4" role="radiogroup" aria-label="Préférence pour cet événement">
+                {HUMEURS.map((h) => (
+                  <LigneChoix key={h.key} actif={humeur === h.key} titre={h.label} onClick={() => setHumeur(humeur === h.key ? null : h.key)} />
+                ))}
+                <LigneChoix actif={humeur === null} titre="Aucune préférence" onClick={() => setHumeur(null)} />
+              </div>
+            )}
+
             {/* L'encart météo commun aux trois étapes est retiré (recette du
                 26/09/2026) : il affichait « Indique la ville… » dès l'étape
                 Occasion et redoublait la légende des dates et le sous-titre du
@@ -1760,15 +1833,23 @@ export default function PlanifierScreen() {
             {/* 9,5 px / .1em : la forme des deux autres pastilles terracotta de
                 l'app (accueil, Valise). Le 10 px d'ici était un troisième
                 réglage pour le même objet. */}
+            <Surtitre>Ta tenue est prête</Surtitre>
+            <div className="mt-2">
             <Badge>
               {occLong}
             </Badge>
+            </div>
             <TitreEtape a={occLabel} b={villeAffichee ? `· ${villeAffichee}` : ""} />
             <div className="text-[12px] text-muted mt-[6px]">
               {dateLongue.charAt(0).toUpperCase() + dateLongue.slice(1)}
               {moment ? ` · ${moment}` : ""}
               {typeLieu ? ` · ${typeLieu}` : ""}
             </div>
+            {villeAffichee && meteoMoment && (
+              <div className="text-[12px] text-muted mt-[2px]">
+                {villeAffichee} · {meteoMoment.temp}°
+              </div>
+            )}
 
             {sansTenue ? (
               <EmptyState
@@ -1802,6 +1883,7 @@ export default function PlanifierScreen() {
                       `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`,
                       phraseMeteo,
                       provenance,
+                      ...(humeur && !composition ? [`Ta préférence « ${LIBELLE_HUMEUR[humeur]} » a départagé des tenues proches.`] : []),
                     ].map((r) => (
                       <div key={r} className="flex gap-[9px] items-start">
                         <span className="flex-shrink-0 text-terracotta-deep mt-[1px]">
@@ -2129,7 +2211,7 @@ export default function PlanifierScreen() {
             {toast}
           </div>
         )}
-        {vue === "etape" && (
+        {vue === "etape" && !compose && (
           <Button
             onClick={() => {
               if (!etapeValide || attend) return;
@@ -2137,29 +2219,31 @@ export default function PlanifierScreen() {
                 setEtape(etape + 1);
                 return;
               }
-              /* DERNIÈRE ÉTAPE. Le lieu est arrêté : c'est ici qu'on demande
-                 la prévision, et pas à chaque frappe dans le champ — un clic,
-                 une requête. L'étape 4 servait jusqu'ici de salle d'attente
-                 pendant l'appel ; sans elle, c'est le bouton qui attend, et
-                 il le dit (« Un instant… »). La tenue n'est affichée qu'une
-                 fois la réponse revenue, jamais composée sur la météo du jour
-                 puis changée sous les yeux.
-
-                 Les deux branches mènent au résultat : une prévision
-                 indisponible est une réponse, pas un échec — l'écran compose
-                 alors sur la météo actuelle et l'annonce. */
-              setPrevisionEtat("encours");
-              fetchPrevisionByCity(ville ? ville.name : lieu.trim(), ville)
-                .then((p) => setPrevision(p))
-                .catch(() => setPrevision(null))
-                .finally(() => {
-                  setPrevisionEtat("faite");
-                  setVue("resultat");
-                });
+              /* LE LIEU EST ARRÊTÉ : c'est ici qu'on demande la prévision, et
+                 pas à chaque frappe dans le champ — un clic, une requête. Avec
+                 l'étape « préférence » (07/10/2026), la réponse revient pendant
+                 qu'on la remplit ; l'écran de composition attend le reste. La
+                 tenue n'est affichée qu'une fois la réponse revenue, jamais
+                 composée sur la météo du jour puis changée sous les yeux. Une
+                 prévision indisponible est une réponse, pas un échec : l'écran
+                 compose alors sur la météo actuelle et l'annonce. */
+              if (etape === 3) {
+                setPrevisionEtat("encours");
+                fetchPrevisionByCity(ville ? ville.name : lieu.trim(), ville)
+                  .then((p) => setPrevision(p))
+                  .catch(() => setPrevision(null))
+                  .finally(() => setPrevisionEtat("faite"));
+              }
+              if (etape < derniere) setEtape(etape + 1);
+              else {
+                setComposeDelaiOk(false);
+                setCoche(0);
+                setCompose(true);
+              }
             }}
             disabled={!etapeValide || attend}
           >
-            {attend ? "Un instant…" : etape === 3 ? "Voir ma tenue" : "Suivant"}
+            {attend ? "Un instant…" : etape === derniere ? "Voir ma tenue" : "Suivant"}
           </Button>
         )}
         {/* « + PLANIFIER UN LOOK » (30/09/2026) : la barre d'action pleine

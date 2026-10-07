@@ -32,7 +32,7 @@ export default function LegalScreen() {
         ))}
       </Card>
 
-      <div className="text-[11px] text-muted mt-[14px] leading-[1.5]">L&apos;édit Capsela · version {APP_VERSION}</div>
+      <div className="text-[11px] text-muted mt-[14px] leading-[1.5]">Capsela · version {APP_VERSION}</div>
     </div>
   );
 }

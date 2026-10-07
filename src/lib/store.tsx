@@ -498,7 +498,11 @@ export interface Actions {
   /** Remplace la liste des tenues planifiées (Planifier : chargement, ajout, retrait). */
   setTenuesPlanifiees: (maj: (l: TenuePlanifiee[]) => TenuePlanifiee[]) => void;
   /** Ouvre le détail d'une tenue planifiée depuis l'Accueil ou Tenue ; le retour y ramène. */
-  ouvrirPlan: (t: TenuePlanifiee, depuis: "home" | "tenues") => void;
+  ouvrirPlan: (t: TenuePlanifiee, depuis: "home" | "tenues" | "calendrier") => void;
+  /** Ouvre le calendrier des tenues (icône du bandeau d'accueil). */
+  goCalendrier: () => void;
+  /** Ouvre Planifier depuis le calendrier avec la date choisie (décalage ≥ 1 : on ne planifie pas aujourd'hui). */
+  planifierPour: (decalage: number) => void;
   /** Quitte la tenue planifiée du jour pour la proposition de Capsela (le plan est écarté ce jour-là). */
   voirAutreProposition: () => void;
   /** Ouvre Planifier depuis Tenue avec la date du jour consulté déjà choisie. */
@@ -1471,6 +1475,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       );
     },
     goHistory: () => go("history"),
+    goCalendrier: () => go("calendrier"),
+    planifierPour: (decalage) =>
+      setState((s) => ({ ...s, planJour: Math.max(1, decalage), planRetour: "calendrier", planComposition: null, screen: "planifier" })),
     // Ouverture ordinaire (barre du bas, cartes) : aucun retour particulier.
     goPlanifier: () => setState((s) => ({ ...s, planRetour: null, planJour: null, screen: "planifier" })),
     goNeverWorn: () => go("neverworn"),

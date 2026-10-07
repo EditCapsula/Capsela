@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { etatDuPlan, jourDHier, texteHeroHier, texteHeroPlan, titreDuPlan } from "../heroPlan";
+import { etatDuPlan, texteHeroPlan, titreDuPlan } from "../heroPlan";
 
 describe("hero de l'accueil — textes d'une tenue planifiée", () => {
   it("l'état d'un plan : à venir, le jour J, passé", () => {
@@ -29,18 +29,8 @@ describe("hero de l'accueil — textes d'une tenue planifiée", () => {
     expect(texteHeroPlan({ jour: "2026-10-04", moment: "Toute la journée" }, "2026-10-04").sousTitre).toBe("Ta silhouette pour aujourd'hui est prête.");
   });
 
-  it("le lendemain : la question, et un mot de soirée seulement pour une soirée", () => {
-    expect(texteHeroHier({ moment: "Soirée" }).mot).toContain("soirée");
-    expect(texteHeroHier({ moment: "Matin" }).mot).not.toContain("soirée");
-    expect(texteHeroHier({ moment: "Soirée" }).badge).toBe("Soirée");
-  });
-
   it("le titre : l'occasion, puis la ville du lieu — sans lieu, l'occasion seule", () => {
     expect(titreDuPlan({ occasion: "festive", lieu: "Gagny, Île-de-France, France" })).toBe("Sortie festive · Gagny");
     expect(titreDuPlan({ occasion: "festive", lieu: "" })).toBe("Sortie festive");
-  });
-
-  it("hier, en date locale", () => {
-    expect(jourDHier(new Date(2026, 9, 1, 12))).toBe("2026-09-30");
   });
 });

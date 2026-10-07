@@ -15,6 +15,7 @@ import PieceScreen from "./screens/PieceScreen";
 import AddScreen from "./screens/AddScreen";
 import CapsuleScreen from "./screens/CapsuleScreen";
 import TenuesScreen from "./screens/TenuesScreen";
+import CalendrierScreen from "./screens/CalendrierScreen";
 import HistoryScreen from "./screens/HistoryScreen";
 import PlanifierScreen from "./screens/PlanifierScreen";
 import PremiumScreen from "./screens/PremiumScreen";
@@ -161,6 +162,7 @@ function Screens() {
         {state.screen === "add" && <AddScreen />}
         {state.screen === "capsule" && <CapsuleScreen />}
         {state.screen === "tenues" && <TenuesScreen />}
+        {state.screen === "calendrier" && <CalendrierScreen />}
         {state.screen === "history" && <HistoryScreen />}
         {state.screen === "planifier" && <PlanifierScreen />}
         {state.screen === "premium" && <PremiumScreen />}

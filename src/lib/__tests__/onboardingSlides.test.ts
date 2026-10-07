@@ -3,7 +3,7 @@ import { ONBOARDING_SLIDES } from "../data";
 
 describe("onboarding — cinq écrans, une histoire", () => {
   it("style, dressing, tenues, valises, puis le compte", () => {
-    expect(ONBOARDING_SLIDES.map((s) => s.kicker)).toEqual(["Ton style", "Ton dressing", "Tes tenues", "Tes valises", "L’édit Capsela"]);
+    expect(ONBOARDING_SLIDES.map((s) => s.kicker)).toEqual(["Ton style", "Ton dressing", "Tes tenues", "Tes valises", "Capsela"]);
   });
   it("chaque écran a un titre en lignes, et une phrase", () => {
     for (const s of ONBOARDING_SLIDES) {

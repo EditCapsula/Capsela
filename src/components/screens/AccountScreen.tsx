@@ -257,7 +257,7 @@ export default function AccountScreen() {
       <button onClick={handleSignOut} className="mt-[18px] w-full text-center text-[12px] text-terracotta cursor-pointer py-3">
         Se déconnecter
       </button>
-      <div className="text-center text-[11px] text-placeholder mt-[6px]">L&apos;édit Capsela · v{APP_VERSION}</div>
+      <div className="text-center text-[11px] text-placeholder mt-[6px]">Capsela · v{APP_VERSION}</div>
 
       <FeuilleDateNaissance open={dateOuverte} onClose={() => setDateOuverte(false)} />
       <BottomSheet title="Supprimer mon compte" open={confirmDelete} onClose={closeDeleteConfirm}>

@@ -80,43 +80,29 @@ function TabIcon({ name, actif }: { name: IconName; actif: boolean }) {
 }
 
 const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<typeof useCapsela>["actions"]) => void }[] = [
-  { label: "Accueil", icon: "home", screen: "home", go: (a) => a.goHome() },
+  { label: "Aujourd’hui", icon: "home", screen: "home", go: (a) => a.goHome() },
   { label: "Dressing", icon: "hanger", screen: "wardrobe", go: (a) => a.goWardrobe() },
-  { label: "Tenue", icon: "sparkle", screen: "tenues", go: (a) => a.goTenues() },
   { label: "Capsule", icon: "capsule", screen: "capsule", go: (a) => a.goCapsule() },
   { label: "Journal", icon: "journal", screen: "history", go: (a) => a.goHistory() },
   /**
-   * PLANIFIER, SIXIÈME ONGLET (24/09/2026, demandé : « il manque l'entrée
-   * Planifier dans le menu »).
+   * CINQ ONGLETS (07/10/2026, refonte de l'accueil « Aujourd'hui »).
    *
-   * MESURÉ AVANT D'ÊTRE AJOUTÉ, ET LA MESURE A CHANGÉ LE CODE.
+   * « Tenue » quitte la barre : la tenue du jour est le cœur de l'accueil,
+   * qui la montre et mène à son détail (« Voir ma tenue »). L'écran `tenues`
+   * existe toujours, comme page de détail — atteignable depuis l'accueil, le
+   * calendrier et les plans — et allume l'onglet Aujourd'hui (cf. `active`
+   * plus bas). Le calendrier est ouvert par l'icône du bandeau d'accueil,
+   * pas par un onglet.
    *
-   * Relevés en rendu réel à 320 px — la largeur la plus étroite supportée —
-   * tous les libellés forcés en semi-gras, c'est-à-dire dans l'état actif,
-   * le plus large : Tenue 32,6 — Accueil 43,1 — Capsule 45,7 — Journal 45,9
-   * — Planifier 49,8 — Dressing 50,4.
+   * Le 24/09/2026, six onglets avaient été mesurés à 320 px : « Dressing »
+   * actif (50,4 px) était le plus large pour un emplacement de 52,7 px, et
+   * l'on avait écrit qu'un libellé plus long ne passerait pas. À cinq, un
+   * emplacement fait 64 px : « Aujourd'hui » (11 caractères) tient, mesuré
+   * en rendu réel : actif, il demandait 64 px pour 63 disponibles, d'où un interlettrage de .02em au lieu de .05em (61 px, 2 px de marge). Le filet `text-ellipsis` du libellé reste.
    *
-   * Avec le `px-2` d'origine, l'emplacement faisait 50,7 px : « Dressing »
-   * actif passait avec 0,3 px. Ce n'est pas une marge, c'est une coïncidence
-   * de métriques — une police de repli, ou le réglage de taille de texte du
-   * téléphone, et le libellé débordait SUR SON VOISIN, puisqu'il est en
-   * `nowrap` sans ellipse.
-   *
-   * Deux corrections, mesurées : le rembourrage horizontal de la barre passe
-   * à `px-0.5`, ce qui porte l'emplacement à 52,7 px et la pire marge à
-   * 2,3 px ; et le libellé reçoit un filet `overflow-hidden text-ellipsis`,
-   * pour que le pire cas restant soit une ellipse discrète plutôt que deux
-   * libellés qui se chevauchent.
-   *
-   * Ces chiffres sont écrits ici parce qu'ils ferment une porte : un septième
-   * onglet ne passerait pas, et un libellé plus long que « Dressing » non plus.
-   *
-   * L'ONGLET EST UNE ENTRÉE, PAS UNE DESTINATION QUI RESTE. `planifier` est
-   * dans FLOW_SCREENS (App.tsx) : la barre disparaît une fois le parcours
-   * ouvert, parce que l'écran pose son propre bouton pleine largeur là où
-   * elle se trouverait. L'onglet ne s'affichera donc jamais en actif — c'est
-   * assumé, et c'est le comportement d'une entrée modale. La sortie se fait
-   * par le chevron du bandeau, qui remonte les étapes une à une.
+   * L'onglet Planifier est une entrée, pas une destination qui reste :
+   * `planifier` est dans FLOW_SCREENS (App.tsx), la barre disparaît une fois
+   * le parcours ouvert.
    */
   { label: "Planifier", icon: "calendrier", screen: "planifier", go: (a) => a.goPlanifier() },
 ];
@@ -165,6 +151,7 @@ export default function TabBar() {
         // Journal : l'onglet reste allumé.
         const active =
           state.screen === tab.screen ||
+          (tab.screen === "home" && (state.screen === "tenues" || state.screen === "calendrier")) ||
           (tab.screen === "history" && (state.screen === "avisTous" || state.screen === "avisEnregistre")) ||
           ongletDOrigine(state) === tab.screen;
         const onClick = () => tab.go(actions);
@@ -205,7 +192,7 @@ export default function TabBar() {
               // filet, le pire cas devient une ellipse discrète au lieu de deux
               // libellés qui se chevauchent.
               className="max-w-full overflow-hidden text-ellipsis t-nav whitespace-nowrap"
-              style={{ fontWeight: active ? 600 : 400 }}
+              style={{ fontWeight: active ? 600 : 400, letterSpacing: "0.02em" }}
             >
               {tab.label}
             </span>

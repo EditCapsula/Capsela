@@ -687,7 +687,7 @@ function composerParOccasion(
  * pas patrimoniale.
  */
 export interface OpinionMessageParts {
-  /** Signature d'ouverture : « L’édit Capsela ». */
+  /** Signature d'ouverture : « Capsela ». */
   marque: string;
   /** « Angela te demande ton avis sur sa tenue. » — sans prénom : « On te demande ton avis sur cette tenue. » */
   demande: string;
@@ -701,12 +701,12 @@ export interface OpinionMessageParts {
   question: string;
   /** Où répondre : dans la conversation même, jamais dans Capsela. */
   relance: string;
-  /** Signature de fin : « Tenue imaginée avec L’édit Capsela. » */
+  /** Signature de fin : « Tenue imaginée avec Capsela. » */
   signature: string;
 }
 
 /** Le nom de marque tel qu'il apparaît dans le message. */
-export const MARQUE_CAPSELA = "L\u2019édit Capsela";
+export const MARQUE_CAPSELA = "Capsela";
 
 /**
  * Les PARTIES du message, avant mise en forme.
