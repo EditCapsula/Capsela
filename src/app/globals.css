@@ -71,8 +71,8 @@
  * peut être terracotta ou gris selon la section) ni les marges.
  *
  * Serif (Fraunces) :
- *   t-display         34 / 1.08  — le « Bonjour » de l'accueil, le titre de l'onboarding
- *   t-titre-ecran     27 / 1.12  — titre d'écran, second temps en italique terracotta
+ *   t-display         28 / 1.08  — le « Bonjour » de l'accueil, le titre de l'onboarding (34 → 28 le 07/10/2026, demandé)
+ *   t-titre-ecran     24 / 1.12  — titre d'écran, second temps en italique terracotta (27 → 24 le 07/10/2026, demandé)
  *   t-titre-section   21 / 1.18  — titre de section ; titre d'un écran secondaire posé
  *                                  sur la ligne du bouton retour
  *   t-titre-carte     18 / 1.2   — titre de carte, de feuille (BottomSheet)
@@ -95,12 +95,12 @@
  */
 @utility t-display {
   font-family: var(--font-serif);
-  font-size: 34px;
+  font-size: 28px;
   line-height: 1.08;
 }
 @utility t-titre-ecran {
   font-family: var(--font-serif);
-  font-size: 27px;
+  font-size: 24px;
   line-height: 1.12;
 }
 @utility t-titre-section {

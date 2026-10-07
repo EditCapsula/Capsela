@@ -2,12 +2,15 @@
 
 import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import BadgePremium from "@/components/BadgePremium";
+import GateAvisStyliste from "@/components/GateAvisStyliste";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
 import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
+import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { OCC_LABELS } from "@/lib/data";
 import { computeDefaultCapsule, currentSeasonKey } from "@/lib/capsule";
 import { estContexteMaison, qualificatifLook, tenueAUnSocle, titreLookDuJour } from "@/lib/logic";
@@ -22,11 +25,19 @@ import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
 import Button, { BoutonDiscret } from "@/components/Button";
 
-const GLYPHE_CALENDRIER = (
-  <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+const glypheCalendrier = (taille: number) => (
+  <svg width={taille} height={taille} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
     <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3.5" y="5.5" width="17" height="15" rx="2.5" />
       <path d="M3.5 10h17M8 3.5v4M16 3.5v4" />
+    </g>
+  </svg>
+);
+const GLYPHE_AVIS = (
+  <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+    <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.5l1.7 5.1 5.1 1.7-5.1 1.7L12 17l-1.7-5.1-5.1-1.7 5.1-1.7L12 3.5z" />
+      <path d="M18.5 16.5v3M17 18h3" />
     </g>
   </svg>
 );
@@ -115,7 +126,7 @@ function CarteAvecCapsela({
 }
 
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, weather, meteoDuJour, jourConsulte, actions } = useCapsela();
+  const { state, geoLoading, vestiairePool, weather, meteoDuJour, jourConsulte, etatPremium, actions } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -136,6 +147,32 @@ export default function HomeScreen() {
     setCleRefusee(cleCourante);
     actions.setOutfitFeedback("pas_aujourdhui");
     quota.demander(actions.regenOutfit);
+  };
+
+  /**
+   * AVIS DE STYLISTE — accès (docs/avis-de-styliste.md sections 4 et 5,
+   * arbitrages du 25/09/2026). Règle unique AVIS_DE_STYLISTE (autorisations.ts).
+   * En phase de test (26/09/2026), ACCES_LIBRE : la carte ouvre l'écran, sans
+   * badge ni Gate. Sous PREMIUM_REQUIRED : Premium confirmé → écran ; gratuit,
+   * expiré, démo → Premium Gate. Un statut encore inconnu n'est jamais pris
+   * pour du Premium : la carte passe en vérification, le statut est relu, et
+   * seul un Premium confirmé ouvre l'écran — sinon, le Gate.
+   *
+   * Le Gate est une feuille posée sur l'écran courant : « Plus tard » la
+   * referme et l'on reste exactement là où l'on était.
+   */
+  const [gateAvisStyliste, setGateAvisStyliste] = useState(false);
+  const [verificationAvis, setVerificationAvis] = useState(false);
+  const ouvrirAvisStyliste = async () => {
+    if (verificationAvis) return;
+    const decision = decisionAcces("AVIS_DE_STYLISTE", etatPremium, false);
+    if (decision === "acces") return actions.goAvisStyliste();
+    if (decision === "gate") return setGateAvisStyliste(true);
+    setVerificationAvis(true);
+    const etat = await actions.verifierEtatPremium();
+    setVerificationAvis(false);
+    if (decisionAcces("AVIS_DE_STYLISTE", etat, true) === "acces") actions.goAvisStyliste();
+    else setGateAvisStyliste(true);
   };
 
   /**
@@ -272,13 +309,13 @@ export default function HomeScreen() {
         <AppHeader
           gauche={
             <button onClick={actions.goCalendrier} aria-label="Ouvrir mon calendrier" className="w-[34px] h-[34px] flex items-center justify-center rounded-full text-ink cursor-pointer active:opacity-70">
-              {GLYPHE_CALENDRIER}
+              {glypheCalendrier(24)}
             </button>
           }
         />
       </div>
 
-      {/* Salutation — présence renforcée (30 → 34 px) sans gonfler la hauteur
+      {/* Salutation (t-display, 34 → 28 px le 07/10/2026, demandé : « trop grand »). Avant : présence renforcée (30 → 34 px) sans gonfler la hauteur
           de l'en-tête : le gain vient de la taille du serif, pas d'un
           interlignage ou d'une marge supplémentaires. */}
       <div className="px-6 mt-[18px]">
@@ -576,7 +613,7 @@ export default function HomeScreen() {
       <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
         <CarteAvecCapsela
           onClick={actions.goPlanifier}
-          glyphe={GLYPHE_CALENDRIER}
+          glyphe={glypheCalendrier(17)}
           titre="Planifier une tenue"
           texte="Une occasion en tête ? Capsela compose le look."
           visuel="/editorial/capsela_planifier_intro.webp"
@@ -592,6 +629,17 @@ export default function HomeScreen() {
           visuel={`/editorial/capsela_planifier_valise_${profile.gender === "homme" ? "homme" : "femme"}.webp`}
           alt="Une valise ouverte, des vêtements pliés et des accessoires"
           cta="Préparer une valise"
+        />
+        <CarteAvecCapsela
+          onClick={ouvrirAvisStyliste}
+          glyphe={GLYPHE_AVIS}
+          titre="Avis de styliste"
+          texte="Obtiens un regard expert sur une tenue ou une pièce de ton dressing."
+          visuel={`/images/avis/extrait-conseil${profile.gender === "homme" ? "-homme" : ""}.webp`}
+          alt="Des accessoires et des pièces assorties, posés à plat"
+          cta="Obtenir mon avis de styliste"
+          badge={premiumRequis("AVIS_DE_STYLISTE") ? <BadgePremium /> : undefined}
+          busy={verificationAvis}
         />
       </div>
 
@@ -670,6 +718,16 @@ export default function HomeScreen() {
       {/* Quota « Pas pour moi » : même feuille que « Autre tenue ». */}
       {quota.feuille}
 
+
+      {/* Premium Gate [DÉCIDÉ] §5 — composant unique, cf. GateAvisStyliste. */}
+      <GateAvisStyliste
+        open={gateAvisStyliste}
+        onClose={() => setGateAvisStyliste(false)}
+        onDecouvrirPremium={() => {
+          setGateAvisStyliste(false);
+          actions.goPremium();
+        }}
+      />
     </div>
   );
 }
