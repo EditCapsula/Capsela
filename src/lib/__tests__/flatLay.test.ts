@@ -44,9 +44,19 @@ describe("composerFlatLay — déterministe, borné, sans grille", () => {
   });
 
   it("les inclinaisons restent dans les plages du brief (pièce de rang : héro ±4, secondaire ±5, chaussures ±8, sac ±6, accessoires ±10)", () => {
-    const lim = { hero: 4, secondaire: 5, bas: 4, chaussures: 8, sac: 6, accessoire: 10 } as const;
+    const lim = { hero: 4, secondaire: 5, bas: 5, chaussures: 8, sac: 6, accessoire: 10 } as const;
     for (let i = 0; i < 40; i++)
       for (const q of composerFlatLay(look(), "g" + i).pieces) expect(Math.abs(q.angle)).toBeLessThanOrEqual(lim[q.role] + 1e-9);
+  });
+
+  it("le héro n'est jamais d'aplomb et le bas pivote de −3° à −5°", () => {
+    for (let i = 0; i < 40; i++) {
+      const { pieces } = composerFlatLay(look(), "a" + i);
+      expect(Math.abs(pieces.find((q) => q.role === "hero")!.angle)).toBeGreaterThanOrEqual(2.5);
+      const bas = pieces.find((q) => q.role === "bas")!.angle;
+      expect(bas).toBeLessThanOrEqual(-3);
+      expect(bas).toBeGreaterThanOrEqual(-5);
+    }
   });
 
   it("tout reste dans la zone de sécurité, et la pièce héro est la plus grande (hors pièces très hautes)", () => {

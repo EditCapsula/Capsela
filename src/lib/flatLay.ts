@@ -80,21 +80,21 @@ export function attribuerRoles<T extends { id: number; cat: CategoryKey }>(piece
 /** Plages de largeur (unités de zone) et d'inclinaison (degrés) par rôle. */
 const LARGEUR: Record<RoleFlatLay, [number, number]> = {
   hero: [64, 72],
-  secondaire: [46, 54],
+  secondaire: [52, 60],
   bas: [50, 60],
   chaussures: [34, 42],
-  sac: [30, 38],
+  sac: [33, 42],
   accessoire: [16, 22],
 };
-const INCLINAISON: Record<RoleFlatLay, number> = { hero: 4, secondaire: 5, bas: 4, chaussures: 8, sac: 6, accessoire: 10 };
+const INCLINAISON: Record<RoleFlatLay, number> = { hero: 4, secondaire: 5, bas: 5, chaussures: 8, sac: 6, accessoire: 10 };
 
 /** Centres du gabarit (zone 100 × 134), le haut-gauche étant le point fort ; le miroir échange gauche et droite. */
 const CENTRES: Record<RoleFlatLay, [number, number]> = {
-  hero: [42, 50],
-  secondaire: [76, 30],
-  bas: [64, 80],
-  chaussures: [24, 116],
-  sac: [84, 102],
+  hero: [46, 48],
+  secondaire: [71, 24],
+  bas: [60, 77],
+  chaussures: [14, 118],
+  sac: [86, 104],
   accessoire: [88, 10],
 };
 const CENTRES_ACCESSOIRES: [number, number][] = [[88, 10], [10, 96], [50, 128]];
@@ -160,7 +160,11 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
     if (miroir) cx = 100 - cx;
     const lim = INCLINAISON[role];
     let angle = dans(-lim, lim);
-    if (miroir && role !== "hero") angle = -angle;
+    if (miroir) angle = -angle;
+    // Affinage du 08/10/2026 : le héro n'est jamais d'aplomb (au moins 2,5°, sinon son axe vertical raidit la planche) et le bas
+    // pivote de −3° à −5° à l'écran, miroir ou non.
+    if (role === "hero") angle = (alea() < 0.5 ? -1 : 1) * dans(2.5, lim);
+    if (role === "bas") angle = -dans(3, 5);
     return { id: piece.id, role, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
   });
 
