@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MARGE_SECURITE, attribuerRoles, composerFlatLay, generateur, type PieceFlatLay } from "../flatLay";
+import { MARGE_SECURITE, PART_VISUELLE, attribuerRoles, composerFlatLay, echelleVisuelle, generateur, type PieceFlatLay } from "../flatLay";
 import type { CategoryKey } from "../types";
 
 let n = 0;
@@ -105,5 +105,36 @@ describe("generateur — stable", () => {
     const a = generateur("abc");
     const b = generateur("abc");
     expect([a(), a(), a()]).toEqual([b(), b(), b()]);
+  });
+});
+
+describe("echelleVisuelle — la taille se rapporte à la catégorie (standard image flat lay)", () => {
+  it("la pièce de référence de chaque rôle garde l'échelle 1", () => {
+    expect(echelleVisuelle("hero", "veste")).toBe(1);
+    expect(echelleVisuelle("secondaire", "haut")).toBe(1);
+    expect(echelleVisuelle("bas", "pantalon")).toBe(1);
+    expect(echelleVisuelle("chaussures", "chaussures")).toBe(1);
+    expect(echelleVisuelle("sac", "sac")).toBe(1);
+  });
+  it("une jupe ou un short en bas sont plus petits qu'un pantalon, un manteau plus grand qu'une veste", () => {
+    expect(echelleVisuelle("bas", "jupe")).toBeLessThan(1);
+    expect(echelleVisuelle("bas", "short")).toBeLessThan(echelleVisuelle("bas", "jupe"));
+    expect(echelleVisuelle("hero", "manteau")).toBeGreaterThan(1);
+    expect(echelleVisuelle("hero", "robe")).toBeGreaterThan(1);
+  });
+  it("l'échelle reste bornée et le standard couvre toutes les catégories", () => {
+    for (const cat of Object.keys(PART_VISUELLE) as CategoryKey[])
+      for (const role of ["hero", "secondaire", "bas", "chaussures", "sac", "accessoire"] as const) {
+        const e = echelleVisuelle(role, cat);
+        expect(e).toBeGreaterThanOrEqual(0.82);
+        expect(e).toBeLessThanOrEqual(1.12);
+      }
+  });
+  it("chaque placement porte sa catégorie et son échelle visuelle", () => {
+    const { pieces } = composerFlatLay([p("manteau", 0.9), p("pull", 0.9), p("jupe", 0.7)], "v");
+    const hero = pieces.find((q) => q.role === "hero")!;
+    expect(hero.cat).toBe("manteau");
+    expect(hero.visualScale).toBeGreaterThan(1);
+    expect(pieces.find((q) => q.role === "bas")!.visualScale).toBeLessThan(1);
   });
 });

@@ -23,7 +23,10 @@ export interface PieceFlatLay {
 
 export interface PlacementFlatLay {
   id: number;
+  cat: CategoryKey;
   role: RoleFlatLay;
+  /** L'échelle visuelle appliquée à cause de la catégorie (cf. PART_VISUELLE) — 1 pour la pièce de référence du rôle. */
+  visualScale: number;
   /** Centre de la pièce, en unités de la zone (100 de large). */
   x: number;
   y: number;
@@ -92,6 +95,38 @@ const REF: Record<RoleFlatLay, { x: number; y: number; l: number; angle: number 
   sac: { x: 17, y: 71, l: 33, angle: -2 },
   accessoire: { x: 8, y: 8, l: 16, angle: 10 },
 };
+/**
+ * LA TAILLE VISUELLE PAR CATÉGORIE (08/10/2026, « standard image flat lay ») : la part d'un canevas carré que doit occuper chaque
+ * type de pièce pour que toutes semblent photographiées ensemble — milieu des plages du standard (T-shirt, chemise, pull
+ * 75–80 ; blazer, veste 80–85 ; manteau, robe 85–90 ; pantalon 80–90 ; jupe 70–80 ; short 65–75 ; sac, chaussures 65–75 ;
+ * accessoire 50–75). Le moteur ne dépend pas du canevas des fichiers : il lit la boîte RÉELLE de l'objet (objectBounds) et
+ * en déduit sa taille ; ce tableau ne sert qu'à RAPPORTER la taille d'une pièce à celle de la pièce de référence de son rôle
+ * (visualScale) — une jupe en bas est un peu plus petite qu'un pantalon, un manteau un peu plus grand qu'un blazer.
+ */
+export const PART_VISUELLE: Record<CategoryKey, number> = {
+  haut: 77.5,
+  pull: 77.5,
+  veste: 82.5,
+  manteau: 87.5,
+  robe: 87.5,
+  combinaison: 87.5,
+  pantalon: 85,
+  jean: 85,
+  jupe: 75,
+  short: 70,
+  sac: 70,
+  chaussures: 70,
+  bijou: 62.5,
+  accessoire: 62.5,
+};
+/** La part visuelle de la pièce de référence de chaque rôle (celle sur laquelle les largeurs de REF ont été réglées). */
+const PART_REF: Record<RoleFlatLay, number> = { hero: 82.5, secondaire: 77.5, bas: 85, chaussures: 70, sac: 70, accessoire: 62.5 };
+
+/** L'échelle visuelle d'une pièce dans son rôle : bornée, pour qu'une catégorie rare ne déséquilibre jamais la planche. */
+export function echelleVisuelle(role: RoleFlatLay, cat: CategoryKey): number {
+  return Math.min(1.12, Math.max(0.82, (PART_VISUELLE[cat] ?? PART_REF[role]) / PART_REF[role]));
+}
+
 const REF_ACCESSOIRES = [
   { x: 8, y: 8, l: 16, angle: 10 },
   { x: 52, y: 94, l: 18, angle: -8 },
@@ -128,8 +163,8 @@ export function generateur(graine: string): () => number {
   };
 }
 
-/** Marge de sécurité autour de la composition, en unités de zone (≈ 14 px sur la colonne de droite à 390 px). */
-export const MARGE_SECURITE = 3;
+/** Marge de sécurité autour de la composition, en unités de zone (4 unités ≈ 7 px sur la colonne de droite à 390 px ; avec le padding de la carte, ≥ 16 px du bord). */
+export const MARGE_SECURITE = 4;
 
 export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZone = 112): { pieces: PlacementFlatLay[] } {
   const roles = attribuerRoles(pieces);
@@ -146,7 +181,8 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
 
   const brut = roles.map(({ piece, role }) => {
     const ref = role === "accessoire" ? REF_ACCESSOIRES[rangAccessoire++ % REF_ACCESSOIRES.length] : REF[role];
-    let l = ref.l * dans(0.97, 1.03) * echelleGlobale;
+    const visualScale = echelleVisuelle(role, piece.cat);
+    let l = ref.l * visualScale * dans(0.97, 1.03) * echelleGlobale;
     if (nb >= 6 && (role === "secondaire" || role === "accessoire")) l *= 0.88;
     const ratio = piece.ratio > 0 ? piece.ratio : 1;
     // Une pièce haute ne dépasse pas 78 % de la hauteur de la zone.
@@ -159,7 +195,7 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
       cx = 100 - cx;
       angle = -angle;
     }
-    return { id: piece.id, role, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
+    return { id: piece.id, cat: piece.cat, role, visualScale, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
   });
 
   // La boîte de chaque pièce, tournée : son encombrement réel pour la zone de sécurité.

@@ -130,3 +130,21 @@ export function ratioHero(url: string | undefined): number | null {
   const r = m ? Number(m[1]) : NaN;
   return Number.isFinite(r) && r > 0.1 && r < 10 ? r : null;
 }
+
+/**
+ * LA BOÎTE RÉELLE DE L'OBJET dans son image (08/10/2026, « objectBoundingBox »), en fractions de l'image : { x, y, width, height }.
+ * Le moteur du flat lay calcule la taille d'une pièce à partir de CETTE boîte et non du fichier. Visuel du catalogue standard :
+ * déduite du tableau des marges. Visuel hero : rogné à la génération, donc toute l'image. Autre fichier : null (boîte inconnue).
+ */
+export interface ObjectBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+export function objectBounds(url: string | undefined): ObjectBounds | null {
+  if (!url) return null;
+  if (ratioHero(url) !== null) return { x: 0, y: 0, width: 1, height: 1 };
+  const m = margesDe(url);
+  return m ? { x: m.g, y: m.h, width: 1 - m.g - m.d, height: 1 - m.h - m.b } : null;
+}
