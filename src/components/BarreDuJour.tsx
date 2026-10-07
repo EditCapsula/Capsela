@@ -10,8 +10,7 @@ import { useCapsela } from "@/lib/store";
  * du moment et la condition. Sans carte ni filet — c'est une ligne posée sur le fond.
  *
  * Mêmes données et mêmes gestes que JourEtMeteo (useDonneesJour) : les chevrons changent le jour consulté — ou remontent aux
- * tenues passées —, la ville ouvre « Localisation & météo ». La maquette montre aussi « Max · min » ; le service météo ne donne
- * que la température et la condition, la condition prend donc cette ligne : rien n'est inventé.
+ * tenues passées —, la ville ouvre « Localisation & météo ». « Max · min » vient de la prévision (previsionPour) ; sans prévision complète du jour, la ligne n'est pas affichée.
  */
 function Chevron({ vers }: { vers: "gauche" | "droite" }) {
   return (
@@ -25,7 +24,7 @@ const chevron = "w-[30px] h-[44px] flex items-center justify-center flex-shrink-
 
 export default function BarreDuJour({ className = "", retro }: { className?: string; retro?: RetroJour }) {
   const { actions } = useCapsela();
-  const { geoCity, geoLoading, decalage, date, enRetro, enAttente, temp, label, note } = useDonneesJour(retro);
+  const { geoCity, geoLoading, decalage, date, enRetro, enAttente, temp, label, note, amplitude } = useDonneesJour(retro);
   const soleil = !!label && /soleil|dégagé|clair|ensoleill/i.test(label);
 
   return (
@@ -79,6 +78,7 @@ export default function BarreDuJour({ className = "", retro }: { className?: str
               <span className="text-[20px] font-medium text-ink tabular-nums">{temp}°</span>
             </div>
             {label && <div className="text-[11px] text-muted mt-[2px] whitespace-nowrap">{label}</div>}
+            {amplitude && <div className="text-[11px] text-muted-3 whitespace-nowrap tabular-nums">Max {amplitude.max}° · min {amplitude.min}°</div>}
           </div>
         )}
       </div>

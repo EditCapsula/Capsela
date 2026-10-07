@@ -547,7 +547,7 @@ interface CapselaContextValue {
   /** Météo du jour consulté — celle que la tenue reçoit ; `weather` aujourd'hui (cf. docs/navigation-par-date.md). */
   meteoDuJour: Weather;
   /** Le jour consulté : sa date, sa prévision (null si aucune), et l'attente de celle-ci. */
-  jourConsulte: { decalage: number; date: Date; meteoPrevue: { temp: number; label: string } | null; previsionEnChargement: boolean };
+  jourConsulte: { decalage: number; date: Date; meteoPrevue: { temp: number; label: string } | null; amplitude: { min: number; max: number } | null; previsionEnChargement: boolean };
   /** Capsule par défaut personnalisée (suggestions du catalogue). */
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
@@ -948,7 +948,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const villeMeteo = geoCity.city;
   const [previsionJour, setPrevisionJour] = useState<{ ville: string; prevision: Prevision | null } | null>(null);
   useEffect(() => {
-    if (state.jourDecalage === 0 || geoLoading) return;
+    if (geoLoading) return;
     if (previsionJour && previsionJour.ville === villeMeteo) return;
     let annule = false;
     fetchPrevisionByCity(villeMeteo).then((prevision) => {
@@ -966,6 +966,19 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         : null,
     [state.jourDecalage, previsionJour, villeMeteo, dateConsultee]
   );
+  /*
+   * L'AMPLITUDE DU JOUR (min · max, barre du jour de l'accueil, 07/10/2026) : la plage des créneaux de la prévision. Un jour à
+   * venir : toute la journée. Aujourd'hui, la prévision commence à l'heure de la requête — passé le matin, le min réel de la
+   * journée n'y est plus : on n'affiche l'amplitude que si le matin ET la soirée sont couverts, sinon rien (jamais un min ou un
+   * max faussé). Sans prévision, rien non plus.
+   */
+  const amplitude = useMemo(() => {
+    if (previsionJour?.ville !== villeMeteo || !previsionJour.prevision) return null;
+    const cle = jourLocal(dateConsultee);
+    if (state.jourDecalage === 0 && (!previsionPour(previsionJour.prevision, cle, "Matin") || !previsionPour(previsionJour.prevision, cle, "Soirée"))) return null;
+    const m = previsionPour(previsionJour.prevision, cle, "Toute la journée");
+    return m ? { min: Math.round(m.tempMin), max: Math.round(m.tempMax) } : null;
+  }, [state.jourDecalage, previsionJour, villeMeteo, dateConsultee]);
   const meteoDuJour: Weather = useMemo(
     () =>
       state.jourDecalage === 0
@@ -2738,6 +2751,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       decalage: state.jourDecalage,
       date: dateConsultee,
       meteoPrevue: meteoPrevue ? { temp: meteoPrevue.temp, label: meteoPrevue.label } : null,
+      amplitude,
       previsionEnChargement,
     },
     defaultCapsule,
