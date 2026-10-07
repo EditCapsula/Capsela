@@ -7,7 +7,7 @@ import { composerFlatLay } from "@/lib/flatLay";
 import type { Item } from "@/lib/types";
 
 /** Hauteur de la zone, en unités de sa largeur (100) : le hero de l'accueil est un peu plus haut que large. */
-export const HAUTEUR_FLAT_LAY = 134;
+export const HAUTEUR_FLAT_LAY = 112;
 
 /**
  * LE FLAT LAY ÉDITORIAL DE CAPSELA (08/10/2026) — les pièces d'un look posées comme sur une planche de stylisme : une pièce
