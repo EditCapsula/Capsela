@@ -78,7 +78,7 @@ export function StatutComposition() {
     <div
       // Même entrée différée que le reste du chargement : rien ne clignote si le look est prêt vite.
       className="mt-[12px] flex items-center gap-[8px] text-[12px] motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]"
-      style={{ minHeight: 50, color: "var(--color-muted-3)" }}
+      style={{ minHeight: 50, color: "var(--color-on-terracotta-soft)" }}
     >
       <span aria-hidden="true" className="etoile-pouls font-serif italic text-[13px] leading-none">
         ✦

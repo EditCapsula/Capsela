@@ -54,9 +54,9 @@ function ActionRonde({ icone, libelle, onClick, actif, disabled, label }: { icon
       disabled={disabled}
       aria-pressed={actif}
       aria-label={label}
-      className="inline-flex items-center gap-[7px] min-h-[44px] px-1 text-[12.5px] text-muted-3 cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]"
+      className="inline-flex items-center gap-[7px] min-h-[44px] px-1 text-[12.5px] text-on-terracotta-soft cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]"
     >
-      <span className="flex-shrink-0 text-terracotta-deep">{icone}</span>
+      <span className="flex-shrink-0 text-on-terracotta">{icone}</span>
       <span>{libelle}</span>
     </button>
   );
@@ -351,41 +351,41 @@ export default function HomeScreen() {
 
       {/* LE LOOK DU JOUR : fond sable, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
           jour passé, aucune tenue possible, la tenue qui se compose, la tenue. */}
-      <div className="mx-6 mt-3 bg-warm-bg rounded-hero grid gap-2" style={{ gridTemplateColumns: "minmax(0,0.92fr) minmax(0,1.08fr)", padding: "20px 14px 10px 18px", minHeight: 300 }}>
+      <div className="mx-6 mt-3 rounded-hero grid gap-2" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: "minmax(0,0.86fr) minmax(0,1.14fr)", padding: "20px 14px 10px 18px", minHeight: 300 }}>
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">
-            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-on-terracotta" style={{ display: "block" }}>
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="t-surtitre text-terracotta-deep whitespace-nowrap">
+            <span className="t-surtitre text-on-terracotta whitespace-nowrap">
               {passee ? (retroActif === 1 ? "Ton look d’hier" : "Ton look passé") : texteHero ? texteHero.surtitre : "Ton look du jour"}
             </span>
           </div>
 
           {passee ? (
             <>
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+              <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
                 {passee.plan ? titreDuPlan(passee.plan) : OCC_LABELS[passee.occasion]}
               </div>
-              <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]">{passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l’avais planifiée."}</div>
+              <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]">{passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l’avais planifiée."}</div>
               <div className="mt-auto pt-4">
-                <Button variante="principal" pleine={false} onClick={actions.goHistory} className="!px-[18px]">
+                <Button variante="claire" pleine={false} onClick={actions.goHistory} className="!px-[18px]">
                   Voir dans mon journal
                 </Button>
               </div>
             </>
           ) : aucuneTenuePossible ? (
             <>
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
-                On prépare ta <span className="italic text-terracotta-deep">première tenue</span>
+              <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                On prépare ta <span className="italic text-on-terracotta-soft">première tenue</span>
               </div>
-              <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+              <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
                 {dressingVide
                   ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
                   : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."}
               </div>
               <div className="mt-auto pt-4">
-                <Button variante="principal" pleine={false} onClick={dressingVide ? actions.openAdd : actions.goWardrobe} className="!px-[18px]">
+                <Button variante="claire" pleine={false} onClick={dressingVide ? actions.openAdd : actions.goWardrobe} className="!px-[18px]">
                   {dressingVide ? "Ajouter mes pièces" : "Voir mon dressing"}
                 </Button>
               </div>
@@ -393,22 +393,22 @@ export default function HomeScreen() {
           ) : hasOutfit ? (
             <>
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
-                <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
                   {titreHero.a}
                   {titreHero.b && (
                     <>
                       <br />
-                      <span className="italic text-terracotta-deep">{titreHero.b}</span>
+                      <span className="italic text-on-terracotta-soft">{titreHero.b}</span>
                     </>
                   )}
                 </div>
-                <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+                <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
                   {sousTitreHero}
                 </div>
               </div>
               <div className="mt-auto pt-4">
                 <Button
-                  variante="principal"
+                  variante="claire"
                   pleine={false}
                   onClick={planHero && jourAVenir ? () => actions.ouvrirPlan(planHero, "home") : actions.goTenues}
                   className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap"
@@ -419,10 +419,10 @@ export default function HomeScreen() {
             </>
           ) : (
             <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
-              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
-                Capsela compose <span className="italic text-terracotta-deep">ta tenue…</span>
+              <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                Capsela compose <span className="italic text-on-terracotta-soft">ta tenue…</span>
               </div>
-              <div className="text-[13px] text-muted-3 leading-[1.45] mt-[10px]">
+              <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]">
                 {jourAVenir ? "Pensée pour ton programme de ce jour-là." : "Pensée pour ton programme d’aujourd’hui."}
               </div>
               <StatutComposition />
@@ -431,7 +431,7 @@ export default function HomeScreen() {
         </div>
 
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
-        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 128", margin: "-8px -8px -2px 0" }}>
+        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 134", margin: "-8px -8px -2px 0" }}>
           {passee ? (
             <OutfitComposition items={piecesPassee} variant="planche" accentHero />
           ) : aucuneTenuePossible ? null : (
@@ -455,7 +455,7 @@ export default function HomeScreen() {
               // rejoint Mes looks — l'avis du jour ne porte que sur la tenue d'aujourd'hui.
               onClick={() => (jourAVenir ? actions.toggleSaveOutfitLook() : actions.setOutfitFeedback("adore"))}
             />
-            <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "var(--color-sand-border)" }} />
+            <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(251,243,234,.35)" }} />
             <ActionRonde
               icone={
                 <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -474,11 +474,11 @@ export default function HomeScreen() {
         {planApplique && hasOutfit && (
           <div className="text-center" style={{ gridColumn: "1 / -1" }}>
             {planApplique.alerte && (
-              <div className="text-[12.5px] text-muted-3 leading-[1.4] mb-[2px]" style={{ textWrap: "pretty" }}>
+              <div className="text-[12.5px] text-on-terracotta-soft leading-[1.4] mb-[2px]" style={{ textWrap: "pretty" }}>
                 {planApplique.alerte}
               </div>
             )}
-            <button onClick={actions.voirAutreProposition} className="text-[13px] underline underline-offset-[3px] text-terracotta-deep cursor-pointer" style={{ minHeight: 44 }}>
+            <button onClick={actions.voirAutreProposition} className="text-[13px] underline underline-offset-[3px] text-on-terracotta cursor-pointer" style={{ minHeight: 44 }}>
               Voir une autre proposition
             </button>
           </div>
