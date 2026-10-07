@@ -44,6 +44,7 @@ import CookieBanner from "./CookieBanner";
 import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
 import LoadingSpinner from "./LoadingSpinner";
 import ConfirmationAjout from "./ConfirmationAjout";
+import { ecranARestaurer, memoriserEcran } from "@/lib/ecranRestaure";
 
 /** Écrans du tunnel accueil/auth/onboarding (pas de compte configuré) — la barre d'onglets n'y a pas de sens. */
 const NO_TABBAR_SCREENS = new Set(["welcome", "onboarding", "auth", "login", "profileSetup"]);
@@ -83,12 +84,16 @@ function Screens() {
   // justSignedUp doivent rester en dépendance pour que l'effet se redéclenche dès qu'ils
   // sont prêts, même si signedIn est passé à true avant que le profil ne soit chargé.
   const { ready, signedIn, justSignedUp } = auth;
+  // Rechargement sur le web : on garde l'écran de premier niveau courant pour le retrouver (cf. ecranRestaure.ts).
+  useEffect(() => {
+    memoriserEcran(state.screen);
+  }, [state.screen]);
   const [refusAge, setRefusAge] = useState<string | null>(null);
   const profileCompleted = auth.profile.completed;
   useEffect(() => {
     if (ready && signedIn && PRE_AUTH_SCREENS.has(state.screen)) {
       if (justSignedUp && !profileCompleted) actions.goProfileSetup("genre");
-      else actions.goHome();
+      else actions.go(ecranARestaurer() ?? "home");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, signedIn, justSignedUp, profileCompleted]);
