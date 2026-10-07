@@ -377,7 +377,7 @@ export default function HomeScreen() {
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
         <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "14px 0 0 0" }}>
           {passee ? (
-            <FlatLayCapsela pieces={piecesPassee} graine={clePieces(piecesPassee.map((p) => p.id)).join(",")} />
+            <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} />
           ) : aucuneTenuePossible ? null : (
             <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} />
           )}

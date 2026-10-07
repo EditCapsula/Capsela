@@ -10,15 +10,26 @@ import type { CategoryKey } from "./types";
  * parts de LARGEUR DE ZONE, mesurées sur la partie visible de la pièce (les marges transparentes du catalogue sont retirées
  * à l'affichage, cf. catalogMarges.ts).
  *
- * Les tailles et positions viennent du gabarit de référence REF (maquette validée du 08/10/2026), pas de plages libres.
+ * Les tailles et positions viennent des gabarits de CONTEXTES (hero-home : la maquette validée du 08/10/2026 ; look-detail : l'écran
+ * Tenue du jour), pas de plages libres. Un seul moteur : le contexte ne change que ses paramètres.
  */
+/** Où la planche s'affiche : chaque contexte a sa zone, sa marge et son gabarit (cf. CONTEXTES). */
+export type ContexteFlatLay = "hero-home" | "look-detail" | "capsule" | "dressing" | "packing";
+
 export type RoleFlatLay = "hero" | "secondaire" | "bas" | "chaussures" | "sac" | "accessoire";
 
 export interface PieceFlatLay {
   id: number;
   cat: CategoryKey;
-  /** Largeur / hauteur de la partie visible de l'image (1 si inconnue). */
+  /** Largeur / hauteur de la partie visible de l'image (1 si inconnue) — celle de l'objectBounds, ou son repli. */
   ratio: number;
+  /** Facultatifs (08/10/2026) : le catalogue actuel ne les porte pas, des valeurs par défaut s'appliquent. */
+  /** Multiplie la taille calculée (défaut 1). */
+  visualScale?: number;
+  /** Inclinaison préférée, en degrés, bornée par la plage du rôle (défaut : celle du gabarit). */
+  preferredRotation?: number;
+  /** false : la pièce n'entre pas dans un flat lay (défaut true). */
+  flatLayCompatible?: boolean;
 }
 
 export interface PlacementFlatLay {
@@ -78,24 +89,6 @@ export function attribuerRoles<T extends { id: number; cat: CategoryKey }>(piece
 }
 
 /**
- * LE GABARIT DE RÉFÉRENCE (08/10/2026, maquette validée « voici exactement ce que je veux ») : une planche à peu près CARRÉE
- * (100 × 100), mesurée sur la maquette — le blazer héro en haut à droite, incliné de +8° et au fond ; le T-shirt en haut à
- * gauche, incliné de −8° ; le pantalon en diagonale (−12°) qui passe sous le T-shirt et sur le blazer ; le sac en bas à
- * gauche ; les baskets en bas à droite. Centres (x, y) et largeurs (l) en unités de la planche, angles en degrés.
- *
- * Les rôles sont ceux de attribuerRoles : ce gabarit vaut pour toute tenue (le héro prend la place du blazer). La graine ne
- * fait varier que de petits écarts (±2 de position, ±3 % de taille, ±1,5° d'angle) et, hors veste héro, le miroir : le
- * regard va du T-shirt au blazer, au pantalon, aux baskets — le sac fait contrepoids.
- */
-const REF: Record<RoleFlatLay, { x: number; y: number; l: number; angle: number }> = {
-  hero: { x: 70, y: 33, l: 58, angle: 8 },
-  secondaire: { x: 27, y: 27, l: 49, angle: -8 },
-  bas: { x: 50, y: 62, l: 42, angle: -12 },
-  chaussures: { x: 80, y: 82, l: 36, angle: -10 },
-  sac: { x: 17, y: 71, l: 33, angle: -2 },
-  accessoire: { x: 8, y: 8, l: 16, angle: 10 },
-};
-/**
  * LA TAILLE VISUELLE PAR CATÉGORIE (08/10/2026, « standard image flat lay ») : la part d'un canevas carré que doit occuper chaque
  * type de pièce pour que toutes semblent photographiées ensemble — milieu des plages du standard (T-shirt, chemise, pull
  * 75–80 ; blazer, veste 80–85 ; manteau, robe 85–90 ; pantalon 80–90 ; jupe 70–80 ; short 65–75 ; sac, chaussures 65–75 ;
@@ -127,11 +120,87 @@ export function echelleVisuelle(role: RoleFlatLay, cat: CategoryKey): number {
   return Math.min(1.12, Math.max(0.82, (PART_VISUELLE[cat] ?? PART_REF[role]) / PART_REF[role]));
 }
 
-const REF_ACCESSOIRES = [
-  { x: 8, y: 8, l: 16, angle: 10 },
-  { x: 52, y: 94, l: 18, angle: -8 },
-  { x: 92, y: 52, l: 14, angle: 12 },
+/**
+ * LES CONTEXTES (08/10/2026, « système flat lay ») : une MÊME image de pièce sert partout ; seul le moteur s'adapte — taille,
+ * position, rotation, profondeur, composition — au contexte. `hauteur` est celle de la zone en unités de largeur (100).
+ *
+ *   hero-home    ≈ 180 × 250 px sur 390 px : compact, plutôt horizontal ; la maquette validée (REF), angles de la maquette.
+ *   look-detail  ≈ 300 × 390 px : la tenue au centre de l'écran Tenue du jour ; la pièce héro bien plus grande ; angles du
+ *                brief (héro ±4°, second plan ±5°, chaussures ±8°, sac ±6°, accessoires ±10°). Une robe est centrée,
+ *                sac et chaussures dessous.
+ *   capsule, dressing, packing : carte carrée, gabarit du hero de l'accueil ; branchés au moteur sans écran concerné pour
+ *                l'instant (le périmètre de cette tâche est la présentation, pas ces écrans).
+ */
+interface Ref {
+  x: number;
+  y: number;
+  l: number;
+  angle: number;
+}
+interface ConfigContexte {
+  hauteur: number;
+  marge: number;
+  /** Combien d'accessoires au plus, quand la tenue compte moins de 6 pièces / 6 et plus. */
+  maxAccessoires: [number, number];
+  /** Écart maximal (unités de zone) entre un accessoire et la pièce la plus proche : au-delà il est isolé. */
+  ecartAccessoireMax: number;
+  refs: Record<RoleFlatLay, Ref>;
+  /** Gabarit d'une robe ou d'une combinaison héro (sinon `refs`). */
+  refsRobe?: Partial<Record<RoleFlatLay, Ref>>;
+  slotsAccessoires: Ref[];
+}
+
+const REF_HOME: Record<RoleFlatLay, Ref> = {
+  hero: { x: 70, y: 33, l: 58, angle: 8 },
+  secondaire: { x: 27, y: 27, l: 49, angle: -8 },
+  bas: { x: 50, y: 62, l: 42, angle: -12 },
+  chaussures: { x: 80, y: 82, l: 36, angle: -10 },
+  sac: { x: 17, y: 71, l: 33, angle: -2 },
+  accessoire: { x: 8, y: 8, l: 16, angle: 10 },
+};
+const SLOTS_HOME: Ref[] = [
+  { x: 8, y: 10, l: 17, angle: 10 },
+  { x: 52, y: 92, l: 18, angle: -8 },
+  { x: 92, y: 52, l: 15, angle: 9 },
 ];
+
+export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
+  "hero-home": { hauteur: 112, marge: 4, maxAccessoires: [2, 1], ecartAccessoireMax: 12, refs: REF_HOME, slotsAccessoires: SLOTS_HOME },
+  "look-detail": {
+    hauteur: 126,
+    marge: 5,
+    maxAccessoires: [3, 2],
+    ecartAccessoireMax: 14,
+    refs: {
+      hero: { x: 64, y: 34, l: 62, angle: 3 },
+      secondaire: { x: 28, y: 27, l: 50, angle: -4 },
+      bas: { x: 50, y: 68, l: 44, angle: -5 },
+      chaussures: { x: 80, y: 100, l: 36, angle: -7 },
+      sac: { x: 20, y: 98, l: 36, angle: -4 },
+      accessoire: { x: 10, y: 8, l: 18, angle: 9 },
+    },
+    // Une robe : centrée, la surcouche derrière à droite, sac et chaussures dessous de part et d'autre.
+    refsRobe: {
+      hero: { x: 46, y: 46, l: 60, angle: 3 },
+      secondaire: { x: 76, y: 30, l: 46, angle: 4 },
+      sac: { x: 20, y: 100, l: 36, angle: -4 },
+      chaussures: { x: 74, y: 104, l: 36, angle: -6 },
+    },
+    slotsAccessoires: [
+      { x: 90, y: 66, l: 18, angle: 8 },
+      { x: 10, y: 12, l: 18, angle: -8 },
+      { x: 50, y: 118, l: 20, angle: 6 },
+    ],
+  },
+  capsule: { hauteur: 100, marge: 4, maxAccessoires: [1, 1], ecartAccessoireMax: 12, refs: REF_HOME, slotsAccessoires: SLOTS_HOME },
+  dressing: { hauteur: 100, marge: 4, maxAccessoires: [1, 1], ecartAccessoireMax: 12, refs: REF_HOME, slotsAccessoires: SLOTS_HOME },
+  packing: { hauteur: 100, marge: 4, maxAccessoires: [2, 1], ecartAccessoireMax: 12, refs: REF_HOME, slotsAccessoires: SLOTS_HOME },
+};
+
+/** La hauteur de la zone d'un contexte, en unités de largeur : la zone d'affichage garde cette proportion. */
+export function hauteurDuContexte(contexte: ContexteFlatLay): number {
+  return CONTEXTES[contexte].hauteur;
+}
 
 /**
  * Profondeur (08/10/2026, demandé : « le manteau ou la veste doivent être derrière ») : la veste et le manteau sont
@@ -163,25 +232,54 @@ export function generateur(graine: string): () => number {
   };
 }
 
-/** Marge de sécurité autour de la composition, en unités de zone (4 unités ≈ 7 px sur la colonne de droite à 390 px ; avec le padding de la carte, ≥ 16 px du bord). */
+/** Marge de sécurité par défaut (celle du hero de l'accueil) : autour de la composition, en unités de zone. */
 export const MARGE_SECURITE = 4;
 
-export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZone = 112): { pieces: PlacementFlatLay[] } {
-  const roles = attribuerRoles(pieces);
-  if (!roles.length) return { pieces: [] };
+/** Les limites d'inclinaison du brief, par rôle, en degrés — utilisées pour borner une inclinaison préférée. */
+const LIMITE_INCLINAISON: Record<RoleFlatLay, number> = { hero: 8, secondaire: 8, bas: 12, chaussures: 10, sac: 6, accessoire: 10 };
+
+type Boite = { x0: number; x1: number; y0: number; y1: number };
+const boiteTournee = (p: { x: number; y: number; l: number; h: number; angle: number }): Boite => {
+  const r = (Math.abs(p.angle) * Math.PI) / 180;
+  const w = p.l * Math.cos(r) + p.h * Math.sin(r);
+  const hh = p.l * Math.sin(r) + p.h * Math.cos(r);
+  return { x0: p.x - w / 2, x1: p.x + w / 2, y0: p.y - hh / 2, y1: p.y + hh / 2 };
+};
+const ecart = (a: Boite, b: Boite) => Math.max(0, Math.max(a.x0 - b.x1, b.x0 - a.x1), Math.max(a.y0 - b.y1, b.y0 - a.y1));
+const aire = (b: Boite) => Math.max(0, b.x1 - b.x0) * Math.max(0, b.y1 - b.y0);
+const recouvrement = (a: Boite, b: Boite) => aire({ x0: Math.max(a.x0, b.x0), x1: Math.min(a.x1, b.x1), y0: Math.max(a.y0, b.y0), y1: Math.min(a.y1, b.y1) });
+
+/** Le rang d'importance d'un accessoire : un accessoire de tenue (ceinture, foulard) passe avant un bijou, trop petit pour une planche. */
+const rangAccessoire = (cat: CategoryKey) => (cat === "accessoire" ? 0 : 1);
+
+export interface OptionsFlatLay {
+  contexte?: ContexteFlatLay;
+}
+
+export function composerFlatLay(pieces: PieceFlatLay[], graine: string, options: OptionsFlatLay = {}): { pieces: PlacementFlatLay[]; ecartees: number[] } {
+  const config = CONTEXTES[options.contexte ?? "hero-home"];
+  const hauteurZone = config.hauteur;
+  const roles = attribuerRoles(pieces.filter((p) => p.flatLayCompatible !== false));
+  if (!roles.length) return { pieces: [], ecartees: [] };
   const alea = generateur(graine);
   const dans = (min: number, max: number) => min + (max - min) * alea();
   // La veste ou le manteau héros se pose toujours à DROITE (maquette) : pas de miroir. Sinon le sens est tiré par la graine.
   const heroDessus = DESSUS.includes(roles[0].piece.cat);
+  const heroRobe = ROBES.includes(roles[0].piece.cat);
   const miroir = !heroDessus && alea() < 0.5;
   const nb = roles.length;
-  // Peu de pièces : un peu plus grandes. Beaucoup : les secondaires et accessoires se réduisent.
+  // 2–3 pièces : composition plus ouverte (un peu plus grandes). 6 et plus : on réduit le secondaire et on limite les accessoires.
   const echelleGlobale = nb <= 3 ? 1.1 : 1;
-  let rangAccessoire = 0;
+  const refDe = (role: RoleFlatLay): Ref => (heroRobe && config.refsRobe?.[role]) || config.refs[role];
 
-  const brut = roles.map(({ piece, role }) => {
-    const ref = role === "accessoire" ? REF_ACCESSOIRES[rangAccessoire++ % REF_ACCESSOIRES.length] : REF[role];
-    const visualScale = echelleVisuelle(role, piece.cat);
+  // Les accessoires : on garde les plus utiles, en nombre limité par le contexte et le nombre de pièces.
+  const accessoires = roles.filter((r) => r.role === "accessoire").sort((a, b) => rangAccessoire(a.piece.cat) - rangAccessoire(b.piece.cat));
+  const plafond = config.maxAccessoires[nb >= 6 ? 1 : 0];
+  const gardes = new Set(accessoires.slice(0, plafond).map((r) => r.piece));
+  const ecartees: number[] = accessoires.filter((r) => !gardes.has(r.piece)).map((r) => r.piece.id);
+
+  const placer = (piece: PieceFlatLay, role: RoleFlatLay, ref: Ref) => {
+    const visualScale = echelleVisuelle(role, piece.cat) * (piece.visualScale && piece.visualScale > 0 ? piece.visualScale : 1);
     let l = ref.l * visualScale * dans(0.97, 1.03) * echelleGlobale;
     if (nb >= 6 && (role === "secondaire" || role === "accessoire")) l *= 0.88;
     const ratio = piece.ratio > 0 ? piece.ratio : 1;
@@ -191,28 +289,50 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
     let cx = ref.x + dans(-2, 2);
     const cy = ref.y + dans(-2, 2) + (hauteurZone - 100) / 2;
     let angle = ref.angle + dans(-1.5, 1.5);
+    if (typeof piece.preferredRotation === "number") {
+      const lim = LIMITE_INCLINAISON[role];
+      angle = Math.max(-lim, Math.min(lim, piece.preferredRotation));
+    }
     if (miroir) {
       cx = 100 - cx;
       angle = -angle;
     }
     return { id: piece.id, cat: piece.cat, role, visualScale, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
-  });
-
-  // La boîte de chaque pièce, tournée : son encombrement réel pour la zone de sécurité.
-  const boite = (p: { x: number; y: number; l: number; h: number; angle: number }) => {
-    const r = (Math.abs(p.angle) * Math.PI) / 180;
-    const w = p.l * Math.cos(r) + p.h * Math.sin(r);
-    const hh = p.l * Math.sin(r) + p.h * Math.cos(r);
-    return { x0: p.x - w / 2, x1: p.x + w / 2, y0: p.y - hh / 2, y1: p.y + hh / 2 };
   };
-  const bornes = brut.map(boite);
+
+  const brut = roles
+    .filter((r) => r.role !== "accessoire")
+    .map(({ piece, role }) => placer(piece, role, refDe(role)));
+
+  // Chaque accessoire garde le premier emplacement qui le colle à la composition SANS couvrir une pièce importante ; sinon il est
+  // écarté : un petit objet isolé ou posé sur le héro ne sert pas la planche (« 08/10/2026 : un accessoire noir seul sous la robe »).
+  const structure = () => brut.map(boiteTournee);
+  for (const { piece } of accessoires.filter((r) => gardes.has(r.piece))) {
+    let meilleur: ReturnType<typeof placer> | null = null;
+    let meilleurEcart = Infinity;
+    for (const slot of config.slotsAccessoires) {
+      const candidat = placer(piece, "accessoire", slot);
+      const bc = boiteTournee(candidat);
+      const autres = structure();
+      const gap = Math.min(...autres.map((b) => ecart(bc, b)));
+      const couvre = autres.some((b) => recouvrement(bc, b) > aire(bc) * 0.12);
+      if (!couvre && gap < meilleurEcart) {
+        meilleur = candidat;
+        meilleurEcart = gap;
+      }
+    }
+    if (meilleur && meilleurEcart <= config.ecartAccessoireMax) brut.push(meilleur);
+    else ecartees.push(piece.id);
+  }
+
+  const bornes = brut.map(boiteTournee);
   const x0 = Math.min(...bornes.map((b) => b.x0));
   const x1 = Math.max(...bornes.map((b) => b.x1));
   const y0 = Math.min(...bornes.map((b) => b.y0));
   const y1 = Math.max(...bornes.map((b) => b.y1));
-  // Ajuster l'ensemble à la zone de sécurité : réduit s'il déborde, agrandi d'au plus 12 % s'il reste de la place.
-  const largeurUtile = 100 - 2 * MARGE_SECURITE;
-  const hauteurUtile = hauteurZone - 2 * MARGE_SECURITE;
+  // Ajuster l'ensemble à la zone de sécurité : réduit s'il déborde, agrandi d'au plus 10 % s'il reste de la place.
+  const largeurUtile = 100 - 2 * config.marge;
+  const hauteurUtile = hauteurZone - 2 * config.marge;
   const k = Math.min(largeurUtile / (x1 - x0), hauteurUtile / (y1 - y0), 1.1);
   const cxEns = (x0 + x1) / 2;
   const cyEns = (y0 + y1) / 2;
@@ -224,5 +344,6 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
       l: p.l * k,
       h: p.h * k,
     })),
+    ecartees,
   };
 }
