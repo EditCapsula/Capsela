@@ -66,12 +66,19 @@ describe("composerFlatLay — déterministe, borné, sans grille", () => {
       for (const q of composerFlatLay(look(), "s" + i).pieces) if (q.role === "sac" || q.role === "chaussures") expect(q.l).toBeGreaterThanOrEqual(20);
   });
 
-  it("le haut est sous la veste, la veste sur le bas, chaussures et sac au-dessus", () => {
-    const z = Object.fromEntries(composerFlatLay(look(), "z").pieces.map((q) => [q.role, q.z]));
-    expect(z.secondaire).toBeLessThan(z.bas);
-    expect(z.bas).toBeLessThan(z.hero);
-    expect(z.hero).toBeLessThan(z.chaussures);
-    expect(z.chaussures).toBeLessThan(z.sac);
+  it("la veste et le manteau sont toujours au fond, le bas puis le haut devant, puis chaussures, sac, accessoires", () => {
+    const z = (pieces: PieceFlatLay[]) => Object.fromEntries(composerFlatLay(pieces, "z").pieces.map((q, i) => [pieces.find((x) => x.id === q.id)!.cat, q.z]));
+    const a = z(look());
+    expect(a.veste).toBeLessThan(a.pantalon);
+    expect(a.pantalon).toBeLessThan(a.haut);
+    expect(a.haut).toBeLessThan(a.chaussures);
+    expect(a.chaussures).toBeLessThan(a.sac);
+    expect(a.sac).toBeLessThan(a.bijou);
+    // Même quand la veste n'est pas le héro (une robe) ou que le manteau est le second plan.
+    const b = z([p("robe"), p("veste"), p("sac")]);
+    expect(b.veste).toBeLessThan(b.robe);
+    const c = z([p("pantalon"), p("manteau"), p("haut")]);
+    expect(c.manteau).toBeLessThan(c.pantalon);
   });
 
   it("aucune pièce : rien", () => {

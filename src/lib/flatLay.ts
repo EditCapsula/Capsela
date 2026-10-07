@@ -99,14 +99,17 @@ const CENTRES: Record<RoleFlatLay, [number, number]> = {
 };
 const CENTRES_ACCESSOIRES: [number, number][] = [[88, 10], [10, 96], [50, 128]];
 
-/** Profondeur : le haut sous la veste, la veste sur le bas, puis chaussures, sac et accessoires. */
-function profondeur(role: RoleFlatLay, heroEstBas: boolean): number {
-  if (role === "secondaire") return 1;
-  if (role === "bas") return 2;
-  if (role === "hero") return heroEstBas ? 2 : 3;
+/**
+ * Profondeur (08/10/2026, demandé : « le manteau ou la veste doivent être derrière ») : la veste et le manteau sont
+ * TOUJOURS au fond, héros ou non ; le bas et la robe viennent ensuite, le haut par-dessus (il rentre dans le bas),
+ * puis chaussures, sac et accessoires.
+ */
+function profondeur(role: RoleFlatLay, cat: CategoryKey): number {
+  if (DESSUS.includes(cat)) return 1;
   if (role === "chaussures") return 4;
   if (role === "sac") return 5;
-  return 6;
+  if (role === "accessoire") return 6;
+  return HAUTS.includes(cat) ? 3 : 2;
 }
 
 /** Une graine d'identité de look → un générateur pseudo-aléatoire stable (FNV-1a, puis mulberry32). */
@@ -138,7 +141,6 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
   const nb = roles.length;
   // Peu de pièces : un peu plus grandes. Beaucoup : les secondaires et accessoires se réduisent.
   const echelleGlobale = nb <= 3 ? 1.12 : 1;
-  const heroEstBas = roles[0].role === "hero" && BAS.includes(roles[0].piece.cat);
   let rangAccessoire = 0;
 
   const brut = roles.map(({ piece, role }) => {
@@ -159,7 +161,7 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
     const lim = INCLINAISON[role];
     let angle = dans(-lim, lim);
     if (miroir && role !== "hero") angle = -angle;
-    return { id: piece.id, role, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, heroEstBas) };
+    return { id: piece.id, role, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
   });
 
   // La boîte de chaque pièce, tournée : son encombrement réel pour la zone de sécurité.
