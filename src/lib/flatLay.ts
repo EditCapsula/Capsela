@@ -79,12 +79,12 @@ export function attribuerRoles<T extends { id: number; cat: CategoryKey }>(piece
 
 /** Plages de largeur (unités de zone) et d'inclinaison (degrés) par rôle. */
 const LARGEUR: Record<RoleFlatLay, [number, number]> = {
-  hero: [64, 72],
-  secondaire: [52, 60],
-  bas: [50, 60],
-  chaussures: [34, 42],
-  sac: [33, 42],
-  accessoire: [16, 22],
+  hero: [70, 79],
+  secondaire: [57, 66],
+  bas: [55, 66],
+  chaussures: [37, 46],
+  sac: [36, 46],
+  accessoire: [18, 24],
 };
 const INCLINAISON: Record<RoleFlatLay, number> = { hero: 4, secondaire: 5, bas: 5, chaussures: 8, sac: 6, accessoire: 10 };
 
@@ -92,12 +92,12 @@ const INCLINAISON: Record<RoleFlatLay, number> = { hero: 4, secondaire: 5, bas: 
 const CENTRES: Record<RoleFlatLay, [number, number]> = {
   hero: [46, 48],
   secondaire: [71, 24],
-  bas: [60, 77],
-  chaussures: [14, 118],
-  sac: [86, 104],
+  bas: [60, 74],
+  chaussures: [14, 110],
+  sac: [86, 98],
   accessoire: [88, 10],
 };
-const CENTRES_ACCESSOIRES: [number, number][] = [[88, 10], [10, 96], [50, 128]];
+const CENTRES_ACCESSOIRES: [number, number][] = [[88, 10], [10, 90], [50, 122]];
 
 /**
  * Profondeur (08/10/2026, demandé : « le manteau ou la veste doivent être derrière ») : la veste et le manteau sont
@@ -137,7 +137,9 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
   if (!roles.length) return { pieces: [] };
   const alea = generateur(graine);
   const dans = (min: number, max: number) => min + (max - min) * alea();
-  const miroir = alea() < 0.5;
+  // La veste ou le manteau héros se pose toujours à DROITE (08/10/2026, demandé), le haut passe donc à gauche ; sinon le sens est tiré.
+  const heroDessus = DESSUS.includes(roles[0].piece.cat);
+  const miroir = alea() < 0.5 || heroDessus;
   const nb = roles.length;
   // Peu de pièces : un peu plus grandes. Beaucoup : les secondaires et accessoires se réduisent.
   const echelleGlobale = nb <= 3 ? 1.12 : 1;
@@ -158,6 +160,7 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, hauteurZ
     cx += dans(-3, 3);
     cy += dans(-3, 3);
     if (miroir) cx = 100 - cx;
+    if (heroDessus && role === "hero") cx += 6;
     const lim = INCLINAISON[role];
     let angle = dans(-lim, lim);
     if (miroir) angle = -angle;

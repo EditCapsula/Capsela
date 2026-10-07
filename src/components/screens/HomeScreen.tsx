@@ -298,7 +298,7 @@ export default function HomeScreen() {
 
       {/* LE LOOK DU JOUR : fond sable, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
           jour passé, aucune tenue possible, la tenue qui se compose, la tenue. */}
-      <div className="mx-6 mt-3 rounded-hero grid gap-2" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: "minmax(0,0.86fr) minmax(0,1.14fr)", padding: "20px 14px 10px 18px", minHeight: 300 }}>
+      <div className="mx-6 mt-3 rounded-hero grid gap-2" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: "minmax(0,0.8fr) minmax(0,1.2fr)", padding: "20px 14px 10px 18px", minHeight: 300 }}>
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">
             <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-on-terracotta" style={{ display: "block" }}>
