@@ -384,6 +384,8 @@ function desserrer<T extends { id: number; x: number; y: number; l: number; h: n
 
 export interface OptionsFlatLay {
   contexte?: ContexteFlatLay;
+  /** true : jamais de planche en miroir (la silhouette de chargement, qui ignore la graine du look à venir). */
+  sansMiroir?: boolean;
 }
 
 /** `masquees` : les pièces de la tenue que le contexte ne pose pas dans la planche (le t-shirt de l'accueil) — elles restent dans le look. */
@@ -407,7 +409,7 @@ export function composerFlatLay(
   const heroRobe = ROBES.includes(roles[0].piece.cat);
   // Un bas héro avec une couche : le groupe des hauts à gauche, le bas à droite — jamais en miroir (la couche reste lisible).
   const groupe = !heroRobe && !heroDessus && BAS.includes(roles[0].piece.cat) && avecCouche;
-  const miroir = !heroDessus && !groupe && alea() < 0.5;
+  const miroir = !heroDessus && !groupe && !options.sansMiroir && alea() < 0.5;
   const nb = roles.length;
   // 2–3 pièces : composition plus ouverte (un peu plus grandes). 6 et plus : on réduit le secondaire et on limite les accessoires.
   const echelleGlobale = nb <= 3 ? 1.1 : 1;
