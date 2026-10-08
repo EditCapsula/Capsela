@@ -74,9 +74,7 @@ function occasionPhraseFor(occasion: OccasionKey, workMode: WorkMode, dateContex
           ? "ta soirée"
           : "ton rendez-vous";
     case "soiree":
-      return "ta sortie";
-    case "festive":
-      return "ta sortie festive";
+      return "ta soirée";
     case "sport":
       return "ta séance de sport";
     case "cocooning":

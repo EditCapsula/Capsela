@@ -169,7 +169,7 @@ describe("ce que R-B10, R-S17 et la règle des mailles voient du catalogue", () 
           const pieces = ids.map((id) => index.get(id)).filter((p): p is CatalogItem => Boolean(p)) as Item[];
           if (pieces.filter(chemiseActuel).length >= 2) hitActuel += 1;
           if (pieces.filter(chemiseCandidat).length >= 2) hitCandidat += 1;
-          if (occ === "festive") {
+          if ((occ as string) === "festive") {
             festives += 1;
             if (pieces.some((p) => (p.cat === "haut" && chemiseActuel(p)) || (p.cat === "robe" && robeChemiseActuel(p)))) festiveChemiseActuel += 1;
             if (pieces.some((p) => (p.cat === "haut" && chemiseCandidat(p)) || (p.cat === "robe" && robeChemiseCandidat(p)))) festiveChemiseCandidat += 1;

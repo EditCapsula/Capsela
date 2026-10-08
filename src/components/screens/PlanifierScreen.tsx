@@ -20,6 +20,7 @@ import { sansTenueCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { titreLookDuJour } from "@/lib/logic";
 import { HUMEURS, LIBELLE_HUMEUR, genererTenueHumeur, type Humeur } from "@/lib/humeur";
+import { soireeHabillee } from "@/lib/occasions";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
@@ -185,13 +186,14 @@ const TYPES_LIEU: [string, string][] = [
  *
  * Deux contraintes cadrent la question avant tout goût :
  *
- * 1. LE TYPE DE LIEU N'ENTRE PAS DANS LE MOTEUR. Vérifié : la tenue vient de
- *    `generateOutfitWithFallback(pool, météo, occasion, workMode, dateContext,
- *    couleurs, genre)` — `typeLieu` n'y figure pas, et aucune règle de
- *    `logic.ts` ne le lit. Il décrit le rendez-vous (il s'affiche sur la
- *    fiche, il se range dans `planned_outfits.type_lieu`), il n'affine pas la
- *    sélection. Une question sans conséquence ne se pose donc que là où la
- *    réponse sert à SE RELIRE plus tard.
+ * 1. LE TYPE DE LIEU N'ENTRE PAS DANS LE MOTEUR, SAUF POUR UNE SEULE OCCASION.
+ *    Vérifié : aucune règle de `logic.ts` ne lit `typeLieu`. Il décrit le
+ *    rendez-vous (il s'affiche sur la fiche, il se range dans
+ *    `planned_outfits.type_lieu`), il n'affine pas la sélection. Une seule
+ *    exception depuis le 08/10/2026 : « Bar / Rooftop » pour une SOIRÉE la
+ *    rend habillée (soireeHabillee, occasions.ts) — c'est ce qui remplace
+ *    l'ancienne occasion « Sortie festive ». Ailleurs, une question sans
+ *    conséquence ne se pose que là où la réponse sert à SE RELIRE plus tard.
  * 2. LES VALEURS SONT FIGÉES PAR LA BASE. `planned_outfits.type_lieu` porte
  *    un CHECK sur exactement ces cinq chaînes (migration 0030). On peut donc
  *    en montrer un sous-ensemble, jamais en inventer une sixième : pas de
@@ -207,9 +209,8 @@ const TYPES_LIEU: [string, string][] = [
  *   entretien        — masqué, même raison.
  *   date             — les cinq. C'est l'occasion où le lieu fait le plus
  *                      varier ce qu'on porte, et celle où on se relit.
- *   soiree           — les cinq.
- *   festive          — trois. « Club, anniversaire, bal » : un musée et un
- *                      parc n'y répondent pas.
+ *   soiree           — les cinq. (L'ancienne « Sortie festive », qui n'en
+ *                      avait que trois, a été fusionnée ici le 08/10/2026.)
  *   sport            — masqué. Seul « Extérieur » aurait du sens, et une
  *                      liste à une entrée n'est pas un choix.
  *   cocooning        — masqué. C'est chez soi, par définition.
@@ -223,7 +224,6 @@ const TYPES_LIEU: [string, string][] = [
 const TYPES_LIEU_PAR_OCCASION: Partial<Record<OccasionKey, readonly string[]>> = {
   date: ["Restaurant", "Bar / Rooftop", "Lieu culturel", "Extérieur", "Chez quelqu'un"],
   soiree: ["Restaurant", "Bar / Rooftop", "Lieu culturel", "Extérieur", "Chez quelqu'un"],
-  festive: ["Restaurant", "Bar / Rooftop", "Chez quelqu'un"],
   evenement_perso: ["Restaurant", "Lieu culturel", "Extérieur", "Chez quelqu'un"],
 };
 
@@ -491,6 +491,7 @@ function composerTenuePlan(e: {
   dateContext: DateContext;
   profile: ReturnType<typeof useAuth>["profile"];
   humeur: Humeur | null;
+  typeLieu: string | null;
 }) {
   if (!e.occ) return null;
   const pool = e.dressingSeul
@@ -507,6 +508,7 @@ function composerTenuePlan(e: {
     morphology: e.profile.morphology,
     colorimetrie: colorimetrieMoteur(e.profile.colorimetrie),
     humeur: e.humeur,
+    soireeHabillee: e.occ === "soiree" && soireeHabillee({ typeLieu: e.typeLieu, humeur: e.humeur }),
   });
 }
 
@@ -767,14 +769,15 @@ export default function PlanifierScreen() {
     dateContext,
     profile,
     humeur,
+    typeLieu,
   };
   const tenue = useMemo(
     () => composerTenuePlan(entreesMoteur),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [occ, dressingSeul, state.items, defaultCapsule, meteoUtilisee, workMode, dateContext, profile, humeur]
+    [occ, dressingSeul, state.items, defaultCapsule, meteoUtilisee, workMode, dateContext, profile, humeur, typeLieu]
   );
   /** L'alternative choisie dans « Autres propositions » : valable tant que les paramètres qui l'ont produite ne changent pas. */
-  const cleParams = `${occ}|${dressingSeul}|${humeur}|${jour}|${moment}|${workMode}|${dateContext}`;
+  const cleParams = `${occ}|${dressingSeul}|${humeur}|${typeLieu}|${jour}|${moment}|${workMode}|${dateContext}`;
   const [choixBrut, setChoixBrut] = useState<{ cle: string; ids: number[] } | null>(null);
   const choisie = choixBrut?.cle === cleParams ? choixBrut.ids : null;
   /** La proposition surlignée dans « Autres propositions » (index dans `propositions`), sinon celle qui est affichée. */

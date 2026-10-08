@@ -2,6 +2,7 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { HUMEURS, type Humeur } from "./humeur";
 import { jourLocal } from "./outfitFeedback";
 import type { MomentJournee } from "./prevision";
+import { normaliserOccasion } from "./occasions";
 import type { OccasionKey } from "./types";
 
 /**
@@ -58,7 +59,8 @@ function rowToTenue(r: PlannedOutfitRow): TenuePlanifiee {
     id: String(r.id),
     jour: r.jour,
     moment: r.moment as MomentJournee,
-    occasion: r.occasion as OccasionKey,
+    // Une planification d'avant le 08/10/2026 peut porter « festive » : elle se lit « soiree » (occasions.ts) et se réécrit ainsi.
+    occasion: normaliserOccasion(r.occasion) ?? (r.occasion as OccasionKey),
     sousChoix: r.sous_choix,
     lieu: r.lieu,
     typeLieu: r.type_lieu,

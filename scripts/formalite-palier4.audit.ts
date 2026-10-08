@@ -39,7 +39,7 @@ const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVI
 
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
 const BUCKETS = ["Printemps / Été", "Automne / Hiver"] as const;
-const OCC4: OccasionKey[] = ["festive", "evenement_perso"];
+const OCC4: OccasionKey[] = ["festive" as OccasionKey, "evenement_perso"];
 const BOTTOMS: CategoryKey[] = [...BAS_CATS, "jupe"];
 const UNEPIECE: CategoryKey[] = ["robe", "combinaison"];
 

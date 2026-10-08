@@ -728,7 +728,7 @@ export const MARQUE_CAPSELA = "Capsela";
  *     l'écran, et la règle du projet exclut les emojis de l'interface ; le
  *     message et son aperçu devant être identiques, aucun des deux n'en porte.
  *   · « pour l’occasion « … » » plutôt que « pour son « … » » : juste quelle
- *     que soit l'occasion (« son Sortie / Soirée » ne l'est pas).
+ *     que soit l'occasion (« sa Soirée » ne l'est pas).
  *   · « Elle hésite encore » devient une relance sans genre — l'application
  *     s'adresse aussi aux hommes, et aucun accord n'est déduit du profil.
  *   · « Météo : » introduit la ligne météo, que l'emoji annonçait.

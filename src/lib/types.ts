@@ -44,7 +44,6 @@ export type OccasionKey =
   | "entretien"
   | "date"
   | "soiree"
-  | "festive"
   | "sport"
   | "cocooning"
   | "voyage"

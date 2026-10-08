@@ -35,7 +35,7 @@ import { STYLES_FEMME, assertCatalogueStyles, profilAudit } from "./harnaisAudit
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const OCC4: OccasionKey[] = ["festive", "evenement_perso"];
+const OCC4: OccasionKey[] = ["festive" as OccasionKey, "evenement_perso"];
 const UNEPIECE = ["robe", "combinaison"];
 const TIRAGES = 20;
 const CAS: { id: number; style: StyleId; saison: CapsuleSeason; attendu: string }[] = [

@@ -32,7 +32,7 @@ const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVI
 
 const OCCS: OccasionKey[] = OCCASIONS.map(([k]) => k);
 const FORM = new Map<OccasionKey, number>(OCCASIONS.map(([k, , , f]) => [k, f]));
-const OCC4: OccasionKey[] = ["festive", "evenement_perso"];
+const OCC4: OccasionKey[] = ["festive" as OccasionKey, "evenement_perso"];
 const UNEPIECE: CategoryKey[] = ["robe", "combinaison"];
 const TIRAGES = 20;
 const pct = (n: number, t: number) => (t ? ((n / t) * 100).toFixed(1) : "0.0") + " %";

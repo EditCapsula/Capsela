@@ -16,9 +16,9 @@ import type { OccasionKey } from "./types";
  * (900 × 1200, sans personne ni texte), copiés tels quels dans
  * public/editorial/occasions. Une seule image pour les profils femme et homme :
  * elle montre l'univers de l'occasion, jamais une silhouette.
- * Rendez-vous important reprend le visuel Travail et Sortie festive celui de
- * Sortie / Soirée (décidé le 26/09/2026) : deux univers voisins, choisis
- * explicitement — jamais un repli automatique.
+ * Rendez-vous important reprend le visuel Travail (décidé le 26/09/2026) : deux
+ * univers voisins, choisis explicitement — jamais un repli automatique.
+ * « Sortie festive » a été fusionnée dans « Soirée » le 08/10/2026 (occasions.ts).
  *
  * ARBITRAGE ÉDITORIAL : les titres et les insights.
  *
@@ -88,21 +88,12 @@ export const OCCASIONS_EDITORIALES: Record<Exclude<OccasionKey, "all">, Occasion
     visuel: V("date", "d'un rendez-vous à deux"),
   },
   soiree: {
-    sujet: "Les sorties",
+    sujet: "Les soirées",
     pluriel: true,
     verbe: RYTHME,
-    pour: "tes sorties",
+    pour: "tes soirées",
     insight: "Ton dressing révèle une vraie place pour les silhouettes de soirée.",
-    cta: "Voir mes tenues sortie",
-    visuel: V("soiree", "d'une soirée"),
-  },
-  festive: {
-    sujet: "Les sorties festives",
-    pluriel: true,
-    verbe: RYTHME,
-    pour: "tes sorties festives",
-    insight: "Ton dressing révèle une vraie place pour tes soirées festives.",
-    cta: "Voir mes tenues sortie festive",
+    cta: "Voir mes tenues soirée",
     visuel: V("soiree", "d'une soirée"),
   },
   sport: {

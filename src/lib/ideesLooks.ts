@@ -90,7 +90,7 @@ export function texteProvenance(p: ProvenanceLook): string {
  * LES TROIS FAMILLES DES PASTILLES (Quotidien / Travail / Sortie). Une
  * occasion sans famille (Sport) n'apparaît que sous « Tous les looks ».
  * ARBITRAGE ÉDITORIAL : Cocooning et Voyage rejoignent le Quotidien ;
- * Rendez-vous important le Travail ; Date, Sortie festive et Cérémonie la
+ * Rendez-vous important le Travail ; Rendez-vous amoureux et Cérémonie la
  * Sortie.
  */
 export type FamilleLook = "quotidien" | "travail" | "sortie";
@@ -108,7 +108,6 @@ const FAMILLE_DE: Partial<Record<OccasionKey, FamilleLook>> = {
   travail_formel: "travail",
   entretien: "travail",
   soiree: "sortie",
-  festive: "sortie",
   date: "sortie",
   evenement_perso: "sortie",
 };

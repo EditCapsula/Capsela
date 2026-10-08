@@ -34,6 +34,8 @@ export interface PieceFlatLay {
   preferredRotation?: number;
   /** false : la pièce n'entre pas dans un flat lay (défaut true). */
   flatLayCompatible?: boolean;
+  /** Sous-type d'un accessoire (« Collants »…), quand le catalogue le porte. */
+  accessoireType?: string;
 }
 
 export interface PlacementFlatLay {
@@ -166,6 +168,8 @@ interface ConfigContexte {
   refsDessus?: Partial<Record<RoleFlatLay, Ref>>;
   /** true : la couche (t-shirt sous un pull…) reste dans la tenue mais n'est pas posée dans cette planche (hero-home). */
   masquerCouche?: boolean;
+  /** Sous-types d'accessoire qui restent dans la tenue mais ne sont pas posées dans cette planche (hero-home : les collants, dont le visuel à plat ne se lit pas — 08/10/2026). */
+  accessoiresMasques?: string[];
   /** Combien l'ajustement à la zone peut AGRANDIR la composition (défaut 1,1) : un contexte compact la laisse remplir sa zone. */
   agrandissementMax?: number;
   /** Seuils de chevauchement propres au contexte (sinon CHEVAUCHEMENT_MAX / MASQUE_MAX). */
@@ -229,6 +233,7 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
     refsGroupe: GROUPE_HOME,
     refsDessus: DESSUS_HOME,
     masquerCouche: true,
+    accessoiresMasques: ["Collants"],
     chevauchementMax: 0.6,
     masqueMax: 0.6,
     slotsAccessoires: SLOTS_HOME,
@@ -401,10 +406,14 @@ export function composerFlatLay(
 ): { pieces: PlacementFlatLay[]; ecartees: number[]; masquees: number[] } {
   const config = CONTEXTES[options.contexte ?? "hero-home"];
   const hauteurZone = config.hauteur;
-  const tous = attribuerRoles(pieces.filter((p) => p.flatLayCompatible !== false));
+  const retirees = pieces.filter((p) => !!p.accessoireType && !!config.accessoiresMasques?.includes(p.accessoireType));
+  const tous = attribuerRoles(pieces.filter((p) => p.flatLayCompatible !== false && !retirees.includes(p)));
   // Le groupe stylistique se décide sur TOUTE la tenue : un t-shirt masqué (hero-home) ne défait pas le gabarit pull + pantalon.
   const avecCouche = tous.some((r) => r.role === "couche");
-  const masquees = config.masquerCouche ? tous.filter((r) => r.role === "couche").map((r) => r.piece.id) : [];
+  const masquees = [
+    ...(config.masquerCouche ? tous.filter((r) => r.role === "couche").map((r) => r.piece.id) : []),
+    ...retirees.map((p) => p.id),
+  ];
   const roles = config.masquerCouche ? tous.filter((r) => r.role !== "couche") : tous;
   if (!roles.length) return { pieces: [], ecartees: [], masquees };
   const alea = generateur(graine);

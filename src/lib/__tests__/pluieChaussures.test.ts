@@ -55,7 +55,7 @@ describe("R-B21 — aucune chaussure ouverte sous la pluie ou la neige", () => {
   }
 
   it("par temps sec, les chaussures ouvertes restent possibles", () => {
-    const vues = chaussuresTirees("Ensoleillé", 24, "festive", 120);
+    const vues = chaussuresTirees("Ensoleillé", 24, "evenement_perso", 120);
     expect(OUVERTES.some((t) => vues.has(t))).toBe(true);
   });
 });

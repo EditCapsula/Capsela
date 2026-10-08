@@ -49,7 +49,7 @@ export function FlatLayCapsela({
           // La boîte réelle de l'objet (objectBounds) : son format fait la taille. Photo du dressing sans boîte connue : un portrait courant ; sans visuel : un carré.
           const b = objectBounds(img.url);
           const ratio = b ? (b.width * (ratioHero(img.url) ?? 1)) / b.height : img.kind === "placeholder" ? 1 : 0.8;
-          return { id: it.id, cat: it.cat, ratio };
+          return { id: it.id, cat: it.cat, ratio, accessoireType: it.accessoireType };
         }),
         graine,
         { contexte: context }

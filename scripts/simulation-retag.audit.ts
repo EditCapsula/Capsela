@@ -31,7 +31,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABAS
 const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const SAISONS: CapsuleSeason[] = ["Printemps", "Été", "Automne", "Hiver"];
-const OCC4: OccasionKey[] = ["festive", "evenement_perso"];
+const OCC4: OccasionKey[] = ["festive" as OccasionKey, "evenement_perso"];
 const TIRAGES = 20;
 
 /** Les cinq candidates, plus les deux cas ouverts. Ids CATALOGUE (offset inclus). */

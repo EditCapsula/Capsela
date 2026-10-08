@@ -58,7 +58,7 @@ describe("valises — la valise enregistrée", () => {
 
 describe("repartirPlanifications — tenues et valises dans « Mes planifications »", () => {
   const tenue = (id: string, jour: string): TenuePlanifiee => ({
-    id, jour, moment: "Soirée", occasion: "festive", sousChoix: null, lieu: "Gagny", typeLieu: null, dressingSeul: false, pieceIds: [1], temp: null, weatherLabel: null,
+    id, jour, moment: "Soirée", occasion: "soiree", sousChoix: null, lieu: "Gagny", typeLieu: null, dressingSeul: false, pieceIds: [1], temp: null, weatherLabel: null,
   });
   const valise = (id: string, depart: string, retour: string): ValiseGardee => ({ ...V2, id, depart, retour });
 

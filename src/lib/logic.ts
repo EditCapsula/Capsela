@@ -1,6 +1,6 @@
 import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, effectiveFormality, isRainy, isSunny } from "./data";
+import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_SOIREE_HABILLEE, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
 import { accordVisage, candidatsCouleur, colorimetriePourPivot, type ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -427,9 +427,7 @@ function occasionPhrase(occasion: OccasionKey, workMode: WorkMode, dateContext: 
           ? "ta soirée"
           : "ton rendez-vous";
     case "soiree":
-      return "ta sortie";
-    case "festive":
-      return "ta soirée festive";
+      return "ta soirée";
     case "sport":
       return "ta séance de sport";
     case "cocooning":
@@ -765,9 +763,15 @@ export function generateOutfit(
    * tirage est STRICTEMENT celui d'avant — c'est aussi le bras « avant »
    * des mesures (AGENTS.md).
    */
-  colorimetrie?: ColorimetrieMoteur | null
+  colorimetrie?: ColorimetrieMoteur | null,
+  /** Soirée « habillée » (occasions.ts) : les règles de l'ancienne « Sortie festive » s'appliquent à ce tirage, à tout palier de formalité. */
+  soireeHabillee = false
 ): GeneratedOutfit {
   const colo = colorimetrie ?? null;
+  // La soirée « habillée » (08/10/2026, occasions.ts) : l'ancienne « Sortie festive » n'est plus une occasion, c'est un niveau d'habillage
+  // de la soirée, déduit de son contexte. Ses règles (talons préférés, pas de chemise, sandales à talons de fête) suivent la DEMANDE, pas le
+  // palier de formalité retenu : comme avant pour « festive », elles restent actives quand la formalité replie vers 3 ou 1.
+  const soireeHabilleeTirage = occasion === "soiree" && soireeHabillee;
   // Référentiel saisonnier : celui de la capsule quand il est connu, sinon
   // celui que la météo porte (tenue du jour sous météo réelle, inchangée).
   // Quatre saisons d'une pièce croisées avec celles du jour quand elle les
@@ -791,7 +795,7 @@ export function generateOutfit(
   const sandaleDeFete = (i: Item): boolean =>
     !leviers?.sansSandalesDeFeteEnAutomne &&
     automne &&
-    (occasion === "festive" || occasion === "evenement_perso") &&
+    (soireeHabilleeTirage || occasion === "evenement_perso") &&
     i.cat === "chaussures" &&
     i.shoeType === "Sandales à talons";
   const seasonPool = pool.filter((i) => estDeSaison(i, contexteSaison) || sandaleDeFete(i));
@@ -1233,8 +1237,8 @@ export function generateOutfit(
   const useRobe = Math.random() < 0.4 && robeAutorisee && poolFor(ONEPIECE_CATS, true).length > 0;
   if (useRobe) {
     // R-S17 (25/08/2026, signalé) — même principe que pour le haut ci-dessous :
-    // pas de robe chemise en sortie festive, préférence molle.
-    const r = pick(ONEPIECE_CATS, true, occasion === "festive" ? (i) => i.subtype !== "Chemise" : undefined);
+    // pas de robe chemise en soirée habillée, préférence molle.
+    const r = pick(ONEPIECE_CATS, true, soireeHabilleeTirage ? (i) => i.subtype !== "Chemise" : undefined);
     if (r) ids.push(r.id);
     primaryTop = r;
     // Collant seulement pour une robe (jambes nues) — une combinaison
@@ -1274,11 +1278,11 @@ export function generateOutfit(
       compensatingVeste = rand(harmonize(vesteCandidates, chosen, false));
       if (compensatingVeste) hautPool = hautCandidates;
     }
-    // R-S17 (25/08/2026, signalé) — sortie festive : on privilégie un
+    // R-S17 (25/08/2026, signalé) — soirée habillée (ex-« Sortie festive ») : on privilégie un
     // haut, mais pas une chemise/chemisier (trop bureau/quotidien pour ce
     // contexte) — préférence molle, jamais exclusive : repli sur le pool
     // complet si aucune alternative n'existe.
-    if (occasion === "festive") {
+    if (soireeHabilleeTirage) {
       const nonChemise = hautPool.filter((i) => !["Chemise", "Chemisier"].includes(i.subtype ?? ""));
       if (nonChemise.length) hautPool = nonChemise;
     }
@@ -1498,10 +1502,10 @@ export function generateOutfit(
     // Les baskets sont déjà exclues en amont si l'occasion est habillée (R-B6, hardCategoryFilter).
     let shoePool = poolFor(["chaussures"], true).filter((i) => i.cat === "chaussures");
     // Préférence de style par occasion (R-S16, recette 20/08/2026) — ex.
-    // talons favorisés pour une sortie festive (cf. OCCASION_STYLE_PREFS) —
+    // talons favorisés pour une soirée habillée (ex-« Sortie festive ») (cf. OCCASION_STYLE_PREFS) —
     // n'écarte rien, juste une inclination si ça laisse au moins une option
     // (même esprit que R-S10/R-B15/R-B16).
-    const shoeTypePrefs = OCCASION_STYLE_PREFS[occasion]?.shoeTypes;
+    const shoeTypePrefs = (soireeHabilleeTirage ? PREFS_SOIREE_HABILLEE : OCCASION_STYLE_PREFS[occasion])?.shoeTypes;
     if (shoeTypePrefs?.length) {
       const styled = shoePool.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) shoePool = styled;
@@ -1673,11 +1677,12 @@ function attemptCoreOutfit(
   formalityOverride: number,
   capsuleSeason?: CapsuleSeason | null,
   leviers?: LeviersMesure,
-  colorimetrie?: ColorimetrieMoteur | null
+  colorimetrie?: ColorimetrieMoteur | null,
+  soireeHabillee = false
 ): GeneratedOutfit {
-  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers, colorimetrie);
+  let result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers, colorimetrie, soireeHabillee);
   for (let attempt = 1; attempt < MAX_ATTEMPTS_PER_TIER && !hasCoreOutfit(result.ids, pool, leviers); attempt++) {
-    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers, colorimetrie);
+    result = generateOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, formalityOverride, undefined, capsuleSeason, leviers, colorimetrie, soireeHabillee);
   }
   return result;
 }
@@ -1708,12 +1713,14 @@ export function generateOutfitWithFallback(
   /** Leviers de mesure — inertes par défaut, cf. LeviersMesure. */
   leviers?: LeviersMesure,
   /** Colorimétrie du profil — cf. generateOutfit ; non renseignée, comportement d'origine. */
-  colorimetrie?: ColorimetrieMoteur | null
+  colorimetrie?: ColorimetrieMoteur | null,
+  /** Soirée « habillée » (palier 4, cf. soireeHabillee dans occasions.ts) : sans effet hors de l'occasion « soiree ». */
+  soireeHabillee = false
 ): GeneratedOutfitWithFallback {
-  const requestedFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext) : 0;
+  const requestedFormality = occasion !== "all" ? effectiveFormality(occasion, workMode, dateContext, soireeHabillee) : 0;
   const chain = FORMALITY_FALLBACK_CHAIN[requestedFormality] ?? [requestedFormality];
   for (const tier of chain) {
-    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason, leviers, colorimetrie);
+    const result = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, tier, capsuleSeason, leviers, colorimetrie, soireeHabillee);
     if (hasCoreOutfit(result.ids, pool, leviers)) {
       return { ...result, requestedFormality, resolvedFormality: tier, formalityDowngraded: tier !== requestedFormality, noCompleteOutfit: false };
     }
@@ -1746,7 +1753,7 @@ export function generateOutfitWithFallback(
   if (!hasStructuralOption) {
     reason = "missing_required_category";
   } else {
-    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason, leviers, colorimetrie);
+    const probe = attemptCoreOutfit(pool, weather, occasion, workMode, dateContext, preferredHexes, gender, 0, capsuleSeason, leviers, colorimetrie, soireeHabillee);
     reason = hasCoreOutfit(probe.ids, pool, leviers) ? "formality_gap" : "no_match";
   }
   return {
@@ -1777,8 +1784,11 @@ export function swapOutfitPiece(
   occasion: OccasionKey = "all",
   workMode: WorkMode = "Présentiel",
   dateContext: DateContext = "Verre",
-  weather?: Weather
+  weather?: Weather,
+  /** Soirée habillée (occasions.ts) : les règles de l'ancienne « Sortie festive » s'appliquent au remplacement comme au tirage. */
+  soireeHabillee = false
 ): number[] {
+  const soireeHabilleeSwap = occasion === "soiree" && soireeHabillee;
   const catGroup: CategoryKey[] =
     BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
   // Signalé le 22/09/2026 : échanger un accessoire empilait « Gourde de sport »
@@ -1820,7 +1830,7 @@ export function swapOutfitPiece(
   // explicitement — sinon un remplacement manuel pouvait exclure une pièce
   // que l'utilisatrice avait pourtant explicitement associée à cette occasion.
   if (occasion !== "all") {
-    const minFormality = effectiveFormality(occasion, workMode, dateContext);
+    const minFormality = effectiveFormality(occasion, workMode, dateContext, soireeHabilleeSwap);
     const hasCompensatingVeste = outfitItems.some(
       (i) => i.id !== pieceId && i.cat === "veste" && formalityOf(i) >= minFormality
     );
@@ -1869,16 +1879,16 @@ export function swapOutfitPiece(
   // R-S16 — symétrique de la préférence de style par occasion appliquée
   // dans generateOutfit (cf. OCCASION_STYLE_PREFS), molle jamais exclusive.
   if (cat === "chaussures") {
-    const shoeTypePrefs = OCCASION_STYLE_PREFS[occasion]?.shoeTypes;
+    const shoeTypePrefs = (soireeHabilleeSwap ? PREFS_SOIREE_HABILLEE : OCCASION_STYLE_PREFS[occasion])?.shoeTypes;
     if (shoeTypePrefs?.length) {
       const styled = candidates.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) candidates = styled;
     }
   }
   // R-S17 — symétrique du filtre appliqué dans generateOutfit : pas de
-  // chemise/chemisier (haut) ni de robe chemise en sortie festive, molle
+  // chemise/chemisier (haut) ni de robe chemise en soirée habillée, molle
   // jamais exclusive.
-  if (occasion === "festive" && (cat === "haut" || cat === "robe" || cat === "combinaison")) {
+  if (soireeHabilleeSwap && (cat === "haut" || cat === "robe" || cat === "combinaison")) {
     const nonChemise = candidates.filter((i) => !["Chemise", "Chemisier"].includes(i.subtype ?? ""));
     if (nonChemise.length) candidates = nonChemise;
   }
@@ -2660,7 +2670,6 @@ const OCCASION_STYLE_TITLES: Partial<Record<OccasionKey, string[]>> = {
   entretien: ["Posée et accessible", "Sérieuse et maîtrisée", "Rigoureuse et formelle"],
   date: ["Décontractée chic", "Féminine et minimaliste", "Plus habillée"],
   soiree: ["Décontractée du soir", "Chic sans en faire trop", "Sophistiquée"],
-  festive: ["Décontractée mais festive", "Chic et affirmée", "Prête à sortir de l'ordinaire"],
   sport: ["Confortable avant tout", "Technique et soignée", "Prête à performer"],
   cocooning: ["Relâchée à la maison", "Confortable et structurée", "Cocooning chic"],
   voyage: ["Pratique avant tout", "Confortable et soignée", "Prête pour toutes les étapes"],
@@ -2750,8 +2759,7 @@ const OCCASION_VARIATION_BASE: Partial<Record<OccasionKey, string>> = {
   travail_formel: "Structurée pour le bureau.",
   entretien: "Sérieuse et posée pour un rendez-vous important.",
   date: "Une touche soignée pour un rendez-vous.",
-  soiree: "Parfaite pour une sortie entre amis.",
-  festive: "Prête pour une soirée qui sort de l'ordinaire.",
+  soiree: "Parfaite pour une soirée entre amis.",
   sport: "Confortable et technique.",
   cocooning: "Décontractée, pensée pour la maison.",
   voyage: "Pratique et confortable pour se déplacer.",
@@ -2764,8 +2772,7 @@ const OCCASION_CLOSERS: Partial<Record<OccasionKey, string[]>> = {
   travail_formel: ["pour une allure structurée au bureau.", "pour un rendu soigné et professionnel."],
   entretien: ["pour une présentation sérieuse et posée."],
   date: ["pour une touche plus soignée pour ce rendez-vous.", "pour une allure élégante sans être trop habillée."],
-  soiree: ["pour une sortie entre amis.", "pour une allure plus détendue en soirée."],
-  festive: ["pour une soirée qui sort de l'ordinaire."],
+  soiree: ["pour une soirée entre amis.", "pour une allure plus détendue en soirée."],
   sport: ["confortable et technique."],
   cocooning: ["pour une allure relâchée à la maison."],
   voyage: ["pratique et confortable pour se déplacer."],

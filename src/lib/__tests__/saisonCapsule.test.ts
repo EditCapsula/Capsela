@@ -200,7 +200,7 @@ describe("G · Tenue du jour sous météo réelle — comportement strictement i
 describe("H · Formalité — R-B3 et le repli de formalité sont intouchés", () => {
   it("une occasion de palier 4 replie toujours quand aucune pièce ne l'atteint", () => {
     const pool = garderobe("Printemps / Été");
-    const r = generateOutfitWithFallback(pool, representativeWeatherFor("Printemps"), "festive", "Présentiel", "Verre", [], "femme", "Printemps");
+    const r = generateOutfitWithFallback(pool, representativeWeatherFor("Printemps"), "evenement_perso", "Présentiel", "Verre", [], "femme", "Printemps");
     expect(r.requestedFormality).toBe(4);
     expect(r.formalityDowngraded).toBe(true);
     expect(r.noCompleteOutfit).toBe(false);
@@ -208,8 +208,8 @@ describe("H · Formalité — R-B3 et le repli de formalité sont intouchés", (
 
   it("le palier demandé ne dépend pas de la saison de capsule", () => {
     const pool = garderobe("Printemps / Été");
-    const avec = generateOutfitWithFallback(pool, representativeWeatherFor("Printemps"), "festive", "Présentiel", "Verre", [], "femme", "Printemps");
-    const sans = generateOutfitWithFallback(pool, representativeWeatherFor("Printemps"), "festive", "Présentiel", "Verre", [], "femme");
+    const avec = generateOutfitWithFallback(pool, representativeWeatherFor("Printemps"), "evenement_perso", "Présentiel", "Verre", [], "femme", "Printemps");
+    const sans = generateOutfitWithFallback(pool, representativeWeatherFor("Printemps"), "evenement_perso", "Présentiel", "Verre", [], "femme");
     expect(avec.requestedFormality).toBe(sans.requestedFormality);
   });
 });

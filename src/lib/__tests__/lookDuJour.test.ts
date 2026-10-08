@@ -8,7 +8,7 @@ describe("titreLookDuJour — contexte réel, jamais « bureau » en dur", () =>
     expect(titreLookDuJour("travail_formel", "Présentiel", "Verre")).toBe("Une silhouette pensée pour ta journée au bureau.");
     expect(titreLookDuJour("travail_formel", "Télétravail", "Verre")).toBe("Une silhouette pensée pour ta journée en télétravail.");
     expect(titreLookDuJour("date", "Présentiel", "Restaurant / date romantique")).toBe("Une silhouette pensée pour ton dîner.");
-    expect(titreLookDuJour("soiree", "Présentiel", "Verre")).toBe("Une silhouette pensée pour ta sortie.");
+    expect(titreLookDuJour("soiree", "Présentiel", "Verre")).toBe("Une silhouette pensée pour ta soirée.");
     expect(titreLookDuJour("quotidien", "Présentiel", "Verre")).toBe("Une silhouette pensée pour ta journée.");
   });
 });

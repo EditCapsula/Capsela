@@ -118,6 +118,9 @@ Sur l'accueil (`hero-home`, zone 181 × 203 px) la planche privilégie la silhou
 tenue, dans le détail du look et dans tous les autres contextes, mais n'est pas posée dans cette planche (`masquerCouche`, résultat
 `masquees`). Le gabarit « groupe » se décide sur toute la tenue : un pull + pantalon masqué de son t-shirt garde son gabarit.
 
+Les **collants** sont traités de la même façon (`accessoiresMasques`, 08/10/2026) : leur visuel à plat ne se lit pas, ils ne sont donc
+pas posés dans le hero de l'accueil ; ils restent dans la tenue et dans le détail du look.
+
 Composition d'un blazer / manteau héro (`refsDessus`) — positions en parts de la zone, converties en unités du moteur :
 
 | Pièce | Centre x | Centre y | Largeur | Angle |

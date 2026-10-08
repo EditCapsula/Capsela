@@ -69,20 +69,12 @@ export const GLYPHES_OCCASION: Record<Exclude<OccasionKey, "all">, React.ReactNo
       <line x1="6" y1="19.5" x2="18" y2="19.5" {...S} />
     </>
   ),
-  // Sortie / Soirée — la coupe.
+  // Soirée — la coupe.
   soiree: (
     <>
       <path d="M4.5 4.5h15l-7.5 8.5Z" {...S} />
       <line x1="12" y1="13" x2="12" y2="18.5" {...S} />
       <line x1="8" y1="18.5" x2="16" y2="18.5" {...S} />
-    </>
-  ),
-  // Sortie festive — l'éclat, déjà le signe de l'app (✦).
-  festive: (
-    <>
-      <path d="M13 2.5l1.7 4.8 4.8 1.7-4.8 1.7L13 15.5l-1.7-4.8-4.8-1.7 4.8-1.7Z" {...S} />
-      <path d="M6.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8Z" {...S} />
-      <path d="M18 15.5l.6 1.6 1.6.6-1.6.6-.6 1.6-.6-1.6-1.6-.6 1.6-.6Z" {...S} />
     </>
   ),
   // Sport — la basket de profil.
@@ -128,9 +120,9 @@ export const GLYPHES_OCCASION: Record<Exclude<OccasionKey, "all">, React.ReactNo
  * Sous-choix : mode de travail, contexte de date, mode de trajet. Une seule
  * table, les trois familles n'ayant aucun libellé commun.
  *
- * Deux réemplois volontaires. « Soirée festive » reprend l'éclat de
- * l'occasion « Sortie festive » : c'est la même idée, et les deux ne peuvent
- * pas se côtoyer — ce sous-choix n'existe que sous l'occasion « Date ». La
+ * Deux réemplois volontaires. « Soirée festive » garde l'éclat qu'avait
+ * l'occasion « Sortie festive », supprimée le 08/10/2026 : ce sous-choix
+ * n'existe que sous l'occasion « Rendez-vous amoureux ». La
  * valise de « Longue distance » ressemble à la mallette du « Travail », mais
  * elle est en portrait avec poignée télescopique, et là encore les deux ne
  * s'affichent jamais ensemble.
@@ -168,7 +160,7 @@ export const GLYPHES_SOUS_CHOIX: Record<WorkMode | DateContext | TravelMode, Rea
     </>
   ),
   // Verre — le verre à pied, bol arrondi : distinct de la coupe triangulaire
-  // de « Sortie / Soirée ».
+  // de « Soirée ».
   "Verre": (
     <>
       <path d="M7.5 3.5h9v5a4.5 4.5 0 0 1-9 0Z" {...S} />
@@ -193,7 +185,7 @@ export const GLYPHES_SOUS_CHOIX: Record<WorkMode | DateContext | TravelMode, Rea
       <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
     </>
   ),
-  // Soirée festive — le même éclat que l'occasion « Sortie festive ».
+  // Soirée festive — l'éclat.
   "Soirée festive": (
     <>
       <path d="M13 2.5l1.7 4.8 4.8 1.7-4.8 1.7L13 15.5l-1.7-4.8-4.8-1.7 4.8-1.7Z" {...S} />
