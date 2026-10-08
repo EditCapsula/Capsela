@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateCourte, grilleDuMois, grilleDuMoisComplete, jourAbrege, joursDeLaSemaine, joursRestantsDeLaSemaine, listeDeLaSemaine, listeDuCalendrier, lundiDe, moisDecale, tenueDuCalendrier } from "../calendrier";
+import { dateCourte, grilleDuMois, grilleDuMoisComplete, jourAbrege, joursDeLaSemaine, numeroDeSemaine, joursRestantsDeLaSemaine, listeDeLaSemaine, listeDuCalendrier, lundiDe, moisDecale, tenueDuCalendrier } from "../calendrier";
 import type { TenuePlanifiee } from "../planifier";
 import type { HistoryEntry } from "../types";
 
@@ -121,5 +121,20 @@ describe("Mon planning — mois complet, semaine en cours, libellés courts", ()
     expect(dateCourte("2026-09-30")).toBe("Mer. 30 sept.");
     expect(jourAbrege("2026-10-05")).toBe("Lun");
     expect(jourAbrege("2026-10-11")).toBe("Dim");
+  });
+});
+
+describe("numéro de semaine ISO 8601", () => {
+  it("la semaine du 28 septembre au 4 octobre 2026 est la 40e, la suivante la 41e", () => {
+    for (const j of joursDeLaSemaine("2026-09-28")) expect(numeroDeSemaine(j)).toBe(40);
+    for (const j of joursDeLaSemaine("2026-10-05")) expect(numeroDeSemaine(j)).toBe(41);
+  });
+  it("les bords de l'année : 2026 commence un jeudi (semaine 1) et compte 53 semaines ; fin décembre 2024 est la semaine 1 de 2025", () => {
+    expect(numeroDeSemaine("2026-01-01")).toBe(1);
+    expect(numeroDeSemaine("2026-12-31")).toBe(53);
+    expect(numeroDeSemaine("2027-01-03")).toBe(53);
+    expect(numeroDeSemaine("2027-01-04")).toBe(1);
+    expect(numeroDeSemaine("2024-12-30")).toBe(1);
+    expect(numeroDeSemaine("2021-01-03")).toBe(53);
   });
 });

@@ -192,3 +192,13 @@ export function dateCourte(jour: string): string {
 export function jourAbrege(jour: string): string {
   return ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][dateDe(jour).getDay()];
 }
+
+/** Le numéro de semaine ISO 8601 (la semaine du premier jeudi de l'année est la 1re) du jour « AAAA-MM-JJ ». */
+export function numeroDeSemaine(jour: string): number {
+  const [a, m, j] = jour.split("-").map(Number);
+  const d = new Date(Date.UTC(a, m - 1, j));
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + 3); // le jeudi de cette semaine
+  const premierJeudi = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  premierJeudi.setUTCDate(premierJeudi.getUTCDate() - ((premierJeudi.getUTCDay() + 6) % 7) + 3);
+  return 1 + Math.round((d.getTime() - premierJeudi.getTime()) / (7 * 86_400_000));
+}

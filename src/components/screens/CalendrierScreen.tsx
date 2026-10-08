@@ -14,6 +14,7 @@ import {
   listeDeLaSemaine,
   listeDuCalendrier,
   moisDecale,
+  numeroDeSemaine,
   tenueDuCalendrier,
   type TenueDuCalendrier,
 } from "@/lib/calendrier";
@@ -405,9 +406,11 @@ export default function CalendrierScreen() {
     );
 
   const semaine = joursDeLaSemaine(selection);
-  const debutSemaine = dateDe(semaine[0]);
-  const finSemaine = dateDe(semaine[6]);
-  const surtitreSemaine = `SEMAINE DU ${debutSemaine.getDate()}${debutSemaine.getMonth() !== finSemaine.getMonth() ? ` ${MONTHS_FR[debutSemaine.getMonth()].toUpperCase()}` : ""} AU ${finSemaine.getDate()} ${MONTHS_FR[finSemaine.getMonth()].toUpperCase()}`;
+  // « SEMAINE 40 » : le numéro de semaine, court — « 28 septembre au 4 octobre » ne tenait pas sur une ligne (signalé le 08/10/2026).
+  // Les dates restent dites aux lecteurs d'écran et se lisent sur les sept tuiles.
+  const numeroSemaine = numeroDeSemaine(semaine[0]);
+  const surtitreSemaine = `SEMAINE ${numeroSemaine}`;
+  const nomSemaine = `Semaine ${numeroSemaine}, du ${libelleLong(semaine[0])} au ${libelleLong(semaine[6])}`;
   const decalerSemaine = (n: number) => setSelection(jourLocal(new Date(dateDe(selection).getTime() + n * 7 * 86_400_000)));
 
   return (
@@ -456,7 +459,7 @@ export default function CalendrierScreen() {
         {vue === "semaine" && (
           <>
             <div className="flex items-center justify-between mt-5 mb-3">
-              <div className="t-surtitre text-muted" aria-live="polite">{surtitreSemaine}</div>
+              <div className="t-surtitre text-muted" aria-live="polite" aria-label={nomSemaine}>{surtitreSemaine}</div>
               <div className="flex items-center -mr-3">
                 <button onClick={() => decalerSemaine(-1)} aria-label="Semaine précédente" className="w-[44px] h-[44px] flex items-center justify-center text-ink cursor-pointer"><Chevron vers="gauche" /></button>
                 <button onClick={() => decalerSemaine(1)} aria-label="Semaine suivante" className="w-[44px] h-[44px] flex items-center justify-center text-ink cursor-pointer"><Chevron vers="droite" /></button>
