@@ -51,6 +51,7 @@ import { contexteDepuisProfil, demanderAvis, type AvisStyliste, type PieceSugger
 import { enregistrerAvis, enregistrerReconnaissanceAvis, listerAvis, supprimerAvis, type AvisEnregistre } from "./avisJournal";
 import { appliquerChoix, type ChoixReconnaissance, type VetementReconnu } from "./reconnaissance";
 import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedback";
+import { titreTenue } from "./dressingSections";
 import {
   choisirVariation,
   clePrincipale,
@@ -525,6 +526,11 @@ export interface Actions {
   setOutfitFeedback: (verdict: Verdict) => void;
   saveLook: () => void;
   toggleSaveOutfitLook: () => void;
+  /**
+   * « Enregistrer » sur une tenue portée du Dressing (08/10/2026) : crée un look enregistré avec ces pièces, ou retire celui qui existe
+   * — un second geste défait le premier. Un look CRÉÉ à la main n'est jamais supprimé d'ici (seul un look « saved » l'est).
+   */
+  basculerLookDeTenue: (pieceIds: number[], occasion: OccasionKey | undefined, ts: number) => void;
   openLook: (id: string) => void;
   closeLookDetail: () => void;
   deleteActiveLook: () => void;
@@ -2677,6 +2683,35 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         pieceIds: ids,
         createdAt: Date.now(),
         occasion: s.occasion && s.occasion !== "all" ? s.occasion : undefined,
+        source: "saved",
+      };
+      if (isSupabaseConfigured && userId) {
+        insertSavedLook(userId, base)
+          .then((look) => setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] })))
+          .catch((err) => reportDressingError("insertSavedLook", err));
+        return;
+      }
+      const look: SavedLook = { id: "look" + Date.now(), ...base };
+      setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] }));
+    },
+    basculerLookDeTenue: (pieceIds, occasion, ts) => {
+      const s = stateRef.current;
+      if (pieceIds.length < 2) return;
+      const cle = clePieces(pieceIds).join(",");
+      const existant = s.savedLooks.find((l) => clePieces(l.pieceIds).join(",") === cle);
+      if (existant) {
+        if (existant.source !== "saved") return;
+        setState((st) => ({ ...st, savedLooks: st.savedLooks.filter((l) => l.id !== existant.id) }));
+        if (isSupabaseConfigured && userId) {
+          deleteSavedLook(existant.id).catch((err) => reportDressingError("deleteSavedLook", err));
+        }
+        return;
+      }
+      const base: Omit<SavedLook, "id"> = {
+        name: titreTenue(ts),
+        pieceIds: [...pieceIds],
+        createdAt: Date.now(),
+        occasion: occasion && occasion !== "all" ? occasion : undefined,
         source: "saved",
       };
       if (isSupabaseConfigured && userId) {
