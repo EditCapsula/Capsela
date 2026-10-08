@@ -421,17 +421,11 @@ export default function HomeScreen() {
           </div>
         )}
 
-        {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu, et le retour à la proposition de Capsela. */}
-        {planApplique && hasOutfit && (
-          <div className="text-center" style={{ gridColumn: "1 / -1" }}>
-            {planApplique.alerte && (
-              <div className="text-[12.5px] text-on-terracotta-soft leading-[1.4] mb-[2px]" style={{ textWrap: "pretty" }}>
-                {planApplique.alerte}
-              </div>
-            )}
-            <button onClick={actions.voirAutreProposition} className="text-[13px] underline underline-offset-[3px] text-on-terracotta cursor-pointer" style={{ minHeight: 44 }}>
-              Voir une autre proposition
-            </button>
+        {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu. Le lien « Voir une autre proposition » n'est plus là
+            (08/10/2026, demandé : « on a déjà "Sauvegarder" et "Autre idée" ») ; la page Tenue garde « Autre proposition ». */}
+        {planApplique?.alerte && hasOutfit && (
+          <div className="text-center text-[12.5px] text-on-terracotta-soft leading-[1.4]" style={{ gridColumn: "1 / -1", textWrap: "pretty" }}>
+            {planApplique.alerte}
           </div>
         )}
       </div>

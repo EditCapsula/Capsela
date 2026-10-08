@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { appliquerAvis, clePieces, jourLocal, memeTenue } from "../outfitFeedback";
+import { appliquerAvis, clePieces, jourLocal, litteralTableau, memeTenue } from "../outfitFeedback";
 
 /**
  * Les deux règles de l'avis du jour qui peuvent être FAUSSES sans que rien ne
@@ -155,5 +155,15 @@ describe("application d'un avis", () => {
     const avant = [{ jour: JOUR, pieceIds: [11, 12, 13], verdict: "adore" as const }];
     appliquerAvis(avant, { jour: JOUR, pieceIds: TENUE, verdict: "pas_aujourdhui" });
     expect(avant).toEqual([{ jour: JOUR, pieceIds: [11, 12, 13], verdict: "adore" }]);
+  });
+});
+
+describe("littéral de tableau pour le filtre de retrait d'un avis", () => {
+  it("« {14,100485,100489} » : trié, sans doublon, avec les accolades que Postgres exige (sinon 22P02)", () => {
+    expect(litteralTableau([100489, 14, 100485, 14])).toBe("{14,100485,100489}");
+    expect(litteralTableau([7])).toBe("{7}");
+  });
+  it("une tenue, quel que soit l'ordre des pièces, donne le même littéral que la clé enregistrée", () => {
+    expect(litteralTableau([3, 1, 2])).toBe(`{${clePieces([1, 2, 3]).join(",")}}`);
   });
 });
