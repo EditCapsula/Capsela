@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHEVAUCHEMENT_MAX, CONTEXTES, LARGEUR_ACCESSOIRE_MIN, LARGEUR_HERO_MAX, LIMITE_INCLINAISON, MARGE_SECURITE, MASQUE_MAX, PART_VISUELLE, attribuerRoles, composerFlatLay, echelleVisuelle, generateur, type PieceFlatLay, type PlacementFlatLay } from "../flatLay";
+import { CHEVAUCHEMENT_MAX, CONTEXTES, LARGEUR_ACCESSOIRE_MIN, LARGEUR_HERO_MAX, LIMITE_INCLINAISON, MASQUE_MAX, PART_VISUELLE, attribuerRoles, composerFlatLay, echelleVisuelle, generateur, type PieceFlatLay, type PlacementFlatLay } from "../flatLay";
 import type { CategoryKey } from "../types";
 
 let n = 0;
@@ -67,14 +67,16 @@ describe("composerFlatLay — déterministe, borné, sans grille", () => {
   it("tout reste dans la zone, rotation comprise, avec la marge de sécurité, et le héro est la plus grande pièce", () => {
     for (let i = 0; i < 40; i++) {
       const { pieces } = composerFlatLay(look(), "z" + i);
+      // La marge du contexte (l'accueil, par défaut ici), pas la constante d'avant : la planche de l'accueil remplit sa zone.
+      const M = CONTEXTES["hero-home"].marge;
       for (const q of pieces) {
         const r = (Math.abs(q.angle) * Math.PI) / 180;
         const w = q.l * Math.cos(r) + q.h * Math.sin(r);
         const h = q.l * Math.sin(r) + q.h * Math.cos(r);
-        expect(q.x - w / 2).toBeGreaterThanOrEqual(MARGE_SECURITE - 0.01);
-        expect(q.x + w / 2).toBeLessThanOrEqual(100 - MARGE_SECURITE + 0.01);
-        expect(q.y - h / 2).toBeGreaterThanOrEqual(MARGE_SECURITE - 0.01 + (112 - 112) / 2);
-        expect(q.y + h / 2).toBeLessThanOrEqual(112 - MARGE_SECURITE + 0.01);
+        expect(q.x - w / 2).toBeGreaterThanOrEqual(M - 0.01);
+        expect(q.x + w / 2).toBeLessThanOrEqual(100 - M + 0.01);
+        expect(q.y - h / 2).toBeGreaterThanOrEqual(M - 0.01);
+        expect(q.y + h / 2).toBeLessThanOrEqual(112 - M + 0.01);
       }
     }
   });
@@ -424,10 +426,11 @@ describe("accueil (hero-home) — composition ciblée sans le t-shirt (08/10/202
     }
   });
 
-  it("les cinq pièces restent dans la zone de sécurité (12 px au minimum, 7,4 unités) et occupent au moins 78 % de sa largeur", () => {
+  it("les cinq pièces restent dans la zone de sécurité et occupent au moins 88 % de sa largeur", () => {
     const h = CONTEXTES["hero-home"].hauteur;
     const m = CONTEXTES["hero-home"].marge;
-    expect(m).toBeGreaterThanOrEqual(12 / 164 * 100 - 1e-9);
+    // 3 unités de marge (≈ 6 px) : la planche remplit sa zone (« c'est encore vraiment petit », 08/10/2026).
+    expect(m).toBeLessThanOrEqual(4);
     for (let i = 0; i < 30; i++) {
       const sortie = composerFlatLay(look(), "z" + i, { contexte: "hero-home" }).pieces;
       const boites = sortie.map(boiteDe);
@@ -437,7 +440,7 @@ describe("accueil (hero-home) — composition ciblée sans le t-shirt (08/10/202
       expect(x1).toBeLessThanOrEqual(100 - m + 1e-6);
       expect(Math.min(...boites.map((b) => b.y0))).toBeGreaterThanOrEqual(m - 1e-6);
       expect(Math.max(...boites.map((b) => b.y1))).toBeLessThanOrEqual(h - m + 1e-6);
-      expect(x1 - x0).toBeGreaterThanOrEqual(78);
+      expect(x1 - x0).toBeGreaterThanOrEqual(88);
     }
   });
 
