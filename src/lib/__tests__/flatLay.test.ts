@@ -301,3 +301,88 @@ describe("calibrage du 08/10/2026 — chevauchements, héro, accessoires", () =>
     expect(Math.max(...pieces.map((q) => q.y + q.h / 2))).toBeGreaterThan(h * 0.8);
   });
 });
+
+describe("regroupement stylistique — les couches d'une même tenue restent ensemble", () => {
+  const boite = (q: PlacementFlatLay) => {
+    const r = (Math.abs(q.angle) * Math.PI) / 180;
+    const w = q.l * Math.cos(r) + q.h * Math.sin(r);
+    const h = q.l * Math.sin(r) + q.h * Math.cos(r);
+    return { x0: q.x - w / 2, x1: q.x + w / 2, y0: q.y - h / 2, y1: q.y + h / 2 };
+  };
+  const ecart = (a: PlacementFlatLay, b: PlacementFlatLay) => {
+    const A = boite(a);
+    const B = boite(b);
+    return Math.max(0, Math.max(A.x0 - B.x1, B.x0 - A.x1), Math.max(A.y0 - B.y1, B.y0 - A.y1));
+  };
+  const commun = (a: PlacementFlatLay, b: PlacementFlatLay) => {
+    const A = boite(a);
+    const B = boite(b);
+    return Math.max(0, Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0)) * Math.max(0, Math.min(A.y1, B.y1) - Math.max(A.y0, B.y0));
+  };
+  const aireDe = (q: PlacementFlatLay) => (boite(q).x1 - boite(q).x0) * (boite(q).y1 - boite(q).y0);
+  const pullTee = () => [p("pull", 1), p("haut", 0.95), p("pantalon", 0.5), p("chaussures", 1), p("sac", 0.85)];
+  const par = (pieces: PieceFlatLay[], graine: string, contexte: "hero-home" | "look-detail") => {
+    const sortie = composerFlatLay(pieces, graine, { contexte }).pieces;
+    return Object.fromEntries(sortie.map((q) => [q.role, q])) as Record<string, PlacementFlatLay>;
+  };
+
+  it("un second haut devient la couche du premier : le pull est la couche extérieure", () => {
+    expect(roles([p("pull"), p("haut"), p("pantalon")])).toMatchObject({ pull: "secondaire", haut: "couche", pantalon: "hero" });
+    // Quel que soit l'ordre des pièces.
+    expect(roles([p("haut"), p("pull"), p("pantalon")])).toMatchObject({ pull: "secondaire", haut: "couche" });
+    // Sous une veste héro : chemise (second plan) + t-shirt (couche).
+    expect(roles([p("veste"), p("haut"), p("pull"), p("pantalon")])).toMatchObject({ veste: "hero", pull: "secondaire", haut: "couche" });
+  });
+
+  it("une seule couche ; sous une robe, un haut de plus n'est pas une couche", () => {
+    const r = attribuerRoles([p("pull"), p("haut"), p("haut"), p("pantalon")]).map((x) => x.role);
+    expect(r.filter((x) => x === "couche").length).toBe(1);
+    expect(roles([p("robe"), p("haut")]).haut).toBe("accessoire");
+  });
+
+  it("la couche touche la pièce qu'elle double : au plus 15 % de la zone d'écart, au plus 18 % de recouvrement, derrière elle", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (let i = 0; i < 30; i++) {
+        const o = par(pullTee(), "g" + i, contexte);
+        expect(ecart(o.couche, o.secondaire), `${contexte} graine ${i}`).toBeLessThanOrEqual(15);
+        expect(commun(o.couche, o.secondaire) / Math.min(aireDe(o.couche), aireDe(o.secondaire)), `${contexte} graine ${i}`).toBeLessThanOrEqual(CHEVAUCHEMENT_MAX + 1e-9);
+        expect(o.couche.z).toBeLessThan(o.secondaire.z);
+        expect(o.couche.groupeAvec).toBe(o.secondaire.id);
+      }
+  });
+
+  it("pull + t-shirt à gauche, pantalon à droite, boots sous le groupe, sac sous le pantalon — jamais en miroir", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (let i = 0; i < 40; i++) {
+        const o = par(pullTee(), "m" + i, contexte);
+        expect(o.secondaire.x, `${contexte} ${i}`).toBeLessThan(o.hero.x);
+        expect(o.couche.x).toBeLessThan(o.hero.x);
+        expect(o.chaussures.x).toBeLessThan(o.sac.x);
+        expect(o.chaussures.y).toBeGreaterThan(o.secondaire.y);
+        expect(o.chaussures.y).toBeGreaterThan(o.couche.y);
+        expect(o.sac.y).toBeGreaterThan(o.hero.y);
+      }
+  });
+
+  it("le t-shirt n'est plus jamais isolé au centre-bas : il est plus près du pull que des chaussures et du sac", () => {
+    for (let i = 0; i < 30; i++) {
+      const o = par(pullTee(), "i" + i, "look-detail");
+      expect(ecart(o.couche, o.secondaire)).toBeLessThan(ecart(o.couche, o.chaussures) + 1e-9);
+      expect(ecart(o.couche, o.secondaire)).toBeLessThan(ecart(o.couche, o.sac));
+    }
+  });
+
+  it("sous une veste héro, la couche reste contre le haut du second plan", () => {
+    const look = [p("veste", 0.85), p("pull", 1), p("haut", 0.9), p("pantalon", 0.55), p("chaussures", 1.2), p("sac", 0.85)];
+    for (let i = 0; i < 30; i++) {
+      const o = par(look, "v" + i, "look-detail");
+      expect(ecart(o.couche, o.secondaire)).toBeLessThanOrEqual(15);
+      expect(o.secondaire.x).toBeLessThan(o.hero.x);
+    }
+  });
+
+  it("la composition reste déterministe", () => {
+    const pieces = pullTee();
+    expect(composerFlatLay(pieces, "k", { contexte: "look-detail" })).toEqual(composerFlatLay(pieces, "k", { contexte: "look-detail" }));
+  });
+});

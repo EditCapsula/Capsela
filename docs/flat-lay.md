@@ -91,6 +91,27 @@ hauteur de Tenue reste de 350 px.
   pièce n'a de visuel (mode démo, catalogue hors ligne) : les pastilles restent, sinon la zone serait vide.
 - **Tailles par catégorie, ombre, graine** : inchangées (cf. plus haut).
 
+## Regroupement stylistique (08/10/2026)
+
+Le flat lay ne place pas les pièces par catégorie seulement : il comprend celles qui se portent ensemble. Cette règle est
+**prioritaire sur l'équilibre géométrique** — on ne cherche pas à remplir toute la zone.
+
+- **Rôle `couche`** : le second haut d'une tenue (t-shirt sous un pull, chemise ou débardeur sous un cardigan, top sous une
+  veste). Le haut du second plan est la couche EXTÉRIEURE (un pull ou un cardigan avant un t-shirt) ; une seule couche ; sous
+  une robe, un haut de plus reste un surnombre.
+- **Pose** : contre la pièce qu'elle double (le haut du second plan, sinon le héro), juste dessous, légèrement derrière
+  (`z` 25, entre le bas et le haut), décalée vers le centre. Elle la recouvre de 14 % de sa hauteur (≤ 18 %) : la distance entre
+  les deux est donc nulle, jamais plus de 15 % de la largeur de la zone. Le désserrement ne sépare jamais une couche de sa
+  pièce (`groupeAvec`) ; face aux autres pièces, la couche prime (importance 4,5, derrière le héro seulement).
+- **Gabarit « groupe »** (`refsGroupe`) : un bas héro (pantalon, jean, jupe, short) avec une couche. Le groupe des hauts à gauche,
+  le bas à droite, les chaussures sous le groupe, le sac sous le bas. Jamais en miroir — la couche reste lisible.
+- **Ordre de construction** : 1. les groupes, 2. la pièce principale, 3. la couche contre son groupe, 4. les autres catégories
+  autour, 5. chaussures et accessoires pour équilibrer.
+- Profondeur : `dessus` 10, `bas` / `robe` 20, `couche` 25, `haut` 30, `chaussures` 40, `sac` 50, `accessoire` 60.
+
+Limite connue : une tenue à six pièces avec veste héro, deux hauts et un bas se range dans la zone avec moins d'air — la couche
+reste contre son haut, le bas s'écarte d'elle.
+
 ## Hero mobile (390 px)
 
 Carte 358 px de large (marge de 16 px). La colonne de la composition fait 181 px, zone `100 / 112`. Zone de sécurité : 12 px
