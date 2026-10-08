@@ -25,8 +25,9 @@ import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
-import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "@/lib/capsule";
+import { computeDefaultCapsule, saisonCalendairePour } from "@/lib/capsule";
 import EtapeLieu, { type MeteoEtapeLieu } from "@/components/EtapeLieu";
+import { meteoPourLaDate } from "@/lib/meteoPlan";
 import { previsionGardee, type VilleSuggeree } from "@/lib/weather";
 import { deleteTenuePlanifiee, fetchTenuesPlanifiees, enregistrerHumeurPlan, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
@@ -491,7 +492,7 @@ function composerTenuePlan(e: {
   if (!e.occ) return null;
   const pool = e.dressingSeul
     ? e.items
-    : composeWardrobePool(e.items, e.capsule, CAT_KEYS, { completerPourOccasion: e.occ, saison: e.meteo, exclureHorsOccasion: true });
+    : composeWardrobePool(e.items, e.capsule, CAT_KEYS, { completerPourOccasion: e.occ, saison: e.meteo, exclureHorsOccasion: true, completerPourSaison: e.meteo });
   return genererTenueHumeur({
     pool,
     weather: e.meteo,
@@ -723,12 +724,25 @@ export default function PlanifierScreen() {
    * le moteur recevait la saison du jour, et « La date fixe la saison de la
    * tenue » était faux au-delà de l'horizon.
    */
-  const meteoUtilisee =
-    meteoMoment && dateChoisie
-      ? weatherForDay(meteoMoment.temp, meteoMoment.label, saisonCalendairePour(dateChoisie), CHALEUR_HORS_SAISON)
-      : dateChoisie
-        ? weatherForDay(weather.temp, weather.label, saisonCalendairePour(dateChoisie), CHALEUR_HORS_SAISON)
-        : weather;
+  const saisonDeLaDate = dateChoisie ? saisonCalendairePour(dateChoisie) : null;
+  /**
+   * LA MÉTÉO DE LA DATE PLANIFIÉE, jamais celle d'aujourd'hui quand elle n'a rien à dire de cette date (08/10/2026, demandé : « il faut
+   * absolument tenir compte de la météo de la date planifiée »). Prévision du créneau quand elle existe. Au-delà de l'horizon de la
+   * prévision, aucune mesure n'existe : le moteur reçoit la TEMPÉRATURE HABITUELLE de la saison de la date (jamais affichée comme une
+   * prévision) — planifier du lin pour juillet un 8 octobre ne se compose plus sur les 11° du jour. Dans l'horizon mais sans réponse
+   * (lieu introuvable, quota), la météo d'aujourd'hui reste la plus proche mesure.
+   */
+  const meteoUtilisee = meteoPourLaDate({ date: dateChoisie, jour, creneau: meteoMoment, aujourdhui: weather });
+  /**
+   * LA CAPSULE DE LA DATE (08/10/2026) : celle du jour est bâtie sur la météo et la saison d'AUJOURD'HUI. Une tenue planifiée pour une autre
+   * saison complétait donc ses catégories vides — les chaussures en premier — avec des pièces d'aujourd'hui (des bottines pour juillet).
+   * Elle est recalculée pour la saison et la météo de la date, comme « Comment porter … ? » le fait pour une pièce.
+   */
+  const capsuleDeLaDate = useMemo(
+    () => (saisonDeLaDate ? computeDefaultCapsule(profile, meteoUtilisee, state.suggestedExcluded, saisonDeLaDate, vestiairePool) : defaultCapsule),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [profile, saisonDeLaDate, meteoUtilisee.temp, meteoUtilisee.label, state.suggestedExcluded, vestiairePool, defaultCapsule]
+  );
   /** Ce que l'étape « Où » dit de la météo : la prévision réelle, ou ce qui manque — jamais une température estimée. */
   const meteoEtapeLieu: MeteoEtapeLieu = !lieu.trim()
     ? { kind: "sansLieu" }
@@ -751,7 +765,7 @@ export default function PlanifierScreen() {
   /** Les entrées du moteur pour cette planification — une seule description, pour la tenue et pour ses alternatives. */
   const entreesMoteur = {
     items: state.items,
-    capsule: defaultCapsule,
+    capsule: capsuleDeLaDate,
     occ,
     dressingSeul,
     meteo: meteoUtilisee,
@@ -764,7 +778,7 @@ export default function PlanifierScreen() {
   const tenue = useMemo(
     () => composerTenuePlan(entreesMoteur),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [occ, dressingSeul, state.items, defaultCapsule, meteoUtilisee, workMode, dateContext, profile, humeur, typeLieu]
+    [occ, dressingSeul, state.items, capsuleDeLaDate, meteoUtilisee, workMode, dateContext, profile, humeur, typeLieu]
   );
   /** L'alternative choisie dans « Autres propositions » : valable tant que les paramètres qui l'ont produite ne changent pas. */
   const cleParams = `${occ}|${dressingSeul}|${humeur}|${typeLieu}|${jour}|${moment}|${workMode}|${dateContext}`;
@@ -879,9 +893,11 @@ export default function PlanifierScreen() {
     }
     if (prevision && dernierJourConnu && dateChoisie && jourLocal(dateChoisie) > dernierJourConnu) {
       const d = new Date(`${dernierJourConnu}T12:00:00`);
-      return `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue suit la saison de la date et la météo d'aujourd'hui — ${aujourdhui}.`;
+      return `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue suit la saison de la date et ses températures habituelles.`;
     }
-    return `Pas de prévision disponible pour ce lieu. La tenue suit la saison de la date et la météo d'aujourd'hui — ${aujourdhui}.`;
+    return jour != null && jour > HORIZON_PREVISION_JOURS
+      ? "Pas de prévision pour cette date. La tenue suit la saison de la date et ses températures habituelles."
+      : `Pas de prévision disponible pour ce lieu. La tenue suit la saison de la date et la météo d'aujourd'hui — ${aujourdhui}.`;
   })();
 
   /**
@@ -1732,6 +1748,16 @@ export default function PlanifierScreen() {
                     <OutfitComposition items={pieces} variant="planche" />
                   </div>
                 </div>
+
+                {/* UNE TENUE A TOUJOURS SES CHAUSSURES (08/10/2026, demandé) : quand le moteur n'en a trouvé aucune pour la saison de
+                    la date, la phrase le dit au lieu de présenter une tenue incomplète comme finie. */}
+                {!composition && pieces.length > 0 && !pieces.some((p) => p.cat === "chaussures") && (
+                  <div role="status" className="mt-3 text-[12px] leading-[1.45] text-terracotta-deep">
+                    {dressingSeul
+                      ? "Aucune paire de chaussures de ton dressing ne convient à cette date. Décoche « Uniquement mon dressing » pour en voir une, ou ajoute-en une."
+                      : "Aucune paire de chaussures ne convient à cette date pour l'instant."}
+                  </div>
+                )}
 
                 {/* LES PIÈCES, en vignettes : de quoi la tenue est faite, d'un coup d'œil. */}
                 <div className="flex gap-2 mt-3" aria-label="Les pièces de la tenue" role="list">
