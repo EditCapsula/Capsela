@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateCourte, grilleDuMois, grilleDuMoisComplete, jourAbrege, joursDeLaSemaine, numeroDeSemaine, joursRestantsDeLaSemaine, listeDeLaSemaine, listeDuCalendrier, lundiDe, moisDecale, tenueDuCalendrier } from "../calendrier";
+import { AVENIR_JOURS, AVENIR_MAX, RECENTES_MAX, dateCourte, dateMoyenne, historiqueParMois, joursPassesAvecTenue, vueListe, grilleDuMois, grilleDuMoisComplete, jourAbrege, joursDeLaSemaine, numeroDeSemaine, joursRestantsDeLaSemaine, listeDeLaSemaine, listeDuCalendrier, lundiDe, moisDecale, tenueDuCalendrier } from "../calendrier";
 import type { TenuePlanifiee } from "../planifier";
 import type { HistoryEntry } from "../types";
 
@@ -146,5 +146,56 @@ describe("numéro de semaine simple (la semaine du 1er janvier est la 1re)", () 
   it("sept jours d'une même semaine ont toujours le même numéro", () => {
     for (const lundi of ["2026-03-02", "2026-06-29", "2026-12-28", "2028-01-03"])
       expect(new Set(joursDeLaSemaine(lundi).map(numeroDeSemaine)).size).toBe(1);
+  });
+});
+
+describe("vue Liste : courte, et l'historique à part", () => {
+  const AUJ2 = "2026-10-08";
+  const porteLe = (jour: string, pieceIds = [3, 4]) => porte(jour, pieceIds);
+  const lesPortees = (jours: string[]) => jours.map((j) => porteLe(j));
+
+  it("À VENIR : les tenues des dix prochains jours, sans les jours vides, six au plus", () => {
+    const plans = [plan("2026-10-11"), plan("2026-10-15"), plan("2026-10-25"), plan("2026-10-12", [])];
+    const v = vueListe(AUJ2, [], plans, proposee);
+    expect(v.avenir.map((t) => t.jour)).toEqual(["2026-10-08", "2026-10-11", "2026-10-15"]);
+    // 25 octobre est à 17 jours : hors des dix jours ; 12 octobre n'a pas de pièce : pas une tenue.
+    expect(v.avenir.every((t) => t.jour < "2026-10-18")).toBe(true);
+    const beaucoup = Array.from({ length: 9 }, (_, i) => plan(`2026-10-${String(9 + i).padStart(2, "0")}`));
+    expect(vueListe(AUJ2, [], beaucoup, proposee).avenir).toHaveLength(AVENIR_MAX);
+    expect(AVENIR_JOURS).toBe(10);
+  });
+
+  it("RÉCEMMENT PORTÉES : les quatre dernières tenues passées seulement, de la plus récente à la plus ancienne", () => {
+    const h = lesPortees(["2026-10-07", "2026-10-05", "2026-10-04", "2026-10-01", "2026-09-27", "2026-09-26", "2026-08-31"]);
+    const v = vueListe(AUJ2, h, [], null);
+    expect(v.recentes.map((t) => t.jour)).toEqual(["2026-10-07", "2026-10-05", "2026-10-04", "2026-10-01"]);
+    expect(v.recentes).toHaveLength(RECENTES_MAX);
+    expect(v.nbPassees).toBe(7);
+  });
+
+  it("une tenue passée planifiée mais non portée garde le statut « planifiée » ; si elle a été portée, « portée » passe devant", () => {
+    const v = vueListe(AUJ2, [porteLe("2026-10-06")], [plan("2026-10-06"), plan("2026-10-05")], null);
+    expect(v.recentes.map((t) => [t.jour, t.statut])).toEqual([["2026-10-06", "porte"], ["2026-10-05", "planifiee"]]);
+  });
+
+  it("les jours passés avec une tenue : portés ou planifiés, sans doublon, jamais aujourd'hui ni le futur", () => {
+    const jours = joursPassesAvecTenue(AUJ2, [porteLe("2026-10-07"), porteLe("2026-10-08"), porteLe("2026-10-07", [9])], [plan("2026-10-07"), plan("2026-10-09"), plan("2026-10-03")], );
+    expect(jours).toEqual(["2026-10-07", "2026-10-03"]);
+  });
+
+  it("l'historique complet est regroupé par mois, du plus récent au plus ancien, avec son filtre", () => {
+    const h = lesPortees(["2026-10-07", "2026-10-01", "2026-09-27", "2026-09-26", "2026-08-31"]);
+    const plans = [plan("2026-09-14")];
+    const tout = historiqueParMois(AUJ2, h, plans);
+    expect(tout.map((m) => [m.cle, m.libelle, m.tenues.length])).toEqual([["2026-10", "Octobre 2026", 2], ["2026-09", "Septembre 2026", 3], ["2026-08", "Août 2026", 1]]);
+    expect(tout[1].tenues.map((t) => t.jour)).toEqual(["2026-09-27", "2026-09-26", "2026-09-14"]);
+    expect(historiqueParMois(AUJ2, h, plans, "portees").flatMap((m) => m.tenues).every((t) => t.statut === "porte")).toBe(true);
+    expect(historiqueParMois(AUJ2, h, plans, "planifiees").flatMap((m) => m.tenues.map((t) => t.jour))).toEqual(["2026-09-14"]);
+    expect(historiqueParMois(AUJ2, [], [])).toEqual([]);
+  });
+
+  it("la date d'une ligne : « Mer. 7 octobre »", () => {
+    expect(dateMoyenne("2026-10-07")).toBe("Mer. 7 octobre");
+    expect(dateMoyenne("2026-08-31")).toBe("Lun. 31 août");
   });
 });

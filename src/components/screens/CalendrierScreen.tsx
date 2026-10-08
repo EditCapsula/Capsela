@@ -7,18 +7,19 @@ import { IconeTuile } from "@/components/PlanifierUI";
 import SegmentedControl from "@/components/SegmentedControl";
 import { resolveItemImage } from "@/lib/catalogImages";
 import {
-  dateCourte,
+  dateMoyenne,
   grilleDuMoisComplete,
+  historiqueParMois,
   jourAbrege,
   joursDeLaSemaine,
-  listeDeLaSemaine,
-  listeDuCalendrier,
   moisDecale,
   numeroDeSemaine,
   tenueDuCalendrier,
+  vueListe,
+  type FiltreHistorique,
   type TenueDuCalendrier,
 } from "@/lib/calendrier";
-import { DAYS_FR, MONTHS_FR, OCC_LABELS } from "@/lib/data";
+import { DAYS_FR, MONTHS_FR, OCC_LABELS, occasionShortLabel } from "@/lib/data";
 import { dateDuJour } from "@/lib/jourConsulte";
 import { jourLocal } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan } from "@/lib/planDuJour";
@@ -186,17 +187,15 @@ export default function CalendrierScreen() {
     t.pieceIds.map((id) => pool.find((i) => i.id === id)).filter((i): i is Item => !!i);
   const tenue = (jour: string) => tenueDuCalendrier(jour, aujourdhui, state.history, state.tenuesPlanifiees, proposee);
 
-  const { avenir, passees } = useMemo(
-    () => listeDuCalendrier(aujourdhui, state.history, state.tenuesPlanifiees, proposee),
-    [aujourdhui, state.history, state.tenuesPlanifiees, proposee]
+  // La vue Liste est COURTE (08/10/2026) : les prochaines tenues (dix jours), les quatre dernières passées — le reste vit dans « Voir toutes mes tenues ».
+  const vl = useMemo(() => vueListe(aujourdhui, state.history, state.tenuesPlanifiees, proposee), [aujourdhui, state.history, state.tenuesPlanifiees, proposee]);
+  const calendrierVide = vl.avenir.length === 0 && vl.nbPassees === 0;
+  const [historiqueOuvert, setHistoriqueOuvert] = useState(false);
+  const [filtre, setFiltre] = useState<FiltreHistorique>("toutes");
+  const historique = useMemo(
+    () => historiqueParMois(aujourdhui, state.history, state.tenuesPlanifiees, filtre),
+    [aujourdhui, state.history, state.tenuesPlanifiees, filtre]
   );
-  const semaineEnCours = useMemo(
-    () => listeDeLaSemaine(aujourdhui, state.history, state.tenuesPlanifiees, proposee),
-    [aujourdhui, state.history, state.tenuesPlanifiees, proposee]
-  );
-  const dimancheEnCours = semaineEnCours[semaineEnCours.length - 1]?.jour ?? aujourdhui;
-  const plusTard = avenir.filter((t) => t.jour > dimancheEnCours);
-  const calendrierVide = avenir.length === 0 && passees.length === 0;
 
   const ouvrir = (t: TenueDuCalendrier) => {
     if (t.statut === "porte") return actions.goHistory();
@@ -286,54 +285,20 @@ export default function CalendrierScreen() {
     </div>
   );
 
-  const ligne = (t: TenueDuCalendrier) => {
-    const [jour, ...reste] = dateCourte(t.jour).split(" ");
-    return (
-      <li key={t.jour}>
-        <button onClick={() => ouvrir(t)} className="w-full flex items-center gap-3 py-3 border-b border-divider text-left cursor-pointer min-h-[56px]">
-          <span className="w-[54px] flex-shrink-0 text-[12px] leading-[1.25]">
-            <span className="block text-ink font-semibold">{jour}</span>
-            <span className="block text-muted">{reste.join(" ")}</span>
+  /** Une ligne, compacte : la date et « occasion · statut » à gauche, quatre miniatures au plus à droite (« +n » au-delà). */
+  const ligne = (t: TenueDuCalendrier) => (
+    <li key={t.jour}>
+      <button onClick={() => ouvrir(t)} className="w-full flex items-center gap-3 py-3 border-b border-divider text-left cursor-pointer min-h-[60px]">
+        <span className="flex-1 min-w-0">
+          <span className="block text-[13px] text-ink font-semibold leading-[1.25]">{dateMoyenne(t.jour)}</span>
+          <span className="block text-[12px] text-muted mt-[2px] leading-[1.3] truncate">
+            {occasionShortLabel(t.occasion)} · {NOM_STATUT[t.statut]}
           </span>
-          <MiniTuiles pieces={piecesDe(t)} />
-          <span className="flex-1 min-w-0">
-            <span className="block text-[13px] text-ink font-semibold leading-[1.25]">{NOM_STATUT[t.statut]}</span>
-            <span className="block text-[12px] text-muted mt-[2px] leading-[1.3]">
-              {OCC_LABELS[t.occasion]}
-              {t.temp != null ? ` · ${Math.round(t.temp)}°` : ""}
-            </span>
-          </span>
-          <span className="text-muted flex-shrink-0"><Chevron vers="droite" /></span>
-        </button>
-      </li>
-    );
-  };
-
-  /** Un jour de « Cette semaine » : sa tenue, ou — s'il est à venir — l'invitation à en planifier une. */
-  const ligneSemaine = ({ jour, tenue: t }: { jour: string; tenue: TenueDuCalendrier | null }) => {
-    if (t) return ligne(t);
-    const [j, ...reste] = dateCourte(jour).split(" ");
-    const auj = jour === aujourdhui;
-    return (
-      <li key={jour}>
-        <button
-          onClick={() => (auj ? actions.goHome() : actions.planifierPour(ecartJours(jour, aujourdhui)))}
-          className="w-full flex items-center gap-3 py-3 border-b border-divider text-left cursor-pointer min-h-[56px]"
-        >
-          <span className="w-[54px] flex-shrink-0 text-[12px] leading-[1.25]">
-            <span className="block text-ink font-semibold">{j}</span>
-            <span className="block text-muted">{reste.join(" ")}</span>
-          </span>
-          <MiniTuiles pieces={[]} />
-          <span className="flex-1 min-w-0">
-            <span className="block text-[13px] text-ink font-semibold leading-[1.25]">{auj ? "Tenue du jour" : "Aucune tenue prévue"}</span>
-            <span className="block text-[12px] text-terracotta-deep mt-[2px] leading-[1.3]">{auj ? "Voir sur l’accueil" : "Planifier"}</span>
-          </span>
-          <span className="text-muted flex-shrink-0"><Chevron vers="droite" /></span>
-        </button>
-      </li>
-    );
-  };
+        </span>
+        <MiniTuiles pieces={piecesDe(t)} />
+      </button>
+    </li>
+  );
 
   /** La carte du jour choisi. Un jour PASSÉ sans tenue n'a pas de carte. */
   const panneau =
@@ -412,6 +377,51 @@ export default function CalendrierScreen() {
   const surtitreSemaine = `SEMAINE ${numeroSemaine}`;
   const nomSemaine = `Semaine ${numeroSemaine}, du ${libelleLong(semaine[0])} au ${libelleLong(semaine[6])}`;
   const decalerSemaine = (n: number) => setSelection(jourLocal(new Date(dateDe(selection).getTime() + n * 7 * 86_400_000)));
+
+  // L'HISTORIQUE COMPLET (« Voir toutes mes tenues → ») : toutes les tenues passées, regroupées par mois, avec un filtre discret.
+  if (historiqueOuvert) {
+    const FILTRES: { key: FiltreHistorique; label: string }[] = [
+      { key: "toutes", label: "Toutes" },
+      { key: "portees", label: "Portées" },
+      { key: "planifiees", label: "Planifiées" },
+    ];
+    return (
+      <div className="absolute inset-0 flex flex-col bg-cream">
+        <div className="scrollarea flex-1 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+          <div className="flex items-center justify-between mb-3">
+            <BoutonRetour onClick={() => setHistoriqueOuvert(false)} label="Revenir à la liste" taille={34} />
+            <h1 className="t-titre-carte text-ink">Mon historique</h1>
+            <span aria-hidden="true" className="w-[34px]" />
+          </div>
+          <div role="tablist" aria-label="Filtrer les tenues" className="flex items-center gap-5 mt-2">
+            {FILTRES.map((f) => (
+              <button
+                key={f.key}
+                role="tab"
+                aria-selected={filtre === f.key}
+                onClick={() => setFiltre(f.key)}
+                className={"min-h-[44px] text-[13px] cursor-pointer " + (filtre === f.key ? "text-terracotta-deep font-semibold underline underline-offset-[6px]" : "text-muted")}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {historique.length === 0 ? (
+            <p className="t-chapeau text-muted mt-5">
+              {filtre === "portees" ? "Aucune tenue portée pour l’instant." : filtre === "planifiees" ? "Aucune tenue planifiée passée." : "Tes tenues passées s’afficheront ici."}
+            </p>
+          ) : (
+            historique.map((m) => (
+              <section key={m.cle} className="mt-5" aria-label={m.libelle}>
+                <h2 className="t-surtitre text-muted">{m.libelle}</h2>
+                <ul>{m.tenues.map(ligne)}</ul>
+              </section>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 flex flex-col bg-cream">
@@ -496,18 +506,29 @@ export default function CalendrierScreen() {
 
         {vue === "liste" && (
           <div className="mt-5">
-            <h2 className="t-surtitre text-muted">Cette semaine</h2>
-            <ul className="mb-6">{semaineEnCours.map(ligneSemaine)}</ul>
-            {plusTard.length > 0 && (
-              <>
-                <h2 className="t-surtitre text-muted">Plus tard</h2>
-                <ul className="mb-6">{plusTard.map(ligne)}</ul>
-              </>
+            <h2 className="t-surtitre text-muted">À venir</h2>
+            {vl.avenir.length > 0 ? (
+              <ul className="mb-6">{vl.avenir.map(ligne)}</ul>
+            ) : (
+              <section className="mt-3 mb-6 rounded-carte bg-card border border-border p-5">
+                <Titre debut="Aucune tenue" accent="prévue" />
+                <p className="t-chapeau text-muted mt-2">Je peux te proposer une tenue adaptée à ta journée et à la météo.</p>
+                <div className="mt-4"><Button variante="principal" onClick={() => actions.planifierPour(1)}>Planifier une tenue</Button></div>
+              </section>
             )}
-            {passees.length > 0 && (
+            {vl.recentes.length > 0 && (
               <>
-                <h2 className="t-surtitre text-muted">Tenues passées</h2>
-                <ul>{passees.map(ligne)}</ul>
+                <h2 className="t-surtitre text-muted">Récemment portées</h2>
+                <ul>{vl.recentes.map(ligne)}</ul>
+                <button
+                  onClick={() => {
+                    setFiltre("toutes");
+                    setHistoriqueOuvert(true);
+                  }}
+                  className="t-lien text-terracotta-deep min-h-[44px] mt-1 cursor-pointer"
+                >
+                  Voir toutes mes tenues →
+                </button>
               </>
             )}
           </div>
