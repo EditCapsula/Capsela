@@ -16,7 +16,11 @@ import type { CategoryKey } from "./types";
 /** Où la planche s'affiche : chaque contexte a sa zone, sa marge et son gabarit (cf. CONTEXTES). */
 export type ContexteFlatLay = "hero-home" | "look-detail" | "capsule" | "dressing" | "packing";
 
-export type RoleFlatLay = "hero" | "secondaire" | "bas" | "chaussures" | "sac" | "accessoire";
+/**
+ * `couche` (calibrage du 08/10/2026, « regroupement stylistique ») : la seconde pièce du haut d'une tenue — un t-shirt sous un
+ * pull, une chemise sous un blazer, un débardeur sous un cardigan. Elle se pose contre la pièce qu'elle double, jamais ailleurs.
+ */
+export type RoleFlatLay = "hero" | "secondaire" | "couche" | "bas" | "chaussures" | "sac" | "accessoire";
 
 export interface PieceFlatLay {
   id: number;
@@ -47,6 +51,8 @@ export interface PlacementFlatLay {
   /** Degrés. */
   angle: number;
   z: number;
+  /** Une couche porte l'id de la pièce qu'elle double (elle forme un groupe avec elle). */
+  groupeAvec?: number;
 }
 
 const ROBES: CategoryKey[] = ["robe", "combinaison"];
@@ -68,7 +74,8 @@ export function attribuerRoles<T extends { id: number; cat: CategoryKey }>(piece
   const manteau = robe ? undefined : prendre(["manteau"]);
   const veste = robe || manteau ? undefined : prendre(["veste"]);
   const bas = robe ? undefined : prendre(BAS);
-  const haut = robe ? undefined : prendre(HAUTS);
+  // Le haut du second plan est la couche EXTÉRIEURE : un pull ou un cardigan avant un t-shirt, qui devient sa couche.
+  const haut = robe ? undefined : (prendre(["pull"]) ?? prendre(["haut"]));
   const dessusRestant = prendre(DESSUS);
   const hero = robe ?? manteau ?? veste ?? bas ?? haut ?? dessusRestant;
   const sortie: { piece: T; role: RoleFlatLay }[] = [];
@@ -82,6 +89,12 @@ export function attribuerRoles<T extends { id: number; cat: CategoryKey }>(piece
   if (chaussures) sortie.push({ piece: chaussures, role: "chaussures" });
   const sac = prendre(["sac"]);
   if (sac) sortie.push({ piece: sac, role: "sac" });
+  // Un second haut (t-shirt, chemise, débardeur) est la COUCHE du premier : il se pose contre lui. Une seule couche ; sous une robe,
+  // un haut de plus reste un surnombre.
+  if (!robe) {
+    const couche = reste.find((p) => HAUTS.includes(p.cat));
+    if (couche) sortie.push({ piece: couche, role: "couche" });
+  }
   // Tout le reste — bijoux, accessoires, pièces en surnombre (une seconde veste, un second bas…) — se pose en accessoire.
   const casees = new Set(sortie.map((x) => x.piece));
   for (const p of pieces) if (!casees.has(p)) sortie.push({ piece: p, role: "accessoire" });
@@ -113,7 +126,7 @@ export const PART_VISUELLE: Record<CategoryKey, number> = {
   accessoire: 62.5,
 };
 /** La part visuelle de la pièce de référence de chaque rôle (celle sur laquelle les largeurs de REF ont été réglées). */
-const PART_REF: Record<RoleFlatLay, number> = { hero: 82.5, secondaire: 77.5, bas: 85, chaussures: 70, sac: 70, accessoire: 62.5 };
+const PART_REF: Record<RoleFlatLay, number> = { hero: 82.5, secondaire: 77.5, couche: 77.5, bas: 85, chaussures: 70, sac: 70, accessoire: 62.5 };
 
 /** L'échelle visuelle d'une pièce dans son rôle : bornée, pour qu'une catégorie rare ne déséquilibre jamais la planche. */
 export function echelleVisuelle(role: RoleFlatLay, cat: CategoryKey): number {
@@ -149,6 +162,8 @@ interface ConfigContexte {
   refs: Record<RoleFlatLay, Ref>;
   /** Gabarit d'une robe ou d'une combinaison héro (sinon `refs`). */
   refsRobe?: Partial<Record<RoleFlatLay, Ref>>;
+  /** Gabarit d'un bas héro AVEC une couche (pull + t-shirt à gauche, bas à droite, chaussures dessous, sac contre le bas). */
+  refsGroupe?: Partial<Record<RoleFlatLay, Ref>>;
   slotsAccessoires: Ref[];
 }
 
@@ -158,7 +173,15 @@ const REF_HOME: Record<RoleFlatLay, Ref> = {
   bas: { x: 50, y: 62, l: 42, angle: -5 },
   chaussures: { x: 80, y: 82, l: 36, angle: -8 },
   sac: { x: 17, y: 71, l: 33, angle: -2 },
+  // La couche se pose contre sa pièce (cf. composerFlatLay) : seule son inclinaison compte ici.
+  couche: { x: 0, y: 0, l: 0, angle: -3 },
   accessoire: { x: 8, y: 8, l: 16, angle: 10 },
+};
+const GROUPE_HOME: Partial<Record<RoleFlatLay, Ref>> = {
+  secondaire: { x: 27, y: 28, l: 46, angle: -3 },
+  hero: { x: 72, y: 46, l: 42, angle: 3 },
+  chaussures: { x: 25, y: 92, l: 32, angle: -6 },
+  sac: { x: 76, y: 94, l: 30, angle: 4 },
 };
 const SLOTS_HOME: Ref[] = [
   { x: 8, y: 10, l: 17, angle: 10 },
@@ -168,7 +191,7 @@ const SLOTS_HOME: Ref[] = [
 
 export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
   // 12 px sur les 181 px de la zone (calibrage du 08/10/2026) : 6,6 unités de zone.
-  "hero-home": { hauteur: 112, marge: 6.6, maxAccessoires: [2, 1], ecartAccessoireMax: 12, refs: REF_HOME, slotsAccessoires: SLOTS_HOME },
+  "hero-home": { hauteur: 112, marge: 6.6, maxAccessoires: [2, 1], ecartAccessoireMax: 12, refs: REF_HOME, refsGroupe: GROUPE_HOME, slotsAccessoires: SLOTS_HOME },
   "look-detail": {
     hauteur: 126,
     marge: 5,
@@ -183,7 +206,15 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
       bas: { x: 50, y: 68, l: 44, angle: -5 },
       chaussures: { x: 80, y: 100, l: 36, angle: -7 },
       sac: { x: 20, y: 98, l: 36, angle: -4 },
+      couche: { x: 0, y: 0, l: 0, angle: -3 },
       accessoire: { x: 10, y: 8, l: 18, angle: 9 },
+    },
+    // Un bas héro avec une couche : le groupe des hauts à gauche, le bas à droite, boots sous le groupe, sac contre le bas.
+    refsGroupe: {
+      secondaire: { x: 27, y: 31, l: 44, angle: -3 },
+      hero: { x: 71, y: 50, l: 46, angle: 3 },
+      chaussures: { x: 25, y: 101, l: 36, angle: -6 },
+      sac: { x: 75, y: 104, l: 33, angle: 4 },
     },
     // Une robe : centrée, la surcouche derrière à droite, sac et chaussures dessous de part et d'autre.
     refsRobe: {
@@ -214,11 +245,13 @@ export function hauteurDuContexte(contexte: ContexteFlatLay): number {
  * puis chaussures, sac et accessoires.
  */
 function profondeur(role: RoleFlatLay, cat: CategoryKey): number {
-  if (DESSUS.includes(cat)) return 1;
-  if (role === "chaussures") return 4;
-  if (role === "sac") return 5;
-  if (role === "accessoire") return 6;
-  return HAUTS.includes(cat) ? 3 : 2;
+  if (DESSUS.includes(cat)) return 10;
+  if (role === "chaussures") return 40;
+  if (role === "sac") return 50;
+  if (role === "accessoire") return 60;
+  // La couche est derrière le haut qu'elle double (« sous / légèrement derrière le pull »), devant le bas.
+  if (role === "couche") return 25;
+  return HAUTS.includes(cat) ? 30 : 20;
 }
 
 /** Une graine d'identité de look → un générateur pseudo-aléatoire stable (FNV-1a, puis mulberry32). */
@@ -246,7 +279,7 @@ export const MARGE_SECURITE = 4;
  * (le bas en est une), chaussures ±8, sac ±6, accessoires ±10. Elles bornent TOUT angle — celui du gabarit, son jitter, le
  * miroir et l'inclinaison préférée d'une pièce. Elles remplacent les 8° / −12° de la maquette du 07/10, plus marqués.
  */
-export const LIMITE_INCLINAISON: Record<RoleFlatLay, number> = { hero: 4, secondaire: 5, bas: 5, chaussures: 8, sac: 6, accessoire: 10 };
+export const LIMITE_INCLINAISON: Record<RoleFlatLay, number> = { hero: 4, secondaire: 5, couche: 5, bas: 5, chaussures: 8, sac: 6, accessoire: 10 };
 
 /** Chevauchement maximal entre deux pièces (part de la plus petite) et part maximale d'une pièce masquée par celles du dessus. */
 export const CHEVAUCHEMENT_MAX = 0.18;
@@ -271,7 +304,7 @@ const recouvrement = (a: Boite, b: Boite) => aire({ x0: Math.max(a.x0, b.x0), x1
 const rangAccessoire = (cat: CategoryKey) => (cat === "accessoire" ? 0 : 1);
 
 /** L'importance d'une pièce quand il faut en écarter une : la plus importante ne bouge pas. */
-const IMPORTANCE: Record<RoleFlatLay, number> = { hero: 5, bas: 4, secondaire: 3, chaussures: 2, sac: 2, accessoire: 1 };
+const IMPORTANCE: Record<RoleFlatLay, number> = { hero: 5, couche: 4.5, bas: 4, secondaire: 3, chaussures: 2, sac: 2, accessoire: 1 };
 
 /**
  * CHEVAUCHEMENTS (calibrage du 08/10/2026) : deux pièces ne se recouvrent pas de plus de 18 % de la plus petite, et une pièce
@@ -279,13 +312,15 @@ const IMPORTANCE: Record<RoleFlatLay, number> = { hero: 5, bas: 4, secondaire: 3
  * prudente : la silhouette réelle (un pull, un pantalon) laisse du vide dans sa boîte. La pièce la moins importante s'écarte,
  * de proche en proche, par l'axe où elle pénètre le moins ; la composition est ensuite ajustée à la zone comme d'habitude.
  */
-function desserrer<T extends { x: number; y: number; l: number; h: number; angle: number; z: number; role: RoleFlatLay }>(pieces: T[]): void {
+function desserrer<T extends { id: number; x: number; y: number; l: number; h: number; angle: number; z: number; role: RoleFlatLay; groupeAvec?: number }>(pieces: T[]): void {
   for (let tour = 0; tour < 120; tour++) {
     let bouge = false;
     for (let i = 0; i < pieces.length; i++) {
       for (let j = i + 1; j < pieces.length; j++) {
         const a = pieces[i];
         const b = pieces[j];
+        // Une couche et la pièce qu'elle double se chevauchent à dessein (≤ 18 %, réglé à la pose) : on ne les sépare pas.
+        if (a.groupeAvec === b.id || b.groupeAvec === a.id) continue;
         const ba = boiteTournee(a);
         const bb = boiteTournee(b);
         const commun = recouvrement(ba, bb);
@@ -325,11 +360,13 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, options:
   // La veste ou le manteau héros se pose toujours à DROITE (maquette) : pas de miroir. Sinon le sens est tiré par la graine.
   const heroDessus = DESSUS.includes(roles[0].piece.cat);
   const heroRobe = ROBES.includes(roles[0].piece.cat);
-  const miroir = !heroDessus && alea() < 0.5;
+  // Un bas héro avec une couche : le groupe des hauts à gauche, le bas à droite — jamais en miroir (la couche reste lisible).
+  const groupe = !heroRobe && !heroDessus && BAS.includes(roles[0].piece.cat) && roles.some((r) => r.role === "couche");
+  const miroir = !heroDessus && !groupe && alea() < 0.5;
   const nb = roles.length;
   // 2–3 pièces : composition plus ouverte (un peu plus grandes). 6 et plus : on réduit le secondaire et on limite les accessoires.
   const echelleGlobale = nb <= 3 ? 1.1 : 1;
-  const refDe = (role: RoleFlatLay): Ref => (heroRobe && config.refsRobe?.[role]) || config.refs[role];
+  const refDe = (role: RoleFlatLay): Ref => (heroRobe && config.refsRobe?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
 
   // Les accessoires : on garde les plus utiles, en nombre limité par le contexte et le nombre de pièces.
   const accessoires = roles.filter((r) => r.role === "accessoire").sort((a, b) => rangAccessoire(a.piece.cat) - rangAccessoire(b.piece.cat));
@@ -358,10 +395,24 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, options:
     return { id: piece.id, cat: piece.cat, role, visualScale, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
   };
 
-  const brut = roles
-    .filter((r) => r.role !== "accessoire")
+  const brut: PlacementFlatLay[] = roles
+    .filter((r) => r.role !== "accessoire" && r.role !== "couche")
     .map(({ piece, role }) => placer(piece, role, refDe(role)));
 
+  desserrer(brut);
+
+  // LA COUCHE (« regroupement stylistique », 08/10/2026) : posée contre la pièce qu'elle double — le haut du second plan, sinon le héro —,
+  // juste dessous et légèrement derrière, vers le centre de la planche. Elle recouvre de 14 % de sa hauteur au plus (sous les 18 %) et ne
+  // s'éloigne jamais : deux couches d'une même tenue ne sont jamais dans deux coins opposés.
+  const coucheRole = roles.find((r) => r.role === "couche");
+  const ancre = brut.find((q) => q.role === "secondaire") ?? brut.find((q) => q.role === "hero");
+  if (coucheRole && ancre) {
+    const c = placer(coucheRole.piece, "couche", { ...refDe("couche"), l: ancre.l * 0.62 });
+    const bAncre = boiteTournee(ancre);
+    c.x = ancre.x + (ancre.x < 50 ? 1 : -1) * 0.05 * ancre.l;
+    c.y = bAncre.y1 - 0.14 * c.h + c.h / 2;
+    brut.push({ ...c, groupeAvec: ancre.id });
+  }
   desserrer(brut);
 
   // Chaque accessoire garde le premier emplacement qui le colle à la composition SANS couvrir une pièce importante ; sinon il est
