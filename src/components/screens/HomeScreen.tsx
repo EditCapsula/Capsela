@@ -295,7 +295,12 @@ export default function HomeScreen() {
 
       {/* LE LOOK DU JOUR : fond sable, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
           jour passé, aucune tenue possible, la tenue qui se compose, la tenue. */}
-      <div className="mx-6 mt-3 rounded-hero grid gap-2" style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: "minmax(0,0.8fr) minmax(0,1.2fr)", padding: "20px 14px 10px 18px", minHeight: 300 }}>
+      <div
+        className="mx-4 mt-3 rounded-hero grid gap-2"
+        // 358 × 307 px sur 390 (calibrage du 08/10/2026) : la marge du hero est de 16 px, 8 px de moins que la gouttière du reste de
+        // l'écran. La colonne de la composition fait 181 px (zone 181 × 203), moins sur un écran étroit : le texte garde sa place.
+        style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
+      >
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">
             <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-on-terracotta" style={{ display: "block" }}>
