@@ -112,6 +112,34 @@ Le flat lay ne place pas les pièces par catégorie seulement : il comprend cell
 Limite connue : une tenue à six pièces avec veste héro, deux hauts et un bas se range dans la zone avec moins d'air — la couche
 reste contre son haut, le bas s'écarte d'elle.
 
+## Accueil : composition ciblée sans le t-shirt (08/10/2026)
+
+Sur l'accueil (`hero-home`, zone 181 × 203 px) la planche privilégie la silhouette : la **couche** (t-shirt sous un pull) reste dans la
+tenue, dans le détail du look et dans tous les autres contextes, mais n'est pas posée dans cette planche (`masquerCouche`, résultat
+`masquees`). Le gabarit « groupe » se décide sur toute la tenue : un pull + pantalon masqué de son t-shirt garde son gabarit.
+
+Composition d'un blazer / manteau héro (`refsDessus`) — positions en parts de la zone, converties en unités du moteur :
+
+| Pièce | Centre x | Centre y | Largeur | Angle |
+|---|---|---|---|---|
+| Pull | 28 % | 28 % | 40 % | +2° |
+| Pantalon | 62 % | 48 % | 44 % | −2° |
+| Blazer | 80 % | 32 % | 40 % | +4° |
+| Sac | 22 % | 76 % | 28 % | −6° |
+| Boots | 78 % | 78 % | 30 % | −8° |
+
+Le moteur ajuste l'ensemble à la zone de sécurité (12 px au minimum, `marge` 7,4 unités — 12 px à 360 px, 13 px à 390 px) : les
+largeurs finales sont un peu inférieures aux cibles (le blazer à 80 % + 20 % toucherait le bord). Le blazer reste derrière le
+pantalon (règle de profondeur : la veste et le manteau sont toujours au fond), alors que le brief lui donnait un z-index de 2.
+
+**ARBITRAGE ÉDITORIAL** : les positions ciblées font passer le pantalon devant le blazer sur près de la moitié de la BOÎTE de ce
+dernier (une mesure prudente — la silhouette réelle laisse du vide). Les seuils de 18 % / 20 % valent pour les autres contextes ;
+sur l'accueil ils sont à 60 % (`chevauchementMax`, `masqueMax`). Un arbitrage instruit pour cette composition et ce contexte : il ne
+se généralise pas à un autre.
+
+Mesuré sur un look blazer + pull + pantalon + sac + boots : pull 36 % de la zone (27 % avant), pantalon 39 % (26 %), boots 28 %
+(23 %), sac 26 % (21 %), blazer 36 % (36 %) ; la planche occupe 84 % de la largeur et 74 % de la hauteur.
+
 ## Hero mobile (390 px)
 
 Carte 358 px de large (marge de 16 px). La colonne de la composition fait 181 px, zone `100 / 112`. Zone de sécurité : 12 px

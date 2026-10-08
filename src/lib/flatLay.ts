@@ -162,6 +162,13 @@ interface ConfigContexte {
   refs: Record<RoleFlatLay, Ref>;
   /** Gabarit d'une robe ou d'une combinaison héro (sinon `refs`). */
   refsRobe?: Partial<Record<RoleFlatLay, Ref>>;
+  /** Gabarit d'une veste ou d'un manteau héro (sinon `refs`) — hero-home : la composition ciblée du 08/10/2026. */
+  refsDessus?: Partial<Record<RoleFlatLay, Ref>>;
+  /** true : la couche (t-shirt sous un pull…) reste dans la tenue mais n'est pas posée dans cette planche (hero-home). */
+  masquerCouche?: boolean;
+  /** Seuils de chevauchement propres au contexte (sinon CHEVAUCHEMENT_MAX / MASQUE_MAX). */
+  chevauchementMax?: number;
+  masqueMax?: number;
   /** Gabarit d'un bas héro AVEC une couche (pull + t-shirt à gauche, bas à droite, chaussures dessous, sac contre le bas). */
   refsGroupe?: Partial<Record<RoleFlatLay, Ref>>;
   slotsAccessoires: Ref[];
@@ -189,9 +196,38 @@ const SLOTS_HOME: Ref[] = [
   { x: 92, y: 52, l: 15, angle: 9 },
 ];
 
+/**
+ * LA COMPOSITION CIBLE DE L'ACCUEIL (08/10/2026) — blazer, pull, pantalon, sac, boots sur la zone de 181 × 203 px, sans le t-shirt.
+ * Les positions du brief sont des parts de la zone (x de la largeur, y de la hauteur) ; `y` est converti ici en unités du moteur :
+ * y% × 1,12 (zone de 112 unités de haut), moins le décalage de 6 que `placer` ajoute aux zones plus hautes que larges.
+ */
+const yHome = (pct: number) => +(pct * 1.12 - 6).toFixed(1);
+const DESSUS_HOME: Partial<Record<RoleFlatLay, Ref>> = {
+  secondaire: { x: 28, y: yHome(28), l: 40, angle: 2 },
+  bas: { x: 62, y: yHome(48), l: 44, angle: -2 },
+  hero: { x: 80, y: yHome(32), l: 40, angle: 4 },
+  sac: { x: 22, y: yHome(76), l: 28, angle: -6 },
+  chaussures: { x: 78, y: yHome(78), l: 30, angle: -8 },
+};
+
 export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
-  // 12 px sur les 181 px de la zone (calibrage du 08/10/2026) : 6,6 unités de zone.
-  "hero-home": { hauteur: 112, marge: 6.6, maxAccessoires: [2, 1], ecartAccessoireMax: 12, refs: REF_HOME, refsGroupe: GROUPE_HOME, slotsAccessoires: SLOTS_HOME },
+  // ARBITRAGE ÉDITORIAL (08/10/2026, brief « Homepage ») : sur l'accueil, la composition ciblée fait passer le bas devant le blazer sur près
+  // de la moitié de la boîte de ce dernier — la boîte est une mesure prudente, la silhouette réelle d'un blazer ou d'un pantalon laisse du
+  // vide. Les seuils de 18 % / 20 % valent pour les autres contextes ; ici 60 %.
+  "hero-home": {
+    hauteur: 112,
+    // 12 px de marge MINIMUM, y compris à 360 px (zone de 164 px) : 12 / 164 = 7,32 unités ; 13,4 px à 390 px.
+    marge: 7.4,
+    maxAccessoires: [2, 1],
+    ecartAccessoireMax: 12,
+    refs: REF_HOME,
+    refsGroupe: GROUPE_HOME,
+    refsDessus: DESSUS_HOME,
+    masquerCouche: true,
+    chevauchementMax: 0.6,
+    masqueMax: 0.6,
+    slotsAccessoires: SLOTS_HOME,
+  },
   "look-detail": {
     hauteur: 126,
     marge: 5,
@@ -312,7 +348,7 @@ const IMPORTANCE: Record<RoleFlatLay, number> = { hero: 5, couche: 4.5, bas: 4, 
  * prudente : la silhouette réelle (un pull, un pantalon) laisse du vide dans sa boîte. La pièce la moins importante s'écarte,
  * de proche en proche, par l'axe où elle pénètre le moins ; la composition est ensuite ajustée à la zone comme d'habitude.
  */
-function desserrer<T extends { id: number; x: number; y: number; l: number; h: number; angle: number; z: number; role: RoleFlatLay; groupeAvec?: number }>(pieces: T[]): void {
+function desserrer<T extends { id: number; x: number; y: number; l: number; h: number; angle: number; z: number; role: RoleFlatLay; groupeAvec?: number }>(pieces: T[], chevauchementMax = CHEVAUCHEMENT_MAX, masqueMax = MASQUE_MAX): void {
   for (let tour = 0; tour < 120; tour++) {
     let bouge = false;
     for (let i = 0; i < pieces.length; i++) {
@@ -331,7 +367,7 @@ function desserrer<T extends { id: number; x: number; y: number; l: number; h: n
         // Le masquage se cumule : une veste cachée à 14 % par le haut et à 13 % par le bas l'est à 27 %.
         const bd = boiteTournee(dessous);
         const masque = pieces.filter((o) => o.z > dessous.z).reduce((s, o) => s + recouvrement(bd, boiteTournee(o)), 0) / aire(bd);
-        if (part <= CHEVAUCHEMENT_MAX && masque <= MASQUE_MAX) continue;
+        if (part <= chevauchementMax && masque <= masqueMax) continue;
         const [fixe, mobile] = IMPORTANCE[a.role] >= IMPORTANCE[b.role] ? [a, b] : [b, a];
         const bf = boiteTournee(fixe);
         const bm = boiteTournee(mobile);
@@ -350,23 +386,32 @@ export interface OptionsFlatLay {
   contexte?: ContexteFlatLay;
 }
 
-export function composerFlatLay(pieces: PieceFlatLay[], graine: string, options: OptionsFlatLay = {}): { pieces: PlacementFlatLay[]; ecartees: number[] } {
+/** `masquees` : les pièces de la tenue que le contexte ne pose pas dans la planche (le t-shirt de l'accueil) — elles restent dans le look. */
+export function composerFlatLay(
+  pieces: PieceFlatLay[],
+  graine: string,
+  options: OptionsFlatLay = {}
+): { pieces: PlacementFlatLay[]; ecartees: number[]; masquees: number[] } {
   const config = CONTEXTES[options.contexte ?? "hero-home"];
   const hauteurZone = config.hauteur;
-  const roles = attribuerRoles(pieces.filter((p) => p.flatLayCompatible !== false));
-  if (!roles.length) return { pieces: [], ecartees: [] };
+  const tous = attribuerRoles(pieces.filter((p) => p.flatLayCompatible !== false));
+  // Le groupe stylistique se décide sur TOUTE la tenue : un t-shirt masqué (hero-home) ne défait pas le gabarit pull + pantalon.
+  const avecCouche = tous.some((r) => r.role === "couche");
+  const masquees = config.masquerCouche ? tous.filter((r) => r.role === "couche").map((r) => r.piece.id) : [];
+  const roles = config.masquerCouche ? tous.filter((r) => r.role !== "couche") : tous;
+  if (!roles.length) return { pieces: [], ecartees: [], masquees };
   const alea = generateur(graine);
   const dans = (min: number, max: number) => min + (max - min) * alea();
   // La veste ou le manteau héros se pose toujours à DROITE (maquette) : pas de miroir. Sinon le sens est tiré par la graine.
   const heroDessus = DESSUS.includes(roles[0].piece.cat);
   const heroRobe = ROBES.includes(roles[0].piece.cat);
   // Un bas héro avec une couche : le groupe des hauts à gauche, le bas à droite — jamais en miroir (la couche reste lisible).
-  const groupe = !heroRobe && !heroDessus && BAS.includes(roles[0].piece.cat) && roles.some((r) => r.role === "couche");
+  const groupe = !heroRobe && !heroDessus && BAS.includes(roles[0].piece.cat) && avecCouche;
   const miroir = !heroDessus && !groupe && alea() < 0.5;
   const nb = roles.length;
   // 2–3 pièces : composition plus ouverte (un peu plus grandes). 6 et plus : on réduit le secondaire et on limite les accessoires.
   const echelleGlobale = nb <= 3 ? 1.1 : 1;
-  const refDe = (role: RoleFlatLay): Ref => (heroRobe && config.refsRobe?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
+  const refDe = (role: RoleFlatLay): Ref => (heroRobe && config.refsRobe?.[role]) || (heroDessus && config.refsDessus?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
 
   // Les accessoires : on garde les plus utiles, en nombre limité par le contexte et le nombre de pièces.
   const accessoires = roles.filter((r) => r.role === "accessoire").sort((a, b) => rangAccessoire(a.piece.cat) - rangAccessoire(b.piece.cat));
@@ -399,7 +444,7 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, options:
     .filter((r) => r.role !== "accessoire" && r.role !== "couche")
     .map(({ piece, role }) => placer(piece, role, refDe(role)));
 
-  desserrer(brut);
+  desserrer(brut, config.chevauchementMax, config.masqueMax);
 
   // LA COUCHE (« regroupement stylistique », 08/10/2026) : posée contre la pièce qu'elle double — le haut du second plan, sinon le héro —,
   // juste dessous et légèrement derrière, vers le centre de la planche. Elle recouvre de 14 % de sa hauteur au plus (sous les 18 %) et ne
@@ -413,7 +458,7 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, options:
     c.y = bAncre.y1 - 0.14 * c.h + c.h / 2;
     brut.push({ ...c, groupeAvec: ancre.id });
   }
-  desserrer(brut);
+  desserrer(brut, config.chevauchementMax, config.masqueMax);
 
   // Chaque accessoire garde le premier emplacement qui le colle à la composition SANS couvrir une pièce importante ; sinon il est
   // écarté : un petit objet isolé ou posé sur le héro ne sert pas la planche (« 08/10/2026 : un accessoire noir seul sous la robe »).
@@ -466,5 +511,6 @@ export function composerFlatLay(pieces: PieceFlatLay[], graine: string, options:
       };
     }),
     ecartees,
+    masquees,
   };
 }

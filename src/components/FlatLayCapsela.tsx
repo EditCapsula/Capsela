@@ -58,7 +58,8 @@ export function FlatLayCapsela({
   );
 
   // Toutes les images chargées (ou en échec) : la planche est prête.
-  const attendues = images.filter(({ img }) => img.url).length;
+  // Seules les pièces POSÉES se chargent : une pièce masquée (le t-shirt de l'accueil) ou écartée ne monte jamais son image.
+  const attendues = composition.filter((q) => images.find(({ it }) => it.id === q.id)?.img.url).length;
   const chargees = useRef(0);
   const prevenu = useRef(false);
   const aCharge = useCallback(() => {
