@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import BoutonRetour from "@/components/BoutonRetour";
 import { CarteIdeeLook } from "@/components/CarteIdeeLook";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { currentSeasonKey } from "@/lib/capsule";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { OCC_SHORT, wornAgo } from "@/lib/data";
@@ -91,8 +91,13 @@ export default function IdeeLookScreen() {
 
       {/* Composition éditoriale (27/09/2026) : une silhouette, pas une
           grille — la zone prend la hauteur des pièces, proche du carré. */}
-      <div className="rounded-feuille bg-warm-bg px-[16px] py-[20px] mt-[14px]">
-        <OutfitComposition items={pieces} variant="editoriale" label={"Composition du look : " + pieces.map((p) => p.name).join(", ")} />
+      <div
+        className="relative rounded-feuille bg-warm-bg overflow-hidden mt-[14px]"
+        style={{ aspectRatio: "100 / 118" }}
+        role="img"
+        aria-label={"Composition du look : " + pieces.map((p) => p.name).join(", ")}
+      >
+        <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id))} />
       </div>
 
       <div className="t-label text-terracotta mt-[18px]">Look {actif.numero}</div>
