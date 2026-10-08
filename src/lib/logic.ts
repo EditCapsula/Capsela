@@ -327,6 +327,8 @@ export interface LeviersMesure {
   sansSandalesDeFeteEnAutomne?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : les sandales et espadrilles ne sont pas écartées sous 15° (R-B22). */
   sansFiltreChaussuresDEte?: boolean;
+  /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
+  saisonDeclareeRelachee?: boolean;
   /**
    * Reproduit le comportement d'AVANT le 01/10/2026 : la longueur des manches
    * (Item.manches, migration 0042) n'est pas lue. La veste par temps frais
@@ -720,7 +722,7 @@ export interface GeneratedOutfit {
  * (couleur, formalité, coupe, style).
  */
 export function generateOutfit(
-  pool: Item[],
+  poolBrut: Item[],
   weather: Weather,
   occasion: OccasionKey,
   workMode: WorkMode = "Présentiel",
@@ -777,6 +779,15 @@ export function generateOutfit(
   // deux seules occasions ; la température (meteo_min_temp), la pluie (R-B21)
   // et le reste de la tenue restent soumis aux règles habituelles.
   const automne = Boolean(contexteSaison.saisons?.includes("Automne"));
+  // LA SAISON DÉCLARÉE D'UNE PIÈCE DU DRESSING EST UNE RÈGLE DURE (08/10/2026, signalé : « il faut aussi et surtout tenir compte de la
+  // saison déclarée pour une pièce de dressing, ici j'avais déclaré que les sandales étaient pour l'été »). Une pièce que l'utilisatrice a
+  // elle-même rangée dans d'autres saisons que celles du jour n'entre jamais dans le tirage : ni par l'exemption des sandales de fête,
+  // ni par le repli « hors saison » d'une catégorie essentielle (poolFor), ni par le pool entier quand moins de quatre pièces sont de
+  // saison. Sans chaussures de saison, la tenue n'a pas de chaussures — mieux que des sandales par 11°. Les pièces du CATALOGUE gardent
+  // ces replis : personne n'y a déclaré de saison. La pièce imposée par l'appelant (pinnedId) reste tirable.
+  const pool = leviers?.saisonDeclareeRelachee
+    ? poolBrut
+    : poolBrut.filter((i) => isCatalogId(i.id) || i.id === pinnedId || estDeSaison(i, contexteSaison));
   const sandaleDeFete = (i: Item): boolean =>
     !leviers?.sansSandalesDeFeteEnAutomne &&
     automne &&
@@ -1780,6 +1791,8 @@ export function swapOutfitPiece(
   // tienne quelle que soit la catégorie.
   const dejaPortees = new Set(outfitItems.filter((i) => i.id !== pieceId).map((i) => i.id));
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId && !dejaPortees.has(i.id));
+  // La saison déclarée d'une pièce du dressing est une règle dure (08/10/2026) — symétrique du filtre de generateOutfit.
+  if (weather) candidates = candidates.filter((i) => isCatalogId(i.id) || estDeSaison(i, weather));
   // Priorité au réel sur le groupe accessoire/bijou/sac — même correctif
   // 22/08/2026 que dans generateOutfit (cf. son commentaire) : pas
   // seulement à la génération automatique, aussi lors d'un remplacement manuel.

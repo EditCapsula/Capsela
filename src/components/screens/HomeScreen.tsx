@@ -59,7 +59,7 @@ function ActionRonde({ icone, libelle, onClick, actif, disabled, label }: { icon
  * contient (« Mes pièces » / « Par Capsela »), pour que le dressing et la capsule ne se confondent pas.
  */
 function CarteUnivers({
-  onClick, glyphe, ligne1, ligne2, texte, accent, visuel, surtitre, label, busy, premium,
+  onClick, glyphe, ligne1, ligne2, texte, accent, visuel, position = "center", surtitre, label, busy, premium,
 }: {
   onClick: () => void;
   glyphe: React.ReactNode;
@@ -69,6 +69,8 @@ function CarteUnivers({
   /** Les styles de la personne, en terracotta après la phrase (carte capsule). */
   accent?: string;
   visuel: string;
+  /** `object-position` du visuel dans sa colonne : garde le sujet principal quand le cadre est plus étroit que l'image. */
+  position?: string;
   surtitre?: string;
   label: string;
   busy?: boolean;
@@ -84,8 +86,9 @@ function CarteUnivers({
       style={{ minHeight: 156 }}
     >
       <span className="absolute top-0 right-0 bottom-0 bg-cream" style={{ width: "clamp(56px, 38%, 92px)" }} aria-hidden="true">
+        {/* Les visuels éditoriaux du 08/10/2026 (zip « Capsela_visuels_editoriaux ») : recadrés sur le sujet, jamais étirés ni bordés de blanc. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={visuel} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover block opacity-90" />
+        <img src={visuel} alt="" width={460} height={940} loading="lazy" decoding="async" className="w-full h-full object-cover block" style={{ objectPosition: position }} />
       </span>
       <span
         aria-hidden="true"
@@ -259,7 +262,6 @@ export default function HomeScreen() {
   const sauvegardee = jourAVenir
     ? state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue)
     : avisDuJour === "adore";
-  const genreVisuel = profile.gender === "homme" ? "homme" : "femme";
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-[100px]">
@@ -450,7 +452,7 @@ export default function HomeScreen() {
             ligne2="dressing"
             surtitre="Mes pièces"
             texte="Ajoute et gère tes pièces"
-            visuel="/editorial/capsela_dressing_banner.webp"
+            visuel="/editorial/capsela_editorial_dressing.webp"
             label="Mon dressing"
           />
           <CarteUnivers
@@ -461,7 +463,7 @@ export default function HomeScreen() {
             surtitre="Par Capsela"
             texte={profile.styles.length > 1 ? "Une sélection adaptée à tes styles" : "Une sélection adaptée à ton style"}
             accent={stylesDits || undefined}
-            visuel="/editorial/capsela_capsule_banner.webp"
+            visuel="/editorial/capsela_editorial_capsule.webp"
             label="Ma capsule"
           />
           <CarteUnivers
@@ -470,7 +472,8 @@ export default function HomeScreen() {
             ligne1="Planifier"
             ligne2="mes looks"
             texte="Organise tes tenues à l’avance"
-            visuel="/editorial/capsela_planifier_intro.webp"
+            visuel="/editorial/capsela_editorial_planning.webp"
+            position="34% center"
             label="Planifier mes looks"
             premium
           />
@@ -480,7 +483,7 @@ export default function HomeScreen() {
             ligne1="Préparer"
             ligne2="une valise"
             texte="Une sélection pensée pour ton voyage"
-            visuel={`/editorial/capsela_planifier_valise_${genreVisuel}.webp`}
+            visuel="/editorial/capsela_editorial_valise.webp"
             label="Préparer une valise"
             premium
           />
