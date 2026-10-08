@@ -47,6 +47,16 @@ export function clePieces(ids: readonly number[]): number[] {
   return [...new Set(ids)].sort((a, b) => a - b);
 }
 
+/**
+ * La clé d'une tenue (clePieces) sous la forme d'un LITTÉRAL de tableau Postgres, « {14,100485,100489} », pour un filtre `.eq`
+ * sur une colonne `bigint[]` (outfit_feedback.piece_ids). Un `.eq("piece_ids", [14, 100485])` part en « 14,100485 », sans les
+ * accolades, et Postgres répond 22P02 « malformed array literal » — c'est l'erreur vue le 08/10/2026 en retirant un avis du jour
+ * (un second tap sur le même verdict). Un envoi en JSON (upsert) n'a pas ce défaut ; seul le filtre en query string en a.
+ */
+export function litteralTableau(ids: readonly number[]): string {
+  return `{${clePieces(ids).join(",")}}`;
+}
+
 /** Deux tenues sont la même si elles rassemblent les mêmes pièces, quel que soit l'ordre. */
 export function memeTenue(a: readonly number[], b: readonly number[]): boolean {
   const ca = clePieces(a);

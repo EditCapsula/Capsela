@@ -1,5 +1,5 @@
 import { accessoireTypeFor } from "./attributes";
-import { type Verdict, clePieces, jourLocal } from "./outfitFeedback";
+import { type Verdict, clePieces, jourLocal, litteralTableau } from "./outfitFeedback";
 import { manchesDepuis } from "./manches";
 import { ordonnerSaisons } from "./saisons";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
@@ -670,6 +670,7 @@ export async function deleteOutfitFeedback(userId: string, jour: string, pieceId
     .delete()
     .eq("user_id", userId)
     .eq("jour", jour)
-    .eq("piece_ids", clePieces(pieceIds));
+    // Un littéral « {a,b} » : un tableau brut part sans accolades et Postgres refuse (22P02).
+    .eq("piece_ids", litteralTableau(pieceIds));
   if (error) throw error;
 }
