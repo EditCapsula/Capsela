@@ -63,9 +63,36 @@ rend aussi la liste des pièces écartées (`ecartees`).
 **Pièce facultative.** `visualScale`, `preferredRotation` (bornée) et `flatLayCompatible` (false = hors planche) peuvent être
 portés par une pièce ; le catalogue actuel ne les a pas, les défauts s'appliquent.
 
+## Calibrage du 08/10/2026 (dimensions réelles, 390 × 844 px)
+
+Mesuré en rendu réel, pas sur la maquette conceptuelle (180 × 250, 300 × 390, hero 370–380 px). Ces règles s'appliquent aux
+deux contextes ; les valeurs sont des constantes exportées de `flatLay.ts`, testées dans `flatLay.test.ts`.
+
+| Écran | Carte | Zone du flat lay |
+|---|---|---|
+| Accueil | 358 × 307 px (marge de 16 px) | 181 × 203 px, colonne à droite du texte (`clamp(140px, 55,5 %, 181px)`) |
+| Tenue du jour | 358 × 564 px (hauteur fixe) | 310 × 350 px, les badges se posent par-dessus le haut |
+
+Le hero et la carte Tenue du jour débordent de 8 px la gouttière de 24 px du reste de l'écran (marge de 16 px) — l'en-tête et
+la navigation ne changent pas. Les largeurs de zone suivent l'écran (360 → 164 × 184 px sur l'accueil, 280 × 350 sur Tenue) ; la
+hauteur de Tenue reste de 350 px.
+
+- **Pièce héro** : 58 % de la largeur de la zone au plus (elle rétrécit sur place, après l'ajustement à la zone).
+- **Chevauchements** : deux pièces ne se recouvrent pas de plus de 18 % de la plus petite, et une pièce n'est jamais masquée à
+  plus de 20 % (cumulé) par celles du dessus. Mesuré sur la boîte tournée de chaque pièce — une mesure prudente, la silhouette
+  réelle laisse du vide dans sa boîte. La pièce la moins importante s'écarte de proche en proche (`desserrer`).
+- **Inclinaisons** (`LIMITE_INCLINAISON`) : héro ±4°, secondaires et bas ±5°, chaussures ±8°, sac ±6°, accessoires ±10°. Elles
+  bornent tout angle : gabarit, jitter de la graine, miroir, inclinaison préférée. Elles remplacent les 8° / −12° de la maquette
+  du 07/10.
+- **Accessoires** : deux au plus ; un accessoire de moins de 8 % de la largeur de la zone n'est pas posé.
+- **Marge** : 12 px entre les pièces et les bords de la zone sur l'accueil (6,6 unités), 14 px sur Tenue ; une réserve de 28 px en
+  haut de la zone Tenue (`margeHaute`) pour la ligne de badges.
+- **Pièce sans visuel** : elle sort de la planche, qui se recalcule avec les autres ; ni vide, ni pastille de couleur. Aucune
+  pièce n'a de visuel (mode démo, catalogue hors ligne) : les pastilles restent, sinon la zone serait vide.
+- **Tailles par catégorie, ombre, graine** : inchangées (cf. plus haut).
+
 ## Hero mobile (390 px)
 
-Carte ≈ 342 px de large (gouttière de 24 px). Colonne de la composition ≈ 60 % de la carte (grille 0,8fr / 1,2fr), zone
-`100 / 112`. Zone de sécurité : 4 unités autour de la composition + le padding de la carte, soit au moins 16 px des bords de
-la carte, du texte, du CTA et des actions. Le flat lay ne recouvre jamais le titre, la description, « Voir le look »,
+Carte 358 px de large (marge de 16 px). La colonne de la composition fait 181 px, zone `100 / 112`. Zone de sécurité : 12 px
+autour de la composition + le padding de la carte. Le flat lay ne recouvre jamais le titre, la description, « Voir le look »,
 « Sauvegarder » ni « Autre idée ».

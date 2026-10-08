@@ -485,7 +485,9 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   // dans les données réelles, les cardigans sont systématiquement stockés
   // en category="hauts" -> canonCategory="haut".
   haut: ["top", "shirt", "blouse", "tank top", "bodysuit", "turtleneck", "polo", "sweatshirt", "cardigan", "sweater"],
-  pull: ["sweater", "cardigan", "sweatshirt"],
+  // « sleeveless vest » (08/10/2026) : le gilet sans manches est rangé en pulls_gilets, et son sujet (« gilet sans manches »)
+  // ne contenait aucun de ces mots — quatre pièces (885, 902, 917, 922) étaient refusées en 422 avant tout appel API.
+  pull: ["sweater", "cardigan", "sweatshirt", "sleeveless vest"],
   pantalon: ["trousers", "pants", "leggings"],
   jean: ["jeans"],
   jupe: ["skirt"],

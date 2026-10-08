@@ -35,7 +35,13 @@ export function FlatLayCapsela({
 }) {
   const HAUTEUR = hauteurDuContexte(context);
   const graine = layoutSeed;
-  const images = useMemo(() => items.map((it) => ({ it, img: resolveHeroImage(it) })), [items]);
+  const images = useMemo(() => {
+    const toutes = items.map((it) => ({ it, img: resolveHeroImage(it) }));
+    // Une pièce sans visuel ne laisse ni vide ni pastille de couleur (calibrage du 08/10/2026) : elle sort de la planche, qui se
+    // recalcule avec les pièces qui ont une image. Aucune n'en a (mode démo, catalogue hors ligne) : on garde les pastilles.
+    const avecImage = toutes.filter(({ img }) => img.url);
+    return avecImage.length ? avecImage : toutes;
+  }, [items]);
   const composition = useMemo(
     () =>
       composerFlatLay(

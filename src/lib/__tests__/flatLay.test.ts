@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CONTEXTES, MARGE_SECURITE, PART_VISUELLE, attribuerRoles, composerFlatLay, echelleVisuelle, generateur, type PieceFlatLay } from "../flatLay";
+import { CHEVAUCHEMENT_MAX, CONTEXTES, LARGEUR_ACCESSOIRE_MIN, LARGEUR_HERO_MAX, LIMITE_INCLINAISON, MARGE_SECURITE, MASQUE_MAX, PART_VISUELLE, attribuerRoles, composerFlatLay, echelleVisuelle, generateur, type PieceFlatLay, type PlacementFlatLay } from "../flatLay";
 import type { CategoryKey } from "../types";
 
 let n = 0;
@@ -43,12 +43,10 @@ describe("composerFlatLay — déterministe, borné, sans grille", () => {
     expect(vues.size).toBeGreaterThan(6);
   });
 
-  it("les inclinaisons suivent la maquette, à 1,5° près (au signe près si la planche est en miroir)", () => {
-    const ref = { hero: 8, secondaire: -8, bas: -12, chaussures: -10, sac: -2 } as const;
-    for (let i = 0; i < 40; i++)
-      for (const q of composerFlatLay(look(), "g" + i).pieces) {
-        if (q.role in ref) expect(Math.abs(q.angle - ref[q.role as keyof typeof ref])).toBeLessThanOrEqual(1.5 + 1e-9);
-      }
+  it("chaque inclinaison reste dans la plage de son rôle (héro ±4°, secondaires ±5°, chaussures ±8°, sac ±6°, accessoires ±10°)", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (let i = 0; i < 40; i++)
+        for (const q of composerFlatLay(look(), "g" + i, { contexte }).pieces) expect(Math.abs(q.angle)).toBeLessThanOrEqual(LIMITE_INCLINAISON[q.role] + 1e-9);
   });
 
   it("une veste héro est toujours à droite, le haut à gauche, le bas entre les deux", () => {
@@ -149,9 +147,9 @@ describe("contextes du flat lay — un moteur, des paramètres différents", () 
     expect(CONTEXTES["look-detail"].hauteur).toBeGreaterThan(CONTEXTES["hero-home"].hauteur);
     expect(home.pieces.length).toBe(detail.pieces.length);
     const angle = (r: typeof home, role: string) => r.pieces.find((q) => q.role === role)!.angle;
-    // look-detail : les angles du brief (héro ±4°), hero-home : ceux de la maquette (héro ≈ 8°).
-    expect(Math.abs(angle(detail, "hero"))).toBeLessThanOrEqual(5.5);
-    expect(Math.abs(angle(home, "hero"))).toBeGreaterThan(6);
+    // Les deux contextes obéissent aux mêmes plages d'inclinaison (calibrage du 08/10/2026).
+    expect(Math.abs(angle(detail, "hero"))).toBeLessThanOrEqual(LIMITE_INCLINAISON.hero + 1e-9);
+    expect(Math.abs(angle(home, "hero"))).toBeLessThanOrEqual(LIMITE_INCLINAISON.hero + 1e-9);
   });
 
   it("look-detail : la pièce héro occupe une plus grande part de la zone que sur la homepage", () => {
@@ -224,5 +222,82 @@ describe("données facultatives de la pièce", () => {
     const b = composerFlatLay([p("veste", 0.94), norm], "c").pieces.find((q) => q.id === norm.id)!;
     expect(a.visualScale).toBeGreaterThan(b.visualScale);
     expect(Math.abs(a.angle)).toBeLessThanOrEqual(6.01);
+  });
+});
+
+describe("calibrage du 08/10/2026 — chevauchements, héro, accessoires", () => {
+  const boite = (q: PlacementFlatLay) => {
+    const r = (Math.abs(q.angle) * Math.PI) / 180;
+    const w = q.l * Math.cos(r) + q.h * Math.sin(r);
+    const h = q.l * Math.sin(r) + q.h * Math.cos(r);
+    return { x0: q.x - w / 2, x1: q.x + w / 2, y0: q.y - h / 2, y1: q.y + h / 2 };
+  };
+  const commun = (a: PlacementFlatLay, b: PlacementFlatLay) => {
+    const A = boite(a);
+    const B = boite(b);
+    return Math.max(0, Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0)) * Math.max(0, Math.min(A.y1, B.y1) - Math.max(A.y0, B.y0));
+  };
+  const aireDe = (q: PlacementFlatLay) => {
+    const b = boite(q);
+    return (b.x1 - b.x0) * (b.y1 - b.y0);
+  };
+  const looks: PieceFlatLay[][] = [
+    [p("veste", 0.94), p("haut", 1), p("pantalon", 0.6), p("chaussures", 1.1), p("sac", 0.82)],
+    [p("robe", 0.55), p("sac", 0.82), p("chaussures", 1.2)],
+    [p("pull", 1), p("jean", 0.6), p("chaussures", 1.1), p("sac", 0.9), p("accessoire", 1)],
+    [p("manteau", 0.7), p("haut", 1), p("pantalon", 0.55), p("chaussures", 1.2), p("sac", 0.8), p("bijou", 1), p("accessoire", 1)],
+  ];
+
+  it("deux pièces ne se recouvrent pas de plus de 18 % de la plus petite", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (const [k, pieces] of looks.entries())
+        for (let i = 0; i < 20; i++) {
+          const sortie = composerFlatLay(pieces, `c${k}-${i}`, { contexte }).pieces;
+          for (let a = 0; a < sortie.length; a++)
+            for (let b = a + 1; b < sortie.length; b++) {
+              const part = commun(sortie[a], sortie[b]) / Math.min(aireDe(sortie[a]), aireDe(sortie[b]));
+              expect(part, `${contexte} look ${k} graine ${i} : ${sortie[a].cat}/${sortie[b].cat}`).toBeLessThanOrEqual(CHEVAUCHEMENT_MAX + 0.02);
+            }
+        }
+  });
+
+  it("aucune pièce n'est masquée à plus de 20 % par celles du dessus", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (const [k, pieces] of looks.entries())
+        for (let i = 0; i < 20; i++) {
+          const sortie = composerFlatLay(pieces, `m${k}-${i}`, { contexte }).pieces;
+          for (const q of sortie) {
+            const masque = sortie.filter((o) => o.z > q.z).reduce((s, o) => s + commun(q, o), 0) / aireDe(q);
+            expect(masque, `${contexte} look ${k} graine ${i} : ${q.cat}`).toBeLessThanOrEqual(MASQUE_MAX + 0.02);
+          }
+        }
+  });
+
+  it("la pièce héro ne dépasse jamais 58 % de la largeur de la zone", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (const pieces of looks)
+        for (let i = 0; i < 20; i++) expect(composerFlatLay(pieces, "h" + i, { contexte }).pieces.find((q) => q.role === "hero")!.l).toBeLessThanOrEqual(LARGEUR_HERO_MAX + 1e-9);
+  });
+
+  it("un accessoire plus étroit que 8 % de la zone n'est pas posé", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (const pieces of looks)
+        for (let i = 0; i < 20; i++)
+          for (const q of composerFlatLay(pieces, "a" + i, { contexte }).pieces.filter((x) => x.role === "accessoire")) expect(q.l).toBeGreaterThanOrEqual(LARGEUR_ACCESSOIRE_MIN);
+  });
+
+  it("deux accessoires au plus dans le flat lay principal", () => {
+    const beaucoup = [p("veste", 0.94), p("haut", 1), p("pantalon", 0.6), p("chaussures"), p("sac"), p("bijou", 1), p("accessoire", 1), p("bijou", 1), p("accessoire", 1)];
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      expect(composerFlatLay(beaucoup, "z", { contexte }).pieces.filter((q) => q.role === "accessoire").length).toBeLessThanOrEqual(2);
+  });
+
+  it("une pièce manquante ne laisse aucun vide : la composition se recalcule, bornée par la zone", () => {
+    const sansSac = [p("veste", 0.94), p("haut", 1), p("pantalon", 0.6), p("chaussures", 1.1)];
+    const { pieces } = composerFlatLay(sansSac, "sansSac", { contexte: "look-detail" });
+    expect(pieces.length).toBe(4);
+    const h = CONTEXTES["look-detail"].hauteur;
+    expect(Math.min(...pieces.map((q) => q.y - q.h / 2))).toBeLessThan(h * 0.2);
+    expect(Math.max(...pieces.map((q) => q.y + q.h / 2))).toBeGreaterThan(h * 0.8);
   });
 });

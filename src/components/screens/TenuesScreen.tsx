@@ -533,7 +533,7 @@ export default function TenuesScreen() {
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <AppHeader onBack={actions.goHome} backLabel="Revenir à l'accueil" />
 
-      <div className="mt-[18px]">
+      <div className="mt-[10px]">
         {/* « Bonjour, <prénom> » appartient à l'accueil et à lui seul
             (23/09/2026) : répété ici, il salue une deuxième fois dans la même
             session et ne dit rien de l'écran. Le titre annonce désormais ce
@@ -552,7 +552,7 @@ export default function TenuesScreen() {
           partagé avec l'Accueil. Il remplace le surtitre qui répétait la
           date : les chevrons changent le jour, la météo ouvre
           « Localisation & météo ». */}
-      <BarreDuJour className="mt-3" />
+      <BarreDuJour className="mt-2" />
       {/* Ce qui est planifié ce jour-là (Planifier) — le même rappel que
           l'Accueil. Un plan de journée est devenu la tenue ci-dessous (option C,
           30/09/2026) ; restent ici la soirée et les plans écartés ou incomplets. */}
@@ -574,10 +574,10 @@ export default function TenuesScreen() {
           elle, deux pastilles posées sous la météo ne disent pas ce qu'elles
           gouvernent — on les lit comme un filtre, pas comme le contexte qui
           produit la tenue. */}
-      <div className="mt-5 t-surtitre text-muted">
+      <div className="mt-[14px] t-surtitre text-muted">
         Qu&apos;est-ce qui est prévu {quand} ?
       </div>
-      <div className="flex items-center gap-2 mt-[9px] flex-wrap">
+      <div className="flex items-center gap-2 mt-2 flex-wrap">
         <button
           onClick={() => setFeuille("occasion")}
           aria-haspopup="dialog"
@@ -675,7 +675,14 @@ export default function TenuesScreen() {
           OutfitComposition — sinon le fond beige des tuiles resterait visible
           en damier sur le terracotta. */}
       {!meteoEnAttente && outfitPieces.length > 0 && (
-        <div id="tenue-du-jour" className="mt-[22px] rounded-hero bg-terracotta-deep text-cream scroll-mt-4" style={{ padding: 16, containerType: "inline-size" }}>
+        <div
+          id="tenue-du-jour"
+          className="-mx-2 mt-3 rounded-hero bg-terracotta-deep text-cream scroll-mt-4 flex flex-col"
+          // 358 × 564 px sur 390 (calibrage du 08/10/2026) : 8 px de plus de chaque côté que la gouttière de 24 px, la marge de 16 px
+          // du hero ; la zone du flat lay prend ce qui reste (350 px) — l'en-tête, la provenance, l'action et les deux
+          // secondaires ont une hauteur fixe. Un constat météo sur un plan l'allonge, jamais le flat lay.
+          style={{ padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : 564, minHeight: 564 }}
+        >
           {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
               le 23/09). Conditionnelle depuis que le titre est parti : sans
               elle, une tenue sans badge NI phrase ouvrirait la card sur une
@@ -705,7 +712,7 @@ export default function TenuesScreen() {
               est la tenue, puis « Autre tenue », remonté du pied de card —
               une action de changement, pas un CTA de même rang que
               « Porter cette tenue ». Hors de la zone à hauteur fixe. */}
-          <div className="flex items-center justify-between gap-3 mb-[12px]">
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 h-[32px]">
             {/* TENUE PLANIFIÉE (option C) : l'étiquette dit d'où vient la
                 tenue, et le bouton de changement revient à la proposition de
                 Capsela — sans passer par le quota d'« Autre tenue », ce n'est
@@ -744,7 +751,7 @@ export default function TenuesScreen() {
           {/* Ce que la météo du jour dit de la tenue planifiée (choisie sur une
               prévision) : un constat, jamais un changement d'office. */}
           {planApplique?.alerte && (
-            <div className="text-[12.5px] leading-[1.4] -mt-[4px] mb-[12px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
+            <div className="flex-shrink-0 text-[12.5px] leading-[1.4] mb-[8px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
               {planApplique.alerte}
             </div>
           )}
@@ -752,9 +759,12 @@ export default function TenuesScreen() {
               largeur de la card pour la planche (la même proportion que
               l'accueil et la tenue planifiée), plus la ligne de badges et la
               provenance. Les unités de conteneur (cqw) portent sur la card. */}
-          <div className="flex flex-col" style={{ height: "calc(112cqw + 70px)" }}>
+          <div className="flex flex-col flex-1 min-h-0">
+          <div className="relative flex-1 min-h-0">
           {(badgesAffiches.length > 0 || recommendationText) && (
-          <div className="flex-shrink-0 flex items-center flex-wrap gap-x-[10px] gap-y-[5px]">
+          // Les badges et la phrase d'ambiance se posent PAR-DESSUS le haut de la zone (calibrage du 08/10/2026) : le flat lay
+          // réserve cette bande (margeHaute), aucune pièce n'y passe.
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center flex-wrap gap-x-[10px] gap-y-[5px] pointer-events-none">
             {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la
                 qualité vient du score, le registre du repli de formalité. Sur
                 fond terracotta, la hiérarchie passe par le remplissage —
@@ -787,10 +797,11 @@ export default function TenuesScreen() {
           </div>
           )}
 
-          <div className="relative flex-1 min-h-0 mt-[13px]">
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
-            <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} />
+            <div className="absolute inset-y-0 left-2 right-2">
+              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} />
+            </div>
           </div>
           <div className="flex-shrink-0">
             {/* PROVENANCE — sur sa propre ligne sous le look, jamais PAR-DESSUS.
@@ -814,7 +825,7 @@ export default function TenuesScreen() {
                 pièce de capsule : une tenue entièrement issue du dressing n'en
                 montre qu'un. */}
             {provenance && (
-              <div className="flex flex-wrap gap-[5px] mt-[8px] px-[6px] pb-[2px]">
+              <div className="flex flex-wrap gap-[5px] mt-[5px] px-[6px]">
                 {provenance.map((p) => (
                   <span
                     key={p.cle}
@@ -843,13 +854,13 @@ export default function TenuesScreen() {
           {decalage > 0 ? (
             /* UN JOUR À VENIR NE SE PORTE PAS ENCORE (27/09/2026) : le Journal
                n'enregistre que le jour même. Même hauteur que le bouton. */
-            <div className="mt-[14px] flex items-center justify-center rounded-full text-[13px] text-cream text-center px-4" style={{ minHeight: 50, border: "1px dashed rgba(243,238,229,.4)" }}>
+            <div className="mt-[8px] flex-shrink-0 flex items-center justify-center rounded-full text-[13px] text-cream text-center px-4" style={{ minHeight: 56, border: "1px dashed rgba(243,238,229,.4)" }}>
               {`À porter ${quand} — enregistre-la ou demande un avis d'ici là.`}
             </div>
           ) : state.outfitValidated ? (
             /* Même hauteur que le bouton qu'il remplace (50 px) : valider la
                tenue ne doit pas déplacer les actions en dessous. */
-            <div className="mt-[14px] flex items-center gap-3 rounded-full py-[9px] px-4" style={{ minHeight: 50, background: "rgba(29,26,22,.28)" }}>
+            <div className="mt-[8px] flex-shrink-0 flex items-center gap-3 rounded-full py-[9px] px-4" style={{ minHeight: 56, background: "rgba(29,26,22,.28)" }}>
               <span className="w-8 h-8 rounded-full bg-cream text-terracotta flex items-center justify-center text-base flex-shrink-0">
                 ✓
               </span>
@@ -873,7 +884,7 @@ export default function TenuesScreen() {
               // tenue telle quelle est un choix légitime — mais passe au
               // contour, pour ne pas dire que le parcours est terminé tant
               // qu'un manque est signalé juste en dessous.
-              className="mt-[14px] disabled:opacity-100 disabled:cursor-not-allowed"
+              className="mt-[8px] !min-h-[56px] flex-shrink-0 disabled:opacity-100 disabled:cursor-not-allowed"
               style={{
                 background: vesteWithoutBase ? "rgba(243,238,229,.38)" : statut.cle === "a_completer" ? "transparent" : undefined,
                 color: vesteWithoutBase ? "rgba(29,26,22,.5)" : statut.cle === "a_completer" ? "var(--color-cream)" : undefined,
@@ -889,8 +900,8 @@ export default function TenuesScreen() {
               plein de la card. « Enregistrer » reste inerte sous deux pièces
               (correctif 23/08 : le masquer le faisait disparaître de façon
               déroutante après une régénération). */}
-          <div className="grid grid-cols-2 gap-[9px] mt-[9px]">
-            <BoutonDiscret
+          <div className="flex-shrink-0 grid grid-cols-2 gap-[9px] mt-[8px]">
+            <BoutonDiscret style={{ minHeight: 48 }}
               onClick={() => canSaveOutfit && actions.toggleSaveOutfitLook()}
               disabled={!canSaveOutfit}
               title={canSaveOutfit ? undefined : "Ajoute au moins 2 pièces à cette tenue pour l'enregistrer."}
@@ -901,6 +912,7 @@ export default function TenuesScreen() {
               {isOutfitSaved ? "Enregistrée" : "Enregistrer"}
             </BoutonDiscret>
             <BoutonDiscret
+              style={{ minHeight: 48 }}
               onClick={() =>
                 decalage > 0
                   ? actions.openOpinionShare({
