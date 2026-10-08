@@ -139,7 +139,6 @@ export function piecesCles(capsule: Item[], max = 3, saison?: CapsuleSeason): It
 const OCCASION_EN_PHRASE: Record<Exclude<OccasionKey, "all">, string> = {
   quotidien: "au quotidien",
   travail_formel: "au travail",
-  entretien: "en rendez-vous important",
   date: "en tête-à-tête",
   soiree: "en soirée",
   sport: "au sport",

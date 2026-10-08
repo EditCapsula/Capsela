@@ -149,14 +149,13 @@ export function saisonParDefaut(cat: CategoryKey, name: string): Season {
  * "Date" a une formalité variable selon son sous-contexte (cf. DATE_CONTEXTS)
  * — la valeur ci-dessous n'est qu'un repli par défaut.
  */
+/** Les sous-choix de « Travail / Bureau » — une seule liste pour Planifier, Tenue et le plan rendu à la tenue du jour. */
+export const WORK_MODES: WorkMode[] = ["Présentiel", "Télétravail", "Entretien"];
+
 export const OCCASIONS: [OccasionKey, string, string, number][] = [
   ["quotidien", "Quotidien / Décontracté", "Courses, école, journée libre", 1],
   ["travail_formel", "Travail / Bureau", "Journée de travail", 3],
-  // Formalité alignée sur travail_formel (correctif 21/08/2026, décidé) :
-  // un entretien se traite comme une journée de travail en présentiel,
-  // business_casual — pas le niveau habillé, jamais couvert par les bas du
-  // catalogue (aucun pantalon/jupe n'atteint ce niveau dans les capsules).
-  ["entretien", "Rendez-vous important", "Entretien, réunion clé", 3],
+  // « Rendez-vous important » (clé `entretien`) a été fusionnée ici le 08/10/2026 : c'est le sous-choix « Entretien » (WORK_MODES).
   ["date", "Rendez-vous amoureux", "Tête-à-tête", 3],
   // Formalité relevée (recette 24/08/2026, signalé : tenues trop basiques
   // pour ces deux occasions) — repli automatique déjà en place
@@ -212,7 +211,6 @@ export const WEATHER_ICONS: Record<string, string> = {
 export const OCC_SHORT: Record<Exclude<OccasionKey, "all">, string> = {
   quotidien: "Quotidien",
   travail_formel: "Travail",
-  entretien: "Rendez-vous",
   date: "Date",
   soiree: "Soirée",
   sport: "Sport",
@@ -279,6 +277,12 @@ export interface OccasionStylePrefs {
  * comme occasion (08/10/2026) : élargie le 21/08/2026 à toute chaussure à talon. Molle, jamais exclusive.
  */
 export const PREFS_SOIREE_HABILLEE: OccasionStylePrefs = { shoeTypes: ["Escarpins", "Sandales à talons", "Mules", "Slingbacks"] };
+/**
+ * Préférence de chaussures d'un ENTRETIEN (sous-choix de « Travail / Bureau », 08/10/2026) — celle de l'ancienne occasion « Rendez-vous
+ * important » (option B du 21/08/2026) : le seuil de formalité reste business casual, mais la tenue doit lire plus structurée qu'une
+ * journée de bureau. Molle, jamais exclusive.
+ */
+export const PREFS_ENTRETIEN: OccasionStylePrefs = { shoeTypes: ["Mocassins", "Escarpins", "Derbies", "Bottines"] };
 export const OCCASION_STYLE_PREFS: Partial<Record<OccasionKey, OccasionStylePrefs>> = {
   // Ajouté (recette 25/08/2026, signalé) — un mariage/baptême appelle une
   // chaussure à talon au même titre qu'une soirée habillée, jamais une
@@ -292,7 +296,6 @@ export const OCCASION_STYLE_PREFS: Partial<Record<OccasionKey, OccasionStylePref
   // d'un entretien reste business_casual (cf. OCCASIONS ci-dessus), mais la
   // tenue doit lire plus sérieuse qu'une simple journée de bureau — favorise
   // les chaussures les plus structurées/habillées de ce niveau.
-  entretien: { shoeTypes: ["Mocassins", "Escarpins", "Derbies", "Bottines"] },
 };
 /** Sous-types — pré-suggérés à la saisie du nom, jamais bloquants. */
 export const SAC_TYPES: SacType[] = ["Sac à main", "Cabas", "Bandoulière", "Pochette", "Sac à dos", "Sac de sport"];

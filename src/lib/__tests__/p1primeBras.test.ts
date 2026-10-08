@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateOutfitWithFallback, type LeviersMesure } from "../logic";
 import type { CatalogItem } from "../catalog";
 import type { Weather } from "../data";
-import type { CategoryKey, OccasionKey, Season } from "../types";
+import type { CategoryKey, OccasionKey, Season, WorkMode } from "../types";
 
 // LES TROIS BRAS DE P1' SONT-ILS ISOLABLES SANS TOUCHER À LA PRODUCTION ?
 //
@@ -45,13 +45,14 @@ const poolSansHaut = (): CatalogItem[] => [
 const P1: LeviersMesure = { pullCommeHautPrincipal: "base" };
 
 /** Le bras C, tel que l'audit le composera : le levier saute sur `entretien`. */
-const leviersBrasC = (occ: OccasionKey): LeviersMesure | undefined =>
-  occ === "entretien" ? undefined : P1;
+// L'ancienne occasion « entretien » est depuis le 08/10/2026 le sous-choix « Entretien » de « Travail / Bureau ».
+const leviersBrasC = (occ: OccasionKey, workMode: WorkMode = "Présentiel"): LeviersMesure | undefined =>
+  occ === "travail_formel" && workMode === "Entretien" ? undefined : P1;
 
 /** Le pull est-il le SEUL dessus de la tenue ? */
-function pullSeulDessus(pool: CatalogItem[], occ: OccasionKey, leviers: LeviersMesure | undefined, tirages = 120): boolean {
+function pullSeulDessus(pool: CatalogItem[], occ: OccasionKey, leviers: LeviersMesure | undefined, tirages = 120, workMode: WorkMode = "Présentiel"): boolean {
   for (let k = 0; k < tirages; k++) {
-    const ids = generateOutfitWithFallback(pool, MILD, occ, "Présentiel", "Verre", [], "femme", "Hiver", leviers).ids;
+    const ids = generateOutfitWithFallback(pool, MILD, occ, workMode, "Verre", [], "femme", "Hiver", leviers).ids;
     const pieces = ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is CatalogItem => Boolean(p));
     const dessus = pieces.filter((p) => p.cat === "haut" || p.cat === "pull");
     if (dessus.some((p) => p.cat === "pull") && !dessus.some((p) => p.cat === "haut")) return true;
@@ -62,9 +63,10 @@ function pullSeulDessus(pool: CatalogItem[], occ: OccasionKey, leviers: LeviersM
 describe("P1' — les trois bras sont isolables sans modifier la production", () => {
   it("BRAS A — sans levier, aucun pull n'est dessus principal, quelle que soit l'occasion", () => {
     const pool = poolSansHaut();
-    for (const occ of ["quotidien", "entretien", "travail_formel", "soiree"] as OccasionKey[]) {
+    for (const occ of ["quotidien", "travail_formel", "soiree"] as OccasionKey[]) {
       expect(pullSeulDessus(pool, occ, undefined), `occasion ${occ}`).toBe(false);
     }
+    expect(pullSeulDessus(pool, "travail_formel", undefined, 120, "Entretien"), "travail · entretien").toBe(false);
   });
 
   it("BRAS B — avec le levier, le pull devient dessus principal, entretien COMPRIS", () => {
@@ -74,14 +76,14 @@ describe("P1' — les trois bras sont isolables sans modifier la production", ()
     // démontrerait alors strictement rien.
     const pool = poolSansHaut();
     expect(pullSeulDessus(pool, "quotidien", P1), "quotidien").toBe(true);
-    expect(pullSeulDessus(pool, "entretien", P1), "entretien").toBe(true);
+    expect(pullSeulDessus(pool, "travail_formel", P1, 120, "Entretien"), "entretien").toBe(true);
   });
 
   it("BRAS C — composé à l'appel, le pull reste dessus principal SAUF en entretien", () => {
     const pool = poolSansHaut();
     expect(pullSeulDessus(pool, "quotidien", leviersBrasC("quotidien")), "quotidien").toBe(true);
     expect(pullSeulDessus(pool, "travail_formel", leviersBrasC("travail_formel")), "travail_formel").toBe(true);
-    expect(pullSeulDessus(pool, "entretien", leviersBrasC("entretien")), "entretien").toBe(false);
+    expect(pullSeulDessus(pool, "travail_formel", leviersBrasC("travail_formel", "Entretien"), 120, "Entretien"), "entretien").toBe(false);
   });
 
   it("le bras C ne demande AUCUN levier nouveau : il est la composition de A et B", () => {
@@ -89,7 +91,7 @@ describe("P1' — les trois bras sont isolables sans modifier la production", ()
     // `exclusionEntretien` à LeviersMesure, ce test échoue et rappelle que
     // l'exclusion est un ARBITRAGE ÉDITORIAL à porter par la production, pas
     // un levier de mesure de plus.
-    expect(leviersBrasC("entretien")).toBeUndefined();
+    expect(leviersBrasC("travail_formel", "Entretien")).toBeUndefined();
     expect(Object.keys(leviersBrasC("quotidien")!)).toEqual(["pullCommeHautPrincipal"]);
   });
 });

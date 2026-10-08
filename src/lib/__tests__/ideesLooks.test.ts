@@ -76,7 +76,7 @@ describe("titreCommentPorter — l'article accordé au nom affiché", () => {
 });
 
 describe("ideesDressingDAbord — la capsule complète seulement si nécessaire", () => {
-  const OCC: OccasionKey[] = ["quotidien", "travail_formel", "entretien", "soiree", "date", "voyage", "cocooning", "evenement_perso"];
+  const OCC: OccasionKey[] = ["quotidien", "travail_formel", "soiree", "date", "voyage", "cocooning", "evenement_perso"];
   let n = 0;
   const p = (id: number, cat: CategoryKey, name: string, extra: Partial<Item> = {}): Item => ({ ...piece(id, cat, name), occasion: OCC, worn: 2, ...extra, id: id || ++n });
   const manteau = p(1, "manteau", "Manteau chocolat", { season: "Automne / Hiver", color: "Chocolat", hex: "#4A3326" });

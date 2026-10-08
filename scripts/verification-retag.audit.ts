@@ -40,7 +40,7 @@ const ATTENDU: Record<number, string> = {
 };
 const CIBLES = Object.keys(ATTENDU).map(Number);
 const OCC4: OccasionKey[] = ["festive" as OccasionKey, "evenement_perso"];
-const OCC3: OccasionKey[] = ["travail_formel", "entretien", "soiree"];
+const OCC3: OccasionKey[] = ["travail_formel", "entretien" as OccasionKey, "soiree"];
 /** Attendu après exécution. Avant, la mesure doit donner 16 et 16. */
 const CIBLE_REPLI = { evenement_perso: 5, festive: 16 };
 const TIRAGES = 20;

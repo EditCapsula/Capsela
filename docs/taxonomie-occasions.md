@@ -1,8 +1,8 @@
 # Taxonomie des occasions (08/10/2026)
 
-Neuf occasions, source unique `OCCASIONS` (`src/lib/data.ts`) — tous les écrans (Planifier, Tenue du jour, création de look, ajout d'une pièce, filtres du Journal) la lisent, aucune liste locale :
+Huit occasions, source unique `OCCASIONS` (`src/lib/data.ts`) — tous les écrans (Planifier, Tenue du jour, création de look, ajout d'une pièce, filtres du Journal) la lisent, aucune liste locale :
 
-Quotidien / Décontracté · Travail / Bureau · Rendez-vous important · Rendez-vous amoureux · Soirée · Sport · Cocooning / Maison · Voyage / Déplacement · Événement / Cérémonie.
+Quotidien / Décontracté · Travail / Bureau · Rendez-vous amoureux · Soirée · Sport · Cocooning / Maison · Voyage / Déplacement · Événement / Cérémonie.
 
 **Supprimée** : « Sortie festive » (clé `festive`). **Renommée** : « Sortie / Soirée » → « Soirée » (clé `soiree`, inchangée).
 
@@ -36,3 +36,9 @@ Sans contexte (tenue du jour, valise), la soirée reste polyvalente : formalité
 - « Soirée festive » reste un sous-contexte du Rendez-vous amoureux (`DateContext`, formalité 3) : ce n'est pas une occasion.
 - Les audits `scripts/*.audit.ts` mesuraient les étiquettes `festive` du catalogue ; ils datent de l'ancienne taxonomie (le type est contourné par un cast).
 - Libellé court du filtre du Journal pour « Rendez-vous amoureux » : toujours « Date ».
+
+## « Rendez-vous important » fusionnée dans « Travail / Bureau » (08/10/2026)
+
+Même formalité (3) que Travail en présentiel : l'occasion ne portait que trois règles, qui deviennent le sous-choix **« Entretien »** de « Travail / Bureau » (`WORK_MODES`, `data.ts`, avec Présentiel et Télétravail) : veste ou blazer plus probable (65 % contre 30 %), blazer forcé avec une chemise, chaussures structurées préférées (`PREFS_ENTRETIEN`). Les textes d'ambiance de l'occasion disparaissent (ceux de Travail s'appliquent) ; la phrase de l'écran dit « ton rendez-vous important » pour ce sous-choix.
+
+Anciennes données : `entretien` se lit `travail_formel` (`normaliserOccasion`), y compris sur les étiquettes des pièces ; une planification qui portait `entretien` sans sous-choix se lit « Travail / Bureau · Entretien » (`rowToTenue`). Aucune migration n'est nécessaire.

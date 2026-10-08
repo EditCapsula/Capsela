@@ -58,7 +58,7 @@ const HORS_TOTAL = "R-B1";
 const BRAS: { court: string; nom: string; leviers: (occ: OccasionKey) => LeviersMesure | undefined }[] = [
   { court: "A", nom: "A · production actuelle", leviers: () => undefined },
   { court: "B", nom: "B · P1' partout", leviers: () => P1 },
-  { court: "C", nom: "C · P1' sauf entretien", leviers: (occ) => (occ === "entretien" ? undefined : P1) },
+  { court: "C", nom: "C · P1' sauf entretien", leviers: (occ) => (occ === ("entretien" as string) ? undefined : P1) },
 ];
 
 function mulberry32(a: number): () => number {

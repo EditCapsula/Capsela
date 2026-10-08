@@ -8,7 +8,7 @@ import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
-import { CATLABEL, DATE_CONTEXTS, OCCASIONS, isBag } from "@/lib/data";
+import { CATLABEL, DATE_CONTEXTS, OCCASIONS, WORK_MODES, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour } from "@/lib/capsule";
@@ -344,8 +344,8 @@ export default function TenuesScreen() {
   } | null =
     state.occasion === "travail_formel"
       ? {
-          titre: "Où travailles-tu aujourd'hui ?",
-          valeurs: ["Présentiel", "Télétravail"] as const,
+          titre: "Quel type de journée ?",
+          valeurs: WORK_MODES,
           courant: state.workMode,
           glyphe: <GlypheSousChoix valeur={state.workMode} />,
           choisir: (v) => actions.setWorkMode(v as WorkMode),

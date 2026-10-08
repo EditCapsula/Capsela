@@ -68,7 +68,6 @@ const PLACARD_MAX = 10;
 const MOMENT_DE_L_OCCASION: Record<Exclude<OccasionKey, "all">, string> = {
   quotidien: "ton quotidien",
   travail_formel: "tes journées de travail",
-  entretien: "tes rendez-vous",
   date: "tes rendez-vous à deux",
   soiree: "tes soirées",
   sport: "tes séances de sport",

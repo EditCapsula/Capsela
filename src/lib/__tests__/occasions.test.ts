@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { OCCASIONS, OCC_LABELS, effectiveFormality, occasionShortLabel } from "@/lib/data";
 import { generateOutfitWithFallback } from "@/lib/logic";
-import { normaliserOccasion, normaliserOccasions, soireeHabillee } from "@/lib/occasions";
+import { estAncienEntretien, normaliserOccasion, normaliserOccasions, soireeHabillee } from "@/lib/occasions";
 import { elementProgramme } from "@/lib/programmeValise";
 import { weatherForDay } from "@/lib/capsule";
 import type { CategoryKey, Item } from "@/lib/types";
@@ -9,11 +9,10 @@ import type { CategoryKey, Item } from "@/lib/types";
 // LA TAXONOMIE DES OCCASIONS (08/10/2026) : « Sortie festive » supprimée, « Sortie / Soirée » devient « Soirée ».
 
 describe("la taxonomie officielle", () => {
-  it("neuf occasions, dans l'ordre décidé", () => {
+  it("huit occasions, dans l'ordre décidé", () => {
     expect(OCCASIONS.map(([, label]) => label)).toEqual([
       "Quotidien / Décontracté",
       "Travail / Bureau",
-      "Rendez-vous important",
       "Rendez-vous amoureux",
       "Soirée",
       "Sport",
@@ -30,6 +29,13 @@ describe("la taxonomie officielle", () => {
 });
 
 describe("normaliserOccasion — les anciennes valeurs restent lisibles", () => {
+  it("« entretien » (Rendez-vous important) se lit « travail_formel » ; son niveau devient le sous-choix « Entretien »", () => {
+    expect(normaliserOccasion("entretien")).toBe("travail_formel");
+    expect(estAncienEntretien("entretien")).toBe(true);
+    expect(estAncienEntretien("travail_formel")).toBe(false);
+    expect(effectiveFormality("travail_formel", "Entretien")).toBe(3);
+    expect(effectiveFormality("travail_formel", "Télétravail")).toBe(1);
+  });
   it("festive, sortie_festive et sortie_soiree se lisent « soiree »", () => {
     for (const v of ["festive", "sortie_festive", "sortie_soiree", "soiree", " Festive "]) expect(normaliserOccasion(v), v).toBe("soiree");
   });
@@ -84,5 +90,35 @@ describe("la soirée habillée remplace l'ancienne occasion à part", () => {
     };
     expect(chemise(true)).toBe(0);
     expect(chemise(false)).toBeGreaterThan(0);
+  });
+});
+
+describe("« Entretien » (sous-choix de Travail / Bureau) garde les règles de l'ancien « Rendez-vous important »", () => {
+  const p = (id: number, cat: CategoryKey, name: string, over: Partial<Item> = {}): Item =>
+    ({ id, name, cat, color: "Noir", hex: "#2A2724", season: "Toutes saisons", worn: null, ...over }) as Item;
+  const pool: Item[] = [
+    p(1, "haut", "Chemise blanche", { subtype: "Chemise" }),
+    p(2, "pantalon", "Pantalon tailleur"),
+    p(3, "veste", "Blazer", { subtype: "Blazer" }),
+    p(4, "chaussures", "Mocassins", { shoeType: "Mocassins" }),
+    p(5, "chaussures", "Baskets", { shoeType: "Baskets" }),
+  ];
+  const w = weatherForDay(18, "Nuageux", "Automne");
+  const veste = (mode: "Présentiel" | "Entretien") => {
+    let n = 0;
+    let total = 0;
+    for (let i = 0; i < 120; i++) {
+      const r = generateOutfitWithFallback(pool, w, "travail_formel", mode, "Verre", [], "femme");
+      if (r.ids.includes(1)) {
+        total++;
+        if (r.ids.includes(3)) n++;
+      }
+    }
+    return { n, total };
+  };
+  it("avec une chemise, un entretien porte toujours le blazer par-dessus (règle du 21/08/2026)", () => {
+    const e = veste("Entretien");
+    expect(e.total).toBeGreaterThan(0);
+    expect(e.n).toBe(e.total);
   });
 });

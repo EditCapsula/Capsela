@@ -65,7 +65,7 @@ describe("glyphes d'occasion", () => {
 
   it("couvre chaque sous-choix des trois familles", () => {
     const valeurs = [
-      "Présentiel", "Télétravail",
+      "Présentiel", "Télétravail", "Entretien",
       ...DATE_CONTEXTS.map(([v]) => v),
       "Court trajet", "Longue distance",
     ] as const;

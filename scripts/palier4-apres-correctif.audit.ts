@@ -127,7 +127,7 @@ describe("P0 — palier 4 après correctif", () => {
     // ═══ 4 · LE RETAG APPORTE-T-IL ENCORE QUELQUE CHOSE ? ═══
     console.log(`\n════════ 4 · RETAG SIMULÉ, PAR-DESSUS LE CORRECTIF ════════`);
     console.log(`  Retag TOUJOURS simulé en mémoire. Aucun UPDATE.`);
-    const RETAG: OccasionKey[] = ["quotidien", "travail_formel", "entretien", "soiree", "date", "evenement_perso"];
+    const RETAG: OccasionKey[] = ["quotidien", "travail_formel", "entretien" as OccasionKey, "soiree", "date", "evenement_perso"];
     const cibles = new Set([100855, 101038, 100891, 100993, 100801]);
     const simule: CatalogItem[] = pool.map((it) => (cibles.has(it.id) ? { ...it, occasion: [...RETAG] } : it));
     console.log(`  ${"occasion".padEnd(18)}${"correctif seul".padStart(16)}${"+ retag".padStart(11)}${"apport du retag".padStart(18)}`);

@@ -137,7 +137,7 @@ describe("quand la météo contredit la saison", () => {
       Math.random = mulberry32(grainePour(`${style}|entretien|0`));
       let ids: number[];
       try {
-        ids = generateOutfitWithFallback(capsule, wSignale, "entretien", "Présentiel", "Verre", [], "femme",
+        ids = generateOutfitWithFallback(capsule, wSignale, "entretien" as OccasionKey, "Présentiel", "Verre", [], "femme",
           undefined, { traceRepli: (e) => traces.push(e), replMeteoRelacheMax: true }).ids;
       } finally { Math.random = vrai; }
       const pieces = ids.map((id) => index.get(id)).filter((p): p is CatalogItem => Boolean(p));

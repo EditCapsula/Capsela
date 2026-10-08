@@ -41,7 +41,6 @@ export type OccasionKey =
   | "all"
   | "quotidien"
   | "travail_formel"
-  | "entretien"
   | "date"
   | "soiree"
   | "sport"
@@ -69,7 +68,8 @@ export type OccasionKey =
 export type OutfitFailureReason = "missing_required_category" | "formality_gap" | "no_match";
 
 /** Sous-choix de l'occasion "travail_formel" — Présentiel relève le niveau de formalité minimum, Télétravail l'abaisse. */
-export type WorkMode = "Présentiel" | "Télétravail";
+/** Le sous-choix de « Travail / Bureau ». « Entretien » (08/10/2026) remplace l'ancienne occasion « Rendez-vous important » : même formalité, plus de veste (cf. logic.ts). */
+export type WorkMode = "Présentiel" | "Télétravail" | "Entretien";
 /** Sous-choix de l'occasion "voyage" — n'affecte pas la formalité, seule la Longue distance affiche une carte conseil. */
 export type TravelMode = "Court trajet" | "Longue distance";
 /** Sous-choix de l'occasion "date" — seul déterminant de sa formalité, variable contrairement aux autres occasions (recette 12/08/2026). */
