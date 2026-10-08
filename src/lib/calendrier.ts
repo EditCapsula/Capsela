@@ -213,3 +213,90 @@ export function numeroDeSemaine(jour: string): number {
   const premiere = lundiDeLaSemaine(new Date(Date.UTC(dimanche.getUTCFullYear(), 0, 1)));
   return 1 + Math.round((lundi.getTime() - premiere.getTime()) / (7 * 86_400_000));
 }
+
+// ── La vue Liste : courte, et l'historique complet à part (08/10/2026) ─────────────────────────────────────────────────
+
+/** « À VENIR » ne regarde que les jours qui viennent : aujourd'hui compris, dix jours au plus — le Mois sert à naviguer plus loin. */
+export const AVENIR_JOURS = 10;
+/** Au plus six tenues à venir, quatre récentes : une dizaine de lignes avant toute interaction. */
+export const AVENIR_MAX = 6;
+export const RECENTES_MAX = 4;
+
+export interface VueListe {
+  /** Les prochaines tenues (aujourd'hui compris) dans les dix jours, du plus proche au plus lointain. Un jour sans tenue n'y est pas. */
+  avenir: TenueDuCalendrier[];
+  /** Les dernières tenues passées, de la plus récente à la plus ancienne. */
+  recentes: TenueDuCalendrier[];
+  /** Combien de tenues passées existent en tout (l'historique complet). */
+  nbPassees: number;
+}
+
+/**
+ * Le jour « AAAA-MM-JJ » de chaque tenue passée connue — portée (historique) ou planifiée —, du plus récent au plus ancien. On part des
+ * jours qui ont une trace, jamais d'une boucle sur toute l'année : l'historique peut remonter loin.
+ */
+export function joursPassesAvecTenue(aujourdhui: string, history: readonly HistoryEntry[], plans: readonly TenuePlanifiee[]): string[] {
+  const jours = new Set<string>();
+  for (const h of history) if (h.pieceIds.length > 0) jours.add(jourLocal(new Date(h.ts)));
+  for (const p of plans) if (p.pieceIds.length > 0) jours.add(p.jour);
+  return [...jours].filter((j) => j < aujourdhui).sort().reverse();
+}
+
+export function vueListe(
+  aujourdhui: string,
+  history: readonly HistoryEntry[],
+  plans: readonly TenuePlanifiee[],
+  proposee: TenuePropose | null
+): VueListe {
+  const avenir: TenueDuCalendrier[] = [];
+  const base = dateDe(aujourdhui);
+  for (let k = 0; k < AVENIR_JOURS && avenir.length < AVENIR_MAX; k++) {
+    const d = new Date(base);
+    d.setDate(base.getDate() + k);
+    const t = tenueDuCalendrier(jourLocal(d), aujourdhui, history, plans, proposee);
+    if (t) avenir.push(t);
+  }
+  const passes = joursPassesAvecTenue(aujourdhui, history, plans)
+    .map((j) => tenueDuCalendrier(j, aujourdhui, history, plans, null))
+    .filter((t): t is TenueDuCalendrier => t !== null);
+  return { avenir, recentes: passes.slice(0, RECENTES_MAX), nbPassees: passes.length };
+}
+
+export type FiltreHistorique = "toutes" | "portees" | "planifiees";
+
+export interface MoisHistorique {
+  /** « 2026-10 » */
+  cle: string;
+  /** « Octobre 2026 » */
+  libelle: string;
+  tenues: TenueDuCalendrier[];
+}
+
+/** L'historique complet des tenues passées, regroupé par mois (le plus récent d'abord), filtrable : portées ou planifiées. */
+export function historiqueParMois(
+  aujourdhui: string,
+  history: readonly HistoryEntry[],
+  plans: readonly TenuePlanifiee[],
+  filtre: FiltreHistorique = "toutes"
+): MoisHistorique[] {
+  const MOIS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+  const groupes = new Map<string, MoisHistorique>();
+  for (const j of joursPassesAvecTenue(aujourdhui, history, plans)) {
+    const t = tenueDuCalendrier(j, aujourdhui, history, plans, null);
+    if (!t) continue;
+    if (filtre === "portees" && t.statut !== "porte") continue;
+    if (filtre === "planifiees" && t.statut !== "planifiee") continue;
+    const cle = j.slice(0, 7);
+    const g = groupes.get(cle) ?? { cle, libelle: `${MOIS[Number(j.slice(5, 7)) - 1]} ${j.slice(0, 4)}`, tenues: [] };
+    g.tenues.push(t);
+    groupes.set(cle, g);
+  }
+  return [...groupes.values()];
+}
+
+/** « Mer. 7 octobre » — la date d'une ligne de la liste (trois lettres pour le jour, le mois en toutes lettres). */
+export function dateMoyenne(jour: string): string {
+  const d = dateDe(jour);
+  const mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"][d.getMonth()];
+  return `${["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."][d.getDay()]} ${d.getDate()} ${mois}`;
+}
