@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import PhotoPiece from "@/components/PhotoPiece";
-import SegmentedControl from "@/components/SegmentedControl";
 import { BoutonAjoutFlottant } from "@/components/screens/WardrobeScreen";
 import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
 import { useAuth } from "@/lib/auth";
@@ -106,10 +105,11 @@ export default function DernieresPiecesScreen() {
     const n = idees?.get(p.id)?.length ?? 0;
     const ligne = libelleLooksPossibles(n);
     return (
-      <button key={p.id} onClick={() => actions.openItem(p.id)} className="text-left cursor-pointer active:opacity-80 min-w-0">
+      <button key={p.id} onClick={() => actions.openItem(p.id)} className="block w-full text-left cursor-pointer active:opacity-80 min-w-0 self-start">
         <PhotoPiece piece={p} ratio={0.8} rayon={20} />
-        <div className="font-serif text-ink mt-[10px] px-[2px] line-clamp-2" style={{ fontSize: 15, lineHeight: 1.25 }}>{p.name}</div>
-        <div className="text-[12px] text-muted mt-[2px] px-[2px] line-clamp-1">
+        {/* Nom et légende réservent deux lignes : d'une carte à sa voisine, photo, nom, légende et « looks possibles » restent alignés. */}
+        <div className="font-serif text-ink mt-[10px] px-[2px] line-clamp-2" style={{ fontSize: 15, lineHeight: 1.25, minHeight: "2.5em" }}>{p.name}</div>
+        <div className="text-[12px] text-muted mt-[2px] px-[2px] line-clamp-2" style={{ lineHeight: 1.35, minHeight: "2.7em" }}>
           {[libelleDuGroupe(p), libelleDateRecente(p.createdAt as number, maintenant)].filter(Boolean).join(" · ")}
         </div>
         {/* La ligne garde sa hauteur même vide : les cartes d'une rangée restent alignées pendant que les idées se calculent. */}
@@ -125,7 +125,7 @@ export default function DernieresPiecesScreen() {
           <div className="t-surtitre text-muted flex-shrink-0">{titre}</div>
           <span aria-hidden="true" className="flex-1 h-px" style={{ background: "var(--color-border)" }} />
         </div>
-        <div className="grid grid-cols-2 gap-x-[14px] gap-y-[18px] mt-4">{pieces.map(carte)}</div>
+        <div className="grid grid-cols-2 gap-x-[14px] gap-y-[18px] mt-4 items-start">{pieces.map(carte)}</div>
       </section>
     );
 
@@ -143,14 +143,23 @@ export default function DernieresPiecesScreen() {
         <div className="text-[13px] mt-[6px]" style={{ color: "var(--color-muted-3)" }}>Elles font déjà partie de tes looks.</div>
 
         {groupes.length > 1 && (
-          <div className="mt-4 -mx-6 px-6">
-            <SegmentedControl
-              segments={[{ key: "toutes", label: "Toutes" }, ...groupes.map((g) => ({ key: g.id, label: g.libelle }))]}
-              actif={groupe}
-              onChange={setGroupe}
-              ariaLabel="Filtrer par catégorie"
-              variante="pastilles"
-            />
+          // Les mêmes pastilles que « Comment porter … ? » : une rangée qui défile, chaque libellé en entier (jamais tronqué), la
+          // pastille coupée au bord de l'écran signale le défilement. L'active est terracotta (demandé le 08/10/2026).
+          <div className="scrollarea flex gap-2 overflow-x-auto pb-[2px] mt-4 -mx-6 px-6" role="group" aria-label="Filtrer par catégorie">
+            {[{ id: "toutes", libelle: "Toutes" }, ...groupes].map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGroupe(g.id)}
+                aria-pressed={groupe === g.id}
+                className={
+                  "flex-none rounded-full px-4 text-[12px] whitespace-nowrap cursor-pointer border " +
+                  (groupe === g.id ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-ink")
+                }
+                style={{ minHeight: 40 }}
+              >
+                {g.libelle}
+              </button>
+            ))}
           </div>
         )}
 
@@ -165,16 +174,16 @@ export default function DernieresPiecesScreen() {
             <div className="font-serif text-ink mt-2" style={{ fontSize: 22, lineHeight: 1.2 }}>
               Déjà <span className="italic text-terracotta">{total} {total === 1 ? "look" : "looks"}</span> à porter
             </div>
-            <div className="grid grid-cols-2 gap-[12px] mt-4">
+            <div className="grid grid-cols-2 gap-[12px] mt-4 items-start">
               {exemples.map(({ piece, idee }) => {
                 const pieces = idee.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i);
                 return (
-                  <button key={piece.id} onClick={() => actions.openItemOutfits(piece.id, false, idees?.get(piece.id))} className="text-left cursor-pointer active:opacity-80 min-w-0">
+                  <button key={piece.id} onClick={() => actions.openItemOutfits(piece.id, false, idees?.get(piece.id))} className="block w-full text-left cursor-pointer active:opacity-80 min-w-0">
                     <div className="relative overflow-hidden" style={{ aspectRatio: "1", borderRadius: 18, background: "var(--color-photo-bg)" }}>
                       <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} />
                     </div>
                     <div className="font-serif text-ink mt-[8px] px-[2px]" style={{ fontSize: 15 }}>{occasionShortLabel(idee.occasion)}</div>
-                    <div className="text-[12px] px-[2px] line-clamp-2" style={{ color: "var(--color-muted-3)" }}>{phrasePiste(piece)}</div>
+                    <div className="text-[12px] px-[2px] line-clamp-2" style={{ color: "var(--color-muted-3)", lineHeight: 1.35, minHeight: "2.7em" }}>{phrasePiste(piece)}</div>
                   </button>
                 );
               })}

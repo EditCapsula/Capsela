@@ -1,10 +1,11 @@
 "use client";
 
-import { OutfitComposition } from "@/components/OutfitComposition";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { occasionShortLabel } from "@/lib/data";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { sourcePiece, texteProvenance, type LookNumerote } from "@/lib/ideesLooks";
 import type { OutfitStyleInsight } from "@/lib/logic";
+import { clePieces } from "@/lib/outfitFeedback";
 import { nomCourtPiece } from "@/lib/selectors";
 import type { Item } from "@/lib/types";
 
@@ -13,8 +14,8 @@ import type { Item } from "@/lib/types";
  * et « D'autres idées avec cette pièce » sur le détail du look : un seul
  * composant pour les deux.
  *
- * La composition est la variante "hero" d'OutfitComposition (celle de
- * l'écran Tenue), posée sur un aplat chaud : aucun texte dans l'image.
+ * La composition est le flat lay éditorial (FlatLayCapsela, contexte « look-detail » — le même que le détail de la tenue et l'accueil,
+ * 08/10/2026), posé sur un aplat chaud : aucun texte dans l'image.
  * La provenance est dite une fois, sous le titre, puis pièce par pièce sur
  * les miniatures : « À découvrir » ne marque que les pièces absentes du
  * dressing (sourcePiece), jamais déduites du nom ou de l'image.
@@ -57,10 +58,10 @@ export function CarteIdeeLook({
           dépassait l'écran. Les proportions entre pièces restent celles de
           la variante. */}
       <div
-        className="rounded-bloc bg-warm-bg px-[14px] py-[14px]"
+        className="relative rounded-bloc bg-warm-bg overflow-hidden"
         style={{ height: rang === "premier" ? "clamp(260px, 76vw, 330px)" : rang === "suivant" ? "clamp(200px, 58vw, 250px)" : "clamp(230px, 68vw, 290px)" }}
       >
-        <OutfitComposition items={pieces} variant="hero" ajustee />
+        <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id)).join(",")} />
       </div>
 
       <div className="px-[4px]">
