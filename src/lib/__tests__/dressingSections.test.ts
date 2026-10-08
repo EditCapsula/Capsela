@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   candidatsARedecouvrir,
   dateRelativeAjout,
+  libelleDateRecente,
+  libelleLooksPossibles,
   ligneDressing,
+  looksDistincts,
   looksRecents,
   piecesRecentes,
   pisteAssociation,
   saisonDeLaDate,
+  separerParSemaine,
   titreTenue,
 } from "../dressingSections";
 import type { CategoryKey, HistoryEntry, Item, SavedLook } from "../types";
@@ -92,5 +96,31 @@ describe("Tes looks", () => {
   });
   it("saisons de l'année", () => {
     expect([new Date(2026, 0, 5), new Date(2026, 3, 5), new Date(2026, 6, 5), new Date(2026, 9, 5)].map((d) => saisonDeLaDate(d.getTime()))).toEqual(["Hiver", "Printemps", "Été", "Automne"]);
+  });
+});
+
+describe("Tes dernières pièces (écran « Voir tout »)", () => {
+  it("la date : « Aujourd'hui », « Hier », « Il y a N jours » dans la semaine, « 22 sept. » au-delà", () => {
+    expect(libelleDateRecente(jours(0), MIDI)).toBe("Aujourd'hui");
+    expect(libelleDateRecente(jours(1), MIDI)).toBe("Hier");
+    expect(libelleDateRecente(jours(2), MIDI)).toBe("Il y a 2 jours");
+    expect(libelleDateRecente(jours(6), MIDI)).toBe("Il y a 6 jours");
+    expect(libelleDateRecente(new Date(2026, 8, 22, 10).getTime(), MIDI)).toBe("22 sept.");
+  });
+  it("cette semaine / un peu plus tôt : l'ordre est gardé, une section vide reste vide", () => {
+    const p = (id: number, j: number) => ({ id, createdAt: jours(j) });
+    const r = separerParSemaine([p(1, 0), p(2, 3), p(3, 7), p(4, 20)], MIDI);
+    expect(r.semaine.map((x) => x.id)).toEqual([1, 2]);
+    expect(r.avant.map((x) => x.id)).toEqual([3, 4]);
+    expect(separerParSemaine([p(1, 30)], MIDI).semaine).toEqual([]);
+  });
+  it("« N looks possibles » : rien quand il n'y en a aucun, singulier pour un", () => {
+    expect(libelleLooksPossibles(0)).toBeNull();
+    expect(libelleLooksPossibles(1)).toBe("1 look possible");
+    expect(libelleLooksPossibles(4)).toBe("4 looks possibles");
+  });
+  it("les looks distincts : un même jeu de pièces ne compte qu'une fois, quel que soit l'ordre", () => {
+    expect(looksDistincts([[[1, 2], [3, 4]], [[2, 1], [5, 6]]])).toBe(3);
+    expect(looksDistincts([])).toBe(0);
   });
 });

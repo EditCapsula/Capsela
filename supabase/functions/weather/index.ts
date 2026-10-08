@@ -186,6 +186,38 @@ Deno.serve(async (req) => {
     }
   }
 
+  // mode=reverse : la ville d'une position (08/10/2026, « Utiliser ma position actuelle » de Planifier). Même clé, même palier
+  // gratuit : /geo/1.0/reverse. Même forme de réponse que mode=geo (`places`), donc la même lecture côté client.
+  if (mode === "reverse") {
+    if (!lat || !lon) return json({ error: "lat/lon requis" }, 400);
+    try {
+      const res = await fetch(
+        `https://api.openweathermap.org/geo/1.0/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&limit=1&appid=${apiKey}`
+      );
+      if (!res.ok) return json({ error: `OpenWeather a répondu ${res.status}` }, 502);
+      const data = await res.json();
+      const brut: unknown[] = Array.isArray(data) ? data : [];
+      const places = brut
+        .map((raw) => {
+          const e = raw as Record<string, unknown>;
+          const locales = e.local_names as Record<string, string> | undefined;
+          const name = (locales?.fr as string | undefined) || (e.name as string | undefined) || "";
+          if (!name || typeof e.lat !== "number" || typeof e.lon !== "number") return null;
+          return {
+            name,
+            country: typeof e.country === "string" ? e.country : "",
+            state: typeof e.state === "string" ? e.state : "",
+            lat: e.lat,
+            lon: e.lon,
+          };
+        })
+        .filter((v) => v !== null);
+      return json({ places });
+    } catch {
+      return json({ error: "Impossible de contacter OpenWeather" }, 502);
+    }
+  }
+
   let query: string;
   if (lat && lon) query = `lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
   else if (city) query = `q=${encodeURIComponent(city)}`;
