@@ -129,3 +129,66 @@ export function listeDuCalendrier(
   }
   return { avenir, passees };
 }
+
+// ── Mon planning : mois complet, semaine en cours, noms courts (08/10/2026) ────────────────────────────────────────────
+
+export interface CaseDuMois {
+  jour: string;
+  /** true pour un jour du mois précédent ou suivant, rendu estompé (il complète la première et la dernière semaine). */
+  horsMois: boolean;
+}
+
+/** Comme grilleDuMois, mais les cases hors du mois portent leur vraie date (28 29 30, puis 1) : la maquette les montre estompées. */
+export function grilleDuMoisComplete(annee: number, mois: number): CaseDuMois[][] {
+  const premier = new Date(annee, mois, 1, 12);
+  const decalage = (premier.getDay() + 6) % 7;
+  const nbJours = new Date(annee, mois + 1, 0).getDate();
+  const total = Math.ceil((decalage + nbJours) / 7) * 7;
+  const semaines: CaseDuMois[][] = [];
+  for (let i = 0; i < total; i += 7) {
+    semaines.push(
+      Array.from({ length: 7 }, (_, k) => {
+        const d = new Date(annee, mois, 1 - decalage + i + k, 12);
+        return { jour: jourLocal(d), horsMois: d.getMonth() !== mois };
+      })
+    );
+  }
+  return semaines;
+}
+
+/** Les jours de la semaine en cours qu'il reste à vivre : d'aujourd'hui au dimanche inclus. Les jours déjà passés n'en font pas partie. */
+export function joursRestantsDeLaSemaine(aujourdhui: string): string[] {
+  return joursDeLaSemaine(aujourdhui).filter((j) => j >= aujourdhui);
+}
+
+export interface JourDeLaListe {
+  jour: string;
+  tenue: TenueDuCalendrier | null;
+}
+
+/**
+ * « CETTE SEMAINE » de la liste : chaque jour d'aujourd'hui au dimanche, avec sa tenue ou sans. Un jour à venir sans tenue
+ * reste dans la liste (il propose de planifier) ; un jour PASSÉ sans tenue n'y est jamais — il est masqué, comme sur la maquette.
+ */
+export function listeDeLaSemaine(
+  aujourdhui: string,
+  history: readonly HistoryEntry[],
+  plans: readonly TenuePlanifiee[],
+  proposee: TenuePropose | null
+): JourDeLaListe[] {
+  return joursRestantsDeLaSemaine(aujourdhui).map((jour) => ({ jour, tenue: tenueDuCalendrier(jour, aujourdhui, history, plans, proposee) }));
+}
+
+const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+
+/** « Mer. 7 oct. » — la date de gauche d'une ligne de la liste. */
+export function dateCourte(jour: string): string {
+  const d = dateDe(jour);
+  const j = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."][d.getDay()];
+  return `${j} ${d.getDate()} ${MOIS_COURTS[d.getMonth()]}`;
+}
+
+/** « Lun », « Mar »… — l'abréviation à trois lettres d'une tuile de la vue Semaine. */
+export function jourAbrege(jour: string): string {
+  return ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][dateDe(jour).getDay()];
+}

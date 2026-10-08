@@ -35,6 +35,7 @@ export default function SegmentedControl<K extends string>({
   onChange,
   ariaLabel,
   serre,
+  variante = "piste",
 }: {
   segments: readonly Segment<K>[];
   actif: K;
@@ -45,17 +46,23 @@ export default function SegmentedControl<K extends string>({
    * moins par côté suffisent. Les écrans à trois onglets gardent l'aération d'origine.
    */
   serre?: boolean;
+  /**
+   * `pastilles` (Mon planning, 08/10/2026, maquette) : trois chips de 40 px séparés — l'actif en terracotta plein, les autres en
+   * pastille claire à filet — au lieu de la piste creuse à pastille blanche. `piste` reste la forme des autres écrans.
+   */
+  variante?: "piste" | "pastilles";
 }) {
+  const pastilles = variante === "pastilles";
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="grid gap-1 rounded-full p-1"
+      className={pastilles ? "grid gap-2" : "grid gap-1 rounded-full p-1"}
       style={{
-        gridTemplateColumns: `repeat(${segments.length}, auto)`,
+        gridTemplateColumns: pastilles ? `repeat(${segments.length}, minmax(0, 1fr))` : `repeat(${segments.length}, auto)`,
         // Jeton existant : le crème sombre déjà utilisé pour les surfaces
         // creuses. Aucune couleur nouvelle.
-        background: "var(--color-chip-soft-bg)",
+        background: pastilles ? undefined : "var(--color-chip-soft-bg)",
       }}
     >
       {segments.map((s) => {
@@ -68,11 +75,17 @@ export default function SegmentedControl<K extends string>({
             onClick={() => onChange(s.key)}
             className={
               "flex items-center justify-center gap-[5px] rounded-full " + (serre ? "px-1" : "px-2") + " text-[12px] cursor-pointer transition-colors min-w-0 " +
-              (on ? "bg-card text-terracotta-deep" : "text-muted-3 active:bg-[rgba(251,248,243,.5)]")
+              (pastilles
+                ? on
+                  ? "bg-terracotta-deep text-cream"
+                  : "bg-card text-ink border border-border"
+                : on
+                  ? "bg-card text-terracotta-deep"
+                  : "text-muted-3 active:bg-[rgba(251,248,243,.5)]")
             }
             /* 44 px et non les 36 de la maquette : c'est le plancher de cible
                tactile retenu pour l'app, et un onglet est petit par nature. */
-            style={{ minHeight: 44, boxShadow: on ? "0 1px 3px rgba(29,26,22,.10)" : undefined }}
+            style={{ minHeight: pastilles ? 40 : 44, boxShadow: !pastilles && on ? "0 1px 3px rgba(29,26,22,.10)" : undefined }}
           >
             {s.icone && <span className="hidden min-[360px]:flex flex-shrink-0">{s.icone}</span>}
             {/* truncate en dernier recours seulement : les colonnes étant

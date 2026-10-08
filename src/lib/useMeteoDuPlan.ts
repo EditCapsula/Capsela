@@ -23,7 +23,7 @@ import { fetchPrevisionByCity } from "./weather";
 const DUREE_CACHE_MS = 10 * 60 * 1000;
 const cache = new Map<string, { a: number; p: Promise<Prevision | null> }>();
 
-function previsionDuLieu(ville: string): Promise<Prevision | null> {
+export function previsionDuLieu(ville: string): Promise<Prevision | null> {
   const cle = ville.toLowerCase();
   const gardee = cache.get(cle);
   if (gardee && Date.now() - gardee.a < DUREE_CACHE_MS) return gardee.p;

@@ -91,8 +91,8 @@ const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<
    * qui la montre et mène à son détail (« Voir ma tenue »). L'écran `tenues`
    * existe toujours, comme page de détail — atteignable depuis l'accueil, le
    * calendrier et les plans — et allume l'onglet Aujourd'hui (cf. `active`
-   * plus bas). Le calendrier est ouvert par l'icône du bandeau d'accueil,
-   * pas par un onglet.
+   * plus bas). Mon planning (le calendrier) est ouvert par l'icône du bandeau
+   * d'accueil, pas par un onglet, et allume l'onglet Planifier.
    *
    * Le 24/09/2026, six onglets avaient été mesurés à 320 px : « Dressing »
    * actif (50,4 px) était le plus large pour un emplacement de 52,7 px, et
@@ -151,7 +151,9 @@ export default function TabBar() {
         // Journal : l'onglet reste allumé.
         const active =
           state.screen === tab.screen ||
-          (tab.screen === "home" && (state.screen === "tenues" || state.screen === "calendrier")) ||
+          (tab.screen === "home" && state.screen === "tenues") ||
+          // Mon planning (maquette, 08/10/2026) allume l'onglet Planifier : c'est le planning des tenues.
+          (tab.screen === "planifier" && state.screen === "calendrier") ||
           (tab.screen === "history" && (state.screen === "avisTous" || state.screen === "avisEnregistre")) ||
           ongletDOrigine(state) === tab.screen;
         const onClick = () => tab.go(actions);

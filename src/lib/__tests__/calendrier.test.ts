@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { grilleDuMois, joursDeLaSemaine, listeDuCalendrier, lundiDe, moisDecale, tenueDuCalendrier } from "../calendrier";
+import { dateCourte, grilleDuMois, grilleDuMoisComplete, jourAbrege, joursDeLaSemaine, joursRestantsDeLaSemaine, listeDeLaSemaine, listeDuCalendrier, lundiDe, moisDecale, tenueDuCalendrier } from "../calendrier";
 import type { TenuePlanifiee } from "../planifier";
 import type { HistoryEntry } from "../types";
 
@@ -72,5 +72,54 @@ describe("listeDuCalendrier", () => {
   it("calendrier libre : deux listes vides", () => {
     const l = listeDuCalendrier(AUJ, [], [], null, new Date(2026, 9, 10, 12));
     expect(l).toEqual({ avenir: [], passees: [] });
+  });
+});
+
+describe("Mon planning — mois complet, semaine en cours, libellés courts", () => {
+  it("le mois complet remplit la première et la dernière semaine avec les vrais jours voisins, estompés", () => {
+    const g = grilleDuMoisComplete(2026, 9); // octobre 2026 : le 1er est un jeudi
+    expect(g.every((s) => s.length === 7)).toBe(true);
+    expect(g[0].map((c) => c.jour)).toEqual(["2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04"]);
+    expect(g[0].map((c) => c.horsMois)).toEqual([true, true, true, false, false, false, false]);
+    const derniere = g[g.length - 1];
+    expect(derniere.at(-1)).toEqual({ jour: "2026-11-01", horsMois: true });
+    expect(derniere.find((c) => c.jour === "2026-10-31")?.horsMois).toBe(false);
+  });
+
+  it("le mois complet garde exactement les cases du mois de grilleDuMois, dans le même ordre", () => {
+    for (const [annee, mois] of [[2026, 9], [2026, 1], [2027, 0], [2026, 11]] as const) {
+      const simple = grilleDuMois(annee, mois).flat().filter((j): j is string => j !== null);
+      const complet = grilleDuMoisComplete(annee, mois).flat().filter((c) => !c.horsMois).map((c) => c.jour);
+      expect(complet).toEqual(simple);
+      expect(grilleDuMoisComplete(annee, mois).length).toBe(grilleDuMois(annee, mois).length);
+    }
+  });
+
+  it("les jours restants de la semaine vont d'aujourd'hui au dimanche inclus, sans les jours passés", () => {
+    expect(joursRestantsDeLaSemaine("2026-10-07")).toEqual(["2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11"]);
+    expect(joursRestantsDeLaSemaine("2026-10-11")).toEqual(["2026-10-11"]);
+    expect(joursRestantsDeLaSemaine("2026-10-05")).toHaveLength(7);
+  });
+
+  it("la liste de la semaine garde un jour à venir sans tenue et masque un jour passé sans tenue", () => {
+    const semaine = listeDeLaSemaine("2026-10-07", [porte("2026-10-05")], [plan("2026-10-09"), plan("2026-10-10", [])], null);
+    expect(semaine.map((s) => s.jour)).toEqual(["2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11"]);
+    expect(semaine.map((s) => s.tenue?.statut ?? null)).toEqual([null, null, "planifiee", null, null]);
+    // Le lundi 5 est porté mais passé : il n'est pas dans « Cette semaine » (il reste dans les tenues passées).
+    expect(semaine.some((s) => s.jour === "2026-10-05")).toBe(false);
+  });
+
+  it("aujourd'hui porte la tenue proposée quand il n'y a pas de plan", () => {
+    const semaine = listeDeLaSemaine("2026-10-07", [], [], proposee);
+    expect(semaine[0].tenue?.statut).toBe("du_jour");
+    expect(semaine[0].tenue?.pieceIds).toEqual([7, 8]);
+  });
+
+  it("les libellés courts : « Mer. 7 oct. » et « Lun »", () => {
+    expect(dateCourte("2026-10-07")).toBe("Mer. 7 oct.");
+    expect(dateCourte("2026-06-02")).toBe("Mar. 2 juin");
+    expect(dateCourte("2026-09-30")).toBe("Mer. 30 sept.");
+    expect(jourAbrege("2026-10-05")).toBe("Lun");
+    expect(jourAbrege("2026-10-11")).toBe("Dim");
   });
 });
