@@ -26,7 +26,8 @@ import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "@/lib/capsule";
-import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
+import EtapeLieu, { type MeteoEtapeLieu } from "@/components/EtapeLieu";
+import { previsionGardee, type VilleSuggeree } from "@/lib/weather";
 import { deleteTenuePlanifiee, fetchTenuesPlanifiees, enregistrerHumeurPlan, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { VISUEL_SEJOUR } from "@/lib/valise";
@@ -129,12 +130,6 @@ const G_EPINGLE = (
     <circle cx="12" cy="10.4" r="2.3" {...T} />
   </>
 );
-const G_LOUPE = (
-  <>
-    <circle cx="11" cy="11" r="6.2" {...T} />
-    <line x1="15.6" y1="15.6" x2="20" y2="20" {...T} />
-  </>
-);
 /** Le dessin de l'onglet Planifier (TabBar) : la date d'une tenue planifiée porte l'icône de l'écran. */
 const G_CALENDRIER = (
   <>
@@ -172,6 +167,8 @@ const MOMENTS: [MomentJournee, string][] = [
   ["Toute la journée", "Du matin au soir"],
 ];
 
+/** Le choix « Autre » du type de lieu : une réponse de l'écran, jamais une valeur de `planned_outfits.type_lieu` (CHECK de la migration 0030). */
+const TYPE_LIEU_AUTRE = "Autre";
 const TYPES_LIEU: [string, string][] = [
   ["Restaurant", ""],
   ["Bar / Rooftop", ""],
@@ -231,7 +228,6 @@ const JOURS_PROPOSES = 21;
 /** Les noms sous les points du fil (maquettes du 07/10/2026) ; une tenue imposée n'a pas la dernière. */
 const LIBELLES_ETAPES = ["Occasion", "Où", "Quand", "Préférence"] as const;
 const ICONE_MOMENT: Record<string, IconePlanifier> = { Matin: "matin", "Après-midi": "apresmidi", Soirée: "soiree", "Toute la journée": "journee" };
-const ICONE_LIEU: Record<string, IconePlanifier> = { Restaurant: "restaurant", "Bar / Rooftop": "bar", "Lieu culturel": "culture", Extérieur: "exterieur", "Chez quelqu'un": "maison" };
 const DOW = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const DOW_LONG = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
@@ -609,7 +605,6 @@ export default function PlanifierScreen() {
    * simplement moins sûre.
    */
   const [ville, setVille] = useState<VilleSuggeree | null>(null);
-  const [suggestions, setSuggestions] = useState<VilleSuggeree[] | null>(null);
   const [typeLieu, setTypeLieu] = useState<string | null>(null);
   /**
    * « Une dernière préférence ? » (07/10/2026) : facultative, jamais mémorisée dans le profil. Elle ne fait que départager
@@ -664,53 +659,11 @@ export default function PlanifierScreen() {
    */
   const typesLieuProposes = useMemo(() => {
     const permis = occ ? TYPES_LIEU_PAR_OCCASION[occ] : undefined;
-    if (!permis) return [] as [string, string][];
-    return TYPES_LIEU.filter(([t]) => permis.includes(t));
+    if (!permis) return [] as string[];
+    // « Autre » ferme la liste (08/10/2026). Il n'est pas écrit en base — la colonne n'accepte que les cinq autres valeurs : il se
+    // lit comme « pas de précision » à l'enregistrement (cf. TYPE_LIEU_AUTRE).
+    return [...TYPES_LIEU.filter(([t]) => permis.includes(t)).map(([t]) => t), TYPE_LIEU_AUTRE];
   }, [occ]);
-  /**
-   * AUTOCOMPLÉTION DE VILLE — /geo/1.0/direct, via la fonction Edge `weather`
-   * en `mode=geo`. Même clé, même fournisseur que la météo : aucun service
-   * supplémentaire, ce que l'audit demandait de vérifier avant d'en ajouter un.
-   *
-   * 280 ms d'attente après la dernière frappe, et la réponse d'une recherche
-   * périmée est jetée (`annule`) : sans ça, « Par » revenant après « Paris »
-   * remplacerait la bonne liste par l'ancienne.
-   *
-   * `suggestions === null` veut dire « pas d'autocomplétion ici » — mode démo,
-   * réseau, ou fonction Edge pas encore redéployée. Rien ne s'affiche alors,
-   * et la saisie libre continue de fonctionner exactement comme avant.
-   */
-  const villeChoisieAffichee = ville != null && libelleVille(ville) === lieu;
-  /**
-   * Ce qui s'affiche réellement sous le champ. DÉRIVÉ, jamais posé dans un
-   * état : une saisie trop courte ou une ville déjà choisie n'a pas à
-   * déclencher un rendu supplémentaire pour vider une liste — elle n'en a
-   * simplement aucune à montrer. `suggestions` ne change donc que quand une
-   * réponse arrive, ce qui est le seul évènement extérieur ici.
-   */
-  const suggestionsVisibles =
-    lieu.trim().length < 2 || villeChoisieAffichee ? [] : (suggestions ?? []);
-
-  useEffect(() => {
-    if (etape !== 2) return;
-    const q = lieu.trim();
-    if (q.length < 2 || villeChoisieAffichee) return;
-    let annule = false;
-    const t = setTimeout(() => {
-      fetchVilles(q)
-        .then((v) => {
-          if (!annule) setSuggestions(v);
-        })
-        .catch(() => {
-          if (!annule) setSuggestions(null);
-        });
-    }, 280);
-    return () => {
-      annule = true;
-      clearTimeout(t);
-    };
-  }, [lieu, etape, villeChoisieAffichee]);
-
   const dateChoisie = jour != null ? dansNJours(jour) : null;
   const dateLongue = dateChoisie
     ? `${DOW_LONG[dateChoisie.getDay()]} ${dateChoisie.getDate()} ${MOIS[dateChoisie.getMonth()]}`
@@ -735,6 +688,32 @@ export default function PlanifierScreen() {
   /** Dernier jour réellement couvert — sert à dire jusqu'à quand on sait. */
   const dernierJourConnu = prevision ? joursCouverts(prevision).at(-1) : undefined;
   /**
+   * LA PRÉVISION, DÈS L'ÉTAPE « OÙ » quand la date est déjà connue (08/10/2026). Elle dépend du POINT (latitude, longitude) et de la
+   * date — pas du type de lieu ni de la préférence, qui ne la redemandent jamais. La réponse est gardée par point (previsionGardee) :
+   * changer de date, revenir sur l'étape ou la quitter ne rappelle pas la fonction pour le même lieu.
+   */
+  const cleLieu = `${lieu.trim()}|${ville ? `${ville.lat},${ville.lon}` : ""}`;
+  useEffect(() => {
+    if (etape !== 2 || !lieu.trim() || jour == null) return;
+    let annule = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPrevisionEtat("encours");
+    previsionGardee(ville ? ville.name : lieu.trim(), ville)
+      .then((p) => {
+        if (!annule) setPrevision(p);
+      })
+      .catch(() => {
+        if (!annule) setPrevision(null);
+      })
+      .finally(() => {
+        if (!annule) setPrevisionEtat("faite");
+      });
+    return () => {
+      annule = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etape, cleLieu, jour]);
+  /**
    * Ce que le moteur reçoit. La saison vient de la DATE PLANIFIÉE et non du
    * jour courant : une tenue préparée pour le 1er septembre depuis le 29 août
    * relève de l'automne.
@@ -751,6 +730,18 @@ export default function PlanifierScreen() {
       : dateChoisie
         ? weatherForDay(weather.temp, weather.label, saisonCalendairePour(dateChoisie), CHALEUR_HORS_SAISON)
         : weather;
+  /** Ce que l'étape « Où » dit de la météo : la prévision réelle, ou ce qui manque — jamais une température estimée. */
+  const meteoEtapeLieu: MeteoEtapeLieu = !lieu.trim()
+    ? { kind: "sansLieu" }
+    : jour == null
+      ? { kind: "sansDate" }
+      : meteoJour
+        ? { kind: "ok", temp: meteoJour.temp, tempMin: meteoJour.tempMin, tempMax: meteoJour.tempMax, label: meteoJour.label }
+        : previsionEtat !== "faite"
+          ? { kind: "encours" }
+          : jour > HORIZON_PREVISION_JOURS
+            ? { kind: "loin" }
+            : { kind: "indispo" };
   /**
    * La ville telle que l'utilisatrice l'a donnée — le nom de la suggestion
    * choisie, ou le premier segment de sa saisie —, jamais une précision
@@ -1044,7 +1035,7 @@ export default function PlanifierScreen() {
         occasion: occ,
         sousChoix: sousChoix ? String(sousChoix.courant) : null,
         lieu: lieu.trim(),
-        typeLieu,
+        typeLieu: typeLieu === TYPE_LIEU_AUTRE ? null : typeLieu,
         // Une composition imposée vient du dressing réel — sauf une tenue
         // planifiée reprise, qui garde ce qu'elle était.
         dressingSeul: composition ? (depuisPlan ? depuisPlan.plan.dressingSeul : true) : dressingSeul,
@@ -1114,7 +1105,6 @@ export default function PlanifierScreen() {
     setMoment(null);
     setLieu("");
     setVille(null);
-    setSuggestions(null);
     setTypeLieu(null);
     setHumeur(null);
     setDressingSeul(false);
@@ -1145,7 +1135,6 @@ export default function PlanifierScreen() {
     setMoment(mode === "modifier" ? t.moment : null);
     setLieu(t.lieu);
     setVille(null);
-    setSuggestions(null);
     setTypeLieu(t.typeLieu);
     setHumeur(t.humeur ?? null);
     setDressingSeul(t.dressingSeul);
@@ -1272,7 +1261,7 @@ export default function PlanifierScreen() {
     1: [`Étape 1 sur ${derniere}`, "Quelle est", "l'occasion ?", "Choisis le moment à préparer, Capsela s’occupe du reste."],
     // Le lieu sert à la prévision météo (et se range avec la tenue planifiée). Le type de lieu précise l'occasion : le
     // moteur ne le lit pas (cf. TYPES_LIEU_PAR_OCCASION), la phrase ne dit donc pas qu'il « affine la tenue ».
-    2: [`Étape 2 sur ${derniere}`, "Où", "seras-tu ?", "Le lieu me permet de trouver la bonne météo."],
+    2: [`Étape 2 sur ${derniere}`, "Où", "seras-tu ?", "Capsela utilise le lieu pour adapter la météo et le contexte de ta tenue."],
     3: [`Étape 3 sur ${derniere}`, "Pour", "quand ?", "Capsela adapte la tenue au moment choisi et à la météo."],
     // Une préférence, pas un style : elle ne départage que des tenues déjà compatibles (humeur.ts).
     4: [`Étape 4 sur ${derniere}`, "Une dernière", "préférence ?", "Comment veux-tu te sentir dans cette tenue ?"],
@@ -1579,7 +1568,7 @@ export default function PlanifierScreen() {
                         /* Le type de lieu déjà choisi ne survit pas à un changement d'occasion qui ne le propose plus —
                            sinon `planned_outfits.type_lieu` recevrait un « Bar / Rooftop » sur un Voyage. */
                         const permis = TYPES_LIEU_PAR_OCCASION[key];
-                        if (!permis || !permis.includes(typeLieu ?? "")) setTypeLieu(null);
+                        if (!permis || (typeLieu !== TYPE_LIEU_AUTRE && !permis.includes(typeLieu ?? ""))) setTypeLieu(null);
                       }}
                     />
                   ))}
@@ -1673,100 +1662,20 @@ export default function PlanifierScreen() {
             )}
 
             {etape === 2 && (
-              <>
-                <Card rayon="bloc" className="flex items-center gap-[10px] mt-4 px-[14px]" style={{ minHeight: 48 }}>
-                  <span aria-hidden="true" className="flex-shrink-0 text-placeholder">
-                    <Glyphe taille={17}>{G_LOUPE}</Glyphe>
-                  </span>
-                  <input
-                    className="capin flex-1 min-w-0 bg-transparent border-none text-[13px] font-medium text-ink"
-                    value={lieu}
-                    onChange={(e) => {
-                      setLieu(e.target.value);
-                      // Retaper invalide le point choisi : sans ça, corriger
-                      // « Paris » en « Parme » enverrait toujours Paris.
-                      setVille(null);
-                    }}
-                    placeholder="Rechercher une ville"
-                    aria-label="Ville du rendez-vous"
-                    autoComplete="off"
-                    autoCapitalize="words"
-                  />
-                  {lieu && (
-                    <button
-                      onClick={() => {
-                        setLieu("");
-                        setVille(null);
-                        setSuggestions(null);
-                      }}
-                      aria-label="Effacer le lieu"
-                      className="flex-shrink-0 w-[32px] h-[32px] flex items-center justify-center text-muted cursor-pointer"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                    </button>
-                  )}
-                </Card>
-                {/* Les suggestions ne s'affichent QUE si l'autocomplétion a
-                    répondu quelque chose. `null` (mode démo, réseau, fonction
-                    Edge pas encore redéployée) ne montre rien du tout : la
-                    saisie libre reste entièrement valable, elle est seulement
-                    moins précise. Rien n'est jamais bloqué par l'absence de
-                    suggestion. */}
-                {suggestionsVisibles.length > 0 && (
-                  <Card rayon="bloc" className="flex flex-col mt-2 overflow-hidden">
-                    {suggestionsVisibles.map((v) => (
-                      <button
-                        key={`${v.lat},${v.lon}`}
-                        onClick={() => {
-                          setVille(v);
-                          setLieu(libelleVille(v));
-                          setSuggestions([]);
-                        }}
-                        className="flex items-center gap-[10px] text-left px-[14px] cursor-pointer border-b border-divider last:border-b-0"
-                        style={{ minHeight: 46 }}
-                      >
-                        <span aria-hidden="true" className="flex-shrink-0 text-muted">
-                          <Glyphe taille={15}>{G_EPINGLE}</Glyphe>
-                        </span>
-                        <span className="flex-1 min-w-0 text-[13px] text-ink truncate">{libelleVille(v)}</span>
-                      </button>
-                    ))}
-                  </Card>
-                )}
-                {ville && (
-                  <div className="text-[11px] text-muted mt-2">
-                    Ville choisie : {ville.name}
-                  </div>
-                )}
-                {/* Le type de lieu ne s'affiche que pour les occasions où il
-                    veut dire quelque chose (cf. TYPES_LIEU_PAR_OCCASION).
-                    Pour les autres, l'étape se réduit à la ville — ce qui est
-                    exactement ce qu'elle a à demander. */}
-                {typesLieuProposes.length > 0 && (
-                  <>
-                    {/* UNE PRÉCISION DE L'OCCASION, PAS UNE NOUVELLE QUESTION
-                        (brief du 25/09, point 2) : la ligne sous le surtitre
-                        rattache le choix à l'occasion déjà donnée. */}
-                    <div className="mt-6">
-                      <Surtitre>Quel type de lieu ? · Facultatif</Surtitre>
-                      <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">
-                        Pour ton occasion « {occLabel} », si tu veux la préciser.
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-[10px] mt-3">
-                      {typesLieuProposes.map(([t]) => (
-                        <TuileIcone
-                          key={t}
-                          icone={ICONE_LIEU[t] ?? "maison"}
-                          label={t}
-                          actif={typeLieu === t}
-                          onClick={() => setTypeLieu(typeLieu === t ? null : t)}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </>
+              <EtapeLieu
+                lieu={lieu}
+                onChoisir={(v, libelle) => {
+                  setVille(v);
+                  setLieu(libelle);
+                  // Nouvelle destination : la prévision de l'ancienne ne vaut plus, elle est redemandée (cf. l'effet plus haut).
+                  setPrevision(null);
+                  setPrevisionEtat("vide");
+                }}
+                types={typesLieuProposes}
+                typeLieu={typeLieu}
+                onType={setTypeLieu}
+                meteo={meteoEtapeLieu}
+              />
             )}
 
             {etape === 4 && (
@@ -2310,7 +2219,7 @@ export default function PlanifierScreen() {
                   setPrevision(null);
                   if (lieu.trim()) {
                     setPrevisionEtat("encours");
-                    fetchPrevisionByCity(ville ? ville.name : lieu.trim(), ville)
+                    previsionGardee(ville ? ville.name : lieu.trim(), ville)
                       .then((p) => setPrevision(p))
                       .catch(() => setPrevision(null))
                       .finally(() => setPrevisionEtat("faite"));

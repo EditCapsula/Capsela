@@ -250,3 +250,47 @@ export async function fetchVilles(q: string): Promise<VilleSuggeree[] | null> {
     return null;
   }
 }
+
+/**
+ * La ville où se trouve une position (« Utiliser ma position actuelle », 08/10/2026) : /geo/1.0/reverse via la fonction Edge
+ * `weather` en `mode=reverse`, avec le même test de forme que l'autocomplétion. Une fonction Edge pas encore redéployée ignore
+ * le mode et renvoie la météo actuelle : on s'en sert alors pour le nom (`fetchWeatherByCoords`), sans région. `null` : introuvable.
+ */
+export async function fetchVilleParPosition(lat: number, lon: number): Promise<VilleSuggeree | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await getSupabase().functions.invoke("weather", { body: { lat, lon, mode: "reverse" } });
+    if (!error && data && !(data as { error?: unknown }).error) {
+      const lues = lireVillesSuggerees(data);
+      if (lues && lues.length) return { ...lues[0], lat, lon };
+    }
+  } catch {
+    // on retente avec la météo actuelle ci-dessous
+  }
+  const c = await fetchWeatherByCoords(lat, lon).catch(() => null);
+  return c ? { name: c.city, country: c.country ?? "", state: "", lat, lon } : null;
+}
+
+/**
+ * La prévision d'un lieu, GARDÉE dix minutes par POINT (latitude, longitude arrondies à 0,01) ou, sans coordonnées, par nom. La
+ * prévision couvre plusieurs jours : une même ville ne rappelle donc pas la fonction à chaque changement de date, ni quand l'étape
+ * « Où » puis « Quand » la demandent toutes deux. Une réponse vide n'est pas gardée : l'affichage suivant retente.
+ */
+const DUREE_PREVISION_MS = 10 * 60 * 1000;
+const previsionsGardees = new Map<string, { a: number; p: Promise<Prevision | null> }>();
+
+export function clePrevision(nom: string, coords?: { lat: number; lon: number } | null): string {
+  return coords ? `${coords.lat.toFixed(2)},${coords.lon.toFixed(2)}` : nom.trim().toLowerCase();
+}
+
+export function previsionGardee(nom: string, coords?: { lat: number; lon: number } | null): Promise<Prevision | null> {
+  const cle = clePrevision(nom, coords);
+  const gardee = previsionsGardees.get(cle);
+  if (gardee && Date.now() - gardee.a < DUREE_PREVISION_MS) return gardee.p;
+  const p = fetchPrevisionByCity(nom, coords).catch(() => null);
+  previsionsGardees.set(cle, { a: Date.now(), p });
+  void p.then((r) => {
+    if (!r) previsionsGardees.delete(cle);
+  });
+  return p;
+}
