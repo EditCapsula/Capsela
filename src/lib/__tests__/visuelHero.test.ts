@@ -10,6 +10,15 @@ const ligne = (surcharge: Partial<VestiaireRow>): VestiaireRow => ({
   id: 1, name: "x", category: "vestes_blazers", sous_type: "Blazer", couleur_dominante: "marron", matiere: "laine", genre: "femme", coupe: null, ...surcharge,
 });
 
+describe("gilet sans manches — accepté en pulls_gilets (08/10/2026)", () => {
+  it("le sujet « sleeveless vest » passe la garde de cohérence, pour le visuel hero comme pour le standard", () => {
+    const gilet = ligne({ category: "pulls_gilets", sous_type: "Gilet sans manches", name: "Gilet sans manches en maille" });
+    expect(buildHeroImagePrompt(gilet).ok).toBe(true);
+    expect(buildImagePrompt(gilet).ok).toBe(true);
+    expect(buildHeroImagePrompt(gilet).noun).toContain("sleeveless vest");
+  });
+});
+
 describe("buildHeroImagePrompt — un flat lay posé, jamais porté", () => {
   it("garde le sujet du visuel standard et change la présentation", () => {
     const standard = buildImagePrompt(ligne({}));
