@@ -140,7 +140,7 @@ export function pisteAssociation(pivot: Item, tenues: number[][], items: Item[])
   return repli ? phrasePiste(repli) : null;
 }
 
-function phrasePiste(p: Item): string {
+export function phrasePiste(p: Item): string {
   const nom = p.name.trim();
   const article = ARTICLE_PAR_CAT[p.cat];
   return article ? `Avec ${article} ${nom.charAt(0).toLowerCase()}${nom.slice(1)}` : `Avec ${nom}`;
@@ -229,4 +229,40 @@ export function recommandationPiece(p: {
     if (nouvelles.length > 0) return { pivot, nombre: nouvelles.length };
   }
   return null;
+}
+
+// ── TES DERNIÈRES PIÈCES (écran « Voir tout », 08/10/2026) ──────────
+
+const MOIS_COURTS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+/** Jusqu'à ce nombre de jours (aujourd'hui compris), une pièce est de « cette semaine ». */
+export const JOURS_CETTE_SEMAINE = 6;
+
+const joursDepuis = (ts: number, maintenant: number) => Math.max(0, Math.round((debutDeJour(maintenant) - debutDeJour(ts)) / 86_400_000));
+
+/** « Aujourd'hui », « Hier », « Il y a 3 jours » pour la semaine ; « 22 sept. » au-delà. */
+export function libelleDateRecente(ts: number, maintenant: number = Date.now()): string {
+  const j = joursDepuis(ts, maintenant);
+  if (j === 0) return "Aujourd'hui";
+  if (j === 1) return "Hier";
+  if (j <= JOURS_CETTE_SEMAINE) return `Il y a ${j} jours`;
+  const d = new Date(ts);
+  return `${d.getDate()} ${MOIS_COURTS[d.getMonth()]}`;
+}
+
+/** Les pièces (déjà triées) séparées en « cette semaine » et « un peu plus tôt ». Une section vide n'existe pas côté écran. */
+export function separerParSemaine<T extends { createdAt?: number }>(pieces: T[], maintenant: number = Date.now()): { semaine: T[]; avant: T[] } {
+  const semaine: T[] = [];
+  const avant: T[] = [];
+  for (const p of pieces) (typeof p.createdAt === "number" && joursDepuis(p.createdAt, maintenant) <= JOURS_CETTE_SEMAINE ? semaine : avant).push(p);
+  return { semaine, avant };
+}
+
+/** « 1 look possible », « 4 looks possibles » — rien quand il n'y en a pas : la ligne ne dit jamais un nombre que le moteur n'a pas trouvé. */
+export function libelleLooksPossibles(n: number): string | null {
+  return n > 0 ? `${n} ${n === 1 ? "look possible" : "looks possibles"}` : null;
+}
+
+/** Le nombre de looks DISTINCTS (même jeu de pièces = un seul) parmi des idées de plusieurs pièces. */
+export function looksDistincts(parPiece: number[][][]): number {
+  return new Set(parPiece.flatMap((tenues) => tenues.map((ids) => clePieces(ids).join(",")))).size;
 }

@@ -4,10 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { MosaiquePieces } from "@/components/CarteLook";
+import PhotoPiece from "@/components/PhotoPiece";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/lib/auth";
-import { fondPhotoPiece } from "@/lib/catalogImages";
-import { resolveItemImage } from "@/lib/catalogImages";
 import { CATLABEL, CATS, OCC_LABELS } from "@/lib/data";
 import {
   SEUIL_PROCHE_LIMITE,
@@ -31,7 +30,7 @@ import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { composeWardrobePool, wearCounts } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
-import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
+import type { Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
 
 /**
@@ -142,44 +141,6 @@ function Associations({
         </button>
       ))}
     </div>
-  );
-}
-
-/** Une pièce montrée par sa vraie photo (cadrée), ou son fond doux et l'icône de sa catégorie quand elle n'en a pas — jamais une image de stock. */
-function PhotoPiece({ piece, ratio, rayon, className = "" }: { piece: Item; ratio: number; rayon: number; className?: string }) {
-  const img = resolveItemImage(piece);
-  return (
-    <div
-      role={img.url ? "img" : undefined}
-      aria-label={img.url ? piece.name : undefined}
-      className={`relative w-full overflow-hidden flex items-center justify-center ${className}`}
-      style={{ aspectRatio: String(ratio), borderRadius: rayon, background: "var(--color-warm-bg)", ...(img.url ? fondPhotoPiece(img.url, img.kind === "detouree") : null) }}
-    >
-      {!img.url && <IconeCategorie cat={piece.cat} />}
-    </div>
-  );
-}
-
-/** Icône linéaire (trait 1.6) de la catégorie — le repli d'une photo absente. */
-function IconeCategorie({ cat }: { cat: CategoryKey }) {
-  const chemin: Partial<Record<CategoryKey, string>> = {
-    haut: "M8 4l-4 3 2 4 2-1v10h8V10l2 1 2-4-4-3a4 4 0 01-8 0z",
-    pull: "M8 4l-4 3 2 4 2-1v10h8V10l2 1 2-4-4-3a4 4 0 01-8 0z",
-    pantalon: "M7 3h10l1 18h-4l-2-9-2 9H6z",
-    jean: "M7 3h10l1 18h-4l-2-9-2 9H6z",
-    short: "M7 5h10l1 9h-5l-1-3-1 3H6z",
-    jupe: "M9 4h6l4 16H5z",
-    robe: "M9 3h6l-1 6 4 12H6l4-12z",
-    combinaison: "M9 3h6l-1 6 4 12H6l4-12z",
-    veste: "M8 4l-4 3v13h5V9l3 3 3-3v11h5V7l-4-3-4 4z",
-    manteau: "M8 4l-4 3v14h5V9l3 3 3-3v12h5V7l-4-3-4 4z",
-    chaussures: "M4 16c4 0 5-3 6-7l3 2c1 3 3 4 7 4v3H4z",
-    sac: "M6 9h12l1 11H5zM9 9a3 3 0 016 0",
-  };
-  return (
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--color-terracotta)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={chemin[cat] ?? "M12 4a2 2 0 011 3.7L12 9l8 6H4l8-6"} />
-    </svg>
   );
 }
 
@@ -399,7 +360,7 @@ export default function WardrobeScreen() {
       {/* ── AJOUTÉES RÉCEMMENT ─ tri par date d'ajout, rien d'autre. */}
       {recentes.length > 0 && (
         <section className={sectionHaute} aria-label="Ajoutées récemment">
-          <TitreSection className="" action={<Lien onClick={() => actions.goWardrobePieces()} label="Voir toutes mes pièces">Voir tout</Lien>}>
+          <TitreSection className="" action={<Lien onClick={() => actions.goDernieresPieces()} label="Voir toutes mes dernières pièces">Voir tout</Lien>}>
             Ajoutées récemment
           </TitreSection>
           <TitreSerif>Tes dernières pièces</TitreSerif>
@@ -596,7 +557,7 @@ export default function WardrobeScreen() {
 const CLE_USAGES_AJOUT = "capsela.boutonAjout.usages";
 const USAGES_AVANT_REDUCTION = 3;
 
-function BoutonAjoutFlottant({ onClick }: { onClick: () => void }) {
+export function BoutonAjoutFlottant({ onClick }: { onClick: () => void }) {
   const [reduit, setReduit] = useState(false);
   useEffect(() => {
     try {

@@ -265,6 +265,7 @@ export interface Actions {
   enterApp: () => void;
   goHome: () => void;
   goWardrobe: () => void;
+  goDernieresPieces: () => void;
   goCapsule: () => void;
   goTenues: () => void;
   goHistory: () => void;
@@ -1460,6 +1461,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     enterApp: () => go("home"),
     goHome: () => go("home"),
     goWardrobe: () => go("wardrobe"),
+    goDernieresPieces: () => go("dernieresPieces"),
     goCapsule: () => go("capsule"),
     goTenues: () =>
       setState((s) => {

@@ -152,6 +152,7 @@ export default function TabBar() {
         const active =
           state.screen === tab.screen ||
           (tab.screen === "home" && state.screen === "tenues") ||
+          (tab.screen === "wardrobe" && state.screen === "dernieresPieces") ||
           // Mon planning (maquette, 08/10/2026) allume l'onglet Planifier : c'est le planning des tenues.
           (tab.screen === "planifier" && state.screen === "calendrier") ||
           (tab.screen === "history" && (state.screen === "avisTous" || state.screen === "avisEnregistre")) ||
