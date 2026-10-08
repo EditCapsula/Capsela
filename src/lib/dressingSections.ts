@@ -1,14 +1,7 @@
 import { estDeSaison, type ContexteSaisonnier } from "./capsule";
-import { occasionShortLabel } from "./data";
-import { MIN_PIECES_DRESSING_ASSOCIATION, associationsNouvelles, categoriesManquantes } from "./dressingEcran";
-import { getOutfitsForItem } from "./logic";
-import { resolveItemImage } from "./catalogImages";
-import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
-import type { Weather } from "./data";
 import { clePieces } from "./outfitFeedback";
 import { inactivityInfo } from "./selectors";
-import type { Gender } from "./profile";
-import type { CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook } from "./types";
+import type { CategoryKey, Item } from "./types";
 
 /*
  * LES SECTIONS DE L'ÉCRAN DRESSING, V6 (08/10/2026) — des fonctions pures, testées ; l'écran ne fait que les afficher.
@@ -147,13 +140,21 @@ export function pisteAssociation(pivot: Item, tenues: number[][], items: Item[])
   return repli ? phrasePiste(repli) : null;
 }
 
+/** « ta veste en daim », « ton pantalon tailleur », « tes chaussures » — la pièce désignée avec son article ; sans article connu, son nom seul. */
+export function designationPiece(p: Item): string {
+  const nom = p.name.trim();
+  const article = ARTICLE_PAR_CAT[p.cat];
+  const bas = `${nom.charAt(0).toLowerCase()}${nom.slice(1)}`;
+  return article ? `${article} ${bas}` : bas;
+}
+
 export function phrasePiste(p: Item): string {
   const nom = p.name.trim();
   const article = ARTICLE_PAR_CAT[p.cat];
   return article ? `Avec ${article} ${nom.charAt(0).toLowerCase()}${nom.slice(1)}` : `Avec ${nom}`;
 }
 
-// ── TES LOOKS ────────────────────────────────────────────────────────
+// ── SAISON ───────────────────────────────────────────────────────────
 
 export function saisonDeLaDate(ts: number): "Printemps" | "Été" | "Automne" | "Hiver" {
   const m = new Date(ts).getMonth() + 1;
@@ -161,81 +162,6 @@ export function saisonDeLaDate(ts: number): "Printemps" | "Été" | "Automne" | 
   if (m >= 6 && m <= 8) return "Été";
   if (m >= 9 && m <= 11) return "Automne";
   return "Hiver";
-}
-
-/** « Tenue du 08/10 » — le nom qu'un look enregistré depuis cette carte reçoit aussi (store.tsx, basculerLookDeTenue). */
-export function titreTenue(ts: number): string {
-  const d = new Date(ts);
-  return `Tenue du ${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-export interface LookRecent {
-  cle: string;
-  ids: number[];
-  ts: number;
-  titre: string;
-  /** « {occasion} · {saison} » — chaque morceau seulement s'il est connu. */
-  meta: string;
-  occasion?: OccasionKey;
-  /** Le look enregistré qui porte exactement ces pièces, s'il existe. */
-  enregistre: SavedLook | null;
-}
-
-/**
- * Les looks récents du Dressing : les tenues PORTÉES (l'historique) et les looks déjà enregistrés, un seul par jeu de pièces, les
- * plus récents d'abord. Une tenue dont moins de deux pièces se retrouvent n'est pas un look à montrer.
- */
-export function looksRecents(history: HistoryEntry[], savedLooks: SavedLook[], pool: Item[], max = 2): LookRecent[] {
-  const connues = new Set(pool.map((i) => i.id));
-  const parCle = new Map<string, LookRecent>();
-  const ajouter = (ids: number[], ts: number, occasion: OccasionKey | undefined, titreSaisi: string | null) => {
-    if (ids.filter((id) => connues.has(id)).length < 2) return;
-    const cle = clePieces(ids).join(",");
-    const enregistre = savedLooks.find((l) => clePieces(l.pieceIds).join(",") === cle) ?? null;
-    const existant = parCle.get(cle);
-    if (existant && existant.ts >= ts) return;
-    parCle.set(cle, {
-      cle,
-      ids,
-      ts,
-      titre: enregistre?.name ?? titreSaisi ?? titreTenue(ts),
-      meta: [occasion && occasion !== "all" ? occasionShortLabel(occasion) : null, saisonDeLaDate(ts)].filter(Boolean).join(" · "),
-      occasion,
-      enregistre,
-    });
-  };
-  for (const h of history) ajouter(h.pieceIds, h.ts, h.occasion, null);
-  for (const l of savedLooks) ajouter(l.pieceIds, l.createdAt, l.occasion, l.name);
-  return [...parCle.values()].sort((a, b) => b.ts - a.ts).slice(0, max);
-}
-
-// ── RECOMMANDATION ───────────────────────────────────────────────────
-
-/**
- * Une pièce de la capsule dont le dressing n'a encore aucune catégorie, et le nombre d'associations NOUVELLES (ni un look enregistré,
- * ni une tenue déjà portée) que le moteur compose avec elle et au moins deux pièces du dressing. `null` quand rien n'est calculable :
- * la carte n'existe pas. Le nombre n'est jamais estimé.
- */
-export function recommandationPiece(p: {
-  items: Item[];
-  capsule: Item[];
-  weather: Weather;
-  hexes: string[];
-  gender: Gender | null;
-  colorimetrie: ColorimetrieMoteur | null;
-  dejaVues: number[][];
-}): { pivot: Item; nombre: number } | null {
-  if (p.items.length === 0) return null;
-  const possedees = new Set(p.items.map((i) => i.id));
-  for (const cat of categoriesManquantes(p.capsule, p.items)) {
-    const delaCat = p.capsule.filter((c) => c.cat === cat);
-    const pivot = delaCat.find((c) => resolveItemImage(c).url) ?? delaCat[0];
-    if (!pivot) continue;
-    const tenues = getOutfitsForItem(pivot.id, [...p.items, pivot], p.weather, p.hexes, { maxPerOccasion: 3, maxTotal: 18 }, p.gender, null, p.colorimetrie);
-    const nouvelles = associationsNouvelles(tenues, p.dejaVues).filter((t) => t.ids.filter((id) => possedees.has(id)).length >= MIN_PIECES_DRESSING_ASSOCIATION);
-    if (nouvelles.length > 0) return { pivot, nombre: nouvelles.length };
-  }
-  return null;
 }
 
 // ── TES DERNIÈRES PIÈCES (écran « Voir tout », 08/10/2026) ──────────

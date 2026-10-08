@@ -5,26 +5,26 @@ import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { MosaiquePieces } from "@/components/CarteLook";
 import PhotoPiece from "@/components/PhotoPiece";
+import { useIdeesDressing } from "@/components/useIdeesDressing";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/lib/auth";
-import { CATLABEL, CATS, OCC_LABELS } from "@/lib/data";
+import { CATS, OCC_LABELS, occasionShortLabel } from "@/lib/data";
 import {
-  SEUIL_PROCHE_LIMITE,
   assezDuDressing,
   groupesDuVestiaire,
   syntheseDressing,
 } from "@/lib/dressingEcran";
 import {
   candidatsARedecouvrir,
-  dateRelativeAjout,
+  designationPiece,
   ligneDressing,
-  looksRecents,
+  looksDistincts,
+  phrasePiste,
   piecesRecentes,
   pisteAssociation,
-  recommandationPiece,
   saisonDeLaDate,
 } from "@/lib/dressingSections";
-import { generateOutfitWithFallback, getOutfitsForItem } from "@/lib/logic";
+import { generateOutfitWithFallback, getOutfitsForItem, type ItemOutfitVariation } from "@/lib/logic";
 import { clePieces } from "@/lib/outfitFeedback";
 import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
@@ -87,6 +87,8 @@ import Button from "@/components/Button";
 
 /** Les deux occasions des idées d'inspiration du dressing vide. */
 const OCCASIONS_INSPIRATION: OccasionKey[] = ["quotidien", "travail_formel"];
+/** Pièces dont les idées sont calculées pour l'écran : au-delà, le total de looks est annoncé « N+ ». */
+const NB_PIECES_AVEC_IDEES = 16;
 
 const PLUS = (
   <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -153,17 +155,10 @@ function TitreSerif({ children, taille = 18 }: { children: React.ReactNode; tail
   );
 }
 
-const COEUR = (plein: boolean) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill={plein ? "var(--color-terracotta-deep)" : "none"} stroke={plein ? "var(--color-terracotta-deep)" : "currentColor"} strokeWidth="1.6" strokeLinejoin="round">
-    <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
-  </svg>
-);
-
 export default function WardrobeScreen() {
   const { state, actions, vestiairePool, defaultCapsule, weather, dressingLoaded, etatPremium } = useCapsela();
   const { profile } = useAuth();
   const items = state.items;
-  const { savedLooks, history } = state;
   const [maintenant] = useState(() => Date.now());
 
   // Pool de résolution stable des looks — cf. l'en-tête, correctif 20/08/2026.
@@ -238,22 +233,17 @@ export default function WardrobeScreen() {
   }, [items, weather, parPiece, profile]);
 
   /**
-   * LA RECOMMANDATION : une pièce de la capsule dont le dressing n'a encore aucune catégorie, et le nombre d'associations NOUVELLES
-   * (ni un look enregistré, ni une tenue déjà portée) que le moteur compose avec au moins deux pièces du dressing. Rien de
-   * calculable : pas de carte. Près de la limite gratuite : jamais d'incitation à ajouter (règle du 25/09/2026, SEUIL_PROCHE_LIMITE).
+   * LES IDÉES DE LOOKS DU DRESSING (V9, 08/10/2026) : les seize pièces les plus récentes (+ celle de « À redécouvrir »), calculées après
+   * le premier rendu avec le moteur de « Comment porter … ? ». Tout ce que l'écran annonce — « N looks possibles », l'inspiration, les
+   * looks du carrousel — en est dérivé ; tant que le calcul n'est pas là, ces blocs n'existent pas.
    */
-  const reco = useMemo(() => {
-    if (etatPremium === "gratuit" && items.length >= SEUIL_PROCHE_LIMITE) return null;
-    return recommandationPiece({
-      items,
-      capsule: defaultCapsule,
-      weather,
-      hexes: paletteHexes(profile),
-      gender: profile.gender,
-      colorimetrie: colorimetrieMoteur(profile.colorimetrie),
-      dejaVues: [...savedLooks.map((l) => l.pieceIds), ...history.map((h) => h.pieceIds)],
-    });
-  }, [items, defaultCapsule, weather, profile, etatPremium, savedLooks, history]);
+  const recentes = useMemo(() => piecesRecentes(items, 8, maintenant), [items, maintenant]);
+  const pourIdees = useMemo(() => {
+    const ordre = [...items].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)).slice(0, NB_PIECES_AVEC_IDEES);
+    const redecouvrir = aRedecouvrir[0]?.piece;
+    return redecouvrir && !ordre.some((p) => p.id === redecouvrir.id) ? [...ordre, redecouvrir] : ordre;
+  }, [items, aRedecouvrir]);
+  const idees = useIdeesDressing(pourIdees);
 
   const ouvrirTenue = (t: { occasion: OccasionKey; pieces: Item[] }) => actions.viewItemOutfit(t.pieces.map((p) => p.id), t.occasion);
 
@@ -341,211 +331,207 @@ export default function WardrobeScreen() {
     );
   }
 
-  // ── DRESSING REMPLI (V6, 08/10/2026) ─────────────────────────────────
-  // Ordre imposé : intro, ajoutées récemment, tes pièces, à redécouvrir, tes looks, recommandation. Chaque section se tait
-  // quand elle n'a pas de donnée vraie.
-  const recentes = piecesRecentes(items, 8, maintenant);
-  const looks = looksRecents(state.history, state.savedLooks, resolvePool, 2);
-  const sectionHaute = "mt-[34px]";
+  // ── DRESSING REMPLI (V9, 08/10/2026) ─────────────────────────────────
+  // Ordre de la maquette : en-tête avec « + Ajouter », récemment ajoutées (miniatures), l'inspiration du moment, tes looks, par catégorie,
+  // à redécouvrir. Chaque bloc se tait quand il n'a pas de donnée vraie. Le bouton d'ajout est dans l'en-tête, plus de bouton flottant ;
+  // dressing complet (gratuit), il mène à Premium au lieu d'ouvrir un formulaire qui refuserait d'enregistrer.
+  const ajouter = () => (synthese.complet ? actions.goPremium() : actions.openAdd());
+  const dejaCalcule = idees !== null;
+  const tousLesLooks = idees ? looksDistincts(pourIdees.map((p) => (idees.get(p.id) ?? []).map((v) => v.ids))) : 0;
+  const plusDe = items.length > NB_PIECES_AVEC_IDEES ? "+" : "";
+
+  // L'inspiration : les deux pièces les plus récentes (30 jours) et un look que le moteur compose avec la première qui en a un.
+  const nouvelles = recentes.slice(0, 2);
+  const avecIdee = nouvelles.find((p) => (idees?.get(p.id) ?? []).length > 0);
+  const lookInspiration = avecIdee ? idees?.get(avecIdee.id)?.[0] : undefined;
+  const piecesAccordees = idees
+    ? new Set(nouvelles.flatMap((p) => (idees.get(p.id) ?? []).flatMap((v) => v.ids)).filter((id) => items.some((i) => i.id === id) && !nouvelles.some((n) => n.id === id))).size
+    : 0;
+  const designations = nouvelles.map((p) => designationPiece(p));
+  const phraseInspiration =
+    piecesAccordees > 0 && designations.length > 0
+      ? `${designations.length === 1 ? designations[0].charAt(0).toUpperCase() + designations[0].slice(1) : `${designations[0].charAt(0).toUpperCase()}${designations[0].slice(1)} et ${designations[1]}`} ${
+          designations.length === 1 && !designations[0].startsWith("tes ") ? "s'accorde" : "s'accordent"
+        } avec ${piecesAccordees} ${piecesAccordees === 1 ? "pièce" : "pièces"} que tu as déjà.`
+      : "";
+
+  // Tes looks : le premier look de chacune des pièces les plus récentes, sans doublon.
+  const looksCarrousel = (() => {
+    if (!idees) return [] as { piece: Item; idee: ItemOutfitVariation }[];
+    const vus = new Set<string>();
+    const sortie: { piece: Item; idee: ItemOutfitVariation }[] = [];
+    for (const piece of pourIdees) {
+      const idee = idees.get(piece.id)?.[0];
+      if (!idee) continue;
+      const cle = clePieces(idee.ids).join(",");
+      if (vus.has(cle)) continue;
+      vus.add(cle);
+      sortie.push({ piece, idee });
+      if (sortie.length >= 6) break;
+    }
+    return sortie;
+  })();
+
+  const aRedecouvrirUne = aRedecouvrir[0];
+  const nbLooksRedecouvrir = aRedecouvrirUne ? (idees?.get(aRedecouvrirUne.piece.id)?.length ?? 0) : 0;
+  const pluriel = aRedecouvrirUne?.piece.cat === "chaussures";
 
   return (
-    <>
     <div
       className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]"
-      // Au-dessus de la barre du bas, plus la place du bouton flottant : il ne masque jamais la fin de la page (≥ 96 px).
-      style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 100px)" }}
+      style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 32px)" }}
     >
-      {enTete}
+      <AppHeader />
+      <div className="t-surtitre text-muted mt-[14px]">Mon dressing</div>
+      <div className="flex items-start justify-between gap-3 mt-[6px]">
+        <div className="t-titre-ecran text-ink" style={{ textWrap: "balance" }}>
+          Ton dressing, <span className="italic text-terracotta">à ton image</span>
+        </div>
+        <Button variante="principal" pleine={false} onClick={ajouter} className="flex-shrink-0 !min-h-[44px] !px-[16px]">
+          {PLUS}
+          Ajouter
+        </Button>
+      </div>
+      <div className="text-[13px] text-muted mt-[8px]">
+        {items.length} {items.length <= 1 ? "pièce" : "pièces"}
+        {dejaCalcule && tousLesLooks > 0 ? ` · ${tousLesLooks}${plusDe} ${tousLesLooks === 1 ? "look possible" : "looks possibles"}` : ""}
+      </div>
 
-      {/* ── AJOUTÉES RÉCEMMENT ─ tri par date d'ajout, rien d'autre. */}
+      {/* ── RÉCEMMENT AJOUTÉES ─ des miniatures et un chevron vers « Tes dernières pièces » (30 jours). */}
       {recentes.length > 0 && (
-        <section className={sectionHaute} aria-label="Ajoutées récemment">
-          <TitreSection className="" action={<Lien onClick={() => actions.goDernieresPieces()} label="Voir toutes mes dernières pièces">Voir tout</Lien>}>
-            Ajoutées récemment
-          </TitreSection>
-          <TitreSerif>Tes dernières pièces</TitreSerif>
-          <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 -mx-6 px-6" style={{ scrollPaddingInline: 18, scrollSnapType: "x mandatory" }}>
-            {recentes.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => actions.openItem(p.id)}
-                className="flex-none text-left cursor-pointer active:opacity-80"
-                style={{ width: 146, scrollSnapAlign: "start" }}
-              >
-                <PhotoPiece piece={p} ratio={0.96} rayon={18} />
-                <div className="font-serif text-ink mt-[9px] px-[2px] line-clamp-2" style={{ fontSize: 14, lineHeight: 1.25 }}>{p.name}</div>
-                <div className="text-[11px] text-muted mt-[2px] px-[2px]">{CATLABEL[p.cat]}</div>
-                <div className="text-[11px] mt-[1px] px-[2px]" style={{ color: "var(--color-muted-3)" }}>{dateRelativeAjout(p.createdAt as number, maintenant)}</div>
+        <div className="mt-4 flex items-center gap-[10px]">
+          <div className="t-surtitre text-muted flex-shrink-0" style={{ width: 78, lineHeight: 1.3 }}>
+            Récemment ajoutées
+          </div>
+          <div className="flex gap-[8px] flex-1 min-w-0 overflow-hidden">
+            {recentes.slice(0, 4).map((p) => (
+              <button key={p.id} onClick={() => actions.openItem(p.id)} aria-label={p.name} className="flex-1 min-w-0 cursor-pointer" style={{ maxWidth: 52 }}>
+                <PhotoPiece piece={p} ratio={0.86} rayon={14} />
               </button>
             ))}
           </div>
-          {/* Un lien secondaire : il ne concurrence jamais le bouton flottant. */}
-          <div className="mt-4 flex items-center gap-[12px] rounded-carte px-[12px] py-[10px]" style={{ background: "var(--color-warm-bg)" }}>
-            <div className="flex-none" style={{ width: 52 }} aria-hidden="true">
-              <MosaiquePieces pieces={recentes.slice(0, 4)} />
-            </div>
-            <span aria-hidden="true" className="flex-none self-stretch" style={{ width: 1, background: "var(--color-sand-border)" }} />
-            <div className="flex-1 min-w-0">
-              <div className="text-[12px] leading-[1.45] text-ink" style={{ textWrap: "pretty" }}>
-                Tes nouvelles pièces peuvent déjà ouvrir de nouveaux looks.
-              </div>
-              <Lien onClick={actions.goLooks}>Découvrir mes looks</Lien>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── TES PIÈCES ─ une carte par catégorie réellement présente. */}
-      <section className={sectionHaute} aria-label="Tes pièces">
-        <TitreSection className="" action={<Lien onClick={() => actions.goWardrobePieces()} label="Voir toutes mes pièces">Voir tout</Lien>}>
-          Tes pièces
-        </TitreSection>
-        <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 -mx-6 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
-          {groupes.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => actions.goWardrobePieces({ libelle: g.libelle, categories: g.categories })}
-              aria-label={`${g.libelle} : ${g.nbPieces} ${g.nbPieces <= 1 ? "pièce" : "pièces"}`}
-              className="flex-none text-left cursor-pointer active:opacity-80 overflow-hidden"
-              style={{ width: 118, scrollSnapAlign: "start", background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 18 }}
-            >
-              {/* Le visuel éditorial de la catégorie (arbitré le 08/10/2026 : on le garde). */}
-              <div style={{ aspectRatio: "0.84", background: "var(--color-warm-bg)" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={g.visuel} alt="" width={480} height={640} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              </div>
-              <div className="px-[10px] pt-[8px] pb-[10px]">
-                <div className="font-serif text-ink" style={{ fontSize: 13, lineHeight: 1.25, textWrap: "balance" }}>
-                  {g.libelle.replace(/ & /g, " &\u00a0")}
-                </div>
-                <div className="text-[11px] text-muted mt-[2px]">
-                  {g.nbPieces} {g.nbPieces <= 1 ? "pièce" : "pièces"}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* DRESSING COMPLET (gratuit, 20 pièces) : présenté seulement quand la limite est atteinte — jamais avant. */}
-      {synthese.complet && (
-        <div className="mt-6">
-          <div className="t-titre-section text-ink">Dressing complet</div>
-          <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
-            {`Ton dressing contient déjà ${items.length} pièces. Passe à Premium pour continuer à l'enrichir.`}
-          </div>
-          <Button variante="contour" pleine={false} className="mt-4" onClick={() => actions.goPremium()}>
-            Découvrir Premium
-          </Button>
-        </div>
-      )}
-
-      {/* ── À REDÉCOUVRIR ─ de saison, peu portées, avec un look possible. Plus compacte. */}
-      {aRedecouvrir.length > 0 && (
-        <section className={sectionHaute} aria-label="À redécouvrir">
-          <TitreSection className="" action={<Lien onClick={actions.goNeverWorn} label="Voir les pièces à redécouvrir">Voir tout</Lien>}>
-            À redécouvrir · {weather.saisons?.length ? weather.saisons.join(" / ") : saisonDeLaDate(maintenant)}
-          </TitreSection>
-          <TitreSerif taille={16}>Des pièces de saison à remettre en jeu</TitreSerif>
-          <div className="scrollarea flex gap-[12px] overflow-x-auto mt-3 -mx-6 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
-            {aRedecouvrir.map(({ piece, etiquette, piste }) => (
-              <button
-                key={piece.id}
-                onClick={() => actions.openItem(piece.id)}
-                className="flex-none text-left cursor-pointer active:opacity-80"
-                style={{ width: 132, scrollSnapAlign: "start" }}
-              >
-                <div className="relative">
-                  <PhotoPiece piece={piece} ratio={1.12} rayon={16} />
-                  <span
-                    className="absolute left-[7px] bottom-[7px] rounded-full px-[8px] py-[3px] text-[10px] leading-none text-ink"
-                    style={{ background: "var(--color-cream)" }}
-                  >
-                    {etiquette}
-                  </span>
-                </div>
-                <div className="font-serif text-ink mt-[8px] px-[2px] line-clamp-1" style={{ fontSize: 13, lineHeight: 1.25 }}>{piece.name}</div>
-                <div className="text-[11px] mt-[1px] px-[2px] line-clamp-2" style={{ color: "var(--color-muted-3)" }}>{piste}</div>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── TES LOOKS ─ deux cartes de même taille ; « Enregistrer » se défait d'un second geste. */}
-      {looks.length > 0 && (
-        <section className={sectionHaute} aria-label="Tes looks">
-          <TitreSection
-            className=""
-            action={
-              <Lien onClick={actions.goLooks} label="Voir tous mes looks">
-                {state.savedLooks.length > 0 ? `Voir tout · ${state.savedLooks.length}` : "Voir tout"}
-              </Lien>
-            }
+          <button
+            onClick={actions.goDernieresPieces}
+            aria-label="Voir mes dernières pièces"
+            className="flex-shrink-0 flex items-center justify-center rounded-full border border-border bg-card text-terracotta cursor-pointer"
+            style={{ width: 44, height: 44 }}
           >
-            Tes looks
-          </TitreSection>
-          <div className="grid gap-[12px] mt-4" style={{ gridTemplateColumns: "1fr 1fr", gridAutoRows: "1fr" }}>
-            {looks.map((l) => {
-              const pieces = l.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
-              const enregistre = l.enregistre !== null;
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </button>
+        </div>
+      )}
+
+      {/* ── L'INSPIRATION DU MOMENT ─ un look que le moteur compose avec les pièces récentes. */}
+      {lookInspiration && avecIdee && phraseInspiration && (
+        <section className="mt-5 overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 24 }} aria-label="L'inspiration du moment">
+          <div className="relative" style={{ aspectRatio: "1.6", background: "var(--color-photo-bg)" }}>
+            <FlatLayCapsela
+              items={lookInspiration.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i)}
+              context="look-detail"
+              layoutSeed={clePieces(lookInspiration.ids).join(",")}
+            />
+          </div>
+          <div className="px-5 pt-4 pb-5">
+            <div className="t-surtitre text-muted">
+              <span className="font-serif italic text-terracotta" aria-hidden="true">✦</span> L&apos;inspiration du moment
+            </div>
+            <div className="t-titre-section text-ink mt-2">
+              Tes nouvelles pièces, <span className="italic text-terracotta">déjà en looks</span>
+            </div>
+            <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>{phraseInspiration}</div>
+            <div className="mt-2">
+              <Lien onClick={() => actions.viewItemOutfit(lookInspiration.ids, lookInspiration.occasion)}>Voir ce look →</Lien>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── TES LOOKS ─ un look par pièce récente, avec la pièce qui l'a fait naître. */}
+      {looksCarrousel.length > 0 && (
+        <section className="mt-8" aria-label="Tes looks">
+          <div className="flex items-baseline justify-between gap-3">
+            <TitreSerif taille={20}>Tes looks</TitreSerif>
+            <Lien onClick={actions.goLooks} label="Voir mes looks">Voir mes looks →</Lien>
+          </div>
+          <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 -mx-6 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
+            {looksCarrousel.map(({ piece, idee }) => {
+              const pieces = idee.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i);
               return (
-                <div key={l.cle} className="flex flex-col min-w-0 overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 20 }}>
-                  <button
-                    onClick={() => (l.enregistre ? actions.openLook(l.enregistre.id) : actions.viewItemOutfit(l.ids, l.occasion ?? "quotidien"))}
-                    aria-label={`Ouvrir ${l.titre}`}
-                    className="relative block w-full cursor-pointer active:opacity-80"
-                    style={{ aspectRatio: "1.18", background: "var(--color-photo-bg)" }}
-                  >
-                    <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(l.ids).join(",")} />
-                  </button>
-                  <div className="flex items-start justify-between gap-[6px] px-[10px] pt-[8px] pb-[6px] flex-1">
-                    <div className="min-w-0">
-                      <div className="font-serif text-ink" style={{ fontSize: 13, lineHeight: 1.25 }}>{l.titre}</div>
-                      <div className="text-[11px] mt-[2px] line-clamp-2" style={{ color: "var(--color-muted-3)" }}>{l.meta}</div>
-                    </div>
-                    <button
-                      onClick={() => actions.basculerLookDeTenue(l.ids, l.occasion, l.ts)}
-                      aria-pressed={enregistre}
-                      className="flex-none flex flex-col items-center justify-center cursor-pointer text-terracotta-deep"
-                      style={{ minWidth: 44, minHeight: 44, marginTop: -4 }}
-                    >
-                      {COEUR(enregistre)}
-                      <span className="text-[10px] leading-none mt-[2px]">{enregistre ? "Enregistré" : "Enregistrer"}</span>
-                    </button>
+                <button
+                  key={clePieces(idee.ids).join(",")}
+                  onClick={() => actions.viewItemOutfit(idee.ids, idee.occasion)}
+                  className="flex-none text-left cursor-pointer active:opacity-80"
+                  style={{ width: "min(78%, 300px)", scrollSnapAlign: "start" }}
+                >
+                  <div className="relative overflow-hidden" style={{ aspectRatio: "1.25", borderRadius: 20, background: "var(--color-photo-bg)" }}>
+                    <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} />
                   </div>
-                </div>
+                  <div className="font-serif text-ink mt-[10px] px-[2px]" style={{ fontSize: 16 }}>{occasionShortLabel(idee.occasion)}</div>
+                  <div className="text-[12px] px-[2px] line-clamp-1" style={{ color: "var(--color-muted-3)" }}>
+                    {phrasePiste(piece)} · {idee.ids.length} pièces
+                  </div>
+                </button>
               );
             })}
           </div>
         </section>
       )}
 
-      {/* ── RECOMMANDATION ─ en dernier, secondaire. Le nombre vient du moteur ; sans lui, pas de carte. Pas de « Ignorer » (retiré le 08/10/2026). */}
-      {reco && (
-        <section className={`${sectionHaute} rounded-hero px-5 py-[18px] flex items-center gap-[14px]`} style={{ background: "var(--color-warm-bg)" }} aria-label="À découvrir">
-          <div className="flex-1 min-w-0">
-            <div className="t-surtitre text-muted">
-              <span className="font-serif italic text-terracotta" aria-hidden="true">✦</span> À découvrir
-            </div>
-            <div className="t-titre-section text-ink mt-2">
-              Une pièce pourrait ouvrir <span className="italic text-terracotta">de nouveaux looks</span>
-            </div>
-            <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>
-              {`Cette pièce pourrait créer ${reco.nombre} ${reco.nombre === 1 ? "nouvelle association" : "nouvelles associations"} avec ce que tu possèdes déjà.`}
-            </div>
-            <div className="mt-3">
-              <Lien onClick={actions.goCapsule}>Découvrir ma sélection</Lien>
-            </div>
-          </div>
-          <div className="flex-none" style={{ width: 112 }}>
-            <PhotoPiece piece={reco.pivot} ratio={0.9} rayon={16} />
-          </div>
-        </section>
+      {/* ── PAR CATÉGORIE ─ une carte par catégorie réellement présente (visuel éditorial, libellé et nombre en pastille). */}
+      <section className="mt-8" aria-label="Par catégorie">
+        <div className="flex items-baseline justify-between gap-3">
+          <TitreSerif taille={20}>Par catégorie</TitreSerif>
+          <Lien onClick={() => actions.goWardrobePieces()} label="Voir toutes mes pièces">Toutes mes pièces →</Lien>
+        </div>
+        <div className="grid grid-cols-2 gap-[12px] mt-4">
+          {groupes.map((g) => (
+            <button
+              key={g.id}
+              onClick={() => actions.goWardrobePieces({ libelle: g.libelle, categories: g.categories })}
+              aria-label={`${g.libelle} : ${g.nbPieces} ${g.nbPieces <= 1 ? "pièce" : "pièces"}`}
+              className="relative block w-full overflow-hidden cursor-pointer active:opacity-80 text-left"
+              style={{ aspectRatio: "0.92", borderRadius: 22, background: "var(--color-warm-bg)" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={g.visuel} alt="" width={480} height={640} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <span
+                className="absolute left-[8px] right-[8px] bottom-[8px] flex items-baseline justify-between gap-2 rounded-full px-[14px] py-[9px]"
+                style={{ background: "var(--color-card)" }}
+              >
+                <span className="font-serif text-ink truncate" style={{ fontSize: 14 }}>{g.libelle.replace(/ & /g, " &\u00a0")}</span>
+                <span className="text-[11px] text-muted flex-shrink-0">{g.nbPieces} {g.nbPieces <= 1 ? "pièce" : "pièces"}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* ── À REDÉCOUVRIR ─ une seule pièce de saison, peu portée, avec un look possible. */}
+      {aRedecouvrirUne && (
+        <button
+          onClick={() => actions.openItemOutfits(aRedecouvrirUne.piece.id, false, idees?.get(aRedecouvrirUne.piece.id))}
+          className="mt-8 w-full flex items-center gap-[14px] text-left rounded-hero px-4 py-4 cursor-pointer active:opacity-80"
+          style={{ background: "var(--color-warm-bg)" }}
+          aria-label="À redécouvrir"
+        >
+          <span className="flex-none" style={{ width: 76 }}>
+            <PhotoPiece piece={aRedecouvrirUne.piece} ratio={0.82} rayon={14} />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block t-surtitre text-muted">À redécouvrir · {weather.saisons?.length ? weather.saisons.join(" / ") : saisonDeLaDate(maintenant)}</span>
+            <span className="block font-serif text-ink mt-[6px]" style={{ fontSize: 17, lineHeight: 1.25 }}>
+              {`${designationPiece(aRedecouvrirUne.piece).replace(/^t(on|a|es) /, (m) => `T${m.slice(1)}`)} `}
+              <span className="italic text-terracotta">{pluriel ? "attendent leur moment" : "attend son moment"}</span>
+            </span>
+            {nbLooksRedecouvrir > 0 && (
+              <span className="block text-[12px] mt-[6px]" style={{ color: "var(--color-terracotta-deep)" }}>
+                {nbLooksRedecouvrir} {nbLooksRedecouvrir === 1 ? "look cette saison" : "looks cette saison"} →
+              </span>
+            )}
+          </span>
+        </button>
       )}
     </div>
-    {!synthese.complet && <BoutonAjoutFlottant onClick={actions.openAdd} />}
-    </>
   );
 }
 

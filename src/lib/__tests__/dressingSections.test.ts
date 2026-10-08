@@ -6,14 +6,12 @@ import {
   libelleLooksPossibles,
   ligneDressing,
   looksDistincts,
-  looksRecents,
   piecesRecentes,
   pisteAssociation,
   saisonDeLaDate,
   separerParSemaine,
-  titreTenue,
 } from "../dressingSections";
-import type { CategoryKey, HistoryEntry, Item, SavedLook } from "../types";
+import type { CategoryKey, Item } from "../types";
 
 // L'écran Dressing V6 (08/10/2026) : les sections se calculent ici, l'écran ne fait que les afficher.
 
@@ -79,26 +77,7 @@ describe("À redécouvrir", () => {
   });
 });
 
-describe("Tes looks", () => {
-  const pool = [piece(1, "haut"), piece(2, "pantalon"), piece(3, "chaussures"), piece(4, "sac")];
-  const h = (id: string, ts: number, ids: number[]): HistoryEntry => ({ id, ts, pieceIds: ids, occasion: "quotidien" });
-  it("les deux tenues les plus récentes, une par jeu de pièces, avec « Tenue du JJ/MM » et « occasion · saison »", () => {
-    const r = looksRecents([h("a", jours(5), [1, 2]), h("b", jours(1), [2, 3]), h("c", jours(3), [2, 1])], [], pool);
-    expect(r.map((l) => l.cle)).toEqual(["2,3", "1,2"]);
-    expect(r[0].titre).toBe(titreTenue(jours(1)));
-    expect(r[0].titre).toBe("Tenue du 07/10");
-    expect(r[0].meta).toBe("Quotidien · Automne");
-    expect(r.every((l) => l.enregistre === null)).toBe(true);
-  });
-  it("un look enregistré avec les mêmes pièces marque la carte « enregistrée » ; une tenue d'une seule pièce retrouvée n'est pas un look", () => {
-    const look: SavedLook = { id: "l1", name: "Tenue du 07/10", pieceIds: [3, 2], createdAt: jours(1), source: "saved" };
-    const r = looksRecents([h("b", jours(1), [2, 3]), h("x", jours(0), [1, 99])], [look], pool);
-    expect(r).toHaveLength(1);
-    expect(r[0].enregistre?.id).toBe("l1");
-  });
-  it("rien à montrer : liste vide", () => {
-    expect(looksRecents([], [], pool)).toEqual([]);
-  });
+describe("saisons", () => {
   it("saisons de l'année", () => {
     expect([new Date(2026, 0, 5), new Date(2026, 3, 5), new Date(2026, 6, 5), new Date(2026, 9, 5)].map((d) => saisonDeLaDate(d.getTime()))).toEqual(["Hiver", "Printemps", "Été", "Automne"]);
   });
