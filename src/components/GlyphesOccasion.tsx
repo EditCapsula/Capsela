@@ -51,16 +51,6 @@ export const GLYPHES_OCCASION: Record<Exclude<OccasionKey, "all">, React.ReactNo
       <line x1="3" y1="12.5" x2="21" y2="12.5" {...S} />
     </>
   ),
-  // Rendez-vous important — une date marquée au calendrier.
-  entretien: (
-    <>
-      <rect x="3.5" y="5.5" width="17" height="15" rx="2" {...S} />
-      <line x1="3.5" y1="10.5" x2="20.5" y2="10.5" {...S} />
-      <line x1="8" y1="3.5" x2="8" y2="7" {...S} />
-      <line x1="16" y1="3.5" x2="16" y2="7" {...S} />
-      <circle cx="12" cy="15.5" r="1.7" fill="currentColor" stroke="none" />
-    </>
-  ),
   // Date — tête-à-tête : la bougie.
   date: (
     <>
@@ -148,6 +138,16 @@ export const GLYPHES_SOUS_CHOIX: Record<WorkMode | DateContext | TravelMode, Rea
       <path d="M3.5 10.2 12 3.5l8.5 6.7" {...S} />
       <path d="M5.5 11.8V20h13v-8.2" {...S} />
       <path d="M9.8 20v-5.2h4.4V20" {...S} />
+    </>
+  ),
+  // Entretien / réunion clé — une date marquée au calendrier (l'ancien glyphe de « Rendez-vous important »).
+  "Entretien": (
+    <>
+      <rect x="3.5" y="5.5" width="17" height="15" rx="2" {...S} />
+      <line x1="3.5" y1="10.5" x2="20.5" y2="10.5" {...S} />
+      <line x1="8" y1="3.5" x2="8" y2="7" {...S} />
+      <line x1="16" y1="3.5" x2="16" y2="7" {...S} />
+      <circle cx="12" cy="15.5" r="1.7" fill="currentColor" stroke="none" />
     </>
   ),
   // Restaurant / date romantique — le couvert.

@@ -1,6 +1,6 @@
 import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_SOIREE_HABILLEE, effectiveFormality, isRainy, isSunny } from "./data";
+import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_ENTRETIEN, PREFS_SOIREE_HABILLEE, effectiveFormality, isRainy, isSunny } from "./data";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
 import { accordVisage, candidatsCouleur, colorimetriePourPivot, type ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -406,8 +406,8 @@ function accessoryProbabilities(occasion: OccasionKey, workMode: WorkMode): { bi
  * qu'une simple journée de bureau — la veste devient nettement plus probable
  * plutôt qu'un tirage à plat 30 %, jamais systématique pour autant.
  */
-function vesteProbability(occasion: OccasionKey): number {
-  if (occasion === "entretien") return 0.65;
+function vesteProbability(occasion: OccasionKey, workMode: WorkMode): number {
+  if (occasion === "travail_formel" && workMode === "Entretien") return 0.65;
   return 0.3;
 }
 
@@ -417,9 +417,7 @@ function occasionPhrase(occasion: OccasionKey, workMode: WorkMode, dateContext: 
     case "quotidien":
       return "ta journée";
     case "travail_formel":
-      return workMode === "Télétravail" ? "ta journée en télétravail" : "ta journée au bureau";
-    case "entretien":
-      return "ton rendez-vous important";
+      return workMode === "Télétravail" ? "ta journée en télétravail" : workMode === "Entretien" ? "ton rendez-vous important" : "ta journée au bureau";
     case "date":
       return dateContext === "Restaurant / date romantique"
         ? "ton dîner"
@@ -1344,7 +1342,7 @@ export function generateOutfit(
   // peu importe météo/saison (nouveau 21/08/2026, décidé) — jamais
   // probabiliste comme vesteProbability pour le reste des occasions/hauts.
   const isChemise = (i: Item | null): boolean => !!i && !!i.subtype && i.subtype.toLowerCase().includes("chemise");
-  const forceEntretienVeste = occasion === "entretien" && isChemise(primaryTop);
+  const forceEntretienVeste = occasion === "travail_formel" && workMode === "Entretien" && isChemise(primaryTop);
 
   // Veste décidée AVANT le calque haut/pull (correctif 21/08/2026, signalé :
   // veste + layering proposés ensemble) — une veste et un calque (chemise
@@ -1367,7 +1365,7 @@ export function generateOutfit(
     // donnée), le comportement est celui d'avant : la veste est forcée.
     (leviers?.manchesIgnorees || primaryTop.manches !== "longues");
   let hasVeste = !!compensatingVeste;
-  if (!hasVeste && (forceEntretienVeste || vesteFraicheRequise || Math.random() < vesteProbability(occasion))) {
+  if (!hasVeste && (forceEntretienVeste || vesteFraicheRequise || Math.random() < vesteProbability(occasion, workMode))) {
     const v = pick(["veste"], forceEntretienVeste);
     if (v) {
       hasVeste = true;
@@ -1505,7 +1503,7 @@ export function generateOutfit(
     // talons favorisés pour une soirée habillée (ex-« Sortie festive ») (cf. OCCASION_STYLE_PREFS) —
     // n'écarte rien, juste une inclination si ça laisse au moins une option
     // (même esprit que R-S10/R-B15/R-B16).
-    const shoeTypePrefs = (soireeHabilleeTirage ? PREFS_SOIREE_HABILLEE : OCCASION_STYLE_PREFS[occasion])?.shoeTypes;
+    const shoeTypePrefs = (soireeHabilleeTirage ? PREFS_SOIREE_HABILLEE : occasion === "travail_formel" && workMode === "Entretien" ? PREFS_ENTRETIEN : OCCASION_STYLE_PREFS[occasion])?.shoeTypes;
     if (shoeTypePrefs?.length) {
       const styled = shoePool.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) shoePool = styled;
@@ -1879,7 +1877,7 @@ export function swapOutfitPiece(
   // R-S16 — symétrique de la préférence de style par occasion appliquée
   // dans generateOutfit (cf. OCCASION_STYLE_PREFS), molle jamais exclusive.
   if (cat === "chaussures") {
-    const shoeTypePrefs = (soireeHabilleeSwap ? PREFS_SOIREE_HABILLEE : OCCASION_STYLE_PREFS[occasion])?.shoeTypes;
+    const shoeTypePrefs = (soireeHabilleeSwap ? PREFS_SOIREE_HABILLEE : occasion === "travail_formel" && workMode === "Entretien" ? PREFS_ENTRETIEN : OCCASION_STYLE_PREFS[occasion])?.shoeTypes;
     if (shoeTypePrefs?.length) {
       const styled = candidates.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) candidates = styled;
@@ -2667,7 +2665,6 @@ export function getOutfitsForItem(
 const OCCASION_STYLE_TITLES: Partial<Record<OccasionKey, string[]>> = {
   quotidien: ["Simple et facile à porter", "Décontractée mais affirmée", "Un cran plus habillée"],
   travail_formel: ["Structurée sans rigidité", "Professionnelle et posée", "Formelle et affirmée"],
-  entretien: ["Posée et accessible", "Sérieuse et maîtrisée", "Rigoureuse et formelle"],
   date: ["Décontractée chic", "Féminine et minimaliste", "Plus habillée"],
   soiree: ["Décontractée du soir", "Chic sans en faire trop", "Sophistiquée"],
   sport: ["Confortable avant tout", "Technique et soignée", "Prête à performer"],
@@ -2757,7 +2754,6 @@ function styleTitleFor(occasion: OccasionKey, axis: DiversityAxis, items: Item[]
 const OCCASION_VARIATION_BASE: Partial<Record<OccasionKey, string>> = {
   quotidien: "Simple et facile à porter au quotidien.",
   travail_formel: "Structurée pour le bureau.",
-  entretien: "Sérieuse et posée pour un rendez-vous important.",
   date: "Une touche soignée pour un rendez-vous.",
   soiree: "Parfaite pour une soirée entre amis.",
   sport: "Confortable et technique.",
@@ -2770,7 +2766,6 @@ const OCCASION_VARIATION_BASE: Partial<Record<OccasionKey, string>> = {
 const OCCASION_CLOSERS: Partial<Record<OccasionKey, string[]>> = {
   quotidien: ["pour un look simple et facile à porter.", "pour une allure décontractée au quotidien."],
   travail_formel: ["pour une allure structurée au bureau.", "pour un rendu soigné et professionnel."],
-  entretien: ["pour une présentation sérieuse et posée."],
   date: ["pour une touche plus soignée pour ce rendez-vous.", "pour une allure élégante sans être trop habillée."],
   soiree: ["pour une soirée entre amis.", "pour une allure plus détendue en soirée."],
   sport: ["confortable et technique."],

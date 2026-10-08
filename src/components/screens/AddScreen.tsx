@@ -222,7 +222,6 @@ function CaseSelect({
  */
 function libelleOccasion(o: OccasionKey): string {
   if (o === "date") return "Rendez-vous";
-  if (o === "entretien") return "Entretien";
   return occasionShortLabel(o);
 }
 

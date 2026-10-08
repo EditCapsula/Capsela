@@ -15,6 +15,8 @@ import type { OccasionKey } from "./types";
  */
 
 const ANCIENNES_VALEURS: Record<string, OccasionKey> = {
+  // « Rendez-vous important » fusionnée dans « Travail / Bureau » (08/10/2026) : son niveau devient le sous-choix « Entretien ».
+  entretien: "travail_formel",
   festive: "soiree",
   sortie_festive: "soiree",
   sortie_soiree: "soiree",
@@ -28,6 +30,11 @@ export function normaliserOccasion(brut: string | null | undefined): OccasionKey
   const cle = brut.trim().toLowerCase();
   if (VALEURS_ACTUELLES.has(cle)) return cle as OccasionKey;
   return ANCIENNES_VALEURS[cle];
+}
+
+/** Une occasion lue en base qui portait l'ancienne valeur « entretien » : elle garde son niveau, le sous-choix « Entretien » de Travail / Bureau. */
+export function estAncienEntretien(brut: string | null | undefined): boolean {
+  return !!brut && brut.trim().toLowerCase() === "entretien";
 }
 
 /** Une liste d'occasions (étiquettes d'une pièce, occasions d'une valise) ramenée aux valeurs canoniques, sans doublon ; les valeurs inconnues sont ignorées. */

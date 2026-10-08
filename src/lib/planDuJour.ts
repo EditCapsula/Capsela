@@ -1,4 +1,4 @@
-import { DATE_CONTEXTS, isRainy, labelPrecipitation, type Weather } from "./data";
+import { DATE_CONTEXTS, WORK_MODES, isRainy, labelPrecipitation, type Weather } from "./data";
 import { CHAUSSURES_OUVERTES } from "./logic";
 import type { TenuePlanifiee } from "./planifier";
 import type { MomentJournee } from "./prevision";
@@ -58,7 +58,6 @@ export function planPourTenueDuJour(
   return { etat: "applicable", plan };
 }
 
-const WORK_MODES: readonly WorkMode[] = ["Présentiel", "Télétravail"];
 
 /** Le sous-choix du plan, rendu à la tenue du jour : mode de travail ou contexte de date, s'il est valide. */
 export function sousChoixDuPlan(plan: Pick<TenuePlanifiee, "occasion" | "sousChoix">): { workMode?: WorkMode; dateContext?: DateContext } {

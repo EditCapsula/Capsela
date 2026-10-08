@@ -15,7 +15,7 @@ import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
 import { resolveItemImage } from "@/lib/catalogImages";
-import { CATS, DATE_CONTEXTS, OCCASIONS, occasionShortLabel, type Weather } from "@/lib/data";
+import { CATS, DATE_CONTEXTS, OCCASIONS, WORK_MODES, occasionShortLabel, type Weather } from "@/lib/data";
 import { sansTenueCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { titreLookDuJour } from "@/lib/logic";
@@ -239,7 +239,6 @@ function dansNJours(n: number): Date {
   return d;
 }
 
-const WORK_MODES: WorkMode[] = ["Présentiel", "Télétravail"];
 
 /**
  * Étiquette de section. 11 px / .16em : la forme MAJORITAIRE de l'app,
@@ -906,7 +905,7 @@ export default function PlanifierScreen() {
   } | null =
     occ === "travail_formel"
       ? {
-          titre: "Où travailleras-tu ce jour-là ?",
+          titre: "Quel type de journée ?",
           valeurs: WORK_MODES,
           courant: workMode,
           choisir: (v) => setWorkMode(v as WorkMode),

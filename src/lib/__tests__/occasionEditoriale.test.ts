@@ -15,8 +15,7 @@ describe("OCCASIONS_EDITORIALES — une source, les vrais assets", () => {
     for (const src of srcs) expect(existsSync(join(process.cwd(), "public", src))).toBe(true);
   });
 
-  it("l'emprunt décidé : Rendez-vous important → Travail ; Voyage → le visuel « déplacement » (Sortie festive n'existe plus, 08/10/2026)", () => {
-    expect(nomVisuel("entretien")).toBe(nomVisuel("travail_formel"));
+  it("Voyage → le visuel « déplacement » (« Sortie festive » et « Rendez-vous important » n'existent plus, 08/10/2026)", () => {
     expect(nomVisuel("voyage")).toBe("capsela_editorial_deplacement_unisex_900x1200.jpg");
   });
 

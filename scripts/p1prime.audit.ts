@@ -79,7 +79,7 @@ const P1: LeviersMesure = { pullCommeHautPrincipal: "base" };
 const BRAS: { nom: string; court: string; leviers: (occ: OccasionKey) => LeviersMesure | undefined }[] = [
   { nom: "A · production actuelle", court: "A", leviers: () => undefined },
   { nom: "B · P1'", court: "B", leviers: () => P1 },
-  { nom: "C · P1' sauf entretien", court: "C", leviers: (occ) => (occ === "entretien" ? undefined : P1) },
+  { nom: "C · P1' sauf entretien", court: "C", leviers: (occ) => (occ === ("entretien" as string) ? undefined : P1) },
 ];
 
 function mulberry32(a: number): () => number {

@@ -69,15 +69,6 @@ export const OCCASIONS_EDITORIALES: Record<Exclude<OccasionKey, "all">, Occasion
     cta: "Voir mes tenues travail",
     visuel: V("travail", "du travail"),
   },
-  entretien: {
-    sujet: "Les rendez\u2011vous importants",
-    pluriel: true,
-    verbe: RYTHME,
-    pour: "tes rendez\u2011vous importants",
-    insight: "Ton dressing t'accompagne surtout dans tes moments importants.",
-    cta: "Voir mes tenues rendez-vous",
-    visuel: V("travail", "du travail"),
-  },
   date: {
     sujet: "Les rendez\u2011vous à deux",
     pluriel: true,

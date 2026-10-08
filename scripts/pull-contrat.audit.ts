@@ -375,7 +375,7 @@ describe("contrat pull / génération", () => {
     for (const cat of ["veste", "manteau"] as CategoryKey[]) {
       const cols = BRAS.map((b) => {
         const r = res.get(b.court)!;
-        return pct(r.parCatOcc.get(`${cat}|entretien`) ?? 0, r.tenuesParOcc.get("entretien") ?? 0).padStart(11);
+        return pct(r.parCatOcc.get(`${cat}|entretien`) ?? 0, r.tenuesParOcc.get("entretien" as OccasionKey) ?? 0).padStart(11);
       });
       console.log(`  ${String(cat).padEnd(14)}${cols.join("")}`);
     }

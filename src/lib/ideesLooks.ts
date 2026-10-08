@@ -106,7 +106,6 @@ const FAMILLE_DE: Partial<Record<OccasionKey, FamilleLook>> = {
   cocooning: "quotidien",
   voyage: "quotidien",
   travail_formel: "travail",
-  entretien: "travail",
   soiree: "sortie",
   date: "sortie",
   evenement_perso: "sortie",

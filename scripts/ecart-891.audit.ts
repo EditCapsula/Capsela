@@ -35,7 +35,7 @@ const ID_891 = 100891;
 const TIRAGES = 20;
 const CONFIGS: { nom: string; occ: OccasionKey[] | null }[] = [
   { nom: "réel : 4 occasions", occ: ["quotidien", "soiree", "date", "evenement_perso"] },
-  { nom: "simulé : 6 occasions", occ: ["quotidien", "travail_formel", "entretien", "soiree", "date", "evenement_perso"] },
+  { nom: "simulé : 6 occasions", occ: ["quotidien", "travail_formel", "entretien" as OccasionKey, "soiree", "date", "evenement_perso"] },
   { nom: "avant retag : vide", occ: null },
 ];
 

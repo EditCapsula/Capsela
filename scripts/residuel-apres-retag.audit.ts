@@ -31,7 +31,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABAS
 const SERVICE_ROLE_KEY = process.env.SB_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const OCC4: OccasionKey[] = ["festive" as OccasionKey, "evenement_perso"];
-const OCC3: OccasionKey[] = ["travail_formel", "entretien", "soiree"];
+const OCC3: OccasionKey[] = ["travail_formel", "entretien" as OccasionKey, "soiree"];
 const UNEPIECE: CategoryKey[] = ["robe", "combinaison"];
 const TIRAGES = 20;
 /**
@@ -45,7 +45,7 @@ const TIRAGES = 20;
 const RETAG_4 = new Set([101038, 100801, 100855, 100993]);
 const RETAG_5 = new Set([101038, 100801, 100855, 100993, 100891]);
 const RETAG_IDS = RETAG_4;
-const RETAG_OCC: OccasionKey[] = ["quotidien", "travail_formel", "entretien", "soiree", "date", "evenement_perso"];
+const RETAG_OCC: OccasionKey[] = ["quotidien", "travail_formel", "entretien" as OccasionKey, "soiree", "date", "evenement_perso"];
 
 function passeRB3(it: Item, occ: OccasionKey, min: number): boolean {
   return (

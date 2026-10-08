@@ -41,7 +41,6 @@ export interface ElementProgramme {
 const CRENEAU_GENERIQUE: Record<string, Creneau> = {
   quotidien: "jour",
   travail_formel: "jour",
-  entretien: "jour",
   date: "soir",
   soiree: "soir",
   sport: "jour",

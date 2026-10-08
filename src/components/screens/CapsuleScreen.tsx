@@ -64,9 +64,7 @@ function occasionPhraseFor(occasion: OccasionKey, workMode: WorkMode, dateContex
     case "quotidien":
       return "ta journée";
     case "travail_formel":
-      return workMode === "Télétravail" ? "ta journée en télétravail" : "ta journée au bureau";
-    case "entretien":
-      return "ton rendez-vous important";
+      return workMode === "Télétravail" ? "ta journée en télétravail" : workMode === "Entretien" ? "ton rendez-vous important" : "ta journée au bureau";
     case "date":
       return dateContext === "Restaurant / date romantique"
         ? "ton dîner"
