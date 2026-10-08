@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import PhotoPiece from "@/components/PhotoPiece";
 import { BoutonAjoutFlottant } from "@/components/screens/WardrobeScreen";
-import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
-import { useAuth } from "@/lib/auth";
-import { computeDefaultCapsule, currentSeasonKey, representativeWeatherFor } from "@/lib/capsule";
-import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
+import { useIdeesDressing } from "@/components/useIdeesDressing";
 import { occasionShortLabel } from "@/lib/data";
 import { groupesDuVestiaire, syntheseDressing } from "@/lib/dressingEcran";
 import {
@@ -21,10 +18,9 @@ import {
 } from "@/lib/dressingSections";
 import type { ItemOutfitVariation } from "@/lib/logic";
 import { clePieces } from "@/lib/outfitFeedback";
-import { paletteHexes } from "@/lib/profile";
-import { saisonPourIdees } from "@/lib/saisons";
+import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import type { CapsuleSeason, Item } from "@/lib/types";
+import type { Item } from "@/lib/types";
 
 /*
  * « TES DERNIÈRES PIÈCES » (maquette V2 du 08/10/2026) — le « Voir tout » de « Ajoutées récemment ». Les pièces du dressing par date
@@ -52,39 +48,8 @@ export default function DernieresPiecesScreen() {
   const { semaine, avant } = separerParSemaine(affichees, maintenant);
   const libelleDuGroupe = (p: Item) => groupes.find((g) => g.categories.includes(p.cat))?.libelle ?? "";
 
-  // LES IDÉES, après le premier rendu. Même pool que « Comment porter … ? », par saison de la pièce.
-  const preferredHexes = useMemo(() => paletteHexes(profile), [profile]);
-  const colorimetrie = useMemo(() => colorimetrieMoteur(profile.colorimetrie), [profile]);
-  const [idees, setIdees] = useState<Map<number, ItemOutfitVariation[]> | null>(null);
-  const idsCalcul = useMemo(() => recentes.slice(0, NB_PIECES_AVEC_IDEES).map((p) => p.id).join(","), [recentes]);
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const courante = state.capsuleSeason || currentSeasonKey();
-      const pools = new Map<CapsuleSeason, Item[]>();
-      const poolDe = (saison: CapsuleSeason) => {
-        let pool = pools.get(saison);
-        if (!pool) {
-          const capsule =
-            saison === courante
-              ? defaultCapsule
-              : computeDefaultCapsule(profile, representativeWeatherFor(saison), state.suggestedExcluded, saison, vestiairePool);
-          pool = poolPourIdees(items, capsule, saison);
-          pools.set(saison, pool);
-        }
-        return pool;
-      };
-      const m = new Map<number, ItemOutfitVariation[]>();
-      for (const p of recentes.slice(0, NB_PIECES_AVEC_IDEES)) {
-        const saison = saisonPourIdees(p, courante);
-        const pool = poolDe(saison);
-        const pivot = pool.some((i) => i.id === p.id) ? pool : [...pool, p];
-        m.set(p.id, calculerIdeesTenues(p, pivot, items, saison, preferredHexes, profile.gender, colorimetrie));
-      }
-      setIdees(m);
-    }, 40);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idsCalcul, defaultCapsule, items]);
+  // LES IDÉES, après le premier rendu (useIdeesDressing) : seize pièces au plus.
+  const idees = useIdeesDressing(useMemo(() => recentes.slice(0, NB_PIECES_AVEC_IDEES), [recentes]));
 
   // « Avec tes nouvelles pièces » : les pièces de la semaine, sinon les quatre dernières ; les looks distincts qu'elles ouvrent.
   const nouvelles = useMemo(() => {
