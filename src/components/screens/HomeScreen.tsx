@@ -135,17 +135,6 @@ export default function HomeScreen() {
    * (arbitrage de la propriétaire) : même quota, même Gate (QuotaTenues).
    */
   const quota = useQuotaTenues();
-  // QUOTA D'ABORD (08/10/2026, demandé : quota dépassé, « Autre idée » ouvre la feuille de quota). Avant, l'avis était écrit — ou
-  // RETIRÉ, un second appui sur le même verdict l'annulant — avant même que le quota ne réponde : la feuille s'ouvrait, mais l'avis
-  // avait bougé. L'avis n'est maintenant enregistré qu'une fois le tirage accordé, juste avant de regénérer (il porte sur la tenue
-  // qu'on quitte), et jamais s'il y est déjà.
-  const pasPourMoi = () => {
-    quota.demander(() => {
-      if (avisDuJour !== "pas_aujourdhui") actions.setOutfitFeedback("pas_aujourdhui");
-      actions.regenOutfit();
-    });
-  };
-
   /**
    * PRÉPARER UNE VALISE (27/09/2026, docs/valise.md) — la décision d'accès
    * (règle PREPARER_VALISE) vit dans le store (`ouvrirValise`), partagée avec
@@ -171,6 +160,17 @@ export default function HomeScreen() {
       state.outfitFeedbackDuJour.find((a) => a.jour === jour && memeTenue(a.pieceIds, state.outfit))?.verdict ?? null
     );
   }, [state.outfitFeedbackDuJour, state.outfit]);
+
+  // QUOTA D'ABORD (08/10/2026, demandé : quota dépassé, « Autre idée » ouvre la feuille de quota). Avant, l'avis était écrit — ou
+  // RETIRÉ, un second appui sur le même verdict l'annulant — avant même que le quota ne réponde : la feuille s'ouvrait, mais l'avis
+  // avait bougé. L'avis n'est maintenant enregistré qu'une fois le tirage accordé, juste avant de regénérer (il porte sur la tenue
+  // qu'on quitte), et jamais s'il y est déjà.
+  const pasPourMoi = () => {
+    quota.demander(() => {
+      if (avisDuJour !== "pas_aujourdhui") actions.setOutfitFeedback("pas_aujourdhui");
+      actions.regenOutfit();
+    });
+  };
   const { profile } = useAuth();
   const firstNameOrYou = profile.displayName || "toi";
 
