@@ -308,6 +308,7 @@ function LigneOption({
  */
 function CartePlanifier({
   glyphe,
+  etiquette,
   titre,
   accroche,
   description,
@@ -323,6 +324,8 @@ function CartePlanifier({
   /** `object-position` du bandeau : chaque visuel a son sujet à une hauteur différente. */
   cadrage?: string;
   glyphe: React.ReactNode;
+  /** La pastille de la carte (« Occasion », « Voyage ») — la même forme que les autres pastilles de l'app (t-pastille). */
+  etiquette?: string;
   titre: [string, string];
   accroche: string;
   description: string;
@@ -357,7 +360,10 @@ function CartePlanifier({
           <span className="w-10 h-10 flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center text-terracotta-deep">
             <Glyphe>{glyphe}</Glyphe>
           </span>
-          <BadgePremium />
+          <span className="flex items-center gap-2">
+            {etiquette && <span className="t-pastille rounded-full px-[10px] py-[5px] bg-warm-bg text-muted-3 uppercase">{etiquette}</span>}
+            <BadgePremium />
+          </span>
         </span>
         <span className="block t-titre-section text-ink mt-[12px]">
           {titre[0]} <span className="italic text-terracotta">{titre[1]}</span>
@@ -642,6 +648,8 @@ export default function PlanifierScreen() {
   const setPlans = actions.setTenuesPlanifiees;
   const [enregistrement, setEnregistrement] = useState(false);
   const [onglet, setOnglet] = useState<"up" | "past">("up");
+  /** Le hub n'affiche qu'une expérience à la fois (08/10/2026) : la tenue par défaut, ou la valise. */
+  const [hub, setHub] = useState<"tenue" | "valise">("tenue");
   const [toast, setToast] = useState<string | null>(null);
 
   const [prevision, setPrevision] = useState<Prevision | null>(null);
@@ -1333,11 +1341,24 @@ export default function PlanifierScreen() {
                 la valise et la tenue pour un profil homme. Sans genre renseigné, pas de visuel choisi au hasard : la
                 carte garde sa forme d'avant, glyphe seul. Ils inspirent et expliquent ; les pièces réelles de la personne
                 n'apparaissent que dans ce qu'elle a déjà créé, sous le bouton de création. */}
-            <div className="flex flex-col gap-4 mt-5">
+            {/* TENUE / VALISE : le même sélecteur que le Dressing, la Valise et Mon planning (SegmentedControl) — la seconde
+                fonctionnalité se découvre sans défiler. Une seule carte à la fois ; elle apparaît par le fondu léger de l'app
+                (capsule-apparition, 220 ms), sans animation si le téléphone demande moins de mouvement. */}
+            <div className="mt-5">
+              <SegmentedControl
+                segments={[{ key: "tenue", label: "Tenue" }, { key: "valise", label: "Valise" }]}
+                actif={hub}
+                onChange={setHub}
+                ariaLabel="Ce que tu veux planifier"
+              />
+            </div>
+            <div key={hub} className="flex flex-col gap-4 mt-4 motion-safe:animate-[capsule-apparition_220ms_ease-out_both]" role="tabpanel">
+              {hub === "tenue" && (
               <CartePlanifier
                 glyphe={G_CINTRE}
+                etiquette="Occasion"
                 titre={["Planifier", "une tenue"]}
-                accroche="Le bon look, au bon moment."
+                accroche="Un moment à venir ? On s'occupe du look."
                 description="Pour un dîner, un rendez-vous, une cérémonie ou toute occasion particulière."
                 ligne="Occasion · date et lieu · tenue personnalisée"
                 cta={tenuesAVenir.length > 0 ? "Planifier une nouvelle tenue" : "Planifier une tenue"}
@@ -1403,13 +1424,16 @@ export default function PlanifierScreen() {
                   </>
                 )}
               </CartePlanifier>
+              )}
 
               {/* Le parcours valise existe depuis le 27/09/2026 : même règle d'accès que l'accueil (PREPARER_VALISE, dans le
                   store), et le retour ramène ici. */}
+              {hub === "valise" && (
               <CartePlanifier
                 glyphe={G_VALISE}
+                etiquette="Voyage"
                 titre={["Préparer", "ma valise"]}
-                accroche="Tous tes looks pour ton séjour."
+                accroche="Une destination en vue ? On compose tes looks."
                 description="Destination, météo, activités et dressing : Capsela prépare une sélection pensée pour ton voyage."
                 ligne="Destination · dates · météo · activités"
                 cta={valisesAVenir.length > 0 ? "Préparer une nouvelle valise" : "Préparer ma valise"}
@@ -1475,6 +1499,7 @@ export default function PlanifierScreen() {
                   </>
                 )}
               </CartePlanifier>
+              )}
             </div>
 
             {/* TES PROCHAINS LOOKS : les prochains sont déjà dans les cartes ci-dessus — ne pas les répéter. Ici, sans
