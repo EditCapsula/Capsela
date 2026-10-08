@@ -47,6 +47,22 @@ const ACCESSORY_CATS: CategoryKey[] = ["chaussures", "sac", "bijou", "accessoire
 export const CHAUSSURES_OUVERTES: ShoeType[] = ["Sandales", "Sandales à talons", "Mules", "Slingbacks", "Espadrilles"];
 
 /**
+ * R-B22 (08/10/2026, signalé : « même si cela fait partie du dressing, on ne peut pas pousser des sandales d'été en plein automne avec
+ * 11° ») — les chaussures d'ÉTÉ (sandales, sandales à talons, espadrilles) ne sont jamais proposées sous 15°, quelle que soit la source
+ * (capsule ou dressing réel) et quelles que soient les saisons que la pièce déclare : le dressing réel les déclare souvent sur toute
+ * l'année, et l'exemption du 01/10 (sandales à talons de fête en automne) ne lève que la SAISON, jamais le thermomètre. 15° est le
+ * seuil de cette exemption telle que mesurée (sandalesDeFete.test.ts : 15° passe, 5° non). ARBITRAGE ÉDITORIAL limité à ces trois
+ * types : les mules et les slingbacks (portées avec des collants) ne sont pas concernées. Sans type renseigné, le nom décide.
+ */
+export const CHAUSSURES_D_ETE: ShoeType[] = ["Sandales", "Sandales à talons", "Espadrilles"];
+export const SEUIL_CHAUSSURES_D_ETE = 15;
+export function estChaussureDEte(i: Pick<Item, "cat" | "shoeType" | "name">): boolean {
+  if (i.cat !== "chaussures") return false;
+  if (i.shoeType) return CHAUSSURES_D_ETE.includes(i.shoeType);
+  return /sandale|espadrille|tropézienne/i.test(i.name || "");
+}
+
+/**
  * Une veste/un manteau seul, sans pièce de base, n'est pas une tenue complète
  * (R-B9).
  *
@@ -309,6 +325,8 @@ export interface LeviersMesure {
    * une sortie festive. Conservé pour qu'un audit retrouve la ligne de base.
    */
   sansSandalesDeFeteEnAutomne?: boolean;
+  /** Reproduit le comportement d'AVANT le 08/10/2026 : les sandales et espadrilles ne sont pas écartées sous 15° (R-B22). */
+  sansFiltreChaussuresDEte?: boolean;
   /**
    * Reproduit le comportement d'AVANT le 01/10/2026 : la longueur des manches
    * (Item.manches, migration 0042) n'est pas lue. La veste par temps frais
@@ -858,6 +876,10 @@ export function generateOutfit(
     // qui ne s'applique elle-même qu'à défaut d'alternative.
     if (isRainy(weather)) {
       r = r.filter((i) => i.cat !== "chaussures" || !i.shoeType || !CHAUSSURES_OUVERTES.includes(i.shoeType));
+    }
+    // R-B22 (08/10/2026) — chaussures d'été jamais proposées sous 15°, dressing réel compris. Règle de catégorie dure, jamais relâchée.
+    if (weather.temp < SEUIL_CHAUSSURES_D_ETE && !leviers?.sansFiltreChaussuresDEte) {
+      r = r.filter((i) => !estChaussureDEte(i));
     }
     return r;
   };
@@ -1820,6 +1842,10 @@ export function swapOutfitPiece(
   // R-B21 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (weather && isRainy(weather)) {
     candidates = candidates.filter((i) => i.cat !== "chaussures" || !i.shoeType || !CHAUSSURES_OUVERTES.includes(i.shoeType));
+  }
+  // R-B22 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
+  if (weather && weather.temp < SEUIL_CHAUSSURES_D_ETE) {
+    candidates = candidates.filter((i) => !estChaussureDEte(i));
   }
   // R-B16 — symétrique de la préférence pluie appliquée dans generateOutfit,
   // molle jamais exclusive : ne filtre que s'il reste au moins une option.

@@ -440,7 +440,9 @@ export default function HomeScreen() {
         <h2 className="t-titre-ecran text-ink mt-1">
           Tout pour ton <span className="italic text-terracotta">style</span>
         </h2>
-        <div className="grid grid-cols-2 gap-[10px] mt-[14px]">
+        {/* Les quatre cartes ont la MÊME hauteur (08/10/2026) : « Ma capsule » cite les styles du profil et pouvait être plus haute que les
+            deux cartes du dessous — `1fr` cale chaque rangée sur la plus haute de toutes. */}
+        <div className="grid grid-cols-2 gap-[10px] mt-[14px]" style={{ gridAutoRows: "1fr" }}>
           <CarteUnivers
             onClick={actions.goWardrobe}
             glyphe={glypheUnivers(D_DRESSING)}
