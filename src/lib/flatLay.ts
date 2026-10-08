@@ -166,6 +166,8 @@ interface ConfigContexte {
   refsDessus?: Partial<Record<RoleFlatLay, Ref>>;
   /** true : la couche (t-shirt sous un pull…) reste dans la tenue mais n'est pas posée dans cette planche (hero-home). */
   masquerCouche?: boolean;
+  /** Combien l'ajustement à la zone peut AGRANDIR la composition (défaut 1,1) : un contexte compact la laisse remplir sa zone. */
+  agrandissementMax?: number;
   /** Seuils de chevauchement propres au contexte (sinon CHEVAUCHEMENT_MAX / MASQUE_MAX). */
   chevauchementMax?: number;
   masqueMax?: number;
@@ -216,8 +218,11 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
   // vide. Les seuils de 18 % / 20 % valent pour les autres contextes ; ici 60 %.
   "hero-home": {
     hauteur: 112,
-    // 12 px de marge MINIMUM, y compris à 360 px (zone de 164 px) : 12 / 164 = 7,32 unités ; 13,4 px à 390 px.
-    marge: 7.4,
+    // « Dans le flat lay de la homepage c'est encore vraiment petit » (08/10/2026) : la marge passe de 7,4 unités (12 px minimum) à 3
+    // (environ 6 px), la planche peut s'agrandir de 30 % au lieu de 10, et l'écran étire la zone dans le remplissage de la card
+    // (HomeScreen). Les pièces restent à 10 px au moins du bord de la card.
+    marge: 3,
+    agrandissementMax: 1.3,
     maxAccessoires: [2, 1],
     ecartAccessoireMax: 12,
     refs: REF_HOME,
@@ -494,7 +499,7 @@ export function composerFlatLay(
   const largeurUtile = 100 - 2 * config.marge;
   const haut = config.margeHaute ?? config.marge;
   const hauteurUtile = hauteurZone - haut - config.marge;
-  const k = Math.min(largeurUtile / (x1 - x0), hauteurUtile / (y1 - y0), 1.1);
+  const k = Math.min(largeurUtile / (x1 - x0), hauteurUtile / (y1 - y0), config.agrandissementMax ?? 1.1);
   const cxEns = (x0 + x1) / 2;
   const cyEns = (y0 + y1) / 2;
   // Le centre de la zone utile : au milieu de la zone quand les deux marges sont égales, plus bas sinon.

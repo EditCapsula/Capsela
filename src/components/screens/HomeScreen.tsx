@@ -388,7 +388,9 @@ export default function HomeScreen() {
         </div>
 
         {/* La composition : toutes les pièces du look, en planche (ZoneLookDuJour — silhouette pendant le chargement). */}
-        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "14px 0 0 0" }}>
+        {/* La zone déborde de 10 px dans le remplissage de droite et de 6 px sur la gouttière : la composition est plus grande (08/10/2026,
+            « c'est encore vraiment petit »). Le texte garde sa colonne ; les pièces restent à 10 px au moins du bord de la card. */}
+        <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "4px -10px 0 -6px" }}>
           {passee ? (
             <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} />
           ) : aucuneTenuePossible ? null : (
