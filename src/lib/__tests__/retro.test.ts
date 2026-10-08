@@ -7,7 +7,7 @@ const MAINTENANT = new Date(2026, 9, 4, 20, 0); // dimanche 4 octobre 2026
 const ts = (jour: number, heure = 21) => new Date(2026, 9, jour, heure).getTime();
 const porte = (id: string, jour: number, pieceIds = [1, 2, 3]): HistoryEntry => ({ id, ts: ts(jour), pieceIds, occasion: "soiree", temp: 18, weatherLabel: "Nuageux" });
 const plan = (id: string, jour: string, pieceIds = [4, 5, 6]): TenuePlanifiee => ({
-  id, jour, moment: "Soirée", occasion: "festive", sousChoix: null, lieu: "Gagny", typeLieu: null, dressingSeul: true, pieceIds, temp: 17, weatherLabel: "Ensoleillé",
+  id, jour, moment: "Soirée", occasion: "soiree", sousChoix: null, lieu: "Gagny", typeLieu: null, dressingSeul: true, pieceIds, temp: 17, weatherLabel: "Ensoleillé",
 });
 
 describe("tenuePassee — l'historique d'abord, le plan ensuite", () => {

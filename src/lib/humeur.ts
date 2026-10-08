@@ -122,12 +122,14 @@ export interface ParametresHumeur {
   morphology: string | null;
   colorimetrie?: ColorimetrieMoteur | null;
   humeur: Humeur | null;
+  /** Soirée habillée (soireeHabillee, occasions.ts) : le palier 4 de l'occasion « soiree ». Sans effet pour les autres occasions. */
+  soireeHabillee?: boolean;
 }
 
 /** Le moteur unique (generateOutfitWithFallback), tiré plusieurs fois quand une humeur est choisie ; sinon un seul tirage, inchangé. */
 export function genererTenueHumeur(p: ParametresHumeur): GeneratedOutfitWithFallback {
   const tirer = () =>
-    generateOutfitWithFallback(p.pool, p.weather, p.occasion, p.workMode, p.dateContext, p.preferredHexes, p.gender, undefined, undefined, p.colorimetrie);
+    generateOutfitWithFallback(p.pool, p.weather, p.occasion, p.workMode, p.dateContext, p.preferredHexes, p.gender, undefined, undefined, p.colorimetrie, p.soireeHabillee);
   const premier = tirer();
   if (!p.humeur || premier.noCompleteOutfit) return premier;
   const resultats: GeneratedOutfitWithFallback[] = [premier];

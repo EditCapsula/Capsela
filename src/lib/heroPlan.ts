@@ -23,7 +23,7 @@ export const jourCourtLong = (jour: string): string => {
   return `${majuscule(JOURS[d.getDay()])} ${d.getDate()} ${MOIS[d.getMonth()]}`;
 };
 
-/** « Sortie festive · Gagny » — l'occasion, puis le lieu s'il y en a un. */
+/** « Soirée · Gagny » — l'occasion, puis le lieu s'il y en a un. */
 export const titreDuPlan = (plan: Pick<TenuePlanifiee, "occasion" | "lieu">): string => {
   const ville = villeDuLieu(plan.lieu);
   return ville ? `${occasionShortLabel(plan.occasion)} · ${ville}` : occasionShortLabel(plan.occasion);

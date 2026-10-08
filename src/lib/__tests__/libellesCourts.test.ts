@@ -5,7 +5,7 @@ import type { OccasionKey } from "@/lib/types";
 // Reproduit les TROIS replis d'origine, tels qu'ils étaient avant unification.
 const ANCIEN_PARTIAL: Partial<Record<OccasionKey, string>> = {
   quotidien: "Quotidien", travail_formel: "Travail", entretien: "Rendez-vous",
-  date: "Date", soiree: "Sortie", festive: "Sortie festive", evenement_perso: "Cérémonie",
+  date: "Date", soiree: "Soirée", evenement_perso: "Cérémonie",
 };
 const ancienSelectors = (k: OccasionKey) => ANCIEN_PARTIAL[k] || OCC_LABELS[k].split(" / ")[0];
 const ancienAddSheet = (k: OccasionKey) => ANCIEN_PARTIAL[k] || OCC_LABELS[k];

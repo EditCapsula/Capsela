@@ -21,36 +21,36 @@ const POOL: Item[] = [
   p(6, "haut", "Top", AUT), p(7, "jupe", "Jupe", AUT),
   p(SANDALES, "chaussures", "Sandales à talons", { season: "Printemps / Été", saisons: ["Été"], shoeType: "Sandales à talons" as ShoeType }),
 ];
-const taux = (occ: OccasionKey, label = "Nuageux", calendaire: "Automne" | "Hiver" = "Automne", leviers?: Parameters<typeof generateOutfitWithFallback>[8], temp = 15) => {
+const taux = (occ: OccasionKey, label = "Nuageux", calendaire: "Automne" | "Hiver" = "Automne", leviers?: Parameters<typeof generateOutfitWithFallback>[8], temp = 15, habillee = false) => {
   const w = weatherForDay(temp, label, calendaire);
   let n = 0;
-  for (let i = 0; i < 150; i++) if (generateOutfitWithFallback(POOL, w, occ, "Présentiel", "Verre", [], "femme", null, leviers).ids.includes(SANDALES)) n++;
+  for (let i = 0; i < 150; i++) if (generateOutfitWithFallback(POOL, w, occ, "Présentiel", "Verre", [], "femme", null, leviers, undefined, habillee).ids.includes(SANDALES)) n++;
   return n;
 };
 
 describe("sandales à talons de fête en automne", () => {
-  it("proposées pour une sortie festive et une cérémonie", () => {
-    expect(taux("festive")).toBeGreaterThan(0);
+  it("proposées pour une soirée habillée (l'ancienne sortie festive) et une cérémonie", () => {
+    expect(taux("soiree", "Nuageux", "Automne", undefined, 15, true)).toBeGreaterThan(0);
     expect(taux("evenement_perso")).toBeGreaterThan(0);
   });
 
-  it("jamais pour les autres occasions", () => {
+  it("jamais pour une soirée polyvalente (sans contexte habillé) ni pour les autres occasions", () => {
     for (const occ of ["quotidien", "travail_formel", "entretien", "date", "soiree", "voyage"] as OccasionKey[]) {
       expect(taux(occ), occ).toBe(0);
     }
   });
 
   it("jamais sous la pluie (R-B21)", () => {
-    expect(taux("festive", "Pluvieux")).toBe(0);
+    expect(taux("soiree", "Pluvieux", "Automne", undefined, 15, true)).toBe(0);
     expect(taux("evenement_perso", "Pluvieux")).toBe(0);
   });
 
   it("jamais par temps d'hiver (5°) — la saison du jour doit comprendre l'automne", () => {
-    expect(taux("festive", "Nuageux", "Hiver", undefined, 5)).toBe(0);
+    expect(taux("soiree", "Nuageux", "Hiver", undefined, 5, true)).toBe(0);
   });
 
   it("le levier sansSandalesDeFeteEnAutomne rend la règle d'origine", () => {
-    expect(taux("festive", "Nuageux", "Automne", { sansSandalesDeFeteEnAutomne: true })).toBe(0);
+    expect(taux("soiree", "Nuageux", "Automne", { sansSandalesDeFeteEnAutomne: true }, 15, true)).toBe(0);
   });
 });
 
@@ -62,17 +62,17 @@ describe("R-B22 — chaussures d'été jamais sous 15°, dressing réel compris 
   const taux2 = (extra: Item[], occ: OccasionKey, temp: number, label = "Nuageux", calendaire: "Automne" | "Hiver" = "Automne") => {
     const w = weatherForDay(temp, label, calendaire);
     let n = 0;
-    for (let i = 0; i < 150; i++) if (generateOutfitWithFallback(pool(extra), w, occ, "Présentiel", "Verre", [], "femme", null).ids.some((id) => extra.some((e) => e.id === id))) n++;
+    for (let i = 0; i < 150; i++) if (generateOutfitWithFallback(pool(extra), w, occ, "Présentiel", "Verre", [], "femme", null, undefined, undefined, true).ids.some((id) => extra.some((e) => e.id === id))) n++;
     return n;
   };
 
   it("des sandales du dressing déclarées sur toute l'année ne sont pas proposées à 11°", () => {
     const sandales = toute(DRESSING_SANDALES, "Sandales", { shoeType: "Sandales" as ShoeType });
-    for (const occ of ["festive", "evenement_perso", "quotidien", "date", "soiree"] as OccasionKey[]) expect(taux2([sandales], occ, 11), occ).toBe(0);
+    for (const occ of ["evenement_perso", "quotidien", "date", "soiree"] as OccasionKey[]) expect(taux2([sandales], occ, 11), occ).toBe(0);
   });
 
   it("de même pour des sandales à talons et des espadrilles, et pour une pièce sans type reconnue par son nom", () => {
-    expect(taux2([toute(DRESSING_SANDALES, "Sandales à talons", { shoeType: "Sandales à talons" as ShoeType })], "festive", 11)).toBe(0);
+    expect(taux2([toute(DRESSING_SANDALES, "Sandales à talons", { shoeType: "Sandales à talons" as ShoeType })], "soiree", 11)).toBe(0);
     expect(taux2([toute(DRESSING_SANDALES, "Espadrilles", { shoeType: "Espadrilles" as ShoeType })], "quotidien", 11)).toBe(0);
     expect(taux2([toute(DRESSING_SANDALES, "Mes sandales dorées")], "quotidien", 11)).toBe(0);
   });
@@ -105,17 +105,17 @@ describe("la saison déclarée d'une pièce du dressing est une règle dure (08/
   const sorties = (pool: Item[], occ: OccasionKey, temp = 11) => {
     const w = weatherForDay(temp, "Nuageux", "Automne");
     let n = 0;
-    for (let i = 0; i < 150; i++) if (generateOutfitWithFallback(pool, w, occ, "Présentiel", "Verre", [], "femme", null).ids.includes(REELLE)) n++;
+    for (let i = 0; i < 150; i++) if (generateOutfitWithFallback(pool, w, occ, "Présentiel", "Verre", [], "femme", null, undefined, undefined, true).ids.includes(REELLE)) n++;
     return n;
   };
 
   it("jamais proposées en automne, même quand elles sont la seule paire du dressing (pas de repli « hors saison »)", () => {
-    for (const occ of ["quotidien", "festive", "evenement_perso", "date", "soiree", "voyage"] as OccasionKey[])
+    for (const occ of ["quotidien", "evenement_perso", "date", "soiree", "voyage"] as OccasionKey[])
       expect(sorties([...sansChaussures, sandalesEte("Sandales", "Sandales" as ShoeType)], occ, 17), occ).toBe(0);
   });
 
-  it("même des sandales à talons déclarées pour l'été, pour une sortie festive : l'exemption ne les touche pas", () => {
-    expect(sorties([...sansChaussures, sandalesEte("Sandales à talons", "Sandales à talons" as ShoeType)], "festive", 17)).toBe(0);
+  it("même des sandales à talons déclarées pour l'été, pour une soirée habillée : l'exemption ne les touche pas", () => {
+    expect(sorties([...sansChaussures, sandalesEte("Sandales à talons", "Sandales à talons" as ShoeType)], "soiree", 17)).toBe(0);
     expect(sorties([...POOL.filter((i) => i.id !== SANDALES), sandalesEte("Sandales à talons", "Sandales à talons" as ShoeType)], "evenement_perso", 17)).toBe(0);
   });
 
@@ -124,7 +124,7 @@ describe("la saison déclarée d'une pièce du dressing est une règle dure (08/
     // Les vêtements du pool de test sont d'automne : on les ouvre à toute l'année pour que la tenue d'été se compose.
     const toutesSaisons = sansChaussures.map((i) => ({ ...i, season: "Toutes saisons", saisons: ["Printemps", "Été", "Automne", "Hiver"] }) as Item);
     let n = 0;
-    for (let i = 0; i < 150; i++) if (generateOutfitWithFallback([...toutesSaisons, sandalesEte("Sandales", "Sandales" as ShoeType)], wEte, "quotidien", "Présentiel", "Verre", [], "femme", null).ids.includes(REELLE)) n++;
+    for (let i = 0; i < 150; i++) if (generateOutfitWithFallback([...toutesSaisons, sandalesEte("Sandales", "Sandales" as ShoeType)], wEte, "quotidien", "Présentiel", "Verre", [], "femme", null, undefined, undefined, true).ids.includes(REELLE)) n++;
     expect(n).toBeGreaterThan(0);
     const aussiAutomne = p(REELLE, "chaussures", "Sandales", { season: "Toutes saisons", saisons: ["Été", "Automne"], shoeType: "Sandales" as ShoeType });
     expect(sorties([...sansChaussures, aussiAutomne], "quotidien", 17)).toBeGreaterThan(0);

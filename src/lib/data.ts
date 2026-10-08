@@ -157,13 +157,14 @@ export const OCCASIONS: [OccasionKey, string, string, number][] = [
   // business_casual — pas le niveau habillé, jamais couvert par les bas du
   // catalogue (aucun pantalon/jupe n'atteint ce niveau dans les capsules).
   ["entretien", "Rendez-vous important", "Entretien, réunion clé", 3],
-  ["date", "Date", "Tête-à-tête", 3],
+  ["date", "Rendez-vous amoureux", "Tête-à-tête", 3],
   // Formalité relevée (recette 24/08/2026, signalé : tenues trop basiques
   // pour ces deux occasions) — repli automatique déjà en place
   // (FORMALITY_FALLBACK_CHAIN, logic.ts) si le dressing/la capsule ne suit
   // pas : 3 -> [3,1], 4 -> [4,3,1], jamais de tenue bloquée pour autant.
-  ["soiree", "Sortie / Soirée", "Bar, dîner, entre amis", 3],
-  ["festive", "Sortie festive", "Club, anniversaire, bal", 4],
+  // « Sortie festive » a été fusionnée ici le 08/10/2026 (occasions.ts) : la formalité de base reste 3 ; elle passe à 4 quand le
+  // contexte de la soirée l'appelle (effectiveFormality, `habillee`).
+  ["soiree", "Soirée", "Bar, dîner, club, entre amis", 3],
   ["sport", "Sport", "Actif, technique", 0],
   ["cocooning", "Cocooning / Maison", "Chez soi, détente", 1],
   ["voyage", "Voyage / Déplacement", "Confortable, polyvalent", 1],
@@ -213,8 +214,7 @@ export const OCC_SHORT: Record<Exclude<OccasionKey, "all">, string> = {
   travail_formel: "Travail",
   entretien: "Rendez-vous",
   date: "Date",
-  soiree: "Sortie",
-  festive: "Sortie festive",
+  soiree: "Soirée",
   sport: "Sport",
   cocooning: "Cocooning",
   voyage: "Voyage",
@@ -242,10 +242,12 @@ export function occasionShortLabel(key: OccasionKey): string {
 /**
  * Formalité minimum effective d'une occasion — "travail_formel" varie selon
  * le sous-choix Présentiel (business casual) / Télétravail (décontracté),
- * "date" varie selon son sous-contexte (cf. DATE_CONTEXTS), les autres
+ * "date" varie selon son sous-contexte (cf. DATE_CONTEXTS), "soiree" monte à 4
+ * quand le contexte la rend habillée (`habillee`, cf. soireeHabillee), les autres
  * occasions gardent leur valeur fixe de OCC_FORMALITY.
  */
-export function effectiveFormality(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext = "Verre"): number {
+export function effectiveFormality(occasion: OccasionKey, workMode: WorkMode, dateContext: DateContext = "Verre", habillee = false): number {
+  if (occasion === "soiree" && habillee) return 4;
   if (occasion === "travail_formel") return workMode === "Télétravail" ? 1 : 3;
   if (occasion === "date") return DATE_CONTEXT_FORMALITY[dateContext] ?? 1;
   return OCC_FORMALITY[occasion] ?? 0;
@@ -269,18 +271,18 @@ export const SHOE_TYPES: ShoeType[] = [
  * préférence de style, comportement inchangé.
  */
 export interface OccasionStylePrefs {
-  /** Types de chaussures favorisés (ex. talons pour une sortie festive). */
+  /** Types de chaussures favorisés (ex. talons pour une soirée habillée). */
   shoeTypes?: ShoeType[];
 }
+/**
+ * Préférence de chaussures d'une soirée HABILLÉE (occasions.ts) — celle de l'ancienne occasion « Sortie festive », qui n'existe plus
+ * comme occasion (08/10/2026) : élargie le 21/08/2026 à toute chaussure à talon. Molle, jamais exclusive.
+ */
+export const PREFS_SOIREE_HABILLEE: OccasionStylePrefs = { shoeTypes: ["Escarpins", "Sandales à talons", "Mules", "Slingbacks"] };
 export const OCCASION_STYLE_PREFS: Partial<Record<OccasionKey, OccasionStylePrefs>> = {
-  // Élargi (correctif 21/08/2026, signalé) au-delà des seuls escarpins :
-  // toute chaussure à talon reste une préférence légitime pour une sortie
-  // festive.
-  festive: { shoeTypes: ["Escarpins", "Sandales à talons", "Mules", "Slingbacks"] },
   // Ajouté (recette 25/08/2026, signalé) — un mariage/baptême appelle une
-  // chaussure à talon au même titre qu'une sortie festive, jamais une
-  // simple sandale plate ; même liste que festive (occasion la plus
-  // proche déjà couverte), préférence molle jamais exclusive comme
+  // chaussure à talon au même titre qu'une soirée habillée, jamais une
+  // simple sandale plate ; même liste (PREFS_SOIREE_HABILLEE), préférence molle jamais exclusive comme
   // partout ailleurs dans cette table.
   evenement_perso: { shoeTypes: ["Escarpins", "Sandales à talons", "Mules", "Slingbacks"] },
   // Ajouté (correctif 21/08/2026, signalé) — inverse : le voyage privilégie

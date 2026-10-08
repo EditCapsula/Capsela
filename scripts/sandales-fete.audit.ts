@@ -117,7 +117,7 @@ function mesurer(scenario: "A" | "B", j: { calendaire: CapsuleSeason; temp: numb
         c.tenues += 1;
         const pieces = ids.map((id) => index.get(id)).filter((p): p is Item => Boolean(p));
         const sandales = pieces.some((p) => p.cat === "chaussures" && p.shoeType === "Sandales à talons");
-        if (occ === "festive" || occ === "evenement_perso") { c.tenuesFete += 1; if (sandales) c.sandFete += 1; }
+        if ((occ as string) === "festive" || occ === "evenement_perso") { c.tenuesFete += 1; if (sandales) c.sandFete += 1; }
         else { c.tenuesAutres += 1; if (sandales) c.sandAutres += 1; }
         if (j.pluie && pieces.some((p) => p.cat === "chaussures" && p.shoeType && CHAUSSURES_OUVERTES.includes(p.shoeType))) c.ouvertesPluie += 1;
         for (const p of pieces) if (p.meteoMaxTemp != null && j.temp > p.meteoMaxTemp) c.horsMax += 1;

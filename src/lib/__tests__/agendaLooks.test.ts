@@ -21,7 +21,7 @@ const tenue = (jour: string, id = jour): Planification => ({
     id,
     jour,
     moment: "Soirée",
-    occasion: "festive",
+    occasion: "soiree",
     sousChoix: null,
     lieu: "Gagny, Île-de-France, France",
     typeLieu: null,
@@ -121,13 +121,13 @@ describe("mises en mots", () => {
 describe("detailCapsela — le conseil lu sur les pièces réelles", () => {
   it("donne une phrase pour un look de plusieurs pièces", () => {
     const pieces = [item(1, "robe"), item(2, "veste"), item(3, "chaussures")];
-    const phrase = detailCapsela(pieces, "festive");
+    const phrase = detailCapsela(pieces, "soiree");
     expect(phrase).toBeTruthy();
     expect(phrase!.length).toBeGreaterThan(10);
   });
 
   it("rien pour une pièce seule ou aucune : l'écran se replie sur la phrase de l'occasion", () => {
-    expect(detailCapsela([item(1, "robe")], "festive")).toBeNull();
-    expect(detailCapsela([], "festive")).toBeNull();
+    expect(detailCapsela([item(1, "robe")], "soiree")).toBeNull();
+    expect(detailCapsela([], "soiree")).toBeNull();
   });
 });

@@ -3,6 +3,7 @@ import { manchesDepuis } from "./manches";
 import { detectAccessoireType, detectBijouType, detectMatiere, detectSacType } from "./attributes";
 import type { CatalogItem } from "./catalog";
 import { FALLBACK_HEX } from "./data";
+import { normaliserOccasions } from "./occasions";
 import type { CapsuleSeason, CategoryKey, Coupe, ImageSource, ImageStatus, IntensiteCouleur, Matiere, OccasionKey, Season, ShoeType, Tons } from "./types";
 
 /**
@@ -56,8 +57,8 @@ import type { CapsuleSeason, CategoryKey, Coupe, ImageSource, ImageStatus, Inten
  * - `occasions` (recette 20/08/2026) : liste libre séparée par virgule,
  *   point-virgule ou barre verticale, valeurs attendues parmi les slugs
  *   internes d'OccasionKey (quotidien, travail_formel, entretien, date,
- *   soiree, festive, sport, cocooning, voyage, evenement_perso — jamais
- *   "all"). Mappée sur Item.occasion, lu par declaredOccasionOk (logic.ts) :
+ *   soiree, sport, cocooning, voyage, evenement_perso — jamais "all" ; l'ancienne
+ *   valeur « festive » se lit « soiree », cf. occasions.ts). Mappée sur Item.occasion, lu par declaredOccasionOk (logic.ts) :
  *   filtre DUR dès qu'au moins une valeur est reconnue — l'article ne peut
  *   plus apparaître pour une occasion absente de cette liste, quelle que
  *   soit sa formalité/saison par ailleurs. Vide/non reconnu = aucune
@@ -290,24 +291,11 @@ function parseCapsuleSeasons(raw: string | null): CapsuleSeason[] | undefined {
   return order.filter((s) => tokens.has(s));
 }
 
-const VALID_OCCASIONS = new Set<OccasionKey>([
-  "quotidien",
-  "travail_formel",
-  "entretien",
-  "date",
-  "soiree",
-  "festive",
-  "sport",
-  "cocooning",
-  "voyage",
-  "evenement_perso",
-]);
-
 /** Filtre discret, jamais bloquant : un token qui ne correspond à aucune occasion connue est simplement ignoré (recette 20/08/2026). */
 function mapOccasions(raw: string | null): OccasionKey[] | undefined {
   const tokens = splitTags(raw);
   if (!tokens) return undefined;
-  const valid = tokens.map((t) => t.trim().toLowerCase()).filter((t): t is OccasionKey => VALID_OCCASIONS.has(t as OccasionKey));
+  const valid = normaliserOccasions(tokens);
   return valid.length ? valid : undefined;
 }
 

@@ -1,6 +1,7 @@
 import { accessoireTypeFor } from "./attributes";
 import { type Verdict, clePieces, jourLocal, litteralTableau } from "./outfitFeedback";
 import { manchesDepuis } from "./manches";
+import { normaliserOccasion, normaliserOccasions } from "./occasions";
 import { ordonnerSaisons } from "./saisons";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import type {
@@ -74,7 +75,7 @@ function rowToItem(row: DressingItemRow): Item {
     season: row.season as Season,
     saisons: row.saisons?.length ? ordonnerSaisons(row.saisons) : undefined,
     manches: manchesDepuis(row.manches),
-    occasion: (row.occasion as OccasionKey[] | null) ?? undefined,
+    occasion: row.occasion ? normaliserOccasions(row.occasion) : undefined,
     shoeType: (row.shoe_type as ShoeType | null) ?? undefined,
     matiere: (row.matiere as Matiere | null) ?? undefined,
     coupe: (row.coupe as Coupe | null) ?? undefined,
@@ -494,7 +495,7 @@ function rowToHistoryEntry(row: OutfitHistoryRow): HistoryEntry {
     id: String(row.id),
     ts: new Date(row.occurred_at).getTime(),
     pieceIds: row.piece_ids ?? [],
-    occasion: row.occasion as OccasionKey,
+    occasion: normaliserOccasion(row.occasion) ?? (row.occasion as OccasionKey),
     temp: row.temp ?? undefined,
     weatherLabel: row.weather_label ?? undefined,
   };
@@ -553,7 +554,7 @@ function rowToSavedLook(row: SavedLookRow): SavedLook {
     id: String(row.id),
     name: row.name,
     pieceIds: row.piece_ids ?? [],
-    occasion: (row.occasion as OccasionKey | null) ?? undefined,
+    occasion: normaliserOccasion(row.occasion),
     source: row.source as SavedLook["source"],
     createdAt: new Date(row.created_at).getTime(),
   };

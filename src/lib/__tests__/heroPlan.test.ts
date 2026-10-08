@@ -30,7 +30,7 @@ describe("hero de l'accueil — textes d'une tenue planifiée", () => {
   });
 
   it("le titre : l'occasion, puis la ville du lieu — sans lieu, l'occasion seule", () => {
-    expect(titreDuPlan({ occasion: "festive", lieu: "Gagny, Île-de-France, France" })).toBe("Sortie festive · Gagny");
-    expect(titreDuPlan({ occasion: "festive", lieu: "" })).toBe("Sortie festive");
+    expect(titreDuPlan({ occasion: "soiree", lieu: "Gagny, Île-de-France, France" })).toBe("Soirée · Gagny");
+    expect(titreDuPlan({ occasion: "soiree", lieu: "" })).toBe("Soirée");
   });
 });

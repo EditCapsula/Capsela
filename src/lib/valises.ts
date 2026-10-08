@@ -1,4 +1,5 @@
 import { getSupabase, isSupabaseConfigured } from "./supabase";
+import { normaliserOccasions } from "./occasions";
 import { jourLocal } from "./outfitFeedback";
 import type { TenuePlanifiee } from "./planifier";
 import type { OccasionKey } from "./types";
@@ -183,7 +184,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     retour: r.retour,
     bagage: r.bagage,
     sejour: (r.sejour as TypeSejour | null) ?? null,
-    occasions: (r.occasions ?? []) as OccasionKey[],
+    occasions: normaliserOccasions(r.occasions),
     meteos: r.calcul?.meteos ?? [],
     situations: r.calcul?.situations ?? [],
     looks: r.calcul?.looks ?? [],

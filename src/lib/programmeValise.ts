@@ -11,7 +11,7 @@ import type { MeteoJour, TypeSejour } from "./valise";
  * ses règles, sans moteur parallèle. `occasionsDuProgramme` rend les mères ; c'est ce que reçoivent les situations.
  *
  * Rattachements arbitrés le 04/10/2026 : Plage et Piscine → Quotidien (contrainte « chaleur ») ; Spa → Cocooning ;
- * Restaurant, Dîner et Sortie en vacances → Sortie / Soirée (Date reste une occasion à part, choisie comme telle) ;
+ * Restaurant, Dîner et Sortie en vacances → Soirée (Date reste une occasion à part, choisie comme telle) ;
  * Randonnée → Sport (contrainte « outdoor ») ; Trajet → Voyage ; Mariage / cérémonie → Événement / Cérémonie.
  * Les contraintes sont des DONNÉES portées par l'entrée ; la phase B les applique en filtrant le pool, jamais dans le moteur.
  *
@@ -44,7 +44,6 @@ const CRENEAU_GENERIQUE: Record<string, Creneau> = {
   entretien: "jour",
   date: "soir",
   soiree: "soir",
-  festive: "soir",
   sport: "jour",
   cocooning: "jour",
   voyage: "trajet",
@@ -80,7 +79,6 @@ export const SOUS_OCCASIONS: ElementProgramme[] = [
   sous("restaurant", "Restaurant", "soiree", "soir"),
   sous("diner", "Dîner", "soiree", "soir"),
   sous("sortie_vacances", "Sortie en vacances", "soiree", "soir"),
-  sous("soiree_festive", "Soirée festive", "festive", "soir"),
   sous("travail_reunion", "Travail / réunion", "travail_formel", "jour"),
   sous("ceremonie", "Mariage / cérémonie", "evenement_perso", "jour"),
   sous("trajet", "Voyage / trajet", "voyage", "trajet"),
@@ -88,7 +86,13 @@ export const SOUS_OCCASIONS: ElementProgramme[] = [
 
 export const TOUS_LES_ELEMENTS: ElementProgramme[] = [...SOUS_OCCASIONS, ...GENERIQUES];
 
-export const elementProgramme = (id: string): ElementProgramme | undefined => TOUS_LES_ELEMENTS.find((e) => e.id === id);
+/** Une valise enregistrée avant le 08/10/2026 peut porter « soiree_festive » (sous-occasion supprimée avec « Sortie festive ») : elle se lit comme « Soirée ». */
+const ANCIENS_ELEMENTS: Record<string, string> = { soiree_festive: "soiree" };
+
+export const elementProgramme = (id: string): ElementProgramme | undefined => {
+  const cible = ANCIENS_ELEMENTS[id] ?? id;
+  return TOUS_LES_ELEMENTS.find((e) => e.id === cible);
+};
 
 export interface ItemProgramme {
   id: string;
@@ -133,7 +137,7 @@ const PROPOSITION: Record<TypeSejour, { retenues: [string, Part][]; proposees: s
   week_end: { retenues: [["visites", 0.4], ["restaurant", 0.4], ["trajet", { fixe: 2 }]], proposees: ["soiree", "shopping", "balade"] },
   professionnel: { retenues: [["travail_reunion", 0.6], ["restaurant", 0.3], ["trajet", { fixe: 2 }]], proposees: ["soiree", "sport", "visites"] },
   road_trip: { retenues: [["balade", 0.4], ["visites", 0.3], ["restaurant", 0.3], ["trajet", { fixe: 2 }]], proposees: ["randonnee", "sport", "soiree"] },
-  evenement: { retenues: [["ceremonie", 0.2], ["visites", 0.3], ["restaurant", 0.2], ["trajet", { fixe: 2 }]], proposees: ["soiree", "soiree_festive", "shopping"] },
+  evenement: { retenues: [["ceremonie", 0.2], ["visites", 0.3], ["restaurant", 0.2], ["trajet", { fixe: 2 }]], proposees: ["soiree", "restaurant", "shopping"] },
   montagne: { retenues: [["sport", 0.5], ["balade", 0.2], ["spa", 0.2], ["restaurant", 0.25], ["trajet", { fixe: 2 }]], proposees: ["cocooning", "randonnee", "soiree"] },
   detente: { retenues: [["spa", 0.3], ["piscine", 0.2], ["balade", 0.2], ["restaurant", 0.25], ["trajet", { fixe: 2 }]], proposees: ["plage", "visites", "soiree"] },
   multi_activites: { retenues: [["visites", 0.3], ["sport", 0.2], ["restaurant", 0.3], ["soiree", 0.2], ["trajet", { fixe: 2 }]], proposees: ["plage", "shopping", "randonnee"] },

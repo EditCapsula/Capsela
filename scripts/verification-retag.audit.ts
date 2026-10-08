@@ -39,7 +39,7 @@ const ATTENDU: Record<number, string> = {
   891: "quotidien,soiree,date,evenement_perso",
 };
 const CIBLES = Object.keys(ATTENDU).map(Number);
-const OCC4: OccasionKey[] = ["festive", "evenement_perso"];
+const OCC4: OccasionKey[] = ["festive" as OccasionKey, "evenement_perso"];
 const OCC3: OccasionKey[] = ["travail_formel", "entretien", "soiree"];
 /** Attendu après exécution. Avant, la mesure doit donner 16 et 16. */
 const CIBLE_REPLI = { evenement_perso: 5, festive: 16 };
@@ -107,7 +107,7 @@ describe("Vérification du retag", () => {
       }
       const cible = (CIBLE_REPLI as Record<string, number>)[occ];
       const verdict = cible === undefined ? "—" : n === cible ? "conforme" : "*** ÉCART ***";
-      console.log(`  ${occ.padEnd(18)}${(occ === "festive" || occ === "evenement_perso" ? "4" : "3").padStart(6)}${(n + "/32").padStart(11)}${(cible === undefined ? "inchangé" : String(cible)).padStart(16)}${verdict.padStart(12)}`);
+      console.log(`  ${occ.padEnd(18)}${((occ as string) === "festive" || occ === "evenement_perso" ? "4" : "3").padStart(6)}${(n + "/32").padStart(11)}${(cible === undefined ? "inchangé" : String(cible)).padStart(16)}${verdict.padStart(12)}`);
       if (n && n <= 20) console.log(`         ${detail.join(" · ")}`);
     }
     console.log(`\n  Rappel des valeurs AVANT exécution : evenement_perso 16/32, festive 16/32,`);

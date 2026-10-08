@@ -190,7 +190,7 @@ describe("périmètre — ce que ce chantier ne devait pas toucher", () => {
   });
 
   it("R-S17 est inchangée : toujours l'égalité stricte sur la robe chemise", () => {
-    expect(logic).toContain('occasion === "festive" ? (i) => i.subtype !== "Chemise" : undefined');
+    expect(logic).toContain('soireeHabilleeTirage ? (i) => i.subtype !== "Chemise" : undefined');
   });
 
   it("aucune notion d'épaisseur n'a été introduite", () => {

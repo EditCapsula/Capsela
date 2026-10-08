@@ -15,9 +15,8 @@ describe("OCCASIONS_EDITORIALES — une source, les vrais assets", () => {
     for (const src of srcs) expect(existsSync(join(process.cwd(), "public", src))).toBe(true);
   });
 
-  it("les deux emprunts décidés : Rendez-vous important → Travail, Sortie festive → Sortie / Soirée ; Voyage → le visuel « déplacement »", () => {
+  it("l'emprunt décidé : Rendez-vous important → Travail ; Voyage → le visuel « déplacement » (Sortie festive n'existe plus, 08/10/2026)", () => {
     expect(nomVisuel("entretien")).toBe(nomVisuel("travail_formel"));
-    expect(nomVisuel("festive")).toBe(nomVisuel("soiree"));
     expect(nomVisuel("voyage")).toBe("capsela_editorial_deplacement_unisex_900x1200.jpg");
   });
 
@@ -30,7 +29,7 @@ describe("OCCASIONS_EDITORIALES — une source, les vrais assets", () => {
 describe("titreStyle — le verbe seulement au-delà de la moitié", () => {
   it("avec les mots de l'application", () => {
     expect(titreStyle(OCCASIONS_EDITORIALES.travail_formel, true)).toBe("Le travail domine ton dressing ce mois-ci");
-    expect(titreStyle(OCCASIONS_EDITORIALES.soiree, true)).toBe("Les sorties rythment ton dressing ce mois-ci");
+    expect(titreStyle(OCCASIONS_EDITORIALES.soiree, true)).toBe("Les soirées rythment ton dressing ce mois-ci");
     expect(titreStyle(OCCASIONS_EDITORIALES.cocooning, true)).toBe("Le cocooning s'invite dans ton dressing ce mois-ci");
     expect(titreStyle(OCCASIONS_EDITORIALES.voyage, true)).toBe("Les voyages rythment ton dressing ce mois-ci");
   });
