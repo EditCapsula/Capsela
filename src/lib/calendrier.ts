@@ -193,12 +193,23 @@ export function jourAbrege(jour: string): string {
   return ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"][dateDe(jour).getDay()];
 }
 
-/** Le numéro de semaine ISO 8601 (la semaine du premier jeudi de l'année est la 1re) du jour « AAAA-MM-JJ ». */
+/**
+ * Le numéro de semaine « simple » du jour « AAAA-MM-JJ » (demandé le 08/10/2026, à la place de la norme ISO 8601) : les semaines vont
+ * du lundi au dimanche, et la semaine qui contient le 1er janvier est la semaine 1, même si elle n'a que quelques jours dans l'année.
+ * Une semaine à cheval sur deux années compte pour la NOUVELLE (celle de son dimanche) : du lundi 28 décembre 2026 au dimanche
+ * 3 janvier 2027, c'est la semaine 1 — la 40e commence le 28 septembre, la 41e le 5 octobre. Elle ne diffère de l'ISO que
+ * autour du Nouvel An.
+ */
 export function numeroDeSemaine(jour: string): number {
+  const lundiDeLaSemaine = (d: Date) => {
+    const l = new Date(d);
+    l.setUTCDate(l.getUTCDate() - ((l.getUTCDay() + 6) % 7));
+    return l;
+  };
   const [a, m, j] = jour.split("-").map(Number);
-  const d = new Date(Date.UTC(a, m - 1, j));
-  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + 3); // le jeudi de cette semaine
-  const premierJeudi = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
-  premierJeudi.setUTCDate(premierJeudi.getUTCDate() - ((premierJeudi.getUTCDay() + 6) % 7) + 3);
-  return 1 + Math.round((d.getTime() - premierJeudi.getTime()) / (7 * 86_400_000));
+  const lundi = lundiDeLaSemaine(new Date(Date.UTC(a, m - 1, j)));
+  const dimanche = new Date(lundi);
+  dimanche.setUTCDate(lundi.getUTCDate() + 6);
+  const premiere = lundiDeLaSemaine(new Date(Date.UTC(dimanche.getUTCFullYear(), 0, 1)));
+  return 1 + Math.round((lundi.getTime() - premiere.getTime()) / (7 * 86_400_000));
 }

@@ -124,17 +124,27 @@ describe("Mon planning — mois complet, semaine en cours, libellés courts", ()
   });
 });
 
-describe("numéro de semaine ISO 8601", () => {
-  it("la semaine du 28 septembre au 4 octobre 2026 est la 40e, la suivante la 41e", () => {
+describe("numéro de semaine simple (la semaine du 1er janvier est la 1re)", () => {
+  it("la semaine du 28 septembre au 4 octobre 2026 est la 40e, celle du 5 au 11 octobre la 41e", () => {
     for (const j of joursDeLaSemaine("2026-09-28")) expect(numeroDeSemaine(j)).toBe(40);
     for (const j of joursDeLaSemaine("2026-10-05")) expect(numeroDeSemaine(j)).toBe(41);
+    expect(numeroDeSemaine("2026-10-08")).toBe(41);
   });
-  it("les bords de l'année : 2026 commence un jeudi (semaine 1) et compte 53 semaines ; fin décembre 2024 est la semaine 1 de 2025", () => {
-    expect(numeroDeSemaine("2026-01-01")).toBe(1);
-    expect(numeroDeSemaine("2026-12-31")).toBe(53);
-    expect(numeroDeSemaine("2027-01-03")).toBe(53);
-    expect(numeroDeSemaine("2027-01-04")).toBe(1);
+  it("le Nouvel An : la semaine qui contient le 1er janvier est la 1re, en entier", () => {
+    // 2026 : le 1er janvier est un jeudi, la semaine va du lundi 29 décembre 2025 au dimanche 4 janvier 2026.
+    for (const j of joursDeLaSemaine("2026-01-01")) expect(numeroDeSemaine(j)).toBe(1);
+    expect(numeroDeSemaine("2026-01-05")).toBe(2);
+    // 2027 : le 1er janvier est un vendredi ; la semaine du 28 décembre 2026 au 3 janvier 2027 est la 1re de 2027.
+    for (const j of joursDeLaSemaine("2027-01-01")) expect(numeroDeSemaine(j)).toBe(1);
+    expect(numeroDeSemaine("2026-12-27")).toBe(52);
+    expect(numeroDeSemaine("2027-01-04")).toBe(2);
+  });
+  it("elle ne diffère de l'ISO qu'autour du Nouvel An : le 30 décembre 2024 est en semaine 1 (ISO 1 aussi), le 3 janvier 2021 en semaine 1 (ISO 53)", () => {
     expect(numeroDeSemaine("2024-12-30")).toBe(1);
-    expect(numeroDeSemaine("2021-01-03")).toBe(53);
+    expect(numeroDeSemaine("2021-01-03")).toBe(1);
+  });
+  it("sept jours d'une même semaine ont toujours le même numéro", () => {
+    for (const lundi of ["2026-03-02", "2026-06-29", "2026-12-28", "2028-01-03"])
+      expect(new Set(joursDeLaSemaine(lundi).map(numeroDeSemaine)).size).toBe(1);
   });
 });
