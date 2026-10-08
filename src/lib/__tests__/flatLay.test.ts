@@ -453,4 +453,15 @@ describe("accueil (hero-home) — composition ciblée sans le t-shirt (08/10/202
   it("sans couche, l'accueil reste identique à avant : rien n'est masqué", () => {
     expect(composerFlatLay([p("pull"), p("pantalon"), p("sac")], "x", { contexte: "hero-home" }).masquees).toEqual([]);
   });
+
+  it("les collants ne sont pas posés dans le hero de l'accueil, mais restent posés dans le détail de la tenue", () => {
+    const pieces = [p("pull"), p("pantalon"), { ...p("accessoire"), accessoireType: "Collants" }, p("sac")];
+    const collants = pieces[2].id;
+    const home = composerFlatLay(pieces, "x", { contexte: "hero-home" });
+    expect(home.pieces.map((q) => q.id)).not.toContain(collants);
+    expect(home.masquees).toContain(collants);
+    expect(home.ecartees).not.toContain(collants);
+    const detail = composerFlatLay(pieces, "x", { contexte: "look-detail" });
+    expect(detail.pieces.map((q) => q.id)).toContain(collants);
+  });
 });
