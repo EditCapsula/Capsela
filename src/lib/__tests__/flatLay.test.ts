@@ -4,6 +4,12 @@ import type { CategoryKey } from "../types";
 
 let n = 0;
 const p = (cat: CategoryKey, ratio = 0.8): PieceFlatLay => ({ id: ++n, cat, ratio });
+const boiteDe = (q: PlacementFlatLay) => {
+  const r = (Math.abs(q.angle) * Math.PI) / 180;
+  const w = q.l * Math.cos(r) + q.h * Math.sin(r);
+  const h = q.l * Math.sin(r) + q.h * Math.cos(r);
+  return { x0: q.x - w / 2, x1: q.x + w / 2, y0: q.y - h / 2, y1: q.y + h / 2 };
+};
 const roles = (pieces: PieceFlatLay[]) => Object.fromEntries(attribuerRoles(pieces).map((r) => [r.piece.cat, r.role]));
 
 describe("attribuerRoles — la pièce héro suit l'ordre du brief", () => {
@@ -256,7 +262,7 @@ describe("calibrage du 08/10/2026 — chevauchements, héro, accessoires", () =>
           for (let a = 0; a < sortie.length; a++)
             for (let b = a + 1; b < sortie.length; b++) {
               const part = commun(sortie[a], sortie[b]) / Math.min(aireDe(sortie[a]), aireDe(sortie[b]));
-              expect(part, `${contexte} look ${k} graine ${i} : ${sortie[a].cat}/${sortie[b].cat}`).toBeLessThanOrEqual(CHEVAUCHEMENT_MAX + 0.02);
+              expect(part, `${contexte} look ${k} graine ${i} : ${sortie[a].cat}/${sortie[b].cat}`).toBeLessThanOrEqual((CONTEXTES[contexte].chevauchementMax ?? CHEVAUCHEMENT_MAX) + 0.02);
             }
         }
   });
@@ -268,7 +274,7 @@ describe("calibrage du 08/10/2026 — chevauchements, héro, accessoires", () =>
           const sortie = composerFlatLay(pieces, `m${k}-${i}`, { contexte }).pieces;
           for (const q of sortie) {
             const masque = sortie.filter((o) => o.z > q.z).reduce((s, o) => s + commun(q, o), 0) / aireDe(q);
-            expect(masque, `${contexte} look ${k} graine ${i} : ${q.cat}`).toBeLessThanOrEqual(MASQUE_MAX + 0.02);
+            expect(masque, `${contexte} look ${k} graine ${i} : ${q.cat}`).toBeLessThanOrEqual((CONTEXTES[contexte].masqueMax ?? MASQUE_MAX) + 0.02);
           }
         }
   });
@@ -341,7 +347,8 @@ describe("regroupement stylistique — les couches d'une même tenue restent ens
   });
 
   it("la couche touche la pièce qu'elle double : au plus 15 % de la zone d'écart, au plus 18 % de recouvrement, derrière elle", () => {
-    for (const contexte of ["hero-home", "look-detail"] as const)
+    // Sur l'accueil la couche n'est pas posée (cf. plus bas) : la règle vaut pour les autres contextes.
+    for (const contexte of ["look-detail"] as const)
       for (let i = 0; i < 30; i++) {
         const o = par(pullTee(), "g" + i, contexte);
         expect(ecart(o.couche, o.secondaire), `${contexte} graine ${i}`).toBeLessThanOrEqual(15);
@@ -352,7 +359,7 @@ describe("regroupement stylistique — les couches d'une même tenue restent ens
   });
 
   it("pull + t-shirt à gauche, pantalon à droite, boots sous le groupe, sac sous le pantalon — jamais en miroir", () => {
-    for (const contexte of ["hero-home", "look-detail"] as const)
+    for (const contexte of ["look-detail"] as const)
       for (let i = 0; i < 40; i++) {
         const o = par(pullTee(), "m" + i, contexte);
         expect(o.secondaire.x, `${contexte} ${i}`).toBeLessThan(o.hero.x);
@@ -384,5 +391,63 @@ describe("regroupement stylistique — les couches d'une même tenue restent ens
   it("la composition reste déterministe", () => {
     const pieces = pullTee();
     expect(composerFlatLay(pieces, "k", { contexte: "look-detail" })).toEqual(composerFlatLay(pieces, "k", { contexte: "look-detail" }));
+  });
+});
+
+describe("accueil (hero-home) — composition ciblée sans le t-shirt (08/10/2026)", () => {
+  const look = () => [p("pull", 1), p("haut", 0.95), p("pantalon", 0.5), p("veste", 0.85), p("sac", 0.85), p("chaussures", 1)];
+  const tee = (pieces: PieceFlatLay[]) => pieces[1].id;
+
+  it("le t-shirt est masqué sur l'accueil, et seulement là : il reste posé dans la page Tenue du jour", () => {
+    const pieces = look();
+    const home = composerFlatLay(pieces, "h", { contexte: "hero-home" });
+    expect(home.masquees).toEqual([tee(pieces)]);
+    expect(home.pieces.find((q) => q.id === tee(pieces))).toBeUndefined();
+    expect(home.pieces.length).toBe(5);
+    for (const contexte of ["look-detail", "capsule", "dressing", "packing"] as const) {
+      const autre = composerFlatLay(pieces, "h", { contexte });
+      expect(autre.masquees).toEqual([]);
+      expect(autre.pieces.find((q) => q.id === tee(pieces))?.role).toBe("couche");
+    }
+  });
+
+  it("pull à gauche, pantalon à droite du pull, blazer à droite et derrière, sac en bas à gauche, boots en bas à droite", () => {
+    for (let i = 0; i < 30; i++) {
+      const sortie = composerFlatLay(look(), "t" + i, { contexte: "hero-home" }).pieces;
+      const o = Object.fromEntries(sortie.map((q) => [q.role, q]));
+      expect(o.secondaire.x, `graine ${i}`).toBeLessThan(o.bas.x);
+      expect(o.bas.x).toBeLessThan(o.hero.x);
+      expect(o.hero.z).toBeLessThan(o.bas.z);
+      expect(o.sac.x).toBeLessThan(o.chaussures.x);
+      expect(o.sac.y).toBeGreaterThan(o.secondaire.y);
+      expect(o.chaussures.y).toBeGreaterThan(o.hero.y);
+    }
+  });
+
+  it("les cinq pièces restent dans la zone de sécurité (12 px au minimum, 7,4 unités) et occupent au moins 78 % de sa largeur", () => {
+    const h = CONTEXTES["hero-home"].hauteur;
+    const m = CONTEXTES["hero-home"].marge;
+    expect(m).toBeGreaterThanOrEqual(12 / 164 * 100 - 1e-9);
+    for (let i = 0; i < 30; i++) {
+      const sortie = composerFlatLay(look(), "z" + i, { contexte: "hero-home" }).pieces;
+      const boites = sortie.map(boiteDe);
+      const x0 = Math.min(...boites.map((b) => b.x0));
+      const x1 = Math.max(...boites.map((b) => b.x1));
+      expect(x0).toBeGreaterThanOrEqual(m - 1e-6);
+      expect(x1).toBeLessThanOrEqual(100 - m + 1e-6);
+      expect(Math.min(...boites.map((b) => b.y0))).toBeGreaterThanOrEqual(m - 1e-6);
+      expect(Math.max(...boites.map((b) => b.y1))).toBeLessThanOrEqual(h - m + 1e-6);
+      expect(x1 - x0).toBeGreaterThanOrEqual(78);
+    }
+  });
+
+  it("les inclinaisons de la composition ciblée restent dans les plages (pull +2°, pantalon −2°, blazer +4°, sac −6°, boots −8°, à 1,5° près)", () => {
+    const cible = { secondaire: 2, bas: -2, hero: 4, sac: -6, chaussures: -8 } as const;
+    for (let i = 0; i < 30; i++)
+      for (const q of composerFlatLay(look(), "a" + i, { contexte: "hero-home" }).pieces) expect(Math.abs(q.angle - cible[q.role as keyof typeof cible])).toBeLessThanOrEqual(1.5 + 1e-9);
+  });
+
+  it("sans couche, l'accueil reste identique à avant : rien n'est masqué", () => {
+    expect(composerFlatLay([p("pull"), p("pantalon"), p("sac")], "x", { contexte: "hero-home" }).masquees).toEqual([]);
   });
 });
