@@ -79,7 +79,9 @@ export function FlatLayCapsela({
   return (
     <div
       className="absolute inset-0 w-full h-full flex items-center justify-center transition-opacity duration-[420ms] ease-out motion-reduce:transition-none"
-      style={{ containerType: "size", opacity: attendre ? 0 : 1 }}
+      // `isolation` : les profondeurs des pièces (jusqu'à 60) restent DANS la planche. Sans elle, le sac passait par-dessus la barre
+      // du bas (z-20) dès que la planche défilait dessous — corrigé le 08/10/2026 après le passage des profondeurs en dizaines.
+      style={{ containerType: "size", opacity: attendre ? 0 : 1, isolation: "isolate" }}
     >
       <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / HAUTEUR}))`, aspectRatio: `100 / ${HAUTEUR}` }}>
         {composition.map((p) => {
