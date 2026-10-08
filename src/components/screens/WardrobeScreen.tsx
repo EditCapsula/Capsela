@@ -344,7 +344,7 @@ export default function WardrobeScreen() {
   // ── DRESSING REMPLI (V6, 08/10/2026) ─────────────────────────────────
   // Ordre imposé : intro, ajoutées récemment, tes pièces, à redécouvrir, tes looks, recommandation. Chaque section se tait
   // quand elle n'a pas de donnée vraie.
-  const recentes = piecesRecentes(items);
+  const recentes = piecesRecentes(items, 8, maintenant);
   const looks = looksRecents(state.history, state.savedLooks, resolvePool, 2);
   const sectionHaute = "mt-[34px]";
 

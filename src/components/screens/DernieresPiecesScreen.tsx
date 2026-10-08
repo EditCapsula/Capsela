@@ -43,10 +43,10 @@ export default function DernieresPiecesScreen() {
   const { profile } = useAuth();
   const items = state.items;
   const [groupe, setGroupe] = useState<string>("toutes");
-  const [maintenant] = useState(() => Date.now());
 
   const groupes = useMemo(() => groupesDuVestiaire(items, profile.gender), [items, profile.gender]);
-  const recentes = useMemo(() => piecesRecentes(items, 60), [items]);
+  const [maintenant] = useState(() => Date.now());
+  const recentes = useMemo(() => piecesRecentes(items, 60, maintenant), [items, maintenant]);
   const categories = groupes.find((g) => g.id === groupe)?.categories;
   const affichees = categories ? recentes.filter((p) => categories.includes(p.cat)) : recentes;
   const { semaine, avant } = separerParSemaine(affichees, maintenant);
@@ -160,6 +160,17 @@ export default function DernieresPiecesScreen() {
                 {g.libelle}
               </button>
             ))}
+          </div>
+        )}
+
+        {recentes.length === 0 && (
+          <div className="mt-8 text-[13px] leading-[1.55]" style={{ color: "var(--color-muted-3)" }}>
+            Aucune pièce ajoutée ces 30 derniers jours.
+            <div>
+              <button onClick={() => actions.goWardrobePieces()} className="t-lien text-terracotta-deep cursor-pointer mt-2" style={{ minHeight: 44 }}>
+                Voir tout mon dressing →
+              </button>
+            </div>
           </div>
         )}
 

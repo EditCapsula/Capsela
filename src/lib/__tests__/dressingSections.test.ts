@@ -33,11 +33,16 @@ describe("ligneDressing", () => {
 describe("Ajoutées récemment", () => {
   it("une pièce ajoutée aujourd'hui passe en premier ; le tri ne regarde que la date d'ajout", () => {
     const items = [piece(1, "haut", { createdAt: jours(5) }), piece(2, "jupe", { createdAt: jours(0), worn: 30 }), piece(3, "sac", { createdAt: jours(2) })];
-    expect(piecesRecentes(items).map((i) => i.id)).toEqual([2, 3, 1]);
+    expect(piecesRecentes(items, 8, MIDI).map((i) => i.id)).toEqual([2, 3, 1]);
     expect(dateRelativeAjout(items[1].createdAt!, MIDI)).toBe("Ajoutée aujourd'hui");
   });
+  it("30 derniers jours seulement : une pièce plus ancienne n'est pas « récente », même la dernière ajoutée", () => {
+    const items = [piece(1, "haut", { createdAt: jours(29) }), piece(2, "jupe", { createdAt: jours(31) }), piece(3, "sac", { createdAt: jours(90) })];
+    expect(piecesRecentes(items, 8, MIDI).map((i) => i.id)).toEqual([1]);
+    expect(piecesRecentes([piece(4, "haut", { createdAt: jours(45) })], 8, MIDI)).toEqual([]);
+  });
   it("une pièce sans date d'ajout n'y figure pas", () => {
-    expect(piecesRecentes([piece(1, "haut")])).toEqual([]);
+    expect(piecesRecentes([piece(1, "haut")], 8, MIDI)).toEqual([]);
   });
   it("dates relatives en jours calendaires", () => {
     expect(dateRelativeAjout(new Date(2026, 9, 7, 23, 50).getTime(), new Date(2026, 9, 8, 0, 10).getTime())).toBe("Ajoutée hier");

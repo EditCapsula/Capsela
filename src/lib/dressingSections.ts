@@ -24,10 +24,17 @@ export function ligneDressing(nbPieces: number, nbCategories: number): string {
 
 // ── AJOUTÉES RÉCEMMENT ───────────────────────────────────────────────
 
-/** Les pièces du dressing par date d'ajout décroissante, et rien d'autre : ni saison, ni usage. Une pièce sans date d'ajout n'y figure pas. */
-export function piecesRecentes(items: Item[], max = 8): Item[] {
+/**
+ * LES DERNIÈRES PIÈCES = LES 30 DERNIERS JOURS (08/10/2026, décidé) : découverte et inspiration. Le Dressing, lui, est tout le
+ * vestiaire — gestion et exploration. Une pièce plus ancienne n'est jamais « récente », même si c'est la dernière ajoutée.
+ */
+export const JOURS_DERNIERES_PIECES = 30;
+
+/** Les pièces ajoutées ces 30 derniers jours, par date d'ajout décroissante, et rien d'autre : ni saison, ni usage. Une pièce sans date d'ajout n'y figure pas. */
+export function piecesRecentes(items: Item[], max = 8, maintenant: number = Date.now()): Item[] {
+  const limite = debutDeJour(maintenant) - JOURS_DERNIERES_PIECES * 86_400_000;
   return items
-    .filter((i): i is Item & { createdAt: number } => typeof i.createdAt === "number")
+    .filter((i): i is Item & { createdAt: number } => typeof i.createdAt === "number" && i.createdAt >= limite)
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, max);
 }
