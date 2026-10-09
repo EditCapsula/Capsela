@@ -15,6 +15,7 @@ import {
   syntheseDressing,
 } from "@/lib/dressingEcran";
 import {
+  articlePossessif,
   candidatsARedecouvrir,
   designationPiece,
   ideeLaPlusComplete,
@@ -382,7 +383,8 @@ export default function WardrobeScreen() {
 
   const aRedecouvrirUne = aRedecouvrir[0];
   const nbLooksRedecouvrir = aRedecouvrirUne ? (idees?.get(aRedecouvrirUne.piece.id)?.length ?? 0) : 0;
-  const pluriel = aRedecouvrirUne?.piece.cat === "chaussures";
+  // Accord sur le nom, comme l'article (« Tes baskets attendent », « Ta basket attend ») — plus sur la catégorie (09/10/2026).
+  const pluriel = aRedecouvrirUne ? articlePossessif(aRedecouvrirUne.piece) === "tes" : false;
 
   return (
     <div
