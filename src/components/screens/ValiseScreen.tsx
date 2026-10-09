@@ -25,7 +25,10 @@ import {
   categoriesPourCompleter,
   BAGAGES,
   capaciteDe,
-  cibleDePieces,
+  UNITES_MOYENNES_PAR_PIECE,
+  unitesDe,
+  volumeDe,
+  cibleDeVolume,
   composerValise,
   conseilMeteo,
   dateDe,
@@ -740,7 +743,7 @@ export default function ValiseScreen() {
                     key={t}
                     onClick={() => setBagage(t)}
                     aria-pressed={on}
-                    aria-label={`${t}, ${libelle}, jusqu'à ${cap} pièces`}
+                    aria-label={`${t}, ${libelle}, environ ${cap} pièces`}
                     className={
                       "relative flex flex-col text-left rounded-feuille px-[14px] pt-[14px] pb-[13px] cursor-pointer border transition-colors " +
                       (on ? "bg-warm-bg border-terracotta" : "bg-card border-border")
@@ -756,13 +759,13 @@ export default function ValiseScreen() {
                       {glypheValise(26 + i * 7)}
                     </span>
                     <span className="block text-[13px] text-ink leading-[1.25]">{libelle}</span>
-                    <span className="block text-[11px] text-muted mt-[2px]">jusqu&apos;à {cap} pièces</span>
+                    <span className="block text-[11px] text-muted mt-[2px]">environ {cap} pièces</span>
                   </button>
                 );
               })}
             </div>
             <div className="text-[12px] text-muted leading-[1.5] mt-4">
-              La capacité inclut vêtements, chaussures, sacs et accessoires.
+              La place tient compte de l&apos;encombrement : chaussures et manteaux en prennent plus qu&apos;un t-shirt.
               <br />
               Capsela cherche à maximiser tes looks avec l&apos;espace disponible.
             </div>
@@ -947,7 +950,7 @@ export default function ValiseScreen() {
                   </>
                 )}
                 {sejour && bloc(3, "Type de séjour", libelleSejour(sejour))}
-                {bagage && bloc(2, "Valise", <>{bagage} · {libelleBagageTexte} · jusqu&apos;à {capaciteTexte} pièces</>)}
+                {bagage && bloc(2, "Valise", <>{bagage} · {libelleBagageTexte} · environ {capaciteTexte} pièces</>)}
                 {bloc(
                   4,
                   "Programme",
@@ -1171,8 +1174,10 @@ function Resultat({
   const looks = valise.looks.filter((l) => l.ids.every((id) => ids.includes(id)) && lookAChaussuresEtSac(l.ids, pieces));
   const parPiece = looksParPiece(looks);
   const couvertes = occasionsCouvertes(looks, valise.situations);
-  const depasse = etatJauge(pieces.length, capacite) === "depassee";
-  const aAlleger = depasse ? allegement(ids, looks, capacite) : [];
+  const volume = volumeDe(pieces);
+  const depasse = etatJauge(volume, capacite) === "depassee";
+  const aAlleger = depasse ? allegement(ids, looks, capacite, (id) => unitesDe(pieces.find((p) => p.id === id)?.cat ?? "haut")) : [];
+  const tauxRemplissage = Math.round((volume / capacite) * 100);
   const nbJours = valise.meteos.length;
   const pieceDe = (id: number) => pieces.find((p) => p.id === id);
   const occasionsDemandees = [...new Set(valise.situations.map((s) => s.occasion))];
@@ -1498,7 +1503,8 @@ function Resultat({
                 (() => {
                   const t = proposition.tenue;
                   const piecesT = t.ids.map((id) => dressing.find((x) => x.id === id)).filter((x): x is Item => !!x);
-                  const total = new Set([...valise.pieceIds, ...t.ids]).size;
+                  const idsTotal = new Set([...valise.pieceIds, ...t.ids]);
+                  const total = volumeDe(dressing.filter((x) => idsTotal.has(x.id)));
                   return (
                     <Card rayon="tuile" className="mt-4 p-[14px]">
                       <div className="flex gap-[3px]">
@@ -1514,7 +1520,7 @@ function Resultat({
                       </div>
                       {total > capacite && (
                         <div className="text-[12px] text-terracotta leading-[1.45] mt-[6px]">
-                          Ta valise passerait à {total} pièces pour une capacité de {capacite}.
+                          Ta valise dépasserait la place d&apos;une valise {valise.bagage}.
                         </div>
                       )}
                       <div className="flex gap-2 mt-4">
@@ -1794,8 +1800,10 @@ function Resultat({
    * du type de valise atteinte (cibleDePieces, 70 % de la capacité), sans dépasser la capacité. Sinon elle est à
    * compléter, et l'écran dit par quoi.
    */
-  const cible = cibleDePieces(valise.bagage);
-  const manquePieces = Math.max(0, cible - pieces.length);
+  const cible = cibleDeVolume(valise.bagage);
+  const manqueVolume = Math.max(0, cible - volume);
+  /** Environ combien de pièces ordinaires combleraient ce volume — dit « environ », jamais comme un compte exact. */
+  const manquePieces = manqueVolume > 0 ? Math.max(1, Math.ceil(manqueVolume / UNITES_MOYENNES_PAR_PIECE)) : 0;
   const prete = looks.length > 0 && occasionsAManque.length === 0 && manquePieces === 0 && !depasse;
   /** Le séjour est couvert : une valise prête, et de quoi varier sur la durée. C'est ce que dit le bloc de validation, rien de plus. */
   const sejourCouvert = prete && !peuDeLooks;
@@ -1925,7 +1933,7 @@ function Resultat({
               : manquePieces > 0
                 ? (
                   <>
-                    {`${manquePieces} ${manquePieces > 1 ? "pièces" : "pièce"} de plus compléteraient ta valise ${valise.bagage} (${pieces.length} sur ${cible} visées).`}
+                    {`Environ ${manquePieces} ${manquePieces > 1 ? "pièces" : "pièce"} de plus compléteraient ta valise ${valise.bagage} (remplie à ${tauxRemplissage} %).`}
                     <button onClick={() => setFeuille({ type: "ajouter" })} className="block mt-[6px] t-lien text-terracotta underline underline-offset-[3px] cursor-pointer">
                       Trouver dans mon dressing
                     </button>
@@ -1987,7 +1995,7 @@ function Resultat({
           Uniquement ton dressing
         </span>
         <span className={"text-[11px] " + (depasse ? "text-terracotta" : "text-muted")}>
-          Valise {valise.bagage} · {depasse ? `${pieces.length - capacite} de trop` : `${pieces.length} / ${capacite} pièces`}
+          Valise {valise.bagage} · {depasse ? "trop pleine" : `${pieces.length} ${pieces.length > 1 ? "pièces" : "pièce"} · remplie à ${tauxRemplissage} %`}
         </span>
       </div>
       {/* Une métrique n'est dite que si elle est comptée : la pièce la plus réutilisée, et dans combien de looks. */}
@@ -2293,7 +2301,7 @@ function Resultat({
             <Card className="mt-4 p-[14px]">
               <div className="t-titre-carte text-ink">On allège un peu ?</div>
               <div className="text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
-                {pieces.length - capacite} {pieces.length - capacite > 1 ? "pièces de trop" : "pièce de trop"} pour une valise {valise.bagage}. Voici celles qui servent
+                Ta valise dépasse la place d&apos;une valise {valise.bagage}. Voici les pièces qui servent
                 le moins.
               </div>
               <div className="flex flex-col gap-2 mt-3">

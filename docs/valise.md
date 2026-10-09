@@ -45,18 +45,31 @@ Le lot 2 (question du transport, tenue de trajet hors capacité, onglets Trajet 
 
 ## 3. Capacité par valise
 
-| Taille | Libellé | Capacité |
-| --- | --- | --- |
-| S | Cabine souple | 8 pièces |
-| M | Cabine | 12 pièces |
-| L | Grande valise | 18 pièces |
-| XL | Très grande valise | 24 pièces |
+**Révisé le 09/10/2026** (demandé : « est-ce que tu te bases sur de vraies estimations ? ») : la capacité n'est plus un nombre de pièces mais un **volume**, en unités d'encombrement (un t-shirt plié = 1). Le barème et les capacités sont un **ARBITRAGE ÉDITORIAL** validé le 09/10/2026 : des ordres de grandeur, ni mesurés ni pesés. [DÉCIDÉ]
 
-Chaussures, sacs et accessoires compris ; ne dépend que de la taille. Capacités : **ARBITRAGE ÉDITORIAL** du 27/09/2026. Libellés L et XL : brief de refonte (« Soute moyenne » / « Grande soute » se lisaient mal). [DÉCIDÉ]
+| Taille | Libellé | Capacité (unités) | L'écran dit |
+| --- | --- | --- | --- |
+| S | Cabine souple | 14 | environ 8 pièces |
+| M | Cabine | 22 | environ 12 pièces |
+| L | Grande valise | 32 | environ 18 pièces |
+| XL | Très grande valise | 44 | environ 24 pièces |
 
-La capacité est un plafond, pas un objectif : le résultat met en avant « pièces → looks » et ne dit la capacité qu'en second (« Valise M · jusqu'à 12 pièces »). [DÉCIDÉ]
+| Catégorie | Unités |
+| --- | --- |
+| Bijou | 0,25 |
+| Accessoire | 0,5 |
+| Haut, short, jupe | 1 |
+| Robe, combinaison | 1,5 |
+| Pantalon, jean, pull, sac | 2 |
+| Veste / blazer | 2,5 |
+| Chaussures | 3 |
+| Manteau | 4 |
 
-**Révisé le 04/10/2026** (demandé : « on est partie sur un nombre de pièces par type de valise », après une valise « prête » à 1 pièce sur 18) : la capacité reste le plafond, et devient aussi une CIBLE pour dire « prête ». Une valise n'est « prête » qu'avec au moins un look par occasion demandée ET `cibleDePieces` atteinte — 70 % de la capacité arrondi au supérieur (S 6, M 9, L 13, XL 17) —, sans dépasser le plafond. Sinon, « Ta valise à compléter », et l'écran dit combien de pièces manquent. Le compteur se lit « 1 / 18 pièces ». **Le 70 % est une proposition, à confirmer : ARBITRAGE ÉDITORIAL.** Le moteur ne change pas : il continue de composer avec le moins de pièces possible ; c'est la présentation qui ne dit plus « prête » avant la cible.
+Le « environ N pièces » suppose 1,8 unité par pièce en moyenne : il n'est qu'un affichage. Le moteur remplit le volume ; ses ratios « looks par pièce » restent comptés en pièces. Chaussures, sacs et accessoires comptés ; ne dépend que de la taille (ni durée, ni saison, ni transport). Un vêtement porté pour le trajet compte quand même : l'app ne sait pas ce qui est porté.
+
+La capacité est un plafond, pas un objectif : le résultat met en avant « pièces → looks » et dit en second le remplissage (« 9 pièces · remplie à 65 % »). [DÉCIDÉ]
+
+**Cible « prête »** (04/10/2026, révisée le 09/10/2026) : une valise n'est « prête » qu'avec au moins un look par occasion demandée ET 70 % de son volume atteint (S 10, M 16, L 23, XL 31 unités), sans dépasser le plafond. Sinon, « Ta valise à compléter », et l'écran dit environ combien de pièces manquent. **Le 70 % est une proposition, à confirmer : ARBITRAGE ÉDITORIAL.**
 
 ## 4. Type de séjour → occasions présélectionnées
 
