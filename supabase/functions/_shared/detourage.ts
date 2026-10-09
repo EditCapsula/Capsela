@@ -37,7 +37,8 @@ export const LIMITE_MISES_A_PLAT_PAR_DEFAUT = 5;
 
 /** `{user}/{uuid}.jpg` devient `{user}/{uuid}.detouree.plat.webp`. */
 export function cheminMisAPlat(cheminOriginal: string, ext: "webp" | "png" = "webp"): string {
-  const sansExtension = cheminOriginal.replace(/\.[^./]+$/, "");
+  // Une photo déjà détourée (`….detouree.webp`) mise à plat ensuite : `….detouree.plat.webp`, sans doubler la marque.
+  const sansExtension = cheminOriginal.replace(/\.[^./]+$/, "").replace(/\.detouree$/, "");
   return `${sansExtension}${MARQUE_DETOUREE}${MARQUE_MISE_A_PLAT.slice(1)}${ext}`;
 }
 

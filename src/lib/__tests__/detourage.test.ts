@@ -173,6 +173,8 @@ describe("la mise à plat d'une pièce portée (10/10/2026)", () => {
   it("le fichier mis à plat reste un fichier détouré, et se reconnaît à sa marque", () => {
     expect(cheminMisAPlat("u1/abc.jpg")).toBe("u1/abc.detouree.plat.webp");
     expect(cheminMisAPlat("u1/abc.jpg", "png")).toBe("u1/abc.detouree.plat.png");
+    // Une photo déjà détourée mise à plat ensuite (bouton « Mettre la photo à plat ») : la marque ne se double pas.
+    expect(cheminMisAPlat("u1/abc.detouree.webp")).toBe("u1/abc.detouree.plat.webp");
     expect(estPhotoDetouree("https://x/u1/abc.detouree.plat.webp?token=1")).toBe(true);
     expect(estPhotoMiseAPlat("https://x/u1/abc.detouree.plat.webp?token=1")).toBe(true);
     expect(estMiseAPlatServeur("u1/abc.detouree.plat.webp")).toBe(true);

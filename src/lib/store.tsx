@@ -427,6 +427,12 @@ export interface Actions {
   startReplace: (item: Item, retour?: Screen) => void;
   /** Ouvre l'écran Ajouter en mode édition pour une pièce réelle du dressing ("Modifier les informations"/"Changer la photo", recette 24/08/2026) — préremplit tous les champs, saveItem met alors à jour cette ligne plutôt que d'en créer une nouvelle. */
   startEditItem: (item: Item) => void;
+  /** « Mettre à plat » (pièce déjà importée) : demande la version mise à plat de la photo ; rend son URL signée, ou null (service absent, plafond, plan sans accès). Rien n'est remplacé. */
+  proposerMiseAPlat: (id: number) => Promise<string | null>;
+  /** Garde la version mise à plat : la photo de la pièce est remplacée, l'ancienne supprimée du stockage si plus rien ne la référence. */
+  adopterPhotoMiseAPlat: (id: number, urlMiseAPlat: string) => void;
+  /** Refuse la version mise à plat : le fichier généré est supprimé du stockage, la pièce garde sa photo. */
+  ecarterPhotoMiseAPlat: (urlMiseAPlat: string) => void;
   setCatFilter: (k: CategoryKey | "all") => void;
   setAddName: (v: string) => void;
   setAddBrand: (v: string) => void;
@@ -1903,6 +1909,35 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           screen: "add",
         };
       }),
+    proposerMiseAPlat: async (id) => {
+      const it = stateRef.current.items.find((x) => x.id === id);
+      if (!it?.photoUrl || !isSupabaseConfigured) return null;
+      return detourerPhoto(it.photoUrl, "mise_a_plat");
+    },
+    adopterPhotoMiseAPlat: (id, urlMiseAPlat) => {
+      const avant = stateRef.current.items;
+      const it = avant.find((x) => x.id === id);
+      if (!it) return;
+      setState((st) => ({ ...st, items: st.items.map((x) => (x.id === id ? { ...x, photoUrl: urlMiseAPlat } : x)) }));
+      if (isSupabaseConfigured && userId) {
+        const { id: _id, ...sansId } = it;
+        void _id;
+        updateDressingItem(id, { ...sansId, photoUrl: urlMiseAPlat })
+          .then(() => {
+            const orphelines = photosDevenuesOrphelines([it], avant.filter((x) => x.id !== id));
+            return deleteDressingPhotos(orphelines);
+          })
+          .catch((err) => {
+            // L'enregistrement a échoué : la pièce retrouve sa photo, et on le dit.
+            setState((st) => ({ ...st, items: st.items.map((x) => (x.id === id ? { ...x, photoUrl: it.photoUrl } : x)) }));
+            reportDressingError("updateDressingItem (mise à plat)", err);
+          });
+      }
+    },
+    ecarterPhotoMiseAPlat: (urlMiseAPlat) => {
+      const chemin = dressingPhotoPath(urlMiseAPlat);
+      if (chemin && isSupabaseConfigured) deleteDressingPhotos([chemin]).catch((err) => console.error("[dressing] version mise à plat non supprimée", err));
+    },
     startEditItem: (item) =>
       setState((s) => {
         const img = resolveItemImage(item);

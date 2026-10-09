@@ -31,6 +31,7 @@ import {
   cheminMisAPlat,
   detourerAvecFournisseur,
   estPhotoDetouree,
+  estPhotoMiseAPlat,
   LIMITE_JOURNALIERE_PAR_DEFAUT,
   LIMITE_MISES_A_PLAT_PAR_DEFAUT,
   mettreAPlatAvecFournisseur,
@@ -99,8 +100,9 @@ Deno.serve(async (req) => {
   }
   const chemin = cheminDansLeBucket(photoUrl);
   if (!chemin) return echec("photo_invalide");
-  // Une photo déjà détourée n'a rien à retirer : refusée AVANT le quota et l'appel payant.
-  if (estPhotoDetouree(chemin)) return echec("photo_invalide");
+  // Une photo déjà détourée n'a rien à retirer : refusée AVANT le quota et l'appel payant. La mise à plat, elle, accepte une photo
+  // détourée (le bouton « Mettre à plat » d'une pièce déjà importée) — mais pas une photo déjà mise à plat.
+  if (miseAPlat ? estPhotoMiseAPlat(chemin) : estPhotoDetouree(chemin)) return echec("photo_invalide");
 
   if (utilisatrice) {
     // Une mise à plat est un appel génératif, plus cher : son plafond du jour est à part et plus bas.
