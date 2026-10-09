@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   candidatsARedecouvrir,
   dateRelativeAjout,
+  ideeLaPlusComplete,
   libelleDateRecente,
   libelleLooksPossibles,
   ligneDressing,
@@ -106,5 +107,22 @@ describe("Tes dernières pièces (écran « Voir tout »)", () => {
   it("les looks distincts : un même jeu de pièces ne compte qu'une fois, quel que soit l'ordre", () => {
     expect(looksDistincts([[[1, 2], [3, 4]], [[2, 1], [5, 6]]])).toBe(3);
     expect(looksDistincts([])).toBe(0);
+  });
+});
+
+describe("ideeLaPlusComplete — le look que montre « Tes looks »", () => {
+  it("la tenue la plus complète des trois premières idées, la première à égalité", () => {
+    const a = { ids: [1, 2, 3] };
+    const b = { ids: [1, 2, 3, 4, 5] };
+    const c = { ids: [1, 2, 3, 4, 5] };
+    const d = { ids: [1, 2, 3, 4, 5, 6] };
+    expect(ideeLaPlusComplete([a, b, c])).toBe(b);
+    // La quatrième idée n'est jamais regardée.
+    expect(ideeLaPlusComplete([a, b, c, d])).toBe(b);
+    expect(ideeLaPlusComplete([a])).toBe(a);
+  });
+  it("sans idée, rien", () => {
+    expect(ideeLaPlusComplete(undefined)).toBeUndefined();
+    expect(ideeLaPlusComplete([])).toBeUndefined();
   });
 });

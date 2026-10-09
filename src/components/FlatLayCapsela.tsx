@@ -24,6 +24,7 @@ export function FlatLayCapsela({
   layoutSeed,
   attendre = false,
   onPret,
+  ombre = "douce",
 }: {
   items: Item[];
   /** Où la planche s'affiche : elle règle la zone, la marge, le gabarit et le nombre d'accessoires (cf. CONTEXTES dans flatLay.ts). */
@@ -32,6 +33,12 @@ export function FlatLayCapsela({
   layoutSeed: string;
   attendre?: boolean;
   onPret?: () => void;
+  /**
+   * L'ombre des pièces. « douce » (défaut) : celle du hero et de la Tenue du jour. « marquee » (09/10/2026, « Tes looks » du
+   * Dressing, sur un fond plus soutenu) : une ombre de contact serrée sous une ombre diffuse, pour que chaque pièce se
+   * détache du fond sans paraître flotter. Jamais noire.
+   */
+  ombre?: "douce" | "marquee";
 }) {
   const HAUTEUR = hauteurDuContexte(context);
   const graine = layoutSeed;
@@ -98,7 +105,10 @@ export function FlatLayCapsela({
             transform: `translate(-50%, -50%) rotate(${p.angle}deg)`,
             zIndex: p.z,
             // Ombre douce, jamais noire : 6 px de décalage, 12 px de flou, 12 % d'opacité.
-            filter: "drop-shadow(0 6px 12px rgba(29,26,22,.12))",
+            filter:
+              ombre === "marquee"
+                ? "drop-shadow(0 1px 1.5px rgba(29,26,22,.22)) drop-shadow(0 7px 12px rgba(29,26,22,.18))"
+                : "drop-shadow(0 6px 12px rgba(29,26,22,.12))",
           };
           if (img.url && m) {
             const lc = 1 - m.g - m.d;

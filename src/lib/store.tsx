@@ -71,9 +71,7 @@ import {
   detectMatiere,
   detectSacType,
   detectSubtype,
-  occasionsRetenues,
   suggestName,
-  suggestOccasions,
 } from "./attributes";
 import type {
   AccessoireType,
@@ -198,7 +196,9 @@ function buildInitialState(): AppState {
     addSaisons: null,
     addSaisonsLues: false,
     addManches: null,
-    addOccasion: ["travail_formel"],
+    addManchesIA: null,
+    addDone: false,
+    addOccasion: [],
     addOccasionTouched: false,
     addShoeType: null,
     addShoeTypeTouched: false,
@@ -440,6 +440,8 @@ export interface Actions {
   basculerAddSaison: (s: CapsuleSeason) => void;
   /** Choisit la longueur des manches ; rappeler la valeur active la retire (retour à « inconnue »). */
   setAddManches: (m: Manches) => void;
+  /** Remet les manches lues par l'analyse de la photo (« Rétablir »). */
+  retablirAddManches: () => void;
   /** Bascule l'occasion dans la sélection multiple. */
   setAddOccasion: (o: OccasionKey) => void;
   setAddShoeType: (t: ShoeType) => void;
@@ -1880,13 +1882,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addPhotoDetourage: "repos",
           addSaisons: saisonsDe(item),
           addManches: item.manches ?? null,
-          addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
+          addOccasion: item.occasion ?? [],
           addOccasionTouched: true,
           addShoeType: item.cat === "chaussures" ? item.shoeType ?? null : null,
           addShoeTypeTouched: Boolean(item.shoeType),
           addMatiere: item.matiere ?? null,
           addMatiereTouched: Boolean(item.matiere),
           addManchesTouched: Boolean(item.manches),
+          addManchesIA: null,
           addCoupe: item.coupe ?? null,
           addCoupeTouched: Boolean(item.coupe),
           addSacType: item.cat === "sac" ? item.sacType ?? null : null,
@@ -1920,13 +1923,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addPhotoDetourage: "repos",
           addSaisons: saisonsDe(item),
           addManches: item.manches ?? null,
-          addOccasion: item.occasion?.length ? item.occasion : s.addOccasion,
+          addOccasion: item.occasion ?? [],
           addOccasionTouched: true,
           addShoeType: item.cat === "chaussures" ? item.shoeType ?? null : null,
           addShoeTypeTouched: Boolean(item.shoeType),
           addMatiere: item.matiere ?? null,
           addMatiereTouched: Boolean(item.matiere),
           addManchesTouched: Boolean(item.manches),
+          addManchesIA: null,
           addCoupe: item.coupe ?? null,
           addCoupeTouched: Boolean(item.coupe),
           addSacType: item.cat === "sac" ? item.sacType ?? null : null,
@@ -1975,7 +1979,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addColor,
           addSubtype: detectSubtype(k, s.addName),
           addSubtypeTouched: false,
-          addOccasion: s.addOccasionTouched ? s.addOccasion : suggestOccasions(k),
+          // Les manches ne suivent que vers une catégorie qui en a : sinon elles repartent à « à préciser ».
+          ...(aDesManches(k) ? {} : { addManches: null, addManchesIA: null, addManchesTouched: false }),
         };
       }),
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c, addColorTouched: true })),
@@ -2035,6 +2040,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                   addColor: finalColor,
                   addMatiere: finalMatiere,
                   addManches: finalManches,
+                  addManchesIA: !catMatches || !aDesManches(finalCat) ? s.addManchesIA : a.manches ?? s.addManchesIA,
                   ...(saisonsLues ? { addSaisons: saisonsLues, addSaisonsLues: true } : {}),
                   addSubtype: finalSubtype,
                   addShoeType: finalShoeType,
@@ -2046,7 +2052,6 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                   // écran "Ajouter une pièce" repensé) — jamais imposés, cf.
                   // addNameTouched/addOccasionTouched.
                   addName: !s.addNameTouched && !s.addName ? suggestName(finalCat, finalSubtype, finalMatiere, finalColor.name) : s.addName,
-                  addOccasion: s.addOccasionTouched ? s.addOccasion : suggestOccasions(finalCat, finalShoeType),
                 };
               });
             })
@@ -2090,14 +2095,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       })),
     setAddManches: (m) =>
       setState((s) => ({ ...s, addManches: s.addManches === m ? null : m, addManchesTouched: true })),
+    retablirAddManches: () => setState((s) => ({ ...s, addManches: s.addManchesIA, addManchesTouched: false })),
     setAddOccasion: (o) =>
       setState((s) => {
-        // Part de ce que l'écran montre : tant que rien n'est touché, c'est la
-        // suggestion (occasionsRetenues), pas la valeur d'ouverture.
-        const avant = occasionsRetenues(s.addOccasionTouched, s.addOccasion, s.addCat, s.addShoeType);
+        // Une occasion suggérée (en pointillés) qu'on touche devient confirmée ;
+        // une confirmée qu'on touche redevient non choisie. Seules les confirmées
+        // sont enregistrées (09/10/2026).
         return {
           ...s,
-          addOccasion: avant.includes(o) ? avant.filter((x) => x !== o) : [...avant, o],
+          addOccasion: s.addOccasion.includes(o) ? s.addOccasion.filter((x) => x !== o) : [...s.addOccasion, o],
           addOccasionTouched: true,
         };
       }),
@@ -2138,7 +2144,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // La saison ne bloque plus (27/09/2026, refonte « Ajouter une pièce ») :
       // sans choix, la pièce est enregistrée « toute l'année » (09/10/2026).
       // Un enregistrement est déjà en cours : pas de doublon sur un second appui.
-      if (s.addSaving) return;
+      if (s.addSaving || s.addDone) return;
+      // V3 (09/10/2026) : pas d'ajout pendant que Capsela lit la photo, ni sans photo ni nom,
+      // ni sans les manches d'une pièce qui en a. À la création seulement : modifier une
+      // pièce déjà enregistrée sans manches ne doit pas être bloqué.
+      if (s.addPhotoAnalyzing || s.addPhotoDetourage === "en_cours") return;
+      if (!s.editingId) {
+        if (!s.addPhotoUrl && !s.addName.trim()) return;
+        if (aDesManches(s.addCat) && !s.addManches) return;
+      }
       if (s.addCat === "chaussures" && !s.addShoeType) return;
       if (SUBTYPE_REQUIRED.includes(s.addCat) && !s.addSubtype) return;
       // Jamais persister l'aperçu local (blob:) : attendre la fin de l'upload
@@ -2169,8 +2183,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         saisons,
         manches: aDesManches(s.addCat) ? s.addManches ?? undefined : undefined,
         occasion: (() => {
-          const retenues = occasionsRetenues(s.addOccasionTouched, s.addOccasion, s.addCat, s.addShoeType);
-          return retenues.length ? retenues : undefined;
+          return s.addOccasion.length ? s.addOccasion : undefined;
         })(),
         shoeType: s.addCat === "chaussures" ? s.addShoeType || undefined : undefined,
         matiere: s.addMatiere || undefined,
@@ -2186,6 +2199,17 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         worn: original ? original.worn : null,
         wornPrev: original?.wornPrev,
       };
+      // « Ajoutée au dressing » reste affiché un court instant, puis le formulaire se vide et on
+      // revient d'où l'on vient — sauf si l'utilisatrice est déjà partie ailleurs entre-temps.
+      const quitterApresAjout = () =>
+        setTimeout(
+          () =>
+            setState((st) => {
+              const r = resetFields(st);
+              return st.screen === "add" ? r : { ...r, screen: st.screen };
+            }),
+          900
+        );
       const resetFields = (st: AppState): AppState => ({
         ...st,
         suggestedExcluded: st.replacingId ? [...st.suggestedExcluded, st.replacingId] : st.suggestedExcluded,
@@ -2221,9 +2245,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addSaisons: null,
         addSaisonsLues: false,
         addManches: null,
+        addManchesIA: null,
+        addDone: false,
         addShoeType: null,
         addShoeTypeTouched: false,
-        addOccasion: ["travail_formel"],
+        addOccasion: [],
         addOccasionTouched: false,
         screen: addReturn || (editingId != null ? "piece" : "wardrobe"),
       });
@@ -2259,7 +2285,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           .then((item) => {
             // La ligne insérée n'a pas encore ses saisons (écriture isolée,
             // cf. updateDressingItemSaisons) : elles sont posées juste après.
-            setState((st) => ({ ...resetFields(st), addSaving: false, items: [{ ...item, saisons, manches: base.manches }, ...st.items] }));
+            setState((st) => ({ ...st, addSaving: false, addDone: true, items: [{ ...item, saisons, manches: base.manches }, ...st.items] }));
+            quitterApresAjout();
             annoncerPieceAjoutee(item.name);
             enregistrerSaisons(item.id, saisons);
             if (base.manches) enregistrerManches(item.id, base.manches, undefined);
@@ -2279,8 +2306,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }
       setState((st) => {
         const item: Item = { id: Math.max(0, ...st.items.map((i) => i.id)) + 1, ...base };
-        return { ...resetFields(st), items: [item, ...st.items] };
+        return { ...st, addDone: true, items: [item, ...st.items] };
       });
+      quitterApresAjout();
       annoncerPieceAjoutee(base.name);
     },
     dismissDressingError: () => setState((s) => ({ ...s, dressingError: null })),
