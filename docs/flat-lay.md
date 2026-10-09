@@ -222,3 +222,9 @@ Dressing. Vérifié sur la planche de debug (`PLANCHE_CONTEXTE=hero-home` et `lo
 Les positions, tailles et règles de visibilité ne changent pas ; les recouvrements restent ≤ 18 % (≤ 20 % sur l'accueil), testé. Hors périmètre,
 laissés tels quels : la planche d'`OutfitComposition` (cartes de Planifier, Agenda, Associations du dressing — une autre composition, avec ses
 propres inclinaisons) et l'étiquette d'annotation inclinée de ce composant.
+
+## Accueil : le haut et la veste +20 % (10/10/2026)
+
+`CONTEXTES["hero-home"].echellesCategorie` : `haut`, `pull`, `veste` et `manteau` ×1,2 sur la largeur des pièces (« augmente le haut de 20 % et la veste de 20 % aussi »).
+Le manteau suit la veste (même rôle de pièce du dessus). Les autres contextes n'ont pas de table : ils ne changent pas. Les recouvrements restent ≤ 20 %
+(testé) ; la planche s'ajuste à la zone, donc le bas et les chaussures gardent leur gabarit mais peuvent perdre quelques % si la hauteur limite.

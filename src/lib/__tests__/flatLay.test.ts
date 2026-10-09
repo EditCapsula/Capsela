@@ -169,7 +169,8 @@ describe("contextes du flat lay — un moteur, des paramètres différents", () 
     };
     const home = composerFlatLay(look(), "ctx", { contexte: "hero-home" });
     const detail = composerFlatLay(look(), "ctx", { contexte: "look-detail" });
-    expect(part(detail, CONTEXTES["look-detail"].hauteur)).toBeGreaterThan(part(home, CONTEXTES["hero-home"].hauteur) * 0.9);
+    // 0,75 et non 0,9 depuis le 10/10/2026 : la veste héro de l'accueil est agrandie de 20 %.
+    expect(part(detail, CONTEXTES["look-detail"].hauteur)).toBeGreaterThan(part(home, CONTEXTES["hero-home"].hauteur) * 0.75);
   });
 
   it("une robe est centrée en look-detail, sac et chaussures dessous de part et d'autre", () => {
@@ -589,5 +590,29 @@ describe("tous les hero du flat lay — aucune rotation (09/10/2026)", () => {
         const sortie = composerFlatLay(pieces, "s" + i, { contexte: "hero-home" }).pieces;
         for (let a = 0; a < sortie.length; a++) for (let b = a + 1; b < sortie.length; b++) expect(part(sortie[a], sortie[b]), `graine ${i}`).toBeLessThanOrEqual(0.2);
       }
+  });
+});
+
+describe("accueil (hero-home) — le haut et la veste agrandis de 20 % (10/10/2026)", () => {
+  const avec = (echelles: Record<string, number> | undefined) => {
+    const config = CONTEXTES["hero-home"];
+    const sauvegarde = config.echellesCategorie;
+    config.echellesCategorie = echelles;
+    try {
+      const pieces = [p("haut", 1), p("pantalon", 0.55), p("veste", 0.95), p("chaussures", 1.5)];
+      return composerFlatLay(pieces, "x", { contexte: "hero-home" }).pieces;
+    } finally {
+      config.echellesCategorie = sauvegarde;
+    }
+  };
+  it("le haut et la veste sont plus larges qu'avant, le bas et les chaussures gardent leur gabarit", () => {
+    expect(CONTEXTES["hero-home"].echellesCategorie).toMatchObject({ haut: 1.2, veste: 1.2 });
+    const apres = Object.fromEntries(avec(CONTEXTES["hero-home"].echellesCategorie).map((q) => [q.cat, q.l]));
+    const avant = Object.fromEntries(avec(undefined).map((q) => [q.cat, q.l]));
+    expect(apres.haut).toBeGreaterThan(avant.haut * 1.05);
+    expect(apres.veste).toBeGreaterThan(avant.veste * 1.05);
+  });
+  it("les autres contextes ne changent pas", () => {
+    expect(CONTEXTES["look-detail"].echellesCategorie).toBeUndefined();
   });
 });

@@ -186,6 +186,8 @@ interface ConfigContexte {
   accessoiresMasques?: string[];
   /** true : jamais de planche en miroir (hero-home : « haut en haut à gauche, pantalon à droite » est une règle, pas un tirage). */
   sansMiroir?: boolean;
+  /** Multiplie la largeur des pièces d'une catégorie dans ce contexte (hero-home : le haut et la veste +20 %, 10/10/2026). */
+  echellesCategorie?: Partial<Record<CategoryKey, number>>;
   /** Au plus ce nombre de pièces dans la planche (hero-home : 4, « 3 à 4 pièces bien lisibles ») ; les autres restent dans la tenue, jamais dans la planche. */
   maxPieces?: number;
   /** Combien l'ajustement à la zone peut AGRANDIR la composition (défaut 1,1) : un contexte compact la laisse remplir sa zone. */
@@ -257,6 +259,9 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
     agrandissementMax: 1.3,
     // 4 pièces au plus (09/10/2026) : le haut, le bas ou la robe, les chaussures et le sac se lisent ; un accessoire seulement s'il reste de la place.
     maxPieces: 4,
+    // « Augmente le haut de 20 % et la veste de 20 % aussi » (10/10/2026) : sur l'accueil, les hauts (t-shirt, chemise, pull) et les vestes
+    // se lisent mieux plus grands ; le manteau, autre pièce du dessus, suit la veste. Les autres contextes ne changent pas.
+    echellesCategorie: { haut: 1.2, pull: 1.2, veste: 1.2, manteau: 1.2 },
     sansMiroir: true,
     maxAccessoires: [1, 0],
     ecartAccessoireMax: 12,
@@ -501,7 +506,7 @@ export function composerFlatLay(
 
   const placer = (piece: PieceFlatLay, role: RoleFlatLay, ref: Ref) => {
     const visualScale = echelleVisuelle(role, piece.cat) * (piece.visualScale && piece.visualScale > 0 ? piece.visualScale : 1);
-    let l = ref.l * visualScale * dans(0.97, 1.03) * echelleGlobale;
+    let l = ref.l * visualScale * dans(0.97, 1.03) * echelleGlobale * (config.echellesCategorie?.[piece.cat] ?? 1);
     if (nb >= 6 && (role === "secondaire" || role === "accessoire")) l *= 0.88;
     const ratio = piece.ratio > 0 ? piece.ratio : 1;
     // Une pièce haute ne dépasse pas 78 % de la hauteur de la zone.
