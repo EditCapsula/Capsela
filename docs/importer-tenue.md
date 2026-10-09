@@ -39,5 +39,16 @@ ou `{ ok: false, code }` (`non_configure`, `photo_invalide`, `photo_refusee`, `c
 - La qualité de la boîte rendue par le modèle (objets qui se touchent, bracelets, montre).
 - Que le détourage rende une image de même taille que la planche (la boîte est en fractions : un recadrage de la planche détourée suppose les mêmes proportions).
 
+## Écran (livré le 10/10/2026)
+
+`ImporterTenueScreen.tsx` (écran `importerTenue`, hors barre du bas), entrée par la carte « Importer une tenue entière » en tête d'« Ajouter une pièce » (création, sans photo). Logique pure testée : `src/lib/importTenue.ts`.
+
+- États : choix de la photo · analyse (3 étapes, la première tient à l'envoi réel) · résultat (bascule « Voir ma photo / Voir l'image à plat », une carte par objet, accordéon : nom, catégorie, modèle, couleur, manches, saisons) · ajout un à un (« Ajout 2 sur 3 ») · terminé · une seule pièce (carte ouverte, sans case) · rien repéré · échec (réessayer ou non selon le code) · dressing gratuit trop petit.
+- Une pièce n'est créée que si elle est COCHÉE ET COMPLÈTE : saisons (jamais présélectionnées), manches pour une pièce qui en a, modèle pour des chaussures. Une carte incomplète dit « Précise les saisons », le bouton se grise avec « Précise les saisons de [nom] pour l'ajouter ».
+- Couleur : dite « À choisir » quand le serveur ne l'a pas lue (`couleurLue: false`). Occasions : aucune enregistrée.
+- Dressing gratuit : les cases cochées sont limitées aux places restantes (`limiterAuxPlaces`), l'écran le dit et renvoie vers Premium. `ajouterPieceImportee` (store) relit la limite à chaque pièce.
+- Fichiers : la planche, les objets non créés et la photo d'origine sont supprimés une fois l'import validé ; en quittant sans valider, tous le sont. Un échec en cours d'ajout garde les pièces non créées dans la liste.
+- NON VÉRIFIÉ à l'écran : le rendu n'a pas été vu (la fonction Edge n'est jamais appelée en mode démo), ni le service réel.
+
 ## À faire ensuite
-L'écran (14 états de la maquette), l'entrée dans « Ajouter une pièce », l'ajout de plusieurs pièces avec progression, la limite du dressing gratuit.
+Essayer avec la vraie clé Photoroom et OpenAI : qualité de la planche et des boîtes, puis ajuster les points ci-dessus.

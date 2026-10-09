@@ -1,6 +1,7 @@
 import { accessoireTypeFor } from "./attributes";
 import { type Verdict, clePieces, jourLocal, litteralTableau } from "./outfitFeedback";
 import { manchesDepuis } from "./manches";
+import type { ObjetRepere } from "./importTenue";
 import { normaliserOccasion, normaliserOccasions } from "./occasions";
 import { ordonnerSaisons } from "./saisons";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
@@ -317,6 +318,39 @@ export async function detourerPhoto(photoUrl: string, mode?: "mise_a_plat"): Pro
     return typeof url === "string" && url.startsWith("http") && estPhotoDetouree(url) ? url : null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Importer une tenue (10/10/2026) : envoie la photo d'une tenue à la fonction Edge `importer-tenue` et rend la planche à plat et
+ * un objet par pièce repérée (URL signées 24 h, fichiers du dossier de la personne). Jamais d'exception : un échec rend le code
+ * de la fonction, ou « indisponible » (réseau, fonction non déployée), comme detourerPhotoAvecCause. Rien n'est créé ici.
+ */
+export type CodeImportTenue = CodeMiseAPlat | "lecture_indisponible" | "resultat_invalide" | "fournisseur_indisponible";
+
+export async function importerTenue(photoUrl: string): Promise<{ tenueUrl: string | null; objets: ObjetRepere[] } | { code: CodeImportTenue }> {
+  try {
+    const { data, error } = await getSupabase().functions.invoke("importer-tenue", { body: { photo_url: photoUrl } });
+    if (!error && data && (data as { ok?: boolean }).ok === true) {
+      const d = data as { tenue_url?: unknown; objets?: unknown };
+      const objets = Array.isArray(d.objets)
+        ? (d.objets as ObjetRepere[]).filter((o) => o && typeof o.photo_url === "string" && o.photo_url.startsWith("http") && typeof o.cat === "string" && o.couleur?.hex)
+        : [];
+      return { tenueUrl: typeof d.tenue_url === "string" && d.tenue_url.startsWith("http") ? d.tenue_url : null, objets };
+    }
+    let code: unknown = (data as { code?: unknown } | null)?.code;
+    const contexte = (error as { context?: unknown } | null)?.context;
+    if (!code && contexte && typeof (contexte as Response).json === "function") {
+      try {
+        code = ((await (contexte as Response).clone().json()) as { code?: unknown }).code;
+      } catch {
+        /* corps illisible : « indisponible » */
+      }
+    }
+    const connus: CodeImportTenue[] = ["quota_atteint", "non_configure", "credits_epuises", "photo_refusee", "photo_invalide", "lecture_indisponible", "resultat_invalide", "fournisseur_indisponible"];
+    return { code: connus.includes(code as CodeImportTenue) ? (code as CodeImportTenue) : "indisponible" };
+  } catch {
+    return { code: "indisponible" };
   }
 }
 

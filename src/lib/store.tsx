@@ -460,6 +460,13 @@ export interface Actions {
   setAddAccessoireType: (t: AccessoireType) => void;
   setAddSubtype: (t: string) => void;
   saveItem: () => void;
+  /** Ouvre « Importer une tenue » (même garde de limite que l'ajout d'une pièce). */
+  openImporterTenue: () => void;
+  /**
+   * Ajoute UNE pièce issue d'une tenue importée (10/10/2026) : insère, puis pose saisons et manches comme saveItem. Rend la pièce créée, ou
+   * null (base indisponible, limite gratuite atteinte). Les pièces sont ajoutées une à une par l'écran, qui montre la progression.
+   */
+  ajouterPieceImportee: (piece: Omit<Item, "id">) => Promise<Item | null>;
   /** Ferme le bandeau de diagnostic temporaire dressingError (correctif 22/08/2026). */
   dismissDressingError: () => void;
   /** Ferme la confirmation « Pièce ajoutée à ton dressing » (pieceAjoutee). */
@@ -1455,6 +1462,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  /** Pièces importées dont l'insertion est en cours : la limite gratuite les compte déjà (stateRef n'est à jour qu'au rendu suivant). */
+  const piecesImporteesEnVol = useRef(0);
+
   const annoncerPieceAjoutee = (nom: string) => {
     const annonce = { nom, jeton: Date.now() };
     setState((st) => ({ ...st, pieceAjoutee: annonce }));
@@ -1734,6 +1744,34 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // désormais à Premium d'emblée. Même règle, même source (peutAjouter) :
     // un droit inconnu n'applique aucune limite ; la garde de saveItem reste.
     openAdd: () => ouvrirAjout((s) => ({ ...s, screen: "add" })),
+    openImporterTenue: () => ouvrirAjout((s) => ({ ...s, screen: "importerTenue" })),
+    ajouterPieceImportee: async (piece) => {
+      // La limite se relit à chaque pièce : le dressing grandit pendant l'import.
+      if (!peutAjouter(etatPremiumRef.current, stateRef.current.items.length + piecesImporteesEnVol.current)) return null;
+      const saisons = piece.saisons ?? [];
+      piecesImporteesEnVol.current += 1;
+      try {
+        if (isSupabaseConfigured && userId) {
+          const item = await insertDressingItem(userId, piece);
+          const creee: Item = { ...item, saisons, manches: piece.manches };
+          setState((st) => ({ ...st, items: [creee, ...st.items] }));
+          enregistrerSaisons(item.id, saisons);
+          if (piece.manches) enregistrerManches(item.id, piece.manches, undefined);
+          return creee;
+        }
+        let creee: Item | null = null;
+        setState((st) => {
+          creee = { id: Math.max(0, ...st.items.map((i) => i.id)) + 1, ...piece };
+          return { ...st, items: [creee, ...st.items] };
+        });
+        return creee;
+      } catch (err) {
+        reportDressingError("insertDressingItem", err);
+        return null;
+      } finally {
+        piecesImporteesEnVol.current -= 1;
+      }
+    },
     openAddBag: () => ouvrirAjout((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
     openAddForCategory: (cat) =>
       ouvrirAjout((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),

@@ -33,15 +33,15 @@ const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
 const BOTTOM_SIZED: CategoryKey[] = [...BAS_CATS, "jupe", "combinaison"];
 
 /** Les huit pastilles de couleur de la page, prises dans la palette réelle (V3, 09/10/2026) ; « Toutes les couleurs » ouvre le reste. */
-const NOMS_PASTILLES = ["Blanc cassé", "Beige", "Camel", "Chocolat", "Kaki", "Marine", "Bordeaux", "Noir"];
+export const NOMS_PASTILLES = ["Blanc cassé", "Beige", "Camel", "Chocolat", "Kaki", "Marine", "Bordeaux", "Noir"];
 /** Teintes claires : la coche y est noire, sur les foncées elle est crème. */
-const luminance = (hex: string) => {
+export const luminance = (hex: string) => {
   const n = parseInt(hex.replace("#", ""), 16);
   return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 };
 
 /** Puce de la V3 : 40 px, terracotta plein quand elle est choisie, crème à bord plein sinon. */
-function chip(on: boolean): string {
+export function chip(on: boolean): string {
   return (
     "h-[40px] px-[14px] rounded-full border text-[12.5px] font-medium cursor-pointer font-sans inline-flex items-center justify-center " +
     (on ? "bg-terracotta-deep border-terracotta-deep text-[#FBF3EA]" : "bg-card border-border text-ink")
@@ -49,10 +49,10 @@ function chip(on: boolean): string {
 }
 
 /** Étiquette de section : capitales espacées, grises (design system). */
-const EYEBROW = "text-[10.5px] tracking-[.16em] uppercase text-[#8B8375]";
+export const EYEBROW = "text-[10.5px] tracking-[.16em] uppercase text-[#8B8375]";
 
 /** Le cintre de la V3 : le crochet fixe, un arc qui tourne pendant l'attente. */
-function SpinnerCintre({ sombre }: { sombre?: boolean }) {
+export function SpinnerCintre({ sombre }: { sombre?: boolean }) {
   return (
     <span className="relative block w-[24px] h-[24px] flex-shrink-0" aria-hidden="true">
       <svg viewBox="0 0 24 24" className="absolute inset-0 w-[24px] h-[24px]" fill="none" stroke={sombre ? "#1D1A16" : "#FBF3EA"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -73,7 +73,7 @@ function ChevronBas({ className = "" }: { className?: string }) {
   );
 }
 
-function Coche({ couleur = "currentColor", taille = 16 }: { couleur?: string; taille?: number }) {
+export function Coche({ couleur = "currentColor", taille = 16 }: { couleur?: string; taille?: number }) {
   return (
     <svg viewBox="0 0 24 24" width={taille} height={taille} fill="none" stroke={couleur} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M6 12.5l4 4 8-9" />
@@ -85,7 +85,7 @@ function Coche({ couleur = "currentColor", taille = 16 }: { couleur?: string; ta
  * Champ à liste (catégorie, modèle, taille) : un select natif transparent couvre la case — c'est le sélecteur du
  * système, que le pouce connaît, et il gère seul le clavier et l'accessibilité.
  */
-function ChampSelect({
+export function ChampSelect({
   label,
   value,
   onChange,
@@ -142,7 +142,7 @@ function ChampSelect({
 }
 
 /** Mêmes tracés que dans PieceScreen : le geste « photo » se reconnaît d'un écran à l'autre. */
-function CameraIcon() {
+export function CameraIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
@@ -151,7 +151,7 @@ function CameraIcon() {
   );
 }
 
-function GalerieIcon() {
+export function GalerieIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="5" width="18" height="14" rx="2" />
@@ -342,6 +342,23 @@ export default function AddScreen() {
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-[18px] pt-[6px] pb-[132px]">
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={onPhotoChange} className="hidden" />
         <input ref={galerieInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
+
+        {/* 0. Une tenue entière (10/10/2026) : discret, sous le chemin principal d'une pièce seule. */}
+        {creation && !state.addPhotoUrl && !state.replacingId && (
+          <button
+            type="button"
+            onClick={actions.openImporterTenue}
+            className="w-full min-h-[56px] mb-3 px-4 py-2 rounded-[20px] border border-border bg-cream flex items-center justify-between gap-3 text-left cursor-pointer"
+          >
+            <span className="flex flex-col">
+              <span className="font-serif font-medium text-[15px] text-ink">Importer une tenue entière</span>
+              <span className="text-[12px] text-[#5C5648]">Une photo, plusieurs pièces</span>
+            </span>
+            <svg viewBox="0 0 24 24" className="w-[16px] h-[16px] flex-shrink-0" fill="none" stroke="#5C5648" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9.5 6l6 6-6 6" />
+            </svg>
+          </button>
+        )}
 
         {/* 1. La photo : même hauteur vide ou remplie (ratio 1,3), aucun saut de mise en page. */}
         {state.addPhotoUrl ? (
