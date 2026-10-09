@@ -2060,9 +2060,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             // qu'une fois remplacée. Jamais bloquant — rien n'est affiché de faux si le service n'est pas branché.
             .then(() => {
               setState((s) => (s.addPhotoUrl === url ? { ...s, addPhotoDetourage: "en_cours" } : s));
-              // Une pièce PORTÉE sur la photo (lue par l'analyse) est mise à plat avant d'être détourée : le détourage seul garderait la
-              // personne. Sans lecture sûre, ou si la mise à plat échoue, c'est le comportement d'avant (détourage simple, ou photo d'origine).
-              detourerPhoto(url, stateRef.current.addPhotoCadrage === "portee" ? "mise_a_plat" : undefined).then((detouree) => {
+              // Toute nouvelle photo est mise à plat par Photoroom (Flat Lay) puis détourée (10/10/2026, « option A ») : les pièces importées
+              // ont toutes le rendu des visuels du catalogue. Si la mise à plat échoue (plan sans accès, plafond du jour, service absent),
+              // une photo à plat retombe sur le détourage simple ; une pièce PORTÉE (lue par l'analyse), non : le détourage garderait la
+              // personne, la photo d'origine reste alors.
+              const portee = stateRef.current.addPhotoCadrage === "portee";
+              detourerPhoto(url, "mise_a_plat")
+                .then((plat) => plat ?? (portee ? null : detourerPhoto(url)))
+                .then((detouree) => {
                 // La photo a changé, ou la pièce est déjà enregistrée avec l'original : on n'y touche pas.
                 if (stateRef.current.addPhotoUrl !== url) return;
                 if (!detouree) {

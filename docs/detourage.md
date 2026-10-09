@@ -72,7 +72,7 @@ L'analyse (`analyze-dressing-photo`) rend aussi `photoType` : `seule`, `portee` 
 ## Mise à plat d'une pièce portée (10/10/2026)
 
 Le détourage seul garde la personne quand la pièce est portée sur la photo. Quand l'analyse lit `photoType = "portee"` (cf. plus haut), l'app demande
-à `detourer-photo` un `mode: "mise_a_plat"` :
+à `detourer-photo` un `mode: "mise_a_plat"` — **depuis le 10/10/2026 pour toute nouvelle photo** (option A, demandée), pas seulement les photos portées :
 
 ```text
 photo portée → Photoroom Flat Lay (POST https://image-api.photoroom.com/v2/edit, x-api-key, imageFile, flatLay.mode=ai.auto)
@@ -84,7 +84,8 @@ photo portée → Photoroom Flat Lay (POST https://image-api.photoroom.com/v2/ed
 - **Génératif** : la pièce peut différer de la photo (couleur, détails). À contrôler sur de vraies photos avant d'ouvrir à tous.
 - Plafond du jour à part : `MAX_MISES_A_PLAT_PER_USER_PER_DAY` (5 par défaut), fonction de quota `detourer-photo-plat`. Deux appels payants par pièce
   portée (mise à plat, puis détourage).
-- Sans lecture sûre « portée », ou si la mise à plat échoue : comportement d'avant (détourage simple, ou photo d'origine). Aucun repli sur le
-  détourage simple en cas d'échec de la mise à plat : il garderait la personne.
+- Si la mise à plat échoue (plan sans accès, plafond du jour de 5, service absent) : une photo à plat retombe sur le détourage simple (plafond de 10) ;
+  une pièce lue « portée » garde sa photo d'origine, sans repli : le détourage simple garderait la personne. Les pièces déjà importées ne sont pas
+  retraitées.
 - Reconnaissance : `estPhotoMiseAPlat` (app) / `estPhotoMiseAPlat` (serveur) lisent la marque `.detouree.plat.` ; un fichier mis à plat reste un fichier détouré
   pour tout l'affichage.
