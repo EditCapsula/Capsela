@@ -13,9 +13,11 @@ import {
   occasionsDuLook,
   resumeLook,
   capaciteDe,
+  unitesDe,
+  volumeDe,
   completerChaussuresEtSac,
   lookAChaussuresEtSac,
-  cibleDePieces,
+  cibleDeVolume,
   composerValise,
   etatJauge,
   generateurMoteur,
@@ -42,8 +44,9 @@ const piece = (id: number, cat: CategoryKey): Item => ({ id, name: `P${id}`, cat
 const meteo = (jour: string, temp = 20, label = "Ensoleillé", prevue = false): MeteoJour => ({ jour, temp, label, prevue });
 
 describe("valise — bagages, séjours, dates", () => {
-  it("capacités arbitrées : S 8, M 12, L 18, XL 24", () => {
-    expect(["S", "M", "L", "XL"].map((t) => capaciteDe(t as "S"))).toEqual([8, 12, 18, 24]);
+  it("capacités arbitrées en unités d'encombrement : S 14, M 22, L 32, XL 44 ; l'écran dit environ 8, 12, 18, 24 pièces", () => {
+    expect(["S", "M", "L", "XL"].map((t) => capaciteDe(t as "S"))).toEqual([14, 22, 32, 44]);
+    expect(BAGAGES.map(([, , n]) => n)).toEqual([8, 12, 18, 24]);
     // Libellés du brief de refonte : plus de « Grande soute » (lu « Grande suite »).
     expect(BAGAGES.map(([, l]) => l)).toEqual(["Cabine souple", "Cabine", "Grande valise", "Très grande valise"]);
   });
@@ -134,9 +137,22 @@ describe("composerValise — plus de looks, moins de pièces", () => {
 
   it("jamais au-delà de la capacité : une situation qui n'y tient pas reste sans look", () => {
     const gen = fauxGenerateur({ quotidien: [[1, 4, 7]], soiree: [[6, 8]] });
-    const r = composerValise(DRESSING, S1(["quotidien", "soiree"]), 4, gen);
-    expect(r.pieceIds.length).toBeLessThanOrEqual(4);
+    // Capacité en unités : le quotidien (haut 1 + pantalon 2 + chaussures 3) en prend 6, la soirée (robe 1,5 + chaussures 3) 4,5.
+    const r = composerValise(DRESSING, S1(["quotidien", "soiree"]), 7, gen);
+    expect(volumeDe(DRESSING.filter((p) => r.pieceIds.includes(p.id)))).toBeLessThanOrEqual(7);
     expect(r.situationsSansLook).toHaveLength(1);
+  });
+
+  it("l'encombrement compte : des chaussures et un manteau pèsent plus que des hauts", () => {
+    expect(volumeDe([piece(1, "haut"), piece(2, "haut")])).toBe(2);
+    expect(volumeDe([piece(1, "chaussures"), piece(2, "manteau")])).toBe(7);
+    expect(unitesDe("bijou")).toBe(0.25);
+  });
+
+  it("allègement : le volume décide, pas le nombre de pièces", () => {
+    const looks = [{ ids: [1, 2], situations: [0], elargie: false }] as never;
+    // Deux pièces seulement, mais 3 + 4 unités pour une capacité de 5 : une doit partir.
+    expect(allegement([1, 2], looks, 5, (id) => (id === 1 ? 3 : 4))).toHaveLength(1);
   });
 
   it("une pièce dans aucun look final ne reste pas dans la valise", () => {
@@ -360,9 +376,9 @@ describe("meteosPrevuesDuSejour — seulement les jours que la prévision d'aujo
   });
 });
 
-describe("cibleDePieces — 70 % de la capacité, arrondi au supérieur", () => {
+describe("cibleDeVolume — 70 % de la capacité (en unités), arrondi au supérieur", () => {
   it("S 6, M 9, L 13, XL 17", () => {
-    expect((["S", "M", "L", "XL"] as const).map((t) => cibleDePieces(t))).toEqual([6, 9, 13, 17]);
+    expect((["S", "M", "L", "XL"] as const).map((t) => cibleDeVolume(t))).toEqual([10, 16, 23, 31]);
   });
 });
 

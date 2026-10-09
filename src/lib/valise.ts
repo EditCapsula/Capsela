@@ -28,9 +28,15 @@ export type TailleBagage = "S" | "M" | "L" | "XL";
 
 /**
  * CAPACITÉ PAR TAILLE — ARBITRAGE ÉDITORIAL du 27/09/2026 (proposé, validé
- * par la propriétaire). Chaussures, sacs et accessoires compris : tout ce qui
- * entre dans le bagage compte. Elle ne dépend que de la taille, quel que soit
- * le transport.
+ * par la propriétaire), révisé le 09/10/2026 : la capacité n'est plus un
+ * nombre de pièces mais un VOLUME, en unités d'encombrement (t-shirt plié = 1,
+ * cf. UNITES_PAR_CATEGORIE). Chaussures, sacs et accessoires compris : tout ce
+ * qui entre dans le bagage compte. Elle ne dépend que de la taille, quel que
+ * soit le transport.
+ *
+ * Le troisième terme de BAGAGES est le nombre de pièces ORDINAIRES que la
+ * valise contient environ (1,8 unité par pièce en moyenne) : c'est lui que
+ * l'écran annonce, en « environ ». Il ne gouverne rien.
  */
 export const BAGAGES: [TailleBagage, string, number][] = [
   ["S", "Cabine souple", 8],
@@ -41,17 +47,54 @@ export const BAGAGES: [TailleBagage, string, number][] = [
   ["XL", "Très grande valise", 24],
 ];
 
-export const capaciteDe = (t: TailleBagage) => BAGAGES.find(([k]) => k === t)![2];
+/**
+ * L'ENCOMBREMENT D'UNE PIÈCE — ARBITRAGE ÉDITORIAL du 09/10/2026 (barème
+ * proposé puis validé par la propriétaire, ordres de grandeur : ni mesuré ni
+ * pesé). Unité : un t-shirt plié. Une catégorie ne se généralise pas : un
+ * manteau pèse plus qu'un blazer, des chaussures plus qu'un sac.
+ */
+export const UNITES_PAR_CATEGORIE: Record<CategoryKey, number> = {
+  haut: 1,
+  short: 1,
+  jupe: 1,
+  bijou: 0.25,
+  accessoire: 0.5,
+  robe: 1.5,
+  combinaison: 1.5,
+  pantalon: 2,
+  jean: 2,
+  pull: 2,
+  sac: 2,
+  veste: 2.5,
+  chaussures: 3,
+  manteau: 4,
+};
+
+export const unitesDe = (cat: CategoryKey): number => UNITES_PAR_CATEGORIE[cat];
+
+/** Le volume d'un ensemble de pièces, en unités. */
+export const volumeDe = (pieces: Pick<Item, "cat">[]): number => pieces.reduce((t, p) => t + unitesDe(p.cat), 0);
+
+/** Unités moyennes d'une pièce : sert seulement à dire « environ N pièces » à partir d'un volume. */
+export const UNITES_MOYENNES_PAR_PIECE = 1.8;
+
+/** Capacité en unités : S 14, M 22, L 32, XL 44 — la même place qu'avant pour un mélange moyen de pièces. */
+export const CAPACITE_UNITES: Record<TailleBagage, number> = { S: 14, M: 22, L: 32, XL: 44 };
+
+export const capaciteDe = (t: TailleBagage) => CAPACITE_UNITES[t];
+
+/** Nombre de pièces ordinaires que contient environ une valise — l'affichage, jamais le calcul. */
+export const piecesTypiques = (t: TailleBagage) => BAGAGES.find(([k]) => k === t)![2];
 
 /**
- * LA CIBLE DE PIÈCES D'UNE VALISE (04/10/2026, demandée : « on est partie sur un nombre de pièces par type de valise »).
+ * LA CIBLE D'UNE VALISE (04/10/2026, demandée : « on est partie sur un nombre de pièces par type de valise »).
  * Jusqu'ici la capacité n'était qu'un plafond, et l'écran disait « prête » pour 1 pièce sur 18. Elle devient aussi une
- * cible : une valise n'est dite « prête » qu'à partir de 70 % de sa capacité (S 6, M 9, L 13, XL 17), arrondie au
- * supérieur. Le 70 % est une PROPOSITION du 04/10/2026, à confirmer : ARBITRAGE ÉDITORIAL, pas une mesure. Le plafond,
- * lui, ne change pas (« On allège un peu ? » au-delà).
+ * cible : une valise n'est dite « prête » qu'à partir de 70 % de sa capacité, arrondie au supérieur — depuis le
+ * 09/10/2026 en unités de volume (S 10, M 16, L 23, XL 31). Le 70 % est une PROPOSITION du 04/10/2026, à confirmer :
+ * ARBITRAGE ÉDITORIAL, pas une mesure. Le plafond, lui, ne change pas (« On allège un peu ? » au-delà).
  */
 export const PART_CIBLE_VALISE = 0.7;
-export const cibleDePieces = (t: TailleBagage) => Math.ceil(capaciteDe(t) * PART_CIBLE_VALISE);
+export const cibleDeVolume = (t: TailleBagage) => Math.ceil(capaciteDe(t) * PART_CIBLE_VALISE);
 export const libelleBagage = (t: TailleBagage) => BAGAGES.find(([k]) => k === t)![1];
 
 // ── Types de séjour ──────────────────────────────────────────────────────
@@ -327,6 +370,10 @@ function tirer(pool: Item[], situations: SituationValise[], generer: Generateur,
 }
 
 const nouvelles = (ids: number[], sac: Set<number>) => ids.filter((id) => !sac.has(id)).length;
+/** Le volume ajouté au sac par ces pièces, en unités. */
+const volumeNouveau = (ids: number[], sac: Set<number>, poids: Map<number, number>) =>
+  ids.filter((id) => !sac.has(id)).reduce((t, id) => t + (poids.get(id) ?? 1), 0);
+const volumeDuSac = (sac: Set<number>, poids: Map<number, number>) => [...sac].reduce((t, id) => t + (poids.get(id) ?? 1), 0);
 const contenu = (ids: number[], sac: Set<number>) => ids.every((id) => sac.has(id));
 
 export interface ResultatValise {
@@ -403,6 +450,8 @@ export function composerValise(
   const candidats = [...tirer(dressing, situations, generer, tirages).values()];
   const sac = new Set<number>();
   const couvertes = new Set<number>();
+  // La capacité est un volume (unités d'encombrement) ; les ratios « looks par pièce » restent comptés en pièces.
+  const poids = new Map(dressing.map((i) => [i.id, unitesDe(i.cat)]));
 
   // 1. Couvrir.
   for (;;) {
@@ -412,7 +461,7 @@ export function composerValise(
       const gain = [...c.situations].filter((i) => !couvertes.has(i)).length;
       if (!gain) continue;
       const n = nouvelles(c.ids, sac);
-      if (sac.size + n > capacite) continue;
+      if (volumeDuSac(sac, poids) + volumeNouveau(c.ids, sac, poids) > capacite) continue;
       if (n < score[0] || (n === score[0] && gain > score[1])) {
         meilleur = c;
         score = [n, gain];
@@ -456,7 +505,7 @@ export function composerValise(
     let ratio = 0;
     for (const c of candidats) {
       const n = nouvelles(c.ids, sac);
-      if (!n || sac.size + n > capacite) continue;
+      if (!n || volumeDuSac(sac, poids) + volumeNouveau(c.ids, sac, poids) > capacite) continue;
       const essai = new Set([...sac, ...c.ids]);
       const gain = candidats.filter((x) => !contenu(x.ids, sac) && contenu(x.ids, essai)).length;
       if (gain / n > ratio) {
@@ -496,9 +545,9 @@ export function nbPolyvalentes(looks: LookValise[]): number {
 export type EtatJauge = "legere" | "optimisee" | "presque_pleine" | "depassee";
 
 /** Les 4 états de la jauge (maquette 06b). Aucun n'est une alerte : même dépassée, on propose d'alléger. */
-export function etatJauge(nbPieces: number, capacite: number): EtatJauge {
-  if (nbPieces > capacite) return "depassee";
-  const r = nbPieces / capacite;
+export function etatJauge(volume: number, capacite: number): EtatJauge {
+  if (volume > capacite) return "depassee";
+  const r = volume / capacite;
   if (r <= 0.5) return "legere";
   if (r <= 0.85) return "optimisee";
   return "presque_pleine";
@@ -530,11 +579,17 @@ export const GROUPES_VALISE: [string, CategoryKey[]][] = [
  * looks, jusqu'à revenir à la capacité. Rend les pièces à retirer, dans
  * l'ordre, avec les looks que chacune emporte avec elle.
  */
-export function allegement(pieceIds: number[], looks: LookValise[], capacite: number): { id: number; looksPerdus: number }[] {
+export function allegement(
+  pieceIds: number[],
+  looks: LookValise[],
+  capacite: number,
+  /** Le volume d'une pièce, en unités ; une unité par pièce à défaut. */
+  poids: (id: number) => number = () => 1
+): { id: number; looksPerdus: number }[] {
   let restants = [...looks];
   let dans = [...pieceIds];
   const out: { id: number; looksPerdus: number }[] = [];
-  while (dans.length > capacite) {
+  while (dans.reduce((t, id) => t + poids(id), 0) > capacite) {
     const parPiece = looksParPiece(restants);
     const id = dans.reduce((m, x) => ((parPiece.get(x) ?? 0) < (parPiece.get(m) ?? 0) ? x : m));
     const looksPerdus = restants.filter((l) => l.ids.includes(id)).length;
@@ -726,7 +781,7 @@ export const nomCategorie = (c: CategoryKey) => CATEGORIE_COURTE[c];
  * des chaussures. En dessous, la valise ne pourrait qu'être à moitié vide :
  * l'écran le dit et mène à l'ajout, plutôt que de composer quand même.
  */
-export const MINIMUM_PIECES_VALISE = capaciteDe("S");
+export const MINIMUM_PIECES_VALISE = piecesTypiques("S");
 
 export interface PretPourValise {
   pret: boolean;
