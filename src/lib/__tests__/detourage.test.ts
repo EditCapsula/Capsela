@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fondPhotoPiece, resolveItemImage } from "../catalogImages";
-import { MARQUE_PHOTO_DETOUREE, estPhotoDetouree } from "../dressing";
+import { MARQUE_PHOTO_DETOUREE, estPhotoDetouree, estPhotoMiseAPlat } from "../dressing";
 import type { Item } from "../types";
 import {
   MARQUE_DETOUREE,
@@ -8,6 +8,10 @@ import {
   TAILLE_SOURCE_MAX_OCTETS,
   cheminDansLeBucket,
   cheminDetoure,
+  cheminMisAPlat,
+  estPhotoMiseAPlat as estMiseAPlatServeur,
+  mettreAPlatAvecFournisseur,
+  POINT_D_ENTREE_PHOTOROOM_EDIT,
   detourerAvecFournisseur,
   estPhotoDetouree as estPhotoDetoureeServeur,
   typeImage,
@@ -162,5 +166,48 @@ describe("l'affichage d'une pièce détourée", () => {
   it("une photo détourée se montre entière (contain) sur la tuile ; une photo réelle remplit la case (cover)", () => {
     expect(fondPhotoPiece("u.webp", true)).toMatchObject({ backgroundSize: "contain", background: "var(--color-photo-bg)" });
     expect(fondPhotoPiece("u.jpg", false)).toMatchObject({ backgroundSize: "cover" });
+  });
+});
+
+describe("la mise à plat d'une pièce portée (10/10/2026)", () => {
+  it("le fichier mis à plat reste un fichier détouré, et se reconnaît à sa marque", () => {
+    expect(cheminMisAPlat("u1/abc.jpg")).toBe("u1/abc.detouree.plat.webp");
+    expect(cheminMisAPlat("u1/abc.jpg", "png")).toBe("u1/abc.detouree.plat.png");
+    expect(estPhotoDetouree("https://x/u1/abc.detouree.plat.webp?token=1")).toBe(true);
+    expect(estPhotoMiseAPlat("https://x/u1/abc.detouree.plat.webp?token=1")).toBe(true);
+    expect(estMiseAPlatServeur("u1/abc.detouree.plat.webp")).toBe(true);
+    expect(estPhotoMiseAPlat("https://x/u1/abc.detouree.webp")).toBe(false);
+    expect(estPhotoMiseAPlat(null)).toBe(false);
+  });
+
+  it("l'appel Flat Lay : bon point d'entrée, clé dans l'en-tête, champ imageFile et flatLay.mode", async () => {
+    let vu: { url: string; init: RequestInit } | null = null;
+    const fetchFn = (async (url: string, init: RequestInit) => {
+      vu = { url, init };
+      return reponse(PNG);
+    }) as unknown as typeof fetch;
+    const r = await mettreAPlatAvecFournisseur(fetchFn, "CLE", JPEG);
+    expect(r).toMatchObject({ ok: true, type: "png" });
+    expect(vu!.url).toBe(POINT_D_ENTREE_PHOTOROOM_EDIT);
+    expect((vu!.init.headers as Record<string, string>)["x-api-key"]).toBe("CLE");
+    expect(vu!.url).not.toContain("CLE");
+    const f = vu!.init.body as FormData;
+    expect(f.get("flatLay.mode")).toBe("ai.auto");
+    expect(f.get("imageFile")).toBeInstanceOf(Blob);
+  });
+
+  it("les échecs sont des codes, jamais des exceptions", async () => {
+    const code = async (r: Response | Error) => ((await mettreAPlatAvecFournisseur(fauxFetch(r), "CLE", JPEG)) as { code?: string }).code;
+    expect(await code(reponse(null, 403))).toBe("non_configure");
+    expect(await code(reponse(null, 402))).toBe("credits_epuises");
+    expect(await code(reponse(null, 422))).toBe("photo_refusee");
+    expect(await code(reponse(null, 500))).toBe("fournisseur_indisponible");
+    expect(await code(new Error("réseau"))).toBe("fournisseur_indisponible");
+    expect(await code(reponse(new Uint8Array([1, 2, 3])))).toBe("resultat_invalide");
+    expect(((await mettreAPlatAvecFournisseur(fauxFetch(reponse(PNG)), "CLE", new Uint8Array([1, 2, 3]))) as { code?: string }).code).toBe("photo_invalide");
+  });
+
+  it("un résultat JPEG est accepté (il sera détouré ensuite)", async () => {
+    expect(await mettreAPlatAvecFournisseur(fauxFetch(reponse(JPEG)), "CLE", JPEG)).toMatchObject({ ok: true, type: "jpeg" });
   });
 });

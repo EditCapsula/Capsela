@@ -9,6 +9,9 @@
 // jamais une blob: URL. La photo d'origine n'est JAMAIS effacée ici : si la personne enregistre sa pièce pendant le
 // détourage, elle porte encore l'original. C'est l'app qui l'efface, quand le détourage remplace bien sa photo.
 //
+// Entrée facultative : `mode: "mise_a_plat"` (10/10/2026) — pièce PORTÉE : mise à plat par Photoroom (Flat Lay, plan Plus), puis
+// détourée ; fichier `….detouree.plat.webp`, plafond du jour à part (MAX_MISES_A_PLAT_PER_USER_PER_DAY, 5 par défaut).
+//
 // Sortie : { ok: true, photo_url } — URL signée du fichier détouré, WebP à fond transparent, au même dossier ; ou
 // { ok: false, code } (cf. CodeErreurDetourage et « quota_atteint »). Le fichier détouré porte « .detouree. » dans son
 // nom : c'est cette marque, et non une colonne, qui dit à l'app qu'une photo est détourée (aucune migration).
@@ -25,9 +28,12 @@ import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
 import {
   cheminDansLeBucket,
   cheminDetoure,
+  cheminMisAPlat,
   detourerAvecFournisseur,
   estPhotoDetouree,
   LIMITE_JOURNALIERE_PAR_DEFAUT,
+  LIMITE_MISES_A_PLAT_PAR_DEFAUT,
+  mettreAPlatAvecFournisseur,
   TAILLE_SOURCE_MAX_OCTETS,
   type CodeErreurDetourage,
 } from "../_shared/detourage.ts";
@@ -78,8 +84,11 @@ Deno.serve(async (req) => {
   if (!estAdmin && !utilisatrice) return reponse({ ok: false, error: "Non authentifié." }, 401);
 
   let photoUrl: string;
+  // « mise_a_plat » : la pièce est portée sur la photo ; sinon, détourage simple (le fond seul).
+  let miseAPlat = false;
   try {
     const body = await req.json();
+    miseAPlat = body.mode === "mise_a_plat";
     photoUrl = String(body.photo_url || "");
     if (!photoUrl.startsWith("http")) throw new Error("photo_url invalide");
   } catch {
@@ -94,8 +103,11 @@ Deno.serve(async (req) => {
   if (estPhotoDetouree(chemin)) return echec("photo_invalide");
 
   if (utilisatrice) {
-    const limite = limiteDepuisEnv(Deno.env.get("MAX_DETOURAGES_PER_USER_PER_DAY"), LIMITE_JOURNALIERE_PAR_DEFAUT);
-    const quota = await consommerQuota(admin, utilisatrice.id, "detourer-photo", limite);
+    // Une mise à plat est un appel génératif, plus cher : son plafond du jour est à part et plus bas.
+    const limite = miseAPlat
+      ? limiteDepuisEnv(Deno.env.get("MAX_MISES_A_PLAT_PER_USER_PER_DAY"), LIMITE_MISES_A_PLAT_PAR_DEFAUT)
+      : limiteDepuisEnv(Deno.env.get("MAX_DETOURAGES_PER_USER_PER_DAY"), LIMITE_JOURNALIERE_PAR_DEFAUT);
+    const quota = await consommerQuota(admin, utilisatrice.id, miseAPlat ? "detourer-photo-plat" : "detourer-photo", limite);
     if (quota === "limite") return echec("quota_atteint");
     if (quota === "indisponible") return reponse({ ok: false, error: "Service momentanément indisponible." }, 503);
   }
@@ -107,8 +119,18 @@ Deno.serve(async (req) => {
     const octetsSource = new Uint8Array(await source.arrayBuffer());
     if (octetsSource.length > TAILLE_SOURCE_MAX_OCTETS) return echec("photo_invalide");
 
-    // 2. Le détourage (fond transparent), puis la conversion WebP — repli sur le PNG brut si elle échoue.
-    const detouree = await detourerAvecFournisseur(fetch, cleFournisseur, octetsSource);
+    // 2. Le détourage (fond transparent), puis la conversion WebP — repli sur le PNG brut si elle échoue. Pour une pièce portée,
+    // la mise à plat passe d'abord, puis son résultat est détouré : le fichier final est transparent dans les deux cas.
+    let aDetourer = octetsSource;
+    if (miseAPlat) {
+      const plat = await mettreAPlatAvecFournisseur(fetch, cleFournisseur, octetsSource);
+      if (!plat.ok) {
+        console.error("[detourer-photo] échec mise à plat :", plat.code);
+        return echec(plat.code);
+      }
+      aDetourer = plat.octets;
+    }
+    const detouree = await detourerAvecFournisseur(fetch, cleFournisseur, aDetourer);
     if (!detouree.ok) {
       console.error("[detourer-photo] échec fournisseur :", detouree.code);
       return echec(detouree.code);
@@ -117,7 +139,7 @@ Deno.serve(async (req) => {
     const ext = encodee.ext === "webp" ? "webp" : "png";
 
     // 3. L'enregistrement, au même dossier que l'original (même politique de stockage, même propriétaire).
-    const sortie = cheminDetoure(chemin, ext);
+    const sortie = miseAPlat ? cheminMisAPlat(chemin, ext) : cheminDetoure(chemin, ext);
     const { error: erreurDepot } = await admin.storage.from("dressing-photos").upload(sortie, encodee.bytes, { contentType: encodee.contentType, upsert: false });
     if (erreurDepot) {
       console.error("[detourer-photo] dépôt impossible :", erreurDepot.message);
