@@ -91,6 +91,13 @@ const OCCASIONS_INSPIRATION: OccasionKey[] = ["quotidien", "travail_formel"];
 /** Pièces dont les idées sont calculées pour l'écran : au-delà, le total de looks est annoncé « N+ ». */
 const NB_PIECES_AVEC_IDEES = 16;
 
+/** L'étoile de « L'inspiration du moment » : le dessin de l'onglet `sparkle` (TabBar), en SVG plutôt que le glyphe ✦ (09/10/2026). */
+const ETOILE = (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style={{ display: "block" }}>
+    <path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z" />
+  </svg>
+);
+
 const PLUS = (
   <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
     <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -107,13 +114,13 @@ function TitreSection({ children, action, className = "mt-10" }: { children: Rea
   );
 }
 
-/** Lien d'action discret : terracotta, sans fond ni contour, cible de 44 px. */
+/** Lien d'action discret : terracotta, sans fond ni contour, cible de 44 px. Demi-gras et terracotta-deep (maquette V9 finale, 09/10/2026). */
 function Lien({ onClick, children, label }: { onClick: () => void; children: React.ReactNode; label?: string }) {
   return (
     <button
       onClick={onClick}
       aria-label={label}
-      className="inline-flex items-center gap-[6px] text-[12px] text-terracotta cursor-pointer flex-shrink-0 py-[13px] -my-[13px] whitespace-nowrap"
+      className="inline-flex items-center gap-[6px] text-[12px] font-semibold text-terracotta-deep cursor-pointer flex-shrink-0 py-[13px] -my-[13px] whitespace-nowrap"
     >
       {children}
     </button>
@@ -384,11 +391,18 @@ export default function WardrobeScreen() {
     >
       <AppHeader />
       <div className="t-surtitre text-muted mt-[14px]">Mon dressing</div>
-      <div className="flex items-start justify-between gap-3 mt-[6px]">
+      <div className="flex items-end justify-between gap-3 mt-[6px]">
         <div className="t-titre-ecran text-ink" style={{ textWrap: "balance" }}>
           Ton dressing, <span className="italic text-terracotta">à ton image</span>
         </div>
-        <Button variante="principal" pleine={false} onClick={ajouter} className="flex-shrink-0 !min-h-[44px] !px-[16px]">
+        {/* Pilule à contour, 44 px (09/10/2026, demandé : le bouton plein était « trop imposant », le simple lien « trop peu voyant »).
+            Terracotta-deep et non terracotta : 4,5:1 sur le fond carte, comme le bouton principal. */}
+        <Button
+          variante="contour"
+          pleine={false}
+          onClick={ajouter}
+          className="flex-shrink-0 !min-h-[44px] !gap-[7px] pl-[14px] pr-[18px] bg-card hover:bg-warm-bg !border-terracotta-deep !text-terracotta-deep font-semibold normal-case tracking-normal"
+        >
           {PLUS}
           Ajouter
         </Button>
@@ -400,58 +414,67 @@ export default function WardrobeScreen() {
 
       {/* ── RÉCEMMENT AJOUTÉES ─ des miniatures et un chevron vers « Tes dernières pièces » (30 jours). */}
       {recentes.length > 0 && (
-        <div className="mt-4 flex items-center gap-[10px]">
-          <div className="t-surtitre text-muted flex-shrink-0" style={{ width: 78, lineHeight: 1.3 }}>
-            Récemment ajoutées
+        <div className="mt-4 flex items-center gap-3">
+          {/* Deux lignes imposées : sans le saut, « Récemment » se coupait par un tiret à 320 px (vérification de la maquette V9). */}
+          <div className="t-surtitre text-muted flex-shrink-0" style={{ lineHeight: 1.4 }}>
+            Récemment
+            <br />
+            ajoutées
           </div>
-          <div className="flex gap-[8px] flex-1 min-w-0 overflow-hidden">
+          <div className="flex gap-[6px] flex-1 min-w-0 overflow-hidden">
             {recentes.slice(0, 4).map((p) => (
-              <button key={p.id} onClick={() => actions.openItem(p.id)} aria-label={p.name} className="flex-1 min-w-0 cursor-pointer" style={{ maxWidth: 52 }}>
-                <PhotoPiece piece={p} ratio={0.86} rayon={14} />
+              <button key={p.id} onClick={() => actions.openItem(p.id)} aria-label={p.name} className="flex-1 min-w-0 cursor-pointer" style={{ maxWidth: 56 }}>
+                <PhotoPiece piece={p} ratio={0.84} rayon={12} />
               </button>
             ))}
           </div>
           <button
             onClick={actions.goDernieresPieces}
             aria-label="Voir mes dernières pièces"
-            className="flex-shrink-0 flex items-center justify-center rounded-full border border-border bg-card text-terracotta cursor-pointer"
+            className="flex-shrink-0 flex items-center justify-center rounded-full border border-border bg-card text-terracotta-deep cursor-pointer"
             style={{ width: 44, height: 44 }}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9.5 6l6 6-6 6" /></svg>
           </button>
         </div>
       )}
 
       {/* ── L'INSPIRATION DU MOMENT ─ un look que le moteur compose avec les pièces récentes. */}
       {lookInspiration && avecIdee && phraseInspiration && (
-        <section className="mt-5 overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 24 }} aria-label="L'inspiration du moment">
-          <div className="relative" style={{ aspectRatio: "1.6", background: "var(--color-photo-bg)" }}>
+        // Hero légèrement réduit (V9 de finition) : photo 1,85 au lieu de 1,6, titre 20 px, marges resserrées — le premier écran garde
+        // l'en-tête, « Récemment ajoutées » et le hero entiers.
+        <section className="mt-4 overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 24 }} aria-label="L'inspiration du moment">
+          <div className="relative" style={{ aspectRatio: "1.85", background: "var(--color-photo-bg)" }}>
             <FlatLayCapsela
               items={lookInspiration.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i)}
               context="look-detail"
               layoutSeed={clePieces(lookInspiration.ids).join(",")}
             />
           </div>
-          <div className="px-5 pt-4 pb-5">
-            <div className="t-surtitre text-muted">
-              <span className="font-serif italic text-terracotta" aria-hidden="true">✦</span> L&apos;inspiration du moment
+          <div className="px-4 pt-3 pb-1">
+            <div className="t-surtitre flex items-center gap-[6px] text-terracotta-hover">
+              <span className="text-terracotta">{ETOILE}</span>
+              L&apos;inspiration du moment
             </div>
-            <div className="t-titre-section text-ink mt-2">
+            <div className="font-serif text-ink mt-[5px]" style={{ fontSize: 20, lineHeight: 1.15 }}>
               Tes nouvelles pièces, <span className="italic text-terracotta">déjà en looks</span>
             </div>
-            <div className="text-[13px] leading-[1.55] mt-[6px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>{phraseInspiration}</div>
-            <div className="mt-2">
-              <Lien onClick={() => actions.viewItemOutfit(lookInspiration.ids, lookInspiration.occasion)}>Voir ce look →</Lien>
-            </div>
+            <div className="text-[12.5px] leading-[1.45] mt-[5px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>{phraseInspiration}</div>
+            <button
+              onClick={() => actions.viewItemOutfit(lookInspiration.ids, lookInspiration.occasion)}
+              className="flex items-center gap-[6px] min-h-[44px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer"
+            >
+              Voir ce look →
+            </button>
           </div>
         </section>
       )}
 
       {/* ── TES LOOKS ─ un look par pièce récente, avec la pièce qui l'a fait naître. */}
       {looksCarrousel.length > 0 && (
-        <section className="mt-8" aria-label="Tes looks">
+        <section className="mt-6" aria-label="Tes looks">
           <div className="flex items-baseline justify-between gap-3">
-            <TitreSerif taille={20}>Tes looks</TitreSerif>
+            <TitreSerif taille={18}>Tes looks</TitreSerif>
             <Lien onClick={actions.goLooks} label="Voir mes looks">Voir mes looks →</Lien>
           </div>
           <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 -mx-6 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
@@ -490,19 +513,19 @@ export default function WardrobeScreen() {
       )}
 
       {/* ── PAR CATÉGORIE ─ une carte par catégorie réellement présente (visuel éditorial, libellé et nombre en pastille). */}
-      <section className="mt-8" aria-label="Par catégorie">
+      <section className="mt-7" aria-label="Par catégorie">
         <div className="flex items-baseline justify-between gap-3">
-          <TitreSerif taille={20}>Par catégorie</TitreSerif>
+          <TitreSerif taille={18}>Par catégorie</TitreSerif>
           <Lien onClick={() => actions.goWardrobePieces()} label="Voir toutes mes pièces">Toutes mes pièces →</Lien>
         </div>
-        <div className="grid grid-cols-2 gap-[12px] mt-4">
+        <div className="grid grid-cols-2 gap-[10px] mt-4">
           {groupes.map((g) => (
             <button
               key={g.id}
               onClick={() => actions.goWardrobePieces({ libelle: g.libelle, categories: g.categories })}
               aria-label={`${g.libelle} : ${g.nbPieces} ${g.nbPieces <= 1 ? "pièce" : "pièces"}`}
               className="relative block w-full overflow-hidden cursor-pointer active:opacity-80 text-left"
-              style={{ aspectRatio: "0.92", borderRadius: 22, background: "var(--color-warm-bg)" }}
+              style={{ aspectRatio: "0.92", borderRadius: 20, background: "var(--color-warm-bg)" }}
             >
               {g.propres.length > 0 ? (
                 <span
@@ -535,7 +558,7 @@ export default function WardrobeScreen() {
               )}
               <span
                 className="absolute left-[8px] right-[8px] bottom-[8px] flex flex-col gap-[1px] px-[14px] py-[8px]"
-                style={{ background: "var(--color-card)", borderRadius: 18 }}
+                style={{ background: "var(--color-card)", borderRadius: 14 }}
               >
                 <span className="font-serif text-ink line-clamp-2" style={{ fontSize: 14, lineHeight: 1.2 }}>{g.libelle.replace(/ & /g, " &\u00a0")}</span>
                 <span className="text-[11px] text-muted">{g.nbPieces} {g.nbPieces <= 1 ? "pièce" : "pièces"}</span>
@@ -549,7 +572,7 @@ export default function WardrobeScreen() {
       {aRedecouvrirUne && (
         <button
           onClick={() => actions.openItemOutfits(aRedecouvrirUne.piece.id, false, idees?.get(aRedecouvrirUne.piece.id))}
-          className="mt-8 w-full flex items-center gap-[14px] text-left rounded-hero px-4 py-4 cursor-pointer active:opacity-80"
+          className="mt-7 w-full flex items-center gap-[14px] text-left rounded-carte py-3 pl-3 pr-[14px] cursor-pointer active:opacity-80"
           style={{ background: "var(--color-warm-bg)" }}
           aria-label="À redécouvrir"
         >
@@ -557,13 +580,13 @@ export default function WardrobeScreen() {
             <PhotoPiece piece={aRedecouvrirUne.piece} ratio={0.82} rayon={14} />
           </span>
           <span className="flex-1 min-w-0">
-            <span className="block t-surtitre text-muted">À redécouvrir · {weather.saisons?.length ? weather.saisons.join(" / ") : saisonDeLaDate(maintenant)}</span>
-            <span className="block font-serif text-ink mt-[6px]" style={{ fontSize: 17, lineHeight: 1.25 }}>
+            <span className="block t-surtitre text-terracotta-hover">À redécouvrir · {weather.saisons?.length ? weather.saisons.join(" / ") : saisonDeLaDate(maintenant)}</span>
+            <span className="block font-serif text-ink mt-[6px]" style={{ fontSize: 17, lineHeight: 1.2 }}>
               {`${designationPiece(aRedecouvrirUne.piece).replace(/^t(on|a|es) /, (m) => `T${m.slice(1)}`)} `}
               <span className="italic text-terracotta">{pluriel ? "attendent leur moment" : "attend son moment"}</span>
             </span>
             {nbLooksRedecouvrir > 0 && (
-              <span className="block text-[12px] mt-[6px]" style={{ color: "var(--color-terracotta-deep)" }}>
+              <span className="block text-[12px] font-semibold mt-[6px]" style={{ color: "var(--color-terracotta-deep)" }}>
                 {nbLooksRedecouvrir} {nbLooksRedecouvrir === 1 ? "look cette saison" : "looks cette saison"} →
               </span>
             )}
