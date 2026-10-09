@@ -276,6 +276,38 @@ export function estPhotoDetouree(url: string | null | undefined): boolean {
  * l'URL signée de la photo détourée, ou null — service non branché, plafond du jour atteint, photo refusée, réseau :
  * jamais une erreur pour l'appelant, qui garde simplement la photo d'origine. Même principe qu'analyzeDressingPhoto.
  */
+export type CodeMiseAPlat = "quota_atteint" | "non_configure" | "credits_epuises" | "photo_refusee" | "photo_invalide" | "indisponible";
+
+/**
+ * Comme detourerPhoto, mais dit POURQUOI quand ça échoue (10/10/2026, « pourquoi l'application ne veut plus mettre à plat ») : le code
+ * renvoyé par la fonction Edge (`{ ok: false, code }`, en corps d'une réponse 4xx/5xx) est lu et rendu tel quel ; tout ce qui n'en
+ * porte pas (réseau, fonction non déployée) est « indisponible ». Sert au bouton « Mettre la photo à plat », qui doit pouvoir dire la cause.
+ */
+export async function detourerPhotoAvecCause(photoUrl: string, mode?: "mise_a_plat"): Promise<{ url: string } | { code: CodeMiseAPlat }> {
+  try {
+    const { data, error } = await getSupabase().functions.invoke("detourer-photo", { body: { photo_url: photoUrl, ...(mode ? { mode } : {}) } });
+    if (!error && data && (data as { ok?: boolean }).ok === true) {
+      const url = (data as { photo_url?: unknown }).photo_url;
+      if (typeof url === "string" && url.startsWith("http") && estPhotoDetouree(url)) return { url };
+      return { code: "indisponible" };
+    }
+    // Une réponse 4xx/5xx arrive en `error` : son corps JSON porte le code (FunctionsHttpError.context est la Response).
+    let code: unknown = (data as { code?: unknown } | null)?.code;
+    const contexte = (error as { context?: unknown } | null)?.context;
+    if (!code && contexte && typeof (contexte as Response).json === "function") {
+      try {
+        code = ((await (contexte as Response).clone().json()) as { code?: unknown }).code;
+      } catch {
+        /* corps illisible : « indisponible » */
+      }
+    }
+    const connus: CodeMiseAPlat[] = ["quota_atteint", "non_configure", "credits_epuises", "photo_refusee", "photo_invalide"];
+    return { code: connus.includes(code as CodeMiseAPlat) ? (code as CodeMiseAPlat) : "indisponible" };
+  } catch {
+    return { code: "indisponible" };
+  }
+}
+
 export async function detourerPhoto(photoUrl: string, mode?: "mise_a_plat"): Promise<string | null> {
   try {
     const { data, error } = await getSupabase().functions.invoke("detourer-photo", { body: { photo_url: photoUrl, ...(mode ? { mode } : {}) } });

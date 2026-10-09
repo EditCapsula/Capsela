@@ -10,12 +10,22 @@ import { libelleSaisons, saisonsDe } from "@/lib/saisons";
 import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import { fondPhotoPiece, resolveItemImage } from "@/lib/catalogImages";
-import { dressingPhotoPath, estPhotoMiseAPlat } from "@/lib/dressing";
+import { dressingPhotoPath, estPhotoMiseAPlat, type CodeMiseAPlat } from "@/lib/dressing";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
+
+/** Ce que la fonction répond quand la mise à plat échoue : la cause, dite simplement (10/10/2026). */
+const MESSAGE_ECHEC_MISE_A_PLAT: Record<CodeMiseAPlat, string> = {
+  quota_atteint: "Tu as atteint la limite de mises à plat du jour : reviens demain.",
+  non_configure: "La mise à plat n'est pas disponible pour le moment.",
+  credits_epuises: "La mise à plat n'est pas disponible pour le moment.",
+  photo_refusee: "Le service n'a pas pu traiter cette photo.",
+  photo_invalide: "Cette photo ne peut pas être mise à plat.",
+  indisponible: "La mise à plat n'a pas abouti : le service n'a pas répondu.",
+};
 
 const LENGTH_SUBTYPES = new Set(["Mini", "Midi", "Longue", "Courte"]);
 
@@ -132,7 +142,7 @@ export default function PieceScreen() {
   const [lookSheetOpen, setLookSheetOpen] = useState(false);
   const [dormant, setDormant] = useState(false);
   // « Mettre à plat » une photo déjà importée : on propose, la personne compare, puis choisit (rien n'est remplacé avant son accord).
-  const [plat, setPlat] = useState<{ etape: "ferme" | "repos" | "cours" | "propose" | "erreur"; url?: string }>({ etape: "ferme" });
+  const [plat, setPlat] = useState<{ etape: "ferme" | "repos" | "cours" | "propose" | "erreur"; url?: string; code?: CodeMiseAPlat }>({ etape: "ferme" });
   const active = state.activeSuggested
     ? vestiairePool.find((i) => i.id === state.activeId)
     : state.items.find((i) => i.id === state.activeId);
@@ -215,8 +225,8 @@ export default function PieceScreen() {
   const peutMettreAPlat = !suggested && isSupabaseConfigured && Boolean(dressingPhotoPath(active.photoUrl)) && !estPhotoMiseAPlat(active.photoUrl);
   const lancerMiseAPlat = async () => {
     setPlat({ etape: "cours" });
-    const url = await actions.proposerMiseAPlat(active.id);
-    setPlat(url ? { etape: "propose", url } : { etape: "erreur" });
+    const r = await actions.proposerMiseAPlat(active.id);
+    setPlat("url" in r ? { etape: "propose", url: r.url } : { etape: "erreur", code: r.code });
   };
   const fermerMiseAPlat = () => {
     // Fermer une version proposée sans la choisir la refuse : le fichier généré ne reste pas dans le stockage.
@@ -483,7 +493,7 @@ export default function PieceScreen() {
           {plat.etape === "erreur" && (
             <>
               <div className="text-[13px] text-ink leading-[1.55]" role="status">
-                La mise à plat n&apos;a pas abouti (service indisponible, plafond du jour atteint ou offre sans accès). Ta photo est inchangée.
+                {MESSAGE_ECHEC_MISE_A_PLAT[plat.code ?? "indisponible"]} Ta photo est inchangée.
               </div>
               <Button variante="secondaire" className="mt-[18px]" onClick={lancerMiseAPlat}>
                 Réessayer
