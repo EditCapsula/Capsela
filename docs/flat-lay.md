@@ -165,3 +165,11 @@ du catalogue), composées par `FlatLayCapsela` — le correctif est de présenta
 
 Limite connue, hors présentation : quand la photo d'une pièce montre une personne qui la porte, le détourage garde sa silhouette.
 Rien dans la pièce ne dit qu'elle est portée (le cadrage lu à l'ajout n'est jamais stocké) : seule une photo à plat règle ce cas.
+
+## Une seconde veste (09/10/2026)
+
+Un manteau héro avec une veste en plus (6 pièces : manteau, haut, bas, veste, chaussures, sac) posait la veste en accessoire, dans un coin de
+16 unités : elle rapetissait (13 unités de large contre 28 pour le haut). Elle prend maintenant le rôle de `couche` quand le haut n'en a pas
+déjà une : posée contre l'ancre (le haut), à côté du bas du côté de l'ancre en le recouvrant de 15 % au plus, aussi large que l'ancre (13 → 29
+unités à 310 px de zone). Une couche de haut (t-shirt sous un pull) garde son comportement : groupe, 62 % de l'ancre, masquée sur l'accueil.
+Une veste en plus, elle, reste posée sur l'accueil.
