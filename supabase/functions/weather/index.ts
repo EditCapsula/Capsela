@@ -65,6 +65,105 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+
+// ------------------------------------------------------------------
+// 09/2026 — PRÉVISIONS JUSQU'À 16 JOURS ET CLIMATOLOGIE, via Open-Meteo (gratuit, sans clé).
+//
+// Pourquoi : le palier gratuit d'OpenWeather ne donne que 5 jours de prévision (4 retenus par l'app). Open-Meteo en donne 16, par
+// heure, avec les mêmes coordonnées — et un historique (1940 →) dont on tire la CLIMATOLOGIE d'un lieu à une date : au-delà de 16 jours,
+// aucune prévision fiable n'existe, l'app dit « températures habituelles ».
+//
+// COMPATIBILITÉ : `mode=forecast` garde exactement sa forme de réponse ({ city, country, timezone, slots }) ; les créneaux sont toujours
+// des points de ts/temp/label, le client ne change pas de lecture. Si Open-Meteo échoue, la branche OpenWeather d'origine répond (5 jours).
+// `mode=climate` est nouveau : une fonction non redéployée l'ignore, le client le détecte par la FORME de la réponse (`climat`).
+//
+// LICENCE : Open-Meteo est gratuit pour un usage NON commercial ; un usage commercial demande son plan payant (open-meteo.com/en/pricing).
+
+/** Codes météo WMO → les libellés que l'app reconnaît déjà (isRainy, labelPrecipitation, isSunny). */
+function libelleWmo(code: number): string {
+  if (code === 0) return "Ensoleillé";
+  if (code === 1 || code === 2) return "Éclaircies";
+  if (code === 3) return "Nuageux";
+  if (code === 45 || code === 48) return "Brumeux";
+  if (code >= 51 && code <= 57) return "Pluie légère";
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return "Pluvieux";
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "Neigeux";
+  if (code >= 95) return "Orageux";
+  return "Nuageux";
+}
+
+async function geocoderParNom(nom: string): Promise<{ lat: number; lon: number; name: string; country: string } | null> {
+  try {
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(nom)}&count=1&language=fr&format=json`);
+    if (!res.ok) return null;
+    const d = await res.json();
+    const r = Array.isArray(d.results) ? d.results[0] : null;
+    if (!r || typeof r.latitude !== "number" || typeof r.longitude !== "number") return null;
+    return { lat: r.latitude, lon: r.longitude, name: r.name || nom, country: r.country_code || "" };
+  } catch {
+    return null;
+  }
+}
+
+/** Prévision horaire sur 16 jours, ramenée à un point toutes les 3 h (la forme d'OpenWeather) : ts en secondes UTC, au fuseau du LIEU. */
+async function previsionOpenMeteo(lat: string, lon: string): Promise<{ timezone: number; slots: { ts: number; temp: number; label: string }[] } | null> {
+  try {
+    const res = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}` +
+        `&hourly=temperature_2m,weather_code&forecast_days=16&timezone=auto&timeformat=unixtime`
+    );
+    if (!res.ok) return null;
+    const d = await res.json();
+    const t: unknown[] = d?.hourly?.time ?? [];
+    const temps: unknown[] = d?.hourly?.temperature_2m ?? [];
+    const codes: unknown[] = d?.hourly?.weather_code ?? [];
+    const slots: { ts: number; temp: number; label: string }[] = [];
+    for (let i = 0; i < t.length; i++) {
+      const ts = t[i], temp = temps[i], code = codes[i];
+      if (typeof ts !== "number" || typeof temp !== "number" || typeof code !== "number") continue;
+      // Un point sur trois (0 h, 3 h, 6 h…, heure locale) : le client agrège par fenêtres et n'a pas besoin du pas horaire.
+      if (((ts + (d.utc_offset_seconds ?? 0)) / 3600) % 3 !== 0) continue;
+      slots.push({ ts, temp: Math.round(temp), label: libelleWmo(code) });
+    }
+    return slots.length ? { timezone: typeof d.utc_offset_seconds === "number" ? d.utc_offset_seconds : 0, slots } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * CLIMATOLOGIE d'un lieu à une date : les cinq années précédentes, fenêtre de ± 3 jours autour de la même date, moyenne des
+ * minimales et maximales et part des jours de pluie (≥ 1 mm). Rien n'est inventé : ce sont des mesures passées, dites comme telles.
+ */
+async function climatologie(lat: string, lon: string, mois: number, jour: number): Promise<{ tempMin: number; tempMax: number; pluie: number; annees: number } | null> {
+  const an = new Date().getUTCFullYear();
+  const requetes = [1, 2, 3, 4, 5].map(async (k) => {
+    const centre = Date.UTC(an - k, mois - 1, jour);
+    const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+    try {
+      const res = await fetch(
+        `https://archive-api.open-meteo.com/v1/archive?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}` +
+          `&start_date=${iso(centre - 3 * 86400000)}&end_date=${iso(centre + 3 * 86400000)}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`
+      );
+      if (!res.ok) return null;
+      const d = await res.json();
+      return d?.daily ?? null;
+    } catch {
+      return null;
+    }
+  });
+  const reponses = (await Promise.all(requetes)).filter((r) => r);
+  const maxs: number[] = [], mins: number[] = [], pluies: number[] = [];
+  for (const r of reponses) {
+    for (const v of r.temperature_2m_max ?? []) if (typeof v === "number") maxs.push(v);
+    for (const v of r.temperature_2m_min ?? []) if (typeof v === "number") mins.push(v);
+    for (const v of r.precipitation_sum ?? []) if (typeof v === "number") pluies.push(v >= 1 ? 1 : 0);
+  }
+  if (!maxs.length || !mins.length) return null;
+  const moy = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+  return { tempMin: Math.round(moy(mins)), tempMax: Math.round(moy(maxs)), pluie: pluies.length ? Math.round((moy(pluies) + Number.EPSILON) * 100) / 100 : 0, annees: reponses.length };
+}
+
 /** Libellés français des conditions OpenWeather — repris tels quels de la route Next remplacée. */
 const WEATHER_LABELS: Record<string, string> = {
   Clear: "Ensoleillé",
@@ -114,6 +213,8 @@ Deno.serve(async (req) => {
   let lon: string | null = null;
   let city: string | null = null;
   let bodyMode: string | null = null;
+  let corpsMois: unknown = null;
+  let corpsJour: unknown = null;
 
   const url = new URL(req.url);
   lat = url.searchParams.get("lat");
@@ -128,6 +229,8 @@ Deno.serve(async (req) => {
       lon = body?.lon != null ? String(body.lon) : null;
       city = body?.city != null ? String(body.city) : null;
       bodyMode = body?.mode != null ? String(body.mode) : null;
+      corpsMois = body?.mois;
+      corpsJour = body?.jour;
     } catch {
       // Corps absent ou illisible : traité comme des paramètres manquants.
     }
@@ -215,6 +318,32 @@ Deno.serve(async (req) => {
       return json({ places });
     } catch {
       return json({ error: "Impossible de contacter OpenWeather" }, 502);
+    }
+  }
+
+  // mode=climate : les températures habituelles d'un lieu à une date (09/2026) — body { lat, lon, mois, jour }.
+  if (mode === "climate") {
+    const mois = Number(corpsMois), jr = Number(corpsJour);
+    if (!lat || !lon || !(mois >= 1 && mois <= 12) || !(jr >= 1 && jr <= 31)) return json({ error: "lat, lon, mois et jour requis" }, 400);
+    const climat = await climatologie(lat, lon, mois, jr);
+    return climat ? json({ climat }) : json({ error: "Climatologie indisponible" }, 502);
+  }
+
+  // mode=forecast : d'abord Open-Meteo (16 jours) ; sans coordonnées, le nom est géocodé. Échec : la branche OpenWeather ci-dessous (5 jours).
+  if (mode === "forecast") {
+    let la = lat, lo = lon, nom = city || "", pays = "";
+    if ((!la || !lo) && city) {
+      const g = await geocoderParNom(city);
+      if (g) {
+        la = String(g.lat);
+        lo = String(g.lon);
+        nom = g.name;
+        pays = g.country;
+      }
+    }
+    if (la && lo) {
+      const p = await previsionOpenMeteo(la, lo);
+      if (p) return json({ city: nom, country: pays, timezone: p.timezone, slots: p.slots });
     }
   }
 

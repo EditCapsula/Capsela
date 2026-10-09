@@ -20,6 +20,8 @@ export type MeteoEtapeLieu =
   | { kind: "sansDate" }
   | { kind: "encours" }
   | { kind: "ok"; temp: number; tempMin: number; tempMax: number; label: string }
+  /** Au-delà de la prévision : les températures HABITUELLES du lieu à cette date — jamais présentées comme une prévision. */
+  | { kind: "habituelle"; tempMin: number; tempMax: number }
   | { kind: "loin" }
   | { kind: "indispo" };
 
@@ -332,6 +334,22 @@ function MeteoDuLieu({ meteo }: { meteo: MeteoEtapeLieu }) {
         <div className="mt-2 inline-flex items-center gap-[7px] rounded-full px-[12px] py-[6px] text-[12px] text-muted-3" style={{ background: "var(--color-warm-bg)" }}>
           <span className="text-terracotta-deep"><Coche /></span>
           La météo sera prise en compte pour ta tenue.
+        </div>
+      </div>
+    );
+  }
+  if (meteo.kind === "habituelle") {
+    return (
+      <div className="mt-4" aria-live="polite">
+        <div className="rounded-bloc border border-border bg-card px-[14px] py-[12px]">
+          <div className="font-serif text-[20px] text-ink leading-[1.2]">
+            {meteo.tempMin === meteo.tempMax ? `${meteo.tempMin}°` : `${meteo.tempMin}° — ${meteo.tempMax}°`}
+          </div>
+          <div className="text-[12px] text-muted-3 mt-[1px]">Températures habituelles à cette date · la prévision sera disponible plus près du jour.</div>
+        </div>
+        <div className="mt-2 inline-flex items-center gap-[7px] rounded-full px-[12px] py-[6px] text-[12px] text-muted-3" style={{ background: "var(--color-warm-bg)" }}>
+          <span className="text-terracotta-deep"><Coche /></span>
+          Ces températures habituelles seront prises en compte.
         </div>
       </div>
     );
