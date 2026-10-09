@@ -16,6 +16,7 @@ import type { CategoryKey, Item } from "../src/lib/types";
 //   PLANCHE_IMG_DIR=/chemin/vers/images   (facultatif : des copies locales, sous <catégorie>/<fichier>.webp, à la place du réseau)
 //   PLANCHE_OUT=/tmp/planche-flat-lay.html
 //   PLANCHE_CONTEXTE=hero-home   (ou look-detail : Tenue du jour, « Tes looks »)
+//   PLANCHE_VISUELS=hero   (les visuels hero du catalogue ; sinon les visuels standard)
 //   PLANCHE_ZOOM=1   (agrandit les cartes pour les regarder de près)
 //   npx vitest run --config vitest.audit.config.mts scripts/planche-flat-lay.audit.ts
 //
@@ -38,9 +39,27 @@ const IMG: Record<string, string> = {
   sac: "femme/sacs/51",
   accessoire: "femme/accessoires/17",
 };
+// Visuels HERO (colonne url_image_hero, posés à plat avec des plis naturels, rognés sur la pièce) : un par catégorie, tirés du catalogue réel
+// le 10/10/2026. `PLANCHE_VISUELS=hero` les utilise à la place des visuels standard ci-dessus.
+const HERO: Record<string, string> = {
+  haut: "hero/femme/hauts/448-1791406119373-r1.00",
+  haut2: "hero/femme/hauts/448-1791406119373-r1.00",
+  pantalon: "hero/femme/pantalons/468-1791407995555-r0.71",
+  pantalon2: "hero/femme/pantalons/468-1791407995555-r0.71",
+  jean: "hero/femme/jeans/467-1791408152887-r0.61",
+  veste: "hero/femme/vestes-blazers/456-1791408100824-r0.96",
+  pull: "hero/femme/pulls-gilets/454-1791407951157-r0.93",
+  manteau: "hero/femme/manteaux-exterieurs/463-1791408313613-r0.78",
+  robe: "hero/femme/robes/472-1791408019783-r0.69",
+  chaussures: "hero/femme/chaussures/476-1791408190964-r1.09",
+  chaussures2: "hero/femme/chaussures/476-1791408190964-r1.09",
+  sac: "hero/femme/sacs/482-1791407998353-r0.88",
+  accessoire: "hero/unisexe/accessoires/485-1791406176225-r1.04",
+};
+const VISUELS_HERO = process.env.PLANCHE_VISUELS === "hero";
 let n = 0;
 const piece = (cle: keyof typeof IMG, cat: CategoryKey): Item =>
-  ({ id: ++n, name: cle, cat, color: "Noir", hex: "#222", season: "Toutes saisons", worn: null, imageUrl: BASE + IMG[cle] + ".webp", imageStatus: "ready" }) as Item;
+  ({ id: ++n, name: cle, cat, color: "Noir", hex: "#222", season: "Toutes saisons", worn: null, imageUrl: BASE + (VISUELS_HERO ? HERO[cle] : IMG[cle]) + ".webp", imageHeroUrl: VISUELS_HERO ? BASE + HERO[cle] + ".webp" : undefined, imageStatus: "ready" }) as Item;
 
 const CONTEXTE = (process.env.PLANCHE_CONTEXTE ?? "hero-home") as ContexteFlatLay;
 const CONFIGS: [string, Item[]][] = [
