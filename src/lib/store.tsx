@@ -15,6 +15,8 @@ import { fetchVestiaireUniversel } from "./vestiaire";
 import {
   analyzeDressingPhoto,
   detourerPhoto,
+  detourerPhotoAvecCause,
+  type CodeMiseAPlat,
   deleteDressingItem,
   deleteDressingPhotos,
   deleteOutfitFeedback,
@@ -428,7 +430,7 @@ export interface Actions {
   /** Ouvre l'écran Ajouter en mode édition pour une pièce réelle du dressing ("Modifier les informations"/"Changer la photo", recette 24/08/2026) — préremplit tous les champs, saveItem met alors à jour cette ligne plutôt que d'en créer une nouvelle. */
   startEditItem: (item: Item) => void;
   /** « Mettre à plat » (pièce déjà importée) : demande la version mise à plat de la photo ; rend son URL signée, ou null (service absent, plafond, plan sans accès). Rien n'est remplacé. */
-  proposerMiseAPlat: (id: number) => Promise<string | null>;
+  proposerMiseAPlat: (id: number) => Promise<{ url: string } | { code: CodeMiseAPlat }>;
   /** Garde la version mise à plat : la photo de la pièce est remplacée, l'ancienne supprimée du stockage si plus rien ne la référence. */
   adopterPhotoMiseAPlat: (id: number, urlMiseAPlat: string) => void;
   /** Refuse la version mise à plat : le fichier généré est supprimé du stockage, la pièce garde sa photo. */
@@ -1911,8 +1913,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }),
     proposerMiseAPlat: async (id) => {
       const it = stateRef.current.items.find((x) => x.id === id);
-      if (!it?.photoUrl || !isSupabaseConfigured) return null;
-      return detourerPhoto(it.photoUrl, "mise_a_plat");
+      if (!it?.photoUrl || !isSupabaseConfigured) return { code: "indisponible" as const };
+      return detourerPhotoAvecCause(it.photoUrl, "mise_a_plat");
     },
     adopterPhotoMiseAPlat: (id, urlMiseAPlat) => {
       const avant = stateRef.current.items;
