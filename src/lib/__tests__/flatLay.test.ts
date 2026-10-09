@@ -554,3 +554,38 @@ describe("une seconde veste n'est pas un accessoire (09/10/2026, « la veste ove
     expect(masquees.length).toBe(2);
   });
 });
+
+describe("accueil (hero-home) — aucune rotation (09/10/2026)", () => {
+  const configs: PieceFlatLay[][] = [
+    [p("haut", 1), p("pantalon", 0.55), p("sac", 1.1), p("chaussures", 1.5)],
+    [p("haut", 0.9), p("pantalon", 0.55), p("veste", 0.95), p("sac", 1.1), p("chaussures", 1.5)],
+    [p("pull", 1), p("pantalon", 0.55), p("manteau", 0.75), p("chaussures", 1.5)],
+    [p("robe", 0.55), p("sac", 1.1), p("chaussures", 1.5), p("accessoire", 1.2)],
+    [p("haut", 1), p("jean", 0.55), p("chaussures", 1.5)],
+    [p("pull", 1), p("haut", 1), p("pantalon", 0.55), p("veste", 0.95), p("sac", 1.1), p("chaussures", 1.5)],
+  ];
+  it("toutes les pièces sont à 0°, quelle que soit la graine, y compris une inclinaison préférée portée par la pièce", () => {
+    for (const pieces of configs)
+      for (let i = 0; i < 30; i++) {
+        const avecPreference = pieces.map((q, k) => (k === 0 ? { ...q, preferredRotation: 7 } : q));
+        for (const q of composerFlatLay(avecPreference, "r" + i, { contexte: "hero-home" }).pieces) expect(Object.is(q.angle, 0), `${q.cat} graine ${i}`).toBe(true);
+      }
+  });
+  it("les autres contextes gardent leurs inclinaisons (Tenue du jour, détail d'un look)", () => {
+    const inclinees = composerFlatLay(configs[0], "x", { contexte: "look-detail" }).pieces.filter((q) => q.angle !== 0);
+    expect(inclinees.length).toBeGreaterThan(0);
+  });
+  it("sans inclinaison, le recouvrement reste faible (≤ 20 % de la plus petite) : aucune compensation par des chevauchements", () => {
+    const part = (a: PlacementFlatLay, b: PlacementFlatLay) => {
+      const A = boiteDe(a);
+      const B = boiteDe(b);
+      const commun = Math.max(0, Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0)) * Math.max(0, Math.min(A.y1, B.y1) - Math.max(A.y0, B.y0));
+      return commun / Math.min((A.x1 - A.x0) * (A.y1 - A.y0), (B.x1 - B.x0) * (B.y1 - B.y0));
+    };
+    for (const pieces of configs)
+      for (let i = 0; i < 30; i++) {
+        const sortie = composerFlatLay(pieces, "s" + i, { contexte: "hero-home" }).pieces;
+        for (let a = 0; a < sortie.length; a++) for (let b = a + 1; b < sortie.length; b++) expect(part(sortie[a], sortie[b]), `graine ${i}`).toBeLessThanOrEqual(0.2);
+      }
+  });
+});

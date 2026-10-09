@@ -184,6 +184,8 @@ interface ConfigContexte {
   masquerCouche?: boolean;
   /** Sous-types d'accessoire qui restent dans la tenue mais ne sont pas posées dans cette planche (hero-home : les collants, dont le visuel à plat ne se lit pas — 08/10/2026). */
   accessoiresMasques?: string[];
+  /** true : aucune pièce n'est inclinée, quel que soit le gabarit, la graine ou l'inclinaison préférée de la pièce (hero-home). */
+  sansInclinaison?: boolean;
   /** true : jamais de planche en miroir (hero-home : « haut en haut à gauche, pantalon à droite » est une règle, pas un tirage). */
   sansMiroir?: boolean;
   /** Au plus ce nombre de pièces dans la planche (hero-home : 4, « 3 à 4 pièces bien lisibles ») ; les autres restent dans la tenue, jamais dans la planche. */
@@ -258,6 +260,7 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
     // 4 pièces au plus (09/10/2026) : le haut, le bas ou la robe, les chaussures et le sac se lisent ; un accessoire seulement s'il reste de la place.
     maxPieces: 4,
     sansMiroir: true,
+    sansInclinaison: true,
     maxAccessoires: [1, 0],
     ecartAccessoireMax: 12,
     refs: { ...REF_HOME, ...HOME_BAS },
@@ -517,6 +520,8 @@ export function composerFlatLay(
       angle = -angle;
     }
     angle = Math.max(-lim, Math.min(lim, angle));
+    // Accueil : toutes les pièces à plat, droites (09/10/2026, « rotation = 0deg pour tous les articles ») — ni gabarit, ni graine, ni inclinaison préférée.
+    if (config.sansInclinaison) angle = 0;
     return { id: piece.id, cat: piece.cat, role, visualScale, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
   };
 

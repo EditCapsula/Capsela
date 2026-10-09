@@ -127,7 +127,8 @@ function SilhouetteFlatLay({ formes }: { formes: { cat: CategoryKey; photoUrl?: 
                 top: `${(p.y / hauteur) * 100}%`,
                 width: `${p.l}%`,
                 aspectRatio: `${p.l} / ${p.h}`,
-                transform: `translate(-50%, -50%) rotate(${p.angle}deg)`,
+                // Une pièce droite n'a aucune rotation CSS (accueil, 09/10/2026) : pas de rotate(0deg) pour autant.
+            transform: p.angle === 0 ? "translate(-50%, -50%)" : `translate(-50%, -50%) rotate(${p.angle}deg)`,
                 zIndex: p.z,
               }}
             >

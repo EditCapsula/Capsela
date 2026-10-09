@@ -210,3 +210,11 @@ Les marges transparentes des visuels du catalogue sont déjà lues (`catalogMarg
 calcule sur elle). Les photos détourées de l'utilisatrice n'ont pas de boîte mesurée (un portrait courant est supposé) : les mesurer demanderait de
 lire l'alpha de chaque image au chargement (CORS, recalcul après chargement) ou de porter les bornes dans le nom du fichier comme le visuel hero.
 Sur l'accueil, une photo brute cède la place au visuel produit déjà généré de la même pièce s'il existe (jamais une nouvelle image).
+
+## Accueil : tout est droit (09/10/2026)
+
+`CONTEXTES["hero-home"].sansInclinaison` : toutes les pièces sont à 0°, quels que soient le gabarit, la graine, l'inclinaison préférée d'une pièce
+(`preferredRotation`) et la veste en plus. Le composant n'écrit alors aucun `rotate()` CSS (`transform: translate(-50%, -50%)` seul), ni dans la
+planche (`FlatLayCapsela`) ni dans la silhouette de chargement (`ZoneLookDuJour`). Vérifié sur la planche de debug : 44 pièces, aucun `rotate`.
+Les positions, tailles et règles de visibilité ne changent pas ; les recouvrements restent ≤ 20 % de la plus petite pièce (testé). Les autres
+contextes (Tenue du jour, détail d'un look, « Tes looks ») gardent leurs inclinaisons.
