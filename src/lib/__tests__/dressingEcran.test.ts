@@ -10,6 +10,7 @@ import {
   categoriesManquantes,
   choisirADecouvrir,
   groupesDuVestiaire,
+  piecesPourVisuelCategorie,
   enteteDressing,
   syntheseDressing,
 } from "../dressingEcran";
@@ -166,5 +167,32 @@ describe("enteteDressing — le total en ligne forte, comme la Capsule", () => {
   it("Premium ou droit non vérifié : aucune limite annoncée", () => {
     expect(enteteDressing("premium", 7, 3)).toEqual({ titre: "7 pièces dans ton dressing", detail: "3 catégories" });
     expect(enteteDressing("inconnu", 1, 1)).toEqual({ titre: "1 pièce dans ton dressing", detail: "1 catégorie" });
+  });
+});
+
+describe("piecesPourVisuelCategorie", () => {
+  const propre = (id: number, cat: CategoryKey, photoUrl = `https://x/${id}.detouree.webp`): Item => ({ ...piece(id, cat), photoUrl });
+
+  it("pièces détourées de la catégorie, les plus récentes d'abord, 3 au plus", () => {
+    const r = piecesPourVisuelCategorie([propre(1, "haut"), propre(2, "pull"), propre(3, "haut"), propre(4, "haut"), propre(5, "jupe")], ["haut", "pull"]);
+    expect(r.map((p) => p.id)).toEqual([4, 3, 2]);
+  });
+
+  it("une photo brute ou une pièce sans image n'illustre pas", () => {
+    const brute = { ...piece(1, "sac"), photoUrl: "https://x/1.jpg" };
+    expect(piecesPourVisuelCategorie([brute, piece(2, "sac")], ["sac"])).toEqual([]);
+  });
+
+  it("cases au-dessus de la pastille de libellé", () => {
+    for (const n of [1, 2, 3]) {
+      const items = Array.from({ length: n }, (_, k) => propre(k + 1, "sac"));
+      for (const c of piecesPourVisuelCategorie(items, ["sac"])) expect(c.t + c.h).toBeLessThanOrEqual(76);
+    }
+  });
+
+  it("groupesDuVestiaire joint ces pièces à la carte, vide sinon", () => {
+    const g = groupesDuVestiaire([propre(1, "sac"), piece(2, "bijou")], "femme");
+    expect(g.find((x) => x.id === "sacs")?.propres).toHaveLength(1);
+    expect(g.find((x) => x.id === "bijoux-accessoires")?.propres).toEqual([]);
   });
 });

@@ -1,6 +1,7 @@
 import type { Gender } from "./profile";
 import type { EtatPremium } from "./premium";
 import { LIMITE_DRESSING_GRATUIT } from "./premium";
+import { resolveItemImage } from "./catalogImages";
 import type { CategoryKey, Item } from "./types";
 
 /*
@@ -56,6 +57,8 @@ export interface GroupeAffiche {
   nbPieces: number;
   /** Catégories techniques additionnées — et filtre de « Mes pièces ». */
   categories: CategoryKey[];
+  /** Pièces propres du dressing qui illustrent la carte ; vide = visuel éditorial. */
+  propres: PieceVisuelCategorie[];
 }
 
 /**
@@ -84,8 +87,45 @@ export function groupesDuVestiaire(items: Item[], gender: Gender | null): Groupe
       visuel: `/images/categories/${visuel}_${g.id}.webp`,
       nbPieces: items.filter((i) => g.categories.includes(i.cat)).length,
       categories: g.categories,
+      propres: piecesPourVisuelCategorie(items, g.categories),
     }))
     .filter((g) => g.nbPieces > 0);
+}
+
+// ── VISUEL DES CARTES « PAR CATÉGORIE » ────────────────────────────────
+
+/** Cases (en % de la tuile) selon le nombre de pièces ; tout reste au-dessus de la pastille de libellé (~25 % du bas). */
+const CASES_VISUEL: Record<1 | 2 | 3, { l: number; t: number; w: number; h: number }[]> = {
+  1: [{ l: 12, t: 8, w: 76, h: 62 }],
+  2: [{ l: 4, t: 14, w: 50, h: 56 }, { l: 46, t: 10, w: 50, h: 56 }],
+  3: [{ l: 6, t: 6, w: 46, h: 44 }, { l: 48, t: 6, w: 46, h: 44 }, { l: 27, t: 36, w: 46, h: 40 }],
+};
+
+export interface PieceVisuelCategorie {
+  id: number;
+  url: string;
+  l: number;
+  t: number;
+  w: number;
+  h: number;
+}
+
+/**
+ * Pièces PROPRES du dressing qui illustrent une carte de catégorie (09/10/2026, demandé : les pièces détourées / mises à plat
+ * remplacent les visuels éditoriaux). Une photo brute n'illustre pas (fond, personne) ; une pièce sans image non plus. Les
+ * plus récentes d'abord, 3 au plus. Liste vide : la carte garde son visuel éditorial.
+ */
+export function piecesPourVisuelCategorie(items: Item[], categories: CategoryKey[], max = 3): PieceVisuelCategorie[] {
+  const propres = items
+    .filter((i) => categories.includes(i.cat))
+    .map((i) => ({ id: i.id, image: resolveItemImage(i) }))
+    .filter((p): p is { id: number; image: { kind: "detouree" | "affiliate" | "generated"; url: string } } =>
+      !!p.image.url && (p.image.kind === "detouree" || p.image.kind === "affiliate" || p.image.kind === "generated"))
+    .sort((a, b) => b.id - a.id)
+    .slice(0, Math.min(max, 3));
+  if (propres.length === 0) return [];
+  const cases = CASES_VISUEL[propres.length as 1 | 2 | 3];
+  return propres.map((p, k) => ({ id: p.id, url: p.image.url, ...cases[k] }));
 }
 
 // ── SYNTHÈSE DE L'EN-TÊTE ──────────────────────────────────────────────

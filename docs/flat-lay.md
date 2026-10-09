@@ -228,3 +228,7 @@ propres inclinaisons) et l'étiquette d'annotation inclinée de ce composant.
 `CONTEXTES["hero-home"].echellesCategorie` : `haut`, `pull`, `veste` et `manteau` ×1,2 sur la largeur des pièces (« augmente le haut de 20 % et la veste de 20 % aussi »).
 Le manteau suit la veste (même rôle de pièce du dessus). Les autres contextes n'ont pas de table : ils ne changent pas. Les recouvrements restent ≤ 20 %
 (testé) ; la planche s'ajuste à la zone, donc le bas et les chaussures gardent leur gabarit mais peuvent perdre quelques % si la hauteur limite.
+
+## Cartes « Par catégorie » du Dressing (09/10/2026)
+
+Les pièces du dressing étant propres (détourées ou mises à plat), elles illustrent elles-mêmes les cartes de catégorie : `piecesPourVisuelCategorie` (`dressingEcran.ts`) retient jusqu'à 3 pièces récentes dont l'image n'est pas une photo brute, posées en `contain` sur le fond grège avec une ombre douce, au-dessus de la pastille. Aucune pièce propre : la carte garde son visuel éditorial. La pastille passe en colonne (libellé sur 2 lignes max, nombre dessous) pour ne plus tronquer « Robes & combinaisons ».
