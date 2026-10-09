@@ -173,3 +173,40 @@ Un manteau héro avec une veste en plus (6 pièces : manteau, haut, bas, veste, 
 déjà une : posée contre l'ancre (le haut), à côté du bas du côté de l'ancre en le recouvrant de 15 % au plus, aussi large que l'ancre (13 → 29
 unités à 310 px de zone). Une couche de haut (t-shirt sous un pull) garde son comportement : groupe, 62 % de l'ancre, masquée sur l'accueil.
 Une veste en plus, elle, reste posée sur l'accueil.
+
+## Accueil : 3 à 4 pièces lisibles (09/10/2026, brief « Optimisation du flat lay sur la homepage »)
+
+Remplace la composition ciblée du 08/10 (5 pièces serrées, bas devant près de la moitié d'une veste).
+
+**Problèmes mesurés** (zone `hero-home`, 100 × 112 unités, ≈ 181 × 203 px) : le bas dominait (jusqu'à 81 unités de haut) et recouvrait 49 à 59 %
+d'une veste, d'un manteau ou des chaussures (seuil de 60 % arbitré le 08/10) ; avec 5 ou 6 pièces, chaque pièce se réduisait (×0,88) ; une photo
+brute de l'utilisatrice (rectangle avec son fond, parfois une personne) était posée comme une pièce de plus.
+
+**Règles** (constantes dans `flatLay.ts`, `CONTEXTES["hero-home"]`) :
+- `maxPieces: 4`. Au-delà, `pieceRepresentatives` garde les plus représentatives : robe, manteau, bas, haut, veste, puis chaussures, sac, accessoire ;
+  un second haut ou une seconde veste pèse 60 % du premier. Les autres restent dans la tenue réelle (`masquees`), jamais retirées.
+- Une photo brute (`photoBrute`, déduite du type d'image `resolveItemImage → "photo"`) passe après les visuels produit : écartée de la planche
+  tant qu'il reste au moins 3 autres pièces. Sans assez de visuels produit, elle reste (jamais moins de 3 pièces).
+- Gabarits (parts de la zone, centre de la pièce) : `HOME_BAS` (haut en haut à gauche, bas au centre droit, sac en bas à gauche, chaussures en
+  bas à droite ; jamais en miroir sur l'accueil, `sansMiroir`), `HOME_DESSUS` (le haut et la veste côte à côte, à moins de 12 unités l'un de l'autre,
+  le bas dessous, plus bas et plus étroit, chaussures en bas à droite), `HOME_ROBE` (robe à droite, surcouche en haut à gauche, sac dessous, chaussures en bas).
+- Chevauchements : les seuils par défaut (18 % de la plus petite, 20 % masquée) s'appliquent de nouveau ; mesurés sur 6 configurations : 12 % au plus.
+- Accessoires : 1 au plus, seulement s'il reste de la place sous les 4 pièces ; les collants restent masqués.
+- Déterministe : la même graine (le look) donne la même planche.
+
+**Limite** : une image où la personne est dans les pixels (photo portée détourée) ne se reconnaît pas : le moteur ne sait pas ce que montre un fichier.
+Il écarte seulement les photos brutes. Le CSS ne peut pas retirer cette personne ; il faudrait un traitement de l'image (ou un indicateur « photo
+portée » à l'ajout).
+
+### Planche de debug (outil de développement, pas un écran de l'app)
+
+`scripts/planche-flat-lay.audit.ts` rend les six compositions de référence avec le VRAI composant `FlatLayCapsela` (contexte `hero-home`) et de
+vraies images du catalogue (bucket `catalog-images`), dans une carte imitant l'accueil, à 390 px (zone 181 px) et à 360 px (zone 164 px) :
+
+    PLANCHE_IMG_DIR=<copies locales, facultatif> PLANCHE_ZOOM=2 PLANCHE_OUT=/tmp/planche.html \
+      npx vitest run --config vitest.audit.config.mts scripts/planche-flat-lay.audit.ts
+
+Les marges transparentes des visuels du catalogue sont déjà lues (`catalogMarges.ts` : la pièce est recadrée sur sa boîte réelle, la taille se
+calcule sur elle). Les photos détourées de l'utilisatrice n'ont pas de boîte mesurée (un portrait courant est supposé) : les mesurer demanderait de
+lire l'alpha de chaque image au chargement (CORS, recalcul après chargement) ou de porter les bornes dans le nom du fichier comme le visuel hero.
+Sur l'accueil, une photo brute cède la place au visuel produit déjà généré de la même pièce s'il existe (jamais une nouvelle image).

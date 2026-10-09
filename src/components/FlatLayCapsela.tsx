@@ -43,12 +43,19 @@ export function FlatLayCapsela({
   const HAUTEUR = hauteurDuContexte(context);
   const graine = layoutSeed;
   const images = useMemo(() => {
-    const toutes = items.map((it) => ({ it, img: resolveHeroImage(it) }));
+    const toutes = items.map((it) => {
+      const img = resolveHeroImage(it);
+      // Sur l'accueil, une photo brute (parfois une personne) cède la place au visuel produit déjà généré pour la même pièce, s'il existe :
+      // un asset existant, jamais un nouveau (09/10/2026).
+      if (context === "hero-home" && img.kind === "photo" && it.imageUrl && it.imageStatus === "ready")
+        return { it, img: { kind: "generated" as const, url: it.imageHeroUrl ?? it.imageUrl } };
+      return { it, img };
+    });
     // Une pièce sans visuel ne laisse ni vide ni pastille de couleur (calibrage du 08/10/2026) : elle sort de la planche, qui se
     // recalcule avec les pièces qui ont une image. Aucune n'en a (mode démo, catalogue hors ligne) : on garde les pastilles.
     const avecImage = toutes.filter(({ img }) => img.url);
     return avecImage.length ? avecImage : toutes;
-  }, [items]);
+  }, [items, context]);
   const composition = useMemo(
     () =>
       composerFlatLay(
@@ -56,7 +63,7 @@ export function FlatLayCapsela({
           // La boîte réelle de l'objet (objectBounds) : son format fait la taille. Photo du dressing sans boîte connue : un portrait courant ; sans visuel : un carré.
           const b = objectBounds(img.url);
           const ratio = b ? (b.width * (ratioHero(img.url) ?? 1)) / b.height : img.kind === "placeholder" ? 1 : 0.8;
-          return { id: it.id, cat: it.cat, ratio, accessoireType: it.accessoireType };
+          return { id: it.id, cat: it.cat, ratio, accessoireType: it.accessoireType, photoBrute: img.kind === "photo" };
         }),
         graine,
         { contexte: context }
