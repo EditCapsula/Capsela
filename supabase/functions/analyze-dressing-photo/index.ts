@@ -150,7 +150,14 @@ interface AnalysisRaw {
   bijou_type?: string | null;
   accessoire_type?: string | null;
   photo_type?: string | null;
+  manches?: string | null;
+  saisons?: string[] | null;
 }
+
+/** Catégories dont la longueur de manches se renseigne — synchronisée avec CATEGORIES_A_MANCHES (src/lib/manches.ts, app-side). */
+const CATEGORIES_A_MANCHES = ["haut", "pull", "robe", "combinaison", "veste", "manteau"] as const;
+
+const SAISONS = ["Printemps", "Été", "Automne", "Hiver"] as const;
 
 /** Ce que montre la photo : l'article seul, porté par une personne, ou plusieurs articles (une tenue entière). */
 const CADRAGES = ["seule", "portee", "plusieurs"] as const;
@@ -252,9 +259,11 @@ function buildPrompt(): string {
     `Si tu peux distinguer la matière principale, indique matiere EXACTEMENT parmi : ${MATIERES.join(", ")}, sinon null.`,
     "Indique aussi color_hex : ta meilleure estimation de la couleur dominante de L'ARTICLE (pas du fond ni de la peau/cheveux si une personne le porte), en hex #RRGGBB.",
     "Si l'article est porté par une personne, concentre-toi uniquement sur l'article lui-même, jamais sur la personne ou le décor.",
+    `Si cat est l'une de : ${CATEGORIES_A_MANCHES.join(", ")}, indique aussi manches EXACTEMENT parmi : sans, courtes, longues (sans = sans manches ou bretelles, courtes = jusqu'au coude, longues = jusqu'au poignet ou au-delà), sinon null. Pour toute autre catégorie, manches = null.`,
+    "Indique aussi saisons : la liste des saisons où cet article se porte, parmi Printemps, Été, Automne, Hiver (une ou plusieurs ; ex. un manteau en laine : Automne, Hiver ; un débardeur en lin : Printemps, Été), d'après la matière, l'épaisseur et la coupe visibles. Si tu n'es pas raisonnablement sûr, saisons = null.",
     "Indique aussi photo_type : \"seule\" si la photo montre UN SEUL article, posé à plat, sur un cintre ou en gros plan, sans personne ; \"portee\" si une personne le porte ; \"plusieurs\" si la photo montre plusieurs articles ou une tenue entière. Null si tu n'es pas sûr.",
     "Si tu n'es pas raisonnablement sûr d'un champ, mets null plutôt que de deviner au hasard — une suggestion fausse est pire qu'aucune suggestion.",
-    'Réponds UNIQUEMENT en JSON strict, un seul objet, avec exactement ces clés : {"cat": string|null, "color_hex": string|null, "matiere": string|null, "subtype": string|null, "shoe_type": string|null, "sac_type": string|null, "bijou_type": string|null, "accessoire_type": string|null, "photo_type": string|null}.',
+    'Réponds UNIQUEMENT en JSON strict, un seul objet, avec exactement ces clés : {"cat": string|null, "color_hex": string|null, "matiere": string|null, "subtype": string|null, "shoe_type": string|null, "sac_type": string|null, "bijou_type": string|null, "accessoire_type": string|null, "photo_type": string|null, "manches": string|null, "saisons": string[]|null}.',
   ].join("\n");
 }
 
@@ -275,6 +284,17 @@ function sanitize(raw: AnalysisRaw): Record<string, unknown> {
   if (raw.photo_type && (CADRAGES as readonly string[]).includes(raw.photo_type)) out.photoType = raw.photo_type;
 
   if (cat && raw.matiere && (MATIERES as readonly string[]).includes(raw.matiere)) out.matiere = raw.matiere;
+
+  // Les manches : seulement pour une catégorie qui en a, et dans la liste.
+  if (cat && (CATEGORIES_A_MANCHES as readonly string[]).includes(cat) && raw.manches && ["sans", "courtes", "longues"].includes(raw.manches)) {
+    out.manches = raw.manches;
+  }
+
+  // Les saisons : seulement celles de la liste, sans doublon, dans l'ordre de l'année.
+  if (Array.isArray(raw.saisons)) {
+    const saisons = SAISONS.filter((s) => (raw.saisons as unknown[]).includes(s));
+    if (saisons.length) out.saisons = saisons;
+  }
 
   const subtypeOptions = cat ? SUBTYPES[cat] : undefined;
   if (subtypeOptions && raw.subtype && subtypeOptions.includes(raw.subtype)) out.subtype = raw.subtype;

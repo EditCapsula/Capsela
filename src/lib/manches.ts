@@ -6,7 +6,8 @@ import type { CategoryKey, Item, Manches } from "./types";
  *
  * Trois valeurs, jamais déduites d'un nom ni d'un sous-type : une pièce sans
  * valeur est INCONNUE, et le moteur la traite comme avant. Seules les
- * catégories qui ont des manches la portent.
+ * catégories qui ont des manches la portent — le manteau aussi (09/10/2026) :
+ * une doudoune peut être sans manches.
  */
 
 export const MANCHES: readonly { valeur: Manches; libelle: string }[] = [
@@ -16,7 +17,7 @@ export const MANCHES: readonly { valeur: Manches; libelle: string }[] = [
 ];
 
 /** Les catégories dont la longueur de manches se renseigne. */
-export const CATEGORIES_A_MANCHES: readonly CategoryKey[] = ["haut", "pull", "robe", "combinaison", "veste"];
+export const CATEGORIES_A_MANCHES: readonly CategoryKey[] = ["haut", "pull", "robe", "combinaison", "veste", "manteau"];
 
 export const aDesManches = (cat: CategoryKey): boolean => CATEGORIES_A_MANCHES.includes(cat);
 

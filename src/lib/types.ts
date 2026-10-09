@@ -273,6 +273,10 @@ export interface PhotoAnalysis {
   accessoireType?: AccessoireType;
   /** Ce que montre la photo (05/10/2026) : l'article seul, porté, ou plusieurs articles. Absent quand le modèle n'est pas sûr. */
   photoType?: CadragePhoto;
+  /** Longueur des manches lue sur la photo (09/10/2026), seulement pour une catégorie qui en a. */
+  manches?: Manches;
+  /** Saisons proposées d'après la photo (09/10/2026) : une suggestion modifiable, absente quand le modèle n'est pas sûr. */
+  saisons?: CapsuleSeason[];
 }
 
 export type CadragePhoto = "seule" | "portee" | "plusieurs";
@@ -373,6 +377,10 @@ export interface AppState {
   addPhotoUrl: string | null;
   /** true pendant l'upload vers Supabase Storage (correctif 22/08/2026, remplace l'ancien aperçu blob: jamais persisté) — bloque la sauvegarde le temps d'obtenir l'URL définitive. */
   addPhotoUploading: boolean;
+  /** Enregistrement en cours (insertion en base) : le bouton est désactivé, le formulaire conservé. */
+  addSaving: boolean;
+  /** Échec du dernier enregistrement, affiché près du bouton — null sinon. */
+  addErreur: string | null;
   /** true pendant l'analyse de la photo par l'IA (recette 22/08/2026, pré-remplissage catégorie/couleur/matière...) — jamais bloquant pour la sauvegarde, juste un indicateur. */
   addPhotoAnalyzing: boolean;
   /** true quand l'analyse de la photo a réellement rendu un résultat (27/09/2026) — seule condition des mentions « Capsela a analysé ta pièce » et « détectées ». addPhotoAnalyzing redevient false aussi en mode démo (aucune analyse) et sur un échec. */
@@ -383,6 +391,8 @@ export interface AppState {
   addPhotoDetourage: "repos" | "en_cours" | "fait";
   /** null tant que l'utilisatrice n'a rien touché — la sauvegarde retient alors saisonsParDefaut (saisons.ts), affichées présélectionnées. Quatre saisons au choix depuis le 27/09/2026, jamais bloquantes. */
   addSaisons: CapsuleSeason[] | null;
+  /** Vrai quand les saisons affichées viennent de l'analyse de la photo et que l'utilisatrice n'y a pas touché. */
+  addSaisonsLues: boolean;
   /** Longueur des manches choisie dans le formulaire (01/10/2026) ; null tant qu'elle n'est pas renseignée. */
   addManches: Manches | null;
   /** Plusieurs choix possibles. */
@@ -397,6 +407,8 @@ export interface AppState {
   addMatiere: Matiere | null;
   addCoupe: Coupe | null;
   addMatiereTouched: boolean;
+  /** Vrai dès que l'utilisatrice a touché aux manches : l'analyse de la photo ne les remplace plus. */
+  addManchesTouched: boolean;
   addCoupeTouched: boolean;
   addSacType: SacType | null;
   addBijouType: BijouType | null;
