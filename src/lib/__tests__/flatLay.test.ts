@@ -555,7 +555,7 @@ describe("une seconde veste n'est pas un accessoire (09/10/2026, « la veste ove
   });
 });
 
-describe("accueil (hero-home) — aucune rotation (09/10/2026)", () => {
+describe("tous les hero du flat lay — aucune rotation (09/10/2026)", () => {
   const configs: PieceFlatLay[][] = [
     [p("haut", 1), p("pantalon", 0.55), p("sac", 1.1), p("chaussures", 1.5)],
     [p("haut", 0.9), p("pantalon", 0.55), p("veste", 0.95), p("sac", 1.1), p("chaussures", 1.5)],
@@ -571,9 +571,11 @@ describe("accueil (hero-home) — aucune rotation (09/10/2026)", () => {
         for (const q of composerFlatLay(avecPreference, "r" + i, { contexte: "hero-home" }).pieces) expect(Object.is(q.angle, 0), `${q.cat} graine ${i}`).toBe(true);
       }
   });
-  it("les autres contextes gardent leurs inclinaisons (Tenue du jour, détail d'un look)", () => {
-    const inclinees = composerFlatLay(configs[0], "x", { contexte: "look-detail" }).pieces.filter((q) => q.angle !== 0);
-    expect(inclinees.length).toBeGreaterThan(0);
+  it("tous les contextes sont droits : Tenue du jour, détail d'un look, « Tes looks », capsule, dressing, valise", () => {
+    for (const contexte of ["look-detail", "capsule", "dressing", "packing"] as const)
+      for (const pieces of configs)
+        for (let i = 0; i < 10; i++)
+          for (const q of composerFlatLay(pieces, "c" + i, { contexte }).pieces) expect(Object.is(q.angle, 0), `${contexte} ${q.cat}`).toBe(true);
   });
   it("sans inclinaison, le recouvrement reste faible (≤ 20 % de la plus petite) : aucune compensation par des chevauchements", () => {
     const part = (a: PlacementFlatLay, b: PlacementFlatLay) => {
