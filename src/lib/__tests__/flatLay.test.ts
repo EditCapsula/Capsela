@@ -57,7 +57,7 @@ describe("composerFlatLay — déterministe, borné, sans grille", () => {
 
   it("une veste héro est toujours à droite, le haut à gauche, le bas entre les deux", () => {
     for (let i = 0; i < 40; i++) {
-      const par = Object.fromEntries(composerFlatLay(look(), "d" + i).pieces.map((q) => [q.role, q]));
+      const par = Object.fromEntries(composerFlatLay(look(), "d" + i, { contexte: "look-detail" }).pieces.map((q) => [q.role, q]));
       expect(par.hero.x).toBeGreaterThan(par.bas.x);
       expect(par.bas.x).toBeGreaterThan(par.secondaire.x);
       expect(par.chaussures.x).toBeGreaterThan(par.sac.x);
@@ -87,7 +87,7 @@ describe("composerFlatLay — déterministe, borné, sans grille", () => {
   });
 
   it("la veste et le manteau sont toujours au fond, le bas puis le haut devant, puis chaussures, sac, accessoires", () => {
-    const z = (pieces: PieceFlatLay[]) => Object.fromEntries(composerFlatLay(pieces, "z").pieces.map((q) => [pieces.find((x) => x.id === q.id)!.cat, q.z]));
+    const z = (pieces: PieceFlatLay[]) => Object.fromEntries(composerFlatLay(pieces, "z", { contexte: "look-detail" }).pieces.map((q) => [pieces.find((x) => x.id === q.id)!.cat, q.z]));
     const a = z(look());
     expect(a.veste).toBeLessThan(a.pantalon);
     expect(a.pantalon).toBeLessThan(a.haut);
@@ -153,7 +153,9 @@ describe("contextes du flat lay — un moteur, des paramètres différents", () 
     const home = composerFlatLay(look(), "ctx", { contexte: "hero-home" });
     const detail = composerFlatLay(look(), "ctx", { contexte: "look-detail" });
     expect(CONTEXTES["look-detail"].hauteur).toBeGreaterThan(CONTEXTES["hero-home"].hauteur);
-    expect(home.pieces.length).toBe(detail.pieces.length);
+    // L'accueil ne pose que 4 pièces (09/10/2026), la Tenue du jour toutes.
+    expect(home.pieces.length).toBe(CONTEXTES["hero-home"].maxPieces);
+    expect(detail.pieces.length).toBe(5);
     const angle = (r: typeof home, role: string) => r.pieces.find((q) => q.role === role)!.angle;
     // Les deux contextes obéissent aux mêmes plages d'inclinaison (calibrage du 08/10/2026).
     expect(Math.abs(angle(detail, "hero"))).toBeLessThanOrEqual(LIMITE_INCLINAISON.hero + 1e-9);
@@ -184,7 +186,7 @@ describe("contextes du flat lay — un moteur, des paramètres différents", () 
     for (const c of ["hero-home", "look-detail", "capsule", "dressing", "packing"] as const) {
       expect(CONTEXTES[c].hauteur).toBeGreaterThanOrEqual(95);
       expect(CONTEXTES[c].marge).toBeGreaterThanOrEqual(3);
-      expect(composerFlatLay(look(), "x", { contexte: c }).pieces.length).toBe(5);
+      expect(composerFlatLay(look(), "x", { contexte: c }).pieces.length).toBe(Math.min(5, CONTEXTES[c].maxPieces ?? 5));
     }
   });
 });
@@ -202,7 +204,7 @@ describe("accessoires — jamais isolés, jamais en surnombre", () => {
   it("un accessoire de tenue passe avant un bijou", () => {
     const bijou = p("bijou", 1);
     const ceinture = p("accessoire", 1.5);
-    const { pieces, ecartees } = composerFlatLay([p("robe", 0.7), p("sac", 0.8), p("chaussures", 1.1), bijou, ceinture, p("bijou", 1), p("bijou", 1)], "a");
+    const { pieces, ecartees } = composerFlatLay([p("robe", 0.7), p("sac", 0.8), p("chaussures", 1.1), bijou, ceinture, p("bijou", 1), p("bijou", 1)], "a", { contexte: "look-detail" });
     const gardes = pieces.filter((q) => q.role === "accessoire").map((q) => q.id);
     if (gardes.length === 1) expect(gardes[0]).toBe(ceinture.id);
     expect(ecartees.length + gardes.length).toBe(4);
@@ -396,62 +398,125 @@ describe("regroupement stylistique — les couches d'une même tenue restent ens
   });
 });
 
-describe("accueil (hero-home) — composition ciblée sans le t-shirt (08/10/2026)", () => {
-  const look = () => [p("pull", 1), p("haut", 0.95), p("pantalon", 0.5), p("veste", 0.85), p("sac", 0.85), p("chaussures", 1)];
-  const tee = (pieces: PieceFlatLay[]) => pieces[1].id;
+describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « Optimisation du flat lay »)", () => {
+  const CONFIGS: Record<string, PieceFlatLay[]> = {
+    "t-shirt + pantalon + sac + chaussures": [p("haut", 1), p("pantalon", 0.55), p("sac", 1.1), p("chaussures", 1.5)],
+    "chemise + pantalon + blazer + sac + chaussures": [p("haut", 0.9), p("pantalon", 0.55), p("veste", 0.95), p("sac", 1.1), p("chaussures", 1.5)],
+    "pull + pantalon + manteau + chaussures": [p("pull", 1), p("pantalon", 0.55), p("manteau", 0.75), p("chaussures", 1.5)],
+    "robe + sac + chaussures": [p("robe", 0.55), p("sac", 1.1), p("chaussures", 1.5)],
+    "trois pièces": [p("haut", 1), p("jean", 0.55), p("chaussures", 1.5)],
+    "six pièces": [p("pull", 1), p("haut", 1), p("pantalon", 0.55), p("veste", 0.95), p("sac", 1.1), p("chaussures", 1.5)],
+  };
+  const part = (a: PlacementFlatLay, b: PlacementFlatLay) => {
+    const A = boiteDe(a);
+    const B = boiteDe(b);
+    const commun = Math.max(0, Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0)) * Math.max(0, Math.min(A.y1, B.y1) - Math.max(A.y0, B.y0));
+    return commun / Math.min((A.x1 - A.x0) * (A.y1 - A.y0), (B.x1 - B.x0) * (B.y1 - B.y0));
+  };
 
-  it("le t-shirt est masqué sur l'accueil, et seulement là : il reste posé dans la page Tenue du jour", () => {
-    const pieces = look();
-    const home = composerFlatLay(pieces, "h", { contexte: "hero-home" });
-    expect(home.masquees).toEqual([tee(pieces)]);
-    expect(home.pieces.find((q) => q.id === tee(pieces))).toBeUndefined();
-    expect(home.pieces.length).toBe(5);
-    for (const contexte of ["look-detail", "capsule", "dressing", "packing"] as const) {
-      const autre = composerFlatLay(pieces, "h", { contexte });
-      expect(autre.masquees).toEqual([]);
-      expect(autre.pieces.find((q) => q.id === tee(pieces))?.role).toBe("couche");
+  it("jamais plus de 4 pièces dans la planche ; les autres restent dans la tenue (masquées), jamais retirées de la tenue réelle", () => {
+    for (const [nom, pieces] of Object.entries(CONFIGS)) {
+      const r = composerFlatLay(pieces, "h", { contexte: "hero-home" });
+      expect(r.pieces.length, nom).toBeLessThanOrEqual(4);
+      expect(r.pieces.length, nom).toBeGreaterThanOrEqual(Math.min(3, pieces.length));
+      expect(r.pieces.length + r.masquees.length + r.ecartees.length, nom).toBe(pieces.length);
     }
   });
 
-  it("pull à gauche, pantalon à droite du pull, blazer à droite et derrière, sac en bas à gauche, boots en bas à droite", () => {
+  it("les pièces retenues sont les plus représentatives : haut, bas, veste ou manteau, chaussures avant le sac ; un second haut ou une seconde veste après", () => {
+    const six = composerFlatLay(CONFIGS["six pièces"], "h", { contexte: "hero-home" });
+    expect(six.pieces.map((q) => q.cat).sort()).toEqual(["chaussures", "pantalon", "pull", "veste"]);
+    const cinq = composerFlatLay(CONFIGS["chemise + pantalon + blazer + sac + chaussures"], "h", { contexte: "hero-home" });
+    expect(cinq.pieces.map((q) => q.cat).sort()).toEqual(["chaussures", "haut", "pantalon", "veste"]);
+  });
+
+  it("t-shirt + pantalon + sac + chaussures : le haut en haut, le bas au centre, le sac et les chaussures dessous (ou en miroir)", () => {
     for (let i = 0; i < 30; i++) {
-      const sortie = composerFlatLay(look(), "t" + i, { contexte: "hero-home" }).pieces;
-      const o = Object.fromEntries(sortie.map((q) => [q.role, q]));
-      expect(o.secondaire.x, `graine ${i}`).toBeLessThan(o.bas.x);
-      expect(o.bas.x).toBeLessThan(o.hero.x);
-      expect(o.hero.z).toBeLessThan(o.bas.z);
-      expect(o.sac.x).toBeLessThan(o.chaussures.x);
-      expect(o.sac.y).toBeGreaterThan(o.secondaire.y);
-      expect(o.chaussures.y).toBeGreaterThan(o.hero.y);
+      const o = Object.fromEntries(composerFlatLay(CONFIGS["t-shirt + pantalon + sac + chaussures"], "t" + i, { contexte: "hero-home" }).pieces.map((q) => [q.cat, q]));
+      expect(o.haut.y, `graine ${i}`).toBeLessThan(o.sac.y);
+      expect(o.pantalon.y).toBeLessThan(o.chaussures.y);
+      // Le haut et le bas sont de part et d'autre, jamais l'un sur l'autre — et jamais en miroir sur l'accueil : le haut est à gauche.
+      expect(o.haut.x).toBeLessThan(o.pantalon.x);
+      expect(Math.abs(o.haut.x - o.pantalon.x)).toBeGreaterThan(25);
+      // Sac et chaussures aussi de part et d'autre.
+      expect(Math.abs(o.sac.x - o.chaussures.x)).toBeGreaterThan(25);
     }
   });
 
-  it("les cinq pièces restent dans la zone de sécurité et occupent au moins 88 % de sa largeur", () => {
+  it("chemise et blazer se rapprochent (moins de 12 unités entre eux), le pantalon reste dessous sans les recouvrir de plus de 20 %", () => {
+    for (let i = 0; i < 30; i++) {
+      const sortie = composerFlatLay(CONFIGS["chemise + pantalon + blazer + sac + chaussures"], "c" + i, { contexte: "hero-home" }).pieces;
+      const o = Object.fromEntries(sortie.map((q) => [q.cat, q]));
+      const ecart = boiteDe(o.veste).x0 - boiteDe(o.haut).x1;
+      expect(ecart, `graine ${i}`).toBeLessThan(12);
+      expect(part(o.pantalon, o.haut)).toBeLessThanOrEqual(0.2);
+      expect(part(o.pantalon, o.veste)).toBeLessThanOrEqual(0.2);
+    }
+  });
+
+  it("veste ou manteau héro : le haut à gauche, la veste à droite, le bas sous les deux, jamais en miroir", () => {
+    for (let i = 0; i < 30; i++)
+      for (const nom of ["chemise + pantalon + blazer + sac + chaussures", "pull + pantalon + manteau + chaussures"]) {
+        const o = Object.fromEntries(composerFlatLay(CONFIGS[nom], "v" + i, { contexte: "hero-home" }).pieces.map((q) => [q.role, q]));
+        expect(o.secondaire.x, nom).toBeLessThan(o.hero.x);
+        expect(o.bas.y).toBeGreaterThan(o.secondaire.y);
+        expect(o.bas.y).toBeGreaterThan(o.hero.y);
+        expect(o.hero.z).toBeLessThan(o.bas.z);
+      }
+  });
+
+  it("chaque tenue de référence : recouvrement faible (≤ 20 % de la plus petite), tout dans la zone de sécurité, déterministe", () => {
     const h = CONTEXTES["hero-home"].hauteur;
     const m = CONTEXTES["hero-home"].marge;
-    // 3 unités de marge (≈ 6 px) : la planche remplit sa zone (« c'est encore vraiment petit », 08/10/2026).
-    expect(m).toBeLessThanOrEqual(4);
-    for (let i = 0; i < 30; i++) {
-      const sortie = composerFlatLay(look(), "z" + i, { contexte: "hero-home" }).pieces;
-      const boites = sortie.map(boiteDe);
-      const x0 = Math.min(...boites.map((b) => b.x0));
-      const x1 = Math.max(...boites.map((b) => b.x1));
-      expect(x0).toBeGreaterThanOrEqual(m - 1e-6);
-      expect(x1).toBeLessThanOrEqual(100 - m + 1e-6);
-      expect(Math.min(...boites.map((b) => b.y0))).toBeGreaterThanOrEqual(m - 1e-6);
-      expect(Math.max(...boites.map((b) => b.y1))).toBeLessThanOrEqual(h - m + 1e-6);
-      expect(x1 - x0).toBeGreaterThanOrEqual(88);
-    }
+    expect(CONTEXTES["hero-home"].chevauchementMax ?? CHEVAUCHEMENT_MAX).toBeLessThanOrEqual(0.2);
+    for (const [nom, pieces] of Object.entries(CONFIGS))
+      for (let i = 0; i < 30; i++) {
+        const sortie = composerFlatLay(pieces, "r" + i, { contexte: "hero-home" }).pieces;
+        expect(composerFlatLay(pieces, "r" + i, { contexte: "hero-home" }).pieces, nom).toEqual(sortie);
+        for (let a = 0; a < sortie.length; a++)
+          for (let b = a + 1; b < sortie.length; b++) expect(part(sortie[a], sortie[b]), `${nom} graine ${i} : ${sortie[a].cat}/${sortie[b].cat}`).toBeLessThanOrEqual(0.2);
+        const boites = sortie.map(boiteDe);
+        expect(Math.min(...boites.map((b) => b.x0)), nom).toBeGreaterThanOrEqual(m - 1e-6);
+        expect(Math.max(...boites.map((b) => b.x1)), nom).toBeLessThanOrEqual(100 - m + 1e-6);
+        expect(Math.min(...boites.map((b) => b.y0)), nom).toBeGreaterThanOrEqual(m - 1e-6);
+        expect(Math.max(...boites.map((b) => b.y1)), nom).toBeLessThanOrEqual(h - m + 1e-6);
+      }
   });
 
-  it("les inclinaisons de la composition ciblée restent dans les plages (pull +2°, pantalon −2°, blazer +4°, sac −6°, boots −8°, à 1,5° près)", () => {
-    const cible = { secondaire: 2, bas: -2, hero: 4, sac: -6, chaussures: -8 } as const;
-    for (let i = 0; i < 30; i++)
-      for (const q of composerFlatLay(look(), "a" + i, { contexte: "hero-home" }).pieces) expect(Math.abs(q.angle - cible[q.role as keyof typeof cible])).toBeLessThanOrEqual(1.5 + 1e-9);
+  it("le haut et le bas se lisent : au moins 29 % de la largeur de la zone ; sac et chaussures au moins 22 %", () => {
+    for (const [nom, pieces] of Object.entries(CONFIGS))
+      for (let i = 0; i < 20; i++)
+        for (const q of composerFlatLay(pieces, "l" + i, { contexte: "hero-home" }).pieces) {
+          if (["haut", "pull", "pantalon", "jean", "robe", "veste", "manteau"].includes(q.cat)) expect(q.l, `${nom} ${q.cat}`).toBeGreaterThanOrEqual(29);
+          if (q.cat === "sac" || q.cat === "chaussures") expect(q.l, `${nom} ${q.cat}`).toBeGreaterThanOrEqual(22);
+        }
   });
 
-  it("sans couche, l'accueil reste identique à avant : rien n'est masqué", () => {
-    expect(composerFlatLay([p("pull"), p("pantalon"), p("sac")], "x", { contexte: "hero-home" }).masquees).toEqual([]);
+  it("le t-shirt sous un pull reste masqué sur l'accueil (et posé dans la Tenue du jour)", () => {
+    const pieces = [p("pull", 1), p("haut", 0.95), p("pantalon", 0.5), p("sac", 0.85)];
+    const home = composerFlatLay(pieces, "h", { contexte: "hero-home" });
+    expect(home.masquees).toContain(pieces[1].id);
+    expect(home.pieces.find((q) => q.id === pieces[1].id)).toBeUndefined();
+    const detail = composerFlatLay(pieces, "h", { contexte: "look-detail" });
+    expect(detail.masquees).toEqual([]);
+    expect(detail.pieces.find((q) => q.id === pieces[1].id)?.role).toBe("couche");
+  });
+
+  it("une photo brute (parfois une personne) passe après les visuels produit : écartée tant qu'il reste 3 autres pièces", () => {
+    const manteauPhoto = { ...p("manteau", 0.8), photoBrute: true };
+    const sacPhoto = { ...p("sac", 1), photoBrute: true };
+    const tenue = [manteauPhoto, p("haut", 1), p("pantalon", 0.55), p("veste", 1), p("chaussures", 1.5), sacPhoto];
+    const home = composerFlatLay(tenue, "h", { contexte: "hero-home" });
+    expect(home.pieces.map((q) => q.id)).not.toContain(manteauPhoto.id);
+    expect(home.pieces.map((q) => q.id)).not.toContain(sacPhoto.id);
+    expect(home.masquees).toEqual(expect.arrayContaining([manteauPhoto.id, sacPhoto.id]));
+    // La Tenue du jour montre toujours la tenue entière.
+    expect(composerFlatLay(tenue, "h", { contexte: "look-detail" }).pieces.map((q) => q.id)).toContain(manteauPhoto.id);
+  });
+
+  it("sans assez de visuels produit, les photos brutes restent : jamais moins de 3 pièces", () => {
+    const tenue = [{ ...p("haut", 1), photoBrute: true }, p("pantalon", 0.55), { ...p("chaussures", 1.5), photoBrute: true }];
+    expect(composerFlatLay(tenue, "h", { contexte: "hero-home" }).pieces.length).toBe(3);
   });
 
   it("les collants ne sont pas posés dans le hero de l'accueil, mais restent posés dans le détail de la tenue", () => {
@@ -482,9 +547,45 @@ describe("une seconde veste n'est pas un accessoire (09/10/2026, « la veste ove
       expect(veste.l, graine).toBeGreaterThan(LARGEUR_ACCESSOIRE_MIN * 2);
     }
   });
-  it("sur l'accueil, la veste en plus reste posée : seul le t-shirt sous un pull est masqué", () => {
+  it("sur l'accueil (4 pièces), la veste en plus passe après le manteau, le haut, le bas et les chaussures : elle reste dans la tenue", () => {
     const { pieces, masquees } = composerFlatLay(tenue, "x,y", { contexte: "hero-home" });
-    expect(pieces.some((q) => q.cat === "veste")).toBe(true);
-    expect(masquees).toEqual([]);
+    expect(pieces.length).toBe(4);
+    expect(pieces.some((q) => q.cat === "veste")).toBe(false);
+    expect(masquees.length).toBe(2);
+  });
+});
+
+describe("accueil (hero-home) — aucune rotation (09/10/2026)", () => {
+  const configs: PieceFlatLay[][] = [
+    [p("haut", 1), p("pantalon", 0.55), p("sac", 1.1), p("chaussures", 1.5)],
+    [p("haut", 0.9), p("pantalon", 0.55), p("veste", 0.95), p("sac", 1.1), p("chaussures", 1.5)],
+    [p("pull", 1), p("pantalon", 0.55), p("manteau", 0.75), p("chaussures", 1.5)],
+    [p("robe", 0.55), p("sac", 1.1), p("chaussures", 1.5), p("accessoire", 1.2)],
+    [p("haut", 1), p("jean", 0.55), p("chaussures", 1.5)],
+    [p("pull", 1), p("haut", 1), p("pantalon", 0.55), p("veste", 0.95), p("sac", 1.1), p("chaussures", 1.5)],
+  ];
+  it("toutes les pièces sont à 0°, quelle que soit la graine, y compris une inclinaison préférée portée par la pièce", () => {
+    for (const pieces of configs)
+      for (let i = 0; i < 30; i++) {
+        const avecPreference = pieces.map((q, k) => (k === 0 ? { ...q, preferredRotation: 7 } : q));
+        for (const q of composerFlatLay(avecPreference, "r" + i, { contexte: "hero-home" }).pieces) expect(Object.is(q.angle, 0), `${q.cat} graine ${i}`).toBe(true);
+      }
+  });
+  it("les autres contextes gardent leurs inclinaisons (Tenue du jour, détail d'un look)", () => {
+    const inclinees = composerFlatLay(configs[0], "x", { contexte: "look-detail" }).pieces.filter((q) => q.angle !== 0);
+    expect(inclinees.length).toBeGreaterThan(0);
+  });
+  it("sans inclinaison, le recouvrement reste faible (≤ 20 % de la plus petite) : aucune compensation par des chevauchements", () => {
+    const part = (a: PlacementFlatLay, b: PlacementFlatLay) => {
+      const A = boiteDe(a);
+      const B = boiteDe(b);
+      const commun = Math.max(0, Math.min(A.x1, B.x1) - Math.max(A.x0, B.x0)) * Math.max(0, Math.min(A.y1, B.y1) - Math.max(A.y0, B.y0));
+      return commun / Math.min((A.x1 - A.x0) * (A.y1 - A.y0), (B.x1 - B.x0) * (B.y1 - B.y0));
+    };
+    for (const pieces of configs)
+      for (let i = 0; i < 30; i++) {
+        const sortie = composerFlatLay(pieces, "s" + i, { contexte: "hero-home" }).pieces;
+        for (let a = 0; a < sortie.length; a++) for (let b = a + 1; b < sortie.length; b++) expect(part(sortie[a], sortie[b]), `graine ${i}`).toBeLessThanOrEqual(0.2);
+      }
   });
 });
