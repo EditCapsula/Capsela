@@ -3,7 +3,7 @@
 import { messageCadrage } from "@/lib/cadragePhoto";
 import { estPhotoDetouree } from "@/lib/dressing";
 import { aDesManches, MANCHES } from "@/lib/manches";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import {
@@ -266,6 +266,19 @@ export default function AddScreen() {
   const galerieInputRef = useRef<HTMLInputElement>(null);
   const [sourcePhoto, setSourcePhoto] = useState(false);
   const [sheet, setSheet] = useState<"characteristics" | null>(null);
+  // Section de la feuille « Caractéristiques » sur laquelle arriver : la
+  // tuile touchée (Couleur, Matière, Coupe) ouvre la feuille directement sur
+  // son menu, au lieu de la laisser en haut (15/10/2026).
+  const [cibleSheet, setCibleSheet] = useState<"couleur" | "matiere" | "coupe">("couleur");
+  const sectionsSheet = useRef<Partial<Record<"couleur" | "matiere" | "coupe", HTMLDivElement | null>>>({});
+  const ouvrirCaracteristiques = (cible: "couleur" | "matiere" | "coupe") => {
+    setCibleSheet(cible);
+    setSheet("characteristics");
+  };
+  useEffect(() => {
+    if (sheet !== "characteristics") return;
+    sectionsSheet.current[cibleSheet]?.scrollIntoView({ block: "start" });
+  }, [sheet, cibleSheet]);
   // Les occasions montrent d'abord les recommandées ; la liste complète
   // s'ouvre sur place, sans feuille par-dessus.
   const [toutesOccasions, setToutesOccasions] = useState(false);
@@ -551,13 +564,13 @@ export default function AddScreen() {
           <TitreSection suggere={analysee}>{analysee ? "Caractéristiques identifiées" : "Caractéristiques"}</TitreSection>
           <div className="grid grid-cols-2 gap-[10px]">
             <TuileCaracteristique
-              onClick={() => setSheet("characteristics")}
+              onClick={() => ouvrirCaracteristiques("couleur")}
               etiquette="Couleur"
               valeur={state.addColor.name}
               pastille={<span className="w-full h-full rounded-full" style={{ background: state.addColor.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} />}
             />
             <TuileCaracteristique
-              onClick={() => setSheet("characteristics")}
+              onClick={() => ouvrirCaracteristiques("matiere")}
               etiquette={matiereEstimee ? "Matière estimée" : "Matière"}
               valeur={matiereManquante ? "Ajouter" : state.addMatiere ?? ""}
               attente={matiereManquante}
@@ -565,7 +578,7 @@ export default function AddScreen() {
             />
             {coupeApplicable && (
               <TuileCaracteristique
-                onClick={() => setSheet("characteristics")}
+                onClick={() => ouvrirCaracteristiques("coupe")}
                 etiquette="Coupe"
                 valeur={coupeManquante ? "Ajouter" : state.addCoupe ?? ""}
                 attente={coupeManquante}
@@ -573,7 +586,7 @@ export default function AddScreen() {
               />
             )}
           </div>
-          <button onClick={() => setSheet("characteristics")} className="mt-[12px] t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[4px]">
+          <button onClick={() => ouvrirCaracteristiques("couleur")} className="mt-[12px] t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[4px]">
             Modifier les caractéristiques →
           </button>
         </div>
@@ -715,7 +728,7 @@ export default function AddScreen() {
       </BottomSheet>
 
       <BottomSheet title="Caractéristiques" open={sheet === "characteristics"} onClose={() => setSheet(null)}>
-        <div className="t-surtitre text-muted mb-[11px]">Couleur dominante</div>
+        <div ref={(el) => { sectionsSheet.current.couleur = el; }} className="t-surtitre text-muted mb-[11px]">Couleur dominante</div>
         {/* Les teintes du dressing, rangées par famille (clair vers foncé) ; les bijoux gardent leur liste de métaux. */}
         {(isBijou
           ? [{ libelle: "", pastilles: PALETTE_BIJOU }]
@@ -748,7 +761,7 @@ export default function AddScreen() {
           </div>
         ))}
 
-        <div className="t-surtitre text-muted mt-[26px] mb-[11px]">
+        <div ref={(el) => { sectionsSheet.current.matiere = el; }} className="t-surtitre text-muted mt-[26px] mb-[11px]">
           Matière <span className="opacity-60 normal-case tracking-normal">(estimation, jamais garantie sur photo)</span>
         </div>
         <Select
@@ -765,7 +778,7 @@ export default function AddScreen() {
 
         {coupeApplicable && (
           <>
-            <div className="t-surtitre text-muted mt-[26px] mb-[11px]">Coupe</div>
+            <div ref={(el) => { sectionsSheet.current.coupe = el; }} className="t-surtitre text-muted mt-[26px] mb-[11px]">Coupe</div>
             <div className="flex gap-2 flex-wrap">
               {COUPES.map((c) => (
                 <button key={c} onClick={() => actions.setAddCoupe(c)} className={chipCls(state.addCoupe === c)}>
