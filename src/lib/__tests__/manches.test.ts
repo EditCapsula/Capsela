@@ -9,7 +9,10 @@ import type { CategoryKey, Item, Manches, OccasionKey, Season } from "../types";
 // manches longues »). Colonne `manches`, migration 0042.
 
 describe("manches — lecture et libellés", () => {
-  it("seules les trois valeurs sont lues, le reste est inconnu", () => {
+  it("seules les quatre valeurs sont lues, le reste est inconnu", () => {
+    expect(manchesDepuis("trois_quarts")).toBe("trois_quarts");
+    expect(libelleManches("trois_quarts")).toBe("Manches 3/4");
+    expect(brasNus({ manches: "trois_quarts" })).toBe(false);
     expect(manchesDepuis("longues")).toBe("longues");
     expect(manchesDepuis("courtes")).toBe("courtes");
     expect(manchesDepuis("sans")).toBe("sans");

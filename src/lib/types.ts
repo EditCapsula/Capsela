@@ -216,7 +216,7 @@ export interface Item {
   revente?: ChoixRevente;
 }
 
-export type Manches = "sans" | "courtes" | "longues";
+export type Manches = "sans" | "courtes" | "trois_quarts" | "longues";
 
 export type ChoixRevente = "gardee" | "de_cote";
 
@@ -397,7 +397,7 @@ export interface AppState {
   addManches: Manches | null;
   /** Plusieurs choix possibles. */
   addOccasion: OccasionKey[];
-  /** true dès que l'utilisatrice modifie la sélection elle-même (recette 24/08/2026) — au-delà, ni suggestOccasions(cat) ni une nouvelle catégorie ne remplacent plus la sélection. */
+  /** Les occasions CONFIRMÉES par l'utilisatrice (09/10/2026) : seules elles sont enregistrées. Les suggestions de Capsela (suggestOccasions) se calculent à l'affichage et ne sont jamais stockées. */
   addOccasionTouched: boolean;
   /** Type de chaussure en cours de saisie — obligatoire si addCat === "chaussures" (R-B6). */
   addShoeType: ShoeType | null;
@@ -409,6 +409,10 @@ export interface AppState {
   addMatiereTouched: boolean;
   /** Vrai dès que l'utilisatrice a touché aux manches : l'analyse de la photo ne les remplace plus. */
   addManchesTouched: boolean;
+  /** La longueur de manches lue par l'analyse de la photo (null si rien n'a été lu) : sert à dire « Détecté par Capsela » seulement quand la valeur vient vraiment de là, et à « Rétablir ». */
+  addManchesIA: Manches | null;
+  /** La pièce vient d'être ajoutée : le bouton le dit un court instant avant le retour au dressing. */
+  addDone: boolean;
   addCoupeTouched: boolean;
   addSacType: SacType | null;
   addBijouType: BijouType | null;
