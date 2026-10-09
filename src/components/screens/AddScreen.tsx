@@ -3,7 +3,7 @@
 import { messageCadrage } from "@/lib/cadragePhoto";
 import { estPhotoDetouree } from "@/lib/dressing";
 import { aDesManches, MANCHES } from "@/lib/manches";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import {
@@ -25,11 +25,11 @@ import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable, occasionsRetenue
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { taillesBasFor, TAILLES_HAUT } from "@/lib/profile";
-import type { AccessoireType, BijouType, CategoryKey, OccasionKey, SacType, ShoeType } from "@/lib/types";
+import type { AccessoireType, BijouType, CategoryKey, Coupe, OccasionKey, SacType, ShoeType } from "@/lib/types";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
-import Input, { Select } from "@/components/Input";
+import Input from "@/components/Input";
 
 const POINTURES = ["35", "36", "37", "38", "39", "40", "41", "42"];
 const BOTTOM_SIZED: CategoryKey[] = [...BAS_CATS, "jupe", "combinaison"];
@@ -57,20 +57,6 @@ function chipOccasionCls(on: boolean): string {
   );
 }
 
-function FabricIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M4 8l16 8M4 12l16 8M4 4l16 8M8 4L4 8m16 8l-4 4" />
-    </svg>
-  );
-}
-function FitIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 12h4M16 12h4M9 8l-3 4 3 4M15 8l3 4-3 4" />
-    </svg>
-  );
-}
 function PencilIcon({ className = "" }: { className?: string }) {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -86,34 +72,6 @@ function CocheRonde() {
         <path d="M5 12.5l4.5 4.5L19 7.5" />
       </svg>
     </span>
-  );
-}
-/** Tuile de « Caractéristiques » : la pastille (couleur ou icône) à gauche, la valeur et son étiquette à droite. */
-function TuileCaracteristique({
-  onClick,
-  etiquette,
-  valeur,
-  pastille,
-  attente,
-}: {
-  onClick: () => void;
-  etiquette: string;
-  valeur: string;
-  pastille: React.ReactNode;
-  attente?: boolean;
-}) {
-  return (
-    <Card rayon="tuile" className="min-w-0">
-    <button onClick={onClick} className="w-full flex items-center gap-[11px] px-[12px] py-[11px] cursor-pointer text-left min-w-0">
-      <span className={"w-[38px] h-[38px] rounded-full flex items-center justify-center flex-shrink-0 " + (attente ? "border border-dashed border-warm-border" : "bg-warm-bg text-warm-text")}>
-        {pastille}
-      </span>
-      <span className="min-w-0">
-        <span className={"block text-[14px] font-serif leading-[1.2] break-words " + (attente ? "text-terracotta" : "text-ink")}>{valeur}</span>
-        <span className="block text-[11px] text-muted mt-[2px]">{etiquette}</span>
-      </span>
-    </button>
-    </Card>
   );
 }
 function InfoIcon({ className = "" }: { className?: string }) {
@@ -264,20 +222,16 @@ export default function AddScreen() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galerieInputRef = useRef<HTMLInputElement>(null);
   const [sourcePhoto, setSourcePhoto] = useState(false);
-  const [sheet, setSheet] = useState<"characteristics" | null>(null);
-  // Section de la feuille « Caractéristiques » sur laquelle arriver : la
-  // tuile touchée (Couleur, Matière, Coupe) ouvre la feuille directement sur
-  // son menu, au lieu de la laisser en haut (15/10/2026).
-  const [cibleSheet, setCibleSheet] = useState<"couleur" | "matiere" | "coupe">("couleur");
-  const sectionsSheet = useRef<Partial<Record<"couleur" | "matiere" | "coupe", HTMLDivElement | null>>>({});
-  const ouvrirCaracteristiques = (cible: "couleur" | "matiere" | "coupe") => {
-    setCibleSheet(cible);
-    setSheet("characteristics");
-  };
-  useEffect(() => {
-    if (sheet !== "characteristics") return;
-    sectionsSheet.current[cibleSheet]?.scrollIntoView({ block: "start" });
-  }, [sheet, cibleSheet]);
+  // « Toutes les couleurs » : la palette complète, en feuille. Les couleurs courantes sont sur la page.
+  const [toutesCouleurs, setToutesCouleurs] = useState(false);
+  // Les détails facultatifs (marque, matière, coupe, taille, manches) : repliés
+  // à l'ajout ; ouverts d'emblée sur une pièce modifiée qui en porte déjà un,
+  // pour que rien de ce qui est enregistré ne reste caché (09/10/2026).
+  const [detailsOuverts, setDetailsOuverts] = useState(
+    () =>
+      state.editingId != null &&
+      Boolean(state.addBrand || state.addMatiere || state.addCoupe || state.addSize || state.addManches),
+  );
   // Les occasions montrent d'abord les recommandées ; la liste complète
   // s'ouvre sur place, sans feuille par-dessus.
   const [toutesOccasions, setToutesOccasions] = useState(false);
@@ -302,9 +256,8 @@ export default function AddScreen() {
   const coupeApplicable = isCoupeApplicable(state.addCat);
 
   const sizes = isShoe ? POINTURES : BOTTOM_SIZED.includes(state.addCat) ? taillesBasFor(profile.gender) : TAILLES_HAUT;
-  // Taille pré-remplie depuis le profil, modifiable.
-  const profileDefaultSize = isShoe ? profile.pointure : BOTTOM_SIZED.includes(state.addCat) ? profile.tailleBas : profile.tailleHaut;
-  const selectedSize = state.addSize ?? profileDefaultSize;
+  // Aucune taille présélectionnée (09/10/2026) : elle n'est enregistrée que si elle est choisie.
+  const selectedSize = state.addSize;
 
 
   // Les saisons affichées sont celles qui seront enregistrées : le choix de
@@ -334,13 +287,26 @@ export default function AddScreen() {
   const detourageFait = state.addPhotoDetourage === "fait";
   const photoDetouree = estPhotoDetouree(state.addPhotoUrl);
   const manchesLues = analysee && !state.addManchesTouched && state.addManches != null;
+  // Les teintes courantes affichées sur la page : une sélection de la palette réelle (jamais une valeur
+  // inventée), plus la couleur courante si elle n'en fait pas partie — rien ne reste caché.
+  const NOMS_COURANTS = ["Blanc cassé", "Crème", "Sable", "Camel", "Chocolat", "Kaki", "Gris", "Marine", "Bordeaux", "Noir"];
+  const palette = isBijou ? PALETTE_BIJOU : PALETTE;
+  const courantes = isBijou ? palette.slice(0, 6) : NOMS_COURANTS.flatMap((n) => palette.filter(([nom]) => nom === n));
+  const pastillesCourantes = courantes.some(([, hex]) => hex === state.addColor.hex)
+    ? courantes
+    : [[state.addColor.name, state.addColor.hex] as [string, string], ...courantes];
+  // Ce qui est déjà renseigné, rappelé sur l'en-tête replié.
+  const resumeDetails = [
+    state.addBrand.trim(),
+    state.addMatiere,
+    coupeApplicable ? state.addCoupe : null,
+    sizeApplicable && selectedSize ? (isShoe ? "Pointure " : "Taille ") + selectedSize : null,
+    aDesManches(state.addCat) && state.addManches ? MANCHES.find((m) => m.valeur === state.addManches)?.libelle : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const nomSuggere = analysee && !state.addNameTouched && state.addName.trim().length > 0;
   const matiereEstimee = analysee && !state.addMatiereTouched && Boolean(state.addMatiere);
-  // Caractéristiques encore vides : proposées à l'ajout, jamais affichées
-  // comme un manque (« Non précisée » répété, qui donnait l'impression que
-  // l'analyse avait échoué).
-  const matiereManquante = !state.addMatiere;
-  const coupeManquante = coupeApplicable && !state.addCoupe;
 
   const titre = !creation ? "Modifier la pièce" : state.replacingId ? "Remplacer par ta pièce" : "Ajouter une pièce";
   // Les occasions recommandées d'abord (même ordre qu'à l'ouverture, donc stable quand on en bascule une), puis
@@ -350,7 +316,6 @@ export default function AddScreen() {
 
   const save = () => {
     if (blocked) return;
-    if (sizeApplicable && state.addSize == null && selectedSize) actions.setAddSize(selectedSize);
     actions.saveItem();
   };
 
@@ -373,61 +338,67 @@ export default function AddScreen() {
 
         {/* 1. La photo, premier élément de l'écran : proportionnelle à la
             largeur, bornée pour laisser voir le nom sous la ligne de flottaison
-            dès 360 px. Toute la carte ouvre le choix de la source ; le bouton
-            flottant « Modifier la photo » en est l'indication. */}
-        <button
-          type="button"
-          onClick={() => setSourcePhoto(true)}
-          aria-label={state.addPhotoUrl ? "Modifier la photo" : "Ajouter une photo"}
-          className={
-            "mt-[4px] w-full rounded-tuile flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta " +
-            (state.addPhotoUrl ? (photoDetouree ? "bg-photo-bg border border-border" : "bg-card border border-border") : "border-[1.5px] border-dashed border-[#d6c7ae] bg-card")
-          }
-          style={{
-            height: "clamp(230px, 68vw, 300px)",
-            ...(state.addPhotoUrl
-              ? {
-                  backgroundImage: `url(${state.addPhotoUrl})`,
-                  // Détourée : la pièce entière, sur la tuile — jamais recadrée comme une photo (04/10/2026).
-                  backgroundSize: photoDetouree ? "contain" : "cover",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                }
-              : {}),
-          }}
-        >
-          {state.addPhotoUploading && (
-            <span
-              className="absolute inset-0 flex items-center justify-center text-[12px] text-cream"
-              style={{ background: "rgba(29,26,22,.45)" }}
-            >
-              Envoi de la photo…
-            </span>
-          )}
-          {state.addPhotoUrl && (
-            <span
-              className="absolute top-3 right-3 w-[38px] h-[38px] rounded-full bg-cream border border-border flex items-center justify-center text-ink"
-              aria-hidden="true"
-            >
-              <PencilIcon />
-            </span>
-          )}
-          {state.addPhotoUrl ? (
-            <span
-              className="absolute bottom-3 right-3 flex items-center gap-[6px] text-[11px] text-ink bg-cream border border-border rounded-full px-3 py-[8px]"
-            >
+            dès 360 px. Sans photo : deux actions explicites, prendre la pièce
+            en photo ou l'importer. Avec photo : toute la carte rouvre le choix
+            de la source (09/10/2026). */}
+        {state.addPhotoUrl ? (
+          <button
+            type="button"
+            onClick={() => setSourcePhoto(true)}
+            aria-label="Modifier la photo"
+            className={
+              "mt-[4px] w-full rounded-tuile flex flex-col items-center justify-center gap-[10px] cursor-pointer relative overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta border border-border " +
+              (photoDetouree ? "bg-photo-bg" : "bg-card")
+            }
+            style={{
+              height: "clamp(230px, 68vw, 300px)",
+              backgroundImage: `url(${state.addPhotoUrl})`,
+              // Détourée : la pièce entière, sur la tuile — jamais recadrée comme une photo (04/10/2026).
+              backgroundSize: photoDetouree ? "contain" : "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+          >
+            {state.addPhotoUploading && (
+              <span
+                className="absolute inset-0 flex items-center justify-center text-[12px] text-cream"
+                style={{ background: "rgba(29,26,22,.45)" }}
+              >
+                Envoi de la photo…
+              </span>
+            )}
+            <span className="absolute bottom-3 right-3 flex items-center gap-[6px] text-[11px] text-ink bg-cream border border-border rounded-full px-3 py-[8px]">
               <PencilIcon /> Modifier la photo
             </span>
-          ) : (
-            <>
-              <div className="w-[54px] h-[54px] rounded-full bg-ink text-cream flex items-center justify-center">
-                <CameraIcon />
-              </div>
-              <div className="text-[13px] text-ink">Prendre la pièce en photo</div>
-              <div className="text-[11px] text-muted">ou importer depuis ta galerie</div>
-            </>
-          )}
-        </button>
+          </button>
+        ) : (
+          <div
+            className="mt-[4px] w-full rounded-tuile flex flex-col items-center justify-center gap-[6px] border-[1.5px] border-dashed border-[#d6c7ae] bg-card px-5 py-6 text-center"
+            style={{ minHeight: "clamp(230px, 62vw, 280px)" }}
+          >
+            <div className="w-[54px] h-[54px] rounded-full bg-ink text-cream flex items-center justify-center mb-[6px]" aria-hidden="true">
+              <CameraIcon />
+            </div>
+            <div className="t-titre-carte text-ink">Photographier ma pièce</div>
+            <div className="text-[12px] text-muted">Ou importer depuis ma galerie</div>
+            <div className="grid grid-cols-2 gap-[10px] w-full mt-[14px]">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex items-center justify-center gap-[8px] rounded-full bg-ink text-cream text-[13px] min-h-[46px] cursor-pointer"
+              >
+                <CameraIcon /> Prendre une photo
+              </button>
+              <button
+                type="button"
+                onClick={() => galerieInputRef.current?.click()}
+                className="flex items-center justify-center gap-[8px] rounded-full border border-border bg-cream text-ink text-[13px] min-h-[46px] cursor-pointer"
+              >
+                <GalerieIcon /> Importer
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* 2. Un seul bloc pour tout ce que Capsela fait de la photo (04/10/2026) :
             analyse et détourage ne s'annoncent plus par deux bandeaux. Chaque
@@ -479,8 +450,11 @@ export default function AddScreen() {
           </div>
         )}
 
-        {/* 3. Le nom : une proposition à relire, toujours modifiable — le champ
-            est visible, l'icône crayon le dit. */}
+        {/* 3. L'identification, visible sans action : le nom (une proposition à
+            relire, toujours modifiable), la catégorie et le modèle. Le modèle
+            reste ici : pour des chaussures il est exigé par le moteur (R-B6) ;
+            ailleurs c'est le type de pièce (Longue, Chemise, Baskets…), distinct
+            de la « Coupe » (Serré, Ajusté, Ample) et de la marque. */}
         <div className="mt-6">
           <TitreSection>Nom de la pièce</TitreSection>
           {nomSuggere && (
@@ -505,28 +479,7 @@ export default function AddScreen() {
               <PencilIcon />
             </span>
           </div>
-        </div>
-
-        {/* 4. Les informations essentielles, en une carte : une ligne par
-            information. La marque y reste — facultative, modifiable, préremplie
-            seulement si l'analyse l'a lue. « Modèle » et non « Coupe » : ce champ
-            est le sous-type (Longue, Chemise, Baskets…), alors que « Coupe »
-            désigne dans l'app un autre champ — Serré, Ajusté, Ample — affiché
-            sous ce nom ici comme sur la fiche de la pièce. */}
-        <div className="mt-6">
-          <TitreSection>Informations essentielles</TitreSection>
-          <div className="grid grid-cols-2 gap-[10px]">
-            <Card as="label" rayon="tuile" className="block px-[14px] pt-[10px] pb-[11px] cursor-text focus-within:border-terracotta min-w-0">
-              <span className="t-label text-muted block">Marque</span>
-              <input
-                className="capin mt-[4px] w-full min-w-0 bg-transparent border-0 p-0 text-[15px] font-serif text-ink"
-                value={state.addBrand}
-                onChange={(e) => actions.setAddBrand(e.target.value)}
-                placeholder="Optionnel"
-                aria-label="Marque, optionnelle"
-                enterKeyHint="done"
-              />
-            </Card>
+          <div className="grid grid-cols-2 gap-[10px] mt-[10px]">
             <CaseSelect
               label="Catégorie"
               value={state.addCat}
@@ -543,52 +496,154 @@ export default function AddScreen() {
                 enAttente={shoeTypeMissing}
               />
             )}
-            {sizeApplicable && (
-              <CaseSelect
-                label={isShoe ? "Pointure" : "Taille"}
-                value={selectedSize ?? ""}
-                onChange={(v) => actions.setAddSize(v)}
-                options={sizes.map((t) => ({ value: t, label: t }))}
-                placeholder="—"
-              />
-            )}
           </div>
+          {shoeTypeMissing && (
+            <div className="text-[12px] text-terracotta mt-[8px]" role="alert">
+              Choisis le modèle de chaussures pour pouvoir les ajouter.
+            </div>
+          )}
         </div>
 
-        {/* 6. Les caractéristiques : seulement ce qui est connu, et une
-            invitation discrète pour le reste. Chaque tuile ouvre la feuille de modification. */}
+        {/* 4. La couleur : les teintes courantes en pastilles, la palette
+            complète à « Toutes les couleurs ». La couleur choisie est dite en
+            toutes lettres et cochée — jamais portée par la seule teinte. */}
         <div className="mt-6">
-          <TitreSection suggere={analysee}>{analysee ? "Caractéristiques identifiées" : "Caractéristiques"}</TitreSection>
-          <div className="grid grid-cols-2 gap-[10px]">
-            <TuileCaracteristique
-              onClick={() => ouvrirCaracteristiques("couleur")}
-              etiquette="Couleur"
-              valeur={state.addColor.name}
-              pastille={<span className="w-full h-full rounded-full" style={{ background: state.addColor.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} />}
-            />
-            <TuileCaracteristique
-              onClick={() => ouvrirCaracteristiques("matiere")}
-              etiquette={matiereEstimee ? "Matière estimée" : "Matière"}
-              valeur={matiereManquante ? "Ajouter" : state.addMatiere ?? ""}
-              attente={matiereManquante}
-              pastille={matiereManquante ? <span className="text-terracotta text-[16px]">+</span> : <FabricIcon />}
-            />
-            {coupeApplicable && (
-              <TuileCaracteristique
-                onClick={() => ouvrirCaracteristiques("coupe")}
-                etiquette="Coupe"
-                valeur={coupeManquante ? "Ajouter" : state.addCoupe ?? ""}
-                attente={coupeManquante}
-                pastille={coupeManquante ? <span className="text-terracotta text-[16px]">+</span> : <FitIcon />}
-              />
-            )}
+          <TitreSection suggere={analysee && !state.addColorTouched}>Couleur</TitreSection>
+          <div className="flex flex-wrap gap-x-[10px] gap-y-[12px]" role="group" aria-label="Couleur de la pièce">
+            {pastillesCourantes.map(([name, hex]) => {
+              const on = state.addColor.hex === hex;
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  aria-label={name}
+                  aria-pressed={on}
+                  onClick={() => actions.setAddColor({ name, hex })}
+                  className="relative w-[40px] h-[40px] rounded-full cursor-pointer flex items-center justify-center"
+                  style={{
+                    background: hex,
+                    border: on ? "2px solid var(--color-ink)" : "1px solid rgba(29,26,22,.14)",
+                    boxShadow: on ? "0 0 0 3px var(--color-cream) inset" : "none",
+                  }}
+                >
+                  {on && (
+                    <span className="absolute -right-[3px] -top-[3px] w-[16px] h-[16px] rounded-full bg-ink text-cream flex items-center justify-center" aria-hidden="true">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12.5l4.5 4.5L19 7.5" />
+                      </svg>
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-          <button onClick={() => ouvrirCaracteristiques("couleur")} className="mt-[12px] t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[4px]">
-            Modifier les caractéristiques →
-          </button>
+          <div className="flex items-center justify-between gap-3 mt-[12px]">
+            <span className="text-[13px] text-ink font-serif">{state.addColor.name}</span>
+            <button
+              type="button"
+              onClick={() => setToutesCouleurs(true)}
+              className="t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[4px]"
+            >
+              Toutes les couleurs →
+            </button>
+          </div>
         </div>
 
-        {/* 7. La saison : une recommandation présélectionnée, jamais un verrou. */}
+        {/* 5. Les détails facultatifs, repliés : marque, matière, coupe, taille,
+            manches — seulement ceux qui concernent la catégorie, aucun
+            présélectionné. Replié, l'en-tête rappelle ce qui est déjà renseigné. */}
+        <div className="mt-6 rounded-tuile border border-border bg-card">
+          <button
+            type="button"
+            onClick={() => setDetailsOuverts((v) => !v)}
+            aria-expanded={detailsOuverts}
+            aria-controls="details-facultatifs"
+            className="w-full flex items-center justify-between gap-3 px-4 py-[14px] cursor-pointer text-left"
+          >
+            <span className="min-w-0">
+              <span className="block t-surtitre text-muted">Détails facultatifs</span>
+              {!detailsOuverts && (
+                <span className="block text-[12px] text-ink-soft mt-[3px] break-words">
+                  {resumeDetails || "Marque, matière, coupe, taille…"}
+                </span>
+              )}
+            </span>
+            <span className={"text-muted text-[12px] flex-shrink-0 motion-safe:transition-transform " + (detailsOuverts ? "rotate-180" : "")} aria-hidden="true">
+              ▾
+            </span>
+          </button>
+          {detailsOuverts && (
+            <div id="details-facultatifs" className="px-4 pb-4">
+              <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-[10px]">
+                <Card as="label" rayon="tuile" className="block px-[14px] pt-[10px] pb-[11px] cursor-text focus-within:border-terracotta min-w-0">
+                  <span className="t-label text-muted block">Marque</span>
+                  <input
+                    className="capin mt-[4px] w-full min-w-0 bg-transparent border-0 p-0 text-[15px] font-serif text-ink"
+                    value={state.addBrand}
+                    onChange={(e) => actions.setAddBrand(e.target.value)}
+                    placeholder="Optionnel"
+                    aria-label="Marque, optionnelle"
+                    enterKeyHint="done"
+                  />
+                </Card>
+                <CaseSelect
+                  label={matiereEstimee ? "Matière estimée" : "Matière"}
+                  value={state.addMatiere ?? ""}
+                  onChange={(v) => actions.setAddMatiere((v || null) as typeof state.addMatiere)}
+                  options={MATIERES.map((m) => ({ value: m, label: m }))}
+                  placeholder="Optionnel"
+                />
+                {coupeApplicable && (
+                  <CaseSelect
+                    label="Coupe"
+                    value={state.addCoupe ?? ""}
+                    onChange={(v) => actions.setAddCoupe((v || null) as Coupe | null)}
+                    options={COUPES.map((c) => ({ value: c, label: c }))}
+                    placeholder="Optionnel"
+                  />
+                )}
+                {sizeApplicable && (
+                  <CaseSelect
+                    label={isShoe ? "Pointure" : "Taille"}
+                    value={selectedSize ?? ""}
+                    onChange={(v) => actions.setAddSize(v || null)}
+                    options={sizes.map((t) => ({ value: t, label: t }))}
+                    placeholder="Optionnel"
+                  />
+                )}
+              </div>
+              {/* Les manches : seulement pour les pièces qui en ont, jamais
+                  présélectionnées — une longueur inconnue reste inconnue, le
+                  moteur la traite alors comme avant. Rappeler le choix actif le retire. */}
+              {aDesManches(state.addCat) && (
+                <div className="mt-[16px]">
+                  <TitreSection suggere={manchesLues}>{manchesLues ? "Manches identifiées" : "Manches"}</TitreSection>
+                  <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">
+                    {manchesLues ? "Lues sur ta photo, modifiables." : "Optionnel."}
+                  </div>
+                  <div className="flex gap-2 flex-wrap" role="group" aria-label="Manches">
+                    {MANCHES.map(({ valeur, libelle }) => {
+                      const on = state.addManches === valeur;
+                      return (
+                        <button
+                          key={valeur}
+                          aria-pressed={on}
+                          onClick={() => actions.setAddManches(valeur)}
+                          className={chipCls(on) + " inline-flex items-center gap-[6px]"}
+                        >
+                          {libelle}
+                          {on && <span aria-hidden="true">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 6. La saison : jamais présélectionnée, jamais un verrou. */}
         <div className="mt-7">
           <TitreSection suggere={false}>Saisons</TitreSection>
           <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Quand portes-tu cette pièce ? Sélection multiple, facultative : sans choix, elle reste proposée toute l&apos;année.</div>
@@ -611,33 +666,6 @@ export default function AddScreen() {
             })}
           </div>
         </div>
-
-        {/* Les manches (01/10/2026) : seulement pour les pièces qui en ont, jamais
-            obligatoires ni présélectionnées — une longueur inconnue reste
-            inconnue, le moteur la traite alors comme avant. Rappeler le choix
-            actif le retire. */}
-        {aDesManches(state.addCat) && (
-          <div className="mt-7">
-            <TitreSection suggere={manchesLues}>{manchesLues ? "Manches identifiées" : "Manches"}</TitreSection>
-            <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">{manchesLues ? "Lues sur ta photo, modifiables." : "Facultatif."}</div>
-            <div className="flex gap-2 flex-wrap" role="group" aria-label="Manches">
-              {MANCHES.map(({ valeur, libelle }) => {
-                const on = state.addManches === valeur;
-                return (
-                  <button
-                    key={valeur}
-                    aria-pressed={on}
-                    onClick={() => actions.setAddManches(valeur)}
-                    className={chipCls(on) + " inline-flex items-center gap-[6px]"}
-                  >
-                    {libelle}
-                    {on && <span aria-hidden="true">✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* 8. Les occasions : les recommandées d'abord (suggestOccasions, la
             règle d'origine), la liste complète à la demande. Jamais
@@ -683,8 +711,13 @@ export default function AddScreen() {
         className="flex-shrink-0 px-6 pt-[10px] border-t border-border bg-cream"
         style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom))" }}
       >
-        <Button onClick={save} disabled={blocked}>
-          {!creation ? "Enregistrer les modifications" : "Ajouter au dressing"}
+        {state.addErreur && (
+          <div className="text-center text-[12px] text-rust mb-[8px] leading-[1.4]" role="alert">
+            {state.addErreur}
+          </div>
+        )}
+        <Button onClick={save} disabled={blocked || state.addSaving} aria-busy={state.addSaving}>
+          {state.addSaving ? "Enregistrement…" : !creation ? "Enregistrer les modifications" : "Ajouter au dressing"}
         </Button>
         {state.addPhotoUploading ? (
           <div className="text-center text-[11px] text-terracotta mt-[8px]">Envoi de la photo en cours…</div>
@@ -724,8 +757,7 @@ export default function AddScreen() {
         </div>
       </BottomSheet>
 
-      <BottomSheet title="Caractéristiques" open={sheet === "characteristics"} onClose={() => setSheet(null)}>
-        <div ref={(el) => { sectionsSheet.current.couleur = el; }} className="t-surtitre text-muted mb-[11px]">Couleur dominante</div>
+      <BottomSheet title="Toutes les couleurs" open={toutesCouleurs} onClose={() => setToutesCouleurs(false)}>
         {/* Les teintes du dressing, rangées par famille (clair vers foncé) ; les bijoux gardent leur liste de métaux. */}
         {(isBijou
           ? [{ libelle: "", pastilles: PALETTE_BIJOU }]
@@ -739,6 +771,7 @@ export default function AddScreen() {
                 return (
                   <button
                     key={hex}
+                    aria-pressed={on}
                     onClick={() => actions.setAddColor({ name, hex })}
                     className="flex flex-col items-center gap-[7px] cursor-pointer"
                   >
@@ -750,7 +783,7 @@ export default function AddScreen() {
                         boxShadow: on ? "0 0 0 3px var(--color-cream) inset" : "none",
                       }}
                     />
-                    <span className={"text-[9px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}</span>
+                    <span className={"text-[9px] text-center leading-[1.3] " + (on ? "text-ink" : "text-muted")}>{name}{on ? " ✓" : ""}</span>
                   </button>
                 );
               })}
@@ -758,37 +791,7 @@ export default function AddScreen() {
           </div>
         ))}
 
-        <div ref={(el) => { sectionsSheet.current.matiere = el; }} className="t-surtitre text-muted mt-[26px] mb-[11px]">
-          Matière <span className="opacity-60 normal-case tracking-normal">(estimation, jamais garantie sur photo)</span>
-        </div>
-        <Select
-          value={state.addMatiere ?? ""}
-          onChange={(e) => actions.setAddMatiere((e.target.value || null) as typeof state.addMatiere)}
-        >
-          <option value="">À préciser</option>
-          {MATIERES.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </Select>
-
-        {coupeApplicable && (
-          <>
-            <div ref={(el) => { sectionsSheet.current.coupe = el; }} className="t-surtitre text-muted mt-[26px] mb-[11px]">Coupe</div>
-            <div className="flex gap-2 flex-wrap">
-              {COUPES.map((c) => (
-                <button key={c} onClick={() => actions.setAddCoupe(c)} className={chipCls(state.addCoupe === c)}>
-                  {c}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        <Button variante="principal" className="mt-[26px]"
-          onClick={() => setSheet(null)}
-        >
+        <Button variante="principal" className="mt-[26px]" onClick={() => setToutesCouleurs(false)}>
           Terminé
         </Button>
       </BottomSheet>

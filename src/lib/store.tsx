@@ -187,6 +187,8 @@ function buildInitialState(): AppState {
     addSize: null,
     addPhotoUrl: null,
     addPhotoUploading: false,
+    addSaving: false,
+    addErreur: null,
     addPhotoAnalyzing: false,
     addPhotoAnalysee: false,
     addPhotoCadrage: null,
@@ -441,7 +443,7 @@ export interface Actions {
   setAddOccasion: (o: OccasionKey) => void;
   setAddShoeType: (t: ShoeType) => void;
   setAddMatiere: (m: Matiere | null) => void;
-  setAddCoupe: (c: Coupe) => void;
+  setAddCoupe: (c: Coupe | null) => void;
   setAddSacType: (t: SacType) => void;
   setAddBijouType: (t: BijouType) => void;
   setAddAccessoireType: (t: AccessoireType) => void;
@@ -2129,7 +2131,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // cette catégorie (R-B6), ni tant que le sous-type n'est pas choisi
       // pour une catégorie de SUBTYPE_REQUIRED (vide aujourd'hui).
       // La saison ne bloque plus (27/09/2026, refonte « Ajouter une pièce ») :
-      // sans choix, c'est saisonParDefaut, celle que l'écran présélectionne.
+      // sans choix, la pièce est enregistrée « toute l'année » (09/10/2026).
+      // Un enregistrement est déjà en cours : pas de doublon sur un second appui.
+      if (s.addSaving) return;
       if (s.addCat === "chaussures" && !s.addShoeType) return;
       if (SUBTYPE_REQUIRED.includes(s.addCat) && !s.addSubtype) return;
       // Jamais persister l'aperçu local (blob:) : attendre la fin de l'upload
@@ -2187,6 +2191,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addBrand: "",
         addPhotoUrl: null,
         addPhotoUploading: false,
+        addSaving: false,
+        addErreur: null,
         addPhotoAnalyzing: false,
         addPhotoAnalysee: false,
         addPhotoCadrage: null,
@@ -2238,12 +2244,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (isSupabaseConfigured && userId) {
-        setState(resetFields);
+        // Le formulaire reste en place tant que la base n'a pas répondu
+        // (09/10/2026) : sur un échec, rien de ce qui a été saisi n'est perdu et
+        // l'utilisatrice peut réessayer, au lieu de tout resaisir.
+        setState((st) => ({ ...st, addSaving: true, addErreur: null }));
         insertDressingItem(userId, base)
           .then((item) => {
             // La ligne insérée n'a pas encore ses saisons (écriture isolée,
             // cf. updateDressingItemSaisons) : elles sont posées juste après.
-            setState((st) => ({ ...st, items: [{ ...item, saisons, manches: base.manches }, ...st.items] }));
+            setState((st) => ({ ...resetFields(st), addSaving: false, items: [{ ...item, saisons, manches: base.manches }, ...st.items] }));
             annoncerPieceAjoutee(item.name);
             enregistrerSaisons(item.id, saisons);
             if (base.manches) enregistrerManches(item.id, base.manches, undefined);
@@ -2253,6 +2262,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             // plutôt que d'y exister avec un id local qui ne correspondrait à aucune
             // ligne en base — mais loguée et affichée (reportDressingError).
             reportDressingError("insertDressingItem", err);
+            setState((st) => ({
+              ...st,
+              addSaving: false,
+              addErreur: "La pièce n'a pas pu être enregistrée. Tes informations sont conservées : réessaie dans un instant.",
+            }));
           });
         return;
       }

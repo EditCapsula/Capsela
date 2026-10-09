@@ -375,6 +375,10 @@ export interface AppState {
   addPhotoUrl: string | null;
   /** true pendant l'upload vers Supabase Storage (correctif 22/08/2026, remplace l'ancien aperçu blob: jamais persisté) — bloque la sauvegarde le temps d'obtenir l'URL définitive. */
   addPhotoUploading: boolean;
+  /** Enregistrement en cours (insertion en base) : le bouton est désactivé, le formulaire conservé. */
+  addSaving: boolean;
+  /** Échec du dernier enregistrement, affiché près du bouton — null sinon. */
+  addErreur: string | null;
   /** true pendant l'analyse de la photo par l'IA (recette 22/08/2026, pré-remplissage catégorie/couleur/matière...) — jamais bloquant pour la sauvegarde, juste un indicateur. */
   addPhotoAnalyzing: boolean;
   /** true quand l'analyse de la photo a réellement rendu un résultat (27/09/2026) — seule condition des mentions « Capsela a analysé ta pièce » et « détectées ». addPhotoAnalyzing redevient false aussi en mode démo (aucune analyse) et sur un échec. */
