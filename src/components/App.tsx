@@ -14,6 +14,7 @@ import WardrobePiecesScreen from "./screens/WardrobePiecesScreen";
 import DernieresPiecesScreen from "@/components/screens/DernieresPiecesScreen";
 import PieceScreen from "./screens/PieceScreen";
 import AddScreen from "./screens/AddScreen";
+import ImporterTenueScreen from "./screens/ImporterTenueScreen";
 import CapsuleScreen from "./screens/CapsuleScreen";
 import TenuesScreen from "./screens/TenuesScreen";
 import CalendrierScreen from "./screens/CalendrierScreen";
@@ -66,7 +67,7 @@ const PRE_AUTH_SCREENS = new Set(["welcome", "onboarding", "auth", "login"]);
  * « add » rejoint l'ensemble le 27/09/2026 (refonte « Ajouter une pièce ») :
  * même raison, son « Ajouter au dressing » est désormais fixé en pied d'écran.
  */
-const FLOW_SCREENS = new Set(["planifier", "premium", "valise", "add"]);
+const FLOW_SCREENS = new Set(["planifier", "premium", "valise", "add", "importerTenue"]);
 
 function Screens() {
   const { state, actions } = useCapsela();
@@ -167,6 +168,7 @@ function Screens() {
         {state.screen === "dernieresPieces" && <DernieresPiecesScreen />}
         {state.screen === "piece" && <PieceScreen />}
         {state.screen === "add" && <AddScreen />}
+        {state.screen === "importerTenue" && <ImporterTenueScreen />}
         {state.screen === "capsule" && <CapsuleScreen />}
         {state.screen === "tenues" && <TenuesScreen />}
         {state.screen === "calendrier" && <CalendrierScreen />}

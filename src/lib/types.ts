@@ -556,6 +556,8 @@ export type Screen =
   | "wardrobe"
   | "piece"
   | "add"
+  // « Importer une tenue » (10/10/2026) : une photo, plusieurs pièces.
+  | "importerTenue"
   | "capsule"
   | "tenues"
   | "calendrier"
