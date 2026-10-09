@@ -19,9 +19,8 @@ import {
   SAC_TYPES,
   SHOE_TYPES,
   SUBTYPES,
-  seasonSuggestion,
 } from "@/lib/data";
-import { QUATRE_SAISONS, saisonsParDefaut } from "@/lib/saisons";
+import { QUATRE_SAISONS } from "@/lib/saisons";
 import { COUPES, MATIERES, isCoupeApplicable, isSizeApplicable, occasionsRetenues, suggestOccasions } from "@/lib/attributes";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -242,8 +241,8 @@ function typeOptionsFor(cat: CategoryKey): string[] | undefined {
  * essentiels, caractéristiques, saison, occasions, puis l'action — fixée en
  * pied d'écran, hors du défilement, pour rester sous le pouce.
  *
- * Ce qui ne bloque plus : la saison (saisonsParDefaut, présélectionnées et
- * modifiables, quatre saisons au choix). Ce qui bloque encore, parce que la sauvegarde elle-même
+ * Ce qui ne bloque plus : la saison (facultative, rien de présélectionné ;
+ * quatre saisons au choix). Ce qui bloque encore, parce que la sauvegarde elle-même
  * l'exige (saveItem) : le type de chaussure (R-B6, nécessaire au moteur)
  * et l'envoi de la photo en cours (jamais d'aperçu local persisté).
  *
@@ -309,13 +308,10 @@ export default function AddScreen() {
 
 
   // Les saisons affichées sont celles qui seront enregistrées : le choix de
-  // l'utilisatrice, sinon saisonsParDefaut — la même règle que saveItem.
+  // l'utilisatrice, rien de présélectionné (09/10/2026) ; sans choix, saveItem
+  // enregistre « toute l'année », ce que l'écran annonce.
   // Quatre saisons cochables depuis le 27/09/2026 (saisons.ts).
-  const saisonsRetenues = state.addSaisons ?? saisonsParDefaut(state.addCat, state.addName);
-  // « Suggérées » seulement quand Capsela a vraiment une suggestion : le
-  // repli sur les quatre saisons est une valeur par défaut, pas une lecture
-  // de la pièce.
-  const saisonSuggeree = state.addSaisons == null && seasonSuggestion(state.addCat, state.addName) != null;
+  const saisonsRetenues = state.addSaisons ?? [];
   const occasions = occasionsRetenues(state.addOccasionTouched, state.addOccasion, state.addCat, state.addShoeType);
   const occasionsSuggerees = !state.addOccasionTouched;
 
@@ -337,6 +333,7 @@ export default function AddScreen() {
   const detourageEnCours = state.addPhotoDetourage === "en_cours";
   const detourageFait = state.addPhotoDetourage === "fait";
   const photoDetouree = estPhotoDetouree(state.addPhotoUrl);
+  const manchesLues = analysee && !state.addManchesTouched && state.addManches != null;
   const nomSuggere = analysee && !state.addNameTouched && state.addName.trim().length > 0;
   const matiereEstimee = analysee && !state.addMatiereTouched && Boolean(state.addMatiere);
   // Caractéristiques encore vides : proposées à l'ajout, jamais affichées
@@ -593,8 +590,8 @@ export default function AddScreen() {
 
         {/* 7. La saison : une recommandation présélectionnée, jamais un verrou. */}
         <div className="mt-7">
-          <TitreSection suggere={saisonSuggeree}>{saisonSuggeree ? "Saisons suggérées" : "Saisons"}</TitreSection>
-          <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Quand portes-tu cette pièce ? Sélection multiple.</div>
+          <TitreSection suggere={false}>Saisons</TitreSection>
+          <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Quand portes-tu cette pièce ? Sélection multiple, facultative : sans choix, elle reste proposée toute l&apos;année.</div>
           {/* Quatre pastilles sur une ligne dès 380 px (maquette du 04/10/2026), deux fois deux en deçà, où la
               coche (« Printemps ✓ ») ne tient plus à côté du mot : au-delà, le fond plein dit seul le choix. */}
           <div className="grid grid-cols-2 min-[380px]:grid-cols-4 gap-2" role="group" aria-label="Saisons">
@@ -621,8 +618,8 @@ export default function AddScreen() {
             actif le retire. */}
         {aDesManches(state.addCat) && (
           <div className="mt-7">
-            <TitreSection suggere={false}>Manches</TitreSection>
-            <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Facultatif.</div>
+            <TitreSection suggere={manchesLues}>{manchesLues ? "Manches identifiées" : "Manches"}</TitreSection>
+            <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">{manchesLues ? "Lues sur ta photo, modifiables." : "Facultatif."}</div>
             <div className="flex gap-2 flex-wrap" role="group" aria-label="Manches">
               {MANCHES.map(({ valeur, libelle }) => {
                 const on = state.addManches === valeur;

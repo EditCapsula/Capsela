@@ -273,6 +273,8 @@ export interface PhotoAnalysis {
   accessoireType?: AccessoireType;
   /** Ce que montre la photo (05/10/2026) : l'article seul, porté, ou plusieurs articles. Absent quand le modèle n'est pas sûr. */
   photoType?: CadragePhoto;
+  /** Longueur des manches lue sur la photo (09/10/2026), seulement pour une catégorie qui en a. */
+  manches?: Manches;
 }
 
 export type CadragePhoto = "seule" | "portee" | "plusieurs";
@@ -397,6 +399,8 @@ export interface AppState {
   addMatiere: Matiere | null;
   addCoupe: Coupe | null;
   addMatiereTouched: boolean;
+  /** Vrai dès que l'utilisatrice a touché aux manches : l'analyse de la photo ne les remplace plus. */
+  addManchesTouched: boolean;
   addCoupeTouched: boolean;
   addSacType: SacType | null;
   addBijouType: BijouType | null;

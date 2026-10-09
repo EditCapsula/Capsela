@@ -43,7 +43,7 @@ import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } 
 import { aDesManches } from "./manches";
 import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
 import { ecrireRecommandation, lireRecommandations, type TableRecommandations } from "./recommandationsRecentes";
-import { basculerSaison, saisonsDe, saisonsParDefaut, seasonDepuisSaisons } from "./saisons";
+import { basculerSaison, saisonsDe, saisonsDepuisSeason, seasonDepuisSaisons } from "./saisons";
 import { composeWardrobePool } from "./selectors";
 import { fetchEtatPremium, peutAjouter, type EtatPremium } from "./premium";
 import { etatSimule, lireProfilSimule } from "./simulationPremium";
@@ -202,6 +202,7 @@ function buildInitialState(): AppState {
     addMatiere: null,
     addCoupe: null,
     addMatiereTouched: false,
+    addManchesTouched: false,
     addCoupeTouched: false,
     addSacType: null,
     addBijouType: null,
@@ -1882,6 +1883,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addShoeTypeTouched: Boolean(item.shoeType),
           addMatiere: item.matiere ?? null,
           addMatiereTouched: Boolean(item.matiere),
+          addManchesTouched: Boolean(item.manches),
           addCoupe: item.coupe ?? null,
           addCoupeTouched: Boolean(item.coupe),
           addSacType: item.cat === "sac" ? item.sacType ?? null : null,
@@ -1921,6 +1923,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addShoeTypeTouched: Boolean(item.shoeType),
           addMatiere: item.matiere ?? null,
           addMatiereTouched: Boolean(item.matiere),
+          addManchesTouched: Boolean(item.manches),
           addCoupe: item.coupe ?? null,
           addCoupeTouched: Boolean(item.coupe),
           addSacType: item.cat === "sac" ? item.sacType ?? null : null,
@@ -2007,11 +2010,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                 if (s.addPhotoUrl !== url) return { ...s, addPhotoAnalyzing: false };
                 // analyzeDressingPhoto rend {} sur un échec : rien n'a alors
                 // été analysé, et l'écran ne doit pas dire le contraire.
-                const analysee = Boolean(a.cat || a.colorName || a.matiere || a.subtype || a.shoeType);
+                const analysee = Boolean(a.cat || a.colorName || a.matiere || a.subtype || a.shoeType || a.manches);
                 const finalCat = s.addCatTouched ? s.addCat : a.cat ?? s.addCat;
                 const catMatches = Boolean(a.cat) && a.cat === finalCat;
                 const finalColor = s.addColorTouched || !a.colorName || !a.colorHex ? s.addColor : { name: a.colorName, hex: a.colorHex };
                 const finalMatiere = s.addMatiereTouched ? s.addMatiere : a.matiere ?? s.addMatiere;
+                // Manches lues sur la photo : seulement pour une catégorie qui en a,
+                // et jamais par-dessus un choix de l'utilisatrice.
+                const finalManches =
+                  s.addManchesTouched || !aDesManches(finalCat) || !catMatches ? s.addManches : a.manches ?? s.addManches;
                 const finalSubtype = s.addSubtypeTouched || !catMatches ? s.addSubtype : a.subtype ?? s.addSubtype;
                 const finalShoeType = s.addShoeTypeTouched || !catMatches ? s.addShoeType : a.shoeType ?? s.addShoeType;
                 return {
@@ -2022,6 +2029,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                   addCat: finalCat,
                   addColor: finalColor,
                   addMatiere: finalMatiere,
+                  addManches: finalManches,
                   addSubtype: finalSubtype,
                   addShoeType: finalShoeType,
                   addSacType: s.addSacTypeTouched || !catMatches ? s.addSacType : a.sacType ?? s.addSacType,
@@ -2068,9 +2076,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     basculerAddSaison: (saison) =>
       setState((s) => ({
         ...s,
-        addSaisons: basculerSaison(s.addSaisons ?? saisonsParDefaut(s.addCat, s.addName), saison),
+        // Aucune saison n'est présélectionnée (09/10/2026) : on part d'une liste
+        // vide, et décocher la dernière saison revient à « aucun choix ».
+        addSaisons:
+          s.addSaisons?.length === 1 && s.addSaisons[0] === saison ? null : basculerSaison(s.addSaisons ?? [], saison),
       })),
-    setAddManches: (m) => setState((s) => ({ ...s, addManches: s.addManches === m ? null : m })),
+    setAddManches: (m) =>
+      setState((s) => ({ ...s, addManches: s.addManches === m ? null : m, addManchesTouched: true })),
     setAddOccasion: (o) =>
       setState((s) => {
         // Part de ce que l'écran montre : tant que rien n'est touché, c'est la
@@ -2130,7 +2142,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // effacerait silencieusement le statut de port.
       const editingId = s.editingId;
       const addReturn = s.addReturn;
-      const saisons = s.addSaisons ?? saisonsParDefaut(s.addCat, s.addName);
+      // Aucune saison cochée : la pièce reste proposée toute l'année, ce que
+      // l'écran annonce (09/10/2026 — plus de saisons présélectionnées).
+      const saisons = s.addSaisons?.length ? s.addSaisons : saisonsDepuisSeason("Toutes saisons");
       const original = editingId != null ? s.items.find((i) => i.id === editingId) : undefined;
       const base: Omit<Item, "id"> = {
         name: (s.addName || "").trim() || "Nouvelle pièce",
@@ -2182,6 +2196,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addMatiere: null,
         addCoupe: null,
         addMatiereTouched: false,
+        addManchesTouched: false,
         addCoupeTouched: false,
         addSacType: null,
         addBijouType: null,
