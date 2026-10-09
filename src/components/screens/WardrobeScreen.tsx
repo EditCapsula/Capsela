@@ -17,6 +17,7 @@ import {
 import {
   candidatsARedecouvrir,
   designationPiece,
+  ideeLaPlusComplete,
   ligneDressing,
   looksDistincts,
   phrasePiste,
@@ -361,7 +362,7 @@ export default function WardrobeScreen() {
     const vus = new Set<string>();
     const sortie: { piece: Item; idee: ItemOutfitVariation }[] = [];
     for (const piece of pourIdees) {
-      const idee = idees.get(piece.id)?.[0];
+      const idee = ideeLaPlusComplete(idees.get(piece.id));
       if (!idee) continue;
       const cle = clePieces(idee.ids).join(",");
       if (vus.has(cle)) continue;
@@ -463,8 +464,19 @@ export default function WardrobeScreen() {
                   className="flex-none text-left cursor-pointer active:opacity-80"
                   style={{ width: "min(78%, 300px)", scrollSnapAlign: "start" }}
                 >
-                  <div className="relative overflow-hidden" style={{ aspectRatio: "1.25", borderRadius: 20, background: "var(--color-photo-bg)" }}>
-                    <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} />
+                  {/* La planche « look-detail » est une zone portrait (100 × 126) : dans une carte à l'italienne (1,25) elle ne remplissait que
+                      les deux tiers de la largeur et les pièces restaient petites. Le ratio de la carte la suit (0,9), sa largeur et son aperçu de
+                      la carte suivante ne changent pas. Fond grège plus soutenu et ombre marquée : les pièces blanches et beiges se détachent. */}
+                  <div
+                    className="relative overflow-hidden"
+                    style={{
+                      aspectRatio: "0.9",
+                      borderRadius: 20,
+                      background: "radial-gradient(120% 90% at 50% 28%, var(--color-flatlay-bg-clair) 0%, var(--color-flatlay-bg) 100%)",
+                      boxShadow: "inset 0 0 0 1px rgba(29,26,22,.05)",
+                    }}
+                  >
+                    <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} ombre="marquee" />
                   </div>
                   <div className="font-serif text-ink mt-[10px] px-[2px]" style={{ fontSize: 16 }}>{occasionShortLabel(idee.occasion)}</div>
                   <div className="text-[12px] px-[2px] line-clamp-1" style={{ color: "var(--color-muted-3)" }}>

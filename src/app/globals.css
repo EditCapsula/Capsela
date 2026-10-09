@@ -40,6 +40,9 @@
   --color-ink-soft: #3f3b34;
   --color-divider: #efe7da;
   --color-photo-bg: #f3ede1;
+  /* Fond intérieur des cartes « Tes looks » (09/10/2026) : un grège clair, plus soutenu que le crème de la page, pour que les pièces blanches et beiges s'en détachent. */
+  --color-flatlay-bg: #dcd3c4;
+  --color-flatlay-bg-clair: #e6dfd2;
   --color-selected-bg: #f6ebe2;
   --color-error-bg: #f4e2da;
   --color-error-border: #dcb2a0;

@@ -199,3 +199,13 @@ export function libelleLooksPossibles(n: number): string | null {
 export function looksDistincts(parPiece: number[][][]): number {
   return new Set(parPiece.flatMap((tenues) => tenues.map((ids) => clePieces(ids).join(",")))).size;
 }
+
+/**
+ * LE LOOK QUE MONTRE « TES LOOKS » POUR UNE PIÈCE (09/10/2026, « la carte active doit présenter un look suffisamment complet ») :
+ * parmi les trois premières idées du moteur pour cette pièce, celle qui compte le plus de pièces — la tenue la plus complète —,
+ * à égalité la première. Jamais une tenue hors des idées du moteur : seul le choix entre elles change.
+ */
+export function ideeLaPlusComplete<T extends { ids: number[] }>(idees: readonly T[] | undefined): T | undefined {
+  if (!idees?.length) return undefined;
+  return idees.slice(0, 3).reduce((meilleure, i) => (i.ids.length > meilleure.ids.length ? i : meilleure));
+}

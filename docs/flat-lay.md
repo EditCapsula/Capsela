@@ -148,3 +148,20 @@ Mesuré sur un look blazer + pull + pantalon + sac + boots : pull 36 % de la zon
 Carte 358 px de large (marge de 16 px). La colonne de la composition fait 181 px, zone `100 / 112`. Zone de sécurité : 12 px
 autour de la composition + le padding de la carte. Le flat lay ne recouvre jamais le titre, la description, « Voir le look »,
 « Sauvegarder » ni « Autre idée ».
+
+## « Tes looks » du Dressing (09/10/2026)
+
+Cause du manque de lisibilité, mesurée : la zone `look-detail` est un portrait (100 × 126) posé dans une carte à l'italienne (ratio 1,25).
+À 390 px, la carte (267 × 214 px) ne laissait à la planche que 170 px de large (le reste était vide) ; les pièces y étaient environ
+30 % plus petites que nécessaire. Source des visuels inchangée : les images des pièces (photos détourées de l'utilisatrice ou visuels
+du catalogue), composées par `FlatLayCapsela` — le correctif est de présentation.
+
+- Ratio de la carte : 0,9 (au lieu de 1,25), même largeur (`min(78 %, 300px)`) : l'aperçu de la carte suivante reste (≈ 60 px à 390 px).
+  La planche passe à 236 px de large (+ 39 %).
+- Fond : `--color-flatlay-bg` / `--color-flatlay-bg-clair`, un grège clair en dégradé radial, plus soutenu que le crème de la page.
+- Ombre `marquee` (propriété `ombre` de `FlatLayCapsela`) : une ombre de contact serrée sous une ombre diffuse. Le hero et la Tenue du
+  jour gardent l'ombre `douce`.
+- Look montré : parmi les trois premières idées du moteur pour la pièce, la plus complète (`ideeLaPlusComplete`).
+
+Limite connue, hors présentation : quand la photo d'une pièce montre une personne qui la porte, le détourage garde sa silhouette.
+Rien dans la pièce ne dit qu'elle est portée (le cadrage lu à l'ajout n'est jamais stocké) : seule une photo à plat règle ce cas.
