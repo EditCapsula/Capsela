@@ -275,6 +275,8 @@ export interface PhotoAnalysis {
   photoType?: CadragePhoto;
   /** Longueur des manches lue sur la photo (09/10/2026), seulement pour une catégorie qui en a. */
   manches?: Manches;
+  /** Saisons proposées d'après la photo (09/10/2026) : une suggestion modifiable, absente quand le modèle n'est pas sûr. */
+  saisons?: CapsuleSeason[];
 }
 
 export type CadragePhoto = "seule" | "portee" | "plusieurs";
@@ -389,6 +391,8 @@ export interface AppState {
   addPhotoDetourage: "repos" | "en_cours" | "fait";
   /** null tant que l'utilisatrice n'a rien touché — la sauvegarde retient alors saisonsParDefaut (saisons.ts), affichées présélectionnées. Quatre saisons au choix depuis le 27/09/2026, jamais bloquantes. */
   addSaisons: CapsuleSeason[] | null;
+  /** Vrai quand les saisons affichées viennent de l'analyse de la photo et que l'utilisatrice n'y a pas touché. */
+  addSaisonsLues: boolean;
   /** Longueur des manches choisie dans le formulaire (01/10/2026) ; null tant qu'elle n'est pas renseignée. */
   addManches: Manches | null;
   /** Plusieurs choix possibles. */

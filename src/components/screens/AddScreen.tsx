@@ -199,8 +199,8 @@ function typeOptionsFor(cat: CategoryKey): string[] | undefined {
  * essentiels, caractéristiques, saison, occasions, puis l'action — fixée en
  * pied d'écran, hors du défilement, pour rester sous le pouce.
  *
- * Ce qui ne bloque plus : la saison (facultative, rien de présélectionné ;
- * quatre saisons au choix). Ce qui bloque encore, parce que la sauvegarde elle-même
+ * La saison est obligatoire mais jamais présélectionnée (09/10/2026) : lue sur
+ * la photo quand l'analyse est sûre, sinon à choisir. Ce qui bloque aussi, parce que la sauvegarde elle-même
  * l'exige (saveItem) : le type de chaussure (R-B6, nécessaire au moteur)
  * et l'envoi de la photo en cours (jamais d'aperçu local persisté).
  *
@@ -261,15 +261,16 @@ export default function AddScreen() {
 
 
   // Les saisons affichées sont celles qui seront enregistrées : le choix de
-  // l'utilisatrice, rien de présélectionné (09/10/2026) ; sans choix, saveItem
-  // enregistre « toute l'année », ce que l'écran annonce.
+  // l'utilisatrice ou, à défaut, la suggestion lue sur la photo ; rien n'est
+  // présélectionné, et le choix est obligatoire (09/10/2026).
   // Quatre saisons cochables depuis le 27/09/2026 (saisons.ts).
   const saisonsRetenues = state.addSaisons ?? [];
   const occasions = occasionsRetenues(state.addOccasionTouched, state.addOccasion, state.addCat, state.addShoeType);
   const occasionsSuggerees = !state.addOccasionTouched;
 
   const shoeTypeMissing = isShoe && !state.addShoeType;
-  const blocked = shoeTypeMissing || state.addPhotoUploading;
+  const saisonManquante = saisonsRetenues.length === 0;
+  const blocked = shoeTypeMissing || saisonManquante || state.addPhotoUploading;
 
   const typeOptions = typeOptionsFor(state.addCat);
   const typeValue = isShoe ? state.addShoeType : isSac ? state.addSacType : isBijou ? state.addBijouType : isAccessoire ? state.addAccessoireType : state.addSubtype;
@@ -645,8 +646,10 @@ export default function AddScreen() {
 
         {/* 6. La saison : jamais présélectionnée, jamais un verrou. */}
         <div className="mt-7">
-          <TitreSection suggere={false}>Saisons</TitreSection>
-          <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">Quand portes-tu cette pièce ? Sélection multiple, facultative : sans choix, elle reste proposée toute l&apos;année.</div>
+          <TitreSection suggere={state.addSaisonsLues}>{state.addSaisonsLues ? "Saisons suggérées" : "Saisons"}</TitreSection>
+          <div className="text-[12px] text-muted leading-[1.45] -mt-[4px] mb-[12px]">
+            {state.addSaisonsLues ? "Lues sur ta photo, modifiables." : "Quand portes-tu cette pièce ? Sélection multiple."}
+          </div>
           {/* Quatre pastilles sur une ligne dès 380 px (maquette du 04/10/2026), deux fois deux en deçà, où la
               coche (« Printemps ✓ ») ne tient plus à côté du mot : au-delà, le fond plein dit seul le choix. */}
           <div className="grid grid-cols-2 min-[380px]:grid-cols-4 gap-2" role="group" aria-label="Saisons">
@@ -723,6 +726,8 @@ export default function AddScreen() {
           <div className="text-center text-[11px] text-terracotta mt-[8px]">Envoi de la photo en cours…</div>
         ) : shoeTypeMissing ? (
           <div className="text-center text-[11px] text-terracotta mt-[8px]">Choisis le modèle de chaussures pour pouvoir les ajouter.</div>
+        ) : saisonManquante ? (
+          <div className="text-center text-[11px] text-terracotta mt-[8px]">Choisis au moins une saison pour ajouter la pièce.</div>
         ) : null}
         <div className="flex items-center justify-center gap-[7px] mt-[9px] text-muted">
           <InfoIcon className="flex-shrink-0" />

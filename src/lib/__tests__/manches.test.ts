@@ -16,7 +16,7 @@ describe("manches — lecture et libellés", () => {
     for (const v of ["", "long", "Longues", null, undefined]) expect(manchesDepuis(v)).toBeUndefined();
   });
   it("les catégories qui ont des manches", () => {
-    for (const c of ["haut", "pull", "robe", "combinaison", "veste"] as CategoryKey[]) expect(aDesManches(c), c).toBe(true);
+    for (const c of ["haut", "pull", "robe", "combinaison", "veste", "manteau"] as CategoryKey[]) expect(aDesManches(c), c).toBe(true);
     for (const c of ["pantalon", "jupe", "chaussures", "sac"] as CategoryKey[]) expect(aDesManches(c), c).toBe(false);
   });
   it("libellés et bras nus", () => {
