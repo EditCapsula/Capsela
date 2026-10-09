@@ -43,3 +43,26 @@ export async function toWebp(pngBytes: Uint8Array): Promise<EncodedImage> {
     return { bytes: pngBytes, contentType: "image/png", ext: "png" };
   }
 }
+
+/** Décode un PNG en pixels RGBA (@jsquash/png) — pour recadrer une image détourée sans perdre sa transparence. */
+export async function decoderPng(octets: Uint8Array): Promise<ImageData> {
+  const { default: decode } = await import("https://esm.sh/@jsquash/png@2.1.0/decode.js");
+  return await decode(octets.buffer.slice(octets.byteOffset, octets.byteOffset + octets.byteLength) as ArrayBuffer);
+}
+
+/** Pixels RGBA vers WebP (transparence conservée), ramenés à 800 px au plus sur le grand côté, proportions gardées. Repli sur null si la conversion échoue. */
+export async function imageDataVersWebp(imageData: ImageData): Promise<EncodedImage | null> {
+  try {
+    const { default: resize } = await import("https://esm.sh/@jsquash/resize@1.1.1");
+    const { default: encode } = await import("https://esm.sh/@jsquash/webp@1.4.0/encode.js");
+    let image = imageData;
+    if (image.width > MAX_IMAGE_DIMENSION || image.height > MAX_IMAGE_DIMENSION) {
+      image = await resize(image, dimensionsProportionnelles(image.width, image.height));
+    }
+    const webp = await encode(image, { quality: 75 });
+    return { bytes: new Uint8Array(webp), contentType: "image/webp", ext: "webp" };
+  } catch (err) {
+    console.error("Encodage WebP indisponible :", err);
+    return null;
+  }
+}

@@ -65,9 +65,9 @@ describe("palette du dressing enrichie", () => {
 
 });
 
-describe("copie de la palette dans la fonction Edge analyze-dressing-photo", () => {
+describe("copie de la palette dans les fonctions Edge (supabase/functions/_shared/enumsPiece.ts)", () => {
   it("est identique à PALETTE (même noms, mêmes codes, même ordre)", () => {
-    const source = readFileSync("supabase/functions/analyze-dressing-photo/index.ts", "utf8");
+    const source = readFileSync("supabase/functions/_shared/enumsPiece.ts", "utf8");
     const debut = source.indexOf("const PALETTE: [string, string][] = [");
     const fin = source.indexOf("const PALETTE_BIJOU");
     const copie = [...source.slice(debut, fin).matchAll(/\["([^"]+)",\s*"(#[0-9A-Fa-f]{6})"\]/g)].map((m) => [m[1], m[2]]);

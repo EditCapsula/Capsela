@@ -504,14 +504,41 @@ export default function WardrobeScreen() {
               className="relative block w-full overflow-hidden cursor-pointer active:opacity-80 text-left"
               style={{ aspectRatio: "0.92", borderRadius: 22, background: "var(--color-warm-bg)" }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={g.visuel} alt="" width={480} height={640} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              {g.propres.length > 0 ? (
+                <span
+                  className="absolute inset-0 block"
+                  style={{ background: "radial-gradient(120% 90% at 50% 28%, var(--color-flatlay-bg-clair) 0%, var(--color-flatlay-bg) 100%)" }}
+                >
+                  {g.propres.map((p) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={p.id}
+                      src={p.url}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      style={{
+                        position: "absolute",
+                        left: `${p.l}%`,
+                        top: `${p.t}%`,
+                        width: `${p.w}%`,
+                        height: `${p.h}%`,
+                        objectFit: "contain",
+                        filter: "drop-shadow(0 3px 5px rgba(29,26,22,.22))",
+                      }}
+                    />
+                  ))}
+                </span>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={g.visuel} alt="" width={480} height={640} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              )}
               <span
-                className="absolute left-[8px] right-[8px] bottom-[8px] flex items-baseline justify-between gap-2 rounded-full px-[14px] py-[9px]"
-                style={{ background: "var(--color-card)" }}
+                className="absolute left-[8px] right-[8px] bottom-[8px] flex flex-col gap-[1px] px-[14px] py-[8px]"
+                style={{ background: "var(--color-card)", borderRadius: 18 }}
               >
-                <span className="font-serif text-ink truncate" style={{ fontSize: 14 }}>{g.libelle.replace(/ & /g, " &\u00a0")}</span>
-                <span className="text-[11px] text-muted flex-shrink-0">{g.nbPieces} {g.nbPieces <= 1 ? "pièce" : "pièces"}</span>
+                <span className="font-serif text-ink line-clamp-2" style={{ fontSize: 14, lineHeight: 1.2 }}>{g.libelle.replace(/ & /g, " &\u00a0")}</span>
+                <span className="text-[11px] text-muted">{g.nbPieces} {g.nbPieces <= 1 ? "pièce" : "pièces"}</span>
               </span>
             </button>
           ))}
