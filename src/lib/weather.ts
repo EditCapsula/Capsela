@@ -294,3 +294,43 @@ export function previsionGardee(nom: string, coords?: { lat: number; lon: number
   });
   return p;
 }
+
+/** Les températures habituelles d'un lieu à une date (moyenne des cinq années précédentes, ± 3 jours) — jamais une prévision. */
+export interface Climat {
+  tempMin: number;
+  tempMax: number;
+  /** Part des jours de pluie (≥ 1 mm), de 0 à 1. */
+  pluie: number;
+  annees: number;
+}
+
+const climatsGardes = new Map<string, Promise<Climat | null>>();
+
+/**
+ * Climatologie d'un POINT à une date (`mode=climate` de la fonction Edge). Gardée pour la session : elle ne change pas d'un appel à
+ * l'autre. `null` : mode démo, réseau, ou fonction Edge pas encore redéployée (elle ignore `mode` — réponse sans `climat`, détectée par
+ * la forme) ; l'appelant retombe alors sur la température habituelle de la saison.
+ */
+export function fetchClimat(coords: { lat: number; lon: number }, date: Date): Promise<Climat | null> {
+  if (!isSupabaseConfigured) return Promise.resolve(null);
+  const mois = date.getMonth() + 1;
+  const jour = date.getDate();
+  const cle = `${coords.lat.toFixed(2)},${coords.lon.toFixed(2)}|${mois}-${jour}`;
+  const gardee = climatsGardes.get(cle);
+  if (gardee) return gardee;
+  const p = (async () => {
+    try {
+      const { data, error } = await getSupabase().functions.invoke("weather", { body: { lat: coords.lat, lon: coords.lon, mois, jour, mode: "climate" } });
+      const c = (data as { climat?: Partial<Climat> } | null)?.climat;
+      if (error || !c || typeof c.tempMin !== "number" || typeof c.tempMax !== "number") return null;
+      return { tempMin: c.tempMin, tempMax: c.tempMax, pluie: typeof c.pluie === "number" ? c.pluie : 0, annees: typeof c.annees === "number" ? c.annees : 0 };
+    } catch {
+      return null;
+    }
+  })();
+  climatsGardes.set(cle, p);
+  void p.then((r) => {
+    if (!r) climatsGardes.delete(cle);
+  });
+  return p;
+}

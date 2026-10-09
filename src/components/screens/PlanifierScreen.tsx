@@ -28,7 +28,7 @@ import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJourn
 import { computeDefaultCapsule, saisonCalendairePour } from "@/lib/capsule";
 import EtapeLieu, { type MeteoEtapeLieu } from "@/components/EtapeLieu";
 import { meteoPourLaDate } from "@/lib/meteoPlan";
-import { previsionGardee, type VilleSuggeree } from "@/lib/weather";
+import { fetchClimat, previsionGardee, type Climat, type VilleSuggeree } from "@/lib/weather";
 import { deleteTenuePlanifiee, fetchTenuesPlanifiees, enregistrerHumeurPlan, upsertTenuePlanifiee, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { VISUEL_SEJOUR } from "@/lib/valise";
@@ -740,7 +740,26 @@ export default function PlanifierScreen() {
    * prévision) — planifier du lin pour juillet un 8 octobre ne se compose plus sur les 11° du jour. Dans l'horizon mais sans réponse
    * (lieu introuvable, quota), la météo d'aujourd'hui reste la plus proche mesure.
    */
-  const meteoUtilisee = meteoPourLaDate({ date: dateChoisie, jour, creneau: meteoMoment, aujourdhui: weather });
+  // AU-DELÀ de ce que la prévision couvre : l'horizon connu d'avance, ou — si la réponse a été plus courte (repli) — son dernier jour réel.
+  const auDela =
+    jour != null &&
+    (jour > HORIZON_PREVISION_JOURS || (prevision != null && dateChoisie != null && dernierJourConnu != null && jourLocal(dateChoisie) > dernierJourConnu));
+  /** Les températures HABITUELLES du lieu à cette date (moyenne des années passées), demandées seulement au-delà de la prévision. */
+  const [climatBrut, setClimatBrut] = useState<{ cle: string; c: Climat | null } | null>(null);
+  const cleClimat = auDela && ville && dateChoisie ? `${ville.lat},${ville.lon}|${jourLocal(dateChoisie)}` : null;
+  useEffect(() => {
+    if (!cleClimat || !ville || !dateChoisie) return;
+    let annule = false;
+    void fetchClimat({ lat: ville.lat, lon: ville.lon }, dateChoisie).then((c) => {
+      if (!annule) setClimatBrut({ cle: cleClimat, c });
+    });
+    return () => {
+      annule = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleClimat]);
+  const climat = cleClimat && climatBrut?.cle === cleClimat ? climatBrut.c : null;
+  const meteoUtilisee = meteoPourLaDate({ date: dateChoisie, creneau: meteoMoment, aujourdhui: weather, auDela, climat });
   /**
    * LA CAPSULE DE LA DATE (08/10/2026) : celle du jour est bâtie sur la météo et la saison d'AUJOURD'HUI. Une tenue planifiée pour une autre
    * saison complétait donc ses catégories vides — les chaussures en premier — avec des pièces d'aujourd'hui (des bottines pour juillet).
@@ -760,8 +779,10 @@ export default function PlanifierScreen() {
         ? { kind: "ok", temp: meteoJour.temp, tempMin: meteoJour.tempMin, tempMax: meteoJour.tempMax, label: meteoJour.label }
         : previsionEtat !== "faite"
           ? { kind: "encours" }
-          : jour > HORIZON_PREVISION_JOURS
-            ? { kind: "loin" }
+          : auDela
+            ? climat
+              ? { kind: "habituelle", tempMin: climat.tempMin, tempMax: climat.tempMax }
+              : { kind: "loin" }
             : { kind: "indispo" };
   /**
    * La ville telle que l'utilisatrice l'a donnée — le nom de la suggestion
@@ -901,10 +922,14 @@ export default function PlanifierScreen() {
     }
     if (prevision && dernierJourConnu && dateChoisie && jourLocal(dateChoisie) > dernierJourConnu) {
       const d = new Date(`${dernierJourConnu}T12:00:00`);
-      return `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue suit la saison de la date et ses températures habituelles.`;
+      return climat
+        ? `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue suit les températures habituelles de ${villeAffichee} à cette date : ${climat.tempMin}° à ${climat.tempMax}°.`
+        : `La prévision ne va que jusqu'au ${d.getDate()} ${MOIS[d.getMonth()]}. Au-delà, la tenue suit la saison de la date et ses températures habituelles.`;
     }
-    return jour != null && jour > HORIZON_PREVISION_JOURS
-      ? "Pas de prévision pour cette date. La tenue suit la saison de la date et ses températures habituelles."
+    return auDela
+      ? climat
+        ? `Pas de prévision pour cette date. La tenue suit les températures habituelles de ${villeAffichee} à cette date : ${climat.tempMin}° à ${climat.tempMax}°.`
+        : "Pas de prévision pour cette date. La tenue suit la saison de la date et ses températures habituelles."
       : `Pas de prévision disponible pour ce lieu. La tenue suit la saison de la date et la météo d'aujourd'hui — ${aujourdhui}.`;
   })();
 

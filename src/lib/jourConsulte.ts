@@ -1,20 +1,23 @@
 import { DAYS_FR, MONTHS_FR } from "./data";
 import type { ProfilePrefs } from "./profile";
-import { HORIZON_PREVISION_JOURS } from "./prevision";
 import type { OccasionKey } from "./types";
 
 /*
  * LE JOUR CONSULTÉ (27/09/2026, navigation par date — docs/navigation-par-date.md).
  *
  * Un seul état dans le store, `jourDecalage` : 0 pour aujourd'hui, 1 pour
- * demain… jusqu'à HORIZON_PREVISION_JOURS, l'étendue de la prévision météo.
+ * demain… jusqu'à JOUR_MAX.
  * Au-delà, la tenue ne pourrait plus suivre la météo du jour : la navigation
  * s'arrête là plutôt que d'annoncer une météo qu'elle n'a pas. L'Accueil et
  * Tenue lisent le même état ; ce module ne porte que les dérivés purs —
  * dates, libellés, occasion par défaut —, testés.
  */
 
-export const JOUR_MAX = HORIZON_PREVISION_JOURS;
+/**
+ * Jours consultables sur l'Accueil et Tenue : 4, comme avant. L'horizon de la prévision est passé à 15 jours (prevision.ts) pour Planifier,
+ * Mon planning et la Valise ; la navigation par date de l'Accueil, dessinée pour cinq jours, ne suit pas — décision séparée.
+ */
+export const JOUR_MAX = 4;
 
 export const borneJour = (n: number) => Math.max(0, Math.min(JOUR_MAX, Math.round(n)));
 
