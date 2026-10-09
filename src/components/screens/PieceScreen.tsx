@@ -5,7 +5,8 @@ import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { bestStyleFor } from "@/lib/capsule";
 import { isCoupeApplicable, isSizeApplicable, suggestName } from "@/lib/attributes";
 import { daysSinceWorn, inactivityInfo } from "@/lib/selectors";
-import { libelleManches } from "@/lib/manches";
+import { aDesManches, libelleManches } from "@/lib/manches";
+import { champsManquants, phraseQuandPorter, titreEnDeuxTemps } from "@/lib/pieceFiche";
 import { libelleSaisons, saisonsDe } from "@/lib/saisons";
 import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
@@ -38,64 +39,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CharRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="flex items-center gap-[8px] t-surtitre text-placeholder flex-shrink-0">
-        <span className="text-terracotta flex-shrink-0">{icon}</span>
-        {label}
-      </span>
-      <span className="text-[13px] text-ink text-right">{value}</span>
-    </div>
-  );
-}
-
-function TicketIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v1.6a1.9 1.9 0 0 0 0 3.8v1.6A1.5 1.5 0 0 1 19.5 17h-15A1.5 1.5 0 0 1 3 15.5v-1.6a1.9 1.9 0 0 0 0-3.8V8.5z" />
-      <path d="M9 7v10" strokeDasharray="1.6 2.2" />
-    </svg>
-  );
-}
-function CalendarIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
-      <path d="M3.5 9.5h17M8 3v3.4M16 3v3.4" />
-    </svg>
-  );
-}
-function LeafIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 15c0-7 5.5-11 16-11 0 11-4.5 16.5-11.5 16.5C5 20.5 4 18 4 15z" />
-      <path d="M5 20L15 10" />
-    </svg>
-  );
-}
-function FabricIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M4 8l16 8M4 12l16 8M4 4l16 8M8 4L4 8m16 8l-4 4" />
-    </svg>
-  );
-}
-function TshirtIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 4L4 7.2l2.4 2.6L8 8.4V20h8V8.4l1.6 1.4 2.4-2.6L16 4l-4 1.8L8 4z" />
-    </svg>
-  );
-}
-function HangerIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3.2a1.5 1.5 0 1 1 1.3 2.3L12 7" />
-      <path d="M12 7l9.3 6.6a1.4 1.4 0 0 1-.9 2.5H3.6a1.4 1.4 0 0 1-.9-2.5L12 7z" />
-    </svg>
-  );
-}
 function EditIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -236,122 +179,89 @@ export default function PieceScreen() {
 
   const addableLooks = state.savedLooks.filter((l) => !l.pieceIds.includes(active.id));
 
+  const manquants = champsManquants(active);
+  const titre = titreEnDeuxTemps(displayName);
+  const trio: { label: string; value: string; dot?: string; vide?: boolean }[] = [
+    { label: "Couleur", value: active.color, dot: active.hex },
+    ...(aDesManches(active.cat) ? [{ label: "Manches", value: active.manches ? libelleManches(active.manches).replace(/^Manches /, "").replace(/^./, (c) => c.toUpperCase()).replace("Sans manches", "Sans") : "À préciser", vide: !active.manches }] : []),
+    ...(sizeApplicable ? [{ label: isShoe ? "Pointure" : "Taille", value: active.size || "À préciser", vide: !active.size }] : []),
+  ];
+  const details: { label: string; value: string }[] = [
+    ...(active.brand ? [{ label: "Marque", value: active.brand }] : []),
+    ...(active.matiere ? [{ label: "Matière", value: active.matiere }] : []),
+    ...(coupeApplicable && active.coupe ? [{ label: "Coupe", value: active.coupe }] : []),
+    ...(typeValue ? [{ label: isLength ? "Longueur" : "Modèle", value: typeValue }] : []),
+  ];
+  const quandPorter = phraseQuandPorter(saisonsDe(active), active.occasion);
+
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
-      <div className="flex items-center justify-between">
-        <BoutonRetour onClick={() => actions.go(state.pieceReturn)} label="Revenir à l'écran précédent" />
-        {!suggested && (
-          <button
-            onClick={() => setMenuOpen(true)}
-            aria-label="Options"
-            className="w-[38px] h-[38px] rounded-full bg-card border border-border flex items-center justify-center text-[17px] text-ink cursor-pointer"
-          >
-            ⋯
-          </button>
-        )}
-      </div>
-
-      <div
-        className="w-full rounded-carte border border-border overflow-hidden mt-[14px] relative"
-        style={
-          resolvedImage.kind === "generated"
-            ? { aspectRatio: "4/5", background: "var(--color-photo-bg)" }
-            : resolvedImage.url
-              ? { aspectRatio: "4/5", ...fondPhotoPiece(resolvedImage.url, resolvedImage.kind === "detouree") }
-              : { aspectRatio: "4/5", background: active.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
-        }
-      >
-        {resolvedImage.kind === "generated" && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={resolvedImage.url}
-            alt={active.name}
-            style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", padding: 18, boxSizing: "border-box" }}
-          />
-        )}
-        {resolvedImage.kind === "placeholder" && active.imageStatus === "generating" && (
-          <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
-        )}
-      </div>
-
-      {suggested && (
-        <div>
-          <button
-            onClick={() => setSuggestionInfoOpen((v) => !v)}
-            className="inline-flex items-center gap-[6px] mt-4 t-pastille text-terracotta bg-warm-bg rounded-full py-1 px-[10px] cursor-pointer"
-          >
-            Suggestion
-            <span className="w-[13px] h-[13px] rounded-full border border-gold text-[9px] normal-case flex items-center justify-center">
-              i
-            </span>
-          </button>
-          {suggestionInfoOpen && (
-            <div className="mt-[9px] bg-warm-bg rounded-champ px-3 py-[11px] text-[11px] text-ink-soft leading-[1.5]">
-              Cette pièce vient de ta capsule de départ : tu n&apos;as pas encore ajouté de pièce de cette catégorie à
-              ton dressing. Ajoute-la si tu l&apos;as déjà, ou remplace-la par une des tiennes.
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="t-surtitre text-muted mt-[14px]">{eyebrow}</div>
-      <div className="t-titre-ecran text-ink mt-1">{displayName}</div>
-      {synthesis && <div className="text-[13px] text-warm-text mt-[6px]">{synthesis}</div>}
-
-      {!suggested && (
-        <Card rayon="pilule" className="flex items-center justify-center gap-[9px] mt-5 px-4 py-[13px]">
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: pNever ? "var(--color-terracotta)" : "var(--color-muted)" }}
-          />
-          <span className="text-[13px]" style={{ color: pNever ? "var(--color-terracotta)" : "var(--color-muted)" }}>
-            {wornStatusLabel}
-          </span>
-        </Card>
-      )}
-
+    <div className="absolute inset-0">
       {suggested ? (
-        <Card rayon="bloc" className="flex flex-col gap-[9px] mt-3 px-4 py-[14px]">
-          {active.brand && <InfoRow label="Marque" value={active.brand} />}
-          <InfoRow label="Taille" value={active.size || "—"} />
-          <InfoRow label="Style" value={bestStyleFor(active)} />
-          <InfoRow
-            label="Occasion"
-            value={active.occasion && active.occasion.length ? active.occasion.map((o) => OCC_LABELS[o]).join(", ") : "—"}
-          />
-          <InfoRow label="Saison" value={libelleSaisons(saisonsDe(active))} />
-          {active.manches && <InfoRow label="Manches" value={libelleManches(active.manches)} />}
-          {active.matiere && <InfoRow label="Matière" value={active.matiere} />}
-          {active.coupe && <InfoRow label="Coupe" value={active.coupe} />}
-          {active.sacType && <InfoRow label="Type de sac" value={active.sacType} />}
-          {active.bijouType && <InfoRow label="Type de bijou" value={active.bijouType} />}
-          {active.accessoireType && <InfoRow label="Type d'accessoire" value={active.accessoireType} />}
-          {active.subtype && <InfoRow label={isLength ? "Longueur" : "Type"} value={active.subtype} />}
-        </Card>
-      ) : (
-        <Card rayon="bloc" className="flex flex-col gap-[11px] mt-3 px-4 py-[14px]">
-          {active.brand && <InfoRow label="Marque" value={active.brand} />}
-          {sizeApplicable && (
-            <CharRow icon={<TicketIcon />} label={isShoe ? "Pointure" : "Taille"} value={active.size || "Non renseignée"} />
-          )}
-          <CharRow
-            icon={<CalendarIcon />}
-            label="Occasions"
-            value={active.occasion && active.occasion.length ? active.occasion.map((o) => OCC_LABELS[o]).join(", ") : "Non renseignée"}
-          />
-          <CharRow icon={<LeafIcon />} label="Saison" value={libelleSaisons(saisonsDe(active))} />
-          {active.manches && <CharRow icon={<TshirtIcon />} label="Manches" value={libelleManches(active.manches)} />}
-          <CharRow icon={<FabricIcon />} label="Matière" value={active.matiere || "Non renseignée"} />
-          {coupeApplicable && <CharRow icon={<TshirtIcon />} label="Coupe" value={active.coupe || "Non renseignée"} />}
-          {typeValue && <CharRow icon={<HangerIcon />} label={isLength ? "Longueur" : "Type"} value={typeValue} />}
-        </Card>
-      )}
+        // UNE SUGGESTION de la capsule (pas encore une pièce du dressing) : la mise en page d'origine, photo en 4/5.
+        <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
+          <div className="flex items-center justify-between">
+            <BoutonRetour onClick={() => actions.go(state.pieceReturn)} label="Revenir à l'écran précédent" />
+          </div>
 
-      {suggested ? (
-        <>
-          <Button variante="principal" className="mt-[18px]"
-            onClick={() => actions.startReplace(active)}
+          <div
+            className="w-full rounded-carte border border-border overflow-hidden mt-[14px] relative"
+            style={
+              resolvedImage.kind === "generated"
+                ? { aspectRatio: "4/5", background: "var(--color-photo-bg)" }
+                : resolvedImage.url
+                  ? { aspectRatio: "4/5", ...fondPhotoPiece(resolvedImage.url, resolvedImage.kind === "detouree") }
+                  : { aspectRatio: "4/5", background: active.hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }
+            }
           >
+            {resolvedImage.kind === "generated" && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={resolvedImage.url}
+                alt={active.name}
+                style={{ width: "100%", height: "100%", objectFit: "contain", objectPosition: "center", padding: 18, boxSizing: "border-box" }}
+              />
+            )}
+            {resolvedImage.kind === "placeholder" && active.imageStatus === "generating" && (
+              <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
+            )}
+          </div>
+
+          <div>
+            <button
+              onClick={() => setSuggestionInfoOpen((v) => !v)}
+              className="inline-flex items-center gap-[6px] mt-4 t-pastille text-terracotta bg-warm-bg rounded-full py-1 px-[10px] cursor-pointer"
+            >
+              Suggestion
+              <span className="w-[13px] h-[13px] rounded-full border border-gold text-[9px] normal-case flex items-center justify-center">i</span>
+            </button>
+            {suggestionInfoOpen && (
+              <div className="mt-[9px] bg-warm-bg rounded-champ px-3 py-[11px] text-[11px] text-ink-soft leading-[1.5]">
+                Cette pièce vient de ta capsule de départ : tu n&apos;as pas encore ajouté de pièce de cette catégorie à
+                ton dressing. Ajoute-la si tu l&apos;as déjà, ou remplace-la par une des tiennes.
+              </div>
+            )}
+          </div>
+
+          <div className="t-surtitre text-muted mt-[14px]">{eyebrow}</div>
+          <div className="t-titre-ecran text-ink mt-1">{displayName}</div>
+          {synthesis && <div className="text-[13px] text-warm-text mt-[6px]">{synthesis}</div>}
+
+          <Card rayon="bloc" className="flex flex-col gap-[9px] mt-3 px-4 py-[14px]">
+            {active.brand && <InfoRow label="Marque" value={active.brand} />}
+            <InfoRow label="Taille" value={active.size || "—"} />
+            <InfoRow label="Style" value={bestStyleFor(active)} />
+            <InfoRow label="Occasion" value={active.occasion && active.occasion.length ? active.occasion.map((o) => OCC_LABELS[o]).join(", ") : "—"} />
+            <InfoRow label="Saison" value={libelleSaisons(saisonsDe(active))} />
+            {active.manches && <InfoRow label="Manches" value={libelleManches(active.manches)} />}
+            {active.matiere && <InfoRow label="Matière" value={active.matiere} />}
+            {active.coupe && <InfoRow label="Coupe" value={active.coupe} />}
+            {active.sacType && <InfoRow label="Type de sac" value={active.sacType} />}
+            {active.bijouType && <InfoRow label="Type de bijou" value={active.bijouType} />}
+            {active.accessoireType && <InfoRow label="Type d'accessoire" value={active.accessoireType} />}
+            {active.subtype && <InfoRow label={isLength ? "Longueur" : "Type"} value={active.subtype} />}
+          </Card>
+
+          <Button variante="principal" className="mt-[18px]" onClick={() => actions.startReplace(active)}>
             J&apos;ai déjà ça
           </Button>
           {active.affLink && (
@@ -364,35 +274,156 @@ export default function PieceScreen() {
               Acheter
             </a>
           )}
-        </>
+        </div>
       ) : (
         <>
-          <Button variante="sombre" className="mt-[18px]"
-            onClick={() => actions.openItemOutfits(active.id, false)}
-          >
-            Voir des tenues avec cette pièce
-          </Button>
-          <Button variante="secondaire" className="mt-[10px]"
-            onClick={() => setLookSheetOpen(true)}
-          >
-            ♡ Ajouter à un look
-          </Button>
-
-          {dormant && (
-            <button
-              onClick={actions.goNeverWorn}
-              className="mt-[14px] w-full flex items-center gap-[12px] bg-warm-bg border border-warm-border rounded-tuile px-4 py-[13px] cursor-pointer text-left"
-            >
-              <span className="w-[32px] h-[32px] rounded-full bg-terracotta text-cream flex items-center justify-center flex-shrink-0">
-                <BulbIcon />
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-[13px] text-ink">Cette pièce dort dans ton dressing.</div>
-                <div className="text-[11px] text-terracotta mt-[3px]">Que faire avec ? →</div>
+          <div className="scrollarea absolute inset-0 overflow-y-auto" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 120px)" }}>
+            {/* LA VITRINE : la photo en entier (jamais recadrée), le retour et le menu posés dessus. */}
+            <div className="relative bg-card" style={{ height: 392 }}>
+              <div
+                role="img"
+                aria-label={active.name}
+                className="absolute"
+                style={{
+                  inset: "64px 28px 40px",
+                  ...(resolvedImage.url
+                    ? { backgroundImage: `url(${resolvedImage.url})`, backgroundSize: "contain", backgroundRepeat: "no-repeat", backgroundPosition: "center" }
+                    : { background: active.hex, borderRadius: 18, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.06)" }),
+                }}
+              />
+              {resolvedImage.kind === "placeholder" && active.imageStatus === "generating" && (
+                <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
+              )}
+              <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-[18px] pt-[14px]">
+                <BoutonRetour onClick={() => actions.go(state.pieceReturn)} label="Revenir à l'écran précédent" />
+                <div className="flex flex-col items-center gap-[6px]" aria-hidden="true">
+                  <span className="font-serif font-medium text-[22px] leading-none text-ink" style={{ letterSpacing: ".2em", paddingLeft: ".2em" }}>CAPSELA</span>
+                  <span className="w-[28px] h-[2px] rounded-[2px]" style={{ background: "var(--color-terracotta)" }} />
+                </div>
+                <button
+                  onClick={() => setMenuOpen(true)}
+                  aria-label="Options"
+                  className="w-[44px] h-[44px] flex items-center justify-center cursor-pointer"
+                >
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" className="text-ink" aria-hidden="true">
+                    <circle cx="12" cy="5.5" r="1.5" />
+                    <circle cx="12" cy="12" r="1.5" />
+                    <circle cx="12" cy="18.5" r="1.5" />
+                  </svg>
+                </button>
               </div>
-              <span className="text-terracotta text-[16px] flex-shrink-0">›</span>
-            </button>
-          )}
+            </div>
+
+            <div className="relative bg-cream border-t border-border px-[18px] pt-[22px]" style={{ marginTop: -24, borderRadius: "24px 24px 0 0" }}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="t-surtitre text-muted">{eyebrow}</div>
+                <span className="h-[32px] px-3 rounded-full border border-border bg-card inline-flex items-center gap-[6px] text-[12px] font-medium text-warm-text">
+                  <span className="w-[7px] h-[7px] rounded-full flex-shrink-0" style={{ background: pNever ? "var(--color-terracotta)" : "var(--color-muted)" }} aria-hidden="true" />
+                  {wornStatusLabel}
+                </span>
+              </div>
+              <h1 className="t-titre-ecran text-ink mt-[6px]">
+                {titre.debut}
+                {titre.fin && (
+                  <>
+                    {" "}
+                    <span className="italic text-terracotta-deep">{titre.fin}</span>
+                  </>
+                )}
+              </h1>
+
+              <div className="grid mt-[18px] border-y border-border" style={{ gridTemplateColumns: `repeat(${trio.length}, minmax(0, 1fr))` }}>
+                {trio.map((t, i) => (
+                  <div key={t.label} className={"pt-[12px] pb-[13px] " + (i ? "border-l border-border pl-[14px]" : "")}>
+                    <div className="text-[12px] text-placeholder">{t.label}</div>
+                    <div className={"flex items-center gap-[6px] font-serif text-[16px] mt-[4px] " + (t.vide ? "text-placeholder" : "text-ink")}>
+                      {t.dot && <span className="w-[12px] h-[12px] rounded-full flex-shrink-0" style={{ background: t.dot, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} aria-hidden="true" />}
+                      {t.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="t-surtitre text-muted mt-[22px]">Quand la porter</div>
+              <p className="font-serif text-[17px] leading-[1.45] text-ink mt-2" style={{ textWrap: "pretty" }}>
+                {quandPorter}
+              </p>
+
+              {dormant && (
+                <button
+                  onClick={actions.goNeverWorn}
+                  className="mt-[20px] w-full flex items-center gap-[12px] bg-warm-bg border border-warm-border rounded-tuile px-4 py-[13px] cursor-pointer text-left"
+                >
+                  <span className="w-[32px] h-[32px] rounded-full bg-terracotta text-cream flex items-center justify-center flex-shrink-0">
+                    <BulbIcon />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] text-ink">Cette pièce dort dans ton dressing.</div>
+                    <div className="text-[11px] text-terracotta mt-[3px]">Que faire avec ? →</div>
+                  </div>
+                  <span className="text-terracotta text-[16px] flex-shrink-0">›</span>
+                </button>
+              )}
+
+              <div className="flex items-baseline justify-between gap-3 mt-[24px]">
+                <div className="t-surtitre text-muted">Détails</div>
+                <button
+                  onClick={() => actions.startEditItem(active)}
+                  className="min-h-[44px] inline-flex items-center gap-[5px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer"
+                >
+                  <EditIcon /> Modifier
+                </button>
+              </div>
+              {details.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {details.map((d) => (
+                    <span key={d.label} className="h-[32px] px-3 rounded-full bg-[#F0E5D6] inline-flex items-center gap-[6px] text-[12.5px]">
+                      <span className="text-warm-text">{d.label}</span>
+                      <span className="font-semibold text-ink">{d.value}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {manquants.length > 0 && (
+                <button
+                  onClick={() => actions.startEditItem(active)}
+                  className="min-h-[44px] mt-[6px] inline-flex items-center gap-[6px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer"
+                >
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  Ajouter {manquants.join(", ")}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Les actions, fixées au-dessus de la navigation. */}
+          <div
+            className="absolute left-0 right-0 bg-cream border-t border-border px-[18px] pt-[10px] pb-[12px]"
+            style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))" }}
+          >
+            <div className="flex items-center gap-[10px]">
+              <button
+                type="button"
+                onClick={() => actions.openItemOutfits(active.id, false)}
+                className="flex-1 h-[52px] rounded-full bg-terracotta-deep text-[#FBF3EA] text-[13px] font-semibold uppercase tracking-[.08em] cursor-pointer"
+              >
+                Voir les tenues associées
+              </button>
+              <button
+                type="button"
+                onClick={() => setLookSheetOpen(true)}
+                aria-label="Ajouter à un look"
+                className="w-[52px] h-[52px] flex-shrink-0 rounded-full border border-terracotta-deep bg-card flex items-center justify-center cursor-pointer"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--color-terracotta-deep)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            </div>
+            <div className="text-center text-[11.5px] text-warm-text mt-[6px]">+ pour l&apos;ajouter à un look existant</div>
+          </div>
         </>
       )}
 
