@@ -262,6 +262,11 @@ export async function analyzeDressingPhoto(photoUrl: string): Promise<PhotoAnaly
 export const MARQUE_PHOTO_DETOUREE = ".detouree.";
 
 /** Cette photo (URL signée, publique ou chemin) est-elle un détourage ? Seul le chemin compte, jamais la chaîne de requête. */
+/** Photo mise à plat (10/10/2026) : `….detouree.plat.webp` — une pièce portée sur la photo, remise à plat puis détourée. */
+export function estPhotoMiseAPlat(url: string | null | undefined): boolean {
+  return Boolean(url) && (url as string).split("?")[0].includes(".detouree.plat.");
+}
+
 export function estPhotoDetouree(url: string | null | undefined): boolean {
   return Boolean(url) && (url as string).split("?")[0].includes(MARQUE_PHOTO_DETOUREE);
 }
@@ -271,9 +276,9 @@ export function estPhotoDetouree(url: string | null | undefined): boolean {
  * l'URL signée de la photo détourée, ou null — service non branché, plafond du jour atteint, photo refusée, réseau :
  * jamais une erreur pour l'appelant, qui garde simplement la photo d'origine. Même principe qu'analyzeDressingPhoto.
  */
-export async function detourerPhoto(photoUrl: string): Promise<string | null> {
+export async function detourerPhoto(photoUrl: string, mode?: "mise_a_plat"): Promise<string | null> {
   try {
-    const { data, error } = await getSupabase().functions.invoke("detourer-photo", { body: { photo_url: photoUrl } });
+    const { data, error } = await getSupabase().functions.invoke("detourer-photo", { body: { photo_url: photoUrl, ...(mode ? { mode } : {}) } });
     // Un refus du serveur (503 « non_configure », 429 « quota_atteint »…) arrive en `error` : rien à signaler à la personne.
     if (error || !data || (data as { ok?: boolean }).ok !== true) return null;
     const url = (data as { photo_url?: unknown }).photo_url;

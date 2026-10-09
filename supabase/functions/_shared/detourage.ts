@@ -22,6 +22,31 @@ export const LIMITE_JOURNALIERE_PAR_DEFAUT = 10;
 
 export const POINT_D_ENTREE_PHOTOROOM = "https://sdk.photoroom.com/v1/segment";
 
+// LA MISE À PLAT (10/10/2026) — pour une photo où la pièce est PORTÉE (le détourage seul garderait la personne). Appel
+// « Flat Lay » de l'API Image Editing de Photoroom (plan Plus) : POST sur /v2/edit, en-tête `x-api-key`, champ `imageFile`,
+// paramètre `flatLay.mode` = `ai.auto`. Contrat lu dans des extraits de docs.photoroom.com (recherche web), JAMAIS ESSAYÉ d'ici :
+// le site est bloqué depuis le conteneur de développement. Le résultat est une image qui n'a pas forcément de fond transparent :
+// l'Edge Function la passe donc par le détourage ci-dessus. Génératif : la pièce peut différer de la photo (couleur, détails).
+export const POINT_D_ENTREE_PHOTOROOM_EDIT = "https://image-api.photoroom.com/v2/edit";
+
+/** Marque d'une photo mise à plat, après celle du détourage : `{user}/{uuid}.detouree.plat.webp` — un fichier mis à plat reste un fichier détouré. */
+export const MARQUE_MISE_A_PLAT = ".plat.";
+
+/** Mises à plat par compte et par jour : un appel génératif coûte plus qu'un détourage (secret MAX_MISES_A_PLAT_PER_USER_PER_DAY). */
+export const LIMITE_MISES_A_PLAT_PAR_DEFAUT = 5;
+
+/** `{user}/{uuid}.jpg` devient `{user}/{uuid}.detouree.plat.webp`. */
+export function cheminMisAPlat(cheminOriginal: string, ext: "webp" | "png" = "webp"): string {
+  const sansExtension = cheminOriginal.replace(/\.[^./]+$/, "");
+  return `${sansExtension}${MARQUE_DETOUREE}${MARQUE_MISE_A_PLAT.slice(1)}${ext}`;
+}
+
+/** Le fichier a-t-il été mis à plat ? Seul le chemin compte, jamais la chaîne de requête. */
+export function estPhotoMiseAPlat(urlOuChemin: string | null | undefined): boolean {
+  if (!urlOuChemin) return false;
+  return urlOuChemin.split("?")[0].includes(`${MARQUE_DETOUREE}${MARQUE_MISE_A_PLAT.slice(1)}`);
+}
+
 /**
  * `{user}/{uuid}.jpg` devient `{user}/{uuid}.detouree.webp` : même dossier, donc la même politique de stockage. Le
  * repli sur le PNG brut (conversion WebP indisponible, cf. webp.ts) garde la marque : `.detouree.png`.
@@ -113,6 +138,43 @@ export async function detourerAvecFournisseur(
     const rendu = typeImage(octets);
     // Le fournisseur doit rendre un PNG (ou un WebP) : un JPEG n'a pas de transparence, ce ne serait pas un détourage.
     if (rendu !== "png" && rendu !== "webp") return { ok: false, code: "resultat_invalide" };
+    return { ok: true, octets, type: rendu };
+  } catch {
+    return { ok: false, code: "fournisseur_indisponible" };
+  } finally {
+    clearTimeout(minuteur);
+  }
+}
+
+/**
+ * Envoie la photo à l'appel Flat Lay et rend l'image mise à plat (PNG, JPEG ou WebP : pas forcément transparente). Même contrat
+ * d'échec que detourerAvecFournisseur : jamais d'exception, un code.
+ */
+export async function mettreAPlatAvecFournisseur(
+  fetchFn: typeof fetch,
+  cle: string,
+  photo: Uint8Array,
+  delaiMs = 90_000,
+  pointDEntree = POINT_D_ENTREE_PHOTOROOM_EDIT,
+): Promise<IssueFournisseur> {
+  const type = typeImage(photo);
+  if (!type || photo.length === 0 || photo.length > TAILLE_SOURCE_MAX_OCTETS) return { ok: false, code: "photo_invalide" };
+  const formulaire = new FormData();
+  formulaire.append("imageFile", new Blob([photo as BlobPart], { type: `image/${type}` }), `photo.${type === "jpeg" ? "jpg" : type}`);
+  formulaire.append("flatLay.mode", "ai.auto");
+  const controle = new AbortController();
+  const minuteur = setTimeout(() => controle.abort(), delaiMs);
+  try {
+    const reponse = await fetchFn(pointDEntree, { method: "POST", headers: { "x-api-key": cle, Accept: "image/*" }, body: formulaire, signal: controle.signal });
+    // 401 / 403 : clé refusée, ou plan sans accès à cet appel (Plus) — l'appelant garde la photo d'origine.
+    if (reponse.status === 401 || reponse.status === 403) return { ok: false, code: "non_configure" };
+    if (reponse.status === 402) return { ok: false, code: "credits_epuises" };
+    if (reponse.status === 400 || reponse.status === 413 || reponse.status === 415 || reponse.status === 422) return { ok: false, code: "photo_refusee" };
+    if (!reponse.ok) return { ok: false, code: "fournisseur_indisponible" };
+    const octets = new Uint8Array(await reponse.arrayBuffer());
+    if (octets.length === 0 || octets.length > TAILLE_RESULTAT_MAX_OCTETS) return { ok: false, code: "resultat_invalide" };
+    const rendu = typeImage(octets);
+    if (!rendu) return { ok: false, code: "resultat_invalide" };
     return { ok: true, octets, type: rendu };
   } catch {
     return { ok: false, code: "fournisseur_indisponible" };

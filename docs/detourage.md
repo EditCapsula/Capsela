@@ -68,3 +68,23 @@ Le site et la documentation de Photoroom sont BLOQUÉS depuis le conteneur de d�
 ## Photo qui n'est pas d'une pièce seule (05/10/2026)
 
 L'analyse (`analyze-dressing-photo`) rend aussi `photoType` : `seule`, `portee` ou `plusieurs`. À l'ajout, si la photo montre la pièce portée ou plusieurs pièces, l'écran le dit (`cadragePhoto.ts`) et invite à une photo de la pièce seule. **Rien n'est stocké** (aucune colonne, aucune migration) : l'avertissement n'existe qu'au moment de choisir la photo, pas ensuite dans le Dressing. Quand le modèle n'est pas sûr, rien n'est dit. **NON DÉMONTRÉ** : la fiabilité de cette lecture sur de vraies photos (aucun essai n'a été fait, faute de clé dans le conteneur). Le détourage reste appelé pour ces photos : sur une photo portée, il peut détourer la personne ; à revoir.
+
+## Mise à plat d'une pièce portée (10/10/2026)
+
+Le détourage seul garde la personne quand la pièce est portée sur la photo. Quand l'analyse lit `photoType = "portee"` (cf. plus haut), l'app demande
+à `detourer-photo` un `mode: "mise_a_plat"` :
+
+```text
+photo portée → Photoroom Flat Lay (POST https://image-api.photoroom.com/v2/edit, x-api-key, imageFile, flatLay.mode=ai.auto)
+             → détourage (/v1/segment) du résultat → WebP transparent  `{user}/{uuid}.detouree.plat.webp`
+```
+
+- **Contrat lu dans des extraits de docs.photoroom.com (recherche web), jamais essayé d'ici** : le site est bloqué depuis le conteneur. Le plan **Plus**
+  est annoncé nécessaire ; un 401/403 (clé refusée, plan sans accès) arrive en `non_configure` et l'app garde la photo d'origine.
+- **Génératif** : la pièce peut différer de la photo (couleur, détails). À contrôler sur de vraies photos avant d'ouvrir à tous.
+- Plafond du jour à part : `MAX_MISES_A_PLAT_PER_USER_PER_DAY` (5 par défaut), fonction de quota `detourer-photo-plat`. Deux appels payants par pièce
+  portée (mise à plat, puis détourage).
+- Sans lecture sûre « portée », ou si la mise à plat échoue : comportement d'avant (détourage simple, ou photo d'origine). Aucun repli sur le
+  détourage simple en cas d'échec de la mise à plat : il garderait la personne.
+- Reconnaissance : `estPhotoMiseAPlat` (app) / `estPhotoMiseAPlat` (serveur) lisent la marque `.detouree.plat.` ; un fichier mis à plat reste un fichier détouré
+  pour tout l'affichage.

@@ -2060,7 +2060,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             // qu'une fois remplacée. Jamais bloquant — rien n'est affiché de faux si le service n'est pas branché.
             .then(() => {
               setState((s) => (s.addPhotoUrl === url ? { ...s, addPhotoDetourage: "en_cours" } : s));
-              detourerPhoto(url).then((detouree) => {
+              // Une pièce PORTÉE sur la photo (lue par l'analyse) est mise à plat avant d'être détourée : le détourage seul garderait la
+              // personne. Sans lecture sûre, ou si la mise à plat échoue, c'est le comportement d'avant (détourage simple, ou photo d'origine).
+              detourerPhoto(url, stateRef.current.addPhotoCadrage === "portee" ? "mise_a_plat" : undefined).then((detouree) => {
                 // La photo a changé, ou la pièce est déjà enregistrée avec l'original : on n'y touche pas.
                 if (stateRef.current.addPhotoUrl !== url) return;
                 if (!detouree) {
