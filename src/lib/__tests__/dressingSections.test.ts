@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  articlePossessif,
   candidatsARedecouvrir,
+  designationPiece,
   dateRelativeAjout,
   ideeLaPlusComplete,
   libelleDateRecente,
@@ -8,6 +10,7 @@ import {
   ligneDressing,
   looksDistincts,
   piecesRecentes,
+  phrasePiste,
   pisteAssociation,
   saisonDeLaDate,
   separerParSemaine,
@@ -124,5 +127,38 @@ describe("ideeLaPlusComplete — le look que montre « Tes looks »", () => {
   it("sans idée, rien", () => {
     expect(ideeLaPlusComplete(undefined)).toBeUndefined();
     expect(ideeLaPlusComplete([])).toBeUndefined();
+  });
+});
+
+describe("articlePossessif — accord sur le nom de la pièce (09/10/2026, « Ton chemise en lin »)", () => {
+  const nomme = (name: string, cat: CategoryKey) => piece(1, cat, { name });
+
+  it("accorde avec le nom, pas avec la catégorie", () => {
+    expect(designationPiece(nomme("Chemise en lin", "haut"))).toBe("ta chemise en lin");
+    expect(designationPiece(nomme("Blouse fluide", "haut"))).toBe("ta blouse fluide");
+    expect(designationPiece(nomme("Blazer à carreaux", "veste"))).toBe("ton blazer à carreaux");
+    expect(designationPiece(nomme("Doudoune courte", "manteau"))).toBe("ta doudoune courte");
+    expect(designationPiece(nomme("Gilet en maille", "pull"))).toBe("ton gilet en maille");
+  });
+
+  it("singulier et pluriel des chaussures", () => {
+    expect(designationPiece(nomme("Baskets blanches", "chaussures"))).toBe("tes baskets blanches");
+    expect(designationPiece(nomme("Basket blanche", "chaussures"))).toBe("ta basket blanche");
+    expect(designationPiece(nomme("Escarpins nude", "chaussures"))).toBe("tes escarpins nude");
+  });
+
+  it("« ton » devant un nom féminin qui commence par une voyelle", () => {
+    expect(designationPiece(nomme("Écharpe en laine", "accessoire"))).toBe("ton écharpe en laine");
+  });
+
+  it("saute un adjectif d'ouverture", () => {
+    expect(designationPiece(nomme("Petite robe noire", "robe"))).toBe("ta petite robe noire");
+    expect(designationPiece(nomme("Long manteau camel", "manteau"))).toBe("ton long manteau camel");
+  });
+
+  it("nom inconnu : repli sur la catégorie, ou le nom seul sans article de catégorie", () => {
+    expect(articlePossessif(nomme("Zorglub", "jupe"))).toBe("ta");
+    expect(phrasePiste(nomme("Zorglub", "bijou"))).toBe("Avec Zorglub");
+    expect(phrasePiste(nomme("Collier doré", "bijou"))).toBe("Avec ton collier doré");
   });
 });

@@ -140,17 +140,72 @@ export function pisteAssociation(pivot: Item, tenues: number[][], items: Item[])
   return repli ? phrasePiste(repli) : null;
 }
 
+/**
+ * L'ARTICLE S'ACCORDE AVEC LE NOM DE LA PIÈCE, PAS AVEC SA CATÉGORIE (09/10/2026, signalé : « Ton chemise en lin ») : une chemise, une
+ * blouse sont rangées dans « haut », des baskets dans « chaussures » mais une basket au singulier aussi. Le nom principal est le premier
+ * mot connu du libellé (les adjectifs d'ouverture comme « petite » sont sautés) ; inconnu, on retombe sur l'article de la catégorie.
+ * Les clés sont sans accents ni majuscules (`cleMot`).
+ */
+const GENRE_DU_NOM: Record<string, "m" | "f" | "p"> = {
+  // Hauts et mailles
+  "t-shirt": "m", "tee-shirt": "m", top: "m", debardeur: "m", chemisier: "m", polo: "m", body: "m", haut: "m", pull: "m", "pull-over": "m",
+  gilet: "m", sweat: "m", "sweat-shirt": "m", cardigan: "m", col: "m", crop: "m", caraco: "m",
+  chemise: "f", blouse: "f", tunique: "f", mariniere: "f", brassiere: "f", maille: "f", chemisette: "f",
+  // Bas, robes, combinaisons
+  pantalon: "m", jean: "m", chino: "m", jogging: "m", legging: "m", short: "m", bermuda: "m", cargo: "m", palazzo: "m", tailleur: "m",
+  jupe: "f", "mini-jupe": "f", robe: "f", salopette: "f", combinaison: "f", combi: "f", combishort: "m",
+  jeans: "p", leggings: "p",
+  // Vestes et manteaux
+  blazer: "m", manteau: "m", trench: "m", "trench-coat": "m", caban: "m", perfecto: "m", blouson: "m", impermeable: "m", "coupe-vent": "m",
+  anorak: "m", kimono: "m", kway: "m", "k-way": "m", poncho: "m", "duffle-coat": "m",
+  veste: "f", parka: "f", doudoune: "f", cape: "f", saharienne: "f", surchemise: "f",
+  // Chaussures
+  escarpin: "m", mocassin: "m", derby: "m", sabot: "m", chausson: "m", richelieu: "m", sneaker: "f",
+  basket: "f", bottine: "f", botte: "f", sandale: "f", ballerine: "f", mule: "f", espadrille: "f", chaussure: "f", tennis: "p",
+  baskets: "p", sneakers: "p", bottines: "p", bottes: "p", sandales: "p", ballerines: "p", escarpins: "p", mocassins: "p", derbies: "p",
+  derbys: "p", mules: "p", espadrilles: "p", chaussures: "p", chaussons: "p", sabots: "p", richelieus: "p", boots: "p",
+  // Sacs, bijoux, accessoires
+  sac: "m", cabas: "m", tote: "m", "tote-bag": "m", collier: "m", bracelet: "m", pendentif: "m", foulard: "m", chapeau: "m", bonnet: "m",
+  beret: "m", carre: "m", bandeau: "m", "serre-tete": "m", chouchou: "m", jonc: "m",
+  pochette: "f", besace: "f", banane: "f", ceinture: "f", echarpe: "f", etole: "f", casquette: "f", montre: "f", bague: "f", gourde: "f",
+  boucles: "p", lunettes: "p", chaussettes: "p", collants: "p", gants: "p", creoles: "p", mitaines: "p",
+};
+
+/** Adjectifs qui peuvent ouvrir un libellé (« Petite robe noire ») : sautés pour trouver le nom. */
+const ADJECTIFS_D_OUVERTURE = new Set([
+  "petit", "petite", "petits", "petites", "grand", "grande", "grands", "grandes", "long", "longue", "longs", "longues", "joli", "jolie",
+  "beau", "bel", "belle", "nouveau", "nouvel", "nouvelle", "vieux", "vieil", "vieille", "gros", "grosse", "mini", "maxi", "vrai", "vraie",
+]);
+
+function cleMot(mot: string): string {
+  return mot.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z-]/g, "");
+}
+
+/** « ton », « ta » ou « tes » selon le nom de la pièce ; repli sur la catégorie ; `undefined` quand rien ne permet de choisir. */
+export function articlePossessif(p: Item): "ton" | "ta" | "tes" | undefined {
+  const mots = p.name.trim().split(/\s+/).map(cleMot).filter(Boolean);
+  for (const mot of mots.slice(0, 3)) {
+    const genre = GENRE_DU_NOM[mot];
+    if (genre === "p") return "tes";
+    // « ton écharpe », « ton espadrille » : devant une voyelle ou un h muet, le possessif féminin prend la forme masculine.
+    if (genre === "f") return /^[aeiouyh]/.test(mot) ? "ton" : "ta";
+    if (genre === "m") return "ton";
+    if (!ADJECTIFS_D_OUVERTURE.has(mot)) break;
+  }
+  return ARTICLE_PAR_CAT[p.cat];
+}
+
 /** « ta veste en daim », « ton pantalon tailleur », « tes chaussures » — la pièce désignée avec son article ; sans article connu, son nom seul. */
 export function designationPiece(p: Item): string {
   const nom = p.name.trim();
-  const article = ARTICLE_PAR_CAT[p.cat];
+  const article = articlePossessif(p);
   const bas = `${nom.charAt(0).toLowerCase()}${nom.slice(1)}`;
   return article ? `${article} ${bas}` : bas;
 }
 
 export function phrasePiste(p: Item): string {
   const nom = p.name.trim();
-  const article = ARTICLE_PAR_CAT[p.cat];
+  const article = articlePossessif(p);
   return article ? `Avec ${article} ${nom.charAt(0).toLowerCase()}${nom.slice(1)}` : `Avec ${nom}`;
 }
 
