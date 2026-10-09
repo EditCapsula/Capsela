@@ -62,22 +62,18 @@ const Coche = ({ taille = 12 }: { taille?: number }) => (
 
 const Surtitre = ({ children }: { children: React.ReactNode }) => <div className="t-surtitre text-muted">{children}</div>;
 
-export default function EtapeLieu({
+/**
+ * LE CHOIX D'UNE VILLE, partagé par « Planifier une tenue » et « Préparer ma valise » (08/10/2026, demandé : « pour valise il faut le même
+ * moteur de ville que tenue planifiée ») : recherche à résultats lisibles, villes récentes communes aux deux parcours, position à la demande,
+ * carte de la destination avec « Modifier ». `lieu` est le lieu choisi (texte) ; `ville` en porte les coordonnées côté appelant.
+ */
+export function ChoixVille({
   lieu,
   onChoisir,
-  types,
-  typeLieu,
-  onType,
-  meteo,
 }: {
   lieu: string;
   /** Choisir une destination : `ville` porte les coordonnées (null pour une saisie libre), `libelle` est ce qui s'affiche et s'enregistre. */
   onChoisir: (ville: VilleSuggeree | null, libelle: string) => void;
-  /** Les types de lieu proposés, « Autre » compris — vide quand la question ne se pose pas pour cette occasion. */
-  types: string[];
-  typeLieu: string | null;
-  onType: (t: string | null) => void;
-  meteo: MeteoEtapeLieu;
 }) {
   const [requete, setRequete] = useState("");
   const [edition, setEdition] = useState(false);
@@ -278,6 +274,30 @@ export default function EtapeLieu({
           )}
         </>
       )}
+    </>
+  );
+}
+
+export default function EtapeLieu({
+  lieu,
+  onChoisir,
+  types,
+  typeLieu,
+  onType,
+  meteo,
+}: {
+  lieu: string;
+  /** Choisir une destination : `ville` porte les coordonnées (null pour une saisie libre), `libelle` est ce qui s'affiche et s'enregistre. */
+  onChoisir: (ville: VilleSuggeree | null, libelle: string) => void;
+  /** Les types de lieu proposés, « Autre » compris — vide quand la question ne se pose pas pour cette occasion. */
+  types: string[];
+  typeLieu: string | null;
+  onType: (t: string | null) => void;
+  meteo: MeteoEtapeLieu;
+}) {
+  return (
+    <>
+      <ChoixVille lieu={lieu} onChoisir={onChoisir} />
 
       <MeteoDuLieu meteo={meteo} />
 
@@ -331,10 +351,6 @@ function MeteoDuLieu({ meteo }: { meteo: MeteoEtapeLieu }) {
             <span className="block text-[12px] text-muted-3 mt-[1px]">Prévisions pour le jour sélectionné · {meteo.label}</span>
           </span>
         </div>
-        <div className="mt-2 inline-flex items-center gap-[7px] rounded-full px-[12px] py-[6px] text-[12px] text-muted-3" style={{ background: "var(--color-warm-bg)" }}>
-          <span className="text-terracotta-deep"><Coche /></span>
-          La météo sera prise en compte pour ta tenue.
-        </div>
       </div>
     );
   }
@@ -346,10 +362,6 @@ function MeteoDuLieu({ meteo }: { meteo: MeteoEtapeLieu }) {
             {meteo.tempMin === meteo.tempMax ? `${meteo.tempMin}°` : `${meteo.tempMin}° — ${meteo.tempMax}°`}
           </div>
           <div className="text-[12px] text-muted-3 mt-[1px]">Températures habituelles à cette date · la prévision sera disponible plus près du jour.</div>
-        </div>
-        <div className="mt-2 inline-flex items-center gap-[7px] rounded-full px-[12px] py-[6px] text-[12px] text-muted-3" style={{ background: "var(--color-warm-bg)" }}>
-          <span className="text-terracotta-deep"><Coche /></span>
-          Ces températures habituelles seront prises en compte.
         </div>
       </div>
     );
