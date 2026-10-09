@@ -10,6 +10,8 @@ import { libelleSaisons, saisonsDe } from "@/lib/saisons";
 import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import { fondPhotoPiece, resolveItemImage } from "@/lib/catalogImages";
+import { dressingPhotoPath, estPhotoMiseAPlat } from "@/lib/dressing";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
@@ -107,6 +109,13 @@ function TrashIcon() {
     </svg>
   );
 }
+function FlatIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 4 4 7l2 3 2-1v11h8V9l2 1 2-3-4-3c-.6 1.3-2 2-4 2s-3.4-.7-4-2z" />
+    </svg>
+  );
+}
 function BulbIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -122,6 +131,8 @@ export default function PieceScreen() {
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [lookSheetOpen, setLookSheetOpen] = useState(false);
   const [dormant, setDormant] = useState(false);
+  // « Mettre à plat » une photo déjà importée : on propose, la personne compare, puis choisit (rien n'est remplacé avant son accord).
+  const [plat, setPlat] = useState<{ etape: "ferme" | "repos" | "cours" | "propose" | "erreur"; url?: string }>({ etape: "ferme" });
   const active = state.activeSuggested
     ? vestiairePool.find((i) => i.id === state.activeId)
     : state.items.find((i) => i.id === state.activeId);
@@ -199,6 +210,19 @@ export default function PieceScreen() {
   const sizeApplicable = isSizeApplicable(active.cat);
   const coupeApplicable = isCoupeApplicable(active.cat);
   const isShoe = active.cat === "chaussures";
+
+  // Seulement une photo personnelle (pas le visuel du catalogue), pas déjà mise à plat, avec la base branchée.
+  const peutMettreAPlat = !suggested && isSupabaseConfigured && Boolean(dressingPhotoPath(active.photoUrl)) && !estPhotoMiseAPlat(active.photoUrl);
+  const lancerMiseAPlat = async () => {
+    setPlat({ etape: "cours" });
+    const url = await actions.proposerMiseAPlat(active.id);
+    setPlat(url ? { etape: "propose", url } : { etape: "erreur" });
+  };
+  const fermerMiseAPlat = () => {
+    // Fermer une version proposée sans la choisir la refuse : le fichier généré ne reste pas dans le stockage.
+    if (plat.etape === "propose" && plat.url) actions.ecarterPhotoMiseAPlat(plat.url);
+    setPlat({ etape: "ferme" });
+  };
 
   const addableLooks = state.savedLooks.filter((l) => !l.pieceIds.includes(active.id));
 
@@ -383,6 +407,17 @@ export default function PieceScreen() {
             >
               <CameraIcon /> Changer la photo
             </button>
+            {peutMettreAPlat && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  setPlat({ etape: "repos" });
+                }}
+                className="flex items-center gap-[13px] py-[15px] text-[14px] text-ink border-b border-border cursor-pointer text-left"
+              >
+                <FlatIcon /> Mettre la photo à plat
+              </button>
+            )}
             <button
               onClick={() => {
                 setMenuOpen(false);
@@ -393,6 +428,68 @@ export default function PieceScreen() {
               <TrashIcon /> Retirer de mon dressing
             </button>
           </div>
+        </BottomSheet>
+      )}
+
+      {/* MISE À PLAT d'une photo déjà importée (10/10/2026) : le résultat est généré par un service tiers (Photoroom) et peut différer de la
+          pièce — on le montre à côté de la photo d'origine, et la personne choisit. */}
+      {!suggested && (
+        <BottomSheet title="Mettre la photo à plat" open={plat.etape !== "ferme"} onClose={fermerMiseAPlat}>
+          {plat.etape === "repos" && (
+            <>
+              <div className="text-[13px] text-ink leading-[1.55]">
+                Capsela remet ta pièce à plat, sur fond transparent, comme les visuels du catalogue. Le résultat est généré : vérifie qu&apos;il ressemble bien à ta
+                pièce. Ta photo reste la tienne tant que tu ne choisis pas la nouvelle.
+              </div>
+              <div className="text-[12px] text-muted leading-[1.5] mt-[8px]">Chaque essai compte dans ton plafond du jour.</div>
+              <Button variante="principal" className="mt-[22px]" onClick={lancerMiseAPlat}>
+                Mettre à plat
+              </Button>
+            </>
+          )}
+          {plat.etape === "cours" && (
+            <div className="py-[18px] text-center text-[13px] text-ink" role="status" aria-live="polite">
+              Capsela met ta pièce à plat…
+              <div className="text-[12px] text-muted mt-[6px]">Cela peut prendre une dizaine de secondes.</div>
+            </div>
+          )}
+          {plat.etape === "propose" && plat.url && (
+            <>
+              <div className="grid grid-cols-2 gap-[10px]">
+                <figure className="m-0">
+                  <div className="rounded-tuile border border-border overflow-hidden" style={{ aspectRatio: "4/5", ...fondPhotoPiece(active.photoUrl ?? "", resolveItemImage(active).kind === "detouree") }} role="img" aria-label="Ta photo" />
+                  <figcaption className="text-[11px] text-muted text-center mt-[6px]">Ta photo</figcaption>
+                </figure>
+                <figure className="m-0">
+                  <div className="rounded-tuile border border-border overflow-hidden" style={{ aspectRatio: "4/5", ...fondPhotoPiece(plat.url, true) }} role="img" aria-label="Version mise à plat" />
+                  <figcaption className="text-[11px] text-muted text-center mt-[6px]">Mise à plat</figcaption>
+                </figure>
+              </div>
+              <Button
+                variante="principal"
+                className="mt-[20px]"
+                onClick={() => {
+                  actions.adopterPhotoMiseAPlat(active.id, plat.url!);
+                  setPlat({ etape: "ferme" });
+                }}
+              >
+                Garder la version à plat
+              </Button>
+              <Button variante="secondaire" className="mt-[10px]" onClick={fermerMiseAPlat}>
+                Garder ma photo
+              </Button>
+            </>
+          )}
+          {plat.etape === "erreur" && (
+            <>
+              <div className="text-[13px] text-ink leading-[1.55]" role="status">
+                La mise à plat n&apos;a pas abouti (service indisponible, plafond du jour atteint ou offre sans accès). Ta photo est inchangée.
+              </div>
+              <Button variante="secondaire" className="mt-[18px]" onClick={lancerMiseAPlat}>
+                Réessayer
+              </Button>
+            </>
+          )}
         </BottomSheet>
       )}
 

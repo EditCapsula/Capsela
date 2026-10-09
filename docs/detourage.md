@@ -89,3 +89,14 @@ photo portée → Photoroom Flat Lay (POST https://image-api.photoroom.com/v2/ed
   retraitées.
 - Reconnaissance : `estPhotoMiseAPlat` (app) / `estPhotoMiseAPlat` (serveur) lisent la marque `.detouree.plat.` ; un fichier mis à plat reste un fichier détouré
   pour tout l'affichage.
+
+### Bouton « Mettre la photo à plat » (10/10/2026) — pièces déjà importées
+
+Menu « Cette pièce » (⋯) de la fiche d'une pièce : visible pour une photo PERSONNELLE (pas le visuel du catalogue), pas déjà mise à plat, base branchée.
+La personne lance la mise à plat, compare « Ta photo » et « Mise à plat » côte à côte, puis choisit :
+- **Garder la version à plat** : la photo de la pièce est remplacée (`adopterPhotoMiseAPlat`, écriture de `photo_url`, retour arrière et message d'erreur si
+  elle échoue) ; l'ancienne photo est supprimée du stockage si plus rien ne la référence.
+- **Garder ma photo** (ou fermer la feuille) : le fichier généré est supprimé du stockage (`ecarterPhotoMiseAPlat`) ; la pièce n'a pas changé.
+Une photo déjà détourée peut être mise à plat (le serveur ne refuse que celle déjà mise à plat). Même plafond du jour que l'ajout (5) : chaque essai compte.
+Un échec (service absent, plafond, offre sans accès) laisse la photo inchangée et propose de réessayer.
+
