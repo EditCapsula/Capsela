@@ -306,6 +306,14 @@ function LigneOption({
  * titre, à côté du glyphe : il ne peut ni chevaucher le titre ni le faire passer à la ligne, quelle que soit la largeur
  * (brief §16 du 25/09/2026).
  */
+/**
+ * LE VISUEL ÉDITORIAL DU HUB (08/10/2026) : celui du profil — femme ou homme —, et jamais « aucun ». Il disparaissait quand le genre
+ * n'était pas (encore) renseigné ou pas encore chargé : le hub perdait ses deux images. Sans genre, la version « femme », celle de la maquette.
+ */
+function visuelHub(kind: "tenue" | "valise", genre: "femme" | "homme" | null): string {
+  return `/editorial/capsela_planifier_${kind}_${genre === "homme" ? "homme" : "femme"}.webp`;
+}
+
 function CartePlanifier({
   glyphe,
   etiquette,
@@ -1388,13 +1396,7 @@ export default function PlanifierScreen() {
                 ligne="Occasion · date et lieu · tenue personnalisée"
                 cta={tenuesAVenir.length > 0 ? "Planifier une nouvelle tenue" : "Planifier une tenue"}
                 onClick={recommencer}
-                visuel={
-                  profile.gender === "femme"
-                    ? "/editorial/capsela_planifier_tenue_femme.webp"
-                    : profile.gender === "homme"
-                      ? "/editorial/capsela_planifier_tenue_homme.webp"
-                      : undefined
-                }
+                visuel={visuelHub("tenue", profile.gender)}
               >
                 {/* Ce qui existe déjà : trois au plus, « Voir tout » ouvre la liste complète. Le premier est le prochain. */}
                 {tenuesAVenir.length > 0 && (
@@ -1463,13 +1465,7 @@ export default function PlanifierScreen() {
                 ligne="Destination · dates · météo · activités"
                 cta={valisesAVenir.length > 0 ? "Préparer une nouvelle valise" : "Préparer ma valise"}
                 onClick={() => void actions.ouvrirValise(null)}
-                visuel={
-                  profile.gender === "femme"
-                    ? "/editorial/capsela_planifier_valise_femme.webp"
-                    : profile.gender === "homme"
-                      ? "/editorial/capsela_planifier_valise_homme.webp"
-                      : undefined
-                }
+                visuel={visuelHub("valise", profile.gender)}
                 cadrage="center 60%"
               >
                 {valisesAVenir.length > 0 && (

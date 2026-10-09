@@ -78,7 +78,8 @@ import {
   type ElementProgramme,
   type ItemProgramme,
 } from "@/lib/programmeValise";
-import { fetchPrevisionByCity, fetchVilles, libelleVille, type VilleSuggeree } from "@/lib/weather";
+import { ChoixVille } from "@/components/EtapeLieu";
+import { fetchClimat, previsionGardee, type Climat, type VilleSuggeree } from "@/lib/weather";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
 import Card from "@/components/Card";
@@ -154,13 +155,6 @@ const svg = (children: React.ReactNode, taille = 19) => (
   <svg width={taille} height={taille} viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
     {children}
   </svg>
-);
-const G_EPINGLE = svg(
-  <>
-    <path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 1 0-13 0C5.5 14.9 12 21 12 21z" {...trait} />
-    <circle cx="12" cy="10.4" r="2.3" {...trait} />
-  </>,
-  17
 );
 const G_CALENDRIER = svg(
   <>
@@ -244,22 +238,6 @@ function TitreEtape({ a, b }: { a: string; b: string }) {
   );
 }
 
-function Puce({ actif, onClick, children }: { actif: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={actif}
-      className={
-        "rounded-full px-[14px] text-[12px] cursor-pointer border transition-colors " +
-        (actif ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-ink")
-      }
-      style={{ minHeight: 40 }}
-    >
-      {children}
-    </button>
-  );
-}
-
 /** Métadonnée d'occasion autour d'un look — jamais incrustée sur le visuel. */
 function PuceOccasion({ occasion }: { occasion: OccasionKey }) {
   return <span className="inline-flex items-center rounded-full bg-chip-soft-bg px-[10px] py-[4px] text-[11px] text-muted-3">{occasionShortLabel(occasion)}</span>;
@@ -330,7 +308,6 @@ export default function ValiseScreen() {
   const aujourdhui = jourLocal();
   const [destination, setDestination] = useState("");
   const [ville, setVille] = useState<VilleSuggeree | null>(null);
-  const [suggestions, setSuggestions] = useState<VilleSuggeree[] | null>(null);
   const [depart, setDepart] = useState("");
   const [retour, setRetour] = useState("");
   const [bagage, setBagage] = useState<TailleBagage | null>(null);
@@ -343,29 +320,6 @@ export default function ValiseScreen() {
   const [programmeManuel, setProgrammeManuel] = useState<ItemProgramme[] | null>(null);
   const [feuilleOccasion, setFeuilleOccasion] = useState(false);
 
-  const villeChoisieAffichee = ville != null && libelleVille(ville) === destination;
-  useEffect(() => {
-    if (vue.nom !== "etape" || etape !== 1) return;
-    const q = destination.trim();
-    if (q.length < 2 || villeChoisieAffichee) return;
-    let annule = false;
-    const t = setTimeout(() => {
-      fetchVilles(q)
-        .then((v) => !annule && setSuggestions(v))
-        .catch(() => !annule && setSuggestions(null));
-    }, 280);
-    return () => {
-      annule = true;
-      clearTimeout(t);
-    };
-  }, [destination, etape, vue.nom, villeChoisieAffichee]);
-  const suggestionsVisibles = destination.trim().length < 2 || villeChoisieAffichee ? [] : (suggestions ?? []);
-
-  /** Villes de tes tenues planifiées : des lieux que tu as réellement donnés (aucun « favori » n'existe). */
-  const villesConnues = useMemo(
-    () => [...new Set(state.tenuesPlanifiees.map((t) => villeDuLieu(t.lieu)).filter(Boolean))].slice(0, 4),
-    [state.tenuesPlanifiees]
-  );
 
   const jours = depart && retour && retour >= depart ? joursDuSejour(depart, retour) : [];
   const dureeOk = jours.length > 0 && dateDe(retour) <= dateDe(plusJours(depart, DUREE_MAX_JOURS - 1));
@@ -390,7 +344,7 @@ export default function ValiseScreen() {
     if (!clePrevision || prevision?.cle === clePrevision) return;
     let annule = false;
     const t = setTimeout(() => {
-      fetchPrevisionByCity(ville ? ville.name : destination.trim(), ville)
+      previsionGardee(ville ? ville.name : destination.trim(), ville)
         .catch(() => null)
         .then((p) => !annule && setPrevision({ cle: clePrevision, p }));
     }, 600);
@@ -401,10 +355,20 @@ export default function ValiseScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clePrevision]);
 
-  const meteosDe = (p: Prevision | null, js: string[] = jours): MeteoJour[] =>
+  /**
+   * LA MÉTÉO DE CHAQUE JOUR DU SÉJOUR : la prévision quand elle couvre le jour ; sinon (au-delà de l'horizon, ou sans réponse) les
+   * TEMPÉRATURES HABITUELLES du lieu à la date du séjour (`climat`, 08/10/2026) — jamais les degrés d'aujourd'hui quand on part ailleurs,
+   * plus tard. Sans climatologie : la météo d'aujourd'hui, comme avant. `prevue` dit seulement s'il s'agit d'une prévision.
+   */
+  const meteosDe = (p: Prevision | null, js: string[] = jours, climat: Climat | null = null): MeteoJour[] =>
     js.map((j) => {
       const m = p ? previsionPour(p, j, "Toute la journée") : null;
-      return m ? { jour: j, temp: m.temp, label: m.label, prevue: true } : { jour: j, temp: weather.temp, label: weather.label, prevue: false };
+      if (m) return { jour: j, temp: m.temp, label: m.label, prevue: true };
+      if (climat) {
+        const temp = Math.round((climat.tempMin + climat.tempMax) / 2);
+        return { jour: j, temp, label: climat.pluie >= 0.6 ? "Pluvieux" : climat.tempMax >= 25 ? "Ensoleillé" : "Nuageux", prevue: false };
+      }
+      return { jour: j, temp: weather.temp, label: weather.label, prevue: false };
     });
   const meteosEtape1 = prevision && prevision.cle === clePrevision ? meteosDe(prevision.p) : null;
   const amplitudeEtape1 = meteosEtape1 ? amplitudePrevue(meteosEtape1) : null;
@@ -457,10 +421,13 @@ export default function ValiseScreen() {
     setFaites(0);
     setVue({ nom: "calcul" });
     const [p] = await Promise.all([
-      prevision && prevision.cle === cle ? prevision.p : fetchPrevisionByCity(rep.ville ? rep.ville.name : rep.destination.trim(), rep.ville).catch(() => null),
+      prevision && prevision.cle === cle ? prevision.p : previsionGardee(rep.ville ? rep.ville.name : rep.destination.trim(), rep.ville).catch(() => null),
       pause(450),
     ]);
-    const meteos = meteosDe(p, joursRep);
+    // Les jours que la prévision ne couvre pas : la climatologie du lieu, à la date au milieu de ces jours (un seul appel).
+    const sansPrevision = joursRep.filter((j) => !(p && previsionPour(p, j, "Toute la journée")));
+    const climat = rep.ville && sansPrevision.length > 0 ? await fetchClimat({ lat: rep.ville.lat, lon: rep.ville.lon }, dateDe(sansPrevision[Math.floor(sansPrevision.length / 2)])) : null;
+    const meteos = meteosDe(p, joursRep, climat);
     if (!actif.current) return;
     setFaites(1);
     const situations = situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions);
@@ -665,58 +632,15 @@ export default function ValiseScreen() {
           <>
             <Surtitre>Ta valise · 1 / 5</Surtitre>
             <TitreEtape a="Où" b="pars-tu ?" />
-            <Card rayon="pilule" className="flex items-center gap-[10px] mt-4 px-[16px]" style={{ minHeight: 50 }}>
-              <span className="flex-shrink-0 text-placeholder">{G_EPINGLE}</span>
-              <input
-                className="capin flex-1 min-w-0 bg-transparent border-none text-[13px] font-medium text-ink"
-                value={destination}
-                onChange={(e) => {
-                  setDestination(e.target.value);
-                  setVille(null);
-                }}
-                placeholder="Rechercher une ville"
-                aria-label="Destination"
-                autoComplete="off"
-                autoCapitalize="words"
-              />
-            </Card>
-            {suggestionsVisibles.length > 0 && (
-              <Card rayon="tuile" className="flex flex-col mt-2 overflow-hidden">
-                {suggestionsVisibles.map((v) => (
-                  <button
-                    key={`${v.lat},${v.lon}`}
-                    onClick={() => {
-                      setVille(v);
-                      setDestination(libelleVille(v));
-                    }}
-                    className="text-left px-[16px] py-[12px] text-[13px] text-ink border-b border-border last:border-b-0 cursor-pointer"
-                  >
-                    {libelleVille(v)}
-                  </button>
-                ))}
-              </Card>
-            )}
-            {villesConnues.length > 0 && (
-              <>
-                <div className="mt-6">
-                  <Surtitre>Tes lieux planifiés</Surtitre>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {villesConnues.map((v) => (
-                    <Puce
-                      key={v}
-                      actif={destination === v}
-                      onClick={() => {
-                        setDestination(v);
-                        setVille(null);
-                      }}
-                    >
-                      {v}
-                    </Puce>
-                  ))}
-                </div>
-              </>
-            )}
+            {/* LE MÊME CHOIX DE VILLE QUE « PLANIFIER UNE TENUE » (08/10/2026, demandé) : résultats lisibles, villes récentes communes,
+                position à la demande, carte de la destination avec « Modifier ». */}
+            <ChoixVille
+              lieu={destination}
+              onChoisir={(v, libelle) => {
+                setVille(v);
+                setDestination(libelle);
+              }}
+            />
             <div className="mt-6">
               <Surtitre>Tes dates</Surtitre>
             </div>
@@ -1291,7 +1215,7 @@ function Resultat({
   useEffect(() => {
     if (!villePrevision) return;
     let annule = false;
-    fetchPrevisionByCity(villePrevision)
+    previsionGardee(villePrevision)
       .catch(() => null)
       .then((p) => !annule && setPrevisionVive({ ville: villePrevision, p }));
     return () => {
