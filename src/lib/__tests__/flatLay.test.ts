@@ -465,3 +465,26 @@ describe("accueil (hero-home) — composition ciblée sans le t-shirt (08/10/202
     expect(detail.pieces.map((q) => q.id)).toContain(collants);
   });
 });
+
+describe("une seconde veste n'est pas un accessoire (09/10/2026, « la veste oversize est trop petite »)", () => {
+  const tenue = [p("manteau", 0.8), p("haut", 1), p("pantalon", 0.5), p("veste", 1.05), p("chaussures", 1.5), p("sac", 1)];
+  it("un manteau héro et une veste en plus : la veste prend le rôle de couche, pas d'accessoire", () => {
+    const r = Object.fromEntries(attribuerRoles(tenue).map((x) => [x.piece.cat, x.role]));
+    expect(r).toMatchObject({ manteau: "hero", haut: "secondaire", veste: "couche" });
+  });
+  it("dans la Tenue du jour, elle est au moins aussi grande que la moitié du haut et reste visible", () => {
+    for (const graine of ["x,y", "a,b", "c,d", "e,f"]) {
+      const { pieces } = composerFlatLay(tenue, graine, { contexte: "look-detail" });
+      const veste = pieces.find((q) => q.cat === "veste")!;
+      const haut = pieces.find((q) => q.cat === "haut")!;
+      expect(veste, graine).toBeDefined();
+      expect(veste.l, graine).toBeGreaterThan(haut.l * 0.5);
+      expect(veste.l, graine).toBeGreaterThan(LARGEUR_ACCESSOIRE_MIN * 2);
+    }
+  });
+  it("sur l'accueil, la veste en plus reste posée : seul le t-shirt sous un pull est masqué", () => {
+    const { pieces, masquees } = composerFlatLay(tenue, "x,y", { contexte: "hero-home" });
+    expect(pieces.some((q) => q.cat === "veste")).toBe(true);
+    expect(masquees).toEqual([]);
+  });
+});

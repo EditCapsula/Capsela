@@ -96,6 +96,14 @@ export function attribuerRoles<T extends { id: number; cat: CategoryKey }>(piece
   if (!robe) {
     const couche = reste.find((p) => HAUTS.includes(p.cat));
     if (couche) sortie.push({ piece: couche, role: "couche" });
+    // Une seconde veste ou un second manteau (09/10/2026, « la veste oversize est trop petite » : un manteau héro, un bomber en
+    // surnombre) n'est pas un accessoire : posé comme tel, dans un coin de 16 unités, il rapetissait. Il prend la place de la couche
+    // quand le haut n'en a pas — une pièce qu'on enfile par-dessus le haut, posée contre lui.
+    else {
+      const dejaPose = new Set(sortie.map((x) => x.piece));
+      const dessusEnPlus = [dessusRestant, ...reste.filter((p) => DESSUS.includes(p.cat))].find((p) => p && !dejaPose.has(p));
+      if (dessusEnPlus) sortie.push({ piece: dessusEnPlus, role: "couche" });
+    }
   }
   // Tout le reste — bijoux, accessoires, pièces en surnombre (une seconde veste, un second bas…) — se pose en accessoire.
   const casees = new Set(sortie.map((x) => x.piece));
@@ -409,12 +417,14 @@ export function composerFlatLay(
   const retirees = pieces.filter((p) => !!p.accessoireType && !!config.accessoiresMasques?.includes(p.accessoireType));
   const tous = attribuerRoles(pieces.filter((p) => p.flatLayCompatible !== false && !retirees.includes(p)));
   // Le groupe stylistique se décide sur TOUTE la tenue : un t-shirt masqué (hero-home) ne défait pas le gabarit pull + pantalon.
-  const avecCouche = tous.some((r) => r.role === "couche");
+  // Seule une couche de haut (t-shirt sous un pull) fait un groupe et se masque sur l'accueil : une veste en plus reste dans la planche.
+  const coucheHaut = (r: { piece: { cat: CategoryKey }; role: RoleFlatLay }) => r.role === "couche" && HAUTS.includes(r.piece.cat);
+  const avecCouche = tous.some(coucheHaut);
   const masquees = [
-    ...(config.masquerCouche ? tous.filter((r) => r.role === "couche").map((r) => r.piece.id) : []),
+    ...(config.masquerCouche ? tous.filter(coucheHaut).map((r) => r.piece.id) : []),
     ...retirees.map((p) => p.id),
   ];
-  const roles = config.masquerCouche ? tous.filter((r) => r.role !== "couche") : tous;
+  const roles = config.masquerCouche ? tous.filter((r) => !coucheHaut(r)) : tous;
   if (!roles.length) return { pieces: [], ecartees: [], masquees };
   const alea = generateur(graine);
   const dans = (min: number, max: number) => min + (max - min) * alea();
@@ -468,10 +478,18 @@ export function composerFlatLay(
   const coucheRole = roles.find((r) => r.role === "couche");
   const ancre = brut.find((q) => q.role === "secondaire") ?? brut.find((q) => q.role === "hero");
   if (coucheRole && ancre) {
-    const c = placer(coucheRole.piece, "couche", { ...refDe("couche"), l: ancre.l * 0.62 });
+    // Une veste en plus se lit plus grande qu'un t-shirt sous un pull : 100 % de son ancre au lieu de 62 %.
+    const c = placer(coucheRole.piece, "couche", { ...refDe("couche"), l: ancre.l * (DESSUS.includes(coucheRole.piece.cat) ? 1 : 0.62) });
     const bAncre = boiteTournee(ancre);
     c.x = ancre.x + (ancre.x < 50 ? 1 : -1) * 0.05 * ancre.l;
     c.y = bAncre.y1 - 0.14 * c.h + c.h / 2;
+    // Une veste en plus (et non un t-shirt) se pose à côté du bas, du côté de son ancre, en le recouvrant de 15 % au plus : juste sous le
+    // haut, elle se retrouvait en grande partie cachée derrière le pantalon (09/10/2026).
+    const bas = brut.find((q) => q.role === "bas");
+    if (bas && DESSUS.includes(coucheRole.piece.cat)) {
+      const bBas = boiteTournee(bas);
+      c.x = ancre.x < 50 ? bBas.x0 + 0.15 * c.l - c.l / 2 : bBas.x1 - 0.15 * c.l + c.l / 2;
+    }
     brut.push({ ...c, groupeAvec: ancre.id });
   }
   desserrer(brut, config.chevauchementMax, config.masqueMax);
