@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     if (miseAPlat) {
       const plat = await mettreAPlatAvecFournisseur(fetch, cleFournisseur, octetsSource);
       if (!plat.ok) {
-        console.error("[detourer-photo] échec mise à plat :", plat.code);
+        console.error("[detourer-photo] échec mise à plat :", plat.code, "HTTP", plat.statut ?? "-", plat.detail ?? "");
         return echec(plat.code);
       }
       aDetourer = plat.octets;

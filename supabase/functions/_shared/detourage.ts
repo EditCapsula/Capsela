@@ -108,7 +108,17 @@ export type CodeErreurDetourage =
   | "fournisseur_indisponible" // réseau, délai ou erreur du fournisseur
   | "resultat_invalide"; // la réponse n'est pas une image exploitable
 
-export type IssueFournisseur = { ok: true; octets: Uint8Array; type: TypeImage } | { ok: false; code: CodeErreurDetourage };
+/** `statut` et `detail` (début de la réponse du fournisseur) ne servent qu'au journal de la fonction : jamais renvoyés à l'app. */
+export type IssueFournisseur = { ok: true; octets: Uint8Array; type: TypeImage } | { ok: false; code: CodeErreurDetourage; statut?: number; detail?: string };
+
+/** Début de la réponse d'erreur du fournisseur, pour le journal (jamais la clé : elle ne figure pas dans la réponse). */
+async function detailErreur(reponse: Response): Promise<string> {
+  try {
+    return (await reponse.text()).slice(0, 300);
+  } catch {
+    return "";
+  }
+}
 
 /**
  * Envoie la photo au fournisseur et rend l'image détourée (fond transparent). `fetchFn` est injectable pour les
@@ -168,10 +178,14 @@ export async function mettreAPlatAvecFournisseur(
   try {
     const reponse = await fetchFn(pointDEntree, { method: "POST", headers: { "x-api-key": cle, Accept: "image/*" }, body: formulaire, signal: controle.signal });
     // 401 / 403 : clé refusée, ou plan sans accès à cet appel (Plus) — l'appelant garde la photo d'origine.
-    if (reponse.status === 401 || reponse.status === 403) return { ok: false, code: "non_configure" };
-    if (reponse.status === 402) return { ok: false, code: "credits_epuises" };
-    if (reponse.status === 400 || reponse.status === 413 || reponse.status === 415 || reponse.status === 422) return { ok: false, code: "photo_refusee" };
-    if (!reponse.ok) return { ok: false, code: "fournisseur_indisponible" };
+    if (!reponse.ok) {
+      const statut = reponse.status;
+      const detail = await detailErreur(reponse);
+      if (statut === 401 || statut === 403) return { ok: false, code: "non_configure", statut, detail };
+      if (statut === 402) return { ok: false, code: "credits_epuises", statut, detail };
+      if (statut === 400 || statut === 413 || statut === 415 || statut === 422) return { ok: false, code: "photo_refusee", statut, detail };
+      return { ok: false, code: "fournisseur_indisponible", statut, detail };
+    }
     const octets = new Uint8Array(await reponse.arrayBuffer());
     if (octets.length === 0 || octets.length > TAILLE_RESULTAT_MAX_OCTETS) return { ok: false, code: "resultat_invalide" };
     const rendu = typeImage(octets);
