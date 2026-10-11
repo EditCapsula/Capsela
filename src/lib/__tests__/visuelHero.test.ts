@@ -119,6 +119,17 @@ describe("resolveHeroImage — le visuel standard reste le repli", () => {
     expect(resolveHeroImage(affilie).url).toBe("https://x/aff.png");
   });
 
+  it("une pièce sans aucun visuel standard est représentée par son hero, sauf visuel invalidé ou en échec", () => {
+    const hero = "https://x/hero-r0.80.webp";
+    expect(resolveHeroImage(piece({ imageHeroUrl: hero })).url).toBe(hero);
+    expect(resolveHeroImage(piece({ imageHeroUrl: hero, imageStatus: "missing" })).url).toBe(hero);
+    for (const st of ["invalid", "error", "generating"] as const) {
+      expect(resolveHeroImage(piece({ imageHeroUrl: hero, imageStatus: st })).kind).toBe("placeholder");
+    }
+    // Les autres visuels (hors flat lay) restent inchangés.
+    expect(resolveItemImage(piece({ imageHeroUrl: hero })).kind).toBe("placeholder");
+  });
+
   it("un visuel standard non prêt n'est jamais remplacé par le hero seul", () => {
     expect(resolveHeroImage(piece({ imageUrl: "https://x/std.webp", imageStatus: "missing", imageHeroUrl: "https://x/hero-r0.80.webp" })).kind).toBe("placeholder");
   });

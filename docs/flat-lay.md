@@ -232,3 +232,10 @@ Le manteau suit la veste (même rôle de pièce du dessus). Les autres contextes
 ## Cartes « Par catégorie » du Dressing (09/10/2026)
 
 Les pièces du dressing étant propres (détourées ou mises à plat), elles illustrent elles-mêmes les cartes de catégorie : `piecesPourVisuelCategorie` (`dressingEcran.ts`) retient jusqu'à 3 pièces récentes dont l'image n'est pas une photo brute, posées en `contain` sur le fond grège avec une ombre douce, au-dessus de la pastille. Aucune pièce propre : la carte garde son visuel éditorial. La pastille passe en colonne (libellé sur 2 lignes max, nombre dessous) pour ne plus tronquer « Robes & combinaisons ».
+
+## Pièces du catalogue avec un hero mais sans visuel standard (11/10/2026)
+
+Mesure du 10/10/2026 : 627 pièces sur 627 ont un visuel hero, mais 7 n'ont aucun visuel standard (robes 1, vestes_blazers 1, accessoires 1, pulls_gilets 4). `resolveHeroImage` les traitait comme sans image et les sortait des flat lay. Elles sont maintenant représentées par leur hero seul, sauf si leur statut est `invalid`, `error` ou `generating` (le hero, tiré du standard, porterait le même défaut). Un standard présent mais pas prêt reste un placeholder, comme avant.
+
+- **ARBITRAGE ÉDITORIAL**, valable à ce seul périmètre (pièce sans `image_url`). 
+- **NON DÉMONTRÉ** : le statut réel de ces 7 pièces n'a pas été lu (la base n'est pas accessible depuis le conteneur). Requête à lancer pour le vérifier : `select id, name, category, image_status, url_image_hero from vestiaire_universel where url_image is null and url_image_hero is not null;` — une ligne `invalid` ou `error` reste hors des flat lay, comme voulu.
