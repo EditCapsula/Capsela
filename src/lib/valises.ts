@@ -3,6 +3,7 @@ import { normaliserOccasions } from "./occasions";
 import { jourLocal } from "./outfitFeedback";
 import type { TenuePlanifiee } from "./planifier";
 import type { OccasionKey } from "./types";
+import type { EtatAffaires } from "./affairesVoyage";
 import type { ActiviteSejour, ItemProgramme } from "./programmeValise";
 import type { LookValise, MeteoJour, SituationValise, TailleBagage, TypeSejour } from "./valise";
 
@@ -64,6 +65,11 @@ export interface ValiseGardee {
    * stockage à part : elle suit la valise d'un appareil à l'autre, et ne garde que des pièces qui y sont encore. Dans `calcul` (jsonb).
    */
   cochees?: number[];
+  /**
+   * Les affaires de voyage (11/10/2026) : cochées, ajoutées à la main, masquées. Le catalogue lui-même est recalculé à l'affichage
+   * (programme, météo, taille) : seul ce que la PERSONNE a fait est gardé. Dans `calcul` (jsonb) : aucune migration.
+   */
+  affaires?: EtatAffaires;
   /**
    * Le programme du séjour (refonte du 04/10/2026) : les occasions retenues — sous-occasions du voyage ou occasions de
    * Capsela — et leur fréquence. Gardé dans `calcul` (jsonb) : aucune colonne, aucune migration. Absent des valises
@@ -186,7 +192,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "activites" | "cochees" | "programme">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "activites" | "cochees" | "affaires" | "programme">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -209,6 +215,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     ...(r.calcul?.suggestionIds?.length ? { suggestionIds: r.calcul.suggestionIds } : {}),
     ...(r.calcul?.activites?.length ? { activites: r.calcul.activites } : {}),
     ...(r.calcul?.cochees?.length ? { cochees: r.calcul.cochees } : {}),
+    ...(r.calcul?.affaires ? { affaires: r.calcul.affaires } : {}),
     ...(r.calcul?.programme?.length ? { programme: r.calcul.programme } : {}),
     // bigint[] revient parfois en chaînes côté PostgREST.
     pieceIds: nombres(r.piece_ids),
@@ -233,6 +240,7 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
       ...(v.suggestionIds?.length ? { suggestionIds: v.suggestionIds } : {}),
       ...(v.activites?.length ? { activites: v.activites } : {}),
       ...(v.cochees?.length ? { cochees: v.cochees } : {}),
+      ...(v.affaires ? { affaires: v.affaires } : {}),
       ...(v.programme?.length ? { programme: v.programme } : {}),
     },
   };
