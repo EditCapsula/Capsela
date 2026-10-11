@@ -9,6 +9,8 @@ photo (stockage privé) → lecture des objets (OpenAI vision : catégorie, coul
 boîte sur la PHOTO D'ORIGINE → détourage de chaque recadrage (Photoroom Segment) → un fichier par objet
 ```
 
+CADRAGE (11/10/2026) : après le détourage, l'image est rognée sur ce que le service a gardé (`rectangleOpaque`, alpha > 16, marge 3 %) : la pièce remplit sa tuile. Un détourage vide n'est pas proposé.
+
 PAS DE MISE À PLAT AUTOMATIQUE (11/10/2026, demandé : « la mise à plat n'est pas automatique, c'est le détourage qui l'est »). Avant, toute la photo passait par la mise à plat générative (plan Plus) ; elle reste une action demandée sur la fiche d'une pièce. Conséquence : `tenue_url` est toujours `null` (plus de planche, plus de bascule « Voir l'image à plat »), les fichiers s'appellent `….oN.detouree.webp` (détourés, pas « à plat »). Limite : sur une photo portée, le recadrage d'une boîte peut garder un bout de bras ou de jambe, le détourage isole le sujet principal ; NON ESSAYÉ sur de vraies photos (la règle d'origine « jamais de découpe d'une photo portée » est levée à la demande de la propriétaire).
 
 L'app montre les objets, la personne coche et modifie, et seulement alors des pièces sont créées. Les fichiers non gardés sont supprimés par l'app.

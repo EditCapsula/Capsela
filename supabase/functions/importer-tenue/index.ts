@@ -19,7 +19,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
-import { assainerObjets, cheminObjet, promptTenue, rectangleDeRecadrage, recadrerPixels } from "../_shared/analyseTenue.ts";
+import { assainerObjets, cheminObjet, promptTenue, rectangleOpaque, rectangleDeRecadrage, recadrerPixels } from "../_shared/analyseTenue.ts";
 import {
   cheminDansLeBucket,
   detourerAvecFournisseur,
@@ -183,7 +183,11 @@ Deno.serve(async (req) => {
       }
       if (detouree.type !== "png") continue;
       const piece = await decoderPng(detouree.octets);
-      const url = await deposer(cheminObjet(chemin, i), piece);
+      // Cadrée sur la pièce : on rogne la transparence autour de ce que le détourage a gardé. Rien gardé : l'objet n'est pas proposé.
+      const cadre = rectangleOpaque(piece.data, piece.width, piece.height);
+      if (!cadre) continue;
+      const rogneePiece = recadrerPixels(piece.data, piece.width, piece.height, cadre);
+      const url = await deposer(cheminObjet(chemin, i), { data: rogneePiece.data, width: rogneePiece.width, height: rogneePiece.height, colorSpace: "srgb" } as ImageData);
       // Un objet dont le détourage ou le fichier a échoué n'est pas proposé : jamais une pièce sans visuel, ni un recadrage rectangulaire.
       if (url) rendus.push({ ...objet, photo_url: url });
     }

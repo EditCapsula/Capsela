@@ -179,6 +179,36 @@ export function recadrerPixels(data: Uint8ClampedArray | Uint8Array, largeur: nu
 }
 
 /**
+ * Le rectangle qui entoure ce que le détourage a GARDÉ (pixels dont l'alpha dépasse `seuil`), élargi d'une petite marge et borné à l'image
+ * (11/10/2026, demandé : « la photo de la pièce retenue doit être cadrée sur la pièce »). Le recadrage d'une boîte laisse une grande part
+ * transparente autour de la pièce ; la pièce se montre alors petite dans sa tuile. Rend null quand rien n'a été gardé (détourage vide) :
+ * l'objet n'est pas proposé, jamais une image transparente.
+ */
+export function rectangleOpaque(data: Uint8ClampedArray | Uint8Array, largeur: number, hauteur: number, seuil = 16, marge = 0.03): Rectangle | null {
+  let x0 = largeur;
+  let y0 = hauteur;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < hauteur; y++) {
+    for (let x = 0; x < largeur; x++) {
+      if (data[(y * largeur + x) * 4 + 3] > seuil) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 < 0) return null;
+  const m = Math.round(Math.max(x1 - x0 + 1, y1 - y0 + 1) * marge);
+  const gx0 = Math.max(0, x0 - m);
+  const gy0 = Math.max(0, y0 - m);
+  const gx1 = Math.min(largeur, x1 + 1 + m);
+  const gy1 = Math.min(hauteur, y1 + 1 + m);
+  return { x: gx0, y: gy0, l: gx1 - gx0, h: gy1 - gy0 };
+}
+
+/**
  * `{user}/{uuid}.jpg` + 2 devient `{user}/{uuid}.o2.detouree.webp` : même dossier, marque « détourée » seule (cf. detourage.ts). Plus de
  * marque « à plat » depuis le 11/10/2026 : l'import ne met plus la photo à plat, la mise à plat reste une action demandée sur la fiche.
  */
