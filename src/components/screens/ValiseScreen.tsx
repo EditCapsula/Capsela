@@ -5,6 +5,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import FilEtapes from "@/components/FilEtapes";
 import { OutfitComposition } from "@/components/OutfitComposition";
+import Input from "@/components/Input";
 import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
@@ -63,6 +64,15 @@ import { selectionApercu } from "@/lib/valiseApercu";
 import { pieceLaPlusUtilisee, planningDuProgramme, type CreneauPlanning } from "@/lib/planningValise";
 import { LIBELLE_RAISON, apercuAllegement, avecTenue, joursDeLaPiece, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
+import {
+  affairesAffichees,
+  affairesMasquees,
+  cocheesValides,
+  GROUPES_AFFAIRES,
+  libelleAjoutValide,
+  noteCabine,
+  type EtatAffaires,
+} from "@/lib/affairesVoyage";
 import {
   ACTIVITES,
   ACTIVITES_MAX,
@@ -495,6 +505,8 @@ export default function ValiseScreen() {
       ...(rep.activites?.length ? { activites: rep.activites } : {}),
       // La check-list suit la valise recomposée : seules les pièces encore présentes restent cochées.
       ...(cochees.length ? { cochees } : {}),
+      // Les affaires de voyage de la personne (cochées, ajoutées, masquées) suivent la valise recomposée.
+      ...(ancienne?.affaires ? { affaires: ancienne.affaires } : {}),
       meteos,
       situations,
       ...r,
@@ -545,6 +557,17 @@ export default function ValiseScreen() {
    * l'écran propose de recomposer pour profiter de la place.
    */
   const changerBagage = (t: TailleBagage) => valise && sauver({ ...valise, bagage: t });
+  /** Les affaires de voyage : ce que la personne coche, ajoute ou masque est gardé avec la valise (appareil et compte). */
+  const majAffaires = (f: (e: EtatAffaires) => EtatAffaires) => {
+    if (!valise) return;
+    const e = f(valise.affaires ?? {});
+    const propre: EtatAffaires = {
+      ...(e.cochees?.length ? { cochees: e.cochees } : {}),
+      ...(e.ajoutees?.length ? { ajoutees: e.ajoutees } : {}),
+      ...(e.masquees?.length ? { masquees: e.masquees } : {}),
+    };
+    sauver({ ...valise, affaires: Object.keys(propre).length ? propre : undefined });
+  };
   /** Coche ou décoche une pièce de la check-list : l'état vit avec la valise (appareil et compte). */
   const cocherPiece = (id: number) => {
     if (!valise) return;
@@ -936,6 +959,7 @@ export default function ValiseScreen() {
             remplacer={remplacer}
             changerBagage={changerBagage}
             cocherPiece={cocherPiece}
+            majAffaires={majAffaires}
             enregistrerLook={actions.enregistrerIdeeLook}
             ajouterAuDressing={actions.openAddEtRevenir}
             ajouterCategorie={actions.openAddForCategory}
@@ -1006,6 +1030,7 @@ function Resultat({
   remplacer,
   changerBagage,
   cocherPiece,
+  majAffaires,
   enregistrerLook,
   ajouterAuDressing,
   ajouterCategorie,
@@ -1029,6 +1054,7 @@ function Resultat({
   remplacer: (ancien: number, nouveau: number) => void;
   changerBagage: (t: TailleBagage) => void;
   cocherPiece: (id: number) => void;
+  majAffaires: (f: (e: EtatAffaires) => EtatAffaires) => void;
   enregistrerLook: (ids: number[], occasion: OccasionKey) => void;
   ajouterAuDressing: () => void;
   ajouterCategorie: (c: CategoryKey) => void;
@@ -1135,6 +1161,27 @@ function Resultat({
   /** Le filtre de l'onglet Pièces : toutes, celles du dressing, ou les suggestions de la capsule. */
   const [filtre, setFiltre] = useState<"toutes" | "dressing" | "capsule">("toutes");
   const [tailleOuverte, setTailleOuverte] = useState(false);
+  /** Les affaires de voyage : celles du séjour (programme, météo) moins les masquées, plus celles que la personne a ajoutées. */
+  const contexteAffaires = { programme: valise.programme ?? [], meteos: valise.meteos };
+  const affaires = affairesAffichees(contexteAffaires, valise.affaires);
+  const affairesCochees = cocheesValides(affaires, valise.affaires);
+  const affairesCachees = affairesMasquees(contexteAffaires, valise.affaires);
+  const [nouvelleAffaire, setNouvelleAffaire] = useState("");
+  const [voirMasquees, setVoirMasquees] = useState(false);
+  const basculer = (liste: string[] | undefined, id: string) => ((liste ?? []).includes(id) ? (liste ?? []).filter((x) => x !== id) : [...(liste ?? []), id]);
+  const ajouterAffaire = () => {
+    const libelle = libelleAjoutValide(nouvelleAffaire, affaires);
+    if (!libelle) return;
+    majAffaires((e) => ({ ...e, ajoutees: [...(e.ajoutees ?? []), { id: `perso-${Date.now().toString(36)}`, libelle }] }));
+    setNouvelleAffaire("");
+  };
+  const masquerAffaire = (id: string) =>
+    majAffaires((e) =>
+      id.startsWith("perso-")
+        ? { ...e, ajoutees: (e.ajoutees ?? []).filter((a) => a.id !== id), cochees: (e.cochees ?? []).filter((x) => x !== id) }
+        : { ...e, masquees: [...(e.masquees ?? []), id], cochees: (e.cochees ?? []).filter((x) => x !== id) }
+    );
+  const noteLiquides = noteCabine(valise.bagage);
   const [retourTaille, setRetourTaille] = useState<string | null>(null);
   const proposer = (situation: number) => setProposition({ situation, tenue: nouvelleTenue(valise.situations[situation], valise.pieceIds, base, valise.looks, generer) });
   /** Une situation, dite comme le programme : ses occasions (« Plage · Piscine »), à défaut l'occasion de Capsela. */
@@ -2356,12 +2403,12 @@ function Resultat({
         <div className="mt-4">
           <div className="flex items-baseline justify-between gap-3">
             <span className="font-serif text-[18px] text-ink">
-              {piecesCochees.length} / {pieces.length} {pieces.length > 1 ? "prêtes" : "prête"}
+              {piecesCochees.length + affairesCochees.length} / {pieces.length + affaires.length} prêtes
             </span>
             <span className="text-[11.5px] text-muted">Gardée avec ta valise</span>
           </div>
           <div className="h-[3px] rounded-full mt-2 overflow-hidden" style={{ background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
-            <div className="h-full bg-terracotta-deep" style={{ width: `${pieces.length ? (piecesCochees.length / pieces.length) * 100 : 0}%` }} />
+            <div className="h-full bg-terracotta-deep" style={{ width: `${pieces.length + affaires.length ? ((piecesCochees.length + affairesCochees.length) / (pieces.length + affaires.length)) * 100 : 0}%` }} />
           </div>
           {pieces.length === 0 && <EmptyState>Aucune pièce dans la valise pour l&apos;instant.</EmptyState>}
           <div className="mt-4">
@@ -2402,6 +2449,101 @@ function Resultat({
             </div>
           </section>
         ))}
+          </div>
+
+          {/* ── AFFAIRES DE VOYAGE ── hors vêtements : sans effet sur la capacité ni sur « prête ». Les essentiels, puis ce que le programme et
+              la météo justifient (la raison est dite) ; la personne coche, masque et ajoute les siennes. Gardé avec la valise. */}
+          <div className="mt-6">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="font-serif text-[18px] text-ink">Affaires de voyage</h2>
+              <span className="text-[12px] text-muted">
+                {affairesCochees.length} / {affaires.length}
+              </span>
+            </div>
+            <div className="text-[12px] text-muted-3 leading-[1.45] mt-1">Hors vêtements : elles ne comptent pas dans la place de la valise.</div>
+            {GROUPES_AFFAIRES.map((g) => {
+              const liste = affaires.filter((a) => a.groupe === g.id);
+              if (!liste.length) return null;
+              return (
+                <section key={g.id} className="mt-4">
+                  <h3 className="t-surtitre text-muted">{g.libelle}</h3>
+                  {g.id === "toilette" && noteLiquides && <div className="text-[11.5px] text-muted-3 leading-[1.45] mt-1">{noteLiquides}</div>}
+                  <div className="flex flex-col gap-2 mt-2">
+                    {liste.map((a) => {
+                      const prete = affairesCochees.includes(a.id);
+                      return (
+                        <div key={a.id} className="flex items-center bg-card border border-border rounded-tuile pr-[2px]">
+                          <button
+                            onClick={() => majAffaires((e) => ({ ...e, cochees: basculer(e.cochees, a.id) }))}
+                            aria-pressed={prete}
+                            aria-label={`${a.libelle} : ${prete ? "remettre à préparer" : "marquer comme prête"}`}
+                            className="flex-1 min-w-0 flex items-center gap-3 text-left p-[10px] cursor-pointer"
+                            style={{ minHeight: 48 }}
+                          >
+                            <span aria-hidden="true" className={"w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 " + (prete ? "bg-success text-cream" : "border border-border text-transparent")}>
+                              {G_COCHE(12, "currentColor")}
+                            </span>
+                            <span className="flex-1 min-w-0">
+                              <span className={"block text-[13px] " + (prete ? "text-muted line-through" : "text-ink")}>{a.libelle}</span>
+                              {a.raison && <span className="block text-[11px] text-terracotta">{a.raison}</span>}
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => masquerAffaire(a.id)}
+                            aria-label={a.id.startsWith("perso-") ? `Retirer ${a.libelle}` : `Masquer ${a.libelle}`}
+                            className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer"
+                          >
+                            {G_CROIX}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
+
+            <form
+              className="flex items-center gap-2 mt-5"
+              onSubmit={(e) => {
+                e.preventDefault();
+                ajouterAffaire();
+              }}
+            >
+              <Input
+                value={nouvelleAffaire}
+                onChange={(e) => setNouvelleAffaire(e.target.value)}
+                placeholder="Ajouter une affaire (ex. appareil photo)"
+                aria-label="Ajouter une affaire de voyage"
+                maxLength={60}
+              />
+              <Button variante="secondaire" pleine={false} className="bg-card flex-shrink-0" disabled={!libelleAjoutValide(nouvelleAffaire, affaires)} onClick={ajouterAffaire}>
+                Ajouter
+              </Button>
+            </form>
+
+            {affairesCachees.length > 0 && (
+              <div className="mt-3">
+                <button onClick={() => setVoirMasquees((v) => !v)} aria-expanded={voirMasquees} className="t-lien text-terracotta underline underline-offset-[3px] cursor-pointer min-h-[44px]">
+                  {voirMasquees ? "Cacher les affaires masquées" : `Afficher les ${affairesCachees.length} affaires masquées`}
+                </button>
+                {voirMasquees && (
+                  <div className="flex flex-col gap-2 mt-1">
+                    {affairesCachees.map((a) => (
+                      <div key={a.id} className="flex items-center justify-between gap-3 bg-card border border-border rounded-tuile px-[12px]" style={{ minHeight: 44 }}>
+                        <span className="text-[13px] text-muted">{a.libelle}</span>
+                        <button
+                          onClick={() => majAffaires((e) => ({ ...e, masquees: (e.masquees ?? []).filter((x) => x !== a.id) }))}
+                          className="t-lien text-terracotta cursor-pointer min-h-[44px]"
+                        >
+                          Réafficher
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

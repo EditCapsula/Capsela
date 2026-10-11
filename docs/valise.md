@@ -171,6 +171,19 @@ Un dressing qui couvre tout : aucune suggestion. Ce que ni le dressing ni la cap
 
 **Vérifié dans l'app (mode démo, navigateur)** : parcours de bout en bout ; retrait d'une pièce (11 → 10) ; filtre capsule ; check-list ; changement S puis XL ; rechargement (taille et coches retrouvées, sur l'appareil) ; dressing du quotidien avec activités Soirée et Événement (2 suggestions entrent, plus rien à compléter) ; dressing vide (« Ton dressing d'abord ») ; 360 et 412 px sans débordement. **NON vérifié** : la persistance dans le compte Supabase (l'API est inaccessible depuis le conteneur) ; le téléchargement de la check-list (il n'existe pas).
 
+## 8 septies. Affaires de voyage (11/10/2026)
+
+Demandé : « intégrer toutes les pièces liées aux vacances — chaussures de randonnée, parfum, dentifrice, crème solaire… » (et maquette V2 : « Essentiels de voyage » dans la check-list).
+
+- **Une couche À PART des vêtements** (`affairesVoyage.ts`, pur, testé) : le moteur de tenues ne connaît que le dressing ; ces affaires n'ont ni catégorie ni volume. **Elles ne changent ni la capacité, ni « prête », ni les looks** ; l'écran le dit (« Hors vêtements : elles ne comptent pas dans la place de la valise »).
+- **Essentiels** (papiers, carte bancaire, billets et réservations, brosse à dents, dentifrice, déodorant, parfum, soins habituels, médicaments personnels, chargeur) : toujours proposés.
+- **Conditionnelles, chacune liée à une donnée RÉELLE du séjour, avec sa raison affichée** : crème solaire (plage ou piscine au programme, ou chaleur attendue ≥ 24°), maillot et serviette (plage, piscine), chaussures de randonnée et gourde (randonnée au programme), maillot de spa, parapluie ou imperméable (pluie dans une PRÉVISION seulement, jamais dans une météo de repli), gants et bonnet (≤ 5° attendus). Sans la donnée, l'affaire n'apparaît pas. Les températures sont celles de `valise.meteos` (prévision ou températures habituelles du lieu).
+- **Valise S** : la règle générale des liquides en cabine (100 ml par contenant) est dite, à vérifier selon la compagnie ; rien pour les autres tailles (on ne sait pas si elles voyagent en soute).
+- **La personne garde la main** : elle coche, masque (réversible : « Afficher les N affaires masquées ») et ajoute les siennes (sans doublon). Tout est gardé AVEC la valise (`affaires`, dans `calcul` jsonb : appareil et compte, aucune migration) ; seul ce que la personne a fait est enregistré, le catalogue est recalculé à l'affichage. Le compteur « N / M prêtes » de la check-list les inclut.
+- Le catalogue et les seuils (24°, 5°) sont un **ARBITRAGE ÉDITORIAL** du 11/10/2026, à valider et compléter. Non repris : anti-moustiques, adaptateur de prise (aucune donnée de destination ne les justifie).
+- **Chaussures de randonnée** : proposées comme affaire quand la randonnée est au programme ; si elles sont dans le dressing, elles entrent dans la valise comme n'importe quelle chaussure (le moteur retient baskets, bottines et bottes pour la randonnée). Un type de chaussure « randonnée » dans le dressing n'a pas été ajouté (il demanderait une valeur de plus en base).
+- **Vérifié dans l'app (démo)** : essentiels, crème solaire et chaussures de randonnée avec leur raison, règle des liquides en valise S, cocher, masquer, réafficher, ajouter, doublon refusé, rechargement (tout retrouvé sur l'appareil). **NON vérifié** : l'enregistrement dans le compte.
+
 ## 8 quater. La capsule complète la valise quand le dressing ne suffit pas (11/10/2026)
 
 Demandé : « capsule dans la valise si les pièces du dressing ne permettent pas de compléter une valise ». Arbitré en deux temps le même jour : d'abord les pièces de capsule en compléments « à ajouter » hors de la valise (option A), puis, à la demande de la propriétaire, **dans la valise, mais seulement quand le dressing ne couvre pas le séjour**. [DÉCIDÉ]
