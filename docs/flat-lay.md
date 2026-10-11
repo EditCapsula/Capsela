@@ -235,7 +235,10 @@ Les pièces du dressing étant propres (détourées ou mises à plat), elles ill
 
 ## Pièces du catalogue avec un hero mais sans visuel standard (11/10/2026)
 
-Mesure du 10/10/2026 : 627 pièces sur 627 ont un visuel hero, mais 7 n'ont aucun visuel standard (robes 1, vestes_blazers 1, accessoires 1, pulls_gilets 4). `resolveHeroImage` les traitait comme sans image et les sortait des flat lay. Elles sont maintenant représentées par leur hero seul, sauf si leur statut est `invalid`, `error` ou `generating` (le hero, tiré du standard, porterait le même défaut). Un standard présent mais pas prêt reste un placeholder, comme avant.
+Mesure du 10/10/2026 : 627 pièces sur 627 ont un visuel hero, mais 7 n'ont aucun visuel standard. `resolveHeroImage` les traitait comme sans image et les sortait des flat lay. Elles sont maintenant représentées par leur hero seul, sauf si leur statut est `invalid` (le hero porterait le même défaut) ou `generating`. Un standard présent mais pas prêt reste un placeholder, comme avant.
 
-- **ARBITRAGE ÉDITORIAL**, valable à ce seul périmètre (pièce sans `image_url`). 
-- **NON DÉMONTRÉ** : le statut réel de ces 7 pièces n'a pas été lu (la base n'est pas accessible depuis le conteneur). Requête à lancer pour le vérifier : `select id, name, category, image_status, url_image_hero from vestiaire_universel where url_image is null and url_image_hero is not null;` — une ligne `invalid` ou `error` reste hors des flat lay, comme voulu.
+Les 7 pièces (requête du 11/10/2026) : 1075 Robe blazer cintrée (`error`), 885, 902, 917 et 922 gilets sans manches (`error`), 1055 Sac business noir (`error`), 1085 Blazer gris en lin (`missing`).
+
+- **DÉMONTRÉ** : les 7 visuels hero ont été regardés un par un le 11/10/2026 — propres, fond uni, conformes au nom de la pièce. C'est pourquoi `error` (échec du visuel STANDARD) n'exclut pas ici.
+- **ARBITRAGE ÉDITORIAL**, valable à ce seul périmètre (pièce sans `image_url`). Une autre pièce au statut `error` mais avec un standard n'est pas concernée.
+- **NON DÉMONTRÉ** : le rendu de ces 7 pièces dans une planche composée (seul leur visuel isolé a été vu).
