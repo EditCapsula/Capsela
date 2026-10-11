@@ -11,7 +11,7 @@
 // fichiers des objets non gardés sont supprimés par l'app (même dossier, noms `….oN.detouree.webp`).
 //
 // Coût par tenue : une lecture OpenAI, un détourage par objet. Un plafond par compte
-// et par jour (MAX_IMPORTS_TENUE_PER_USER_PER_DAY, 5 par défaut) est le seul garde-fou financier. Jamais d'appel sans compte connecté
+// et par jour (MAX_IMPORTS_TENUE_PER_USER_PER_DAY, 50 par défaut depuis le 11/10/2026, 5 avant) est le seul garde-fou financier. Jamais d'appel sans compte connecté
 // ni sur la photo d'une autre personne. Secrets : PHOTOROOM_API_KEY, OPENAI_API_KEY, IMPORT_TENUE_MODEL (facultatif).
 //
 // NON ESSAYÉ contre les vrais services : le contrat du détourage est celui de _shared/detourage.ts (extraits de documentation),
@@ -35,7 +35,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-const LIMITE_PAR_DEFAUT = 5;
+const LIMITE_PAR_DEFAUT = 50;
 const MODELE_PAR_DEFAUT = "gpt-4.1-mini";
 const DUREE_URL_SIGNEE_S = 24 * 3600;
 

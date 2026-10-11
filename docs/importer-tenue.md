@@ -33,7 +33,7 @@ ou `{ ok: false, code }` (`non_configure`, `photo_invalide`, `photo_refusee`, `c
   modèle n'a rien rendu de lisible : la teinte n'est pas à présenter comme détectée.
 - Fichiers dans le dossier de la personne : `….oN.detouree.webp` (un objet détouré, reconnu par `estPhotoDetouree`, pas par `estPhotoMiseAPlat`). Plus de planche `….tenue.webp` depuis le 11/10/2026.
 - Rien repéré : `objets: []`, aucun détourage payant.
-- Plafond : `MAX_IMPORTS_TENUE_PER_USER_PER_DAY` (5 par défaut, quota `importer-tenue`) ; secrets `PHOTOROOM_API_KEY`, `OPENAI_API_KEY`, `IMPORT_TENUE_MODEL` (facultatif).
+- Plafond : `MAX_IMPORTS_TENUE_PER_USER_PER_DAY` (50 par défaut depuis le 11/10/2026, 5 avant ; une variable déjà définie dans Supabase l'emporte, quota `importer-tenue`) ; secrets `PHOTOROOM_API_KEY`, `OPENAI_API_KEY`, `IMPORT_TENUE_MODEL` (facultatif).
 - Coût par tenue : une lecture OpenAI (détail élevé), un détourage PAR OBJET (modifié le 11/10/2026 : avant, un seul détourage de la planche entière, recadré ensuite — les boîtes qui se chevauchent gardaient des fragments des pièces voisines).
 - Un objet dont le détourage échoue n'est pas proposé (jamais un recadrage rectangulaire à la place) ; crédits épuisés ou clé refusée arrêtent la boucle ; aucun objet exploitable avec une cause fournisseur rend ce code, pas une liste vide.
 - Limite réelle : le fournisseur isole le sujet principal du recadrage. Deux pièces très imbriquées peuvent encore se contaminer. NON ESSAYÉ contre le vrai service.

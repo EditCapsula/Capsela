@@ -146,9 +146,16 @@ export function ChampSelect({
 }
 
 /** Mêmes tracés que dans PieceScreen : le geste « photo » se reconnaît d'un écran à l'autre. */
-export function CameraIcon() {
+/** Les trois conseils de l'état initial (maquette 11/10/2026) : des consignes de prise de vue, aucune donnée de la personne. */
+const CONSEILS_PHOTO = [
+  { titre: "Bonne lumière", texte: "Lumière naturelle de préférence", icone: "M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" },
+  { titre: "Fond uni", texte: "Un fond clair et sans motif", icone: "M8 3L3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z" },
+  { titre: "Plusieurs pièces", texte: "Tu peux ajouter plusieurs vêtements en même temps", icone: "M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5" },
+] as const;
+
+export function CameraIcon({ taille = 16 }: { taille?: number } = {}) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={taille} height={taille} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
       <circle cx="12" cy="13" r="3.4" />
     </svg>
@@ -222,6 +229,13 @@ export default function AddScreen() {
   const [aPhotoChoisie, setAPhotoChoisie] = useState(false);
   const detectionLancee = useRef(false);
   const [saisieManuelle, setSaisieManuelle] = useState(false);
+  const retirerLaPhoto = () => {
+    // Retirer la photo : retour à l'état initial, sans garder les champs lus sur elle.
+    actions.retirerPhotoAjout();
+    photoChoisie.current = null;
+    setAPhotoChoisie(false);
+    setSaisieManuelle(false);
+  };
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -412,13 +426,16 @@ export default function AddScreen() {
                 Envoi de la photo…
               </span>
             )}
-            {!lectureEnCours && !state.addPhotoUploading && (
+            {!lectureEnCours && !state.addPhotoUploading && creation && (
               <button
                 type="button"
-                onClick={() => setSourcePhoto(true)}
-                className="absolute right-[10px] bottom-[10px] h-[44px] px-4 rounded-full bg-card text-ink text-[12.5px] font-semibold cursor-pointer"
+                aria-label="Retirer la photo"
+                onClick={retirerLaPhoto}
+                className="absolute right-[10px] top-[10px] w-[44px] h-[44px] rounded-full bg-card flex items-center justify-center cursor-pointer"
               >
-                Remplacer
+                <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="#1D1A16" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5" />
+                </svg>
               </button>
             )}
             {lectureEnCours && (
@@ -444,29 +461,71 @@ export default function AddScreen() {
             )}
           </div>
         ) : (
-          <div className="rounded-[24px] bg-card border border-border aspect-[1.3] p-[18px] flex flex-col items-center justify-center text-center">
-            <span className="text-terracotta-deep" aria-hidden="true">
-              <CameraIcon />
-            </span>
-            <div className="font-serif font-medium text-[19px] text-ink mt-[10px]">Photographier ma pièce</div>
-            <div className="text-[12.5px] text-[#5C5648] mt-1">Sur un fond uni, à la lumière du jour.</div>
-            <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-2 w-full mt-[18px]">
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                className="h-[44px] rounded-full bg-terracotta-deep text-[#FBF3EA] text-[13px] font-semibold cursor-pointer"
-              >
-                Prendre une photo
-              </button>
-              <button
-                type="button"
-                onClick={() => galerieInputRef.current?.click()}
-                className="h-[44px] rounded-full border border-border bg-cream text-ink text-[13px] font-semibold cursor-pointer"
-              >
-                Importer
-              </button>
+          <>
+            {/* État initial (maquette « Ajouter une pièce », 11/10/2026) : l'invitation, deux boutons l'un sous l'autre, puis les conseils. */}
+            <div className="rounded-[24px] bg-card border border-border px-[18px] pt-[26px] pb-[18px] flex flex-col items-center text-center">
+              <span className="w-[64px] h-[64px] rounded-full flex items-center justify-center text-terracotta-deep" style={{ background: "rgba(158,91,67,.12)" }} aria-hidden="true">
+                <CameraIcon taille={28} />
+              </span>
+              <div className="font-serif font-medium text-[22px] text-ink mt-[14px]">Photographier ma pièce</div>
+              <div className="text-[12.5px] text-[#5C5648] mt-1 leading-[1.45]">
+                Sur un fond uni, à la lumière du jour.
+                <br />
+                Tu peux photographier plusieurs vêtements en même temps.
+              </div>
+              <div className="flex flex-col gap-2 w-full mt-[20px]">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="h-[48px] rounded-full bg-terracotta-deep text-[#FBF3EA] text-[13.5px] font-semibold cursor-pointer"
+                >
+                  Prendre une photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => galerieInputRef.current?.click()}
+                  className="h-[48px] rounded-full border border-border bg-cream text-ink text-[13.5px] font-semibold cursor-pointer"
+                >
+                  Importer
+                </button>
+              </div>
             </div>
-          </div>
+            {etat === "initial" && (
+              <section className="mt-[22px]" aria-labelledby="ajout-conseils">
+                <div id="ajout-conseils" className={EYEBROW}>
+                  Conseils
+                </div>
+                <ul className="list-none p-0 mt-[10px] flex flex-col gap-2">
+                  {CONSEILS_PHOTO.map((c) => (
+                    <li key={c.titre} className="flex items-center gap-3 rounded-[16px] bg-warm-bg px-3 py-[10px]">
+                      <span className="w-[32px] h-[32px] flex-shrink-0 flex items-center justify-center text-terracotta-deep" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                          <path d={c.icone} />
+                        </svg>
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[13px] text-ink font-medium leading-[1.3]">{c.titre}</span>
+                        <span className="block text-[12px] text-[#5C5648] leading-[1.35]">{c.texte}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </>
+        )}
+
+        {state.addPhotoUrl && !lectureEnCours && !state.addPhotoUploading && (
+          <button
+            type="button"
+            onClick={() => setSourcePhoto(true)}
+            className="mx-auto mt-3 min-h-[44px] px-5 rounded-full border border-border bg-cream text-ink text-[13px] font-semibold flex items-center gap-2 cursor-pointer"
+          >
+            <svg viewBox="0 0 24 24" className="w-[16px] h-[16px]" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" />
+            </svg>
+            Remplacer la photo
+          </button>
         )}
 
         {/* Une photo qui n'est pas celle d'une pièce seule : dit à l'ajout, d'après ce que l'analyse a vu — jamais stocké, jamais deviné. */}
