@@ -3,6 +3,7 @@
 import { messageCadrage } from "@/lib/cadragePhoto";
 import { estPhotoDetouree } from "@/lib/dressing";
 import { aDesManches, MANCHES } from "@/lib/manches";
+import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import {
@@ -275,6 +276,19 @@ export default function AddScreen() {
         : state.addPhotoUrl && !state.addManches
           ? { texte: "Non détecté · à préciser", couleur: "#8B8375" }
           : { texte: "À préciser", couleur: "#8B8375" };
+
+  // ── Motif (11/10/2026) : facultatif ; d'où vient la valeur affichée.
+  const avecMotif = aUnMotif(state.addCat);
+  const motifIA = state.addMotifIA;
+  const motifDetecte = motifIA != null && !state.addMotifTouched && state.addMotif === motifIA;
+  const motifModifie = motifIA != null && state.addMotif !== motifIA;
+  const motifMeta = analyseEnCours
+    ? { texte: "Analyse en cours…", couleur: "#8B8375" }
+    : motifDetecte
+      ? { texte: "Détecté par Capsela", couleur: "#9E5B43" }
+      : motifModifie
+        ? { texte: "Modifié par toi", couleur: "#5C5648" }
+        : { texte: "Facultatif", couleur: "#8B8375" };
 
   // ── Ce qui bloque l'ajout, dans l'ordre où on le dit.
   const manquantes: string[] = [];
@@ -565,6 +579,45 @@ export default function AddScreen() {
                     aria-checked={on}
                     disabled={analyseEnCours}
                     onClick={() => actions.setAddManches(valeur)}
+                    className={chip(on) + " disabled:opacity-60 disabled:cursor-default"}
+                  >
+                    {libelle}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* 5 bis. Le motif : facultatif, lu sur la photo quand il est net, jamais pour un bijou. Aucune règle de tenue ne le lit encore. */}
+        {avecMotif && (
+          <>
+            <div className="flex items-center justify-between gap-3 mt-[22px] min-h-[24px]">
+              <span className={EYEBROW}>Motif</span>
+              <span className="flex items-center gap-[10px] text-[11.5px] font-medium" style={{ color: motifMeta.couleur }}>
+                {motifMeta.texte}
+                {motifModifie && !analyseEnCours && (
+                  <button
+                    type="button"
+                    onClick={actions.retablirAddMotif}
+                    className="min-h-[44px] -my-[10px] text-[11.5px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer"
+                  >
+                    Rétablir
+                  </button>
+                )}
+              </span>
+            </div>
+            <div role="radiogroup" aria-label="Motif" className="flex flex-wrap gap-2 mt-[10px]">
+              {MOTIFS.map(({ valeur, libelle }) => {
+                const on = state.addMotif === valeur;
+                return (
+                  <button
+                    key={valeur}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    disabled={analyseEnCours}
+                    onClick={() => actions.setAddMotif(valeur)}
                     className={chip(on) + " disabled:opacity-60 disabled:cursor-default"}
                   >
                     {libelle}

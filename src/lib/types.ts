@@ -139,6 +139,8 @@ export interface Item {
   saisons?: CapsuleSeason[];
   /** Longueur des manches (01/10/2026, colonne `manches`, migration 0042). Absent = inconnue : le moteur se comporte alors comme avant. Jamais déduite d'un nom. */
   manches?: Manches;
+  /** Motif (11/10/2026, colonne `motif`, migration 0051). Absent = inconnu : rien n'est affiché, rien n'est déduit. */
+  motif?: Motif;
   /** Days since last worn. null = never worn. 0 = worn today. */
   worn: number | null;
   /** Value of `worn` before the most recent "worn today" action, for Corriger/undo. */
@@ -218,6 +220,9 @@ export interface Item {
 
 export type Manches = "sans" | "courtes" | "trois_quarts" | "longues";
 
+/** Le motif d'une pièce (11/10/2026, colonne `motif`, migration 0051) — la liste est celle de MOTIFS (motifs.ts). */
+export type Motif = "uni" | "rayures" | "carreaux" | "pois" | "fleurs" | "animalier" | "graphique" | "autre";
+
 export type ChoixRevente = "gardee" | "de_cote";
 
 export interface City {
@@ -275,6 +280,8 @@ export interface PhotoAnalysis {
   photoType?: CadragePhoto;
   /** Longueur des manches lue sur la photo (09/10/2026), seulement pour une catégorie qui en a. */
   manches?: Manches;
+  /** Motif (11/10/2026, colonne `motif`, migration 0051). Absent = inconnu : rien n'est affiché, rien n'est déduit. */
+  motif?: Motif;
   /** Saisons proposées d'après la photo (09/10/2026) : une suggestion modifiable, absente quand le modèle n'est pas sûr. */
   saisons?: CapsuleSeason[];
 }
@@ -411,6 +418,12 @@ export interface AppState {
   addManchesTouched: boolean;
   /** La longueur de manches lue par l'analyse de la photo (null si rien n'a été lu) : sert à dire « Détecté par Capsela » seulement quand la valeur vient vraiment de là, et à « Rétablir ». */
   addManchesIA: Manches | null;
+  /** Le motif choisi dans le formulaire (11/10/2026) ; null tant qu'il n'est pas renseigné. Facultatif. */
+  addMotif: Motif | null;
+  /** Vrai dès que l'utilisatrice a touché au motif : l'analyse de la photo ne le remplace plus. */
+  addMotifTouched: boolean;
+  /** Le motif lu par l'analyse de la photo (null si rien n'a été lu) : « Détecté par Capsela » et « Rétablir ». */
+  addMotifIA: Motif | null;
   /** La pièce vient d'être ajoutée : le bouton le dit un court instant avant le retour au dressing. */
   addDone: boolean;
   addCoupeTouched: boolean;

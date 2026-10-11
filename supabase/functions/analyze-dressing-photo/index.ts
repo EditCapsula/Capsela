@@ -48,9 +48,11 @@ import {
 
 import {
   ACCESSOIRE_TYPES,
+  aUnMotif,
   BIJOU_TYPES,
   CATEGORY_KEYS,
   MATIERES,
+  MOTIFS,
   nearestPaletteColor,
   PALETTE,
   PALETTE_BIJOU,
@@ -84,6 +86,7 @@ interface AnalysisRaw {
   accessoire_type?: string | null;
   photo_type?: string | null;
   manches?: string | null;
+  motif?: string | null;
   saisons?: string[] | null;
 }
 
@@ -193,10 +196,11 @@ function buildPrompt(): string {
     "Indique aussi color_hex : ta meilleure estimation de la couleur dominante de L'ARTICLE (pas du fond ni de la peau/cheveux si une personne le porte), en hex #RRGGBB.",
     "Si l'article est porté par une personne, concentre-toi uniquement sur l'article lui-même, jamais sur la personne ou le décor.",
     `Si cat est l'une de : ${CATEGORIES_A_MANCHES.join(", ")}, indique aussi manches EXACTEMENT parmi : sans, courtes, trois_quarts, longues (sans = sans manches ou bretelles, courtes = jusqu'au coude, trois_quarts = jusqu'à mi-avant-bras, longues = jusqu'au poignet ou au-delà), sinon null. Pour toute autre catégorie, manches = null.`,
+    `Si cat n'est pas "bijou", indique aussi motif EXACTEMENT parmi : ${MOTIFS.join(", ")} (uni = une seule couleur, sans dessin ; rayures ; carreaux ; pois ; fleurs ; animalier ; graphique = formes, lettres, logos ou dessin abstrait ; autre = tout autre motif visible), sinon null. Ne donne un motif que s'il est net : en cas de doute entre uni et motif discret, null. Pour un article à motif, color_hex reste la teinte DOMINANTE de l'article.`,
     "Indique aussi saisons : la liste des saisons où cet article se porte, parmi Printemps, Été, Automne, Hiver (une ou plusieurs ; ex. un manteau en laine : Automne, Hiver ; un débardeur en lin : Printemps, Été), d'après la matière, l'épaisseur et la coupe visibles. Si tu n'es pas raisonnablement sûr, saisons = null.",
     "Indique aussi photo_type : \"seule\" si la photo montre UN SEUL article, posé à plat, sur un cintre ou en gros plan, sans personne ; \"portee\" si une personne le porte ; \"plusieurs\" si la photo montre plusieurs articles ou une tenue entière. Null si tu n'es pas sûr.",
     "Si tu n'es pas raisonnablement sûr d'un champ, mets null plutôt que de deviner au hasard — une suggestion fausse est pire qu'aucune suggestion.",
-    'Réponds UNIQUEMENT en JSON strict, un seul objet, avec exactement ces clés : {"cat": string|null, "color_hex": string|null, "matiere": string|null, "subtype": string|null, "shoe_type": string|null, "sac_type": string|null, "bijou_type": string|null, "accessoire_type": string|null, "photo_type": string|null, "manches": string|null, "saisons": string[]|null}.',
+    'Réponds UNIQUEMENT en JSON strict, un seul objet, avec exactement ces clés : {"cat": string|null, "color_hex": string|null, "matiere": string|null, "subtype": string|null, "shoe_type": string|null, "sac_type": string|null, "bijou_type": string|null, "accessoire_type": string|null, "photo_type": string|null, "manches": string|null, "motif": string|null, "saisons": string[]|null}.',
   ].join("\n");
 }
 
@@ -222,6 +226,9 @@ function sanitize(raw: AnalysisRaw): Record<string, unknown> {
   if (cat && (CATEGORIES_A_MANCHES as readonly string[]).includes(cat) && raw.manches && ["sans", "courtes", "trois_quarts", "longues"].includes(raw.manches)) {
     out.manches = raw.manches;
   }
+
+  // Le motif : dans la liste, jamais pour un bijou.
+  if (cat && aUnMotif(cat) && raw.motif && (MOTIFS as readonly string[]).includes(raw.motif)) out.motif = raw.motif;
 
   // Les saisons : seulement celles de la liste, sans doublon, dans l'ordre de l'année.
   if (Array.isArray(raw.saisons)) {

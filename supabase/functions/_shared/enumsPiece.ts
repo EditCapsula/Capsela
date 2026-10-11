@@ -29,6 +29,12 @@ export const MATIERES = [
   "Coton", "Lin", "Laine", "Cachemire", "Soie", "Viscose",
   "Cuir", "Daim", "Denim", "Velours", "Polyester", "Nylon", "Synthétique",
 ] as const;
+/** Le motif d'une pièce (11/10/2026) — doit rester synchronisé avec MOTIFS (src/lib/motifs.ts, app-side) ; un test le verrouille. */
+export const MOTIFS = ["uni", "rayures", "carreaux", "pois", "fleurs", "animalier", "graphique", "autre"] as const;
+export type Motif = (typeof MOTIFS)[number];
+/** Un bijou n'a pas de motif ; toute autre catégorie peut en avoir (un foulard, un sac, une chemise…). */
+export const aUnMotif = (cat: string): boolean => cat !== "bijou";
+
 export const SHOE_TYPES = [
   "Baskets", "Bottines", "Bottes", "Escarpins", "Sandales", "Sandales à talons",
   "Espadrilles", "Mocassins", "Ballerines", "Chaussures d'intérieur",
