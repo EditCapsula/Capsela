@@ -23,6 +23,7 @@ import {
   peutCocher,
   phraseManque,
   pieceDepuis,
+  reprendrePhoto,
   type BrouillonPiece,
 } from "@/lib/importTenue";
 import { aDesManches, MANCHES } from "@/lib/manches";
@@ -139,6 +140,14 @@ export default function ImporterTenueScreen() {
     setOuverte(r.objets.length === 1 ? 0 : null);
     setPhase("resultat");
   };
+
+  // Une photo confiée par « Ajouter une pièce » (elle montre plusieurs pièces) : la lecture démarre sans second choix de photo.
+  useEffect(() => {
+    const confiee = reprendrePhoto();
+    // Hors de l'effet (setTimeout) : la lecture met l'état à jour tout de suite. Pas de nettoyage du minuteur : en développement l'effet se joue deux fois et la photo n'est reprise qu'une.
+    if (confiee) setTimeout(() => void lancer(confiee), 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onFichier = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];

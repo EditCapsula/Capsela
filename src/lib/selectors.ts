@@ -1,7 +1,7 @@
 import { MONTHS_FR, OCC_LABELS, occasionShortLabel } from "./data";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour, type ContexteSaisonnier } from "./capsule";
-import type { CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
+import type { CapsuleSeason, CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
 
 /**
  * "Wishlist" (Mes looks, recette 23/08/2026) n'est pas une 3ᵉ façon
@@ -480,6 +480,36 @@ export function mostWornPieces(history: HistoryEntry[], pool: Item[], limit = 3)
       return item ? { item, count } : null;
     })
     .filter((x): x is MostWornPiece => Boolean(x));
+}
+
+/**
+ * Début de la saison calendaire de `maintenant` (même découpage, au mois près, que `saisonCalendairePour` : hiver = décembre à février,
+ * printemps = mars à mai, été = juin à août, automne = septembre à novembre). En janvier ou février, l'hiver a commencé le 1er décembre
+ * de l'année d'avant.
+ */
+export function debutDeSaison(maintenant: Date): Date {
+  const m = maintenant.getMonth();
+  const annee = maintenant.getFullYear();
+  if (m === 11) return new Date(annee, 11, 1);
+  if (m <= 1) return new Date(annee - 1, 11, 1);
+  const premierMois = m <= 4 ? 2 : m <= 7 ? 5 : 8;
+  return new Date(annee, premierMois, 1);
+}
+
+/**
+ * Les pièces les plus portées DEPUIS LE DÉBUT DE LA SAISON EN COURS (11/10/2026, demandé : « celles par saison et non de manière
+ * générale »). Avant, le classement comptait tout l'historique : un sac porté en été restait en tête en automne. Même règle que
+ * mostWornPieces (fréquence réelle, sans seuil minimum), sur les seules tenues portées depuis le début de la saison calendaire ; les
+ * nombres de ports affichés sont ceux de la saison. Une saison sans tenue portée rend une liste vide : la section ne s'affiche pas.
+ */
+export function mostWornPiecesDeSaison(history: HistoryEntry[], pool: Item[], maintenant: Date = new Date(), limit = 3): MostWornPiece[] {
+  const debut = debutDeSaison(maintenant).getTime();
+  return mostWornPieces(history.filter((h) => h.ts >= debut && h.ts <= maintenant.getTime()), pool, limit);
+}
+
+/** « de l'automne », « du printemps »… pour le titre de la section. */
+export function deLaSaison(saison: CapsuleSeason): string {
+  return saison === "Printemps" ? "du printemps" : saison === "Été" ? "de l'été" : saison === "Automne" ? "de l'automne" : "de l'hiver";
 }
 
 /**

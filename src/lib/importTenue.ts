@@ -173,3 +173,19 @@ export const libelleCategorie = (cat: CategoryKey): string => CATS.find(([c]) =>
 
 /** « 3 pièces » / « 1 pièce ». */
 export const nPieces = (n: number): string => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
+
+/*
+ * PASSAGE DE LA PHOTO D'« AJOUTER UNE PIÈCE » À « IMPORTER UNE TENUE » (11/10/2026, signalé : « il n'y a pas la détection de plusieurs
+ * pièces »). Quand l'analyse d'une photo dit qu'elle montre une pièce portée ou plusieurs pièces, la personne peut en détecter toutes les
+ * pièces : le fichier d'origine est confié à l'écran d'import, qui le prend à son ouverture et lance la lecture. Une seule lecture : le
+ * fichier est vidé dès qu'il est repris, pour qu'un retour sur l'écran ne relance pas un traitement payant.
+ */
+let fichierConfie: File | null = null;
+export const confierPhoto = (f: File | null): void => {
+  fichierConfie = f;
+};
+export const reprendrePhoto = (): File | null => {
+  const f = fichierConfie;
+  fichierConfie = null;
+  return f;
+};
