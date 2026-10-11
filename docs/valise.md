@@ -138,15 +138,18 @@ La valise ne puise que dans le dressing : quand il la limite, l'écran le dit et
 - **Retour de l'ajout** : l'ajout revient à la valise (`openAddForCategory`, `openAddEtRevenir`). Une pièce ajoutée depuis le calcul se reconnaît (`dressingIds`, gardé dans `calcul`) : « Une nouvelle pièce dans ton dressing · Recomposer ma valise », qui relance le calcul avec les mêmes réponses, sur la même valise.
 - **Onglet Pièces** : « Une pièce qui n'est pas encore dans ton dressing ? L'ajouter à mon dressing », distinct de « Ajouter une pièce de ton dressing » (qui met une pièce du dressing dans la valise).
 
-## 8 quater. Les pièces de la capsule : des compléments « à ajouter », jamais dans la valise (11/10/2026, option A)
+## 8 quater. La capsule complète la valise quand le dressing ne suffit pas (11/10/2026)
 
-Demandé : « intégrer des pièces des capsules ». Arbitré : **la valise reste faite de pièces que tu possèdes** ; la capsule n'apporte que des compléments, marqués comme tels. Une pièce de capsule est une suggestion de catalogue, pas un vêtement : elle ne peut pas être mise dans une valise physique. [DÉCIDÉ]
+Demandé : « capsule dans la valise si les pièces du dressing ne permettent pas de compléter une valise ». Arbitré en deux temps le même jour : d'abord les pièces de capsule en compléments « à ajouter » hors de la valise (option A), puis, à la demande de la propriétaire, **dans la valise, mais seulement quand le dressing ne couvre pas le séjour**. [DÉCIDÉ]
 
-- `categoriesPourCompleter` rend aussi `pieces` : les pièces de la capsule que le moteur a prises pour composer le look d'une occasion sans look (jamais celles du dressing). L'écran « Optimise ta valise » les montre avec leur visuel et leur nom : « À ajouter · compose un look [occasion] avec ton dressing », et le bouton ajoute cette catégorie au dressing (parcours existant, retour à la valise, « Recomposer »).
-- Elles ne comptent NI dans les pièces de la valise, NI dans son volume, NI dans le « remplissage » ou le « prête » : le sac, ses looks et ses chiffres restent comptés sur le dressing seul. L'écran le dit : « Ces pièces ne sont pas dans ta valise : elles ne comptent ni dans ses pièces, ni dans son remplissage. »
-- Rien n'est enregistré : les suggestions sont recalculées à l'affichage (dressing + capsule du moment), donc aucune valise gardée ne référence une pièce de capsule, et aucune migration n'est nécessaire.
-- Le minimum de 8 pièces pour ouvrir le parcours (§ 8 ter) est inchangé.
-- **NON DÉMONTRÉ** : la phrase « compose un look » reflète le look que le moteur compose avec ce pool (dressing + capsule) ; ce look peut utiliser des pièces du dressing absentes de la valise. Rendu non vu à l'écran.
+- **Déclencheur exact** (`completerAvecCapsule`, valise.ts, testé) : une occasion du séjour qu'AUCUN look du dressing ne couvre. Pour chacune, le moteur compose le look dans le pool habituel de l'app (`composeWardrobePool`, la capsule complète ce que le dressing n'a pas) ; les pièces de ce look entrent dans la valise si le volume le permet, celles de la capsule étant des SUGGESTIONS.
+- **Un dressing qui couvre tout : rien n'est ajouté**, la valise reste faite de pièces possédées, et l'écran dit toujours « Uniquement ton dressing ». Si le moteur compose le look avec le dressing seul, c'est la place qui manque : rien n'est ajouté non plus.
+- **Marquage.** `ValiseGardee.suggestionIds` (dans `calcul`, jsonb : aucune migration) liste les pièces de capsule ; elles sont aussi dans `pieceIds`. L'écran dit « Dont N pièces de ta capsule à ajouter à ton dressing », « Ton dressing, complété par ta capsule », et marque chaque pièce « Suggestion capsule · à ajouter à ton dressing » (onglet Pièces, check-list).
+- **Comptage.** Elles comptent dans le volume (une fois ajoutées, elles prendront de la place) et dans « pièces → looks » ; l'écran les distingue dans le résumé. « Ta valise est prête » reste fondé sur les occasions couvertes et le volume, et la mention « dont N à ajouter » l'accompagne : une valise prête n'est pas dite entièrement possédée.
+- **Résolution.** Les suggestions sont retrouvées par identifiant dans la capsule et le catalogue (`poolDeLaValise`) ; le moteur les voit à chaque modification (retirer, remplacer, ajouter), sinon leurs looks se perdraient. Une suggestion qui disparaîtrait du catalogue n'est plus dans la valise.
+- **Reste hors de la valise** : une occasion qui ne tient pas dans la capacité garde l'encart « Optimise ta valise », avec les pièces de capsule « À ajouter » (« ne comptent ni dans ses pièces, ni dans son remplissage »).
+- Le minimum de 8 pièces pour ouvrir le parcours (§ 8 ter) est inchangé. **À arbitrer** : le baisser maintenant que la capsule peut compléter.
+- **NON DÉMONTRÉ** : le rendu à l'écran ; le comportement sur des dressings réels (quand une occasion reste sans look malgré la capsule).
 
 ## 9. Accès
 

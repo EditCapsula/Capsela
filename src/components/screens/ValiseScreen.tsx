@@ -23,6 +23,8 @@ import {
   alternatives,
   amplitudePrevue,
   categoriesPourCompleter,
+  completerAvecCapsule,
+  poolDeLaValise,
   BAGAGES,
   capaciteDe,
   UNITES_MOYENNES_PAR_PIECE,
@@ -282,7 +284,7 @@ const ETAPES_CALCUL: [React.ReactNode, string][] = [
 ];
 
 export default function ValiseScreen() {
-  const { state, weather, defaultCapsule, actions } = useCapsela();
+  const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
   const dressing = state.items;
   const generer = useMemo(() => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie)), [profile]);
@@ -438,7 +440,9 @@ export default function ValiseScreen() {
     if (!actif.current) return;
     setFaites(2);
     await pause(30);
-    const r = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
+    const r0 = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
+    // Le dressing ne couvre pas toutes les occasions : la capsule complète la valise, ses pièces marquées « à ajouter » (completerAvecCapsule).
+    const r = completerAvecCapsule(dressing, defaultCapsule, situations, r0, capaciteDe(rep.bagage), generer);
     await pause(380);
     if (!actif.current) return;
     setFaites(3);
@@ -490,7 +494,12 @@ export default function ValiseScreen() {
   };
 
   /** Nouvelles pièces : les looks sont recomptés par le moteur. */
-  const avecPieces = (v: ValiseGardee, ids: number[]): ValiseGardee => ({ ...v, ...looksDeLaValise(ids, dressing, v.situations, generer, v.looks) });
+  const avecPieces = (v: ValiseGardee, ids: number[]): ValiseGardee => {
+    // Le pool compte les suggestions de capsule que la valise porte : sans elles, le moteur perdrait leurs looks à chaque modification.
+    const pool = poolDeLaValise(dressing, v.suggestionIds, [...defaultCapsule, ...vestiairePool]);
+    const restantes = (v.suggestionIds ?? []).filter((id) => ids.includes(id));
+    return { ...v, ...looksDeLaValise(ids, pool, v.situations, generer, v.looks), suggestionIds: restantes.length ? restantes : undefined };
+  };
   const retirer = (ids: number[]) => valise && sauver(avecPieces(valise, valise.pieceIds.filter((x) => !ids.includes(x))));
   const ajouter = (id: number) => valise && sauver(avecPieces(valise, [...valise.pieceIds, id]));
   /** « Ajouter une tenue » : la tenue et les pièces qu'elle demande entrent dans la valise, sans recomposer le reste. */
@@ -1160,6 +1169,10 @@ function Resultat({
   recommencer: () => void;
   supprimer: () => void;
 }) {
+  const { vestiairePool } = useCapsela();
+  /** Le dressing plus les suggestions de capsule que la valise porte : ce que le moteur et l'affichage résolvent. */
+  const base = useMemo(() => poolDeLaValise(dressing, valise.suggestionIds, [...capsule, ...vestiairePool]), [dressing, valise.suggestionIds, capsule, vestiairePool]);
+  const suggestions = new Set(valise.suggestionIds ?? []);
   const [indexLook, setIndexLook] = useState(0);
   const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "alleger" } | { type: "tenue" } | { type: "checklist" } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
@@ -1167,7 +1180,8 @@ function Resultat({
 
   const capacite = capaciteDe(valise.bagage);
   // Une pièce supprimée du dressing depuis n'est plus dans la valise.
-  const pieces = valise.pieceIds.map((id) => dressing.find((i) => i.id === id)).filter((i): i is Item => !!i);
+  const pieces = valise.pieceIds.map((id) => base.find((i) => i.id === id)).filter((i): i is Item => !!i);
+  const nbSuggestions = pieces.filter((p) => suggestions.has(p.id)).length;
   const ids = pieces.map((p) => p.id);
   // Un look de valise a toujours chaussures et sac (lookAChaussuresEtSac) : les valises gardées avant cette règle ne montrent plus
   // les looks qui n'en ont pas — « Recomposer » en refait avec.
@@ -1236,8 +1250,8 @@ function Resultat({
   // l'ouverture de la feuille — pas avant, c'est le calcul le plus coûteux.
   const idRemplacee = feuille?.type === "remplacer" ? feuille.id : null;
   const alts = useMemo(
-    () => (idRemplacee != null ? alternatives(idRemplacee, valise.pieceIds, dressing, valise.situations, generer) : []),
-    [idRemplacee, valise.pieceIds, valise.situations, dressing, generer]
+    () => (idRemplacee != null ? alternatives(idRemplacee, valise.pieceIds, base, valise.situations, generer) : []),
+    [idRemplacee, valise.pieceIds, valise.situations, base, generer]
   );
 
   // « Alléger » : les pièces cochées ; « Ajouter une tenue » : la proposition du moteur pour la situation choisie (calculée au
@@ -1266,7 +1280,7 @@ function Resultat({
       // Sans stockage, la coche tient le temps de l'écran : la check-list reste utilisable.
     }
   };
-  const proposer = (situation: number) => setProposition({ situation, tenue: nouvelleTenue(valise.situations[situation], valise.pieceIds, dressing, valise.looks, generer) });
+  const proposer = (situation: number) => setProposition({ situation, tenue: nouvelleTenue(valise.situations[situation], valise.pieceIds, base, valise.looks, generer) });
   /** Une situation, dite comme le programme : ses occasions (« Plage · Piscine »), à défaut l'occasion de Capsela. */
   const libelleSituation = (i: number) => {
     const s = valise.situations[i];
@@ -1502,9 +1516,9 @@ function Resultat({
               (proposition.tenue ? (
                 (() => {
                   const t = proposition.tenue;
-                  const piecesT = t.ids.map((id) => dressing.find((x) => x.id === id)).filter((x): x is Item => !!x);
+                  const piecesT = t.ids.map((id) => base.find((x) => x.id === id)).filter((x): x is Item => !!x);
                   const idsTotal = new Set([...valise.pieceIds, ...t.ids]);
-                  const total = volumeDe(dressing.filter((x) => idsTotal.has(x.id)));
+                  const total = volumeDe(base.filter((x) => idsTotal.has(x.id)));
                   return (
                     <Card rayon="tuile" className="mt-4 p-[14px]">
                       <div className="flex gap-[3px]">
@@ -1515,7 +1529,7 @@ function Resultat({
                       <div className="text-[13px] text-ink leading-[1.35] mt-3">{resumeLook(piecesT)}</div>
                       <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
                         {t.ajouts.length
-                          ? `Elle demande ${t.ajouts.length} ${t.ajouts.length > 1 ? "pièces" : "pièce"} de ton dressing : ${t.ajouts.map((id) => dressing.find((x) => x.id === id)?.name ?? "").join(", ")}.`
+                          ? `Elle demande ${t.ajouts.length} ${t.ajouts.length > 1 ? "pièces" : "pièce"} de ton dressing : ${t.ajouts.map((id) => base.find((x) => x.id === id)?.name ?? "").join(", ")}.`
                           : "Elle se fait avec les pièces de ta valise."}
                       </div>
                       {total > capacite && (
@@ -1578,7 +1592,10 @@ function Resultat({
                     className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer"
                   >
                     <Vignette it={p} taille={40} />
-                    <span className={"flex-1 min-w-0 text-[13px] truncate " + (dedans ? "text-muted line-through" : "text-ink")}>{p.name}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className={"block text-[13px] truncate " + (dedans ? "text-muted line-through" : "text-ink")}>{p.name}</span>
+                      {suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">À ajouter à ton dressing</span>}
+                    </span>
                     <span aria-hidden="true" className={"w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 mr-2 " + (dedans ? "bg-success text-cream" : "border border-border text-transparent")}>
                       {G_COCHE(12, "currentColor")}
                     </span>
@@ -1887,6 +1904,11 @@ function Resultat({
         )}
       </div>
       <div className="t-chapeau text-muted-3 mt-[6px]">{libelleDuree(nbJours)}</div>
+      {nbSuggestions > 0 && (
+        <div className="text-[12px] text-terracotta leading-[1.4] mt-[4px]">
+          Dont {nbSuggestions} {nbSuggestions > 1 ? "pièces" : "pièce"} de ta capsule à ajouter à ton dressing : ton dressing ne couvrait pas tout le séjour.
+        </div>
+      )}
 
       {/* La météo, compacte : celle de la prévision d'aujourd'hui, pour les jours qu'elle couvre — rien d'autre. */}
       {(amplitude || !previsionAttendue) && (
@@ -1992,7 +2014,7 @@ function Resultat({
       <div className="flex items-center justify-between gap-3 mt-3">
         <span className="inline-flex items-center gap-[7px] text-[12px] text-ink">
           <span className="text-terracotta">{G_COCHE(14)}</span>
-          Uniquement ton dressing
+          {nbSuggestions > 0 ? "Ton dressing, complété par ta capsule" : "Uniquement ton dressing"}
         </span>
         <span className={"text-[11px] " + (depasse ? "text-terracotta" : "text-muted")}>
           Valise {valise.bagage} · {depasse ? "trop pleine" : `${pieces.length} ${pieces.length > 1 ? "pièces" : "pièce"} · remplie à ${tauxRemplissage} %`}
@@ -2381,6 +2403,7 @@ function Resultat({
                                 return portee.length ? ` · portée ${portee.map((j) => `J${j}`).join(", ")}` : "";
                               })()}
                             </span>
+                            {suggestions.has(p.id) && <span className="block text-[11px] text-terracotta mt-[1px]">Suggestion capsule · à ajouter à ton dressing</span>}
                             {n >= SEUIL_POLYVALENTE && <span className="block text-[11px] text-muted mt-[1px]">Pièce polyvalente</span>}
                           </span>
                         </button>

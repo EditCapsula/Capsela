@@ -49,6 +49,12 @@ export interface ValiseGardee {
    */
   dressingIds?: number[];
   /**
+   * Les pièces de la CAPSULE entrées dans la valise parce que le dressing ne suffisait pas (11/10/2026) : des suggestions, déjà comprises
+   * dans `pieceIds` et à ajouter au dressing. Gardé dans `calcul` (jsonb) : aucune colonne, aucune migration. Absent des valises plus
+   * anciennes et de toute valise que le dressing suffit à faire.
+   */
+  suggestionIds?: number[];
+  /**
    * Le programme du séjour (refonte du 04/10/2026) : les occasions retenues — sous-occasions du voyage ou occasions de
    * Capsela — et leur fréquence. Gardé dans `calcul` (jsonb) : aucune colonne, aucune migration. Absent des valises
    * plus anciennes, qui n'ont que leurs occasions mères (`occasions`).
@@ -170,7 +176,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "programme">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "programme">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -190,6 +196,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     looks: r.calcul?.looks ?? [],
     situationsSansLook: r.calcul?.situationsSansLook ?? [],
     ...(r.calcul?.dressingIds ? { dressingIds: r.calcul.dressingIds } : {}),
+    ...(r.calcul?.suggestionIds?.length ? { suggestionIds: r.calcul.suggestionIds } : {}),
     ...(r.calcul?.programme?.length ? { programme: r.calcul.programme } : {}),
     // bigint[] revient parfois en chaînes côté PostgREST.
     pieceIds: nombres(r.piece_ids),
@@ -211,6 +218,7 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
       looks: v.looks,
       situationsSansLook: v.situationsSansLook,
       ...(v.dressingIds ? { dressingIds: v.dressingIds } : {}),
+      ...(v.suggestionIds?.length ? { suggestionIds: v.suggestionIds } : {}),
       ...(v.programme?.length ? { programme: v.programme } : {}),
     },
   };
