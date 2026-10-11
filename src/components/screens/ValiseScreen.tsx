@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import FilEtapes from "@/components/FilEtapes";
-import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
@@ -40,7 +39,6 @@ import {
   GROUPES_VALISE,
   joursDuSejour,
   libelleDuree,
-  libelleSejour,
   lookAChaussuresEtSac,
   looksDeLaValise,
   looksParPiece,
@@ -55,32 +53,27 @@ import {
   pluieAnnoncee,
   pretPourUneValise,
   resumeLook,
-  SEJOURS,
   situationsDuProgramme,
   type LookValise,
   type MeteoJour,
   type TailleBagage,
   type TypeSejour,
-  VISUEL_SEJOUR,
 } from "@/lib/valise";
 import { selectionApercu } from "@/lib/valiseApercu";
 import { pieceLaPlusUtilisee, planningDuProgramme, type CreneauPlanning } from "@/lib/planningValise";
 import { LIBELLE_RAISON, apercuAllegement, avecTenue, joursDeLaPiece, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import {
-  borneFrequence,
+  ACTIVITES,
+  ACTIVITES_MAX,
+  activitesDuProgramme,
+  bagageConseille,
   couvertureMeteo,
   elementProgramme,
-  frequenceAjoutee,
-  libelleFrequence,
   occasionsDuProgramme,
-  occasionsProposees,
-  plafondFrequence,
   programmeDepuisOccasions,
-  programmeParDefaut,
-  SOUS_OCCASIONS,
-  TOUS_LES_ELEMENTS,
-  type ElementProgramme,
+  programmeDesActivites,
+  type ActiviteSejour,
   type ItemProgramme,
 } from "@/lib/programmeValise";
 import { ChoixVille } from "@/components/EtapeLieu";
@@ -208,13 +201,6 @@ const G_CINTRE = svg(
 const G_ETINCELLE = svg(<path d="M12 3.5l1.7 5.3 5.3 1.7-5.3 1.7L12 17.5l-1.7-5.3L5 10.5l5.3-1.7z" {...trait} />, 18);
 const G_LISTE = svg(<path d="M9 7h11M9 12h11M9 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01" {...trait} strokeWidth={1.7} />, 18);
 const G_COCHE = (taille = 12, couleur = "currentColor") => svg(<path d="M5 12.5l4.5 4.5L19 7.5" {...trait} stroke={couleur} strokeWidth={2.2} />, taille);
-const G_CRAYON = svg(
-  <>
-    <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" {...trait} />
-    <path d="M14.5 7.5l3 3" {...trait} />
-  </>,
-  17
-);
 const G_CROIX = svg(<path d="M6 6l12 12M18 6L6 18" {...trait} strokeWidth={1.7} />, 14);
 const G_ECHANGE = svg(<path d="M7 7h11l-3-3M17 17H6l3 3" {...trait} />, 15);
 const G_PLUS = svg(<path d="M12 5v14M5 12h14" {...trait} strokeWidth={1.7} />, 15);
@@ -274,13 +260,34 @@ function CarteInfo({ glyphe, children }: { glyphe: React.ReactNode; children: Re
 
 // ── Écran ────────────────────────────────────────────────────────────────
 
-type Vue = { nom: "etape" } | { nom: "calcul" } | { nom: "resultat" } | { nom: "look"; index: number } | { nom: "piece"; id: number; depuis: Vue };
+type Vue = { nom: "etape" } | { nom: "calcul" } | { nom: "erreur" } | { nom: "resultat" } | { nom: "look"; index: number } | { nom: "piece"; id: number; depuis: Vue };
+
+/** Les pictogrammes des huit activités (maquette V2). */
+/** À quel séjour chaque valise convient (maquette V2). */
+const USAGE_BAGAGE: Record<TailleBagage, string> = {
+  S: "Week-end ou court séjour",
+  M: "Séjour d'une semaine",
+  L: "Long séjour",
+  XL: "Très long séjour",
+};
+
+const GLYPHES_ACTIVITE: Record<ActiviteSejour, React.ReactNode> = {
+  plage: svg(<path d="M3 19c2 0 2-1.5 4.5-1.5S10 19 12 19s2-1.5 4.5-1.5S19 19 21 19M12 4a7 7 0 0 1 7 7H5a7 7 0 0 1 7-7zM12 11v7" {...trait} />, 18),
+  ville: svg(<path d="M4 20V10l5-3v13M9 20V4h7v16M16 20v-9h4v9M3 20h18" {...trait} />, 18),
+  nature: svg(<path d="M12 3l6 9h-3l4 6H5l4-6H6zM12 18v3" {...trait} />, 18),
+  detente: svg(<path d="M5 20l3-8h8l3 8M8 12l-2-5M10 16h4" {...trait} />, 18),
+  soiree: svg(<path d="M8 3h8l-1 6a3 3 0 0 1-6 0zM12 12v8M8.5 21h7" {...trait} />, 18),
+  travail: svg(<path d="M4 8h16v11H4zM9 8V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M4 13h16" {...trait} />, 18),
+  sport: svg(<path d="M6 9v6M18 9v6M3 11v2M21 11v2M6 12h12" {...trait} />, 18),
+  evenement: svg(<path d="M12 4l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 9.3l5-.7z" {...trait} />, 18),
+};
 
 const ETAPES_CALCUL: [React.ReactNode, string][] = [
-  [svg(<path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 18.5z" {...trait} />, 18), "Analyse de la météo"],
-  [G_LISTE, "Prise en compte de ton programme"],
-  [G_CINTRE, "Sélection dans ton dressing"],
-  [G_ETINCELLE, "Optimisation des looks et des pièces"],
+  [svg(<path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 18.5z" {...trait} />, 18), "Analyse des besoins du séjour"],
+  [G_CINTRE, "Sélection des pièces du dressing"],
+  [G_PLUS, "Complétion avec la capsule si nécessaire"],
+  [G_ETINCELLE, "Composition des looks"],
+  [G_LISTE, "Vérification de la capacité de la valise"],
 ];
 
 export default function ValiseScreen() {
@@ -316,26 +323,20 @@ export default function ValiseScreen() {
   const [depart, setDepart] = useState("");
   const [retour, setRetour] = useState("");
   const [bagage, setBagage] = useState<TailleBagage | null>(null);
-  const [sejour, setSejour] = useState<TypeSejour | null>(null);
   /**
-   * LE PROGRAMME (refonte du 04/10/2026) : les occasions retenues et leur fréquence. Tant qu'on n'y a pas touché (`null`),
-   * il suit le séjour ET la durée — la proposition de Capsela (programmeParDefaut) ; dès qu'on le modifie, c'est le sien,
-   * borné par les jours du séjour (un changement de dates ne laisse jamais une fréquence au-dessus du plafond).
+   * LES ACTIVITÉS du séjour (maquette V2, 11/10/2026) : jusqu'à quatre. Elles donnent le programme (programmeDesActivites), que le
+   * moteur reçoit en occasions mères et que le planning jour par jour répartit — le moteur et la phase B sont inchangés.
    */
-  const [programmeManuel, setProgrammeManuel] = useState<ItemProgramme[] | null>(null);
-  const [feuilleOccasion, setFeuilleOccasion] = useState(false);
-
+  const [activites, setActivites] = useState<ActiviteSejour[]>([]);
+  /** Les réponses de la dernière préparation, gardées pour « Réessayer » après un échec. */
+  const [dernieresReponses, setDernieresReponses] = useState<{ rep: Reponses; id: string | null } | null>(null);
 
   const jours = depart && retour && retour >= depart ? joursDuSejour(depart, retour) : [];
+  /** La valise que la durée du séjour conseille (maquette : « Valise M conseillée pour 5 jours »). */
+  const conseille = bagageConseille(Math.max(1, jours.length));
   const dureeOk = jours.length > 0 && dateDe(retour) <= dateDe(plusJours(depart, DUREE_MAX_JOURS - 1));
   const nomVille = ville ? ville.name : villeDuLieu(destination.trim());
-  const programme: ItemProgramme[] = programmeManuel
-    ? programmeManuel.flatMap((it) => {
-        const e = elementProgramme(it.id);
-        return e ? [{ id: it.id, frequence: borneFrequence(it.frequence, e.creneau, jours.length || 1) }] : [];
-      })
-    : programmeParDefaut(sejour, jours.length || 1);
-  const modifierProgramme = (f: (p: ItemProgramme[]) => ItemProgramme[]) => setProgrammeManuel(f(programme));
+  const programme: ItemProgramme[] = programmeDesActivites(activites, jours.length || 1);
 
   /**
    * LA MÉTÉO SUR PLACE, DÈS L'ÉTAPE 1 — seulement quand la prévision peut la
@@ -379,7 +380,7 @@ export default function ValiseScreen() {
   const amplitudeEtape1 = meteosEtape1 ? amplitudePrevue(meteosEtape1) : null;
 
   const etapeValide =
-    etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : etape === 3 ? sejour != null : true;
+    etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : activites.length > 0;
 
   const zoneScroll = useRef<HTMLDivElement | null>(null);
   const [onglet, setOnglet] = useState<Onglet>("ensemble");
@@ -387,8 +388,6 @@ export default function ValiseScreen() {
   useEffect(() => {
     zoneScroll.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [etape, cleVue, onglet]);
-
-  const choisirSejour = (t: TypeSejour) => setSejour(t);
 
   /**
    * LA GÉNÉRATION, EN QUATRE ÉTAPES RÉELLES — chacune cochée quand elle est
@@ -421,6 +420,16 @@ export default function ValiseScreen() {
     programme?: ItemProgramme[];
   };
   const lancer = async (rep: Reponses, idCible: string | null) => {
+    setDernieresReponses({ rep, id: idCible });
+    try {
+      await calculer(rep, idCible);
+    } catch (err) {
+      // Un échec (réseau, calcul) ne perd rien : les réponses sont gardées, l'écran propose de relancer.
+      console.error("[valise] préparation interrompue", err);
+      if (actif.current) setVue({ nom: "erreur" });
+    }
+  };
+  const calculer = async (rep: Reponses, idCible: string | null) => {
     const joursRep = joursDuSejour(rep.depart, rep.retour);
     const cle = rep.ville ? `${rep.ville.lat},${rep.ville.lon}` : villeDuLieu(rep.destination).toLowerCase();
     setFaites(0);
@@ -438,18 +447,23 @@ export default function ValiseScreen() {
     const situations = situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions);
     await pause(380);
     if (!actif.current) return;
-    setFaites(2);
     await pause(30);
     const r0 = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
+    await pause(380);
+    if (!actif.current) return;
+    setFaites(2);
     // Le dressing ne couvre pas toutes les occasions : la capsule complète la valise, ses pièces marquées « à ajouter » (completerAvecCapsule).
     const r = completerAvecCapsule(dressing, defaultCapsule, situations, r0, capaciteDe(rep.bagage), generer);
     await pause(380);
     if (!actif.current) return;
     setFaites(3);
-    await pause(380);
+    await pause(300);
     if (!actif.current) return;
     setFaites(4);
     await pause(260);
+    if (!actif.current) return;
+    setFaites(5);
+    await pause(200);
     if (!actif.current) return;
     const id = idCible ?? nouvelIdLocal();
     sauver({
@@ -474,13 +488,13 @@ export default function ValiseScreen() {
     setOnglet("ensemble");
     setVue({ nom: "resultat" });
   };
-  const preparer = (passer: boolean) => {
+  const preparer = () => {
     if (!bagage) return;
     // Les occasions que reçoit le moteur sont les MÈRES du programme (occasionsDuProgramme) : une sous-occasion hérite des
-    // règles de son occasion mère, le moteur ne connaît pas autre chose. Programme vide : le repli d'avant (le quotidien).
-    const retenu = passer ? [] : programme;
+    // règles de son occasion mère, le moteur ne connaît pas autre chose.
+    const retenu = programme;
     void lancer(
-      { destination, ville, depart, retour, bagage, sejour, occasions: occasionsRetenues(occasionsDuProgramme(retenu), sejour), programme: retenu },
+      { destination, ville, depart, retour, bagage, sejour: null, occasions: occasionsRetenues(occasionsDuProgramme(retenu), null), programme: retenu },
       idEnModification
     );
   };
@@ -515,8 +529,7 @@ export default function ValiseScreen() {
     setDepart("");
     setRetour("");
     setBagage(null);
-    setSejour(null);
-    setProgrammeManuel(null);
+    setActivites([]);
     setVue({ nom: "etape" });
     setEtape(1);
   };
@@ -535,9 +548,8 @@ export default function ValiseScreen() {
     setDepart(valise.depart);
     setRetour(valise.retour);
     setBagage(valise.bagage);
-    setSejour(valise.sejour);
-    // Une valise d'avant la refonte n'a que ses occasions mères : une entrée par occasion, sans fréquence inventée.
-    setProgrammeManuel(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1));
+    // Les activités qu'évoque le programme gardé ; une valise d'avant la refonte n'a que ses occasions mères.
+    setActivites(activitesDuProgramme(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1)));
     setIdEnModification(valise.id);
     setVue({ nom: "etape" });
     setEtape(1);
@@ -584,7 +596,7 @@ export default function ValiseScreen() {
       </div>
       {questions && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
-          <FilEtapes total={5} courante={etape - 1} />
+          <FilEtapes total={3} courante={etape - 1} />
         </div>
       )}
 
@@ -642,8 +654,9 @@ export default function ValiseScreen() {
         {/* ── 1. DESTINATION ── */}
         {questions && etape === 1 && (
           <>
-            <Surtitre>Ta valise · 1 / 5</Surtitre>
-            <TitreEtape a="Où" b="pars-tu ?" />
+            <Surtitre>Ta valise · 1 / 3</Surtitre>
+            <TitreEtape a="Ton" b="voyage" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Où pars-tu et quand ?</div>
             {/* LE MÊME CHOIX DE VILLE QUE « PLANIFIER UNE TENUE » (08/10/2026, demandé) : résultats lisibles, villes récentes communes,
                 position à la demande, carte de la destination avec « Modifier ». */}
             <ChoixVille
@@ -742,17 +755,18 @@ export default function ValiseScreen() {
         {/* ── 2. VALISE ── */}
         {questions && etape === 2 && (
           <>
-            <Surtitre>Ta valise · 2 / 5</Surtitre>
-            <TitreEtape a="Quelle valise" b="prends-tu ?" />
+            <Surtitre>Ta valise · 2 / 3</Surtitre>
+            <TitreEtape a="Quelle valise" b="emportes-tu ?" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Nous adaptons ta sélection à sa capacité.</div>
             <div className="grid grid-cols-2 gap-[10px] mt-5">
-              {BAGAGES.map(([t, libelle, cap], i) => {
+              {BAGAGES.map(([t, , cap], i) => {
                 const on = bagage === t;
                 return (
                   <button
                     key={t}
                     onClick={() => setBagage(t)}
                     aria-pressed={on}
-                    aria-label={`${t}, ${libelle}, environ ${cap} pièces`}
+                    aria-label={`${t}, ${USAGE_BAGAGE[t]}, environ ${cap} pièces${conseille === t ? ", conseillée" : ""}`}
                     className={
                       "relative flex flex-col text-left rounded-feuille px-[14px] pt-[14px] pb-[13px] cursor-pointer border transition-colors " +
                       (on ? "bg-warm-bg border-terracotta" : "bg-card border-border")
@@ -767,270 +781,77 @@ export default function ValiseScreen() {
                     <span className={"flex-1 flex items-center justify-center " + (on ? "text-terracotta" : "text-muted-3")} style={{ minHeight: 56 }}>
                       {glypheValise(26 + i * 7)}
                     </span>
-                    <span className="block text-[13px] text-ink leading-[1.25]">{libelle}</span>
-                    <span className="block text-[11px] text-muted mt-[2px]">environ {cap} pièces</span>
+                    <span className="block text-[13px] font-semibold text-ink leading-[1.25]">{cap} pièces</span>
+                    <span className="block text-[11px] text-muted mt-[2px]">{USAGE_BAGAGE[t]}</span>
+                    {conseille === t && !on && <span className="absolute top-[14px] right-[12px] text-[10.5px] font-semibold text-terracotta-deep">Conseillée</span>}
                   </button>
                 );
               })}
             </div>
-            <div className="text-[12px] text-muted leading-[1.5] mt-4">
-              La place tient compte de l&apos;encombrement : chaussures et manteaux en prennent plus qu&apos;un t-shirt.
-              <br />
-              Capsela cherche à maximiser tes looks avec l&apos;espace disponible.
+            {jours.length > 0 && dureeOk && (
+              <div className="text-[12px] text-muted leading-[1.5] mt-4">
+                Valise {conseille} conseillée pour {jours.length} {jours.length > 1 ? "jours" : "jour"}.
+              </div>
+            )}
+            <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">
+              Ces quantités sont indicatives : la place tient compte de l&apos;encombrement (chaussures et manteaux en prennent plus qu&apos;un t-shirt). Tu pourras ajuster ta sélection ensuite.
             </div>
           </>
         )}
 
-        {/* ── 3. TYPE DE SÉJOUR ── */}
+        {/* ── 3. L'ESPRIT DU SÉJOUR ── maquette V2 (11/10/2026) : huit activités, quatre au plus ; elles se traduisent en programme
+            (programmeDesActivites), donc en occasions mères pour le moteur. */}
         {questions && etape === 3 && (
           <>
-            <Surtitre>Ta valise · 3 / 5</Surtitre>
-            <TitreEtape a="Quel type" b="de séjour ?" />
-            <div className="grid grid-cols-2 gap-[10px] mt-5">
-              {SEJOURS.filter(([t]) => VISUEL_SEJOUR[t]).map(([t, libelle]) => {
-                const on = sejour === t;
+            <Surtitre>Ta valise · 3 / 3</Surtitre>
+            <TitreEtape a="Quel est l'esprit" b="de ton séjour ?" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Sélectionne jusqu&apos;à {ACTIVITES_MAX} activités.</div>
+            <div className="grid grid-cols-2 gap-2 mt-5" role="group" aria-label="Activités du séjour">
+              {ACTIVITES.map((a) => {
+                const on = activites.includes(a.id);
+                const bloquee = !on && activites.length >= ACTIVITES_MAX;
                 return (
                   <button
-                    key={t}
-                    onClick={() => choisirSejour(t)}
+                    key={a.id}
+                    onClick={() => setActivites((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : l.length >= ACTIVITES_MAX ? l : [...l, a.id]))}
                     aria-pressed={on}
-                    className={"relative text-left rounded-carte overflow-hidden cursor-pointer border bg-card transition-colors " + (on ? "border-terracotta" : "border-border")}
-                    style={{ borderWidth: on ? 1.5 : 1 }}
+                    disabled={bloquee}
+                    className={
+                      "flex items-center gap-[10px] text-left rounded-tuile px-[14px] border cursor-pointer transition-colors disabled:cursor-default " +
+                      (on ? "bg-terracotta-deep border-terracotta-deep text-[#FBF3EA]" : "bg-card border-border text-ink")
+                    }
+                    style={{ minHeight: 48, opacity: bloquee ? 0.5 : 1 }}
                   >
-                    {/* Visuel décoratif : le libellé dessous dit le séjour. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={VISUEL_SEJOUR[t]} alt="" loading="lazy" className="block w-full object-cover" style={{ height: "clamp(72px, 22vw, 92px)" }} />
-                    {on && (
-                      <span className="absolute top-[7px] right-[7px]">
-                        <Coche />
-                      </span>
-                    )}
-                    <span className={"block px-[11px] py-[9px] text-[12px] leading-[1.3] " + (on ? "text-terracotta-deep" : "text-ink")}>{libelle}</span>
+                    <span className={"flex-shrink-0 " + (on ? "text-[#FBF3EA]" : "text-terracotta-deep")}>{GLYPHES_ACTIVITE[a.id]}</span>
+                    <span className="text-[12.5px] leading-[1.25]">{a.libelle}</span>
                   </button>
                 );
               })}
             </div>
-            <div className="mt-[10px]">
-              <button
-                onClick={() => choisirSejour("autre")}
-                aria-pressed={sejour === "autre"}
-                className={
-                  "inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12px] cursor-pointer border transition-colors " +
-                  (sejour === "autre" ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-ink")
-                }
-                style={{ minHeight: 44 }}
-              >
-                {sejour === "autre" ? G_COCHE(13) : G_PLUS}
-                Autre
-              </button>
+            <div className="text-[12px] text-muted mt-3" aria-live="polite">
+              {activites.length} sur {ACTIVITES_MAX} {activites.length > 1 ? "choisies" : "choisie"}
             </div>
           </>
         )}
 
-        {/* ── 4. PROGRAMME ── « Capsela propose, tu corriges » (refonte du 04/10/2026) : les occasions retenues pour ce
-            séjour, chacune avec sa fréquence — des jours, des soirs, des trajets —, que le jour et le soir d'une même
-            journée peuvent se partager. Les dix occasions de Capsela restent toutes à portée, derrière « Ajouter une
-            occasion ». */}
-        {questions && etape === 4 && (
-          <>
-            <Surtitre>Ta valise · 4 / 5</Surtitre>
-            <TitreEtape a="Qu'est-ce" b="qui est prévu ?" />
-            <div className="t-chapeau text-muted-3 mt-2">Capsela a préparé une première sélection selon ton séjour. Tu peux la modifier.</div>
-
-            {programme.length === 0 ? (
-              <div className="mt-4">
-                <CarteInfo glyphe={G_AMPOULE}>Rien n&apos;est retenu : Capsela préparera des tenues de tous les jours.</CarteInfo>
-              </div>
-            ) : (
-              <ul className="flex flex-col gap-[8px] mt-4 list-none p-0" aria-label="Programme du séjour">
-                {programme.map((it) => {
-                  const e = elementProgramme(it.id);
-                  if (!e) return null;
-                  const plafond = plafondFrequence(e.creneau, jours.length || 1);
-                  const bouton = "w-[44px] h-[44px] flex items-center justify-center text-terracotta cursor-pointer disabled:opacity-30 disabled:cursor-default";
-                  return (
-                    <li key={it.id}>
-                      <Card rayon="tuile" className="flex items-center gap-[10px] pl-[12px] pr-[2px]">
-                        <span className="flex-shrink-0 text-terracotta">
-                          <GlypheOccasion occasion={e.mere} taille={18} />
-                        </span>
-                        <span className="flex-1 min-w-0 text-[13px] text-ink leading-[1.25] py-[10px]">{e.libelle}</span>
-                        <span className="flex items-center flex-shrink-0">
-                          <button
-                            onClick={() => modifierProgramme((p) => p.map((x) => (x.id === it.id ? { ...x, frequence: it.frequence - 1 } : x)))}
-                            disabled={it.frequence <= 1}
-                            aria-label={`Une fois de moins : ${e.libelle}`}
-                            className={bouton}
-                          >
-                            <span aria-hidden="true">−</span>
-                          </button>
-                          <span className="text-[12px] text-ink text-center min-w-[58px]" aria-live="polite">
-                            {libelleFrequence(e.creneau, it.frequence)}
-                          </span>
-                          <button
-                            onClick={() => modifierProgramme((p) => p.map((x) => (x.id === it.id ? { ...x, frequence: it.frequence + 1 } : x)))}
-                            disabled={it.frequence >= plafond}
-                            aria-label={`Une fois de plus : ${e.libelle}`}
-                            className={bouton}
-                          >
-                            <span aria-hidden="true">+</span>
-                          </button>
-                        </span>
-                        <button
-                          onClick={() => modifierProgramme((p) => p.filter((x) => x.id !== it.id))}
-                          aria-label={`Retirer ${e.libelle}`}
-                          className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer"
-                        >
-                          {G_CROIX}
-                        </button>
-                      </Card>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <div className="text-[11px] text-muted leading-[1.45] mt-[10px]">
-              Un jour peut avoir plusieurs occasions : les jours et les soirs se comptent à part, ils peuvent se chevaucher.
+        {/* ── LA PRÉPARATION N'A PAS ABOUTI ── les réponses sont gardées : on relance sans rien ressaisir. */}
+        {vue.nom === "erreur" && (
+          <div className="mt-2">
+            <Surtitre>Un instant</Surtitre>
+            <TitreEtape a="La préparation" b="n'a pas abouti" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">
+              Tes réponses sont gardées : destination, dates, valise et activités. Tu peux relancer sans rien ressaisir.
             </div>
-
-            {/* Les propositions en second : un tap les ajoute. */}
-            {occasionsProposees(sejour, programme).length > 0 && (
-              <div className="flex flex-wrap gap-[8px] mt-4">
-                {occasionsProposees(sejour, programme).map((e) => (
-                  <button
-                    key={e.id}
-                    onClick={() => modifierProgramme((p) => [...p, { id: e.id, frequence: frequenceAjoutee(e, jours.length || 1) }])}
-                    className="inline-flex items-center gap-[7px] rounded-full border border-border bg-card px-[14px] text-[12px] text-ink cursor-pointer"
-                    style={{ minHeight: 44 }}
-                  >
-                    <span className="text-terracotta">{G_PLUS}</span>
-                    {e.libelle}
-                  </button>
-                ))}
-              </div>
-            )}
-            <button onClick={() => setFeuilleOccasion(true)} className="mt-3 text-[12px] text-terracotta cursor-pointer min-h-[44px]">
-              + Ajouter une occasion
-            </button>
-          </>
+          </div>
         )}
-
-        {/* ── 5. TON PROGRAMME EST PRÊT ── la synthèse avant la génération : chaque bloc se corrige d'un tap. */}
-        {questions && etape === 5 && (() => {
-          const meteo = couvertureMeteo(meteosEtape1 ?? jours.map((j) => ({ jour: j, temp: 0, label: "", prevue: false })));
-          const [, libelleBagageTexte, capaciteTexte] = BAGAGES.find(([t]) => t === bagage) ?? ["S", "", 0];
-          const bloc = (etapeCible: number, titre: string, corps: React.ReactNode) => (
-            <Card rayon="tuile" className="px-[14px] py-[12px]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="t-label text-muted">{titre}</div>
-                  <div className="text-[13px] text-ink leading-[1.4] mt-[4px]">{corps}</div>
-                </div>
-                <button onClick={() => setEtape(etapeCible)} aria-label={`Modifier : ${titre.toLowerCase()}`} className="w-[44px] h-[44px] -mr-[8px] -mt-[8px] flex items-center justify-center flex-shrink-0 text-terracotta cursor-pointer">
-                  {G_CRAYON}
-                </button>
-              </div>
-            </Card>
-          );
-          return (
-            <>
-              <Surtitre>Ta valise · 5 / 5</Surtitre>
-              <TitreEtape a="Ton programme" b="est prêt" />
-              <div className="flex flex-col gap-[8px] mt-5">
-                {bloc(1, "Destination", nomVille || destination)}
-                {bloc(1, "Dates", <>{libellePeriode(depart, retour)} · {libelleDuree(jours.length)}</>)}
-                {bloc(
-                  1,
-                  "Météo",
-                  <>
-                    {meteo.avecPrevision.map((p) => (
-                      <span key={p} className="block">
-                        {p} · {amplitudeEtape1 ? libelleAmplitude(amplitudeEtape1) + " · " : ""}prévisions disponibles
-                      </span>
-                    ))}
-                    {meteo.sansPrevision.map((p) => (
-                      <span key={p} className="block text-muted-3">
-                        {p} · prévisions météo non disponibles
-                      </span>
-                    ))}
-                    {meteo.sansPrevision.length > 0 && (
-                      <span className="block text-[12px] text-muted mt-[3px]">Capsela adapte les looks selon la saison et le type de séjour.</span>
-                    )}
-                  </>
-                )}
-                {sejour && bloc(3, "Type de séjour", libelleSejour(sejour))}
-                {bagage && bloc(2, "Valise", <>{bagage} · {libelleBagageTexte} · environ {capaciteTexte} pièces</>)}
-                {bloc(
-                  4,
-                  "Programme",
-                  programme.length ? (
-                    programme.map((it) => {
-                      const e = elementProgramme(it.id);
-                      return e ? (
-                        <span key={it.id} className="block">
-                          {e.libelle} · {libelleFrequence(e.creneau, it.frequence)}
-                        </span>
-                      ) : null;
-                    })
-                  ) : (
-                    "Des tenues de tous les jours"
-                  )
-                )}
-                <Card rayon="tuile" className="px-[14px] py-[12px]">
-                  <div className="t-label text-muted">Dressing utilisé</div>
-                  <div className="text-[13px] text-ink leading-[1.4] mt-[4px]">Ton dressing — {dressing.length} {dressing.length > 1 ? "pièces" : "pièce"}</div>
-                </Card>
-              </div>
-            </>
-          );
-        })()}
-
-        {/* Les occasions à ajouter : les sous-occasions du voyage, puis les dix occasions de Capsela — aucune n'est retirée. */}
-        <BottomSheet title="Ajouter une occasion" open={feuilleOccasion} onClose={() => setFeuilleOccasion(false)}>
-          {(
-            [
-              ["Pendant le séjour", SOUS_OCCASIONS],
-              ["Les occasions de Capsela", TOUS_LES_ELEMENTS.filter((e) => e.generique)],
-            ] as [string, ElementProgramme[]][]
-          ).map(([titre, liste]) => {
-            const dispo = liste.filter((e) => !programme.some((p) => p.id === e.id));
-            if (!dispo.length) return null;
-            return (
-              <section key={titre} className="mb-4">
-                <h3 className="t-surtitre text-muted">{titre}</h3>
-                <div className="flex flex-col gap-2 mt-2">
-                  {dispo.map((e) => (
-                    <button
-                      key={e.id}
-                      onClick={() => {
-                        modifierProgramme((p) => [...p, { id: e.id, frequence: frequenceAjoutee(e, jours.length || 1) }]);
-                        setFeuilleOccasion(false);
-                      }}
-                      className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile px-[12px] cursor-pointer"
-                      style={{ minHeight: 48 }}
-                    >
-                      <span className="flex-shrink-0 text-terracotta">
-                        <GlypheOccasion occasion={e.mere} taille={18} />
-                      </span>
-                      <span className="flex-1 min-w-0 text-[13px] text-ink">{e.libelle}</span>
-                      <span className="text-terracotta flex-shrink-0">{G_PLUS}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </BottomSheet>
 
         {/* ── 5. GÉNÉRATION ── */}
         {vue.nom === "calcul" && (
           <div className="flex flex-col justify-center" style={{ minHeight: "62vh" }} aria-live="polite">
             <div className="t-titre-ecran text-ink text-center">
-              Je prépare <span className="italic text-terracotta">ta valise…</span>
+              Je prépare <span className="italic text-terracotta">ta valise</span>
             </div>
-            <div className="text-[13px] text-muted leading-[1.5] mt-3 text-center max-w-[300px] mx-auto">
-              Capsela compose une sélection sur mesure en fonction de ton séjour et de ton dressing.
-            </div>
+            <div className="text-[13px] text-muted leading-[1.5] mt-3 text-center max-w-[300px] mx-auto">À partir de ton dressing et de ta capsule.</div>
             <ul className="flex flex-col gap-[14px] mt-8 mx-auto" style={{ width: "min(100%, 290px)" }}>
               {ETAPES_CALCUL.map(([glyphe, libelle], i) => {
                 const faite = i < faites;
@@ -1048,7 +869,8 @@ export default function ValiseScreen() {
                 );
               })}
             </ul>
-            <div className="h-[3px] rounded-full mt-9 mx-auto overflow-hidden" style={{ width: "min(100%, 290px)", background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
+            <div className="text-center text-[12px] text-muted mt-6">Garde l&apos;appli ouverte quelques secondes.</div>
+            <div className="h-[3px] rounded-full mt-6 mx-auto overflow-hidden" style={{ width: "min(100%, 290px)", background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
               <div className="h-full bg-terracotta-deep transition-[width] duration-300" style={{ width: `${(faites / ETAPES_CALCUL.length) * 100}%` }} />
             </div>
           </div>
@@ -1083,29 +905,27 @@ export default function ValiseScreen() {
 
       {questions && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
-          <Button
-            onClick={() => (etape < 5 ? etapeValide && setEtape(etape + 1) : preparer(false))}
-            disabled={!etapeValide}
-          >
-            {etape < 5 ? "Continuer" : "Préparer ma valise"}
+          <Button onClick={() => (etape < 3 ? etapeValide && setEtape(etape + 1) : preparer())} disabled={!etapeValide}>
+            {etape < 3 ? "Continuer" : "Générer ma valise"}
           </Button>
-          {etape === 4 && (
-            // Passer : la proposition de Capsela, telle quelle — la synthèse la montre avant la génération.
-            <button
-              onClick={() => {
-                setProgrammeManuel(null);
-                setEtape(5);
-              }}
-              className="text-[12px] text-terracotta cursor-pointer py-[10px]"
-            >
-              Passer cette étape
-            </button>
-          )}
-          {etape === 5 && (
-            <button onClick={() => setEtape(1)} className="text-[12px] text-terracotta cursor-pointer py-[10px]">
-              Modifier mes choix
-            </button>
-          )}
+          {etape === 3 && activites.length === 0 && <div className="text-center text-[12px] text-muted min-h-[16px]">Choisis au moins une activité.</div>}
+        </div>
+      )}
+
+      {vue.nom === "erreur" && (
+        <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
+          <Button onClick={() => dernieresReponses && void lancer(dernieresReponses.rep, dernieresReponses.id)} disabled={!dernieresReponses}>
+            Réessayer
+          </Button>
+          <button
+            onClick={() => {
+              setVue({ nom: "etape" });
+              setEtape(1);
+            }}
+            className="text-[12px] text-terracotta cursor-pointer py-[10px]"
+          >
+            Modifier mes réponses
+          </button>
         </div>
       )}
 

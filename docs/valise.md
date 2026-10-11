@@ -138,6 +138,18 @@ La valise ne puise que dans le dressing : quand il la limite, l'écran le dit et
 - **Retour de l'ajout** : l'ajout revient à la valise (`openAddForCategory`, `openAddEtRevenir`). Une pièce ajoutée depuis le calcul se reconnaît (`dressingIds`, gardé dans `calcul`) : « Une nouvelle pièce dans ton dressing · Recomposer ma valise », qui relance le calcul avec les mêmes réponses, sur la même valise.
 - **Onglet Pièces** : « Une pièce qui n'est pas encore dans ton dressing ? L'ajouter à mon dressing », distinct de « Ajouter une pièce de ton dressing » (qui met une pièce du dressing dans la valise).
 
+## 8 quinquies. Refonte « Préparer ma valise V2 » — phase 1, le parcours (11/10/2026)
+
+Demandé : « il faut suivre les maquettes » (maquette « Capsela — Préparer ma valise V2 », 19 états). Livré en phases ; la phase 1 est le PARCOURS.
+
+- **Trois étapes au lieu de cinq** : « Ton voyage » (destination et dates), « Quelle valise emportes-tu ? », « Quel est l'esprit de ton séjour ? ». Le type de séjour, l'écran du programme (fréquences) et la synthèse sont retirés du parcours.
+- **Étape 2** : « 8 / 12 / 18 / 24 pièces » et l'usage de chaque valise (week-end, semaine, long, très long séjour), « Conseillée » selon la durée (`bagageConseille` : ≤ 3 jours S, ≤ 8 M, ≤ 15 L, au-delà XL — ARBITRAGE ÉDITORIAL).
+- **Étape 3** : huit activités (Plage, Ville, Nature, Détente, Soirée, Travail, Sport, Événement spécial), quatre au plus. **Elles pilotent toujours le moteur** : `programmeDesActivites` les traduit en entrées du programme (donc en occasions mères) avec le trajet ; le planning jour par jour et les contraintes de pool de la phase B restent. Les parts des jours par activité sont un ARBITRAGE ÉDITORIAL à revoir sur de vrais voyages. Le programme n'est plus ajustable à la main dans le parcours : la personne choisit des activités, Capsela propose les fréquences.
+- **Génération** en cinq étapes (« Analyse des besoins du séjour », « Sélection des pièces du dressing », « Complétion avec la capsule si nécessaire », « Composition des looks », « Vérification de la capacité de la valise »). Les deux premières correspondent à du calcul réel (météo et situations, `composerValise`), la troisième à `completerAvecCapsule` ; les deux dernières sont affichées un court instant, le calcul des looks et de la capacité étant compris dans `composerValise`.
+- **Erreur** : « La préparation n'a pas abouti », réponses gardées, « Réessayer » et « Modifier mes réponses ».
+- **Écarts assumés avec la maquette** : le champ « Un besoin particulier ? » n'est pas repris (aucune donnée ne l'utiliserait) ; la carte « Ta valise sera composée avec les N pièces de ton dressing » reste à l'étape 1 (chemin vers l'ajout de pièces) ; les dates restent les sélecteurs natifs ; le seuil de 8 pièces (§ 8 ter) est inchangé.
+- **À venir** : phase 2, le résultat (en-tête « Ma valise », onglets Aperçu / Looks / Pièces / Checklist, collages de looks, filtres Toutes / Ton dressing / Capsule) ; phase 3, « Vérifier ma valise », « Ta valise est prête ! » et la liste des valises.
+
 ## 8 quater. La capsule complète la valise quand le dressing ne suffit pas (11/10/2026)
 
 Demandé : « capsule dans la valise si les pièces du dressing ne permettent pas de compléter une valise ». Arbitré en deux temps le même jour : d'abord les pièces de capsule en compléments « à ajouter » hors de la valise (option A), puis, à la demande de la propriétaire, **dans la valise, mais seulement quand le dressing ne couvre pas le séjour**. [DÉCIDÉ]
