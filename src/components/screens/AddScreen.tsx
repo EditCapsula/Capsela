@@ -4,6 +4,7 @@ import { messageCadrage } from "@/lib/cadragePhoto";
 import { estPhotoDetouree } from "@/lib/dressing";
 import { aDesManches, MANCHES } from "@/lib/manches";
 import { aUnMotif, MOTIFS } from "@/lib/motifs";
+import { confierPhoto } from "@/lib/importTenue";
 import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import {
@@ -214,9 +215,16 @@ export default function AddScreen() {
   );
   // Les occasions montrent d'abord les recommandées ; la liste complète s'ouvre sur place.
   const [toutesOccasions, setToutesOccasions] = useState(false);
+  // Le fichier de la photo choisie : de quoi détecter toutes ses pièces (« Importer une tenue ») si elle en montre plusieurs.
+  const photoChoisie = useRef<File | null>(null);
+  const [aPhotoChoisie, setAPhotoChoisie] = useState(false);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) actions.uploadAddPhoto(file);
+    if (file) {
+      photoChoisie.current = file;
+      setAPhotoChoisie(true);
+      actions.uploadAddPhoto(file);
+    }
     // Sans réinitialisation, reprendre DEUX FOIS la même photo n'émettrait pas de second `change`.
     e.target.value = "";
     setSourcePhoto(false);
@@ -438,6 +446,18 @@ export default function AddScreen() {
           <div className="mt-[10px] rounded-tuile bg-warm-bg border border-sand-border px-4 py-[12px]" role="status">
             <div className="text-[13px] text-ink font-medium leading-[1.35]">{messageCadrage(state.addPhotoCadrage)!.titre}</div>
             <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">{messageCadrage(state.addPhotoCadrage)!.texte}</div>
+            {aPhotoChoisie && (state.addPhotoCadrage === "portee" || state.addPhotoCadrage === "plusieurs") && (
+              <button
+                type="button"
+                onClick={() => {
+                  confierPhoto(photoChoisie.current);
+                  actions.openImporterTenue();
+                }}
+                className="mt-[10px] min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer"
+              >
+                Détecter toutes les pièces de la photo
+              </button>
+            )}
           </div>
         )}
 
