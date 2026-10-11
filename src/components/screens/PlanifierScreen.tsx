@@ -1525,7 +1525,8 @@ export default function PlanifierScreen() {
 
             {/* TES PROCHAINS LOOKS : les prochains sont déjà dans les cartes ci-dessus — ne pas les répéter. Ici, sans
                 rien de créé, une phrase ; sinon, ce qui est passé (priorité 4), deux au plus. */}
-            {nbPlanifications === 0 ? (
+            {/* Les looks passés sont des TENUES planifiées : ils n'ont pas leur place sous l'onglet Valise (11/10/2026, signalé). */}
+            {hub !== "tenue" ? null : nbPlanifications === 0 ? (
               <div className="mt-[30px]">
                 <Surtitre>Tes prochains looks</Surtitre>
                 <div className="text-[13px] text-muted leading-[1.5] mt-2">Tes prochains looks apparaîtront ici.</div>

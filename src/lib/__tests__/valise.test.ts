@@ -7,6 +7,8 @@ import {
   MINIMUM_PIECES_VALISE,
   pretPourUneValise,
   categoriesPourCompleter,
+  completerAvecCapsule,
+  poolDeLaValise,
   conseilMeteo,
   occasionsCouvertes,
   occasionsDeLaPiece,
@@ -296,16 +298,132 @@ describe("categoriesPourCompleter — dire quoi ajouter au dressing, sans l'inve
   it("les catégories que le moteur a dû prendre dans la capsule", () => {
     const gen: Generateur = (pool, s) =>
       s.occasion === "soiree" && pool.some((p) => p.id === 60) ? { ids: [60, 7], elargie: false } : { ids: [1, 4, 7], elargie: false };
-    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([{ occasion: "soiree", categories: ["robe"], capacite: false }]);
+    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([
+      { occasion: "soiree", categories: ["robe"], pieces: [capsule[0]], capacite: false },
+    ]);
+  });
+
+  it("les pièces rendues sont celles de la capsule, jamais celles du dressing — elles ne sont pas dans la valise", () => {
+    const gen: Generateur = (pool, s) =>
+      s.occasion === "soiree" && pool.some((p) => p.id === 60) ? { ids: [60, 7], elargie: false } : { ids: [1, 4, 7], elargie: false };
+    const [m] = categoriesPourCompleter(dressing, capsule, situations, [1], gen);
+    expect(m.pieces.map((p) => p.id)).toEqual([60]);
+    expect(m.pieces.every((p) => !dressing.some((d) => d.id === p.id))).toBe(true);
   });
 
   it("look possible avec le dressing seul : c'est la place qui a manqué, pas une pièce", () => {
     const gen: Generateur = () => ({ ids: [1, 4, 7], elargie: false });
-    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([{ occasion: "soiree", categories: [], capacite: true }]);
+    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([{ occasion: "soiree", categories: [], pieces: [], capacite: true }]);
   });
 
   it("une occasion n'est dite qu'une fois ; rien quand le moteur ne trouve rien", () => {
     expect(categoriesPourCompleter(dressing, capsule, situations, [1], () => null)).toEqual([]);
+  });
+});
+
+describe("completerAvecCapsule — la capsule entre dans la valise seulement quand le dressing ne suffit pas", () => {
+  const situations = situationsDuSejour(["quotidien", "soiree"], [meteo("2026-10-16")]);
+  const capsule = [piece(60, "robe")];
+  const dressing = [piece(1, "haut"), piece(4, "pantalon"), piece(7, "chaussures")];
+  const dressingSeul = { pieceIds: [1, 4, 7], looks: [{ ids: [1, 4, 7], situations: [0], elargie: false }], situationsSansLook: [1] };
+  const gen: Generateur = (pool, s) =>
+    s.occasion === "soiree" && pool.some((p) => p.id === 60) ? { ids: [60, 7], elargie: false } : { ids: [1, 4, 7], elargie: false };
+
+  it("une occasion que le dressing ne couvre pas : la pièce de capsule entre, marquée suggestion, et l'occasion est couverte", () => {
+    const r = completerAvecCapsule(dressing, capsule, situations, dressingSeul, 22, gen);
+    expect(r.suggestionIds).toEqual([60]);
+    expect(r.pieceIds).toContain(60);
+    expect(r.situationsSansLook).toEqual([]);
+  });
+
+  it("un dressing qui couvre tout : rien n'est ajouté", () => {
+    const complet = { ...dressingSeul, looks: [...dressingSeul.looks, { ids: [1, 4, 7], situations: [1], elargie: false }], situationsSansLook: [] };
+    const r = completerAvecCapsule(dressing, capsule, situations, complet, 22, gen);
+    expect(r.suggestionIds).toEqual([]);
+    expect(r.pieceIds).toEqual([1, 4, 7]);
+  });
+
+  it("jamais au-delà de la capacité : la suggestion qui ne tient pas n'entre pas", () => {
+    const r = completerAvecCapsule(dressing, capsule, situations, dressingSeul, 7, gen);
+    expect(r.suggestionIds).toEqual([]);
+    expect(r.pieceIds).toEqual([1, 4, 7]);
+  });
+
+  it("le dressing seul compose le look : c'est la place qui manque, la capsule n'ajoute rien", () => {
+    const r = completerAvecCapsule(dressing, capsule, situations, dressingSeul, 22, () => ({ ids: [1, 4, 7], elargie: false }));
+    expect(r.suggestionIds).toEqual([]);
+  });
+
+  it("sans capsule : inchangé ; et le pool de la valise ne reprend que ses suggestions", () => {
+    expect(completerAvecCapsule(dressing, [], situations, dressingSeul, 22, gen).suggestionIds).toEqual([]);
+    expect(poolDeLaValise(dressing, undefined, capsule)).toBe(dressing);
+    expect(poolDeLaValise(dressing, [60], [...capsule, piece(61, "veste")]).map((p) => p.id)).toEqual([1, 4, 7, 60]);
+  });
+});
+
+describe("completerAvecCapsule — jamais de doublon redondant", () => {
+  const situations = situationsDuSejour(["quotidien", "soiree", "evenement_perso"], [meteo("2026-10-16")]);
+  const capsule = [piece(60, "robe"), piece(61, "robe")];
+  const dressing = [piece(1, "haut"), piece(4, "pantalon"), piece(7, "chaussures")];
+  const r = { pieceIds: [1, 4, 7], looks: [{ ids: [1, 4, 7], situations: [0], elargie: false }], situationsSansLook: [1, 2] };
+  const gen: Generateur = (pool, s) =>
+    s.occasion === "quotidien" ? { ids: [1, 4, 7], elargie: false } : pool.some((p) => p.id === 60) ? { ids: [60, 7], elargie: false } : pool.some((p) => p.id === 61) ? { ids: [61, 7], elargie: false } : null;
+
+  it("une pièce de capsule déjà retenue pour une occasion est réutilisée pour l'autre", () => {
+    const out = completerAvecCapsule(dressing, capsule, situations, r, 30, gen);
+    expect(out.suggestionIds).toEqual([60]);
+    expect(out.situationsSansLook).toEqual([]);
+  });
+});
+
+describe("completerAvecCapsule — une occasion seulement élargie peut être complétée", () => {
+  const situations = situationsDuSejour(["quotidien", "soiree"], [meteo("2026-10-16")]);
+  const capsule = [piece(60, "robe")];
+  const dressing = [piece(1, "haut"), piece(4, "pantalon"), piece(7, "chaussures")];
+  const r = {
+    pieceIds: [1, 4, 7],
+    looks: [{ ids: [1, 4, 7], situations: [0, 1], elargie: true }],
+    situationsSansLook: [],
+  };
+
+  it("une pièce de capsule qui apporte quelque chose complète la couverture élargie", () => {
+    const gen: Generateur = (pool, s) => (s.occasion === "soiree" && pool.some((p) => p.id === 60) ? { ids: [60, 7], elargie: true } : { ids: [1, 4, 7], elargie: true });
+    expect(completerAvecCapsule(dressing, capsule, situations, r, 30, gen).suggestionIds).toEqual([60]);
+  });
+
+  it("un look élargi qui n'apporte aucune pièce de capsule n'ajoute rien", () => {
+    const gen: Generateur = () => ({ ids: [1, 4, 7], elargie: true });
+    expect(completerAvecCapsule(dressing, capsule, situations, r, 30, gen).suggestionIds).toEqual([]);
+  });
+});
+
+describe("completerAvecCapsule — la capsule complète, elle ne remplace pas le dressing", () => {
+  const situations = situationsDuSejour(["quotidien", "soiree"], [meteo("2026-10-16")]);
+  const capsule = [piece(60, "robe"), piece(61, "veste"), piece(62, "bijou")];
+  const dressing = [piece(1, "haut"), piece(7, "chaussures")];
+  const r = { pieceIds: [1, 7], looks: [], situationsSansLook: [1] };
+
+  it("jamais plus de suggestions que la moitié des pièces possédées (arrondie au-dessus)", () => {
+    const gen: Generateur = (pool) => (pool.some((p) => p.id === 60) ? { ids: [1, 7, 60, 61, 62], elargie: false } : null);
+    const out = completerAvecCapsule(dressing, capsule, situations, r, 99, gen);
+    // 2 pièces possédées dans la valise : au plus 1 suggestion ; le look qui en demande 3 n'entre pas.
+    expect(out.suggestionIds).toEqual([]);
+    const gen1: Generateur = (pool) => (pool.some((p) => p.id === 60) ? { ids: [1, 7, 60], elargie: false } : null);
+    expect(completerAvecCapsule(dressing, capsule, situations, r, 99, gen1).suggestionIds).toEqual([60]);
+  });
+});
+
+describe("alternatives — la capacité est respectée", () => {
+  const dressing = [piece(1, "haut"), piece(4, "pantalon"), piece(7, "chaussures"), piece(8, "chaussures"), piece(9, "manteau")];
+  const situations = situationsDuSejour(["quotidien"], [meteo("2026-10-16")]);
+  const gen: Generateur = (pool) => ({ ids: pool.map((p) => p.id).filter((id) => id !== 9), elargie: false });
+
+  it("une pièce qui ferait dépasser la valise est rendue avec tient: false, après celles qui tiennent", () => {
+    const sansLimite = alternatives(7, [1, 4, 7], dressing, situations, gen, 2);
+    expect(sansLimite.every((a) => a.tient)).toBe(true);
+    // Haut 1 + pantalon 2 + chaussures 3 = 6 ; remplacer les chaussures par une paire (3) tient dans 6, pas dans 5.
+    expect(alternatives(7, [1, 4, 7], dressing, situations, gen, 2, 6).map((a) => [a.item.id, a.tient])).toEqual([[8, true]]);
+    expect(alternatives(7, [1, 4, 7], dressing, situations, gen, 2, 5).map((a) => [a.item.id, a.tient])).toEqual([[8, false]]);
   });
 });
 

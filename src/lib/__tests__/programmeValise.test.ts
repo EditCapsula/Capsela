@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACTIVITES,
+  ACTIVITES_MAX,
+  activitesDuProgramme,
+  bagageConseille,
+  programmeDesActivites,
   borneFrequence,
   couvertureMeteo,
   elementProgramme,
@@ -118,5 +123,38 @@ describe("couvertureMeteo — ce que la météo connaît du séjour", () => {
   });
   it("un séjour à cheval sur deux mois", () => {
     expect(couvertureMeteo([m("2026-09-30", true), m("2026-10-01", true)]).avecPrevision).toEqual(["30 sept. – 1 oct."]);
+  });
+});
+
+describe("activités de la maquette V2 — elles se traduisent en programme, donc en occasions mères", () => {
+  it("huit activités, toutes rattachées à des entrées du programme qui existent", () => {
+    expect(ACTIVITES).toHaveLength(8);
+    expect(ACTIVITES_MAX).toBe(4);
+    for (const a of ACTIVITES) for (const [id] of a.retenues) expect(elementProgramme(id), `${a.id} → ${id}`).toBeDefined();
+  });
+
+  it("les entrées des activités choisies, sans doublon, avec le trajet ; fréquences bornées par les jours", () => {
+    const p = programmeDesActivites(["plage", "ville"], 5);
+    expect(p.map((x) => x.id)).toEqual(["plage", "piscine", "visites", "shopping", "restaurant", "trajet"]);
+    expect(p.find((x) => x.id === "trajet")?.frequence).toBe(2);
+    for (const x of p) expect(x.frequence).toBeGreaterThanOrEqual(1);
+    expect(p.find((x) => x.id === "visites")?.frequence).toBeLessThanOrEqual(5);
+    // Deux activités qui partagent une entrée (nature et détente : la balade) : une seule entrée, la plus grande part.
+    const q = programmeDesActivites(["nature", "detente"], 10);
+    expect(q.filter((x) => x.id === "balade")).toHaveLength(1);
+    expect(q.find((x) => x.id === "balade")?.frequence).toBe(3);
+  });
+
+  it("les occasions mères que reçoit le moteur", () => {
+    expect(occasionsDuProgramme(programmeDesActivites(["plage", "soiree", "sport"], 7))).toEqual(["quotidien", "soiree", "sport", "voyage"]);
+  });
+
+  it("aucune activité : le repli d'avant, sans trajet inventé", () => {
+    expect(programmeDesActivites([], 5).map((x) => x.id)).toEqual(["quotidien"]);
+  });
+
+  it("une valise gardée évoque ses activités ; la valise conseillée suit la durée", () => {
+    expect(activitesDuProgramme(programmeDesActivites(["plage", "travail"], 5))).toEqual(["plage", "travail"]);
+    expect([2, 3, 5, 8, 12, 20].map(bagageConseille)).toEqual(["S", "S", "M", "M", "L", "XL"]);
   });
 });

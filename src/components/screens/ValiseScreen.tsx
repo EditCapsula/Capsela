@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import FilEtapes from "@/components/FilEtapes";
-import { GlypheOccasion } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
@@ -23,6 +22,8 @@ import {
   alternatives,
   amplitudePrevue,
   categoriesPourCompleter,
+  completerAvecCapsule,
+  poolDeLaValise,
   BAGAGES,
   capaciteDe,
   UNITES_MOYENNES_PAR_PIECE,
@@ -38,7 +39,6 @@ import {
   GROUPES_VALISE,
   joursDuSejour,
   libelleDuree,
-  libelleSejour,
   lookAChaussuresEtSac,
   looksDeLaValise,
   looksParPiece,
@@ -53,32 +53,27 @@ import {
   pluieAnnoncee,
   pretPourUneValise,
   resumeLook,
-  SEJOURS,
   situationsDuProgramme,
   type LookValise,
   type MeteoJour,
   type TailleBagage,
   type TypeSejour,
-  VISUEL_SEJOUR,
 } from "@/lib/valise";
 import { selectionApercu } from "@/lib/valiseApercu";
 import { pieceLaPlusUtilisee, planningDuProgramme, type CreneauPlanning } from "@/lib/planningValise";
 import { LIBELLE_RAISON, apercuAllegement, avecTenue, joursDeLaPiece, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import {
-  borneFrequence,
+  ACTIVITES,
+  ACTIVITES_MAX,
+  activitesDuProgramme,
+  bagageConseille,
   couvertureMeteo,
   elementProgramme,
-  frequenceAjoutee,
-  libelleFrequence,
   occasionsDuProgramme,
-  occasionsProposees,
-  plafondFrequence,
   programmeDepuisOccasions,
-  programmeParDefaut,
-  SOUS_OCCASIONS,
-  TOUS_LES_ELEMENTS,
-  type ElementProgramme,
+  programmeDesActivites,
+  type ActiviteSejour,
   type ItemProgramme,
 } from "@/lib/programmeValise";
 import { ChoixVille } from "@/components/EtapeLieu";
@@ -118,10 +113,8 @@ const MOIS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août"
 const DOW = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
 
 
-type Onglet = "ensemble" | "looks" | "pieces" | "accessoires";
-
-/** Les groupes de pièces de l'onglet Accessoires ; tous les autres sont dans Pièces. */
-const GROUPES_ACCESSOIRES = ["Sacs", "Bijoux & accessoires"];
+/** Les quatre vues du résultat (maquette V2) : Aperçu, Looks, Pièces (tous les groupes, avec filtre de provenance), Checklist. */
+type Onglet = "ensemble" | "looks" | "pieces" | "checklist";
 
 /** « 16 → 20 oct. », « 30 sept. → 8 oct. » */
 function libellePeriode(depart: string, retour: string): string {
@@ -152,6 +145,20 @@ const libelleAmplitude = (a: { min: number; max: number }) => (a.min === a.max ?
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ── Glyphes (grammaire de GlyphesOccasion : trait 1,5, currentColor) ────
+
+/**
+ * La check-list d'avant le 11/10/2026 vivait dans le stockage de l'appareil (`capsela.valise.check.<id>`). Elle est reprise une fois, à la
+ * première coche, puis écrite avec la valise : elle suit désormais la valise d'un appareil à l'autre.
+ */
+function lireChecklistHeritee(id: string): number[] {
+  try {
+    const brut = localStorage.getItem(`capsela.valise.check.${id}`);
+    const ids = brut ? (JSON.parse(brut) as unknown) : [];
+    return Array.isArray(ids) ? ids.filter((x): x is number => typeof x === "number") : [];
+  } catch {
+    return [];
+  }
+}
 
 const trait = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
 const svg = (children: React.ReactNode, taille = 19) => (
@@ -206,13 +213,6 @@ const G_CINTRE = svg(
 const G_ETINCELLE = svg(<path d="M12 3.5l1.7 5.3 5.3 1.7-5.3 1.7L12 17.5l-1.7-5.3L5 10.5l5.3-1.7z" {...trait} />, 18);
 const G_LISTE = svg(<path d="M9 7h11M9 12h11M9 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01" {...trait} strokeWidth={1.7} />, 18);
 const G_COCHE = (taille = 12, couleur = "currentColor") => svg(<path d="M5 12.5l4.5 4.5L19 7.5" {...trait} stroke={couleur} strokeWidth={2.2} />, taille);
-const G_CRAYON = svg(
-  <>
-    <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" {...trait} />
-    <path d="M14.5 7.5l3 3" {...trait} />
-  </>,
-  17
-);
 const G_CROIX = svg(<path d="M6 6l12 12M18 6L6 18" {...trait} strokeWidth={1.7} />, 14);
 const G_ECHANGE = svg(<path d="M7 7h11l-3-3M17 17H6l3 3" {...trait} />, 15);
 const G_PLUS = svg(<path d="M12 5v14M5 12h14" {...trait} strokeWidth={1.7} />, 15);
@@ -272,17 +272,38 @@ function CarteInfo({ glyphe, children }: { glyphe: React.ReactNode; children: Re
 
 // ── Écran ────────────────────────────────────────────────────────────────
 
-type Vue = { nom: "etape" } | { nom: "calcul" } | { nom: "resultat" } | { nom: "look"; index: number } | { nom: "piece"; id: number; depuis: Vue };
+type Vue = { nom: "etape" } | { nom: "calcul" } | { nom: "erreur" } | { nom: "resultat" } | { nom: "look"; index: number } | { nom: "piece"; id: number; depuis: Vue };
+
+/** Les pictogrammes des huit activités (maquette V2). */
+/** À quel séjour chaque valise convient (maquette V2). */
+const USAGE_BAGAGE: Record<TailleBagage, string> = {
+  S: "Week-end ou court séjour",
+  M: "Séjour d'une semaine",
+  L: "Long séjour",
+  XL: "Très long séjour",
+};
+
+const GLYPHES_ACTIVITE: Record<ActiviteSejour, React.ReactNode> = {
+  plage: svg(<path d="M3 19c2 0 2-1.5 4.5-1.5S10 19 12 19s2-1.5 4.5-1.5S19 19 21 19M12 4a7 7 0 0 1 7 7H5a7 7 0 0 1 7-7zM12 11v7" {...trait} />, 18),
+  ville: svg(<path d="M4 20V10l5-3v13M9 20V4h7v16M16 20v-9h4v9M3 20h18" {...trait} />, 18),
+  nature: svg(<path d="M12 3l6 9h-3l4 6H5l4-6H6zM12 18v3" {...trait} />, 18),
+  detente: svg(<path d="M5 20l3-8h8l3 8M8 12l-2-5M10 16h4" {...trait} />, 18),
+  soiree: svg(<path d="M8 3h8l-1 6a3 3 0 0 1-6 0zM12 12v8M8.5 21h7" {...trait} />, 18),
+  travail: svg(<path d="M4 8h16v11H4zM9 8V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M4 13h16" {...trait} />, 18),
+  sport: svg(<path d="M6 9v6M18 9v6M3 11v2M21 11v2M6 12h12" {...trait} />, 18),
+  evenement: svg(<path d="M12 4l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 9.3l5-.7z" {...trait} />, 18),
+};
 
 const ETAPES_CALCUL: [React.ReactNode, string][] = [
-  [svg(<path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 18.5z" {...trait} />, 18), "Analyse de la météo"],
-  [G_LISTE, "Prise en compte de ton programme"],
-  [G_CINTRE, "Sélection dans ton dressing"],
-  [G_ETINCELLE, "Optimisation des looks et des pièces"],
+  [svg(<path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 18.5z" {...trait} />, 18), "Analyse des besoins du séjour"],
+  [G_CINTRE, "Sélection des pièces du dressing"],
+  [G_PLUS, "Complétion avec la capsule si nécessaire"],
+  [G_ETINCELLE, "Composition des looks"],
+  [G_LISTE, "Vérification de la capacité de la valise"],
 ];
 
 export default function ValiseScreen() {
-  const { state, weather, defaultCapsule, actions } = useCapsela();
+  const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
   const dressing = state.items;
   const generer = useMemo(() => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie)), [profile]);
@@ -314,26 +335,20 @@ export default function ValiseScreen() {
   const [depart, setDepart] = useState("");
   const [retour, setRetour] = useState("");
   const [bagage, setBagage] = useState<TailleBagage | null>(null);
-  const [sejour, setSejour] = useState<TypeSejour | null>(null);
   /**
-   * LE PROGRAMME (refonte du 04/10/2026) : les occasions retenues et leur fréquence. Tant qu'on n'y a pas touché (`null`),
-   * il suit le séjour ET la durée — la proposition de Capsela (programmeParDefaut) ; dès qu'on le modifie, c'est le sien,
-   * borné par les jours du séjour (un changement de dates ne laisse jamais une fréquence au-dessus du plafond).
+   * LES ACTIVITÉS du séjour (maquette V2, 11/10/2026) : jusqu'à quatre. Elles donnent le programme (programmeDesActivites), que le
+   * moteur reçoit en occasions mères et que le planning jour par jour répartit — le moteur et la phase B sont inchangés.
    */
-  const [programmeManuel, setProgrammeManuel] = useState<ItemProgramme[] | null>(null);
-  const [feuilleOccasion, setFeuilleOccasion] = useState(false);
-
+  const [activites, setActivites] = useState<ActiviteSejour[]>([]);
+  /** Les réponses de la dernière préparation, gardées pour « Réessayer » après un échec. */
+  const [dernieresReponses, setDernieresReponses] = useState<{ rep: Reponses; id: string | null } | null>(null);
 
   const jours = depart && retour && retour >= depart ? joursDuSejour(depart, retour) : [];
+  /** La valise que la durée du séjour conseille (maquette : « Valise M conseillée pour 5 jours »). */
+  const conseille = bagageConseille(Math.max(1, jours.length));
   const dureeOk = jours.length > 0 && dateDe(retour) <= dateDe(plusJours(depart, DUREE_MAX_JOURS - 1));
   const nomVille = ville ? ville.name : villeDuLieu(destination.trim());
-  const programme: ItemProgramme[] = programmeManuel
-    ? programmeManuel.flatMap((it) => {
-        const e = elementProgramme(it.id);
-        return e ? [{ id: it.id, frequence: borneFrequence(it.frequence, e.creneau, jours.length || 1) }] : [];
-      })
-    : programmeParDefaut(sejour, jours.length || 1);
-  const modifierProgramme = (f: (p: ItemProgramme[]) => ItemProgramme[]) => setProgrammeManuel(f(programme));
+  const programme: ItemProgramme[] = programmeDesActivites(activites, jours.length || 1);
 
   /**
    * LA MÉTÉO SUR PLACE, DÈS L'ÉTAPE 1 — seulement quand la prévision peut la
@@ -377,7 +392,7 @@ export default function ValiseScreen() {
   const amplitudeEtape1 = meteosEtape1 ? amplitudePrevue(meteosEtape1) : null;
 
   const etapeValide =
-    etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : etape === 3 ? sejour != null : true;
+    etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : activites.length > 0;
 
   const zoneScroll = useRef<HTMLDivElement | null>(null);
   const [onglet, setOnglet] = useState<Onglet>("ensemble");
@@ -385,8 +400,6 @@ export default function ValiseScreen() {
   useEffect(() => {
     zoneScroll.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [etape, cleVue, onglet]);
-
-  const choisirSejour = (t: TypeSejour) => setSejour(t);
 
   /**
    * LA GÉNÉRATION, EN QUATRE ÉTAPES RÉELLES — chacune cochée quand elle est
@@ -417,8 +430,20 @@ export default function ValiseScreen() {
     occasions: OccasionKey[];
     /** Le programme du séjour (absent d'une valise recomposée qui n'en avait pas). */
     programme?: ItemProgramme[];
+    /** Les activités choisies, gardées avec la valise pour rouvrir le parcours tel qu'il a été rempli. */
+    activites?: ActiviteSejour[];
   };
   const lancer = async (rep: Reponses, idCible: string | null) => {
+    setDernieresReponses({ rep, id: idCible });
+    try {
+      await calculer(rep, idCible);
+    } catch (err) {
+      // Un échec (réseau, calcul) ne perd rien : les réponses sont gardées, l'écran propose de relancer.
+      console.error("[valise] préparation interrompue", err);
+      if (actif.current) setVue({ nom: "erreur" });
+    }
+  };
+  const calculer = async (rep: Reponses, idCible: string | null) => {
     const joursRep = joursDuSejour(rep.depart, rep.retour);
     const cle = rep.ville ? `${rep.ville.lat},${rep.ville.lon}` : villeDuLieu(rep.destination).toLowerCase();
     setFaites(0);
@@ -436,18 +461,27 @@ export default function ValiseScreen() {
     const situations = situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions);
     await pause(380);
     if (!actif.current) return;
-    setFaites(2);
     await pause(30);
-    const r = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
+    const r0 = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
+    await pause(380);
+    if (!actif.current) return;
+    setFaites(2);
+    // Le dressing ne couvre pas toutes les occasions : la capsule complète la valise, ses pièces marquées « à ajouter » (completerAvecCapsule).
+    const r = completerAvecCapsule(dressing, defaultCapsule, situations, r0, capaciteDe(rep.bagage), generer);
     await pause(380);
     if (!actif.current) return;
     setFaites(3);
-    await pause(380);
+    await pause(300);
     if (!actif.current) return;
     setFaites(4);
     await pause(260);
     if (!actif.current) return;
+    setFaites(5);
+    await pause(200);
+    if (!actif.current) return;
     const id = idCible ?? nouvelIdLocal();
+    const ancienne = idCible ? state.valises.find((v) => v.id === idCible) : undefined;
+    const cochees = (ancienne?.cochees ?? []).filter((x) => r.pieceIds.includes(x));
     sauver({
       version: 2,
       id,
@@ -458,6 +492,9 @@ export default function ValiseScreen() {
       sejour: rep.sejour,
       occasions: rep.occasions,
       ...(rep.programme?.length ? { programme: rep.programme } : {}),
+      ...(rep.activites?.length ? { activites: rep.activites } : {}),
+      // La check-list suit la valise recomposée : seules les pièces encore présentes restent cochées.
+      ...(cochees.length ? { cochees } : {}),
       meteos,
       situations,
       ...r,
@@ -470,13 +507,13 @@ export default function ValiseScreen() {
     setOnglet("ensemble");
     setVue({ nom: "resultat" });
   };
-  const preparer = (passer: boolean) => {
+  const preparer = () => {
     if (!bagage) return;
     // Les occasions que reçoit le moteur sont les MÈRES du programme (occasionsDuProgramme) : une sous-occasion hérite des
-    // règles de son occasion mère, le moteur ne connaît pas autre chose. Programme vide : le repli d'avant (le quotidien).
-    const retenu = passer ? [] : programme;
+    // règles de son occasion mère, le moteur ne connaît pas autre chose.
+    const retenu = programme;
     void lancer(
-      { destination, ville, depart, retour, bagage, sejour, occasions: occasionsRetenues(occasionsDuProgramme(retenu), sejour), programme: retenu },
+      { destination, ville, depart, retour, bagage, sejour: null, occasions: occasionsRetenues(occasionsDuProgramme(retenu), null), programme: retenu, activites },
       idEnModification
     );
   };
@@ -484,18 +521,37 @@ export default function ValiseScreen() {
   const recomposer = () => {
     if (!valise) return;
     void lancer(
-      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme },
+      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites },
       valise.id
     );
   };
 
   /** Nouvelles pièces : les looks sont recomptés par le moteur. */
-  const avecPieces = (v: ValiseGardee, ids: number[]): ValiseGardee => ({ ...v, ...looksDeLaValise(ids, dressing, v.situations, generer, v.looks) });
+  const avecPieces = (v: ValiseGardee, ids: number[]): ValiseGardee => {
+    // Le pool compte les suggestions de capsule que la valise porte : sans elles, le moteur perdrait leurs looks à chaque modification.
+    const pool = poolDeLaValise(dressing, v.suggestionIds, [...defaultCapsule, ...vestiairePool]);
+    const restantes = (v.suggestionIds ?? []).filter((id) => ids.includes(id));
+    const cochees = (v.cochees ?? []).filter((id) => ids.includes(id));
+    return { ...v, ...looksDeLaValise(ids, pool, v.situations, generer, v.looks), suggestionIds: restantes.length ? restantes : undefined, cochees: cochees.length ? cochees : undefined };
+  };
   const retirer = (ids: number[]) => valise && sauver(avecPieces(valise, valise.pieceIds.filter((x) => !ids.includes(x))));
   const ajouter = (id: number) => valise && sauver(avecPieces(valise, [...valise.pieceIds, id]));
   /** « Ajouter une tenue » : la tenue et les pièces qu'elle demande entrent dans la valise, sans recomposer le reste. */
   const ajouterTenue = (t: TenueProposee, situation: number) => valise && sauver({ ...valise, ...avecTenue(valise, t, situation) });
   const remplacer = (ancien: number, nouveau: number) => valise && sauver(avecPieces(valise, [...valise.pieceIds.filter((x) => x !== ancien), nouveau]));
+  /**
+   * CHANGER LA TAILLE d'une valise déjà préparée : la sélection est CONSERVÉE (aucune pièce n'est retirée en silence) ; seule la capacité
+   * change. Plus petite et dépassée : l'écran le dit et propose d'alléger (« On allège un peu ? »). Plus grande : la sélection reste, et
+   * l'écran propose de recomposer pour profiter de la place.
+   */
+  const changerBagage = (t: TailleBagage) => valise && sauver({ ...valise, bagage: t });
+  /** Coche ou décoche une pièce de la check-list : l'état vit avec la valise (appareil et compte). */
+  const cocherPiece = (id: number) => {
+    if (!valise) return;
+    const actuelles = (valise.cochees ?? lireChecklistHeritee(valise.id)).filter((x) => valise.pieceIds.includes(x));
+    const suivantes = actuelles.includes(id) ? actuelles.filter((x) => x !== id) : [...actuelles, id];
+    sauver({ ...valise, cochees: suivantes.length ? suivantes : undefined });
+  };
 
   /** « Nouvelle valise » : la précédente reste dans « Mes planifications ». */
   const recommencer = () => {
@@ -506,8 +562,7 @@ export default function ValiseScreen() {
     setDepart("");
     setRetour("");
     setBagage(null);
-    setSejour(null);
-    setProgrammeManuel(null);
+    setActivites([]);
     setVue({ nom: "etape" });
     setEtape(1);
   };
@@ -526,9 +581,8 @@ export default function ValiseScreen() {
     setDepart(valise.depart);
     setRetour(valise.retour);
     setBagage(valise.bagage);
-    setSejour(valise.sejour);
-    // Une valise d'avant la refonte n'a que ses occasions mères : une entrée par occasion, sans fréquence inventée.
-    setProgrammeManuel(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1));
+    // Les activités qu'évoque le programme gardé ; une valise d'avant la refonte n'a que ses occasions mères.
+    setActivites(valise.activites ?? activitesDuProgramme(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1)));
     setIdEnModification(valise.id);
     setVue({ nom: "etape" });
     setEtape(1);
@@ -575,7 +629,7 @@ export default function ValiseScreen() {
       </div>
       {questions && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
-          <FilEtapes total={5} courante={etape - 1} />
+          <FilEtapes total={3} courante={etape - 1} />
         </div>
       )}
 
@@ -633,11 +687,13 @@ export default function ValiseScreen() {
         {/* ── 1. DESTINATION ── */}
         {questions && etape === 1 && (
           <>
-            <Surtitre>Ta valise · 1 / 5</Surtitre>
-            <TitreEtape a="Où" b="pars-tu ?" />
+            <Surtitre>Ta valise · 1 / 3</Surtitre>
+            <TitreEtape a="Ton" b="voyage" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Où pars-tu et quand ?</div>
             {/* LE MÊME CHOIX DE VILLE QUE « PLANIFIER UNE TENUE » (08/10/2026, demandé) : résultats lisibles, villes récentes communes,
                 position à la demande, carte de la destination avec « Modifier ». */}
             <ChoixVille
+              avecPosition={false}
               lieu={destination}
               onChoisir={(v, libelle) => {
                 setVille(v);
@@ -680,6 +736,15 @@ export default function ValiseScreen() {
             </div>
             {jours.length > 0 && (
               <div className="text-[12px] text-muted mt-3">{dureeOk ? libelleDuree(jours.length) : `Un séjour de ${DUREE_MAX_JOURS} jours au plus.`}</div>
+            )}
+            {/* Les saisies invalides sont dites, jamais corrigées en silence : le bouton reste grisé tant qu'elles le sont. */}
+            {depart && depart < aujourdhui && (
+              <div role="alert" className="text-[12px] text-terracotta mt-2">
+                La date de départ est passée : choisis une date à venir.
+              </div>
+            )}
+            {destination.trim().length > 1 && (!depart || !retour) && (
+              <div className="text-[12px] text-muted mt-2">Indique la date de départ et la date de retour pour continuer.</div>
             )}
             {/* Le résumé météo n'existe que si la prévision a répondu pour au
                 moins un jour du séjour — jamais une température supposée. */}
@@ -733,17 +798,18 @@ export default function ValiseScreen() {
         {/* ── 2. VALISE ── */}
         {questions && etape === 2 && (
           <>
-            <Surtitre>Ta valise · 2 / 5</Surtitre>
-            <TitreEtape a="Quelle valise" b="prends-tu ?" />
+            <Surtitre>Ta valise · 2 / 3</Surtitre>
+            <TitreEtape a="Quelle valise" b="emportes-tu ?" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Nous adaptons ta sélection à sa capacité.</div>
             <div className="grid grid-cols-2 gap-[10px] mt-5">
-              {BAGAGES.map(([t, libelle, cap], i) => {
+              {BAGAGES.map(([t, , cap], i) => {
                 const on = bagage === t;
                 return (
                   <button
                     key={t}
                     onClick={() => setBagage(t)}
                     aria-pressed={on}
-                    aria-label={`${t}, ${libelle}, environ ${cap} pièces`}
+                    aria-label={`${t}, ${USAGE_BAGAGE[t]}, environ ${cap} pièces${conseille === t ? ", conseillée" : ""}`}
                     className={
                       "relative flex flex-col text-left rounded-feuille px-[14px] pt-[14px] pb-[13px] cursor-pointer border transition-colors " +
                       (on ? "bg-warm-bg border-terracotta" : "bg-card border-border")
@@ -758,270 +824,77 @@ export default function ValiseScreen() {
                     <span className={"flex-1 flex items-center justify-center " + (on ? "text-terracotta" : "text-muted-3")} style={{ minHeight: 56 }}>
                       {glypheValise(26 + i * 7)}
                     </span>
-                    <span className="block text-[13px] text-ink leading-[1.25]">{libelle}</span>
-                    <span className="block text-[11px] text-muted mt-[2px]">environ {cap} pièces</span>
+                    <span className="block text-[13px] font-semibold text-ink leading-[1.25]">environ {cap} pièces</span>
+                    <span className="block text-[11px] text-muted mt-[2px]">{USAGE_BAGAGE[t]}</span>
+                    {conseille === t && !on && <span className="absolute top-[14px] right-[12px] text-[10.5px] font-semibold text-terracotta-deep">Conseillée</span>}
                   </button>
                 );
               })}
             </div>
-            <div className="text-[12px] text-muted leading-[1.5] mt-4">
-              La place tient compte de l&apos;encombrement : chaussures et manteaux en prennent plus qu&apos;un t-shirt.
-              <br />
-              Capsela cherche à maximiser tes looks avec l&apos;espace disponible.
+            {jours.length > 0 && dureeOk && (
+              <div className="text-[12px] text-muted leading-[1.5] mt-4">
+                Valise {conseille} conseillée pour {jours.length} {jours.length > 1 ? "jours" : "jour"}.
+              </div>
+            )}
+            <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">
+              Ces quantités sont indicatives : la place tient compte de l&apos;encombrement (chaussures et manteaux en prennent plus qu&apos;un t-shirt). Tu pourras ajuster ta sélection ensuite.
             </div>
           </>
         )}
 
-        {/* ── 3. TYPE DE SÉJOUR ── */}
+        {/* ── 3. L'ESPRIT DU SÉJOUR ── maquette V2 (11/10/2026) : huit activités, quatre au plus ; elles se traduisent en programme
+            (programmeDesActivites), donc en occasions mères pour le moteur. */}
         {questions && etape === 3 && (
           <>
-            <Surtitre>Ta valise · 3 / 5</Surtitre>
-            <TitreEtape a="Quel type" b="de séjour ?" />
-            <div className="grid grid-cols-2 gap-[10px] mt-5">
-              {SEJOURS.filter(([t]) => VISUEL_SEJOUR[t]).map(([t, libelle]) => {
-                const on = sejour === t;
+            <Surtitre>Ta valise · 3 / 3</Surtitre>
+            <TitreEtape a="Quel est l'esprit" b="de ton séjour ?" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Sélectionne jusqu&apos;à {ACTIVITES_MAX} activités.</div>
+            <div className="grid grid-cols-2 gap-2 mt-5" role="group" aria-label="Activités du séjour">
+              {ACTIVITES.map((a) => {
+                const on = activites.includes(a.id);
+                const bloquee = !on && activites.length >= ACTIVITES_MAX;
                 return (
                   <button
-                    key={t}
-                    onClick={() => choisirSejour(t)}
+                    key={a.id}
+                    onClick={() => setActivites((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : l.length >= ACTIVITES_MAX ? l : [...l, a.id]))}
                     aria-pressed={on}
-                    className={"relative text-left rounded-carte overflow-hidden cursor-pointer border bg-card transition-colors " + (on ? "border-terracotta" : "border-border")}
-                    style={{ borderWidth: on ? 1.5 : 1 }}
+                    disabled={bloquee}
+                    className={
+                      "flex items-center gap-[10px] text-left rounded-tuile px-[14px] border cursor-pointer transition-colors disabled:cursor-default " +
+                      (on ? "bg-terracotta-deep border-terracotta-deep text-[#FBF3EA]" : "bg-card border-border text-ink")
+                    }
+                    style={{ minHeight: 48, opacity: bloquee ? 0.5 : 1 }}
                   >
-                    {/* Visuel décoratif : le libellé dessous dit le séjour. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={VISUEL_SEJOUR[t]} alt="" loading="lazy" className="block w-full object-cover" style={{ height: "clamp(72px, 22vw, 92px)" }} />
-                    {on && (
-                      <span className="absolute top-[7px] right-[7px]">
-                        <Coche />
-                      </span>
-                    )}
-                    <span className={"block px-[11px] py-[9px] text-[12px] leading-[1.3] " + (on ? "text-terracotta-deep" : "text-ink")}>{libelle}</span>
+                    <span className={"flex-shrink-0 " + (on ? "text-[#FBF3EA]" : "text-terracotta-deep")}>{GLYPHES_ACTIVITE[a.id]}</span>
+                    <span className="text-[12.5px] leading-[1.25]">{a.libelle}</span>
                   </button>
                 );
               })}
             </div>
-            <div className="mt-[10px]">
-              <button
-                onClick={() => choisirSejour("autre")}
-                aria-pressed={sejour === "autre"}
-                className={
-                  "inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12px] cursor-pointer border transition-colors " +
-                  (sejour === "autre" ? "bg-terracotta-deep border-terracotta-deep text-cream" : "bg-card border-border text-ink")
-                }
-                style={{ minHeight: 44 }}
-              >
-                {sejour === "autre" ? G_COCHE(13) : G_PLUS}
-                Autre
-              </button>
+            <div className="text-[12px] text-muted mt-3" aria-live="polite">
+              {activites.length} sur {ACTIVITES_MAX} {activites.length > 1 ? "choisies" : "choisie"}
             </div>
           </>
         )}
 
-        {/* ── 4. PROGRAMME ── « Capsela propose, tu corriges » (refonte du 04/10/2026) : les occasions retenues pour ce
-            séjour, chacune avec sa fréquence — des jours, des soirs, des trajets —, que le jour et le soir d'une même
-            journée peuvent se partager. Les dix occasions de Capsela restent toutes à portée, derrière « Ajouter une
-            occasion ». */}
-        {questions && etape === 4 && (
-          <>
-            <Surtitre>Ta valise · 4 / 5</Surtitre>
-            <TitreEtape a="Qu'est-ce" b="qui est prévu ?" />
-            <div className="t-chapeau text-muted-3 mt-2">Capsela a préparé une première sélection selon ton séjour. Tu peux la modifier.</div>
-
-            {programme.length === 0 ? (
-              <div className="mt-4">
-                <CarteInfo glyphe={G_AMPOULE}>Rien n&apos;est retenu : Capsela préparera des tenues de tous les jours.</CarteInfo>
-              </div>
-            ) : (
-              <ul className="flex flex-col gap-[8px] mt-4 list-none p-0" aria-label="Programme du séjour">
-                {programme.map((it) => {
-                  const e = elementProgramme(it.id);
-                  if (!e) return null;
-                  const plafond = plafondFrequence(e.creneau, jours.length || 1);
-                  const bouton = "w-[44px] h-[44px] flex items-center justify-center text-terracotta cursor-pointer disabled:opacity-30 disabled:cursor-default";
-                  return (
-                    <li key={it.id}>
-                      <Card rayon="tuile" className="flex items-center gap-[10px] pl-[12px] pr-[2px]">
-                        <span className="flex-shrink-0 text-terracotta">
-                          <GlypheOccasion occasion={e.mere} taille={18} />
-                        </span>
-                        <span className="flex-1 min-w-0 text-[13px] text-ink leading-[1.25] py-[10px]">{e.libelle}</span>
-                        <span className="flex items-center flex-shrink-0">
-                          <button
-                            onClick={() => modifierProgramme((p) => p.map((x) => (x.id === it.id ? { ...x, frequence: it.frequence - 1 } : x)))}
-                            disabled={it.frequence <= 1}
-                            aria-label={`Une fois de moins : ${e.libelle}`}
-                            className={bouton}
-                          >
-                            <span aria-hidden="true">−</span>
-                          </button>
-                          <span className="text-[12px] text-ink text-center min-w-[58px]" aria-live="polite">
-                            {libelleFrequence(e.creneau, it.frequence)}
-                          </span>
-                          <button
-                            onClick={() => modifierProgramme((p) => p.map((x) => (x.id === it.id ? { ...x, frequence: it.frequence + 1 } : x)))}
-                            disabled={it.frequence >= plafond}
-                            aria-label={`Une fois de plus : ${e.libelle}`}
-                            className={bouton}
-                          >
-                            <span aria-hidden="true">+</span>
-                          </button>
-                        </span>
-                        <button
-                          onClick={() => modifierProgramme((p) => p.filter((x) => x.id !== it.id))}
-                          aria-label={`Retirer ${e.libelle}`}
-                          className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer"
-                        >
-                          {G_CROIX}
-                        </button>
-                      </Card>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <div className="text-[11px] text-muted leading-[1.45] mt-[10px]">
-              Un jour peut avoir plusieurs occasions : les jours et les soirs se comptent à part, ils peuvent se chevaucher.
+        {/* ── LA PRÉPARATION N'A PAS ABOUTI ── les réponses sont gardées : on relance sans rien ressaisir. */}
+        {vue.nom === "erreur" && (
+          <div className="mt-2">
+            <Surtitre>Un instant</Surtitre>
+            <TitreEtape a="La préparation" b="n'a pas abouti" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">
+              Tes réponses sont gardées : destination, dates, valise et activités. Tu peux relancer sans rien ressaisir.
             </div>
-
-            {/* Les propositions en second : un tap les ajoute. */}
-            {occasionsProposees(sejour, programme).length > 0 && (
-              <div className="flex flex-wrap gap-[8px] mt-4">
-                {occasionsProposees(sejour, programme).map((e) => (
-                  <button
-                    key={e.id}
-                    onClick={() => modifierProgramme((p) => [...p, { id: e.id, frequence: frequenceAjoutee(e, jours.length || 1) }])}
-                    className="inline-flex items-center gap-[7px] rounded-full border border-border bg-card px-[14px] text-[12px] text-ink cursor-pointer"
-                    style={{ minHeight: 44 }}
-                  >
-                    <span className="text-terracotta">{G_PLUS}</span>
-                    {e.libelle}
-                  </button>
-                ))}
-              </div>
-            )}
-            <button onClick={() => setFeuilleOccasion(true)} className="mt-3 text-[12px] text-terracotta cursor-pointer min-h-[44px]">
-              + Ajouter une occasion
-            </button>
-          </>
+          </div>
         )}
-
-        {/* ── 5. TON PROGRAMME EST PRÊT ── la synthèse avant la génération : chaque bloc se corrige d'un tap. */}
-        {questions && etape === 5 && (() => {
-          const meteo = couvertureMeteo(meteosEtape1 ?? jours.map((j) => ({ jour: j, temp: 0, label: "", prevue: false })));
-          const [, libelleBagageTexte, capaciteTexte] = BAGAGES.find(([t]) => t === bagage) ?? ["S", "", 0];
-          const bloc = (etapeCible: number, titre: string, corps: React.ReactNode) => (
-            <Card rayon="tuile" className="px-[14px] py-[12px]">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="t-label text-muted">{titre}</div>
-                  <div className="text-[13px] text-ink leading-[1.4] mt-[4px]">{corps}</div>
-                </div>
-                <button onClick={() => setEtape(etapeCible)} aria-label={`Modifier : ${titre.toLowerCase()}`} className="w-[44px] h-[44px] -mr-[8px] -mt-[8px] flex items-center justify-center flex-shrink-0 text-terracotta cursor-pointer">
-                  {G_CRAYON}
-                </button>
-              </div>
-            </Card>
-          );
-          return (
-            <>
-              <Surtitre>Ta valise · 5 / 5</Surtitre>
-              <TitreEtape a="Ton programme" b="est prêt" />
-              <div className="flex flex-col gap-[8px] mt-5">
-                {bloc(1, "Destination", nomVille || destination)}
-                {bloc(1, "Dates", <>{libellePeriode(depart, retour)} · {libelleDuree(jours.length)}</>)}
-                {bloc(
-                  1,
-                  "Météo",
-                  <>
-                    {meteo.avecPrevision.map((p) => (
-                      <span key={p} className="block">
-                        {p} · {amplitudeEtape1 ? libelleAmplitude(amplitudeEtape1) + " · " : ""}prévisions disponibles
-                      </span>
-                    ))}
-                    {meteo.sansPrevision.map((p) => (
-                      <span key={p} className="block text-muted-3">
-                        {p} · prévisions météo non disponibles
-                      </span>
-                    ))}
-                    {meteo.sansPrevision.length > 0 && (
-                      <span className="block text-[12px] text-muted mt-[3px]">Capsela adapte les looks selon la saison et le type de séjour.</span>
-                    )}
-                  </>
-                )}
-                {sejour && bloc(3, "Type de séjour", libelleSejour(sejour))}
-                {bagage && bloc(2, "Valise", <>{bagage} · {libelleBagageTexte} · environ {capaciteTexte} pièces</>)}
-                {bloc(
-                  4,
-                  "Programme",
-                  programme.length ? (
-                    programme.map((it) => {
-                      const e = elementProgramme(it.id);
-                      return e ? (
-                        <span key={it.id} className="block">
-                          {e.libelle} · {libelleFrequence(e.creneau, it.frequence)}
-                        </span>
-                      ) : null;
-                    })
-                  ) : (
-                    "Des tenues de tous les jours"
-                  )
-                )}
-                <Card rayon="tuile" className="px-[14px] py-[12px]">
-                  <div className="t-label text-muted">Dressing utilisé</div>
-                  <div className="text-[13px] text-ink leading-[1.4] mt-[4px]">Ton dressing — {dressing.length} {dressing.length > 1 ? "pièces" : "pièce"}</div>
-                </Card>
-              </div>
-            </>
-          );
-        })()}
-
-        {/* Les occasions à ajouter : les sous-occasions du voyage, puis les dix occasions de Capsela — aucune n'est retirée. */}
-        <BottomSheet title="Ajouter une occasion" open={feuilleOccasion} onClose={() => setFeuilleOccasion(false)}>
-          {(
-            [
-              ["Pendant le séjour", SOUS_OCCASIONS],
-              ["Les occasions de Capsela", TOUS_LES_ELEMENTS.filter((e) => e.generique)],
-            ] as [string, ElementProgramme[]][]
-          ).map(([titre, liste]) => {
-            const dispo = liste.filter((e) => !programme.some((p) => p.id === e.id));
-            if (!dispo.length) return null;
-            return (
-              <section key={titre} className="mb-4">
-                <h3 className="t-surtitre text-muted">{titre}</h3>
-                <div className="flex flex-col gap-2 mt-2">
-                  {dispo.map((e) => (
-                    <button
-                      key={e.id}
-                      onClick={() => {
-                        modifierProgramme((p) => [...p, { id: e.id, frequence: frequenceAjoutee(e, jours.length || 1) }]);
-                        setFeuilleOccasion(false);
-                      }}
-                      className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile px-[12px] cursor-pointer"
-                      style={{ minHeight: 48 }}
-                    >
-                      <span className="flex-shrink-0 text-terracotta">
-                        <GlypheOccasion occasion={e.mere} taille={18} />
-                      </span>
-                      <span className="flex-1 min-w-0 text-[13px] text-ink">{e.libelle}</span>
-                      <span className="text-terracotta flex-shrink-0">{G_PLUS}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </BottomSheet>
 
         {/* ── 5. GÉNÉRATION ── */}
         {vue.nom === "calcul" && (
           <div className="flex flex-col justify-center" style={{ minHeight: "62vh" }} aria-live="polite">
             <div className="t-titre-ecran text-ink text-center">
-              Je prépare <span className="italic text-terracotta">ta valise…</span>
+              Je prépare <span className="italic text-terracotta">ta valise</span>
             </div>
-            <div className="text-[13px] text-muted leading-[1.5] mt-3 text-center max-w-[300px] mx-auto">
-              Capsela compose une sélection sur mesure en fonction de ton séjour et de ton dressing.
-            </div>
+            <div className="text-[13px] text-muted leading-[1.5] mt-3 text-center max-w-[300px] mx-auto">À partir de ton dressing et de ta capsule.</div>
             <ul className="flex flex-col gap-[14px] mt-8 mx-auto" style={{ width: "min(100%, 290px)" }}>
               {ETAPES_CALCUL.map(([glyphe, libelle], i) => {
                 const faite = i < faites;
@@ -1039,7 +912,8 @@ export default function ValiseScreen() {
                 );
               })}
             </ul>
-            <div className="h-[3px] rounded-full mt-9 mx-auto overflow-hidden" style={{ width: "min(100%, 290px)", background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
+            <div className="text-center text-[12px] text-muted mt-6">Garde l&apos;appli ouverte quelques secondes.</div>
+            <div className="h-[3px] rounded-full mt-6 mx-auto overflow-hidden" style={{ width: "min(100%, 290px)", background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
               <div className="h-full bg-terracotta-deep transition-[width] duration-300" style={{ width: `${(faites / ETAPES_CALCUL.length) * 100}%` }} />
             </div>
           </div>
@@ -1060,6 +934,8 @@ export default function ValiseScreen() {
             ajouter={ajouter}
             ajouterTenue={ajouterTenue}
             remplacer={remplacer}
+            changerBagage={changerBagage}
+            cocherPiece={cocherPiece}
             enregistrerLook={actions.enregistrerIdeeLook}
             ajouterAuDressing={actions.openAddEtRevenir}
             ajouterCategorie={actions.openAddForCategory}
@@ -1074,29 +950,27 @@ export default function ValiseScreen() {
 
       {questions && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
-          <Button
-            onClick={() => (etape < 5 ? etapeValide && setEtape(etape + 1) : preparer(false))}
-            disabled={!etapeValide}
-          >
-            {etape < 5 ? "Continuer" : "Préparer ma valise"}
+          <Button onClick={() => (etape < 3 ? etapeValide && setEtape(etape + 1) : preparer())} disabled={!etapeValide}>
+            {etape < 3 ? "Continuer" : "Générer ma valise"}
           </Button>
-          {etape === 4 && (
-            // Passer : la proposition de Capsela, telle quelle — la synthèse la montre avant la génération.
-            <button
-              onClick={() => {
-                setProgrammeManuel(null);
-                setEtape(5);
-              }}
-              className="text-[12px] text-terracotta cursor-pointer py-[10px]"
-            >
-              Passer cette étape
-            </button>
-          )}
-          {etape === 5 && (
-            <button onClick={() => setEtape(1)} className="text-[12px] text-terracotta cursor-pointer py-[10px]">
-              Modifier mes choix
-            </button>
-          )}
+          {etape === 3 && activites.length === 0 && <div className="text-center text-[12px] text-muted min-h-[16px]">Choisis au moins une activité.</div>}
+        </div>
+      )}
+
+      {vue.nom === "erreur" && (
+        <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
+          <Button onClick={() => dernieresReponses && void lancer(dernieresReponses.rep, dernieresReponses.id)} disabled={!dernieresReponses}>
+            Réessayer
+          </Button>
+          <button
+            onClick={() => {
+              setVue({ nom: "etape" });
+              setEtape(1);
+            }}
+            className="text-[12px] text-terracotta cursor-pointer py-[10px]"
+          >
+            Modifier mes réponses
+          </button>
         </div>
       )}
 
@@ -1130,6 +1004,8 @@ function Resultat({
   ajouter,
   ajouterTenue,
   remplacer,
+  changerBagage,
+  cocherPiece,
   enregistrerLook,
   ajouterAuDressing,
   ajouterCategorie,
@@ -1151,6 +1027,8 @@ function Resultat({
   ajouter: (id: number) => void;
   ajouterTenue: (t: TenueProposee, situation: number) => void;
   remplacer: (ancien: number, nouveau: number) => void;
+  changerBagage: (t: TailleBagage) => void;
+  cocherPiece: (id: number) => void;
   enregistrerLook: (ids: number[], occasion: OccasionKey) => void;
   ajouterAuDressing: () => void;
   ajouterCategorie: (c: CategoryKey) => void;
@@ -1160,14 +1038,19 @@ function Resultat({
   recommencer: () => void;
   supprimer: () => void;
 }) {
+  const { vestiairePool } = useCapsela();
+  /** Le dressing plus les suggestions de capsule que la valise porte : ce que le moteur et l'affichage résolvent. */
+  const base = useMemo(() => poolDeLaValise(dressing, valise.suggestionIds, [...capsule, ...vestiairePool]), [dressing, valise.suggestionIds, capsule, vestiairePool]);
+  const suggestions = new Set(valise.suggestionIds ?? []);
   const [indexLook, setIndexLook] = useState(0);
-  const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "alleger" } | { type: "tenue" } | { type: "checklist" } | null>(null);
+  const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "alleger" } | { type: "tenue" } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
   const toucher = useRef<number | null>(null);
 
   const capacite = capaciteDe(valise.bagage);
   // Une pièce supprimée du dressing depuis n'est plus dans la valise.
-  const pieces = valise.pieceIds.map((id) => dressing.find((i) => i.id === id)).filter((i): i is Item => !!i);
+  const pieces = valise.pieceIds.map((id) => base.find((i) => i.id === id)).filter((i): i is Item => !!i);
+  const nbSuggestions = pieces.filter((p) => suggestions.has(p.id)).length;
   const ids = pieces.map((p) => p.id);
   // Un look de valise a toujours chaussures et sac (lookAChaussuresEtSac) : les valises gardées avant cette règle ne montrent plus
   // les looks qui n'en ont pas — « Recomposer » en refait avec.
@@ -1185,7 +1068,8 @@ function Resultat({
   /** Occasions couvertes seulement par des looks « élargis » : le dressing n'a pas de pièce déclarée pour elles. */
   const occasionsElargies = occasionsDemandees.filter((o) => {
     const siens = looks.filter((l) => occasionsDuLook(l, valise.situations).includes(o));
-    return siens.length > 0 && siens.every((l) => l.elargie);
+    // Une occasion déjà complétée par une suggestion de capsule de la valise n'est plus à compléter.
+    return siens.length > 0 && siens.every((l) => l.elargie) && !siens.some((l) => l.ids.some((id) => suggestions.has(id)));
   });
   const occasionsAManque = [...occasionsSansLook, ...occasionsElargies];
   const index = Math.min(indexLook, Math.max(0, looks.length - 1));
@@ -1196,13 +1080,14 @@ function Resultat({
   const manques = useMemo(
     () =>
       categoriesPourCompleter(
-        dressing,
+        // Le dressing ET les suggestions déjà dans la valise : une pièce de capsule déjà retenue n'est pas proposée une seconde fois.
+        base,
         capsule,
         valise.situations,
         valise.situations.map((_, i) => i).filter((i) => cleSansLook.split(",").includes(valise.situations[i].occasion)),
         generer
       ),
-    [dressing, capsule, valise.situations, cleSansLook, generer]
+    [base, capsule, valise.situations, cleSansLook, generer]
   );
   const peuDeLooks = looks.length > 0 && looks.length < nbJours;
   const numero = (i: number) => String(i + 1).padStart(2, "0");
@@ -1236,37 +1121,22 @@ function Resultat({
   // l'ouverture de la feuille — pas avant, c'est le calcul le plus coûteux.
   const idRemplacee = feuille?.type === "remplacer" ? feuille.id : null;
   const alts = useMemo(
-    () => (idRemplacee != null ? alternatives(idRemplacee, valise.pieceIds, dressing, valise.situations, generer) : []),
-    [idRemplacee, valise.pieceIds, valise.situations, dressing, generer]
+    () => (idRemplacee != null ? alternatives(idRemplacee, valise.pieceIds, base, valise.situations, generer, 6, capaciteDe(valise.bagage)) : []),
+    [idRemplacee, valise.pieceIds, valise.situations, base, generer, valise.bagage]
   );
 
   // « Alléger » : les pièces cochées ; « Ajouter une tenue » : la proposition du moteur pour la situation choisie (calculée au
   // choix, pas à l'ouverture — c'est un calcul du moteur) ; « Check-list » : les pièces cochées, gardées sur l'appareil.
   const [retirees, setRetirees] = useState<number[]>([]);
   const [proposition, setProposition] = useState<{ situation: number; tenue: TenueProposee | null } | null>(null);
-  const cleCheck = `capsela.valise.check.${valise.id}`;
-  const [cochees, setCochees] = useState<{ id: string; ids: number[] } | null>(null);
-  const piecesCochees =
-    cochees && cochees.id === valise.id
-      ? cochees.ids
-      : (() => {
-          try {
-            const brut = localStorage.getItem(cleCheck);
-            return brut ? (JSON.parse(brut) as number[]) : [];
-          } catch {
-            return [];
-          }
-        })();
-  const cocher = (id: number) => {
-    const ids = piecesCochees.includes(id) ? piecesCochees.filter((x) => x !== id) : [...piecesCochees, id];
-    setCochees({ id: valise.id, ids });
-    try {
-      localStorage.setItem(cleCheck, JSON.stringify(ids));
-    } catch {
-      // Sans stockage, la coche tient le temps de l'écran : la check-list reste utilisable.
-    }
-  };
-  const proposer = (situation: number) => setProposition({ situation, tenue: nouvelleTenue(valise.situations[situation], valise.pieceIds, dressing, valise.looks, generer) });
+  /** La check-list : les pièces préparées, gardées AVEC la valise ; seules celles qui sont encore dans la valise comptent. */
+  const piecesCochees = (valise.cochees ?? lireChecklistHeritee(valise.id)).filter((id) => valise.pieceIds.includes(id));
+  const cocher = cocherPiece;
+  /** Le filtre de l'onglet Pièces : toutes, celles du dressing, ou les suggestions de la capsule. */
+  const [filtre, setFiltre] = useState<"toutes" | "dressing" | "capsule">("toutes");
+  const [tailleOuverte, setTailleOuverte] = useState(false);
+  const [retourTaille, setRetourTaille] = useState<string | null>(null);
+  const proposer = (situation: number) => setProposition({ situation, tenue: nouvelleTenue(valise.situations[situation], valise.pieceIds, base, valise.looks, generer) });
   /** Une situation, dite comme le programme : ses occasions (« Plage · Piscine »), à défaut l'occasion de Capsela. */
   const libelleSituation = (i: number) => {
     const s = valise.situations[i];
@@ -1287,7 +1157,7 @@ function Resultat({
               [G_CINTRE, "Ajouter une tenue", "Pour une occasion de ton séjour.", () => setFeuille({ type: "tenue" })],
               [G_ECHANGE, "Retirer ou remplacer une pièce", "Depuis l'onglet Pièces, sur chaque pièce.", () => (setOnglet("pieces"), setVue({ nom: "resultat" }))],
               [G_PLUS, "Ajouter une pièce de ton dressing", "Les looks sont recomposés avec elle.", () => setFeuille({ type: "ajouter" })],
-              [G_COCHE(18), "Check-list de départ", "Coche les pièces au fil de la préparation.", () => setFeuille({ type: "checklist" })],
+              [G_COCHE(18), "Check-list de départ", "Coche les pièces au fil de la préparation.", () => (setOnglet("checklist"), setVue({ nom: "resultat" }))],
               [G_CALENDRIER, "Modifier le séjour", "Destination, dates, valise ou programme.", modifier],
             ] as const
           ).map(([glyphe, titre, sous, f]) => (
@@ -1367,21 +1237,62 @@ function Resultat({
         {dressing.every((p) => ids.includes(p.id)) && <div className="text-[13px] text-muted">Toutes les pièces de ton dressing sont déjà dans la valise.</div>}
       </BottomSheet>
 
+      <BottomSheet title="Taille de la valise" open={tailleOuverte} onClose={() => setTailleOuverte(false)}>
+        <div className="text-[12px] text-muted leading-[1.45] mb-3">
+          Ta sélection est conservée : aucune pièce n&apos;est retirée sans toi. Si la nouvelle valise est plus petite, Capsela te propose d&apos;alléger.
+        </div>
+        <div role="radiogroup" aria-label="Taille de la valise" className="flex flex-col gap-2">
+          {BAGAGES.map(([t, , cap]) => {
+            const on = valise.bagage === t;
+            return (
+              <button
+                key={t}
+                role="radio"
+                aria-checked={on}
+                onClick={() => {
+                  setTailleOuverte(false);
+                  if (on) return;
+                  changerBagage(t);
+                  const place = volume - capaciteDe(t);
+                  setRetourTaille(
+                    place > 0
+                      ? `Valise ${t} : ta sélection ne tient plus (environ ${Math.max(1, Math.ceil(place / UNITES_MOYENNES_PAR_PIECE))} ${place / UNITES_MOYENNES_PAR_PIECE > 1 ? "pièces" : "pièce"} de trop). Elle est conservée telle quelle.`
+                      : capaciteDe(t) > capacite
+                        ? `Valise ${t} : ta sélection est conservée. Il reste de la place : « Recomposer ma valise » en profiterait.`
+                        : `Valise ${t} : ta sélection est conservée et tient dedans.`
+                  );
+                }}
+                className={"flex items-center gap-3 text-left rounded-tuile border px-[14px] cursor-pointer " + (on ? "bg-warm-bg border-terracotta" : "bg-card border-border")}
+                style={{ minHeight: 56 }}
+              >
+                <span className={"font-serif text-[22px] w-[34px] " + (on ? "text-terracotta" : "text-ink")}>{t}</span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[13px] text-ink">environ {cap} pièces</span>
+                  <span className="block text-[11px] text-muted">{USAGE_BAGAGE[t]}</span>
+                </span>
+                {on && <Coche />}
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
+
       <BottomSheet title={idRemplacee != null ? `Remplacer ${pieceDe(idRemplacee)?.name ?? "la pièce"}` : "Remplacer"} open={idRemplacee != null} onClose={() => setFeuille(null)}>
         {alts.length === 0 ? (
           <EmptyState>Aucune autre pièce de cette famille dans ton dressing.</EmptyState>
         ) : (
           <div className="flex flex-col gap-2">
             <div className="text-[12px] text-muted leading-[1.45] mb-1">Avec chacune, la valise compterait ce nombre de looks (aujourd&apos;hui : {looks.length}).</div>
-            {alts.map(({ item, looks: n }) => (
+            {alts.map(({ item, looks: n, tient }) => (
               <button
                 key={item.id}
+                disabled={!tient}
                 onClick={() => {
                   if (idRemplacee != null) remplacer(idRemplacee, item.id);
                   setFeuille(null);
                   if (vue.nom === "piece") setVue(vue.depuis);
                 }}
-                className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer"
+                className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer disabled:cursor-default disabled:opacity-60"
               >
                 <Vignette it={item} taille={40} />
                 <span className="flex-1 min-w-0">
@@ -1389,6 +1300,7 @@ function Resultat({
                   <span className={"block text-[11px] " + (n ? "text-terracotta" : "text-muted")}>
                     {n} {n > 1 ? "looks" : "look"}
                   </span>
+                  {!tient && <span className="block text-[11px] text-muted">Prendrait trop de place dans une valise {valise.bagage}</span>}
                 </span>
               </button>
             ))}
@@ -1502,9 +1414,9 @@ function Resultat({
               (proposition.tenue ? (
                 (() => {
                   const t = proposition.tenue;
-                  const piecesT = t.ids.map((id) => dressing.find((x) => x.id === id)).filter((x): x is Item => !!x);
+                  const piecesT = t.ids.map((id) => base.find((x) => x.id === id)).filter((x): x is Item => !!x);
                   const idsTotal = new Set([...valise.pieceIds, ...t.ids]);
-                  const total = volumeDe(dressing.filter((x) => idsTotal.has(x.id)));
+                  const total = volumeDe(base.filter((x) => idsTotal.has(x.id)));
                   return (
                     <Card rayon="tuile" className="mt-4 p-[14px]">
                       <div className="flex gap-[3px]">
@@ -1515,7 +1427,7 @@ function Resultat({
                       <div className="text-[13px] text-ink leading-[1.35] mt-3">{resumeLook(piecesT)}</div>
                       <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
                         {t.ajouts.length
-                          ? `Elle demande ${t.ajouts.length} ${t.ajouts.length > 1 ? "pièces" : "pièce"} de ton dressing : ${t.ajouts.map((id) => dressing.find((x) => x.id === id)?.name ?? "").join(", ")}.`
+                          ? `Elle demande ${t.ajouts.length} ${t.ajouts.length > 1 ? "pièces" : "pièce"} de ton dressing : ${t.ajouts.map((id) => base.find((x) => x.id === id)?.name ?? "").join(", ")}.`
                           : "Elle se fait avec les pièces de ta valise."}
                       </div>
                       {total > capacite && (
@@ -1552,43 +1464,6 @@ function Resultat({
         )}
       </BottomSheet>
 
-      {/* CHECK-LIST DE DÉPART : seulement les pièces de la valise — aucun autre objet n'est inventé. Gardée sur l'appareil. */}
-      <BottomSheet title="Check-list de départ" open={feuille?.type === "checklist"} onClose={() => setFeuille(null)}>
-        {(
-          [
-            ["À préparer", pieces.filter((p) => !piecesCochees.includes(p.id))],
-            ["Dans la valise", pieces.filter((p) => piecesCochees.includes(p.id))],
-          ] as const
-        ).map(([titre, liste]) => (
-          <section key={titre} className="mb-4">
-            <div className="flex items-baseline justify-between">
-              <h3 className="t-surtitre text-muted">{titre}</h3>
-              <span className="text-[12px] text-muted">{liste.length}</span>
-            </div>
-            <div className="flex flex-col gap-2 mt-2">
-              {liste.length === 0 && <div className="text-[12px] text-muted-3">{titre === "À préparer" ? "Tout est dans la valise." : "Rien encore."}</div>}
-              {liste.map((p) => {
-                const dedans = piecesCochees.includes(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => cocher(p.id)}
-                    aria-pressed={dedans}
-                    aria-label={`${p.name} : ${dedans ? "remettre à préparer" : "mettre dans la valise"}`}
-                    className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer"
-                  >
-                    <Vignette it={p} taille={40} />
-                    <span className={"flex-1 min-w-0 text-[13px] truncate " + (dedans ? "text-muted line-through" : "text-ink")}>{p.name}</span>
-                    <span aria-hidden="true" className={"w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 mr-2 " + (dedans ? "bg-success text-cream" : "border border-border text-transparent")}>
-                      {G_COCHE(12, "currentColor")}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ))}
-      </BottomSheet>
     </>
   );
 
@@ -1887,6 +1762,11 @@ function Resultat({
         )}
       </div>
       <div className="t-chapeau text-muted-3 mt-[6px]">{libelleDuree(nbJours)}</div>
+      {nbSuggestions > 0 && (
+        <div className="text-[12px] text-terracotta leading-[1.4] mt-[4px]">
+          Dont {nbSuggestions} {nbSuggestions > 1 ? "pièces" : "pièce"} de ta capsule à ajouter à ton dressing : ton dressing ne couvrait pas tout le séjour.
+        </div>
+      )}
 
       {/* La météo, compacte : celle de la prévision d'aujourd'hui, pour les jours qu'elle couvre — rien d'autre. */}
       {(amplitude || !previsionAttendue) && (
@@ -1944,17 +1824,53 @@ function Resultat({
         )}
       </div>
 
-      {/* LES ONGLETS (refonte du 04/10/2026) : Ensemble (la valise et ses premiers looks), Looks (jour par jour), Pièces,
-          Accessoires. « Ensemble » pour « Vue d'ensemble » : à 320 px, quatre segments ne portent pas le libellé complet. */}
+      {/* LA TAILLE ET LA PROVENANCE (maquette V2, 11/10/2026) : « Valise M · 12 pièces », « Changer », et ce qui vient du dressing ou de
+          la capsule. Les nombres sont ceux de la sélection enregistrée. */}
+      <div className="flex items-center justify-between gap-3 mt-5">
+        <span className="font-serif text-[16px] text-ink">
+          Valise {valise.bagage} · {pieces.length} {pieces.length > 1 ? "pièces sélectionnées" : "pièce sélectionnée"}
+        </span>
+        <button onClick={() => setTailleOuverte(true)} className="t-lien text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] flex-shrink-0">
+          Changer
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-2 mt-1">
+        <span className="inline-flex items-center gap-[6px] rounded-full bg-chip-soft-bg px-[10px] py-[4px] text-[11.5px] text-ink">
+          <span className="w-[7px] h-[7px] rounded-full" style={{ background: "var(--color-success)" }} aria-hidden="true" />
+          {pieces.length - nbSuggestions} {pieces.length - nbSuggestions > 1 ? "pièces" : "pièce"} de ton dressing
+        </span>
+        {nbSuggestions > 0 && (
+          <span className="inline-flex items-center gap-[6px] rounded-full bg-warm-bg border border-sand-border px-[10px] py-[4px] text-[11.5px] text-ink">
+            <span className="w-[7px] h-[7px] rounded-full bg-terracotta" aria-hidden="true" />
+            {nbSuggestions} {nbSuggestions > 1 ? "suggestions capsule" : "suggestion capsule"}
+          </span>
+        )}
+      </div>
+      {retourTaille && (
+        <div role="status" className="text-[12px] text-ink-soft leading-[1.45] mt-2">
+          {retourTaille}
+        </div>
+      )}
+      {depasse && (
+        <div role="status" className="text-[12px] text-terracotta leading-[1.45] mt-2">
+          Ta sélection dépasse la place d&apos;une valise {valise.bagage}. Rien n&apos;est retiré sans toi :{" "}
+          <button onClick={() => setOnglet("pieces")} className="underline underline-offset-[3px] cursor-pointer">
+            voir ce qu&apos;on peut alléger
+          </button>
+          .
+        </div>
+      )}
+
+      {/* LES ONGLETS : Aperçu (la valise et ses premiers looks), Looks (jour par jour), Pièces, Checklist. */}
       <div className="mt-5">
         <SegmentedControl
           ariaLabel="Contenu de la valise"
           serre
           segments={[
-            { key: "ensemble", label: "Ensemble" },
+            { key: "ensemble", label: "Aperçu" },
             { key: "looks", label: "Looks" },
             { key: "pieces", label: "Pièces" },
-            { key: "accessoires", label: "Accessoires" },
+            { key: "checklist", label: "Checklist" },
           ]}
           actif={onglet}
           onChange={setOnglet}
@@ -1992,7 +1908,7 @@ function Resultat({
       <div className="flex items-center justify-between gap-3 mt-3">
         <span className="inline-flex items-center gap-[7px] text-[12px] text-ink">
           <span className="text-terracotta">{G_COCHE(14)}</span>
-          Uniquement ton dressing
+          {nbSuggestions > 0 ? "Ton dressing, complété par ta capsule" : "Uniquement ton dressing"}
         </span>
         <span className={"text-[11px] " + (depasse ? "text-terracotta" : "text-muted")}>
           Valise {valise.bagage} · {depasse ? "trop pleine" : `${pieces.length} ${pieces.length > 1 ? "pièces" : "pièce"} · remplie à ${tauxRemplissage} %`}
@@ -2218,6 +2134,11 @@ function Resultat({
                   ? "Capsela a repéré ce qui compléterait tes looks pour tout ton séjour."
                   : "Capsela a repéré quelques pièces qui pourraient enrichir tes looks et t'offrir plus de variété."}
               </div>
+              {manques.some((m) => m.pieces.length > 0) && (
+                <div className="text-[11px] text-muted leading-[1.45] mt-[4px]">
+                  Ces pièces ne sont pas dans ta valise : elles ne comptent ni dans ses pièces, ni dans son remplissage.
+                </div>
+              )}
               <div className="flex flex-col gap-4 mt-4">
                 {occasionsAManque.map((o) => {
                   const m = manques.find((x) => x.occasion === o);
@@ -2234,7 +2155,31 @@ function Resultat({
                               ? `Il manque une pièce pour couvrir ${occasionShortLabel(o)}.`
                               : `Pas encore de look ${occasionShortLabel(o)}.`}
                       </div>
-                      {m && m.categories.length > 0 && (
+                      {m && m.pieces.length > 0 && (
+                        <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
+                          {m.pieces.map((p) => (
+                            <Card key={p.id} rayon="tuile" className="relative">
+                              <button
+                                onClick={() => ajouterCategorie(p.cat)}
+                                aria-label={`Ajouter ${p.name} à ton dressing`}
+                                className="w-full flex items-center gap-[10px] text-left pl-[10px] pr-[44px] py-[10px] min-h-[62px] cursor-pointer"
+                              >
+                                <Vignette it={p} taille={44} />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-[13px] text-ink leading-[1.2] break-words">{p.name}</span>
+                                  <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">
+                                    À ajouter · compose un look {occasionShortLabel(o)} avec ton dressing
+                                  </span>
+                                </span>
+                                <span aria-hidden="true" className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
+                                  {G_PLUS}
+                                </span>
+                              </button>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                      {m && m.pieces.length === 0 && m.categories.length > 0 && (
                         <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
                           {m.categories.map((c) => (
                             <Card key={c} rayon="tuile" className="relative">
@@ -2295,9 +2240,27 @@ function Resultat({
       )}
 
       {/* ── PIÈCES ── regroupées, chacune justifiée par ses looks */}
-      {(onglet === "pieces" || onglet === "accessoires") && (
+      {onglet === "pieces" && (
         <>
-          {onglet === "pieces" && aAlleger.length > 0 && (
+          <div className="mt-4">
+            <SegmentedControl
+              ariaLabel="Provenance des pièces"
+              serre
+              segments={[
+                { key: "toutes", label: `Toutes · ${pieces.length}` },
+                { key: "dressing", label: `Ton dressing · ${pieces.length - nbSuggestions}` },
+                { key: "capsule", label: `Capsule · ${nbSuggestions}` },
+              ]}
+              actif={filtre}
+              onChange={setFiltre}
+            />
+          </div>
+          {filtre === "capsule" && nbSuggestions === 0 && (
+            <div className="text-[12px] text-muted-3 leading-[1.5] mt-4">
+              Aucune suggestion de capsule dans ta valise : ton dressing couvre ton séjour, ou la capsule n&apos;a rien de pertinent à y ajouter.
+            </div>
+          )}
+          {aAlleger.length > 0 && (
             <Card className="mt-4 p-[14px]">
               <div className="t-titre-carte text-ink">On allège un peu ?</div>
               <div className="text-[12px] text-muted-3 leading-[1.45] mt-[4px]">
@@ -2326,8 +2289,8 @@ function Resultat({
               </Button>
             </Card>
           )}
-          {GROUPES_VALISE.filter(([titre]) => (onglet === "accessoires") === GROUPES_ACCESSOIRES.includes(titre)).map(([titre, cats]) => {
-            const duGroupe = pieces.filter((p) => cats.includes(p.cat));
+          {GROUPES_VALISE.map(([titre, cats]) => {
+            const duGroupe = pieces.filter((p) => cats.includes(p.cat) && (filtre === "toutes" || (filtre === "capsule") === suggestions.has(p.id)));
             if (!duGroupe.length) return null;
             return (
               <section key={titre} className="mt-5">
@@ -2352,6 +2315,7 @@ function Resultat({
                                 return portee.length ? ` · portée ${portee.map((j) => `J${j}`).join(", ")}` : "";
                               })()}
                             </span>
+                            {suggestions.has(p.id) && <span className="block text-[11px] text-terracotta mt-[1px]">Suggestion capsule · à ajouter à ton dressing</span>}
                             {n >= SEUIL_POLYVALENTE && <span className="block text-[11px] text-muted mt-[1px]">Pièce polyvalente</span>}
                           </span>
                         </button>
@@ -2385,6 +2349,61 @@ function Resultat({
             </button>
           </div>
         </>
+      )}
+
+      {/* ── CHECKLIST ── les pièces de la valise à cocher au fil de la préparation ; l'état est gardé AVEC la valise (appareil et compte). */}
+      {onglet === "checklist" && (
+        <div className="mt-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="font-serif text-[18px] text-ink">
+              {piecesCochees.length} / {pieces.length} {pieces.length > 1 ? "prêtes" : "prête"}
+            </span>
+            <span className="text-[11.5px] text-muted">Gardée avec ta valise</span>
+          </div>
+          <div className="h-[3px] rounded-full mt-2 overflow-hidden" style={{ background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
+            <div className="h-full bg-terracotta-deep" style={{ width: `${pieces.length ? (piecesCochees.length / pieces.length) * 100 : 0}%` }} />
+          </div>
+          {pieces.length === 0 && <EmptyState>Aucune pièce dans la valise pour l&apos;instant.</EmptyState>}
+          <div className="mt-4">
+        {(
+          [
+            ["À préparer", pieces.filter((p) => !piecesCochees.includes(p.id))],
+            ["Dans la valise", pieces.filter((p) => piecesCochees.includes(p.id))],
+          ] as const
+        ).map(([titre, liste]) => (
+          <section key={titre} className="mb-4">
+            <div className="flex items-baseline justify-between">
+              <h3 className="t-surtitre text-muted">{titre}</h3>
+              <span className="text-[12px] text-muted">{liste.length}</span>
+            </div>
+            <div className="flex flex-col gap-2 mt-2">
+              {liste.length === 0 && <div className="text-[12px] text-muted-3">{titre === "À préparer" ? "Tout est dans la valise." : "Rien encore."}</div>}
+              {liste.map((p) => {
+                const dedans = piecesCochees.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => cocher(p.id)}
+                    aria-pressed={dedans}
+                    aria-label={`${p.name} : ${dedans ? "remettre à préparer" : "mettre dans la valise"}`}
+                    className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer"
+                  >
+                    <Vignette it={p} taille={40} />
+                    <span className="flex-1 min-w-0">
+                      <span className={"block text-[13px] truncate " + (dedans ? "text-muted line-through" : "text-ink")}>{p.name}</span>
+                      {suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">À ajouter à ton dressing</span>}
+                    </span>
+                    <span aria-hidden="true" className={"w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 mr-2 " + (dedans ? "bg-success text-cream" : "border border-border text-transparent")}>
+                      {G_COCHE(12, "currentColor")}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+          </div>
+        </div>
       )}
 
       {/* 6 · QUE PUIS-JE FAIRE MAINTENANT ? L'action dominante reste sous le pouce, posée sur la barre du bas : le défilement réserve déjà la hauteur de la barre (pb-safe-nav), le -16 px retire sa marge de confort. */}

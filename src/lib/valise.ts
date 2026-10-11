@@ -612,18 +612,23 @@ export function alternatives(
   dressing: Item[],
   situations: SituationValise[],
   generer: Generateur,
-  tirages = 6
-): { item: Item; looks: number }[] {
+  tirages = 6,
+  /** La capacité de la valise (unités) : une pièce qui la ferait dépasser est rendue avec `tient: false`, jamais acceptée en silence. */
+  capacite?: number
+): { item: Item; looks: number; tient: boolean }[] {
   const piece = dressing.find((p) => p.id === id);
   if (!piece) return [];
   const groupe = GROUPES_VALISE.find(([, cats]) => cats.includes(piece.cat))?.[1] ?? [piece.cat];
+  const reste = pieceIds.filter((x) => x !== id);
+  const volumeReste = reste.reduce((n, x) => n + unitesDe(dressing.find((p) => p.id === x)?.cat ?? "haut"), 0);
   return dressing
     .filter((p) => groupe.includes(p.cat) && !pieceIds.includes(p.id))
     .map((p) => ({
       item: p,
-      looks: looksDeLaValise([...pieceIds.filter((x) => x !== id), p.id], dressing, situations, generer, [], tirages).looks.length,
+      looks: looksDeLaValise([...reste, p.id], dressing, situations, generer, [], tirages).looks.length,
+      tient: capacite === undefined || volumeReste + unitesDe(p.cat) <= capacite,
     }))
-    .sort((a, b) => b.looks - a.looks);
+    .sort((a, b) => Number(b.tient) - Number(a.tient) || b.looks - a.looks);
 }
 
 // ── Présentation du résultat (refonte du 27/09/2026) ─────────────────────
@@ -733,6 +738,11 @@ export interface Manque {
   occasion: OccasionKey;
   /** Catégories que le moteur a dû prendre dans la capsule pour composer ce look — ce qui manque au dressing. */
   categories: CategoryKey[];
+  /**
+   * Les pièces de la capsule elles-mêmes (11/10/2026, « option A ») : des SUGGESTIONS, pas des pièces possédées. Elles ne sont jamais dans la
+   * valise ni dans son volume ; l'écran les montre « à ajouter ».
+   */
+  pieces: Item[];
   /** Le dressing a de quoi, mais pas la valise : c'est la capacité qui manque, pas une pièce. */
   capacite: boolean;
 }
@@ -764,9 +774,100 @@ export function categoriesPourCompleter(
     if (!t) continue;
     const venues = t.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => !!p && !idsDressing.has(p.id));
     const categories = [...new Set(venues.map((p) => p.cat))];
-    out.push({ occasion: s.occasion, categories, capacite: categories.length === 0 });
+    out.push({ occasion: s.occasion, categories, pieces: venues, capacite: categories.length === 0 });
   }
   return out;
+}
+
+/**
+ * La part maximale de suggestions de capsule par rapport aux pièces possédées de la valise (la moitié, arrondie au-dessus) : la capsule ne
+ * doit pas devenir la valise. ARBITRAGE ÉDITORIAL du 11/10/2026, à revoir sur des dressings réels.
+ */
+export const PLAFOND_SUGGESTIONS = 0.5;
+
+export interface ValiseCompletee extends ResultatValise {
+  /** Les pièces de la CAPSULE entrées dans la valise parce que le dressing ne suffisait pas — jamais des pièces possédées. */
+  suggestionIds: number[];
+}
+
+/**
+ * COMPLÉTER LA VALISE AVEC LA CAPSULE QUAND LE DRESSING NE SUFFIT PAS (11/10/2026, demandé : « capsule dans la valise si les pièces du
+ * dressing ne permettent pas de compléter une valise »).
+ *
+ * Le déclencheur est exact : une occasion du séjour qu'AUCUN look du dressing ne couvre. Pour chacune, le moteur compose le look dans le
+ * pool habituel de l'app (composeWardrobePool : la capsule complète ce que le dressing n'a pas) ; les pièces de ce look entrent dans la
+ * valise si le volume le permet, celles de la capsule étant marquées comme suggestions (`suggestionIds`). Un dressing qui couvre tout :
+ * rien n'est ajouté, la valise reste faite de pièces possédées. Si le moteur compose le look avec le dressing seul, c'est la place qui
+ * manque, pas une pièce : rien n'est ajouté non plus.
+ *
+ * Les suggestions comptent dans le volume (une fois ajoutées au dressing, elles prendront de la place) ; l'écran les dit « à ajouter ».
+ */
+export function completerAvecCapsule(
+  dressing: Item[],
+  capsule: Item[],
+  situations: SituationValise[],
+  r: ResultatValise,
+  capacite: number,
+  generer: Generateur
+): ValiseCompletee {
+  const rien: ValiseCompletee = { ...r, suggestionIds: [] };
+  // Une occasion « faiblement couverte » : tous ses looks sont ÉLARGIS (le dressing n'a pas de pièce déclarée pour elle). La capsule peut
+  // la compléter, à condition d'apporter au moins une pièce que le dressing n'a pas (le look composé reste dit « élargi » si le moteur
+  // l'a relâché : le drapeau du moteur ne dit pas si la capsule améliore la couverture, il n'est donc pas un critère).
+  const faibles = new Set<number>();
+  situations.forEach((_, i) => {
+    const siens = r.looks.filter((l) => l.situations.includes(i));
+    if (siens.length > 0 && siens.every((l) => l.elargie)) faibles.add(i);
+  });
+  const aTraiter = [...r.situationsSansLook, ...faibles];
+  if (aTraiter.length === 0 || capsule.length === 0) return rien;
+  const idsDressing = new Set(dressing.map((i) => i.id));
+  const tous = new Map([...capsule, ...dressing].map((i) => [i.id, i]));
+  const sac = new Set(r.pieceIds);
+  const suggerees = new Set<number>();
+  const tirees: { ids: number[]; situations: number[]; elargie: boolean }[] = [];
+  const dites = new Set<OccasionKey>();
+  const volumeDe_ = (ids: Iterable<number>) => [...ids].reduce((n, id) => n + unitesDe(tous.get(id)?.cat ?? "haut"), 0);
+  for (const i of aTraiter) {
+    const s = situations[i];
+    if (!s || dites.has(s.occasion)) continue;
+    dites.add(s.occasion);
+    // D'abord avec ce que la valise a déjà (dressing + suggestions déjà retenues) : une pièce de capsule déjà ajoutée pour une autre
+    // occasion est réutilisée plutôt que doublée par une seconde, redondante.
+    const dejaLa = [...dressing, ...[...suggerees].map((id) => tous.get(id)!)];
+    const reuse = suggerees.size ? generer(dejaLa, s) : null;
+    const pool = reuse ? dejaLa : composeWardrobePool(dressing, capsule, TOUTES_CATEGORIES, { completerPourOccasion: s.occasion });
+    const t = reuse ?? generer(pool, s);
+    if (!t) continue;
+    const nouveaux = t.ids.filter((id) => !sac.has(id));
+    const venues = nouveaux.filter((id) => !idsDressing.has(id) && tous.has(id));
+    // Le dressing seul compose ce look : c'est la place qui manque, la capsule n'y change rien. (Un look refait avec des suggestions
+    // déjà retenues n'ajoute aucune pièce de capsule, mais couvre l'occasion : il entre dans la valise.)
+    if (venues.length === 0 && !reuse) continue;
+    if (volumeDe_(sac) + volumeDe_(nouveaux) > capacite) continue;
+    // La capsule COMPLÈTE, elle ne remplace pas le dressing : jamais plus de suggestions que la moitié des pièces possédées de la valise.
+    const possedees = [...sac, ...nouveaux].filter((id) => idsDressing.has(id)).length;
+    const dejaSuggerees = suggerees.size + venues.filter((id) => !suggerees.has(id)).length;
+    if (dejaSuggerees > Math.ceil(possedees * PLAFOND_SUGGESTIONS)) continue;
+    nouveaux.forEach((id) => sac.add(id));
+    venues.forEach((id) => suggerees.add(id));
+    const siennes = situations.map((x, k) => (x.occasion === s.occasion ? k : -1)).filter((k) => k >= 0);
+    tirees.push({ ids: t.ids, situations: siennes, elargie: t.elargie });
+  }
+  if (suggerees.size === 0) return rien;
+  const pool = [...dressing, ...[...suggerees].map((id) => tous.get(id)!)];
+  const refait = looksDeLaValise([...sac], pool, situations, generer, [...r.looks, ...tirees]);
+  return { ...refait, suggestionIds: [...suggerees].filter((id) => refait.pieceIds.includes(id)) };
+}
+
+/** Le pool de la valise : le dressing, plus les suggestions de capsule qu'elle porte (cherchées dans `sources`). */
+export function poolDeLaValise(dressing: Item[], suggestionIds: readonly number[] | undefined, sources: Item[]): Item[] {
+  if (!suggestionIds?.length) return dressing;
+  const deja = new Set(dressing.map((i) => i.id));
+  const voulues = new Set(suggestionIds);
+  const extra = new Map<number, Item>();
+  for (const i of sources) if (voulues.has(i.id) && !deja.has(i.id) && !extra.has(i.id)) extra.set(i.id, i);
+  return [...dressing, ...extra.values()];
 }
 
 /** Nom court d'une catégorie, pour « Ajouter : veste, chaussures ». */

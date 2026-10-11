@@ -156,6 +156,69 @@ export function programmeParDefaut(sejour: TypeSejour | null, nbJours: number): 
   return out;
 }
 
+// ── Les activités de la maquette « Préparer ma valise V2 » (11/10/2026) ───────────────────────────
+
+export type ActiviteSejour = "plage" | "ville" | "nature" | "detente" | "soiree" | "travail" | "sport" | "evenement";
+
+/** Au plus quatre activités (maquette : « Sélectionne jusqu'à 4 activités »). */
+export const ACTIVITES_MAX = 4;
+
+/**
+ * Les huit activités que la maquette V2 propose à la place du type de séjour et du programme. Chacune se traduit en entrées du
+ * programme, donc en occasions MÈRES pour le moteur : aucun second moteur, le planning jour par jour et les contraintes de pool
+ * (chaleur, marche, outdoor) restent ceux de la phase B. Les parts des jours du séjour sont un ARBITRAGE ÉDITORIAL du 11/10/2026,
+ * à revoir sur de vrais voyages (même nature que les parts de `programmeParDefaut`).
+ */
+export const ACTIVITES: { id: ActiviteSejour; libelle: string; retenues: [string, Part][] }[] = [
+  { id: "plage", libelle: "Plage", retenues: [["plage", 0.3], ["piscine", 0.15]] },
+  { id: "ville", libelle: "Ville", retenues: [["visites", 0.4], ["shopping", 0.15], ["restaurant", 0.25]] },
+  { id: "nature", libelle: "Nature", retenues: [["randonnee", 0.3], ["balade", 0.3]] },
+  { id: "detente", libelle: "Détente", retenues: [["spa", 0.25], ["balade", 0.2]] },
+  { id: "soiree", libelle: "Soirée", retenues: [["sortie_vacances", 0.3], ["diner", 0.2]] },
+  { id: "travail", libelle: "Travail", retenues: [["travail_reunion", 0.5]] },
+  { id: "sport", libelle: "Sport", retenues: [["sport", 0.3]] },
+  { id: "evenement", libelle: "Événement spécial", retenues: [["ceremonie", 0.15]] },
+];
+
+/**
+ * Le programme que les activités choisies donnent pour un séjour de `nbJours` : leurs entrées, sans doublon (la plus grande part
+ * l'emporte), plus le trajet (aller, retour) que tout voyage comporte. Aucune activité : le repli d'avant (le quotidien).
+ */
+export function programmeDesActivites(activites: readonly ActiviteSejour[], nbJours: number): ItemProgramme[] {
+  const parId = new Map<string, number>();
+  for (const a of ACTIVITES.filter((x) => activites.includes(x.id))) {
+    for (const [id, part] of a.retenues) {
+      const brut = typeof part === "number" ? part * nbJours : part.fixe;
+      parId.set(id, Math.max(parId.get(id) ?? 0, brut));
+    }
+  }
+  if (parId.size === 0) return programmeParDefaut(null, nbJours).filter((p) => p.id !== "trajet");
+  const out: ItemProgramme[] = [];
+  for (const [id, brut] of parId) {
+    const e = elementProgramme(id);
+    if (e) out.push({ id, frequence: borneFrequence(Math.round(brut), e.creneau, nbJours) });
+  }
+  const trajet = elementProgramme("trajet");
+  if (trajet) out.push({ id: "trajet", frequence: borneFrequence(2, trajet.creneau, nbJours) });
+  return out;
+}
+
+/** Les activités qu'un programme déjà gardé évoque (une activité est retenue dès que l'une de ses entrées y figure). */
+export function activitesDuProgramme(programme: readonly ItemProgramme[]): ActiviteSejour[] {
+  return ACTIVITES.filter((a) => a.retenues.some(([id]) => programme.some((p) => p.id === id))).map((a) => a.id);
+}
+
+/**
+ * La valise conseillée pour une durée (maquette : « Valise M conseillée pour 5 jours »). Maquette : S week-end ou court séjour,
+ * M séjour d'une semaine, L long séjour, XL très long séjour. Seuils : ARBITRAGE ÉDITORIAL, des ordres de grandeur.
+ */
+export function bagageConseille(nbJours: number): "S" | "M" | "L" | "XL" {
+  if (nbJours <= 3) return "S";
+  if (nbJours <= 8) return "M";
+  if (nbJours <= 15) return "L";
+  return "XL";
+}
+
 /** Les occasions proposées en second, à cocher d'un tap : celles du modèle qui ne sont pas déjà retenues. */
 export function occasionsProposees(sejour: TypeSejour | null, programme: readonly ItemProgramme[]): ElementProgramme[] {
   const modele = PROPOSITION[sejour ?? "autre"];

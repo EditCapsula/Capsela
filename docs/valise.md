@@ -138,6 +138,52 @@ La valise ne puise que dans le dressing : quand il la limite, l'écran le dit et
 - **Retour de l'ajout** : l'ajout revient à la valise (`openAddForCategory`, `openAddEtRevenir`). Une pièce ajoutée depuis le calcul se reconnaît (`dressingIds`, gardé dans `calcul`) : « Une nouvelle pièce dans ton dressing · Recomposer ma valise », qui relance le calcul avec les mêmes réponses, sur la même valise.
 - **Onglet Pièces** : « Une pièce qui n'est pas encore dans ton dressing ? L'ajouter à mon dressing », distinct de « Ajouter une pièce de ton dressing » (qui met une pièce du dressing dans la valise).
 
+## 8 quinquies. Refonte « Préparer ma valise V2 » — phase 1, le parcours (11/10/2026)
+
+Demandé : « il faut suivre les maquettes » (maquette « Capsela — Préparer ma valise V2 », 19 états). Livré en phases ; la phase 1 est le PARCOURS.
+
+- **Trois étapes au lieu de cinq** : « Ton voyage » (destination et dates), « Quelle valise emportes-tu ? », « Quel est l'esprit de ton séjour ? ». Le type de séjour, l'écran du programme (fréquences) et la synthèse sont retirés du parcours.
+- **Étape 2** : « 8 / 12 / 18 / 24 pièces » et l'usage de chaque valise (week-end, semaine, long, très long séjour), « Conseillée » selon la durée (`bagageConseille` : ≤ 3 jours S, ≤ 8 M, ≤ 15 L, au-delà XL — ARBITRAGE ÉDITORIAL).
+- **Étape 3** : huit activités (Plage, Ville, Nature, Détente, Soirée, Travail, Sport, Événement spécial), quatre au plus. **Elles pilotent toujours le moteur** : `programmeDesActivites` les traduit en entrées du programme (donc en occasions mères) avec le trajet ; le planning jour par jour et les contraintes de pool de la phase B restent. Les parts des jours par activité sont un ARBITRAGE ÉDITORIAL à revoir sur de vrais voyages. Le programme n'est plus ajustable à la main dans le parcours : la personne choisit des activités, Capsela propose les fréquences.
+- **Génération** en cinq étapes (« Analyse des besoins du séjour », « Sélection des pièces du dressing », « Complétion avec la capsule si nécessaire », « Composition des looks », « Vérification de la capacité de la valise »). Les deux premières correspondent à du calcul réel (météo et situations, `composerValise`), la troisième à `completerAvecCapsule` ; les deux dernières sont affichées un court instant, le calcul des looks et de la capacité étant compris dans `composerValise`.
+- **Erreur** : « La préparation n'a pas abouti », réponses gardées, « Réessayer » et « Modifier mes réponses ».
+- **Écarts assumés avec la maquette** : le champ « Un besoin particulier ? » n'est pas repris (aucune donnée ne l'utiliserait) ; la carte « Ta valise sera composée avec les N pièces de ton dressing » reste à l'étape 1 (chemin vers l'ajout de pièces) ; les dates restent les sélecteurs natifs ; le seuil de 8 pièces (§ 8 ter) est inchangé.
+- **À venir** : phase 2, le résultat (en-tête « Ma valise », onglets Aperçu / Looks / Pièces / Checklist, collages de looks, filtres Toutes / Ton dressing / Capsule) ; phase 3, « Vérifier ma valise », « Ta valise est prête ! » et la liste des valises.
+
+## 8 sexies. Parcours « Préparer ma valise » — intégration de la maquette V2 (11/10/2026)
+
+Brief : intégrer les améliorations pertinentes de la maquette sans la recopier, avec les composants existants, et vérifier chaque interaction.
+
+**Priorité dressing puis capsule, dans le moteur** (`completerAvecCapsule`, valise.ts) : le moteur compose d'abord avec le dressing seul (`composerValise`) ; une occasion est « à compléter » quand aucun look ne la couvre, ou quand tous ses looks sont ÉLARGIS. La capsule n'entre qu'à ces conditions :
+- le look composé dans le pool dressing + capsule (`composeWardrobePool`, le moteur habituel) apporte au moins une pièce que le dressing n'a pas ;
+- les suggestions DÉJÀ retenues pour une autre occasion sont réutilisées avant d'en ajouter une seconde (aucune redondance) ;
+- le volume de la valise n'est jamais dépassé ;
+- jamais plus de suggestions que la moitié des pièces possédées de la valise, arrondie au-dessus (`PLAFOND_SUGGESTIONS`, ARBITRAGE ÉDITORIAL à revoir sur des dressings réels) : la capsule complète, elle ne remplace pas le dressing.
+Un dressing qui couvre tout : aucune suggestion. Ce que ni le dressing ni la capsule ne couvrent reste dit (« Optimise ta valise » : seulement les pièces pas encore dans la valise).
+
+**Capacité** : un seul endroit, `BAGAGES` et le barème de volume (valise.ts), paramètres métier documentés au § 3 ; l'écran dit « environ N pièces », jamais une capacité universelle. Corrections : le remplacement d'une pièce est refusé quand il ferait dépasser la valise (`alternatives(…, capacite)` rend `tient: false`, la pièce est grisée avec la raison) ; le **changement de taille après génération** conserve la sélection — plus petite et dépassée, l'écran le dit et mène à « On allège un peu ? » ; plus grande, il dit qu'il reste de la place et propose de recomposer. Rien n'est retiré sans la personne. Compteurs : toujours calculés sur la sélection enregistrée.
+
+**Résultat** : en-tête « Valise M · N pièces sélectionnées · Changer », pastilles « N pièces de ton dressing » / « N suggestions capsule », quatre vues Aperçu / Looks / Pièces / Checklist. Pièces : filtre Toutes / Ton dressing / Capsule (compteurs réels), tous les groupes (l'onglet Accessoires est fusionné), chaque suggestion marquée « Suggestion capsule · à ajouter à ton dressing ».
+
+**Persistance** : la check-list vit désormais AVEC la valise (`cochees`, dans `calcul` jsonb : appareil et compte, aucune migration) ; l'ancienne clé de l'appareil (`capsela.valise.check.<id>`) est reprise à la première coche. Les activités (`activites`) sont gardées pour rouvrir le parcours tel qu'il a été rempli. Retirer, remplacer ou recomposer retire des coches les pièces qui ne sont plus dans la valise. Il n'y a toujours qu'une source de vérité (`state.valises`).
+
+**Autres retouches** : dates invalides dites (« La date de départ est passée »), « Utiliser ma position actuelle » retiré du choix de destination de la valise (on part ailleurs ; l'option reste pour « Planifier une tenue »), les looks passés ne s'affichent plus sous l'onglet Valise de Planifier.
+
+**Vérifié dans l'app (mode démo, navigateur)** : parcours de bout en bout ; retrait d'une pièce (11 → 10) ; filtre capsule ; check-list ; changement S puis XL ; rechargement (taille et coches retrouvées, sur l'appareil) ; dressing du quotidien avec activités Soirée et Événement (2 suggestions entrent, plus rien à compléter) ; dressing vide (« Ton dressing d'abord ») ; 360 et 412 px sans débordement. **NON vérifié** : la persistance dans le compte Supabase (l'API est inaccessible depuis le conteneur) ; le téléchargement de la check-list (il n'existe pas).
+
+## 8 quater. La capsule complète la valise quand le dressing ne suffit pas (11/10/2026)
+
+Demandé : « capsule dans la valise si les pièces du dressing ne permettent pas de compléter une valise ». Arbitré en deux temps le même jour : d'abord les pièces de capsule en compléments « à ajouter » hors de la valise (option A), puis, à la demande de la propriétaire, **dans la valise, mais seulement quand le dressing ne couvre pas le séjour**. [DÉCIDÉ]
+
+- **Déclencheur exact** (`completerAvecCapsule`, valise.ts, testé) : une occasion du séjour qu'AUCUN look du dressing ne couvre. Pour chacune, le moteur compose le look dans le pool habituel de l'app (`composeWardrobePool`, la capsule complète ce que le dressing n'a pas) ; les pièces de ce look entrent dans la valise si le volume le permet, celles de la capsule étant des SUGGESTIONS.
+- **Un dressing qui couvre tout : rien n'est ajouté**, la valise reste faite de pièces possédées, et l'écran dit toujours « Uniquement ton dressing ». Si le moteur compose le look avec le dressing seul, c'est la place qui manque : rien n'est ajouté non plus.
+- **Marquage.** `ValiseGardee.suggestionIds` (dans `calcul`, jsonb : aucune migration) liste les pièces de capsule ; elles sont aussi dans `pieceIds`. L'écran dit « Dont N pièces de ta capsule à ajouter à ton dressing », « Ton dressing, complété par ta capsule », et marque chaque pièce « Suggestion capsule · à ajouter à ton dressing » (onglet Pièces, check-list).
+- **Comptage.** Elles comptent dans le volume (une fois ajoutées, elles prendront de la place) et dans « pièces → looks » ; l'écran les distingue dans le résumé. « Ta valise est prête » reste fondé sur les occasions couvertes et le volume, et la mention « dont N à ajouter » l'accompagne : une valise prête n'est pas dite entièrement possédée.
+- **Résolution.** Les suggestions sont retrouvées par identifiant dans la capsule et le catalogue (`poolDeLaValise`) ; le moteur les voit à chaque modification (retirer, remplacer, ajouter), sinon leurs looks se perdraient. Une suggestion qui disparaîtrait du catalogue n'est plus dans la valise.
+- **Reste hors de la valise** : une occasion qui ne tient pas dans la capacité garde l'encart « Optimise ta valise », avec les pièces de capsule « À ajouter » (« ne comptent ni dans ses pièces, ni dans son remplissage »).
+- Le minimum de 8 pièces pour ouvrir le parcours (§ 8 ter) est inchangé. **À arbitrer** : le baisser maintenant que la capsule peut compléter.
+- **NON DÉMONTRÉ** : le rendu à l'écran ; le comportement sur des dressings réels (quand une occasion reste sans look malgré la capsule).
+
 ## 9. Accès
 
 Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie serveur pour le test miroir) : fonctionnalité **Premium**, en **`ACCES_LIBRE`** pendant la phase de test, comme l'Avis de styliste. Au lancement : `PREMIUM_REQUIRED` des deux côtés ; aucune fonction serveur à redéployer. [DÉCIDÉ]
