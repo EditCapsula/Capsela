@@ -6,7 +6,7 @@ Demandé le 10/10/2026 (option B) ; maquette « Capsela — Importer une tenue �
 
 ```text
 photo de la tenue (stockage privé) → mise à plat Photoroom (Flat Lay) → lecture des objets (OpenAI vision : catégorie, couleur, matière,
-manches, boîte) → détourage de la planche → recadrage de chaque boîte → un fichier par objet
+manches, boîte) → recadrage de chaque boîte sur l'image à plat → détourage de chaque recadrage → un fichier par objet
 ```
 
 L'app montre les objets, la personne coche et modifie, et seulement alors des pièces sont créées. Les fichiers non gardés sont supprimés par l'app.
@@ -32,12 +32,14 @@ ou `{ ok: false, code }` (`non_configure`, `photo_invalide`, `photo_refusee`, `c
 - Sans mise à plat, pas de découpe : jamais de recadrage d'une photo portée (le service doit rendre une planche, sinon `code` d'échec, photo inchangée).
 - Rien repéré : `objets: []`, aucun détourage payant.
 - Plafond : `MAX_IMPORTS_TENUE_PER_USER_PER_DAY` (5 par défaut, quota `importer-tenue`) ; secrets `PHOTOROOM_API_KEY`, `OPENAI_API_KEY`, `IMPORT_TENUE_MODEL` (facultatif).
-- Coût par tenue : une mise à plat (génératif, plan Plus), une lecture OpenAI (détail élevé), un détourage.
+- Coût par tenue : une mise à plat (génératif, plan Plus), une lecture OpenAI (détail élevé), un détourage PAR OBJET (modifié le 11/10/2026 : avant, un seul détourage de la planche entière, recadré ensuite — les boîtes qui se chevauchent gardaient des fragments des pièces voisines).
+- Un objet dont le détourage échoue n'est pas proposé (jamais un recadrage rectangulaire à la place) ; crédits épuisés ou clé refusée arrêtent la boucle ; aucun objet exploitable avec une cause fournisseur rend ce code, pas une liste vide.
+- Limite réelle : le fournisseur isole le sujet principal du recadrage. Deux pièces très imbriquées peuvent encore se contaminer. NON ESSAYÉ contre le vrai service.
 
 ## NON ESSAYÉ contre les vrais services
 - Le contrat de la mise à plat (extraits de documentation) ; la planche qu'elle rend n'a jamais été lue pour une tenue entière.
 - La qualité de la boîte rendue par le modèle (objets qui se touchent, bracelets, montre).
-- Que le détourage rende une image de même taille que la planche (la boîte est en fractions : un recadrage de la planche détourée suppose les mêmes proportions).
+- Le détourage d'un recadrage (la boîte est en fractions de l'image à plat, donc plus de supposition sur la taille d'une planche détourée).
 
 ## Écran (livré le 10/10/2026)
 

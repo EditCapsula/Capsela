@@ -1,7 +1,7 @@
 // Edge Function importer-tenue (10/10/2026) — « Importer une tenue » : à partir de la photo d'une tenue, rend UNE PIÈCE PAR OBJET.
 //
 //   photo (stockage privé) → mise à plat par Photoroom (Flat Lay) → lecture des objets par le modèle de vision (catégorie, couleur,
-//   matière, manches, boîte) → détourage de la planche (fond transparent) → recadrage de chaque boîte → un fichier par objet.
+//   matière, manches, boîte) → recadrage de chaque boîte sur l'image à plat → détourage de chaque recadrage → un fichier par objet.
 //
 // Entrée : { photo_url } — URL signée du bucket dressing-photos (celle que uploadDressingPhoto renvoie), la photo de la personne.
 // Sortie : { ok: true, tenue_url, objets: [{ …ObjetTenue, photo_url }] } — URL signées, 24 h ; `objets` peut être vide (rien
@@ -10,7 +10,7 @@
 // Rien n'est ajouté au dressing ici : l'app montre les objets, la personne coche, et seulement alors des pièces sont créées. Les
 // fichiers des objets non gardés sont supprimés par l'app (même dossier, noms `….oN.detouree.plat.webp` et `….tenue.webp`).
 //
-// Coût par tenue : une mise à plat (appel génératif Photoroom, plan Plus), une lecture OpenAI, un détourage. Un plafond par compte
+// Coût par tenue : une mise à plat (appel génératif Photoroom, plan Plus), une lecture OpenAI, un détourage par objet. Un plafond par compte
 // et par jour (MAX_IMPORTS_TENUE_PER_USER_PER_DAY, 5 par défaut) est le seul garde-fou financier. Jamais d'appel sans compte connecté
 // ni sur la photo d'une autre personne. Secrets : PHOTOROOM_API_KEY, OPENAI_API_KEY, IMPORT_TENUE_MODEL (facultatif).
 //
@@ -29,7 +29,7 @@ import {
   type CodeErreurDetourage,
 } from "../_shared/detourage.ts";
 import { authentifier, consommerQuota, estAppelantAdmin, jetonDepuisEntete, limiteDepuisEnv, urlPhotoAutorisee } from "../_shared/protection.ts";
-import { decoderPng, imageDataVersWebp } from "../_shared/webp.ts";
+import { decoderImage, decoderPng, imageDataVersPng, imageDataVersWebp } from "../_shared/webp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -150,15 +150,10 @@ Deno.serve(async (req) => {
     // Rien de repéré : aucune découpe, aucun détourage payant.
     if (objets.length === 0) return reponse({ ok: true, tenue_url: null, objets: [] });
 
-    // 4. La planche détourée (fond transparent), puis un fichier par objet.
-    const detouree = await detourerAvecFournisseur(fetch, clePhotoroom, plat.octets);
-    if (!detouree.ok) {
-      console.error("[importer-tenue] échec détourage :", detouree.code);
-      return echec(detouree.code);
-    }
-    if (detouree.type !== "png") return echec("resultat_invalide");
-    const planche = await decoderPng(detouree.octets);
-
+    // 4. Un détourage PAR OBJET (11/10/2026) : chaque boîte est recadrée sur l'image à plat (avec son fond), puis détourée seule. Le
+    // fournisseur isole ainsi la pièce de la boîte et non celle d'à côté : détourer d'abord la planche entière puis la recadrer laissait
+    // des fragments des pièces voisines dans les boîtes qui se chevauchent. Coût : un détourage par objet au lieu d'un par tenue.
+    const planche = await decoderImage(plat.octets, plat.type);
     const deposer = async (cheminSortie: string, image: ImageData): Promise<string | null> => {
       const encodee = await imageDataVersWebp(image);
       if (!encodee) return null;
@@ -171,15 +166,31 @@ Deno.serve(async (req) => {
       return data?.signedUrl ?? null;
     };
 
+    // La planche à plat, sans détourage : la photo « Voir l'image à plat » de l'écran.
     const tenueUrl = await deposer(cheminTenue(chemin), planche);
     const rendus = [];
+    let codeEchec: CodeErreurDetourage | null = null;
     for (const [i, objet] of objets.entries()) {
       const r = rectangleDeRecadrage(planche.width, planche.height, objet.boite);
       const rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
-      const url = await deposer(cheminObjet(chemin, i), { data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
-      // Un objet dont le fichier n'a pas pu être enregistré n'est pas proposé : jamais une pièce sans visuel.
+      const entree = await imageDataVersPng({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
+      if (!entree) continue;
+      const detouree = await detourerAvecFournisseur(fetch, clePhotoroom, entree);
+      if (!detouree.ok) {
+        console.error("[importer-tenue] échec détourage de l'objet", i, ":", detouree.code);
+        codeEchec = detouree.code;
+        // Plus de crédit ou clé refusée : les objets suivants échoueraient de même, on s'arrête (aucun appel payant de plus).
+        if (detouree.code === "credits_epuises" || detouree.code === "non_configure") break;
+        continue;
+      }
+      if (detouree.type !== "png") continue;
+      const piece = await decoderPng(detouree.octets);
+      const url = await deposer(cheminObjet(chemin, i), piece);
+      // Un objet dont le détourage ou le fichier a échoué n'est pas proposé : jamais une pièce sans visuel, ni un recadrage rectangulaire.
       if (url) rendus.push({ ...objet, photo_url: url });
     }
+    // Aucun objet exploitable ET une cause de fournisseur : on la dit, au lieu d'une liste vide qui ressemblerait à « rien repéré ».
+    if (rendus.length === 0 && codeEchec) return echec(codeEchec);
     return reponse({ ok: true, tenue_url: tenueUrl, objets: rendus });
   } catch (err) {
     console.error("[importer-tenue] erreur inattendue :", err);

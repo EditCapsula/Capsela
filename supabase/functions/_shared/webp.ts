@@ -66,3 +66,23 @@ export async function imageDataVersWebp(imageData: ImageData): Promise<EncodedIm
     return null;
   }
 }
+
+/** Décode un PNG, un JPEG ou un WebP en pixels RGBA — pour recadrer l'image à plat rendue par le fournisseur, quel que soit son format. */
+export async function decoderImage(octets: Uint8Array, type: "png" | "jpeg" | "webp"): Promise<ImageData> {
+  const tampon = octets.buffer.slice(octets.byteOffset, octets.byteOffset + octets.byteLength) as ArrayBuffer;
+  if (type === "png") return await decoderPng(octets);
+  const { default: decode } =
+    type === "jpeg" ? await import("https://esm.sh/@jsquash/jpeg@1.5.0/decode.js") : await import("https://esm.sh/@jsquash/webp@1.4.0/decode.js");
+  return await decode(tampon);
+}
+
+/** Pixels RGBA vers PNG sans perte, taille d'origine : l'entrée d'un détourage ne doit pas être dégradée avant le fournisseur. Null si l'encodage échoue. */
+export async function imageDataVersPng(imageData: ImageData): Promise<Uint8Array | null> {
+  try {
+    const { default: encode } = await import("https://esm.sh/@jsquash/png@2.1.0/encode.js");
+    return new Uint8Array(await encode(imageData));
+  } catch (err) {
+    console.error("Encodage PNG indisponible :", err);
+    return null;
+  }
+}
