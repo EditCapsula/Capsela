@@ -366,7 +366,7 @@ export default function AddScreen() {
           >
             <span className="flex flex-col">
               <span className="font-serif font-medium text-[15px] text-ink">Importer une tenue entière</span>
-              <span className="text-[12px] text-[#5C5648]">Une photo, plusieurs pièces</span>
+              <span className="text-[12px] text-[#5C5648]">Une photo, plusieurs vêtements : Capsela les détecte et te laisse les ajouter séparément</span>
             </span>
             <svg viewBox="0 0 24 24" className="w-[16px] h-[16px] flex-shrink-0" fill="none" stroke="#5C5648" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M9.5 6l6 6-6 6" />
