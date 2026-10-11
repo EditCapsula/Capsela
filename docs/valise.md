@@ -138,6 +138,16 @@ La valise ne puise que dans le dressing : quand il la limite, l'écran le dit et
 - **Retour de l'ajout** : l'ajout revient à la valise (`openAddForCategory`, `openAddEtRevenir`). Une pièce ajoutée depuis le calcul se reconnaît (`dressingIds`, gardé dans `calcul`) : « Une nouvelle pièce dans ton dressing · Recomposer ma valise », qui relance le calcul avec les mêmes réponses, sur la même valise.
 - **Onglet Pièces** : « Une pièce qui n'est pas encore dans ton dressing ? L'ajouter à mon dressing », distinct de « Ajouter une pièce de ton dressing » (qui met une pièce du dressing dans la valise).
 
+## 8 quater. Les pièces de la capsule : des compléments « à ajouter », jamais dans la valise (11/10/2026, option A)
+
+Demandé : « intégrer des pièces des capsules ». Arbitré : **la valise reste faite de pièces que tu possèdes** ; la capsule n'apporte que des compléments, marqués comme tels. Une pièce de capsule est une suggestion de catalogue, pas un vêtement : elle ne peut pas être mise dans une valise physique. [DÉCIDÉ]
+
+- `categoriesPourCompleter` rend aussi `pieces` : les pièces de la capsule que le moteur a prises pour composer le look d'une occasion sans look (jamais celles du dressing). L'écran « Optimise ta valise » les montre avec leur visuel et leur nom : « À ajouter · compose un look [occasion] avec ton dressing », et le bouton ajoute cette catégorie au dressing (parcours existant, retour à la valise, « Recomposer »).
+- Elles ne comptent NI dans les pièces de la valise, NI dans son volume, NI dans le « remplissage » ou le « prête » : le sac, ses looks et ses chiffres restent comptés sur le dressing seul. L'écran le dit : « Ces pièces ne sont pas dans ta valise : elles ne comptent ni dans ses pièces, ni dans son remplissage. »
+- Rien n'est enregistré : les suggestions sont recalculées à l'affichage (dressing + capsule du moment), donc aucune valise gardée ne référence une pièce de capsule, et aucune migration n'est nécessaire.
+- Le minimum de 8 pièces pour ouvrir le parcours (§ 8 ter) est inchangé.
+- **NON DÉMONTRÉ** : la phrase « compose un look » reflète le look que le moteur compose avec ce pool (dressing + capsule) ; ce look peut utiliser des pièces du dressing absentes de la valise. Rendu non vu à l'écran.
+
 ## 9. Accès
 
 Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie serveur pour le test miroir) : fonctionnalité **Premium**, en **`ACCES_LIBRE`** pendant la phase de test, comme l'Avis de styliste. Au lancement : `PREMIUM_REQUIRED` des deux côtés ; aucune fonction serveur à redéployer. [DÉCIDÉ]

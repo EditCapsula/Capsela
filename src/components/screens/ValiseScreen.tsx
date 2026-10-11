@@ -2218,6 +2218,11 @@ function Resultat({
                   ? "Capsela a repéré ce qui compléterait tes looks pour tout ton séjour."
                   : "Capsela a repéré quelques pièces qui pourraient enrichir tes looks et t'offrir plus de variété."}
               </div>
+              {manques.some((m) => m.pieces.length > 0) && (
+                <div className="text-[11px] text-muted leading-[1.45] mt-[4px]">
+                  Ces pièces ne sont pas dans ta valise : elles ne comptent ni dans ses pièces, ni dans son remplissage.
+                </div>
+              )}
               <div className="flex flex-col gap-4 mt-4">
                 {occasionsAManque.map((o) => {
                   const m = manques.find((x) => x.occasion === o);
@@ -2234,7 +2239,31 @@ function Resultat({
                               ? `Il manque une pièce pour couvrir ${occasionShortLabel(o)}.`
                               : `Pas encore de look ${occasionShortLabel(o)}.`}
                       </div>
-                      {m && m.categories.length > 0 && (
+                      {m && m.pieces.length > 0 && (
+                        <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
+                          {m.pieces.map((p) => (
+                            <Card key={p.id} rayon="tuile" className="relative">
+                              <button
+                                onClick={() => ajouterCategorie(p.cat)}
+                                aria-label={`Ajouter ${p.name} à ton dressing`}
+                                className="w-full flex items-center gap-[10px] text-left pl-[10px] pr-[44px] py-[10px] min-h-[62px] cursor-pointer"
+                              >
+                                <Vignette it={p} taille={44} />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-[13px] text-ink leading-[1.2] break-words">{p.name}</span>
+                                  <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">
+                                    À ajouter · compose un look {occasionShortLabel(o)} avec ton dressing
+                                  </span>
+                                </span>
+                                <span aria-hidden="true" className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
+                                  {G_PLUS}
+                                </span>
+                              </button>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                      {m && m.pieces.length === 0 && m.categories.length > 0 && (
                         <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
                           {m.categories.map((c) => (
                             <Card key={c} rayon="tuile" className="relative">

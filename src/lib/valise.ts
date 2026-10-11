@@ -733,6 +733,11 @@ export interface Manque {
   occasion: OccasionKey;
   /** Catégories que le moteur a dû prendre dans la capsule pour composer ce look — ce qui manque au dressing. */
   categories: CategoryKey[];
+  /**
+   * Les pièces de la capsule elles-mêmes (11/10/2026, « option A ») : des SUGGESTIONS, pas des pièces possédées. Elles ne sont jamais dans la
+   * valise ni dans son volume ; l'écran les montre « à ajouter ».
+   */
+  pieces: Item[];
   /** Le dressing a de quoi, mais pas la valise : c'est la capacité qui manque, pas une pièce. */
   capacite: boolean;
 }
@@ -764,7 +769,7 @@ export function categoriesPourCompleter(
     if (!t) continue;
     const venues = t.ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Item => !!p && !idsDressing.has(p.id));
     const categories = [...new Set(venues.map((p) => p.cat))];
-    out.push({ occasion: s.occasion, categories, capacite: categories.length === 0 });
+    out.push({ occasion: s.occasion, categories, pieces: venues, capacite: categories.length === 0 });
   }
   return out;
 }

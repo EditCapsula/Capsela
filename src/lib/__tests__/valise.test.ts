@@ -296,12 +296,22 @@ describe("categoriesPourCompleter — dire quoi ajouter au dressing, sans l'inve
   it("les catégories que le moteur a dû prendre dans la capsule", () => {
     const gen: Generateur = (pool, s) =>
       s.occasion === "soiree" && pool.some((p) => p.id === 60) ? { ids: [60, 7], elargie: false } : { ids: [1, 4, 7], elargie: false };
-    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([{ occasion: "soiree", categories: ["robe"], capacite: false }]);
+    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([
+      { occasion: "soiree", categories: ["robe"], pieces: [capsule[0]], capacite: false },
+    ]);
+  });
+
+  it("les pièces rendues sont celles de la capsule, jamais celles du dressing — elles ne sont pas dans la valise", () => {
+    const gen: Generateur = (pool, s) =>
+      s.occasion === "soiree" && pool.some((p) => p.id === 60) ? { ids: [60, 7], elargie: false } : { ids: [1, 4, 7], elargie: false };
+    const [m] = categoriesPourCompleter(dressing, capsule, situations, [1], gen);
+    expect(m.pieces.map((p) => p.id)).toEqual([60]);
+    expect(m.pieces.every((p) => !dressing.some((d) => d.id === p.id))).toBe(true);
   });
 
   it("look possible avec le dressing seul : c'est la place qui a manqué, pas une pièce", () => {
     const gen: Generateur = () => ({ ids: [1, 4, 7], elargie: false });
-    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([{ occasion: "soiree", categories: [], capacite: true }]);
+    expect(categoriesPourCompleter(dressing, capsule, situations, [1], gen)).toEqual([{ occasion: "soiree", categories: [], pieces: [], capacite: true }]);
   });
 
   it("une occasion n'est dite qu'une fois ; rien quand le moteur ne trouve rien", () => {
