@@ -9,6 +9,7 @@ import {
   recadrerPixels,
   recouvrementUnion,
   rectangleDeRecadrage,
+  rectangleOpaque,
 } from "../../../supabase/functions/_shared/analyseTenue.ts";
 import { estPhotoDetouree, estPhotoMiseAPlat } from "../../../supabase/functions/_shared/detourage.ts";
 
@@ -149,9 +150,9 @@ describe("recadrage d'un objet", () => {
 
 describe("noms des fichiers", () => {
   it("un objet est un fichier détouré ET mis à plat, dans le dossier de la personne ; la planche n'est la photo d'aucune pièce", () => {
-    expect(cheminObjet("u1/abc.jpg", 2)).toBe("u1/abc.o2.detouree.plat.webp");
+    expect(cheminObjet("u1/abc.jpg", 2)).toBe("u1/abc.o2.detouree.webp");
     expect(estPhotoDetouree(cheminObjet("u1/abc.jpg", 0))).toBe(true);
-    expect(estPhotoMiseAPlat(cheminObjet("u1/abc.jpg", 0))).toBe(true);
+    expect(estPhotoMiseAPlat(cheminObjet("u1/abc.jpg", 0))).toBe(false);
     expect(cheminTenue("u1/abc.jpg")).toBe("u1/abc.tenue.webp");
     expect(estPhotoDetouree(cheminTenue("u1/abc.jpg"))).toBe(false);
   });
@@ -164,5 +165,30 @@ describe("le prompt de lecture", () => {
     expect(p).toContain("trois_quarts");
     expect(p).toContain("boite");
     expect(p).toContain("Au plus 8");
+  });
+});
+
+describe("rectangleOpaque — cadrer sur ce que le détourage a gardé", () => {
+  const image = (l: number, h: number, opaques: [number, number][]) => {
+    const d = new Uint8ClampedArray(l * h * 4);
+    opaques.forEach(([x, y]) => (d[(y * l + x) * 4 + 3] = 255));
+    return d;
+  };
+  it("entoure les pixels opaques, avec une petite marge bornée à l'image", () => {
+    const d = image(100, 100, [[40, 30], [59, 69]]);
+    // 20 px de large, 40 de haut : marge = 3 % de 40 = 1 px.
+    expect(rectangleOpaque(d, 100, 100)).toEqual({ x: 39, y: 29, l: 22, h: 42 });
+  });
+  it("la marge ne sort pas de l'image", () => {
+    const d = image(10, 10, [[0, 0], [9, 9]]);
+    expect(rectangleOpaque(d, 10, 10, 16, 0.5)).toEqual({ x: 0, y: 0, l: 10, h: 10 });
+  });
+  it("rien de gardé : null, jamais une image transparente", () => {
+    expect(rectangleOpaque(new Uint8ClampedArray(10 * 10 * 4), 10, 10)).toBeNull();
+  });
+  it("un voile quasi transparent (sous le seuil) n'est pas la pièce", () => {
+    const d = new Uint8ClampedArray(10 * 10 * 4);
+    d[(5 * 10 + 5) * 4 + 3] = 10;
+    expect(rectangleOpaque(d, 10, 10)).toBeNull();
   });
 });

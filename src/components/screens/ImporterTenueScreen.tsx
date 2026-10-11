@@ -36,16 +36,16 @@ import type { CapsuleSeason, CategoryKey } from "@/lib/types";
 
 type Phase = "choix" | "analyse" | "resultat" | "ajout" | "termine" | "vide" | "echec";
 
-/** Ce que dit l'écran quand la mise à plat n'aboutit pas : toujours « ta photo est inchangée », sans reproche. */
+/** Ce que dit l'écran quand l'import n'aboutit pas : toujours « ta photo est inchangée », sans reproche. */
 function messageEchec(code: CodeImportTenue | "photo"): { texte: string; reessayer: boolean } {
   if (code === "quota_atteint") return { texte: "Tu as atteint la limite du jour, reviens demain.", reessayer: false };
   if (code === "photo_refusee" || code === "photo_invalide") return { texte: "Cette photo n'a pas pu être traitée. Ta photo est inchangée : essaie-en une autre.", reessayer: false };
-  return { texte: "La mise à plat n'a pas abouti. Ta photo est inchangée.", reessayer: true };
+  return { texte: "Le détourage n'a pas abouti. Ta photo est inchangée.", reessayer: true };
 }
 
 /**
  * IMPORTER UNE TENUE (10/10/2026, option B ; maquette « Importer une tenue », 14 états). Une photo de tenue → la fonction Edge
- * `importer-tenue` la met à plat et repère les objets → la personne coche, modifie, puis seulement alors une pièce est créée par
+ * `importer-tenue` repère les objets et détoure chacun (pas de mise à plat automatique) → la personne coche, modifie, puis seulement alors une pièce est créée par
  * objet. Rien n'est affiché qui n'ait été lu : « Capsela a repéré N pièces » n'apparaît que si N objets sont revenus, et la couleur
  * n'est dite lue que si elle l'a été. Les fichiers non gardés (planche, objets décochés, photo d'origine) sont supprimés.
  * La logique pure est dans `lib/importTenue.ts` (testée).
@@ -219,7 +219,7 @@ export default function ImporterTenueScreen() {
 
   const etapes: { label: string; etat: "faite" | "cours" | "attente" }[] = [
     { label: "Envoi de ta photo", etat: envoyee ? "faite" : "cours" },
-    { label: "Mise à plat et repérage des pièces", etat: envoyee ? "cours" : "attente" },
+    { label: "Repérage des pièces", etat: envoyee ? "cours" : "attente" },
     { label: "Couleurs et catégories", etat: envoyee ? "cours" : "attente" },
   ];
 
