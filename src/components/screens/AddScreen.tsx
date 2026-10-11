@@ -357,23 +357,6 @@ export default function AddScreen() {
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={onPhotoChange} className="hidden" />
         <input ref={galerieInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
 
-        {/* 0. Une tenue entière (10/10/2026) : discret, sous le chemin principal d'une pièce seule. */}
-        {creation && !state.addPhotoUrl && !state.replacingId && (
-          <button
-            type="button"
-            onClick={actions.openImporterTenue}
-            className="w-full min-h-[56px] mb-3 px-4 py-2 rounded-[20px] border border-border bg-cream flex items-center justify-between gap-3 text-left cursor-pointer"
-          >
-            <span className="flex flex-col">
-              <span className="font-serif font-medium text-[15px] text-ink">Importer une tenue entière</span>
-              <span className="text-[12px] text-[#5C5648]">Une photo, plusieurs vêtements : Capsela les détecte et te laisse les ajouter séparément</span>
-            </span>
-            <svg viewBox="0 0 24 24" className="w-[16px] h-[16px] flex-shrink-0" fill="none" stroke="#5C5648" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9.5 6l6 6-6 6" />
-            </svg>
-          </button>
-        )}
-
         {/* 1. La photo : même hauteur vide ou remplie (ratio 1,3), aucun saut de mise en page. */}
         {state.addPhotoUrl ? (
           <div

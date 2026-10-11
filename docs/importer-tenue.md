@@ -43,7 +43,7 @@ ou `{ ok: false, code }` (`non_configure`, `photo_invalide`, `photo_refusee`, `c
 
 ## Écran (livré le 10/10/2026)
 
-`ImporterTenueScreen.tsx` (écran `importerTenue`, hors barre du bas), entrée par la carte « Importer une tenue entière » en tête d'« Ajouter une pièce » (création, sans photo). Logique pure testée : `src/lib/importTenue.ts`.
+`ImporterTenueScreen.tsx` (écran `importerTenue`, hors barre du bas), la carte d'entrée « Importer une tenue entière » en tête d'« Ajouter une pièce » a été RETIRÉE le 11/10/2026 à la demande de la propriétaire : l'écran et l'action `openImporterTenue` existent toujours, mais aucun bouton n'y mène pour l'instant. Logique pure testée : `src/lib/importTenue.ts`.
 
 - États : choix de la photo · analyse (3 étapes, la première tient à l'envoi réel) · résultat (bascule « Voir ma photo / Voir l'image à plat », une carte par objet, accordéon : nom, catégorie, modèle, couleur, manches, saisons) · ajout un à un (« Ajout 2 sur 3 ») · terminé · une seule pièce (carte ouverte, sans case) · rien repéré · échec (réessayer ou non selon le code) · dressing gratuit trop petit.
 - Une pièce n'est créée que si elle est COCHÉE ET COMPLÈTE : saisons (jamais présélectionnées), manches pour une pièce qui en a, modèle pour des chaussures. Une carte incomplète dit « Précise les saisons », le bouton se grise avec « Précise les saisons de [nom] pour l'ajouter ».
