@@ -70,8 +70,14 @@ const Surtitre = ({ children }: { children: React.ReactNode }) => <div className
 export function ChoixVille({
   lieu,
   onChoisir,
+  avecPosition = true,
 }: {
   lieu: string;
+  /**
+   * « Utiliser ma position actuelle » : utile pour une tenue planifiée là où l'on se trouve, pas pour une valise (11/10/2026, demandé :
+   * on prépare un voyage ailleurs, jamais là où l'on est). Vrai par défaut.
+   */
+  avecPosition?: boolean;
   /** Choisir une destination : `ville` porte les coordonnées (null pour une saisie libre), `libelle` est ce qui s'affiche et s'enregistre. */
   onChoisir: (ville: VilleSuggeree | null, libelle: string) => void;
 }) {
@@ -241,15 +247,17 @@ export function ChoixVille({
             </div>
           ) : (
             <>
-              <button
-                onClick={utiliserPosition}
-                disabled={position === "encours"}
-                className="mt-3 inline-flex items-center gap-[8px] text-[13px] text-terracotta-deep cursor-pointer"
-                style={{ minHeight: 44 }}
-              >
-                <Cible />
-                {position === "encours" ? "Je cherche ta position…" : "Utiliser ma position actuelle"}
-              </button>
+              {avecPosition && (
+                <button
+                  onClick={utiliserPosition}
+                  disabled={position === "encours"}
+                  className="mt-3 inline-flex items-center gap-[8px] text-[13px] text-terracotta-deep cursor-pointer"
+                  style={{ minHeight: 44 }}
+                >
+                  <Cible />
+                  {position === "encours" ? "Je cherche ta position…" : "Utiliser ma position actuelle"}
+                </button>
+              )}
               {/* Première utilisation : aucune section vide. */}
               {recentes.length > 0 && (
                 <div className="mt-4">

@@ -612,18 +612,23 @@ export function alternatives(
   dressing: Item[],
   situations: SituationValise[],
   generer: Generateur,
-  tirages = 6
-): { item: Item; looks: number }[] {
+  tirages = 6,
+  /** La capacité de la valise (unités) : une pièce qui la ferait dépasser est rendue avec `tient: false`, jamais acceptée en silence. */
+  capacite?: number
+): { item: Item; looks: number; tient: boolean }[] {
   const piece = dressing.find((p) => p.id === id);
   if (!piece) return [];
   const groupe = GROUPES_VALISE.find(([, cats]) => cats.includes(piece.cat))?.[1] ?? [piece.cat];
+  const reste = pieceIds.filter((x) => x !== id);
+  const volumeReste = reste.reduce((n, x) => n + unitesDe(dressing.find((p) => p.id === x)?.cat ?? "haut"), 0);
   return dressing
     .filter((p) => groupe.includes(p.cat) && !pieceIds.includes(p.id))
     .map((p) => ({
       item: p,
-      looks: looksDeLaValise([...pieceIds.filter((x) => x !== id), p.id], dressing, situations, generer, [], tirages).looks.length,
+      looks: looksDeLaValise([...reste, p.id], dressing, situations, generer, [], tirages).looks.length,
+      tient: capacite === undefined || volumeReste + unitesDe(p.cat) <= capacite,
     }))
-    .sort((a, b) => b.looks - a.looks);
+    .sort((a, b) => Number(b.tient) - Number(a.tient) || b.looks - a.looks);
 }
 
 // ── Présentation du résultat (refonte du 27/09/2026) ─────────────────────
@@ -774,6 +779,12 @@ export function categoriesPourCompleter(
   return out;
 }
 
+/**
+ * La part maximale de suggestions de capsule par rapport aux pièces possédées de la valise (la moitié, arrondie au-dessus) : la capsule ne
+ * doit pas devenir la valise. ARBITRAGE ÉDITORIAL du 11/10/2026, à revoir sur des dressings réels.
+ */
+export const PLAFOND_SUGGESTIONS = 0.5;
+
 export interface ValiseCompletee extends ResultatValise {
   /** Les pièces de la CAPSULE entrées dans la valise parce que le dressing ne suffisait pas — jamais des pièces possédées. */
   suggestionIds: number[];
@@ -800,7 +811,16 @@ export function completerAvecCapsule(
   generer: Generateur
 ): ValiseCompletee {
   const rien: ValiseCompletee = { ...r, suggestionIds: [] };
-  if (r.situationsSansLook.length === 0 || capsule.length === 0) return rien;
+  // Une occasion « faiblement couverte » : tous ses looks sont ÉLARGIS (le dressing n'a pas de pièce déclarée pour elle). La capsule peut
+  // la compléter, à condition d'apporter au moins une pièce que le dressing n'a pas (le look composé reste dit « élargi » si le moteur
+  // l'a relâché : le drapeau du moteur ne dit pas si la capsule améliore la couverture, il n'est donc pas un critère).
+  const faibles = new Set<number>();
+  situations.forEach((_, i) => {
+    const siens = r.looks.filter((l) => l.situations.includes(i));
+    if (siens.length > 0 && siens.every((l) => l.elargie)) faibles.add(i);
+  });
+  const aTraiter = [...r.situationsSansLook, ...faibles];
+  if (aTraiter.length === 0 || capsule.length === 0) return rien;
   const idsDressing = new Set(dressing.map((i) => i.id));
   const tous = new Map([...capsule, ...dressing].map((i) => [i.id, i]));
   const sac = new Set(r.pieceIds);
@@ -808,18 +828,27 @@ export function completerAvecCapsule(
   const tirees: { ids: number[]; situations: number[]; elargie: boolean }[] = [];
   const dites = new Set<OccasionKey>();
   const volumeDe_ = (ids: Iterable<number>) => [...ids].reduce((n, id) => n + unitesDe(tous.get(id)?.cat ?? "haut"), 0);
-  for (const i of r.situationsSansLook) {
+  for (const i of aTraiter) {
     const s = situations[i];
     if (!s || dites.has(s.occasion)) continue;
     dites.add(s.occasion);
-    const pool = composeWardrobePool(dressing, capsule, TOUTES_CATEGORIES, { completerPourOccasion: s.occasion });
-    const t = generer(pool, s);
+    // D'abord avec ce que la valise a déjà (dressing + suggestions déjà retenues) : une pièce de capsule déjà ajoutée pour une autre
+    // occasion est réutilisée plutôt que doublée par une seconde, redondante.
+    const dejaLa = [...dressing, ...[...suggerees].map((id) => tous.get(id)!)];
+    const reuse = suggerees.size ? generer(dejaLa, s) : null;
+    const pool = reuse ? dejaLa : composeWardrobePool(dressing, capsule, TOUTES_CATEGORIES, { completerPourOccasion: s.occasion });
+    const t = reuse ?? generer(pool, s);
     if (!t) continue;
     const nouveaux = t.ids.filter((id) => !sac.has(id));
     const venues = nouveaux.filter((id) => !idsDressing.has(id) && tous.has(id));
-    // Le dressing seul compose ce look : c'est la place qui manque, la capsule n'y change rien.
-    if (venues.length === 0) continue;
+    // Le dressing seul compose ce look : c'est la place qui manque, la capsule n'y change rien. (Un look refait avec des suggestions
+    // déjà retenues n'ajoute aucune pièce de capsule, mais couvre l'occasion : il entre dans la valise.)
+    if (venues.length === 0 && !reuse) continue;
     if (volumeDe_(sac) + volumeDe_(nouveaux) > capacite) continue;
+    // La capsule COMPLÈTE, elle ne remplace pas le dressing : jamais plus de suggestions que la moitié des pièces possédées de la valise.
+    const possedees = [...sac, ...nouveaux].filter((id) => idsDressing.has(id)).length;
+    const dejaSuggerees = suggerees.size + venues.filter((id) => !suggerees.has(id)).length;
+    if (dejaSuggerees > Math.ceil(possedees * PLAFOND_SUGGESTIONS)) continue;
     nouveaux.forEach((id) => sac.add(id));
     venues.forEach((id) => suggerees.add(id));
     const siennes = situations.map((x, k) => (x.occasion === s.occasion ? k : -1)).filter((k) => k >= 0);
