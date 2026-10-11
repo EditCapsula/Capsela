@@ -68,7 +68,7 @@ export interface ObjetTenue {
 export function promptTenue(): string {
   const sousTypes = JSON.stringify(SUBTYPES);
   return [
-    "Tu lis la photo d'une tenue de mode posée à plat sur un fond uni (ou portée) pour une app de garde-robe. Repère chaque article distinct : vêtement, chaussures, sac, bijou, accessoire.",
+    "Tu lis la photo d'une tenue de mode (portée, posée à plat ou sur cintre) pour une app de garde-robe. Repère chaque article distinct : vêtement, chaussures, sac, bijou, accessoire.",
     `Pour chaque article, indique cat EXACTEMENT parmi : ${CATEGORY_KEYS.join(", ")}.`,
     `Selon la catégorie, indique sous_type EXACTEMENT parmi la liste associée (JSON, clé = catégorie) : ${sousTypes}. Ignore les catégories sans liste.`,
     `cat = "chaussures" : shoe_type EXACTEMENT parmi : ${SHOE_TYPES.join(", ")}.`,
@@ -178,10 +178,13 @@ export function recadrerPixels(data: Uint8ClampedArray | Uint8Array, largeur: nu
   return { data: sortie, width: r.l, height: r.h };
 }
 
-/** `{user}/{uuid}.jpg` + 2 devient `{user}/{uuid}.o2.detouree.plat.webp` : même dossier, marque « détourée » et « à plat » (cf. detourage.ts). */
+/**
+ * `{user}/{uuid}.jpg` + 2 devient `{user}/{uuid}.o2.detouree.webp` : même dossier, marque « détourée » seule (cf. detourage.ts). Plus de
+ * marque « à plat » depuis le 11/10/2026 : l'import ne met plus la photo à plat, la mise à plat reste une action demandée sur la fiche.
+ */
 export function cheminObjet(cheminOriginal: string, indice: number, ext: "webp" | "png" = "webp"): string {
   const base = cheminOriginal.replace(/\.[^./]+$/, "");
-  return `${base}.o${indice}.detouree.plat.${ext}`;
+  return `${base}.o${indice}.detouree.${ext}`;
 }
 
 /** L'image à plat de toute la tenue (transparente), pour la montrer à côté de la photo — sans marque « détourée » : ce n'est la photo d'aucune pièce. */

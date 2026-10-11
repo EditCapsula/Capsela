@@ -149,9 +149,9 @@ describe("recadrage d'un objet", () => {
 
 describe("noms des fichiers", () => {
   it("un objet est un fichier détouré ET mis à plat, dans le dossier de la personne ; la planche n'est la photo d'aucune pièce", () => {
-    expect(cheminObjet("u1/abc.jpg", 2)).toBe("u1/abc.o2.detouree.plat.webp");
+    expect(cheminObjet("u1/abc.jpg", 2)).toBe("u1/abc.o2.detouree.webp");
     expect(estPhotoDetouree(cheminObjet("u1/abc.jpg", 0))).toBe(true);
-    expect(estPhotoMiseAPlat(cheminObjet("u1/abc.jpg", 0))).toBe(true);
+    expect(estPhotoMiseAPlat(cheminObjet("u1/abc.jpg", 0))).toBe(false);
     expect(cheminTenue("u1/abc.jpg")).toBe("u1/abc.tenue.webp");
     expect(estPhotoDetouree(cheminTenue("u1/abc.jpg"))).toBe(false);
   });
