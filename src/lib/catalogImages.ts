@@ -37,6 +37,20 @@ export function resolveItemImage(item: Item): ResolvedItemImage {
 export function resolveHeroImage(item: Item): ResolvedItemImage {
   const standard = resolveItemImage(item);
   if (standard.kind === "generated" && item.imageHeroUrl) return { kind: "generated", url: item.imageHeroUrl };
+  // Une pièce du catalogue qui a un visuel hero mais AUCUN visuel standard (11/10/2026 : 7 pièces sur 627 — robes 1, vestes_blazers 1,
+  // accessoires 1, pulls_gilets 4) n'était pas posée dans les flat lay : elle sortait de la planche faute d'image. Le hero seul la
+  // représente alors, SAUF si son statut dit que le visuel a été invalidé (« invalid », le hero porterait le même défaut) ou est en cours
+  // de génération. « error » (la génération du STANDARD a échoué) n'exclut pas : les 6 pièces concernées ont été regardées une à une le
+  // 11/10/2026, leur hero est propre et conforme au nom. Un standard PRÉSENT mais pas prêt reste un placeholder, comme avant.
+  // ARBITRAGE ÉDITORIAL à ce périmètre seul (pièce sans image_url).
+  if (
+    standard.kind === "placeholder" &&
+    item.imageHeroUrl &&
+    !item.imageUrl &&
+    item.imageStatus !== "invalid" &&
+    item.imageStatus !== "generating"
+  )
+    return { kind: "generated", url: item.imageHeroUrl };
   return standard;
 }
 

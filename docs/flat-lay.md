@@ -232,3 +232,13 @@ Le manteau suit la veste (même rôle de pièce du dessus). Les autres contextes
 ## Cartes « Par catégorie » du Dressing (09/10/2026)
 
 Les pièces du dressing étant propres (détourées ou mises à plat), elles illustrent elles-mêmes les cartes de catégorie : `piecesPourVisuelCategorie` (`dressingEcran.ts`) retient jusqu'à 3 pièces récentes dont l'image n'est pas une photo brute, posées en `contain` sur le fond grège avec une ombre douce, au-dessus de la pastille. Aucune pièce propre : la carte garde son visuel éditorial. La pastille passe en colonne (libellé sur 2 lignes max, nombre dessous) pour ne plus tronquer « Robes & combinaisons ».
+
+## Pièces du catalogue avec un hero mais sans visuel standard (11/10/2026)
+
+Mesure du 10/10/2026 : 627 pièces sur 627 ont un visuel hero, mais 7 n'ont aucun visuel standard. `resolveHeroImage` les traitait comme sans image et les sortait des flat lay. Elles sont maintenant représentées par leur hero seul, sauf si leur statut est `invalid` (le hero porterait le même défaut) ou `generating`. Un standard présent mais pas prêt reste un placeholder, comme avant.
+
+Les 7 pièces (requête du 11/10/2026) : 1075 Robe blazer cintrée (`error`), 885, 902, 917 et 922 gilets sans manches (`error`), 1055 Sac business noir (`error`), 1085 Blazer gris en lin (`missing`).
+
+- **DÉMONTRÉ** : les 7 visuels hero ont été regardés un par un le 11/10/2026 — propres, fond uni, conformes au nom de la pièce. C'est pourquoi `error` (échec du visuel STANDARD) n'exclut pas ici.
+- **ARBITRAGE ÉDITORIAL**, valable à ce seul périmètre (pièce sans `image_url`). Une autre pièce au statut `error` mais avec un standard n'est pas concernée.
+- **NON DÉMONTRÉ** : le rendu de ces 7 pièces dans une planche composée (seul leur visuel isolé a été vu).
