@@ -71,8 +71,10 @@ L'analyse (`analyze-dressing-photo`) rend aussi `photoType` : `seule`, `portee` 
 
 ## Mise à plat d'une pièce portée (10/10/2026)
 
-Le détourage seul garde la personne quand la pièce est portée sur la photo. Quand l'analyse lit `photoType = "portee"` (cf. plus haut), l'app demande
-à `detourer-photo` un `mode: "mise_a_plat"` — **depuis le 10/10/2026 pour toute nouvelle photo** (option A, demandée), pas seulement les photos portées :
+Le détourage seul garde la personne quand la pièce est portée sur la photo. **Depuis le 11/10/2026, la mise à plat est SUR DEMANDE** (« option A » : l'ajout d'une photo
+ne fait plus qu'un détourage simple, un seul appel ; une photo lue « portée » n'est pas détourée et garde son original) : la personne la lance depuis la fiche de la pièce
+(« Mettre la photo à plat », plus bas). Raison : chaque mise à plat coûte deux appels payants, et la lancer à chaque ajout épuisait les crédits (402) avant toute mesure.
+L'app demande alors à `detourer-photo` un `mode: "mise_a_plat"` :
 
 ```text
 photo portée → Photoroom Flat Lay (POST https://image-api.photoroom.com/v2/edit, x-api-key, imageFile, flatLay.mode=ai.auto)
@@ -84,9 +86,8 @@ photo portée → Photoroom Flat Lay (POST https://image-api.photoroom.com/v2/ed
 - **Génératif** : la pièce peut différer de la photo (couleur, détails). À contrôler sur de vraies photos avant d'ouvrir à tous.
 - Plafond du jour à part : `MAX_MISES_A_PLAT_PER_USER_PER_DAY` (5 par défaut), fonction de quota `detourer-photo-plat`. Deux appels payants par pièce
   portée (mise à plat, puis détourage).
-- Si la mise à plat échoue (plan sans accès, plafond du jour de 5, service absent) : une photo à plat retombe sur le détourage simple (plafond de 10) ;
-  une pièce lue « portée » garde sa photo d'origine, sans repli : le détourage simple garderait la personne. Les pièces déjà importées ne sont pas
-  retraitées.
+- Si la mise à plat échoue (plan sans accès, crédits épuisés, plafond du jour, service absent) : la photo reste inchangée et l'écran dit la cause. Les pièces déjà
+  importées ne sont pas retraitées.
 - Reconnaissance : `estPhotoMiseAPlat` (app) / `estPhotoMiseAPlat` (serveur) lisent la marque `.detouree.plat.` ; un fichier mis à plat reste un fichier détouré
   pour tout l'affichage.
 
