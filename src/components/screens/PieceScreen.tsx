@@ -20,7 +20,7 @@ import Button from "@/components/Button";
 import Card from "@/components/Card";
 
 /** Ce que la fonction répond quand la mise à plat échoue : la cause, dite simplement (10/10/2026). */
-const MESSAGE_ECHEC_MISE_A_PLAT: Record<CodeMiseAPlat, string> = {
+export const MESSAGE_ECHEC_MISE_A_PLAT: Record<CodeMiseAPlat, string> = {
   quota_atteint: "Tu as atteint la limite de mises à plat du jour : reviens demain.",
   non_configure: "Le service de mise à plat n'est pas relié pour le moment.",
   credits_epuises: "Le service de mise à plat n'a plus de crédit pour le moment.",

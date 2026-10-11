@@ -5,6 +5,8 @@ import { estPhotoDetouree } from "@/lib/dressing";
 import { aDesManches, MANCHES } from "@/lib/manches";
 import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { confierPhoto } from "@/lib/importTenue";
+import { etatAjout } from "@/lib/etatAjout";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { useEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import {
@@ -219,6 +221,7 @@ export default function AddScreen() {
   const photoChoisie = useRef<File | null>(null);
   const [aPhotoChoisie, setAPhotoChoisie] = useState(false);
   const detectionLancee = useRef(false);
+  const [saisieManuelle, setSaisieManuelle] = useState(false);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -325,6 +328,18 @@ export default function AddScreen() {
         : manquantes.length
           ? `Précise ${manquantes.join(" et ")} pour l'ajouter.`
           : null;
+  // Les champs et le bouton d'ajout ne se montrent qu'une fois la photo analysée (cf. etatAjout.ts, états tirés du pipeline réel).
+  const etat = etatAjout({
+    creation,
+    photo: Boolean(state.addPhotoUrl),
+    envoi: state.addPhotoUploading,
+    analyse: state.addPhotoAnalyzing,
+    analysee: state.addPhotoAnalysee,
+    analyseDisponible: isSupabaseConfigured,
+    saisieManuelle,
+    nomRempli: state.addName.trim().length > 0,
+  });
+  const formulaireVisible = etat === "pret";
   const desactive = Boolean(blocage) || state.addSaving || state.addDone;
 
   const nomSuggere = analysee && !state.addNameTouched && state.addName.trim().length > 0;
@@ -474,6 +489,33 @@ export default function AddScreen() {
           </div>
         )}
 
+        {etat === "echec" && (
+          <div role="alert" className="mt-[10px] rounded-tuile bg-warm-bg border border-sand-border px-4 py-[12px]">
+            <div className="text-[13px] text-ink font-medium leading-[1.35]">Capsela n&apos;a pas pu lire cette photo.</div>
+            <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">Aucune information n&apos;a été détectée : réessaie, remplace la photo ou saisis la pièce à la main.</div>
+            {aPhotoChoisie && (
+              <button
+                type="button"
+                onClick={() => photoChoisie.current && actions.uploadAddPhoto(photoChoisie.current)}
+                className="mt-[10px] mr-4 min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer"
+              >
+                Réessayer
+              </button>
+            )}
+            <button type="button" onClick={() => setSaisieManuelle(true)} className="mt-[10px] min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer">
+              Saisir à la main
+            </button>
+          </div>
+        )}
+
+        {etat === "initial" && (
+          <button type="button" onClick={() => setSaisieManuelle(true)} className="mt-4 min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer">
+            Saisir la pièce sans photo
+          </button>
+        )}
+
+        {formulaireVisible && (
+          <>
         {/* 2. Le nom. */}
         <label htmlFor="ajout-nom" className={"block mt-[22px] " + EYEBROW}>
           Nom de la pièce
@@ -786,9 +828,12 @@ export default function AddScreen() {
             + Ajouter une autre occasion
           </button>
         )}
+          </>
+        )}
       </div>
 
       {/* 9. L'action, fixée hors du défilement, au-dessus de la zone système. */}
+      {formulaireVisible && (
       <div className="absolute left-0 right-0 bottom-0 bg-cream border-t border-border px-[18px] pt-3" style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom))" }}>
         <button
           type="button"
@@ -809,6 +854,7 @@ export default function AddScreen() {
             (state.addDone ? "Tu la retrouves dans ton dressing." : (blocage ?? "Tout reste modifiable depuis ton dressing."))}
         </div>
       </div>
+      )}
 
       <BottomSheet title={state.addPhotoUrl ? "Changer la photo" : "Ajouter une photo"} open={sourcePhoto} onClose={() => setSourcePhoto(false)}>
         <div className="flex flex-col">
@@ -830,6 +876,21 @@ export default function AddScreen() {
           >
             <GalerieIcon /> Choisir dans la galerie
           </button>
+          {creation && state.addPhotoUrl && (
+            <button
+              onClick={() => {
+                setSourcePhoto(false);
+                // Retirer la photo : retour à l'état initial, sans garder les champs lus sur elle.
+                actions.retirerPhotoAjout();
+                photoChoisie.current = null;
+                setAPhotoChoisie(false);
+                setSaisieManuelle(false);
+              }}
+              className="flex items-center gap-[13px] py-[15px] text-[14px] text-ink border-t border-border cursor-pointer text-left"
+            >
+              Retirer la photo
+            </button>
+          )}
         </div>
       </BottomSheet>
 

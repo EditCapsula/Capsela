@@ -55,3 +55,8 @@ ou `{ ok: false, code }` (`non_configure`, `photo_invalide`, `photo_refusee`, `c
 
 ## À faire ensuite
 Essayer avec la vraie clé Photoroom et OpenAI : qualité des boîtes et des détourages sur photo portée, puis ajuster les points ci-dessus.
+
+## Écran de résultat refondu (11/10/2026, d'après une capture d'une autre application)
+Plus de cases à cocher ni de bouton fixe « Ajouter les N pièces » : titre « N pièces détectées », « Tout ajouter » en haut, et une carte par pièce (photo cadrée détourée, nom avec crayon, catégorie, corbeille, « Mettre à plat », « Ajouter »). « Ajouter » d'une carte incomplète ouvre ses champs (saisons, manches, modèle restent requis). Les pièces ajoutées sortent de la liste ; sans pièce restante, l'import est terminé. « Mettre à plat » est SUR DEMANDE (même fonction que la fiche pièce, mêmes messages d'échec) et ne remplace la photo de la carte qu'en cas de succès. Dressing gratuit : jamais plus de pièces ajoutées que de places.
+
+« Ajouter une pièce » (états dans `etatAjout.ts`, testés) : sans photo, seul le choix de la photo (+ « Saisir la pièce sans photo ») ; photo en envoi ou en analyse, champs et bouton masqués ; analyse qui n'a rien lu, message avec « Réessayer », remplacer la photo ou « Saisir à la main » ; analyse faite, le formulaire. « Retirer la photo » (feuille « Changer la photo ») ramène à l'état initial et efface le nom et les champs lus sur elle ; remplacer la photo efface de même les champs lus (jamais ceux que la personne a choisis).

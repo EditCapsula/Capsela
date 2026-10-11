@@ -448,6 +448,8 @@ export interface Actions {
   setAddColor: (c: { name: string; hex: string }) => void;
   setAddSize: (v: string | null) => void;
   setAddPhoto: (url: string | null) => void;
+  /** Retire la photo de l'ajout (11/10/2026) : retour à l'état initial, sans garder le nom ni les champs lus sur elle. */
+  retirerPhotoAjout: () => void;
   /** Aperçu local immédiat puis upload réel vers Supabase Storage (bucket dressing-photos) — remplace addPhotoUrl par l'URL définitive une fois terminé. */
   uploadAddPhoto: (file: File) => void;
   /** Coche ou décoche une des quatre saisons (basculerSaison, saisons.ts) — la dernière restante reste cochée. */
@@ -666,6 +668,22 @@ const CapselaContext = createContext<CapselaContextValue | null>(null);
  */
 export function findPiece(pool: Item[], id: number, fallback: Item[] = CATALOG): Item | undefined {
   return pool.find((i) => i.id === id) ?? fallback.find((i) => i.id === id);
+}
+
+/**
+ * Les champs que l'analyse d'une photo a REMPLIS (jamais ceux que la personne a choisis elle-même : drapeaux *Touched) sont vidés quand la
+ * photo change ou part : une nouvelle image ne garde pas silencieusement les manches, le motif, les saisons lues ou le nom de l'ancienne
+ * (11/10/2026). `effacerNom` : le nom aussi, même saisi — le retrait de la photo ramène l'écran à son état initial.
+ */
+function sansLecturePrecedente(s: AppState, effacerNom: boolean): Partial<AppState> {
+  return {
+    addManches: s.addManchesTouched ? s.addManches : null,
+    addManchesIA: null,
+    addMotif: s.addMotifTouched ? s.addMotif : null,
+    addMotifIA: null,
+    ...(s.addSaisonsLues ? { addSaisons: null, addSaisonsLues: false } : {}),
+    ...(effacerNom || !s.addNameTouched ? { addName: "", addNameTouched: false } : {}),
+  };
 }
 
 export function CapselaProvider({ children }: { children: React.ReactNode }) {
@@ -2088,12 +2106,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c, addColorTouched: true })),
     setAddSize: (v) => setState((s) => ({ ...s, addSize: v })),
     setAddPhoto: (v) => setState((s) => ({ ...s, addPhotoUrl: v })),
+    retirerPhotoAjout: () =>
+      setState((s) => ({
+        ...s,
+        ...sansLecturePrecedente(s, true),
+        addPhotoUrl: null,
+        addPhotoUploading: false,
+        addPhotoAnalyzing: false,
+        addPhotoAnalysee: false,
+        addPhotoCadrage: null,
+        addPhotoDetourage: "repos",
+      })),
     uploadAddPhoto: (file) => {
       // Aperçu local instantané (URL.createObjectURL) pendant l'upload —
       // jamais ce qui sera persisté au final (cf. photoUrl côté
       // insertDressingItem, uniquement rempli une fois l'URL définitive
       // obtenue ci-dessous).
-      setState((s) => ({ ...s, addPhotoUrl: URL.createObjectURL(file), addPhotoUploading: true, addPhotoAnalysee: false, addPhotoCadrage: null, addPhotoDetourage: "repos" }));
+      setState((s) => ({ ...s, ...(s.addPhotoUrl ? sansLecturePrecedente(s, false) : {}), addPhotoUrl: URL.createObjectURL(file), addPhotoUploading: true, addPhotoAnalysee: false, addPhotoCadrage: null, addPhotoDetourage: "repos" }));
       if (!isSupabaseConfigured || !userId) {
         // Mode démo : pas de Storage à interroger, l'aperçu local reste tel quel.
         setState((s) => ({ ...s, addPhotoUploading: false }));

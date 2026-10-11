@@ -8,7 +8,8 @@ import Input from "@/components/Input";
 import { CameraIcon, ChampSelect, chip, Coche, EYEBROW, luminance, NOMS_PASTILLES, SpinnerCintre } from "@/components/screens/AddScreen";
 import { useAuth } from "@/lib/auth";
 import { CATS, FAMILLES_COULEURS, PALETTE, PALETTE_BIJOU } from "@/lib/data";
-import { deleteDressingPhotos, dressingPhotoPath, importerTenue, uploadDressingPhoto, type CodeImportTenue } from "@/lib/dressing";
+import { deleteDressingPhotos, detourerPhotoAvecCause, dressingPhotoPath, estPhotoMiseAPlat, importerTenue, uploadDressingPhoto, type CodeImportTenue } from "@/lib/dressing";
+import { MESSAGE_ECHEC_MISE_A_PLAT } from "@/components/screens/PieceScreen";
 import {
   aCreer,
   brouillonsDepuis,
@@ -17,10 +18,8 @@ import {
   libelleCategorie,
   limiterAuxPlaces,
   manquesDe,
-  messageIncomplet,
   modelesDe,
   nPieces,
-  peutCocher,
   phraseManque,
   pieceDepuis,
   reprendrePhoto,
@@ -61,8 +60,8 @@ export default function ImporterTenueScreen() {
 
   const [phase, setPhase] = useState<Phase>("choix");
   const [apercu, setApercu] = useState<string | null>(null);
-  const [tenueUrl, setTenueUrl] = useState<string | null>(null);
-  const [vue, setVue] = useState<"photo" | "plat">("plat");
+  // Mise à plat demandée sur une carte (« Mettre à plat ») : en cours, ou la cause de l'échec. Jamais lancée seule.
+  const [plat, setPlat] = useState<Record<number, { etat: "cours" | "erreur"; message?: string }>>({});
   const [brouillons, setBrouillons] = useState<BrouillonPiece[]>([]);
   const [nbRepere, setNbRepere] = useState(0);
   const [ouverte, setOuverte] = useState<number | null>(null);
@@ -94,7 +93,7 @@ export default function ImporterTenueScreen() {
     purger(tout());
     fichiers.current = { source: null, tenue: null, objets: new Map() };
     setApercu(URL.createObjectURL(file));
-    setVue("plat");
+    setPlat({});
     setOuverte(null);
     setErreurAjout(null);
     setEnvoyee(false);
@@ -127,7 +126,6 @@ export default function ImporterTenueScreen() {
       const c = dressingPhotoPath(o.photo_url);
       if (c) fichiers.current.objets.set(i, c);
     });
-    setTenueUrl(r.tenueUrl);
     if (r.objets.length === 0) {
       purger(tout());
       fichiers.current = { source: null, tenue: null, objets: new Map() };
@@ -165,9 +163,14 @@ export default function ImporterTenueScreen() {
     actions.go("add");
   };
 
-  const valider = async () => {
-    const pretes = aCreer(brouillons);
+  // Ajoute les pièces demandées (une carte : « Ajouter » ; toutes : « Tout ajouter »), une à une. Les pièces entrées sortent de la liste ;
+  // quand il n'en reste plus, l'import est terminé. Un échec en route garde ce qui n'est pas entré.
+  const valider = async (cibles: BrouillonPiece[]) => {
+    let pretes = cibles.filter((b) => b.coche && manquesDe(b).length === 0);
     if (!pretes.length || phase === "ajout") return;
+    // Dressing gratuit : jamais plus de pièces que de places restantes.
+    if (places !== null) pretes = pretes.slice(0, Math.max(0, places));
+    if (!pretes.length) return;
     setErreurAjout(null);
     setProgression({ fait: 0, total: pretes.length });
     setPhase("ajout");
@@ -179,24 +182,57 @@ export default function ImporterTenueScreen() {
       setProgression({ fait: reussies.length, total: pretes.length });
     }
     const gardees = new Set(reussies.map((b) => b.cle));
-    if (reussies.length === pretes.length) {
-      // Tout est entré : ne reste que ce qui sert aux pièces.
-      purger([fichiers.current.source, fichiers.current.tenue, ...[...fichiers.current.objets].filter(([k]) => !gardees.has(k)).map(([, c]) => c)]);
+    for (const k of gardees) fichiers.current.objets.delete(k);
+    setAjoutees((a) => [...a, ...reussies.map((b) => b.photoUrl)]);
+    const restantes = brouillons.filter((b) => !gardees.has(b.cle));
+    setBrouillons((bs) => bs.filter((b) => !gardees.has(b.cle)));
+    if (reussies.length === pretes.length && restantes.length === 0) {
+      // Tout est traité : ne reste que ce qui sert aux pièces ajoutées.
+      purger([fichiers.current.source, fichiers.current.tenue, ...fichiers.current.objets.values()]);
+      fichiers.current = { source: null, tenue: null, objets: new Map() };
       fin.current = true;
-      setAjoutees(reussies.map((b) => b.photoUrl));
       setPhase("termine");
       return;
     }
-    // Échec en route (réseau, limite gratuite) : les pièces entrées sortent de la liste, le reste est conservé.
-    setAjoutees((a) => [...a, ...reussies.map((b) => b.photoUrl)]);
-    setBrouillons((bs) => bs.filter((b) => !gardees.has(b.cle)));
-    for (const k of gardees) fichiers.current.objets.delete(k);
-    setErreurAjout(
-      reussies.length
-        ? `${nPieces(reussies.length)} ajoutée${reussies.length > 1 ? "s" : ""}. Les autres n'ont pas pu l'être : tes choix sont conservés, réessaie dans un instant.`
-        : "Les pièces n'ont pas pu être ajoutées. Tes choix sont conservés : réessaie dans un instant."
-    );
+    if (reussies.length < pretes.length) {
+      setErreurAjout(
+        reussies.length
+          ? `${nPieces(reussies.length)} ajoutée${reussies.length > 1 ? "s" : ""}. Les autres n'ont pas pu l'être : tes choix sont conservés, réessaie dans un instant.`
+          : "Les pièces n'ont pas pu être ajoutées. Tes choix sont conservés : réessaie dans un instant."
+      );
+    }
     setPhase("resultat");
+  };
+
+  // Retirer une détection : sa carte sort de la liste et son fichier est supprimé. Sans carte restante, rien n'est ajouté.
+  const retirer = (cle: number) => {
+    const chemin = fichiers.current.objets.get(cle);
+    if (chemin) purger([chemin]);
+    fichiers.current.objets.delete(cle);
+    setBrouillons((bs) => bs.filter((b) => b.cle !== cle));
+    setOuverte((o) => (o === cle ? null : o));
+  };
+
+  // « Mettre à plat » une pièce, sur demande (le détourage seul est automatique). Rien n'est remplacé si le service échoue.
+  const mettreAPlat = async (b: BrouillonPiece) => {
+    if (plat[b.cle]?.etat === "cours") return;
+    setPlat((p) => ({ ...p, [b.cle]: { etat: "cours" } }));
+    const r = await detourerPhotoAvecCause(b.photoUrl, "mise_a_plat");
+    if ("code" in r) {
+      setPlat((p) => ({ ...p, [b.cle]: { etat: "erreur", message: MESSAGE_ECHEC_MISE_A_PLAT[r.code] } }));
+      return;
+    }
+    // La version à plat remplace la photo de la carte ; l'ancien fichier n'a plus d'usage.
+    const ancien = fichiers.current.objets.get(b.cle);
+    const nouveau = dressingPhotoPath(r.url);
+    if (nouveau) fichiers.current.objets.set(b.cle, nouveau);
+    if (ancien && ancien !== nouveau) purger([ancien]);
+    modifier(b.cle, { photoUrl: r.url });
+    setPlat((p) => {
+      const { [b.cle]: _fini, ...reste } = p;
+      void _fini;
+      return reste;
+    });
   };
 
   const recommencer = () => {
@@ -204,7 +240,6 @@ export default function ImporterTenueScreen() {
     fichiers.current = { source: null, tenue: null, objets: new Map() };
     fin.current = false;
     setApercu(null);
-    setTenueUrl(null);
     setBrouillons([]);
     setAjoutees([]);
     setErreurAjout(null);
@@ -212,7 +247,6 @@ export default function ImporterTenueScreen() {
   };
 
   const pretes = aCreer(brouillons);
-  const incomplet = messageIncomplet(brouillons);
   const plein = depasseLesPlaces(nbRepere, places);
   const enCours = phase === "analyse";
   const enAjout = phase === "ajout";
@@ -223,8 +257,8 @@ export default function ImporterTenueScreen() {
     { label: "Couleurs et catégories", etat: envoyee ? "cours" : "attente" },
   ];
 
-  const montrePlat = vue === "plat" && tenueUrl && (phase === "resultat" || phase === "ajout");
-  const imageZone = montrePlat ? tenueUrl : apercu;
+  const imageZone = apercu;
+  const listeAffichee = phase === "resultat" || phase === "ajout";
 
   return (
     <div className="absolute inset-0 flex flex-col bg-cream">
@@ -234,12 +268,12 @@ export default function ImporterTenueScreen() {
         <span />
       </div>
 
-      <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-[18px] pt-[6px] pb-[160px]" aria-busy={enCours || enAjout}>
+      <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-[18px] pt-[6px] pb-[40px]" aria-busy={enCours || enAjout}>
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={onFichier} className="hidden" />
         <input ref={galerieRef} type="file" accept="image/*" onChange={onFichier} className="hidden" />
 
-        {/* Zone image : même hauteur à tous les états (ratio 1,3). */}
-        {phase === "choix" || phase === "echec" || phase === "vide" ? (
+        {/* Zone image : même hauteur à tous les états (ratio 1,3), sauf sur la liste des pièces, qui montre une photo par pièce. */}
+        {listeAffichee ? null : phase === "choix" || phase === "echec" || phase === "vide" ? (
           <div className="rounded-[24px] bg-card border border-border aspect-[1.3] p-[18px] flex flex-col items-center justify-center text-center">
             <span className="text-terracotta-deep" aria-hidden="true">
               <CameraIcon />
@@ -258,12 +292,12 @@ export default function ImporterTenueScreen() {
         ) : (
           <div
             role="img"
-            aria-label={montrePlat ? "Ta tenue mise à plat" : "Ta photo"}
+            aria-label="Ta photo"
             className="relative rounded-[24px] overflow-hidden border border-border aspect-[1.3]"
             style={{
-              background: montrePlat ? "#F0E5D6" : "var(--color-warm-bg)",
+              background: "var(--color-warm-bg)",
               backgroundImage: imageZone ? `url(${imageZone})` : undefined,
-              backgroundSize: montrePlat ? "contain" : "cover",
+              backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
             }}
@@ -292,31 +326,26 @@ export default function ImporterTenueScreen() {
           </div>
         )}
 
-        {/* Bascule photo / à plat : seulement quand la planche existe. */}
-        {tenueUrl && apercu && (phase === "resultat" || phase === "ajout") && (
-          <div role="group" aria-label="Image affichée" className="grid grid-cols-2 gap-1 p-1 mt-3 rounded-full bg-[#F0E5D6]">
-            {(["photo", "plat"] as const).map((v) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={vue === v}
-                onClick={() => setVue(v)}
-                className={"h-[36px] rounded-full text-[12.5px] font-semibold cursor-pointer " + (vue === v ? "bg-card text-ink" : "text-[#5C5648]")}
-              >
-                {v === "photo" ? "Voir ma photo" : "Voir l'image à plat"}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Phrase de statut. */}
         <div role="status" aria-live="polite" className="mt-4">
           {phase === "choix" && <p className="text-[13px] text-[#5C5648]">Capsela repère chaque pièce, tu choisis celles à ajouter.</p>}
           {phase === "resultat" && (
-            <>
-              <p className="font-serif font-medium text-[18px] text-ink">{seul ? "Une seule pièce repérée." : `Capsela a repéré ${nbRepere} pièces.`}</p>
-              {tenueUrl && <p className="text-[12px] text-[#5C5648] mt-1">Image générée à partir de ta photo : vérifie qu&apos;elle ressemble à tes pièces.</p>}
-            </>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-serif font-medium text-[22px] text-ink">{seul ? "1 pièce détectée" : `${nbRepere} pièces détectées`}</p>
+                <p className="text-[12.5px] text-[#5C5648] mt-1">Vérifie les vêtements avant de les ajouter à ton dressing.</p>
+              </div>
+              {brouillons.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => void valider(brouillons)}
+                  disabled={pretes.length === 0}
+                  className={"h-[40px] px-4 flex-shrink-0 rounded-full text-[13px] font-semibold " + (pretes.length === 0 ? "bg-[#E2C9A8] text-[#5C5648] cursor-not-allowed" : "bg-terracotta-deep text-[#FBF3EA] cursor-pointer")}
+                >
+                  Tout ajouter
+                </button>
+              )}
+            </div>
           )}
           {phase === "vide" && (
             <>
@@ -357,50 +386,80 @@ export default function ImporterTenueScreen() {
             {brouillons.map((b) => {
               const manques = manquesDe(b);
               const ouvert = ouverte === b.cle;
-              const peut = b.coche || peutCocher(brouillons, places);
+              const etatPlat = plat[b.cle];
+              const peutAPlat = isSupabaseConfigured && !estPhotoMiseAPlat(b.photoUrl);
               return (
-                <li key={b.cle} className={"rounded-[20px] border border-border bg-card transition-opacity " + (b.coche ? "" : "opacity-[.55]")}>
-                  <div className="flex items-center gap-3 pl-3 pr-1 min-h-[72px]">
-                    <button
-                      type="button"
-                      aria-expanded={ouvert}
-                      aria-label={`Modifier ${b.nom || "la pièce"}`}
-                      disabled={enAjout}
-                      onClick={() => setOuverte(ouvert ? null : b.cle)}
-                      className="flex-1 min-w-0 flex items-center gap-3 text-left cursor-pointer py-2"
-                    >
-                      <span className="w-[56px] h-[56px] flex-shrink-0 rounded-[14px] overflow-hidden flex items-center justify-center" style={{ background: "#F0E5D6" }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={b.photoUrl} alt="" className="w-full h-full object-contain" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-serif font-medium text-[16px] text-ink truncate">{b.nom || "Nouvelle pièce"}</span>
-                        <span className="block text-[12px] text-[#5C5648]">{libelleCategorie(b.cat)}</span>
-                        {!b.coche ? (
-                          <span className="block text-[11.5px] text-[#8B8375]">Ne sera pas ajoutée</span>
-                        ) : (
-                          manques.length > 0 && <span className="block text-[11.5px] font-semibold text-terracotta-deep">{phraseManque(manques)}</span>
-                        )}
-                      </span>
-                    </button>
-                    {!seul && (
-                      <button
-                        type="button"
-                        role="checkbox"
-                        aria-checked={b.coche}
-                        aria-label={`Ajouter ${b.nom || "cette pièce"}`}
-                        disabled={enAjout || !peut}
-                        onClick={() => modifier(b.cle, { coche: !b.coche })}
-                        className="w-[44px] h-[44px] flex-shrink-0 flex items-center justify-center cursor-pointer disabled:cursor-default"
-                      >
-                        <span
-                          className={"w-[26px] h-[26px] rounded-full border flex items-center justify-center " + (b.coche ? "bg-terracotta-deep border-terracotta-deep" : "bg-card border-[#CFC3B0]")}
-                        >
-                          {b.coche && <Coche couleur="#FBF3EA" taille={16} />}
+                <li key={b.cle} className="rounded-[20px] border border-border bg-card">
+                  <div className="flex gap-3 p-3">
+                    <span className="relative w-[96px] h-[120px] flex-shrink-0 rounded-[14px] overflow-hidden flex items-center justify-center" style={{ background: "#F0E5D6" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={b.photoUrl} alt="" className="w-full h-full object-contain" />
+                      {etatPlat?.etat === "cours" && (
+                        <span className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(243,238,229,.7)" }} role="status" aria-label="Mise à plat en cours">
+                          <SpinnerCintre sombre />
                         </span>
-                      </button>
-                    )}
+                      )}
+                    </span>
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <div className="flex items-start justify-between gap-1">
+                        <button
+                          type="button"
+                          aria-expanded={ouvert}
+                          aria-label={`Modifier ${b.nom || "la pièce"}`}
+                          disabled={enAjout}
+                          onClick={() => setOuverte(ouvert ? null : b.cle)}
+                          className="min-w-0 flex items-center gap-[6px] text-left cursor-pointer min-h-[32px]"
+                        >
+                          <span className="font-serif font-medium text-[16px] text-ink truncate">{b.nom || "Nouvelle pièce"}</span>
+                          <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] flex-shrink-0" fill="none" stroke="#8B8375" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Retirer ${b.nom || "cette pièce"}`}
+                          disabled={enAjout}
+                          onClick={() => retirer(b.cle)}
+                          className="w-[36px] h-[36px] -mt-1 -mr-1 flex-shrink-0 flex items-center justify-center cursor-pointer"
+                        >
+                          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="#8B8375" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5" />
+                          </svg>
+                        </button>
+                      </div>
+                      <span className="block text-[12px] text-[#5C5648]">{libelleCategorie(b.cat)}</span>
+                      {!b.coche ? (
+                        <span className="block text-[11.5px] text-[#8B8375] mt-[2px]">Plus de place dans ton dressing gratuit</span>
+                      ) : (
+                        manques.length > 0 && <span className="block text-[11.5px] font-semibold text-terracotta-deep mt-[2px]">{phraseManque(manques)}</span>
+                      )}
+                      <div className="mt-auto pt-3 flex gap-2">
+                        {peutAPlat && (
+                          <button
+                            type="button"
+                            disabled={enAjout || etatPlat?.etat === "cours"}
+                            onClick={() => void mettreAPlat(b)}
+                            className="h-[40px] px-3 rounded-full border border-border bg-cream text-ink text-[12.5px] font-semibold cursor-pointer disabled:cursor-default disabled:opacity-60"
+                          >
+                            Mettre à plat
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={enAjout || !b.coche}
+                          onClick={() => (manques.length > 0 ? setOuverte(b.cle) : void valider([b]))}
+                          className="h-[40px] px-4 rounded-full bg-terracotta-deep text-[#FBF3EA] text-[12.5px] font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50"
+                        >
+                          Ajouter
+                        </button>
+                      </div>
+                    </div>
                   </div>
+                  {etatPlat?.etat === "erreur" && (
+                    <p role="alert" className="px-3 pb-3 -mt-1 text-[12px] text-[#5C5648]">
+                      {etatPlat.message} Ta photo est inchangée.
+                    </p>
+                  )}
 
                   {ouvert && (
                     <div className="px-3 pb-4 pt-1 flex flex-col gap-3 border-t border-border">
@@ -573,28 +632,6 @@ export default function ImporterTenueScreen() {
           </div>
         )}
       </div>
-
-      {/* L'action, fixée hors du défilement. */}
-      {(phase === "resultat" || phase === "ajout") && (
-        <div className="absolute left-0 right-0 bottom-0 bg-cream border-t border-border px-[18px] pt-3" style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom))" }}>
-          <button
-            type="button"
-            onClick={() => void valider()}
-            disabled={pretes.length === 0 || enAjout}
-            aria-busy={enAjout}
-            className={
-              "w-full h-[52px] rounded-full flex items-center justify-center gap-[10px] text-[13.5px] font-semibold uppercase tracking-[.08em] " +
-              (pretes.length === 0 && !enAjout ? "bg-[#E2C9A8] text-[#5C5648] cursor-not-allowed" : "bg-terracotta-deep text-[#FBF3EA] cursor-pointer disabled:cursor-default")
-            }
-          >
-            {enAjout && <SpinnerCintre />}
-            {enAjout ? `Ajout ${Math.min(progression.fait + 1, progression.total)} sur ${progression.total}` : pretes.length <= 1 ? (seul ? "Ajouter la pièce" : `Ajouter ${nPieces(pretes.length)}`) : `Ajouter ${nPieces(pretes.length)}`}
-          </button>
-          <div className="text-center text-[12px] text-[#5C5648] mt-2 min-h-[16px]">
-            {enAjout ? "Tu les retrouves dans ton dressing." : incomplet ?? (brouillons.some((b) => b.coche) ? "Touche une pièce pour la modifier." : "Coche au moins une pièce.")}
-          </div>
-        </div>
-      )}
 
       <BottomSheet title="Toutes les couleurs" open={couleurPour !== null} onClose={() => setCouleurPour(null)}>
         {(() => {
