@@ -8,6 +8,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { useAuth } from "@/lib/auth";
 import { DAYS_FR, MONTHS_FR, occasionShortLabel } from "@/lib/data";
 import { participePorte, participePorteMaj } from "@/lib/logic";
+import { currentSeasonKey } from "@/lib/capsule";
 import { useCapsela } from "@/lib/store";
 import {
   capsuleJournal,
@@ -16,7 +17,8 @@ import {
   journalInsights,
   moisAnnee,
   moisDepuis,
-  mostWornPieces,
+  mostWornPiecesDeSaison,
+  deLaSaison,
   nomCourtPiece,
   deLaSaisonEnCours,
   styleDuMois,
@@ -307,7 +309,8 @@ export default function HistoryScreen() {
 
   const insights = journalInsights(state.history);
   const entries = journalEntries(state.history, resolvePool);
-  const fetiches = mostWornPieces(state.history, resolvePool, 3);
+  const fetiches = mostWornPiecesDeSaison(state.history, resolvePool);
+  const saisonEnCours = currentSeasonKey();
   const style = styleDuMois(state.history);
 
   // ── À SORTIR DU PLACARD ─────────────────────────────────────────────
@@ -772,7 +775,7 @@ export default function HistoryScreen() {
       {fetiches.length > 0 && (
         <section className="mt-[30px]" aria-labelledby="journal-fetiches">
           <Surtitre>
-            <span id="journal-fetiches">Tes pièces fétiches</span>
+            <span id="journal-fetiches">Tes pièces fétiches {deLaSaison(saisonEnCours)}</span>
           </Surtitre>
           {/* Vitrine horizontale (26/09/2026) : les trois pièces visibles
               ensemble, sans défilement — une liste verticale à vignettes de
