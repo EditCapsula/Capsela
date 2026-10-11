@@ -33,6 +33,7 @@ import {
   updateDressingItem,
   updateDressingItemRevente,
   updateDressingItemManches,
+  updateDressingItemMotif,
   updateDressingItemSaisons,
   updateDressingItemWorn,
   updateSavedLook,
@@ -43,6 +44,7 @@ import { ensureCatalogImage, resolveItemImage } from "./catalogImages";
 import { choisirMeteo, fetchPrevisionByCity, fetchWeatherByCity, fetchWeatherByCoords, getBrowserPosition, type SourceMeteo } from "./weather";
 import { CATS, CITIES, PALETTE, PALETTE_BIJOU, SUBTYPE_REQUIRED, type Weather } from "./data";
 import { aDesManches } from "./manches";
+import { aUnMotif } from "./motifs";
 import { genererTenueDiversifiee, recentsDuJour } from "./diversite";
 import { ecrireRecommandation, lireRecommandations, type TableRecommandations } from "./recommandationsRecentes";
 import { basculerSaison, saisonsDe, seasonDepuisSaisons } from "./saisons";
@@ -82,6 +84,7 @@ import type {
   CapsuleSeason,
   CategoryKey,
   Manches,
+  Motif,
   ChoixRevente,
   City,
   Coupe,
@@ -199,6 +202,9 @@ function buildInitialState(): AppState {
     addSaisonsLues: false,
     addManches: null,
     addManchesIA: null,
+    addMotif: null,
+    addMotifIA: null,
+    addMotifTouched: false,
     addDone: false,
     addOccasion: [],
     addOccasionTouched: false,
@@ -450,6 +456,10 @@ export interface Actions {
   setAddManches: (m: Manches) => void;
   /** Remet les manches lues par l'analyse de la photo (« Rétablir »). */
   retablirAddManches: () => void;
+  /** Choisit le motif ; rappeler la valeur active la retire (retour à « inconnu »). Facultatif. */
+  setAddMotif: (m: Motif) => void;
+  /** Remet le motif lu par l'analyse de la photo (« Rétablir »). */
+  retablirAddMotif: () => void;
   /** Bascule l'occasion dans la sélection multiple. */
   setAddOccasion: (o: OccasionKey) => void;
   setAddShoeType: (t: ShoeType) => void;
@@ -1462,6 +1472,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  /** Écrit le motif d'une pièce (migration 0051) : même règle que les manches — un échec remet l'état d'avant et se dit. */
+  const enregistrerMotif = (id: number, motif: Motif | null, avant: Motif | undefined) => {
+    updateDressingItemMotif(id, motif).catch((err) => {
+      setState((st) => ({ ...st, items: st.items.map((it) => (it.id === id ? { ...it, motif: avant } : it)) }));
+      reportDressingError("updateDressingItemMotif", err);
+    });
+  };
+
   /** Pièces importées dont l'insertion est en cours : la limite gratuite les compte déjà (stateRef n'est à jour qu'au rendu suivant). */
   const piecesImporteesEnVol = useRef(0);
 
@@ -1753,10 +1771,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       try {
         if (isSupabaseConfigured && userId) {
           const item = await insertDressingItem(userId, piece);
-          const creee: Item = { ...item, saisons, manches: piece.manches };
+          const creee: Item = { ...item, saisons, manches: piece.manches, motif: piece.motif };
           setState((st) => ({ ...st, items: [creee, ...st.items] }));
           enregistrerSaisons(item.id, saisons);
           if (piece.manches) enregistrerManches(item.id, piece.manches, undefined);
+          if (piece.motif) enregistrerMotif(item.id, piece.motif, undefined);
           return creee;
         }
         let creee: Item | null = null;
@@ -1936,6 +1955,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addMatiereTouched: Boolean(item.matiere),
           addManchesTouched: Boolean(item.manches),
           addManchesIA: null,
+          addMotif: item.motif ?? null,
+          addMotifTouched: Boolean(item.motif),
+          addMotifIA: null,
           addCoupe: item.coupe ?? null,
           addCoupeTouched: Boolean(item.coupe),
           addSacType: item.cat === "sac" ? item.sacType ?? null : null,
@@ -2006,6 +2028,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addMatiereTouched: Boolean(item.matiere),
           addManchesTouched: Boolean(item.manches),
           addManchesIA: null,
+          addMotif: item.motif ?? null,
+          addMotifTouched: Boolean(item.motif),
+          addMotifIA: null,
           addCoupe: item.coupe ?? null,
           addCoupeTouched: Boolean(item.coupe),
           addSacType: item.cat === "sac" ? item.sacType ?? null : null,
@@ -2056,6 +2081,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           addSubtypeTouched: false,
           // Les manches ne suivent que vers une catégorie qui en a : sinon elles repartent à « à préciser ».
           ...(aDesManches(k) ? {} : { addManches: null, addManchesIA: null, addManchesTouched: false }),
+          // Un bijou n'a pas de motif.
+          ...(aUnMotif(k) ? {} : { addMotif: null, addMotifIA: null, addMotifTouched: false }),
         };
       }),
     setAddColor: (c) => setState((s) => ({ ...s, addColor: c, addColorTouched: true })),
@@ -2093,7 +2120,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                 if (s.addPhotoUrl !== url) return { ...s, addPhotoAnalyzing: false };
                 // analyzeDressingPhoto rend {} sur un échec : rien n'a alors
                 // été analysé, et l'écran ne doit pas dire le contraire.
-                const analysee = Boolean(a.cat || a.colorName || a.matiere || a.subtype || a.shoeType || a.manches || a.saisons?.length);
+                const analysee = Boolean(a.cat || a.colorName || a.matiere || a.subtype || a.shoeType || a.manches || a.motif || a.saisons?.length);
                 const finalCat = s.addCatTouched ? s.addCat : a.cat ?? s.addCat;
                 const catMatches = Boolean(a.cat) && a.cat === finalCat;
                 const finalColor = s.addColorTouched || !a.colorName || !a.colorHex ? s.addColor : { name: a.colorName, hex: a.colorHex };
@@ -2116,6 +2143,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
                   addMatiere: finalMatiere,
                   addManches: finalManches,
                   addManchesIA: !catMatches || !aDesManches(finalCat) ? s.addManchesIA : a.manches ?? s.addManchesIA,
+                  // Motif lu sur la photo : jamais pour un bijou, jamais par-dessus un choix de l'utilisatrice.
+                  addMotif: s.addMotifTouched || !aUnMotif(finalCat) || !catMatches ? s.addMotif : a.motif ?? s.addMotif,
+                  addMotifIA: !catMatches || !aUnMotif(finalCat) ? s.addMotifIA : a.motif ?? s.addMotifIA,
                   ...(saisonsLues ? { addSaisons: saisonsLues, addSaisonsLues: true } : {}),
                   addSubtype: finalSubtype,
                   addShoeType: finalShoeType,
@@ -2176,6 +2206,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setAddManches: (m) =>
       setState((s) => ({ ...s, addManches: s.addManches === m ? null : m, addManchesTouched: true })),
     retablirAddManches: () => setState((s) => ({ ...s, addManches: s.addManchesIA, addManchesTouched: false })),
+    setAddMotif: (m) => setState((s) => ({ ...s, addMotif: s.addMotif === m ? null : m, addMotifTouched: true })),
+    retablirAddMotif: () => setState((s) => ({ ...s, addMotif: s.addMotifIA, addMotifTouched: false })),
     setAddOccasion: (o) =>
       setState((s) => {
         // Une occasion suggérée (en pointillés) qu'on touche devient confirmée ;
@@ -2262,6 +2294,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         season: seasonDepuisSaisons(saisons),
         saisons,
         manches: aDesManches(s.addCat) ? s.addManches ?? undefined : undefined,
+        motif: aUnMotif(s.addCat) ? s.addMotif ?? undefined : undefined,
         occasion: (() => {
           return s.addOccasion.length ? s.addOccasion : undefined;
         })(),
@@ -2326,6 +2359,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         addSaisonsLues: false,
         addManches: null,
         addManchesIA: null,
+        addMotif: null,
+        addMotifIA: null,
+        addMotifTouched: false,
         addDone: false,
         addShoeType: null,
         addShoeTypeTouched: false,
@@ -2352,6 +2388,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           updateDressingItem(editingId, base).catch((err) => reportDressingError("updateDressingItem", err));
           enregistrerSaisons(editingId, saisons);
           if (base.manches !== original?.manches) enregistrerManches(editingId, base.manches ?? null, original?.manches);
+          if (base.motif !== original?.motif) enregistrerMotif(editingId, base.motif ?? null, original?.motif);
           deleteDressingPhotos(photos).catch((err) => reportDressingError("deleteDressingPhotos", err));
         }
         return;
@@ -2365,11 +2402,12 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           .then((item) => {
             // La ligne insérée n'a pas encore ses saisons (écriture isolée,
             // cf. updateDressingItemSaisons) : elles sont posées juste après.
-            setState((st) => ({ ...st, addSaving: false, addDone: true, items: [{ ...item, saisons, manches: base.manches }, ...st.items] }));
+            setState((st) => ({ ...st, addSaving: false, addDone: true, items: [{ ...item, saisons, manches: base.manches, motif: base.motif }, ...st.items] }));
             quitterApresAjout();
             annoncerPieceAjoutee(item.name);
             enregistrerSaisons(item.id, saisons);
             if (base.manches) enregistrerManches(item.id, base.manches, undefined);
+            if (base.motif) enregistrerMotif(item.id, base.motif, undefined);
           })
           .catch((err) => {
             // Échec réseau/RLS/contrainte : la pièce n'apparaît pas dans le dressing

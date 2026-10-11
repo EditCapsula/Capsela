@@ -10,9 +10,11 @@
 
 import {
   ACCESSOIRE_TYPES,
+  aUnMotif,
   BIJOU_TYPES,
   CATEGORY_KEYS,
   MATIERES,
+  MOTIFS,
   nearestPaletteColor,
   PALETTE,
   PALETTE_BIJOU,
@@ -20,6 +22,7 @@ import {
   SHOE_TYPES,
   SUBTYPES,
   type CategoryKey,
+  type Motif,
 } from "./enumsPiece.ts";
 
 /** Au plus ce nombre de pièces proposées pour une photo : les plus grandes sont gardées. */
@@ -57,6 +60,8 @@ export interface ObjetTenue {
   couleurLue: boolean;
   matiere?: string;
   manches?: Manches;
+  /** Le motif lu (11/10/2026), jamais pour un bijou ; absent quand le modèle n'est pas sûr. */
+  motif?: Motif;
   boite: BoiteNormalisee;
 }
 
@@ -72,11 +77,12 @@ export function promptTenue(): string {
     `cat = "accessoire" : accessoire_type EXACTEMENT parmi : ${ACCESSOIRE_TYPES.join(", ")}.`,
     `Si tu distingues la matière principale : matiere EXACTEMENT parmi : ${MATIERES.join(", ")}, sinon null.`,
     `Pour ${CATEGORIES_A_MANCHES.join(", ")} : manches EXACTEMENT parmi sans, courtes, trois_quarts, longues (sans = sans manches ou bretelles, courtes = jusqu'au coude, trois_quarts = jusqu'à mi-avant-bras, longues = jusqu'au poignet ou au-delà), sinon null. Pour toute autre catégorie : null.`,
+    `Sauf pour un bijou, indique motif EXACTEMENT parmi ${MOTIFS.join(", ")} (uni = une seule couleur ; graphique = formes, lettres, logos ou dessin abstrait), sinon null : ne donne un motif que s'il est net. color_hex reste la teinte DOMINANTE de l'objet.`,
     "color_hex : ta meilleure estimation de la couleur dominante de L'ARTICLE, en hex #RRGGBB.",
     "nom : un nom court en français (ex. « Robe longue fleurie », « Sac en raphia »).",
     "boite : [x, y, l, h] — la boîte qui contient TOUT l'article visible, en fractions de la largeur et de la hauteur de l'image (0 à 1), (x, y) étant le coin haut-gauche.",
     "Règles : une paire de chaussures est UN article (une boîte autour des deux) ; plusieurs bracelets posés ensemble sont UN article ; ne liste jamais une partie du corps ni un décor ; ne devine pas un article caché ou coupé. Au plus 8 articles. Si tu n'es pas raisonnablement sûr d'un champ, mets null plutôt que de deviner.",
-    'Réponds UNIQUEMENT en JSON strict : {"objets":[{"nom":string,"cat":string,"sous_type":string|null,"shoe_type":string|null,"sac_type":string|null,"bijou_type":string|null,"accessoire_type":string|null,"matiere":string|null,"manches":string|null,"color_hex":string|null,"boite":[number,number,number,number]}]}.',
+    'Réponds UNIQUEMENT en JSON strict : {"objets":[{"nom":string,"cat":string,"sous_type":string|null,"shoe_type":string|null,"sac_type":string|null,"bijou_type":string|null,"accessoire_type":string|null,"matiere":string|null,"manches":string|null,"motif":string|null,"color_hex":string|null,"boite":[number,number,number,number]}]}.',
   ].join("\n");
 }
 
@@ -136,6 +142,7 @@ export function assainerObjets(brut: unknown): ObjetTenue[] {
       couleurLue: hex !== null,
       matiere: dans(MATIERES, o.matiere),
       manches,
+      motif: aUnMotif(cat) ? (dans(MOTIFS, o.motif) as Motif | undefined) : undefined,
       boite,
     });
   }

@@ -26,6 +26,7 @@ import {
   type BrouillonPiece,
 } from "@/lib/importTenue";
 import { aDesManches, MANCHES } from "@/lib/manches";
+import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { placesRestantes } from "@/lib/premium";
 import { QUATRE_SAISONS } from "@/lib/saisons";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -461,6 +462,26 @@ export default function ImporterTenueScreen() {
                                 aria-checked={b.manches === valeur}
                                 onClick={() => modifier(b.cle, { manches: b.manches === valeur ? null : valeur })}
                                 className={chip(b.manches === valeur)}
+                              >
+                                {libelle}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {aUnMotif(b.cat) && (
+                        <div>
+                          <span className={EYEBROW}>Motif</span>
+                          <div role="radiogroup" aria-label="Motif" className="grid grid-cols-2 gap-2 mt-[10px]">
+                            {MOTIFS.map(({ valeur, libelle }) => (
+                              <button
+                                key={valeur}
+                                type="button"
+                                role="radio"
+                                aria-checked={b.motif === valeur}
+                                onClick={() => modifier(b.cle, { motif: b.motif === valeur ? null : valeur })}
+                                className={chip(b.motif === valeur)}
                               >
                                 {libelle}
                               </button>

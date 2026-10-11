@@ -1,8 +1,9 @@
 import { aDesManches } from "./manches";
+import { aUnMotif, motifDepuis } from "./motifs";
 import { accessoireTypeFor } from "./attributes";
 import { ACCESSOIRE_TYPES, BIJOU_TYPES, CATS, SAC_TYPES, SHOE_TYPES, SUBTYPES } from "./data";
 import { seasonDepuisSaisons } from "./saisons";
-import type { AccessoireType, BijouType, CapsuleSeason, CategoryKey, Item, Manches, Matiere, SacType, ShoeType } from "./types";
+import type { AccessoireType, BijouType, CapsuleSeason, CategoryKey, Item, Manches, Matiere, Motif, SacType, ShoeType } from "./types";
 
 
 /*
@@ -24,6 +25,7 @@ export interface ObjetRepere {
   couleurLue: boolean;
   matiere?: string;
   manches?: Manches;
+  motif?: string;
   photo_url: string;
 }
 
@@ -40,6 +42,8 @@ export interface BrouillonPiece {
   couleurLue: boolean;
   matiere?: string;
   manches: Manches | null;
+  /** Lu sur la photo, corrigeable ; null = non précisé (facultatif). */
+  motif: Motif | null;
   /** Jamais présélectionnées, jamais déduites : la personne choisit. */
   saisons: CapsuleSeason[];
   photoUrl: string;
@@ -69,6 +73,7 @@ export function brouillonsDepuis(objets: ObjetRepere[]): BrouillonPiece[] {
     couleurLue: o.couleurLue,
     matiere: o.matiere,
     manches: aDesManches(o.cat) ? o.manches ?? null : null,
+    motif: aUnMotif(o.cat) ? motifDepuis(o.motif) ?? null : null,
     saisons: [],
     photoUrl: o.photo_url,
     coche: true,
@@ -78,7 +83,7 @@ export function brouillonsDepuis(objets: ObjetRepere[]): BrouillonPiece[] {
 /** Changer de catégorie : le modèle et les manches d'avant ne valent plus. */
 export function changerCategorie(b: BrouillonPiece, cat: CategoryKey): BrouillonPiece {
   if (cat === b.cat) return b;
-  return { ...b, cat, type: "", manches: aDesManches(cat) ? b.manches : null };
+  return { ...b, cat, type: "", manches: aDesManches(cat) ? b.manches : null, motif: aUnMotif(cat) ? b.motif : null };
 }
 
 export type Manque = "modele" | "manches" | "saisons";
@@ -152,6 +157,7 @@ export function pieceDepuis(b: BrouillonPiece): Omit<Item, "id"> {
     season: seasonDepuisSaisons(b.saisons),
     saisons: b.saisons,
     manches: aDesManches(b.cat) ? b.manches ?? undefined : undefined,
+    motif: aUnMotif(b.cat) ? b.motif ?? undefined : undefined,
     shoeType: b.cat === "chaussures" ? ((b.type || undefined) as ShoeType | undefined) : undefined,
     sacType: b.cat === "sac" ? ((b.type || undefined) as SacType | undefined) : undefined,
     bijouType: b.cat === "bijou" ? ((b.type || undefined) as BijouType | undefined) : undefined,

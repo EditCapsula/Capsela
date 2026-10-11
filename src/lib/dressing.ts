@@ -1,6 +1,7 @@
 import { accessoireTypeFor } from "./attributes";
 import { type Verdict, clePieces, jourLocal, litteralTableau } from "./outfitFeedback";
 import { manchesDepuis } from "./manches";
+import { motifDepuis } from "./motifs";
 import type { ObjetRepere } from "./importTenue";
 import { normaliserOccasion, normaliserOccasions } from "./occasions";
 import { ordonnerSaisons } from "./saisons";
@@ -15,6 +16,7 @@ import type {
   HistoryEntry,
   Item,
   Manches,
+  Motif,
   Matiere,
   OccasionKey,
   PhotoAnalysis,
@@ -62,6 +64,7 @@ interface DressingItemRow {
   saisons?: string[] | null;
   /** Migration 0042 — absente de la ligne tant qu'elle n'est pas exécutée. */
   manches?: string | null;
+  motif?: string | null;
 }
 
 function rowToItem(row: DressingItemRow): Item {
@@ -76,6 +79,7 @@ function rowToItem(row: DressingItemRow): Item {
     season: row.season as Season,
     saisons: row.saisons?.length ? ordonnerSaisons(row.saisons) : undefined,
     manches: manchesDepuis(row.manches),
+    motif: motifDepuis(row.motif),
     occasion: row.occasion ? normaliserOccasions(row.occasion) : undefined,
     shoeType: (row.shoe_type as ShoeType | null) ?? undefined,
     matiere: (row.matiere as Matiere | null) ?? undefined,
@@ -526,6 +530,15 @@ export async function updateDressingItemSaisons(id: number, saisons: CapsuleSeas
  */
 export async function updateDressingItemManches(id: number, manches: Manches | null): Promise<void> {
   const { error } = await getSupabase().from("dressing_items").update({ manches }).eq("id", id);
+  if (error) throw error;
+}
+
+/**
+ * Enregistre le motif d'une pièce (migration 0051). Même règle que les manches : écriture ISOLÉE, jamais dans `itemToRow` — une colonne pas
+ * encore créée casserait sinon toutes les sauvegardes. Un échec est rendu à l'appelant, qui le signale et remet l'état d'avant.
+ */
+export async function updateDressingItemMotif(id: number, motif: Motif | null): Promise<void> {
+  const { error } = await getSupabase().from("dressing_items").update({ motif }).eq("id", id);
   if (error) throw error;
 }
 
