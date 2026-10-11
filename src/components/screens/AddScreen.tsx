@@ -5,7 +5,7 @@ import { estPhotoDetouree } from "@/lib/dressing";
 import { aDesManches, MANCHES } from "@/lib/manches";
 import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { confierPhoto } from "@/lib/importTenue";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import {
   ACCESSOIRE_TYPES,
@@ -218,10 +218,12 @@ export default function AddScreen() {
   // Le fichier de la photo choisie : de quoi détecter toutes ses pièces (« Importer une tenue ») si elle en montre plusieurs.
   const photoChoisie = useRef<File | null>(null);
   const [aPhotoChoisie, setAPhotoChoisie] = useState(false);
+  const detectionLancee = useRef(false);
   const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       photoChoisie.current = file;
+      detectionLancee.current = false;
       setAPhotoChoisie(true);
       actions.uploadAddPhoto(file);
     }
@@ -303,6 +305,17 @@ export default function AddScreen() {
   if (creation && avecManches && !state.addManches) manquantes.push("les manches");
   if (saisonsRetenues.length === 0) manquantes.push("au moins une saison");
   const shoeTypeMissing = isShoe && !state.addShoeType;
+  // DÉTECTION AUTOMATIQUE (11/10/2026, choisie par la propriétaire) : dès que l'analyse dit que la photo choisie ici montre une pièce
+  // portée ou plusieurs pièces, elle passe à « Importer une tenue », une seule fois par photo choisie. Au retour sur cet écran, le fichier
+  // n'est plus là : rien ne se relance, la personne reste sur le formulaire d'une pièce.
+  const cadrageMulti = state.addPhotoCadrage === "portee" || state.addPhotoCadrage === "plusieurs";
+  useEffect(() => {
+    if (!creation || !aPhotoChoisie || lectureEnCours || !cadrageMulti || detectionLancee.current || !photoChoisie.current) return;
+    detectionLancee.current = true;
+    confierPhoto(photoChoisie.current);
+    actions.openImporterTenue();
+  }, [creation, aPhotoChoisie, lectureEnCours, cadrageMulti, actions]);
+
   const blocage = lectureEnCours || state.addPhotoUploading
     ? "Un instant, Capsela analyse ta photo."
     : creation && !state.addPhotoUrl && !state.addName.trim()
