@@ -215,16 +215,14 @@ export default function WardrobePiecesScreen() {
       {items.length === 0 && terme ? (
         <EmptyState className="mt-3">Aucune pièce ne correspond à « {recherche.trim()} ».</EmptyState>
       ) : items.length === 0 && groupeActif ? (
-        // CATÉGORIE VIDE (12/10/2026) : un message à sa mesure et l'action d'ajout, jamais une grande zone vide. Le CTA ouvre le parcours
-        // d'ajout existant (Premium si le dressing gratuit est plein, comme le bouton flottant) ; l'état disparaît dès qu'une pièce y entre.
-        <section className="mt-6 rounded-carte border border-border bg-card px-5 py-7 text-center" aria-label={`${groupeActif.libelle} : aucune pièce`}>
-          <div className="t-titre-section text-ink" style={{ textWrap: "balance" }}>
+        // CATÉGORIE VIDE (12/10/2026, resserré le jour même : « pas de grand CTA d'ajout ni d'illustration ») : un court message éditorial,
+        // sans bouton ni encart. L'ajout passe par le bouton flottant, le même que sur le Dressing, toujours présent ; l'état disparaît dès
+        // qu'une pièce entre dans la catégorie.
+        <section className="mt-8 px-1" aria-label={`${groupeActif.libelle} : aucune pièce`}>
+          <div className="t-titre-carte text-ink" style={{ textWrap: "balance" }}>
             {(VIDE_CATEGORIE[groupeActif.id] ?? VIDE_PAR_DEFAUT).titre}
           </div>
-          <div className="t-chapeau text-muted-3 mt-[10px]">{(VIDE_CATEGORIE[groupeActif.id] ?? VIDE_PAR_DEFAUT).texte}</div>
-          <Button variante="principal" className="mt-5" onClick={ajouter}>
-            Ajouter une pièce
-          </Button>
+          <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]">{(VIDE_CATEGORIE[groupeActif.id] ?? VIDE_PAR_DEFAUT).texte}</div>
         </section>
       ) : items.length === 0 ? (
         <EmptyState className="mt-3">Tes pièces apparaîtront ici au fur et à mesure que tu les ajoutes à ton dressing.</EmptyState>
