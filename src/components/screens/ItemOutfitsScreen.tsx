@@ -8,6 +8,7 @@ import { computeDefaultCapsule, contexteCapsule, currentSeasonKey, estDeSaison, 
 import { CATS } from "@/lib/data";
 import { enSaisons, pourLaSaison, saisonPourIdees, saisonsDe } from "@/lib/saisons";
 import { composeWardrobePool } from "@/lib/selectors";
+import { avecTirageDeterministe, graineIdees } from "@/lib/looks";
 import { FAMILLES_LOOK, cleLook, decrireLooks, ideesDressingDAbord, ordonnerLooks, titreCommentPorter, type FamilleLook } from "@/lib/ideesLooks";
 import type { ItemOutfitVariation } from "@/lib/logic";
 import { paletteHexes } from "@/lib/profile";
@@ -61,7 +62,11 @@ export function calculerIdeesTenues(
   gender: "femme" | "homme" | null,
   colorimetrie: ColorimetrieMoteur | null = null
 ): ItemOutfitVariation[] {
-  return ideesDressingDAbord(pivot, wardrobePool, dressing, capsuleSeason, preferredHexes, gender, colorimetrie);
+  // Tirage STABLE (12/10/2026) : le moteur tire au hasard ; sans graine, « N looks possibles » et les pièces d'une idée changeaient à chaque
+  // rechargement. Graine = pièce + saison + pool (looks.ts, graineIdees).
+  return avecTirageDeterministe(graineIdees(pivot.id, capsuleSeason, wardrobePool), () =>
+    ideesDressingDAbord(pivot, wardrobePool, dressing, capsuleSeason, preferredHexes, gender, colorimetrie)
+  );
 }
 
 const CAT_KEYS = CATS.map(([k]) => k);
