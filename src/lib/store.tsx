@@ -2141,8 +2141,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           // retenue est bien celle que l'IA a analysée (catMatches) — sinon
           // une catégorie choisie manuellement entre-temps hériterait d'un
           // sous-type d'une autre catégorie (ex. "Bermuda" sur une "veste").
+          // Le cadrage lu par l'analyse, gardé ICI (12/10/2026) : le relire plus tard dans l'état est faux quand l'écran a déjà confié la photo à
+          // l'import et remis l'état à zéro — le détourage partait alors sur la photo d'origine que l'import allait lire (signalé : « la photo a
+          // été détourée mais j'ai eu cet écran »).
+          let cadrageLu: string | null = null;
           analyzeDressingPhoto(url)
             .then((a) => {
+              cadrageLu = a.photoType ?? null;
               setState((s) => {
                 // La photo a déjà changé pendant l'analyse (nouvelle prise/
                 // import) : suggestion périmée, jamais appliquée à la nouvelle.
@@ -2193,11 +2198,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             // Le détourage vient APRÈS l'analyse : elle lit la photo d'origine, que le détourage ne supprime
             // qu'une fois remplacée. Jamais bloquant — rien n'est affiché de faux si le service n'est pas branché.
             .then(() => {
+              // La photo a changé, a été retirée ou confiée à l'import entre-temps : aucun détourage (aucun appel payant, aucun fichier supprimé).
+              if (stateRef.current.addPhotoUrl !== url) return;
               setState((s) => (s.addPhotoUrl === url ? { ...s, addPhotoDetourage: "en_cours" } : s));
               // Une nouvelle photo est seulement DÉTOURÉE (11/10/2026) : la mise à plat Photoroom (Flat Lay, deux appels payants) ne se lance plus
               // à chaque ajout mais sur demande, depuis la fiche de la pièce (« Mettre la photo à plat »). Une pièce PORTÉE (lue par l'analyse)
               // n'est pas détourée : le détourage garderait la personne, la photo d'origine reste alors.
-              const portee = stateRef.current.addPhotoCadrage === "portee" || stateRef.current.addPhotoCadrage === "plusieurs";
+              const portee = cadrageLu === "portee" || cadrageLu === "plusieurs";
               (portee ? Promise.resolve(null) : detourerPhoto(url))
                 .then((detouree) => {
                 // La photo a changé, ou la pièce est déjà enregistrée avec l'original : on n'y touche pas.
