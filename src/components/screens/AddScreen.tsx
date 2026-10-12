@@ -354,6 +354,8 @@ export default function AddScreen() {
     confierPhoto({ fichier: photoChoisie.current, url: /^https?:/.test(state.addPhotoUrl ?? "") ? state.addPhotoUrl ?? undefined : undefined });
     actions.retirerPhotoAjout();
     photoChoisie.current = null;
+    // Même lot que le changement d'écran juste dessous : un seul rendu, sans éclair (cf. « redirection »).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAPhotoChoisie(false);
     actions.openImporterTenue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
