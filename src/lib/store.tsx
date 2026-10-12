@@ -249,6 +249,7 @@ function buildInitialState(): AppState {
     tenuesVues: [],
     avisSource: null,
     planARouvrir: null,
+    planAAdapter: null,
     planComposition: null,
     tenuesPlanifiees: [],
     planRetour: null,
@@ -525,6 +526,9 @@ export interface Actions {
   closeOpinionShare: () => void;
   /** Planifier a rouvert le plan au retour du partage. */
   oublierPlanARouvrir: () => void;
+  /** Ouvre Planifier sur le look adapté à la météo (cf. AppState.planAAdapter) ; `depuis` : l'écran où revenir. */
+  adapterPlan: (plan: TenuePlanifiee, ids: number[], notes: string[], depuis: "home" | "tenues" | "calendrier") => void;
+  oublierPlanAAdapter: () => void;
   /** Ouvre Planifier avec cette composition déjà faite (avis de styliste), pour demain ou une date à choisir. */
   planifierComposition: (ids: number[], demain: boolean) => void;
   /** Planifier a repris la composition. */
@@ -2725,6 +2729,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           : { ...s, avisSource: null, screen: "tenues" }
       ),
     oublierPlanARouvrir: () => setState((s) => (s.planARouvrir ? { ...s, planARouvrir: null } : s)),
+    adapterPlan: (plan, ids, notes, depuis) => setState((s) => ({ ...s, planAAdapter: { plan, ids, notes }, planRetour: depuis, planJour: null, screen: "planifier" })),
+    oublierPlanAAdapter: () => setState((s) => (s.planAAdapter ? { ...s, planAAdapter: null } : s)),
     planifierComposition: (ids, demain) =>
       setState((s) => ({ ...s, planComposition: { pieceIds: ids, demain }, planRetour: null, planJour: null, screen: "planifier" })),
     oublierPlanComposition: () => setState((s) => (s.planComposition ? { ...s, planComposition: null } : s)),

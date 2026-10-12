@@ -70,7 +70,7 @@ describe("alerteMeteoPlan — un constat sur les pièces, jamais deviné", () =>
   const mocassins = piece(6, "chaussures", { shoeType: "Mocassins" });
 
   it("chaussures ouvertes sous la pluie", () => {
-    expect(alerteMeteoPlan([sandales], { temp: 16, label: "Pluie légère" })).toMatch(/pluie/i);
+    expect(alerteMeteoPlan([sandales], { temp: 16, label: "Pluie légère" })).toMatch(/pluie est annoncée/i);
     expect(alerteMeteoPlan([mocassins], { temp: 16, label: "Pluie légère" })).toBeNull();
     expect(alerteMeteoPlan([sandales], { temp: 16, label: "Ensoleillé" })).toBeNull();
   });
@@ -78,8 +78,8 @@ describe("alerteMeteoPlan — un constat sur les pièces, jamais deviné", () =>
   it("pièce hors de ses bornes de température déclarées", () => {
     const lin = piece(7, "haut", { meteoMinTemp: 18 });
     const laine = piece(8, "pull", { meteoMaxTemp: 15 });
-    expect(alerteMeteoPlan([lin], { temp: 11, label: "Nuageux" })).toBe("Il fera 11° : plus frais que ce que certaines pièces de cette tenue supportent.");
-    expect(alerteMeteoPlan([laine], { temp: 24, label: "Ensoleillé" })).toMatch(/plus chaud/);
+    expect(alerteMeteoPlan([lin], { temp: 11, label: "Nuageux" })).toBe("Les températures prévues (11 °C) risquent d'être trop fraîches pour cette tenue. Découvre une alternative plus adaptée.");
+    expect(alerteMeteoPlan([laine], { temp: 24, label: "Ensoleillé" })).toMatch(/trop élevées/);
     expect(alerteMeteoPlan([lin], { temp: 20, label: "Nuageux" })).toBeNull();
     expect(alerteMeteoPlan([laine], { temp: 12, label: "Nuageux" })).toBeNull();
   });

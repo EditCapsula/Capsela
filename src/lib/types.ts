@@ -515,6 +515,12 @@ export interface AppState {
   /** Plan à rouvrir en revenant sur Planifier après le partage ; consommé à l'ouverture. */
   planARouvrir: TenuePlanifiee | null;
   /**
+   * « Adapter mon look » (12/10/2026) : le look planifié et la composition adaptée à la météo prévue (pièces du dressing), consommés à l'ouverture
+   * de Planifier, qui s'ouvre sur cette composition (parcours « Tenue déjà planifiée », le plan est remplacé à l'enregistrement).
+   * `notes` : une ligne par changement, dite à la personne.
+   */
+  planAAdapter: { plan: TenuePlanifiee; ids: number[]; notes: string[] } | null;
+  /**
    * Composition à planifier, venue d'un avis de styliste (V2, 26/09/2026) :
    * les pièces reconnues sur la photo, et « demain » si c'est l'action
    * choisie. Planifier la reprend telle quelle, sans passer par le moteur ;

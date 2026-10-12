@@ -16,7 +16,7 @@ import BarreDuJour from "@/components/BarreDuJour";
 import BadgePremium from "@/components/BadgePremium";
 import { retourPrecedent, retourSuivant, retoursAvecTenue, tenuePassee } from "@/lib/retro";
 import { dateDuJour } from "@/lib/jourConsulte";
-import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
+import { AlerteMeteoLook, PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
 import Button from "@/components/Button";
@@ -431,11 +431,7 @@ export default function HomeScreen() {
 
         {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu. Le lien « Voir une autre proposition » n'est plus là
             (08/10/2026, demandé : « on a déjà "Sauvegarder" et "Autre idée" ») ; la page Tenue garde « Autre proposition ». */}
-        {planApplique?.alerte && hasOutfit && (
-          <div className="text-center text-[12.5px] text-on-terracotta-soft leading-[1.4]" style={{ gridColumn: "1 / -1", textWrap: "pretty" }}>
-            {planApplique.alerte}
-          </div>
-        )}
+        {planApplique?.alerte && hasOutfit && <AlerteMeteoLook planApplique={planApplique} />}
       </div>
 
       {/* ══ EXPLORER CAPSELA — « Tout pour ton style » : les quatre univers de l'app. */}

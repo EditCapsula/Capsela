@@ -752,7 +752,7 @@ export default function TenuesScreen() {
               prévision) : un constat, jamais un changement d'office. */}
           {planApplique?.alerte && (
             <div className="flex-shrink-0 text-[12.5px] leading-[1.4] mb-[8px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
-              {planApplique.alerte}
+              {planApplique.alerte.message}
             </div>
           )}
           {/* Hauteur FIXE à largeur donnée depuis le 30/09/2026 : 82 % de la

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 import { CarteIdeeLook } from "@/components/CarteIdeeLook";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { currentSeasonKey } from "@/lib/capsule";
@@ -87,7 +87,8 @@ export default function IdeeLookScreen() {
 
   return (
     <div ref={haut} className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <BoutonRetour onClick={actions.closeIdeeLook} label="Revenir aux idées de tenues" />
+      {/* Le bandeau de marque (12/10/2026, signalé : « il manque le logo et l'icône du profil ») : logo centré, avatar à droite, retour à gauche. */}
+      <AppHeader onBack={actions.closeIdeeLook} backLabel="Revenir aux idées de tenues" />
 
       {/* Composition éditoriale (27/09/2026) : une silhouette, pas une
           grille — la zone prend la hauteur des pièces, proche du carré. */}
