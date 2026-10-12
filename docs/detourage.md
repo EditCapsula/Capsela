@@ -101,3 +101,6 @@ La personne lance la mise à plat, compare « Ta photo » et « Mise à plat » 
 Une photo déjà détourée peut être mise à plat (le serveur ne refuse que celle déjà mise à plat). Même plafond du jour que l'ajout (5) : chaque essai compte.
 Un échec (service absent, plafond, offre sans accès) laisse la photo inchangée et propose de réessayer.
 
+
+## Mise à plat masquée (12/10/2026)
+Le bouton « Mettre la photo à plat » (fiche pièce) et « Mettre à plat » (cartes de l'import) sont masqués tant que `NEXT_PUBLIC_MISE_A_PLAT` ne vaut pas `1` (`src/lib/miseAPlat.ts`) : Flat Lay exige le plan Photoroom Plus. Le détourage (plan Basic) n'est pas touché. Réactiver : prendre le plan Plus, définir la variable sur l'hébergeur, redéployer.
