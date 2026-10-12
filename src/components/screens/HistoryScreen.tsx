@@ -12,6 +12,7 @@ import { currentSeasonKey } from "@/lib/capsule";
 import { useCapsela } from "@/lib/store";
 import {
   chiffresPeriode,
+  peutEtreDiteJamaisPortee,
   repartitionDressing,
   type PeriodeJournal,
   type PartDressing,
@@ -398,7 +399,7 @@ export default function HistoryScreen() {
     .map((item) => ({ item, port: etatDePort(item, state.history) }))
     .filter(
       ({ item, port }) =>
-        port.etat === "jamais" || port.etat === "delaissee" || (port.etat === "a_vendre" && item.revente === "gardee")
+        (port.etat === "jamais" && peutEtreDiteJamaisPortee(item)) || port.etat === "delaissee" || (port.etat === "a_vendre" && item.revente === "gardee")
     )
     // Jamais portées d'abord, puis de la plus récente à la plus ancienne
     // absence — l'ordre de l'exemple du brief.
