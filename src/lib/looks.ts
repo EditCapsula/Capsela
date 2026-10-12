@@ -78,8 +78,21 @@ function mulberry32(a: number): () => number {
   };
 }
 
+/**
+ * Graine des idées de looks d'une pièce (12/10/2026, signalé : « à chaque rechargement le nombre de looks change et les pièces changent
+ * aléatoirement ») : la pièce, la saison et le contenu du pool, rien d'autre — jamais la date ni l'heure. Mêmes pièces, même saison : mêmes
+ * idées, au rechargement comme d'un écran à l'autre. Elles ne changent que si le dressing ou la capsule changent.
+ */
+export function graineIdees(pivotId: number, saison: string, pool: Item[]): number {
+  let h = 2166136261;
+  for (const c of saison) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  h ^= pivotId; h = Math.imul(h, 16777619);
+  for (const it of [...pool].sort((a, b) => a.id - b.id)) { h ^= it.id; h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
 /** Exécute `fn` avec un Math.random déterministe, puis le rend intact. */
-function avecTirageDeterministe<T>(seed: number, fn: () => T): T {
+export function avecTirageDeterministe<T>(seed: number, fn: () => T): T {
   const vrai = Math.random;
   Math.random = mulberry32(seed);
   try { return fn(); } finally { Math.random = vrai; }

@@ -26,6 +26,7 @@ import {
   pisteAssociation,
   saisonDeLaDate,
 } from "@/lib/dressingSections";
+import { avecTirageDeterministe, graineIdees } from "@/lib/looks";
 import { generateOutfitWithFallback, getOutfitsForItem, type ItemOutfitVariation } from "@/lib/logic";
 import { clePieces } from "@/lib/outfitFeedback";
 import { paletteHexes } from "@/lib/profile";
@@ -192,7 +193,10 @@ export default function WardrobeScreen() {
       ? defaultCapsule
       : composeWardrobePool(items, defaultCapsule, CATS.map(([k]) => k), { completerPourOccasion: occasion, saison: weather, exclureHorsOccasion: true });
     if (pool.length === 0) return null;
-    const r = generateOutfitWithFallback(pool, weather, occasion, state.workMode, state.dateContext, paletteHexes(profile), profile.gender, undefined, undefined, colorimetrieMoteur(profile.colorimetrie));
+    // Tirage stable (12/10/2026) : même dressing, mêmes tenues d'inspiration à chaque rechargement (graine = occasion + pool).
+    const r = avecTirageDeterministe(graineIdees(occasion.length, occasion, pool), () =>
+      generateOutfitWithFallback(pool, weather, occasion, state.workMode, state.dateContext, paletteHexes(profile), profile.gender, undefined, undefined, colorimetrieMoteur(profile.colorimetrie))
+    );
     const pieces = r.ids.map((id) => pool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
     if (pieces.length === 0) return null;
     if (!vide && !assezDuDressing(pieces.map((p) => p.id), items)) return null;
@@ -234,7 +238,10 @@ export default function WardrobeScreen() {
     const sortie: { piece: Item; etiquette: string; piste: string }[] = [];
     for (const c of candidatsARedecouvrir(items, weather, parPiece, 8)) {
       if (sortie.length >= 6) break;
-      const tenues = getOutfitsForItem(c.piece.id, items, weather, hexes, { maxPerOccasion: 1, maxTotal: 4, attemptsPerOccasion: 12 }, profile.gender, null, colo);
+      // Tirage stable (12/10/2026) : la piste « Avec ton… » d'une pièce ne change pas au rechargement.
+      const tenues = avecTirageDeterministe(graineIdees(c.piece.id, "a-redecouvrir", items), () =>
+        getOutfitsForItem(c.piece.id, items, weather, hexes, { maxPerOccasion: 1, maxTotal: 4, attemptsPerOccasion: 12 }, profile.gender, null, colo)
+      );
       const piste = pisteAssociation(c.piece, tenues.map((t) => t.ids), items);
       if (piste) sortie.push({ piece: c.piece, etiquette: c.etiquette, piste });
     }

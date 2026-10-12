@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nounInfoDuNom, type ItemOutfitVariation } from "../logic";
+import { avecTirageDeterministe, graineIdees } from "../looks";
 import { familleDe, ideesDressingDAbord, ordonnerLooks, provenanceLook, sourcePiece, texteProvenance, titreCommentPorter } from "../ideesLooks";
 import type { CategoryKey, Item, OccasionKey } from "../types";
 
@@ -127,5 +128,37 @@ describe("ideesDressingDAbord — la capsule complète seulement si nécessaire"
     const idees = ideesDressingDAbord(manteau, [...sansChaussures, ...capsule], sansChaussures, "Automne", [], "femme");
     expect(idees.length).toBeGreaterThan(0);
     expect(idees.every((i) => provenanceLook(i.ids, sansChaussures).suggestions > 0)).toBe(true);
+  });
+});
+
+describe("idées de looks stables (12/10/2026)", () => {
+  const pool = [
+    piece(1, "manteau", "Manteau chocolat"),
+    piece(2, "haut", "Pull fin crème"),
+    piece(3, "pantalon", "Pantalon noir"),
+    piece(4, "haut", "Chemise blanche"),
+    piece(5, "jean", "Jean brut"),
+    piece(6, "chaussures", "Baskets blanches"),
+    piece(7, "chaussures", "Bottines noires"),
+  ];
+  const calcul = () =>
+    avecTirageDeterministe(graineIdees(2, "Automne", pool), () => ideesDressingDAbord(pool[1], pool, pool, "Automne", [], "femme")).map((v) => `${v.occasion}:${v.ids.join(",")}`);
+  it("mêmes pièces, même saison : exactement les mêmes idées à chaque calcul", () => {
+    expect(calcul()).toEqual(calcul());
+    expect(calcul()).toEqual(calcul());
+  });
+  it("la graine ne dépend ni de l'ordre du pool ni de la date", () => {
+    expect(graineIdees(2, "Automne", pool)).toBe(graineIdees(2, "Automne", [...pool].reverse()));
+  });
+  it("la graine change avec la pièce, la saison ou le pool", () => {
+    const g = graineIdees(2, "Automne", pool);
+    expect(graineIdees(3, "Automne", pool)).not.toBe(g);
+    expect(graineIdees(2, "Hiver", pool)).not.toBe(g);
+    expect(graineIdees(2, "Automne", pool.slice(1))).not.toBe(g);
+  });
+  it("Math.random est rendu intact", () => {
+    const avant = Math.random;
+    calcul();
+    expect(Math.random).toBe(avant);
   });
 });
