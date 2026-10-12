@@ -39,7 +39,12 @@ type Phase = "choix" | "analyse" | "resultat" | "ajout" | "termine" | "vide" | "
 function messageEchec(code: CodeImportTenue | "photo"): { texte: string; reessayer: boolean } {
   if (code === "quota_atteint") return { texte: "Tu as atteint la limite du jour, reviens demain.", reessayer: false };
   if (code === "photo_refusee" || code === "photo_invalide") return { texte: "Cette photo n'a pas pu être traitée. Ta photo est inchangée : essaie-en une autre.", reessayer: false };
-  return { texte: "Le détourage n'a pas abouti. Ta photo est inchangée.", reessayer: true };
+  // La cause, dite quand on la connaît (11/10/2026) : « n'a pas abouti » seul masquait un service sans crédit ou non relié.
+  if (code === "credits_epuises") return { texte: "Le service de détourage n'a plus de crédit pour le moment. Ta photo est inchangée.", reessayer: false };
+  if (code === "non_configure") return { texte: "Le service de détourage n'est pas relié pour le moment. Ta photo est inchangée.", reessayer: false };
+  if (code === "lecture_indisponible") return { texte: "Capsela n'a pas pu lire ta photo : le service de lecture n'a pas répondu. Ta photo est inchangée.", reessayer: true };
+  if (code === "resultat_invalide") return { texte: "Le service a rendu une image inexploitable. Ta photo est inchangée.", reessayer: true };
+  return { texte: "Le détourage n'a pas abouti : le service n'a pas répondu. Ta photo est inchangée.", reessayer: true };
 }
 
 /**
