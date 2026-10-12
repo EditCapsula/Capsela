@@ -297,7 +297,7 @@ export default function ImporterTenueScreen() {
           <div
             role="img"
             aria-label="Ta photo"
-            className={"relative rounded-[24px] overflow-hidden border border-border " + (phase === "analyse" ? "aspect-[4/5]" : "aspect-[1.3]")}
+            className={"relative rounded-[24px] overflow-hidden border border-border " + (phase === "analyse" ? "aspect-[4/5] max-h-[calc(100dvh-210px)]" : "aspect-[1.3]")}
             style={{
               background: "var(--color-warm-bg)",
               backgroundImage: imageZone ? `url(${imageZone})` : undefined,

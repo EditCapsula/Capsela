@@ -1,5 +1,6 @@
 import { aDesManches } from "./manches";
 import { aUnMotif, motifDepuis } from "./motifs";
+import { QUATRE_SAISONS } from "./saisons";
 import { accessoireTypeFor } from "./attributes";
 import { ACCESSOIRE_TYPES, BIJOU_TYPES, CATS, SAC_TYPES, SHOE_TYPES, SUBTYPES } from "./data";
 import { seasonDepuisSaisons } from "./saisons";
@@ -26,6 +27,8 @@ export interface ObjetRepere {
   matiere?: string;
   manches?: Manches;
   motif?: string;
+  /** Saisons suggérées par la lecture de la photo (12/10/2026). */
+  saisons?: string[];
   photo_url: string;
 }
 
@@ -44,7 +47,7 @@ export interface BrouillonPiece {
   manches: Manches | null;
   /** Lu sur la photo, corrigeable ; null = non précisé (facultatif). */
   motif: Motif | null;
-  /** Jamais présélectionnées, jamais déduites : la personne choisit. */
+  /** Suggérées par la lecture de la photo (modifiables), vides quand le modèle n'est pas sûr : jamais devinées d'un nom. */
   saisons: CapsuleSeason[];
   photoUrl: string;
   coche: boolean;
@@ -74,7 +77,8 @@ export function brouillonsDepuis(objets: ObjetRepere[]): BrouillonPiece[] {
     matiere: o.matiere,
     manches: aDesManches(o.cat) ? o.manches ?? null : null,
     motif: aUnMotif(o.cat) ? motifDepuis(o.motif) ?? null : null,
-    saisons: [],
+    // Les saisons lues sur la photo (12/10/2026, demandé : l'ajout ne doit pas exiger d'action) : une suggestion, modifiable ; vide quand le modèle n'est pas sûr.
+    saisons: QUATRE_SAISONS.filter((sa) => o.saisons?.includes(sa)),
     photoUrl: o.photo_url,
     coche: true,
   }));

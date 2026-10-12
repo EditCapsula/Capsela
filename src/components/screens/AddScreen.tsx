@@ -85,11 +85,11 @@ export function CarteAnalyse() {
       className="absolute inset-0 flex items-end p-[14px]"
       style={{ background: "linear-gradient(to top, rgba(243,238,229,.62) 0%, rgba(243,238,229,0) 52%)" }}
     >
-      <div className="w-full bg-card border border-border rounded-[20px] px-[14px] py-[12px] flex items-center gap-[14px]">
-        <LoadingSpinner size={56} className="flex-shrink-0" />
+      <div className="w-full bg-card border border-border rounded-[20px] px-[12px] py-[10px] flex items-center gap-[12px]">
+        <LoadingSpinner size={52} className="flex-shrink-0" />
         <div className="min-w-0">
           <div className="font-serif font-medium text-[17px] leading-[1.2] text-ink">On prépare ta pièce</div>
-          <div className="text-[12.5px] leading-[1.4] text-[#5C5648] mt-[3px]">
+          <div className="text-[12px] leading-[1.35] text-[#5C5648] mt-[2px]">
             Capsela analyse ta photo pour identifier les vêtements à ajouter à ton dressing.
           </div>
         </div>
@@ -447,7 +447,7 @@ export default function AddScreen() {
           <div
             role="img"
             aria-label="Photo de la pièce"
-            className={"relative rounded-[24px] overflow-hidden border border-border " + (etat === "chargement" ? "aspect-[4/5]" : "aspect-[1.3]") + " " + (photoDetouree ? "bg-photo-bg" : "bg-warm-bg")}
+            className={"relative rounded-[24px] overflow-hidden border border-border " + (etat === "chargement" ? "aspect-[4/5] max-h-[calc(100dvh-210px)]" : "aspect-[1.3]") + " " + (photoDetouree ? "bg-photo-bg" : "bg-warm-bg")}
             style={{
               backgroundImage: `url(${state.addPhotoUrl})`,
               // Détourée : la pièce entière, jamais recadrée comme une photo.

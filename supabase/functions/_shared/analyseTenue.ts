@@ -62,6 +62,8 @@ export interface ObjetTenue {
   manches?: Manches;
   /** Le motif lu (11/10/2026), jamais pour un bijou ; absent quand le modèle n'est pas sûr. */
   motif?: Motif;
+  /** Les saisons suggérées par la lecture (12/10/2026) : une ou plusieurs de la liste, dans l'ordre de l'année ; absentes quand le modèle n'est pas sûr. */
+  saisons?: string[];
   boite: BoiteNormalisee;
 }
 
@@ -78,12 +80,21 @@ export function promptTenue(): string {
     `Si tu distingues la matière principale : matiere EXACTEMENT parmi : ${MATIERES.join(", ")}, sinon null.`,
     `Pour ${CATEGORIES_A_MANCHES.join(", ")} : manches EXACTEMENT parmi sans, courtes, trois_quarts, longues (sans = sans manches ou bretelles, courtes = jusqu'au coude, trois_quarts = jusqu'à mi-avant-bras, longues = jusqu'au poignet ou au-delà), sinon null. Pour toute autre catégorie : null.`,
     `Sauf pour un bijou, indique motif EXACTEMENT parmi ${MOTIFS.join(", ")} (uni = une seule couleur ; graphique = formes, lettres, logos ou dessin abstrait), sinon null : ne donne un motif que s'il est net. color_hex reste la teinte DOMINANTE de l'objet.`,
+    "saisons : la liste des saisons où cet article se porte, parmi Printemps, Été, Automne, Hiver (une ou plusieurs ; ex. un manteau en laine : Automne, Hiver ; un débardeur en lin : Printemps, Été), d'après la matière, l'épaisseur et la coupe visibles ; si tu n'es pas raisonnablement sûr, saisons = null.",
     "color_hex : ta meilleure estimation de la couleur dominante de L'ARTICLE, en hex #RRGGBB.",
     "nom : un nom court en français (ex. « Robe longue fleurie », « Sac en raphia »).",
     "boite : [x, y, l, h] — la boîte qui contient TOUT l'article visible, en fractions de la largeur et de la hauteur de l'image (0 à 1), (x, y) étant le coin haut-gauche.",
     "Règles : une paire de chaussures est UN article (une boîte autour des deux) ; plusieurs bracelets posés ensemble sont UN article ; ne liste jamais une partie du corps ni un décor ; ne devine pas un article caché ou coupé. Au plus 8 articles. Si tu n'es pas raisonnablement sûr d'un champ, mets null plutôt que de deviner.",
-    'Réponds UNIQUEMENT en JSON strict : {"objets":[{"nom":string,"cat":string,"sous_type":string|null,"shoe_type":string|null,"sac_type":string|null,"bijou_type":string|null,"accessoire_type":string|null,"matiere":string|null,"manches":string|null,"motif":string|null,"color_hex":string|null,"boite":[number,number,number,number]}]}.',
+    'Réponds UNIQUEMENT en JSON strict : {"objets":[{"nom":string,"cat":string,"sous_type":string|null,"shoe_type":string|null,"sac_type":string|null,"bijou_type":string|null,"accessoire_type":string|null,"matiere":string|null,"manches":string|null,"motif":string|null,"saisons":string[]|null,"color_hex":string|null,"boite":[number,number,number,number]}]}.',
   ].join("\n");
+}
+
+const SAISONS_LUES = ["Printemps", "Été", "Automne", "Hiver"] as const;
+/** Seulement les saisons de la liste, sans doublon, dans l'ordre de l'année ; rien si le modèle n'en a pas rendu. */
+export function saisonsLues(brut: unknown): string[] | undefined {
+  if (!Array.isArray(brut)) return undefined;
+  const l = SAISONS_LUES.filter((s) => brut.includes(s));
+  return l.length ? l : undefined;
 }
 
 const borne = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -143,6 +154,7 @@ export function assainerObjets(brut: unknown): ObjetTenue[] {
       matiere: dans(MATIERES, o.matiere),
       manches,
       motif: aUnMotif(cat) ? (dans(MOTIFS, o.motif) as Motif | undefined) : undefined,
+      saisons: saisonsLues(o.saisons),
       boite,
     });
   }
