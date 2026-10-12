@@ -347,11 +347,15 @@ export default function AddScreen() {
   const redirection = creation && aPhotoChoisie && cadrageMulti && !state.addPhotoAnalyzing && !state.addPhotoUploading;
   useEffect(() => {
     if (!creation || !aPhotoChoisie || lectureEnCours || !cadrageMulti || detectionLancee.current || !photoChoisie.current) return;
+    // Jamais une photo déjà détourée : ce n'est plus la photo d'une tenue (l'import la refuse).
+    if (estPhotoDetouree(state.addPhotoUrl)) return;
     detectionLancee.current = true;
     // Le fichier ET son URL déjà envoyée : l'import ne renvoie pas la photo. Cet écran repart de zéro (la photo appartient désormais à l'import).
     confierPhoto({ fichier: photoChoisie.current, url: /^https?:/.test(state.addPhotoUrl ?? "") ? state.addPhotoUrl ?? undefined : undefined });
     actions.retirerPhotoAjout();
     photoChoisie.current = null;
+    // Même lot que le changement d'écran juste dessous : un seul rendu, sans éclair (cf. « redirection »).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAPhotoChoisie(false);
     actions.openImporterTenue();
     // eslint-disable-next-line react-hooks/exhaustive-deps

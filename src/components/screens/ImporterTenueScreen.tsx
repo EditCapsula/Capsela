@@ -40,6 +40,7 @@ type Phase = "choix" | "analyse" | "resultat" | "ajout" | "termine" | "vide" | "
 /** Ce que dit l'écran quand l'import n'aboutit pas : toujours « ta photo est inchangée », sans reproche. */
 function messageEchec(code: CodeImportTenue | "photo"): { texte: string; reessayer: boolean } {
   if (code === "quota_atteint") return { texte: "Tu as atteint la limite du jour, reviens demain.", reessayer: false };
+  if (code === "photo") return { texte: "L'envoi de ta photo n'a pas abouti. Vérifie ta connexion et réessaie.", reessayer: true };
   if (code === "photo_refusee" || code === "photo_invalide") return { texte: "Cette photo n'a pas pu être traitée. Ta photo est inchangée : essaie-en une autre.", reessayer: false };
   // La cause, dite quand on la connaît (11/10/2026) : « n'a pas abouti » seul masquait un service sans crédit ou non relié.
   if (code === "credits_epuises") return { texte: "Le service de détourage n'a plus de crédit pour le moment. Ta photo est inchangée.", reessayer: false };
