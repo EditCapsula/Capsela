@@ -4,7 +4,15 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { occasionShortLabel } from "@/lib/data";
 import { jourLocal } from "@/lib/outfitFeedback";
 import { evaluerAlerteMeteo, libelleChangement, proposerAdaptation, type AlerteMeteo, type MeteoDuPlan } from "@/lib/alerteMeteo";
-import { contexteCapsule, saisonCalendairePour } from "@/lib/capsule";
+import { CHALEUR_HORS_SAISON, computeDefaultCapsule, saisonCalendairePour, weatherForDay } from "@/lib/capsule";
+import { CATS } from "@/lib/data";
+import { poolDePlanification } from "@/lib/selectors";
+import type { CategoryKey } from "@/lib/types";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
+import { soireeHabillee } from "@/lib/occasions";
+import { sousChoixDuPlan } from "@/lib/planDuJour";
+import { paletteHexes } from "@/lib/profile";
+import { useAuth } from "@/lib/auth";
 import { plansDuJour, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { useCapsela } from "@/lib/store";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
@@ -42,16 +50,30 @@ export function usePlanApplique(): { plan: TenuePlanifiee; alerte: AlerteMeteo |
  * « Modifier ce look » reprend le parcours complet — le CTA ne reste jamais sans effet. Posée sur le fond terracotta de la carte.
  */
 export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<ReturnType<typeof usePlanApplique>> }) {
-  const { state, actions } = useCapsela();
+  const { state, vestiairePool, actions } = useCapsela();
+  const { profile } = useAuth();
   const { alerte, plan, pieces, meteo } = planApplique;
   if (!alerte || !meteo) return null;
   const adapter = () => {
+    // Le MÊME pool que celui qui compose une tenue planifiée : le dressing d'abord, complété par la capsule de la saison du plan.
+    const saisonDuPlan = saisonCalendairePour(new Date(`${plan.jour}T12:00:00`));
+    const meteoMoteur = weatherForDay(meteo.temp, meteo.label, saisonDuPlan, CHALEUR_HORS_SAISON);
+    const capsule = plan.dressingSeul ? [] : computeDefaultCapsule(profile, meteoMoteur, state.suggestedExcluded, saisonDuPlan, vestiairePool);
+    const pool = poolDePlanification({ items: state.items, capsule, occasion: plan.occasion, dressingSeul: plan.dressingSeul, meteo: meteoMoteur, categories: CATS.map(([k]) => k) as CategoryKey[] });
     const proposition = proposerAdaptation({
       pieces,
-      dressing: state.items,
+      pool,
+      dressingIds: new Set(state.items.map((i) => i.id)),
       meteo,
       occasion: plan.occasion,
-      contexte: contexteCapsule(saisonCalendairePour(new Date(`${plan.jour}T12:00:00`))),
+      saisonDuPlan,
+      moteur: {
+        ...sousChoixDuPlan(plan),
+        soireeHabillee: plan.occasion === "soiree" && soireeHabillee({ typeLieu: plan.typeLieu, humeur: plan.humeur ?? null }),
+        paletteHexes: paletteHexes(profile),
+        morphology: profile.morphology,
+        colorimetrie: colorimetrieMoteur(profile.colorimetrie),
+      },
       ctx: { ville: villeDuLieu(plan.lieu) || undefined, moment: plan.moment },
     });
     if (!proposition) return actions.ouvrirPlan(plan, "home");

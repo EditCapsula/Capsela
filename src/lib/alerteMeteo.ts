@@ -1,7 +1,8 @@
-import { isRainy } from "./data";
-import { estDeSaison, type ContexteSaisonnier } from "./capsule";
-import { CHAUSSURES_OUVERTES, declaredOccasionOk } from "./logic";
-import type { Item, OccasionKey } from "./types";
+import { CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
+import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
+import { isRainy, type Weather } from "./data";
+import { CHAUSSURES_OUVERTES, candidatsDeRemplacement, computeLookScore, evaluateBlocking } from "./logic";
+import type { CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "./types";
 
 /*
  * L'ALERTE MÉTÉO D'UN LOOK PLANIFIÉ, ET SON ADAPTATION (12/10/2026, demandé : un vrai conseil stylistique à la place de « plus frais que ce
@@ -132,12 +133,14 @@ export function evaluerAlerteMeteo(pieces: readonly Item[], meteo: MeteoDuPlan, 
   return null;
 }
 
-/* ───────────── L'ADAPTATION : des modifications MINIMALES, prises dans le dressing ───────────── */
+/* ───────────── L'ADAPTATION : les règles du moteur, le dressing d'abord ───────────── */
 
 export interface ChangementAdaptation {
   type: "ajout" | "remplacement";
   piece: Item;
   remplace?: Item;
+  /** D'où vient la pièce : le dressing de la personne, ou la capsule (suggestion), prise seulement quand le dressing n'a rien de convenable. */
+  source: "dressing" | "capsule";
 }
 
 export interface PropositionAdaptation {
@@ -146,26 +149,34 @@ export interface PropositionAdaptation {
   changements: ChangementAdaptation[];
   /** true : plus aucune pièce hors borne ne reste dans le look adapté. */
   resolu: boolean;
+  /** La note du moteur (computeLookScore : couleur, palette, morphologie, formalité…) du look adapté. */
+  score: number;
+}
+
+/** Ce que le moteur a besoin de savoir de la personne et du plan pour juger un look (les mêmes entrées que la composition d'une tenue). */
+export interface ContexteMoteur {
+  workMode?: WorkMode;
+  dateContext?: DateContext;
+  soireeHabillee?: boolean;
+  paletteHexes?: string[];
+  morphology?: string | null;
+  colorimetrie?: ColorimetrieMoteur | null;
 }
 
 const bornesOk = (p: Item, t: number): boolean => (p.meteoMinTemp == null || t >= p.meteoMinTemp) && (p.meteoMaxTemp == null || t <= p.meteoMaxTemp);
 const bornesDeclarees = (p: Item): boolean => p.meteoMinTemp != null || p.meteoMaxTemp != null;
-const aUnIndice = (p: Item, contexte: ContexteSaisonnier): boolean => bornesDeclarees(p) || Boolean(p.saisons?.length && p.saisons.some((s) => contexte.saisons?.includes(s))) || p.season !== "Toutes saisons";
+const aUnIndice = (p: Item, w: Weather): boolean => bornesDeclarees(p) || Boolean(p.saisons?.length && p.saisons.some((x) => w.saisons?.includes(x))) || p.season !== "Toutes saisons";
 
 /** Écart de formalité maximal toléré entre une pièce et celle qu'elle remplace (paliers 0, 1, 3, 4) : au-delà, le look change de registre. */
 export const ECART_FORMALITE_MAX = 2;
+/** Nombre de candidates départagées par la note du moteur (la note d'un look complet coûte ; les meilleures d'abord). */
+const CANDIDATES_NOTEES = 8;
 
 const ecartFormalite = (a: Item, b: Item): number | null => (a.niveauFormalite != null && b.niveauFormalite != null ? Math.abs(a.niveauFormalite - b.niveauFormalite) : null);
 
-/**
- * Meilleure pièce d'abord : formalité la plus proche de celle de la pièce remplacée (ou du reste du look pour une couche ajoutée) quand les
- * deux sont connues, puis bornes DÉCLARÉES et respectées, puis occasion déclarée, puis la moins portée récemment, puis l'id (déterministe).
- * Une pièce dont l'écart de formalité dépasse ECART_FORMALITE_MAX n'est jamais candidate (12/10/2026, audit : sans cela 29 % des
- * remplacements changeaient de registre). Formalité inconnue (pièces du dressing réel, qui n'en portent pas) : aucune contrainte — limite assumée.
- */
-function classer(candidats: Item[], t: number, occasion: OccasionKey, reference?: readonly Item[]): Item[] {
+/** Ordre de préférence avant la note : proximité de formalité, bornes DÉCLARÉES respectées, occasion déclarée, moins portée récemment, id (déterministe). */
+function pretri(candidats: Item[], t: number, occasion: OccasionKey, reference: readonly Item[]): Item[] {
   const ecart = (p: Item): number => {
-    if (!reference?.length) return 0;
     const e = reference.map((r) => ecartFormalite(p, r)).filter((x): x is number => x != null);
     return e.length ? Math.min(...e) : 0;
   };
@@ -176,73 +187,108 @@ function classer(candidats: Item[], t: number, occasion: OccasionKey, reference?
 }
 
 /**
- * Ce qu'il faut changer au look pour la météo prévue, avec le moins de pièces possible, depuis le DRESSING :
- *  1. une pièce hors borne est remplacée par une pièce de la même catégorie dont les bornes sont respectées ;
- *  2. par temps frais, si le look n'a aucune veste ni manteau, on en ajoute un (manteau sous 10 °C, sinon veste) ;
- *  3. des chaussures ouvertes sous la pluie sont remplacées par des chaussures fermées.
- * Les pièces qui n'ont pas à bouger restent. null quand rien ne peut être changé : l'appelant mène alors à l'écran du plan, où la personne
- * ajuste elle-même. Ce n'est pas le moteur de tenues : il ne recompose rien, il n'écarte pas une pièce sur son style (limite assumée).
+ * Ce qu'il faut changer au look pour la météo prévue, avec le moins de pièces possible, en suivant LES MÊMES RÈGLES QUE LE MOTEUR (12/10/2026,
+ * demandé : « tenir compte des règles du moteur : dressing en priorité, puis pièces de la capsule avec morphologie, météo, couleur, occasions ») :
+ *  · les candidates viennent de `candidatsDeRemplacement` (logic.ts), la fonction que partage « Changer cette pièce » : saison, occasion et
+ *    plancher de formalité, baskets en tenue habillée, soleil, shorts, chaussures ouvertes sous la pluie et d'été sous 15°, bornes de
+ *    température, puis harmonize (une teinte affirmée par tenue, formalité, coupe, style) ;
+ *  · le pool est celui que Planifier compose déjà (composeWardrobePool) : le DRESSING d'abord, la capsule de la saison (déjà choisie sur le style
+ *    et la morphologie du profil) en complément — jamais pour un plan « dressing seul » ;
+ *  · les candidates restantes sont départagées par la note du moteur du look complet (computeLookScore : couleur, palette, colorimétrie,
+ *    morphologie…), puis par l'ordre de préférence ci-dessus ;
+ *  · une pièce n'est candidate contre le froid ou le chaud que s'il y a un INDICE de sa tenue à cette température (bornes ou saisons choisies).
+ * Les pièces qui n'ont pas à bouger restent. null quand rien ne peut être changé : l'appelant mène alors à l'écran du plan.
+ * LIMITE : la pièce proposée suit les règles du moteur, mais ce n'est pas un nouveau tirage du moteur : le reste du look est conservé tel quel.
  */
 export function proposerAdaptation(args: {
   pieces: readonly Item[];
-  dressing: readonly Item[];
+  /**
+   * Le POOL du moteur pour ce plan, tel que Planifier le compose (composeWardrobePool) : les pièces du dressing d'abord, catégorie par
+   * catégorie, complétées par les pièces de la capsule de la saison du plan quand le dressing n'a rien de convenable pour l'occasion. Un plan
+   * « dressing seul » ne reçoit que le dressing. Ce mécanisme existe déjà : l'adaptation ne le refait pas.
+   */
+  pool: readonly Item[];
+  /** Les ids qui sont dans le dressing de la personne : les autres pièces du pool sont des suggestions de la capsule (dites comme telles). */
+  dressingIds: ReadonlySet<number>;
   meteo: MeteoDuPlan;
   occasion: OccasionKey;
-  contexte: ContexteSaisonnier;
+  /** La météo telle que le moteur la construit pour ce jour (weatherForDay), pour ses règles de saison : saison calendaire du plan. */
+  saisonDuPlan: CapsuleSeason;
+  moteur?: ContexteMoteur;
   ctx?: ContexteAlerte;
 }): PropositionAdaptation | null {
-  const { pieces, dressing, meteo, occasion, contexte } = args;
+  const { pieces, meteo, occasion, saisonDuPlan } = args;
+  const m = args.moteur ?? {};
   const alerte = evaluerAlerteMeteo(pieces, meteo, args.ctx);
   if (!alerte) return null;
   const t = meteo.temp;
-  const dejaLa = new Set(pieces.map((p) => p.id));
-  // Une pièce n'est candidate que s'il existe un INDICE de sa tenue à cette température : bornes déclarées respectées, ou saisons choisies qui
-  // contiennent celle du plan. Une pièce « toutes saisons » sans borne ni saison choisie ne dit rien : jamais proposée comme remède contre le
-  // froid ou le chaud. Sous la pluie, le fait utile est le type de chaussure (fermée), vérifié plus bas : pas d'indice de température requis.
-  const eligibles = dressing.filter((p) => !dejaLa.has(p.id) && declaredOccasionOk(p, occasion) && estDeSaison(p, contexte) && bornesOk(p, t) && (alerte.cause === "pluie" || aUnIndice(p, contexte)));
+  const weather: Weather = weatherForDay(t, meteo.label, saisonDuPlan, CHALEUR_HORS_SAISON);
+  const regles = { workMode: m.workMode ?? ("Présentiel" as WorkMode), dateContext: m.dateContext ?? ("Verre" as DateContext), soiree: Boolean(m.soireeHabillee) };
 
-  const ids = new Map(pieces.map((p) => [p.id, p] as const));
+  const courant = new Map(pieces.map((p) => [p.id, p] as const));
   const changements: ChangementAdaptation[] = [];
   const pris = new Set<number>();
-  const remplacer = (hors: Item, candidats: Item[]): boolean => {
-    const choix = classer(candidats.filter((c) => !pris.has(c.id)), t, occasion, [hors])[0];
-    if (!choix) return false;
-    ids.delete(hors.id);
-    ids.set(choix.id, choix);
-    pris.add(choix.id);
-    changements.push({ type: "remplacement", piece: choix, remplace: hors });
-    return true;
+  const note = (items: Item[]): number =>
+    computeLookScore(items, occasion, m.paletteHexes ?? [], m.morphology ?? null, new Set(), weather, regles.workMode, regles.dateContext, [], m.colorimetrie ?? null).score;
+
+  /** Les meilleures candidates pour un emplacement, prises dans le pool du moteur (dressing d'abord, capsule en complément). */
+  const choisir = (hors: Item | null, cat: CategoryKey, reference: readonly Item[]): { piece: Item; source: "dressing" | "capsule" } | null => {
+    const tenue = [...courant.values()];
+    const pool = args.pool.filter((p) => !courant.has(p.id) || p.id === hors?.id) as Item[];
+    let candidates = candidatsDeRemplacement(tenue, pool, hors?.id ?? -1, cat, occasion, regles.workMode, regles.dateContext, weather, regles.soiree)
+      .filter((c) => !pris.has(c.id) && bornesOk(c, t));
+    if (alerte.cause === "pluie") candidates = candidates.filter((c) => c.cat !== "chaussures" || (c.shoeType && !CHAUSSURES_OUVERTES.includes(c.shoeType)));
+    else candidates = candidates.filter((c) => aUnIndice(c, weather));
+    const ordre = pretri(candidates, t, occasion, reference).slice(0, CANDIDATES_NOTEES);
+    // Jamais une pièce qui fait déclencher à la tenue une règle bloquante du moteur (R-B1 à R-B10 : saison, contraste de formalité, robe
+    // avec haut ou bas…) que la tenue actuelle ne déclenchait pas — y compris la saison d'une pièce du catalogue, que le simple échange
+    // du moteur ne contrôle pas (audit du 12/10/2026).
+    const dejaDeclenchees = new Set(evaluateBlocking(tenue, occasion, weather, regles.workMode, regles.dateContext).map((h) => h.id));
+    const sains = ordre.filter((c) => {
+      const apres = tenue.filter((x) => x.id !== hors?.id).concat(c);
+      return evaluateBlocking(apres, occasion, weather, regles.workMode, regles.dateContext).every((h) => dejaDeclenchees.has(h.id));
+    });
+    if (!sains.length) return null;
+    const notes = sains.map((c, i) => {
+      const apres = tenue.filter((x) => x.id !== hors?.id).concat(c);
+      return { c, i, n: note(apres) };
+    });
+    notes.sort((a, b) => b.n - a.n || a.i - b.i);
+    return { piece: notes[0].c, source: args.dressingIds.has(notes[0].c.id) ? "dressing" : "capsule" };
   };
 
   let nonResolues = 0;
   for (const id of alerte.pieceIds) {
     const hors = pieces.find((p) => p.id === id);
     if (!hors) continue;
-    const memeCat = eligibles.filter((c) => c.cat === hors.cat);
-    // Sous la pluie : seulement des chaussures fermées.
-    const candidats = alerte.cause === "pluie" ? memeCat.filter((c) => c.shoeType && !CHAUSSURES_OUVERTES.includes(c.shoeType)) : memeCat;
-    if (!remplacer(hors, candidats)) nonResolues++;
+    const choix = choisir(hors, hors.cat, [hors]);
+    if (!choix) {
+      nonResolues++;
+      continue;
+    }
+    courant.delete(hors.id);
+    courant.set(choix.piece.id, choix.piece);
+    pris.add(choix.piece.id);
+    changements.push({ type: "remplacement", piece: choix.piece, remplace: hors, source: choix.source });
   }
 
-  if (alerte.cause === "froid") {
-    const aUneCouche = [...ids.values()].some((p) => (COUCHES as readonly string[]).includes(p.cat));
-    if (!aUneCouche) {
-      const cat = t < 10 ? "manteau" : "veste";
-      const reste = [...ids.values()];
-      const choix = classer(eligibles.filter((c) => c.cat === cat && !pris.has(c.id)), t, occasion, reste)[0] ?? classer(eligibles.filter((c) => (COUCHES as readonly string[]).includes(c.cat) && !pris.has(c.id)), t, occasion, reste)[0];
-      if (choix) {
-        ids.set(choix.id, choix);
-        pris.add(choix.id);
-        changements.push({ type: "ajout", piece: choix });
-      }
+  if (alerte.cause === "froid" && ![...courant.values()].some((p) => (COUCHES as readonly string[]).includes(p.cat))) {
+    const reste = [...courant.values()];
+    const choix = (t < 10 ? choisir(null, "manteau", reste) : choisir(null, "veste", reste)) ?? choisir(null, t < 10 ? "veste" : "manteau", reste);
+    if (choix) {
+      courant.set(choix.piece.id, choix.piece);
+      pris.add(choix.piece.id);
+      changements.push({ type: "ajout", piece: choix.piece, source: choix.source });
     }
   }
 
   if (!changements.length) return null;
-  return { ids: [...ids.keys()], changements, resolu: nonResolues === 0 };
+  const ids = [...courant.keys()];
+  return { ids, changements, resolu: nonResolues === 0, score: note([...courant.values()]) };
 }
 
 /** Une ligne par changement, pour le dire à la personne : « Ajout : Veste en jean », « Cardigan beige à la place de T-shirt blanc ». */
 export function libelleChangement(c: ChangementAdaptation): string {
-  return c.type === "ajout" ? `Ajout : ${c.piece.name}` : `${c.piece.name} à la place de ${c.remplace?.name ?? "la pièce d'origine"}`;
+  const suffixe = c.source === "capsule" ? " (suggestion de ta capsule)" : "";
+  return (c.type === "ajout" ? `Ajout : ${c.piece.name}` : `${c.piece.name} à la place de ${c.remplace?.name ?? "la pièce d'origine"}`) + suffixe;
 }

@@ -34,7 +34,7 @@ import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { VISUEL_SEJOUR } from "@/lib/valise";
 import { libelleStyles, paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
-import { composeWardrobePool } from "@/lib/selectors";
+import { poolDePlanification } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
@@ -504,9 +504,7 @@ function composerTenuePlan(e: {
   typeLieu: string | null;
 }) {
   if (!e.occ) return null;
-  const pool = e.dressingSeul
-    ? e.items
-    : composeWardrobePool(e.items, e.capsule, CAT_KEYS, { completerPourOccasion: e.occ, saison: e.meteo, exclureHorsOccasion: true, completerPourSaison: e.meteo });
+  const pool = poolDePlanification({ items: e.items, capsule: e.capsule, occasion: e.occ, dressingSeul: e.dressingSeul, meteo: e.meteo, categories: CAT_KEYS });
   return genererTenueHumeur({
     pool,
     weather: e.meteo,

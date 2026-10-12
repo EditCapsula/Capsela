@@ -1,8 +1,9 @@
 import { describe, it } from "vitest";
 import { createClient } from "@supabase/supabase-js";
 import { rowToCatalogItem, VESTIAIRE_ID_OFFSET, type VestiaireRow } from "../src/lib/vestiaire";
-import { CAPSULE_SEASONS, computeDefaultCapsule, contexteCapsule, representativeWeatherFor } from "../src/lib/capsule";
-import { generateOutfitWithFallback } from "../src/lib/logic";
+import { CAPSULE_SEASONS, computeDefaultCapsule, representativeWeatherFor } from "../src/lib/capsule";
+import { evaluateBlocking, generateOutfitWithFallback } from "../src/lib/logic";
+import { CHALEUR_HORS_SAISON, estDeSaison, weatherForDay } from "../src/lib/capsule";
 import { ECART_FORT, evaluerAlerteMeteo, proposerAdaptation } from "../src/lib/alerteMeteo";
 import type { CatalogItem } from "../src/lib/catalog";
 import type { CapsuleSeason, Item, OccasionKey } from "../src/lib/types";
@@ -70,14 +71,14 @@ describe("alerte météo et adaptation — mesure sur le catalogue réel", () =>
     }
     console.log(`  dressing de test : ${dressing.length} pièces, dont ${dressing.filter(avec).length} avec borne`);
 
-    type Cellule = { ecarts: number[]; ecartsFormalite: number[]; n: number; legere: number; forte: number; proposees: number; resolues: number; changements: number; gardeesAltereesCount: number; horsBorneCount: number; pieceAutreSaison: number };
-    const mesurer = (nomDressing: string, dressingDe: (saison: CapsuleSeason) => Item[]) => {
+    type Cellule = { regleNouvelle: number; depuisCapsule: number; ecarts: number[]; ecartsFormalite: number[]; n: number; legere: number; forte: number; proposees: number; resolues: number; changements: number; gardeesAltereesCount: number; horsBorneCount: number; pieceAutreSaison: number };
+    const parRegle = new Map<string, number>();
+    const mesurer = (nomDressing: string, dressingDe: (saison: CapsuleSeason) => Item[], avecCapsule = false) => {
       const parEcart = new Map<number, Cellule>();
-      for (const e of ECARTS) parEcart.set(e, { ecarts: [], ecartsFormalite: [], n: 0, legere: 0, forte: 0, proposees: 0, resolues: 0, changements: 0, gardeesAltereesCount: 0, horsBorneCount: 0, pieceAutreSaison: 0 });
+      for (const e of ECARTS) parEcart.set(e, { regleNouvelle: 0, depuisCapsule: 0, ecarts: [], ecartsFormalite: [], n: 0, legere: 0, forte: 0, proposees: 0, resolues: 0, changements: 0, gardeesAltereesCount: 0, horsBorneCount: 0, pieceAutreSaison: 0 });
       for (const saison of CAPSULE_SEASONS) {
         const capsule = capsules.get(saison)!;
         const meteoBase = representativeWeatherFor(saison);
-        const contexte = contexteCapsule(saison);
         const leDressing = dressingDe(saison);
         for (const occasion of OCCASIONS) {
           for (let k = 0; k < TIRAGES; k++) {
@@ -93,11 +94,19 @@ describe("alerte météo et adaptation — mesure sur le catalogue réel", () =>
               if (!a) continue;
               if (a.niveau === "forte") c.forte++; else c.legere++;
               c.ecarts.push(a.ecart);
-              const p = proposerAdaptation({ pieces, dressing: leDressing, meteo, occasion, contexte });
+              const p = proposerAdaptation({ pieces, pool: avecCapsule ? [...leDressing, ...capsule.filter((c) => !leDressing.some((d) => d.id === c.id))] : leDressing, dressingIds: new Set(leDressing.map((d) => d.id)), meteo, occasion, saisonDuPlan: saison, moteur: { paletteHexes: [], morphology: null } });
               if (!p) continue;
               c.proposees++;
               if (p.resolu) c.resolues++;
               c.changements += p.changements.length;
+              c.depuisCapsule += p.changements.filter((x) => x.source === "capsule").length;
+              // RÈGLES BLOQUANTES DU MOTEUR (R-B1 à R-B10) : celles que le look adapté déclenche et que le look d'origine, jugé à la même météo, ne déclenchait pas.
+              const wT = weatherForDay(T, meteo.label, saison, CHALEUR_HORS_SAISON);
+              const avant = new Set(evaluateBlocking(pieces, occasion, wT).map((h) => h.id));
+              const apres = evaluateBlocking([...capsule, ...leDressing].filter((it, i, arr) => arr.findIndex((z) => z.id === it.id) === i).filter((it) => p.ids.includes(it.id)), occasion, wT);
+              const nouvelles = apres.filter((h) => !avant.has(h.id));
+              if (nouvelles.length) c.regleNouvelle++;
+              for (const h of nouvelles) parRegle.set(h.id, (parRegle.get(h.id) ?? 0) + 1);
               const touchees = new Set(p.changements.flatMap((x) => [x.remplace?.id]).filter((x): x is number => x != null));
               // INVARIANT : toute pièce qui n'est pas remplacée est restée dans le look.
               for (const piece of pieces) if (!touchees.has(piece.id) && !p.ids.includes(piece.id)) c.gardeesAltereesCount++;
@@ -106,21 +115,23 @@ describe("alerte météo et adaptation — mesure sur le catalogue réel", () =>
                 const q = ch.piece;
                 if (ch.remplace && q.niveauFormalite != null && ch.remplace.niveauFormalite != null) c.ecartsFormalite.push(Math.abs(q.niveauFormalite - ch.remplace.niveauFormalite));
                 if ((q.meteoMinTemp != null && T < q.meteoMinTemp) || (q.meteoMaxTemp != null && T > q.meteoMaxTemp)) c.horsBorneCount++;
-                if (!contexte.seasons.includes(q.season) && q.season !== "Toutes saisons" && !q.saisons?.some((s) => contexte.saisons?.includes(s))) c.pieceAutreSaison++;
+                if (!estDeSaison(q, wT)) c.pieceAutreSaison++;
               }
             }
           }
         }
       }
       histogramme(parEcart, nomDressing.slice(0, 1));
+      console.log(`\n  règles bloquantes nouvellement déclenchées (${nomDressing.slice(0, 1)}) : ${[...parRegle].sort().map(([k, v]) => `${k} ×${v}`).join(", ") || "aucune"}`);
+      parRegle.clear();
       console.log(`\n  ── ${nomDressing} ──`);
-      console.log(`  écart | looks | alerte légère | alerte forte | adaptation proposée | résolue | changements/prop. | gardées altérées | hors borne | autre saison`);
+      console.log(`  écart | looks | alerte légère | alerte forte | adaptation proposée | résolue | changements/prop. | règle nouvelle | depuis capsule | gardées altérées | hors borne | autre saison`);
       const pct = (x: number, s: number) => (s ? `${((100 * x) / s).toFixed(0)} %` : "—");
       for (const e of ECARTS) {
         const c = parEcart.get(e)!;
         const alertes = c.legere + c.forte;
         console.log(
-          `  ${(e > 0 ? "+" : "") + e}`.padEnd(8) + `| ${String(c.n).padStart(5)} | ${pct(c.legere, c.n).padStart(13)} | ${pct(c.forte, c.n).padStart(12)} | ${pct(c.proposees, alertes).padStart(19)} | ${pct(c.resolues, c.proposees).padStart(7)} | ${(c.proposees ? c.changements / c.proposees : 0).toFixed(1).padStart(17)} | ${String(c.gardeesAltereesCount).padStart(16)} | ${String(c.horsBorneCount).padStart(10)} | ${String(c.pieceAutreSaison).padStart(12)}`
+          `  ${(e > 0 ? "+" : "") + e}`.padEnd(8) + `| ${String(c.n).padStart(5)} | ${pct(c.legere, c.n).padStart(13)} | ${pct(c.forte, c.n).padStart(12)} | ${pct(c.proposees, alertes).padStart(19)} | ${pct(c.resolues, c.proposees).padStart(7)} | ${(c.proposees ? c.changements / c.proposees : 0).toFixed(1).padStart(17)} | ${pct(c.regleNouvelle, c.proposees).padStart(12)} | ${pct(c.depuisCapsule, c.changements).padStart(13)} | ${String(c.gardeesAltereesCount).padStart(16)} | ${String(c.horsBorneCount).padStart(10)} | ${String(c.pieceAutreSaison).padStart(12)}`
         );
       }
     };
@@ -132,6 +143,7 @@ describe("alerte météo et adaptation — mesure sur le catalogue réel", () =>
       console.log(`  ${nom} : ${f.length} remplacements avec formalité connue — écart de formalité 0 : ${part(f, (x) => x === 0)} ; >= 2 : ${part(f, (x) => x >= 2)} ; >= 3 : ${part(f, (x) => x >= 3)}`);
     };
     mesurer("A · dressing = les quatre capsules réunies (riche, 62 pièces)", () => dressing);
+    mesurer("C · dressing vide + la capsule de la saison en complément (cas d'un dressing sans pièce convenable)", () => [], true);
     mesurer("B · dressing = la seule capsule de la saison du plan (pauvre : aucune pièce plus chaude ou plus légère hors de cette saison)", (saison) => capsules.get(saison)!);
     console.log(`\n  Lecture : la colonne « adaptation proposée » est rapportée aux looks en alerte ; « résolue » aux adaptations proposées.`);
   });
