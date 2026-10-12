@@ -1,5 +1,6 @@
 "use client";
 
+import { MISE_A_PLAT_DISPONIBLE } from "@/lib/miseAPlat";
 import { useEffect, useState } from "react";
 import { CATLABEL, OCC_LABELS, wornAgo } from "@/lib/data";
 import { bestStyleFor } from "@/lib/capsule";
@@ -166,7 +167,7 @@ export default function PieceScreen() {
   const isShoe = active.cat === "chaussures";
 
   // Seulement une photo personnelle (pas le visuel du catalogue), pas déjà mise à plat, avec la base branchée.
-  const peutMettreAPlat = !suggested && isSupabaseConfigured && Boolean(dressingPhotoPath(active.photoUrl)) && !estPhotoMiseAPlat(active.photoUrl);
+  const peutMettreAPlat = MISE_A_PLAT_DISPONIBLE && !suggested && isSupabaseConfigured && Boolean(dressingPhotoPath(active.photoUrl)) && !estPhotoMiseAPlat(active.photoUrl);
   const lancerMiseAPlat = async () => {
     setPlat({ etape: "cours" });
     const r = await actions.proposerMiseAPlat(active.id);

@@ -7,6 +7,7 @@ import Button from "@/components/Button";
 import Input from "@/components/Input";
 import { CameraIcon, CarteAnalyse, ChampSelect, chip, Coche, EYEBROW, luminance, NOMS_PASTILLES, SpinnerCintre } from "@/components/screens/AddScreen";
 import { useAuth } from "@/lib/auth";
+import { MISE_A_PLAT_DISPONIBLE } from "@/lib/miseAPlat";
 import { CATS, FAMILLES_COULEURS, PALETTE, PALETTE_BIJOU } from "@/lib/data";
 import { deleteDressingPhotos, detourerPhotoAvecCause, dressingPhotoPath, estPhotoMiseAPlat, importerTenue, uploadDressingPhoto, type CodeImportTenue } from "@/lib/dressing";
 import { MESSAGE_ECHEC_MISE_A_PLAT } from "@/components/screens/PieceScreen";
@@ -369,7 +370,7 @@ export default function ImporterTenueScreen() {
               const manques = manquesDe(b);
               const ouvert = ouverte === b.cle;
               const etatPlat = plat[b.cle];
-              const peutAPlat = isSupabaseConfigured && !estPhotoMiseAPlat(b.photoUrl);
+              const peutAPlat = MISE_A_PLAT_DISPONIBLE && isSupabaseConfigured && !estPhotoMiseAPlat(b.photoUrl);
               return (
                 <li key={b.cle} className="rounded-[20px] border border-border bg-card">
                   <div className="flex gap-3 p-3">
