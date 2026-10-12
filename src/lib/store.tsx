@@ -375,7 +375,7 @@ export interface Actions {
   openAdd: () => void;
   openAddBag: () => void;
   /** Ouvre l'ajout pré-rempli sur une catégorie donnée, en mémorisant l'écran d'origine pour y revenir (recette 24/08/2026, tuile "Ajouter un/une..." de Créer un look) — jamais utilisé pour openAdd/startReplace/startEditItem, qui gardent leur repli habituel. */
-  openAddForCategory: (cat: CategoryKey) => void;
+  openAddForCategory: (cat: CategoryKey, options?: { laPhotoDecide?: boolean }) => void;
   /** Ouvre l'ajout d'une pièce au dressing et revient ensuite à l'écran courant (la valise invite à compléter le dressing). */
   openAddEtRevenir: () => void;
   /**
@@ -1820,8 +1820,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }
     },
     openAddBag: () => ouvrirAjout((s) => ({ ...s, screen: "add", addCat: "sac", addName: "Sac " })),
-    openAddForCategory: (cat) =>
-      ouvrirAjout((s) => ({ ...s, addCat: cat, addCatTouched: true, addReturn: s.screen, screen: "add" })),
+    // `laPhotoDecide` (12/10/2026, « Mes pièces ») : la catégorie n'est qu'une valeur de départ — la catégorie lue sur la photo la remplace
+    // (une robe ajoutée depuis « Sacs » devient une robe) ; un choix de la personne dans le formulaire, lui, n'est jamais écrasé.
+    // Par défaut (Créer un look : « Ajouter un sac »), la catégorie est un choix, la photo ne la change pas.
+    openAddForCategory: (cat, options) =>
+      ouvrirAjout((s) => ({ ...s, addCat: cat, addCatTouched: !options?.laPhotoDecide, addReturn: s.screen, screen: "add" })),
     openAddEtRevenir: () => ouvrirAjout((s) => ({ ...s, addReturn: s.screen, screen: "add" })),
     ajouterPieceNonReconnue: (cat, nom) =>
       ouvrirAjout((s) => ({

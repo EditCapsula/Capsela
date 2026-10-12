@@ -100,10 +100,10 @@ export default function WardrobePiecesScreen() {
   }, [cleActive]);
 
   // Depuis une catégorie ouverte (vide ou non), l'ajout s'ouvre sur cette catégorie (12/10/2026, demandé) — la première de son groupe
-  // (« Bijoux & accessoires » : bijou), modifiable dans le formulaire — et le retour ramène ici. « Toutes » : ajout habituel.
+  // (« Bijoux & accessoires » : bijou), modifiable dans le formulaire — et le retour ramène ici ; la catégorie lue sur la photo prend le pas sur ce point de départ. « Toutes » : ajout habituel.
   const ajouter = () => {
     if (syntheseDressing(etatPremium, state.items.length, groupes.length).complet) actions.goPremium();
-    else if (groupeActif) actions.openAddForCategory(groupeActif.categories[0]);
+    else if (groupeActif) actions.openAddForCategory(groupeActif.categories[0], { laPhotoDecide: true });
     else actions.openAdd();
   };
   const counts = wearCounts(state.history);
