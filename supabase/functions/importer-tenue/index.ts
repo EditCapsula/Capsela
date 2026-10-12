@@ -19,7 +19,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
-import { assainerObjets, cheminObjet, promptTenue, rectangleOpaque, rectangleDeRecadrage, recadrerPixels } from "../_shared/analyseTenue.ts";
+import { FRACTION_GARDEE_MAX, FRACTION_GARDEE_MIN, MARGES_RECADRAGE, analyserDecoupe, assainerObjets, cheminObjet, cotesCoupes, promptTenue, rectangleOpaque, rectangleDeRecadrage, recadrerPixels } from "../_shared/analyseTenue.ts";
 import {
   cheminDansLeBucket,
   detourerAvecFournisseur,
@@ -169,20 +169,41 @@ Deno.serve(async (req) => {
     const rendus = [];
     let codeEchec: CodeErreurDetourage | null = null;
     for (const [i, objet] of objets.entries()) {
-      const r = rectangleDeRecadrage(planche.width, planche.height, objet.boite);
-      const rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
-      const entree = await imageDataVersPng({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
-      if (!entree) continue;
-      const detouree = await detourerAvecFournisseur(fetch, clePhotoroom, entree);
-      if (!detouree.ok) {
-        console.error("[importer-tenue] échec détourage de l'objet", i, ":", detouree.code);
-        codeEchec = detouree.code;
-        // Plus de crédit ou clé refusée : les objets suivants échoueraient de même, on s'arrête (aucun appel payant de plus).
-        if (detouree.code === "credits_epuises" || detouree.code === "non_configure") break;
-        continue;
+      // Jusqu'à deux détourages par objet (12/10/2026) : si la pièce touche le bord du recadrage côté intérieur de la photo, la boîte l'a
+      // coupée (un pantalon à la jambe) : on recommence UNE fois avec une marge plus large. Le second appel n'est payé que dans ce cas.
+      let piece: ImageData | null = null;
+      let arret = false;
+      for (const [tentative, marge] of MARGES_RECADRAGE.entries()) {
+        const r = rectangleDeRecadrage(planche.width, planche.height, objet.boite, marge);
+        const rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
+        const entree = await imageDataVersPng({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
+        if (!entree) break;
+        const detouree = await detourerAvecFournisseur(fetch, clePhotoroom, entree);
+        if (!detouree.ok) {
+          console.error("[importer-tenue] échec détourage de l'objet", i, ":", detouree.code);
+          codeEchec = detouree.code;
+          // Plus de crédit ou clé refusée : les objets suivants échoueraient de même, on s'arrête (aucun appel payant de plus).
+          if (detouree.code === "credits_epuises" || detouree.code === "non_configure") arret = true;
+          break;
+        }
+        if (detouree.type !== "png") break;
+        const candidate = await decoderPng(detouree.octets);
+        const analyse = analyserDecoupe(candidate.data, candidate.width, candidate.height);
+        // Presque rien de gardé, ou presque tout : pas une pièce isolée (mauvaise boîte, fond non retiré) — jamais proposée.
+        if (analyse.fraction < FRACTION_GARDEE_MIN || analyse.fraction > FRACTION_GARDEE_MAX) {
+          console.warn("[importer-tenue] objet", i, "écarté : part gardée", analyse.fraction.toFixed(3));
+          break;
+        }
+        const coupes = cotesCoupes(analyse, r, planche.width, planche.height);
+        piece = candidate;
+        if (coupes.length === 0 || tentative === MARGES_RECADRAGE.length - 1) {
+          if (coupes.length) console.warn("[importer-tenue] objet", i, "encore coupé côtés", coupes.join(","), "après marge élargie");
+          break;
+        }
+        console.warn("[importer-tenue] objet", i, "coupé côtés", coupes.join(","), ": recadrage élargi");
       }
-      if (detouree.type !== "png") continue;
-      const piece = await decoderPng(detouree.octets);
+      if (arret) break;
+      if (!piece) continue;
       // Cadrée sur la pièce : on rogne la transparence autour de ce que le détourage a gardé. Rien gardé : l'objet n'est pas proposé.
       const cadre = rectangleOpaque(piece.data, piece.width, piece.height);
       if (!cadre) continue;

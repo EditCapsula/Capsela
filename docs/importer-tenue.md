@@ -69,3 +69,10 @@ La lecture de la tenue rend aussi `saisons` (une ou plusieurs, parmi les quatre,
 
 ## Écran d'analyse (12/10/2026)
 Photo en grand (4/5, plafonnée à la hauteur disponible), carte au pied de l'image (cintre de marque `LoadingSpinner`, « On prépare ta pièce »), dégradé léger sans voile uniforme. Un seul message stable : l'analyse ne rend ni étape ni pourcentage.
+
+## Fiabiliser les cadrages (12/10/2026, signalé : un pantalon coupé à la jambe, une carte « Baskets » qui montrait du sol)
+La boîte de chaque pièce est lue par un modèle de vision (peu fiable pour localiser). Trois garde-fous, tous dans `importer-tenue` + `analyseTenue.ts` (`analyserDecoupe`, `cotesCoupes`, testés) :
+- **Consigne** : boîte la plus SERRÉE, de la ceinture à l'ourlet pour un pantalon, sans autre article, sans couper la pièce.
+- **Pièce coupée** : si ce que le détourage garde touche le bord du recadrage côté intérieur de la photo, la boîte l'a coupée : UN second détourage avec une marge plus large (0,08 puis 0,22). Coût : un appel Photoroom de plus, seulement dans ce cas (au plus deux par pièce).
+- **Pas une pièce** : part gardée < 5 % du recadrage (rien) ou > 92 % (fond non retiré) : la pièce n'est pas proposée plutôt qu'une carte avec du sol.
+Les décisions sont journalisées (`console.warn`, part gardée, côtés coupés). NON DÉMONTRÉ sur de vraies photos : aucune mesure du taux de cadrages corrects avant/après. Leviers restants si ce n'est pas assez : un modèle plus fort (`IMPORT_TENUE_MODEL`, ex. gpt-4.1 — plus cher), ou une passe de vérification du recadrage par le modèle.

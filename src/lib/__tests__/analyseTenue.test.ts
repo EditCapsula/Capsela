@@ -11,6 +11,8 @@ import {
   rectangleDeRecadrage,
   rectangleOpaque,
   saisonsLues,
+  analyserDecoupe,
+  cotesCoupes,
 } from "../../../supabase/functions/_shared/analyseTenue.ts";
 import { estPhotoDetouree, estPhotoMiseAPlat } from "../../../supabase/functions/_shared/detourage.ts";
 
@@ -208,5 +210,36 @@ describe("saisons suggérées par la lecture (12/10/2026)", () => {
     expect(o.saisons).toEqual(["Printemps", "Été"]);
     const [sans] = assainerObjets({ objets: [objet({ saisons: null })] });
     expect(sans.saisons).toBeUndefined();
+  });
+});
+
+describe("analyserDecoupe / cotesCoupes — fiabiliser les cadrages (12/10/2026)", () => {
+  const image = (l: number, h: number, pixels: (x: number, y: number) => boolean) => {
+    const d = new Uint8ClampedArray(l * h * 4);
+    for (let y = 0; y < h; y++) for (let x = 0; x < l; x++) if (pixels(x, y)) d[(y * l + x) * 4 + 3] = 255;
+    return d;
+  };
+  it("une pièce au milieu : part plausible, aucun bord touché", () => {
+    const a = analyserDecoupe(image(100, 100, (x, y) => x >= 30 && x < 70 && y >= 20 && y < 80), 100, 100);
+    expect(a.fraction).toBeCloseTo(0.24, 2);
+    expect(Object.values(a.bords).some(Boolean)).toBe(false);
+  });
+  it("une jambe qui sort par le bas : le bord bas est touché", () => {
+    const a = analyserDecoupe(image(100, 100, (x, y) => x >= 40 && x < 60 && y >= 10), 100, 100);
+    expect(a.bords).toEqual({ haut: false, bas: true, gauche: false, droite: false });
+  });
+  it("un pixel isolé sur un bord ne compte pas", () => {
+    const a = analyserDecoupe(image(100, 100, (x, y) => (x === 50 && y === 0) || (x >= 30 && x < 70 && y >= 30 && y < 70)), 100, 100);
+    expect(a.bords.haut).toBe(false);
+  });
+  it("rien de gardé : part nulle ; tout gardé : part de 1", () => {
+    expect(analyserDecoupe(image(10, 10, () => false), 10, 10).fraction).toBe(0);
+    expect(analyserDecoupe(image(10, 10, () => true), 10, 10).fraction).toBe(1);
+  });
+  it("cotesCoupes : seulement les côtés où la boîte n'est pas déjà au bord de la photo", () => {
+    const a = { fraction: 0.3, bords: { haut: true, bas: true, gauche: false, droite: true } };
+    // Recadrage collé en haut de l'image (y = 0) et à droite : la photo elle-même coupe, pas la boîte.
+    expect(cotesCoupes(a, { x: 50, y: 0, l: 50, h: 60 }, 100, 100)).toEqual(["bas"]);
+    expect(cotesCoupes(a, { x: 10, y: 10, l: 50, h: 60 }, 100, 100)).toEqual(["haut", "bas", "droite"]);
   });
 });
