@@ -83,7 +83,7 @@ export function promptTenue(): string {
     "saisons : la liste des saisons où cet article se porte, parmi Printemps, Été, Automne, Hiver (une ou plusieurs ; ex. un manteau en laine : Automne, Hiver ; un débardeur en lin : Printemps, Été), d'après la matière, l'épaisseur et la coupe visibles ; si tu n'es pas raisonnablement sûr, saisons = null.",
     "color_hex : ta meilleure estimation de la couleur dominante de L'ARTICLE, en hex #RRGGBB.",
     "nom : un nom court en français (ex. « Robe longue fleurie », « Sac en raphia »).",
-    "boite : [x, y, l, h] — la boîte qui contient TOUT l'article visible, en fractions de la largeur et de la hauteur de l'image (0 à 1), (x, y) étant le coin haut-gauche.",
+    "boite : [x, y, l, h] — la boîte la plus SERRÉE qui contient TOUT l'article visible, de son bord le plus haut à son bord le plus bas et de son bord gauche à son bord droit (un pantalon : de la ceinture jusqu'à l'ourlet ; des chaussures : les deux chaussures), en fractions de la largeur et de la hauteur de l'image (0 à 1), (x, y) étant le coin haut-gauche. Vérifie que la boîte ne contient AUCUN autre article en grande partie, et ne coupe jamais l'article.",
     "Règles : une paire de chaussures est UN article (une boîte autour des deux) ; plusieurs bracelets posés ensemble sont UN article ; ne liste jamais une partie du corps ni un décor ; ne devine pas un article caché ou coupé. Au plus 8 articles. Si tu n'es pas raisonnablement sûr d'un champ, mets null plutôt que de deviner.",
     'Réponds UNIQUEMENT en JSON strict : {"objets":[{"nom":string,"cat":string,"sous_type":string|null,"shoe_type":string|null,"sac_type":string|null,"bijou_type":string|null,"accessoire_type":string|null,"matiere":string|null,"manches":string|null,"motif":string|null,"saisons":string[]|null,"color_hex":string|null,"boite":[number,number,number,number]}]}.',
   ].join("\n");
@@ -218,6 +218,58 @@ export function rectangleOpaque(data: Uint8ClampedArray | Uint8Array, largeur: n
   const gx1 = Math.min(largeur, x1 + 1 + m);
   const gy1 = Math.min(hauteur, y1 + 1 + m);
   return { x: gx0, y: gy0, l: gx1 - gx0, h: gy1 - gy0 };
+}
+
+/** Marges de recadrage d'une boîte (part de sa plus grande dimension) : une première, puis une plus large si la pièce sort du cadre. */
+export const MARGES_RECADRAGE = [0.08, 0.22] as const;
+/** Part minimale / maximale du recadrage que doit occuper ce que le détourage a gardé, sinon ce n'est pas une pièce isolée. */
+export const FRACTION_GARDEE_MIN = 0.05;
+export const FRACTION_GARDEE_MAX = 0.92;
+
+export interface AnalyseDecoupe {
+  /** Part des pixels gardés (alpha > seuil), de 0 à 1. */
+  fraction: number;
+  /** Côtés où ce qui a été gardé touche le bord du recadrage : la pièce y est probablement COUPÉE par la boîte. */
+  bords: { haut: boolean; bas: boolean; gauche: boolean; droite: boolean };
+}
+
+/**
+ * Lit le résultat d'un détourage de recadrage (12/10/2026, signalé : un pantalon coupé à la jambe, une carte « Baskets » qui montrait du
+ * sol). Deux contrôles que le service ne fait pas : la pièce touche-t-elle le bord du recadrage (boîte trop serrée), et occupe-t-elle une
+ * part plausible du recadrage (≈ rien : pas de pièce ; ≈ tout : le fond n'a pas été retiré). Un bord n'est dit touché que si au moins 3 %
+ * de sa longueur est gardée : un pixel isolé ne compte pas.
+ */
+export function analyserDecoupe(data: Uint8ClampedArray | Uint8Array, largeur: number, hauteur: number, seuil = 16): AnalyseDecoupe {
+  let gardes = 0;
+  const alpha = (x: number, y: number) => data[(y * largeur + x) * 4 + 3];
+  for (let y = 0; y < hauteur; y++) for (let x = 0; x < largeur; x++) if (alpha(x, y) > seuil) gardes++;
+  const part = (n: number, sur: number) => n >= Math.max(1, Math.ceil(sur * 0.03));
+  let haut = 0, bas = 0, gauche = 0, droite = 0;
+  for (let x = 0; x < largeur; x++) {
+    if (alpha(x, 0) > seuil) haut++;
+    if (alpha(x, hauteur - 1) > seuil) bas++;
+  }
+  for (let y = 0; y < hauteur; y++) {
+    if (alpha(0, y) > seuil) gauche++;
+    if (alpha(largeur - 1, y) > seuil) droite++;
+  }
+  return {
+    fraction: gardes / (largeur * hauteur),
+    bords: { haut: part(haut, largeur), bas: part(bas, largeur), gauche: part(gauche, hauteur), droite: part(droite, hauteur) },
+  };
+}
+
+/**
+ * Les côtés où la pièce est coupée PAR LA BOÎTE : ceux dont le recadrage n'est pas déjà au bord de l'image (là, la pièce est coupée par la
+ * photo elle-même, un recadrage plus large n'y changerait rien).
+ */
+export function cotesCoupes(a: AnalyseDecoupe, r: Rectangle, largeurImage: number, hauteurImage: number): string[] {
+  const l: string[] = [];
+  if (a.bords.haut && r.y > 0) l.push("haut");
+  if (a.bords.bas && r.y + r.h < hauteurImage) l.push("bas");
+  if (a.bords.gauche && r.x > 0) l.push("gauche");
+  if (a.bords.droite && r.x + r.l < largeurImage) l.push("droite");
+  return l;
 }
 
 /**
