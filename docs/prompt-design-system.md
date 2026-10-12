@@ -32,7 +32,7 @@ Tu mets à jour le design system de **Capsela**, une application mobile qui comp
 - Composants à réutiliser : Button, Card, Badge, Input, SegmentedControl, BottomSheet, EmptyState, Rangee, OutfitComposition, AppHeader, BoutonRetour, FilEtapes, LogoCapsela, JourEtMeteo, IconeTuile, FlatLayCapsela.
 
 ### 5. Navigation
-- Une seule page, navigation par état. Barre du bas à cinq onglets : Aujourd'hui · Dressing · Capsule · Journal · Planifier. L'onglet Planifier reste allumé sur « Mon planning » (le calendrier).
+- Une seule page, navigation par état. Barre du bas à cinq onglets : Aujourd'hui · Dressing · Capsule · Planifier · Journal (Journal en dernier depuis le 12/10/2026). L'onglet Planifier reste allumé sur « Mon planning » (le calendrier).
 - Les parcours guidés (Planifier, Valise, Ajouter une pièce, Premium) masquent la barre et posent leur action principale en pied d'écran.
 - Gouttière de 16 px sur l'accueil et le planning, 24 px dans les parcours.
 

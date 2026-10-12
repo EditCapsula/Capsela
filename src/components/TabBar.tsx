@@ -83,7 +83,6 @@ const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<
   { label: "Aujourd’hui", icon: "home", screen: "home", go: (a) => a.goHome() },
   { label: "Dressing", icon: "hanger", screen: "wardrobe", go: (a) => a.goWardrobe() },
   { label: "Capsule", icon: "capsule", screen: "capsule", go: (a) => a.goCapsule() },
-  { label: "Journal", icon: "journal", screen: "history", go: (a) => a.goHistory() },
   /**
    * CINQ ONGLETS (07/10/2026, refonte de l'accueil « Aujourd'hui »).
    *
@@ -105,6 +104,8 @@ const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<
    * le parcours ouvert.
    */
   { label: "Planifier", icon: "calendrier", screen: "planifier", go: (a) => a.goPlanifier() },
+  // Journal en DERNIÈRE position (12/10/2026, demandé) : il était avant Planifier. Aujourd'hui · Dressing · Capsule · Planifier · Journal.
+  { label: "Journal", icon: "journal", screen: "history", go: (a) => a.goHistory() },
 ];
 
 /**
