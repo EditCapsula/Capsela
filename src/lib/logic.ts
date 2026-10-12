@@ -1,6 +1,6 @@
 import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_ENTRETIEN, PREFS_SOIREE_HABILLEE, effectiveFormality, isRainy, isSunny } from "./data";
+import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_ENTRETIEN, PREFS_SOIREE_HABILLEE, effectiveFormality, isRainy, isSunny, necessiteLeSoleil } from "./data";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
 import { accordVisage, candidatsCouleur, colorimetriePourPivot, type ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -869,7 +869,7 @@ export function generateOutfit(
     // s'applique pas au picker manuel de l'écran Création de looks (qui ne
     // passe pas par hardCategoryFilter).
     if (!isSunny(weather)) {
-      r = r.filter((i) => !i.necessiteSoleil);
+      r = r.filter((i) => !necessiteLeSoleil(i));
     }
     // R-B20 (25/08/2026, signalé) — un short (capsule ou dressing réel,
     // jamais de distinction de source) n'est jamais proposé dans la tenue
@@ -1854,7 +1854,7 @@ export function swapOutfitPiece(
   }
   // R-B15 — symétrique du filtre appliqué dans generateOutfit.
   if (weather && !isSunny(weather)) {
-    candidates = candidates.filter((i) => !i.necessiteSoleil);
+    candidates = candidates.filter((i) => !necessiteLeSoleil(i));
   }
   // R-B20 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (weather && weather.temp <= 22) {

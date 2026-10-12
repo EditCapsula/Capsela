@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { MosaiquePieces } from "@/components/CarteLook";
@@ -349,7 +349,7 @@ export default function WardrobeScreen() {
 
   // ── DRESSING REMPLI (V9, 08/10/2026) ─────────────────────────────────
   // Ordre de la maquette : en-tête avec « + Ajouter », récemment ajoutées (miniatures), l'inspiration du moment, tes looks, par catégorie,
-  // à redécouvrir. Chaque bloc se tait quand il n'a pas de donnée vraie. Le bouton d'ajout est dans l'en-tête, plus de bouton flottant ;
+  // à redécouvrir. Chaque bloc se tait quand il n'a pas de donnée vraie. Le bouton d'ajout est flottant (« + », à droite) depuis le 12/10/2026 ;
   // dressing complet (gratuit), il mène à Premium au lieu d'ouvrir un formulaire qui refuserait d'enregistrer.
   const ajouter = () => (synthese.complet ? actions.goPremium() : actions.openAdd());
   const dejaCalcule = idees !== null;
@@ -394,9 +394,10 @@ export default function WardrobeScreen() {
   const pluriel = aRedecouvrirUne ? articlePossessif(aRedecouvrirUne.piece) === "tes" : false;
 
   return (
+    <>
     <div
       className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]"
-      style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 32px)" }}
+      style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}
     >
       <AppHeader />
       <div className="t-surtitre text-muted mt-[14px]">Mon dressing</div>
@@ -404,17 +405,6 @@ export default function WardrobeScreen() {
         <div className="t-titre-ecran text-ink" style={{ textWrap: "balance" }}>
           Ton dressing, <span className="italic text-terracotta">à ton image</span>
         </div>
-        {/* Pilule à contour, 44 px (09/10/2026, demandé : le bouton plein était « trop imposant », le simple lien « trop peu voyant »).
-            Terracotta-deep et non terracotta : 4,5:1 sur le fond carte, comme le bouton principal. */}
-        <Button
-          variante="contour"
-          pleine={false}
-          onClick={ajouter}
-          className="flex-shrink-0 !min-h-[44px] !gap-[7px] pl-[14px] pr-[18px] bg-card hover:bg-warm-bg !border-terracotta-deep !text-terracotta-deep font-semibold normal-case tracking-normal"
-        >
-          {PLUS}
-          Ajouter
-        </Button>
       </div>
       <div className="text-[13px] text-muted mt-[8px]">
         {items.length} {items.length <= 1 ? "pièce" : "pièces"}
@@ -603,53 +593,33 @@ export default function WardrobeScreen() {
         </button>
       )}
     </div>
+    <BoutonAjoutFlottant onClick={ajouter} />
+    </>
   );
 }
 
 /**
- * LE BOUTON FLOTTANT « AJOUTER UNE PIÈCE » (maquette du 04/10/2026) : toujours à portée du pouce, au-dessus de la barre
- * du bas. Étiqueté d'abord ; après trois usages, il se réduit au « + » — la personne sait ce qu'il fait. Le compte est
- * gardé sur l'appareil (aucune donnée de compte) ; sans stockage, il reste étiqueté.
+ * LE BOUTON FLOTTANT « AJOUTER UNE PIÈCE » (12/10/2026, demandé : remplacer le bouton « Ajouter » de l'en-tête par un bouton flottant à
+ * droite de l'écran, avec un « + ») : un rond de 56 px, toujours à portée du pouce, au-dessus de la barre du bas. L'étiquette qui se
+ * réduisait au « + » après trois usages (maquette du 04/10/2026) disparaît : il est un « + » d'emblée, nommé pour les lecteurs d'écran.
  */
-const CLE_USAGES_AJOUT = "capsela.boutonAjout.usages";
-const USAGES_AVANT_REDUCTION = 3;
-
 export function BoutonAjoutFlottant({ onClick }: { onClick: () => void }) {
-  const [reduit, setReduit] = useState(false);
-  useEffect(() => {
-    try {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setReduit(Number(localStorage.getItem(CLE_USAGES_AJOUT) ?? 0) >= USAGES_AVANT_REDUCTION);
-    } catch {
-      // stockage indisponible : le bouton reste étiqueté
-    }
-  }, []);
   return (
     <button
-      onClick={() => {
-        try {
-          localStorage.setItem(CLE_USAGES_AJOUT, String(Number(localStorage.getItem(CLE_USAGES_AJOUT) ?? 0) + 1));
-        } catch {
-          // idem
-        }
-        onClick();
-      }}
+      type="button"
+      onClick={onClick}
       aria-label="Ajouter une pièce à mon dressing"
-      className="absolute right-4 z-10 flex items-center gap-[10px] rounded-full bg-terracotta-deep text-cream cursor-pointer transition-transform active:scale-[.97]"
+      className="absolute right-4 z-10 flex items-center justify-center rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer transition-transform active:scale-[.95]"
       style={{
-        bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 12px)",
-        minHeight: 52,
-        minWidth: 52,
-        padding: reduit ? "0 16px" : "0 20px 0 16px",
-        boxShadow: "0 4px 14px rgba(29,26,22,.18)",
+        bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px)",
+        width: 56,
+        height: 56,
+        boxShadow: "0 4px 14px rgba(29,26,22,.22)",
       }}
     >
-      <span aria-hidden="true" className="flex items-center justify-center">
-        <svg width="20" height="20" viewBox="0 0 24 24">
-          <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      </span>
-      {!reduit && <span className="text-[13px] leading-[1.15] text-left">Ajouter<br />une pièce</span>}
+      <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
     </button>
   );
 }

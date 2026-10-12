@@ -391,13 +391,30 @@ function estimateUvIndex(weather: Weather): number {
   else if (weather.temp >= 10) base = 2;
   else base = 1;
   if (/soleil/i.test(weather.label)) return base;
+  if (/[ée]claircie/i.test(weather.label)) return Math.max(0, base - 1);
   if (/pluie|orage/i.test(weather.label)) return Math.max(0, base - 3);
   return Math.max(0, base - 2);
 }
 
 /** Météo jugée assez ensoleillée pour les pièces necessite_soleil (R-B15) — seuil indice UV estimé ≥ 3 (correctif 21/08/2026, remplace l'ancien test uniquement textuel sur "ensoleillé"). */
 export function isSunny(weather: Weather): boolean {
-  return estimateUvIndex(weather) >= 3;
+  // Il faut du soleil DANS LE CIEL (12/10/2026, signalé : « les lunettes de soleil ne doivent être portées que s'il y a de
+  // l'ensoleillement ; en temps nuageux, pluvieux, etc., il n'y en a pas à pousser »). Avant, l'indice UV seul décidait : un ciel nuageux à
+  // 22 °C passait le seuil (5 − 2 = 3) et recevait des lunettes. Désormais « Ensoleillé » ou « Éclaircies », ET un indice UV estimé ≥ 3.
+  // ARBITRAGE ÉDITORIAL : les éclaircies comptent comme du soleil ; nuageux, brumeux, pluvieux, orageux, neigeux, non.
+  return /soleil|[ée]claircie/i.test(weather.label) && estimateUvIndex(weather) >= 3;
+}
+
+/**
+ * Une pièce qui ne se porte que s'il y a du soleil : les lunettes de soleil (12/10/2026, signalé : « il n'y a pas de lunettes de soleil à
+ * pousser dans une tenue par temps nuageux ou pluvieux »). Le drapeau `necessiteSoleil` n'existe que sur les pièces du catalogue ; une
+ * paire du dressing réel (type « Lunettes » ou nom « Lunettes de soleil ») n'en a pas, et passait donc le filtre R-B15 par tous les temps.
+ * Des lunettes de vue ne sont pas concernées.
+ */
+export function necessiteLeSoleil(item: { necessiteSoleil?: boolean; accessoireType?: string; name: string }): boolean {
+  if (item.necessiteSoleil) return true;
+  if (/vue|optique|lecture|ordinateur/i.test(item.name)) return false;
+  return item.accessoireType === "Lunettes" || /lunettes de soleil|solaires/i.test(item.name);
 }
 
 /**
