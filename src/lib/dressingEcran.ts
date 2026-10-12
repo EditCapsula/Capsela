@@ -72,10 +72,11 @@ export interface GroupeAffiche {
  * la pièce hors du vestiaire. Sans profil renseigné : configuration femme,
  * la seule qui couvre les 14 catégories.
  */
-export function groupesDuVestiaire(items: Item[], gender: Gender | null): GroupeAffiche[] {
+export function groupesDuVestiaire(items: Item[], gender: Gender | null, options: { inclureVides?: boolean } = {}): GroupeAffiche[] {
   const profil: Gender = gender ?? "femme";
   const propres = DRESSING_GROUPS[profil];
   const couvertes = new Set(propres.flatMap((g) => g.categories));
+  const propres_ids = new Set(propres.map((g) => g.id));
   const replis = DRESSING_GROUPS.femme.filter((g) => g.categories.every((c) => !couvertes.has(c)));
   return [
     ...propres.map((g) => ({ g, visuel: profil })),
@@ -89,7 +90,9 @@ export function groupesDuVestiaire(items: Item[], gender: Gender | null): Groupe
       categories: g.categories,
       propres: piecesPourVisuelCategorie(items, g.categories),
     }))
-    .filter((g) => g.nbPieces > 0);
+    // Les cartes du Dressing ne montrent que les catégories remplies ; les filtres de « Mes pièces » (12/10/2026) gardent aussi les vides
+    // de la configuration du profil, pour y proposer l'ajout. Une catégorie de repli (hors profil) n'est jamais proposée vide.
+    .filter((g) => g.nbPieces > 0 || (options.inclureVides === true && propres_ids.has(g.id)));
 }
 
 // ── VISUEL DES CARTES « PAR CATÉGORIE » ────────────────────────────────

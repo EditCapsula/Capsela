@@ -12,6 +12,10 @@ import BoutonRetour from "@/components/BoutonRetour";
 import { teinteDe } from "@/lib/colorimetrieMoteur";
 import Button from "@/components/Button";
 import EmptyState from "@/components/EmptyState";
+import { BoutonAjoutFlottant } from "@/components/screens/WardrobeScreen";
+import { groupesDuVestiaire, syntheseDressing } from "@/lib/dressingEcran";
+import { useAuth } from "@/lib/auth";
+import type { CategoryKey } from "@/lib/types";
 
 /**
  * "Mes pièces" (recette 24/08/2026, mockup fourni) — grille plate 2 colonnes
@@ -46,15 +50,39 @@ import EmptyState from "@/components/EmptyState";
  */
 const DUREE_APPUI_LONG_MS = 500;
 
+/** Message d'une catégorie vide, par groupe du Dressing (clés de DRESSING_GROUPS). Aucune pièce n'y est inventée : le texte invite seulement à ajouter. */
+const VIDE_PAR_DEFAUT = { titre: "Ici, tout reste à composer.", texte: "Ajoute tes premières pièces pour les retrouver dans tes prochaines tenues." };
+const VIDE_CATEGORIE: Record<string, { titre: string; texte: string }> = {
+  "bijoux-accessoires": { titre: "Les détails font la différence.", texte: "Ajoute tes bijoux et accessoires pour compléter tes prochaines tenues." },
+  sacs: { titre: "Le sac qui finit le look.", texte: "Ajoute tes sacs pour qu'ils accompagnent tes prochaines tenues." },
+  chaussures: { titre: "Chaque tenue commence par les pieds.", texte: "Ajoute tes chaussures pour compléter tes prochaines tenues." },
+  "vestes-manteaux": { titre: "La couche qui change tout.", texte: "Ajoute tes vestes et manteaux pour composer des tenues pour toutes les météos." },
+  "robes-combinaisons": { titre: "Une pièce, une tenue.", texte: "Ajoute tes robes et combinaisons pour des looks faciles à composer." },
+  hauts: { titre: "La base de tes looks.", texte: "Ajoute tes hauts et pulls pour les associer à tes prochaines tenues." },
+  jupes: { titre: "Du mouvement dans tes tenues.", texte: "Ajoute tes jupes pour varier tes prochaines tenues." },
+  "pantalons-jeans-shorts": { titre: "Le socle de tes tenues.", texte: "Ajoute tes pantalons, jeans et shorts pour composer tes prochaines tenues." },
+};
+
 export default function WardrobePiecesScreen() {
-  const { state, actions } = useCapsela();
+  const { state, actions, etatPremium } = useCapsela();
+  const { profile } = useAuth();
   // Ouvert depuis une carte du vestiaire (refonte Dressing, 25/09/2026) :
   // seules les pièces de ses catégories techniques, et un « Tout afficher »
   // pour revenir à l'ensemble.
   const filtre = state.filtrePieces;
-  const items = filtre
+  const parFiltre = filtre
     ? state.items.filter((i) => (!filtre.categories || filtre.categories.includes(i.cat)) && (!filtre.teinte || teinteDe(i) === filtre.teinte))
     : state.items;
+  // Recherche par nom (12/10/2026), sans accent ni casse, dans la vue affichée (toutes les pièces ou la catégorie choisie). Proposée à partir de
+  // 9 pièces : en dessous, la grille tient presque à l'écran et un champ de plus l'alourdirait.
+  const [recherche, setRecherche] = useState("");
+  const normaliser = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const terme = normaliser(recherche);
+  const items = terme ? parFiltre.filter((i) => normaliser(i.name).includes(terme)) : parFiltre;
+  const groupes = groupesDuVestiaire(state.items, profile.gender, { inclureVides: true });
+  // Un filtre de catégorie se reconnaît à ses catégories ; une couleur (depuis la tenue) n'a pas de pastille sélectionnée.
+  const groupeActif = filtre?.categories ? groupes.find((g) => g.categories.join() === filtre.categories!.join()) : undefined;
+  const ajouter = () => (syntheseDressing(etatPremium, state.items.length, groupes.length).complet ? actions.goPremium() : actions.openAdd());
   const counts = wearCounts(state.history);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selection, setSelection] = useState<Set<number>>(new Set());
@@ -107,41 +135,75 @@ export default function WardrobePiecesScreen() {
   };
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-24">
+    <>
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}>
       <div className="flex items-center justify-between gap-3 mt-[10px]">
         <div className="flex items-center gap-[14px] min-w-0">
           <BoutonRetour onClick={filtre?.retour === "tenue" ? actions.goTenues : actions.goWardrobe} label={filtre?.retour === "tenue" ? "Revenir à ma tenue" : "Revenir au dressing"} className="flex-shrink-0" />
           <div className="t-titre-section text-ink truncate">Mes pièces</div>
         </div>
-        <button onClick={actions.openAdd} className="flex items-center gap-[7px] flex-shrink-0 cursor-pointer">
-          <span className="w-[30px] h-[30px] rounded-full bg-terracotta text-cream flex items-center justify-center text-[16px] flex-shrink-0">
-            +
-          </span>
-          <span className="text-[11px] text-ink">Ajouter</span>
-        </button>
       </div>
 
       {/* Plus de lien « Sélectionner » (12/10/2026) : la sélection s'ouvre par un appui long sur une carte (cf. commencerAppui). Le
           rappel en gris, à la place du lien, garde le geste découvrable (le lien avait été ajouté le 10/09/2026 parce qu'on ne voyait pas
           comment sélectionner en masse). */}
-      <div className="flex items-baseline justify-between gap-3 mt-4">
-        <div className="t-surtitre text-muted">
-          {selectionMode
-            ? selection.size === 0
-              ? "Touche les pièces à retirer"
-              : `${selection.size} ${selection.size === 1 ? "sélectionnée" : "sélectionnées"}`
-            : `${items.length} ${items.length === 1 ? "pièce" : "pièces"}`}
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <div className="t-surtitre text-muted min-w-0">
+            {selectionMode
+              ? selection.size === 0
+                ? "Touche les pièces à retirer"
+                : `${selection.size} ${selection.size === 1 ? "sélectionnée" : "sélectionnées"}`
+              : `${filtre?.libelle ?? "Toutes mes pièces"} · ${items.length} ${items.length <= 1 ? "pièce" : "pièces"}`}
+          </div>
+          {selectionMode && (
+            <button onClick={quitterSelection} className="text-[12px] text-muted flex-shrink-0 cursor-pointer py-[4px]">
+              Annuler
+            </button>
+          )}
         </div>
-        {selectionMode ? (
-          <button onClick={quitterSelection} className="text-[12px] text-muted flex-shrink-0 cursor-pointer py-[4px]">
-            Annuler
-          </button>
-        ) : (
-          items.length > 0 && <span className="text-[11px] text-placeholder flex-shrink-0">Appui long pour sélectionner</span>
-        )}
+        {!selectionMode && items.length > 0 && <div className="text-[11px] text-placeholder mt-[4px]">Appui long sur une pièce pour la sélectionner</div>}
       </div>
 
-      {filtre && !selectionMode && (
+      {/* NAVIGATION PAR CATÉGORIE (12/10/2026) : les catégories du Dressing (mêmes groupes, dressingEcran), avec leur nombre de pièces,
+          en pastilles horizontales ; celle qui est ouverte est pleine. Elle remplace le lien « Tout afficher » (la pastille « Toutes » fait
+          la même chose), sauf pour un filtre de couleur venu de la tenue, qui n'est pas une catégorie. Les catégories vides du profil restent
+          proposées : on y ajoute sa première pièce. */}
+      {!selectionMode && !filtre?.teinte && (
+        <div role="group" aria-label="Catégories" className="scrollarea flex gap-2 overflow-x-auto mt-3 pb-[2px]">
+          {[{ id: "toutes", libelle: "Toutes", nbPieces: state.items.length, categories: undefined as CategoryKey[] | undefined }, ...groupes].map((g) => {
+            const actif = g.id === "toutes" ? !filtre?.categories : groupeActif?.id === g.id;
+            return (
+              <button
+                key={g.id}
+                aria-pressed={actif}
+                onClick={() => {
+                  setRecherche("");
+                  actions.goWardrobePieces(g.categories ? { libelle: g.libelle, categories: g.categories, ...(filtre?.retour ? { retour: filtre.retour } : {}) } : filtre?.retour ? { libelle: "Toutes mes pièces", retour: filtre.retour } : undefined);
+                }}
+                className={`flex-none min-h-[40px] px-[14px] rounded-full text-[12.5px] cursor-pointer border whitespace-nowrap ${
+                  actif ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
+                }`}
+              >
+                {g.libelle} <span className={actif ? "text-cream/70" : "text-muted"}>{g.nbPieces}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {!selectionMode && parFiltre.length >= 9 && (
+        <input
+          type="search"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder="Rechercher une pièce"
+          aria-label="Rechercher une pièce par son nom"
+          className="mt-3 w-full min-h-[44px] rounded-full border border-border bg-card px-4 text-[13px] text-ink placeholder:text-placeholder outline-none focus:border-terracotta"
+        />
+      )}
+
+      {filtre?.teinte && !selectionMode && (
         <div className="flex items-baseline justify-between gap-3 mt-[6px] text-[12px]">
           <span className="text-ink">{filtre.libelle}</span>
           <button onClick={() => actions.goWardrobePieces()} className="text-terracotta flex-shrink-0 cursor-pointer py-[13px] -my-[13px]">
@@ -150,7 +212,21 @@ export default function WardrobePiecesScreen() {
         </div>
       )}
 
-      {items.length === 0 ? (
+      {items.length === 0 && terme ? (
+        <EmptyState className="mt-3">Aucune pièce ne correspond à « {recherche.trim()} ».</EmptyState>
+      ) : items.length === 0 && groupeActif ? (
+        // CATÉGORIE VIDE (12/10/2026) : un message à sa mesure et l'action d'ajout, jamais une grande zone vide. Le CTA ouvre le parcours
+        // d'ajout existant (Premium si le dressing gratuit est plein, comme le bouton flottant) ; l'état disparaît dès qu'une pièce y entre.
+        <section className="mt-6 rounded-carte border border-border bg-card px-5 py-7 text-center" aria-label={`${groupeActif.libelle} : aucune pièce`}>
+          <div className="t-titre-section text-ink" style={{ textWrap: "balance" }}>
+            {(VIDE_CATEGORIE[groupeActif.id] ?? VIDE_PAR_DEFAUT).titre}
+          </div>
+          <div className="t-chapeau text-muted-3 mt-[10px]">{(VIDE_CATEGORIE[groupeActif.id] ?? VIDE_PAR_DEFAUT).texte}</div>
+          <Button variante="principal" className="mt-5" onClick={ajouter}>
+            Ajouter une pièce
+          </Button>
+        </section>
+      ) : items.length === 0 ? (
         <EmptyState className="mt-3">Tes pièces apparaîtront ici au fur et à mesure que tu les ajoutes à ton dressing.</EmptyState>
       ) : (
         <div className="grid grid-cols-2 gap-x-[12px] gap-y-[22px] mt-4">
@@ -269,5 +345,7 @@ export default function WardrobePiecesScreen() {
         </button>
       </BottomSheet>
     </div>
+    {!selectionMode && <BoutonAjoutFlottant onClick={ajouter} />}
+    </>
   );
 }
