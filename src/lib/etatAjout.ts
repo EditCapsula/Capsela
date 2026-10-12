@@ -18,6 +18,8 @@ export interface EntreeEtatAjout {
   analysee: boolean;
   analyseDisponible: boolean;
   saisieManuelle: boolean;
+  /** L'analyse a vu une tenue portée ou plusieurs pièces et l'écran passe à « Importer une tenue » : pas de formulaire entre les deux. */
+  redirection?: boolean;
   /** Un nom déjà présent (parcours « Remplacer par ta pièce ») : il y a de quoi montrer le formulaire. */
   nomRempli: boolean;
 }
@@ -25,7 +27,7 @@ export interface EntreeEtatAjout {
 export function etatAjout(e: EntreeEtatAjout): EtatAjout {
   if (!e.creation || e.saisieManuelle) return "pret";
   if (e.photo) {
-    if (e.envoi || e.analyse) return "chargement";
+    if (e.envoi || e.analyse || e.redirection) return "chargement";
     return !e.analyseDisponible || e.analysee ? "pret" : "echec";
   }
   return e.nomRempli ? "pret" : "initial";

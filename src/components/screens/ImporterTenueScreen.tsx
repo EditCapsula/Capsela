@@ -92,7 +92,7 @@ export default function ImporterTenueScreen() {
     if (!fin.current) purger(tout());
   }, []);
 
-  const lancer = async (file: File) => {
+  const lancer = async (file: File, urlDejaEnvoyee?: string) => {
     fichierRef.current = file;
     setAFichier(true);
     purger(tout());
@@ -110,7 +110,8 @@ export default function ImporterTenueScreen() {
     }
     let urlPhoto: string;
     try {
-      urlPhoto = await uploadDressingPhoto(userId, file);
+      // Photo déjà envoyée par « Ajouter une pièce » : on ne la renvoie pas.
+      urlPhoto = urlDejaEnvoyee ?? (await uploadDressingPhoto(userId, file));
     } catch {
       setCode("photo");
       setPhase("echec");
@@ -148,7 +149,7 @@ export default function ImporterTenueScreen() {
   useEffect(() => {
     const confiee = reprendrePhoto();
     // Hors de l'effet (setTimeout) : la lecture met l'état à jour tout de suite. Pas de nettoyage du minuteur : en développement l'effet se joue deux fois et la photo n'est reprise qu'une.
-    if (confiee) setTimeout(() => void lancer(confiee), 0);
+    if (confiee) setTimeout(() => void lancer(confiee.fichier, confiee.url), 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -298,7 +299,7 @@ export default function ImporterTenueScreen() {
           <div
             role="img"
             aria-label="Ta photo"
-            className="relative rounded-[24px] overflow-hidden border border-border aspect-[1.3]"
+            className={"relative rounded-[24px] overflow-hidden border border-border " + (phase === "analyse" ? "aspect-[4/5]" : "aspect-[1.3]")}
             style={{
               background: "var(--color-warm-bg)",
               backgroundImage: imageZone ? `url(${imageZone})` : undefined,
@@ -312,7 +313,7 @@ export default function ImporterTenueScreen() {
                 <div className="w-[250px] max-w-full bg-card border border-border rounded-[20px] px-4 pt-[14px] pb-[10px]">
                   <div className="flex items-center gap-[10px]">
                     <SpinnerCintre sombre />
-                    <span className="font-serif font-medium text-[16px] text-ink">Capsela regarde ta tenue</span>
+                    <span className="font-serif font-medium text-[16px] text-ink">Capsela analyse ta photo</span>
                   </div>
                   <ul className="flex flex-col mt-2 list-none p-0 m-0">
                     {etapes.map((e) => (

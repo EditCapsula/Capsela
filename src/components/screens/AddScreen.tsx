@@ -326,11 +326,18 @@ export default function AddScreen() {
   // portée ou plusieurs pièces, elle passe à « Importer une tenue », une seule fois par photo choisie. Au retour sur cet écran, le fichier
   // n'est plus là : rien ne se relance, la personne reste sur le formulaire d'une pièce.
   const cadrageMulti = state.addPhotoCadrage === "portee" || state.addPhotoCadrage === "plusieurs";
+  // L'écran reste en « chargement » entre la fin de l'analyse et le passage à l'import : jamais un éclair du formulaire d'une pièce seule.
+  const redirection = creation && aPhotoChoisie && cadrageMulti && !state.addPhotoAnalyzing && !state.addPhotoUploading;
   useEffect(() => {
     if (!creation || !aPhotoChoisie || lectureEnCours || !cadrageMulti || detectionLancee.current || !photoChoisie.current) return;
     detectionLancee.current = true;
-    confierPhoto(photoChoisie.current);
+    // Le fichier ET son URL déjà envoyée : l'import ne renvoie pas la photo. Cet écran repart de zéro (la photo appartient désormais à l'import).
+    confierPhoto({ fichier: photoChoisie.current, url: /^https?:/.test(state.addPhotoUrl ?? "") ? state.addPhotoUrl ?? undefined : undefined });
+    actions.retirerPhotoAjout();
+    photoChoisie.current = null;
+    setAPhotoChoisie(false);
     actions.openImporterTenue();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [creation, aPhotoChoisie, lectureEnCours, cadrageMulti, actions]);
 
   const blocage = lectureEnCours || state.addPhotoUploading
@@ -351,6 +358,7 @@ export default function AddScreen() {
     analysee: state.addPhotoAnalysee,
     analyseDisponible: isSupabaseConfigured,
     saisieManuelle,
+    redirection,
     nomRempli: state.addName.trim().length > 0,
   });
   const formulaireVisible = etat === "pret";
@@ -412,7 +420,7 @@ export default function AddScreen() {
           <div
             role="img"
             aria-label="Photo de la pièce"
-            className={"relative rounded-[24px] overflow-hidden border border-border aspect-[1.3] " + (photoDetouree ? "bg-photo-bg" : "bg-warm-bg")}
+            className={"relative rounded-[24px] overflow-hidden border border-border " + (etat === "chargement" ? "aspect-[4/5]" : "aspect-[1.3]") + " " + (photoDetouree ? "bg-photo-bg" : "bg-warm-bg")}
             style={{
               backgroundImage: `url(${state.addPhotoUrl})`,
               // Détourée : la pièce entière, jamais recadrée comme une photo.
@@ -438,12 +446,12 @@ export default function AddScreen() {
                 </svg>
               </button>
             )}
-            {lectureEnCours && (
+            {(lectureEnCours || etat === "chargement") && (
               <div role="status" aria-live="polite" className="absolute inset-0 flex items-center justify-center p-[18px]" style={{ background: "rgba(243,238,229,.64)" }}>
                 <div className="w-[236px] max-w-full bg-card border border-border rounded-[20px] px-4 pt-[14px] pb-[10px]">
                   <div className="flex items-center gap-[10px]">
                     <SpinnerCintre sombre />
-                    <span className="font-serif font-medium text-[16px] text-ink">Capsela regarde ta pièce</span>
+                    <span className="font-serif font-medium text-[16px] text-ink">Capsela analyse ta photo</span>
                   </div>
                   <ul className="flex flex-col mt-2 list-none p-0 m-0">
                     {etapes.map((e) => (
@@ -537,7 +545,7 @@ export default function AddScreen() {
               <button
                 type="button"
                 onClick={() => {
-                  confierPhoto(photoChoisie.current);
+                  if (photoChoisie.current) confierPhoto({ fichier: photoChoisie.current, url: /^https?:/.test(state.addPhotoUrl ?? "") ? state.addPhotoUrl ?? undefined : undefined });
                   actions.openImporterTenue();
                 }}
                 className="mt-[10px] min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer"

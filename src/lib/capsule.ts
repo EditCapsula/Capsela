@@ -1,6 +1,6 @@
 import { CATALOG, type CatalogItem } from "./catalog";
 import { fermetureMaille, formalityOf, intensiteOf, isStatement, suggestOccasions, tonsOf } from "./attributes";
-import { isSunny, type Weather } from "./data";
+import { isSunny, necessiteLeSoleil, type Weather } from "./data";
 import { effetMorphologique } from "./garmentEffect";
 import {
   STYLE_ID_TO_CATALOG_LABEL,
@@ -737,7 +737,7 @@ export function computeDefaultCapsule(
   // lunettes de soleil) n'est jamais suggérée dans la capsule hors météo
   // ensoleillée.
   if (!isSunny(weather)) {
-    base = base.filter((it) => !it.necessiteSoleil);
+    base = base.filter((it) => !necessiteLeSoleil(it));
   }
 
   // Filtrage genre symétrique (recette 18/08/2026, distinction homme/femme
@@ -960,7 +960,7 @@ export function computeDefaultCapsule(
         it.cat === cat &&
         !excluded.has(it.id) &&
         it.genre !== oppositeGenre &&
-        (isSunny(weather) || !it.necessiteSoleil) &&
+        (isSunny(weather) || !necessiteLeSoleil(it)) &&
         (it.meteoMinTemp == null || capsuleTemp >= it.meteoMinTemp) &&
         (it.meteoMaxTemp == null || capsuleTemp <= it.meteoMaxTemp) &&
         // Même éligibilité que la sélection principale, sinon ce filet

@@ -2197,7 +2197,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
               // Une nouvelle photo est seulement DÉTOURÉE (11/10/2026) : la mise à plat Photoroom (Flat Lay, deux appels payants) ne se lance plus
               // à chaque ajout mais sur demande, depuis la fiche de la pièce (« Mettre la photo à plat »). Une pièce PORTÉE (lue par l'analyse)
               // n'est pas détourée : le détourage garderait la personne, la photo d'origine reste alors.
-              const portee = stateRef.current.addPhotoCadrage === "portee";
+              const portee = stateRef.current.addPhotoCadrage === "portee" || stateRef.current.addPhotoCadrage === "plusieurs";
               (portee ? Promise.resolve(null) : detourerPhoto(url))
                 .then((detouree) => {
                 // La photo a changé, ou la pièce est déjà enregistrée avec l'original : on n'y touche pas.
