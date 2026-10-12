@@ -486,9 +486,10 @@ export function outfitMoodPhrase(
     return `Pensée pour ${occasionPhrase(occasion, workMode, dateContext)}.`;
   }
   const q = weatherQualifier(Math.round(temp));
-  // Sur l'écran Tenue, le conseil de 12° à 19° prend la majuscule (« Confortable · Prévois une couche légère ») ; les autres
-  // paliers restent ce qu'ils étaient. L'accueil dit la même chose, par qualificatifLook.
-  return q === QUALIFICATIF_12_19 ? q.charAt(0).toUpperCase() + q.slice(1) : q;
+  // SUPPRIMÉE LE 12/10/2026 (demandé : « supprime la phrase "Confortable · Prévois une couche légère" ») : de 12° à 19°, l'écran Tenue ne
+  // dit plus rien ici (chaîne vide, que l'écran n'affiche pas). Les autres paliers restent ce qu'ils étaient. L'accueil garde son titre
+  // (qualificatifLook, titreDuQualificatif), qui n'en reprend que le premier temps.
+  return q === QUALIFICATIF_12_19 ? "" : q;
 }
 
 /**

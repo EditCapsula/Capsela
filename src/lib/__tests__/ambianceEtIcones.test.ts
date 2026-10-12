@@ -29,8 +29,8 @@ describe("phrase d'ambiance", () => {
     }
   });
 
-  it("entre 12° et 19°, le conseil de l'écran Tenue est « Confortable · Prévois une couche légère » ; les autres paliers sont inchangés", () => {
-    for (const t of [12, 15, 19]) expect(outfitMoodPhrase("quotidien", "Présentiel", "Verre", t)).toBe("Confortable · Prévois une couche légère");
+  it("entre 12° et 19°, l'écran Tenue n'affiche plus de phrase (supprimée le 12/10/2026) ; les autres paliers sont inchangés", () => {
+    for (const t of [12, 15, 19]) expect(outfitMoodPhrase("quotidien", "Présentiel", "Verre", t)).toBe("");
     expect(outfitMoodPhrase("quotidien", "Présentiel", "Verre", 20)).toBe("légère et confortable");
     expect(outfitMoodPhrase("quotidien", "Présentiel", "Verre", 5)).toBe("chaude et enveloppante");
   });
