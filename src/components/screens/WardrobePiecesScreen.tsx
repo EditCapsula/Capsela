@@ -2,7 +2,7 @@
 
 import { estPhotoDetouree } from "@/lib/dressing";
 import { fondPhotoPiece } from "@/lib/catalogImages";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { useCapsela } from "@/lib/store";
 import { daysSinceWorn, wearCounts } from "@/lib/selectors";
@@ -82,6 +82,23 @@ export default function WardrobePiecesScreen() {
   const groupes = groupesDuVestiaire(state.items, profile.gender, { inclureVides: true });
   // Un filtre de catégorie se reconnaît à ses catégories ; une couleur (depuis la tenue) n'a pas de pastille sélectionnée.
   const groupeActif = filtre?.categories ? groupes.find((g) => g.categories.join() === filtre.categories!.join()) : undefined;
+  // Position de la liste de pastilles (12/10/2026, signalé : le premier libellé était tronqué à gauche au chargement). La liste déborde des
+  // marges de l'écran (-mx-6 / px-6, scroll-padding) : une pastille qui défile passe sous le bord de l'écran, pas sous une coupure à 24 px.
+  // À l'ouverture et à chaque changement de catégorie, la pastille active est ramenée au centre de la liste (« Toutes » : tout à gauche) ;
+  // le défilement est calculé sur la liste seule, il ne fait jamais défiler l'écran.
+  const listeCategories = useRef<HTMLDivElement>(null);
+  const cleActive = groupeActif?.id ?? "toutes";
+  useEffect(() => {
+    const liste = listeCategories.current;
+    if (!liste) return;
+    const actif = liste.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!actif || cleActive === "toutes") {
+      liste.scrollLeft = 0;
+      return;
+    }
+    liste.scrollLeft = Math.max(0, actif.offsetLeft - (liste.clientWidth - actif.offsetWidth) / 2);
+  }, [cleActive]);
+
   const ajouter = () => (syntheseDressing(etatPremium, state.items.length, groupes.length).complet ? actions.goPremium() : actions.openAdd());
   const counts = wearCounts(state.history);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -170,7 +187,7 @@ export default function WardrobePiecesScreen() {
           la même chose), sauf pour un filtre de couleur venu de la tenue, qui n'est pas une catégorie. Les catégories vides du profil restent
           proposées : on y ajoute sa première pièce. */}
       {!selectionMode && !filtre?.teinte && (
-        <div role="group" aria-label="Catégories" className="scrollarea flex gap-2 overflow-x-auto mt-3 pb-[2px]">
+        <div ref={listeCategories} role="group" aria-label="Catégories" className="scrollarea relative flex gap-2 overflow-x-auto mt-3 pb-[2px] -mx-6 px-6 scroll-px-6">
           {[{ id: "toutes", libelle: "Toutes", nbPieces: state.items.length, categories: undefined as CategoryKey[] | undefined }, ...groupes].map((g) => {
             const actif = g.id === "toutes" ? !filtre?.categories : groupeActif?.id === g.id;
             return (
@@ -218,7 +235,7 @@ export default function WardrobePiecesScreen() {
         // CATÉGORIE VIDE (12/10/2026, resserré le jour même : « pas de grand CTA d'ajout ni d'illustration ») : un court message éditorial,
         // sans bouton ni encart. L'ajout passe par le bouton flottant, le même que sur le Dressing, toujours présent ; l'état disparaît dès
         // qu'une pièce entre dans la catégorie.
-        <section className="mt-8 px-1" aria-label={`${groupeActif.libelle} : aucune pièce`}>
+        <section className="mt-11 px-1" aria-label={`${groupeActif.libelle} : aucune pièce`}>
           <div className="t-titre-carte text-ink" style={{ textWrap: "balance" }}>
             {(VIDE_CATEGORIE[groupeActif.id] ?? VIDE_PAR_DEFAUT).titre}
           </div>
