@@ -2,7 +2,7 @@
 
 import { estPhotoDetouree } from "@/lib/dressing";
 import { fondPhotoPiece } from "@/lib/catalogImages";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { useCapsela } from "@/lib/store";
 import { daysSinceWorn, wearCounts } from "@/lib/selectors";
@@ -82,6 +82,23 @@ export default function WardrobePiecesScreen() {
   const groupes = groupesDuVestiaire(state.items, profile.gender, { inclureVides: true });
   // Un filtre de catégorie se reconnaît à ses catégories ; une couleur (depuis la tenue) n'a pas de pastille sélectionnée.
   const groupeActif = filtre?.categories ? groupes.find((g) => g.categories.join() === filtre.categories!.join()) : undefined;
+  // Position de la liste de pastilles (12/10/2026, signalé : le premier libellé était tronqué à gauche au chargement). La liste déborde des
+  // marges de l'écran (-mx-6 / px-6, scroll-padding) : une pastille qui défile passe sous le bord de l'écran, pas sous une coupure à 24 px.
+  // À l'ouverture et à chaque changement de catégorie, la pastille active est ramenée au centre de la liste (« Toutes » : tout à gauche) ;
+  // le défilement est calculé sur la liste seule, il ne fait jamais défiler l'écran.
+  const listeCategories = useRef<HTMLDivElement>(null);
+  const cleActive = groupeActif?.id ?? "toutes";
+  useEffect(() => {
+    const liste = listeCategories.current;
+    if (!liste) return;
+    const actif = liste.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!actif || cleActive === "toutes") {
+      liste.scrollLeft = 0;
+      return;
+    }
+    liste.scrollLeft = Math.max(0, actif.offsetLeft - (liste.clientWidth - actif.offsetWidth) / 2);
+  }, [cleActive]);
+
   const ajouter = () => (syntheseDressing(etatPremium, state.items.length, groupes.length).complet ? actions.goPremium() : actions.openAdd());
   const counts = wearCounts(state.history);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -170,7 +187,7 @@ export default function WardrobePiecesScreen() {
           la même chose), sauf pour un filtre de couleur venu de la tenue, qui n'est pas une catégorie. Les catégories vides du profil restent
           proposées : on y ajoute sa première pièce. */}
       {!selectionMode && !filtre?.teinte && (
-        <div role="group" aria-label="Catégories" className="scrollarea flex gap-2 overflow-x-auto mt-3 pb-[2px]">
+        <div ref={listeCategories} role="group" aria-label="Catégories" className="scrollarea relative flex gap-2 overflow-x-auto mt-3 pb-[2px] -mx-6 px-6 scroll-px-6">
           {[{ id: "toutes", libelle: "Toutes", nbPieces: state.items.length, categories: undefined as CategoryKey[] | undefined }, ...groupes].map((g) => {
             const actif = g.id === "toutes" ? !filtre?.categories : groupeActif?.id === g.id;
             return (
@@ -215,16 +232,14 @@ export default function WardrobePiecesScreen() {
       {items.length === 0 && terme ? (
         <EmptyState className="mt-3">Aucune pièce ne correspond à « {recherche.trim()} ».</EmptyState>
       ) : items.length === 0 && groupeActif ? (
-        // CATÉGORIE VIDE (12/10/2026) : un message à sa mesure et l'action d'ajout, jamais une grande zone vide. Le CTA ouvre le parcours
-        // d'ajout existant (Premium si le dressing gratuit est plein, comme le bouton flottant) ; l'état disparaît dès qu'une pièce y entre.
-        <section className="mt-6 rounded-carte border border-border bg-card px-5 py-7 text-center" aria-label={`${groupeActif.libelle} : aucune pièce`}>
-          <div className="t-titre-section text-ink" style={{ textWrap: "balance" }}>
+        // CATÉGORIE VIDE (12/10/2026, resserré le jour même : « pas de grand CTA d'ajout ni d'illustration ») : un court message éditorial,
+        // sans bouton ni encart. L'ajout passe par le bouton flottant, le même que sur le Dressing, toujours présent ; l'état disparaît dès
+        // qu'une pièce entre dans la catégorie.
+        <section className="mt-11 px-1" aria-label={`${groupeActif.libelle} : aucune pièce`}>
+          <div className="t-titre-carte text-ink" style={{ textWrap: "balance" }}>
             {(VIDE_CATEGORIE[groupeActif.id] ?? VIDE_PAR_DEFAUT).titre}
           </div>
-          <div className="t-chapeau text-muted-3 mt-[10px]">{(VIDE_CATEGORIE[groupeActif.id] ?? VIDE_PAR_DEFAUT).texte}</div>
-          <Button variante="principal" className="mt-5" onClick={ajouter}>
-            Ajouter une pièce
-          </Button>
+          <div className="text-[13px] text-muted-3 leading-[1.5] mt-[6px]">{(VIDE_CATEGORIE[groupeActif.id] ?? VIDE_PAR_DEFAUT).texte}</div>
         </section>
       ) : items.length === 0 ? (
         <EmptyState className="mt-3">Tes pièces apparaîtront ici au fur et à mesure que tu les ajoutes à ton dressing.</EmptyState>
