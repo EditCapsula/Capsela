@@ -2298,9 +2298,15 @@ export function computeLookScore(
   // Les pièces possédées passent désormais en tête, le catalogue ensuite.
   // Seule la PIÈCE proposée change : déclencheurs, textes et score intacts.
   const dressingDAbord = (a: Item, b: Item) => Number(isCatalogId(a.id)) - Number(isCatalogId(b.id));
+  // LES RÈGLES DU MOTEUR (12/10/2026, audit : « tenir compte des règles du moteur quand l'application recommande »). La pièce suggérée est
+  // prise parmi les candidates que le moteur accepterait pour cette tenue (candidatsDeRemplacement : météo, soleil — des lunettes de soleil
+  // n'étaient pas écartées par temps nuageux —, pluie, saison, occasion, formalité, couleur, coupe, style), plus seulement parmi les pièces de
+  // la catégorie. Le dressing reste devant le catalogue.
+  const candidatesDuMoteur = (cats: CategoryKey[]): Item[] =>
+    cats.flatMap((cat) => candidatsDeRemplacement(pieces, pool, -1, cat, occasion, workMode, dateContext, weather)).filter((i) => cats.includes(i.cat));
   const findSuggestedPiece = (cats: CategoryKey[], extra: (i: Item) => boolean): number | undefined =>
-    pool
-      .filter((i) => cats.includes(i.cat) && !pieceIds.has(i.id) && !hasSameSlot(i) && extra(i))
+    candidatesDuMoteur(cats)
+      .filter((i) => !pieceIds.has(i.id) && !hasSameSlot(i) && extra(i))
       .sort(dressingDAbord)[0]?.id;
 
   // Un bijou doré/argenté/cuivré (palette PALETTE_BIJOU, data.ts) n'est pas
@@ -2345,14 +2351,8 @@ export function computeLookScore(
     // n'importe quelle veste si le pool n'a aucune option décontractée
     // (même esprit que R-B16/R-S16, findSuggestedPiece ne permettant pas
     // ce classement par préférence).
-    const vesteManteauCandidates = pool
-      .filter(
-        (i) =>
-          (i.cat === "veste" || i.cat === "manteau") &&
-          !pieceIds.has(i.id) &&
-          !hasSameSlot(i) &&
-          estDeSaison(i, weather)
-      )
+    const vesteManteauCandidates = candidatesDuMoteur(["veste", "manteau"])
+      .filter((i) => !pieceIds.has(i.id) && !hasSameSlot(i) && estDeSaison(i, weather))
       .sort(dressingDAbord);
     const decontracte = occasion === "sport" ? vesteManteauCandidates.filter((i) => formalityOf(i) <= 1) : [];
     proactives.push({
