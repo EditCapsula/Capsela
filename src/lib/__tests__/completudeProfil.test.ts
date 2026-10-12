@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_PROFILE, completudeProfil, type Profile } from "../profile";
+import { EMPTY_PROFILE, completudeProfil, prochaineActionProfil, type Profile } from "../profile";
 
 const complet: Profile = {
   ...EMPTY_PROFILE,
@@ -46,5 +46,35 @@ describe("complétude du profil style", () => {
   it("un style non proposé pour le genre ne compte pas", () => {
     const c = completudeProfil({ ...complet, styles: ["id_inexistant"] });
     expect(c.manquants.map((m) => m.cle)).toEqual(["style"]);
+  });
+});
+
+describe("prochaine action du profil — dérivée des champs réellement manquants", () => {
+  it("profil complet : aucune action", () => {
+    expect(prochaineActionProfil(complet)).toBeNull();
+  });
+  it("pointure seule manquante : le message et le bouton parlent de la pointure, vers l'étape des tailles", () => {
+    const a = prochaineActionProfil({ ...complet, pointure: "" });
+    expect(a).toMatchObject({ cle: "tailles", cta: "Renseigner ma pointure" });
+    expect(a!.message).toContain("pointure");
+  });
+  it("morphologie manquante : l'action est la morphologie, sans message négatif", () => {
+    const a = prochaineActionProfil({ ...complet, morphology: null });
+    expect(a).toMatchObject({ cle: "morphologie", cta: "Compléter ma morphologie" });
+    expect(a!.message).not.toMatch(/cacher|corriger|défaut|grossir|amincir/i);
+  });
+  it("priorité = ordre du questionnaire : le genre avant le style, avant les tailles", () => {
+    expect(prochaineActionProfil(EMPTY_PROFILE)?.cle).toBe("genre");
+    expect(prochaineActionProfil({ ...EMPTY_PROFILE, gender: "femme" })?.cle).toBe("style");
+    expect(prochaineActionProfil({ ...complet, tailleHaut: "", pointure: "" })?.cta).toBe("Renseigner ma taille de haut");
+  });
+  it("homme : la morphologie n'est jamais proposée", () => {
+    const a = prochaineActionProfil({ ...complet, gender: "homme", morphology: null, pointure: "" });
+    expect(a?.cle).toBe("tailles");
+  });
+  it("cohérent avec le pourcentage : une action existe exactement quand le profil n'est pas à 100 %", () => {
+    for (const p of [complet, { ...complet, palette: undefined, paletteCouleurs: [] }, EMPTY_PROFILE] as Profile[]) {
+      expect(prochaineActionProfil(p) === null).toBe(completudeProfil(p).pourcentage === 100);
+    }
   });
 });
