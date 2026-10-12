@@ -24,6 +24,9 @@ describe("etatAjout", () => {
     expect(etatAjout({ ...base, saisieManuelle: true })).toBe("pret");
     expect(etatAjout({ ...base, photo: true, saisieManuelle: true })).toBe("pret");
   });
+  it("analyse finie mais passage à l'import en cours : toujours le chargement, jamais le formulaire d'une pièce seule", () => {
+    expect(etatAjout({ ...base, photo: true, analysee: true, redirection: true })).toBe("chargement");
+  });
   it("retirer la photo ramène à l'état initial", () => {
     expect(etatAjout({ ...base, photo: false })).toBe("initial");
   });

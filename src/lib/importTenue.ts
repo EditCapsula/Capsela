@@ -180,12 +180,17 @@ export const nPieces = (n: number): string => `${n} ${n <= 1 ? "pièce" : "pièc
  * pièces : le fichier d'origine est confié à l'écran d'import, qui le prend à son ouverture et lance la lecture. Une seule lecture : le
  * fichier est vidé dès qu'il est repris, pour qu'un retour sur l'écran ne relance pas un traitement payant.
  */
-let fichierConfie: File | null = null;
-export const confierPhoto = (f: File | null): void => {
-  fichierConfie = f;
+/** La photo confiée : le fichier, et son URL signée quand « Ajouter une pièce » l'a déjà envoyée (l'import ne la renvoie alors pas une seconde fois). */
+export interface PhotoConfiee {
+  fichier: File;
+  url?: string;
+}
+let photoConfiee: PhotoConfiee | null = null;
+export const confierPhoto = (p: PhotoConfiee | null): void => {
+  photoConfiee = p;
 };
-export const reprendrePhoto = (): File | null => {
-  const f = fichierConfie;
-  fichierConfie = null;
-  return f;
+export const reprendrePhoto = (): PhotoConfiee | null => {
+  const p = photoConfiee;
+  photoConfiee = null;
+  return p;
 };
