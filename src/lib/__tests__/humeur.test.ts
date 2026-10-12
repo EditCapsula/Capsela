@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BONUS_HUMEUR_MAX, affiniteHumeur, choisirParHumeur, HUMEURS } from "../humeur";
+import { BONUS_HUMEUR_MAX, affiniteHumeur, choisirParHumeur, HUMEURS, humeursProposees, libelleHumeur } from "../humeur";
 import { MARGE_PERTINENCE } from "../diversite";
 import type { CategoryKey, Item } from "../types";
 
@@ -46,5 +46,19 @@ describe("humeur d'un événement", () => {
 
   it("sans candidat, ne choisit rien", () => {
     expect(choisirParHumeur([], [], "elegant")).toBe(-1);
+  });
+});
+
+describe("mots et choix selon le genre du profil", () => {
+  it("profil homme : accords au masculin et pas de « Féminin »", () => {
+    const l = humeursProposees("homme").map((h) => h.label);
+    expect(l).toEqual(["Élégant", "Décontracté", "Audacieux", "Confortable"]);
+  });
+  it("profil femme : cinq choix accordés au féminin", () => {
+    expect(humeursProposees("femme").map((h) => h.label)).toEqual(["Élégante", "Féminine", "Décontractée", "Audacieuse", "Confortable"]);
+  });
+  it("genre non renseigné : formes d'origine", () => {
+    expect(humeursProposees(null).map((h) => h.label)).toEqual(HUMEURS.map((h) => h.label));
+    expect(libelleHumeur("elegant", null)).toBe("Élégant(e)");
   });
 });

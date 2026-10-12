@@ -19,7 +19,7 @@ import { CATS, DATE_CONTEXTS, OCCASIONS, WORK_MODES, occasionShortLabel, type We
 import { sansTenueCopy } from "@/lib/emptyStateCopy";
 import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { titreLookDuJour } from "@/lib/logic";
-import { HUMEURS, LIBELLE_HUMEUR, genererTenueHumeur, type Humeur } from "@/lib/humeur";
+import { humeursProposees, libelleHumeur, genererTenueHumeur, type Humeur } from "@/lib/humeur";
 import { soireeHabillee } from "@/lib/occasions";
 import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
@@ -1590,7 +1590,7 @@ export default function PlanifierScreen() {
                   : villeAffichee || lieu.trim()
                     ? ["Le lieu", villeAffichee || lieu.trim()]
                     : null,
-                humeur ? ["Ta préférence", LIBELLE_HUMEUR[humeur]] : null,
+                humeur ? ["Ta préférence", libelleHumeur(humeur, profile.gender)] : null,
                 profile.styles.length ? ["Ton style", libelleStyles(profile.styles, profile.gender)] : null,
                 ["Ton dressing", state.items.length ? `${state.items.length} pièce${state.items.length > 1 ? "s" : ""} disponible${state.items.length > 1 ? "s" : ""}` : "Complété par ta capsule"],
               ] as ([string, string] | null)[])
@@ -1777,7 +1777,7 @@ export default function PlanifierScreen() {
 
             {etape === 4 && (
               <div className="flex flex-col gap-[7px] mt-4" role="radiogroup" aria-label="Préférence pour cet événement">
-                {HUMEURS.map((h) => (
+                {humeursProposees(profile.gender).map((h) => (
                   <LigneIcone key={h.key} icone={h.key} label={h.label} actif={humeur === h.key} onClick={() => setHumeur(humeur === h.key ? null : h.key)} />
                 ))}
                 <LigneIcone icone="aucune" label="Aucune préférence" actif={humeur === null} onClick={() => setHumeur(null)} />
@@ -1869,7 +1869,7 @@ export default function PlanifierScreen() {
                       ...(!composition && !dressingSeul && nbCapsule > 0 && profile.styles.length
                         ? [["elegant", "Ton style", `Une base de ta capsule ${libelleStyles(profile.styles, profile.gender)}.`] as [IconePlanifier, string, string]]
                         : []),
-                      ...(humeur && !composition ? [["confortable", "Ton envie", `« ${LIBELLE_HUMEUR[humeur]} » a départagé des tenues proches.`] as [IconePlanifier, string, string]] : []),
+                      ...(humeur && !composition ? [["confortable", "Ton envie", `« ${libelleHumeur(humeur, profile.gender)} » a départagé des tenues proches.`] as [IconePlanifier, string, string]] : []),
                       ["cintre", composition ? "Ta tenue" : "Ton dressing", provenance],
                     ] as [IconePlanifier, string, string][]).map(([icone, titre, texte]) => (
                       <li key={titre} className="flex gap-3 items-start py-3 border-b border-border last:border-b-0">

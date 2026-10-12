@@ -32,6 +32,26 @@ export const HUMEURS: { key: Humeur; label: string }[] = [
 
 export const LIBELLE_HUMEUR: Record<Humeur, string> = Object.fromEntries(HUMEURS.map((h) => [h.key, h.label])) as Record<Humeur, string>;
 
+/**
+ * LES CHOIX ET LEURS MOTS SELON LE GENRE DÉCLARÉ DU PROFIL (12/10/2026, signalé : « cette étape ne marche pas pour les hommes »). Le libellé
+ * épicène « Élégant(e) » se lit mal et « Féminin(e) » n'a pas de sens pour un dressing d'homme : ses pièces repères (robe, jupe, soie,
+ * talons) n'y existent pas, la préférence n'y départagerait jamais rien. Profil homme : trois accords au masculin et pas de « Féminin » ;
+ * profil femme : accords au féminin ; genre non renseigné : formes épicènes d'origine. C'est le genre DÉCLARÉ qui choisit les mots — aucune
+ * déduction sur la personne.
+ */
+const ACCORDS: Record<"homme" | "femme", Partial<Record<Humeur, string>>> = {
+  homme: { elegant: "Élégant", decontracte: "Décontracté", audacieux: "Audacieux" },
+  femme: { elegant: "Élégante", feminin: "Féminine", decontracte: "Décontractée", audacieux: "Audacieuse" },
+};
+
+export function libelleHumeur(h: Humeur, gender: "femme" | "homme" | null | undefined): string {
+  return (gender ? ACCORDS[gender][h] : undefined) ?? LIBELLE_HUMEUR[h];
+}
+
+export function humeursProposees(gender: "femme" | "homme" | null | undefined): { key: Humeur; label: string }[] {
+  return HUMEURS.filter((h) => !(gender === "homme" && h.key === "feminin")).map((h) => ({ key: h.key, label: libelleHumeur(h.key, gender) }));
+}
+
 export const BONUS_HUMEUR_MAX = 6;
 /** Tirages du moteur départagés par l'humeur — moins que la diversité : la latence se paie à chaque « Une autre tenue ». */
 export const CANDIDATS_HUMEUR = 10;
