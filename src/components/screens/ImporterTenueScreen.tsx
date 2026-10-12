@@ -9,7 +9,7 @@ import { CameraIcon, CarteAnalyse, ChampSelect, chip, Coche, EYEBROW, luminance,
 import { useAuth } from "@/lib/auth";
 import { MISE_A_PLAT_DISPONIBLE } from "@/lib/miseAPlat";
 import { CATS, FAMILLES_COULEURS, PALETTE, PALETTE_BIJOU } from "@/lib/data";
-import { motifDisponible, deleteDressingPhotos, detourerPhotoAvecCause, dressingPhotoPath, estPhotoMiseAPlat, importerTenue, uploadDressingPhoto, type CodeImportTenue } from "@/lib/dressing";
+import { motifDisponible, deleteDressingPhotos, detourerPhotoAvecCause, dressingPhotoPath, estPhotoDetouree, estPhotoMiseAPlat, importerTenue, uploadDressingPhoto, type CodeImportTenue, type CodeMiseAPlat } from "@/lib/dressing";
 import { MESSAGE_ECHEC_MISE_A_PLAT } from "@/components/screens/PieceScreen";
 import {
   aCreer,
@@ -50,9 +50,19 @@ function messageEchec(code: CodeImportTenue | "photo"): { texte: string; reessay
   return { texte: "Le détourage n'a pas abouti : le service n'a pas répondu. Ta photo est inchangée.", reessayer: true };
 }
 
+/** Échec du détourage d'une pièce à l'ajout : la pièce n'est pas ajoutée, sa carte reste. */
+const MESSAGE_ECHEC_DETOURAGE: Record<CodeMiseAPlat, string> = {
+  quota_atteint: "Tu as atteint la limite de détourages du jour : reviens demain.",
+  non_configure: "Le service de détourage n'est pas relié pour le moment.",
+  credits_epuises: "Le service de détourage n'a plus de crédit pour le moment.",
+  photo_refusee: "Le détourage n'a pas pu isoler cette pièce : le recadrage ne la montre pas seule.",
+  photo_invalide: "Cette photo ne peut pas être détourée.",
+  indisponible: "Le détourage n'a pas abouti : le service n'a pas répondu.",
+};
+
 /**
  * IMPORTER UNE TENUE (10/10/2026, option B ; maquette « Importer une tenue », 14 états). Une photo de tenue → la fonction Edge
- * `importer-tenue` repère les objets et détoure chacun (pas de mise à plat automatique) → la personne coche, modifie, puis seulement alors une pièce est créée par
+ * `importer-tenue` repère les objets et recadre chacun ; le détourage se fait à l'ajout (pas de mise à plat automatique) → la personne coche, modifie, puis seulement alors une pièce est créée par
  * objet. Rien n'est affiché qui n'ait été lu : « Capsela a repéré N pièces » n'apparaît que si N objets sont revenus, et la couleur
  * n'est dite lue que si elle l'a été. Les fichiers non gardés (planche, objets décochés, photo d'origine) sont supprimés.
  * La logique pure est dans `lib/importTenue.ts` (testée).
@@ -183,8 +193,32 @@ export default function ImporterTenueScreen() {
     setErreurAjout(null);
     setProgression({ fait: 0, total: pretes.length });
     setPhase("ajout");
+    // Le détourage (appel payant) n'a lieu qu'ici, pour les seules pièces ajoutées (12/10/2026). Les cartes sont détourées en parallèle ;
+    // une pièce dont le détourage échoue n'est pas ajoutée (jamais un recadrage rectangulaire) et reste dans la liste avec sa cause.
+    const detourees = await Promise.all(
+      pretes.map(async (b) => {
+        if (!isSupabaseConfigured || estPhotoDetouree(b.photoUrl)) return b;
+        const r = await detourerPhotoAvecCause(b.photoUrl, undefined, true);
+        if ("code" in r) {
+          setPlat((p) => ({ ...p, [b.cle]: { etat: "erreur", message: MESSAGE_ECHEC_DETOURAGE[r.code] } }));
+          return null;
+        }
+        const ancien = fichiers.current.objets.get(b.cle);
+        const nouveau = dressingPhotoPath(r.url);
+        if (nouveau) fichiers.current.objets.set(b.cle, nouveau);
+        if (ancien && ancien !== nouveau) purger([ancien]);
+        modifier(b.cle, { photoUrl: r.url });
+        setPlat((p) => {
+          const { [b.cle]: _fini, ...reste } = p;
+          void _fini;
+          return reste;
+        });
+        return { ...b, photoUrl: r.url };
+      })
+    );
+    const aAjouter = detourees.filter((b): b is BrouillonPiece => b !== null);
     const reussies: BrouillonPiece[] = [];
-    for (const b of pretes) {
+    for (const b of aAjouter) {
       const creee = await actions.ajouterPieceImportee(pieceDepuis(b));
       if (!creee) break;
       reussies.push(b);
@@ -207,7 +241,9 @@ export default function ImporterTenueScreen() {
       setErreurAjout(
         reussies.length
           ? `${nPieces(reussies.length)} ajoutée${reussies.length > 1 ? "s" : ""}. Les autres n'ont pas pu l'être : tes choix sont conservés, réessaie dans un instant.`
-          : "Les pièces n'ont pas pu être ajoutées. Tes choix sont conservés : réessaie dans un instant."
+          : aAjouter.length < pretes.length
+            ? "Le détourage n'a pas abouti pour ces pièces. Tes choix sont conservés : réessaie dans un instant."
+            : "Les pièces n'ont pas pu être ajoutées. Tes choix sont conservés : réessaie dans un instant."
       );
     }
     setPhase("resultat");

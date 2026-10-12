@@ -302,9 +302,10 @@ export type CodeMiseAPlat = "quota_atteint" | "non_configure" | "credits_epuises
  * renvoyé par la fonction Edge (`{ ok: false, code }`, en corps d'une réponse 4xx/5xx) est lu et rendu tel quel ; tout ce qui n'en
  * porte pas (réseau, fonction non déployée) est « indisponible ». Sert au bouton « Mettre la photo à plat », qui doit pouvoir dire la cause.
  */
-export async function detourerPhotoAvecCause(photoUrl: string, mode?: "mise_a_plat"): Promise<{ url: string } | { code: CodeMiseAPlat }> {
+export async function detourerPhotoAvecCause(photoUrl: string, mode?: "mise_a_plat", recadrer?: boolean): Promise<{ url: string } | { code: CodeMiseAPlat }> {
   try {
-    const { data, error } = await getSupabase().functions.invoke("detourer-photo", { body: { photo_url: photoUrl, ...(mode ? { mode } : {}) } });
+    // `recadrer` (12/10/2026) : la photo est le recadrage d'une pièce de « Importer une tenue » ; le serveur rogne le résultat sur la pièce.
+    const { data, error } = await getSupabase().functions.invoke("detourer-photo", { body: { photo_url: photoUrl, ...(mode ? { mode } : {}), ...(recadrer ? { recadrer: true } : {}) } });
     if (!error && data && (data as { ok?: boolean }).ok === true) {
       const url = (data as { photo_url?: unknown }).photo_url;
       if (typeof url === "string" && url.startsWith("http") && estPhotoDetouree(url)) return { url };
