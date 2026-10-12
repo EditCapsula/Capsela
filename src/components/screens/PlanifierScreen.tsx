@@ -525,13 +525,18 @@ function composerTenuePlan(e: {
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, vestiairePool, etatPremium, actions } = useCapsela();
   const { profile, userId } = useAuth();
+  // « Adapter mon look » (12/10/2026) : le parcours s'ouvre sur la composition adaptée à la météo prévue, au pas « quand » du plan, avec ses
+  // pièces et son lieu déjà posés (même mécanisme que « Modifier ce look » / « Tenue déjà planifiée » : la composition est imposée, le plan
+  // est remplacé à l'enregistrement). Lu UNE fois, à l'ouverture ; l'état global est vidé par l'effet plus bas.
+  const [adaptation] = useState(() => state.planAAdapter);
+  const [notesAdaptation] = useState<string[]>(() => state.planAAdapter?.notes ?? []);
 
   // Retour de « Demander l'avis d'un proche » : le plan partagé se rouvre,
   // plutôt que de laisser sur le hub (l'état de cet écran est local).
   // « Planifier une tenue pour … » depuis Tenue (27/09/2026) : la date est
   // déjà choisie, le parcours s'ouvre sur ses étapes.
   const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "alternatives" | "liste" | "detail" | "confirmation">(() =>
-    state.planARouvrir ? "detail" : state.planComposition || state.planJour != null ? "etape" : "intro"
+    state.planARouvrir ? "detail" : state.planComposition || state.planJour != null || state.planAAdapter ? "etape" : "intro"
   );
   /**
    * COMPOSITION IMPOSÉE (Avis de styliste V2, 26/09/2026) : les pièces
@@ -540,7 +545,7 @@ export default function PlanifierScreen() {
    * celle de la photo qui est gardée. « Planifier une tenue » depuis le hub
    * repart sans elle (recommencer).
    */
-  const [composition, setComposition] = useState<number[] | null>(() => state.planComposition?.pieceIds ?? null);
+  const [composition, setComposition] = useState<number[] | null>(() => state.planComposition?.pieceIds ?? state.planAAdapter?.ids ?? null);
   /** Tenue planifiée ouverte en détail, ou dont le menu « … » est déplié. */
   const [planOuvert, setPlanOuvert] = useState<TenuePlanifiee | null>(() => state.planARouvrir);
   /** La météo du LIEU et du MOMENT du plan ouvert, aujourd'hui (useMeteoDuPlan) — null hors horizon ou sans réponse. */
@@ -551,6 +556,7 @@ export default function PlanifierScreen() {
   useEffect(() => {
     if (state.planARouvrir) actions.oublierPlanARouvrir();
     if (state.planComposition) actions.oublierPlanComposition();
+    if (state.planAAdapter) actions.oublierPlanAAdapter();
     if (state.planJour != null) actions.oublierPlanJour();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -562,7 +568,7 @@ export default function PlanifierScreen() {
    * l'ancienne. Sans lui, « Modifier » vers une autre date gardait les deux :
    * l'upsert se fait sur (jour, moment), une autre date est une autre ligne.
    */
-  const [depuisPlan, setDepuisPlan] = useState<{ plan: TenuePlanifiee; remplacer: boolean } | null>(null);
+  const [depuisPlan, setDepuisPlan] = useState<{ plan: TenuePlanifiee; remplacer: boolean } | null>(() => (state.planAAdapter ? { plan: state.planAAdapter.plan, remplacer: true } : null));
   const [aSupprimer, setASupprimer] = useState<TenuePlanifiee | null>(null);
   /** « Enregistrer dans mes looks » demandé pour ce plan — le temps que l'insertion revienne. */
   const [lookDemande, setLookDemande] = useState<string | null>(null);
@@ -584,9 +590,12 @@ export default function PlanifierScreen() {
     if (decisionAcces("AVIS_DE_STYLISTE", etat, true) === "acces") actions.goAvisStyliste();
     else setGateAvisStyliste(true);
   };
-  const [etape, setEtape] = useState(1);
-  const [occ, setOcc] = useState<OccasionKey | null>(null);
-  const [workMode, setWorkMode] = useState<WorkMode>("Présentiel");
+  const [etape, setEtape] = useState(() => (state.planAAdapter ? 3 : 1));
+  const [occ, setOcc] = useState<OccasionKey | null>(() => state.planAAdapter?.plan.occasion ?? null);
+  const [workMode, setWorkMode] = useState<WorkMode>(() => {
+    const p = state.planAAdapter?.plan;
+    return p?.occasion === "travail_formel" && WORK_MODES.includes(p.sousChoix as WorkMode) ? (p.sousChoix as WorkMode) : "Présentiel";
+  });
   /**
    * PREMIER SOUS-CHOIX DE LA LISTE, ET NON UNE VALEUR ÉCRITE À LA MAIN.
    *
@@ -600,17 +609,29 @@ export default function PlanifierScreen() {
    * liste change, le défaut suit, au lieu de désigner silencieusement une
    * ligne qui n'est plus la première.
    */
-  const [dateContext, setDateContext] = useState<DateContext>(DATE_CONTEXTS[0][0]);
+  const [dateContext, setDateContext] = useState<DateContext>(() => {
+    const p = state.planAAdapter?.plan;
+    return p?.occasion === "date" && DATE_CONTEXTS.some(([c]) => c === p.sousChoix) ? (p.sousChoix as DateContext) : DATE_CONTEXTS[0][0];
+  });
   // « Planifier pour demain » depuis un avis : la date est déjà connue.
   // Depuis Tenue, le jour consulté (planJour, toujours ≥ 1 : Planifier ne propose pas aujourd'hui).
-  const [jour, setJour] = useState<number | null>(() => (state.planComposition?.demain ? 1 : state.planJour));
-  const [moment, setMoment] = useState<MomentJournee | null>(null);
+  const [jour, setJour] = useState<number | null>(() => {
+    const p = state.planAAdapter?.plan;
+    if (p) {
+      const midi = new Date();
+      midi.setHours(12, 0, 0, 0);
+      const ecart = Math.round((new Date(`${p.jour}T12:00:00`).getTime() - midi.getTime()) / 86400000);
+      return ecart >= 1 && ecart <= JOURS_PROPOSES ? ecart : null;
+    }
+    return state.planComposition?.demain ? 1 : state.planJour;
+  });
+  const [moment, setMoment] = useState<MomentJournee | null>(() => state.planAAdapter?.plan.moment ?? null);
   /** Le mois affiché par le calendrier de l'étape « Quand » : celui de la date déjà choisie, sinon le mois courant. */
   const [moisAffiche, setMoisAffiche] = useState<Date>(() => {
     const d = dansNJours(jour ?? 0);
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
-  const [lieu, setLieu] = useState("");
+  const [lieu, setLieu] = useState(() => state.planAAdapter?.plan.lieu ?? "");
   /**
    * VILLE CHOISIE DANS LES SUGGESTIONS, avec ses coordonnées — `null` tant
    * qu'on tape librement. C'est elle qui part chercher la prévision quand
@@ -619,19 +640,19 @@ export default function PlanifierScreen() {
    * simplement moins sûre.
    */
   const [ville, setVille] = useState<VilleSuggeree | null>(null);
-  const [typeLieu, setTypeLieu] = useState<string | null>(null);
+  const [typeLieu, setTypeLieu] = useState<string | null>(() => state.planAAdapter?.plan.typeLieu ?? null);
   /**
    * « Une dernière préférence ? » (07/10/2026) : facultative, jamais mémorisée dans le profil. Elle ne fait que départager
    * des tenues déjà compatibles (humeur.ts). Une composition imposée (photo d'un avis) n'a pas cette étape : sa tenue est faite.
    */
-  const [humeur, setHumeur] = useState<Humeur | null>(null);
+  const [humeur, setHumeur] = useState<Humeur | null>(() => state.planAAdapter?.plan.humeur ?? null);
   /** L'écran « Capsela compose ta tenue… » : affiché entre la dernière question et le résultat, le temps de la prévision. */
   const [compose, setCompose] = useState(false);
   /** La tenue qui vient d'être gardée — pour l'écran de confirmation. */
   const [gardee, setGardee] = useState<TenuePlanifiee | null>(null);
   const [composeDelaiOk, setComposeDelaiOk] = useState(false);
   const [coche, setCoche] = useState(0);
-  const [dressingSeul, setDressingSeul] = useState(false);
+  const [dressingSeul, setDressingSeul] = useState(() => state.planAAdapter?.plan.dressingSeul ?? false);
   /**
    * Prévision du LIEU. Demandée en quittant l'étape 3, c'est-à-dire au moment
    * où le lieu est arrêté — pas à chaque frappe dans le champ. Le temps que
@@ -1607,9 +1628,20 @@ export default function PlanifierScreen() {
                 <span aria-hidden="true" className="text-terracotta">
                   ✓
                 </span>
-                {depuisPlan ? "Ta tenue planifiée est gardée" : "La tenue de ta photo est gardée"} · {pieces.length} pièce
+                {depuisPlan ? (adaptation ? "Ton look adapté à la météo" : "Ta tenue planifiée est gardée") : "La tenue de ta photo est gardée"} · {pieces.length} pièce
                 {pieces.length > 1 ? "s" : ""}
               </div>
+            )}
+            {/* Ce qui a changé par rapport au look planifié, dit simplement : les pièces gardées ne bougent pas. Un look planifié reste
+                modifiable : « Voir ma tenue », puis « Planifier » remplace l'ancien. */}
+            {adaptation && notesAdaptation.length > 0 && (
+              <ul className="list-none p-0 mt-[10px] flex flex-col gap-[4px]" aria-label="Ce qui change dans ton look">
+                {notesAdaptation.map((n) => (
+                  <li key={n} className="text-[12.5px] text-ink-soft leading-[1.45]">
+                    {n}
+                  </li>
+                ))}
+              </ul>
             )}
 
             {etape === 1 && (

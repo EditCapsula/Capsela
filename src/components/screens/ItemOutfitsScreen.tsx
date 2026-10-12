@@ -16,7 +16,7 @@ import { colorimetrieMoteur, type ColorimetrieMoteur } from "@/lib/colorimetrieM
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import type { CapsuleSeason, Item } from "@/lib/types";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 import Card from "@/components/Card";
 
 /**
@@ -198,7 +198,8 @@ export default function ItemOutfitsScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <BoutonRetour onClick={() => actions.go(state.itemOutfitsReturn)} label="Revenir à l'écran précédent" />
+      {/* Le bandeau de marque (12/10/2026, signalé : « il manque le logo et l'icône du profil »). */}
+      <AppHeader onBack={() => actions.go(state.itemOutfitsReturn)} />
 
       {/* Titre accordé au nom de la pièce (titreCommentPorter) : « ton » pour
           une pièce du dressing, article défini pour une suggestion. */}

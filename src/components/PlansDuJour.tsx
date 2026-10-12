@@ -3,7 +3,8 @@
 import { resolveItemImage } from "@/lib/catalogImages";
 import { occasionShortLabel } from "@/lib/data";
 import { jourLocal } from "@/lib/outfitFeedback";
-import { alerteMeteoPlan } from "@/lib/planDuJour";
+import { evaluerAlerteMeteo, libelleChangement, proposerAdaptation, type AlerteMeteo, type MeteoDuPlan } from "@/lib/alerteMeteo";
+import { contexteCapsule, saisonCalendairePour } from "@/lib/capsule";
 import { plansDuJour, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { useCapsela } from "@/lib/store";
 import { useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
@@ -15,18 +16,59 @@ import type { Item } from "@/lib/types";
  * affichée est la proposition de Capsela. Pour l'étiquette « Ta tenue
  * planifiée » de l'Accueil et de Tenue.
  */
-export function usePlanApplique(): { plan: TenuePlanifiee; alerte: string | null } | null {
+export function usePlanApplique(): { plan: TenuePlanifiee; alerte: AlerteMeteo | null; pieces: Item[]; meteo: MeteoDuPlan | null } | null {
   const { state, vestiairePool, meteoDuJour } = useCapsela();
   const plan = state.planAppliqueId ? (state.tenuesPlanifiees.find((t) => t.id === state.planAppliqueId) ?? null) : null;
   // La météo du LIEU et du MOMENT du plan (useMeteoDuPlan), pas celle de la ville de la personne : un plan « Gagny, ce
   // soir » ne se juge pas sur la météo de la journée ailleurs. Un plan sans lieu garde la météo du jour ; un plan avec
-  // lieu dont la prévision manque n'a pas d'alerte — rien n'est deviné.
+  // lieu dont la prévision manque n'a pas d'alerte — rien n'est deviné. Jamais la météo ACTUELLE de l'accueil pour un autre jour/lieu.
   const meteoPlan = useMeteoDuPlan(plan);
   if (!plan) return null;
   const pool: Item[] = [...state.items, ...vestiairePool];
   const pieces = plan.pieceIds.map((id) => pool.find((i) => i.id === id)).filter((i): i is Item => !!i);
   const meteo = meteoPlan ?? (villeDuLieu(plan.lieu) ? null : meteoDuJour);
-  return { plan, alerte: meteo ? alerteMeteoPlan(pieces, meteo) : null };
+  const alerte = meteo ? evaluerAlerteMeteo(pieces, meteo, { ville: villeDuLieu(plan.lieu) || undefined, moment: plan.moment }) : null;
+  return { plan, alerte, pieces, meteo };
+}
+
+/**
+ * L'ALERTE MÉTÉO DU LOOK PLANIFIÉ (12/10/2026) — dans la partie basse de la carte de l'accueil : un titre, une phrase qui dit la température
+ * PRÉVUE (au lieu et au moment du plan, jamais la météo actuelle) et ce qui est à faire, et un CTA qui ouvre une vraie adaptation.
+ * « Adapter mon look » / « Trouver une alternative » : les modifications minimales sont prises dans le dressing (proposerAdaptation) et
+ * ouvertes dans Planifier, où la personne les voit, les garde ou les change. Rien d'adaptable dans le dressing : l'écran du plan, où
+ * « Modifier ce look » reprend le parcours complet — le CTA ne reste jamais sans effet. Posée sur le fond terracotta de la carte.
+ */
+export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<ReturnType<typeof usePlanApplique>> }) {
+  const { state, actions } = useCapsela();
+  const { alerte, plan, pieces, meteo } = planApplique;
+  if (!alerte || !meteo) return null;
+  const adapter = () => {
+    const proposition = proposerAdaptation({
+      pieces,
+      dressing: state.items,
+      meteo,
+      occasion: plan.occasion,
+      contexte: contexteCapsule(saisonCalendairePour(new Date(`${plan.jour}T12:00:00`))),
+      ctx: { ville: villeDuLieu(plan.lieu) || undefined, moment: plan.moment },
+    });
+    if (proposition) actions.adapterPlan(plan, proposition.ids, proposition.changements.map(libelleChangement), "home");
+    else actions.ouvrirPlan(plan, "home");
+  };
+  return (
+    <div
+      role="status"
+      className="rounded-[16px] px-[14px] py-[11px] text-left"
+      style={{ gridColumn: "1 / -1", background: "rgba(251,243,234,.12)", border: "1px solid rgba(251,243,234,.28)" }}
+    >
+      <div className="text-[13px] font-semibold leading-[1.3] text-cream">{alerte.titre}</div>
+      <div className="text-[12.5px] leading-[1.45] text-on-terracotta-soft mt-[3px]" style={{ textWrap: "pretty" }}>
+        {alerte.message}
+      </div>
+      <button type="button" onClick={adapter} className="mt-[6px] min-h-[44px] text-[13px] font-semibold text-cream underline underline-offset-[3px] cursor-pointer">
+        {alerte.cta} →
+      </button>
+    </div>
+  );
 }
 
 /*

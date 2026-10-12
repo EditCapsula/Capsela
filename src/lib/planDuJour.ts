@@ -1,5 +1,5 @@
-import { DATE_CONTEXTS, WORK_MODES, isRainy, labelPrecipitation, type Weather } from "./data";
-import { CHAUSSURES_OUVERTES } from "./logic";
+import { evaluerAlerteMeteo, type ContexteAlerte } from "./alerteMeteo";
+import { DATE_CONTEXTS, WORK_MODES, labelPrecipitation, type Weather } from "./data";
 import type { TenuePlanifiee } from "./planifier";
 import type { MomentJournee } from "./prevision";
 import type { DateContext, Item, WorkMode } from "./types";
@@ -69,22 +69,13 @@ export function sousChoixDuPlan(plan: Pick<TenuePlanifiee, "occasion" | "sousCho
 }
 
 /**
- * LA MÉTÉO DU JOUR CONTREDIT-ELLE LA TENUE PLANIFIÉE ? Une phrase, ou null.
- * Seulement des constats vérifiables sur les pièces : chaussures ouvertes
- * sous la pluie, pièce hors de ses bornes de température déclarées. Rien
- * d'autre n'est deviné.
+ * LA MÉTÉO DU JOUR CONTREDIT-ELLE LA TENUE PLANIFIÉE ? Une phrase, ou null. Réécrit le 12/10/2026 : la logique et les messages sont dans
+ * alerteMeteo.ts (evaluerAlerteMeteo : titre, message, CTA, niveau). Ici seulement le MESSAGE, pour les écrans qui n'ont qu'une ligne
+ * (Calendrier, fiche d'un plan, Tenue). Seulement des constats vérifiables sur les pièces (bornes de température déclarées, pluie sur
+ * chaussures ouvertes) ; rien d'autre n'est deviné.
  */
-export function alerteMeteoPlan(pieces: readonly Item[], meteo: Pick<Weather, "temp" | "label">): string | null {
-  if (isRainy(meteo) && pieces.some((p) => p.cat === "chaussures" && p.shoeType && CHAUSSURES_OUVERTES.includes(p.shoeType))) {
-    return "De la pluie est annoncée : des chaussures fermées seraient plus sûres.";
-  }
-  if (pieces.some((p) => p.meteoMinTemp != null && meteo.temp < p.meteoMinTemp)) {
-    return `Il fera ${Math.round(meteo.temp)}° : plus frais que ce que certaines pièces de cette tenue supportent.`;
-  }
-  if (pieces.some((p) => p.meteoMaxTemp != null && meteo.temp > p.meteoMaxTemp)) {
-    return `Il fera ${Math.round(meteo.temp)}° : plus chaud que ce que certaines pièces de cette tenue supportent.`;
-  }
-  return null;
+export function alerteMeteoPlan(pieces: readonly Item[], meteo: Pick<Weather, "temp" | "label">, ctx?: ContexteAlerte): string | null {
+  return evaluerAlerteMeteo(pieces, meteo, ctx)?.message ?? null;
 }
 
 /**
