@@ -11,7 +11,10 @@ import { participePorte, participePorteMaj } from "@/lib/logic";
 import { currentSeasonKey } from "@/lib/capsule";
 import { useCapsela } from "@/lib/store";
 import {
-  capsuleJournal,
+  chiffresPeriode,
+  repartitionDressing,
+  type PeriodeJournal,
+  type PartDressing,
   etatDePort,
   journalEntries,
   journalInsights,
@@ -171,15 +174,15 @@ function statutAttente(item: Item, port: EtatDePort): string {
   return port.moisSansPort >= 12 ? "12 mois+" : `${port.moisSansPort} mois`;
 }
 
-/** Jauge en anneau : la part de la capsule déjà portée, le chiffre écrit au centre. */
-function AnneauCapsule({ pourcentage }: { pourcentage: number }) {
+/** Jauge en anneau : une part (0-100) du dressing, le chiffre écrit au centre. */
+function AnneauCapsule({ pourcentage, legende }: { pourcentage: number; legende: string }) {
   const taille = 92;
   const trait = 7;
   const r = (taille - trait) / 2;
   const c = 2 * Math.PI * r;
   const plein = (Math.min(100, Math.max(0, pourcentage)) / 100) * c;
   return (
-    <div className="relative flex-shrink-0" style={{ width: taille, height: taille }} role="img" aria-label={`${pourcentage} % de ta capsule portée`}>
+    <div className="relative flex-shrink-0" style={{ width: taille, height: taille }} role="img" aria-label={`${pourcentage} % ${legende}`}>
       <svg width={taille} height={taille} viewBox={`0 0 ${taille} ${taille}`} aria-hidden="true" style={{ display: "block" }}>
         <circle cx={taille / 2} cy={taille / 2} r={r} fill="none" stroke="var(--color-warm-bg)" strokeWidth={trait} />
         {plein > 0 && (
@@ -198,11 +201,7 @@ function AnneauCapsule({ pourcentage }: { pourcentage: number }) {
       </svg>
       <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <span className="t-chiffre text-ink">{pourcentage} %</span>
-        <span className="text-[9px] text-muted leading-[1.2] mt-[4px]">
-          de ta capsule
-          <br />
-          portée
-        </span>
+        <span className="text-[9px] text-muted leading-[1.2] mt-[4px] px-2">{legende}</span>
       </div>
     </div>
   );
@@ -274,8 +273,67 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
   );
 }
 
+const PERIODES: { key: PeriodeJournal; label: string; phrase: string }[] = [
+  { key: "mois", label: "Ce mois-ci", phrase: "ce mois-ci" },
+  { key: "trois_mois", label: "3 derniers mois", phrase: "sur les 3 derniers mois" },
+  { key: "tout", label: "Toute la période", phrase: "depuis le début" },
+];
+
+/** Couleurs des parts de l'anneau, tirées des tokens ; la légende écrit toujours le nombre et le pourcentage (la couleur ne porte jamais seule). */
+const COULEURS_PARTS = [
+  "var(--color-terracotta)",
+  "var(--color-ink-soft)",
+  "var(--color-gold)",
+  "var(--color-warm-text)",
+  "var(--color-success)",
+  "var(--color-muted)",
+  "var(--color-sand-text)",
+  "var(--color-placeholder)",
+];
+
+/** Anneau de composition : un arc par catégorie, séparés par un petit blanc ; le total de pièces au centre. */
+function AnneauComposition({ parts, total }: { parts: PartDressing[]; total: number }) {
+  const taille = 112;
+  const trait = 16;
+  const r = (taille - trait) / 2;
+  const c = 2 * Math.PI * r;
+  const ecart = parts.length > 1 ? 2 : 0;
+  // Début de chaque arc : somme des parts précédentes (calculée hors du rendu des cercles).
+  const debuts = parts.map((_, i) => parts.slice(0, i).reduce((a, q) => a + (q.nb / total) * c, 0));
+  return (
+    <div className="relative flex-shrink-0" style={{ width: taille, height: taille }}>
+      <svg width={taille} height={taille} viewBox={`0 0 ${taille} ${taille}`} aria-hidden="true" style={{ display: "block" }}>
+        <circle cx={taille / 2} cy={taille / 2} r={r} fill="none" stroke="var(--color-warm-bg)" strokeWidth={trait} />
+        {parts.map((p, i) => {
+          const longueur = (p.nb / total) * c;
+          const arc = Math.max(0, longueur - ecart);
+          const decalage = -debuts[i];
+          return (
+            <circle
+              key={p.cat}
+              cx={taille / 2}
+              cy={taille / 2}
+              r={r}
+              fill="none"
+              stroke={COULEURS_PARTS[i % COULEURS_PARTS.length]}
+              strokeWidth={trait}
+              strokeDasharray={`${arc} ${c - arc}`}
+              strokeDashoffset={decalage}
+              transform={`rotate(-90 ${taille / 2} ${taille / 2})`}
+            />
+          );
+        })}
+      </svg>
+      <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="t-chiffre text-ink">{total}</span>
+        <span className="text-[10px] text-muted leading-[1.2] mt-[2px]">{pl(total, "pièce", "pièces")}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function HistoryScreen() {
-  const { state, wardrobePool, vestiairePool, actions, dressingLoaded, avisEnregistres } = useCapsela();
+  const { state, vestiairePool, actions, dressingLoaded, avisEnregistres } = useCapsela();
 
   // Avis de styliste enregistrés : lus au premier affichage du Journal (et
   // relus après un nouvel enregistrement, qui remet la liste à null).
@@ -288,6 +346,7 @@ export default function HistoryScreen() {
   const [historiqueComplet, setHistoriqueComplet] = useState(false);
   const [pages, setPages] = useState(1);
   const [filtre, setFiltre] = useState<OccasionKey | "toutes">("toutes");
+  const [periode, setPeriode] = useState<PeriodeJournal>("mois");
   const [enCours, setEnCours] = useState<number | null>(null);
   const [avis, setAvis] = useState<{ ton: "ok" | "erreur"; texte: string; annuler?: { id: number; choix: ChoixRevente | null } } | null>(null);
 
@@ -591,14 +650,12 @@ export default function HistoryScreen() {
       ? `Ce mois-ci, ${insights.wornThisMonth} ${pl(insights.wornThisMonth, "tenue a rejoint", "tenues ont rejoint")} ton journal.`
       : `Ta dernière tenue portée date du ${entries[0].jour}.`;
 
-  // UNE SEULE BASE pour le bilan (cf. capsuleJournal) : le pool affiché et
-  // l'historique réel — la même que les pièces fétiches et la timeline (le
-  // placard, lui, ne lit plus que le dressing depuis le 26/09/2026). « Pièces utilisées » = pièces uniques portées au moins une
-  // fois ; le pourcentage en découle.
-  const capsule = capsuleJournal(wardrobePool, state.history);
   // Le mois de référence de journalInsights, et non celui de la dernière
   // tenue : sans tenue ce mois-ci, ce dernier nommait le mois précédent.
   const moisCourant = MONTHS_FR[insights.mois];
+
+  const chiffres = chiffresPeriode(state.items, state.history, periode);
+  const parts = repartitionDressing(state.items);
 
   const occasionsPresentes = [...new Set(entries.filter((e) => e.hasOccasion).map((e) => e.occasion))];
   const entreesFiltrees = filtre === "toutes" ? entries : entries.filter((e) => e.occasion === filtre);
@@ -632,44 +689,17 @@ export default function HistoryScreen() {
       </div>
       <div className="t-chapeau text-muted-3 mt-[8px]">{phraseEnTete}</div>
 
-      {/* BILAN — une métrique principale, deux secondaires, chacune dite en
-          toutes lettres (§6 : pas de petit chiffre sans contexte). */}
-      {/* L'ANNEAU de la maquette (signalé le 25/09 : « il manque le graphe »).
-          Une jauge, pas un graphique : une seule valeur rapportée à un
-          total. Le pourcentage est écrit au centre en toutes lettres — la
-          couleur ne porte jamais seule l'information. Arc terracotta sur
-          piste sable : 3,4:1, au-dessus du seuil de 3:1 d'un élément
-          graphique. Les deux chiffres secondaires sont à droite, séparés par
-          des filets, comme sur la maquette. */}
-      <Card className="mt-5 px-4 py-4 flex items-center gap-3">
-        {capsule.total > 0 && (
-          <>
-            <AnneauCapsule pourcentage={capsule.pourcentage} />
-            <span aria-hidden="true" className="self-stretch w-px bg-border flex-shrink-0" />
-          </>
-        )}
-        <div className="flex-1 min-w-0 grid grid-cols-2">
-          <div className="pr-2">
-            <div className="t-chiffre text-ink">{entries.length}</div>
-            <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(entries.length, "tenue portée", "tenues portées")}</div>
-          </div>
-          <div className="pl-3 border-l border-border">
-            <div className="t-chiffre text-ink">{capsule.portees}</div>
-            <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(capsule.portees, "pièce utilisée", "pièces utilisées")}</div>
-          </div>
-        </div>
-      </Card>
-
-      {/* TON STYLE CE MOIS-CI — une carte éditoriale (26/09/2026) : ce que
+      {/* BILAN DU MOIS d'abord (A), puis les chiffres clés (B) et le dressing en chiffres (C) — ordre du brief du 12/10/2026. */}
+      {/* TON BILAN DU MOIS (renommé le 12/10/2026, brief « Refonte UX du Journal » ; « Ton style ce mois-ci » avant, même contenu : l'insight est déterministe, tiré de styleDuMois, jamais d'une IA) — une carte éditoriale (26/09/2026) : ce que
           ton mois dit de ton style, puis l'accès aux tenues qui le disent.
           Tout vient de styleDuMois : un ratio en nombres absolus (« 5 / 7 »,
           plus de pourcentage), un point par tenue analysée. Sous 3 tenues,
           sans occasion notée ou à égalité, la carte le dit simplement —
           jamais de conclusion inventée. Le compte des pièces jamais portées
           vit dans « À sortir du placard ». */}
-      <section className="mt-[30px]" aria-labelledby="journal-style">
+      <section className="mt-5" aria-labelledby="journal-style">
         <Surtitre>
-          <span id="journal-style">Ton style ce mois-ci</span>
+          <span id="journal-style">Ton bilan du mois</span>
         </Surtitre>
         {style.etat === "tendance" ? (
           (() => {
@@ -771,6 +801,81 @@ export default function HistoryScreen() {
         )}
       </section>
 
+
+      {/* CHIFFRES CLÉS (B) — trois indicateurs sur la période choisie, tous calculés par chiffresPeriode (selectors.ts, testé) : tenues
+          validées « portées » ; pièces du DRESSING RÉEL portées au moins une fois ; part du dressing que cela représente. Une pièce ajoutée
+          n'est pas une pièce portée, une tenue seulement proposée n'est pas dans l'historique. Sans dressing réel, seule la ligne des tenues. */}
+      <section className="mt-[30px]" aria-labelledby="journal-chiffres">
+        <Surtitre>
+          <span id="journal-chiffres">Tes chiffres clés</span>
+        </Surtitre>
+        <div role="group" aria-label="Période" className="scrollarea flex gap-2 overflow-x-auto mt-3 pb-[2px]">
+          {PERIODES.map(({ key, label }) => (
+            <button
+              key={key}
+              aria-pressed={periode === key}
+              onClick={() => setPeriode(key)}
+              className={`flex-none min-h-[36px] px-[14px] rounded-full text-[12px] cursor-pointer border ${
+                periode === key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <Card className="mt-3 px-4 py-4 flex items-center gap-3" aria-live="polite">
+          {chiffres.totalDressing > 0 && (
+            <>
+              <AnneauCapsule pourcentage={chiffres.part} legende="de ton dressing porté" />
+              <span aria-hidden="true" className="self-stretch w-px bg-border flex-shrink-0" />
+            </>
+          )}
+          <div className="flex-1 min-w-0 grid grid-cols-2">
+            <div className="pr-2">
+              <div className="t-chiffre text-ink">{chiffres.tenues}</div>
+              <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(chiffres.tenues, "tenue portée", "tenues portées")}</div>
+            </div>
+            {chiffres.totalDressing > 0 && (
+              <div className="pl-3 border-l border-border">
+                <div className="t-chiffre text-ink">{chiffres.piecesUtilisees}</div>
+                <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(chiffres.piecesUtilisees, "pièce utilisée", "pièces utilisées")}</div>
+              </div>
+            )}
+          </div>
+        </Card>
+        {chiffres.totalDressing > 0 && (
+          <div className="text-[12px] text-muted-3 leading-[1.45] mt-[8px]">
+            {chiffres.piecesUtilisees} {pl(chiffres.piecesUtilisees, "pièce", "pièces")} sur les {chiffres.totalDressing} de ton dressing {pl(chiffres.piecesUtilisees, "a", "ont")} été {pl(chiffres.piecesUtilisees, "portée", "portées")}{" "}
+            {PERIODES.find((x) => x.key === periode)!.phrase}.
+          </div>
+        )}
+      </section>
+
+      {/* TON DRESSING EN CHIFFRES (C) — la composition du dressing RÉEL : une pièce, une catégorie, la somme des parts est le total affiché
+          (repartitionDressing, testé). Les catégories sont celles de la taxonomie de l'app (CATS). Les répartitions par saison, couleur et
+          style ne sont pas montrées : pas de calcul fiable à ce jour sur ces trois axes (cf. docs/journal.md). */}
+      {parts.length > 0 && (
+        <section className="mt-[30px]" aria-labelledby="journal-composition">
+          <Surtitre>
+            <span id="journal-composition">Ton dressing en chiffres</span>
+          </Surtitre>
+          <Card className="mt-3 px-4 py-4 flex items-center gap-4">
+            <AnneauComposition parts={parts} total={state.items.length} />
+            <ul className="flex-1 min-w-0 flex flex-col gap-[7px]">
+              {parts.map((p, i) => (
+                <li key={p.cat} className="flex items-center gap-2 text-[12px] text-ink">
+                  <span aria-hidden="true" className="w-[10px] h-[10px] rounded-full flex-shrink-0" style={{ background: COULEURS_PARTS[i % COULEURS_PARTS.length] }} />
+                  <span className="flex-1 min-w-0 truncate">{p.libelle}</span>
+                  <span className="text-muted whitespace-nowrap">
+                    {p.nb} · {p.pct} %
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </section>
+      )}
+
       {/* TES PIÈCES FÉTICHES */}
       {fetiches.length > 0 && (
         <section className="mt-[30px]" aria-labelledby="journal-fetiches">
@@ -828,7 +933,7 @@ export default function HistoryScreen() {
           </div>
           <ul className="scrollarea flex gap-[10px] overflow-x-auto mt-3 pb-[2px]">
             {placard.slice(0, PLACARD_MAX).map(({ item, port }) => (
-              <li key={item.id} className="flex-none w-[96px]">
+              <li key={item.id} className="flex-none w-[132px]">
                 <button
                   onClick={() => ouvrirPiece(item)}
                   className="w-full text-left cursor-pointer"
@@ -841,18 +946,19 @@ export default function HistoryScreen() {
                   <Badge taille="s" className="mt-[7px]">
                     {statutAttente(item, port)}
                   </Badge>
-                  <div className="text-[12px] text-ink mt-[4px] leading-[1.25] line-clamp-2">{item.name}</div>
+                  <div className="text-[12px] text-ink mt-[4px] leading-[1.25] line-clamp-2 min-h-[2.5em]">{item.name}</div>
+                </button>
+                {/* « Trouver une tenue » (12/10/2026) : le parcours existant « Comment porter … ? » de CETTE pièce (même moteur, openItemOutfits). */}
+                <button
+                  onClick={() => actions.openItemOutfits(item.id, false)}
+                  className="mt-[6px] w-full min-h-[40px] rounded-full border border-terracotta text-terracotta text-[12px] cursor-pointer"
+                  aria-label={`Trouver une tenue avec ${item.name}`}
+                >
+                  Trouver une tenue
                 </button>
               </li>
             ))}
           </ul>
-          <button
-            onClick={() => actions.openItemOutfits(placard[0].item.id, false)}
-            className="mt-3 min-h-[44px] text-[12px] text-terracotta cursor-pointer"
-            aria-label={`Voir les idées de tenues avec ${placard[0].item.name}`}
-          >
-            Voir les idées de tenues →
-          </button>
         </section>
       )}
 

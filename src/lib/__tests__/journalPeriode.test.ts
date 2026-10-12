@@ -1,0 +1,64 @@
+import { describe, expect, it } from "vitest";
+import { chiffresPeriode, debutPeriode, historiqueDansPeriode, repartitionDressing } from "../selectors";
+import type { HistoryEntry, Item } from "../types";
+
+const item = (id: number, cat: string): Item => ({ id, cat, name: `p${id}`, hex: "#000000" }) as unknown as Item;
+const entree = (id: string, ts: Date, pieceIds: number[]): HistoryEntry => ({ id, ts: ts.getTime(), pieceIds, occasion: "quotidien" });
+const NOW = new Date(2026, 9, 12, 14, 0); // 12 octobre 2026, heure locale
+
+describe("périodes du Journal", () => {
+  it("le mois commence le 1er à 00:00 ; trois mois = le mois en cours et les deux précédents", () => {
+    expect(debutPeriode("mois", NOW)).toBe(new Date(2026, 9, 1).getTime());
+    expect(debutPeriode("trois_mois", NOW)).toBe(new Date(2026, 7, 1).getTime());
+    expect(debutPeriode("tout", NOW)).toBe(-Infinity);
+  });
+  it("passe l'année : janvier + 3 mois commence en novembre", () => {
+    expect(debutPeriode("trois_mois", new Date(2026, 0, 15))).toBe(new Date(2025, 10, 1).getTime());
+  });
+  it("aucun doublon au changement de mois : la tenue du 1er à 00:00 est du nouveau mois seulement", () => {
+    const h = [entree("a", new Date(2026, 8, 30, 23, 59), [1]), entree("b", new Date(2026, 9, 1, 0, 0), [2])];
+    expect(historiqueDansPeriode(h, "mois", NOW).map((e) => e.id)).toEqual(["b"]);
+    expect(historiqueDansPeriode(h, "trois_mois", NOW).map((e) => e.id)).toEqual(["a", "b"]);
+  });
+  it("une tenue du futur n'est jamais comptée", () => {
+    expect(historiqueDansPeriode([entree("f", new Date(2026, 9, 20), [1])], "tout", NOW)).toEqual([]);
+  });
+});
+
+describe("chiffresPeriode", () => {
+  const dressing = [item(1, "haut"), item(2, "jean"), item(3, "robe"), item(4, "sac")];
+  const h = [entree("a", new Date(2026, 9, 2), [1, 2, 99]), entree("b", new Date(2026, 9, 5), [1]), entree("c", new Date(2026, 8, 5), [3])];
+  it("compte les tenues et les pièces DU DRESSING portées (pas une suggestion, pas une pièce seulement ajoutée)", () => {
+    expect(chiffresPeriode(dressing, h, "mois", NOW)).toEqual({ tenues: 2, piecesUtilisees: 2, totalDressing: 4, part: 50 });
+  });
+  it("change avec la période", () => {
+    expect(chiffresPeriode(dressing, h, "trois_mois", NOW)).toMatchObject({ tenues: 3, piecesUtilisees: 3, part: 75 });
+  });
+  it("dressing vide : part 0 sans division par zéro", () => {
+    expect(chiffresPeriode([], h, "tout", NOW)).toMatchObject({ piecesUtilisees: 0, totalDressing: 0, part: 0 });
+  });
+});
+
+describe("repartitionDressing", () => {
+  it("une pièce, une catégorie : le total est la somme des parts", () => {
+    const items = [item(1, "haut"), item(2, "haut"), item(3, "jean"), item(4, "robe")];
+    const r = repartitionDressing(items);
+    expect(r.reduce((a, l) => a + l.nb, 0)).toBe(items.length);
+    expect(r[0]).toMatchObject({ cat: "haut", nb: 2, pct: 50 });
+  });
+  it("trois parts égales font 100 %, pas 99", () => {
+    const r = repartitionDressing([item(1, "haut"), item(2, "jean"), item(3, "robe")]);
+    expect(r.reduce((a, l) => a + l.pct, 0)).toBe(100);
+  });
+  it("une catégorie hors taxonomie est rangée dans « Autres », jamais perdue", () => {
+    const r = repartitionDressing([item(1, "haut"), item(2, "inconnue")]);
+    expect(r.map((l) => l.cat)).toEqual(["haut", "autre"]);
+    expect(r.find((l) => l.cat === "autre")?.libelle).toBe("Autres");
+  });
+  it("ordre déterministe à égalité : celui de la taxonomie", () => {
+    expect(repartitionDressing([item(1, "robe"), item(2, "haut")]).map((l) => l.cat)).toEqual(["haut", "robe"]);
+  });
+  it("dressing vide : aucune ligne", () => {
+    expect(repartitionDressing([])).toEqual([]);
+  });
+});

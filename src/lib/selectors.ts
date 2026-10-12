@@ -1,4 +1,4 @@
-import { MONTHS_FR, OCC_LABELS, occasionShortLabel, type Weather } from "./data";
+import { CATLABEL, CATS, MONTHS_FR, OCC_LABELS, occasionShortLabel, type Weather } from "./data";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour, type ContexteSaisonnier } from "./capsule";
 import type { CapsuleSeason, CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
@@ -386,6 +386,84 @@ export function journalInsights(history: HistoryEntry[]): JournalInsights {
   }
 
   return { wornThisMonth, distinctPiecesWornThisMonth, topOccasion, topOccasionShort, topOccasionShare, mois: now.getMonth() };
+}
+
+/**
+ * PÉRIODE DU JOURNAL (12/10/2026, brief « Refonte UX du Journal ») : les trois bornes du sélecteur des chiffres clés.
+ *   · "mois" : le mois civil en cours, du 1er à 00:00 (heure locale de l'appareil) ;
+ *   · "trois_mois" : TROIS MOIS CIVILS, le mois en cours et les deux précédents (du 1er du mois d'il y a deux mois) — des mois entiers, pas
+ *     « 90 jours glissants », pour que « ce mois-ci » soit toujours inclus dans « 3 mois » ;
+ *   · "tout" : tout l'historique.
+ * Borne basse INCLUSE, pas de borne haute : l'historique ne contient pas de tenue du futur. Une tenue du 1er à 00:00 locale appartient au
+ * nouveau mois, jamais aux deux (aucun doublon au changement de mois). Le fuseau est celui de l'appareil, comme partout dans le Journal.
+ */
+export type PeriodeJournal = "mois" | "trois_mois" | "tout";
+
+export function debutPeriode(periode: PeriodeJournal, now: Date = new Date()): number {
+  if (periode === "tout") return -Infinity;
+  const decalage = periode === "mois" ? 0 : 2;
+  return new Date(now.getFullYear(), now.getMonth() - decalage, 1).getTime();
+}
+
+export function historiqueDansPeriode(history: HistoryEntry[], periode: PeriodeJournal, now: Date = new Date()): HistoryEntry[] {
+  const debut = debutPeriode(periode, now);
+  const fin = now.getTime();
+  return history.filter((h) => h.ts >= debut && h.ts <= fin);
+}
+
+export interface ChiffresPeriode {
+  /** Tenues portées sur la période : une entrée d'historique = une tenue validée « je la porte » (jamais une tenue seulement proposée). */
+  tenues: number;
+  /** Pièces du DRESSING RÉEL portées au moins une fois sur la période. Une pièce ajoutée mais jamais portée n'y compte pas ; une suggestion de la capsule non plus. */
+  piecesUtilisees: number;
+  /** Taille du dressing réel. */
+  totalDressing: number;
+  /** Part (0-100, arrondie) du dressing portée sur la période. */
+  part: number;
+}
+
+export function chiffresPeriode(dressing: Item[], history: HistoryEntry[], periode: PeriodeJournal, now: Date = new Date()): ChiffresPeriode {
+  const entrees = historiqueDansPeriode(history, periode, now);
+  const ids = new Set(dressing.map((i) => i.id));
+  const portees = new Set(entrees.flatMap((h) => h.pieceIds).filter((id) => ids.has(id)));
+  const totalDressing = ids.size;
+  return { tenues: entrees.length, piecesUtilisees: portees.size, totalDressing, part: totalDressing ? Math.round((portees.size / totalDressing) * 100) : 0 };
+}
+
+export interface PartDressing {
+  /** Clé de catégorie, ou "autre" pour une catégorie hors taxonomie (jamais perdue, jamais inventée). */
+  cat: CategoryKey | "autre";
+  libelle: string;
+  nb: number;
+  /** Pourcentage entier ; la somme des parts vaut toujours 100 (méthode du plus fort reste). */
+  pct: number;
+}
+
+/**
+ * « TON DRESSING EN CHIFFRES » : une pièce, une seule catégorie — le total est la somme des parts. Ordre : de la plus fournie à la moins
+ * fournie, puis l'ordre de la taxonomie à égalité (déterministe). Les pourcentages sont arrondis par la méthode du plus fort reste : arrondis
+ * un à un, trois parts égales donneraient 33 + 33 + 33 = 99 %.
+ */
+export function repartitionDressing(items: Item[]): PartDressing[] {
+  const compte = new Map<CategoryKey | "autre", number>();
+  for (const it of items) {
+    const cle = it.cat in CATLABEL ? it.cat : "autre";
+    compte.set(cle, (compte.get(cle) ?? 0) + 1);
+  }
+  const ordre = new Map<CategoryKey | "autre", number>(CATS.map(([k], i) => [k, i]));
+  ordre.set("autre", CATS.length);
+  const lignes = [...compte.entries()]
+    .map(([cat, nb]) => ({ cat, nb, libelle: cat === "autre" ? "Autres" : CATLABEL[cat], exact: (nb / items.length) * 100 }))
+    .sort((a, b) => b.nb - a.nb || ordre.get(a.cat)! - ordre.get(b.cat)!);
+  const bases = lignes.map((l) => Math.floor(l.exact));
+  let reste = 100 - bases.reduce((a, b) => a + b, 0);
+  const parReste = lignes.map((l, i) => ({ i, f: l.exact - bases[i] })).sort((a, b) => b.f - a.f || a.i - b.i);
+  for (const { i } of parReste) {
+    if (reste <= 0) break;
+    bases[i] += 1;
+    reste -= 1;
+  }
+  return lignes.map((l, i) => ({ cat: l.cat, libelle: l.libelle, nb: l.nb, pct: bases[i] }));
 }
 
 /**
