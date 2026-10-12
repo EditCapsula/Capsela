@@ -2,7 +2,7 @@
 
 import { estPhotoDetouree } from "@/lib/dressing";
 import { fondPhotoPiece } from "@/lib/catalogImages";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { useCapsela } from "@/lib/store";
 import { daysSinceWorn, wearCounts } from "@/lib/selectors";
@@ -44,6 +44,8 @@ import EmptyState from "@/components/EmptyState";
  * deux colonnes ; la légende reste maintenant toujours sur 2 lignes,
  * quelle que soit la pièce.
  */
+const DUREE_APPUI_LONG_MS = 500;
+
 export default function WardrobePiecesScreen() {
   const { state, actions } = useCapsela();
   // Ouvert depuis une carte du vestiaire (refonte Dressing, 25/09/2026) :
@@ -72,6 +74,33 @@ export default function WardrobePiecesScreen() {
       return suivant;
     });
 
+  // Appui long sur une carte = entrée dans la sélection, cette pièce cochée (12/10/2026, demandé : « pour sélectionner une pièce il faut
+  // cliquer longtemps dessus » ; le lien « Sélectionner » est supprimé). Le geste de la galerie du téléphone : si le doigt bouge (défilement)
+  // ou se relève avant DUREE_APPUI_LONG, rien ne se passe. Le clic qui suit un appui long est avalé, sinon il ouvrirait la pièce.
+  const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const appuiLongFait = useRef(false);
+  const departAppui = useRef<{ x: number; y: number } | null>(null);
+  const annulerAppui = () => {
+    if (minuteur.current) clearTimeout(minuteur.current);
+    minuteur.current = null;
+    departAppui.current = null;
+  };
+  const commencerAppui = (e: React.PointerEvent, id: number) => {
+    if (selectionMode) return;
+    appuiLongFait.current = false;
+    departAppui.current = { x: e.clientX, y: e.clientY };
+    minuteur.current = setTimeout(() => {
+      minuteur.current = null;
+      appuiLongFait.current = true;
+      setSelectionMode(true);
+      setSelection(new Set([id]));
+    }, DUREE_APPUI_LONG_MS);
+  };
+  const bougerAppui = (e: React.PointerEvent) => {
+    const d = departAppui.current;
+    if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) annulerAppui();
+  };
+
   const supprimer = () => {
     actions.removeItems([...selection]);
     quitterSelection();
@@ -92,13 +121,9 @@ export default function WardrobePiecesScreen() {
         </button>
       </div>
 
-      {/* « Sélectionner » vit sur la ligne du compte, pas dans l'en-tête
-          (correctif 10/09/2026, signalé : « je ne vois pas comment
-          sélectionner en masse »). Placé en gris entre le titre et le
-          « + Ajouter » terracotta, il se lisait comme du décor sur une
-          largeur de téléphone. Ici il est seul de son côté, en terracotta —
-          la couleur que l'app réserve aux actions — et juste au-dessus de la
-          grille sur laquelle il agit. */}
+      {/* Plus de lien « Sélectionner » (12/10/2026) : la sélection s'ouvre par un appui long sur une carte (cf. commencerAppui). Le
+          rappel en gris, à la place du lien, garde le geste découvrable (le lien avait été ajouté le 10/09/2026 parce qu'on ne voyait pas
+          comment sélectionner en masse). */}
       <div className="flex items-baseline justify-between gap-3 mt-4">
         <div className="t-surtitre text-muted">
           {selectionMode
@@ -112,14 +137,7 @@ export default function WardrobePiecesScreen() {
             Annuler
           </button>
         ) : (
-          items.length > 0 && (
-            <button
-              onClick={() => setSelectionMode(true)}
-              className="text-[12px] text-terracotta flex-shrink-0 cursor-pointer py-[4px]"
-            >
-              Sélectionner
-            </button>
-          )
+          items.length > 0 && <span className="text-[11px] text-placeholder flex-shrink-0">Appui long pour sélectionner</span>
         )}
       </div>
 
@@ -151,9 +169,23 @@ export default function WardrobePiecesScreen() {
             return (
               <button
                 key={it.id}
-                onClick={() => (selectionMode ? basculer(it.id) : actions.openItem(it.id, false))}
+                onClick={() => {
+                  if (appuiLongFait.current) {
+                    appuiLongFait.current = false;
+                    return;
+                  }
+                  if (selectionMode) basculer(it.id);
+                  else actions.openItem(it.id, false);
+                }}
+                onPointerDown={(e) => commencerAppui(e, it.id)}
+                onPointerMove={bougerAppui}
+                onPointerUp={annulerAppui}
+                onPointerCancel={annulerAppui}
+                onPointerLeave={annulerAppui}
+                // Le menu natif d'un appui long (enregistrer l'image…) ne doit pas s'ouvrir par-dessus la sélection.
+                onContextMenu={(e) => e.preventDefault()}
                 aria-pressed={selectionMode ? selected : undefined}
-                className="text-left cursor-pointer"
+                className="text-left cursor-pointer select-none [-webkit-touch-callout:none]"
               >
                 <div
                   className="relative w-full rounded-bloc border border-border overflow-hidden"

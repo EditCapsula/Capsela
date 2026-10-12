@@ -20,7 +20,6 @@ import {
   designationPiece,
   ideeLaPlusComplete,
   ligneDressing,
-  looksDistincts,
   phrasePiste,
   piecesRecentes,
   pisteAssociation,
@@ -352,9 +351,6 @@ export default function WardrobeScreen() {
   // à redécouvrir. Chaque bloc se tait quand il n'a pas de donnée vraie. Le bouton d'ajout est flottant (« + », à droite) depuis le 12/10/2026 ;
   // dressing complet (gratuit), il mène à Premium au lieu d'ouvrir un formulaire qui refuserait d'enregistrer.
   const ajouter = () => (synthese.complet ? actions.goPremium() : actions.openAdd());
-  const dejaCalcule = idees !== null;
-  const tousLesLooks = idees ? looksDistincts(pourIdees.map((p) => (idees.get(p.id) ?? []).map((v) => v.ids))) : 0;
-  const plusDe = items.length > NB_PIECES_AVEC_IDEES ? "+" : "";
 
   // L'inspiration : les deux pièces les plus récentes (30 jours) et un look que le moteur compose avec la première qui en a un.
   const nouvelles = recentes.slice(0, 2);
@@ -408,7 +404,8 @@ export default function WardrobeScreen() {
       </div>
       <div className="text-[13px] text-muted mt-[8px]">
         {items.length} {items.length <= 1 ? "pièce" : "pièces"}
-        {dejaCalcule && tousLesLooks > 0 ? ` · ${tousLesLooks}${plusDe} ${tousLesLooks === 1 ? "look possible" : "looks possibles"}` : ""}
+        {/* « N looks possibles » retiré le 12/10/2026 (« j'ai l'impression que ce nombre est faux ») : un total de tirages du moteur ne se
+            vérifie pas à l'œil. Le nombre par pièce (« Comment porter … ? », Dernières pièces) reste. */}
       </div>
 
       {/* ── RÉCEMMENT AJOUTÉES ─ des miniatures et un chevron vers « Tes dernières pièces » (30 jours). */}
