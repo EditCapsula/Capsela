@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chiffresPeriode, debutPeriode, historiqueDansPeriode, repartitionDressing } from "../selectors";
+import { chiffresPeriode, debutPeriode, historiqueDansPeriode, peutEtreDiteJamaisPortee, repartitionDressing } from "../selectors";
 import type { HistoryEntry, Item } from "../types";
 
 const item = (id: number, cat: string): Item => ({ id, cat, name: `p${id}`, hex: "#000000" }) as unknown as Item;
@@ -60,5 +60,22 @@ describe("repartitionDressing", () => {
   });
   it("dressing vide : aucune ligne", () => {
     expect(repartitionDressing([])).toEqual([]);
+  });
+});
+
+describe("peutEtreDiteJamaisPortee — « À sortir du placard » n'affirme que ce que les données permettent", () => {
+  const J = 86400000;
+  const base = { id: 1, cat: "haut", name: "p", hex: "#000" } as unknown as Item;
+  it("une pièce importée il y a 5 jours n'est pas « oubliée »", () => {
+    expect(peutEtreDiteJamaisPortee({ ...base, worn: null, createdAt: NOW.getTime() - 5 * J }, NOW.getTime())).toBe(false);
+  });
+  it("après 30 jours sans port, elle peut l'être", () => {
+    expect(peutEtreDiteJamaisPortee({ ...base, worn: null, createdAt: NOW.getTime() - 40 * J }, NOW.getTime())).toBe(true);
+  });
+  it("une pièce marquée portée (Item.worn) n'est pas « jamais portée », même sans entrée d'historique", () => {
+    expect(peutEtreDiteJamaisPortee({ ...base, worn: 12, createdAt: NOW.getTime() - 90 * J }, NOW.getTime())).toBe(false);
+  });
+  it("sans date d'ajout, on ne sait pas qu'elle est récente : admise", () => {
+    expect(peutEtreDiteJamaisPortee({ ...base, worn: null } as Item, NOW.getTime())).toBe(true);
   });
 });

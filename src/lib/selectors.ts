@@ -249,6 +249,20 @@ export function etatDePort(item: Item, history: HistoryEntry[], now: number = Da
   return { etat: presenceSaison >= MIN_SEASON_PRESENCE_MS ? "delaissee" : "recente", dernierPort: dernier, moisSansPort };
 }
 
+/**
+ * Peut-on DIRE d'une pièce sans port dans l'historique qu'elle attend, « jamais portée » (12/10/2026, revue du Journal) ? Deux cas où les
+ * données ne permettent pas de l'affirmer :
+ *   · elle a été ajoutée il y a moins de 30 jours (MIN_SEASON_PRESENCE_MS, le seuil de présence déjà utilisé partout) : une pièce
+ *     fraîchement importée n'est pas « oubliée », elle n'a simplement pas eu le temps d'être portée ;
+ *   · `Item.worn` dit qu'elle l'a été (action « porté » hors d'une tenue validée) alors que l'historique n'a pas d'entrée.
+ * Une pièce sans date d'ajout (enregistrée avant la colonne) reste admise : on ne sait pas qu'elle est récente.
+ * Limite connue : l'historique ne contient que les tenues validées ; « aucun port enregistré » n'est pas « jamais portée » au sens strict.
+ */
+export function peutEtreDiteJamaisPortee(item: Item, now: number = Date.now()): boolean {
+  if (item.worn != null) return false;
+  return item.createdAt == null || now - item.createdAt >= MIN_SEASON_PRESENCE_MS;
+}
+
 /** Mois pleins écoulés depuis un horodatage — même mesure pour « sans port » et « dans ton dressing depuis ». */
 export function moisDepuis(ts: number, now: number = Date.now()): number {
   return Math.max(0, Math.floor((now - ts) / MS_PAR_MOIS));
