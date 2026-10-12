@@ -28,6 +28,8 @@ import {
   applyGenderChange,
   champsProfilStyle,
   completudeProfil,
+  prochaineActionProfil,
+  VISUELS_ETAPE_STYLE_FEMME,
   fieldNeedsRevalidation,
   genderLabel,
   morphologyLabel,
@@ -63,20 +65,8 @@ import Card from "@/components/Card";
  * suggestion, elles pré-remplissent l'ajout d'une pièce.
  */
 
-/** « ton genre, ta palette et tes tailles » — les champs manquants, dits en toutes lettres. */
-const ARTICLE: Record<ChampProfilStyle, string> = {
-  genre: "ton genre",
-  style: "ton style",
-  morphologie: "ta silhouette",
-  palette: "ta palette",
-  tailles: "tes tailles",
-};
-function enumerer(mots: string[]): string {
-  return mots.length <= 1 ? mots.join("") : mots.slice(0, -1).join(", ") + " et " + mots[mots.length - 1];
-}
-
 export default function ProfileScreen() {
-  const { profile, email, demoMode, saveProfile } = useAuth();
+  const { profile, email, demoMode, saveProfile, profileLoaded } = useAuth();
   const { state, actions, etatPremium } = useCapsela();
   const [genreOuvert, setGenreOuvert] = useState(false);
   const [aRevalider, setARevalider] = useState<GenderDependentField | null>(null);
@@ -97,6 +87,7 @@ export default function ProfileScreen() {
   const champs = champsProfilStyle(profile);
   const renseigne = (cle: ChampProfilStyle) => champs.find((c) => c.cle === cle)?.renseigne ?? false;
   const completude = completudeProfil(profile);
+  const prochaine = prochaineActionProfil(profile);
   const morphologieApplicable = champs.some((c) => c.cle === "morphologie");
   const toRevalidate = GENDER_DEPENDENT_FIELDS.find((f) => fieldNeedsRevalidation(f, profile));
 
@@ -171,7 +162,7 @@ export default function ProfileScreen() {
         </button>
       )}
 
-      <Surtitre icone={I_ETINCELLE}>Ton style</Surtitre>
+      <Surtitre icone={I_ETINCELLE}>Mon profil stylistique</Surtitre>
       <Card className="overflow-hidden">
         <LigneProfil
           icone={I_GENRE}
@@ -184,7 +175,19 @@ export default function ProfileScreen() {
         <LigneProfil
           icone={I_CINTRE}
           titre="Style"
-          valeur={libelleStyles(profile.styles, profile.gender) || "Non renseigné"}
+          valeur={
+            <span className="flex items-center gap-[10px]">
+              {/* Visuels éditoriaux déjà dans l'app (étape « Style », côté femme seulement : il n'en existe pas pour l'homme). */}
+              {profile.gender !== "homme" &&
+                profile.styles.slice(0, 2).map((id) =>
+                  VISUELS_ETAPE_STYLE_FEMME[id as keyof typeof VISUELS_ETAPE_STYLE_FEMME] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={id} src={VISUELS_ETAPE_STYLE_FEMME[id as keyof typeof VISUELS_ETAPE_STYLE_FEMME]} alt="" width={30} height={40} loading="lazy" className="w-[30px] h-[40px] rounded-[6px] object-cover flex-shrink-0" />
+                  ) : null
+                )}
+              <span>{libelleStyles(profile.styles, profile.gender) || "Non renseigné"}</span>
+            </span>
+          }
           renseigne={renseigne("style")}
           explication="Définit l'univers de tes recommandations."
           onClick={() => ouvrirChamp("style")}
@@ -235,11 +238,10 @@ export default function ProfileScreen() {
       </Card>
       <div className="text-[12px] text-muted leading-[1.45] mt-[8px] px-1">Pré-remplies quand tu ajoutes une pièce.</div>
 
-      {/* COMPLÉTUDE — seulement quand il manque quelque chose (le pourcentage
-          est calculé : champs applicables renseignés / applicables). Le
-          bouton ouvre directement le premier champ manquant : il n'y a plus
-          d'écran d'édition intermédiaire (recette du 26/09/2026). */}
-      {completude.manquants.length > 0 ? (
+      {/* COMPLÉTUDE (12/10/2026) — la PROCHAINE information manquante, dite avec son intérêt, et un bouton qui ouvre directement son éditeur
+          (prochaineActionProfil, profile.ts : mêmes champs et même pourcentage que completudeProfil, rien d'écrit en dur par état). Tant que
+          le profil n'est pas chargé, rien : un pourcentage calculé sur un profil vide serait faux. Profil complet : une confirmation discrète. */}
+      {!profileLoaded ? null : prochaine ? (
         <div className="mt-4 bg-warm-bg border border-warm-border rounded-carte p-4">
           <div className="flex items-start gap-[12px]">
             <span className="w-9 h-9 flex-shrink-0 rounded-full bg-card text-terracotta flex items-center justify-center">
@@ -249,9 +251,7 @@ export default function ProfileScreen() {
               <div className="t-titre-carte text-ink">
                 Ton profil est <span className="italic text-terracotta">presque prêt</span>
               </div>
-              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[4px]">
-                Il manque {enumerer(completude.manquants.map((m) => ARTICLE[m.cle]))} pour que ton profil soit complet.
-              </div>
+              <div className="text-[13px] text-warm-text-2 leading-[1.45] mt-[4px]">{prochaine.message}</div>
               <div className="flex items-center gap-[10px] mt-[10px]">
                 <div
                   className="flex-1 h-[6px] rounded-full bg-card overflow-hidden"
@@ -267,13 +267,16 @@ export default function ProfileScreen() {
               </div>
             </div>
           </div>
-          <Button variante="principal" className="mt-[14px]"
-            onClick={() => ouvrirChamp(completude.manquants[0].cle)}
-          >
-            Compléter mon profil
+          <Button variante="principal" className="mt-[14px]" onClick={() => ouvrirChamp(prochaine.cle)}>
+            {prochaine.cta}
           </Button>
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-4 flex items-center gap-[10px] px-1 text-[12px] text-muted-3" role="status">
+          <span aria-hidden="true" className="w-[18px] h-[18px] rounded-full bg-success-bg text-success flex items-center justify-center text-[11px]">✓</span>
+          Ton profil est complet.
+        </div>
+      )}
 
       {/* « MA CAPSULE » RETIRÉE (27/09/2026) : pièces et looks portés ont leurs
           espaces (Dressing, Journal) ; le profil reste ce que Capsela sait de
@@ -282,7 +285,7 @@ export default function ProfileScreen() {
       {/* TA MÉTÉO — informative : la ville, et ce qu'elle fait vraiment ; les
           réglages (géolocalisation, météo de la position, ville) vivent dans
           Préférences Capsela, que la ligne ouvre. */}
-      <Surtitre icone={I_GRAPHIQUE}>Ta météo</Surtitre>
+      <Surtitre icone={I_GRAPHIQUE}>Mon lieu et ma météo</Surtitre>
       <Card className="overflow-hidden">
         <LigneProfil
           icone={I_REPERE}

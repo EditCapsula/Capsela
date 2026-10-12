@@ -537,3 +537,39 @@ export function completudeProfil(profile: Profile): Completude {
   const renseignes = champs.length - manquants.length;
   return { total: champs.length, renseignes, manquants, pourcentage: Math.round((renseignes / champs.length) * 100) };
 }
+
+
+/**
+ * LA PROCHAINE INFORMATION À RENSEIGNER (12/10/2026, brief « Refonte UX/UI de Mon profil »). Dérivée des MÊMES champs que
+ * completudeProfil (champsProfilStyle) : aucun pourcentage ni critère de plus. Priorité = l'ordre des champs du questionnaire
+ * (genre, style, morphologie, palette, tailles) ; pour les tailles, la première absente de haut, bas, pointure. `null` quand le profil est complet.
+ *
+ * CHAQUE « POURQUOI » EST VRAI DANS LE CODE (règle du projet, cf. ProfileScreen) : le genre adapte les pièces et styles proposés, le style
+ * définit l'univers de la capsule, la silhouette n'oriente la sélection que pour deux silhouettes (« peut orienter »), la palette oriente
+ * les couleurs de la capsule et des tenues, les tailles pré-remplissent l'ajout d'une pièce — elles ne filtrent aucune suggestion, la
+ * phrase « pour affiner les recommandations de chaussures » serait donc fausse. Jamais de message négatif sur la morphologie.
+ */
+export interface ProchaineActionProfil {
+  cle: ChampProfilStyle;
+  message: string;
+  cta: string;
+}
+
+export function prochaineActionProfil(profile: Profile): ProchaineActionProfil | null {
+  const manquant = completudeProfil(profile).manquants[0];
+  if (!manquant) return null;
+  switch (manquant.cle) {
+    case "genre":
+      return { cle: "genre", message: "Indique ton genre : il adapte les pièces et les styles proposés.", cta: "Renseigner mon genre" };
+    case "style":
+      return { cle: "style", message: "Choisis ton style : il définit l'univers de tes recommandations.", cta: "Choisir mon style" };
+    case "morphologie":
+      return { cle: "morphologie", message: "Renseigne ta silhouette : elle peut orienter les coupes et proportions de ta capsule.", cta: "Compléter ma morphologie" };
+    case "palette":
+      return { cle: "palette", message: "Choisis tes couleurs : elles orientent la capsule et tes tenues.", cta: "Choisir ma palette" };
+    case "tailles":
+      if (!profile.tailleHaut) return { cle: "tailles", message: "Ajoute ta taille de haut : elle est pré-remplie quand tu ajoutes une pièce.", cta: "Renseigner ma taille de haut" };
+      if (!profile.tailleBas) return { cle: "tailles", message: "Ajoute ta taille de bas : elle est pré-remplie quand tu ajoutes une pièce.", cta: "Renseigner ma taille de bas" };
+      return { cle: "tailles", message: "Ajoute ta pointure : elle est pré-remplie quand tu ajoutes une paire de chaussures.", cta: "Renseigner ma pointure" };
+  }
+}
