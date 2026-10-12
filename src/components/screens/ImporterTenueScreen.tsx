@@ -22,6 +22,7 @@ import {
   nPieces,
   phraseManque,
   pieceDepuis,
+  apercuPhotoConfiee,
   reprendrePhoto,
   type BrouillonPiece,
 } from "@/lib/importTenue";
@@ -63,8 +64,10 @@ export default function ImporterTenueScreen() {
   const fin = useRef(false);
   const [aFichier, setAFichier] = useState(false);
 
-  const [phase, setPhase] = useState<Phase>("choix");
-  const [apercu, setApercu] = useState<string | null>(null);
+  // Une photo confiée par « Ajouter une pièce » : le tout premier rendu est déjà l'analyse, sur la même photo (12/10/2026, signalé : un scintillement
+  // entre les deux écrans — l'écran de choix s'affichait une image avant que la lecture démarre).
+  const [phase, setPhase] = useState<Phase>(() => (apercuPhotoConfiee() ? "analyse" : "choix"));
+  const [apercu, setApercu] = useState<string | null>(() => apercuPhotoConfiee()?.url ?? null);
   // Mise à plat demandée sur une carte (« Mettre à plat ») : en cours, ou la cause de l'échec. Jamais lancée seule.
   const [plat, setPlat] = useState<Record<number, { etat: "cours" | "erreur"; message?: string }>>({});
   const [brouillons, setBrouillons] = useState<BrouillonPiece[]>([]);
@@ -96,7 +99,8 @@ export default function ImporterTenueScreen() {
     setAFichier(true);
     purger(tout());
     fichiers.current = { source: null, tenue: null, objets: new Map() };
-    setApercu(URL.createObjectURL(file));
+    // Photo déjà envoyée : on garde son URL (celle que l'écran précédent affichait), pas de second visuel qui ferait sauter l'image.
+    setApercu(urlDejaEnvoyee ?? URL.createObjectURL(file));
     setPlat({});
     setOuverte(null);
     setErreurAjout(null);

@@ -189,6 +189,8 @@ let photoConfiee: PhotoConfiee | null = null;
 export const confierPhoto = (p: PhotoConfiee | null): void => {
   photoConfiee = p;
 };
+/** Lecture sans prise : le premier rendu de l'import part déjà en « analyse » sur la photo confiée (aucun éclair de l'écran de choix). */
+export const apercuPhotoConfiee = (): PhotoConfiee | null => photoConfiee;
 export const reprendrePhoto = (): PhotoConfiee | null => {
   const p = photoConfiee;
   photoConfiee = null;
