@@ -5,7 +5,7 @@ import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
-import { CameraIcon, ChampSelect, chip, Coche, EYEBROW, luminance, NOMS_PASTILLES, SpinnerCintre } from "@/components/screens/AddScreen";
+import { CameraIcon, CarteAnalyse, ChampSelect, chip, Coche, EYEBROW, luminance, NOMS_PASTILLES, SpinnerCintre } from "@/components/screens/AddScreen";
 import { useAuth } from "@/lib/auth";
 import { CATS, FAMILLES_COULEURS, PALETTE, PALETTE_BIJOU } from "@/lib/data";
 import { deleteDressingPhotos, detourerPhotoAvecCause, dressingPhotoPath, estPhotoMiseAPlat, importerTenue, uploadDressingPhoto, type CodeImportTenue } from "@/lib/dressing";
@@ -74,7 +74,6 @@ export default function ImporterTenueScreen() {
   const [progression, setProgression] = useState({ fait: 0, total: 0 });
   const [ajoutees, setAjoutees] = useState<string[]>([]);
   const [erreurAjout, setErreurAjout] = useState<string | null>(null);
-  const [envoyee, setEnvoyee] = useState(false);
   const [couleurPour, setCouleurPour] = useState<number | null>(null);
   // Chemins des fichiers créés pour cet import : à supprimer s'ils ne servent à aucune pièce.
   const fichiers = useRef<{ source: string | null; tenue: string | null; objets: Map<number, string> }>({ source: null, tenue: null, objets: new Map() });
@@ -101,7 +100,6 @@ export default function ImporterTenueScreen() {
     setPlat({});
     setOuverte(null);
     setErreurAjout(null);
-    setEnvoyee(false);
     setPhase("analyse");
     if (!isSupabaseConfigured || !userId) {
       setCode("indisponible");
@@ -118,7 +116,6 @@ export default function ImporterTenueScreen() {
       return;
     }
     fichiers.current.source = dressingPhotoPath(urlPhoto);
-    setEnvoyee(true);
     const r = await importerTenue(urlPhoto);
     if ("code" in r) {
       purger(tout());
@@ -257,11 +254,6 @@ export default function ImporterTenueScreen() {
   const enCours = phase === "analyse";
   const enAjout = phase === "ajout";
 
-  const etapes: { label: string; etat: "faite" | "cours" | "attente" }[] = [
-    { label: "Envoi de ta photo", etat: envoyee ? "faite" : "cours" },
-    { label: "Repérage des pièces", etat: envoyee ? "cours" : "attente" },
-    { label: "Couleurs et catégories", etat: envoyee ? "cours" : "attente" },
-  ];
 
   const imageZone = apercu;
   const listeAffichee = phase === "resultat" || phase === "ajout";
@@ -270,7 +262,7 @@ export default function ImporterTenueScreen() {
     <div className="absolute inset-0 flex flex-col bg-cream">
       <div className="flex-shrink-0 grid grid-cols-[44px_1fr_44px] items-center gap-2 px-[14px] pt-[8px] pb-[6px]">
         <BoutonRetour onClick={retour} label="Revenir à l'écran précédent" />
-        <div className="text-center font-serif font-medium text-[19px] text-ink">Importer une tenue</div>
+        <div className="text-center font-serif font-medium text-[19px] text-ink">Ajouter une pièce</div>
         <span />
       </div>
 
@@ -308,27 +300,7 @@ export default function ImporterTenueScreen() {
               backgroundRepeat: "no-repeat",
             }}
           >
-            {enCours && (
-              <div role="status" aria-live="polite" className="absolute inset-0 flex items-center justify-center p-[18px]" style={{ background: "rgba(243,238,229,.64)" }}>
-                <div className="w-[250px] max-w-full bg-card border border-border rounded-[20px] px-4 pt-[14px] pb-[10px]">
-                  <div className="flex items-center gap-[10px]">
-                    <SpinnerCintre sombre />
-                    <span className="font-serif font-medium text-[16px] text-ink">Capsela analyse ta photo</span>
-                  </div>
-                  <ul className="flex flex-col mt-2 list-none p-0 m-0">
-                    {etapes.map((e) => (
-                      <li key={e.label} className={"flex items-center gap-[10px] min-h-[30px] text-[12.5px] " + (e.etat === "attente" ? "text-[#8B8375]" : "text-ink")}>
-                        <svg viewBox="0 0 24 24" className="w-[16px] h-[16px] flex-shrink-0" fill={e.etat === "cours" ? "#A66950" : "none"} stroke={e.etat === "faite" ? "#9E5B43" : e.etat === "cours" ? "#A66950" : "#CFC3B0"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d={e.etat === "faite" ? "M6 12.5l4 4 8-9" : e.etat === "cours" ? "M12 8.5a3.5 3.5 0 1 1 0 7a3.5 3.5 0 1 1 0-7z" : "M12 7a5 5 0 1 1 0 10a5 5 0 1 1 0-10z"} />
-                        </svg>
-                        {e.label}
-                        <span className="sr-only">{e.etat === "faite" ? " : fait" : e.etat === "cours" ? " : en cours" : " : à venir"}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
+            {enCours && <CarteAnalyse />}
           </div>
         )}
 
