@@ -220,6 +220,45 @@ export function rectangleOpaque(data: Uint8ClampedArray | Uint8Array, largeur: n
   return { x: gx0, y: gy0, l: gx1 - gx0, h: gy1 - gy0 };
 }
 
+/**
+ * LA VÉRIFICATION D'UN RECADRAGE (12/10/2026, signalé : une « veste » qui montrait la personne entière, un « sac » qui montrait un pantalon,
+ * des « chaussures » qui montraient du sol). Une boîte lue sur toute la photo est imprécise ; le même modèle regarde de plus près le
+ * RECADRAGE de l'article : il dit s'il y est vraiment, et où, dans ce recadrage. Absent : la pièce n'est pas proposée (et aucun détourage
+ * payant n'est lancé). Présent : on recadre plus serré avant de détourer.
+ */
+export function promptVerificationRecadrage(o: { nom: string; cat: string }): string {
+  return [
+    `Cette image est le recadrage d'une photo de mode. Elle devrait montrer UN seul article : « ${o.nom} » (catégorie : ${o.cat}).`,
+    "present : true seulement si cet article est clairement visible dans l'image, entier ou en grande partie ; false s'il est absent, à peine visible, ou si l'image montre surtout autre chose (un autre article, le sol, le décor, la personne).",
+    "boite : [x, y, l, h] — la boîte la plus SERRÉE qui contient TOUT cet article visible dans CETTE image, en fractions de sa largeur et de sa hauteur (0 à 1), (x, y) étant le coin haut-gauche. Ne cadre jamais la personne entière ni un autre article ; null si present = false.",
+    'Réponds UNIQUEMENT en JSON strict : {"present": boolean, "boite": [number, number, number, number] | null}.',
+  ].join("\n");
+}
+
+export interface VerificationRecadrage {
+  present: boolean;
+  boite: BoiteNormalisee | null;
+}
+
+/** La réponse du modèle, vérifiée : une valeur invalide donne null (l'appelant garde alors son recadrage, il ne rejette rien sur une réponse illisible). */
+export function assainerVerification(brut: unknown): VerificationRecadrage | null {
+  if (!brut || typeof brut !== "object") return null;
+  const o = brut as Record<string, unknown>;
+  if (typeof o.present !== "boolean") return null;
+  if (!o.present) return { present: false, boite: null };
+  return { present: true, boite: boiteValide(o.boite) };
+}
+
+/** La boîte (en fractions DU RECADRAGE) ramenée dans l'image d'origine, avec une petite marge, bornée à l'image. */
+export function rectangleAffine(r: Rectangle, boite: BoiteNormalisee, largeurImage: number, hauteurImage: number, marge = 0.05): Rectangle {
+  const sous = rectangleDeRecadrage(r.l, r.h, boite, marge);
+  const x0 = Math.max(0, r.x + sous.x);
+  const y0 = Math.max(0, r.y + sous.y);
+  const x1 = Math.min(largeurImage, r.x + sous.x + sous.l);
+  const y1 = Math.min(hauteurImage, r.y + sous.y + sous.h);
+  return { x: x0, y: y0, l: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
+}
+
 /** Marges de recadrage d'une boîte (part de sa plus grande dimension) : une première, puis une plus large si la pièce sort du cadre. */
 export const MARGES_RECADRAGE = [0.08, 0.22] as const;
 /** Part minimale / maximale du recadrage que doit occuper ce que le détourage a gardé, sinon ce n'est pas une pièce isolée. */
