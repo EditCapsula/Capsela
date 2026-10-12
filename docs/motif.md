@@ -14,3 +14,6 @@ Aucune règle d'association de motifs (deux motifs forts, motif et couleur…). 
 ## Limites connues
 - Fiabilité de la lecture : NON DÉMONTRÉE sur photos réelles.
 - Sur une pièce à motif, la « couleur principale » lue reste la teinte dominante ; elle peut différer de ce que l'on nomme à l'œil.
+
+## Tant que la migration 0051 n'est pas exécutée (12/10/2026)
+L'app sait si la colonne existe (`motifDisponible`, `dressing.ts`) : au chargement du dressing (une ligne sans clé `motif`) ou au premier refus de la base (PGRST204). Colonne absente : le motif n'est plus proposé (ajout, import), plus rien n'est écrit et aucune erreur technique n'est affichée (avant : bandeau rouge « Could not find the 'motif' column »). Un motif déjà lu sur une photo n'est alors pas enregistré — la fonctionnalité attend la migration.

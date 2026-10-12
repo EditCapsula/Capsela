@@ -1,7 +1,7 @@
 "use client";
 
 import { messageCadrage } from "@/lib/cadragePhoto";
-import { estPhotoDetouree } from "@/lib/dressing";
+import { estPhotoDetouree, motifDisponible } from "@/lib/dressing";
 import { aDesManches, MANCHES } from "@/lib/manches";
 import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { confierPhoto } from "@/lib/importTenue";
@@ -333,7 +333,7 @@ export default function AddScreen() {
           : { texte: "À préciser", couleur: "#8B8375" };
 
   // ── Motif (11/10/2026) : facultatif ; d'où vient la valeur affichée.
-  const avecMotif = aUnMotif(state.addCat);
+  const avecMotif = motifDisponible() && aUnMotif(state.addCat);
   const motifIA = state.addMotifIA;
   const motifDetecte = motifIA != null && !state.addMotifTouched && state.addMotif === motifIA;
   const motifModifie = motifIA != null && state.addMotif !== motifIA;

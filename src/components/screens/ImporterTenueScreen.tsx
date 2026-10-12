@@ -9,7 +9,7 @@ import { CameraIcon, CarteAnalyse, ChampSelect, chip, Coche, EYEBROW, luminance,
 import { useAuth } from "@/lib/auth";
 import { MISE_A_PLAT_DISPONIBLE } from "@/lib/miseAPlat";
 import { CATS, FAMILLES_COULEURS, PALETTE, PALETTE_BIJOU } from "@/lib/data";
-import { deleteDressingPhotos, detourerPhotoAvecCause, dressingPhotoPath, estPhotoMiseAPlat, importerTenue, uploadDressingPhoto, type CodeImportTenue } from "@/lib/dressing";
+import { motifDisponible, deleteDressingPhotos, detourerPhotoAvecCause, dressingPhotoPath, estPhotoMiseAPlat, importerTenue, uploadDressingPhoto, type CodeImportTenue } from "@/lib/dressing";
 import { MESSAGE_ECHEC_MISE_A_PLAT } from "@/components/screens/PieceScreen";
 import {
   aCreer,
@@ -522,7 +522,7 @@ export default function ImporterTenueScreen() {
                         </div>
                       )}
 
-                      {aUnMotif(b.cat) && (
+                      {motifDisponible() && aUnMotif(b.cat) && (
                         <div>
                           <span className={EYEBROW}>Motif</span>
                           <div role="radiogroup" aria-label="Motif" className="grid grid-cols-2 gap-2 mt-[10px]">
