@@ -36,7 +36,7 @@ Jamais bloquant : si le détourage n'est pas branché, si le plafond du jour est
 
 ## Protection et coût
 
-Même protection qu'`analyze-dressing-photo` : personne connectée, photo qui est la sienne, plafond par compte et par jour (`consommer_edge_quota`, fonction `detourer-photo`, 10 par défaut, secret `MAX_DETOURAGES_PER_USER_PER_DAY`). **ARBITRAGE ÉDITORIAL provisoire** : le plafond est le seul garde-fou financier ; réserver le détourage à Premium, ou le lier à la vidéo récompensée, n'est pas décidé (question posée le 04/10/2026, sans réponse).
+Même protection qu'`analyze-dressing-photo` : personne connectée, photo qui est la sienne, plafond par compte et par jour (`consommer_edge_quota`, fonction `detourer-photo`, 50 par défaut depuis le 12/10/2026, secret `MAX_DETOURAGES_PER_USER_PER_DAY`). **ARBITRAGE ÉDITORIAL provisoire** : le plafond est le seul garde-fou financier ; réserver le détourage à Premium, ou le lier à la vidéo récompensée, n'est pas décidé (question posée le 04/10/2026, sans réponse).
 
 Coût indicatif : 0,02 $ par image chez Photoroom (plan Basic), plus un éventuel minimum mensuel (voir plus bas) ; non vérifié sur la page des tarifs, inaccessible depuis le conteneur de développement.
 

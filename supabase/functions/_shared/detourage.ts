@@ -18,7 +18,7 @@ export const TAILLE_SOURCE_MAX_OCTETS = 8 * 1024 * 1024;
 export const TAILLE_RESULTAT_MAX_OCTETS = 12 * 1024 * 1024;
 
 /** Détourages par compte et par jour : une image détourée est un appel payant (modifiable par le secret MAX_DETOURAGES_PER_USER_PER_DAY). */
-export const LIMITE_JOURNALIERE_PAR_DEFAUT = 10;
+export const LIMITE_JOURNALIERE_PAR_DEFAUT = 50;
 
 export const POINT_D_ENTREE_PHOTOROOM = "https://sdk.photoroom.com/v1/segment";
 

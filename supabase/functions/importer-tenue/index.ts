@@ -1,35 +1,35 @@
 // Edge Function importer-tenue (10/10/2026) — « Importer une tenue » : à partir de la photo d'une tenue, rend UNE PIÈCE PAR OBJET.
 //
 //   photo (stockage privé) → lecture des objets par le modèle de vision (catégorie, couleur,
-//   matière, manches, boîte) → recadrage de chaque boîte sur la photo d'origine → détourage de chaque recadrage → un fichier par objet.
+//   matière, manches, boîte) → recadrage de chaque boîte sur la photo d'origine (vérifié, resserré) → un fichier par objet. AUCUN détourage ici (12/10/2026) :
+//   il se lance à l'ajout de la pièce (detourer-photo, `recadrer`).
 //
 // Entrée : { photo_url } — URL signée du bucket dressing-photos (celle que uploadDressingPhoto renvoie), la photo de la personne.
 // Sortie : { ok: true, tenue_url, objets: [{ …ObjetTenue, photo_url }] } — URL signées, 24 h ; `objets` peut être vide (rien
 // repéré). Ou { ok: false, code } (CodeErreurDetourage, « quota_atteint », « lecture_indisponible »).
 //
 // Rien n'est ajouté au dressing ici : l'app montre les objets, la personne coche, et seulement alors des pièces sont créées. Les
-// fichiers des objets non gardés sont supprimés par l'app (même dossier, noms `….oN.detouree.webp`).
+// fichiers des objets non gardés sont supprimés par l'app (même dossier, noms `….oN.webp`, et `….oN.detouree.webp` une fois détourés).
 //
-// Coût par tenue : une lecture OpenAI, un détourage par objet. Un plafond par compte
+// Coût par tenue : une lecture OpenAI et une vérification par objet (détail bas) ; plus de Photoroom. Un plafond par compte
 // et par jour (MAX_IMPORTS_TENUE_PER_USER_PER_DAY, 50 par défaut depuis le 11/10/2026, 5 avant) est le seul garde-fou financier. Jamais d'appel sans compte connecté
-// ni sur la photo d'une autre personne. Secrets : PHOTOROOM_API_KEY, OPENAI_API_KEY, IMPORT_TENUE_MODEL (facultatif).
+// ni sur la photo d'une autre personne. Secrets : OPENAI_API_KEY, IMPORT_TENUE_MODEL (facultatif).
 //
 // NON ESSAYÉ contre les vrais services : le contrat du détourage est celui de _shared/detourage.ts (extraits de documentation),
 // la lecture de la boîte des objets par le modèle n'a jamais été mesurée sur de vraies tenues.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
-import { FRACTION_GARDEE_MAX, FRACTION_GARDEE_MIN, MARGES_RECADRAGE, analyserDecoupe, assainerObjets, assainerVerification, cheminObjet, cotesCoupes, promptTenue, promptVerificationRecadrage, rectangleAffine, rectangleOpaque, rectangleDeRecadrage, recadrerPixels } from "../_shared/analyseTenue.ts";
+import { MARGES_RECADRAGE, assainerObjets, assainerVerification, cheminObjet, promptTenue, promptVerificationRecadrage, rectangleAffine, rectangleDeRecadrage, recadrerPixels } from "../_shared/analyseTenue.ts";
 import {
   cheminDansLeBucket,
-  detourerAvecFournisseur,
   estPhotoDetouree,
   typeImage,
   TAILLE_SOURCE_MAX_OCTETS,
   type CodeErreurDetourage,
 } from "../_shared/detourage.ts";
 import { authentifier, consommerQuota, estAppelantAdmin, jetonDepuisEntete, limiteDepuisEnv, urlPhotoAutorisee } from "../_shared/protection.ts";
-import { decoderImage, decoderPng, imageDataVersPng, imageDataVersWebp } from "../_shared/webp.ts";
+import { decoderImage, imageDataVersPng, imageDataVersWebp } from "../_shared/webp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,9 +64,8 @@ const base64 = (octets: Uint8Array) => {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const clePhotoroom = Deno.env.get("PHOTOROOM_API_KEY");
   const cleOpenai = Deno.env.get("OPENAI_API_KEY");
-  if (!clePhotoroom || !cleOpenai) return echec("non_configure");
+  if (!cleOpenai) return echec("non_configure");
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const cleAdmin = getAdminKey();
@@ -171,9 +170,8 @@ Deno.serve(async (req) => {
       }
     };
 
-    // 4. Un détourage PAR OBJET (11/10/2026) : chaque boîte est recadrée sur la photo d'origine, puis détourée seule. Le
-    // fournisseur isole ainsi la pièce de la boîte et non celle d'à côté : détourer d'abord la planche entière puis la recadrer laissait
-    // des fragments des pièces voisines dans les boîtes qui se chevauchent. Coût : un détourage par objet au lieu d'un par tenue.
+    // 4. Un recadrage PAR OBJET (11/10/2026), sur la photo d'origine : détourer d'abord la planche entière puis la recadrer laissait
+    // des fragments des pièces voisines dans les boîtes qui se chevauchent.
     const planche = await decoderImage(octetsSource, typeSource);
     const deposer = async (cheminSortie: string, image: ImageData): Promise<string | null> => {
       const encodee = await imageDataVersWebp(image);
@@ -190,66 +188,25 @@ Deno.serve(async (req) => {
     // Plus de planche à plat : tenue_url reste null, l'écran n'affiche pas la bascule photo / à plat.
     const tenueUrl: string | null = null;
     const rendus = [];
-    let codeEchec: CodeErreurDetourage | null = null;
     for (const [i, objet] of objets.entries()) {
-      // Jusqu'à deux détourages par objet (12/10/2026) : si la pièce touche le bord du recadrage côté intérieur de la photo, la boîte l'a
-      // coupée (un pantalon à la jambe) : on recommence UNE fois avec une marge plus large. Le second appel n'est payé que dans ce cas.
-      let piece: ImageData | null = null;
-      let arret = false;
-      for (const [tentative, marge] of MARGES_RECADRAGE.entries()) {
-        let r = rectangleDeRecadrage(planche.width, planche.height, objet.boite, marge);
-        let rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
-        let entree = await imageDataVersPng({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
-        if (!entree) break;
-        // Le modèle regarde de plus près ce recadrage : absent, la pièce n'est pas proposée (et aucun détourage payant n'est lancé) ; présent,
-        // on recadre plus serré sur ce qu'il a vu avant de détourer.
-        const verif = await verifierRecadrage(entree, { nom: objet.nom, cat: objet.cat });
-        if (verif && !verif.present) {
-          console.warn("[importer-tenue] objet", i, "écarté : absent de son recadrage");
-          break;
-        }
-        if (verif?.boite) {
-          r = rectangleAffine(r, verif.boite, planche.width, planche.height);
-          rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
-          const affine = await imageDataVersPng({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
-          if (affine) entree = affine;
-        }
-        const detouree = await detourerAvecFournisseur(fetch, clePhotoroom, entree);
-        if (!detouree.ok) {
-          console.error("[importer-tenue] échec détourage de l'objet", i, ":", detouree.code);
-          codeEchec = detouree.code;
-          // Plus de crédit ou clé refusée : les objets suivants échoueraient de même, on s'arrête (aucun appel payant de plus).
-          if (detouree.code === "credits_epuises" || detouree.code === "non_configure") arret = true;
-          break;
-        }
-        if (detouree.type !== "png") break;
-        const candidate = await decoderPng(detouree.octets);
-        const analyse = analyserDecoupe(candidate.data, candidate.width, candidate.height);
-        // Presque rien de gardé, ou presque tout : pas une pièce isolée (mauvaise boîte, fond non retiré) — jamais proposée.
-        if (analyse.fraction < FRACTION_GARDEE_MIN || analyse.fraction > FRACTION_GARDEE_MAX) {
-          console.warn("[importer-tenue] objet", i, "écarté : part gardée", analyse.fraction.toFixed(3));
-          break;
-        }
-        const coupes = cotesCoupes(analyse, r, planche.width, planche.height);
-        piece = candidate;
-        if (coupes.length === 0 || tentative === MARGES_RECADRAGE.length - 1) {
-          if (coupes.length) console.warn("[importer-tenue] objet", i, "encore coupé côtés", coupes.join(","), "après marge élargie");
-          break;
-        }
-        console.warn("[importer-tenue] objet", i, "coupé côtés", coupes.join(","), ": recadrage élargi");
+      // Le recadrage de chaque pièce est préparé ici, SANS détourage (12/10/2026) : le détourage est l'appel le plus cher et la moitié des
+      // pièces proposées ne sont pas gardées. Il se lance à l'ajout (detourer-photo, `recadrer`). Marge large d'abord, puis resserrée sur
+      // ce que la vérification a vu ; sans vérification (panne), la marge étroite : un recadrage large risquerait d'inclure la voisine.
+      let r = rectangleDeRecadrage(planche.width, planche.height, objet.boite, MARGES_RECADRAGE[1]);
+      let rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
+      const entree = await imageDataVersPng({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
+      if (!entree) continue;
+      const verif = await verifierRecadrage(entree, { nom: objet.nom, cat: objet.cat });
+      if (verif && !verif.present) {
+        console.warn("[importer-tenue] objet", i, "écarté : absent de son recadrage");
+        continue;
       }
-      if (arret) break;
-      if (!piece) continue;
-      // Cadrée sur la pièce : on rogne la transparence autour de ce que le détourage a gardé. Rien gardé : l'objet n'est pas proposé.
-      const cadre = rectangleOpaque(piece.data, piece.width, piece.height);
-      if (!cadre) continue;
-      const rogneePiece = recadrerPixels(piece.data, piece.width, piece.height, cadre);
-      const url = await deposer(cheminObjet(chemin, i), { data: rogneePiece.data, width: rogneePiece.width, height: rogneePiece.height, colorSpace: "srgb" } as ImageData);
-      // Un objet dont le détourage ou le fichier a échoué n'est pas proposé : jamais une pièce sans visuel, ni un recadrage rectangulaire.
+      if (verif?.boite) r = rectangleAffine(r, verif.boite, planche.width, planche.height);
+      else if (!verif) r = rectangleDeRecadrage(planche.width, planche.height, objet.boite, MARGES_RECADRAGE[0]);
+      rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
+      const url = await deposer(cheminObjet(chemin, i), { data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
       if (url) rendus.push({ ...objet, photo_url: url });
     }
-    // Aucun objet exploitable ET une cause de fournisseur : on la dit, au lieu d'une liste vide qui ressemblerait à « rien repéré ».
-    if (rendus.length === 0 && codeEchec) return echec(codeEchec);
     return reponse({ ok: true, tenue_url: tenueUrl, objets: rendus });
   } catch (err) {
     console.error("[importer-tenue] erreur inattendue :", err);

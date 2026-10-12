@@ -312,12 +312,12 @@ export function cotesCoupes(a: AnalyseDecoupe, r: Rectangle, largeurImage: numbe
 }
 
 /**
- * `{user}/{uuid}.jpg` + 2 devient `{user}/{uuid}.o2.detouree.webp` : même dossier, marque « détourée » seule (cf. detourage.ts). Plus de
- * marque « à plat » depuis le 11/10/2026 : l'import ne met plus la photo à plat, la mise à plat reste une action demandée sur la fiche.
+ * `{user}/{uuid}.jpg` + 2 devient `{user}/{uuid}.o2.webp` : même dossier, SANS la marque « détourée » (12/10/2026) : c'est un recadrage brut,
+ * détouré seulement à l'ajout de la pièce (detourer-photo l'écrit alors en `….o2.detouree.webp`, cf. detourage.ts).
  */
 export function cheminObjet(cheminOriginal: string, indice: number, ext: "webp" | "png" = "webp"): string {
   const base = cheminOriginal.replace(/\.[^./]+$/, "");
-  return `${base}.o${indice}.detouree.${ext}`;
+  return `${base}.o${indice}.${ext}`;
 }
 
 /** L'image à plat de toute la tenue (transparente), pour la montrer à côté de la photo — sans marque « détourée » : ce n'est la photo d'aucune pièce. */

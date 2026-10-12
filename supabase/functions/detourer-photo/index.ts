@@ -46,7 +46,8 @@ import {
   limiteDepuisEnv,
   urlPhotoAutorisee,
 } from "../_shared/protection.ts";
-import { toWebp } from "../_shared/webp.ts";
+import { FRACTION_GARDEE_MAX, FRACTION_GARDEE_MIN, analyserDecoupe, rectangleOpaque, recadrerPixels } from "../_shared/analyseTenue.ts";
+import { decoderPng, imageDataVersWebp, toWebp } from "../_shared/webp.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,8 +88,12 @@ Deno.serve(async (req) => {
   let photoUrl: string;
   // « mise_a_plat » : la pièce est portée sur la photo ; sinon, détourage simple (le fond seul).
   let miseAPlat = false;
+  // « recadrer » (12/10/2026) : la photo est le recadrage d'une pièce de « Importer une tenue » ; le résultat est rogné sur ce que le
+  // détourage a gardé, et refusé s'il n'est pas une pièce isolée (presque rien, ou presque tout, de gardé).
+  let recadrer = false;
   try {
     const body = await req.json();
+    recadrer = body.recadrer === true && body.mode !== "mise_a_plat";
     miseAPlat = body.mode === "mise_a_plat";
     photoUrl = String(body.photo_url || "");
     if (!photoUrl.startsWith("http")) throw new Error("photo_url invalide");
@@ -137,7 +142,19 @@ Deno.serve(async (req) => {
       console.error("[detourer-photo] échec fournisseur :", detouree.code);
       return echec(detouree.code);
     }
-    const encodee = detouree.type === "png" ? await toWebp(detouree.octets) : { bytes: detouree.octets, contentType: "image/webp", ext: "webp" };
+    let encodee = detouree.type === "png" ? await toWebp(detouree.octets) : { bytes: detouree.octets, contentType: "image/webp", ext: "webp" };
+    if (recadrer && detouree.type === "png") {
+      const image = await decoderPng(detouree.octets);
+      const analyse = analyserDecoupe(image.data, image.width, image.height);
+      const cadre = rectangleOpaque(image.data, image.width, image.height);
+      if (!cadre || analyse.fraction < FRACTION_GARDEE_MIN || analyse.fraction > FRACTION_GARDEE_MAX) {
+        console.warn("[detourer-photo] recadrage écarté : part gardée", analyse.fraction.toFixed(3));
+        return echec("photo_refusee");
+      }
+      const rogne = recadrerPixels(image.data, image.width, image.height, cadre);
+      const webp = await imageDataVersWebp({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
+      if (webp) encodee = webp;
+    }
     const ext = encodee.ext === "webp" ? "webp" : "png";
 
     // 3. L'enregistrement, au même dossier que l'original (même politique de stockage, même propriétaire).
