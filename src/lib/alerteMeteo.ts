@@ -150,11 +150,29 @@ export interface PropositionAdaptation {
 
 const bornesOk = (p: Item, t: number): boolean => (p.meteoMinTemp == null || t >= p.meteoMinTemp) && (p.meteoMaxTemp == null || t <= p.meteoMaxTemp);
 const bornesDeclarees = (p: Item): boolean => p.meteoMinTemp != null || p.meteoMaxTemp != null;
+const aUnIndice = (p: Item, contexte: ContexteSaisonnier): boolean => bornesDeclarees(p) || Boolean(p.saisons?.length && p.saisons.some((s) => contexte.saisons?.includes(s))) || p.season !== "Toutes saisons";
 
-/** Meilleure pièce d'abord : bornes DÉCLARÉES et respectées, puis occasion déclarée, puis la moins portée récemment, puis l'id (déterministe). */
-function classer(candidats: Item[], t: number, occasion: OccasionKey): Item[] {
+/** Écart de formalité maximal toléré entre une pièce et celle qu'elle remplace (paliers 0, 1, 3, 4) : au-delà, le look change de registre. */
+export const ECART_FORMALITE_MAX = 2;
+
+const ecartFormalite = (a: Item, b: Item): number | null => (a.niveauFormalite != null && b.niveauFormalite != null ? Math.abs(a.niveauFormalite - b.niveauFormalite) : null);
+
+/**
+ * Meilleure pièce d'abord : formalité la plus proche de celle de la pièce remplacée (ou du reste du look pour une couche ajoutée) quand les
+ * deux sont connues, puis bornes DÉCLARÉES et respectées, puis occasion déclarée, puis la moins portée récemment, puis l'id (déterministe).
+ * Une pièce dont l'écart de formalité dépasse ECART_FORMALITE_MAX n'est jamais candidate (12/10/2026, audit : sans cela 29 % des
+ * remplacements changeaient de registre). Formalité inconnue (pièces du dressing réel, qui n'en portent pas) : aucune contrainte — limite assumée.
+ */
+function classer(candidats: Item[], t: number, occasion: OccasionKey, reference?: readonly Item[]): Item[] {
+  const ecart = (p: Item): number => {
+    if (!reference?.length) return 0;
+    const e = reference.map((r) => ecartFormalite(p, r)).filter((x): x is number => x != null);
+    return e.length ? Math.min(...e) : 0;
+  };
   const note = (p: Item) => (bornesDeclarees(p) && bornesOk(p, t) ? 2 : 0) + (p.occasion?.includes(occasion) ? 1 : 0);
-  return [...candidats].sort((a, b) => note(b) - note(a) || (b.worn ?? 1e6) - (a.worn ?? 1e6) || a.id - b.id);
+  return candidats
+    .filter((p) => ecart(p) <= ECART_FORMALITE_MAX)
+    .sort((a, b) => ecart(a) - ecart(b) || note(b) - note(a) || (b.worn ?? 1e6) - (a.worn ?? 1e6) || a.id - b.id);
 }
 
 /**
@@ -178,13 +196,16 @@ export function proposerAdaptation(args: {
   if (!alerte) return null;
   const t = meteo.temp;
   const dejaLa = new Set(pieces.map((p) => p.id));
-  const eligibles = dressing.filter((p) => !dejaLa.has(p.id) && declaredOccasionOk(p, occasion) && estDeSaison(p, contexte) && bornesOk(p, t));
+  // Une pièce n'est candidate que s'il existe un INDICE de sa tenue à cette température : bornes déclarées respectées, ou saisons choisies qui
+  // contiennent celle du plan. Une pièce « toutes saisons » sans borne ni saison choisie ne dit rien : jamais proposée comme remède contre le
+  // froid ou le chaud. Sous la pluie, le fait utile est le type de chaussure (fermée), vérifié plus bas : pas d'indice de température requis.
+  const eligibles = dressing.filter((p) => !dejaLa.has(p.id) && declaredOccasionOk(p, occasion) && estDeSaison(p, contexte) && bornesOk(p, t) && (alerte.cause === "pluie" || aUnIndice(p, contexte)));
 
   const ids = new Map(pieces.map((p) => [p.id, p] as const));
   const changements: ChangementAdaptation[] = [];
   const pris = new Set<number>();
   const remplacer = (hors: Item, candidats: Item[]): boolean => {
-    const choix = classer(candidats.filter((c) => !pris.has(c.id)), t, occasion)[0];
+    const choix = classer(candidats.filter((c) => !pris.has(c.id)), t, occasion, [hors])[0];
     if (!choix) return false;
     ids.delete(hors.id);
     ids.set(choix.id, choix);
@@ -207,7 +228,8 @@ export function proposerAdaptation(args: {
     const aUneCouche = [...ids.values()].some((p) => (COUCHES as readonly string[]).includes(p.cat));
     if (!aUneCouche) {
       const cat = t < 10 ? "manteau" : "veste";
-      const choix = classer(eligibles.filter((c) => c.cat === cat && !pris.has(c.id)), t, occasion)[0] ?? classer(eligibles.filter((c) => (COUCHES as readonly string[]).includes(c.cat) && !pris.has(c.id)), t, occasion)[0];
+      const reste = [...ids.values()];
+      const choix = classer(eligibles.filter((c) => c.cat === cat && !pris.has(c.id)), t, occasion, reste)[0] ?? classer(eligibles.filter((c) => (COUCHES as readonly string[]).includes(c.cat) && !pris.has(c.id)), t, occasion, reste)[0];
       if (choix) {
         ids.set(choix.id, choix);
         pris.add(choix.id);

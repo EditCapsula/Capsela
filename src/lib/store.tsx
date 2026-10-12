@@ -6,7 +6,7 @@ import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
-import { previsionPour, type Prevision } from "./prevision";
+import { previsionPour, type MeteoMoment, type MomentJournee, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
 import { clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
 import { avecValise, enregistrerValise, fetchValises, fusionnerValises, garderValisesLocales, lireValisesLocales, supprimerValiseDuCompte, type ValiseGardee } from "./valises";
@@ -584,6 +584,12 @@ interface CapselaContextValue {
   sourceMeteo: SourceMeteo;
   /** Météo du jour consulté — celle que la tenue reçoit ; `weather` aujourd'hui (cf. docs/navigation-par-date.md). */
   meteoDuJour: Weather;
+  /**
+   * La prévision de la ville de l'accueil pour le MOMENT du jour consulté (« Soirée », « Matin »…), ou null quand elle n'est pas connue ou que
+   * le moment est passé. Pour juger un plan SANS lieu (12/10/2026) : jamais la météo actuelle ni les valeurs par défaut présentées comme celles
+   * du jour de l'événement.
+   */
+  meteoPourMoment: (moment: MomentJournee) => MeteoMoment | null;
   /** Le jour consulté : sa date, sa prévision (null si aucune), et l'attente de celle-ci. */
   jourConsulte: { decalage: number; date: Date; meteoPrevue: { temp: number; label: string } | null; amplitude: { min: number; max: number } | null; previsionEnChargement: boolean };
   /** Capsule par défaut personnalisée (suggestions du catalogue). */
@@ -2973,6 +2979,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     geoIsLive,
     sourceMeteo,
     meteoDuJour,
+    meteoPourMoment: (moment) =>
+      previsionJour?.ville === villeMeteo && previsionJour.prevision ? previsionPour(previsionJour.prevision, jourLocal(dateConsultee), moment) : null,
     jourConsulte: {
       decalage: state.jourDecalage,
       date: dateConsultee,

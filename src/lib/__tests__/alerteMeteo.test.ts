@@ -94,6 +94,18 @@ describe("proposerAdaptation — modifications minimales, depuis le dressing", (
     const p = proposerAdaptation({ pieces: [sandales], dressing: [sandales, baskets], meteo: { temp: 16, label: "Pluvieux" }, occasion: "quotidien", contexte: contexteCapsule("Printemps") });
     expect(p?.ids).toEqual([31]);
   });
+  it("jamais une pièce dont la formalité s'écarte trop de celle de la pièce remplacée", () => {
+    const jupeHabillee = piece(40, "jupe", "Jupe habillée", { meteoMinTemp: 14, niveauFormalite: 4 });
+    const jupeSport = piece(41, "jupe", "Jupe de sport", { meteoMinTemp: 2, saisons: ["Automne"], niveauFormalite: 0 });
+    const jupeProche = piece(42, "jupe", "Jupe plissée", { meteoMinTemp: 2, saisons: ["Automne"], niveauFormalite: 3 });
+    const p = proposerAdaptation({ pieces: [jupeHabillee, blazer], dressing: [jupeHabillee, blazer, jupeSport, jupeProche], meteo: { temp: 11, label: "Nuageux" }, occasion: "soiree", contexte });
+    expect(p?.ids).toContain(42);
+    expect(p?.ids).not.toContain(41);
+  });
+  it("une pièce « toutes saisons » sans borne ni saison choisie n'est jamais proposée contre le froid", () => {
+    const sansIndice = piece(43, "jupe", "Jupe sans information");
+    expect(proposerAdaptation({ pieces: [jupe, blazer], dressing: [jupe, blazer, sansIndice], meteo: { temp: 11, label: "Nuageux" }, occasion: "soiree", contexte })).toBeNull();
+  });
   it("une pièce est déterministe : même entrée, même proposition", () => {
     const args = { pieces: look, dressing: [...look, jupeChaude, bottines, cardigan], meteo: { temp: 8, label: "Nuageux" }, occasion: "soiree" as const, contexte };
     expect(proposerAdaptation(args)).toEqual(proposerAdaptation(args));
