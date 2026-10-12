@@ -69,6 +69,24 @@ export function SpinnerCintre({ sombre }: { sombre?: boolean }) {
   );
 }
 
+/**
+ * LA CARTE D'ANALYSE (12/10/2026, demandé : « le même écran pour une pièce et pour une tenue »), posée sur la photo en grand : le cintre
+ * qui tourne et une phrase, sans liste d'étapes. Partagée par « Ajouter une pièce » et « Importer une tenue », pour que le passage de
+ * l'un à l'autre ne se voie pas.
+ */
+export function CarteAnalyse() {
+  return (
+    <div role="status" aria-live="polite" className="absolute inset-0 flex items-center justify-center p-[18px]" style={{ background: "rgba(243,238,229,.64)" }}>
+      <div className="w-[236px] max-w-full bg-card border border-border rounded-[20px] px-4 py-[14px]">
+        <div className="flex items-center gap-[10px]">
+          <SpinnerCintre sombre />
+          <span className="font-serif font-medium text-[16px] text-ink">Capsela analyse ta photo</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChevronBas({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} width="16" height="16" fill="none" stroke="#5C5648" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -268,7 +286,6 @@ export default function AddScreen() {
 
   const analyseEnCours = state.addPhotoAnalyzing;
   const detourageEnCours = state.addPhotoDetourage === "en_cours";
-  const detourageFait = state.addPhotoDetourage === "fait";
   const lectureEnCours = analyseEnCours || detourageEnCours;
   const analysee = state.addPhotoAnalysee && creation;
   const photoDetouree = estPhotoDetouree(state.addPhotoUrl);
@@ -389,11 +406,6 @@ export default function AddScreen() {
     actions.saveItem();
   };
 
-  const etapes: { label: string; etat: "faite" | "cours" | "attente" }[] = [
-    { label: "Couleur principale", etat: analyseEnCours ? "cours" : "faite" },
-    { label: "Catégorie", etat: analyseEnCours ? "attente" : "faite" },
-    { label: "Détourage de la pièce", etat: detourageEnCours ? "cours" : detourageFait ? "faite" : "attente" },
-  ];
 
   const libelleCta = state.addDone
     ? "Ajoutée au dressing"
@@ -446,27 +458,7 @@ export default function AddScreen() {
                 </svg>
               </button>
             )}
-            {(lectureEnCours || etat === "chargement") && (
-              <div role="status" aria-live="polite" className="absolute inset-0 flex items-center justify-center p-[18px]" style={{ background: "rgba(243,238,229,.64)" }}>
-                <div className="w-[236px] max-w-full bg-card border border-border rounded-[20px] px-4 pt-[14px] pb-[10px]">
-                  <div className="flex items-center gap-[10px]">
-                    <SpinnerCintre sombre />
-                    <span className="font-serif font-medium text-[16px] text-ink">Capsela analyse ta photo</span>
-                  </div>
-                  <ul className="flex flex-col mt-2 list-none p-0 m-0">
-                    {etapes.map((e) => (
-                      <li key={e.label} className={"flex items-center gap-[10px] min-h-[30px] text-[12.5px] " + (e.etat === "attente" ? "text-[#8B8375]" : "text-ink")}>
-                        <svg viewBox="0 0 24 24" className="w-[16px] h-[16px] flex-shrink-0" fill={e.etat === "cours" ? "#A66950" : "none"} stroke={e.etat === "faite" ? "#9E5B43" : e.etat === "cours" ? "#A66950" : "#CFC3B0"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <path d={e.etat === "faite" ? "M6 12.5l4 4 8-9" : e.etat === "cours" ? "M12 8.5a3.5 3.5 0 1 1 0 7a3.5 3.5 0 1 1 0-7z" : "M12 7a5 5 0 1 1 0 10a5 5 0 1 1 0-10z"} />
-                        </svg>
-                        {e.label}
-                        <span className="sr-only">{e.etat === "faite" ? " : fait" : e.etat === "cours" ? " : en cours" : " : à venir"}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
+            {(lectureEnCours || etat === "chargement") && <CarteAnalyse />}
           </div>
         ) : (
           <>
