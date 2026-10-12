@@ -1770,11 +1770,12 @@ export function generateOutfitWithFallback(
 }
 
 /**
- * Remplace une pièce de la tenue par une autre de la même famille de
- * catégorie, en priorité une qui s'accorde avec le reste de la tenue.
- * Les baskets sont écartées du tirage si l'occasion est habillée (R-B6).
+ * Les CANDIDATES de remplacement d'une pièce de la tenue (ou d'ajout : `pieceId` qui n'est dans la tenue), toutes les règles du moteur
+ * appliquées : saison, sport/cocooning, plancher de formalité de l'occasion, baskets en tenue habillée (R-B6), soleil (R-B15), shorts
+ * (R-B20), chaussures ouvertes sous la pluie (R-B21) et d'été sous 15° (R-B22), bornes de température, puis harmonize (couleur, formalité,
+ * coupe, style). Sorti de swapOutfitPiece le 12/10/2026 pour que l'adaptation d'un look planifié à la météo suive EXACTEMENT les mêmes règles.
  */
-export function swapOutfitPiece(
+export function candidatsDeRemplacement(
   outfitItems: Item[],
   pool: Item[],
   pieceId: number,
@@ -1785,7 +1786,7 @@ export function swapOutfitPiece(
   weather?: Weather,
   /** Soirée habillée (occasions.ts) : les règles de l'ancienne « Sortie festive » s'appliquent au remplacement comme au tirage. */
   soireeHabillee = false
-): number[] {
+): Item[] {
   const soireeHabilleeSwap = occasion === "soiree" && soireeHabillee;
   const catGroup: CategoryKey[] =
     BAS_CATS.includes(cat) ? BOTTOMS : cat === "accessoire" ? ["accessoire", "bijou", "sac"] : [cat];
@@ -1910,9 +1911,29 @@ export function swapOutfitPiece(
       candidates = candidates.filter((i) => i.cat !== "accessoire" || i.accessoireType !== "Collants");
     }
   }
-  if (!candidates.length) return outfitItems.map((i) => i.id);
+  if (!candidates.length) return [];
   const rest = outfitItems.filter((i) => i.id !== pieceId);
-  const next = rand(harmonize(candidates, rest));
+  return harmonize(candidates, rest);
+}
+
+/**
+ * Remplace une pièce de la tenue par une autre de la même famille de
+ * catégorie, en priorité une qui s'accorde avec le reste de la tenue.
+ * Les baskets sont écartées du tirage si l'occasion est habillée (R-B6).
+ */
+export function swapOutfitPiece(
+  outfitItems: Item[],
+  pool: Item[],
+  pieceId: number,
+  cat: CategoryKey,
+  occasion: OccasionKey = "all",
+  workMode: WorkMode = "Présentiel",
+  dateContext: DateContext = "Verre",
+  weather?: Weather,
+  /** Soirée habillée (occasions.ts) : les règles de l'ancienne « Sortie festive » s'appliquent au remplacement comme au tirage. */
+  soireeHabillee = false
+): number[] {
+  const next = rand(candidatsDeRemplacement(outfitItems, pool, pieceId, cat, occasion, workMode, dateContext, weather, soireeHabillee));
   if (!next) return outfitItems.map((i) => i.id);
   return outfitItems.map((i) => (i.id === pieceId ? next.id : i.id));
 }

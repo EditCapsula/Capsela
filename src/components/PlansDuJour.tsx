@@ -4,10 +4,18 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { occasionShortLabel } from "@/lib/data";
 import { jourLocal } from "@/lib/outfitFeedback";
 import { evaluerAlerteMeteo, libelleChangement, proposerAdaptation, type AlerteMeteo, type MeteoDuPlan } from "@/lib/alerteMeteo";
-import { contexteCapsule, saisonCalendairePour } from "@/lib/capsule";
+import { CHALEUR_HORS_SAISON, computeDefaultCapsule, saisonCalendairePour, weatherForDay } from "@/lib/capsule";
+import { CATS } from "@/lib/data";
+import { poolDePlanification } from "@/lib/selectors";
+import type { CategoryKey } from "@/lib/types";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
+import { soireeHabillee } from "@/lib/occasions";
+import { sousChoixDuPlan } from "@/lib/planDuJour";
+import { paletteHexes } from "@/lib/profile";
+import { useAuth } from "@/lib/auth";
 import { plansDuJour, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import { useCapsela } from "@/lib/store";
-import { useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
+import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import type { Item } from "@/lib/types";
 
 /**
@@ -17,7 +25,7 @@ import type { Item } from "@/lib/types";
  * planifiée » de l'Accueil et de Tenue.
  */
 export function usePlanApplique(): { plan: TenuePlanifiee; alerte: AlerteMeteo | null; pieces: Item[]; meteo: MeteoDuPlan | null } | null {
-  const { state, vestiairePool, meteoDuJour } = useCapsela();
+  const { state, vestiairePool, meteoPourMoment } = useCapsela();
   const plan = state.planAppliqueId ? (state.tenuesPlanifiees.find((t) => t.id === state.planAppliqueId) ?? null) : null;
   // La météo du LIEU et du MOMENT du plan (useMeteoDuPlan), pas celle de la ville de la personne : un plan « Gagny, ce
   // soir » ne se juge pas sur la météo de la journée ailleurs. Un plan sans lieu garde la météo du jour ; un plan avec
@@ -26,7 +34,10 @@ export function usePlanApplique(): { plan: TenuePlanifiee; alerte: AlerteMeteo |
   if (!plan) return null;
   const pool: Item[] = [...state.items, ...vestiairePool];
   const pieces = plan.pieceIds.map((id) => pool.find((i) => i.id === id)).filter((i): i is Item => !!i);
-  const meteo = meteoPlan ?? (villeDuLieu(plan.lieu) ? null : meteoDuJour);
+  // Un plan SANS lieu se juge sur la prévision de la ville de l'accueil pour SON moment (meteoPourMoment) — jamais sur la météo actuelle, ni
+  // sur les valeurs par défaut ou la température d'aujourd'hui reprise pour un autre jour (signalé à l'audit du 12/10/2026 : meteoDuJour en
+  // était un repli). Prévision absente : pas d'alerte.
+  const meteo = villeDuLieu(plan.lieu) ? meteoPlan : meteoPourMoment(plan.moment);
   const alerte = meteo ? evaluerAlerteMeteo(pieces, meteo, { ville: villeDuLieu(plan.lieu) || undefined, moment: plan.moment }) : null;
   return { plan, alerte, pieces, meteo };
 }
@@ -39,20 +50,40 @@ export function usePlanApplique(): { plan: TenuePlanifiee; alerte: AlerteMeteo |
  * « Modifier ce look » reprend le parcours complet — le CTA ne reste jamais sans effet. Posée sur le fond terracotta de la carte.
  */
 export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<ReturnType<typeof usePlanApplique>> }) {
-  const { state, actions } = useCapsela();
+  const { state, vestiairePool, actions } = useCapsela();
+  const { profile } = useAuth();
   const { alerte, plan, pieces, meteo } = planApplique;
   if (!alerte || !meteo) return null;
   const adapter = () => {
+    // Le MÊME pool que celui qui compose une tenue planifiée : le dressing d'abord, complété par la capsule de la saison du plan.
+    const saisonDuPlan = saisonCalendairePour(new Date(`${plan.jour}T12:00:00`));
+    const meteoMoteur = weatherForDay(meteo.temp, meteo.label, saisonDuPlan, CHALEUR_HORS_SAISON);
+    const capsule = plan.dressingSeul ? [] : computeDefaultCapsule(profile, meteoMoteur, state.suggestedExcluded, saisonDuPlan, vestiairePool);
+    const pool = poolDePlanification({ items: state.items, capsule, occasion: plan.occasion, dressingSeul: plan.dressingSeul, meteo: meteoMoteur, categories: CATS.map(([k]) => k) as CategoryKey[] });
     const proposition = proposerAdaptation({
       pieces,
-      dressing: state.items,
+      pool,
+      dressingIds: new Set(state.items.map((i) => i.id)),
       meteo,
       occasion: plan.occasion,
-      contexte: contexteCapsule(saisonCalendairePour(new Date(`${plan.jour}T12:00:00`))),
+      saisonDuPlan,
+      moteur: {
+        ...sousChoixDuPlan(plan),
+        soireeHabillee: plan.occasion === "soiree" && soireeHabillee({ typeLieu: plan.typeLieu, humeur: plan.humeur ?? null }),
+        paletteHexes: paletteHexes(profile),
+        morphology: profile.morphology,
+        colorimetrie: colorimetrieMoteur(profile.colorimetrie),
+      },
       ctx: { ville: villeDuLieu(plan.lieu) || undefined, moment: plan.moment },
     });
-    if (proposition) actions.adapterPlan(plan, proposition.ids, proposition.changements.map(libelleChangement), "home");
-    else actions.ouvrirPlan(plan, "home");
+    if (!proposition) return actions.ouvrirPlan(plan, "home");
+    // Planifier ne place une tenue que dans les jours À VENIR : pour un plan d'aujourd'hui, la date serait perdue (audit du 12/10/2026). Le look
+    // adapté s'ouvre alors comme tenue du jour (écran Tenue), sans toucher au plan, qui n'est remplacé que par un enregistrement explicite.
+    if (ecartJoursDuPlan(plan.jour) <= 0) {
+      actions.viewItemOutfit(proposition.ids, plan.occasion);
+      return actions.goTenues();
+    }
+    actions.adapterPlan(plan, proposition.ids, proposition.changements.map(libelleChangement), "home");
   };
   return (
     <div

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { Weather } from "../data";
 import {
   allegement,
   alternatives,
@@ -522,5 +523,24 @@ describe("chaussures et sac — la règle d'un look de valise", () => {
     expect(lookAChaussuresEtSac([1, 2, 3, 5], pool)).toBe(true);
     expect(lookAChaussuresEtSac([1, 2, 3], pool)).toBe(false);
     expect(lookAChaussuresEtSac([1, 2, 5], pool)).toBe(false);
+  });
+});
+
+describe("completerChaussuresEtSac — règles du moteur (12/10/2026)", () => {
+  const p = (id: number, cat: Item["cat"], name: string, extra: Partial<Item> = {}): Item => ({ id, name, cat, color: "Noir", hex: "#1D1A16", season: "Toutes saisons", worn: null, ...extra });
+  const tenue = [p(1, "haut", "T-shirt"), p(2, "pantalon", "Pantalon")];
+  const sandales = p(10, "chaussures", "Sandales", { shoeType: "Sandales" });
+  const bottines = p(11, "chaussures", "Bottines", { shoeType: "Bottines" });
+  const sac = p(12, "sac", "Sac cabas");
+  const pluie = { season: "Automne / Hiver", temp: 10, label: "Pluvieux", seasons: ["Automne / Hiver", "Toutes saisons"] } as Weather;
+
+  it("sans contexte, comportement d'origine : une paire quelconque du pool", () => {
+    expect(completerChaussuresEtSac([1, 2], [...tenue, sandales, sac], () => 0)).toEqual([1, 2, 10, 12]);
+  });
+  it("avec le moteur : pas de sandales sous la pluie, ni sous 15 °C", () => {
+    expect(completerChaussuresEtSac([1, 2], [...tenue, sandales, bottines, sac], () => 0, { occasion: "quotidien", meteo: pluie })).toEqual([1, 2, 11, 12]);
+  });
+  it("avec le moteur : si aucune paire n'est acceptée, ce n'est pas un look de valise", () => {
+    expect(completerChaussuresEtSac([1, 2], [...tenue, sandales, sac], () => 0, { occasion: "quotidien", meteo: pluie })).toBeNull();
   });
 });

@@ -3,7 +3,7 @@ import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgr
 import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
-import { categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
+import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
 import { composeWardrobePool } from "./selectors";
 import type { CategoryKey, Item, OccasionKey } from "./types";
 
@@ -304,7 +304,8 @@ export function generateurMoteur(
     if (!pool.length) return null;
     const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
-    const ids = completerChaussuresEtSac(r.ids, pool);
+    // Les chaussures et le sac ajoutés suivent les règles du moteur (météo, occasion, couleur, saison) : 12/10/2026, demandé « tenir compte des règles du moteur ».
+    const ids = completerChaussuresEtSac(r.ids, pool, undefined, { occasion: s.occasion, meteo: s.meteo });
     return ids ? { ids, elargie: r.occasionRelachee } : null;
   };
 }
@@ -317,11 +318,25 @@ export function generateurMoteur(
  * (null) — « Optimise ta valise » dit alors ce qui manque. La pièce ajoutée est tirée au hasard parmi celles du pool, comme
  * le moteur tire ses tenues : plusieurs tirages font apparaître plusieurs paires.
  */
-export function completerChaussuresEtSac(ids: number[], pool: Item[], hasard: () => number = Math.random): number[] | null {
+export function completerChaussuresEtSac(
+  ids: number[],
+  pool: Item[],
+  hasard: () => number = Math.random,
+  /**
+   * Avec ce contexte (12/10/2026, demandé : « tenir compte des règles du moteur »), les candidates sont celles que le moteur accepterait pour
+   * cette pièce (candidatsDeRemplacement : météo, occasion, saison, couleur, formalité, coupe, style) et non plus n'importe quelle paire ou
+   * sac du pool — qui pouvait être des sandales sous la pluie ou des baskets avec une tenue habillée. Aucune candidate acceptée : pas de look.
+   * Sans contexte, comportement d'origine.
+   */
+  moteur?: { occasion: OccasionKey; meteo: Weather }
+): number[] | null {
   const sortie = [...ids];
   for (const cat of ["chaussures", "sac"] as const) {
     if (sortie.some((id) => pool.find((p) => p.id === id)?.cat === cat)) continue;
-    const candidats = pool.filter((p) => p.cat === cat && !sortie.includes(p.id));
+    const dejaLa = pool.filter((p) => sortie.includes(p.id));
+    const candidats = moteur
+      ? candidatsDeRemplacement(dejaLa, pool.filter((p) => !sortie.includes(p.id)), -1, cat, moteur.occasion, "Présentiel", "Verre", moteur.meteo).filter((p) => p.cat === cat)
+      : pool.filter((p) => p.cat === cat && !sortie.includes(p.id));
     if (!candidats.length) return null;
     sortie.push(candidats[Math.min(candidats.length - 1, Math.floor(hasard() * candidats.length))].id);
   }

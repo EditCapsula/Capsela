@@ -34,7 +34,7 @@ import { repartirPlanifications, type ValiseGardee } from "@/lib/valises";
 import { VISUEL_SEJOUR } from "@/lib/valise";
 import { libelleStyles, paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
-import { composeWardrobePool } from "@/lib/selectors";
+import { poolDePlanification } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
@@ -504,9 +504,7 @@ function composerTenuePlan(e: {
   typeLieu: string | null;
 }) {
   if (!e.occ) return null;
-  const pool = e.dressingSeul
-    ? e.items
-    : composeWardrobePool(e.items, e.capsule, CAT_KEYS, { completerPourOccasion: e.occ, saison: e.meteo, exclureHorsOccasion: true, completerPourSaison: e.meteo });
+  const pool = poolDePlanification({ items: e.items, capsule: e.capsule, occasion: e.occ, dressingSeul: e.dressingSeul, meteo: e.meteo, categories: CAT_KEYS });
   return genererTenueHumeur({
     pool,
     weather: e.meteo,
@@ -1102,8 +1100,12 @@ export default function PlanifierScreen() {
    * (même précaution que saveItem). En cas d'échec on le dit — une tenue qu'on
    * croit gardée et qui a disparu au rechargement coûte plus qu'un message.
    */
+  const enregistrementEnCours = useRef(false);
   const garder = async () => {
     if (!userId || !occ || jour == null || !moment || sansTenue) return;
+    // Un double clic ne lance pas deux enregistrements (l'état `enregistrement` n'est à jour qu'au rendu suivant).
+    if (enregistrementEnCours.current) return;
+    enregistrementEnCours.current = true;
     setEnregistrement(true);
     try {
       const ligne = await upsertTenuePlanifiee(userId, {
@@ -1155,6 +1157,7 @@ export default function PlanifierScreen() {
     } catch {
       flash("L'enregistrement a échoué. Réessaie.");
     } finally {
+      enregistrementEnCours.current = false;
       setEnregistrement(false);
     }
   };

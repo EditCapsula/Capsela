@@ -1,4 +1,4 @@
-import { MONTHS_FR, OCC_LABELS, occasionShortLabel } from "./data";
+import { MONTHS_FR, OCC_LABELS, occasionShortLabel, type Weather } from "./data";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour, type ContexteSaisonnier } from "./capsule";
 import type { CapsuleSeason, CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
@@ -803,4 +803,18 @@ export function formatOpinionMessage(parts: OpinionMessageParts): string {
 /** Le message complet, en une fois — forme d'appel historique, conservée. */
 export function buildOpinionMessage(args: Parameters<typeof buildOpinionMessageParts>[0]): string {
   return formatOpinionMessage(buildOpinionMessageParts(args));
+}
+
+
+/**
+ * LE POOL DU MOTEUR POUR UNE TENUE PLANIFIÉE : le dressing d'abord, complété — catégorie par catégorie — par les pièces de la capsule de la
+ * saison de la date quand le dressing n'a rien de convenable pour l'occasion et la saison ; un plan « dressing seul » ne reçoit que le
+ * dressing. Sorti de Planifier (composerTenuePlan) le 12/10/2026 pour que l'adaptation d'un look à la météo prévue prenne ses pièces dans
+ * LE MÊME pool que celui qui a composé le look (« pour compléter une tenue, on peut faire appel aux pièces de la capsule de la saison en
+ * cours en plus du dressing : c'est déjà implémenté »).
+ */
+export function poolDePlanification(e: { items: Item[]; capsule: Item[]; occasion: OccasionKey; dressingSeul: boolean; meteo: Weather; categories: CategoryKey[] }): Item[] {
+  return e.dressingSeul
+    ? e.items
+    : composeWardrobePool(e.items, e.capsule, e.categories, { completerPourOccasion: e.occasion, saison: e.meteo, exclureHorsOccasion: true, completerPourSaison: e.meteo });
 }
