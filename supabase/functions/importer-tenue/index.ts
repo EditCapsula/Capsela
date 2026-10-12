@@ -19,7 +19,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
-import { FRACTION_GARDEE_MAX, FRACTION_GARDEE_MIN, MARGES_RECADRAGE, analyserDecoupe, assainerObjets, cheminObjet, cotesCoupes, promptTenue, rectangleOpaque, rectangleDeRecadrage, recadrerPixels } from "../_shared/analyseTenue.ts";
+import { FRACTION_GARDEE_MAX, FRACTION_GARDEE_MIN, MARGES_RECADRAGE, analyserDecoupe, assainerObjets, assainerVerification, cheminObjet, cotesCoupes, promptTenue, promptVerificationRecadrage, rectangleAffine, rectangleOpaque, rectangleDeRecadrage, recadrerPixels } from "../_shared/analyseTenue.ts";
 import {
   cheminDansLeBucket,
   detourerAvecFournisseur,
@@ -148,6 +148,29 @@ Deno.serve(async (req) => {
     // Rien de repéré : aucune découpe, aucun détourage payant.
     if (objets.length === 0) return reponse({ ok: true, tenue_url: null, objets: [] });
 
+    // Vérification d'un recadrage par le modèle de vision (12/10/2026) : l'article est-il vraiment dans ce recadrage, et où ? Une réponse
+    // illisible ou un échec du service rend null : l'appelant garde alors son recadrage (jamais une pièce rejetée sur une panne).
+    const verifierRecadrage = async (png: Uint8Array, o: { nom: string; cat: string }) => {
+      try {
+        const rep = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${cleOpenai}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: modele,
+            store: false,
+            response_format: { type: "json_object" },
+            max_tokens: 200,
+            messages: [{ role: "user", content: [{ type: "text", text: promptVerificationRecadrage(o) }, { type: "image_url", image_url: { url: `data:image/png;base64,${base64(png)}`, detail: "low" } }] }],
+          }),
+        });
+        if (!rep.ok) return null;
+        const texte = (await rep.json())?.choices?.[0]?.message?.content;
+        return texte ? assainerVerification(JSON.parse(texte)) : null;
+      } catch {
+        return null;
+      }
+    };
+
     // 4. Un détourage PAR OBJET (11/10/2026) : chaque boîte est recadrée sur la photo d'origine, puis détourée seule. Le
     // fournisseur isole ainsi la pièce de la boîte et non celle d'à côté : détourer d'abord la planche entière puis la recadrer laissait
     // des fragments des pièces voisines dans les boîtes qui se chevauchent. Coût : un détourage par objet au lieu d'un par tenue.
@@ -174,10 +197,23 @@ Deno.serve(async (req) => {
       let piece: ImageData | null = null;
       let arret = false;
       for (const [tentative, marge] of MARGES_RECADRAGE.entries()) {
-        const r = rectangleDeRecadrage(planche.width, planche.height, objet.boite, marge);
-        const rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
-        const entree = await imageDataVersPng({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
+        let r = rectangleDeRecadrage(planche.width, planche.height, objet.boite, marge);
+        let rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
+        let entree = await imageDataVersPng({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
         if (!entree) break;
+        // Le modèle regarde de plus près ce recadrage : absent, la pièce n'est pas proposée (et aucun détourage payant n'est lancé) ; présent,
+        // on recadre plus serré sur ce qu'il a vu avant de détourer.
+        const verif = await verifierRecadrage(entree, { nom: objet.nom, cat: objet.cat });
+        if (verif && !verif.present) {
+          console.warn("[importer-tenue] objet", i, "écarté : absent de son recadrage");
+          break;
+        }
+        if (verif?.boite) {
+          r = rectangleAffine(r, verif.boite, planche.width, planche.height);
+          rogne = recadrerPixels(planche.data, planche.width, planche.height, r);
+          const affine = await imageDataVersPng({ data: rogne.data, width: rogne.width, height: rogne.height, colorSpace: "srgb" } as ImageData);
+          if (affine) entree = affine;
+        }
         const detouree = await detourerAvecFournisseur(fetch, clePhotoroom, entree);
         if (!detouree.ok) {
           console.error("[importer-tenue] échec détourage de l'objet", i, ":", detouree.code);

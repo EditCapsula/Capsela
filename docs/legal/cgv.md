@@ -20,7 +20,7 @@ Elles complètent les Conditions générales d'utilisation.
 
 Capsela Premium donne accès, pendant la durée de l'abonnement, à :
 
-- un dressing sans limite de pièces (la version gratuite en compte 20) ;
+- un dressing sans limite de pièces (la version gratuite en compte 50) ;
 - des tenues sans limite (« Autre tenue ») ;
 - la planification de tenues ;
 - l'avis de styliste, dans la limite de 5 analyses par mois ;

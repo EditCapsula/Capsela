@@ -134,7 +134,7 @@ const pieces = (n: number) => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
 const categories = (n: number) => `${n} ${n <= 1 ? "catégorie" : "catégories"}`;
 
 /**
- * « X / 20 pièces · Y catégories ».
+ * « X / 50 pièces · Y catégories ».
  *
  * « / 20 » N'APPARAÎT QUE LORSQUE LA LIMITE S'APPLIQUE, c'est-à-dire en
  * gratuit vérifié — même règle que `placesRestantes` : jamais en Premium,

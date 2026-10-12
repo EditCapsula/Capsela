@@ -12,6 +12,9 @@ import {
   rectangleOpaque,
   saisonsLues,
   analyserDecoupe,
+  assainerVerification,
+  promptVerificationRecadrage,
+  rectangleAffine,
   cotesCoupes,
 } from "../../../supabase/functions/_shared/analyseTenue.ts";
 import { estPhotoDetouree, estPhotoMiseAPlat } from "../../../supabase/functions/_shared/detourage.ts";
@@ -241,5 +244,34 @@ describe("analyserDecoupe / cotesCoupes — fiabiliser les cadrages (12/10/2026)
     // Recadrage collé en haut de l'image (y = 0) et à droite : la photo elle-même coupe, pas la boîte.
     expect(cotesCoupes(a, { x: 50, y: 0, l: 50, h: 60 }, 100, 100)).toEqual(["bas"]);
     expect(cotesCoupes(a, { x: 10, y: 10, l: 50, h: 60 }, 100, 100)).toEqual(["haut", "bas", "droite"]);
+  });
+});
+
+describe("vérification d'un recadrage (12/10/2026)", () => {
+  it("le prompt nomme l'article et demande une boîte serrée, jamais la personne entière", () => {
+    const p = promptVerificationRecadrage({ nom: "Veste oversize beige", cat: "veste" });
+    expect(p).toContain("Veste oversize beige");
+    expect(p).toContain("Ne cadre jamais la personne entière");
+  });
+  it("une réponse valide : présent avec sa boîte, ou absent", () => {
+    expect(assainerVerification({ present: true, boite: [0.2, 0.1, 0.5, 0.6] })).toEqual({ present: true, boite: { x: 0.2, y: 0.1, l: 0.5, h: 0.6 } });
+    expect(assainerVerification({ present: false, boite: null })).toEqual({ present: false, boite: null });
+  });
+  it("une réponse illisible : null (l'appelant garde son recadrage)", () => {
+    expect(assainerVerification(null)).toBeNull();
+    expect(assainerVerification({ present: "oui" })).toBeNull();
+    expect(assainerVerification("x")).toBeNull();
+  });
+  it("présent sans boîte exploitable : présent, boîte nulle", () => {
+    expect(assainerVerification({ present: true, boite: [0, 0, 0, 0] })).toEqual({ present: true, boite: null });
+  });
+  it("rectangleAffine ramène la boîte du recadrage dans l'image d'origine, bornée", () => {
+    const r = { x: 100, y: 200, l: 400, h: 600 };
+    const a = rectangleAffine(r, { x: 0.25, y: 0.25, l: 0.5, h: 0.5 }, 1000, 1000, 0);
+    expect(a).toEqual({ x: 200, y: 350, l: 200, h: 300 });
+    const bord = rectangleAffine(r, { x: 0, y: 0, l: 1, h: 1 }, 450, 700, 0.5);
+    expect(bord.x).toBeGreaterThanOrEqual(0);
+    expect(bord.x + bord.l).toBeLessThanOrEqual(450);
+    expect(bord.y + bord.h).toBeLessThanOrEqual(700);
   });
 });

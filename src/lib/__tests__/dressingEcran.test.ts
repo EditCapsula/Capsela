@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CATS } from "../data";
+import { LIMITE_DRESSING_GRATUIT as L } from "../premium";
 import {
   DRESSING_GROUPS,
   MIN_PIECES_DRESSING_ASSOCIATION,
@@ -90,20 +91,20 @@ describe("groupesDuVestiaire", () => {
 
 describe("syntheseDressing — les quatre états de la limite gratuite", () => {
   it.each([
-    [0, 0, "0 / 20 pièces", false],
-    [5, 3, "5 / 20 pièces · 3 catégories", false],
-    [19, 5, "19 / 20 pièces · 5 catégories", false],
-    [20, 5, "20 / 20 pièces · 5 catégories", true],
+    [0, 0, `0 / ${L} pièces`, false],
+    [5, 3, `5 / ${L} pièces · 3 catégories`, false],
+    [L - 1, 5, `${L - 1} / ${L} pièces · 5 catégories`, false],
+    [L, 5, `${L} / ${L} pièces · 5 catégories`, true],
   ])("gratuit, %i pièces", (n, c, texte, complet) => {
     expect(syntheseDressing("gratuit", n, c)).toEqual({ texte, complet });
   });
 
-  it("au-delà de 20 (pièces antérieures à la limite) : pas de « 23 / 20 », mais complet", () => {
-    expect(syntheseDressing("gratuit", 23, 6)).toEqual({ texte: "23 pièces · 6 catégories", complet: true });
+  it("au-delà de la limite (pièces antérieures à celle-ci) : pas de « 53 / 50 », mais complet", () => {
+    expect(syntheseDressing("gratuit", L + 3, 6)).toEqual({ texte: `${L + 3} pièces · 6 catégories`, complet: true });
   });
 
   it("Premium ou droit non vérifié : aucune limite annoncée", () => {
-    expect(syntheseDressing("premium", 20, 5)).toEqual({ texte: "20 pièces · 5 catégories", complet: false });
+    expect(syntheseDressing("premium", L, 5)).toEqual({ texte: `${L} pièces · 5 catégories`, complet: false });
     expect(syntheseDressing("inconnu", 1, 1)).toEqual({ texte: "1 pièce · 1 catégorie", complet: false });
   });
 });
@@ -131,7 +132,7 @@ describe("choisirADecouvrir", () => {
   });
 
   it("proche de la limite gratuite : jamais d'incitation à ajouter, même s'il manque une catégorie", () => {
-    expect(choisirADecouvrir({ ...base, nbPieces: 18, nbManques: 4 })).toEqual({ cas: "proche_limite", nbPieces: 18 });
+    expect(choisirADecouvrir({ ...base, nbPieces: L - 2, nbManques: 4 })).toEqual({ cas: "proche_limite", nbPieces: L - 2 });
     expect(choisirADecouvrir({ ...base, etat: "premium", nbPieces: 18, nbManques: 4 })).toEqual({ cas: "manque" });
   });
 
@@ -159,10 +160,10 @@ describe("assezDuDressing — une association complétée par la capsule reste �
 
 describe("enteteDressing — le total en ligne forte, comme la Capsule", () => {
   it("gratuit : le total, les catégories et les places restantes", () => {
-    expect(enteteDressing("gratuit", 7, 3)).toEqual({ titre: "7 pièces dans ton dressing", detail: "3 catégories · 13 places restantes" });
-    expect(enteteDressing("gratuit", 19, 5).detail).toBe("5 catégories · 1 place restante");
-    expect(enteteDressing("gratuit", 20, 5).detail).toBe("5 catégories · dressing complet");
-    expect(enteteDressing("gratuit", 23, 6).detail).toBe("6 catégories · dressing complet");
+    expect(enteteDressing("gratuit", 7, 3)).toEqual({ titre: "7 pièces dans ton dressing", detail: `3 catégories · ${L - 7} places restantes` });
+    expect(enteteDressing("gratuit", L - 1, 5).detail).toBe("5 catégories · 1 place restante");
+    expect(enteteDressing("gratuit", L, 5).detail).toBe("5 catégories · dressing complet");
+    expect(enteteDressing("gratuit", L + 3, 6).detail).toBe("6 catégories · dressing complet");
   });
   it("Premium ou droit non vérifié : aucune limite annoncée", () => {
     expect(enteteDressing("premium", 7, 3)).toEqual({ titre: "7 pièces dans ton dressing", detail: "3 catégories" });

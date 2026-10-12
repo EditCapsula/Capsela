@@ -11,8 +11,8 @@ import { getSupabase, isSupabaseConfigured } from "./supabase";
  * la clé de service y écrit.
  */
 
-/** Pièces qu'un dressing gratuit peut contenir — arbitré le 24/09/2026. */
-export const LIMITE_DRESSING_GRATUIT = 20;
+/** Pièces qu'un dressing gratuit peut contenir — arbitré le 24/09/2026 à 20, porté à 50 le 12/10/2026 (demandé : « élève à 50 le nombre de pièces autorisées, après on bascule sur Premium »). */
+export const LIMITE_DRESSING_GRATUIT = 50;
 
 /**
  * Générations de tenues offertes par jour sans abonnement — arbitré le
