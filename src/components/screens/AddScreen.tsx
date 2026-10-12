@@ -9,6 +9,7 @@ import { etatAjout } from "@/lib/etatAjout";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { useEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import {
   ACCESSOIRE_TYPES,
   BAS_CATS,
@@ -70,17 +71,27 @@ export function SpinnerCintre({ sombre }: { sombre?: boolean }) {
 }
 
 /**
- * LA CARTE D'ANALYSE (12/10/2026, demandé : « le même écran pour une pièce et pour une tenue »), posée sur la photo en grand : le cintre
- * qui tourne et une phrase, sans liste d'étapes. Partagée par « Ajouter une pièce » et « Importer une tenue », pour que le passage de
- * l'un à l'autre ne se voie pas.
+ * LA CARTE D'ANALYSE (12/10/2026) — posée sur la photo en grand, partagée par « Ajouter une pièce » et « Importer une tenue » pour que le
+ * passage de l'un à l'autre ne se voie pas. La photo reste VISIBLE et inchangée : plus de voile uniforme, seulement un dégradé léger au pied
+ * de l'image, derrière la carte. Le cintre avec son cœur est celui de la marque (LoadingSpinner : cintre fixe, arc terracotta qui tourne, anneau
+ * pâle ; l'arc ne tourne pas si le téléphone demande moins d'animations). Une progression honnête : l'analyse ne rend aucune étape ni
+ * pourcentage, donc UN message stable et un indicateur indéterminé.
  */
 export function CarteAnalyse() {
   return (
-    <div role="status" aria-live="polite" className="absolute inset-0 flex items-center justify-center p-[18px]" style={{ background: "rgba(243,238,229,.64)" }}>
-      <div className="w-[236px] max-w-full bg-card border border-border rounded-[20px] px-4 py-[14px]">
-        <div className="flex items-center gap-[10px]">
-          <SpinnerCintre sombre />
-          <span className="font-serif font-medium text-[16px] text-ink">Capsela analyse ta photo</span>
+    <div
+      role="status"
+      aria-live="polite"
+      className="absolute inset-0 flex items-end p-[14px]"
+      style={{ background: "linear-gradient(to top, rgba(243,238,229,.62) 0%, rgba(243,238,229,0) 52%)" }}
+    >
+      <div className="w-full bg-card border border-border rounded-[20px] px-[14px] py-[12px] flex items-center gap-[14px]">
+        <LoadingSpinner size={56} className="flex-shrink-0" />
+        <div className="min-w-0">
+          <div className="font-serif font-medium text-[17px] leading-[1.2] text-ink">On prépare ta pièce</div>
+          <div className="text-[12.5px] leading-[1.4] text-[#5C5648] mt-[3px]">
+            Capsela analyse ta photo pour identifier les vêtements à ajouter à ton dressing.
+          </div>
         </div>
       </div>
     </div>
