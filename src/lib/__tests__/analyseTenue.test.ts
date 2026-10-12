@@ -10,6 +10,7 @@ import {
   recouvrementUnion,
   rectangleDeRecadrage,
   rectangleOpaque,
+  saisonsLues,
 } from "../../../supabase/functions/_shared/analyseTenue.ts";
 import { estPhotoDetouree, estPhotoMiseAPlat } from "../../../supabase/functions/_shared/detourage.ts";
 
@@ -190,5 +191,22 @@ describe("rectangleOpaque — cadrer sur ce que le détourage a gardé", () => {
     const d = new Uint8ClampedArray(10 * 10 * 4);
     d[(5 * 10 + 5) * 4 + 3] = 10;
     expect(rectangleOpaque(d, 10, 10)).toBeNull();
+  });
+});
+
+describe("saisons suggérées par la lecture (12/10/2026)", () => {
+  it("seulement les saisons de la liste, sans doublon, dans l'ordre de l'année", () => {
+    expect(saisonsLues(["Hiver", "Automne", "Automne", "Mousson"])).toEqual(["Automne", "Hiver"]);
+  });
+  it("rien de lisible : rien", () => {
+    expect(saisonsLues(null)).toBeUndefined();
+    expect(saisonsLues([])).toBeUndefined();
+    expect(saisonsLues(["Mousson"])).toBeUndefined();
+  });
+  it("assainerObjets garde les saisons lues d'un objet", () => {
+    const [o] = assainerObjets({ objets: [objet({ saisons: ["Été", "Printemps"] })] });
+    expect(o.saisons).toEqual(["Printemps", "Été"]);
+    const [sans] = assainerObjets({ objets: [objet({ saisons: null })] });
+    expect(sans.saisons).toBeUndefined();
   });
 });

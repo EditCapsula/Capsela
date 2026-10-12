@@ -122,6 +122,18 @@ function itemToRow(item: Omit<Item, "id">, userId: string) {
 }
 
 /** Retourne [] en mode démo ou en cas d'échec réseau — l'appelant garde alors le dressing tel quel plutôt que de l'écraser. */
+/**
+ * LA COLONNE `motif` EXISTE-T-ELLE ? (12/10/2026, signalé : un bandeau rouge technique « Could not find the 'motif' column » à l'import). Tant
+ * que la migration 0051 n'est pas exécutée, le motif ne peut pas être enregistré : l'app le sait dès la lecture du dressing (une ligne sans
+ * clé `motif`) ou au premier refus de la base, cesse de proposer le motif et n'affiche plus d'erreur technique. `null` : pas encore su.
+ */
+let colonneMotif: boolean | null = null;
+export const motifDisponible = (): boolean => colonneMotif !== false;
+const colonneMotifAbsente = (err: unknown): boolean => {
+  const e = err as { code?: string; message?: string } | null;
+  return e?.code === "PGRST204" || /'motif' column|column .*motif/i.test(e?.message ?? "");
+};
+
 export async function fetchDressingItems(userId: string): Promise<Item[]> {
   if (!isSupabaseConfigured) return [];
   try {
@@ -134,7 +146,9 @@ export async function fetchDressingItems(userId: string): Promise<Item[]> {
       console.error("[dressing] échec fetchDressingItems", error);
       return [];
     }
-    return await signerPhotosDressing((data as DressingItemRow[]).map(rowToItem));
+    const lignes = data as DressingItemRow[];
+    if (lignes.length > 0) colonneMotif = "motif" in lignes[0];
+    return await signerPhotosDressing(lignes.map(rowToItem));
   } catch (err) {
     console.error("[dressing] échec fetchDressingItems", err);
     return [];
@@ -538,8 +552,16 @@ export async function updateDressingItemManches(id: number, manches: Manches | n
  * encore créée casserait sinon toutes les sauvegardes. Un échec est rendu à l'appelant, qui le signale et remet l'état d'avant.
  */
 export async function updateDressingItemMotif(id: number, motif: Motif | null): Promise<void> {
+  // Colonne absente (migration 0051 non exécutée) : rien à écrire, rien à dire — le motif n'est plus proposé (motifDisponible).
+  if (colonneMotif === false) return;
   const { error } = await getSupabase().from("dressing_items").update({ motif }).eq("id", id);
-  if (error) throw error;
+  if (error) {
+    if (colonneMotifAbsente(error)) {
+      colonneMotif = false;
+      return;
+    }
+    throw error;
+  }
 }
 
 /**

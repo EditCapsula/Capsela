@@ -108,3 +108,14 @@ describe("pieceDepuis", () => {
     expect(pieceDepuis({ ...b, saisons: ["Été"] }).name).toBe("Nouvelle pièce");
   });
 });
+
+describe("saisons lues sur la photo (12/10/2026)", () => {
+  it("elles préremplissent le brouillon (modifiables), dans l'ordre de l'année", () => {
+    const [b] = brouillonsDepuis([objet({ cat: "manteau", saisons: ["Hiver", "Automne", "Mousson"] } as never)]);
+    expect(b.saisons).toEqual(["Automne", "Hiver"]);
+  });
+  it("sans saison lue, le brouillon n'en invente pas", () => {
+    const [b] = brouillonsDepuis([objet({ cat: "manteau" })]);
+    expect(b.saisons).toEqual([]);
+  });
+});

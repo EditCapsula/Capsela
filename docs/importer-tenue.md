@@ -63,3 +63,9 @@ Plus de cases à cocher ni de bouton fixe « Ajouter les N pièces » : titre «
 
 ## Parcours fluide (12/10/2026, signalé : « j'ajoute une photo, l'écran pièce s'affiche puis je bascule sur Ajouter une tenue »)
 Une seule étape d'analyse : la photo choisie s'affiche en grand (4/5) avec « Capsela analyse ta photo », puis soit le formulaire d'une pièce seule, soit la liste des pièces de la tenue. Quand l'analyse d'« Ajouter une pièce » dit « portée » ou « plusieurs pièces », l'écran reste en chargement (`redirection` dans `etatAjout`), confie à l'import le fichier ET son URL déjà envoyée (`confierPhoto({ fichier, url })` : pas de second envoi), se vide (`retirerPhotoAjout`) et ouvre l'import, qui lit la photo à son tour. Une photo « plusieurs pièces » n'est plus détourée par « Ajouter une pièce » (le détourage supprimait l'original que l'import réutilise). Une seule pièce repérée dans une tenue reste une carte ouverte de l'import.
+
+## Saisons suggérées à l'import (12/10/2026, demandé : l'ajout ne doit pas exiger d'action)
+La lecture de la tenue rend aussi `saisons` (une ou plusieurs, parmi les quatre, d'après matière, épaisseur et coupe visibles ; `null` si le modèle n'est pas sûr). Elles préremplissent la carte, modifiables : une pièce dont les saisons sont lues n'exige plus rien avant « Ajouter ». Sans saison lue, rien n'est inventé : la carte dit « Précise les saisons ». Même principe que « Ajouter une pièce » (saisons « lues sur ta photo »). La fonction `importer-tenue` doit être redéployée (workflow Supabase) pour que la lecture les rende.
+
+## Écran d'analyse (12/10/2026)
+Photo en grand (4/5, plafonnée à la hauteur disponible), carte au pied de l'image (cintre de marque `LoadingSpinner`, « On prépare ta pièce »), dégradé léger sans voile uniforme. Un seul message stable : l'analyse ne rend ni étape ni pourcentage.
