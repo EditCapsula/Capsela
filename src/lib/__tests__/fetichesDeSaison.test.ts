@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { debutDeSaison, deLaSaison, mostWornPiecesDeSaison } from "../selectors";
+import { debutDeSaison, deLaSaison, mostWornPiecesDeSaison, mostWornPiecesPeriode } from "../selectors";
 import type { HistoryEntry, Item } from "../types";
 
 // PIÈCES FÉTICHES PAR SAISON (11/10/2026) : le classement ne compte que les ports depuis le début de la saison calendaire en cours.
@@ -41,5 +41,24 @@ describe("mostWornPiecesDeSaison", () => {
   it("une entrée postérieure à maintenant n'est pas comptée", () => {
     const r = mostWornPiecesDeSaison([entree("f", new Date(2026, 9, 20), [4])], pool, maintenant);
     expect(r).toEqual([]);
+  });
+});
+
+describe("mostWornPiecesPeriode (sélecteur de période, 14/10/2026)", () => {
+  const maintenant = new Date(2026, 9, 11);
+  const histo = [
+    ...[1, 2, 3, 4, 5].map((j) => entree(`e${j}`, new Date(2026, 6, j), [1])),
+    entree("a1", new Date(2026, 8, 5), [2]),
+    entree("a2", new Date(2026, 9, 1), [2, 3]),
+  ];
+  it("« saison » garde le comportement d'avant", () => {
+    expect(mostWornPiecesPeriode(histo, pool, "saison", maintenant).map((x) => x.item.id)).toEqual([2, 3]);
+  });
+  it("« mois » ne compte que le mois en cours", () => {
+    expect(mostWornPiecesPeriode(histo, pool, "mois", maintenant).map((x) => [x.item.id, x.count])).toEqual([[2, 1], [3, 1]]);
+  });
+  it("« tout » compte tout l'historique : la pièce de l'été repasse en tête", () => {
+    expect(mostWornPiecesPeriode(histo, pool, "tout", maintenant)[0]).toMatchObject({ count: 5 });
+    expect(mostWornPiecesPeriode(histo, pool, "tout", maintenant)[0].item.id).toBe(1);
   });
 });

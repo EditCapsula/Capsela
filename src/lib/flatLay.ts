@@ -438,6 +438,11 @@ export interface OptionsFlatLay {
   template?: TemplateFlatLay | null;
   /** true : jamais de planche en miroir (la silhouette de chargement, qui ignore la graine du look à venir). */
   sansMiroir?: boolean;
+  /**
+   * Places en plus du maximum du contexte (14/10/2026) : une pièce CONSEILLÉE posée à côté de la tenue (la veste du soir sur l'accueil) ne
+   * doit pas prendre la place d'une pièce de la tenue.
+   */
+  piecesEnPlus?: number;
 }
 
 /**
@@ -482,7 +487,7 @@ export function composerFlatLay(
   const retirees = pieces.filter((p) => !!p.accessoireType && !!config.accessoiresMasques?.includes(p.accessoireType));
   const compatibles = pieces.filter((p) => p.flatLayCompatible !== false && !retirees.includes(p));
   // Un contexte qui limite le nombre de pièces (hero-home) ne pose que les plus représentatives ; les autres restent dans la tenue.
-  const choix = config.maxPieces ? pieceRepresentatives(compatibles, config.maxPieces) : { gardees: compatibles, ecartees: [] as PieceFlatLay[] };
+  const choix = config.maxPieces ? pieceRepresentatives(compatibles, config.maxPieces + (options.piecesEnPlus ?? 0)) : { gardees: compatibles, ecartees: [] as PieceFlatLay[] };
   const tous = attribuerRoles(choix.gardees);
   // Le groupe stylistique se décide sur TOUTE la tenue : un t-shirt masqué (hero-home) ne défait pas le gabarit pull + pantalon.
   // Seule une couche de haut (t-shirt sous un pull) fait un groupe et se masque sur l'accueil : une veste en plus reste dans la planche.

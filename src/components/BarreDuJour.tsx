@@ -21,10 +21,26 @@ function Chevron({ vers }: { vers: "gauche" | "droite" }) {
   );
 }
 
+/** Le « i » d'information (15 px, trait de l'app) — barre du jour et barre d'un look planifié. */
+function IconeInfo() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+      <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M12 11v5.2" />
+      </g>
+      <circle cx="12" cy="7.9" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 const chevron = "w-[30px] h-[44px] flex items-center justify-center flex-shrink-0 cursor-pointer disabled:cursor-default disabled:opacity-30 text-terracotta";
 
 export default function BarreDuJour({ className = "", retro }: { className?: string; retro?: RetroJour }) {
   const { actions } = useCapsela();
+  // La note sur la source de la météo (« Météo actuelle de ta ville — active la géolocalisation… ») est derrière un « i » (14/10/2026,
+  // demandé) : elle ne s'affiche qu'à la demande au lieu d'occuper une ligne sous la barre.
+  const [noteOuverte, setNoteOuverte] = useState(false);
   const { geoCity, geoLoading, decalage, date, enRetro, enAttente, temp, label, note, amplitude } = useDonneesJour(retro);
   const soleil = !!label && /soleil|dégagé|clair|ensoleill/i.test(label);
 
@@ -70,6 +86,17 @@ export default function BarreDuJour({ className = "", retro }: { className?: str
             </svg>
             <span className="truncate">{enAttente ? (geoLoading ? "Localisation…" : "Prévision…") : enRetro ? "Météo enregistrée" : geoCity.city}</span>
           </button>
+          {note && (
+            <button
+              type="button"
+              onClick={() => setNoteOuverte((v) => !v)}
+              aria-expanded={noteOuverte}
+              aria-label="D'où vient cette météo ?"
+              className="w-[30px] h-[44px] flex items-center justify-center flex-shrink-0 cursor-pointer text-terracotta"
+            >
+              <IconeInfo />
+            </button>
+          )}
         </div>
 
         {!enAttente && temp != null && (
@@ -83,7 +110,11 @@ export default function BarreDuJour({ className = "", retro }: { className?: str
           </div>
         )}
       </div>
-      {note && <div className="text-[10px] text-placeholder mt-[2px] leading-[1.4]">{note}</div>}
+      {note && noteOuverte && (
+        <div role="status" className="text-[11.5px] text-ink-soft leading-[1.45] mt-[2px] rounded-[12px] bg-warm-bg px-3 py-2">
+          {note}
+        </div>
+      )}
     </div>
   );
 }
@@ -130,13 +161,7 @@ export function BarreDuPlan({
               aria-label="D'où vient cette météo ?"
               className="w-[30px] h-[44px] flex items-center justify-center flex-shrink-0 cursor-pointer text-terracotta"
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="8.5" />
-                  <path d="M12 11v5.2" />
-                </g>
-                <circle cx="12" cy="7.9" r="1" fill="currentColor" />
-              </svg>
+              <IconeInfo />
             </button>
           )}
           <span aria-hidden="true" className="text-muted mx-[6px]">·</span>

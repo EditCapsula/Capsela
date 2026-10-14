@@ -9,8 +9,9 @@ import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
-import { estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle, titreDuQualificatif } from "@/lib/logic";
-import { libelleStyles } from "@/lib/profile";
+import { computeLookScore, estContexteMaison, qualificatifLook, sousTitreLookDuJour, tenueAUnSocle, titreDuQualificatif } from "@/lib/logic";
+import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
+import { libelleStyles, paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import BarreDuJour from "@/components/BarreDuJour";
@@ -108,7 +109,7 @@ const FANTOME_CHAUSSURES: CategoryKey[] = ["chaussures"];
 const AUCUN_FANTOME: CategoryKey[] = [];
 
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, meteoDuJour, jourConsulte, actions } = useCapsela();
+  const { state, geoLoading, vestiairePool, wardrobePool, meteoDuJour, jourConsulte, actions } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -183,6 +184,28 @@ export default function HomeScreen() {
   const occasionKey =
     state.occasion && state.occasion !== "all" ? state.occasion : occasionParDefaut(profile.prefs, jourConsulte.date);
   const outfitPieces = hasOutfit ? piecesResolues : [];
+  // LA VESTE CONSEILLÉE PAR TEMPS FRAIS, SUR L'ACCUEIL AUSSI (14/10/2026, demandé) : la même suggestion que la page Tenue (computeLookScore,
+  // « veste_soir », mêmes arguments), posée dans la composition de la tenue du jour, estompée, avec un « + » qui l'ajoute.
+  const conseilVeste = useMemo(() => {
+    if (!hasOutfit) return undefined;
+    const score = computeLookScore(
+      outfitPieces,
+      state.occasion || "all",
+      paletteHexes(profile),
+      profile.morphology,
+      new Set(state.dismissedSuggestions || []),
+      meteoDuJour,
+      state.workMode,
+      state.dateContext,
+      wardrobePool,
+      colorimetrieMoteur(profile.colorimetrie)
+    );
+    const p = score.proactives.find((x) => x.key === "veste_soir");
+    const piece = p?.suggestedId != null ? wardrobePool.find((i) => i.id === p.suggestedId) : undefined;
+    return piece ? [{ item: piece, onAjouter: () => actions.addPieceToOutfit(piece.id) }] : undefined;
+    // `actions` change à chaque rendu ; la suggestion ne dépend que de la tenue, de la météo, de l'occasion et du profil.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.outfit, state.occasion, state.workMode, state.dateContext, state.dismissedSuggestions, meteoDuJour, wardrobePool, profile, hasOutfit]);
 
   /*
    * LE HERO DYNAMIQUE (04/10/2026) — trois états qui portent un plan, un qui n'en porte pas :
@@ -301,6 +324,7 @@ export default function HomeScreen() {
         graine={cleSlide(slide.ids)}
         categoriesAttendues={duJour ? categoriesAttendues : undefined}
         fantomes={sansChaussures(pieces)}
+        ajouts={duJour ? conseilVeste : undefined}
         onVoir={() => actions.consulterTenue(slide.ids, slide.occasion, slide.source === "plan" ? (planHero?.id ?? null) : null)}
         sauvegardee={duJour ? sauvegardee : dejaSauvegardee(slide.ids)}
         onSauvegarder={() => {
@@ -442,7 +466,7 @@ export default function HomeScreen() {
           {passee ? (
             <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
           ) : aucuneTenuePossible ? null : (
-            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={ouvrirPiece} fantomes={sansChaussures(outfitPieces)} />
+            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={ouvrirPiece} fantomes={sansChaussures(outfitPieces)} ajouts={conseilVeste} />
           )}
         </div>
 
