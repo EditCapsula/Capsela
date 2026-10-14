@@ -1,6 +1,6 @@
 # Carrousel de l'accueil (14/10/2026)
 
-Trois tenues par occasion à la place d'une seule : **pour le travail**, **pour ton quotidien**, **pour ta soirée**, dans cet ordre fixe. Carte #EEDED8, composition (flat lay) en point focal, repères de pagination dessous.
+Trois tenues par occasion à la place d'une seule : **pour le travail**, **pour ton quotidien**, **pour ta soirée**, dans cet ordre fixe. Carte sur le fond des hero (`--color-hero-background`, #F0E1D9), composition (flat lay) en point focal, repères de pagination dessous.
 
 ## Qui occupe quelle slide (`carrousel.ts`, pur, testé)
 - La **tenue du jour** du store (`state.outfit`, celle qui porte l'avis, le quota, le plan appliqué) occupe la slide de SON occasion (`slideDeLOccasion` : travail, quotidien, soirée ; « date » compte comme soirée).
