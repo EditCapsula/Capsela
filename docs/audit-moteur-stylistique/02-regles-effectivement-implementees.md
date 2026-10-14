@@ -20,6 +20,7 @@ Les identifiants `R-B*` / `R-S*` sont ceux **présents dans le code**. Les règl
 | R-B20 | Short | temp ≤ 22 | exclusion des shorts | 881–883 ; échange 1862 | — | Implémentée |
 | R-B21 | Chaussures ouvertes sous la pluie | `isRainy` ; type dans {Sandales, Sandales à talons, Mules, Slingbacks, Espadrilles} ; sans type : gardée | exclusion | 47, 891–893 ; échange 1866 | sandalesDeFete, pluieChaussures | Implémentée |
 | R-B22 | Chaussures d'été | temp < 15 ; Sandales, Sandales à talons, Espadrilles (sans type : regex du nom) | exclusion | 57–63, 894–897 ; échange 1870 | sandalesDeFete | Implémentée |
+| R-B23 | Pas de sac à dos en occasion habillée (14/10/2026) | occasion ∈ soirée, date (tous types), evenement_perso ; sacType « Sac à dos » (sans type : detectSacType du nom) ; dressing réel compris | exclusion | OCCASIONS_SANS_SAC_A_DOS, estSacADos ; hardCategoryFilter ; échange candidatsDeRemplacement | sacADos.test.ts | Implémentée |
 | D-01 | Plage de température | `meteoMinTemp > temp` (sauf haut, pull, robe, combinaison, jupe, short) ou `temp > meteoMaxTemp` | exclusion (relâchée par `poolFor`) | 956–962 | — | Implémentée |
 | D-02 | Occasion déclarée sur la pièce | `it.occasion` non vide et sans l'occasion du tirage | exclusion (relâchée par `poolFor` pour les catégories essentielles) | 570, 918 | — | Implémentée |
 | D-03 | Saison déclarée = règle dure (dressing réel) | pièce non catalogue, hors saisons du jour (`estDeSaison`) | exclusion, jamais relâchée ; exceptions : catalogue, `pinnedId` | 791–793 | — | Implémentée |
@@ -84,7 +85,7 @@ Voir `03-scoring-et-classement.md`.
 
 ## Décompte
 
-- Identifiants historiques **présents dans le code** : R-B1 à R-B22 (22), R-S1 à R-S18 (18) — dont **R-S9 retirée** (29/08/2026) → 39 actifs ou signalés.
+- Identifiants historiques **présents dans le code** : R-B1 à R-B23 (23, R-B23 ajoutée le 14/10/2026), R-S1 à R-S18 (18) — dont **R-S9 retirée** (29/08/2026) → 40 actifs ou signalés.
 - Règles bloquantes de génération (A) : 11 identifiées + 3 règles D-01/02/03 = 14 ; **une seule** bloque l'enregistrement (R-B9).
 - Règles de composition (B) : 24 lignes (dont 4 molles : R-S10, D-18, R-B16, R-S16).
 - Compensations : R-B18 (thermique), R-B19 (collants), D-09 (veste compensatrice), D-14 (base sous calque).
