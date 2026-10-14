@@ -1154,7 +1154,13 @@ export function generateOutfit(
     // Affectait robes/combinaisons, bas, vestes, manteaux, sacs et bijoux —
     // les hauts et chaussures se tirent hors de pick() et y échappaient.
     const real = base.filter((i) => !isCatalogId(i.id));
-    if (real.length) {
+    // La pièce ADAPTÉE avant le réel (14/10/2026, demandé : « il faut surtout pousser la pièce adaptée à l'occasion ») : en Voyage, si
+    // aucune pièce réelle du groupe n'est décontractée (R-S19) et que la capsule en a une, la priorité au réel ne s'applique pas — la
+    // préférence R-S19 ci-dessous la retient.
+    const souple = (i: Item) => formalityOf(i) <= 1;
+    const confortAvantReel =
+      occasion === "voyage" && !leviers?.sansConfortVoyage && !real.some(souple) && base.some((i) => isCatalogId(i.id) && souple(i));
+    if (real.length && !confortAvantReel) {
       const pinned = pinnedId != null && !real.some((i) => i.id === pinnedId) ? base.find((i) => i.id === pinnedId) : undefined;
       base = pinned ? [...real, pinned] : real;
     }

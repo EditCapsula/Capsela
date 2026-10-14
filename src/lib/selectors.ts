@@ -1,4 +1,5 @@
-import { CATLABEL, CATS, MONTHS_FR, OCC_LABELS, occasionShortLabel, type Weather } from "./data";
+import { CATLABEL, CATS, MONTHS_FR, OCCASION_STYLE_PREFS, OCC_LABELS, occasionShortLabel, type Weather } from "./data";
+import { formalityOf } from "./attributes";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour, type ContexteSaisonnier } from "./capsule";
 import type { CapsuleSeason, CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
@@ -758,6 +759,12 @@ export function composeWardrobePool(
      * qu'une pièce de saison existe. Absent : comportement d'origine.
      */
     completerPourSaison?: ContexteSaisonnier | null;
+    /**
+     * LA PIÈCE ADAPTÉE À L'OCCASION D'ABORD (14/10/2026, demandé : « il faut surtout pousser la pièce adaptée à l'occasion »). Une
+     * catégorie dont aucune pièce réelle n'est ADAPTÉE (`adapteeALOccasion`) alors que la capsule en a une : les pièces de la capsule
+     * adaptées prennent la place des pièces réelles qui ne le sont pas. Exige `completerPourOccasion`. Absent : comportement d'avant.
+     */
+    pieceAdaptee?: boolean;
   }
 ): Item[] {
   const saisonConcernee = options?.completerPourSaison ?? null;
@@ -772,11 +779,28 @@ export function composeWardrobePool(
   });
 }
 
+/**
+ * Une pièce ADAPTÉE à l'occasion (14/10/2026) — au-delà de l'occasion déclarée, ce que le moteur préfère déjà pour elle :
+ *   · Voyage (R-S19) : des baskets pour les chaussures, une formalité ≤ 1 pour les vêtements ;
+ *   · une occasion qui a ses types de chaussures (R-S16, OCCASION_STYLE_PREFS : cérémonie…) : l'un de ces types.
+ * Toute autre pièce est adaptée : rien n'est inventé là où le moteur n'a pas de préférence.
+ */
+export function adapteeALOccasion(i: Item, occasion: OccasionKey): boolean {
+  if (occasion === "voyage") {
+    if (i.cat === "chaussures") return i.shoeType === "Baskets" || formalityOf(i) === 0;
+    return VETEMENTS.includes(i.cat) ? formalityOf(i) <= 1 : true;
+  }
+  const types = OCCASION_STYLE_PREFS[occasion]?.shoeTypes;
+  if (i.cat === "chaussures" && types?.length) return Boolean(i.shoeType && types.includes(i.shoeType));
+  return true;
+}
+const VETEMENTS: CategoryKey[] = ["haut", "pull", "veste", "manteau", "pantalon", "jean", "jupe", "short", "robe", "combinaison"];
+
 function composerParOccasion(
   items: Item[],
   capsule: Item[],
   cats: readonly CategoryKey[],
-  options?: { completerPourOccasion?: OccasionKey | null; saison?: ContexteSaisonnier | null; exclureHorsOccasion?: boolean }
+  options?: { completerPourOccasion?: OccasionKey | null; saison?: ContexteSaisonnier | null; exclureHorsOccasion?: boolean; pieceAdaptee?: boolean }
 ): Item[] {
   const occasion = options?.completerPourOccasion ?? null;
   const saison = options?.saison ?? null;
@@ -788,6 +812,14 @@ function composerParOccasion(
       ? reelles.filter((i) => isCatalogId(i.id) || !i.occasion?.length || i.occasion.includes(occasion))
       : reelles;
     const utilisable = (i: Item) => occasionsOf(i).includes(occasion) && (!saison || estDeSaison(i, saison));
+    // Adaptée ET de saison ; sans occasion déclarée (la plupart des chaussures du catalogue), c'est son adéquation qui la justifie — une
+    // pièce déclarée pour d'AUTRES occasions, non. Le même critère pour le dressing et pour la capsule.
+    const convient = (i: Item) =>
+      (i.occasion?.length ? i.occasion.includes(occasion) : true) && (!saison || estDeSaison(i, saison)) && adapteeALOccasion(i, occasion);
+    if (options?.pieceAdaptee && !gardees.some(convient)) {
+      const adaptees = capsule.filter((i) => i.cat === cat && !gardees.some((r) => r.id === i.id) && convient(i));
+      if (adaptees.length) return [...gardees.filter((i) => adapteeALOccasion(i, occasion)), ...adaptees];
+    }
     if (gardees.some(utilisable)) return gardees;
     const secours = capsule.filter(
       (i) => i.cat === cat && !gardees.some((r) => r.id === i.id) && occasionsOf(i).includes(occasion)
@@ -919,5 +951,5 @@ export function buildOpinionMessage(args: Parameters<typeof buildOpinionMessageP
 export function poolDePlanification(e: { items: Item[]; capsule: Item[]; occasion: OccasionKey; dressingSeul: boolean; meteo: Weather; categories: CategoryKey[] }): Item[] {
   return e.dressingSeul
     ? e.items
-    : composeWardrobePool(e.items, e.capsule, e.categories, { completerPourOccasion: e.occasion, saison: e.meteo, exclureHorsOccasion: true, completerPourSaison: e.meteo });
+    : composeWardrobePool(e.items, e.capsule, e.categories, { completerPourOccasion: e.occasion, saison: e.meteo, exclureHorsOccasion: true, completerPourSaison: e.meteo, pieceAdaptee: true });
 }

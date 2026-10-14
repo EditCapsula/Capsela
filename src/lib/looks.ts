@@ -34,7 +34,7 @@ function poolPourOccasion(pool: Item[], capsule: Item[], occasion: OccasionKey, 
   // Même référentiel saisonnier que le moteur pour ce décompte : la capsule
   // quand sa saison est connue, sinon la météo (28/09/2026).
   const contexte = saison ? contexteCapsule(saison) : weather;
-  return composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: occasion, saison: contexte, exclureHorsOccasion: true });
+  return composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: occasion, saison: contexte, exclureHorsOccasion: true, pieceAdaptee: true });
 }
 
 /**
