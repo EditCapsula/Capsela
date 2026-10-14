@@ -201,7 +201,7 @@ export default function PieceScreen() {
     <div className="absolute inset-0">
       {suggested ? (
         // UNE SUGGESTION de la capsule (pas encore une pièce du dressing) : la mise en page d'origine, photo en 4/5.
-        <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
+        <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
           <div className="flex items-center justify-between">
             <BoutonRetour onClick={() => actions.go(state.pieceReturn)} label="Revenir à l'écran précédent" />
           </div>
@@ -380,7 +380,7 @@ export default function PieceScreen() {
               {details.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {details.map((d) => (
-                    <span key={d.label} className="h-[32px] px-3 rounded-full bg-[#F0E5D6] inline-flex items-center gap-[6px] text-[12.5px]">
+                    <span key={d.label} className="h-[32px] px-3 rounded-full bg-warm-bg inline-flex items-center gap-[6px] text-[12.5px]">
                       <span className="text-warm-text">{d.label}</span>
                       <span className="font-semibold text-ink">{d.value}</span>
                     </span>
@@ -410,7 +410,7 @@ export default function PieceScreen() {
               <button
                 type="button"
                 onClick={() => actions.openItemOutfits(active.id, false)}
-                className="flex-1 h-[52px] rounded-full bg-terracotta-deep text-[#FBF3EA] text-[13px] font-semibold uppercase tracking-[.08em] cursor-pointer"
+                className="flex-1 h-[52px] rounded-full bg-terracotta-deep text-on-terracotta text-[13px] font-semibold uppercase tracking-[.08em] cursor-pointer"
               >
                 Voir les tenues associées
               </button>

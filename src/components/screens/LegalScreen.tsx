@@ -14,7 +14,7 @@ export default function LegalScreen() {
   const { actions } = useCapsela();
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <div className="flex items-center gap-[14px] mt-[10px]">
         <BoutonRetour onClick={actions.backFromLegal} label="Revenir à l'écran précédent" />
         <div className="t-titre-section text-ink">Informations légales</div>

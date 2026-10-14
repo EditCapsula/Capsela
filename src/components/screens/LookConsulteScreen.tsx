@@ -47,7 +47,7 @@ export default function LookConsulteScreen() {
 
       <div
         className="relative rounded-feuille overflow-hidden mt-[14px]"
-        style={{ aspectRatio: "100 / 118", background: "#EEDED8" }}
+        style={{ aspectRatio: "100 / 118", background: "var(--color-look-bg)" }}
         role="img"
         aria-label={"Composition de la tenue : " + pieces.map((p) => p.name).join(", ")}
       >
@@ -118,7 +118,7 @@ export default function LookConsulteScreen() {
             disabled={enregistre}
             aria-pressed={enregistre}
           >
-            {enregistre ? "✓ Enregistrée dans mes looks" : "Sauvegarder"}
+            {enregistre ? "✓ Enregistré dans mes looks" : "Enregistrer dans mes looks"}
           </Button>
           <Button variante="secondaire" className="mt-[10px]" onClick={() => actions.planifierComposition(tenue.ids, false)}>
             Planifier

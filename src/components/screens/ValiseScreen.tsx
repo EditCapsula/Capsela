@@ -884,11 +884,11 @@ export default function ValiseScreen() {
                     disabled={bloquee}
                     className={
                       "flex items-center gap-[10px] text-left rounded-tuile px-[14px] border cursor-pointer transition-colors disabled:cursor-default " +
-                      (on ? "bg-terracotta-deep border-terracotta-deep text-[#FBF3EA]" : "bg-card border-border text-ink")
+                      (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
                     }
                     style={{ minHeight: 48, opacity: bloquee ? 0.5 : 1 }}
                   >
-                    <span className={"flex-shrink-0 " + (on ? "text-[#FBF3EA]" : "text-terracotta-deep")}>{GLYPHES_ACTIVITE[a.id]}</span>
+                    <span className={"flex-shrink-0 " + (on ? "text-on-terracotta" : "text-terracotta-deep")}>{GLYPHES_ACTIVITE[a.id]}</span>
                     <span className="text-[12.5px] leading-[1.25]">{a.libelle}</span>
                   </button>
                 );
@@ -1684,7 +1684,7 @@ function Resultat({
           }}
           disabled={enregistre}
         >
-          {enregistre ? "Enregistré dans tes looks" : "Enregistrer dans mes looks"}
+          {enregistre ? "Enregistré dans mes looks" : "Enregistrer dans mes looks"}
         </Button>
         {feuilles}
       </>

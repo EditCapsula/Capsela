@@ -98,7 +98,7 @@ export default function DernieresPiecesScreen() {
     <>
       <div
         className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]"
-        style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 100px)" }}
+        style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}
       >
         <AppHeader onBack={actions.goWardrobe} backLabel="Revenir au dressing" />
         <div className="t-surtitre text-muted mt-[14px]">Ajoutées récemment</div>

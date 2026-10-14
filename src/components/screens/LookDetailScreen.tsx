@@ -34,7 +34,7 @@ export default function LookDetailScreen() {
     .filter((it): it is NonNullable<typeof it> => Boolean(it));
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-[100px]">
+    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       <div className="flex items-center gap-[14px]">
         <BoutonRetour onClick={actions.closeLookDetail} label="Revenir à l'écran précédent" />
         <div className="t-titre-section text-ink">{look.name}</div>
