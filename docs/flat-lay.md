@@ -284,3 +284,12 @@ toléré de 18 %), de chaussures posées sous le pantalon, et d'une planche au f
 Vérifié en rendu réel avec les visuels du catalogue (mode démo, catalogue servi localement), 360 / 390 / 430 px, mêmes tenues avant et après.
 **NON VÉRIFIÉ** : les photos détourées du dressing (aucune accessible ici) ; leurs marges transparentes ne sont pas recadrées, elles
 peuvent paraître plus petites que les visuels du catalogue.
+
+## Une pièce qui manque, avec un « + » (14/10/2026)
+Demandé sur une capture (tenue Cérémonie) : le conseil « il va faire frais ce soir » restait une carte « À prévoir » sans pièce quand aucune veste du dressing ni de la capsule n'atteint la formalité de l'occasion. Sur Tenue, il passe dans le hero : la silhouette de veste (dessin de chargement), un « + », et la phrase « Il va faire frais ce soir : appuie sur + pour ajouter une veste à ton dressing ». Toucher la silhouette ou son « + » ouvre l'ajout d'une veste (`openAddForCategory("veste")`). La silhouette des chaussures manquantes reçoit le même « + » (ajout de chaussures). Prop `onFantome` de `FlatLayCapsela` ; sans elle, les silhouettes restent décoratives (accueil).
+
+Les « + » (silhouettes et pièces conseillées) sont posés dans un calque au-dessus de la planche : dans leur pièce, ils prenaient sa profondeur et passaient sous les pièces voisines.
+
+Le hero de Tenue prend le même fond que l'accueil le même jour : `--color-card` cerné de `--color-border`.
+
+**NON VÉRIFIÉ** : le cas réel (veste_soir sans pièce) n'a pas été reproduit ici, faute de météo fraîche en mode démo ; le rendu a été contrôlé en forçant la condition, puis le forçage retiré. Le « + » d'une pièce conseillée de l'accueil n'a pas été revu en rendu.

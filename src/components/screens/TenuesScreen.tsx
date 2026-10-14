@@ -484,9 +484,15 @@ export default function TenuesScreen() {
     const piece = displayPool.find((i) => i.id === p.suggestedId);
     return piece ? { p, piece } : null;
   })();
+  // SANS VESTE À PROPOSER (14/10/2026, demandé, capture d'une tenue Cérémonie) : aucune veste du dressing ni de la capsule n'atteint le
+  // niveau de formalité, donc « veste_soir » n'a pas de pièce. Le conseil passe quand même dans le hero : une silhouette de veste avec
+  // un « + » qui ouvre l'ajout d'une veste au dressing — plutôt qu'une carte « À prévoir » sans rien à ajouter.
+  const vesteAAjouter =
+    !conseilVeste && !noCompleteOutfit && liveProactiveByKey.has("veste_soir") && !dismissingEntries["veste_soir"];
   const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)])).filter(
-    (k) => !(conseilVeste && k === "veste_soir")
+    (k) => !((conseilVeste || vesteAAjouter) && k === "veste_soir")
   );
+  const fantomesHero = [...(chaussuresManquantes ? (["chaussures"] as const) : []), ...(vesteAAjouter ? (["veste"] as const) : [])];
   const aCompleter = !noCompleteOutfit && (proactiveKeys.length > 0 || Boolean(missingTextCarte) || vesteWithoutBase);
 
   // pb-safe-nav (correctif 20/08/2026) remplace pb-24 : réserve la hauteur
@@ -594,7 +600,9 @@ export default function TenuesScreen() {
           // 358 × 564 px sur 390 (calibrage du 08/10/2026) : 8 px de plus de chaque côté que la gouttière de 24 px, la marge de 16 px
           // du hero ; la zone du flat lay prend ce qui reste (350 px) — l'en-tête, la provenance, l'action et les deux
           // secondaires ont une hauteur fixe. Un constat météo sur un plan l'allonge, jamais le flat lay.
-          style={{ background: "var(--color-hero-background)", padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : 564, minHeight: 564 }}
+          // Blanc cassé des cartes cerné d'un filet (14/10/2026, demandé : « le hero de Tenue n'a pas le même fond que la homepage ») : le
+          // fond de l'accueil depuis l'option 3h, pour que la tenue d'une slide garde son fond en arrivant ici par « Voir le look ».
+          style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : 564, minHeight: 564 }}
         >
           {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
               le 23/09). Conditionnelle depuis que le titre est parti : sans
@@ -723,7 +731,7 @@ export default function TenuesScreen() {
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
             <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={chaussuresManquantes ? ["chaussures"] : []} onPiece={ouvrirPiece} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
+              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => actions.openAddForCategory(cat)} onPiece={ouvrirPiece} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -750,6 +758,11 @@ export default function TenuesScreen() {
             {conseilVeste && (
               <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
                 Il va faire frais ce soir : appuie sur + pour ajouter {conseilVeste.piece.name.toLowerCase()}.
+              </div>
+            )}
+            {vesteAAjouter && (
+              <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
+                Il va faire frais ce soir : appuie sur + pour ajouter une veste à ton dressing.
               </div>
             )}
             {chaussuresManquantes && (

@@ -1,6 +1,6 @@
 # Carrousel de l'accueil (14/10/2026)
 
-Trois tenues par occasion à la place d'une seule : **pour le travail**, **pour ton quotidien**, **pour ta soirée**, dans cet ordre fixe. Carte blanc cassé des cartes (`--color-card`, #FBF8F3, cernée de `--color-border` #E6DCCB — option 3h du 14/10/2026 ; les autres hero gardent `--color-hero-background`), composition (flat lay) en point focal, repères de pagination dessous.
+Trois tenues par occasion à la place d'une seule : **pour le travail**, **pour ton quotidien**, **pour ta soirée**, dans cet ordre fixe. Carte blanc cassé des cartes (`--color-card`, #FBF8F3, cernée de `--color-border` #E6DCCB — option 3h du 14/10/2026 ; le hero de Tenue le suit le même jour, les autres gardent `--color-hero-background`), composition (flat lay) en point focal, repères de pagination dessous.
 
 ## Qui occupe quelle slide (`carrousel.ts`, pur, testé)
 - La **tenue du jour** du store (`state.outfit`, celle qui porte l'avis, le quota, le plan appliqué) occupe la slide de SON occasion (`slideDeLOccasion` : travail, quotidien, soirée ; « date » compte comme soirée).
@@ -15,7 +15,7 @@ Trois tenues par occasion à la place d'une seule : **pour le travail**, **pour 
 - « Voir le look » : `consulterTenue` ouvre Tenue sur CETTE tenue (voir plus bas).
 
 ## « Voir le look » : la page Tenue, occasion présélectionnée
-`consulterTenue(ids, occasion, planId)` ouvre l'écran Tenue sur la tenue de la slide, avec son occasion déjà choisie (les occasions restent changeables) et le fond des hero (`--color-hero-background`, #F0E1D9 depuis le 14/10/2026). La tenue du jour est mise de côté dans `state.consultation` pendant la consultation et RENDUE en quittant Tenue pour un onglet (accueil, dressing, capsule, planifier, journal), sauf si la tenue consultée a été portée entre-temps (elle devient celle du jour). Les écrans ouverts depuis Tenue (fiche d'une pièce…) gardent la consultation. L'application automatique d'un plan est suspendue le temps de la consultation. (Une première version ouvrait une page dédiée ; retirée le 14/10/2026 à la demande de la propriétaire : on doit atterrir sur Tenue.)
+`consulterTenue(ids, occasion, planId)` ouvre l'écran Tenue sur la tenue de la slide, avec son occasion déjà choisie (les occasions restent changeables) sur le même fond que la slide (`--color-card` cerné de `--color-border`, depuis le 14/10/2026). La tenue du jour est mise de côté dans `state.consultation` pendant la consultation et RENDUE en quittant Tenue pour un onglet (accueil, dressing, capsule, planifier, journal), sauf si la tenue consultée a été portée entre-temps (elle devient celle du jour). Les écrans ouverts depuis Tenue (fiche d'une pièce…) gardent la consultation. L'application automatique d'un plan est suspendue le temps de la consultation. (Une première version ouvrait une page dédiée ; retirée le 14/10/2026 à la demande de la propriétaire : on doit atterrir sur Tenue.)
 
 ## Tirage des propositions
 Un effet du store les tire une fois la tenue du jour posée, seulement pour aujourd'hui et accueil affiché ; recalculées si le jour, le dressing, la météo, le profil ou le mode de travail changent, jamais à chaque nouvelle tenue du jour. Rien n'est écrit en base.
