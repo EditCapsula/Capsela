@@ -20,6 +20,8 @@ import { AlerteMeteoLook, PlansDuJour, usePlanApplique } from "@/components/Plan
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
 import Button from "@/components/Button";
+import { ActionRonde, CarrouselHero, CarteHero } from "@/components/CarrouselHero";
+import { composerSlides, cleTenue as cleSlide, type SlideCarrousel } from "@/lib/carrousel";
 
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
 const glypheUnivers = (d: string) => (
@@ -31,26 +33,6 @@ const D_DRESSING = "M10 6a2 2 0 1 1 2 2v1.5M12 9.5L3.4 16a1 1 0 0 0 .6 1.8h16a1 
 const D_CAPSULE = "M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3";
 const D_AGENDA = "M4.5 6h15v14h-15zM4.5 10h15M8.5 3.5v4M15.5 3.5v4";
 const D_VALISE = "M3 10a2.5 2.5 0 0 1 2.5-2.5h13A2.5 2.5 0 0 1 21 10v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18zM9 7.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2.5M9.5 11.5v5M14.5 11.5v5";
-
-/**
- * Une action discrète sous le look : un rond au trait, puis son libellé (« Sauvegarder », « Autre idée »). Un seul bouton,
- * cible tactile de 48 px.
- */
-function ActionRonde({ icone, libelle, onClick, actif, disabled, label }: { icone: React.ReactNode; libelle: string; onClick: () => void; actif?: boolean; disabled?: boolean; label?: string }) {
-  // Polish du 07/10/2026 : une icône et un mot, sans pastille — le CTA « Voir le look » reste l'action dominante du hero.
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={actif}
-      aria-label={label}
-      className="inline-flex items-center gap-[7px] min-h-[44px] px-1 text-[12.5px] text-on-terracotta-soft cursor-pointer disabled:opacity-50 motion-safe:transition-transform motion-safe:active:scale-[.97]"
-    >
-      <span className="flex-shrink-0 text-on-terracotta">{icone}</span>
-      <span>{libelle}</span>
-    </button>
-  );
-}
 
 /**
  * Une carte de la grille « Tout pour ton style » : un glyphe, un titre en deux lignes, une phrase, un visuel éditorial en
@@ -269,6 +251,69 @@ export default function HomeScreen() {
     ? state.savedLooks.some((l) => clePieces(l.pieceIds).join(",") === cleTenue)
     : avisDuJour === "adore";
 
+  /*
+   * LE CARROUSEL (14/10/2026, carrousel.ts) : trois tenues par occasion, pour AUJOURD'HUI seulement. La tenue du jour (celle qui porte
+   * l'avis, le quota, le plan appliqué) occupe la slide de son occasion — la première si c'est un plan —, les autres sont des propositions
+   * du moteur (store : `carrousel`). Un autre jour, une tenue passée, le chargement ou l'absence de tenue gardent la carte seule d'avant.
+   */
+  const slides: SlideCarrousel[] =
+    hasOutfit && !passee && jourConsulte.decalage === 0
+      ? composerSlides({
+          tenueDuJour: state.outfit,
+          occasion: occasionKey,
+          planAujourdhui: Boolean(planHero),
+          propositions: state.carrousel?.propositions ?? {},
+        })
+      : [];
+  const carrouselActif = slides.length > 1;
+  const piecesDe = (ids: number[]) => ids.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
+  const dejaSauvegardee = (ids: number[]) => state.savedLooks.some((l) => cleSlide(l.pieceIds) === cleSlide(ids));
+  const titreDe = (pieces: Item[]) => {
+    const q = qualificatifLook(meteoEnAttente ? null : meteoDuJour.temp, pieces);
+    return q ? titreDuQualificatif(q) : { a: "Ta tenue", b: "du jour" };
+  };
+
+  const carteSlide = (slide: SlideCarrousel) => {
+    const duJour = slide.source !== "proposition";
+    const pieces = duJour ? outfitPieces : piecesDe(slide.ids);
+    const titre = slide.source === "plan" && planHero ? { a: titreDuPlan(planHero), b: "" } : titreDe(pieces);
+    const sousTitre =
+      slide.source === "plan" && texteHero
+        ? texteHero.sousTitre
+        : sousTitreLookDuJour(slide.occasion, state.workMode, state.dateContext);
+    // Le libellé d'une tenue planifiée est contextuel (« Look du jour », « Look planifié »…) ; les autres disent leur occasion.
+    const surtitre = slide.source === "plan" && texteHero ? texteHero.surtitre : slide.surtitre;
+    return (
+      <CarteHero
+        key={slide.id}
+        surtitre={surtitre}
+        titre={titre}
+        sousTitre={sousTitre}
+        pieces={pieces}
+        graine={cleSlide(slide.ids)}
+        categoriesAttendues={duJour ? categoriesAttendues : undefined}
+        onVoir={() =>
+          actions.consulterTenue({
+            ids: slide.ids,
+            occasion: slide.occasion,
+            surtitre,
+            titre: [titre.a, titre.b].filter(Boolean).join(" "),
+            description: sousTitre,
+            plan: slide.source === "plan" ? planHero : null,
+          })
+        }
+        sauvegardee={duJour ? sauvegardee : dejaSauvegardee(slide.ids)}
+        onSauvegarder={() => {
+          if (duJour) return actions.setOutfitFeedback("adore");
+          if (!dejaSauvegardee(slide.ids)) actions.enregistrerIdeeLook(slide.ids, slide.occasion);
+        }}
+        onAutre={() => (duJour ? pasPourMoi() : quota.demander(() => actions.autreIdeeSlide(slide.id)))}
+        autreDesactive={quota.tirageEnCours}
+        pied={duJour && planApplique?.alerte ? <AlerteMeteoLook planApplique={planApplique} /> : undefined}
+      />
+    );
+  };
+
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-[100px]">
       <div className="px-6">
@@ -301,48 +346,51 @@ export default function HomeScreen() {
         {retroActif === 0 && <PlansDuJour depuis="home" className="mt-3" />}
       </div>
 
-      {/* LE LOOK DU JOUR : fond sable, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
-          jour passé, aucune tenue possible, la tenue qui se compose, la tenue. */}
+      {carrouselActif ? (
+        <CarrouselHero slides={slides.map(carteSlide)} libelles={slides.map((sl) => sl.surtitre)} />
+      ) : (
+      // LE LOOK DU JOUR : fond #EEDED8, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
+      // jour passé, aucune tenue possible, la tenue qui se compose, la tenue. Seul, quand le carrousel n'a pas lieu d'être.
       <div
         className="mx-4 mt-3 rounded-hero grid gap-2"
         // 358 × 307 px sur 390 (calibrage du 08/10/2026) : la marge du hero est de 16 px, 8 px de moins que la gouttière du reste de
         // l'écran. La colonne de la composition fait 181 px (zone 181 × 203), moins sur un écran étroit : le texte garde sa place.
-        style={{ background: "var(--color-terracotta-deep)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
+        style={{ background: "#EEDED8", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
       >
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">
-            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-on-terracotta" style={{ display: "block" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta-deep" style={{ display: "block" }}>
               <path d="M12 3.5l1.7 5.1 5.3 1.7-5.3 1.7L12 17.1l-1.7-5.1L5 10.3l5.3-1.7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span className="t-surtitre text-on-terracotta whitespace-nowrap">
+            <span className="t-surtitre text-ink whitespace-nowrap">
               {passee ? (retroActif === 1 ? "Ton look d’hier" : "Ton look passé") : texteHero ? texteHero.surtitre : "Ton look du jour"}
             </span>
           </div>
 
           {passee ? (
             <>
-              <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
                 {passee.plan ? titreDuPlan(passee.plan) : OCC_LABELS[passee.occasion]}
               </div>
-              <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]">{passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l’avais planifiée."}</div>
+              <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]">{passee.source === "porte" ? "Tu as porté cette tenue." : "Tu l’avais planifiée."}</div>
               <div className="mt-auto pt-4">
-                <Button variante="claire" pleine={false} onClick={actions.goHistory} className="!px-[18px]">
+                <Button variante="principal" pleine={false} onClick={actions.goHistory} className="!px-[18px]">
                   Voir dans mon journal
                 </Button>
               </div>
             </>
           ) : aucuneTenuePossible ? (
             <>
-              <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
-                On prépare ta <span className="italic text-on-terracotta-soft">première tenue</span>
+              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                On prépare ta <span className="italic text-terracotta">première tenue</span>
               </div>
-              <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+              <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
                 {dressingVide
                   ? "Ajoute quelques pièces à ton dressing, et on compose ta tenue du jour."
                   : "Ton dressing et ta capsule ne couvrent pas encore cette occasion. Quelques pièces de plus suffiront."}
               </div>
               <div className="mt-auto pt-4">
-                <Button variante="claire" pleine={false} onClick={dressingVide ? actions.openAdd : actions.goWardrobe} className="!px-[18px]">
+                <Button variante="principal" pleine={false} onClick={dressingVide ? actions.openAdd : actions.goWardrobe} className="!px-[18px]">
                   {dressingVide ? "Ajouter mes pièces" : "Voir mon dressing"}
                 </Button>
               </div>
@@ -350,22 +398,22 @@ export default function HomeScreen() {
           ) : hasOutfit ? (
             <>
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
-                <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
                   {titreHero.a}
                   {titreHero.b && (
                     <>
                       <br />
-                      <span className="italic text-on-terracotta-soft">{titreHero.b}</span>
+                      <span className="italic text-terracotta">{titreHero.b}</span>
                     </>
                   )}
                 </div>
-                <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
+                <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
                   {sousTitreHero}
                 </div>
               </div>
               <div className="mt-auto pt-4">
                 <Button
-                  variante="claire"
+                  variante="principal"
                   pleine={false}
                   onClick={planHero && jourAVenir ? () => actions.ouvrirPlan(planHero, "home") : actions.goTenues}
                   className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap"
@@ -376,10 +424,10 @@ export default function HomeScreen() {
             </>
           ) : (
             <div key="chargement" className="motion-safe:animate-[capsule-apparition_260ms_ease-out_300ms_both]" role="status">
-              <div className="font-serif text-on-terracotta mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
-                Capsela compose <span className="italic text-on-terracotta-soft">ta tenue…</span>
+              <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                Capsela compose <span className="italic text-terracotta">ta tenue…</span>
               </div>
-              <div className="text-[13px] text-on-terracotta-soft leading-[1.45] mt-[10px]">
+              <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]">
                 {jourAVenir ? "Pensée pour ton programme de ce jour-là." : "Pensée pour ton programme d’aujourd’hui."}
               </div>
               <StatutComposition />
@@ -414,7 +462,7 @@ export default function HomeScreen() {
               // rejoint Mes looks — l'avis du jour ne porte que sur la tenue d'aujourd'hui.
               onClick={() => (jourAVenir ? actions.toggleSaveOutfitLook() : actions.setOutfitFeedback("adore"))}
             />
-            <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(251,243,234,.35)" }} />
+            <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
             <ActionRonde
               icone={
                 <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -433,6 +481,7 @@ export default function HomeScreen() {
             (08/10/2026, demandé : « on a déjà "Sauvegarder" et "Autre idée" ») ; la page Tenue garde « Autre proposition ». */}
         {planApplique?.alerte && hasOutfit && <AlerteMeteoLook planApplique={planApplique} />}
       </div>
+      )}
 
       {/* ══ EXPLORER CAPSELA — « Tout pour ton style » : les quatre univers de l'app. */}
       <div className="px-6 mt-7">

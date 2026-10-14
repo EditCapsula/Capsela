@@ -89,13 +89,13 @@ export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<Re
     <div
       role="status"
       className="rounded-[16px] px-[14px] py-[11px] text-left"
-      style={{ gridColumn: "1 / -1", background: "rgba(251,243,234,.12)", border: "1px solid rgba(251,243,234,.28)" }}
+      style={{ gridColumn: "1 / -1", background: "rgba(29,26,22,.05)", border: "1px solid rgba(29,26,22,.14)" }}
     >
-      <div className="text-[13px] font-semibold leading-[1.3] text-cream">{alerte.titre}</div>
-      <div className="text-[12.5px] leading-[1.45] text-on-terracotta-soft mt-[3px]" style={{ textWrap: "pretty" }}>
+      <div className="text-[13px] font-semibold leading-[1.3] text-ink">{alerte.titre}</div>
+      <div className="text-[12.5px] leading-[1.45] text-ink-soft mt-[3px]" style={{ textWrap: "pretty" }}>
         {alerte.message}
       </div>
-      <button type="button" onClick={adapter} className="mt-[6px] min-h-[44px] text-[13px] font-semibold text-cream underline underline-offset-[3px] cursor-pointer">
+      <button type="button" onClick={adapter} className="mt-[6px] min-h-[44px] text-[13px] font-semibold text-terracotta-deep underline underline-offset-[3px] cursor-pointer">
         {alerte.cta} →
       </button>
     </div>

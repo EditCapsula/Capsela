@@ -115,6 +115,8 @@ const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<
  * sous-écrans gardent leur comportement.
  */
 function ongletDOrigine(state: ReturnType<typeof useCapsela>["state"]): Screen | null {
+  // Le détail d'une tenue du carrousel (14/10/2026) s'ouvre depuis l'accueil : « Aujourd'hui » reste allumé.
+  if (state.screen === "lookConsulte") return "home";
   if (state.screen !== "itemOutfits" && state.screen !== "ideeLook") return null;
   const origine = state.itemOutfitsReturn === "piece" ? state.pieceReturn : state.itemOutfitsReturn;
   return origine === "wardrobePieces" || origine === "looks" ? "wardrobe" : origine;
