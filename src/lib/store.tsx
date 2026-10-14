@@ -1315,22 +1315,27 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
    * occasion, saison, règles, diversité —, appliqué à l'occasion de la slide sur une copie de l'état (aucune écriture). Rend [] quand
    * le moteur ne trouve rien de complet ou rien qui n'ait déjà été montré : la slide n'est alors pas affichée.
    */
-  const proposerPourOccasion = (s: AppState, occasion: OccasionKey, courante: number[], montrees: Set<string>): number[] => {
+  const proposerPourOccasion = (s: AppState, occasion: OccasionKey, courante: number[], montrees: Set<string>, vues: Set<string>): number[] => {
     const resolution = [...s.items, ...vestiaireRef.current];
     const base: AppState = { ...s, occasion, outfit: [], planAppliqueId: null, jourDecalage: 0 };
     // Une proposition est une tenue COMPLÈTE (haut + bas ou robe, ET chaussures — isCompleteOutfit) : une slide sans chaussures
     // n'est pas montrée (signalé le 14/10/2026). Plusieurs tirages du moteur, on retient la plus garnie (accessoires compris) qui n'a
     // pas déjà été montrée et qui diffère de la tenue quittée.
-    let meilleure: number[] = [];
-    for (let i = 0; i < 10; i++) {
+    // `montrees` : ce qui est DÉJÀ à l'écran (tenue du jour, autres slides) — jamais redonné. `vues` : les tenues quittées par « Autre tenue » ces derniers
+    // jours — seulement une préférence : comme la page Tenue, qui rend une tenue déjà vue plutôt que rien, une slide ne disparaît pas parce que
+    // le dressing n'offre plus de tenue inédite (cause d'une slide manquante signalée le 14/10/2026).
+    let meilleure: { ids: number[]; inedite: boolean } | null = null;
+    for (let i = 0; i < 16; i++) {
       const st = regen(base);
       if (st.outfitNoCompleteOutfit || st.outfitMissingCats.length > 0 || st.outfit.length === 0) continue;
       const pieces = st.outfit.map((id) => findPiece(poolRef.current, id, vestiaireRef.current)).filter((it): it is Item => Boolean(it));
       if (pieces.length !== st.outfit.length || !isCompleteOutfit(pieces) || !tenueAUnSocle(pieces)) continue;
-      if (montrees.has(clePrincipale(st.outfit, resolution)) || cleTenue(st.outfit) === cleTenue(courante)) continue;
-      if (st.outfit.length > meilleure.length) meilleure = st.outfit;
+      const cle = clePrincipale(st.outfit, resolution);
+      if (montrees.has(cle) || cleTenue(st.outfit) === cleTenue(courante)) continue;
+      const inedite = !vues.has(cle);
+      if (!meilleure || (inedite && !meilleure.inedite) || (inedite === meilleure.inedite && st.outfit.length > meilleure.ids.length)) meilleure = { ids: st.outfit, inedite };
     }
-    return meilleure;
+    return meilleure ? meilleure.ids : [];
   };
 
   // Occasion par défaut du jour (recette 13/08/2026) — calculée une seule
@@ -1412,12 +1417,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setState((s) => {
       if (s.carrousel?.cle === cleCarrousel) return s;
       const resolution = [...s.items, ...vestiaireRef.current];
-      const montrees = new Set<string>(s.tenuesVues);
+      const montrees = new Set<string>();
       if (s.outfit.length) montrees.add(clePrincipale(s.outfit, resolution));
+      const vues = new Set<string>(s.tenuesVues);
       const propositions: NonNullable<AppState["carrousel"]>["propositions"] = {};
       for (const def of SLIDES) {
         // La slide de la tenue du jour (ou la première, pour un plan appliqué) n'a pas besoin de proposition.
-        const ids = proposerPourOccasion(s, def.occasion, s.outfit, montrees);
+        const ids = proposerPourOccasion(s, def.occasion, s.outfit, montrees, vues);
         if (ids.length === 0) continue;
         propositions[def.id] = ids;
         montrees.add(clePrincipale(ids, resolution));
@@ -2030,8 +2036,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             .filter((ids): ids is number[] => Array.isArray(ids) && ids.length > 0)
             .map((ids) => clePrincipale(ids, resolution))
         );
-        for (const v of s.tenuesVues) montrees.add(v);
-        const ids = proposerPourOccasion(s, def.occasion, courante, montrees);
+        const ids = proposerPourOccasion(s, def.occasion, courante, montrees, new Set(s.tenuesVues));
         // Rien de nouveau à proposer : la slide garde sa tenue plutôt que de disparaître.
         if (ids.length === 0) return s;
         propositions[slide] = ids;
