@@ -2,14 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
-import BottomSheet from "@/components/BottomSheet";
 import BarreDuJour from "@/components/BarreDuJour";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import { useQuotaTenues } from "@/components/QuotaTenues";
-import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
-import { CATLABEL, DATE_CONTEXTS, OCCASIONS, WORK_MODES, isBag } from "@/lib/data";
+import SelecteurOccasion from "@/components/SelecteurOccasion";
+import { CATLABEL, OCCASIONS, isBag } from "@/lib/data";
 import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour } from "@/lib/capsule";
@@ -30,7 +29,7 @@ import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
 import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
-import type { DateContext, Item, TravelMode, WorkMode } from "@/lib/types";
+import type { Item } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button, { BoutonDiscret } from "@/components/Button";
 import Card from "@/components/Card";
@@ -126,8 +125,6 @@ export default function TenuesScreen() {
   const tirageEnCours = quota.tirageEnCours;
   const { profile, userId } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
-  /** Feuille ouverte, ou aucune. Une seule à la fois : les deux se répondent. */
-  const [feuille, setFeuille] = useState<null | "occasion" | "sous">(null);
   // "Explorer d'autres styles" (recette 24/08/2026, état vide Tenues) —
   // calcul déclenché uniquement au clic, jamais automatiquement (coûteux :
   // rejoue le moteur pour chaque style candidat). Réinitialisé dès que
@@ -321,55 +318,6 @@ export default function TenuesScreen() {
    * séparation dressing/capsule, elle, survit intacte — `suggestedCount`
    * ci-dessus alimente désormais `provenance`.
    */
-
-  /**
-   * Ce que les deux chips affichent, et ce que la feuille des sous-choix
-   * contient. `occasion` vaut "all" tant que rien n'est choisi (store.tsx) —
-   * c'est un état légitime, pas une absence de donnée, et le chip le dit
-   * plutôt que de rester vide.
-   *
-   * `choisir` est typé sur `string` et recasté à l'appel : les trois setters
-   * attendent trois types distincts (WorkMode, DateContext, TravelMode) et
-   * les réunir ici évite trois branches de rendu identiques. Les valeurs
-   * proposées viennent toujours de la source — DATE_CONTEXTS pour la date,
-   * les littéraux du type pour les deux autres, comme avant.
-   */
-  const libelleOccasion =
-    OCCASIONS.find(([k]) => k === state.occasion)?.[1] ?? "Choisir une occasion";
-  const sousChoix: {
-    titre: string;
-    // Typé sur l'union plutôt que sur string : la feuille rend un glyphe par
-    // valeur, et un string nu y aurait demandé un cast à chaque ligne.
-    valeurs: readonly (WorkMode | DateContext | TravelMode)[];
-    courant: string;
-    glyphe: React.ReactNode;
-    choisir: (v: string) => void;
-  } | null =
-    state.occasion === "travail_formel"
-      ? {
-          titre: "Quel type de journée ?",
-          valeurs: WORK_MODES,
-          courant: state.workMode,
-          glyphe: <GlypheSousChoix valeur={state.workMode} />,
-          choisir: (v) => actions.setWorkMode(v as WorkMode),
-        }
-      : state.occasion === "date"
-        ? {
-            titre: "Quel type de date ?",
-            valeurs: DATE_CONTEXTS.map(([m]) => m),
-            courant: state.dateContext,
-          glyphe: <GlypheSousChoix valeur={state.dateContext} />,
-            choisir: (v) => actions.setDateContext(v as DateContext),
-          }
-        : state.occasion === "voyage"
-          ? {
-              titre: "Quel type de trajet ?",
-              valeurs: ["Court trajet", "Longue distance"] as const,
-              courant: state.travelMode,
-          glyphe: <GlypheSousChoix valeur={state.travelMode} />,
-              choisir: (v) => actions.setTravelMode(v as TravelMode),
-            }
-          : null;
 
   /**
    * PROVENANCE DES PIÈCES — d'où vient vraiment cette tenue.
@@ -576,60 +524,7 @@ export default function TenuesScreen() {
           30/09/2026) ; restent ici la soirée et les plans écartés ou incomplets. */}
       <PlansDuJour depuis="tenues" className="mt-3" />
 
-      {/* SÉLECTEUR COMPACT (brief 22/09/2026).
-          Les dix occasions défilaient ici en cartes de deux lignes, plus
-          jusqu'à cinq boutons de sous-choix en dessous : le look n'apparaissait
-          qu'après un tiers d'écran. Elles vivent désormais dans une feuille
-          ouverte à la demande — une seule occasion visible, toutes
-          accessibles en un tap.
-
-          Aucune taxonomie locale : OCCASIONS et DATE_CONTEXTS restent les
-          sources. Et TROIS sous-choix, pas deux — le voyage garde le sien
-          (arbitré 22/09), sans quoi « Longue distance » deviendrait
-          inatteignable et le conseil qui en dépend ne s'afficherait plus
-          jamais. */}
-      {/* La question reste au-dessus des chips (demandé le 22/09) : sans
-          elle, deux pastilles posées sous la météo ne disent pas ce qu'elles
-          gouvernent — on les lit comme un filtre, pas comme le contexte qui
-          produit la tenue. */}
-      <div className="mt-[14px] t-surtitre text-muted">
-        Qu&apos;est-ce qui est prévu {quand} ?
-      </div>
-      <div className="flex items-center gap-2 mt-2 flex-wrap">
-        <button
-          onClick={() => setFeuille("occasion")}
-          aria-haspopup="dialog"
-          aria-label={`Occasion : ${libelleOccasion}. Changer d'occasion`}
-          className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12px] cursor-pointer bg-terracotta-deep text-cream"
-          style={{ minHeight: 46 }}
-        >
-          {/* Glyphes dessinés depuis le 23/09, après la planche de
-              comparaison. Ils prennent currentColor, donc le crème du chip
-              actif ici et la terre de sienne du chip sable plus bas — ce
-              qu'un emoji ne peut pas faire, ses couleurs étant imposées par
-              le système. Ils remplacent le carré ❑ du 22/09, qui ne
-              distinguait aucune occasion d'une autre. */}
-          <GlypheOccasion occasion={state.occasion} />
-          <span className="whitespace-nowrap">{libelleOccasion}</span>
-          <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
-        </button>
-
-        {/* Le second chip n'existe que pour les occasions qui ont réellement
-            un sous-choix — jamais un chip vide pour l'alignement. */}
-        {sousChoix && (
-          <button
-            onClick={() => setFeuille("sous")}
-            aria-haspopup="dialog"
-            aria-label={`${sousChoix.titre} ${sousChoix.courant}. Changer`}
-            className="inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12px] cursor-pointer bg-warm-bg text-sand-text border border-sand-border"
-            style={{ minHeight: 46 }}
-          >
-            {sousChoix.glyphe}
-            <span className="whitespace-nowrap">{sousChoix.courant}</span>
-            <span aria-hidden="true" className="text-[9px] opacity-70">▾</span>
-          </button>
-        )}
-      </div>
+      <SelecteurOccasion quand={quand} />
 
       {state.occasion === "voyage" && state.travelMode === "Longue distance" && !state.travelTipDismissed && (
         <Card rayon="bloc" className="mt-[14px] flex items-start gap-[11px] px-4 py-[14px]">
@@ -1411,77 +1306,7 @@ export default function TenuesScreen() {
         </span>
       </button>
 
-      {/* LES DEUX FEUILLES. BottomSheet existe depuis le 24/08 (écran Ajouter)
-          — overlay cliquable, hauteur plafonnée à 85 %, largeur alignée sur
-          la coquille : rien à réinventer ici, et le comportement au clavier
-          comme au tactile reste celui déjà éprouvé ailleurs.
-
-          `aria-pressed` porte la sélection active plutôt qu'un simple ✓
-          visuel : une lectrice d'écran doit savoir laquelle est choisie, pas
-          seulement voir une coche. */}
       {quota.feuille}
-
-      <BottomSheet title={`Qu'est-ce qui est prévu ${quand} ?`} open={feuille === "occasion"} onClose={() => setFeuille(null)}>
-        <div className="flex flex-col">
-          {OCCASIONS.map(([key, label, sub]) => {
-            const actif = state.occasion === key;
-            return (
-              <button
-                key={key}
-                onClick={() => {
-                  actions.setOccasion(key);
-                  setFeuille(null);
-                }}
-                aria-pressed={actif}
-                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-divider last:border-b-0"
-                style={{ minHeight: 52 }}
-              >
-                {/* Le même glyphe que sur le chip : la feuille est l'endroit
-                    d'où le chip tire sa valeur, les montrer d'un seul côté
-                    rendait le lien entre les deux moins évident. */}
-                <span className={actif ? "text-terracotta" : "text-muted"}>
-                  <GlypheOccasion occasion={key} taille={19} />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className={"text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
-                  <div className="text-[11px] text-muted mt-[2px]">{sub}</div>
-                </div>
-                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
-                  ✓
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </BottomSheet>
-
-      <BottomSheet title={sousChoix?.titre ?? ""} open={feuille === "sous" && Boolean(sousChoix)} onClose={() => setFeuille(null)}>
-        <div className="flex flex-col">
-          {sousChoix?.valeurs.map((v) => {
-            const actif = sousChoix.courant === v;
-            return (
-              <button
-                key={v}
-                onClick={() => {
-                  sousChoix.choisir(v);
-                  setFeuille(null);
-                }}
-                aria-pressed={actif}
-                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-divider last:border-b-0"
-                style={{ minHeight: 52 }}
-              >
-                <span className={actif ? "text-terracotta" : "text-muted"}>
-                  <GlypheSousChoix valeur={v} taille={19} />
-                </span>
-                <div className={"flex-1 min-w-0 text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>{v}</div>
-                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
-                  ✓
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </BottomSheet>
 
       {/* Toast "Ajouter à la tenue" (recette 23/08/2026) — remplace l'ancienne
           carte de confirmation permanente : disparaît seule après ~2,6s,
