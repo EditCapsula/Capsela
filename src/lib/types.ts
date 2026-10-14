@@ -625,7 +625,6 @@ export type Screen =
   | "itemOutfits"
   // Détail d'une idée de look (27/09/2026), ouvert depuis « Comment porter … ? ».
   | "ideeLook"
-  | "wardrobePieces"
   // « Tes dernières pièces » (08/10/2026) — « Voir tout » de « Ajoutées récemment ».
   | "dernieresPieces"
   // Tous les looks (refonte Dressing, 25/09/2026) — « Mes looks · Voir tout ».

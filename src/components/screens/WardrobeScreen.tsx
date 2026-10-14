@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { MosaiquePieces } from "@/components/CarteLook";
@@ -8,7 +8,7 @@ import PhotoPiece from "@/components/PhotoPiece";
 import { useIdeesDressing } from "@/components/useIdeesDressing";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/lib/auth";
-import { CATLABEL, CATS, OCC_LABELS, occasionShortLabel } from "@/lib/data";
+import { CATLABEL, CATS, OCC_LABELS, occasionShortLabel, wornAgo } from "@/lib/data";
 import {
   assezDuDressing,
   groupesDuVestiaire,
@@ -30,7 +30,10 @@ import { generateOutfitWithFallback, getOutfitsForItem, type ItemOutfitVariation
 import { clePieces } from "@/lib/outfitFeedback";
 import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
-import { composeWardrobePool, wearCounts } from "@/lib/selectors";
+import { composeWardrobePool, daysSinceWorn, wearCounts } from "@/lib/selectors";
+import BottomSheet from "@/components/BottomSheet";
+import { teinteDe } from "@/lib/colorimetrieMoteur";
+import { participePorte, participePorteMaj } from "@/lib/logic";
 import { useCapsela } from "@/lib/store";
 import type { Item, OccasionKey } from "@/lib/types";
 import Button from "@/components/Button";
@@ -165,7 +168,20 @@ export default function WardrobeScreen() {
   const [maintenant] = useState(() => Date.now());
   // MAQUETTE « DRESSING V10 » (14/10/2026) : la grille des pièces est la page. Recherche, catégorie et tri vivent ici, pas dans l'URL.
   const [recherche, setRecherche] = useState("");
-  const [groupeId, setGroupeId] = useState<string | null>(null);
+  // Ouvert depuis une catégorie ou une couleur (la fiche « Voir dans mon dressing » de Tenue, « Tes dernières pièces ») : `filtrePieces` du store.
+  const filtre = state.filtrePieces;
+  const [groupeId, setGroupeId] = useState<string | null>(() => {
+    if (!filtre?.categories) return null;
+    const cle = filtre.categories.join();
+    return groupesDuVestiaire(state.items, profile.gender).find((g) => g.categories.join() === cle)?.id ?? null;
+  });
+  // MES PIÈCES EST FUSIONNÉ ICI (14/10/2026) : la sélection par appui long, la suppression confirmée, « Porté X fois » / « Jamais porté ».
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selection, setSelection] = useState<Set<number>>(new Set());
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const appuiLongFait = useRef(false);
+  const departAppui = useRef<{ x: number; y: number } | null>(null);
   const [tri, setTri] = useState<"recent" | "az">("recent");
 
   // Pool de résolution stable des looks — cf. l'en-tête, correctif 20/08/2026.
@@ -389,7 +405,8 @@ export default function WardrobeScreen() {
   const normaliser = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const terme = normaliser(recherche.trim());
   const correspond = (it: Item) => !terme || normaliser(`${it.name} ${CATLABEL[it.cat] ?? ""} ${it.color ?? ""}`).includes(terme);
-  const parRecherche = items.filter(correspond);
+  const baseItems = filtre?.teinte ? items.filter((i) => teinteDe(i) === filtre.teinte) : items;
+  const parRecherche = baseItems.filter(correspond);
   const groupeActif = groupes.find((g) => g.id === groupeId) ?? null;
   const nbDuGroupe = (g: (typeof groupes)[number]) => parRecherche.filter((it) => g.categories.includes(it.cat)).length;
   const affichees = (groupeActif ? parRecherche.filter((it) => groupeActif.categories.includes(it.cat)) : parRecherche)
@@ -401,14 +418,53 @@ export default function WardrobeScreen() {
     : groupeActif
       ? `${groupeActif.libelle} · ${pl(affichees.length)}`
       : `Toutes tes pièces · ${items.length}`;
-  const sansFiltre = !terme && !groupeActif;
+  const sansFiltre = !terme && !groupeActif && !filtre?.teinte;
+
+  const quitterSelection = () => {
+    setSelectionMode(false);
+    setSelection(new Set());
+    setConfirmOpen(false);
+  };
+  const basculer = (id: number) =>
+    setSelection((prec) => {
+      const suivant = new Set(prec);
+      if (suivant.has(id)) suivant.delete(id);
+      else suivant.add(id);
+      return suivant;
+    });
+  // Appui long sur une pièce = entrée dans la sélection, cette pièce cochée (le geste de la galerie du téléphone). Si le doigt bouge
+  // (défilement) ou se relève avant 500 ms, rien ne se passe ; le clic qui suit un appui long est avalé, sinon il ouvrirait la pièce.
+  const annulerAppui = () => {
+    if (minuteur.current) clearTimeout(minuteur.current);
+    minuteur.current = null;
+    departAppui.current = null;
+  };
+  const commencerAppui = (e: React.PointerEvent, id: number) => {
+    if (selectionMode) return;
+    appuiLongFait.current = false;
+    departAppui.current = { x: e.clientX, y: e.clientY };
+    minuteur.current = setTimeout(() => {
+      minuteur.current = null;
+      appuiLongFait.current = true;
+      setSelectionMode(true);
+      setSelection(new Set([id]));
+    }, 500);
+  };
+  const bougerAppui = (e: React.PointerEvent) => {
+    const d = departAppui.current;
+    if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10) annulerAppui();
+  };
+  const supprimerSelection = () => {
+    actions.removeItems([...selection]);
+    quitterSelection();
+  };
 
   return (
     <>
     <div className="absolute inset-0 flex flex-col">
       {/* EN-TÊTE FIXE : bandeau, titre, recherche, catégories — la grille arrive juste dessous, sans bannière intercalée. */}
       <div className="flex-shrink-0 px-6 pt-[6px]">
-        <AppHeader />
+        <AppHeader onBack={filtre?.retour === "tenue" ? actions.goTenues : undefined} backLabel="Revenir à ma tenue" />
         <div className="t-titre-ecran text-ink mt-[18px]">
           Mon <span className="italic text-terracotta">dressing</span>
         </div>
@@ -436,6 +492,7 @@ export default function WardrobeScreen() {
             </button>
           )}
         </label>
+        {!selectionMode && !filtre?.teinte && (
         <div role="tablist" aria-label="Catégories" className="scrollarea flex gap-2 overflow-x-auto py-3 -mx-6 px-6" style={{ scrollbarWidth: "none" }}>
           {[{ id: null as string | null, libelle: "Tout", n: parRecherche.length }, ...groupes.map((g) => ({ id: g.id as string | null, libelle: g.libelle, n: nbDuGroupe(g) }))].map((c) => {
             const actif = groupeId === c.id;
@@ -454,27 +511,84 @@ export default function WardrobeScreen() {
             );
           })}
         </div>
+        )}
       </div>
 
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 border-t border-border" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}>
         <div className="flex items-center justify-between gap-3 min-h-[44px]">
-          <span role="status" aria-live="polite" className="text-[12px] text-muted-3">{libelleResultats}</span>
-          <button type="button" onClick={() => setTri(tri === "recent" ? "az" : "recent")} className="h-[44px] flex items-center gap-[5px] text-[12px] font-semibold text-ink cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="text-muted-3" style={{ display: "block" }}>
-              <path d="M7 5v14M4 16l3 3 3-3M17 19V5M14 8l3-3 3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {tri === "recent" ? "Récentes d'abord" : "A → Z"}
-          </button>
+          <span role="status" aria-live="polite" className="text-[12px] text-muted-3 min-w-0">
+            {selectionMode ? (selection.size === 0 ? "Touche les pièces à retirer" : `${selection.size} ${selection.size === 1 ? "sélectionnée" : "sélectionnées"}`) : filtre?.teinte ? `${filtre.libelle} · ${pl(affichees.length)}` : libelleResultats}
+          </span>
+          {selectionMode ? (
+            <button type="button" onClick={quitterSelection} className="h-[44px] text-[12px] text-muted flex-shrink-0 cursor-pointer">Annuler</button>
+          ) : filtre?.teinte ? (
+            <button type="button" onClick={() => actions.goWardrobePieces()} className="h-[44px] text-[12px] font-semibold text-terracotta-deep flex-shrink-0 cursor-pointer">Tout afficher</button>
+          ) : (
+            <button type="button" onClick={() => setTri(tri === "recent" ? "az" : "recent")} className="h-[44px] flex items-center gap-[5px] text-[12px] font-semibold text-ink cursor-pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="text-muted-3" style={{ display: "block" }}>
+                <path d="M7 5v14M4 16l3 3 3-3M17 19V5M14 8l3-3 3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {tri === "recent" ? "Récentes d'abord" : "A → Z"}
+            </button>
+          )}
         </div>
+        {!selectionMode && affichees.length > 0 && <div className="text-[11px] text-placeholder -mt-[4px] mb-[6px]">Appui long sur une pièce pour la sélectionner</div>}
 
         {affichees.length > 0 ? (
           <div className="grid grid-cols-3 gap-x-2 gap-y-[14px]">
-            {affichees.map((p) => (
-              <button key={p.id} type="button" onClick={() => actions.openItem(p.id, false)} aria-label={p.name} className="block min-w-0 text-left text-ink cursor-pointer">
-                <PhotoPiece piece={p} ratio={0.8} rayon={14} />
-                <div className="text-[11.5px] font-medium leading-[1.3] mt-[6px]" style={{ textWrap: "pretty" }}>{p.name}</div>
-              </button>
-            ))}
+            {affichees.map((p) => {
+              const nb = parPiece.get(p.id) || 0;
+              // it.worn (jamais null si déjà porté) reste la source de « jamais porté » ; le nombre vient de l'historique réel.
+              const jamais = p.worn == null;
+              const jours = jamais ? null : daysSinceWorn(state.history, p.id);
+              const aujourdhui = jours === 0;
+              const cochee = selection.has(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    if (appuiLongFait.current) {
+                      appuiLongFait.current = false;
+                      return;
+                    }
+                    if (selectionMode) basculer(p.id);
+                    else actions.openItem(p.id, false);
+                  }}
+                  onPointerDown={(e) => commencerAppui(e, p.id)}
+                  onPointerMove={bougerAppui}
+                  onPointerUp={annulerAppui}
+                  onPointerCancel={annulerAppui}
+                  onPointerLeave={annulerAppui}
+                  onContextMenu={(e) => e.preventDefault()}
+                  aria-label={p.name}
+                  aria-pressed={selectionMode ? cochee : undefined}
+                  className="block min-w-0 text-left text-ink cursor-pointer select-none [-webkit-touch-callout:none]"
+                >
+                  <div className="relative">
+                    <PhotoPiece piece={p} ratio={0.8} rayon={14} />
+                    {selectionMode && (
+                      <span
+                        className="absolute top-[7px] left-[7px] w-[22px] h-[22px] rounded-full border flex items-center justify-center text-[12px]"
+                        style={cochee ? { background: "rgba(166,105,80,.95)", borderColor: "rgba(166,105,80,.95)", color: "var(--color-cream)" } : { background: "rgba(243,238,229,.85)", borderColor: "rgba(29,26,22,.18)", color: "transparent" }}
+                      >
+                        ✓
+                      </span>
+                    )}
+                    {aujourdhui && !selectionMode && (
+                      <span className="absolute top-[6px] right-[6px] text-[9px] tracking-[.04em] text-cream rounded-full px-[7px] py-[2px]" style={{ background: "rgba(166,105,80,.92)" }}>
+                        Aujourd&apos;hui
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[11.5px] font-medium leading-[1.3] mt-[6px]" style={{ textWrap: "pretty", opacity: selectionMode && !cochee ? 0.45 : 1 }}>{p.name}</div>
+                  <div className="text-[10px] text-placeholder mt-[1px] leading-[1.3]">
+                    {/* Accordé à la pièce (participePorte) : « Jamais portées » pour des bottines. */}
+                    {jamais ? "Jamais " + participePorte(p) : nb > 0 ? `${participePorteMaj(p)} ${nb} fois` : wornAgo(jours).replace(/^Porté/, participePorteMaj(p))}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         ) : (
           <div className="pt-9 pb-7 px-3 text-center">
@@ -492,13 +606,6 @@ export default function WardrobeScreen() {
                 Ajouter une pièce
               </button>
             </div>
-          </div>
-        )}
-
-        {/* La suppression de pièces (appui long → sélection) vit dans « Mes pièces » : un accès discret, la grille d'ici n'a pas de mode sélection. */}
-        {affichees.length > 0 && (
-          <div className="mt-4">
-            <Lien onClick={() => actions.goWardrobePieces(groupeActif ? { libelle: groupeActif.libelle, categories: groupeActif.categories } : undefined)} label="Gérer mes pièces">Gérer mes pièces</Lien>
           </div>
         )}
 
@@ -586,7 +693,26 @@ export default function WardrobeScreen() {
         )}
       </div>
     </div>
-    <BoutonAjoutFlottant onClick={ajouter} />
+    {selectionMode && selection.size > 0 && (
+      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-[480px] px-6 pb-[18px] pt-[14px] bg-gradient-to-t from-cream via-cream to-transparent">
+        <Button variante="destructif" onClick={() => setConfirmOpen(true)}>
+          Retirer {selection.size} {selection.size === 1 ? "pièce" : "pièces"}
+        </Button>
+      </div>
+    )}
+    <BottomSheet title={selection.size === 1 ? "Retirer cette pièce" : `Retirer ${selection.size} pièces`} open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+      <div className="text-[13px] text-ink leading-[1.55]">
+        {selection.size === 1 ? "Cette pièce quittera" : "Ces pièces quitteront"} ton dressing et {selection.size === 1 ? "ne sera plus proposée" : "ne seront plus proposées"} dans tes tenues. Ton historique
+        reste intact. <span className="text-rust">Cette action est définitive.</span>
+      </div>
+      <Button variante="destructif" className="mt-[22px]" onClick={supprimerSelection}>
+        Retirer définitivement
+      </Button>
+      <button onClick={() => setConfirmOpen(false)} className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer">
+        Annuler
+      </button>
+    </BottomSheet>
+    {!selectionMode && <BoutonAjoutFlottant onClick={ajouter} />}
     </>
   );
 }

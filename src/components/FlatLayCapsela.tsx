@@ -29,6 +29,7 @@ export function FlatLayCapsela({
   ombre = "douce",
   templates = true,
   fantomes = [],
+  onPiece,
 }: {
   items: Item[];
   /** Où la planche s'affiche : elle règle la zone, la marge, le gabarit et le nombre d'accessoires (cf. CONTEXTES dans flatLay.ts). */
@@ -54,6 +55,8 @@ export function FlatLayCapsela({
    * la tenue : elle n'est ni comptée, ni cliquable, ni enregistrée.
    */
   fantomes?: CategoryKey[];
+  /** Rend chaque pièce cliquable (hero) : elle ouvre sa fiche. Les silhouettes ne le sont jamais. */
+  onPiece?: (it: Item) => void;
 }) {
   const HAUTEUR = hauteurDuContexte(context);
   const graine = layoutSeed;
@@ -132,6 +135,20 @@ export function FlatLayCapsela({
           const entree = images.find(({ it }) => it.id === p.id)!;
           const { it, img, fantome } = entree;
           const m = fantome ? null : margesDe(img.url);
+          const cliquable = onPiece && !fantome
+            ? {
+                role: "button" as const,
+                tabIndex: 0,
+                "aria-label": `${it.name}. Voir le détail`,
+                onClick: () => onPiece(it),
+                onKeyDown: (e: React.KeyboardEvent) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onPiece(it);
+                  }
+                },
+              }
+            : {};
           const base = {
             position: "absolute" as const,
             left: `${p.x}%`,
@@ -160,7 +177,7 @@ export function FlatLayCapsela({
             const lc = 1 - m.g - m.d;
             const hc = 1 - m.h - m.b;
             return (
-              <div key={it.id} data-peint="" style={{ ...base, overflow: "hidden" }}>
+              <div key={it.id} data-peint="" {...cliquable} style={{ ...base, overflow: "hidden", cursor: onPiece ? "pointer" : undefined }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={img.url}
@@ -174,13 +191,13 @@ export function FlatLayCapsela({
           }
           if (img.url) {
             return (
-              <div key={it.id} data-peint="" style={{ ...base, borderRadius: img.kind === "photo" ? 14 : undefined, overflow: "hidden" }}>
+              <div key={it.id} data-peint="" {...cliquable} style={{ ...base, borderRadius: img.kind === "photo" ? 14 : undefined, overflow: "hidden", cursor: onPiece ? "pointer" : undefined }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={img.url} alt={it.name} onLoad={aCharge} onError={aCharge} style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }} />
               </div>
             );
           }
-          return <div key={it.id} data-peint="" role="img" aria-label={it.name} style={{ ...base, borderRadius: 14, background: it.hex, opacity: 0.9 }} />;
+          return <div key={it.id} data-peint="" role={onPiece ? "button" : "img"} aria-label={it.name} {...(onPiece ? { tabIndex: 0, onClick: () => onPiece(it) } : {})} style={{ ...base, borderRadius: 14, background: it.hex, opacity: 0.9, cursor: onPiece ? "pointer" : undefined }} />;
         })}
       </div>
     </div>

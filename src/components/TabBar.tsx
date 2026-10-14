@@ -117,7 +117,7 @@ const TABS: { label: string; icon: IconName; screen: Screen; go: (a: ReturnType<
 function ongletDOrigine(state: ReturnType<typeof useCapsela>["state"]): Screen | null {
   if (state.screen !== "itemOutfits" && state.screen !== "ideeLook") return null;
   const origine = state.itemOutfitsReturn === "piece" ? state.pieceReturn : state.itemOutfitsReturn;
-  return origine === "wardrobePieces" || origine === "looks" ? "wardrobe" : origine;
+  return origine === "looks" ? "wardrobe" : origine;
 }
 
 export default function TabBar() {

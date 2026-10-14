@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { CarteIdeeLook } from "@/components/CarteIdeeLook";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import { currentSeasonKey } from "@/lib/capsule";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { OCC_SHORT, wornAgo } from "@/lib/data";
@@ -37,6 +38,7 @@ import Card from "@/components/Card";
 export default function IdeeLookScreen() {
   const { state, wardrobePool, vestiairePool, actions } = useCapsela();
   const actif = state.ideeLookActive;
+  const ouvrirPiece = useOuvrirPiece();
   const haut = useRef<HTMLDivElement>(null);
   // L'enregistrement demandé, par look : un autre look rouvert ici repart à zéro.
   const [demandeCle, setDemandeCle] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export default function IdeeLookScreen() {
         role="img"
         aria-label={"Composition du look : " + pieces.map((p) => p.name).join(", ")}
       >
-        <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id))} />
+        <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id))} onPiece={ouvrirPiece} />
       </div>
 
       <div className="t-label text-terracotta mt-[18px]">Look {actif.numero}</div>

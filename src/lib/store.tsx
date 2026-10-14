@@ -1618,7 +1618,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goAuth: () => go("auth"),
     enterApp: () => go("home"),
     goHome: () => go("home"),
-    goWardrobe: () => go("wardrobe"),
+    goWardrobe: () => setState((s) => ({ ...s, filtrePieces: null, screen: "wardrobe" })),
     goDernieresPieces: () => go("dernieresPieces"),
     goCapsule: () => go("capsule"),
     goTenues: () =>
@@ -1662,7 +1662,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     planifierDirect: () => setState((s) => ({ ...s, planRetour: "home", planJour: null, planComposition: null, planDirect: true, screen: "planifier" })),
     oublierPlanDirect: () => setState((s) => (s.planDirect ? { ...s, planDirect: false } : s)),
     goNeverWorn: () => go("neverworn"),
-    goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobePieces" })),
+    // « Mes pièces » est fusionné dans le Dressing (14/10/2026) : le filtre (catégorie, couleur venue de Tenue) s'applique à la grille du Dressing.
+    goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobe" })),
     goLooks: () => go("looks"),
     // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
     // Avant : revenir de « Modifier » au profil enregistrait « Modifier »

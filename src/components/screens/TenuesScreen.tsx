@@ -6,6 +6,7 @@ import BottomSheet from "@/components/BottomSheet";
 import BarreDuJour from "@/components/BarreDuJour";
 import { PlansDuJour, usePlanApplique } from "@/components/PlansDuJour";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { CATLABEL, DATE_CONTEXTS, OCCASIONS, WORK_MODES, isBag } from "@/lib/data";
@@ -121,6 +122,7 @@ export default function TenuesScreen() {
   const autreTenue = () => quota.demander(rejouer);
   // La tenue planifiée devenue tenue du jour (option C, 30/09/2026).
   const planApplique = usePlanApplique();
+  const ouvrirPiece = useOuvrirPiece();
   const tirageEnCours = quota.tirageEnCours;
   const { profile, userId } = useAuth();
   const [layeringInfoOpen, setLayeringInfoOpen] = useState(false);
@@ -816,7 +818,7 @@ export default function TenuesScreen() {
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
             <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={chaussuresManquantes ? ["chaussures"] : []} />
+              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={chaussuresManquantes ? ["chaussures"] : []} onPiece={ouvrirPiece} />
             </div>
           </div>
           <div className="flex-shrink-0">

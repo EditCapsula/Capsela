@@ -20,7 +20,7 @@ export default function ConfirmationAjout({ auDessusDeLaBarre }: { auDessusDeLaB
   const { fermerPieceAjoutee } = actions;
 
   if (!state.pieceAjoutee) return null;
-  const dejaAuDressing = state.screen === "wardrobe" || state.screen === "wardrobePieces";
+  const dejaAuDressing = state.screen === "wardrobe";
 
   return (
     <div

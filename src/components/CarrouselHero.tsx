@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { ZoneLookDuJour } from "@/components/ZoneLookDuJour";
+import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import Button from "@/components/Button";
 import type { CategoryKey, Item } from "@/lib/types";
 
@@ -58,6 +59,7 @@ export interface CarteHeroProps {
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
 export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied }: CarteHeroProps) {
+  const ouvrirPiece = useOuvrirPiece();
   return (
     <div
       className="rounded-hero grid gap-2"
@@ -91,9 +93,9 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
 
       <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "4px -10px 0 -6px" }}>
         {categoriesAttendues ? (
-          <ZoneLookDuJour pieces={pieces} categoriesAttendues={categoriesAttendues} graine={graine} />
+          <ZoneLookDuJour pieces={pieces} categoriesAttendues={categoriesAttendues} graine={graine} onPiece={ouvrirPiece} />
         ) : (
-          <FlatLayCapsela items={pieces} context="hero-home" layoutSeed={graine} />
+          <FlatLayCapsela items={pieces} context="hero-home" layoutSeed={graine} onPiece={ouvrirPiece} />
         )}
       </div>
 

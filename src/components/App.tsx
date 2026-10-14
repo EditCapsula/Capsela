@@ -10,7 +10,6 @@ import OnboardingScreen from "./screens/OnboardingScreen";
 import AuthScreen from "./screens/AuthScreen";
 import HomeScreen from "./screens/HomeScreen";
 import WardrobeScreen from "./screens/WardrobeScreen";
-import WardrobePiecesScreen from "./screens/WardrobePiecesScreen";
 import DernieresPiecesScreen from "@/components/screens/DernieresPiecesScreen";
 import PieceScreen from "./screens/PieceScreen";
 import AddScreen from "./screens/AddScreen";
@@ -164,7 +163,6 @@ function Screens() {
         {state.screen === "auth" && <AuthScreen />}
         {state.screen === "home" && <HomeScreen />}
         {state.screen === "wardrobe" && <WardrobeScreen />}
-        {state.screen === "wardrobePieces" && <WardrobePiecesScreen />}
         {state.screen === "dernieresPieces" && <DernieresPiecesScreen />}
         {state.screen === "piece" && <PieceScreen />}
         {state.screen === "add" && <AddScreen />}
