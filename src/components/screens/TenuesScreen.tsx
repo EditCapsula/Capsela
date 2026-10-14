@@ -414,6 +414,11 @@ export default function TenuesScreen() {
       ? categoriesManquantes(outfitPieces)
       : [];
   const missingText = missingSuggestionText(categoriesAbsentes);
+  // DES CHAUSSURES QUI MANQUENT (14/10/2026, demandé) : elles ne font plus l'objet d'une carte « À compléter » sous le hero ; le hero les
+  // montre en silhouette, comme l'écran de chargement, avec la phrase « Il te manque une paire de chaussures pour ce look ». Les autres
+  // manques (haut, bas, chaud…) gardent leur carte. `missingText` reste complet : le statut de la tenue (« à compléter ») en dépend.
+  const chaussuresManquantes = categoriesAbsentes.includes("chaussures") && outfitPieces.length > 0 && !state.outfitNoCompleteOutfit;
+  const missingTextCarte = missingSuggestionText(categoriesAbsentes.filter((k) => k !== "chaussures"));
   // Repli progressif de formalité (nouveau 21/08/2026, décidé) — calculé
   // par generateOutfitWithFallback (store.tsx), jamais recalculé ici :
   // bannière + badge distincts de missingText (rien ne manque, la
@@ -522,7 +527,7 @@ export default function TenuesScreen() {
   const badgesAffiches = statut.cle === "a_completer" ? badges.filter((b) => b !== "recommande") : badges;
 
   const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)]));
-  const aCompleter = !noCompleteOutfit && (proactiveKeys.length > 0 || Boolean(missingText) || vesteWithoutBase);
+  const aCompleter = !noCompleteOutfit && (proactiveKeys.length > 0 || Boolean(missingTextCarte) || vesteWithoutBase);
 
   // pb-safe-nav (correctif 20/08/2026) remplace pb-24 : réserve la hauteur
   // réelle de la navigation basse + safe-area-inset-bottom + marge de
@@ -811,7 +816,7 @@ export default function TenuesScreen() {
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
             <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} />
+              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={chaussuresManquantes ? ["chaussures"] : []} />
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -835,6 +840,11 @@ export default function TenuesScreen() {
                 en dur. Le badge capsule ne s'affiche que s'il y a vraiment une
                 pièce de capsule : une tenue entièrement issue du dressing n'en
                 montre qu'un. */}
+            {chaussuresManquantes && (
+              <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
+                Il te manque une paire de chaussures pour ce look.
+              </div>
+            )}
             {provenance && (
               <div className="flex flex-wrap gap-[5px] mt-[5px] px-[6px]">
                 {provenance.map((p) => (
@@ -963,10 +973,10 @@ export default function TenuesScreen() {
             <span className="t-label text-terracotta">Compléter la tenue</span>
           </div>
 
-          {!noCompleteOutfit && missingText && (
+          {!noCompleteOutfit && missingTextCarte && (
             <Card className="mt-[12px] p-4">
               <div className="t-label text-terracotta">À compléter</div>
-              <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{missingText}</div>
+              <div className="text-[13px] text-ink-soft leading-[1.5] mt-[6px]">{missingTextCarte}</div>
               <button onClick={actions.openAdd} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
                 Ajouter une pièce →
               </button>

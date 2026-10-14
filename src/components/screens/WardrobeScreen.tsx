@@ -8,7 +8,7 @@ import PhotoPiece from "@/components/PhotoPiece";
 import { useIdeesDressing } from "@/components/useIdeesDressing";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAuth } from "@/lib/auth";
-import { CATS, OCC_LABELS, occasionShortLabel } from "@/lib/data";
+import { CATLABEL, CATS, OCC_LABELS, occasionShortLabel } from "@/lib/data";
 import {
   assezDuDressing,
   groupesDuVestiaire,
@@ -163,6 +163,10 @@ export default function WardrobeScreen() {
   const { profile } = useAuth();
   const items = state.items;
   const [maintenant] = useState(() => Date.now());
+  // MAQUETTE « DRESSING V10 » (14/10/2026) : la grille des pièces est la page. Recherche, catégorie et tri vivent ici, pas dans l'URL.
+  const [recherche, setRecherche] = useState("");
+  const [groupeId, setGroupeId] = useState<string | null>(null);
+  const [tri, setTri] = useState<"recent" | "az">("recent");
 
   // Pool de résolution stable des looks — cf. l'en-tête, correctif 20/08/2026.
   const resolvePool = useMemo(() => [...items, ...vestiairePool], [items, vestiairePool]);
@@ -261,7 +265,7 @@ export default function WardrobeScreen() {
     <>
       <AppHeader />
       <div className="t-titre-ecran text-ink mt-[18px]" style={{ textWrap: "balance" }}>
-        Ton dressing, <span className="italic text-terracotta">à ton image</span>
+        Mon <span className="italic text-terracotta">dressing</span>
       </div>
       {/* Une seule ligne : le nombre de pièces et de catégories, calculés. Plus de « places restantes » (08/10/2026). */}
       <div className="text-[13px] text-muted mt-[8px]">
@@ -381,205 +385,206 @@ export default function WardrobeScreen() {
   // Accord sur le nom, comme l'article (« Tes baskets attendent », « Ta basket attend ») — plus sur la catégorie (09/10/2026).
   const pluriel = aRedecouvrirUne ? articlePossessif(aRedecouvrirUne.piece) === "tes" : false;
 
+  // ── LES PIÈCES : recherche (nom, catégorie, couleur), catégorie, tri — la maquette V10 ──────────────────────────────────────────
+  const normaliser = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const terme = normaliser(recherche.trim());
+  const correspond = (it: Item) => !terme || normaliser(`${it.name} ${CATLABEL[it.cat] ?? ""} ${it.color ?? ""}`).includes(terme);
+  const parRecherche = items.filter(correspond);
+  const groupeActif = groupes.find((g) => g.id === groupeId) ?? null;
+  const nbDuGroupe = (g: (typeof groupes)[number]) => parRecherche.filter((it) => g.categories.includes(it.cat)).length;
+  const affichees = (groupeActif ? parRecherche.filter((it) => groupeActif.categories.includes(it.cat)) : parRecherche)
+    .slice()
+    .sort(tri === "recent" ? (x, y) => (y.createdAt ?? 0) - (x.createdAt ?? 0) || y.id - x.id : (x, y) => x.name.localeCompare(y.name, "fr"));
+  const pl = (n: number) => `${n} ${n <= 1 ? "pièce" : "pièces"}`;
+  const libelleResultats = terme
+    ? `${pl(affichees.length)} pour « ${recherche.trim()} »`
+    : groupeActif
+      ? `${groupeActif.libelle} · ${pl(affichees.length)}`
+      : `Toutes tes pièces · ${items.length}`;
+  const sansFiltre = !terme && !groupeActif;
+
   return (
     <>
-    <div
-      className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]"
-      style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}
-    >
-      <AppHeader />
-      <div className="flex items-end justify-between gap-3 mt-[18px]">
-        <div className="t-titre-ecran text-ink" style={{ textWrap: "balance" }}>
-          Ton dressing, <span className="italic text-terracotta">à ton image</span>
+    <div className="absolute inset-0 flex flex-col">
+      {/* EN-TÊTE FIXE : bandeau, titre, recherche, catégories — la grille arrive juste dessous, sans bannière intercalée. */}
+      <div className="flex-shrink-0 px-6 pt-[6px]">
+        <AppHeader />
+        <div className="t-titre-ecran text-ink mt-[18px]">
+          Mon <span className="italic text-terracotta">dressing</span>
+        </div>
+        <div className="text-[13px] text-muted-3 mt-[4px]">{pl(items.length)}</div>
+        <label className="mt-3 flex items-center gap-[10px] h-[44px] pl-[14px] pr-[6px] rounded-full bg-card border" style={{ borderColor: recherche ? "var(--color-terracotta-deep)" : "var(--color-border)" }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-muted-3" style={{ display: "block" }}>
+            <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="6" />
+              <path d="M20 20l-4.5-4.5" />
+            </g>
+          </svg>
+          <input
+            type="search"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="Rechercher une pièce, une couleur…"
+            aria-label="Rechercher une pièce"
+            className="flex-1 min-w-0 h-full bg-transparent outline-none text-[13.5px] font-medium text-ink placeholder:text-placeholder"
+          />
+          {recherche && (
+            <button type="button" onClick={() => setRecherche("")} aria-label="Effacer la recherche" className="w-[34px] h-[34px] flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center cursor-pointer">
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="text-muted-3" style={{ display: "block" }}>
+                <path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
+        </label>
+        <div role="tablist" aria-label="Catégories" className="scrollarea flex gap-2 overflow-x-auto py-3 -mx-6 px-6" style={{ scrollbarWidth: "none" }}>
+          {[{ id: null as string | null, libelle: "Tout", n: parRecherche.length }, ...groupes.map((g) => ({ id: g.id as string | null, libelle: g.libelle, n: nbDuGroupe(g) }))].map((c) => {
+            const actif = groupeId === c.id;
+            return (
+              <button
+                key={c.id ?? "tout"}
+                type="button"
+                role="tab"
+                aria-selected={actif}
+                onClick={() => setGroupeId(c.id)}
+                className={"flex-shrink-0 h-[40px] px-[15px] rounded-full border text-[12.5px] font-medium whitespace-nowrap flex items-center gap-[6px] cursor-pointer " + (actif ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")}
+              >
+                {c.libelle}
+                <span className="text-[11.5px]" style={{ color: actif ? "var(--color-warm-bg)" : "var(--color-muted)" }}>{c.n}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
-      <div className="text-[13px] text-muted mt-[8px]">
-        {items.length} {items.length <= 1 ? "pièce" : "pièces"}
-        {/* « N looks possibles » retiré le 12/10/2026 (« j'ai l'impression que ce nombre est faux ») : un total de tirages du moteur ne se
-            vérifie pas à l'œil. Le nombre par pièce (« Comment porter … ? », Dernières pièces) reste. */}
-      </div>
 
-      {/* ── RÉCEMMENT AJOUTÉES ─ des miniatures et un chevron vers « Tes dernières pièces » (30 jours). */}
-      {recentes.length > 0 && (
-        <div className="mt-4 flex items-center gap-3">
-          {/* Deux lignes imposées : sans le saut, « Récemment » se coupait par un tiret à 320 px (vérification de la maquette V9). */}
-          <div className="t-surtitre text-muted flex-shrink-0" style={{ lineHeight: 1.4 }}>
-            Récemment
-            <br />
-            ajoutées
-          </div>
-          <div className="flex gap-[6px] flex-1 min-w-0 overflow-hidden">
-            {recentes.slice(0, 4).map((p) => (
-              <button key={p.id} onClick={() => actions.openItem(p.id)} aria-label={p.name} className="flex-1 min-w-0 cursor-pointer" style={{ maxWidth: 56 }}>
-                <PhotoPiece piece={p} ratio={0.84} rayon={12} />
+      <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 border-t border-border" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}>
+        <div className="flex items-center justify-between gap-3 min-h-[44px]">
+          <span role="status" aria-live="polite" className="text-[12px] text-muted-3">{libelleResultats}</span>
+          <button type="button" onClick={() => setTri(tri === "recent" ? "az" : "recent")} className="h-[44px] flex items-center gap-[5px] text-[12px] font-semibold text-ink cursor-pointer">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="text-muted-3" style={{ display: "block" }}>
+              <path d="M7 5v14M4 16l3 3 3-3M17 19V5M14 8l3-3 3 3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {tri === "recent" ? "Récentes d'abord" : "A → Z"}
+          </button>
+        </div>
+
+        {affichees.length > 0 ? (
+          <div className="grid grid-cols-3 gap-x-2 gap-y-[14px]">
+            {affichees.map((p) => (
+              <button key={p.id} type="button" onClick={() => actions.openItem(p.id, false)} aria-label={p.name} className="block min-w-0 text-left text-ink cursor-pointer">
+                <PhotoPiece piece={p} ratio={0.8} rayon={14} />
+                <div className="text-[11.5px] font-medium leading-[1.3] mt-[6px]" style={{ textWrap: "pretty" }}>{p.name}</div>
               </button>
             ))}
           </div>
-          <button
-            onClick={actions.goDernieresPieces}
-            aria-label="Voir mes dernières pièces"
-            className="flex-shrink-0 flex items-center justify-center rounded-full border border-border bg-card text-terracotta-deep cursor-pointer"
-            style={{ width: 44, height: 44 }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9.5 6l6 6-6 6" /></svg>
-          </button>
-        </div>
-      )}
-
-      {/* ── L'INSPIRATION DU MOMENT ─ un look que le moteur compose avec les pièces récentes. */}
-      {lookInspiration && avecIdee && phraseInspiration && (
-        // Hero légèrement réduit (V9 de finition) : photo 1,85 au lieu de 1,6, titre 20 px, marges resserrées — le premier écran garde
-        // l'en-tête, « Récemment ajoutées » et le hero entiers.
-        <section className="mt-4 overflow-hidden" style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", borderRadius: 24 }} aria-label="L'inspiration du moment">
-          <div className="relative" style={{ aspectRatio: "1.85", background: "var(--color-photo-bg)" }}>
-            <FlatLayCapsela
-              items={lookInspiration.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i)}
-              context="look-detail"
-              layoutSeed={clePieces(lookInspiration.ids).join(",")}
-            />
-          </div>
-          <div className="px-4 pt-3 pb-1">
-            <div className="t-surtitre flex items-center gap-[6px] text-terracotta-hover">
-              <span className="text-terracotta">{ETOILE}</span>
-              L&apos;inspiration du moment
+        ) : (
+          <div className="pt-9 pb-7 px-3 text-center">
+            <div className="font-serif text-ink" style={{ fontSize: 18, lineHeight: 1.25 }}>
+              {terme ? `Aucune pièce pour « ${recherche.trim()} »` : "Rien dans cette catégorie pour l'instant"}
             </div>
-            <div className="font-serif text-ink mt-[5px]" style={{ fontSize: 20, lineHeight: 1.15 }}>
-              Tes nouvelles pièces, <span className="italic text-terracotta">déjà en looks</span>
+            <div className="text-[12.5px] text-muted-3 leading-[1.5] mt-2" style={{ textWrap: "pretty" }}>
+              {terme ? "Essaie un autre mot, une couleur ou une catégorie. Ou ajoute-la si elle n'est pas encore dans ton dressing." : "Ajoute une pièce pour la retrouver ici."}
             </div>
-            <div className="text-[12.5px] leading-[1.45] mt-[5px]" style={{ color: "var(--color-muted-3)", textWrap: "pretty" }}>{phraseInspiration}</div>
-            <button
-              onClick={() => actions.viewItemOutfit(lookInspiration.ids, lookInspiration.occasion)}
-              className="flex items-center gap-[6px] min-h-[44px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer"
-            >
-              Voir ce look →
-            </button>
+            <div className="flex justify-center gap-2 mt-4 flex-wrap">
+              <button type="button" onClick={() => { setRecherche(""); setGroupeId(null); }} className="h-[44px] px-[18px] rounded-full border border-border bg-card text-[13px] font-semibold text-ink cursor-pointer">
+                Voir tout le dressing
+              </button>
+              <button type="button" onClick={ajouter} className="h-[44px] px-[18px] rounded-full border border-terracotta-deep bg-card text-[13px] font-semibold text-terracotta-deep cursor-pointer">
+                Ajouter une pièce
+              </button>
+            </div>
           </div>
-        </section>
-      )}
+        )}
 
-      {/* ── TES LOOKS ─ un look par pièce récente, avec la pièce qui l'a fait naître. */}
-      {looksCarrousel.length > 0 && (
-        <section className="mt-6" aria-label="Tes looks">
-          <div className="flex items-baseline justify-between gap-3">
-            <TitreSerif taille={18}>Tes looks</TitreSerif>
-            <Lien onClick={actions.goLooks} label="Voir mes looks">Voir mes looks →</Lien>
+        {/* La suppression de pièces (appui long → sélection) vit dans « Mes pièces » : un accès discret, la grille d'ici n'a pas de mode sélection. */}
+        {affichees.length > 0 && (
+          <div className="mt-4">
+            <Lien onClick={() => actions.goWardrobePieces(groupeActif ? { libelle: groupeActif.libelle, categories: groupeActif.categories } : undefined)} label="Gérer mes pièces">Gérer mes pièces</Lien>
           </div>
-          <div className="scrollarea flex gap-[12px] overflow-x-auto mt-4 -mx-6 px-6" style={{ scrollPaddingInline: 24, scrollSnapType: "x proximity" }}>
-            {looksCarrousel.map(({ piece, idee }) => {
-              const pieces = idee.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i);
-              return (
-                <button
-                  key={clePieces(idee.ids).join(",")}
-                  onClick={() => actions.viewItemOutfit(idee.ids, idee.occasion)}
-                  className="flex-none text-left cursor-pointer active:opacity-80"
-                  style={{ width: "min(78%, 300px)", scrollSnapAlign: "start" }}
-                >
-                  {/* La planche « look-detail » est une zone portrait (100 × 126) : dans une carte à l'italienne (1,25) elle ne remplissait que
-                      les deux tiers de la largeur et les pièces restaient petites. Le ratio de la carte la suit (0,9), sa largeur et son aperçu de
-                      la carte suivante ne changent pas. Fond grège plus soutenu et ombre marquée : les pièces blanches et beiges se détachent. */}
-                  <div
-                    className="relative overflow-hidden"
-                    style={{
-                      aspectRatio: "0.9",
-                      borderRadius: 20,
-                      background: "radial-gradient(120% 90% at 50% 28%, var(--color-flatlay-bg-clair) 0%, var(--color-flatlay-bg) 100%)",
-                      boxShadow: "inset 0 0 0 1px rgba(29,26,22,.05)",
-                    }}
-                  >
-                    <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} ombre="marquee" />
-                  </div>
-                  <div className="font-serif text-ink mt-[10px] px-[2px]" style={{ fontSize: 16 }}>{occasionShortLabel(idee.occasion)}</div>
-                  <div className="text-[12px] px-[2px] line-clamp-1" style={{ color: "var(--color-muted-3)" }}>
-                    {phrasePiste(piece)} · {idee.ids.length} pièces
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      )}
+        )}
 
-      {/* ── PAR CATÉGORIE ─ une carte par catégorie réellement présente (visuel éditorial, libellé et nombre en pastille). */}
-      <section className="mt-7" aria-label="Par catégorie">
-        <div className="flex items-baseline justify-between gap-3">
-          <TitreSerif taille={18}>Par catégorie</TitreSerif>
-          <Lien onClick={() => actions.goWardrobePieces()} label="Voir toutes mes pièces">Toutes mes pièces →</Lien>
-        </div>
-        <div className="grid grid-cols-2 gap-[10px] mt-4">
-          {groupes.map((g) => (
-            <button
-              key={g.id}
-              onClick={() => actions.goWardrobePieces({ libelle: g.libelle, categories: g.categories })}
-              aria-label={`${g.libelle} : ${g.nbPieces} ${g.nbPieces <= 1 ? "pièce" : "pièces"}`}
-              className="relative block w-full overflow-hidden cursor-pointer active:opacity-80 text-left"
-              style={{ aspectRatio: "0.92", borderRadius: 20, background: "var(--color-warm-bg)" }}
-            >
-              {g.propres.length > 0 ? (
-                <span
-                  className="absolute inset-0 block"
-                  style={{ background: "radial-gradient(120% 90% at 50% 28%, var(--color-flatlay-bg-clair) 0%, var(--color-flatlay-bg) 100%)" }}
-                >
-                  {g.propres.map((p) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={p.id}
-                      src={p.url}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      style={{
-                        position: "absolute",
-                        left: `${p.l}%`,
-                        top: `${p.t}%`,
-                        width: `${p.w}%`,
-                        height: `${p.h}%`,
-                        objectFit: "contain",
-                        filter: "drop-shadow(0 3px 5px rgba(29,26,22,.22))",
-                      }}
-                    />
-                  ))}
-                </span>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={g.visuel} alt="" width={480} height={640} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              )}
-              <span
-                className="absolute left-[8px] right-[8px] bottom-[8px] flex flex-col gap-[1px] px-[14px] py-[8px]"
-                style={{ background: "var(--color-card)", borderRadius: 14 }}
-              >
-                <span className="font-serif text-ink line-clamp-2" style={{ fontSize: 14, lineHeight: 1.2 }}>{g.libelle.replace(/ & /g, " &\u00a0")}</span>
-                <span className="text-[11px] text-muted">{g.nbPieces} {g.nbPieces <= 1 ? "pièce" : "pièces"}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ── À REDÉCOUVRIR ─ une seule pièce de saison, peu portée, avec un look possible. */}
-      {aRedecouvrirUne && (
-        <button
-          onClick={() => actions.openItemOutfits(aRedecouvrirUne.piece.id, false, idees?.get(aRedecouvrirUne.piece.id))}
-          className="mt-7 w-full flex items-center gap-[14px] text-left rounded-carte py-3 pl-3 pr-[14px] cursor-pointer active:opacity-80"
-          style={{ background: "var(--color-warm-bg)" }}
-          aria-label="À redécouvrir"
-        >
-          <span className="flex-none" style={{ width: 76 }}>
-            <PhotoPiece piece={aRedecouvrirUne.piece} ratio={0.82} rayon={14} />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block t-surtitre text-terracotta-hover">À redécouvrir · {weather.saisons?.length ? weather.saisons.join(" / ") : saisonDeLaDate(maintenant)}</span>
-            <span className="block font-serif text-ink mt-[6px]" style={{ fontSize: 17, lineHeight: 1.2 }}>
-              {`${designationPiece(aRedecouvrirUne.piece).replace(/^t(on|a|es) /, (m) => `T${m.slice(1)}`)} `}
-              <span className="italic text-terracotta">{pluriel ? "attendent leur moment" : "attend son moment"}</span>
-            </span>
-            {nbLooksRedecouvrir > 0 && (
-              <span className="block text-[12px] font-semibold mt-[6px]" style={{ color: "var(--color-terracotta-deep)" }}>
-                {nbLooksRedecouvrir} {nbLooksRedecouvrir === 1 ? "look cette saison" : "looks cette saison"} →
-              </span>
+        {/* Après les pièces, et seulement sans recherche ni catégorie : looks, inspiration, à redécouvrir. */}
+        {sansFiltre && (
+          <>
+            {looksCarrousel.length > 0 && (
+              <section className="mt-8" aria-label="Tes looks">
+                <div className="flex items-center justify-between gap-3">
+                  <TitreSerif taille={18}>Tes looks</TitreSerif>
+                  <Lien onClick={actions.goLooks} label="Voir mes looks">Voir mes looks</Lien>
+                </div>
+                <div className="grid grid-cols-2 gap-[10px] mt-1">
+                  {looksCarrousel.slice(0, 2).map(({ piece, idee }) => {
+                    const pieces = idee.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i);
+                    return (
+                      <button key={clePieces(idee.ids).join(",")} type="button" onClick={() => actions.viewItemOutfit(idee.ids, idee.occasion)} className="block text-left cursor-pointer active:opacity-80">
+                        <div
+                          className="relative overflow-hidden"
+                          style={{ aspectRatio: "0.9", borderRadius: 20, background: "radial-gradient(120% 90% at 50% 28%, var(--color-flatlay-bg-clair) 0%, var(--color-flatlay-bg) 100%)", boxShadow: "inset 0 0 0 1px rgba(29,26,22,.05)" }}
+                        >
+                          <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} ombre="marquee" />
+                        </div>
+                        <div className="font-serif text-ink mt-2" style={{ fontSize: 15 }}>{occasionShortLabel(idee.occasion)}</div>
+                        <div className="text-[11.5px] text-muted-3 mt-[2px] line-clamp-2">{phrasePiste(piece)} · {idee.ids.length} pièces</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
             )}
-          </span>
-        </button>
-      )}
+
+            {lookInspiration && avecIdee && phraseInspiration && (
+              <button
+                type="button"
+                onClick={() => actions.viewItemOutfit(lookInspiration.ids, lookInspiration.occasion)}
+                className="mt-[22px] w-full flex items-center gap-[14px] text-left rounded-[20px] border border-border bg-card py-3 pl-3 pr-[14px] cursor-pointer active:opacity-80"
+                aria-label="L'inspiration du moment"
+              >
+                <span className="relative flex-none overflow-hidden" style={{ width: 76, height: 92, borderRadius: 14, background: "var(--color-photo-bg)" }}>
+                  <FlatLayCapsela
+                    items={lookInspiration.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i)}
+                    context="look-detail"
+                    layoutSeed={clePieces(lookInspiration.ids).join(",")}
+                  />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="t-surtitre flex items-center gap-[6px] text-terracotta-hover">
+                    <span className="text-terracotta">{ETOILE}</span>
+                    L&apos;inspiration du moment
+                  </span>
+                  <span className="block font-serif text-ink mt-[5px]" style={{ fontSize: 16.5, lineHeight: 1.2 }}>
+                    Tes nouvelles pièces, <span className="italic text-terracotta">déjà en looks</span>
+                  </span>
+                  <span className="block text-[12px] font-semibold mt-[6px] text-terracotta-deep">Voir ce look</span>
+                </span>
+              </button>
+            )}
+
+            {aRedecouvrirUne && (
+              <button
+                onClick={() => actions.openItemOutfits(aRedecouvrirUne.piece.id, false, idees?.get(aRedecouvrirUne.piece.id))}
+                className="mt-[10px] w-full flex items-center gap-[14px] text-left rounded-[20px] py-3 pl-3 pr-[14px] cursor-pointer active:opacity-80"
+                style={{ background: "var(--color-warm-bg)" }}
+                aria-label="À redécouvrir"
+              >
+                <span className="flex-none" style={{ width: 76 }}>
+                  <PhotoPiece piece={aRedecouvrirUne.piece} ratio={0.82} rayon={14} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block t-surtitre text-terracotta-hover">À redécouvrir · {weather.saisons?.length ? weather.saisons.join(" / ") : saisonDeLaDate(maintenant)}</span>
+                  <span className="block font-serif text-ink mt-[5px]" style={{ fontSize: 16.5, lineHeight: 1.2 }}>
+                    {`${designationPiece(aRedecouvrirUne.piece).replace(/^t(on|a|es) /, (m) => `T${m.slice(1)}`)} `}
+                    <span className="italic text-terracotta">{pluriel ? "attendent leur moment" : "attend son moment"}</span>
+                  </span>
+                  {nbLooksRedecouvrir > 0 && (
+                    <span className="block text-[12px] font-semibold mt-[6px] text-terracotta-deep">
+                      {nbLooksRedecouvrir} {nbLooksRedecouvrir === 1 ? "look cette saison" : "looks cette saison"}
+                    </span>
+                  )}
+                </span>
+              </button>
+            )}
+          </>
+        )}
+      </div>
     </div>
     <BoutonAjoutFlottant onClick={ajouter} />
     </>
