@@ -176,8 +176,8 @@ export function ChoixVille({
                   // sans effet : la page reste où elle est
                 }
               }}
-              placeholder="Rechercher une ville ou un pays"
-              aria-label="Rechercher une ville ou un pays"
+              placeholder="Rechercher une ville"
+              aria-label="Rechercher une ville"
               autoComplete="off"
               autoCapitalize="words"
               enterKeyHint="search"
@@ -221,7 +221,8 @@ export function ChoixVille({
               ) : resultats && resultats.length === 0 ? (
                 <div className="px-[4px] py-[14px]">
                   <div className="text-[14px] text-ink">Aucune ville trouvée</div>
-                  <div className="text-[12px] text-muted mt-[2px]">Vérifie l&apos;orthographe ou essaie une autre ville.</div>
+                  {/* 14/10/2026 : la recherche porte sur des VILLES (OpenWeather, /geo/1.0/direct) ; un pays n'a pas de position unique, donc pas de météo. Le champ ne promettait « ou un pays » qu'à tort. */}
+                  <div className="text-[12px] text-muted mt-[2px]">Vérifie l&apos;orthographe. Les pays ne sont pas reconnus : cherche une ville de ta destination.</div>
                 </div>
               ) : (
                 <ul className="flex flex-col rounded-bloc border border-border bg-card overflow-hidden" aria-label="Villes proposées">
