@@ -272,6 +272,7 @@ function buildInitialState(): AppState {
     activeLookId: null,
     lookReturn: "wardrobe",
     filtrePieces: null,
+    pieceApercu: null,
   };
 }
 
@@ -294,6 +295,9 @@ export interface Actions {
   goNeverWorn: () => void;
   /** `filtre` : carte du vestiaire — n'affiche que les pièces de ses catégories techniques. */
   goWardrobePieces: (filtre?: FiltrePieces) => void;
+  /** Ouvre / ferme l'aperçu d'une pièce (feuille) depuis un hero. */
+  ouvrirApercuPiece: (id: number) => void;
+  fermerApercuPiece: () => void;
   goLooks: () => void;
   goProfile: () => void;
   /** Réglages de fonctionnement de l'application (notifications, météo, rythme). */
@@ -1663,6 +1667,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     oublierPlanDirect: () => setState((s) => (s.planDirect ? { ...s, planDirect: false } : s)),
     goNeverWorn: () => go("neverworn"),
     // « Mes pièces » est fusionné dans le Dressing (14/10/2026) : le filtre (catégorie, couleur venue de Tenue) s'applique à la grille du Dressing.
+    ouvrirApercuPiece: (id) => setState((s) => ({ ...s, pieceApercu: id })),
+    fermerApercuPiece: () => setState((s) => (s.pieceApercu == null ? s : { ...s, pieceApercu: null })),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobe" })),
     goLooks: () => go("looks"),
     // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
