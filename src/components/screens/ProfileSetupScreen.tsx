@@ -214,8 +214,14 @@ export default function ProfileSetupScreen() {
       (s.key !== "prenom" || !profile.displayName.trim() || (state.profileSetupFromEdit && state.profileSetupStep === "prenom")) &&
       ((s.key !== "colorimetrie_resultat" && s.key !== "colorimetrie_suite") || colorimetrieUtilisable(draft.colorimetrie))
   );
+  // UNE COLORIMÉTRIE DÉJÀ FAITE SE RETROUVE, ELLE NE SE REFAIT PAS (14/10/2026, demandé : « si l'utilisateur a déjà fait le test et revient
+  // à cette étape, le résultat déjà obtenu doit s'afficher, avec la possibilité de refaire le test »). Arriver sur l'étape colorimétrie —
+  // par l'avant, par l'arrière ou depuis le profil — avec un résultat exploitable ouvre directement « Ta palette », qui porte le lien
+  // « Refaire le test ». La présentation et le questionnaire ne s'ouvrent que pour une première fois, ou sur ce lien.
+  const dejaFaite = colorimetrieUtilisable(draft.colorimetrie);
+  const sansPresentationDejaFaite = (i: number) => (dejaFaite && STEPS[i]?.key === "colorimetrie" ? i + 1 : i);
   const [step, setStep] = useState(() =>
-    Math.max(0, STEPS.findIndex((s) => s.key === (state.profileSetupStep || "genre")))
+    sansPresentationDejaFaite(Math.max(0, STEPS.findIndex((s) => s.key === (state.profileSetupStep || "genre"))))
   );
   const [guideOpen, setGuideOpen] = useState(false);
   // Le parcours colorimétrie (colorimetrieParcours.ts). Repris avec les
@@ -275,7 +281,7 @@ export default function ProfileSetupScreen() {
     // En arrivant sur la colorimétrie PAR L'AVANT, on commence par sa
     // présentation — même si le questionnaire avait déjà été parcouru.
     if (STEPS[step + 1]?.key === "colorimetrie") setColo((p) => ({ ...p, vue: "presentation", question: 0 }));
-    setStep(step + 1);
+    setStep(sansPresentationDejaFaite(step + 1));
   };
   // EN MODIFICATION, LE RETOUR RAMÈNE À L'ÉCRAN D'APPEL (25/09/2026). Avant,
   // ouvrir « Style » depuis le profil puis toucher le chevron remontait les
@@ -291,12 +297,14 @@ export default function ProfileSetupScreen() {
       const precedent = retourColorimetrie(colo);
       if (precedent) return setColo(precedent);
     }
+    // En reculant depuis « Ta palette », la présentation d'une colorimétrie déjà faite est sautée (cf. sansPresentationDejaFaite).
+    const precedente = dejaFaite && STEPS[step - 1]?.key === "colorimetrie" && STEPS[step]?.key === "colorimetrie_resultat" ? step - 2 : step - 1;
     if (state.profileSetupFromEdit) {
-      if (step > entryIndex) setStep(step - 1);
+      if (precedente >= entryIndex && step > entryIndex) setStep(precedente);
       else actions.go(state.profileSetupReturn);
       return;
     }
-    if (step > 0) setStep(step - 1);
+    if (precedente >= 0) setStep(precedente);
     else if (profile.completed) actions.goProfile();
   };
   const meta = STEPS[step];
@@ -721,6 +729,21 @@ export default function ProfileSetupScreen() {
         case "indecis":
           return { libelle: "Continuer", onClick: passerColorimetrie, actif: true, lien: { libelle: "Refaire le questionnaire", onClick: () => setColo(recommencer()) } };
       }
+    }
+    if (meta.key === "colorimetrie_resultat") {
+      return {
+        libelle: isLast ? (state.profileSetupFromEdit ? "Enregistrer les modifications" : "Créer mon dressing") : "Continuer",
+        onClick: next,
+        actif: true,
+        // Refaire le test : le questionnaire depuis le début, réponses effacées. Le résultat actuel reste tant qu'un nouveau n'est pas trouvé.
+        lien: {
+          libelle: "Refaire le test",
+          onClick: () => {
+            setColo(recommencer());
+            setStep(Math.max(0, indexColorimetrie));
+          },
+        },
+      };
     }
     if (meta.key === "colorimetrie_suite") {
       return {

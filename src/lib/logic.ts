@@ -590,6 +590,9 @@ export function explainRecommendation(
  * décider seule.
  */
 export function declaredOccasionOk(it: Item, occ: OccasionKey): boolean {
+  // Des baskets pour un trajet (14/10/2026, demandé : « pour le voyage on privilégie des baskets ») : éligibles en Voyage quelles que
+  // soient les occasions déclarées — l'app leur pré-suggérait « Quotidien » et « Sport » seulement, et les écartait de tous les trajets.
+  if (occ === "voyage" && it.cat === "chaussures" && (it.shoeType === "Baskets" || formalityOf(it) === 0)) return true;
   return !it.occasion || !it.occasion.length || it.occasion.includes(occ);
 }
 

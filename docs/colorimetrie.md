@@ -258,3 +258,10 @@ La feuille d'une couleur d'accord propose « Voir les N pièces dans mon dressin
 s'ouvre filtré sur la teinte (`FiltrePieces.teinte`, lue par `teinteDe` : le nom et le code enregistrés par la détection de couleur
 suffisent, les pièces n'ont pas à changer). La flèche de retour ramène à la tenue (`retour: "tenue"`). Une pièce sans couleur renseignée
 n'est reconnue sous aucune teinte.
+
+## Une colorimétrie déjà faite se retrouve (14/10/2026)
+Demandé : en revenant sur l'étape après avoir déjà fait le test, on doit voir le résultat obtenu, avec la possibilité de refaire le test. Avec une colorimétrie exploitable (`colorimetrieUtilisable`), arriver sur l'étape colorimétrie ouvre directement « Ta palette » (le résultat) au lieu de la présentation. C'est vrai par l'avant, depuis le profil (Palette → Continuer → Continuer) et en reculant (le retour saute la présentation).
+
+Sous le bouton « Continuer », un lien « Refaire le test » relance le questionnaire depuis le début, réponses effacées. Le résultat actuel reste enregistré tant qu'un nouveau n'est pas trouvé.
+
+Vérifié en rendu réel (mode démo, 390 px) : résultat affiché, retour vers « Quelle intensité… », retour au résultat, « Refaire le test » ouvre la question 1/4.

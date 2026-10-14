@@ -21,6 +21,38 @@ export interface ResolvedItemImage {
  * existe (une image invalidée après coup ne doit jamais réapparaître).
  */
 export function resolveItemImage(item: Item): ResolvedItemImage {
+  // UN SEUL VISUEL PAR PIÈCE (14/10/2026, signalé : « la robe noire est différente entre le flat lay et le catalogue ») : une pièce du
+  // catalogue se montre partout — fiche, rangées, vignettes — avec le visuel du flat lay, quand elle en a un. Les deux visuels avaient été
+  // générés séparément et ne représentaient pas toujours la même pièce : le standard de la « Robe noire » (473, robe à bretelles) montre
+  // une robe à manches ballon, faute de sous-type dans sa consigne ; le hero, conforme, est généré avec. Le standard reste le repli.
+  return visuelCatalogue(item);
+}
+
+/** Le visuel d'une pièce : photo réelle, sinon produit affilié, sinon visuel hero du catalogue, sinon visuel standard, sinon placeholder. */
+function visuelCatalogue(item: Item): ResolvedItemImage {
+  const standard = visuelStandard(item);
+  // Les collants : la photo du catalogue, jamais le visuel posé à plat, qui rend mal (14/10/2026, demandé). ARBITRAGE ÉDITORIAL à ce seul
+  // type de pièce ; sans photo catalogue, le repli d'avant (hero) reste.
+  if (item.accessoireType === "Collants" && standard.kind === "generated") return standard;
+  if (standard.kind === "generated" && item.imageHeroUrl) return { kind: "generated", url: item.imageHeroUrl };
+  // Une pièce du catalogue qui a un visuel hero mais AUCUN visuel standard (11/10/2026 : 7 pièces sur 627 — robes 1, vestes_blazers 1,
+  // accessoires 1, pulls_gilets 4) : le hero seul la représente, SAUF si son statut dit que le visuel a été invalidé (« invalid », le hero
+  // porterait le même défaut) ou est en cours de génération. « error » (la génération du STANDARD a échoué) n'exclut pas : les 6 pièces
+  // concernées ont été regardées une à une le 11/10/2026, leur hero est propre et conforme au nom. Un standard PRÉSENT mais pas prêt reste
+  // un placeholder. ARBITRAGE ÉDITORIAL à ce périmètre seul (pièce sans image_url).
+  if (
+    standard.kind === "placeholder" &&
+    item.imageHeroUrl &&
+    !item.imageUrl &&
+    item.imageStatus !== "invalid" &&
+    item.imageStatus !== "generating"
+  )
+    return { kind: "generated", url: item.imageHeroUrl };
+  return standard;
+}
+
+/** La priorité d'origine (18/08/2026), sans le visuel hero. */
+function visuelStandard(item: Item): ResolvedItemImage {
   // Une photo DÉTOURÉE (fond transparent, 04/10/2026) se montre comme un visuel produit — posée en « contain » sur la
   // tuile, jamais recadrée comme une photo réelle. C'est le nom du fichier qui le dit (estPhotoDetouree).
   if (item.photoUrl) return { kind: estPhotoDetouree(item.photoUrl) ? "detouree" : "photo", url: item.photoUrl };
@@ -35,26 +67,8 @@ export function resolveItemImage(item: Item): ResolvedItemImage {
  * donc le repli de toute pièce sans visuel hero, avant comme après la migration 0049.
  */
 export function resolveHeroImage(item: Item): ResolvedItemImage {
-  const standard = resolveItemImage(item);
-  // Les collants : la photo du catalogue, jamais le visuel posé à plat, qui rend mal (14/10/2026, demandé). ARBITRAGE ÉDITORIAL à ce seul
-  // type de pièce ; sans photo catalogue, le repli d'avant (hero) reste.
-  if (item.accessoireType === "Collants" && standard.kind === "generated") return standard;
-  if (standard.kind === "generated" && item.imageHeroUrl) return { kind: "generated", url: item.imageHeroUrl };
-  // Une pièce du catalogue qui a un visuel hero mais AUCUN visuel standard (11/10/2026 : 7 pièces sur 627 — robes 1, vestes_blazers 1,
-  // accessoires 1, pulls_gilets 4) n'était pas posée dans les flat lay : elle sortait de la planche faute d'image. Le hero seul la
-  // représente alors, SAUF si son statut dit que le visuel a été invalidé (« invalid », le hero porterait le même défaut) ou est en cours
-  // de génération. « error » (la génération du STANDARD a échoué) n'exclut pas : les 6 pièces concernées ont été regardées une à une le
-  // 11/10/2026, leur hero est propre et conforme au nom. Un standard PRÉSENT mais pas prêt reste un placeholder, comme avant.
-  // ARBITRAGE ÉDITORIAL à ce périmètre seul (pièce sans image_url).
-  if (
-    standard.kind === "placeholder" &&
-    item.imageHeroUrl &&
-    !item.imageUrl &&
-    item.imageStatus !== "invalid" &&
-    item.imageStatus !== "generating"
-  )
-    return { kind: "generated", url: item.imageHeroUrl };
-  return standard;
+  // Depuis le 14/10/2026, le même visuel que partout ailleurs (resolveItemImage) : gardé pour ses appelants.
+  return resolveItemImage(item);
 }
 
 /**

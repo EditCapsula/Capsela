@@ -37,8 +37,9 @@ const taux = (occ: OccasionKey, id: number, pieceAdaptee: boolean) => {
 
 describe("la pièce adaptée à l'occasion d'abord", () => {
   it("Voyage : les baskets de la capsule plutôt que les babies du dressing", () => {
-    expect(taux("voyage", BABIES, false)).toBe(100);
-    expect(taux("voyage", BASKETS, false)).toBe(0);
+    // Avant : les babies du dressing la plupart du temps (les baskets de la capsule déclarent « Voyage » depuis le même jour et
+    // complètent la catégorie, sans être préférées).
+    expect(taux("voyage", BABIES, false)).toBeGreaterThan(0);
     expect(taux("voyage", BASKETS, true)).toBe(100);
     expect(taux("voyage", BABIES, true)).toBe(0);
   });
@@ -59,6 +60,18 @@ describe("la pièce adaptée à l'occasion d'abord", () => {
     const pool = composeWardrobePool(dressing, CAPSULE, CATS, { completerPourOccasion: "voyage", saison: meteo, exclureHorsOccasion: true, pieceAdaptee: true });
     // Les baskets du dressing conviennent : aucune paire de la capsule n'est ajoutée, ses babies restent (le moteur préfère les baskets).
     expect(pool.filter((i) => i.cat === "chaussures").map((i) => i.id)).toEqual([BABIES, 13]);
+  });
+
+  it("les baskets du dressing pour un trajet, même déclarées Quotidien et Sport seulement", () => {
+    const MES_BASKETS = 14;
+    const dressing = [...DRESSING, p(MES_BASKETS, "chaussures", "Mes baskets", { shoeType: "Baskets" as ShoeType, occasion: ["quotidien", "sport"] })];
+    const tirer = (adaptee: boolean) => {
+      const pool = composeWardrobePool(dressing, CAPSULE, CATS, { completerPourOccasion: "voyage", saison: meteo, exclureHorsOccasion: true, pieceAdaptee: adaptee });
+      let n = 0;
+      for (let i = 0; i < 100; i++) if (generateOutfitWithFallback(pool, meteo, "voyage", "Présentiel", "Verre", [], "femme", null, adaptee ? undefined : { sansConfortVoyage: true }).ids.includes(MES_BASKETS)) n++;
+      return n;
+    };
+    expect(tirer(true)).toBe(100);
   });
 
   it("sans préférence du moteur, rien n'est inventé", () => {
