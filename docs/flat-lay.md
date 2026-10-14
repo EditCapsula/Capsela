@@ -348,3 +348,5 @@ Signalé deux fois : la « Robe noire » (473, robe à bretelles) et les « Chau
 Depuis cette date, `resolveItemImage` rend le visuel hero quand la pièce en a un, partout : fiche, rangées, vignettes, Capsule, Dressing. `resolveHeroImage` n'en est plus qu'un alias. Le standard reste le repli. Les collants gardent leur photo du catalogue (arbitrage du même jour). La photo de la personne et la photo affiliée passent toujours devant.
 
 Aucune donnée n'a été modifiée en base ; les visuels standard erronés restent à régénérer si on veut un jour s'en resservir.
+
+Exception le même jour (demandé : « dans la capsule, remets les photos du catalogue ») : l'écran Capsule (ses vignettes et sa fiche « Suggestion ») montre le visuel standard (`resolvePhotoCatalogue`). Le hero ne sert qu'en repli, pour une pièce sans visuel standard. Partout ailleurs, `resolveItemImage`.

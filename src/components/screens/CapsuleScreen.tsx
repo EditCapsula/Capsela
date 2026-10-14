@@ -23,7 +23,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { libelleStyles, silhouetteForme, styleLabel, stylesLabels } from "@/lib/profile";
 import { useCapsela } from "@/lib/store";
-import { resolveItemImage } from "@/lib/catalogImages";
+import { resolvePhotoCatalogue } from "@/lib/catalogImages";
 import { analyserImage, placementDansCadre, type Analyse } from "@/lib/cadrageImage";
 import type { CategoryKey, DateContext, Item, OccasionKey, WorkMode } from "@/lib/types";
 import Button from "@/components/Button";
@@ -183,7 +183,8 @@ const RATIO_VIGNETTE = 4 / 5;
  * comme avant.
  */
 function Vignette({ item, arrondi = 14, marge = margeVignette(item.cat) }: { item: Item; arrondi?: number; marge?: number }) {
-  const image = resolveItemImage(item);
+  // Les photos du catalogue, pas le visuel du flat lay (14/10/2026, demandé).
+  const image = resolvePhotoCatalogue(item);
   return (
     <div
       className="w-full border border-border relative overflow-hidden"
@@ -398,7 +399,7 @@ export default function CapsuleScreen() {
   useEffect(() => {
     if (!pieceFiche) return;
     if (
-      resolveItemImage(pieceFiche).kind === "placeholder" &&
+      resolvePhotoCatalogue(pieceFiche).kind === "placeholder" &&
       pieceFiche.imageStatus !== "generating" &&
       pieceFiche.imageStatus !== "error" &&
       pieceFiche.imageStatus !== "invalid"

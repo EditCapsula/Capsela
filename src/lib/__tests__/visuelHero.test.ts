@@ -3,7 +3,7 @@ import { buildHeroImagePrompt } from "../../../supabase/functions/_shared/heroPr
 import { boiteOpaque, nomFichierHero, rognerSurLaPiece } from "../../../supabase/functions/_shared/heroImage";
 import { buildImagePrompt, type VestiaireRow } from "../../../supabase/functions/_shared/imagePrompt";
 import { ratioHero } from "../catalogMarges";
-import { resolveHeroImage, resolveItemImage } from "../catalogImages";
+import { resolveHeroImage, resolveItemImage, resolvePhotoCatalogue } from "../catalogImages";
 import type { Item } from "../types";
 
 const ligne = (surcharge: Partial<VestiaireRow>): VestiaireRow => ({
@@ -103,6 +103,12 @@ describe("rognerSurLaPiece — le format est dans le nom du fichier", () => {
 });
 
 describe("resolveHeroImage — le visuel standard reste le repli", () => {
+  it("l'écran Capsule montre la photo du catalogue ; le hero seulement sans standard (14/10/2026)", () => {
+    expect(resolvePhotoCatalogue(piece({ imageUrl: "https://x/std.webp", imageStatus: "ready", imageHeroUrl: "https://x/hero-r0.80.webp" })).url).toBe("https://x/std.webp");
+    expect(resolvePhotoCatalogue(piece({ imageHeroUrl: "https://x/hero-r0.80.webp" })).url).toBe("https://x/hero-r0.80.webp");
+    expect(resolvePhotoCatalogue(piece({ photoUrl: "https://x/ma-photo.png", imageHeroUrl: "https://x/hero-r0.80.webp" })).url).toBe("https://x/ma-photo.png");
+  });
+
   it("les collants gardent leur photo du catalogue, partout", () => {
     const collants = piece({ cat: "accessoire", accessoireType: "Collants", imageUrl: "https://x/std.webp", imageStatus: "ready", imageHeroUrl: "https://x/hero-r0.30.webp" });
     expect(resolveItemImage(collants).url).toBe("https://x/std.webp");

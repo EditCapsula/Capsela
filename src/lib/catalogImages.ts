@@ -35,6 +35,19 @@ function visuelCatalogue(item: Item): ResolvedItemImage {
   // type de pièce ; sans photo catalogue, le repli d'avant (hero) reste.
   if (item.accessoireType === "Collants" && standard.kind === "generated") return standard;
   if (standard.kind === "generated" && item.imageHeroUrl) return { kind: "generated", url: item.imageHeroUrl };
+  return heroEnRepli(item, standard);
+}
+
+/**
+ * LA PHOTO DU CATALOGUE, PAS LE VISUEL DU FLAT LAY (14/10/2026, demandé : « dans la capsule, remets les photos du catalogue ») : le
+ * visuel standard d'abord ; le hero seulement pour une pièce qui n'a pas de standard (même règle de repli que resolveItemImage).
+ * Réservé à l'écran Capsule ; partout ailleurs, resolveItemImage.
+ */
+export function resolvePhotoCatalogue(item: Item): ResolvedItemImage {
+  return heroEnRepli(item, visuelStandard(item));
+}
+
+function heroEnRepli(item: Item, standard: ResolvedItemImage): ResolvedItemImage {
   // Une pièce du catalogue qui a un visuel hero mais AUCUN visuel standard (11/10/2026 : 7 pièces sur 627 — robes 1, vestes_blazers 1,
   // accessoires 1, pulls_gilets 4) : le hero seul la représente, SAUF si son statut dit que le visuel a été invalidé (« invalid », le hero
   // porterait le même défaut) ou est en cours de génération. « error » (la génération du STANDARD a échoué) n'exclut pas : les 6 pièces
