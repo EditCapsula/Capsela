@@ -143,7 +143,7 @@ export default function DernieresPiecesScreen() {
 
         {/* AVEC TES NOUVELLES PIÈCES : le nombre de looks distincts que le moteur compose avec elles, et deux exemples. */}
         {total > 0 && exemples.length > 0 && groupe === "toutes" && (
-          <section className="mt-6 rounded-hero px-5 py-[18px]" style={{ background: "var(--color-warm-bg)" }} aria-label="Avec tes nouvelles pièces">
+          <section className="mt-6 rounded-hero px-5 py-[18px]" style={{ background: "var(--color-hero-background)" }} aria-label="Avec tes nouvelles pièces">
             <div className="t-surtitre text-muted">
               <span className="font-serif italic text-terracotta" aria-hidden="true">✦</span> Avec tes nouvelles pièces
             </div>

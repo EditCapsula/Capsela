@@ -649,7 +649,7 @@ export default function WardrobeScreen() {
                 className="mt-[22px] w-full flex items-center gap-[14px] text-left rounded-[20px] border border-border bg-card py-3 pl-3 pr-[14px] cursor-pointer active:opacity-80"
                 aria-label="L'inspiration du moment"
               >
-                <span className="relative flex-none overflow-hidden" style={{ width: 76, height: 92, borderRadius: 14, background: "var(--color-photo-bg)" }}>
+                <span className="relative flex-none overflow-hidden" style={{ width: 76, height: 92, borderRadius: 14, background: "var(--color-hero-background)" }}>
                   <FlatLayCapsela
                     items={lookInspiration.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i)}
                     context="look-detail"

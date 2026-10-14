@@ -368,7 +368,7 @@ export default function OpinionShareScreen() {
           Ta tenue
         </TitreSection>
         {/* Le fond de la carte du look, comme les autres heros (14/10/2026) : la tenue en flat lay, chaque pièce ouvre sa fiche. */}
-        <div className="rounded-hero" style={{ padding: 16, background: "var(--color-look-bg)" }}>
+        <div className="rounded-hero" style={{ padding: 16, background: "var(--color-hero-background)" }}>
           <div className="relative" style={{ aspectRatio: "100 / 118" }}>
             <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={pieces.map((p) => p.id).join(",")} onPiece={ouvrirPiece} />
           </div>

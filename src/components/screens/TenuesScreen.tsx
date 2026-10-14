@@ -699,7 +699,7 @@ export default function TenuesScreen() {
           // 358 × 564 px sur 390 (calibrage du 08/10/2026) : 8 px de plus de chaque côté que la gouttière de 24 px, la marge de 16 px
           // du hero ; la zone du flat lay prend ce qui reste (350 px) — l'en-tête, la provenance, l'action et les deux
           // secondaires ont une hauteur fixe. Un constat météo sur un plan l'allonge, jamais le flat lay.
-          style={{ background: "var(--color-look-bg)", padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : 564, minHeight: 564 }}
+          style={{ background: "var(--color-hero-background)", padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : 564, minHeight: 564 }}
         >
           {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
               le 23/09). Conditionnelle depuis que le titre est parti : sans
