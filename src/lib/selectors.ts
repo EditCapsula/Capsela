@@ -1,5 +1,5 @@
 import { CATLABEL, CATS, MONTHS_FR, OCCASION_STYLE_PREFS, OCC_LABELS, occasionShortLabel, type Weather } from "./data";
-import { formalityOf } from "./attributes";
+import { estDenim, formalityOf } from "./attributes";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour, type ContexteSaisonnier } from "./capsule";
 import type { CapsuleSeason, CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
@@ -781,14 +781,14 @@ export function composeWardrobePool(
 
 /**
  * Une pièce ADAPTÉE à l'occasion (14/10/2026) — au-delà de l'occasion déclarée, ce que le moteur préfère déjà pour elle :
- *   · Voyage (R-S19) : des baskets pour les chaussures, une formalité ≤ 1 pour les vêtements ;
+ *   · Voyage (R-S19) : des baskets pour les chaussures, une formalité ≤ 1 et pas de denim pour les vêtements ;
  *   · une occasion qui a ses types de chaussures (R-S16, OCCASION_STYLE_PREFS : cérémonie…) : l'un de ces types.
  * Toute autre pièce est adaptée : rien n'est inventé là où le moteur n'a pas de préférence.
  */
 export function adapteeALOccasion(i: Item, occasion: OccasionKey): boolean {
   if (occasion === "voyage") {
     if (i.cat === "chaussures") return i.shoeType === "Baskets" || formalityOf(i) === 0;
-    return VETEMENTS.includes(i.cat) ? formalityOf(i) <= 1 : true;
+    return VETEMENTS.includes(i.cat) ? formalityOf(i) <= 1 && !estDenim(i) : true;
   }
   const types = OCCASION_STYLE_PREFS[occasion]?.shoeTypes;
   if (i.cat === "chaussures" && types?.length) return Boolean(i.shoeType && types.includes(i.shoeType));

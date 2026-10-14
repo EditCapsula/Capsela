@@ -11,7 +11,9 @@ import {
   coupeOf,
   formalityOf,
   huesHarmonious,
+  estDenim,
   fermetureMaille,
+  matiereDeVoyage,
   isMetallicFinish,
   isNeutralColor,
   isStatement,
@@ -1157,7 +1159,8 @@ export function generateOutfit(
     // La pièce ADAPTÉE avant le réel (14/10/2026, demandé : « il faut surtout pousser la pièce adaptée à l'occasion ») : en Voyage, si
     // aucune pièce réelle du groupe n'est décontractée (R-S19) et que la capsule en a une, la priorité au réel ne s'applique pas — la
     // préférence R-S19 ci-dessous la retient.
-    const souple = (i: Item) => formalityOf(i) <= 1;
+    // Décontractée ET pas en denim (14/10/2026, demandé : « pour le voyage il ne faut pas privilégier du tissu denim »).
+    const souple = (i: Item) => formalityOf(i) <= 1 && !estDenim(i);
     const confortAvantReel =
       occasion === "voyage" && !leviers?.sansConfortVoyage && !real.some(souple) && base.some((i) => isCatalogId(i.id) && souple(i));
     if (real.length && !confortAvantReel) {
@@ -1182,8 +1185,11 @@ export function generateOutfit(
     // R-S19 (14/10/2026, signalé : « pour un trajet il faut privilégier des pièces avec formalités moins élevées ») — en Voyage, les
     // pièces les plus décontractées (formalité ≤ 1) d'abord, si la catégorie en a. Préférence molle : jamais une catégorie vidée.
     if (occasion === "voyage" && !leviers?.sansConfortVoyage) {
-      const souples = base.filter((i) => formalityOf(i) <= 1);
+      const souples = base.filter(souple);
       if (souples.length) base = souples;
+      // Puis la matière de la saison (coton stretch ou mélangé en automne-hiver, lin ou coton naturel au printemps-été) : molle aussi.
+      const matiere = base.filter((i) => matiereDeVoyage(i, weather.season));
+      if (matiere.length) base = matiere;
     }
     // Préférence pour la palette personnelle — n'écarte rien, juste une inclination
     // quand elle laisse assez d'options (R-S10, esprit "préférence molle, jamais exclusive").
@@ -1337,6 +1343,13 @@ export function generateOutfit(
     ) {
       const longues = hautPool.filter((i) => i.manches === "longues");
       if (longues.length) hautPool = longues;
+    }
+    // R-S19 pour le haut, tiré hors de pick() : en Voyage, pas de denim, puis la matière de la saison. Molle.
+    if (occasion === "voyage" && !leviers?.sansConfortVoyage && pinnedId == null) {
+      const sansDenim = hautPool.filter((i) => !estDenim(i));
+      if (sansDenim.length) hautPool = sansDenim;
+      const matiere = hautPool.filter((i) => matiereDeVoyage(i, weather.season));
+      if (matiere.length) hautPool = matiere;
     }
     // Même règle que dans pick() ci-dessus (exemption FALLBACK_HEX comprise).
     const h = rand(harmonize(candidatsCouleur(hautPool, preferredHexes, colo), chosen, true));
@@ -1932,8 +1945,12 @@ export function candidatsDeRemplacement(
   }
   // R-S19 — symétrique du tirage : en Voyage, les pièces décontractées d'abord, les baskets d'abord pour les chaussures. Molle.
   if (occasion === "voyage") {
-    const souples = candidates.filter((i) => (cat === "chaussures" ? i.shoeType === "Baskets" || formalityOf(i) === 0 : formalityOf(i) <= 1));
+    const souples = candidates.filter((i) => (cat === "chaussures" ? i.shoeType === "Baskets" || formalityOf(i) === 0 : formalityOf(i) <= 1 && !estDenim(i)));
     if (souples.length) candidates = souples;
+    if (weather) {
+      const matiere = candidates.filter((i) => matiereDeVoyage(i, weather.season));
+      if (matiere.length) candidates = matiere;
+    }
   }
   // R-S17 — symétrique du filtre appliqué dans generateOutfit : pas de
   // chemise/chemisier (haut) ni de robe chemise en soirée habillée, molle

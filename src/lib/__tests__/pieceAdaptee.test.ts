@@ -18,13 +18,13 @@ const DRESSING = [
   p(11, "pantalon", "Pantalon tailleur"),
   p(12, "haut", "T-shirt basique"),
 ];
-// La capsule : des baskets, des escarpins, un jean, un sac.
+// La capsule : des baskets, des escarpins, un jogger en coton stretch, un sac.
 const BASKETS = 1003;
 const ESCARPINS = 1004;
 const CAPSULE = [
   p(BASKETS, "chaussures", "Baskets blanches", { shoeType: "Baskets" as ShoeType }),
   p(ESCARPINS, "chaussures", "Escarpins", { shoeType: "Escarpins" as ShoeType }),
-  p(1006, "jean", "Jean droit"),
+  p(1006, "pantalon", "Pantalon jogger", { matiere: "Coton / élasthanne" as Item["matiere"] }),
   p(1007, "sac", "Sac cabas", { sacType: "Cabas" }),
 ];
 const taux = (occ: OccasionKey, id: number, pieceAdaptee: boolean) => {
@@ -43,7 +43,7 @@ describe("la pièce adaptée à l'occasion d'abord", () => {
     expect(taux("voyage", BABIES, true)).toBe(0);
   });
 
-  it("Voyage : le jean de la capsule plutôt que le pantalon tailleur du dressing", () => {
+  it("Voyage : le jogger en coton de la capsule plutôt que le pantalon tailleur du dressing", () => {
     expect(taux("voyage", 11, false)).toBeGreaterThan(0);
     expect(taux("voyage", 11, true)).toBe(0);
     expect(taux("voyage", 1006, true)).toBe(100);
