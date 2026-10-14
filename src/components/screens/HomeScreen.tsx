@@ -349,13 +349,13 @@ export default function HomeScreen() {
       {carrouselActif ? (
         <CarrouselHero slides={slides.map(carteSlide)} libelles={slides.map((sl) => sl.surtitre)} />
       ) : (
-      // LE LOOK DU JOUR : fond #EEDED8, texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
+      // LE LOOK DU JOUR : fond des hero (--color-hero-background), texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un
       // jour passé, aucune tenue possible, la tenue qui se compose, la tenue. Seul, quand le carrousel n'a pas lieu d'être.
       <div
         className="mx-4 mt-3 rounded-hero grid gap-2"
         // 358 × 307 px sur 390 (calibrage du 08/10/2026) : la marge du hero est de 16 px, 8 px de moins que la gouttière du reste de
         // l'écran. La colonne de la composition fait 181 px (zone 181 × 203), moins sur un écran étroit : le texte garde sa place.
-        style={{ background: "var(--color-look-bg)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
+        style={{ background: "var(--color-hero-background)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
       >
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">

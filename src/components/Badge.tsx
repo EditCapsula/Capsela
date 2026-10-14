@@ -11,7 +11,7 @@ import type { CSSProperties, ReactNode } from "react";
  *   possede  encre sur beige, filet — « Ton dressing », « Dressing » : ce qui appartient à la personne
  *   neutre   gris sur fond discret — « Bientôt »
  *   succes   vert de réussite (jetons success) — « Recommandé »
- *   surTerracotta / surTerracottaContour   pastille posée sur la carte du look (#EEDED8 depuis le 14/10/2026 ; le nom date du fond terracotta)
+ *   surTerracotta / surTerracottaContour   pastille posée sur la carte du look (fond des hero, --color-hero-background, depuis le 14/10/2026 ; le nom date du fond terracotta)
  *
  * Deux tailles : `m` (9 × 4 px) et `s` (8 × 3 px, sur photo ou dans une ligne serrée).
  */

@@ -40,9 +40,12 @@
   --color-ink-soft: #3f3b34;
   --color-divider: #efe7da;
   --color-photo-bg: #f3ede1;
+  /* FOND DES HERO (14/10/2026, harmonisation) : un terracotta poudré très clair, légèrement rosé — la couleur commune de tous les grands
+     blocs qui mettent en valeur une tenue ou un flat lay (accueil, Tenue, look planifié, résultat Planifier, avis d'un proche, idée de look,
+     valise, inspiration du Dressing, nouvelles pièces). Jamais sur les cartes ordinaires, les modales, les champs ni le fond de l'app.
+     Remplace --color-look-bg (#eeded8). */
+  --color-hero-background: #f0e1d9;
   /* Fond intérieur des cartes « Tes looks » (09/10/2026) : un grège clair, plus soutenu que le crème de la page, pour que les pièces blanches et beiges s'en détachent. */
-  /* Fond de la carte du look (hero de l'accueil, détail de la tenue consultée) : une seule valeur, 14/10/2026. */
-  --color-look-bg: #eeded8;
   --color-flatlay-bg: #dcd3c4;
   --color-flatlay-bg-clair: #e6dfd2;
   --color-selected-bg: #f6ebe2;

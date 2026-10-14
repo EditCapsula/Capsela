@@ -58,7 +58,7 @@ export default function Button({
 }
 
 /**
- * L'ACTION DISCRÈTE posée sur la carte du look (#EEDED8 depuis le 14/10/2026 ; hero de l'accueil et de la tenue, 02/10/2026 : les deux écrans
+ * L'ACTION DISCRÈTE posée sur la carte du look (fond des hero, --color-hero-background, depuis le 14/10/2026 ; hero de l'accueil et de la tenue, 02/10/2026 : les deux écrans
  * écrivaient chacun la leur, l'une à fond translucide, l'autre à filet). Un filet, sans aplat : elle ne peut pas
  * être confondue avec l'action pleine. `actif` : un état coché (ex. « Enregistrée ») prend un léger aplat.
  */

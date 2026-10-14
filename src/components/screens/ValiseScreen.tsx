@@ -1630,7 +1630,7 @@ function Resultat({
           </div>
         )}
         {l.elargie && <div className="text-[11px] text-muted mt-2">Occasion élargie : ton dressing n&apos;a pas de pièce déclarée pour cette occasion.</div>}
-        <div className="rounded-feuille bg-warm-bg px-[16px] py-[20px] mt-4">
+        <div className="rounded-feuille px-[16px] py-[20px] mt-4" style={{ background: "var(--color-hero-background)" }}>
           <OutfitComposition items={items} variant="editoriale" label={"Composition du look : " + items.map((p) => p.name).join(", ")} />
         </div>
         <div className="flex items-center justify-between mt-3">
@@ -2078,8 +2078,8 @@ function Resultat({
                   <button
                     onClick={() => setVue({ nom: "look", index })}
                     aria-label={`Voir le look ${numero(index)} : ${resumeLook(piecesDuLook(l))}`}
-                    className="block w-full rounded-carte bg-warm-bg px-[12px] py-[14px] cursor-pointer"
-                    style={{ height: "clamp(270px, 80vw, 340px)" }}
+                    className="block w-full rounded-carte px-[12px] py-[14px] cursor-pointer"
+                    style={{ height: "clamp(270px, 80vw, 340px)", background: "var(--color-hero-background)" }}
                   >
                     <OutfitComposition items={piecesDuLook(l)} variant="hero" ajustee />
                   </button>

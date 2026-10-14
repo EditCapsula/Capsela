@@ -95,8 +95,8 @@ export default function IdeeLookScreen() {
       {/* Composition éditoriale (27/09/2026) : une silhouette, pas une
           grille — la zone prend la hauteur des pièces, proche du carré. */}
       <div
-        className="relative rounded-feuille bg-warm-bg overflow-hidden mt-[14px]"
-        style={{ aspectRatio: "100 / 118" }}
+        className="relative rounded-feuille overflow-hidden mt-[14px]"
+        style={{ aspectRatio: "100 / 118", background: "var(--color-hero-background)" }}
         role="img"
         aria-label={"Composition du look : " + pieces.map((p) => p.name).join(", ")}
       >

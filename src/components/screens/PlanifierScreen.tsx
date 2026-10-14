@@ -1758,7 +1758,7 @@ export default function PlanifierScreen() {
               </EmptyState>
             ) : (
               <>
-                <div className="mt-[14px] rounded-hero p-4" style={{ background: "var(--color-look-bg)" }}>
+                <div className="mt-[14px] rounded-hero p-4" style={{ background: "var(--color-hero-background)" }}>
                   <span
                     className="inline-block text-[10px] text-ink rounded-full px-[11px] py-[5px] whitespace-nowrap"
                     style={{ background: "rgba(29,26,22,.07)" }}

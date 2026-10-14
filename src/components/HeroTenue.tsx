@@ -48,7 +48,7 @@ export function HeroTenue({
   if (provenance.length === 1) provenance[0] = { ...provenance[0], texte: `Une sélection de ${provenance[0].texte}` };
 
   return (
-    <div className="-mx-2 mt-[18px] rounded-hero flex flex-col text-ink" style={{ background: "var(--color-look-bg)", padding: 16, containerType: "inline-size", minHeight: 564 }}>
+    <div className="-mx-2 mt-[18px] rounded-hero flex flex-col text-ink" style={{ background: "var(--color-hero-background)", padding: 16, containerType: "inline-size", minHeight: 564 }}>
       <div className="flex-shrink-0 flex items-center justify-between gap-3 h-[32px]">
         <span className="t-label" aria-live="polite">
           <span aria-hidden="true">✦ </span>
