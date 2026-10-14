@@ -296,6 +296,18 @@ export default function PieceScreen() {
               {resolvedImage.kind === "placeholder" && active.imageStatus === "generating" && (
                 <span className="absolute inset-0 animate-pulse" style={{ background: "rgba(243,238,229,.35)" }} />
               )}
+              {/* « METTRE LA PHOTO À PLAT » SUR LA PHOTO (14/10/2026, demandé : plus dans le menu « ••• ») : visible dès que la photo n'est pas
+                  à plat — personnelle, détourable, pas déjà mise à plat. Même parcours qu'avant (feuille de comparaison, rien n'est remplacé sans accord). */}
+              {peutMettreAPlat && (
+                <button
+                  type="button"
+                  onClick={() => setPlat({ etape: "repos" })}
+                  className="absolute left-[18px] bottom-[40px] z-10 h-[40px] px-[14px] rounded-full inline-flex items-center gap-[7px] text-[12.5px] font-medium text-ink cursor-pointer"
+                  style={{ background: "rgba(251,248,243,.94)", border: "1px solid var(--color-border)", boxShadow: "0 2px 8px rgba(29,26,22,.12)" }}
+                >
+                  <FlatIcon /> Mettre la photo à plat
+                </button>
+              )}
               <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-[18px] pt-[14px]">
                 <BoutonRetour onClick={() => actions.go(state.pieceReturn)} label="Revenir à l'écran précédent" />
                 <div className="flex flex-col items-center gap-[6px]" aria-hidden="true">
@@ -450,17 +462,6 @@ export default function PieceScreen() {
             >
               <CameraIcon /> Changer la photo
             </button>
-            {peutMettreAPlat && (
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  setPlat({ etape: "repos" });
-                }}
-                className="flex items-center gap-[13px] py-[15px] text-[14px] text-ink border-b border-border cursor-pointer text-left"
-              >
-                <FlatIcon /> Mettre la photo à plat
-              </button>
-            )}
             <button
               onClick={() => {
                 setMenuOpen(false);
