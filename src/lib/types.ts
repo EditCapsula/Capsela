@@ -549,17 +549,25 @@ export interface AppState {
    */
   carrousel: { cle: string; propositions: Partial<Record<"travail" | "quotidien" | "soiree", number[]>> } | null;
   /**
-   * LA TENUE CONSULTÉE (14/10/2026) : la tenue d'une slide ouverte par « Voir le look ». Lecture seule — elle n'écrase NI la tenue
-   * du jour (state.outfit), NI son occasion, NI son avis ; l'écran « lookConsulte » ne lit qu'elle.
+   * LA CONSULTATION D'UNE SLIDE (14/10/2026) : « Voir le look » ouvre la page Tenue sur la tenue de la slide, son occasion présélectionnée.
+   * La tenue du jour qu'elle remplace le temps de la consultation est gardée ici ; elle est rendue en quittant Tenue pour un onglet,
+   * sauf si la tenue consultée a été portée entre-temps (elle devient alors celle du jour).
    */
-  tenueConsultee: {
-    ids: number[];
-    occasion: OccasionKey;
-    surtitre: string;
-    titre: string;
-    description: string;
-    /** Le plan d'où vient la tenue, s'il y en a un (accès à sa fiche). */
-    plan: TenuePlanifiee | null;
+  consultation: {
+    avant: Pick<
+      AppState,
+      | "outfit"
+      | "outfitMissingCats"
+      | "outfitFormalityDowngraded"
+      | "outfitOccasionRelachee"
+      | "outfitNoCompleteOutfit"
+      | "outfitFailureReason"
+      | "outfitValidated"
+      | "occasion"
+      | "occasionManual"
+      | "dismissedSuggestions"
+      | "planAppliqueId"
+    >;
   } | null;
   /**
    * LES VALISES (27/09/2026, docs/valise.md) : plusieurs, gardées sur
@@ -617,8 +625,6 @@ export type Screen =
   | "itemOutfits"
   // Détail d'une idée de look (27/09/2026), ouvert depuis « Comment porter … ? ».
   | "ideeLook"
-  // Détail de la tenue d'une slide du carrousel de l'accueil (14/10/2026) : lecture seule.
-  | "lookConsulte"
   | "wardrobePieces"
   // « Tes dernières pièces » (08/10/2026) — « Voir tout » de « Ajoutées récemment ».
   | "dernieresPieces"

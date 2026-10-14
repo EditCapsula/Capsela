@@ -454,8 +454,7 @@ export default function CapsuleScreen() {
         <AppHeader />
 
         <div className="mt-[18px]">
-          <div className="t-surtitre text-muted">Ta capsule</div>
-          <div className="t-titre-ecran text-ink mt-[6px]">
+          <div className="t-titre-ecran text-ink">
             Capsule <span className="italic text-terracotta">{capsuleSeason}</span>
           </div>
           {/*

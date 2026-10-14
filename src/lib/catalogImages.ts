@@ -36,6 +36,9 @@ export function resolveItemImage(item: Item): ResolvedItemImage {
  */
 export function resolveHeroImage(item: Item): ResolvedItemImage {
   const standard = resolveItemImage(item);
+  // Les collants : la photo du catalogue, jamais le visuel posé à plat, qui rend mal (14/10/2026, demandé). ARBITRAGE ÉDITORIAL à ce seul
+  // type de pièce ; sans photo catalogue, le repli d'avant (hero) reste.
+  if (item.accessoireType === "Collants" && standard.kind === "generated") return standard;
   if (standard.kind === "generated" && item.imageHeroUrl) return { kind: "generated", url: item.imageHeroUrl };
   // Une pièce du catalogue qui a un visuel hero mais AUCUN visuel standard (11/10/2026 : 7 pièces sur 627 — robes 1, vestes_blazers 1,
   // accessoires 1, pulls_gilets 4) n'était pas posée dans les flat lay : elle sortait de la planche faute d'image. Le hero seul la

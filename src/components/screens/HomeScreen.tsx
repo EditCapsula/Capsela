@@ -292,16 +292,7 @@ export default function HomeScreen() {
         pieces={pieces}
         graine={cleSlide(slide.ids)}
         categoriesAttendues={duJour ? categoriesAttendues : undefined}
-        onVoir={() =>
-          actions.consulterTenue({
-            ids: slide.ids,
-            occasion: slide.occasion,
-            surtitre,
-            titre: [titre.a, titre.b].filter(Boolean).join(" "),
-            description: sousTitre,
-            plan: slide.source === "plan" ? planHero : null,
-          })
-        }
+        onVoir={() => actions.consulterTenue(slide.ids, slide.occasion, slide.source === "plan" ? (planHero?.id ?? null) : null)}
         sauvegardee={duJour ? sauvegardee : dejaSauvegardee(slide.ids)}
         onSauvegarder={() => {
           if (duJour) return actions.setOutfitFeedback("adore");

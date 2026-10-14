@@ -11,7 +11,7 @@ import type { CSSProperties, ReactNode } from "react";
  *   possede  encre sur beige, filet — « Ton dressing », « Dressing » : ce qui appartient à la personne
  *   neutre   gris sur fond discret — « Bientôt »
  *   succes   vert de réussite (jetons success) — « Recommandé »
- *   surTerracotta / surTerracottaContour   pastille posée SUR un fond terracotta (carte de la tenue)
+ *   surTerracotta / surTerracottaContour   pastille posée sur la carte du look (#EEDED8 depuis le 14/10/2026 ; le nom date du fond terracotta)
  *
  * Deux tailles : `m` (9 × 4 px) et `s` (8 × 3 px, sur photo ou dans une ligne serrée).
  */
@@ -22,8 +22,8 @@ const TONS: Record<string, { classe?: string; style?: CSSProperties }> = {
   possede: { classe: "bg-warm-bg text-ink border border-warm-border" },
   neutre: { classe: "bg-chip-soft-bg text-muted" },
   succes: { classe: "bg-success-bg text-success" },
-  surTerracotta: { style: { background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)" } },
-  surTerracottaContour: { style: { border: "1px solid rgba(243,238,229,.38)", color: "var(--color-on-terracotta-soft)" } },
+  surTerracotta: { style: { background: "rgba(158,91,67,.14)", color: "var(--color-terracotta-deep)" } },
+  surTerracottaContour: { style: { border: "1px solid rgba(29,26,22,.28)", color: "var(--color-ink-soft)" } },
 };
 
 const TAILLES = { m: "px-[9px] py-[4px]", s: "px-[8px] py-[3px]" } as const;

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
@@ -58,6 +58,7 @@ import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedb
 import {
   choisirVariation,
   clePrincipale,
+  isCompleteOutfit,
   tenueAUnSocle,
   generateOutfitWithFallback,
   piecesPrincipales,
@@ -68,7 +69,7 @@ import {
 import type { FamilleLook } from "./ideesLooks";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import { colorimetrieMoteur } from "./colorimetrieMoteur";
-import { SLIDES, type SlideId } from "./carrousel";
+import { SLIDES, cleTenue, type SlideId } from "./carrousel";
 import {
   accessoireTypeFor,
   detectAccessoireType,
@@ -258,7 +259,7 @@ function buildInitialState(): AppState {
     planJour: null,
     planDirect: false,
     carrousel: null,
-    tenueConsultee: null,
+    consultation: null,
     valises: [],
     valiseOuverte: null,
     valiseRetour: null,
@@ -519,9 +520,8 @@ export interface Actions {
   regenOutfit: () => void;
   /** « Autre idée » d'une slide du carrousel qui ne porte pas la tenue du jour : une autre proposition pour SON occasion, sans toucher aux autres slides ni au planning. */
   autreIdeeSlide: (slide: SlideId) => void;
-  /** « Voir le look » d'une slide : ouvre le détail de CETTE tenue, en lecture seule (state.outfit n'est pas touché). */
-  consulterTenue: (t: NonNullable<AppState["tenueConsultee"]>) => void;
-  fermerTenueConsultee: () => void;
+  /** « Voir le look » d'une slide : ouvre Tenue sur CETTE tenue, son occasion présélectionnée ; la tenue du jour est rendue en quittant Tenue (AppState.consultation). `planId` : la slide est le plan appliqué. */
+  consulterTenue: (ids: number[], occasion: OccasionKey, planId: string | null) => void;
   dismissOutfitSuggestion: (key: string) => void;
   wearOutfitToday: () => void;
   wearPieceToday: (id: number) => void;
@@ -689,6 +689,9 @@ const CapselaContext = createContext<CapselaContextValue | null>(null);
  * d'une capsule de style exploré. CATALOG reste le défaut pour les appels
  * hors provider, où le vestiaire vivant n'est pas accessible.
  */
+/** Les écrans d'onglet : y arriver met fin à une consultation (carrousel de l'accueil). */
+const ECRANS_ONGLETS: Screen[] = ["home", "wardrobe", "capsule", "planifier", "history", "calendrier"];
+
 export function findPiece(pool: Item[], id: number, fallback: Item[] = CATALOG): Item | undefined {
   return pool.find((i) => i.id === id) ?? fallback.find((i) => i.id === id);
 }
@@ -1315,11 +1318,19 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const proposerPourOccasion = (s: AppState, occasion: OccasionKey, courante: number[], montrees: Set<string>): number[] => {
     const resolution = [...s.items, ...vestiaireRef.current];
     const base: AppState = { ...s, occasion, outfit: [], planAppliqueId: null, jourDecalage: 0 };
-    const { choix } = choisirVariation(() => regen(base), (st) => st.outfit, courante, montrees, resolution);
-    if (choix.outfitNoCompleteOutfit || choix.outfit.length === 0) return [];
-    const pieces = choix.outfit.map((id) => findPiece(poolRef.current, id, vestiaireRef.current)).filter((it): it is Item => Boolean(it));
-    if (pieces.length !== choix.outfit.length || !tenueAUnSocle(pieces)) return [];
-    return montrees.has(clePrincipale(choix.outfit, resolution)) ? [] : choix.outfit;
+    // Une proposition est une tenue COMPLÈTE (haut + bas ou robe, ET chaussures — isCompleteOutfit) : une slide sans chaussures
+    // n'est pas montrée (signalé le 14/10/2026). Plusieurs tirages du moteur, on retient la plus garnie (accessoires compris) qui n'a
+    // pas déjà été montrée et qui diffère de la tenue quittée.
+    let meilleure: number[] = [];
+    for (let i = 0; i < 10; i++) {
+      const st = regen(base);
+      if (st.outfitNoCompleteOutfit || st.outfitMissingCats.length > 0 || st.outfit.length === 0) continue;
+      const pieces = st.outfit.map((id) => findPiece(poolRef.current, id, vestiaireRef.current)).filter((it): it is Item => Boolean(it));
+      if (pieces.length !== st.outfit.length || !isCompleteOutfit(pieces) || !tenueAUnSocle(pieces)) continue;
+      if (montrees.has(clePrincipale(st.outfit, resolution)) || cleTenue(st.outfit) === cleTenue(courante)) continue;
+      if (st.outfit.length > meilleure.length) meilleure = st.outfit;
+    }
+    return meilleure;
   };
 
   // Occasion par défaut du jour (recette 13/08/2026) — calculée une seule
@@ -1366,6 +1377,20 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setState((s) => (s.outfit.length || s.jourDecalage === 0 ? s : regen(withDefaultOccasion(s), wardrobePool, meteoDuJour, defaultCapsule)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.jourDecalage, state.outfit.length, previsionEnChargement, meteoDuJour, ready, dressingLoaded, geoLoading, vestiaireResolu]);
+
+  // FIN D'UNE CONSULTATION (14/10/2026) : quitter Tenue pour un onglet rend la tenue du jour mise de côté par « Voir le look » ; une
+  // tenue consultée puis portée (outfitValidated) devient celle du jour, rien n'est rendu. Avant la peinture : l'accueil ne montre jamais,
+  // même un instant, la tenue d'une autre slide. Les écrans ouverts DEPUIS Tenue (fiche d'une pièce…) gardent la consultation.
+  useLayoutEffect(() => {
+    if (!state.consultation || !ECRANS_ONGLETS.includes(state.screen)) return;
+    // Un seul passage : la consultation est vidée par cette même écriture. Écrit ici et non dans chaque navigation : il y en a des dizaines.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState((s) => {
+      if (!s.consultation) return s;
+      const { avant } = s.consultation;
+      return s.outfitValidated ? { ...s, consultation: null } : { ...s, ...avant, consultation: null };
+    });
+  }, [state.screen, state.consultation]);
 
   // LES PROPOSITIONS DU CARROUSEL (14/10/2026) : tirées une fois que la tenue du jour existe (pour ne pas la répéter), seulement pour
   // aujourd'hui, et seulement quand l'accueil est affiché — jamais en arrière-plan. Recalculées si le jour, le dressing, la météo, le
@@ -1460,7 +1485,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready || !dressingLoaded || geoLoading || !vestiaireResolu) return;
     const s = stateRef.current;
-    if (s.exploredStyleId || s.outfitValidated) return;
+    if (s.exploredStyleId || s.outfitValidated || s.consultation) return;
     const plans = plansDuJour(s.tenuesPlanifiees, jourLocal(dateDuJour(s.jourDecalage)));
     const choix = planPourTenueDuJour(plans, [...s.items, ...vestiairePool], s.plansEcartes);
     if (choix?.etat === "applicable") {
@@ -1961,8 +1986,38 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // « Enregistrer dans mes looks » : la même écriture que « J'adore cette
     // tenue », sans doublon ni suppression (enregistrerTenueSiAbsente).
     enregistrerIdeeLook: (ids, occasion) => enregistrerTenueSiAbsente(ids, occasion),
-    consulterTenue: (t) => setState((s) => ({ ...s, tenueConsultee: t, screen: "lookConsulte" })),
-    fermerTenueConsultee: () => setState((s) => ({ ...s, screen: "home" })),
+    consulterTenue: (ids, occasion, planId) =>
+      setState((s) => ({
+        ...s,
+        consultation: s.consultation ?? {
+          avant: {
+            outfit: s.outfit,
+            outfitMissingCats: s.outfitMissingCats,
+            outfitFormalityDowngraded: s.outfitFormalityDowngraded,
+            outfitOccasionRelachee: s.outfitOccasionRelachee,
+            outfitNoCompleteOutfit: s.outfitNoCompleteOutfit,
+            outfitFailureReason: s.outfitFailureReason,
+            outfitValidated: s.outfitValidated,
+            occasion: s.occasion,
+            occasionManual: s.occasionManual,
+            dismissedSuggestions: s.dismissedSuggestions,
+            planAppliqueId: s.planAppliqueId,
+          },
+        },
+        outfit: ids,
+        outfitMissingCats: [],
+        outfitFormalityDowngraded: false,
+        outfitOccasionRelachee: false,
+        outfitNoCompleteOutfit: false,
+        outfitFailureReason: null,
+        outfitValidated: false,
+        occasion,
+        occasionManual: true,
+        dismissedSuggestions: [],
+        // Le rappel d'un plan ne vaut que pour la tenue du plan : une autre tenue consultée ne l'affiche pas.
+        planAppliqueId: planId ?? null,
+        screen: "tenues",
+      })),
     autreIdeeSlide: (slide) =>
       setState((s) => {
         const def = SLIDES.find((d) => d.id === slide);
