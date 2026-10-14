@@ -929,10 +929,12 @@ export default function HistoryScreen() {
                         {idx + 1}
                       </span>
                     </span>
-                    <span className="text-[12px] text-ink leading-[1.25] mt-[7px] line-clamp-2 min-h-[2.5em]">
+                    {/* Le nombre de ports suit le nom de près (14/10/2026, demandé) : la hauteur de deux lignes réservée au nom laissait un
+                        blanc d'une ligne sous les noms courts. Un nom sur deux lignes décale seulement son propre compte. */}
+                    <span className="text-[12px] text-ink leading-[1.25] mt-[7px] line-clamp-2">
                       {nomCourtPiece(item.name)}
                     </span>
-                    <span className="block text-[11px] text-muted mt-[2px]">{ports}</span>
+                    <span className="block text-[11px] text-muted mt-[1px]">{ports}</span>
                   </button>
                 </li>
               );
