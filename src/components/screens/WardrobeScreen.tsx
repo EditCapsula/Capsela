@@ -266,8 +266,7 @@ export default function WardrobeScreen() {
   const enTete = (
     <>
       <AppHeader />
-      <div className="t-surtitre text-muted mt-[14px]">Mon dressing</div>
-      <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
+      <div className="t-titre-ecran text-ink mt-[18px]" style={{ textWrap: "balance" }}>
         Ton dressing, <span className="italic text-terracotta">à ton image</span>
       </div>
       {/* Une seule ligne : le nombre de pièces et de catégories, calculés. Plus de « places restantes » (08/10/2026). */}
@@ -396,8 +395,7 @@ export default function WardrobeScreen() {
       style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}
     >
       <AppHeader />
-      <div className="t-surtitre text-muted mt-[14px]">Mon dressing</div>
-      <div className="flex items-end justify-between gap-3 mt-[6px]">
+      <div className="flex items-end justify-between gap-3 mt-[18px]">
         <div className="t-titre-ecran text-ink" style={{ textWrap: "balance" }}>
           Ton dressing, <span className="italic text-terracotta">à ton image</span>
         </div>

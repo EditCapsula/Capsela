@@ -1388,7 +1388,10 @@ export default function PlanifierScreen() {
             parcours, puis les planifications. */}
         {vue === "intro" && (
           <>
-            <Surtitre>Planifier</Surtitre>
+            {/* 18 px sous le bandeau, comme les autres onglets (pt-4 du conteneur + 2). */}
+            <div className="mt-[2px]">
+              <Surtitre>Planifier</Surtitre>
+            </div>
             <TitreEtape a="Anticipe tes moments." b="Capsela s'occupe du look" />
             <div className="t-chapeau text-muted-3 mt-[10px]" style={{ textWrap: "pretty" }}>
               Des tenues pensées pour tes occasions et tes voyages, selon ton style, la météo et ton dressing.

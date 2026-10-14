@@ -41,6 +41,8 @@
   --color-divider: #efe7da;
   --color-photo-bg: #f3ede1;
   /* Fond intérieur des cartes « Tes looks » (09/10/2026) : un grège clair, plus soutenu que le crème de la page, pour que les pièces blanches et beiges s'en détachent. */
+  /* Fond de la carte du look (hero de l'accueil, détail de la tenue consultée) : une seule valeur, 14/10/2026. */
+  --color-look-bg: #eeded8;
   --color-flatlay-bg: #dcd3c4;
   --color-flatlay-bg-clair: #e6dfd2;
   --color-selected-bg: #f6ebe2;

@@ -64,8 +64,10 @@ export function FlatLayCapsela({
     return avecImage.length ? avecImage : toutes;
   }, [items, context]);
   const template = useMemo(
-    () => (templates ? choisirTemplate(images.map(({ it }) => ({ cat: it.cat, subtype: it.subtype, name: it.name }))) : null),
-    [images, templates]
+    // Pas de template sur l'accueil (14/10/2026) : jamais validé en rendu réel dans ce contexte (seul look-detail l'a été), et une tenue y a
+    // paru sans ses chaussures. Le moteur d'origine y compose seul ; le moteur de templates sait le faire (flatLay.ts), il faut juste le valider.
+    () => (templates && context !== "hero-home" ? choisirTemplate(images.map(({ it }) => ({ cat: it.cat, subtype: it.subtype, name: it.name }))) : null),
+    [images, templates, context]
   );
   const composition = useMemo(
     () =>

@@ -292,16 +292,7 @@ export default function HomeScreen() {
         pieces={pieces}
         graine={cleSlide(slide.ids)}
         categoriesAttendues={duJour ? categoriesAttendues : undefined}
-        onVoir={() =>
-          actions.consulterTenue({
-            ids: slide.ids,
-            occasion: slide.occasion,
-            surtitre,
-            titre: [titre.a, titre.b].filter(Boolean).join(" "),
-            description: sousTitre,
-            plan: slide.source === "plan" ? planHero : null,
-          })
-        }
+        onVoir={() => actions.consulterTenue(slide.ids, slide.occasion, slide.source === "plan" ? (planHero?.id ?? null) : null)}
         sauvegardee={duJour ? sauvegardee : dejaSauvegardee(slide.ids)}
         onSauvegarder={() => {
           if (duJour) return actions.setOutfitFeedback("adore");
@@ -315,7 +306,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-[100px]">
+    <div className="scrollarea absolute inset-0 overflow-y-auto pt-[6px] pb-safe-nav">
       <div className="px-6">
         {/* Le calendrier est une entrée GLOBALE, pas un onglet : un bouton dans la gouttière gauche du bandeau (05/10/2026). */}
         <AppHeader />
@@ -355,7 +346,7 @@ export default function HomeScreen() {
         className="mx-4 mt-3 rounded-hero grid gap-2"
         // 358 × 307 px sur 390 (calibrage du 08/10/2026) : la marge du hero est de 16 px, 8 px de moins que la gouttière du reste de
         // l'écran. La colonne de la composition fait 181 px (zone 181 × 203), moins sur un écran étroit : le texte garde sa place.
-        style={{ background: "#EEDED8", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
+        style={{ background: "var(--color-look-bg)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
       >
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-[7px]">

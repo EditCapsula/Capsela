@@ -520,13 +520,12 @@ describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « 
     expect(composerFlatLay(tenue, "h", { contexte: "hero-home" }).pieces.length).toBe(3);
   });
 
-  it("les collants ne sont pas posés dans le hero de l'accueil, mais restent posés dans le détail de la tenue", () => {
+  it("les collants sont posés dans le hero de l'accueil comme dans le détail de la tenue (14/10/2026, demandé : ils étaient masqués depuis le 08/10)", () => {
     const pieces = [p("pull"), p("pantalon"), { ...p("accessoire"), accessoireType: "Collants" }, p("sac")];
     const collants = pieces[2].id;
     const home = composerFlatLay(pieces, "x", { contexte: "hero-home" });
-    expect(home.pieces.map((q) => q.id)).not.toContain(collants);
-    expect(home.masquees).toContain(collants);
-    expect(home.ecartees).not.toContain(collants);
+    expect(home.pieces.map((q) => q.id)).toContain(collants);
+    expect(home.masquees).not.toContain(collants);
     const detail = composerFlatLay(pieces, "x", { contexte: "look-detail" });
     expect(detail.pieces.map((q) => q.id)).toContain(collants);
   });

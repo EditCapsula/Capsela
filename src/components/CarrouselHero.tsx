@@ -61,7 +61,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
   return (
     <div
       className="rounded-hero grid gap-2"
-      style={{ background: "#EEDED8", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
+      style={{ background: "var(--color-look-bg)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
     >
       <div className="flex flex-col min-w-0">
         <div className="flex items-center gap-[7px]">

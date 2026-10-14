@@ -58,7 +58,7 @@ export default function Button({
 }
 
 /**
- * L'ACTION DISCRÈTE posée sur un fond terracotta (hero de l'accueil et de la tenue, 02/10/2026 : les deux écrans
+ * L'ACTION DISCRÈTE posée sur la carte du look (#EEDED8 depuis le 14/10/2026 ; hero de l'accueil et de la tenue, 02/10/2026 : les deux écrans
  * écrivaient chacun la leur, l'une à fond translucide, l'autre à filet). Un filet, sans aplat : elle ne peut pas
  * être confondue avec l'action pleine. `actif` : un état coché (ex. « Enregistrée ») prend un léger aplat.
  */
@@ -77,9 +77,9 @@ export function BoutonDiscret({
       className={"flex items-center justify-center gap-[6px] rounded-full text-[12px] cursor-pointer disabled:cursor-default disabled:opacity-45 " + className}
       style={{
         minHeight: 44,
-        background: actif ? "rgba(243,238,229,.18)" : "transparent",
-        border: "1px solid rgba(243,238,229,.24)",
-        color: "var(--color-on-terracotta)",
+        background: actif ? "rgba(29,26,22,.07)" : "transparent",
+        border: "1px solid rgba(29,26,22,.22)",
+        color: "var(--color-ink)",
         ...style,
       }}
     >

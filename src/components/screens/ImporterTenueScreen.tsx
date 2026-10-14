@@ -319,9 +319,9 @@ export default function ImporterTenueScreen() {
               <CameraIcon />
             </span>
             <div className="font-serif font-medium text-[19px] text-ink mt-[10px]">Photographie ta tenue</div>
-            <div className="text-[12.5px] text-[#5C5648] mt-1">Porte-la en pied, sur un fond simple, bien éclairée.</div>
+            <div className="text-[12.5px] text-muted-3 mt-1">Porte-la en pied, sur un fond simple, bien éclairée.</div>
             <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-2 w-full mt-[18px]">
-              <button type="button" onClick={() => cameraRef.current?.click()} className="h-[44px] rounded-full bg-terracotta-deep text-[#FBF3EA] text-[13px] font-semibold cursor-pointer">
+              <button type="button" onClick={() => cameraRef.current?.click()} className="h-[44px] rounded-full bg-terracotta-deep text-on-terracotta text-[13px] font-semibold cursor-pointer">
                 Prendre une photo
               </button>
               <button type="button" onClick={() => galerieRef.current?.click()} className="h-[44px] rounded-full border border-border bg-cream text-ink text-[13px] font-semibold cursor-pointer">
@@ -348,19 +348,19 @@ export default function ImporterTenueScreen() {
 
         {/* Phrase de statut. */}
         <div role="status" aria-live="polite" className="mt-4">
-          {phase === "choix" && <p className="text-[13px] text-[#5C5648]">Capsela repère chaque pièce, tu choisis celles à ajouter.</p>}
+          {phase === "choix" && <p className="text-[13px] text-muted-3">Capsela repère chaque pièce, tu choisis celles à ajouter.</p>}
           {phase === "resultat" && (
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-serif font-medium text-[22px] text-ink">{seul ? "1 pièce détectée" : `${nbRepere} pièces détectées`}</p>
-                <p className="text-[12.5px] text-[#5C5648] mt-1">Vérifie les vêtements avant de les ajouter à ton dressing.</p>
+                <p className="text-[12.5px] text-muted-3 mt-1">Vérifie les vêtements avant de les ajouter à ton dressing.</p>
               </div>
               {brouillons.length > 1 && (
                 <button
                   type="button"
                   onClick={() => void valider(brouillons)}
                   disabled={pretes.length === 0}
-                  className={"h-[40px] px-4 flex-shrink-0 rounded-full text-[13px] font-semibold " + (pretes.length === 0 ? "bg-[#E2C9A8] text-[#5C5648] cursor-not-allowed" : "bg-terracotta-deep text-[#FBF3EA] cursor-pointer")}
+                  className={"h-[40px] px-4 flex-shrink-0 rounded-full text-[13px] font-semibold " + (pretes.length === 0 ? "bg-[#E2C9A8] text-muted-3 cursor-not-allowed" : "bg-terracotta-deep text-on-terracotta cursor-pointer")}
                 >
                   Tout ajouter
                 </button>
@@ -370,7 +370,7 @@ export default function ImporterTenueScreen() {
           {phase === "vide" && (
             <>
               <p className="font-serif font-medium text-[18px] text-ink">Capsela n&apos;a pas repéré de pièces sur cette photo.</p>
-              <ul className="mt-2 text-[13px] text-[#5C5648] list-disc pl-5 space-y-1">
+              <ul className="mt-2 text-[13px] text-muted-3 list-disc pl-5 space-y-1">
                 <li>Photographie la tenue en pied.</li>
                 <li>Choisis un fond simple.</li>
                 <li>Cherche une bonne lumière.</li>
@@ -382,7 +382,7 @@ export default function ImporterTenueScreen() {
               {messageEchec(code).texte}
             </p>
           )}
-          {phase === "ajout" && <p className="text-[13px] text-[#5C5648]">Ajout {Math.min(progression.fait + 1, progression.total)} sur {progression.total}…</p>}
+          {phase === "ajout" && <p className="text-[13px] text-muted-3">Ajout {Math.min(progression.fait + 1, progression.total)} sur {progression.total}…</p>}
         </div>
 
         {/* Dressing gratuit : plus d'objets que de places. */}
@@ -411,7 +411,7 @@ export default function ImporterTenueScreen() {
               return (
                 <li key={b.cle} className="rounded-[20px] border border-border bg-card">
                   <div className="flex gap-3 p-3">
-                    <span className="relative w-[96px] h-[120px] flex-shrink-0 rounded-[14px] overflow-hidden flex items-center justify-center" style={{ background: "#F0E5D6" }}>
+                    <span className="relative w-[96px] h-[120px] flex-shrink-0 rounded-[14px] overflow-hidden flex items-center justify-center" style={{ background: "var(--color-warm-bg)" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={b.photoUrl} alt="" className="w-full h-full object-contain" />
                       {etatPlat?.etat === "cours" && (
@@ -447,7 +447,7 @@ export default function ImporterTenueScreen() {
                           </svg>
                         </button>
                       </div>
-                      <span className="block text-[12px] text-[#5C5648]">{libelleCategorie(b.cat)}</span>
+                      <span className="block text-[12px] text-muted-3">{libelleCategorie(b.cat)}</span>
                       {!b.coche ? (
                         <span className="block text-[11.5px] text-[#8B8375] mt-[2px]">Plus de place dans ton dressing gratuit</span>
                       ) : (
@@ -468,7 +468,7 @@ export default function ImporterTenueScreen() {
                           type="button"
                           disabled={enAjout || !b.coche}
                           onClick={() => (manques.length > 0 ? setOuverte(b.cle) : void valider([b]))}
-                          className="h-[40px] px-4 rounded-full bg-terracotta-deep text-[#FBF3EA] text-[12.5px] font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50"
+                          className="h-[40px] px-4 rounded-full bg-terracotta-deep text-on-terracotta text-[12.5px] font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50"
                         >
                           Ajouter
                         </button>
@@ -476,7 +476,7 @@ export default function ImporterTenueScreen() {
                     </div>
                   </div>
                   {etatPlat?.etat === "erreur" && (
-                    <p role="alert" className="px-3 pb-3 -mt-1 text-[12px] text-[#5C5648]">
+                    <p role="alert" className="px-3 pb-3 -mt-1 text-[12px] text-muted-3">
                       {etatPlat.message} Ta photo est inchangée.
                     </p>
                   )}
@@ -524,7 +524,7 @@ export default function ImporterTenueScreen() {
                                 aria-label={nom}
                                 onClick={() => modifier(b.cle, { couleur: { nom, hex }, couleurLue: true })}
                                 className="w-[44px] h-[44px] rounded-full bg-transparent p-[3px] cursor-pointer"
-                                style={{ border: `2px solid ${on ? "#1D1A16" : "transparent"}` }}
+                                style={{ border: `2px solid ${on ? "var(--color-ink)" : "transparent"}` }}
                               >
                                 <span className="w-full h-full rounded-full flex items-center justify-center" style={{ background: hex, border: `1px solid ${claire ? "#D9CDB8" : hex}` }}>
                                   {on && <Coche couleur={claire ? "#1D1A16" : "#FBF8F3"} />}
@@ -616,7 +616,7 @@ export default function ImporterTenueScreen() {
             </p>
             <div className="flex gap-2 mt-4 flex-wrap">
               {ajoutees.map((u) => (
-                <span key={u} className="w-[64px] h-[64px] rounded-[14px] overflow-hidden flex items-center justify-center" style={{ background: "#F0E5D6" }}>
+                <span key={u} className="w-[64px] h-[64px] rounded-[14px] overflow-hidden flex items-center justify-center" style={{ background: "var(--color-warm-bg)" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={u} alt="" className="w-full h-full object-contain" />
                 </span>

@@ -41,7 +41,6 @@ import CreateLookScreen from "./screens/CreateLookScreen";
 import LookDetailScreen from "./screens/LookDetailScreen";
 import ItemOutfitsScreen from "./screens/ItemOutfitsScreen";
 import IdeeLookScreen from "./screens/IdeeLookScreen";
-import LookConsulteScreen from "./screens/LookConsulteScreen";
 import TabBar from "./TabBar";
 import CookieBanner from "./CookieBanner";
 import { readConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
@@ -193,7 +192,6 @@ function Screens() {
         {state.screen === "lookDetail" && <LookDetailScreen />}
         {state.screen === "itemOutfits" && <ItemOutfitsScreen />}
         {state.screen === "ideeLook" && <IdeeLookScreen />}
-        {state.screen === "lookConsulte" && <LookConsulteScreen />}
       </div>
       {showTabbar && <TabBar />}
       <LegalDocOverlay />

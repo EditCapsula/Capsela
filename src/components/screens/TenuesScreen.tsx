@@ -677,11 +677,11 @@ export default function TenuesScreen() {
       {!meteoEnAttente && outfitPieces.length > 0 && (
         <div
           id="tenue-du-jour"
-          className="-mx-2 mt-3 rounded-hero bg-terracotta-deep text-cream scroll-mt-4 flex flex-col"
+          className="-mx-2 mt-3 rounded-hero text-ink scroll-mt-4 flex flex-col"
           // 358 × 564 px sur 390 (calibrage du 08/10/2026) : 8 px de plus de chaque côté que la gouttière de 24 px, la marge de 16 px
           // du hero ; la zone du flat lay prend ce qui reste (350 px) — l'en-tête, la provenance, l'action et les deux
           // secondaires ont une hauteur fixe. Un constat météo sur un plan l'allonge, jamais le flat lay.
-          style={{ padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : 564, minHeight: 564 }}
+          style={{ background: "var(--color-look-bg)", padding: 16, containerType: "inline-size", height: planApplique?.alerte ? undefined : 564, minHeight: 564 }}
         >
           {/* UNE SEULE LIGNE pour les badges ET la phrase d'ambiance (demandé
               le 23/09). Conditionnelle depuis que le titre est parti : sans
@@ -717,14 +717,14 @@ export default function TenuesScreen() {
                 tenue, et le bouton de changement revient à la proposition de
                 Capsela — sans passer par le quota d'« Autre tenue », ce n'est
                 pas une alternative demandée. */}
-            <span className="t-label" aria-live="polite" style={{ color: statut.cle === "a_completer" && !planApplique ? "var(--color-on-terracotta-soft)" : "var(--color-on-terracotta)" }}>
+            <span className="t-label" aria-live="polite" style={{ color: statut.cle === "a_completer" && !planApplique ? "var(--color-ink-soft)" : "var(--color-ink)" }}>
               {(planApplique || statut.cle === "complete") && <span aria-hidden="true">✦ </span>}
               {planApplique ? "Ta tenue planifiée" : statut.libelle}
             </span>
             {planApplique ? (
               <button
                 onClick={actions.voirAutreProposition}
-                className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-cream cursor-pointer -my-[10px] py-[10px]"
+                className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-ink cursor-pointer -my-[10px] py-[10px]"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
                   <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -737,7 +737,7 @@ export default function TenuesScreen() {
                 onClick={autreTenue}
                 disabled={tirageEnCours}
                 aria-busy={tirageEnCours}
-                className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-cream cursor-pointer disabled:cursor-not-allowed -my-[10px] py-[10px]"
+                className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-ink cursor-pointer disabled:cursor-not-allowed -my-[10px] py-[10px]"
                 style={{ opacity: tirageEnCours ? 0.6 : 1 }}
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
@@ -751,7 +751,7 @@ export default function TenuesScreen() {
           {/* Ce que la météo du jour dit de la tenue planifiée (choisie sur une
               prévision) : un constat, jamais un changement d'office. */}
           {planApplique?.alerte && (
-            <div className="flex-shrink-0 text-[12.5px] leading-[1.4] mb-[8px]" style={{ color: "var(--color-on-terracotta-soft)", textWrap: "pretty" }}>
+            <div className="flex-shrink-0 text-[12.5px] leading-[1.4] mb-[8px]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
               {planApplique.alerte.message}
             </div>
           )}
@@ -790,7 +790,7 @@ export default function TenuesScreen() {
                 le SEUL endroit qui affiche la température, et l'argument
                 « elle est déjà au-dessus » y est faux. */}
             {recommendationText && (
-              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "#F7E7DA" }}>
+              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "var(--color-terracotta-deep)" }}>
                 {recommendationText}
               </span>
             )}
@@ -830,12 +830,12 @@ export default function TenuesScreen() {
                   <span
                     key={p.cle}
                     className="inline-flex items-center gap-[7px] rounded-full pl-[6px] pr-[11px] py-[4px] text-[11px] leading-[1.25]"
-                    style={{ background: "rgba(74,36,24,.72)", color: "var(--color-on-terracotta)" }}
+                    style={{ background: "rgba(29,26,22,.07)", color: "var(--color-ink)" }}
                   >
                     <span
                       aria-hidden="true"
                       className="w-[17px] h-[17px] rounded-full flex items-center justify-center text-[9px] flex-shrink-0"
-                      style={{ background: "rgba(251,243,234,.2)" }}
+                      style={{ background: "rgba(29,26,22,.1)" }}
                     >
                       {p.glyphe}
                     </span>
@@ -854,21 +854,21 @@ export default function TenuesScreen() {
           {decalage > 0 ? (
             /* UN JOUR À VENIR NE SE PORTE PAS ENCORE (27/09/2026) : le Journal
                n'enregistre que le jour même. Même hauteur que le bouton. */
-            <div className="mt-[8px] flex-shrink-0 flex items-center justify-center rounded-full text-[13px] text-cream text-center px-4" style={{ minHeight: 56, border: "1px dashed rgba(243,238,229,.4)" }}>
+            <div className="mt-[8px] flex-shrink-0 flex items-center justify-center rounded-full text-[13px] text-ink text-center px-4" style={{ minHeight: 56, border: "1px dashed rgba(29,26,22,.3)" }}>
               {`À porter ${quand} — enregistre-la ou demande un avis d'ici là.`}
             </div>
           ) : state.outfitValidated ? (
             /* Même hauteur que le bouton qu'il remplace (50 px) : valider la
                tenue ne doit pas déplacer les actions en dessous. */
-            <div className="mt-[8px] flex-shrink-0 flex items-center gap-3 rounded-full py-[9px] px-4" style={{ minHeight: 56, background: "rgba(29,26,22,.28)" }}>
-              <span className="w-8 h-8 rounded-full bg-cream text-terracotta flex items-center justify-center text-base flex-shrink-0">
+            <div className="mt-[8px] flex-shrink-0 flex items-center gap-3 rounded-full py-[9px] px-4" style={{ minHeight: 56, background: "rgba(29,26,22,.07)" }}>
+              <span className="w-8 h-8 rounded-full bg-terracotta-deep text-cream flex items-center justify-center text-base flex-shrink-0">
                 ✓
               </span>
-              <div className="text-[13px] text-cream">Bonne journée avec cette tenue !</div>
+              <div className="text-[13px] text-ink">Bonne journée avec cette tenue !</div>
             </div>
           ) : (
             <Button
-              variante="claire"
+              variante="principal"
               onClick={vesteWithoutBase ? undefined : actions.wearOutfitToday}
               disabled={vesteWithoutBase}
               title={vesteWithoutBase ? "Ajoute un haut, une robe ou une combinaison sous ta veste." : undefined}
@@ -886,9 +886,9 @@ export default function TenuesScreen() {
               // qu'un manque est signalé juste en dessous.
               className="mt-[8px] !min-h-[56px] flex-shrink-0 disabled:opacity-100 disabled:cursor-not-allowed"
               style={{
-                background: vesteWithoutBase ? "rgba(243,238,229,.38)" : statut.cle === "a_completer" ? "transparent" : undefined,
-                color: vesteWithoutBase ? "rgba(29,26,22,.5)" : statut.cle === "a_completer" ? "var(--color-cream)" : undefined,
-                border: !vesteWithoutBase && statut.cle === "a_completer" ? "1px solid rgba(243,238,229,.6)" : undefined,
+                background: vesteWithoutBase ? "rgba(29,26,22,.12)" : statut.cle === "a_completer" ? "transparent" : undefined,
+                color: vesteWithoutBase ? "rgba(29,26,22,.5)" : statut.cle === "a_completer" ? "var(--color-terracotta-deep)" : undefined,
+                border: !vesteWithoutBase && statut.cle === "a_completer" ? "1px solid var(--color-terracotta-deep)" : undefined,
               }}
             >
               Porter cette tenue
