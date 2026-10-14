@@ -54,6 +54,7 @@ import {
   MAX_STYLES,
   libelleStyles,
   exposedStyleIds,
+  stylesDuGenre,
   paletteColorName,
   styleConfigFor,
   VISUELS_ETAPE_STYLE_FEMME,
@@ -236,13 +237,16 @@ export default function ProfileSetupScreen() {
   // Un ou deux styles (05/10/2026 ; avant : sélection unique, arbitrage du 20/08/2026 reconduit après un essai de
   // multi-sélection le même jour) : basculerStyle, le premier choisi est le principal.
   // Un troisième style est BLOQUÉ, pas substitué (07/10/2026) : le remplacer en silence changeait un choix sans le dire.
+  // Seuls comptent les styles que le genre propose (stylesDuGenre) : un style resté d'un autre genre (Glamour après un passage à Homme) ne
+  // doit ni occuper une des deux places ni rester dans le profil.
   const selectStyle = (id: string) => {
-    if (!draft.styles.includes(id) && draft.styles.length >= MAX_STYLES) {
+    const valides = stylesDuGenre(draft.styles, draft.gender);
+    if (!valides.includes(id) && valides.length >= MAX_STYLES) {
       setStyleBloque(true);
       return;
     }
     setStyleBloque(false);
-    patch({ styles: basculerStyle(draft.styles, id) });
+    patch({ styles: basculerStyle(valides, id) });
   };
 
   // Édition ciblée d'une seule étape (recette 22/08/2026, signalé : "si je
