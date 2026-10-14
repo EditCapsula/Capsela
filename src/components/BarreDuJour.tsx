@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { IconeTuile } from "@/components/PlanifierUI";
 import { useDonneesJour, type RetroJour } from "@/components/JourMeteo";
 import { JOUR_MAX, libelleJour, libelleJourCourt } from "@/lib/jourConsulte";
@@ -88,43 +89,66 @@ export default function BarreDuJour({ className = "", retro }: { className?: str
 }
 
 /**
- * LA BARRE MÉTÉO D'UN LOOK PLANIFIÉ (14/10/2026) : la même ligne que celle de l'accueil et de Tenue — le lieu à gauche, la température
- * et la condition à droite, « Max · min » dessous —, mais pour le LIEU et le MOMENT du plan, pas pour la position de la personne.
- * `prevision` : la prévision du lieu pour le moment planifié (useMeteoDuPlan) ; sans elle (plan hors de l'horizon, sans lieu connu ou
- * sans réponse), la météo enregistrée à la planification, DITE comme telle — jamais une température d'ailleurs.
+ * LA BARRE D'UN LOOK PLANIFIÉ (14/10/2026) : la même ligne que celle de l'accueil — à gauche la date et le lieu, à droite la température,
+ * la condition et « Max · min » —, mais pour le LIEU et le MOMENT du plan, pas pour la position de la personne. Un « i » près de la date
+ * dit d'où vient la météo (`info`) : la prévision du lieu pour le moment planifié (useMeteoDuPlan), ou, sans elle (plan hors de l'horizon,
+ * sans lieu connu, sans réponse), la météo enregistrée à la planification — jamais une température d'ailleurs.
  */
 export function BarreDuPlan({
+  date,
   lieu,
-  moment,
   prevision,
   enregistree,
+  info,
   className = "",
   children,
 }: {
+  date: string;
   lieu: string;
-  moment: string;
   prevision: { temp: number; tempMin: number; tempMax: number; label: string } | null;
   enregistree: { temp: number | null; label: string | null };
+  /** La source de la météo, dite dans l'infobulle du « i » ; null : pas de « i ». */
+  info?: string | null;
   className?: string;
-  /** Les notes sous la barre : prévision changée, alerte, source de la prévision. */
+  /** Les notes sous la barre : prévision changée, alerte. */
   children?: React.ReactNode;
 }) {
+  const [infoOuverte, setInfoOuverte] = useState(false);
   const temp = prevision ? prevision.temp : enregistree.temp;
   const label = prevision ? prevision.label : enregistree.label;
   const soleil = !!label && /soleil|dégagé|clair|ensoleill/i.test(label);
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-[6px] min-w-0 text-[12.5px] font-medium text-ink min-h-[44px]">
-          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-muted" style={{ display: "block" }}>
-            <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
-              <path d="M12 12.3a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6z" />
-            </g>
-          </svg>
-          <span className="truncate">{lieu || "Lieu non précisé"}</span>
-          <span aria-hidden="true" className="text-muted">·</span>
-          <span className="text-muted-3 whitespace-nowrap">{moment}</span>
+        <div className="flex items-center min-w-0 text-[12.5px] font-medium text-muted-3 min-h-[44px]">
+          <span className="whitespace-nowrap">{date}</span>
+          {info && (
+            <button
+              type="button"
+              onClick={() => setInfoOuverte((v) => !v)}
+              aria-expanded={infoOuverte}
+              aria-label="D'où vient cette météo ?"
+              className="w-[30px] h-[44px] flex items-center justify-center flex-shrink-0 cursor-pointer text-terracotta"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="8.5" />
+                  <path d="M12 11v5.2" />
+                </g>
+                <circle cx="12" cy="7.9" r="1" fill="currentColor" />
+              </svg>
+            </button>
+          )}
+          <span aria-hidden="true" className="text-muted mx-[6px]">·</span>
+          <span className="flex items-center gap-[6px] min-w-0 text-ink">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-muted" style={{ display: "block" }}>
+              <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+                <path d="M12 12.3a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6z" />
+              </g>
+            </svg>
+            <span className="truncate">{lieu || "Lieu non précisé"}</span>
+          </span>
         </div>
         {temp != null && (
           <div className="flex-shrink-0 text-right" aria-label={`${temp}°${label ? `, ${label}` : ""}`}>
@@ -137,6 +161,11 @@ export function BarreDuPlan({
           </div>
         )}
       </div>
+      {infoOuverte && info && (
+        <div role="status" className="text-[11.5px] text-ink-soft leading-[1.45] mt-[2px] rounded-[12px] bg-warm-bg px-3 py-2">
+          {info}
+        </div>
+      )}
       {children}
     </div>
   );

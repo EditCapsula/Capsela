@@ -90,7 +90,10 @@ describe("garde-fou — le vocabulaire du manque ne revient pas", () => {
   // le moteur de score). Un garde-fou fichier par fichier laisserait passer la
   // quatrième, écrite ailleurs : la vérification porte sur tout src.
   it("« Il te manque » n'existe plus nulle part dans src", () => {
-    const coupables = fichiersSource(SRC).filter((f) => codeSansCommentaires(f).includes("Il te manque"));
+    // Seule exception, décidée par la propriétaire le 14/10/2026 : la phrase du hero de Tenue quand il n'y a AUCUNE chaussure dans la tenue
+    // (« Il te manque une paire de chaussures pour ce look. ») — un constat sur une tenue réellement incomplète, pas sur une tenue valide.
+    const PHRASE_AUTORISEE = "Il te manque une paire de chaussures pour ce look.";
+    const coupables = fichiersSource(SRC).filter((f) => codeSansCommentaires(f).split(PHRASE_AUTORISEE).join("").includes("Il te manque"));
     expect(coupables.map((f) => f.slice(SRC.length + 1))).toEqual([]);
   });
 

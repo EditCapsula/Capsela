@@ -127,19 +127,6 @@ const G_CINTRE = (
     <path d="M14 9.4 3.9 16.2a1 1 0 0 0 .6 1.8h15a1 1 0 0 0 .6-1.8L14 9.4z" {...T} />
   </>
 );
-/** Le dessin de l'onglet Planifier (TabBar) : la date d'une tenue planifiée porte l'icône de l'écran. */
-const G_CALENDRIER = (
-  <>
-    <rect x="4" y="6" width="16" height="14" rx="2" {...T} />
-    <path d="M4 10h16M8.5 3.5V7M15.5 3.5V7" {...T} />
-  </>
-);
-const G_HORLOGE = (
-  <>
-    <circle cx="12" cy="12" r="8" {...T} />
-    <path d="M12 7.5V12l3 2" {...T} />
-  </>
-);
 
 const MOMENTS: [MomentJournee, string][] = [
   ["Matin", "Avant midi"],
@@ -2005,42 +1992,31 @@ export default function PlanifierScreen() {
             <>
               {/* INTRODUCTION — type d'écran, occasion et ville, puis date et
                   moment sur une ligne légère, avec leurs icônes. */}
-              <Surtitre>Look planifié</Surtitre>
-              <TitreEtape a={occasionShortLabel(t.occasion)} b={villePlan ? `· ${villePlan}` : ""} />
-              <div className="flex items-center flex-wrap gap-x-[10px] gap-y-[4px] text-[12px] text-muted-3 mt-[9px]">
-                <span className="inline-flex items-center gap-[6px]">
-                  <span className="text-terracotta">
-                    <Glyphe taille={15}>{G_CALENDRIER}</Glyphe>
-                  </span>
-                  {jourLong.charAt(0).toUpperCase() + jourLong.slice(1)}
-                </span>
-                <span aria-hidden="true" className="w-px h-[12px] bg-border" />
-                <span className="inline-flex items-center gap-[6px]">
-                  <span className="text-terracotta">
-                    <Glyphe taille={15}>{G_HORLOGE}</Glyphe>
-                  </span>
-                  {t.moment}
-                </span>
+              {/* L'EN-TÊTE COMME L'ACCUEIL (14/10/2026) : un titre, puis la barre « date (i) · lieu » avec la météo à droite. L'occasion et le moment
+                  ne sont dits qu'une fois, dans le hero (« pensée pour ta soirée ») ; la source de la prévision est dans le « i » près de la date. */}
+              <div className="t-titre-ecran text-ink mt-[18px]">
+                Look <span className="italic text-terracotta">planifié</span>
               </div>
-
-              {/* LA MÉTÉO DU LIEU ET DU MOMENT PLANIFIÉS (14/10/2026) : la même barre que l'accueil et Tenue, à la place de l'ancienne carte
-                  « Le contexte ». La prévision est celle du lieu du plan pour son moment ; sans elle, la météo enregistrée, dite comme telle. */}
-              <BarreDuPlan className="mt-[10px]" lieu={villePlan} moment={t.moment} prevision={meteoPlanVive} enregistree={{ temp: t.temp, label: t.weatherLabel }}>
-                {meteoPlanVive ? (
-                  <>
-                    {previsionAChange(t, meteoPlanVive) && (
-                      <div className="text-[11px] text-terracotta leading-[1.45] mt-[2px]">
-                        La prévision a changé depuis la planification{t.temp != null ? ` (${t.temp}°${t.weatherLabel ? `, ${t.weatherLabel.toLowerCase()}` : ""})` : ""}.
-                      </div>
-                    )}
-                    {alerteMeteoPlan(pieces, meteoPlanVive) && <div className="text-[11px] text-terracotta leading-[1.45] mt-[2px]">{alerteMeteoPlan(pieces, meteoPlanVive)}</div>}
-                    <div className="text-[10px] text-placeholder mt-[2px] leading-[1.4]">
-                      Prévision {ecartJoursPlan === 0 ? "d'aujourd'hui" : ecartJoursPlan === 1 ? "de demain" : "à jour"} à {villePlan || "ce lieu"}, pour {t.moment.toLowerCase()}
-                    </div>
-                  </>
-                ) : t.temp != null ? (
-                  <div className="text-[10px] text-placeholder mt-[2px] leading-[1.4]">Météo enregistrée à la planification — la prévision de ce lieu n&apos;est pas disponible pour cette date.</div>
-                ) : null}
+              <BarreDuPlan
+                className="mt-1"
+                date={jourLong.charAt(0).toUpperCase() + jourLong.slice(1)}
+                lieu={villePlan}
+                prevision={meteoPlanVive}
+                enregistree={{ temp: t.temp, label: t.weatherLabel }}
+                info={
+                  meteoPlanVive
+                    ? `Prévision ${ecartJoursPlan === 0 ? "d'aujourd'hui" : ecartJoursPlan === 1 ? "de demain" : "à jour"} à ${villePlan || "ce lieu"}, pour ${t.moment.toLowerCase()}.`
+                    : t.temp != null
+                      ? "Météo enregistrée à la planification — la prévision de ce lieu n'est pas disponible pour cette date."
+                      : null
+                }
+              >
+                {meteoPlanVive && previsionAChange(t, meteoPlanVive) && (
+                  <div className="text-[11px] text-terracotta leading-[1.45] mt-[2px]">
+                    La prévision a changé depuis la planification{t.temp != null ? ` (${t.temp}°${t.weatherLabel ? `, ${t.weatherLabel.toLowerCase()}` : ""})` : ""}.
+                  </div>
+                )}
+                {meteoPlanVive && alerteMeteoPlan(pieces, meteoPlanVive) && <div className="text-[11px] text-terracotta leading-[1.45] mt-[2px]">{alerteMeteoPlan(pieces, meteoPlanVive)}</div>}
               </BarreDuPlan>
 
               {/* LE HERO DE LA PAGE TENUE (14/10/2026, demandé), pour la tenue GARDÉE : mêmes mesures, mêmes actions discrètes — « Modifier ce look »

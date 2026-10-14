@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { DESSINS_SILHOUETTE } from "@/lib/silhouetteFlatLay";
 import { margesDe, objectBounds, ratioHero } from "@/lib/catalogMarges";
 import { resolveHeroImage } from "@/lib/catalogImages";
 import { composerFlatLay, hauteurDuContexte, type ContexteFlatLay } from "@/lib/flatLay";
 import { choisirTemplate } from "@/lib/flatLayTemplates";
-import type { Item } from "@/lib/types";
+import type { CategoryKey, Item } from "@/lib/types";
 
 /**
  * LE FLAT LAY ÉDITORIAL DE CAPSELA (08/10/2026) — les pièces d'un look posées comme sur une planche de stylisme : une pièce
@@ -27,6 +28,7 @@ export function FlatLayCapsela({
   onPret,
   ombre = "douce",
   templates = true,
+  fantomes = [],
 }: {
   items: Item[];
   /** Où la planche s'affiche : elle règle la zone, la marge, le gabarit et le nombre d'accessoires (cf. CONTEXTES dans flatLay.ts). */
@@ -46,6 +48,12 @@ export function FlatLayCapsela({
    * `false`, le moteur compose comme avant. Le contexte décide s'il en accepte un (look-detail, hero-home).
    */
   templates?: boolean;
+  /**
+   * Des pièces MANQUANTES posées en silhouette (14/10/2026, demandé : « intègre dans le hero une paire de chaussures comme sur l'écran de
+   * chargement ») : le dessin de chargement de la catégorie, à la place et à la taille qu'aurait la pièce, estompé. Jamais une pièce de
+   * la tenue : elle n'est ni comptée, ni cliquable, ni enregistrée.
+   */
+  fantomes?: CategoryKey[];
 }) {
   const HAUTEUR = hauteurDuContexte(context);
   const graine = layoutSeed;
@@ -61,8 +69,15 @@ export function FlatLayCapsela({
     // Une pièce sans visuel ne laisse ni vide ni pastille de couleur (calibrage du 08/10/2026) : elle sort de la planche, qui se
     // recalcule avec les pièces qui ont une image. Aucune n'en a (mode démo, catalogue hors ligne) : on garde les pastilles.
     const avecImage = toutes.filter(({ img }) => img.url);
-    return avecImage.length ? avecImage : toutes;
-  }, [items, context]);
+    const base = avecImage.length ? avecImage : toutes;
+    const ombres = fantomes.flatMap((cat, i) => {
+      const dessin = DESSINS_SILHOUETTE[cat];
+      if (!dessin) return [];
+      const it = { id: -(i + 1), cat, name: "Pièce à ajouter", hex: "#d9cbb6" } as unknown as Item;
+      return [{ it, img: { kind: "generated" as const, url: dessin.src }, fantome: dessin.ratio }];
+    });
+    return [...base.map((e) => ({ ...e, fantome: undefined as number | undefined })), ...ombres];
+  }, [items, context, fantomes]);
   const template = useMemo(
     // Pas de template sur l'accueil (14/10/2026) : jamais validé en rendu réel dans ce contexte (seul look-detail l'a été), et une tenue y a
     // paru sans ses chaussures. Le moteur d'origine y compose seul ; le moteur de templates sait le faire (flatLay.ts), il faut juste le valider.
@@ -72,7 +87,8 @@ export function FlatLayCapsela({
   const composition = useMemo(
     () =>
       composerFlatLay(
-        images.map(({ it, img }) => {
+        images.map(({ it, img, fantome }) => {
+          if (fantome) return { id: it.id, cat: it.cat, ratio: fantome, visualScale: 1.35 };
           // La boîte réelle de l'objet (objectBounds) : son format fait la taille. Photo du dressing sans boîte connue : un portrait courant ; sans visuel : un carré.
           const b = objectBounds(img.url);
           const ratio = b ? (b.width * (ratioHero(img.url) ?? 1)) / b.height : img.kind === "placeholder" ? 1 : 0.8;
@@ -114,8 +130,8 @@ export function FlatLayCapsela({
       <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / HAUTEUR}))`, aspectRatio: `100 / ${HAUTEUR}` }}>
         {composition.map((p) => {
           const entree = images.find(({ it }) => it.id === p.id)!;
-          const { it, img } = entree;
-          const m = margesDe(img.url);
+          const { it, img, fantome } = entree;
+          const m = fantome ? null : margesDe(img.url);
           const base = {
             position: "absolute" as const,
             left: `${p.x}%`,
@@ -131,6 +147,15 @@ export function FlatLayCapsela({
                 ? "drop-shadow(0 1px 1.5px rgba(29,26,22,.22)) drop-shadow(0 7px 12px rgba(29,26,22,.18))"
                 : "drop-shadow(0 6px 12px rgba(29,26,22,.12))",
           };
+          if (fantome) {
+            // La silhouette : estompée, sans ombre portée — elle dit ce qui manque, elle ne prétend pas être une pièce.
+            return (
+              <div key={it.id} aria-hidden="true" style={{ ...base, filter: "none", opacity: 0.5 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.url} alt="" onLoad={aCharge} onError={aCharge} style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }} />
+              </div>
+            );
+          }
           if (img.url && m) {
             const lc = 1 - m.g - m.d;
             const hc = 1 - m.h - m.b;
