@@ -171,6 +171,8 @@ export interface VilleSuggeree {
   state: string;
   lat: number;
   lon: number;
+  /** Renseigné quand la saisie était un PAYS : le nom du pays, dont cette ville est la capitale retenue pour la météo (14/10/2026). */
+  capitaleDe?: string;
 }
 
 /**
@@ -226,7 +228,49 @@ export function libelleVille(v: VilleSuggeree): string {
   } catch {
     // Environnement sans données de localisation : on garde le code.
   }
-  return [v.name, v.state, pays].filter(Boolean).join(", ");
+  const base = [v.name, v.state, pays].filter(Boolean).join(", ");
+  // Un pays saisi (« Thaïlande ») : la météo est celle de sa capitale, dite comme telle.
+  return v.capitaleDe ? `${base} (capitale)` : base;
+}
+
+const sansAccent = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+/**
+ * Un PAYS saisi à la place d'une ville (14/10/2026, signalé : « Thaïlande » ne donnait rien dans la valise) — fonction PURE, donc testée.
+ * Un pays n'a pas de position unique : on prend sa CAPITALE, et l'affichage le dit (« Bangkok, Thaïlande (capitale) »). Lecture de la
+ * réponse de REST Countries (/v3.1/translation) : seul un pays dont le nom, en français ou en anglais, est exactement la saisie est retenu
+ * (« Niger » ne rend pas « Nigeria »), avec ses coordonnées de capitale ; sans capitale ou sans coordonnées, rien.
+ */
+export function lirePaysCommeCapitale(data: unknown, saisie: string): VilleSuggeree[] {
+  if (!Array.isArray(data)) return [];
+  const voulu = sansAccent(saisie);
+  const sortie: VilleSuggeree[] = [];
+  for (const raw of data) {
+    const p = raw as {
+      name?: { common?: string; official?: string };
+      translations?: { fra?: { common?: string; official?: string } };
+      capital?: string[];
+      capitalInfo?: { latlng?: number[] };
+      cca2?: string;
+    };
+    const noms = [p.name?.common, p.name?.official, p.translations?.fra?.common, p.translations?.fra?.official].filter((n): n is string => typeof n === "string");
+    if (!noms.some((n) => sansAccent(n) === voulu)) continue;
+    const capitale = p.capital?.[0];
+    const ll = p.capitalInfo?.latlng;
+    if (!capitale || !ll || ll.length < 2 || typeof ll[0] !== "number" || typeof ll[1] !== "number") continue;
+    sortie.push({ name: capitale, country: p.cca2 ?? "", state: "", lat: ll[0], lon: ll[1], capitaleDe: p.translations?.fra?.common ?? p.name?.common ?? saisie });
+  }
+  return sortie;
+}
+
+async function fetchCapitaleDuPays(nom: string): Promise<VilleSuggeree[]> {
+  try {
+    const res = await fetch(`https://restcountries.com/v3.1/translation/${encodeURIComponent(nom)}?fields=name,translations,capital,capitalInfo,cca2`);
+    if (!res.ok) return [];
+    return lirePaysCommeCapitale(await res.json(), nom);
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -245,7 +289,10 @@ export async function fetchVilles(q: string): Promise<VilleSuggeree[] | null> {
       body: { city: nom, mode: "geo" },
     });
     if (error || !data || (data as { error?: unknown }).error) return null;
-    return lireVillesSuggerees(data);
+    const villes = lireVillesSuggerees(data);
+    // Aucune ville : peut-être un pays — sa capitale est proposée (lirePaysCommeCapitale).
+    if (villes && villes.length === 0 && nom.length >= 3) return await fetchCapitaleDuPays(nom);
+    return villes;
   } catch {
     return null;
   }
