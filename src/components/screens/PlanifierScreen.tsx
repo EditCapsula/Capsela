@@ -381,7 +381,7 @@ function CartePlanifier({
           {description}
         </span>
         <span className="block text-[12px] text-muted leading-[1.45] mt-[8px]">{ligne}</span>
-        <span className="mt-[16px] flex items-center justify-center min-h-[52px] rounded-full bg-terracotta-deep text-cream t-bouton">{cta} →</span>
+        <span className="mt-[16px] flex items-center justify-center min-h-[52px] rounded-full bg-terracotta-deep text-cream t-bouton">{cta}</span>
       </button>
       {children && <div className="border-t border-divider px-[18px] pt-[12px] pb-[8px]">{children}</div>}
     </div>
@@ -2185,7 +2185,7 @@ export default function PlanifierScreen() {
                     Obtiens un regard expert sur ce look avant le jour J.
                   </div>
                   <Button variante="principal" className="mt-[14px]" onClick={ouvrirAvisStyliste} aria-busy={verificationAvis}>
-                    {verificationAvis ? <LoadingSpinner size={18} /> : <>Obtenir mon avis de styliste <span aria-hidden="true">→</span></>}
+                    {verificationAvis ? <LoadingSpinner size={18} /> : "Obtenir mon avis de styliste"}
                   </Button>
                 </div>
               )}
@@ -2370,7 +2370,7 @@ export default function PlanifierScreen() {
             largeur de tous les écrans, pas une pastille flottante qui
             n'existait nulle part ailleurs. */}
         {vue === "liste" && (
-          <Button onClick={recommencer}>+ Planifier un look</Button>
+          <Button onClick={recommencer}>Planifier un look</Button>
         )}
         {vue === "alternatives" && (
           <Button

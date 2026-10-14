@@ -593,7 +593,7 @@ export default function PieceScreen() {
               actions.goCreateLook(active.id);
             }}
           >
-            + Créer un nouveau look
+            Créer un nouveau look
           </Button>
         </BottomSheet>
       )}

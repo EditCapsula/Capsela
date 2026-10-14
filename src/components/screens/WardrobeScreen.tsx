@@ -99,12 +99,6 @@ const ETOILE = (
   </svg>
 );
 
-const PLUS = (
-  <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-    <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-  </svg>
-);
-
 /** Surtitre de section, avec son action facultative à droite. */
 function TitreSection({ children, action, className = "mt-10" }: { children: React.ReactNode; action?: React.ReactNode; className?: string }) {
   return (
@@ -322,7 +316,6 @@ export default function WardrobeScreen() {
         <Button variante="principal" className="mt-5"
           onClick={actions.openAdd}
         >
-          {PLUS}
           Ajouter ma première pièce
         </Button>
 

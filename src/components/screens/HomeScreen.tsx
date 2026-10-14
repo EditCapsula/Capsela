@@ -409,7 +409,7 @@ export default function HomeScreen() {
                   onClick={planHero && jourAVenir ? () => actions.ouvrirPlan(planHero, "home") : actions.goTenues}
                   className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap"
                 >
-                  Voir le look <span aria-hidden="true">→</span>
+                  Voir le look
                 </Button>
               </div>
             </>
