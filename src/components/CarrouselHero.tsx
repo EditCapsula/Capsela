@@ -50,6 +50,8 @@ export interface CarteHeroProps {
   onSauvegarder: () => void;
   onAutre: () => void;
   autreDesactive?: boolean;
+  /** Pièces manquantes posées en silhouette (les chaussures, 14/10/2026), comme sur la page Tenue. */
+  fantomes?: CategoryKey[];
   /** Sous les actions, sur toute la largeur (alerte météo d'un look planifié). */
   pied?: React.ReactNode;
 }
@@ -58,7 +60,7 @@ export interface CarteHeroProps {
  * UNE SLIDE DU HERO (14/10/2026) : fond #EEDED8, le texte réduit à gauche, la composition — point focal — à droite, deux actions
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
-export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied }: CarteHeroProps) {
+export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes }: CarteHeroProps) {
   const ouvrirPiece = useOuvrirPiece();
   return (
     <div
@@ -93,9 +95,9 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
 
       <div className="relative min-w-0 self-center" style={{ aspectRatio: "100 / 112", margin: "4px -10px 0 -6px" }}>
         {categoriesAttendues ? (
-          <ZoneLookDuJour pieces={pieces} categoriesAttendues={categoriesAttendues} graine={graine} onPiece={ouvrirPiece} />
+          <ZoneLookDuJour pieces={pieces} categoriesAttendues={categoriesAttendues} graine={graine} onPiece={ouvrirPiece} fantomes={fantomes} />
         ) : (
-          <FlatLayCapsela items={pieces} context="hero-home" layoutSeed={graine} onPiece={ouvrirPiece} />
+          <FlatLayCapsela items={pieces} context="hero-home" layoutSeed={graine} onPiece={ouvrirPiece} fantomes={fantomes} />
         )}
       </div>
 

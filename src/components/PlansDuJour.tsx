@@ -2,7 +2,7 @@
 
 import { resolveItemImage } from "@/lib/catalogImages";
 import { occasionShortLabel } from "@/lib/data";
-import { jourLocal } from "@/lib/outfitFeedback";
+import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { evaluerAlerteMeteo, libelleChangement, proposerAdaptation, type AlerteMeteo, type MeteoDuPlan } from "@/lib/alerteMeteo";
 import { CHALEUR_HORS_SAISON, computeDefaultCapsule, saisonCalendairePour, weatherForDay } from "@/lib/capsule";
 import { CATS } from "@/lib/data";
@@ -120,7 +120,9 @@ export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<Re
  */
 export function PlansDuJour({ depuis, className = "" }: { depuis: "home" | "tenues"; className?: string }) {
   const { state, vestiairePool, jourConsulte, actions } = useCapsela();
-  const plans = plansDuJour(state.tenuesPlanifiees, jourLocal(jourConsulte.date)).filter((t) => t.id !== state.planAppliqueId);
+  // Un plan dont la tenue est DÉJÀ celle du hero n'est pas rappelé dessous (14/10/2026, signalé : « inutile de remettre la carte, le hero pousse
+  // la tenue planifiée »).
+  const plans = plansDuJour(state.tenuesPlanifiees, jourLocal(jourConsulte.date)).filter((t) => t.id !== state.planAppliqueId && !memeTenue(t.pieceIds, state.outfit));
   if (!plans.length) return null;
   const pool: Item[] = [...state.items, ...vestiairePool];
 
@@ -158,7 +160,8 @@ export function PlansDuJour({ depuis, className = "" }: { depuis: "home" | "tenu
             <span className={"flex-1 min-w-0" + (apercu.length ? "" : " pl-2")}>
               {/* « Planifiée » et non « Tenue planifiée » : à 360 px, « Tenue
                   planifiée · Toute la journée » était tronqué (mesuré). */}
-              <span className="block t-label text-terracotta truncate">{t.moment === "Soirée" ? "Ce soir" : `Planifiée · ${t.moment}`}</span>
+              <span className="block t-label text-terracotta truncate">{/* « Ce soir » ne vaut que pour aujourd'hui (14/10/2026, signalé : affiché pour un plan de demain soir). */}
+                {jourConsulte.decalage === 0 && t.moment === "Soirée" ? "Ce soir" : jourConsulte.decalage > 0 ? "Ta tenue planifiée" : `Planifiée · ${t.moment}`}</span>
               <span className="block text-[13px] text-ink mt-[3px] truncate">
                 {occasionShortLabel(t.occasion)}
                 {ville ? ` · ${ville}` : ""}

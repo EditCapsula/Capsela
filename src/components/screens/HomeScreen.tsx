@@ -103,6 +103,10 @@ function CarteUnivers({
   );
 }
 
+// Constantes : une liste recréée à chaque rendu relancerait la composition du flat lay.
+const FANTOME_CHAUSSURES: CategoryKey[] = ["chaussures"];
+const AUCUN_FANTOME: CategoryKey[] = [];
+
 export default function HomeScreen() {
   const { state, geoLoading, vestiairePool, meteoDuJour, jourConsulte, actions } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
@@ -110,6 +114,8 @@ export default function HomeScreen() {
   const jourAVenir = jourConsulte.decalage > 0;
   const planApplique = usePlanApplique();
   const ouvrirPiece = useOuvrirPiece();
+  // UNE TENUE SANS CHAUSSURES (14/10/2026) : leur silhouette se pose dans la composition, comme sur la page Tenue.
+  const sansChaussures = (pieces: Item[]): CategoryKey[] => (pieces.length > 0 && !pieces.some((p) => p.cat === "chaussures") ? FANTOME_CHAUSSURES : AUCUN_FANTOME);
 
   /**
    * « PAS POUR MOI » PROPOSE UNE AUTRE TENUE (recette du 26/09/2026) — et
@@ -294,6 +300,7 @@ export default function HomeScreen() {
         pieces={pieces}
         graine={cleSlide(slide.ids)}
         categoriesAttendues={duJour ? categoriesAttendues : undefined}
+        fantomes={sansChaussures(pieces)}
         onVoir={() => actions.consulterTenue(slide.ids, slide.occasion, slide.source === "plan" ? (planHero?.id ?? null) : null)}
         sauvegardee={duJour ? sauvegardee : dejaSauvegardee(slide.ids)}
         onSauvegarder={() => {
@@ -435,7 +442,7 @@ export default function HomeScreen() {
           {passee ? (
             <FlatLayCapsela items={piecesPassee} context="hero-home" layoutSeed={clePieces(piecesPassee.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
           ) : aucuneTenuePossible ? null : (
-            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={ouvrirPiece} />
+            <ZoneLookDuJour pieces={outfitPieces} categoriesAttendues={categoriesAttendues} graine={cleTenue} onPiece={ouvrirPiece} fantomes={sansChaussures(outfitPieces)} />
           )}
         </div>
 

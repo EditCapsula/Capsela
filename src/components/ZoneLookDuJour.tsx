@@ -33,7 +33,7 @@ const ATTENTE_MAX_IMAGES = 2500;
  * chargement : une tenue qui en remplace une autre (« Pas pour moi », autre
  * jour) s'affiche comme avant, sans repasser par la silhouette.
  */
-export function ZoneLookDuJour({ pieces, categoriesAttendues, graine, onPiece }: { pieces: Item[]; categoriesAttendues: CategoryKey[]; graine: string; onPiece?: (it: Item) => void }) {
+export function ZoneLookDuJour({ pieces, categoriesAttendues, graine, onPiece, fantomes }: { pieces: Item[]; categoriesAttendues: CategoryKey[]; graine: string; onPiece?: (it: Item) => void; fantomes?: CategoryKey[] }) {
   const [apparue, setApparue] = useState(false);
   const [effacee, setEffacee] = useState(false);
   // Retour au chargement : la prochaine tenue repassera par la silhouette.
@@ -63,7 +63,7 @@ export function ZoneLookDuJour({ pieces, categoriesAttendues, graine, onPiece }:
         </div>
       )}
       <div className="absolute inset-0">
-        {pieces.length > 0 && <FlatLayCapsela key={graine} items={pieces} context="hero-home" layoutSeed={graine} attendre={!apparue} onPret={reveler} onPiece={onPiece} />}
+        {pieces.length > 0 && <FlatLayCapsela key={graine} items={pieces} context="hero-home" layoutSeed={graine} attendre={!apparue} onPret={reveler} onPiece={onPiece} fantomes={fantomes} />}
       </div>
     </div>
   );
