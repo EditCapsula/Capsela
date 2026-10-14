@@ -1,13 +1,13 @@
 # Carrousel de l'accueil (14/10/2026)
 
-Trois tenues par occasion à la place d'une seule : **pour le travail**, **pour ton quotidien**, **pour ta soirée**, dans cet ordre fixe. Carte sur le fond des hero (`--color-hero-background`, #F0E1D9), composition (flat lay) en point focal, repères de pagination dessous.
+Trois tenues par occasion à la place d'une seule : **pour le travail**, **pour ton quotidien**, **pour ta soirée**, dans cet ordre fixe. Carte blanc cassé des cartes (`--color-card`, #FBF8F3, cernée de `--color-border` #E6DCCB — option 3h du 14/10/2026 ; les autres hero gardent `--color-hero-background`), composition (flat lay) en point focal, repères de pagination dessous.
 
 ## Qui occupe quelle slide (`carrousel.ts`, pur, testé)
 - La **tenue du jour** du store (`state.outfit`, celle qui porte l'avis, le quota, le plan appliqué) occupe la slide de SON occasion (`slideDeLOccasion` : travail, quotidien, soirée ; « date » compte comme soirée).
 - Une **tenue planifiée pour aujourd'hui** prend la PREMIÈRE slide, quelle que soit son occasion ; son libellé est celui du plan (« Look planifié », « Look du jour »).
 - Les autres slides sont des **propositions du moteur** (`state.carrousel`) : le même `regen` que la tenue du jour (météo, occasion, règles, diversité) appliqué à l'occasion de la slide, en évitant les tenues déjà montrées. Une slide sans tenue complète n'est pas affichée ; deux slides ne montrent jamais la même tenue (la tenue du jour l'emporte).
 - Une occasion hors carrousel (sport, cocooning, voyage…) : seules les propositions s'affichent.
-- Un autre jour que le jour même, une tenue passée, le chargement ou l'absence de tenue : la carte seule d'avant (même fond des hero, `--color-hero-background`).
+- Un autre jour que le jour même, une tenue passée, le chargement ou l'absence de tenue : la carte seule d'avant (même fond et même filet que les slides).
 
 ## Actions
 - « Sauvegarder » : sur la tenue du jour, l'avis « J'adore » (inchangé) ; sur une proposition, `enregistrerIdeeLook` (sans doublon).
