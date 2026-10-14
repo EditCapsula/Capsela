@@ -4,7 +4,7 @@ import Rangee from "@/components/Rangee";
 import { APP_VERSION } from "@/lib/data";
 import { DOCUMENTS_LEGAUX } from "@/lib/legal/documents";
 import { useCapsela } from "@/lib/store";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 import Card from "@/components/Card";
 
 // Les CGV ne figurent pas ici tant que Premium ne s'achète pas (docs/legal/README.md).
@@ -15,10 +15,8 @@ export default function LegalScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <div className="flex items-center gap-[14px] mt-[10px]">
-        <BoutonRetour onClick={actions.backFromLegal} label="Revenir à l'écran précédent" />
-        <div className="t-titre-section text-ink">Informations légales</div>
-      </div>
+      <AppHeader onBack={actions.backFromLegal} />
+      <div className="t-titre-ecran text-ink mt-[18px]">Informations légales</div>
 
       <Card rayon="tuile" className="overflow-hidden mt-5">
         {LEGAL_ROWS.map((r) => (

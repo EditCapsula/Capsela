@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { deLaSaisonEnCours, neverWornItems, inactivityInfo } from "@/lib/selectors";
 import type { Item } from "@/lib/types";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 import { MosaiquePieces, VisuelPiece } from "@/components/CarteLook";
 import { calculerIdeesTenues, poolPourIdees } from "@/components/screens/ItemOutfitsScreen";
 import Badge from "@/components/Badge";
@@ -205,9 +205,7 @@ export default function NeverWornScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <div className="mt-[10px]">
-        <BoutonRetour onClick={actions.goTenues} label="Revenir à la tenue du jour" />
-      </div>
+      <AppHeader onBack={actions.goTenues} backLabel="Revenir à la tenue du jour" />
 
       <div className="t-surtitre text-muted mt-[18px]">À redécouvrir</div>
 
