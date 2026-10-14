@@ -696,7 +696,7 @@ export default function CapsuleScreen() {
           // que 3,8:1 de contraste, sous le seuil AA du texte courant ; 4,5:1
           // sur le fond profond, déjà celui des boutons pleins de Planifier.
         >
-          ✦ Découvrir mes tenues
+          Découvrir mes tenues
         </Button>
       </div>
 

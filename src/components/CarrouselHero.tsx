@@ -84,7 +84,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
         </div>
         <div className="mt-auto pt-4">
           <Button variante="principal" pleine={false} onClick={onVoir} className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap">
-            Voir le look <span aria-hidden="true">→</span>
+            Voir le look
           </Button>
         </div>
       </div>

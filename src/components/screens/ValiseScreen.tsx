@@ -2553,7 +2553,7 @@ function Resultat({
         className="sticky z-10 -mx-6 px-6 pt-[10px] pb-[10px] mt-6 bg-cream border-t border-border"
         style={{ bottom: "-16px" }}
       >
-        <Button onClick={() => setFeuille({ type: "ajuster" })}>Ajuster ma valise →</Button>
+        <Button onClick={() => setFeuille({ type: "ajuster" })}>Ajuster ma valise</Button>
       </div>
       <button onClick={recommencer} className="block mx-auto mt-1 t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[10px]">
         Créer une autre valise
