@@ -630,7 +630,11 @@ export default function WardrobeScreen() {
                           <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} ombre="marquee" />
                         </div>
                         <div className="font-serif text-ink mt-2" style={{ fontSize: 15 }}>{occasionShortLabel(idee.occasion)}</div>
-                        <div className="text-[11.5px] text-muted-3 mt-[2px] line-clamp-2 leading-[1.35] min-h-[2.7em]">{phrasePiste(piece)} · {idee.ids.length} pièces</div>
+                        {/* La piste sur une ligne, le nombre de pièces toujours sur la suivante (14/10/2026, demandé) : deux lignes fixes, cartes de même hauteur. */}
+                        <div className="text-[11.5px] text-muted-3 mt-[2px] leading-[1.35]">
+                          <div className="truncate">{phrasePiste(piece)}</div>
+                          <div>{idee.ids.length} pièces</div>
+                        </div>
                       </button>
                     );
                   })}
