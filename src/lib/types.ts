@@ -544,6 +544,24 @@ export interface AppState {
   /** « Planifier mes looks » depuis l'accueil (13/10/2026) : Planifier s'ouvre directement sur sa première étape, pas sur le hub (réservé à l'onglet du menu). */
   planDirect: boolean;
   /**
+   * LE CARROUSEL DE L'ACCUEIL (14/10/2026, carrousel.ts) : les propositions du moteur pour les occasions que la tenue du jour ne
+   * couvre pas, tirées une fois par jour et par état du dressing (`cle`). Jamais écrit en base.
+   */
+  carrousel: { cle: string; propositions: Partial<Record<"travail" | "quotidien" | "soiree", number[]>> } | null;
+  /**
+   * LA TENUE CONSULTÉE (14/10/2026) : la tenue d'une slide ouverte par « Voir le look ». Lecture seule — elle n'écrase NI la tenue
+   * du jour (state.outfit), NI son occasion, NI son avis ; l'écran « lookConsulte » ne lit qu'elle.
+   */
+  tenueConsultee: {
+    ids: number[];
+    occasion: OccasionKey;
+    surtitre: string;
+    titre: string;
+    description: string;
+    /** Le plan d'où vient la tenue, s'il y en a un (accès à sa fiche). */
+    plan: TenuePlanifiee | null;
+  } | null;
+  /**
    * LES VALISES (27/09/2026, docs/valise.md) : plusieurs, gardées sur
    * l'appareil et dans le compte, rappelées dans « Mes planifications ».
    */
@@ -599,6 +617,8 @@ export type Screen =
   | "itemOutfits"
   // Détail d'une idée de look (27/09/2026), ouvert depuis « Comment porter … ? ».
   | "ideeLook"
+  // Détail de la tenue d'une slide du carrousel de l'accueil (14/10/2026) : lecture seule.
+  | "lookConsulte"
   | "wardrobePieces"
   // « Tes dernières pièces » (08/10/2026) — « Voir tout » de « Ajoutées récemment ».
   | "dernieresPieces"

@@ -58,6 +58,7 @@ import { type Verdict, appliquerAvis, clePieces, jourLocal } from "./outfitFeedb
 import {
   choisirVariation,
   clePrincipale,
+  tenueAUnSocle,
   generateOutfitWithFallback,
   piecesPrincipales,
   swapOutfitPiece,
@@ -67,6 +68,7 @@ import {
 import type { FamilleLook } from "./ideesLooks";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import { colorimetrieMoteur } from "./colorimetrieMoteur";
+import { SLIDES, type SlideId } from "./carrousel";
 import {
   accessoireTypeFor,
   detectAccessoireType,
@@ -255,6 +257,8 @@ function buildInitialState(): AppState {
     planRetour: null,
     planJour: null,
     planDirect: false,
+    carrousel: null,
+    tenueConsultee: null,
     valises: [],
     valiseOuverte: null,
     valiseRetour: null,
@@ -513,6 +517,11 @@ export interface Actions {
   /** Déclenche la génération du visuel d'une pièce du catalogue si elle n'en a pas encore (sans effet sinon). */
   requestCatalogImage: (itemId: number) => void;
   regenOutfit: () => void;
+  /** « Autre idée » d'une slide du carrousel qui ne porte pas la tenue du jour : une autre proposition pour SON occasion, sans toucher aux autres slides ni au planning. */
+  autreIdeeSlide: (slide: SlideId) => void;
+  /** « Voir le look » d'une slide : ouvre le détail de CETTE tenue, en lecture seule (state.outfit n'est pas touché). */
+  consulterTenue: (t: NonNullable<AppState["tenueConsultee"]>) => void;
+  fermerTenueConsultee: () => void;
   dismissOutfitSuggestion: (key: string) => void;
   wearOutfitToday: () => void;
   wearPieceToday: (id: number) => void;
@@ -1298,6 +1307,21 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
+  /**
+   * UNE PROPOSITION DU MOTEUR POUR UNE OCCASION (carrousel de l'accueil, 14/10/2026) : le même `regen` que la tenue du jour — météo,
+   * occasion, saison, règles, diversité —, appliqué à l'occasion de la slide sur une copie de l'état (aucune écriture). Rend [] quand
+   * le moteur ne trouve rien de complet ou rien qui n'ait déjà été montré : la slide n'est alors pas affichée.
+   */
+  const proposerPourOccasion = (s: AppState, occasion: OccasionKey, courante: number[], montrees: Set<string>): number[] => {
+    const resolution = [...s.items, ...vestiaireRef.current];
+    const base: AppState = { ...s, occasion, outfit: [], planAppliqueId: null, jourDecalage: 0 };
+    const { choix } = choisirVariation(() => regen(base), (st) => st.outfit, courante, montrees, resolution);
+    if (choix.outfitNoCompleteOutfit || choix.outfit.length === 0) return [];
+    const pieces = choix.outfit.map((id) => findPiece(poolRef.current, id, vestiaireRef.current)).filter((it): it is Item => Boolean(it));
+    if (pieces.length !== choix.outfit.length || !tenueAUnSocle(pieces)) return [];
+    return montrees.has(clePrincipale(choix.outfit, resolution)) ? [] : choix.outfit;
+  };
+
   // Occasion par défaut du jour (recette 13/08/2026) — calculée une seule
   // fois, tant qu'aucune tenue n'a encore été générée et que l'utilisatrice
   // n'a jamais choisi d'occasion elle-même cette session, et appliquée
@@ -1342,6 +1366,41 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setState((s) => (s.outfit.length || s.jourDecalage === 0 ? s : regen(withDefaultOccasion(s), wardrobePool, meteoDuJour, defaultCapsule)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.jourDecalage, state.outfit.length, previsionEnChargement, meteoDuJour, ready, dressingLoaded, geoLoading, vestiaireResolu]);
+
+  // LES PROPOSITIONS DU CARROUSEL (14/10/2026) : tirées une fois que la tenue du jour existe (pour ne pas la répéter), seulement pour
+  // aujourd'hui, et seulement quand l'accueil est affiché — jamais en arrière-plan. Recalculées si le jour, le dressing, la météo, le
+  // profil ou le mode de travail changent (`cle`), jamais à chaque nouvelle tenue du jour : un « Autre idée » ailleurs ne bouge pas les autres slides.
+  const cleCarrousel = [
+    jourLocal(),
+    state.items.map((i) => i.id).join("."),
+    meteoDuJour.label,
+    Math.round(meteoDuJour.temp),
+    profile.styles.join("."),
+    profile.gender ?? "",
+    state.workMode,
+  ].join("|");
+  useEffect(() => {
+    if (state.screen !== "home" || state.jourDecalage !== 0) return;
+    if (!ready || !dressingLoaded || geoLoading || !vestiaireResolu) return;
+    if (stateRef.current.carrousel?.cle === cleCarrousel) return;
+    if (!stateRef.current.outfit.length && !stateRef.current.outfitNoCompleteOutfit) return;
+    setState((s) => {
+      if (s.carrousel?.cle === cleCarrousel) return s;
+      const resolution = [...s.items, ...vestiaireRef.current];
+      const montrees = new Set<string>(s.tenuesVues);
+      if (s.outfit.length) montrees.add(clePrincipale(s.outfit, resolution));
+      const propositions: NonNullable<AppState["carrousel"]>["propositions"] = {};
+      for (const def of SLIDES) {
+        // La slide de la tenue du jour (ou la première, pour un plan appliqué) n'a pas besoin de proposition.
+        const ids = proposerPourOccasion(s, def.occasion, s.outfit, montrees);
+        if (ids.length === 0) continue;
+        propositions[def.id] = ids;
+        montrees.add(clePrincipale(ids, resolution));
+      }
+      return { ...s, carrousel: { cle: cleCarrousel, propositions } };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.screen, state.jourDecalage, state.outfit.length, state.outfitNoCompleteOutfit, cleCarrousel, ready, dressingLoaded, geoLoading, vestiaireResolu]);
 
   // Mémorise la tenue AFFICHÉE pour le jour consulté, avec sa météo : c'est ce
   // que les jours suivants éviteront de reproposer. Jamais pendant l'exploration
@@ -1902,6 +1961,27 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // « Enregistrer dans mes looks » : la même écriture que « J'adore cette
     // tenue », sans doublon ni suppression (enregistrerTenueSiAbsente).
     enregistrerIdeeLook: (ids, occasion) => enregistrerTenueSiAbsente(ids, occasion),
+    consulterTenue: (t) => setState((s) => ({ ...s, tenueConsultee: t, screen: "lookConsulte" })),
+    fermerTenueConsultee: () => setState((s) => ({ ...s, screen: "home" })),
+    autreIdeeSlide: (slide) =>
+      setState((s) => {
+        const def = SLIDES.find((d) => d.id === slide);
+        if (!def || s.jourDecalage !== 0) return s;
+        const resolution = [...s.items, ...vestiaireRef.current];
+        const propositions = { ...(s.carrousel?.propositions ?? {}) };
+        const courante = propositions[slide] ?? [];
+        const montrees = new Set<string>(
+          [s.outfit, ...Object.values(propositions)]
+            .filter((ids): ids is number[] => Array.isArray(ids) && ids.length > 0)
+            .map((ids) => clePrincipale(ids, resolution))
+        );
+        for (const v of s.tenuesVues) montrees.add(v);
+        const ids = proposerPourOccasion(s, def.occasion, courante, montrees);
+        // Rien de nouveau à proposer : la slide garde sa tenue plutôt que de disparaître.
+        if (ids.length === 0) return s;
+        propositions[slide] = ids;
+        return { ...s, carrousel: { cle: s.carrousel?.cle ?? "", propositions } };
+      }),
     // Affiche la combinaison choisie sur l'écran Tenue (recette 19/08/2026) :
     // conserve l'occasion correspondante, jamais d'enregistrement comme
     // portée ni de remplacement automatique en dehors de ce clic explicite.
