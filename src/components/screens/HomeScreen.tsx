@@ -465,7 +465,7 @@ export default function HomeScreen() {
             label="Ma capsule"
           />
           <CarteUnivers
-            onClick={actions.goPlanifier}
+            onClick={actions.planifierDirect}
             glyphe={glypheUnivers(D_AGENDA)}
             ligne1="Planifier"
             ligne2="mes looks"

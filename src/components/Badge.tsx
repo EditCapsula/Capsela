@@ -7,7 +7,7 @@ import type { CSSProperties, ReactNode } from "react";
  *
  *   doux     terracotta sur beige chaud — le défaut (occasion, statut, Premium sur carte blanche)
  *   carte    terracotta sur fond de carte — la même pastille posée sur un bloc beige ou une photo
- *   plein    crème sur terracotta — « Suggérée », « À découvrir » : ce qui vient de Capsela
+ *   plein    crème sur terracotta — « Suggérée », « Suggestion » : ce qui vient de Capsela
  *   possede  encre sur beige, filet — « Ton dressing », « Dressing » : ce qui appartient à la personne
  *   neutre   gris sur fond discret — « Bientôt »
  *   succes   vert de réussite (jetons success) — « Recommandé »
