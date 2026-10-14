@@ -771,7 +771,7 @@ export default function TenuesScreen() {
           {planApplique && (
             <div className="flex-shrink-0 flex items-baseline justify-between gap-3 mb-[8px]">
               <span className="text-[13px] text-ink truncate">{titreDuPlan(planApplique.plan)}</span>
-              <button onClick={() => actions.ouvrirPlan(planApplique.plan, "tenues")} className="flex-shrink-0 text-[12px] text-terracotta-deep underline underline-offset-[3px] cursor-pointer">
+              <button onClick={() => actions.ouvrirPlan(planApplique.plan, "tenues")} className="flex-shrink-0 text-[12px] text-sand-text underline underline-offset-[3px] cursor-pointer">
                 Voir le plan
               </button>
             </div>
@@ -818,7 +818,7 @@ export default function TenuesScreen() {
                 le SEUL endroit qui affiche la température, et l'argument
                 « elle est déjà au-dessus » y est faux. */}
             {recommendationText && (
-              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "var(--color-terracotta-deep)" }}>
+              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "var(--color-sand-text)" }}>
                 {recommendationText}
               </span>
             )}
