@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import AppHeader from "@/components/AppHeader";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
-import { OutfitComposition } from "@/components/OutfitComposition";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { OCC_LABELS } from "@/lib/data";
 import { composeOutfitImage } from "@/lib/outfitImage";
@@ -190,7 +191,7 @@ function ChipTenue({ children }: { children: React.ReactNode }) {
   return (
     <span
       className="inline-flex items-center gap-[6px] rounded-full whitespace-nowrap text-[11px]"
-      style={{ height: 30, padding: "0 12px", background: "rgba(29,26,22,.62)", color: "var(--color-on-terracotta)" }}
+      style={{ height: 30, padding: "0 12px", background: "rgba(29,26,22,.07)", color: "var(--color-ink)" }}
     >
       {children}
     </span>
@@ -201,6 +202,7 @@ type Etat = "defaut" | "partage";
 
 export default function OpinionShareScreen() {
   const { state, geoCity, geoLoading, vestiairePool, actions } = useCapsela();
+  const ouvrirPiece = useOuvrirPiece();
   const { profile } = useAuth();
   const [etat, setEtat] = useState<Etat>("defaut");
   const [avecImage, setAvecImage] = useState(true);
@@ -365,8 +367,11 @@ export default function OpinionShareScreen() {
         >
           Ta tenue
         </TitreSection>
-        <div className="rounded-hero bg-terracotta-deep" style={{ padding: 16 }}>
-          <OutfitComposition items={pieces} variant="hero" />
+        {/* Le fond de la carte du look, comme les autres heros (14/10/2026) : la tenue en flat lay, chaque pièce ouvre sa fiche. */}
+        <div className="rounded-hero" style={{ padding: 16, background: "var(--color-look-bg)" }}>
+          <div className="relative" style={{ aspectRatio: "100 / 118" }}>
+            <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={pieces.map((p) => p.id).join(",")} onPiece={ouvrirPiece} />
+          </div>
           {(occasionLabel || meteo) && (
             <div className="flex flex-wrap items-center gap-[6px] mt-[12px]">
               {occasionLabel && (
