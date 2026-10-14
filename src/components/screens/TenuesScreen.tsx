@@ -18,8 +18,9 @@ import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } fro
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
-import { statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
+import { candidatsDeRemplacement, categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
+import { manquesActuels, piecesStructurellesManquantes, statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
+import BottomSheet from "@/components/BottomSheet";
 import { clePieces } from "@/lib/outfitFeedback";
 import { titreDuPlan } from "@/lib/heroPlan";
 import { complementTenue, momentMessage, quandPhrase } from "@/lib/jourConsulte";
@@ -41,6 +42,56 @@ function PlusIcon() {
       <line x1="12" y1="4" x2="12" y2="20" />
       <line x1="4" y1="12" x2="20" y2="12" />
     </svg>
+  );
+}
+/**
+ * Une pièce proposée pour compléter la tenue (14/10/2026) : sa vignette ouvre la fiche, « Choisir » la met dans la tenue. Une pièce de
+ * la capsule garde son traitement de suggestion (atténuée, « Suggérée ») pour ne jamais passer pour une pièce possédée — la seule
+ * indication de pertinence montrée : d'où vient la pièce. `pleine` : sur toute la largeur de sa colonne (feuille).
+ */
+function VignetteChoix({ it, onVoir, onChoisir, pleine = false }: { it: Item; onVoir: () => void; onChoisir: () => void; pleine?: boolean }) {
+  const image = resolveItemImage(it);
+  const suggeree = isCatalogId(it.id);
+  return (
+    <div className={"flex flex-col " + (pleine ? "min-w-0" : "flex-shrink-0 w-[104px]")}>
+      <button
+        type="button"
+        onClick={onVoir}
+        aria-label={`${it.name}. Voir le détail`}
+        className="relative w-full aspect-square rounded-bloc overflow-hidden cursor-pointer"
+        style={{ background: image.url ? "var(--color-photo-bg)" : it.hex }}
+      >
+        {image.url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image.url}
+            alt=""
+            loading="lazy"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: image.kind === "photo" ? "cover" : "contain",
+              padding: image.kind === "photo" ? 0 : 8,
+              boxSizing: "border-box",
+              filter: suggeree ? "grayscale(35%) opacity(.85)" : image.kind === "photo" ? "brightness(.94) contrast(1.04) saturate(.9)" : undefined,
+            }}
+          />
+        )}
+        <Badge tone={suggeree ? "plein" : "possede"} taille="s" className="absolute top-[7px] left-[7px]">
+          {suggeree ? "Suggérée" : "Ton dressing"}
+        </Badge>
+      </button>
+      <div className="text-[12.5px] text-ink leading-[1.3] mt-[7px] line-clamp-2">{it.name}</div>
+      <button
+        type="button"
+        onClick={onChoisir}
+        aria-label={`Choisir ${it.name} pour cette tenue`}
+        className="mt-[8px] inline-flex items-center justify-center gap-[6px] rounded-full border border-terracotta text-terracotta text-[12px] min-h-[36px] cursor-pointer active:bg-warm-bg"
+      >
+        <PlusIcon />
+        Choisir
+      </button>
+    </div>
   );
 }
 function BagIcon() {
@@ -189,11 +240,19 @@ export default function TenuesScreen() {
   }
 
   function handleAddSuggestedPiece(p: ProactiveEntry, piece: Item) {
-    actions.addPieceToOutfit(piece.id);
     setDismissingEntries((m) => ({ ...m, [p.key]: { p, suggested: piece } }));
     setTimeout(() => {
       setDismissingEntries((m) => Object.fromEntries(Object.entries(m).filter(([k]) => k !== p.key)));
     }, 320);
+    ajouterALaTenue(piece);
+  }
+
+  /**
+   * Une pièce entre dans la tenue du jour — et SEULEMENT dans la tenue (addPieceToOutfit) : choisir une paire de la capsule pour
+   * compléter un look ne l'ajoute pas au dressing. Toast avec « Annuler », le héros remonte avec son nouveau statut.
+   */
+  function ajouterALaTenue(piece: Item) {
+    actions.addPieceToOutfit(piece.id);
     setRecentlyAddedId(piece.id);
     setTimeout(() => setRecentlyAddedId((current) => (current === piece.id ? null : current)), 1500);
     // "Ajouté à la tenue : {nom}" plutôt que "{nom} ajouté(e)" — le nom d'une
@@ -358,17 +417,25 @@ export default function TenuesScreen() {
   // (27/09/2026) — une tenue modifiée ou rejouée depuis un autre écran
   // n'arrive pas toujours avec les manques de son tirage. Signalé : robe +
   // sac affichés « Recommandé » sans un mot sur les chaussures.
-  const categoriesAbsentes = state.outfitMissingCats?.length
-    ? state.outfitMissingCats
-    : outfitPieces.length && !isCompleteOutfit(outfitPieces)
-      ? categoriesManquantes(outfitPieces)
-      : [];
+  // Relus sur les pièces affichées depuis le 14/10/2026 (manquesActuels) : une paire choisie dans « Compléter la tenue » fait tomber
+  // le manque « chaussures » signalé par le tirage, et la tenue revient à l'état complet.
+  const categoriesAbsentes = manquesActuels(state.outfitMissingCats, categoriesManquantes(outfitPieces), outfitPieces.length);
   const missingText = missingSuggestionText(categoriesAbsentes);
   // DES CHAUSSURES QUI MANQUENT (14/10/2026, demandé) : elles ne font plus l'objet d'une carte « À compléter » sous le hero ; le hero les
   // montre en silhouette, comme l'écran de chargement, avec la phrase « Il te manque une paire de chaussures pour ce look ». Les autres
   // manques (haut, bas, chaud…) gardent leur carte. `missingText` reste complet : le statut de la tenue (« à compléter ») en dépend.
   const chaussuresManquantes = categoriesAbsentes.includes("chaussures") && outfitPieces.length > 0 && !state.outfitNoCompleteOutfit;
   const missingTextCarte = missingSuggestionText(categoriesAbsentes.filter((k) => k !== "chaussures"));
+  // LES CHAUSSURES QUI POURRAIENT COMPLÉTER LA TENUE (14/10/2026, brief « Tenue incomplète ») : les candidates d'ajout du moteur —
+  // candidatsDeRemplacement avec un id hors tenue, la fonction du remplacement d'une pièce : toutes ses règles (saison, occasion,
+  // formalité, baskets en tenue habillée, pluie, chaussures d'été…), le dressing d'abord, puis l'accord avec le reste de la tenue
+  // (harmonize). Aucune règle ni aucun score nouveaux ; vide si rien ne passe.
+  const chaussuresPossibles = chaussuresManquantes
+    ? candidatsDeRemplacement(outfitPieces, displayPool, -1, "chaussures", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)
+    : [];
+  const [choixChaussuresOuvert, setChoixChaussuresOuvert] = useState(false);
+  /** L'emplacement en pointillés et la phrase sous le flat lay : choisir parmi les paires possibles, sinon en ajouter une au dressing. */
+  const completerChaussures = () => (chaussuresPossibles.length ? setChoixChaussuresOuvert(true) : actions.openAddForCategory("chaussures"));
   // Repli progressif de formalité (nouveau 21/08/2026, décidé) — calculé
   // par generateOutfitWithFallback (store.tsx), jamais recalculé ici :
   // bannière + badge distincts de missingText (rien ne manque, la
@@ -468,6 +535,7 @@ export default function TenuesScreen() {
   ).length;
   const statut = statutTenue({
     nbPieces: outfitPieces.length,
+    piecesManquantes: piecesStructurellesManquantes(categoriesAbsentes),
     complete: !missingText && !vesteWithoutBase && isCompleteOutfit(outfitPieces),
     ajoutsConseilles,
     vientDEtreCompletee: recentlyAddedId != null,
@@ -489,11 +557,13 @@ export default function TenuesScreen() {
   // un « + » qui ouvre l'ajout d'une veste au dressing — plutôt qu'une carte « À prévoir » sans rien à ajouter.
   const vesteAAjouter =
     !conseilVeste && !noCompleteOutfit && liveProactiveByKey.has("veste_soir") && !dismissingEntries["veste_soir"];
+  // Tant qu'une paire manque, « Compléter la tenue » ne montre que ce qui la complète (14/10/2026) : les conseils de style (touche de
+  // couleur, layering) reviennent dès que la tenue est complète, avec leur « Ignorer » inchangé.
   const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)])).filter(
-    (k) => !((conseilVeste || vesteAAjouter) && k === "veste_soir")
+    (k) => !((conseilVeste || vesteAAjouter) && k === "veste_soir") && !chaussuresManquantes
   );
   const fantomesHero = [...(chaussuresManquantes ? (["chaussures"] as const) : []), ...(vesteAAjouter ? (["veste"] as const) : [])];
-  const aCompleter = !noCompleteOutfit && (proactiveKeys.length > 0 || Boolean(missingTextCarte) || vesteWithoutBase);
+  const aCompleter = !noCompleteOutfit && (proactiveKeys.length > 0 || Boolean(missingTextCarte) || vesteWithoutBase || chaussuresManquantes);
 
   // pb-safe-nav (correctif 20/08/2026) remplace pb-24 : réserve la hauteur
   // réelle de la navigation basse + safe-area-inset-bottom + marge de
@@ -731,7 +801,7 @@ export default function TenuesScreen() {
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
             <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => actions.openAddForCategory(cat)} onPiece={ouvrirPiece} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
+              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={fantomesHero} onFantome={(cat) => (cat === "chaussures" ? completerChaussures() : actions.openAddForCategory(cat))} onPiece={ouvrirPiece} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -766,9 +836,18 @@ export default function TenuesScreen() {
               </div>
             )}
             {chaussuresManquantes && (
-              <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
-                Il te manque une paire de chaussures pour ce look.
-              </div>
+              // Une ligne qui agit (14/10/2026) : le même parcours que l'emplacement en pointillés.
+              <button
+                type="button"
+                onClick={completerChaussures}
+                className="mt-[2px] w-full flex items-center justify-between gap-2 px-[6px] min-h-[36px] text-left text-[12.5px] leading-[1.4] cursor-pointer"
+                style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}
+              >
+                <span>Il te manque une paire de chaussures pour compléter ce look.</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-terracotta" style={{ display: "block" }}>
+                  <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
             )}
             {provenance && (
               <div className="flex flex-wrap gap-[5px] mt-[5px] px-[6px]">
@@ -891,8 +970,34 @@ export default function TenuesScreen() {
             <span className="font-serif italic text-[13px] text-terracotta" aria-hidden="true">
               ✦
             </span>
-            <span className="t-label text-terracotta">Compléter la tenue</span>
+            <span className="t-label text-terracotta flex-1">Compléter la tenue</span>
+            {chaussuresManquantes && chaussuresPossibles.length > 0 && (
+              <button onClick={() => setChoixChaussuresOuvert(true)} className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer -my-[10px] py-[10px]">
+                Voir plus
+              </button>
+            )}
           </div>
+
+          {/* LES PAIRES QUI COMPLÈTENT LA TENUE (14/10/2026) : de vraies pièces, le dressing d'abord. La vignette ouvre la fiche, « Choisir »
+              met la paire dans la tenue du jour (pas dans le dressing). Deux boutons voisins, jamais l'un dans l'autre. */}
+          {chaussuresManquantes && (
+            <Card className="mt-[12px] py-4">
+              {chaussuresPossibles.length > 0 ? (
+                <div className="scrollarea flex gap-[10px] overflow-x-auto px-4" style={{ overscrollBehaviorX: "contain" }}>
+                  {chaussuresPossibles.slice(0, 6).map((it) => (
+                    <VignetteChoix key={it.id} it={it} onVoir={() => ouvrirPiece(it)} onChoisir={() => ajouterALaTenue(it)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4">
+                  <div className="text-[13px] text-ink-soft leading-[1.5]">Aucune paire de ton dressing ne s&apos;accorde à cette tenue pour cette occasion.</div>
+                  <button onClick={() => actions.openAddForCategory("chaussures")} className="mt-[10px] inline-block text-[12px] text-terracotta cursor-pointer">
+                    Ajouter des chaussures à mon dressing →
+                  </button>
+                </div>
+              )}
+            </Card>
+          )}
 
           {!noCompleteOutfit && missingTextCarte && (
             <Card className="mt-[12px] p-4">
@@ -1320,6 +1425,29 @@ export default function TenuesScreen() {
       </button>
 
       {quota.feuille}
+
+      <BottomSheet title="Choisir des chaussures" open={choixChaussuresOuvert && chaussuresPossibles.length > 0} onClose={() => setChoixChaussuresOuvert(false)}>
+        <div className="grid grid-cols-2 gap-x-[12px] gap-y-[16px]">
+          {chaussuresPossibles.map((it) => (
+            <VignetteChoix
+              key={it.id}
+              it={it}
+              pleine
+              onVoir={() => {
+                setChoixChaussuresOuvert(false);
+                ouvrirPiece(it);
+              }}
+              onChoisir={() => {
+                setChoixChaussuresOuvert(false);
+                ajouterALaTenue(it);
+              }}
+            />
+          ))}
+        </div>
+        <button onClick={() => actions.openAddForCategory("chaussures")} className="mt-[18px] inline-block text-[12px] text-terracotta cursor-pointer">
+          Ajouter une autre paire à mon dressing →
+        </button>
+      </BottomSheet>
 
       {/* Toast "Ajouter à la tenue" (recette 23/08/2026) — remplace l'ancienne
           carte de confirmation permanente : disparaît seule après ~2,6s,

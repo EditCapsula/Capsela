@@ -26,6 +26,11 @@ export interface StatutTenue {
 
 export function statutTenue(args: {
   nbPieces: number;
+  /**
+   * Les pièces de structure qui manquent (haut, bas, chaussures — `piecesStructurellesManquantes`), pour le ratio « 4/5 pièces »
+   * (14/10/2026). 0 ou absent : pas de ratio, « À compléter » seul (une veste sans rien dessous, un manque de chaleur).
+   */
+  piecesManquantes?: number;
   /** Structure minimale du moteur, sans manque signalé ni veste sans dessous. */
   complete: boolean;
   /** Suggestions du moteur actives (non ignorées) qui proposent une pièce précise. */
@@ -35,7 +40,10 @@ export function statutTenue(args: {
 }): StatutTenue {
   const { nbPieces, complete, ajoutsConseilles } = args;
   const pieces = `${nbPieces} ${nbPieces > 1 ? "pièces" : "pièce"}`;
-  if (!complete) return { cle: "a_completer", libelle: "À compléter" };
+  if (!complete) {
+    const manquantes = args.piecesManquantes ?? 0;
+    return { cle: "a_completer", libelle: manquantes > 0 ? `À compléter · ${nbPieces}/${nbPieces + manquantes} pièces` : "À compléter" };
+  }
   if (ajoutsConseilles > 0)
     return { cle: "ajout_conseille", libelle: `${pieces} · ${ajoutsConseilles} ${ajoutsConseilles > 1 ? "ajouts conseillés" : "ajout conseillé"}` };
   return { cle: "complete", libelle: `${args.vientDEtreCompletee ? "Tenue complétée" : "Tenue complète"} · ${pieces}` };
@@ -50,4 +58,24 @@ export function surtitreSuggestion(cle: string): string {
   if (cle === "color") return "Une touche de couleur";
   if (cle === "layer") return "Pour compléter";
   return "Conseil Capsela";
+}
+
+/** Les manques que la tenue peut combler par une pièce : la structure minimale du moteur (cf. categoriesManquantes, logic.ts). */
+const STRUCTURE = ["haut", "bas", "chaussures"] as const;
+export type ManqueStructurel = (typeof STRUCTURE)[number];
+
+/**
+ * CE QUI MANQUE ENCORE (14/10/2026). Les manques signalés par le tirage (`outfitMissingCats`) ne sont pas relus après un ajout : une
+ * tenue complétée à la main (chaussures choisies dans « Compléter la tenue ») restait « À compléter ». Un manque de structure (haut,
+ * bas, chaussures) ne vaut que s'il manque toujours aux pièces affichées (`encoreManquantes`, la règle d'isCompleteOutfit) ; les autres
+ * (« chaud ») restent ceux du tirage, inchangés. Sans signalement du tirage : les manques de structure des pièces affichées.
+ */
+export function manquesActuels(signales: readonly string[] | null | undefined, encoreManquantes: readonly ManqueStructurel[], nbPieces: number): string[] {
+  if (signales?.length) return signales.filter((k) => !(STRUCTURE as readonly string[]).includes(k) || encoreManquantes.includes(k as ManqueStructurel));
+  return nbPieces > 0 ? [...encoreManquantes] : [];
+}
+
+/** Le nombre de pièces de structure qui manquent — le dénominateur du ratio n'est jamais calculé autrement. */
+export function piecesStructurellesManquantes(manques: readonly string[]): number {
+  return manques.filter((k) => (STRUCTURE as readonly string[]).includes(k)).length;
 }

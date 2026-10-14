@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { representativeWeatherFor } from "../capsule";
 import { categoriesManquantes, computeLookScore, isCompleteOutfit } from "../logic";
-import { statutTenue, surtitreSuggestion } from "../statutTenue";
+import { manquesActuels, piecesStructurellesManquantes, statutTenue, surtitreSuggestion } from "../statutTenue";
 import type { CategoryKey, Item } from "../types";
 
 describe("statutTenue — trois états lus sur le moteur", () => {
@@ -23,6 +23,24 @@ describe("statutTenue — trois états lus sur le moteur", () => {
 
   it("juste après un ajout : « Tenue complétée »", () => {
     expect(statutTenue({ nbPieces: 4, complete: true, ajoutsConseilles: 0, vientDEtreCompletee: true }).libelle).toBe("Tenue complétée · 4 pièces");
+  });
+
+  it("le ratio de pièces, seulement quand une pièce de structure manque", () => {
+    expect(statutTenue({ nbPieces: 4, complete: false, ajoutsConseilles: 0, piecesManquantes: 1 }).libelle).toBe("À compléter · 4/5 pièces");
+    expect(statutTenue({ nbPieces: 2, complete: false, ajoutsConseilles: 0, piecesManquantes: 0 }).libelle).toBe("À compléter");
+    expect(statutTenue({ nbPieces: 2, complete: false, ajoutsConseilles: 0 }).libelle).toBe("À compléter");
+  });
+
+  it("un manque signalé par le tirage tombe dès que la pièce est ajoutée", () => {
+    expect(manquesActuels(["chaussures"], ["chaussures"], 4)).toEqual(["chaussures"]);
+    expect(manquesActuels(["chaussures"], [], 5)).toEqual([]);
+    // « chaud » n'est pas une pièce de structure : il reste celui du tirage.
+    expect(manquesActuels(["chaussures", "chaud"], [], 5)).toEqual(["chaud"]);
+    // Sans signalement : la structure des pièces affichées ; rien pour une tenue vide.
+    expect(manquesActuels([], ["chaussures"], 3)).toEqual(["chaussures"]);
+    expect(manquesActuels(undefined, ["haut", "bas", "chaussures"], 0)).toEqual([]);
+    expect(piecesStructurellesManquantes(["chaussures", "chaud"])).toBe(1);
+    expect(piecesStructurellesManquantes(["haut", "bas"])).toBe(2);
   });
 
   it("le surtitre dit pourquoi", () => {

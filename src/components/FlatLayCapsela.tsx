@@ -219,7 +219,8 @@ export function FlatLayCapsela({
               );
             }
             // Actionnable : toute la silhouette ouvre l'ajout d'une pièce de sa catégorie. Son « + » est posé dans le calque du dessus
-            // (cf. plus bas), avec celui des pièces conseillées.
+            // (cf. plus bas), avec celui des pièces conseillées. Cernée d'un pointillé terracotta discret (14/10/2026, brief « Tenue
+            // incomplète ») : un emplacement à remplir, qu'on ne confond pas avec une pièce estompée.
             return (
               <button
                 key={it.id}
@@ -227,7 +228,7 @@ export function FlatLayCapsela({
                 onClick={() => onFantome(it.cat)}
                 aria-label={`Ajouter ${LIBELLE_AJOUT[it.cat] ?? "une pièce"} à ton dressing`}
                 className="cursor-pointer"
-                style={{ ...base, filter: "none", padding: 0, border: "none", background: "transparent" }}
+                style={{ ...base, filter: "none", padding: 6, border: "1.5px dashed color-mix(in srgb, var(--color-terracotta) 60%, transparent)", borderRadius: 14, background: "color-mix(in srgb, var(--color-terracotta) 4%, transparent)" }}
               >
                 {dessin}
               </button>

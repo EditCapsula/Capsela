@@ -293,3 +293,20 @@ Les « + » (silhouettes et pièces conseillées) sont posés dans un calque au-
 Le hero de Tenue prend le même fond que l'accueil le même jour : `--color-card` cerné de `--color-border`.
 
 **NON VÉRIFIÉ** : le cas réel (veste_soir sans pièce) n'a pas été reproduit ici, faute de météo fraîche en mode démo ; le rendu a été contrôlé en forçant la condition, puis le forçage retiré. Le « + » d'une pièce conseillée de l'accueil n'a pas été revu en rendu.
+
+## Tenue incomplète : l'emplacement, la phrase, les paires possibles (14/10/2026)
+Brief « Tenue incomplète ». Quand la tenue n'a pas de chaussures, sur Tenue :
+- **Statut** : « À compléter · 3/4 pièces ». Le dénominateur vient des manques de structure réels (`piecesStructurellesManquantes`, `statutTenue.ts`), jamais d'une estimation ; sans manque de structure (veste sans dessous, manque de chaleur) : « À compléter » seul.
+- **Emplacement dans le flat lay** : la silhouette de chaussures cernée d'un pointillé terracotta discret, avec son « + ». La phrase dessous, « Il te manque une paire de chaussures pour compléter ce look. », est une ligne cliquable avec un chevron. Les deux ouvrent la feuille « Choisir des chaussures » s'il existe des paires possibles, sinon l'ajout de chaussures au dressing.
+- **Compléter la tenue** : une rangée de vraies paires, avec la vignette (qui ouvre la fiche), le nom, la provenance (« Ton dressing » / « Suggérée ») et « Choisir ». « Voir plus » ouvre la feuille de toutes les paires. Choisir met la paire dans la TENUE (`addPieceToOutfit`, toast avec « Annuler »), jamais dans le dressing. Sans paire possible : un état vide qui mène à l'ajout au dressing.
+- **Les paires** viennent de `candidatsDeRemplacement` avec un id hors tenue : les règles du remplacement d'une pièce (saison, occasion, formalité, R-B6, pluie, chaussures d'été…), le dressing d'abord, puis l'accord avec le reste de la tenue. Aucun score nouveau ; la seule « pertinence » affichée est la provenance.
+- **Priorité** : tant que des chaussures manquent, les conseils de style (touche de couleur, layering) ne s'affichent pas ; ils reviennent quand la tenue est complète, avec leur « Ignorer ».
+- **Correctif** : les manques signalés par le tirage (`outfitMissingCats`) sont relus sur les pièces affichées (`manquesActuels`). Avant, une tenue complétée à la main restait « À compléter ».
+
+Vérifié en rendu réel (mode démo, 360 et 390 px), le manque étant simulé en retirant les chaussures du tirage, puis la simulation retirée :
+- statut « 3/4 », puis « Tenue complétée · 4 pièces » et « Tenue complète · 4 pièces » après le choix ;
+- la feuille s'ouvre depuis les pointillés comme depuis la phrase ;
+- sans paire possible, l'état vide et la phrase mènent à l'ajout ;
+- sur une tenue complète, ni pointillés ni carte.
+
+**NON VÉRIFIÉ** : un vrai tirage sans chaussures, les vraies images. Seules les chaussures ont l'emplacement et la rangée ; un haut ou un bas manquant garde la carte « À compléter » d'avant.
