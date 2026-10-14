@@ -10,8 +10,9 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { CalendrierMois, IconeTuile, LigneIcone, ProgressionLibelles, TuileIcone, TuileOccasion, type IconePlanifier } from "@/components/PlanifierUI";
 import { OCCASIONS_EDITORIALES } from "@/lib/occasionEditoriale";
 import { GlypheSousChoix } from "@/components/GlyphesOccasion";
-import { OutfitComposition } from "@/components/OutfitComposition";
 import { HeroTenue, RailPiecesTenue } from "@/components/HeroTenue";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import { BarreDuPlan } from "@/components/BarreDuJour";
 import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
@@ -458,6 +459,7 @@ function composerTenuePlan(e: {
 
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, vestiairePool, etatPremium, actions } = useCapsela();
+  const ouvrirPiece = useOuvrirPiece();
   const { profile, userId } = useAuth();
   // « Adapter mon look » (12/10/2026) : le parcours s'ouvre sur la composition adaptée à la météo prévue, au pas « quand » du plan, avec ses
   // pièces et son lieu déjà posés (même mécanisme que « Modifier ce look » / « Tenue déjà planifiée » : la composition est imposée, le plan
@@ -1756,15 +1758,15 @@ export default function PlanifierScreen() {
               </EmptyState>
             ) : (
               <>
-                <div className="mt-[14px] rounded-hero p-4" style={{ background: "var(--color-terracotta-deep)" }}>
+                <div className="mt-[14px] rounded-hero p-4" style={{ background: "var(--color-look-bg)" }}>
                   <span
-                    className="inline-block text-[10px] text-cream rounded-full px-[11px] py-[5px] whitespace-nowrap"
-                    style={{ background: "rgba(251,243,234,.2)" }}
+                    className="inline-block text-[10px] text-ink rounded-full px-[11px] py-[5px] whitespace-nowrap"
+                    style={{ background: "rgba(29,26,22,.07)" }}
                   >
                     {composition ? (depuisPlan ? "Tenue déjà planifiée" : "Tenue de ta photo") : dressingSeul || nbCapsule === 0 ? "100% ton dressing" : "Ton dressing + ta capsule"}
                   </span>
-                  <div className="mt-3" style={{ aspectRatio: "100 / 92" }}>
-                    <OutfitComposition items={pieces} variant="planche" />
+                  <div className="relative mt-3" style={{ aspectRatio: "100 / 118" }}>
+                    <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={pieces.map((p) => p.id).join(",")} onPiece={ouvrirPiece} />
                   </div>
                 </div>
 

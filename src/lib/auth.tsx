@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type { User } from "@supabase/supabase-js";
 import { COLORIMETRIE_VIDE, rafraichirColorimetrie, type Colorimetrie } from "./colorimetrie";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
-import { DEFAULT_PREFS, EMPTY_PROFILE, type Profile } from "./profile";
+import { DEFAULT_PREFS, EMPTY_PROFILE, stylesDuGenre, type Profile } from "./profile";
 import { effacerDonneesLocales } from "./donneesLocales";
 import { consumeSignupIntent, forgetSignupIntent } from "./signupIntent";
 import { lireRetourLien, messageErreurNouveauMotDePasse, PARAM_RECUPERATION } from "./motDePasse";
@@ -96,7 +96,8 @@ function rowToProfile(row: Record<string, unknown>): Profile {
     tailleHaut: (row.taille_haut as string) ?? null,
     tailleBas: (row.taille_bas as string) ?? null,
     pointure: (row.pointure as string) ?? null,
-    styles: (row.styles as string[]) ?? [],
+    // Les styles que le genre propose seulement (14/10/2026) : un profil passé de Femme à Homme gardait « Glamour » en base. Relu écarté ; la base est corrigée à la prochaine sauvegarde.
+    styles: stylesDuGenre((row.styles as string[]) ?? [], (row.gender as Profile["gender"]) ?? null),
     morphology: (row.morphology as string) ?? null,
     city: (row.city as string) || "Paris",
     completed: Boolean(row.completed),

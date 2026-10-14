@@ -311,6 +311,16 @@ export const MAX_STYLES = 2;
  * Le choix d'un style : un style choisi se retire (le second devient alors le principal) ; un style absent s'ajoute ; à
  * `MAX_STYLES`, il remplace le second — jamais le principal, qui ne change que si on le retire.
  */
+/**
+ * Les styles qui existent pour ce genre (14/10/2026, signalé : un profil passé de Femme à Homme gardait « Glamour », absent des styles
+ * Homme — invisible à l'écran mais compté dans la limite de deux : impossible d'en choisir un autre). Les ids hors genre sont écartés ;
+ * l'ordre est gardé, donc le principal reste le principal s'il existe encore.
+ */
+export function stylesDuGenre(styles: readonly string[], gender: Gender | null): string[] {
+  const permis = new Set<string>(exposedStyleIds(gender));
+  return styles.filter((s) => permis.has(s));
+}
+
 export function basculerStyle(styles: readonly string[], id: string): string[] {
   if (styles.includes(id)) return styles.filter((s) => s !== id);
   if (styles.length >= MAX_STYLES) return [...styles.slice(0, MAX_STYLES - 1), id];
@@ -455,6 +465,9 @@ export function profileNeedsRevalidation(profile: Profile): boolean {
  */
 export function applyGenderChange(profile: Profile, gender: Gender): { patch: Partial<Profile>; revalidate: GenderDependentField | null } {
   let patch: Partial<Profile> = { gender };
+  // Un style que le nouveau genre ne propose pas n'est plus un choix valable : il est retiré, au lieu de rester caché et de bloquer la sélection.
+  const stylesValides = stylesDuGenre(profile.styles, gender);
+  if (stylesValides.length !== profile.styles.length) patch = { ...patch, styles: stylesValides };
   const next = { ...profile, gender };
   GENDER_DEPENDENT_FIELDS.forEach((f) => {
     if (fieldNotApplicable(f, next)) patch = { ...patch, ...f.clear() };

@@ -593,6 +593,8 @@ export interface AppState {
   lookReturn: "wardrobe" | "looks";
   /** Carte du vestiaire qui filtre « Mes pièces » sur ses catégories techniques ; null = toutes les pièces. */
   filtrePieces: FiltrePieces | null;
+  /** L'aperçu d'une pièce ouvert depuis un hero (14/10/2026) : une feuille posée sur l'écran, pas une page. Id de la pièce, ou null. */
+  pieceApercu: number | null;
 }
 
 export type Screen =

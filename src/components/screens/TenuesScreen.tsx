@@ -1216,7 +1216,7 @@ export default function TenuesScreen() {
                 <div key={it.id} className="flex-none w-[112px]" style={{ scrollSnapAlign: "start" }}>
                   <div className="relative">
                     <button
-                      onClick={() => (suggested ? actions.openItemOutfits(it.id) : actions.openItem(it.id, false))}
+                      onClick={() => actions.openItem(it.id, suggested)}
                       aria-label={`${it.name} — ${CATLABEL[isBag(it) ? "sac" : it.cat]}. Voir le détail`}
                       className="block w-[112px] h-[112px] rounded-bloc overflow-hidden cursor-pointer transition-shadow duration-[1200ms] ease-out"
                       style={{
