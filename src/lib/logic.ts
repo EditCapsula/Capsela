@@ -1,6 +1,7 @@
 import type { AccessoireType, CapsuleSeason, CategoryKey, DateContext, Item, OccasionKey, OutfitFailureReason, ShoeType, WorkMode } from "./types";
 import type { Weather } from "./data";
-import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_ENTRETIEN, PREFS_SOIREE_HABILLEE, effectiveFormality, isRainy, isSunny, necessiteLeSoleil } from "./data";
+import { BAS_CATS, CATLABEL, OCCASIONS, OCCASION_STYLE_PREFS, PREFS_ENTRETIEN, PREFS_SOIREE_HABILLEE, effectiveFormality, isBag, isRainy, isSunny, necessiteLeSoleil } from "./data";
+import { detectSacType } from "./attributes";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, currentSeasonKey, estDeSaison } from "./capsule";
 import { accordVisage, candidatsCouleur, colorimetriePourPivot, type ColorimetrieMoteur } from "./colorimetrieMoteur";
@@ -55,6 +56,18 @@ export const CHAUSSURES_OUVERTES: ShoeType[] = ["Sandales", "Sandales à talons"
  * types : les mules et les slingbacks (portées avec des collants) ne sont pas concernées. Sans type renseigné, le nom décide.
  */
 export const CHAUSSURES_D_ETE: ShoeType[] = ["Sandales", "Sandales à talons", "Espadrilles"];
+
+/**
+ * R-B23 (14/10/2026, signalé : « un sac à dos, même ajouté dans un dressing, ne doit pas être poussé pour une occasion habillée ») — le
+ * sac à dos n'est jamais PROPOSÉ en Soirée, en Rendez-vous amoureux (tous les types de date, Verre et Activité compris) ni en
+ * Événement / Cérémonie, quelle que soit la source. ARBITRAGE ÉDITORIAL de la propriétaire, le même jour, à ces trois occasions : Travail
+ * / Bureau le garde. Règle de proposition (tirage, remplacement), pas d'interdiction : la création manuelle d'un look reste libre. Sans
+ * type renseigné, le nom décide (detectSacType), comme pour les chaussures d'été.
+ */
+export const OCCASIONS_SANS_SAC_A_DOS: readonly OccasionKey[] = ["soiree", "date", "evenement_perso"];
+export function estSacADos(i: Pick<Item, "cat" | "sacType" | "name">): boolean {
+  return isBag(i) && (i.sacType ?? detectSacType(i.name)) === "Sac à dos";
+}
 export const SEUIL_CHAUSSURES_D_ETE = 15;
 export function estChaussureDEte(i: Pick<Item, "cat" | "shoeType" | "name">): boolean {
   if (i.cat !== "chaussures") return false;
@@ -894,6 +907,10 @@ export function generateOutfit(
     // R-B22 (08/10/2026) — chaussures d'été jamais proposées sous 15°, dressing réel compris. Règle de catégorie dure, jamais relâchée.
     if (weather.temp < SEUIL_CHAUSSURES_D_ETE && !leviers?.sansFiltreChaussuresDEte) {
       r = r.filter((i) => !estChaussureDEte(i));
+    }
+    // R-B23 (14/10/2026) — pas de sac à dos en Soirée, Rendez-vous, Cérémonie, dressing réel compris. Jamais relâchée.
+    if (OCCASIONS_SANS_SAC_A_DOS.includes(occasion)) {
+      r = r.filter((i) => !estSacADos(i));
     }
     return r;
   };
@@ -1869,6 +1886,10 @@ export function candidatsDeRemplacement(
   // R-B22 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
   if (weather && weather.temp < SEUIL_CHAUSSURES_D_ETE) {
     candidates = candidates.filter((i) => !estChaussureDEte(i));
+  }
+  // R-B23 — symétrique du filtre appliqué dans generateOutfit, jamais relâchée.
+  if (OCCASIONS_SANS_SAC_A_DOS.includes(occasion)) {
+    candidates = candidates.filter((i) => !estSacADos(i));
   }
   // R-B16 — symétrique de la préférence pluie appliquée dans generateOutfit,
   // molle jamais exclusive : ne filtre que s'il reste au moins une option.
