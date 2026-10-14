@@ -103,12 +103,19 @@ describe("rognerSurLaPiece — le format est dans le nom du fichier", () => {
 });
 
 describe("resolveHeroImage — le visuel standard reste le repli", () => {
+  it("les collants gardent leur photo du catalogue, partout", () => {
+    const collants = piece({ cat: "accessoire", accessoireType: "Collants", imageUrl: "https://x/std.webp", imageStatus: "ready", imageHeroUrl: "https://x/hero-r0.30.webp" });
+    expect(resolveItemImage(collants).url).toBe("https://x/std.webp");
+    expect(resolveHeroImage(collants).url).toBe("https://x/std.webp");
+  });
+
   const piece = (extra: Partial<Item>): Item => ({ id: 1, name: "x", cat: "veste", color: "x", hex: "#999", season: "toutes" as never, worn: null, ...extra }) as Item;
 
   it("le visuel hero passe devant le standard d'une pièce du catalogue", () => {
     const it = piece({ imageUrl: "https://x/std.webp", imageStatus: "ready", imageHeroUrl: "https://x/hero-r0.80.webp" });
     expect(resolveHeroImage(it).url).toBe("https://x/hero-r0.80.webp");
-    expect(resolveItemImage(it).url).toBe("https://x/std.webp");
+    // Le même visuel partout depuis le 14/10/2026 (« la robe noire est différente entre le flat lay et le catalogue »).
+    expect(resolveItemImage(it).url).toBe("https://x/hero-r0.80.webp");
   });
 
   it("sans visuel hero, ou avec une photo de la personne ou un produit affilié : comme avant", () => {
@@ -128,8 +135,8 @@ describe("resolveHeroImage — le visuel standard reste le repli", () => {
     for (const st of ["invalid", "generating"] as const) {
       expect(resolveHeroImage(piece({ imageHeroUrl: hero, imageStatus: st })).kind).toBe("placeholder");
     }
-    // Les autres visuels (hors flat lay) restent inchangés.
-    expect(resolveItemImage(piece({ imageHeroUrl: hero })).kind).toBe("placeholder");
+    // Partout, le même visuel depuis le 14/10/2026 (fiche, rangées, vignettes).
+    expect(resolveItemImage(piece({ imageHeroUrl: hero })).url).toBe(hero);
   });
 
   it("un visuel standard non prêt n'est jamais remplacé par le hero seul", () => {

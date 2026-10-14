@@ -341,3 +341,10 @@ La pièce reste un pull partout ailleurs (moteur, statut, fiches).
 | Legging | 30 → 21 | – |
 
 Rendu réel contrôlé avec les vraies images (avant/après).
+
+## Un seul visuel par pièce du catalogue (14/10/2026)
+Signalé deux fois : la « Robe noire » (473, robe à bretelles) et les « Chaussures d'intérieur » n'avaient pas le même visuel dans le flat lay et dans la fiche ou la rangée « Les pièces de ta tenue ». Le visuel standard (`url_image`) et le visuel hero (`url_image_hero`) ont été générés séparément. Pour la 473, le standard (`femme/robes/43.webp`) vient d'une consigne générique sans sous-type et montre une robe à manches ballon ; le hero est conforme.
+
+Depuis cette date, `resolveItemImage` rend le visuel hero quand la pièce en a un, partout : fiche, rangées, vignettes, Capsule, Dressing. `resolveHeroImage` n'en est plus qu'un alias. Le standard reste le repli. Les collants gardent leur photo du catalogue (arbitrage du même jour). La photo de la personne et la photo affiliée passent toujours devant.
+
+Aucune donnée n'a été modifiée en base ; les visuels standard erronés restent à régénérer si on veut un jour s'en resservir.
