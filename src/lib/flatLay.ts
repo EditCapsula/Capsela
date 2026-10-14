@@ -271,7 +271,8 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
     refsDessus: HOME_DESSUS,
     refsRobe: HOME_ROBE,
     masquerCouche: true,
-    accessoiresMasques: ["Collants"],
+    // Les collants ne sont plus masqués sur l'accueil (14/10/2026, demandé) : ils s'y montrent avec la photo du catalogue (resolveHeroImage),
+    // le visuel à plat qui ne se lisait pas (08/10/2026) n'étant plus utilisé pour eux.
     slotsAccessoires: SLOTS_HOME,
   },
   "look-detail": {
