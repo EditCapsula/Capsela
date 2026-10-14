@@ -154,7 +154,7 @@ export default function IdeeLookScreen() {
                 <div className="text-[14px] text-ink leading-[1.3] overflow-hidden text-ellipsis whitespace-nowrap">{it.name}</div>
                 {possedee && <div className="text-[11px] text-muted mt-[3px]">{usage(it)}</div>}
                 <Badge tone={possedee ? "possede" : "plein"} taille="s" className="mt-[6px]">
-                  {possedee ? "Dressing" : "À découvrir"}
+                  {possedee ? "Dressing" : "Suggestion"}
                 </Badge>
               </div>
               <span className="text-muted text-[16px] flex-shrink-0" aria-hidden="true">

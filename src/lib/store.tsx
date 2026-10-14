@@ -254,6 +254,7 @@ function buildInitialState(): AppState {
     tenuesPlanifiees: [],
     planRetour: null,
     planJour: null,
+    planDirect: false,
     valises: [],
     valiseOuverte: null,
     valiseRetour: null,
@@ -282,6 +283,9 @@ export interface Actions {
   goTenues: () => void;
   goHistory: () => void;
   goPlanifier: () => void;
+  /** Depuis la carte « Planifier mes looks » de l'accueil : ouvre directement la première étape de planification, retour vers l'accueil. */
+  planifierDirect: () => void;
+  oublierPlanDirect: () => void;
   goNeverWorn: () => void;
   /** `filtre` : carte du vestiaire — n'affiche que les pièces de ses catégories techniques. */
   goWardrobePieces: (filtre?: FiltrePieces) => void;
@@ -1564,7 +1568,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     planifierPour: (decalage) =>
       setState((s) => ({ ...s, planJour: Math.max(1, decalage), planRetour: "calendrier", planComposition: null, screen: "planifier" })),
     // Ouverture ordinaire (barre du bas, cartes) : aucun retour particulier.
-    goPlanifier: () => setState((s) => ({ ...s, planRetour: null, planJour: null, screen: "planifier" })),
+    goPlanifier: () => setState((s) => ({ ...s, planRetour: null, planJour: null, planDirect: false, screen: "planifier" })),
+    planifierDirect: () => setState((s) => ({ ...s, planRetour: "home", planJour: null, planComposition: null, planDirect: true, screen: "planifier" })),
+    oublierPlanDirect: () => setState((s) => (s.planDirect ? { ...s, planDirect: false } : s)),
     goNeverWorn: () => go("neverworn"),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobePieces" })),
     goLooks: () => go("looks"),

@@ -541,6 +541,8 @@ export interface AppState {
   planRetour: "home" | "tenues" | "calendrier" | null;
   /** Date préremplie (décalage en jours) par « Planifier une tenue pour … » de Tenue ; consommée à l'ouverture. */
   planJour: number | null;
+  /** « Planifier mes looks » depuis l'accueil (13/10/2026) : Planifier s'ouvre directement sur sa première étape, pas sur le hub (réservé à l'onglet du menu). */
+  planDirect: boolean;
   /**
    * LES VALISES (27/09/2026, docs/valise.md) : plusieurs, gardées sur
    * l'appareil et dans le compte, rappelées dans « Mes planifications ».

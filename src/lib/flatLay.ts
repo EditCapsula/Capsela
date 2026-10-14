@@ -1,4 +1,5 @@
 import type { CategoryKey } from "./types";
+import { CORRECTIONS_PIECES, GABARITS_TEMPLATES, REGLAGES_TEMPLATES, type TemplateFlatLay } from "./flatLayTemplates";
 
 /**
  * LE FLAT LAY ÉDITORIAL (08/10/2026, brief « Optimisation du hero Tenue du jour ») — la composition des pièces d'un look,
@@ -160,7 +161,7 @@ export function echelleVisuelle(role: RoleFlatLay, cat: CategoryKey): number {
  *   capsule, dressing, packing : carte carrée, gabarit du hero de l'accueil ; branchés au moteur sans écran concerné pour
  *                l'instant (le périmètre de cette tâche est la présentation, pas ces écrans).
  */
-interface Ref {
+export interface Ref {
   x: number;
   y: number;
   l: number;
@@ -429,6 +430,11 @@ function desserrer<T extends { id: number; x: number; y: number; l: number; h: n
 
 export interface OptionsFlatLay {
   contexte?: ContexteFlatLay;
+  /**
+   * Un des six templates (flatLayTemplates.ts) : ses emplacements remplacent ceux du contexte pour les rôles qu'il définit. Absent ou sans
+   * gabarit pour ce contexte : le moteur compose exactement comme avant. Rien d'autre ne change — rôles, échelles, collisions, graine.
+   */
+  template?: TemplateFlatLay | null;
   /** true : jamais de planche en miroir (la silhouette de chargement, qui ignore la graine du look à venir). */
   sansMiroir?: boolean;
 }
@@ -496,7 +502,10 @@ export function composerFlatLay(
   const nb = roles.length;
   // 2–3 pièces : composition plus ouverte (un peu plus grandes). 6 et plus : on réduit le secondaire et on limite les accessoires.
   const echelleGlobale = nb <= 3 ? 1.1 : 1;
-  const refDe = (role: RoleFlatLay): Ref => (heroRobe && config.refsRobe?.[role]) || (heroDessus && config.refsDessus?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
+  // Un template (13/10/2026) ne vaut que sur les contextes qui montrent une tenue entière en grand ; les autres gardent leur gabarit.
+  const template = options.template && (options.contexte === "look-detail" || options.contexte === "hero-home") ? options.template : null;
+  const gabaritTemplate = template ? GABARITS_TEMPLATES[template] : null;
+  const refDe = (role: RoleFlatLay): Ref => (gabaritTemplate?.[role]) || (heroRobe && config.refsRobe?.[role]) || (heroDessus && config.refsDessus?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
 
   // Les accessoires : on garde les plus utiles, en nombre limité par le contexte et le nombre de pièces.
   const accessoires = roles.filter((r) => r.role === "accessoire").sort((a, b) => rangAccessoire(a.piece.cat) - rangAccessoire(b.piece.cat));
@@ -512,8 +521,11 @@ export function composerFlatLay(
     // Une pièce haute ne dépasse pas 78 % de la hauteur de la zone.
     const hMax = hauteurZone * 0.78;
     if (l / ratio > hMax) l = hMax * ratio;
-    let cx = ref.x + dans(-2, 2);
-    const cy = ref.y + dans(-2, 2) + (hauteurZone - 100) / 2;
+    // Correction ponctuelle d'une pièce (flatLayTemplates.ts) : seulement avec un template ; sans lui, aucune.
+    const corr = template ? CORRECTIONS_PIECES[piece.id] : undefined;
+    if (corr?.echelle) l *= corr.echelle;
+    let cx = ref.x + dans(-2, 2) + (corr?.dx ?? 0);
+    const cy = ref.y + dans(-2, 2) + (hauteurZone - 100) / 2 + (corr?.dy ?? 0);
     const lim = LIMITE_INCLINAISON[role];
     let angle = ref.angle + dans(-1.5, 1.5);
     if (typeof piece.preferredRotation === "number") angle = piece.preferredRotation;
@@ -526,7 +538,7 @@ export function composerFlatLay(
     // tous les articles » — ni gabarit, ni graine, ni inclinaison préférée. Les angles des gabarits restent écrits : ils bornent encore
     // la boîte tournée d'un éventuel retour en arrière, mais n'ont plus d'effet.
     angle = 0;
-    return { id: piece.id, cat: piece.cat, role, visualScale, x: cx, y: cy, l, h: l / ratio, angle, z: profondeur(role, piece.cat) };
+    return { id: piece.id, cat: piece.cat, role, visualScale, x: cx, y: cy, l, h: l / ratio, angle, z: corr?.z ?? profondeur(role, piece.cat) };
   };
 
   const brut: PlacementFlatLay[] = roles
@@ -589,7 +601,7 @@ export function composerFlatLay(
   const largeurUtile = 100 - 2 * config.marge;
   const haut = config.margeHaute ?? config.marge;
   const hauteurUtile = hauteurZone - haut - config.marge;
-  const k = Math.min(largeurUtile / (x1 - x0), hauteurUtile / (y1 - y0), config.agrandissementMax ?? 1.1);
+  const k = Math.min(largeurUtile / (x1 - x0), hauteurUtile / (y1 - y0), (template && REGLAGES_TEMPLATES[template]?.agrandissementMax) || config.agrandissementMax || 1.1);
   const cxEns = (x0 + x1) / 2;
   const cyEns = (y0 + y1) / 2;
   // Le centre de la zone utile : au milieu de la zone quand les deux marges sont égales, plus bas sinon.

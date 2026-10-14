@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { margesDe, objectBounds, ratioHero } from "@/lib/catalogMarges";
 import { resolveHeroImage } from "@/lib/catalogImages";
 import { composerFlatLay, hauteurDuContexte, type ContexteFlatLay } from "@/lib/flatLay";
+import { choisirTemplate } from "@/lib/flatLayTemplates";
 import type { Item } from "@/lib/types";
 
 /**
@@ -25,6 +26,7 @@ export function FlatLayCapsela({
   attendre = false,
   onPret,
   ombre = "douce",
+  templates = true,
 }: {
   items: Item[];
   /** Où la planche s'affiche : elle règle la zone, la marge, le gabarit et le nombre d'accessoires (cf. CONTEXTES dans flatLay.ts). */
@@ -39,6 +41,11 @@ export function FlatLayCapsela({
    * détache du fond sans paraître flotter. Jamais noire.
    */
   ombre?: "douce" | "marquee";
+  /**
+   * Les six templates (flatLayTemplates.ts, 13/10/2026) : le gabarit est choisi sur les pièces réellement posées ; sans template adapté, ou
+   * `false`, le moteur compose comme avant. Le contexte décide s'il en accepte un (look-detail, hero-home).
+   */
+  templates?: boolean;
 }) {
   const HAUTEUR = hauteurDuContexte(context);
   const graine = layoutSeed;
@@ -56,6 +63,10 @@ export function FlatLayCapsela({
     const avecImage = toutes.filter(({ img }) => img.url);
     return avecImage.length ? avecImage : toutes;
   }, [items, context]);
+  const template = useMemo(
+    () => (templates ? choisirTemplate(images.map(({ it }) => ({ cat: it.cat, subtype: it.subtype, name: it.name }))) : null),
+    [images, templates]
+  );
   const composition = useMemo(
     () =>
       composerFlatLay(
@@ -66,9 +77,9 @@ export function FlatLayCapsela({
           return { id: it.id, cat: it.cat, ratio, accessoireType: it.accessoireType, photoBrute: img.kind === "photo" };
         }),
         graine,
-        { contexte: context }
+        { contexte: context, template }
       ).pieces,
-    [images, graine, context]
+    [images, graine, context, template]
   );
 
   // Toutes les images chargées (ou en échec) : la planche est prête.

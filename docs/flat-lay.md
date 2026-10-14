@@ -242,3 +242,23 @@ Les 7 pièces (requête du 11/10/2026) : 1075 Robe blazer cintrée (`error`), 88
 - **DÉMONTRÉ** : les 7 visuels hero ont été regardés un par un le 11/10/2026 — propres, fond uni, conformes au nom de la pièce. C'est pourquoi `error` (échec du visuel STANDARD) n'exclut pas ici.
 - **ARBITRAGE ÉDITORIAL**, valable à ce seul périmètre (pièce sans `image_url`). Une autre pièce au statut `error` mais avec un standard n'est pas concernée.
 - **NON DÉMONTRÉ** : le rendu de ces 7 pièces dans une planche composée (seul leur visuel isolé a été vu).
+
+## Les six templates de composition (14/10/2026)
+
+Une couche mince POSÉE AU-DESSUS du moteur existant (`flatLay.ts`), qui reste le repli. Aucune pièce, aucune recommandation ni aucun écran n'est changé : un template ne fait que poser les mêmes pièces autrement.
+
+**Responsabilités.**
+- `flatLayTemplates.ts` : `choisirTemplate` (sélection déterministe, lue sur les catégories ; blazer reconnu par sous-type/nom), `GABARITS_TEMPLATES` (rôle → emplacement), `REGLAGES_TEMPLATES`, `CORRECTIONS_PIECES` (par id de pièce, vide aujourd'hui). Aucun calcul de taille, de collision ni d'aléa.
+- `flatLay.ts` : rôles, échelles visuelles, collisions (`desserrer`), graine — inchangés et réutilisés ; il lit le gabarit du template avant celui du contexte.
+- `FlatLayCapsela.tsx` : choisit le template (prop `templates`, vraie par défaut) et le passe au moteur.
+- `compositionEditoriale.ts` / `OutfitComposition.tsx` (agenda, valise, avis, planche) : NON concernés.
+
+**Périmètre.** Contextes `look-detail` et `hero-home` seulement ; les autres (capsule, dressing, valise) gardent le moteur actuel. Sans template adapté (`choisirTemplate` rend null) : moteur actuel, à l'identique.
+
+**Sélection** (`HIERARCHIE_TEMPLATES`, configurable, premier vrai l'emporte) : robe, combinaison, blazer-chic (blazer + haut + chaussures + sac, bas intégré s'il y en a un), veste-dominante (blazer/manteau + au moins deux autres vêtements), haut-bas-veste (veste + haut + bas), minimaliste (2 ou 3 pièces sans veste).
+
+**Paramètres modifiables** : la hiérarchie, les emplacements de `GABARITS_TEMPLATES`, `agrandissementMax` de `minimaliste`, les corrections par pièce.
+
+**Validation visuelle** : `scripts/flatlay-templates.audit.ts` (lecture seule) compose des tenues réelles du catalogue (8 styles × 4 saisons × 6 occasions) et rend actuel / template côte à côte dans une page HTML (`FLATLAY_SORTIE`, `FLATLAY_MAX`, `FLATLAY_CONTEXTE`).
+- **DÉMONTRÉ** (rendu regardé le 14/10/2026, 16 tenues : robe, blazer-chic, haut-bas-veste) : après un premier réglage, les pièces restent entières et lisibles, le sac ne chevauche aucun vêtement. Le premier jet cachait en partie le bas sous la veste ; les gabarits ont été resserrés en conséquence.
+- **NON DÉMONTRÉ** : veste-dominante, minimaliste et combinaison (aucune tenue réelle dans l'échantillon, couverts seulement par tests synthétiques de bornes et de déterminisme) ; le contexte hero-home en rendu réel.

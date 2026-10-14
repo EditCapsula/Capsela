@@ -17,7 +17,7 @@ import type { Item } from "@/lib/types";
  * La composition est le flat lay éditorial (FlatLayCapsela, contexte « look-detail » — le même que le détail de la tenue et l'accueil,
  * 08/10/2026), posé sur un aplat chaud : aucun texte dans l'image.
  * La provenance est dite une fois, sous le titre, puis pièce par pièce sur
- * les miniatures : « À découvrir » ne marque que les pièces absentes du
+ * les miniatures : « Suggestion » (ex-« À découvrir », 13/10/2026, harmonisé) ne marque que les pièces absentes du
  * dressing (sourcePiece), jamais déduites du nom ou de l'image.
  *
  * Toute la carte est un seul bouton : les miniatures ne sont pas
@@ -119,7 +119,7 @@ export function CarteIdeeLook({
                   )}
                 </div>
                 <div className="text-[10px] text-ink leading-[1.25] mt-[5px] line-clamp-2 hyphens-auto">{nomCourtPiece(it.name)}</div>
-                {catalogue && <div className="text-[9px] text-terracotta leading-[1.2] mt-[2px] whitespace-nowrap">À découvrir</div>}
+                {catalogue && <div className="text-[9px] text-terracotta leading-[1.2] mt-[2px] whitespace-nowrap">Suggestion</div>}
               </div>
             );
           })}

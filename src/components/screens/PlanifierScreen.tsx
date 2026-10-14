@@ -534,7 +534,7 @@ export default function PlanifierScreen() {
   // « Planifier une tenue pour … » depuis Tenue (27/09/2026) : la date est
   // déjà choisie, le parcours s'ouvre sur ses étapes.
   const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "alternatives" | "liste" | "detail" | "confirmation">(() =>
-    state.planARouvrir ? "detail" : state.planComposition || state.planJour != null || state.planAAdapter ? "etape" : "intro"
+    state.planARouvrir ? "detail" : state.planComposition || state.planJour != null || state.planAAdapter || state.planDirect ? "etape" : "intro"
   );
   /**
    * COMPOSITION IMPOSÉE (Avis de styliste V2, 26/09/2026) : les pièces
@@ -556,6 +556,7 @@ export default function PlanifierScreen() {
     if (state.planComposition) actions.oublierPlanComposition();
     if (state.planAAdapter) actions.oublierPlanAAdapter();
     if (state.planJour != null) actions.oublierPlanJour();
+    if (state.planDirect) actions.oublierPlanDirect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [menuPlan, setMenuPlan] = useState<TenuePlanifiee | null>(null);
