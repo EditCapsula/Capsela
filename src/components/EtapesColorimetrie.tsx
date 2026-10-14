@@ -57,7 +57,44 @@ function Pictogramme({ nom, taille = 20, className = "text-terracotta" }: { nom:
 
 /* ───────── 1. Présentation ───────── */
 
-/** La réassurance, en trois repères — chacun vrai : quatre questions, aucune photo, un résultat tiré de ses réponses. */
+/**
+ * LES QUATRE QUESTIONS, dites en toutes lettres (13/10/2026, brief « Optimisation UX de l'écran d'introduction à la colorimétrie »). Le texte
+ * est celui des questions RÉELLES : leur nombre vient de QUESTIONS_COLORIMETRIE, leur contenu (métal, blanc près du visage, cheveux d'origine,
+ * yeux) est vérifié par un test contre les identifiants de ces questions — si une question change, le test casse avant que l'écran mente.
+ */
+export const RESUME_DES_QUESTIONS = "le métal qui te va, le blanc près de ton visage, la couleur d'origine de tes cheveux et celle de tes yeux";
+
+/** « Comment ça marche ? » — trois étapes, toutes vraies dans le moteur (docs/colorimetrie.md) ; aucune palette n'est montrée avant les réponses. */
+function CommentCaMarche() {
+  const n = QUESTIONS_COLORIMETRIE.length;
+  const etapes: [string, string][] = [
+    [`Tu réponds à ${n} questions`, `Tu choisis ${RESUME_DES_QUESTIONS}.`],
+    ["Capsela analyse tes réponses", "Elles sont croisées pour identifier ta saison colorimétrique, lorsque le résultat est suffisamment net."],
+    ["Ta palette guide tes tenues", "Tes couleurs influencent en douceur les associations proposées, sans exclure les pièces qui te plaisent."],
+  ];
+  return (
+    <section className="mt-[26px] pt-[22px] border-t border-border" aria-labelledby="colo-comment">
+      <div id="colo-comment" className="t-surtitre text-muted">
+        Comment ça marche ?
+      </div>
+      <ol className="mt-[14px] flex flex-col gap-[14px]">
+        {etapes.map(([titre, texte], i) => (
+          <li key={titre} className="flex items-start gap-[12px]">
+            <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full border border-terracotta text-terracotta text-[12px] flex items-center justify-center flex-shrink-0 mt-[1px]">
+              {i + 1}
+            </span>
+            <span className="min-w-0">
+              <span className="block t-titre-ligne text-ink">{titre}</span>
+              <span className="block text-[12px] text-muted-3 leading-[1.45] mt-[2px]">{texte}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/** La réassurance, en trois repères — chacun vrai : quatre questions, aucune photo, un résultat tiré de ses réponses ; puis « Comment ça marche ? ». */
 export function IntroColorimetrie() {
   const reperes: [Picto, string][] = [
     ["horloge", "Environ 1 minute"],
@@ -65,16 +102,19 @@ export function IntroColorimetrie() {
     ["etoile", "Résultat personnalisé"],
   ];
   return (
-    <div className="mt-[26px] grid grid-cols-3 gap-[10px]">
-      {reperes.map(([p, texte]) => (
-        <Card rayon="tuile" className="px-[8px] py-[14px] flex flex-col items-center gap-[8px] text-center" key={texte}>
-          <Pictogramme nom={p} />
-          <span className="text-[12px] leading-[1.3] text-muted-3" style={{ textWrap: "balance" }}>
-            {texte}
-          </span>
-        </Card>
-      ))}
-    </div>
+    <>
+      <div className="mt-[26px] grid grid-cols-3 gap-[10px]">
+        {reperes.map(([p, texte]) => (
+          <Card rayon="tuile" className="px-[8px] py-[14px] flex flex-col items-center gap-[8px] text-center" key={texte}>
+            <Pictogramme nom={p} />
+            <span className="text-[12px] leading-[1.3] text-muted-3" style={{ textWrap: "balance" }}>
+              {texte}
+            </span>
+          </Card>
+        ))}
+      </div>
+      <CommentCaMarche />
+    </>
   );
 }
 
