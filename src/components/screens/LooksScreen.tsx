@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 import CarteLook, { ONGLETS_LOOKS } from "@/components/CarteLook";
 import SegmentedControl from "@/components/SegmentedControl";
 import { isWishlistLook, lookWornCount } from "@/lib/selectors";
@@ -33,19 +33,19 @@ export default function LooksScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <div className="flex items-center justify-between gap-3 mt-[10px]">
-        <BoutonRetour onClick={actions.goWardrobe} label="Revenir au dressing" />
+      {/* Le bandeau commun des écrans secondaires (14/10/2026) : retour dans sa gouttière, logo, avatar. */}
+      <AppHeader onBack={actions.goWardrobe} backLabel="Revenir au dressing" />
+      <div className="t-surtitre text-muted mt-[18px]">Dressing</div>
+      <div className="flex items-end justify-between gap-3 mt-[6px]">
+        <div className="t-titre-ecran text-ink">
+          Mes <span className="italic text-terracotta">looks</span>
+        </div>
         <button
           onClick={() => actions.goCreateLook()}
           className="text-[12px] text-terracotta cursor-pointer flex-shrink-0 py-[13px] -my-[13px]"
         >
           + Créer un look
         </button>
-      </div>
-      {/* Le même en-tête que les autres écrans : surtitre, titre de 27 px, chapeau (02/10/2026). */}
-      <div className="t-surtitre text-muted mt-[14px]">Dressing</div>
-      <div className="t-titre-ecran text-ink mt-[6px]">
-        Mes <span className="italic text-terracotta">looks</span>
       </div>
       {nbGardes > 0 && (
         <div className="t-chapeau text-muted-3 mt-[8px]">

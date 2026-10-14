@@ -16,6 +16,7 @@ import { fondPhotoPiece, resolveItemImage } from "@/lib/catalogImages";
 import { dressingPhotoPath, estPhotoMiseAPlat, type CodeMiseAPlat } from "@/lib/dressing";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import BottomSheet from "@/components/BottomSheet";
+import AppHeader from "@/components/AppHeader";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -202,9 +203,7 @@ export default function PieceScreen() {
       {suggested ? (
         // UNE SUGGESTION de la capsule (pas encore une pièce du dressing) : la mise en page d'origine, photo en 4/5.
         <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-          <div className="flex items-center justify-between">
-            <BoutonRetour onClick={() => actions.go(state.pieceReturn)} label="Revenir à l'écran précédent" />
-          </div>
+          <AppHeader onBack={() => actions.go(state.pieceReturn)} />
 
           <div
             className="w-full rounded-carte border border-border overflow-hidden mt-[14px] relative"

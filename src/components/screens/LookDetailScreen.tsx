@@ -5,7 +5,7 @@ import { isCatalogId } from "@/lib/catalog";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { isWishlistLook } from "@/lib/selectors";
 import { useCapsela } from "@/lib/store";
-import BoutonRetour from "@/components/BoutonRetour";
+import AppHeader from "@/components/AppHeader";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -35,12 +35,10 @@ export default function LookDetailScreen() {
 
   return (
     <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-      <div className="flex items-center gap-[14px]">
-        <BoutonRetour onClick={actions.closeLookDetail} label="Revenir à l'écran précédent" />
-        <div className="t-titre-section text-ink">{look.name}</div>
-      </div>
+      <AppHeader onBack={actions.closeLookDetail} />
+      <div className="t-titre-ecran text-ink mt-[18px]">{look.name}</div>
 
-      <div className={"t-label mt-5 " + (wishlist ? "text-terracotta" : look.source === "saved" ? "text-terracotta" : "text-muted")}>
+      <div className={"t-label mt-[10px] " + (wishlist ? "text-terracotta" : look.source === "saved" ? "text-terracotta" : "text-muted")}>
         {wishlist ? "✦ Suggéré (Wishlist)" : look.source === "saved" ? "♡ Enregistré" : "✦ Créé par moi"}
       </div>
       <div className="t-surtitre text-muted mt-[6px] mb-3">
