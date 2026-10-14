@@ -60,7 +60,7 @@ export function HeroTenue({
         <div className="relative flex-1 min-h-0" style={{ minHeight: 350 }}>
           {phrase && (
             <div className="absolute top-0 left-0 right-0 z-10 pointer-events-none">
-              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "var(--color-terracotta-deep)" }}>
+              <span className="font-hand text-[17px] leading-[1.15]" style={{ color: "var(--color-sand-text)" }}>
                 {phrase}
               </span>
             </div>
