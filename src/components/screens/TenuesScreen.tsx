@@ -528,7 +528,17 @@ export default function TenuesScreen() {
   // score est masquée tant qu'un manque existe (le score, lui, est inchangé).
   const badgesAffiches = statut.cle === "a_completer" ? badges.filter((b) => b !== "recommande") : badges;
 
-  const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)]));
+  // LA VESTE CONSEILLÉE PAR TEMPS FRAIS, DANS LE HERO (14/10/2026, demandé) : la pièce proposée par « veste_soir » est posée dans la
+  // composition, estompée, avec un « + » qui l'ajoute — la carte « À prévoir » correspondante ne s'affiche plus dessous.
+  const conseilVeste = (() => {
+    const p = liveProactiveByKey.get("veste_soir");
+    if (!p || p.suggestedId == null || dismissingEntries["veste_soir"]) return null;
+    const piece = displayPool.find((i) => i.id === p.suggestedId);
+    return piece ? { p, piece } : null;
+  })();
+  const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)])).filter(
+    (k) => !(conseilVeste && k === "veste_soir")
+  );
   const aCompleter = !noCompleteOutfit && (proactiveKeys.length > 0 || Boolean(missingTextCarte) || vesteWithoutBase);
 
   // pb-safe-nav (correctif 20/08/2026) remplace pb-24 : réserve la hauteur
@@ -818,7 +828,7 @@ export default function TenuesScreen() {
             {/* En planche depuis le 30/09/2026, comme l'accueil et la tenue
                 planifiée : la même silhouette sur les trois heros. */}
             <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={chaussuresManquantes ? ["chaussures"] : []} onPiece={ouvrirPiece} />
+              <FlatLayCapsela items={outfitPieces} context="look-detail" layoutSeed={clePieces(outfitPieces.map((p) => p.id)).join(",")} fantomes={chaussuresManquantes ? ["chaussures"] : []} onPiece={ouvrirPiece} ajouts={conseilVeste ? [{ item: conseilVeste.piece, onAjouter: () => handleAddSuggestedPiece(conseilVeste.p, conseilVeste.piece) }] : []} />
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -842,6 +852,11 @@ export default function TenuesScreen() {
                 en dur. Le badge capsule ne s'affiche que s'il y a vraiment une
                 pièce de capsule : une tenue entièrement issue du dressing n'en
                 montre qu'un. */}
+            {conseilVeste && (
+              <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
+                Il va faire frais ce soir : appuie sur + pour ajouter {conseilVeste.piece.name.toLowerCase()}.
+              </div>
+            )}
             {chaussuresManquantes && (
               <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
                 Il te manque une paire de chaussures pour ce look.
@@ -874,13 +889,9 @@ export default function TenuesScreen() {
               avertissement — un bouton dont la position dépend du nombre de
               bannières n'est pas un bouton principal. 52 px : cible tactile
               du brief, et le plus grand élément cliquable de l'écran. */}
-          {decalage > 0 ? (
-            /* UN JOUR À VENIR NE SE PORTE PAS ENCORE (27/09/2026) : le Journal
-               n'enregistre que le jour même. Même hauteur que le bouton. */
-            <div className="mt-[8px] flex-shrink-0 flex items-center justify-center rounded-full text-[13px] text-ink text-center px-4" style={{ minHeight: 56, border: "1px dashed rgba(29,26,22,.3)" }}>
-              {`À porter ${quand} — enregistre-la ou demande un avis d'ici là.`}
-            </div>
-          ) : state.outfitValidated ? (
+          {/* UN JOUR À VENIR NE SE PORTE PAS ENCORE (27/09/2026) : le bouton n'est pas proposé. La ligne « À porter demain — enregistre-la ou
+              demande un avis d'ici là » qui le remplaçait est retirée (14/10/2026, demandé : « n'apporte rien ») ; les deux actions restent. */}
+          {decalage > 0 ? null : state.outfitValidated ? (
             /* Même hauteur que le bouton qu'il remplace (50 px) : valider la
                tenue ne doit pas déplacer les actions en dessous. */
             <div className="mt-[8px] flex-shrink-0 flex items-center gap-3 rounded-full py-[9px] px-4" style={{ minHeight: 56, background: "rgba(29,26,22,.07)" }}>

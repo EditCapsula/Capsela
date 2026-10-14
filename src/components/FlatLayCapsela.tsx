@@ -20,6 +20,9 @@ import type { CategoryKey, Item } from "@/lib/types";
  * des autres écrans. `attendre` la garde transparente jusqu'à ce que toutes les images soient chargées (ou en échec), puis
  * `onPret` prévient l'appelant (le fondu depuis la silhouette de chargement).
  */
+const AUCUNE_CATEGORIE: CategoryKey[] = [];
+const AUCUN_AJOUT: { item: Item; onAjouter: () => void }[] = [];
+
 export function FlatLayCapsela({
   items,
   context = "hero-home",
@@ -28,8 +31,9 @@ export function FlatLayCapsela({
   onPret,
   ombre = "douce",
   templates = true,
-  fantomes = [],
+  fantomes = AUCUNE_CATEGORIE,
   onPiece,
+  ajouts = AUCUN_AJOUT,
 }: {
   items: Item[];
   /** Où la planche s'affiche : elle règle la zone, la marge, le gabarit et le nombre d'accessoires (cf. CONTEXTES dans flatLay.ts). */
@@ -57,6 +61,11 @@ export function FlatLayCapsela({
   fantomes?: CategoryKey[];
   /** Rend chaque pièce cliquable (hero) : elle ouvre sa fiche. Les silhouettes ne le sont jamais. */
   onPiece?: (it: Item) => void;
+  /**
+   * Des pièces CONSEILLÉES, pas encore dans la tenue (14/10/2026, demandé : « la veste à ajouter, directement dans le hero, avec un + ») :
+   * posées à leur place, estompées, avec un « + » qui les ajoute. Elles ne comptent dans la tenue qu'une fois ajoutées.
+   */
+  ajouts?: { item: Item; onAjouter: () => void }[];
 }) {
   const HAUTEUR = hauteurDuContexte(context);
   const graine = layoutSeed;
@@ -79,8 +88,13 @@ export function FlatLayCapsela({
       const it = { id: -(i + 1), cat, name: "Pièce à ajouter", hex: "#d9cbb6" } as unknown as Item;
       return [{ it, img: { kind: "generated" as const, url: dessin.src }, fantome: dessin.ratio }];
     });
-    return [...base.map((e) => ({ ...e, fantome: undefined as number | undefined })), ...ombres];
-  }, [items, context, fantomes]);
+    const conseils = ajouts
+      .filter(({ item }) => !items.some((i) => i.id === item.id))
+      .map(({ item, onAjouter }) => ({ it: item, img: resolveHeroImage(item), fantome: undefined as number | undefined, ajout: onAjouter }))
+      // Comme les pièces de la tenue : sans visuel, la pièce n'est posée que si AUCUNE pièce n'en a (pastilles du mode démo).
+      .filter(({ img }) => img.url || avecImage.length === 0);
+    return [...base.map((e) => ({ ...e, fantome: undefined as number | undefined, ajout: undefined as (() => void) | undefined })), ...ombres.map((o) => ({ ...o, ajout: undefined as (() => void) | undefined })), ...conseils];
+  }, [items, context, fantomes, ajouts]);
   const template = useMemo(
     // Pas de template sur l'accueil (14/10/2026) : jamais validé en rendu réel dans ce contexte (seul look-detail l'a été), et une tenue y a
     // paru sans ses chaussures. Le moteur d'origine y compose seul ; le moteur de templates sait le faire (flatLay.ts), il faut juste le valider.
@@ -133,7 +147,7 @@ export function FlatLayCapsela({
       <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / HAUTEUR}))`, aspectRatio: `100 / ${HAUTEUR}` }}>
         {composition.map((p) => {
           const entree = images.find(({ it }) => it.id === p.id)!;
-          const { it, img, fantome } = entree;
+          const { it, img, fantome, ajout } = entree;
           const m = fantome ? null : margesDe(img.url);
           const cliquable = onPiece && !fantome
             ? {
@@ -170,6 +184,43 @@ export function FlatLayCapsela({
               <div key={it.id} aria-hidden="true" style={{ ...base, filter: "none", opacity: 0.5 }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={img.url} alt="" onLoad={aCharge} onError={aCharge} style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }} />
+              </div>
+            );
+          }
+          if (ajout) {
+            // La pièce conseillée : estompée à sa place, un « + » pour l'ajouter. Le reste de la pièce ouvre sa fiche, comme les autres.
+            const lc = m ? 1 - m.g - m.d : 1;
+            const hc = m ? 1 - m.h - m.b : 1;
+            return (
+              <div key={it.id} data-peint="" style={{ ...base, overflow: "visible" }}>
+                <div {...cliquable} style={{ position: "absolute", inset: 0, overflow: "hidden", opacity: 0.55, cursor: onPiece ? "pointer" : undefined, ...(img.url ? {} : { borderRadius: 14, background: it.hex }) }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {img.url && <img
+                    src={img.url}
+                    alt={it.name}
+                    onLoad={aCharge}
+                    onError={aCharge}
+                    style={
+                      m
+                        ? { position: "absolute", display: "block", maxWidth: "none", width: `${100 / lc}%`, height: `${100 / hc}%`, left: `${(-m.g / lc) * 100}%`, top: `${(-m.h / hc) * 100}%` }
+                        : { display: "block", width: "100%", height: "100%", objectFit: "contain" }
+                    }
+                  />}
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    ajout();
+                  }}
+                  aria-label={`Ajouter ${it.name} à la tenue`}
+                  className="absolute flex items-center justify-center rounded-full bg-terracotta-deep text-cream cursor-pointer"
+                  style={{ top: -6, right: -6, width: 30, height: 30, zIndex: 2, boxShadow: "0 2px 6px rgba(29,26,22,.25)" }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                    <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </button>
               </div>
             );
           }

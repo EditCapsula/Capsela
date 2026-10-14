@@ -444,13 +444,16 @@ export interface OptionsFlatLay {
  * LES PIÈCES REPRÉSENTATIVES (09/10/2026, hero-home : « 3 à 4 pièces bien lisibles ») : quand la tenue en compte plus que le contexte n'en
  * pose, on garde celles qui disent la tenue — la robe, le manteau ou la veste, le bas, le haut, puis les chaussures et le sac. Un second haut
  * ou une seconde veste pèse moins que le premier. Une pièce dont le visuel est une photo brute (`photoBrute`) passe après les visuels
- * produit : elle est écartée de la planche tant qu'il reste au moins 3 autres pièces. Jamais la tenue réelle : seul l'aperçu change.
+ * produit : elle est écartée de la planche tant qu'il reste au moins 3 autres pièces — sauf les chaussures, toujours gardées (14/10/2026).
+ * Jamais la tenue réelle : seul l'aperçu change.
  */
 const POIDS_REPRESENTATIF: Partial<Record<CategoryKey, number>> = {
   robe: 5, combinaison: 5, manteau: 4.6, pantalon: 4.5, jean: 4.5, jupe: 4.5, short: 4.3, haut: 4.4, pull: 4.4, veste: 4.2, chaussures: 3, sac: 2.5, accessoire: 1, bijou: 0.5,
 };
 export function pieceRepresentatives<T extends { id: number; cat: CategoryKey; photoBrute?: boolean }>(pieces: T[], max: number): { gardees: T[]; ecartees: T[] } {
-  const proprement = pieces.filter((q) => !q.photoBrute);
+  // Les CHAUSSURES restent, même en photo brute (14/10/2026, signalé deux fois : la tenue de l'accueil s'affichait sans ses chaussures,
+  // écartées parce que leur visuel était une photo) : une tenue sans chaussures se lit incomplète. Les autres photos brutes passent après.
+  const proprement = pieces.filter((q) => !q.photoBrute || q.cat === "chaussures");
   // Au moins trois pièces dans la planche : sans assez de visuels produit, les photos brutes restent.
   const candidates = proprement.length >= Math.min(3, pieces.length) ? proprement : pieces;
   if (candidates.length <= max) return { gardees: candidates, ecartees: pieces.filter((q) => !candidates.includes(q)) };

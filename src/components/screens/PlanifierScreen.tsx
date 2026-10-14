@@ -2028,7 +2028,6 @@ export default function PlanifierScreen() {
                 phrase={phrase}
                 pieces={pieces}
                 vide="Les pièces de ce look ne sont plus dans ton dressing."
-                info={passee ? undefined : `À porter ${ecartJoursPlan === 0 ? "aujourd'hui" : ecartJoursPlan === 1 ? "demain" : jourLong}.`}
                 actions={
                   pieces.length > 0
                     ? [

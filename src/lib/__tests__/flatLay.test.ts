@@ -515,6 +515,13 @@ describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « 
     expect(composerFlatLay(tenue, "h", { contexte: "look-detail" }).pieces.map((q) => q.id)).toContain(manteauPhoto.id);
   });
 
+  it("les chaussures restent sur l'accueil même en photo brute (14/10/2026, signalé : tenue de l'accueil sans ses chaussures)", () => {
+    const chaussuresPhoto = { ...p("chaussures", 1.5), photoBrute: true };
+    const tenue = [p("robe", 0.5), p("sac", 1), p("accessoire", 1.2), chaussuresPhoto];
+    const home = composerFlatLay(tenue, "h", { contexte: "hero-home" });
+    expect(home.pieces.map((q) => q.id)).toContain(chaussuresPhoto.id);
+  });
+
   it("sans assez de visuels produit, les photos brutes restent : jamais moins de 3 pièces", () => {
     const tenue = [{ ...p("haut", 1), photoBrute: true }, p("pantalon", 0.55), { ...p("chaussures", 1.5), photoBrute: true }];
     expect(composerFlatLay(tenue, "h", { contexte: "hero-home" }).pieces.length).toBe(3);
