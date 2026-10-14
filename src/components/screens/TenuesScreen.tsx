@@ -21,6 +21,7 @@ import { useCapsela } from "@/lib/store";
 import { candidatsDeRemplacement, categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
 import { manquesActuels, piecesStructurellesManquantes, statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
 import BottomSheet from "@/components/BottomSheet";
+import { piecesDAutresStyles, styleAffiche } from "@/lib/suggestionsAutresStyles";
 import { clePieces } from "@/lib/outfitFeedback";
 import { titreDuPlan } from "@/lib/heroPlan";
 import { complementTenue, momentMessage, quandPhrase } from "@/lib/jourConsulte";
@@ -49,7 +50,20 @@ function PlusIcon() {
  * la capsule garde son traitement de suggestion (atténuée, « Suggérée ») pour ne jamais passer pour une pièce possédée — la seule
  * indication de pertinence montrée : d'où vient la pièce. `pleine` : sur toute la largeur de sa colonne (feuille).
  */
-function VignetteChoix({ it, onVoir, onChoisir, pleine = false }: { it: Item; onVoir: () => void; onChoisir: () => void; pleine?: boolean }) {
+function VignetteChoix({
+  it,
+  onVoir,
+  onChoisir,
+  pleine = false,
+  autreStyle,
+}: {
+  it: Item;
+  onVoir: () => void;
+  onChoisir: () => void;
+  pleine?: boolean;
+  /** Une pièce d'un autre style que le profil (14/10/2026) : son style à la place de « Suggérée ». */
+  autreStyle?: string;
+}) {
   const image = resolveItemImage(it);
   const suggeree = isCatalogId(it.id);
   return (
@@ -78,10 +92,10 @@ function VignetteChoix({ it, onVoir, onChoisir, pleine = false }: { it: Item; on
           />
         )}
         <Badge tone={suggeree ? "plein" : "possede"} taille="s" className="absolute top-[7px] left-[7px]">
-          {suggeree ? "Suggérée" : "Ton dressing"}
+          {autreStyle ?? (suggeree ? "Suggérée" : "Ton dressing")}
         </Badge>
       </button>
-      <div className="text-[12.5px] text-ink leading-[1.3] mt-[7px] line-clamp-2">{it.name}</div>
+      <div className="text-[12.5px] text-ink leading-[1.3] mt-[7px] line-clamp-2 min-h-[2.6em]">{it.name}</div>
       <button
         type="button"
         onClick={onChoisir}
@@ -430,9 +444,33 @@ export default function TenuesScreen() {
   // candidatsDeRemplacement avec un id hors tenue, la fonction du remplacement d'une pièce : toutes ses règles (saison, occasion,
   // formalité, baskets en tenue habillée, pluie, chaussures d'été…), le dressing d'abord, puis l'accord avec le reste de la tenue
   // (harmonize). Aucune règle ni aucun score nouveaux ; vide si rien ne passe.
-  const chaussuresPossibles = chaussuresManquantes
+  const chaussuresDuStyle = chaussuresManquantes
     ? candidatsDeRemplacement(outfitPieces, displayPool, -1, "chaussures", state.occasion || "all", state.workMode, state.dateContext, meteoDuJour)
     : [];
+  // PUIS D'AUTRES STYLES (14/10/2026, demandé) : les paires du catalogue que la capsule ne propose pas, du genre de l'utilisatrice, de
+  // saison, jamais écartées (suggestionsAutresStyles.ts) — passées par les MÊMES règles de tenue. Après celles du dressing et de la
+  // capsule, jamais à leur place.
+  const chaussuresAutresStyles = chaussuresManquantes
+    ? candidatsDeRemplacement(
+        outfitPieces,
+        piecesDAutresStyles(vestiairePool, "chaussures", {
+          gender: profile.gender,
+          dejaProposees: new Set(displayPool.map((i) => i.id)),
+          exclues: state.suggestedExcluded,
+          meteo: meteoDuJour,
+        }),
+        -1,
+        "chaussures",
+        state.occasion || "all",
+        state.workMode,
+        state.dateContext,
+        meteoDuJour
+      ).slice(0, 6)
+    : [];
+  const chaussuresPossibles = [...chaussuresDuStyle, ...chaussuresAutresStyles];
+  const idsAutresStyles = new Set(chaussuresAutresStyles.map((i) => i.id));
+  /** La provenance dite sur la vignette : le style nommé pour une pièce d'un autre style. */
+  const autreStyle = (it: Item) => (idsAutresStyles.has(it.id) ? styleAffiche(it, profile.styles, profile.gender) : undefined);
   const [choixChaussuresOuvert, setChoixChaussuresOuvert] = useState(false);
   /** L'emplacement en pointillés et la phrase sous le flat lay : choisir parmi les paires possibles, sinon en ajouter une au dressing. */
   const completerChaussures = () => (chaussuresPossibles.length ? setChoixChaussuresOuvert(true) : actions.openAddForCategory("chaussures"));
@@ -984,8 +1022,8 @@ export default function TenuesScreen() {
             <Card className="mt-[12px] py-4">
               {chaussuresPossibles.length > 0 ? (
                 <div className="scrollarea flex gap-[10px] overflow-x-auto px-4" style={{ overscrollBehaviorX: "contain" }}>
-                  {chaussuresPossibles.slice(0, 6).map((it) => (
-                    <VignetteChoix key={it.id} it={it} onVoir={() => ouvrirPiece(it)} onChoisir={() => ajouterALaTenue(it)} />
+                  {[...chaussuresDuStyle.slice(0, 4), ...chaussuresAutresStyles.slice(0, 4)].map((it) => (
+                    <VignetteChoix key={it.id} it={it} autreStyle={autreStyle(it)} onVoir={() => ouvrirPiece(it)} onChoisir={() => ajouterALaTenue(it)} />
                   ))}
                 </div>
               ) : (
@@ -1432,6 +1470,7 @@ export default function TenuesScreen() {
             <VignetteChoix
               key={it.id}
               it={it}
+              autreStyle={autreStyle(it)}
               pleine
               onVoir={() => {
                 setChoixChaussuresOuvert(false);

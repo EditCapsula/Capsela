@@ -310,3 +310,16 @@ Vérifié en rendu réel (mode démo, 360 et 390 px), le manque étant simulé e
 - sur une tenue complète, ni pointillés ni carte.
 
 **NON VÉRIFIÉ** : un vrai tirage sans chaussures, les vraies images. Seules les chaussures ont l'emplacement et la rangée ; un haut ou un bas manquant garde la carte « À compléter » d'avant.
+
+### Des paires d'autres styles (14/10/2026, demandé)
+Après les paires du dressing et de la capsule, la rangée et la feuille proposent des paires d'autres styles, prises dans le reste du catalogue (`vestiairePool`, déjà chargé, donc aucune requête). Elles sont filtrées par `piecesDAutresStyles` (`suggestionsAutresStyles.ts`, testé) :
+- jamais une pièce de l'autre genre, sans le repli « ≥ 16 pièces » de la capsule ;
+- jamais une pièce écartée (`suggestedExcluded`) ;
+- jamais hors saison ;
+- jamais une pièce déjà proposée par la capsule.
+
+Les mêmes règles de tenue s'appliquent ensuite (`candidatsDeRemplacement`). La rangée en montre 4 au plus après les 4 premières de la capsule, la feuille 6 au plus.
+
+La vignette nomme le style, au libellé du genre de l'utilisatrice (`styleAffiche` : le premier style déclaré de la pièce qui n'est pas celui du profil), ou « Autre style » si aucun n'est déclaré. Jamais deviné par le nom.
+
+Constat en mode démo : le catalogue de repli (`catalog.ts`) marque escarpins et ballerines « unisexe », donc un profil homme les voit proposés PAR LA CAPSULE. C'est un défaut de ce catalogue de démo, pas du filtre ; le vrai catalogue porte le genre de chaque pièce. NON VÉRIFIÉ sur le vrai catalogue.
