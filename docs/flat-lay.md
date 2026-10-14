@@ -323,3 +323,21 @@ Les mêmes règles de tenue s'appliquent ensuite (`candidatsDeRemplacement`). La
 La vignette nomme le style, au libellé du genre de l'utilisatrice (`styleAffiche` : le premier style déclaré de la pièce qui n'est pas celui du profil), ou « Autre style » si aucun n'est déclaré. Jamais deviné par le nom.
 
 Constat en mode démo : le catalogue de repli (`catalog.ts`) marque escarpins et ballerines « unisexe », donc un profil homme les voit proposés PAR LA CAPSULE. C'est un défaut de ce catalogue de démo, pas du filtre ; le vrai catalogue porte le genre de chaque pièce. NON VÉRIFIÉ sur le vrai catalogue.
+
+## Une maille ouverte se pose comme une veste (14/10/2026)
+Signalé deux fois le même jour : « le gilet est trop petit » (Voyage : combinaison et cardigan), « on ne voit pas le débardeur » (Sport : brassière et sweat zippé). Un cardigan, un gilet ou un sweat zippé (`fermetureMaille` « ouverte ») est désormais posé dans la planche comme une VESTE (`catDePlanche`, `FlatLayCapsela.tsx`) :
+- sur une combinaison, il devient sa surcouche au lieu de tomber en accessoire ;
+- sur un débardeur, c'est le débardeur qui devient le haut, et non plus la petite couche du sweat.
+
+La pièce reste un pull partout ailleurs (moteur, statut, fiches).
+
+**Mesuré** (look-detail, zone 110, mêmes pièces et mêmes graines ; aire en unités de zone) :
+
+| Pièce | Aire avant → après | Part visible avant → après |
+|---|---|---|
+| Cardigan (Voyage) | 3 → 11 | – |
+| Brassière (Sport) | 6 → 14 | 70–73 % → 100 % |
+| Sweat zippé | 12 → 15 | 100 % → 71 % (posé derrière, comme une veste) |
+| Legging | 30 → 21 | – |
+
+Rendu réel contrôlé avec les vraies images (avant/après).

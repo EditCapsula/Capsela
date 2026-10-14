@@ -340,6 +340,8 @@ export interface LeviersMesure {
   sansSandalesDeFeteEnAutomne?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : les sandales et espadrilles ne sont pas écartées sous 15° (R-B22). */
   sansFiltreChaussuresDEte?: boolean;
+  /** Reproduit le comportement d'AVANT le 14/10/2026 : en Voyage, ni les baskets ni les pièces les plus décontractées ne sont préférées (R-S19). */
+  sansConfortVoyage?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
   saisonDeclareeRelachee?: boolean;
   /**
@@ -1171,6 +1173,12 @@ export function generateOutfit(
       const rainResistant = base.filter((i) => i.resistePluie);
       if (rainResistant.length) base = rainResistant;
     }
+    // R-S19 (14/10/2026, signalé : « pour un trajet il faut privilégier des pièces avec formalités moins élevées ») — en Voyage, les
+    // pièces les plus décontractées (formalité ≤ 1) d'abord, si la catégorie en a. Préférence molle : jamais une catégorie vidée.
+    if (occasion === "voyage" && !leviers?.sansConfortVoyage) {
+      const souples = base.filter((i) => formalityOf(i) <= 1);
+      if (souples.length) base = souples;
+    }
     // Préférence pour la palette personnelle — n'écarte rien, juste une inclination
     // quand elle laisse assez d'options (R-S10, esprit "préférence molle, jamais exclusive").
     // Un article à FALLBACK_HEX (couleur jamais renseignée) échappe à ce
@@ -1530,6 +1538,11 @@ export function generateOutfit(
     if (shoeTypePrefs?.length) {
       const styled = shoePool.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) shoePool = styled;
+    }
+    // R-S19 — en Voyage, les baskets d'abord (« même en chaussures, comme des baskets »), puis la liste confort ci-dessus. Molle.
+    if (occasion === "voyage" && !leviers?.sansConfortVoyage) {
+      const baskets = shoePool.filter((i) => i.shoeType === "Baskets" || formalityOf(i) === 0);
+      if (baskets.length) shoePool = baskets;
     }
     const picked = rand(harmonize(shoePool, chosen, true));
     if (picked) chosen.push(picked);
@@ -1910,6 +1923,11 @@ export function candidatsDeRemplacement(
       const styled = candidates.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) candidates = styled;
     }
+  }
+  // R-S19 — symétrique du tirage : en Voyage, les pièces décontractées d'abord, les baskets d'abord pour les chaussures. Molle.
+  if (occasion === "voyage") {
+    const souples = candidates.filter((i) => (cat === "chaussures" ? i.shoeType === "Baskets" || formalityOf(i) === 0 : formalityOf(i) <= 1));
+    if (souples.length) candidates = souples;
   }
   // R-S17 — symétrique du filtre appliqué dans generateOutfit : pas de
   // chemise/chemisier (haut) ni de robe chemise en soirée habillée, molle
