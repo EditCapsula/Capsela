@@ -353,6 +353,11 @@ export interface LeviersMesure {
 
 /** Sous cette température, une tenue sans couche de dessus est à compléter d'une veste (R-S14) — le seuil de la suggestion, désormais aussi celui de la veste intégrée. */
 export const SEUIL_SOIREE_FRAICHE = 21;
+/** Une maille qui tient lieu de veste pour la soirée fraîche (R-S14) : ouverte sur le devant, ou à capuche. */
+export function estCoucheDuSoir(i: Item): boolean {
+  if (i.cat !== "pull") return false;
+  return fermetureMaille(i) === "ouverte" || /capuche|hoodie/i.test(`${i.subtype ?? ""} ${i.name}`);
+}
 
 /**
  * Un événement de trace. Cf. LeviersMesure.traceRepli.
@@ -2364,7 +2369,10 @@ export function computeLookScore(
   // R-S14 — soirée fraîche : exclue en Cocooning (R-B12), pas de sens à suggérer une veste chez soi.
   // Télétravail aussi (02/10/2026, signalé : « à prévoir » avec un blazer pour une journée chez soi).
   const chezSoi = estContexteMaison(occasion, workMode);
-  const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau");
+  // Une maille qui se porte PAR-DESSUS compte comme la couche du soir (14/10/2026, signalé : une tenue Sport avec un sweat à capuche
+  // zippé recevait « ajoute une veste ») : maille ouverte (gilet, cardigan, zippé — fermetureMaille) ou sweat à capuche, toutes
+  // occasions. Un pull simple, enfilé sous rien, ne compte pas : c'est le haut, pas une couche en plus.
+  const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau" || estCoucheDuSoir(i));
   if (!chezSoi && weather.temp <= SEUIL_SOIREE_FRAICHE && !hasOuterwear && !dismissed.has("veste_soir")) {
     // Occasion sport (recette 25/08/2026, signalé : blazer structuré
     // suggéré sur une tenue baskets + short cycliste) — préférence molle
