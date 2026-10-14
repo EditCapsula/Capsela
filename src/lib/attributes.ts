@@ -1,4 +1,4 @@
-import type { AccessoireType, BijouType, CategoryKey, Coupe, IntensiteCouleur, Item, Matiere, OccasionKey, SacType, ShoeType, Tons } from "./types";
+import type { AccessoireType, BijouType, CategoryKey, Coupe, IntensiteCouleur, Item, Matiere, OccasionKey, SacType, Season, ShoeType, Tons } from "./types";
 import { CATLABEL, SUBTYPES } from "./data";
 
 /**
@@ -206,6 +206,32 @@ const MATIERE_DEFAULT_BY_CAT: Record<string, Matiere> = {
 export function matiereOf(it: Item): Matiere {
   if (it.matiere) return it.matiere;
   return detectMatiere(it.name) || MATIERE_DEFAULT_BY_CAT[it.cat] || "Coton";
+}
+
+/**
+ * LES MATIÈRES D'UN TRAJET (14/10/2026, demandé : « pour le voyage il ne faut pas privilégier du tissu denim ; une matière plus
+ * confortable comme le coton stretch ou mélangé en automne-hiver, le lin ou le coton naturel en été ou au printemps »).
+ * La colonne `matiere` du catalogue est un texte libre (« Lin / coton », « Coton piqué », « Viscose / élasthanne ») : la lecture se fait
+ * par mots, sur la matière déclarée, sinon devinée du nom (matiereOf). ARBITRAGE ÉDITORIAL de la propriétaire, Voyage seul.
+ */
+const VETEMENTS_MATIERE: CategoryKey[] = ["haut", "pull", "veste", "manteau", "pantalon", "jean", "jupe", "short", "robe", "combinaison"];
+const texteMatiere = (it: Item) => String(matiereOf(it)).toLowerCase();
+/** Le denim : la catégorie jean, ou une matière qui le dit. */
+export function estDenim(it: Item): boolean {
+  return it.cat === "jean" || /denim|\bjean/.test(texteMatiere(it));
+}
+/**
+ * Une matière confortable pour voyager à cette saison — vêtements seulement (une autre pièce est toujours « confortable »).
+ *   · Automne / Hiver : coton stretch (élasthanne, stretch, jersey) ou coton mélangé (« coton / … », « … / coton », « mélangé »).
+ *   · Printemps / Été : lin, ou coton naturel (sans fibre synthétique ni élasthanne).
+ * Jamais le denim.
+ */
+export function matiereDeVoyage(it: Item, saison: Season): boolean {
+  if (!VETEMENTS_MATIERE.includes(it.cat)) return true;
+  if (estDenim(it)) return false;
+  const m = texteMatiere(it);
+  if (saison === "Automne / Hiver") return /coton/.test(m) && (/stretch|élasthanne|elasthanne|jersey|mélang|melang|\//.test(m));
+  return /(^|[^a-z])lin($|[^a-z])/.test(m) || (/coton/.test(m) && !/élasthanne|elasthanne|polyester|polyamide|synth|nylon/.test(m));
 }
 
 /**

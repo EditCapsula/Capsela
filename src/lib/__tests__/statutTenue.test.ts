@@ -83,6 +83,16 @@ describe("computeLookScore — la veste d'une soirée fraîche vient d'abord du 
     expect(cle("travail_formel", "Présentiel")).toBe(true);
   });
 
+  it("une maille portée par-dessus (sweat à capuche, gilet, zippé) tient lieu de veste ; un pull simple, non (14/10/2026)", () => {
+    const pool = [vesteDuCatalogue, vesteDuDressing, robe, chaussures];
+    const conseille = (couche: Item, occ: "sport" | "quotidien" = "quotidien") =>
+      computeLookScore([robe, chaussures, couche], occ, [], null, new Set(), meteo, "Présentiel", "Verre", pool).proactives.some((p) => p.key === "veste_soir");
+    expect(conseille(piece("pull", "Sweat à capuche (Hoodie) / Sweat zippé", undefined, { subtype: "Sweat à capuche" }), "sport")).toBe(false);
+    expect(conseille(piece("pull", "Hoodie oversize", undefined, { subtype: "Hoodie" }))).toBe(false);
+    expect(conseille(piece("pull", "Cardigan en laine", undefined, { subtype: "Cardigan" }))).toBe(false);
+    expect(conseille(piece("pull", "Pull col rond", undefined, { subtype: "Pull" }))).toBe(true);
+  });
+
   it("sans veste au dressing : celle du catalogue, comme avant", () => {
     const { proactives } = computeLookScore([robe, chaussures], "quotidien", [], null, new Set(), meteo, "Présentiel", "Verre", [vesteDuCatalogue, robe, chaussures]);
     expect(proactives.find((p) => p.key === "veste_soir")?.suggestedId).toBe(vesteDuCatalogue.id);

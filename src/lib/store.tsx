@@ -1250,7 +1250,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // composeWardrobePool.
     const poolGeneration =
       s.occasion && !secours
-        ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion, saison: w, exclureHorsOccasion: true })
+        ? composeWardrobePool(pool, capsule, CAT_KEYS, { completerPourOccasion: s.occasion, saison: w, exclureHorsOccasion: true, pieceAdaptee: true })
         : pool;
     // DIVERSIFICATION SUR CINQ JOURS (01/10/2026, diversite.ts). La date du jour
     // consulté recalcule la météo (w), l'occasion (s.occasion) ET la fenêtre des

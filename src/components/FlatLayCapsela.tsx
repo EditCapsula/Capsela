@@ -7,6 +7,7 @@ import { resolveHeroImage } from "@/lib/catalogImages";
 import { composerFlatLay, hauteurDuContexte, type ContexteFlatLay } from "@/lib/flatLay";
 import { choisirTemplate } from "@/lib/flatLayTemplates";
 import type { CategoryKey, Item } from "@/lib/types";
+import { fermetureMaille } from "@/lib/attributes";
 
 /**
  * LE FLAT LAY ÉDITORIAL DE CAPSELA (08/10/2026) — les pièces d'un look posées comme sur une planche de stylisme : une pièce
@@ -21,6 +22,15 @@ import type { CategoryKey, Item } from "@/lib/types";
  * `onPret` prévient l'appelant (le fondu depuis la silhouette de chargement).
  */
 const AUCUNE_CATEGORIE: CategoryKey[] = [];
+
+/**
+ * UNE MAILLE OUVERTE SE POSE COMME UNE VESTE (14/10/2026, signalé deux fois le même jour : « le gilet est trop petit », « on ne voit pas le
+ * débardeur »). Un cardigan, un gilet, un sweat zippé (fermetureMaille « ouverte ») se portent par-dessus, comme une veste : posés en
+ * « pull », le cardigan d'une combinaison tombait en accessoire (16 × 16 unités) et le débardeur sous un sweat zippé devenait la petite
+ * couche du sweat, à moitié couverte. Mesuré (même pool, mêmes graines, look-detail) : cardigan 3 → 11 d'aire, brassière 6 → 14 et
+ * entièrement visible. Seule la planche change : la pièce reste un pull partout ailleurs.
+ */
+const catDePlanche = (it: Item): CategoryKey => (fermetureMaille(it) === "ouverte" ? "veste" : it.cat);
 const AUCUN_AJOUT: { item: Item; onAjouter: () => void }[] = [];
 /** Ce que dit le bouton d'une silhouette actionnable (lecteur d'écran) : seules les catégories posées en silhouette par un écran. */
 const LIBELLE_AJOUT: Partial<Record<CategoryKey, string>> = { veste: "une veste", manteau: "un manteau", chaussures: "une paire de chaussures" };
@@ -124,7 +134,7 @@ export function FlatLayCapsela({
   const template = useMemo(
     // Pas de template sur l'accueil (14/10/2026) : jamais validé en rendu réel dans ce contexte (seul look-detail l'a été), et une tenue y a
     // paru sans ses chaussures. Le moteur d'origine y compose seul ; le moteur de templates sait le faire (flatLay.ts), il faut juste le valider.
-    () => (templates && context !== "hero-home" ? choisirTemplate(images.map(({ it }) => ({ cat: it.cat, subtype: it.subtype, name: it.name }))) : null),
+    () => (templates && context !== "hero-home" ? choisirTemplate(images.map(({ it }) => ({ cat: catDePlanche(it), subtype: it.subtype, name: it.name }))) : null),
     [images, templates, context]
   );
   const composition = useMemo(
@@ -135,7 +145,7 @@ export function FlatLayCapsela({
           // La boîte réelle de l'objet (objectBounds) : son format fait la taille. Photo du dressing sans boîte connue : un portrait courant ; sans visuel : un carré.
           const b = objectBounds(img.url);
           const ratio = b ? (b.width * (ratioHero(img.url) ?? 1)) / b.height : img.kind === "placeholder" ? 1 : 0.8;
-          return { id: it.id, cat: it.cat, ratio, accessoireType: it.accessoireType, photoBrute: img.kind === "photo" };
+          return { id: it.id, cat: catDePlanche(it), ratio, accessoireType: it.accessoireType, photoBrute: img.kind === "photo" };
         }),
         graine,
         { contexte: context, template, piecesEnPlus: images.filter((e) => e.ajout).length, hauteurZone: HAUTEUR }

@@ -22,7 +22,7 @@ Les tests ne couvrent que des fonctions pures de `src/lib` (environnement node, 
 **Le store** (`src/lib/store.tsx`) porte `AppState` et toutes les actions. Les pools à connaître :
 - `vestiairePool` — le catalogue `vestiaire_universel` (repli : `catalog.ts`) ;
 - `defaultCapsule` — la capsule calculée depuis le catalogue et le profil (`computeDefaultCapsule`, `capsule.ts`) ;
-- `wardrobePool` — `composeWardrobePool` : catégorie par catégorie, les pièces réelles du dressing remplacent les suggestions de la capsule.
+- `wardrobePool` — `composeWardrobePool` : catégorie par catégorie, les pièces réelles du dressing remplacent les suggestions de la capsule. Exception (14/10/2026, `pieceAdaptee`) : pour une occasion, une catégorie dont aucune pièce réelle n'est ADAPTÉE (`adapteeALOccasion` : baskets et pièces décontractées en Voyage, types de chaussures préférés d'une occasion) reçoit les pièces adaptées de la capsule, qui prennent la place des pièces réelles non adaptées.
 
 Pour résoudre des pièces déjà enregistrées (historique, looks, tenues planifiées), utiliser `[...state.items, ...vestiairePool]` et non `wardrobePool`, qui change avec le dressing et le style.
 

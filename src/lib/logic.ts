@@ -11,7 +11,9 @@ import {
   coupeOf,
   formalityOf,
   huesHarmonious,
+  estDenim,
   fermetureMaille,
+  matiereDeVoyage,
   isMetallicFinish,
   isNeutralColor,
   isStatement,
@@ -340,6 +342,8 @@ export interface LeviersMesure {
   sansSandalesDeFeteEnAutomne?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : les sandales et espadrilles ne sont pas écartées sous 15° (R-B22). */
   sansFiltreChaussuresDEte?: boolean;
+  /** Reproduit le comportement d'AVANT le 14/10/2026 : en Voyage, ni les baskets ni les pièces les plus décontractées ne sont préférées (R-S19). */
+  sansConfortVoyage?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
   saisonDeclareeRelachee?: boolean;
   /**
@@ -353,6 +357,11 @@ export interface LeviersMesure {
 
 /** Sous cette température, une tenue sans couche de dessus est à compléter d'une veste (R-S14) — le seuil de la suggestion, désormais aussi celui de la veste intégrée. */
 export const SEUIL_SOIREE_FRAICHE = 21;
+/** Une maille qui tient lieu de veste pour la soirée fraîche (R-S14) : ouverte sur le devant, ou à capuche. */
+export function estCoucheDuSoir(i: Item): boolean {
+  if (i.cat !== "pull") return false;
+  return fermetureMaille(i) === "ouverte" || /capuche|hoodie/i.test(`${i.subtype ?? ""} ${i.name}`);
+}
 
 /**
  * Un événement de trace. Cf. LeviersMesure.traceRepli.
@@ -1147,7 +1156,14 @@ export function generateOutfit(
     // Affectait robes/combinaisons, bas, vestes, manteaux, sacs et bijoux —
     // les hauts et chaussures se tirent hors de pick() et y échappaient.
     const real = base.filter((i) => !isCatalogId(i.id));
-    if (real.length) {
+    // La pièce ADAPTÉE avant le réel (14/10/2026, demandé : « il faut surtout pousser la pièce adaptée à l'occasion ») : en Voyage, si
+    // aucune pièce réelle du groupe n'est décontractée (R-S19) et que la capsule en a une, la priorité au réel ne s'applique pas — la
+    // préférence R-S19 ci-dessous la retient.
+    // Décontractée ET pas en denim (14/10/2026, demandé : « pour le voyage il ne faut pas privilégier du tissu denim »).
+    const souple = (i: Item) => formalityOf(i) <= 1 && !estDenim(i);
+    const confortAvantReel =
+      occasion === "voyage" && !leviers?.sansConfortVoyage && !real.some(souple) && base.some((i) => isCatalogId(i.id) && souple(i));
+    if (real.length && !confortAvantReel) {
       const pinned = pinnedId != null && !real.some((i) => i.id === pinnedId) ? base.find((i) => i.id === pinnedId) : undefined;
       base = pinned ? [...real, pinned] : real;
     }
@@ -1165,6 +1181,15 @@ export function generateOutfit(
     if (isRainy(weather) && cats.some((c) => OUTERWEAR_CATS.includes(c))) {
       const rainResistant = base.filter((i) => i.resistePluie);
       if (rainResistant.length) base = rainResistant;
+    }
+    // R-S19 (14/10/2026, signalé : « pour un trajet il faut privilégier des pièces avec formalités moins élevées ») — en Voyage, les
+    // pièces les plus décontractées (formalité ≤ 1) d'abord, si la catégorie en a. Préférence molle : jamais une catégorie vidée.
+    if (occasion === "voyage" && !leviers?.sansConfortVoyage) {
+      const souples = base.filter(souple);
+      if (souples.length) base = souples;
+      // Puis la matière de la saison (coton stretch ou mélangé en automne-hiver, lin ou coton naturel au printemps-été) : molle aussi.
+      const matiere = base.filter((i) => matiereDeVoyage(i, weather.season));
+      if (matiere.length) base = matiere;
     }
     // Préférence pour la palette personnelle — n'écarte rien, juste une inclination
     // quand elle laisse assez d'options (R-S10, esprit "préférence molle, jamais exclusive").
@@ -1318,6 +1343,13 @@ export function generateOutfit(
     ) {
       const longues = hautPool.filter((i) => i.manches === "longues");
       if (longues.length) hautPool = longues;
+    }
+    // R-S19 pour le haut, tiré hors de pick() : en Voyage, pas de denim, puis la matière de la saison. Molle.
+    if (occasion === "voyage" && !leviers?.sansConfortVoyage && pinnedId == null) {
+      const sansDenim = hautPool.filter((i) => !estDenim(i));
+      if (sansDenim.length) hautPool = sansDenim;
+      const matiere = hautPool.filter((i) => matiereDeVoyage(i, weather.season));
+      if (matiere.length) hautPool = matiere;
     }
     // Même règle que dans pick() ci-dessus (exemption FALLBACK_HEX comprise).
     const h = rand(harmonize(candidatsCouleur(hautPool, preferredHexes, colo), chosen, true));
@@ -1525,6 +1557,11 @@ export function generateOutfit(
     if (shoeTypePrefs?.length) {
       const styled = shoePool.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) shoePool = styled;
+    }
+    // R-S19 — en Voyage, les baskets d'abord (« même en chaussures, comme des baskets »), puis la liste confort ci-dessus. Molle.
+    if (occasion === "voyage" && !leviers?.sansConfortVoyage) {
+      const baskets = shoePool.filter((i) => i.shoeType === "Baskets" || formalityOf(i) === 0);
+      if (baskets.length) shoePool = baskets;
     }
     const picked = rand(harmonize(shoePool, chosen, true));
     if (picked) chosen.push(picked);
@@ -1904,6 +1941,15 @@ export function candidatsDeRemplacement(
     if (shoeTypePrefs?.length) {
       const styled = candidates.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) candidates = styled;
+    }
+  }
+  // R-S19 — symétrique du tirage : en Voyage, les pièces décontractées d'abord, les baskets d'abord pour les chaussures. Molle.
+  if (occasion === "voyage") {
+    const souples = candidates.filter((i) => (cat === "chaussures" ? i.shoeType === "Baskets" || formalityOf(i) === 0 : formalityOf(i) <= 1 && !estDenim(i)));
+    if (souples.length) candidates = souples;
+    if (weather) {
+      const matiere = candidates.filter((i) => matiereDeVoyage(i, weather.season));
+      if (matiere.length) candidates = matiere;
     }
   }
   // R-S17 — symétrique du filtre appliqué dans generateOutfit : pas de
@@ -2364,7 +2410,10 @@ export function computeLookScore(
   // R-S14 — soirée fraîche : exclue en Cocooning (R-B12), pas de sens à suggérer une veste chez soi.
   // Télétravail aussi (02/10/2026, signalé : « à prévoir » avec un blazer pour une journée chez soi).
   const chezSoi = estContexteMaison(occasion, workMode);
-  const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau");
+  // Une maille qui se porte PAR-DESSUS compte comme la couche du soir (14/10/2026, signalé : une tenue Sport avec un sweat à capuche
+  // zippé recevait « ajoute une veste ») : maille ouverte (gilet, cardigan, zippé — fermetureMaille) ou sweat à capuche, toutes
+  // occasions. Un pull simple, enfilé sous rien, ne compte pas : c'est le haut, pas une couche en plus.
+  const hasOuterwear = pieces.some((i) => i.cat === "veste" || i.cat === "manteau" || estCoucheDuSoir(i));
   if (!chezSoi && weather.temp <= SEUIL_SOIREE_FRAICHE && !hasOuterwear && !dismissed.has("veste_soir")) {
     // Occasion sport (recette 25/08/2026, signalé : blazer structuré
     // suggéré sur une tenue baskets + short cycliste) — préférence molle
