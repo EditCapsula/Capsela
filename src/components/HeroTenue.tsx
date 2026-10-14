@@ -7,6 +7,7 @@ import { resolveItemImage } from "@/lib/catalogImages";
 import { CATLABEL, isBag } from "@/lib/data";
 import { clePieces } from "@/lib/outfitFeedback";
 import { useCapsela } from "@/lib/store";
+import { useOuvrirPiece } from "@/components/useOuvrirPiece";
 import type { Item } from "@/lib/types";
 
 /**
@@ -36,6 +37,7 @@ export function HeroTenue({
   info?: string;
   actions: { cle: string; glyphe: string; libelle: string; onClick: () => void }[];
 }) {
+  const ouvrirPiece = useOuvrirPiece();
   const total = pieces.length;
   const capsule = pieces.filter((p) => isCatalogId(p.id)).length;
   const dressing = total - capsule;
@@ -65,7 +67,7 @@ export function HeroTenue({
           )}
           {total > 0 ? (
             <div className="absolute inset-y-0 left-2 right-2">
-              <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id)).join(",")} />
+              <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(pieces.map((p) => p.id)).join(",")} onPiece={ouvrirPiece} />
             </div>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-center px-6 text-[13px] leading-[1.5] text-ink-soft">{vide}</div>
