@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { DESSINS_SILHOUETTE } from "@/lib/silhouetteFlatLay";
 import { margesDe, objectBounds, ratioHero } from "@/lib/catalogMarges";
 import { resolveHeroImage } from "@/lib/catalogImages";
@@ -67,7 +67,24 @@ export function FlatLayCapsela({
    */
   ajouts?: { item: Item; onAjouter: () => void }[];
 }) {
-  const HAUTEUR = hauteurDuContexte(context);
+  // LA ZONE PREND LE FORMAT DE SON CADRE (14/10/2026, « exploiter tout l'espace alloué au flat lay ») : la planche gardait le format fixe
+  // du contexte et laissait vides les bords d'un cadre plus large ou plus haut. Mesurée avant la peinture ; bornée entre le carré et
+  // 140 (au-delà, les gabarits n'ont pas été pensés pour). Sans mesure (premier rendu, cadre nul) : le format du contexte.
+  const cadre = useRef<HTMLDivElement>(null);
+  const [formatCadre, setFormatCadre] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = cadre.current;
+    if (!el) return;
+    const lire = () => {
+      const { width, height } = el.getBoundingClientRect();
+      if (width > 0 && height > 0) setFormatCadre(Math.round(Math.min(140, Math.max(100, (100 * height) / width))));
+    };
+    lire();
+    const ro = new ResizeObserver(lire);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const HAUTEUR = formatCadre ?? hauteurDuContexte(context);
   const graine = layoutSeed;
   const images = useMemo(() => {
     const toutes = items.map((it) => {
@@ -112,9 +129,9 @@ export function FlatLayCapsela({
           return { id: it.id, cat: it.cat, ratio, accessoireType: it.accessoireType, photoBrute: img.kind === "photo" };
         }),
         graine,
-        { contexte: context, template, piecesEnPlus: images.filter((e) => e.ajout).length }
+        { contexte: context, template, piecesEnPlus: images.filter((e) => e.ajout).length, hauteurZone: HAUTEUR }
       ).pieces,
-    [images, graine, context, template]
+    [images, graine, context, template, HAUTEUR]
   );
 
   // Toutes les images chargées (ou en échec) : la planche est prête.
@@ -136,13 +153,14 @@ export function FlatLayCapsela({
     }
   }, [attendues, onPret]);
 
-  if (!composition.length) return null;
   return (
     <div
+      ref={cadre}
       className="absolute inset-0 w-full h-full flex items-center justify-center transition-opacity duration-[420ms] ease-out motion-reduce:transition-none"
       // `isolation` : les profondeurs des pièces (jusqu'à 60) restent DANS la planche. Sans elle, le sac passait par-dessus la barre
       // du bas (z-20) dès que la planche défilait dessous — corrigé le 08/10/2026 après le passage des profondeurs en dizaines.
-      style={{ containerType: "size", opacity: attendre ? 0 : 1, isolation: "isolate" }}
+      // Une planche vide reste montée (le cadre se mesure) mais ne capte aucun geste destiné à ce qui est dessous.
+      style={{ containerType: "size", opacity: attendre ? 0 : 1, isolation: "isolate", pointerEvents: composition.length ? undefined : "none" }}
     >
       <div style={{ position: "relative", width: `min(100cqw, calc(100cqh * ${100 / HAUTEUR}))`, aspectRatio: `100 / ${HAUTEUR}` }}>
         {composition.map((p) => {

@@ -162,15 +162,17 @@ describe("contextes du flat lay — un moteur, des paramètres différents", () 
     expect(Math.abs(angle(home, "hero"))).toBeLessThanOrEqual(LIMITE_INCLINAISON.hero + 1e-9);
   });
 
-  it("look-detail : la pièce héro occupe une plus grande part de la zone que sur la homepage", () => {
-    const part = (r: ReturnType<typeof composerFlatLay>, h: number) => {
+  it("look-detail : la pièce héro est plus grande à l'écran que sur la homepage", () => {
+    // En pixels et non plus en part de zone (14/10/2026) : la composition de l'accueil, resserrée, remplit davantage SA zone (196 × 219 px
+    // à 390 px) ; celle de la Tenue du jour, qui pose toute la tenue, en remplit moins, mais dans une zone deux fois et demie plus grande
+    // (310 × 350 px). C'est la taille à l'écran que la règle protège.
+    const px = (r: ReturnType<typeof composerFlatLay>, largeurPx: number) => {
       const hero = r.pieces.find((q) => q.role === "hero")!;
-      return (hero.l * hero.h) / (100 * h);
+      return ((hero.l * largeurPx) / 100) * ((hero.h * largeurPx) / 100);
     };
-    const home = composerFlatLay(look(), "ctx", { contexte: "hero-home" });
-    const detail = composerFlatLay(look(), "ctx", { contexte: "look-detail" });
-    // 0,75 et non 0,9 depuis le 10/10/2026 : la veste héro de l'accueil est agrandie de 20 %.
-    expect(part(detail, CONTEXTES["look-detail"].hauteur)).toBeGreaterThan(part(home, CONTEXTES["hero-home"].hauteur) * 0.75);
+    const home = composerFlatLay(look(), "ctx", { contexte: "hero-home", hauteurZone: 112 });
+    const detail = composerFlatLay(look(), "ctx", { contexte: "look-detail", hauteurZone: 113 });
+    expect(px(detail, 310)).toBeGreaterThan(px(home, 196));
   });
 
   it("une robe est centrée en look-detail, sac et chaussures dessous de part et d'autre", () => {
@@ -380,7 +382,8 @@ describe("regroupement stylistique — les couches d'une même tenue restent ens
     for (let i = 0; i < 30; i++) {
       const o = par(pullTee(), "i" + i, "look-detail");
       expect(ecart(o.couche, o.secondaire)).toBeLessThan(ecart(o.couche, o.chaussures) + 1e-9);
-      expect(ecart(o.couche, o.secondaire)).toBeLessThan(ecart(o.couche, o.sac));
+      // ≤ et non < depuis le 14/10/2026 : la composition resserrée pose le t-shirt contre le pull ET contre le sac (écarts nuls).
+      expect(ecart(o.couche, o.secondaire)).toBeLessThanOrEqual(ecart(o.couche, o.sac));
     }
   });
 
@@ -444,14 +447,16 @@ describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « 
     }
   });
 
-  it("chemise et blazer se rapprochent (moins de 12 unités entre eux), le pantalon reste dessous sans les recouvrir de plus de 20 %", () => {
+  // 30 % et non plus 20 % depuis le 14/10/2026 (« le flat lay est encore trop timide ») : le chevauchement toléré passe de 18 à 30 % de
+  // la boîte de la pièce, pour que la composition, plus serrée, soit agrandie. Les trois tests de recouvrement suivent ce seuil.
+  it("chemise et blazer se rapprochent (moins de 12 unités entre eux), le pantalon reste dessous sans les recouvrir de plus de 30 %", () => {
     for (let i = 0; i < 30; i++) {
       const sortie = composerFlatLay(CONFIGS["chemise + pantalon + blazer + sac + chaussures"], "c" + i, { contexte: "hero-home" }).pieces;
       const o = Object.fromEntries(sortie.map((q) => [q.cat, q]));
       const ecart = boiteDe(o.veste).x0 - boiteDe(o.haut).x1;
       expect(ecart, `graine ${i}`).toBeLessThan(12);
-      expect(part(o.pantalon, o.haut)).toBeLessThanOrEqual(0.2);
-      expect(part(o.pantalon, o.veste)).toBeLessThanOrEqual(0.2);
+      expect(part(o.pantalon, o.haut)).toBeLessThanOrEqual(0.3 + 1e-9);
+      expect(part(o.pantalon, o.veste)).toBeLessThanOrEqual(0.3 + 1e-9);
     }
   });
 
@@ -466,16 +471,16 @@ describe("accueil (hero-home) — 3 à 4 pièces lisibles (09/10/2026, brief « 
       }
   });
 
-  it("chaque tenue de référence : recouvrement faible (≤ 20 % de la plus petite), tout dans la zone de sécurité, déterministe", () => {
+  it("chaque tenue de référence : recouvrement borné (≤ 30 % de la plus petite), tout dans la zone de sécurité, déterministe", () => {
     const h = CONTEXTES["hero-home"].hauteur;
     const m = CONTEXTES["hero-home"].marge;
-    expect(CONTEXTES["hero-home"].chevauchementMax ?? CHEVAUCHEMENT_MAX).toBeLessThanOrEqual(0.2);
+    expect(CONTEXTES["hero-home"].chevauchementMax ?? CHEVAUCHEMENT_MAX).toBeLessThanOrEqual(0.3);
     for (const [nom, pieces] of Object.entries(CONFIGS))
       for (let i = 0; i < 30; i++) {
         const sortie = composerFlatLay(pieces, "r" + i, { contexte: "hero-home" }).pieces;
         expect(composerFlatLay(pieces, "r" + i, { contexte: "hero-home" }).pieces, nom).toEqual(sortie);
         for (let a = 0; a < sortie.length; a++)
-          for (let b = a + 1; b < sortie.length; b++) expect(part(sortie[a], sortie[b]), `${nom} graine ${i} : ${sortie[a].cat}/${sortie[b].cat}`).toBeLessThanOrEqual(0.2);
+          for (let b = a + 1; b < sortie.length; b++) expect(part(sortie[a], sortie[b]), `${nom} graine ${i} : ${sortie[a].cat}/${sortie[b].cat}`).toBeLessThanOrEqual(0.3 + 1e-9);
         const boites = sortie.map(boiteDe);
         expect(Math.min(...boites.map((b) => b.x0)), nom).toBeGreaterThanOrEqual(m - 1e-6);
         expect(Math.max(...boites.map((b) => b.x1)), nom).toBeLessThanOrEqual(100 - m + 1e-6);
@@ -584,7 +589,7 @@ describe("tous les hero du flat lay — aucune rotation (09/10/2026)", () => {
         for (let i = 0; i < 10; i++)
           for (const q of composerFlatLay(pieces, "c" + i, { contexte }).pieces) expect(Object.is(q.angle, 0), `${contexte} ${q.cat}`).toBe(true);
   });
-  it("sans inclinaison, le recouvrement reste faible (≤ 20 % de la plus petite) : aucune compensation par des chevauchements", () => {
+  it("sans inclinaison, le recouvrement reste borné (≤ 30 % de la plus petite depuis le 14/10/2026) : aucune compensation par des chevauchements", () => {
     const part = (a: PlacementFlatLay, b: PlacementFlatLay) => {
       const A = boiteDe(a);
       const B = boiteDe(b);
@@ -594,7 +599,7 @@ describe("tous les hero du flat lay — aucune rotation (09/10/2026)", () => {
     for (const pieces of configs)
       for (let i = 0; i < 30; i++) {
         const sortie = composerFlatLay(pieces, "s" + i, { contexte: "hero-home" }).pieces;
-        for (let a = 0; a < sortie.length; a++) for (let b = a + 1; b < sortie.length; b++) expect(part(sortie[a], sortie[b]), `graine ${i}`).toBeLessThanOrEqual(0.2);
+        for (let a = 0; a < sortie.length; a++) for (let b = a + 1; b < sortie.length; b++) expect(part(sortie[a], sortie[b]), `graine ${i}`).toBeLessThanOrEqual(0.3 + 1e-9);
       }
   });
 });
@@ -614,11 +619,50 @@ describe("accueil (hero-home) — le haut et la veste agrandis de 20 % (10/10/20
   it("le haut et la veste sont plus larges qu'avant, le bas et les chaussures gardent leur gabarit", () => {
     expect(CONTEXTES["hero-home"].echellesCategorie).toMatchObject({ haut: 1.2, veste: 1.2 });
     const apres = Object.fromEntries(avec(CONTEXTES["hero-home"].echellesCategorie).map((q) => [q.cat, q.l]));
-    const avant = Object.fromEntries(avec(undefined).map((q) => [q.cat, q.l]));
+    // Le levier seul (14/10/2026) : « avant » garde les autres échelles du contexte (le bas, agrandi depuis) et retire celles du haut et de la veste.
+    const sansHautNiVeste = Object.fromEntries(Object.entries(CONTEXTES["hero-home"].echellesCategorie ?? {}).filter(([cat]) => !["haut", "pull", "veste", "manteau"].includes(cat)));
+    const avant = Object.fromEntries(avec(sansHautNiVeste).map((q) => [q.cat, q.l]));
     expect(apres.haut).toBeGreaterThan(avant.haut * 1.05);
     expect(apres.veste).toBeGreaterThan(avant.veste * 1.05);
   });
   it("les autres contextes ne changent pas", () => {
-    expect(CONTEXTES["look-detail"].echellesCategorie).toBeUndefined();
+    // Le haut et la veste : agrandis sur l'accueil seulement. (Le bas l'est aussi dans la Tenue du jour depuis le 14/10/2026.)
+    expect(CONTEXTES["look-detail"].echellesCategorie?.haut).toBeUndefined();
+    expect(CONTEXTES["look-detail"].echellesCategorie?.veste).toBeUndefined();
+  });
+});
+
+describe("hero — la tenue prend toute la place de sa zone (14/10/2026, « le flat lay est encore trop timide »)", () => {
+  const boite = (q: PlacementFlatLay) => boiteDe(q);
+  const hautPantalon = () => [p("haut", 0.95), p("pantalon", 0.45), p("chaussures", 1.3)];
+  it("le pantalon prend plus de hauteur : jusqu'à 92 % de la zone, les chaussures à côté de lui quand il n'y a pas de sac", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const) {
+      expect(CONTEXTES[contexte].hauteurBasMax).toBe(0.92);
+      for (let i = 0; i < 20; i++) {
+        const o = Object.fromEntries(composerFlatLay(hautPantalon(), "b" + i, { contexte }).pieces.map((q) => [q.cat, q]));
+        const h = CONTEXTES[contexte].hauteur;
+        expect(o.pantalon.h / h, `${contexte} graine ${i}`).toBeGreaterThan(0.75);
+        // À côté et non dessous : les chaussures ne sont pas sous l'emprise horizontale du pantalon.
+        const bp = boite(o.pantalon);
+        const bc = boite(o.chaussures);
+        expect(bc.x1 <= bp.x0 + 0.3 * (bp.x1 - bp.x0) || bc.x0 >= bp.x1 - 0.3 * (bp.x1 - bp.x0), `${contexte} graine ${i}`).toBe(true);
+      }
+    }
+  });
+  it("avec un sac, les chaussures gardent leur place sous le bas (la colonne du haut et du sac est pleine)", () => {
+    const o = Object.fromEntries(composerFlatLay([...hautPantalon(), p("sac", 1)], "s", { contexte: "hero-home" }).pieces.map((q) => [q.cat, q]));
+    expect(o.chaussures.y).toBeGreaterThan(o.pantalon.y);
+  });
+  it("la zone prend le format de son cadre : avec une hauteur donnée, tout y tient, marges comprises", () => {
+    for (const contexte of ["hero-home", "look-detail"] as const)
+      for (const hauteurZone of [100, 113, 126, 140]) {
+        const c = CONTEXTES[contexte];
+        const sortie = composerFlatLay([p("veste", 0.9), p("haut", 0.9), p("pantalon", 0.5), p("chaussures", 1.3), p("sac", 1)], "z", { contexte, hauteurZone }).pieces;
+        const b = sortie.map(boite);
+        expect(Math.min(...b.map((x) => x.x0)), `${contexte} ${hauteurZone}`).toBeGreaterThanOrEqual(c.marge - 1e-6);
+        expect(Math.max(...b.map((x) => x.x1)), `${contexte} ${hauteurZone}`).toBeLessThanOrEqual(100 - c.marge + 1e-6);
+        expect(Math.min(...b.map((x) => x.y0)), `${contexte} ${hauteurZone}`).toBeGreaterThanOrEqual((c.margeHaute ?? c.marge) - 1e-6);
+        expect(Math.max(...b.map((x) => x.y1)), `${contexte} ${hauteurZone}`).toBeLessThanOrEqual(hauteurZone - c.marge + 1e-6);
+      }
   });
 });

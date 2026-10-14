@@ -262,3 +262,25 @@ Une couche mince POSÉE AU-DESSUS du moteur existant (`flatLay.ts`), qui reste l
 **Validation visuelle** : `scripts/flatlay-templates.audit.ts` (lecture seule) compose des tenues réelles du catalogue (8 styles × 4 saisons × 6 occasions) et rend actuel / template côte à côte dans une page HTML (`FLATLAY_SORTIE`, `FLATLAY_MAX`, `FLATLAY_CONTEXTE`).
 - **DÉMONTRÉ** (rendu regardé le 14/10/2026, 16 tenues : robe, blazer-chic, haut-bas-veste) : après un premier réglage, les pièces restent entières et lisibles, le sac ne chevauche aucun vêtement. Le premier jet cachait en partie le bas sous la veste ; les gabarits ont été resserrés en conséquence.
 - **NON DÉMONTRÉ** : veste-dominante, minimaliste et combinaison (aucune tenue réelle dans l'échantillon, couverts seulement par tests synthétiques de bornes et de déterminisme) ; le contexte hero-home en rendu réel.
+
+## La tenue prend toute la place de sa zone (14/10/2026)
+
+Demandé : « le flat lay des tenues est encore trop timide », puis « le pantalon doit prendre plus de hauteur ». Constat mesuré : la
+composition remplissait déjà sa zone dans une dimension ; le vide venait de pièces écartées les unes des autres (gabarits, chevauchement
+toléré de 18 %), de chaussures posées sous le pantalon, et d'une planche au format fixe dans un cadre plus large (Tenue : 32 px perdus à
+390 px, 72 px à 430 px).
+
+- **Resserrement** (`resserrement: 0.7`, accueil et Tenue du jour) : les emplacements des gabarits sont rapprochés du centre de 30 %, la
+  composition est ensuite agrandie pour remplir la zone. Les emplacements des accessoires sont essayés resserrés et tels quels.
+- **Chevauchement toléré : 30 %** de la boîte de la pièce (au lieu de 18 %). Mesure (5 à 6 tenues-types × 4 graines, même exécution) :
+  pièces couvrant 61 → 75 % de la zone sur l'accueil, 65 → 75 % sur la Tenue ; le resserrement seul 69 %, la tolérance seule 62 %.
+- **Le bas** (pantalon, jean, jupe, short) : × 1,2, jusqu'à 92 % de la hauteur de la zone, et les chaussures à côté de lui quand la tenue
+  n'a pas de sac (`refsSansSac`). Hauteur du bas : 64 → 77 % de la zone sur l'accueil, 62 → 69 % sur la Tenue. Avec un sac, les
+  chaussures restent dessous (à gauche, elles faisaient monter le chevauchement à 52 %).
+- **La zone prend le format de son cadre** (`FlatLayCapsela`, `hauteurZone`) : mesuré avant la peinture, borné entre 100 et 140.
+- **Écarté** : le sac et les chaussures × 1,25 — ils prenaient la place de la pièce héro et du bas, et les collants sortaient de la planche.
+- **Compromis connu** : une veste héro sur la Tenue du jour, avec un bas dessous, perd un peu de largeur (40 → 37 unités) au profit du bas.
+
+Vérifié en rendu réel avec les visuels du catalogue (mode démo, catalogue servi localement), 360 / 390 / 430 px, mêmes tenues avant et après.
+**NON VÉRIFIÉ** : les photos détourées du dressing (aucune accessible ici) ; leurs marges transparentes ne sont pas recadrées, elles
+peuvent paraître plus petites que les visuels du catalogue.

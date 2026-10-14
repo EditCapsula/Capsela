@@ -166,6 +166,8 @@ export interface Ref {
   y: number;
   l: number;
   angle: number;
+  /** false : l'emplacement n'est pas rapproché du centre par le `resserrement` du contexte (essai d'un accessoire). */
+  resserre?: boolean;
 }
 interface ConfigContexte {
   hauteur: number;
@@ -193,9 +195,23 @@ interface ConfigContexte {
   maxPieces?: number;
   /** Combien l'ajustement à la zone peut AGRANDIR la composition (défaut 1,1) : un contexte compact la laisse remplir sa zone. */
   agrandissementMax?: number;
+  /**
+   * Rapproche les emplacements du gabarit du centre de la zone (1 = le gabarit tel quel, 0,8 = 20 % plus près) avant les collisions et
+   * l'ajustement à la zone : la composition, plus serrée, est ensuite agrandie pour remplir la zone — les pièces y gagnent leur taille.
+   */
+  resserrement?: number;
+  /** Hauteur maximale d'un bas (pantalon, jean, jupe, short), en part de la hauteur de la zone (sinon 0,78, la règle de toutes les pièces). */
+  hauteurBasMax?: number;
+  /** Largeur maximale de la pièce héro dans ce contexte (sinon LARGEUR_HERO_MAX). */
+  largeurHeroMax?: number;
   /** Seuils de chevauchement propres au contexte (sinon CHEVAUCHEMENT_MAX / MASQUE_MAX). */
   chevauchementMax?: number;
   masqueMax?: number;
+  /**
+   * Emplacements qui remplacent les autres quand la tenue n'a PAS de sac (14/10/2026, « le pantalon doit prendre plus de hauteur ») : la
+   * place du sac libérée, les chaussures quittent le dessous du bas pour se poser à côté — le bas peut alors prendre toute la hauteur.
+   */
+  refsSansSac?: Partial<Record<RoleFlatLay, Ref>>;
   /** Gabarit d'un bas héro AVEC une couche (pull + t-shirt à gauche, bas à droite, chaussures dessous, sac contre le bas). */
   refsGroupe?: Partial<Record<RoleFlatLay, Ref>>;
   slotsAccessoires: Ref[];
@@ -258,11 +274,24 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
     // (HomeScreen). Les pièces restent à 10 px au moins du bord de la card.
     marge: 3,
     agrandissementMax: 1.3,
+    // « Le flat lay est encore trop timide » (14/10/2026) : les emplacements rapprochés de 30 % et un chevauchement toléré de 30 % au lieu de
+    // 18 % (mesuré sur la boîte de la pièce, qui laisse du vide autour de la silhouette) — la composition, plus serrée, est agrandie
+    // pour remplir la zone. Mesure (tmp, 6 tenues × 4 graines) : les pièces couvrent 75 % de la zone au lieu de 61 % ; le resserrement
+    // seul en donne 69 %, la tolérance seule 62 % — les deux se débloquent l'une l'autre. DÉMONTRÉ sur ces tenues-types.
+    resserrement: 0.7,
+    chevauchementMax: 0.3,
+    masqueMax: 0.3,
     // 4 pièces au plus (09/10/2026) : le haut, le bas ou la robe, les chaussures et le sac se lisent ; un accessoire seulement s'il reste de la place.
     maxPieces: 4,
     // « Augmente le haut de 20 % et la veste de 20 % aussi » (10/10/2026) : sur l'accueil, les hauts (t-shirt, chemise, pull) et les vestes
     // se lisent mieux plus grands ; le manteau, autre pièce du dessus, suit la veste. Les autres contextes ne changent pas.
-    echellesCategorie: { haut: 1.2, pull: 1.2, veste: 1.2, manteau: 1.2 },
+    // Le bas +20 % et jusqu'à 92 % de la hauteur de la zone, les chaussures à côté du bas quand il n'y a pas de sac (14/10/2026, « le
+    // pantalon doit prendre plus de hauteur ») : le bas passe de 64 à 77 % de la hauteur de la zone (tmp, 5 tenues × 4 graines, même
+    // exécution ; l'échelle seule : 67 %, plafonnée par les chaussures posées dessous). Avec un sac, la colonne de gauche est pleine :
+    // les chaussures y faisaient monter le chevauchement à 52 %, elles restent sous le bas.
+    echellesCategorie: { haut: 1.2, pull: 1.2, veste: 1.2, manteau: 1.2, pantalon: 1.2, jean: 1.2, jupe: 1.2, short: 1.2 },
+    hauteurBasMax: 0.92,
+    refsSansSac: { chaussures: { x: 26, y: 88, l: 34, angle: 0 } },
     sansMiroir: true,
     maxAccessoires: [1, 0],
     ecartAccessoireMax: 12,
@@ -278,6 +307,16 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
   "look-detail": {
     hauteur: 126,
     marge: 5,
+    // Même réglage que l'accueil (14/10/2026) : 75 % de la zone couverte au lieu de 65 % ; le sac et les chaussures +25 % (plus petite
+    // pièce : 41 % de la zone au lieu de 36 %).
+    resserrement: 0.7,
+    // Le bas comme sur l'accueil (14/10/2026) : de 62 à 69 % de la hauteur de la zone. Le sac et les chaussures ne sont PAS agrandis : essayé
+    // (× 1,25) le même jour, ils prenaient la place de la pièce héro et du bas, et un accessoire de l'accueil (les collants) sortait de la planche.
+    echellesCategorie: { pantalon: 1.2, jean: 1.2, jupe: 1.2, short: 1.2 },
+    hauteurBasMax: 0.92,
+    refsSansSac: { chaussures: { x: 20, y: 98, l: 36, angle: 0 } },
+    chevauchementMax: 0.3,
+    masqueMax: 0.3,
     // 28 px sur les 278 px de large de la planche : la ligne de badges se pose par-dessus la zone, jamais sur une pièce.
     margeHaute: 10,
     // Deux accessoires au plus dans le flat lay principal (calibrage du 08/10/2026).
@@ -310,6 +349,11 @@ export const CONTEXTES: Record<ContexteFlatLay, ConfigContexte> = {
       { x: 90, y: 66, l: 18, angle: 8 },
       { x: 10, y: 12, l: 18, angle: -8 },
       { x: 50, y: 118, l: 20, angle: 6 },
+      // Les coins restants (14/10/2026) : des pièces plus grandes couvraient les trois emplacements d'avant, l'accessoire était écarté.
+      { x: 90, y: 12, l: 18, angle: 8 },
+      { x: 10, y: 66, l: 18, angle: -8 },
+      { x: 10, y: 118, l: 18, angle: -6 },
+      { x: 90, y: 118, l: 18, angle: 6 },
     ],
   },
   capsule: { hauteur: 100, marge: 4, maxAccessoires: [1, 1], ecartAccessoireMax: 12, refs: REF_HOME, slotsAccessoires: SLOTS_HOME },
@@ -443,6 +487,11 @@ export interface OptionsFlatLay {
    * doit pas prendre la place d'une pièce de la tenue.
    */
   piecesEnPlus?: number;
+  /**
+   * La hauteur RÉELLE de la zone, en unités de largeur (14/10/2026) : celle du cadre que l'écran donne à la planche, au lieu du format fixe du
+   * contexte. Sans elle, une planche au format 100/126 posée dans un cadre plus large laissait ses bords vides (Tenue : 32 px à 390 px).
+   */
+  hauteurZone?: number;
 }
 
 /**
@@ -483,7 +532,7 @@ export function composerFlatLay(
   options: OptionsFlatLay = {}
 ): { pieces: PlacementFlatLay[]; ecartees: number[]; masquees: number[] } {
   const config = CONTEXTES[options.contexte ?? "hero-home"];
-  const hauteurZone = config.hauteur;
+  const hauteurZone = options.hauteurZone ?? config.hauteur;
   const retirees = pieces.filter((p) => !!p.accessoireType && !!config.accessoiresMasques?.includes(p.accessoireType));
   const compatibles = pieces.filter((p) => p.flatLayCompatible !== false && !retirees.includes(p));
   // Un contexte qui limite le nombre de pièces (hero-home) ne pose que les plus représentatives ; les autres restent dans la tenue.
@@ -514,7 +563,8 @@ export function composerFlatLay(
   // Un template (13/10/2026) ne vaut que sur les contextes qui montrent une tenue entière en grand ; les autres gardent leur gabarit.
   const template = options.template && (options.contexte === "look-detail" || options.contexte === "hero-home") ? options.template : null;
   const gabaritTemplate = template ? GABARITS_TEMPLATES[template] : null;
-  const refDe = (role: RoleFlatLay): Ref => (gabaritTemplate?.[role]) || (heroRobe && config.refsRobe?.[role]) || (heroDessus && config.refsDessus?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
+  const sansSac = !roles.some((r) => r.role === "sac");
+  const refDe = (role: RoleFlatLay): Ref => (gabaritTemplate?.[role]) || (sansSac && !heroRobe && !heroDessus && config.refsSansSac?.[role]) || (heroRobe && config.refsRobe?.[role]) || (heroDessus && config.refsDessus?.[role]) || (groupe && config.refsGroupe?.[role]) || config.refs[role];
 
   // Les accessoires : on garde les plus utiles, en nombre limité par le contexte et le nombre de pièces.
   const accessoires = roles.filter((r) => r.role === "accessoire").sort((a, b) => rangAccessoire(a.piece.cat) - rangAccessoire(b.piece.cat));
@@ -528,13 +578,14 @@ export function composerFlatLay(
     if (nb >= 6 && (role === "secondaire" || role === "accessoire")) l *= 0.88;
     const ratio = piece.ratio > 0 ? piece.ratio : 1;
     // Une pièce haute ne dépasse pas 78 % de la hauteur de la zone.
-    const hMax = hauteurZone * 0.78;
+    const hMax = hauteurZone * (BAS.includes(piece.cat) && config.hauteurBasMax ? config.hauteurBasMax : 0.78);
     if (l / ratio > hMax) l = hMax * ratio;
     // Correction ponctuelle d'une pièce (flatLayTemplates.ts) : seulement avec un template ; sans lui, aucune.
     const corr = template ? CORRECTIONS_PIECES[piece.id] : undefined;
     if (corr?.echelle) l *= corr.echelle;
-    let cx = ref.x + dans(-2, 2) + (corr?.dx ?? 0);
-    const cy = ref.y + dans(-2, 2) + (hauteurZone - 100) / 2 + (corr?.dy ?? 0);
+    const r = ref.resserre === false ? 1 : (config.resserrement ?? 1);
+    let cx = 50 + (ref.x - 50) * r + dans(-2, 2) + (corr?.dx ?? 0);
+    const cy = 50 + (ref.y - 50) * r + dans(-2, 2) + (hauteurZone - 100) / 2 + (corr?.dy ?? 0);
     const lim = LIMITE_INCLINAISON[role];
     let angle = ref.angle + dans(-1.5, 1.5);
     if (typeof piece.preferredRotation === "number") angle = piece.preferredRotation;
@@ -584,7 +635,10 @@ export function composerFlatLay(
   for (const { piece } of accessoires.filter((r) => gardes.has(r.piece))) {
     let meilleur: ReturnType<typeof placer> | null = null;
     let meilleurEcart = Infinity;
-    for (const slot of config.slotsAccessoires) {
+    // Chaque emplacement est essayé resserré ET tel quel (14/10/2026) : resserré seul, il tombait sur les pièces ; tel quel seul, il
+    // s'éloignait de la composition plus serrée — dans les deux cas l'accessoire était écarté (les collants de l'accueil, demandés le même jour).
+    const essais = config.resserrement && config.resserrement !== 1 ? config.slotsAccessoires.flatMap((slot) => [slot, { ...slot, resserre: false }]) : config.slotsAccessoires;
+    for (const slot of essais) {
       const candidat = placer(piece, "accessoire", slot);
       // Un accessoire de moins de 8 % de la largeur de la zone ne se lit pas : il n'entre pas dans la planche principale.
       if (candidat.l < LARGEUR_ACCESSOIRE_MIN) continue;
@@ -619,7 +673,8 @@ export function composerFlatLay(
     pieces: brut.map((p) => {
       const l = p.l * k;
       // La pièce héro reste dominante sans écraser la planche : 58 % de la largeur de la zone au plus (elle rétrécit sur place).
-      const c = p.role === "hero" && l > LARGEUR_HERO_MAX ? LARGEUR_HERO_MAX / l : 1;
+      const heroMax = config.largeurHeroMax ?? LARGEUR_HERO_MAX;
+      const c = p.role === "hero" && l > heroMax ? heroMax / l : 1;
       return {
         ...p,
         x: 50 + (p.x - cxEns) * k,
