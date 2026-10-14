@@ -86,3 +86,58 @@ export default function BarreDuJour({ className = "", retro }: { className?: str
     </div>
   );
 }
+
+/**
+ * LA BARRE MÉTÉO D'UN LOOK PLANIFIÉ (14/10/2026) : la même ligne que celle de l'accueil et de Tenue — le lieu à gauche, la température
+ * et la condition à droite, « Max · min » dessous —, mais pour le LIEU et le MOMENT du plan, pas pour la position de la personne.
+ * `prevision` : la prévision du lieu pour le moment planifié (useMeteoDuPlan) ; sans elle (plan hors de l'horizon, sans lieu connu ou
+ * sans réponse), la météo enregistrée à la planification, DITE comme telle — jamais une température d'ailleurs.
+ */
+export function BarreDuPlan({
+  lieu,
+  moment,
+  prevision,
+  enregistree,
+  className = "",
+  children,
+}: {
+  lieu: string;
+  moment: string;
+  prevision: { temp: number; tempMin: number; tempMax: number; label: string } | null;
+  enregistree: { temp: number | null; label: string | null };
+  className?: string;
+  /** Les notes sous la barre : prévision changée, alerte, source de la prévision. */
+  children?: React.ReactNode;
+}) {
+  const temp = prevision ? prevision.temp : enregistree.temp;
+  const label = prevision ? prevision.label : enregistree.label;
+  const soleil = !!label && /soleil|dégagé|clair|ensoleill/i.test(label);
+  return (
+    <div className={className}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-[6px] min-w-0 text-[12.5px] font-medium text-ink min-h-[44px]">
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" className="flex-shrink-0 text-muted" style={{ display: "block" }}>
+            <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+              <path d="M12 12.3a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6z" />
+            </g>
+          </svg>
+          <span className="truncate">{lieu || "Lieu non précisé"}</span>
+          <span aria-hidden="true" className="text-muted">·</span>
+          <span className="text-muted-3 whitespace-nowrap">{moment}</span>
+        </div>
+        {temp != null && (
+          <div className="flex-shrink-0 text-right" aria-label={`${temp}°${label ? `, ${label}` : ""}`}>
+            <div className="flex items-center justify-end gap-[6px] text-terracotta">
+              <IconeTuile nom={soleil ? "apresmidi" : "nuage"} taille={22} />
+              <span className="text-[20px] font-medium text-ink tabular-nums">{temp}°</span>
+            </div>
+            {label && <div className="text-[11px] text-muted mt-[2px] whitespace-nowrap">{label}</div>}
+            {prevision && <div className="text-[11px] text-muted-3 whitespace-nowrap tabular-nums">Max {prevision.tempMax}° · min {prevision.tempMin}°</div>}
+          </div>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}

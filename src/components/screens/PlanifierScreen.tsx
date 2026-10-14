@@ -9,8 +9,10 @@ import GateAvisStyliste from "@/components/GateAvisStyliste";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { CalendrierMois, IconeTuile, LigneIcone, ProgressionLibelles, TuileIcone, TuileOccasion, type IconePlanifier } from "@/components/PlanifierUI";
 import { OCCASIONS_EDITORIALES } from "@/lib/occasionEditoriale";
-import { GlypheOccasion, GlypheSousChoix } from "@/components/GlyphesOccasion";
+import { GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { OutfitComposition } from "@/components/OutfitComposition";
+import { HeroTenue, RailPiecesTenue } from "@/components/HeroTenue";
+import { BarreDuPlan } from "@/components/BarreDuJour";
 import SegmentedControl from "@/components/SegmentedControl";
 import TabBar from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
@@ -21,7 +23,7 @@ import { decisionAcces, premiumRequis } from "@/lib/autorisations";
 import { titreLookDuJour } from "@/lib/logic";
 import { humeursProposees, libelleHumeur, genererTenueHumeur, type Humeur } from "@/lib/humeur";
 import { soireeHabillee } from "@/lib/occasions";
-import { jourLocal, memeTenue } from "@/lib/outfitFeedback";
+import { jourLocal } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
@@ -125,12 +127,6 @@ const G_CINTRE = (
     <path d="M14 9.4 3.9 16.2a1 1 0 0 0 .6 1.8h15a1 1 0 0 0 .6-1.8L14 9.4z" {...T} />
   </>
 );
-const G_EPINGLE = (
-  <>
-    <path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 1 0-13 0C5.5 14.9 12 21 12 21z" {...T} />
-    <circle cx="12" cy="10.4" r="2.3" {...T} />
-  </>
-);
 /** Le dessin de l'onglet Planifier (TabBar) : la date d'une tenue planifiée porte l'icône de l'écran. */
 const G_CALENDRIER = (
   <>
@@ -144,22 +140,6 @@ const G_HORLOGE = (
     <path d="M12 7.5V12l3 2" {...T} />
   </>
 );
-/** Le glyphe météo de la valise (ValiseScreen, « Météo prévue »). */
-const G_METEO = (
-  <>
-    <path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 18.5z" {...T} />
-    <path d="M15.5 4.5v1.3M19.8 6.3l-.9.9M21.5 10.5h-1.3" {...T} />
-  </>
-);
-const G_CHEVRON = <path d="M9.5 6l6 6-6 6" {...T} strokeWidth={1.7} />;
-const G_COCHE_PETITE = <path d="M5 12.5l4.5 4.5L19 7.5" {...T} strokeWidth={2.2} />;
-const G_CRAYON = (
-  <>
-    <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" {...T} />
-    <path d="M14.5 7.5l3 3" {...T} />
-  </>
-);
-const G_COEUR = <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" {...T} />;
 
 const MOMENTS: [MomentJournee, string][] = [
   ["Matin", "Avant midi"],
@@ -260,37 +240,6 @@ function TitreEtape({ a, b }: { a: string; b: string }) {
   );
 }
 
-/** Une ligne de « Autres options » (détail d'une tenue planifiée) : libellé, chevron, 52 px. */
-function LigneOption({
-  label,
-  onClick,
-  danger = false,
-  disabled = false,
-}: {
-  label: React.ReactNode;
-  onClick: () => void;
-  danger?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={
-        "w-full flex items-center justify-between gap-3 text-left text-[13px] border-b border-divider last:border-b-0 cursor-pointer disabled:cursor-default " +
-        (danger ? "text-terracotta" : "text-ink")
-      }
-      style={{ minHeight: 52 }}
-    >
-      <span className="min-w-0">{label}</span>
-      {!disabled && (
-        <span className="flex-shrink-0 text-muted">
-          <Glyphe taille={15}>{G_CHEVRON}</Glyphe>
-        </span>
-      )}
-    </button>
-  );
-}
 
 /**
  * Ligne à choix unique. Le rond de sélection n'est pas décoratif : avec la
@@ -569,8 +518,6 @@ export default function PlanifierScreen() {
    */
   const [depuisPlan, setDepuisPlan] = useState<{ plan: TenuePlanifiee; remplacer: boolean } | null>(() => (state.planAAdapter ? { plan: state.planAAdapter.plan, remplacer: true } : null));
   const [aSupprimer, setASupprimer] = useState<TenuePlanifiee | null>(null);
-  /** « Enregistrer dans mes looks » demandé pour ce plan — le temps que l'insertion revienne. */
-  const [lookDemande, setLookDemande] = useState<string | null>(null);
   /**
    * AVIS DE STYLISTE depuis le détail d'une tenue planifiée (30/09/2026) — la
    * fonctionnalité existante, sa décision d'accès et son Gate, repris tels
@@ -683,7 +630,6 @@ export default function PlanifierScreen() {
   const [prevision, setPrevision] = useState<Prevision | null>(null);
   const [previsionEtat, setPrevisionEtat] = useState<"vide" | "encours" | "faite">("vide");
 
-  const occLongDe = (k: OccasionKey) => OCCASIONS.find(([x]) => x === k)?.[1] ?? occasionShortLabel(k);
   const occLabel = occ && occ !== "all" ? occasionShortLabel(occ) : "";
   const occLong = occ ? (OCCASIONS.find(([k]) => k === occ)?.[1] ?? "") : "";
 
@@ -2049,16 +1995,12 @@ export default function PlanifierScreen() {
           const villePlan = villeDuLieu(t.lieu);
           const passee = t.jour < jourLocal(new Date());
           const jourLong = `${DOW_LONG[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;
-          const dansMesLooks = state.savedLooks.some((l) => memeTenue(l.pieceIds, t.pieceIds));
           // Le texte éditorial du hero : la même phrase que la carte « Look du
           // jour » de l'accueil (titreLookDuJour), nourrie du sous-choix
           // enregistré — « ta journée en télétravail », « ton dîner »…
           // occasionPhrase ne fait que comparer : un sous-choix d'une autre
           // occasion (ou absent) retombe sur la phrase générale de l'occasion.
           const phrase = titreLookDuJour(t.occasion, (t.sousChoix ?? "") as WorkMode, (t.sousChoix ?? "") as DateContext);
-          // Occasion, précision, type de lieu, température : seulement ce qui
-          // a été enregistré. La ville est dans le titre, la date au-dessus.
-          const tempAffichee = meteoPlanVive && planOuvert?.id === t.id ? meteoPlanVive.temp : t.temp;
           return (
             <>
               {/* INTRODUCTION — type d'écran, occasion et ville, puis date et
@@ -2081,54 +2023,56 @@ export default function PlanifierScreen() {
                 </span>
               </div>
 
-              {/* LE HERO. Même famille que la carte « Look du jour » de
-                  l'accueil : terracotta, titre serif crème, pièces en planche
-                  (OutfitComposition "planche", 30/09/2026 — la même silhouette
-                  que l'accueil et l'écran Tenue) dans une zone de hauteur FIXE (même
-                  mesure que l'accueil et l'écran Tenue). Une robe longue ou
-                  des chaussures horizontales s'adaptent à la zone ; la zone ne
-                  s'adapte pas à elles, et rien ne bouge en dessous. */}
-              <div className="mt-[18px] bg-terracotta rounded-hero text-left" style={{ padding: "20px 18px 20px" }}>
-                <div className="font-serif text-[23px] min-[380px]:text-[26px] text-cream leading-[1.16]">
-                  {passee ? "Ton look était planifié" : "Ton look est prêt."}
-                </div>
-                <div className="font-serif italic text-[15px] leading-[1.4] mt-[8px]" style={{ color: "rgba(243,238,229,.86)" }}>
-                  {phrase}
-                </div>
-                {/* Même zone que la carte de l'accueil : 82 % de la largeur. */}
-                <div className="mt-[12px]" style={{ aspectRatio: "100 / 82" }}>
-                  {pieces.length > 0 ? (
-                    <OutfitComposition items={pieces} variant="planche" />
-                  ) : (
-                    <div
-                      className="h-full rounded-tuile flex items-center justify-center text-center px-6 text-[13px] leading-[1.5]"
-                      style={{ background: "rgba(243,238,229,.10)", color: "rgba(243,238,229,.86)" }}
-                    >
-                      Les pièces de ce look ne sont plus dans ton dressing.
-                    </div>
-                  )}
-                </div>
-                {/* Confirmation discrète (maquette du 04/10/2026) : « Dans tes looks » dit que le look est enregistré ; sinon,
-                    l'occasion, comme avant. */}
-                <div className="pt-[16px]">
-                  <span
-                    className="inline-flex items-center gap-[6px] whitespace-nowrap"
-                    style={{ fontSize: 11, background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)", borderRadius: 100, padding: "8px 14px" }}
-                  >
-                    {dansMesLooks ? (
-                      <>
-                        <Glyphe taille={13}>{G_COCHE_PETITE}</Glyphe>
-                        Dans tes looks
-                      </>
-                    ) : (
-                      <span className="inline-flex items-center gap-[6px] uppercase" style={{ fontSize: 9.5, letterSpacing: ".08em" }}>
-                        <GlypheOccasion occasion={t.occasion} taille={13} />
-                        {occLongDe(t.occasion)}
-                      </span>
+              {/* LA MÉTÉO DU LIEU ET DU MOMENT PLANIFIÉS (14/10/2026) : la même barre que l'accueil et Tenue, à la place de l'ancienne carte
+                  « Le contexte ». La prévision est celle du lieu du plan pour son moment ; sans elle, la météo enregistrée, dite comme telle. */}
+              <BarreDuPlan className="mt-[10px]" lieu={villePlan} moment={t.moment} prevision={meteoPlanVive} enregistree={{ temp: t.temp, label: t.weatherLabel }}>
+                {meteoPlanVive ? (
+                  <>
+                    {previsionAChange(t, meteoPlanVive) && (
+                      <div className="text-[11px] text-terracotta leading-[1.45] mt-[2px]">
+                        La prévision a changé depuis la planification{t.temp != null ? ` (${t.temp}°${t.weatherLabel ? `, ${t.weatherLabel.toLowerCase()}` : ""})` : ""}.
+                      </div>
                     )}
-                  </span>
-                </div>
-              </div>
+                    {alerteMeteoPlan(pieces, meteoPlanVive) && <div className="text-[11px] text-terracotta leading-[1.45] mt-[2px]">{alerteMeteoPlan(pieces, meteoPlanVive)}</div>}
+                    <div className="text-[10px] text-placeholder mt-[2px] leading-[1.4]">
+                      Prévision {ecartJoursPlan === 0 ? "d'aujourd'hui" : ecartJoursPlan === 1 ? "de demain" : "à jour"} à {villePlan || "ce lieu"}, pour {t.moment.toLowerCase()}
+                    </div>
+                  </>
+                ) : t.temp != null ? (
+                  <div className="text-[10px] text-placeholder mt-[2px] leading-[1.4]">Météo enregistrée à la planification — la prévision de ce lieu n&apos;est pas disponible pour cette date.</div>
+                ) : null}
+              </BarreDuPlan>
+
+              {/* LE HERO DE LA PAGE TENUE (14/10/2026, demandé), pour la tenue GARDÉE : mêmes mesures, mêmes actions discrètes — « Modifier ce look »
+                  à la place d'« Enregistrer », « Avis d'un proche » comme sur Tenue. */}
+              <HeroTenue
+                statut={passee ? "Ton look était planifié" : "Ta tenue planifiée"}
+                phrase={phrase}
+                pieces={pieces}
+                vide="Les pièces de ce look ne sont plus dans ton dressing."
+                info={passee ? undefined : `À porter ${ecartJoursPlan === 0 ? "aujourd'hui" : ecartJoursPlan === 1 ? "demain" : jourLong}.`}
+                actions={
+                  pieces.length > 0
+                    ? [
+                        { cle: "modifier", glyphe: "✎", libelle: "Modifier ce look", onClick: () => repartirDuPlan(t, "modifier") },
+                        {
+                          cle: "avis",
+                          glyphe: "✦",
+                          libelle: "Avis d'un proche",
+                          onClick: () =>
+                            actions.openOpinionShare({
+                              pieceIds: t.pieceIds,
+                              occasion: t.occasion,
+                              temp: t.temp,
+                              label: t.weatherLabel,
+                              moment: `pour ${DOW_LONG[d.getDay()].toLowerCase()} ${d.getDate()} ${MOIS[d.getMonth()]}`,
+                              plan: t,
+                            }),
+                        },
+                      ]
+                    : []
+                }
+              />
 
               {/* On dit ce qui manque plutôt que de compléter avec autre
                   chose : une pièce retirée du dressing depuis la
@@ -2140,37 +2084,8 @@ export default function PlanifierScreen() {
                 </div>
               )}
 
-              {/* LE CONTEXTE, compact : la météo d'abord quand elle est connue (celle d'aujourd'hui du lieu du plan, sinon
-                  celle enregistrée à la planification, dite comme telle), puis le type de lieu et le moment. */}
-              <Card className="mt-[14px] p-[15px] flex items-start gap-[12px]">
-                <span className="flex-shrink-0 text-terracotta mt-[1px]">
-                  <Glyphe taille={22}>{tempAffichee != null ? G_METEO : G_EPINGLE}</Glyphe>
-                </span>
-                <div className="min-w-0">
-                  <div className="t-label text-muted">Le contexte</div>
-                  <div className="text-[14px] text-ink font-medium leading-[1.35] mt-[5px]">
-                    {tempAffichee != null
-                      ? `${tempAffichee}°${(meteoPlanVive ? meteoPlanVive.label : t.weatherLabel) ? ` · ${meteoPlanVive ? meteoPlanVive.label : t.weatherLabel}` : ""}`
-                      : occLongDe(t.occasion)}
-                  </div>
-                  <div className="text-[12px] text-muted leading-[1.45] mt-[3px]">{[t.sousChoix, t.typeLieu, t.moment].filter(Boolean).join(" · ")}</div>
-                  {meteoPlanVive ? (
-                    <>
-                      {previsionAChange(t, meteoPlanVive) && (
-                        <div className="text-[12px] text-terracotta leading-[1.45] mt-[3px]">
-                          La prévision a changé depuis la planification{t.temp != null ? ` (${t.temp}°${t.weatherLabel ? `, ${t.weatherLabel.toLowerCase()}` : ""})` : ""}.
-                        </div>
-                      )}
-                      {alerteMeteoPlan(pieces, meteoPlanVive) && (
-                        <div className="text-[12px] text-terracotta leading-[1.45] mt-[3px]">{alerteMeteoPlan(pieces, meteoPlanVive)}</div>
-                      )}
-                      <div className="text-[11px] text-placeholder leading-[1.45] mt-[3px]">
-                        Prévision {ecartJoursPlan === 0 ? "d'aujourd'hui" : ecartJoursPlan === 1 ? "de demain" : "à jour"} à {villePlan || "ce lieu"}
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-              </Card>
+              {/* LE DÉTAIL DES PIÈCES, juste sous le hero comme sur la page Tenue. */}
+              <RailPiecesTenue pieces={pieces} />
 
               {/* L'AVIS DE STYLISTE, mis en avant (maquette du 04/10/2026) — la fonctionnalité Premium existante (son
                   écran, sa décision d'accès, son Gate), avec son propre CTA. Pas sur une tenue passée : « avant le jour J »
@@ -2189,78 +2104,6 @@ export default function PlanifierScreen() {
                   </Button>
                 </div>
               )}
-
-              {/* LES ACTIONS. Principale : modifier — rouvrir le parcours pré-rempli (repartirDuPlan). Secondaire : l'avis
-                  d'un proche (même écran de partage que la tenue du jour, qui décrit ici la tenue planifiée : ses pièces,
-                  son occasion, la prévision enregistrée). */}
-              <div className="mt-[18px] flex flex-col gap-[10px]">
-                <Card rayon="carte" className="" style={{ borderColor: "var(--color-terracotta)" }}>
-                  <button onClick={() => repartirDuPlan(t, "modifier")} className="w-full flex items-center gap-[14px] px-[16px] py-[14px] text-left cursor-pointer transition-opacity active:opacity-80" style={{ minHeight: 64 }}>
-                    <span aria-hidden="true" className="text-terracotta flex-shrink-0"><Glyphe taille={22}>{G_CRAYON}</Glyphe></span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-[14px] text-ink font-medium">Modifier ce look</span>
-                      <span className="block text-[12px] text-muted mt-[2px]">Reprendre ce look pour l&apos;ajuster</span>
-                    </span>
-                    <span aria-hidden="true" className="text-muted flex-shrink-0"><Glyphe taille={15}>{G_CHEVRON}</Glyphe></span>
-                  </button>
-                </Card>
-                {pieces.length > 0 && (
-                  <Card rayon="carte">
-                    <button
-                      onClick={() =>
-                        actions.openOpinionShare({
-                          pieceIds: t.pieceIds,
-                          occasion: t.occasion,
-                          temp: t.temp,
-                          label: t.weatherLabel,
-                          moment: `pour ${DOW_LONG[d.getDay()].toLowerCase()} ${d.getDate()} ${MOIS[d.getMonth()]}`,
-                          plan: t,
-                        })
-                      }
-                      className="w-full flex items-center gap-[14px] px-[16px] py-[14px] text-left cursor-pointer transition-opacity active:opacity-80"
-                      style={{ minHeight: 64 }}
-                    >
-                      <span aria-hidden="true" className="text-terracotta flex-shrink-0"><Glyphe taille={22}>{G_COEUR}</Glyphe></span>
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-[14px] text-ink font-medium">Demander l&apos;avis d&apos;un proche</span>
-                        <span className="block text-[12px] text-muted mt-[2px]">Partage ce look et demande leur avis</span>
-                      </span>
-                      <span aria-hidden="true" className="text-muted flex-shrink-0"><Glyphe taille={15}>{G_CHEVRON}</Glyphe></span>
-                    </button>
-                  </Card>
-                )}
-              </div>
-
-              {/* AUTRES OPTIONS, repliées (maquette du 04/10/2026) — uniquement des actions qui existent :
-                  « Enregistrer dans mes looks » (enregistrerIdeeLook, la même écriture que « J'adore » et les idées de
-                  looks) tant que le look n'y est pas ; une fois dedans, le badge du hero le dit. Déplacer et dupliquer
-                  reprennent la composition imposée ; la suppression garde sa confirmation. */}
-              <Card as="details" className="group mt-[14px]">
-                <summary className="flex items-center justify-between gap-3 px-[15px] cursor-pointer list-none text-[13px] text-ink [&::-webkit-details-marker]:hidden" style={{ minHeight: 52 }}>
-                  <span className="flex items-center gap-[12px]">
-                    <span aria-hidden="true" className="text-muted tracking-[.2em]">•••</span>
-                    Autres options
-                  </span>
-                  <span aria-hidden="true" className="text-muted transition-transform group-open:rotate-90">
-                    <Glyphe taille={15}>{G_CHEVRON}</Glyphe>
-                  </span>
-                </summary>
-                <div className="px-[15px] border-t border-divider">
-                  {pieces.length > 0 && <LigneOption label="Changer la date ou le moment" onClick={() => repartirDuPlan(t, "deplacer")} />}
-                  {pieces.length >= 2 && !dansMesLooks && (
-                    <LigneOption
-                      label={lookDemande === t.id ? "Enregistrement…" : "Enregistrer dans mes looks"}
-                      disabled={lookDemande === t.id}
-                      onClick={() => {
-                        setLookDemande(t.id);
-                        actions.enregistrerIdeeLook(t.pieceIds, t.occasion);
-                      }}
-                    />
-                  )}
-                  {pieces.length > 0 && <LigneOption label="Dupliquer ce look" onClick={() => repartirDuPlan(t, "dupliquer")} />}
-                  <LigneOption label="Supprimer ce look" danger onClick={() => setASupprimer(t)} />
-                </div>
-              </Card>
             </>
           );
         })()}
