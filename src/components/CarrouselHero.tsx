@@ -59,7 +59,8 @@ export interface CarteHeroProps {
 }
 
 /**
- * UNE SLIDE DU HERO (14/10/2026) : fond des hero (--color-hero-background), le texte réduit à gauche, la composition — point focal — à droite, deux actions
+ * UNE SLIDE DU HERO (14/10/2026) : fond blanc cassé des cartes (--color-card) cerné de leur filet (--color-border) — le hero de l'accueil
+ * seul, arbitré le 14/10/2026 (option 3h) ; les autres hero gardent --color-hero-background. Le texte réduit à gauche, la composition — point focal — à droite, deux actions
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
 export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, ajouts }: CarteHeroProps) {
@@ -67,7 +68,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
   return (
     <div
       className="rounded-hero grid gap-2"
-      style={{ background: "var(--color-hero-background)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
+      style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
     >
       <div className="flex flex-col min-w-0">
         <div className="flex items-center gap-[7px]">

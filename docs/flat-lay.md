@@ -158,7 +158,7 @@ du catalogue), composées par `FlatLayCapsela` — le correctif est de présenta
 
 - Ratio de la carte : 0,9 (au lieu de 1,25), même largeur (`min(78 %, 300px)`) : l'aperçu de la carte suivante reste (≈ 60 px à 390 px).
   La planche passe à 236 px de large (+ 39 %).
-- Fond : `--color-flatlay-bg` / `--color-flatlay-bg-clair`, un grège clair en dégradé radial, plus soutenu que le crème de la page.
+- Fond : blanc cassé des cartes (`--color-card`) cerné de `--color-border`, depuis le 14/10/2026 (option 3h, comme le hero de l'accueil). Le grège en dégradé radial d'avant (`--color-flatlay-bg`, retiré) faisait ressortir les pièces blanches et beiges ; à surveiller en rendu réel.
 - Ombre `marquee` (propriété `ombre` de `FlatLayCapsela`) : une ombre de contact serrée sous une ombre diffuse. Le hero et la Tenue du
   jour gardent l'ombre `douce`.
 - Look montré : parmi les trois premières idées du moteur pour la pièce, la plus complète (`ideeLaPlusComplete`).

@@ -623,9 +623,10 @@ export default function WardrobeScreen() {
                     const pieces = idee.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i);
                     return (
                       <button key={clePieces(idee.ids).join(",")} type="button" onClick={() => actions.viewItemOutfit(idee.ids, idee.occasion)} className="flex flex-col justify-start h-full text-left cursor-pointer active:opacity-80">
+                        {/* Blanc cassé des cartes cerné de leur filet, comme le hero de l'accueil (option 3h, 14/10/2026, demandé pour le Dressing). */}
                         <div
                           className="relative overflow-hidden"
-                          style={{ aspectRatio: "0.9", borderRadius: 20, background: "radial-gradient(120% 90% at 50% 28%, var(--color-flatlay-bg-clair) 0%, var(--color-flatlay-bg) 100%)", boxShadow: "inset 0 0 0 1px rgba(29,26,22,.05)" }}
+                          style={{ aspectRatio: "0.9", borderRadius: 20, background: "var(--color-card)", border: "1px solid var(--color-border)" }}
                         >
                           <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} ombre="marquee" />
                         </div>
@@ -649,7 +650,7 @@ export default function WardrobeScreen() {
                 className="mt-[22px] w-full flex items-center gap-[14px] text-left rounded-[20px] border border-border bg-card py-3 pl-3 pr-[14px] cursor-pointer active:opacity-80"
                 aria-label="L'inspiration du moment"
               >
-                <span className="relative flex-none overflow-hidden" style={{ width: 76, height: 92, borderRadius: 14, background: "var(--color-hero-background)" }}>
+                <span className="relative flex-none overflow-hidden" style={{ width: 76, height: 92, borderRadius: 14, background: "var(--color-card)", border: "1px solid var(--color-border)" }}>
                   <FlatLayCapsela
                     items={lookInspiration.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i)}
                     context="look-detail"
