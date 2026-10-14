@@ -22,6 +22,8 @@ import type { CategoryKey, Item } from "@/lib/types";
  */
 const AUCUNE_CATEGORIE: CategoryKey[] = [];
 const AUCUN_AJOUT: { item: Item; onAjouter: () => void }[] = [];
+/** Ce que dit le bouton d'une silhouette actionnable (lecteur d'écran) : seules les catégories posées en silhouette par un écran. */
+const LIBELLE_AJOUT: Partial<Record<CategoryKey, string>> = { veste: "une veste", manteau: "un manteau", chaussures: "une paire de chaussures" };
 
 export function FlatLayCapsela({
   items,
@@ -34,6 +36,7 @@ export function FlatLayCapsela({
   fantomes = AUCUNE_CATEGORIE,
   onPiece,
   ajouts = AUCUN_AJOUT,
+  onFantome,
 }: {
   items: Item[];
   /** Où la planche s'affiche : elle règle la zone, la marge, le gabarit et le nombre d'accessoires (cf. CONTEXTES dans flatLay.ts). */
@@ -66,6 +69,12 @@ export function FlatLayCapsela({
    * posées à leur place, estompées, avec un « + » qui les ajoute. Elles ne comptent dans la tenue qu'une fois ajoutées.
    */
   ajouts?: { item: Item; onAjouter: () => void }[];
+  /**
+   * Rend les silhouettes actionnables (14/10/2026, demandé : « quand il manque une pièce, ajouter une pièce veste avec un + dans le
+   * hero ; au clic, l'ajout de pièces ») : un « + » sur la silhouette, qui ouvre l'ajout d'une pièce de SA catégorie. Sans lui, elles
+   * restent décoratives.
+   */
+  onFantome?: (cat: CategoryKey) => void;
 }) {
   // LA ZONE PREND LE FORMAT DE SON CADRE (14/10/2026, « exploiter tout l'espace alloué au flat lay ») : la planche gardait le format fixe
   // du contexte et laissait vides les bords d'un cadre plus large ou plus haut. Mesurée avant la peinture ; bornée entre le carré et
@@ -198,11 +207,30 @@ export function FlatLayCapsela({
           };
           if (fantome) {
             // La silhouette : estompée, sans ombre portée — elle dit ce qui manque, elle ne prétend pas être une pièce.
+            const dessin = (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={img.url} alt="" onLoad={aCharge} onError={aCharge} style={{ display: "block", width: "100%", height: "100%", objectFit: "contain", opacity: 0.5 }} />
+            );
+            if (!onFantome) {
+              return (
+                <div key={it.id} aria-hidden="true" style={{ ...base, filter: "none" }}>
+                  {dessin}
+                </div>
+              );
+            }
+            // Actionnable : toute la silhouette ouvre l'ajout d'une pièce de sa catégorie. Son « + » est posé dans le calque du dessus
+            // (cf. plus bas), avec celui des pièces conseillées.
             return (
-              <div key={it.id} aria-hidden="true" style={{ ...base, filter: "none", opacity: 0.5 }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.url} alt="" onLoad={aCharge} onError={aCharge} style={{ display: "block", width: "100%", height: "100%", objectFit: "contain" }} />
-              </div>
+              <button
+                key={it.id}
+                type="button"
+                onClick={() => onFantome(it.cat)}
+                aria-label={`Ajouter ${LIBELLE_AJOUT[it.cat] ?? "une pièce"} à ton dressing`}
+                className="cursor-pointer"
+                style={{ ...base, filter: "none", padding: 0, border: "none", background: "transparent" }}
+              >
+                {dessin}
+              </button>
             );
           }
           if (ajout) {
@@ -225,20 +253,6 @@ export function FlatLayCapsela({
                     }
                   />}
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    ajout();
-                  }}
-                  aria-label={`Ajouter ${it.name} à la tenue`}
-                  className="absolute flex items-center justify-center rounded-full bg-terracotta-deep text-cream cursor-pointer"
-                  style={{ top: -6, right: -6, width: 30, height: 30, zIndex: 2, boxShadow: "0 2px 6px rgba(29,26,22,.25)" }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                    <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </button>
               </div>
             );
           }
@@ -267,6 +281,37 @@ export function FlatLayCapsela({
             );
           }
           return <div key={it.id} data-peint="" role={onPiece ? "button" : "img"} aria-label={it.name} {...(onPiece ? { tabIndex: 0, onClick: () => onPiece(it) } : {})} style={{ ...base, borderRadius: 14, background: it.hex, opacity: 0.9, cursor: onPiece ? "pointer" : undefined }} />;
+        })}
+        {/* LES « + » DANS UN CALQUE AU-DESSUS DE LA PLANCHE (14/10/2026) : posés dans leur pièce, ils prenaient sa profondeur et passaient
+            sous les pièces voisines (capture : la silhouette de veste, son « + » couvert par le haut). Au coin haut droit de la boîte de la
+            pièce, sans suivre son inclinaison (quelques degrés). */}
+        {composition.map((p) => {
+          const { it, fantome, ajout } = images.find(({ it }) => it.id === p.id)!;
+          const action = ajout ?? (fantome && onFantome ? () => onFantome(it.cat) : null);
+          if (!action) return null;
+          return (
+            <button
+              key={`plus-${it.id}`}
+              type="button"
+              onClick={action}
+              // La silhouette est déjà un bouton (même action) : son « + » ne fait pas double emploi au clavier ni au lecteur d'écran.
+              {...(ajout ? { "aria-label": `Ajouter ${it.name} à la tenue` } : { "aria-hidden": true, tabIndex: -1 })}
+              className="absolute flex items-center justify-center rounded-full bg-terracotta-deep text-cream cursor-pointer"
+              style={{
+                left: `${p.x + p.l / 2}%`,
+                top: `${((p.y - p.h / 2) / HAUTEUR) * 100}%`,
+                transform: "translate(-70%, -30%)",
+                width: 30,
+                height: 30,
+                zIndex: 100,
+                boxShadow: "0 2px 6px rgba(29,26,22,.25)",
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+          );
         })}
       </div>
     </div>
