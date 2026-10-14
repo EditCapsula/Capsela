@@ -52,7 +52,8 @@ describe("occasionsRetenues", () => {
   });
 
   it("suit le type de chaussure affiché", () => {
-    expect(occasionsRetenues(false, ["travail_formel"], "chaussures", "Baskets")).toEqual(["quotidien", "sport"]);
+    // « Voyage » depuis le 14/10/2026 : pour un trajet, on privilégie des baskets.
+    expect(occasionsRetenues(false, ["travail_formel"], "chaussures", "Baskets")).toEqual(["quotidien", "sport", "voyage"]);
   });
 
   it("garde la sélection de l'utilisatrice dès qu'elle l'a modifiée, même vide", () => {

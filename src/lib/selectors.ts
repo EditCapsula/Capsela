@@ -794,6 +794,15 @@ export function adapteeALOccasion(i: Item, occasion: OccasionKey): boolean {
   if (i.cat === "chaussures" && types?.length) return Boolean(i.shoeType && types.includes(i.shoeType));
   return true;
 }
+/** L'occasion a-t-elle une préférence pour cette catégorie (celles que lit adapteeALOccasion) ? */
+function aUnePreference(cat: CategoryKey, occasion: OccasionKey): boolean {
+  if (occasion === "voyage") return cat === "chaussures" || VETEMENTS.includes(cat);
+  return cat === "chaussures" && Boolean(OCCASION_STYLE_PREFS[occasion]?.shoeTypes?.length);
+}
+/** Des chaussures adaptées à un trajet (des baskets) : éligibles en Voyage quelles que soient les occasions déclarées. */
+function bonnesPourLeTrajet(i: Item, occasion: OccasionKey): boolean {
+  return occasion === "voyage" && i.cat === "chaussures" && adapteeALOccasion(i, occasion);
+}
 const VETEMENTS: CategoryKey[] = ["haut", "pull", "veste", "manteau", "pantalon", "jean", "jupe", "short", "robe", "combinaison"];
 
 function composerParOccasion(
@@ -808,18 +817,23 @@ function composerParOccasion(
     const reelles = items.filter((i) => i.cat === cat);
     if (!reelles.length) return capsule.filter((i) => i.cat === cat);
     if (!occasion) return reelles;
-    const gardees = options?.exclureHorsOccasion
-      ? reelles.filter((i) => isCatalogId(i.id) || !i.occasion?.length || i.occasion.includes(occasion))
-      : reelles;
+    // Des baskets pour un trajet (14/10/2026, demandé : « pour le voyage on privilégie des baskets ») : les baskets du dressing restent
+    // éligibles en Voyage même déclarées pour d'autres occasions — l'app leur pré-suggère « Quotidien » et « Sport », pas « Voyage », et
+    // elles étaient écartées de tous les trajets au profit de chaussures moins confortables.
+    const declaree = (i: Item) => !i.occasion?.length || i.occasion.includes(occasion) || bonnesPourLeTrajet(i, occasion);
+    const gardees = options?.exclureHorsOccasion ? reelles.filter((i) => isCatalogId(i.id) || declaree(i)) : reelles;
     const utilisable = (i: Item) => occasionsOf(i).includes(occasion) && (!saison || estDeSaison(i, saison));
     // Adaptée ET de saison ; sans occasion déclarée (la plupart des chaussures du catalogue), c'est son adéquation qui la justifie — une
     // pièce déclarée pour d'AUTRES occasions, non. Le même critère pour le dressing et pour la capsule.
-    const convient = (i: Item) =>
-      (i.occasion?.length ? i.occasion.includes(occasion) : true) && (!saison || estDeSaison(i, saison)) && adapteeALOccasion(i, occasion);
-    if (options?.pieceAdaptee && !gardees.some(convient)) {
+    const convient = (i: Item) => declaree(i) && (!saison || estDeSaison(i, saison)) && adapteeALOccasion(i, occasion);
+    // Seulement là où l'occasion a une préférence : ailleurs, le relais de la capsule reste celui d'avant.
+    const adaptation = options?.pieceAdaptee && aUnePreference(cat, occasion);
+    if (adaptation && !gardees.some(convient)) {
       const adaptees = capsule.filter((i) => i.cat === cat && !gardees.some((r) => r.id === i.id) && convient(i));
       if (adaptees.length) return [...gardees.filter((i) => adapteeALOccasion(i, occasion)), ...adaptees];
     }
+    // Une pièce du dressing qui convient suffit : la capsule ne vient pas la concurrencer.
+    if (adaptation && gardees.some(convient)) return gardees;
     if (gardees.some(utilisable)) return gardees;
     const secours = capsule.filter(
       (i) => i.cat === cat && !gardees.some((r) => r.id === i.id) && occasionsOf(i).includes(occasion)

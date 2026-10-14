@@ -261,7 +261,8 @@ const OCCASIONS_DEFAULT_BY_CAT: Partial<Record<CategoryKey, OccasionKey[]>> = {
 };
 
 export function suggestOccasions(cat: CategoryKey, shoeType?: ShoeType | null): OccasionKey[] {
-  if (cat === "chaussures" && shoeType === "Baskets") return ["quotidien", "sport"];
+  // « Voyage » ajouté le 14/10/2026 (« pour le voyage on privilégie des baskets ») : des baskets ajoutées au dressing le déclarent d'office.
+  if (cat === "chaussures" && shoeType === "Baskets") return ["quotidien", "sport", "voyage"];
   return OCCASIONS_DEFAULT_BY_CAT[cat] || ["quotidien"];
 }
 
