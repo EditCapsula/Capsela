@@ -21,6 +21,7 @@ import { useCapsela } from "@/lib/store";
 import { categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
 import { statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
 import { clePieces } from "@/lib/outfitFeedback";
+import { titreDuPlan } from "@/lib/heroPlan";
 import { complementTenue, momentMessage, quandPhrase } from "@/lib/jourConsulte";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
@@ -748,6 +749,16 @@ export default function TenuesScreen() {
               </button>
             )}
           </div>
+          {/* LE PLAN D'OÙ VIENT LA TENUE (14/10/2026) : « Voir le look » d'un look planifié mène ici, comme celui des autres slides ; la fiche du
+              plan (lieu, moment, modifier, supprimer) reste à un appui, dans Planifier, et revient ici. */}
+          {planApplique && (
+            <div className="flex-shrink-0 flex items-baseline justify-between gap-3 mb-[8px]">
+              <span className="text-[13px] text-ink truncate">{titreDuPlan(planApplique.plan)}</span>
+              <button onClick={() => actions.ouvrirPlan(planApplique.plan, "tenues")} className="flex-shrink-0 text-[12px] text-terracotta-deep underline underline-offset-[3px] cursor-pointer">
+                Voir le plan
+              </button>
+            </div>
+          )}
           {/* Ce que la météo du jour dit de la tenue planifiée (choisie sur une
               prévision) : un constat, jamais un changement d'office. */}
           {planApplique?.alerte && (
