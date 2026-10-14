@@ -1484,7 +1484,7 @@ function Resultat({
                       )}
                       <div className="flex gap-2 mt-4">
                         <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={() => proposer(proposition.situation)}>
-                          Autre proposition
+                          Autre tenue
                         </Button>
                         <Button
                           variante="principal"

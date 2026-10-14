@@ -437,7 +437,7 @@ export default function HomeScreen() {
           )}
         </div>
 
-        {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre idée »
+        {/* LES DEUX ACTIONS : « Sauvegarder » range la tenue dans Mes looks (l'ancien « J'adore », même enregistrement) ; « Autre tenue »
             propose une autre tenue (l'ancien « Pas pour moi » : le refus est enregistré, la suivante l'évite, même quota). */}
         {hasOutfit && !passee && (
           <div className="flex items-center mt-0" style={{ gridColumn: "1 / -1" }} aria-live="polite">
@@ -460,7 +460,7 @@ export default function HomeScreen() {
                   <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               }
-              libelle="Autre idée"
+              libelle="Autre tenue"
               label="Propose-moi une autre tenue"
               disabled={quota.tirageEnCours}
               onClick={jourAVenir ? () => quota.demander(actions.regenOutfit) : pasPourMoi}
@@ -469,7 +469,7 @@ export default function HomeScreen() {
         )}
 
         {/* LA TENUE PLANIFIÉE : ce que la météo du jour en dit, s'il y a lieu. Le lien « Voir une autre proposition » n'est plus là
-            (08/10/2026, demandé : « on a déjà "Sauvegarder" et "Autre idée" ») ; la page Tenue garde « Autre proposition ». */}
+            (08/10/2026, demandé : « on a déjà "Sauvegarder" et "Autre tenue" ») ; la page Tenue garde « Autre tenue ». */}
         {planApplique?.alerte && hasOutfit && <AlerteMeteoLook planApplique={planApplique} />}
       </div>
       )}
@@ -528,7 +528,7 @@ export default function HomeScreen() {
         </div>
       </div>
 
-      {/* Quota « Autre idée » : même feuille que « Autre tenue ». */}
+      {/* Quota « Autre tenue » : la même feuille de quota partout. */}
       {quota.feuille}
     </div>
   );

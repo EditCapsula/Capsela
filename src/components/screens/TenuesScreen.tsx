@@ -730,7 +730,7 @@ export default function TenuesScreen() {
                   <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                Autre proposition
+                Autre tenue
               </button>
             ) : !noCompleteOutfit && (
               <button

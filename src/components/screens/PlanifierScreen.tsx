@@ -1932,7 +1932,7 @@ export default function PlanifierScreen() {
           return (
             <>
               <Surtitre>Tenue planifiée</Surtitre>
-              <TitreEtape a="Autres propositions" b="pour ce moment" />
+              <TitreEtape a="Autres tenues" b="pour ce moment" />
               <div className="t-chapeau text-muted mt-[6px]">Mêmes infos, nouvelles idées. Choisis celle qui te parle.</div>
               {alternatives.length === 0 && (
                 <div className="text-[13px] text-muted-3 mt-4 leading-[1.5]">
@@ -2443,7 +2443,7 @@ export default function PlanifierScreen() {
                   className="flex-1 rounded-full bg-card border border-terracotta text-[12px] font-medium text-terracotta cursor-pointer"
                   style={{ minHeight: 44 }}
                 >
-                  Une autre tenue
+                  Autre tenue
                 </button>
               )}
             </div>

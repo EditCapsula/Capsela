@@ -100,7 +100,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
       <div className="flex items-center" style={{ gridColumn: "1 / -1" }} aria-live="polite">
         <ActionRonde icone={<IconeCoeur plein={sauvegardee} />} libelle={sauvegardee ? "Sauvegardée" : "Sauvegarder"} actif={sauvegardee} onClick={onSauvegarder} />
         <span aria-hidden="true" className="w-px h-[16px] mx-3" style={{ background: "rgba(29,26,22,.2)" }} />
-        <ActionRonde icone={<IconeAutre />} libelle="Autre idée" label="Propose-moi une autre tenue" disabled={autreDesactive} onClick={onAutre} />
+        <ActionRonde icone={<IconeAutre />} libelle="Autre tenue" label="Propose-moi une autre tenue" disabled={autreDesactive} onClick={onAutre} />
       </div>
       {pied}
     </div>
