@@ -21,8 +21,8 @@ import {
   journalInsights,
   moisAnnee,
   moisDepuis,
-  mostWornPiecesDeSaison,
-  deLaSaison,
+  mostWornPiecesPeriode,
+  type PeriodeFetiches,
   nomCourtPiece,
   deLaSaisonEnCours,
   styleDuMois,
@@ -274,6 +274,13 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
   );
 }
 
+const PERIODES_FETICHES: { key: PeriodeFetiches; label: string }[] = [
+  { key: "saison", label: "Cette saison" },
+  { key: "mois", label: "Ce mois-ci" },
+  { key: "trois_mois", label: "3 derniers mois" },
+  { key: "tout", label: "Toute la période" },
+];
+
 const PERIODES: { key: PeriodeJournal; label: string; phrase: string }[] = [
   { key: "mois", label: "Ce mois-ci", phrase: "ce mois-ci" },
   { key: "trois_mois", label: "3 derniers mois", phrase: "sur les 3 derniers mois" },
@@ -348,6 +355,8 @@ export default function HistoryScreen() {
   const [pages, setPages] = useState(1);
   const [filtre, setFiltre] = useState<OccasionKey | "toutes">("toutes");
   const [periode, setPeriode] = useState<PeriodeJournal>("mois");
+  // Les pièces fétiches ont leur propre période (14/10/2026) : la saison en cours par défaut, comme avant.
+  const [periodeFetiches, setPeriodeFetiches] = useState<PeriodeFetiches>("saison");
   const [enCours, setEnCours] = useState<number | null>(null);
   const [avis, setAvis] = useState<{ ton: "ok" | "erreur"; texte: string; annuler?: { id: number; choix: ChoixRevente | null } } | null>(null);
 
@@ -369,7 +378,7 @@ export default function HistoryScreen() {
 
   const insights = journalInsights(state.history);
   const entries = journalEntries(state.history, resolvePool);
-  const fetiches = mostWornPiecesDeSaison(state.history, resolvePool);
+  const fetiches = mostWornPiecesPeriode(state.history, resolvePool, periodeFetiches);
   const saisonEnCours = currentSeasonKey();
   const style = styleDuMois(state.history);
 
@@ -877,18 +886,30 @@ export default function HistoryScreen() {
         </section>
       )}
 
-      {/* TES PIÈCES FÉTICHES */}
-      {fetiches.length > 0 && (
+      {/* TES PIÈCES FÉTICHES — avec leur sélecteur de période (14/10/2026). La section reste là dès qu'une tenue a été portée, même si la
+          période choisie n'en compte aucune : le sélecteur doit rester accessible. */}
+      {state.history.length > 0 && (
         <section className="mt-[30px]" aria-labelledby="journal-fetiches">
           <Surtitre>
-            <span id="journal-fetiches">Tes pièces fétiches {deLaSaison(saisonEnCours)}</span>
+            <span id="journal-fetiches">Tes pièces fétiches</span>
           </Surtitre>
-          {/* Vitrine horizontale (26/09/2026) : les trois pièces visibles
-              ensemble, sans défilement — une liste verticale à vignettes de
-              44 px prenait trop de hauteur pour trois pièces. Même vignette
-              4/5 que « À sortir du placard », le rang posé sur l'image. Nom
-              court sur deux lignes au plus, hauteur réservée : un nom long ne
-              décale ni la carte ni le nombre de ports. */}
+          <div role="group" aria-label="Période des pièces fétiches" className="scrollarea flex gap-2 overflow-x-auto mt-3 pb-[2px]">
+            {PERIODES_FETICHES.map(({ key, label }) => (
+              <button
+                key={key}
+                aria-pressed={periodeFetiches === key}
+                onClick={() => setPeriodeFetiches(key)}
+                className={`flex-none min-h-[36px] px-[14px] rounded-full text-[12px] cursor-pointer border ${
+                  periodeFetiches === key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
+                }`}
+              >
+                {key === "saison" ? `Cette saison${saisonEnCours ? ` (${saisonEnCours.toLowerCase()})` : ""}` : label}
+              </button>
+            ))}
+          </div>
+          {fetiches.length === 0 ? (
+            <div className="text-[12.5px] text-muted-3 leading-[1.45] mt-3">Aucune tenue portée sur cette période.</div>
+          ) : (
           <ol className="mt-3 grid grid-cols-3 gap-[10px]">
             {fetiches.map(({ item, count }, idx) => {
               const ports = `${participePorteMaj(item)} ${count} fois`;
@@ -917,6 +938,7 @@ export default function HistoryScreen() {
               );
             })}
           </ol>
+          )}
         </section>
       )}
 

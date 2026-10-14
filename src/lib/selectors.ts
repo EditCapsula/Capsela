@@ -599,6 +599,17 @@ export function mostWornPiecesDeSaison(history: HistoryEntry[], pool: Item[], ma
   return mostWornPieces(history.filter((h) => h.ts >= debut && h.ts <= maintenant.getTime()), pool, limit);
 }
 
+/**
+ * LES PIÈCES FÉTICHES SUR UNE PÉRIODE CHOISIE (14/10/2026, arbitrage de la propriétaire : un sélecteur de période plutôt que la seule
+ * saison). « saison » : la saison calendaire en cours (mostWornPiecesDeSaison, comportement d'avant) ; « mois », « trois_mois », « tout » :
+ * les mêmes bornes que les chiffres clés du Journal (historiqueDansPeriode). Même classement partout (mostWornPieces).
+ */
+export type PeriodeFetiches = "saison" | PeriodeJournal;
+export function mostWornPiecesPeriode(history: HistoryEntry[], pool: Item[], periode: PeriodeFetiches, maintenant: Date = new Date(), limit = 3): MostWornPiece[] {
+  if (periode === "saison") return mostWornPiecesDeSaison(history, pool, maintenant, limit);
+  return mostWornPieces(historiqueDansPeriode(history, periode, maintenant), pool, limit);
+}
+
 /** « de l'automne », « du printemps »… pour le titre de la section. */
 export function deLaSaison(saison: CapsuleSeason): string {
   return saison === "Printemps" ? "du printemps" : saison === "Été" ? "de l'été" : saison === "Automne" ? "de l'automne" : "de l'hiver";

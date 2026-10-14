@@ -112,7 +112,7 @@ export function FlatLayCapsela({
           return { id: it.id, cat: it.cat, ratio, accessoireType: it.accessoireType, photoBrute: img.kind === "photo" };
         }),
         graine,
-        { contexte: context, template }
+        { contexte: context, template, piecesEnPlus: images.filter((e) => e.ajout).length }
       ).pieces,
     [images, graine, context, template]
   );
