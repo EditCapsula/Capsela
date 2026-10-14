@@ -618,11 +618,11 @@ export default function WardrobeScreen() {
                   <TitreSerif taille={18}>Tes looks</TitreSerif>
                   <Lien onClick={actions.goLooks} label="Voir mes looks">Voir mes looks</Lien>
                 </div>
-                <div className="grid grid-cols-2 gap-[10px] mt-1">
+                <div className="grid grid-cols-2 gap-[10px] mt-1 items-start">
                   {looksCarrousel.slice(0, 2).map(({ piece, idee }) => {
                     const pieces = idee.ids.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => !!i);
                     return (
-                      <button key={clePieces(idee.ids).join(",")} type="button" onClick={() => actions.viewItemOutfit(idee.ids, idee.occasion)} className="block text-left cursor-pointer active:opacity-80">
+                      <button key={clePieces(idee.ids).join(",")} type="button" onClick={() => actions.viewItemOutfit(idee.ids, idee.occasion)} className="flex flex-col justify-start h-full text-left cursor-pointer active:opacity-80">
                         <div
                           className="relative overflow-hidden"
                           style={{ aspectRatio: "0.9", borderRadius: 20, background: "radial-gradient(120% 90% at 50% 28%, var(--color-flatlay-bg-clair) 0%, var(--color-flatlay-bg) 100%)", boxShadow: "inset 0 0 0 1px rgba(29,26,22,.05)" }}
@@ -630,7 +630,7 @@ export default function WardrobeScreen() {
                           <FlatLayCapsela items={pieces} context="look-detail" layoutSeed={clePieces(idee.ids).join(",")} ombre="marquee" />
                         </div>
                         <div className="font-serif text-ink mt-2" style={{ fontSize: 15 }}>{occasionShortLabel(idee.occasion)}</div>
-                        <div className="text-[11.5px] text-muted-3 mt-[2px] line-clamp-2">{phrasePiste(piece)} · {idee.ids.length} pièces</div>
+                        <div className="text-[11.5px] text-muted-3 mt-[2px] line-clamp-2 leading-[1.35] min-h-[2.7em]">{phrasePiste(piece)} · {idee.ids.length} pièces</div>
                       </button>
                     );
                   })}
