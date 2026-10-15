@@ -70,7 +70,8 @@ const SUBTYPE_EN: Record<string, string> = {
   "robe t-shirt": "t-shirt dress",
   montre: "watch",
   ceinture: "belt",
-  foulard: "scarf",
+  // « Léger, carré » (15/10/2026, audit) : « scarf » seul était dessiné en écharpe de laine à franges (555, 862, 1013).
+  foulard: "lightweight square scarf",
   écharpe: "scarf",
   chapeau: "hat",
   casquette: "cap",
@@ -79,7 +80,9 @@ const SUBTYPE_EN: Record<string, string> = {
   "chaussettes hautes": "knee-high socks",
   gourde: "reusable water bottle",
   "t-shirt": "t-shirt",
-  chemise: "shirt",
+  // « Boutonnée » (15/10/2026, audit) : « shirt » seul était dessiné en t-shirt sans col sur 4 flat lays (534, 670, 715, 737).
+  // Le col s'ajoute par DEFAUTS_VISIBLES, sauf col mao ou col ouvert.
+  chemise: "button-up shirt",
   chemisier: "blouse",
   surchemise: "overshirt",
   blouse: "blouse",
@@ -94,7 +97,8 @@ const SUBTYPE_EN: Record<string, string> = {
   cardigan: "cardigan",
   blazer: "blazer",
   bomber: "bomber jacket",
-  "coupe-vent": "windbreaker jacket",
+  // 15/10/2026 (audit) : catalogue à capuche, flat lay en blouson pour la même pièce (726) — la capuche est fixée.
+  "coupe-vent": "lightweight hooded zip-up windbreaker jacket",
   "veste en jean": "denim jacket",
   "veste saharienne": "safari jacket",
   trench: "trench coat",
@@ -107,7 +111,8 @@ const SUBTYPE_EN: Record<string, string> = {
   // « Veste effet cuir » (id 953, « Veste courte effet cuir ») : sans entrée, le sujet retombait sur « jacket » et la
   // génération dessinait une veste quelconque (07/10/2026, signalé : mauvais visuel). La matière vient de `matiere`.
   "veste effet cuir": "short waist-length jacket",
-  legging: "leggings",
+  // « Mat » (15/10/2026, audit) : le catalogue du 494 était brillant façon cuir, le flat lay mat.
+  legging: "matte stretch leggings",
   jogging: "jogging pants",
   bermuda: "bermuda shorts",
   combishort: "playsuit",
@@ -158,6 +163,10 @@ const SUBTYPE_EN: Record<string, string> = {
   "robe fourreau": "sheath dress",
   "robe pull": "sweater dress",
   "mini-jupe": "mini skirt",
+  // 15/10/2026, seconde passe de l'audit : sujets restés vagues, que la génération interprétait différemment d'une image à l'autre.
+  "bague statement": "bold statement cocktail ring",
+  "veste en daim": "suede blouson jacket",
+  "manteau long": "long coat falling below the knee",
 };
 
 /** Mots-clés de coupe/style repérés DANS sous_type (jamais dans name) — ajoutés comme modificateurs, ne changent jamais le type de produit. */
@@ -394,7 +403,8 @@ const CATEGORY_COMPOSITION: Record<string, string> = {
   jupe: "Complete skirt, waistband to hem visible.",
   combinaison: "Complete jumpsuit, full length visible.",
   chaussures: "Pair of shoes, both shoes visible.",
-  sac: "Single handbag, fully visible.",
+  // « Bag » et non « handbag » (15/10/2026) : une banane ou une besace n'est pas un sac à main.
+  sac: "Single bag, fully visible.",
   bijou: "Single jewelry item, centered.",
   // "blazer or jacket" retiré (correctif 23/08/2026, signalé : bomber et
   // coupe-vent générés comme des blazers) — cette suggestion biaisait tout
@@ -530,6 +540,39 @@ export interface BuiltPrompt {
  * Le sujet structurel (noun/canonCategory/ok) ne dépend JAMAIS de cet ordre —
  * une tendance ne peut jamais changer la nature du produit.
  */
+/**
+ * Ce qu'une image montre forcément, et que la génération tirait au hasard quand rien ne le disait (15/10/2026, seconde passe de
+ * l'audit des visuels) : la même pièce sortait à manches longues au catalogue et courtes au flat lay, en doudoune longue puis
+ * courte. Un détail écrit (sous-type ou nom) l'emporte toujours ; la valeur par défaut ne s'ajoute que s'il n'y en a aucun.
+ */
+const LONGUEURS = ["long", "short", "midi-length", "maxi-length", "mini", "knee-length", "hip-length"];
+const DEFAUTS_VISIBLES: { noun: string; axe: string[]; defaut: string }[] = [
+  { noun: "button-up shirt", axe: ["short-sleeved", "long-sleeved", "sleeveless"], defaut: "long-sleeved" },
+  { noun: "button-up shirt", axe: ["mandarin collar", "open-collar", "collared"], defaut: "collared" },
+  { noun: "puffer jacket", axe: LONGUEURS, defaut: "hip-length" },
+  { noun: "trench coat", axe: LONGUEURS, defaut: "knee-length" },
+  { noun: "coat", axe: LONGUEURS, defaut: "knee-length" },
+];
+
+/** Mots qui ne portent pas le détail : « pussy-bow collar » est déjà dit par « pussy-bow blouse ». */
+const MOTS_OUTILS = new Set(["with", "collar", "print"]);
+
+/**
+ * Les modificateurs dans leur forme finale (15/10/2026) : sans ceux que le sujet dit déjà (« ribbed ribbed knit beanie hat »,
+ * « satin satin slip dress » après l'ajout des détails du nom), complétés des défauts visibles, et ceux en « with … » rangés
+ * après le sujet (« dress with thin straps », pas « with thin straps dress »).
+ */
+function affinerModificateurs(modifiers: string[], noun: string): { avant: string[]; apres: string[] } {
+  const motsDuSujet = new Set(noun.split(" "));
+  const utiles = modifiers.filter((m) => {
+    const porteurs = m.split(" ").filter((w) => !MOTS_OUTILS.has(w));
+    return !noun.includes(m) && !porteurs.every((w) => motsDuSujet.has(w));
+  });
+  const defauts = DEFAUTS_VISIBLES.filter((d) => d.noun === noun && !utiles.some((m) => d.axe.includes(m))).map((d) => d.defaut);
+  utiles.unshift(...defauts);
+  return { avant: utiles.filter((m) => !m.startsWith("with ")), apres: utiles.filter((m) => m.startsWith("with ")) };
+}
+
 export function buildImagePrompt(item: CatalogItem, trend?: TrendRule | null): BuiltPrompt {
   const canonCategory = item.cat;
   const genreEn = item.genre === "femme" ? "women's" : item.genre === "homme" ? "men's" : "unisex";
@@ -566,7 +609,10 @@ export function buildImagePrompt(item: CatalogItem, trend?: TrendRule | null): B
     )
   );
 
-  const productDescription = [genreEn, colorEn, ...modifiers, matiereEn, noun].filter(Boolean).join(" ");
+  const { avant, apres } = affinerModificateurs(modifiers, noun);
+  // La matière que le sujet dit déjà n'est pas répétée (« denim denim jacket », 15/10/2026).
+  const matiereDite = matiereEn && !noun.includes(matiereEn) ? matiereEn : undefined;
+  const productDescription = [genreEn, colorEn, ...avant, matiereDite, noun, ...apres].filter(Boolean).join(" ");
 
   // Sujet structurel — jamais affecté par override/tendance (garde-fou
   // "un blazer doit rester un blazer" du brief 19/08/2026).
@@ -596,7 +642,7 @@ export function buildImagePrompt(item: CatalogItem, trend?: TrendRule | null): B
   if (overrideText) {
     designBlock = overrideText;
   } else {
-    const productLine = capSentence([...modifiers, noun].filter(Boolean).join(" ") || noun);
+    const productLine = capSentence([...avant, noun, ...apres].filter(Boolean).join(" ") || noun);
     const silhouetteText = item.silhouetteMode?.trim() || effectiveTrend?.silhouette?.trim() || "";
     const detailsText = item.detailsMode?.trim() || effectiveTrend?.details?.trim() || "";
 

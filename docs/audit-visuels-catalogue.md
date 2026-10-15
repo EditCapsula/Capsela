@@ -33,6 +33,17 @@ La liste complète (id, constat, visuel à refaire) a été remise à la propri�
 - **Mesuré sur les 627 pièces** : 0 pièce refusée par la validation ; 135 pièces changent de clé (celles dont le nom porte un détail).
 - **Ce qui change, et quand** : le visuel flat lay (`heroPrompt.ts`) reprend le sujet de `buildImagePrompt`, il profite donc du même correctif. Aucun visuel existant ne change avant une régénération.
 
+## Seconde passe (15/10/2026), après contrôle des 209 pièces relevées
+Chaque pièce relevée a été repassée dans le nouveau constructeur de prompt. Trois défauts restaient :
+
+- **Le gabarit flat lay nommait un type de pièce** (DÉMONTRÉ, `heroPrompt.ts`) : « The t-shirt lies… » pour tous les hauts, « with its lapels visible » pour toutes les vestes et tous les manteaux, « handles » pour les sacs. D'où les chemises, caracos et tops bandeau en t-shirt, et les blousons, vestes matelassées, kimonos en blazer, au flat lay seulement. La pose ne nomme plus de type.
+- **Mots répétés** une fois les détails du nom ajoutés (« ribbed ribbed knit beanie hat », « satin satin slip dress », « denim denim jacket ») et « manchette » des boutons de manchette lu comme un bracelet manchette. Un modificateur ou une matière que le sujet dit déjà est retiré ; « de manchette » est consommé sans rien produire.
+- **Ce que l'image montre forcément, sans que rien le dise** : la même pièce sortait à manches longues puis courtes, longue puis courte. Valeurs par défaut, écartées dès qu'un détail écrit les contredit : chemise boutonnée à col et à manches longues, doudoune à la hanche, trench et manteau au genou, manteau long sous le genou. Sujets précisés : foulard léger et carré, legging mat, coupe-vent à capuche, veste en daim en blouson, bague statement. Détails du nom ajoutés : texturé, chaîne (fine), souple, léger, basque, palazzo, petites créoles, col ouvert, wide leg.
+
+Mesure sur les 627 pièces, même exécution : 0 refusée par la validation, 171 changent de clé visuelle (le seul visuel existant n'en change pas : l'audit `cles-perimees` les verra comme périmées tant qu'elles ne sont pas régénérées).
+
+**Trois pièces gardent le même sujet** (NON DÉMONTRÉ qu'une régénération suffise) : 1002 (bracelet en cuir, tressé au flat lay), 503 (pull col V dessiné col rond, alors que le prompt dit « v-neck »), 548 (combinaison : la base ne dit ni bretelles ni manches, rien à écrire sans l'inventer).
+
 ## Reste à faire
-- **Régénérer les visuels faux** (environ 0,02 $ l'image), d'abord une poignée de pièces validées à l'œil, puis le reste.
+- **Régénérer les 209 pièces relevées** (décidé le 15/10/2026 : toutes, léger compris) : le visuel désigné faux, ou les deux. Environ 0,02 $ le standard, 0,04 $ le flat lay.
 - **Corriger la donnée cassée de la #472** : sa couleur vaut « <la couleur> ».

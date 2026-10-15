@@ -18,7 +18,8 @@ describe("detailsDuNom — les détails visibles du nom", () => {
     expect(detailsDuNom("Chemise rayée oversize légère")).toContain("striped");
     expect(detailsDuNom("Jupe midi à carreaux")).toEqual(["midi-length", "checked"]);
     expect(detailsDuNom("Pull torsadé")).toEqual(["cable-knit"]);
-    expect(detailsDuNom("Veste matelassée légère")).toEqual(["quilted"]);
+    expect(detailsDuNom("Veste matelassée légère")).toEqual(["quilted", "lightweight"]);
+    expect(detailsDuNom("Bracelet chaîne fin")).toEqual(["thin chain"]);
   });
 
   it("un bigramme passe avant ses mots : « manches courtes » n'est jamais « short »", () => {
@@ -29,6 +30,13 @@ describe("detailsDuNom — les détails visibles du nom", () => {
   it("un imprimé précis remplace l'imprimé générique", () => {
     expect(detailsDuNom("Blouse fluide imprimée paisley")).toEqual(["paisley print"]);
     expect(detailsDuNom("Foulard imprimé")).toEqual(["printed"]);
+  });
+
+  it("seconde passe : manchette des boutons, créoles ou puces, rayures marinière, longueurs contraires", () => {
+    expect(detailsDuNom("Boutons de manchette minimalistes")).toEqual([]);
+    expect(detailsDuNom("Petites créoles / puces")).toEqual(["small hoop"]);
+    expect(detailsDuNom("T-shirt rayé type marinière")).toEqual(["breton-striped"]);
+    expect(detailsDuNom("Jupe midi / maxi fluide")).toEqual([]);
   });
 
   it("rien pour un nom sans détail", () => {
@@ -70,8 +78,29 @@ describe("buildImagePrompt — les sous-types relevés à l'audit", () => {
 
   it("le motif du nom entre dans le prompt sans changer le sujet", () => {
     const b = sujet({ category: "hauts", sous_type: "Chemise", name: "Chemise rayée", couleur_dominante: "Bleu ciel" });
-    expect(b.noun).toBe("shirt");
+    expect(b.noun).toBe("button-up shirt");
     expect(b.prompt.split("\n")[0].toLowerCase()).toContain("striped");
+  });
+});
+
+describe("buildImagePrompt — le sujet dans sa forme finale (seconde passe du 15/10/2026)", () => {
+  const ligne1 = (over: Partial<VestiaireRow>) => sujet(over).prompt.split("\n")[0];
+  it("aucun mot déjà dit par le sujet n'est répété", () => {
+    expect(ligne1({ category: "accessoires", sous_type: "Bonnet", name: "Bonnet côtelé" })).toContain("black ribbed knit beanie hat");
+    expect(ligne1({ category: "robes", sous_type: "Robe nuisette", name: "Robe nuisette midi satinée" })).toContain("midi-length satin slip dress");
+    expect(ligne1({ category: "hauts", sous_type: "Blouse lavallière", name: "Blouse fluide à col lavallière" })).toContain("black pussy-bow blouse");
+  });
+  it("« with … » vient après le sujet", () => {
+    expect(ligne1({ category: "hauts", sous_type: "Caraco satiné", name: "Caraco satiné à fines bretelles" })).toContain("black satin camisole top with thin straps.");
+  });
+  it("une chemise a un col et des manches longues, sauf détail contraire", () => {
+    expect(ligne1({ category: "hauts", sous_type: "Chemise", name: "Chemise" })).toContain("long-sleeved collared button-up shirt");
+    expect(ligne1({ category: "hauts", sous_type: "Chemise manches courtes", name: "Chemise oversize manches courtes" })).not.toContain("long-sleeved");
+    expect(ligne1({ category: "hauts", sous_type: "Chemise", name: "Chemise col mao" })).not.toContain("collared");
+  });
+  it("une doudoune sans longueur écrite est à la hanche, une doudoune longue reste longue", () => {
+    expect(ligne1({ category: "manteaux_exterieurs", sous_type: "Doudoune", name: "Doudoune" })).toContain("hip-length puffer jacket");
+    expect(ligne1({ category: "manteaux_exterieurs", sous_type: "Doudoune", name: "Doudoune longue" })).not.toContain("hip-length");
   });
 });
 

@@ -8,12 +8,17 @@
 // est terracotta : un T-shirt blanc s'y détache, contrairement au fond blanc de l'app qui imposait un gris).
 import { buildImagePrompt, type BuiltPrompt, type TrendRule, type VestiaireRow } from "./imagePrompt.ts";
 
-/** La pose naturelle de chaque catégorie — ce qui distingue un flat lay d'une vue de face. */
+/**
+ * La pose naturelle de chaque catégorie — ce qui distingue un flat lay d'une vue de face. Elle ne nomme jamais un TYPE de pièce
+ * (15/10/2026, audit des visuels) : « The t-shirt lies » pour tous les hauts faisait dessiner chemises, caracos et tops bandeau en
+ * t-shirt ; « lapels visible » pour toutes les vestes et tous les manteaux, des blousons, vestes matelassées, kimonos et
+ * doudounes en blazer ; « handles » des sacs à bandoulière en cabas. Le type vient du sujet, et seulement de lui.
+ */
 const POSE: Record<string, string> = {
-  haut: "The t-shirt lies loosely, slightly asymmetrical, with soft natural creases, one sleeve relaxed at a slight angle.",
+  haut: "The top lies loosely, slightly asymmetrical, with soft natural creases, one sleeve or strap relaxed at a slight angle.",
   pull: "The knit lies loosely with soft natural folds, one sleeve gently angled across the body.",
-  veste: "The jacket lies open-collared with its lapels visible, one sleeve folded across the body so the cuff shows, soft natural creases.",
-  manteau: "The coat lies with its lapels visible, one sleeve folded across the body so the cuff shows, soft natural creases.",
+  veste: "The jacket lies flat with its front fully visible, one sleeve folded across the body so the cuff shows, soft natural creases.",
+  manteau: "The coat lies flat with its front fully visible, one sleeve folded across the body so the cuff shows, soft natural creases.",
   pantalon: "The trousers lie in a slight diagonal, one leg a little offset from the other, soft natural creases at the knees and hem.",
   jean: "The jeans lie in a slight diagonal, one leg a little offset from the other, soft natural creases at the knees and hem.",
   short: "The shorts lie flat with one leg slightly offset, soft natural creases.",
@@ -21,7 +26,7 @@ const POSE: Record<string, string> = {
   robe: "The dress lies flat and slightly turned, one sleeve or strap relaxed, soft natural folds in the skirt.",
   combinaison: "The jumpsuit lies flat and slightly turned, legs a little offset, soft natural folds.",
   chaussures: "A pair of shoes placed side by side at a slight diagonal, one slightly ahead of the other.",
-  sac: "The handbag stands slightly tilted, its handles resting naturally.",
+  sac: "The bag lies slightly tilted, its strap or handles resting naturally.",
   bijou: "The jewelry piece lies naturally, slightly turned.",
   accessoire: "The accessory lies naturally, slightly turned, with soft folds if it is made of fabric.",
 };
@@ -39,7 +44,7 @@ const ORIENTATION: Record<string, string> = {
   robe: "Neckline at the top of the image, hem at the bottom.",
   combinaison: "Neckline at the top of the image, hems at the bottom.",
   chaussures: "Toes pointing toward the upper right of the image.",
-  sac: "Upright, handles at the top.",
+  sac: "Upright, strap or handles at the top.",
   bijou: "Upright, clasp at the top if it has one.",
   accessoire: "Upright, in its natural orientation.",
 };

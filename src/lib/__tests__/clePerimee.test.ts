@@ -40,8 +40,9 @@ describe("clé attendue — les faux positifs du balayage SQL", () => {
   it("« Blouse » + « Blanc cassé » produit bien femme_haut_chemisier_ecru", () => {
     const a = article({ id: 533, name: "Blouse légère brodée", category: "haut", sous_type: "Blouse", couleur_dominante: "Blanc cassé" });
     // Depuis le 15/10/2026, le détail visible du nom (« brodée ») entre dans la clé : la blouse brodée n'emprunte plus le visuel
-    // d'une blouse unie. Le seau du sous-type (Blouse → chemisier) et celui de la couleur, eux, sont inchangés.
-    expect(cleAttendue(a)).toBe("femme_haut_chemisier_ecru_embroidered");
+    // d'une blouse unie ; « légère » aussi depuis la seconde passe du même jour (« lightweight »). Le seau du sous-type
+    // (Blouse → chemisier) et celui de la couleur, eux, sont inchangés.
+    expect(cleAttendue(a)).toBe("femme_haut_chemisier_ecru_lightweight_embroidered");
   });
 
   it("« Cardigan » homme + « Beige » produit bien homme_pull_gilet_beige", () => {
