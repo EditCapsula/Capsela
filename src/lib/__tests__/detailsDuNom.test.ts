@@ -67,6 +67,9 @@ describe("buildImagePrompt — les sous-types relevés à l'audit", () => {
     [{ category: "pantalons", sous_type: "Parachute", name: "Pantalon parachute" }, "parachute pants"],
     [{ category: "sacs", sous_type: "Sac banane", name: "Sac banane crossbody" }, "belt bag"],
     [{ category: "manteaux_exterieurs", sous_type: "Caban", name: "Caban croisé en laine" }, "double-breasted"],
+    [{ category: "accessoires", sous_type: "Chapeau", name: "Chapeau fedora souple" }, "fedora"],
+    [{ category: "bijoux", sous_type: "Bracelet minimaliste", name: "Bracelet minimaliste", matiere: "Cuir" }, "smooth single-band bracelet"],
+    [{ category: "pantalons", sous_type: "Legging", name: "Legging de sport" }, "non-shiny"],
   ];
   it("chaque sous-type a son sujet, et la génération l'accepte", () => {
     for (const [over, attendu] of cas) {

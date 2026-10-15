@@ -73,6 +73,8 @@ const MOTS: Record<string, string> = {
   "croisé": "double-breasted",
   // Chaussures
   chelsea: "chelsea",
+  // Chapeaux (15/10/2026) : le « Chapeau fedora souple » (sous-type « Chapeau ») était dessiné en casquette.
+  fedora: "fedora",
   // Bijoux
   jonc: "rigid bangle",
   manchette: "wide cuff",

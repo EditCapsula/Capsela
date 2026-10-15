@@ -50,6 +50,11 @@ Mesure sur les 627 pièces, même exécution : 0 refusée par la validation, 171
 - **Correctif** : la cascade n'accepte plus qu'un visuel dont le prompt stocké porte exactement les mêmes détails visibles.
 - Planches à l'œil des 173 visuels neufs : en plus des cinq ci-dessus, défauts restants de la génération elle-même — 580 (standard non tressé), 494 (legging encore brillant), 1002 (flat lay tressé), 1051 (flat lay kaki pour du taupe), 779 et 643 (bretelles d'un côté, manches de l'autre : la base ne dit rien).
 
+## Régénération du 15/10/2026, second passage (après recharge du crédit)
+- Toutes les pièces relevées régénérées (sauf 472), cascade corrigée. Contrôle en base : aucune pièce au visuel d'une autre, aucune nouvelle pièce en `error`. Trois pièces avaient hérité d'un ancien visuel faux avant le correctif (844 bonnet en écharpe, 554, 487) : relancées, justes.
+- Ratés de génération repris avec un vocabulaire renforcé : legging « non-shiny » (494), bracelet minimaliste « lisse, un seul bandeau » (1002), « fedora » lu dans le nom (898) ; 565 et 737 relancés tels quels.
+- **En attente d'un ARBITRAGE ÉDITORIAL** : 779, 869, 1059, 937, 535, 762 — manches au catalogue, bretelles au flat lay, la base ne dit rien des manches.
+
 ## Reste à faire
 - **Régénérer les 209 pièces relevées** (décidé le 15/10/2026 : toutes, léger compris) : le visuel désigné faux, ou les deux. Environ 0,02 $ le standard, 0,04 $ le flat lay.
 - **Corriger la donnée cassée de la #472** : sa couleur vaut « <la couleur> ».

@@ -111,8 +111,9 @@ const SUBTYPE_EN: Record<string, string> = {
   // « Veste effet cuir » (id 953, « Veste courte effet cuir ») : sans entrée, le sujet retombait sur « jacket » et la
   // génération dessinait une veste quelconque (07/10/2026, signalé : mauvais visuel). La matière vient de `matiere`.
   "veste effet cuir": "short waist-length jacket",
-  // « Mat » (15/10/2026, audit) : le catalogue du 494 était brillant façon cuir, le flat lay mat.
-  legging: "matte stretch leggings",
+  // « Mat » (15/10/2026, audit) : le catalogue du 494 était brillant façon cuir, le flat lay mat ; « matte » seul n'a pas suffi
+  // en trois générations, « non-shiny » le redit.
+  legging: "matte non-shiny stretch leggings",
   jogging: "jogging pants",
   bermuda: "bermuda shorts",
   combishort: "playsuit",
@@ -167,6 +168,8 @@ const SUBTYPE_EN: Record<string, string> = {
   "bague statement": "bold statement cocktail ring",
   "veste en daim": "suede blouson jacket",
   "manteau long": "long coat falling below the knee",
+  // Le flat lay du 1002 sortait tressé deux fois sur deux : « lisse, un seul bandeau ».
+  "bracelet minimaliste": "minimalist smooth single-band bracelet",
 };
 
 /** Mots-clés de coupe/style repérés DANS sous_type (jamais dans name) — ajoutés comme modificateurs, ne changent jamais le type de produit. */
