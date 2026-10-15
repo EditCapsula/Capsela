@@ -9,7 +9,8 @@
 export type IconePlanifier =
   | "restaurant" | "bar" | "culture" | "exterieur" | "maison"
   | "matin" | "apresmidi" | "soiree" | "journee" | "nuage" | "cintre"
-  | "elegant" | "feminin" | "decontracte" | "audacieux" | "confortable" | "aucune";
+  | "elegant" | "feminin" | "decontracte" | "audacieux" | "confortable" | "aucune"
+  | "printemps" | "ete" | "automne" | "hiver";
 
 const TRAIT = { fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" } as const;
 
@@ -31,6 +32,11 @@ const FORMES: Record<IconePlanifier, React.ReactNode> = {
   audacieux: <><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /><path d="M19 16v4M17 18h4" /></>,
   confortable: <path d="M12 20s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.5-7 10-7 10z" />,
   aucune: <><circle cx="12" cy="12" r="8" /><path d="M7 17L17 7" /></>,
+  // Les quatre saisons (15/10/2026, « Créer un look ») : même trait que les autres pictogrammes, aucune image.
+  printemps: <><path d="M12 21v-8" /><path d="M12 13c-3.5 0-5-2.5-5-5.5 3 0 5 1.8 5 5.5zM12 13c3.5 0 5-2.5 5-5.5-3 0-5 1.8-5 5.5z" /><path d="M9 21h6" /></>,
+  ete: <><circle cx="12" cy="12" r="3.8" /><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6L18 18M6 18l1.4-1.4M16.6 7.4L18 6" /></>,
+  automne: <><path d="M5 19C5 10 10 5 19 5c0 9-5 14-14 14z" /><path d="M5 19l8-8M9.5 14.5h3M12.5 11.5V9" /></>,
+  hiver: <><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" /><path d="M10 4.5l2 1.5 2-1.5M10 19.5l2-1.5 2 1.5" /></>,
 };
 
 export function IconeTuile({ nom, taille = 22 }: { nom: IconePlanifier; taille?: number }) {
@@ -75,8 +81,17 @@ export function TuileOccasion({
 
 /** Une tuile à icône (moment, type de lieu) : aplat terracotta plein à la sélection, texte clair. */
 export function TuileIcone({
-  icone, label, sousTitre, actif, onClick, hauteur = 72,
-}: { icone: IconePlanifier; label: string; sousTitre?: string; actif: boolean; onClick: () => void; hauteur?: number }) {
+  icone, glyphe, label, sousTitre, actif, onClick, hauteur = 72,
+}: {
+  icone?: IconePlanifier;
+  /** Un pictogramme d'ailleurs (le glyphe d'une occasion, GlyphesOccasion) à la place d'une icône de ce jeu — 15/10/2026, « Créer un look ». */
+  glyphe?: React.ReactNode;
+  label: string;
+  sousTitre?: string;
+  actif: boolean;
+  onClick: () => void;
+  hauteur?: number;
+}) {
   return (
     <button
       onClick={onClick}
@@ -87,7 +102,7 @@ export function TuileIcone({
       }
       style={{ minHeight: hauteur }}
     >
-      <span className={actif ? "text-cream" : "text-muted-3"}><IconeTuile nom={icone} /></span>
+      <span className={actif ? "text-cream" : "text-muted-3"}>{glyphe ?? (icone && <IconeTuile nom={icone} />)}</span>
       <span className="text-[12px] leading-[1.2]">{label}</span>
       {sousTitre && <span className={"text-[11px] leading-[1.2] " + (actif ? "text-on-terracotta-soft" : "text-muted")}>{sousTitre}</span>}
     </button>

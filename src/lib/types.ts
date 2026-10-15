@@ -3,6 +3,7 @@ import type { TenuePlanifiee } from "./planifier";
 import type { ValiseGardee } from "./valises";
 import type { ItemOutfitVariation } from "./logic";
 import type { FamilleLook } from "./ideesLooks";
+import type { Humeur } from "./humeur";
 
 export type CategoryKey =
   | "haut"
@@ -586,6 +587,14 @@ export interface AppState {
   lookDraftIds: number[];
   lookDraftName: string;
   lookDraftOccasion: OccasionKey;
+  /**
+   * La saison où porter le look en création (15/10/2026, « Créer un look ») : une préférence, jamais une date. Elle règle la météo
+   * représentative passée au score et aux règles bloquantes, et l'ordre des pièces. En mémoire seulement : saved_looks n'a pas de
+   * colonne pour elle.
+   */
+  lookDraftSaison: CapsuleSeason;
+  /** L'intention de style (l'humeur de Planifier, humeur.ts), facultative : elle range d'abord les pièces qui y répondent. En mémoire seulement. */
+  lookDraftHumeur: Humeur | null;
   /** Clés des suggestions proactives écartées pour le brouillon de look en cours. */
   lookDraftDismissed: string[];
   /** Id du look actuellement ouvert dans l'écran de détail. */
@@ -596,6 +605,12 @@ export interface AppState {
   filtrePieces: FiltrePieces | null;
   /** L'aperçu d'une pièce ouvert depuis un hero (14/10/2026) : une feuille posée sur l'écran, pas une page. Id de la pièce, ou null. */
   pieceApercu: number | null;
+  /**
+   * La fiche détaillée d'une pièce ouverte EN FEUILLE (15/10/2026, demandé : « depuis la homepage, au clic sur une pièce, ouvrir la fiche
+   * détaillée dans une feuille ») : l'écran d'où elle a été ouverte, qui reste dessous. null : aucune. Une navigation vers un autre écran
+   * la referme (App).
+   */
+  ficheEnFeuille: { ecran: Screen } | null;
 }
 
 export type Screen =

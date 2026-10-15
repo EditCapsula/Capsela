@@ -5,7 +5,10 @@ import type { OccasionKey } from "./types";
  * le quotidien, pour la soirée, dans cet ordre fixe. Module pur ; le tirage des tenues reste celui du moteur (regen, store.tsx).
  *
  *   · La tenue du jour du store (state.outfit — celle qui porte l'avis, le quota, le plan appliqué) occupe la slide de SON occasion
- *     quand elle en a une. Une tenue planifiée pour aujourd'hui prend la PREMIÈRE slide, quelle que soit son occasion.
+ *     quand elle en a une. Une tenue planifiée pour aujourd'hui est montrée EN PREMIER ; depuis le 15/10/2026 (signalé : « il manque une
+ *     tenue Soirée, il n'y a que deux slides »), elle occupe la slide de son occasion, déplacée en tête, et non plus celle du travail :
+ *     un plan « Soirée » prenait la place de la proposition Travail, puis la proposition Soirée tombait, ses pièces principales étant
+ *     celles du plan — deux slides au lieu de trois. Un plan d'une autre occasion (sport, voyage…) garde la première place.
  *   · Les autres slides sont des propositions du moteur, tirées pour leur occasion, qui évitent les tenues déjà montrées.
  *   · Une slide sans tenue valide n'est pas affichée ; deux slides ne montrent jamais la même tenue (garde ci-dessous).
  */
@@ -51,7 +54,7 @@ export interface EntreeCarrousel {
 
 export function composerSlides({ tenueDuJour, occasion, planAujourdhui, propositions }: EntreeCarrousel): SlideCarrousel[] {
   const aLaTenue = tenueDuJour.length > 0;
-  const slideDuJour: SlideId | null = !aLaTenue ? null : planAujourdhui ? "travail" : slideDeLOccasion(occasion);
+  const slideDuJour: SlideId | null = !aLaTenue ? null : (slideDeLOccasion(occasion) ?? (planAujourdhui ? "travail" : null));
   // La tenue du jour est montrée d'abord : une proposition identique à elle s'efface, jamais l'inverse.
   const vues = new Set<string>(slideDuJour ? [cleTenue(tenueDuJour)] : []);
   const slides: SlideCarrousel[] = [];
@@ -72,6 +75,11 @@ export function composerSlides({ tenueDuJour, occasion, planAujourdhui, proposit
       ids,
       source: duJour ? (planAujourdhui ? "plan" : "jour") : "proposition",
     });
+  }
+  // Le plan d'aujourd'hui en tête, les autres slides dans leur ordre.
+  if (planAujourdhui) {
+    const i = slides.findIndex((x) => x.source === "plan");
+    if (i > 0) slides.unshift(...slides.splice(i, 1));
   }
   return slides;
 }

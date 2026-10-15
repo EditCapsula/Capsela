@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef,
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
 import { CATALOG, type CatalogItem } from "./catalog";
+import type { Humeur } from "./humeur";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
 import { previsionPour, type MeteoMoment, type MomentJournee, type Prevision } from "./prevision";
@@ -268,11 +269,14 @@ function buildInitialState(): AppState {
     lookDraftIds: [],
     lookDraftName: "",
     lookDraftOccasion: "all",
+    lookDraftSaison: currentSeasonKey(),
+    lookDraftHumeur: null,
     lookDraftDismissed: [],
     activeLookId: null,
     lookReturn: "wardrobe",
     filtrePieces: null,
     pieceApercu: null,
+    ficheEnFeuille: null,
   };
 }
 
@@ -297,6 +301,9 @@ export interface Actions {
   goWardrobePieces: (filtre?: FiltrePieces) => void;
   /** Ouvre / ferme l'aperçu d'une pièce (feuille) depuis un hero. */
   ouvrirApercuPiece: (id: number) => void;
+  /** La fiche complète d'une pièce, dans une feuille posée sur l'écran courant (accueil). */
+  ouvrirFicheEnFeuille: (id: number, suggested: boolean) => void;
+  fermerFicheEnFeuille: () => void;
   fermerApercuPiece: () => void;
   goLooks: () => void;
   goProfile: () => void;
@@ -575,10 +582,18 @@ export interface Actions {
   toggleLookDraftPiece: (id: number) => void;
   setLookDraftName: (v: string) => void;
   setLookDraftOccasion: (o: OccasionKey) => void;
+  setLookDraftSaison: (saison: CapsuleSeason) => void;
+  /** Bascule : repasser l'intention active la retire. */
+  setLookDraftHumeur: (h: Humeur) => void;
   dismissLookDraftSuggestion: (key: string) => void;
   /** Avis rapide sur la tenue du jour — repasser le même verdict le retire. */
   setOutfitFeedback: (verdict: Verdict) => void;
-  saveLook: () => void;
+  /**
+   * Enregistre le look en création. Ne rend « ok » qu'une fois la ligne écrite (15/10/2026 : avant, l'écran revenait au Dressing
+   * avant la réponse de la base, et un échec perdait le brouillon) ; « erreur » garde le brouillon intact, « refuse » quand les
+   * règles l'interdisent (moins de 2 pièces, R-B9).
+   */
+  saveLook: () => Promise<"ok" | "erreur" | "refuse">;
   toggleSaveOutfitLook: () => void;
   openLook: (id: string) => void;
   closeLookDetail: () => void;
@@ -1668,6 +1683,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goNeverWorn: () => go("neverworn"),
     // « Mes pièces » est fusionné dans le Dressing (14/10/2026) : le filtre (catégorie, couleur venue de Tenue) s'applique à la grille du Dressing.
     ouvrirApercuPiece: (id) => setState((s) => ({ ...s, pieceApercu: id })),
+    ouvrirFicheEnFeuille: (id, suggested) =>
+      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, ficheEnFeuille: { ecran: s.screen } })),
+    fermerFicheEnFeuille: () => setState((s) => (s.ficheEnFeuille ? { ...s, ficheEnFeuille: null } : s)),
     fermerApercuPiece: () => setState((s) => (s.pieceApercu == null ? s : { ...s, pieceApercu: null })),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobe" })),
     goLooks: () => go("looks"),
@@ -2073,13 +2091,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // dont l'exécution n'est pas garantie synchrone.
       const s = stateRef.current;
       if (s.activeSuggested) {
-        setState((st) => ({ ...st, suggestedExcluded: [...st.suggestedExcluded, st.activeId], screen: st.pieceReturn }));
+        setState((st) => ({ ...st, suggestedExcluded: [...st.suggestedExcluded, st.activeId], screen: st.pieceReturn, ficheEnFeuille: null }));
         return;
       }
       const deletedId = s.activeId;
       const retiree = s.items.filter((it) => it.id === deletedId);
       const photos = photosDevenuesOrphelines(retiree, s.items.filter((it) => it.id !== deletedId));
-      setState((st) => ({ ...st, items: st.items.filter((it) => it.id !== deletedId), screen: st.pieceReturn }));
+      setState((st) => ({ ...st, items: st.items.filter((it) => it.id !== deletedId), screen: st.pieceReturn, ficheEnFeuille: null }));
       if (isSupabaseConfigured && userId) {
         // Suppression best-effort : la pièce reste retirée localement même en cas d'échec réseau.
         deleteDressingItem(deletedId).catch((err) => reportDressingError("deleteDressingItem", err));
@@ -2914,6 +2932,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         lookDraftIds: seedId != null ? [seedId] : [],
         lookDraftName: "",
         lookDraftOccasion: "all",
+        // Par défaut, la saison calendaire du jour : la même règle que la capsule (currentSeasonKey), aucune nouvelle.
+        lookDraftSaison: currentSeasonKey(),
+        lookDraftHumeur: null,
         lookDraftDismissed: [],
         screen: "createLook",
       })),
@@ -2948,6 +2969,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     setLookDraftName: (v) => setState((s) => ({ ...s, lookDraftName: v })),
     setLookDraftOccasion: (o) =>
       setState((s) => ({ ...s, lookDraftOccasion: s.lookDraftOccasion === o ? "all" : o, lookDraftDismissed: [] })),
+    setLookDraftSaison: (saison) => setState((s) => ({ ...s, lookDraftSaison: saison, lookDraftDismissed: [] })),
+    setLookDraftHumeur: (h) => setState((s) => ({ ...s, lookDraftHumeur: s.lookDraftHumeur === h ? null : h })),
     dismissLookDraftSuggestion: (key) =>
       setState((s) => ({ ...s, lookDraftDismissed: [...s.lookDraftDismissed, key] })),
     // Persistance saved_looks (recette 23/08/2026, signalé : les looks
@@ -2998,13 +3021,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         setState((st) => ({ ...st, outfitFeedbackDuJour: avant }));
       });
     },
-    saveLook: () => {
+    saveLook: async () => {
       const s = stateRef.current;
       // Un look doit rassembler au moins 2 pièces pour avoir du sens.
-      if (s.lookDraftIds.length < 2) return;
+      if (s.lookDraftIds.length < 2) return "refuse";
       // R-B9 — seule règle bloquante : une veste/un manteau seul sans pièce de base ne peut pas être enregistré.
       const draftPieces = s.lookDraftIds.map((id) => s.items.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
-      if (violatesOuterwearRule(draftPieces)) return;
+      if (violatesOuterwearRule(draftPieces)) return "refuse";
       const now = new Date();
       const defaultName =
         "Look du " + now.getDate().toString().padStart(2, "0") + "/" + (now.getMonth() + 1).toString().padStart(2, "0");
@@ -3015,23 +3038,28 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         occasion: s.lookDraftOccasion !== "all" ? s.lookDraftOccasion : undefined,
         source: "created",
       };
+      // Le brouillon n'est vidé qu'APRÈS l'écriture (15/10/2026) ; l'écran reste celui de la création, qui confirme lui-même.
       const resetDraft = (st: AppState): AppState => ({
         ...st,
         lookDraftIds: [],
         lookDraftName: "",
         lookDraftOccasion: "all",
+        lookDraftHumeur: null,
         lookDraftDismissed: [],
-        screen: "wardrobe",
       });
       if (isSupabaseConfigured && userId) {
-        setState(resetDraft);
-        insertSavedLook(userId, base)
-          .then((look) => setState((st) => ({ ...st, savedLooks: [look, ...st.savedLooks] })))
-          .catch((err) => reportDressingError("insertSavedLook", err));
-        return;
+        try {
+          const look = await insertSavedLook(userId, base);
+          setState((st) => ({ ...resetDraft(st), savedLooks: [look, ...st.savedLooks] }));
+          return "ok";
+        } catch (err) {
+          console.error("[looks] échec insertSavedLook", err);
+          return "erreur";
+        }
       }
       const look: SavedLook = { id: "look" + Date.now(), ...base };
       setState((st) => ({ ...resetDraft(st), savedLooks: [look, ...st.savedLooks] }));
+      return "ok";
     },
     // "Enregistrer cette tenue" (Tenue du jour, recette 23/08/2026) — atterrit
     // dans Dressing → Mes looks, mais à la différence de "Créer un look"
