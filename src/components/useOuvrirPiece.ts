@@ -1,12 +1,14 @@
+import { isCatalogId } from "@/lib/catalog";
 import { useCapsela } from "@/lib/store";
 import type { Item } from "@/lib/types";
 
 /**
- * L'OUVERTURE D'UNE PIÈCE depuis un hero (14/10/2026, demandé : « dans chaque hero, tous les éléments sont cliquables », « pas en pleine page ») : un APERÇU en feuille (ApercuPiece), qui mène à la fiche complète. Avant : la même
- * destination que le rail « Les pièces de ta tenue » — la FICHE de la pièce, pour une pièce du dressing comme pour une suggestion de la
- * capsule (« Suggestion », avec ses informations). Plus « Comment porter … ? » depuis un hero (14/10/2026, demandé).
+ * L'OUVERTURE D'UNE PIÈCE depuis un hero (accueil, carrousel, Tenue, look planifié…). Du 14/10/2026 au 15/10/2026 : un APERÇU en
+ * feuille (ApercuPiece), puis « Voir la fiche ». Depuis le 15/10/2026 (demandé : « au clic sur une pièce depuis le hero, affiche la
+ * page détaillée de la pièce ») : la FICHE directement, en suggestion pour une pièce de la capsule — la même destination que le
+ * bouton « Voir la fiche » de l'aperçu, une étape de moins. La flèche de la fiche ramène à l'écran du hero (pieceReturn).
  */
 export function useOuvrirPiece() {
   const { actions } = useCapsela();
-  return (it: Item) => actions.ouvrirApercuPiece(it.id);
+  return (it: Item) => actions.openItem(it.id, isCatalogId(it.id));
 }

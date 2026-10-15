@@ -17,6 +17,18 @@ Brief « Rendre le camembert du dressing interactif ». Composant `CompositionDr
 - **Vérifié en rendu réel** (mode démo, 19 pièces, 7 catégories) à 320, 390 et 1 280 px : chaque arc et chaque ligne choisissent la même part, centre et détail justes, double clic et « Tout le dressing » réinitialisent, Dressing filtré (Hauts : 5 pièces ; Jupes : la puce), retour au Journal, aucun débordement horizontal.
 - **Limites connues** : à 320 px, un libellé long de la légende est tronqué (comme avant), le centre et le détail le donnent en entier ; au retour du Dressing, le Journal reprend en haut et sans part choisie.
 
+## Une seule période (15/10/2026, brief « Optimisation UX du Journal »)
+**Cause de l'incohérence (DÉMONTRÉ dans le code)** : le titre « 31 tenues portées » comptait TOUT l'historique (`entries.length`), le bilan et les chiffres clés le MOIS en cours (« 4 tenues »). Seconde contradiction : la phrase d'en-tête lisait `journalInsights.topOccasion`, qui prend la première occasion même à égalité (« surtout accompagné ton quotidien »), au-dessus d'un bilan `styleDuMois` à égalité (« aucune occasion ne se détache »).
+
+**Règles retenues**
+- Un seul sélecteur (« Ce mois-ci », « 3 derniers mois », « Toute la période »), placé sous l'en-tête : il pilote le titre, la phrase, le bilan et les chiffres clés. Bornes : `debutPeriode` (mois civils, heure locale de l'appareil, borne basse incluse), inchangées.
+- Titre : tenues de la période (`chiffresPeriode.tenues`). Le total historique n'apparaît que nommé (« Depuis le début : 31 tenues portées »), et seulement s'il diffère.
+- Bilan et phrase d'en-tête : `styleDePeriode` (les règles de `styleDuMois` sur la période) — sous 3 tenues « Ton style se dessine », égalité en tête « Des occasions variées », sans occasion notée « Des tenues sans occasion notée », tendance : l'occasion, « domine » au-delà de la moitié, « arrive en tête » sinon (`titreStyle`, avec la période).
+- Chiffres clés : tenues ; pièces DISTINCTES du dressing réel portées au moins une fois, « 7 / 19 » ; part = distinctes / taille du dressing (7/19 = 36,8 → 37 %). Zéro pièce : « Aucune des 19 pièces de ton dressing n'a été portée ce mois-ci », pas « 0 pièce… soit 0 % ».
+- Les pièces fétiches gardent leur propre période (arbitrage du 14/10).
+
+**Vérifié** : tests (31 tenues en tout, 4 en octobre, égalité en tête ; 7/19 = 37 %), rendu réel en démo à 320 et 390 px pour les trois périodes, aucun débordement.
+
 ## Ce qui n'a PAS été fait, et pourquoi
 - **Pièces fétiches sur la période choisie** : elles restent PAR SAISON (demandé par la propriétaire le 26/09/2026, « par saison et non de manière générale »). Le brief les voulait sur la période sélectionnée : conflit à arbitrer (ARBITRAGE ÉDITORIAL ouvert).
 - **Répartition par saison, couleur, style** : non montrée. Saison (`saisons`, migration 0040) et couleur existent mais le « style » d'une pièce n'est pas une donnée de pièce ; rien n'a été calculé à moitié.

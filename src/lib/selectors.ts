@@ -522,11 +522,19 @@ export type StyleDuMois =
 export const STYLE_DU_MOIS_MINIMUM = 3;
 
 export function styleDuMois(history: HistoryEntry[], now: number = Date.now()): StyleDuMois {
-  const n = new Date(now);
-  const mois = history.filter((h) => {
-    const d = new Date(h.ts);
-    return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
-  });
+  return styleDesTenues(historiqueDansPeriode(history, "mois", new Date(now)));
+}
+
+/**
+ * LE BILAN D'UNE PÉRIODE (15/10/2026, « Optimisation UX du Journal ») : les mêmes règles que styleDuMois — 3 tenues au moins, une
+ * égalité en tête n'est pas une tendance, `majorite` au-delà de la moitié — appliquées aux tenues de la période choisie
+ * (historiqueDansPeriode), pour que l'en-tête, le bilan et les chiffres clés parlent tous de la même période.
+ */
+export function styleDePeriode(history: HistoryEntry[], periode: PeriodeJournal, now: Date = new Date()): StyleDuMois {
+  return styleDesTenues(historiqueDansPeriode(history, periode, now));
+}
+
+function styleDesTenues(mois: HistoryEntry[]): StyleDuMois {
   const total = mois.length;
   if (total === 0) return { etat: "vide", total: 0 };
   if (total < STYLE_DU_MOIS_MINIMUM) return { etat: "peu", total };
