@@ -163,6 +163,48 @@ export default function ProfileScreen() {
       )}
 
       <Surtitre icone={I_ETINCELLE}>Mon profil stylistique</Surtitre>
+      {/* COMPLÉTUDE (12/10/2026) — la PROCHAINE information manquante, dite avec son intérêt, et un bouton qui ouvre directement son éditeur
+          (prochaineActionProfil, profile.ts : mêmes champs et même pourcentage que completudeProfil, rien d'écrit en dur par état). Tant que
+          le profil n'est pas chargé, rien : un pourcentage calculé sur un profil vide serait faux. Profil complet : une confirmation discrète.
+          Remonté sous le surtitre « Mon profil stylistique », avant ses lignes, et titré « presque complet » au lieu de « presque prêt »
+          (15/10/2026, demandé). */}
+      {!profileLoaded ? null : prochaine ? (
+        <div className="mb-3 bg-warm-bg border border-warm-border rounded-carte p-4">
+          <div className="flex items-start gap-[12px]">
+            <span className="w-9 h-9 flex-shrink-0 rounded-full bg-card text-terracotta flex items-center justify-center">
+              <Icone taille={17}>{I_GRAPHIQUE}</Icone>
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="t-titre-carte text-ink">
+                Ton profil est <span className="italic text-terracotta">presque complet</span>
+              </div>
+              <div className="text-[13px] text-warm-text-2 leading-[1.45] mt-[4px]">{prochaine.message}</div>
+              <div className="flex items-center gap-[10px] mt-[10px]">
+                <div
+                  className="flex-1 h-[6px] rounded-full bg-card overflow-hidden"
+                  role="progressbar"
+                  aria-valuenow={completude.pourcentage}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Complétude du profil"
+                >
+                  <div className="h-full rounded-full bg-terracotta" style={{ width: `${completude.pourcentage}%` }} />
+                </div>
+                <span className="text-[12px] text-terracotta flex-shrink-0">{completude.pourcentage} %</span>
+              </div>
+            </div>
+          </div>
+          <Button variante="principal" className="mt-[14px]" onClick={() => ouvrirChamp(prochaine.cle)}>
+            {prochaine.cta}
+          </Button>
+        </div>
+      ) : (
+        <div className="mb-3 flex items-center gap-[10px] px-1 text-[12px] text-muted-3" role="status">
+          <span aria-hidden="true" className="w-[18px] h-[18px] rounded-full bg-success-bg text-success flex items-center justify-center text-[11px]">✓</span>
+          Ton profil est complet.
+        </div>
+      )}
+
       <Card className="overflow-hidden">
         <LigneProfil
           icone={I_GENRE}
@@ -237,46 +279,6 @@ export default function ProfileScreen() {
         />
       </Card>
       <div className="text-[12px] text-muted leading-[1.45] mt-[8px] px-1">Pré-remplies quand tu ajoutes une pièce.</div>
-
-      {/* COMPLÉTUDE (12/10/2026) — la PROCHAINE information manquante, dite avec son intérêt, et un bouton qui ouvre directement son éditeur
-          (prochaineActionProfil, profile.ts : mêmes champs et même pourcentage que completudeProfil, rien d'écrit en dur par état). Tant que
-          le profil n'est pas chargé, rien : un pourcentage calculé sur un profil vide serait faux. Profil complet : une confirmation discrète. */}
-      {!profileLoaded ? null : prochaine ? (
-        <div className="mt-4 bg-warm-bg border border-warm-border rounded-carte p-4">
-          <div className="flex items-start gap-[12px]">
-            <span className="w-9 h-9 flex-shrink-0 rounded-full bg-card text-terracotta flex items-center justify-center">
-              <Icone taille={17}>{I_GRAPHIQUE}</Icone>
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="t-titre-carte text-ink">
-                Ton profil est <span className="italic text-terracotta">presque prêt</span>
-              </div>
-              <div className="text-[13px] text-warm-text-2 leading-[1.45] mt-[4px]">{prochaine.message}</div>
-              <div className="flex items-center gap-[10px] mt-[10px]">
-                <div
-                  className="flex-1 h-[6px] rounded-full bg-card overflow-hidden"
-                  role="progressbar"
-                  aria-valuenow={completude.pourcentage}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-label="Complétude du profil"
-                >
-                  <div className="h-full rounded-full bg-terracotta" style={{ width: `${completude.pourcentage}%` }} />
-                </div>
-                <span className="text-[12px] text-terracotta flex-shrink-0">{completude.pourcentage} %</span>
-              </div>
-            </div>
-          </div>
-          <Button variante="principal" className="mt-[14px]" onClick={() => ouvrirChamp(prochaine.cle)}>
-            {prochaine.cta}
-          </Button>
-        </div>
-      ) : (
-        <div className="mt-4 flex items-center gap-[10px] px-1 text-[12px] text-muted-3" role="status">
-          <span aria-hidden="true" className="w-[18px] h-[18px] rounded-full bg-success-bg text-success flex items-center justify-center text-[11px]">✓</span>
-          Ton profil est complet.
-        </div>
-      )}
 
       {/* « MA CAPSULE » RETIRÉE (27/09/2026) : pièces et looks portés ont leurs
           espaces (Dressing, Journal) ; le profil reste ce que Capsela sait de
