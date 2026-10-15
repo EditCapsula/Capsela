@@ -34,7 +34,7 @@ import {
   type JournalPeriod,
 } from "@/lib/selectors";
 import { OCCASIONS_EDITORIALES, libelleOccasion, titreStyle } from "@/lib/occasionEditoriale";
-import type { ChoixRevente, Item, OccasionKey } from "@/lib/types";
+import type { CapsuleSeason, ChoixRevente, Item, OccasionKey } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -314,6 +314,9 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
     </button>
   );
 }
+
+/** Le nom de la saison en cours sur l'onglet des pièces fétiches (15/10/2026, demandé : « Cet automne » plutôt que « Cette saison (automne) »). */
+const CETTE_SAISON: Record<CapsuleSeason, string> = { Printemps: "Ce printemps", Été: "Cet été", Automne: "Cet automne", Hiver: "Cet hiver" };
 
 const PERIODES_FETICHES: { key: PeriodeFetiches; label: string }[] = [
   { key: "saison", label: "Cette saison" },
@@ -1107,7 +1110,7 @@ export default function HistoryScreen() {
                   periodeFetiches === key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
                 }`}
               >
-                {key === "saison" ? `Cette saison${saisonEnCours ? ` (${saisonEnCours.toLowerCase()})` : ""}` : label}
+                {key === "saison" ? CETTE_SAISON[saisonEnCours] : label}
               </button>
             ))}
           </div>

@@ -175,8 +175,17 @@ export default function ProfileScreen() {
               <Icone taille={17}>{I_GRAPHIQUE}</Icone>
             </span>
             <div className="min-w-0 flex-1">
+              {/* À 0 %, « presque complet » serait faux : « Complète ton profil » (15/10/2026, demandé). */}
               <div className="t-titre-carte text-ink">
-                Ton profil est <span className="italic text-terracotta">presque complet</span>
+                {completude.pourcentage === 0 ? (
+                  <>
+                    Complète ton <span className="italic text-terracotta">profil</span>
+                  </>
+                ) : (
+                  <>
+                    Ton profil est <span className="italic text-terracotta">presque complet</span>
+                  </>
+                )}
               </div>
               <div className="text-[13px] text-warm-text-2 leading-[1.45] mt-[4px]">{prochaine.message}</div>
               <div className="flex items-center gap-[10px] mt-[10px]">
