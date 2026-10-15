@@ -6,6 +6,7 @@ import AvisEnregistresJournal from "@/components/AvisEnregistresJournal";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { resolveItemImage } from "@/lib/catalogImages";
 import { useAuth } from "@/lib/auth";
+import { moisAnneeInscription } from "@/lib/membreDepuis";
 import { DAYS_FR, MONTHS_FR, occasionShortLabel } from "@/lib/data";
 import { participePorte, participePorteMaj } from "@/lib/logic";
 import { currentSeasonKey } from "@/lib/capsule";
@@ -486,7 +487,7 @@ export default function HistoryScreen() {
     if (avisEnregistres === null) actions.chargerAvisEnregistres();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avisEnregistres]);
-  const { profile } = useAuth();
+  const { profile, inscritLe } = useAuth();
   const [vue, setVue] = useState<"journal" | "vendre">("journal");
   const [historiqueComplet, setHistoriqueComplet] = useState(false);
   const [pages, setPages] = useState(1);
@@ -803,19 +804,37 @@ export default function HistoryScreen() {
   const chiffres = chiffresPeriode(state.items, state.history, periode);
   const quandBilan = periode === "mois" ? `en ${moisCourant}` : p.quand;
   const moment = style.etat === "tendance" ? MOMENT_DE_L_OCCASION[style.occasion] : null;
+  // « Depuis ton inscription en octobre 2026 » (15/10/2026, demandé), le mois et l'année en terracotta, plutôt que « Depuis le début »,
+  // qui ne disait pas de quoi. Sans date d'inscription connue, la formule d'avant.
+  const inscription = periode === "tout" ? moisAnneeInscription(inscritLe) : null;
+  const debut = inscription ? (
+    <>
+      Depuis ton inscription en <span className="text-terracotta">{inscription}</span>
+    </>
+  ) : (
+    p.debut
+  );
   const phraseStyle =
-    style.etat === "vide"
-      ? `Aucune tenue portée ${p.quand} pour l'instant.`
-      : style.etat === "tendance" && moment
-        ? `${p.debut}, tes tenues ont ${style.majorite ? "surtout" : "le plus souvent"} accompagné ${moment}.`
-        : style.etat === "egalite"
-          ? `${p.debut}, tes tenues se partagent entre plusieurs occasions.`
-          : `${p.debut}, ton style se dessine au fil de tes tenues.`;
+    style.etat === "vide" ? (
+      `Aucune tenue portée ${p.quand} pour l'instant.`
+    ) : style.etat === "tendance" && moment ? (
+      <>
+        {debut}, tes tenues ont {style.majorite ? "surtout" : "le plus souvent"} accompagné {moment}.
+      </>
+    ) : style.etat === "egalite" ? (
+      <>{debut}, tes tenues se partagent entre plusieurs occasions.</>
+    ) : (
+      <>{debut}, ton style se dessine au fil de tes tenues.</>
+    );
   // Le total historique, seulement là où il est nommé comme tel.
   const phraseEnTete =
-    periode === "tout" || entries.length === chiffres.tenues
-      ? phraseStyle
-      : `${phraseStyle} Depuis le début : ${entries.length} ${pl(entries.length, "tenue portée", "tenues portées")}.`;
+    periode === "tout" || entries.length === chiffres.tenues ? (
+      phraseStyle
+    ) : (
+      <>
+        {phraseStyle} Depuis le début : {entries.length} {pl(entries.length, "tenue portée", "tenues portées")}.
+      </>
+    );
   const parts = repartitionDressing(state.items);
 
   const occasionsPresentes = [...new Set(entries.filter((e) => e.hasOccasion).map((e) => e.occasion))];
