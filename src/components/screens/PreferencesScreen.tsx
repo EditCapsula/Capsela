@@ -62,9 +62,20 @@ export default function PreferencesScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.preferencesSection]);
   const prefs = profile.prefs;
-  const setPrefs = (p: Partial<ProfilePrefs>) => saveProfile({ ...profile, prefs: { ...prefs, ...p } });
   const [confirmerReinit, setConfirmerReinit] = useState(false);
   const [villeOuverte, setVilleOuverte] = useState(false);
+  const [reinitFaite, setReinitFaite] = useState(false);
+  const setPrefs = (p: Partial<ProfilePrefs>) => {
+    setReinitFaite(false);
+    saveProfile({ ...profile, prefs: { ...prefs, ...p } });
+  };
+  // Signalé le 15/10/2026 : « Réinitialiser ne fait rien ». Elle agissait, mais sur des réglages déjà d'origine, et sans rien dire.
+  // La ligne le dit désormais : réglages déjà d'origine (rien à réinitialiser), ou réinitialisation faite. Les jours se comparent
+  // sans tenir compte de leur ordre de saisie.
+  const parDefaut =
+    (Object.keys(DEFAULT_PREFS) as (keyof ProfilePrefs)[]).every((k) =>
+      k === "workDays" ? [...prefs.workDays].sort().join() === [...DEFAULT_PREFS.workDays].sort().join() : prefs[k] === DEFAULT_PREFS[k]
+    );
   // La pastille sélectionnée canonique de l'app (terracotta, cf. les filtres
   // du Dressing et des idées de tenues) — elle était ici la seule en encre.
   const pastille = (on: boolean) => (on ? "bg-terracotta text-cream border-terracotta" : "bg-card text-muted-3 border-border");
@@ -201,13 +212,22 @@ export default function PreferencesScreen() {
           <span className="text-[13px] text-ink">Fuseau horaire</span>
           <span className="text-[13px] text-muted-3 truncate">{fuseau}</span>
         </Ligne>
-        <button
-          onClick={() => setConfirmerReinit(true)}
-          className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer"
-        >
-          <span className="text-[13px] text-ink">Réinitialiser les préférences</span>
-          <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
-        </button>
+        {parDefaut ? (
+          <div className="px-4 py-[14px]" role="status">
+            <div className="text-[13px] text-muted-3">Réinitialiser les préférences</div>
+            <div className="text-[11px] text-muted mt-[2px] leading-[1.35]">
+              {reinitFaite ? "C'est fait : tes préférences sont revenues à leurs réglages d'origine." : "Tes préférences sont déjà à leurs réglages d'origine."}
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmerReinit(true)}
+            className="w-full flex items-center justify-between gap-3 px-4 py-[14px] text-left cursor-pointer"
+          >
+            <span className="text-[13px] text-ink">Réinitialiser les préférences</span>
+            <span aria-hidden="true" className="text-placeholder text-[15px]">›</span>
+          </button>
+        )}
       </Section>
 
       <FeuilleVille open={villeOuverte} onClose={() => setVilleOuverte(false)} />
@@ -220,6 +240,7 @@ export default function PreferencesScreen() {
         <Button variante="sombre" className="mt-[22px]"
           onClick={() => {
             setConfirmerReinit(false);
+            setReinitFaite(true);
             saveProfile({ ...profile, prefs: DEFAULT_PREFS });
           }}
         >

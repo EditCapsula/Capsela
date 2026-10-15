@@ -39,3 +39,18 @@ Brief « Rendre le camembert du dressing interactif ». Composant `CompositionDr
 ## Revue du 12/10/2026 — fiabilité de « À sortir du placard »
 Une pièce sans port dans l'historique était présentée « jamais portée » même ajoutée la veille, ou même marquée portée (`Item.worn`) hors d'une tenue validée. `peutEtreDiteJamaisPortee` (`selectors.ts`, testé) l'écarte du placard : ajout de moins de 30 jours (seuil de présence existant), ou `worn` renseigné. Une pièce sans date d'ajout reste admise. NON RÉSOLU : l'historique ne contient que les tenues validées, « aucun port enregistré » ne prouve donc pas « jamais portée » ; distinguer « confirmée portée / sans port enregistré / jamais portée » demanderait de collecter l'information (par exemple une question à l'ajout d'une pièce déjà possédée) — évolution produit, non faite.
 Rappel : les bornes de période suivent le fuseau de l'appareil (`new Date(an, mois, 1)`), qui gère les changements d'heure ; pour une utilisatrice en France, c'est l'heure française. Rendu sur appareil réel et données de production : non vérifiés.
+
+## 15/10/2026 — rapprochement de la maquette
+
+- **En-tête** : la période passe dans un menu à droite du titre (« Octobre 2026 », « 3 derniers mois », « Depuis le début »). Les pastilles
+  de « Tes chiffres clés » pilotent la même période : menu et pastilles ne peuvent pas se contredire.
+- **Bilan** : plus de surtitre (il reste le nom de la section pour le lecteur d'écran). Hors tendance, la carte a une pastille de
+  calendrier à gauche ; à égalité, son titre nomme la période (« Un mois aux occasions variées »).
+- **Chiffres clés** : l'anneau à gauche, puis tenues et pièces utilisées, chacun avec sa pastille d'icône ; la phrase qui dit les
+  chiffres passe dans la carte, derrière une ampoule.
+- **Dressing en chiffres** : un chevron mène au Dressing. La légende sur deux colonnes de la maquette a été essayée puis écartée
+  (libellés tronqués à 390 px, illisibles à 320 px).
+- **Pièces fétiches** : une carte sable par pièce. Le sélecteur de période des fétiches est gardé (demandé le 14/10/2026) ; pas de
+  chevron, faute d'écran qui liste toutes les pièces fétiches.
+- **Non repris** : le visuel éditorial (sac et lunettes) de la carte du bilan, aucun visuel existant ne correspondant ; la phrase
+  d'en-tête de la maquette (« … pour ton quotidien »), qui affirmerait une occasion que les données ne portent pas à égalité.

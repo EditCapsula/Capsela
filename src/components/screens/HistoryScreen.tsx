@@ -34,7 +34,7 @@ import {
   type JournalPeriod,
 } from "@/lib/selectors";
 import { OCCASIONS_EDITORIALES, libelleOccasion, titreStyle } from "@/lib/occasionEditoriale";
-import type { ChoixRevente, Item, OccasionKey } from "@/lib/types";
+import type { CapsuleSeason, ChoixRevente, Item, OccasionKey } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -105,6 +105,9 @@ function BarreTenues({ compte, total }: { compte: number; total: number }) {
   );
 }
 
+/** Les deux chiffres à côté de l'anneau : 21 px, réduits sur un écran étroit pour que « 10 / 18 » tienne entre ses deux filets à 320 px. */
+const TAILLE_CHIFFRE = { fontSize: "clamp(17px, 5.4vw, 21px)" } as const;
+
 const pl = (n: number, un: string, plusieurs: string) => (n <= 1 ? un : plusieurs);
 
 function Surtitre({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -133,6 +136,44 @@ function IconeIdee() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M9 18h6M10 21h4M8 14.5A5.5 5.5 0 1 1 16 14.5c-.7.8-1.3 1.6-1.4 2.5H9.4c-.1-.9-.7-1.7-1.4-2.5z" />
     </svg>
+  );
+}
+
+function IconeCalendrier() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+function IconeCouches() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8z" />
+      <path d="M3.5 12l8.5 4.5 8.5-4.5M3.5 16l8.5 4.5 8.5-4.5" />
+    </svg>
+  );
+}
+/** Pastille ronde d'une icône (chiffres clés, bilan) — la même que les cartes de l'accueil. */
+function PastilleIcone({ children, taille = 36, fond = "bg-warm-bg" }: { children: React.ReactNode; taille?: number; fond?: string }) {
+  return (
+    <span className={`flex-shrink-0 rounded-full ${fond} text-terracotta flex items-center justify-center`} style={{ width: taille, height: taille }}>
+      {children}
+    </span>
+  );
+}
+/** Un surtitre de section suivi d'un chevron qui mène quelque part (jamais un chevron sans destination). */
+function SurtitreLien({ id, children, onClick, label }: { id: string; children: React.ReactNode; onClick: () => void; label: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <Surtitre>
+        <span id={id}>{children}</span>
+      </Surtitre>
+      <button type="button" onClick={onClick} aria-label={label} className="w-[44px] h-[44px] -my-[14px] -mr-[14px] flex items-center justify-center text-ink cursor-pointer">
+        <span aria-hidden="true" className="text-[20px] leading-none">›</span>
+      </button>
+    </div>
   );
 }
 
@@ -178,9 +219,7 @@ function statutAttente(item: Item, port: EtatDePort): string {
 }
 
 /** Jauge en anneau : une part (0-100) du dressing, le chiffre écrit au centre. */
-function AnneauCapsule({ pourcentage, legende }: { pourcentage: number; legende: string }) {
-  const taille = 92;
-  const trait = 7;
+function AnneauCapsule({ pourcentage, legende, taille = 92, trait = 7 }: { pourcentage: number; legende: string; taille?: number; trait?: number }) {
   const r = (taille - trait) / 2;
   const c = 2 * Math.PI * r;
   const plein = (Math.min(100, Math.max(0, pourcentage)) / 100) * c;
@@ -204,7 +243,7 @@ function AnneauCapsule({ pourcentage, legende }: { pourcentage: number; legende:
       </svg>
       <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <span className="t-chiffre text-ink">{pourcentage} %</span>
-        <span className="text-[9px] text-muted leading-[1.2] mt-[4px] px-2">{legende}</span>
+        <span className="text-[10px] text-muted leading-[1.25] mt-[4px] px-3">{legende}</span>
       </div>
     </div>
   );
@@ -275,6 +314,9 @@ function CarteTenue({ entry, onOpen }: { entry: JournalEntry; onOpen: () => void
     </button>
   );
 }
+
+/** Le nom de la saison en cours sur l'onglet des pièces fétiches (15/10/2026, demandé : « Cet automne » plutôt que « Cette saison (automne) »). */
+const CETTE_SAISON: Record<CapsuleSeason, string> = { Printemps: "Ce printemps", Été: "Cet été", Automne: "Cet automne", Hiver: "Cet hiver" };
 
 const PERIODES_FETICHES: { key: PeriodeFetiches; label: string }[] = [
   { key: "saison", label: "Cette saison" },
@@ -379,6 +421,8 @@ function CompositionDressing({ parts, total, onVoirPieces }: { parts: PartDressi
             <span className="text-[10px] text-muted leading-[1.2] mt-[2px] line-clamp-2">{active ? active.libelle : pl(total, "pièce", "pièces")}</span>
           </div>
         </div>
+        {/* Une seule colonne : la légende sur deux colonnes de la maquette (15/10/2026) a été essayée puis écartée — à 390 px,
+            « Veste / Blazer » et « Chaussures » y étaient tronqués, à 320 px illisibles. */}
         <ul className="flex-1 min-w-0 flex flex-col" aria-label="Catégories de ton dressing">
           {parts.map((p, i) => {
             const estActive = active?.cat === p.cat;
@@ -749,6 +793,8 @@ export default function HistoryScreen() {
   // Le mois de référence de journalInsights, et non celui de la dernière
   // tenue : sans tenue ce mois-ci, ce dernier nommait le mois précédent.
   const moisCourant = MONTHS_FR[insights.mois];
+  // « Octobre 2026 » : le mois de référence et son année (celle d'aujourd'hui, comme journalInsights).
+  const libelleMois = `${moisCourant.charAt(0).toUpperCase()}${moisCourant.slice(1)} ${new Date().getFullYear()}`;
 
   // UNE SEULE PÉRIODE pour l'en-tête, le bilan et les chiffres clés (15/10/2026). La phrase d'en-tête lit le MÊME bilan que la carte
   // (styleDePeriode) : avant, elle prenait la première occasion même à égalité (journalInsights) et disait « surtout ton quotidien »
@@ -798,25 +844,33 @@ export default function HistoryScreen() {
       <AppHeader />
 
       {/* EN-TÊTE */}
+      {/* EN-TÊTE (15/10/2026, maquette du Journal) : le titre à gauche, la période en menu à droite (« Octobre 2026 »). Le menu et les
+          pastilles de « Tes chiffres clés » pilotent la MÊME période : ils ne peuvent pas se contredire. Un <select> natif : la liste
+          s'ouvre à la manière du système, au clavier et au lecteur d'écran aussi. */}
       <Surtitre className="mt-[18px]">Ton journal</Surtitre>
-      <div className="t-titre-ecran text-ink mt-[6px]" aria-live="polite">
-        {chiffres.tenues} <span className="italic text-terracotta">{pl(chiffres.tenues, "tenue portée", "tenues portées")}</span>
+      <div className="flex items-start justify-between gap-3 mt-[6px]">
+        <div className="t-titre-ecran text-ink min-w-0" aria-live="polite">
+          {chiffres.tenues} <span className="italic text-terracotta">{pl(chiffres.tenues, "tenue portée", "tenues portées")}</span>
+        </div>
+        <label className="relative flex-shrink-0">
+          <span className="sr-only">Période du journal</span>
+          <select
+            value={periode}
+            onChange={(e) => setPeriode(e.target.value as PeriodeJournal)}
+            className="appearance-none min-h-[40px] pl-[14px] pr-[34px] rounded-full bg-card border border-border text-[12.5px] text-ink cursor-pointer"
+          >
+            {PERIODES.map(({ key, label }) => (
+              <option key={key} value={key}>
+                {key === "mois" ? libelleMois : key === "tout" ? "Depuis le début" : label}
+              </option>
+            ))}
+          </select>
+          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="absolute right-[14px] top-1/2 -translate-y-1/2 pointer-events-none text-ink">
+            <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </label>
       </div>
       <div className="t-chapeau text-muted-3 mt-[8px]">{phraseEnTete}</div>
-      <div role="group" aria-label="Période du journal" className="scrollarea flex gap-2 overflow-x-auto mt-4 pb-[2px]">
-        {PERIODES.map(({ key, label }) => (
-          <button
-            key={key}
-            aria-pressed={periode === key}
-            onClick={() => setPeriode(key)}
-            className={`flex-none min-h-[40px] px-[14px] rounded-full text-[12px] cursor-pointer border ${
-              periode === key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
 
       {/* BILAN DU MOIS d'abord (A), puis les chiffres clés (B) et le dressing en chiffres (C) — ordre du brief du 12/10/2026. */}
       {/* TON BILAN DU MOIS (renommé le 12/10/2026, brief « Refonte UX du Journal » ; « Ton style ce mois-ci » avant, même contenu : l'insight est déterministe, tiré de styleDuMois, jamais d'une IA) — une carte éditoriale (26/09/2026) : ce que
@@ -826,10 +880,9 @@ export default function HistoryScreen() {
           sans occasion notée ou à égalité, la carte le dit simplement —
           jamais de conclusion inventée. Le compte des pièces jamais portées
           vit dans « À sortir du placard ». */}
-      <section className="mt-5" aria-labelledby="journal-style">
-        <Surtitre>
-          <span id="journal-style">{p.bilan}</span>
-        </Surtitre>
+      {/* Le surtitre « Ton bilan du mois » n'est plus affiché (15/10/2026, maquette) : la carte suit l'en-tête, qui nomme déjà la
+          période ; il reste le nom de la section pour le lecteur d'écran. */}
+      <section className="mt-5" aria-label={p.bilan}>
         {style.etat === "tendance" ? (
           (() => {
             // Tout ce que la carte dit et montre de l'occasion vient d'une
@@ -839,7 +892,7 @@ export default function HistoryScreen() {
             const o = OCCASIONS_EDITORIALES[style.occasion];
             const titre = titreStyle(o, style.majorite, p.quand);
             return (
-              <div className="mt-3 bg-warm-bg border border-warm-border rounded-feuille px-5 pt-[16px] pb-[18px] overflow-hidden">
+              <div className="bg-warm-bg border border-warm-border rounded-feuille px-5 pt-[16px] pb-[18px] overflow-hidden">
                 <div className="flex gap-[14px]">
                   <div className="flex-1 min-w-0">
                     {/* Le nom de l'occasion en pastille, seul : plus de surtitre
@@ -909,7 +962,13 @@ export default function HistoryScreen() {
             );
           })()
         ) : (
-          <div className="mt-3 bg-warm-bg border border-warm-border rounded-carte px-5 py-[16px]">
+          <div className="bg-warm-bg border border-warm-border rounded-carte px-4 py-[16px] flex items-start gap-[14px]">
+            <PastilleIcone taille={44} fond="bg-card">
+              <span className="text-terracotta">
+                <IconeCalendrier />
+              </span>
+            </PastilleIcone>
+            <div className="flex-1 min-w-0">
             {/* Quatre cas, aucune conclusion que les données ne portent pas (15/10/2026) : rien à lire, trop peu pour une tendance (le
                 seuil de 3 tenues de STYLE_DU_MOIS_MINIMUM), plusieurs occasions à égalité en tête (une diversité, pas un échec), ou des
                 tenues sans occasion notée. */}
@@ -919,7 +978,11 @@ export default function HistoryScreen() {
                 : style.etat === "peu"
                   ? "Ton style se dessine"
                   : style.etat === "egalite"
-                    ? "Des occasions variées"
+                    ? periode === "mois"
+                      ? "Un mois aux occasions variées"
+                      : periode === "trois_mois"
+                        ? "Trois mois aux occasions variées"
+                        : "Des occasions variées"
                     : "Des tenues sans occasion notée"}
             </div>
             <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[6px]">
@@ -928,8 +991,9 @@ export default function HistoryScreen() {
                 : style.etat === "peu"
                   ? `${style.total} ${pl(style.total, "tenue portée", "tenues portées")} ${quandBilan} : une tendance se dégage à partir de ${STYLE_DU_MOIS_MINIMUM}.`
                   : style.etat === "egalite"
-                    ? `Tes ${style.total} tenues ${quandBilan} se répartissent entre plusieurs occasions, sans qu'une passe devant : ton dressing t'accompagne dans des moments différents.`
+                    ? `Tes ${style.total} tenues ${quandBilan} se répartissent entre plusieurs occasions. Continue à enregistrer tes tenues pour découvrir tes tendances.`
                     : `${style.total} tenues portées ${quandBilan}, sans occasion précisée : rien ne permet encore de dire ce qui rythme ton style.`}
+            </div>
             </div>
           </div>
         )}
@@ -943,44 +1007,71 @@ export default function HistoryScreen() {
         <Surtitre>
           <span id="journal-chiffres">Tes chiffres clés</span>
         </Surtitre>
-        <Card className="mt-3 px-4 py-4 flex items-center gap-3" aria-live="polite">
-          {chiffres.totalDressing > 0 && (
-            <>
-              <AnneauCapsule pourcentage={chiffres.part} legende="de ton dressing porté" />
-              <span aria-hidden="true" className="self-stretch w-px bg-border flex-shrink-0" />
-            </>
-          )}
-          <div className="flex-1 min-w-0 grid grid-cols-2">
-            <div className="pr-2">
-              <div className="t-chiffre text-ink">{chiffres.tenues}</div>
-              <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(chiffres.tenues, "tenue portée", "tenues portées")}</div>
+        {/* Les trois périodes en pastilles de même largeur (15/10/2026, maquette) : la même période que le menu de l'en-tête. */}
+        <div role="group" aria-label="Période des chiffres clés" className="grid grid-cols-3 gap-2 mt-3">
+          {PERIODES.map(({ key, label }) => (
+            <button
+              key={key}
+              aria-pressed={periode === key}
+              onClick={() => setPeriode(key)}
+              className={`min-h-[40px] px-2 rounded-full text-[12px] leading-[1.2] cursor-pointer border ${
+                periode === key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <Card className="mt-3 px-3 pt-4 pb-3" aria-live="polite">
+          <div className="flex items-stretch">
+            {chiffres.totalDressing > 0 && (
+              <>
+                <div className="flex items-center pr-3">
+                  <AnneauCapsule pourcentage={chiffres.part} legende="de ton dressing porté" taille={100} trait={9} />
+                </div>
+                <span aria-hidden="true" className="w-px bg-border flex-shrink-0" />
+              </>
+            )}
+            <div className="flex-1 min-w-0 flex flex-col items-center text-center px-1">
+              <PastilleIcone>
+                <IconeCintre />
+              </PastilleIcone>
+              <div className="t-chiffre text-ink mt-[8px]" style={TAILLE_CHIFFRE}>{chiffres.tenues}</div>
+              <div className="text-[12px] text-muted leading-[1.3] mt-[4px]">{pl(chiffres.tenues, "tenue portée", "tenues portées")}</div>
             </div>
             {chiffres.totalDressing > 0 && (
-              <div className="pl-3 border-l border-border">
-                {/* « 7 / 19 » : des pièces DISTINCTES, sur la taille du dressing (15/10/2026) — jamais le nombre de ports. */}
-                <div className="t-chiffre text-ink whitespace-nowrap">
-                  {chiffres.piecesUtilisees}
-                  <span className="text-muted"> / {chiffres.totalDressing}</span>
-                </div>
-                <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(chiffres.piecesUtilisees, "pièce utilisée", "pièces utilisées")}</div>
-              </div>
-            )}
-          </div>
-        </Card>
-        {chiffres.totalDressing > 0 && (
-          <div className="text-[12px] text-muted-3 leading-[1.45] mt-[8px]">
-            {chiffres.piecesUtilisees === 0 ? (
-              chiffres.totalDressing === 1
-                ? `La pièce de ton dressing n'a pas été portée ${p.phrase}.`
-                : `Aucune des ${chiffres.totalDressing} pièces de ton dressing n'a été portée ${p.phrase}.`
-            ) : (
               <>
-                {chiffres.piecesUtilisees} {pl(chiffres.piecesUtilisees, "pièce différente", "pièces différentes")} de ton dressing sur {chiffres.totalDressing}{" "}
-                {pl(chiffres.piecesUtilisees, "a été portée", "ont été portées")} au moins une fois {p.phrase}, soit {chiffres.part} %.
+                <span aria-hidden="true" className="w-px bg-border flex-shrink-0" />
+                <div className="flex-1 min-w-0 flex flex-col items-center text-center px-1">
+                  <PastilleIcone>
+                    <IconeCouches />
+                  </PastilleIcone>
+                  {/* « 7 / 19 » : des pièces DISTINCTES, sur la taille du dressing (15/10/2026) — jamais le nombre de ports. */}
+                  <div className="t-chiffre text-ink whitespace-nowrap mt-[8px]" style={TAILLE_CHIFFRE}>
+                    {chiffres.piecesUtilisees} / {chiffres.totalDressing}
+                  </div>
+                  <div className="text-[12px] text-muted leading-[1.3] mt-[4px]">{pl(chiffres.piecesUtilisees, "pièce utilisée", "pièces utilisées")}</div>
+                </div>
               </>
             )}
           </div>
-        )}
+          {/* La phrase qui dit les chiffres, dans la carte, derrière une ampoule (maquette). */}
+          {chiffres.totalDressing > 0 && (
+            <div className="mt-[14px] bg-warm-bg rounded-[12px] px-3 py-[10px] flex items-start gap-[10px] text-[12px] text-ink-soft leading-[1.45]">
+              <span className="text-terracotta flex-shrink-0 mt-[1px]">
+                <IconeIdee />
+              </span>
+              <span>
+                {chiffres.piecesUtilisees === 0
+                  ? chiffres.totalDressing === 1
+                    ? `La pièce de ton dressing n'a pas été portée ${p.phrase}.`
+                    : `Aucune des ${chiffres.totalDressing} pièces de ton dressing n'a été portée ${p.phrase}.`
+                  : // Trait d'union insécable : « mois-ci » ne se coupe pas en fin de ligne.
+                    `Tu as porté ${chiffres.piecesUtilisees} ${pl(chiffres.piecesUtilisees, "pièce", "pièces différentes")} sur les ${chiffres.totalDressing} de ton dressing ${p.phrase.replace("-", "\u2011")}.`}
+              </span>
+            </div>
+          )}
+        </Card>
       </section>
 
       {/* TON DRESSING EN CHIFFRES (C) — la composition du dressing RÉEL : une pièce, une catégorie, la somme des parts est le total affiché
@@ -988,9 +1079,9 @@ export default function HistoryScreen() {
           style ne sont pas montrées : pas de calcul fiable à ce jour sur ces trois axes (cf. docs/journal.md). */}
       {parts.length > 0 && (
         <section className="mt-[30px]" aria-labelledby="journal-composition">
-          <Surtitre>
-            <span id="journal-composition">Ton dressing en chiffres</span>
-          </Surtitre>
+          <SurtitreLien id="journal-composition" onClick={actions.goWardrobe} label="Voir mon dressing">
+            Ton dressing en chiffres
+          </SurtitreLien>
           <CompositionDressing
             parts={parts}
             total={state.items.length}
@@ -1019,7 +1110,7 @@ export default function HistoryScreen() {
                   periodeFetiches === key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
                 }`}
               >
-                {key === "saison" ? `Cette saison${saisonEnCours ? ` (${saisonEnCours.toLowerCase()})` : ""}` : label}
+                {key === "saison" ? CETTE_SAISON[saisonEnCours] : label}
               </button>
             ))}
           </div>
@@ -1033,9 +1124,11 @@ export default function HistoryScreen() {
                 <li key={item.id} className="min-w-0">
                   <button
                     onClick={() => ouvrirPiece(item)}
-                    className="w-full text-left cursor-pointer"
+                    className="w-full h-full text-left cursor-pointer"
                     aria-label={`${idx + 1}. ${item.name}, ${ports.toLowerCase()}`}
                   >
+                    {/* Une carte sable par pièce (15/10/2026, maquette) : le rang, le visuel, le nom et le nombre de ports ensemble. */}
+                    <span className="block bg-warm-bg rounded-tuile p-[6px] pb-[10px] h-full">
                     <span className="relative block">
                       <Vignette item={item} className="w-full" pad={6} />
                       <span
@@ -1047,10 +1140,11 @@ export default function HistoryScreen() {
                     </span>
                     {/* Le nombre de ports suit le nom de près (14/10/2026, demandé) : la hauteur de deux lignes réservée au nom laissait un
                         blanc d'une ligne sous les noms courts. Un nom sur deux lignes décale seulement son propre compte. */}
-                    <span className="text-[12px] text-ink leading-[1.25] mt-[7px] line-clamp-2">
+                    <span className="text-[12px] text-ink leading-[1.25] mt-[7px] px-[4px] line-clamp-2">
                       {nomCourtPiece(item.name)}
                     </span>
-                    <span className="block text-[11px] text-muted mt-[1px]">{ports}</span>
+                    <span className="block text-[11px] text-muted mt-[1px] px-[4px]">{ports}</span>
+                    </span>
                   </button>
                 </li>
               );

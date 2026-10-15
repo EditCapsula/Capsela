@@ -517,8 +517,9 @@ export default function HomeScreen() {
       </div>
       )}
 
-      {/* ══ EXPLORER CAPSELA — « Tout pour ton style » : les quatre univers de l'app. */}
-      <div className="px-6 mt-7">
+      {/* ══ EXPLORER CAPSELA — « Tout pour ton style » : les quatre univers de l'app. Sous le carrousel, 8 px au lieu de 28 (15/10/2026,
+          demandé) : les repères de pagination ajoutent déjà 32 px sous la slide ; le repère se trouve ainsi à égale distance de la slide et du surtitre. */}
+      <div className={`px-6 ${carrouselActif ? "mt-2" : "mt-7"}`}>
         <span className="t-surtitre text-muted-3 !text-[9.5px]">Explorer Capsela</span>
         <h2 className="t-titre-ecran text-ink mt-1">
           Tout pour ton <span className="italic text-terracotta">style</span>
