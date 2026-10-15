@@ -805,15 +805,18 @@ export default function HistoryScreen() {
   const quandBilan = periode === "mois" ? `en ${moisCourant}` : p.quand;
   const moment = style.etat === "tendance" ? MOMENT_DE_L_OCCASION[style.occasion] : null;
   // « Depuis ton inscription en octobre 2026 » (15/10/2026, demandé), le mois et l'année en terracotta, plutôt que « Depuis le début »,
-  // qui ne disait pas de quoi. Sans date d'inscription connue, la formule d'avant.
+  // qui ne disait pas de quoi. Sans date d'inscription connue : « Depuis ton inscription » seul (demandé le même jour).
   const inscription = periode === "tout" ? moisAnneeInscription(inscritLe) : null;
-  const debut = inscription ? (
-    <>
-      Depuis ton inscription en <span className="text-terracotta">{inscription}</span>
-    </>
-  ) : (
-    p.debut
-  );
+  const debut =
+    periode !== "tout" ? (
+      p.debut
+    ) : inscription ? (
+      <>
+        Depuis ton inscription en <span className="text-terracotta">{inscription}</span>
+      </>
+    ) : (
+      "Depuis ton inscription"
+    );
   const phraseStyle =
     style.etat === "vide" ? (
       `Aucune tenue portée ${p.quand} pour l'instant.`
