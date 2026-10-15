@@ -249,3 +249,15 @@ export function choisirADecouvrir(p: {
   if (p.nbManques > 0) return { cas: "manque" };
   return null;
 }
+
+/**
+ * UN FILTRE PAR CATÉGORIE QU'AUCUNE PUCE NE PORTE (15/10/2026, « Voir les pièces » d'une part de l'anneau du Journal). Les puces du
+ * Dressing regroupent des catégories (« Hauts & mailles » = haut + pull) ; le Journal compte par catégorie (repartitionDressing). Quand
+ * le filtre reçu correspond exactement à une puce, c'est la puce qui s'active (null ici) ; sinon, les catégories du filtre
+ * s'appliquent telles quelles, comme le filtre par teinte, avec son libellé et « Tout afficher ».
+ */
+export function categoriesHorsPuces(filtre: { categories?: CategoryKey[] } | null | undefined, groupes: { categories: CategoryKey[] }[]): CategoryKey[] | null {
+  if (!filtre?.categories?.length) return null;
+  const cle = filtre.categories.join();
+  return groupes.some((g) => g.categories.join() === cle) ? null : filtre.categories;
+}

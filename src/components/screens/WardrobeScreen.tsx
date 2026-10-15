@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { CATLABEL, CATS, OCC_LABELS, occasionShortLabel, wornAgo } from "@/lib/data";
 import {
   assezDuDressing,
+  categoriesHorsPuces,
   groupesDuVestiaire,
   syntheseDressing,
 } from "@/lib/dressingEcran";
@@ -405,7 +406,14 @@ export default function WardrobeScreen() {
   const normaliser = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const terme = normaliser(recherche.trim());
   const correspond = (it: Item) => !terme || normaliser(`${it.name} ${CATLABEL[it.cat] ?? ""} ${it.color ?? ""}`).includes(terme);
-  const baseItems = filtre?.teinte ? items.filter((i) => teinteDe(i) === filtre.teinte) : items;
+  // Une catégorie qu'aucune puce ne porte (« Haut » seul, venu du Journal, 15/10/2026) s'applique comme le filtre par teinte.
+  const horsPuces = categoriesHorsPuces(filtre, groupes);
+  const filtreExact = Boolean(filtre?.teinte || horsPuces);
+  const baseItems = filtre?.teinte
+    ? items.filter((i) => teinteDe(i) === filtre.teinte)
+    : horsPuces
+      ? items.filter((i) => horsPuces.includes(i.cat))
+      : items;
   const parRecherche = baseItems.filter(correspond);
   const groupeActif = groupes.find((g) => g.id === groupeId) ?? null;
   const nbDuGroupe = (g: (typeof groupes)[number]) => parRecherche.filter((it) => g.categories.includes(it.cat)).length;
@@ -418,7 +426,7 @@ export default function WardrobeScreen() {
     : groupeActif
       ? `${groupeActif.libelle} · ${pl(affichees.length)}`
       : `Toutes tes pièces · ${items.length}`;
-  const sansFiltre = !terme && !groupeActif && !filtre?.teinte;
+  const sansFiltre = !terme && !groupeActif && !filtreExact;
 
   const quitterSelection = () => {
     setSelectionMode(false);
@@ -464,7 +472,10 @@ export default function WardrobeScreen() {
     <div className="absolute inset-0 flex flex-col">
       {/* EN-TÊTE FIXE : bandeau, titre, recherche, catégories — la grille arrive juste dessous, sans bannière intercalée. */}
       <div className="flex-shrink-0 px-6 pt-[6px]">
-        <AppHeader onBack={filtre?.retour === "tenue" ? actions.goTenues : undefined} backLabel="Revenir à ma tenue" />
+        <AppHeader
+          onBack={filtre?.retour === "tenue" ? actions.goTenues : filtre?.retour === "journal" ? actions.goHistory : undefined}
+          backLabel={filtre?.retour === "journal" ? "Revenir au Journal" : "Revenir à ma tenue"}
+        />
         <div className="t-titre-ecran text-ink mt-[18px]">
           Mon <span className="italic text-terracotta">dressing</span>
         </div>
@@ -492,7 +503,7 @@ export default function WardrobeScreen() {
             </button>
           )}
         </label>
-        {!selectionMode && !filtre?.teinte && (
+        {!selectionMode && !filtreExact && (
         <div role="tablist" aria-label="Catégories" className="scrollarea flex gap-2 overflow-x-auto py-3 -mx-6 px-6" style={{ scrollbarWidth: "none" }}>
           {[{ id: null as string | null, libelle: "Tout", n: parRecherche.length }, ...groupes.map((g) => ({ id: g.id as string | null, libelle: g.libelle, n: nbDuGroupe(g) }))].map((c) => {
             const actif = groupeId === c.id;
@@ -517,11 +528,11 @@ export default function WardrobeScreen() {
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 border-t border-border" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}>
         <div className="flex items-center justify-between gap-3 min-h-[44px]">
           <span role="status" aria-live="polite" className="text-[12px] text-muted-3 min-w-0">
-            {selectionMode ? (selection.size === 0 ? "Touche les pièces à retirer" : `${selection.size} ${selection.size === 1 ? "sélectionnée" : "sélectionnées"}`) : filtre?.teinte ? `${filtre.libelle} · ${pl(affichees.length)}` : libelleResultats}
+            {selectionMode ? (selection.size === 0 ? "Touche les pièces à retirer" : `${selection.size} ${selection.size === 1 ? "sélectionnée" : "sélectionnées"}`) : filtreExact && filtre ? `${filtre.libelle} · ${pl(affichees.length)}` : libelleResultats}
           </span>
           {selectionMode ? (
             <button type="button" onClick={quitterSelection} className="h-[44px] text-[12px] text-muted flex-shrink-0 cursor-pointer">Annuler</button>
-          ) : filtre?.teinte ? (
+          ) : filtreExact ? (
             <button type="button" onClick={() => actions.goWardrobePieces()} className="h-[44px] text-[12px] font-semibold text-terracotta-deep flex-shrink-0 cursor-pointer">Tout afficher</button>
           ) : (
             <button type="button" onClick={() => setTri(tri === "recent" ? "az" : "recent")} className="h-[44px] flex items-center gap-[5px] text-[12px] font-semibold text-ink cursor-pointer">

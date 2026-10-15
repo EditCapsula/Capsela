@@ -28,13 +28,14 @@ export type CapsuleSeason = "Printemps" | "Été" | "Automne" | "Hiver";
 /**
  * Le filtre de l'écran « Mes pièces » : par catégories (cartes du Dressing) ou par teinte (feuille d'un
  * accord de saison, 02/10/2026 ; `teinte` est un hex de PAL_COULEURS, lu par teinteDe). `retour: "tenue"` :
- * la flèche de retour ramène à la tenue d'où l'on vient, pas au Dressing.
+ * la flèche de retour ramène à la tenue d'où l'on vient, pas au Dressing ; `retour: "journal"` (15/10/2026) : au Journal, d'où
+ * « Voir les pièces » d'une part de l'anneau a ouvert le Dressing.
  */
 export interface FiltrePieces {
   libelle: string;
   categories?: CategoryKey[];
   teinte?: string;
-  retour?: "tenue";
+  retour?: "tenue" | "journal";
 }
 
 export type OccasionKey =

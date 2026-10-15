@@ -8,6 +8,15 @@ Brief « Capsela — Refonte UX/UI du Journal ». L'écran existait déjà (`His
 - **Ton dressing en chiffres** : anneau SVG + légende (nombre et pourcentage par catégorie, jamais la couleur seule), `repartitionDressing` : une pièce, une catégorie, la somme des parts = le total affiché ; pourcentages au plus fort reste (somme 100) ; catégorie hors taxonomie = « Autres ». Section absente si le dressing est vide.
 - **À sortir du placard** : chaque carte porte « Trouver une tenue » → parcours existant « Comment porter … ? » de la pièce (`openItemOutfits`, même moteur). Le lien « Voir les idées de tenues » de la première pièce est retiré.
 
+## Anneau interactif (15/10/2026)
+Brief « Rendre le camembert du dressing interactif ». Composant `CompositionDressing` (`HistoryScreen.tsx`), état local, aucune autre section touchée.
+- **Choisir une part** : sur l'arc ou sur sa ligne de légende (boutons, `aria-pressed`, Entrée/Espace) ; la même part ou « Tout le dressing » revient à la vue d'ensemble. Arc choisi : 16 → 22 px ; les autres à 32 % d'opacité ; ligne de légende en gras sur fond sable, les autres atténuées. Centre : nombre et libellé de la part (« 5 / Haut »), sinon le total.
+- **Détail** sous l'anneau (`detailPartDressing`, testé) : libellé pluriel de la taxonomie (« Hauts »), « 5 pièces · 26 % du dressing », « Voir les pièces », « Tout le dressing ». Mêmes parts que l'arc et la légende : aucun second calcul.
+- **Voir les pièces** : `goWardrobePieces(filtrePourPart(part))` — la catégorie exacte, `retour: "journal"` (flèche « Revenir au Journal »). Les puces du Dressing regroupent des catégories (« Hauts & mailles ») : une catégorie portée seule par une puce l'active (Jupes, Chaussures, Sacs) ; sinon elle s'applique comme le filtre par teinte, avec son libellé et « Tout afficher » (`categoriesHorsPuces`, testé). « Autres » n'a pas de filtre : pas d'action.
+- **Animations** : 200 ms (arc, légende, fondu du détail), coupées par `prefers-reduced-motion`. Clavier : l'arc atteint s'épaissit (un contour encadrerait l'anneau entier).
+- **Vérifié en rendu réel** (mode démo, 19 pièces, 7 catégories) à 320, 390 et 1 280 px : chaque arc et chaque ligne choisissent la même part, centre et détail justes, double clic et « Tout le dressing » réinitialisent, Dressing filtré (Hauts : 5 pièces ; Jupes : la puce), retour au Journal, aucun débordement horizontal.
+- **Limites connues** : à 320 px, un libellé long de la légende est tronqué (comme avant), le centre et le détail le donnent en entier ; au retour du Dressing, le Journal reprend en haut et sans part choisie.
+
 ## Ce qui n'a PAS été fait, et pourquoi
 - **Pièces fétiches sur la période choisie** : elles restent PAR SAISON (demandé par la propriétaire le 26/09/2026, « par saison et non de manière générale »). Le brief les voulait sur la période sélectionnée : conflit à arbitrer (ARBITRAGE ÉDITORIAL ouvert).
 - **Répartition par saison, couleur, style** : non montrée. Saison (`saisons`, migration 0040) et couleur existent mais le « style » d'une pièce n'est pas une donnée de pièce ; rien n'a été calculé à moitié.
