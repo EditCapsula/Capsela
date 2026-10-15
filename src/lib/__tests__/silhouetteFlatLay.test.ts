@@ -56,16 +56,20 @@ describe("silhouette de chargement — mêmes tailles relatives que le look fina
 });
 
 describe("dessins selon le profil (15/10/2026)", () => {
-  it("un profil homme reçoit la besace, le pardessus, le blazer droit et le short chino ; le reste est commun", () => {
+  it("un profil homme reçoit tout le jeu homme : t-shirt, pantalon, tennis, besace, pardessus, blazer droit, short chino", () => {
     expect(dessinSilhouette("sac", { homme: true })?.src).toBe("/loader/sac-homme.webp");
     expect(dessinSilhouette("manteau", { homme: true })?.src).toBe("/loader/manteau-homme.webp");
     expect(dessinSilhouette("veste", { homme: true })?.src).toBe("/loader/veste-homme.webp");
     expect(dessinSilhouette("short", { homme: true })?.src).toBe("/loader/short-homme.webp");
-    for (const cat of ["haut", "pantalon", "chaussures"] as const) expect(dessinSilhouette(cat, { homme: true })).toBe(DESSINS_SILHOUETTE[cat]);
+    expect(dessinSilhouette("haut", { homme: true })?.src).toBe("/loader/haut-homme.webp");
+    expect(dessinSilhouette("pull", { homme: true })?.src).toBe("/loader/haut-homme.webp");
+    expect(dessinSilhouette("pantalon", { homme: true })?.src).toBe("/loader/pantalon-homme.webp");
+    expect(dessinSilhouette("jean", { homme: true })?.src).toBe("/loader/pantalon-homme.webp");
+    expect(dessinSilhouette("chaussures", { homme: true })?.src).toBe("/loader/chaussures-homme.webp");
   });
 
   it("sans profil homme, les dessins communs ne changent pas", () => {
-    for (const cat of ["sac", "manteau", "veste", "short"] as const) expect(dessinSilhouette(cat)).toBe(DESSINS_SILHOUETTE[cat]);
+    for (const cat of ["haut", "pull", "pantalon", "jean", "chaussures", "sac", "manteau", "veste", "short"] as const) expect(dessinSilhouette(cat)).toBe(DESSINS_SILHOUETTE[cat]);
   });
 
   it("un sac à dos est dessiné comme tel, quel que soit le profil", () => {

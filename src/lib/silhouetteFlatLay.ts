@@ -30,11 +30,19 @@ export const DESSINS_SILHOUETTE: Partial<Record<CategoryKey, { src: string; rati
  * ceinturé, le blazer cintré et le short taille haute sont de coupe féminine ; un profil homme reçoit une besace, un pardessus droit,
  * un blazer droit et un short chino (dessins générés par ChatGPT sur une planche, découpés un à un : fond et halo retirés, couleurs
  * ramenées à l'aplat et au trait crème des dessins existants).
- * Les autres catégories (haut, pantalon, chaussures) gardent le dessin commun. Formats mesurés sur les fichiers.
+ * Le même jour, le haut, le pantalon et les chaussures (tennis) du même jeu, pour que la silhouette homme soit homogène (demandé :
+ * « seulement pour les hommes ») ; un profil femme garde tous les dessins d'origine. Formats mesurés sur les fichiers.
  */
-const DESSINS_HOMME: Partial<Record<CategoryKey, { src: string; ratio: number }>> = {
+const DESSINS_HOMME: Partial<Record<CategoryKey, { src: string; ratio: number; echelle?: number }>> = {
+  haut: { src: "/loader/haut-homme.webp", ratio: 1.06 },
+  pull: { src: "/loader/haut-homme.webp", ratio: 1.06 },
+  pantalon: { src: "/loader/pantalon-homme.webp", ratio: 0.53 },
+  jean: { src: "/loader/pantalon-homme.webp", ratio: 0.53 },
+  // Une paire de tennis VUE DE DESSUS (format vertical), là où le mocassin est vu de profil : à l'échelle du moteur, elle prenait la
+  // taille d'un sac et mordait sur le pantalon. Ramenée à 55 %, elle garde la place des chaussures sous le bas.
+  chaussures: { src: "/loader/chaussures-homme.webp", ratio: 0.8, echelle: 0.55 },
   sac: { src: "/loader/sac-homme.webp", ratio: 1.07 },
-  veste: { src: "/loader/veste-homme.webp", ratio: 0.96 },
+  veste: { src: "/loader/veste-homme.webp", ratio: 0.97 },
   manteau: { src: "/loader/manteau-homme.webp", ratio: 0.75 },
   short: { src: "/loader/short-homme.webp", ratio: 1.2 },
 };
@@ -50,7 +58,7 @@ export interface OptionsDessin {
 }
 
 /** Le dessin d'une catégorie pour ce profil (et ce sac), ou undefined si la catégorie n'en a pas. */
-export function dessinSilhouette(cat: CategoryKey, options: OptionsDessin = {}): { src: string; ratio: number } | undefined {
+export function dessinSilhouette(cat: CategoryKey, options: OptionsDessin = {}): { src: string; ratio: number; echelle?: number } | undefined {
   if (cat === "sac" && options.sacType === "Sac à dos") return DESSIN_SAC_A_DOS;
   return (options.homme ? DESSINS_HOMME[cat] : undefined) ?? DESSINS_SILHOUETTE[cat];
 }
@@ -63,7 +71,7 @@ const RATIO_PHOTO = 0.8;
 
 export interface FormeSilhouette {
   cat: CategoryKey;
-  dessin: { src: string; ratio: number };
+  dessin: { src: string; ratio: number; echelle?: number };
   /** Le haut photographié : un cadre de photo au format 4:5 au lieu du dessin. */
   photo: boolean;
 }
@@ -87,7 +95,7 @@ export function composerSilhouette(
   const { pieces } = composerFlatLay(
     // Le dessin du haut est un carré plein (format 1:1), celui du pantalon un trait étroit (0,36) : à échelle égale, le haut prenait
     // plus de place que le bas. Le haut est ramené à 78 % — sa surface reste sous celle du pantalon, comme dans le look final.
-    utiles.map((f, id) => ({ id, cat: f.cat, ratio: f.photo ? RATIO_PHOTO : f.dessin.ratio, visualScale: f.cat === "haut" || f.cat === "pull" ? ECHELLE_HAUT : 1 })),
+    utiles.map((f, id) => ({ id, cat: f.cat, ratio: f.photo ? RATIO_PHOTO : f.dessin.ratio, visualScale: f.dessin.echelle ?? (f.cat === "haut" || f.cat === "pull" ? ECHELLE_HAUT : 1) })),
     // Une graine fixe par ensemble de catégories : la silhouette ne bouge pas d'un rendu à l'autre.
     `silhouette:${utiles.map((f) => f.cat).join(",")}`,
     { contexte: "hero-home", sansMiroir: true }
