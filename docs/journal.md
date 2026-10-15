@@ -42,8 +42,8 @@ Rappel : les bornes de période suivent le fuseau de l'appareil (`new Date(an, m
 
 ## 15/10/2026 — rapprochement de la maquette
 
-- **En-tête** : la période passe dans un menu à droite du titre (« Octobre 2026 », « 3 derniers mois », « Depuis le début »). Les pastilles
-  de « Tes chiffres clés » pilotent la même période : menu et pastilles ne peuvent pas se contredire.
+- **En-tête** : la période passe dans un menu à droite du titre (« Octobre 2026 », « 3 derniers mois », « Depuis le début »). C'est le
+  seul sélecteur de période : les pastilles reprises de la maquette sous « Tes chiffres clés » ont été retirées le même jour (redondantes).
 - **Bilan** : plus de surtitre (il reste le nom de la section pour le lecteur d'écran). Hors tendance, la carte a une pastille de
   calendrier à gauche ; à égalité, son titre nomme la période (« Un mois aux occasions variées »).
 - **Chiffres clés** : l'anneau à gauche, puis tenues et pièces utilisées, chacun avec sa pastille d'icône ; la phrase qui dit les
