@@ -3,6 +3,7 @@ import type { TenuePlanifiee } from "./planifier";
 import type { ValiseGardee } from "./valises";
 import type { ItemOutfitVariation } from "./logic";
 import type { FamilleLook } from "./ideesLooks";
+import type { Humeur } from "./humeur";
 
 export type CategoryKey =
   | "haut"
@@ -586,6 +587,14 @@ export interface AppState {
   lookDraftIds: number[];
   lookDraftName: string;
   lookDraftOccasion: OccasionKey;
+  /**
+   * La saison où porter le look en création (15/10/2026, « Créer un look ») : une préférence, jamais une date. Elle règle la météo
+   * représentative passée au score et aux règles bloquantes, et l'ordre des pièces. En mémoire seulement : saved_looks n'a pas de
+   * colonne pour elle.
+   */
+  lookDraftSaison: CapsuleSeason;
+  /** L'intention de style (l'humeur de Planifier, humeur.ts), facultative : elle range d'abord les pièces qui y répondent. En mémoire seulement. */
+  lookDraftHumeur: Humeur | null;
   /** Clés des suggestions proactives écartées pour le brouillon de look en cours. */
   lookDraftDismissed: string[];
   /** Id du look actuellement ouvert dans l'écran de détail. */

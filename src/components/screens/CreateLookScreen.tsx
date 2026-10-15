@@ -4,7 +4,11 @@ import { useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour, { LienRetour } from "@/components/BoutonRetour";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
-import { BAS_CATS, CATS, OCCASIONS } from "@/lib/data";
+import { BAS_CATS, CATS, OCCASIONS, occasionShortLabel } from "@/lib/data";
+import { FlatLayCapsela } from "@/components/FlatLayCapsela";
+import { TuileIcone, type IconePlanifier } from "@/components/PlanifierUI";
+import { contexteCapsule, estDeSaison, representativeWeatherFor } from "@/lib/capsule";
+import { affiniteHumeur, humeursProposees, libelleHumeur } from "@/lib/humeur";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
 import { fondPhotoPiece, resolveItemImage } from "@/lib/catalogImages";
@@ -19,7 +23,7 @@ import {
 import { rolePieceOf } from "@/lib/attributes";
 import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
-import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
+import type { CapsuleSeason, CategoryKey, Item } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -47,6 +51,15 @@ import Input from "@/components/Input";
  * Rien ne change dans les règles : mêmes filtres d'occasion, mêmes
  * incompatibilités (R-B5, jamais deux pièces de base), même score, même
  * enregistrement (saveLook), même minimum de deux pièces.
+ *
+ * PARCOURS EN ÉTAPES (15/10/2026, brief « Optimisation du parcours de création de look ») :
+ *   1. contexte — occasion, saison, intention de style, en tuiles à icône (TuileIcone de Planifier, glyphes d'occasion), sans image ;
+ *      l'occasion n'est plus dans une feuille. La saison règle la météo représentative passée au score et aux règles bloquantes
+ *      (representativeWeatherFor, comme « Comment porter ») ; saison et intention RANGENT les pièces (estDeSaison, affiniteHumeur),
+ *      sans en retirer aucune. Ni l'une ni l'autre n'est enregistrée : saved_looks n'a pas de colonne pour elles.
+ *   2. pièces — l'écran d'avant, avec le contexte rappelé et modifiable, l'aperçu (FlatLayCapsela) et le remplacement d'une pièce
+ *      en touchant sa vignette ;
+ *   3. confirmation — seulement après l'écriture réelle (saveLook rend « ok ») ; un échec garde le brouillon.
  */
 
 const TOP_BOTTOM_CATS = new Set(["haut", ...BAS_CATS, "jupe"]);
@@ -124,14 +137,32 @@ function PastilleSelection({ on }: { on: boolean }) {
   );
 }
 
+/** Les quatre saisons du sélecteur, avec leur pictogramme (PlanifierUI) — la notion de saison du moteur (CapsuleSeason), aucune nouvelle. */
+const SAISONS: { key: CapsuleSeason; icone: IconePlanifier }[] = [
+  { key: "Printemps", icone: "printemps" },
+  { key: "Été", icone: "ete" },
+  { key: "Automne", icone: "automne" },
+  { key: "Hiver", icone: "hiver" },
+];
+
 export default function CreateLookScreen() {
-  const { state, weather, actions } = useCapsela();
+  const { state, actions } = useCapsela();
   const { profile } = useAuth();
   const items = state.items;
   const groupRefs = useRef<Partial<Record<CategoryKey, HTMLDivElement | null>>>({});
-  const [feuille, setFeuille] = useState<null | "occasion" | "ajout">(null);
+  const [feuille, setFeuille] = useState<null | "ajout">(null);
   const [categorieFeuille, setCategorieFeuille] = useState<CategoryKey | null>(null);
   const [nommer, setNommer] = useState(false);
+  // LE PARCOURS (15/10/2026, brief « Optimisation du parcours de création de look ») : le contexte (occasion, saison, intention),
+  // puis les pièces, puis la confirmation — sur le même écran, sans perdre le brouillon d'une étape à l'autre (il vit dans le store).
+  const [etape, setEtape] = useState<"contexte" | "pieces" | "enregistre">("contexte");
+  const [enregistrement, setEnregistrement] = useState<"repos" | "en_cours" | "erreur">("repos");
+  const [apercu, setApercu] = useState(false);
+  // La saison choisie, transmise au moteur comme le fait déjà « Comment porter » (representativeWeatherFor) : le score et les règles
+  // bloquantes jugent le look pour CETTE saison, pas pour la météo du jour.
+  const weather = representativeWeatherFor(state.lookDraftSaison);
+  const contexteSaison = contexteCapsule(state.lookDraftSaison);
+  const humeur = state.lookDraftHumeur;
 
   const draftPieces = state.lookDraftIds
     .map((id) => items.find((i) => i.id === id))
@@ -167,6 +198,10 @@ export default function CreateLookScreen() {
       const withoutBaskets = visible.filter((i) => i.shoeType !== "Baskets");
       if (withoutBaskets.length) visible = withoutBaskets;
     }
+    // Rangement, jamais un filtre (15/10/2026) : d'abord les pièces de la saison choisie (estDeSaison, la règle de la capsule), puis,
+    // à saison égale, celles qui répondent à l'intention (affiniteHumeur, la règle de Planifier). Aucune pièce n'est retirée.
+    const rang = (i: Item) => (estDeSaison(i, contexteSaison) ? 0 : 2) + (humeur && affiniteHumeur([i], humeur) > 0 ? 0 : 1);
+    visible = visible.map((i, n) => ({ i, n })).sort((a, b) => rang(a.i) - rang(b.i) || a.n - b.n).map(({ i }) => i);
     return { key, label: plural, items: visible };
   }).filter((g) => g.items.length > 0);
 
@@ -197,7 +232,10 @@ export default function CreateLookScreen() {
     undefined,
     colorimetrieMoteur(profile.colorimetrie)
   );
-  const blockingHits = evaluateBlocking(draftPieces, state.lookDraftOccasion, weather);
+  // R-B1 dit « pas de saison aujourd'hui » : ici, le look est jugé pour la saison CHOISIE — même règle, phrase qui la nomme.
+  const blockingHits = evaluateBlocking(draftPieces, state.lookDraftOccasion, weather).map((h) =>
+    h.id === "R-B1" ? { ...h, message: `Une pièce n'est pas vraiment de saison pour ${state.lookDraftSaison === "Été" ? "l'été" : state.lookDraftSaison === "Hiver" ? "l'hiver" : state.lookDraftSaison === "Automne" ? "l'automne" : "le printemps"}.` } : h
+  );
   const hardBlocked = blockingHits.some((h) => h.hard);
 
   const count = state.lookDraftIds.length;
@@ -232,11 +270,137 @@ export default function CreateLookScreen() {
     actions.toggleLookDraftPiece(id);
     if (ajout) setFeuille(null);
   };
-  const choisirOccasion = (key: OccasionKey) => {
-    // setLookDraftOccasion bascule : repasser l'occasion active la retirerait.
-    if (key !== state.lookDraftOccasion) actions.setLookDraftOccasion(key);
-    setFeuille(null);
+
+  const humeurs = humeursProposees(profile.gender);
+  const recapContexte = [
+    occasionDraft ? occasionShortLabel(occasionDraft[0]) : "Sans occasion précise",
+    state.lookDraftSaison,
+    humeur ? libelleHumeur(humeur, profile.gender) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const ouvrirRemplacement = (cat: CategoryKey) => {
+    setApercu(false);
+    setCategorieFeuille(cat);
+    setFeuille("ajout");
   };
+  // L'enregistrement attend la base (saveLook) : jamais de confirmation avant, et un échec garde le brouillon tel quel.
+  const enregistrer = async () => {
+    setEnregistrement("en_cours");
+    const r = await actions.saveLook();
+    if (r === "ok") {
+      setEnregistrement("repos");
+      setEtape("enregistre");
+    } else setEnregistrement(r === "erreur" ? "erreur" : "repos");
+  };
+  const paddingBas = { paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 112px)" };
+  const piedFixe = {
+    bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))",
+    paddingBottom: 12,
+    background: "linear-gradient(to top, var(--color-cream) 70%, rgba(243,238,229,0))",
+  };
+
+  // ── ÉTAPE 1 · LE CONTEXTE ─ occasion, saison, intention : les tuiles à icône de Planifier (TuileIcone), sans aucune image. Un dressing
+  // vide n'a pas de contexte à régler : l'écran des pièces dit quoi faire.
+  if (etape === "contexte" && items.length > 0) {
+    return (
+      <>
+        <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]" style={paddingBas}>
+          <div className="flex items-center gap-[14px] mt-[10px]">
+            <BoutonRetour onClick={actions.cancelCreateLook} label="Annuler et revenir au dressing" className="flex-shrink-0" />
+            <div className="t-titre-section text-ink">Créer un look</div>
+          </div>
+          <div className="t-chapeau text-muted mt-4">Pour quelle occasion, quelle saison, et avec quelle envie ?</div>
+
+          <section aria-labelledby="look-occasion" className="mt-6">
+            <div id="look-occasion" className="t-surtitre text-muted">
+              1. Occasion <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2 mt-3">
+              {OCCASIONS.map(([key]) => (
+                <TuileIcone
+                  key={key}
+                  glyphe={<GlypheOccasion occasion={key} taille={22} />}
+                  label={occasionShortLabel(key)}
+                  actif={state.lookDraftOccasion === key}
+                  onClick={() => actions.setLookDraftOccasion(key)}
+                  hauteur={76}
+                />
+              ))}
+            </div>
+          </section>
+
+          <section aria-labelledby="look-saison" className="mt-7">
+            <div id="look-saison" className="t-surtitre text-muted">2. Saison</div>
+            <div className="text-[12.5px] text-ink-soft mt-[6px]">À quelle saison souhaites-tu porter ce look ?</div>
+            <div role="group" aria-labelledby="look-saison" className="grid grid-cols-4 gap-2 mt-3">
+              {SAISONS.map(({ key, icone }) => (
+                <TuileIcone key={key} icone={icone} label={key} actif={state.lookDraftSaison === key} onClick={() => actions.setLookDraftSaison(key)} hauteur={76} />
+              ))}
+            </div>
+          </section>
+
+          <section aria-labelledby="look-intention" className="mt-7">
+            <div id="look-intention" className="t-surtitre text-muted">
+              3. Intention de style <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {humeurs.map(({ key, label }) => (
+                <TuileIcone key={key} icone={key} label={label} actif={humeur === key} onClick={() => actions.setLookDraftHumeur(key)} hauteur={72} />
+              ))}
+            </div>
+          </section>
+        </div>
+        <div className="absolute inset-x-0 z-10 px-6 pt-[14px] pointer-events-none" style={piedFixe}>
+          <Button className="pointer-events-auto" onClick={() => setEtape("pieces")}>
+            Commencer mon look
+          </Button>
+        </div>
+      </>
+    );
+  }
+
+  // ── ÉTAPE 5 · LA CONFIRMATION ─ seulement après l'écriture réelle (saveLook a rendu « ok »). Le look vient de la liste « Mes looks ».
+  if (etape === "enregistre") {
+    const look = state.savedLooks[0];
+    const piecesLook = look ? look.pieceIds.map((id) => items.find((i) => i.id === id)).filter((it): it is Item => Boolean(it)) : [];
+    return (
+      <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 24px)" }}>
+        <div className="flex items-center gap-[14px] mt-[10px]">
+          <BoutonRetour onClick={actions.cancelCreateLook} label="Revenir au dressing" className="flex-shrink-0" />
+          <div className="t-titre-section text-ink">Créer un look</div>
+        </div>
+        <div role="status" className="mt-6">
+          <div className="t-titre-ecran text-ink">
+            Ton look est <span className="italic text-terracotta">enregistré</span>
+          </div>
+          {look && <div className="t-chapeau text-muted mt-2">« {look.name} » t&apos;attend dans Mes looks.</div>}
+        </div>
+        {piecesLook.length > 0 && (
+          // Le cadre de la carte d'idée de look (CarteIdeeLook) : la planche se pose dans une hauteur fixée, jamais au-dessus des boutons.
+          <div className="relative mt-5 rounded-bloc bg-warm-bg overflow-hidden" style={{ height: "clamp(230px, 68vw, 290px)" }}>
+            <FlatLayCapsela items={piecesLook} context="look-detail" layoutSeed={piecesLook.map((p) => p.id).join(",")} />
+          </div>
+        )}
+        <Button className="mt-6" onClick={actions.goLooks}>
+          Voir mes looks
+        </Button>
+        <Button
+          variante="secondaire"
+          className="mt-3"
+          onClick={() => {
+            actions.goCreateLook();
+            setEtape("contexte");
+          }}
+        >
+          Créer un autre look
+        </Button>
+        <button onClick={actions.cancelCreateLook} className="mt-2 w-full text-center text-[12px] text-muted min-h-[44px] cursor-pointer">
+          Revenir au dressing
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -246,14 +410,14 @@ export default function CreateLookScreen() {
         style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 112px)" }}
       >
         <div className="flex items-center gap-[14px] mt-[10px]">
-          <BoutonRetour onClick={actions.cancelCreateLook} label="Annuler et revenir au dressing" className="flex-shrink-0" />
+          <BoutonRetour
+            onClick={items.length > 0 ? () => setEtape("contexte") : actions.cancelCreateLook}
+            label={items.length > 0 ? "Revenir au contexte du look" : "Annuler et revenir au dressing"}
+            className="flex-shrink-0"
+          />
           <div className="t-titre-section text-ink">Créer un look</div>
         </div>
-        <div className="t-chapeau text-muted mt-4">
-          Choisis les pièces de ton dressing à combiner.
-          <br />
-          Tu pourras le reporter d&apos;un tap.
-        </div>
+        <div className="t-chapeau text-muted mt-4">Choisis les pièces de ton dressing à combiner.</div>
 
         {items.length === 0 ? (
           <Card rayon="tuile" className="mt-6 px-4 py-[18px] text-center text-[13px] text-muted leading-[1.5]">
@@ -261,27 +425,20 @@ export default function CreateLookScreen() {
           </Card>
         ) : (
           <>
-            {/* ── OCCASION ─ le chip de l'écran Tenue : l'occasion choisie,
-                   ou l'invitation à en choisir une ; la feuille liste les dix. */}
-            <div className="mt-6 t-surtitre text-muted">
-              Occasion <span className="opacity-60 normal-case tracking-normal">(optionnel)</span>
+            {/* ── LE CONTEXTE ─ rappelé en une ligne, modifiable à tout moment (15/10/2026) : le brouillon de pièces est gardé. */}
+            <div className="mt-5 flex items-center justify-between gap-3 bg-warm-bg border border-warm-border rounded-bloc pl-4 pr-3 py-[10px]">
+              <div className="flex items-center gap-[8px] min-w-0 text-[12.5px] text-ink">
+                {occasionDraft && (
+                  <span className="text-terracotta flex-shrink-0">
+                    <GlypheOccasion occasion={occasionDraft[0]} />
+                  </span>
+                )}
+                <span className="truncate">{recapContexte}</span>
+              </div>
+              <button onClick={() => setEtape("contexte")} className={CLASSE_LIEN} aria-label={`Modifier le contexte du look : ${recapContexte}`}>
+                Modifier
+              </button>
             </div>
-            <button
-              onClick={() => setFeuille("occasion")}
-              aria-haspopup="dialog"
-              aria-label={occasionDraft ? `Occasion : ${occasionDraft[1]}. Changer d'occasion` : "Choisir une occasion"}
-              className={
-                "mt-[9px] inline-flex items-center gap-[8px] rounded-full px-[16px] text-[12px] cursor-pointer " +
-                (occasionDraft ? "bg-terracotta-deep text-cream" : "bg-warm-bg text-sand-text border border-sand-border")
-              }
-              style={{ minHeight: 46 }}
-            >
-              {occasionDraft && <GlypheOccasion occasion={occasionDraft[0]} />}
-              <span className="whitespace-nowrap">{occasionDraft ? occasionDraft[1] : "Choisir une occasion"}</span>
-              <span aria-hidden="true" className="text-[9px] opacity-70">
-                ▾
-              </span>
-            </button>
 
             {/* ── TON LOOK ─ les pièces choisies, en vignettes : le look tel
                    qu'il sera enregistré. Chacune se retire d'un tap. */}
@@ -289,15 +446,25 @@ export default function CreateLookScreen() {
               <div className="t-surtitre text-muted whitespace-nowrap">
                 Ton look{count > 0 && ` · ${count} ${count > 1 ? "pièces" : "pièce"}`}
               </div>
-              <button onClick={ouvrirAjout} aria-haspopup="dialog" className={CLASSE_LIEN}>
-                + Ajouter une pièce
-              </button>
+              <div className="flex items-center gap-4">
+                {count > 0 && (
+                  <button onClick={() => setApercu(true)} aria-haspopup="dialog" className={CLASSE_LIEN}>
+                    Aperçu
+                  </button>
+                )}
+                <button onClick={ouvrirAjout} aria-haspopup="dialog" className={CLASSE_LIEN}>
+                  + Ajouter une pièce
+                </button>
+              </div>
             </div>
             <div className="scrollarea flex items-start gap-[10px] overflow-x-auto mt-3 -mx-6 px-6 pt-[2px] pb-[2px]" aria-label="Pièces de ton look">
               {draftPieces.map((it) => (
                 <div key={it.id} className="flex-none w-[84px] motion-safe:animate-[capsule-apparition_220ms_ease-out_both]">
                   <div className="relative">
-                    <PhotoPiece item={it} arrondi={12} />
+                    {/* Toucher la pièce la remplace : la feuille s'ouvre sur sa catégorie, le reste du look ne bouge pas. */}
+                    <button onClick={() => ouvrirRemplacement(it.cat)} aria-haspopup="dialog" aria-label={`Remplacer ${it.name}`} className="block w-full cursor-pointer">
+                      <PhotoPiece item={it} arrondi={12} />
+                    </button>
                     <button
                       onClick={() => actions.toggleLookDraftPiece(it.id)}
                       aria-label={`Retirer ${it.name} du look`}
@@ -457,54 +624,44 @@ export default function CreateLookScreen() {
             background: "linear-gradient(to top, var(--color-cream) 70%, rgba(243,238,229,0))",
           }}
         >
-          {messageCta && (
-            <div className="text-center text-[11px] text-terracotta mb-[8px]" role="status">
-              {messageCta}
+          {enregistrement === "erreur" ? (
+            <div className="text-center text-[11px] text-rust mb-[8px]" role="alert">
+              L&apos;enregistrement n&apos;a pas abouti. Ton look est toujours là : réessaie.
             </div>
+          ) : (
+            messageCta && (
+              <div className="text-center text-[11px] text-terracotta mb-[8px]" role="status">
+                {messageCta}
+              </div>
+            )
           )}
-          <Button className="pointer-events-auto" onClick={actions.saveLook} disabled={!canSave}>
-            Enregistrer ce look {count > 0 ? `(${count})` : ""}
+          <Button className="pointer-events-auto" onClick={() => void enregistrer()} disabled={!canSave || enregistrement === "en_cours"} aria-busy={enregistrement === "en_cours"}>
+            {enregistrement === "en_cours" ? "Enregistrement…" : `Enregistrer ce look ${count > 0 ? `(${count})` : ""}`}
           </Button>
         </div>
       )}
 
-      <BottomSheet title="Pour quelle occasion ?" open={feuille === "occasion"} onClose={() => setFeuille(null)}>
-        <div className="flex flex-col">
-          {OCCASIONS.map(([key, label, sub]) => {
-            const actif = state.lookDraftOccasion === key;
-            return (
-              <button
-                key={key}
-                onClick={() => choisirOccasion(key)}
-                aria-pressed={actif}
-                className="flex items-center gap-3 text-left px-1 py-[10px] cursor-pointer border-b border-divider last:border-b-0"
-                style={{ minHeight: 52 }}
-              >
-                <span className={actif ? "text-terracotta" : "text-muted"}>
-                  <GlypheOccasion occasion={key} taille={19} />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className={"text-[13px] " + (actif ? "text-terracotta" : "text-ink")}>{label}</div>
-                  <div className="text-[11px] text-muted mt-[2px]">{sub}</div>
-                </div>
-                <span aria-hidden="true" className={"text-[13px] flex-shrink-0 " + (actif ? "text-terracotta" : "text-transparent")}>
-                  ✓
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {occasionDraft && (
-          <button
-            onClick={() => {
-              actions.setLookDraftOccasion(state.lookDraftOccasion);
-              setFeuille(null);
-            }}
-            className="mt-2 w-full text-center text-[12px] text-muted min-h-[44px] cursor-pointer"
-          >
-            Sans occasion précise
-          </button>
+      {/* ── L'APERÇU ─ la planche des pièces choisies (FlatLayCapsela, celle des looks), à jour à chaque sélection. Toucher une pièce la
+             remplace ; fermer ramène à la sélection, rien n'est perdu. */}
+      <BottomSheet title="Aperçu du look" open={apercu} onClose={() => setApercu(false)}>
+        {draftPieces.length > 0 ? (
+          <div className="relative rounded-bloc bg-warm-bg overflow-hidden" style={{ height: "clamp(230px, 68vw, 290px)" }}>
+            <FlatLayCapsela items={draftPieces} context="look-detail" layoutSeed={draftPieces.map((p) => p.id).join(",")} onPiece={(it) => ouvrirRemplacement(it.cat)} />
+          </div>
+        ) : (
+          <div className="text-[12.5px] text-muted py-6 text-center">Aucune pièce pour l&apos;instant.</div>
         )}
+        <div className="text-[11.5px] text-muted text-center mt-2">Touche une pièce pour la remplacer.</div>
+        <Button
+          variante="secondaire"
+          className="mt-4"
+          onClick={() => {
+            setApercu(false);
+            ouvrirAjout();
+          }}
+        >
+          Ajouter une pièce
+        </Button>
       </BottomSheet>
 
       <BottomSheet title={groupeFeuille ? groupeFeuille.label : "Ajouter une pièce"} open={feuille === "ajout"} onClose={() => setFeuille(null)}>
