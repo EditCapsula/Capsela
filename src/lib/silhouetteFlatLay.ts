@@ -28,18 +28,19 @@ export const DESSINS_SILHOUETTE: Partial<Record<CategoryKey, { src: string; rati
 /**
  * LES DESSINS HOMME (15/10/2026, signalé : « les silhouettes des pièces pour homme sont-elles adaptées ? »). Le sac à main, le trench
  * ceinturé, le blazer cintré et le short taille haute sont de coupe féminine ; un profil homme reçoit une besace, un pardessus droit,
- * un blazer droit et un short chino (dessins Claude Design, liseré crème ajouté au traitement pour coller au reste de la planche).
+ * un blazer droit et un short chino (dessins générés par ChatGPT sur une planche, découpés un à un : fond et halo retirés, couleurs
+ * ramenées à l'aplat et au trait crème des dessins existants).
  * Les autres catégories (haut, pantalon, chaussures) gardent le dessin commun. Formats mesurés sur les fichiers.
  */
 const DESSINS_HOMME: Partial<Record<CategoryKey, { src: string; ratio: number }>> = {
-  sac: { src: "/loader/sac-homme.webp", ratio: 1.1 },
-  veste: { src: "/loader/veste-homme.webp", ratio: 0.9 },
-  manteau: { src: "/loader/manteau-homme.webp", ratio: 0.66 },
-  short: { src: "/loader/short-homme.webp", ratio: 1.22 },
+  sac: { src: "/loader/sac-homme.webp", ratio: 1.07 },
+  veste: { src: "/loader/veste-homme.webp", ratio: 0.96 },
+  manteau: { src: "/loader/manteau-homme.webp", ratio: 0.75 },
+  short: { src: "/loader/short-homme.webp", ratio: 1.2 },
 };
 
 /** Un sac à dos est dessiné comme tel, quel que soit le profil : ni sac à main ni besace. */
-const DESSIN_SAC_A_DOS = { src: "/loader/sac-a-dos.webp", ratio: 0.81 };
+const DESSIN_SAC_A_DOS = { src: "/loader/sac-a-dos.webp", ratio: 0.86 };
 
 export interface OptionsDessin {
   /** Profil homme : les dessins de DESSINS_HOMME remplacent les dessins communs. */
