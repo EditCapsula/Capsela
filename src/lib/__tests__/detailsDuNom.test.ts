@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { detailsDuNom } from "../detailsDuNom";
+import { detailsDuNom, signatureDesDetails } from "../detailsDuNom";
 import { buildImagePrompt, type VestiaireRow } from "../../../supabase/functions/_shared/imagePrompt.ts";
 import { computeVisualKey } from "../../../supabase/functions/_shared/visualKey.ts";
 
@@ -101,6 +101,24 @@ describe("buildImagePrompt — le sujet dans sa forme finale (seconde passe du 1
   it("une doudoune sans longueur écrite est à la hanche, une doudoune longue reste longue", () => {
     expect(ligne1({ category: "manteaux_exterieurs", sous_type: "Doudoune", name: "Doudoune" })).toContain("hip-length puffer jacket");
     expect(ligne1({ category: "manteaux_exterieurs", sous_type: "Doudoune", name: "Doudoune longue" })).not.toContain("hip-length");
+  });
+});
+
+describe("signatureDesDetails — la cascade générique ne mélange plus les détails (15/10/2026)", () => {
+  const p = (over: Partial<VestiaireRow>) => sujet(over).prompt;
+  it("des boucles pendantes ne prennent pas le visuel de créoles texturées, ni l'inverse", () => {
+    const pendantes = p({ category: "bijoux", sous_type: "Boucles d'oreilles", name: "Boucles d'oreilles pendantes", couleur_dominante: "Doré" });
+    const creoles = p({ category: "bijoux", sous_type: "Boucles d'oreilles", name: "Créoles texturées", couleur_dominante: "Doré" });
+    expect(signatureDesDetails(pendantes)).toBe("drop");
+    expect(signatureDesDetails(creoles)).toBe("hoop|textured");
+  });
+  it("un ancien prompt sans détail reste réutilisable par une pièce sans détail", () => {
+    const ancien = "Premium ecommerce cutout product image of women's gold earrings.\n\nProduct:\nEarrings.";
+    expect(signatureDesDetails(ancien)).toBe("");
+    expect(signatureDesDetails(p({ category: "bijoux", sous_type: "Boucles d'oreilles", name: "Boucles d'oreilles", couleur_dominante: "Doré" }))).toBe("");
+  });
+  it("« long » ne se lit pas dans « long-sleeved »", () => {
+    expect(signatureDesDetails("men's blue long-sleeved collared button-up shirt.")).toBe("long-sleeved");
   });
 });
 
