@@ -130,10 +130,10 @@ export const libelleOccasion = (occasion: Exclude<OccasionKey, "all">) => occasi
 
 /**
  * Le titre de la carte. « Domine », « rythme », « s'invite » seulement quand
- * l'occasion dépasse la moitié des tenues du mois (styleDuMois.majorite) ;
- * sinon elle « arrive en tête » — jamais une domination qu'elle n'a pas.
+ * l'occasion dépasse la moitié des tenues de la période (styleDePeriode.majorite) ;
+ * sinon elle « arrive en tête » — jamais une domination qu'elle n'a pas. `quand` nomme la période (« ce mois-ci » par défaut).
  */
-export function titreStyle(o: OccasionEditoriale, majorite: boolean): string {
+export function titreStyle(o: OccasionEditoriale, majorite: boolean, quand = "ce mois-ci"): string {
   const verbe = majorite ? (o.pluriel ? o.verbe.pluriel : o.verbe.singulier) : o.pluriel ? "arrivent en tête" : "arrive en tête";
-  return `${o.sujet} ${verbe} ce mois-ci`;
+  return `${o.sujet} ${verbe} ${quand}`;
 }

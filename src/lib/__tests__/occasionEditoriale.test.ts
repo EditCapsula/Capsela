@@ -35,5 +35,7 @@ describe("titreStyle — le verbe seulement au-delà de la moitié", () => {
 
   it("sans majorité : en tête, sans domination", () => {
     expect(titreStyle(OCCASIONS_EDITORIALES.sport, false)).toBe("Le sport arrive en tête ce mois-ci");
+    // La période choisie dans le Journal (15/10/2026).
+    expect(titreStyle(OCCASIONS_EDITORIALES.sport, false, "depuis le début")).toBe("Le sport arrive en tête depuis le début");
   });
 });

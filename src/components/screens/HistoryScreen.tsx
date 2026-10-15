@@ -27,7 +27,7 @@ import {
   type PeriodeFetiches,
   nomCourtPiece,
   deLaSaisonEnCours,
-  styleDuMois,
+  styleDePeriode,
   STYLE_DU_MOIS_MINIMUM,
   type EtatDePort,
   type JournalEntry,
@@ -283,10 +283,15 @@ const PERIODES_FETICHES: { key: PeriodeFetiches; label: string }[] = [
   { key: "tout", label: "Toute la période" },
 ];
 
-const PERIODES: { key: PeriodeJournal; label: string; phrase: string }[] = [
-  { key: "mois", label: "Ce mois-ci", phrase: "ce mois-ci" },
-  { key: "trois_mois", label: "3 derniers mois", phrase: "sur les 3 derniers mois" },
-  { key: "tout", label: "Toute la période", phrase: "depuis le début" },
+/**
+ * La période du Journal (15/10/2026, « Optimisation UX du Journal ») : UN sélecteur, sous l'en-tête, pilote le titre, le bilan et les
+ * chiffres clés. Avant, le titre comptait tout l'historique (« 31 tenues portées ») pendant que le bilan et les chiffres comptaient
+ * le mois (« 4 tenues ») : deux nombres contradictoires sans que rien ne le dise. Chaque texte nomme maintenant sa période.
+ */
+const PERIODES: { key: PeriodeJournal; label: string; phrase: string; quand: string; debut: string; bilan: string }[] = [
+  { key: "mois", label: "Ce mois-ci", phrase: "ce mois-ci", quand: "ce mois-ci", debut: "Ce mois-ci", bilan: "Ton bilan du mois" },
+  { key: "trois_mois", label: "3 derniers mois", phrase: "sur les 3 derniers mois", quand: "ces 3 derniers mois", debut: "Ces 3 derniers mois", bilan: "Ton bilan des 3 derniers mois" },
+  { key: "tout", label: "Toute la période", phrase: "depuis le début", quand: "depuis le début", debut: "Depuis le début", bilan: "Ton bilan depuis le début" },
 ];
 
 /** Couleurs des parts de l'anneau, tirées des tokens ; la légende écrit toujours le nombre et le pourcentage (la couleur ne porte jamais seule). */
@@ -468,7 +473,7 @@ export default function HistoryScreen() {
   const entries = journalEntries(state.history, resolvePool);
   const fetiches = mostWornPiecesPeriode(state.history, resolvePool, periodeFetiches);
   const saisonEnCours = currentSeasonKey();
-  const style = styleDuMois(state.history);
+  const style = styleDePeriode(state.history, periode);
 
   // ── À SORTIR DU PLACARD ─────────────────────────────────────────────
   // LES PIÈCES DU DRESSING SEULEMENT (26/09/2026, signalé : « pas logique
@@ -741,18 +746,30 @@ export default function HistoryScreen() {
   }
 
   // ── JOURNAL REMPLI ──────────────────────────────────────────────────
-  const moment = insights.topOccasion && insights.topOccasion !== "all" ? MOMENT_DE_L_OCCASION[insights.topOccasion] : null;
-  const phraseEnTete = moment
-    ? `Ce mois-ci, tes tenues ont surtout accompagné ${moment}.`
-    : insights.wornThisMonth > 0
-      ? `Ce mois-ci, ${insights.wornThisMonth} ${pl(insights.wornThisMonth, "tenue a rejoint", "tenues ont rejoint")} ton journal.`
-      : `Ta dernière tenue portée date du ${entries[0].jour}.`;
-
   // Le mois de référence de journalInsights, et non celui de la dernière
   // tenue : sans tenue ce mois-ci, ce dernier nommait le mois précédent.
   const moisCourant = MONTHS_FR[insights.mois];
 
+  // UNE SEULE PÉRIODE pour l'en-tête, le bilan et les chiffres clés (15/10/2026). La phrase d'en-tête lit le MÊME bilan que la carte
+  // (styleDePeriode) : avant, elle prenait la première occasion même à égalité (journalInsights) et disait « surtout ton quotidien »
+  // au-dessus d'une carte « aucune occasion ne se détache ».
+  const p = PERIODES.find((x) => x.key === periode)!;
   const chiffres = chiffresPeriode(state.items, state.history, periode);
+  const quandBilan = periode === "mois" ? `en ${moisCourant}` : p.quand;
+  const moment = style.etat === "tendance" ? MOMENT_DE_L_OCCASION[style.occasion] : null;
+  const phraseStyle =
+    style.etat === "vide"
+      ? `Aucune tenue portée ${p.quand} pour l'instant.`
+      : style.etat === "tendance" && moment
+        ? `${p.debut}, tes tenues ont ${style.majorite ? "surtout" : "le plus souvent"} accompagné ${moment}.`
+        : style.etat === "egalite"
+          ? `${p.debut}, tes tenues se partagent entre plusieurs occasions.`
+          : `${p.debut}, ton style se dessine au fil de tes tenues.`;
+  // Le total historique, seulement là où il est nommé comme tel.
+  const phraseEnTete =
+    periode === "tout" || entries.length === chiffres.tenues
+      ? phraseStyle
+      : `${phraseStyle} Depuis le début : ${entries.length} ${pl(entries.length, "tenue portée", "tenues portées")}.`;
   const parts = repartitionDressing(state.items);
 
   const occasionsPresentes = [...new Set(entries.filter((e) => e.hasOccasion).map((e) => e.occasion))];
@@ -782,10 +799,24 @@ export default function HistoryScreen() {
 
       {/* EN-TÊTE */}
       <Surtitre className="mt-[18px]">Ton journal</Surtitre>
-      <div className="t-titre-ecran text-ink mt-[6px]">
-        {entries.length} <span className="italic text-terracotta">{pl(entries.length, "tenue portée", "tenues portées")}</span>
+      <div className="t-titre-ecran text-ink mt-[6px]" aria-live="polite">
+        {chiffres.tenues} <span className="italic text-terracotta">{pl(chiffres.tenues, "tenue portée", "tenues portées")}</span>
       </div>
       <div className="t-chapeau text-muted-3 mt-[8px]">{phraseEnTete}</div>
+      <div role="group" aria-label="Période du journal" className="scrollarea flex gap-2 overflow-x-auto mt-4 pb-[2px]">
+        {PERIODES.map(({ key, label }) => (
+          <button
+            key={key}
+            aria-pressed={periode === key}
+            onClick={() => setPeriode(key)}
+            className={`flex-none min-h-[40px] px-[14px] rounded-full text-[12px] cursor-pointer border ${
+              periode === key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       {/* BILAN DU MOIS d'abord (A), puis les chiffres clés (B) et le dressing en chiffres (C) — ordre du brief du 12/10/2026. */}
       {/* TON BILAN DU MOIS (renommé le 12/10/2026, brief « Refonte UX du Journal » ; « Ton style ce mois-ci » avant, même contenu : l'insight est déterministe, tiré de styleDuMois, jamais d'une IA) — une carte éditoriale (26/09/2026) : ce que
@@ -797,7 +828,7 @@ export default function HistoryScreen() {
           vit dans « À sortir du placard ». */}
       <section className="mt-5" aria-labelledby="journal-style">
         <Surtitre>
-          <span id="journal-style">Ton bilan du mois</span>
+          <span id="journal-style">{p.bilan}</span>
         </Surtitre>
         {style.etat === "tendance" ? (
           (() => {
@@ -806,7 +837,7 @@ export default function HistoryScreen() {
             // styleDuMois. Sans visuel pour cette occasion, pas d'image de
             // repli : le texte prend toute la largeur.
             const o = OCCASIONS_EDITORIALES[style.occasion];
-            const titre = titreStyle(o, style.majorite);
+            const titre = titreStyle(o, style.majorite, p.quand);
             return (
               <div className="mt-3 bg-warm-bg border border-warm-border rounded-feuille px-5 pt-[16px] pb-[18px] overflow-hidden">
                 <div className="flex gap-[14px]">
@@ -879,21 +910,26 @@ export default function HistoryScreen() {
           })()
         ) : (
           <div className="mt-3 bg-warm-bg border border-warm-border rounded-carte px-5 py-[16px]">
+            {/* Quatre cas, aucune conclusion que les données ne portent pas (15/10/2026) : rien à lire, trop peu pour une tendance (le
+                seuil de 3 tenues de STYLE_DU_MOIS_MINIMUM), plusieurs occasions à égalité en tête (une diversité, pas un échec), ou des
+                tenues sans occasion notée. */}
             <div className="t-titre-carte text-ink">
               {style.etat === "vide"
-                ? `Aucune tenue portée en ${moisCourant} pour l'instant`
-                : style.etat === "egalite"
-                  ? "Aucune occasion ne se détache encore"
-                  : "Pas encore de tendance ce mois-ci"}
+                ? `Aucune tenue portée ${quandBilan} pour l'instant`
+                : style.etat === "peu"
+                  ? "Ton style se dessine"
+                  : style.etat === "egalite"
+                    ? "Des occasions variées"
+                    : "Des tenues sans occasion notée"}
             </div>
             <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[6px]">
               {style.etat === "vide"
-                ? "Ton style du mois se dessinera au fil de tes tenues."
+                ? "Ton bilan se dessinera au fil de tes tenues."
                 : style.etat === "peu"
-                  ? `${style.total} ${pl(style.total, "tenue portée", "tenues portées")} en ${moisCourant} : ton style du mois se dessinera à partir de ${STYLE_DU_MOIS_MINIMUM}.`
+                  ? `${style.total} ${pl(style.total, "tenue portée", "tenues portées")} ${quandBilan} : une tendance se dégage à partir de ${STYLE_DU_MOIS_MINIMUM}.`
                   : style.etat === "egalite"
-                    ? `Tes ${style.total} tenues de ${moisCourant} se partagent entre plusieurs occasions, sans qu'une passe devant.`
-                    : `${style.total} tenues portées en ${moisCourant}, sans occasion précisée.`}
+                    ? `Tes ${style.total} tenues ${quandBilan} se répartissent entre plusieurs occasions, sans qu'une passe devant : ton dressing t'accompagne dans des moments différents.`
+                    : `${style.total} tenues portées ${quandBilan}, sans occasion précisée : rien ne permet encore de dire ce qui rythme ton style.`}
             </div>
           </div>
         )}
@@ -907,20 +943,6 @@ export default function HistoryScreen() {
         <Surtitre>
           <span id="journal-chiffres">Tes chiffres clés</span>
         </Surtitre>
-        <div role="group" aria-label="Période" className="scrollarea flex gap-2 overflow-x-auto mt-3 pb-[2px]">
-          {PERIODES.map(({ key, label }) => (
-            <button
-              key={key}
-              aria-pressed={periode === key}
-              onClick={() => setPeriode(key)}
-              className={`flex-none min-h-[36px] px-[14px] rounded-full text-[12px] cursor-pointer border ${
-                periode === key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
         <Card className="mt-3 px-4 py-4 flex items-center gap-3" aria-live="polite">
           {chiffres.totalDressing > 0 && (
             <>
@@ -935,7 +957,11 @@ export default function HistoryScreen() {
             </div>
             {chiffres.totalDressing > 0 && (
               <div className="pl-3 border-l border-border">
-                <div className="t-chiffre text-ink">{chiffres.piecesUtilisees}</div>
+                {/* « 7 / 19 » : des pièces DISTINCTES, sur la taille du dressing (15/10/2026) — jamais le nombre de ports. */}
+                <div className="t-chiffre text-ink whitespace-nowrap">
+                  {chiffres.piecesUtilisees}
+                  <span className="text-muted"> / {chiffres.totalDressing}</span>
+                </div>
                 <div className="text-[12px] text-muted leading-[1.3] mt-[6px]">{pl(chiffres.piecesUtilisees, "pièce utilisée", "pièces utilisées")}</div>
               </div>
             )}
@@ -943,8 +969,16 @@ export default function HistoryScreen() {
         </Card>
         {chiffres.totalDressing > 0 && (
           <div className="text-[12px] text-muted-3 leading-[1.45] mt-[8px]">
-            {chiffres.piecesUtilisees} {pl(chiffres.piecesUtilisees, "pièce", "pièces")} sur les {chiffres.totalDressing} de ton dressing {pl(chiffres.piecesUtilisees, "a", "ont")} été {pl(chiffres.piecesUtilisees, "portée", "portées")}{" "}
-            {PERIODES.find((x) => x.key === periode)!.phrase}.
+            {chiffres.piecesUtilisees === 0 ? (
+              chiffres.totalDressing === 1
+                ? `La pièce de ton dressing n'a pas été portée ${p.phrase}.`
+                : `Aucune des ${chiffres.totalDressing} pièces de ton dressing n'a été portée ${p.phrase}.`
+            ) : (
+              <>
+                {chiffres.piecesUtilisees} {pl(chiffres.piecesUtilisees, "pièce différente", "pièces différentes")} de ton dressing sur {chiffres.totalDressing}{" "}
+                {pl(chiffres.piecesUtilisees, "a été portée", "ont été portées")} au moins une fois {p.phrase}, soit {chiffres.part} %.
+              </>
+            )}
           </div>
         )}
       </section>

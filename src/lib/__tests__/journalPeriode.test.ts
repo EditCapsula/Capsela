@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chiffresPeriode, debutPeriode, detailPartDressing, filtrePourPart, historiqueDansPeriode, peutEtreDiteJamaisPortee, repartitionDressing } from "../selectors";
+import { chiffresPeriode, debutPeriode, detailPartDressing, styleDePeriode, filtrePourPart, historiqueDansPeriode, peutEtreDiteJamaisPortee, repartitionDressing } from "../selectors";
 import type { HistoryEntry, Item } from "../types";
 
 const item = (id: number, cat: string): Item => ({ id, cat, name: `p${id}`, hex: "#000000" }) as unknown as Item;
@@ -60,6 +60,36 @@ describe("repartitionDressing", () => {
   });
   it("dressing vide : aucune ligne", () => {
     expect(repartitionDressing([])).toEqual([]);
+  });
+});
+
+describe("une seule période pour l'en-tête, le bilan et les chiffres (15/10/2026)", () => {
+  // La capture du 15/10 : 31 tenues en tout, 4 en octobre, deux occasions à égalité.
+  const occ = (id: string, ts: Date, occasion: HistoryEntry["occasion"]): HistoryEntry => ({ id, ts: ts.getTime(), pieceIds: [1], occasion });
+  const anciennes = Array.from({ length: 27 }, (_, k) => occ(`a${k}`, new Date(2026, 5, 1 + (k % 28)), "quotidien"));
+  const octobre = [
+    occ("o1", new Date(2026, 9, 2), "quotidien"),
+    occ("o2", new Date(2026, 9, 5), "quotidien"),
+    occ("o3", new Date(2026, 9, 8), "travail_formel"),
+    occ("o4", new Date(2026, 9, 10), "travail_formel"),
+  ];
+  const histo = [...anciennes, ...octobre];
+  const dressing = Array.from({ length: 19 }, (_, k) => item(k + 1, "haut"));
+  it("le mois compte 4 tenues, toute la période 31 — chacun dans son contexte", () => {
+    expect(chiffresPeriode(dressing, histo, "mois", NOW).tenues).toBe(4);
+    expect(chiffresPeriode(dressing, histo, "tout", NOW).tenues).toBe(31);
+  });
+  it("à égalité en tête, le bilan du mois ne désigne aucune occasion ; sur toute la période, le quotidien domine", () => {
+    expect(styleDePeriode(histo, "mois", NOW)).toEqual({ etat: "egalite", total: 4 });
+    expect(styleDePeriode(histo, "tout", NOW)).toMatchObject({ etat: "tendance", occasion: "quotidien", compte: 29, majorite: true });
+  });
+  it("sous 3 tenues, pas de tendance ; aucune tenue, un état vide — jamais un zéro déguisé en tendance", () => {
+    expect(styleDePeriode(octobre.slice(0, 2), "mois", NOW)).toEqual({ etat: "peu", total: 2 });
+    expect(styleDePeriode(anciennes, "mois", NOW)).toEqual({ etat: "vide", total: 0 });
+  });
+  it("7 pièces distinctes sur 19 : 37 %, quel que soit le nombre de ports", () => {
+    const h = [entree("x1", new Date(2026, 9, 3), [1, 2, 3, 4]), entree("x2", new Date(2026, 9, 4), [1, 2, 5, 6, 7])];
+    expect(chiffresPeriode(dressing, h, "mois", NOW)).toEqual({ tenues: 2, piecesUtilisees: 7, totalDressing: 19, part: 37 });
   });
 });
 
