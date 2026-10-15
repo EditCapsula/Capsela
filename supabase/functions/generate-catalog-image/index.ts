@@ -188,6 +188,7 @@ Deno.serve(async (req) => {
         couleur: article.couleur_dominante,
         matiere: article.matiere,
         coupe: article.coupe,
+        nom: article.name,
       })
     : null;
 

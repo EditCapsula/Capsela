@@ -89,6 +89,8 @@ export function cleAttendue(a: Article): string | null {
     couleur: a.couleur_dominante,
     matiere: a.matiere,
     coupe: a.coupe,
+    // Le nom entre dans la clé depuis le 15/10/2026 (detailsDuNom) : sans lui, toute pièce au nom détaillé paraîtrait périmée.
+    nom: a.name,
   });
   const marqueur = a.prompt_image_override?.trim()
     ? `~ov~${shortHash(a.prompt_image_override.trim())}`
