@@ -7,7 +7,7 @@ import { FeuilleDateNaissance, LigneInfo } from "@/components/ProfilUI";
 import { Toggle } from "@/components/screens/PreferencesScreen";
 import { useAuth } from "@/lib/auth";
 import { readConsent, setConsent, subscribeConsent, type ConsentState } from "@/lib/consent";
-import { APP_VERSION } from "@/lib/data";
+import { VERSION_APP } from "@/lib/versionApp";
 import { buildDataExport, downloadJson, exportFileName } from "@/lib/dataExport";
 import { useCapsela } from "@/lib/store";
 import Button from "@/components/Button";
@@ -257,7 +257,7 @@ export default function AccountScreen() {
       <button onClick={handleSignOut} className="mt-[18px] w-full text-center text-[12px] text-terracotta cursor-pointer py-3">
         Se déconnecter
       </button>
-      <div className="text-center text-[11px] text-placeholder mt-[6px]">Capsela · v{APP_VERSION}</div>
+      <div className="text-center text-[11px] text-placeholder mt-[6px]">Capsela · version {VERSION_APP}</div>
 
       <FeuilleDateNaissance open={dateOuverte} onClose={() => setDateOuverte(false)} />
       <BottomSheet title="Supprimer mon compte" open={confirmDelete} onClose={closeDeleteConfirm}>

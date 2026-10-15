@@ -63,14 +63,23 @@ describe("buildDataExport — tout ce que l'utilisatrice a fourni", () => {
     expect(e.verdicts_du_jour).toEqual([{ id: 3, jour: "2026-10-01", verdict: "aimee" }]);
   });
 
+  it("inclut les retours sur les accords de couleurs (15/10/2026 : ils manquaient)", async () => {
+    reset();
+    tables.accord_retours = { data: [{ accord_cle: "Automne|Vieux rose+Marron", retour: "pas_pour_moi" }], error: null };
+    const { buildDataExport } = await import("@/lib/dataExport");
+    const e = await buildDataExport("u1", null);
+    expect(e.retours_accords_couleurs).toEqual([{ accord_cle: "Automne|Vieux rose+Marron", retour: "pas_pour_moi" }]);
+  });
+
   it("une table absente (migration non exécutée) donne une liste vide, sans faire échouer l'export", async () => {
     reset();
-    for (const t of ["planned_outfits", "valises", "outfit_feedback"]) tables[t] = { data: null, error: { code: "42P01", message: "absente" } };
+    for (const t of ["planned_outfits", "valises", "outfit_feedback", "accord_retours"]) tables[t] = { data: null, error: { code: "42P01", message: "absente" } };
     const { buildDataExport } = await import("@/lib/dataExport");
     const e = await buildDataExport("u1", null);
     expect(e.tenues_planifiees).toEqual([]);
     expect(e.valises).toEqual([]);
     expect(e.verdicts_du_jour).toEqual([]);
+    expect(e.retours_accords_couleurs).toEqual([]);
   });
 
   it("toute autre erreur fait échouer l'export plutôt que de livrer un fichier amputé", async () => {

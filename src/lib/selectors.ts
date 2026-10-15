@@ -2,7 +2,7 @@ import { CATLABEL, CATS, MONTHS_FR, OCCASION_STYLE_PREFS, OCC_LABELS, occasionSh
 import { estDenim, formalityOf } from "./attributes";
 import { isCatalogId } from "./catalog";
 import { contexteCapsule, estDeSaison, occasionsOf, saisonCalendairePour, type ContexteSaisonnier } from "./capsule";
-import type { CapsuleSeason, CategoryKey, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
+import type { CapsuleSeason, CategoryKey, FiltrePieces, HistoryEntry, Item, OccasionKey, SavedLook, Season } from "./types";
 
 /**
  * "Wishlist" (Mes looks, recette 23/08/2026) n'est pas une 3ᵉ façon
@@ -479,6 +479,25 @@ export function repartitionDressing(items: Item[]): PartDressing[] {
     reste -= 1;
   }
   return lignes.map((l, i) => ({ cat: l.cat, libelle: l.libelle, nb: l.nb, pct: bases[i] }));
+}
+
+/**
+ * LA PART CHOISIE DANS L'ANNEAU DU JOURNAL (15/10/2026, « rendre le camembert interactif ») — ce que dit le détail sous l'anneau,
+ * tiré de la MÊME part que l'arc et la légende (repartitionDressing) : jamais un second calcul. Le titre est le libellé pluriel de
+ * la taxonomie (CATS : « Hauts », « Vestes & blazers ») ; « Autres » reste « Autres ».
+ */
+export function detailPartDressing(part: PartDressing): { titre: string; sousTitre: string } {
+  const pluriel = part.cat === "autre" ? "Autres" : CATS.find(([k]) => k === part.cat)?.[2] ?? part.libelle;
+  return { titre: pluriel, sousTitre: `${part.nb} ${part.nb > 1 ? "pièces" : "pièce"} · ${part.pct} % du dressing` };
+}
+
+/**
+ * Le filtre du Dressing pour « Voir les pièces » d'une part : la catégorie exacte, et le retour au Journal. « Autres » (catégorie
+ * hors taxonomie) n'a pas de filtre possible : null, et l'action n'est pas proposée.
+ */
+export function filtrePourPart(part: PartDressing): FiltrePieces | null {
+  if (part.cat === "autre") return null;
+  return { libelle: detailPartDressing(part).titre, categories: [part.cat], retour: "journal" };
 }
 
 /**

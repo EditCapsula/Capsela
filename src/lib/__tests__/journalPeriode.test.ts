@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chiffresPeriode, debutPeriode, historiqueDansPeriode, peutEtreDiteJamaisPortee, repartitionDressing } from "../selectors";
+import { chiffresPeriode, debutPeriode, detailPartDressing, filtrePourPart, historiqueDansPeriode, peutEtreDiteJamaisPortee, repartitionDressing } from "../selectors";
 import type { HistoryEntry, Item } from "../types";
 
 const item = (id: number, cat: string): Item => ({ id, cat, name: `p${id}`, hex: "#000000" }) as unknown as Item;
@@ -60,6 +60,31 @@ describe("repartitionDressing", () => {
   });
   it("dressing vide : aucune ligne", () => {
     expect(repartitionDressing([])).toEqual([]);
+  });
+});
+
+describe("la part choisie dans l'anneau (15/10/2026) — mêmes données que l'arc et la légende", () => {
+  // 19 pièces dont 5 hauts : l'exemple du brief (« 5 pièces · 26 % du dressing »).
+  const items = [
+    ...[1, 2, 3, 4, 5].map((i) => item(i, "haut")),
+    ...Array.from({ length: 14 }, (_, k) => item(10 + k, k % 2 ? "jean" : "robe")),
+  ];
+  const parts = repartitionDressing(items);
+  const hauts = parts.find((p) => p.cat === "haut")!;
+  it("titre pluriel de la taxonomie, nombre et pourcentage de la part", () => {
+    expect(detailPartDressing(hauts)).toEqual({ titre: "Hauts", sousTitre: "5 pièces · 26 % du dressing" });
+  });
+  it("une seule pièce s'accorde au singulier", () => {
+    const [seule] = repartitionDressing([item(1, "veste")]);
+    expect(detailPartDressing(seule)).toEqual({ titre: "Vestes & blazers", sousTitre: "1 pièce · 100 % du dressing" });
+  });
+  it("le filtre du Dressing est la catégorie exacte, avec le retour au Journal", () => {
+    expect(filtrePourPart(hauts)).toEqual({ libelle: "Hauts", categories: ["haut"], retour: "journal" });
+  });
+  it("« Autres » n'a pas de filtre : l'action n'est pas proposée", () => {
+    const autre = repartitionDressing([item(1, "inconnue")])[0];
+    expect(detailPartDressing(autre).titre).toBe("Autres");
+    expect(filtrePourPart(autre)).toBeNull();
   });
 });
 

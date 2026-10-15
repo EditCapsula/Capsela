@@ -57,10 +57,13 @@ ressemblent. Elles ne servent jamais à te juger ni à te classer.
   saisons, matière, coupe, occasions, et la photo si tu en prends une ;
 - ce que tu portes (date, pièces, occasion, météo du jour), tes looks
   enregistrés, tes réactions à la tenue du jour (« J'adore », « Pas pour moi ») ;
-- tes looks planifiés : date, moment, occasion, lieu que tu indiques ;
+- tes looks planifiés : date, moment, occasion, lieu que tu indiques, et
+  l'humeur que tu choisis pour l'événement (élégante, décontractée…) ;
 - tes valises : destination, dates, taille de bagage, pièces choisies ;
 - tes avis de styliste enregistrés dans ton Journal, avec leur photo ;
-- le choix que tu fais pour une pièce (la garder, la mettre de côté).
+- le choix que tu fais pour une pièce (la garder, la mettre de côté) ;
+- tes retours sur les associations de couleurs de ta saison (« J'aime »,
+  « Pas pour moi ») : une association écartée ne t'est plus proposée.
 
 ### Ta localisation
 
@@ -74,14 +77,35 @@ La position sert seulement à interroger la météo : elle n'est pas enregistré
 sur nos serveurs. La dernière ville obtenue est gardée sur ton appareil pour
 afficher la météo plus vite à l'ouverture suivante.
 
+Quand tu cherches une ville (pour la météo, un look planifié ou une valise),
+le nom saisi est envoyé au service de météo pour la retrouver. Si tu saisis
+un nom de pays, l'application interroge directement depuis ton appareil un
+service public de données sur les pays (restcountries.com) pour en trouver
+la capitale : ce service reçoit le nom saisi et, comme tout site consulté,
+l'adresse IP de ton appareil. Les dernières villes choisies sont gardées sur
+ton appareil pour te les reproposer.
+
 ### Tes photos
 
 - **Photos du dressing** : enregistrées dans un espace de stockage privé.
   Elles ne sont accessibles qu'à toi, par des liens temporaires. Quand tu
-  ajoutes une photo, elle peut être analysée pour préremplir la fiche de la
-  pièce (catégorie, couleur…) ; ces suggestions ne sont jamais imposées. Les
+  ajoutes une photo, elle est analysée pour préremplir la fiche de la
+  pièce (catégorie, couleur, matière, saisons…) et pour savoir si elle montre
+  la pièce seule, portée ou plusieurs pièces ; ces suggestions ne sont
+  jamais imposées. Quand la photo montre la pièce seule, son fond est ensuite
+  retiré automatiquement (détourage) par un prestataire spécialisé, pour que
+  la pièce s'affiche comme celles du catalogue ; la photo d'origine est alors
+  supprimée. Les
   métadonnées de la photo (dont la position GPS) sont retirées avant l'envoi ;
   une photo qui ne peut pas être préparée ainsi est refusée.
+- **Photo d'une tenue entière** : quand ta photo montre une tenue portée ou
+  plusieurs pièces, l'application peut y repérer chaque pièce. La photo est
+  analysée (nature, couleur, matière, saisons et emplacement de chaque
+  pièce), puis chaque pièce est découpée en une image séparée, rangée dans
+  ton espace privé. Seules les pièces que tu ajoutes sont détourées et
+  gardées ; les autres découpes et la photo d'origine sont supprimées à la
+  fin de l'import, ou quand tu le quittes. La photo peut te montrer : elle
+  n'est jamais utilisée pour t'identifier, ni pour juger ton corps.
 - **Photos d'avis de styliste** : la photo de ta tenue est envoyée pour
   l'analyse, puis n'est conservée que si tu enregistres l'avis dans ton
   Journal. Dans ce cas, elle est stockée dans un espace privé et supprimée
@@ -96,6 +120,12 @@ afficher la météo plus vite à l'ouverture suivante.
 - **Rapports d'erreur** : quand l'application rencontre un problème, un
   rapport technique est envoyé (type d'erreur, écran, navigateur). Il ne
   contient ni ton nom, ni ton e-mail, ni ton identifiant, ni tes photos.
+- **Sur ton appareil** : pour aller plus vite et éviter de te reproposer la
+  même tenue, l'application garde dans le stockage de ton appareil tes
+  valises, tes dernières villes, les tenues proposées ces derniers jours et
+  tes retours sur les associations de couleurs (voir « Cookies et
+  traceurs »). Tout cela est effacé de l'appareil quand tu supprimes ton
+  compte.
 
 Nous ne collectons aucune donnée bancaire à ce jour : l'abonnement Premium
 n'est pas encore en vente.
@@ -107,7 +137,8 @@ n'est pas encore en vente.
 | Créer et gérer ton compte, te connecter, réinitialiser ton mot de passe | Exécution du contrat (les Conditions d'utilisation) |
 | Composer ta tenue du jour, planifier tes looks, préparer tes valises, tenir ton Journal | Exécution du contrat |
 | Obtenir la météo de ta ville ou de ta position | Exécution du contrat ; pour la position, ton consentement |
-| Analyser une photo que tu envoies (préremplissage d'une pièce, avis de styliste) | Exécution du contrat, à ta demande |
+| Analyser une photo que tu envoies (préremplissage d'une pièce, repérage des pièces d'une tenue, avis de styliste) | Exécution du contrat, à ta demande |
+| Retirer le fond des photos de tes pièces (détourage) | Exécution du contrat |
 | Gérer ton statut Premium et les limites d'usage (nombre de pièces, « Autre tenue ») | Exécution du contrat |
 | Mesurer l'audience | Ton consentement, que tu peux retirer à tout moment |
 | Détecter et résoudre les erreurs, sécuriser le service | Intérêt légitime : faire fonctionner l'application de façon fiable |
@@ -127,14 +158,20 @@ compte et selon nos instructions (sous-traitants au sens du RGPD).
 | --- | --- | --- | --- |
 | Supabase Inc. | Comptes, base de données, stockage des photos, fonctions serveur | Toutes les données du compte | [À COMPLÉTER — région du projet] |
 | Vercel Inc. | Hébergement du site et de l'application web | Données techniques de connexion | États-Unis |
-| OpenAI [À VÉRIFIER — entité contractante] | Analyse des photos (préremplissage d'une pièce, avis de styliste) | La photo analysée ; pour l'avis, ton style, ta silhouette déclarée, ta palette et ta colorimétrie — jamais ton nom, ton e-mail ni ton identifiant | États-Unis |
-| OpenWeather Ltd | Météo et recherche de ville | Ta ville, ou les coordonnées de ta position si tu l'as autorisée | Royaume-Uni |
+| OpenAI [À VÉRIFIER — entité contractante] | Analyse des photos (préremplissage d'une pièce, repérage des pièces d'une tenue, avis de styliste) | La photo analysée ; pour l'avis, ton style, ta silhouette déclarée, ta palette et ta colorimétrie — jamais ton nom, ton e-mail ni ton identifiant | États-Unis |
+| Photoroom SAS [À VÉRIFIER — entité et adresse] | Détourage des photos de tes pièces | La photo de la pièce, ou la découpe d'une pièce dans la photo d'une tenue — jamais ton nom, ton e-mail ni ton identifiant | France ; serveurs [À VÉRIFIER — le prestataire n'annonce pas d'hébergement réservé à l'Union européenne] |
+| Open-Meteo [À VÉRIFIER — entité et adresse] | Prévisions météo jusqu'à 16 jours, températures habituelles d'un lieu, recherche de ville | Le nom de la ville cherchée, ou les coordonnées de la ville ou de ta position | [À VÉRIFIER] |
+| OpenWeather Ltd | Météo du jour, prévisions de secours et recherche de ville | Ta ville, ou les coordonnées de ta position si tu l'as autorisée | Royaume-Uni |
+| restcountries.com [À VÉRIFIER — éditeur] | Trouver la capitale d'un pays saisi, interrogé directement depuis ton appareil | Le nom de pays saisi et l'adresse IP de ton appareil | [À VÉRIFIER] |
 | Google Ireland Ltd | Connexion avec Google (si tu la choisis) ; mesure d'audience (si tu l'acceptes) | Données de connexion ; données d'usage | Irlande, avec transferts possibles vers les États-Unis |
 | Functional Software Inc. (Sentry) | Rapports d'erreur | Données techniques de l'erreur, sans identifiant | États-Unis |
 
 Les analyses de photos sont demandées sans conservation par OpenAI pour
 l'amélioration de ses modèles (paramètre `store: false`). [À VÉRIFIER —
 durée de conservation résiduelle selon les conditions d'OpenAI.]
+
+Photoroom déclare effacer les images après chaque traitement. [À VÉRIFIER —
+contrat de traitement des données et durée de conservation réelle.]
 
 Quand tu partages une tenue avec un proche (« Demander l'avis d'un proche »),
 c'est toi qui l'envoies, depuis ton téléphone et avec l'application de ton
@@ -161,6 +198,10 @@ de la Commission. [À VÉRIFIER — mécanisme retenu pour chaque prestataire.]
   conservée.
 - **Une photo de pièce remplacée ou une pièce supprimée** : la photo est
   effacée dès qu'aucune autre pièce ne l'utilise.
+- **La photo d'origine d'une pièce détourée** : effacée dès que la version
+  détourée la remplace.
+- **La photo d'une tenue importée et ses découpes** : effacées à la fin de
+  l'import ; seules restent les pièces que tu as ajoutées.
 - **Rapports d'erreur** : [À COMPLÉTER — durée de conservation du plan Sentry].
 - **Mesure d'audience** : [À COMPLÉTER — durée réglée dans Google Analytics, 2 ou 14 mois].
 - **Session de connexion** : jusqu'à 400 jours sur ton appareil, ou jusqu'à ta

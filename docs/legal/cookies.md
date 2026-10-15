@@ -18,7 +18,14 @@ refusés, mais ne servent à rien d'autre.
 | `capsela.analyticsConsent` (stockage local) | Retenir ton choix sur la mesure d'audience | Six mois, puis la question est reposée |
 | `capsela.lastKnownCity` (stockage local) | Afficher la météo de ta dernière ville plus vite | Jusqu'à la prochaine mise à jour |
 | `capsela.valises.…` (stockage local) | Garder tes valises disponibles sur l'appareil | Jusqu'à leur suppression |
+| `capsela.villesRecentes` (stockage local) | Te reproposer les six dernières villes choisies | Jusqu'à la suppression du compte |
+| `capsela.recommandees.…` (stockage local) | Éviter de te reproposer la tenue des jours précédents | Une quinzaine de jours glissants |
+| `capsela.accords.…` (stockage local) | Ne plus te proposer une association de couleurs écartée | Jusqu'à ce que tu changes d'avis, ou la suppression du compte |
 | `capsela.authIntent` (stockage de session) | Revenir au bon écran après l'inscription | Jusqu'à la fermeture de l'onglet |
+| `capsela.dernierEcran` (stockage de session) | Rouvrir l'écran où tu étais après un rechargement | Jusqu'à la fermeture de l'onglet |
+
+Ceux qui sont liés à ton compte sont effacés de l'appareil quand tu le
+supprimes.
 
 ## Mesure d'audience (avec ton consentement)
 

@@ -62,7 +62,7 @@ Le site et la documentation de Photoroom sont BLOQUÉS depuis le conteneur de d�
 1. Créer le compte chez le fournisseur et poser le secret **`PHOTOROOM_API_KEY`** (Supabase → Edge Functions → Secrets). Sans lui, la fonction répond `non_configure` et rien ne change pour les utilisatrices.
 2. Déployer : le workflow « Déployer les fonctions Supabase » le fait à la fusion dans `main`.
 3. **Essayer sur quelques vraies photos** (vêtement clair sur fond clair, maille, sac, chaussures) avant d'ouvrir à tous ; relire la documentation du fournisseur contre `_shared/detourage.ts`.
-4. Dire dans la **politique de confidentialité** et les **mentions légales** que les photos de vêtements sont traitées par un sous-traitant, lequel, où, combien de temps (les textes sont encore à compléter, `src/lib/legal/contenu.ts`).
+4. ~~Dire dans la politique de confidentialité que les photos de vêtements sont traitées par un sous-traitant~~ : **fait le 15/10/2026** (Politique de confidentialité et CGU, `docs/legal/README.md`, « Repasse du 15/10/2026 »). Restent `[À VÉRIFIER]` : entité, hébergement, contrat de traitement.
 5. Décider **qui paie** (plafond seul, Premium, vidéo récompensée).
 
 ## Photo qui n'est pas d'une pièce seule (05/10/2026)

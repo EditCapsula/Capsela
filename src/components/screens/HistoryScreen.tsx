@@ -14,6 +14,8 @@ import {
   chiffresPeriode,
   peutEtreDiteJamaisPortee,
   repartitionDressing,
+  detailPartDressing,
+  filtrePourPart,
   type PeriodeJournal,
   type PartDressing,
   etatDePort,
@@ -299,44 +301,130 @@ const COULEURS_PARTS = [
   "var(--color-placeholder)",
 ];
 
-/** Anneau de composition : un arc par catégorie, séparés par un petit blanc ; le total de pièces au centre. */
-function AnneauComposition({ parts, total }: { parts: PartDressing[]; total: number }) {
+/**
+ * TON DRESSING EN CHIFFRES, INTERACTIF (15/10/2026, brief « rendre le camembert du dressing interactif »).
+ *
+ * Une part se choisit sur l'anneau OU dans la légende (les deux sont des boutons, au clavier aussi) ; la même part la désélectionne,
+ * « Tout le dressing » aussi. Part choisie : son arc s'épaissit, les autres s'atténuent, le centre dit son nombre et son libellé, la
+ * ligne de légende passe en gras sur fond sable (jamais la couleur seule ; pas de coche, qui tronquait le libellé à 320 px), et le
+ * détail sous l'anneau, qui nomme la catégorie, ouvre le Dressing filtré sur cette catégorie. Tout vient des mêmes parts
+ * (repartitionDressing) : l'arc, la légende, le centre et le détail ne peuvent pas se contredire. Transitions de 200 ms, coupées si
+ * le système demande moins d'animations.
+ */
+function CompositionDressing({ parts, total, onVoirPieces }: { parts: PartDressing[]; total: number; onVoirPieces: (p: PartDressing) => void }) {
+  const [choisie, setChoisie] = useState<PartDressing["cat"] | null>(null);
+  // Une part disparue (pièce supprimée) n'est plus choisie : retour à la vue d'ensemble, sans état fantôme.
+  const active = parts.find((p) => p.cat === choisie) ?? null;
+  const basculer = (cat: PartDressing["cat"]) => setChoisie((c) => (c === cat ? null : cat));
+  const detail = active ? detailPartDressing(active) : null;
+  const filtre = active ? filtrePourPart(active) : null;
+
   const taille = 112;
   const trait = 16;
+  const traitActif = 22;
+  // Même rayon qu'avant : la part choisie déborde de 3 px du cadre, permis par `overflow: visible` sur le SVG.
   const r = (taille - trait) / 2;
   const c = 2 * Math.PI * r;
   const ecart = parts.length > 1 ? 2 : 0;
   // Début de chaque arc : somme des parts précédentes (calculée hors du rendu des cercles).
   const debuts = parts.map((_, i) => parts.slice(0, i).reduce((a, q) => a + (q.nb / total) * c, 0));
+  const etiquette = (p: PartDressing) => `${p.libelle} : ${p.nb} ${pl(p.nb, "pièce", "pièces")}, ${p.pct} %`;
+
   return (
-    <div className="relative flex-shrink-0" style={{ width: taille, height: taille }}>
-      <svg width={taille} height={taille} viewBox={`0 0 ${taille} ${taille}`} aria-hidden="true" style={{ display: "block" }}>
-        <circle cx={taille / 2} cy={taille / 2} r={r} fill="none" stroke="var(--color-warm-bg)" strokeWidth={trait} />
-        {parts.map((p, i) => {
-          const longueur = (p.nb / total) * c;
-          const arc = Math.max(0, longueur - ecart);
-          const decalage = -debuts[i];
-          return (
-            <circle
-              key={p.cat}
-              cx={taille / 2}
-              cy={taille / 2}
-              r={r}
-              fill="none"
-              stroke={COULEURS_PARTS[i % COULEURS_PARTS.length]}
-              strokeWidth={trait}
-              strokeDasharray={`${arc} ${c - arc}`}
-              strokeDashoffset={decalage}
-              transform={`rotate(-90 ${taille / 2} ${taille / 2})`}
-            />
-          );
-        })}
-      </svg>
-      <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="t-chiffre text-ink">{total}</span>
-        <span className="text-[10px] text-muted leading-[1.2] mt-[2px]">{pl(total, "pièce", "pièces")}</span>
+    <Card className="mt-3 px-4 py-4">
+      <div className="flex items-center gap-4">
+        <div className="relative flex-shrink-0" style={{ width: taille, height: taille }}>
+          <svg width={taille} height={taille} viewBox={`0 0 ${taille} ${taille}`} role="group" aria-label="Répartition de ton dressing par catégorie" style={{ display: "block", overflow: "visible" }}>
+            <circle cx={taille / 2} cy={taille / 2} r={r} fill="none" stroke="var(--color-warm-bg)" strokeWidth={trait} aria-hidden="true" />
+            {parts.map((p, i) => {
+              const longueur = (p.nb / total) * c;
+              const arc = Math.max(0, longueur - ecart);
+              const estActive = active?.cat === p.cat;
+              return (
+                <circle
+                  key={p.cat}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={estActive}
+                  aria-label={etiquette(p)}
+                  onClick={() => basculer(p.cat)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      basculer(p.cat);
+                    }
+                  }}
+                  cx={taille / 2}
+                  cy={taille / 2}
+                  r={r}
+                  fill="none"
+                  stroke={COULEURS_PARTS[i % COULEURS_PARTS.length]}
+                  strokeWidth={estActive ? traitActif : trait}
+                  strokeOpacity={active && !estActive ? 0.32 : 1}
+                  strokeDasharray={`${arc} ${c - arc}`}
+                  strokeDashoffset={-debuts[i]}
+                  transform={`rotate(-90 ${taille / 2} ${taille / 2})`}
+                  className="anneau-part cursor-pointer outline-none transition-[stroke-width,stroke-opacity] duration-200 ease-out motion-reduce:transition-none"
+                />
+              );
+            })}
+          </svg>
+          <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-[22px]">
+            <span className="t-chiffre text-ink">{active ? active.nb : total}</span>
+            <span className="text-[10px] text-muted leading-[1.2] mt-[2px] line-clamp-2">{active ? active.libelle : pl(total, "pièce", "pièces")}</span>
+          </div>
+        </div>
+        <ul className="flex-1 min-w-0 flex flex-col" aria-label="Catégories de ton dressing">
+          {parts.map((p, i) => {
+            const estActive = active?.cat === p.cat;
+            return (
+              <li key={p.cat}>
+                <button
+                  type="button"
+                  aria-pressed={estActive}
+                  aria-label={etiquette(p)}
+                  onClick={() => basculer(p.cat)}
+                  className={`w-full min-h-[26px] -mx-[6px] px-[6px] rounded-[8px] flex items-center gap-2 text-left text-[12px] cursor-pointer transition-[background-color,opacity] duration-200 ease-out motion-reduce:transition-none ${
+                    estActive ? "bg-warm-bg text-ink font-semibold" : active ? "text-ink opacity-70" : "text-ink"
+                  }`}
+                  style={{ width: "calc(100% + 12px)" }}
+                >
+                  <span aria-hidden="true" className="w-[10px] h-[10px] rounded-full flex-shrink-0" style={{ background: COULEURS_PARTS[i % COULEURS_PARTS.length] }} />
+                  <span className="flex-1 min-w-0 truncate">{p.libelle}</span>
+                  <span className={`whitespace-nowrap ${estActive ? "text-ink" : "text-muted"}`}>
+                    {p.nb} · {p.pct} %
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </div>
-    </div>
+      {/* Le détail de la part choisie : son nom, son poids, l'accès aux pièces, et le retour à la vue d'ensemble. */}
+      <div role="status" aria-live="polite">
+        {active && detail && (
+          <div className="detail-part mt-[14px] pt-[12px] border-t border-border flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="font-serif text-[16px] text-ink leading-[1.25] truncate">{detail.titre}</div>
+              <div className="text-[11.5px] text-muted mt-[2px]">{detail.sousTitre}</div>
+              <button type="button" onClick={() => setChoisie(null)} className="min-h-[32px] -my-[4px] text-[11.5px] text-muted underline underline-offset-2 cursor-pointer">
+                Tout le dressing
+              </button>
+            </div>
+            {filtre && (
+              <button
+                type="button"
+                onClick={() => onVoirPieces(active)}
+                className="min-h-[44px] flex items-center gap-[6px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer flex-shrink-0"
+              >
+                Voir les pièces
+                <span aria-hidden="true" className="text-[16px] leading-none">›</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 
@@ -869,20 +957,14 @@ export default function HistoryScreen() {
           <Surtitre>
             <span id="journal-composition">Ton dressing en chiffres</span>
           </Surtitre>
-          <Card className="mt-3 px-4 py-4 flex items-center gap-4">
-            <AnneauComposition parts={parts} total={state.items.length} />
-            <ul className="flex-1 min-w-0 flex flex-col gap-[7px]">
-              {parts.map((p, i) => (
-                <li key={p.cat} className="flex items-center gap-2 text-[12px] text-ink">
-                  <span aria-hidden="true" className="w-[10px] h-[10px] rounded-full flex-shrink-0" style={{ background: COULEURS_PARTS[i % COULEURS_PARTS.length] }} />
-                  <span className="flex-1 min-w-0 truncate">{p.libelle}</span>
-                  <span className="text-muted whitespace-nowrap">
-                    {p.nb} · {p.pct} %
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Card>
+          <CompositionDressing
+            parts={parts}
+            total={state.items.length}
+            onVoirPieces={(p) => {
+              const f = filtrePourPart(p);
+              if (f) actions.goWardrobePieces(f);
+            }}
+          />
         </section>
       )}
 

@@ -1,4 +1,4 @@
-# Textes légaux — brouillons du 30/09/2026
+# Textes légaux — brouillons du 30/09/2026, repassés le 15/10/2026
 
 **BROUILLONS À FAIRE VALIDER PAR UN JURISTE AVANT PUBLICATION.** Ils sont
 rédigés à partir de ce que le code fait réellement au 30/09/2026 (inventaire
@@ -65,10 +65,9 @@ Relevés en écrivant, par ordre d'importance. État au 01/10/2026.
    `compressDressingPhoto` refuse (`PhotoNonPreparee`) une photo qu'elle ne sait
    pas ré-encoder, et envoie toujours le JPEG ré-encodé. L'arbitrage du
    10/09 (« ne jamais bloquer l'ajout ») cède devant celui-ci.
-3. **Liens « Acheter »** : **à vérifier en base** —
-   `select count(*) from vestiaire_universel where lien_affiliation is not
-   null;`. Si des liens existent et restent, ils doivent être signalés comme
-   liens commerciaux. Non traité.
+3. **Liens « Acheter »** : **vérifié le 15/10/2026** — aucune pièce du
+   catalogue n'a de `lien_affiliation` (0 ligne). Si des liens sont ajoutés,
+   ils devront être signalés comme liens commerciaux.
 4. **Inscription** : **traité.** Date de naissance obligatoire, inscription
    refusée sous 15 ans (`ageMinimum.ts`), et « Conditions » et « Politique de
    confidentialité » sont des liens vers les pages publiques `/legal/cgu` et
@@ -89,6 +88,41 @@ Relevés en écrivant, par ordre d'importance. État au 01/10/2026.
 8. **Sentry** : le stockage des adresses IP se désactive dans le tableau de
    bord Sentry (Settings → Security & Privacy → « Prevent Storing of IP
    Addresses »). Le texte suppose que c'est fait. Hors code : à faire.
+
+## Repasse du 15/10/2026
+
+Les textes ont été relus contre ce que le code fait au 15/10/2026 (fonctions serveur, appels sortants, tables, stockage de
+l'appareil). Ce qui avait changé depuis le 30/09, et ce qui a été fait :
+
+**Textes mis à jour**
+- **Nouveaux prestataires**, absents des textes : **Photoroom** (détourage des photos du dressing, `detourer-photo`, depuis le
+  04/10), **Open-Meteo** (prévisions à 16 jours, températures habituelles et recherche de ville, fonction `weather`, depuis
+  09/2026), **restcountries.com** (capitale d'un pays saisi, appelé DIRECTEMENT depuis l'appareil, `weather.ts`). Ajoutés au
+  tableau des destinataires de la Politique de confidentialité, avec leurs `[À VÉRIFIER]`.
+- **Nouveaux traitements** : le repérage des pièces d'une tenue entière (`importer-tenue` : la photo, qui peut montrer la
+  personne, est lue par OpenAI puis découpée ; les découpes non gardées et l'original sont supprimés), le détourage automatique
+  à l'ajout, l'humeur d'un look planifié (0048), les retours sur les associations de couleurs (0047). Politique de
+  confidentialité, CGU (ce que propose Capsela, contenus, suggestions), « Tes droits ».
+- **Stockage de l'appareil** : `capsela.villesRecentes`, `capsela.recommandees.…`, `capsela.accords.…` et
+  `capsela.dernierEcran` ajoutés à « Cookies et traceurs ».
+
+**Code corrigé**
+- **Export** : les retours sur les associations de couleurs (`accord_retours`, 0047) n'y figuraient pas. Ajoutés
+  (`retours_accords_couleurs`, testé).
+- **Suppression du compte** : les villes récentes (`capsela.villesRecentes`) et les anciennes check-lists de valise
+  (`capsela.valise.check.<id>`) restaient sur l'appareil. Effacées (`donneesLocales.ts`, testé).
+
+**Reste à décider ou à vérifier (avant le lancement)**
+- **Photoroom** : contrat de traitement des données (annoncé seulement en offre Enterprise), hébergement sans résidence
+  européenne annoncée, durée réelle de conservation des images (cf. `docs/detourage.md`).
+- **Open-Meteo** : gratuit pour un usage NON commercial seulement. Une app avec abonnement payant relève du plan commercial :
+  à souscrire avant le lancement, avec ses conditions de traitement.
+- **restcountries.com** : seul service tiers appelé depuis l'appareil (il reçoit l'adresse IP). Le faire passer par la
+  fonction `weather` le retirerait des textes ; non fait.
+- **Mise à plat** (Photoroom Flat Lay, générative) : masquée (`NEXT_PUBLIC_MISE_A_PLAT`). Si elle est réactivée, dire dans
+  la Politique et les CGU que l'image produite est générée et peut différer de la pièce.
+- **Vidéo récompensée** : aucun réseau publicitaire branché (`video-recompense` refuse tout). Le jour où il l'est, les textes
+  disent faux (« aucun cookie publicitaire ») : consentement, Cookies et Politique à refaire avant la mise en ligne.
 
 ## Pages publiques
 

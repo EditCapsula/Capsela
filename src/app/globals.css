@@ -351,6 +351,27 @@ input.capin::placeholder {
   }
 }
 
+/* Anneau « Ton dressing en chiffres » du Journal (15/10/2026) : la part atteinte au clavier s'épaissit et reprend toute son opacité
+   (un contour encadrerait l'anneau entier, le cadre d'un élément SVG étant celui du cercle complet) ; le détail de la part choisie
+   apparaît en fondu court, coupé si le système demande moins d'animations. */
+.anneau-part:focus-visible {
+  outline: none;
+  stroke-width: 22px;
+  stroke-opacity: 1;
+}
+@keyframes detail-part-entree {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+.detail-part {
+  animation: detail-part-entree 200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .detail-part {
+    animation: none;
+  }
+}
+
 /* Utilitaire de la police manuscrite. Déclaré à la main : le jeton --font-hand
    n'appartient pas aux familles que Tailwind génère automatiquement. */
 .font-hand {

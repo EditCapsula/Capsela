@@ -1,7 +1,7 @@
 "use client";
 
 import Rangee from "@/components/Rangee";
-import { APP_VERSION } from "@/lib/data";
+import { VERSION_APP } from "@/lib/versionApp";
 import { DOCUMENTS_LEGAUX } from "@/lib/legal/documents";
 import { useCapsela } from "@/lib/store";
 import AppHeader from "@/components/AppHeader";
@@ -30,7 +30,7 @@ export default function LegalScreen() {
         ))}
       </Card>
 
-      <div className="text-[11px] text-muted mt-[14px] leading-[1.5]">Capsela · version {APP_VERSION}</div>
+      <div className="text-[11px] text-muted mt-[14px] leading-[1.5]">Capsela · version {VERSION_APP}</div>
     </div>
   );
 }

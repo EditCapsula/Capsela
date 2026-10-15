@@ -1,5 +1,21 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { execSync } from "node:child_process";
+
+/**
+ * Le commit et la date du build (15/10/2026), affichés comme version de l'app (src/lib/versionApp.ts) et envoyés avec les
+ * rapports d'erreur. Vercel et la CI donnent le commit par variable ; ailleurs (build local, empaquetage Capacitor) on le
+ * lit dans git ; sans git, rien — jamais un commit inventé.
+ */
+function commitDuBuild(): string {
+  const fourni = process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA;
+  if (fourni) return fourni.slice(0, 7);
+  try {
+    return execSync("git rev-parse --short=7 HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+  } catch {
+    return "";
+  }
+}
 
 /**
  * `output: "export"` produit un site entièrement statique dans `out/` : un
@@ -21,6 +37,10 @@ import { withSentryConfig } from "@sentry/nextjs";
  */
 const nextConfig: NextConfig = {
   output: "export",
+  env: {
+    CAPSELA_BUILD_COMMIT: commitDuBuild(),
+    CAPSELA_BUILD_DATE: new Date().toISOString(),
+  },
 };
 
 /**

@@ -8,6 +8,7 @@ import {
   MIN_PIECES_DRESSING_ASSOCIATION,
   assezDuDressing,
   associationsNouvelles,
+  categoriesHorsPuces,
   categoriesManquantes,
   choisirADecouvrir,
   groupesDuVestiaire,
@@ -195,5 +196,19 @@ describe("piecesPourVisuelCategorie", () => {
     const g = groupesDuVestiaire([propre(1, "sac"), piece(2, "bijou")], "femme");
     expect(g.find((x) => x.id === "sacs")?.propres).toHaveLength(1);
     expect(g.find((x) => x.id === "bijoux-accessoires")?.propres).toEqual([]);
+  });
+});
+
+describe("categoriesHorsPuces — « Voir les pièces » depuis le Journal (15/10/2026)", () => {
+  const groupes = [{ categories: ["haut", "pull"] as const }, { categories: ["jupe"] as const }].map((g) => ({ categories: [...g.categories] }));
+  it("une catégorie qu'une puce porte seule active la puce : aucun filtre exact", () => {
+    expect(categoriesHorsPuces({ categories: ["jupe"] }, groupes)).toBeNull();
+  });
+  it("une catégorie regroupée avec d'autres dans sa puce (« Haut » dans « Hauts & mailles ») s'applique telle quelle", () => {
+    expect(categoriesHorsPuces({ categories: ["haut"] }, groupes)).toEqual(["haut"]);
+  });
+  it("sans catégorie (filtre par teinte, ou aucun filtre) : rien", () => {
+    expect(categoriesHorsPuces({}, groupes)).toBeNull();
+    expect(categoriesHorsPuces(null, groupes)).toBeNull();
   });
 });
