@@ -56,6 +56,8 @@ export interface CarteHeroProps {
   ajouts?: { item: Item; onAjouter: () => void }[];
   /** Sous les actions, sur toute la largeur (alerte météo d'un look planifié). */
   pied?: React.ReactNode;
+  /** La tenue a été portée aujourd'hui (« Porter cette tenue ») : la carte le dit (15/10/2026, demandé). */
+  portee?: boolean;
 }
 
 /**
@@ -63,7 +65,7 @@ export interface CarteHeroProps {
  * seul, arbitré le 14/10/2026 (option 3h), puis Tenue le même jour ; les autres hero gardent --color-hero-background. Le texte réduit à gauche, la composition — point focal — à droite, deux actions
  * dessous. Même géométrie que le hero d'avant (358 × 307 sur 390), aux couleurs de la carte claire.
  */
-export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, ajouts }: CarteHeroProps) {
+export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categoriesAttendues, onVoir, sauvegardee, onSauvegarder, onAutre, autreDesactive, pied, fantomes, ajouts, portee }: CarteHeroProps) {
   const ouvrirPiece = useOuvrirPiece();
   return (
     <div
@@ -89,6 +91,7 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
         <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
           {sousTitre}
         </div>
+        {portee && <MentionPortee />}
         <div className="mt-auto pt-4">
           <Button variante="principal" pleine={false} onClick={onVoir} className="!px-[16px] !normal-case !tracking-[0.02em] !text-[14px] whitespace-nowrap">
             Voir le look
@@ -179,6 +182,21 @@ export function CarrouselHero({ slides, libelles }: { slides: React.ReactNode[];
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * « Portée aujourd'hui » (15/10/2026, demandé : « si j'ai indiqué avoir porté cette tenue, cela doit être indiqué sur l'accueil ») — la
+ * coche ronde terracotta de la page Tenue (« Bonne journée avec cette tenue ! »), en plus petit. Un texte, jamais la couleur seule.
+ */
+export function MentionPortee() {
+  return (
+    <div className="mt-[10px] inline-flex items-center gap-[7px] self-start" role="status">
+      <span aria-hidden="true" className="w-[20px] h-[20px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center text-[11px] flex-shrink-0">
+        ✓
+      </span>
+      <span className="text-[12.5px] text-ink">Portée aujourd&apos;hui</span>
     </div>
   );
 }

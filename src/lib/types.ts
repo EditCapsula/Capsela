@@ -605,6 +605,12 @@ export interface AppState {
   filtrePieces: FiltrePieces | null;
   /** L'aperçu d'une pièce ouvert depuis un hero (14/10/2026) : une feuille posée sur l'écran, pas une page. Id de la pièce, ou null. */
   pieceApercu: number | null;
+  /**
+   * La fiche détaillée d'une pièce ouverte EN FEUILLE (15/10/2026, demandé : « depuis la homepage, au clic sur une pièce, ouvrir la fiche
+   * détaillée dans une feuille ») : l'écran d'où elle a été ouverte, qui reste dessous. null : aucune. Une navigation vers un autre écran
+   * la referme (App).
+   */
+  ficheEnFeuille: { ecran: Screen } | null;
 }
 
 export type Screen =

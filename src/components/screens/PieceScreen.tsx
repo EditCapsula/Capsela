@@ -80,8 +80,10 @@ function BulbIcon() {
   );
 }
 
-export default function PieceScreen() {
+/** `onFermer` : la fiche est dans une feuille (FicheEnFeuille) — le retour la referme au lieu de changer d'écran. */
+export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}) {
   const { state, actions, vestiairePool } = useCapsela();
+  const revenir = onFermer ?? (() => actions.go(state.pieceReturn));
   const [suggestionInfoOpen, setSuggestionInfoOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -203,7 +205,7 @@ export default function PieceScreen() {
       {suggested ? (
         // UNE SUGGESTION de la capsule (pas encore une pièce du dressing) : la mise en page d'origine, photo en 4/5.
         <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-          <AppHeader onBack={() => actions.go(state.pieceReturn)} />
+          <AppHeader onBack={revenir} />
 
           <div
             className="w-full rounded-carte border border-border overflow-hidden mt-[14px] relative"
@@ -309,7 +311,7 @@ export default function PieceScreen() {
                 </button>
               )}
               <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-[18px] pt-[14px]">
-                <BoutonRetour onClick={() => actions.go(state.pieceReturn)} label="Revenir à l'écran précédent" />
+                <BoutonRetour onClick={revenir} label={onFermer ? "Fermer la fiche" : "Revenir à l'écran précédent"} />
                 <div className="flex flex-col items-center gap-[6px]" aria-hidden="true">
                   <span className="font-serif font-medium text-[22px] leading-none text-ink" style={{ letterSpacing: ".2em", paddingLeft: ".2em" }}>CAPSELA</span>
                   <span className="w-[28px] h-[2px] rounded-[2px]" style={{ background: "var(--color-terracotta)" }} />

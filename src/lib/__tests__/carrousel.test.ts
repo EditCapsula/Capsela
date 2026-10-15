@@ -24,11 +24,18 @@ describe("composerSlides", () => {
     expect(s[2]).toMatchObject({ ids: [7, 8, 9], source: "proposition" });
   });
 
-  it("une tenue planifiée prend la première slide, quelle que soit son occasion, et garde l'occasion du plan", () => {
-    const s = composerSlides({ tenueDuJour: [20, 21], occasion: "soiree", planAujourdhui: true, propositions });
-    expect(s[0]).toMatchObject({ id: "travail", ids: [20, 21], source: "plan", occasion: "soiree" });
-    expect(s.slice(1).map((x) => x.id)).toEqual(["quotidien", "soiree"]);
+  it("une tenue planifiée est montrée en premier, sur la slide de SON occasion : les deux autres occasions restent (15/10/2026)", () => {
+    // Signalé : un plan « Soirée » prenait la slide Travail, et la proposition Soirée (mêmes pièces principales) tombait.
+    const s = composerSlides({ tenueDuJour: [20, 21], occasion: "soiree", planAujourdhui: true, propositions: { travail: [1, 2, 3], quotidien: [4, 5, 6] } });
+    expect(s.map((x) => x.id)).toEqual(["soiree", "travail", "quotidien"]);
+    expect(s[0]).toMatchObject({ ids: [20, 21], source: "plan", occasion: "soiree" });
     expect(s.slice(1).every((x) => x.source === "proposition")).toBe(true);
+  });
+
+  it("un plan d'une occasion sans slide (sport, voyage…) garde la première place", () => {
+    const s = composerSlides({ tenueDuJour: [20, 21], occasion: "voyage", planAujourdhui: true, propositions });
+    expect(s[0]).toMatchObject({ id: "travail", ids: [20, 21], source: "plan", occasion: "voyage" });
+    expect(s.slice(1).map((x) => x.id)).toEqual(["quotidien", "soiree"]);
   });
 
   it("ne montre jamais deux fois la même tenue, quel que soit l'ordre des ids", () => {

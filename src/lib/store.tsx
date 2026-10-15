@@ -276,6 +276,7 @@ function buildInitialState(): AppState {
     lookReturn: "wardrobe",
     filtrePieces: null,
     pieceApercu: null,
+    ficheEnFeuille: null,
   };
 }
 
@@ -300,6 +301,9 @@ export interface Actions {
   goWardrobePieces: (filtre?: FiltrePieces) => void;
   /** Ouvre / ferme l'aperçu d'une pièce (feuille) depuis un hero. */
   ouvrirApercuPiece: (id: number) => void;
+  /** La fiche complète d'une pièce, dans une feuille posée sur l'écran courant (accueil). */
+  ouvrirFicheEnFeuille: (id: number, suggested: boolean) => void;
+  fermerFicheEnFeuille: () => void;
   fermerApercuPiece: () => void;
   goLooks: () => void;
   goProfile: () => void;
@@ -1679,6 +1683,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     goNeverWorn: () => go("neverworn"),
     // « Mes pièces » est fusionné dans le Dressing (14/10/2026) : le filtre (catégorie, couleur venue de Tenue) s'applique à la grille du Dressing.
     ouvrirApercuPiece: (id) => setState((s) => ({ ...s, pieceApercu: id })),
+    ouvrirFicheEnFeuille: (id, suggested) =>
+      setState((s) => ({ ...s, activeId: id, activeSuggested: suggested, pieceReturn: s.screen, ficheEnFeuille: { ecran: s.screen } })),
+    fermerFicheEnFeuille: () => setState((s) => (s.ficheEnFeuille ? { ...s, ficheEnFeuille: null } : s)),
     fermerApercuPiece: () => setState((s) => (s.pieceApercu == null ? s : { ...s, pieceApercu: null })),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobe" })),
     goLooks: () => go("looks"),
@@ -2084,13 +2091,13 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       // dont l'exécution n'est pas garantie synchrone.
       const s = stateRef.current;
       if (s.activeSuggested) {
-        setState((st) => ({ ...st, suggestedExcluded: [...st.suggestedExcluded, st.activeId], screen: st.pieceReturn }));
+        setState((st) => ({ ...st, suggestedExcluded: [...st.suggestedExcluded, st.activeId], screen: st.pieceReturn, ficheEnFeuille: null }));
         return;
       }
       const deletedId = s.activeId;
       const retiree = s.items.filter((it) => it.id === deletedId);
       const photos = photosDevenuesOrphelines(retiree, s.items.filter((it) => it.id !== deletedId));
-      setState((st) => ({ ...st, items: st.items.filter((it) => it.id !== deletedId), screen: st.pieceReturn }));
+      setState((st) => ({ ...st, items: st.items.filter((it) => it.id !== deletedId), screen: st.pieceReturn, ficheEnFeuille: null }));
       if (isSupabaseConfigured && userId) {
         // Suppression best-effort : la pièce reste retirée localement même en cas d'échec réseau.
         deleteDressingItem(deletedId).catch((err) => reportDressingError("deleteDressingItem", err));

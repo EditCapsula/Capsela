@@ -37,6 +37,7 @@ import LegalScreen from "./screens/LegalScreen";
 import LoginScreen from "./screens/LoginScreen";
 import OpinionShareScreen from "./screens/OpinionShareScreen";
 import CreateLookScreen from "./screens/CreateLookScreen";
+import FicheEnFeuille from "@/components/FicheEnFeuille";
 import ApercuPiece from "./ApercuPiece";
 import LookDetailScreen from "./screens/LookDetailScreen";
 import ItemOutfitsScreen from "./screens/ItemOutfitsScreen";
@@ -196,6 +197,7 @@ function Screens() {
       <LegalDocOverlay />
       <ConfirmationAjout auDessusDeLaBarre={showTabbar} />
       <ApercuPiece />
+      <FicheEnFeuille />
       <Analytics />
     </div>
   );

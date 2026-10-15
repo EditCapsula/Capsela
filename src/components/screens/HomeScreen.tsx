@@ -22,7 +22,7 @@ import { AlerteMeteoLook, PlansDuJour, usePlanApplique } from "@/components/Plan
 import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
 import Button from "@/components/Button";
-import { ActionRonde, CarrouselHero, CarteHero } from "@/components/CarrouselHero";
+import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
 import { composerSlides, cleTenue as cleSlide, type SlideCarrousel } from "@/lib/carrousel";
 
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
@@ -297,6 +297,13 @@ export default function HomeScreen() {
         })
       : [];
   const carrouselActif = slides.length > 1;
+  // PORTÉE AUJOURD'HUI (15/10/2026, demandé) : la tenue du jour validée « Porter cette tenue », ou une tenue du Journal d'aujourd'hui
+  // faite des mêmes pièces (le validé ne survit pas toujours à un rechargement ; l'historique, si).
+  const auj = new Date().toDateString();
+  const porteeAujourdhui =
+    jourConsulte.decalage === 0 &&
+    state.outfit.length > 0 &&
+    (state.outfitValidated || state.history.some((h) => new Date(h.ts).toDateString() === auj && cleSlide(h.pieceIds) === cleSlide(state.outfit)));
   const piecesDe = (ids: number[]) => ids.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
   const dejaSauvegardee = (ids: number[]) => state.savedLooks.some((l) => cleSlide(l.pieceIds) === cleSlide(ids));
   const titreDe = (pieces: Item[]) => {
@@ -334,6 +341,7 @@ export default function HomeScreen() {
         onAutre={() => (duJour ? pasPourMoi() : quota.demander(() => actions.autreIdeeSlide(slide.id)))}
         autreDesactive={quota.tirageEnCours}
         pied={duJour && planApplique?.alerte ? <AlerteMeteoLook planApplique={planApplique} /> : undefined}
+        portee={duJour && porteeAujourdhui}
       />
     );
   };
@@ -435,6 +443,7 @@ export default function HomeScreen() {
                 <div className="text-[13px] text-ink-soft leading-[1.45] mt-[10px]" style={{ textWrap: "pretty" }}>
                   {sousTitreHero}
                 </div>
+                {porteeAujourdhui && <MentionPortee />}
               </div>
               <div className="mt-auto pt-4">
                 <Button
