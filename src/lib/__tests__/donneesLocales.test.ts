@@ -10,7 +10,7 @@ afterEach(() => {
 
 function stockageFactice(initial: Record<string, string>) {
   const donnees = new Map(Object.entries(initial));
-  vi.stubGlobal("window", { localStorage: { removeItem: (k: string) => void donnees.delete(k) } });
+  vi.stubGlobal("window", { localStorage: { getItem: (k: string) => donnees.get(k) ?? null, removeItem: (k: string) => void donnees.delete(k) } });
   return donnees;
 }
 
@@ -23,6 +23,7 @@ describe("clesLocalesDuCompte", () => {
       "capsela.valise.u1",
       "capsela.recommandees.u1",
       "capsela.accords.u1",
+      "capsela.villesRecentes",
     ]);
   });
   it("le mode démo range ses valises sous « demo »", () => {
@@ -41,6 +42,18 @@ describe("effacerDonneesLocales", () => {
     });
     effacerDonneesLocales("u1");
     expect([...donnees.keys()].sort()).toEqual(["capsela.analyticsConsent", "capsela.valises.u2"]);
+  });
+
+  it("efface aussi les villes récentes et les check-lists héritées des valises du compte (15/10/2026)", () => {
+    const donnees = stockageFactice({
+      "capsela.valises.u1": JSON.stringify([{ id: "v1" }, { id: "v2" }]),
+      "capsela.valise.check.v1": "[1,2]",
+      "capsela.valise.check.v2": "[3]",
+      "capsela.valise.check.autre": "[4]",
+      "capsela.villesRecentes": "[]",
+    });
+    effacerDonneesLocales("u1");
+    expect([...donnees.keys()]).toEqual(["capsela.valise.check.autre"]);
   });
 
   it("ne jette jamais, même si le stockage refuse", () => {

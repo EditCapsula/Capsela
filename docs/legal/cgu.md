@@ -37,7 +37,9 @@ techniques peuvent l'interrompre.
 ## 4. Ce que propose Capsela
 
 - une tenue du jour, composée d'après ton dressing, la météo et ton programme ;
-- ton dressing, avec la photo de tes pièces ;
+- ton dressing, avec la photo de tes pièces, dont le fond est retiré
+  automatiquement ;
+- le repérage des pièces d'une tenue entière à partir d'une seule photo ;
 - une capsule de saison et des idées de tenues ;
 - la planification de looks et la préparation de valises ;
 - un Journal de ce que tu portes ;
@@ -51,7 +53,12 @@ l'application et peut évoluer.
 
 Les tenues, les avis et les colorimétries sont des suggestions produites
 automatiquement, notamment par des outils d'intelligence artificielle. Ils
-peuvent se tromper : sur une pièce reconnue, une couleur ou la météo. Tu
+peuvent se tromper : sur une pièce reconnue, une couleur, une découpe ou la
+météo. Ce qui est lu sur une photo (catégorie, couleur, saisons…) t'est
+proposé et reste modifiable avant d'être enregistré.
+
+Les visuels du catalogue créés par Capsela sont des illustrations générées :
+ils montrent un type de pièce, pas un article précis vendu par une marque. Tu
 restes seule juge de ce que tu portes. Capsela ne porte aucun jugement sur
 ton corps et n'en tire aucune conséquence.
 
@@ -61,9 +68,11 @@ Les prévisions météo proviennent d'un service tiers et ne sont pas garanties.
 
 Les photos et informations que tu ajoutes (tes « contenus ») restent les tiens.
 
-Tu autorises Capsela à les stocker, les afficher dans ton compte et les
-analyser pour te rendre le service (préremplissage d'une pièce, avis de
-styliste). Cette autorisation s'arrête quand tu supprimes le contenu ou ton
+Tu autorises Capsela à les stocker, les afficher dans ton compte, les
+analyser et en retirer le fond pour te rendre le service (préremplissage
+d'une pièce, repérage des pièces d'une tenue, détourage, avis de styliste).
+Ces traitements peuvent être confiés aux prestataires listés dans la
+Politique de confidentialité. Cette autorisation s'arrête quand tu supprimes le contenu ou ton
 compte. Tes photos ne sont jamais rendues publiques ni utilisées à d'autres
 fins.
 
