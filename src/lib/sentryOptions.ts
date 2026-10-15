@@ -29,6 +29,8 @@
  * la requête — seul ce réglage garantit qu'elle n'est pas conservée.
  */
 export const SENTRY_COMMON_OPTIONS = {
+  // Le build d'où vient l'erreur (15/10/2026) : le même commit que la version affichée dans l'app (versionApp.ts).
+  release: process.env.CAPSELA_BUILD_COMMIT || undefined,
   sendDefaultPii: false,
   tracesSampleRate: 0,
   /** Retire les fils d'Ariane susceptibles de transporter des données saisies par l'utilisatrice. */
