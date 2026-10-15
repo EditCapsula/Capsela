@@ -21,6 +21,9 @@
 // changer la nature du produit — seule la partie "design" du prompt en
 // dépend, jamais canonCategory/noun/ok qui restent calculés uniquement
 // depuis sous_type/category, indépendamment du niveau de tendance.
+// 15/10/2026 (audit des visuels) : le nom fournit désormais les DÉTAILS visibles — motif, aspect, longueur, encolure — par
+// detailsDuNom.ts, jamais le sujet : la règle du 18/08 tient pour le type de pièce.
+import { detailsDuNom } from "./detailsDuNom.ts";
 
 export interface VestiaireRow {
   id: number;
@@ -170,7 +173,8 @@ const SUBTYPE_EN: Record<string, string> = {
   montre: "watch",
   // Accessoires
   ceinture: "belt",
-  foulard: "scarf",
+  // « Léger, carré » (15/10/2026, audit) : « scarf » seul était dessiné en écharpe de laine à franges (555, 862, 1013).
+  foulard: "lightweight square scarf",
   écharpe: "scarf",
   chapeau: "hat",
   casquette: "cap",
@@ -180,7 +184,9 @@ const SUBTYPE_EN: Record<string, string> = {
   gourde: "reusable water bottle",
   // Hauts / pulls
   "t-shirt": "t-shirt",
-  chemise: "shirt",
+  // « Boutonnée » (15/10/2026, audit) : « shirt » seul était dessiné en t-shirt sans col sur 4 flat lays (534, 670, 715, 737).
+  // Le col s'ajoute par DEFAUTS_VISIBLES, sauf col mao ou col ouvert.
+  chemise: "button-up shirt",
   chemisier: "blouse",
   surchemise: "overshirt",
   blouse: "blouse",
@@ -196,25 +202,78 @@ const SUBTYPE_EN: Record<string, string> = {
   // Vestes / manteaux
   blazer: "blazer",
   bomber: "bomber jacket",
-  "coupe-vent": "windbreaker jacket",
+  // 15/10/2026 (audit) : catalogue à capuche, flat lay en blouson pour la même pièce (726) — la capuche est fixée.
+  "coupe-vent": "lightweight hooded zip-up windbreaker jacket",
   "veste en jean": "denim jacket",
   "veste saharienne": "safari jacket",
   trench: "trench coat",
   parka: "parka",
   doudoune: "puffer jacket",
-  caban: "pea coat",
+  // « Croisé » (15/10/2026, audit) : la photo catalogue du caban 1028 montrait un manteau droit à un rang.
+  caban: "double-breasted pea coat",
   imperméable: "raincoat",
   perfecto: "leather jacket",
   // « Veste effet cuir » (id 953, « Veste courte effet cuir ») : sans entrée, le sujet retombait sur « jacket » et la
   // génération dessinait une veste quelconque (07/10/2026, signalé : mauvais visuel). La matière vient de `matiere`.
   "veste effet cuir": "short waist-length jacket",
   // Bas
-  legging: "leggings",
+  // « Mat » (15/10/2026, audit) : le catalogue du 494 était brillant façon cuir, le flat lay mat.
+  legging: "matte stretch leggings",
   jogging: "jogging pants",
   bermuda: "bermuda shorts",
   // Robes / combinaisons
   combishort: "playsuit",
   salopette: "dungarees",
+  // VOCABULAIRE MANQUANT (15/10/2026, audit des visuels du 14/10) : sans entrée, ces sous-types retombaient sur le terme
+  // générique de la catégorie — un bonnet ou des gants devenaient « accessory » (dessinés en écharpe, en sac), un hoodie un
+  // « sweater » sans capuche, des boots des derbies basses. Les phrases composées passent par la correspondance exacte ou par
+  // préfixe (« bottines chelsea noir » → chelsea), avant le mot-par-mot.
+  bonnet: "ribbed knit beanie hat",
+  "béret": "beret hat",
+  bob: "bucket hat",
+  "bucket hat": "bucket hat",
+  gants: "pair of gloves",
+  "boutons de manchette": "pair of cufflinks",
+  "ceinture tressée": "braided belt",
+  babies: "mary jane shoes",
+  sabots: "leather clog shoes",
+  slingbacks: "slingback pumps",
+  "chaussures bateau": "boat shoes",
+  "bottines chelsea": "chelsea ankle boots",
+  "desert boots": "suede desert boots",
+  "boots lacées": "lace-up ankle boots",
+  "boots habillées lacées": "dressy lace-up ankle boots",
+  "boots chunky": "chunky lug-sole ankle boots",
+  "boots montantes semelle épaisse": "high lace-up boots with a thick chunky sole",
+  "boots workwear montantes": "high lace-up work boots",
+  "boots doublées": "shearling-lined ankle boots",
+  "bottes hautes": "knee-high boots",
+  caraco: "camisole top with thin straps",
+  "caraco satiné": "satin camisole top with thin straps",
+  "crop top": "cropped top",
+  "top bandeau": "strapless bandeau top",
+  "chemise bowling": "short-sleeved bowling shirt",
+  "blouse lavallière": "pussy-bow blouse",
+  hoodie: "hooded sweatshirt",
+  "veste harrington": "harrington jacket",
+  varsity: "varsity jacket",
+  "veste matelassée": "quilted jacket",
+  kimono: "long kimono jacket",
+  "manteau cape": "cape coat",
+  "manteau shearling": "shearling coat",
+  "manteau croisé": "double-breasted coat",
+  parachute: "parachute pants",
+  "sac banane": "belt bag",
+  "sac baguette": "baguette shoulder bag",
+  "sac besace": "messenger bag",
+  "robe nuisette": "satin slip dress",
+  "robe fourreau": "sheath dress",
+  "robe pull": "sweater dress",
+  "mini-jupe": "mini skirt",
+  // 15/10/2026, seconde passe de l'audit : sujets restés vagues, que la génération interprétait différemment d'une image à l'autre.
+  "bague statement": "bold statement cocktail ring",
+  "veste en daim": "suede blouson jacket",
+  "manteau long": "long coat falling below the knee",
 };
 
 /** Mots-clés de coupe/style repérés DANS sous_type (jamais dans name) — ajoutés comme modificateurs, ne changent jamais le type de produit. */
@@ -247,6 +306,7 @@ const MODIFIER_EN: Record<string, string> = {
   dentelle: "lace",
   maille: "knit",
   "drapée": "draped",
+  "cache-cœur": "wrap-front",
   "asymétrique": "asymmetric",
   "structuré": "structured",
   "structurée": "structured",
@@ -312,6 +372,11 @@ const NECKLINE_EN: Record<string, string> = {
   "épaules dénudées": "off-the-shoulder",
   "épaules dégagées": "off-the-shoulder",
   "manches ballon": "balloon-sleeve",
+  // 15/10/2026 (audit des visuels) : matières d'aspect et cols jusque-là ignorés.
+  "velours côtelé": "corduroy",
+  "col mao": "mandarin collar",
+  "col lavallière": "pussy-bow collar",
+  "une épaule": "one-shoulder",
 };
 
 const COLOR_EN: Record<string, string> = {
@@ -446,7 +511,8 @@ const CATEGORY_COMPOSITION: Record<string, string> = {
   jupe: "Complete skirt, waistband to hem visible.",
   combinaison: "Complete jumpsuit, full length visible.",
   chaussures: "Pair of shoes, both shoes visible.",
-  sac: "Single handbag, fully visible.",
+  // « Bag » et non « handbag » (15/10/2026) : une banane ou une besace n'est pas un sac à main.
+  sac: "Single bag, fully visible.",
   bijou: "Single jewelry item, centered.",
   veste: "Complete jacket, front view.",
   manteau: "Complete coat, front view.",
@@ -504,12 +570,12 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   manteau: ["coat", "parka", "puffer jacket", "raincoat"],
   chaussures: ["shoes", "sneakers", "boots", "flats", "sandals", "loafers", "pumps", "slippers"],
   sac: ["bag", "handbag", "tote", "backpack", "clutch"],
-  bijou: ["necklace", "earrings", "bracelet", "ring", "watch", "jewelry"],
+  bijou: ["necklace", "earrings", "bracelet", "ring", "watch", "jewelry", "cufflinks"],
   // Mots-clés sac ajoutés (correctif 21/08/2026, signalé : erreur de
   // génération) : la catégorie "sacs" n'est jamais utilisée dans les
   // données réelles, tous les sacs sont stockés en category="accessoires"
   // -> canonCategory="accessoire".
-  accessoire: ["belt", "scarf", "hat", "cap", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch", "bottle", "briefcase"],
+  accessoire: ["belt", "scarf", "hat", "cap", "gloves", "sunglasses", "tights", "socks", "accessory", "bag", "handbag", "tote", "backpack", "clutch", "bottle", "briefcase"],
 };
 
 function translate(dict: Record<string, string>, raw: string | null | undefined): string | undefined {
@@ -581,6 +647,39 @@ export interface BuiltPrompt {
  * Le sujet structurel (noun/canonCategory/ok) ne dépend JAMAIS de cet ordre —
  * une tendance ne peut jamais changer la nature du produit.
  */
+/**
+ * Ce qu'une image montre forcément, et que la génération tirait au hasard quand rien ne le disait (15/10/2026, seconde passe de
+ * l'audit des visuels) : la même pièce sortait à manches longues au catalogue et courtes au flat lay, en doudoune longue puis
+ * courte. Un détail écrit (sous-type ou nom) l'emporte toujours ; la valeur par défaut ne s'ajoute que s'il n'y en a aucun.
+ */
+const LONGUEURS = ["long", "short", "midi-length", "maxi-length", "mini", "knee-length", "hip-length"];
+const DEFAUTS_VISIBLES: { noun: string; axe: string[]; defaut: string }[] = [
+  { noun: "button-up shirt", axe: ["short-sleeved", "long-sleeved", "sleeveless"], defaut: "long-sleeved" },
+  { noun: "button-up shirt", axe: ["mandarin collar", "open-collar", "collared"], defaut: "collared" },
+  { noun: "puffer jacket", axe: LONGUEURS, defaut: "hip-length" },
+  { noun: "trench coat", axe: LONGUEURS, defaut: "knee-length" },
+  { noun: "coat", axe: LONGUEURS, defaut: "knee-length" },
+];
+
+/** Mots qui ne portent pas le détail : « pussy-bow collar » est déjà dit par « pussy-bow blouse ». */
+const MOTS_OUTILS = new Set(["with", "collar", "print"]);
+
+/**
+ * Les modificateurs dans leur forme finale (15/10/2026) : sans ceux que le sujet dit déjà (« ribbed ribbed knit beanie hat »,
+ * « satin satin slip dress » après l'ajout des détails du nom), complétés des défauts visibles, et ceux en « with … » rangés
+ * après le sujet (« dress with thin straps », pas « with thin straps dress »).
+ */
+function affinerModificateurs(modifiers: string[], noun: string): { avant: string[]; apres: string[] } {
+  const motsDuSujet = new Set(noun.split(" "));
+  const utiles = modifiers.filter((m) => {
+    const porteurs = m.split(" ").filter((w) => !MOTS_OUTILS.has(w));
+    return !noun.includes(m) && !porteurs.every((w) => motsDuSujet.has(w));
+  });
+  const defauts = DEFAUTS_VISIBLES.filter((d) => d.noun === noun && !utiles.some((m) => d.axe.includes(m))).map((d) => d.defaut);
+  utiles.unshift(...defauts);
+  return { avant: utiles.filter((m) => !m.startsWith("with ")), apres: utiles.filter((m) => m.startsWith("with ")) };
+}
+
 export function buildImagePrompt(row: VestiaireRow, trend?: TrendRule | null): BuiltPrompt {
   const canonCategory = CATEGORY_CANON[(row.category || "").trim().toLowerCase()] || "accessoire";
   const genreRaw = (row.genre || "").trim().toLowerCase();
@@ -614,11 +713,17 @@ export function buildImagePrompt(row: VestiaireRow, trend?: TrendRule | null): B
         ...sousTypeTokens.map((w) => MODIFIER_EN[w]),
         ...sousTypeBigrams.map((b) => NECKLINE_EN[b]),
         row.coupe ? COUPE_EN[row.coupe] : undefined,
+        // Les détails VISIBLES écrits seulement dans le nom (motif, aspect, longueur, encolure — 15/10/2026, audit des visuels) :
+        // jamais le type de pièce, qui reste celui du sous-type.
+        ...detailsDuNom(row.name),
       ].filter((w): w is string => Boolean(w))
     )
   );
 
-  const productDescription = [genreEn, colorEn, ...modifiers, matiereEn, noun].filter(Boolean).join(" ");
+  const { avant, apres } = affinerModificateurs(modifiers, noun);
+  // La matière que le sujet dit déjà n'est pas répétée (« denim denim jacket », 15/10/2026).
+  const matiereDite = matiereEn && !noun.includes(matiereEn) ? matiereEn : undefined;
+  const productDescription = [genreEn, colorEn, ...avant, matiereDite, noun, ...apres].filter(Boolean).join(" ");
 
   // Sujet structurel — jamais affecté par override/tendance (garde-fou
   // "un blazer doit rester un blazer" du brief 19/08/2026).
@@ -648,7 +753,7 @@ export function buildImagePrompt(row: VestiaireRow, trend?: TrendRule | null): B
   if (overrideText) {
     designBlock = overrideText;
   } else {
-    const productLine = capSentence([...modifiers, noun].filter(Boolean).join(" ") || noun);
+    const productLine = capSentence([...avant, noun, ...apres].filter(Boolean).join(" ") || noun);
     const silhouetteText = row.silhouette_mode?.trim() || effectiveTrend?.silhouette?.trim() || "";
     const detailsText = row.details_mode?.trim() || effectiveTrend?.details?.trim() || "";
 

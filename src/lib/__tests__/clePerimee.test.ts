@@ -39,12 +39,16 @@ describe("clé attendue — les faux positifs du balayage SQL", () => {
    */
   it("« Blouse » + « Blanc cassé » produit bien femme_haut_chemisier_ecru", () => {
     const a = article({ id: 533, name: "Blouse légère brodée", category: "haut", sous_type: "Blouse", couleur_dominante: "Blanc cassé" });
-    expect(cleAttendue(a)).toBe("femme_haut_chemisier_ecru");
+    // Depuis le 15/10/2026, le détail visible du nom (« brodée ») entre dans la clé : la blouse brodée n'emprunte plus le visuel
+    // d'une blouse unie ; « légère » aussi depuis la seconde passe du même jour (« lightweight »). Le seau du sous-type
+    // (Blouse → chemisier) et celui de la couleur, eux, sont inchangés.
+    expect(cleAttendue(a)).toBe("femme_haut_chemisier_ecru_lightweight_embroidered");
   });
 
   it("« Cardigan » homme + « Beige » produit bien homme_pull_gilet_beige", () => {
     const a = article({ id: 511, name: "Cardigan / Maille ajourée", genre: "homme", category: "pull", sous_type: "Cardigan", couleur_dominante: "Beige" });
-    expect(cleAttendue(a)).toBe("homme_pull_gilet_beige");
+    // « Maille ajourée » : détail du nom dans la clé depuis le 15/10/2026 ; les seaux restent ceux d'avant.
+    expect(cleAttendue(a)).toBe("homme_pull_gilet_beige_openwork");
   });
 
   it("« Pull col rond » + « Gris clair » se regroupent aussi", () => {
@@ -81,7 +85,8 @@ describe("faux positif ou vraie dérive — seul l'appel à la fonction tranche"
   it("« Robe fleurie » n'a pas de seau : la clé stockée en `robe` est périmée", () => {
     const a = article({ id: 544, name: "Robe longue fleurie", category: "robe", sous_type: "Robe fleurie", couleur_dominante: "Écru" });
     const attendue = cleAttendue(a)!;
-    expect(attendue).toBe("femme_robe_robe_fleurie_ecru");
+    // « longue » (le nom) entre dans la clé depuis le 15/10/2026 ; « fleurie », déjà dans le sous-type, n'y est pas répété.
+    expect(attendue).toBe("femme_robe_robe_fleurie_ecru_long");
     expect(attendue).not.toBe("femme_robe_robe_ecru");
     expect(causeDe("femme_robe_robe_ecru", attendue).cause).toBe("attribut absent à la génération");
   });

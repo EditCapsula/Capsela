@@ -65,6 +65,12 @@ describe("buildHeroImagePrompt — un flat lay posé, jamais porté", () => {
     expect(buildHeroImagePrompt(ligne({})).prompt).toContain("sleeve folded across the body");
   });
 
+  it("la pose ne nomme jamais un autre type de pièce que le sujet (15/10/2026, audit des visuels)", () => {
+    const chemise = buildHeroImagePrompt(ligne({ category: "hauts", sous_type: "Chemise", name: "Chemise" })).prompt;
+    expect(chemise).not.toContain("t-shirt");
+    expect(buildHeroImagePrompt(ligne({ sous_type: "Veste matelassée", name: "Veste matelassée" })).prompt).not.toContain("lapels");
+  });
+
   it("conserve les exclusions de la catégorie (une veste n'est pas une chemise)", () => {
     expect(buildHeroImagePrompt(ligne({})).prompt).toContain("No shirt.");
   });

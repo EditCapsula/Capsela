@@ -1,6 +1,7 @@
 // Miroir Deno de src/lib/visualKey.ts — dupliqué volontairement (runtime
 // Deno séparé du bundle Next.js, cf. _shared/imagePrompt.ts). À garder
 // synchronisé si les dictionnaires évoluent côté app.
+import { detailsDuNom } from "./detailsDuNom.ts";
 
 function slug(s: string): string {
   return s
@@ -143,6 +144,8 @@ export interface VisualKeyInput {
   couleur: string | null;
   matiere: string | null;
   coupe?: string | null;
+  /** Le nom de la pièce : ses détails visibles (detailsDuNom) entrent dans la clé depuis le 15/10/2026. */
+  nom?: string | null;
 }
 
 /**
@@ -159,6 +162,10 @@ export function computeVisualKey(input: VisualKeyInput): string {
     normalizeVisualColor(input.couleur),
     VISUALLY_SIGNIFICANT_MATIERES.has(matiereSlug) ? matiereSlug : "",
     input.coupe === "Ample" ? "oversize" : "",
+    // Les détails visibles lus dans le nom (15/10/2026, audit des visuels) : une chemise rayée ne réutilise plus le visuel d'une
+    // chemise unie de même sous-type et de même couleur. Seules les pièces dont le nom porte un tel détail changent de clé.
+    // Ceux que le sous-type dit déjà (« Pull col rond fin ») ne changent rien : seule la clé d'une pièce au détail NOUVEAU bouge.
+    ...detailsDuNom(input.nom).filter((d) => !detailsDuNom(input.sousType).includes(d)),
   ];
   return parts.map(slug).filter(Boolean).join("_");
 }

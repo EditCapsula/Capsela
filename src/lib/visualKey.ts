@@ -1,4 +1,5 @@
 import type { CatalogItem } from "./catalog";
+import { detailsDuNom } from "./detailsDuNom";
 
 /** Slug ASCII simple (minuscules, sans accents, mots séparés par _) — pour composer une clé stable et lisible. */
 function slug(s: string): string {
@@ -175,6 +176,10 @@ export function computeVisualKey(item: CatalogItem): string {
     normalizeVisualColor(item.color),
     VISUALLY_SIGNIFICANT_MATIERES.has(matiereSlug) ? matiereSlug : "",
     item.coupe === "Ample" ? "oversize" : "",
+    // Les détails visibles lus dans le nom (15/10/2026, audit des visuels) : une chemise rayée ne réutilise plus le visuel d'une
+    // chemise unie de même sous-type et de même couleur. Seules les pièces dont le nom porte un tel détail changent de clé.
+    // Ceux que le sous-type dit déjà (« Pull col rond fin ») ne changent rien : seule la clé d'une pièce au détail NOUVEAU bouge.
+    ...detailsDuNom(item.name).filter((d) => !detailsDuNom(subtypeRaw).includes(d)),
   ];
   return parts.map(slug).filter(Boolean).join("_");
 }
