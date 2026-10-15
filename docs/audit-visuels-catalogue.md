@@ -44,6 +44,12 @@ Mesure sur les 627 pièces, même exécution : 0 refusée par la validation, 171
 
 **Trois pièces gardent le même sujet** (NON DÉMONTRÉ qu'une régénération suffise) : 1002 (bracelet en cuir, tressé au flat lay), 503 (pull col V dessiné col rond, alors que le prompt dit « v-neck »), 548 (combinaison : la base ne dit ni bretelles ni manches, rien à écrire sans l'inventer).
 
+## Régénération du 15/10/2026, premier passage
+- 104 visuels standard et 69 flat lays régénérés, puis interruption : crédit OpenAI épuisé. Chaque échec a passé la pièce en `image_status = 'error'`, ce qui masque son visuel dans l'app. Les 76 pièces touchées ont été remises en `ready` à la main (SQL), car leur ancienne image était intacte.
+- **Défaut de la cascade générique (DÉMONTRÉ)** : sans visuel pour la clé exacte, `generate-catalog-image` réutilise un visuel prêt de même genre, sous-type et couleur, sans lire la clé. Cinq pièces ont ainsi hérité du visuel neuf d'une autre : 770 « pendantes » ← créoles texturées, 639 « avec fente » ← jupe imprimée, 565 « imprimée » ← chemise col mao, 535 « imprimé floral » ← top crochet, 762 « satinée » ← blouse brodée. Relevé par la comparaison, sur toutes les pièces au visuel du jour, de la signature des détails attendue et de celle du prompt reçu (`signatureDesDetails`).
+- **Correctif** : la cascade n'accepte plus qu'un visuel dont le prompt stocké porte exactement les mêmes détails visibles.
+- Planches à l'œil des 173 visuels neufs : en plus des cinq ci-dessus, défauts restants de la génération elle-même — 580 (standard non tressé), 494 (legging encore brillant), 1002 (flat lay tressé), 1051 (flat lay kaki pour du taupe), 779 et 643 (bretelles d'un côté, manches de l'autre : la base ne dit rien).
+
 ## Reste à faire
 - **Régénérer les 209 pièces relevées** (décidé le 15/10/2026 : toutes, léger compris) : le visuel désigné faux, ou les deux. Environ 0,02 $ le standard, 0,04 $ le flat lay.
 - **Corriger la donnée cassée de la #472** : sa couleur vaut « <la couleur> ».

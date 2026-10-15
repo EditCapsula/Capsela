@@ -34,6 +34,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { buildImagePrompt, CATEGORY_CANON, CATEGORY_FOLDER, type TrendRule, type VestiaireRow } from "../_shared/imagePrompt.ts";
 import { computeVisualKey, normalizeVisualColor, normalizeVisualSubtype } from "../_shared/visualKey.ts";
+import { signatureDesDetails } from "../_shared/detailsDuNom.ts";
 import { toWebp } from "../_shared/webp.ts";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
 import { authentifier, consommerQuota, estAppelantAdmin, jetonDepuisEntete, limiteDepuisEnv } from "../_shared/protection.ts";
@@ -278,6 +279,10 @@ Deno.serve(async (req) => {
   // dès que l'un des deux existait.
   const isOversize = article.coupe === "Ample";
 
+  // Détails visibles du sujet (15/10/2026) : la cascade générique ne lit pas la clé, elle ne doit pas non plus donner à une
+  // boucle « pendante » le visuel des créoles d'une autre pièce (cf. signatureDesDetails).
+  const signature = signatureDesDetails(buildImagePrompt(article as VestiaireRow).prompt);
+
   try {
     // 2. Exact visual_key, prêt. category contrainte aussi ici en défense en
     // profondeur (correctif 18/08/2026 v2) : la clé exacte inclut déjà la
@@ -309,6 +314,7 @@ Deno.serve(async (req) => {
         excludeBespoke: true,
         niveauTendance,
         oversize: isOversize,
+        signature,
       });
     }
     // Le repli sans genre (step 4) ne vaut que pour les catégories dont le
@@ -326,6 +332,7 @@ Deno.serve(async (req) => {
         excludeBespoke: true,
         niveauTendance,
         oversize: isOversize,
+        signature,
       });
     }
     if (reusable) {
@@ -604,6 +611,9 @@ async function findReadyAsset(
     // distinguer une base ajustée d'un calque oversize une fois qu'on
     // retombe sur les critères génériques (genre+sous_type+couleur).
     oversize?: boolean;
+    // Signature des détails visibles de L'ARTICLE courant (15/10/2026) : seul un asset dont le prompt stocké porte exactement
+    // les mêmes détails est réutilisable par la cascade générique.
+    signature?: string;
   }
 ): Promise<AssetRow | null> {
   let query = supabase
@@ -631,8 +641,13 @@ async function findReadyAsset(
   // couleur, cf. commentaires ci-dessus) : LIMIT 1 pouvait renvoyer une ligne
   // différente d'un appel à l'autre. Tri déterministe sur id (le plus ancien
   // asset correspondant gagne toujours), jamais un ordre laissé au hasard.
-  const { data } = await query.order("id", { ascending: true }).limit(1).maybeSingle();
-  return (data as AssetRow | null) ?? null;
+  if (criteria.signature === undefined) {
+    const { data } = await query.order("id", { ascending: true }).limit(1).maybeSingle();
+    return (data as AssetRow | null) ?? null;
+  }
+  // Même ordre déterministe, premier candidat aux mêmes détails.
+  const { data } = await query.order("id", { ascending: true }).limit(50);
+  return ((data as AssetRow[] | null) ?? []).find((a) => signatureDesDetails(a.prompt) === criteria.signature) ?? null;
 }
 
 /** Hash court et déterministe (FNV-1a) — distingue deux designs bespoke différents dans une clé visuelle, jamais un usage cryptographique. */

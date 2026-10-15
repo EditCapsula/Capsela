@@ -152,3 +152,24 @@ export function detailsDuNom(nom: string | null | undefined): string[] {
   if (uniques.includes("midi-length") && uniques.includes("maxi-length")) uniques = uniques.filter((d) => d !== "midi-length" && d !== "maxi-length");
   return uniques;
 }
+
+/** Tous les détails que ce module peut produire. */
+export const DETAILS_POSSIBLES: readonly string[] = Array.from(
+  new Set([...Object.values(MOTS), ...Object.values(BIGRAMMES)].filter(Boolean)),
+);
+
+/**
+ * La signature des détails écrits dans la première ligne d'un prompt (le sujet), triée : deux visuels ne sont interchangeables
+ * que si elle est identique (15/10/2026). La cascade générique de generate-catalog-image réutilise un visuel « de même genre,
+ * sous-type et couleur » sans lire la clé : à la régénération du 15/10, une boucle « pendante » a hérité des créoles texturées
+ * d'une autre pièce, une jupe « avec fente » de la jupe imprimée d'une autre. Lue sur le prompt stocké de chaque visuel, la
+ * signature vaut aussi pour les visuels générés avant l'ajout des détails (signature vide : réservés aux pièces sans détail).
+ */
+export function signatureDesDetails(prompt: string | null | undefined): string {
+  const sujet = (prompt || "").split("\n")[0].toLowerCase();
+  const presents = DETAILS_POSSIBLES.filter((d) => {
+    const motif = d.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[\\s,])${motif}([\\s,.]|$)`).test(sujet);
+  });
+  return presents.sort().join("|");
+}
