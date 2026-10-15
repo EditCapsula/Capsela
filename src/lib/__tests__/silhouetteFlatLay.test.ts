@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CONTEXTES } from "../flatLay";
-import { DESSINS_SILHOUETTE, composerSilhouette } from "../silhouetteFlatLay";
+import { DESSINS_SILHOUETTE, composerSilhouette, dessinSilhouette } from "../silhouetteFlatLay";
 import type { CategoryKey } from "../types";
 
 // La silhouette de chargement pose ses dessins avec le moteur du flat lay : signalé le 08/10/2026 (« haut trop grand vs bas »).
@@ -52,5 +52,35 @@ describe("silhouette de chargement — mêmes tailles relatives que le look fina
 
   it("déterministe : le même ensemble de catégories donne la même silhouette", () => {
     expect(composerSilhouette(BASE.map((cat) => ({ cat })))).toEqual(composerSilhouette(BASE.map((cat) => ({ cat }))));
+  });
+});
+
+describe("dessins selon le profil (15/10/2026)", () => {
+  it("un profil homme reçoit tout le jeu homme : t-shirt, pantalon, tennis, besace, pardessus, blazer droit, short chino", () => {
+    expect(dessinSilhouette("sac", { homme: true })?.src).toBe("/loader/sac-homme.webp");
+    expect(dessinSilhouette("manteau", { homme: true })?.src).toBe("/loader/manteau-homme.webp");
+    expect(dessinSilhouette("veste", { homme: true })?.src).toBe("/loader/veste-homme.webp");
+    expect(dessinSilhouette("short", { homme: true })?.src).toBe("/loader/short-homme.webp");
+    expect(dessinSilhouette("haut", { homme: true })?.src).toBe("/loader/haut-homme.webp");
+    expect(dessinSilhouette("pull", { homme: true })?.src).toBe("/loader/haut-homme.webp");
+    expect(dessinSilhouette("pantalon", { homme: true })?.src).toBe("/loader/pantalon-homme.webp");
+    expect(dessinSilhouette("jean", { homme: true })?.src).toBe("/loader/pantalon-homme.webp");
+    expect(dessinSilhouette("chaussures", { homme: true })?.src).toBe("/loader/chaussures-homme.webp");
+  });
+
+  it("sans profil homme, les dessins communs ne changent pas", () => {
+    for (const cat of ["haut", "pull", "pantalon", "jean", "chaussures", "sac", "manteau", "veste", "short"] as const) expect(dessinSilhouette(cat)).toBe(DESSINS_SILHOUETTE[cat]);
+  });
+
+  it("un sac à dos est dessiné comme tel, quel que soit le profil", () => {
+    expect(dessinSilhouette("sac", { sacType: "Sac à dos" })?.src).toBe("/loader/sac-a-dos.webp");
+    expect(dessinSilhouette("sac", { homme: true, sacType: "Sac à dos" })?.src).toBe("/loader/sac-a-dos.webp");
+  });
+
+  it("la composition pose les dessins homme avec leur propre format", () => {
+    const pieces = composerSilhouette([{ cat: "haut" }, { cat: "pantalon" }, { cat: "chaussures" }, { cat: "sac" }], { homme: true });
+    const sac = pieces.find((p) => p.cat === "sac")!;
+    expect(sac.src).toBe("/loader/sac-homme.webp");
+    expect(sac.l / sac.h).toBeCloseTo(dessinSilhouette("sac", { homme: true })!.ratio, 1);
   });
 });

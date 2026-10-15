@@ -21,6 +21,7 @@ import {
   RevalidationSheet,
   Surtitre,
 } from "@/components/ProfilUI";
+import { libelleMembreDepuis } from "@/lib/membreDepuis";
 import { useAuth } from "@/lib/auth";
 import { morphologieOrienteLaSelection } from "@/lib/capsule";
 import {
@@ -66,7 +67,8 @@ import Card from "@/components/Card";
  */
 
 export default function ProfileScreen() {
-  const { profile, email, demoMode, saveProfile, profileLoaded } = useAuth();
+  const { profile, email, inscritLe, demoMode, saveProfile, profileLoaded } = useAuth();
+  const membreDepuis = libelleMembreDepuis(inscritLe);
   const { state, actions, etatPremium } = useCapsela();
   const [genreOuvert, setGenreOuvert] = useState(false);
   const [aRevalider, setARevalider] = useState<GenderDependentField | null>(null);
@@ -128,6 +130,8 @@ export default function ProfileScreen() {
             {profile.displayName || "Ton nom"}
           </div>
           <div className="text-[12px] text-muted-3 mt-[2px] [overflow-wrap:anywhere]">{email ?? "E-mail non renseigné"}</div>
+          {/* Ligne secondaire sous l'e-mail (15/10/2026, demandé). Sans date d'inscription connue, rien. */}
+          {membreDepuis && <div className="text-[12px] text-muted mt-[1px]">{membreDepuis}</div>}
           {demoMode && <div className="text-[12px] text-muted mt-[1px]">Mode démo — les données restent sur cet appareil</div>}
           <button
             onClick={actions.goAccount}

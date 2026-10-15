@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { DESSINS_SILHOUETTE } from "@/lib/silhouetteFlatLay";
+import { dessinSilhouette } from "@/lib/silhouetteFlatLay";
+import { useAuth } from "@/lib/auth";
 import { margesDe, objectBounds, ratioHero } from "@/lib/catalogMarges";
 import { resolveHeroImage } from "@/lib/catalogImages";
 import { composerFlatLay, hauteurDuContexte, type ContexteFlatLay } from "@/lib/flatLay";
@@ -103,6 +104,7 @@ export function FlatLayCapsela({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const homme = useAuth().profile.gender === "homme";
   const HAUTEUR = formatCadre ?? hauteurDuContexte(context);
   const graine = layoutSeed;
   const images = useMemo(() => {
@@ -119,7 +121,8 @@ export function FlatLayCapsela({
     const avecImage = toutes.filter(({ img }) => img.url);
     const base = avecImage.length ? avecImage : toutes;
     const ombres = fantomes.flatMap((cat, i) => {
-      const dessin = DESSINS_SILHOUETTE[cat];
+      // Une pièce manquante posée en silhouette prend le dessin du profil (15/10/2026) : la veste d'un homme est un blazer droit.
+      const dessin = dessinSilhouette(cat, { homme });
       if (!dessin) return [];
       const it = { id: -(i + 1), cat, name: "Pièce à ajouter", hex: "#d9cbb6" } as unknown as Item;
       return [{ it, img: { kind: "generated" as const, url: dessin.src }, fantome: dessin.ratio }];
@@ -130,7 +133,7 @@ export function FlatLayCapsela({
       // Comme les pièces de la tenue : sans visuel, la pièce n'est posée que si AUCUNE pièce n'en a (pastilles du mode démo).
       .filter(({ img }) => img.url || avecImage.length === 0);
     return [...base.map((e) => ({ ...e, fantome: undefined as number | undefined, ajout: undefined as (() => void) | undefined })), ...ombres.map((o) => ({ ...o, ajout: undefined as (() => void) | undefined })), ...conseils];
-  }, [items, context, fantomes, ajouts]);
+  }, [items, context, fantomes, ajouts, homme]);
   const template = useMemo(
     // Pas de template sur l'accueil (14/10/2026) : jamais validé en rendu réel dans ce contexte (seul look-detail l'a été), et une tenue y a
     // paru sans ses chaussures. Le moteur d'origine y compose seul ; le moteur de templates sait le faire (flatLay.ts), il faut juste le valider.

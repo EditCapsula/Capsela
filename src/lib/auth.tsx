@@ -16,6 +16,8 @@ export { markSignupIntent } from "./signupIntent";
 interface DemoAuth {
   email: string;
   profile: Profile;
+  /** Création du compte démo sur l'appareil (ISO, 15/10/2026) — absente des comptes démo plus anciens. */
+  creeLe?: string;
 }
 
 export interface AuthContextValue {
@@ -41,6 +43,8 @@ export interface AuthContextValue {
   /** Mode démo : pas de credentials Supabase configurés. */
   demoMode: boolean;
   email: string | null;
+  /** Date d'inscription (ISO) : `created_at` du compte, ou création du compte démo. null si elle n'est pas connue. */
+  inscritLe: string | null;
   /** Id Supabase Auth réel — null en mode démo (pas d'utilisateur Supabase) ou tant qu'aucune session n'est chargée. */
   userId: string | null;
   profile: Profile;
@@ -249,7 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     const fresh = { ...EMPTY_PROFILE, displayName: name, birthdate: birthdate || null };
     if (!isSupabaseConfigured) {
-      persistDemo({ email, profile: fresh });
+      persistDemo({ email, profile: fresh, creeLe: new Date().toISOString() });
       setProfile(fresh);
       return "ok";
     }
@@ -270,7 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     if (!isSupabaseConfigured) {
       const stored = readStoredDemo();
-      const restored: DemoAuth = stored && stored.email === email ? stored : { email, profile: EMPTY_PROFILE };
+      const restored: DemoAuth = stored && stored.email === email ? stored : { email, profile: EMPTY_PROFILE, creeLe: new Date().toISOString() };
       persistDemo(restored);
       setProfile(restored.profile);
       return true;
@@ -288,7 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isSupabaseConfigured) {
       const email = "demo@capsela.app";
       const stored = readStoredDemo();
-      const restored: DemoAuth = stored && stored.email === email ? stored : { email, profile: EMPTY_PROFILE };
+      const restored: DemoAuth = stored && stored.email === email ? stored : { email, profile: EMPTY_PROFILE, creeLe: new Date().toISOString() };
       persistDemo(restored);
       setProfile(restored.profile);
       setJustSignedUp(consumeSignupIntent());
@@ -421,6 +425,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profileLoaded: !isSupabaseConfigured || profilChargeReel,
     demoMode: !isSupabaseConfigured,
     email: user?.email ?? demoUser?.email ?? null,
+    inscritLe: user?.created_at ?? demoUser?.creeLe ?? null,
     userId: user?.id ?? null,
     profile,
     error,

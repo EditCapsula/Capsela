@@ -844,9 +844,9 @@ export default function HistoryScreen() {
       <AppHeader />
 
       {/* EN-TÊTE */}
-      {/* EN-TÊTE (15/10/2026, maquette du Journal) : le titre à gauche, la période en menu à droite (« Octobre 2026 »). Le menu et les
-          pastilles de « Tes chiffres clés » pilotent la MÊME période : ils ne peuvent pas se contredire. Un <select> natif : la liste
-          s'ouvre à la manière du système, au clavier et au lecteur d'écran aussi. */}
+      {/* EN-TÊTE (15/10/2026, maquette du Journal) : le titre à gauche, la période en menu à droite (« Octobre 2026 »). Ce menu est le
+          SEUL sélecteur de période du titre, du bilan et des chiffres clés. Un <select> natif : la liste s'ouvre à la manière du
+          système, au clavier et au lecteur d'écran aussi. */}
       <Surtitre className="mt-[18px]">Ton journal</Surtitre>
       <div className="flex items-start justify-between gap-3 mt-[6px]">
         <div className="t-titre-ecran text-ink min-w-0" aria-live="polite">
@@ -1007,21 +1007,7 @@ export default function HistoryScreen() {
         <Surtitre>
           <span id="journal-chiffres">Tes chiffres clés</span>
         </Surtitre>
-        {/* Les trois périodes en pastilles de même largeur (15/10/2026, maquette) : la même période que le menu de l'en-tête. */}
-        <div role="group" aria-label="Période des chiffres clés" className="grid grid-cols-3 gap-2 mt-3">
-          {PERIODES.map(({ key, label }) => (
-            <button
-              key={key}
-              aria-pressed={periode === key}
-              onClick={() => setPeriode(key)}
-              className={`min-h-[40px] px-2 rounded-full text-[12px] leading-[1.2] cursor-pointer border ${
-                periode === key ? "bg-ink text-cream border-ink" : "bg-card text-ink border-border"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {/* Plus de pastilles de période ici (15/10/2026, demandé : redondant avec le menu de l'en-tête, qui pilote seul la période). */}
         <Card className="mt-3 px-3 pt-4 pb-3" aria-live="polite">
           <div className="flex items-stretch">
             {chiffres.totalDressing > 0 && (
