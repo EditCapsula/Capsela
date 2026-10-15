@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { hauteurDuContexte } from "@/lib/flatLay";
 import { composerSilhouette } from "@/lib/silhouetteFlatLay";
+import { useAuth } from "@/lib/auth";
 import type { CategoryKey, Item } from "@/lib/types";
 
 /** Au-delà, la planche apparaît même si une image tarde : la silhouette ne doit pas masquer un look prêt. */
@@ -104,9 +105,11 @@ export function StatutComposition() {
  * relatives et aux places du look final. Même cadre que FlatLayCapsela (zone de 100 × 112 unités, centrée) : le fondu de l'un à l'autre
  * ne déplace rien.
  */
-function SilhouetteFlatLay({ formes }: { formes: { cat: CategoryKey; photoUrl?: string | null }[] }) {
+function SilhouetteFlatLay({ formes }: { formes: { cat: CategoryKey; photoUrl?: string | null; sacType?: Item["sacType"] }[] }) {
   const hauteur = hauteurDuContexte("hero-home");
-  const pieces = composerSilhouette(formes);
+  // Les dessins homme pour un profil homme (15/10/2026) : pas de sac à main ni de trench ceinturé au chargement.
+  const { profile } = useAuth();
+  const pieces = composerSilhouette(formes, { homme: profile.gender === "homme" });
   if (!pieces.length) return null;
   return (
     <div aria-hidden="true" className="absolute inset-0 w-full h-full flex items-center justify-center" style={{ containerType: "size", isolation: "isolate" }}>
