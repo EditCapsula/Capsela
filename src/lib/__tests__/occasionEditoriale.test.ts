@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { OCCASIONS, occasionShortLabel } from "../data";
-import { OCCASIONS_EDITORIALES, libelleOccasion, titreStyle } from "../occasionEditoriale";
+import { OCCASIONS_EDITORIALES, libelleOccasion } from "../occasionEditoriale";
 
 const nomVisuel = (k: keyof typeof OCCASIONS_EDITORIALES) => OCCASIONS_EDITORIALES[k].visuel?.src.split("/").pop();
 
@@ -22,20 +22,5 @@ describe("OCCASIONS_EDITORIALES — une source, les vrais assets", () => {
   it("le nom affiché est celui de l'application (le même que les pastilles du filtre)", () => {
     expect(libelleOccasion("voyage")).toBe(occasionShortLabel("voyage"));
     expect(libelleOccasion("voyage")).toBe("Voyage");
-  });
-});
-
-describe("titreStyle — le verbe seulement au-delà de la moitié", () => {
-  it("avec les mots de l'application", () => {
-    expect(titreStyle(OCCASIONS_EDITORIALES.travail_formel, true)).toBe("Le travail domine ton dressing ce mois-ci");
-    expect(titreStyle(OCCASIONS_EDITORIALES.soiree, true)).toBe("Les soirées rythment ton dressing ce mois-ci");
-    expect(titreStyle(OCCASIONS_EDITORIALES.cocooning, true)).toBe("Le cocooning s'invite dans ton dressing ce mois-ci");
-    expect(titreStyle(OCCASIONS_EDITORIALES.voyage, true)).toBe("Les voyages rythment ton dressing ce mois-ci");
-  });
-
-  it("sans majorité : en tête, sans domination", () => {
-    expect(titreStyle(OCCASIONS_EDITORIALES.sport, false)).toBe("Le sport arrive en tête ce mois-ci");
-    // La période choisie dans le Journal (15/10/2026).
-    expect(titreStyle(OCCASIONS_EDITORIALES.sport, false, "depuis le début")).toBe("Le sport arrive en tête depuis le début");
   });
 });

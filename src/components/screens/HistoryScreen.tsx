@@ -28,13 +28,12 @@ import {
   type PeriodeFetiches,
   nomCourtPiece,
   deLaSaisonEnCours,
-  styleDePeriode,
-  STYLE_DU_MOIS_MINIMUM,
   type EtatDePort,
   type JournalEntry,
   type JournalPeriod,
 } from "@/lib/selectors";
-import { OCCASIONS_EDITORIALES, libelleOccasion, titreStyle } from "@/lib/occasionEditoriale";
+import { OCCASIONS_EDITORIALES } from "@/lib/occasionEditoriale";
+import { commentaireJournal, filtrerListeJournal } from "@/lib/commentaireJournal";
 import type { CapsuleSeason, ChoixRevente, Item, OccasionKey } from "@/lib/types";
 import Badge from "@/components/Badge";
 import Button from "@/components/Button";
@@ -492,6 +491,8 @@ export default function HistoryScreen() {
   const [historiqueComplet, setHistoriqueComplet] = useState(false);
   const [pages, setPages] = useState(1);
   const [filtre, setFiltre] = useState<OccasionKey | "toutes">("toutes");
+  // La liste ouverte par le bouton de la carte garde la période du Journal (16/10/2026) ; « Tout afficher » la retire, pas l'occasion.
+  const [listeSurPeriode, setListeSurPeriode] = useState(false);
   const [periode, setPeriode] = useState<PeriodeJournal>("mois");
   // Les pièces fétiches ont leur propre période (14/10/2026) : la saison en cours par défaut, comme avant.
   const [periodeFetiches, setPeriodeFetiches] = useState<PeriodeFetiches>("saison");
@@ -518,7 +519,8 @@ export default function HistoryScreen() {
   const entries = journalEntries(state.history, resolvePool);
   const fetiches = mostWornPiecesPeriode(state.history, resolvePool, periodeFetiches);
   const saisonEnCours = currentSeasonKey();
-  const style = styleDePeriode(state.history, periode);
+  // Le commentaire de la carte et de l'en-tête (moteur commentaireJournal.ts, 16/10/2026), sur la période choisie.
+  const commentaire = commentaireJournal(state.history, periode);
 
   // ── À SORTIR DU PLACARD ─────────────────────────────────────────────
   // LES PIÈCES DU DRESSING SEULEMENT (26/09/2026, signalé : « pas logique
@@ -798,12 +800,11 @@ export default function HistoryScreen() {
   const libelleMois = `${moisCourant.charAt(0).toUpperCase()}${moisCourant.slice(1)} ${new Date().getFullYear()}`;
 
   // UNE SEULE PÉRIODE pour l'en-tête, le bilan et les chiffres clés (15/10/2026). La phrase d'en-tête lit le MÊME bilan que la carte
-  // (styleDePeriode) : avant, elle prenait la première occasion même à égalité (journalInsights) et disait « surtout ton quotidien »
+  // (commentaireJournal) : avant, elle prenait la première occasion même à égalité (journalInsights) et disait « surtout ton quotidien »
   // au-dessus d'une carte « aucune occasion ne se détache ».
   const p = PERIODES.find((x) => x.key === periode)!;
   const chiffres = chiffresPeriode(state.items, state.history, periode);
-  const quandBilan = periode === "mois" ? `en ${moisCourant}` : p.quand;
-  const moment = style.etat === "tendance" ? MOMENT_DE_L_OCCASION[style.occasion] : null;
+  const moment = commentaire.occasion ? MOMENT_DE_L_OCCASION[commentaire.occasion] : null;
   // « Depuis ton inscription en octobre 2026 » (15/10/2026, demandé), le mois et l'année en terracotta, plutôt que « Depuis le début »,
   // qui ne disait pas de quoi. Sans date d'inscription connue : « Depuis ton inscription » seul (demandé le même jour).
   const inscription = periode === "tout" ? moisAnneeInscription(inscritLe) : null;
@@ -817,14 +818,15 @@ export default function HistoryScreen() {
     ) : (
       "Depuis ton inscription"
     );
+  // La phrase d'en-tête suit le type du commentaire : une occasion n'y est nommée que si la carte la désigne.
   const phraseStyle =
-    style.etat === "vide" ? (
+    commentaire.type === "vide" ? (
       `Aucune tenue portée ${p.quand} pour l'instant.`
-    ) : style.etat === "tendance" && moment ? (
+    ) : moment ? (
       <>
-        {debut}, tes tenues ont {style.majorite ? "surtout" : "le plus souvent"} accompagné {moment}.
+        {debut}, tes tenues ont {commentaire.type === "dominant" ? "surtout" : "le plus souvent"} accompagné {moment}.
       </>
-    ) : style.etat === "egalite" ? (
+    ) : commentaire.type === "equilibre" || commentaire.type === "diversifie" ? (
       <>{debut}, tes tenues se partagent entre plusieurs occasions.</>
     ) : (
       <>{debut}, ton style se dessine au fil de tes tenues.</>
@@ -841,7 +843,8 @@ export default function HistoryScreen() {
   const parts = repartitionDressing(state.items);
 
   const occasionsPresentes = [...new Set(entries.filter((e) => e.hasOccasion).map((e) => e.occasion))];
-  const entreesFiltrees = filtre === "toutes" ? entries : entries.filter((e) => e.occasion === filtre);
+  const libellePeriodeListe = periode === "mois" ? libelleMois : periode === "tout" ? "Depuis le début" : p.label;
+  const entreesFiltrees = filtrerListeJournal(entries, filtre, listeSurPeriode ? periode : null);
   const entreesVisibles = entreesFiltrees.slice(0, pages * HISTORY_PAGE_SIZE);
 
   // « Voir mes looks travail → » : le journal complet, filtré sur cette
@@ -850,6 +853,7 @@ export default function HistoryScreen() {
   const voirOccasion = (o: OccasionKey) => {
     setHistoriqueComplet(true);
     setFiltre(o);
+    setListeSurPeriode(true);
     setPages(1);
     requestAnimationFrame(() =>
       document.getElementById("journal-historique")?.closest("section")?.scrollIntoView({ behavior: "smooth", block: "start" })
@@ -859,6 +863,7 @@ export default function HistoryScreen() {
     setHistoriqueComplet(true);
     setPages(1);
     setFiltre("toutes");
+    setListeSurPeriode(false);
   };
 
   return (
@@ -895,36 +900,26 @@ export default function HistoryScreen() {
       <div className="t-chapeau text-muted-3 mt-[8px]">{phraseEnTete}</div>
 
       {/* BILAN DU MOIS d'abord (A), puis les chiffres clés (B) et le dressing en chiffres (C) — ordre du brief du 12/10/2026. */}
-      {/* TON BILAN DU MOIS (renommé le 12/10/2026, brief « Refonte UX du Journal » ; « Ton style ce mois-ci » avant, même contenu : l'insight est déterministe, tiré de styleDuMois, jamais d'une IA) — une carte éditoriale (26/09/2026) : ce que
-          ton mois dit de ton style, puis l'accès aux tenues qui le disent.
-          Tout vient de styleDuMois : un ratio en nombres absolus (« 5 / 7 »,
-          plus de pourcentage), un point par tenue analysée. Sous 3 tenues,
-          sans occasion notée ou à égalité, la carte le dit simplement —
-          jamais de conclusion inventée. Le compte des pièces jamais portées
-          vit dans « À sortir du placard ». */}
-      {/* Le surtitre « Ton bilan du mois » n'est plus affiché (15/10/2026, maquette) : la carte suit l'en-tête, qui nomme déjà la
+      {/* LA CARTE ÉDITORIALE (26/09/2026 ; moteur de commentaires du 16/10/2026). Le commentaire vient de commentaireJournal (règles et
+          seuils dans commentaireJournal.ts, mots dans occasionEditoriale.ts) : une occasion n'est désignée qu'à partir de 10 tenues
+          sur la période, et seulement si elle domine nettement ou arrive en tête sans égalité ni équilibre. Désignée, elle prend la
+          carte magazine (badge, ratio « 14 / 35 », visuel, bouton vers ses tenues de la période) ; sinon la carte simple dit l'état
+          (Journal qui commence, qui prend forme, style qui se dessine, équilibre, diversité, occasions non renseignées).
+          Le surtitre « Ton bilan du mois » n'est plus affiché (15/10/2026, maquette) : la carte suit l'en-tête, qui nomme déjà la
           période ; il reste le nom de la section pour le lecteur d'écran. */}
       <section className="mt-5" aria-label={p.bilan}>
-        {style.etat === "tendance" ? (
+        {commentaire.occasion ? (
           (() => {
-            // Tout ce que la carte dit et montre de l'occasion vient d'une
-            // seule source (OCCASIONS_EDITORIALES) ; les chiffres, de
-            // styleDuMois. Sans visuel pour cette occasion, pas d'image de
-            // repli : le texte prend toute la largeur.
-            const o = OCCASIONS_EDITORIALES[style.occasion];
-            const titre = titreStyle(o, style.majorite, p.quand);
+            const occasion = commentaire.occasion;
+            const o = OCCASIONS_EDITORIALES[occasion];
+            const titre = commentaire.titre;
             return (
               <div className="bg-warm-bg border border-warm-border rounded-feuille px-5 pt-[16px] pb-[18px] overflow-hidden">
                 <div className="flex gap-[14px]">
                   <div className="flex-1 min-w-0">
                     {/* Le nom de l'occasion en pastille, seul : plus de surtitre
                         « Occasion principale » (retiré le 26/09/2026, demandé). */}
-                    <Badge tone="carte">
-                      {libelleOccasion(style.occasion)}
-                    </Badge>
-                    {/* Un titre long (« Les rendez-vous importants rythment… »)
-                        passe à la taille des titres de carte : à côté du visuel,
-                        il prenait jusqu'à six lignes à 360 px. */}
+                    <Badge tone="carte">{commentaire.libelleOccasion}</Badge>
                     <div
                       className={(titre.length > 52 ? "t-titre-carte" : "t-titre-section") + " text-ink mt-[10px]"}
                       style={{ textWrap: "balance" }}
@@ -933,14 +928,14 @@ export default function HistoryScreen() {
                     </div>
                     <div className="mt-[12px]">
                       <span className="sr-only">
-                        {style.compte} {pl(style.compte, "tenue", "tenues")} sur {style.total}
+                        {commentaire.compte} {pl(commentaire.compte, "tenue", "tenues")} sur {commentaire.total}
                       </span>
                       <span aria-hidden="true" className="t-display text-terracotta whitespace-nowrap">
-                        {style.compte} / {style.total}
+                        {commentaire.compte} / {commentaire.total}
                       </span>
                     </div>
                     <div className="text-[12px] text-warm-text-2 leading-[1.4] mt-[4px]">
-                      {pl(style.compte, "tenue pensée", "tenues pensées")} pour {o.pour}
+                      {pl(commentaire.compte, "tenue pensée", "tenues pensées")} pour {o.pour}
                     </div>
                   </div>
                   {/* Le visuel en pleine page de magazine : environ 38 % de la
@@ -968,13 +963,11 @@ export default function HistoryScreen() {
                   )}
                 </div>
                 <div className="mt-[16px]">
-                  <BarreTenues compte={style.compte} total={style.total} />
+                  <BarreTenues compte={commentaire.compte} total={commentaire.total} />
                 </div>
-                <div className="text-[13px] text-muted-3 leading-[1.45] mt-[12px]">
-                  {style.majorite ? o.insight : `Ton dressing accompagne d'abord ${o.pour}.`}
-                </div>
+                <div className="text-[13px] text-muted-3 leading-[1.45] mt-[12px]">{commentaire.description}</div>
                 <button
-                  onClick={() => voirOccasion(style.occasion)}
+                  onClick={() => voirOccasion(occasion)}
                   className="mt-[14px] w-full min-h-[48px] rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream t-cta cursor-pointer flex items-center justify-center gap-[8px] px-4"
                 >
                   {o.cta}
@@ -991,36 +984,12 @@ export default function HistoryScreen() {
               </span>
             </PastilleIcone>
             <div className="flex-1 min-w-0">
-            {/* Quatre cas, aucune conclusion que les données ne portent pas (15/10/2026) : rien à lire, trop peu pour une tendance (le
-                seuil de 3 tenues de STYLE_DU_MOIS_MINIMUM), plusieurs occasions à égalité en tête (une diversité, pas un échec), ou des
-                tenues sans occasion notée. */}
-            <div className="t-titre-carte text-ink">
-              {style.etat === "vide"
-                ? `Aucune tenue portée ${quandBilan} pour l'instant`
-                : style.etat === "peu"
-                  ? "Ton style se dessine"
-                  : style.etat === "egalite"
-                    ? periode === "mois"
-                      ? "Un mois aux occasions variées"
-                      : periode === "trois_mois"
-                        ? "Trois mois aux occasions variées"
-                        : "Des occasions variées"
-                    : "Des tenues sans occasion notée"}
-            </div>
-            <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[6px]">
-              {style.etat === "vide"
-                ? "Ton bilan se dessinera au fil de tes tenues."
-                : style.etat === "peu"
-                  ? `${style.total} ${pl(style.total, "tenue portée", "tenues portées")} ${quandBilan} : une tendance se dégage à partir de ${STYLE_DU_MOIS_MINIMUM}.`
-                  : style.etat === "egalite"
-                    ? `Tes ${style.total} tenues ${quandBilan} se répartissent entre plusieurs occasions. Continue à enregistrer tes tenues pour découvrir tes tendances.`
-                    : `${style.total} tenues portées ${quandBilan}, sans occasion précisée : rien ne permet encore de dire ce qui rythme ton style.`}
-            </div>
+              <div className="t-titre-carte text-ink">{commentaire.titre}</div>
+              <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[6px]">{commentaire.description}</div>
             </div>
           </div>
         )}
       </section>
-
 
       {/* CHIFFRES CLÉS (B) — trois indicateurs sur la période choisie, tous calculés par chiffresPeriode (selectors.ts, testé) : tenues
           validées « portées » ; pièces du DRESSING RÉEL portées au moins une fois ; part du dressing que cela représente. Une pièce ajoutée
@@ -1293,6 +1262,23 @@ export default function HistoryScreen() {
           </div>
         ) : (
           <>
+            {/* La période du Journal, gardée quand la liste vient du bouton de la carte (16/10/2026) : la mention la nomme et
+                « Tout afficher » la retire, l'occasion restant filtrée. Le mois est celui du menu de l'en-tête (« Octobre 2026 »). */}
+            {listeSurPeriode && (
+              <button
+                type="button"
+                onClick={() => {
+                  setListeSurPeriode(false);
+                  setPages(1);
+                }}
+                className="mt-3 min-h-[36px] inline-flex items-center gap-[6px] text-[12px] text-ink-soft cursor-pointer"
+                aria-label={`Période : ${libellePeriodeListe}. Tout afficher`}
+              >
+                <span>{libellePeriodeListe}</span>
+                <span aria-hidden="true">·</span>
+                <span className="text-terracotta underline underline-offset-2">Tout afficher</span>
+              </button>
+            )}
             {/* Filtre discret (§13), seulement s'il départage vraiment : au
                 moins deux occasions présentes dans l'historique. */}
             {/* Affiché aussi quand un filtre est posé (depuis « Ton style ce
@@ -1353,6 +1339,7 @@ export default function HistoryScreen() {
               setHistoriqueComplet(false);
               setPages(1);
               setFiltre("toutes");
+              setListeSurPeriode(false);
             }}
             className="mt-3 w-full min-h-[44px] t-lien text-terracotta cursor-pointer"
           >

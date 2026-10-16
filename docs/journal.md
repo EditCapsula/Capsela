@@ -54,3 +54,25 @@ Rappel : les bornes de période suivent le fuseau de l'appareil (`new Date(an, m
   chevron, faute d'écran qui liste toutes les pièces fétiches.
 - **Non repris** : le visuel éditorial (sac et lunettes) de la carte du bilan, aucun visuel existant ne correspondant ; la phrase
   d'en-tête de la maquette (« … pour ton quotidien »), qui affirmerait une occasion que les données ne portent pas à égalité.
+
+## 16/10/2026 — moteur de commentaires éditoriaux
+
+Spécification « Moteur de commentaires éditoriaux du Journal » et arbitrages produit du même jour. Le commentaire de la carte (et la
+phrase d'en-tête) vient de `commentaireJournal` (`src/lib/commentaireJournal.ts`, fonction pure, testée) ; les mots, de
+`OCCASIONS_EDITORIALES` et `TEXTES_JOURNAL` (`src/lib/occasionEditoriale.ts`). Il remplace `styleDePeriode` et `titreStyle`.
+
+- **Données** : les tenues de `state.history` sur la période choisie — une entrée n'existe que pour une tenue validée « je la porte ».
+  Une tenue sans occasion compte dans le total, dans aucune occasion ; les parts se calculent sur ce total.
+- **Seuils** (`SEUILS_COMMENTAIRE`, ARBITRAGE ÉDITORIAL à valider sur données réelles) : 5 tenues pour une observation, 10 pour
+  désigner une occasion ; dominante à 40 % et 15 points d'avance ; équilibre à 5 points d'écart ou moins ; diversité à 4 occasions.
+- **Ordre** : vide → secours (aucune occasion renseignée) → moins de 5 → moins de 10 → égalité à trois ou plus (diversifiée) → égalité
+  à deux (équilibrée) → écart de 5 points ou moins (équilibrée, deux occasions au moins) → dominante → quatre occasions ou plus
+  (diversifiée) → en tête. Les seuils sont atteints « au moins » (40 % exactement est dominant). À égalité, l'ordre du référentiel
+  `OCCASIONS` départage le classement, jamais le commentaire.
+- **Carte** : une occasion désignée (dominante ou en tête) garde la carte magazine — badge, titre, « 14 / 35 », visuel, barre,
+  description, bouton rédigé par occasion ; les autres états gardent la carte simple à pastille calendrier.
+- **Bouton** : il ouvre « Tout mon journal » filtré sur l'occasion ET la période du Journal ; une mention « Octobre 2026 · Tout
+  afficher » (le mois du menu) retire la période, l'occasion restant filtrée (`filtrerListeJournal`).
+- **Écarts assumés** : « Prête à bouger avec style » (Voyage) devient « Le style en mouvement », neutre en genre. L'équilibre à 5 points
+  exige deux occasions représentées : une seule occasion, très minoritaire face à des tenues sans occasion, n'est pas « un équilibre
+  entre plusieurs occasions ». Le secours passe avant les seuils de volume : sans aucune occasion, rien ne se dit sur elles.
