@@ -16,6 +16,7 @@ import {
   CLOTHING_CATS,
   TOP_LAYER_CATS,
   applySportCocooningFilter,
+  chemiseAmpleSurCombinaison,
   computeLookScore,
   evaluateBlocking,
   recentlyWorn,
@@ -213,8 +214,12 @@ export default function CreateLookScreen() {
   // pièce calque n'existe dans le dressing, cf. ci-dessus).
   const estBloquee = (it: Item) => {
     if (state.lookDraftIds.includes(it.id)) return false;
+    // Exception (16/10/2026) : une chemise ample se pose sur une combinaison sans manches, et réciproquement (chemiseAmpleSurCombinaison).
+    const piecesUniques = draftPieces.filter((i) => i.cat === "robe" || i.cat === "combinaison");
+    const hautsBas = draftPieces.filter((i) => TOP_BOTTOM_CATS.has(i.cat));
     const robeConflict =
-      (TOP_BOTTOM_CATS.has(it.cat) && hasRobeOrCombi) || ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom);
+      (TOP_BOTTOM_CATS.has(it.cat) && hasRobeOrCombi && !piecesUniques.every((u) => chemiseAmpleSurCombinaison(it, u))) ||
+      ((it.cat === "robe" || it.cat === "combinaison") && hasTopBottom && !hautsBas.every((h) => chemiseAmpleSurCombinaison(h, it)));
     const baseLayerConflict = TOP_LAYER_CATS.includes(it.cat) && rolePieceOf(it) === "base" && topDraftBaseSelected && hasCalqueOption;
     return robeConflict || baseLayerConflict;
   };
