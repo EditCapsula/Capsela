@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { chiffresPeriode, debutPeriode, detailPartDressing, styleDePeriode, filtrePourPart, historiqueDansPeriode, peutEtreDiteJamaisPortee, repartitionDressing } from "../selectors";
+import { chiffresPeriode, debutPeriode, detailPartDressing, filtrePourPart, historiqueDansPeriode, peutEtreDiteJamaisPortee, repartitionDressing } from "../selectors";
+import { commentaireJournal } from "../commentaireJournal";
 import type { HistoryEntry, Item } from "../types";
 
 const item = (id: number, cat: string): Item => ({ id, cat, name: `p${id}`, hex: "#000000" }) as unknown as Item;
@@ -79,13 +80,12 @@ describe("une seule période pour l'en-tête, le bilan et les chiffres (15/10/20
     expect(chiffresPeriode(dressing, histo, "mois", NOW).tenues).toBe(4);
     expect(chiffresPeriode(dressing, histo, "tout", NOW).tenues).toBe(31);
   });
-  it("à égalité en tête, le bilan du mois ne désigne aucune occasion ; sur toute la période, le quotidien domine", () => {
-    expect(styleDePeriode(histo, "mois", NOW)).toEqual({ etat: "egalite", total: 4 });
-    expect(styleDePeriode(histo, "tout", NOW)).toMatchObject({ etat: "tendance", occasion: "quotidien", compte: 29, majorite: true });
+  it("le commentaire suit la période : 4 tenues en octobre, trop peu ; 31 depuis le début, le quotidien domine (29 / 31)", () => {
+    expect(commentaireJournal(histo, "mois", NOW)).toMatchObject({ type: "insuffisant", occasion: null, total: 4 });
+    expect(commentaireJournal(histo, "tout", NOW)).toMatchObject({ type: "dominant", occasion: "quotidien", compte: 29, total: 31 });
   });
-  it("sous 3 tenues, pas de tendance ; aucune tenue, un état vide — jamais un zéro déguisé en tendance", () => {
-    expect(styleDePeriode(octobre.slice(0, 2), "mois", NOW)).toEqual({ etat: "peu", total: 2 });
-    expect(styleDePeriode(anciennes, "mois", NOW)).toEqual({ etat: "vide", total: 0 });
+  it("aucune tenue sur la période : un état vide — jamais un zéro déguisé en tendance", () => {
+    expect(commentaireJournal(anciennes, "mois", NOW)).toMatchObject({ type: "vide", total: 0, part: null });
   });
   it("7 pièces distinctes sur 19 : 37 %, quel que soit le nombre de ports", () => {
     const h = [entree("x1", new Date(2026, 9, 3), [1, 2, 3, 4]), entree("x2", new Date(2026, 9, 4), [1, 2, 5, 6, 7])];

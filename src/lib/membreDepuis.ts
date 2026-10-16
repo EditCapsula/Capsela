@@ -6,8 +6,14 @@ import { MONTHS_FR } from "./data";
  * s'affiche pas plutôt que d'afficher une date inventée. Mois et année lus dans le fuseau de l'appareil.
  */
 export function libelleMembreDepuis(iso: string | null | undefined): string | null {
+  const m = moisAnneeInscription(iso);
+  return m ? `Membre depuis ${m}` : null;
+}
+
+/** « octobre 2026 » : le mois et l'année d'inscription seuls (Journal, « Depuis ton inscription en … »), null sans date lisible. */
+export function moisAnneeInscription(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return `Membre depuis ${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
+  return `${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
 }
