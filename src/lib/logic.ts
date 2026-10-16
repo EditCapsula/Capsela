@@ -220,6 +220,22 @@ function isShirtLike(it: Item): boolean {
 }
 
 /**
+ * CHEMISE AMPLE SUR UNE COMBINAISON SANS MANCHES (16/10/2026, demandé : « il faut autoriser une chemise ample sur une combinaison
+ * sans manche »). Exception à R-B5 : la chemise ample s'y porte ouverte, comme une veste légère — les bras nus de la combinaison
+ * l'appellent. Elle vaut dans tous les contextes, habillés compris, et quel que soit le rôle (base / calque) noté sur la chemise.
+ * Les manches de la combinaison doivent être DÉCLARÉES « sans » (Item.manches, jamais déduites d'un nom) ; inconnues, R-B5 reste
+ * entière. « Ample » se lit comme partout ailleurs (coupeOf : coupe « Ample » ou libellé oversize / ample / large).
+ */
+export function estChemiseAmple(it: Item): boolean {
+  if (it.cat !== "haut" || coupeOf(it) !== "oversize") return false;
+  return /^chemis/i.test(it.subtype ?? "") || /\bchemis/i.test(it.name);
+}
+
+export function chemiseAmpleSurCombinaison(dessus: Item, pieceUnique: Item): boolean {
+  return pieceUnique.cat === "combinaison" && pieceUnique.manches === "sans" && estChemiseAmple(dessus);
+}
+
+/**
  * Maille FERMÉE (arbitrage éditorial du 31/08/2026) — deux d'entre elles ne se
  * superposent pas, exactement au même titre que deux chemises (R-B10). Comme
  * R-B10, la règle vise les SOUS-TYPES et non la catégorie : `pull` recouvre
@@ -1442,7 +1458,10 @@ export function generateOutfit(
   // décontracté, jamais systématique, jamais non plus si une veste est déjà
   // dans la tenue (même rôle de superposition, cf. plus haut).
   if (useRobe && !dressy && !hasVeste && Math.random() < 0.3) {
-    const robeLayerCandidates = hardBase.filter((i) => TOP_LAYER_CATS.includes(i.cat) && rolePieceOf(i) === "calque");
+    // Une chemise ample sur une combinaison sans manches en est aussi un, même notée « base » (16/10/2026, chemiseAmpleSurCombinaison).
+    const robeLayerCandidates = hardBase.filter(
+      (i) => TOP_LAYER_CATS.includes(i.cat) && (rolePieceOf(i) === "calque" || (primaryTop != null && chemiseAmpleSurCombinaison(i, primaryTop)))
+    );
     // Calque près du visage : la colorimétrie s'y applique (sans préférence
     // de palette, qui n'y a jamais joué — sans colorimétrie, liste inchangée).
     const robeLayer = rand(harmonize(candidatsCouleur(robeLayerCandidates, [], colo), chosen, false));
@@ -2082,8 +2101,10 @@ export function evaluateBlocking(
   // décontracté est un vrai geste stylistique, jamais signalé.
   if (hasRobeOrCombi) {
     const dressy = isDressy(occasion, workMode, dateContext);
+    const piecesUniques = pieces.filter((i) => i.cat === "robe" || i.cat === "combinaison");
     const offending = pieces.some((i) => {
       if (!TOP_OR_BOTTOM_CATS.includes(i.cat)) return false;
+      if (piecesUniques.every((u) => chemiseAmpleSurCombinaison(i, u))) return false;
       if (!TOP_LAYER_CATS.includes(i.cat)) return true; // un bas n'a jamais de sens ici
       return dressy || rolePieceOf(i) !== "calque";
     });
