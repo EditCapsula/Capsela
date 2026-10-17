@@ -8,6 +8,7 @@
     "prebuild": "npm run legal:generer",
     "dev": "next dev",
     "build": "next build",
+    "mobile:sync": "npm run build && cap sync",
     "start": "npx --yes serve@latest out",
     "lint": "eslint",
     "test": "vitest run",
@@ -16,6 +17,9 @@
     "verify": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/ios": "8.5.2",
     "@next/third-parties": "^16.3.3",
     "@sentry/nextjs": "^10.71.0",
     "@supabase/ssr": "^0.12.4",
@@ -25,6 +29,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

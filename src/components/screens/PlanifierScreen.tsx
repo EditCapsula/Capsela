@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import AgendaLooks from "@/components/AgendaLooks";
+import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
 import AppHeader from "@/components/AppHeader";
 import BadgePremium from "@/components/BadgePremium";
 import BottomSheet from "@/components/BottomSheet";
@@ -262,8 +262,11 @@ function CartePlanifier({
   onClick,
   visuel,
   cadrage = "center 38%",
+  premium = false,
   children,
 }: {
+  /** Le badge Premium : la valise seulement (17/10/2026, décidé : la planification de tenues n'est pas Premium). */
+  premium?: boolean;
   /** Bandeau éditorial en tête de carte — absent tant que le visuel n'existe pas. */
   visuel?: string;
   /** `object-position` du bandeau : chaque visuel a son sujet à une hauteur différente. */
@@ -307,7 +310,7 @@ function CartePlanifier({
           </span>
           <span className="flex items-center gap-2">
             {etiquette && <span className="t-pastille rounded-full px-[10px] py-[5px] bg-warm-bg text-muted-3 uppercase">{etiquette}</span>}
-            <BadgePremium />
+            {premium && <BadgePremium />}
           </span>
         </span>
         <span className="block t-titre-section text-ink mt-[12px]">
@@ -612,6 +615,9 @@ export default function PlanifierScreen() {
   const setPlans = actions.setTenuesPlanifiees;
   const [enregistrement, setEnregistrement] = useState(false);
   const [onglet, setOnglet] = useState<"up" | "past">("up");
+  // L'AGENDA DE « MES LOOKS À VENIR » (17/10/2026) : vue Agenda, Jour ou Liste, le jour choisi et le mois affiché. Porté ici pour
+  // survivre à l'ouverture du détail d'un look : le retour ramène au même jour, au même mois.
+  const [etatAgenda, setEtatAgenda] = useState<EtatAgenda>(() => ({ mode: "agenda", jour: jourLocal(), mois: jourLocal() }));
   /** Le hub n'affiche qu'une expérience à la fois (08/10/2026) : la tenue par défaut, ou la valise. */
   const [hub, setHub] = useState<"tenue" | "valise">("tenue");
   const [toast, setToast] = useState<string | null>(null);
@@ -1111,6 +1117,9 @@ export default function PlanifierScreen() {
     }
   };
 
+  /** L'écart en jours entre aujourd'hui et un jour « AAAA-MM-JJ », en dates locales (midi : pas de bascule d'heure d'été). */
+  const ecartDuJour = (j: string) => Math.round((new Date(`${j}T12:00:00`).getTime() - new Date(`${jourLocal()}T12:00:00`).getTime()) / 86_400_000);
+
   const recommencer = () => {
     setComposition(null);
     setDepuisPlan(null);
@@ -1229,6 +1238,11 @@ export default function PlanifierScreen() {
 
   const revenir = () => {
     if (compose) return;
+    // Dans l'agenda, la vue Jour et la vue Liste reviennent d'abord au calendrier.
+    if (vue === "liste" && etatAgenda.mode !== "agenda") {
+      setEtatAgenda({ ...etatAgenda, mode: "agenda" });
+      return;
+    }
     if (retourExterne) {
       actions.quitterPlanifier();
       return;
@@ -1369,6 +1383,7 @@ export default function PlanifierScreen() {
                       nombre={tenuesAVenir.length}
                       onVoirTout={() => {
                         setOnglet("up");
+                        setEtatAgenda((e) => ({ ...e, mode: "agenda" }));
                         setVue("liste");
                       }}
                     />
@@ -1430,6 +1445,7 @@ export default function PlanifierScreen() {
                 onClick={() => void actions.ouvrirValise(null)}
                 visuel={visuelHub("valise", profile.gender)}
                 cadrage="center 60%"
+                premium
               >
                 {valisesAVenir.length > 0 && (
                   <>
@@ -1438,6 +1454,7 @@ export default function PlanifierScreen() {
                       nombre={valisesAVenir.length}
                       onVoirTout={() => {
                         setOnglet("up");
+                        setEtatAgenda((e) => ({ ...e, mode: "liste" }));
                         setVue("liste");
                       }}
                     />
@@ -1502,6 +1519,7 @@ export default function PlanifierScreen() {
                     <button
                       onClick={() => {
                         setOnglet("past");
+                        setEtatAgenda((e) => ({ ...e, mode: "liste" }));
                         setVue("liste");
                       }}
                       className="text-[12px] text-terracotta cursor-pointer min-h-[44px] -my-[12px] flex items-center"
@@ -2091,6 +2109,18 @@ export default function PlanifierScreen() {
             données et mêmes actions que la liste d'avant (AgendaLooks). */}
         {vue === "liste" && (
           <AgendaLooks
+            etat={etatAgenda}
+            onEtat={setEtatAgenda}
+            peutPlanifierLe={(j) => {
+              const e = ecartDuJour(j);
+              return e >= 1 && e <= JOURS_PROPOSES;
+            }}
+            onPlanifierLe={(j) => {
+              // Le parcours existant, la date déjà choisie (comme « Planifier une tenue pour mardi » depuis Tenue).
+              recommencer();
+              const e = ecartDuJour(j);
+              if (e >= 1 && e <= JOURS_PROPOSES) setJour(e);
+            }}
             onglet={onglet}
             onglets={ongletsPlans}
             aVenir={aVenir}
@@ -2208,6 +2238,8 @@ export default function PlanifierScreen() {
           <>
             <Button
               onClick={() => {
+                // Le jour de la tenue gardée, dans l'agenda (17/10/2026).
+                if (gardee) setEtatAgenda({ mode: "jour", jour: gardee.jour, mois: gardee.jour });
                 setVue("liste");
                 setOnglet("up");
               }}

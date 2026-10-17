@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     // Maquettes de référence livrées avec le design — code tiers, jamais
     // exécuté par l'application, hors du périmètre de nos règles.
     "design-reference/**",
+    // Projets natifs Capacitor (17/10/2026) : ils contiennent une copie de `out/` après `cap sync` (ignorée par git).
+    "ios/**",
+    "android/**",
   ]),
   {
     // Les Edge Functions tournent sous Deno, avec leur propre linter : les

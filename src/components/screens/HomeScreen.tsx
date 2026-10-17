@@ -24,6 +24,7 @@ import type { CategoryKey, Item } from "@/lib/types";
 import Button from "@/components/Button";
 import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
 import { composerSlides, cleTenue as cleSlide, typeDeJour, type SlideCarrousel } from "@/lib/carrousel";
+import { titreDeLaTenue } from "@/lib/dressingSections";
 
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
 const glypheUnivers = (d: string) => (
@@ -273,6 +274,8 @@ export default function HomeScreen() {
   const stylesDits = libelleStyles(profile.styles, profile.gender);
   const titreHero = (() => {
     if (planHero) return { a: titreDuPlan(planHero), b: "" };
+    const deLaTenue = titreDeLaTenue(outfitPieces);
+    if (deLaTenue) return deLaTenue;
     if (qualificatif) return titreDuQualificatif(qualificatif);
     return { a: "Ta tenue", b: "du jour" };
   })();
@@ -307,7 +310,10 @@ export default function HomeScreen() {
     (state.outfitValidated || state.history.some((h) => new Date(h.ts).toDateString() === auj && cleSlide(h.pieceIds) === cleSlide(state.outfit)));
   const piecesDe = (ids: number[]) => ids.map((id) => resolvePool.find((i) => i.id === id)).filter((it): it is Item => Boolean(it));
   const dejaSauvegardee = (ids: number[]) => state.savedLooks.some((l) => cleSlide(l.pieceIds) === cleSlide(ids));
+  // Le titre d'une slide nomme ses deux pièces maîtresses (17/10/2026, titreDeLaTenue) : le titre météo était le même sur toutes.
   const titreDe = (pieces: Item[]) => {
+    const deLaTenue = titreDeLaTenue(pieces);
+    if (deLaTenue) return deLaTenue;
     const q = qualificatifLook(meteoEnAttente ? null : meteoDuJour.temp, pieces);
     return q ? titreDuQualificatif(q) : { a: "Ta tenue", b: "du jour" };
   };
@@ -432,7 +438,7 @@ export default function HomeScreen() {
           ) : hasOutfit ? (
             <>
               <div key="prete" className="motion-safe:animate-[capsule-apparition_320ms_ease-out_both]">
-                <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(22px, 6.4vw, 27px)", lineHeight: 1.08 }}>
+                <div className="font-serif text-ink mt-3" style={{ fontSize: "clamp(19px, 5.3vw, 22px)", lineHeight: 1.15, textWrap: "balance" }}>
                   {titreHero.a}
                   {titreHero.b && (
                     <>
@@ -558,7 +564,6 @@ export default function HomeScreen() {
             visuel="/editorial/capsela_editorial_planning.webp"
             position="34% center"
             label="Planifier mes looks"
-            premium
           />
           <CarteUnivers
             onClick={ouvrirValise}

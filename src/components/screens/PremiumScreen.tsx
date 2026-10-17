@@ -55,14 +55,6 @@ const G_CINTRE = (
     <path d="M14 9.4 3.9 16.2a1 1 0 0 0 .6 1.8h15a1 1 0 0 0 .6-1.8L14 9.4z" {...T} />
   </>
 );
-const G_CALENDRIER = (
-  <>
-    <rect x="4" y="6" width="16" height="14" rx="2" {...T} />
-    <line x1="4" y1="10" x2="20" y2="10" {...T} />
-    <line x1="8.5" y1="3.5" x2="8.5" y2="7" {...T} />
-    <line x1="15.5" y1="3.5" x2="15.5" y2="7" {...T} />
-  </>
-);
 const G_VALISE = (
   <>
     <rect x="5.5" y="7.5" width="13" height="12" rx="1.5" {...T} />
@@ -96,11 +88,7 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
     titre: "Dressing illimité",
     desc: `Au-delà de ${LIMITE_DRESSING_GRATUIT} pièces, ajoute tout ce que tu possèdes sans compter.`,
   },
-  {
-    glyphe: G_CALENDRIER,
-    titre: "Planifier une tenue",
-    desc: "Prépare tes looks à l'avance selon la date et le lieu, avec la météo prévue sur place.",
-  },
+  // « Planifier une tenue » retiré le 17/10/2026 (décidé) : la planification de tenues est gratuite. La valise reste Premium.
   {
     glyphe: G_ETINCELLE,
     titre: "Tenues sans limite",

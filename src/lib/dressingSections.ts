@@ -203,6 +203,52 @@ export function designationPiece(p: Item): string {
   return article ? `${article} ${bas}` : bas;
 }
 
+/** « le », « la », « l' » ou « les » selon le nom de la pièce (même lecture que `articlePossessif`) ; `undefined` quand rien ne permet de choisir. */
+export function articleDefini(p: Item): "le" | "la" | "l'" | "les" | undefined {
+  const mots = p.name.trim().split(/\s+/).map(cleMot).filter(Boolean);
+  const elide = (mot: string) => /^[aeiouyh]/.test(mot);
+  for (const mot of mots.slice(0, 3)) {
+    const genre = GENRE_DU_NOM[mot];
+    if (genre === "p") return "les";
+    if (genre === "f" || genre === "m") return elide(mots[0]) ? "l'" : genre === "f" ? "la" : "le";
+    if (!ADJECTIFS_D_OUVERTURE.has(mot)) break;
+  }
+  const possessif = ARTICLE_PAR_CAT[p.cat];
+  if (!possessif || !mots[0]) return undefined;
+  if (possessif === "tes") return "les";
+  return elide(mots[0]) ? "l'" : possessif === "ta" ? "la" : "le";
+}
+
+function avecArticleDefini(p: Item): string {
+  const nom = p.name.trim();
+  const bas = `${nom.charAt(0).toLowerCase()}${nom.slice(1)}`;
+  const article = articleDefini(p);
+  if (!article) return bas;
+  return article === "l'" ? `l'${bas}` : `${article} ${bas}`;
+}
+
+const BAS_TITRE: CategoryKey[] = ["pantalon", "jean", "jupe", "short"];
+const DESSUS_TITRE: CategoryKey[] = ["veste", "manteau"];
+
+/**
+ * LE TITRE D'UNE SLIDE DE L'ACCUEIL, TIRÉ DE SA TENUE (17/10/2026, signalé : « le titre Confortable sur chaque slide n'apporte rien
+ * puisqu'à chaque fois le même »). Le titre venait de la seule météo, identique d'une slide à l'autre. Il nomme désormais les deux
+ * pièces qui font la tenue, avec leur vrai nom (couleur et matière comprises quand le nom les porte) : rien d'inventé.
+ *   · robe ou combinaison : elle, puis la veste ou le manteau, sinon les chaussures ;
+ *   · sinon : le bas, puis le haut (ou la maille).
+ * Premier temps en romain, second en italique (« Le jean brut / et la marinière »). Sans pièce reconnue : null, l'appelant garde son titre.
+ */
+export function titreDeLaTenue(pieces: Item[]): { a: string; b: string } | null {
+  const unique = pieces.find((p) => p.cat === "robe" || p.cat === "combinaison");
+  const premiere = unique ?? pieces.find((p) => BAS_TITRE.includes(p.cat));
+  const seconde = unique
+    ? (pieces.find((p) => DESSUS_TITRE.includes(p.cat)) ?? pieces.find((p) => p.cat === "chaussures"))
+    : (pieces.find((p) => p.cat === "haut") ?? pieces.find((p) => p.cat === "pull"));
+  if (!premiere) return null;
+  const a = avecArticleDefini(premiere);
+  return { a: a.charAt(0).toUpperCase() + a.slice(1), b: seconde ? `et ${avecArticleDefini(seconde)}` : "" };
+}
+
 export function phrasePiste(p: Item): string {
   const nom = p.name.trim();
   const article = articlePossessif(p);

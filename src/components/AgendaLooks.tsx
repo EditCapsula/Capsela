@@ -1,43 +1,51 @@
 "use client";
 
+import { useMemo } from "react";
 import { GlypheOccasion } from "@/components/GlyphesOccasion";
+import { RailPiecesTenue } from "@/components/HeroTenue";
 import { OutfitComposition } from "@/components/OutfitComposition";
 import {
-  composerAgenda,
   detailCapsela,
-  echeanceCourte,
+  echeanceLongue,
+  groupesParMois,
+  joursAutour,
+  libelleMoisAnnee,
   looksDisponibles,
+  marqueDuJour,
+  momentsLibres,
   occasionsDuVoyage,
+  planificationsParJour,
   sousTitreAgenda,
+  type JourAgenda,
 } from "@/lib/agendaLooks";
+import { grilleDuMoisComplete, moisDecale } from "@/lib/calendrier";
 import { occasionShortLabel } from "@/lib/data";
 import { titreLookDuJour } from "@/lib/logic";
 import { jourLocal } from "@/lib/outfitFeedback";
 import { villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
 import type { DateContext, Item, WorkMode } from "@/lib/types";
+import { useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import type { Planification, ValiseGardee } from "@/lib/valises";
+import Button from "@/components/Button";
 import Card from "@/components/Card";
 import EmptyState from "@/components/EmptyState";
 
 /*
- * « MES LOOKS À VENIR » — la page « Mes planifications » de Planifier, refondue
- * le 30/09/2026 (brief « Refonte premium ») : d'une liste de cartes identiques
- * à un agenda de looks. Trois niveaux, jamais la même importance pour tous :
+ * « MES LOOKS À VENIR » — la page « Mes planifications » de Planifier. Refondue le 30/09/2026 (agenda de looks : le prochain en grand,
+ * les suivants en frise), puis le 17/10/2026 en AGENDA ÉDITORIAL (brief « Refonte UX/UI de la page Planifier ») : trois vues d'un même
+ * état, sans route nouvelle (l'app navigue par état) —
  *
- *   1. LE PROCHAIN LOOK — sa planche en grand, l'occasion, la date, le lieu
- *      et la météo enregistrée, « Le détail Capsela », « Voir le look » ;
- *   2. LES SUIVANTS — une frise discrète, une image plus petite par look ;
- *   3. LES VOYAGES — en contexte, une ligne légère : ils ne concurrencent pas
- *      le look.
- * Au-delà de trois looks suivants, le reste tient en lignes compactes.
+ *   · AGENDA, l'entrée : le calendrier du mois (un point = un look, deux = plusieurs, un trait = un voyage), le prochain rendez-vous en
+ *     grand, puis trois autres planifications et « Voir tout » ;
+ *   · JOUR, en touchant une date ou une ligne : les jours voisins, la météo FIABLE du jour, chaque look du jour en grand avec ses pièces,
+ *     les voyages en cours, et les moments encore libres quand Planifier accepte la date ;
+ *   · LISTE, par « Voir tout » : tout, groupé par mois, en lignes compactes.
  *
- * Rien n'est calculé ici : les planifications arrivent déjà réparties et
- * triées (repartirPlanifications), les pièces résolues par l'écran
- * (piecesDuPlan, pool stable). Les actions sont celles d'avant : ouvrir le
- * détail, le menu « … », ouvrir la valise.
+ * Rien n'est calculé sur les données ici : les planifications arrivent réparties et triées (repartirPlanifications), rangées par jour
+ * par planificationsParJour (agendaLooks.ts, testé) ; les pièces sont résolues par l'écran (piecesDuPlan, pool stable). Les actions sont
+ * celles d'avant : le détail d'un look, le menu « … », la valise, le parcours de planification. Aucune planification n'est inventée.
  *
- * TUTOIEMENT : le brief écrivait « Vos prochains looks », « Planifiez » ; toute
- * l'app tutoie, la page aussi.
+ * TUTOIEMENT : toute l'app tutoie, la page aussi.
  */
 
 const DOW = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -71,7 +79,76 @@ function Chevron() {
   );
 }
 
+export type ModeAgenda = "agenda" | "jour" | "liste";
+/** L'état de navigation des trois vues, porté par PlanifierScreen : il survit à l'ouverture du détail d'un look et au retour. */
+export interface EtatAgenda {
+  mode: ModeAgenda;
+  /** Le jour choisi (vue Jour, case sélectionnée du calendrier). */
+  jour: string;
+  /** Un jour du mois affiché par le calendrier. */
+  mois: string;
+}
+
+const JOURS_ENTETE = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+const DOW_CAPS = ["DIM", "LUN", "MAR", "MER", "JEU", "VEN", "SAM"];
+const MOIS_LONG = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const DOW_TITRE = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+const titreJour = (jour: string) => {
+  const d = dateDe(jour);
+  return `${DOW_TITRE[d.getDay()]} ${d.getDate()} ${MOIS_LONG[d.getMonth()]}`;
+};
+const pluriel = (n: number, un: string, plusieurs: string) => `${n} ${n > 1 ? plusieurs : un}`;
+/** Le moment, sauf quand il répète l'occasion (« Soirée · Soirée ») : alors rien. */
+const momentDistinct = (t: Pick<TenuePlanifiee, "moment" | "occasion">) => (t.moment === occasionShortLabel(t.occasion) ? null : t.moment);
+const meteoEnregistree = (t: Pick<TenuePlanifiee, "temp" | "weatherLabel">) =>
+  t.temp != null ? `${t.temp}°${t.weatherLabel ? ` · ${t.weatherLabel}` : ""}` : null;
+
+function Fleche({ vers }: { vers: "gauche" | "droite" }) {
+  return (
+    <svg width={16} height={16} viewBox="0 0 24 24" aria-hidden="true">
+      <path d={vers === "gauche" ? "M14.5 6l-6 6 6 6" : "M9.5 6l6 6-6 6"} {...trait} strokeWidth={1.7} />
+    </svg>
+  );
+}
+
+/** Les points d'une case ou d'un jour : un point pour un look, deux pour plusieurs, un trait pour un voyage. Toujours doublé d'un nom accessible. */
+function Marques({ marque, sur, ajout = false }: { marque: ReturnType<typeof marqueDuJour>; sur: "clair" | "terracotta"; ajout?: boolean }) {
+  const couleur = sur === "terracotta" ? "var(--color-on-terracotta)" : "var(--color-terracotta)";
+  // UN PETIT « + » SUR UN JOUR LIBRE (17/10/2026, demandé) : seulement quand Planifier accepte ce jour (demain à J+21) — un « + » sur un
+  // jour passé, ou sur aujourd'hui (préparé depuis l'accueil), promettrait une action qui n'existe pas.
+  if (ajout)
+    return (
+      <span className="flex items-center justify-center h-[7px] text-[10px] leading-none font-semibold" style={{ color: couleur, opacity: 0.75 }} aria-hidden="true">
+        +
+      </span>
+    );
+  if (marque.looks === "aucun" && !marque.voyage) return <span className="block h-[5px]" aria-hidden="true" />;
+  return (
+    <span className="flex items-center justify-center gap-[3px] h-[5px]" aria-hidden="true">
+      {marque.looks !== "aucun" && <span className="w-[4px] h-[4px] rounded-full" style={{ background: couleur }} />}
+      {marque.looks === "plusieurs" && <span className="w-[4px] h-[4px] rounded-full" style={{ background: couleur }} />}
+      {marque.voyage && <span className="w-[8px] h-[2px] rounded-full" style={{ background: couleur, opacity: 0.7 }} />}
+    </span>
+  );
+}
+
+const nomMarque = (m: ReturnType<typeof marqueDuJour>) =>
+  [m.looks === "un" ? "un look planifié" : m.looks === "plusieurs" ? "plusieurs looks planifiés" : null, m.voyage ? "un voyage" : null]
+    .filter(Boolean)
+    .join(", ") || "rien de prévu";
+
+/** La miniature d'une ligne : la planche de la tenue, petite, sur le fond chaud des cartes éditoriales. */
+function Miniature({ pieces, taille }: { pieces: Item[]; taille: number }) {
+  return (
+    <span className="flex-shrink-0 rounded-champ bg-warm-bg p-[5px]" style={{ width: taille, height: taille }} aria-hidden="true">
+      {pieces.length > 0 && <OutfitComposition items={pieces} variant="planche" />}
+    </span>
+  );
+}
+
 export default function AgendaLooks({
+  etat,
+  onEtat,
   onglet,
   onglets,
   aVenir,
@@ -81,7 +158,11 @@ export default function AgendaLooks({
   onOuvrir,
   onMenu,
   onOuvrirValise,
+  peutPlanifierLe,
+  onPlanifierLe,
 }: {
+  etat: EtatAgenda;
+  onEtat: (e: EtatAgenda) => void;
   onglet: "up" | "past";
   /** Les onglets À venir / Passées de l'écran, partagés avec le hub. */
   onglets: React.ReactNode;
@@ -92,182 +173,531 @@ export default function AgendaLooks({
   onOuvrir: (t: TenuePlanifiee) => void;
   onMenu: (t: TenuePlanifiee) => void;
   onOuvrirValise: (v: ValiseGardee) => void;
+  /** Planifier accepte ce jour (de demain à J+21) : le parcours existant s'ouvre avec la date choisie. */
+  peutPlanifierLe: (jour: string) => boolean;
+  onPlanifierLe: (jour: string) => void;
 }) {
   const passe = onglet === "past";
-  const agenda = composerAgenda(passe ? passees : aVenir, onglet);
-  const sousTitre = sousTitreAgenda(aVenir.length);
   const aujourdhui = jourLocal();
-  const vide = !agenda.voyages.length && !agenda.prochain && !agenda.suivants.length;
+  const toutes = useMemo(() => [...aVenir, ...passees], [aVenir, passees]);
+  const parJour = useMemo(
+    () =>
+      planificationsParJour(
+        toutes.flatMap((p) => (p.type === "tenue" ? [p.tenue] : [])),
+        toutes.flatMap((p) => (p.type === "valise" ? [p.valise] : []))
+      ),
+    [toutes]
+  );
+  const liste = passe ? passees : aVenir;
+  const sousTitre = sousTitreAgenda(aVenir.length);
+  const ouvrirJour = (jour: string) => onEtat({ mode: "jour", jour, mois: jour });
 
-  return (
+  const entete = (
     <>
-      {/* L'EN-TÊTE — titre d'écran comme tous les autres (t-titre-ecran, 27 px :
-          le brief demandait plus grand, la cohérence avec l'app l'a emporté le
-          30/09/2026), « looks » dans l'italique terracotta des mots éditoriaux. */}
       <div className="t-surtitre text-muted">Planifier</div>
       <h1 className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
         Mes <span className="italic text-terracotta">looks</span> à venir
       </h1>
-      {sousTitre && <div className="t-chapeau text-muted-3 mt-[8px]">{sousTitre}</div>}
+    </>
+  );
 
+  // ── VUE JOUR ───────────────────────────────────────────────────────────
+  if (etat.mode === "jour") {
+    return (
+      <VueJour
+        jour={etat.jour}
+        parJour={parJour}
+        aujourdhui={aujourdhui}
+        onJour={(jour) => onEtat({ mode: "jour", jour, mois: jour })}
+        onCalendrier={() => onEtat({ mode: "agenda", jour: etat.jour, mois: etat.jour })}
+        piecesDuPlan={piecesDuPlan}
+        dressing={dressing}
+        onOuvrir={onOuvrir}
+        onMenu={onMenu}
+        onOuvrirValise={onOuvrirValise}
+        peutPlanifierLe={peutPlanifierLe}
+        onPlanifierLe={onPlanifierLe}
+      />
+    );
+  }
+
+  // ── VUE LISTE ──────────────────────────────────────────────────────────
+  if (etat.mode === "liste") {
+    const groupes = groupesParMois(liste);
+    return (
+      <>
+        {entete}
+        {sousTitre && <div className="t-chapeau text-muted-3 mt-[8px]">{sousTitre}</div>}
+        {(aVenir.length > 0 || passees.length > 0) && <div className="mt-[18px]">{onglets}</div>}
+        {groupes.length === 0 ? (
+          <EmptyState forme={passe ? "carte" : "invitation"} className="mt-[22px]" titre={passe ? "Aucun look passé" : "Ton prochain look commence ici."}>
+            {passe ? "Tes looks et tes voyages viendront ici une fois leur date passée." : "Planifie une tenue pour une occasion, un voyage ou simplement demain."}
+          </EmptyState>
+        ) : (
+          groupes.map((g) => (
+            <section key={g.cle} className="mt-[24px]" style={{ opacity: passe ? 0.85 : 1 }}>
+              <h2 className="t-surtitre text-muted">{g.libelle}</h2>
+              <div className="flex flex-col gap-[8px] mt-[10px]">
+                {g.items.map((p) => (
+                  <LignePlanification
+                    key={p.type === "tenue" ? p.tenue.id : "valise-" + p.valise.id}
+                    p={p}
+                    piecesDuPlan={piecesDuPlan}
+                    dressing={dressing}
+                    onTenue={(t) => ouvrirJour(t.jour)}
+                    onOuvrirValise={onOuvrirValise}
+                    avecDate
+                  />
+                ))}
+              </div>
+            </section>
+          ))
+        )}
+      </>
+    );
+  }
+
+  // ── VUE AGENDA ─────────────────────────────────────────────────────────
+  const prochain = passe ? null : (aVenir.find((p): p is Extract<Planification, { type: "tenue" }> => p.type === "tenue")?.tenue ?? null);
+  const autres = liste.filter((p) => !(p.type === "tenue" && p.tenue === prochain));
+  const AUTRES_MAX = 3;
+  return (
+    <>
+      {entete}
+      <div className="t-chapeau text-muted-3 mt-[8px]" style={{ textWrap: "pretty" }}>
+        Organise tes tenues et profite de chaque occasion en toute sérénité.
+      </div>
       {(aVenir.length > 0 || passees.length > 0) && <div className="mt-[18px]">{onglets}</div>}
 
-      {vide ? (
+      <Calendrier
+        peutPlanifierLe={peutPlanifierLe}
+        onPlanifierLe={onPlanifierLe}
+        mois={etat.mois}
+        selection={etat.jour}
+        aujourdhui={aujourdhui}
+        parJour={parJour}
+        onMois={(mois) => onEtat({ ...etat, mois })}
+        onJour={ouvrirJour}
+      />
+
+      {liste.length === 0 ? (
         passe ? (
           <EmptyState forme="carte" className="mt-[26px]" titre="Aucun look passé">
             Tes looks et tes voyages viendront ici une fois leur date passée.
           </EmptyState>
         ) : (
-          /* L'ÉTAT VIDE — une invitation, pas un constat, dans la forme des
-             autres états vides de l'app (cadre en pointillés, titre de carte :
-             Tenue, hub Planifier). Le bouton est celui du pied de page,
-             toujours visible : il n'est pas répété ici. */
-          <EmptyState forme="invitation" className="mt-4" titre="Ton prochain look commence ici.">
+          <EmptyState forme="invitation" className="mt-[22px]" titre="Ton prochain look commence ici.">
             Planifie une tenue pour une occasion, un voyage ou simplement demain.
           </EmptyState>
         )
       ) : (
         <>
-          {/* NIVEAU 3 — LES VOYAGES, EN CONTEXTE. Une ligne légère, sans fond :
-              « Capsela a préparé ma garde-robe pour ce voyage », pas une
-              seconde carte qui disputerait la place au look. */}
-          {agenda.voyages.length > 0 && (
-            <div className="mt-[20px] flex flex-col gap-[10px]">
-              {agenda.voyages.map((v) => {
-                const nb = looksDisponibles(v, dressing);
-                const occasions = occasionsDuVoyage(v);
-                return (
-                  <button
-                    key={"voyage-" + v.id}
-                    onClick={() => onOuvrirValise(v)}
-                    className="w-full text-left rounded-carte border border-border px-4 py-[11px] flex items-center gap-3 cursor-pointer transition-transform active:scale-[.99]"
-                    style={{ opacity: passe ? 0.78 : 1 }}
-                  >
-                    <span className="flex-1 min-w-0">
-                      <span className="flex items-center gap-[7px] t-label">
-                        <span className="text-terracotta flex-shrink-0">
-                          <GlypheOccasion occasion="voyage" taille={14} />
-                        </span>
-                        <span className="text-terracotta truncate">{v.destination}</span>
-                        <span className="text-muted whitespace-nowrap">
-                          {dateCourte(v.depart).replace(/^\S+ /, "")}
-                          {v.depart !== v.retour ? ` — ${dateCourte(v.retour).replace(/^\S+ /, "")}` : ""}
-                        </span>
-                      </span>
-                      {nb > 0 && (
-                        <span className="block text-[13px] text-ink mt-[6px]">
-                          {nb} {nb > 1 ? "looks préparés" : "look préparé"}
-                        </span>
-                      )}
-                      {occasions.length > 0 && (
-                        <span className="block text-[12px] text-muted mt-[2px] truncate">{occasions.join(" · ")}</span>
-                      )}
-                    </span>
-                    <span className="text-muted">
-                      <Chevron />
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* NIVEAU 1 — LE PROCHAIN LOOK. */}
-          {agenda.prochain && (
+          {prochain && (
             <ProchainLook
-              t={agenda.prochain}
-              pieces={piecesDuPlan(agenda.prochain)}
-              echeance={echeanceCourte(agenda.prochain.jour, aujourdhui)}
+              t={prochain}
+              pieces={piecesDuPlan(prochain)}
+              echeance={echeanceLongue(prochain.jour, aujourdhui)}
               onOuvrir={onOuvrir}
               onMenu={onMenu}
             />
           )}
-
-          {/* NIVEAU 2 — LA FRISE DES LOOKS SUIVANTS (ou des looks passés, plus
-              discrète). Une ligne verticale très fine relie les dates. */}
-          {agenda.suivants.length > 0 && (
-            <section className="mt-[34px]">
-              {!passe && <div className="t-surtitre text-muted">Tes prochains looks</div>}
-              <ol className="relative mt-[16px]" style={{ opacity: passe ? 0.8 : 1 }}>
-                <span aria-hidden="true" className="absolute left-[5px] top-[8px] bottom-[26px] w-px bg-border" />
-                {agenda.suivants.map((t) => {
-                  const pieces = piecesDuPlan(t);
-                  const echeance = passe ? null : echeanceCourte(t.jour, aujourdhui);
-                  const ville = villeDuLieu(t.lieu);
-                  return (
-                    <li key={t.id} className="relative pl-[26px] pb-[24px]">
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-0 top-[3px] w-[11px] h-[11px] rounded-full border"
-                        style={{
-                          borderColor: passe ? "var(--color-border)" : "var(--color-terracotta)",
-                          background: passe ? "var(--color-border)" : "var(--color-cream)",
-                        }}
-                      />
-                      <div className="t-label text-terracotta">
-                        {dateCourte(t.jour)}
-                        {echeance && <span className="text-muted"> · {echeance}</span>}
-                      </div>
-                      <button
-                        onClick={() => onOuvrir(t)}
-                        aria-label={`Voir le look : ${occasionShortLabel(t.occasion)}, ${dateLongue(t.jour)}`}
-                        className="mt-[9px] w-full flex items-center gap-[14px] text-left cursor-pointer transition-transform active:scale-[.99]"
-                      >
-                        <span className="w-[44%] max-w-[180px] flex-shrink-0 rounded-carte bg-warm-bg p-[8px]" style={{ aspectRatio: "1 / 1" }}>
-                          {pieces.length > 0 && <OutfitComposition items={pieces} variant="planche" />}
-                        </span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block t-titre-carte text-ink">{occasionShortLabel(t.occasion)}</span>
-                          <span className="block text-[12px] text-muted-3 mt-[5px]">
-                            {t.moment}
-                            {ville ? ` · ${ville}` : ""}
-                          </span>
-                        </span>
-                        <span className="text-muted">
-                          <Chevron />
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
+          {autres.length > 0 && (
+            <section className="mt-[30px]">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="t-surtitre text-muted">{passe ? "Tes derniers looks" : prochain ? "Autres looks à venir" : "Tes voyages à venir"}</h2>
+                {autres.length > AUTRES_MAX || (prochain && autres.length > 0) ? (
+                  <button
+                    onClick={() => onEtat({ ...etat, mode: "liste" })}
+                    className="text-[12px] text-terracotta cursor-pointer min-h-[44px] -my-[12px] flex items-center"
+                  >
+                    Voir tout
+                  </button>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-[8px] mt-[12px]">
+                {autres.slice(0, AUTRES_MAX).map((p) => (
+                  <LignePlanification
+                    key={p.type === "tenue" ? p.tenue.id : "valise-" + p.valise.id}
+                    p={p}
+                    piecesDuPlan={piecesDuPlan}
+                    dressing={dressing}
+                    onTenue={(t) => ouvrirJour(t.jour)}
+                    onOuvrirValise={onOuvrirValise}
+                  />
+                ))}
+              </div>
             </section>
           )}
+        </>
+      )}
+    </>
+  );
+}
 
-          {/* LE RESTE — une ligne par look : la hiérarchie tient jusqu'au bout. */}
-          {agenda.plusTard.length > 0 && (
-            <section className="mt-[10px]" style={{ opacity: passe ? 0.8 : 1 }}>
-              <div className="t-surtitre text-muted">{passe ? "Plus anciens" : "Plus tard"}</div>
-              <div className="mt-[6px]">
-                {agenda.plusTard.map((t) => {
-                  const ville = villeDuLieu(t.lieu);
-                  return (
+/**
+ * LE CALENDRIER DU MOIS — compact, dans une carte crème. La case choisie est pleine terracotta ; aujourd'hui, cerclé ; les jours d'un autre
+ * mois, atténués. Un point = un look, deux points = plusieurs, un trait = un voyage : la légende le dit, et chaque case porte un nom qui le dit.
+ * La grille vient de grilleDuMoisComplete (Mon planning), la même partout.
+ */
+function Calendrier({
+  mois,
+  selection,
+  aujourdhui,
+  parJour,
+  onMois,
+  onJour,
+  peutPlanifierLe,
+  onPlanifierLe,
+}: {
+  peutPlanifierLe: (jour: string) => boolean;
+  onPlanifierLe: (jour: string) => void;
+  mois: string;
+  selection: string;
+  aujourdhui: string;
+  parJour: Map<string, JourAgenda>;
+  onMois: (mois: string) => void;
+  onJour: (jour: string) => void;
+}) {
+  const d = dateDe(mois);
+  const semaines = grilleDuMoisComplete(d.getFullYear(), d.getMonth());
+  return (
+    <section className="mt-[18px] rounded-carte border border-border bg-card px-[12px] pt-[12px] pb-[10px]" aria-label="Calendrier de tes looks">
+      <div className="flex items-center justify-between pl-[6px]">
+        <h2 className="font-serif text-[19px] text-ink" aria-live="polite">
+          {libelleMoisAnnee(mois)}
+        </h2>
+        <div className="flex items-center">
+          <button onClick={() => onMois(moisDecale(mois, -1))} aria-label="Mois précédent" className="w-11 h-11 flex items-center justify-center text-ink cursor-pointer rounded-full active:opacity-60">
+            <Fleche vers="gauche" />
+          </button>
+          <button onClick={() => onMois(moisDecale(mois, 1))} aria-label="Mois suivant" className="w-11 h-11 flex items-center justify-center text-ink cursor-pointer rounded-full active:opacity-60">
+            <Fleche vers="droite" />
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 mt-[2px]" aria-hidden="true">
+        {JOURS_ENTETE.map((j) => (
+          <span key={j} className="text-center text-[10px] uppercase tracking-[.08em] text-muted py-[4px]">
+            {j}
+          </span>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-[2px]">
+        {semaines.flat().map(({ jour, horsMois }) => {
+          const marque = marqueDuJour(parJour.get(jour));
+          const choisi = jour === selection;
+          const auj = jour === aujourdhui;
+          const n = dateDe(jour).getDate();
+          // Un jour libre et planifiable : le « + » ouvre directement le parcours, la date choisie.
+          const ajout = marque.looks === "aucun" && !marque.voyage && !horsMois && peutPlanifierLe(jour);
+          return (
+            <button
+              key={jour}
+              onClick={() => (ajout ? onPlanifierLe(jour) : onJour(jour))}
+              aria-label={`${titreJour(jour)}${auj ? ", aujourd'hui" : ""} : ${ajout ? "rien de prévu, planifier un look" : nomMarque(marque)}`}
+              aria-current={auj ? "date" : undefined}
+              className="flex flex-col items-center justify-center min-h-[44px] cursor-pointer"
+            >
+              <span
+                className="w-[34px] h-[34px] rounded-full flex flex-col items-center justify-center gap-[2px] text-[13px] tabular-nums"
+                style={{
+                  background: choisi ? "var(--color-terracotta-deep)" : undefined,
+                  color: choisi ? "var(--color-on-terracotta)" : horsMois ? "var(--color-muted)" : "var(--color-ink)",
+                  opacity: horsMois && !choisi ? 0.55 : 1,
+                  boxShadow: auj && !choisi ? "inset 0 0 0 1px var(--color-terracotta)" : undefined,
+                  fontWeight: choisi || auj ? 600 : 400,
+                }}
+              >
+                <span className="leading-none mt-[3px]">{n}</span>
+                <Marques marque={marque} sur={choisi ? "terracotta" : "clair"} ajout={ajout} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-center flex-wrap gap-x-[14px] gap-y-[4px] mt-[8px] pt-[8px] border-t border-border text-[10.5px] text-muted-3" aria-hidden="true">
+        <span className="inline-flex items-center gap-[5px]">
+          <Marques marque={{ looks: "un", voyage: false }} sur="clair" /> Un look
+        </span>
+        <span className="inline-flex items-center gap-[5px]">
+          <Marques marque={{ looks: "plusieurs", voyage: false }} sur="clair" /> Plusieurs looks
+        </span>
+        <span className="inline-flex items-center gap-[5px]">
+          <Marques marque={{ looks: "aucun", voyage: true }} sur="clair" /> Voyage
+        </span>
+        <span className="inline-flex items-center gap-[5px]">
+          <Marques marque={{ looks: "aucun", voyage: false }} sur="clair" ajout /> Planifier
+        </span>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * UNE LIGNE DE PLANIFICATION — l'agenda (« Autres looks à venir ») et la liste. Plus compacte que le prochain rendez-vous : la date, la
+ * miniature de la tenue, l'occasion, ce qui est préparé, le lieu et la météo ENREGISTRÉE (dite à la planification, jamais une prévision).
+ */
+function LignePlanification({
+  p,
+  piecesDuPlan,
+  dressing,
+  onTenue,
+  onOuvrirValise,
+  avecDate = false,
+}: {
+  p: Planification;
+  piecesDuPlan: (t: TenuePlanifiee) => Item[];
+  dressing: Item[];
+  onTenue: (t: TenuePlanifiee) => void;
+  onOuvrirValise: (v: ValiseGardee) => void;
+  /** La vue Liste pose la date à gauche, en colonne ; l'agenda la met dans le texte. */
+  avecDate?: boolean;
+}) {
+  const jour = p.type === "tenue" ? p.tenue.jour : p.valise.depart;
+  const d = dateDe(jour);
+  const colonneDate = avecDate && (
+    <span className="w-[34px] flex-shrink-0 text-center" aria-hidden="true">
+      <span className="block text-[10px] tracking-[.08em] text-muted">{DOW_CAPS[d.getDay()]}</span>
+      <span className="block font-serif text-[22px] leading-[1.1] text-terracotta">{d.getDate()}</span>
+    </span>
+  );
+  const classe = "w-full flex items-center gap-[12px] rounded-carte border border-border bg-card px-[12px] py-[10px] text-left cursor-pointer transition-transform active:scale-[.99]";
+  if (p.type === "valise") {
+    const v = p.valise;
+    const nb = looksDisponibles(v, dressing);
+    const occasions = occasionsDuVoyage(v);
+    return (
+      <button onClick={() => onOuvrirValise(v)} className={classe} aria-label={`Voyage à ${v.destination}, ${dateLongue(v.depart)}${nb ? `, ${pluriel(nb, "look préparé", "looks préparés")}` : ""}`}>
+        {colonneDate}
+        <span className="w-[52px] h-[52px] flex-shrink-0 rounded-champ bg-warm-bg flex items-center justify-center text-terracotta" aria-hidden="true">
+          <GlypheOccasion occasion="voyage" taille={22} />
+        </span>
+        <span className="flex-1 min-w-0">
+          {!avecDate && <span className="block t-label text-terracotta">{dateCourte(v.depart)}{v.retour !== v.depart ? ` → ${dateCourte(v.retour).replace(/^\S+ /, "")}` : ""}</span>}
+          <span className="block t-titre-vignette text-ink truncate">Voyage · {v.destination}</span>
+          <span className="block text-[12px] text-muted-3 mt-[2px] truncate">
+            {nb > 0 ? pluriel(nb, "look préparé", "looks préparés") : "Valise préparée"}
+            {occasions.length ? ` · ${occasions.join(", ")}` : ""}
+          </span>
+        </span>
+        <span className="text-muted">
+          <Chevron />
+        </span>
+      </button>
+    );
+  }
+  const t = p.tenue;
+  const ville = villeDuLieu(t.lieu);
+  const meteo = meteoEnregistree(t);
+  return (
+    <button onClick={() => onTenue(t)} className={classe} aria-label={`${occasionShortLabel(t.occasion)}, ${dateLongue(t.jour)}, ${t.moment.toLowerCase()}`}>
+      {colonneDate}
+      <Miniature pieces={piecesDuPlan(t)} taille={52} />
+      <span className="flex-1 min-w-0">
+        {!avecDate && <span className="block t-label text-terracotta">{dateCourte(t.jour)}</span>}
+        <span className="block t-titre-vignette text-ink truncate">{occasionShortLabel(t.occasion)}</span>
+        <span className="block text-[12px] text-muted-3 mt-[2px] truncate">
+          {[momentDistinct(t), ville, avecDate && meteo ? `${t.temp}°` : null].filter(Boolean).join(" · ")}
+        </span>
+      </span>
+      <span className="text-muted">
+        <Chevron />
+      </span>
+    </button>
+  );
+}
+
+/**
+ * LA VUE JOUR — le détail d'une date : la date en titre, un sélecteur des jours voisins (une grille de sept, sans défilement de page),
+ * la météo du jour quand elle est fiable, puis chaque look du jour en grand avec ses pièces, les voyages en cours, et les moments
+ * encore libres quand Planifier accepte cette date. Les actions sont celles d'avant : voir le look (son détail : modifier, avis d'un
+ * proche, avis de styliste), le menu « … », planifier un look — rien d'ajouté au modèle.
+ */
+function VueJour({
+  jour,
+  parJour,
+  aujourdhui,
+  onJour,
+  onCalendrier,
+  piecesDuPlan,
+  dressing,
+  onOuvrir,
+  onMenu,
+  onOuvrirValise,
+  peutPlanifierLe,
+  onPlanifierLe,
+}: {
+  jour: string;
+  parJour: Map<string, JourAgenda>;
+  aujourdhui: string;
+  onJour: (jour: string) => void;
+  onCalendrier: () => void;
+  piecesDuPlan: (t: TenuePlanifiee) => Item[];
+  dressing: Item[];
+  onOuvrir: (t: TenuePlanifiee) => void;
+  onMenu: (t: TenuePlanifiee) => void;
+  onOuvrirValise: (v: ValiseGardee) => void;
+  peutPlanifierLe: (jour: string) => boolean;
+  onPlanifierLe: (jour: string) => void;
+}) {
+  const duJour = parJour.get(jour) ?? { tenues: [], valises: [] };
+  const premiere = duJour.tenues[0] ?? null;
+  // La météo de la date : la PRÉVISION du lieu du premier look quand elle couvre la date (useMeteoDuPlan, horizon de prévision), sinon
+  // celle enregistrée à la planification, dite comme telle. Jamais inventée, jamais la météo d'aujourd'hui pour un autre jour.
+  const prevision = useMeteoDuPlan(premiere);
+  const meteo = prevision
+    ? { texte: `${Math.round(prevision.temp)}° · ${prevision.label}`, source: "Prévision" }
+    : premiere && premiere.temp != null
+      ? { texte: meteoEnregistree(premiere)!, source: "Prévue à la planification" }
+      : null;
+  const ville = premiere ? villeDuLieu(premiere.lieu) : duJour.valises[0]?.destination;
+  const sousTitre = [premiere ? occasionShortLabel(premiere.occasion) : duJour.valises.length ? "Voyage" : null, ville].filter(Boolean).join(" · ");
+  const libres = momentsLibres(duJour.tenues);
+  const planifiable = peutPlanifierLe(jour) && libres.length > 0;
+  const nb = duJour.tenues.length;
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <div className="t-surtitre text-muted">Planifier</div>
+        <button onClick={onCalendrier} className="text-[12px] text-terracotta cursor-pointer min-h-[44px] -my-[12px] flex items-center gap-[4px]">
+          Calendrier
+        </button>
+      </div>
+      <h1 className="t-titre-ecran text-ink mt-[6px]">{titreJour(jour)}</h1>
+      {sousTitre && <div className="t-chapeau text-muted-3 mt-[4px]">{sousTitre}</div>}
+
+      {/* LES JOURS VOISINS — sept cases dans la largeur, sans défilement : le jour choisi au centre ; toucher un voisin le recentre. */}
+      <nav className="mt-[16px] grid grid-cols-7 gap-[4px]" aria-label="Choisir un autre jour">
+        {joursAutour(jour).map((j) => {
+          const d = dateDe(j);
+          const choisi = j === jour;
+          const marque = marqueDuJour(parJour.get(j));
+          const ajout = !choisi && marque.looks === "aucun" && !marque.voyage && peutPlanifierLe(j);
+          return (
+            <button
+              key={j}
+              onClick={() => onJour(j)}
+              aria-label={`${titreJour(j)} : ${ajout ? "rien de prévu" : nomMarque(marque)}`}
+              aria-current={choisi ? "date" : undefined}
+              className="flex flex-col items-center gap-[3px] rounded-champ py-[8px] cursor-pointer min-h-[60px] border"
+              style={{
+                background: choisi ? "var(--color-terracotta-deep)" : "var(--color-card)",
+                borderColor: choisi ? "var(--color-terracotta-deep)" : "var(--color-border)",
+                color: choisi ? "var(--color-on-terracotta)" : "var(--color-ink)",
+              }}
+            >
+              <span className="text-[9.5px] tracking-[.06em]" style={{ opacity: choisi ? 0.9 : 0.6 }}>
+                {DOW_CAPS[d.getDay()]}
+              </span>
+              <span className="text-[15px] leading-none tabular-nums" style={{ fontWeight: j === aujourdhui || choisi ? 600 : 400 }}>
+                {d.getDate()}
+              </span>
+              <Marques marque={marque} sur={choisi ? "terracotta" : "clair"} ajout={ajout} />
+            </button>
+          );
+        })}
+      </nav>
+
+      {meteo && (
+        <div className="mt-[14px] inline-flex items-center gap-[8px] rounded-full border border-border bg-card px-[12px] py-[6px] text-[12px] text-ink">
+          <span>{meteo.texte}</span>
+          <span className="text-muted">· {meteo.source}</span>
+        </div>
+      )}
+
+      {nb === 0 && duJour.valises.length === 0 ? (
+        <EmptyState
+          forme="invitation"
+          className="mt-[20px]"
+          titre="Rien de prévu ce jour-là."
+          action={peutPlanifierLe(jour) ? { libelle: "Planifier un look ce jour-là", onClick: () => onPlanifierLe(jour) } : undefined}
+        >
+          {peutPlanifierLe(jour) ? "Une occasion en vue ? Capsela compose la tenue avec la météo prévue." : "Choisis un autre jour, ou reviens au calendrier."}
+        </EmptyState>
+      ) : (
+        <>
+          {nb > 0 && <h2 className="font-serif text-[19px] text-ink mt-[20px]">{pluriel(nb, "look planifié", "looks planifiés")}</h2>}
+          {duJour.tenues.map((t) => {
+            const pieces = piecesDuPlan(t);
+            const detail = detailCapsela(pieces, t.occasion) ?? titreLookDuJour(t.occasion, (t.sousChoix ?? "") as WorkMode, (t.sousChoix ?? "") as DateContext);
+            return (
+              <article key={t.id} className="mt-[12px]">
+                <Card rayon="hero" className="p-[10px]">
+                  <div className="relative">
                     <button
-                      key={t.id}
                       onClick={() => onOuvrir(t)}
-                      className="w-full flex items-center gap-3 py-[13px] border-b border-border text-left cursor-pointer active:opacity-80"
+                      aria-label={`Voir le look : ${occasionShortLabel(t.occasion)}, ${t.moment.toLowerCase()}`}
+                      className="block w-full rounded-carte bg-warm-bg cursor-pointer transition-transform active:scale-[.99]"
+                      style={{ aspectRatio: "100 / 86", padding: "18px 16px" }}
                     >
-                      <span className="t-label text-muted w-[92px] flex-shrink-0 whitespace-nowrap">{dateCourte(t.jour)}</span>
-                      <span className="flex-1 min-w-0 truncate">
-                        <span className="text-[13px] text-ink">{occasionShortLabel(t.occasion)}</span>
-                        {ville && <span className="text-[12px] text-muted"> · {ville}</span>}
-                      </span>
-                      <span className="text-muted">
-                        <Chevron />
+                      {pieces.length > 0 ? (
+                        <OutfitComposition items={pieces} variant="planche" />
+                      ) : (
+                        <span className="h-full flex items-center justify-center text-center px-6 text-[13px] text-muted-3 leading-[1.5]">
+                          Les pièces de ce look ne sont plus dans ton dressing.
+                        </span>
+                      )}
+                    </button>
+                    <span className="absolute top-[10px] left-[10px] rounded-full bg-card/90 border border-border px-[10px] py-[4px] text-[11px] text-terracotta">
+                      {[occasionShortLabel(t.occasion), momentDistinct(t)].filter(Boolean).join(" · ")}
+                    </span>
+                    <button
+                      onClick={() => onMenu(t)}
+                      aria-label={`Actions pour ce look`}
+                      className="absolute top-[4px] right-[4px] w-11 h-11 flex items-center justify-center cursor-pointer text-muted-3"
+                    >
+                      <span aria-hidden="true" className="text-[17px] leading-none">
+                        ⋯
                       </span>
                     </button>
-                  );
-                })}
+                  </div>
+                  <div className="px-[8px] pt-[12px] pb-[6px]">
+                    <p className="font-serif italic text-[15px] leading-[1.45] text-ink" style={{ textWrap: "pretty" }}>
+                      {detail}
+                    </p>
+                    <Button className="mt-[14px]" onClick={() => onOuvrir(t)}>
+                      Voir le look
+                    </Button>
+                  </div>
+                </Card>
+                <RailPiecesTenue pieces={pieces} />
+              </article>
+            );
+          })}
+
+          {duJour.valises.length > 0 && (
+            <section className="mt-[24px]">
+              <h2 className="t-surtitre text-muted">En voyage</h2>
+              <div className="flex flex-col gap-[8px] mt-[10px]">
+                {duJour.valises.map((v) => (
+                  <LignePlanification key={v.id} p={{ type: "valise", valise: v }} piecesDuPlan={piecesDuPlan} dressing={dressing} onTenue={() => {}} onOuvrirValise={onOuvrirValise} />
+                ))}
               </div>
             </section>
           )}
 
-          {!passe && (
-            <div className="text-[11.5px] text-muted text-center leading-[1.5] mt-[26px]">
-              Pour une occasion, une destination
-              <br />
-              ou simplement demain.
-            </div>
+          {/* AUTRES MOMENTS — le modèle accepte un look par moment (Matin, Après-midi, Soirée, Toute la journée) : les moments libres
+              ouvrent le parcours existant, date choisie. Seulement quand Planifier propose cette date (demain à J+21). */}
+          {planifiable && nb > 0 && (
+            <section className="mt-[26px]">
+              <h2 className="t-surtitre text-muted">Autres moments de la journée</h2>
+              <button
+                onClick={() => onPlanifierLe(jour)}
+                className="mt-[10px] w-full flex items-center gap-[12px] rounded-carte border border-dashed border-sand-border px-[14px] py-[12px] text-left cursor-pointer active:opacity-80"
+              >
+                <span className="w-[34px] h-[34px] rounded-full border border-border flex items-center justify-center text-terracotta text-[18px] leading-none" aria-hidden="true">
+                  +
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[13.5px] text-ink">Ajouter un look</span>
+                  <span className="block text-[12px] text-muted-3 mt-[2px] truncate">{libres.join(", ")}</span>
+                </span>
+                <span className="text-muted">
+                  <Chevron />
+                </span>
+              </button>
+            </section>
           )}
         </>
       )}
