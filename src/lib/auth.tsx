@@ -8,6 +8,10 @@ import { DEFAULT_PREFS, EMPTY_PROFILE, stylesDuGenre, type Profile } from "./pro
 import { effacerDonneesLocales } from "./donneesLocales";
 import { consumeSignupIntent, forgetSignupIntent } from "./signupIntent";
 import { lireRetourLien, messageErreurNouveauMotDePasse, PARAM_RECUPERATION } from "./motDePasse";
+import { App } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
+import type { PluginListenerHandle } from "@capacitor/core";
+import { estNatif, lireRetourNatif, REDIRECTION_NATIVE } from "./authNatif";
 
 const DEMO_KEY = "capsela.demo.auth";
 
@@ -225,7 +229,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfilChargeReel(false);
       }
     });
-    return () => sub.subscription.unsubscribe();
+    // LE RETOUR DANS L'APP (17/10/2026) : le lien profond `app.capsela://auth/callback`, à l'ouverture de l'app (getLaunchUrl) ou
+    // pendant qu'elle tourne (appUrlOpen). Le code est échangé contre une session ; onAuthStateChange, ci-dessus, fait le reste.
+    let ecoute: PluginListenerHandle | null = null;
+    if (estNatif()) {
+      const traiter = async (url: string) => {
+        const retour = lireRetourNatif(url);
+        if (!retour) return;
+        void Browser.close().catch(() => {});
+        if (retour.erreur) {
+          if (retour.recuperation) setRecuperation("lien_invalide");
+          return;
+        }
+        if (retour.code) await supabase.auth.exchangeCodeForSession(retour.code);
+        else if (retour.accessToken && retour.refreshToken)
+          await supabase.auth.setSession({ access_token: retour.accessToken, refresh_token: retour.refreshToken });
+        if (retour.recuperation) setRecuperation("active");
+      };
+      void App.getLaunchUrl().then((r) => {
+        if (r?.url) void traiter(r.url);
+      });
+      void App.addListener("appUrlOpen", ({ url }) => void traiter(url)).then((h) => (ecoute = h));
+    }
+    return () => {
+      sub.subscription.unsubscribe();
+      void ecoute?.remove();
+    };
   }, [loadProfile]);
 
   const persistDemo = (demo: DemoAuth | null) => {
@@ -297,6 +326,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(restored.profile);
       setJustSignedUp(consumeSignupIntent());
       return true;
+    }
+    // Dans l'app : la page Google s'ouvre dans le navigateur du système et revient par le lien profond (authNatif.ts).
+    if (estNatif()) {
+      const { data, error: err } = await getSupabase().auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: REDIRECTION_NATIVE, skipBrowserRedirect: true },
+      });
+      if (err || !data?.url) {
+        setError(frenchAuthError(err?.message ?? ""));
+        return false;
+      }
+      await Browser.open({ url: data.url });
+      return false;
     }
     const { error: err } = await getSupabase().auth.signInWithOAuth({
       provider: "google",
@@ -386,7 +428,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isSupabaseConfigured) return "demo";
     try {
       const { error: err } = await getSupabase().auth.resetPasswordForEmail(adresse.trim(), {
-        redirectTo: `${window.location.origin}/?${PARAM_RECUPERATION}=1`,
+        redirectTo: estNatif() ? `${REDIRECTION_NATIVE}?${PARAM_RECUPERATION}=1` : `${window.location.origin}/?${PARAM_RECUPERATION}=1`,
       });
       if (!err) return "envoye";
       const m = err.message.toLowerCase();

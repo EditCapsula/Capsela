@@ -23,6 +23,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Le lien profond de retour de connexion (Google, nouveau mot de passe) : app.capsela://auth/callback (authNatif.ts). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="app.capsela" android:host="auth" />
+            </intent-filter>
+
         </activity>
 
         <provider
