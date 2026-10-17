@@ -70,7 +70,7 @@ import {
 import type { FamilleLook } from "./ideesLooks";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import { colorimetrieMoteur } from "./colorimetrieMoteur";
-import { SLIDES, cleTenue, slidesDuJour, type SlideId } from "./carrousel";
+import { NB_SLIDES_INITIALES, SLIDES, cleTenue, slideDeLOccasion, slidesDuJour, typeDeJour, type SlideId } from "./carrousel";
 import {
   accessoireTypeFor,
   detectAccessoireType,
@@ -531,6 +531,8 @@ export interface Actions {
   regenOutfit: () => void;
   /** « Autre idée » d'une slide du carrousel qui ne porte pas la tenue du jour : une autre proposition pour SON occasion, sans toucher aux autres slides ni au planning. */
   autreIdeeSlide: (slide: SlideId) => void;
+  /** Tire la slide suivante du carrousel de l'accueil (calcul paresseux, 17/10/2026). */
+  etendreCarrousel: () => void;
   /** « Voir le look » d'une slide : ouvre Tenue sur CETTE tenue, son occasion présélectionnée ; la tenue du jour est rendue en quittant Tenue (AppState.consultation). `planId` : la slide est le plan appliqué. */
   consulterTenue: (ids: number[], occasion: OccasionKey, planId: string | null) => void;
   dismissOutfitSuggestion: (key: string) => void;
@@ -1419,11 +1421,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // LES PROPOSITIONS DU CARROUSEL (14/10/2026) : tirées une fois que la tenue du jour existe (pour ne pas la répéter), seulement pour
   // aujourd'hui, et seulement quand l'accueil est affiché — jamais en arrière-plan. Recalculées si le jour, le dressing, la météo, le
   // profil ou le mode de travail changent (`cle`), jamais à chaque nouvelle tenue du jour : un « Autre idée » ailleurs ne bouge pas les autres slides.
-  // Le jeu de slides suit « Mon rythme » (17/10/2026, slidesDuJour) : travail un jour travaillé, sport un jour de repos ou de congés.
-  const jourTravaille = occasionParDefaut(profile.prefs, new Date()) === "travail_formel";
+  // L'ordre des slides suit « Mon rythme » (17/10/2026, slidesDuJour) : travail d'abord un jour travaillé, jamais un jour de repos.
+  const jourCarrousel = typeDeJour(occasionParDefaut(profile.prefs, new Date()));
   const cleCarrousel = [
     jourLocal(),
-    jourTravaille ? "travaille" : "repos",
+    jourCarrousel,
     state.items.map((i) => i.id).join("."),
     meteoDuJour.label,
     Math.round(meteoDuJour.temp),
@@ -1431,27 +1433,43 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     profile.gender ?? "",
     state.workMode,
   ].join("|");
+  /**
+   * Tire les propositions des slides suivantes de l'ordre du jour, jusqu'à en avoir `cible` d'affichées (la tenue du jour comprise) ou
+   * jusqu'au bout de l'ordre. Une slide tentée (même vide) ne l'est plus : `tentees`. La slide de la tenue du jour n'a pas besoin de
+   * proposition. Calcul paresseux (17/10/2026) : chaque slide coûte jusqu'à 16 tirages du moteur ; huit d'un coup bloqueraient l'Accueil.
+   */
+  const completerCarrousel = (s: AppState, cle: string, cible: number): AppState => {
+    const memeCle = s.carrousel?.cle === cle;
+    const propositions: NonNullable<AppState["carrousel"]>["propositions"] = memeCle ? { ...s.carrousel!.propositions } : {};
+    const tentees = new Set<SlideId>(memeCle ? (s.carrousel!.tentees ?? []) : []);
+    const resolution = [...s.items, ...vestiaireRef.current];
+    const slideDuJour = s.outfit.length ? slideDeLOccasion(s.occasion) : null;
+    const montrees = new Set<string>(
+      [s.outfit, ...Object.values(propositions)]
+        .filter((ids): ids is number[] => Array.isArray(ids) && ids.length > 0)
+        .map((ids) => clePrincipale(ids, resolution))
+    );
+    const vues = new Set<string>(s.tenuesVues);
+    const affichees = () => Object.keys(propositions).filter((id) => id !== slideDuJour).length + (slideDuJour ? 1 : 0);
+    for (const id of slidesDuJour(jourCarrousel)) {
+      if (affichees() >= cible) break;
+      if (tentees.has(id)) continue;
+      tentees.add(id);
+      if (id === slideDuJour) continue;
+      const def = SLIDES.find((d) => d.id === id)!;
+      const ids = proposerPourOccasion(s, def.occasion, s.outfit, montrees, vues);
+      if (ids.length === 0) continue;
+      propositions[id] = ids;
+      montrees.add(clePrincipale(ids, resolution));
+    }
+    return { ...s, carrousel: { cle, propositions, tentees: [...tentees] } };
+  };
   useEffect(() => {
     if (state.screen !== "home" || state.jourDecalage !== 0) return;
     if (!ready || !dressingLoaded || geoLoading || !vestiaireResolu) return;
     if (stateRef.current.carrousel?.cle === cleCarrousel) return;
     if (!stateRef.current.outfit.length && !stateRef.current.outfitNoCompleteOutfit) return;
-    setState((s) => {
-      if (s.carrousel?.cle === cleCarrousel) return s;
-      const resolution = [...s.items, ...vestiaireRef.current];
-      const montrees = new Set<string>();
-      if (s.outfit.length) montrees.add(clePrincipale(s.outfit, resolution));
-      const vues = new Set<string>(s.tenuesVues);
-      const propositions: NonNullable<AppState["carrousel"]>["propositions"] = {};
-      for (const def of SLIDES.filter((d) => slidesDuJour(jourTravaille).includes(d.id))) {
-        // La slide de la tenue du jour (ou la première, pour un plan appliqué) n'a pas besoin de proposition.
-        const ids = proposerPourOccasion(s, def.occasion, s.outfit, montrees, vues);
-        if (ids.length === 0) continue;
-        propositions[def.id] = ids;
-        montrees.add(clePrincipale(ids, resolution));
-      }
-      return { ...s, carrousel: { cle: cleCarrousel, propositions } };
-    });
+    setState((s) => (s.carrousel?.cle === cleCarrousel ? s : completerCarrousel(s, cleCarrousel, NB_SLIDES_INITIALES)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.screen, state.jourDecalage, state.outfit.length, state.outfitNoCompleteOutfit, cleCarrousel, ready, dressingLoaded, geoLoading, vestiaireResolu]);
 
@@ -2052,6 +2070,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         planAppliqueId: planId ?? null,
         screen: "tenues",
       })),
+    // La slide suivante de l'ordre du jour, tirée quand on arrive sur l'avant-dernière (17/10/2026, completerCarrousel).
+    etendreCarrousel: () =>
+      setState((s) => {
+        if (s.jourDecalage !== 0 || !s.carrousel || s.carrousel.cle !== cleCarrousel) return s;
+        const slideDuJour = s.outfit.length ? slideDeLOccasion(s.occasion) : null;
+        const visibles = Object.keys(s.carrousel.propositions).filter((id) => id !== slideDuJour).length + (slideDuJour ? 1 : 0);
+        const suite = completerCarrousel(s, cleCarrousel, visibles + 1);
+        return (suite.carrousel?.tentees?.length ?? 0) === (s.carrousel.tentees?.length ?? 0) ? s : suite;
+      }),
     autreIdeeSlide: (slide) =>
       setState((s) => {
         const def = SLIDES.find((d) => d.id === slide);
@@ -2068,7 +2095,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         // Rien de nouveau à proposer : la slide garde sa tenue plutôt que de disparaître.
         if (ids.length === 0) return s;
         propositions[slide] = ids;
-        return { ...s, carrousel: { cle: s.carrousel?.cle ?? "", propositions } };
+        return { ...s, carrousel: { ...s.carrousel, cle: s.carrousel?.cle ?? "", propositions } };
       }),
     // Affiche la combinaison choisie sur l'écran Tenue (recette 19/08/2026) :
     // conserve l'occasion correspondante, jamais d'enregistrement comme

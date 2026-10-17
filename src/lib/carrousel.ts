@@ -1,8 +1,8 @@
 import type { OccasionKey } from "./types";
 
 /*
- * LE CARROUSEL DE L'ACCUEIL (14/10/2026) — trois propositions par occasion à la place d'une tenue unique : pour le travail, pour
- * le quotidien, pour la soirée (un jour de repos : quotidien, sport, soirée — slidesDuJour), dans cet ordre, sauf la slide de la tenue du jour, toujours en tête (17/10/2026). Module pur ; le tirage des tenues reste celui du moteur (regen, store.tsx).
+ * LE CARROUSEL DE L'ACCUEIL (14/10/2026) — une proposition par occasion à la place d'une tenue unique, dans l'ordre du
+ * jour (slidesDuJour, 17/10/2026 : travail d'abord un jour travaillé, jamais un jour de repos), sauf la slide de la tenue du jour, toujours en tête. Module pur ; le tirage des tenues reste celui du moteur (regen, store.tsx).
  *
  *   · La tenue du jour du store (state.outfit — celle qui porte l'avis, le quota, le plan appliqué) occupe la slide de SON occasion
  *     quand elle en a une. Une tenue planifiée pour aujourd'hui est montrée EN PREMIER ; depuis le 15/10/2026 (signalé : « il manque une
@@ -13,31 +13,45 @@ import type { OccasionKey } from "./types";
  *   · Une slide sans tenue valide n'est pas affichée ; deux slides ne montrent jamais la même tenue (garde ci-dessous).
  */
 
-export type SlideId = "travail" | "quotidien" | "sport" | "soiree";
+export type SlideId = "travail" | "quotidien" | "sport" | "soiree" | "date" | "voyage" | "cocooning" | "ceremonie";
 
 export const SLIDES: readonly { id: SlideId; occasion: OccasionKey; surtitre: string }[] = [
   { id: "travail", occasion: "travail_formel", surtitre: "Pour le travail" },
   { id: "quotidien", occasion: "quotidien", surtitre: "Pour ton quotidien" },
   { id: "sport", occasion: "sport", surtitre: "Pour ton sport" },
   { id: "soiree", occasion: "soiree", surtitre: "Pour ta soirée" },
+  { id: "date", occasion: "date", surtitre: "Pour ton rendez-vous" },
+  { id: "voyage", occasion: "voyage", surtitre: "Pour ton voyage" },
+  { id: "cocooning", occasion: "cocooning", surtitre: "Pour ton cocooning" },
+  { id: "ceremonie", occasion: "evenement_perso", surtitre: "Pour une cérémonie" },
 ];
 
-/**
- * LES SLIDES DU JOUR (17/10/2026, demandé : « pendant les congés et/ou le week-end, le carrousel doit pousser d'autres occasions :
- * quotidien, sport, soirée »). Un jour travaillé selon « Mon rythme » : travail, quotidien, soirée ; un jour de repos ou de congés :
- * quotidien, sport, soirée — jamais le travail. Trois slides dans les deux cas (arbitrage du 14/10/2026).
- */
-export function slidesDuJour(jourTravaille: boolean): readonly SlideId[] {
-  return jourTravaille ? ["travail", "quotidien", "soiree"] : ["quotidien", "sport", "soiree"];
+export type TypeDeJour = "travail" | "repos" | "conges";
+
+/** Le type du jour, lu sur l'occasion par défaut de « Mon rythme » (occasionParDefaut) : travail, cocooning en congés, sinon repos. */
+export function typeDeJour(occasionParDefaut: OccasionKey): TypeDeJour {
+  if (occasionParDefaut === "travail_formel") return "travail";
+  if (occasionParDefaut === "cocooning") return "conges";
+  return "repos";
 }
 
-/** La slide d'une occasion du store (« date » est une sortie du soir, comme la soirée) ; null pour cocooning, voyage… */
+/**
+ * L'ORDRE DES SLIDES DU JOUR (17/10/2026, demandé : « pendant les congés et/ou le week-end, le carrousel doit pousser d'autres
+ * occasions : quotidien, sport, soirée », puis une slide par occasion, ordre validé le même jour). Les trois premières sont tirées à
+ * l'ouverture (NB_SLIDES_INITIALES) ; les suivantes, une à une, quand on arrive sur l'avant-dernière slide (etendreCarrousel, store) :
+ * l'ouverture de l'Accueil garde le coût de trois slides. Le travail n'est jamais proposé un jour de repos ou de congés.
+ */
+export function slidesDuJour(type: TypeDeJour): readonly SlideId[] {
+  if (type === "travail") return ["travail", "quotidien", "soiree", "date", "sport", "voyage", "cocooning", "ceremonie"];
+  if (type === "conges") return ["quotidien", "cocooning", "sport", "soiree", "date", "voyage", "ceremonie"];
+  return ["quotidien", "sport", "soiree", "date", "cocooning", "voyage", "ceremonie"];
+}
+
+export const NB_SLIDES_INITIALES = 3;
+
+/** La slide d'une occasion du store ; null pour « all ». */
 export function slideDeLOccasion(occasion: OccasionKey | null | undefined): SlideId | null {
-  if (occasion === "travail_formel") return "travail";
-  if (occasion === "quotidien") return "quotidien";
-  if (occasion === "sport") return "sport";
-  if (occasion === "soiree" || occasion === "date") return "soiree";
-  return null;
+  return SLIDES.find((d) => d.occasion === occasion)?.id ?? null;
 }
 
 export type SourceSlide = "plan" | "jour" | "proposition";
@@ -61,13 +75,13 @@ export interface EntreeCarrousel {
   planAujourdhui: boolean;
   /** Les propositions du moteur, par slide. */
   propositions: Partial<Record<SlideId, number[]>>;
-  /** Jour travaillé selon « Mon rythme » (slidesDuJour) ; vrai par défaut. */
-  jourTravaille?: boolean;
+  /** Le type du jour selon « Mon rythme » (slidesDuJour) ; « travail » par défaut. */
+  jour?: TypeDeJour;
 }
 
-export function composerSlides({ tenueDuJour, occasion, planAujourdhui, propositions, jourTravaille = true }: EntreeCarrousel): SlideCarrousel[] {
+export function composerSlides({ tenueDuJour, occasion, planAujourdhui, propositions, jour = "travail" }: EntreeCarrousel): SlideCarrousel[] {
   const aLaTenue = tenueDuJour.length > 0;
-  const ordre = slidesDuJour(jourTravaille);
+  const ordre = slidesDuJour(jour);
   const slideDuJour: SlideId | null = !aLaTenue ? null : (slideDeLOccasion(occasion) ?? (planAujourdhui ? ordre[0] : null));
   // Une tenue du jour choisie hors du jeu du jour (le travail un samedi, à la main) garde sa slide : on ne la retire jamais.
   const ids = slideDuJour && !ordre.includes(slideDuJour) ? [slideDuJour, ...ordre] : ordre;
