@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `npm run verify` — typecheck → lint → test → build, l'ordre exact de `.github/workflows/ci.yml`. C'est la seule vérification qui compte avant un commit (cf. AGENTS.md).
 - `npm run dev` — serveur de développement ; `npm run build` produit le site statique dans `out/`.
+- `npm run mobile:sync` — construit le site puis le copie dans les projets natifs `ios/` et `android/` (Capacitor, `docs/applications-mobiles.md`). Le site web n'en dépend pas.
 - Un seul fichier de tests : `npx vitest run src/lib/__tests__/etatDePort.test.ts` ; un seul test : ajouter `-t "nom du test"`.
 - Audits catalogue (interrogent Supabase, hors de `npm test`) : `npx vitest run --config vitest.audit.config.mts scripts/<nom>.audit.ts`.
 
