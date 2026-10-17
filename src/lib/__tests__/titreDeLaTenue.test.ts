@@ -34,7 +34,7 @@ describe("titreDeLaTenue", () => {
       a: "La robe noire",
       b: "et le blazer camel",
     });
-    expect(titreDeLaTenue([p("robe", "Robe noire"), p("chaussures", "Escarpins noirs")]).b).toBe("et les escarpins noirs");
+    expect(titreDeLaTenue([p("robe", "Robe noire"), p("chaussures", "Escarpins noirs")])?.b).toBe("et les escarpins noirs");
   });
   it("sans pièce reconnue, rien : l'appelant garde son titre", () => {
     expect(titreDeLaTenue([p("sac", "Cabas")])).toBeNull();
