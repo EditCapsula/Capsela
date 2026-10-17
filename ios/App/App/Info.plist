@@ -71,6 +71,18 @@
 	<string>Capsela accède à tes photos pour ajouter des pièces à ton dressing, importer une tenue et demander un avis de styliste.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Capsela utilise ta position pour connaître la météo de ta ville et adapter ta tenue du jour.</string>
+	<!-- Le lien profond de retour de connexion (Google, nouveau mot de passe) : app.capsela://auth/callback (authNatif.ts). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.capsela</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>app.capsela</string>
+			</array>
+		</dict>
+	</array>
 	<!-- Seul le chiffrement standard (HTTPS) est utilisé : exemption de la déclaration d'export. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>

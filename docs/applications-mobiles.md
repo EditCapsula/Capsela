@@ -26,13 +26,23 @@ Capacitor emballe le site statique déjà construit (`out/`, `output: "export"`)
 
 `ITSAppUsesNonExemptEncryption` vaut `false` : seul le chiffrement standard (HTTPS) est utilisé.
 
+## Connexion dans l'app (17/10/2026)
+
+- **Google** : `signInWithOAuth` avec `skipBrowserRedirect`, puis la page Google dans le navigateur du système (`@capacitor/browser` 8.0.5) ; retour par le lien profond `app.capsela://auth/callback` (`@capacitor/app` 8.1.2, `appUrlOpen` et `getLaunchUrl`), échange du code PKCE contre une session (`exchangeCodeForSession`). Code : `authNatif.ts` (lecture du lien, testée), `auth.tsx`.
+- **Nouveau mot de passe** : le lien de l'e-mail revient par le même lien profond (`?reinitialisation=1`) quand la demande vient de l'app.
+- **Session** : dans l'app, le client Supabase garde la session dans le stockage local (`supabase.ts`) — la vue web d'iOS ne garde pas les cookies de la page. Le web garde son client d'avant.
+- **Lien profond déclaré** : `CFBundleURLTypes` (iOS), `intent-filter` `app.capsela://auth` (Android).
+- **À faire par la propriétaire** : ajouter `app.capsela://auth/callback` aux « Redirect URLs » de Supabase (Authentication → URL Configuration). Sans cela, Supabase renvoie vers le site au lieu de l'app.
+
+## Icône et écran de démarrage (17/10/2026)
+
+`node scripts/generer-icones-mobiles.mjs` : le cintre-cœur terracotta (`src/app/icon.svg`) centré sur le crème de l'app, décliné pour iOS (icône 1024 px opaque, écrans de démarrage) et Android (icônes classiques, rondes, adaptatives, écrans de démarrage). **Provisoire** : le SVG est une vectorisation en escalier ; le script en lisse les contours, mais une version vectorielle propre du logo est à fournir pour l'icône définitive (visible en grand sur la fiche App Store).
+
 ## Ce qui reste à faire avant la première soumission
 
-1. **Connexion Google** : `signInWithOAuth` redirige vers `window.location.origin`, qui vaut `capacitor://localhost` (iOS) ou `https://localhost` (Android) dans l'app, et Google refuse sa page de connexion dans une vue web intégrée. Il faut ouvrir la connexion dans le navigateur du système et revenir par un lien profond (`app.capsela://…`), déclaré dans Supabase. Même chose pour le lien « nouveau mot de passe » (`auth.tsx`, `PARAM_RECUPERATION`).
-2. **Sign in with Apple** : exigé sur iOS tant que la connexion Google y est proposée (règle 4.8 de l'App Store).
-3. **Icône et écran de démarrage** : les projets portent les icônes par défaut de Capacitor. Produire une icône 1024 × 1024 px sans transparence, puis la décliner (outil `@capacitor/assets`, à ajouter le moment venu).
-4. **Pages légales** : déjà publiques sur le site (`/legal/confidentialite`, `/legal/cgu`… générées par `scripts/generer-legal.mjs`) ; ce sont ces adresses qu'il faut donner aux stores.
-5. **Paiement** : aucun. Sur les stores, un abonnement numérique passe obligatoirement par l'achat intégré d'Apple ou de Google ; l'écran Premium actuel (« on te préviendra ») ne vend rien et peut rester tel quel.
+1. **Sign in with Apple** : exigé sur iOS tant que la connexion Google y est proposée (règle 4.8 de l'App Store) — à faire quand le compte Apple existe (identifiant de service, clé, fournisseur « Apple » dans Supabase).
+2. **Pages légales** : déjà publiques sur le site (`/legal/confidentialite`, `/legal/cgu`… générées par `scripts/generer-legal.mjs`) ; ce sont ces adresses qu'il faut donner aux stores.
+3. **Paiement** : aucun. Sur les stores, un abonnement numérique passe obligatoirement par l'achat intégré d'Apple ou de Google ; l'écran Premium actuel (« on te préviendra ») ne vend rien et peut rester tel quel.
 
 ## Ce qui n'a pas été vérifié
 
