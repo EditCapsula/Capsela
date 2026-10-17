@@ -70,7 +70,7 @@ import {
 import type { FamilleLook } from "./ideesLooks";
 import { exposedStyleIds, paletteHexes, type ProfilePrefs, type StyleId } from "./profile";
 import { colorimetrieMoteur } from "./colorimetrieMoteur";
-import { SLIDES, cleTenue, type SlideId } from "./carrousel";
+import { SLIDES, cleTenue, slidesDuJour, type SlideId } from "./carrousel";
 import {
   accessoireTypeFor,
   detectAccessoireType,
@@ -1419,8 +1419,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // LES PROPOSITIONS DU CARROUSEL (14/10/2026) : tirées une fois que la tenue du jour existe (pour ne pas la répéter), seulement pour
   // aujourd'hui, et seulement quand l'accueil est affiché — jamais en arrière-plan. Recalculées si le jour, le dressing, la météo, le
   // profil ou le mode de travail changent (`cle`), jamais à chaque nouvelle tenue du jour : un « Autre idée » ailleurs ne bouge pas les autres slides.
+  // Le jeu de slides suit « Mon rythme » (17/10/2026, slidesDuJour) : travail un jour travaillé, sport un jour de repos ou de congés.
+  const jourTravaille = occasionParDefaut(profile.prefs, new Date()) === "travail_formel";
   const cleCarrousel = [
     jourLocal(),
+    jourTravaille ? "travaille" : "repos",
     state.items.map((i) => i.id).join("."),
     meteoDuJour.label,
     Math.round(meteoDuJour.temp),
@@ -1440,7 +1443,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       if (s.outfit.length) montrees.add(clePrincipale(s.outfit, resolution));
       const vues = new Set<string>(s.tenuesVues);
       const propositions: NonNullable<AppState["carrousel"]>["propositions"] = {};
-      for (const def of SLIDES) {
+      for (const def of SLIDES.filter((d) => slidesDuJour(jourTravaille).includes(d.id))) {
         // La slide de la tenue du jour (ou la première, pour un plan appliqué) n'a pas besoin de proposition.
         const ids = proposerPourOccasion(s, def.occasion, s.outfit, montrees, vues);
         if (ids.length === 0) continue;

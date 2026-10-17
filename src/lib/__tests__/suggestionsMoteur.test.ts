@@ -44,3 +44,23 @@ describe("R-S14 — la veste du soir", () => {
     expect(sug).toBe(dressing.id);
   });
 });
+
+describe("R-S14 — en Sport, le hoodie d'abord (17/10/2026)", () => {
+  const sport = { occasion: ["sport"] as Item["occasion"] };
+  const tenue = [
+    piece("haut", "Débardeur de sport", "Noir", { subtype: "Débardeur", ...sport }),
+    piece("pantalon", "Legging de sport", "Noir", { subtype: "Legging", ...sport }),
+    piece("chaussures", "Baskets running", "Blanc", { shoeType: "Baskets", ...sport }),
+  ];
+  const hoodie = piece("pull", "Sweat à capuche", "Gris", { subtype: "Hoodie", ...sport });
+  const coupeVent = piece("veste", "Coupe-vent", "Noir", { subtype: "Coupe-vent", ...sport });
+  const sug = (pool: Item[]) =>
+    computeLookScore(tenue, "sport", [], null, new Set(), meteo(12, "Nuageux"), "Présentiel", "Verre", [...tenue, ...pool]).proactives.find((p) => p.key === "veste_soir")?.suggestedId;
+
+  it("propose le hoodie de la capsule, même quand une veste existe", () => {
+    expect(sug([coupeVent, hoodie])).toBe(hoodie.id);
+  });
+  it("sans hoodie, la veste décontractée comme avant", () => {
+    expect(sug([coupeVent])).toBe(coupeVent.id);
+  });
+});

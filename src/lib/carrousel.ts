@@ -2,7 +2,7 @@ import type { OccasionKey } from "./types";
 
 /*
  * LE CARROUSEL DE L'ACCUEIL (14/10/2026) — trois propositions par occasion à la place d'une tenue unique : pour le travail, pour
- * le quotidien, pour la soirée, dans cet ordre, sauf la slide de la tenue du jour, toujours en tête (17/10/2026). Module pur ; le tirage des tenues reste celui du moteur (regen, store.tsx).
+ * le quotidien, pour la soirée (un jour de repos : quotidien, sport, soirée — slidesDuJour), dans cet ordre, sauf la slide de la tenue du jour, toujours en tête (17/10/2026). Module pur ; le tirage des tenues reste celui du moteur (regen, store.tsx).
  *
  *   · La tenue du jour du store (state.outfit — celle qui porte l'avis, le quota, le plan appliqué) occupe la slide de SON occasion
  *     quand elle en a une. Une tenue planifiée pour aujourd'hui est montrée EN PREMIER ; depuis le 15/10/2026 (signalé : « il manque une
@@ -13,18 +13,29 @@ import type { OccasionKey } from "./types";
  *   · Une slide sans tenue valide n'est pas affichée ; deux slides ne montrent jamais la même tenue (garde ci-dessous).
  */
 
-export type SlideId = "travail" | "quotidien" | "soiree";
+export type SlideId = "travail" | "quotidien" | "sport" | "soiree";
 
 export const SLIDES: readonly { id: SlideId; occasion: OccasionKey; surtitre: string }[] = [
   { id: "travail", occasion: "travail_formel", surtitre: "Pour le travail" },
   { id: "quotidien", occasion: "quotidien", surtitre: "Pour ton quotidien" },
+  { id: "sport", occasion: "sport", surtitre: "Pour ton sport" },
   { id: "soiree", occasion: "soiree", surtitre: "Pour ta soirée" },
 ];
 
-/** La slide d'une occasion du store (« date » est une sortie du soir, comme la soirée) ; null pour sport, cocooning, voyage… */
+/**
+ * LES SLIDES DU JOUR (17/10/2026, demandé : « pendant les congés et/ou le week-end, le carrousel doit pousser d'autres occasions :
+ * quotidien, sport, soirée »). Un jour travaillé selon « Mon rythme » : travail, quotidien, soirée ; un jour de repos ou de congés :
+ * quotidien, sport, soirée — jamais le travail. Trois slides dans les deux cas (arbitrage du 14/10/2026).
+ */
+export function slidesDuJour(jourTravaille: boolean): readonly SlideId[] {
+  return jourTravaille ? ["travail", "quotidien", "soiree"] : ["quotidien", "sport", "soiree"];
+}
+
+/** La slide d'une occasion du store (« date » est une sortie du soir, comme la soirée) ; null pour cocooning, voyage… */
 export function slideDeLOccasion(occasion: OccasionKey | null | undefined): SlideId | null {
   if (occasion === "travail_formel") return "travail";
   if (occasion === "quotidien") return "quotidien";
+  if (occasion === "sport") return "sport";
   if (occasion === "soiree" || occasion === "date") return "soiree";
   return null;
 }
@@ -50,15 +61,21 @@ export interface EntreeCarrousel {
   planAujourdhui: boolean;
   /** Les propositions du moteur, par slide. */
   propositions: Partial<Record<SlideId, number[]>>;
+  /** Jour travaillé selon « Mon rythme » (slidesDuJour) ; vrai par défaut. */
+  jourTravaille?: boolean;
 }
 
-export function composerSlides({ tenueDuJour, occasion, planAujourdhui, propositions }: EntreeCarrousel): SlideCarrousel[] {
+export function composerSlides({ tenueDuJour, occasion, planAujourdhui, propositions, jourTravaille = true }: EntreeCarrousel): SlideCarrousel[] {
   const aLaTenue = tenueDuJour.length > 0;
-  const slideDuJour: SlideId | null = !aLaTenue ? null : (slideDeLOccasion(occasion) ?? (planAujourdhui ? "travail" : null));
+  const ordre = slidesDuJour(jourTravaille);
+  const slideDuJour: SlideId | null = !aLaTenue ? null : (slideDeLOccasion(occasion) ?? (planAujourdhui ? ordre[0] : null));
+  // Une tenue du jour choisie hors du jeu du jour (le travail un samedi, à la main) garde sa slide : on ne la retire jamais.
+  const ids = slideDuJour && !ordre.includes(slideDuJour) ? [slideDuJour, ...ordre] : ordre;
+  const defs = ids.map((id) => SLIDES.find((d) => d.id === id)!);
   // La tenue du jour est montrée d'abord : une proposition identique à elle s'efface, jamais l'inverse.
   const vues = new Set<string>(slideDuJour ? [cleTenue(tenueDuJour)] : []);
   const slides: SlideCarrousel[] = [];
-  for (const def of SLIDES) {
+  for (const def of defs) {
     const duJour = def.id === slideDuJour;
     const ids = duJour ? tenueDuJour : (propositions[def.id] ?? []);
     if (ids.length === 0) continue;

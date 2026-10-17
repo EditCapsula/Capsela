@@ -294,6 +294,7 @@ export default function HomeScreen() {
           occasion: occasionKey,
           planAujourdhui: Boolean(planHero),
           propositions: state.carrousel?.propositions ?? {},
+          jourTravaille: occasionParDefaut(profile.prefs, jourConsulte.date) === "travail_formel",
         })
       : [];
   const carrouselActif = slides.length > 1;
