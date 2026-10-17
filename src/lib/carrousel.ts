@@ -2,7 +2,7 @@ import type { OccasionKey } from "./types";
 
 /*
  * LE CARROUSEL DE L'ACCUEIL (14/10/2026) — trois propositions par occasion à la place d'une tenue unique : pour le travail, pour
- * le quotidien, pour la soirée, dans cet ordre fixe. Module pur ; le tirage des tenues reste celui du moteur (regen, store.tsx).
+ * le quotidien, pour la soirée, dans cet ordre, sauf la slide de la tenue du jour, toujours en tête (17/10/2026). Module pur ; le tirage des tenues reste celui du moteur (regen, store.tsx).
  *
  *   · La tenue du jour du store (state.outfit — celle qui porte l'avis, le quota, le plan appliqué) occupe la slide de SON occasion
  *     quand elle en a une. Une tenue planifiée pour aujourd'hui est montrée EN PREMIER ; depuis le 15/10/2026 (signalé : « il manque une
@@ -76,10 +76,11 @@ export function composerSlides({ tenueDuJour, occasion, planAujourdhui, proposit
       source: duJour ? (planAujourdhui ? "plan" : "jour") : "proposition",
     });
   }
-  // Le plan d'aujourd'hui en tête, les autres slides dans leur ordre.
-  if (planAujourdhui) {
-    const i = slides.findIndex((x) => x.source === "plan");
-    if (i > 0) slides.unshift(...slides.splice(i, 1));
-  }
+  // Le plan d'aujourd'hui en tête, sinon la tenue du jour ; les autres slides dans leur ordre. La tenue du jour en tête (17/10/2026,
+  // signalé : « nous sommes samedi, j'ai indiqué travailler du lundi au vendredi, pourquoi me pousser en premier le travail ? ») :
+  // l'ordre fixe mettait le Travail devant même un jour non travaillé. La tenue du jour porte l'occasion de la date (« Mon rythme »,
+  // occasionParDefaut) ou celle choisie : c'est elle qui ouvre le carrousel — Quotidien le samedi, Travail en semaine.
+  const i = slides.findIndex((x) => x.source !== "proposition");
+  if (i > 0) slides.unshift(...slides.splice(i, 1));
   return slides;
 }

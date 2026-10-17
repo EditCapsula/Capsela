@@ -16,12 +16,19 @@ describe("slideDeLOccasion", () => {
 });
 
 describe("composerSlides", () => {
-  it("garde l'ordre travail, quotidien, soirée, avec la tenue du jour sur la slide de son occasion", () => {
+  it("met la tenue du jour en tête, les autres dans l'ordre travail, quotidien, soirée (17/10/2026)", () => {
+    // Signalé : un samedi (jour non travaillé), la slide Travail passait devant la tenue Quotidien du jour.
     const s = composerSlides({ tenueDuJour: [10, 11, 12], occasion: "quotidien", planAujourdhui: false, propositions });
-    expect(s.map((x) => x.id)).toEqual(["travail", "quotidien", "soiree"]);
-    expect(s[1]).toMatchObject({ ids: [10, 11, 12], source: "jour" });
-    expect(s[0]).toMatchObject({ ids: [1, 2, 3], source: "proposition" });
+    expect(s.map((x) => x.id)).toEqual(["quotidien", "travail", "soiree"]);
+    expect(s[0]).toMatchObject({ ids: [10, 11, 12], source: "jour" });
+    expect(s[1]).toMatchObject({ ids: [1, 2, 3], source: "proposition" });
     expect(s[2]).toMatchObject({ ids: [7, 8, 9], source: "proposition" });
+  });
+
+  it("un jour travaillé, la tenue du jour Travail reste la première", () => {
+    const s = composerSlides({ tenueDuJour: [10, 11, 12], occasion: "travail_formel", planAujourdhui: false, propositions });
+    expect(s.map((x) => x.id)).toEqual(["travail", "quotidien", "soiree"]);
+    expect(s[0].source).toBe("jour");
   });
 
   it("une tenue planifiée est montrée en premier, sur la slide de SON occasion : les deux autres occasions restent (15/10/2026)", () => {
