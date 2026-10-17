@@ -84,6 +84,13 @@ function BulbIcon() {
 export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}) {
   const { state, actions, vestiairePool } = useCapsela();
   const revenir = onFermer ?? (() => actions.go(state.pieceReturn));
+  /*
+   * DANS UNE FEUILLE (17/10/2026, signalé en capture : logo en double et grand vide en bas) : ni logo, ni barre du bas sous la fiche.
+   * Les actions se posent donc au bas de la feuille, au-dessus de la zone sûre, et non plus au-dessus d'une barre de navigation absente
+   * — elles flottaient à mi-hauteur, le contenu passant dessous.
+   */
+  const enFeuille = Boolean(onFermer);
+  const basActions = enFeuille ? "0px" : "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))";
   const [suggestionInfoOpen, setSuggestionInfoOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -204,8 +211,15 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
     <div className="absolute inset-0">
       {suggested ? (
         // UNE SUGGESTION de la capsule (pas encore une pièce du dressing) : la mise en page d'origine, photo en 4/5.
-        <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
-          <AppHeader onBack={revenir} />
+        <div
+          className={"scrollarea absolute inset-0 overflow-y-auto px-6 " + (enFeuille ? "pt-[14px]" : "pt-[6px] pb-safe-nav")}
+          style={enFeuille ? { paddingBottom: "calc(max(env(safe-area-inset-bottom), 14px) + 24px)" } : undefined}
+        >
+          {enFeuille ? (
+            <BoutonRetour onClick={revenir} label="Fermer la fiche" />
+          ) : (
+            <AppHeader onBack={revenir} />
+          )}
 
           <div
             className="w-full rounded-carte border border-border overflow-hidden mt-[14px] relative"
@@ -281,7 +295,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
         </div>
       ) : (
         <>
-          <div className="scrollarea absolute inset-0 overflow-y-auto" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 120px)" }}>
+          <div className="scrollarea absolute inset-0 overflow-y-auto" style={{ paddingBottom: `calc(${basActions} + 124px)` }}>
             {/* LA VITRINE : la photo en entier (jamais recadrée), le retour et le menu posés dessus. */}
             <div className="relative bg-card" style={{ height: 392 }}>
               <div
@@ -312,10 +326,13 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
               )}
               <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-[18px] pt-[14px]">
                 <BoutonRetour onClick={revenir} label={onFermer ? "Fermer la fiche" : "Revenir à l'écran précédent"} />
-                <div className="flex flex-col items-center gap-[6px]" aria-hidden="true">
-                  <span className="font-serif font-medium text-[22px] leading-none text-ink" style={{ letterSpacing: ".2em", paddingLeft: ".2em" }}>CAPSELA</span>
-                  <span className="w-[28px] h-[2px] rounded-[2px]" style={{ background: "var(--color-terracotta)" }} />
-                </div>
+                {/* Pas de logo dans une feuille (17/10/2026, demandé) : la marque est déjà sur l'écran, juste dessous. */}
+                {!enFeuille && (
+                  <div className="flex flex-col items-center gap-[6px]" aria-hidden="true">
+                    <span className="font-serif font-medium text-[22px] leading-none text-ink" style={{ letterSpacing: ".2em", paddingLeft: ".2em" }}>CAPSELA</span>
+                    <span className="w-[28px] h-[2px] rounded-[2px]" style={{ background: "var(--color-terracotta)" }} />
+                  </div>
+                )}
                 <button
                   onClick={() => setMenuOpen(true)}
                   aria-label="Options"
@@ -417,7 +434,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
           {/* Les actions, fixées au-dessus de la navigation. */}
           <div
             className="absolute left-0 right-0 bg-cream border-t border-border px-[18px] pt-[10px] pb-[12px]"
-            style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))" }}
+            style={{ bottom: basActions, paddingBottom: enFeuille ? "max(env(safe-area-inset-bottom), 14px)" : undefined }}
           >
             <div className="flex items-center gap-[10px]">
               <button
