@@ -262,8 +262,11 @@ function CartePlanifier({
   onClick,
   visuel,
   cadrage = "center 38%",
+  premium = false,
   children,
 }: {
+  /** Le badge Premium : la valise seulement (17/10/2026, décidé : la planification de tenues n'est pas Premium). */
+  premium?: boolean;
   /** Bandeau éditorial en tête de carte — absent tant que le visuel n'existe pas. */
   visuel?: string;
   /** `object-position` du bandeau : chaque visuel a son sujet à une hauteur différente. */
@@ -307,7 +310,7 @@ function CartePlanifier({
           </span>
           <span className="flex items-center gap-2">
             {etiquette && <span className="t-pastille rounded-full px-[10px] py-[5px] bg-warm-bg text-muted-3 uppercase">{etiquette}</span>}
-            <BadgePremium />
+            {premium && <BadgePremium />}
           </span>
         </span>
         <span className="block t-titre-section text-ink mt-[12px]">
@@ -1442,6 +1445,7 @@ export default function PlanifierScreen() {
                 onClick={() => void actions.ouvrirValise(null)}
                 visuel={visuelHub("valise", profile.gender)}
                 cadrage="center 60%"
+                premium
               >
                 {valisesAVenir.length > 0 && (
                   <>

@@ -33,7 +33,6 @@ import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
 import Badge from "@/components/Badge";
-import BadgePremium from "@/components/BadgePremium";
 import Button, { BoutonDiscret } from "@/components/Button";
 import Card from "@/components/Card";
 
@@ -1423,7 +1422,7 @@ export default function TenuesScreen() {
           reste telle quelle : Planifier ne propose pas le jour même. */}
       {/* HARMONISÉE AVEC « PLANIFIER MES LOOKS » DE L'ACCUEIL (17/10/2026, brief « Harmonisation de la card À préparer ») : même
           langage que CarteUnivers (HomeScreen) — fond carte, bordure, rayon rounded-carte, le texte à gauche, le MÊME visuel éditorial
-          à droite (/editorial/capsela_editorial_planning.webp, aucun asset dupliqué), le badge Premium partagé (BadgePremium), le même
+          à droite (/editorial/capsela_editorial_planning.webp, aucun asset dupliqué), le même
           retour au toucher. Proportions adaptées à la pleine largeur : la photo prend un tiers, recadrée sur la grille du planning.
           La planification n'a pas de règle d'accès (autorisations.ts) : le badge l'annonce comme l'accueil, sans rien bloquer ; la
           destination est inchangée (Planifier, ou le jour consulté déjà choisi).
@@ -1434,12 +1433,8 @@ export default function TenuesScreen() {
         className="relative flex w-full min-w-0 text-left bg-card border border-border rounded-carte overflow-hidden mt-4 cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
       >
         <span className="flex flex-col min-w-0 flex-1 pl-4 pr-3 py-[12px]">
-          {/* Le badge Premium sur la ligne du surtitre : discret, et la carte garde à peu près la hauteur de l'encart d'avant. La pastille
-              « doux » (beige sur carte blanche, Badge.tsx) : la variante « carte » s'y fondait et semblait décaler le texte. */}
-          <span className="flex items-center justify-between gap-2">
-            <span className="t-surtitre text-muted-3 !text-[9.5px] whitespace-nowrap">À préparer</span>
-            <BadgePremium />
-          </span>
+          {/* Pas de badge Premium (17/10/2026, décidé : la planification de tenues n'est pas une fonctionnalité Premium ; la valise l'est). */}
+          <span className="t-surtitre text-muted-3 !text-[9.5px] whitespace-nowrap">À préparer</span>
           <span className="block t-titre-carte text-ink mt-[4px]">Planifie tes looks</span>
           <span className="block text-[12px] text-muted leading-[1.4] mt-[3px]" style={{ textWrap: "pretty" }}>
             Prépare tes tenues selon l&apos;occasion, la date et le lieu.

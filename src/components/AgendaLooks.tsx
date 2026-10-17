@@ -112,8 +112,16 @@ function Fleche({ vers }: { vers: "gauche" | "droite" }) {
 }
 
 /** Les points d'une case ou d'un jour : un point pour un look, deux pour plusieurs, un trait pour un voyage. Toujours doublé d'un nom accessible. */
-function Marques({ marque, sur }: { marque: ReturnType<typeof marqueDuJour>; sur: "clair" | "terracotta" }) {
+function Marques({ marque, sur, ajout = false }: { marque: ReturnType<typeof marqueDuJour>; sur: "clair" | "terracotta"; ajout?: boolean }) {
   const couleur = sur === "terracotta" ? "var(--color-on-terracotta)" : "var(--color-terracotta)";
+  // UN PETIT « + » SUR UN JOUR LIBRE (17/10/2026, demandé) : seulement quand Planifier accepte ce jour (demain à J+21) — un « + » sur un
+  // jour passé, ou sur aujourd'hui (préparé depuis l'accueil), promettrait une action qui n'existe pas.
+  if (ajout)
+    return (
+      <span className="flex items-center justify-center h-[7px] text-[10px] leading-none font-semibold" style={{ color: couleur, opacity: 0.75 }} aria-hidden="true">
+        +
+      </span>
+    );
   if (marque.looks === "aucun" && !marque.voyage) return <span className="block h-[5px]" aria-hidden="true" />;
   return (
     <span className="flex items-center justify-center gap-[3px] h-[5px]" aria-hidden="true">
@@ -262,6 +270,8 @@ export default function AgendaLooks({
       {(aVenir.length > 0 || passees.length > 0) && <div className="mt-[18px]">{onglets}</div>}
 
       <Calendrier
+        peutPlanifierLe={peutPlanifierLe}
+        onPlanifierLe={onPlanifierLe}
         mois={etat.mois}
         selection={etat.jour}
         aujourdhui={aujourdhui}
@@ -336,7 +346,11 @@ function Calendrier({
   parJour,
   onMois,
   onJour,
+  peutPlanifierLe,
+  onPlanifierLe,
 }: {
+  peutPlanifierLe: (jour: string) => boolean;
+  onPlanifierLe: (jour: string) => void;
   mois: string;
   selection: string;
   aujourdhui: string;
@@ -374,11 +388,13 @@ function Calendrier({
           const choisi = jour === selection;
           const auj = jour === aujourdhui;
           const n = dateDe(jour).getDate();
+          // Un jour libre et planifiable : le « + » ouvre directement le parcours, la date choisie.
+          const ajout = marque.looks === "aucun" && !marque.voyage && !horsMois && peutPlanifierLe(jour);
           return (
             <button
               key={jour}
-              onClick={() => onJour(jour)}
-              aria-label={`${titreJour(jour)}${auj ? ", aujourd'hui" : ""} : ${nomMarque(marque)}`}
+              onClick={() => (ajout ? onPlanifierLe(jour) : onJour(jour))}
+              aria-label={`${titreJour(jour)}${auj ? ", aujourd'hui" : ""} : ${ajout ? "rien de prévu, planifier un look" : nomMarque(marque)}`}
               aria-current={auj ? "date" : undefined}
               className="flex flex-col items-center justify-center min-h-[44px] cursor-pointer"
             >
@@ -393,7 +409,7 @@ function Calendrier({
                 }}
               >
                 <span className="leading-none mt-[3px]">{n}</span>
-                <Marques marque={marque} sur={choisi ? "terracotta" : "clair"} />
+                <Marques marque={marque} sur={choisi ? "terracotta" : "clair"} ajout={ajout} />
               </span>
             </button>
           );
@@ -408,6 +424,9 @@ function Calendrier({
         </span>
         <span className="inline-flex items-center gap-[5px]">
           <Marques marque={{ looks: "aucun", voyage: true }} sur="clair" /> Voyage
+        </span>
+        <span className="inline-flex items-center gap-[5px]">
+          <Marques marque={{ looks: "aucun", voyage: false }} sur="clair" ajout /> Planifier
         </span>
       </div>
     </section>
@@ -554,11 +573,12 @@ function VueJour({
           const d = dateDe(j);
           const choisi = j === jour;
           const marque = marqueDuJour(parJour.get(j));
+          const ajout = !choisi && marque.looks === "aucun" && !marque.voyage && peutPlanifierLe(j);
           return (
             <button
               key={j}
               onClick={() => onJour(j)}
-              aria-label={`${titreJour(j)} : ${nomMarque(marque)}`}
+              aria-label={`${titreJour(j)} : ${ajout ? "rien de prévu" : nomMarque(marque)}`}
               aria-current={choisi ? "date" : undefined}
               className="flex flex-col items-center gap-[3px] rounded-champ py-[8px] cursor-pointer min-h-[60px] border"
               style={{
@@ -573,7 +593,7 @@ function VueJour({
               <span className="text-[15px] leading-none tabular-nums" style={{ fontWeight: j === aujourdhui || choisi ? 600 : 400 }}>
                 {d.getDate()}
               </span>
-              <Marques marque={marque} sur={choisi ? "terracotta" : "clair"} />
+              <Marques marque={marque} sur={choisi ? "terracotta" : "clair"} ajout={ajout} />
             </button>
           );
         })}

@@ -564,7 +564,6 @@ export default function HomeScreen() {
             visuel="/editorial/capsela_editorial_planning.webp"
             position="34% center"
             label="Planifier mes looks"
-            premium
           />
           <CarteUnivers
             onClick={ouvrirValise}
