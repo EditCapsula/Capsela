@@ -1433,19 +1433,21 @@ export default function TenuesScreen() {
         aria-label={decalage > 0 ? `Planifier une tenue pour ${quand}` : "Planifier une tenue"}
         className="relative flex w-full min-w-0 text-left bg-card border border-border rounded-carte overflow-hidden mt-4 cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
       >
-        <span className="flex flex-col min-w-0 flex-1 pl-4 pr-3 py-[14px]">
+        <span className="flex flex-col min-w-0 flex-1 pl-4 pr-3 py-[12px]">
           {/* Le badge Premium sur la ligne du surtitre : discret, et la carte garde à peu près la hauteur de l'encart d'avant. La pastille
               « doux » (beige sur carte blanche, Badge.tsx) : la variante « carte » s'y fondait et semblait décaler le texte. */}
           <span className="flex items-center justify-between gap-2">
             <span className="t-surtitre text-muted-3 !text-[9.5px] whitespace-nowrap">À préparer</span>
             <BadgePremium />
           </span>
-          <span className="block t-titre-carte text-ink mt-[6px]">Planifie tes looks</span>
-          <span className="block text-[12px] text-muted leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
+          <span className="block t-titre-carte text-ink mt-[4px]">Planifie tes looks</span>
+          <span className="block text-[12px] text-muted leading-[1.4] mt-[3px]" style={{ textWrap: "pretty" }}>
             Prépare tes tenues selon l&apos;occasion, la date et le lieu.
           </span>
-          <span className="mt-[10px] text-[12px] text-terracotta">
-            {decalage > 0 ? `Planifier une tenue pour ${quand} →` : "Planifier une tenue →"}
+          {/* Un seul libellé, même pour un jour à venir (17/10/2026, validé) : la date reste choisie à l'ouverture de Planifier,
+              et l'aria-label la nomme. Densité mobile resserrée le même jour (espacements du texte, pas la structure). */}
+          <span className="mt-[8px] text-[12px] text-terracotta">
+            Planifier une tenue →
           </span>
         </span>
         <span className="relative shrink-0 bg-cream" style={{ width: "clamp(104px, 34%, 168px)" }} aria-hidden="true">
