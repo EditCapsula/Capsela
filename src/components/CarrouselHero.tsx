@@ -122,11 +122,26 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
  * Aucune bibliothèque : la position se lit sur le défilement, les repères y reconduisent. Une seule slide domine ; la piste ne
  * déborde pas de la page (le défilement reste dans le composant).
  */
-export function CarrouselHero({ slides, libelles }: { slides: React.ReactNode[]; libelles: string[] }) {
+export function CarrouselHero({
+  slides,
+  libelles,
+  onAvantDerniere,
+}: {
+  slides: React.ReactNode[];
+  libelles: string[];
+  /** Appelé quand l'avant-dernière slide (ou la dernière) est affichée : le carrousel tire alors la suivante (17/10/2026). */
+  onAvantDerniere?: () => void;
+}) {
   const piste = useRef<HTMLDivElement>(null);
   const [actif, setActif] = useState(0);
   const n = slides.length;
   const indexActif = Math.min(actif, Math.max(0, n - 1));
+  const surAvantDerniere = n > 1 && indexActif >= n - 2;
+  useEffect(() => {
+    if (surAvantDerniere) onAvantDerniere?.();
+    // Une fois par arrivée sur l'avant-dernière (ou par slide ajoutée) : pas à chaque rendu, la fonction change à chaque rendu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [surAvantDerniere, n]);
 
   // Une slide qui disparaît (plus de proposition) ramène à une position valide ; une piste qui rétrécit se recale.
   useEffect(() => {

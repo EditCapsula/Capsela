@@ -33,6 +33,7 @@ import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
 import Badge from "@/components/Badge";
+import BadgePremium from "@/components/BadgePremium";
 import Button, { BoutonDiscret } from "@/components/Button";
 import Card from "@/components/Card";
 
@@ -1408,7 +1409,7 @@ export default function TenuesScreen() {
           restaurant, un mariage, un entretien ou un voyage — c'est-à-dire pour
           les dix occasions du référentiel, sans en privilégier une.
 
-          Contenu arrêté le 24/09/2026 : surtitre, titre, promesse,
+          Contenu arrêté le 24/09/2026 (remplacé le 17/10/2026 par celui du brief d’harmonisation, ci-dessous) : surtitre, titre, promesse,
           description, CTA. Quatre niveaux plutôt que deux, parce que le bloc
           devait dire ce que Capsela FAIT — « Capsela compose le look » — et
           pas seulement ce qu'il demande.
@@ -1420,45 +1421,45 @@ export default function TenuesScreen() {
           ce jour-là — vrai par construction, c'est le jour consulté — et
           ouvre Planifier avec cette date déjà choisie. Aujourd'hui, elle
           reste telle quelle : Planifier ne propose pas le jour même. */}
+      {/* HARMONISÉE AVEC « PLANIFIER MES LOOKS » DE L'ACCUEIL (17/10/2026, brief « Harmonisation de la card À préparer ») : même
+          langage que CarteUnivers (HomeScreen) — fond carte, bordure, rayon rounded-carte, le texte à gauche, le MÊME visuel éditorial
+          à droite (/editorial/capsela_editorial_planning.webp, aucun asset dupliqué), le badge Premium partagé (BadgePremium), le même
+          retour au toucher. Proportions adaptées à la pleine largeur : la photo prend un tiers, recadrée sur la grille du planning.
+          La planification n'a pas de règle d'accès (autorisations.ts) : le badge l'annonce comme l'accueil, sans rien bloquer ; la
+          destination est inchangée (Planifier, ou le jour consulté déjà choisi).
+          La carte entière est le bouton ; le CTA est un <span> (jamais un bouton dans un bouton, cf. le 24/09/2026). */}
       <button
         onClick={decalage > 0 ? () => actions.planifierLeJour(decalage) : actions.goPlanifier}
-        className="w-full text-left bg-warm-bg border border-sand-border rounded-feuille px-4 py-[16px] mt-4 cursor-pointer transition-opacity active:opacity-80"
+        aria-label={decalage > 0 ? `Planifier une tenue pour ${quand}` : "Planifier une tenue"}
+        className="relative flex w-full min-w-0 text-left bg-card border border-border rounded-carte overflow-hidden mt-4 cursor-pointer motion-safe:transition-[transform,opacity] motion-safe:active:scale-[.985] active:opacity-90"
       >
-        {/* Surtitre : 10,5 px / .14em terracotta — la forme de CET écran, celle
-            de « Nos conseils pour sublimer cette tenue » quelques lignes plus
-            haut et de « Une autre piste ». Pas le 11 px / .16em majoritaire
-            ailleurs dans l'app : le voisin immédiat prime sur la moyenne. */}
-        <span className="block t-label text-terracotta">À préparer</span>
-
-        {/* UN PROLONGEMENT, PAS UNE SECONDE TENUE (27/09/2026, parcours
-            « Tenue ») : titre au rang d'une vignette et une seule phrase —
-            la card garde sa forme éditoriale mais ne rivalise plus avec la
-            tenue du jour. La promesse « Capsela compose le look » reste. */}
-        <span className="block t-titre-vignette text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-          {decalage > 0 ? `Autre chose de prévu ${quand} ?` : "Tu veux préparer une autre tenue ?"}
+        <span className="flex flex-col min-w-0 flex-1 pl-4 pr-3 py-[14px]">
+          {/* Le badge Premium sur la ligne du surtitre : discret, et la carte garde à peu près la hauteur de l'encart d'avant. La pastille
+              « doux » (beige sur carte blanche, Badge.tsx) : la variante « carte » s'y fondait et semblait décaler le texte. */}
+          <span className="flex items-center justify-between gap-2">
+            <span className="t-surtitre text-muted-3 !text-[9.5px] whitespace-nowrap">À préparer</span>
+            <BadgePremium />
+          </span>
+          <span className="block t-titre-carte text-ink mt-[6px]">Planifie tes looks</span>
+          <span className="block text-[12px] text-muted leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
+            Prépare tes tenues selon l&apos;occasion, la date et le lieu.
+          </span>
+          <span className="mt-[10px] text-[12px] text-terracotta">
+            {decalage > 0 ? `Planifier une tenue pour ${quand} →` : "Planifier une tenue →"}
+          </span>
         </span>
-
-        <span className="block text-[12px] text-muted leading-[1.45] mt-[4px]" style={{ textWrap: "pretty" }}>
-          {decalage > 0
-            ? "Donne l'occasion et le lieu : Capsela compose le look."
-            : "Donne l'occasion, la date et le lieu : Capsela compose le look."}
-        </span>
-
-        {/* CTA TEXTUEL, PAS UN BOUTON PLEIN LARGEUR. C'est la forme déjà
-            utilisée quatre fois sur cet écran — « Ajouter une pièce → »,
-            « Compléter mon dressing → » : `mt-[10px] inline-block text-[12px]
-            text-terracotta`. Rien de neuf, donc rien à harmoniser plus tard.
-
-            UN <span> ET NON UN <button> : la carte entière est déjà cliquable,
-            et imbriquer un bouton dans un bouton est invalide en HTML autant
-            qu'ambigu pour une lectrice d'écran. Le CTA est ici une indication
-            visuelle de ce que fait la carte, pas une seconde cible.
-
-            La flèche est dans le texte, comme dans les quatre autres, et non
-            posée à droite de la carte : à droite, elle désignait la carte
-            entière sans dire ce qu'elle faisait. */}
-        <span className="mt-[10px] inline-block text-[12px] text-terracotta">
-          {decalage > 0 ? `Planifier une tenue pour ${quand} →` : "Planifier une tenue →"}
+        <span className="relative shrink-0 bg-cream" style={{ width: "clamp(104px, 34%, 168px)" }} aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/editorial/capsela_editorial_planning.webp"
+            alt=""
+            width={460}
+            height={626}
+            loading="lazy"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover block"
+            style={{ objectPosition: "45% 55%" }}
+          />
         </span>
       </button>
 

@@ -2450,10 +2450,19 @@ export function computeLookScore(
       .filter((i) => !pieceIds.has(i.id) && !hasSameSlot(i) && estDeSaison(i, weather))
       .sort(dressingDAbord);
     const decontracte = occasion === "sport" ? vesteManteauCandidates.filter((i) => formalityOf(i) <= 1) : [];
+    // En Sport, le hoodie d'abord (17/10/2026, signalé : « on avait convenu d'afficher directement un hoodie s'il y en a un dans la
+    // capsule » — la tenue Sport montrait une silhouette de blazer à ajouter). Une maille qui se porte par-dessus (estCoucheDuSoir :
+    // sweat à capuche, zippé, gilet), du dressing ou de la capsule, passe devant toute veste ; sans elle, la règle d'avant.
+    const coucheSport =
+      occasion === "sport"
+        ? candidatesDuMoteur(["pull"])
+            .filter((i) => !pieceIds.has(i.id) && estCoucheDuSoir(i) && estDeSaison(i, weather))
+            .sort((a, b) => Number(/capuche|hoodie/i.test(`${b.subtype ?? ""} ${b.name}`)) - Number(/capuche|hoodie/i.test(`${a.subtype ?? ""} ${a.name}`)) || dressingDAbord(a, b))
+        : [];
     proactives.push({
       key: "veste_soir",
       text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",
-      suggestedId: (decontracte.length ? decontracte : vesteManteauCandidates)[0]?.id,
+      suggestedId: (coucheSport.length ? coucheSport : decontracte.length ? decontracte : vesteManteauCandidates)[0]?.id,
     });
   }
 

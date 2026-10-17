@@ -23,7 +23,7 @@ import { occasionParDefaut } from "@/lib/jourConsulte";
 import type { CategoryKey, Item } from "@/lib/types";
 import Button from "@/components/Button";
 import { ActionRonde, CarrouselHero, CarteHero, MentionPortee } from "@/components/CarrouselHero";
-import { composerSlides, cleTenue as cleSlide, type SlideCarrousel } from "@/lib/carrousel";
+import { composerSlides, cleTenue as cleSlide, typeDeJour, type SlideCarrousel } from "@/lib/carrousel";
 
 /** Un glyphe au trait de la grille « Tout pour ton style » (maquette Accueil V9, 07/10/2026). */
 const glypheUnivers = (d: string) => (
@@ -294,6 +294,7 @@ export default function HomeScreen() {
           occasion: occasionKey,
           planAujourdhui: Boolean(planHero),
           propositions: state.carrousel?.propositions ?? {},
+          jour: typeDeJour(occasionParDefaut(profile.prefs, jourConsulte.date)),
         })
       : [];
   const carrouselActif = slides.length > 1;
@@ -379,7 +380,7 @@ export default function HomeScreen() {
       </div>
 
       {carrouselActif ? (
-        <CarrouselHero slides={slides.map(carteSlide)} libelles={slides.map((sl) => sl.surtitre)} />
+        <CarrouselHero slides={slides.map(carteSlide)} libelles={slides.map((sl) => sl.surtitre)} onAvantDerniere={actions.etendreCarrousel} />
       ) : (
       // LE LOOK DU JOUR : fond blanc cassé des cartes (--color-card) et leur filet (--color-border), comme les slides du carrousel (option 3h,
       // 14/10/2026 : l'accueil, puis Tenue le même jour ; les autres hero gardent --color-hero-background). Texte à gauche, composition à droite, deux actions dessous. Quatre états : la tenue d'un

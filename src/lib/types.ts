@@ -549,7 +549,12 @@ export interface AppState {
    * LE CARROUSEL DE L'ACCUEIL (14/10/2026, carrousel.ts) : les propositions du moteur pour les occasions que la tenue du jour ne
    * couvre pas, tirées une fois par jour et par état du dressing (`cle`). Jamais écrit en base.
    */
-  carrousel: { cle: string; propositions: Partial<Record<"travail" | "quotidien" | "soiree", number[]>> } | null;
+  carrousel: {
+    cle: string;
+    propositions: Partial<Record<"travail" | "quotidien" | "sport" | "soiree" | "date" | "voyage" | "cocooning" | "ceremonie", number[]>>;
+    /** Les slides déjà tirées, même vides (calcul paresseux, 17/10/2026) : jamais retirées deux fois. */
+    tentees?: ("travail" | "quotidien" | "sport" | "soiree" | "date" | "voyage" | "cocooning" | "ceremonie")[];
+  } | null;
   /**
    * LA CONSULTATION D'UNE SLIDE (14/10/2026) : « Voir le look » ouvre la page Tenue sur la tenue de la slide, son occasion présélectionnée.
    * La tenue du jour qu'elle remplace le temps de la consultation est gardée ici ; elle est rendue en quittant Tenue pour un onglet,
