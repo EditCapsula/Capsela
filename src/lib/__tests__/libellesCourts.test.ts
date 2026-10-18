@@ -7,7 +7,7 @@ const ANCIEN_PARTIAL: Partial<Record<OccasionKey, string>> = {
   quotidien: "Quotidien", travail_formel: "Travail",
   date: "Date", soiree: "Soirée", evenement_perso: "Cérémonie",
 };
-const ancienSelectors = (k: OccasionKey) => ANCIEN_PARTIAL[k] || OCC_LABELS[k].split(" / ")[0];
+const ancienSelectors = (k: OccasionKey) => ANCIEN_PARTIAL[k] || OCC_LABELS[k].split(/ \/ | · /)[0];
 const ancienAddSheet = (k: OccasionKey) => ANCIEN_PARTIAL[k] || OCC_LABELS[k];
 const ancienAddChip = (k: OccasionKey) => ANCIEN_PARTIAL[k] || k;
 
@@ -20,7 +20,7 @@ describe("équivalence des libellés courts", () => {
     const differents = cles.filter((k) => occasionShortLabel(k) !== ancienAddSheet(k));
     expect(differents.sort()).toEqual(["cocooning", "voyage"]);
     expect(occasionShortLabel("cocooning")).toBe("Cocooning");
-    expect(ancienAddSheet("cocooning")).toBe("Cocooning / Maison");
+    expect(ancienAddSheet("cocooning")).toBe("Cocooning · Maison");
   });
   it("écran d'ajout : le chip ne rend plus jamais une clé brute", () => {
     const brutes = cles.filter((k) => ancienAddChip(k) === k);

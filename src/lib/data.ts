@@ -149,9 +149,10 @@ export function saisonParDefaut(cat: CategoryKey, name: string): Season {
 /** Les sous-choix de « Travail / Bureau » — une seule liste pour Planifier, Tenue et le plan rendu à la tenue du jour. */
 export const WORK_MODES: WorkMode[] = ["Présentiel", "Télétravail", "Entretien"];
 
+// Les deux noms d'une occasion sont séparés par un point médian, jamais par « / » (18/10/2026, demandé).
 export const OCCASIONS: [OccasionKey, string, string, number][] = [
-  ["quotidien", "Quotidien / Décontracté", "Courses, école, journée libre", 1],
-  ["travail_formel", "Travail / Bureau", "Journée de travail", 3],
+  ["quotidien", "Quotidien · Décontracté", "Courses, école, journée libre", 1],
+  ["travail_formel", "Travail · Bureau", "Journée de travail", 3],
   // « Rendez-vous important » (clé `entretien`) a été fusionnée ici le 08/10/2026 : c'est le sous-choix « Entretien » (WORK_MODES).
   ["date", "Rendez-vous amoureux", "Tête-à-tête", 3],
   // Formalité relevée (recette 24/08/2026, signalé : tenues trop basiques
@@ -162,9 +163,9 @@ export const OCCASIONS: [OccasionKey, string, string, number][] = [
   // contexte de la soirée l'appelle (effectiveFormality, `habillee`).
   ["soiree", "Soirée", "Bar, dîner, club, entre amis", 3],
   ["sport", "Sport", "Actif, technique", 0],
-  ["cocooning", "Cocooning / Maison", "Chez soi, détente", 1],
-  ["voyage", "Voyage / Déplacement", "Confortable, polyvalent", 1],
-  ["evenement_perso", "Événement / Cérémonie", "Mariage, baptême", 4],
+  ["cocooning", "Cocooning · Maison", "Chez soi, détente", 1],
+  ["voyage", "Voyage · Déplacement", "Confortable, polyvalent", 1],
+  ["evenement_perso", "Événement · Cérémonie", "Mariage, baptême", 4],
 ];
 
 /** Sous-contexte de l'occasion "Date" — seul déterminant de sa formalité (recette 12/08/2026). */

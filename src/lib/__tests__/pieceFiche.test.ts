@@ -11,7 +11,7 @@ describe("fiche d'une pièce", () => {
 
   it("n'affirme que les occasions enregistrées", () => {
     expect(phraseQuandPorter(["Hiver"], undefined)).toBe("En hiver.");
-    expect(phraseQuandPorter(["Hiver"], ["quotidien", "soiree"])).toBe("En hiver — quotidien / Décontracté, soirée.");
+    expect(phraseQuandPorter(["Hiver"], ["quotidien", "soiree"])).toBe("En hiver — quotidien · Décontracté, soirée.");
   });
 
   it("titre en deux temps", () => {
