@@ -219,8 +219,31 @@ export function articleDefini(p: Item): "le" | "la" | "l'" | "les" | undefined {
   return elide(mots[0]) ? "l'" : possessif === "ta" ? "la" : "le";
 }
 
+/** Petits mots qui ouvrent un complément (« en lin », « de sport », « à talons ») : le nom court s'arrête avant eux. */
+const COMPLEMENTS = new Set(["en", "de", "du", "des", "d'", "à", "a", "au", "aux", "avec", "sans", "pour", "façon", "effet"]);
+/** Mots gardés au plus dans un titre de slide : le nom de la pièce et un qualificatif. */
+export const MOTS_TITRE_MAX = 2;
+
+/**
+ * LE NOM COURT D'UNE PIÈCE DANS UN TITRE DE SLIDE (18/10/2026, signalé : « les noms des pièces dans le carrousel sont trop longs et il y a
+ * un écart de hauteur quand on swipe »). La première appellation (avant « / », nomCourtPiece), arrêtée avant un complément (« Chemise en
+ * lin » → « Chemise »), au plus MOTS_TITRE_MAX mots (« Jupe midi plissée » → « Jupe midi »). Le nom complet reste sur la fiche de la pièce.
+ */
+export function nomCourtTitre(nom: string): string {
+  // Tout ce qui suit un « / », avec ou sans espaces (« Babies / Mary Jane », « Panier/Sac en rafia »), est retiré.
+  const mots = nom.split(/\s*\/\s*/)[0].trim().split(/\s+/).filter(Boolean);
+  const gardes: string[] = [];
+  for (const mot of mots) {
+    const cle = mot.toLowerCase().replace(/[’]/g, "'");
+    if (gardes.length > 0 && (COMPLEMENTS.has(cle) || /^d'/.test(cle))) break;
+    gardes.push(mot);
+    if (gardes.length >= MOTS_TITRE_MAX) break;
+  }
+  return gardes.join(" ") || nom.trim();
+}
+
 function avecArticleDefini(p: Item): string {
-  const nom = p.name.trim();
+  const nom = nomCourtTitre(p.name);
   const bas = `${nom.charAt(0).toLowerCase()}${nom.slice(1)}`;
   const article = articleDefini(p);
   if (!article) return bas;
@@ -236,6 +259,7 @@ const DESSUS_TITRE: CategoryKey[] = ["veste", "manteau"];
  * pièces qui font la tenue, avec leur vrai nom (couleur et matière comprises quand le nom les porte) : rien d'inventé.
  *   · robe ou combinaison : elle, puis la veste ou le manteau, sinon les chaussures ;
  *   · sinon : le bas, puis le haut (ou la maille).
+ * Les noms y sont COURTS (nomCourtTitre, 18/10/2026) : le titre tient sur deux à trois lignes, d'une slide à l'autre.
  * Premier temps en romain, second en italique (« Le jean brut / et la marinière »). Sans pièce reconnue : null, l'appelant garde son titre.
  */
 export function titreDeLaTenue(pieces: Item[]): { a: string; b: string } | null {

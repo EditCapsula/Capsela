@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { articleDefini, titreDeLaTenue } from "../dressingSections";
+import { articleDefini, nomCourtTitre, titreDeLaTenue } from "../dressingSections";
 import type { CategoryKey, Item } from "../types";
 
 // LE TITRE D'UNE SLIDE TIRÉ DE SA TENUE (17/10/2026) : les deux pièces maîtresses, avec leur vrai nom.
@@ -43,5 +43,26 @@ describe("titreDeLaTenue", () => {
     const a = titreDeLaTenue([p("pantalon", "Pantalon tailleur"), p("haut", "Chemise blanche")]);
     const b = titreDeLaTenue([p("short", "Short en lin"), p("haut", "T-shirt rayé")]);
     expect(a).not.toEqual(b);
+  });
+});
+
+describe("nomCourtTitre (18/10/2026 : des titres courts, une hauteur stable au glissé)", () => {
+  it("s'arrête avant un complément", () => {
+    expect(nomCourtTitre("Chemise en lin")).toBe("Chemise");
+    expect(nomCourtTitre("Débardeur de sport")).toBe("Débardeur");
+    expect(nomCourtTitre("Sandales à talons")).toBe("Sandales");
+    expect(nomCourtTitre("Veste d'été légère")).toBe("Veste");
+  });
+  it("garde au plus deux mots, et la première appellation seulement", () => {
+    expect(nomCourtTitre("Jupe midi plissée")).toBe("Jupe midi");
+    expect(nomCourtTitre("Babies / Mary Jane")).toBe("Babies");
+    expect(nomCourtTitre("Panier/Sac en rafia")).toBe("Panier");
+    expect(nomCourtTitre("Robe portefeuille")).toBe("Robe portefeuille");
+  });
+  it("le titre de la slide utilise ces noms courts", () => {
+    expect(titreDeLaTenue([p("jupe", "Jupe midi plissée"), p("haut", "Chemisier rayé en coton")])).toEqual({
+      a: "La jupe midi",
+      b: "et le chemisier rayé",
+    });
   });
 });
