@@ -33,7 +33,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -73,7 +73,14 @@ jobs:
           CAPSELA_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           CAPSELA_VERSION_CODE: ${{ github.run_number }}
           CAPSELA_VERSION_NAME: ${{ inputs.version || '0.0-verification' }}
-        run: ./gradlew bundleRelease --no-daemon
+        # En cas d'échec, l'erreur de Gradle remonte dans les annotations de l'exécution (lisibles sans ouvrir le journal complet).
+        run: |
+          set -o pipefail
+          if ! ./gradlew bundleRelease --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log"; then
+            grep -A 12 "What went wrong" "$RUNNER_TEMP/gradle.log" | head -40 | while IFS= read -r ligne; do echo "::error::$ligne"; done
+            grep -m 20 -E "^e: |error:|ERROR" "$RUNNER_TEMP/gradle.log" | while IFS= read -r ligne; do echo "::error::$ligne"; done
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'workflow_dispatch'
