@@ -77,7 +77,7 @@ jobs:
         run: |
           set -o pipefail
           if ! ./gradlew bundleRelease --no-daemon --stacktrace 2>&1 | tee "$RUNNER_TEMP/gradle.log"; then
-            grep -A 12 "What went wrong" "$RUNNER_TEMP/gradle.log" | head -40 | while IFS= read -r ligne; do echo "::error::$ligne"; done
+            grep -B 6 -A 14 "What went wrong" "$RUNNER_TEMP/gradle.log" | head -40 | while IFS= read -r ligne; do echo "::error::$ligne"; done
             grep -m 20 -E "^e: |error:|ERROR" "$RUNNER_TEMP/gradle.log" | while IFS= read -r ligne; do echo "::error::$ligne"; done
             exit 1
           fi
