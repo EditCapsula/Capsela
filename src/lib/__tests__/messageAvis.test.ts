@@ -38,7 +38,7 @@ describe("message envoyé à un proche — autonome, hors de Capsela", () => {
 
   it("porte l'occasion et la météo quand elles existent", () => {
     const m = buildOpinionMessage(BASE);
-    expect(m).toContain("Capsela lui propose cette tenue pour l’occasion « Travail / Bureau » :");
+    expect(m).toContain("Capsela lui propose cette tenue pour l’occasion « Travail · Bureau » :");
     expect(m).toContain("Météo : 23 °C · Ensoleillé");
   });
 

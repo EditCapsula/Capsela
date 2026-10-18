@@ -132,7 +132,7 @@ function VisuelTenue() {
               ☀️ 22° · Paris
             </span>
             <span className="inline-flex rounded-full text-[11px] px-[10px] py-[6px] whitespace-nowrap" style={{ background: "rgba(243,238,229,.22)", color: "var(--color-on-terracotta)" }}>
-              Travail / Bureau
+              Travail · Bureau
             </span>
           </div>
           <div className="mt-[10px] text-[10px] uppercase tracking-[.08em] [@media(max-height:700px)]:hidden" style={{ color: "rgba(243,238,229,.7)" }}>

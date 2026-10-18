@@ -11,14 +11,14 @@ import type { CategoryKey, Item } from "@/lib/types";
 describe("la taxonomie officielle", () => {
   it("huit occasions, dans l'ordre décidé", () => {
     expect(OCCASIONS.map(([, label]) => label)).toEqual([
-      "Quotidien / Décontracté",
-      "Travail / Bureau",
+      "Quotidien · Décontracté",
+      "Travail · Bureau",
       "Rendez-vous amoureux",
       "Soirée",
       "Sport",
-      "Cocooning / Maison",
-      "Voyage / Déplacement",
-      "Événement / Cérémonie",
+      "Cocooning · Maison",
+      "Voyage · Déplacement",
+      "Événement · Cérémonie",
     ]);
   });
 

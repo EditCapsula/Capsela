@@ -860,7 +860,7 @@ export interface OpinionMessageParts {
   marque: string;
   /** « Angela te demande ton avis sur sa tenue. » — sans prénom : « On te demande ton avis sur cette tenue. » */
   demande: string;
-  /** « Capsela lui propose cette tenue pour l’occasion « Quotidien / Décontracté » : » — sans occasion, sans elle. */
+  /** « Capsela lui propose cette tenue pour l’occasion « Quotidien · Décontracté » : » — sans occasion, sans elle. */
   contexte: string;
   /** Un nom de pièce par entrée, SANS la puce — elle appartient au rendu. */
   pieces: string[];

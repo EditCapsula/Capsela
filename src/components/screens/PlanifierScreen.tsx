@@ -887,7 +887,8 @@ export default function PlanifierScreen() {
         meteoMoment.tempMin === meteoMoment.tempMax
           ? `${meteoMoment.temp}°`
           : `de ${meteoMoment.tempMin}° à ${meteoMoment.tempMax}°`;
-      return `Prévision à ${villeAffichee} pour ce moment : ${amplitude}, ${meteoMoment.label.toLowerCase()}. La tenue en tient compte.`;
+      // « La tenue en tient compte » retiré le 18/10/2026 (demandé) : le bloc « Pourquoi ce look ? » le dit déjà par sa place.
+      return `Prévision à ${villeAffichee} pour ce moment : ${amplitude}, ${meteoMoment.label.toLowerCase()}.`;
     }
     if (prevision && dernierJourConnu && dateChoisie && jourLocal(dateChoisie) > dernierJourConnu) {
       const d = new Date(`${dernierJourConnu}T12:00:00`);
