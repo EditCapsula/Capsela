@@ -7,8 +7,10 @@ android {
         applicationId "app.capsela"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Numéro et nom de version fournis par la construction automatique (.github/workflows/android-construire.yml) ; 1 / 1.0 en local.
+        // Affectation explicite : sans « = », Groovy lit « versionCode (…).toInteger() » comme un appel suivi de .toInteger() sur son résultat.
+        versionCode = Integer.parseInt(System.getenv("CAPSELA_VERSION_CODE") ?: "1")
+        versionName = System.getenv("CAPSELA_VERSION_NAME") ?: "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +18,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // LA CLÉ D'ENVOI (17/10/2026) : lue dans l'environnement de la construction automatique, jamais dans le dépôt. Sans elle, la
+    // version « release » n'est pas signée (construction locale) ; Google Play re-signe l'app avec sa propre clé (Play App Signing).
+    signingConfigs {
+        release {
+            def magasin = System.getenv("CAPSELA_KEYSTORE_PATH")
+            if (magasin) {
+                storeFile file(magasin)
+                storePassword System.getenv("CAPSELA_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("CAPSELA_KEY_ALIAS") ?: "capsela"
+                keyPassword System.getenv("CAPSELA_KEYSTORE_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         release {
+            if (System.getenv("CAPSELA_KEYSTORE_PATH")) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

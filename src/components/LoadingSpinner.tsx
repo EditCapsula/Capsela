@@ -43,7 +43,7 @@ export default function LoadingSpinner({ size = 76, className = "" }: Props) {
         />
       </svg>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-hanger-only.png" alt="" style={{ width: iconSize, height: "auto" }} />
+      <img src="/brand/capsela-monogramme.png" alt="" style={{ width: iconSize, height: "auto" }} />
     </div>
   );
 }
