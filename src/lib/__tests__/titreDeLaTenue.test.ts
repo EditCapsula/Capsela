@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { articleDefini, titreDeLaTenue } from "../dressingSections";
+import { articleDefini, nomCourtTitre, titreDeLaTenue } from "../dressingSections";
 import type { CategoryKey, Item } from "../types";
 
 // LE TITRE D'UNE SLIDE TIRÉ DE SA TENUE (17/10/2026) : les deux pièces maîtresses, avec leur vrai nom.
@@ -43,5 +43,31 @@ describe("titreDeLaTenue", () => {
     const a = titreDeLaTenue([p("pantalon", "Pantalon tailleur"), p("haut", "Chemise blanche")]);
     const b = titreDeLaTenue([p("short", "Short en lin"), p("haut", "T-shirt rayé")]);
     expect(a).not.toEqual(b);
+  });
+});
+
+describe("nomCourtTitre (18/10/2026 : raccourcir sans perdre ce qui dit la pièce)", () => {
+  it("un nom assez court reste entier", () => {
+    expect(nomCourtTitre("Chemise en lin")).toBe("Chemise en lin");
+    expect(nomCourtTitre("Short de sport")).toBe("Short de sport");
+    expect(nomCourtTitre("Jupe midi plissée")).toBe("Jupe midi plissée");
+    expect(nomCourtTitre("Robe portefeuille")).toBe("Robe portefeuille");
+  });
+  it("rien après « / » ni entre parenthèses", () => {
+    expect(nomCourtTitre("Babies / Mary Jane")).toBe("Babies");
+    expect(nomCourtTitre("Panier/Sac en rafia")).toBe("Panier");
+    expect(nomCourtTitre("Jean droit (brut)")).toBe("Jean droit");
+  });
+  it("un nom long perd ses derniers mots, sans finir sur un mot de liaison", () => {
+    expect(nomCourtTitre("Pantalon tailleur taille haute")).toBe("Pantalon tailleur");
+    expect(nomCourtTitre("Blazer structuré en laine")).toBe("Blazer structuré");
+    expect(nomCourtTitre("Veste en jean délavée")).toBe("Veste en jean");
+    expect(nomCourtTitre("Sandales à talons fins dorées")).toBe("Sandales à talons");
+  });
+  it("le titre de la slide utilise ces noms", () => {
+    expect(titreDeLaTenue([p("jupe", "Jupe midi plissée"), p("haut", "Chemisier rayé en coton bio")])).toEqual({
+      a: "La jupe midi plissée",
+      b: "et le chemisier rayé",
+    });
   });
 });

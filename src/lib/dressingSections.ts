@@ -219,8 +219,31 @@ export function articleDefini(p: Item): "le" | "la" | "l'" | "les" | undefined {
   return elide(mots[0]) ? "l'" : possessif === "ta" ? "la" : "le";
 }
 
+/** Petits mots qui ne terminent jamais un nom raccourci (« Chemise en », « Sandales à ») : on les retire avec ce qui les suit. */
+const MOTS_DE_LIAISON = new Set(["en", "de", "du", "des", "d'", "à", "a", "au", "aux", "avec", "sans", "pour", "façon", "effet", "et", "le", "la", "les", "l'"]);
+/** Longueur au-delà de laquelle un nom de pièce est raccourci dans un titre de slide (caractères, espaces compris). */
+export const LONGUEUR_TITRE_MAX = 18;
+
+/**
+ * LE NOM COURT D'UNE PIÈCE DANS UN TITRE DE SLIDE (18/10/2026, signalé : « les noms des pièces dans le carrousel sont trop longs » ; puis
+ * « il faut les raccourcir intelligemment, les noms doivent rester lisibles »). Dans l'ordre :
+ *   1. la première appellation seulement : rien après « / » (« Babies / Mary Jane » → « Babies ») ni entre parenthèses ;
+ *   2. un nom assez court reste ENTIER — « Chemise en lin », « Short de sport », « Jupe midi plissée » disent la pièce ;
+ *   3. un nom trop long perd ses derniers mots un à un, jusqu'à tenir dans LONGUEUR_TITRE_MAX, sans jamais finir sur un mot de liaison
+ *      (« Pantalon tailleur taille haute » → « Pantalon tailleur », « Blazer structuré en laine » → « Blazer structuré »).
+ * Le nom complet reste sur la fiche de la pièce.
+ */
+export function nomCourtTitre(nom: string): string {
+  const appellation = nom.split(/\s*\/\s*/)[0].replace(/\s*\([^)]*\)/g, "").trim();
+  const mots = appellation.split(/\s+/).filter(Boolean);
+  if (!mots.length) return nom.trim();
+  const estLiaison = (m: string) => MOTS_DE_LIAISON.has(m.toLowerCase().replace(/’/g, "'")) || /^[dl]['’]$/i.test(m);
+  while (mots.length > 1 && (mots.join(" ").length > LONGUEUR_TITRE_MAX || estLiaison(mots[mots.length - 1]))) mots.pop();
+  return mots.join(" ");
+}
+
 function avecArticleDefini(p: Item): string {
-  const nom = p.name.trim();
+  const nom = nomCourtTitre(p.name);
   const bas = `${nom.charAt(0).toLowerCase()}${nom.slice(1)}`;
   const article = articleDefini(p);
   if (!article) return bas;
@@ -236,6 +259,7 @@ const DESSUS_TITRE: CategoryKey[] = ["veste", "manteau"];
  * pièces qui font la tenue, avec leur vrai nom (couleur et matière comprises quand le nom les porte) : rien d'inventé.
  *   · robe ou combinaison : elle, puis la veste ou le manteau, sinon les chaussures ;
  *   · sinon : le bas, puis le haut (ou la maille).
+ * Les noms y sont raccourcis quand ils sont longs (nomCourtTitre, 18/10/2026) : le titre reste lisible et tient sur peu de lignes.
  * Premier temps en romain, second en italique (« Le jean brut / et la marinière »). Sans pièce reconnue : null, l'appelant garde son titre.
  */
 export function titreDeLaTenue(pieces: Item[]): { a: string; b: string } | null {

@@ -69,7 +69,8 @@ export function CarteHero({ surtitre, titre, sousTitre, pieces, graine, categori
   const ouvrirPiece = useOuvrirPiece();
   return (
     <div
-      className="rounded-hero grid gap-2"
+      // flex-1 : toutes les slides prennent la hauteur de la plus haute (la piste les étire) — pas de saut de hauteur au glissé (18/10/2026).
+      className="rounded-hero grid gap-2 flex-1"
       style={{ background: "var(--color-card)", border: "1px solid var(--color-border)", gridTemplateColumns: "minmax(0,1fr) clamp(140px, 55.5%, 181px)", padding: "20px 14px 10px 18px", minHeight: 307 }}
     >
       <div className="flex flex-col min-w-0">
@@ -174,7 +175,7 @@ export function CarrouselHero({
         {slides.map((slide, i) => (
           <div
             key={i}
-            className="snap-center shrink-0 w-full px-4"
+            className="snap-center shrink-0 w-full px-4 flex flex-col"
             role="group"
             aria-roledescription="diapositive"
             aria-label={`${libelles[i]} (${i + 1} sur ${n})`}
