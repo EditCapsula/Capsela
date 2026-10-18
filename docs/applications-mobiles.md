@@ -36,7 +36,7 @@ Capacitor emballe le site statique déjà construit (`out/`, `output: "export"`)
 
 ## Icône et écran de démarrage (17/10/2026)
 
-`node scripts/generer-icones-mobiles.mjs` : le cintre-cœur terracotta (`src/app/icon.svg`) centré sur le crème de l'app, décliné pour iOS (icône 1024 px opaque, écrans de démarrage) et Android (icônes classiques, rondes, adaptatives, écrans de démarrage). **Provisoire** : le SVG est une vectorisation en escalier ; le script en lisse les contours, mais une version vectorielle propre du logo est à fournir pour l'icône définitive (visible en grand sur la fiche App Store).
+**Nouveau logo (18/10/2026)** : `public/brand/capsela-logo.png` (« CAPSELA » en didone, le A terracotta, tel que fourni). `node scripts/generer-marque.mjs` en dérive la version claire (fonds sombres) et le monogramme « CA » ; `node scripts/generer-icones-mobiles.mjs` pose ce monogramme sur le crème de l'app pour iOS (icône 1024 px opaque, écrans de démarrage), Android (icônes classiques, rondes, adaptatives, écrans de démarrage) ; le favicon du site reste le cintre-cœur (`src/app/icon.svg`, décidé le 18/10/2026). **À valider** : dans le logo, la jambe droite du A passe sous le P ; le monogramme la prolonge jusqu'à la ligne de base en suivant ses bords. Le fichier fourni fait 775 px de large : une version vectorielle (ou au moins 3 000 px) donnerait une icône plus nette.
 
 ## Construction automatique de l'app Android (17/10/2026)
 

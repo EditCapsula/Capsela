@@ -1,38 +1,18 @@
 // Icônes et écrans de démarrage des applications iOS et Android (17/10/2026, plan « Publication sur les stores »).
 //
-// Une seule source : le cintre-cœur terracotta de la marque (src/app/icon.svg, celui de l'onglet du navigateur), posé sur le crème
-// de l'app (--color-cream, #F3EEE5). Rien n'est dessiné ici : le script ne fait que redimensionner et centrer.
+// Une seule source : le monogramme « CA » du logo (le C encre, le A terracotta), posé sur le crème de l'app (--color-cream, #F3EEE5).
+// Rien n'est dessiné ici : le script ne fait que redimensionner et centrer. Remplace le cintre-cœur du 17/10/2026.
 // Relancer après un changement de logo : `node scripts/generer-icones-mobiles.mjs`.
 import sharp from "sharp";
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 
 const CREME = "#F3EEE5";
-const svg = readFileSync("src/app/icon.svg");
 
-const TERRACOTTA = { r: 194, g: 105, b: 55 };
+// Le monogramme « CA » du logo (18/10/2026, nouveau logo) : public/brand/capsela-monogramme.png, dérivé par scripts/generer-marque.mjs.
+const MONOGRAMME = "public/brand/capsela-monogramme.png";
 
-/**
- * Le logo rendu à `largeur` px (proportions du SVG gardées), fond transparent. Le SVG est une vectorisation en escalier (ses contours
- * suivent les pixels de l'image d'origine) : à 1024 px, les marches se voient. On les lisse sans redessiner : le tracé devient un masque,
- * flouté puis seuillé à mi-hauteur (les marches disparaissent, la forme reste), puis légèrement adouci pour l'anticrénelage.
- */
-async function logo(largeur) {
-  const l = Math.round(largeur);
-  const trace = await sharp(svg, { density: 1200 }).resize({ width: l }).flatten({ background: "#ffffff" }).greyscale().toBuffer();
-  const masque = await sharp(trace)
-    .blur(Math.max(0.6, l / 110))
-    .threshold(175)
-    .negate()
-    .blur(Math.max(0.5, l / 900))
-    .toColourspace("b-w")
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const { width, height } = masque.info;
-  return sharp({ create: { width, height, channels: 3, background: TERRACOTTA } })
-    .joinChannel(masque.data, { raw: { width, height, channels: 1 } })
-    .png()
-    .toBuffer();
-}
+/** Le monogramme rendu à `largeur` px de large (proportions gardées), fond transparent. */
+const logo = (largeur) => sharp(MONOGRAMME).resize({ width: Math.round(largeur), kernel: "lanczos3" }).png().toBuffer();
 
 /** Un carré ou un rectangle crème (ou transparent), le logo centré à `part` de son plus petit côté. */
 async function planche(largeur, hauteur, part, { fond = CREME, rond = false } = {}) {
@@ -77,3 +57,4 @@ await ecrire(`${res}/drawable/splash.png`, await planche(480, 320, 0.3), { opaqu
 // Le fond de l'icône adaptative : le crème.
 writeFileSync(`${res}/values/ic_launcher_background.xml`, `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${CREME}</color>\n</resources>\n`);
 console.log("écrit", `${res}/values/ic_launcher_background.xml`);
+// Le favicon du site (src/app/icon.svg, favicon.ico) n'est PAS régénéré : il reste le cintre-cœur (demandé le 18/10/2026).

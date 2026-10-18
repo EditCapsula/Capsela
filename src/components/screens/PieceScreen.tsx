@@ -17,6 +17,7 @@ import { dressingPhotoPath, estPhotoMiseAPlat, type CodeMiseAPlat } from "@/lib/
 import { isSupabaseConfigured } from "@/lib/supabase";
 import BottomSheet from "@/components/BottomSheet";
 import AppHeader from "@/components/AppHeader";
+import LogoCapsela from "@/components/LogoCapsela";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
@@ -328,10 +329,7 @@ export default function PieceScreen({ onFermer }: { onFermer?: () => void } = {}
                 <BoutonRetour onClick={revenir} label={onFermer ? "Fermer la fiche" : "Revenir à l'écran précédent"} />
                 {/* Pas de logo dans une feuille (17/10/2026, demandé) : la marque est déjà sur l'écran, juste dessous. */}
                 {!enFeuille && (
-                  <div className="flex flex-col items-center gap-[6px]" aria-hidden="true">
-                    <span className="font-serif font-medium text-[22px] leading-none text-ink" style={{ letterSpacing: ".2em", paddingLeft: ".2em" }}>CAPSELA</span>
-                    <span className="w-[28px] h-[2px] rounded-[2px]" style={{ background: "var(--color-terracotta)" }} />
-                  </div>
+                  <LogoCapsela />
                 )}
                 <button
                   onClick={() => setMenuOpen(true)}

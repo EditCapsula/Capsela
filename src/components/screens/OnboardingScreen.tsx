@@ -89,7 +89,7 @@ function VisuelDressing() {
         <img src="/onboarding/dressing-penderie.webp" alt="" width={368} height={410} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 40%" }} />
         <div className="absolute bottom-[10px] left-1/2 -translate-x-1/2 flex items-center gap-[6px] bg-card border border-border rounded-full py-[7px] px-[13px] whitespace-nowrap">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-hanger-only.png" alt="" style={{ width: 13, height: "auto" }} />
+          <img src="/brand/capsela-monogramme.png" alt="" style={{ width: 14, height: "auto" }} />
           <span className="text-[11px] text-ink font-medium">36 pièces · exemple</span>
         </div>
       </div>
