@@ -219,27 +219,27 @@ export function articleDefini(p: Item): "le" | "la" | "l'" | "les" | undefined {
   return elide(mots[0]) ? "l'" : possessif === "ta" ? "la" : "le";
 }
 
-/** Petits mots qui ouvrent un complément (« en lin », « de sport », « à talons ») : le nom court s'arrête avant eux. */
-const COMPLEMENTS = new Set(["en", "de", "du", "des", "d'", "à", "a", "au", "aux", "avec", "sans", "pour", "façon", "effet"]);
-/** Mots gardés au plus dans un titre de slide : le nom de la pièce et un qualificatif. */
-export const MOTS_TITRE_MAX = 2;
+/** Petits mots qui ne terminent jamais un nom raccourci (« Chemise en », « Sandales à ») : on les retire avec ce qui les suit. */
+const MOTS_DE_LIAISON = new Set(["en", "de", "du", "des", "d'", "à", "a", "au", "aux", "avec", "sans", "pour", "façon", "effet", "et", "le", "la", "les", "l'"]);
+/** Longueur au-delà de laquelle un nom de pièce est raccourci dans un titre de slide (caractères, espaces compris). */
+export const LONGUEUR_TITRE_MAX = 18;
 
 /**
- * LE NOM COURT D'UNE PIÈCE DANS UN TITRE DE SLIDE (18/10/2026, signalé : « les noms des pièces dans le carrousel sont trop longs et il y a
- * un écart de hauteur quand on swipe »). La première appellation (avant « / », nomCourtPiece), arrêtée avant un complément (« Chemise en
- * lin » → « Chemise »), au plus MOTS_TITRE_MAX mots (« Jupe midi plissée » → « Jupe midi »). Le nom complet reste sur la fiche de la pièce.
+ * LE NOM COURT D'UNE PIÈCE DANS UN TITRE DE SLIDE (18/10/2026, signalé : « les noms des pièces dans le carrousel sont trop longs » ; puis
+ * « il faut les raccourcir intelligemment, les noms doivent rester lisibles »). Dans l'ordre :
+ *   1. la première appellation seulement : rien après « / » (« Babies / Mary Jane » → « Babies ») ni entre parenthèses ;
+ *   2. un nom assez court reste ENTIER — « Chemise en lin », « Short de sport », « Jupe midi plissée » disent la pièce ;
+ *   3. un nom trop long perd ses derniers mots un à un, jusqu'à tenir dans LONGUEUR_TITRE_MAX, sans jamais finir sur un mot de liaison
+ *      (« Pantalon tailleur taille haute » → « Pantalon tailleur », « Blazer structuré en laine » → « Blazer structuré »).
+ * Le nom complet reste sur la fiche de la pièce.
  */
 export function nomCourtTitre(nom: string): string {
-  // Tout ce qui suit un « / », avec ou sans espaces (« Babies / Mary Jane », « Panier/Sac en rafia »), est retiré.
-  const mots = nom.split(/\s*\/\s*/)[0].trim().split(/\s+/).filter(Boolean);
-  const gardes: string[] = [];
-  for (const mot of mots) {
-    const cle = mot.toLowerCase().replace(/[’]/g, "'");
-    if (gardes.length > 0 && (COMPLEMENTS.has(cle) || /^d'/.test(cle))) break;
-    gardes.push(mot);
-    if (gardes.length >= MOTS_TITRE_MAX) break;
-  }
-  return gardes.join(" ") || nom.trim();
+  const appellation = nom.split(/\s*\/\s*/)[0].replace(/\s*\([^)]*\)/g, "").trim();
+  const mots = appellation.split(/\s+/).filter(Boolean);
+  if (!mots.length) return nom.trim();
+  const estLiaison = (m: string) => MOTS_DE_LIAISON.has(m.toLowerCase().replace(/’/g, "'")) || /^[dl]['’]$/i.test(m);
+  while (mots.length > 1 && (mots.join(" ").length > LONGUEUR_TITRE_MAX || estLiaison(mots[mots.length - 1]))) mots.pop();
+  return mots.join(" ");
 }
 
 function avecArticleDefini(p: Item): string {
@@ -259,7 +259,7 @@ const DESSUS_TITRE: CategoryKey[] = ["veste", "manteau"];
  * pièces qui font la tenue, avec leur vrai nom (couleur et matière comprises quand le nom les porte) : rien d'inventé.
  *   · robe ou combinaison : elle, puis la veste ou le manteau, sinon les chaussures ;
  *   · sinon : le bas, puis le haut (ou la maille).
- * Les noms y sont COURTS (nomCourtTitre, 18/10/2026) : le titre tient sur deux à trois lignes, d'une slide à l'autre.
+ * Les noms y sont raccourcis quand ils sont longs (nomCourtTitre, 18/10/2026) : le titre reste lisible et tient sur peu de lignes.
  * Premier temps en romain, second en italique (« Le jean brut / et la marinière »). Sans pièce reconnue : null, l'appelant garde son titre.
  */
 export function titreDeLaTenue(pieces: Item[]): { a: string; b: string } | null {
