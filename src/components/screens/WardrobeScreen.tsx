@@ -692,7 +692,7 @@ export default function WardrobeScreen() {
                   <PhotoPiece piece={aRedecouvrirUne.piece} ratio={0.82} rayon={14} />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block t-surtitre text-terracotta-hover">À redécouvrir · {weather.saisons?.length ? weather.saisons.join(" / ") : saisonDeLaDate(maintenant)}</span>
+                  <span className="block t-surtitre text-terracotta-hover">À redécouvrir · {weather.saisons?.length ? weather.saisons.join(" · ") : saisonDeLaDate(maintenant)}</span>
                   <span className="block font-serif text-ink mt-[5px]" style={{ fontSize: 16.5, lineHeight: 1.2 }}>
                     {`${designationPiece(aRedecouvrirUne.piece).replace(/^t(on|a|es) /, (m) => `T${m.slice(1)}`)} `}
                     <span className="italic text-terracotta">{pluriel ? "attendent leur moment" : "attend son moment"}</span>
