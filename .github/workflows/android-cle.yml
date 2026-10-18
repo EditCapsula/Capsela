@@ -1,0 +1,43 @@
+name: Android — créer la clé d'envoi
+
+# À LANCER UNE SEULE FOIS (17/10/2026, docs/applications-mobiles.md). Crée la clé qui signe les versions envoyées à Google Play
+# (la « clé d'envoi » : Google re-signe ensuite l'app avec sa propre clé, et une clé d'envoi perdue se remplace auprès du support).
+#
+# Avant : créer le secret ANDROID_KEYSTORE_PASSWORD (un mot de passe d'au moins 8 caractères, à garder aussi dans un gestionnaire).
+# Après : télécharger l'artefact « cle-envoi-android » (gardé 1 jour), copier le texte de cle-envoi.base64.txt dans un nouveau secret
+# ANDROID_KEYSTORE_BASE64, puis supprimer l'artefact et le fichier téléchargé.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  cle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Vérifier le mot de passe
+        env:
+          MOT_DE_PASSE: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ ${#MOT_DE_PASSE} -lt 8 ]; then
+            echo "::error::Crée d'abord le secret ANDROID_KEYSTORE_PASSWORD (8 caractères au moins)."
+            exit 1
+          fi
+
+      - name: Créer la clé
+        env:
+          MOT_DE_PASSE: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          keytool -genkeypair -v -keystore cle-envoi.jks -alias capsela -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass "$MOT_DE_PASSE" -keypass "$MOT_DE_PASSE" -dname "CN=Capsela, O=Capsela, C=FR"
+          base64 -w 0 cle-envoi.jks > cle-envoi.base64.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cle-envoi-android
+          path: cle-envoi.base64.txt
+          retention-days: 1

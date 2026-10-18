@@ -38,6 +38,14 @@ Capacitor emballe le site statique déjà construit (`out/`, `output: "export"`)
 
 `node scripts/generer-icones-mobiles.mjs` : le cintre-cœur terracotta (`src/app/icon.svg`) centré sur le crème de l'app, décliné pour iOS (icône 1024 px opaque, écrans de démarrage) et Android (icônes classiques, rondes, adaptatives, écrans de démarrage). **Provisoire** : le SVG est une vectorisation en escalier ; le script en lisse les contours, mais une version vectorielle propre du logo est à fournir pour l'icône définitive (visible en grand sur la fiche App Store).
 
+## Construction automatique de l'app Android (17/10/2026)
+
+Sans Android Studio : deux workflows GitHub (onglet Actions).
+- **« Android — créer la clé d'envoi »** (`android-cle.yml`), une seule fois : crée la clé qui signe les versions envoyées à Google Play. Avant : secret `ANDROID_KEYSTORE_PASSWORD`. Après : copier le contenu de l'artefact `cle-envoi.base64.txt` dans le secret `ANDROID_KEYSTORE_BASE64`, puis supprimer l'artefact. Google Play re-signe l'app (Play App Signing) : une clé d'envoi perdue se remplace auprès du support.
+- **« Android — construire l'app pour Google Play »** (`android-construire.yml`), à chaque version : « Run workflow » avec le nom de version ; le fichier `.aab` signé est en artefact (30 jours), à déposer dans la Play Console. Le numéro de version (`versionCode`) est le numéro d'exécution, toujours croissant. Secret de la clé publique Supabase : `NEXT_PUBLIC_SUPABASE_ANON_KEY`, sinon `SUPABASE_PUBLISHABLE_KEY`.
+- **Sur une pull request** qui touche `android/`, `capacitor.config.ts` ou le workflow : la même construction, non signée, pour vérifier que le projet compile.
+- Gradle lit la clé et la version dans l'environnement (`android/app/build.gradle`) : rien de secret dans le dépôt.
+
 ## Ce qui reste à faire avant la première soumission
 
 1. **Sign in with Apple** : exigé sur iOS tant que la connexion Google y est proposée (règle 4.8 de l'App Store) — à faire quand le compte Apple existe (identifiant de service, clé, fournisseur « Apple » dans Supabase).
