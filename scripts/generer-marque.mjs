@@ -42,7 +42,6 @@ const TERRA = (() => {
   return [158, 91, 67];
 })();
 const bords = []; // [y, gauche, droite] de la jambe épaisse, là où elle n'est pas encore cachée
-let basA = 0;
 for (let y = 0; y < height; y++) {
   let g = -1, d = -1, run = 0, meilleur = [-1, -1, 0];
   for (let x = premiereTerracotta; x <= finA + 1; x++) {
@@ -50,7 +49,7 @@ for (let y = 0; y < height; y++) {
     const t = x <= finA && mono[i + 3] > 128 && estTerracotta(i);
     if (t) { if (run === 0) g = x; run++; d = x; } else { if (run > meilleur[2]) meilleur = [g, d, run]; run = 0; }
   }
-  if (meilleur[2] >= 6) { bords.push([y, meilleur[0], meilleur[1]]); basA = y; }
+  if (meilleur[2] >= 6) { bords.push([y, meilleur[0], meilleur[1]]); }
 }
 const ajuster = (pts) => {
   const n = pts.length, sx = pts.reduce((a, [y]) => a + y, 0), sy = pts.reduce((a, [, v]) => a + v, 0);
