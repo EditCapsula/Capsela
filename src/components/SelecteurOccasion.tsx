@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { GlypheSousChoix } from "@/components/GlyphesOccasion";
 import { DATE_CONTEXTS, OCCASIONS, WORK_MODES } from "@/lib/data";
-import { libelleDeclencheur, phraseOccasion } from "@/lib/phraseOccasion";
+import { libelleDeclencheur, phraseOccasion, sansBarre } from "@/lib/phraseOccasion";
 import { useCapsela } from "@/lib/store";
 import type { DateContext, OccasionKey, TravelMode, WorkMode } from "@/lib/types";
 
@@ -179,7 +179,7 @@ export default function SelecteurOccasion({ quand }: { quand: string }) {
                   className={"flex-1 min-w-0 text-[14px] " + (actif ? "font-semibold" : "text-ink")}
                   style={actif ? { color: "var(--color-terracotta-deep)" } : undefined}
                 >
-                  {v}
+                  {sansBarre(v)}
                 </span>
                 {actif && (
                   <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block", color: "var(--color-terracotta-deep)" }}>

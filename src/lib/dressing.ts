@@ -1,3 +1,4 @@
+import { sansBarre } from "./barre";
 import { accessoireTypeFor } from "./attributes";
 import { type Verdict, clePieces, jourLocal, litteralTableau } from "./outfitFeedback";
 import { manchesDepuis } from "./manches";
@@ -70,7 +71,8 @@ interface DressingItemRow {
 function rowToItem(row: DressingItemRow): Item {
   return {
     id: row.id,
-    name: row.name,
+    // Comme au catalogue (18/10/2026) : le « / » d'un nom s'affiche en point médian.
+    name: sansBarre(row.name),
     brand: row.brand ?? undefined,
     cat: row.cat as CategoryKey,
     color: row.color,

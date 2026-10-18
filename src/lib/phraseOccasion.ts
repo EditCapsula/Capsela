@@ -57,6 +57,8 @@ export function phraseOccasion(
   }
 }
 
+export { sansBarre } from "./barre";
+
 /** Libellé du déclencheur : la première partie d'un libellé composé (« Restaurant / date romantique » → « Restaurant »), sinon le libellé entier. */
 export function libelleDeclencheur(valeur: string): string {
   return valeur.split(" / ")[0];

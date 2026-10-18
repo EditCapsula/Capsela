@@ -1,3 +1,4 @@
+import { sansBarre } from "./barre";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { manchesDepuis } from "./manches";
 import { detectAccessoireType, detectBijouType, detectMatiere, detectSacType } from "./attributes";
@@ -334,7 +335,8 @@ const SHOE_TYPE_MAP: Record<string, ShoeType> = {
 export function rowToCatalogItem(row: VestiaireRow): CatalogItem | null {
   let cat = mapCategory(row.category);
   if (!cat) return null;
-  const name = (row.name || "").trim();
+  // Le « / » d'un nom à deux appellations s'affiche en point médian (18/10/2026, demandé) : « Babies · Mary Jane ».
+  const name = sansBarre((row.name || "").trim());
   if (!name) return null;
   const hex = row.hex || FALLBACK_HEX;
   const color = row.couleur_dominante || "";
