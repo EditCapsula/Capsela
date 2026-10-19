@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   ACTIVITES,
-  ACTIVITES_MAX,
   activitesDuProgramme,
   bagageConseille,
   programmeDesActivites,
@@ -129,7 +128,6 @@ describe("couvertureMeteo — ce que la météo connaît du séjour", () => {
 describe("activités de la maquette V2 — elles se traduisent en programme, donc en occasions mères", () => {
   it("neuf activités (Randonnée depuis le 19/10/2026), toutes rattachées à des entrées du programme qui existent", () => {
     expect(ACTIVITES).toHaveLength(9);
-    expect(ACTIVITES_MAX).toBe(4);
     for (const a of ACTIVITES) for (const [id] of a.retenues) expect(elementProgramme(id), `${a.id} → ${id}`).toBeDefined();
   });
 
@@ -150,6 +148,14 @@ describe("activités de la maquette V2 — elles se traduisent en programme, don
     const nature = programmeDesActivites(["nature"], 7).map((x) => x.id);
     expect(nature).toContain("balade");
     expect(nature).not.toContain("randonnee");
+  });
+
+  it("toutes les activités à la fois (sans limite depuis le 19/10/2026) : un programme valide, même sur un court séjour", () => {
+    for (const jours of [1, 3, 10]) {
+      const p = programmeDesActivites(ACTIVITES.map((a) => a.id), jours);
+      expect(new Set(p.map((x) => x.id)).size).toBe(p.length);
+      for (const x of p) expect(x.frequence).toBeGreaterThanOrEqual(1);
+    }
   });
 
   it("les occasions mères que reçoit le moteur", () => {

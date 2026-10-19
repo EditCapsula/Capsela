@@ -160,8 +160,6 @@ export function programmeParDefaut(sejour: TypeSejour | null, nbJours: number): 
 
 export type ActiviteSejour = "plage" | "ville" | "nature" | "randonnee" | "detente" | "soiree" | "travail" | "sport" | "evenement";
 
-/** Au plus quatre activités (maquette : « Sélectionne jusqu'à 4 activités »). */
-export const ACTIVITES_MAX = 4;
 
 /**
  * Les activités que la maquette V2 propose (huit, plus Randonnée le 19/10/2026) à la place du type de séjour et du programme. Chacune se traduit en entrées du

@@ -75,7 +75,6 @@ import {
 } from "@/lib/affairesVoyage";
 import {
   ACTIVITES,
-  ACTIVITES_MAX,
   activitesDuProgramme,
   bagageConseille,
   couvertureMeteo,
@@ -866,28 +865,25 @@ export default function ValiseScreen() {
           </>
         )}
 
-        {/* ── 3. L'ESPRIT DU SÉJOUR ── maquette V2 (11/10/2026) : neuf activités depuis l'ajout de Randonnée (19/10/2026), quatre au plus ; elles se traduisent en programme
+        {/* ── 3. L'ESPRIT DU SÉJOUR ── maquette V2 (11/10/2026) : neuf activités depuis l'ajout de Randonnée (19/10/2026), sans limite depuis le même jour (demandé : « on peut tout sélectionner si besoin ») ; elles se traduisent en programme
             (programmeDesActivites), donc en occasions mères pour le moteur. */}
         {questions && etape === 3 && (
           <>
             <Surtitre>Ta valise · 3 / 3</Surtitre>
             <TitreEtape a="Quel est l'esprit" b="de ton séjour ?" />
-            <div className="text-[13px] text-muted leading-[1.5] mt-2">Sélectionne jusqu&apos;à {ACTIVITES_MAX} activités.</div>
             <div className="grid grid-cols-2 gap-2 mt-5" role="group" aria-label="Activités du séjour">
               {ACTIVITES.map((a) => {
                 const on = activites.includes(a.id);
-                const bloquee = !on && activites.length >= ACTIVITES_MAX;
                 return (
                   <button
                     key={a.id}
-                    onClick={() => setActivites((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : l.length >= ACTIVITES_MAX ? l : [...l, a.id]))}
+                    onClick={() => setActivites((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : [...l, a.id]))}
                     aria-pressed={on}
-                    disabled={bloquee}
                     className={
-                      "flex items-center gap-[10px] text-left rounded-tuile px-[14px] border cursor-pointer transition-colors disabled:cursor-default " +
+                      "flex items-center gap-[10px] text-left rounded-tuile px-[14px] border cursor-pointer transition-colors " +
                       (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
                     }
-                    style={{ minHeight: 48, opacity: bloquee ? 0.5 : 1 }}
+                    style={{ minHeight: 48 }}
                   >
                     <span className={"flex-shrink-0 " + (on ? "text-on-terracotta" : "text-terracotta-deep")}>{GLYPHES_ACTIVITE[a.id]}</span>
                     <span className="text-[12.5px] leading-[1.25]">{a.libelle}</span>
@@ -896,7 +892,7 @@ export default function ValiseScreen() {
               })}
             </div>
             <div className="text-[12px] text-muted mt-3" aria-live="polite">
-              {activites.length} sur {ACTIVITES_MAX} {activites.length > 1 ? "choisies" : "choisie"}
+              {activites.length > 0 && `${activites.length} ${activites.length > 1 ? "activités choisies" : "activité choisie"}`}
             </div>
           </>
         )}
