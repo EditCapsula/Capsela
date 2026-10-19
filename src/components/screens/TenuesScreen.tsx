@@ -18,7 +18,7 @@ import { ecrireRetourDuCompte, envoyerRetoursAuCompte, lireRetoursDuCompte } fro
 import CarteAccordSaison from "@/components/CarteAccordSaison";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
-import { candidatsDeRemplacement, categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, violatesOuterwearRule } from "@/lib/logic";
+import { candidatsDeRemplacement, categoriesManquantes, computeLookScore, isCompleteOutfit, outfitMoodPhrase, SEUIL_MANTEAU, violatesOuterwearRule } from "@/lib/logic";
 import { manquesActuels, piecesStructurellesManquantes, statutTenue, surtitreSuggestion } from "@/lib/statutTenue";
 import BottomSheet from "@/components/BottomSheet";
 import { piecesDAutresStyles, styleAffiche } from "@/lib/suggestionsAutresStyles";
@@ -600,7 +600,9 @@ export default function TenuesScreen() {
   const proactiveKeys = Array.from(new Set([...lookScore.proactives.map((p) => p.key), ...Object.keys(dismissingEntries)])).filter(
     (k) => !((conseilVeste || vesteAAjouter) && k === "veste_soir") && !chaussuresManquantes
   );
-  const fantomesHero = [...(chaussuresManquantes ? (["chaussures"] as const) : []), ...(vesteAAjouter ? (["veste"] as const) : [])];
+  // Par le froid (sous SEUIL_MANTEAU, 19/10/2026), la pièce à ajouter est un manteau, pas une veste.
+  const coucheAAjouter = meteoDuJour.temp < SEUIL_MANTEAU ? ("manteau" as const) : ("veste" as const);
+  const fantomesHero = [...(chaussuresManquantes ? (["chaussures"] as const) : []), ...(vesteAAjouter ? [coucheAAjouter] : [])];
   const aCompleter = !noCompleteOutfit && (proactiveKeys.length > 0 || Boolean(missingTextCarte) || vesteWithoutBase || chaussuresManquantes);
 
   // pb-safe-nav (correctif 20/08/2026) remplace pb-24 : réserve la hauteur
@@ -870,7 +872,9 @@ export default function TenuesScreen() {
             )}
             {vesteAAjouter && (
               <div className="mt-[4px] px-[6px] text-[12.5px] leading-[1.4]" style={{ color: "var(--color-ink-soft)", textWrap: "pretty" }}>
-                Il va faire frais ce soir : appuie sur + pour ajouter une veste à ton dressing.
+                {coucheAAjouter === "manteau"
+                  ? "Il va faire froid : appuie sur + pour ajouter un manteau à ton dressing."
+                  : "Il va faire frais ce soir : appuie sur + pour ajouter une veste à ton dressing."}
               </div>
             )}
             {chaussuresManquantes && (
