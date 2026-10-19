@@ -57,4 +57,4 @@ await ecrire(`${res}/drawable/splash.png`, await planche(480, 320, 0.3), { opaqu
 // Le fond de l'icône adaptative : le crème.
 writeFileSync(`${res}/values/ic_launcher_background.xml`, `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${CREME}</color>\n</resources>\n`);
 console.log("écrit", `${res}/values/ic_launcher_background.xml`);
-// Le favicon du site (src/app/icon.svg, favicon.ico) n'est PAS régénéré : il reste le cintre-cœur (demandé le 18/10/2026).
+// Le favicon du site est généré à part, depuis le « c. » : `node scripts/generer-favicon.mjs` (19/10/2026).

@@ -4,10 +4,11 @@ type Props = {
 };
 
 /**
- * Icône de chargement de page (cintre + cœur, spec design 23/08/2026,
- * affinée 26/08/2026 : anneau fin façon logo plutôt qu'un spinner
- * technique) : le cintre reste totalement fixe (aucune rotation, aucune
- * pulsation), seul l'arc extérieur tourne. Anneau inactif en terracotta
+ * Icône de chargement de page (spec design 23/08/2026, affinée 26/08/2026 :
+ * anneau fin façon logo plutôt qu'un spinner technique). Au centre, le
+ * monogramme « c. » de la marque (19/10/2026, remplace le cintre-cœur) :
+ * il reste totalement fixe (aucune rotation, aucune pulsation), seul
+ * l'arc extérieur tourne. Anneau inactif en terracotta
  * très pâle, arc actif dans le terracotta principal — jamais l'inverse.
  */
 export default function LoadingSpinner({ size = 76, className = "" }: Props) {
@@ -43,7 +44,7 @@ export default function LoadingSpinner({ size = 76, className = "" }: Props) {
         />
       </svg>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/capsela-monogramme.png" alt="" style={{ width: iconSize, height: "auto" }} />
+      <img src="/brand/capsela-c.png" alt="" style={{ width: iconSize, height: "auto" }} />
     </div>
   );
 }
