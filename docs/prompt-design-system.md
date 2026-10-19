@@ -21,7 +21,7 @@ Tu mets à jour le design system de **Capsela**, une application mobile qui comp
 - Statuts : erreur #F4E2DA / #DCB2A0, réussite #5B7A5E / #E7EEDF.
 
 ### 3. Typographie
-- Bodoni Moda (didone, comme le logo ; depuis le 19/10/2026) pour les titres et les chiffres, Manrope pour tout le reste. Caveat : un seul usage, la phrase d'ambiance de la tenue.
+- Bodoni Moda (didone, comme le logo ; depuis le 19/10/2026) pour les titres et les chiffres, en graisse 500 par défaut (600 pour un titre appuyé, depuis le 19/10/2026), Manrope pour tout le reste. Caveat : un seul usage, la phrase d'ambiance de la tenue.
 - Rôles : display 28 (« Bonjour »), titre d'écran 24 (second temps en italique terracotta), titre de section 21, titre de carte 18, ligne 16, vignette 15, chapeau 13, surtitre 11 capitales .16em, label 10, bouton 13 capitales .1em, lien 12 suivi de « → », barre du bas 9 capitales.
 - Corps 13, secondaire 12, légende 11.
 
