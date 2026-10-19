@@ -285,3 +285,14 @@ Les mocassins et les derbies (type de chaussure déclaré) ne servent qu'aux loo
 - **Liés au séjour, avec leur raison** : plage ou piscine → tongs, sac de plage ; plage, piscine ou chaleur (24° et plus) → lunettes de soleil, chapeau ou casquette ; trajet au programme → un groupe « Pour le trajet » (écouteurs, livre ou liseuse, coussin de voyage, en-cas et bouteille d'eau).
 - **Écartés** : vêtements, sacs, bijoux, montre, ceinture et foulard, que la valise choisit dans le dressing avec les looks.
 - Chaque affaire reste masquable ; c'est un ARBITRAGE ÉDITORIAL, à ajuster à l'usage.
+
+## Refonte UX/UI du 19/10/2026
+
+Brief « Refonte UX/UI de la fonctionnalité Valise ». Le moteur, la sélection et les données ne changent pas ; aucune migration.
+
+- **Audit.** Un seul écran, `ValiseScreen.tsx` (parcours, résultat, détail look et pièce, feuilles). La valise est gardée sur l'appareil et dans le compte (`valises`, jsonb `calcul`). La **sélection** (`pieceIds`) et la **préparation** (`cochees` pour les pièces, `affaires.cochees` pour les affaires de voyage) sont déjà deux données distinctes. Il n'existe **pas de quantité** : une pièce du dressing est un objet unique, présent une fois dans la valise même s'il sert à plusieurs looks. Aucun contrôle de quantité n'est donc ajouté.
+- **Checklist** (`checklistValise.ts`, testé) : « Ma checklist de départ », une progression unique (articles préparés / total, restants, %), filtres Tout / À préparer / Préparés, sections repliables avec leur progression (Vêtements, Chaussures, Sacs et accessoires, puis les groupes des affaires de voyage), lignes compactes (miniature, nom, case). Cocher ne touche ni la sélection ni les looks. « Ta valise est prête à partir » quand tout est coché. Pas de « Tout marquer comme préparé » : une validation accidentelle effacerait le suivi réel.
+- **Aperçu** : la composition par famille (Vêtements, Chaussures, Sacs et accessoires, Affaires de voyage) et « Ma préparation », la même progression que la Checklist. En-tête plus compact ; la destination reste typographique, sans photo.
+- **Looks** : cartes de jour resserrées, trois miniatures plus grandes des vraies pièces du look.
+- **Retirer une pièce** dit ce que deviennent les looks (« looks recomposés : 5 → 4 ») : la valise les recompose déjà avec les pièces restantes.
+- **Ajuster ma valise** : les mêmes actions, regroupées — Mes tenues (Ajouter une tenue), Ma sélection (Optimiser ma valise, Ajouter une pièce, Gérer les pièces), Mon départ (Préparer ma valise, Modifier mon séjour) — et « Supprimer cette valise » à part, toujours derrière sa confirmation.

@@ -1,3 +1,4 @@
+import { sansBarre } from "./barre";
 import { OCCASIONS } from "./data";
 import type { Item, OccasionKey } from "./types";
 import type { MeteoJour, TypeSejour } from "./valise";
@@ -57,9 +58,10 @@ const GENERIQUES: ElementProgramme[] = OCCASIONS.filter(([k]) => k !== "all").ma
   generique: true,
 }));
 
+// Le « / » ne s'affiche pas (18/10/2026, règle de barre.ts) : « Voyage / trajet » se lit « Voyage · trajet » (corrigé le 19/10/2026).
 const sous = (id: string, libelle: string, mere: OccasionKey, creneau: Creneau, contrainte?: Contrainte): ElementProgramme => ({
   id,
-  libelle,
+  libelle: sansBarre(libelle),
   mere,
   creneau,
   contrainte,
