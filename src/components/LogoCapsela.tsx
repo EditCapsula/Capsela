@@ -1,12 +1,12 @@
 /**
- * LE LOGO CAPSELA (18/10/2026, nouveau logo fourni par la propriétaire : « CAPSELA » en didone, le A en terracotta). Il remplace le mot
- * composé en Fraunces avec un trait dessous (05/10/2026). Une image, pas du texte : le dessin des lettres et le A croisé ne se
- * reproduisent pas avec une police. Deux fichiers (public/brand, dérivés par scripts/generer-marque.mjs) : encre sur fond crème,
- * crème sur fond sombre (`claire`). Le terracotta du A est celui du logo, inchangé.
+ * LE LOGO CAPSELA (19/10/2026, logo définitif fourni par la propriétaire : « capsela. » en bas de casse, « el » et « a » en italique,
+ * point final). Il remplace « CAPSELA » en capitales du 18/10/2026. Une image, pas du texte : le dessin des lettres ne se reproduit
+ * pas avec une police. Deux fichiers tels que fournis, rognés (public/brand) : noir sur fond clair, blanc sur fond sombre (`claire`).
+ * Hauteurs relevées d'un cran par rapport aux capitales : la hauteur du fichier compte le jambage du p, le corps des lettres est plus bas.
  */
-const HAUTEURS = { sm: 20, md: 26, lg: 44 } as const;
-/** Proportions du fichier (741 × 158) : la largeur est réservée avant le chargement, sans saut de mise en page. */
-const RAPPORT = 741 / 158;
+const HAUTEURS = { sm: 22, md: 30, lg: 52 } as const;
+/** Proportions du fichier (1524 × 441) : la largeur est réservée avant le chargement, sans saut de mise en page. */
+const RAPPORT = 1524 / 441;
 
 export default function LogoCapsela({ taille = "md", claire = false, className = "" }: { taille?: keyof typeof HAUTEURS; claire?: boolean; className?: string }) {
   const h = HAUTEURS[taille];

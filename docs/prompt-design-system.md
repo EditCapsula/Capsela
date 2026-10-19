@@ -1,6 +1,6 @@
 # Prompt « design system » Capsela
 
-Prompt à fournir tel quel à un assistant (Claude, ou un outil de maquettes) pour qu'il conçoive ou code des écrans cohérents avec l'application. Il est tenu à jour avec le code : la source de vérité reste `src/app/globals.css` (jetons et typographie), `src/components/` (composants) et `CLAUDE.md` / `AGENTS.md` (règles). Dernière mise à jour : 08/10/2026 (flat lay, accueil, Mon planning, visuels éditoriaux, silhouette de chargement, règles de saison).
+Prompt à fournir tel quel à un assistant (Claude, ou un outil de maquettes) pour qu'il conçoive ou code des écrans cohérents avec l'application. Il est tenu à jour avec le code : la source de vérité reste `src/app/globals.css` (jetons et typographie), `src/components/` (composants) et `CLAUDE.md` / `AGENTS.md` (règles). Dernière mise à jour : 19/10/2026 (logo et monogramme définitifs).
 
 ---
 
@@ -10,7 +10,8 @@ Tu mets à jour le design system de **Capsela**, une application mobile qui comp
 
 ### 1. Marque
 - Nom : Capsela (jamais « L'édit Capsela »).
-- Logo : « CAPSELA » en capitales, Fraunces, interlettrage large, souligné d'un trait terracotta de 2 px. Pas de cintre. Tailles sm / md / lg, variante claire sur fond sombre.
+- Logo (définitif, 19/10/2026) : « capsela. » en bas de casse, didone à fort contraste, « el » et « a » en italique, point final. Une image, jamais recomposée avec une police : noir sur fond clair (`public/brand/capsela-logo.png`), blanc sur fond sombre (`capsela-logo-claire.png`). Composant LogoCapsela, hauteurs sm 22 / md 30 / lg 52 px. Centré dans l'en-tête, en grand sur l'écran de bienvenue ; jamais dans une feuille (fiche pièce).
+- Monogramme : « c. », même dessin que le logo. Terracotta #A66950 par défaut (`capsela-c.png`), noir (`capsela-c-noir.png`) ou blanc (`capsela-c-blanc.png`) selon le fond. Sert au favicon, à l'icône des apps iOS et Android (sur fond crème), au centre de l'indicateur de chargement et aux petites marques de l'app. Pas de cintre.
 
 ### 2. Couleurs (jetons, jamais de valeur en dur)
 - Fond crème #F3EEE5. Texte encre #1D1A16. Accent terracotta #A66950 (liens, icônes actives, surtitres), survol #8B5E4D.
