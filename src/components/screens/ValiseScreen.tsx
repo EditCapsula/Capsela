@@ -2478,7 +2478,7 @@ function Resultat({
                                 return portee.length ? ` · portée ${portee.map((j) => `J${j}`).join(", ")}` : "";
                               })()}
                             </span>
-                            {suggestions.has(p.id) && <span className="block text-[11px] text-terracotta mt-[1px]">Suggestion capsule · à ajouter à ton dressing</span>}
+                            {suggestions.has(p.id) && <span className="block text-[11px] text-terracotta mt-[1px]">Capsule</span>}
                             {n >= SEUIL_POLYVALENTE && <span className="block text-[11px] text-muted mt-[1px]">Pièce polyvalente</span>}
                           </span>
                         </button>
@@ -2552,6 +2552,10 @@ function Resultat({
               .filter((sec) => filtreChecklist === "tout" || sec.articles.length > 0)
               .map((sec) => {
               const repliee = repliees.includes(sec.id);
+              // Une raison partagée par TOUS les articles de la section (« Trajet au programme ») est dite une fois, sous son titre,
+              // plutôt que répétée sur chaque ligne (19/10/2026, demandé).
+              const raisons = articles.filter((x) => x.section === sec.id).map((x) => x.affaire?.raison);
+              const raisonCommune = raisons.length > 1 && raisons[0] && raisons.every((r) => r === raisons[0]) ? raisons[0] : null;
               return (
                 <Card key={sec.id} rayon="tuile" className="px-[12px]">
                   <button
@@ -2560,7 +2564,10 @@ function Resultat({
                     className="w-full flex items-center gap-[10px] text-left cursor-pointer"
                     style={{ minHeight: 48 }}
                   >
-                    <span className="flex-1 min-w-0 text-[13px] text-ink font-medium">{sec.libelle}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[13px] text-ink font-medium">{sec.libelle}</span>
+                      {raisonCommune && <span className="block text-[11px] text-terracotta">{raisonCommune}</span>}
+                    </span>
                     <span className={"text-[12px] " + (sec.progression.restantes === 0 ? "text-success" : "text-muted")}>
                       {sec.progression.preparees} / {sec.progression.total}
                     </span>
@@ -2583,8 +2590,9 @@ function Resultat({
                               {p ? <Vignette it={p} taille={40} /> : null}
                               <span className="flex-1 min-w-0">
                                 <span className={"block text-[13px] leading-[1.3] truncate " + (art.prete ? "text-muted line-through" : "text-ink")}>{art.libelle}</span>
-                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">À ajouter à ton dressing</span>}
-                                {a?.raison && <span className="block text-[11px] text-terracotta truncate">{a.raison}</span>}
+                                {/* Une suggestion de la capsule se dit « Capsule » (19/10/2026, demandé) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
+                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Capsule</span>}
+                                {a?.raison && !raisonCommune && <span className="block text-[11px] text-terracotta truncate">{a.raison}</span>}
                               </span>
                               <span aria-hidden="true" className={"w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0 " + (art.prete ? "bg-terracotta-deep text-cream" : "border border-border text-transparent")}>
                                 {G_COCHE(12, "currentColor")}
