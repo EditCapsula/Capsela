@@ -137,6 +137,24 @@
   font-size: 21px;
   line-height: 1;
 }
+/*
+ * GRAISSE DES TITRES (19/10/2026, demandé : « pas assez visibles »). Bodoni Moda est plus fin que Fraunces à graisse égale :
+ * toute la serif monte d'un cran. Sans classe de graisse, un titre passe de 400 à 500 (couche base : une graisse explicite
+ * l'emporte) ; font-medium passe à 600 et font-semibold à 700 pour garder l'écart entre les titres. font-normal reste à 400.
+ */
+@layer base {
+  :where(.font-serif, .t-display, .t-titre-ecran, .t-titre-section, .t-titre-carte, .t-titre-ligne, .t-titre-vignette, .t-chiffre) {
+    font-weight: 500;
+  }
+}
+@layer utilities {
+  :is(.font-serif, .t-display, .t-titre-ecran, .t-titre-section, .t-titre-carte, .t-titre-ligne, .t-titre-vignette, .t-chiffre).font-medium {
+    font-weight: 600;
+  }
+  :is(.font-serif, .t-display, .t-titre-ecran, .t-titre-section, .t-titre-carte, .t-titre-ligne, .t-titre-vignette, .t-chiffre).font-semibold {
+    font-weight: 700;
+  }
+}
 @utility t-chapeau {
   font-size: 13px;
   line-height: 1.5;
