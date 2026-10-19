@@ -274,6 +274,6 @@ Module pur : `ajustementsValise.ts` (tests : `ajustementsValise.test.ts`). Rien 
 - **Pièces manquantes.** Dit seulement quand la cible de pièces n'est pas atteinte : « N pièces de plus compléteraient ta valise X (n sur cible visées) », avec « Trouver dans mon dressing ». Le brief disait « Il te manque N pièces » : la formule est interdite dans tout src (outfitCopy.test.ts, arbitrage du 31/08/2026), le texte décrit donc l'apport d'un ajout.
 - **Check-list de départ.** « À préparer » → « Dans la valise », sur les seules pièces de la valise (aucun autre objet inventé). Gardée sur l'appareil (localStorage, clé par valise), jamais dans le compte : ARBITRAGE ÉDITORIAL, c'est une aide de préparation, pas une donnée de la valise.
 
-## Pas de babies en vacances (19/10/2026)
+## Pas de mocassins ni de derbies en vacances (19/10/2026)
 
-Les babies (reconnues au nom : « Babies », « Mary Jane ») ne servent qu'aux looks d'un événement professionnel (Travail · Bureau). Pour toute autre situation de la valise, elles sortent du pool avant le moteur (`sansBabiesHorsTravail`, `valise.ts`) : elles ne sont emportées que si le séjour compte un événement professionnel. Arbitrage instruit sur les babies seulement ; mocassins, derbies et escarpins ne sont pas concernés.
+Les mocassins et les derbies (type de chaussure déclaré) ne servent qu'aux looks d'un événement professionnel (Travail · Bureau). Pour toute autre situation de la valise, ils sortent du pool avant le moteur (`sansChaussuresSerieusesHorsTravail`, `valise.ts`) : ils ne sont emportés que si le séjour compte un événement professionnel. Arbitrage instruit sur ces deux types seulement ; babies, escarpins et bottines ne sont pas concernés.

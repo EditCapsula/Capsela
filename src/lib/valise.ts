@@ -5,7 +5,7 @@ import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
 import { composeWardrobePool } from "./selectors";
-import type { CategoryKey, Item, OccasionKey } from "./types";
+import type { CategoryKey, Item, OccasionKey, ShoeType } from "./types";
 
 /*
  * PRÉPARER SA VALISE — module pur (lot 1, 27/09/2026, docs/valise.md).
@@ -293,17 +293,18 @@ export interface TenueMoteur {
 export type Generateur = (pool: Item[], s: SituationValise) => TenueMoteur | null;
 
 /**
- * PAS DE BABIES EN VACANCES (19/10/2026, demandé : « des babies pour des vacances ça ne va pas, c'est trop sérieux s'il n'y a pas
- * d'événements professionnels »). Dans une valise, les babies ne servent qu'aux looks d'un événement professionnel (Travail · Bureau) ;
- * pour toute autre situation (quotidien, voyage, soirée…), elles sortent du pool avant le moteur — elles ne sont donc emportées que si
- * le séjour compte un événement professionnel. Reconnues au nom (« Babies », « Mary Jane ») : le type de chaussure n'a pas de valeur
- * « Babies » et elles sont souvent rangées en Mocassins. ARBITRAGE ÉDITORIAL, instruit sur les babies seulement : les mocassins, derbies
- * ou escarpins ne sont pas concernés sans nouvel examen (AGENTS.md, point 7).
+ * PAS DE MOCASSINS NI DE DERBIES EN VACANCES (19/10/2026, demandé : « c'est trop sérieux pour des vacances s'il n'y a pas d'événements
+ * professionnels », précisé : « ce sont les mocassins et derbies qui sont concernés »). Dans une valise, ces deux types de chaussures
+ * ne servent qu'aux looks d'un événement professionnel (Travail · Bureau) ; pour toute autre situation (quotidien, voyage, soirée…), ils
+ * sortent du pool avant le moteur — ils ne sont donc emportés que si le séjour compte un événement professionnel. Lus sur le type de
+ * chaussure déclaré. ARBITRAGE ÉDITORIAL, instruit sur ces deux types : les babies, escarpins, bottines… ne sont pas concernés sans
+ * nouvel examen (AGENTS.md, point 7).
  */
-const BABIES = /\bbabies\b|\bmary[\s-]?janes?\b/i;
-export const estBabies = (i: Item): boolean => i.cat === "chaussures" && BABIES.test(`${i.name} ${i.subtype ?? ""}`);
-export const sansBabiesHorsTravail = (pool: Item[], occasion: OccasionKey): Item[] =>
-  occasion === "travail_formel" ? pool : pool.filter((i) => !estBabies(i));
+const TROP_SERIEUSES_EN_VACANCES: readonly ShoeType[] = ["Mocassins", "Derbies"];
+export const tropSerieusePourLesVacances = (i: Item): boolean =>
+  i.cat === "chaussures" && Boolean(i.shoeType && TROP_SERIEUSES_EN_VACANCES.includes(i.shoeType));
+export const sansChaussuresSerieusesHorsTravail = (pool: Item[], occasion: OccasionKey): Item[] =>
+  occasion === "travail_formel" ? pool : pool.filter((i) => !tropSerieusePourLesVacances(i));
 
 export function generateurMoteur(
   couleurs: string[],
@@ -313,7 +314,7 @@ export function generateurMoteur(
 ): Generateur {
   return (poolComplet, s) => {
     // La contrainte de la situation (chaleur, marche, outdoor) restreint le pool ; le moteur, lui, ne change pas.
-    const pool = sansBabiesHorsTravail(filtrerParContrainte(poolComplet, s.contrainte), s.occasion);
+    const pool = sansChaussuresSerieusesHorsTravail(filtrerParContrainte(poolComplet, s.contrainte), s.occasion);
     if (!pool.length) return null;
     const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
@@ -698,20 +699,26 @@ const CATEGORIE_COURTE: Record<CategoryKey, string> = {
 const ORDRE_RESUME: CategoryKey[] = ["robe", "combinaison", "haut", "pull", "pantalon", "jean", "jupe", "short", "veste", "manteau", "chaussures", "sac", "bijou", "accessoire"];
 
 /**
- * Le nom d'un look, fait de ses pièces : « Chemise · pantalon · mocassins ·
- * sac ». La maquette titre « City day » ou « Dîner en ville » : aucune donnée
+ * Le nom d'un look, fait de ses pièces : « Chemise · Pantalon · Mocassins ·
+ * Sac ». La maquette titre « City day » ou « Dîner en ville » : aucune donnée
  * ne fournit ces noms, on dit ce que le look contient. Le sous-type ou le
  * type de chaussure quand il est connu, la catégorie sinon.
+ *
+ * 19/10/2026 (demandé : « la jupe ne s'appelle que midi, ce n'est pas très clair ») : pour une jupe, une robe, un short, un pantalon
+ * ou une combinaison, un sous-type qui ne nomme pas la pièce (« Midi », « Chemise ») est précédé de sa catégorie : « Jupe midi »,
+ * « Robe chemise ». Et chaque pièce prend une majuscule : « T-shirt · Jupe midi · Mocassins · Sac ».
  */
+const CATEGORIE_A_NOMMER: CategoryKey[] = ["jupe", "robe", "short", "pantalon", "combinaison"];
+function nomDansLeLook(p: Item): string {
+  if (p.cat === "chaussures") return (p.shoeType ?? CATEGORIE_COURTE.chaussures).toLowerCase();
+  const sousType = p.subtype?.toLowerCase();
+  if (!sousType) return CATEGORIE_COURTE[p.cat];
+  const categorie = CATEGORIE_COURTE[p.cat];
+  return CATEGORIE_A_NOMMER.includes(p.cat) && !sousType.includes(categorie) ? `${categorie} ${sousType}` : sousType;
+}
 export function resumeLook(pieces: Item[]): string {
-  const mots = [...pieces]
-    .sort((a, b) => ORDRE_RESUME.indexOf(a.cat) - ORDRE_RESUME.indexOf(b.cat))
-    .map((p) => (p.cat === "chaussures" ? p.shoeType : p.subtype) ?? CATEGORIE_COURTE[p.cat])
-    .map((m) => m.toLowerCase());
-  const uniques = [...new Set(mots)];
-  if (!uniques.length) return "";
-  const texte = uniques.join(" · ");
-  return texte.charAt(0).toUpperCase() + texte.slice(1);
+  const mots = [...pieces].sort((a, b) => ORDRE_RESUME.indexOf(a.cat) - ORDRE_RESUME.indexOf(b.cat)).map(nomDansLeLook);
+  return [...new Set(mots)].map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(" · ");
 }
 
 /**

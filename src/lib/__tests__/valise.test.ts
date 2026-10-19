@@ -275,8 +275,14 @@ describe("présentation du résultat — ce que l'écran affiche", () => {
   it("le nom d'un look dit ce qu'il contient, sans rien inventer", () => {
     const robe: Item = { ...piece(6, "robe"), subtype: "Chemise" };
     const baskets: Item = { ...piece(7, "chaussures"), shoeType: "Baskets" };
-    expect(resumeLook([baskets, piece(16, "sac"), robe, piece(9, "veste")])).toBe("Chemise · veste · baskets · sac");
-    expect(resumeLook([piece(1, "haut"), piece(4, "pantalon")])).toBe("Haut · pantalon");
+    expect(resumeLook([baskets, piece(16, "sac"), robe, piece(9, "veste")])).toBe("Robe chemise · Veste · Baskets · Sac");
+    expect(resumeLook([piece(1, "haut"), piece(4, "pantalon")])).toBe("Haut · Pantalon");
+    // 19/10/2026 : un sous-type qui ne nomme pas la pièce est précédé de sa catégorie ; une majuscule à chaque pièce.
+    const jupe: Item = { ...piece(5, "jupe"), subtype: "Midi" };
+    const tshirt: Item = { ...piece(2, "haut"), subtype: "T-shirt" };
+    const mocassins: Item = { ...piece(8, "chaussures"), shoeType: "Mocassins" };
+    expect(resumeLook([piece(16, "sac"), mocassins, jupe, tshirt])).toBe("T-shirt · Jupe midi · Mocassins · Sac");
+    expect(resumeLook([{ ...piece(3, "jupe"), subtype: "Jupe crayon" }])).toBe("Jupe crayon");
     expect(resumeLook([])).toBe("");
   });
 
