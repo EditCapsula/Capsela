@@ -292,6 +292,19 @@ export interface TenueMoteur {
 /** Tire une tenue pour une situation dans un pool donné — le moteur par défaut, remplaçable en test. */
 export type Generateur = (pool: Item[], s: SituationValise) => TenueMoteur | null;
 
+/**
+ * PAS DE BABIES EN VACANCES (19/10/2026, demandé : « des babies pour des vacances ça ne va pas, c'est trop sérieux s'il n'y a pas
+ * d'événements professionnels »). Dans une valise, les babies ne servent qu'aux looks d'un événement professionnel (Travail · Bureau) ;
+ * pour toute autre situation (quotidien, voyage, soirée…), elles sortent du pool avant le moteur — elles ne sont donc emportées que si
+ * le séjour compte un événement professionnel. Reconnues au nom (« Babies », « Mary Jane ») : le type de chaussure n'a pas de valeur
+ * « Babies » et elles sont souvent rangées en Mocassins. ARBITRAGE ÉDITORIAL, instruit sur les babies seulement : les mocassins, derbies
+ * ou escarpins ne sont pas concernés sans nouvel examen (AGENTS.md, point 7).
+ */
+const BABIES = /\bbabies\b|\bmary[\s-]?janes?\b/i;
+export const estBabies = (i: Item): boolean => i.cat === "chaussures" && BABIES.test(`${i.name} ${i.subtype ?? ""}`);
+export const sansBabiesHorsTravail = (pool: Item[], occasion: OccasionKey): Item[] =>
+  occasion === "travail_formel" ? pool : pool.filter((i) => !estBabies(i));
+
 export function generateurMoteur(
   couleurs: string[],
   genre: "femme" | "homme" | null,
@@ -300,7 +313,7 @@ export function generateurMoteur(
 ): Generateur {
   return (poolComplet, s) => {
     // La contrainte de la situation (chaleur, marche, outdoor) restreint le pool ; le moteur, lui, ne change pas.
-    const pool = filtrerParContrainte(poolComplet, s.contrainte);
+    const pool = sansBabiesHorsTravail(filtrerParContrainte(poolComplet, s.contrainte), s.occasion);
     if (!pool.length) return null;
     const r = generateOutfitWithFallback(pool, s.meteo, s.occasion, "Présentiel", undefined, couleurs, genre, undefined, undefined, colorimetrie);
     if (r.noCompleteOutfit || !r.ids.length) return null;
