@@ -237,15 +237,15 @@ function BarrePreparation({ titre, p }: { titre: string; p: Progression }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3">
-        <span className="font-serif text-[18px] text-ink">{titre}</span>
-        <span className="font-serif text-[18px] text-ink" aria-label={`${p.preparees} articles préparés sur ${p.total}`}>
+        <span className="t-titre-carte text-ink">{titre}</span>
+        <span className="t-titre-carte text-ink" aria-label={`${p.preparees} articles préparés sur ${p.total}`}>
           {p.preparees} / {p.total}
         </span>
       </div>
       <div className="h-[4px] rounded-full mt-2 overflow-hidden" style={{ background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
         <div className="h-full rounded-full bg-terracotta-deep transition-[width]" style={{ width: `${p.pourcentage}%` }} />
       </div>
-      <div className="flex items-baseline justify-between gap-3 mt-[6px] text-[11.5px] text-muted-3 whitespace-nowrap">
+      <div className="flex items-baseline justify-between gap-3 mt-[6px] text-[11px] text-muted-3 whitespace-nowrap">
         <span>{p.restantes === 0 ? "Tout est prêt" : `${p.restantes} ${p.restantes > 1 ? "articles restants" : "article restant"}`}</span>
         <span>{p.pourcentage} %</span>
       </div>
@@ -1286,8 +1286,8 @@ function Resultat({
                 >
                   <span className="w-[22px] flex justify-center flex-shrink-0 text-terracotta">{glyphe}</span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-[13.5px] text-ink leading-[1.3]">{titre}</span>
-                    <span className="block text-[11.5px] text-muted-3 leading-[1.35] mt-[1px]">{sous}</span>
+                    <span className="block text-[13px] text-ink leading-[1.3]">{titre}</span>
+                    <span className="block text-[12px] text-muted-3 leading-[1.35] mt-[1px]">{sous}</span>
                   </span>
                   <span aria-hidden="true" className="text-placeholder flex-shrink-0">{chevron("d")}</span>
                 </button>
@@ -1869,7 +1869,7 @@ function Resultat({
     <>
       {/* 1 · OÙ VAIS-JE ? La destination est le premier élément éditorial. */}
       <div className="t-surtitre text-muted">{libellePeriode(valise.depart, valise.retour)}</div>
-      <h1 className="font-serif text-terracotta text-[34px] leading-[1.05] mt-[4px] break-words" style={{ textWrap: "balance" }}>
+      <h1 className="t-display text-terracotta mt-[4px] break-words" style={{ textWrap: "balance" }}>
         {valise.destination}
       </h1>
 
@@ -2073,8 +2073,8 @@ function Resultat({
               className="flex items-baseline justify-between gap-2 text-left bg-card border border-border rounded-tuile px-[12px] py-[10px] cursor-pointer"
               style={{ minHeight: 48 }}
             >
-              <span className="text-[12.5px] text-ink leading-[1.25]">{libelle}</span>
-              <span className="font-serif text-[18px] text-ink leading-none">{n}</span>
+              <span className="text-[13px] text-ink leading-[1.25]">{libelle}</span>
+              <span className="t-chiffre text-ink">{n}</span>
             </button>
           ))}
       </div>
@@ -2560,7 +2560,7 @@ function Resultat({
                     className="w-full flex items-center gap-[10px] text-left cursor-pointer"
                     style={{ minHeight: 48 }}
                   >
-                    <span className="flex-1 min-w-0 text-[13.5px] text-ink font-medium">{sec.libelle}</span>
+                    <span className="flex-1 min-w-0 text-[13px] text-ink font-medium">{sec.libelle}</span>
                     <span className={"text-[12px] " + (sec.progression.restantes === 0 ? "text-success" : "text-muted")}>
                       {sec.progression.preparees} / {sec.progression.total}
                     </span>
