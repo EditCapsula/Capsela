@@ -130,7 +130,7 @@ export default function SelecteurOccasion({ quand }: { quand: string }) {
 
       {/* Phrase + déclencheur sur UNE ligne, pour toutes les occasions. Une phrase longue passe à la ligne dans sa colonne, le
           déclencheur reste à droite. 58 px et non les 52 du brief : mesuré le 14/10/2026, à 52 une phrase sur deux lignes (« Un
-          rendez-vous autour d'un verre » à 390 px) poussait la carte tenue de 5 px. Deux lignes de Fraunces 19 px y tiennent. */}
+          rendez-vous autour d'un verre » à 390 px) poussait la carte tenue de 5 px. Deux lignes de serif 19 px y tiennent (revérifié le 19/10/2026 en Bodoni Moda : 46 px). */}
       <div className="flex items-center justify-between gap-3 min-h-[58px] py-[6px]">
         <p aria-live="polite" className="min-w-0 font-serif font-medium text-[19px] leading-[1.2] text-ink" style={{ textWrap: "balance" }}>
           {phrase && (

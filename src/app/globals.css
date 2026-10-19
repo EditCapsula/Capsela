@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-serif: var(--font-fraunces), serif;
+  --font-serif: var(--font-bodoni), serif;
   --font-sans: var(--font-manrope), sans-serif;
   /* Manuscrite — un seul usage aujourd'hui : la phrase d'ambiance de la card
      Tenue (23/09/2026). Repli cursive pour que la phrase reste lisible si le
@@ -74,11 +74,12 @@
 /*
  * HIÉRARCHIE TYPOGRAPHIQUE (audit du 26/09/2026). Chaque rôle a UN
  * traitement, repris des valeurs déjà dominantes dans l'app — aucune taille
- * nouvelle, aucune police nouvelle : Fraunces pour les titres et les chiffres,
- * Manrope pour le reste. Les jetons ne portent pas la couleur (un surtitre
+ * nouvelle, aucune police nouvelle : la serif pour les titres et les chiffres,
+ * Manrope pour le reste. La serif est Bodoni Moda depuis le 19/10/2026
+ * (Fraunces avant), cf. layout.tsx. Les jetons ne portent pas la couleur (un surtitre
  * peut être terracotta ou gris selon la section) ni les marges.
  *
- * Serif (Fraunces) :
+ * Serif (Bodoni Moda) :
  *   t-display         28 / 1.08  — le « Bonjour » de l'accueil, le titre de l'onboarding (34 → 28 le 07/10/2026, demandé)
  *   t-titre-ecran     24 / 1.12  — titre d'écran, second temps en italique terracotta (27 → 24 le 07/10/2026, demandé)
  *   t-titre-section   21 / 1.18  — titre de section ; titre d'un écran secondaire posé

@@ -134,7 +134,7 @@ export function ChampSelect({
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
   placeholder?: string;
-  /** Valeur en Fraunces (la catégorie) plutôt qu'en Manrope grise (les champs facultatifs). */
+  /** Valeur en serif (la catégorie) plutôt qu'en Manrope grise (les champs facultatifs). */
   valeurSerif?: boolean;
   fond?: boolean;
   /** Valeur requise encore vide, ou analyse en cours : valeur grisée. */

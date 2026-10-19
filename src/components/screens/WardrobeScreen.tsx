@@ -153,7 +153,7 @@ function Associations({
   );
 }
 
-/** Titre de section en Fraunces, sous son surtitre. */
+/** Titre de section en serif, sous son surtitre. */
 function TitreSerif({ children, taille = 18 }: { children: React.ReactNode; taille?: number }) {
   return (
     <div className="font-serif text-ink mt-[6px]" style={{ fontSize: taille, lineHeight: 1.25 }}>
