@@ -16,6 +16,26 @@ const ctx = (programme: string[], meteos = [m(18)]): ContexteSejour => ({ progra
 const ids = (c: ContexteSejour) => affairesDuSejour(c).map((a) => a.id);
 
 describe("affairesDuSejour — liées à des données réelles, jamais devinées", () => {
+  it("étoffé le 19/10/2026 : linge, toilette, trousse de secours, électronique en essentiels", () => {
+    const a = ids(ctx(["visites"]));
+    for (const id of ["sous_vetements", "chaussettes", "pyjama", "sac_linge", "gel_douche", "trousse_secours", "batterie", "carte_vitale"]) expect(a).toContain(id);
+  });
+
+  it("plage : tongs, sac de plage, lunettes et chapeau ; la chaleur seule apporte lunettes et chapeau, pas les tongs", () => {
+    const plage = affairesDuSejour(ctx(["plage"]));
+    for (const id of ["tongs", "sac_plage", "lunettes_soleil", "chapeau"]) expect(plage.find((x) => x.id === id)?.raison).toBe("Plage au programme");
+    const chaud = ids(ctx(["visites"], [m(SEUIL_CHALEUR)]));
+    expect(chaud).toContain("lunettes_soleil");
+    expect(chaud).not.toContain("tongs");
+    expect(ids(ctx(["visites"]))).not.toContain("lunettes_soleil");
+  });
+
+  it("trajet au programme : écouteurs, livre, coussin et en-cas, avec leur raison ; sans trajet, rien", () => {
+    const a = affairesDuSejour(ctx(["visites", "trajet"]));
+    for (const id of ["ecouteurs", "livre", "coussin", "en_cas"]) expect(a.find((x) => x.id === id)?.raison).toBe("Trajet au programme");
+    expect(ids(ctx(["visites"]))).not.toContain("coussin");
+  });
+
   it("les essentiels sont toujours là, sans raison affichée", () => {
     const a = affairesDuSejour(ctx(["visites"]));
     for (const id of ["papiers", "dentifrice", "parfum", "brosse", "chargeur"]) expect(a.map((x) => x.id)).toContain(id);

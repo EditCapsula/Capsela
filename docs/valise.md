@@ -273,3 +273,15 @@ Module pur : `ajustementsValise.ts` (tests : `ajustementsValise.test.ts`). Rien 
 - **Ajouter une tenue.** On choisit une occasion du séjour (une situation, dite par ses éléments de programme) ; le moteur propose une tenue d'abord avec les pièces de la valise, à défaut avec le reste du dressing (la tenue qui demande le moins de pièces à ajouter), jamais un look déjà présent. La feuille dit les pièces qui s'ajoutent et un éventuel dépassement de capacité. « Autre proposition » retire au sort. Aucune pièce inventée ni « à acheter » : si le dressing ne permet rien, la feuille le dit.
 - **Pièces manquantes.** Dit seulement quand la cible de pièces n'est pas atteinte : « N pièces de plus compléteraient ta valise X (n sur cible visées) », avec « Trouver dans mon dressing ». Le brief disait « Il te manque N pièces » : la formule est interdite dans tout src (outfitCopy.test.ts, arbitrage du 31/08/2026), le texte décrit donc l'apport d'un ajout.
 - **Check-list de départ.** « À préparer » → « Dans la valise », sur les seules pièces de la valise (aucun autre objet inventé). Gardée sur l'appareil (localStorage, clé par valise), jamais dans le compte : ARBITRAGE ÉDITORIAL, c'est une aide de préparation, pas une donnée de la valise.
+
+## Pas de mocassins ni de derbies en vacances (19/10/2026)
+
+Les mocassins et les derbies (type de chaussure déclaré) ne servent qu'aux looks d'un événement professionnel (Travail · Bureau). Pour toute autre situation de la valise, ils sortent du pool avant le moteur (`sansChaussuresSerieusesHorsTravail`, `valise.ts`) : ils ne sont emportés que si le séjour compte un événement professionnel. Arbitrage instruit sur ces deux types seulement ; babies, escarpins et bottines ne sont pas concernés.
+
+## Affaires de voyage étoffées (19/10/2026)
+
+À partir de l'infographie « Les choses à avoir dans sa valise » (`affairesVoyage.ts`) :
+- **Essentiels ajoutés** : carte Vitale, assurance voyage (« si tu en as une ») ; un groupe « Linge et nuit » (sous-vêtements, chaussettes, pyjama, sac pour le linge sale) ; gel douche et shampoing, brosse ou peigne, élastiques et pinces, maquillage et démaquillant, rasoir ou épilateur ; petite trousse de secours ; batterie externe, adaptateur de prise (« si tu pars à l'étranger » : la valise ne connaît pas le pays).
+- **Liés au séjour, avec leur raison** : plage ou piscine → tongs, sac de plage ; plage, piscine ou chaleur (24° et plus) → lunettes de soleil, chapeau ou casquette ; trajet au programme → un groupe « Pour le trajet » (écouteurs, livre ou liseuse, coussin de voyage, en-cas et bouteille d'eau).
+- **Écartés** : vêtements, sacs, bijoux, montre, ceinture et foulard, que la valise choisit dans le dressing avec les looks.
+- Chaque affaire reste masquable ; c'est un ARBITRAGE ÉDITORIAL, à ajuster à l'usage.

@@ -13,15 +13,23 @@ import type { MeteoJour, TailleBagage } from "./valise";
  *
  * Le catalogue est ÉDITORIAL (arbitrage du 11/10/2026, à valider et compléter par la propriétaire). Les affaires que la personne ajoute ou
  * masque sont gardées avec la valise (ValiseGardee.affaires).
+ *
+ * ÉTOFFÉ LE 19/10/2026 (demandé : « inspire-toi de cette liste », infographie « Les choses à avoir dans sa valise »). Repris de la liste :
+ * ce que le dressing ne porte pas (linge, nuit), la toilette, la trousse de secours, la carte Vitale, l'assurance, l'électronique, et, liés
+ * à une donnée du séjour, la plage (tongs, sac de plage, lunettes, chapeau) et le trajet (écouteurs, livre, coussin, en-cas). Écartés :
+ * les vêtements, sacs, bijoux, montre, ceinture et foulard (la valise les choisit dans le dressing, avec les looks) ; l'adaptateur de
+ * prise n'est proposé qu'en essentiel « si tu pars à l'étranger » : la valise ne connaît pas le pays de destination.
  */
 
-export type GroupeAffaire = "documents" | "toilette" | "sante" | "electronique" | "equipement";
+export type GroupeAffaire = "documents" | "linge" | "toilette" | "sante" | "electronique" | "trajet" | "equipement";
 
 export const GROUPES_AFFAIRES: { id: GroupeAffaire; libelle: string }[] = [
   { id: "documents", libelle: "Documents et paiement" },
+  { id: "linge", libelle: "Linge et nuit" },
   { id: "toilette", libelle: "Toilette" },
   { id: "sante", libelle: "Soin et santé" },
   { id: "electronique", libelle: "Électronique" },
+  { id: "trajet", libelle: "Pour le trajet" },
   { id: "equipement", libelle: "Équipement du séjour" },
 ];
 
@@ -52,13 +60,27 @@ const ESSENTIELS: AffaireVoyage[] = [
   { id: "papiers", libelle: "Papiers d'identité", groupe: "documents" },
   { id: "paiement", libelle: "Carte bancaire et moyens de paiement", groupe: "documents" },
   { id: "reservations", libelle: "Billets et réservations", groupe: "documents" },
+  { id: "carte_vitale", libelle: "Carte Vitale", groupe: "documents" },
+  { id: "assurance", libelle: "Assurance voyage, si tu en as une", groupe: "documents" },
+  { id: "sous_vetements", libelle: "Sous-vêtements", groupe: "linge" },
+  { id: "chaussettes", libelle: "Chaussettes", groupe: "linge" },
+  { id: "pyjama", libelle: "Pyjama", groupe: "linge" },
+  { id: "sac_linge", libelle: "Sac pour le linge sale", groupe: "linge" },
   { id: "brosse", libelle: "Brosse à dents", groupe: "toilette" },
   { id: "dentifrice", libelle: "Dentifrice", groupe: "toilette" },
+  { id: "gel_douche", libelle: "Gel douche et shampoing", groupe: "toilette" },
   { id: "deodorant", libelle: "Déodorant", groupe: "toilette" },
+  { id: "brosse_cheveux", libelle: "Brosse ou peigne", groupe: "toilette" },
+  { id: "elastiques", libelle: "Élastiques et pinces", groupe: "toilette" },
   { id: "parfum", libelle: "Parfum", groupe: "toilette" },
+  { id: "maquillage", libelle: "Maquillage et démaquillant", groupe: "toilette" },
+  { id: "rasoir", libelle: "Rasoir ou épilateur", groupe: "toilette" },
   { id: "soins", libelle: "Soins habituels", groupe: "toilette" },
   { id: "medicaments", libelle: "Médicaments personnels", groupe: "sante" },
+  { id: "trousse_secours", libelle: "Petite trousse de secours", groupe: "sante" },
   { id: "chargeur", libelle: "Chargeur de téléphone", groupe: "electronique" },
+  { id: "batterie", libelle: "Batterie externe", groupe: "electronique" },
+  { id: "adaptateur", libelle: "Adaptateur de prise, si tu pars à l'étranger", groupe: "electronique" },
 ];
 
 /**
@@ -75,8 +97,17 @@ export function affairesDuSejour(ctx: ContexteSejour): AffaireVoyage[] {
 
   const eau = au(programme, "plage", "piscine");
   if (eau) {
-    out.push({ id: "maillot", libelle: "Maillot de bain", groupe: "equipement", raison: `${LIBELLE_PROGRAMME[eau]} au programme` });
-    out.push({ id: "serviette", libelle: "Serviette de plage", groupe: "equipement", raison: `${LIBELLE_PROGRAMME[eau]} au programme` });
+    const raison = `${LIBELLE_PROGRAMME[eau]} au programme`;
+    out.push({ id: "maillot", libelle: "Maillot de bain", groupe: "equipement", raison });
+    out.push({ id: "serviette", libelle: "Serviette de plage", groupe: "equipement", raison });
+    out.push({ id: "tongs", libelle: "Tongs ou sandales de plage", groupe: "equipement", raison });
+    out.push({ id: "sac_plage", libelle: "Sac de plage", groupe: "equipement", raison });
+  }
+  // Lunettes de soleil et chapeau : l'eau au programme, sinon la chaleur — même règle que la crème solaire.
+  const soleil = eau ? `${LIBELLE_PROGRAMME[eau]} au programme` : max !== null && max >= SEUIL_CHALEUR ? `Chaleur attendue (jusqu'à ${max}°)` : null;
+  if (soleil) {
+    out.push({ id: "lunettes_soleil", libelle: "Lunettes de soleil", groupe: "equipement", raison: soleil });
+    out.push({ id: "chapeau", libelle: "Chapeau ou casquette", groupe: "equipement", raison: soleil });
   }
   if (eau) out.push({ id: "creme_solaire", libelle: "Crème solaire", groupe: "sante", raison: `${LIBELLE_PROGRAMME[eau]} au programme` });
   else if (max !== null && max >= SEUIL_CHALEUR) out.push({ id: "creme_solaire", libelle: "Crème solaire", groupe: "sante", raison: `Chaleur attendue (jusqu'à ${max}°)` });
@@ -84,6 +115,11 @@ export function affairesDuSejour(ctx: ContexteSejour): AffaireVoyage[] {
   if (au(programme, "randonnee")) {
     out.push({ id: "chaussures_rando", libelle: "Chaussures de randonnée", groupe: "equipement", raison: "Randonnée au programme" });
     out.push({ id: "gourde", libelle: "Gourde", groupe: "equipement", raison: "Randonnée au programme" });
+  }
+  if (au(programme, "trajet")) {
+    for (const [id, libelle] of [["ecouteurs", "Écouteurs"], ["livre", "Livre ou liseuse"], ["coussin", "Coussin de voyage"], ["en_cas", "En-cas et bouteille d'eau"]] as const) {
+      out.push({ id, libelle, groupe: "trajet", raison: "Trajet au programme" });
+    }
   }
   if (au(programme, "spa")) out.push({ id: "maillot_spa", libelle: "Maillot de bain pour le spa", groupe: "equipement", raison: "Spa au programme" });
   if (pluie) out.push({ id: "parapluie", libelle: "Parapluie ou imperméable", groupe: "equipement", raison: "Pluie annoncée" });
