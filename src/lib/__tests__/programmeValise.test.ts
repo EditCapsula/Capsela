@@ -127,8 +127,8 @@ describe("couvertureMeteo — ce que la météo connaît du séjour", () => {
 });
 
 describe("activités de la maquette V2 — elles se traduisent en programme, donc en occasions mères", () => {
-  it("huit activités, toutes rattachées à des entrées du programme qui existent", () => {
-    expect(ACTIVITES).toHaveLength(8);
+  it("neuf activités (Randonnée depuis le 19/10/2026), toutes rattachées à des entrées du programme qui existent", () => {
+    expect(ACTIVITES).toHaveLength(9);
     expect(ACTIVITES_MAX).toBe(4);
     for (const a of ACTIVITES) for (const [id] of a.retenues) expect(elementProgramme(id), `${a.id} → ${id}`).toBeDefined();
   });
@@ -143,6 +143,13 @@ describe("activités de la maquette V2 — elles se traduisent en programme, don
     const q = programmeDesActivites(["nature", "detente"], 10);
     expect(q.filter((x) => x.id === "balade")).toHaveLength(1);
     expect(q.find((x) => x.id === "balade")?.frequence).toBe(3);
+  });
+
+  it("randonnée, activité à part (19/10/2026) : elle seule apporte la randonnée ; Nature garde la balade", () => {
+    expect(programmeDesActivites(["randonnee"], 7).map((x) => x.id)).toContain("randonnee");
+    const nature = programmeDesActivites(["nature"], 7).map((x) => x.id);
+    expect(nature).toContain("balade");
+    expect(nature).not.toContain("randonnee");
   });
 
   it("les occasions mères que reçoit le moteur", () => {

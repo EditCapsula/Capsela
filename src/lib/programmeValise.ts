@@ -158,21 +158,26 @@ export function programmeParDefaut(sejour: TypeSejour | null, nbJours: number): 
 
 // ── Les activités de la maquette « Préparer ma valise V2 » (11/10/2026) ───────────────────────────
 
-export type ActiviteSejour = "plage" | "ville" | "nature" | "detente" | "soiree" | "travail" | "sport" | "evenement";
+export type ActiviteSejour = "plage" | "ville" | "nature" | "randonnee" | "detente" | "soiree" | "travail" | "sport" | "evenement";
 
 /** Au plus quatre activités (maquette : « Sélectionne jusqu'à 4 activités »). */
 export const ACTIVITES_MAX = 4;
 
 /**
- * Les huit activités que la maquette V2 propose à la place du type de séjour et du programme. Chacune se traduit en entrées du
+ * Les activités que la maquette V2 propose (huit, plus Randonnée le 19/10/2026) à la place du type de séjour et du programme. Chacune se traduit en entrées du
  * programme, donc en occasions MÈRES pour le moteur : aucun second moteur, le planning jour par jour et les contraintes de pool
  * (chaleur, marche, outdoor) restent ceux de la phase B. Les parts des jours du séjour sont un ARBITRAGE ÉDITORIAL du 11/10/2026,
  * à revoir sur de vrais voyages (même nature que les parts de `programmeParDefaut`).
+ *
+ * RANDONNÉE, activité à part (19/10/2026, demandé : « il manque randonnées pour recommander des chaussures de rando ») : elle portait
+ * la part de randonnée que Nature retenait sans le dire. Nature garde la balade ; les chaussures de randonnée et la gourde (affaires
+ * de voyage) ne viennent plus que d'une randonnée choisie.
  */
 export const ACTIVITES: { id: ActiviteSejour; libelle: string; retenues: [string, Part][] }[] = [
   { id: "plage", libelle: "Plage", retenues: [["plage", 0.3], ["piscine", 0.15]] },
   { id: "ville", libelle: "Ville", retenues: [["visites", 0.4], ["shopping", 0.15], ["restaurant", 0.25]] },
-  { id: "nature", libelle: "Nature", retenues: [["randonnee", 0.3], ["balade", 0.3]] },
+  { id: "nature", libelle: "Nature", retenues: [["balade", 0.3]] },
+  { id: "randonnee", libelle: "Randonnée", retenues: [["randonnee", 0.3]] },
   { id: "detente", libelle: "Détente", retenues: [["spa", 0.25], ["balade", 0.2]] },
   { id: "soiree", libelle: "Soirée", retenues: [["sortie_vacances", 0.3], ["diner", 0.2]] },
   { id: "travail", libelle: "Travail", retenues: [["travail_reunion", 0.5]] },

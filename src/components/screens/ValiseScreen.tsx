@@ -284,7 +284,7 @@ function CarteInfo({ glyphe, children }: { glyphe: React.ReactNode; children: Re
 
 type Vue = { nom: "etape" } | { nom: "calcul" } | { nom: "erreur" } | { nom: "resultat" } | { nom: "look"; index: number } | { nom: "piece"; id: number; depuis: Vue };
 
-/** Les pictogrammes des huit activités (maquette V2). */
+/** Les pictogrammes des activités (maquette V2, plus Randonnée le 19/10/2026). */
 /** À quel séjour chaque valise convient (maquette V2). */
 const USAGE_BAGAGE: Record<TailleBagage, string> = {
   S: "Week-end ou court séjour",
@@ -297,6 +297,7 @@ const GLYPHES_ACTIVITE: Record<ActiviteSejour, React.ReactNode> = {
   plage: svg(<path d="M3 19c2 0 2-1.5 4.5-1.5S10 19 12 19s2-1.5 4.5-1.5S19 19 21 19M12 4a7 7 0 0 1 7 7H5a7 7 0 0 1 7-7zM12 11v7" {...trait} />, 18),
   ville: svg(<path d="M4 20V10l5-3v13M9 20V4h7v16M16 20v-9h4v9M3 20h18" {...trait} />, 18),
   nature: svg(<path d="M12 3l6 9h-3l4 6H5l4-6H6zM12 18v3" {...trait} />, 18),
+  randonnee: svg(<path d="M3 19l6-10 4 6 2-3 6 7zM8 3.5a1.5 1.5 0 1 0 0 .01" {...trait} />, 18),
   detente: svg(<path d="M5 20l3-8h8l3 8M8 12l-2-5M10 16h4" {...trait} />, 18),
   soiree: svg(<path d="M8 3h8l-1 6a3 3 0 0 1-6 0zM12 12v8M8.5 21h7" {...trait} />, 18),
   travail: svg(<path d="M4 8h16v11H4zM9 8V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M4 13h16" {...trait} />, 18),
@@ -865,7 +866,7 @@ export default function ValiseScreen() {
           </>
         )}
 
-        {/* ── 3. L'ESPRIT DU SÉJOUR ── maquette V2 (11/10/2026) : huit activités, quatre au plus ; elles se traduisent en programme
+        {/* ── 3. L'ESPRIT DU SÉJOUR ── maquette V2 (11/10/2026) : neuf activités depuis l'ajout de Randonnée (19/10/2026), quatre au plus ; elles se traduisent en programme
             (programmeDesActivites), donc en occasions mères pour le moteur. */}
         {questions && etape === 3 && (
           <>
