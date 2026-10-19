@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { sansBarre } from "@/lib/phraseOccasion";
 import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
 import AppHeader from "@/components/AppHeader";
 import BadgePremium from "@/components/BadgePremium";
@@ -1646,7 +1647,7 @@ export default function PlanifierScreen() {
                             style={{ minHeight: 44 }}
                           >
                             <GlypheSousChoix valeur={v} taille={16} />
-                            <span className="whitespace-nowrap">{v}</span>
+                            <span className="whitespace-nowrap">{sansBarre(v)}</span>
                           </button>
                         );
                       })}
@@ -1822,7 +1823,7 @@ export default function PlanifierScreen() {
                   <div className="t-titre-carte text-ink">Pourquoi ce look ?</div>
                   <ul className="mt-2">
                     {([
-                      ["journee", "Ton occasion", `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${dateContext}` : ""}`],
+                      ["journee", "Ton occasion", `${composition ? "Prévue" : "Pensée"} pour « ${occLong} »${occ === "travail_formel" ? ` · ${workMode}` : occ === "date" && dateContext ? ` · ${sansBarre(dateContext)}` : ""}`],
                       ...(meteoMoment ? [["nuage", "La météo", phraseMeteo] as [IconePlanifier, string, string]] : []),
                       ...(!composition && !dressingSeul && nbCapsule > 0 && profile.styles.length
                         ? [["elegant", "Ton style", `Une base de ta capsule ${libelleStyles(profile.styles, profile.gender)}.`] as [IconePlanifier, string, string]]

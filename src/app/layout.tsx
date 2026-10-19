@@ -1,12 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Caveat, Fraunces, Manrope } from "next/font/google";
+import { Caveat, Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  weight: ["400", "500", "600"],
+/**
+ * Police des titres : Bodoni Moda (19/10/2026, fournie par la propriétaire, licence SIL OFL 1.1), à la place de Fraunces — une didone,
+ * comme le logo « capsela. ». Fichiers variables (graisse 400 à 900, taille optique 6 à 96 que le navigateur règle seul sur la taille
+ * du texte), convertis en WOFF2 et servis par l'app : aucun appel à Google Fonts pour elle.
+ */
+const bodoni = localFont({
+  variable: "--font-bodoni",
+  src: [
+    { path: "./fonts/BodoniModa.woff2", weight: "400 900", style: "normal" },
+    { path: "./fonts/BodoniModa-Italic.woff2", weight: "400 900", style: "italic" },
+  ],
 });
 
 const manrope = Manrope({
@@ -52,7 +59,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${fraunces.variable} ${manrope.variable} ${caveat.variable}`}>
+    <html lang="fr" className={`${bodoni.variable} ${manrope.variable} ${caveat.variable}`}>
       <body>{children}</body>
     </html>
   );

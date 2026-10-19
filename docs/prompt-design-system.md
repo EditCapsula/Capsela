@@ -1,6 +1,6 @@
 # Prompt « design system » Capsela
 
-Prompt à fournir tel quel à un assistant (Claude, ou un outil de maquettes) pour qu'il conçoive ou code des écrans cohérents avec l'application. Il est tenu à jour avec le code : la source de vérité reste `src/app/globals.css` (jetons et typographie), `src/components/` (composants) et `CLAUDE.md` / `AGENTS.md` (règles). Dernière mise à jour : 08/10/2026 (flat lay, accueil, Mon planning, visuels éditoriaux, silhouette de chargement, règles de saison).
+Prompt à fournir tel quel à un assistant (Claude, ou un outil de maquettes) pour qu'il conçoive ou code des écrans cohérents avec l'application. Il est tenu à jour avec le code : la source de vérité reste `src/app/globals.css` (jetons et typographie), `src/components/` (composants) et `CLAUDE.md` / `AGENTS.md` (règles). Dernière mise à jour : 19/10/2026 (logo et monogramme définitifs, Bodoni Moda pour les titres).
 
 ---
 
@@ -10,7 +10,8 @@ Tu mets à jour le design system de **Capsela**, une application mobile qui comp
 
 ### 1. Marque
 - Nom : Capsela (jamais « L'édit Capsela »).
-- Logo : « CAPSELA » en capitales, Fraunces, interlettrage large, souligné d'un trait terracotta de 2 px. Pas de cintre. Tailles sm / md / lg, variante claire sur fond sombre.
+- Logo (définitif, 19/10/2026) : « capsela. » en bas de casse, didone à fort contraste, « el » et « a » en italique, point final. Une image, jamais recomposée avec une police : noir sur fond clair (`public/brand/capsela-logo.png`), blanc sur fond sombre (`capsela-logo-claire.png`). Composant LogoCapsela, hauteurs sm 22 / md 30 / lg 52 px. Centré dans l'en-tête, en grand sur l'écran de bienvenue ; jamais dans une feuille (fiche pièce).
+- Monogramme : « c. », même dessin que le logo. Terracotta #A66950 par défaut (`capsela-c.png`), noir (`capsela-c-noir.png`) ou blanc (`capsela-c-blanc.png`) selon le fond. Sert au favicon, à l'icône des apps iOS et Android (sur fond crème), au centre de l'indicateur de chargement et aux petites marques de l'app. Pas de cintre.
 
 ### 2. Couleurs (jetons, jamais de valeur en dur)
 - Fond crème #F3EEE5. Texte encre #1D1A16. Accent terracotta #A66950 (liens, icônes actives, surtitres), survol #8B5E4D.
@@ -20,7 +21,7 @@ Tu mets à jour le design system de **Capsela**, une application mobile qui comp
 - Statuts : erreur #F4E2DA / #DCB2A0, réussite #5B7A5E / #E7EEDF.
 
 ### 3. Typographie
-- Fraunces pour les titres et les chiffres, Manrope pour tout le reste. Caveat : un seul usage, la phrase d'ambiance de la tenue.
+- Bodoni Moda (didone, comme le logo ; depuis le 19/10/2026) pour les titres et les chiffres, Manrope pour tout le reste. Caveat : un seul usage, la phrase d'ambiance de la tenue.
 - Rôles : display 28 (« Bonjour »), titre d'écran 24 (second temps en italique terracotta), titre de section 21, titre de carte 18, ligne 16, vignette 15, chapeau 13, surtitre 11 capitales .16em, label 10, bouton 13 capitales .1em, lien 12 suivi de « → », barre du bas 9 capitales.
 - Corps 13, secondaire 12, légende 11.
 
@@ -50,7 +51,7 @@ La tenue s'affiche en pièces posées à plat sur fond crème, sans mannequin.
 ### 7. Accueil
 - Carte hero terracotta profond (rayon 24), hauteur minimale 307 px. Deux colonnes : texte à gauche, flat lay à droite (55 % de la largeur, entre 140 et 181 px).
 - Actions sous le hero : « Pas pour moi » et « Autre idée » ouvrent la feuille de quota quand le quota est dépassé. Pas de lien « Voir une autre proposition » sur une tenue planifiée : l'alerte météo reste, en texte.
-- « Tout pour ton style » : quatre cartes de même hauteur, chacune avec un visuel éditorial WebP (460 px, cover, object-position réglé par carte), un surtitre, un titre Fraunces et un lien.
+- « Tout pour ton style » : quatre cartes de même hauteur, chacune avec un visuel éditorial WebP (460 px, cover, object-position réglé par carte), un surtitre, un titre en Bodoni Moda et un lien.
 
 ### 8. Mon planning
 - Titre « Mon planning », vues Mois / Semaine / Liste.

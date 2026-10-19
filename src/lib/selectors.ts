@@ -1,3 +1,4 @@
+import { premiereAppellation } from "./barre";
 import { CATLABEL, CATS, MONTHS_FR, OCCASION_STYLE_PREFS, OCC_LABELS, occasionShortLabel, type Weather } from "./data";
 import { estDenim, formalityOf } from "./attributes";
 import { isCatalogId } from "./catalog";
@@ -615,7 +616,7 @@ export function deLaSaison(saison: CapsuleSeason): string {
  * tel quel — la troncature sur deux lignes reste à la charge de l'affichage.
  */
 export function nomCourtPiece(nom: string): string {
-  const premier = nom.split(" / ")[0].trim();
+  const premier = premiereAppellation(nom);
   return premier || nom.trim();
 }
 

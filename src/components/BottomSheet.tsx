@@ -14,7 +14,7 @@ import { useEffect, useRef } from "react";
  *
  * STYLE DU 14/10/2026 (brief du sélecteur d'occasions, appliqué À TOUTES les feuilles sur décision de la propriétaire) : voile plus
  * léger (.32), fond blanc cassé des cartes (--color-card), poignée sable (--color-sand-border), rayon haut du hero (24 px), titre
- * Fraunces 500 20 px, croix seule dans une cible de 44 px. Échap ferme ; le focus revient à l'élément qui a ouvert la feuille.
+ * serif des titres 500 20 px, croix seule dans une cible de 44 px. Échap ferme ; le focus revient à l'élément qui a ouvert la feuille.
  */
 export default function BottomSheet({
   title,

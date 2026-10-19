@@ -1,22 +1,23 @@
 // Icônes et écrans de démarrage des applications iOS et Android (17/10/2026, plan « Publication sur les stores »).
 //
-// Une seule source : le monogramme « CA » du logo (le C encre, le A terracotta), posé sur le crème de l'app (--color-cream, #F3EEE5).
-// Rien n'est dessiné ici : le script ne fait que redimensionner et centrer. Remplace le cintre-cœur du 17/10/2026.
+// Deux sources, posées sur le crème de l'app (--color-cream, #F3EEE5) : le monogramme « c. » terracotta pour les icônes, le logo
+// « capsela. » pour les écrans de démarrage (19/10/2026, logos définitifs fournis par la propriétaire ; remplacent le « CA » du 18/10).
+// Rien n'est dessiné ici : le script ne fait que redimensionner et centrer.
 // Relancer après un changement de logo : `node scripts/generer-icones-mobiles.mjs`.
 import sharp from "sharp";
 import { writeFileSync } from "node:fs";
 
 const CREME = "#F3EEE5";
 
-// Le monogramme « CA » du logo (18/10/2026, nouveau logo) : public/brand/capsela-monogramme.png, dérivé par scripts/generer-marque.mjs.
-const MONOGRAMME = "public/brand/capsela-monogramme.png";
+const MONOGRAMME = "public/brand/capsela-c.png";
+const LOGO = "public/brand/capsela-logo.png";
 
-/** Le monogramme rendu à `largeur` px de large (proportions gardées), fond transparent. */
-const logo = (largeur) => sharp(MONOGRAMME).resize({ width: Math.round(largeur), kernel: "lanczos3" }).png().toBuffer();
+/** `source` rendue à `largeur` px de large (proportions gardées), fond transparent. */
+const logo = (source, largeur) => sharp(source).resize({ width: Math.round(largeur), kernel: "lanczos3" }).png().toBuffer();
 
-/** Un carré ou un rectangle crème (ou transparent), le logo centré à `part` de son plus petit côté. */
-async function planche(largeur, hauteur, part, { fond = CREME, rond = false } = {}) {
-  const l = await logo(Math.min(largeur, hauteur) * part);
+/** Un carré ou un rectangle crème (ou transparent), `source` centrée, large de `part` de son plus petit côté. */
+async function planche(largeur, hauteur, part, { fond = CREME, rond = false, source = MONOGRAMME } = {}) {
+  const l = await logo(source, Math.min(largeur, hauteur) * part);
   const { width: lw, height: lh } = await sharp(l).metadata();
   let image = sharp({ create: { width: largeur, height: hauteur, channels: 4, background: fond ?? { r: 0, g: 0, b: 0, alpha: 0 } } }).composite([
     { input: l, left: Math.round((largeur - lw) / 2), top: Math.round((hauteur - lh) / 2) },
@@ -37,7 +38,7 @@ const ecrire = async (chemin, image, { opaque = false } = {}) => {
 // iOS — une icône 1024 × 1024, SANS transparence (exigé par l'App Store).
 await ecrire("ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png", await planche(1024, 1024, 0.62), { opaque: true });
 // iOS — écran de démarrage (les trois variantes du projet, mêmes images).
-for (const s of ["", "-1", "-2"]) await ecrire(`ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732${s}.png`, await planche(2732, 2732, 0.2), { opaque: true });
+for (const s of ["", "-1", "-2"]) await ecrire(`ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732${s}.png`, await planche(2732, 2732, 0.3, { source: LOGO }), { opaque: true });
 
 // Android — icônes classiques et rondes, puis le premier plan de l'icône adaptative (108 dp : le logo tient dans la zone sûre de 66 dp).
 const DENSITES = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
@@ -50,11 +51,11 @@ for (const [d, f] of Object.entries(DENSITES)) {
 // Android — écrans de démarrage, portrait et paysage.
 const SPLASH = { mdpi: [320, 480], hdpi: [480, 800], xhdpi: [720, 1280], xxhdpi: [960, 1600], xxxhdpi: [1280, 1920] };
 for (const [d, [l, h]] of Object.entries(SPLASH)) {
-  await ecrire(`${res}/drawable-port-${d}/splash.png`, await planche(l, h, 0.3), { opaque: true });
-  await ecrire(`${res}/drawable-land-${d}/splash.png`, await planche(h, l, 0.3), { opaque: true });
+  await ecrire(`${res}/drawable-port-${d}/splash.png`, await planche(l, h, 0.5, { source: LOGO }), { opaque: true });
+  await ecrire(`${res}/drawable-land-${d}/splash.png`, await planche(h, l, 0.5, { source: LOGO }), { opaque: true });
 }
-await ecrire(`${res}/drawable/splash.png`, await planche(480, 320, 0.3), { opaque: true });
+await ecrire(`${res}/drawable/splash.png`, await planche(480, 320, 0.5, { source: LOGO }), { opaque: true });
 // Le fond de l'icône adaptative : le crème.
 writeFileSync(`${res}/values/ic_launcher_background.xml`, `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${CREME}</color>\n</resources>\n`);
 console.log("écrit", `${res}/values/ic_launcher_background.xml`);
-// Le favicon du site (src/app/icon.svg, favicon.ico) n'est PAS régénéré : il reste le cintre-cœur (demandé le 18/10/2026).
+// Le favicon du site est généré à part, depuis le « c. » : `node scripts/generer-favicon.mjs` (19/10/2026).

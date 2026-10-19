@@ -1,3 +1,4 @@
+import { premiereAppellation } from "./barre";
 import { estDeSaison, type ContexteSaisonnier } from "./capsule";
 import { clePieces } from "./outfitFeedback";
 import { inactivityInfo } from "./selectors";
@@ -227,14 +228,14 @@ export const LONGUEUR_TITRE_MAX = 18;
 /**
  * LE NOM COURT D'UNE PIÈCE DANS UN TITRE DE SLIDE (18/10/2026, signalé : « les noms des pièces dans le carrousel sont trop longs » ; puis
  * « il faut les raccourcir intelligemment, les noms doivent rester lisibles »). Dans l'ordre :
- *   1. la première appellation seulement : rien après « / » (« Babies / Mary Jane » → « Babies ») ni entre parenthèses ;
+ *   1. la première appellation seulement : rien après « / » ou « · » (« Babies / Mary Jane » → « Babies ») ni entre parenthèses ;
  *   2. un nom assez court reste ENTIER — « Chemise en lin », « Short de sport », « Jupe midi plissée » disent la pièce ;
  *   3. un nom trop long perd ses derniers mots un à un, jusqu'à tenir dans LONGUEUR_TITRE_MAX, sans jamais finir sur un mot de liaison
  *      (« Pantalon tailleur taille haute » → « Pantalon tailleur », « Blazer structuré en laine » → « Blazer structuré »).
  * Le nom complet reste sur la fiche de la pièce.
  */
 export function nomCourtTitre(nom: string): string {
-  const appellation = nom.split(/\s*\/\s*/)[0].replace(/\s*\([^)]*\)/g, "").trim();
+  const appellation = premiereAppellation(nom).replace(/\s*\([^)]*\)/g, "").trim();
   const mots = appellation.split(/\s+/).filter(Boolean);
   if (!mots.length) return nom.trim();
   const estLiaison = (m: string) => MOTS_DE_LIAISON.has(m.toLowerCase().replace(/’/g, "'")) || /^[dl]['’]$/i.test(m);

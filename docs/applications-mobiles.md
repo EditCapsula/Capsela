@@ -36,7 +36,11 @@ Capacitor emballe le site statique déjà construit (`out/`, `output: "export"`)
 
 ## Icône et écran de démarrage (17/10/2026)
 
-**Nouveau logo (18/10/2026)** : `public/brand/capsela-logo.png` (« CAPSELA » en didone, le A terracotta, tel que fourni). `node scripts/generer-marque.mjs` en dérive la version claire (fonds sombres) et le monogramme « CA » ; `node scripts/generer-icones-mobiles.mjs` pose ce monogramme sur le crème de l'app pour iOS (icône 1024 px opaque, écrans de démarrage), Android (icônes classiques, rondes, adaptatives, écrans de démarrage) ; le favicon du site reste le cintre-cœur (`src/app/icon.svg`, décidé le 18/10/2026). **À valider** : dans le logo, la jambe droite du A passe sous le P ; le monogramme la prolonge jusqu'à la ligne de base en suivant ses bords. Le fichier fourni fait 775 px de large : une version vectorielle (ou au moins 3 000 px) donnerait une icône plus nette.
+**Logos définitifs (19/10/2026)**, fournis par la propriétaire, rangés tels quels (rognés) dans `public/brand/` :
+- `capsela-logo.png` (« capsela. » noir) et `capsela-logo-claire.png` (blanc, fonds sombres) : le logo de l'app (`LogoCapsela`) ;
+- `capsela-c.png` (« c. » terracotta), `capsela-c-noir.png`, `capsela-c-blanc.png` : le monogramme.
+
+`node scripts/generer-icones-mobiles.mjs` pose le « c. » terracotta sur le crème pour les icônes iOS (1024 px opaque) et Android (classiques, rondes, adaptatives), et le logo « capsela. » pour les écrans de démarrage. `node scripts/generer-favicon.mjs` produit le favicon du site (`src/app/icon.png`, `apple-icon.png`, `favicon.ico`) depuis le « c. ». L'indicateur de chargement (`LoadingSpinner`) affiche aussi le « c. ».
 
 ## Construction automatique de l'app Android (17/10/2026)
 

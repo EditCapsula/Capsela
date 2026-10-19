@@ -77,7 +77,7 @@ export function caseDeLaPiece(
 export const SIGNATURE_IMAGE = "Capsela";
 
 async function signer(ctx: CanvasRenderingContext2D) {
-  const famille = getComputedStyle(document.documentElement).getPropertyValue("--font-fraunces").trim();
+  const famille = getComputedStyle(document.documentElement).getPropertyValue("--font-bodoni").trim();
   const police = `italic 30px ${famille ? `${famille}, ` : ""}serif`;
   try {
     await document.fonts?.load(police, SIGNATURE_IMAGE);

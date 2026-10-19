@@ -369,10 +369,29 @@ export interface LeviersMesure {
    * thermomètre. Conservé pour qu'un audit retrouve la ligne de base.
    */
   manchesIgnorees?: boolean;
+  /** Reproduit le comportement d'AVANT le 19/10/2026 : aucun manteau ajouté par le froid, et le manteau soumis au plancher de formalité. */
+  sansManteauParLeFroid?: boolean;
 }
 
 /** Sous cette température, une tenue sans couche de dessus est à compléter d'une veste (R-S14) — le seuil de la suggestion, désormais aussi celui de la veste intégrée. */
 export const SEUIL_SOIREE_FRAICHE = 21;
+
+/**
+ * LE MANTEAU PAR LE FROID (19/10/2026, signalé : « pour cette tenue pourquoi on ne pousse pas de manteau », tenue Cérémonie, robe, sous 12°).
+ * Deux causes, deux règles, validées le même jour :
+ *   · sous SEUIL_MANTEAU (le seuil où le qualificatif devient « chaude et enveloppante »), la tenue part avec un manteau de saison s'il en
+ *     existe un — quelle que soit la base, robe comprise ; hors Cocooning et Sport, qui ont leurs propres règles ;
+ *   · un manteau se porte par-dessus et s'enlève : le niveau d'habillement de l'occasion (R-B3) ne s'y applique pas. Formalité déduite du
+ *     nom, quasi toujours 1 pour un manteau : en Cérémonie (plancher 4), aucun n'était jamais éligible. Pour une occasion habillée, seuls
+ *     les manteaux techniques (doudoune, parka…) restent écartés.
+ * ARBITRAGE ÉDITORIAL. Levier de mesure : LeviersMesure.sansManteauParLeFroid.
+ */
+export const SEUIL_MANTEAU = 12;
+const MANTEAU_TECHNIQUE = /doudoune|parka|anorak|k-?way|coupe-vent|polaire|softshell/i;
+/** Un manteau échappe au plancher de formalité de l'occasion — sauf un manteau technique en contexte habillé. */
+export function manteauHorsPlancher(i: Item, dressy: boolean): boolean {
+  return i.cat === "manteau" && !(dressy && MANTEAU_TECHNIQUE.test(`${i.subtype ?? ""} ${i.name}`));
+}
 /** Une maille qui tient lieu de veste pour la soirée fraîche (R-S14) : ouverte sur le devant, ou à capuche. */
 export function estCoucheDuSoir(i: Item): boolean {
   if (i.cat !== "pull") return false;
@@ -894,6 +913,7 @@ export function generateOutfit(
       r = r.filter(
         (i) =>
           !CLOTHING_CATS.includes(i.cat) ||
+          (!leviers?.sansManteauParLeFroid && manteauHorsPlancher(i, minFormality >= 3)) ||
           Boolean(i.occasion && i.occasion.includes(occasion)) ||
           (TOP_LAYER_CATS.includes(i.cat) && formalityOf(i) > 0) ||
           formalityOf(i) >= minFormality
@@ -1451,6 +1471,18 @@ export function generateOutfit(
     const manteau = pick(["manteau"], false);
     if (manteau && !ids.includes(manteau.id)) ids.push(manteau.id);
   }
+  // LE MANTEAU PAR LE FROID (19/10/2026, cf. SEUIL_MANTEAU) : sous 12°, un manteau de saison par-dessus, robe comprise. pick() ne rend que
+  // des pièces admises par les règles dures (saison, bornes de température, occasion) : sans manteau éligible, rien n'est forcé.
+  if (
+    !leviers?.sansManteauParLeFroid &&
+    occasion !== "cocooning" &&
+    occasion !== "sport" &&
+    weather.temp < SEUIL_MANTEAU &&
+    !ids.some((id) => chosen.some((c) => c.id === id && c.cat === "manteau"))
+  ) {
+    const manteau = pick(["manteau"], false);
+    if (manteau && !ids.includes(manteau.id)) ids.push(manteau.id);
+  }
   // R-B5 assoupli (nuance demandée le 19/08/2026) : une robe/combinaison
   // reste self-sufficient face à un haut/bas "base" (redondant), mais une
   // pièce role_piece = "calque" par-dessus (chemise ouverte, gilet léger)
@@ -1913,6 +1945,7 @@ export function candidatsDeRemplacement(
     candidates = candidates.filter(
       (i) =>
         !CLOTHING_CATS.includes(i.cat) ||
+        manteauHorsPlancher(i, minFormality >= 3) ||
         Boolean(i.occasion && i.occasion.includes(occasion)) ||
         (TOP_LAYER_CATS.includes(i.cat) && hasCompensatingVeste) ||
         formalityOf(i) >= minFormality
@@ -2057,21 +2090,24 @@ export function evaluateBlocking(
     hits.push({ id: "R-B1", message: "Une pièce n'est pas vraiment de saison aujourd'hui." });
   }
 
-  if (clothing.length >= 2) {
-    const formalities = clothing.map(formalityOf);
+  // R-B2 et R-B3 ne jugent pas le manteau (19/10/2026, manteauHorsPlancher) : porté par-dessus et enlevé, il ne fixe pas le niveau
+  // d'habillement de la tenue ; un manteau en laine sur une robe de cérémonie n'est pas un « contraste ».
+  const habillement = clothing.filter((i) => i.cat !== "manteau");
+  if (habillement.length >= 2) {
+    const formalities = habillement.map(formalityOf);
     if (Math.max(...formalities) - Math.min(...formalities) > 2) {
       hits.push({ id: "R-B2", message: "Le niveau habillé de cette tenue est assez contrasté d'une pièce à l'autre." });
     }
   }
 
-  if (occasion !== "all" && clothing.length) {
+  if (occasion !== "all" && habillement.length) {
     const minFormalityRequired = effectiveFormality(occasion, workMode, dateContext);
     // Correctif 19/08/2026 : une veste structurée compense la formalité du
     // haut (ex. "t-shirt + blazer" pour le bureau), cf. generateOutfit —
     // exclut le haut du calcul quand une telle veste est présente, jamais
     // le bas.
     const hasCompensatingVeste = pieces.some((i) => i.cat === "veste" && formalityOf(i) >= minFormalityRequired);
-    const relevant = hasCompensatingVeste ? clothing.filter((i) => !TOP_LAYER_CATS.includes(i.cat)) : clothing;
+    const relevant = hasCompensatingVeste ? habillement.filter((i) => !TOP_LAYER_CATS.includes(i.cat)) : habillement;
     const minFormality = relevant.length ? Math.min(...relevant.map(formalityOf)) : minFormalityRequired;
     if (minFormality < minFormalityRequired) {
       hits.push({ id: "R-B3", message: "Cette tenue est peut-être un peu trop décontractée pour l'occasion choisie." });
@@ -2450,6 +2486,8 @@ export function computeLookScore(
       .filter((i) => !pieceIds.has(i.id) && !hasSameSlot(i) && estDeSaison(i, weather))
       .sort(dressingDAbord);
     const decontracte = occasion === "sport" ? vesteManteauCandidates.filter((i) => formalityOf(i) <= 1) : [];
+    // Sous SEUIL_MANTEAU (19/10/2026), un manteau passe devant une veste : par grand froid, une veste ne suffit pas.
+    const parLeFroid = weather.temp < SEUIL_MANTEAU ? vesteManteauCandidates.filter((i) => i.cat === "manteau") : [];
     // En Sport, le hoodie d'abord (17/10/2026, signalé : « on avait convenu d'afficher directement un hoodie s'il y en a un dans la
     // capsule » — la tenue Sport montrait une silhouette de blazer à ajouter). Une maille qui se porte par-dessus (estCoucheDuSoir :
     // sweat à capuche, zippé, gilet), du dressing ou de la capsule, passe devant toute veste ; sans elle, la règle d'avant.
@@ -2462,7 +2500,7 @@ export function computeLookScore(
     proactives.push({
       key: "veste_soir",
       text: "N'hésite pas à compléter cette tenue avec une veste, il va faire frais ce soir.",
-      suggestedId: (coucheSport.length ? coucheSport : decontracte.length ? decontracte : vesteManteauCandidates)[0]?.id,
+      suggestedId: (coucheSport.length ? coucheSport : decontracte.length ? decontracte : parLeFroid.length ? parLeFroid : vesteManteauCandidates)[0]?.id,
     });
   }
 
