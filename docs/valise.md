@@ -277,3 +277,11 @@ Module pur : `ajustementsValise.ts` (tests : `ajustementsValise.test.ts`). Rien 
 ## Pas de mocassins ni de derbies en vacances (19/10/2026)
 
 Les mocassins et les derbies (type de chaussure déclaré) ne servent qu'aux looks d'un événement professionnel (Travail · Bureau). Pour toute autre situation de la valise, ils sortent du pool avant le moteur (`sansChaussuresSerieusesHorsTravail`, `valise.ts`) : ils ne sont emportés que si le séjour compte un événement professionnel. Arbitrage instruit sur ces deux types seulement ; babies, escarpins et bottines ne sont pas concernés.
+
+## Affaires de voyage étoffées (19/10/2026)
+
+À partir de l'infographie « Les choses à avoir dans sa valise » (`affairesVoyage.ts`) :
+- **Essentiels ajoutés** : carte Vitale, assurance voyage (« si tu en as une ») ; un groupe « Linge et nuit » (sous-vêtements, chaussettes, pyjama, sac pour le linge sale) ; gel douche et shampoing, brosse ou peigne, élastiques et pinces, maquillage et démaquillant, rasoir ou épilateur ; petite trousse de secours ; batterie externe, adaptateur de prise (« si tu pars à l'étranger » : la valise ne connaît pas le pays).
+- **Liés au séjour, avec leur raison** : plage ou piscine → tongs, sac de plage ; plage, piscine ou chaleur (24° et plus) → lunettes de soleil, chapeau ou casquette ; trajet au programme → un groupe « Pour le trajet » (écouteurs, livre ou liseuse, coussin de voyage, en-cas et bouteille d'eau).
+- **Écartés** : vêtements, sacs, bijoux, montre, ceinture et foulard, que la valise choisit dans le dressing avec les looks.
+- Chaque affaire reste masquable ; c'est un ARBITRAGE ÉDITORIAL, à ajuster à l'usage.
