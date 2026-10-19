@@ -61,6 +61,7 @@ import {
   type TypeSejour,
 } from "@/lib/valise";
 import { selectionApercu } from "@/lib/valiseApercu";
+import { articlesChecklist, progressionChecklist, sectionsChecklist, type FiltreChecklist, type Progression, type SectionChecklist } from "@/lib/checklistValise";
 import { pieceLaPlusUtilisee, planningDuProgramme, type CreneauPlanning } from "@/lib/planningValise";
 import { LIBELLE_RAISON, apercuAllegement, avecTenue, joursDeLaPiece, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
@@ -68,14 +69,12 @@ import {
   affairesAffichees,
   affairesMasquees,
   cocheesValides,
-  GROUPES_AFFAIRES,
   libelleAjoutValide,
   noteCabine,
   type EtatAffaires,
 } from "@/lib/affairesVoyage";
 import {
   ACTIVITES,
-  ACTIVITES_MAX,
   activitesDuProgramme,
   bagageConseille,
   couvertureMeteo,
@@ -226,6 +225,33 @@ const G_COCHE = (taille = 12, couleur = "currentColor") => svg(<path d="M5 12.5l
 const G_CROIX = svg(<path d="M6 6l12 12M18 6L6 18" {...trait} strokeWidth={1.7} />, 14);
 const G_ECHANGE = svg(<path d="M7 7h11l-3-3M17 17H6l3 3" {...trait} />, 15);
 const G_PLUS = svg(<path d="M12 5v14M5 12h14" {...trait} strokeWidth={1.7} />, 15);
+const G_POUBELLE = svg(<path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10.5 10.5v5M13.5 10.5v5" {...trait} />, 16);
+const chevronBas = (ouvert: boolean) => svg(<path d={ouvert ? "M7 14l5-5 5 5" : "M7 10l5 5 5-5"} {...trait} />, 16);
+
+/**
+ * LA BARRE DE PRÉPARATION (19/10/2026, refonte Valise) : « 18 / 42 », la barre, « 24 articles restants · 43 % ». Une seule source,
+ * progressionChecklist : l'Aperçu et la Checklist disent les mêmes nombres. Les articles PRÉPARÉS, jamais les pièces sélectionnées
+ * ni les looks.
+ */
+function BarrePreparation({ titre, p }: { titre: string; p: Progression }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="t-titre-carte text-ink">{titre}</span>
+        <span className="t-titre-carte text-ink" aria-label={`${p.preparees} articles préparés sur ${p.total}`}>
+          {p.preparees} / {p.total}
+        </span>
+      </div>
+      <div className="h-[4px] rounded-full mt-2 overflow-hidden" style={{ background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
+        <div className="h-full rounded-full bg-terracotta-deep transition-[width]" style={{ width: `${p.pourcentage}%` }} />
+      </div>
+      <div className="flex items-baseline justify-between gap-3 mt-[6px] text-[11px] text-muted-3 whitespace-nowrap">
+        <span>{p.restantes === 0 ? "Tout est prêt" : `${p.restantes} ${p.restantes > 1 ? "articles restants" : "article restant"}`}</span>
+        <span>{p.pourcentage} %</span>
+      </div>
+    </div>
+  );
+}
 const chevron = (vers: "g" | "d") => svg(<path d={vers === "g" ? "M14.5 6l-6 6 6 6" : "M9.5 6l6 6-6 6"} {...trait} strokeWidth={1.7} />, 16);
 
 /** Pastille de sélection (maquette : cercle terracotta, coche crème). */
@@ -284,7 +310,7 @@ function CarteInfo({ glyphe, children }: { glyphe: React.ReactNode; children: Re
 
 type Vue = { nom: "etape" } | { nom: "calcul" } | { nom: "erreur" } | { nom: "resultat" } | { nom: "look"; index: number } | { nom: "piece"; id: number; depuis: Vue };
 
-/** Les pictogrammes des huit activités (maquette V2). */
+/** Les pictogrammes des activités (maquette V2, plus Randonnée le 19/10/2026). */
 /** À quel séjour chaque valise convient (maquette V2). */
 const USAGE_BAGAGE: Record<TailleBagage, string> = {
   S: "Week-end ou court séjour",
@@ -297,6 +323,7 @@ const GLYPHES_ACTIVITE: Record<ActiviteSejour, React.ReactNode> = {
   plage: svg(<path d="M3 19c2 0 2-1.5 4.5-1.5S10 19 12 19s2-1.5 4.5-1.5S19 19 21 19M12 4a7 7 0 0 1 7 7H5a7 7 0 0 1 7-7zM12 11v7" {...trait} />, 18),
   ville: svg(<path d="M4 20V10l5-3v13M9 20V4h7v16M16 20v-9h4v9M3 20h18" {...trait} />, 18),
   nature: svg(<path d="M12 3l6 9h-3l4 6H5l4-6H6zM12 18v3" {...trait} />, 18),
+  randonnee: svg(<path d="M3 19l6-10 4 6 2-3 6 7zM8 3.5a1.5 1.5 0 1 0 0 .01" {...trait} />, 18),
   detente: svg(<path d="M5 20l3-8h8l3 8M8 12l-2-5M10 16h4" {...trait} />, 18),
   soiree: svg(<path d="M8 3h8l-1 6a3 3 0 0 1-6 0zM12 12v8M8.5 21h7" {...trait} />, 18),
   travail: svg(<path d="M4 8h16v11H4zM9 8V6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M4 13h16" {...trait} />, 18),
@@ -865,28 +892,25 @@ export default function ValiseScreen() {
           </>
         )}
 
-        {/* ── 3. L'ESPRIT DU SÉJOUR ── maquette V2 (11/10/2026) : huit activités, quatre au plus ; elles se traduisent en programme
+        {/* ── 3. L'ESPRIT DU SÉJOUR ── maquette V2 (11/10/2026) : neuf activités depuis l'ajout de Randonnée (19/10/2026), sans limite depuis le même jour (demandé : « on peut tout sélectionner si besoin ») ; elles se traduisent en programme
             (programmeDesActivites), donc en occasions mères pour le moteur. */}
         {questions && etape === 3 && (
           <>
             <Surtitre>Ta valise · 3 / 3</Surtitre>
             <TitreEtape a="Quel est l'esprit" b="de ton séjour ?" />
-            <div className="text-[13px] text-muted leading-[1.5] mt-2">Sélectionne jusqu&apos;à {ACTIVITES_MAX} activités.</div>
             <div className="grid grid-cols-2 gap-2 mt-5" role="group" aria-label="Activités du séjour">
               {ACTIVITES.map((a) => {
                 const on = activites.includes(a.id);
-                const bloquee = !on && activites.length >= ACTIVITES_MAX;
                 return (
                   <button
                     key={a.id}
-                    onClick={() => setActivites((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : l.length >= ACTIVITES_MAX ? l : [...l, a.id]))}
+                    onClick={() => setActivites((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : [...l, a.id]))}
                     aria-pressed={on}
-                    disabled={bloquee}
                     className={
-                      "flex items-center gap-[10px] text-left rounded-tuile px-[14px] border cursor-pointer transition-colors disabled:cursor-default " +
+                      "flex items-center gap-[10px] text-left rounded-tuile px-[14px] border cursor-pointer transition-colors " +
                       (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
                     }
-                    style={{ minHeight: 48, opacity: bloquee ? 0.5 : 1 }}
+                    style={{ minHeight: 48 }}
                   >
                     <span className={"flex-shrink-0 " + (on ? "text-on-terracotta" : "text-terracotta-deep")}>{GLYPHES_ACTIVITE[a.id]}</span>
                     <span className="text-[12.5px] leading-[1.25]">{a.libelle}</span>
@@ -895,7 +919,7 @@ export default function ValiseScreen() {
               })}
             </div>
             <div className="text-[12px] text-muted mt-3" aria-live="polite">
-              {activites.length} sur {ACTIVITES_MAX} {activites.length > 1 ? "choisies" : "choisie"}
+              {activites.length > 0 && `${activites.length} ${activites.length > 1 ? "activités choisies" : "activité choisie"}`}
             </div>
           </>
         )}
@@ -1166,6 +1190,34 @@ function Resultat({
   const affaires = affairesAffichees(contexteAffaires, valise.affaires);
   const affairesCochees = cocheesValides(affaires, valise.affaires);
   const affairesCachees = affairesMasquees(contexteAffaires, valise.affaires);
+  /** La checklist de départ : pièces et affaires, une progression unique (checklistValise.ts). */
+  const articles = articlesChecklist(pieces, piecesCochees, affaires, affairesCochees);
+  const progression = progressionChecklist(articles);
+  const [filtreChecklist, setFiltreChecklist] = useState<FiltreChecklist>("tout");
+  /** Les sections repliées : gardées le temps de l'écran (on passe d'un onglet à l'autre sans les rouvrir). */
+  const [repliees, setRepliees] = useState<SectionChecklist[]>([]);
+  /**
+   * RETIRER UNE PIÈCE DIT CE QUE DEVIENNENT LES LOOKS (19/10/2026, refonte) : la valise recompose déjà ses looks avec les pièces
+   * restantes (avecPieces → looksDeLaValise) ; l'écran le dit, avec le nombre avant et après — jamais un look incomplet en silence.
+   */
+  const [retrait, setRetrait] = useState<{ nb: number; looksAvant: number } | null>(null);
+  const [retraitDit, setRetraitDit] = useState<string | null>(null);
+  const retirerEtDire = (ids: number[]) => {
+    setRetrait({ nb: ids.length, looksAvant: looks.length });
+    retirer(ids);
+  };
+  const nbLooks = looks.length;
+  useEffect(() => {
+    if (!retrait) return;
+    const { nb, looksAvant } = retrait;
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setRetrait(null);
+    setRetraitDit(
+      `${nb > 1 ? `${nb} pièces retirées` : "Pièce retirée"} · ${looksAvant === nbLooks ? `${nbLooks} ${nbLooks > 1 ? "looks" : "look"}, inchangés` : `looks recomposés : ${looksAvant} → ${nbLooks}`}.`
+    );
+    // Seul le changement de la valise déclenche le message (le nombre de looks recalculé après le retrait).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valise.pieceIds.join(",")]);
   const [nouvelleAffaire, setNouvelleAffaire] = useState("");
   const [voirMasquees, setVoirMasquees] = useState(false);
   const basculer = (liste: string[] | undefined, id: string) => ((liste ?? []).includes(id) ? (liste ?? []).filter((x) => x !== id) : [...(liste ?? []), id]);
@@ -1196,38 +1248,61 @@ function Resultat({
 
   const feuilles = (
     <>
+      {/* AJUSTER MA VALISE (refonte du 19/10/2026) : les mêmes actions qu'avant, regroupées par intention — mes tenues, ma sélection, mon
+          départ — et la suppression à part, en bas, toujours derrière sa confirmation. Aucune action nouvelle, aucun sous-menu. */}
       <BottomSheet title="Ajuster ma valise" open={feuille?.type === "ajuster"} onClose={() => setFeuille(null)}>
-        <div className="flex flex-col gap-2">
-          {(
+        {(
+          [
+            ["Mes tenues", [[G_CINTRE, "Ajouter une tenue", "Compléter le programme du séjour.", () => setFeuille({ type: "tenue" })]]],
             [
-              [G_ETINCELLE, "Alléger ma valise", "Voir ce qu'on peut retirer, avant de le faire.", () => setFeuille({ type: "alleger" })],
-              [G_CINTRE, "Ajouter une tenue", "Pour une occasion de ton séjour.", () => setFeuille({ type: "tenue" })],
-              [G_ECHANGE, "Retirer ou remplacer une pièce", "Depuis l'onglet Pièces, sur chaque pièce.", () => (setOnglet("pieces"), setVue({ nom: "resultat" }))],
-              [G_PLUS, "Ajouter une pièce de ton dressing", "Les looks sont recomposés avec elle.", () => setFeuille({ type: "ajouter" })],
-              [G_COCHE(18), "Check-list de départ", "Coche les pièces au fil de la préparation.", () => (setOnglet("checklist"), setVue({ nom: "resultat" }))],
-              [G_CALENDRIER, "Modifier le séjour", "Destination, dates, valise ou programme.", modifier],
-            ] as const
-          ).map(([glyphe, titre, sous, f]) => (
-            <button
-              key={titre}
-              onClick={() => {
-                setFeuille(null);
-                f();
-              }}
-              className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile px-[14px] cursor-pointer"
-              style={{ minHeight: 60 }}
-            >
-              <span className="flex-shrink-0 text-terracotta">{glyphe}</span>
-              <span className="flex-1 min-w-0">
-                <span className="block text-[13px] text-ink">{titre}</span>
-                <span className="block text-[11px] text-muted mt-[2px]">{sous}</span>
-              </span>
-            </button>
-          ))}
-          {/* Supprimer est une action explicite depuis le 27/09/2026 : « Nouvelle
-              valise » garde la précédente dans « Mes planifications ». */}
-          <button onClick={() => setFeuille({ type: "supprimer" })} className="text-[12px] text-muted cursor-pointer mt-2 py-[10px]">
-            Supprimer cette valise
+              "Ma sélection",
+              [
+                [G_ETINCELLE, "Optimiser ma valise", "Voir les pièces qu'on peut retirer, avant de le faire.", () => setFeuille({ type: "alleger" })],
+                [G_PLUS, "Ajouter une pièce", "Depuis ton dressing ; les looks sont recomposés avec elle.", () => setFeuille({ type: "ajouter" })],
+                [G_ECHANGE, "Gérer les pièces", "Retirer ou remplacer une pièce de la sélection.", () => (setOnglet("pieces"), setVue({ nom: "resultat" }))],
+              ],
+            ],
+            [
+              "Mon départ",
+              [
+                [G_COCHE(18), "Préparer ma valise", "Cocher les articles au fur et à mesure.", () => (setOnglet("checklist"), setVue({ nom: "resultat" }))],
+                [G_CALENDRIER, "Modifier mon séjour", "Destination, dates, valise ou programme.", modifier],
+              ],
+            ],
+          ] as const
+        ).map(([groupe, actions], gi) => (
+          <section key={groupe} className={gi ? "mt-4" : ""}>
+            <h3 className="t-surtitre text-terracotta">{groupe}</h3>
+            <div className="flex flex-col gap-2 mt-2">
+              {actions.map(([glyphe, titre, sous, f]) => (
+                <button
+                  key={titre}
+                  onClick={() => {
+                    setFeuille(null);
+                    f();
+                  }}
+                  className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile px-[14px] py-[9px] cursor-pointer"
+                  style={{ minHeight: 56 }}
+                >
+                  <span className="w-[22px] flex justify-center flex-shrink-0 text-terracotta">{glyphe}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[13px] text-ink leading-[1.3]">{titre}</span>
+                    <span className="block text-[12px] text-muted-3 leading-[1.35] mt-[1px]">{sous}</span>
+                  </span>
+                  <span aria-hidden="true" className="text-placeholder flex-shrink-0">{chevron("d")}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+        {/* Supprimer : séparée des actions courantes ; une confirmation explicite suit (feuille « Supprimer cette valise ? »). */}
+        <div className="border-t border-divider mt-5 pt-2">
+          <button
+            onClick={() => setFeuille({ type: "supprimer" })}
+            className="w-full inline-flex items-center justify-center gap-[8px] text-[13px] text-rust cursor-pointer"
+            style={{ minHeight: 48 }}
+          >
+            {G_POUBELLE} Supprimer cette valise
           </button>
         </div>
       </BottomSheet>
@@ -1358,7 +1433,7 @@ function Resultat({
       {/* ALLÉGER MA VALISE : on voit l'avant et l'après AVANT de retirer. Les pièces proposées sont celles qui n'atteignent pas
           le seuil de polyvalence (SEUIL_POLYVALENTE) ; l'aperçu compte les looks conservés (un plancher : à l'enregistrement
           le moteur recompose avec les pièces restantes). */}
-      <BottomSheet title="Alléger ma valise" open={feuille?.type === "alleger"} onClose={() => (setFeuille(null), setRetirees([]))}>
+      <BottomSheet title="Optimiser ma valise" open={feuille?.type === "alleger"} onClose={() => (setFeuille(null), setRetirees([]))}>
         {(() => {
           const candidates = piecesAllegeables(pieces, looks);
           if (!candidates.length) return <EmptyState>Chaque pièce de ta valise revient dans au moins {SEUIL_POLYVALENTE} looks : rien à retirer sans perdre de variété.</EmptyState>;
@@ -1420,7 +1495,7 @@ function Resultat({
                 className="mt-4"
                 disabled={!retirees.length}
                 onClick={() => {
-                  retirer(retirees);
+                  retirerEtDire(retirees);
                   setRetirees([]);
                   setFeuille(null);
                 }}
@@ -1592,7 +1667,7 @@ function Resultat({
           </button>
           <button
             onClick={() => {
-              retirer([p.id]);
+              retirerEtDire([p.id]);
               setVue(vue.depuis.nom === "look" ? { nom: "resultat" } : vue.depuis);
             }}
             className="flex-1 rounded-full border border-border bg-card text-ink text-[12px] cursor-pointer inline-flex items-center justify-center gap-[6px]"
@@ -1764,11 +1839,12 @@ function Resultat({
               key={c.creneau + c.sousId}
               onClick={() => setVue({ nom: "look", index: c.look as number })}
               aria-label={`${c.libelle} : voir le look ${numero(c.look as number)}`}
-              className="flex items-center gap-3 py-[10px] text-left cursor-pointer min-h-[64px] border-t border-divider first:border-t-0 transition-opacity active:opacity-70"
+              className="flex items-center gap-3 py-[8px] text-left cursor-pointer min-h-[60px] border-t border-divider first:border-t-0 transition-opacity active:opacity-70"
             >
+              {/* Les vraies pièces du look, trois au plus, en miniatures plus grandes (19/10/2026, refonte). */}
               <span className="flex gap-[3px] flex-shrink-0">
                 {items.slice(0, 3).map((p) => (
-                  <Vignette key={p.id} it={p} taille={36} />
+                  <Vignette key={p.id} it={p} taille={42} />
                 ))}
               </span>
               <span className="flex-1 min-w-0">
@@ -1793,7 +1869,7 @@ function Resultat({
     <>
       {/* 1 · OÙ VAIS-JE ? La destination est le premier élément éditorial. */}
       <div className="t-surtitre text-muted">{libellePeriode(valise.depart, valise.retour)}</div>
-      <h1 className="font-serif text-terracotta text-[40px] leading-[1.05] mt-[6px] break-words" style={{ textWrap: "balance" }}>
+      <h1 className="t-display text-terracotta mt-[4px] break-words" style={{ textWrap: "balance" }}>
         {valise.destination}
       </h1>
 
@@ -1881,6 +1957,9 @@ function Resultat({
           Changer
         </button>
       </div>
+      {/* La provenance n'est dite que si la capsule complète le dressing (19/10/2026, refonte : un en-tête plus compact) ; sinon
+          « Uniquement ton dressing » le dit déjà dans l'Aperçu. */}
+      {nbSuggestions > 0 && (
       <div className="flex flex-wrap gap-2 mt-1">
         <span className="inline-flex items-center gap-[6px] rounded-full bg-chip-soft-bg px-[10px] py-[4px] text-[11.5px] text-ink">
           <span className="w-[7px] h-[7px] rounded-full" style={{ background: "var(--color-success)" }} aria-hidden="true" />
@@ -1893,6 +1972,7 @@ function Resultat({
           </span>
         )}
       </div>
+      )}
       {retourTaille && (
         <div role="status" className="text-[12px] text-ink-soft leading-[1.45] mt-2">
           {retourTaille}
@@ -1905,6 +1985,12 @@ function Resultat({
             voir ce qu&apos;on peut alléger
           </button>
           .
+        </div>
+      )}
+
+      {retraitDit && (
+        <div role="status" className="text-[12px] text-ink-soft leading-[1.45] mt-2">
+          {retraitDit}
         </div>
       )}
 
@@ -1958,7 +2044,7 @@ function Resultat({
           {nbSuggestions > 0 ? "Ton dressing, complété par ta capsule" : "Uniquement ton dressing"}
         </span>
         <span className={"text-[11px] " + (depasse ? "text-terracotta" : "text-muted")}>
-          Valise {valise.bagage} · {depasse ? "trop pleine" : `${pieces.length} ${pieces.length > 1 ? "pièces" : "pièce"} · remplie à ${tauxRemplissage} %`}
+          Valise {valise.bagage} · {depasse ? "trop pleine" : `remplie à ${tauxRemplissage}\u00a0%`}
         </span>
       </div>
       {/* Une métrique n'est dite que si elle est comptée : la pièce la plus réutilisée, et dans combien de looks. */}
@@ -1966,6 +2052,36 @@ function Resultat({
         <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
           {pieceReutilisee.name} est utilisée dans {plusUtilisee.fois} looks.
         </div>
+      )}
+
+      {/* COMPOSITION ET PRÉPARATION (refonte du 19/10/2026) : les pièces par grande famille, et la progression de la checklist —
+          la même que l'onglet Checklist (progressionChecklist), comptée en articles préparés. */}
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        {(
+          [
+            ["Vêtements", sectionsChecklist(articles, "tout").find((x) => x.id === "vetements")?.progression.total ?? 0, "pieces"],
+            ["Chaussures", sectionsChecklist(articles, "tout").find((x) => x.id === "chaussures")?.progression.total ?? 0, "pieces"],
+            ["Sacs et accessoires", sectionsChecklist(articles, "tout").find((x) => x.id === "accessoires")?.progression.total ?? 0, "pieces"],
+            ["Affaires de voyage", affaires.length, "checklist"],
+          ] as const
+        )
+          .filter(([, n]) => n > 0)
+          .map(([libelle, n, vers]) => (
+            <button
+              key={libelle}
+              onClick={() => setOnglet(vers)}
+              className="flex items-baseline justify-between gap-2 text-left bg-card border border-border rounded-tuile px-[12px] py-[10px] cursor-pointer"
+              style={{ minHeight: 48 }}
+            >
+              <span className="text-[13px] text-ink leading-[1.25]">{libelle}</span>
+              <span className="t-chiffre text-ink">{n}</span>
+            </button>
+          ))}
+      </div>
+      {progression.total > 0 && (
+        <button onClick={() => setOnglet("checklist")} className="block w-full text-left bg-card border border-border rounded-tuile px-[14px] pt-[12px] pb-[10px] mt-2 cursor-pointer" aria-label="Ouvrir la checklist de départ">
+          <BarrePreparation titre="Ma préparation" p={progression} />
+        </button>
       )}
 
       {/* APERÇU DE TA VALISE : les pièces emportées, posées à plat comme sur une planche — le visuel de la valise vient du
@@ -2033,7 +2149,7 @@ function Resultat({
                 <span className="text-[12px] text-muted flex-shrink-0">{looks.length} {looks.length > 1 ? "looks" : "look"}</span>
               </div>
               <div className="t-chapeau text-muted-3 mt-[4px]">Chaque journée, et chaque soir, avec un look de ta valise.</div>
-              <div className="flex flex-col gap-[10px] mt-4">{(onglet === "looks" ? planningParJour : planningParJour.slice(0, 5)).map(carteJour)}</div>
+              <div className="flex flex-col gap-2 mt-3">{(onglet === "looks" ? planningParJour : planningParJour.slice(0, 5)).map(carteJour)}</div>
               {onglet === "ensemble" && planningParJour.length > 5 && (
                 <button onClick={() => setOnglet("looks")} className="mt-3 t-lien text-terracotta cursor-pointer min-h-[44px]">
                   Voir tous les looks jour par jour →
@@ -2331,7 +2447,7 @@ function Resultat({
                   );
                 })}
               </div>
-              <Button variante="principal" className="mt-3" onClick={() => retirer(aAlleger.map((a) => a.id))}>
+              <Button variante="principal" className="mt-3" onClick={() => retirerEtDire(aAlleger.map((a) => a.id))}>
                 Optimiser
               </Button>
             </Card>
@@ -2369,7 +2485,7 @@ function Resultat({
                         <button onClick={() => setFeuille({ type: "remplacer", id: p.id })} aria-label={`Remplacer ${p.name}`} className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
                           {G_ECHANGE}
                         </button>
-                        <button onClick={() => retirer([p.id])} aria-label={`Retirer ${p.name} de la valise`} className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
+                        <button onClick={() => retirerEtDire([p.id])} aria-label={`Retirer ${p.name} de la valise`} className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
                           {G_CROIX}
                         </button>
                       </Card>
@@ -2398,111 +2514,104 @@ function Resultat({
         </>
       )}
 
-      {/* ── CHECKLIST ── les pièces de la valise à cocher au fil de la préparation ; l'état est gardé AVEC la valise (appareil et compte). */}
+      {/* ── CHECKLIST ── (refonte du 19/10/2026) « Ma checklist de départ » : les pièces de la valise et les affaires de voyage, par
+          section repliable avec sa progression, filtrées Tout / À préparer / Préparés. Cocher = « préparé physiquement » : rien n'est
+          ajouté, retiré ni recomposé. L'état est celui que la valise garde déjà (appareil et compte). */}
       {onglet === "checklist" && (
-        <div className="mt-4">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="font-serif text-[18px] text-ink">
-              {piecesCochees.length + affairesCochees.length} / {pieces.length + affaires.length} prêtes
-            </span>
-            <span className="text-[11.5px] text-muted">Gardée avec ta valise</span>
-          </div>
-          <div className="h-[3px] rounded-full mt-2 overflow-hidden" style={{ background: "var(--color-chip-soft-bg)" }} aria-hidden="true">
-            <div className="h-full bg-terracotta-deep" style={{ width: `${pieces.length + affaires.length ? ((piecesCochees.length + affairesCochees.length) / (pieces.length + affaires.length)) * 100 : 0}%` }} />
-          </div>
-          {pieces.length === 0 && <EmptyState>Aucune pièce dans la valise pour l&apos;instant.</EmptyState>}
-          <div className="mt-4">
-        {(
-          [
-            ["À préparer", pieces.filter((p) => !piecesCochees.includes(p.id))],
-            ["Dans la valise", pieces.filter((p) => piecesCochees.includes(p.id))],
-          ] as const
-        ).map(([titre, liste]) => (
-          <section key={titre} className="mb-4">
-            <div className="flex items-baseline justify-between">
-              <h3 className="t-surtitre text-muted">{titre}</h3>
-              <span className="text-[12px] text-muted">{liste.length}</span>
-            </div>
-            <div className="flex flex-col gap-2 mt-2">
-              {liste.length === 0 && <div className="text-[12px] text-muted-3">{titre === "À préparer" ? "Tout est dans la valise." : "Rien encore."}</div>}
-              {liste.map((p) => {
-                const dedans = piecesCochees.includes(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => cocher(p.id)}
-                    aria-pressed={dedans}
-                    aria-label={`${p.name} : ${dedans ? "remettre à préparer" : "mettre dans la valise"}`}
-                    className="flex items-center gap-3 text-left bg-card border border-border rounded-tuile p-[7px] cursor-pointer"
-                  >
-                    <Vignette it={p} taille={40} />
-                    <span className="flex-1 min-w-0">
-                      <span className={"block text-[13px] truncate " + (dedans ? "text-muted line-through" : "text-ink")}>{p.name}</span>
-                      {suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">À ajouter à ton dressing</span>}
-                    </span>
-                    <span aria-hidden="true" className={"w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 mr-2 " + (dedans ? "bg-success text-cream" : "border border-border text-transparent")}>
-                      {G_COCHE(12, "currentColor")}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ))}
-          </div>
-
-          {/* ── AFFAIRES DE VOYAGE ── hors vêtements : sans effet sur la capacité ni sur « prête ». Les essentiels, puis ce que le programme et
-              la météo justifient (la raison est dite) ; la personne coche, masque et ajoute les siennes. Gardé avec la valise. */}
-          <div className="mt-6">
-            <div className="flex items-baseline justify-between gap-3">
-              <h2 className="font-serif text-[18px] text-ink">Affaires de voyage</h2>
-              <span className="text-[12px] text-muted">
-                {affairesCochees.length} / {affaires.length}
+        <div className="mt-5">
+          <BarrePreparation titre="Ma checklist de départ" p={progression} />
+          {progression.total > 0 && progression.restantes === 0 && (
+            <div role="status" className="flex items-center gap-[10px] rounded-tuile bg-success-bg px-[14px] py-[10px] mt-3">
+              <span aria-hidden="true" className="w-[22px] h-[22px] rounded-full bg-success text-cream flex items-center justify-center flex-shrink-0">
+                {G_COCHE(12, "var(--color-cream)")}
               </span>
+              <span className="text-[13px] text-ink">Ta valise est prête à partir.</span>
             </div>
-            <div className="text-[12px] text-muted-3 leading-[1.45] mt-1">Hors vêtements : elles ne comptent pas dans la place de la valise.</div>
-            {GROUPES_AFFAIRES.map((g) => {
-              const liste = affaires.filter((a) => a.groupe === g.id);
-              if (!liste.length) return null;
+          )}
+          <div className="mt-4">
+            <SegmentedControl
+              ariaLabel="Filtrer la checklist"
+              variante="pastilles"
+              segments={[
+                // Sans compte dans les libellés : à 320 px « À préparer · 42 » était coupé ; les nombres sont dans l'en-tête.
+                { key: "tout", label: "Tout" },
+                { key: "a_preparer", label: "À préparer" },
+                { key: "preparees", label: "Préparés" },
+              ]}
+              actif={filtreChecklist}
+              onChange={setFiltreChecklist}
+            />
+          </div>
+          {progression.total === 0 && <EmptyState className="mt-4">Rien à préparer pour l&apos;instant.</EmptyState>}
+          {progression.total > 0 && filtreChecklist === "preparees" && progression.preparees === 0 && (
+            <div className="text-[12px] text-muted-3 mt-4">Aucun article préparé pour l&apos;instant : coche-les au fil de ta préparation.</div>
+          )}
+          <div className="flex flex-col gap-2 mt-4">
+            {/* Sous un filtre, une section sans article concerné ne s'affiche pas : la liste montre ce qu'on cherche, rien d'autre. */}
+            {sectionsChecklist(articles, filtreChecklist)
+              .filter((sec) => filtreChecklist === "tout" || sec.articles.length > 0)
+              .map((sec) => {
+              const repliee = repliees.includes(sec.id);
               return (
-                <section key={g.id} className="mt-4">
-                  <h3 className="t-surtitre text-muted">{g.libelle}</h3>
-                  {g.id === "toilette" && noteLiquides && <div className="text-[11.5px] text-muted-3 leading-[1.45] mt-1">{noteLiquides}</div>}
-                  <div className="flex flex-col gap-2 mt-2">
-                    {liste.map((a) => {
-                      const prete = affairesCochees.includes(a.id);
-                      return (
-                        <div key={a.id} className="flex items-center bg-card border border-border rounded-tuile pr-[2px]">
-                          <button
-                            onClick={() => majAffaires((e) => ({ ...e, cochees: basculer(e.cochees, a.id) }))}
-                            aria-pressed={prete}
-                            aria-label={`${a.libelle} : ${prete ? "remettre à préparer" : "marquer comme prête"}`}
-                            className="flex-1 min-w-0 flex items-center gap-3 text-left p-[10px] cursor-pointer"
-                            style={{ minHeight: 48 }}
-                          >
-                            <span aria-hidden="true" className={"w-[22px] h-[22px] rounded-full flex items-center justify-center flex-shrink-0 " + (prete ? "bg-success text-cream" : "border border-border text-transparent")}>
-                              {G_COCHE(12, "currentColor")}
-                            </span>
-                            <span className="flex-1 min-w-0">
-                              <span className={"block text-[13px] " + (prete ? "text-muted line-through" : "text-ink")}>{a.libelle}</span>
-                              {a.raison && <span className="block text-[11px] text-terracotta">{a.raison}</span>}
-                            </span>
-                          </button>
-                          <button
-                            onClick={() => masquerAffaire(a.id)}
-                            aria-label={a.id.startsWith("perso-") ? `Retirer ${a.libelle}` : `Masquer ${a.libelle}`}
-                            className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer"
-                          >
-                            {G_CROIX}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
+                <Card key={sec.id} rayon="tuile" className="px-[12px]">
+                  <button
+                    onClick={() => setRepliees((r) => (repliee ? r.filter((x) => x !== sec.id) : [...r, sec.id]))}
+                    aria-expanded={!repliee}
+                    className="w-full flex items-center gap-[10px] text-left cursor-pointer"
+                    style={{ minHeight: 48 }}
+                  >
+                    <span className="flex-1 min-w-0 text-[13px] text-ink font-medium">{sec.libelle}</span>
+                    <span className={"text-[12px] " + (sec.progression.restantes === 0 ? "text-success" : "text-muted")}>
+                      {sec.progression.preparees} / {sec.progression.total}
+                    </span>
+                    <span aria-hidden="true" className="text-muted">{chevronBas(!repliee)}</span>
+                  </button>
+                  {!repliee && (
+                    <div className="border-t border-divider pb-[4px]">
+                      {sec.articles.map((art) => {
+                        const p = art.piece;
+                        const a = art.affaire;
+                        const basculerArticle = () => (p ? cocher(p.id) : a && majAffaires((e) => ({ ...e, cochees: basculer(e.cochees, a.id) })));
+                        return (
+                          <div key={art.cle} className="flex items-center gap-[10px] border-b border-divider last:border-b-0" style={{ minHeight: 52 }}>
+                            <button
+                              onClick={basculerArticle}
+                              aria-pressed={art.prete}
+                              aria-label={`${art.libelle} : ${art.prete ? "remettre à préparer" : "marquer comme préparé"}`}
+                              className="flex-1 min-w-0 flex items-center gap-[10px] text-left py-[6px] cursor-pointer"
+                            >
+                              {p ? <Vignette it={p} taille={40} /> : null}
+                              <span className="flex-1 min-w-0">
+                                <span className={"block text-[13px] leading-[1.3] truncate " + (art.prete ? "text-muted line-through" : "text-ink")}>{art.libelle}</span>
+                                {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">À ajouter à ton dressing</span>}
+                                {a?.raison && <span className="block text-[11px] text-terracotta truncate">{a.raison}</span>}
+                              </span>
+                              <span aria-hidden="true" className={"w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0 " + (art.prete ? "bg-terracotta-deep text-cream" : "border border-border text-transparent")}>
+                                {G_COCHE(12, "currentColor")}
+                              </span>
+                            </button>
+                            {a && (
+                              <button
+                                onClick={() => masquerAffaire(a.id)}
+                                aria-label={a.id.startsWith("perso-") ? `Retirer ${a.libelle}` : `Masquer ${a.libelle}`}
+                                className="w-[32px] h-[44px] -mr-[4px] flex items-center justify-center flex-shrink-0 text-placeholder cursor-pointer"
+                              >
+                                {G_CROIX}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {sec.id === "toilette" && noteLiquides && <div className="text-[11px] text-muted-3 leading-[1.45] py-[8px]">{noteLiquides}</div>}
+                    </div>
+                  )}
+                </Card>
               );
             })}
+          </div>
 
+          {/* Ajouter une affaire : elle rejoint « Équipement du séjour », le total et la progression ; gardée avec la valise. */}
+          <div className="mt-5">
             <form
               className="flex items-center gap-2 mt-5"
               onSubmit={(e) => {
