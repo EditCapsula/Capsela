@@ -733,6 +733,9 @@ function sansLecturePrecedente(s: AppState, effacerNom: boolean): Partial<AppSta
   };
 }
 
+/** Délai maximal de la position et de sa météo avant le repli sur la ville du profil (19/10/2026). */
+const DELAI_POSITION_MS = 10_000;
+
 export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const { profile, ready, userId } = useAuth();
   const [state, setState] = useState<AppState>(buildInitialState);
@@ -938,9 +941,16 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     }
     setGeoStatus("loading");
     (async () => {
-      const pos = await getBrowserPosition();
-      if (cancelled) return;
-      const w = pos ? await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude) : null;
+      // 10 s au plus pour la position ET sa météo (19/10/2026) : le délai de getCurrentPosition ne court qu'une fois l'autorisation
+      // donnée — une demande restée sans réponse, ou un service météo lent, bloquait la tenue du jour sur « Localisation… ». Passé ce
+      // délai, échec : la ville du profil prend le relais, comme pour un refus.
+      const w = await Promise.race([
+        (async () => {
+          const pos = await getBrowserPosition();
+          return pos ? await fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude) : null;
+        })(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), DELAI_POSITION_MS)),
+      ]);
       if (cancelled) return;
       if (w) {
         setLiveWeather(w);
@@ -1529,7 +1539,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
    * la proposition de Capsela — le rappel du plan dit pourquoi.
    */
   useEffect(() => {
-    if (!ready || !dressingLoaded || geoLoading || !vestiaireResolu) return;
+    // La tenue planifiée n'attend PAS la localisation (19/10/2026, signalé : « Capsela compose ta tenue… » au chargement alors qu'une
+    // tenue est planifiée pour aujourd'hui) : ses pièces sont fixées, la météo n'y change rien. Seul le retour à la proposition de
+    // Capsela (plan retiré) attend la vraie météo, comme toute composition.
+    if (!ready || !dressingLoaded || !vestiaireResolu) return;
     const s = stateRef.current;
     if (s.exploredStyleId || s.outfitValidated || s.consultation) return;
     const plans = plansDuJour(s.tenuesPlanifiees, jourLocal(dateDuJour(s.jourDecalage)));
@@ -1555,7 +1568,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         occasionManual: false,
         planAppliqueId: plan.id,
       }));
-    } else if (s.planAppliqueId) {
+    } else if (s.planAppliqueId && !geoLoading) {
       planAppliqueCleRef.current = null;
       setState((st) => regen(withDefaultOccasion({ ...st, occasionManual: false }), wardrobePool, meteoDuJour, defaultCapsule));
     }
