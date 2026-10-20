@@ -61,6 +61,7 @@ import {
   type TypeSejour,
 } from "@/lib/valise";
 import { selectionApercu } from "@/lib/valiseApercu";
+import { decalerMois, grilleDuMois, toucherJour } from "@/lib/calendrierPeriode";
 import { articlesChecklist, progressionChecklist, sectionsChecklist, type FiltreChecklist, type Progression, type SectionChecklist } from "@/lib/checklistValise";
 import { pieceLaPlusUtilisee, planningDuProgramme, type CreneauPlanning } from "@/lib/planningValise";
 import { LIBELLE_RAISON, apercuAllegement, avecTenue, joursDeLaPiece, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
@@ -152,6 +153,86 @@ const joursEntre = (a: string, b: string) => Math.round((dateDe(b).getTime() - d
 const libelleAmplitude = (a: { min: number; max: number }) => (a.min === a.max ? `${a.min}°` : `${a.min}° – ${a.max}°`);
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const MOIS_LONGS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+
+/**
+ * LES DATES DU SÉJOUR DANS UN SEUL CALENDRIER (20/10/2026, demandé) : premier toucher le départ, second le retour (calendrierPeriode.ts).
+ * Les jours passés, et au-delà de DUREE_MAX_JOURS après le départ tant que le retour n'est pas choisi, ne se touchent pas. Le mois
+ * affiché suit le départ ; on navigue mois par mois, jamais avant le mois en cours.
+ */
+function CalendrierPeriode({ depart, retour, aujourdhui, onChange }: { depart: string; retour: string; aujourdhui: string; onChange: (p: { depart: string; retour: string }) => void }) {
+  const base = dateDe(depart || aujourdhui);
+  const [vue, setVue] = useState({ annee: base.getFullYear(), mois: base.getMonth() });
+  const debut = dateDe(aujourdhui);
+  const auPremierMois = vue.annee === debut.getFullYear() && vue.mois === debut.getMonth();
+  const limite = depart && !retour ? plusJours(depart, DUREE_MAX_JOURS - 1) : null;
+  const fin = retour || depart;
+  return (
+    <Card rayon="carte" className="px-[12px] pt-[10px] pb-[12px]">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setVue(decalerMois(vue.annee, vue.mois, -1))}
+          disabled={auPremierMois}
+          aria-label="Mois précédent"
+          className="w-[44px] h-[44px] flex items-center justify-center text-terracotta cursor-pointer disabled:opacity-30 disabled:cursor-default"
+        >
+          {chevron("g")}
+        </button>
+        <span className="t-titre-ligne text-ink first-letter:uppercase" aria-live="polite">
+          {MOIS_LONGS[vue.mois]} {vue.annee}
+        </span>
+        <button
+          onClick={() => setVue(decalerMois(vue.annee, vue.mois, 1))}
+          aria-label="Mois suivant"
+          className="w-[44px] h-[44px] flex items-center justify-center text-terracotta cursor-pointer"
+        >
+          {chevron("d")}
+        </button>
+      </div>
+      <div className="grid grid-cols-7 mt-1" aria-hidden="true">
+        {["L", "M", "M", "J", "V", "S", "D"].map((j, i) => (
+          <span key={i} className="text-center t-label text-muted py-[4px]">
+            {j}
+          </span>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-[2px]" role="group" aria-label="Choisir les dates du séjour">
+        {grilleDuMois(vue.annee, vue.mois).map((jour, i) => {
+          if (!jour) return <span key={i} />;
+          const passe = jour < aujourdhui;
+          const tropLoin = limite != null && jour > limite;
+          const bout = jour === depart || jour === retour;
+          const dedans = depart && fin && jour > depart && jour < fin;
+          // La bande de la période relie les deux bouts : demi-bande sous le départ et le retour, pleine entre les deux.
+          const bande = retour && retour !== depart && (dedans || bout)
+            ? jour === depart
+              ? "linear-gradient(to right, transparent 50%, var(--color-hero-background) 50%)"
+              : jour === retour
+                ? "linear-gradient(to right, var(--color-hero-background) 50%, transparent 50%)"
+                : "var(--color-hero-background)"
+            : undefined;
+          return (
+            <div key={jour} className="flex justify-center" style={{ background: bande }}>
+              <button
+                onClick={() => onChange(toucherJour({ depart, retour }, jour))}
+                disabled={passe || tropLoin}
+                aria-pressed={bout}
+                aria-label={`${dateCourte(jour)}${jour === depart ? ", départ" : jour === retour ? ", retour" : ""}`}
+                className={
+                  "w-[40px] h-[40px] rounded-full text-[13px] cursor-pointer disabled:cursor-default disabled:text-placeholder " +
+                  (bout ? "bg-terracotta-deep text-on-terracotta" : jour === aujourdhui ? "border border-border text-ink" : "text-ink")
+                }
+              >
+                {Number(jour.slice(8))}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
 
 // ── Glyphes (grammaire de GlyphesOccasion : trait 1,5, currentColor) ────
 
@@ -753,36 +834,30 @@ export default function ValiseScreen() {
             <div className="mt-6">
               <Surtitre>Tes dates</Surtitre>
             </div>
+            {/* Départ et retour : un seul calendrier (20/10/2026, demandé), le résumé au-dessus. */}
             <div className="grid grid-cols-2 gap-[10px] mt-3">
-              {([
+              {(
                 [
-                  "Départ",
-                  depart,
-                  aujourdhui,
-                  undefined,
-                  (v: string) => {
-                    setDepart(v);
-                    if (retour && retour < v) setRetour(v);
-                  },
-                ],
-                ["Retour", retour, depart || aujourdhui, depart ? plusJours(depart, DUREE_MAX_JOURS - 1) : undefined, setRetour],
-              ] as const).map(([titre, valeur, min, max, changer]) => (
-                <Card as="label" key={titre} className="flex items-center gap-[9px] px-[12px] py-[10px] cursor-pointer min-w-0">
-                  <span className="flex-shrink-0 text-muted-3">{G_CALENDRIER}</span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-[11px] text-muted">{titre}</span>
-                    <input
-                      type="date"
-                      value={valeur}
-                      min={min}
-                      max={max}
-                      onChange={(e) => changer(e.target.value)}
-                      aria-label={`Date de ${titre.toLowerCase()}`}
-                      className="capin block w-full min-w-0 bg-transparent border-none font-serif text-[14px] text-ink mt-[1px] p-0"
-                    />
-                  </span>
-                </Card>
+                  ["Départ", depart],
+                  ["Retour", retour],
+                ] as const
+              ).map(([titre, valeur]) => (
+                <div key={titre} className={"rounded-tuile border px-[12px] py-[8px] " + (titre === "Retour" && depart && !retour ? "border-terracotta bg-card" : "border-border bg-card")}>
+                  <span className="block text-[11px] text-muted">{titre}</span>
+                  <span className={"block font-serif text-[15px] mt-[1px] " + (valeur ? "text-ink" : "text-placeholder")}>{valeur ? dateCourte(valeur) : "Choisir"}</span>
+                </div>
               ))}
+            </div>
+            <div className="mt-2">
+              <CalendrierPeriode
+                depart={depart}
+                retour={retour}
+                aujourdhui={aujourdhui}
+                onChange={(p) => {
+                  setDepart(p.depart);
+                  setRetour(p.retour);
+                }}
+              />
             </div>
             {jours.length > 0 && (
               <div className="text-[12px] text-muted mt-3">{dureeOk ? libelleDuree(jours.length) : `Un séjour de ${DUREE_MAX_JOURS} jours au plus.`}</div>

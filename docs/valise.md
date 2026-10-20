@@ -18,7 +18,7 @@ Quatre questions, puis la génération et le résultat. Aucune cinquième questi
 
 | Écran | Contenu |
 | --- | --- |
-| 1 / 4 — Où pars-tu ? | Ville (autocomplétion de Planifier), « Tes lieux planifiés » (villes de tes tenues planifiées), dates départ / retour, « 9 jours · 8 nuits ». Séjour de 21 jours au plus. Si la prévision couvre le départ : « Berlin · 17° – 18° prévus » et un conseil (section 5) |
+| 1 / 4 — Où pars-tu ? | Ville (autocomplétion de Planifier), « Tes lieux planifiés » (villes de tes tenues planifiées), dates départ et retour dans un seul calendrier (20/10/2026 : premier toucher le départ, second le retour, `calendrierPeriode.ts`), « 9 jours · 8 nuits ». Séjour de 21 jours au plus. Si la prévision couvre le départ : « Berlin · 17° – 18° prévus » et un conseil (section 5) |
 | 2 / 4 — Quelle valise prends-tu ? | Grille 2 × 2, S / M / L / XL, capacité (section 3). Le glyphe valise de l'accueil grandit avec la taille |
 | 3 / 4 — Quel type de séjour ? | Cartes à visuel éditorial (10 types) et « Autre ». Présélectionne les occasions de l'écran 4 (section 4) |
 | 4 / 4 — Qu'est-ce qui est prévu ? | Occasions avec leurs glyphes, plusieurs choix. « Capsela a déjà préparé une première sélection selon ton séjour. Tu peux la modifier. » « Passer cette étape » garde la présélection, sinon « Quotidien » |
