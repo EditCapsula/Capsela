@@ -1,5 +1,6 @@
 "use client";
 
+import { autresIdees } from "@/lib/alternativesTenue";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { sansBarre } from "@/lib/phraseOccasion";
 import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
@@ -785,22 +786,22 @@ export default function PlanifierScreen() {
   const choisie = choixBrut?.cle === cleParams ? choixBrut.ids : null;
   /** La proposition surlignée dans « Autres propositions » (index dans `propositions`), sinon celle qui est affichée. */
   const [altSel, setAltSel] = useState(0);
-  const [altsBrut, setAltsBrut] = useState<{ cle: string; liste: number[][] } | null>(null);
+  /** Les idées affichées, toutes celles déjà montrées pour ces informations, et si le dressing n'en a plus (autresIdees, 20/10/2026). */
+  const [altsBrut, setAltsBrut] = useState<{ cle: string; liste: number[][]; vues: number[][]; epuise: boolean } | null>(null);
   const alternatives = altsBrut?.cle === cleParams ? altsBrut.liste : [];
+  const alternativesEpuisees = altsBrut?.cle === cleParams && altsBrut.epuise;
   const idsAffiches = composition ?? choisie ?? tenue?.ids ?? [];
   /** Jusqu'à trois tenues différentes de celle affichée, tirées du même moteur avec les mêmes paramètres. */
   const chercherAlternatives = () => {
-    const vues = new Set<string>([[...idsAffiches].sort().join(",")]);
-    const liste: number[][] = [];
-    for (let i = 0; i < 30 && liste.length < 3; i++) {
+    // Toutes les idées déjà montrées pour ces mêmes informations restent exclues : chaque série en apporte de nouvelles.
+    const dejaVues = altsBrut?.cle === cleParams ? altsBrut.vues : [idsAffiches];
+    const poolJuge = [...state.items, ...defaultCapsule, ...vestiairePool];
+    const tirer = () => {
       const t = composerTenuePlan(entreesMoteur);
-      if (!t || t.noCompleteOutfit || !t.ids.length) continue;
-      const cle = [...t.ids].sort().join(",");
-      if (vues.has(cle)) continue;
-      vues.add(cle);
-      liste.push(t.ids);
-    }
-    setAltsBrut({ cle: cleParams, liste });
+      return t && !t.noCompleteOutfit && t.ids.length ? t.ids : null;
+    };
+    const { idees, epuise } = autresIdees(tirer, dejaVues, poolJuge);
+    setAltsBrut({ cle: cleParams, liste: idees, vues: [...dejaVues, ...idees], epuise });
     setAltSel(0);
   };
 
@@ -1891,7 +1892,7 @@ export default function PlanifierScreen() {
               <div className="t-chapeau text-muted mt-[6px]">Mêmes infos, nouvelles idées. Choisis celle qui te parle.</div>
               {alternatives.length === 0 && (
                 <div className="text-[13px] text-muted-3 mt-4 leading-[1.5]">
-                  Le moteur n’a pas trouvé d’autre tenue avec ces mêmes informations. Tu peux modifier l’événement pour élargir la recherche.
+                  Pas d’autre tenue vraiment différente avec ces mêmes informations. Tu peux modifier l’événement pour élargir la recherche.
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3 mt-4" role="radiogroup" aria-label="Propositions de tenue">
@@ -1900,7 +1901,7 @@ export default function PlanifierScreen() {
                   const on = altSel === i;
                   return (
                     <button
-                      key={pr.ids.join("-")}
+                      key={`${i}-${pr.ids.join("-")}`}
                       role="radio"
                       aria-checked={on}
                       onClick={() => setAltSel(i)}
@@ -1928,13 +1929,18 @@ export default function PlanifierScreen() {
                   );
                 })}
               </div>
-              <button
-                onClick={chercherAlternatives}
-                className="w-full text-[13px] text-muted cursor-pointer underline mt-3"
-                style={{ minHeight: 44 }}
-              >
-                Voir d’autres idées
-              </button>
+              {/* Plus d'idée assez différente : le bouton disparaît au lieu de promettre ce qu'il ne trouvera pas (20/10/2026, demandé). */}
+              {alternativesEpuisees ? (
+                alternatives.length > 0 && <div className="text-[12px] text-muted-3 text-center mt-4">Ce sont toutes les idées vraiment différentes pour ce moment.</div>
+              ) : (
+                <button
+                  onClick={chercherAlternatives}
+                  className="w-full text-[13px] text-muted cursor-pointer underline mt-3"
+                  style={{ minHeight: 44 }}
+                >
+                  Voir d’autres idées
+                </button>
+              )}
             </>
           );
         })()}
