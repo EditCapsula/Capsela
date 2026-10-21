@@ -5,7 +5,8 @@ import AppHeader from "@/components/AppHeader";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { StatutComposition, ZoneLookDuJour } from "@/components/ZoneLookDuJour";
 import { useOuvrirPiece } from "@/components/useOuvrirPiece";
-import { texteHeroPlan, titreDuPlan } from "@/lib/heroPlan";
+import { texteHeroPlan, texteHeroValise, titreDuPlan } from "@/lib/heroPlan";
+import { estPlanValise } from "@/lib/valiseDuJour";
 import { useQuotaTenues } from "@/components/QuotaTenues";
 import { clePieces, jourLocal, memeTenue } from "@/lib/outfitFeedback";
 import { OCC_LABELS } from "@/lib/data";
@@ -110,7 +111,7 @@ const FANTOME_CHAUSSURES: CategoryKey[] = ["chaussures"];
 const AUCUN_FANTOME: CategoryKey[] = [];
 
 export default function HomeScreen() {
-  const { state, geoLoading, vestiairePool, wardrobePool, meteoDuJour, jourConsulte, actions } = useCapsela();
+  const { state, geoLoading, vestiairePool, wardrobePool, meteoDuJour, jourConsulte, valiseConsultee, actions } = useCapsela();
   // Navigation par date (27/09/2026) : la tenue et sa météo sont celles du jour consulté.
   const meteoEnAttente = geoLoading || jourConsulte.previsionEnChargement;
   const jourAVenir = jourConsulte.decalage > 0;
@@ -229,7 +230,12 @@ export default function HomeScreen() {
   const passee = retroActif > 0 ? tenuePassee(state.history, state.tenuesPlanifiees, jourLocal(dateRetro)) : null;
   const piecesPassee = passee ? passee.pieceIds.map((id) => resolvePool.find((i) => i.id === id)).filter((i): i is Item => Boolean(i)) : [];
   const planHero = planApplique && hasOutfit ? planApplique.plan : null;
-  const texteHero = planHero ? texteHeroPlan(planHero) : null;
+  // Un look de valise (séjour en cours, valiseDuJour.ts) se dit comme tel : « Look de ta valise · Jour 2 de ton séjour à Lisbonne ».
+  const texteHero = planHero
+    ? estPlanValise(planHero.id) && valiseConsultee
+      ? texteHeroValise(valiseConsultee.numero, valiseConsultee.valise.destination)
+      : texteHeroPlan(planHero)
+    : null;
   // Le qualificatif sous le titre (qualificatifLook) : celui de la météo, sans
   // jamais présenter comme une option une veste que la tenue contient. Aucune
   // température affichée : elle est sur la ligne jour + météo, juste au-dessus.

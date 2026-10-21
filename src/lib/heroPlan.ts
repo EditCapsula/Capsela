@@ -70,3 +70,12 @@ export function texteHeroPlan(plan: Pick<TenuePlanifiee, "jour" | "moment">, auj
   const quand = plan.jour === demain ? "demain" : JOURS[dateDe(plan.jour).getDay()];
   return { surtitre: "Look planifié", sousTitre: `Ton look est prêt pour ${quand}.`, badge: `${jourCourtLong(plan.jour)} · ${plan.moment}` };
 }
+
+/**
+ * LE LOOK DE LA VALISE, PENDANT LE SÉJOUR (20/10/2026, valiseDuJour.ts) : « Look de ta valise », « Jour 2 de ton séjour à Lisbonne. ».
+ * Le titre reste celui du plan (occasion · lieu).
+ */
+export function texteHeroValise(numero: number, destination: string): TexteHeroPlan {
+  const ville = villeDuLieu(destination) || destination;
+  return { surtitre: "Look de ta valise", sousTitre: `Jour ${numero} de ton séjour à ${ville}.`, badge: `Jour ${numero} · ${ville}` };
+}

@@ -24,6 +24,7 @@ import BottomSheet from "@/components/BottomSheet";
 import { piecesDAutresStyles, styleAffiche } from "@/lib/suggestionsAutresStyles";
 import { clePieces } from "@/lib/outfitFeedback";
 import { titreDuPlan } from "@/lib/heroPlan";
+import { estPlanValise } from "@/lib/valiseDuJour";
 import { complementTenue, momentMessage, quandPhrase } from "@/lib/jourConsulte";
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
@@ -750,7 +751,7 @@ export default function TenuesScreen() {
                 pas une alternative demandée. */}
             <span className="t-label" aria-live="polite" style={{ color: statut.cle === "a_completer" && !planApplique ? "var(--color-ink-soft)" : "var(--color-ink)" }}>
               {(planApplique || statut.cle === "complete") && <span aria-hidden="true">✦ </span>}
-              {planApplique ? "Ta tenue planifiée" : statut.libelle}
+              {planApplique ? (estPlanValise(planApplique.plan.id) ? "Look de ta valise" : "Ta tenue planifiée") : statut.libelle}
             </span>
             {planApplique ? (
               <button
@@ -785,7 +786,7 @@ export default function TenuesScreen() {
             <div className="flex-shrink-0 flex items-baseline justify-between gap-3 mb-[8px]">
               <span className="text-[13px] text-ink truncate">{titreDuPlan(planApplique.plan)}</span>
               <button onClick={() => actions.ouvrirPlan(planApplique.plan, "tenues")} className="flex-shrink-0 text-[12px] text-sand-text underline underline-offset-[3px] cursor-pointer">
-                Voir le plan
+                {estPlanValise(planApplique.plan.id) ? "Voir la valise" : "Voir le plan"}
               </button>
             </div>
           )}

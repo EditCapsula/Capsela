@@ -7,6 +7,7 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import type { Humeur } from "./humeur";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
+import { estPlanValise, looksValiseDuJour, lookSuivant, piecesDeLaValise, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
 import { previsionPour, type MeteoMoment, type MomentJournee, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
 import { clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
@@ -630,6 +631,8 @@ interface CapselaContextValue {
   defaultCapsule: Item[];
   /** Pool actif : le dressing réel s'il contient des pièces, sinon la capsule par défaut. */
   wardrobePool: Item[];
+  /** La valise du séjour en cours le jour consulté, et ses looks de ce jour (valiseDuJour.ts) ; null hors séjour. */
+  valiseConsultee: ValiseDuJourConsulte | null;
   /** Source des suggestions — vestiaire universel (Supabase) si disponible, sinon le catalogue statique de secours. Utilisé par l'écran Capsule pour recalculer une capsule sur une saison différente de la saison courante. */
   vestiairePool: CatalogItem[];
   /**
@@ -1177,9 +1180,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // qu'aucune dérive n'est possible entre ce que le moteur fait et ce qu'on
   // croit mesurer. Sans occasion, le comportement est celui d'avant — les
   // vraies pièces priment, catégorie par catégorie.
+  /**
+   * LA VALISE DU JOUR CONSULTÉ (20/10/2026, valiseDuJour.ts) : entre le départ et le retour d'une valise, la tenue du jour est le look
+   * que la valise prévoit pour ce jour-là, et « Autre tenue » ne tire que dans SES pièces — jamais une pièce restée à la maison : le
+   * vivier est celui de la valise, sans complément de la capsule.
+   */
+  const jourConsulteIso = jourLocal(dateDuJour(state.jourDecalage));
+  const valiseConsultee: ValiseDuJourConsulte | null = useMemo(() => {
+    const v = valiseDuJour(state.valises, jourConsulteIso);
+    return v ? looksValiseDuJour(v, jourConsulteIso, [...state.items, ...vestiairePool]) : null;
+  }, [state.valises, jourConsulteIso, state.items, vestiairePool]);
+  const capsuleGeneration = useMemo(() => (valiseConsultee ? [] : defaultCapsule), [valiseConsultee, defaultCapsule]);
   const wardrobePool = useMemo(
-    () => composeWardrobePool(state.items, defaultCapsule, CAT_KEYS),
-    [state.items, defaultCapsule, CAT_KEYS]
+    () =>
+      valiseConsultee
+        ? composeWardrobePool(piecesDeLaValise(valiseConsultee.valise, [...state.items, ...vestiairePool]), [], CAT_KEYS)
+        : composeWardrobePool(state.items, defaultCapsule, CAT_KEYS),
+    [valiseConsultee, state.items, vestiairePool, defaultCapsule, CAT_KEYS]
   );
 
   const poolRef = useRef(wardrobePool);
@@ -1195,12 +1212,21 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   // La capsule sert à COMPLÉTER le pool au moment de générer (cf. regen) :
   // il faut donc la garder sous la main, comme le pool et la météo.
   const capsuleRef = useRef<Item[]>(defaultCapsule);
+  /** Les pièces réelles où l'on tire : le dressing, ou les seules pièces de la valise pendant un séjour (20/10/2026, valiseDuJour.ts). */
+  const itemsGeneration = useMemo(
+    () => (valiseConsultee ? piecesDeLaValise(valiseConsultee.valise, [...state.items, ...vestiairePool]) : state.items),
+    [valiseConsultee, state.items, vestiairePool]
+  );
+  const itemsGenerationRef = useRef<Item[]>(itemsGeneration);
+  const valiseRef = useRef<ValiseDuJourConsulte | null>(valiseConsultee);
   useEffect(() => {
     poolRef.current = wardrobePool;
     weatherRef.current = meteoDuJour;
     vestiaireRef.current = vestiairePool;
-    capsuleRef.current = defaultCapsule;
-  }, [wardrobePool, meteoDuJour, vestiairePool, defaultCapsule]);
+    capsuleRef.current = capsuleGeneration;
+    itemsGenerationRef.current = itemsGeneration;
+    valiseRef.current = valiseConsultee;
+  }, [wardrobePool, meteoDuJour, vestiairePool, capsuleGeneration, itemsGeneration, valiseConsultee]);
 
   // pool/meteo surchargeables : les références ne sont mises à jour que par
   // un effet, donc encore périmées pendant le rendu où le profil vient de
@@ -1342,6 +1368,32 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
+   * « AUTRE TENUE » PENDANT UN SÉJOUR (20/10/2026, valiseDuJour.ts) : le look suivant de la valise, complet et composé pour ce voyage,
+   * avec son occasion. Le look de valise affiché est écarté comme une tenue planifiée, pour ne pas revenir aussitôt. null hors séjour
+   * ou sans autre look : « Autre tenue » reprend alors son tirage habituel, dans les seules pièces de la valise.
+   */
+  const versLookDeValise = (s: AppState): AppState | null => {
+    const v = valiseRef.current;
+    const suivant = v ? lookSuivant(v.looks, s.outfit) : null;
+    if (!suivant) return null;
+    return {
+      ...s,
+      outfit: [...suivant.ids],
+      occasion: suivant.occasion,
+      occasionManual: false,
+      outfitMissingCats: [],
+      outfitFormalityDowngraded: false,
+      outfitOccasionRelachee: false,
+      outfitNoCompleteOutfit: false,
+      outfitFailureReason: null,
+      outfitValidated: false,
+      dismissedSuggestions: [],
+      planAppliqueId: null,
+      plansEcartes: s.planAppliqueId && !s.plansEcartes.includes(s.planAppliqueId) ? [...s.plansEcartes, s.planAppliqueId] : s.plansEcartes,
+    };
+  };
+
+  /**
    * UNE PROPOSITION DU MOTEUR POUR UNE OCCASION (carrousel de l'accueil, 14/10/2026) : le même `regen` que la tenue du jour — météo,
    * occasion, saison, règles, diversité —, appliqué à l'occasion de la slide sur une copie de l'état (aucune écriture). Rend [] quand
    * le moteur ne trouve rien de complet ou rien qui n'ait déjà été montré : la slide n'est alors pas affichée.
@@ -1410,7 +1462,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     if (state.jourDecalage === 0 || previsionEnChargement) return;
     if (!ready || !dressingLoaded || geoLoading || !vestiaireResolu) return;
     if (stateRef.current.outfit.length) return;
-    setState((s) => (s.outfit.length || s.jourDecalage === 0 ? s : regen(withDefaultOccasion(s), wardrobePool, meteoDuJour, defaultCapsule)));
+    setState((s) => (s.outfit.length || s.jourDecalage === 0 ? s : regen(withDefaultOccasion(s), wardrobePool, meteoDuJour, capsuleGeneration)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.jourDecalage, state.outfit.length, previsionEnChargement, meteoDuJour, ready, dressingLoaded, geoLoading, vestiaireResolu]);
 
@@ -1525,7 +1577,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     if (!s.outfit.length || s.exploredStyleId) return;
     const resolution = [...s.items, ...vestiairePool];
     const perdue = s.outfit.some((id) => !resolution.some((p) => p.id === id));
-    if (perdue) setState((st) => regen(st, wardrobePool, weather, defaultCapsule));
+    if (perdue) setState((st) => regen(st, wardrobePool, weather, capsuleGeneration));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vestiairePool, state.items, ready, dressingLoaded, geoLoading, vestiaireResolu]);
 
@@ -1545,7 +1597,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     if (!ready || !dressingLoaded || !vestiaireResolu) return;
     const s = stateRef.current;
     if (s.exploredStyleId || s.outfitValidated || s.consultation) return;
-    const plans = plansDuJour(s.tenuesPlanifiees, jourLocal(dateDuJour(s.jourDecalage)));
+    // Les tenues planifiées par la personne d'abord, puis le look de la journée de la valise en cours (valiseDuJour.ts).
+    const plans = [...plansDuJour(s.tenuesPlanifiees, jourLocal(dateDuJour(s.jourDecalage))), ...(valiseConsultee?.journee ? [valiseConsultee.journee] : [])];
     const choix = planPourTenueDuJour(plans, [...s.items, ...vestiairePool], s.plansEcartes);
     if (choix?.etat === "applicable") {
       const { plan } = choix;
@@ -1570,10 +1623,10 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       }));
     } else if (s.planAppliqueId && !geoLoading) {
       planAppliqueCleRef.current = null;
-      setState((st) => regen(withDefaultOccasion({ ...st, occasionManual: false }), wardrobePool, meteoDuJour, defaultCapsule));
+      setState((st) => regen(withDefaultOccasion({ ...st, occasionManual: false }), wardrobePool, meteoDuJour, capsuleGeneration));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.tenuesPlanifiees, state.jourDecalage, state.items, state.outfit.length, state.plansEcartes, vestiairePool, ready, dressingLoaded, geoLoading, vestiaireResolu]);
+  }, [state.tenuesPlanifiees, state.jourDecalage, state.items, state.outfit.length, state.plansEcartes, vestiairePool, ready, dressingLoaded, geoLoading, vestiaireResolu, valiseConsultee?.journee?.id, valiseConsultee?.journee?.pieceIds.join(",")]);
 
   // Changer de style (ou de genre) redéfinit la capsule par défaut, donc le
   // vivier de suggestions : la tenue affichée doit suivre immédiatement.
@@ -1599,7 +1652,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         // Si l'exploration est devenue caduque, le bloc ligne ~350 l'a déjà
         // annulée et ce garde-fou ne s'applique donc plus.
         if (s.exploredStyleId) return s;
-        return regen(s, wardrobePool, weather, defaultCapsule);
+        return regen(s, wardrobePool, weather, capsuleGeneration);
       });
     }
   }
@@ -2793,6 +2846,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // (météo, occasion, formalité, R-B*) ne bougent pas.
     regenOutfit: () =>
       setState((s) => {
+        const deLaValise = versLookDeValise(s);
+        if (deLaValise) return deLaValise;
         const resolution = [...s.items, ...vestiaireRef.current];
         const jour = jourLocal();
         const evitees = new Set([
@@ -2806,7 +2861,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         let choix = premier.choix;
         if (!premier.substantielle) {
           const quittees = new Set(piecesPrincipales(s.outfit, resolution));
-          const poolSecours = [...s.items.filter((i) => !quittees.has(i.id)), ...capsuleRef.current];
+          // Le secours tire dans les pièces de génération : le dressing, ou la valise pendant un séjour — jamais une pièce restée à la maison.
+          const poolSecours = [...itemsGenerationRef.current.filter((i) => !quittees.has(i.id)), ...capsuleRef.current];
           const secours = choisirVariation(
             () => regen(s, poolSecours, weatherRef.current, capsuleRef.current, { poolDejaCompose: true }),
             idsDe,
@@ -2958,11 +3014,15 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
       setState((s) => ({ ...s, planComposition: { pieceIds: ids, demain }, planRetour: null, planJour: null, screen: "planifier" })),
     oublierPlanComposition: () => setState((s) => (s.planComposition ? { ...s, planComposition: null } : s)),
     setTenuesPlanifiees: (maj) => setState((s) => ({ ...s, tenuesPlanifiees: maj(s.tenuesPlanifiees) })),
-    ouvrirPlan: (t, depuis) => setState((s) => ({ ...s, planARouvrir: t, planRetour: depuis, planJour: null, screen: "planifier" })),
+    // Un look de valise (plan virtuel, valiseDuJour.ts) s'ouvre dans sa valise, pas dans Planifier.
+    ouvrirPlan: (t, depuis) =>
+      estPlanValise(t.id)
+        ? void actions.ouvrirValise(t.id.slice(PREFIXE_PLAN_VALISE.length).split(":")[0])
+        : setState((s) => ({ ...s, planARouvrir: t, planRetour: depuis, planJour: null, screen: "planifier" })),
     // Pas une « autre tenue » au sens du quota : on revient à la proposition
     // du jour, avec l'occasion de « Mon rythme ». regen écarte le plan.
     voirAutreProposition: () =>
-      setState((s) => (s.planAppliqueId ? regen(withDefaultOccasion({ ...s, occasionManual: false })) : s)),
+      setState((s) => (s.planAppliqueId ? (versLookDeValise(s) ?? regen(withDefaultOccasion({ ...s, occasionManual: false }))) : s)),
     planifierLeJour: (decalage) =>
       setState((s) => ({ ...s, planJour: decalage, planRetour: "tenues", planComposition: null, screen: "planifier" })),
     oublierPlanJour: () => setState((s) => (s.planJour != null ? { ...s, planJour: null } : s)),
@@ -3218,6 +3278,7 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     defaultCapsule,
     wardrobePool,
     vestiairePool,
+    valiseConsultee,
     dressingLoaded,
     etatPremium,
     avisStyliste,
