@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { roleApercu, selectionApercu } from "../valiseApercu";
+import { casesApercu, roleApercu, selectionApercu } from "../valiseApercu";
 import type { CategoryKey, Item } from "../types";
 
 const piece = (id: number, cat: CategoryKey): Item => ({ id, name: `P${id}`, cat, color: "Noir", hex: "#222", season: "Toutes saisons", worn: 1 });
@@ -22,14 +22,17 @@ describe("selectionApercu — une sélection représentative, jamais les huit pr
     const ids = r.affichees.map((a) => a.item.id);
     expect(ids).toContain(20);
     expect(ids).toContain(21);
-    expect(r.affichees).toHaveLength(8);
-    expect(r.reste).toBe(6);
+    expect(r.affichees.length).toBeGreaterThanOrEqual(8);
+    expect(r.reste).toBe(14 - r.affichees.length);
   });
 
-  it("jamais plus que le maximum, jamais deux fois la même pièce", () => {
+  it("huit pièces de base, puis la dernière rangée remplie (20/10/2026) ; jamais deux fois la même pièce", () => {
     const toutes = Array.from({ length: 24 }, (_, i) => piece(i + 1, (["haut", "pantalon", "chaussures", "sac", "bijou"] as CategoryKey[])[i % 5]));
     const r = selectionApercu(toutes);
-    expect(r.affichees.length).toBeLessThanOrEqual(8);
+    expect(r.affichees.filter((a) => !a.compacte)).toHaveLength(8);
+    expect(r.affichees.length).toBeGreaterThan(8);
+    // Les rangées de la grille de six colonnes sont pleines : aucune case vide tant qu'il reste des pièces.
+    expect(r.affichees.reduce((n, a) => n + casesApercu(a), 0) % 6).toBe(0);
     expect(new Set(r.affichees.map((a) => a.item.id)).size).toBe(r.affichees.length);
     expect(r.reste).toBe(24 - r.affichees.length);
   });

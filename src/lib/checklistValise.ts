@@ -101,3 +101,18 @@ export function sectionsChecklist(
     return [{ ...s, progression: progressionChecklist(siens), articles: filtrerChecklist(siens, filtre) }];
   });
 }
+
+/**
+ * LES RAISONS PARTAGÉES D'UNE SECTION (20/10/2026, demandé : « Plage au programme » répété sous chaque article). Une raison portée par
+ * au moins deux articles de la section est dite une fois, au niveau de la section ; une raison propre à un seul article (« Pluie
+ * annoncée » sous « Parapluie ou imperméable ») reste sous lui. Calculé sur TOUS les articles de la section, quel que soit le filtre :
+ * l'en-tête ne change pas quand on filtre. Présentation seulement — les règles qui produisent les raisons ne bougent pas.
+ */
+export function raisonsPartagees(articlesDeLaSection: readonly ArticleChecklist[]): string[] {
+  const compte = new Map<string, number>();
+  for (const a of articlesDeLaSection) {
+    const r = a.affaire?.raison;
+    if (r) compte.set(r, (compte.get(r) ?? 0) + 1);
+  }
+  return [...compte].filter(([, n]) => n > 1).map(([r]) => r);
+}
