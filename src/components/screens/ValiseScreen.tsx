@@ -62,7 +62,7 @@ import {
 } from "@/lib/valise";
 import { selectionApercu } from "@/lib/valiseApercu";
 import { decalerMois, grilleDuMois, toucherJour } from "@/lib/calendrierPeriode";
-import { articlesChecklist, progressionChecklist, sectionsChecklist, type FiltreChecklist, type Progression, type SectionChecklist } from "@/lib/checklistValise";
+import { articlesChecklist, progressionChecklist, raisonsPartagees, sectionsChecklist, type FiltreChecklist, type Progression, type SectionChecklist } from "@/lib/checklistValise";
 import { pieceLaPlusUtilisee, planningDuProgramme, type CreneauPlanning } from "@/lib/planningValise";
 import { LIBELLE_RAISON, apercuAllegement, avecTenue, joursDeLaPiece, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
@@ -1308,6 +1308,21 @@ function Resultat({
         ? { ...e, ajoutees: (e.ajoutees ?? []).filter((a) => a.id !== id), cochees: (e.cochees ?? []).filter((x) => x !== id) }
         : { ...e, masquees: [...(e.masquees ?? []), id], cochees: (e.cochees ?? []).filter((x) => x !== id) }
     );
+  /**
+   * RETIRER UN ARTICLE DE LA CHECKLIST, AVEC « ANNULER » (20/10/2026) : la croix masque une affaire proposée (réaffichable plus bas) ou
+   * supprime une affaire ajoutée à la main — définitif. Le geste reste celui d'avant ; un « Annuler » de quelques secondes rattrape
+   * un toucher malheureux, dans les deux cas.
+   */
+  const [annulation, setAnnulation] = useState<{ libelle: string; avant: EtatAffaires } | null>(null);
+  const retirerDeLaChecklist = (a: { id: string; libelle: string }) => {
+    setAnnulation({ libelle: a.libelle, avant: valise.affaires ?? {} });
+    masquerAffaire(a.id);
+  };
+  useEffect(() => {
+    if (!annulation) return;
+    const t = setTimeout(() => setAnnulation(null), 6000);
+    return () => clearTimeout(t);
+  }, [annulation]);
   const noteLiquides = noteCabine(valise.bagage);
   const [retourTaille, setRetourTaille] = useState<string | null>(null);
   const proposer = (situation: number) => setProposition({ situation, tenue: nouvelleTenue(valise.situations[situation], valise.pieceIds, base, valise.looks, generer) });
@@ -2169,10 +2184,11 @@ function Resultat({
           <span className="text-[11px] text-ink rounded-full bg-cream border border-border px-[10px] py-[3px]">{nbPieces(pieces.length)}</span>
         </div>
         <ul className="grid grid-cols-6 gap-[8px] mt-3 list-none p-0" style={{ gridAutoRows: "clamp(40px, 11.5vw, 54px)", gridAutoFlow: "dense" }}>
-          {apercu.affichees.map(({ item: p, role, echelle }, i) => {
+          {apercu.affichees.map(({ item: p, role, echelle, compacte }, i) => {
             const im = resolveItemImage(p);
-            const gabarit =
-              echelle === "grand"
+            const gabarit = compacte
+              ? "col-span-2 row-span-1"
+              : echelle === "grand"
                 ? role === "petit"
                   ? "col-span-3 row-span-2"
                   : "col-span-3 row-span-3"
@@ -2617,6 +2633,23 @@ function Resultat({
               onChange={setFiltreChecklist}
             />
           </div>
+          {annulation && (
+            <div role="status" className="flex items-center justify-between gap-3 rounded-tuile bg-ink text-cream px-[14px] mt-3" style={{ minHeight: 48 }}>
+              <span className="text-[13px] min-w-0 truncate">{annulation.libelle} retiré de la checklist</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const avant = annulation.avant;
+                  majAffaires(() => avant);
+                  setAnnulation(null);
+                }}
+                className="t-cta text-cream underline underline-offset-[3px] cursor-pointer flex-shrink-0"
+                style={{ minHeight: 44 }}
+              >
+                Annuler
+              </button>
+            </div>
+          )}
           {progression.total === 0 && <EmptyState className="mt-4">Rien à préparer pour l&apos;instant.</EmptyState>}
           {progression.total > 0 && filtreChecklist === "preparees" && progression.preparees === 0 && (
             <div className="text-[12px] text-muted-3 mt-4">Aucun article préparé pour l&apos;instant : coche-les au fil de ta préparation.</div>
@@ -2629,8 +2662,9 @@ function Resultat({
               const repliee = repliees.includes(sec.id);
               // Une raison partagée par TOUS les articles de la section (« Trajet au programme ») est dite une fois, sous son titre,
               // plutôt que répétée sur chaque ligne (19/10/2026, demandé).
-              const raisons = articles.filter((x) => x.section === sec.id).map((x) => x.affaire?.raison);
-              const raisonCommune = raisons.length > 1 && raisons[0] && raisons.every((r) => r === raisons[0]) ? raisons[0] : null;
+              // Une raison portée par plusieurs articles de la section (« Plage au programme ») est dite une fois, sous son titre ; une
+              // raison propre à un article (« Pluie annoncée ») reste sous lui (raisonsPartagees, 20/10/2026).
+              const partagees = raisonsPartagees(articles.filter((x) => x.section === sec.id));
               return (
                 <Card key={sec.id} rayon="tuile" className="px-[12px]">
                   <button
@@ -2641,7 +2675,7 @@ function Resultat({
                   >
                     <span className="flex-1 min-w-0">
                       <span className="block text-[13px] text-ink font-medium">{sec.libelle}</span>
-                      {raisonCommune && <span className="block text-[11px] text-terracotta">{raisonCommune}</span>}
+                      {partagees.length > 0 && <span className="block text-[11px] text-terracotta">{partagees.join(" · ")}</span>}
                     </span>
                     <span className={"text-[12px] " + (sec.progression.restantes === 0 ? "text-success" : "text-muted")}>
                       {sec.progression.preparees} / {sec.progression.total}
@@ -2654,33 +2688,53 @@ function Resultat({
                         const p = art.piece;
                         const a = art.affaire;
                         const basculerArticle = () => (p ? cocher(p.id) : a && majAffaires((e) => ({ ...e, cochees: basculer(e.cochees, a.id) })));
+                        const raisonPropre = a?.raison && !partagees.includes(a.raison) ? a.raison : null;
+                        /*
+                         * TROIS ZONES DISTINCTES (20/10/2026, demandé : la coche et la croix trop proches) : le contenu, la coche (44 × 44), puis,
+                         * séparée de 12 px, la croix (44 × 44, plus discrète). Deux boutons frères, jamais imbriqués : un toucher n'en déclenche
+                         * qu'un. La colonne de la croix existe aussi sous les pièces (vide) : les coches restent alignées d'une ligne à l'autre.
+                         */
                         return (
-                          <div key={art.cle} className="flex items-center gap-[10px] border-b border-divider last:border-b-0" style={{ minHeight: 52 }}>
-                            <button
-                              onClick={basculerArticle}
-                              aria-pressed={art.prete}
-                              aria-label={`${art.libelle} : ${art.prete ? "remettre à préparer" : "marquer comme préparé"}`}
-                              className="flex-1 min-w-0 flex items-center gap-[10px] text-left py-[6px] cursor-pointer"
-                            >
+                          <div
+                            key={art.cle}
+                            className="grid items-center border-b border-divider last:border-b-0"
+                            style={{ gridTemplateColumns: "minmax(0, 1fr) 44px 44px", columnGap: 12, minHeight: 52 }}
+                          >
+                            <div className="flex items-center gap-[10px] min-w-0 py-[6px]">
                               {p ? <Vignette it={p} taille={40} /> : null}
                               <span className="flex-1 min-w-0">
-                                <span className={"block text-[13px] leading-[1.3] truncate " + (art.prete ? "text-muted line-through" : "text-ink")}>{art.libelle}</span>
+                                <span className={"block text-[13px] leading-[1.3] line-clamp-2 break-words " + (art.prete ? "text-muted line-through" : "text-ink")}>{art.libelle}</span>
                                 {/* Une suggestion de la capsule se dit « Capsule » (19/10/2026, demandé) ; l'en-tête de la valise explique qu'elle est à ajouter au dressing. */}
                                 {p && suggestions.has(p.id) && <span className="block text-[11px] text-terracotta">Capsule</span>}
-                                {a?.raison && !raisonCommune && <span className="block text-[11px] text-terracotta truncate">{a.raison}</span>}
+                                {raisonPropre && <span className="block text-[11px] text-terracotta truncate">{raisonPropre}</span>}
                               </span>
-                              <span aria-hidden="true" className={"w-[24px] h-[24px] rounded-full flex items-center justify-center flex-shrink-0 " + (art.prete ? "bg-terracotta-deep text-cream" : "border border-border text-transparent")}>
-                                {G_COCHE(12, "currentColor")}
+                            </div>
+                            <button
+                              type="button"
+                              role="checkbox"
+                              aria-checked={art.prete}
+                              onClick={basculerArticle}
+                              aria-label={`Marquer ${art.libelle} comme ${art.prete ? "non préparé" : "préparé"}`}
+                              className="w-[44px] h-[44px] flex items-center justify-center rounded-full cursor-pointer focus-visible:outline-2 focus-visible:outline-terracotta"
+                            >
+                              <span aria-hidden="true" className={"w-[26px] h-[26px] rounded-full flex items-center justify-center " + (art.prete ? "bg-terracotta-deep text-cream" : "border-[1.5px] border-muted text-transparent")}>
+                                {G_COCHE(13, "currentColor")}
                               </span>
                             </button>
-                            {a && (
+                            {a ? (
                               <button
-                                onClick={() => masquerAffaire(a.id)}
-                                aria-label={a.id.startsWith("perso-") ? `Retirer ${a.libelle}` : `Masquer ${a.libelle}`}
-                                className="w-[32px] h-[44px] -mr-[4px] flex items-center justify-center flex-shrink-0 text-placeholder cursor-pointer"
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  retirerDeLaChecklist(a);
+                                }}
+                                aria-label={`Retirer ${a.libelle} de la checklist`}
+                                className="w-[44px] h-[44px] flex items-center justify-center rounded-full text-placeholder cursor-pointer focus-visible:outline-2 focus-visible:outline-terracotta"
                               >
                                 {G_CROIX}
                               </button>
+                            ) : (
+                              <span aria-hidden="true" />
                             )}
                           </div>
                         );
@@ -2717,7 +2771,7 @@ function Resultat({
             {affairesCachees.length > 0 && (
               <div className="mt-3">
                 <button onClick={() => setVoirMasquees((v) => !v)} aria-expanded={voirMasquees} className="t-lien text-terracotta underline underline-offset-[3px] cursor-pointer min-h-[44px]">
-                  {voirMasquees ? "Cacher les affaires masquées" : `Afficher les ${affairesCachees.length} affaires masquées`}
+                  {voirMasquees ? "Cacher les affaires masquées" : affairesCachees.length > 1 ? `Afficher les ${affairesCachees.length} affaires masquées` : "Afficher l'affaire masquée"}
                 </button>
                 {voirMasquees && (
                   <div className="flex flex-col gap-2 mt-1">

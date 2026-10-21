@@ -28,6 +28,15 @@ export interface PieceApercu {
   role: RoleApercu;
   /** « grand » : trois pièces ou moins, chacune prend de la place — la composition reste simple. */
   echelle: EchelleApercu;
+  /** Une pièce ajoutée pour remplir une case restée vide de la grille (20/10/2026) : posée en petit format, 2 × 1. */
+  compacte?: boolean;
+}
+
+/** Les cases qu'une pièce occupe dans la grille de six colonnes de l'aperçu (ValiseScreen : gabarits par rôle et échelle). */
+export function casesApercu(p: PieceApercu): number {
+  if (p.compacte) return 2;
+  if (p.echelle === "grand") return p.role === "petit" ? 6 : 9;
+  return p.role === "chaussures" || p.role === "petit" ? 2 : 4;
 }
 
 export function selectionApercu(pieces: Item[], max = 8): { affichees: PieceApercu[]; reste: number } {
@@ -45,8 +54,23 @@ export function selectionApercu(pieces: Item[], max = 8): { affichees: PieceAper
   // Au-delà du maximum (quotas dépassant `max`), on coupe par ordre d'importance.
   const ordonnees = ORDRE.flatMap((r) => parRole.get(r)!.filter((p) => retenues.has(p.id))).slice(0, max);
   const echelle: EchelleApercu = ordonnees.length <= 3 ? "grand" : "moyen";
-  return {
-    affichees: ordonnees.map((item) => ({ item, role: roleApercu(item.cat), echelle })),
-    reste: pieces.length - ordonnees.length,
-  };
+  const affichees: PieceApercu[] = ordonnees.map((item) => ({ item, role: roleApercu(item.cat), echelle }));
+  /*
+   * TOUTE LA PLANCHE (20/10/2026, demandé : « explorer tout l'espace pour afficher au moins une autre pièce ») : la dernière rangée de
+   * la grille laissait des cases vides alors que des pièces restaient comptées dans « +N pièces ». Chaque paire de cases libres reçoit
+   * une pièce de plus, en petit format, dans le même ordre d'importance. Seulement à l'échelle « moyen » : en « grand », toutes les
+   * pièces sont déjà là (trois au plus).
+   */
+  if (echelle === "moyen") {
+    const utilisees = affichees.reduce((n, p) => n + casesApercu(p), 0);
+    let libres = Math.ceil(utilisees / 6) * 6 - utilisees;
+    const vues = new Set(ordonnees.map((p) => p.id));
+    const suivantes = ORDRE.flatMap((r) => parRole.get(r)!).filter((p) => !vues.has(p.id));
+    for (const item of suivantes) {
+      if (libres < 2) break;
+      affichees.push({ item, role: roleApercu(item.cat), echelle, compacte: true });
+      libres -= 2;
+    }
+  }
+  return { affichees, reste: pieces.length - affichees.length };
 }

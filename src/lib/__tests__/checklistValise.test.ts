@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { articlesChecklist, filtrerChecklist, progressionChecklist, sectionsChecklist } from "../checklistValise";
+import { articlesChecklist, filtrerChecklist, progressionChecklist, raisonsPartagees, sectionsChecklist } from "../checklistValise";
 import type { AffaireVoyage } from "../affairesVoyage";
 import type { Item } from "../types";
 
@@ -39,5 +39,22 @@ describe("checklist de départ", () => {
     expect(vetements.progression).toMatchObject({ preparees: 1, total: 2 });
     expect(vetements.articles.map((x) => x.cle)).toEqual(["p-1"]);
     expect(s.find((x) => x.id === "chaussures")!.articles).toEqual([]);
+  });
+});
+
+describe("raisonsPartagees", () => {
+  it("une raison portée par deux articles ou plus est partagée ; une raison propre ne l'est pas", () => {
+    const equipement: AffaireVoyage[] = [
+      { id: "maillot", libelle: "Maillot de bain", groupe: "equipement", raison: "Plage au programme" },
+      { id: "serviette", libelle: "Serviette de plage", groupe: "equipement", raison: "Plage au programme" },
+      { id: "tongs", libelle: "Tongs", groupe: "equipement", raison: "Plage au programme" },
+      { id: "parapluie", libelle: "Parapluie ou imperméable", groupe: "equipement", raison: "Pluie annoncée" },
+      { id: "perso-1", libelle: "Appareil photo", groupe: "equipement" },
+    ];
+    expect(raisonsPartagees(articlesChecklist([], [], equipement, []))).toEqual(["Plage au programme"]);
+  });
+
+  it("sans raison, ou une seule fois chacune : rien de partagé", () => {
+    expect(raisonsPartagees(articlesChecklist(pieces, [], affaires, []))).toEqual([]);
   });
 });
