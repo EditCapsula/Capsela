@@ -296,3 +296,12 @@ Brief « Refonte UX/UI de la fonctionnalité Valise ». Le moteur, la sélection
 - **Looks** : cartes de jour resserrées, trois miniatures plus grandes des vraies pièces du look.
 - **Retirer une pièce** dit ce que deviennent les looks (« looks recomposés : 5 → 4 ») : la valise les recompose déjà avec les pièces restantes.
 - **Ajuster ma valise** : les mêmes actions, regroupées — Mes tenues (Ajouter une tenue), Ma sélection (Optimiser ma valise, Ajouter une pièce, Gérer les pièces), Mon départ (Préparer ma valise, Modifier mon séjour) — et « Supprimer cette valise » à part, toujours derrière sa confirmation.
+
+## La valise fait la tenue du jour pendant le séjour (20/10/2026)
+
+Entre le départ et le retour d'une valise (`valiseDuJour.ts`, testé) :
+- **Le look de la journée** que la valise prévoit pour ce jour (planning jour par jour, à défaut le look du trajet) devient la tenue du jour, sous la forme d'une tenue planifiée virtuelle — jamais enregistrée — qui passe par le mécanisme des tenues planifiées (`planDuJour.ts`). Une tenue planifiée par la personne pour ce jour passe avant. L'accueil dit « Look de ta valise · Jour 2 de ton séjour à Lisbonne » ; « Voir la valise » ouvre la valise.
+- **Le look du soir** est rappelé sous la tenue (« Ta valise · Ce soir »).
+- **« Autre tenue »** passe au look suivant de la valise (complet, composé pour ce voyage) ; sans autre look, il tire dans les seules pièces de la valise, sans complément de la capsule — jamais une pièce restée à la maison (vivier, secours compris).
+- Une valise sans planning jour par jour (composée avant le 04/10/2026) n'attribue pas de look ; la tenue du jour se tire alors dans ses pièces.
+- Limite : la météo de l'accueil reste celle de la position ou de la ville du profil, pas la prévision de la destination.

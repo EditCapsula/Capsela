@@ -11,6 +11,7 @@ import type { CategoryKey } from "@/lib/types";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { soireeHabillee } from "@/lib/occasions";
 import { sousChoixDuPlan } from "@/lib/planDuJour";
+import { estPlanValise } from "@/lib/valiseDuJour";
 import { paletteHexes } from "@/lib/profile";
 import { useAuth } from "@/lib/auth";
 import { plansDuJour, villeDuLieu, type TenuePlanifiee } from "@/lib/planifier";
@@ -25,8 +26,11 @@ import type { Item } from "@/lib/types";
  * planifiée » de l'Accueil et de Tenue.
  */
 export function usePlanApplique(): { plan: TenuePlanifiee; alerte: AlerteMeteo | null; pieces: Item[]; meteo: MeteoDuPlan | null } | null {
-  const { state, vestiairePool, meteoPourMoment } = useCapsela();
-  const plan = state.planAppliqueId ? (state.tenuesPlanifiees.find((t) => t.id === state.planAppliqueId) ?? null) : null;
+  const { state, vestiairePool, meteoPourMoment, valiseConsultee } = useCapsela();
+  // Une tenue planifiée par la personne, ou le look de la journée de la valise en cours (plan virtuel, valiseDuJour.ts).
+  const plan = state.planAppliqueId
+    ? (state.tenuesPlanifiees.find((t) => t.id === state.planAppliqueId) ?? (valiseConsultee?.journee?.id === state.planAppliqueId ? valiseConsultee.journee : null))
+    : null;
   // La météo du LIEU et du MOMENT du plan (useMeteoDuPlan), pas celle de la ville de la personne : un plan « Gagny, ce
   // soir » ne se juge pas sur la météo de la journée ailleurs. Un plan sans lieu garde la météo du jour ; un plan avec
   // lieu dont la prévision manque n'a pas d'alerte — rien n'est deviné. Jamais la météo ACTUELLE de l'accueil pour un autre jour/lieu.
@@ -119,10 +123,14 @@ export function AlerteMeteoLook({ planApplique }: { planApplique: NonNullable<Re
  * générique ; une pièce retirée du dressing depuis n'y figure plus.
  */
 export function PlansDuJour({ depuis, className = "" }: { depuis: "home" | "tenues"; className?: string }) {
-  const { state, vestiairePool, jourConsulte, actions } = useCapsela();
+  const { state, vestiairePool, jourConsulte, valiseConsultee, actions } = useCapsela();
   // Un plan dont la tenue est DÉJÀ celle du hero n'est pas rappelé dessous (14/10/2026, signalé : « inutile de remettre la carte, le hero pousse
-  // la tenue planifiée »).
-  const plans = plansDuJour(state.tenuesPlanifiees, jourLocal(jourConsulte.date)).filter((t) => t.id !== state.planAppliqueId && !memeTenue(t.pieceIds, state.outfit));
+  // la tenue planifiée »). Pendant un séjour, les looks de la valise de ce jour (journée écartée, soir) sont rappelés comme les autres
+  // (20/10/2026, valiseDuJour.ts) ; les toucher ouvre la valise.
+  const deLaValise = [valiseConsultee?.journee, valiseConsultee?.soir].filter((t): t is TenuePlanifiee => !!t);
+  const plans = [...plansDuJour(state.tenuesPlanifiees, jourLocal(jourConsulte.date)), ...deLaValise].filter(
+    (t) => t.id !== state.planAppliqueId && !memeTenue(t.pieceIds, state.outfit)
+  );
   if (!plans.length) return null;
   const pool: Item[] = [...state.items, ...vestiairePool];
 
@@ -161,7 +169,9 @@ export function PlansDuJour({ depuis, className = "" }: { depuis: "home" | "tenu
               {/* « Planifiée » et non « Tenue planifiée » : à 360 px, « Tenue
                   planifiée · Toute la journée » était tronqué (mesuré). */}
               <span className="block t-label text-terracotta truncate">{/* « Ce soir » ne vaut que pour aujourd'hui (14/10/2026, signalé : affiché pour un plan de demain soir). */}
-                {jourConsulte.decalage === 0 && t.moment === "Soirée" ? "Ce soir" : jourConsulte.decalage > 0 ? "Ta tenue planifiée" : `Planifiée · ${t.moment}`}</span>
+                {estPlanValise(t.id)
+                  ? `Ta valise · ${t.moment === "Soirée" ? (jourConsulte.decalage === 0 ? "Ce soir" : "Le soir") : "La journée"}`
+                  : jourConsulte.decalage === 0 && t.moment === "Soirée" ? "Ce soir" : jourConsulte.decalage > 0 ? "Ta tenue planifiée" : `Planifiée · ${t.moment}`}</span>
               <span className="block text-[13px] text-ink mt-[3px] truncate">
                 {occasionShortLabel(t.occasion)}
                 {ville ? ` · ${ville}` : ""}
