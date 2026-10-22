@@ -21,7 +21,7 @@ En résumé :
 [À COMPLÉTER — nom ou raison sociale de l'éditeur, adresse], éditeur de
 Capsela, est responsable du traitement.
 
-Contact pour toute question sur tes données : [À COMPLÉTER — adresse e-mail].
+Contact pour toute question sur tes données : capsela.angela@gmail.com.
 
 ## 2. Les données que nous traitons
 
@@ -224,7 +224,7 @@ Tu peux à tout moment :
   moment, sans que cela remette en cause ce qui a été fait avant ;
 - définir des **directives** sur le sort de tes données après ton décès.
 
-Pour toute demande : [À COMPLÉTER — adresse e-mail]. Nous répondons dans un
+Pour toute demande : capsela.angela@gmail.com. Nous répondons dans un
 délai d'un mois. Nous pouvons te demander de justifier ton identité si un
 doute existe.
 

@@ -14,7 +14,7 @@ copie de tes données : « Gérer mon compte → Télécharger mes données ».
 
 ## Sans l'application
 
-Si tu n'as plus accès à l'application, écris à [À COMPLÉTER — adresse e-mail]
+Si tu n'as plus accès à l'application, écris à capsela.angela@gmail.com
 depuis l'adresse e-mail de ton compte, avec pour objet « Supprimer mon
 compte ». Nous supprimons ton compte dans un délai d'un mois et te le
 confirmons par e-mail. Nous pouvons te demander de justifier ton identité si

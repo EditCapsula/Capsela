@@ -28,7 +28,7 @@ ou un avis à l'unité.
 
 **Demander autre chose**
 Accès, rectification, opposition, limitation, directives après décès :
-écris à [À COMPLÉTER — adresse e-mail]. Réponse sous un mois.
+écris à capsela.angela@gmail.com. Réponse sous un mois.
 
 **Réclamer**
 Si tu estimes que tes droits ne sont pas respectés : CNIL, cnil.fr.

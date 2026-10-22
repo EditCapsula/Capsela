@@ -124,7 +124,7 @@ pas d'accord, tu peux supprimer ton compte.
 ## 12. Droit applicable et litiges
 
 Ces conditions sont soumises au droit français. En cas de litige, écris-nous
-d'abord à [À COMPLÉTER — adresse e-mail] : nous cherchons une solution
+d'abord à capsela.angela@gmail.com : nous cherchons une solution
 amiable. Tu peux aussi recourir gratuitement au médiateur de la
 consommation : [À COMPLÉTER — nom et coordonnées du médiateur]. Sinon,
 les tribunaux compétents sont ceux prévus par la loi.
