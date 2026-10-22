@@ -31,7 +31,7 @@ import { jourLocal } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
-import { computeDefaultCapsule, saisonCalendairePour } from "@/lib/capsule";
+import { computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour } from "@/lib/capsule";
 import EtapeLieu, { type MeteoEtapeLieu } from "@/components/EtapeLieu";
 import { meteoPourLaDate } from "@/lib/meteoPlan";
 import { fetchClimat, previsionGardee, type Climat, type VilleSuggeree } from "@/lib/weather";
@@ -750,8 +750,14 @@ export default function PlanifierScreen() {
    * saison complétait donc ses catégories vides — les chaussures en premier — avec des pièces d'aujourd'hui (des bottines pour juillet).
    * Elle est recalculée pour la saison et la météo de la date, comme « Comment porter … ? » le fait pour une pièce.
    */
+  // LA CHALEUR DE LA DATE (22/10/2026, demandé : « pioche dans les bonnes capsules ») : la saison de la capsule suit la météo de la date,
+  // bornée par son calendrier sous la vraie chaleur — la règle de la tenue du jour (saisonCapsuleDuJour). Avant : la saison calendaire
+  // seule, et un 28° d'octobre se composait dans la capsule d'automne.
   const capsuleDeLaDate = useMemo(
-    () => (saisonDeLaDate ? computeDefaultCapsule(profile, meteoUtilisee, state.suggestedExcluded, saisonDeLaDate, vestiairePool) : defaultCapsule),
+    () =>
+      saisonDeLaDate
+        ? computeDefaultCapsule(profile, meteoUtilisee, state.suggestedExcluded, saisonCapsuleDuJour(meteoUtilisee.temp, saisonDeLaDate), vestiairePool)
+        : defaultCapsule,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [profile, saisonDeLaDate, meteoUtilisee.temp, meteoUtilisee.label, state.suggestedExcluded, vestiairePool, defaultCapsule]
   );
@@ -809,7 +815,7 @@ export default function PlanifierScreen() {
   const chercherAlternatives = () => {
     // Toutes les idées déjà montrées pour ces mêmes informations restent exclues : chaque série en apporte de nouvelles.
     const dejaVues = altsBrut?.cle === cleParams ? altsBrut.vues : [idsAffiches];
-    const poolJuge = [...state.items, ...defaultCapsule, ...vestiairePool];
+    const poolJuge = [...state.items, ...capsuleDeLaDate, ...vestiairePool];
     const tirer = () => {
       const t = composerTenuePlan(entreesMoteur);
       return t && !t.noCompleteOutfit && t.ids.length ? t.ids : null;
@@ -829,10 +835,10 @@ export default function PlanifierScreen() {
       return composition.map((id) => source.find((i) => i.id === id)).filter((i): i is Item => !!i);
     }
     if (!tenue) return [];
-    const source = dressingSeul ? state.items : [...state.items, ...defaultCapsule];
+    const source = dressingSeul ? state.items : [...state.items, ...capsuleDeLaDate];
     return idsAffiches.map((id) => source.find((i) => i.id === id)).filter((i): i is Item => !!i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [composition, tenue, choisie, state.items, vestiairePool, defaultCapsule, dressingSeul]);
+  }, [composition, tenue, choisie, state.items, vestiairePool, capsuleDeLaDate, dressingSeul]);
   /** Rien à garder : état vide du moteur — une composition imposée en a toujours une. */
   const sansTenue = !composition && (!tenue || tenue.noCompleteOutfit);
   /** Les mots de l'état sans tenue : dressing vide, pièces manquantes, ou pas de combinaison pour l'occasion (emptyStateCopy.ts). */
@@ -1898,7 +1904,7 @@ export default function PlanifierScreen() {
             { ids: idsAffiches, titre: "Proposition actuelle" },
             ...alternatives.map((ids, i) => ({ ids, titre: `Proposition ${i + 2}` })),
           ];
-          const source = dressingSeul ? state.items : [...state.items, ...defaultCapsule];
+          const source = dressingSeul ? state.items : [...state.items, ...capsuleDeLaDate];
           return (
             <>
               <Surtitre>Tenue planifiée</Surtitre>

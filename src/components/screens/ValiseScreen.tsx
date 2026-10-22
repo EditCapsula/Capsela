@@ -16,6 +16,7 @@ import { villeDuLieu } from "@/lib/planifier";
 import { HORIZON_PREVISION_JOURS, previsionPour, type Prevision } from "@/lib/prevision";
 import { paletteHexes } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
+import { computeDefaultCapsule } from "@/lib/capsule";
 import { useCapsela } from "@/lib/store";
 import type { CategoryKey, Item, OccasionKey } from "@/lib/types";
 import {
@@ -55,6 +56,8 @@ import {
   pretPourUneValise,
   resumeLook,
   situationsDuProgramme,
+  capsuleDuSejour,
+  type SituationValise,
   type LookValise,
   type MeteoJour,
   type TailleBagage,
@@ -688,6 +691,9 @@ function EtapeEvenements({
 export default function ValiseScreen() {
   const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
+  /** La capsule du séjour : bâtie sur la météo du séjour, pas sur celle d'aujourd'hui à la maison (capsuleDuSejour, 22/10/2026). */
+  const capsuleDe = (situations: SituationValise[]): Item[] =>
+    capsuleDuSejour(situations, (meteo, saison) => computeDefaultCapsule(profile, meteo, state.suggestedExcluded, saison, vestiairePool));
   const dressing = state.items;
   const generer = useMemo(() => generateurMoteur(paletteHexes(profile), profile.gender, colorimetrieMoteur(profile.colorimetrie)), [profile]);
 
@@ -699,6 +705,12 @@ export default function ValiseScreen() {
    * planifications ». `valiseOuverte` null : une nouvelle valise.
    */
   const valise = state.valises.find((v) => v.id === state.valiseOuverte) ?? null;
+  /** La capsule de la valise affichée, pour la compléter ou y ajouter une tenue : celle de son séjour, recalculée depuis ses situations. */
+  const capsuleDuSejourAffiche = useMemo(
+    () => (valise ? capsuleDe(valise.situations) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [valise?.situations, profile, state.suggestedExcluded, vestiairePool]
+  );
   /** La valise dont on modifie les réponses : la génération la remplace au lieu d'en créer une. */
   const [idEnModification, setIdEnModification] = useState<string | null>(null);
   /** Où elle est gardée, tel que c'est : une valise locale, ou dont la dernière écriture a échoué, ne suit pas sur un autre appareil. */
@@ -861,7 +873,7 @@ export default function ValiseScreen() {
     if (!actif.current) return;
     setFaites(2);
     // Le dressing ne couvre pas toutes les occasions : la capsule complète la valise, ses pièces marquées « à ajouter » (completerAvecCapsule).
-    const r = completerAvecCapsule(dressing, defaultCapsule, situations, r0, capaciteDe(rep.bagage), generer);
+    const r = completerAvecCapsule(dressing, capsuleDe(situations), situations, r0, capaciteDe(rep.bagage), generer);
     await pause(380);
     if (!actif.current) return;
     setFaites(3);
@@ -1355,7 +1367,7 @@ export default function ValiseScreen() {
             enregistrerLook={actions.enregistrerIdeeLook}
             ajouterAuDressing={actions.openAddEtRevenir}
             ajouterCategorie={actions.openAddForCategory}
-            capsule={defaultCapsule}
+            capsule={capsuleDuSejourAffiche}
             recomposer={recomposer}
             modifier={modifier}
             recommencer={recommencer}

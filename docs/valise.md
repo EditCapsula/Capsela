@@ -323,3 +323,9 @@ Limite constatée en rendu (seed de démo, Lisbonne 25–29/10, mariage le 25 au
 Demandé : « que la conformité de tenue depuis laquelle on demande une autre tenue soit gardée ». Avant, « Autre tenue » passait au look suivant de la valise quelle que soit son occasion. Désormais (`lookSuivantConforme`, `valiseDuJour.ts`), seuls les looks qui servent l'occasion de la tenue affichée sont parcourus — un look sert toutes les occasions de ses situations — et l'occasion ne change pas. Sans autre look de cette occasion, le store tire une tenue de la même occasion dans les seules pièces de la valise.
 
 Mesuré en rendu (séjour de démo, tenue du jour en Quotidien, six « Autre tenue ») : avant, 3 tirages sur 6 passaient en Soirée ; après, 0 sur 6.
+
+## La capsule du séjour suit la chaleur du séjour (22/10/2026)
+
+Demandé : « lorsque tu identifies que la température est élevée il faut que tu en tiennes compte et que tu pioches dans les bonnes capsules ». La valise se complétait avec la capsule de la tenue du jour, bâtie sur la météo d'aujourd'hui chez soi. `capsuleDuSejour` (`valise.ts`) bâtit une capsule par saison que les situations du séjour appellent — `saisonCapsuleDuJour`, la règle de la tenue du jour : la météo, bornée par le calendrier sous `CHALEUR_HORS_SAISON` (24°) — et les réunit sans doublon. Même correction, même règle, pour Planifier (capsule de la date) et pour la tenue d'un autre jour que l'accueil consulte (`capsuleDuJourConsulte`, store).
+
+Mesuré (catalogue réel, 8 styles × femme/homme, même exécution) : à 26°, 29° en automne et 31° en hiver, la capsule utilisée contenait 192 pièces de froid (saison Automne / Hiver, manteaux, pulls) sur 616 ; avec la chaleur, 32 sur 592. À 12° en automne, rien ne change (192/616 des deux côtés). DÉMONTRÉ pour ces scénarios.

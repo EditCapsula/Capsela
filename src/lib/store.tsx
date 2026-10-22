@@ -1191,13 +1191,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     const v = valiseDuJour(state.valises, jourConsulteIso);
     return v ? looksValiseDuJour(v, jourConsulteIso, [...state.items, ...vestiairePool]) : null;
   }, [state.valises, jourConsulteIso, state.items, vestiairePool]);
-  const capsuleGeneration = useMemo(() => (valiseConsultee ? [] : defaultCapsule), [valiseConsultee, defaultCapsule]);
+  // LA CAPSULE DU JOUR CONSULTÉ (22/10/2026, demandé : « pioche dans les bonnes capsules » quand il fait chaud) : `defaultCapsule` est
+  // bâtie sur la météo d'AUJOURD'HUI ; la tenue d'un autre jour reçoit la capsule de SA météo et de SA saison (saisonCapsuleDuJour),
+  // comme Planifier. Aujourd'hui, c'est la même capsule.
+  const capsuleDuJourConsulte = useMemo(
+    () =>
+      state.jourDecalage === 0
+        ? defaultCapsule
+        : computeDefaultCapsule(profile, meteoDuJour, state.suggestedExcluded, saisonCapsuleDuJour(meteoDuJour.temp, saisonCalendairePour(dateConsultee)), vestiairePool),
+    [state.jourDecalage, defaultCapsule, profile, meteoDuJour, state.suggestedExcluded, dateConsultee, vestiairePool]
+  );
+  const capsuleGeneration = useMemo(() => (valiseConsultee ? [] : capsuleDuJourConsulte), [valiseConsultee, capsuleDuJourConsulte]);
   const wardrobePool = useMemo(
     () =>
       valiseConsultee
         ? composeWardrobePool(piecesDeLaValise(valiseConsultee.valise, [...state.items, ...vestiairePool]), [], CAT_KEYS)
-        : composeWardrobePool(state.items, defaultCapsule, CAT_KEYS),
-    [valiseConsultee, state.items, vestiairePool, defaultCapsule, CAT_KEYS]
+        : composeWardrobePool(state.items, capsuleDuJourConsulte, CAT_KEYS),
+    [valiseConsultee, state.items, vestiairePool, capsuleDuJourConsulte, CAT_KEYS]
   );
 
   const poolRef = useRef(wardrobePool);
