@@ -437,9 +437,16 @@ const SEGMENTS_MOMENT = [
   { key: "soir", label: "Soirée" },
 ] as const;
 
+const G_CRAYON = svg(<path d="M5 19l1-4L15.5 5.5a2 2 0 0 1 3 3L9 18zM13.5 7.5l3 3" {...trait} />, 16);
+
+/** Pour le libellé accessible d'un jour : « dimanche 25 octobre ». */
+const JOURS_LONGS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+
 /**
- * L'ÉTAPE 4 (22/10/2026) : les événements déjà ajoutés, puis de quoi en ajouter un — son type, son jour (un jour du séjour), son moment
- * (proposé selon le type, changé d'un tap) et un nom facultatif. Rien n'est ajouté sans type ni jour.
+ * L'ÉTAPE 4 — LES ÉVÉNEMENTS (22/10/2026 ; refondue le même jour, brief « Refonte UX/UI de l'étape 4/4 ») : les événements ajoutés,
+ * comptés, chacun modifiable et supprimable (« Annuler » pendant 6 s, comme la checklist) ; puis le formulaire — type, jour (une rangée
+ * défilante des jours du séjour), moment (proposé selon le type), nom facultatif. Un champ obligatoire manquant est dit au toucher
+ * d'« Ajouter », jamais deviné. Modifier un événement réinjecte ses valeurs et garde son identifiant : aucun doublon. Rien n'est généré ici.
  */
 function EtapeEvenements({
   jours,
@@ -454,105 +461,226 @@ function EtapeEvenements({
   const [jour, setJour] = useState<string | null>(jours.length === 1 ? jours[0] : null);
   const [moment, setMoment] = useState<MomentEvenement>("jour");
   const [nom, setNom] = useState("");
+  /** L'événement en cours de modification ; null : un ajout. */
+  const [enModification, setEnModification] = useState<string | null>(null);
+  const [manque, setManque] = useState(false);
+  const [confirmation, setConfirmation] = useState<string | null>(null);
+  const [annulation, setAnnulation] = useState<{ evenement: EvenementValise; index: number } | null>(null);
+  useEffect(() => {
+    if (!confirmation) return;
+    const t = setTimeout(() => setConfirmation(null), 3000);
+    return () => clearTimeout(t);
+  }, [confirmation]);
+  useEffect(() => {
+    if (!annulation) return;
+    const t = setTimeout(() => setAnnulation(null), 6000);
+    return () => clearTimeout(t);
+  }, [annulation]);
+
   const dansLeSejour = evenementsDuSejour(evenements, jours);
-  const pret = type != null && jour != null && jours.includes(jour);
-  const ajouter = () => {
-    if (!pret) return;
-    const nomPropre = nom.trim().slice(0, NOM_EVENEMENT_MAX);
-    setEvenements((l) => [...l, { id: `e${Date.now().toString(36)}${l.length}`, type, jour, moment, ...(nomPropre ? { nom: nomPropre } : {}) }]);
+  const complet = type != null && jour != null && jours.includes(jour);
+  const vider = () => {
     setType(null);
+    setJour(jours.length === 1 ? jours[0] : null);
+    setMoment("jour");
     setNom("");
+    setEnModification(null);
+    setManque(false);
   };
-  const etiquette = "t-label text-muted mt-4 mb-2";
+  const valider = () => {
+    if (!complet) {
+      setManque(true);
+      return;
+    }
+    const nomPropre = nom.trim().slice(0, NOM_EVENEMENT_MAX);
+    const champs = { type, jour, moment, ...(nomPropre ? { nom: nomPropre } : {}) };
+    if (enModification) {
+      setEvenements((l) => l.map((e) => (e.id === enModification ? { id: e.id, ...champs } : e)));
+      setConfirmation(`${libelleEvenement(champs)} : modifications enregistrées`);
+    } else {
+      setEvenements((l) => [...l, { id: `e${Date.now().toString(36)}${l.length}`, ...champs }]);
+      setConfirmation(`${libelleEvenement(champs)} ajouté`);
+    }
+    vider();
+  };
+  const modifier = (e: EvenementValise) => {
+    setType(e.type);
+    setJour(e.jour);
+    setMoment(e.moment);
+    setNom(e.nom ?? "");
+    setEnModification(e.id);
+    setManque(false);
+  };
+  const supprimer = (e: EvenementValise) => {
+    setAnnulation({ evenement: e, index: evenements.findIndex((x) => x.id === e.id) });
+    setEvenements((l) => l.filter((x) => x.id !== e.id));
+    if (enModification === e.id) vider();
+  };
+  const libelleType = (id: string) => TYPES_EVENEMENT.find((t) => t.id === id)?.libelle ?? libelleEvenement({ type: id });
+  const momentLibelle = (m: MomentEvenement) => (m === "soir" ? "Soirée" : "Journée");
+  const etiquette = "t-label text-muted mt-5 mb-2";
+  const pastille = (on: boolean) =>
+    "rounded-full border px-[14px] min-h-[44px] text-[13px] cursor-pointer transition-colors " +
+    (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink");
+  const titreFormulaire = enModification ? "Modifier l'événement" : dansLeSejour.length ? "Ajouter un autre événement" : "Ajouter un événement";
+
   return (
     <>
       {dansLeSejour.length > 0 && (
-        <ul className="flex flex-col gap-2 mt-5" aria-label="Événements ajoutés">
-          {dansLeSejour.map((e) => (
-            <li key={e.id} className="flex items-center gap-2 rounded-tuile border border-border bg-card pl-[14px]">
-              <span className="text-terracotta-deep flex-shrink-0">{G_ETINCELLE}</span>
-              <span className="flex-1 min-w-0 py-[10px]">
-                <span className="block text-[13.5px] text-ink leading-[1.3] truncate">{libelleEvenement(e)}</span>
-                <span className="block text-[12px] text-muted mt-[2px]">
-                  {dateCourte(e.jour)} · {e.moment === "soir" ? "Soirée" : "Journée"}
-                </span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setEvenements((l) => l.filter((x) => x.id !== e.id))}
-                aria-label={`Retirer ${libelleEvenement(e)}`}
-                className="w-[44px] h-[44px] flex items-center justify-center text-muted cursor-pointer flex-shrink-0"
-              >
-                {G_CROIX}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <section className="mt-6" aria-label={`Événements ajoutés : ${dansLeSejour.length}`}>
+          <Surtitre>Événements ajoutés ({dansLeSejour.length})</Surtitre>
+          <ul className="flex flex-col gap-2 mt-3">
+            {dansLeSejour.map((e) => {
+              const titre = libelleEvenement(e);
+              const enCours = enModification === e.id;
+              return (
+                <li
+                  key={e.id}
+                  className={"flex items-center gap-1 rounded-tuile border bg-card pl-[14px] " + (enCours ? "border-terracotta-deep" : "border-border")}
+                >
+                  <span className="flex-1 min-w-0 py-[11px]">
+                    <span className="block text-[14px] text-ink leading-[1.3] truncate">{titre}</span>
+                    <span className="block text-[12px] text-muted mt-[2px]">
+                      {dateCourte(e.jour)} · {momentLibelle(e.moment)}
+                    </span>
+                    {/* Le type n'est redit que sous un nom personnalisé : sans nom, le titre l'est déjà. */}
+                    {e.nom?.trim() && <span className="block text-[12px] text-terracotta mt-[1px]">{libelleType(e.type)}</span>}
+                    {enCours && <span className="block text-[11px] text-terracotta-deep mt-[3px]">En cours de modification</span>}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => modifier(e)}
+                    aria-label={`Modifier ${titre}`}
+                    className="w-[44px] h-[44px] flex items-center justify-center text-ink cursor-pointer flex-shrink-0 rounded-full active:opacity-70"
+                  >
+                    {G_CRAYON}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => supprimer(e)}
+                    aria-label={`Supprimer ${titre}`}
+                    className="w-[44px] h-[44px] flex items-center justify-center text-muted cursor-pointer flex-shrink-0 rounded-full active:opacity-70 mr-[2px]"
+                  >
+                    {G_POUBELLE}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+      {annulation && (
+        <div role="status" className="flex items-center justify-between gap-3 rounded-tuile bg-ink text-cream px-[14px] mt-3" style={{ minHeight: 48 }}>
+          <span className="text-[13px] min-w-0 truncate">{libelleEvenement(annulation.evenement)} supprimé</span>
+          <button
+            type="button"
+            onClick={() => {
+              const { evenement, index } = annulation;
+              setEvenements((l) => (l.some((x) => x.id === evenement.id) ? l : [...l.slice(0, index), evenement, ...l.slice(index)]));
+              setAnnulation(null);
+            }}
+            className="t-cta text-cream underline underline-offset-[3px] cursor-pointer flex-shrink-0"
+            style={{ minHeight: 44 }}
+          >
+            Annuler
+          </button>
+        </div>
       )}
 
-      <div className="mt-5">
-        <Surtitre>{dansLeSejour.length ? "Ajouter un autre événement" : "Ajouter un événement"}</Surtitre>
-      </div>
-      <div className={etiquette}>Type</div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Type d'événement">
-        {TYPES_EVENEMENT.map((t) => {
-          const on = type === t.id;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              aria-pressed={on}
-              onClick={() => {
-                setType(t.id);
-                setMoment(t.moment);
-              }}
-              className={
-                "rounded-full border px-[14px] min-h-[40px] text-[12.5px] cursor-pointer transition-colors " +
-                (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
-              }
-            >
-              {t.libelle}
+      <section className="mt-7" aria-label={titreFormulaire}>
+        <Surtitre>{titreFormulaire}</Surtitre>
+        <div className={etiquette} id="evt-type">
+          Type d&apos;événement
+        </div>
+        <div className="flex flex-wrap gap-2" role="group" aria-labelledby="evt-type">
+          {TYPES_EVENEMENT.map((t) => {
+            const on = type === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => {
+                  setType(t.id);
+                  // Le moment proposé suit le type, sans écraser celui d'un événement qu'on modifie.
+                  if (!enModification) setMoment(t.moment);
+                }}
+                className={pastille(on)}
+              >
+                {t.libelle}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className={etiquette} id="evt-jour">
+          Jour
+        </div>
+        {/* Une rangée défilante (22/10/2026) : sept jours ou trente tiennent sur une ligne, sans pousser le formulaire vers le bas. */}
+        <div className="scrollarea flex gap-2 overflow-x-auto -mx-6 px-6 pb-[2px]" role="group" aria-labelledby="evt-jour" style={{ scrollbarWidth: "none" }}>
+          {jours.map((j) => {
+            const on = jour === j;
+            const d = dateDe(j);
+            return (
+              <button
+                key={j}
+                type="button"
+                aria-pressed={on}
+                aria-label={`${JOURS_LONGS[d.getDay()]} ${d.getDate()} ${MOIS_LONGS[d.getMonth()]}`}
+                onClick={() => setJour(j)}
+                className={
+                  "flex-shrink-0 w-[58px] rounded-tuile border flex flex-col items-center justify-center py-[8px] cursor-pointer transition-colors " +
+                  (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
+                }
+                style={{ minHeight: 76 }}
+              >
+                <span className={"text-[11px] " + (on ? "text-on-terracotta" : "text-muted")}>{DOW[d.getDay()]}</span>
+                <span className="font-serif text-[20px] leading-[1.15]">{d.getDate()}</span>
+                <span className={"text-[11px] " + (on ? "text-on-terracotta" : "text-muted")}>{MOIS[d.getMonth()]}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className={etiquette}>Moment</div>
+        <SegmentedControl segments={SEGMENTS_MOMENT} actif={moment} onChange={setMoment} ariaLabel="Moment de l'événement" variante="pastilles" />
+
+        <label className={etiquette + " block"} htmlFor="evt-nom">
+          Nom de l&apos;événement (optionnel)
+        </label>
+        <Input
+          id="evt-nom"
+          value={nom}
+          onChange={(e) => setNom(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              valider();
+            }
+          }}
+          placeholder="Ex. Dîner au restaurant, réunion client…"
+          maxLength={NOM_EVENEMENT_MAX}
+        />
+
+        {manque && !complet && (
+          <div role="alert" className="text-[12px] text-terracotta mt-3">
+            {type == null && (jour == null || !jours.includes(jour)) ? "Choisis le type et le jour de l'événement." : type == null ? "Choisis le type de l'événement." : "Choisis le jour de l'événement."}
+          </div>
+        )}
+        <div className="mt-4 flex flex-col gap-1">
+          <Button variante="secondaire" className="bg-card" onClick={valider}>
+            {enModification ? "Enregistrer les modifications" : "+ Ajouter cet événement"}
+          </Button>
+          {enModification && (
+            <button type="button" onClick={vider} className="t-lien text-terracotta cursor-pointer min-h-[44px]">
+              Annuler la modification
             </button>
-          );
-        })}
-      </div>
-      <div className={etiquette}>Jour</div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Jour de l'événement">
-        {jours.map((j) => {
-          const on = jour === j;
-          return (
-            <button
-              key={j}
-              type="button"
-              aria-pressed={on}
-              onClick={() => setJour(j)}
-              className={
-                "rounded-full border px-[12px] min-h-[40px] text-[12.5px] cursor-pointer transition-colors " +
-                (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
-              }
-            >
-              {dateCourte(j)}
-            </button>
-          );
-        })}
-      </div>
-      <div className={etiquette}>Moment</div>
-      <SegmentedControl segments={SEGMENTS_MOMENT} actif={moment} onChange={setMoment} ariaLabel="Moment de l'événement" variante="pastilles" />
-      <div className={etiquette}>Nom, si tu veux</div>
-      <form
-        className="flex items-center gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          ajouter();
-        }}
-      >
-        <Input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex. mariage de Léa" aria-label="Nom de l'événement" maxLength={NOM_EVENEMENT_MAX} />
-        <Button variante="secondaire" pleine={false} className="bg-card flex-shrink-0" disabled={!pret} onClick={ajouter}>
-          Ajouter
-        </Button>
-      </form>
-      {!pret && (type != null || jour != null) && <div className="text-[12px] text-muted mt-2">{type == null ? "Choisis le type de l'événement." : "Choisis son jour."}</div>}
-      {pret && <div className="text-[12px] text-muted mt-2">Touche « Ajouter » pour le garder.</div>}
+          )}
+        </div>
+        <div className="text-[12px] text-terracotta-deep mt-2 min-h-[18px]" role="status" aria-live="polite">
+          {confirmation ?? (complet && !enModification ? "Touche « Ajouter cet événement » pour le garder." : "")}
+        </div>
+      </section>
     </>
   );
 }
@@ -692,7 +820,11 @@ export default function ValiseScreen() {
     /** Les événements datés du séjour (étape 4), déjà restreints à ses dates. */
     evenements?: EvenementValise[];
   };
+  /** Une préparation à la fois (22/10/2026) : un double toucher sur « Générer ma valise » ne lance pas deux calculs. */
+  const preparationEnCours = useRef(false);
   const lancer = async (rep: Reponses, idCible: string | null) => {
+    if (preparationEnCours.current) return;
+    preparationEnCours.current = true;
     setDernieresReponses({ rep, id: idCible });
     try {
       await calculer(rep, idCible);
@@ -700,6 +832,8 @@ export default function ValiseScreen() {
       // Un échec (réseau, calcul) ne perd rien : les réponses sont gardées, l'écran propose de relancer.
       console.error("[valise] préparation interrompue", err);
       if (actif.current) setVue({ nom: "erreur" });
+    } finally {
+      preparationEnCours.current = false;
     }
   };
   const calculer = async (rep: Reponses, idCible: string | null) => {
@@ -1153,7 +1287,7 @@ export default function ValiseScreen() {
           <>
             <Surtitre>Ta valise · 4 / 4</Surtitre>
             <TitreEtape a="Un événement" b="de prévu ?" />
-            <div className="text-[13px] text-muted leading-[1.5] mt-2">Un mariage, un dîner, une réunion : ajoute-le à son jour, ta valise lui réserve un look. Facultatif.</div>
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Un mariage, un dîner, une réunion ? Ajoute tes événements pour que Capsela prévoie des tenues adaptées dans ta valise.</div>
             <EtapeEvenements jours={jours} evenements={evenements} setEvenements={setEvenements} />
           </>
         )}

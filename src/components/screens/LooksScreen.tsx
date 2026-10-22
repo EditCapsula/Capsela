@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import AppHeader from "@/components/AppHeader";
 import CarteLook, { ONGLETS_LOOKS } from "@/components/CarteLook";
 import SegmentedControl from "@/components/SegmentedControl";
@@ -24,7 +25,14 @@ import EmptyState from "@/components/EmptyState";
  */
 export default function LooksScreen() {
   const { state, actions, vestiairePool } = useCapsela();
-  const [filtre, setFiltre] = useState<FiltreLooks>("all");
+  // AU RETOUR DU DÉTAIL D'UN LOOK (22/10/2026, memoireEcrans.ts) : le filtre et le défilement d'avant. Ouvert depuis le Dressing
+  // (goLooks), l'écran repart à neuf.
+  type ContexteLooks = { filtre: FiltreLooks; defilement: number };
+  const repris = useContexteRepris<ContexteLooks>("looks");
+  const [filtre, setFiltre] = useState<FiltreLooks>(repris?.filtre ?? "all");
+  const zone = useRef<HTMLDivElement | null>(null);
+  const defilement = useDefilementRepris(zone, repris?.defilement);
+  useGarderContexte("looks", (): ContexteLooks => ({ filtre, defilement: defilement.position.current }));
   const pool = useMemo(() => [...state.items, ...vestiairePool], [state.items, vestiairePool]);
   const looks = filtrerLooks(state.savedLooks, filtre);
   const nbSuggeres = state.savedLooks.filter(isWishlistLook).length;
@@ -32,7 +40,7 @@ export default function LooksScreen() {
   const nbGardes = state.savedLooks.length - nbSuggeres;
 
   return (
-    <div className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
+    <div ref={zone} onScroll={defilement.onScroll} className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px] pb-safe-nav">
       {/* Le bandeau commun des écrans secondaires (14/10/2026) : retour dans sa gouttière, logo, avatar. */}
       <AppHeader onBack={actions.goWardrobe} backLabel="Revenir au dressing" />
       <div className="t-surtitre text-muted mt-[18px]">Dressing</div>

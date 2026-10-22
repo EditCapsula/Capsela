@@ -1,5 +1,6 @@
 "use client";
 
+import { oublierContexte } from "./memoireEcrans";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
@@ -1775,7 +1776,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     fermerFicheEnFeuille: () => setState((s) => (s.ficheEnFeuille ? { ...s, ficheEnFeuille: null } : s)),
     fermerApercuPiece: () => setState((s) => (s.pieceApercu == null ? s : { ...s, pieceApercu: null })),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobe" })),
-    goLooks: () => go("looks"),
+    // Ouvrir Mes looks depuis le Dressing repart à neuf ; seul le retour du détail d'un look retrouve le filtre et le défilement.
+    goLooks: () => {
+      oublierContexte("looks");
+      go("looks");
+    },
     // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
     // Avant : revenir de « Modifier » au profil enregistrait « Modifier »
     // comme écran de retour, et le chevron du profil y renvoyait — profil →

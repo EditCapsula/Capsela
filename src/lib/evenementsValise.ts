@@ -39,6 +39,10 @@ export const TYPES_EVENEMENT: { id: string; libelle: string; moment: MomentEvene
   { id: "soiree", libelle: "Soirée", moment: "soir" },
   { id: "date", libelle: "Rendez-vous", moment: "soir" },
   { id: "travail_reunion", libelle: "Réunion · travail", moment: "jour" },
+  // « Autre » (22/10/2026, brief de refonte de l'étape 4) : un événement que les autres types ne décrivent pas. Il prend l'occasion
+  // Quotidien, la plus neutre — ARBITRAGE ÉDITORIAL : sans savoir ce qu'il est, Capsela n'habille ni trop ni trop peu ; le nom donné
+  // par la personne ne change pas la tenue (le moteur ne lit pas de texte libre).
+  { id: "quotidien", libelle: "Autre", moment: "jour" },
 ];
 
 export const NOM_EVENEMENT_MAX = 40;

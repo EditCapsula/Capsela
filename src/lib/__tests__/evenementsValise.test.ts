@@ -128,3 +128,11 @@ describe("les autres créneaux évitent le look d'un événement quand un autre 
     expect(plan.every((c) => c.look === 0)).toBe(true);
   });
 });
+
+describe("le type « Autre »", () => {
+  it("prend l'occasion Quotidien, la plus neutre, et se lit « Autre » sans nom", () => {
+    const autre: EvenementValise = { id: "a", type: "quotidien", jour: "2026-10-24", moment: "jour" };
+    expect(situationsDesEvenements([autre], meteos)[0]).toMatchObject({ occasion: "quotidien", sousIds: ["evt:a"] });
+    expect(libelleEvenement(autre)).toBe("Autre");
+  });
+});
