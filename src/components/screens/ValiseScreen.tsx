@@ -2690,16 +2690,31 @@ function Resultat({
                         const basculerArticle = () => (p ? cocher(p.id) : a && majAffaires((e) => ({ ...e, cochees: basculer(e.cochees, a.id) })));
                         const raisonPropre = a?.raison && !partagees.includes(a.raison) ? a.raison : null;
                         /*
-                         * TROIS ZONES DISTINCTES (20/10/2026, demandé : la coche et la croix trop proches) : le contenu, la coche (44 × 44), puis,
-                         * séparée de 12 px, la croix (44 × 44, plus discrète). Deux boutons frères, jamais imbriqués : un toucher n'en déclenche
-                         * qu'un. La colonne de la croix existe aussi sous les pièces (vide) : les coches restent alignées d'une ligne à l'autre.
+                         * TROIS ZONES DISTINCTES (20/10/2026, demandé : la coche et la croix trop proches). Depuis le 22/10/2026 (demandé) :
+                         * la croix à GAUCHE de la ligne, la coche à DROITE — le contenu entre les deux, les deux actions aux deux bouts.
+                         * Deux boutons frères de 44 × 44, jamais imbriqués : un toucher n'en déclenche qu'un. Une pièce de la valise n'a pas
+                         * de croix (on la retire depuis l'onglet Pièces) : sa ligne commence par sa vignette, et les coches restent alignées à droite.
                          */
+                        const croix = a ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              retirerDeLaChecklist(a);
+                            }}
+                            aria-label={`Retirer ${a.libelle} de la checklist`}
+                            className="w-[44px] h-[44px] -ml-[12px] flex items-center justify-center rounded-full text-placeholder cursor-pointer focus-visible:outline-2 focus-visible:outline-terracotta"
+                          >
+                            {G_CROIX}
+                          </button>
+                        ) : null;
                         return (
                           <div
                             key={art.cle}
                             className="grid items-center border-b border-divider last:border-b-0"
-                            style={{ gridTemplateColumns: "minmax(0, 1fr) 44px 44px", columnGap: 12, minHeight: 52 }}
+                            style={{ gridTemplateColumns: a ? "32px minmax(0, 1fr) 44px" : "minmax(0, 1fr) 44px", columnGap: 8, minHeight: 52 }}
                           >
+                            {croix}
                             <div className="flex items-center gap-[10px] min-w-0 py-[6px]">
                               {p ? <Vignette it={p} taille={40} /> : null}
                               <span className="flex-1 min-w-0">
@@ -2721,21 +2736,6 @@ function Resultat({
                                 {G_COCHE(13, "currentColor")}
                               </span>
                             </button>
-                            {a ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  retirerDeLaChecklist(a);
-                                }}
-                                aria-label={`Retirer ${a.libelle} de la checklist`}
-                                className="w-[44px] h-[44px] flex items-center justify-center rounded-full text-placeholder cursor-pointer focus-visible:outline-2 focus-visible:outline-terracotta"
-                              >
-                                {G_CROIX}
-                              </button>
-                            ) : (
-                              <span aria-hidden="true" />
-                            )}
                           </div>
                         );
                       })}
