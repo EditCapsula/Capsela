@@ -305,3 +305,14 @@ Entre le départ et le retour d'une valise (`valiseDuJour.ts`, testé) :
 - **« Autre tenue »** passe au look suivant de la valise (complet, composé pour ce voyage) ; sans autre look, il tire dans les seules pièces de la valise, sans complément de la capsule — jamais une pièce restée à la maison (vivier, secours compris).
 - Une valise sans planning jour par jour (composée avant le 04/10/2026) n'attribue pas de look ; la tenue du jour se tire alors dans ses pièces.
 - Limite : la météo de l'accueil reste celle de la position ou de la ville du profil, pas la prévision de la destination.
+
+## Les événements datés (22/10/2026)
+
+Demandé : « il manque une étape d'événements dans la planification de valises ». Une **4e étape**, facultative, après « L'esprit du séjour » : la personne ajoute des moments précis — type (Mariage · cérémonie, Dîner, Soirée, Rendez-vous, Réunion · travail), jour du séjour, moment (Journée ou Soirée, proposé selon le type), nom facultatif (`evenementsValise.ts`).
+
+- **Une situation par événement** (`situationsDesEvenements`) : son occasion mère, la météo de son seul jour, le sous-identifiant `evt:<id>`. Ajoutées après celles du programme, dont les indices ne bougent pas. Le moteur reçoit l'occasion mère, rien d'autre : une réunion autorise donc les mocassins pour son look, comme un événement professionnel.
+- **Le planning** (`planningDuProgramme`, paramètre `evenements`) place chaque événement à son jour et à son moment AVANT d'étaler les activités, qui évitent ce créneau quand elles le peuvent. Les événements choisissent leur look en premier ; les autres créneaux évitent ensuite ces looks quand un autre look leur répond — sans autre look, il est partagé, jamais retiré. Le créneau porte `evenement: true` ; l'écran l'affiche en terracotta avec son moment (« Mariage de Léa · Soirée »).
+- **La tenue du jour** pendant le séjour passe par le même planning (`planningDeLaValise`, partagé par l'écran Valise et `valiseDuJour.ts`) : un événement du soir devient le plan de soirée, un événement de journée la tenue du jour.
+- Gardés dans `ValiseGardee.evenements`, dans le jsonb `calcul` : **aucune migration**. Un événement hors des dates (les dates ont changé) est ignoré, jamais déplacé.
+
+Limite constatée en rendu (seed de démo, Lisbonne 25–29/10, mariage le 25 au soir) : le look du mariage est la seule tenue de soirée de la valise, il revient donc les autres soirs. La composition (`composerValise`) minimise les pièces et ne garantit pas un look propre à chaque événement — à instruire si besoin.

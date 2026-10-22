@@ -63,7 +63,16 @@ import {
 import { selectionApercu } from "@/lib/valiseApercu";
 import { decalerMois, grilleDuMois, toucherJour } from "@/lib/calendrierPeriode";
 import { articlesChecklist, progressionChecklist, raisonsPartagees, sectionsChecklist, type FiltreChecklist, type Progression, type SectionChecklist } from "@/lib/checklistValise";
-import { pieceLaPlusUtilisee, planningDuProgramme, type CreneauPlanning } from "@/lib/planningValise";
+import { pieceLaPlusUtilisee, planningDeLaValise, type CreneauPlanning } from "@/lib/planningValise";
+import {
+  NOM_EVENEMENT_MAX,
+  TYPES_EVENEMENT,
+  evenementsDuSejour,
+  libelleEvenement,
+  situationsDesEvenements,
+  type EvenementValise,
+  type MomentEvenement,
+} from "@/lib/evenementsValise";
 import { LIBELLE_RAISON, apercuAllegement, avecTenue, joursDeLaPiece, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import {
@@ -420,6 +429,134 @@ const ETAPES_CALCUL: [React.ReactNode, string][] = [
   [G_LISTE, "Vérification de la capacité de la valise"],
 ];
 
+/** Un créneau du planning : un événement daté dit son moment (« Mariage de Léa · Soirée ») ; une activité répartie, son seul libellé. */
+const libelleCreneau = (c: CreneauPlanning) => (c.evenement ? `${c.libelle} · ${c.creneau === "soir" ? "Soirée" : "Journée"}` : c.libelle);
+
+const SEGMENTS_MOMENT = [
+  { key: "jour", label: "Journée" },
+  { key: "soir", label: "Soirée" },
+] as const;
+
+/**
+ * L'ÉTAPE 4 (22/10/2026) : les événements déjà ajoutés, puis de quoi en ajouter un — son type, son jour (un jour du séjour), son moment
+ * (proposé selon le type, changé d'un tap) et un nom facultatif. Rien n'est ajouté sans type ni jour.
+ */
+function EtapeEvenements({
+  jours,
+  evenements,
+  setEvenements,
+}: {
+  jours: string[];
+  evenements: EvenementValise[];
+  setEvenements: (f: (l: EvenementValise[]) => EvenementValise[]) => void;
+}) {
+  const [type, setType] = useState<string | null>(null);
+  const [jour, setJour] = useState<string | null>(jours.length === 1 ? jours[0] : null);
+  const [moment, setMoment] = useState<MomentEvenement>("jour");
+  const [nom, setNom] = useState("");
+  const dansLeSejour = evenementsDuSejour(evenements, jours);
+  const pret = type != null && jour != null && jours.includes(jour);
+  const ajouter = () => {
+    if (!pret) return;
+    const nomPropre = nom.trim().slice(0, NOM_EVENEMENT_MAX);
+    setEvenements((l) => [...l, { id: `e${Date.now().toString(36)}${l.length}`, type, jour, moment, ...(nomPropre ? { nom: nomPropre } : {}) }]);
+    setType(null);
+    setNom("");
+  };
+  const etiquette = "t-label text-muted mt-4 mb-2";
+  return (
+    <>
+      {dansLeSejour.length > 0 && (
+        <ul className="flex flex-col gap-2 mt-5" aria-label="Événements ajoutés">
+          {dansLeSejour.map((e) => (
+            <li key={e.id} className="flex items-center gap-2 rounded-tuile border border-border bg-card pl-[14px]">
+              <span className="text-terracotta-deep flex-shrink-0">{G_ETINCELLE}</span>
+              <span className="flex-1 min-w-0 py-[10px]">
+                <span className="block text-[13.5px] text-ink leading-[1.3] truncate">{libelleEvenement(e)}</span>
+                <span className="block text-[12px] text-muted mt-[2px]">
+                  {dateCourte(e.jour)} · {e.moment === "soir" ? "Soirée" : "Journée"}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setEvenements((l) => l.filter((x) => x.id !== e.id))}
+                aria-label={`Retirer ${libelleEvenement(e)}`}
+                className="w-[44px] h-[44px] flex items-center justify-center text-muted cursor-pointer flex-shrink-0"
+              >
+                {G_CROIX}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-5">
+        <Surtitre>{dansLeSejour.length ? "Ajouter un autre événement" : "Ajouter un événement"}</Surtitre>
+      </div>
+      <div className={etiquette}>Type</div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Type d'événement">
+        {TYPES_EVENEMENT.map((t) => {
+          const on = type === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              aria-pressed={on}
+              onClick={() => {
+                setType(t.id);
+                setMoment(t.moment);
+              }}
+              className={
+                "rounded-full border px-[14px] min-h-[40px] text-[12.5px] cursor-pointer transition-colors " +
+                (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
+              }
+            >
+              {t.libelle}
+            </button>
+          );
+        })}
+      </div>
+      <div className={etiquette}>Jour</div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Jour de l'événement">
+        {jours.map((j) => {
+          const on = jour === j;
+          return (
+            <button
+              key={j}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setJour(j)}
+              className={
+                "rounded-full border px-[12px] min-h-[40px] text-[12.5px] cursor-pointer transition-colors " +
+                (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
+              }
+            >
+              {dateCourte(j)}
+            </button>
+          );
+        })}
+      </div>
+      <div className={etiquette}>Moment</div>
+      <SegmentedControl segments={SEGMENTS_MOMENT} actif={moment} onChange={setMoment} ariaLabel="Moment de l'événement" variante="pastilles" />
+      <div className={etiquette}>Nom, si tu veux</div>
+      <form
+        className="flex items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          ajouter();
+        }}
+      >
+        <Input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex. mariage de Léa" aria-label="Nom de l'événement" maxLength={NOM_EVENEMENT_MAX} />
+        <Button variante="secondaire" pleine={false} className="bg-card flex-shrink-0" disabled={!pret} onClick={ajouter}>
+          Ajouter
+        </Button>
+      </form>
+      {!pret && (type != null || jour != null) && <div className="text-[12px] text-muted mt-2">{type == null ? "Choisis le type de l'événement." : "Choisis son jour."}</div>}
+      {pret && <div className="text-[12px] text-muted mt-2">Touche « Ajouter » pour le garder.</div>}
+    </>
+  );
+}
+
 export default function ValiseScreen() {
   const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
@@ -458,6 +595,8 @@ export default function ValiseScreen() {
    * moteur reçoit en occasions mères et que le planning jour par jour répartit — le moteur et la phase B sont inchangés.
    */
   const [activites, setActivites] = useState<ActiviteSejour[]>([]);
+  /** LES ÉVÉNEMENTS DATÉS (étape 4, 22/10/2026) : facultatifs ; chacun a son jour, son moment, son look (evenementsValise.ts). */
+  const [evenements, setEvenements] = useState<EvenementValise[]>([]);
   /** Les réponses de la dernière préparation, gardées pour « Réessayer » après un échec. */
   const [dernieresReponses, setDernieresReponses] = useState<{ rep: Reponses; id: string | null } | null>(null);
 
@@ -510,7 +649,7 @@ export default function ValiseScreen() {
   const amplitudeEtape1 = meteosEtape1 ? amplitudePrevue(meteosEtape1) : null;
 
   const etapeValide =
-    etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : activites.length > 0;
+    etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : etape === 3 ? activites.length > 0 : true;
 
   const zoneScroll = useRef<HTMLDivElement | null>(null);
   const [onglet, setOnglet] = useState<Onglet>("ensemble");
@@ -550,6 +689,8 @@ export default function ValiseScreen() {
     programme?: ItemProgramme[];
     /** Les activités choisies, gardées avec la valise pour rouvrir le parcours tel qu'il a été rempli. */
     activites?: ActiviteSejour[];
+    /** Les événements datés du séjour (étape 4), déjà restreints à ses dates. */
+    evenements?: EvenementValise[];
   };
   const lancer = async (rep: Reponses, idCible: string | null) => {
     setDernieresReponses({ rep, id: idCible });
@@ -576,7 +717,8 @@ export default function ValiseScreen() {
     const meteos = meteosDe(p, joursRep, climat);
     if (!actif.current) return;
     setFaites(1);
-    const situations = situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions);
+    // Les événements datés ont chacun leur situation, APRÈS celles du programme : les indices de celles-ci ne bougent pas.
+    const situations = [...situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions), ...situationsDesEvenements(rep.evenements, meteos)];
     await pause(380);
     if (!actif.current) return;
     await pause(30);
@@ -611,6 +753,7 @@ export default function ValiseScreen() {
       occasions: rep.occasions,
       ...(rep.programme?.length ? { programme: rep.programme } : {}),
       ...(rep.activites?.length ? { activites: rep.activites } : {}),
+      ...(rep.evenements?.length ? { evenements: rep.evenements } : {}),
       // La check-list suit la valise recomposée : seules les pièces encore présentes restent cochées.
       ...(cochees.length ? { cochees } : {}),
       // Les affaires de voyage de la personne (cochées, ajoutées, masquées) suivent la valise recomposée.
@@ -632,8 +775,11 @@ export default function ValiseScreen() {
     // Les occasions que reçoit le moteur sont les MÈRES du programme (occasionsDuProgramme) : une sous-occasion hérite des
     // règles de son occasion mère, le moteur ne connaît pas autre chose.
     const retenu = programme;
+    // Les événements hors des dates (les dates ont changé depuis leur ajout) ne partent pas avec la valise.
+    const evts = evenementsDuSejour(evenements, jours);
+    const meres = occasionsDuProgramme([...retenu, ...evts.map((e) => ({ id: e.type, frequence: 1 }))]);
     void lancer(
-      { destination, ville, depart, retour, bagage, sejour: null, occasions: occasionsRetenues(occasionsDuProgramme(retenu), null), programme: retenu, activites },
+      { destination, ville, depart, retour, bagage, sejour: null, occasions: occasionsRetenues(meres, null), programme: retenu, activites, evenements: evts },
       idEnModification
     );
   };
@@ -641,7 +787,7 @@ export default function ValiseScreen() {
   const recomposer = () => {
     if (!valise) return;
     void lancer(
-      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites },
+      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites, evenements: valise.evenements },
       valise.id
     );
   };
@@ -694,6 +840,7 @@ export default function ValiseScreen() {
     setRetour("");
     setBagage(null);
     setActivites([]);
+    setEvenements([]);
     setVue({ nom: "etape" });
     setEtape(1);
   };
@@ -714,6 +861,7 @@ export default function ValiseScreen() {
     setBagage(valise.bagage);
     // Les activités qu'évoque le programme gardé ; une valise d'avant la refonte n'a que ses occasions mères.
     setActivites(valise.activites ?? activitesDuProgramme(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1)));
+    setEvenements(valise.evenements ?? []);
     setIdEnModification(valise.id);
     setVue({ nom: "etape" });
     setEtape(1);
@@ -760,7 +908,7 @@ export default function ValiseScreen() {
       </div>
       {questions && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
-          <FilEtapes total={3} courante={etape - 1} />
+          <FilEtapes total={4} courante={etape - 1} />
         </div>
       )}
 
@@ -818,7 +966,7 @@ export default function ValiseScreen() {
         {/* ── 1. DESTINATION ── */}
         {questions && etape === 1 && (
           <>
-            <Surtitre>Ta valise · 1 / 3</Surtitre>
+            <Surtitre>Ta valise · 1 / 4</Surtitre>
             <TitreEtape a="Ton" b="voyage" />
             <div className="text-[13px] text-muted leading-[1.5] mt-2">Où pars-tu et quand ?</div>
             {/* LE MÊME CHOIX DE VILLE QUE « PLANIFIER UNE TENUE » (08/10/2026, demandé) : résultats lisibles, villes récentes communes,
@@ -923,7 +1071,7 @@ export default function ValiseScreen() {
         {/* ── 2. VALISE ── */}
         {questions && etape === 2 && (
           <>
-            <Surtitre>Ta valise · 2 / 3</Surtitre>
+            <Surtitre>Ta valise · 2 / 4</Surtitre>
             <TitreEtape a="Quelle valise" b="emportes-tu ?" />
             <div className="text-[13px] text-muted leading-[1.5] mt-2">Nous adaptons ta sélection à sa capacité.</div>
             <div className="grid grid-cols-2 gap-[10px] mt-5">
@@ -971,7 +1119,7 @@ export default function ValiseScreen() {
             (programmeDesActivites), donc en occasions mères pour le moteur. */}
         {questions && etape === 3 && (
           <>
-            <Surtitre>Ta valise · 3 / 3</Surtitre>
+            <Surtitre>Ta valise · 3 / 4</Surtitre>
             <TitreEtape a="Quel est l'esprit" b="de ton séjour ?" />
             <div className="grid grid-cols-2 gap-2 mt-5" role="group" aria-label="Activités du séjour">
               {ACTIVITES.map((a) => {
@@ -999,13 +1147,24 @@ export default function ValiseScreen() {
           </>
         )}
 
+        {/* ── 4. LES ÉVÉNEMENTS DATÉS ── 22/10/2026 (demandé : « il manque une étape d'événements ») : facultatifs ; chacun reçoit son look,
+            placé à son jour et à son moment dans le planning et dans la tenue du jour (evenementsValise.ts). */}
+        {questions && etape === 4 && (
+          <>
+            <Surtitre>Ta valise · 4 / 4</Surtitre>
+            <TitreEtape a="Un événement" b="de prévu ?" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Un mariage, un dîner, une réunion : ajoute-le à son jour, ta valise lui réserve un look. Facultatif.</div>
+            <EtapeEvenements jours={jours} evenements={evenements} setEvenements={setEvenements} />
+          </>
+        )}
+
         {/* ── LA PRÉPARATION N'A PAS ABOUTI ── les réponses sont gardées : on relance sans rien ressaisir. */}
         {vue.nom === "erreur" && (
           <div className="mt-2">
             <Surtitre>Un instant</Surtitre>
             <TitreEtape a="La préparation" b="n'a pas abouti" />
             <div className="text-[13px] text-muted leading-[1.5] mt-2">
-              Tes réponses sont gardées : destination, dates, valise et activités. Tu peux relancer sans rien ressaisir.
+              Tes réponses sont gardées : destination, dates, valise, activités et événements. Tu peux relancer sans rien ressaisir.
             </div>
           </div>
         )}
@@ -1073,8 +1232,8 @@ export default function ValiseScreen() {
 
       {questions && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
-          <Button onClick={() => (etape < 3 ? etapeValide && setEtape(etape + 1) : preparer())} disabled={!etapeValide}>
-            {etape < 3 ? "Continuer" : "Générer ma valise"}
+          <Button onClick={() => (etape < 4 ? etapeValide && setEtape(etape + 1) : preparer())} disabled={!etapeValide}>
+            {etape < 4 ? "Continuer" : "Générer ma valise"}
           </Button>
           {etape === 3 && activites.length === 0 && <div className="text-center text-[12px] text-muted min-h-[16px]">Choisis au moins une activité.</div>}
         </div>
@@ -1904,10 +2063,7 @@ function Resultat({
    * un programme ET dont les situations portent leurs occasions ; sinon, les looks s'affichent en carrousel, comme avant.
    */
   const joursDuSejourValise = joursDuSejour(valise.depart, valise.retour);
-  const planning: CreneauPlanning[] =
-    valise.programme?.length && valise.situations.some((x) => x.sousIds?.length)
-      ? planningDuProgramme(valise.programme, joursDuSejourValise, valise.situations, looks)
-      : [];
+  const planning: CreneauPlanning[] = planningDeLaValise(valise, joursDuSejourValise, looks);
   const aPlanning = planning.length > 0;
   const planningParJour = joursDuSejourValise
     .map((jour, i) => ({ jour, numero: i + 1, creneaux: planning.filter((c) => c.jour === jour) }))
@@ -1928,7 +2084,7 @@ function Resultat({
             <button
               key={c.creneau + c.sousId}
               onClick={() => setVue({ nom: "look", index: c.look as number })}
-              aria-label={`${c.libelle} : voir le look ${numero(c.look as number)}`}
+              aria-label={`${libelleCreneau(c)} : voir le look ${numero(c.look as number)}`}
               className="flex items-center gap-3 py-[8px] text-left cursor-pointer min-h-[60px] border-t border-divider first:border-t-0 transition-opacity active:opacity-70"
             >
               {/* Les vraies pièces du look, trois au plus, en miniatures plus grandes (19/10/2026, refonte). */}
@@ -1938,14 +2094,14 @@ function Resultat({
                 ))}
               </span>
               <span className="flex-1 min-w-0">
-                <span className="block t-label text-muted">{c.libelle}</span>
+                <span className={"block t-label " + (c.evenement ? "text-terracotta" : "text-muted")}>{libelleCreneau(c)}</span>
                 <span className="block text-[13px] text-ink leading-[1.3] mt-[2px] truncate">{resumeLook(items)}</span>
               </span>
               <span aria-hidden="true" className="text-muted flex-shrink-0">{chevron("d")}</span>
             </button>
           ) : (
             <div key={c.creneau + c.sousId} className="py-[10px] border-t border-divider first:border-t-0 min-h-[52px]">
-              <span className="block t-label text-muted">{c.libelle}</span>
+              <span className={"block t-label " + (c.evenement ? "text-terracotta" : "text-muted")}>{libelleCreneau(c)}</span>
               <span className="block text-[12px] text-muted-3 leading-[1.4] mt-[2px]">Aucun look de ta valise ne répond encore à cette occasion.</span>
             </div>
           );

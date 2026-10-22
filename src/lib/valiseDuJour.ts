@@ -1,4 +1,4 @@
-import { planningDuProgramme } from "./planningValise";
+import { planningDeLaValise } from "./planningValise";
 import type { TenuePlanifiee } from "./planifier";
 import { elementProgramme } from "./programmeValise";
 import { joursDuSejour, lookAChaussuresEtSac, type LookValise } from "./valise";
@@ -50,7 +50,7 @@ export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly 
   const numero = jours.indexOf(jour) + 1;
   const looks = looksVisibles(v, pool);
   // Une valise composée avant le planning jour par jour n'en a pas : aucun look attribué, la tenue du jour se tire dans ses pièces.
-  const planning = v.programme?.length && v.situations.some((s) => s.sousIds?.length) ? planningDuProgramme(v.programme, jours, v.situations, looks) : [];
+  const planning = planningDeLaValise(v, jours, looks);
   const duJour = planning.filter((c) => c.jour === jour && c.look != null);
   const virtuel = (moment: TenuePlanifiee["moment"], c: (typeof duJour)[number] | undefined): TenuePlanifiee | null => {
     if (!c || c.look == null) return null;
