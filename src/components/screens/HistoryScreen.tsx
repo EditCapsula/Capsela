@@ -831,15 +831,9 @@ export default function HistoryScreen() {
     ) : (
       <>{debut}, ton style se dessine au fil de tes tenues.</>
     );
-  // Le total historique, seulement là où il est nommé comme tel.
-  const phraseEnTete =
-    periode === "tout" || entries.length === chiffres.tenues ? (
-      phraseStyle
-    ) : (
-      <>
-        {phraseStyle} Depuis le début : {entries.length} {pl(entries.length, "tenue portée", "tenues portées")}.
-      </>
-    );
+  // « Depuis le début : N tenues portées » retiré le 22/10/2026 (demandé : « pas pertinent ») : la page parle de la période choisie ;
+  // le total depuis le début reste dans le menu de période (« Toute la période »).
+  const phraseEnTete = phraseStyle;
   const parts = repartitionDressing(state.items);
 
   const occasionsPresentes = [...new Set(entries.filter((e) => e.hasOccasion).map((e) => e.occasion))];
