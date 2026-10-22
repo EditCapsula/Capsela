@@ -1,5 +1,6 @@
 "use client";
 
+import { oublierContexte } from "./memoireEcrans";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
@@ -7,7 +8,7 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import type { Humeur } from "./humeur";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
-import { estPlanValise, looksValiseDuJour, lookSuivant, piecesDeLaValise, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
+import { estPlanValise, looksValiseDuJour, lookSuivantConforme, piecesDeLaValise, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
 import { previsionPour, type MeteoMoment, type MomentJournee, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
 import { clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
@@ -1190,13 +1191,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     const v = valiseDuJour(state.valises, jourConsulteIso);
     return v ? looksValiseDuJour(v, jourConsulteIso, [...state.items, ...vestiairePool]) : null;
   }, [state.valises, jourConsulteIso, state.items, vestiairePool]);
-  const capsuleGeneration = useMemo(() => (valiseConsultee ? [] : defaultCapsule), [valiseConsultee, defaultCapsule]);
+  // LA CAPSULE DU JOUR CONSULTÉ (22/10/2026, demandé : « pioche dans les bonnes capsules » quand il fait chaud) : `defaultCapsule` est
+  // bâtie sur la météo d'AUJOURD'HUI ; la tenue d'un autre jour reçoit la capsule de SA météo et de SA saison (saisonCapsuleDuJour),
+  // comme Planifier. Aujourd'hui, c'est la même capsule.
+  const capsuleDuJourConsulte = useMemo(
+    () =>
+      state.jourDecalage === 0
+        ? defaultCapsule
+        : computeDefaultCapsule(profile, meteoDuJour, state.suggestedExcluded, saisonCapsuleDuJour(meteoDuJour.temp, saisonCalendairePour(dateConsultee)), vestiairePool),
+    [state.jourDecalage, defaultCapsule, profile, meteoDuJour, state.suggestedExcluded, dateConsultee, vestiairePool]
+  );
+  const capsuleGeneration = useMemo(() => (valiseConsultee ? [] : capsuleDuJourConsulte), [valiseConsultee, capsuleDuJourConsulte]);
   const wardrobePool = useMemo(
     () =>
       valiseConsultee
         ? composeWardrobePool(piecesDeLaValise(valiseConsultee.valise, [...state.items, ...vestiairePool]), [], CAT_KEYS)
-        : composeWardrobePool(state.items, defaultCapsule, CAT_KEYS),
-    [valiseConsultee, state.items, vestiairePool, defaultCapsule, CAT_KEYS]
+        : composeWardrobePool(state.items, capsuleDuJourConsulte, CAT_KEYS),
+    [valiseConsultee, state.items, vestiairePool, capsuleDuJourConsulte, CAT_KEYS]
   );
 
   const poolRef = useRef(wardrobePool);
@@ -1369,17 +1380,18 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * « AUTRE TENUE » PENDANT UN SÉJOUR (20/10/2026, valiseDuJour.ts) : le look suivant de la valise, complet et composé pour ce voyage,
-   * avec son occasion. Le look de valise affiché est écarté comme une tenue planifiée, pour ne pas revenir aussitôt. null hors séjour
-   * ou sans autre look : « Autre tenue » reprend alors son tirage habituel, dans les seules pièces de la valise.
+   * DANS L'OCCASION DE LA TENUE AFFICHÉE (22/10/2026, lookSuivantConforme). Le look de valise affiché est écarté comme une tenue
+   * planifiée, pour ne pas revenir aussitôt. null hors séjour ou sans autre look de cette occasion : « Autre tenue » reprend alors son
+   * tirage habituel, avec la même occasion, dans les seules pièces de la valise.
    */
   const versLookDeValise = (s: AppState): AppState | null => {
     const v = valiseRef.current;
-    const suivant = v ? lookSuivant(v.looks, s.outfit) : null;
+    // L'occasion de la tenue affichée est gardée (22/10/2026) : seuls les looks qui la servent sont parcourus.
+    const suivant = v ? lookSuivantConforme(v.looks, s.outfit, s.occasion) : null;
     if (!suivant) return null;
     return {
       ...s,
       outfit: [...suivant.ids],
-      occasion: suivant.occasion,
       occasionManual: false,
       outfitMissingCats: [],
       outfitFormalityDowngraded: false,
@@ -1775,7 +1787,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     fermerFicheEnFeuille: () => setState((s) => (s.ficheEnFeuille ? { ...s, ficheEnFeuille: null } : s)),
     fermerApercuPiece: () => setState((s) => (s.pieceApercu == null ? s : { ...s, pieceApercu: null })),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobe" })),
-    goLooks: () => go("looks"),
+    // Ouvrir Mes looks depuis le Dressing repart à neuf ; seul le retour du détail d'un look retrouve le filtre et le défilement.
+    goLooks: () => {
+      oublierContexte("looks");
+      go("looks");
+    },
     // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
     // Avant : revenir de « Modifier » au profil enregistrait « Modifier »
     // comme écran de retour, et le chevron du profil y renvoyait — profil →

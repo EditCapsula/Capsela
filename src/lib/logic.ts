@@ -71,6 +71,28 @@ export function estSacADos(i: Pick<Item, "cat" | "sacType" | "name">): boolean {
   return isBag(i) && (i.sacType ?? detectSacType(i.name)) === "Sac à dos";
 }
 export const SEUIL_CHAUSSURES_D_ETE = 15;
+
+/**
+ * R-S20 (22/10/2026, signalé : « là où je suis il fait plus de 25 degrés et tu proposes des mocassins ») — par forte chaleur, à partir de
+ * SEUIL_CHAUSSURES_FERMEES, les chaussures fermées et chaudes cèdent la place aux autres paires du pool. Préférence MOLLE, appliquée
+ * AVANT celle de l'occasion (R-S16, qui retient les mocassins en Voyage et au bureau) : elle ne filtre que s'il reste une autre paire —
+ * un vestiaire de bureau qui n'a que des derbies et des mocassins garde ses chaussures. Dressing réel compris. ARBITRAGE ÉDITORIAL : les
+ * mocassins sont le cas signalé ; derbies, bottines et bottes, de la même famille fermée et chaude, sont ajoutées par extension — liste
+ * à confirmer par la propriétaire (AGENTS.md, point 7). Sans type renseigné, le nom décide.
+ */
+export const SEUIL_CHAUSSURES_FERMEES = 25;
+export const CHAUSSURES_FERMEES_CHAUDES: ShoeType[] = ["Mocassins", "Derbies", "Bottines", "Bottes"];
+export function estChaussureFermeeChaude(i: Pick<Item, "cat" | "shoeType" | "name">): boolean {
+  if (i.cat !== "chaussures") return false;
+  if (i.shoeType) return CHAUSSURES_FERMEES_CHAUDES.includes(i.shoeType);
+  return /mocassin|derby|derbies|bottine|botte/i.test(i.name || "");
+}
+/** Les chaussures du pool sans les fermées et chaudes, par forte chaleur et s'il reste une autre paire ; sinon le pool tel quel. */
+export function chaussuresPourLaChaleur<T extends Pick<Item, "cat" | "shoeType" | "name">>(pool: T[], weather?: Pick<Weather, "temp"> | null): T[] {
+  if (!weather || weather.temp < SEUIL_CHAUSSURES_FERMEES) return pool;
+  const legeres = pool.filter((i) => !estChaussureFermeeChaude(i));
+  return legeres.some((i) => i.cat === "chaussures") ? legeres : pool;
+}
 export function estChaussureDEte(i: Pick<Item, "cat" | "shoeType" | "name">): boolean {
   if (i.cat !== "chaussures") return false;
   if (i.shoeType) return CHAUSSURES_D_ETE.includes(i.shoeType);
@@ -360,6 +382,8 @@ export interface LeviersMesure {
   sansFiltreChaussuresDEte?: boolean;
   /** Reproduit le comportement d'AVANT le 14/10/2026 : en Voyage, ni les baskets ni les pièces les plus décontractées ne sont préférées (R-S19). */
   sansConfortVoyage?: boolean;
+  /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
+  sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
   saisonDeclareeRelachee?: boolean;
   /**
@@ -1603,6 +1627,8 @@ export function generateOutfit(
   const sh = (() => {
     // Les baskets sont déjà exclues en amont si l'occasion est habillée (R-B6, hardCategoryFilter).
     let shoePool = poolFor(["chaussures"], true).filter((i) => i.cat === "chaussures");
+    // R-S20 — par forte chaleur, pas de chaussures fermées et chaudes s'il reste une autre paire. Avant la préférence de l'occasion.
+    if (!leviers?.sansChaussuresLegeresParLaChaleur) shoePool = chaussuresPourLaChaleur(shoePool, weather);
     // Préférence de style par occasion (R-S16, recette 20/08/2026) — ex.
     // talons favorisés pour une soirée habillée (ex-« Sortie festive ») (cf. OCCASION_STYLE_PREFS) —
     // n'écarte rien, juste une inclination si ça laisse au moins une option
@@ -1989,6 +2015,8 @@ export function candidatsDeRemplacement(
     const rainResistant = candidates.filter((i) => i.resistePluie);
     if (rainResistant.length) candidates = rainResistant;
   }
+  // R-S20 — symétrique du tirage : par forte chaleur, pas de chaussures fermées et chaudes s'il reste une autre paire. Molle.
+  if (cat === "chaussures") candidates = chaussuresPourLaChaleur(candidates, weather);
   // R-S16 — symétrique de la préférence de style par occasion appliquée
   // dans generateOutfit (cf. OCCASION_STYLE_PREFS), molle jamais exclusive.
   if (cat === "chaussures") {

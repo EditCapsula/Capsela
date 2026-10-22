@@ -2,6 +2,7 @@
 
 import { autresIdees } from "@/lib/alternativesTenue";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useContexteRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { sansBarre } from "@/lib/phraseOccasion";
 import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
 import AppHeader from "@/components/AppHeader";
@@ -30,7 +31,7 @@ import { jourLocal } from "@/lib/outfitFeedback";
 import { alerteMeteoPlan, previsionAChange } from "@/lib/planDuJour";
 import { ecartJoursDuPlan, useMeteoDuPlan } from "@/lib/useMeteoDuPlan";
 import { HORIZON_PREVISION_JOURS, joursCouverts, previsionPour, type MomentJournee, type Prevision } from "@/lib/prevision";
-import { computeDefaultCapsule, saisonCalendairePour } from "@/lib/capsule";
+import { computeDefaultCapsule, saisonCalendairePour, saisonCapsuleDuJour } from "@/lib/capsule";
 import EtapeLieu, { type MeteoEtapeLieu } from "@/components/EtapeLieu";
 import { meteoPourLaDate } from "@/lib/meteoPlan";
 import { fetchClimat, previsionGardee, type Climat, type VilleSuggeree } from "@/lib/weather";
@@ -462,6 +463,13 @@ function composerTenuePlan(e: {
   });
 }
 
+interface ContextePlanifier {
+  vue: "intro" | "liste";
+  hub: "tenue" | "valise";
+  onglet: "up" | "past";
+  etatAgenda: EtatAgenda;
+}
+
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, vestiairePool, etatPremium, actions } = useCapsela();
   const ouvrirPiece = useOuvrirPiece();
@@ -476,8 +484,13 @@ export default function PlanifierScreen() {
   // plutôt que de laisser sur le hub (l'état de cet écran est local).
   // « Planifier une tenue pour … » depuis Tenue (27/09/2026) : la date est
   // déjà choisie, le parcours s'ouvre sur ses étapes.
+  /** Un parcours demandé par un autre écran (un plan à rouvrir, une tenue à planifier pour un jour…) prime sur le contexte gardé. */
+  const entreeDemandee = !!(state.planARouvrir || state.planComposition || state.planJour != null || state.planAAdapter || state.planDirect);
+  // AU RETOUR (22/10/2026, memoireEcrans.ts) : une valise ouverte depuis le hub ou la liste ramène au même onglet (Tenue ou Valise),
+  // à la même vue (hub ou « Mes planifications ») et au même agenda. Les étapes d'un parcours ne sont pas gardées.
+  const repris = useContexteRepris<ContextePlanifier>("planifier", entreeDemandee);
   const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "alternatives" | "liste" | "detail" | "confirmation">(() =>
-    state.planARouvrir ? "detail" : state.planComposition || state.planJour != null || state.planAAdapter || state.planDirect ? "etape" : "intro"
+    state.planARouvrir ? "detail" : entreeDemandee ? "etape" : (repris?.vue ?? "intro")
   );
   /**
    * COMPOSITION IMPOSÉE (Avis de styliste V2, 26/09/2026) : les pièces
@@ -616,12 +629,13 @@ export default function PlanifierScreen() {
   const plans = state.tenuesPlanifiees;
   const setPlans = actions.setTenuesPlanifiees;
   const [enregistrement, setEnregistrement] = useState(false);
-  const [onglet, setOnglet] = useState<"up" | "past">("up");
+  const [onglet, setOnglet] = useState<"up" | "past">(repris?.onglet ?? "up");
   // L'AGENDA DE « MES LOOKS À VENIR » (17/10/2026) : vue Agenda, Jour ou Liste, le jour choisi et le mois affiché. Porté ici pour
   // survivre à l'ouverture du détail d'un look : le retour ramène au même jour, au même mois.
-  const [etatAgenda, setEtatAgenda] = useState<EtatAgenda>(() => ({ mode: "agenda", jour: jourLocal(), mois: jourLocal() }));
+  const [etatAgenda, setEtatAgenda] = useState<EtatAgenda>(() => repris?.etatAgenda ?? { mode: "agenda", jour: jourLocal(), mois: jourLocal() });
   /** Le hub n'affiche qu'une expérience à la fois (08/10/2026) : la tenue par défaut, ou la valise. */
-  const [hub, setHub] = useState<"tenue" | "valise">("tenue");
+  const [hub, setHub] = useState<"tenue" | "valise">(repris?.hub ?? "tenue");
+  useGarderContexte("planifier", (): ContextePlanifier => ({ vue: vue === "liste" ? "liste" : "intro", hub, onglet, etatAgenda }));
   const [toast, setToast] = useState<string | null>(null);
 
   const [prevision, setPrevision] = useState<Prevision | null>(null);
@@ -736,8 +750,14 @@ export default function PlanifierScreen() {
    * saison complétait donc ses catégories vides — les chaussures en premier — avec des pièces d'aujourd'hui (des bottines pour juillet).
    * Elle est recalculée pour la saison et la météo de la date, comme « Comment porter … ? » le fait pour une pièce.
    */
+  // LA CHALEUR DE LA DATE (22/10/2026, demandé : « pioche dans les bonnes capsules ») : la saison de la capsule suit la météo de la date,
+  // bornée par son calendrier sous la vraie chaleur — la règle de la tenue du jour (saisonCapsuleDuJour). Avant : la saison calendaire
+  // seule, et un 28° d'octobre se composait dans la capsule d'automne.
   const capsuleDeLaDate = useMemo(
-    () => (saisonDeLaDate ? computeDefaultCapsule(profile, meteoUtilisee, state.suggestedExcluded, saisonDeLaDate, vestiairePool) : defaultCapsule),
+    () =>
+      saisonDeLaDate
+        ? computeDefaultCapsule(profile, meteoUtilisee, state.suggestedExcluded, saisonCapsuleDuJour(meteoUtilisee.temp, saisonDeLaDate), vestiairePool)
+        : defaultCapsule,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [profile, saisonDeLaDate, meteoUtilisee.temp, meteoUtilisee.label, state.suggestedExcluded, vestiairePool, defaultCapsule]
   );
@@ -795,7 +815,7 @@ export default function PlanifierScreen() {
   const chercherAlternatives = () => {
     // Toutes les idées déjà montrées pour ces mêmes informations restent exclues : chaque série en apporte de nouvelles.
     const dejaVues = altsBrut?.cle === cleParams ? altsBrut.vues : [idsAffiches];
-    const poolJuge = [...state.items, ...defaultCapsule, ...vestiairePool];
+    const poolJuge = [...state.items, ...capsuleDeLaDate, ...vestiairePool];
     const tirer = () => {
       const t = composerTenuePlan(entreesMoteur);
       return t && !t.noCompleteOutfit && t.ids.length ? t.ids : null;
@@ -815,10 +835,10 @@ export default function PlanifierScreen() {
       return composition.map((id) => source.find((i) => i.id === id)).filter((i): i is Item => !!i);
     }
     if (!tenue) return [];
-    const source = dressingSeul ? state.items : [...state.items, ...defaultCapsule];
+    const source = dressingSeul ? state.items : [...state.items, ...capsuleDeLaDate];
     return idsAffiches.map((id) => source.find((i) => i.id === id)).filter((i): i is Item => !!i);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [composition, tenue, choisie, state.items, vestiairePool, defaultCapsule, dressingSeul]);
+  }, [composition, tenue, choisie, state.items, vestiairePool, capsuleDeLaDate, dressingSeul]);
   /** Rien à garder : état vide du moteur — une composition imposée en a toujours une. */
   const sansTenue = !composition && (!tenue || tenue.noCompleteOutfit);
   /** Les mots de l'état sans tenue : dressing vide, pièces manquantes, ou pas de combinaison pour l'occasion (emptyStateCopy.ts). */
@@ -1884,7 +1904,7 @@ export default function PlanifierScreen() {
             { ids: idsAffiches, titre: "Proposition actuelle" },
             ...alternatives.map((ids, i) => ({ ids, titre: `Proposition ${i + 2}` })),
           ];
-          const source = dressingSeul ? state.items : [...state.items, ...defaultCapsule];
+          const source = dressingSeul ? state.items : [...state.items, ...capsuleDeLaDate];
           return (
             <>
               <Surtitre>Tenue planifiée</Surtitre>

@@ -4,6 +4,7 @@ import { jourLocal } from "./outfitFeedback";
 import type { TenuePlanifiee } from "./planifier";
 import type { OccasionKey } from "./types";
 import type { EtatAffaires } from "./affairesVoyage";
+import type { EvenementValise } from "./evenementsValise";
 import type { ActiviteSejour, ItemProgramme } from "./programmeValise";
 import type { LookValise, MeteoJour, SituationValise, TailleBagage, TypeSejour } from "./valise";
 
@@ -76,6 +77,11 @@ export interface ValiseGardee {
    * plus anciennes, qui n'ont que leurs occasions mères (`occasions`).
    */
   programme?: ItemProgramme[];
+  /**
+   * Les événements datés du séjour (22/10/2026, evenementsValise.ts) : un jour, un moment, un look qui leur répond. Dans `calcul`
+   * (jsonb) : aucune migration. Absent des valises qui n'en ont pas.
+   */
+  evenements?: EvenementValise[];
 }
 
 let compteur = 0;
@@ -192,7 +198,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "activites" | "cochees" | "affaires" | "programme">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "activites" | "cochees" | "affaires" | "programme" | "evenements">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -217,6 +223,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     ...(r.calcul?.cochees?.length ? { cochees: r.calcul.cochees } : {}),
     ...(r.calcul?.affaires ? { affaires: r.calcul.affaires } : {}),
     ...(r.calcul?.programme?.length ? { programme: r.calcul.programme } : {}),
+    ...(r.calcul?.evenements?.length ? { evenements: r.calcul.evenements } : {}),
     // bigint[] revient parfois en chaînes côté PostgREST.
     pieceIds: nombres(r.piece_ids),
   };
@@ -242,6 +249,7 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
       ...(v.cochees?.length ? { cochees: v.cochees } : {}),
       ...(v.affaires ? { affaires: v.affaires } : {}),
       ...(v.programme?.length ? { programme: v.programme } : {}),
+      ...(v.evenements?.length ? { evenements: v.evenements } : {}),
     },
   };
 }

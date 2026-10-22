@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { FlatLayCapsela } from "@/components/FlatLayCapsela";
 import { MosaiquePieces } from "@/components/CarteLook";
 import PhotoPiece from "@/components/PhotoPiece";
@@ -162,16 +163,27 @@ function TitreSerif({ children, taille = 18 }: { children: React.ReactNode; tail
   );
 }
 
+interface ContexteDressing {
+  recherche: string;
+  groupeId: string | null;
+  tri: "recent" | "az";
+  defilement: number;
+}
+
 export default function WardrobeScreen() {
   const { state, actions, vestiairePool, defaultCapsule, weather, dressingLoaded, etatPremium } = useCapsela();
   const { profile } = useAuth();
   const items = state.items;
   const [maintenant] = useState(() => Date.now());
   // MAQUETTE « DRESSING V10 » (14/10/2026) : la grille des pièces est la page. Recherche, catégorie et tri vivent ici, pas dans l'URL.
-  const [recherche, setRecherche] = useState("");
   // Ouvert depuis une catégorie ou une couleur (la fiche « Voir dans mon dressing » de Tenue, « Tes dernières pièces ») : `filtrePieces` du store.
   const filtre = state.filtrePieces;
+  // AU RETOUR D'UNE FICHE (22/10/2026, memoireEcrans.ts) : la catégorie, la recherche, le tri et le défilement d'avant. Un filtre demandé
+  // par un autre écran prime ; un onglet de la barre du bas ouvre le Dressing à neuf.
+  const repris = useContexteRepris<ContexteDressing>("wardrobe", !!filtre);
+  const [recherche, setRecherche] = useState(repris?.recherche ?? "");
   const [groupeId, setGroupeId] = useState<string | null>(() => {
+    if (repris) return repris.groupeId;
     if (!filtre?.categories) return null;
     const cle = filtre.categories.join();
     return groupesDuVestiaire(state.items, profile.gender).find((g) => g.categories.join() === cle)?.id ?? null;
@@ -183,7 +195,10 @@ export default function WardrobeScreen() {
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appuiLongFait = useRef(false);
   const departAppui = useRef<{ x: number; y: number } | null>(null);
-  const [tri, setTri] = useState<"recent" | "az">("recent");
+  const [tri, setTri] = useState<"recent" | "az">(repris?.tri ?? "recent");
+  const zoneGrille = useRef<HTMLDivElement | null>(null);
+  const defilement = useDefilementRepris(zoneGrille, repris?.defilement);
+  useGarderContexte("wardrobe", (): ContexteDressing => ({ recherche, groupeId, tri, defilement: defilement.position.current }));
 
   // Pool de résolution stable des looks — cf. l'en-tête, correctif 20/08/2026.
   const resolvePool = useMemo(() => [...items, ...vestiairePool], [items, vestiairePool]);
@@ -525,7 +540,7 @@ export default function WardrobeScreen() {
         )}
       </div>
 
-      <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 border-t border-border" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}>
+      <div ref={zoneGrille} onScroll={defilement.onScroll} className="scrollarea flex-1 min-h-0 overflow-y-auto px-6 border-t border-border" style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 88px)" }}>
         <div className="flex items-center justify-between gap-3 min-h-[44px]">
           <span role="status" aria-live="polite" className="text-[12px] text-muted-3 min-w-0">
             {selectionMode ? (selection.size === 0 ? "Touche les pièces à retirer" : `${selection.size} ${selection.size === 1 ? "sélectionnée" : "sélectionnées"}`) : filtreExact && filtre ? `${filtre.libelle} · ${pl(affichees.length)}` : libelleResultats}

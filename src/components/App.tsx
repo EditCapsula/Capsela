@@ -1,7 +1,10 @@
 "use client";
 
 import LegalDocOverlay from "@/components/legal/LegalDocOverlay";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { App as CapApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
+import { decisionRetour, lirePage } from "@/lib/retourSysteme";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CapselaProvider, useCapsela } from "@/lib/store";
@@ -91,6 +94,38 @@ function Screens() {
   useEffect(() => {
     memoriserEcran(state.screen);
   }, [state.screen]);
+  // LE RETOUR ANDROID (22/10/2026, retourSysteme.ts) : il ferme ce qui est ouvert par-dessus, sinon suit le bouton Retour de l'écran,
+  // sinon revient à l'accueil depuis un écran de la barre du bas ; l'app ne se ferme plus que depuis l'accueil.
+  const ecranRef = useRef(state.screen);
+  useEffect(() => {
+    ecranRef.current = state.screen;
+  });
+  useEffect(() => {
+    const gerer = () => {
+      const page = lirePage(document);
+      const decision = decisionRetour({ superposition: !!page.superposition, bouton: !!page.bouton, ecran: ecranRef.current });
+      if (decision === "fermer") document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      else if (decision === "bouton") page.bouton?.click();
+      else if (decision === "accueil") actions.goHome();
+      else if (decision === "etapePrecedente") actions.onbBack();
+      else if (Capacitor.isNativePlatform()) void CapApp.exitApp();
+      return decision;
+    };
+    // Vérifiable en rendu dans le navigateur de développement, où l'événement natif n'existe pas.
+    if (process.env.NODE_ENV === "development") (window as unknown as { __retourSysteme?: () => string }).__retourSysteme = gerer;
+    if (!Capacitor.isNativePlatform()) return;
+    let ecoute: { remove: () => Promise<void> } | null = null;
+    let fini = false;
+    void CapApp.addListener("backButton", gerer).then((h) => {
+      if (fini) void h.remove();
+      else ecoute = h;
+    });
+    return () => {
+      fini = true;
+      void ecoute?.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [refusAge, setRefusAge] = useState<string | null>(null);
   const profileCompleted = auth.profile.completed;
   useEffect(() => {

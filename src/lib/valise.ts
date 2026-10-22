@@ -1,11 +1,11 @@
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
-import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "./capsule";
+import { CHALEUR_HORS_SAISON, saisonCalendairePour, saisonCapsuleDuJour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
 import { composeWardrobePool } from "./selectors";
-import type { CategoryKey, Item, OccasionKey, ShoeType } from "./types";
+import type { CapsuleSeason, CategoryKey, Item, OccasionKey, ShoeType } from "./types";
 
 /*
  * PRÉPARER SA VALISE — module pur (lot 1, 27/09/2026, docs/valise.md).
@@ -931,4 +931,36 @@ export function pretPourUneValise(dressing: Item[]): PretPourValise {
   const manquePieces = Math.max(0, MINIMUM_PIECES_VALISE - dressing.length);
   const manqueBase = categoriesManquantes(dressing);
   return { pret: manquePieces === 0 && manqueBase.length === 0, manquePieces, manqueBase };
+}
+
+/**
+ * LA CAPSULE DU SÉJOUR (22/10/2026, demandé : « lorsque tu identifies que la température est élevée il faut que tu en tiennes compte et
+ * que tu pioches dans les bonnes capsules »). La valise se complétait avec la capsule de la tenue du jour, bâtie sur la météo d'AUJOURD'HUI
+ * chez soi : une plage à 30° préparée un jour d'automne à 14° recevait des pièces d'automne. Désormais une capsule par saison que les
+ * situations du séjour appellent — la saison de leur météo, bornée par le calendrier sous la vraie chaleur (saisonCapsuleDuJour, la règle
+ * de la tenue du jour) —, réunies sans doublon. Le moteur trie ensuite chaque situation selon sa propre météo, comme avant.
+ */
+export function capsuleDuSejour(
+  situations: readonly SituationValise[],
+  construire: (meteo: Weather, saison: CapsuleSeason) => Item[]
+): Item[] {
+  const parSaison = new Map<CapsuleSeason, Weather>();
+  for (const s of situations) {
+    const jour = s.jours[0];
+    if (!jour) continue;
+    const saison = saisonCapsuleDuJour(s.meteo.temp, saisonCalendairePour(dateDe(jour)));
+    const deja = parSaison.get(saison);
+    // Pour une même saison, la situation la plus chaude décide de la météo de référence : c'est elle que la capsule doit pouvoir habiller.
+    if (!deja || s.meteo.temp > deja.temp) parSaison.set(saison, s.meteo);
+  }
+  const vues = new Set<number>();
+  const out: Item[] = [];
+  for (const [saison, meteo] of parSaison) {
+    for (const it of construire(meteo, saison)) {
+      if (vues.has(it.id)) continue;
+      vues.add(it.id);
+      out.push(it);
+    }
+  }
+  return out;
 }

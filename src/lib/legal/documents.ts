@@ -19,6 +19,8 @@ export const DOCUMENTS_LEGAUX: readonly DocumentLegal[] = [
   { slug: "droits-rgpd", titre: "Tes droits (RGPD)", sousTitre: "Accès, rectification, suppression" },
   { slug: "cookies", titre: "Cookies et traceurs", sousTitre: "Préférences de mesure" },
   { slug: "cgv", titre: "Conditions générales de vente", sousTitre: "Abonnement Premium" },
+  // Page publique exigée par Google Play pour les apps avec compte (22/10/2026) : comment supprimer son compte, avec ou sans l'app.
+  { slug: "suppression-compte", titre: "Supprimer ton compte", sousTitre: "Depuis l'app ou par e-mail" },
 ];
 
 export const SLUGS_LEGAUX: string[] = DOCUMENTS_LEGAUX.map((d) => d.slug);

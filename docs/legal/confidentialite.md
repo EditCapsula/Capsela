@@ -21,7 +21,7 @@ En résumé :
 [À COMPLÉTER — nom ou raison sociale de l'éditeur, adresse], éditeur de
 Capsela, est responsable du traitement.
 
-Contact pour toute question sur tes données : [À COMPLÉTER — adresse e-mail].
+Contact pour toute question sur tes données : capsela.angela@gmail.com.
 
 ## 2. Les données que nous traitons
 
@@ -214,9 +214,9 @@ Tu peux à tout moment :
 - **accéder** à tes données et en obtenir une copie ;
 - les **rectifier** (la plupart se modifient directement dans « Mon profil »
   et dans ton dressing) ;
-- les **effacer** : « Mon compte → Supprimer mon compte » efface tout,
+- les **effacer** : « Gérer mon compte → Supprimer mon compte » efface tout,
   immédiatement et définitivement ;
-- les **récupérer** dans un format lisible par une machine : « Mon compte →
+- les **récupérer** dans un format lisible par une machine : « Gérer mon compte →
   Télécharger mes données » produit un fichier JSON ;
 - **t'opposer** à un traitement fondé sur notre intérêt légitime, ou en
   demander la **limitation** ;
@@ -224,7 +224,7 @@ Tu peux à tout moment :
   moment, sans que cela remette en cause ce qui a été fait avant ;
 - définir des **directives** sur le sort de tes données après ton décès.
 
-Pour toute demande : [À COMPLÉTER — adresse e-mail]. Nous répondons dans un
+Pour toute demande : capsela.angela@gmail.com. Nous répondons dans un
 délai d'un mois. Nous pouvons te demander de justifier ton identité si un
 doute existe.
 

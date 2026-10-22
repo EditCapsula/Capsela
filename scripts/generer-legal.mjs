@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const racine = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SLUGS = ["mentions-legales", "confidentialite", "cgu", "droits-rgpd", "cookies", "cgv"];
+const SLUGS = ["mentions-legales", "confidentialite", "cgu", "droits-rgpd", "cookies", "cgv", "suppression-compte"];
 
 export function contenuGenere() {
   const lignes = SLUGS.map((slug) => {
