@@ -214,9 +214,9 @@ Tu peux à tout moment :
 - **accéder** à tes données et en obtenir une copie ;
 - les **rectifier** (la plupart se modifient directement dans « Mon profil »
   et dans ton dressing) ;
-- les **effacer** : « Mon compte → Supprimer mon compte » efface tout,
+- les **effacer** : « Gérer mon compte → Supprimer mon compte » efface tout,
   immédiatement et définitivement ;
-- les **récupérer** dans un format lisible par une machine : « Mon compte →
+- les **récupérer** dans un format lisible par une machine : « Gérer mon compte →
   Télécharger mes données » produit un fichier JSON ;
 - **t'opposer** à un traitement fondé sur notre intérêt légitime, ou en
   demander la **limitation** ;

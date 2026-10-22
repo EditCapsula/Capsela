@@ -30,7 +30,7 @@ techniques peuvent l'interrompre.
   ton compte Google.
 - Tu t'engages à donner une adresse e-mail valide et à garder ton mot de passe
   pour toi. Tout ce qui est fait depuis ton compte est réputé fait par toi.
-- Tu peux supprimer ton compte à tout moment : « Mon compte → Supprimer mon
+- Tu peux supprimer ton compte à tout moment : « Gérer mon compte → Supprimer mon
   compte ». La suppression est immédiate et définitive ; elle efface ton
   dressing, tes photos, ton historique et tes avis.
 
