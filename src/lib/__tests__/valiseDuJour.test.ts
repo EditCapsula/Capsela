@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estPlanValise, looksValiseDuJour, lookSuivant, piecesDeLaValise, valiseDuJour } from "../valiseDuJour";
+import { estPlanValise, looksValiseDuJour, lookSuivant, lookSuivantConforme, piecesDeLaValise, valiseDuJour } from "../valiseDuJour";
 import type { ValiseGardee } from "../valises";
 import type { Item } from "../types";
 
@@ -79,5 +79,31 @@ describe("lookSuivant", () => {
     expect(lookSuivant(looks, [5, 6])).toEqual({ ids: [1, 2] });
     expect(lookSuivant(looks, [9])).toEqual({ ids: [1, 2] });
     expect(lookSuivant([{ ids: [1, 2] }], [1, 2])).toBeNull();
+  });
+});
+
+describe("« Autre tenue » garde l'occasion de la tenue affichée (22/10/2026)", () => {
+  const looks = [
+    { ids: [1, 2, 3, 4], occasions: ["quotidien"] },
+    { ids: [5, 6, 4], occasions: ["soiree", "evenement_perso"] },
+    { ids: [99, 2, 3, 4], occasions: ["quotidien"] },
+    { ids: [5, 3, 4], occasions: ["evenement_perso"] },
+  ];
+
+  it("depuis un look de cérémonie : le look de cérémonie suivant, jamais un look de quotidien", () => {
+    // Avant : lookSuivant sur tous les looks renvoyait le look suivant dans l'ordre, ici un look de quotidien.
+    expect(lookSuivant(looks, [5, 6, 4])?.occasions).toEqual(["quotidien"]);
+    expect(lookSuivantConforme(looks, [5, 6, 4], "evenement_perso")?.ids).toEqual([5, 3, 4]);
+    expect(lookSuivantConforme(looks, [5, 3, 4], "evenement_perso")?.ids).toEqual([5, 6, 4]);
+  });
+
+  it("aucun autre look de cette occasion : null (le store tire alors dans la valise, même occasion)", () => {
+    expect(lookSuivantConforme(looks, [5, 6, 4], "soiree")).toBeNull();
+    expect(lookSuivantConforme(looks, [1, 2, 3, 4], "sport")).toBeNull();
+  });
+
+  it("chaque look de la valise porte toutes les occasions qu'il sert", () => {
+    const v = valise({ looks: [{ ids: [5, 6, 4], situations: [1, 0], elargie: false }] });
+    expect(looksValiseDuJour(v, "2026-10-26", pool).looks[0]).toMatchObject({ occasion: "soiree", occasions: ["soiree", "quotidien"] });
   });
 });

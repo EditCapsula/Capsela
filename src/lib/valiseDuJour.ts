@@ -41,8 +41,11 @@ export interface ValiseDuJourConsulte {
   journee: TenuePlanifiee | null;
   /** Le look du soir, en tenue planifiée virtuelle ; null sans look du soir ce jour-là. */
   soir: TenuePlanifiee | null;
-  /** Tous les looks de la valise (ceux que son écran montre), avec leur occasion : « Autre tenue » les parcourt pendant le séjour. */
-  looks: { ids: number[]; occasion: TenuePlanifiee["occasion"] }[];
+  /**
+   * Tous les looks de la valise (ceux que son écran montre), avec leur occasion — la première de ses situations — et TOUTES celles
+   * qu'il sert : « Autre tenue » les parcourt pendant le séjour, dans l'occasion de la tenue affichée (lookSuivantConforme).
+   */
+  looks: { ids: number[]; occasion: TenuePlanifiee["occasion"]; occasions: TenuePlanifiee["occasion"][] }[];
 }
 
 export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly Item[]): ValiseDuJourConsulte {
@@ -73,7 +76,10 @@ export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly 
   return {
     valise: v,
     numero,
-    looks: looks.map((l) => ({ ids: [...l.ids], occasion: v.situations[l.situations[0]]?.occasion ?? "quotidien" })),
+    looks: looks.map((l) => {
+      const occasions = [...new Set(l.situations.map((i) => v.situations[i]?.occasion).filter((o): o is TenuePlanifiee["occasion"] => !!o))];
+      return { ids: [...l.ids], occasion: occasions[0] ?? "quotidien", occasions: occasions.length ? occasions : ["quotidien"] };
+    }),
     journee: virtuel("Toute la journée", duJour.find((c) => c.creneau === "jour") ?? duJour.find((c) => c.creneau === "trajet")),
     soir: virtuel("Soirée", duJour.find((c) => c.creneau === "soir")),
   };
@@ -97,4 +103,17 @@ export function lookSuivant<T extends { ids: number[] }>(looks: readonly T[], co
     if (cle(l.ids) !== actuelle) return l;
   }
   return null;
+}
+
+/**
+ * « AUTRE TENUE » GARDE L'OCCASION (22/10/2026, demandé : « que la conformité de tenue depuis laquelle on demande une autre tenue
+ * soit gardée »). Avant : le look suivant de la valise, quelle que soit son occasion — d'un look de mariage, on passait à un look de
+ * plage. Désormais seuls les looks qui servent l'occasion de la tenue affichée sont parcourus, et l'occasion reste celle-là. null : la
+ * valise n'a pas d'autre look pour cette occasion — le store tire alors une tenue de cette occasion dans les seules pièces de la valise.
+ */
+export function lookSuivantConforme<T extends { ids: number[]; occasions: readonly string[] }>(looks: readonly T[], courante: readonly number[], occasion: string): T | null {
+  return lookSuivant(
+    looks.filter((l) => l.occasions.includes(occasion)),
+    courante
+  );
 }

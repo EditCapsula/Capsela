@@ -8,7 +8,7 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import type { Humeur } from "./humeur";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
-import { estPlanValise, looksValiseDuJour, lookSuivant, piecesDeLaValise, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
+import { estPlanValise, looksValiseDuJour, lookSuivantConforme, piecesDeLaValise, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
 import { previsionPour, type MeteoMoment, type MomentJournee, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
 import { clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
@@ -1370,17 +1370,18 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * « AUTRE TENUE » PENDANT UN SÉJOUR (20/10/2026, valiseDuJour.ts) : le look suivant de la valise, complet et composé pour ce voyage,
-   * avec son occasion. Le look de valise affiché est écarté comme une tenue planifiée, pour ne pas revenir aussitôt. null hors séjour
-   * ou sans autre look : « Autre tenue » reprend alors son tirage habituel, dans les seules pièces de la valise.
+   * DANS L'OCCASION DE LA TENUE AFFICHÉE (22/10/2026, lookSuivantConforme). Le look de valise affiché est écarté comme une tenue
+   * planifiée, pour ne pas revenir aussitôt. null hors séjour ou sans autre look de cette occasion : « Autre tenue » reprend alors son
+   * tirage habituel, avec la même occasion, dans les seules pièces de la valise.
    */
   const versLookDeValise = (s: AppState): AppState | null => {
     const v = valiseRef.current;
-    const suivant = v ? lookSuivant(v.looks, s.outfit) : null;
+    // L'occasion de la tenue affichée est gardée (22/10/2026) : seuls les looks qui la servent sont parcourus.
+    const suivant = v ? lookSuivantConforme(v.looks, s.outfit, s.occasion) : null;
     if (!suivant) return null;
     return {
       ...s,
       outfit: [...suivant.ids],
-      occasion: suivant.occasion,
       occasionManual: false,
       outfitMissingCats: [],
       outfitFormalityDowngraded: false,

@@ -317,3 +317,9 @@ Demandé : « il manque une étape d'événements dans la planification de valis
 - **Refonte de l'étape (22/10/2026, brief « Refonte UX/UI de l'étape 4/4 »)** : « Événements ajoutés (N) » en cartes compactes (nom, jour · moment, type sous un nom personnalisé), chacune modifiable (le formulaire reprend ses valeurs et garde son identifiant : aucun doublon) et supprimable (« Annuler » pendant 6 s, comme la checklist). Jours en rangée défilante (jour, numéro, mois), calculés depuis les dates du séjour. Un champ obligatoire manquant (type, jour) est signalé au toucher d'« Ajouter cet événement ». Type « Autre » → occasion Quotidien (ARBITRAGE ÉDITORIAL : la plus neutre ; le moteur ne lit pas le nom libre). « Générer ma valise » ne lance qu'une préparation à la fois.
 
 Limite constatée en rendu (seed de démo, Lisbonne 25–29/10, mariage le 25 au soir) : le look du mariage est la seule tenue de soirée de la valise, il revient donc les autres soirs. La composition (`composerValise`) minimise les pièces et ne garantit pas un look propre à chaque événement — à instruire si besoin.
+
+## « Autre tenue » garde l'occasion pendant le séjour (22/10/2026)
+
+Demandé : « que la conformité de tenue depuis laquelle on demande une autre tenue soit gardée ». Avant, « Autre tenue » passait au look suivant de la valise quelle que soit son occasion. Désormais (`lookSuivantConforme`, `valiseDuJour.ts`), seuls les looks qui servent l'occasion de la tenue affichée sont parcourus — un look sert toutes les occasions de ses situations — et l'occasion ne change pas. Sans autre look de cette occasion, le store tire une tenue de la même occasion dans les seules pièces de la valise.
+
+Mesuré en rendu (séjour de démo, tenue du jour en Quotidien, six « Autre tenue ») : avant, 3 tirages sur 6 passaient en Soirée ; après, 0 sur 6.
