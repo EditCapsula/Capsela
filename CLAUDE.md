@@ -20,6 +20,8 @@ Les tests ne couvrent que des fonctions pures de `src/lib` (environnement node, 
 
 **Une seule page, navigation par état.** `src/app/page.tsx` → `AppLoader` (import dynamique, `ssr: false`) → `App.tsx`, qui monte `AuthProvider` puis `CapselaProvider` et affiche l'écran désigné par `state.screen` (union `Screen` dans `src/lib/types.ts`). Il n'y a pas de routage par URL : on change d'écran par les actions du store (`goHome`, `goPlanifier`, `openItem`…). Un fichier par écran dans `src/components/screens/`. La barre du bas est masquée pour `NO_TABBAR_SCREENS` et `FLOW_SCREENS` (`App.tsx`) ; un écran de parcours peut la rendre lui-même sur sa vue d'accueil (cf. le hub de `PlanifierScreen`).
 
+**Retour et contexte** (22/10/2026). Changer d'écran démonte le précédent : Dressing, Capsule et Planifier gardent leur contexte (catégorie, recherche, tri, sections, défilement, onglet du hub) dans `memoireEcrans.ts` (`useContexteEcran`) et le retrouvent au RETOUR ; un onglet de la barre du bas l'oublie et ouvre l'écran à neuf. Le retour Android (`retourSysteme.ts`, écouté dans `App.tsx`) ferme d'abord ce qui est ouvert par-dessus (Échap), sinon touche le `BoutonRetour` visible (attribut `data-retour-ecran`), sinon revient à l'accueil ; l'app ne se ferme que depuis l'accueil. Tout bouton Retour d'écran passe donc par `BoutonRetour`.
+
 **Le store** (`src/lib/store.tsx`) porte `AppState` et toutes les actions. Les pools à connaître :
 - `vestiairePool` — le catalogue `vestiaire_universel` (repli : `catalog.ts`) ;
 - `defaultCapsule` — la capsule calculée depuis le catalogue et le profil (`computeDefaultCapsule`, `capsule.ts`) ;

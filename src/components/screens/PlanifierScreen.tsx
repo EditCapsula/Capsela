@@ -2,6 +2,7 @@
 
 import { autresIdees } from "@/lib/alternativesTenue";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useContexteRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import { sansBarre } from "@/lib/phraseOccasion";
 import AgendaLooks, { type EtatAgenda } from "@/components/AgendaLooks";
 import AppHeader from "@/components/AppHeader";
@@ -462,6 +463,13 @@ function composerTenuePlan(e: {
   });
 }
 
+interface ContextePlanifier {
+  vue: "intro" | "liste";
+  hub: "tenue" | "valise";
+  onglet: "up" | "past";
+  etatAgenda: EtatAgenda;
+}
+
 export default function PlanifierScreen() {
   const { state, weather, defaultCapsule, vestiairePool, etatPremium, actions } = useCapsela();
   const ouvrirPiece = useOuvrirPiece();
@@ -476,8 +484,13 @@ export default function PlanifierScreen() {
   // plutôt que de laisser sur le hub (l'état de cet écran est local).
   // « Planifier une tenue pour … » depuis Tenue (27/09/2026) : la date est
   // déjà choisie, le parcours s'ouvre sur ses étapes.
+  /** Un parcours demandé par un autre écran (un plan à rouvrir, une tenue à planifier pour un jour…) prime sur le contexte gardé. */
+  const entreeDemandee = !!(state.planARouvrir || state.planComposition || state.planJour != null || state.planAAdapter || state.planDirect);
+  // AU RETOUR (22/10/2026, memoireEcrans.ts) : une valise ouverte depuis le hub ou la liste ramène au même onglet (Tenue ou Valise),
+  // à la même vue (hub ou « Mes planifications ») et au même agenda. Les étapes d'un parcours ne sont pas gardées.
+  const repris = useContexteRepris<ContextePlanifier>("planifier", entreeDemandee);
   const [vue, setVue] = useState<"intro" | "etape" | "resultat" | "alternatives" | "liste" | "detail" | "confirmation">(() =>
-    state.planARouvrir ? "detail" : state.planComposition || state.planJour != null || state.planAAdapter || state.planDirect ? "etape" : "intro"
+    state.planARouvrir ? "detail" : entreeDemandee ? "etape" : (repris?.vue ?? "intro")
   );
   /**
    * COMPOSITION IMPOSÉE (Avis de styliste V2, 26/09/2026) : les pièces
@@ -616,12 +629,13 @@ export default function PlanifierScreen() {
   const plans = state.tenuesPlanifiees;
   const setPlans = actions.setTenuesPlanifiees;
   const [enregistrement, setEnregistrement] = useState(false);
-  const [onglet, setOnglet] = useState<"up" | "past">("up");
+  const [onglet, setOnglet] = useState<"up" | "past">(repris?.onglet ?? "up");
   // L'AGENDA DE « MES LOOKS À VENIR » (17/10/2026) : vue Agenda, Jour ou Liste, le jour choisi et le mois affiché. Porté ici pour
   // survivre à l'ouverture du détail d'un look : le retour ramène au même jour, au même mois.
-  const [etatAgenda, setEtatAgenda] = useState<EtatAgenda>(() => ({ mode: "agenda", jour: jourLocal(), mois: jourLocal() }));
+  const [etatAgenda, setEtatAgenda] = useState<EtatAgenda>(() => repris?.etatAgenda ?? { mode: "agenda", jour: jourLocal(), mois: jourLocal() });
   /** Le hub n'affiche qu'une expérience à la fois (08/10/2026) : la tenue par défaut, ou la valise. */
-  const [hub, setHub] = useState<"tenue" | "valise">("tenue");
+  const [hub, setHub] = useState<"tenue" | "valise">(repris?.hub ?? "tenue");
+  useGarderContexte("planifier", (): ContextePlanifier => ({ vue: vue === "liste" ? "liste" : "intro", hub, onglet, etatAgenda }));
   const [toast, setToast] = useState<string | null>(null);
 
   const [prevision, setPrevision] = useState<Prevision | null>(null);

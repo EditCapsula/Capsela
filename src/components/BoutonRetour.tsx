@@ -56,6 +56,8 @@ export default function BoutonRetour({
     <button
       onClick={onClick}
       aria-label={label}
+      // Le retour Android touche ce bouton quand rien n'est ouvert par-dessus (retourSysteme.ts, ATTRIBUT_RETOUR).
+      data-retour-ecran=""
       className={"w-11 h-11 flex-shrink-0 flex items-center justify-center cursor-pointer " + className}
       style={{ margin: marge }}
     >
