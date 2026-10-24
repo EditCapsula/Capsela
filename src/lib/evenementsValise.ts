@@ -1,4 +1,5 @@
 import { elementProgramme } from "./programmeValise";
+import type { OccasionKey } from "./types";
 import { groupesMeteo, type MeteoJour, type SituationValise } from "./valise";
 
 /*
@@ -31,6 +32,11 @@ export interface EvenementValise {
   moment: MomentEvenement;
   /** Le nom que la personne lui donne (« Mariage de Léa ») ; facultatif. */
   nom?: string;
+  /**
+   * L'occasion lue dans le NOM d'un événement « Autre » (22/10/2026, lectureEvenement.ts) : elle remplace celle du type, qui ne dit rien.
+   * Absente sans nom, hors ligne ou sur une lecture douteuse.
+   */
+  occasionLue?: OccasionKey;
 }
 
 export const TYPES_EVENEMENT: { id: string; libelle: string; moment: MomentEvenement }[] = [
@@ -43,6 +49,7 @@ export const TYPES_EVENEMENT: { id: string; libelle: string; moment: MomentEvene
   // Quotidien, la plus neutre — ARBITRAGE ÉDITORIAL : sans savoir ce qu'il est, Capsela n'habille ni trop ni trop peu ; le nom donné
   // par la personne ne change pas la tenue (le moteur ne lit pas de texte libre).
   { id: "quotidien", libelle: "Autre", moment: "jour" },
+  // Depuis le même jour, le NOM d'un événement « Autre » est lu (occasionLue, lectureEvenement.ts) : Quotidien n'est plus qu'un repli.
 ];
 
 export const NOM_EVENEMENT_MAX = 40;
@@ -66,14 +73,24 @@ export function evenementsDuSejour(evenements: readonly EvenementValise[] | unde
     .sort((a, b) => a.jour.localeCompare(b.jour) || (a.moment === b.moment ? 0 : a.moment === "jour" ? -1 : 1));
 }
 
+/** Le type « Autre » : le seul dont le nom est lu (son occasion par défaut ne dit rien de l'événement). */
+export const TYPE_AUTRE = "quotidien";
+
+/** L'occasion que le moteur reçoit pour un événement : celle lue dans le nom d'un « Autre », sinon celle de son type. */
+export function occasionDeLEvenement(e: Pick<EvenementValise, "type" | "occasionLue">): OccasionKey | null {
+  if (e.type === TYPE_AUTRE && e.occasionLue) return e.occasionLue;
+  return elementProgramme(e.type)?.mere ?? null;
+}
+
 /** Une situation par événement du séjour : son occasion mère, la météo de son jour, ce seul jour. Ajoutées APRÈS celles du programme. */
 export function situationsDesEvenements(evenements: readonly EvenementValise[] | undefined, meteos: readonly MeteoJour[]): SituationValise[] {
   const jours = meteos.map((m) => m.jour);
   return evenementsDuSejour(evenements, jours).flatMap((e): SituationValise[] => {
     const element = elementProgramme(e.type);
+    const occasion = occasionDeLEvenement(e);
     const m = meteos.find((x) => x.jour === e.jour);
-    if (!element || !m) return [];
+    if (!element || !occasion || !m) return [];
     const [groupe] = groupesMeteo([m]);
-    return [{ occasion: element.mere, meteo: groupe.meteo, jours: [e.jour], ...(element.contrainte ? { contrainte: element.contrainte } : {}), sousIds: [sousIdEvenement(e)] }];
+    return [{ occasion, meteo: groupe.meteo, jours: [e.jour], ...(element.contrainte ? { contrainte: element.contrainte } : {}), sousIds: [sousIdEvenement(e)] }];
   });
 }

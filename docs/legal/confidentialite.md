@@ -59,7 +59,7 @@ ressemblent. Elles ne servent jamais à te juger ni à te classer.
   enregistrés, tes réactions à la tenue du jour (« J'adore », « Pas pour moi ») ;
 - tes looks planifiés : date, moment, occasion, lieu que tu indiques, et
   l'humeur que tu choisis pour l'événement (élégante, décontractée…) ;
-- tes valises : destination, dates, taille de bagage, pièces choisies ;
+- tes valises : destination, dates, taille de bagage, activités, événements prévus (type, jour, moment et nom si tu en donnes un), pièces choisies ;
 - tes avis de styliste enregistrés dans ton Journal, avec leur photo ;
 - le choix que tu fais pour une pièce (la garder, la mettre de côté) ;
 - tes retours sur les associations de couleurs de ta saison (« J'aime »,
@@ -158,7 +158,7 @@ compte et selon nos instructions (sous-traitants au sens du RGPD).
 | --- | --- | --- | --- |
 | Supabase Inc. | Comptes, base de données, stockage des photos, fonctions serveur | Toutes les données du compte | [À COMPLÉTER — région du projet] |
 | Vercel Inc. | Hébergement du site et de l'application web | Données techniques de connexion | États-Unis |
-| OpenAI [À VÉRIFIER — entité contractante] | Analyse des photos (préremplissage d'une pièce, repérage des pièces d'une tenue, avis de styliste) | La photo analysée ; pour l'avis, ton style, ta silhouette déclarée, ta palette et ta colorimétrie — jamais ton nom, ton e-mail ni ton identifiant | États-Unis |
+| OpenAI [À VÉRIFIER — entité contractante] | Analyse des photos (préremplissage d'une pièce, repérage des pièces d'une tenue, avis de style) ; lecture du nom d'un événement de valise de type « Autre », pour choisir l'occasion de sa tenue | La photo analysée ; pour l'avis, ton style, ta silhouette déclarée, ta palette et ta colorimétrie ; pour un événement, son seul nom — jamais ton nom, ton e-mail ni ton identifiant | États-Unis |
 | Photoroom SAS [À VÉRIFIER — entité et adresse] | Détourage des photos de tes pièces | La photo de la pièce, ou la découpe d'une pièce dans la photo d'une tenue — jamais ton nom, ton e-mail ni ton identifiant | France ; serveurs [À VÉRIFIER — le prestataire n'annonce pas d'hébergement réservé à l'Union européenne] |
 | Open-Meteo [À VÉRIFIER — entité et adresse] | Prévisions météo jusqu'à 16 jours, températures habituelles d'un lieu, recherche de ville | Le nom de la ville cherchée, ou les coordonnées de la ville ou de ta position | [À VÉRIFIER] |
 | OpenWeather Ltd | Météo du jour, prévisions de secours et recherche de ville | Ta ville, ou les coordonnées de ta position si tu l'as autorisée | Royaume-Uni |
@@ -166,7 +166,7 @@ compte et selon nos instructions (sous-traitants au sens du RGPD).
 | Google Ireland Ltd | Connexion avec Google (si tu la choisis) ; mesure d'audience (si tu l'acceptes) | Données de connexion ; données d'usage | Irlande, avec transferts possibles vers les États-Unis |
 | Functional Software Inc. (Sentry) | Rapports d'erreur | Données techniques de l'erreur, sans identifiant | États-Unis |
 
-Les analyses de photos sont demandées sans conservation par OpenAI pour
+Les analyses de photos et les lectures de noms d'événements sont demandées sans conservation par OpenAI pour
 l'amélioration de ses modèles (paramètre `store: false`). [À VÉRIFIER —
 durée de conservation résiduelle selon les conditions d'OpenAI.]
 

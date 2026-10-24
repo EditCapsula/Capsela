@@ -66,10 +66,13 @@ import {
 import { selectionApercu } from "@/lib/valiseApercu";
 import { decalerMois, grilleDuMois, toucherJour } from "@/lib/calendrierPeriode";
 import { articlesChecklist, progressionChecklist, raisonsPartagees, sectionsChecklist, type FiltreChecklist, type Progression, type SectionChecklist } from "@/lib/checklistValise";
+import { lireNomEvenement } from "@/lib/lectureEvenement";
 import { pieceLaPlusUtilisee, planningDeLaValise, type CreneauPlanning } from "@/lib/planningValise";
 import {
   NOM_EVENEMENT_MAX,
+  TYPE_AUTRE,
   TYPES_EVENEMENT,
+  occasionDeLEvenement,
   evenementsDuSejour,
   libelleEvenement,
   situationsDesEvenements,
@@ -469,6 +472,8 @@ function EtapeEvenements({
   const [manque, setManque] = useState(false);
   const [confirmation, setConfirmation] = useState<string | null>(null);
   const [annulation, setAnnulation] = useState<{ evenement: EvenementValise; index: number } | null>(null);
+  /** Les événements « Autre » dont le nom est en cours de lecture. */
+  const [lectures, setLectures] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (!confirmation) return;
     const t = setTimeout(() => setConfirmation(null), 3000);
@@ -497,12 +502,26 @@ function EtapeEvenements({
     }
     const nomPropre = nom.trim().slice(0, NOM_EVENEMENT_MAX);
     const champs = { type, jour, moment, ...(nomPropre ? { nom: nomPropre } : {}) };
+    const id = enModification ?? `e${Date.now().toString(36)}${evenements.length}`;
     if (enModification) {
       setEvenements((l) => l.map((e) => (e.id === enModification ? { id: e.id, ...champs } : e)));
       setConfirmation(`${libelleEvenement(champs)} : modifications enregistrées`);
     } else {
-      setEvenements((l) => [...l, { id: `e${Date.now().toString(36)}${l.length}`, ...champs }]);
+      setEvenements((l) => [...l, { id, ...champs }]);
       setConfirmation(`${libelleEvenement(champs)} ajouté`);
+    }
+    // LA LECTURE DU NOM (22/10/2026) : un « Autre » nommé reçoit l'occasion que son nom décrit, dès que la lecture répond — seulement
+    // si l'événement n'a pas changé entre-temps. Sans réponse, il garde Quotidien.
+    if (type === TYPE_AUTRE && nomPropre) {
+      setLectures((l) => new Set(l).add(id));
+      void lireNomEvenement(nomPropre).then((occasion) => {
+        setLectures((l) => {
+          const n = new Set(l);
+          n.delete(id);
+          return n;
+        });
+        if (occasion) setEvenements((l) => l.map((e) => (e.id === id && e.type === TYPE_AUTRE && e.nom === nomPropre ? { ...e, occasionLue: occasion } : e)));
+      });
     }
     vider();
   };
@@ -548,6 +567,12 @@ function EtapeEvenements({
                     </span>
                     {/* Le type n'est redit que sous un nom personnalisé : sans nom, le titre l'est déjà. */}
                     {e.nom?.trim() && <span className="block text-[12px] text-terracotta mt-[1px]">{libelleType(e.type)}</span>}
+                    {/* Un « Autre » dit la tenue qu'il recevra : celle que son nom décrit, ou Quotidien à défaut. */}
+                    {e.type === TYPE_AUTRE && (
+                      <span className="block text-[12px] text-muted mt-[1px]">
+                        {lectures.has(e.id) ? "Capsela lit le nom…" : `Tenue : ${occasionShortLabel(occasionDeLEvenement(e) ?? "quotidien")}`}
+                      </span>
+                    )}
                     {enCours && <span className="block text-[11px] text-terracotta-deep mt-[3px]">En cours de modification</span>}
                   </span>
                   <button
