@@ -1384,10 +1384,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
    * planifiée, pour ne pas revenir aussitôt. null hors séjour ou sans autre look de cette occasion : « Autre tenue » reprend alors son
    * tirage habituel, avec la même occasion, dans les seules pièces de la valise.
    */
-  const versLookDeValise = (s: AppState): AppState | null => {
+  const versLookDeValise = (s: AppState, dejaVues?: ReadonlySet<string>): AppState | null => {
     const v = valiseRef.current;
+    // Les looks déjà montrés pendant cette session sont passés (22/10/2026) : quand tous l'ont été, « Autre tenue » compose de nouvelles
+    // tenues dans les pièces de la valise (regenOutfit) avant de revenir à eux.
+    const resolution = [...s.items, ...vestiaireRef.current];
+    const looks = v && dejaVues ? v.looks.filter((l) => !dejaVues.has(clePrincipale(l.ids, resolution))) : v?.looks;
     // L'occasion de la tenue affichée est gardée (22/10/2026) : seuls les looks qui la servent sont parcourus.
-    const suivant = v ? lookSuivantConforme(v.looks, s.outfit, s.occasion) : null;
+    const suivant = looks ? lookSuivantConforme(looks, s.outfit, s.occasion) : null;
     if (!suivant) return null;
     return {
       ...s,
@@ -2862,9 +2866,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // (météo, occasion, formalité, R-B*) ne bougent pas.
     regenOutfit: () =>
       setState((s) => {
-        const deLaValise = versLookDeValise(s);
-        if (deLaValise) return deLaValise;
         const resolution = [...s.items, ...vestiaireRef.current];
+        const quittee = clePrincipale(s.outfit, resolution);
+        const avecQuittee = (st: AppState): AppState => ({ ...st, tenuesVues: quittee ? [...s.tenuesVues, quittee].slice(-30) : s.tenuesVues });
+        const deLaValise = versLookDeValise(s, new Set([...s.tenuesVues, quittee]));
+        if (deLaValise) return avecQuittee(deLaValise);
         const jour = jourLocal();
         const evitees = new Set([
           ...s.tenuesVues,
@@ -2873,7 +2879,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             .map((a) => clePrincipale(a.pieceIds, resolution)),
         ]);
         const idsDe = (st: AppState) => st.outfit;
-        const premier = choisirVariation(() => regen(s), idsDe, s.outfit, evitees, resolution);
+        // Pendant un séjour, le vivier est petit (les pièces de la valise) : plus d'essais avant de conclure qu'il n'a rien de nouveau.
+        const essais = valiseRef.current ? 40 : 12;
+        const premier = choisirVariation(() => regen(s), idsDe, s.outfit, evitees, resolution, essais);
         let choix = premier.choix;
         if (!premier.substantielle) {
           const quittees = new Set(piecesPrincipales(s.outfit, resolution));
@@ -2884,12 +2892,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             idsDe,
             s.outfit,
             evitees,
-            resolution
+            resolution,
+            essais
           );
           if (secours.substantielle) choix = secours.choix;
+          else if (valiseRef.current) {
+            // Pendant un séjour : une tenue jamais vue, même proche de l'actuelle, plutôt qu'un look déjà montré ; à défaut seulement, on
+            // revient aux looks de la valise.
+            const cleDe = (st: AppState) => clePrincipale(st.outfit, resolution);
+            const jamaisVue = [premier.choix, secours.choix].find((st) => cleDe(st) !== quittee && !evitees.has(cleDe(st)));
+            if (jamaisVue) choix = jamaisVue;
+            else {
+              const retourAuxLooks = versLookDeValise(s);
+              if (retourAuxLooks) return avecQuittee(retourAuxLooks);
+            }
+          }
         }
-        const quittee = clePrincipale(s.outfit, resolution);
-        return { ...choix, tenuesVues: quittee ? [...s.tenuesVues, quittee].slice(-30) : s.tenuesVues };
+        return avecQuittee(choix);
       }),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
@@ -3037,8 +3056,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         : setState((s) => ({ ...s, planARouvrir: t, planRetour: depuis, planJour: null, screen: "planifier" })),
     // Pas une « autre tenue » au sens du quota : on revient à la proposition
     // du jour, avec l'occasion de « Mon rythme ». regen écarte le plan.
+    // Pendant un séjour, le look de valise quitté compte comme vu (22/10/2026) : « Autre tenue » ne le reproposera qu'après les autres.
     voirAutreProposition: () =>
-      setState((s) => (s.planAppliqueId ? (versLookDeValise(s) ?? regen(withDefaultOccasion({ ...s, occasionManual: false }))) : s)),
+      setState((s) => {
+        if (!s.planAppliqueId) return s;
+        const quittee = clePrincipale(s.outfit, [...s.items, ...vestiaireRef.current]);
+        const suivant = versLookDeValise(s, new Set([...s.tenuesVues, quittee])) ?? regen(withDefaultOccasion({ ...s, occasionManual: false }));
+        return { ...suivant, tenuesVues: quittee ? [...s.tenuesVues, quittee].slice(-30) : s.tenuesVues };
+      }),
     planifierLeJour: (decalage) =>
       setState((s) => ({ ...s, planJour: decalage, planRetour: "tenues", planComposition: null, screen: "planifier" })),
     oublierPlanJour: () => setState((s) => (s.planJour != null ? { ...s, planJour: null } : s)),

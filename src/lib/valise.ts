@@ -377,6 +377,8 @@ interface Candidat {
 
 /** Tirages par situation : le moteur est aléatoire, plusieurs tirages font apparaître les combinaisons réelles. */
 export const TIRAGES_PAR_SITUATION = 10;
+/** Étape 4 de composerValise : au plus deux pièces nouvelles par look ajouté, un look pour deux jours. ARBITRAGE ÉDITORIAL du 22/10/2026. */
+export const VARIETE_PIECES_MAX = 2;
 
 function tirer(pool: Item[], situations: SituationValise[], generer: Generateur, tirages: number): Map<string, Candidat> {
   const candidats = new Map<string, Candidat>();
@@ -465,6 +467,8 @@ export function looksDeLaValise(
  *    moins un). Au-delà, seulement si elle en rapporte au moins deux par
  *    pièce — « plus de looks, moins de pièces ». La capacité est un plafond,
  *    pas un objectif : une valise légère qui couvre tout est une bonne valise.
+ * 4. VARIER (22/10/2026). Une occasion de plusieurs jours reçoit des looks jusqu'à un look pour deux jours, chacun pour au plus
+ *    deux pièces nouvelles et dans la capacité.
  *
  * Seuils (un look par jour, deux looks par pièce) : ARBITRAGE ÉDITORIAL du
  * 27/09/2026, à revoir sur des dressings réels.
@@ -474,7 +478,9 @@ export function composerValise(
   situations: SituationValise[],
   capacite: number,
   generer: Generateur,
-  tirages = TIRAGES_PAR_SITUATION
+  tirages = TIRAGES_PAR_SITUATION,
+  /** Couture d'audit (22/10/2026) : `sansVariete` reproduit la composition d'avant l'étape 4. La production ne la renseigne jamais. */
+  leviers?: { sansVariete?: boolean }
 ): ResultatValise {
   const candidats = [...tirer(dressing, situations, generer, tirages).values()];
   const sac = new Set<number>();
@@ -544,6 +550,40 @@ export function composerValise(
     }
     if (!meilleur || ratio < seuil) break;
     meilleur.ids.forEach((id) => sac.add(id));
+  }
+
+  // 4. VARIER (22/10/2026, signalé : la même tenue du soir chaque soir). Une occasion qui revient sur plusieurs jours reçoit des looks
+  //    jusqu'à un look pour deux jours, chacun pour au plus VARIETE_PIECES_MAX pièces nouvelles et dans la capacité : le moins coûteux,
+  //    à égalité celui qui sert le plus de ses situations. L'étape 3 ne les ajoutait pas, car un look de plus pour deux pièces reste sous
+  //    son seuil de deux looks par pièce.
+  if (!leviers?.sansVariete) {
+    const occasions = [...new Set(situations.map((s) => s.occasion))];
+    for (const occ of occasions) {
+      const siennes = situations.flatMap((s, i) => (s.occasion === occ ? [i] : []));
+      const jours = new Set(siennes.flatMap((i) => situations[i].jours));
+      if (jours.size < 2) continue;
+      const servent = (c: Candidat) => siennes.some((i) => c.situations.has(i));
+      // Un look pour deux jours au plus : la cible de l'occasion. Une occasion sans aucun look n'est pas l'affaire de cette étape.
+      const cible = Math.ceil(jours.size / 2);
+      for (;;) {
+        const nb = looksDans(sac).filter(servent).length;
+        if (nb === 0 || nb >= cible) break;
+        let meilleur: Candidat | null = null;
+        let score: [number, number] = [Infinity, -1];
+        for (const c of candidats) {
+          if (!servent(c) || contenu(c.ids, sac)) continue;
+          const n = nouvelles(c.ids, sac);
+          if (n > VARIETE_PIECES_MAX || volumeDuSac(sac, poids) + volumeNouveau(c.ids, sac, poids) > capacite) continue;
+          const gain = siennes.filter((i) => c.situations.has(i)).length;
+          if (n < score[0] || (n === score[0] && gain > score[1])) {
+            meilleur = c;
+            score = [n, gain];
+          }
+        }
+        if (!meilleur) break;
+        meilleur.ids.forEach((id) => sac.add(id));
+      }
+    }
   }
 
   // Une pièce qui ne figure dans aucun look final (un accessoire tiré avec
