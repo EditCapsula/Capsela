@@ -45,7 +45,7 @@ describe("lireMarkdown", () => {
   });
 });
 
-describe("les six textes de docs/legal", () => {
+describe("les sept textes de docs/legal", () => {
   for (const { slug, titre } of DOCUMENTS_LEGAUX) {
     it(`${slug} : se lit en blocs, avec un titre`, () => {
       const source = readFileSync(path.join(process.cwd(), "docs", "legal", `${slug}.md`), "utf8");
@@ -56,7 +56,7 @@ describe("les six textes de docs/legal", () => {
     });
   }
   it("slugs et URL publiques", () => {
-    expect(SLUGS_LEGAUX).toEqual(["mentions-legales", "confidentialite", "cgu", "droits-rgpd", "cookies", "cgv"]);
+    expect(SLUGS_LEGAUX).toEqual(["mentions-legales", "confidentialite", "cgu", "droits-rgpd", "cookies", "cgv", "suppression-compte"]);
     expect(urlLegale("cgu")).toBe("/legal/cgu");
   });
   it("un texte à champs vides est annoncé provisoire", () => {

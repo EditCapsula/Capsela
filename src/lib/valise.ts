@@ -1,11 +1,11 @@
 import { previsionPour, type Prevision } from "./prevision";
 import { elementProgramme, filtrerParContrainte, type Contrainte, type ItemProgramme } from "./programmeValise";
-import { CHALEUR_HORS_SAISON, saisonCalendairePour, weatherForDay } from "./capsule";
+import { CHALEUR_HORS_SAISON, saisonCalendairePour, saisonCapsuleDuJour, weatherForDay } from "./capsule";
 import type { Weather } from "./data";
 import type { ColorimetrieMoteur } from "./colorimetrieMoteur";
 import { candidatsDeRemplacement, categoriesManquantes, clePrincipale, generateOutfitWithFallback } from "./logic";
 import { composeWardrobePool } from "./selectors";
-import type { CategoryKey, Item, OccasionKey, ShoeType } from "./types";
+import type { CapsuleSeason, CategoryKey, Item, OccasionKey, ShoeType } from "./types";
 
 /*
  * PRÉPARER SA VALISE — module pur (lot 1, 27/09/2026, docs/valise.md).
@@ -377,6 +377,8 @@ interface Candidat {
 
 /** Tirages par situation : le moteur est aléatoire, plusieurs tirages font apparaître les combinaisons réelles. */
 export const TIRAGES_PAR_SITUATION = 10;
+/** Étape 4 de composerValise : au plus deux pièces nouvelles par look ajouté, un look pour deux jours. ARBITRAGE ÉDITORIAL du 22/10/2026. */
+export const VARIETE_PIECES_MAX = 2;
 
 function tirer(pool: Item[], situations: SituationValise[], generer: Generateur, tirages: number): Map<string, Candidat> {
   const candidats = new Map<string, Candidat>();
@@ -465,6 +467,8 @@ export function looksDeLaValise(
  *    moins un). Au-delà, seulement si elle en rapporte au moins deux par
  *    pièce — « plus de looks, moins de pièces ». La capacité est un plafond,
  *    pas un objectif : une valise légère qui couvre tout est une bonne valise.
+ * 4. VARIER (22/10/2026). Une occasion de plusieurs jours reçoit des looks jusqu'à un look pour deux jours, chacun pour au plus
+ *    deux pièces nouvelles et dans la capacité.
  *
  * Seuils (un look par jour, deux looks par pièce) : ARBITRAGE ÉDITORIAL du
  * 27/09/2026, à revoir sur des dressings réels.
@@ -474,7 +478,9 @@ export function composerValise(
   situations: SituationValise[],
   capacite: number,
   generer: Generateur,
-  tirages = TIRAGES_PAR_SITUATION
+  tirages = TIRAGES_PAR_SITUATION,
+  /** Couture d'audit (22/10/2026) : `sansVariete` reproduit la composition d'avant l'étape 4. La production ne la renseigne jamais. */
+  leviers?: { sansVariete?: boolean }
 ): ResultatValise {
   const candidats = [...tirer(dressing, situations, generer, tirages).values()];
   const sac = new Set<number>();
@@ -544,6 +550,40 @@ export function composerValise(
     }
     if (!meilleur || ratio < seuil) break;
     meilleur.ids.forEach((id) => sac.add(id));
+  }
+
+  // 4. VARIER (22/10/2026, signalé : la même tenue du soir chaque soir). Une occasion qui revient sur plusieurs jours reçoit des looks
+  //    jusqu'à un look pour deux jours, chacun pour au plus VARIETE_PIECES_MAX pièces nouvelles et dans la capacité : le moins coûteux,
+  //    à égalité celui qui sert le plus de ses situations. L'étape 3 ne les ajoutait pas, car un look de plus pour deux pièces reste sous
+  //    son seuil de deux looks par pièce.
+  if (!leviers?.sansVariete) {
+    const occasions = [...new Set(situations.map((s) => s.occasion))];
+    for (const occ of occasions) {
+      const siennes = situations.flatMap((s, i) => (s.occasion === occ ? [i] : []));
+      const jours = new Set(siennes.flatMap((i) => situations[i].jours));
+      if (jours.size < 2) continue;
+      const servent = (c: Candidat) => siennes.some((i) => c.situations.has(i));
+      // Un look pour deux jours au plus : la cible de l'occasion. Une occasion sans aucun look n'est pas l'affaire de cette étape.
+      const cible = Math.ceil(jours.size / 2);
+      for (;;) {
+        const nb = looksDans(sac).filter(servent).length;
+        if (nb === 0 || nb >= cible) break;
+        let meilleur: Candidat | null = null;
+        let score: [number, number] = [Infinity, -1];
+        for (const c of candidats) {
+          if (!servent(c) || contenu(c.ids, sac)) continue;
+          const n = nouvelles(c.ids, sac);
+          if (n > VARIETE_PIECES_MAX || volumeDuSac(sac, poids) + volumeNouveau(c.ids, sac, poids) > capacite) continue;
+          const gain = siennes.filter((i) => c.situations.has(i)).length;
+          if (n < score[0] || (n === score[0] && gain > score[1])) {
+            meilleur = c;
+            score = [n, gain];
+          }
+        }
+        if (!meilleur) break;
+        meilleur.ids.forEach((id) => sac.add(id));
+      }
+    }
   }
 
   // Une pièce qui ne figure dans aucun look final (un accessoire tiré avec
@@ -931,4 +971,36 @@ export function pretPourUneValise(dressing: Item[]): PretPourValise {
   const manquePieces = Math.max(0, MINIMUM_PIECES_VALISE - dressing.length);
   const manqueBase = categoriesManquantes(dressing);
   return { pret: manquePieces === 0 && manqueBase.length === 0, manquePieces, manqueBase };
+}
+
+/**
+ * LA CAPSULE DU SÉJOUR (22/10/2026, demandé : « lorsque tu identifies que la température est élevée il faut que tu en tiennes compte et
+ * que tu pioches dans les bonnes capsules »). La valise se complétait avec la capsule de la tenue du jour, bâtie sur la météo d'AUJOURD'HUI
+ * chez soi : une plage à 30° préparée un jour d'automne à 14° recevait des pièces d'automne. Désormais une capsule par saison que les
+ * situations du séjour appellent — la saison de leur météo, bornée par le calendrier sous la vraie chaleur (saisonCapsuleDuJour, la règle
+ * de la tenue du jour) —, réunies sans doublon. Le moteur trie ensuite chaque situation selon sa propre météo, comme avant.
+ */
+export function capsuleDuSejour(
+  situations: readonly SituationValise[],
+  construire: (meteo: Weather, saison: CapsuleSeason) => Item[]
+): Item[] {
+  const parSaison = new Map<CapsuleSeason, Weather>();
+  for (const s of situations) {
+    const jour = s.jours[0];
+    if (!jour) continue;
+    const saison = saisonCapsuleDuJour(s.meteo.temp, saisonCalendairePour(dateDe(jour)));
+    const deja = parSaison.get(saison);
+    // Pour une même saison, la situation la plus chaude décide de la météo de référence : c'est elle que la capsule doit pouvoir habiller.
+    if (!deja || s.meteo.temp > deja.temp) parSaison.set(saison, s.meteo);
+  }
+  const vues = new Set<number>();
+  const out: Item[] = [];
+  for (const [saison, meteo] of parSaison) {
+    for (const it of construire(meteo, saison)) {
+      if (vues.has(it.id)) continue;
+      vues.add(it.id);
+      out.push(it);
+    }
+  }
+  return out;
 }

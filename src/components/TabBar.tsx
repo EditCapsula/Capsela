@@ -1,5 +1,6 @@
 "use client";
 
+import { oublierContexte } from "@/lib/memoireEcrans";
 import { useCapsela } from "@/lib/store";
 import type { Screen } from "@/lib/types";
 
@@ -158,7 +159,11 @@ export default function TabBar() {
           (tab.screen === "planifier" && state.screen === "calendrier") ||
           (tab.screen === "history" && (state.screen === "avisTous" || state.screen === "avisEnregistre")) ||
           ongletDOrigine(state) === tab.screen;
-        const onClick = () => tab.go(actions);
+        // Un onglet ouvre son écran à neuf (memoireEcrans.ts) : seul un retour retrouve le contexte gardé.
+        const onClick = () => {
+          oublierContexte(tab.screen);
+          tab.go(actions);
+        };
         return (
           <button
             key={tab.screen}

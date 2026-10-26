@@ -1,5 +1,6 @@
 "use client";
 
+import { oublierContexte } from "./memoireEcrans";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
 import { isSupabaseConfigured } from "./supabase";
@@ -7,7 +8,7 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import type { Humeur } from "./humeur";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
-import { estPlanValise, looksValiseDuJour, lookSuivant, piecesDeLaValise, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
+import { estPlanValise, looksValiseDuJour, lookSuivantConforme, piecesDeLaValise, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
 import { previsionPour, type MeteoMoment, type MomentJournee, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
 import { clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
@@ -1190,13 +1191,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     const v = valiseDuJour(state.valises, jourConsulteIso);
     return v ? looksValiseDuJour(v, jourConsulteIso, [...state.items, ...vestiairePool]) : null;
   }, [state.valises, jourConsulteIso, state.items, vestiairePool]);
-  const capsuleGeneration = useMemo(() => (valiseConsultee ? [] : defaultCapsule), [valiseConsultee, defaultCapsule]);
+  // LA CAPSULE DU JOUR CONSULTÉ (22/10/2026, demandé : « pioche dans les bonnes capsules » quand il fait chaud) : `defaultCapsule` est
+  // bâtie sur la météo d'AUJOURD'HUI ; la tenue d'un autre jour reçoit la capsule de SA météo et de SA saison (saisonCapsuleDuJour),
+  // comme Planifier. Aujourd'hui, c'est la même capsule.
+  const capsuleDuJourConsulte = useMemo(
+    () =>
+      state.jourDecalage === 0
+        ? defaultCapsule
+        : computeDefaultCapsule(profile, meteoDuJour, state.suggestedExcluded, saisonCapsuleDuJour(meteoDuJour.temp, saisonCalendairePour(dateConsultee)), vestiairePool),
+    [state.jourDecalage, defaultCapsule, profile, meteoDuJour, state.suggestedExcluded, dateConsultee, vestiairePool]
+  );
+  const capsuleGeneration = useMemo(() => (valiseConsultee ? [] : capsuleDuJourConsulte), [valiseConsultee, capsuleDuJourConsulte]);
   const wardrobePool = useMemo(
     () =>
       valiseConsultee
         ? composeWardrobePool(piecesDeLaValise(valiseConsultee.valise, [...state.items, ...vestiairePool]), [], CAT_KEYS)
-        : composeWardrobePool(state.items, defaultCapsule, CAT_KEYS),
-    [valiseConsultee, state.items, vestiairePool, defaultCapsule, CAT_KEYS]
+        : composeWardrobePool(state.items, capsuleDuJourConsulte, CAT_KEYS),
+    [valiseConsultee, state.items, vestiairePool, capsuleDuJourConsulte, CAT_KEYS]
   );
 
   const poolRef = useRef(wardrobePool);
@@ -1369,17 +1380,22 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
   /**
    * « AUTRE TENUE » PENDANT UN SÉJOUR (20/10/2026, valiseDuJour.ts) : le look suivant de la valise, complet et composé pour ce voyage,
-   * avec son occasion. Le look de valise affiché est écarté comme une tenue planifiée, pour ne pas revenir aussitôt. null hors séjour
-   * ou sans autre look : « Autre tenue » reprend alors son tirage habituel, dans les seules pièces de la valise.
+   * DANS L'OCCASION DE LA TENUE AFFICHÉE (22/10/2026, lookSuivantConforme). Le look de valise affiché est écarté comme une tenue
+   * planifiée, pour ne pas revenir aussitôt. null hors séjour ou sans autre look de cette occasion : « Autre tenue » reprend alors son
+   * tirage habituel, avec la même occasion, dans les seules pièces de la valise.
    */
-  const versLookDeValise = (s: AppState): AppState | null => {
+  const versLookDeValise = (s: AppState, dejaVues?: ReadonlySet<string>): AppState | null => {
     const v = valiseRef.current;
-    const suivant = v ? lookSuivant(v.looks, s.outfit) : null;
+    // Les looks déjà montrés pendant cette session sont passés (22/10/2026) : quand tous l'ont été, « Autre tenue » compose de nouvelles
+    // tenues dans les pièces de la valise (regenOutfit) avant de revenir à eux.
+    const resolution = [...s.items, ...vestiaireRef.current];
+    const looks = v && dejaVues ? v.looks.filter((l) => !dejaVues.has(clePrincipale(l.ids, resolution))) : v?.looks;
+    // L'occasion de la tenue affichée est gardée (22/10/2026) : seuls les looks qui la servent sont parcourus.
+    const suivant = looks ? lookSuivantConforme(looks, s.outfit, s.occasion) : null;
     if (!suivant) return null;
     return {
       ...s,
       outfit: [...suivant.ids],
-      occasion: suivant.occasion,
       occasionManual: false,
       outfitMissingCats: [],
       outfitFormalityDowngraded: false,
@@ -1775,7 +1791,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     fermerFicheEnFeuille: () => setState((s) => (s.ficheEnFeuille ? { ...s, ficheEnFeuille: null } : s)),
     fermerApercuPiece: () => setState((s) => (s.pieceApercu == null ? s : { ...s, pieceApercu: null })),
     goWardrobePieces: (filtre) => setState((s) => ({ ...s, filtrePieces: filtre ?? null, screen: "wardrobe" })),
-    goLooks: () => go("looks"),
+    // Ouvrir Mes looks depuis le Dressing repart à neuf ; seul le retour du détail d'un look retrouve le filtre et le défilement.
+    goLooks: () => {
+      oublierContexte("looks");
+      go("looks");
+    },
     // LE RETOUR DU PROFIL NE MÉMORISE JAMAIS UN DE SES SOUS-ÉCRANS (25/09).
     // Avant : revenir de « Modifier » au profil enregistrait « Modifier »
     // comme écran de retour, et le chevron du profil y renvoyait — profil →
@@ -2846,9 +2866,11 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // (météo, occasion, formalité, R-B*) ne bougent pas.
     regenOutfit: () =>
       setState((s) => {
-        const deLaValise = versLookDeValise(s);
-        if (deLaValise) return deLaValise;
         const resolution = [...s.items, ...vestiaireRef.current];
+        const quittee = clePrincipale(s.outfit, resolution);
+        const avecQuittee = (st: AppState): AppState => ({ ...st, tenuesVues: quittee ? [...s.tenuesVues, quittee].slice(-30) : s.tenuesVues });
+        const deLaValise = versLookDeValise(s, new Set([...s.tenuesVues, quittee]));
+        if (deLaValise) return avecQuittee(deLaValise);
         const jour = jourLocal();
         const evitees = new Set([
           ...s.tenuesVues,
@@ -2857,7 +2879,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             .map((a) => clePrincipale(a.pieceIds, resolution)),
         ]);
         const idsDe = (st: AppState) => st.outfit;
-        const premier = choisirVariation(() => regen(s), idsDe, s.outfit, evitees, resolution);
+        // Pendant un séjour, le vivier est petit (les pièces de la valise) : plus d'essais avant de conclure qu'il n'a rien de nouveau.
+        const essais = valiseRef.current ? 40 : 12;
+        const premier = choisirVariation(() => regen(s), idsDe, s.outfit, evitees, resolution, essais);
         let choix = premier.choix;
         if (!premier.substantielle) {
           const quittees = new Set(piecesPrincipales(s.outfit, resolution));
@@ -2868,12 +2892,23 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
             idsDe,
             s.outfit,
             evitees,
-            resolution
+            resolution,
+            essais
           );
           if (secours.substantielle) choix = secours.choix;
+          else if (valiseRef.current) {
+            // Pendant un séjour : une tenue jamais vue, même proche de l'actuelle, plutôt qu'un look déjà montré ; à défaut seulement, on
+            // revient aux looks de la valise.
+            const cleDe = (st: AppState) => clePrincipale(st.outfit, resolution);
+            const jamaisVue = [premier.choix, secours.choix].find((st) => cleDe(st) !== quittee && !evitees.has(cleDe(st)));
+            if (jamaisVue) choix = jamaisVue;
+            else {
+              const retourAuxLooks = versLookDeValise(s);
+              if (retourAuxLooks) return avecQuittee(retourAuxLooks);
+            }
+          }
         }
-        const quittee = clePrincipale(s.outfit, resolution);
-        return { ...choix, tenuesVues: quittee ? [...s.tenuesVues, quittee].slice(-30) : s.tenuesVues };
+        return avecQuittee(choix);
       }),
     dismissOutfitSuggestion: (key) =>
       setState((s) => ({ ...s, dismissedSuggestions: [...s.dismissedSuggestions, key] })),
@@ -3021,8 +3056,14 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
         : setState((s) => ({ ...s, planARouvrir: t, planRetour: depuis, planJour: null, screen: "planifier" })),
     // Pas une « autre tenue » au sens du quota : on revient à la proposition
     // du jour, avec l'occasion de « Mon rythme ». regen écarte le plan.
+    // Pendant un séjour, le look de valise quitté compte comme vu (22/10/2026) : « Autre tenue » ne le reproposera qu'après les autres.
     voirAutreProposition: () =>
-      setState((s) => (s.planAppliqueId ? (versLookDeValise(s) ?? regen(withDefaultOccasion({ ...s, occasionManual: false }))) : s)),
+      setState((s) => {
+        if (!s.planAppliqueId) return s;
+        const quittee = clePrincipale(s.outfit, [...s.items, ...vestiaireRef.current]);
+        const suivant = versLookDeValise(s, new Set([...s.tenuesVues, quittee])) ?? regen(withDefaultOccasion({ ...s, occasionManual: false }));
+        return { ...suivant, tenuesVues: quittee ? [...s.tenuesVues, quittee].slice(-30) : s.tenuesVues };
+      }),
     planifierLeJour: (decalage) =>
       setState((s) => ({ ...s, planJour: decalage, planRetour: "tenues", planComposition: null, screen: "planifier" })),
     oublierPlanJour: () => setState((s) => (s.planJour != null ? { ...s, planJour: null } : s)),

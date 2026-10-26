@@ -12,7 +12,7 @@ L'application et le site Capsela sont édités par :
 - SIREN / SIRET : [À COMPLÉTER]
 - Immatriculation : [À COMPLÉTER — RCS de …, ou Registre national des entreprises]
 - TVA intracommunautaire : [À COMPLÉTER, ou « non applicable, art. 293 B du CGI »]
-- Contact : [À COMPLÉTER — adresse e-mail]
+- Contact : capsela.angela@gmail.com
 
 Directrice de la publication : [À COMPLÉTER — nom et prénom].
 
@@ -38,8 +38,8 @@ générales d'utilisation, « Tes contenus »).
 ## Données personnelles
 
 Le traitement de tes données est décrit dans la Politique de
-confidentialité. Pour exercer tes droits : [À COMPLÉTER — adresse e-mail].
+confidentialité. Pour exercer tes droits : capsela.angela@gmail.com.
 
 ## Signaler un contenu
 
-Pour signaler un contenu illicite ou nous joindre : [À COMPLÉTER — adresse e-mail].
+Pour signaler un contenu illicite ou nous joindre : capsela.angela@gmail.com.

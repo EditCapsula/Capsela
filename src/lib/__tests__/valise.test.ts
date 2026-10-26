@@ -550,3 +550,32 @@ describe("completerChaussuresEtSac — règles du moteur (12/10/2026)", () => {
     expect(completerChaussuresEtSac([1, 2], [...tenue, sandales, sac], () => 0, { occasion: "quotidien", meteo: pluie })).toBeNull();
   });
 });
+
+describe("composerValise — étape 4, varier (22/10/2026)", () => {
+  const quatreJours = ["2026-10-16", "2026-10-17", "2026-10-18", "2026-10-19"].map((j) => meteo(j));
+  const situations = situationsDuSejour(["quotidien", "soiree"], quatreJours);
+  // La seconde tenue du soir demande deux pièces nouvelles pour un seul look : l'étape 3 (deux looks par pièce) ne l'ajoute pas.
+  const gen = () => fauxGenerateur({ quotidien: [[1, 4, 7], [2, 4, 7], [1, 5, 7], [2, 5, 7]], soiree: [[6, 8], [3, 9, 8]] });
+  const looksDuSoir = (r: { looks: { situations: number[] }[] }) => r.looks.filter((l) => l.situations.includes(1)).length;
+
+  it("une occasion de quatre jours servie par un seul look en reçoit un second (deux pièces nouvelles au plus)", () => {
+    expect(looksDuSoir(composerValise(DRESSING, situations, 22, gen(), undefined, { sansVariete: true }))).toBe(1);
+    const r = composerValise(DRESSING, situations, 22, gen());
+    expect(looksDuSoir(r)).toBe(2);
+    expect(r.pieceIds).toEqual(expect.arrayContaining([3, 9]));
+  });
+
+  it("jamais au-delà de la capacité", () => {
+    const avant = composerValise(DRESSING, situations, 22, gen(), undefined, { sansVariete: true });
+    // Une capacité juste égale au volume d'avant : le second look du soir n'y tient pas.
+    const volume = volumeDe(DRESSING.filter((p) => avant.pieceIds.includes(p.id)));
+    const r = composerValise(DRESSING, situations, volume, gen());
+    expect(looksDuSoir(r)).toBe(1);
+    expect(volumeDe(DRESSING.filter((p) => r.pieceIds.includes(p.id)))).toBeLessThanOrEqual(volume);
+  });
+
+  it("une occasion d'un seul jour n'est pas concernée", () => {
+    const unJour = situationsDuSejour(["quotidien", "soiree"], [meteo("2026-10-16")]);
+    expect(looksDuSoir(composerValise(DRESSING, unJour, 22, gen()))).toBe(1);
+  });
+});

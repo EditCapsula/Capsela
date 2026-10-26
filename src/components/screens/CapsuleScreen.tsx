@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useContexteRepris, useDefilementRepris, useGarderContexte } from "@/lib/memoireEcrans";
 import AppHeader from "@/components/AppHeader";
 import BottomSheet from "@/components/BottomSheet";
 import { CATLABEL, CATS } from "@/lib/data";
@@ -389,7 +390,13 @@ export default function CapsuleScreen() {
   // Catégories ouvertes ou repliées À LA MAIN, par rapport à leur état
   // d'arrivée (OUVERTES_PAR_DEFAUT) : un clic bascule. Sur place, aucune
   // navigation nouvelle ; l'état survit au changement de saison.
-  const [bascules, setBascules] = useState<CategoryKey[]>([]);
+  // AU RETOUR D'UNE FICHE (22/10/2026, memoireEcrans.ts) : les catégories dépliées ou repliées et le défilement d'avant.
+  type ContexteCapsule = { bascules: CategoryKey[]; defilement: number };
+  const repris = useContexteRepris<ContexteCapsule>("capsule");
+  const [bascules, setBascules] = useState<CategoryKey[]>(repris?.bascules ?? []);
+  const zone = useRef<HTMLDivElement | null>(null);
+  const defilement = useDefilementRepris(zone, repris?.defilement);
+  useGarderContexte("capsule", (): ContexteCapsule => ({ bascules, defilement: defilement.position.current }));
 
   const [fiche, setFiche] = useState<Fiche | null>(null);
   // Relue à chaque rendu plutôt que figée à l'ouverture : la génération de son
@@ -448,6 +455,8 @@ export default function CapsuleScreen() {
   return (
     <>
       <div
+        ref={zone}
+        onScroll={defilement.onScroll}
         className="scrollarea absolute inset-0 overflow-y-auto px-6 pt-[6px]"
         // Réserve la barre du bas ET le bouton principal qui flotte au-dessus.
         style={{ paddingBottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 92px)" }}

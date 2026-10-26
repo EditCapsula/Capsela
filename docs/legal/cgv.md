@@ -86,7 +86,7 @@ fourni reste dû (art. L221-25). [À VÉRIFIER — mécanique exacte avec le
 juriste, et en version A, articulation avec la politique de remboursement
 d'Apple et de Google.]
 
-Pour te rétracter : [À COMPLÉTER — adresse e-mail], ou le formulaire
+Pour te rétracter : capsela.angela@gmail.com, ou le formulaire
 ci-dessous.
 
 > Formulaire de rétractation — À l'attention de [éditeur, adresse, e-mail] :
@@ -105,7 +105,7 @@ e-mail].
 
 ## 8. Réclamations et médiation
 
-Pour toute réclamation : [À COMPLÉTER — adresse e-mail]. Si aucune solution
+Pour toute réclamation : capsela.angela@gmail.com. Si aucune solution
 n'est trouvée, tu peux saisir gratuitement le médiateur de la consommation :
 [À COMPLÉTER — nom, site, adresse]. Tu peux aussi utiliser la plateforme
 européenne de règlement en ligne des litiges.

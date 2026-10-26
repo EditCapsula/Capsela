@@ -30,7 +30,7 @@ techniques peuvent l'interrompre.
   ton compte Google.
 - Tu t'engages à donner une adresse e-mail valide et à garder ton mot de passe
   pour toi. Tout ce qui est fait depuis ton compte est réputé fait par toi.
-- Tu peux supprimer ton compte à tout moment : « Mon compte → Supprimer mon
+- Tu peux supprimer ton compte à tout moment : « Gérer mon compte → Supprimer mon
   compte ». La suppression est immédiate et définitive ; elle efface ton
   dressing, tes photos, ton historique et tes avis.
 
@@ -124,7 +124,7 @@ pas d'accord, tu peux supprimer ton compte.
 ## 12. Droit applicable et litiges
 
 Ces conditions sont soumises au droit français. En cas de litige, écris-nous
-d'abord à [À COMPLÉTER — adresse e-mail] : nous cherchons une solution
+d'abord à capsela.angela@gmail.com : nous cherchons une solution
 amiable. Tu peux aussi recourir gratuitement au médiateur de la
 consommation : [À COMPLÉTER — nom et coordonnées du médiateur]. Sinon,
 les tribunaux compétents sont ceux prévus par la loi.
