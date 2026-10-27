@@ -7,8 +7,8 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * mêmes comptes. Le site web (Vercel) n'est pas touché — `npm run build` reste le même ; seul `npm run mobile:sync` copie `out/`
  * dans les projets natifs. Doc : docs/applications-mobiles.md.
  *
- * `appId` est DÉFINITIF une fois l'app publiée : `app.capsela`, dérivé du domaine capsela.app (proposé, à valider avant le
- * premier envoi aux stores).
+ * `appId` est DÉFINITIF une fois l'app publiée : `app.capsela`, dérivé du domaine capsela.app — domaine acheté par la propriétaire,
+ * identifiant validé le 27/10/2026 avant le premier envoi aux stores.
  */
 const config: CapacitorConfig = {
   appId: "app.capsela",
