@@ -90,6 +90,19 @@ export const piecesDeLaValise = (v: ValiseGardee, pool: readonly Item[]): Item[]
   v.pieceIds.map((id) => pool.find((i) => i.id === id)).filter((i): i is Item => !!i);
 
 /**
+ * UNE VALISE QUI PEUT HABILLER (30/10/2026, signalé : « On prépare ta première tenue — ton dressing et ta capsule ne couvrent pas encore
+ * cette occasion » alors que le dressing est rempli). Pendant un séjour, la tenue du jour ne pioche que dans la valise : une valise sans
+ * haut avec bas, ni robe ou combinaison (des pièces retirées, des pièces disparues du dressing) laissait le moteur sans tenue possible,
+ * et l'accueil accusait le dressing. Même test que le moteur (hasStructuralOption, logic.ts). Sans cela, la tenue du jour revient au
+ * dressing et à la capsule, comme hors séjour.
+ */
+export function valisePeutHabiller(pieces: readonly Pick<Item, "cat">[]): boolean {
+  const haut = pieces.some((p) => p.cat === "haut");
+  const bas = pieces.some((p) => ["pantalon", "jean", "jupe", "short"].includes(p.cat));
+  return (haut && bas) || pieces.some((p) => p.cat === "robe" || p.cat === "combinaison");
+}
+
+/**
  * « AUTRE TENUE » PENDANT LE SÉJOUR (20/10/2026) : le look suivant de la valise, dans l'ordre de la valise, en revenant au début —
  * jamais la tenue affichée. Les looks de la valise sont complets et composés pour ce voyage ; tirer de nouvelles tenues dans ses seules
  * pièces pouvait rendre une tenue sans chaussures quand la météo du jour écartait celles de la valise. null : aucun autre look.

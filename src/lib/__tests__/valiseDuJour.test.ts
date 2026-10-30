@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estPlanValise, looksValiseDuJour, lookSuivant, lookSuivantConforme, piecesDeLaValise, valiseDuJour } from "../valiseDuJour";
+import { estPlanValise, looksValiseDuJour, lookSuivant, lookSuivantConforme, piecesDeLaValise, valiseDuJour, valisePeutHabiller } from "../valiseDuJour";
 import type { ValiseGardee } from "../valises";
 import type { Item } from "../types";
 
@@ -105,5 +105,14 @@ describe("« Autre tenue » garde l'occasion de la tenue affichée (22/10/2026)"
   it("chaque look de la valise porte toutes les occasions qu'il sert", () => {
     const v = valise({ looks: [{ ids: [5, 6, 4], situations: [1, 0], elargie: false }] });
     expect(looksValiseDuJour(v, "2026-10-26", pool).looks[0]).toMatchObject({ occasion: "soiree", occasions: ["soiree", "quotidien"] });
+  });
+});
+
+describe("valisePeutHabiller (30/10/2026)", () => {
+  it("haut et bas, ou robe, ou combinaison : oui ; sinon la tenue du jour revient au dressing", () => {
+    expect(valisePeutHabiller([piece(1, "haut"), piece(2, "pantalon"), piece(3, "chaussures")])).toBe(true);
+    expect(valisePeutHabiller([piece(5, "robe")])).toBe(true);
+    expect(valisePeutHabiller([piece(3, "chaussures"), piece(4, "sac"), piece(1, "haut")])).toBe(false);
+    expect(valisePeutHabiller([])).toBe(false);
   });
 });

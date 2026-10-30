@@ -8,7 +8,7 @@ import { CATALOG, type CatalogItem } from "./catalog";
 import type { Humeur } from "./humeur";
 import { computeDefaultCapsule, currentSeasonKey, saisonCalendairePour, saisonCapsuleDuJour, CHALEUR_HORS_SAISON, weatherForDay } from "./capsule";
 import { borneJour, dateDuJour, occasionParDefaut } from "./jourConsulte";
-import { estPlanValise, looksValiseDuJour, lookSuivantConforme, piecesDeLaValise, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
+import { estPlanValise, looksValiseDuJour, lookSuivantConforme, piecesDeLaValise, valisePeutHabiller, valiseDuJour, PREFIXE_PLAN_VALISE, type ValiseDuJourConsulte } from "./valiseDuJour";
 import { previsionPour, type MeteoMoment, type MomentJournee, type Prevision } from "./prevision";
 import { fetchTenuesPlanifiees, plansDuJour, type TenuePlanifiee } from "./planifier";
 import { clePlanApplique, doitAppliquerPlan, planPourTenueDuJour, sousChoixDuPlan } from "./planDuJour";
@@ -1189,7 +1189,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
   const jourConsulteIso = jourLocal(dateDuJour(state.jourDecalage));
   const valiseConsultee: ValiseDuJourConsulte | null = useMemo(() => {
     const v = valiseDuJour(state.valises, jourConsulteIso);
-    return v ? looksValiseDuJour(v, jourConsulteIso, [...state.items, ...vestiairePool]) : null;
+    const pool = [...state.items, ...vestiairePool];
+    // Une valise qui ne peut composer aucune tenue ne prend pas la main sur la tenue du jour (valisePeutHabiller).
+    return v && valisePeutHabiller(piecesDeLaValise(v, pool)) ? looksValiseDuJour(v, jourConsulteIso, pool) : null;
   }, [state.valises, jourConsulteIso, state.items, vestiairePool]);
   // LA CAPSULE DU JOUR CONSULTÉ (22/10/2026, demandé : « pioche dans les bonnes capsules » quand il fait chaud) : `defaultCapsule` est
   // bâtie sur la météo d'AUJOURD'HUI ; la tenue d'un autre jour reçoit la capsule de SA météo et de SA saison (saisonCapsuleDuJour),

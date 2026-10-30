@@ -29,7 +29,7 @@ import { complementTenue, momentMessage, quandPhrase } from "@/lib/jourConsulte"
 import { BADGE_RECOMMANDE, BADGE_REGISTRE, outfitBadges } from "@/lib/outfitBadges";
 import { emptyStateCopy } from "@/lib/emptyStateCopy";
 import { missingSuggestionText, occasionElargieText } from "@/lib/outfitCopy";
-import { paletteHexes, styleConfigFor, type Gender, type StyleId } from "@/lib/profile";
+import { paletteHexes, styleConfigFor, VISUELS_ETAPE_STYLE_FEMME, type Gender, type StyleId } from "@/lib/profile";
 import { colorimetrieMoteur } from "@/lib/colorimetrieMoteur";
 import { findCompatibleStyles } from "@/lib/styleCoverage";
 import type { Item } from "@/lib/types";
@@ -139,6 +139,8 @@ function ExploreStyleCard({
   onClick: () => void;
 }) {
   const cfg = styleConfigFor(gender)[id];
+  // Les mêmes visuels que l'étape Style de l'onboarding (30/10/2026, demandé) : les flat lays côté femme ; côté homme, ceux du style.
+  const visuel = gender !== "homme" ? VISUELS_ETAPE_STYLE_FEMME[id] : cfg.asset;
   const [failed, setFailed] = useState(false);
   return (
     <button
@@ -147,9 +149,9 @@ function ExploreStyleCard({
       style={{ background: selected ? "var(--color-selected-bg)" : "var(--color-card)" }}
     >
       <div className="w-full aspect-[4/5] relative" style={{ background: "var(--color-border)" }}>
-        {cfg.asset && !failed && (
+        {visuel && !failed && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={cfg.asset} alt="" onError={() => setFailed(true)} className="absolute inset-0 w-full h-full object-cover" />
+          <img src={visuel} alt="" onError={() => setFailed(true)} className="absolute inset-0 w-full h-full object-cover" />
         )}
         {selected && (
           <span className="absolute top-[7px] right-[7px] w-[19px] h-[19px] rounded-full bg-terracotta flex items-center justify-center">
