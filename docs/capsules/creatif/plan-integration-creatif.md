@@ -1,0 +1,125 @@
+# Plan d'intégration — style Créatif femme et homme
+
+Étape 1 de l'audit Créatif, 30/10/2026 : **proposition seulement**. Rien n'est exécuté avant ta validation explicite (« Ne passe pas à
+l'étape 2 sans validation explicite »). Aucun SQL de ce document n'a été lancé. Les étiquettes suivent la règle d'audit d'AGENTS.md :
+**DÉMONTRÉ**, **NON DÉMONTRÉ**, **ARBITRAGE ÉDITORIAL**.
+
+Sources : `audit-rapprochement-creatif.md`, `audit-couverture-creatif.md`, `pieces-manquantes-creatif.xlsx` (même dossier).
+
+## 1. Ce que l'audit établit
+
+| Constat | Statut |
+|---|---|
+| Aucun article de `vestiaire_universel` ne porte « Créatif » dans `styles` | DÉMONTRÉ (export du 30/10/2026) |
+| Équivalents exacts : 8 pièces de référence femme sur 151 (4 articles distincts), 33 homme sur 128 (28 articles distincts, dont 4 unisexes) | DÉMONTRÉ |
+| Bases potentielles (le type existe, sans le trait créatif) : 121 femme, 77 homme | DÉMONTRÉ, à arbitrer pièce par pièce |
+| Manquantes : 13 femme, 15 homme ; incompatibles (saison ou genre) : 9 femme, 3 homme | DÉMONTRÉ |
+| La capsule de référence ne couvre pas seule toutes les occasions : 22/32 femme, 16/32 homme ; 28/32 et 23/32 avec les pièces transversales | DÉMONTRÉ (critère : haut + bas ou pièce unique, + chaussures) |
+| Avec les seuls équivalents exacts, un profil Créatif femme n'aurait pas de style effectif | DÉMONTRÉ par le code, NON DÉMONTRÉ en exécution — cf. § 2 |
+
+## 2. La contrainte du moteur qui décide de tout
+
+`computeDefaultCapsule` (`src/lib/capsule.ts`) filtre le catalogue par style du profil, puis :
+
+```ts
+let curated = styles.length ? base.filter((it) => isSportEssential(it) || styles.some((st) => styleFit(it, st))) : base;
+if (curated.length < 18) curated = base;
+```
+
+Sous 18 articles du style (après les filtres genre, saison, température), la capsule **ignore le style** et repart de tout le catalogue.
+Pour Créatif, articles distincts disponibles par saison (même genre ; les unisexes s'y ajoutent) :
+
+| Genre | Saison | Exacts seuls | Exacts + bases potentielles validées |
+|---|---|---|---|
+| Femme | Printemps · Été · Automne · Hiver | 1 · 2 · 2 · 1 | 32 · 28 · 31 · 26 |
+| Homme | Printemps · Été · Automne · Hiver | 7 · 4 · 11 · 11 | 24 · 23 · 27 · 25 |
+
+Conséquence : étiqueter les seuls équivalents exacts ne suffit pas. Un style Créatif utile exige soit la validation d'une grande part des
+bases potentielles, soit la création des variantes créatives, soit les deux. Le seuil de 18 reste tel quel (ne pas modifier les règles de
+scoring sans justification) : c'est le catalogue qui doit le franchir. L'effet réel sur les capsules et les tenues est **NON DÉMONTRÉ**
+tant que l'audit d'exécution (§ 6) ne l'a pas mesuré.
+
+`styleFit` lit `styleTags` quand l'article en a (tous les articles du catalogue) ; la table de motifs `STYLE_FIT` ne sert qu'aux pièces
+sans étiquettes, c'est-à-dire celles du dressing. Il faut donc une entrée `Créatif` dans `STYLE_FIT` pour que les pièces réelles
+d'un profil Créatif soient reconnues.
+
+## 3. Décisions à prendre avant l'étape 2
+
+1. **Identifiant du style — ARBITRAGE ÉDITORIAL.** Un commentaire de `profile.ts` (20/08/2026) dit « jamais un 9e id » ; ta demande d'un
+   9e style femme le contredit. Proposition : un id `creatif` commun aux deux genres, libellé « Créatif » (femme) et « Créatif /
+   Artistique » (homme, libellé déjà employé par la référence homme). L'entrée homme `romantique`, aujourd'hui libellée « Créatif /
+   Artistique » et masquée, reprend un libellé neutre pour ne pas afficher deux fois le même nom. Un profil homme qui aurait `romantique`
+   enregistré se lit `creatif` à la lecture, sans réécriture en base (même principe que `normaliserOccasion`). Aucune contrainte en base
+   ne s'y oppose : `profiles.styles` est un `text[]` sans CHECK (migration 0001), `vestiaire_universel.styles` aussi (migration 0017).
+2. **Libellé catalogue** : « Créatif », ajouté à la colonne `styles` (texte séparé par des virgules), jamais en remplacement.
+3. **Bases potentielles — ARBITRAGE ÉDITORIAL, pièce par pièce.** Étiqueter « Créatif » une base unie (un « Pull col V » pour un « Pull
+   jacquard graphique ») dilue le style ; créer la variante l'enrichit mais coûte une fiche et une image. La feuille « Potentielles à
+   arbitrer » du classeur a une colonne « Décision », vide, à remplir ligne par ligne. Une décision prise sur une pièce ne vaut pas pour une autre
+   (règle d'audit, points 6 et 7).
+4. **Occasion « Vacances »** (7 pièces femme, Été) : absente de la taxonomie. La rattacher à « Voyage », ou retirer l'étiquette.
+5. **Trous de la référence** (`audit-couverture-creatif.md`, dernière section) : surtout des chaussures (Travail été, Cérémonie automne
+   femme ; Soirée homme) et des bas homme (Soirée, Cérémonie). À combler dans la référence avant d'en tirer les fiches.
+6. **Pièces unisexes** : #486 lunettes, #580 ceinture tressée, #756 sac crossbody, #926 écharpe oversize — les étiqueter Créatif pour
+   l'homme les fait aussi entrer dans les capsules Créatif femme. À accepter ou à exclure.
+
+## 4. Données — à montrer puis à lancer à la main (jamais par moi)
+
+Toutes les écritures sont des AJOUTS : aucun article supprimé, aucun identifiant remplacé, aucune image touchée, aucune autre colonne
+modifiée, aucun autre style retiré. Réversibles par l'opération inverse.
+
+**4.1 Équivalents exacts** (après décision 6 sur les unisexes) :
+
+```sql
+-- Ajoute « Créatif » aux styles des équivalents exacts, sans rien retirer. Idempotent : un article déjà étiqueté n'est pas touché.
+update vestiaire_universel
+set styles = case when coalesce(styles, '') = '' then 'Créatif' else styles || ', Créatif' end
+where id in (
+  710, 817, 973, 1063,                                                                    -- femme
+  504, 505, 506, 512, 521, 565, 574, 577, 609, 675, 709, 750, 752, 807, 813, 836, 846,    -- homme
+  851, 852, 901, 905, 910, 911, 957,
+  486, 580, 756, 926                                                                      -- unisexes (décision 6)
+)
+and coalesce(styles, '') not like '%Créatif%';
+```
+
+**4.2 Pièces transversales** (chaussures d'intérieur #481 et #520, baskets de sport #971 et #972) : même requête, mêmes garanties. Sans
+elles, Sport et Cocooning n'ont pas de chaussures Créatif (R-B13 : seules les chaussures d'intérieur sont admises en Cocooning).
+
+**4.3 Bases potentielles validées** : même requête sur la liste arrêtée à la décision 3.
+
+**4.4 Pièces à créer** (manquantes, incompatibles, variantes choisies) : des `insert` de nouvelles lignes, avec de nouveaux identifiants,
+renseignées depuis la référence (genre, catégorie, saisons, couleur dominante, matière, manches, occasions, `styles` = « Créatif » et
+les styles secondaires de la référence). Les visuels passent par la chaîne existante (`generate-catalog-image`), en `image_status`
+« missing » jusqu'à génération. Les colonnes que la référence ne renseigne pas (`hex`, `niveau_formalite`, `meteo_*`) sont signalées,
+pas devinées : à fixer à la main ou par la règle existante de l'import du catalogue.
+
+## 5. Application — code, après validation
+
+- `profile.ts` : `creatif` dans `STYLE_IDS`, `STYLE_ID_TO_CATALOG_LABEL` (`Créatif`), `STYLE_CONFIG` femme et homme (libellé, phrase,
+  visuel), `VISUELS_ETAPE_STYLE_FEMME`, `EXPOSED_STYLE_IDS` (femme : 9 ; homme : les 6 actuels + `creatif`), lecture `romantique` →
+  `creatif` côté homme (décision 1).
+- Visuels : déjà préparés à partir du visuel fourni (femme à gauche, homme à droite), recadrés en 900 × 1200 WebP, comme les autres
+  flat lays de l'étape Style.
+- `capsule.ts` : une entrée `Créatif` dans `STYLE_FIT`, pour les pièces du dressing (motifs à tirer des traits de la référence :
+  graphique, imprimé, color-block, asymétrique, sculptural…). Aucune règle de scoring modifiée.
+- `suggestionsAutresStyles.ts` (`STYLE_DU_LIBELLE`) et les écrans qui listent les styles : vérifiés pour le 9e style.
+- Tests : identifiants, libellés par genre, lecture `romantique` → `creatif` homme, `STYLE_FIT` Créatif.
+
+## 6. Mesure avant mise en production (règle d'audit)
+
+Un audit `scripts/creatif.audit.ts` (hors `npm test`), qui lit l'export CSV plutôt que Supabase, mesure dans **la même exécution, sur le
+même pool** :
+
+1. baseline : profils femme et homme sans Créatif ;
+2. profil Créatif avec les seuls équivalents exacts (4.1 + 4.2, simulés en mémoire) ;
+3. profil Créatif avec exacts + bases validées (4.3) ;
+4. profil Créatif avec les pièces à créer (4.4, simulées).
+
+Pour chacun, 4 saisons × 8 occasions : seuil de 18 franchi ou non, part de pièces Créatif dans la capsule, tenue complète obtenue par
+`generateOutfitWithFallback`, nombre de replis de formalité. Aucune écriture en production avant ce résultat ; toute mesure qui contredit
+une conclusion de ce document la rouvre (point 8).
+
+## 7. Préservé
+
+Aucune capsule d'un autre style n'est modifiée : l'ajout d'un libellé à `styles` n'en retire aucun, et le filtre de style d'un profil
+Minimaliste, Bohème… ne lit pas « Créatif ». Les huit styles existants, leurs visuels et leurs règles restent tels quels.
