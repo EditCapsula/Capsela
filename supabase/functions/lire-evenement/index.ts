@@ -6,16 +6,22 @@
 // l'occasion du type choisi.
 //
 // Déploiement : automatique au merge sur main (workflow « Déployer les fonctions Supabase »).
+//
+// Depuis le 30/10/2026, la même fonction propose aussi des IDÉES D'ACTIVITÉS pour une destination ({ destination } au lieu de { nom },
+// cf. _shared/ideesSejour.ts) : même protection, son propre plafond. Un échec donne { idees: [] } et l'app propose ses idées de repli.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
 import { authentifier, consommerQuota, estAppelantAdmin, jetonDepuisEntete, limiteDepuisEnv } from "../_shared/protection.ts";
 import { invite, nomPropre, occasionLue } from "../_shared/lectureEvenement.ts";
+import { destinationPropre, ideesLues, inviteIdees } from "../_shared/ideesSejour.ts";
 
 // Plafond de lectures par compte et par jour : quelques événements par valise suffisent. Modifiable par le secret
 // MAX_LECTURES_EVENEMENT_PER_USER_PER_DAY ; une valeur absente ou illisible ne retire jamais le plafond.
 const DEFAULT_DAILY_LIMIT_PER_USER = 60;
 const DEFAULT_MODEL = "gpt-4.1-mini";
+// Plafond d'idées par compte et par jour : une demande par destination (l'app garde la réponse). Secret MAX_IDEES_SEJOUR_PER_USER_PER_DAY.
+const DEFAULT_IDEES_LIMIT_PER_USER = 30;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,11 +48,46 @@ Deno.serve(async (req) => {
   if (!estAdmin && !utilisatrice) return json({ error: "Non authentifié." }, 401);
 
   let nom = "";
+  let destination = "";
   try {
-    nom = nomPropre((await req.json()).nom);
+    const corps = await req.json();
+    nom = nomPropre(corps.nom);
+    destination = destinationPropre(corps.destination);
   } catch {
     return json({ error: "nom manquant." }, 400);
   }
+
+  // LES IDÉES POUR UNE DESTINATION (30/10/2026).
+  if (destination) {
+    if (utilisatrice) {
+      const limite = limiteDepuisEnv(Deno.env.get("MAX_IDEES_SEJOUR_PER_USER_PER_DAY"), DEFAULT_IDEES_LIMIT_PER_USER);
+      const quota = await consommerQuota(admin, utilisatrice.id, "idees-sejour", limite);
+      if (quota === "limite") return json({ error: "Limite quotidienne atteinte." }, 429);
+      if (quota === "indisponible") return json({ error: "Service momentanément indisponible." }, 503);
+    }
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          store: false,
+          temperature: 0.4,
+          response_format: { type: "json_object" },
+          max_tokens: 900,
+          messages: [{ role: "user", content: inviteIdees(destination) }],
+        }),
+      });
+      if (!res.ok) throw new Error(`Échec appel OpenAI (${res.status})`);
+      const data = await res.json();
+      const contenu = data?.choices?.[0]?.message?.content;
+      return json({ idees: contenu ? ideesLues(JSON.parse(contenu)) : [] });
+    } catch (err) {
+      console.error(JSON.stringify({ fonction: "lire-evenement", mode: "idees", error: err instanceof Error ? err.message : "inconnue" }));
+      return json({ idees: [] });
+    }
+  }
+
   if (!nom) return json({ occasion: null });
 
   if (utilisatrice) {

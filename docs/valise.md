@@ -362,3 +362,13 @@ Brief « Refonte UX de l'écran Ma valise ». Aucune règle du moteur ni de la c
   - Vêtements et Indispensables ont chacun leur progression.
 - **En-tête** : la synthèse « durée · tenues · vêtements · indispensables », puis la taille et le remplissage de la valise.
 - **Retirer une pièce qui sert dans des tenues** passe par une feuille (`BottomSheet`). Elle nomme les créneaux concernés et propose « La remplacer », « La retirer quand même » ou « Annuler ». Une pièce qu'aucune tenue n'utilise se retire directement, comme avant.
+
+## L'étape Activités en une seule sélection (30/10/2026)
+
+Brief « Refonte UX de l'étape Activités ». L'étape 3 n'a plus deux sections (activités, puis événements datés avec jour, moment et nom) mais une seule sélection, « Qu'as-tu prévu à Marrakech ? » (`destinationAvecPreposition` : à, au, en, aux).
+
+- **Des idées selon la destination**, servies par la fonction `lire-evenement`, qui lisait déjà le nom d'un événement (`_shared/ideesSejour.ts`). Même protection, même clé, plafond propre (`MAX_IDEES_SEJOUR_PER_USER_PER_DAY`, 30 par défaut). Seul le nom de la destination part chez OpenAI. Chaque idée porte une famille (filtres de l'écran) et l'une des activités que le moteur connaît. Une réponse est gardée sur l'appareil par destination. Sans réponse (mode démo, hors ligne, quota, destination vague) : `IDEES_GENERIQUES`, les activités d'avant sous forme d'idées.
+- **Ses propres idées** : un champ, un geste, sans date, moment ni nom distinct. Un mariage s'ajoute comme une visite. La correspondance vers le moteur vient des mots (`activiteDuLibelle`), sinon de la lecture IA du libellé (`lireNomEvenement`). Un libellé qu'aucune activité ne décrit est gardé tel quel et ne change rien aux tenues.
+- **« Ton programme »** rassemble les choix, chacun retirable. « Tout effacer » passe par une feuille de confirmation.
+- **Le moteur ne change pas** : les choix (`ValiseGardee.choix`, dans `calcul`, aucune migration) se traduisent en `activites`, qui donnent le programme par `programmeDesActivites`, comme avant. Le libellé d'origine n'est jamais perdu. Plusieurs idées qui évoquent la même activité ne pèsent pas plus qu'une (les parts du séjour sont celles d'avant).
+- **Reprise** : une valise d'avant retrouve ses activités sous le libellé de l'idée qui les dit. Ses événements datés restent avec leur jour, figurent au programme et se retirent de la même façon.
