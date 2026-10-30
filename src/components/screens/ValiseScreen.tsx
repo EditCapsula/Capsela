@@ -76,6 +76,8 @@ import {
   evenementsDuSejour,
   libelleEvenement,
   situationsDesEvenements,
+  MOMENTS_EVENEMENT,
+  libelleMoment,
   type EvenementValise,
   type MomentEvenement,
 } from "@/lib/evenementsValise";
@@ -316,7 +318,6 @@ const G_CINTRE = svg(
   18
 );
 const G_ETINCELLE = svg(<path d="M12 3.5l1.7 5.3 5.3 1.7-5.3 1.7L12 17.5l-1.7-5.3L5 10.5l5.3-1.7z" {...trait} />, 18);
-const G_LISTE = svg(<path d="M9 7h11M9 12h11M9 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01" {...trait} strokeWidth={1.7} />, 18);
 const G_COCHE = (taille = 12, couleur = "currentColor") => svg(<path d="M5 12.5l4.5 4.5L19 7.5" {...trait} stroke={couleur} strokeWidth={2.2} />, taille);
 const G_CROIX = svg(<path d="M6 6l12 12M18 6L6 18" {...trait} strokeWidth={1.7} />, 14);
 const G_ECHANGE = svg(<path d="M7 7h11l-3-3M17 17H6l3 3" {...trait} />, 15);
@@ -365,10 +366,19 @@ function Surtitre({ children }: { children: React.ReactNode }) {
   return <div className="t-surtitre text-muted">{children}</div>;
 }
 
+/**
+ * Le trait d'union de Bodoni Moda est un filet : à 24 px, sa taille optique d'affichage l'amincit au point qu'il disparaît (« Qu'as tu »,
+ * constaté en rendu le 30/10/2026). Il garde la même police, avec la taille optique d'un texte courant, dont le filet reste visible.
+ */
+function avecTraitsDUnion(texte: string): React.ReactNode {
+  const morceaux = texte.split("-");
+  return morceaux.flatMap((m, i) => (i === 0 ? [m] : [<span key={i} style={{ fontVariationSettings: '"opsz" 10' }}>-</span>, m]));
+}
+
 function TitreEtape({ a, b }: { a: string; b: string }) {
   return (
     <div className="t-titre-ecran text-ink mt-[6px]" style={{ textWrap: "balance" }}>
-      {a} <span className="italic text-terracotta">{b}</span>
+      {avecTraitsDUnion(a)} <span className="italic text-terracotta">{avecTraitsDUnion(b)}</span>
     </div>
   );
 }
@@ -427,21 +437,30 @@ const GLYPHES_ACTIVITE: Record<ActiviteSejour, React.ReactNode> = {
   evenement: svg(<path d="M12 4l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5L4.8 9.3l5-.7z" {...trait} />, 18),
 };
 
+/** Le parcours compte trois étapes depuis le 30/10/2026 : ton séjour, ta valise, ce que tu as prévu (activités et événements ensemble). */
+const DERNIERE_ETAPE = 3;
+
+/**
+ * Les activités PROPOSÉES (30/10/2026) : toutes, sauf « Événement spécial », qui répartissait une cérémonie sur le séjour sans date —
+ * un mariage s'ajoute désormais comme un événement daté, juste en dessous. Elle reste dans ACTIVITES (une valise qui l'a gardée la
+ * retrouve, cochée, et peut la décocher) : les correspondances du programme ne changent pas.
+ */
+const ACTIVITES_PROPOSEES: readonly ActiviteSejour[] = ["plage", "ville", "nature", "randonnee", "detente", "soiree", "travail", "sport"];
+
+/**
+ * LES ÉTAPES DE LA PRÉPARATION, TELLES QU'ELLES ONT LIEU (30/10/2026) : trois traitements réels, dans leur ordre, chacun coché quand il est
+ * fait. Avant : cinq lignes, dont « Composition des looks » et « Vérification de la capacité », cochées après coup — elles ont lieu DANS
+ * la sélection (composerValise) — et retardées par des pauses : une progression qui ne correspondait pas au calcul.
+ */
 const ETAPES_CALCUL: [React.ReactNode, string][] = [
-  [svg(<path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 18.5z" {...trait} />, 18), "Analyse des besoins du séjour"],
-  [G_CINTRE, "Sélection des pièces du dressing"],
-  [G_PLUS, "Complétion avec la capsule si nécessaire"],
-  [G_ETINCELLE, "Composition des looks"],
-  [G_LISTE, "Vérification de la capacité de la valise"],
+  [svg(<path d="M7 18.5h9.5a4 4 0 0 0 .4-8 5.5 5.5 0 0 0-10.4 1.6A3.2 3.2 0 0 0 7 18.5z" {...trait} />, 18), "La météo et ton programme"],
+  [G_CINTRE, "Tes pièces et tes looks, dans la place de ta valise"],
+  [G_PLUS, "Ta capsule, si ton dressing ne couvre pas tout"],
 ];
 
 /** Un créneau du planning : un événement daté dit son moment (« Mariage de Léa · Soirée ») ; une activité répartie, son seul libellé. */
-const libelleCreneau = (c: CreneauPlanning) => (c.evenement ? `${c.libelle} · ${c.creneau === "soir" ? "Soirée" : "Journée"}` : c.libelle);
-
-const SEGMENTS_MOMENT = [
-  { key: "jour", label: "Journée" },
-  { key: "soir", label: "Soirée" },
-] as const;
+const libelleCreneau = (c: CreneauPlanning) =>
+  c.evenement ? `${c.libelle} · ${c.moment ? libelleMoment(c.moment) : c.creneau === "soir" ? "Soirée" : "Journée"}` : c.libelle;
 
 const G_CRAYON = svg(<path d="M5 19l1-4L15.5 5.5a2 2 0 0 1 3 3L9 18zM13.5 7.5l3 3" {...trait} />, 16);
 
@@ -449,10 +468,11 @@ const G_CRAYON = svg(<path d="M5 19l1-4L15.5 5.5a2 2 0 0 1 3 3L9 18zM13.5 7.5l3 
 const JOURS_LONGS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
 
 /**
- * L'ÉTAPE 4 — LES ÉVÉNEMENTS (22/10/2026 ; refondue le même jour, brief « Refonte UX/UI de l'étape 4/4 ») : les événements ajoutés,
- * comptés, chacun modifiable et supprimable (« Annuler » pendant 6 s, comme la checklist) ; puis le formulaire — type, jour (une rangée
- * défilante des jours du séjour), moment (proposé selon le type), nom facultatif. Un champ obligatoire manquant est dit au toucher
- * d'« Ajouter », jamais deviné. Modifier un événement réinjecte ses valeurs et garde son identifiant : aucun doublon. Rien n'est généré ici.
+ * LES ÉVÉNEMENTS (22/10/2026 ; depuis le 30/10/2026, une section de l'étape « Qu'as-tu prévu ? », plus une étape à part — brief
+ * « Fluidification du parcours ») : les événements ajoutés, chacun modifiable et supprimable (« Annuler » pendant 6 s, comme la
+ * checklist) ; puis les types en pastilles. Le reste ne s'ouvre qu'une fois un type choisi (révélation progressive) : le jour (une
+ * rangée défilante des jours du séjour), le moment (proposé selon le type), un nom facultatif. Un champ manquant n'est dit qu'au toucher
+ * d'« Ajouter », jamais avant. Modifier un événement réinjecte ses valeurs et garde son identifiant : aucun doublon. Rien n'est généré ici.
  */
 function EtapeEvenements({
   jours,
@@ -539,19 +559,23 @@ function EtapeEvenements({
     if (enModification === e.id) vider();
   };
   const libelleType = (id: string) => TYPES_EVENEMENT.find((t) => t.id === id)?.libelle ?? libelleEvenement({ type: id });
-  const momentLibelle = (m: MomentEvenement) => (m === "soir" ? "Soirée" : "Journée");
   const etiquette = "t-label text-muted mt-5 mb-2";
   const pastille = (on: boolean) =>
     "rounded-full border px-[14px] min-h-[44px] text-[13px] cursor-pointer transition-colors " +
     (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink");
-  const titreFormulaire = enModification ? "Modifier l'événement" : dansLeSejour.length ? "Ajouter un autre événement" : "Ajouter un événement";
+  /** Le formulaire ne s'ouvre qu'une fois un type choisi (ou un événement à modifier). */
+  const ouvert = type != null;
+  // Le formulaire qui s'ouvre vient sous les yeux : sous les pastilles, il tombait sous le bouton fixe « Préparer ma valise ».
+  const formulaire = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (ouvert) formulaire.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [ouvert, enModification]);
 
   return (
     <>
       {dansLeSejour.length > 0 && (
-        <section className="mt-6" aria-label={`Événements ajoutés : ${dansLeSejour.length}`}>
-          <Surtitre>Événements ajoutés ({dansLeSejour.length})</Surtitre>
-          <ul className="flex flex-col gap-2 mt-3">
+        <section className="mt-4" aria-label={`Événements ajoutés : ${dansLeSejour.length}`}>
+          <ul className="flex flex-col gap-2">
             {dansLeSejour.map((e) => {
               const titre = libelleEvenement(e);
               const enCours = enModification === e.id;
@@ -563,7 +587,7 @@ function EtapeEvenements({
                   <span className="flex-1 min-w-0 py-[11px]">
                     <span className="block text-[14px] text-ink leading-[1.3] truncate">{titre}</span>
                     <span className="block text-[12px] text-muted mt-[2px]">
-                      {dateCourte(e.jour)} · {momentLibelle(e.moment)}
+                      {dateCourte(e.jour)} · {libelleMoment(e.moment)}
                     </span>
                     {/* Le type n'est redit que sous un nom personnalisé : sans nom, le titre l'est déjà. */}
                     {e.nom?.trim() && <span className="block text-[12px] text-terracotta mt-[1px]">{libelleType(e.type)}</span>}
@@ -615,12 +639,9 @@ function EtapeEvenements({
         </div>
       )}
 
-      <section className="mt-7" aria-label={titreFormulaire}>
-        <Surtitre>{titreFormulaire}</Surtitre>
-        <div className={etiquette} id="evt-type">
-          Type d&apos;événement
-        </div>
-        <div className="flex flex-wrap gap-2" role="group" aria-labelledby="evt-type">
+      <div className="mt-4">
+        {enModification && <div className="t-label text-terracotta-deep mb-2">Modifier l&apos;événement</div>}
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Type d'événement">
           {TYPES_EVENEMENT.map((t) => {
             const on = type === t.id;
             return (
@@ -629,7 +650,10 @@ function EtapeEvenements({
                 type="button"
                 aria-pressed={on}
                 onClick={() => {
+                  // Toucher le type déjà choisi referme le formulaire d'ajout (rien n'est perdu de ce qui est déjà ajouté).
+                  if (on && !enModification) return vider();
                   setType(t.id);
+                  setManque(false);
                   // Le moment proposé suit le type, sans écraser celui d'un événement qu'on modifie.
                   if (!enModification) setMoment(t.moment);
                 }}
@@ -640,75 +664,87 @@ function EtapeEvenements({
             );
           })}
         </div>
+      </div>
 
-        <div className={etiquette} id="evt-jour">
-          Jour
-        </div>
-        {/* Une rangée défilante (22/10/2026) : sept jours ou trente tiennent sur une ligne, sans pousser le formulaire vers le bas. */}
-        <div className="scrollarea flex gap-2 overflow-x-auto -mx-6 px-6 pb-[2px]" role="group" aria-labelledby="evt-jour" style={{ scrollbarWidth: "none" }}>
-          {jours.map((j) => {
-            const on = jour === j;
-            const d = dateDe(j);
-            return (
-              <button
-                key={j}
-                type="button"
-                aria-pressed={on}
-                aria-label={`${JOURS_LONGS[d.getDay()]} ${d.getDate()} ${MOIS_LONGS[d.getMonth()]}`}
-                onClick={() => setJour(j)}
-                className={
-                  "flex-shrink-0 w-[58px] rounded-tuile border flex flex-col items-center justify-center py-[8px] cursor-pointer transition-colors " +
-                  (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
+      {ouvert && (
+        <div ref={formulaire} className="mt-4 scroll-mb-[120px]">
+          <Card rayon="tuile" className="px-[14px] pt-[2px] pb-[14px]">
+            <div className={etiquette} id="evt-jour">
+              Quel jour ?
+            </div>
+            {/* Une rangée défilante (22/10/2026) : sept jours ou trente tiennent sur une ligne, sans pousser le formulaire vers le bas. */}
+            <div className="scrollarea flex gap-2 overflow-x-auto -mx-[14px] px-[14px] pb-[2px]" role="group" aria-labelledby="evt-jour" style={{ scrollbarWidth: "none" }}>
+              {jours.map((j) => {
+                const on = jour === j;
+                const d = dateDe(j);
+                return (
+                  <button
+                    key={j}
+                    type="button"
+                    aria-pressed={on}
+                    aria-label={`${JOURS_LONGS[d.getDay()]} ${d.getDate()} ${MOIS_LONGS[d.getMonth()]}`}
+                    onClick={() => setJour(j)}
+                    className={
+                      "flex-shrink-0 w-[58px] rounded-tuile border flex flex-col items-center justify-center py-[8px] cursor-pointer transition-colors " +
+                      (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-cream border-border text-ink")
+                    }
+                    style={{ minHeight: 76 }}
+                  >
+                    <span className={"text-[11px] " + (on ? "text-on-terracotta" : "text-muted")}>{DOW[d.getDay()]}</span>
+                    <span className="font-serif text-[20px] leading-[1.15]">{d.getDate()}</span>
+                    <span className={"text-[11px] " + (on ? "text-on-terracotta" : "text-muted")}>{MOIS[d.getMonth()]}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className={etiquette} id="evt-moment">
+              À quel moment ?
+            </div>
+            <div className="flex flex-wrap gap-2" role="group" aria-labelledby="evt-moment">
+              {MOMENTS_EVENEMENT.map((m) => (
+                <button key={m.id} type="button" aria-pressed={moment === m.id} onClick={() => setMoment(m.id)} className={pastille(moment === m.id)}>
+                  {m.libelle}
+                </button>
+              ))}
+            </div>
+
+            <label className={etiquette + " block"} htmlFor="evt-nom">
+              Un nom, si tu veux
+            </label>
+            <Input
+              id="evt-nom"
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  valider();
                 }
-                style={{ minHeight: 76 }}
-              >
-                <span className={"text-[11px] " + (on ? "text-on-terracotta" : "text-muted")}>{DOW[d.getDay()]}</span>
-                <span className="font-serif text-[20px] leading-[1.15]">{d.getDate()}</span>
-                <span className={"text-[11px] " + (on ? "text-on-terracotta" : "text-muted")}>{MOIS[d.getMonth()]}</span>
+              }}
+              placeholder="Ex. Mariage de Léa, dîner client…"
+              maxLength={NOM_EVENEMENT_MAX}
+            />
+
+            {manque && !complet && (
+              <div role="alert" className="text-[12px] text-terracotta mt-3">
+                Choisis le jour de l&apos;événement.
+              </div>
+            )}
+            <div className="mt-4 flex flex-col gap-1">
+              <Button variante="secondaire" className="bg-card" onClick={valider}>
+                {enModification ? "Enregistrer" : "Ajouter cet événement"}
+              </Button>
+              <button type="button" onClick={vider} className="t-lien text-muted cursor-pointer min-h-[44px]">
+                Annuler
               </button>
-            );
-          })}
+            </div>
+          </Card>
         </div>
-
-        <div className={etiquette}>Moment</div>
-        <SegmentedControl segments={SEGMENTS_MOMENT} actif={moment} onChange={setMoment} ariaLabel="Moment de l'événement" variante="pastilles" />
-
-        <label className={etiquette + " block"} htmlFor="evt-nom">
-          Nom de l&apos;événement (optionnel)
-        </label>
-        <Input
-          id="evt-nom"
-          value={nom}
-          onChange={(e) => setNom(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              valider();
-            }
-          }}
-          placeholder="Ex. Dîner au restaurant, réunion client…"
-          maxLength={NOM_EVENEMENT_MAX}
-        />
-
-        {manque && !complet && (
-          <div role="alert" className="text-[12px] text-terracotta mt-3">
-            {type == null && (jour == null || !jours.includes(jour)) ? "Choisis le type et le jour de l'événement." : type == null ? "Choisis le type de l'événement." : "Choisis le jour de l'événement."}
-          </div>
-        )}
-        <div className="mt-4 flex flex-col gap-1">
-          <Button variante="secondaire" className="bg-card" onClick={valider}>
-            {enModification ? "Enregistrer les modifications" : "+ Ajouter cet événement"}
-          </Button>
-          {enModification && (
-            <button type="button" onClick={vider} className="t-lien text-terracotta cursor-pointer min-h-[44px]">
-              Annuler la modification
-            </button>
-          )}
-        </div>
-        <div className="text-[12px] text-terracotta-deep mt-2 min-h-[18px]" role="status" aria-live="polite">
-          {confirmation ?? (complet && !enModification ? "Touche « Ajouter cet événement » pour le garder." : "")}
-        </div>
-      </section>
+      )}
+      <div className="text-[12px] text-terracotta-deep mt-2 min-h-[18px]" role="status" aria-live="polite">
+        {confirmation ?? ""}
+      </div>
     </>
   );
 }
@@ -814,7 +850,7 @@ export default function ValiseScreen() {
   const amplitudeEtape1 = meteosEtape1 ? amplitudePrevue(meteosEtape1) : null;
 
   const etapeValide =
-    etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : etape === 3 ? activites.length > 0 : true;
+    etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : true;
 
   const zoneScroll = useRef<HTMLDivElement | null>(null);
   const [onglet, setOnglet] = useState<Onglet>("ensemble");
@@ -890,25 +926,17 @@ export default function ValiseScreen() {
     setFaites(1);
     // Les événements datés ont chacun leur situation, APRÈS celles du programme : les indices de celles-ci ne bougent pas.
     const situations = [...situationsDuProgramme(rep.programme ?? [], meteos, rep.occasions), ...situationsDesEvenements(rep.evenements, meteos)];
-    await pause(380);
-    if (!actif.current) return;
-    await pause(30);
-    const r0 = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
-    await pause(380);
-    if (!actif.current) return;
-    setFaites(2);
-    // Le dressing ne couvre pas toutes les occasions : la capsule complète la valise, ses pièces marquées « à ajouter » (completerAvecCapsule).
-    const r = completerAvecCapsule(dressing, capsuleDe(situations), situations, r0, capaciteDe(rep.bagage), generer);
-    await pause(380);
-    if (!actif.current) return;
-    setFaites(3);
+    // Une courte pause entre deux traitements, le temps qu'on lise la ligne cochée : jamais une étape qui n'aurait pas eu lieu.
     await pause(300);
     if (!actif.current) return;
-    setFaites(4);
-    await pause(260);
+    const r0 = composerValise(dressing, situations, capaciteDe(rep.bagage), generer);
+    setFaites(2);
+    await pause(300);
     if (!actif.current) return;
-    setFaites(5);
-    await pause(200);
+    // Le dressing ne couvre pas toutes les occasions : la capsule complète la valise, ses pièces marquées « à ajouter » (completerAvecCapsule).
+    const r = completerAvecCapsule(dressing, capsuleDe(situations), situations, r0, capaciteDe(rep.bagage), generer);
+    setFaites(3);
+    await pause(300);
     if (!actif.current) return;
     const id = idCible ?? nouvelIdLocal();
     const ancienne = idCible ? state.valises.find((v) => v.id === idCible) : undefined;
@@ -1079,7 +1107,7 @@ export default function ValiseScreen() {
       </div>
       {questions && (
         <div className="flex-shrink-0 flex justify-center px-6 pb-[2px]">
-          <FilEtapes total={4} courante={etape - 1} />
+          <FilEtapes total={DERNIERE_ETAPE} courante={etape - 1} />
         </div>
       )}
 
@@ -1137,8 +1165,8 @@ export default function ValiseScreen() {
         {/* ── 1. DESTINATION ── */}
         {questions && etape === 1 && (
           <>
-            <Surtitre>Ta valise · 1 / 4</Surtitre>
-            <TitreEtape a="Ton" b="voyage" />
+            <Surtitre>Ta valise · 1 / 3</Surtitre>
+            <TitreEtape a="Ton" b="séjour" />
             <div className="text-[13px] text-muted leading-[1.5] mt-2">Où pars-tu et quand ?</div>
             {/* LE MÊME CHOIX DE VILLE QUE « PLANIFIER UNE TENUE » (08/10/2026, demandé) : résultats lisibles, villes récentes communes,
                 position à la demande, carte de la destination avec « Modifier ». */}
@@ -1242,7 +1270,7 @@ export default function ValiseScreen() {
         {/* ── 2. VALISE ── */}
         {questions && etape === 2 && (
           <>
-            <Surtitre>Ta valise · 2 / 4</Surtitre>
+            <Surtitre>Ta valise · 2 / 3</Surtitre>
             <TitreEtape a="Quelle valise" b="emportes-tu ?" />
             <div className="text-[13px] text-muted leading-[1.5] mt-2">Nous adaptons ta sélection à sa capacité.</div>
             <div className="grid grid-cols-2 gap-[10px] mt-5">
@@ -1286,46 +1314,44 @@ export default function ValiseScreen() {
           </>
         )}
 
-        {/* ── 3. L'ESPRIT DU SÉJOUR ── maquette V2 (11/10/2026) : neuf activités depuis l'ajout de Randonnée (19/10/2026), sans limite depuis le même jour (demandé : « on peut tout sélectionner si besoin ») ; elles se traduisent en programme
-            (programmeDesActivites), donc en occasions mères pour le moteur. */}
+        {/* ── 3. CE QUE TU AS PRÉVU ── 30/10/2026 (brief « Fluidification du parcours ») : les activités et les événements, autrefois deux
+            étapes, sur un même écran. Les activités se traduisent en programme (programmeDesActivites), donc en occasions mères pour le
+            moteur ; les événements datés, en situations à leur jour (evenementsValise.ts). Les deux sont FACULTATIFS : sans activité, le
+            programme retombe sur le quotidien (programmeDesActivites), comme le moteur le faisait déjà. */}
         {questions && etape === 3 && (
           <>
-            <Surtitre>Ta valise · 3 / 4</Surtitre>
-            <TitreEtape a="Quel est l'esprit" b="de ton séjour ?" />
-            <div className="grid grid-cols-2 gap-2 mt-5" role="group" aria-label="Activités du séjour">
-              {ACTIVITES.map((a) => {
+            <Surtitre>Ta valise · 3 / 3</Surtitre>
+            <TitreEtape a="Qu'as-tu prévu" b="pendant ton séjour ?" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Plage, visites, restaurants… Dis-nous ce que tu as prévu, on s&apos;occupe des tenues.</div>
+            <div className="flex flex-wrap gap-2 mt-5" role="group" aria-label="Activités du séjour">
+              {ACTIVITES.filter((a) => ACTIVITES_PROPOSEES.includes(a.id) || activites.includes(a.id)).map((a) => {
                 const on = activites.includes(a.id);
                 return (
                   <button
                     key={a.id}
+                    type="button"
                     onClick={() => setActivites((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : [...l, a.id]))}
                     aria-pressed={on}
                     className={
-                      "flex items-center gap-[10px] text-left rounded-tuile px-[14px] border cursor-pointer transition-colors " +
+                      "inline-flex items-center gap-[8px] rounded-full pl-[12px] pr-[16px] border cursor-pointer transition-colors " +
                       (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
                     }
-                    style={{ minHeight: 48 }}
+                    style={{ minHeight: 44 }}
                   >
                     <span className={"flex-shrink-0 " + (on ? "text-on-terracotta" : "text-terracotta-deep")}>{GLYPHES_ACTIVITE[a.id]}</span>
-                    <span className="text-[12.5px] leading-[1.25]">{a.libelle}</span>
+                    <span className="text-[13px] leading-[1.2]">{a.libelle}</span>
                   </button>
                 );
               })}
             </div>
-            <div className="text-[12px] text-muted mt-3" aria-live="polite">
-              {activites.length > 0 && `${activites.length} ${activites.length > 1 ? "activités choisies" : "activité choisie"}`}
-            </div>
-          </>
-        )}
 
-        {/* ── 4. LES ÉVÉNEMENTS DATÉS ── 22/10/2026 (demandé : « il manque une étape d'événements ») : facultatifs ; chacun reçoit son look,
-            placé à son jour et à son moment dans le planning et dans la tenue du jour (evenementsValise.ts). */}
-        {questions && etape === 4 && (
-          <>
-            <Surtitre>Ta valise · 4 / 4</Surtitre>
-            <TitreEtape a="Un événement" b="de prévu ?" />
-            <div className="text-[13px] text-muted leading-[1.5] mt-2">Un mariage, un dîner, une réunion ? Ajoute tes événements pour que Capsela prévoie des tenues adaptées dans ta valise.</div>
-            <EtapeEvenements jours={jours} evenements={evenements} setEvenements={setEvenements} />
+            <div className="mt-8 pt-6 border-t border-border">
+              <div className="font-serif text-[19px] text-ink leading-[1.25]">Et as-tu d&apos;autres événements prévus ?</div>
+              <div className="text-[13px] text-muted leading-[1.5] mt-[6px]">
+                Un mariage, un dîner, une réunion ou une sortie particulière ? Ajoute-les pour qu&apos;on pense aussi aux tenues adaptées.
+              </div>
+              <EtapeEvenements jours={jours} evenements={evenements} setEvenements={setEvenements} />
+            </div>
           </>
         )}
 
@@ -1333,10 +1359,8 @@ export default function ValiseScreen() {
         {vue.nom === "erreur" && (
           <div className="mt-2">
             <Surtitre>Un instant</Surtitre>
-            <TitreEtape a="La préparation" b="n'a pas abouti" />
-            <div className="text-[13px] text-muted leading-[1.5] mt-2">
-              Tes réponses sont gardées : destination, dates, valise, activités et événements. Tu peux relancer sans rien ressaisir.
-            </div>
+            <TitreEtape a="On n'a pas pu" b="préparer ta valise" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Tout ce que tu as indiqué est gardé : tu peux réessayer sans rien ressaisir.</div>
           </div>
         )}
 
@@ -1344,9 +1368,11 @@ export default function ValiseScreen() {
         {vue.nom === "calcul" && (
           <div className="flex flex-col justify-center" style={{ minHeight: "62vh" }} aria-live="polite">
             <div className="t-titre-ecran text-ink text-center">
-              Je prépare <span className="italic text-terracotta">ta valise</span>
+              On prépare <span className="italic text-terracotta">ta valise…</span>
             </div>
-            <div className="text-[13px] text-muted leading-[1.5] mt-3 text-center max-w-[300px] mx-auto">À partir de ton dressing et de ta capsule.</div>
+            <div className="text-[13px] text-muted leading-[1.5] mt-3 text-center max-w-[300px] mx-auto">
+              On sélectionne les tenues qui correspondent à ton séjour, à la météo et à ton style.
+            </div>
             <ul className="flex flex-col gap-[14px] mt-8 mx-auto" style={{ width: "min(100%, 290px)" }}>
               {ETAPES_CALCUL.map(([glyphe, libelle], i) => {
                 const faite = i < faites;
@@ -1403,10 +1429,10 @@ export default function ValiseScreen() {
 
       {questions && (
         <div className="flex-shrink-0 px-6 pt-[10px] pb-[18px] flex flex-col gap-1 border-t border-border">
-          <Button onClick={() => (etape < 4 ? etapeValide && setEtape(etape + 1) : preparer())} disabled={!etapeValide}>
-            {etape < 4 ? "Continuer" : "Générer ma valise"}
+          <Button onClick={() => (etape < DERNIERE_ETAPE ? etapeValide && setEtape(etape + 1) : preparer())} disabled={!etapeValide}>
+            {etape < DERNIERE_ETAPE ? "Continuer" : "Préparer ma valise"}
           </Button>
-          {etape === 3 && activites.length === 0 && <div className="text-center text-[12px] text-muted min-h-[16px]">Choisis au moins une activité.</div>}
+          {etape === DERNIERE_ETAPE && <div className="text-center text-[12px] text-muted">Tu pourras toujours modifier ta valise ensuite.</div>}
         </div>
       )}
 
@@ -2293,7 +2319,7 @@ function Resultat({
       {/* 2 · TA VALISE EST-ELLE PRÊTE ? */}
       <div className="t-titre-ecran text-ink mt-[14px] flex items-center flex-wrap gap-x-[10px]">
         <span>
-          Ta valise <span className="italic">{prete ? "est prête" : "à compléter"}</span>
+          Ta valise <span className="italic">{prete ? "est prête\u00a0!" : "à compléter"}</span>
         </span>
         {prete && (
           <span aria-hidden="true" className="w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center flex-shrink-0">

@@ -6,7 +6,7 @@
 
 Capacitor emballe le site statique déjà construit (`out/`, `output: "export"`) dans une app iOS (`ios/`) et une app Android (`android/`). Même code, même Supabase, mêmes comptes. **Le site web n'est pas touché** : `npm run build` et le déploiement Vercel restent les mêmes ; seul `npm run mobile:sync` copie `out/` dans les projets natifs.
 
-- Configuration : `capacitor.config.ts` — identifiant `app.capsela` (définitif une fois publié, à valider), nom « Capsela », fond crème `#F3EEE5`.
+- Configuration : `capacitor.config.ts` — identifiant `app.capsela` (définitif une fois publié ; validé le 27/10/2026, capsela.app appartient à la propriétaire), nom « Capsela », fond crème `#F3EEE5`.
 - Versions : `@capacitor/*` 8.5.2, épinglées.
 - iOS : Swift Package Manager (pas de CocoaPods), iPhone seulement, portrait. Android : `minSdk` 24, `targetSdk` 36, portrait.
 

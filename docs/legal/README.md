@@ -31,7 +31,8 @@ Rien de cela n'est dans le code ni dans les docs ; je ne l'ai pas inventé.
 3. **Région d'hébergement Supabase** (visible dans le tableau de bord :
    Settings → General → Region). Elle décide s'il y a transfert hors UE pour
    la base et les photos.
-4. **Domaine public** de l'app (les textes et les stores exigent une URL).
+4. ~~**Domaine public**~~ : capsela.app, propriété de l'éditrice (confirmé le
+   27/10/2026). URL publiques des textes : https://capsela.app/legal/<slug>.
 5. **Mode de paiement** de Premium : achat intégré App Store / Google Play,
    ou paiement web (Stripe…). Les CGV en dépendent (facturation,
    remboursement, résiliation).

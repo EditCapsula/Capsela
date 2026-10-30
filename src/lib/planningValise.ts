@@ -1,4 +1,4 @@
-import { evenementsDuSejour, libelleEvenement, sousIdEvenement, type EvenementValise } from "./evenementsValise";
+import { creneauDuMoment, evenementsDuSejour, libelleEvenement, sousIdEvenement, type EvenementValise, type MomentEvenement } from "./evenementsValise";
 import { elementProgramme, type Creneau, type ItemProgramme } from "./programmeValise";
 import type { LookValise, SituationValise } from "./valise";
 import type { ValiseGardee } from "./valises";
@@ -30,6 +30,8 @@ export interface CreneauPlanning {
   look: number | null;
   /** Vrai pour un événement daté : l'écran le distingue des activités réparties. */
   evenement?: boolean;
+  /** Le moment d'un événement daté (Matin, Journée, Soirée, Toute la journée), que l'écran affiche. */
+  moment?: MomentEvenement;
 }
 
 const ORDRE_CRENEAU: Record<Creneau, number> = { trajet: 0, jour: 1, soir: 2 };
@@ -65,7 +67,7 @@ export function planningDuProgramme(
 ): CreneauPlanning[] {
   const nb = jours.length;
   if (!nb) return [];
-  const creneaux: { jourIdx: number; creneau: Creneau; sousId: string; libelle: string; evenement?: boolean }[] = [];
+  const creneaux: { jourIdx: number; creneau: Creneau; sousId: string; libelle: string; evenement?: boolean; moment?: MomentEvenement }[] = [];
   const chargeJour = new Array(nb).fill(0);
   const chargeSoir = new Array(nb).fill(0);
 
@@ -82,8 +84,11 @@ export function planningDuProgramme(
   // 2. Les événements datés : leur jour, leur moment. Le créneau compte comme pris : les activités étalées l'évitent si elles le peuvent.
   for (const ev of evenementsDuSejour(evenements, jours)) {
     const d = jours.indexOf(ev.jour);
-    (ev.moment === "soir" ? chargeSoir : chargeJour)[d]++;
-    creneaux.push({ jourIdx: d, creneau: ev.moment, sousId: sousIdEvenement(ev), libelle: libelleEvenement(ev), evenement: true });
+    const creneau = creneauDuMoment(ev.moment);
+    (creneau === "soir" ? chargeSoir : chargeJour)[d]++;
+    // Toute la journée : la soirée est prise aussi, les sorties du soir étalées l'évitent si elles le peuvent.
+    if (ev.moment === "journee_entiere") chargeSoir[d]++;
+    creneaux.push({ jourIdx: d, creneau, sousId: sousIdEvenement(ev), libelle: libelleEvenement(ev), evenement: true, moment: ev.moment });
   }
   // 3. Le reste, les plus fréquentes d'abord, étalées sur les jours (ou les soirs) les moins chargés.
   const parFrequence = (a: { frequence: number }, b: { frequence: number }) => b.frequence - a.frequence;
@@ -130,7 +135,7 @@ export function planningDuProgramme(
     sousId: c.sousId,
     libelle: c.libelle,
     look: choix[idx],
-    ...(c.evenement ? { evenement: true } : {}),
+    ...(c.evenement ? { evenement: true, moment: c.moment } : {}),
   }));
 }
 
