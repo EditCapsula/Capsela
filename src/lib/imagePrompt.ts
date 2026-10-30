@@ -48,7 +48,9 @@ const SUBTYPE_EN: Record<string, string> = {
   "tropéziennes": "strappy flat sandals",
   mocassins: "loafers",
   ballerines: "ballet flats",
-  "chaussures d'intérieur": "house slippers",
+  // Les chaussures d'intérieur : un sabot en daim fourré, à boucle et semelle de liège (30/10/2026, modèle choisi par la propriétaire
+  // en capture : les chaussons en éponge d'avant faisaient « démodé »). Une forme générique, jamais une marque.
+  "chaussures d'intérieur": "suede clog slippers with an adjustable buckle strap, a cozy shearling lining and a cork footbed",
   "sac à main": "handbag",
   cabas: "tote bag",
   bandoulière: "crossbody bag",

@@ -48,7 +48,7 @@ const RAW: [string, CategoryKey, string, string][] = [
   ["Escarpins", "chaussures", "Bordeaux", "#6E3B3A"],
   ["Mocassins", "chaussures", "Camel", "#C08A5E"],
   ["Ballerines", "chaussures", "Taupe", "#A8967C"],
-  ["Chaussons cocooning", "chaussures", "Crème", "#E7DCC8"],
+  ["Sabots fourrés en daim", "chaussures", "Kaki", "#8A8560"], // « Chaussons cocooning » avant le 30/10/2026 (modèle choisi par la propriétaire)
   ["Sac cabas", "sac", "Camel", "#C08A5E"],
   ["Sac bandoulière", "sac", "Noir", "#2A2724"],
   ["Ceinture cuir", "accessoire", "Rouille", "#A9613F"],
@@ -85,7 +85,8 @@ function catalogShoeTypeFor(cat: CategoryKey, name: string): ShoeType | undefine
   if (/mule/.test(n)) return "Mules";
   if (/slingback/.test(n)) return "Slingbacks";
   if (/derbies/.test(n)) return "Derbies";
-  if (/chausson|charentaise|pantoufle|intérieur/.test(n)) return "Chaussures d'intérieur";
+  // « sabots fourrés » (30/10/2026) : le modèle d'intérieur choisi par la propriétaire ; un sabot seul reste une chaussure d'extérieur.
+  if (/chausson|charentaise|pantoufle|intérieur|sabots? fourrés?/.test(n)) return "Chaussures d'intérieur";
   return undefined;
 }
 
