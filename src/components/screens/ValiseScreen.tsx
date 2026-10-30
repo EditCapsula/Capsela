@@ -785,9 +785,9 @@ function EtapesRoadTrip({
   const prochaineArrivee = () => {
     const prises = new Set(autres.map((e) => e.arrivee));
     const libres = arrivees.filter((j) => !prises.has(j));
-    return libres[Math.floor(libres.length / 2)] ?? arrivees[arrivees.length - 1];
+    // Sans dates encore : aucun jour proposé ; il se choisit une fois les dates posées.
+    return libres[Math.floor(libres.length / 2)] ?? arrivees[arrivees.length - 1] ?? "";
   };
-  if (arrivees.length === 0) return null;
 
   return (
     <div className="mt-6">
@@ -799,10 +799,12 @@ function EtapesRoadTrip({
               <span className="flex-shrink-0 w-[24px] h-[24px] rounded-full bg-terracotta-deep text-on-terracotta text-[12px] flex items-center justify-center">1</span>
               <span className="flex-1 min-w-0">
                 <span className="block text-[13px] text-ink">{premiere || "Ta destination"}</span>
-                <span className="block text-[11px] text-muted mt-[2px]">
-                  Dès le {dateCourte(jours[0]).toLowerCase()}
-                  {premiereRetenue ? ` · ${libelleNuits(nuits(premiereRetenue))}` : ""}
-                </span>
+                {jours[0] && (
+                  <span className="block text-[11px] text-muted mt-[2px]">
+                    Dès le {dateCourte(jours[0]).toLowerCase()}
+                    {premiereRetenue ? ` · ${libelleNuits(nuits(premiereRetenue))}` : ""}
+                  </span>
+                )}
               </span>
             </li>
             {autres.map((e, i) => {
@@ -838,6 +840,7 @@ function EtapesRoadTrip({
                     />
                   )}
                   <div className="text-[11px] text-muted mt-3">Arrivée le</div>
+                  {arrivees.length === 0 && <div className="text-[12px] text-muted-3 mt-[4px]">Choisis tes dates ci-dessous, puis ton jour d&apos;arrivée ici.</div>}
                   <div className="scrollarea flex gap-[6px] overflow-x-auto -mx-[14px] px-[14px] mt-[6px]" role="group" aria-label={`Jour d'arrivée à ${e.destination || "cette étape"}`}>
                     {arrivees.map((j) => {
                       const on = e.arrivee === j;
@@ -858,11 +861,13 @@ function EtapesRoadTrip({
                       );
                     })}
                   </div>
-                  {doublonDeJour && (
+                  {doublonDeJour && arrivees.length > 0 && (
                     <div className="text-[12px] text-terracotta mt-2">
-                      {arrivees.includes(e.arrivee)
-                        ? "Une autre étape commence ce jour-là : choisis un autre jour d'arrivée."
-                        : "Les dates du séjour ont changé : choisis son jour d'arrivée."}
+                      {!e.arrivee
+                        ? "Choisis son jour d'arrivée."
+                        : arrivees.includes(e.arrivee)
+                          ? "Une autre étape commence ce jour-là : choisis un autre jour d'arrivée."
+                          : "Les dates du séjour ont changé : choisis son jour d'arrivée."}
                     </div>
                   )}
                 </li>
@@ -878,7 +883,7 @@ function EtapesRoadTrip({
           className="w-full mt-3 rounded-full border border-border bg-card text-[12px] text-ink cursor-pointer inline-flex items-center justify-center gap-[6px]"
           style={{ minHeight: 44 }}
         >
-          {G_PLUS} {autres.length ? "Ajouter une étape" : "Un road trip ? Ajouter une autre destination"}
+          {G_PLUS} Ajouter une autre destination
         </button>
       )}
     </div>
@@ -1358,6 +1363,21 @@ export default function ValiseScreen() {
                 setDestination(libelle);
               }}
             />
+            {/* LE ROAD TRIP (30/10/2026), sous la destination et avant les dates (demandé) : les villes d'abord, leur jour d'arrivée une fois
+                les dates posées. */}
+            {destination.trim().length > 1 && (
+              <EtapesRoadTrip
+                premiere={etapes[0]?.destination ?? nomVille}
+                jours={dureeOk ? jours : []}
+                retour={retour}
+                autres={autresEtapes}
+                setAutres={setAutresEtapes}
+                retenues={etapes}
+              />
+            )}
+            {autresEtapes.some((e) => !e.destination.trim()) && (
+              <div className="text-[12px] text-muted mt-2">Choisis la ville de ta nouvelle étape, ou retire-la, pour continuer.</div>
+            )}
             <div className="mt-6">
               <Surtitre>Tes dates</Surtitre>
             </div>
@@ -1390,12 +1410,7 @@ export default function ValiseScreen() {
             {jours.length > 0 && (
               <div className="text-[12px] text-muted mt-3">{dureeOk ? libelleDuree(jours.length) : `Un séjour de ${DUREE_MAX_JOURS} jours au plus.`}</div>
             )}
-            {destination.trim().length > 1 && dureeOk && (
-              <EtapesRoadTrip premiere={etapes[0]?.destination ?? nomVille} jours={jours} retour={retour} autres={autresEtapes} setAutres={setAutresEtapes} retenues={etapes} />
-            )}
-            {autresEtapes.some((e) => !e.destination.trim()) && (
-              <div className="text-[12px] text-muted mt-2">Choisis la ville de ta nouvelle étape, ou retire-la, pour continuer.</div>
-            )}
+
             {/* Les saisies invalides sont dites, jamais corrigées en silence : le bouton reste grisé tant qu'elles le sont. */}
             {depart && depart < premierJour && (
               <div role="alert" className="text-[12px] text-terracotta mt-2">
