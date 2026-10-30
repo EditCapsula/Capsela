@@ -239,7 +239,7 @@ export function reactionErreur(code: CodeErreurAvis | "reseau", raison?: RaisonI
       return {
         action: "limite",
         // Sans le nombre : le plafond vit côté serveur (STYLIST_ADVICE_LIMITE_MENSUELLE), l'app ne le recopie pas.
-        message: "Tu as utilisé tous tes avis de styliste de ce mois-ci.",
+        message: "Tu as utilisé tous tes avis de ce mois-ci.",
         sousTexte: `Le prochain sera disponible le ${prochainMois(maintenant)}.`,
       };
     case "non_authentifie":

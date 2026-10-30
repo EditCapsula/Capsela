@@ -20,7 +20,7 @@ import Card from "@/components/Card";
  *   - pas de tags : aucune donnée ne les porte.
  */
 
-const TITRE = "Mes avis de styliste"; // arbitré le 25/09/2026
+const TITRE = "L'œil de Capsela"; // « Mes avis de styliste » le 25/09/2026, renommé le 30/10/2026
 export const AVIS_DANS_LE_JOURNAL = 2;
 
 const formatDate = (t: number) => new Date(t).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -34,7 +34,7 @@ export function CarteAvis({ avis, onOuvrir }: { avis: AvisEnregistre; onOuvrir: 
     <button
       type="button"
       onClick={() => onOuvrir(avis.id)}
-      aria-label={`Avis de styliste du ${date} : ${verdict ?? avis.avis.overallAssessment}. Voir l'avis complet`}
+      aria-label={`Avis de Capsela du ${date} : ${verdict ?? avis.avis.overallAssessment}. Voir l'avis complet`}
       className="w-full flex gap-[14px] bg-card border border-border rounded-carte p-[10px] text-left cursor-pointer transition-colors active:bg-warm-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
     >
       {/* La photo d'abord : assez grande pour reconnaître la tenue, entière
@@ -52,7 +52,7 @@ export function CarteAvis({ avis, onOuvrir }: { avis: AvisEnregistre; onOuvrir: 
         )}
       </span>
       <span className="flex-1 min-w-0 flex flex-col py-[4px] pr-[4px]">
-        <span className="block text-[11px] text-muted">{date} · Avis de styliste</span>
+        <span className="block text-[11px] text-muted">{date} · L&apos;œil de Capsela</span>
         <span className="t-titre-carte text-ink mt-[8px] line-clamp-3">
           <span aria-hidden="true" className="text-terracotta text-[13px] mr-[5px]">
             ✦
@@ -105,7 +105,7 @@ export default function AvisEnregistresJournal({
         // ÉTAT VIDE : une invitation, jamais de fausse carte.
         <Card className="mt-[12px] px-4 py-[16px]">
           <div className="t-titre-carte text-ink">
-            Tes futurs avis de styliste <span className="italic text-terracotta">seront ici</span>
+            Tes futurs avis <span className="italic text-terracotta">seront ici</span>
           </div>
           <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
             Analyse une tenue et retrouve tous tes conseils personnalisés dans ton Journal.

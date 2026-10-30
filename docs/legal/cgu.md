@@ -43,7 +43,7 @@ techniques peuvent l'interrompre.
 - une capsule de saison et des idées de tenues ;
 - la planification de looks et la préparation de valises ;
 - un Journal de ce que tu portes ;
-- l'avis de styliste : l'analyse d'une photo de ta tenue ;
+- L'œil de Capsela : l'analyse d'une photo de ta tenue ;
 - un questionnaire de colorimétrie.
 
 Le détail des fonctionnalités gratuites et Premium est présenté dans
@@ -70,7 +70,7 @@ Les photos et informations que tu ajoutes (tes « contenus ») restent les tiens
 
 Tu autorises Capsela à les stocker, les afficher dans ton compte, les
 analyser et en retirer le fond pour te rendre le service (préremplissage
-d'une pièce, repérage des pièces d'une tenue, détourage, avis de styliste).
+d'une pièce, repérage des pièces d'une tenue, détourage, L'œil de Capsela).
 Ces traitements peuvent être confiés aux prestataires listés dans la
 Politique de confidentialité. Cette autorisation s'arrête quand tu supprimes le contenu ou ton
 compte. Tes photos ne sont jamais rendues publiques ni utilisées à d'autres

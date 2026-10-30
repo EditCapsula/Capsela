@@ -23,7 +23,7 @@ Capsela Premium donne accès, pendant la durée de l'abonnement, à :
 - un dressing sans limite de pièces (la version gratuite en compte 50) ;
 - des tenues sans limite (« Autre tenue ») ;
 - la planification de tenues ;
-- l'avis de styliste, dans la limite de 5 analyses par mois ;
+- L'œil de Capsela, dans la limite de 5 analyses par mois ;
 - la préparation de valises.
 
 [À VÉRIFIER — liste à aligner sur l'écran Premium et sur les arbitrages au

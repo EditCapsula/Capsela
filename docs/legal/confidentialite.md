@@ -60,7 +60,7 @@ ressemblent. Elles ne servent jamais à te juger ni à te classer.
 - tes looks planifiés : date, moment, occasion, lieu que tu indiques, et
   l'humeur que tu choisis pour l'événement (élégante, décontractée…) ;
 - tes valises : destination, dates, taille de bagage, activités, événements prévus (type, jour, moment et nom si tu en donnes un), pièces choisies ;
-- tes avis de styliste enregistrés dans ton Journal, avec leur photo ;
+- les avis de L'œil de Capsela enregistrés dans ton Journal, avec leur photo ;
 - le choix que tu fais pour une pièce (la garder, la mettre de côté) ;
 - tes retours sur les associations de couleurs de ta saison (« J'aime »,
   « Pas pour moi ») : une association écartée ne t'est plus proposée.
@@ -106,7 +106,7 @@ ton appareil pour te les reproposer.
   gardées ; les autres découpes et la photo d'origine sont supprimées à la
   fin de l'import, ou quand tu le quittes. La photo peut te montrer : elle
   n'est jamais utilisée pour t'identifier, ni pour juger ton corps.
-- **Photos d'avis de styliste** : la photo de ta tenue est envoyée pour
+- **Photos de L'œil de Capsela** : la photo de ta tenue est envoyée pour
   l'analyse, puis n'est conservée que si tu enregistres l'avis dans ton
   Journal. Dans ce cas, elle est stockée dans un espace privé et supprimée
   avec l'avis. Ses métadonnées (dont la position GPS) sont retirées avant
@@ -137,7 +137,7 @@ n'est pas encore en vente.
 | Créer et gérer ton compte, te connecter, réinitialiser ton mot de passe | Exécution du contrat (les Conditions d'utilisation) |
 | Composer ta tenue du jour, planifier tes looks, préparer tes valises, tenir ton Journal | Exécution du contrat |
 | Obtenir la météo de ta ville ou de ta position | Exécution du contrat ; pour la position, ton consentement |
-| Analyser une photo que tu envoies (préremplissage d'une pièce, repérage des pièces d'une tenue, avis de styliste) | Exécution du contrat, à ta demande |
+| Analyser une photo que tu envoies (préremplissage d'une pièce, repérage des pièces d'une tenue, L'œil de Capsela) | Exécution du contrat, à ta demande |
 | Retirer le fond des photos de tes pièces (détourage) | Exécution du contrat |
 | Gérer ton statut Premium et les limites d'usage (nombre de pièces, « Autre tenue ») | Exécution du contrat |
 | Mesurer l'audience | Ton consentement, que tu peux retirer à tout moment |
@@ -193,7 +193,7 @@ de la Commission. [À VÉRIFIER — mécanisme retenu pour chaque prestataire.]
 - **Ton compte et tout ce qu'il contient** (profil, dressing, photos,
   historique, looks, plans, valises, avis) : tant que ton compte existe.
   Quand tu le supprimes, tout est effacé, photos comprises.
-- **Un avis de styliste** : jusqu'à ce que tu le supprimes, ou jusqu'à la
+- **Un avis de L'œil de Capsela** : jusqu'à ce que tu le supprimes, ou jusqu'à la
   suppression de ton compte. Une analyse que tu n'enregistres pas n'est pas
   conservée.
 - **Une photo de pièce remplacée ou une pièce supprimée** : la photo est
