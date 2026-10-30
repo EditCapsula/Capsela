@@ -199,7 +199,7 @@ Demandé : « capsule dans la valise si les pièces du dressing ne permettent pa
 
 ## 9. Accès
 
-Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie serveur pour le test miroir) : fonctionnalité **Premium**, en **`ACCES_LIBRE`** pendant la phase de test, comme l'Avis de styliste. Au lancement : `PREMIUM_REQUIRED` des deux côtés ; aucune fonction serveur à redéployer. [DÉCIDÉ]
+Règle `PREPARER_VALISE` dans `REGLES_ACCES` (`src/lib/autorisations.ts`, copie serveur pour le test miroir) : **gratuite**, `ACCES_LIBRE` (décidé le 30/10/2026 : « enlève le premium de la préparation de valise » ; elle était Premium, en accès libre pendant la phase de test). Badges Premium retirés des cartes Valise de l'accueil et de Planifier, et de la liste de l'écran Premium. [DÉCIDÉ]
 
 ## 10. Conservation et « Mes planifications »
 
@@ -384,3 +384,8 @@ Demandé : « donner la possibilité d'ajouter plusieurs destinations dans le ca
 - **Le moteur ne change pas** : il reçoit, comme avant, une météo par jour.
 - **Étape Activités** : le titre devient « Qu'as-tu prévu pendant ton road trip ? », et les idées couvrent toutes les villes.
 - **Gardé** : `ValiseGardee.etapes` (dans `calcul`, aucune migration). `destination` dit l'itinéraire, « Lisbonne → Porto → Faro ». Une valise d'une seule destination n'a pas d'étapes et se lit comme avant. Modifier un road trip reprend ses étapes ; le recomposer refait la météo étape par étape.
+
+### Compléments du 30/10/2026
+
+- **Jours d'arrivée proposés** (`arriveesProposees`) : une étape ajoutée avant les dates reçoit un jour d'arrivée dès que les dates sont choisies. Les jours sont répartis sur le séjour, dans l'ordre d'ajout, sans en prendre un déjà pris. Un jour déjà choisi ne bouge pas.
+- **Les villes du même pays d'abord** : quand la première destination est un pays, la recherche des étapes suivantes demande d'abord les villes de ce pays (géocodage « ville,code pays »), puis les autres, sans doublon (`villesDuPaysDabord`, `lieux.ts`). Le code pays est gardé avec la première étape (`EtapeSejour.pays`), pour la reprise.

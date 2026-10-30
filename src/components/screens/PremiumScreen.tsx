@@ -88,7 +88,7 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
     titre: "Dressing illimité",
     desc: `Au-delà de ${LIMITE_DRESSING_GRATUIT} pièces, ajoute tout ce que tu possèdes sans compter.`,
   },
-  // « Planifier une tenue » retiré le 17/10/2026 (décidé) : la planification de tenues est gratuite. La valise reste Premium.
+  // « Planifier une tenue » retiré le 17/10/2026 (décidé) : la planification de tenues est gratuite. La valise est gratuite depuis le 30/10/2026 (décidé) : retirée de la liste.
   {
     glyphe: G_ETINCELLE,
     titre: "Tenues sans limite",
@@ -100,12 +100,6 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
     glyphe: G_REGARD,
     titre: "L'œil de Capsela", // renommé le 30/10/2026 (avant : « Avis de styliste »)
     desc: "Montre ta tenue à Capsela : ce qui fonctionne, ce que tu peux ajuster.",
-  },
-  {
-    glyphe: G_VALISE,
-    titre: "Préparer une valise",
-    // Disponible depuis le 27/09/2026 (lot 1, docs/valise.md) : plus « bientôt ».
-    desc: "Indique ta destination et tes dates, Capsela choisit les pièces à emporter et compose tes looks.",
   },
 ];
 

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ONBOARDING_SLIDES } from "@/lib/data";
 import AppHeader from "@/components/AppHeader";
 import { useCapsela } from "@/lib/store";
-import { STYLE_CONFIG, type StyleId } from "@/lib/profile";
+import { STYLE_CONFIG, VISUELS_ETAPE_STYLE_FEMME, type StyleId } from "@/lib/profile";
 import Button from "@/components/Button";
 import Card from "@/components/Card";
 
@@ -34,15 +34,20 @@ import Card from "@/components/Card";
 
 const STYLES_ONBOARDING: StyleId[] = ["minimaliste", "casual_chic", "boheme", "classique_chic", "streetwear", "glamour"];
 
-/** Le visuel d'un style : le même que l'étape Style du profil, jamais un second jeu d'images. Repli sur l'aplat si le fichier ne charge pas. */
+/**
+ * Le visuel d'un style : le même que l'étape Style du profil, jamais un second jeu d'images — les visuels de l'étape Style
+ * (VISUELS_ETAPE_STYLE_FEMME) depuis le 30/10/2026 (demandé : « mets à jour ces visuels avec les derniers visuels de styles »), comme les
+ * cartes « Explore un autre univers ». Repli sur l'aplat si le fichier ne charge pas.
+ */
 function TuileStyle({ id, decale }: { id: StyleId; decale?: boolean }) {
   const cfg = STYLE_CONFIG.femme[id];
+  const visuel = VISUELS_ETAPE_STYLE_FEMME[id] ?? cfg.asset;
   const [echec, setEchec] = useState(false);
   return (
     <div className={"relative rounded-bloc overflow-hidden bg-border aspect-[4/5] " + (decale ? "translate-y-[12px]" : "")}>
-      {cfg.asset && !echec && (
+      {visuel && !echec && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={cfg.asset} alt="" onError={() => setEchec(true)} className="absolute inset-0 w-full h-full object-cover" />
+        <img src={visuel} alt="" onError={() => setEchec(true)} className="absolute inset-0 w-full h-full object-cover" />
       )}
       <div className="absolute bottom-0 left-0 right-0 px-[8px] pt-[14px] pb-[7px] bg-gradient-to-t from-black/45 to-transparent">
         <div className="text-[10.5px] text-white font-medium leading-[1.2]">{cfg.label}</div>

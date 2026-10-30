@@ -1468,7 +1468,6 @@ export default function PlanifierScreen() {
                 onClick={() => void actions.ouvrirValise(null)}
                 visuel={visuelHub("valise", profile.gender)}
                 cadrage="center 60%"
-                premium
               >
                 {valisesAVenir.length > 0 && (
                   <>

@@ -87,7 +87,7 @@ import {
   type IdeeSejour,
 } from "@/lib/activitesSejour";
 import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
-import { destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, ETAPES_MAX, type EtapeSejour } from "@/lib/etapesSejour";
+import { arriveesProposees, destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, ETAPES_MAX, type EtapeSejour } from "@/lib/etapesSejour";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { pieceLaPlusUtilisee, planningDeLaValise, type CreneauPlanning } from "@/lib/planningValise";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
@@ -750,7 +750,9 @@ function EtapeActivites({
 
 /** La première étape d'un séjour : la destination choisie, avec ses coordonnées quand elle vient de la liste des villes. */
 const etapePremiere = (destination: string, ville: VilleSuggeree | null): Omit<EtapeSejour, "arrivee"> =>
-  ville ? { destination: ville.name, lat: ville.lat, lon: ville.lon } : { destination: villeDuLieu(destination.trim()) };
+  ville
+    ? { destination: ville.name, lat: ville.lat, lon: ville.lon, ...(ville.capitaleDe && ville.country ? { pays: ville.country } : {}) }
+    : { destination: villeDuLieu(destination.trim()) };
 
 /**
  * LES ÉTAPES D'UN ROAD TRIP (30/10/2026, demandé ; dates par étape, arbitré le même jour) : sous les dates du séjour, « Ajouter une autre
@@ -759,6 +761,7 @@ const etapePremiere = (destination: string, ville: VilleSuggeree | null): Omit<E
  */
 function EtapesRoadTrip({
   premiere,
+  paysPrefere,
   jours,
   retour,
   autres,
@@ -766,6 +769,8 @@ function EtapesRoadTrip({
   retenues,
 }: {
   premiere: string;
+  /** La première destination est un pays : ses villes d'abord dans la recherche des étapes. */
+  paysPrefere?: string;
   jours: string[];
   retour: string;
   autres: EtapeSejour[];
@@ -831,6 +836,7 @@ function EtapesRoadTrip({
                     <ChoixVille
                       avecPosition={false}
                       avecRecentes={false}
+                      paysPrefere={paysPrefere}
                       lieu=""
                       onChoisir={(v, libelle) =>
                         setAutres((l) =>
@@ -1237,7 +1243,11 @@ export default function ValiseScreen() {
     // Un road trip reprend sa première ville comme destination, les autres comme étapes (avec leurs coordonnées).
     const [premiere, ...suivantes] = valise.etapes ?? [];
     setDestination(premiere ? premiere.destination : valise.destination);
-    setVille(premiere && premiere.lat != null && premiere.lon != null ? { name: villeDuLieu(premiere.destination), country: "", state: "", lat: premiere.lat, lon: premiere.lon } : null);
+    setVille(
+      premiere && premiere.lat != null && premiere.lon != null
+        ? { name: villeDuLieu(premiere.destination), country: premiere.pays ?? "", state: "", lat: premiere.lat, lon: premiere.lon, ...(premiere.pays ? { capitaleDe: villeDuLieu(premiere.destination) } : {}) }
+        : null
+    );
     setAutresEtapes(suivantes);
     setDepart(valise.depart);
     setRetour(valise.retour);
@@ -1368,6 +1378,7 @@ export default function ValiseScreen() {
             {destination.trim().length > 1 && (
               <EtapesRoadTrip
                 premiere={etapes[0]?.destination ?? nomVille}
+                paysPrefere={ville?.capitaleDe ? ville.country || undefined : undefined}
                 jours={dureeOk ? jours : []}
                 retour={retour}
                 autres={autresEtapes}
@@ -1404,6 +1415,8 @@ export default function ValiseScreen() {
                 onChange={(p) => {
                   setDepart(p.depart);
                   setRetour(p.retour);
+                  // Les étapes ajoutées avant les dates reçoivent un jour d'arrivée (arriveesProposees) ; un jour choisi ne bouge pas.
+                  if (p.depart && p.retour && p.retour > p.depart) setAutresEtapes((l) => arriveesProposees(l, joursDuSejour(p.depart, p.retour)));
                 }}
               />
             </div>

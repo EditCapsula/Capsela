@@ -43,6 +43,20 @@ export function presenterResultats(villes: VilleSuggeree[]): ResultatVille[] {
   });
 }
 
+/**
+ * LES VILLES D'UN PAYS D'ABORD (30/10/2026, demandé : « si la première destination est un pays, pour les suivantes il faut privilégier
+ * les villes dans le même pays ») : les résultats de la recherche dans ce pays, puis ceux de la recherche libre, sans doublon. Une ville
+ * d'ailleurs reste proposée, après : un road trip peut passer une frontière.
+ */
+export function villesDuPaysDabord(duPays: VilleSuggeree[] | null, libres: VilleSuggeree[] | null, pays: string): VilleSuggeree[] | null {
+  if (!duPays && !libres) return null;
+  const vues = new Set<string>();
+  const cle = (v: VilleSuggeree) => `${v.lat.toFixed(2)},${v.lon.toFixed(2)}`;
+  const tous = [...(duPays ?? []), ...(libres ?? [])].filter((v) => !vues.has(cle(v)) && vues.add(cle(v)));
+  const code = pays.toUpperCase();
+  return [...tous.filter((v) => v.country.toUpperCase() === code), ...tous.filter((v) => v.country.toUpperCase() !== code)];
+}
+
 /** Ce qui se range avec la tenue planifiée et s'affiche sur la carte de la destination. */
 export function libelleDestination(v: VilleSuggeree, villesDeLaListe: VilleSuggeree[] = [v]): string {
   const liste = villesDeLaListe.some((x) => x.lat === v.lat && x.lon === v.lon) ? villesDeLaListe : [v, ...villesDeLaListe];

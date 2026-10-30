@@ -280,18 +280,19 @@ async function fetchCapitaleDuPays(nom: string): Promise<VilleSuggeree[]> {
  * distinction compte : le premier cas ne doit rien afficher, le second peut
  * le dire.
  */
-export async function fetchVilles(q: string): Promise<VilleSuggeree[] | null> {
+export async function fetchVilles(q: string, pays?: string): Promise<VilleSuggeree[] | null> {
   if (!isSupabaseConfigured) return null;
   const nom = q.trim();
   if (nom.length < 2) return [];
   try {
+    // `pays` (code ISO, 30/10/2026) : la recherche « ville,pays » du géocodage, restreinte à ce pays — jamais de repli sur une capitale.
     const { data, error } = await getSupabase().functions.invoke("weather", {
-      body: { city: nom, mode: "geo" },
+      body: { city: pays ? `${nom},${pays}` : nom, mode: "geo" },
     });
     if (error || !data || (data as { error?: unknown }).error) return null;
     const villes = lireVillesSuggerees(data);
     // Aucune ville : peut-être un pays — sa capitale est proposée (lirePaysCommeCapitale).
-    if (villes && villes.length === 0 && nom.length >= 3) return await fetchCapitaleDuPays(nom);
+    if (!pays && villes && villes.length === 0 && nom.length >= 3) return await fetchCapitaleDuPays(nom);
     return villes;
   } catch {
     return null;

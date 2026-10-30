@@ -384,6 +384,8 @@ export interface LeviersMesure {
   sansConfortVoyage?: boolean;
   /** Reproduit le comportement d'AVANT le 30/10/2026 : en Voyage, une combinaison est tirée comme une robe (R-S21). */
   combinaisonEnVoyage?: boolean;
+  /** Reproduit le comportement d'AVANT le 30/10/2026 : en Cocooning, une écharpe peut être tirée en accessoire (R-S22). */
+  echarpeEnCocooning?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
@@ -1712,7 +1714,10 @@ export function generateOutfit(
         i.cat === "accessoire" &&
         (hasRobeJupeOuShort || i.accessoireType !== "Collants") &&
         // En Sport, la gourde est déjà ajoutée systématiquement ci-dessus.
-        (occasion !== "sport" || i.accessoireType !== "Gourde")
+        (occasion !== "sport" || i.accessoireType !== "Gourde") &&
+        // R-S22 (30/10/2026, demandé : « pour les tenues cocooning pas besoin de pousser une écharpe en accessoire ») — l'occasion
+        // Cocooning seule : le Télétravail, autre contexte « maison », n'a pas été instruit (règle d'audit, point 7).
+        (occasion !== "cocooning" || leviers?.echarpeEnCocooning || i.accessoireType !== "Écharpe")
     );
     // Foulard, écharpe : près du visage (candidatsCouleur ; sans colorimétrie, liste inchangée).
     const ac = rand(harmonize(candidatsCouleur(accessoireBase, [], colo), chosen, false));
@@ -1950,6 +1955,8 @@ export function candidatsDeRemplacement(
   // tienne quelle que soit la catégorie.
   const dejaPortees = new Set(outfitItems.filter((i) => i.id !== pieceId).map((i) => i.id));
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId && !dejaPortees.has(i.id));
+  // R-S22 — symétrique du tirage : en Cocooning, pas d'écharpe proposée en accessoire.
+  if (occasion === "cocooning") candidates = candidates.filter((i) => i.accessoireType !== "Écharpe");
   // La saison déclarée d'une pièce du dressing est une règle dure (08/10/2026) — symétrique du filtre de generateOutfit.
   if (weather) candidates = candidates.filter((i) => isCatalogId(i.id) || estDeSaison(i, weather));
   // Priorité au réel sur le groupe accessoire/bijou/sac — même correctif
