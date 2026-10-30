@@ -473,7 +473,7 @@ export default function TenuesScreen() {
   const chaussuresPossibles = [...chaussuresDuStyle, ...chaussuresAutresStyles];
   const idsAutresStyles = new Set(chaussuresAutresStyles.map((i) => i.id));
   /** La provenance dite sur la vignette : le style nommé pour une pièce d'un autre style. */
-  const autreStyle = (it: Item) => (idsAutresStyles.has(it.id) ? styleAffiche(it, profile.styles, profile.gender) : undefined);
+  const autreStyle = (it: Item) => (idsAutresStyles.has(it.id) ? (styleAffiche(it, profile.styles, profile.gender) ?? undefined) : undefined);
   const [choixChaussuresOuvert, setChoixChaussuresOuvert] = useState(false);
   /** L'emplacement en pointillés et la phrase sous le flat lay : choisir parmi les paires possibles, sinon en ajouter une au dressing. */
   const completerChaussures = () => (chaussuresPossibles.length ? setChoixChaussuresOuvert(true) : actions.openAddForCategory("chaussures"));
