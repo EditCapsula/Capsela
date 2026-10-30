@@ -36,8 +36,13 @@ const STYLE_DU_LIBELLE = Object.fromEntries(Object.entries(STYLE_ID_TO_CATALOG_L
 /**
  * Le style à nommer sur la vignette : le premier style déclaré de la pièce qui n'est pas celui du profil, avec le libellé du genre
  * de l'utilisatrice (« Créatif » côté homme pour romantique…). Aucun style déclaré lisible : « Autre style » — jamais deviné.
+ *
+ * Aucun style pour des chaussures d'intérieur (null, 30/10/2026, signalé en capture : « valables pour tous les styles, pas que
+ * minimaliste ») : la capsule les ajoute déjà indépendamment du style (capsule.ts), leur étiquette de style au catalogue ne dit rien
+ * d'elles. L'écran les présente alors comme une suggestion.
  */
-export function styleAffiche(it: Pick<Item, "styleTags">, stylesDuProfil: readonly string[], gender: Gender | null): string {
+export function styleAffiche(it: Pick<Item, "styleTags" | "shoeType">, stylesDuProfil: readonly string[], gender: Gender | null): string | null {
+  if (it.shoeType === "Chaussures d'intérieur") return null;
   const id = (it.styleTags ?? []).map((t) => STYLE_DU_LIBELLE[t]).find((s) => s && !stylesDuProfil.includes(s));
   return (id && styleLabel(id, gender)) || "Autre style";
 }

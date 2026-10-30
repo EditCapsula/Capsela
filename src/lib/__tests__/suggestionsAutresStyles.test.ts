@@ -37,4 +37,7 @@ describe("styleAffiche — le style nommé, jamais deviné", () => {
     expect(styleAffiche({}, ["minimaliste"], "femme")).toBe("Autre style");
     expect(styleAffiche({ styleTags: ["Minimaliste"] }, ["minimaliste"], "femme")).toBe("Autre style");
   });
+  it("des chaussures d'intérieur ne sont d'aucun style : rien à nommer (30/10/2026)", () => {
+    expect(styleAffiche({ styleTags: ["Minimaliste"], shoeType: "Chaussures d'intérieur" }, ["boheme"], "femme")).toBeNull();
+  });
 });

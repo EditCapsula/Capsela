@@ -114,7 +114,9 @@ const SUBTYPE_BUCKETS: Record<string, string> = {
   espadrilles: "espadrilles",
   mocassins: "mocassins",
   baskets: "baskets",
-  "chaussures d'intérieur": "chaussons",
+  // « sabots_fourres » depuis le 30/10/2026 (« chaussons » avant) : une clé nouvelle, pour que la cascade de réutilisation ne rende
+  // jamais l'ancien visuel en éponge au nouveau modèle (imagePrompt.ts).
+  "chaussures d'intérieur": "sabots_fourres",
   collier: "collier",
   "boucles d'oreilles": "boucles_oreilles",
   bracelet: "bracelet",
