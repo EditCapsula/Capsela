@@ -40,6 +40,7 @@ techniques peuvent l'interrompre.
 - ton dressing, avec la photo de tes pièces, dont le fond est retiré
   automatiquement ;
 - le repérage des pièces d'une tenue entière à partir d'une seule photo ;
+- l'ajout de pièces depuis la photo d'un ticket de caisse, qui préremplit leurs fiches ;
 - une capsule de saison et des idées de tenues ;
 - la planification de looks et la préparation de valises ;
 - un Journal de ce que tu portes ;
