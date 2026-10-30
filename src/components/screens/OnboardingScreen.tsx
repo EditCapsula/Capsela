@@ -238,9 +238,10 @@ function VisuelValise() {
 
 function VisuelCompte() {
   return (
-    <div role="img" aria-label="Un téléphone affichant Capsela, posé parmi un sac, des lunettes et un magazine" className="relative rounded-carte overflow-hidden bg-border" style={{ height: "calc(var(--h-visuel) + 10px)" }}>
+    <div role="img" aria-label="Un téléphone affichant Capsela, posé parmi un tissu terracotta, des lunettes et des créoles dorées" className="relative rounded-carte overflow-hidden bg-border" style={{ height: "calc(var(--h-visuel) + 10px)" }}>
+      {/* Visuel fourni le 30/10/2026, au format paysage (1 200 × 800) : centré, le téléphone reste entier à toutes les hauteurs du cadre. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/onboarding/compte-telephone.webp" alt="" width={310} height={680} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center 58%" }} />
+      <img src="/onboarding/compte-telephone.webp" alt="" width={1200} height={800} decoding="async" className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: "center" }} />
     </div>
   );
 }
