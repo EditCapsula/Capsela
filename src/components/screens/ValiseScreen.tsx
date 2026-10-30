@@ -87,6 +87,7 @@ import {
   type IdeeSejour,
 } from "@/lib/activitesSejour";
 import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
+import { destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, ETAPES_MAX, type EtapeSejour } from "@/lib/etapesSejour";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { pieceLaPlusUtilisee, planningDeLaValise, type CreneauPlanning } from "@/lib/planningValise";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
@@ -747,6 +748,143 @@ function EtapeActivites({
   );
 }
 
+/** La première étape d'un séjour : la destination choisie, avec ses coordonnées quand elle vient de la liste des villes. */
+const etapePremiere = (destination: string, ville: VilleSuggeree | null): Omit<EtapeSejour, "arrivee"> =>
+  ville ? { destination: ville.name, lat: ville.lat, lon: ville.lon } : { destination: villeDuLieu(destination.trim()) };
+
+/**
+ * LES ÉTAPES D'UN ROAD TRIP (30/10/2026, demandé ; dates par étape, arbitré le même jour) : sous les dates du séjour, « Ajouter une autre
+ * destination ». Chaque étape ajoutée : sa ville (le même choix de ville que la destination) et son jour d'arrivée, en pastilles parmi les
+ * jours du séjour. Le nombre de nuits de chaque étape se lit à côté. La première étape est la destination, au départ (etapesSejour.ts).
+ */
+function EtapesRoadTrip({
+  premiere,
+  jours,
+  retour,
+  autres,
+  setAutres,
+  retenues,
+}: {
+  premiere: string;
+  jours: string[];
+  retour: string;
+  autres: EtapeSejour[];
+  setAutres: (f: (l: EtapeSejour[]) => EtapeSejour[]) => void;
+  retenues: EtapeSejour[];
+}) {
+  // Les jours où l'on peut arriver dans une autre ville : du lendemain du départ au retour.
+  const arrivees = jours.slice(1);
+  const nuits = (e: EtapeSejour) => {
+    const i = retenues.indexOf(e);
+    if (i < 0) return null;
+    const fin = retenues[i + 1]?.arrivee ?? retour;
+    return joursEntre(e.arrivee, fin);
+  };
+  const libelleNuits = (n: number | null) => (n == null ? "" : n === 0 ? "Dernier jour" : `${n} ${n > 1 ? "nuits" : "nuit"}`);
+  const premiereRetenue = retenues[0];
+  const prochaineArrivee = () => {
+    const prises = new Set(autres.map((e) => e.arrivee));
+    const libres = arrivees.filter((j) => !prises.has(j));
+    return libres[Math.floor(libres.length / 2)] ?? arrivees[arrivees.length - 1];
+  };
+  if (arrivees.length === 0) return null;
+
+  return (
+    <div className="mt-6">
+      {autres.length > 0 && (
+        <>
+          <Surtitre>Tes étapes</Surtitre>
+          <ol className="flex flex-col gap-2 mt-3">
+            <li className="flex items-center gap-[12px] bg-card border border-border rounded-tuile px-[14px] py-[10px]">
+              <span className="flex-shrink-0 w-[24px] h-[24px] rounded-full bg-terracotta-deep text-on-terracotta text-[12px] flex items-center justify-center">1</span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[13px] text-ink">{premiere || "Ta destination"}</span>
+                <span className="block text-[11px] text-muted mt-[2px]">
+                  Dès le {dateCourte(jours[0]).toLowerCase()}
+                  {premiereRetenue ? ` · ${libelleNuits(nuits(premiereRetenue))}` : ""}
+                </span>
+              </span>
+            </li>
+            {autres.map((e, i) => {
+              const retenue = retenues.find((r) => r === e) ?? null;
+              const doublonDeJour = !!e.destination && !retenue;
+              return (
+                <li key={i} className="bg-card border border-border rounded-tuile px-[14px] py-[10px]">
+                  <div className="flex items-center gap-[12px]">
+                    <span className="flex-shrink-0 w-[24px] h-[24px] rounded-full bg-chip-soft-bg text-ink text-[12px] flex items-center justify-center">{i + 2}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[13px] text-ink">{e.destination || "Nouvelle étape"}</span>
+                      {retenue && <span className="block text-[11px] text-muted mt-[2px]">{libelleNuits(nuits(retenue))}</span>}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAutres((l) => l.filter((_, k) => k !== i))}
+                      aria-label={`Retirer l'étape ${e.destination || i + 2}`}
+                      className="flex-shrink-0 w-[44px] h-[44px] -mr-[10px] flex items-center justify-center text-muted cursor-pointer"
+                    >
+                      {G_CROIX}
+                    </button>
+                  </div>
+                  {!e.destination && (
+                    <ChoixVille
+                      avecPosition={false}
+                      avecRecentes={false}
+                      lieu=""
+                      onChoisir={(v, libelle) =>
+                        setAutres((l) =>
+                          l.map((x, k) => (k === i ? { ...x, destination: v ? v.name : villeDuLieu(libelle), ...(v ? { lat: v.lat, lon: v.lon } : {}) } : x))
+                        )
+                      }
+                    />
+                  )}
+                  <div className="text-[11px] text-muted mt-3">Arrivée le</div>
+                  <div className="scrollarea flex gap-[6px] overflow-x-auto -mx-[14px] px-[14px] mt-[6px]" role="group" aria-label={`Jour d'arrivée à ${e.destination || "cette étape"}`}>
+                    {arrivees.map((j) => {
+                      const on = e.arrivee === j;
+                      return (
+                        <button
+                          key={j}
+                          type="button"
+                          onClick={() => setAutres((l) => l.map((x, k) => (k === i ? { ...x, arrivee: j } : x)))}
+                          aria-pressed={on}
+                          className={
+                            "flex-shrink-0 rounded-full px-[12px] text-[12px] border cursor-pointer " +
+                            (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-transparent border-border text-ink")
+                          }
+                          style={{ minHeight: 36 }}
+                        >
+                          {dateCourte(j)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {doublonDeJour && (
+                    <div className="text-[12px] text-terracotta mt-2">
+                      {arrivees.includes(e.arrivee)
+                        ? "Une autre étape commence ce jour-là : choisis un autre jour d'arrivée."
+                        : "Les dates du séjour ont changé : choisis son jour d'arrivée."}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </>
+      )}
+      {autres.length < ETAPES_MAX - 1 && (
+        <button
+          type="button"
+          onClick={() => setAutres((l) => [...l, { destination: "", arrivee: prochaineArrivee() }])}
+          className="w-full mt-3 rounded-full border border-border bg-card text-[12px] text-ink cursor-pointer inline-flex items-center justify-center gap-[6px]"
+          style={{ minHeight: 44 }}
+        >
+          {G_PLUS} {autres.length ? "Ajouter une étape" : "Un road trip ? Ajouter une autre destination"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function ValiseScreen() {
   const { state, weather, defaultCapsule, vestiairePool, actions } = useCapsela();
   const { profile } = useAuth();
@@ -794,6 +932,8 @@ export default function ValiseScreen() {
   const sejourCommence = premierJour < aujourdhui;
   const [destination, setDestination] = useState("");
   const [ville, setVille] = useState<VilleSuggeree | null>(null);
+  /** LES AUTRES ÉTAPES D'UN ROAD TRIP (30/10/2026, etapesSejour.ts) : chaque ville et son jour d'arrivée. La première est `destination`. */
+  const [autresEtapes, setAutresEtapes] = useState<EtapeSejour[]>([]);
   const [depart, setDepart] = useState("");
   const [retour, setRetour] = useState("");
   const [bagage, setBagage] = useState<TailleBagage | null>(null);
@@ -814,6 +954,10 @@ export default function ValiseScreen() {
   const conseille = bagageConseille(Math.max(1, jours.length));
   const dureeOk = jours.length > 0 && dateDe(retour) <= dateDe(plusJours(depart, DUREE_MAX_JOURS - 1));
   const nomVille = ville ? ville.name : villeDuLieu(destination.trim());
+  const etapes = depart && retour ? etapesRetenues(etapePremiere(destination, ville), autresEtapes, depart, retour) : [];
+  const roadTrip = etapes.length > 1;
+  /** Une étape ajoutée sans ville, ou dont le jour d'arrivée est déjà pris : on le dit, le bouton attend (jamais écartée en silence). */
+  const etapesCompletes = autresEtapes.every((e) => e.destination.trim() && etapes.includes(e));
   const programme: ItemProgramme[] = programmeDesActivites(activites, jours.length || 1);
 
   /**
@@ -858,7 +1002,7 @@ export default function ValiseScreen() {
   const amplitudeEtape1 = meteosEtape1 ? amplitudePrevue(meteosEtape1) : null;
 
   const etapeValide =
-    etape === 1 ? destination.trim().length > 1 && depart >= premierJour && dureeOk : etape === 2 ? bagage != null : true;
+    etape === 1 ? destination.trim().length > 1 && depart >= premierJour && dureeOk && etapesCompletes : etape === 2 ? bagage != null : true;
 
   const zoneScroll = useRef<HTMLDivElement | null>(null);
   const [onglet, setOnglet] = useState<Onglet>("ensemble");
@@ -889,6 +1033,8 @@ export default function ValiseScreen() {
   type Reponses = {
     destination: string;
     ville: VilleSuggeree | null;
+    /** Les étapes d'un road trip (au moins deux) ; absentes pour une seule destination. */
+    etapes?: EtapeSejour[];
     depart: string;
     retour: string;
     bagage: TailleBagage;
@@ -921,17 +1067,34 @@ export default function ValiseScreen() {
   };
   const calculer = async (rep: Reponses, idCible: string | null) => {
     const joursRep = joursDuSejour(rep.depart, rep.retour);
-    const cle = rep.ville ? `${rep.ville.lat},${rep.ville.lon}` : villeDuLieu(rep.destination).toLowerCase();
     setFaites(0);
     setVue({ nom: "calcul" });
-    const [p] = await Promise.all([
-      prevision && prevision.cle === cle ? prevision.p : previsionGardee(rep.ville ? rep.ville.name : rep.destination.trim(), rep.ville).catch(() => null),
+    /**
+     * La météo de chaque jour, VILLE PAR VILLE pour un road trip (30/10/2026) : chaque étape, sa prévision et sa climatologie, sur ses
+     * seuls jours. Une seule destination : une seule étape, le calcul d'avant.
+     */
+    const etapesRep: { nom: string; ville: VilleSuggeree | null; jours: string[] }[] = rep.etapes?.length
+      ? joursParEtape(rep.etapes, joursRep).map(({ etape, jours: js }) => ({
+          nom: etape.destination,
+          ville: etape.lat != null && etape.lon != null ? { name: villeDuLieu(etape.destination), country: "", state: "", lat: etape.lat, lon: etape.lon } : null,
+          jours: js,
+        }))
+      : [{ nom: rep.ville ? rep.ville.name : rep.destination.trim(), ville: rep.ville, jours: joursRep }];
+    const [meteosParEtape] = await Promise.all([
+      Promise.all(
+        etapesRep.map(async (e) => {
+          const cle = e.ville ? `${e.ville.lat},${e.ville.lon}` : villeDuLieu(e.nom).toLowerCase();
+          const p = prevision && prevision.cle === cle ? prevision.p : await previsionGardee(e.ville ? e.ville.name : villeDuLieu(e.nom), e.ville).catch(() => null);
+          // Les jours que la prévision ne couvre pas : la climatologie du lieu, à la date au milieu de ces jours (un seul appel).
+          const sansPrevision = e.jours.filter((j) => !(p && previsionPour(p, j, "Toute la journée")));
+          const climat =
+            e.ville && sansPrevision.length > 0 ? await fetchClimat({ lat: e.ville.lat, lon: e.ville.lon }, dateDe(sansPrevision[Math.floor(sansPrevision.length / 2)])).catch(() => null) : null;
+          return meteosDe(p, e.jours, climat);
+        })
+      ),
       pause(450),
     ]);
-    // Les jours que la prévision ne couvre pas : la climatologie du lieu, à la date au milieu de ces jours (un seul appel).
-    const sansPrevision = joursRep.filter((j) => !(p && previsionPour(p, j, "Toute la journée")));
-    const climat = rep.ville && sansPrevision.length > 0 ? await fetchClimat({ lat: rep.ville.lat, lon: rep.ville.lon }, dateDe(sansPrevision[Math.floor(sansPrevision.length / 2)])) : null;
-    const meteos = meteosDe(p, joursRep, climat);
+    const meteos = meteosParEtape.flat();
     if (!actif.current) return;
     setFaites(1);
     // Les événements datés ont chacun leur situation, APRÈS celles du programme : les indices de celles-ci ne bougent pas.
@@ -954,7 +1117,8 @@ export default function ValiseScreen() {
     sauver({
       version: 2,
       id,
-      destination: rep.ville ? rep.ville.name : villeDuLieu(rep.destination.trim()),
+      destination: rep.etapes?.length ? libelleItineraire(rep.etapes) : rep.ville ? rep.ville.name : villeDuLieu(rep.destination.trim()),
+      ...(rep.etapes && rep.etapes.length > 1 ? { etapes: rep.etapes } : {}),
       depart: rep.depart,
       retour: rep.retour,
       bagage: rep.bagage,
@@ -989,7 +1153,7 @@ export default function ValiseScreen() {
     const evts = evenementsDuSejour(evenements, jours);
     const meres = occasionsDuProgramme([...retenu, ...evts.map((e) => ({ id: e.type, frequence: 1 }))]);
     void lancer(
-      { destination, ville, depart, retour, bagage, sejour: null, occasions: occasionsRetenues(meres, null), programme: retenu, activites, choix, evenements: evts },
+      { destination, ville, ...(roadTrip ? { etapes } : {}), depart, retour, bagage, sejour: null, occasions: occasionsRetenues(meres, null), programme: retenu, activites, choix, evenements: evts },
       idEnModification
     );
   };
@@ -997,7 +1161,7 @@ export default function ValiseScreen() {
   const recomposer = () => {
     if (!valise) return;
     void lancer(
-      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites, choix: valise.choix, evenements: valise.evenements },
+      { destination: valise.destination, ville: null, ...(valise.etapes ? { etapes: valise.etapes } : {}), depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites, choix: valise.choix, evenements: valise.evenements },
       valise.id
     );
   };
@@ -1046,6 +1210,7 @@ export default function ValiseScreen() {
     setIdEnModification(null);
     setDestination("");
     setVille(null);
+    setAutresEtapes([]);
     setDepart("");
     setRetour("");
     setBagage(null);
@@ -1064,8 +1229,11 @@ export default function ValiseScreen() {
   /** Reprendre les réponses de la valise affichée, pour la modifier. */
   const modifier = () => {
     if (!valise) return;
-    setDestination(valise.destination);
-    setVille(null);
+    // Un road trip reprend sa première ville comme destination, les autres comme étapes (avec leurs coordonnées).
+    const [premiere, ...suivantes] = valise.etapes ?? [];
+    setDestination(premiere ? premiere.destination : valise.destination);
+    setVille(premiere && premiere.lat != null && premiere.lon != null ? { name: villeDuLieu(premiere.destination), country: "", state: "", lat: premiere.lat, lon: premiere.lon } : null);
+    setAutresEtapes(suivantes);
     setDepart(valise.depart);
     setRetour(valise.retour);
     setBagage(valise.bagage);
@@ -1183,6 +1351,7 @@ export default function ValiseScreen() {
                 position à la demande, carte de la destination avec « Modifier ». */}
             <ChoixVille
               avecPosition={false}
+              avecRecentes={false}
               lieu={destination}
               onChoisir={(v, libelle) => {
                 setVille(v);
@@ -1220,6 +1389,12 @@ export default function ValiseScreen() {
             </div>
             {jours.length > 0 && (
               <div className="text-[12px] text-muted mt-3">{dureeOk ? libelleDuree(jours.length) : `Un séjour de ${DUREE_MAX_JOURS} jours au plus.`}</div>
+            )}
+            {destination.trim().length > 1 && dureeOk && (
+              <EtapesRoadTrip premiere={etapes[0]?.destination ?? nomVille} jours={jours} retour={retour} autres={autresEtapes} setAutres={setAutresEtapes} retenues={etapes} />
+            )}
+            {autresEtapes.some((e) => !e.destination.trim()) && (
+              <div className="text-[12px] text-muted mt-2">Choisis la ville de ta nouvelle étape, ou retire-la, pour continuer.</div>
             )}
             {/* Les saisies invalides sont dites, jamais corrigées en silence : le bouton reste grisé tant qu'elles le sont. */}
             {depart && depart < premierJour && (
@@ -1337,11 +1512,15 @@ export default function ValiseScreen() {
         {questions && etape === 3 && (
           <>
             <Surtitre>Ta valise · 3 / 3</Surtitre>
-            <TitreEtape a="Qu'as-tu prévu" b={`${destinationAvecPreposition(ville?.capitaleDe ?? nomVille) ?? "pendant ton séjour"} ?`} />
+            <TitreEtape
+              a="Qu'as-tu prévu"
+              b={`${roadTrip ? "pendant ton road trip" : (destinationAvecPreposition(ville?.capitaleDe ?? nomVille) ?? "pendant ton séjour")} ?`}
+            />
             <div className="text-[13px] text-muted leading-[1.5] mt-2">
               Voici quelques idées pour profiter de ton séjour. Sélectionne celles qui te plaisent, tu peux en ajouter autant que tu veux !
             </div>
-            <EtapeActivites requete={destination.trim()} jours={jours} choix={choix} setChoix={setChoix} evenements={evenements} setEvenements={setEvenements} />
+            {/* Un road trip : les idées couvrent toutes ses villes (« Lisbonne, Porto, Faro »). */}
+            <EtapeActivites requete={roadTrip ? etapes.map((e) => e.destination).join(", ") : destination.trim()} jours={jours} choix={choix} setChoix={setChoix} evenements={evenements} setEvenements={setEvenements} />
           </>
         )}
 
@@ -1570,7 +1749,8 @@ function Resultat({
    */
   const aujourdhui = jourLocal();
   const joursAVenir = valise.meteos.map((m) => m.jour).filter((j) => j >= aujourdhui);
-  const villePrevision = joursAVenir.length > 0 && joursEntre(aujourdhui, joursAVenir[0]) <= HORIZON_PREVISION_JOURS ? valise.destination : null;
+  // Un road trip : la ville du premier jour à venir (etapesSejour.ts) ; jamais l'itinéraire entier, qui n'est pas un lieu.
+  const villePrevision = joursAVenir.length > 0 && joursEntre(aujourdhui, joursAVenir[0]) <= HORIZON_PREVISION_JOURS ? destinationDuJour(valise, joursAVenir[0]) : null;
   const [previsionVive, setPrevisionVive] = useState<{ ville: string; p: Prevision | null } | null>(null);
   useEffect(() => {
     if (!villePrevision) return;
@@ -1583,7 +1763,9 @@ function Resultat({
     };
   }, [villePrevision]);
   /** Les jours du séjour que la prévision du moment couvre — vide tant qu'elle n'est pas arrivée, ou si elle manque. */
-  const meteosPrevues = previsionVive && previsionVive.ville === villePrevision ? meteosPrevuesDuSejour(previsionVive.p, joursAVenir) : [];
+  // Seuls les jours passés dans cette ville : la prévision de Lisbonne ne dit rien des jours à Porto.
+  const joursDeLaVille = villePrevision ? joursAVenir.filter((j) => destinationDuJour(valise, j) === villePrevision) : [];
+  const meteosPrevues = previsionVive && previsionVive.ville === villePrevision ? meteosPrevuesDuSejour(previsionVive.p, joursDeLaVille) : [];
   const amplitude = amplitudePrevue(meteosPrevues);
   const previsionAttendue = villePrevision != null && !(previsionVive && previsionVive.ville === villePrevision);
 

@@ -71,8 +71,14 @@ export function ChoixVille({
   lieu,
   onChoisir,
   avecPosition = true,
+  avecRecentes = true,
 }: {
   lieu: string;
+  /**
+   * « Villes récentes » : utile pour planifier une tenue là où l'on va souvent ; retirée de la valise le 30/10/2026 (demandé : « elle
+   * n'est pas pertinente » — on prépare un voyage vers un lieu nouveau). Vrai par défaut. Les villes choisies restent gardées.
+   */
+  avecRecentes?: boolean;
   /**
    * « Utiliser ma position actuelle » : utile pour une tenue planifiée là où l'on se trouve, pas pour une valise (11/10/2026, demandé :
    * on prépare un voyage ailleurs, jamais là où l'on est). Vrai par défaut.
@@ -259,7 +265,7 @@ export function ChoixVille({
                 </button>
               )}
               {/* Première utilisation : aucune section vide. */}
-              {recentes.length > 0 && (
+              {avecRecentes && recentes.length > 0 && (
                 <div className="mt-4">
                   <Surtitre>Villes récentes</Surtitre>
                   <div className="flex flex-wrap gap-[8px] mt-[10px]">

@@ -1,4 +1,5 @@
 import { planningDeLaValise } from "./planningValise";
+import { destinationDuJour } from "./etapesSejour";
 import type { TenuePlanifiee } from "./planifier";
 import { elementProgramme } from "./programmeValise";
 import { joursDuSejour, lookAChaussuresEtSac, type LookValise } from "./valise";
@@ -65,7 +66,8 @@ export function looksValiseDuJour(v: ValiseGardee, jour: string, pool: readonly 
       moment,
       occasion,
       sousChoix: null,
-      lieu: v.destination,
+      // La ville de CE jour pour un road trip (etapesSejour.ts, 30/10/2026) : sa météo et son libellé sont ceux de l'étape.
+      lieu: destinationDuJour(v, jour),
       typeLieu: null,
       dressingSeul: false,
       pieceIds: [...look.ids],
