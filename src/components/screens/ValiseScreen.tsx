@@ -67,20 +67,35 @@ import { selectionApercu } from "@/lib/valiseApercu";
 import { decalerMois, grilleDuMois, toucherJour } from "@/lib/calendrierPeriode";
 import { articlesChecklist, progressionChecklist, raisonsPartagees, sectionsChecklist, type FiltreChecklist, type Progression, type SectionChecklist } from "@/lib/checklistValise";
 import { lireNomEvenement } from "@/lib/lectureEvenement";
+import {
+  CATEGORIES_IDEES,
+  IDEES_GENERIQUES,
+  LIBELLE_MAX,
+  activiteDeLOccasion,
+  activiteDuLibelle,
+  activitesDesChoix,
+  ajouterLibelle,
+  basculerIdee,
+  choixDeLaValise,
+  cleLibelle,
+  dejaChoisi,
+  destinationAvecPreposition,
+  ideesUniques,
+  libellePropre,
+  type ActiviteChoisie,
+  type CategorieIdee,
+  type IdeeSejour,
+} from "@/lib/activitesSejour";
+import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
+import LoadingSpinner from "@/components/LoadingSpinner";
 import { pieceLaPlusUtilisee, planningDeLaValise, type CreneauPlanning } from "@/lib/planningValise";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
 import {
-  NOM_EVENEMENT_MAX,
-  TYPE_AUTRE,
-  TYPES_EVENEMENT,
-  occasionDeLEvenement,
   evenementsDuSejour,
   libelleEvenement,
   situationsDesEvenements,
-  MOMENTS_EVENEMENT,
   libelleMoment,
   type EvenementValise,
-  type MomentEvenement,
 } from "@/lib/evenementsValise";
 import { LIBELLE_RAISON, apercuAllegement, avecTenue, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
@@ -93,7 +108,6 @@ import {
   type EtatAffaires,
 } from "@/lib/affairesVoyage";
 import {
-  ACTIVITES,
   activitesDuProgramme,
   bagageConseille,
   couvertureMeteo,
@@ -455,13 +469,6 @@ const GLYPHES_ACTIVITE: Record<ActiviteSejour, React.ReactNode> = {
 const DERNIERE_ETAPE = 3;
 
 /**
- * Les activités PROPOSÉES (30/10/2026) : toutes, sauf « Événement spécial », qui répartissait une cérémonie sur le séjour sans date —
- * un mariage s'ajoute désormais comme un événement daté, juste en dessous. Elle reste dans ACTIVITES (une valise qui l'a gardée la
- * retrouve, cochée, et peut la décocher) : les correspondances du programme ne changent pas.
- */
-const ACTIVITES_PROPOSEES: readonly ActiviteSejour[] = ["plage", "ville", "nature", "randonnee", "detente", "soiree", "travail", "sport"];
-
-/**
  * LES ÉTAPES DE LA PRÉPARATION, TELLES QU'ELLES ONT LIEU (30/10/2026) : trois traitements réels, dans leur ordre, chacun coché quand il est
  * fait. Avant : cinq lignes, dont « Composition des looks » et « Vérification de la capacité », cochées après coup — elles ont lieu DANS
  * la sélection (composerValise) — et retardées par des pauses : une progression qui ne correspondait pas au calcul.
@@ -476,289 +483,266 @@ const ETAPES_CALCUL: [React.ReactNode, string][] = [
 const libelleCreneau = (c: CreneauPlanning) =>
   c.evenement ? `${c.libelle} · ${c.moment ? libelleMoment(c.moment) : c.creneau === "soir" ? "Soirée" : "Journée"}` : c.libelle;
 
-const G_CRAYON = svg(<path d="M5 19l1-4L15.5 5.5a2 2 0 0 1 3 3L9 18zM13.5 7.5l3 3" {...trait} />, 16);
-
-/** Pour le libellé accessible d'un jour : « dimanche 25 octobre ». */
-const JOURS_LONGS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
+/** Les idées montrées d'emblée : assez pour choisir, peu pour rester lisible sur un petit écran ; « Voir plus d'idées » montre le reste. */
+const IDEES_VISIBLES = 8;
+/** Les filtres n'apparaissent qu'avec assez d'idées, et au moins trois familles : en dessous, ils encombrent sans aider. */
+const IDEES_POUR_FILTRES = 8;
+const FAMILLES_POUR_FILTRES = 3;
 
 /**
- * LES ÉVÉNEMENTS (22/10/2026 ; depuis le 30/10/2026, une section de l'étape « Qu'as-tu prévu ? », plus une étape à part — brief
- * « Fluidification du parcours ») : les événements ajoutés, chacun modifiable et supprimable (« Annuler » pendant 6 s, comme la
- * checklist) ; puis les types en pastilles. Le reste ne s'ouvre qu'une fois un type choisi (révélation progressive) : le jour (une
- * rangée défilante des jours du séjour), le moment (proposé selon le type), un nom facultatif. Un champ manquant n'est dit qu'au toucher
- * d'« Ajouter », jamais avant. Modifier un événement réinjecte ses valeurs et garde son identifiant : aucun doublon. Rien n'est généré ici.
+ * L'ÉTAPE ACTIVITÉS (30/10/2026, brief « Refonte UX de l'étape Activités ») : une seule sélection. Des idées selon la destination (la
+ * fonction `lire-evenement`, ideesSejour.ts ; à défaut, IDEES_GENERIQUES), ce que la personne écrit elle-même, et « Ton programme » qui
+ * rassemble ses choix. Aucun jour, aucun moment, aucun nom demandé : un mariage s'ajoute comme une visite, en un geste. Chaque choix garde
+ * son libellé et porte l'activité du moteur qu'il évoque (activitesSejour.ts) ; seule celle-ci part vers le programme. Les événements
+ * datés d'une valise d'avant restent avec leur jour : ils figurent au programme et se retirent de la même façon.
  */
-function EtapeEvenements({
+function EtapeActivites({
+  requete,
   jours,
+  choix,
+  setChoix,
   evenements,
   setEvenements,
 }: {
+  /** Le lieu tel qu'il part pour les idées (« Marrakech, Maroc »). */
+  requete: string;
   jours: string[];
+  choix: ActiviteChoisie[];
+  setChoix: (f: (l: ActiviteChoisie[]) => ActiviteChoisie[]) => void;
   evenements: EvenementValise[];
   setEvenements: (f: (l: EvenementValise[]) => EvenementValise[]) => void;
 }) {
-  const [type, setType] = useState<string | null>(null);
-  const [jour, setJour] = useState<string | null>(jours.length === 1 ? jours[0] : null);
-  const [moment, setMoment] = useState<MomentEvenement>("jour");
-  const [nom, setNom] = useState("");
-  /** L'événement en cours de modification ; null : un ajout. */
-  const [enModification, setEnModification] = useState<string | null>(null);
-  const [manque, setManque] = useState(false);
-  const [confirmation, setConfirmation] = useState<string | null>(null);
-  const [annulation, setAnnulation] = useState<{ evenement: EvenementValise; index: number } | null>(null);
-  /** Les événements « Autre » dont le nom est en cours de lecture. */
-  const [lectures, setLectures] = useState<Set<string>>(new Set());
+  const [idees, setIdees] = useState<{ requete: string; liste: IdeeSejour[]; duLieu: boolean } | null>(() => {
+    const gardees = ideesGardees(requete);
+    return gardees ? { requete, liste: gardees, duLieu: true } : null;
+  });
   useEffect(() => {
-    if (!confirmation) return;
-    const t = setTimeout(() => setConfirmation(null), 3000);
-    return () => clearTimeout(t);
-  }, [confirmation]);
-  useEffect(() => {
-    if (!annulation) return;
-    const t = setTimeout(() => setAnnulation(null), 6000);
-    return () => clearTimeout(t);
-  }, [annulation]);
+    if (idees?.requete === requete) return;
+    let annule = false;
+    void ideesPourDestination(requete).then((liste) => {
+      if (!annule) setIdees({ requete, liste: liste ?? IDEES_GENERIQUES, duLieu: Boolean(liste) });
+    });
+    return () => {
+      annule = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requete]);
+  const chargement = !idees || idees.requete !== requete;
+  const liste = ideesUniques(chargement ? [] : idees.liste);
 
-  const dansLeSejour = evenementsDuSejour(evenements, jours);
-  const complet = type != null && jour != null && jours.includes(jour);
-  const vider = () => {
-    setType(null);
-    setJour(jours.length === 1 ? jours[0] : null);
-    setMoment("jour");
-    setNom("");
-    setEnModification(null);
-    setManque(false);
-  };
-  const valider = () => {
-    if (!complet) {
-      setManque(true);
+  const [filtre, setFiltre] = useState<CategorieIdee | null>(null);
+  const [toutes, setToutes] = useState(false);
+  const familles = CATEGORIES_IDEES.filter((c) => liste.some((i) => i.categorie === c.id));
+  const avecFiltres = liste.length >= IDEES_POUR_FILTRES && familles.length >= FAMILLES_POUR_FILTRES;
+  const filtrees = avecFiltres && filtre ? liste.filter((i) => i.categorie === filtre) : liste;
+  const visibles = toutes || filtre ? filtrees : filtrees.slice(0, IDEES_VISIBLES);
+
+  const [saisie, setSaisie] = useState("");
+  const [doublon, setDoublon] = useState(false);
+  const ajouter = () => {
+    const libelle = libellePropre(saisie);
+    if (!cleLibelle(libelle)) return;
+    if (dejaChoisi(choix, libelle)) {
+      setDoublon(true);
       return;
     }
-    const nomPropre = nom.trim().slice(0, NOM_EVENEMENT_MAX);
-    const champs = { type, jour, moment, ...(nomPropre ? { nom: nomPropre } : {}) };
-    const id = enModification ?? `e${Date.now().toString(36)}${evenements.length}`;
-    if (enModification) {
-      setEvenements((l) => l.map((e) => (e.id === enModification ? { id: e.id, ...champs } : e)));
-      setConfirmation(`${libelleEvenement(champs)} : modifications enregistrées`);
-    } else {
-      setEvenements((l) => [...l, { id, ...champs }]);
-      setConfirmation(`${libelleEvenement(champs)} ajouté`);
-    }
-    // LA LECTURE DU NOM (22/10/2026) : un « Autre » nommé reçoit l'occasion que son nom décrit, dès que la lecture répond — seulement
-    // si l'événement n'a pas changé entre-temps. Sans réponse, il garde Quotidien.
-    if (type === TYPE_AUTRE && nomPropre) {
-      setLectures((l) => new Set(l).add(id));
-      void lireNomEvenement(nomPropre).then((occasion) => {
-        setLectures((l) => {
-          const n = new Set(l);
-          n.delete(id);
-          return n;
-        });
-        if (occasion) setEvenements((l) => l.map((e) => (e.id === id && e.type === TYPE_AUTRE && e.nom === nomPropre ? { ...e, occasionLue: occasion } : e)));
+    setChoix((l) => ajouterLibelle(l, libelle));
+    setSaisie("");
+    setDoublon(false);
+    // Aucun mot ne dit l'activité : la lecture IA du libellé (celle des événements « Autre ») prend le relais, sans rien bloquer.
+    if (!activiteDuLibelle(libelle)) {
+      void lireNomEvenement(libelle).then((occasion) => {
+        const activite = activiteDeLOccasion(occasion);
+        if (activite) setChoix((l) => l.map((c) => (c.libelle === libelle && c.source === "perso" && !c.activite ? { ...c, activite } : c)));
       });
     }
-    vider();
   };
-  const modifier = (e: EvenementValise) => {
-    setType(e.type);
-    setJour(e.jour);
-    setMoment(e.moment);
-    setNom(e.nom ?? "");
-    setEnModification(e.id);
-    setManque(false);
-  };
-  const supprimer = (e: EvenementValise) => {
-    setAnnulation({ evenement: e, index: evenements.findIndex((x) => x.id === e.id) });
-    setEvenements((l) => l.filter((x) => x.id !== e.id));
-    if (enModification === e.id) vider();
-  };
-  const libelleType = (id: string) => TYPES_EVENEMENT.find((t) => t.id === id)?.libelle ?? libelleEvenement({ type: id });
-  const etiquette = "t-label text-muted mt-5 mb-2";
-  const pastille = (on: boolean) =>
-    "rounded-full border px-[14px] min-h-[44px] text-[13px] cursor-pointer transition-colors " +
-    (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink");
-  /** Le formulaire ne s'ouvre qu'une fois un type choisi (ou un événement à modifier). */
-  const ouvert = type != null;
-  // Le formulaire qui s'ouvre vient sous les yeux : sous les pastilles, il tombait sous le bouton fixe « Préparer ma valise ».
-  const formulaire = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (ouvert) formulaire.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-  }, [ouvert, enModification]);
+
+  const evtsDuSejour = evenementsDuSejour(evenements, jours);
+  const total = choix.length + evtsDuSejour.length;
+  const [confirmerEffacer, setConfirmerEffacer] = useState(false);
+
+  const glyphe = (activite: ActiviteSejour | null) => (activite ? GLYPHES_ACTIVITE[activite] : GLYPHES_ACTIVITE.ville);
 
   return (
     <>
-      {dansLeSejour.length > 0 && (
-        <section className="mt-4" aria-label={`Événements ajoutés : ${dansLeSejour.length}`}>
-          <ul className="flex flex-col gap-2">
-            {dansLeSejour.map((e) => {
-              const titre = libelleEvenement(e);
-              const enCours = enModification === e.id;
-              return (
-                <li
-                  key={e.id}
-                  className={"flex items-center gap-1 rounded-tuile border bg-card pl-[14px] " + (enCours ? "border-terracotta-deep" : "border-border")}
-                >
-                  <span className="flex-1 min-w-0 py-[11px]">
-                    <span className="block text-[14px] text-ink leading-[1.3] truncate">{titre}</span>
-                    <span className="block text-[12px] text-muted mt-[2px]">
-                      {dateCourte(e.jour)} · {libelleMoment(e.moment)}
-                    </span>
-                    {/* Le type n'est redit que sous un nom personnalisé : sans nom, le titre l'est déjà. */}
-                    {e.nom?.trim() && <span className="block text-[12px] text-terracotta mt-[1px]">{libelleType(e.type)}</span>}
-                    {/* Un « Autre » dit la tenue qu'il recevra : celle que son nom décrit, ou Quotidien à défaut. */}
-                    {e.type === TYPE_AUTRE && (
-                      <span className="block text-[12px] text-muted mt-[1px]">
-                        {lectures.has(e.id) ? "Capsela lit le nom…" : `Tenue : ${occasionShortLabel(occasionDeLEvenement(e) ?? "quotidien")}`}
-                      </span>
-                    )}
-                    {enCours && <span className="block text-[11px] text-terracotta-deep mt-[3px]">En cours de modification</span>}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => modifier(e)}
-                    aria-label={`Modifier ${titre}`}
-                    className="w-[44px] h-[44px] flex items-center justify-center text-ink cursor-pointer flex-shrink-0 rounded-full active:opacity-70"
-                  >
-                    {G_CRAYON}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => supprimer(e)}
-                    aria-label={`Supprimer ${titre}`}
-                    className="w-[44px] h-[44px] flex items-center justify-center text-muted cursor-pointer flex-shrink-0 rounded-full active:opacity-70 mr-[2px]"
-                  >
-                    {G_POUBELLE}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-      {annulation && (
-        <div role="status" className="flex items-center justify-between gap-3 rounded-tuile bg-ink text-cream px-[14px] mt-3" style={{ minHeight: 48 }}>
-          <span className="text-[13px] min-w-0 truncate">{libelleEvenement(annulation.evenement)} supprimé</span>
-          <button
-            type="button"
-            onClick={() => {
-              const { evenement, index } = annulation;
-              setEvenements((l) => (l.some((x) => x.id === evenement.id) ? l : [...l.slice(0, index), evenement, ...l.slice(index)]));
-              setAnnulation(null);
-            }}
-            className="t-cta text-cream underline underline-offset-[3px] cursor-pointer flex-shrink-0"
-            style={{ minHeight: 44 }}
-          >
-            Annuler
-          </button>
+      {/* ── LES IDÉES ── */}
+      <section className="mt-6" aria-labelledby="idees-sejour">
+        <div id="idees-sejour" className="font-serif text-[19px] text-ink leading-[1.25]">
+          Quelques idées pour ton séjour
         </div>
-      )}
-
-      <div className="mt-4">
-        {enModification && <div className="t-label text-terracotta-deep mb-2">Modifier l&apos;événement</div>}
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Type d'événement">
-          {TYPES_EVENEMENT.map((t) => {
-            const on = type === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                aria-pressed={on}
-                onClick={() => {
-                  // Toucher le type déjà choisi referme le formulaire d'ajout (rien n'est perdu de ce qui est déjà ajouté).
-                  if (on && !enModification) return vider();
-                  setType(t.id);
-                  setManque(false);
-                  // Le moment proposé suit le type, sans écraser celui d'un événement qu'on modifie.
-                  if (!enModification) setMoment(t.moment);
-                }}
-                className={pastille(on)}
-              >
-                {t.libelle}
-              </button>
-            );
-          })}
+        <div className="text-[13px] text-muted leading-[1.5] mt-[4px]">
+          {chargement || idees?.duLieu ? "Des suggestions selon ta destination." : "Des idées pour tout voyage : ajoute aussi les tiennes."}
         </div>
-      </div>
 
-      {ouvert && (
-        <div ref={formulaire} className="mt-4 scroll-mb-[120px]">
-          <Card rayon="tuile" className="px-[14px] pt-[2px] pb-[14px]">
-            <div className={etiquette} id="evt-jour">
-              Quel jour ?
-            </div>
-            {/* Une rangée défilante (22/10/2026) : sept jours ou trente tiennent sur une ligne, sans pousser le formulaire vers le bas. */}
-            <div className="scrollarea flex gap-2 overflow-x-auto -mx-[14px] px-[14px] pb-[2px]" role="group" aria-labelledby="evt-jour" style={{ scrollbarWidth: "none" }}>
-              {jours.map((j) => {
-                const on = jour === j;
-                const d = dateDe(j);
+        {chargement ? (
+          <div className="flex items-center gap-[10px] mt-4 text-[13px] text-muted" aria-live="polite">
+            <LoadingSpinner size={16} /> On cherche des idées pour ta destination…
+          </div>
+        ) : (
+          <>
+            {avecFiltres && (
+              <div className="scrollarea flex gap-[8px] overflow-x-auto -mx-6 px-6 mt-4" role="group" aria-label="Filtrer les idées">
+                {[{ id: null, libelle: "Toutes" } as { id: CategorieIdee | null; libelle: string }, ...familles].map((f) => {
+                  const on = filtre === f.id;
+                  return (
+                    <button
+                      key={f.libelle}
+                      type="button"
+                      onClick={() => setFiltre(f.id)}
+                      aria-pressed={on}
+                      className={"flex-shrink-0 rounded-full px-[14px] text-[12px] border cursor-pointer " + (on ? "bg-ink text-cream border-ink" : "bg-transparent text-muted-3 border-border")}
+                      style={{ minHeight: 36 }}
+                    >
+                      {f.libelle}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2 mt-4" role="group" aria-label="Idées d'activités">
+              {visibles.map((idee) => {
+                const on = dejaChoisi(choix, idee.libelle);
                 return (
                   <button
-                    key={j}
+                    key={idee.libelle}
                     type="button"
+                    onClick={() => setChoix((l) => basculerIdee(l, idee))}
                     aria-pressed={on}
-                    aria-label={`${JOURS_LONGS[d.getDay()]} ${d.getDate()} ${MOIS_LONGS[d.getMonth()]}`}
-                    onClick={() => setJour(j)}
                     className={
-                      "flex-shrink-0 w-[58px] rounded-tuile border flex flex-col items-center justify-center py-[8px] cursor-pointer transition-colors " +
-                      (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-cream border-border text-ink")
+                      "inline-flex items-center gap-[8px] rounded-[22px] pl-[12px] pr-[12px] py-[8px] border text-left cursor-pointer transition-colors max-w-full " +
+                      (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
                     }
-                    style={{ minHeight: 76 }}
+                    style={{ minHeight: 44 }}
                   >
-                    <span className={"text-[11px] " + (on ? "text-on-terracotta" : "text-muted")}>{DOW[d.getDay()]}</span>
-                    <span className="font-serif text-[20px] leading-[1.15]">{d.getDate()}</span>
-                    <span className={"text-[11px] " + (on ? "text-on-terracotta" : "text-muted")}>{MOIS[d.getMonth()]}</span>
+                    <span className={"flex-shrink-0 " + (on ? "text-on-terracotta" : "text-terracotta-deep")}>{glyphe(idee.activite)}</span>
+                    <span className="text-[13px] leading-[1.25]">{idee.libelle}</span>
+                    <span className="flex-shrink-0 opacity-80" aria-hidden="true">
+                      {on ? G_COCHE(13, "currentColor") : G_PLUS}
+                    </span>
                   </button>
                 );
               })}
             </div>
-
-            <div className={etiquette} id="evt-moment">
-              À quel moment ?
-            </div>
-            <div className="flex flex-wrap gap-2" role="group" aria-labelledby="evt-moment">
-              {MOMENTS_EVENEMENT.map((m) => (
-                <button key={m.id} type="button" aria-pressed={moment === m.id} onClick={() => setMoment(m.id)} className={pastille(moment === m.id)}>
-                  {m.libelle}
-                </button>
-              ))}
-            </div>
-
-            <label className={etiquette + " block"} htmlFor="evt-nom">
-              Un nom, si tu veux
-            </label>
-            <Input
-              id="evt-nom"
-              value={nom}
-              onChange={(e) => setNom(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  valider();
-                }
-              }}
-              placeholder="Ex. Mariage de Léa, dîner client…"
-              maxLength={NOM_EVENEMENT_MAX}
-            />
-
-            {manque && !complet && (
-              <div role="alert" className="text-[12px] text-terracotta mt-3">
-                Choisis le jour de l&apos;événement.
-              </div>
-            )}
-            <div className="mt-4 flex flex-col gap-1">
-              <Button variante="secondaire" className="bg-card" onClick={valider}>
-                {enModification ? "Enregistrer" : "Ajouter cet événement"}
-              </Button>
-              <button type="button" onClick={vider} className="t-lien text-muted cursor-pointer min-h-[44px]">
-                Annuler
+            {!toutes && !filtre && filtrees.length > IDEES_VISIBLES && (
+              <button type="button" onClick={() => setToutes(true)} className="mt-3 text-[13px] text-terracotta cursor-pointer min-h-[44px]">
+                Voir plus d&apos;idées ({filtrees.length - IDEES_VISIBLES})
               </button>
-            </div>
-          </Card>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* ── UNE AUTRE IDÉE ── un champ, un geste ; Entrée ajoute aussi. */}
+      <section className="mt-8 pt-6 border-t border-border" aria-labelledby="autre-idee">
+        <div id="autre-idee" className="font-serif text-[19px] text-ink leading-[1.25]">
+          Une autre idée ?
         </div>
+        <div className="text-[13px] text-muted leading-[1.5] mt-[4px]">Tu as prévu autre chose ? Ajoute-le ici.</div>
+        <form
+          className="flex items-center gap-2 mt-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            ajouter();
+          }}
+        >
+          <Input
+            value={saisie}
+            onChange={(e) => {
+              setSaisie(e.target.value);
+              setDoublon(false);
+            }}
+            maxLength={LIBELLE_MAX}
+            placeholder="Ex. Un mariage, une sortie en quad…"
+            aria-label="Une autre activité ou un événement"
+            enterKeyHint="done"
+            className="flex-1 min-w-0"
+          />
+          <button
+            type="submit"
+            disabled={!cleLibelle(saisie)}
+            aria-label="Ajouter à mon programme"
+            className="flex-shrink-0 w-[48px] h-[48px] rounded-full bg-terracotta-deep text-on-terracotta flex items-center justify-center cursor-pointer disabled:opacity-40 disabled:cursor-default"
+          >
+            {G_PLUS}
+          </button>
+        </form>
+        {doublon && <div className="text-[12px] text-muted mt-2">C&apos;est déjà dans ton programme.</div>}
+      </section>
+
+      {/* ── TON PROGRAMME ── seulement s'il y a quelque chose : une section vide ne s'affiche pas. */}
+      {total > 0 && (
+        <section className="mt-8 pt-6 border-t border-border" aria-labelledby="ton-programme">
+          <div className="flex items-baseline justify-between gap-3">
+            <div id="ton-programme" className="font-serif text-[19px] text-ink leading-[1.25]">
+              Ton programme <span className="text-muted text-[15px]">· {total}</span>
+            </div>
+            {total > 1 && (
+              <button type="button" onClick={() => setConfirmerEffacer(true)} className="flex-shrink-0 text-[12px] text-terracotta cursor-pointer min-h-[44px] -my-[12px]">
+                Tout effacer
+              </button>
+            )}
+          </div>
+          <ul className="flex flex-col gap-2 mt-3">
+            {choix.map((c) => (
+              <li key={c.libelle} className="flex items-center gap-[10px] bg-card border border-border rounded-tuile pl-[14px] pr-[2px]" style={{ minHeight: 48 }}>
+                <span className="flex-shrink-0 text-terracotta-deep">{glyphe(c.activite)}</span>
+                <span className="flex-1 min-w-0 text-[13px] text-ink leading-[1.3] py-[8px]">{c.libelle}</span>
+                <button
+                  type="button"
+                  onClick={() => setChoix((l) => l.filter((x) => x.libelle !== c.libelle))}
+                  aria-label={`Retirer ${c.libelle} de mon programme`}
+                  className="flex-shrink-0 w-[44px] h-[44px] flex items-center justify-center text-muted cursor-pointer"
+                >
+                  {G_CROIX}
+                </button>
+              </li>
+            ))}
+            {evtsDuSejour.map((e) => (
+              <li key={e.id} className="flex items-center gap-[10px] bg-card border border-border rounded-tuile pl-[14px] pr-[2px]" style={{ minHeight: 48 }}>
+                <span className="flex-shrink-0 text-terracotta-deep">{GLYPHES_ACTIVITE.evenement}</span>
+                <span className="flex-1 min-w-0 py-[8px]">
+                  <span className="block text-[13px] text-ink leading-[1.3]">{libelleEvenement(e)}</span>
+                  <span className="block text-[11px] text-muted mt-[2px]">
+                    {dateCourte(e.jour)} · {libelleMoment(e.moment)}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setEvenements((l) => l.filter((x) => x.id !== e.id))}
+                  aria-label={`Retirer ${libelleEvenement(e)} de mon programme`}
+                  className="flex-shrink-0 w-[44px] h-[44px] flex items-center justify-center text-muted cursor-pointer"
+                >
+                  {G_CROIX}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
-      <div className="text-[12px] text-terracotta-deep mt-2 min-h-[18px]" role="status" aria-live="polite">
-        {confirmation ?? ""}
-      </div>
+
+      <BottomSheet title="Effacer ton programme ?" open={confirmerEffacer} onClose={() => setConfirmerEffacer(false)}>
+        <div className="text-[13px] text-muted-3 leading-[1.5]">
+          {total} {total > 1 ? "activités seront retirées" : "activité sera retirée"}. Les idées restent proposées : tu pourras les choisir à nouveau.
+        </div>
+        <div className="flex gap-2 mt-5">
+          <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={() => setConfirmerEffacer(false)}>
+            Garder
+          </Button>
+          <Button
+            variante="principal"
+            pleine={false}
+            className="flex-1"
+            onClick={() => {
+              setChoix(() => []);
+              setEvenements((l) => l.filter((x) => !evtsDuSejour.some((e) => e.id === x.id)));
+              setConfirmerEffacer(false);
+            }}
+          >
+            Tout effacer
+          </Button>
+        </div>
+      </BottomSheet>
     </>
   );
 }
@@ -817,7 +801,9 @@ export default function ValiseScreen() {
    * LES ACTIVITÉS du séjour (maquette V2, 11/10/2026) : jusqu'à quatre. Elles donnent le programme (programmeDesActivites), que le
    * moteur reçoit en occasions mères et que le planning jour par jour répartit — le moteur et la phase B sont inchangés.
    */
-  const [activites, setActivites] = useState<ActiviteSejour[]>([]);
+  const [choix, setChoix] = useState<ActiviteChoisie[]>([]);
+  /** Depuis le 30/10/2026, les activités viennent des CHOIX de l'étape (idées ou libellés saisis, activitesSejour.ts) : leur traduction. */
+  const activites = activitesDesChoix(choix);
   /** LES ÉVÉNEMENTS DATÉS (étape 4, 22/10/2026) : facultatifs ; chacun a son jour, son moment, son look (evenementsValise.ts). */
   const [evenements, setEvenements] = useState<EvenementValise[]>([]);
   /** Les réponses de la dernière préparation, gardées pour « Réessayer » après un échec. */
@@ -912,6 +898,8 @@ export default function ValiseScreen() {
     programme?: ItemProgramme[];
     /** Les activités choisies, gardées avec la valise pour rouvrir le parcours tel qu'il a été rempli. */
     activites?: ActiviteSejour[];
+    /** Les choix de l'étape Activités, avec leur libellé (30/10/2026). */
+    choix?: ActiviteChoisie[];
     /** Les événements datés du séjour (étape 4), déjà restreints à ses dates. */
     evenements?: EvenementValise[];
   };
@@ -974,6 +962,7 @@ export default function ValiseScreen() {
       occasions: rep.occasions,
       ...(rep.programme?.length ? { programme: rep.programme } : {}),
       ...(rep.activites?.length ? { activites: rep.activites } : {}),
+      ...(rep.choix?.length ? { choix: rep.choix } : {}),
       ...(rep.evenements?.length ? { evenements: rep.evenements } : {}),
       // La check-list suit la valise recomposée : seules les pièces encore présentes restent cochées.
       ...(cochees.length ? { cochees } : {}),
@@ -1000,7 +989,7 @@ export default function ValiseScreen() {
     const evts = evenementsDuSejour(evenements, jours);
     const meres = occasionsDuProgramme([...retenu, ...evts.map((e) => ({ id: e.type, frequence: 1 }))]);
     void lancer(
-      { destination, ville, depart, retour, bagage, sejour: null, occasions: occasionsRetenues(meres, null), programme: retenu, activites, evenements: evts },
+      { destination, ville, depart, retour, bagage, sejour: null, occasions: occasionsRetenues(meres, null), programme: retenu, activites, choix, evenements: evts },
       idEnModification
     );
   };
@@ -1008,7 +997,7 @@ export default function ValiseScreen() {
   const recomposer = () => {
     if (!valise) return;
     void lancer(
-      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites, evenements: valise.evenements },
+      { destination: valise.destination, ville: null, depart: valise.depart, retour: valise.retour, bagage: valise.bagage, sejour: valise.sejour, occasions: valise.occasions, programme: valise.programme, activites: valise.activites, choix: valise.choix, evenements: valise.evenements },
       valise.id
     );
   };
@@ -1060,7 +1049,7 @@ export default function ValiseScreen() {
     setDepart("");
     setRetour("");
     setBagage(null);
-    setActivites([]);
+    setChoix([]);
     setEvenements([]);
     setVue({ nom: "etape" });
     setEtape(1);
@@ -1081,7 +1070,7 @@ export default function ValiseScreen() {
     setRetour(valise.retour);
     setBagage(valise.bagage);
     // Les activités qu'évoque le programme gardé ; une valise d'avant la refonte n'a que ses occasions mères.
-    setActivites(valise.activites ?? activitesDuProgramme(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1)));
+    setChoix(choixDeLaValise(valise.choix, valise.activites ?? activitesDuProgramme(valise.programme ?? programmeDepuisOccasions(valise.occasions, valise.meteos.length || 1))));
     setEvenements(valise.evenements ?? []);
     setIdEnModification(valise.id);
     setVue({ nom: "etape" });
@@ -1342,44 +1331,17 @@ export default function ValiseScreen() {
           </>
         )}
 
-        {/* ── 3. CE QUE TU AS PRÉVU ── 30/10/2026 (brief « Fluidification du parcours ») : les activités et les événements, autrefois deux
-            étapes, sur un même écran. Les activités se traduisent en programme (programmeDesActivites), donc en occasions mères pour le
-            moteur ; les événements datés, en situations à leur jour (evenementsValise.ts). Les deux sont FACULTATIFS : sans activité, le
-            programme retombe sur le quotidien (programmeDesActivites), comme le moteur le faisait déjà. */}
+        {/* ── 3. CE QUE TU AS PRÉVU ── refondue le 30/10/2026 (brief « Refonte UX de l'étape Activités ») : une seule sélection — des
+            idées selon la destination, ce que la personne ajoute, son programme (EtapeActivites). FACULTATIVE : sans choix, le programme
+            retombe sur le quotidien (programmeDesActivites), comme le moteur le faisait déjà. */}
         {questions && etape === 3 && (
           <>
             <Surtitre>Ta valise · 3 / 3</Surtitre>
-            <TitreEtape a="Qu'as-tu prévu" b="pendant ton séjour ?" />
-            <div className="text-[13px] text-muted leading-[1.5] mt-2">Plage, visites, restaurants… Dis-nous ce que tu as prévu, on s&apos;occupe des tenues.</div>
-            <div className="flex flex-wrap gap-2 mt-5" role="group" aria-label="Activités du séjour">
-              {ACTIVITES.filter((a) => ACTIVITES_PROPOSEES.includes(a.id) || activites.includes(a.id)).map((a) => {
-                const on = activites.includes(a.id);
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    onClick={() => setActivites((l) => (l.includes(a.id) ? l.filter((x) => x !== a.id) : [...l, a.id]))}
-                    aria-pressed={on}
-                    className={
-                      "inline-flex items-center gap-[8px] rounded-full pl-[12px] pr-[16px] border cursor-pointer transition-colors " +
-                      (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-card border-border text-ink")
-                    }
-                    style={{ minHeight: 44 }}
-                  >
-                    <span className={"flex-shrink-0 " + (on ? "text-on-terracotta" : "text-terracotta-deep")}>{GLYPHES_ACTIVITE[a.id]}</span>
-                    <span className="text-[13px] leading-[1.2]">{a.libelle}</span>
-                  </button>
-                );
-              })}
+            <TitreEtape a="Qu'as-tu prévu" b={`${destinationAvecPreposition(ville?.capitaleDe ?? nomVille) ?? "pendant ton séjour"} ?`} />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">
+              Voici quelques idées pour profiter de ton séjour. Sélectionne celles qui te plaisent, tu peux en ajouter autant que tu veux !
             </div>
-
-            <div className="mt-8 pt-6 border-t border-border">
-              <div className="font-serif text-[19px] text-ink leading-[1.25]">Et as-tu d&apos;autres événements prévus ?</div>
-              <div className="text-[13px] text-muted leading-[1.5] mt-[6px]">
-                Un mariage, un dîner, une réunion ou une sortie particulière ? Ajoute-les pour qu&apos;on pense aussi aux tenues adaptées.
-              </div>
-              <EtapeEvenements jours={jours} evenements={evenements} setEvenements={setEvenements} />
-            </div>
+            <EtapeActivites requete={destination.trim()} jours={jours} choix={choix} setChoix={setChoix} evenements={evenements} setEvenements={setEvenements} />
           </>
         )}
 
