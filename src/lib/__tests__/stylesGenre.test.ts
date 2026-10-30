@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_PROFILE, STYLE_ID_TO_CATALOG_LABEL, VISUELS_ETAPE_STYLE_FEMME, applyGenderChange, basculerStyle, styleConfigFor, styleLabel, stylesDuGenre, stylesLus } from "../profile";
+import { EMPTY_PROFILE, STYLE_ID_TO_CATALOG_LABEL, VISUELS_ETAPE_STYLE_FEMME, applyGenderChange, basculerStyle, styleConfigFor, styleLabel, stylesDuGenre } from "../profile";
 import { styleFit } from "../capsule";
 import type { Item } from "../types";
 
@@ -22,11 +22,10 @@ describe("styles et genre", () => {
     expect(VISUELS_ETAPE_STYLE_FEMME.creatif).toBe("/images/styles/creatif.webp");
   });
 
-  it("un profil homme enregistré avec `romantique` (ancien « Créatif / Artistique ») se relit `creatif`, sans doublon", () => {
-    expect(stylesLus(["romantique", "minimaliste"], "homme")).toEqual(["creatif", "minimaliste"]);
-    expect(stylesLus(["romantique", "creatif"], "homme")).toEqual(["creatif"]);
-    // Côté femme, Romantique reste Romantique.
-    expect(stylesLus(["romantique"], "femme")).toEqual(["romantique"]);
+  it("le style romantique caché de l'homme n'est pas touché : Créatif est un id à part", () => {
+    expect(styleLabel("romantique", "homme")).toBe("Créatif / Artistique");
+    expect(stylesDuGenre(["romantique", "creatif"], "homme")).toEqual(["creatif"]);
+    expect(stylesDuGenre(["romantique"], "femme")).toEqual(["romantique"]);
   });
 
   it("une femme Romantique qui passe en Homme ne devient pas Créatif", () => {

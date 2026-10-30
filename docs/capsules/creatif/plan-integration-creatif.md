@@ -47,9 +47,10 @@ d'un profil Créatif soient reconnues.
 
 1. **Identifiant du style — ARBITRAGE ÉDITORIAL.** Un commentaire de `profile.ts` (20/08/2026) dit « jamais un 9e id » ; ta demande d'un
    9e style femme le contredit. Proposition : un id `creatif` commun aux deux genres, libellé « Créatif » (femme) et « Créatif /
-   Artistique » (homme, libellé déjà employé par la référence homme). L'entrée homme `romantique`, aujourd'hui libellée « Créatif /
-   Artistique » et masquée, reprend un libellé neutre pour ne pas afficher deux fois le même nom. Un profil homme qui aurait `romantique`
-   enregistré se lit `creatif` à la lecture, sans réécriture en base (même principe que `normaliserOccasion`). Aucune contrainte en base
+   Artistique » (homme, libellé déjà employé par la référence homme). **Arbitré le 30/10/2026** : l'entrée homme `romantique` (masquée,
+   libellée « Créatif / Artistique ») n'est PAS touchée — ni libellé, ni relecture en `creatif`. Constat sur l'export : 5 articles homme
+   portent « Romantique », toujours parmi d'autres styles (#504, #511, #517, #521, #972), aucun en propre ; le style étant masqué côté
+   homme et écarté à la lecture d'un profil (`stylesDuGenre`), ces étiquettes sont sans effet. Aucune contrainte en base
    ne s'y oppose : `profiles.styles` est un `text[]` sans CHECK (migration 0001), `vestiaire_universel.styles` aussi (migration 0017).
 2. **Libellé catalogue** : « Créatif », ajouté à la colonne `styles` (texte séparé par des virgules), jamais en remplacement.
 3. **Bases potentielles — ARBITRAGE ÉDITORIAL, pièce par pièce.** Étiqueter « Créatif » une base unie (un « Pull col V » pour un « Pull
@@ -96,14 +97,14 @@ pas devinées : à fixer à la main ou par la règle existante de l'import du ca
 ## 5. Application — code, après validation
 
 - `profile.ts` : `creatif` dans `STYLE_IDS`, `STYLE_ID_TO_CATALOG_LABEL` (`Créatif`), `STYLE_CONFIG` femme et homme (libellé, phrase,
-  visuel), `VISUELS_ETAPE_STYLE_FEMME`, `EXPOSED_STYLE_IDS` (femme : 9 ; homme : les 6 actuels + `creatif`), lecture `romantique` →
-  `creatif` côté homme (décision 1).
+  visuel), `VISUELS_ETAPE_STYLE_FEMME`, `EXPOSED_STYLE_IDS` (femme : 9 ; homme : les 6 actuels + `creatif`) ; `romantique` homme inchangé
+  (décision 1).
 - Visuels : déjà préparés à partir du visuel fourni (femme à gauche, homme à droite), recadrés en 900 × 1200 WebP, comme les autres
   flat lays de l'étape Style.
 - `capsule.ts` : une entrée `Créatif` dans `STYLE_FIT`, pour les pièces du dressing (motifs à tirer des traits de la référence :
   graphique, imprimé, color-block, asymétrique, sculptural…). Aucune règle de scoring modifiée.
 - `suggestionsAutresStyles.ts` (`STYLE_DU_LIBELLE`) et les écrans qui listent les styles : vérifiés pour le 9e style.
-- Tests : identifiants, libellés par genre, lecture `romantique` → `creatif` homme, `STYLE_FIT` Créatif.
+- Tests : identifiants, libellés par genre, `romantique` homme inchangé, `STYLE_FIT` Créatif.
 
 ## 6. Mesure avant mise en production (règle d'audit)
 
@@ -130,9 +131,9 @@ Validé par la propriétaire : l'identifiant `creatif`, commun aux deux genres ;
 pièces de référence sans équivalent exact sont CRÉÉES depuis l'Excel ; « sous-pull et pull col roulé fin ne sont pas pareils ».
 
 **Application (code, livré)** : `creatif` dans `STYLE_IDS` (libellé « Créatif » femme, « Créatif / Artistique » homme, libellé catalogue
-« Créatif »), visuels fournis (`/images/styles/creatif.webp`, `/images/styles/homme/creatif.webp`), proposé aux deux genres ; un profil
-homme enregistré avec `romantique` se relit `creatif` (`stylesLus`, au chargement seulement : une femme Romantique qui passe en Homme ne
-devient pas Créatif) ; entrée `Créatif` dans `STYLE_FIT` pour les pièces du dressing. Tests ajoutés.
+« Créatif »), visuels fournis (`/images/styles/creatif.webp`, `/images/styles/homme/creatif.webp`), proposé aux deux genres ; le style
+`romantique` masqué de l'homme n'est pas touché (arbitré le 30/10/2026) ; entrée `Créatif` dans `STYLE_FIT` pour les pièces du
+dressing. Tests ajoutés.
 
 **Données (SQL montré, à lancer à la main, dans l'ordre)** — `sql/` :
 

@@ -254,9 +254,10 @@ export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardCo
     minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: VISUEL_STYLE_HOMME("minimaliste") },
     casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: VISUEL_STYLE_HOMME("casual-chic") },
     classique_chic: { label: "Classique chic", desc: "Élégant et toujours approprié.", asset: VISUEL_STYLE_HOMME("classique-chic") },
-    // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS). Libellé « Créatif / Artistique » jusqu'au 30/10/2026 :
-    // il passe à `creatif`, et un profil homme qui portait `romantique` se relit `creatif` (stylesDuGenre).
-    romantique: { label: "Romantique", desc: "Douceur, fluidité et détails.", asset: "" },
+    // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS), entrée conservée uniquement pour styleLabel().
+    // Inchangée au passage de Créatif (30/10/2026, arbitré : « tu ne touches pas au style romantique caché de l'homme ») : Créatif est
+    // un id à part, `creatif`.
+    romantique: { label: "Créatif / Artistique", desc: "Original, expressif, hors des codes classiques.", asset: "" },
     boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: VISUEL_STYLE_HOMME("boheme") },
     streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: VISUEL_STYLE_HOMME("streetwear") },
     preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: VISUEL_STYLE_HOMME("preppy") },
@@ -339,15 +340,6 @@ export function stylesDuGenre(styles: readonly string[], gender: Gender | null):
   return styles.filter((s) => permis.has(s));
 }
 
-/**
- * Les styles d'un profil ENREGISTRÉ, à la lecture. Côté homme, `romantique` s'affichait « Créatif / Artistique » (masqué de la grille) :
- * il se relit `creatif` depuis le 30/10/2026, sans réécriture en base (la prochaine sauvegarde du profil l'enregistre). Jamais au
- * changement de genre : une femme Romantique qui passe en Homme ne devient pas Créatif (applyGenderChange garde stylesDuGenre).
- */
-export function stylesLus(styles: readonly string[], gender: Gender | null): string[] {
-  const relus = gender === "homme" ? styles.map((s) => (s === "romantique" ? "creatif" : s)) : [...styles];
-  return stylesDuGenre(relus.filter((s, i) => relus.indexOf(s) === i), gender);
-}
 
 export function basculerStyle(styles: readonly string[], id: string): string[] {
   if (styles.includes(id)) return styles.filter((s) => s !== id);
