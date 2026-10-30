@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { destinationDuJour, etapeDuJour, etapesRetenues, joursParEtape, libelleItineraire, type EtapeSejour } from "../etapesSejour";
+import { arriveesProposees, destinationDuJour, etapeDuJour, etapesRetenues, joursParEtape, libelleItineraire, type EtapeSejour } from "../etapesSejour";
 
 /** LES ÉTAPES D'UN ROAD TRIP (30/10/2026) : dates par étape, chaque jour à une seule ville. */
 
@@ -48,5 +48,24 @@ describe("chaque jour à une seule ville", () => {
     const v = { destination: libelleItineraire(etapes), etapes };
     expect(destinationDuJour(v, "2026-11-08")).toBe("Porto");
     expect(destinationDuJour({ destination: "Rome" }, "2026-11-08")).toBe("Rome");
+  });
+});
+
+describe("arriveesProposees — les étapes ajoutées avant les dates", () => {
+  const JOURS7 = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22"];
+  it("deux étapes sans jour : réparties sur le séjour, dans l'ordre, sans doublon", () => {
+    const r = arriveesProposees([{ destination: "Praia", arrivee: "" }, { destination: "São Vicente", arrivee: "" }], JOURS7);
+    expect(r.map((e) => e.arrivee)).toEqual(["2026-11-18", "2026-11-21"]);
+    expect(etapesRetenues({ destination: "Cap-Vert" }, r, JOURS7[0], JOURS7[6])).toHaveLength(3);
+  });
+  it("un jour déjà choisi ne bouge pas ; l'étape sans jour prend un jour libre", () => {
+    const r = arriveesProposees([{ destination: "Praia", arrivee: "2026-11-19" }, { destination: "Mindelo", arrivee: "" }], JOURS7);
+    expect(r[0].arrivee).toBe("2026-11-19");
+    expect(r[1].arrivee).not.toBe("2026-11-19");
+    expect(JOURS7.slice(1)).toContain(r[1].arrivee);
+  });
+  it("sans dates : rien ne change", () => {
+    const a = [{ destination: "Praia", arrivee: "" }];
+    expect(arriveesProposees(a, [])).toEqual(a);
   });
 });

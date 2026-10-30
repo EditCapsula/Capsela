@@ -18,6 +18,8 @@ export interface EtapeSejour {
   /** Les coordonnées de la ville quand elle a été choisie dans la liste : la climatologie s'en sert. */
   lat?: number;
   lon?: number;
+  /** Quand la destination est un PAYS (30/10/2026) : son code ISO ; les étapes suivantes cherchent d'abord ses villes. */
+  pays?: string;
 }
 
 export const ETAPES_MAX = 6;
@@ -65,4 +67,29 @@ export const libelleItineraire = (etapes: readonly Pick<EtapeSejour, "destinatio
 /** La ville d'un jour pour une valise : celle de son étape, sinon sa destination (une valise d'une seule ville). */
 export function destinationDuJour(v: { destination: string; etapes?: readonly EtapeSejour[] }, jour: string): string {
   return (v.etapes?.length ? etapeDuJour(v.etapes, jour)?.destination : null) ?? v.destination;
+}
+
+/**
+ * LES JOURS D'ARRIVÉE PROPOSÉS (30/10/2026, signalé en capture : des étapes ajoutées avant les dates restaient « Choisis son jour
+ * d'arrivée »). Une fois les dates posées, chaque étape sans jour valable en reçoit un, réparti sur le séjour dans l'ordre de l'ajout
+ * et jamais un jour déjà pris ; un jour déjà choisi n'est jamais déplacé. La personne le change d'un toucher.
+ */
+export function arriveesProposees(autres: readonly EtapeSejour[], jours: readonly string[]): EtapeSejour[] {
+  const possibles = jours.slice(1);
+  if (possibles.length === 0) return [...autres];
+  const prises = new Set(autres.filter((e) => possibles.includes(e.arrivee)).map((e) => e.arrivee));
+  const sansJour = autres.filter((e) => !possibles.includes(e.arrivee));
+  if (sansJour.length === 0) return [...autres];
+  let rang = 0;
+  return autres.map((e) => {
+    if (possibles.includes(e.arrivee)) return e;
+    rang++;
+    // La place régulière de cette étape parmi celles à placer, puis le premier jour libre à partir de là (sinon avant).
+    const cible = Math.min(possibles.length - 1, Math.max(0, Math.round((rang * jours.length) / (sansJour.length + 1)) - 1));
+    const ordre = [...possibles.slice(cible), ...possibles.slice(0, cible).reverse()];
+    const jour = ordre.find((j) => !prises.has(j));
+    if (!jour) return e;
+    prises.add(jour);
+    return { ...e, arrivee: jour };
+  });
 }

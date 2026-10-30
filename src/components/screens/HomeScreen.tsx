@@ -579,7 +579,6 @@ export default function HomeScreen() {
             texte="Une sélection pensée pour ton voyage"
             visuel="/editorial/capsela_editorial_valise.webp"
             label="Préparer une valise"
-            premium
           />
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { IconeTuile, type IconePlanifier } from "@/components/PlanifierUI";
-import { chargerRecentes, garderRecentes, ajouterRecente, libelleDestination, presenterResultats, type VilleRecente } from "@/lib/lieux";
+import { chargerRecentes, garderRecentes, ajouterRecente, libelleDestination, presenterResultats, villesDuPaysDabord, type VilleRecente } from "@/lib/lieux";
 import { fetchVilleParPosition, fetchVilles, getBrowserPosition, type VilleSuggeree } from "@/lib/weather";
 
 /*
@@ -72,8 +72,11 @@ export function ChoixVille({
   onChoisir,
   avecPosition = true,
   avecRecentes = true,
+  paysPrefere,
 }: {
   lieu: string;
+  /** Un code pays (ISO) : ses villes sont proposées d'abord (villesDuPaysDabord) — les étapes d'un road trip dans un pays. */
+  paysPrefere?: string;
   /**
    * « Villes récentes » : utile pour planifier une tenue là où l'on va souvent ; retirée de la valise le 30/10/2026 (demandé : « elle
    * n'est pas pertinente » — on prépare un voyage vers un lieu nouveau). Vrai par défaut. Les villes choisies restent gardées.
@@ -101,7 +104,12 @@ export function ChoixVille({
     let annule = false;
     // 280 ms après la dernière frappe ; la réponse d'une recherche périmée est jetée (« Par » après « Paris »).
     const t = setTimeout(() => {
-      fetchVilles(q)
+      (paysPrefere
+        ? Promise.all([fetchVilles(q, paysPrefere).catch(() => null), fetchVilles(q).catch(() => null)]).then(([duPays, libres]) =>
+            villesDuPaysDabord(duPays, libres, paysPrefere)
+          )
+        : fetchVilles(q)
+      )
         .then((liste) => {
           if (!annule) setReponse({ q, liste });
         })
@@ -113,7 +121,7 @@ export function ChoixVille({
       annule = true;
       clearTimeout(t);
     };
-  }, [q]);
+  }, [q, paysPrefere]);
 
   const choisir = (v: VilleSuggeree, libelle: string) => {
     const r = ajouterRecente(recentes, { ...v, libelle });
