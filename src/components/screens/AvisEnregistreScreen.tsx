@@ -104,7 +104,7 @@ export default function AvisEnregistreScreen() {
       <div className="t-surtitre text-muted mt-[18px]">Journal</div>
       <div className="mt-[6px] flex items-start justify-between gap-3">
         <div className="t-titre-ecran text-ink">
-          Avis de <span className="italic text-terracotta">styliste</span>
+          L&apos;œil de <span className="italic text-terracotta">Capsela</span>
         </div>
         {premiumRequis("AVIS_DE_STYLISTE") && (
           <span className="mt-[6px]">

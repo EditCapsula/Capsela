@@ -27,7 +27,7 @@ export default function AvisTousScreen() {
       <AppHeader onBack={actions.goHistory} backLabel="Revenir au journal" />
       <div className="t-surtitre text-muted mt-[18px]">Journal</div>
       <div className="t-titre-ecran text-ink mt-[6px]">
-        Mes avis de <span className="italic text-terracotta">styliste</span>
+        Tous mes <span className="italic text-terracotta">avis</span>
       </div>
       {avis.length > 0 && (
         <div className="t-chapeau text-muted-3 mt-[8px]">

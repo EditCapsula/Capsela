@@ -594,8 +594,8 @@ export default function AvisStylisteScreen() {
         {analyse.restants !== null && (
           <div className="text-[12px] text-muted mt-[8px] leading-[1.45]">
             {analyse.restants === 0
-              ? "C'était ton dernier avis de styliste de ce mois-ci."
-              : `Il te reste ${analyse.restants} avis de styliste ce mois-ci.`}
+              ? "C'était ton dernier avis de ce mois-ci."
+              : `Il te reste ${analyse.restants} avis ce mois-ci.`}
           </div>
         )}
       </div>
@@ -657,7 +657,8 @@ export default function AvisStylisteScreen() {
         {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
       </div>
       <div className="t-titre-ecran text-ink mt-[6px]">
-        Avis de <span className="italic text-terracotta">styliste</span>
+        {/* « L'œil de Capsela » depuis le 30/10/2026, choisi par la propriétaire (avant : « Avis de styliste »). */}
+        L&apos;œil de <span className="italic text-terracotta">Capsela</span>
       </div>
       <div className="t-chapeau text-muted-3 mt-[8px]">
         {introAffichee

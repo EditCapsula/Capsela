@@ -153,7 +153,7 @@ describe("plafond mensuel — réaction et date de reprise", () => {
     const r = reactionErreur("quota_atteint", undefined, new Date("2026-10-15T12:00:00Z"));
     expect(r).toEqual({
       action: "limite",
-      message: "Tu as utilisé tous tes avis de styliste de ce mois-ci.",
+      message: "Tu as utilisé tous tes avis de ce mois-ci.",
       sousTexte: "Le prochain sera disponible le 1er novembre.",
     });
   });

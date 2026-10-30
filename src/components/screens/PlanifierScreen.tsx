@@ -2117,13 +2117,13 @@ export default function PlanifierScreen() {
                 <div className="mt-[14px] bg-warm-bg border border-warm-border rounded-carte px-[16px] py-[16px]">
                   {premiumRequis("AVIS_DE_STYLISTE") && <BadgePremium />}
                   <div className="font-serif text-[19px] text-ink leading-[1.2] mt-[2px]" style={{ textWrap: "balance" }}>
-                    Ton regard de styliste, avant le jour J.
+                    L&apos;œil de Capsela, avant le jour J.
                   </div>
                   <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]" style={{ textWrap: "pretty" }}>
                     Obtiens un regard expert sur ce look avant le jour J.
                   </div>
                   <Button variante="principal" className="mt-[14px]" onClick={ouvrirAvisStyliste} aria-busy={verificationAvis}>
-                    {verificationAvis ? <LoadingSpinner size={18} /> : "Obtenir mon avis de styliste"}
+                    {verificationAvis ? <LoadingSpinner size={18} /> : "Obtenir l'avis de Capsela"}
                   </Button>
                 </div>
               )}

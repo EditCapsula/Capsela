@@ -98,7 +98,7 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
   // il n'est donc jamais « bientôt ». Même promesse que la carte de l'accueil.
   {
     glyphe: G_REGARD,
-    titre: "Avis de styliste",
+    titre: "L'œil de Capsela", // renommé le 30/10/2026 (avant : « Avis de styliste »)
     desc: "Montre ta tenue à Capsela : ce qui fonctionne, ce que tu peux ajuster.",
   },
   {
