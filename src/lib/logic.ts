@@ -382,6 +382,8 @@ export interface LeviersMesure {
   sansFiltreChaussuresDEte?: boolean;
   /** Reproduit le comportement d'AVANT le 14/10/2026 : en Voyage, ni les baskets ni les pièces les plus décontractées ne sont préférées (R-S19). */
   sansConfortVoyage?: boolean;
+  /** Reproduit le comportement d'AVANT le 30/10/2026 : en Voyage, une combinaison est tirée comme une robe (R-S21). */
+  combinaisonEnVoyage?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
@@ -1340,11 +1342,20 @@ export function generateOutfit(
   // mesurer les deux bras dans une même exécution sur le même pool.
   const robeMemeSiRelachement = leviers?.robeMemeSiOccasionRelachee === true;
   const robeAutorisee = robeMemeSiRelachement || !robeExigeUnRelachement || !hautBasSansRelachement;
-  const useRobe = Math.random() < 0.4 && robeAutorisee && poolFor(ONEPIECE_CATS, true).length > 0;
+  // R-S21 (30/10/2026, demandé : « pour le voyage on évite de proposer une combinaison car ce n'est pas pratique ») — en Voyage, la
+  // pièce unique est une robe ; sans robe possible, la tenue part sur haut + bas. Évitée, pas interdite : une combinaison reste tirée
+  // quand haut + bas exigerait de relâcher l'occasion (même garantie « toujours une tenue » que robeAutorisee ci-dessus).
+  // poolFor n'est appelé qu'une fois le tirage à 40 % passé, comme avant : il signale les relâchements qu'il fait (occasionRelachee).
+  const eviterCombinaison = occasion === "voyage" && !leviers?.combinaisonEnVoyage;
+  const piecesUniques = Math.random() < 0.4 && robeAutorisee ? poolFor(ONEPIECE_CATS, true) : [];
+  const combinaisonEvitee = eviterCombinaison && hautBasSansRelachement && piecesUniques.every((i) => i.cat === "combinaison");
+  const useRobe = piecesUniques.length > 0 && !combinaisonEvitee;
   if (useRobe) {
     // R-S17 (25/08/2026, signalé) — même principe que pour le haut ci-dessous :
     // pas de robe chemise en soirée habillée, préférence molle.
-    const r = pick(ONEPIECE_CATS, true, soireeHabilleeTirage ? (i) => i.subtype !== "Chemise" : undefined);
+    const extraR17: ((i: Item) => boolean) | undefined = soireeHabilleeTirage ? (i) => i.subtype !== "Chemise" : undefined;
+    // R-S21 : en Voyage, la robe avant la combinaison (préférence molle, comme R-S17).
+    const r = pick(ONEPIECE_CATS, true, extraR17 ?? (eviterCombinaison ? (i) => i.cat !== "combinaison" : undefined));
     if (r) ids.push(r.id);
     primaryTop = r;
     // Collant seulement pour une robe (jambes nues) — une combinaison
