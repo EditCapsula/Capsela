@@ -48,7 +48,7 @@ const RAW: [string, CategoryKey, string, string][] = [
   ["Escarpins", "chaussures", "Bordeaux", "#6E3B3A"],
   ["Mocassins", "chaussures", "Camel", "#C08A5E"],
   ["Ballerines", "chaussures", "Taupe", "#A8967C"],
-  ["Sabots fourrés en daim", "chaussures", "Kaki", "#8A8560"], // « Chaussons cocooning » avant le 30/10/2026 (modèle choisi par la propriétaire)
+  ["Sabots fourrés en daim", "chaussures", "Gris", "#9B968F"], // « Chaussons cocooning » avant le 30/10/2026 (modèle choisi par la propriétaire)
   ["Sac cabas", "sac", "Camel", "#C08A5E"],
   ["Sac bandoulière", "sac", "Noir", "#2A2724"],
   ["Ceinture cuir", "accessoire", "Rouille", "#A9613F"],
