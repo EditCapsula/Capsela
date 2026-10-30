@@ -475,6 +475,19 @@ export default function TenuesScreen() {
   /** La provenance dite sur la vignette : le style nommé pour une pièce d'un autre style. */
   const autreStyle = (it: Item) => (idsAutresStyles.has(it.id) ? (styleAffiche(it, profile.styles, profile.gender) ?? undefined) : undefined);
   const [choixChaussuresOuvert, setChoixChaussuresOuvert] = useState(false);
+  // LES PAIRES PROPOSÉES ONT LEUR VISUEL (30/10/2026, signalé : les sabots d'intérieur, dont l'image avait été retirée pour être refaite,
+  // restaient sans image) : comme les pièces de la tenue ci-dessus, une pièce du catalogue montrée sans visuel en déclenche la
+  // génération — les vignettes de la rangée, et toutes celles de la feuille quand elle est ouverte. Même garde que plus haut.
+  const pairesMontrees = choixChaussuresOuvert ? chaussuresPossibles : [...chaussuresDuStyle.slice(0, 4), ...chaussuresAutresStyles.slice(0, 4)];
+  const clePairesMontrees = pairesMontrees.map((i) => i.id).join(",");
+  useEffect(() => {
+    pairesMontrees.forEach((it) => {
+      if (resolveItemImage(it).kind === "placeholder" && it.imageStatus !== "generating" && it.imageStatus !== "error" && it.imageStatus !== "invalid") {
+        actions.requestCatalogImage(it.id);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clePairesMontrees]);
   /** L'emplacement en pointillés et la phrase sous le flat lay : choisir parmi les paires possibles, sinon en ajouter une au dressing. */
   const completerChaussures = () => (chaussuresPossibles.length ? setChoixChaussuresOuvert(true) : actions.openAddForCategory("chaussures"));
   // Repli progressif de formalité (nouveau 21/08/2026, décidé) — calculé
