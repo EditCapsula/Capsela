@@ -372,3 +372,15 @@ Brief « Refonte UX de l'étape Activités ». L'étape 3 n'a plus deux sections
 - **« Ton programme »** rassemble les choix, chacun retirable. « Tout effacer » passe par une feuille de confirmation.
 - **Le moteur ne change pas** : les choix (`ValiseGardee.choix`, dans `calcul`, aucune migration) se traduisent en `activites`, qui donnent le programme par `programmeDesActivites`, comme avant. Le libellé d'origine n'est jamais perdu. Plusieurs idées qui évoquent la même activité ne pèsent pas plus qu'une (les parts du séjour sont celles d'avant).
 - **Reprise** : une valise d'avant retrouve ses activités sous le libellé de l'idée qui les dit. Ses événements datés restent avec leur jour, figurent au programme et se retirent de la même façon.
+
+## Le road trip : plusieurs destinations, des dates par étape (30/10/2026)
+
+Demandé : « donner la possibilité d'ajouter plusieurs destinations dans le cas d'un roadtrip ». Arbitré par la propriétaire le même jour : des dates **par étape** (`etapesSejour.ts`).
+
+- **Étape 1 du parcours** : sous les dates, « Un road trip ? Ajouter une autre destination ». Chaque étape ajoutée a sa ville (le même choix de ville que la destination) et son jour d'arrivée, choisi parmi les jours du séjour. Le nombre de nuits de chaque étape s'affiche. Jusqu'à six étapes.
+  - La première étape est la destination, au départ.
+  - Une étape sans ville, ou dont le jour d'arrivée est déjà pris ou sorti du séjour, est signalée, et « Continuer » attend.
+- **Chaque jour appartient à une seule ville** : la dernière étape arrivée, le jour du trajet compris. Sa météo est celle de cette ville (prévision et climatologie de l'étape, sur ses seuls jours). Pendant le séjour, la tenue du jour et la prévision du résultat suivent l'étape du jour (`destinationDuJour`).
+- **Le moteur ne change pas** : il reçoit, comme avant, une météo par jour.
+- **Étape Activités** : le titre devient « Qu'as-tu prévu pendant ton road trip ? », et les idées couvrent toutes les villes.
+- **Gardé** : `ValiseGardee.etapes` (dans `calcul`, aucune migration). `destination` dit l'itinéraire, « Lisbonne → Porto → Faro ». Une valise d'une seule destination n'a pas d'étapes et se lit comme avant. Modifier un road trip reprend ses étapes ; le recomposer refait la météo étape par étape.

@@ -6,6 +6,7 @@ import type { OccasionKey } from "./types";
 import type { EtatAffaires } from "./affairesVoyage";
 import type { EvenementValise } from "./evenementsValise";
 import type { ActiviteChoisie } from "./activitesSejour";
+import type { EtapeSejour } from "./etapesSejour";
 import type { ActiviteSejour, ItemProgramme } from "./programmeValise";
 import type { LookValise, MeteoJour, SituationValise, TailleBagage, TypeSejour } from "./valise";
 
@@ -68,6 +69,11 @@ export interface ValiseGardee {
    * migration. Absent des valises plus anciennes (on les déduit alors de `activites`).
    */
   choix?: ActiviteChoisie[];
+  /**
+   * Les étapes d'un road trip (30/10/2026, etapesSejour.ts) : chaque ville et son jour d'arrivée. Absentes d'une valise d'une seule
+   * destination. `destination` dit alors l'itinéraire (« Lisbonne → Porto »). Dans `calcul` (jsonb) : aucune migration.
+   */
+  etapes?: EtapeSejour[];
   /**
    * La check-list de départ : les pièces déjà préparées (11/10/2026). Elle vit AVEC la valise — appareil et compte — et non plus dans un
    * stockage à part : elle suit la valise d'un appareil à l'autre, et ne garde que des pièces qui y sont encore. Dans `calcul` (jsonb).
@@ -205,7 +211,7 @@ interface ValiseRow {
   sejour: string | null;
   occasions: string[];
   piece_ids: (number | string)[];
-  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "activites" | "choix" | "cochees" | "affaires" | "programme" | "evenements">;
+  calcul: Pick<ValiseGardee, "meteos" | "situations" | "looks" | "situationsSansLook" | "dressingIds" | "suggestionIds" | "activites" | "choix" | "etapes" | "cochees" | "affaires" | "programme" | "evenements">;
 }
 
 const nombres = (l: (number | string)[] | null | undefined) => (l ?? []).map(Number);
@@ -228,6 +234,7 @@ export function rowToValise(r: ValiseRow): ValiseGardee {
     ...(r.calcul?.suggestionIds?.length ? { suggestionIds: r.calcul.suggestionIds } : {}),
     ...(r.calcul?.activites?.length ? { activites: r.calcul.activites } : {}),
     ...(r.calcul?.choix?.length ? { choix: r.calcul.choix } : {}),
+    ...(r.calcul?.etapes && r.calcul.etapes.length > 1 ? { etapes: r.calcul.etapes } : {}),
     ...(r.calcul?.cochees?.length ? { cochees: r.calcul.cochees } : {}),
     ...(r.calcul?.affaires ? { affaires: r.calcul.affaires } : {}),
     ...(r.calcul?.programme?.length ? { programme: r.calcul.programme } : {}),
@@ -255,6 +262,7 @@ export function valiseToRow(v: ValiseGardee): Omit<ValiseRow, "id"> {
       ...(v.suggestionIds?.length ? { suggestionIds: v.suggestionIds } : {}),
       ...(v.activites?.length ? { activites: v.activites } : {}),
       ...(v.choix?.length ? { choix: v.choix } : {}),
+      ...(v.etapes && v.etapes.length > 1 ? { etapes: v.etapes } : {}),
       ...(v.cochees?.length ? { cochees: v.cochees } : {}),
       ...(v.affaires ? { affaires: v.affaires } : {}),
       ...(v.programme?.length ? { programme: v.programme } : {}),
