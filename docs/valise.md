@@ -387,5 +387,12 @@ Demandé : « donner la possibilité d'ajouter plusieurs destinations dans le ca
 
 ### Compléments du 30/10/2026
 
-- **Jours d'arrivée proposés** (`arriveesProposees`) : une étape ajoutée avant les dates reçoit un jour d'arrivée dès que les dates sont choisies. Les jours sont répartis sur le séjour, dans l'ordre d'ajout, sans en prendre un déjà pris. Un jour déjà choisi ne bouge pas.
 - **Les villes du même pays d'abord** : quand la première destination est un pays, la recherche des étapes suivantes demande d'abord les villes de ce pays (géocodage « ville,code pays »), puis les autres, sans doublon (`villesDuPaysDabord`, `lieux.ts`). Le code pays est gardé avec la première étape (`EtapeSejour.pays`), pour la reprise.
+
+### Une destination, ses dates (30/10/2026)
+
+Demandé : reprendre l'organisation et les textes d'une capture partagée. L'étape 1 s'appelle « Ton prochain voyage » (« Choisis tes destinations et les dates de ton voyage. »). Chaque destination a son champ de ville et, juste dessous, son champ de dates (« Sélectionner les dates », ou « Lun. 16 nov. → Jeu. 19 nov. · 3 nuits »). « Ajouter une autre destination » en ajoute une. Le bloc « Tes étapes » et ses pastilles de jours sont remplacés (`DestinationsDuVoyage`).
+
+- **Le modèle ne change pas** : départ, retour et jour d'arrivée de chaque autre ville. Les dates d'une destination en sont la lecture (`periodesDesDestinations`) ; les choisir les écrit (`appliquerPeriode`). La fin d'une destination est l'arrivée dans la suivante, le jour du trajet.
+- **Une destination ajoutée** partage les dates de la dernière, coupées au milieu (`arriveeAuMilieu`). Si la dernière compte moins de deux nuits, ses dates restent à choisir.
+- **Un seul calendrier ouvert**, sous la destination dont on choisit les dates. Le premier jour possible est le lendemain du début de la précédente. « Continuer » attend que chaque destination ait une ville et des dates complètes.

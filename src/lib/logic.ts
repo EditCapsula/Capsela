@@ -386,6 +386,8 @@ export interface LeviersMesure {
   combinaisonEnVoyage?: boolean;
   /** Reproduit le comportement d'AVANT le 30/10/2026 : en Cocooning, une écharpe peut être tirée en accessoire (R-S22). */
   echarpeEnCocooning?: boolean;
+  /** Reproduit le comportement d'AVANT le 30/10/2026 : deux pièces sans manches pouvaient se porter ensemble (R-S23). */
+  deuxSansManches?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
@@ -1272,6 +1274,16 @@ export function generateOutfit(
     // Colorimétrie (30/09/2026) : candidatsCouleur rend exactement la règle
     // ci-dessus sans colorimétrie ou loin du visage, et y ajoute les paliers
     // de la saison près du visage.
+    // R-S23 (30/10/2026, demandé : « on ne met pas ensemble deux pièces sans manches, surtout en automne ou hiver ») — une pièce
+    // sans manches déjà dans la tenue : la suivante en a, si la catégorie le permet. En automne-hiver, une couche facultative sans
+    // manches n'est pas ajoutée du tout ; une catégorie essentielle n'est jamais vidée (toujours une tenue). Au printemps-été, une
+    // préférence seulement. Les manches doivent être DÉCLARÉES (Item.manches, jamais déduites d'un nom). ARBITRAGE ÉDITORIAL sur la
+    // portée saisonnière (« surtout »).
+    if (!leviers?.deuxSansManches && chosen.some((c) => c.manches === "sans")) {
+      const avecManches = base.filter((i) => i.manches !== "sans");
+      if (avecManches.length) base = avecManches;
+      else if (weather.season === "Automne / Hiver" && !essential) base = [];
+    }
     const candidates = harmonize(candidatsCouleur(base, preferredHexes, colo), chosen, essential);
     const picked = rand(candidates);
     if (picked) chosen.push(picked);
@@ -1957,6 +1969,12 @@ export function candidatsDeRemplacement(
   let candidates = pool.filter((i) => catGroup.includes(i.cat) && i.id !== pieceId && !dejaPortees.has(i.id));
   // R-S22 — symétrique du tirage : en Cocooning, pas d'écharpe proposée en accessoire.
   if (occasion === "cocooning") candidates = candidates.filter((i) => i.accessoireType !== "Écharpe");
+  // R-S23 — symétrique du tirage : la tenue porte déjà une pièce sans manches, le remplaçant en a (exclu en automne-hiver, préféré sinon).
+  if (outfitItems.some((i) => i.id !== pieceId && i.manches === "sans")) {
+    const avecManches = candidates.filter((i) => i.manches !== "sans");
+    if (weather?.season === "Automne / Hiver") candidates = avecManches;
+    else if (avecManches.length) candidates = avecManches;
+  }
   // La saison déclarée d'une pièce du dressing est une règle dure (08/10/2026) — symétrique du filtre de generateOutfit.
   if (weather) candidates = candidates.filter((i) => isCatalogId(i.id) || estDeSaison(i, weather));
   // Priorité au réel sur le groupe accessoire/bijou/sac — même correctif

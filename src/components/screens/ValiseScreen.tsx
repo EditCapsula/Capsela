@@ -87,7 +87,7 @@ import {
   type IdeeSejour,
 } from "@/lib/activitesSejour";
 import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
-import { arriveesProposees, destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, ETAPES_MAX, type EtapeSejour } from "@/lib/etapesSejour";
+import { appliquerPeriode, arriveeAuMilieu, destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, periodeValide, periodesDesDestinations, ETAPES_MAX, type EtapeSejour, type Periode } from "@/lib/etapesSejour";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { pieceLaPlusUtilisee, planningDeLaValise, type CreneauPlanning } from "@/lib/planningValise";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
@@ -755,144 +755,151 @@ const etapePremiere = (destination: string, ville: VilleSuggeree | null): Omit<E
     : { destination: villeDuLieu(destination.trim()) };
 
 /**
- * LES ÉTAPES D'UN ROAD TRIP (30/10/2026, demandé ; dates par étape, arbitré le même jour) : sous les dates du séjour, « Ajouter une autre
- * destination ». Chaque étape ajoutée : sa ville (le même choix de ville que la destination) et son jour d'arrivée, en pastilles parmi les
- * jours du séjour. Le nombre de nuits de chaque étape se lit à côté. La première étape est la destination, au départ (etapesSejour.ts).
+ * TES DESTINATIONS ET TES DATES (30/10/2026, demandé : « l'organisation et les textes » de la capture partagée). Chaque destination a
+ * son champ de ville et, juste dessous, son champ de dates ; « Ajouter une autre destination » en ajoute une. Le modèle reste celui du
+ * road trip (etapesSejour.ts) : le départ, le retour et le jour d'arrivée de chaque autre ville. Les dates d'une destination en sont la
+ * lecture (periodesDesDestinations) ; les choisir les écrit (appliquerPeriode). Un seul calendrier ouvert à la fois, sous la destination
+ * dont on choisit les dates : les deux touchers (début, fin) restent en brouillon, puis s'appliquent.
  */
-function EtapesRoadTrip({
-  premiere,
+function DestinationsDuVoyage({
+  destination,
+  onChoisirPremiere,
   paysPrefere,
-  jours,
-  retour,
   autres,
   setAutres,
-  retenues,
+  depart,
+  retour,
+  setDates,
+  aujourdhui,
+  premierJour,
 }: {
-  premiere: string;
-  /** La première destination est un pays : ses villes d'abord dans la recherche des étapes. */
+  destination: string;
+  onChoisirPremiere: (v: VilleSuggeree | null, libelle: string) => void;
   paysPrefere?: string;
-  jours: string[];
-  retour: string;
   autres: EtapeSejour[];
   setAutres: (f: (l: EtapeSejour[]) => EtapeSejour[]) => void;
-  retenues: EtapeSejour[];
+  depart: string;
+  retour: string;
+  setDates: (depart: string, retour: string) => void;
+  aujourdhui: string;
+  premierJour: string;
 }) {
-  // Les jours où l'on peut arriver dans une autre ville : du lendemain du départ au retour.
-  const arrivees = jours.slice(1);
-  const nuits = (e: EtapeSejour) => {
-    const i = retenues.indexOf(e);
-    if (i < 0) return null;
-    const fin = retenues[i + 1]?.arrivee ?? retour;
-    return joursEntre(e.arrivee, fin);
+  const periodes = periodesDesDestinations(depart, retour, autres.map((e) => e.arrivee));
+  const plusieurs = periodes.length > 1;
+  // Le calendrier ouvert : celui de la première destination tant que le voyage n'a pas de dates, sinon aucun.
+  const [ouvert, setOuvert] = useState<number | null>(depart && retour ? null : 0);
+  const [brouillon, setBrouillon] = useState<Periode>({ debut: "", fin: "" });
+  const ouvrir = (i: number) => {
+    if (ouvert === i) return setOuvert(null);
+    setBrouillon(periodes[i]);
+    setOuvert(i);
   };
-  const libelleNuits = (n: number | null) => (n == null ? "" : n === 0 ? "Dernier jour" : `${n} ${n > 1 ? "nuits" : "nuit"}`);
-  const premiereRetenue = retenues[0];
-  const prochaineArrivee = () => {
-    const prises = new Set(autres.map((e) => e.arrivee));
-    const libres = arrivees.filter((j) => !prises.has(j));
-    // Sans dates encore : aucun jour proposé ; il se choisit une fois les dates posées.
-    return libres[Math.floor(libres.length / 2)] ?? arrivees[arrivees.length - 1] ?? "";
+  const appliquer = (i: number, p: Periode) => {
+    const r = appliquerPeriode({ depart, retour, arrivees: autres.map((e) => e.arrivee) }, i, p);
+    setDates(r.depart, r.retour);
+    setAutres((l) => l.map((e, k) => ({ ...e, arrivee: r.arrivees[k] ?? e.arrivee })));
   };
+  const libellePeriode = (p: Periode) => {
+    if (!periodeValide(p)) return null;
+    const n = joursEntre(p.debut, p.fin);
+    return { dates: `${dateCourte(p.debut)} → ${dateCourte(p.fin)}`, nuits: `${n} ${n > 1 ? "nuits" : "nuit"}` };
+  };
+  const ajouter = () => {
+    const derniere = periodes[periodes.length - 1];
+    setAutres((l) => [...l, { destination: "", arrivee: arriveeAuMilieu(derniere, joursDuSejour) }]);
+    setOuvert(null);
+  };
+  const derniereNommee = autres.length === 0 ? destination.trim().length > 1 : !!autres[autres.length - 1].destination.trim();
 
   return (
-    <div className="mt-6">
-      {autres.length > 0 && (
-        <>
-          <Surtitre>Tes étapes</Surtitre>
-          <ol className="flex flex-col gap-2 mt-3">
-            <li className="flex items-center gap-[12px] bg-card border border-border rounded-tuile px-[14px] py-[10px]">
-              <span className="flex-shrink-0 w-[24px] h-[24px] rounded-full bg-terracotta-deep text-on-terracotta text-[12px] flex items-center justify-center">1</span>
+    <ol className="flex flex-col gap-6 mt-6">
+      {periodes.map((p, i) => {
+        const etape = i > 0 ? autres[i - 1] : null;
+        const lu = libellePeriode(p);
+        // Le premier jour qu'on peut toucher : le départ (ou aujourd'hui) pour la première, le lendemain du début de la précédente ensuite.
+        const minimum = i === 0 ? premierJour : periodes[i - 1].debut ? plusJours(periodes[i - 1].debut, 1) : premierJour;
+        return (
+          <li key={i}>
+            <div className="flex items-baseline justify-between gap-3">
+              <Surtitre>{plusieurs ? `Destination ${i + 1}` : "Ta destination"}</Surtitre>
+              {etape && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAutres((l) => l.filter((_, k) => k !== i - 1));
+                    setOuvert(null);
+                  }}
+                  className="t-lien text-terracotta-deep cursor-pointer min-h-[44px] -my-[12px]"
+                >
+                  Retirer
+                </button>
+              )}
+            </div>
+            {i === 0 ? (
+              <ChoixVille avecPosition={false} avecRecentes={false} titre={null} lieu={destination} onChoisir={onChoisirPremiere} />
+            ) : (
+              <ChoixVille
+                avecPosition={false}
+                avecRecentes={false}
+                titre={null}
+                paysPrefere={paysPrefere}
+                lieu={etape?.destination ?? ""}
+                onChoisir={(v, libelle) =>
+                  setAutres((l) => l.map((x, k) => (k === i - 1 ? { ...x, destination: v ? v.name : villeDuLieu(libelle), ...(v ? { lat: v.lat, lon: v.lon } : {}) } : x)))
+                }
+              />
+            )}
+            {/* Le champ de dates, sous la ville (comme la capture) : « Sélectionner les dates », ou les dates et les nuits. */}
+            <button
+              type="button"
+              onClick={() => ouvrir(i)}
+              aria-expanded={ouvert === i}
+              className={
+                "w-full mt-[8px] flex items-center gap-[10px] rounded-bloc border bg-card px-[14px] text-left cursor-pointer " +
+                (ouvert === i ? "border-terracotta" : "border-border")
+              }
+              style={{ minHeight: 52 }}
+            >
+              <span className={"flex-shrink-0 " + (lu ? "text-terracotta-deep" : "text-placeholder")}>{G_CALENDRIER}</span>
               <span className="flex-1 min-w-0">
-                <span className="block text-[13px] text-ink">{premiere || "Ta destination"}</span>
-                {jours[0] && (
-                  <span className="block text-[11px] text-muted mt-[2px]">
-                    Dès le {dateCourte(jours[0]).toLowerCase()}
-                    {premiereRetenue ? ` · ${libelleNuits(nuits(premiereRetenue))}` : ""}
-                  </span>
+                {lu ? (
+                  <>
+                    <span className="block font-serif text-[15px] text-ink">{lu.dates}</span>
+                    <span className="block text-[11px] text-muted mt-[1px]">{lu.nuits}</span>
+                  </>
+                ) : (
+                  <span className="block text-[14px] text-placeholder">Sélectionner les dates</span>
                 )}
               </span>
-            </li>
-            {autres.map((e, i) => {
-              const retenue = retenues.find((r) => r === e) ?? null;
-              const doublonDeJour = !!e.destination && !retenue;
-              return (
-                <li key={i} className="bg-card border border-border rounded-tuile px-[14px] py-[10px]">
-                  <div className="flex items-center gap-[12px]">
-                    <span className="flex-shrink-0 w-[24px] h-[24px] rounded-full bg-chip-soft-bg text-ink text-[12px] flex items-center justify-center">{i + 2}</span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block text-[13px] text-ink">{e.destination || "Nouvelle étape"}</span>
-                      {retenue && <span className="block text-[11px] text-muted mt-[2px]">{libelleNuits(nuits(retenue))}</span>}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setAutres((l) => l.filter((_, k) => k !== i))}
-                      aria-label={`Retirer l'étape ${e.destination || i + 2}`}
-                      className="flex-shrink-0 w-[44px] h-[44px] -mr-[10px] flex items-center justify-center text-muted cursor-pointer"
-                    >
-                      {G_CROIX}
-                    </button>
-                  </div>
-                  {!e.destination && (
-                    <ChoixVille
-                      avecPosition={false}
-                      avecRecentes={false}
-                      paysPrefere={paysPrefere}
-                      lieu=""
-                      onChoisir={(v, libelle) =>
-                        setAutres((l) =>
-                          l.map((x, k) => (k === i ? { ...x, destination: v ? v.name : villeDuLieu(libelle), ...(v ? { lat: v.lat, lon: v.lon } : {}) } : x))
-                        )
-                      }
-                    />
-                  )}
-                  <div className="text-[11px] text-muted mt-3">Arrivée le</div>
-                  {arrivees.length === 0 && <div className="text-[12px] text-muted-3 mt-[4px]">Choisis tes dates ci-dessous, puis ton jour d&apos;arrivée ici.</div>}
-                  <div className="scrollarea flex gap-[6px] overflow-x-auto -mx-[14px] px-[14px] mt-[6px]" role="group" aria-label={`Jour d'arrivée à ${e.destination || "cette étape"}`}>
-                    {arrivees.map((j) => {
-                      const on = e.arrivee === j;
-                      return (
-                        <button
-                          key={j}
-                          type="button"
-                          onClick={() => setAutres((l) => l.map((x, k) => (k === i ? { ...x, arrivee: j } : x)))}
-                          aria-pressed={on}
-                          className={
-                            "flex-shrink-0 rounded-full px-[12px] text-[12px] border cursor-pointer " +
-                            (on ? "bg-terracotta-deep border-terracotta-deep text-on-terracotta" : "bg-transparent border-border text-ink")
-                          }
-                          style={{ minHeight: 36 }}
-                        >
-                          {dateCourte(j)}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {doublonDeJour && arrivees.length > 0 && (
-                    <div className="text-[12px] text-terracotta mt-2">
-                      {!e.arrivee
-                        ? "Choisis son jour d'arrivée."
-                        : arrivees.includes(e.arrivee)
-                          ? "Une autre étape commence ce jour-là : choisis un autre jour d'arrivée."
-                          : "Les dates du séjour ont changé : choisis son jour d'arrivée."}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </>
+            </button>
+            {ouvert === i && (
+              <div className="mt-2">
+                <CalendrierPeriode
+                  depart={brouillon.debut}
+                  retour={brouillon.fin}
+                  aujourdhui={aujourdhui}
+                  premierJour={minimum}
+                  onChange={(n) => {
+                    setBrouillon({ debut: n.depart, fin: n.retour });
+                    if (n.depart && n.retour) {
+                      appliquer(i, { debut: n.depart, fin: n.retour });
+                      setOuvert(null);
+                    }
+                  }}
+                />
+              </div>
+            )}
+          </li>
+        );
+      })}
+      {derniereNommee && autres.length < ETAPES_MAX - 1 && (
+        <li>
+          <button type="button" onClick={ajouter} className="w-full inline-flex items-center justify-center gap-[8px] text-[14px] text-ink cursor-pointer" style={{ minHeight: 44 }}>
+            {G_PLUS} Ajouter une autre destination
+          </button>
+        </li>
       )}
-      {autres.length < ETAPES_MAX - 1 && (
-        <button
-          type="button"
-          onClick={() => setAutres((l) => [...l, { destination: "", arrivee: prochaineArrivee() }])}
-          className="w-full mt-3 rounded-full border border-border bg-card text-[12px] text-ink cursor-pointer inline-flex items-center justify-center gap-[6px]"
-          style={{ minHeight: 44 }}
-        >
-          {G_PLUS} Ajouter une autre destination
-        </button>
-      )}
-    </div>
+    </ol>
   );
 }
 
@@ -968,7 +975,10 @@ export default function ValiseScreen() {
   const etapes = depart && retour ? etapesRetenues(etapePremiere(destination, ville), autresEtapes, depart, retour) : [];
   const roadTrip = etapes.length > 1;
   /** Une étape ajoutée sans ville, ou dont le jour d'arrivée est déjà pris : on le dit, le bouton attend (jamais écartée en silence). */
-  const etapesCompletes = autresEtapes.every((e) => e.destination.trim() && etapes.includes(e));
+  const etapesCompletes =
+    autresEtapes.every((e) => e.destination.trim() && etapes.includes(e)) &&
+    // Chaque destination a des dates complètes et dans l'ordre (30/10/2026, une destination, ses dates).
+    (autresEtapes.length === 0 || periodesDesDestinations(depart, retour, autresEtapes.map((e) => e.arrivee)).every(periodeValide));
   const programme: ItemProgramme[] = programmeDesActivites(activites, jours.length || 1);
 
   /**
@@ -1360,66 +1370,34 @@ export default function ValiseScreen() {
         {questions && etape === 1 && (
           <>
             <Surtitre>Ta valise · 1 / 3</Surtitre>
-            <TitreEtape a="Ton" b="séjour" />
-            <div className="text-[13px] text-muted leading-[1.5] mt-2">Où pars-tu et quand ?</div>
-            {/* LE MÊME CHOIX DE VILLE QUE « PLANIFIER UNE TENUE » (08/10/2026, demandé) : résultats lisibles, villes récentes communes,
-                position à la demande, carte de la destination avec « Modifier ». */}
-            <ChoixVille
-              avecPosition={false}
-              avecRecentes={false}
-              lieu={destination}
-              onChoisir={(v, libelle) => {
+            <TitreEtape a="Ton prochain" b="voyage" />
+            <div className="text-[13px] text-muted leading-[1.5] mt-2">Choisis tes destinations et les dates de ton voyage.</div>
+            {/* L'ORGANISATION DE LA CAPTURE PARTAGÉE (30/10/2026, demandé) : chaque destination, sa ville puis ses dates
+                (DestinationsDuVoyage) ; le même choix de ville que « Planifier une tenue », sans villes récentes ni position. */}
+            <DestinationsDuVoyage
+              destination={destination}
+              onChoisirPremiere={(v, libelle) => {
                 setVille(v);
                 setDestination(libelle);
               }}
+              paysPrefere={ville?.capitaleDe ? ville.country || undefined : undefined}
+              autres={autresEtapes}
+              setAutres={setAutresEtapes}
+              depart={depart}
+              retour={retour}
+              setDates={(d, r) => {
+                setDepart(d);
+                setRetour(r);
+              }}
+              aujourdhui={aujourdhui}
+              premierJour={premierJour}
             />
-            {/* LE ROAD TRIP (30/10/2026), sous la destination et avant les dates (demandé) : les villes d'abord, leur jour d'arrivée une fois
-                les dates posées. */}
-            {destination.trim().length > 1 && (
-              <EtapesRoadTrip
-                premiere={etapes[0]?.destination ?? nomVille}
-                paysPrefere={ville?.capitaleDe ? ville.country || undefined : undefined}
-                jours={dureeOk ? jours : []}
-                retour={retour}
-                autres={autresEtapes}
-                setAutres={setAutresEtapes}
-                retenues={etapes}
-              />
-            )}
             {autresEtapes.some((e) => !e.destination.trim()) && (
-              <div className="text-[12px] text-muted mt-2">Choisis la ville de ta nouvelle étape, ou retire-la, pour continuer.</div>
+              <div className="text-[12px] text-muted mt-3">Choisis la ville de ta nouvelle destination, ou retire-la, pour continuer.</div>
             )}
-            <div className="mt-6">
-              <Surtitre>Tes dates</Surtitre>
-            </div>
-            {/* Départ et retour : un seul calendrier (20/10/2026, demandé), le résumé au-dessus. */}
-            <div className="grid grid-cols-2 gap-[10px] mt-3">
-              {(
-                [
-                  ["Départ", depart],
-                  ["Retour", retour],
-                ] as const
-              ).map(([titre, valeur]) => (
-                <div key={titre} className={"rounded-tuile border px-[12px] py-[8px] " + (titre === "Retour" && depart && !retour ? "border-terracotta bg-card" : "border-border bg-card")}>
-                  <span className="block text-[11px] text-muted">{titre}</span>
-                  <span className={"block font-serif text-[15px] mt-[1px] " + (valeur ? "text-ink" : "text-placeholder")}>{valeur ? dateCourte(valeur) : "Choisir"}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-2">
-              <CalendrierPeriode
-                depart={depart}
-                retour={retour}
-                aujourdhui={aujourdhui}
-                premierJour={premierJour}
-                onChange={(p) => {
-                  setDepart(p.depart);
-                  setRetour(p.retour);
-                  // Les étapes ajoutées avant les dates reçoivent un jour d'arrivée (arriveesProposees) ; un jour choisi ne bouge pas.
-                  if (p.depart && p.retour && p.retour > p.depart) setAutresEtapes((l) => arriveesProposees(l, joursDuSejour(p.depart, p.retour)));
-                }}
-              />
-            </div>
+            {autresEtapes.some((e) => e.destination.trim()) && !etapesCompletes && (
+              <div className="text-[12px] text-muted mt-3">Choisis les dates de chaque destination pour continuer.</div>
+            )}
             {jours.length > 0 && (
               <div className="text-[12px] text-muted mt-3">{dureeOk ? libelleDuree(jours.length) : `Un séjour de ${DUREE_MAX_JOURS} jours au plus.`}</div>
             )}
@@ -1436,7 +1414,7 @@ export default function ValiseScreen() {
               </div>
             )}
             {destination.trim().length > 1 && (!depart || !retour) && (
-              <div className="text-[12px] text-muted mt-2">Indique la date de départ et la date de retour pour continuer.</div>
+              <div className="text-[12px] text-muted mt-2">Choisis les dates de ton voyage pour continuer.</div>
             )}
             {/* Le résumé météo n'existe que si la prévision a répondu pour au
                 moins un jour du séjour — jamais une température supposée. */}

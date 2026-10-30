@@ -70,26 +70,46 @@ export function destinationDuJour(v: { destination: string; etapes?: readonly Et
 }
 
 /**
- * LES JOURS D'ARRIVÉE PROPOSÉS (30/10/2026, signalé en capture : des étapes ajoutées avant les dates restaient « Choisis son jour
- * d'arrivée »). Une fois les dates posées, chaque étape sans jour valable en reçoit un, réparti sur le séjour dans l'ordre de l'ajout
- * et jamais un jour déjà pris ; un jour déjà choisi n'est jamais déplacé. La personne le change d'un toucher.
+ * UNE DESTINATION, SES DATES (30/10/2026, demandé : l'organisation et les textes de la capture partagée — chaque destination avec son
+ * champ de dates). Le modèle ne change pas : le départ, le retour et le jour d'arrivée de chaque autre ville. Les dates d'une
+ * destination en sont la lecture : la première commence au départ, chacune finit à l'arrivée dans la suivante (le jour du trajet), la
+ * dernière au retour. Une date encore inconnue vaut "".
  */
-export function arriveesProposees(autres: readonly EtapeSejour[], jours: readonly string[]): EtapeSejour[] {
-  const possibles = jours.slice(1);
-  if (possibles.length === 0) return [...autres];
-  const prises = new Set(autres.filter((e) => possibles.includes(e.arrivee)).map((e) => e.arrivee));
-  const sansJour = autres.filter((e) => !possibles.includes(e.arrivee));
-  if (sansJour.length === 0) return [...autres];
-  let rang = 0;
-  return autres.map((e) => {
-    if (possibles.includes(e.arrivee)) return e;
-    rang++;
-    // La place régulière de cette étape parmi celles à placer, puis le premier jour libre à partir de là (sinon avant).
-    const cible = Math.min(possibles.length - 1, Math.max(0, Math.round((rang * jours.length) / (sansJour.length + 1)) - 1));
-    const ordre = [...possibles.slice(cible), ...possibles.slice(0, cible).reverse()];
-    const jour = ordre.find((j) => !prises.has(j));
-    if (!jour) return e;
-    prises.add(jour);
-    return { ...e, arrivee: jour };
-  });
+export interface Periode {
+  debut: string;
+  fin: string;
+}
+
+export function periodesDesDestinations(depart: string, retour: string, arrivees: readonly string[]): Periode[] {
+  const n = arrivees.length + 1;
+  return Array.from({ length: n }, (_, i) => ({ debut: i === 0 ? depart : (arrivees[i - 1] ?? ""), fin: i < n - 1 ? (arrivees[i] ?? "") : retour }));
+}
+
+/** Les dates choisies pour la destination `i` : son début et sa fin deviennent le départ, une arrivée ou le retour. */
+export function appliquerPeriode(
+  etat: { depart: string; retour: string; arrivees: readonly string[] },
+  i: number,
+  p: Periode
+): { depart: string; retour: string; arrivees: string[] } {
+  const arrivees = [...etat.arrivees];
+  const n = arrivees.length + 1;
+  let { depart, retour } = etat;
+  if (i === 0) depart = p.debut;
+  else arrivees[i - 1] = p.debut;
+  if (i === n - 1) retour = p.fin;
+  else arrivees[i] = p.fin;
+  return { depart, retour, arrivees };
+}
+
+/** Des dates complètes et dans l'ordre : au moins une nuit. */
+export const periodeValide = (p: Periode): boolean => !!p.debut && !!p.fin && p.debut < p.fin;
+
+/**
+ * Le jour d'arrivée d'une destination ajoutée : le milieu des dates de la dernière (elle les partage), quand elle compte au moins deux
+ * nuits ; sinon "" — ses dates restent à choisir.
+ */
+export function arriveeAuMilieu(derniere: Periode, jours: (debut: string, fin: string) => string[]): string {
+  if (!periodeValide(derniere)) return "";
+  const js = jours(derniere.debut, derniere.fin);
+  return js.length >= 3 ? js[Math.floor((js.length - 1) / 2)] : "";
 }

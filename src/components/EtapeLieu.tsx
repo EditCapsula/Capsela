@@ -73,8 +73,11 @@ export function ChoixVille({
   avecPosition = true,
   avecRecentes = true,
   paysPrefere,
+  titre = "Destination sélectionnée",
 }: {
   lieu: string;
+  /** Le surtitre de la destination choisie ; null : aucun (la valise numérote ses destinations, 30/10/2026). */
+  titre?: string | null;
   /** Un code pays (ISO) : ses villes sont proposées d'abord (villesDuPaysDabord) — les étapes d'un road trip dans un pays. */
   paysPrefere?: string;
   /**
@@ -155,9 +158,9 @@ export function ChoixVille({
   return (
     <>
       {carte ? (
-        <div className="mt-5">
-          <Surtitre>Destination sélectionnée</Surtitre>
-          <div className="mt-[10px] flex items-center gap-[10px] rounded-bloc border border-border bg-card px-[14px]" style={{ minHeight: 56 }}>
+        <div className={titre ? "mt-5" : "mt-[10px]"}>
+          {titre && <Surtitre>{titre}</Surtitre>}
+          <div className={(titre ? "mt-[10px] " : "") + "flex items-center gap-[10px] rounded-bloc border border-border bg-card px-[14px]"} style={{ minHeight: 56 }}>
             <span className="flex-shrink-0 text-terracotta-deep"><Epingle /></span>
             <span className="flex-1 min-w-0 font-serif text-[17px] text-ink truncate">{lieu}</span>
             <button
@@ -175,7 +178,7 @@ export function ChoixVille({
         </div>
       ) : (
         <>
-          <div className="mt-5 flex items-center gap-[10px] rounded-bloc border border-border bg-card px-[14px] focus-within:border-terracotta" style={{ minHeight: 52 }}>
+          <div className={(titre ? "mt-5" : "mt-[10px]") + " flex items-center gap-[10px] rounded-bloc border border-border bg-card px-[14px] focus-within:border-terracotta"} style={{ minHeight: 52 }}>
             <span aria-hidden="true" className="flex-shrink-0 text-placeholder"><Loupe /></span>
             <input
               ref={champ}
