@@ -26,7 +26,7 @@ describe("evenementsDuSejour", () => {
 describe("libelleEvenement", () => {
   it("son nom s'il en a un, sinon son type", () => {
     expect(libelleEvenement(mariage)).toBe("Mariage de Léa");
-    expect(libelleEvenement(reunion)).toBe("Réunion · travail");
+    expect(libelleEvenement(reunion)).toBe("Réunion");
     expect(libelleEvenement({ type: "diner", nom: "   " })).toBe("Dîner");
   });
 });
@@ -54,7 +54,7 @@ describe("le planning place les événements à leur jour et leur moment", () =>
   it("le mariage tombe le 25 au soir, avec le look qui lui répond, distingué des activités", () => {
     const plan = planningDuProgramme(programme, JOURS, situations, looks, [mariage]);
     const ev = plan.filter((c) => c.evenement);
-    expect(ev).toEqual([{ jour: "2026-10-25", creneau: "soir", sousId: "evt:m", libelle: "Mariage de Léa", look: 1, evenement: true }]);
+    expect(ev).toEqual([{ jour: "2026-10-25", creneau: "soir", sousId: "evt:m", libelle: "Mariage de Léa", look: 1, evenement: true, moment: "soir" }]);
   });
 
   it("les activités étalées évitent son créneau quand elles le peuvent", () => {
@@ -134,5 +134,58 @@ describe("le type « Autre »", () => {
     const autre: EvenementValise = { id: "a", type: "quotidien", jour: "2026-10-24", moment: "jour" };
     expect(situationsDesEvenements([autre], meteos)[0]).toMatchObject({ occasion: "quotidien", sousIds: ["evt:a"] });
     expect(libelleEvenement(autre)).toBe("Autre");
+  });
+});
+
+describe("les quatre moments et les types ajoutés (30/10/2026)", () => {
+  it("matin, journée et toute la journée prennent le créneau de la journée ; seule la soirée prend celui du soir", () => {
+    const programme = [{ id: "diner", frequence: 3 }];
+    const situations = [...situationsDuProgramme(programme, meteos, ["quotidien"])];
+    const evts: EvenementValise[] = [
+      { id: "a", type: "sport", jour: "2026-10-24", moment: "matin" },
+      { id: "b", type: "ceremonie", jour: "2026-10-25", moment: "journee_entiere" },
+    ];
+    const plan = planningDuProgramme(programme, JOURS, situations, [], evts);
+    expect(plan.filter((c) => c.evenement).map((c) => [c.jour, c.creneau, c.moment])).toEqual([
+      ["2026-10-24", "jour", "matin"],
+      ["2026-10-25", "jour", "journee_entiere"],
+    ]);
+    // Toute la journée occupe aussi la soirée : les dîners étalés évitent le 25.
+    expect(plan.filter((c) => c.sousId === "diner").map((c) => c.jour)).not.toContain("2026-10-25");
+  });
+
+  it("le même jour : matin, toute la journée, journée, soirée — dans cet ordre", () => {
+    const j = "2026-10-26";
+    const ids = evenementsDuSejour(
+      [
+        { id: "s", type: "diner", jour: j, moment: "soir" },
+        { id: "j", type: "visites", jour: j, moment: "jour" },
+        { id: "m", type: "sport", jour: j, moment: "matin" },
+        { id: "t", type: "ceremonie", jour: j, moment: "journee_entiere" },
+      ],
+      JOURS
+    ).map((e) => e.id);
+    expect(ids).toEqual(["m", "t", "j", "s"]);
+  });
+
+  it("Visite, Activité sportive et Sortie en bateau renvoient à des entrées du programme existantes", () => {
+    const s = situationsDesEvenements(
+      [
+        { id: "v", type: "visites", jour: "2026-10-24", moment: "jour" },
+        { id: "p", type: "sport", jour: "2026-10-25", moment: "matin" },
+        { id: "b", type: "excursion", jour: "2026-10-26", moment: "jour" },
+      ],
+      meteos
+    );
+    expect(s.map((x) => [x.occasion, x.contrainte ?? null])).toEqual([
+      ["quotidien", "marche"],
+      ["sport", null],
+      ["quotidien", "marche"],
+    ]);
+    expect(libelleEvenement({ type: "excursion" })).toBe("Sortie en bateau");
+  });
+
+  it("un événement gardé avant le 30/10 (moment « jour » ou « soir ») reste lu tel quel", () => {
+    expect(evenementsDuSejour([mariage, reunion], JOURS).map((e) => e.moment)).toEqual(["soir", "jour"]);
   });
 });
