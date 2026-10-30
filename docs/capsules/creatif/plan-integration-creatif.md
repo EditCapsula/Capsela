@@ -123,3 +123,44 @@ une conclusion de ce document la rouvre (point 8).
 
 Aucune capsule d'un autre style n'est modifiée : l'ajout d'un libellé à `styles` n'en retire aucun, et le filtre de style d'un profil
 Minimaliste, Bohème… ne lit pas « Créatif ». Les huit styles existants, leurs visuels et leurs règles restent tels quels.
+
+## 8. Étape 2 — préparée le 30/10/2026 (rien n'est lancé en production)
+
+Validé par la propriétaire : l'identifiant `creatif`, commun aux deux genres ; « dans les fichiers Excel tu as toutes les pièces » — les
+pièces de référence sans équivalent exact sont CRÉÉES depuis l'Excel ; « sous-pull et pull col roulé fin ne sont pas pareils ».
+
+**Application (code, livré)** : `creatif` dans `STYLE_IDS` (libellé « Créatif » femme, « Créatif / Artistique » homme, libellé catalogue
+« Créatif »), visuels fournis (`/images/styles/creatif.webp`, `/images/styles/homme/creatif.webp`), proposé aux deux genres ; un profil
+homme enregistré avec `romantique` se relit `creatif` (`stylesLus`, au chargement seulement : une femme Romantique qui passe en Homme ne
+devient pas Créatif) ; entrée `Créatif` dans `STYLE_FIT` pour les pièces du dressing. Tests ajoutés.
+
+**Données (SQL montré, à lancer à la main, dans l'ordre)** — `sql/` :
+
+| Fichier | Contenu | Défaut |
+|---|---|---|
+| `01-etiqueter-existants.sql` | ajoute « Créatif » à 28 équivalents exacts (1.a) et aux 4 pièces transversales (1.b) | 1.c (4 unisexes) en commentaire, décision en attente |
+| `02-creer-pieces.sql` | crée 201 articles hors sport (2.a), tirés des références sans équivalent exact, une pièce présente à plusieurs saisons = un article | 2.b (17 pièces de sport) en commentaire, cf. mesure ci-dessous |
+| `02-revue-pieces-a-creer.xlsx` | les mêmes articles, une ligne chacun, pour relecture | — |
+| `03-annuler.sql` | retour arrière de 01 et 02 | — |
+
+Points de 02 à valider avant de lancer : couleurs côté femme **proposées** (la colonne de la référence porte la palette de la saison, pas
+la couleur de la pièce : ses couleurs connues de l'app sont réparties, 115 lignes marquées « couleur proposée ») ; 11 pièces sans couleur
+connue de l'app (listées en fin de fichier) ; `niveau_formalite` proposé par une règle écrite sur les occasions ; 3 ensembles homme non
+créés (l'app n'a pas de catégorie « ensemble ») ; occasion « Vacances » écartée. Les visuels se génèrent au premier affichage, par la
+chaîne existante (`requestCatalogImage` → `generate-catalog-image`).
+
+**Mesure (`scripts/creatif.audit.ts`, une exécution, même pool, export du 30/10/2026)** — profil Créatif, 4 saisons, 8 occasions,
+20 tirages par occasion :
+
+| État du catalogue | Style Créatif | Part Créatif de la capsule | Tenues complètes | Autres styles modifiés (femme / homme) |
+|---|---|---|---|---|
+| L0 — actuel | ignoré (seuil de 18 non atteint) | 0 % | 100 % | — |
+| L1 — + 01 | ignoré, sauf homme automne et hiver | 5 à 14 % (74–76 % homme aut./hiv.) | 100 % | 0 / 32 · 0 / 24 |
+| L2 — + 01 + 02 complet (2.a et 2.b) | actif | 85 à 90 % | 100 % | **32 / 32 · 24 / 24** |
+| L2s — + 01 + 02.a (sans sport) | actif | 84 à 89 % | 100 %, toutes occasions | **0 / 32 · 0 / 24** |
+
+**DÉMONTRÉ** (sur cet export) : 02.a rend le style effectif dans les deux genres et aux quatre saisons sans toucher aux capsules des
+autres styles ; les pièces de sport créées les modifient toutes, parce que le bloc Sport d'une capsule n'est jamais filtré par style
+(capsule.ts, arbitrage du 24/08/2026). En L2s, les tenues Sport restent complètes, avec environ 20 à 50 % de pièces Créatif selon les tirages (sport commun du
+catalogue étiqueté en 1.b). **NON DÉMONTRÉ** : le rendu des visuels générés pour les nouvelles pièces, et le comportement sur le
+catalogue de production s'il a changé depuis l'export.

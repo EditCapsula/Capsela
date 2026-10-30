@@ -292,6 +292,9 @@ const STYLE_FIT: Record<string, RegExp> = {
   Streetwear: /sweat|baskets|jean brut|jogging|coupe-vent|débardeur|molleton/,
   Preppy: /chemise|pull col rond|gilet|mocassins|ceinture|rayé|marine|chino/,
   Glamour: /soie|escarpins|robe|doré|paillet/,
+  // Pièces du dressing seulement (le catalogue porte ses étiquettes) — les traits des capsules Créatif de référence (30/10/2026,
+  // docs/capsules/creatif/) : motif, couleur ou ligne affirmés.
+  "Créatif": /graphique|illustr|imprimé|arty|artistique|abstrait|color-block|colorblock|patchwork|empiècement|asymétri|sculptur|jacquard|bicolore|contrast/,
 };
 
 export function styleFit(it: Item, style: string): boolean {

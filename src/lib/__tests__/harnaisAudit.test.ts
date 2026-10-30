@@ -54,10 +54,11 @@ const LIBELLES = new Set<string>([
 ]);
 
 describe("Correspondance identifiant ↔ libellé catalogue", () => {
-  it("expose huit styles femme, six styles homme, tous traduisibles", () => {
+  it("expose neuf styles femme, sept styles homme (Créatif compris, 30/10/2026), tous traduisibles", () => {
     expect(exposedStyleIds("femme")).toEqual([...STYLE_IDS]);
-    expect(exposedStyleIds("femme")).toHaveLength(8);
-    expect(exposedStyleIds("homme")).toHaveLength(6);
+    expect(exposedStyleIds("femme")).toHaveLength(9);
+    expect(exposedStyleIds("homme")).toHaveLength(7);
+    expect(exposedStyleIds("homme")).toContain("creatif");
     expect(exposedStyleIds("homme")).not.toContain("romantique");
     expect(exposedStyleIds("homme")).not.toContain("glamour");
     // Le harnais et la production lisent la même source.
