@@ -231,10 +231,9 @@ function styleVisualUrl(gender: "femme" | "homme", slug: string): string {
  */
 /**
  * VISUELS DES STYLES HOMME (fournis le 30/10/2026, demandé : « mets à jour les visuels des styles hommes partout où ils apparaissent ») :
- * flat lays recadrés depuis la planche validée, servis par l'app (public/images/styles/homme/) et non plus depuis Storage. Format
- * 5:4 (374 × 299) : celui des cartes de l'étape Style ; les cartes 4:5 et les vignettes en gardent le centre. Le bord droit de la planche
- * (rond de sélection, coin de carte) est retiré au recadrage. Les fichiers fournis ne font que 441 px de large : un envoi en plus haute
- * définition les remplacerait sans autre changement.
+ * flat lays servis par l'app (public/images/styles/homme/), au format des visuels femme — portrait 3:4, 900 × 1200 WebP — pour que les
+ * grilles de l'étape Style soient identiques dans les deux genres. Générés en 1024 × 1536, élargis de 64 px de fond de chaque côté
+ * (bord recopié) plutôt que recoupés en hauteur : aucun élément coupé, même échelle sur toute la série.
  */
 const VISUEL_STYLE_HOMME = (slug: string) => `/images/styles/homme/${slug}.webp`;
 
