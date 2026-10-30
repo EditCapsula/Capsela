@@ -1,14 +1,12 @@
-import { PALETTE } from "./data";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
-import type { CategoryKey } from "./types";
 import { ticketLu, type ArticleLu, type TicketLu } from "../../supabase/functions/_shared/lectureTicket.ts";
 
 /*
  * AJOUTER DES PIÈCES DEPUIS UN TICKET DE CAISSE (30/10/2026, demandé ; le nom du magasin dans « Marque », arbitré le même jour).
  *
  * La photo du ticket est réduite sur l'appareil, envoyée à la fonction Edge `lire-ticket` (supabase/functions/_shared/lectureTicket.ts),
- * qui ne la garde pas, puis oubliée. Ce qui revient — le magasin et les articles vestimentaires — préremplit les fiches de pièces, une
- * par article choisi, que la personne vérifie et enregistre comme toute pièce : rien n'est ajouté au dressing sans elle.
+ * qui ne la garde pas, puis oubliée. Ce qui revient — le magasin et les articles vestimentaires — devient une carte par article dans la
+ * liste de l'import (importTenue.ts, brouillonsDepuisTicket), que la personne vérifie et ajoute : rien n'entre au dressing sans elle.
  */
 
 export type { ArticleLu, TicketLu };
@@ -39,19 +37,4 @@ export async function lireTicket(fichier: File): Promise<TicketLu | null> {
   } catch {
     return null;
   }
-}
-
-/** Les champs de la fiche préremplis par un article : ce que le ticket dit, rien d'autre. Le magasin va dans « Marque ». */
-export function champsDeLArticle(
-  article: ArticleLu,
-  magasin: string | null
-): { addName: string; addBrand: string; addCat?: CategoryKey; addSize: string | null; addColor?: { name: string; hex: string } } {
-  const couleur = article.couleur ? PALETTE.find(([n]) => n === article.couleur) : undefined;
-  return {
-    addName: article.nom,
-    addBrand: magasin ?? "",
-    ...(article.categorie ? { addCat: article.categorie as CategoryKey } : {}),
-    addSize: article.taille ? article.taille.toUpperCase() : null,
-    ...(couleur ? { addColor: { name: couleur[0], hex: couleur[1] } } : {}),
-  };
 }

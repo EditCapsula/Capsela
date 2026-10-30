@@ -91,12 +91,15 @@ export type RegleAcces = "PREMIUM_REQUIRED" | "ACCES_LIBRE";
  * déclenche donc un appel payant au modèle. Au lancement : "PREMIUM_REQUIRED"
  * des deux côtés, puis redéployer `stylist-advice`.
  */
-export const REGLES_ACCES: Record<"AVIS_DE_STYLISTE" | "PREPARER_VALISE", RegleAcces> = {
+export const REGLES_ACCES: Record<"AVIS_DE_STYLISTE" | "PREPARER_VALISE" | "LIRE_TICKET", RegleAcces> = {
   AVIS_DE_STYLISTE: "ACCES_LIBRE",
   // Préparer sa valise : GRATUITE depuis le 30/10/2026 (décidé : « enlève le premium de la préparation de valise ») — plus une
   // phase de test, à ne pas repasser en PREMIUM_REQUIRED au lancement. Aucun appel serveur ne la sert (tout est calculé sur
   // l'appareil) : seule la règle client agit, la copie serveur n'existe que pour le test miroir.
   PREPARER_VALISE: "ACCES_LIBRE",
+  // Ajouter des pièces depuis un ticket de caisse : PREMIUM (30/10/2026, décidé : « la fonctionnalité ticket de caisse est premium »).
+  // Contrôlée aussi par la fonction `lire-ticket` (chaque lecture est un appel payant au modèle).
+  LIRE_TICKET: "PREMIUM_REQUIRED",
 };
 
 /**

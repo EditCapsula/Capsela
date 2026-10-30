@@ -301,11 +301,6 @@ export interface AppState {
   editingId: number | null;
   /** Écran vers lequel revenir en quittant l'ajout (recette 24/08/2026, tuile "Ajouter un/une..." de Créer un look) — prime sur le repli habituel (wardrobe/piece) quand renseigné ; null partout ailleurs (openAdd/startReplace/startEditItem/openAddBag), comportement inchangé. */
   addReturn: Screen | null;
-  /**
-   * L'AJOUT DEPUIS UN TICKET DE CAISSE en cours (30/10/2026, lectureTicket.ts) : les articles qui restent à vérifier, le magasin (mis dans
-   * « Marque »), leur nombre de départ et l'écran où revenir à la fin. Chaque pièce enregistrée ouvre la fiche de l'article suivant.
-   */
-  ticket: { magasin: string | null; articles: { nom: string; categorie: string | null; taille: string | null; couleur: string | null }[]; total: number; retour: Screen | null } | null;
 
   screen: Screen;
   /** Écran vers lequel revenir en quittant le profil (ouvert depuis l'avatar). */

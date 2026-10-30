@@ -12,6 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { ADMIN_KEY_MISSING, getAdminKey } from "../_shared/adminKey.ts";
 import { authentifier, consommerQuota, estAppelantAdmin, jetonDepuisEntete, limiteDepuisEnv } from "../_shared/protection.ts";
 import { inviteTicket, ticketLu } from "../_shared/lectureTicket.ts";
+import { autoriserFonctionnalite, type LecteurPremium } from "../_shared/premium.ts";
 
 // Plafond de tickets par compte et par jour. Modifiable par le secret MAX_TICKETS_PER_USER_PER_DAY ; une valeur absente ou illisible ne
 // retire jamais le plafond.
@@ -43,6 +44,11 @@ Deno.serve(async (req) => {
   const estAdmin = estAppelantAdmin(req.headers.get("Authorization"), req.headers.get("apikey"), cleAdmin);
   const utilisatrice = estAdmin ? null : await authentifier(admin, jetonDepuisEntete(req.headers.get("Authorization")));
   if (!estAdmin && !utilisatrice) return json({ error: "Non authentifié." }, 401);
+  // Fonctionnalité Premium (30/10/2026) : un statut non confirmé n'appelle jamais le modèle.
+  if (utilisatrice) {
+    const verdict = await autoriserFonctionnalite(admin as unknown as LecteurPremium, utilisatrice, "LIRE_TICKET");
+    if (!verdict.ok) return json({ error: verdict.raison }, verdict.statut);
+  }
 
   let image = "";
   try {
