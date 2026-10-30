@@ -349,3 +349,16 @@ Brief « Fluidification du parcours de préparation de valise ». **Trois étape
 - **Préparation** : trois traitements réels, cochés dans leur ordre (la météo et ton programme ; tes pièces et tes looks, dans la place de ta valise ; ta capsule si besoin). Avant : cinq lignes, dont deux cochées après coup et retardées par des pauses.
 - **Textes** : « Ton séjour », « Préparer ma valise » et « Tu pourras toujours modifier ta valise ensuite. », « On prépare ta valise… », « On n'a pas pu préparer ta valise », « Ta valise est prête ! ».
 - Le moteur et la composition ne changent pas : à programme et événements égaux, la valise est la même.
+
+## L'écran « Ma valise » refondu (30/10/2026)
+
+Brief « Refonte UX de l'écran Ma valise ». Aucune règle du moteur ni de la composition ne change : à séjour égal, les tenues sont les mêmes. Ce qui change, c'est la lecture de la valise.
+
+- **Une pièce, une ligne** (`valiseVetements.ts`, testé) : les vêtements sont rangés par identifiant, jamais par nom ni par catégorie. Un pull porté dans trois tenues est UNE pièce, qui dit « 3 tenues ». Ils sont groupés par famille (Hauts, Bas, Robes & combinaisons…), chacune avec son nombre de pièces.
+- **Deux statuts de provenance**, arbitrés par la propriétaire le 30/10/2026 : « Dans ton dressing » pour une pièce possédée, « À ajouter » pour une suggestion de la capsule (`suggestionIds`). Il n'y a pas de « Dans ta capsule ».
+- **Les suggestions restent dans les tenues** (arbitrage « Garder les tenues » du même jour) : aucune tenue n'est modifiée. Elles ne sont plus comptées parmi les vêtements, ni montrées avec les pièces à emporter. Elles n'apparaissent que dans « À compléter », avec la tenue qui les demande (« Pour ta tenue Dîner du ven. 6 nov. », `creneauxDeLaPiece`) et l'ajout au dressing.
+- **Quatre onglets** : Aperçu, Tenues, Vêtements, Indispensables (« Essentiels » sous 360 px de large).
+  - L'Aperçu montre une galerie horizontale des tenues, les pièces à emporter et « À compléter ».
+  - Vêtements et Indispensables ont chacun leur progression.
+- **En-tête** : la synthèse « durée · tenues · vêtements · indispensables », puis la taille et le remplissage de la valise.
+- **Retirer une pièce qui sert dans des tenues** passe par une feuille (`BottomSheet`). Elle nomme les créneaux concernés et propose « La remplacer », « La retirer quand même » ou « Annuler ». Une pièce qu'aucune tenue n'utilise se retire directement, comme avant.
