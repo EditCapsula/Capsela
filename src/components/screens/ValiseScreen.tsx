@@ -178,10 +178,23 @@ const MOIS_LONGS = ["janvier", "février", "mars", "avril", "mai", "juin", "juil
  * Les jours passés, et au-delà de DUREE_MAX_JOURS après le départ tant que le retour n'est pas choisi, ne se touchent pas. Le mois
  * affiché suit le départ ; on navigue mois par mois, jamais avant le mois en cours.
  */
-function CalendrierPeriode({ depart, retour, aujourdhui, onChange }: { depart: string; retour: string; aujourdhui: string; onChange: (p: { depart: string; retour: string }) => void }) {
+function CalendrierPeriode({
+  depart,
+  retour,
+  aujourdhui,
+  premierJour = aujourdhui,
+  onChange,
+}: {
+  depart: string;
+  retour: string;
+  aujourdhui: string;
+  /** Le premier jour qu'on peut toucher : aujourd'hui, ou le départ déjà passé d'un séjour en cours qu'on modifie (30/10/2026). */
+  premierJour?: string;
+  onChange: (p: { depart: string; retour: string }) => void;
+}) {
   const base = dateDe(depart || aujourdhui);
   const [vue, setVue] = useState({ annee: base.getFullYear(), mois: base.getMonth() });
-  const debut = dateDe(aujourdhui);
+  const debut = dateDe(premierJour);
   const auPremierMois = vue.annee === debut.getFullYear() && vue.mois === debut.getMonth();
   const limite = depart && !retour ? plusJours(depart, DUREE_MAX_JOURS - 1) : null;
   const fin = retour || depart;
@@ -217,7 +230,7 @@ function CalendrierPeriode({ depart, retour, aujourdhui, onChange }: { depart: s
       <div className="grid grid-cols-7 gap-y-[2px]" role="group" aria-label="Choisir les dates du séjour">
         {grilleDuMois(vue.annee, vue.mois).map((jour, i) => {
           if (!jour) return <span key={i} />;
-          const passe = jour < aujourdhui;
+          const passe = jour < premierJour;
           const tropLoin = limite != null && jour > limite;
           const bout = jour === depart || jour === retour;
           const dedans = depart && fin && jour > depart && jour < fin;
@@ -786,6 +799,14 @@ export default function ValiseScreen() {
 
   // ── Réponses ──
   const aujourdhui = jourLocal();
+  /**
+   * RACCOURCIR OU PROLONGER UN SÉJOUR COMMENCÉ (30/10/2026, demandé : « je dois pouvoir modifier les dates du séjour pour le raccourcir »).
+   * Une valise qu'on modifie garde le droit à sa date de départ, même passée : sans cela, le calendrier refusait tout jour d'avant
+   * aujourd'hui et l'étape restait bloquée. Une nouvelle valise, elle, part toujours d'aujourd'hui ou plus tard.
+   */
+  const departGarde = idEnModification && valise?.id === idEnModification ? valise.depart : null;
+  const premierJour = departGarde && departGarde < aujourdhui ? departGarde : aujourdhui;
+  const sejourCommence = premierJour < aujourdhui;
   const [destination, setDestination] = useState("");
   const [ville, setVille] = useState<VilleSuggeree | null>(null);
   const [depart, setDepart] = useState("");
@@ -850,7 +871,7 @@ export default function ValiseScreen() {
   const amplitudeEtape1 = meteosEtape1 ? amplitudePrevue(meteosEtape1) : null;
 
   const etapeValide =
-    etape === 1 ? destination.trim().length > 1 && depart >= aujourdhui && dureeOk : etape === 2 ? bagage != null : true;
+    etape === 1 ? destination.trim().length > 1 && depart >= premierJour && dureeOk : etape === 2 ? bagage != null : true;
 
   const zoneScroll = useRef<HTMLDivElement | null>(null);
   const [onglet, setOnglet] = useState<Onglet>("ensemble");
@@ -1200,6 +1221,7 @@ export default function ValiseScreen() {
                 depart={depart}
                 retour={retour}
                 aujourdhui={aujourdhui}
+                premierJour={premierJour}
                 onChange={(p) => {
                   setDepart(p.depart);
                   setRetour(p.retour);
@@ -1210,9 +1232,14 @@ export default function ValiseScreen() {
               <div className="text-[12px] text-muted mt-3">{dureeOk ? libelleDuree(jours.length) : `Un séjour de ${DUREE_MAX_JOURS} jours au plus.`}</div>
             )}
             {/* Les saisies invalides sont dites, jamais corrigées en silence : le bouton reste grisé tant qu'elles le sont. */}
-            {depart && depart < aujourdhui && (
+            {depart && depart < premierJour && (
               <div role="alert" className="text-[12px] text-terracotta mt-2">
                 La date de départ est passée : choisis une date à venir.
+              </div>
+            )}
+            {sejourCommence && (
+              <div className="text-[12px] text-muted leading-[1.5] mt-2">
+                Ton séjour a déjà commencé : touche ta date de départ, puis ta nouvelle date de retour.
               </div>
             )}
             {destination.trim().length > 1 && (!depart || !retour) && (
