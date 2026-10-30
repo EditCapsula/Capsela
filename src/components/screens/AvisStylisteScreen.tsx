@@ -173,13 +173,13 @@ function IntroService() {
  */
 const EXTRAIT_FEMME: [NomIconeAvis, string, string, string][] = [
   ["etincelle", "Le verdict", "Une silhouette équilibrée et moderne", "L'association du blazer et du jean large met en valeur ta silhouette tout en restant confortable et tendance."],
-  ["ampoule", "Conseil du styliste", "Ajoute une touche de couleur", "Une couleur chaude (camel, terracotta ou bordeaux) apportera de la profondeur à ta tenue."],
+  ["ampoule", "Le conseil de Capsela", "Ajoute une touche de couleur", "Une couleur chaude (camel, terracotta ou bordeaux) apportera de la profondeur à ta tenue."],
   ["cintre", "À tester", "3 idées d'associations avec ton dressing", ""],
 ];
 /** La variante masculine (maquette du 03/10/2026) : même exemple, autres pièces — le profil choisit, jamais la photo. */
 const EXTRAIT_HOMME: [NomIconeAvis, string, string, string][] = [
   ["etincelle", "Le verdict", "Un look moderne et maîtrisé", "L'association de la surchemise et du chino crée une silhouette équilibrée, à la fois décontractée et élégante."],
-  ["ampoule", "Conseil du styliste", "Ajoute une pièce pour structurer", "Une veste plus ajustée ou un pull fin apportera plus de structure à l'ensemble."],
+  ["ampoule", "Le conseil de Capsela", "Ajoute une pièce pour structurer", "Une veste plus ajustée ou un pull fin apportera plus de structure à l'ensemble."],
   ["cintre", "À tester", "3 idées d'associations avec ton dressing", ""],
 ];
 
@@ -223,7 +223,7 @@ function ExtraitAvis({ homme }: { homme: boolean }) {
           {EXTRAIT.map(([icone, etiquette, titre, texte], i) => (
             <li key={etiquette} className={decalage(i)}>
               <Card rayon="tuile" className="px-[14px] py-[12px] shadow-[0_6px_16px_rgba(29,26,22,.07)]">
-                <div className={etiquette === "Conseil du styliste" ? "flex items-start gap-[10px]" : undefined}>
+                <div className={etiquette === "Le conseil de Capsela" ? "flex items-start gap-[10px]" : undefined}>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-[7px] text-terracotta">
                       <IconeAvis nom={icone} taille={14} />
@@ -232,7 +232,7 @@ function ExtraitAvis({ homme }: { homme: boolean }) {
                     <div className="font-serif text-[16px] leading-[1.25] text-ink mt-[6px]">{titre}</div>
                     {texte && <div className="text-[12px] text-muted leading-[1.45] mt-[4px]">{texte}</div>}
                   </div>
-                  {etiquette === "Conseil du styliste" && (
+                  {etiquette === "Le conseil de Capsela" && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={imageConseil} alt="" width={162} height={202} decoding="async" loading="lazy" className="w-[34%] max-w-[88px] flex-shrink-0 rounded-champ bg-photo-bg object-cover" />
                   )}

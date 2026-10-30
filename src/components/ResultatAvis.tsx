@@ -289,7 +289,7 @@ function BlocNote({ note, personnalisation }: { note: NoteTenue; personnalisatio
         </ul>
         <p className="text-[12px] text-muted leading-[1.5] mt-[10px]">
           La note évalue la tenue, jamais la personne. Les couleurs, la coordination et la finition sont calculées sur les pièces reconnues dans ton dressing
-          {personnalisation.length > 0 ? `; la lecture de la styliste tient compte de ${joindre(personnalisation)}` : ""}.
+          {personnalisation.length > 0 ? `; la lecture de Capsela tient compte de ${joindre(personnalisation)}` : ""}.
         </p>
       </details>
     </div>
