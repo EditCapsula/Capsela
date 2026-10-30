@@ -7,6 +7,7 @@ import { aUnMotif, MOTIFS } from "@/lib/motifs";
 import { confierPhoto } from "@/lib/importTenue";
 import { etatAjout } from "@/lib/etatAjout";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { lireTicket, type TicketLu } from "@/lib/lectureTicket";
 import { useEffect, useRef, useState } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -258,6 +259,24 @@ export default function AddScreen() {
   const [aPhotoChoisie, setAPhotoChoisie] = useState(false);
   const detectionLancee = useRef(false);
   const [saisieManuelle, setSaisieManuelle] = useState(false);
+  /**
+   * LE TICKET DE CAISSE (30/10/2026, lectureTicket.ts) : la photo choisie est lue, puis la feuille liste les articles trouvés, tous cochés ;
+   * « Ajouter » ouvre la fiche du premier, préremplie (store, commencerTicket). `null` en retour : la lecture n'a pas pu se faire.
+   */
+  const ticketInputRef = useRef<HTMLInputElement>(null);
+  const [lectureTicket, setLectureTicket] = useState<"repos" | "en_cours" | "echec" | TicketLu>("repos");
+  const [articlesRetenus, setArticlesRetenus] = useState<number[]>([]);
+  const onTicketChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fichier = e.target.files?.[0];
+    e.target.value = "";
+    if (!fichier) return;
+    setLectureTicket("en_cours");
+    const lu = await lireTicket(fichier);
+    if (!lu) return setLectureTicket("echec");
+    setArticlesRetenus(lu.articles.map((_, i) => i));
+    setLectureTicket(lu);
+  };
+  const ticketLuAffiche = typeof lectureTicket === "object" ? lectureTicket : null;
   const retirerLaPhoto = () => {
     // Retirer la photo : retour à l'état initial, sans garder les champs lus sur elle.
     actions.retirerPhotoAjout();
@@ -389,7 +408,8 @@ export default function AddScreen() {
     analyse: state.addPhotoAnalyzing,
     analysee: state.addPhotoAnalysee,
     analyseDisponible: isSupabaseConfigured,
-    saisieManuelle,
+    // Une fiche préremplie par un ticket se montre d'emblée : ses champs viennent du ticket, pas d'une photo.
+    saisieManuelle: saisieManuelle || state.ticket != null,
     redirection,
     nomRempli: state.addName.trim().length > 0,
   });
@@ -441,6 +461,20 @@ export default function AddScreen() {
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-[18px] pt-[6px] pb-[132px]">
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={onPhotoChange} className="hidden" />
         <input ref={galerieInputRef} type="file" accept="image/*" onChange={onPhotoChange} className="hidden" />
+        <input ref={ticketInputRef} type="file" accept="image/*" onChange={onTicketChange} className="hidden" />
+
+        {/* L'ARTICLE DU TICKET EN COURS (30/10/2026) : où l'on en est, et de quoi passer un article qu'on ne veut pas ajouter. */}
+        {state.ticket && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-tuile bg-warm-bg border border-sand-border px-4 py-[10px]" role="status">
+            <span className="min-w-0 text-[12.5px] text-ink leading-[1.35]">
+              Article {state.ticket.total - state.ticket.articles.length} sur {state.ticket.total} du ticket
+              {state.ticket.magasin ? ` · ${state.ticket.magasin}` : ""}
+            </span>
+            <button type="button" onClick={actions.passerArticleTicket} className="flex-shrink-0 min-h-[44px] -my-[10px] text-[12.5px] font-semibold text-terracotta-deep cursor-pointer">
+              Passer
+            </button>
+          </div>
+        )}
 
         {/* 1. La photo : même hauteur vide ou remplie (ratio 1,3), aucun saut de mise en page. */}
         {state.addPhotoUrl ? (
@@ -586,6 +620,28 @@ export default function AddScreen() {
           <button type="button" onClick={() => setSaisieManuelle(true)} className="mt-4 min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer">
             Saisir la pièce sans photo
           </button>
+        )}
+        {etat === "initial" && creation && !state.ticket && (
+          <button
+            type="button"
+            onClick={() => ticketInputRef.current?.click()}
+            disabled={lectureTicket === "en_cours"}
+            className="mt-1 min-h-[44px] text-[13px] font-semibold text-terracotta-deep cursor-pointer flex items-center gap-2 disabled:opacity-60"
+          >
+            {lectureTicket === "en_cours" ? (
+              <>
+                <LoadingSpinner size={14} /> Lecture du ticket…
+              </>
+            ) : (
+              "Ajouter depuis un ticket de caisse"
+            )}
+          </button>
+        )}
+        {lectureTicket === "echec" && (
+          <div role="alert" className="mt-[10px] rounded-tuile bg-warm-bg border border-sand-border px-4 py-[12px]">
+            <div className="text-[13px] text-ink font-medium leading-[1.35]">Capsela n&apos;a pas pu lire ce ticket.</div>
+            <div className="text-[12px] text-warm-text-2 leading-[1.45] mt-[2px]">Réessaie avec une photo nette du ticket entier, ou saisis tes pièces à la main.</div>
+          </div>
         )}
 
         {formulaireVisible && (
@@ -1002,6 +1058,59 @@ export default function AddScreen() {
         <Button variante="principal" className="mt-[26px]" onClick={() => setToutesCouleurs(false)}>
           Terminé
         </Button>
+      </BottomSheet>
+      {/* LES ARTICLES DU TICKET : tous cochés ; « Ajouter » ouvre la fiche du premier. Rien n'entre au dressing sans être vérifié. */}
+      <BottomSheet title={ticketLuAffiche?.magasin ? `Ton ticket · ${ticketLuAffiche.magasin}` : "Ton ticket"} open={ticketLuAffiche != null} onClose={() => setLectureTicket("repos")}>
+        {ticketLuAffiche && ticketLuAffiche.articles.length === 0 ? (
+          <div className="text-[13px] text-muted-3 leading-[1.5]">Aucun vêtement ni accessoire trouvé sur ce ticket. Essaie une photo plus nette, ou saisis tes pièces à la main.</div>
+        ) : (
+          <>
+            <div className="text-[13px] text-muted-3 leading-[1.5]">
+              Coche les pièces à ajouter. Chaque fiche s&apos;ouvre préremplie{ticketLuAffiche?.magasin ? `, avec ${ticketLuAffiche.magasin} en marque` : ""} : tu la vérifies, tu ajoutes une photo si tu veux.
+            </div>
+            <ul className="flex flex-col gap-2 mt-4">
+              {(ticketLuAffiche?.articles ?? []).map((a, i) => {
+                const coche = articlesRetenus.includes(i);
+                return (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={coche}
+                      onClick={() => setArticlesRetenus((l) => (l.includes(i) ? l.filter((x) => x !== i) : [...l, i]))}
+                      className="w-full flex items-center gap-3 rounded-tuile border border-border bg-card px-[14px] py-[10px] text-left cursor-pointer"
+                      style={{ minHeight: 52 }}
+                    >
+                      <span className={"w-[22px] h-[22px] rounded-full border flex items-center justify-center flex-shrink-0 " + (coche ? "bg-terracotta-deep border-terracotta-deep" : "border-placeholder")}>
+                        {coche && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="var(--color-cream)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[13px] text-ink leading-[1.3]">{a.nom}</span>
+                        {(a.taille || a.couleur) && <span className="block text-[11px] text-muted mt-[2px]">{[a.taille && `Taille ${a.taille}`, a.couleur].filter(Boolean).join(" · ")}</span>}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <Button
+              className="mt-5"
+              disabled={articlesRetenus.length === 0}
+              onClick={() => {
+                const choisis = (ticketLuAffiche?.articles ?? []).filter((_, i) => articlesRetenus.includes(i));
+                const magasin = ticketLuAffiche?.magasin ?? null;
+                setLectureTicket("repos");
+                actions.commencerTicket(choisis, magasin);
+              }}
+            >
+              {articlesRetenus.length > 1 ? `Ajouter ${articlesRetenus.length} pièces` : "Ajouter cette pièce"}
+            </Button>
+          </>
+        )}
       </BottomSheet>
     </div>
   );

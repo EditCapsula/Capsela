@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { arriveesProposees, destinationDuJour, etapeDuJour, etapesRetenues, joursParEtape, libelleItineraire, type EtapeSejour } from "../etapesSejour";
+import { appliquerPeriode, arriveeAuMilieu, destinationDuJour, etapeDuJour, etapesRetenues, joursParEtape, libelleItineraire, periodesDesDestinations, periodeValide, type EtapeSejour } from "../etapesSejour";
 
 /** LES ÉTAPES D'UN ROAD TRIP (30/10/2026) : dates par étape, chaque jour à une seule ville. */
 
@@ -51,21 +51,29 @@ describe("chaque jour à une seule ville", () => {
   });
 });
 
-describe("arriveesProposees — les étapes ajoutées avant les dates", () => {
-  const JOURS7 = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22"];
-  it("deux étapes sans jour : réparties sur le séjour, dans l'ordre, sans doublon", () => {
-    const r = arriveesProposees([{ destination: "Praia", arrivee: "" }, { destination: "São Vicente", arrivee: "" }], JOURS7);
-    expect(r.map((e) => e.arrivee)).toEqual(["2026-11-18", "2026-11-21"]);
-    expect(etapesRetenues({ destination: "Cap-Vert" }, r, JOURS7[0], JOURS7[6])).toHaveLength(3);
+describe("une destination, ses dates", () => {
+  it("les dates de chaque destination se lisent dans le départ, les arrivées et le retour", () => {
+    expect(periodesDesDestinations("2026-11-16", "2026-11-22", ["2026-11-18", "2026-11-20"])).toEqual([
+      { debut: "2026-11-16", fin: "2026-11-18" },
+      { debut: "2026-11-18", fin: "2026-11-20" },
+      { debut: "2026-11-20", fin: "2026-11-22" },
+    ]);
+    expect(periodesDesDestinations("", "", [""])).toEqual([{ debut: "", fin: "" }, { debut: "", fin: "" }]);
   });
-  it("un jour déjà choisi ne bouge pas ; l'étape sans jour prend un jour libre", () => {
-    const r = arriveesProposees([{ destination: "Praia", arrivee: "2026-11-19" }, { destination: "Mindelo", arrivee: "" }], JOURS7);
-    expect(r[0].arrivee).toBe("2026-11-19");
-    expect(r[1].arrivee).not.toBe("2026-11-19");
-    expect(JOURS7.slice(1)).toContain(r[1].arrivee);
+  it("choisir les dates d'une destination déplace le départ, l'arrivée voisine ou le retour", () => {
+    const etat = { depart: "2026-11-16", retour: "2026-11-22", arrivees: ["2026-11-18", "2026-11-20"] };
+    expect(appliquerPeriode(etat, 0, { debut: "2026-11-15", fin: "2026-11-17" })).toEqual({ depart: "2026-11-15", retour: "2026-11-22", arrivees: ["2026-11-17", "2026-11-20"] });
+    expect(appliquerPeriode(etat, 1, { debut: "2026-11-18", fin: "2026-11-21" })).toEqual({ depart: "2026-11-16", retour: "2026-11-22", arrivees: ["2026-11-18", "2026-11-21"] });
+    expect(appliquerPeriode(etat, 2, { debut: "2026-11-20", fin: "2026-11-24" })).toEqual({ depart: "2026-11-16", retour: "2026-11-24", arrivees: ["2026-11-18", "2026-11-20"] });
   });
-  it("sans dates : rien ne change", () => {
-    const a = [{ destination: "Praia", arrivee: "" }];
-    expect(arriveesProposees(a, [])).toEqual(a);
+  it("une destination ajoutée partage les dates de la dernière ; trop courtes : ses dates restent à choisir", () => {
+    const jours = (a: string, b: string) => {
+      const out: string[] = [];
+      for (let d = new Date(`${a}T12:00:00`); d <= new Date(`${b}T12:00:00`); d.setDate(d.getDate() + 1)) out.push(d.toISOString().slice(0, 10));
+      return out;
+    };
+    expect(arriveeAuMilieu({ debut: "2026-11-16", fin: "2026-11-22" }, jours)).toBe("2026-11-19");
+    expect(arriveeAuMilieu({ debut: "2026-11-16", fin: "2026-11-17" }, jours)).toBe("");
+    expect(periodeValide({ debut: "2026-11-17", fin: "2026-11-17" })).toBe(false);
   });
 });

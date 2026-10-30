@@ -1,5 +1,6 @@
 "use client";
 
+import { champsDeLArticle, type ArticleLu } from "./lectureTicket";
 import { oublierContexte } from "./memoireEcrans";
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
@@ -165,6 +166,7 @@ function buildInitialState(): AppState {
     replacingId: null,
     editingId: null,
     addReturn: null,
+    ticket: null,
     screen: "welcome",
     profileReturn: "home",
     jourDecalage: 0,
@@ -497,6 +499,10 @@ export interface Actions {
   saveItem: () => void;
   /** Ouvre « Importer une tenue » (même garde de limite que l'ajout d'une pièce). */
   openImporterTenue: () => void;
+  /** Commence l'ajout des articles choisis sur un ticket de caisse : la fiche du premier s'ouvre, préremplie (lectureTicket.ts). */
+  commencerTicket: (articles: ArticleLu[], magasin: string | null) => void;
+  /** Laisse l'article du ticket affiché sans l'ajouter, et ouvre le suivant (ou termine). */
+  passerArticleTicket: () => void;
   /**
    * Ajoute UNE pièce issue d'une tenue importée (10/10/2026) : insère, puis pose saisons et manches comme saveItem. Rend la pièce créée, ou
    * null (base indisponible, limite gratuite atteinte). Les pièces sont ajoutées une à une par l'écran, qui montre la progression.
@@ -1677,6 +1683,29 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
 
   const go = (screen: Screen) => setState((s) => ({ ...s, screen }));
   /** Ouvre le formulaire d'ajout, ou Premium quand la limite gratuite est atteinte (cf. openAdd). */
+  /**
+   * LA FICHE DE L'ARTICLE SUIVANT D'UN TICKET (30/10/2026) : préremplie par ce que le ticket dit (champsDeLArticle) — nom, magasin dans
+   * « Marque », catégorie, taille, couleur —, chaque champ marqué « touché » pour que l'analyse d'une photo ajoutée ensuite ne l'écrase
+   * pas. Plus d'article : le ticket est terminé, on revient d'où l'on était parti.
+   */
+  const avecArticleSuivant = (s: AppState): AppState => {
+    const t = s.ticket;
+    if (!t) return s;
+    const [article, ...reste] = t.articles;
+    if (!article) return { ...s, ticket: null, addReturn: null, screen: t.retour ?? "wardrobe" };
+    const champs = champsDeLArticle(article as ArticleLu, t.magasin);
+    return {
+      ...s,
+      ...champs,
+      addNameTouched: true,
+      addCatTouched: Boolean(champs.addCat),
+      addColorTouched: Boolean(champs.addColor),
+      ticket: { ...t, articles: reste },
+      addReturn: t.retour,
+      screen: "add",
+    };
+  };
+
   const ouvrirAjout = (ouvrir: (s: AppState) => AppState) =>
     setState((s) =>
       peutAjouter(etatPremiumRef.current, s.items.length)
@@ -2021,6 +2050,30 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     // un droit inconnu n'applique aucune limite ; la garde de saveItem reste.
     openAdd: () => ouvrirAjout((s) => ({ ...s, screen: "add" })),
     openImporterTenue: () => ouvrirAjout((s) => ({ ...s, screen: "importerTenue" })),
+    commencerTicket: (articles, magasin) =>
+      ouvrirAjout((s) => avecArticleSuivant({ ...s, ticket: { magasin, articles, total: articles.length, retour: s.addReturn ?? (s.screen === "add" ? null : s.screen) } })),
+    // L'article passé ne laisse rien à la fiche suivante : ni photo, ni détails saisis pour lui.
+    passerArticleTicket: () =>
+      setState((s) =>
+        avecArticleSuivant({
+          ...s,
+          addPhotoUrl: null,
+          addPhotoAnalysee: false,
+          addPhotoCadrage: null,
+          addPhotoDetourage: "repos",
+          addSize: null,
+          addSubtype: null,
+          addSubtypeTouched: false,
+          addMatiere: null,
+          addCoupe: null,
+          addSaisons: null,
+          addManches: null,
+          addMotif: null,
+          addColor: { name: "Blanc cassé", hex: "#EDE4D6" },
+          addColorTouched: false,
+          addCatTouched: false,
+        })
+      ),
     ajouterPieceImportee: async (piece) => {
       // La limite se relit à chaque pièce : le dressing grandit pendant l'import.
       if (!peutAjouter(etatPremiumRef.current, stateRef.current.items.length + piecesImporteesEnVol.current)) return null;
@@ -2070,6 +2123,9 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
     addBack: () =>
       setState((s) => ({
         ...s,
+        // Quitter le formulaire abandonne les articles du ticket qui restaient (30/10/2026) ; ceux déjà enregistrés le restent.
+        ticket: null,
+        ...(s.ticket ? { addReturn: s.ticket.retour } : {}),
         replacingId: null,
         editingId: null,
         addReturn: null,
@@ -2657,6 +2713,8 @@ export function CapselaProvider({ children }: { children: React.ReactNode }) {
           () =>
             setState((st) => {
               const r = resetFields(st);
+              // Un ticket en cours : la fiche de l'article suivant s'ouvre à la place du retour (30/10/2026).
+              if (st.ticket && st.screen === "add") return avecArticleSuivant(r);
               return st.screen === "add" ? r : { ...r, screen: st.screen };
             }),
           900

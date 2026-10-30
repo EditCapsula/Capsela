@@ -111,6 +111,12 @@ ton appareil pour te les reproposer.
   Journal. Dans ce cas, elle est stockée dans un espace privé et supprimée
   avec l'avis. Ses métadonnées (dont la position GPS) sont retirées avant
   l'envoi.
+- **Photo d'un ticket de caisse** : quand tu ajoutes des pièces depuis un
+  ticket, sa photo est réduite sur ton appareil puis envoyée pour être lue.
+  Elle n'est jamais enregistrée, ni sur nos serveurs ni dans ton dressing. Seuls
+  le nom du magasin et les articles vestimentaires (nom, catégorie, taille,
+  couleur) en sont gardés, pour préremplir les fiches que tu vérifies : jamais
+  les prix, la date, le moyen de paiement ni un numéro de carte.
 - **Photo de profil** : elle reste sur ton appareil et n'est envoyée nulle part.
 
 ### Données techniques
@@ -137,7 +143,7 @@ n'est pas encore en vente.
 | Créer et gérer ton compte, te connecter, réinitialiser ton mot de passe | Exécution du contrat (les Conditions d'utilisation) |
 | Composer ta tenue du jour, planifier tes looks, préparer tes valises, tenir ton Journal | Exécution du contrat |
 | Obtenir la météo de ta ville ou de ta position | Exécution du contrat ; pour la position, ton consentement |
-| Analyser une photo que tu envoies (préremplissage d'une pièce, repérage des pièces d'une tenue, L'œil de Capsela) | Exécution du contrat, à ta demande |
+| Analyser une photo que tu envoies (préremplissage d'une pièce, repérage des pièces d'une tenue, lecture d'un ticket de caisse, L'œil de Capsela) | Exécution du contrat, à ta demande |
 | Retirer le fond des photos de tes pièces (détourage) | Exécution du contrat |
 | Gérer ton statut Premium et les limites d'usage (nombre de pièces, « Autre tenue ») | Exécution du contrat |
 | Mesurer l'audience | Ton consentement, que tu peux retirer à tout moment |
@@ -158,7 +164,7 @@ compte et selon nos instructions (sous-traitants au sens du RGPD).
 | --- | --- | --- | --- |
 | Supabase Inc. | Comptes, base de données, stockage des photos, fonctions serveur | Toutes les données du compte | [À COMPLÉTER — région du projet] |
 | Vercel Inc. | Hébergement du site et de l'application web | Données techniques de connexion | États-Unis |
-| OpenAI [À VÉRIFIER — entité contractante] | Analyse des photos (préremplissage d'une pièce, repérage des pièces d'une tenue, avis de style) ; lecture du nom d'une activité ou d'un événement de valise, pour choisir l'occasion de sa tenue ; idées d'activités pour la destination d'une valise | La photo analysée ; pour l'avis, ton style, ta silhouette déclarée, ta palette et ta colorimétrie ; pour une activité ou un événement, son seul nom ; pour les idées, le seul nom de la destination — jamais ton nom, ton e-mail ni ton identifiant | États-Unis |
+| OpenAI [À VÉRIFIER — entité contractante] | Analyse des photos (préremplissage d'une pièce, repérage des pièces d'une tenue, lecture d'un ticket de caisse, avis de style) ; lecture du nom d'une activité ou d'un événement de valise, pour choisir l'occasion de sa tenue ; idées d'activités pour la destination d'une valise | La photo analysée ; pour l'avis, ton style, ta silhouette déclarée, ta palette et ta colorimétrie ; pour une activité ou un événement, son seul nom ; pour les idées, le seul nom de la destination — jamais ton nom, ton e-mail ni ton identifiant | États-Unis |
 | Photoroom SAS [À VÉRIFIER — entité et adresse] | Détourage des photos de tes pièces | La photo de la pièce, ou la découpe d'une pièce dans la photo d'une tenue — jamais ton nom, ton e-mail ni ton identifiant | France ; serveurs [À VÉRIFIER — le prestataire n'annonce pas d'hébergement réservé à l'Union européenne] |
 | Open-Meteo [À VÉRIFIER — entité et adresse] | Prévisions météo jusqu'à 16 jours, températures habituelles d'un lieu, recherche de ville | Le nom de la ville cherchée, ou les coordonnées de la ville ou de ta position | [À VÉRIFIER] |
 | OpenWeather Ltd | Météo du jour, prévisions de secours et recherche de ville | Ta ville, ou les coordonnées de ta position si tu l'as autorisée | Royaume-Uni |
