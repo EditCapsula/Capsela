@@ -68,6 +68,7 @@ import { decalerMois, grilleDuMois, toucherJour } from "@/lib/calendrierPeriode"
 import { articlesChecklist, progressionChecklist, raisonsPartagees, sectionsChecklist, type FiltreChecklist, type Progression, type SectionChecklist } from "@/lib/checklistValise";
 import { lireNomEvenement } from "@/lib/lectureEvenement";
 import { pieceLaPlusUtilisee, planningDeLaValise, type CreneauPlanning } from "@/lib/planningValise";
+import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
 import {
   NOM_EVENEMENT_MAX,
   TYPE_AUTRE,
@@ -81,7 +82,7 @@ import {
   type EvenementValise,
   type MomentEvenement,
 } from "@/lib/evenementsValise";
-import { LIBELLE_RAISON, apercuAllegement, avecTenue, joursDeLaPiece, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
+import { LIBELLE_RAISON, apercuAllegement, avecTenue, nouvelleTenue, piecesAllegeables, type TenueProposee } from "@/lib/ajustementsValise";
 import { estIdLocal, nouvelIdLocal, type ValiseGardee } from "@/lib/valises";
 import {
   affairesAffichees,
@@ -1551,14 +1552,13 @@ function Resultat({
   const base = useMemo(() => poolDeLaValise(dressing, valise.suggestionIds, [...capsule, ...vestiairePool]), [dressing, valise.suggestionIds, capsule, vestiairePool]);
   const suggestions = new Set(valise.suggestionIds ?? []);
   const [indexLook, setIndexLook] = useState(0);
-  const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "alleger" } | { type: "tenue" } | null>(null);
+  const [feuille, setFeuille] = useState<{ type: "ajuster" } | { type: "ajouter" } | { type: "supprimer" } | { type: "remplacer"; id: number } | { type: "retirer"; id: number } | { type: "alleger" } | { type: "tenue" } | null>(null);
   const [enregistres, setEnregistres] = useState<string[]>([]);
   const toucher = useRef<number | null>(null);
 
   const capacite = capaciteDe(valise.bagage);
   // Une pièce supprimée du dressing depuis n'est plus dans la valise.
   const pieces = valise.pieceIds.map((id) => base.find((i) => i.id === id)).filter((i): i is Item => !!i);
-  const nbSuggestions = pieces.filter((p) => suggestions.has(p.id)).length;
   const ids = pieces.map((p) => p.id);
   // Un look de valise a toujours chaussures et sac (lookAChaussuresEtSac) : les valises gardées avant cette règle ne montrent plus
   // les looks qui n'en ont pas — « Recomposer » en refait avec.
@@ -1640,17 +1640,22 @@ function Resultat({
   /** La check-list : les pièces préparées, gardées AVEC la valise ; seules celles qui sont encore dans la valise comptent. */
   const piecesCochees = (valise.cochees ?? lireChecklistHeritee(valise.id)).filter((id) => valise.pieceIds.includes(id));
   const cocher = cocherPiece;
-  /** Le filtre de l'onglet Pièces : toutes, celles du dressing, ou les suggestions de la capsule. */
-  const [filtre, setFiltre] = useState<"toutes" | "dressing" | "capsule">("toutes");
   const [tailleOuverte, setTailleOuverte] = useState(false);
   /** Les affaires de voyage : celles du séjour (programme, météo) moins les masquées, plus celles que la personne a ajoutées. */
   const contexteAffaires = { programme: valise.programme ?? [], meteos: valise.meteos };
   const affaires = affairesAffichees(contexteAffaires, valise.affaires);
   const affairesCochees = cocheesValides(affaires, valise.affaires);
   const affairesCachees = affairesMasquees(contexteAffaires, valise.affaires);
-  /** La checklist de départ : pièces et affaires, une progression unique (checklistValise.ts). */
+  /** Les articles de la checklist : pièces et affaires (checklistValise.ts), lus séparément ci-dessous. */
   const articles = articlesChecklist(pieces, piecesCochees, affaires, affairesCochees);
-  const progression = progressionChecklist(articles);
+  /**
+   * VÊTEMENTS ET INDISPENSABLES À PART (30/10/2026, brief « Refonte de l'écran Ma valise ») : les vêtements se cochent dans l'onglet
+   * Vêtements, les affaires de voyage dans l'onglet Indispensables. Les suggestions de la capsule n'en font pas partie : elles ne sont pas
+   * encore dans le dressing. Mêmes données qu'avant (cochees, affaires.cochees) : rien de nouveau n'est gardé.
+   */
+  const progressionVetements = progressionChecklist(articles.filter((a) => a.piece && !suggestions.has(a.piece.id)));
+  const articlesAffaires = articles.filter((a) => a.affaire);
+  const progressionAffaires = progressionChecklist(articlesAffaires);
   const [filtreChecklist, setFiltreChecklist] = useState<FiltreChecklist>("tout");
   /** Les sections repliées : gardées le temps de l'écran (on passe d'un onglet à l'autre sans les rouvrir). */
   const [repliees, setRepliees] = useState<SectionChecklist[]>([]);
@@ -1664,6 +1669,8 @@ function Resultat({
     setRetrait({ nb: ids.length, looksAvant: looks.length });
     retirer(ids);
   };
+  /** Une pièce que des tenues portent n'est pas retirée en silence (30/10/2026) : la feuille dit lesquelles et propose de la remplacer. */
+  const demanderRetrait = (id: number) => ((parPiece.get(id) ?? 0) > 0 ? setFeuille({ type: "retirer", id }) : retirerEtDire([id]));
   const nbLooks = looks.length;
   useEffect(() => {
     if (!retrait) return;
@@ -1870,6 +1877,51 @@ function Resultat({
             );
           })}
         </div>
+      </BottomSheet>
+
+      {/* RETIRER UNE PIÈCE QUE DES TENUES PORTENT (30/10/2026) : les tenues touchées sont nommées, d'après le planning ; on peut la remplacer
+          plutôt que la retirer. Rien n'est supprimé avant le choix. */}
+      <BottomSheet title={feuille?.type === "retirer" ? `Retirer ${pieceDe(feuille.id)?.name ?? "la pièce"} ?` : "Retirer"} open={feuille?.type === "retirer"} onClose={() => setFeuille(null)}>
+        {feuille?.type === "retirer" &&
+          (() => {
+            const id = feuille.id;
+            const n = parPiece.get(id) ?? 0;
+            const touches = creneauxDeLaPiece(planningDeLaValise(valise, joursDuSejour(valise.depart, valise.retour), looks), looks, id);
+            return (
+              <>
+                <div className="text-[13px] text-ink leading-[1.5]">
+                  Elle sert dans {n} {n > 1 ? "tenues" : "tenue"} de ta valise.{touches.length ? " Au programme :" : ""}
+                </div>
+                {touches.length > 0 && (
+                  <ul className="mt-2 flex flex-col gap-[4px]">
+                    {touches.slice(0, 6).map((c) => (
+                      <li key={c.jour + c.creneau + c.sousId} className="text-[12px] text-ink-soft">
+                        {dateCourte(c.jour)} · {libelleCreneau(c)}
+                      </li>
+                    ))}
+                    {touches.length > 6 && <li className="text-[12px] text-muted">et {touches.length - 6} de plus</li>}
+                  </ul>
+                )}
+                <div className="text-[12px] text-muted leading-[1.5] mt-3">Sans elle, Capsela recompose ces tenues avec le reste de ta valise. Tu peux aussi la remplacer par une autre pièce de ton dressing.</div>
+                <Button variante="principal" className="mt-4" onClick={() => setFeuille({ type: "remplacer", id })}>
+                  La remplacer
+                </Button>
+                <Button
+                  variante="secondaire"
+                  className="mt-2 bg-card"
+                  onClick={() => {
+                    setFeuille(null);
+                    retirerEtDire([id]);
+                  }}
+                >
+                  La retirer quand même
+                </Button>
+                <button onClick={() => setFeuille(null)} className="mt-[10px] w-full text-center text-[13px] text-muted py-[10px] cursor-pointer">
+                  Annuler
+                </button>
+              </>
+            );
+          })()}
       </BottomSheet>
 
       <BottomSheet title={idRemplacee != null ? `Remplacer ${pieceDe(idRemplacee)?.name ?? "la pièce"}` : "Remplacer"} open={idRemplacee != null} onClose={() => setFeuille(null)}>
@@ -2213,7 +2265,7 @@ function Resultat({
                 <span className="flex-1 min-w-0">
                   <span className="block text-[13px] text-ink truncate">{p.name}</span>
                   <span className="block text-[11px] text-terracotta mt-[2px]">
-                    Dans {n} {n > 1 ? "looks" : "look"}
+                    {suggestions.has(p.id) ? "À ajouter à ton dressing · " : ""}Dans {n} {n > 1 ? "tenues" : "tenue"}
                   </span>
                 </span>
                 <span className="text-placeholder pr-1">{chevron("d")}</span>
@@ -2279,7 +2331,10 @@ function Resultat({
   const sejourCouvert = prete && !peuDeLooks;
   const piecesRepetees = looks.length > 1 && pieces.some((p) => (parPiece.get(p.id) ?? 0) > 1);
   /** Les pièces de l'aperçu : une sélection représentative (valiseApercu.ts), le reste compté. */
-  const apercu = selectionApercu(pieces);
+  /** Les vêtements UNIQUES à emporter (par identifiant) et les suggestions à ajouter, à part (valiseVetements.ts). Les tenues ne bougent pas. */
+  const { aEmporter, aAjouter } = vetementsDeLaValise(valise.pieceIds, looks, valise.suggestionIds, pieceDe);
+  const familles = vetementsParFamille(aEmporter);
+  const apercu = selectionApercu(aEmporter.map((v) => v.item));
   const aOptimiser = nouvelles === 0 && (occasionsAManque.length > 0 || peuDeLooks);
   /**
    * LES LOOKS JOUR PAR JOUR (phase B, 04/10/2026) : le programme réparti sur les jours, un look de la valise par créneau
@@ -2293,6 +2348,138 @@ function Resultat({
     .map((jour, i) => ({ jour, numero: i + 1, creneaux: planning.filter((c) => c.jour === jour) }))
     .filter((j) => j.creneaux.length > 0);
   const plusUtilisee = pieceLaPlusUtilisee(parPiece);
+  /**
+   * LES CARTES DE TENUES DE L'APERÇU (30/10/2026) : le jour et l'occasion de chaque créneau qui a sa tenue, d'après le planning ; sans
+   * planning (valise d'avant le jour par jour), une carte par tenue avec sa première occasion. Le visuel, ce sont les vraies pièces.
+   */
+  const cartesTenues: { cle: string; look: number; quand: string; quoi: string }[] = aPlanning
+    ? planning.flatMap((c) =>
+        c.look == null
+          ? []
+          : [{ cle: c.jour + c.creneau + c.sousId, look: c.look, quand: dateCourte(c.jour), quoi: c.evenement ? libelleCreneau(c) : c.creneau === "soir" ? `${c.libelle} · soir` : c.libelle }]
+      )
+    : looks.map((lk, i) => ({ cle: `look-${i}`, look: i, quand: `Tenue ${i + 1}`, quoi: occasionsDuLook(lk, valise.situations).map((o) => occasionShortLabel(o))[0] ?? "" }));
+  /**
+   * « À COMPLÉTER » (30/10/2026) : ce qui n'est pas dans le dressing. D'abord les suggestions de la capsule que des tenues portent déjà,
+   * avec la tenue qui les demande ; puis ce que le moteur a repéré pour une occasion sans tenue ou élargie (l'ancien « Optimise ta
+   * valise »). Jamais affiché vide, jamais ajouté sans toi : chaque pièce s'ajoute au dressing d'un geste.
+   */
+  const blocACompleter =
+    aAjouter.length > 0 || aOptimiser ? (
+      <section className="mt-7" aria-labelledby="titre-a-completer">
+        <h2 id="titre-a-completer" className="t-titre-section text-ink">
+          À compléter
+        </h2>
+        <div className="t-chapeau text-muted-3 mt-[4px]">Quelques pièces pourraient encore améliorer tes tenues.</div>
+        {aAjouter.length > 0 && (
+          <div className="flex flex-col gap-2 mt-3">
+            {aAjouter.map(({ item: p, tenues }) => {
+              const pour = creneauxDeLaPiece(planning, looks, p.id)[0];
+              const raison = pour
+                ? `Pour ta tenue ${libelleCreneau(pour)} du ${dateCourte(pour.jour).toLowerCase()}`
+                : `Pour ${tenues.length > 1 ? `${tenues.length} de tes tenues` : "une de tes tenues"}`;
+              return (
+                <Card key={p.id} rayon="tuile" className="relative">
+                  <button
+                    onClick={() => ajouterCategorie(p.cat)}
+                    aria-label={`Ajouter ${p.name} à ton dressing`}
+                    className="w-full flex items-center gap-[10px] text-left pl-[10px] pr-[44px] py-[10px] min-h-[62px] cursor-pointer"
+                  >
+                    <Vignette it={p} taille={44} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] text-ink leading-[1.2] break-words">{p.name}</span>
+                      <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">{raison.endsWith(".") ? raison : `${raison}.`}</span>
+                      <span className="block text-[11px] text-terracotta-deep mt-[1px]">À ajouter</span>
+                    </span>
+                    <span aria-hidden="true" className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
+                      {G_PLUS}
+                    </span>
+                  </button>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+        {aOptimiser && (
+          <div className="flex flex-col gap-4 mt-4">
+                {occasionsAManque.map((o) => {
+                  const m = manques.find((x) => x.occasion === o);
+                  const elargie = occasionsElargies.includes(o);
+                  return (
+                    <div key={o}>
+                      <div className="t-label text-terracotta">Nécessaire</div>
+                      <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
+                        {elargie
+                          ? `Tes looks ${occasionShortLabel(o)} empruntent des pièces pensées pour d'autres occasions${m?.categories.length ? " : ces pièces les compléteraient." : "."}`
+                          : m?.capacite
+                            ? `Pas encore de look ${occasionShortLabel(o)} : ta valise manque de place pour lui.`
+                            : m?.categories.length
+                              ? `Il manque une pièce pour couvrir ${occasionShortLabel(o)}.`
+                              : `Pas encore de look ${occasionShortLabel(o)}.`}
+                      </div>
+                      {m && m.pieces.length > 0 && (
+                        <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
+                          {m.pieces.map((p) => (
+                            <Card key={p.id} rayon="tuile" className="relative">
+                              <button
+                                onClick={() => ajouterCategorie(p.cat)}
+                                aria-label={`Ajouter ${p.name} à ton dressing`}
+                                className="w-full flex items-center gap-[10px] text-left pl-[10px] pr-[44px] py-[10px] min-h-[62px] cursor-pointer"
+                              >
+                                <Vignette it={p} taille={44} />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-[13px] text-ink leading-[1.2] break-words">{p.name}</span>
+                                  <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">
+                                    À ajouter · compose un look {occasionShortLabel(o)} avec ton dressing
+                                  </span>
+                                </span>
+                                <span aria-hidden="true" className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
+                                  {G_PLUS}
+                                </span>
+                              </button>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                      {m && m.pieces.length === 0 && m.categories.length > 0 && (
+                        <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
+                          {m.categories.map((c) => (
+                            <Card key={c} rayon="tuile" className="relative">
+                              <button
+                                onClick={() => ajouterCategorie(c)}
+                                aria-label={`Ajouter ${nomCategorie(c)} à ton dressing`}
+                                className="w-full flex items-center gap-[10px] text-left pl-[10px] pr-[44px] py-[10px] min-h-[62px] cursor-pointer"
+                              >
+                                <span aria-hidden="true" className="w-[40px] h-[40px] rounded-champ bg-warm-bg text-terracotta flex items-center justify-center flex-shrink-0">
+                                  {G_CINTRE}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-[13px] text-ink leading-[1.2] break-words first-letter:uppercase">{nomCategorie(c)}</span>
+                                  <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">pour {occasionShortLabel(o)}</span>
+                                </span>
+                                <span aria-hidden="true" className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
+                                  {G_PLUS}
+                                </span>
+                              </button>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {peuDeLooks && (
+                  <div>
+                    <div className="t-label text-muted">Optionnel</div>
+                    <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
+                      Quelques pièces de plus ajouteraient de la variété à tes looks : {looks.length} {looks.length > 1 ? "looks" : "look"} pour {nbJours} jours.
+                    </div>
+                  </div>
+                )}
+              </div>
+        )}
+      </section>
+    ) : null;
   const pieceReutilisee = plusUtilisee ? pieces.find((p) => p.id === plusUtilisee.id) : undefined;
   /** Une journée du planning : ses créneaux, chacun avec le look de la valise qui lui répond. */
   const carteJour = (j: (typeof planningParJour)[number]) => (
@@ -2354,12 +2541,16 @@ function Resultat({
           </span>
         )}
       </div>
-      <div className="t-chapeau text-muted-3 mt-[6px]">{libelleDuree(nbJours)}</div>
-      {nbSuggestions > 0 && (
-        <div className="text-[12px] text-terracotta leading-[1.4] mt-[4px]">
-          Dont {nbSuggestions} {nbSuggestions > 1 ? "pièces" : "pièce"} de ta capsule à ajouter à ton dressing : ton dressing ne couvrait pas tout le séjour.
-        </div>
-      )}
+      {prete && <div className="t-chapeau text-muted-3 mt-[6px]">{"On a sélectionné les tenues et les indispensables pour ton séjour. À toi de les ajuster\u00a0!"}</div>}
+      {/* LA SYNTHÈSE (30/10/2026) : une ligne, des nombres comptés — tenues, vêtements UNIQUES à emporter (sans les suggestions), indispensables. */}
+      <div className="text-[12px] text-muted mt-[8px]">
+        {[
+          libelleDuree(nbJours),
+          `${looks.length} ${looks.length > 1 ? "tenues" : "tenue"}`,
+          `${aEmporter.length} ${aEmporter.length > 1 ? "vêtements" : "vêtement"}`,
+          `${affaires.length} ${affaires.length > 1 ? "indispensables" : "indispensable"}`,
+        ].join(" · ")}
+      </div>
 
       {/* La météo, compacte : celle de la prévision d'aujourd'hui, pour les jours qu'elle couvre — rien d'autre. */}
       {(amplitude || !previsionAttendue) && (
@@ -2389,17 +2580,8 @@ function Resultat({
 
       {/* 3 · EST-ELLE ADAPTÉE ? Dit seulement quand c'est vrai (voir sejourCouvert). */}
       <div className="mt-4">
-        {sejourCouvert ? (
-          <div className="flex items-start gap-[12px] rounded-tuile bg-success-bg border border-success px-[14px] py-[12px]" style={{ borderColor: "color-mix(in srgb, var(--color-success) 35%, transparent)" }}>
-            <span aria-hidden="true" className="w-[24px] h-[24px] rounded-full bg-success text-cream flex items-center justify-center flex-shrink-0 mt-[1px]">
-              {G_COCHE(13, "var(--color-cream)")}
-            </span>
-            <div className="min-w-0">
-              <div className="text-[13px] text-ink font-medium leading-[1.35]">Ta valise couvre les besoins de ton séjour.</div>
-              <div className="text-[12px] text-ink-soft leading-[1.45] mt-[2px]">Les looks ont été composés à partir de ton dressing et de la saison.</div>
-            </div>
-          </div>
-        ) : (
+        {/* « Ta valise couvre les besoins de ton séjour » répétait le titre (30/10/2026) : seule l'information utile reste. */}
+        {!sejourCouvert && (
           <CarteInfo glyphe={G_AMPOULE}>
             {looks.length === 0
               ? "Aucun look complet avec ces pièces pour l'instant : ajoute des pièces à ton dressing, Capsela composera tes looks avec elles."
@@ -2421,28 +2603,12 @@ function Resultat({
           la capsule. Les nombres sont ceux de la sélection enregistrée. */}
       <div className="flex items-center justify-between gap-3 mt-5">
         <span className="font-serif text-[16px] text-ink">
-          Valise {valise.bagage} · {pieces.length} {pieces.length > 1 ? "pièces sélectionnées" : "pièce sélectionnée"}
+          Valise {valise.bagage} · {depasse ? "trop pleine" : `remplie à ${tauxRemplissage}\u00a0%`}
         </span>
         <button onClick={() => setTailleOuverte(true)} className="t-lien text-terracotta-deep underline underline-offset-[3px] cursor-pointer min-h-[44px] flex-shrink-0">
           Changer
         </button>
       </div>
-      {/* La provenance n'est dite que si la capsule complète le dressing (19/10/2026, refonte : un en-tête plus compact) ; sinon
-          « Uniquement ton dressing » le dit déjà dans l'Aperçu. */}
-      {nbSuggestions > 0 && (
-      <div className="flex flex-wrap gap-2 mt-1">
-        <span className="inline-flex items-center gap-[6px] rounded-full bg-chip-soft-bg px-[10px] py-[4px] text-[11.5px] text-ink">
-          <span className="w-[7px] h-[7px] rounded-full" style={{ background: "var(--color-success)" }} aria-hidden="true" />
-          {pieces.length - nbSuggestions} {pieces.length - nbSuggestions > 1 ? "pièces" : "pièce"} de ton dressing
-        </span>
-        {nbSuggestions > 0 && (
-          <span className="inline-flex items-center gap-[6px] rounded-full bg-warm-bg border border-sand-border px-[10px] py-[4px] text-[11.5px] text-ink">
-            <span className="w-[7px] h-[7px] rounded-full bg-terracotta" aria-hidden="true" />
-            {nbSuggestions} {nbSuggestions > 1 ? "suggestions capsule" : "suggestion capsule"}
-          </span>
-        )}
-      </div>
-      )}
       {retourTaille && (
         <div role="status" className="text-[12px] text-ink-soft leading-[1.45] mt-2">
           {retourTaille}
@@ -2471,9 +2637,10 @@ function Resultat({
           serre
           segments={[
             { key: "ensemble", label: "Aperçu" },
-            { key: "looks", label: "Looks" },
-            { key: "pieces", label: "Pièces" },
-            { key: "checklist", label: "Checklist" },
+            { key: "looks", label: "Tenues" },
+            { key: "pieces", label: "Vêtements" },
+            // « Indispensables » ne tient pas à côté des trois autres sous 360 px (coupé à 320) : « Essentiels », le même onglet.
+            { key: "checklist", label: typeof window !== "undefined" && window.innerWidth < 360 ? "Essentiels" : "Indispensables" },
           ]}
           actif={onglet}
           onChange={setOnglet}
@@ -2482,115 +2649,111 @@ function Resultat({
 
       {onglet === "ensemble" && (
         <>
-      {/* LE RATIO PIÈCES → LOOKS, au centre de la fonctionnalité — compact. La capacité n'est pas un objectif à remplir : elle est dite en second. */}
-      <div className="flex items-baseline justify-between gap-3 mt-6">
-        <h2 className="t-titre-section text-ink">Ta valise</h2>
-        <button onClick={() => setOnglet("pieces")} className="t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[6px] flex-shrink-0">
-          Voir toutes les pièces →
-        </button>
-      </div>
-      <Card rayon="tuile" className="mt-3 grid py-[14px]" style={{ gridTemplateColumns: nbJours > 0 ? "1fr 1fr 1fr" : "1fr 1fr" }}>
-        {(
-          [
-            [glypheValise(18), pieces.length, pieces.length > 1 ? "pièces" : "pièce"],
-            [G_CINTRE, looks.length, looks.length > 1 ? "looks" : "look"],
-            // La signature « 12 pièces · 18 looks · 10 jours » : le séjour est la troisième mesure ; les occasions couvertes
-            // sont dites par les blocs de l'onglet.
-            ...(nbJours > 0 ? ([[G_CALENDRIER, nbJours, nbJours > 1 ? "jours" : "jour"]] as const) : []),
-          ] as const
-        ).map(([glyphe, n, libelle], i) => (
-          <div key={libelle} className="flex flex-col items-center text-center px-[6px]" style={{ borderLeft: i ? "1px solid var(--color-border)" : undefined }}>
-            <span className="flex items-center gap-[7px] text-terracotta">
-              {glyphe}
-              <span className="font-serif text-[26px] leading-none text-ink">{n}</span>
-            </span>
-            <span className="text-[11px] leading-[1.25] mt-[6px] text-muted">{libelle}</span>
-          </div>
-        ))}
-      </Card>
-      <div className="flex items-center justify-between gap-3 mt-3">
-        <span className="inline-flex items-center gap-[7px] text-[12px] text-ink">
-          <span className="text-terracotta">{G_COCHE(14)}</span>
-          {nbSuggestions > 0 ? "Ton dressing, complété par ta capsule" : "Uniquement ton dressing"}
-        </span>
-        <span className={"text-[11px] " + (depasse ? "text-terracotta" : "text-muted")}>
-          Valise {valise.bagage} · {depasse ? "trop pleine" : `remplie à ${tauxRemplissage}\u00a0%`}
-        </span>
-      </div>
-      {/* Une métrique n'est dite que si elle est comptée : la pièce la plus réutilisée, et dans combien de looks. */}
-      {plusUtilisee && pieceReutilisee && (
-        <div className="text-[12px] text-muted-3 leading-[1.45] mt-[6px]">
-          {pieceReutilisee.name} est utilisée dans {plusUtilisee.fois} looks.
-        </div>
-      )}
-
-      {/* COMPOSITION ET PRÉPARATION (refonte du 19/10/2026) : les pièces par grande famille, et la progression de la checklist —
-          la même que l'onglet Checklist (progressionChecklist), comptée en articles préparés. */}
-      <div className="grid grid-cols-2 gap-2 mt-4">
-        {(
-          [
-            ["Vêtements", sectionsChecklist(articles, "tout").find((x) => x.id === "vetements")?.progression.total ?? 0, "pieces"],
-            ["Chaussures", sectionsChecklist(articles, "tout").find((x) => x.id === "chaussures")?.progression.total ?? 0, "pieces"],
-            ["Sacs et accessoires", sectionsChecklist(articles, "tout").find((x) => x.id === "accessoires")?.progression.total ?? 0, "pieces"],
-            ["Affaires de voyage", affaires.length, "checklist"],
-          ] as const
-        )
-          .filter(([, n]) => n > 0)
-          .map(([libelle, n, vers]) => (
-            <button
-              key={libelle}
-              onClick={() => setOnglet(vers)}
-              className="flex items-baseline justify-between gap-2 text-left bg-card border border-border rounded-tuile px-[12px] py-[10px] cursor-pointer"
-              style={{ minHeight: 48 }}
-            >
-              <span className="text-[13px] text-ink leading-[1.25]">{libelle}</span>
-              <span className="t-chiffre text-ink">{n}</span>
+      {/* L'APERÇU (refonte du 30/10/2026) : les tenues d'abord, en galerie ; puis les pièces à emporter ; ce qui reste à compléter ; les
+          indispensables. Chaque bloc mène à son onglet. */}
+      <section className="mt-6" aria-labelledby="titre-tenues">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="titre-tenues" className="t-titre-section text-ink">
+            Tes tenues
+          </h2>
+          {looks.length > 0 && (
+            <button onClick={() => setOnglet("looks")} className="t-lien text-terracotta cursor-pointer py-[6px] flex-shrink-0">
+              Voir toutes mes tenues →
             </button>
-          ))}
-      </div>
-      {progression.total > 0 && (
-        <button onClick={() => setOnglet("checklist")} className="block w-full text-left bg-card border border-border rounded-tuile px-[14px] pt-[12px] pb-[10px] mt-2 cursor-pointer" aria-label="Ouvrir la checklist de départ">
-          <BarrePreparation titre="Ma préparation" p={progression} />
-        </button>
-      )}
-
-      {/* APERÇU DE TA VALISE : les pièces emportées, posées à plat comme sur une planche — le visuel de la valise vient du
-          dressing de la personne, jamais d'une photo de destination. Une sélection représentative (valiseApercu.ts) ; chaque
-          pièce ouvre sa fiche, le reste est compté. Grille de six colonnes à gabarits par rôle, légèrement décalés : une
-          composition asymétrique sans position absolue, qui s'adapte à toute largeur et à tout nombre de pièces. */}
-      <Card rayon="carte" className="mt-4 px-[14px] pt-[14px] pb-[16px]">
-        <div className="flex items-center justify-between gap-3">
-          <span className="t-label text-muted">Aperçu de ta valise</span>
-          <span className="text-[11px] text-ink rounded-full bg-cream border border-border px-[10px] py-[3px]">{nbPieces(pieces.length)}</span>
+          )}
         </div>
-        <ul className="grid grid-cols-6 gap-[8px] mt-3 list-none p-0" style={{ gridAutoRows: "clamp(40px, 11.5vw, 54px)", gridAutoFlow: "dense" }}>
-          {apercu.affichees.map(({ item: p, role, echelle, compacte }, i) => {
-            const im = resolveItemImage(p);
-            const gabarit = compacte
-              ? "col-span-2 row-span-1"
-              : echelle === "grand"
-                ? role === "petit"
-                  ? "col-span-3 row-span-2"
-                  : "col-span-3 row-span-3"
-                : role === "chaussures" || role === "petit"
+        {cartesTenues.length === 0 ? (
+          <EmptyState className="mt-3">Aucune tenue complète avec les pièces de cette valise.</EmptyState>
+        ) : (
+          <div className="scrollarea flex gap-[10px] overflow-x-auto -mx-6 px-6 mt-3 pb-[4px]" style={{ scrollbarWidth: "none", scrollSnapType: "x mandatory", scrollPaddingInline: 24 }}>
+            {cartesTenues.slice(0, 8).map((c) => (
+              <button
+                key={c.cle}
+                onClick={() => setVue({ nom: "look", index: c.look })}
+                aria-label={`${c.quand}, ${c.quoi} : voir la tenue`}
+                className="flex-shrink-0 w-[150px] text-left bg-card border border-border rounded-carte overflow-hidden cursor-pointer active:opacity-80"
+                style={{ scrollSnapAlign: "start" }}
+              >
+                <span className="block h-[150px] px-[8px] py-[10px]" style={{ background: "var(--color-hero-background)" }}>
+                  <OutfitComposition items={piecesDuLook(looks[c.look])} variant="planche" />
+                </span>
+                <span className="block px-[10px] py-[9px]">
+                  <span className="block t-label text-terracotta truncate">{c.quand}</span>
+                  <span className="block text-[13px] text-ink leading-[1.25] mt-[3px] truncate">{c.quoi}</span>
+                  <span className="block text-[11px] text-muted mt-[2px]">{nbPieces(looks[c.look].ids.length)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* LES PIÈCES DE MA VALISE : chaque vêtement une fois, quel que soit le nombre de tenues qui le portent ; les suggestions sont à part. */}
+      <section className="mt-7" aria-labelledby="titre-pieces">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="titre-pieces" className="t-titre-section text-ink">
+            Les pièces de ma valise
+          </h2>
+          <button onClick={() => setOnglet("pieces")} className="t-lien text-terracotta cursor-pointer py-[6px] flex-shrink-0">
+            Voir mes vêtements →
+          </button>
+        </div>
+        {familles.length > 0 && <div className="text-[12px] text-muted leading-[1.5] mt-[4px]">{familles.map((f) => `${f.titre} ${f.vetements.length}`).join(" · ")}</div>}
+        {aEmporter.length > 0 && (
+          <Card rayon="carte" className="mt-3 px-[14px] pt-[14px] pb-[16px]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="t-label text-muted">À emporter</span>
+              <span className="text-[11px] text-ink rounded-full bg-cream border border-border px-[10px] py-[3px]">{nbPieces(aEmporter.length)}</span>
+            </div>
+            <ul className="grid grid-cols-6 gap-[8px] mt-3 list-none p-0" style={{ gridAutoRows: "clamp(40px, 11.5vw, 54px)", gridAutoFlow: "dense" }}>
+              {apercu.affichees.map(({ item: p, role, echelle, compacte }, i) => {
+                const im = resolveItemImage(p);
+                const gabarit = compacte
                   ? "col-span-2 row-span-1"
-                  : "col-span-2 row-span-2";
-            return (
-              <li key={p.id} className={gabarit} style={{ transform: i % 2 ? "translateY(4px)" : undefined }}>
-                <button onClick={() => ouvrirPiece(p.id)} aria-label={`Voir la pièce : ${p.name}`} className="block w-full h-full cursor-pointer">
-                  {im.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={im.url} alt="" loading="lazy" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 3px rgba(29,26,22,.14))" }} />
-                  ) : (
-                    <span className="block w-full h-full rounded-champ" style={{ background: p.hex }} />
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        {apercu.reste > 0 && <div className="text-[12px] text-muted text-right mt-[14px]">+{apercu.reste} {apercu.reste > 1 ? "pièces" : "pièce"}</div>}
-      </Card>
+                  : echelle === "grand"
+                    ? role === "petit"
+                      ? "col-span-3 row-span-2"
+                      : "col-span-3 row-span-3"
+                    : role === "chaussures" || role === "petit"
+                      ? "col-span-2 row-span-1"
+                      : "col-span-2 row-span-2";
+                return (
+                  <li key={p.id} className={gabarit} style={{ transform: i % 2 ? "translateY(4px)" : undefined }}>
+                    <button onClick={() => ouvrirPiece(p.id)} aria-label={`Voir la pièce : ${p.name}`} className="block w-full h-full cursor-pointer">
+                      {im.url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={im.url} alt="" loading="lazy" className="w-full h-full object-contain" style={{ filter: "drop-shadow(0 2px 3px rgba(29,26,22,.14))" }} />
+                      ) : (
+                        <span className="block w-full h-full rounded-champ" style={{ background: p.hex }} />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {apercu.reste > 0 && <div className="text-[12px] text-muted text-right mt-[14px]">+{apercu.reste} {apercu.reste > 1 ? "pièces" : "pièce"}</div>}
+          </Card>
+        )}
+        {/* Une métrique n'est dite que si elle est comptée : la pièce la plus portée, et dans combien de tenues. */}
+        {plusUtilisee && pieceReutilisee && !suggestions.has(pieceReutilisee.id) && (
+          <div className="text-[12px] text-muted-3 leading-[1.45] mt-[8px]">
+            {pieceReutilisee.name} revient dans {plusUtilisee.fois} tenues.
+          </div>
+        )}
+      </section>
+
+      {blocACompleter}
+
+      {progressionAffaires.total > 0 && (
+        <section className="mt-7" aria-labelledby="titre-indispensables">
+          <h2 id="titre-indispensables" className="t-titre-section text-ink">
+            Les indispensables
+          </h2>
+          <button onClick={() => setOnglet("checklist")} className="block w-full text-left bg-card border border-border rounded-tuile px-[14px] pt-[12px] pb-[10px] mt-3 cursor-pointer" aria-label="Ouvrir les indispensables">
+            <BarrePreparation titre="Préparés" p={progressionAffaires} />
+          </button>
+        </section>
+      )}
 
       {/* Au retour d'un ajout au dressing : la proposition de recomposer. */}
       {nouvelles > 0 && (
@@ -2609,23 +2772,18 @@ function Resultat({
       )}
 
       {/* 4 · QU'EST-CE QUE JE VAIS PORTER ? Une grande carte éditoriale à la fois. */}
-      {(onglet === "looks" || onglet === "ensemble") && (
+      {onglet === "looks" && (
         <section className="mt-6" aria-labelledby="titre-looks">
           {aPlanning ? (
             <>
               <div className="flex items-baseline justify-between gap-3">
                 <h2 id="titre-looks" className="t-titre-section text-ink">
-                  {onglet === "looks" ? "Tes looks jour par jour" : "Tes looks pour le séjour"}
+                  Tes tenues jour par jour
                 </h2>
-                <span className="text-[12px] text-muted flex-shrink-0">{looks.length} {looks.length > 1 ? "looks" : "look"}</span>
+                <span className="text-[12px] text-muted flex-shrink-0">{looks.length} {looks.length > 1 ? "tenues" : "tenue"}</span>
               </div>
-              <div className="t-chapeau text-muted-3 mt-[4px]">Chaque journée, et chaque soir, avec un look de ta valise.</div>
-              <div className="flex flex-col gap-2 mt-3">{(onglet === "looks" ? planningParJour : planningParJour.slice(0, 5)).map(carteJour)}</div>
-              {onglet === "ensemble" && planningParJour.length > 5 && (
-                <button onClick={() => setOnglet("looks")} className="mt-3 t-lien text-terracotta cursor-pointer min-h-[44px]">
-                  Voir tous les looks jour par jour →
-                </button>
-              )}
+              <div className="t-chapeau text-muted-3 mt-[4px]">Chaque journée, et chaque soir, avec une tenue de ta valise.</div>
+              <div className="flex flex-col gap-2 mt-3">{planningParJour.map(carteJour)}</div>
               {piecesRepetees && (
                 <div className="text-[12px] text-muted-3 leading-[1.5] text-center mt-3">
                   Certaines pièces sont pensées pour être portées plusieurs fois et combinées différemment.
@@ -2756,142 +2914,17 @@ function Resultat({
             </>
           )}
 
-          {/* 5 · PUIS-JE L'AMÉLIORER ? « Nécessaire » (une occasion sans look) et « Optionnel » (plus de variété) sont dits comme tels. */}
-          {onglet === "ensemble" && aOptimiser && (
-            <Card rayon="carte" className="mt-7 p-[16px]">
-              <div className="flex items-center gap-[9px]">
-                <span className="text-terracotta flex-shrink-0">{G_ETINCELLE}</span>
-                <h2 className="t-titre-carte text-ink">Optimise ta valise</h2>
-              </div>
-              <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">
-                {occasionsAManque.length > 0
-                  ? "Capsela a repéré ce qui compléterait tes looks pour tout ton séjour."
-                  : "Capsela a repéré quelques pièces qui pourraient enrichir tes looks et t'offrir plus de variété."}
-              </div>
-              {manques.some((m) => m.pieces.length > 0) && (
-                <div className="text-[11px] text-muted leading-[1.45] mt-[4px]">
-                  Ces pièces ne sont pas dans ta valise : elles ne comptent ni dans ses pièces, ni dans son remplissage.
-                </div>
-              )}
-              <div className="flex flex-col gap-4 mt-4">
-                {occasionsAManque.map((o) => {
-                  const m = manques.find((x) => x.occasion === o);
-                  const elargie = occasionsElargies.includes(o);
-                  return (
-                    <div key={o}>
-                      <div className="t-label text-terracotta">Nécessaire</div>
-                      <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
-                        {elargie
-                          ? `Tes looks ${occasionShortLabel(o)} empruntent des pièces pensées pour d'autres occasions${m?.categories.length ? " : ces pièces les compléteraient." : "."}`
-                          : m?.capacite
-                            ? `Pas encore de look ${occasionShortLabel(o)} : ta valise manque de place pour lui.`
-                            : m?.categories.length
-                              ? `Il manque une pièce pour couvrir ${occasionShortLabel(o)}.`
-                              : `Pas encore de look ${occasionShortLabel(o)}.`}
-                      </div>
-                      {m && m.pieces.length > 0 && (
-                        <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
-                          {m.pieces.map((p) => (
-                            <Card key={p.id} rayon="tuile" className="relative">
-                              <button
-                                onClick={() => ajouterCategorie(p.cat)}
-                                aria-label={`Ajouter ${p.name} à ton dressing`}
-                                className="w-full flex items-center gap-[10px] text-left pl-[10px] pr-[44px] py-[10px] min-h-[62px] cursor-pointer"
-                              >
-                                <Vignette it={p} taille={44} />
-                                <span className="min-w-0 flex-1">
-                                  <span className="block text-[13px] text-ink leading-[1.2] break-words">{p.name}</span>
-                                  <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">
-                                    À ajouter · compose un look {occasionShortLabel(o)} avec ton dressing
-                                  </span>
-                                </span>
-                                <span aria-hidden="true" className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
-                                  {G_PLUS}
-                                </span>
-                              </button>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
-                      {m && m.pieces.length === 0 && m.categories.length > 0 && (
-                        <div className="grid grid-cols-1 gap-[8px] mt-[10px]">
-                          {m.categories.map((c) => (
-                            <Card key={c} rayon="tuile" className="relative">
-                              <button
-                                onClick={() => ajouterCategorie(c)}
-                                aria-label={`Ajouter ${nomCategorie(c)} à ton dressing`}
-                                className="w-full flex items-center gap-[10px] text-left pl-[10px] pr-[44px] py-[10px] min-h-[62px] cursor-pointer"
-                              >
-                                <span aria-hidden="true" className="w-[40px] h-[40px] rounded-champ bg-warm-bg text-terracotta flex items-center justify-center flex-shrink-0">
-                                  {G_CINTRE}
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="block text-[13px] text-ink leading-[1.2] break-words first-letter:uppercase">{nomCategorie(c)}</span>
-                                  <span className="block text-[11px] text-muted leading-[1.3] mt-[2px]">pour {occasionShortLabel(o)}</span>
-                                </span>
-                                <span aria-hidden="true" className="absolute right-[10px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full bg-terracotta-deep text-cream flex items-center justify-center">
-                                  {G_PLUS}
-                                </span>
-                              </button>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {peuDeLooks && (
-                  <div>
-                    <div className="t-label text-muted">Optionnel</div>
-                    <div className="text-[12px] text-ink leading-[1.45] mt-[3px]">
-                      Quelques pièces de plus ajouteraient de la variété à tes looks : {looks.length} {looks.length > 1 ? "looks" : "look"} pour {nbJours} jours.
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
-
-          {/* Ajouter une pièce : les deux parcours existants, dits comme tels. */}
-          {onglet === "ensemble" && (
-          <Card rayon="carte" className="mt-4 p-[16px]">
-            <div className="flex items-center gap-[9px]">
-              <span className="text-terracotta flex-shrink-0">{G_PLUS}</span>
-              <h2 className="t-titre-carte text-ink">Ajouter une pièce</h2>
-            </div>
-            <div className="text-[12px] text-muted-3 leading-[1.5] mt-[6px]">Ajoute une pièce depuis ton dressing ou en scannant une nouvelle pièce.</div>
-            <div className="flex flex-col min-[400px]:flex-row gap-2 mt-3">
-              <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={() => setFeuille({ type: "ajouter" })}>
-                Depuis mon dressing
-              </Button>
-              <Button variante="secondaire" pleine={false} className="flex-1 bg-card" onClick={ajouterAuDressing}>
-                Ajouter une nouvelle pièce
-              </Button>
-            </div>
-          </Card>
-          )}
         </section>
       )}
 
       {/* ── PIÈCES ── regroupées, chacune justifiée par ses looks */}
       {onglet === "pieces" && (
         <>
-          <div className="mt-4">
-            <SegmentedControl
-              ariaLabel="Provenance des pièces"
-              serre
-              segments={[
-                { key: "toutes", label: `Toutes · ${pieces.length}` },
-                { key: "dressing", label: `Ton dressing · ${pieces.length - nbSuggestions}` },
-                { key: "capsule", label: `Capsule · ${nbSuggestions}` },
-              ]}
-              actif={filtre}
-              onChange={setFiltre}
-            />
-          </div>
-          {filtre === "capsule" && nbSuggestions === 0 && (
-            <div className="text-[12px] text-muted-3 leading-[1.5] mt-4">
-              Aucune suggestion de capsule dans ta valise : ton dressing couvre ton séjour, ou la capsule n&apos;a rien de pertinent à y ajouter.
+          {/* LES VÊTEMENTS (30/10/2026) : chaque pièce une fois, par famille, avec sa provenance, ses tenues et son état — à emporter ou
+              déjà dans la valise. Cocher, c'est le même état qu'avant (cochees). Les suggestions sont dans « À compléter », plus bas. */}
+          {progressionVetements.total > 0 && (
+            <div className="mt-5">
+              <BarrePreparation titre="Dans ta valise" p={progressionVetements} />
             </div>
           )}
           {aAlleger.length > 0 && (
@@ -2923,9 +2956,8 @@ function Resultat({
               </Button>
             </Card>
           )}
-          {GROUPES_VALISE.map(([titre, cats]) => {
-            const duGroupe = pieces.filter((p) => cats.includes(p.cat) && (filtre === "toutes" || (filtre === "capsule") === suggestions.has(p.id)));
-            if (!duGroupe.length) return null;
+          {familles.map(({ titre, vetements }) => {
+            const duGroupe = vetements.map((v) => v.item);
             return (
               <section key={titre} className="mt-5">
                 <div className="flex items-baseline justify-between">
@@ -2935,28 +2967,38 @@ function Resultat({
                 <div className="flex flex-col gap-2 mt-2">
                   {duGroupe.map((p) => {
                     const n = parPiece.get(p.id) ?? 0;
+                    const dedans = piecesCochees.includes(p.id);
                     return (
                       <Card key={p.id} rayon="tuile" className="flex items-center pr-[2px]">
-                        <button onClick={() => ouvrirPiece(p.id)} className="flex-1 min-w-0 flex items-center gap-3 text-left p-[7px] cursor-pointer" aria-label={`${p.name}, dans ${n} ${n > 1 ? "looks" : "look"}. Voir la pièce`}>
-                          <Vignette it={p} />
-                          <span className="flex-1 min-w-0">
-                            <span className="block text-[13px] text-ink truncate">{p.name}</span>
-                            <span className={"block text-[11px] mt-[2px] " + (n ? "text-terracotta" : "text-muted")}>
-                              {n ? `Dans ${n} ${n > 1 ? "looks" : "look"}` : "Dans aucun look de la valise"}
-                              {(() => {
-                                // Les jours où elle est portée, d'après le planning — rien sans planning.
-                                const portee = joursDeLaPiece(planning, looks, p.id, joursDuSejourValise);
-                                return portee.length ? ` · portée ${portee.map((j) => `J${j}`).join(", ")}` : "";
-                              })()}
-                            </span>
-                            {suggestions.has(p.id) && <span className="block text-[11px] text-terracotta mt-[1px]">Capsule</span>}
-                            {n >= SEUIL_POLYVALENTE && <span className="block text-[11px] text-muted mt-[1px]">Pièce polyvalente</span>}
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={dedans}
+                          onClick={() => cocher(p.id)}
+                          aria-label={`${p.name} : ${dedans ? "déjà dans la valise" : "à emporter"}`}
+                          className="w-[44px] h-[44px] flex items-center justify-center flex-shrink-0 cursor-pointer"
+                        >
+                          <span className={"w-[22px] h-[22px] rounded-full border flex items-center justify-center " + (dedans ? "bg-terracotta-deep border-terracotta-deep" : "border-placeholder bg-card")}>
+                            {dedans && G_COCHE(12, "var(--color-cream)")}
                           </span>
                         </button>
-                        <button onClick={() => setFeuille({ type: "remplacer", id: p.id })} aria-label={`Remplacer ${p.name}`} className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
+                        <button onClick={() => ouvrirPiece(p.id)} className="flex-1 min-w-0 flex items-center gap-[10px] text-left py-[7px] pr-[4px] cursor-pointer" aria-label={`${p.name}, dans ${n} ${n > 1 ? "tenues" : "tenue"}. Voir la pièce`}>
+                          <Vignette it={p} taille={40} />
+                          <span className="flex-1 min-w-0">
+                            <span className={"block text-[13px] leading-[1.3] line-clamp-2 " + (dedans ? "text-muted" : "text-ink")}>{p.name}</span>
+                            <span className="block text-[11px] leading-[1.35] text-muted mt-[2px]">Dans ton dressing</span>
+                            <span className="block text-[11px] leading-[1.35] mt-[1px]">
+                              <span className="text-muted whitespace-nowrap">{n ? `${n} ${n > 1 ? "tenues" : "tenue"}` : "Aucune tenue"} ·</span>{" "}
+                              {/* Un bloc insécable : à 320 px, « À emporter » passe entier à la ligne au lieu de se couper (l'espace qui
+                                  précède reste hors du segment insécable : c'est là que la ligne se coupe). */}
+                              <span className={"inline-block " + (dedans ? "text-muted" : "text-terracotta")}>{dedans ? "Déjà dans la valise" : "À emporter"}</span>
+                            </span>
+                          </span>
+                        </button>
+                        <button onClick={() => setFeuille({ type: "remplacer", id: p.id })} aria-label={`Remplacer ${p.name}`} className="w-[36px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
                           {G_ECHANGE}
                         </button>
-                        <button onClick={() => retirerEtDire([p.id])} aria-label={`Retirer ${p.name} de la valise`} className="w-[40px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
+                        <button onClick={() => demanderRetrait(p.id)} aria-label={`Retirer ${p.name} de la valise`} className="w-[36px] h-[44px] flex items-center justify-center flex-shrink-0 text-muted cursor-pointer">
                           {G_CROIX}
                         </button>
                       </Card>
@@ -2982,16 +3024,17 @@ function Resultat({
               L&apos;ajouter à mon dressing
             </button>
           </div>
+          {blocACompleter}
         </>
       )}
 
-      {/* ── CHECKLIST ── (refonte du 19/10/2026) « Ma checklist de départ » : les pièces de la valise et les affaires de voyage, par
+      {/* ── INDISPENSABLES ── (depuis le 30/10/2026, les affaires de voyage seules : les vêtements se cochent dans l'onglet Vêtements) — par
           section repliable avec sa progression, filtrées Tout / À préparer / Préparés. Cocher = « préparé physiquement » : rien n'est
           ajouté, retiré ni recomposé. L'état est celui que la valise garde déjà (appareil et compte). */}
       {onglet === "checklist" && (
         <div className="mt-5">
-          <BarrePreparation titre="Ma checklist de départ" p={progression} />
-          {progression.total > 0 && progression.restantes === 0 && (
+          <BarrePreparation titre="Tes indispensables" p={progressionAffaires} />
+          {progressionAffaires.total > 0 && progressionAffaires.restantes === 0 && progressionVetements.restantes === 0 && (
             <div role="status" className="flex items-center gap-[10px] rounded-tuile bg-success-bg px-[14px] py-[10px] mt-3">
               <span aria-hidden="true" className="w-[22px] h-[22px] rounded-full bg-success text-cream flex items-center justify-center flex-shrink-0">
                 {G_COCHE(12, "var(--color-cream)")}
@@ -3030,21 +3073,21 @@ function Resultat({
               </button>
             </div>
           )}
-          {progression.total === 0 && <EmptyState className="mt-4">Rien à préparer pour l&apos;instant.</EmptyState>}
-          {progression.total > 0 && filtreChecklist === "preparees" && progression.preparees === 0 && (
+          {progressionAffaires.total === 0 && <EmptyState className="mt-4">Rien à préparer pour l&apos;instant.</EmptyState>}
+          {progressionAffaires.total > 0 && filtreChecklist === "preparees" && progressionAffaires.preparees === 0 && (
             <div className="text-[12px] text-muted-3 mt-4">Aucun article préparé pour l&apos;instant : coche-les au fil de ta préparation.</div>
           )}
           <div className="flex flex-col gap-2 mt-4">
             {/* Sous un filtre, une section sans article concerné ne s'affiche pas : la liste montre ce qu'on cherche, rien d'autre. */}
-            {sectionsChecklist(articles, filtreChecklist)
+            {sectionsChecklist(articlesAffaires, filtreChecklist)
               .filter((sec) => filtreChecklist === "tout" || sec.articles.length > 0)
               .map((sec) => {
               const repliee = repliees.includes(sec.id);
-              // Une raison partagée par TOUS les articles de la section (« Trajet au programme ») est dite une fois, sous son titre,
+              // Une raison partagée par TOUS les articlesAffaires de la section (« Trajet au programme ») est dite une fois, sous son titre,
               // plutôt que répétée sur chaque ligne (19/10/2026, demandé).
-              // Une raison portée par plusieurs articles de la section (« Plage au programme ») est dite une fois, sous son titre ; une
+              // Une raison portée par plusieurs articlesAffaires de la section (« Plage au programme ») est dite une fois, sous son titre ; une
               // raison propre à un article (« Pluie annoncée ») reste sous lui (raisonsPartagees, 20/10/2026).
-              const partagees = raisonsPartagees(articles.filter((x) => x.section === sec.id));
+              const partagees = raisonsPartagees(articlesAffaires.filter((x) => x.section === sec.id));
               return (
                 <Card key={sec.id} rayon="tuile" className="px-[12px]">
                   <button
@@ -3127,7 +3170,7 @@ function Resultat({
             })}
           </div>
 
-          {/* Ajouter une affaire : elle rejoint « Équipement du séjour », le total et la progression ; gardée avec la valise. */}
+          {/* Ajouter une affaire : elle rejoint « Équipement du séjour », le total et la progressionAffaires ; gardée avec la valise. */}
           <div className="mt-5">
             <form
               className="flex items-center gap-2 mt-5"
