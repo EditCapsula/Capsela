@@ -568,13 +568,15 @@ export function outfitMoodPhrase(
   if (temp == null || !Number.isFinite(temp)) {
     return `Pensée pour ${occasionPhrase(occasion, workMode, dateContext)}.`;
   }
-  const q = weatherQualifier(Math.round(temp));
   // SUPPRIMÉE LE 12/10/2026 (demandé : « supprime la phrase "Confortable · Prévois une couche légère" ») : de 12° à 19°, l'écran Tenue ne
   // dit plus rien ici (chaîne vide, que l'écran n'affiche pas). Les autres paliers restent ce qu'ils étaient. L'accueil garde son titre
   // (qualificatifLook, titreDuQualificatif), qui n'en reprend que le premier temps.
   // SUPPRIMÉE AUSSI SOUS 12° LE 30/10/2026 (signalé en capture : « chaude et enveloppante » sur une robe de soirée et une veste en
   // jean, « elle n'est pas pertinente ») : la phrase décrit la météo, pas la tenue, et la tenue ne la vérifie pas toujours.
-  return q === QUALIFICATIF_12_19 || q === "chaude et enveloppante" ? "" : q;
+  // PLUS AUCUN QUALIFICATIF MÉTÉO SUR L'ÉCRAN TENUE (30/10/2026, validé par la propriétaire) : « légère et confortable » et « légère et
+  // fraîche » décrivaient la météo, pas la tenue, comme les deux paliers retirés avant eux (historique ci-dessus). La température
+  // connue, l'écran ne dit rien ici ; sans elle, la phrase d'occasion ci-dessus reste. L'accueil garde son titre (qualificatifLook).
+  return "";
 }
 
 /**

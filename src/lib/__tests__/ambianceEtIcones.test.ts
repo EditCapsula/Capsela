@@ -29,13 +29,8 @@ describe("phrase d'ambiance", () => {
     }
   });
 
-  it("entre 12° et 19°, l'écran Tenue n'affiche plus de phrase (supprimée le 12/10/2026) ; à partir de 20° la phrase reste", () => {
-    for (const t of [12, 15, 19]) expect(outfitMoodPhrase("quotidien", "Présentiel", "Verre", t)).toBe("");
-    expect(outfitMoodPhrase("quotidien", "Présentiel", "Verre", 20)).toBe("légère et confortable");
-  });
-
-  it("sous 12°, l'écran Tenue n'affiche plus « chaude et enveloppante » (supprimée le 30/10/2026)", () => {
-    for (const t of [-3, 5, 11]) expect(outfitMoodPhrase("quotidien", "Présentiel", "Verre", t)).toBe("");
+  it("la température connue, l'écran Tenue n'affiche aucun qualificatif météo (12–19° le 12/10/2026, tous les paliers le 30/10/2026)", () => {
+    for (const t of TEMPS) expect(outfitMoodPhrase("quotidien", "Présentiel", "Verre", t), `à ${t}°`).toBe("");
   });
 
   it("la conserve sur l'accueil, où elle est la seule source", () => {
