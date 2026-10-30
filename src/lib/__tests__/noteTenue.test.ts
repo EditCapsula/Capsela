@@ -86,7 +86,7 @@ describe("quand il y a une note", () => {
     expect(n.ameliorations.length).toBeLessThanOrEqual(3);
   });
 
-  it("le conseil de la styliste vient en premier, avec ses pièces du dressing", () => {
+  it("le conseil de Capsela vient en premier, avec ses pièces du dressing", () => {
     const veste = piece("veste", "Beige");
     const n = noteDeLaTenue(entree(base(), { piecesDuConseil: [veste], titreConseil: "Structurer la silhouette" }))!;
     expect(n.ameliorations[0]).toMatchObject({ titre: "Structurer la silhouette", pieces: [veste] });

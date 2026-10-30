@@ -68,7 +68,7 @@ const LIBELLES: Record<CleDimension, string> = {
   couleurs: "Harmonie des couleurs",
   coordination: "Coordination des pièces",
   finition: "Finition et accessoires",
-  lecture: "Lecture de la styliste",
+  lecture: "Lecture de Capsela", // « Lecture de la styliste » jusqu'au 30/10/2026 : le nom de l'avis est désormais « L'œil de Capsela »
 };
 
 /** Le titre du verdict (liste fermée, TITRES_VERDICT) lu en note : seul le NIVEAU compte, jamais le texte libre. */
@@ -166,7 +166,7 @@ export function noteDeLaTenue(e: EntreeNote): NoteTenue | null {
   // tenue, trois au plus. Rien de générique : chaque ligne vient d'un constat.
   const ameliorations: Amelioration[] = [];
   if (e.avis.mainAdvice.trim()) {
-    ameliorations.push({ titre: e.titreConseil ?? "Le conseil de la styliste", texte: e.avis.mainAdvice, pieces: e.piecesDuConseil });
+    ameliorations.push({ titre: e.titreConseil ?? "Le conseil de Capsela", texte: e.avis.mainAdvice, pieces: e.piecesDuConseil });
   }
   score.regles
     .filter((r) => r.points < 0 && r.regle !== "R-S15" && r.message && TITRE_REGLE[r.regle])
