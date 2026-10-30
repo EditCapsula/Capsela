@@ -828,6 +828,7 @@ function EtapesRoadTrip({
                   {!e.destination && (
                     <ChoixVille
                       avecPosition={false}
+                      avecRecentes={false}
                       lieu=""
                       onChoisir={(v, libelle) =>
                         setAutres((l) =>
@@ -1350,6 +1351,7 @@ export default function ValiseScreen() {
                 position à la demande, carte de la destination avec « Modifier ». */}
             <ChoixVille
               avecPosition={false}
+              avecRecentes={false}
               lieu={destination}
               onChoisir={(v, libelle) => {
                 setVille(v);
