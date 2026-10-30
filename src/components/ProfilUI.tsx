@@ -143,21 +143,16 @@ export function LigneProfil({
 
 
 /**
- * La palette en nuancier : les teintes réellement enregistrées, puis des
- * emplacements vides jusqu'au maximum de 6 — une palette en cours, pas une
- * liste. « Non renseignée » quand il n'y a aucune couleur.
+ * La palette en nuancier : les teintes réellement enregistrées. Sans maximum depuis le 30/10/2026 : plus d'emplacements vides (ils
+ * montraient une palette « en cours » vers six), et la rangée passe à la ligne. « Non renseignée » quand il n'y a aucune couleur.
  */
 export function PastillesPalette({ couleurs }: { couleurs: string[] }) {
   if (!couleurs.length) return <>Non renseignée</>;
   return (
-    <span className="flex items-center gap-[6px] py-[2px]" aria-label={`${couleurs.length} couleurs`}>
-      {Array.from({ length: Math.max(6, couleurs.length) }, (_, i) => couleurs[i]).map((hex, i) =>
-        hex ? (
-          <span key={i} className="w-[20px] h-[20px] rounded-full flex-shrink-0" style={{ background: hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} />
-        ) : (
-          <span key={i} className="w-[20px] h-[20px] rounded-full flex-shrink-0 border border-border" />
-        )
-      )}
+    <span className="flex flex-wrap items-center gap-[6px] py-[2px]" aria-label={`${couleurs.length} ${couleurs.length > 1 ? "couleurs" : "couleur"}`}>
+      {couleurs.map((hex, i) => (
+        <span key={i} className="w-[20px] h-[20px] rounded-full flex-shrink-0" style={{ background: hex, boxShadow: "inset 0 0 0 1px rgba(29,26,22,.12)" }} />
+      ))}
     </span>
   );
 }

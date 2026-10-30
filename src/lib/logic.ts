@@ -148,6 +148,9 @@ const ACCESSOIRES_SPORT: ReadonlySet<AccessoireType> = new Set<AccessoireType>([
   "Gourde",
 ]);
 
+/** Les chaussures à talons (R-S24) : celles dont le talon est le type même. */
+const CHAUSSURES_A_TALONS: readonly string[] = ["Escarpins", "Sandales à talons", "Slingbacks"];
+
 /**
  * Contexte « à la maison » — Cocooning, ou Télétravail (sous-contexte de
  * travail_formel), jamais Présentiel. Partagé par R-B13/R-B14/R-B17, et lu
@@ -388,6 +391,8 @@ export interface LeviersMesure {
   echarpeEnCocooning?: boolean;
   /** Reproduit le comportement d'AVANT le 30/10/2026 : deux pièces sans manches pouvaient se porter ensemble (R-S23). */
   deuxSansManches?: boolean;
+  /** Reproduit le comportement d'AVANT le 30/10/2026 : en soirée et en cérémonie, les talons ne sont pas privilégiés pour une femme (R-S24). */
+  sansTalonsEnSoiree?: boolean;
   /** Reproduit le comportement d'AVANT le 22/10/2026 : les chaussures fermées et chaudes ne cèdent pas la place par forte chaleur (R-S20). */
   sansChaussuresLegeresParLaChaleur?: boolean;
   /** Reproduit le comportement d'AVANT le 08/10/2026 : la saison déclarée d'une pièce du dressing pouvait être relâchée (repli « hors saison », exemption des sandales de fête). */
@@ -1666,6 +1671,13 @@ export function generateOutfit(
     if (shoeTypePrefs?.length) {
       const styled = shoePool.filter((i) => i.shoeType && shoeTypePrefs.includes(i.shoeType));
       if (styled.length) shoePool = styled;
+    }
+    // R-S24 (30/10/2026, demandé : « pour les soirées ou cérémonies, privilégie des talons pour les femmes ») — une paire À TALONS
+    // d'abord, s'il y en a une : escarpins, sandales à talons, slingbacks (les mules, parfois plates, n'en sont pas). Soirée, toutes
+    // déclinaisons, et cérémonie ; un profil femme seulement. Molle : jamais une catégorie vidée.
+    if (gender === "femme" && (occasion === "soiree" || occasion === "evenement_perso") && !leviers?.sansTalonsEnSoiree) {
+      const talons = shoePool.filter((i) => i.shoeType && CHAUSSURES_A_TALONS.includes(i.shoeType));
+      if (talons.length) shoePool = talons;
     }
     // R-S19 — en Voyage, les baskets d'abord (« même en chaussures, comme des baskets »), puis la liste confort ci-dessus. Molle.
     if (occasion === "voyage" && !leviers?.sansConfortVoyage) {

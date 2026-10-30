@@ -1,5 +1,6 @@
 "use client";
 
+import { avecTraitsDUnion } from "@/components/TraitsDUnion";
 import { useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
@@ -43,7 +44,6 @@ import {
   GENDERS,
   INTENSITE_OPTIONS,
   INTENSITE_VISUELS,
-  MAX_PALETTE_COULEURS,
   MIN_PALETTE_COULEURS,
   MORPHOLOGIES,
   MORPHOLOGY_LABELS,
@@ -103,7 +103,7 @@ const ALL_STEPS = [
    * parle : le surtitre de la première est « Tes couleurs », pas « Ta
    * palette ».
    */
-  { key: "pal_couleurs", kicker: "Tes couleurs", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis 1 à 6 couleurs que tu portes ou aimerais porter souvent." },
+  { key: "pal_couleurs", kicker: "Tes couleurs", title: "Quelles couleurs aimes-tu porter ?", subtitle: "Choisis les couleurs que tu aimes porter ou aimerais porter souvent." },
   { key: "pal_intensite", kicker: "Tes couleurs", title: "Quelle intensité de couleurs portes-tu volontiers ?", subtitle: "Cela nous aide à créer des looks dans ton style." },
   /*
    * LE PARCOURS COLORIMÉTRIE (refonte UX/UI du 30/09/2026) : présentation,
@@ -141,9 +141,8 @@ function isLightColor(hex: string): boolean {
 }
 
 /**
- * Grille de pastilles de la palette personnelle — sélection multiple
- * jusqu'à MAX_PALETTE_COULEURS (cf. toggleCouleur, bloquant au-delà, pas
- * d'éviction). Contour unique terracotta + coche à la sélection (remplace
+ * Grille de pastilles de la palette personnelle — sélection multiple, sans
+ * maximum depuis le 30/10/2026 (six auparavant). Contour unique terracotta + coche à la sélection (remplace
  * le double anneau décoratif crème/terracotta) ; bordure neutre du Design
  * System (--color-border) hors sélection, y compris pour les teintes très
  * claires qui s'y fondaient auparavant. Correctif 24/08/2026 (2e retour) :
@@ -230,14 +229,10 @@ export default function ProfileSetupScreen() {
 
   const patch = (p: Partial<Profile>) => setDraft((d) => ({ ...d, ...p }));
 
-  // Bloque la 7e sélection plutôt que d'évincer la plus ancienne (brief UX
-  // "Ta palette" du 24/08/2026) — au maximum, les couleurs non sélectionnées
-  // sont désactivées (cf. PaletteDots), donc ce cas ne devrait plus être
-  // déclenché depuis l'UI ; gardé en défense en profondeur.
+  // Autant de couleurs qu'on veut depuis le 30/10/2026 (demandé) ; six au plus auparavant (brief UX « Ta palette » du 24/08/2026).
   const toggleCouleur = (hex: string) => {
     const cur = draft.paletteCouleurs;
     if (cur.includes(hex)) return patch({ paletteCouleurs: cur.filter((x) => x !== hex) });
-    if (cur.length >= MAX_PALETTE_COULEURS) return;
     patch({ paletteCouleurs: [...cur, hex] });
   };
   // Un ou deux styles (05/10/2026 ; avant : sélection unique, arbitrage du 20/08/2026 reconduit après un essai de
@@ -456,12 +451,11 @@ export default function ProfileSetupScreen() {
 
       <div className="mt-[26px]">
         {enTete.kicker && <div className="t-surtitre text-terracotta">{enTete.kicker}</div>}
-        <div className="t-titre-ecran text-ink mt-3" style={{ textWrap: "balance" }}>{enTete.title}</div>
+        <div className="t-titre-ecran text-ink mt-3" style={{ textWrap: "balance" }}>{avecTraitsDUnion(enTete.title)}</div>
         {enTete.subtitle && <div className="t-chapeau text-muted mt-[10px]">{enTete.subtitle}</div>}
         {meta.key === "pal_couleurs" && draft.paletteCouleurs.length > 0 && (
           <div className="text-[12px] text-muted mt-[6px]">
-            {draft.paletteCouleurs.length} / {MAX_PALETTE_COULEURS} sélectionnée
-            {draft.paletteCouleurs.length > 1 ? "s" : ""}
+            {draft.paletteCouleurs.length} {draft.paletteCouleurs.length > 1 ? "couleurs sélectionnées" : "couleur sélectionnée"}
           </div>
         )}
         {/* LA PHRASE QUI ÉVITE LE MALENTENDU CENTRAL de ce parcours : aimer

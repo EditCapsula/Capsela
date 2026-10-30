@@ -92,7 +92,8 @@ export function genderLabel(g: Gender | null): string {
  * colonnes de ProfileSetupScreen s'appuie sur cet ordre exact.
  */
 export const MIN_PALETTE_COULEURS = 1;
-export const MAX_PALETTE_COULEURS = 6;
+// Plus de maximum depuis le 30/10/2026 (demandé : « enlève la limite de couleurs, l'utilisateur peut choisir tout ce qu'il veut ») ;
+// six auparavant (brief « Ta palette » du 24/08/2026). La palette reste une préférence molle du moteur (R-S10).
 
 export const AFFINITE_OPTIONS: Affinite[] = ["Tons chauds", "Tons froids", "Les deux", "Je ne sais pas"];
 export const INTENSITE_OPTIONS: Intensite[] = ["Douces et discrètes", "Profondes et intenses", "Lumineuses", "Un mélange"];

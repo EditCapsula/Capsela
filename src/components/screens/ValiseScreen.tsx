@@ -89,6 +89,7 @@ import {
 import { ideesGardees, ideesPourDestination } from "@/lib/ideesSejour";
 import { appliquerPeriode, arriveeAuMilieu, destinationDuJour, etapesRetenues, joursParEtape, libelleItineraire, periodeValide, periodesDesDestinations, ETAPES_MAX, type EtapeSejour, type Periode } from "@/lib/etapesSejour";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { avecTraitsDUnion } from "@/components/TraitsDUnion";
 import { pieceLaPlusUtilisee, planningDeLaValise, type CreneauPlanning } from "@/lib/planningValise";
 import { creneauxDeLaPiece, vetementsDeLaValise, vetementsParFamille } from "@/lib/valiseVetements";
 import {
@@ -393,15 +394,6 @@ function Coche() {
 
 function Surtitre({ children }: { children: React.ReactNode }) {
   return <div className="t-surtitre text-muted">{children}</div>;
-}
-
-/**
- * Le trait d'union de Bodoni Moda est un filet : à 24 px, sa taille optique d'affichage l'amincit au point qu'il disparaît (« Qu'as tu »,
- * constaté en rendu le 30/10/2026). Il garde la même police, avec la taille optique d'un texte courant, dont le filet reste visible.
- */
-function avecTraitsDUnion(texte: string): React.ReactNode {
-  const morceaux = texte.split("-");
-  return morceaux.flatMap((m, i) => (i === 0 ? [m] : [<span key={i} style={{ fontVariationSettings: '"opsz" 10' }}>-</span>, m]));
 }
 
 function TitreEtape({ a, b }: { a: string; b: string }) {

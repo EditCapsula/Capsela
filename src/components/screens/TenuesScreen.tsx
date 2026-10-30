@@ -170,6 +170,9 @@ function ExploreStyleCard({
 }
 
 export default function TenuesScreen() {
+  // Sous 380 px de large, « Autre tenue » ne garde que son icône (libellé lu par les lecteurs d'écran) : la ligne de provenance tient
+  // alors sur une ligne avec les deux pastilles (30/10/2026). L'app n'est rendue que côté client (AppLoader, ssr: false).
+  const etroit = typeof window !== "undefined" && window.innerWidth < 380;
   const { state, weather, meteoDuJour, jourConsulte, geoLoading, wardrobePool, vestiairePool, actions } = useCapsela();
   // En attente tant que la météo du jour consulté n'est pas connue : position,
   // ou prévision d'un jour à venir (navigation par date, 27/09/2026).
@@ -425,7 +428,9 @@ export default function TenuesScreen() {
      * produit, pas un pis-aller. Deux sources : on garde les deux lignes
      * nues, « une sélection de » répété deux fois se lirait comme un bégaiement.
      */
-    if (lignes.length === 1) lignes[0] = { ...lignes[0], texte: `Une sélection de ${lignes[0].texte}` };
+    // Compactes depuis le 30/10/2026 : les deux pastilles et « Autre tenue » tiennent sur une ligne (demandé). « 3 de ton dressing »,
+    // « 1 de ta capsule » ; une seule source garde son nombre de pièces, sans « Une sélection de ».
+    if (lignes.length === 2) return lignes.map((l) => ({ ...l, texte: l.texte.replace(/ pièces? /, " ") }));
     return lignes;
   })();
 
@@ -759,7 +764,7 @@ export default function TenuesScreen() {
               est la tenue, puis « Autre tenue », remonté du pied de card —
               une action de changement, pas un CTA de même rang que
               « Porter cette tenue ». Hors de la zone à hauteur fixe. */}
-          <div className="flex-shrink-0 flex items-center justify-between gap-3 h-[32px]">
+          <div className="flex-shrink-0 flex items-center justify-between gap-3 min-h-[32px]">
             {/* TENUE PLANIFIÉE (option C) : l'étiquette dit d'où vient la
                 tenue, et le bouton de changement revient à la proposition de
                 Capsela — sans passer par le quota d'« Autre tenue », ce n'est
@@ -768,31 +773,21 @@ export default function TenuesScreen() {
               {(planApplique || statut.cle === "complete") && <span aria-hidden="true">✦ </span>}
               {planApplique ? (estPlanValise(planApplique.plan.id) ? "Look de ta valise" : "Ta tenue planifiée") : statut.libelle}
             </span>
-            {planApplique ? (
-              <button
-                onClick={actions.voirAutreProposition}
-                className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-ink cursor-pointer -my-[10px] py-[10px]"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                  <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Autre tenue
-              </button>
-            ) : !noCompleteOutfit && (
-              <button
-                onClick={autreTenue}
-                disabled={tirageEnCours}
-                aria-busy={tirageEnCours}
-                className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-ink cursor-pointer disabled:cursor-not-allowed -my-[10px] py-[10px]"
-                style={{ opacity: tirageEnCours ? 0.6 : 1 }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
-                  <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Autre tenue
-              </button>
+            {/* « RECOMMANDÉ » EN TÊTE, à la place d'« Autre tenue » (30/10/2026, demandé), qui passe sur la ligne de la provenance. */}
+            {badgesAffiches.length > 0 && (
+              <span className="flex-shrink-0 flex items-center gap-[6px]">
+                {badgesAffiches.map((key) =>
+                  key === "recommande" ? (
+                    <Badge key={key} tone="surTerracotta" taille="s">
+                      {BADGE_RECOMMANDE}
+                    </Badge>
+                  ) : (
+                    <Badge key={key} tone="surTerracottaContour" taille="s">
+                      {BADGE_REGISTRE}
+                    </Badge>
+                  )
+                )}
+              </span>
             )}
           </div>
           {/* LE PLAN D'OÙ VIENT LA TENUE (14/10/2026) : « Voir le look » d'un look planifié mène ici, comme celui des autres slides ; la fiche du
@@ -818,26 +813,10 @@ export default function TenuesScreen() {
               provenance. Les unités de conteneur (cqw) portent sur la card. */}
           <div className="flex flex-col flex-1 min-h-0">
           <div className="relative flex-1 min-h-0">
-          {(badgesAffiches.length > 0 || recommendationText) && (
-          // Les badges et la phrase d'ambiance se posent PAR-DESSUS le haut de la zone (calibrage du 08/10/2026) : le flat lay
-          // réserve cette bande (margeHaute), aucune pièce n'y passe.
+          {recommendationText && (
+          // La phrase d'ambiance se pose PAR-DESSUS le haut de la zone (calibrage du 08/10/2026) : le flat lay réserve cette bande
+          // (margeHaute), aucune pièce n'y passe. Les badges sont dans l'en-tête de la card depuis le 30/10/2026.
           <div className="absolute top-0 left-0 right-0 z-10 flex items-center flex-wrap gap-x-[10px] gap-y-[5px] pointer-events-none">
-            {/* Deux axes indépendants (cf. src/lib/outfitBadges.ts) : la
-                qualité vient du score, le registre du repli de formalité. Sur
-                fond terracotta, la hiérarchie passe par le remplissage —
-                pastille pleine pour le principal, détourée pour le registre. */}
-            {badgesAffiches.map((key) =>
-              key === "recommande" ? (
-                <Badge key={key} tone="surTerracotta" taille="s">
-                  {BADGE_RECOMMANDE}
-                </Badge>
-              ) : (
-                <Badge key={key} tone="surTerracottaContour" taille="s">
-                  {BADGE_REGISTRE}
-                </Badge>
-              )
-            )}
-
             {/* Phrase d'ambiance — celle de CETTE tenue, jamais un bulletin,
                 et SANS la température : la barre météo la donne déjà à deux
                 cents pixels au-dessus (23/09). Manuscrite, d'où une taille
@@ -907,24 +886,47 @@ export default function TenuesScreen() {
                 </svg>
               </button>
             )}
-            {provenance && (
-              <div className="flex flex-wrap gap-[5px] mt-[5px] px-[6px]">
-                {provenance.map((p) => (
+            {/* LA PROVENANCE ET « AUTRE TENUE » SUR UNE LIGNE (30/10/2026, demandé : « Autre tenue sur la même ligne que 1 pièce de ta
+                capsule », « les deux labels gris sur la même ligne ») : les pastilles ne passent plus à la ligne ; « Autre tenue » à droite. */}
+            {(provenance || !noCompleteOutfit || planApplique) && (
+              <div className="flex items-center gap-[5px] mt-[5px] px-[6px]">
+                <span className="flex-1 min-w-0 flex items-center gap-[5px]">
+                {(provenance ?? []).map((p) => (
                   <span
                     key={p.cle}
-                    className="inline-flex items-center gap-[7px] rounded-full pl-[6px] pr-[11px] py-[4px] text-[11px] leading-[1.25]"
+                    className="inline-flex items-center rounded-full px-[9px] py-[5px] text-[11px] leading-[1.25] whitespace-nowrap flex-shrink-0"
                     style={{ background: "rgba(29,26,22,.07)", color: "var(--color-ink)" }}
                   >
-                    <span
-                      aria-hidden="true"
-                      className="w-[17px] h-[17px] rounded-full flex items-center justify-center text-[9px] flex-shrink-0"
-                      style={{ background: "rgba(29,26,22,.1)" }}
-                    >
-                      {p.glyphe}
-                    </span>
                     {p.texte}
                   </span>
                 ))}
+                </span>
+              {planApplique ? (
+                <button
+                  onClick={actions.voirAutreProposition}
+                  className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-ink cursor-pointer -my-[10px] py-[10px]"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className={etroit ? "sr-only" : undefined}>Autre tenue</span>
+                </button>
+              ) : !noCompleteOutfit && (
+                <button
+                  onClick={autreTenue}
+                  disabled={tirageEnCours}
+                  aria-busy={tirageEnCours}
+                  className="flex-shrink-0 flex items-center gap-[6px] text-[12px] text-ink cursor-pointer disabled:cursor-not-allowed -my-[10px] py-[10px]"
+                  style={{ opacity: tirageEnCours ? 0.6 : 1 }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style={{ display: "block" }}>
+                    <path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M19.5 4.2v3.6h-3.6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className={etroit ? "sr-only" : undefined}>Autre tenue</span>
+                </button>
+              )}
               </div>
             )}
           </div>
