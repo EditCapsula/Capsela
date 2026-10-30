@@ -23,7 +23,7 @@ LIBELLES = {
 }
 SAISONS = ["Printemps", "Été", "Automne", "Hiver"]
 ROLE = {
-    "haut": {"tshirt", "debardeur", "brassiere", "haut_technique", "top", "tunique", "blouse", "chemise", "surchemise", "polo", "pull", "sweat"},
+    "haut": {"tshirt", "debardeur", "brassiere", "haut_technique", "top", "tunique", "blouse", "chemise", "surchemise", "polo", "pull", "sous_pull", "sweat"},
     "bas": {"jogging", "legging", "short", "jean", "pantalon", "jupe"},
     "unique": {"robe", "combinaison", "combishort", "ensemble"},
     "chaussures": {"baskets", "ballerines", "bottines", "bottes", "mocassins", "derbies", "mules", "sandales", "espadrilles"},

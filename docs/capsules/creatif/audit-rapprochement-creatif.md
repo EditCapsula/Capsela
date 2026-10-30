@@ -36,13 +36,15 @@ relu (`RELECTURE`, `outils/rapprocher.py`) : H-CR-HIV-30 → #625 passe en POTEN
 du quotidien). Deux autres sont déclassées par la règle des manches (t-shirt graphique à manches longues contre article à manches
 courtes). Les relectures successives ont durci les règles : familles fines de traits (une chemise à carreaux ne porte pas un « imprimé
 artistique ») et, après relecture d'un POTENTIAL_MATCH sur quatre, règle de nature (une veste en cuir n'est pas une veste en jean).
+**ARBITRAGE ÉDITORIAL** (propriétaire, 30/10/2026) : « sous-pull et pull col roulé fin ne sont pas pareils ». Le sous-pull est un type
+à part ; aucun article n'en est un, les quatre sous-pulls de référence sont MISSING.
 
 ## Résultat
 
 | Genre | EXACT_MATCH | POTENTIAL_MATCH | MISSING | INCOMPATIBLE | Total |
 |---|---|---|---|---|---|
-| Femme | 8 | 121 | 13 | 9 | 151 |
-| Homme | 33 | 77 | 15 | 3 | 128 |
+| Femme | 8 | 119 | 15 | 9 | 151 |
+| Homme | 33 | 75 | 17 | 3 | 128 |
 
 Par saison :
 
@@ -50,15 +52,15 @@ Par saison :
 |---|---|---|---|---|---|
 | Femme | Printemps | 1 | 31 | 3 | 2 |
 | Femme | Été | 3 | 29 | 3 | 3 |
-| Femme | Automne | 2 | 32 | 1 | 3 |
-| Femme | Hiver | 2 | 29 | 6 | 1 |
+| Femme | Automne | 2 | 31 | 2 | 3 |
+| Femme | Hiver | 2 | 28 | 7 | 1 |
 | Homme | Printemps | 7 | 20 | 4 | 1 |
 | Homme | Été | 4 | 22 | 5 | 0 |
-| Homme | Automne | 11 | 17 | 3 | 1 |
-| Homme | Hiver | 11 | 18 | 3 | 1 |
+| Homme | Automne | 11 | 16 | 4 | 1 |
+| Homme | Hiver | 11 | 17 | 4 | 1 |
 
 Lecture, **DÉMONTRÉ** : le catalogue a les BASES de la plupart des pièces Créatif (le type existe, dans la bonne saison et la bonne
-matière : 198 pièces sur 279 en POTENTIAL_MATCH), mais presque jamais leur version créative. Côté femme, 8 pièces sur 151 trouvent un
+matière : 194 pièces sur 279 en POTENTIAL_MATCH), mais presque jamais leur version créative. Côté femme, 8 pièces sur 151 trouvent un
 équivalent exact, presque toutes des hauts (t-shirts et sweats graphiques, top drapé asymétrique) et un pantalon en velours côtelé ;
 aucune chaussure, aucun bas imprimé, aucune robe. Côté homme, 33 sur 128 : la capsule homme compte davantage de pièces de base
 (chemise oxford, bottines, derbies, pull col roulé…), que le catalogue a déjà.
@@ -69,11 +71,11 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 |---|---|---|---|
 | Femme | Printemps | 1 | 32 |
 | Femme | Été | 2 | 28 |
-| Femme | Automne | 2 | 31 |
-| Femme | Hiver | 1 | 26 |
+| Femme | Automne | 2 | 30 |
+| Femme | Hiver | 1 | 25 |
 | Homme | Printemps | 7 | 24 |
 | Homme | Été | 4 | 23 |
-| Homme | Automne | 11 | 27 |
+| Homme | Automne | 11 | 26 |
 | Homme | Hiver | 11 | 25 |
 
 ## Détail par pièce
@@ -91,7 +93,7 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 | F-CRE-HIV-07 | Hiver | Sweat illustré | #973 Sweat graphique oversize (femme, Hiver) | même type, même genre, saison couverte, mêmes traits : graphique |
 | F-CRE-HIV-26 | Hiver | Sweat chaud graphique | #973 Sweat graphique oversize (femme, Hiver) | même type, même genre, saison couverte, mêmes traits : graphique |
 
-### Femme — POTENTIAL_MATCH (121)
+### Femme — POTENTIAL_MATCH (119)
 
 | ID | Saison | Pièce de référence | Article retenu | Raison |
 |---|---|---|---|---|
@@ -149,7 +151,6 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 | F-CRE-ÉTÉ-31 | Été | Bijoux sculpturaux | #489 Collier fin (unisexe, Toutes saisons) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 | F-CRE-ÉTÉ-32 | Été | Foulard graphique | #487 Foulard (unisexe, Toutes saisons) | même type, même genre, saison couverte, sans le trait créatif (graphique) |
 | F-CRE-AUT-01 | Automne | Chemise à imprimé abstrait | #452 Chemise oversize (femme, Printemps, Été, Automne, Hiver) | même type, même genre, saison couverte, sans le trait créatif (artistique, imprime) |
-| F-CRE-AUT-03 | Automne | Sous-pull coloré | #455 Pull col roulé (femme, Automne, Hiver) | même type, même genre, saison couverte, sans le trait créatif (colore) |
 | F-CRE-AUT-04 | Automne | Blouse à col travaillé | #927 Blouse fluide à col lavallière (femme, Hiver, Printemps, Été, Automne) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 | F-CRE-AUT-05 | Automne | Pull jacquard graphique | #454 Pull col V (femme, Automne, Hiver, Printemps) | même type, même genre, saison couverte, sans le trait créatif (graphique, jacquard) |
 | F-CRE-AUT-06 | Automne | Cardigan à boutons contrastants | #931 Cardigan à boutons nacrés (femme, Hiver, Printemps, Automne) | même type, même genre, saison couverte, sans le trait créatif (contraste) |
@@ -177,7 +178,6 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 | F-CRE-AUT-32 | Automne | Écharpe à motif artistique | #488 Echarpe (unisexe, Hiver, Automne) | même type, même genre, saison couverte, sans le trait créatif (artistique, imprime) |
 | F-CRE-AUT-33 | Automne | Bijoux sculpturaux | #489 Collier fin (unisexe, Toutes saisons) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 | F-CRE-HIV-02 | Hiver | T-shirt graphique manches longues | #710 T-shirt oversize graphique (femme, Été, Automne, Hiver, Printemps) | même type et mêmes traits, mais manches courtes (référence : Longues) |
-| F-CRE-HIV-03 | Hiver | Sous-pull coloré | #455 Pull col roulé (femme, Automne, Hiver) | même type, même genre, saison couverte, sans le trait créatif (colore) |
 | F-CRE-HIV-04 | Hiver | Pull jacquard audacieux | #454 Pull col V (femme, Automne, Hiver, Printemps) | même type, même genre, saison couverte, sans le trait créatif (jacquard) |
 | F-CRE-HIV-05 | Hiver | Pull à volume sculptural | #454 Pull col V (femme, Automne, Hiver, Printemps) | même type, même genre, saison couverte, sans le trait créatif (sculptural) |
 | F-CRE-HIV-06 | Hiver | Cardigan bijoux | #816 Cardigan ample (femme, Automne, Hiver) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
@@ -217,15 +217,17 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 | F-CRE-ÉTÉ-A05 | Été | Pantalon palazzo en lin imprimé | #540 Pantalon palazzo (femme, Été) | même type, même genre, saison couverte, sans le trait créatif (imprime) |
 | F-CRE-AUT-A05 | Automne | Pantalon wide-leg à pinces contrastées | #636 Pantalon large à pinces d'été (femme, Été, Automne, Printemps) | même type, même genre, saison couverte, sans le trait créatif (contraste) |
 
-### Femme — MISSING (13)
+### Femme — MISSING (15)
 
 | ID | Saison | Pièce de référence | Article retenu | Raison |
 |---|---|---|---|---|
 | F-CRE-PRI-22 | Printemps | Veste de sport légère | — | le type existe, mais aucun article ne porte la nature demandée (technique) |
 | F-CRE-ÉTÉ-22 | Été | Short de sport imprimé | — | le type existe, mais aucun article ne porte la nature demandée (technique) |
 | F-CRE-ÉTÉ-24 | Été | Short de détente coordonné | — | le type existe, mais aucun article ne porte la nature demandée (homewear) |
+| F-CRE-AUT-03 | Automne | Sous-pull coloré | — | aucune pièce de ce type pour ce genre |
 | F-CRE-AUT-25 | Automne | Jogging en maille graphique | — | le type existe, mais aucun article ne porte la nature demandée (maille) |
 | F-CRE-HIV-01 | Hiver | Chemise satinée colorée | — | le type existe, mais aucun article ne porte la nature demandée (satin) |
+| F-CRE-HIV-03 | Hiver | Sous-pull coloré | — | aucune pièce de ce type pour ce genre |
 | F-CRE-HIV-16 | Hiver | Robe de soirée sculpturale | — | le type existe, mais aucun article ne porte la nature demandée (soiree) |
 | F-CRE-HIV-17 | Hiver | Blazer en velours | — | le type existe, mais aucun article ne porte la nature demandée (velours) |
 | F-CRE-HIV-25 | Hiver | Pantalon de détente en maille | — | le type existe, mais aucun article ne porte la nature demandée (homewear, maille) |
@@ -287,7 +289,7 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 | H-CR-HIV-28 | Hiver | Bonnet | #851 Bonnet côtelé minimaliste (homme, Hiver) | même type, même genre, saison couverte, mêmes traits : même coupe |
 | H-CR-HIV-29 | Hiver | Gants | #852 Gants classiques (homme, Hiver) | même type, même genre, saison couverte, mêmes traits : même coupe |
 
-### Homme — POTENTIAL_MATCH (77)
+### Homme — POTENTIAL_MATCH (75)
 
 | ID | Saison | Pièce de référence | Article retenu | Raison |
 |---|---|---|---|---|
@@ -337,7 +339,6 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 | H-CR-AUT-04 | Automne | Pull graphique | #503 Pull col V (homme, Automne, Hiver, Printemps) | même type, même genre, saison couverte, sans le trait créatif (graphique) |
 | H-CR-AUT-05 | Automne | Cardigan texturé | #511 Cardigan / Maille ajourée (homme, Printemps, Été, Automne) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 | H-CR-AUT-06 | Automne | Sweat-shirt illustré | #522 Sweat à capuche (Hoodie) / Sweat zippé (homme, Automne, Hiver, Printemps) | même type, même genre, saison couverte, sans le trait créatif (graphique) |
-| H-CR-AUT-07 | Automne | Sous-pull fin | #1044 Pull col roulé fin noir (homme, Automne, Hiver, Printemps) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 | H-CR-AUT-09 | Automne | Jean large | #516 Jean droit clair (Straight/Wide) (homme, Toutes saisons) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 | H-CR-AUT-12 | Automne | Pantalon cargo revisité | #742 Pantalon cargo ample (homme, Été, Automne, Hiver, Printemps) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 | H-CR-AUT-13 | Automne | Chino coloré | #618 Pantalon chino droit (homme, Été, Automne, Hiver, Printemps) | même type, même genre, saison couverte, sans le trait créatif (colore) |
@@ -350,7 +351,6 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 | H-CR-AUT-30 | Automne | Bijoux graphiques | #489 Collier fin (unisexe, Toutes saisons) | même type, même genre, saison couverte, sans le trait créatif (graphique) |
 | H-CR-AUT-31 | Automne | Bonnet graphique | #969 Bonnet côtelé (homme, Automne, Hiver) | même type, même genre, saison couverte, sans le trait créatif (graphique) |
 | H-CR-AUT-32 | Automne | Chemise habillée | #528 Chemise blanche (homme, Toutes saisons) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
-| H-CR-HIV-01 | Hiver | Sous-pull graphique | #504 Pull col roulé (homme, Automne, Hiver) | même type, même genre, saison couverte, sans le trait créatif (graphique) |
 | H-CR-HIV-02 | Hiver | Chemise blanche texturée | #528 Chemise blanche (homme, Toutes saisons) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 | H-CR-HIV-04 | Hiver | Pull color-block | #503 Pull col V (homme, Automne, Hiver, Printemps) | même type, même genre, saison couverte, sans le trait créatif (color_block) |
 | H-CR-HIV-06 | Hiver | Gros pull texturé | #961 Pull ample texturé (homme, Automne, Hiver) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
@@ -369,7 +369,7 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 | H-CR-HIV-32 | Hiver | Chemise de cérémonie | #528 Chemise blanche (homme, Toutes saisons) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 | H-CR-HIV-33 | Hiver | Pantalon habillé | #518 Pantalon à pinces / Tailleur (homme, Toutes saisons) | même type, même genre, saison couverte, sans le trait créatif (aucun trait lu) |
 
-### Homme — MISSING (15)
+### Homme — MISSING (17)
 
 | ID | Saison | Pièce de référence | Article retenu | Raison |
 |---|---|---|---|---|
@@ -382,9 +382,11 @@ Plusieurs références pointent vers le même article (ex. trois t-shirts graphi
 | H-CR-ÉTÉ-16 | Été | Débardeur technique | — | le type existe, mais aucun article ne porte la nature demandée (technique) |
 | H-CR-ÉTÉ-17 | Été | Short de sport | — | le type existe, mais aucun article ne porte la nature demandée (technique) |
 | H-CR-ÉTÉ-20 | Été | Short détente | — | le type existe, mais aucun article ne porte la nature demandée (homewear) |
+| H-CR-AUT-07 | Automne | Sous-pull fin | — | aucune pièce de ce type pour ce genre |
 | H-CR-AUT-16 | Automne | Veste en cuir | — | le type existe, mais aucun article ne porte la nature demandée (cuir) |
 | H-CR-AUT-20 | Automne | Jogger technique | — | le type existe, mais aucun article ne porte la nature demandée (technique) |
 | H-CR-AUT-22 | Automne | Pantalon homewear | — | le type existe, mais aucun article ne porte la nature demandée (homewear) |
+| H-CR-HIV-01 | Hiver | Sous-pull graphique | — | aucune pièce de ce type pour ce genre |
 | H-CR-HIV-15 | Hiver | Veste en cuir | — | le type existe, mais aucun article ne porte la nature demandée (cuir) |
 | H-CR-HIV-20 | Hiver | Pantalon de sport chaud | — | le type existe, mais aucun article ne porte la nature demandée (technique) |
 | H-CR-HIV-22 | Hiver | Pantalon homewear chaud | — | le type existe, mais aucun article ne porte la nature demandée (homewear) |

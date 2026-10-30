@@ -29,7 +29,7 @@ def norm(t):
 TYPES = [
     ("t shirt technique", "haut_technique"), ("t shirt", "tshirt"), ("tee shirt", "tshirt"), ("debardeur", "debardeur"), ("brassiere", "brassiere"),
     ("haut technique", "haut_technique"), ("haut thermique", "haut_technique"), ("top", "top"), ("tunique", "tunique"),
-    ("blouse", "blouse"), ("surchemise", "surchemise"), ("chemise", "chemise"), ("polo", "polo"), ("sous pull", "pull"), ("pull", "pull"), ("cardigan", "cardigan"), ("gilet", "cardigan"), ("hoodie", "sweat"),
+    ("blouse", "blouse"), ("surchemise", "surchemise"), ("chemise", "chemise"), ("polo", "polo"), ("sous pull", "sous_pull"), ("pull", "pull"), ("cardigan", "cardigan"), ("gilet", "cardigan"), ("hoodie", "sweat"),
     ("sweat", "sweat"), ("jogging", "jogging"), ("jogger", "jogging"), ("pantalon jogger", "jogging"), ("pantalon de sport", "jogging"),
     ("legging", "legging"), ("bermuda", "short"), ("combishort", "combishort"), ("short", "short"), ("jean", "jean"),
     ("chino", "pantalon"), ("pantalon", "pantalon"), ("jupe", "jupe"), ("robe", "robe"), ("combinaison", "combinaison"),
@@ -42,6 +42,8 @@ TYPES = [
 ]
 
 
+# Un sous-pull est un type à part (30/10/2026, arbitré par la propriétaire : « sous-pull et pull col roulé fin ne sont pas pareils ») :
+# un pull col roulé fin ne le satisfait pas, même comme base potentielle.
 def type_de(nom):
     n = " " + norm(nom) + " "
     # Un pantalon de jogging est un jogging (« Pantalon de jogger / Jogging structuré ») : le type précis l'emporte sur « pantalon ».
@@ -148,8 +150,6 @@ for genre, (fichier, col_nom, col_occ) in XL.items():
                 + 2 * len(a["_q"] & q)
                 + 1.5 * len((a["_mots"] & mots) - VIDES)
                 + (1 if saison in a["_saisons"] else 0)
-                # Un sous-pull est un col roulé fin : la forme la plus proche dans le catalogue.
-                + (2 if "sous" in mots and {"col", "roule"} <= a["_mots"] else 0)
             )
 
         nat = natures_de(nom, t)

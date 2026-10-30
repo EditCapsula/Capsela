@@ -760,8 +760,9 @@ export function BoutonAjoutFlottant({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       aria-label="Ajouter une pièce à mon dressing"
       className="absolute right-4 z-10 flex items-center justify-center rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer transition-transform active:scale-[.95]"
+      // Collé au menu (30/10/2026, confirmé : « tous les boutons flottants doivent être collés au menu ») : plus d'écart de 16 px.
       style={{
-        bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px)",
+        bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))",
         width: 56,
         height: 56,
         boxShadow: "0 4px 14px rgba(29,26,22,.22)",

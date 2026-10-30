@@ -1517,7 +1517,8 @@ export default function TenuesScreen() {
       {toast && (
         <div
           className="fixed inset-x-0 mx-auto max-w-[480px] px-6 z-30"
-          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 14px)" }}
+          // Collé au menu (30/10/2026, confirmé : « tous les boutons flottants doivent être collés au menu »).
+          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))" }}
         >
           <div className="flex items-center gap-3 bg-ink rounded-full py-[12px] pl-4 pr-[6px] shadow-lg">
             <span className="flex-1 min-w-0 text-[12px] text-cream truncate">{toast.text}</span>

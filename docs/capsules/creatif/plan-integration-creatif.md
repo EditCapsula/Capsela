@@ -12,8 +12,8 @@ Sources : `audit-rapprochement-creatif.md`, `audit-couverture-creatif.md`, `piec
 |---|---|
 | Aucun article de `vestiaire_universel` ne porte « Créatif » dans `styles` | DÉMONTRÉ (export du 30/10/2026) |
 | Équivalents exacts : 8 pièces de référence femme sur 151 (4 articles distincts), 33 homme sur 128 (28 articles distincts, dont 4 unisexes) | DÉMONTRÉ |
-| Bases potentielles (le type existe, sans le trait créatif) : 121 femme, 77 homme | DÉMONTRÉ, à arbitrer pièce par pièce |
-| Manquantes : 13 femme, 15 homme ; incompatibles (saison ou genre) : 9 femme, 3 homme | DÉMONTRÉ |
+| Bases potentielles (le type existe, sans le trait créatif) : 119 femme, 75 homme | DÉMONTRÉ, à arbitrer pièce par pièce |
+| Manquantes : 15 femme, 17 homme (dont les 4 sous-pulls, arbitrage du 30/10/2026 : un sous-pull n'est pas un pull col roulé fin) ; incompatibles (saison ou genre) : 9 femme, 3 homme | DÉMONTRÉ |
 | La capsule de référence ne couvre pas seule toutes les occasions : 22/32 femme, 16/32 homme ; 28/32 et 23/32 avec les pièces transversales | DÉMONTRÉ (critère : haut + bas ou pièce unique, + chaussures) |
 | Avec les seuls équivalents exacts, un profil Créatif femme n'aurait pas de style effectif | DÉMONTRÉ par le code, NON DÉMONTRÉ en exécution — cf. § 2 |
 
@@ -31,8 +31,8 @@ Pour Créatif, articles distincts disponibles par saison (même genre ; les unis
 
 | Genre | Saison | Exacts seuls | Exacts + bases potentielles validées |
 |---|---|---|---|
-| Femme | Printemps · Été · Automne · Hiver | 1 · 2 · 2 · 1 | 32 · 28 · 31 · 26 |
-| Homme | Printemps · Été · Automne · Hiver | 7 · 4 · 11 · 11 | 24 · 23 · 27 · 25 |
+| Femme | Printemps · Été · Automne · Hiver | 1 · 2 · 2 · 1 | 32 · 28 · 30 · 25 |
+| Homme | Printemps · Été · Automne · Hiver | 7 · 4 · 11 · 11 | 24 · 23 · 26 · 25 |
 
 Conséquence : étiqueter les seuls équivalents exacts ne suffit pas. Un style Créatif utile exige soit la validation d'une grande part des
 bases potentielles, soit la création des variantes créatives, soit les deux. Le seuil de 18 reste tel quel (ne pas modifier les règles de
