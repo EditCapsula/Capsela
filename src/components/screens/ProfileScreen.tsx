@@ -31,6 +31,8 @@ import {
   completudeProfil,
   prochaineActionProfil,
   VISUELS_ETAPE_STYLE_FEMME,
+  styleConfigFor,
+  type StyleId,
   fieldNeedsRevalidation,
   genderLabel,
   morphologyLabel,
@@ -232,14 +234,15 @@ export default function ProfileScreen() {
           titre="Style"
           valeur={
             <span className="flex items-center gap-[10px]">
-              {/* Visuels éditoriaux déjà dans l'app (étape « Style », côté femme seulement : il n'en existe pas pour l'homme). */}
-              {profile.gender !== "homme" &&
-                profile.styles.slice(0, 2).map((id) =>
-                  VISUELS_ETAPE_STYLE_FEMME[id as keyof typeof VISUELS_ETAPE_STYLE_FEMME] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={id} src={VISUELS_ETAPE_STYLE_FEMME[id as keyof typeof VISUELS_ETAPE_STYLE_FEMME]} alt="" width={30} height={40} loading="lazy" className="w-[30px] h-[40px] rounded-[6px] object-cover flex-shrink-0" />
-                  ) : null
-                )}
+              {/* Les visuels de l'étape « Style » : flat lays femme ; côté homme, ceux fournis le 30/10/2026 (STYLE_CONFIG). */}
+              {profile.styles.slice(0, 2).map((id) => {
+                const visuel =
+                  profile.gender === "homme" ? styleConfigFor("homme")[id as StyleId]?.asset : VISUELS_ETAPE_STYLE_FEMME[id as keyof typeof VISUELS_ETAPE_STYLE_FEMME];
+                return visuel ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={id} src={visuel} alt="" width={30} height={40} loading="lazy" className="w-[30px] h-[40px] rounded-[6px] object-cover flex-shrink-0" />
+                ) : null;
+              })}
               <span>{libelleStyles(profile.styles, profile.gender) || "Non renseigné"}</span>
             </span>
           }

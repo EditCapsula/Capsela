@@ -225,6 +225,15 @@ function styleVisualUrl(gender: "femme" | "homme", slug: string): string {
  * d'onboarding homme — cf. `EXPOSED_STYLE_IDS` plus bas, décision arrêtée le
  * 20/08/2026, aucun équivalent masculin à ces deux styles.
  */
+/**
+ * VISUELS DES STYLES HOMME (fournis le 30/10/2026, demandé : « mets à jour les visuels des styles hommes partout où ils apparaissent ») :
+ * flat lays recadrés depuis la planche validée, servis par l'app (public/images/styles/homme/) et non plus depuis Storage. Format
+ * 5:4 (374 × 299) : celui des cartes de l'étape Style ; les cartes 4:5 et les vignettes en gardent le centre. Le bord droit de la planche
+ * (rond de sélection, coin de carte) est retiré au recadrage. Les fichiers fournis ne font que 441 px de large : un envoi en plus haute
+ * définition les remplacerait sans autre changement.
+ */
+const VISUEL_STYLE_HOMME = (slug: string) => `/images/styles/homme/${slug}.webp`;
+
 export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardConfig>> = {
   femme: {
     minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: styleVisualUrl("femme", "minimaliste") },
@@ -237,14 +246,14 @@ export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardCo
     glamour: { label: "Glamour", desc: "Sophistiqué, audacieux et résolument élégant.", asset: styleVisualUrl("femme", "glamour") },
   },
   homme: {
-    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: styleVisualUrl("homme", "minimaliste") },
-    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: styleVisualUrl("homme", "casual-chic") },
-    classique_chic: { label: "Classique chic", desc: "Élégant et toujours approprié.", asset: styleVisualUrl("homme", "classique-chic") },
+    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: VISUEL_STYLE_HOMME("minimaliste") },
+    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: VISUEL_STYLE_HOMME("casual-chic") },
+    classique_chic: { label: "Classique chic", desc: "Élégant et toujours approprié.", asset: VISUEL_STYLE_HOMME("classique-chic") },
     // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS), entrée conservée uniquement pour styleLabel().
     romantique: { label: "Créatif / Artistique", desc: "Original, expressif, hors des codes classiques.", asset: "" },
-    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: styleVisualUrl("homme", "boheme") },
-    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("homme", "streetwear") },
-    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: styleVisualUrl("homme", "preppy") },
+    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: VISUEL_STYLE_HOMME("boheme") },
+    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: VISUEL_STYLE_HOMME("streetwear") },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: VISUEL_STYLE_HOMME("preppy") },
     // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS), entrée conservée uniquement pour styleLabel().
     glamour: { label: "Élégant / Sophistiqué", desc: "Raffiné, maîtrisé et résolument chic.", asset: "" },
   },
