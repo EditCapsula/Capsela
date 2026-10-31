@@ -38,3 +38,33 @@ Les deux réponses neutres (« Aucune préférence particulière », « Cela dé
 - Aucun corps, aucune peau, aucun mannequin (règle du brief et de CLAUDE.md).
 - Même fond, même lumière, même cadrage sur les 13 : à comparer côte à côte.
 - Lisible en 288 px : le détail qui nomme l'option (fente, encolure, ceinture…) doit se voir en petit.
+
+## Profil homme (31/10/2026)
+
+Proposition : pour un homme, « Mon décolleté », « Mes courbes » et « Mes hanches » ne sont pas proposés ; 5 options de mise en valeur (taille, jambes, épaules, bras, dos) et les 5 coupes, avec des pièces homme. 10 visuels, même base commune. Fichiers : `public/onboarding/mise-en-valeur/homme/<option>.webp`, `public/onboarding/coupes/homme/<option>.webp`.
+
+### Mise en valeur — homme (5)
+
+| Option | Prompt (après la base) |
+|---|---|
+| Ma taille | Un pantalon à pinces taille haute en laine encre posé à plat, une chemise écrue rentrée dedans et une ceinture en cuir camel ; la ligne de taille est le sujet. |
+| Mes jambes | Un pantalon droit en laine sable posé à plat sur toute sa longueur, pli central marqué, une paire de mocassins en cuir camel au bas. |
+| Mes épaules | Une veste en laine camel aux épaules nettes et bien construites, sur un cintre en bois ; la ligne d'épaule est le sujet. |
+| Mes bras | Un polo en maille fine écrue à manches courtes, posé à plat, manches près du bras bien visibles. |
+| Mon dos | Une chemise en lin terracotta vue de dos sur un cintre en bois, empiècement d'épaules et pli creux au milieu du dos. |
+
+### Coupes préférées — homme (5)
+
+| Option | Prompt (après la base) |
+|---|---|
+| Ajustées | Flat lay : une chemise cintrée blanche et un pantalon slim encre, pièces étroites, bords nets. |
+| Droites | Flat lay : une chemise oxford écrue coupe droite et un chino droit sable, lignes verticales parallèles. |
+| Fluides | Une chemise à col cubain en viscose camel et un pantalon fluide terracotta, plis souples, la matière qui coule. |
+| Amples | Flat lay : une surchemise oversize en lin écru et un pantalon large à pinces sable, volumes généreux. |
+| Structurées | Un blazer en laine encre aux épaules nettes et revers marqués, sur un cintre en bois, tenant sa forme seul. |
+
+### Variante planche (si génération groupée)
+
+> [Base commune], mais en planche de N cases séparées par une fine marge ivoire, chaque case au format portrait 3:4, une pièce ou un ensemble par case, dans cet ordre : … Même fond, même lumière, même cadrage dans toutes les cases. Image finale la plus grande possible.
+
+Préférer la génération une par une : en planche, chaque case ne fait qu'environ 300 px de large.
