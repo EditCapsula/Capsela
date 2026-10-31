@@ -760,6 +760,8 @@ export function BoutonAjoutFlottant({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       aria-label="Ajouter une pièce à mon dressing"
       className="absolute right-4 z-10 flex items-center justify-center rounded-full bg-terracotta-deep active:bg-terracotta-hover text-cream cursor-pointer transition-transform active:scale-[.95]"
+      // 16 px au-dessus du menu, JAMAIS collé (30/10/2026, arbitré : « je ne veux pas coller le bouton + rond »), contrairement aux barres
+      // d'action et aux messages de confirmation, posés sur le menu.
       style={{
         bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 16px)",
         width: 56,

@@ -49,8 +49,15 @@ export interface BrouillonPiece {
   motif: Motif | null;
   /** Suggérées par la lecture de la photo (modifiables), vides quand le modèle n'est pas sûr : jamais devinées d'un nom. */
   saisons: CapsuleSeason[];
+  /** La photo de la pièce ; "" pour un article lu sur un ticket de caisse, qui n'en a pas (une photo peut s'ajouter ensuite). */
   photoUrl: string;
   coche: boolean;
+  /** La marque, saisie sur la carte (30/10/2026, sur le modèle de la capture partagée) ; pour un ticket, le magasin. Facultative. */
+  marque: string;
+  /** Vrai quand la catégorie n'a pas été lue (article de ticket sans catégorie sûre) : à confirmer avant l'ajout. */
+  categorieAConfirmer?: boolean;
+  /** La taille lue sur un ticket de caisse (« M », « 38 ») ; absente pour une photo. */
+  taille?: string;
 }
 
 /** Les modèles proposés pour une catégorie (même liste que « Ajouter une pièce »). */
@@ -81,23 +88,26 @@ export function brouillonsDepuis(objets: ObjetRepere[]): BrouillonPiece[] {
     saisons: QUATRE_SAISONS.filter((sa) => o.saisons?.includes(sa)),
     photoUrl: o.photo_url,
     coche: true,
+    marque: "",
   }));
 }
 
 /** Changer de catégorie : le modèle et les manches d'avant ne valent plus. */
 export function changerCategorie(b: BrouillonPiece, cat: CategoryKey): BrouillonPiece {
-  if (cat === b.cat) return b;
-  return { ...b, cat, type: "", manches: aDesManches(cat) ? b.manches : null, motif: aUnMotif(cat) ? b.motif : null };
+  if (cat === b.cat) return { ...b, categorieAConfirmer: false };
+  return { ...b, categorieAConfirmer: false, cat, type: "", manches: aDesManches(cat) ? b.manches : null, motif: aUnMotif(cat) ? b.motif : null };
 }
 
-export type Manque = "modele" | "manches" | "saisons";
+export type Manque = "categorie" | "modele" | "manches" | "saisons";
 
 /** Ce qui manque à une pièce pour être créée (dans l'ordre où l'écran le demande). Vide : elle est complète. */
 export function manquesDe(b: BrouillonPiece): Manque[] {
   const m: Manque[] = [];
+  // Une catégorie à confirmer passe d'abord : le modèle et les manches dépendent d'elle.
+  if (b.categorieAConfirmer) m.push("categorie");
   // Comme « Ajouter une pièce » (R-B6) : une chaussure sans type n'est pas enregistrée.
-  if (b.cat === "chaussures" && !b.type) m.push("modele");
-  if (aDesManches(b.cat) && !b.manches) m.push("manches");
+  else if (b.cat === "chaussures" && !b.type) m.push("modele");
+  if (!b.categorieAConfirmer && aDesManches(b.cat) && !b.manches) m.push("manches");
   if (b.saisons.length === 0) m.push("saisons");
   return m;
 }
@@ -106,7 +116,7 @@ export function manquesDe(b: BrouillonPiece): Manque[] {
 export function phraseManque(m: Manque[]): string | null {
   if (m.length === 0) return null;
   if (m.length > 1) return "Précise les détails";
-  return m[0] === "saisons" ? "Précise les saisons" : m[0] === "manches" ? "Précise les manches" : "Précise le modèle";
+  return m[0] === "saisons" ? "Précise les saisons" : m[0] === "manches" ? "Précise les manches" : m[0] === "categorie" ? "Précise la catégorie" : "Précise le modèle";
 }
 
 /** Pièces qui seront créées : cochées ET complètes. */
@@ -168,7 +178,9 @@ export function pieceDepuis(b: BrouillonPiece): Omit<Item, "id"> {
     accessoireType: accessoireTypeFor(b.cat, (b.cat === "accessoire" ? b.type || null : null) as AccessoireType | null, nom),
     subtype: !["chaussures", "sac", "bijou", "accessoire"].includes(b.cat) ? b.type || undefined : undefined,
     matiere: b.matiere as Matiere | undefined,
-    photoUrl: b.photoUrl,
+    brand: b.marque.trim() || undefined,
+    size: b.taille || undefined,
+    photoUrl: b.photoUrl || undefined,
     worn: null,
   };
 }
@@ -200,3 +212,49 @@ export const reprendrePhoto = (): PhotoConfiee | null => {
   photoConfiee = null;
   return p;
 };
+
+/*
+ * LES ARTICLES D'UN TICKET DE CAISSE, DANS LA MÊME LISTE (30/10/2026, demandé : « cette présentation d'ajout de plusieurs pièces est
+ * valable de façon générale lorsque plusieurs pièces sont ajoutées, pas que pour le ticket »). « Ajouter une pièce » confie le ticket lu
+ * à l'écran d'import, qui en fait une carte par article : le nom lu, le magasin en marque, la catégorie, la taille et la couleur quand le
+ * ticket les dit. Aucune photo ; aucune saison devinée. Une catégorie que le ticket ne dit pas reste à confirmer.
+ */
+export interface ArticleTicketConfie {
+  nom: string;
+  categorie: string | null;
+  taille: string | null;
+  couleur: { nom: string; hex: string } | null;
+}
+let ticketConfie: { magasin: string | null; articles: ArticleTicketConfie[] } | null = null;
+export const confierTicket = (t: { magasin: string | null; articles: ArticleTicketConfie[] } | null): void => {
+  ticketConfie = t;
+};
+export const apercuTicketConfie = () => ticketConfie;
+export const reprendreTicket = () => {
+  const t = ticketConfie;
+  ticketConfie = null;
+  return t;
+};
+
+/** Une carte par article du ticket. Couleur par défaut, non présentée comme lue, quand le ticket ne la dit pas. */
+export function brouillonsDepuisTicket(t: { magasin: string | null; articles: ArticleTicketConfie[] }): BrouillonPiece[] {
+  return t.articles.map((a, i) => {
+    const cat = (CATS.some(([c]) => c === a.categorie) ? a.categorie : "haut") as CategoryKey;
+    return {
+      cle: i,
+      nom: a.nom,
+      cat,
+      type: "",
+      couleur: a.couleur ?? { nom: "Blanc cassé", hex: "#EDE4D6" },
+      couleurLue: Boolean(a.couleur),
+      manches: null,
+      motif: null,
+      saisons: [],
+      photoUrl: "",
+      coche: true,
+      marque: t.magasin ?? "",
+      categorieAConfirmer: !CATS.some(([c]) => c === a.categorie),
+      ...(a.taille ? { taille: a.taille.toUpperCase() } : {}),
+    };
+  });
+}

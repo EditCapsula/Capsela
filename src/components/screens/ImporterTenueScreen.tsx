@@ -5,6 +5,7 @@ import BottomSheet from "@/components/BottomSheet";
 import BoutonRetour from "@/components/BoutonRetour";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import { avecTraitsDUnion } from "@/components/TraitsDUnion";
 import { CameraIcon, CarteAnalyse, ChampSelect, chip, Coche, EYEBROW, luminance, NOMS_PASTILLES, SpinnerCintre } from "@/components/screens/AddScreen";
 import { useAuth } from "@/lib/auth";
 import { MISE_A_PLAT_DISPONIBLE } from "@/lib/miseAPlat";
@@ -24,7 +25,10 @@ import {
   phraseManque,
   pieceDepuis,
   apercuPhotoConfiee,
+  apercuTicketConfie,
+  brouillonsDepuisTicket,
   reprendrePhoto,
+  reprendreTicket,
   type BrouillonPiece,
 } from "@/lib/importTenue";
 import { aDesManches, MANCHES } from "@/lib/manches";
@@ -48,6 +52,15 @@ function messageEchec(code: CodeImportTenue | "photo"): { texte: string; reessay
   if (code === "lecture_indisponible") return { texte: "Capsela n'a pas pu lire ta photo : le service de lecture n'a pas répondu. Ta photo est inchangée.", reessayer: true };
   if (code === "resultat_invalide") return { texte: "Le service a rendu une image inexploitable. Ta photo est inchangée.", reessayer: true };
   return { texte: "Le détourage n'a pas abouti : le service n'a pas répondu. Ta photo est inchangée.", reessayer: true };
+}
+
+/**
+ * Les huit pastilles d'une carte. La couleur de la pièce prend la dernière place si elle n'y est pas (30/10/2026, signalé : un short
+ * lu « Bleu ciel » n'apparaissait qu'après « Toutes les couleurs ») — même règle que « Ajouter une pièce ».
+ */
+function pastillesAvec(b: BrouillonPiece): [string, string][] {
+  const base = (b.cat === "bijou" ? PALETTE_BIJOU.slice(0, 8) : NOMS_PASTILLES.flatMap((n) => PALETTE.filter(([nom]) => nom === n))).slice(0, 8);
+  return base.some(([, hex]) => hex === b.couleur.hex) ? base : [...base.slice(0, 7), [b.couleur.nom, b.couleur.hex]];
 }
 
 /** Échec du détourage d'une pièce à l'ajout : la pièce n'est pas ajoutée, sa carte reste. */
@@ -78,13 +91,17 @@ export default function ImporterTenueScreen() {
 
   // Une photo confiée par « Ajouter une pièce » : le tout premier rendu est déjà l'analyse, sur la même photo (12/10/2026, signalé : un scintillement
   // entre les deux écrans — l'écran de choix s'affichait une image avant que la lecture démarre).
-  const [phase, setPhase] = useState<Phase>(() => (apercuPhotoConfiee() ? "analyse" : "choix"));
+  // Un ticket de caisse confié par « Ajouter une pièce » (30/10/2026) : ses articles arrivent déjà lus, la liste s'affiche d'emblée.
+  const [ticket, setTicket] = useState(() => apercuTicketConfie());
+  const [phase, setPhase] = useState<Phase>(() => (ticket ? "resultat" : apercuPhotoConfiee() ? "analyse" : "choix"));
   const [apercu, setApercu] = useState<string | null>(() => apercuPhotoConfiee()?.url ?? null);
   // Mise à plat demandée sur une carte (« Mettre à plat ») : en cours, ou la cause de l'échec. Jamais lancée seule.
   const [plat, setPlat] = useState<Record<number, { etat: "cours" | "erreur"; message?: string }>>({});
-  const [brouillons, setBrouillons] = useState<BrouillonPiece[]>([]);
-  const [nbRepere, setNbRepere] = useState(0);
-  const [ouverte, setOuverte] = useState<number | null>(null);
+  const [brouillons, setBrouillons] = useState<BrouillonPiece[]>(() =>
+    ticket ? limiterAuxPlaces(brouillonsDepuisTicket(ticket), placesRestantes(etatPremium, state.items.length)) : []
+  );
+  const [nbRepere, setNbRepere] = useState(() => ticket?.articles.length ?? 0);
+  const [ouverte, setOuverte] = useState<number | null>(() => (ticket?.articles.length === 1 ? 0 : null));
   const [code, setCode] = useState<CodeImportTenue | "photo">("indisponible");
   const [progression, setProgression] = useState({ fait: 0, total: 0 });
   const [ajoutees, setAjoutees] = useState<string[]>([]);
@@ -109,6 +126,7 @@ export default function ImporterTenueScreen() {
   const lancer = async (file: File, urlDejaEnvoyee?: string) => {
     fichierRef.current = file;
     setAFichier(true);
+    setTicket(null);
     purger(tout());
     fichiers.current = { source: null, tenue: null, objets: new Map() };
     // Photo déjà envoyée : on garde son URL (celle que l'écran précédent affichait), pas de second visuel qui ferait sauter l'image.
@@ -160,6 +178,8 @@ export default function ImporterTenueScreen() {
 
   // Une photo confiée par « Ajouter une pièce » (elle montre plusieurs pièces) : la lecture démarre sans second choix de photo.
   useEffect(() => {
+    // Le ticket est déjà dans l'état initial : il n'est repris qu'une fois.
+    reprendreTicket();
     const confiee = reprendrePhoto();
     // Hors de l'effet (setTimeout) : la lecture met l'état à jour tout de suite. Pas de nettoyage du minuteur : en développement l'effet se joue deux fois et la photo n'est reprise qu'une.
     if (confiee) setTimeout(() => void lancer(confiee.fichier, confiee.url), 0);
@@ -197,7 +217,8 @@ export default function ImporterTenueScreen() {
     // une pièce dont le détourage échoue n'est pas ajoutée (jamais un recadrage rectangulaire) et reste dans la liste avec sa cause.
     const detourees = await Promise.all(
       pretes.map(async (b) => {
-        if (!isSupabaseConfigured || estPhotoDetouree(b.photoUrl)) return b;
+        // Un article de ticket n'a pas de photo : rien à détourer.
+        if (!isSupabaseConfigured || !b.photoUrl || estPhotoDetouree(b.photoUrl)) return b;
         const r = await detourerPhotoAvecCause(b.photoUrl, undefined, true);
         if ("code" in r) {
           setPlat((p) => ({ ...p, [b.cle]: { etat: "erreur", message: MESSAGE_ECHEC_DETOURAGE[r.code] } }));
@@ -285,6 +306,7 @@ export default function ImporterTenueScreen() {
     fichiers.current = { source: null, tenue: null, objets: new Map() };
     fin.current = false;
     setApercu(null);
+    setTicket(null);
     setBrouillons([]);
     setAjoutees([]);
     setErreurAjout(null);
@@ -299,13 +321,31 @@ export default function ImporterTenueScreen() {
 
   const imageZone = apercu;
   const listeAffichee = phase === "resultat" || phase === "ajout";
+  const toutAjouterVisible = listeAffichee && brouillons.length > 1;
 
   return (
     <div className="absolute inset-0 flex flex-col bg-cream">
-      <div className="flex-shrink-0 grid grid-cols-[44px_1fr_44px] items-center gap-2 px-[14px] pt-[8px] pb-[6px]">
+      <div className="flex-shrink-0 flex items-center justify-between gap-2 px-[14px] pt-[8px] pb-[6px] min-h-[58px]">
         <BoutonRetour onClick={retour} label="Revenir à l'écran précédent" />
-        <div className="text-center font-serif font-medium text-[19px] text-ink">Ajouter une pièce</div>
-        <span />
+        {toutAjouterVisible ? (
+          // « Tout ajouter » dans la barre du haut (30/10/2026, sur le modèle de la capture partagée) : toujours à portée, quelle que soit la liste.
+          <button
+            type="button"
+            onClick={() => void valider(brouillons)}
+            disabled={pretes.length === 0 || enAjout}
+            className={
+              "h-[44px] px-5 flex-shrink-0 rounded-full text-[13px] font-semibold flex items-center gap-[8px] " +
+              (pretes.length === 0 || enAjout ? "bg-[#E2C9A8] text-muted-3 cursor-not-allowed" : "bg-terracotta-deep text-on-terracotta cursor-pointer")
+            }
+          >
+            <Coche couleur="currentColor" /> Tout ajouter
+          </button>
+        ) : (
+          <>
+            <div className="flex-1 text-center font-serif font-medium text-[19px] text-ink">Ajouter une pièce</div>
+            <span className="w-[44px] flex-shrink-0" />
+          </>
+        )}
       </div>
 
       <div className="scrollarea flex-1 min-h-0 overflow-y-auto px-[18px] pt-[6px] pb-[40px]" aria-busy={enCours || enAjout}>
@@ -352,19 +392,11 @@ export default function ImporterTenueScreen() {
           {phase === "resultat" && (
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-serif font-medium text-[22px] text-ink">{seul ? "1 pièce détectée" : `${nbRepere} pièces détectées`}</p>
-                <p className="text-[12.5px] text-muted-3 mt-1">Vérifie les vêtements avant de les ajouter à ton dressing.</p>
+                <p className="font-serif font-medium text-[22px] text-ink">{ticket ? (seul ? "1 article sur ton ticket" : `${nbRepere} articles sur ton ticket`) : seul ? "1 pièce détectée" : `${nbRepere} pièces détectées`}</p>
+                <p className="text-[12.5px] text-muted-3 mt-1">
+                  {ticket ? "Vérifie chaque pièce avant de l'ajouter : une photo pourra s'ajouter ensuite depuis sa fiche." : "Vérifie les vêtements avant de les ajouter à ton dressing."}
+                </p>
               </div>
-              {brouillons.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => void valider(brouillons)}
-                  disabled={pretes.length === 0}
-                  className={"h-[40px] px-4 flex-shrink-0 rounded-full text-[13px] font-semibold " + (pretes.length === 0 ? "bg-[#E2C9A8] text-muted-3 cursor-not-allowed" : "bg-terracotta-deep text-on-terracotta cursor-pointer")}
-                >
-                  Tout ajouter
-                </button>
-              )}
             </div>
           )}
           {phase === "vide" && (
@@ -407,13 +439,49 @@ export default function ImporterTenueScreen() {
               const manques = manquesDe(b);
               const ouvert = ouverte === b.cle;
               const etatPlat = plat[b.cle];
-              const peutAPlat = MISE_A_PLAT_DISPONIBLE && isSupabaseConfigured && !estPhotoMiseAPlat(b.photoUrl);
+              const peutAPlat = MISE_A_PLAT_DISPONIBLE && isSupabaseConfigured && Boolean(b.photoUrl) && !estPhotoMiseAPlat(b.photoUrl);
               return (
-                <li key={b.cle} className="rounded-[20px] border border-border bg-card">
+                <li key={b.cle}>
+                  {/* Le nom, à modifier (crayon), et la corbeille (30/10/2026, sur le modèle de la capture partagée). */}
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      aria-expanded={ouvert}
+                      aria-label={`Modifier ${b.nom || "la pièce"}`}
+                      disabled={enAjout}
+                      onClick={() => setOuverte(ouvert ? null : b.cle)}
+                      className="min-w-0 flex items-center gap-[8px] text-left cursor-pointer min-h-[44px]"
+                    >
+                      <span className="font-serif font-medium text-[17px] text-ink truncate">{avecTraitsDUnion(b.nom || "Nouvelle pièce")}</span>
+                      <svg viewBox="0 0 24 24" className="w-[15px] h-[15px] flex-shrink-0" fill="none" stroke="#8B8375" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Retirer ${b.nom || "cette pièce"}`}
+                      disabled={enAjout}
+                      onClick={() => retirer(b.cle)}
+                      className="w-[40px] h-[40px] flex-shrink-0 rounded-full bg-warm-bg flex items-center justify-center cursor-pointer"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="#5C5648" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="mt-[6px] rounded-[20px] border border-border bg-card">
                   <div className="flex gap-3 p-3">
-                    <span className="relative w-[96px] h-[120px] flex-shrink-0 rounded-[14px] overflow-hidden flex items-center justify-center" style={{ background: "var(--color-warm-bg)" }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={b.photoUrl} alt="" className="w-full h-full object-contain" />
+                    <span
+                      className="relative w-[44%] aspect-[4/5] flex-shrink-0 rounded-[14px] overflow-hidden flex items-center justify-center"
+                      style={{ background: "var(--color-warm-bg)" }}
+                    >
+                      {b.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={b.photoUrl} alt="" className="w-full h-full object-contain" />
+                      ) : (
+                        // Article de ticket : pas de photo, la couleur de la pièce à la place (jamais une image inventée).
+                        <span aria-hidden="true" className="w-[56%] aspect-square rounded-full" style={{ background: b.couleur.hex, border: "1px solid rgba(29,26,22,.12)" }} />
+                      )}
                       {etatPlat?.etat === "cours" && (
                         <span className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(243,238,229,.7)" }} role="status" aria-label="Mise à plat en cours">
                           <SpinnerCintre sombre />
@@ -421,39 +489,31 @@ export default function ImporterTenueScreen() {
                       )}
                     </span>
                     <div className="flex-1 min-w-0 flex flex-col">
-                      <div className="flex items-start justify-between gap-1">
-                        <button
-                          type="button"
-                          aria-expanded={ouvert}
-                          aria-label={`Modifier ${b.nom || "la pièce"}`}
-                          disabled={enAjout}
-                          onClick={() => setOuverte(ouvert ? null : b.cle)}
-                          className="min-w-0 flex items-center gap-[6px] text-left cursor-pointer min-h-[32px]"
-                        >
-                          <span className="font-serif font-medium text-[16px] text-ink truncate">{b.nom || "Nouvelle pièce"}</span>
-                          <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] flex-shrink-0" fill="none" stroke="#8B8375" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Retirer ${b.nom || "cette pièce"}`}
-                          disabled={enAjout}
-                          onClick={() => retirer(b.cle)}
-                          className="w-[36px] h-[36px] -mt-1 -mr-1 flex-shrink-0 flex items-center justify-center cursor-pointer"
-                        >
-                          <svg viewBox="0 0 24 24" className="w-[18px] h-[18px]" fill="none" stroke="#8B8375" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5" />
-                          </svg>
-                        </button>
-                      </div>
-                      <span className="block text-[12px] text-muted-3">{libelleCategorie(b.cat)}</span>
+                      <input
+                        className="capin w-full h-[40px] bg-transparent border-b border-border text-[13.5px] text-ink"
+                        value={b.marque}
+                        placeholder="Ajouter la marque"
+                        aria-label="Marque"
+                        disabled={enAjout}
+                        onChange={(e) => modifier(b.cle, { marque: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        disabled={enAjout}
+                        onClick={() => setOuverte(b.cle)}
+                        className="mt-[10px] text-left cursor-pointer"
+                      >
+                        <span className="block text-[11px] text-muted-3">Catégorie</span>
+                        <span className={"block text-[14px] " + (b.categorieAConfirmer ? "text-[#8B8375]" : "text-ink")}>
+                          {b.categorieAConfirmer ? "À choisir" : libelleCategorie(b.cat)}
+                        </span>
+                      </button>
                       {!b.coche ? (
-                        <span className="block text-[11.5px] text-[#8B8375] mt-[2px]">Plus de place dans ton dressing gratuit</span>
+                        <span className="block text-[11.5px] text-[#8B8375] mt-[6px]">Plus de place dans ton dressing gratuit</span>
                       ) : (
-                        manques.length > 0 && <span className="block text-[11.5px] font-semibold text-terracotta-deep mt-[2px]">{phraseManque(manques)}</span>
+                        manques.length > 0 && <span className="block text-[11.5px] font-semibold text-terracotta-deep mt-[6px]">{phraseManque(manques)}</span>
                       )}
-                      <div className="mt-auto pt-3 flex gap-2">
+                      <div className="mt-auto pt-3 flex flex-col gap-2">
                         {peutAPlat && (
                           <button
                             type="button"
@@ -468,9 +528,9 @@ export default function ImporterTenueScreen() {
                           type="button"
                           disabled={enAjout || !b.coche}
                           onClick={() => (manques.length > 0 ? setOuverte(b.cle) : void valider([b]))}
-                          className="h-[40px] px-4 rounded-full bg-terracotta-deep text-on-terracotta text-[12.5px] font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50"
+                          className="h-[40px] px-4 rounded-full bg-terracotta-deep text-on-terracotta text-[12.5px] font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50 flex items-center justify-center gap-[6px]"
                         >
-                          Ajouter
+                          <Coche couleur="currentColor" /> Ajouter
                         </button>
                       </div>
                     </div>
@@ -491,11 +551,12 @@ export default function ImporterTenueScreen() {
                         label="Catégorie"
                         valeurSerif
                         fond
-                        value={b.cat}
+                        value={b.categorieAConfirmer ? "" : b.cat}
+                        placeholder="Choisir"
                         onChange={(v) => modifier(b.cle, (x) => changerCategorie(x, v as CategoryKey))}
                         options={CATS.map(([c, l]) => ({ value: c, label: l }))}
                       />
-                      {modelesDe(b.cat).length > 0 && (
+                      {!b.categorieAConfirmer && modelesDe(b.cat).length > 0 && (
                         <ChampSelect
                           label="Modèle"
                           fond
@@ -511,8 +572,8 @@ export default function ImporterTenueScreen() {
                           <span className={EYEBROW}>Couleur principale</span>
                           <span className="text-[11.5px] text-[#8B8375]">{b.couleurLue ? b.couleur.nom : "À choisir"}</span>
                         </div>
-                        <div role="radiogroup" aria-label="Couleur principale" className="flex flex-wrap gap-[2px] mt-1">
-                          {(b.cat === "bijou" ? PALETTE_BIJOU.slice(0, 8) : NOMS_PASTILLES.flatMap((n) => PALETTE.filter(([nom]) => nom === n))).map(([nom, hex]) => {
+                        <div role="radiogroup" aria-label="Couleur principale" className="grid grid-cols-8 gap-[2px] mt-1">
+                          {pastillesAvec(b).map(([nom, hex]) => {
                             const on = b.couleur.hex === hex;
                             const claire = luminance(hex) > 0.8;
                             return (
@@ -523,7 +584,7 @@ export default function ImporterTenueScreen() {
                                 aria-checked={on}
                                 aria-label={nom}
                                 onClick={() => modifier(b.cle, { couleur: { nom, hex }, couleurLue: true })}
-                                className="w-[44px] h-[44px] rounded-full bg-transparent p-[3px] cursor-pointer"
+                                className="w-full max-w-[44px] aspect-square rounded-full bg-transparent p-[3px] cursor-pointer"
                                 style={{ border: `2px solid ${on ? "var(--color-ink)" : "transparent"}` }}
                               >
                                 <span className="w-full h-full rounded-full flex items-center justify-center" style={{ background: hex, border: `1px solid ${claire ? "#D9CDB8" : hex}` }}>
@@ -538,7 +599,7 @@ export default function ImporterTenueScreen() {
                         </button>
                       </div>
 
-                      {aDesManches(b.cat) && (
+                      {!b.categorieAConfirmer && aDesManches(b.cat) && (
                         <div>
                           <span className={EYEBROW}>Manches</span>
                           <div role="radiogroup" aria-label="Manches" className="grid grid-cols-2 gap-2 mt-[10px]">
@@ -558,7 +619,7 @@ export default function ImporterTenueScreen() {
                         </div>
                       )}
 
-                      {motifDisponible() && aUnMotif(b.cat) && (
+                      {!b.categorieAConfirmer && motifDisponible() && aUnMotif(b.cat) && (
                         <div>
                           <span className={EYEBROW}>Motif</span>
                           <div role="radiogroup" aria-label="Motif" className="grid grid-cols-2 gap-2 mt-[10px]">
@@ -602,6 +663,7 @@ export default function ImporterTenueScreen() {
                       </div>
                     </div>
                   )}
+                  </div>
                 </li>
               );
             })}

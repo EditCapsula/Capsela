@@ -595,10 +595,11 @@ export default function ProfileSetupScreen() {
           {exposedStyleIds(draft.gender).map((id) => {
             const cfg = styleConfigFor(draft.gender)[id];
             const on = draft.styles.includes(id);
-            // Côté femme (et genre non renseigné, qui affiche la grille
-            // femme) : les flat lays du 25/09, en portrait. Côté homme :
-            // inchangé.
-            const visuelFemme = draft.gender !== "homme" ? VISUELS_ETAPE_STYLE_FEMME[id] : null;
+            // Les flat lays en portrait 3:4 : côté femme (et genre non
+            // renseigné, qui affiche la grille femme) ceux du 25/09 ; côté
+            // homme, ceux fournis le 30/10/2026 (STYLE_CONFIG), au même
+            // format — les deux grilles sont identiques.
+            const visuel = draft.gender === "homme" ? cfg.asset || null : VISUELS_ETAPE_STYLE_FEMME[id];
             return (
               <button
                 key={id}
@@ -613,7 +614,7 @@ export default function ProfileSetupScreen() {
                 }
                 style={{ background: on ? "var(--color-selected-bg)" : "var(--color-card)" }}
               >
-                {visuelFemme ? (
+                {visuel ? (
                   /* LE FORMAT EXACT DU VISUEL (3:4), et non le 5:4 des
                      anciennes cartes : dans un cadre paysage, un flat lay
                      portrait perdait ~40 % de sa hauteur. Ici rien n'est
@@ -624,7 +625,7 @@ export default function ProfileSetupScreen() {
                   <div className="w-full flex-shrink-0 bg-border" style={{ aspectRatio: "3/4" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={visuelFemme}
+                      src={visuel}
                       alt=""
                       width={900}
                       height={1200}

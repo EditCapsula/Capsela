@@ -101,6 +101,12 @@ const AVANTAGES: { glyphe: React.ReactNode; titre: string; desc: string; bientot
     titre: "L'œil de Capsela", // renommé le 30/10/2026 (avant : « Avis de styliste »)
     desc: "Montre ta tenue à Capsela : ce qui fonctionne, ce que tu peux ajuster.",
   },
+  // Premium depuis le 30/10/2026 (décidé : « la fonctionnalité ticket de caisse est premium »), LIRE_TICKET dans autorisations.ts.
+  {
+    glyphe: G_CINTRE,
+    titre: "Ajout depuis un ticket de caisse",
+    desc: "Photographie ton ticket : une fiche par vêtement acheté, avec le magasin en marque.",
+  },
 ];
 
 interface Formule {

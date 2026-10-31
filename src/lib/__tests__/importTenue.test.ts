@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aCreer,
+  brouillonsDepuisTicket,
   brouillonsDepuis,
   changerCategorie,
   depasseLesPlaces,
@@ -117,5 +118,33 @@ describe("saisons lues sur la photo (12/10/2026)", () => {
   it("sans saison lue, le brouillon n'en invente pas", () => {
     const [b] = brouillonsDepuis([objet({ cat: "manteau" })]);
     expect(b.saisons).toEqual([]);
+  });
+});
+
+describe("les articles d'un ticket de caisse (30/10/2026)", () => {
+  const t = {
+    magasin: "Sézane",
+    articles: [
+      { nom: "Robe midi", categorie: "robe", taille: "s", couleur: { nom: "Camel", hex: "#C08A5E" } },
+      { nom: "Article mode", categorie: null, taille: null, couleur: null },
+    ],
+  };
+  const [robe, inconnu] = brouillonsDepuisTicket(t);
+
+  it("une carte par article, le magasin en marque, sans photo ni saison devinée", () => {
+    expect(robe).toMatchObject({ nom: "Robe midi", cat: "robe", marque: "Sézane", photoUrl: "", saisons: [], taille: "S", couleurLue: true });
+    expect(robe.categorieAConfirmer).toBe(false);
+  });
+  it("une catégorie que le ticket ne dit pas reste à confirmer, et bloque l'ajout", () => {
+    expect(inconnu.categorieAConfirmer).toBe(true);
+    expect(inconnu.couleurLue).toBe(false);
+    expect(manquesDe(inconnu)[0]).toBe("categorie");
+    expect(manquesDe(changerCategorie(inconnu, "haut"))).not.toContain("categorie");
+  });
+  it("la pièce créée garde la marque et la taille, et n'a pas de photo", () => {
+    const p = pieceDepuis({ ...robe, saisons: ["Été"] });
+    expect(p.brand).toBe("Sézane");
+    expect(p.size).toBe("S");
+    expect(p.photoUrl).toBeUndefined();
   });
 });

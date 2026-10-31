@@ -3359,20 +3359,22 @@ function Resultat({
         </div>
       )}
 
-      {/* 6 · QUE PUIS-JE FAIRE MAINTENANT ? L'action dominante reste sous le pouce, posée sur la barre du bas : le défilement réserve déjà la hauteur de la barre (pb-safe-nav), le -16 px retire sa marge de confort. */}
-      <div
-        className="sticky z-10 -mx-6 px-6 pt-[10px] pb-[10px] mt-6 bg-cream border-t border-border"
-        style={{ bottom: "-16px" }}
-      >
-        <Button onClick={() => setFeuille({ type: "ajuster" })}>Ajuster ma valise</Button>
-      </div>
-      <button onClick={recommencer} className="block mx-auto mt-1 t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[10px]">
+      <button onClick={recommencer} className="block mx-auto mt-6 t-lien text-terracotta underline underline-offset-[3px] cursor-pointer py-[10px]">
         Créer une autre valise
       </button>
       <div className="text-[11px] text-placeholder leading-[1.5] mt-2 text-center">
         <div>{`${dateCourte(valise.depart)} → ${dateCourte(valise.retour)}`}</div>
         {gardeeOu === "compte" && <div>Enregistrée dans ton compte.</div>}
         {gardeeOu === "appareil" && <div>Enregistrée sur cet appareil seulement.</div>}
+      </div>
+
+      {/* 6 · QUE PUIS-JE FAIRE MAINTENANT ? L'action dominante reste sous le pouce, COLLÉE à la barre du bas (30/10/2026, demandé : « tous les
+          boutons flottants doivent être collés au menu » — rien ne défile plus entre les deux). Dernier élément de la page : arrivé en bas,
+          elle reste à sa place. Mesuré dans Chromium : le décalage d'un élément sticky part du padding du conteneur (pb-safe-nav), d'où
+          -16 px pour retirer la marge de confort en cours de défilement, et la même marge négative en bas de page. */}
+      <div className="sticky z-10 -mx-6 px-6 pt-[10px] pb-[10px] mt-4 bg-cream border-t border-border" style={{ bottom: -16, marginBottom: -16 }}
+      >
+        <Button onClick={() => setFeuille({ type: "ajuster" })}>Ajuster ma valise</Button>
       </div>
       {feuilles}
     </>

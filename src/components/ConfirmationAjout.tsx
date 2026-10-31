@@ -26,8 +26,9 @@ export default function ConfirmationAjout({ auDessusDeLaBarre }: { auDessusDeLaB
     <div
       className="fixed inset-x-0 mx-auto max-w-[480px] px-6 z-30"
       style={{
+        // Collé au menu (30/10/2026, confirmé : « tous les boutons flottants doivent être collés au menu »).
         bottom: auDessusDeLaBarre
-          ? "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 14px)"
+          ? "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom))"
           : "calc(env(safe-area-inset-bottom) + 92px)",
       }}
       role="status"

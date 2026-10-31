@@ -160,7 +160,7 @@ export function paletteSummary(profile: Profile): string {
 }
 
 /**
- * Style utilisateur — sélection unique, 8 ids stables et jamais renommés
+ * Style utilisateur — sélection unique, 9 ids stables et jamais renommés (8, puis `creatif` le 30/10/2026)
  * (Tâche 7, arbitrages du 20/08/2026). Seuls le libellé, la description et
  * le visuel varient selon le genre (STYLE_CONFIG) ; l'id seul est
  * persisté sur `profiles.styles` — un libellé stocké deviendrait faux au
@@ -175,6 +175,9 @@ export const STYLE_IDS = [
   "streetwear",
   "preppy",
   "glamour",
+  // 9e style (30/10/2026, validé par la propriétaire : un id `creatif` commun aux deux genres), qui lève l'arbitrage du 20/08/2026
+  // « jamais un 9e id ». Référentiel : les capsules Créatif femme et homme (docs/capsules/creatif/).
+  "creatif",
 ] as const;
 export type StyleId = (typeof STYLE_IDS)[number];
 
@@ -193,6 +196,7 @@ export const STYLE_ID_TO_CATALOG_LABEL: Record<StyleId, string> = {
   streetwear: "Streetwear",
   preppy: "Preppy",
   glamour: "Glamour",
+  creatif: "Créatif",
 };
 
 export interface StyleCardConfig {
@@ -225,6 +229,14 @@ function styleVisualUrl(gender: "femme" | "homme", slug: string): string {
  * d'onboarding homme — cf. `EXPOSED_STYLE_IDS` plus bas, décision arrêtée le
  * 20/08/2026, aucun équivalent masculin à ces deux styles.
  */
+/**
+ * VISUELS DES STYLES HOMME (fournis le 30/10/2026, demandé : « mets à jour les visuels des styles hommes partout où ils apparaissent ») :
+ * flat lays servis par l'app (public/images/styles/homme/), au format des visuels femme — portrait 3:4, 900 × 1200 WebP — pour que les
+ * grilles de l'étape Style soient identiques dans les deux genres. Générés en 1024 × 1536, élargis de 64 px de fond de chaque côté
+ * (bord recopié) plutôt que recoupés en hauteur : aucun élément coupé, même échelle sur toute la série.
+ */
+const VISUEL_STYLE_HOMME = (slug: string) => `/images/styles/homme/${slug}.webp`;
+
 export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardConfig>> = {
   femme: {
     minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: styleVisualUrl("femme", "minimaliste") },
@@ -235,18 +247,22 @@ export const STYLE_CONFIG: Record<"femme" | "homme", Record<StyleId, StyleCardCo
     streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("femme", "streetwear") },
     preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: styleVisualUrl("femme", "preppy") },
     glamour: { label: "Glamour", desc: "Sophistiqué, audacieux et résolument élégant.", asset: styleVisualUrl("femme", "glamour") },
+    creatif: { label: "Créatif", desc: "Imprimés, couleurs et lignes inattendues.", asset: "/images/styles/creatif.webp" },
   },
   homme: {
-    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: styleVisualUrl("homme", "minimaliste") },
-    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: styleVisualUrl("homme", "casual-chic") },
-    classique_chic: { label: "Classique chic", desc: "Élégant et toujours approprié.", asset: styleVisualUrl("homme", "classique-chic") },
+    minimaliste: { label: "Minimaliste", desc: "Épuré, essentiel et intemporel.", asset: VISUEL_STYLE_HOMME("minimaliste") },
+    casual_chic: { label: "Casual chic", desc: "Décontracté mais soigné, facile au quotidien.", asset: VISUEL_STYLE_HOMME("casual-chic") },
+    classique_chic: { label: "Classique chic", desc: "Élégant et toujours approprié.", asset: VISUEL_STYLE_HOMME("classique-chic") },
     // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS), entrée conservée uniquement pour styleLabel().
+    // Inchangée au passage de Créatif (30/10/2026, arbitré : « tu ne touches pas au style romantique caché de l'homme ») : Créatif est
+    // un id à part, `creatif`.
     romantique: { label: "Créatif / Artistique", desc: "Original, expressif, hors des codes classiques.", asset: "" },
-    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: styleVisualUrl("homme", "boheme") },
-    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: styleVisualUrl("homme", "streetwear") },
-    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: styleVisualUrl("homme", "preppy") },
+    boheme: { label: "Bohème", desc: "Naturel, libre et inspiré des voyages.", asset: VISUEL_STYLE_HOMME("boheme") },
+    streetwear: { label: "Streetwear", desc: "Urbain, confort et attitude décontractée.", asset: VISUEL_STYLE_HOMME("streetwear") },
+    preppy: { label: "Preppy", desc: "Soigné, frais et esprit collégial.", asset: VISUEL_STYLE_HOMME("preppy") },
     // Pas de visuel — jamais affiché dans la grille homme (EXPOSED_STYLE_IDS), entrée conservée uniquement pour styleLabel().
     glamour: { label: "Élégant / Sophistiqué", desc: "Raffiné, maîtrisé et résolument chic.", asset: "" },
+    creatif: { label: "Créatif / Artistique", desc: "Original, expressif, hors des codes classiques.", asset: VISUEL_STYLE_HOMME("creatif") },
   },
 };
 
@@ -287,6 +303,7 @@ export const VISUELS_ETAPE_STYLE_FEMME: Record<StyleId, string> = {
   streetwear: "/images/styles/streetwear.webp",
   preppy: "/images/styles/preppy.webp",
   glamour: "/images/styles/glamour.webp",
+  creatif: "/images/styles/creatif.webp",
 };
 
 export function styleConfigFor(gender: Gender | null): Record<StyleId, StyleCardConfig> {
@@ -321,6 +338,7 @@ export function stylesDuGenre(styles: readonly string[], gender: Gender | null):
   const permis = new Set<string>(exposedStyleIds(gender));
   return styles.filter((s) => permis.has(s));
 }
+
 
 export function basculerStyle(styles: readonly string[], id: string): string[] {
   if (styles.includes(id)) return styles.filter((s) => s !== id);
