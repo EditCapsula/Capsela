@@ -1,7 +1,7 @@
 "use client";
 
 import { avecTraitsDUnion } from "@/components/TraitsDUnion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
 import { useAuth } from "@/lib/auth";
 import { useCapsela } from "@/lib/store";
@@ -240,10 +240,13 @@ export default function ProfileSetupScreen() {
   // Un troisième style est BLOQUÉ, pas substitué (07/10/2026) : le remplacer en silence changeait un choix sans le dire.
   // Seuls comptent les styles que le genre propose (stylesDuGenre) : un style resté d'un autre genre (Glamour après un passage à Homme) ne
   // doit ni occuper une des deux places ni rester dans le profil.
+  const nbStyles = stylesDuGenre(draft.styles, draft.gender).length;
   const selectStyle = (id: string) => {
     const valides = stylesDuGenre(draft.styles, draft.gender);
     if (!valides.includes(id) && valides.length >= MAX_STYLES) {
-      setStyleBloque(true);
+      // Un false puis true : un second refus pendant que le message est affiché relance son délai.
+      setStyleBloque(false);
+      setTimeout(() => setStyleBloque(true), 0);
       return;
     }
     setStyleBloque(false);
@@ -360,6 +363,13 @@ export default function ProfileSetupScreen() {
       ? `${sectionCourante + 1} / ${SECTIONS.length} · ${SECTIONS[sectionCourante].label}`
       : null;
   const [styleBloque, setStyleBloque] = useState(false);
+  // Le refus d'un troisième style se dit un instant, puis s'efface (31/10/2026, brief « Ajustement UX – sélection des styles ») : jamais
+  // un message permanent. Un nouveau refus relance le délai.
+  useEffect(() => {
+    if (!styleBloque) return;
+    const t = setTimeout(() => setStyleBloque(false), 3500);
+    return () => clearTimeout(t);
+  }, [styleBloque]);
   // Seules les étapes style et palette exigent une sélection non vide
   // (styles : recette 20/08/2026 ; palette : Tâche 8, min 1 couleur) — les
   // autres étapes gardent leur comportement existant, jamais bloquant.
@@ -585,13 +595,15 @@ export default function ProfileSetupScreen() {
         </div>
       )}
 
-      {meta.key === "style" && styleBloque && (
-        <p role="status" className="text-[12px] text-terracotta-deep mt-4 leading-[1.45]">
-          Tu peux choisir deux styles au maximum. Retire-en un pour en choisir un autre.
+      {/* OÙ EN EST LA SÉLECTION (31/10/2026, brief « Ajustement UX – sélection des styles ») : rien avant le premier choix (le sous-titre
+          dit déjà « 1 ou 2 styles maximum »), puis 1/2, puis 2/2. Hauteur réservée : la grille ne saute pas quand le compteur apparaît. */}
+      {meta.key === "style" && (
+        <p role="status" aria-live="polite" className="h-[18px] mt-[14px] text-[12px] text-muted leading-[18px]">
+          {nbStyles === 1 ? "1/2 style sélectionné" : nbStyles >= MAX_STYLES ? `${MAX_STYLES}/${MAX_STYLES} styles sélectionnés` : ""}
         </p>
       )}
       {meta.key === "style" && (
-        <div className="grid grid-cols-2 gap-[11px] mt-[26px]">
+        <div className="grid grid-cols-2 gap-[11px] mt-[12px]">
           {exposedStyleIds(draft.gender).map((id) => {
             const cfg = styleConfigFor(draft.gender)[id];
             const on = draft.styles.includes(id);
@@ -609,10 +621,13 @@ export default function ProfileSetupScreen() {
                   // couleur change à la sélection, jamais la largeur, pour
                   // qu'aucune card ne bouge d'un pixel au clic (indépendant
                   // de box-sizing, garanti par construction).
-                  "relative text-left rounded-tuile overflow-hidden border-[1.5px] cursor-pointer flex flex-col " +
+                  // Sélectionnée (31/10/2026) : la bordure se marque d'un anneau de 1 px en plus (box-shadow, hors du flux : aucune card ne
+                  // bouge), le fond s'éclaire ; transition de 180 ms, coupée si le téléphone demande moins d'animations.
+                  "relative text-left rounded-tuile overflow-hidden border-[1.5px] cursor-pointer flex flex-col transition-[border-color,box-shadow,background-color] duration-[180ms] ease-out motion-reduce:transition-none " +
                   (on ? "border-terracotta" : "border-border")
                 }
-                style={{ background: on ? "var(--color-selected-bg)" : "var(--color-card)" }}
+                aria-pressed={on}
+                style={{ background: on ? "var(--color-selected-bg)" : "var(--color-card)", boxShadow: on ? "0 0 0 1px var(--color-terracotta)" : "none" }}
               >
                 {visuel ? (
                   /* LE FORMAT EXACT DU VISUEL (3:4), et non le 5:4 des
@@ -654,11 +669,11 @@ export default function ProfileSetupScreen() {
                 />
                 )}
                 <span
-                  className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-[1.5px]"
+                  className="absolute top-[9px] right-[9px] w-[21px] h-[21px] rounded-full flex items-center justify-center border-[1.5px] transition-colors duration-[180ms] motion-reduce:transition-none"
                   style={{ background: on ? "var(--color-terracotta)" : "#FFFFFF", borderColor: on ? "var(--color-terracotta)" : "#B08968" }}
                 >
                   {on && (
-                    <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                    <svg width="11" height="9" viewBox="0 0 11 9" fill="none" className="coche-style">
                       <path d="M1 4.5L4 7.5L10 1" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
@@ -801,11 +816,24 @@ export default function ProfileSetupScreen() {
   // scrollable unique, strictement inchangée.
   // Le parcours colorimétrie prend la même structure (30/09/2026) : son
   // bouton reste accessible sans défiler, même quand le résultat est long.
-  const deuxZones = ["pal_couleurs", "colorimetrie", "colorimetrie_resultat", "colorimetrie_suite"].includes(meta.key);
+  // L'étape Style aussi (31/10/2026, brief « Ajustement UX – sélection des styles ») : son bouton reste accessible pendant le défilement,
+  // sans jamais recouvrir les dernières cartes.
+  const deuxZones = ["style", "pal_couleurs", "colorimetrie", "colorimetrie_resultat", "colorimetrie_suite"].includes(meta.key);
   if (deuxZones) {
     return (
       <div className="absolute inset-0 flex flex-col">
-        <div className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">{pageBody}</div>
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <div className="scrollarea flex-1 overflow-y-auto px-7 pt-2 pb-6">{pageBody}</div>
+          {/* Le refus d'un troisième style : une bulle discrète au-dessus du bouton, quelques secondes (pas dans la page : sur deux lignes,
+              elle aurait fait sauter la grille à chaque apparition). */}
+          {meta.key === "style" && styleBloque && (
+            <div role="status" className="detail-part absolute inset-x-0 bottom-3 mx-auto max-w-[480px] px-7 pointer-events-none">
+              <div className="bg-ink rounded-feuille px-4 py-[10px] text-[12px] text-cream leading-[1.4] text-center shadow-lg">
+                Tu as déjà choisi deux styles. Retire-en un pour en sélectionner un autre.
+              </div>
+            </div>
+          )}
+        </div>
         {continueButton && (
           <div
             className="flex-shrink-0 px-7 bg-cream border-t border-border flex flex-col"
