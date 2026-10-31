@@ -211,3 +211,8 @@ Ordre de mise en production, impératif :
 
 **`sql/04-etiqueter-sport-commun.sql` appliqué en production le 31/10/2026** par la propriétaire (étape 1 de l'ordre ci-dessus).
 Restent : la fusion de la PR, puis `sql/05-creer-sport-creatif.sql`.
+
+**Terminé le 31/10/2026.** PR fusionnée (sport par étiquette en ligne), puis `sql/05-creer-sport-creatif.sql` appliqué en production
+par la propriétaire : contrôle 17 pièces de sport Créatif. Catalogue Créatif en production : 201 + 17 pièces créées, 32 existantes
+étiquetées, 7 pièces de sport communes portant les neuf styles. Ne relancer ni 02 ni 05 (ils créeraient des doublons). Restent en
+suspens, sans urgence : 1.c (4 pièces unisexes), l'occasion « Vacances » (7 pièces femme), 11 pièces sans couleur connue de l'app.
