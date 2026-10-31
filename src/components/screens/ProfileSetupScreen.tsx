@@ -598,12 +598,12 @@ export default function ProfileSetupScreen() {
       {/* OÙ EN EST LA SÉLECTION (31/10/2026, brief « Ajustement UX – sélection des styles ») : rien avant le premier choix (le sous-titre
           dit déjà « 1 ou 2 styles maximum »), puis 1/2, puis 2/2. Hauteur réservée : la grille ne saute pas quand le compteur apparaît. */}
       {meta.key === "style" && (
-        <p role="status" aria-live="polite" className="h-[18px] mt-[14px] text-[12px] text-muted leading-[18px]">
+        <p role="status" aria-live="polite" className="h-[18px] mt-[6px] text-[12px] text-muted leading-[18px]">
           {nbStyles === 1 ? "1/2 style sélectionné" : nbStyles >= MAX_STYLES ? `${MAX_STYLES}/${MAX_STYLES} styles sélectionnés` : ""}
         </p>
       )}
       {meta.key === "style" && (
-        <div className="grid grid-cols-2 gap-[11px] mt-[12px]">
+        <div className="grid grid-cols-2 gap-[11px] mt-[8px]">
           {exposedStyleIds(draft.gender).map((id) => {
             const cfg = styleConfigFor(draft.gender)[id];
             const on = draft.styles.includes(id);
