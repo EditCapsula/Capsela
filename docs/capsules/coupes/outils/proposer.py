@@ -5,11 +5,11 @@ VET = {'hauts','pulls_gilets','vestes_blazers','robes','jupes','shorts','manteau
 DEJA = re.compile(r'oversize|large|ample|évasé|ajusté|moulant|slim|cintré|côtelé', re.I)  # déjà lu par coupeOf
 AJUSTE = [(r'cigarette','pantalon cigarette'),(r'crayon','jupe crayon'),(r'fourreau','robe fourreau'),(r'\bbody\b','body'),(r'legging','legging'),
           (r'brassière','brassière'),(r'bustier','bustier'),(r'bandeau','bandeau'),(r'cycliste|biker','cycliste'),(r'skinny','skinny'),
-          (r'col roulé fin|sous-pull','col roulé fin / sous-pull'),(r'maille fine','maille fine')]
-AMPLE = [(r'wide','wide leg'),(r'palazzo','palazzo'),(r'relaxed','relaxed'),(r'baggy|boyfriend','baggy / boyfriend'),(r'cargo','cargo'),
+          (r'col roulé fin|sous-pull','col roulé fin / sous-pull')]
+AMPLE = [(r'wide[ -]leg','wide leg'),(r'palazzo','palazzo'),(r'relaxed','relaxed'),(r'baggy|boyfriend','baggy / boyfriend'),(r'cargo','cargo'),
          (r'jogger|jogging','jogging'),(r'capuche|hoodie','sweat à capuche'),(r'surchemise','surchemise'),(r'ballon|bouffant','manches ballon / bouffantes'),
-         (r'\bcape\b','cape'),(r'kimono|poncho','kimono / poncho'),(r'trapèze|ligne a\b','trapèze / ligne A'),(r'déstructuré','déstructuré'),
-         (r'shearling|doudoune','doudoune / shearling')]
+         (r'\bcape\b','cape'),(r'kimono|poncho','kimono / poncho'),(r'trapèze|ligne a\b','trapèze / ligne A')]
+# Retirées le 31/10/2026 à la relecture : « déstructuré » (non doublé, pas ample) et « doudoune / shearling » (type, pas coupe).
 def proposer(nom):
     n = nom.lower()
     if re.search(r'flare', n): return '', 'flare : ajusté puis évasé, non tranché'
@@ -19,7 +19,8 @@ def proposer(nom):
         if re.search(rx, n): return 'Ample', m
     return '', ''
 rows = [x for x in csv.DictReader(open(CSV)) if x['category'] in VET]
-crees = [dict(x, id='(créée)') for x in json.load(open(REVUE))['revue'] if x.get('category') in VET]
+# REVUE = '-' : l'export contient déjà toutes les pièces, Créatif compris (export du 31/10/2026 après-midi).
+crees = [] if REVUE == '-' else [dict(x, id='(créée)') for x in json.load(open(REVUE))['revue'] if x.get('category') in VET]
 lignes = []
 for x in rows + crees:
     if (x.get('coupe') or '').strip(): continue
@@ -28,7 +29,7 @@ for x in rows + crees:
     lignes.append((x['id'], x['category'], x['name'], x.get('genre',''), x.get('styles',''), x.get('matiere') or '', c, m))
 cnt = Counter(l[6] or '(aucune)' for l in lignes)
 print('pièces sans coupe à examiner', len(lignes), dict(cnt))
-print('dont créées Créatif', sum(1 for l in lignes if l[0]=='(créée)'), Counter(l[6] or '(aucune)' for l in lignes if l[0]=='(créée)'))
+print('dont Créatif', sum(1 for l in lignes if 'Créatif' in (l[4] or '')), '; créées hors export', sum(1 for l in lignes if l[0]=='(créée)'), Counter(l[6] or '(aucune)' for l in lignes if l[0]=='(créée)'))
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 wb = Workbook(); ws = wb.active; ws.title = 'Coupes à valider'
