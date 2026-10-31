@@ -1,6 +1,8 @@
 # Prompts des visuels — Mise en valeur et Coupes préférées
 
-31/10/2026. Pour un générateur d'images (ChatGPT). Visuels carrés, comme les vignettes de colorimétrie (`public/onboarding/colorimetrie/`, affichées en 288 × 288) : générer en 1024 × 1024, puis conversion en WebP au moment de l'intégration.
+31/10/2026. Mise en valeur : reçus le 31/10/2026 en planche 4 × 2, découpés en 3:4 (~300 × 400) dans `public/onboarding/mise-en-valeur/<option>.webp`.
+
+Pour un générateur d'images (ChatGPT). Visuels carrés, comme les vignettes de colorimétrie (`public/onboarding/colorimetrie/`, affichées en 288 × 288) : générer en 1024 × 1024, puis conversion en WebP au moment de l'intégration.
 
 Les deux réponses neutres (« Aucune préférence particulière », « Cela dépend du vêtement ») réutilisent `neutre-lin.webp`, déjà présent : 13 visuels à produire.
 
