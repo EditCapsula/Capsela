@@ -1,6 +1,6 @@
 # Prompts des visuels — Mise en valeur et Coupes préférées
 
-31/10/2026. Mise en valeur : reçus le 31/10/2026 en planche 4 × 2, découpés en 3:4 (~300 × 400) dans `public/onboarding/mise-en-valeur/<option>.webp`.
+31/10/2026. Coupes : reçues le 31/10/2026 (planche 3 + 2), découpées en 3:4 dans `public/onboarding/coupes/<option>.webp`. Mise en valeur : reçus le 31/10/2026 en planche 4 × 2, découpés en 3:4 (~300 × 400) dans `public/onboarding/mise-en-valeur/<option>.webp`.
 
 Pour un générateur d'images (ChatGPT). Visuels carrés, comme les vignettes de colorimétrie (`public/onboarding/colorimetrie/`, affichées en 288 × 288) : générer en 1024 × 1024, puis conversion en WebP au moment de l'intégration.
 
