@@ -1,3 +1,4 @@
+import { PREFERENCES_SILHOUETTE_VIDES, type PreferencesSilhouette } from "./preferencesSilhouette";
 import { COLORIMETRIE_VIDE, type Colorimetrie } from "./colorimetrie";
 export { PAL_COULEURS } from "./palCouleurs";
 import { PAL_COULEURS } from "./palCouleurs";
@@ -43,6 +44,8 @@ export interface Profile {
   city: string;
   completed: boolean;
   prefs: ProfilePrefs;
+  /** Mise en valeur et coupes préférées (31/10/2026, preferencesSilhouette.ts) : `null` par champ = jamais posé. */
+  preferencesSilhouette: PreferencesSilhouette;
 }
 
 export const DEFAULT_PREFS: ProfilePrefs = {
@@ -71,6 +74,7 @@ export const EMPTY_PROFILE: Profile = {
   city: "Paris",
   completed: false,
   prefs: DEFAULT_PREFS,
+  preferencesSilhouette: PREFERENCES_SILHOUETTE_VIDES,
 };
 
 export const GENDERS: { key: Gender; label: string }[] = [
