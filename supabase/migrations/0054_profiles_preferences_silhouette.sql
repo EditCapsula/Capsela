@@ -9,6 +9,8 @@
 -- RLS : les politiques de `profiles` (0001, lecture / insertion / mise à jour par la propriétaire de
 -- la ligne) couvrent la colonne. Rien à ajouter.
 --
+-- APPLIQUÉE le 31/10/2026 par la propriétaire (éditeur SQL).
+--
 -- Avant cette migration, l'app fonctionne : la colonne est écrite à part (auth.tsx, saveProfile),
 -- jamais avec le reste du profil, et son échec est signalé à l'écran.
 
